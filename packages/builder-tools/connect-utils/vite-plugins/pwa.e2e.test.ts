@@ -8,6 +8,10 @@ import {
 import { join } from "node:path";
 import { build } from "vite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import {
+  FILE_HANDLER_ACTION,
+  type ConnectPwaFileHandler,
+} from "./pwa-overrides.js";
 import { connectPwaPlugins } from "./pwa.js";
 
 // The temp project must live INSIDE cwd: Vite 8's build-html plugin rejects an
@@ -62,10 +66,49 @@ describe("connectPwaPlugins e2e build", () => {
     expect(manifestFile, "a .webmanifest should be emitted").toBeDefined();
     const manifest = JSON.parse(
       readFileSync(join(outDir, manifestFile as string), "utf-8"),
-    ) as { theme_color?: string; name?: string; icons?: unknown[] };
+    ) as {
+      theme_color?: string;
+      name?: string;
+      icons?: { src?: string; purpose?: string }[];
+      file_handlers?: ConnectPwaFileHandler[];
+      launch_handler?: { client_mode?: string };
+    };
     expect(manifest.theme_color).toBe("#123456"); // override applied
     expect(manifest.name).toBe("E2E Connect");
     expect(manifest.icons?.length).toBeGreaterThanOrEqual(2); // base icons kept
+
+    // The built-in file association ships by default: .phd/.phdm under the
+    // vendor MIME keys, opening at the app root, with OS file-type icons
+    // (the Powerhouse document icon, distinct from the app icon).
+    expect(manifest.file_handlers).toHaveLength(1);
+    const handler = manifest.file_handlers?.[0];
+    expect(handler?.action).toBe(FILE_HANDLER_ACTION);
+    expect(handler?.accept).toEqual({
+      "application/vnd.powerhouse.document+zip": [".phd"],
+      "application/vnd.powerhouse.document-model+zip": [".phdm"],
+    });
+    expect(handler?.icons?.map((icon) => icon.src)).toEqual([
+      "document-icon-192x192.png",
+      "document-icon-512x512.png",
+    ]);
+    expect(manifest.launch_handler?.client_mode).toBe("focus-existing");
+
+    // The maskable icon is the full-bleed variant, not the rounded "any" one.
+    const maskable = manifest.icons?.find(
+      (icon) => icon.purpose === "maskable",
+    );
+    expect(maskable?.src).toBe("pwa-512x512-maskable.png");
+
+    // The icon assets themselves are emitted into the build.
+    for (const asset of [
+      "pwa-192x192.png",
+      "pwa-512x512.png",
+      "pwa-512x512-maskable.png",
+      "document-icon-192x192.png",
+      "document-icon-512x512.png",
+    ]) {
+      expect(files, `${asset} should be emitted`).toContain(asset);
+    }
 
     expect(files).toContain("service-worker.js");
     const sw = readFileSync(join(outDir, "service-worker.js"), "utf-8");
@@ -73,6 +116,42 @@ describe("connectPwaPlugins e2e build", () => {
     expect(sw).toContain("acme-api");
     // The built-in ph-runtime-config NetworkFirst rule carries its timeout.
     expect(sw).toContain("networkTimeoutSeconds");
+  }, 60000);
+
+  it("appends a contributed file handler after the built-in one", async () => {
+    const outDir = join(root, "dist");
+    await build({
+      root,
+      logLevel: "silent",
+      build: { outDir, emptyOutDir: true },
+      plugins: [
+        ...connectPwaPlugins({
+          offlineEnabled: true,
+          pwa: {
+            manifest: {
+              file_handlers: [
+                { accept: { "application/x-custom+zip": [".custom"] } },
+              ],
+            },
+          },
+        }),
+      ],
+    });
+    const files = readdirSync(outDir);
+    const manifestFile = files.find((f) => f.endsWith(".webmanifest"));
+    const manifest = JSON.parse(
+      readFileSync(join(outDir, manifestFile as string), "utf-8"),
+    ) as { file_handlers?: ConnectPwaFileHandler[] };
+    expect(manifest.file_handlers).toHaveLength(2);
+    // Base first — Chromium is first-registered-wins per extension, so the
+    // built-in .phd/.phdm association cannot be hijacked by a contribution.
+    expect(manifest.file_handlers?.[0].accept).toHaveProperty(
+      "application/vnd.powerhouse.document+zip",
+    );
+    expect(manifest.file_handlers?.[1]).toEqual({
+      action: FILE_HANDLER_ACTION,
+      accept: { "application/x-custom+zip": [".custom"] },
+    });
   }, 60000);
 
   it("emits a self-destroying worker when offline is disabled", async () => {

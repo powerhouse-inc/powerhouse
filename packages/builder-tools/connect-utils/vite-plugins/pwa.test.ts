@@ -39,6 +39,21 @@ describe("connectPwaPlugins", () => {
     // connectPwaIconsPlugin + the VitePWA plugins.
     expect(plugins.length).toBeGreaterThan(1);
   });
+
+  it("constructs the plugins with a contributed file handler", () => {
+    expect(() =>
+      connectPwaPlugins({
+        offlineEnabled: true,
+        pwa: {
+          manifest: {
+            file_handlers: [
+              { accept: { "application/x-custom+zip": [".custom"] } },
+            ],
+          },
+        },
+      }),
+    ).not.toThrow();
+  });
 });
 
 describe("pwa fragment collection", () => {
@@ -379,6 +394,117 @@ describe("pwa fragment collection", () => {
       ).toThrow(
         /Invalid connect\.pwa in \/proj\/powerhouse\.config\.json.*urlPattern/,
       );
+    });
+
+    it("passes a valid file_handlers block through", () => {
+      const config = {
+        manifest: {
+          file_handlers: [
+            {
+              accept: { "application/x-custom+zip": [".custom", ".cst"] },
+              icons: [{ src: "custom.png", sizes: "192x192" }],
+              launch_type: "single-client" as const,
+            },
+          ],
+          launch_handler: { client_mode: "focus-existing" as const },
+        },
+      };
+      expect(
+        validateProjectPwaConfig(config, "powerhouse.config.json"),
+      ).toEqual(config);
+    });
+
+    it("rejects a file-handler extension without the leading dot", () => {
+      // Chromium silently ignores dotless extensions — fail the build instead.
+      expect(() =>
+        validateProjectPwaConfig(
+          {
+            manifest: {
+              file_handlers: [{ accept: { "application/x-a+zip": ["phd"] } }],
+            },
+          },
+          "/proj/powerhouse.config.json",
+        ),
+      ).toThrow(/file_handlers.*accept|accept.*file_handlers/s);
+    });
+
+    it("rejects a file handler that tries to set its own action route", () => {
+      // The open route is fixed by Connect (its runtime consumes the files);
+      // contributors only declare accepted types.
+      expect(() =>
+        validateProjectPwaConfig(
+          {
+            manifest: {
+              file_handlers: [
+                { action: "/custom", accept: { "app/x": [".x"] } },
+              ],
+            },
+          },
+          "/proj/powerhouse.config.json",
+        ),
+      ).toThrow(/action/);
+    });
+
+    it("rejects an unknown manifest field instead of silently dropping it", () => {
+      // Strict objects: a `manifest.nam` typo must fail the build, not be
+      // stripped — a silently dropped field would quietly lose the branding.
+      expect(() =>
+        validateProjectPwaConfig(
+          { manifest: { nam: "Acme" } },
+          "/proj/powerhouse.config.json",
+        ),
+      ).toThrow(/[Uu]nrecognized/);
+    });
+
+    it("rejects an unknown top-level connect.pwa field", () => {
+      // e.g. a `runtimeCahing` typo — likewise a build failure, not a no-op.
+      expect(() =>
+        validateProjectPwaConfig(
+          { runtimeCahing: [] },
+          "/proj/powerhouse.config.json",
+        ),
+      ).toThrow(/[Uu]nrecognized/);
+    });
+  });
+
+  describe("package fragments with file_handlers", () => {
+    it("reads a valid file_handlers fragment from a local package", async () => {
+      writePackage("@acme/files", {
+        name: "Files",
+        pwa: {
+          manifest: {
+            file_handlers: [{ accept: { "application/x-a+zip": [".aaa"] } }],
+          },
+        },
+      });
+      const contributions = await collectPackagePwaContributions({
+        packages: [local("@acme/files")],
+        projectRoot,
+      });
+      expect(contributions).toHaveLength(1);
+      expect(
+        contributions[0].config.manifest?.file_handlers?.[0].accept,
+      ).toEqual({ "application/x-a+zip": [".aaa"] });
+    });
+
+    it("warns and skips a package fragment with malformed file_handlers", async () => {
+      const onWarn = vi.fn();
+      writePackage("@acme/badfiles", {
+        name: "BadFiles",
+        pwa: {
+          manifest: {
+            file_handlers: [{ accept: { "application/x-a+zip": ["aaa"] } }],
+          },
+        },
+      });
+      const contributions = await collectPackagePwaContributions({
+        packages: [local("@acme/badfiles")],
+        projectRoot,
+        onWarn,
+      });
+      expect(contributions).toEqual([]);
+      expect(onWarn).toHaveBeenCalledTimes(1);
+      expect(onWarn.mock.calls[0][0]).toContain("BadFiles");
     });
   });
 });

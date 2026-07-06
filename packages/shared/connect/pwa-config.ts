@@ -27,6 +27,7 @@ import { deepMerge } from "./config-loader.js";
 export type {
   PHConnectPwa,
   PHConnectPwaCacheStrategy,
+  PHConnectPwaFileHandler,
   PHConnectPwaIcon,
   PHConnectPwaManifest,
   PHConnectPwaRuntimeCaching,
@@ -51,6 +52,7 @@ const MANIFEST_SCALAR_KEYS: readonly (keyof PHConnectPwaManifest)[] = [
   "display",
   "start_url",
   "scope",
+  "launch_handler",
 ];
 
 // Structural icon shape shared by PHConnectPwaIcon and vite-plugin-pwa's
@@ -78,6 +80,42 @@ export function dedupeIcons<T extends IconLike>(icons: T[]): T[] {
     if (seen.has(key)) continue;
     seen.add(key);
     result.push(icon);
+  }
+  return result;
+}
+
+/** `JSON.stringify` with object keys sorted recursively, so two structurally
+ * equal values always serialise identically (accept-map key order etc.). */
+function stableStringify(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `[${value.map(stableStringify).join(",")}]`;
+  }
+  if (value !== null && typeof value === "object") {
+    const entries = Object.entries(value as Record<string, unknown>)
+      .filter(([, v]) => v !== undefined)
+      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+      .map(([k, v]) => `${JSON.stringify(k)}:${stableStringify(v)}`);
+    return `{${entries.join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
+
+/**
+ * Concatenate file handlers, keeping the first occurrence of each entry.
+ * Deduped on the WHOLE entry (canonical JSON) rather than any single field:
+ * every handler shares Connect's fixed action, and two handlers accepting
+ * different file types are both real contributions — only the exact same
+ * fragment arriving via two layers is a duplicate. Structural, so it also
+ * works on the vite-plugin-pwa handler shape in builder-tools.
+ */
+export function dedupeFileHandlers<T extends object>(handlers: T[]): T[] {
+  const seen = new Set<string>();
+  const result: T[] = [];
+  for (const handler of handlers) {
+    const key = stableStringify(handler);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(handler);
   }
   return result;
 }
@@ -114,11 +152,13 @@ function unionPatterns(
 }
 
 /** Merge one fragment into `target` in place, applying the per-field
- * strategies (manifest scalars deep-merge and win; icons/globs/rules/denylist
- * are additive; size ceiling takes the max). */
+ * strategies (manifest scalars deep-merge and win; icons/file_handlers/globs/
+ * rules/denylist are additive; size ceiling takes the max). */
 function mergeInto(target: PHConnectPwa, config: PHConnectPwa): void {
   if (config.manifest) {
-    const { icons, ...scalars } = config.manifest;
+    // The array fields must stay out of the deepMerge path — deepMerge
+    // replaces arrays wholesale, which would drop earlier contributions.
+    const { icons, file_handlers, ...scalars } = config.manifest;
     if (Object.keys(scalars).length > 0) {
       target.manifest = deepMerge(
         target.manifest ?? {},
@@ -129,6 +169,15 @@ function mergeInto(target: PHConnectPwa, config: PHConnectPwa): void {
       target.manifest = {
         ...(target.manifest ?? {}),
         icons: dedupeIcons([...(target.manifest?.icons ?? []), ...icons]),
+      };
+    }
+    if (file_handlers?.length) {
+      target.manifest = {
+        ...(target.manifest ?? {}),
+        file_handlers: dedupeFileHandlers([
+          ...(target.manifest?.file_handlers ?? []),
+          ...file_handlers,
+        ]),
       };
     }
   }
@@ -191,7 +240,7 @@ export function mergePwaConfig(
   for (const { source, config } of packageContributions) {
     mergeInto(merged, config);
     for (const [key, value] of Object.entries(config.manifest ?? {})) {
-      if (key === "icons") continue;
+      if (key === "icons" || key === "file_handlers") continue;
       (packageScalarSetters[key] ??= []).push({ source, value });
     }
   }
@@ -202,9 +251,11 @@ export function mergePwaConfig(
     const setters = packageScalarSetters[key];
     const projectSettles = projectManifest[key] !== undefined;
     if (!setters || setters.length < 2 || projectSettles) continue;
-    // Same value from every package is agreement, not a conflict (scalars
-    // are all primitives, so Set identity is enough).
-    const distinctValues = new Set(setters.map((s) => s.value));
+    // Same value from every package is agreement, not a conflict. Compared
+    // via stableStringify, not by identity — launch_handler is object-valued,
+    // and two packages sending equal objects (in any key order) must not read
+    // as a conflict.
+    const distinctValues = new Set(setters.map((s) => stableStringify(s.value)));
     if (distinctValues.size < 2) continue;
     const sources = setters.map((s) => s.source);
     onWarn(

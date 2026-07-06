@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-07-02T19:58:30.677Z
+> Generated: 2026-07-06T20:28:43.263Z
 > Total Documents: 100
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -26587,10 +26587,16 @@ Connect ships as a **Progressive Web App**: users can install it, and a precachi
 Offline support is controlled by `connect.app.offline` (default `true`):
 
 ```json
-{ "connect": { "app": { "offline": false } } }
+{
+  "connect": {
+    "app": {
+      "offline": false
+    }
+  }
+}
 ```
 
-There's no dedicated flag, so from the CLI use the positional form or `--json`:
+From the CLI, use the positional flag form or `--json`:
 
 ```bash
 ph connect config connect.app.offline false
@@ -26607,18 +26613,52 @@ The service worker is only built for production. During local development it is 
 
 ### Manifest
 
-`connect.pwa.manifest` overrides the [web app manifest](https://developer.mozilla.org/en-US/docs/Web/Manifest). Scalars deep-merge over the defaults (yours win); `icons` append to the built-in set.
+`connect.pwa.manifest` overrides the [web app manifest](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Manifest). Scalars deep-merge over the defaults and your values win; [`icons`](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Manifest/Reference/icons) and `file_handlers` append to the built-in set.
 
-| Field                              | Default                      |
-| ---------------------------------- | ---------------------------- |
-| `name`                             | `"Powerhouse Connect"`       |
-| `short_name`                       | `"Connect"`                  |
-| `theme_color` / `background_color` | `"#ffffff"`                  |
-| `display`                          | `"standalone"`               |
-| `start_url` / `scope`              | `"."`                        |
-| `icons`                            | bundled 192 / 512 + maskable |
+| Field                              | Default                                             |
+| ---------------------------------- | --------------------------------------------------- |
+| `name`                             | `"Powerhouse Connect"`                              |
+| `short_name`                       | `"Connect"`                                         |
+| `theme_color` / `background_color` | `"#ffffff"`                                         |
+| `display`                          | `"standalone"`                                      |
+| `start_url` / `scope`              | `"."`                                               |
+| `icons`                            | bundled 192 / 512 + maskable                        |
+| `file_handlers`                    | opens `.phd` and `.phdm` files — see [File handling](#file-handling) |
+| `launch_handler`                   | `{ "client_mode": "focus-existing" }`               |
 
 To replace the browser-tab favicon too, pass `ph connect build --favicon ./icon.ico`.
+
+### File handling
+
+The installed PWA registers as an **OS-level handler** for Powerhouse document files through the manifest's [`file_handlers`](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Manifest/Reference/file_handlers) member: opening a `.phd` or `.phdm` file from the file system launches Connect, which asks which drive to import into and imports the file(s) there. A single opened file is then opened in its editor; when several files are opened at once they are imported together and each gets an "Open document" link in the upload panel. The manifest also sets [`launch_handler`](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Manifest/Reference/launch_handler) to `focus-existing`, so an already-running Connect window is focused and receives the files instead of a new window opening per file. Inside the app, the files arrive through the [`LaunchQueue`](https://developer.mozilla.org/en-US/docs/Web/API/LaunchQueue) API.
+
+Browser and OS support for file handling varies — check the compatibility tables on the MDN pages above. Where a platform does not support it, the association is simply never registered and Connect keeps working normally. Each handler entry may declare per-type `icons` for the file association; whether and how the OS displays them is also platform-dependent, and some platforms derive document icons from the app icon instead.
+
+A package or the project can associate **additional file types** by contributing `file_handlers` entries:
+
+```json
+{
+  "connect": {
+    "pwa": {
+      "manifest": {
+        "file_handlers": [
+          {
+            "accept": { "application/x-acme+zip": [".acme"] },
+            "icons": [{ "src": "acme-192.png", "sizes": "192x192", "type": "image/png" }]
+          }
+        ]
+      }
+    }
+  }
+}
+```
+
+Notes:
+
+- Entries only declare **which** file types to accept: `accept`, optional `icons` and optional `launch_type`. There is **no `action` field** — opening the files requires Connect's own runtime handling, so every handler opens at Connect's app root. A fragment that tries to set `action` fails validation.
+- Extensions must start with a dot. This is validated at build time, since browsers silently ignore entries without it.
+- Contributed entries are **appended after** Connect's built-in handler and de-duplicated on the whole entry. Browsers associate each extension with the first handler that claims it, so the built-in `.phd` and `.phdm` association cannot be overridden by a package.
+- File handling only activates for an **installed** PWA on a production build — it cannot be exercised through `ph connect dev`.
 
 ### Caching
 
@@ -26686,11 +26726,11 @@ A malformed package fragment is never fatal: the build warns (naming the package
 
 Precedence is `Connect defaults < package fragments (declared order) < the project's own manifest < project connect.pwa`:
 
-| Field type                                   | Strategy                       |
-| -------------------------------------------- | ------------------------------ |
-| Manifest scalars                             | Deep-merge — **project wins**  |
-| `icons`, globs, `runtimeCaching`, denylist   | **Additive**                   |
-| `maximumFileSizeToCacheInBytes`              | The **max** across layers      |
+| Field type                                                  | Strategy                       |
+| ----------------------------------------------------------- | ------------------------------ |
+| Manifest scalars, including `launch_handler`                 | Deep-merge — **project wins**  |
+| `icons`, `file_handlers`, globs, `runtimeCaching`, denylist | **Additive**                   |
+| `maximumFileSizeToCacheInBytes`                             | The **max** across layers      |
 
 Additive fields let a package always add offline coverage without a later layer dropping it. If two packages set the same scalar to different values and the project doesn't settle it, the build warns and the last-loaded wins — set that field in `connect.pwa` to decide it explicitly (packages agreeing on the same value is fine and doesn't warn).
 
@@ -26707,8 +26747,9 @@ Then confirm the emitted `manifest.webmanifest` and `service-worker.js` carry yo
 
 ## Reference
 
+- [MDN — Web app manifest](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Manifest), with member pages for [`icons`](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Manifest/Reference/icons), [`file_handlers`](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Manifest/Reference/file_handlers) and [`launch_handler`](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Manifest/Reference/launch_handler).
+- [MDN — `LaunchQueue`](https://developer.mozilla.org/en-US/docs/Web/API/LaunchQueue) — how launched files reach the app at runtime.
 - [`vite-plugin-pwa`](https://vite-pwa-org.netlify.app/) and Workbox — [`generateSW`](https://developer.chrome.com/docs/workbox/modules/workbox-build), [strategies](https://developer.chrome.com/docs/workbox/modules/workbox-strategies).
-- [MDN — Web app manifest](https://developer.mozilla.org/en-US/docs/Web/Manifest).
 - [Configure your environment](../docs/docs/04-ConfigureEnvironment.md) — precedence, CLI, Docker.
 - [Publish your package](../docs/docs/02-PublishYourProject.md).
 

@@ -80,7 +80,7 @@ Each layer can supply a partial value; missing leaves fall back to the layer bel
 
 Two fields interact with the service worker and deserve a caveat:
 
-- **`connect.pwa` is build-time only.** `ph connect build` merges it (together with package `pwa` fragments) into the generated `service-worker.js` and `manifest.webmanifest`. It is carried along in the dist file for transparency, but the SPA never reads it — editing the dist copy or injecting it via `PH_CONNECT_CONFIG_JSON` has no effect on an already-built worker. See the Academy page "Configure the PWA" for the merge semantics.
+- **`connect.pwa` is build-time only.** `ph connect build` merges it (together with package `pwa` fragments) into the generated `service-worker.js` and `manifest.webmanifest` — including the manifest's `file_handlers` (the built-in `.phd`/`.phdm` OS file association plus any contributed types) and `launch_handler`. It is carried along in the dist file for transparency, but the SPA never reads it — editing the dist copy or injecting it via `PH_CONNECT_CONFIG_JSON` has no effect on an already-built worker. See the Academy page "Configure the PWA" for the merge semantics.
 - **`connect.app.offline` is hybrid.** At build time it decides whether a precaching worker or a self-destroying one is emitted; at boot the SPA reads it to register or unregister the worker (`apps/connect/src/components/app.tsx`, default `true`). Flipping it to `false` at deploy time therefore unregisters the worker on the next load, but flipping it to `true` cannot conjure a worker the build didn't emit.
 
 ### The five ways to feed a value into a layer
@@ -238,6 +238,17 @@ generated from them. Miss a step and the schemas silently drift from the types.
    ```
    This rewrites `packages/builder-tools/connect-utils/runtime-config.schema.json`
    and `packages/shared/clis/source-config.schema.json`. Commit both.
+
+**`connect.pwa.*` fields have a sixth artefact.** The zod `PwaConfigSchema` /
+`PwaManifestOverrideSchema` in `packages/shared/document-model/schemas.ts` is
+the validator `ph connect build` actually runs against `connect.pwa` (via
+`validateProjectPwaConfig`), and it is hand-maintained: `emit-schemas.ts` does
+not regenerate it, and the coverage test below does not cover it (there is no
+`pwa` default). The `z.ZodType<PHConnectPwa>` annotation only pins it to the TS
+type, not to the schema fragment, and does not force it to gain a newly-added
+optional field. So when you add a `connect.pwa.*` field, declare it there too —
+the objects are strict (`z.strictObject`), so a field the schema doesn't know
+fails the build as an unrecognized key rather than being silently dropped.
 
 Then consume it in the SPA via `getRuntimeConfig().connect?.<block>?.<field>`
 (or add a typed accessor in `apps/connect/src/connect.config.ts`).

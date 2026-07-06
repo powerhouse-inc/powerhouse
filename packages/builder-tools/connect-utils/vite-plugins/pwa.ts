@@ -4,6 +4,7 @@ import { VitePWA } from "vite-plugin-pwa";
 import { connectPwaIconsPlugin } from "./pwa-icons.js";
 import {
   applyPwaOverrides,
+  FILE_HANDLER_ACTION,
   type ConnectPwaManifest,
   type ConnectWorkboxOptions,
 } from "./pwa-overrides.js";
@@ -27,12 +28,55 @@ const BASE_MANIFEST: ConnectPwaManifest = {
     { src: "pwa-192x192.png", sizes: "192x192", type: "image/png" },
     { src: "pwa-512x512.png", sizes: "512x512", type: "image/png" },
     {
-      src: "pwa-512x512.png",
+      // Full-bleed variant: maskable icons get cropped to the platform shape,
+      // so the logo sits inside the safe zone instead of reusing the rounded
+      // "any" icon (whose transparent corners would show through the mask).
+      src: "pwa-512x512-maskable.png",
       sizes: "512x512",
       type: "image/png",
       purpose: "maskable",
     },
   ],
+  // OS-level file associations for the installed PWA (File Handling API,
+  // Chromium desktop). Powerhouse documents are zip archives, but keying on
+  // application/zip would make Connect a candidate handler for EVERY zip on
+  // MIME-keyed platforms — hence the vendor types with the RFC 6839 +zip
+  // suffix. Config-contributed handlers are appended after this entry, and
+  // Chromium is first-registered-wins per extension, so .phd/.phdm cannot be
+  // hijacked by a package. Consuming the launched files happens in the
+  // Connect SPA (launchQueue consumer).
+  file_handlers: [
+    {
+      action: FILE_HANDLER_ACTION,
+      accept: {
+        "application/vnd.powerhouse.document+zip": [".phd"],
+        "application/vnd.powerhouse.document-model+zip": [".phdm"],
+      },
+      // OS file-type icons: the same Powerhouse document icon the in-app
+      // import list shows. Declared per spec, but note Chromium doesn't
+      // consume them on desktop yet — macOS synthesizes document icons from
+      // the app icon (no CFBundleTypeIconFile is written), and Windows
+      // support is unimplemented (FileHandlingIconsSupportedByOs() is false,
+      // crbug.com/40185571). Shipping them is forward-compatible and costs
+      // nothing. Assets emitted by connectPwaIconsPlugin, precached via the
+      // png glob.
+      icons: [
+        {
+          src: "document-icon-192x192.png",
+          sizes: "192x192",
+          type: "image/png",
+        },
+        {
+          src: "document-icon-512x512.png",
+          sizes: "512x512",
+          type: "image/png",
+        },
+      ],
+    },
+  ],
+  // Opening a handled file focuses the running Connect window (launchQueue
+  // delivers the file there) instead of spawning a new window per file.
+  launch_handler: { client_mode: "focus-existing" },
 };
 
 /**

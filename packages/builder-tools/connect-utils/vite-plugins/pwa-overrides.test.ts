@@ -1,15 +1,23 @@
 import { describe, expect, it } from "vitest";
 import {
   applyPwaOverrides,
+  FILE_HANDLER_ACTION,
   type ConnectPwaManifest,
   type ConnectWorkboxOptions,
 } from "./pwa-overrides.js";
 
 describe("applyPwaOverrides", () => {
+  const baseFileHandler = {
+    action: FILE_HANDLER_ACTION,
+    accept: { "application/vnd.powerhouse.document+zip": [".phd"] },
+    icons: [{ src: "pwa-192x192.png", sizes: "192x192", type: "image/png" }],
+  };
   const baseManifest: ConnectPwaManifest = {
     name: "Powerhouse Connect",
     theme_color: "#ffffff",
     icons: [{ src: "pwa-192x192.png", sizes: "192x192", type: "image/png" }],
+    file_handlers: [baseFileHandler],
+    launch_handler: { client_mode: "focus-existing" },
   };
   const baseFn = ({ url }: { url: URL }) => url.origin === "https://x";
   const baseWorkbox: ConnectWorkboxOptions = {
@@ -127,5 +135,61 @@ describe("applyPwaOverrides", () => {
     expect(re?.test("/api?x=1")).toBe(true);
     // An unescaped `?` would make the `i` optional and match this too.
     expect(re?.test("/apx=1")).toBe(false);
+  });
+
+  it("appends file handlers after the base entry with the fixed action injected", () => {
+    const { manifest } = applyPwaOverrides(
+      { manifest: baseManifest, workbox: baseWorkbox },
+      {
+        manifest: {
+          file_handlers: [
+            {
+              accept: { "application/x-custom+zip": [".custom"] },
+              launch_type: "single-client",
+            },
+          ],
+        },
+      },
+    );
+    expect(manifest.file_handlers).toEqual([
+      baseFileHandler, // base stays first → Chromium keeps .phd/.phdm on Connect
+      {
+        action: FILE_HANDLER_ACTION,
+        accept: { "application/x-custom+zip": [".custom"] },
+        launch_type: "single-client",
+      },
+    ]);
+    // The extra spec'd members survive vite-plugin-pwa's narrower typing.
+    expect(manifest.file_handlers?.[1].launch_type).toBe("single-client");
+  });
+
+  it("drops an override handler that duplicates the base entry", () => {
+    const { manifest } = applyPwaOverrides(
+      { manifest: baseManifest, workbox: baseWorkbox },
+      {
+        manifest: {
+          // Same entry as the base once the fixed action is injected.
+          file_handlers: [
+            {
+              accept: { "application/vnd.powerhouse.document+zip": [".phd"] },
+              icons: [
+                { src: "pwa-192x192.png", sizes: "192x192", type: "image/png" },
+              ],
+            },
+          ],
+        },
+      },
+    );
+    expect(manifest.file_handlers).toEqual([baseFileHandler]);
+  });
+
+  it("lets the override replace launch_handler while leaving other scalars alone", () => {
+    const { manifest } = applyPwaOverrides(
+      { manifest: baseManifest, workbox: baseWorkbox },
+      { manifest: { launch_handler: { client_mode: "navigate-new" } } },
+    );
+    expect(manifest.launch_handler).toEqual({ client_mode: "navigate-new" });
+    expect(manifest.name).toBe("Powerhouse Connect");
+    expect(manifest.file_handlers).toEqual([baseFileHandler]);
   });
 });

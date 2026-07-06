@@ -138,4 +138,136 @@ describe("mergePwaConfig", () => {
       { source: "^/y", flags: "i" },
     ]);
   });
+
+  it("concatenates file_handlers in precedence order and drops exact duplicates", () => {
+    const handler = { accept: { "application/x-a+zip": [".aaa"] } };
+    const merged = mergePwaConfig(
+      [
+        pkg("@a/pkg", { manifest: { file_handlers: [handler] } }),
+        pkg("@b/pkg", {
+          manifest: {
+            file_handlers: [
+              handler, // exact duplicate → dropped
+              { accept: { "application/x-b+zip": [".bbb"] } },
+            ],
+          },
+        }),
+      ],
+      undefined,
+    );
+    expect(merged.manifest?.file_handlers).toEqual([
+      { accept: { "application/x-a+zip": [".aaa"] } },
+      { accept: { "application/x-b+zip": [".bbb"] } },
+    ]);
+  });
+
+  it("treats file_handlers differing only in accept key order as duplicates", () => {
+    const merged = mergePwaConfig(
+      [
+        pkg("@a/pkg", {
+          manifest: {
+            file_handlers: [{ accept: { "app/x": [".x"], "app/y": [".y"] } }],
+          },
+        }),
+        pkg("@b/pkg", {
+          manifest: {
+            file_handlers: [{ accept: { "app/y": [".y"], "app/x": [".x"] } }],
+          },
+        }),
+      ],
+      undefined,
+    );
+    expect(merged.manifest?.file_handlers).toHaveLength(1);
+  });
+
+  it("keeps two handlers accepting different types — both are real contributions", () => {
+    const merged = mergePwaConfig(
+      [
+        pkg("@a/pkg", {
+          manifest: { file_handlers: [{ accept: { "app/x": [".x"] } }] },
+        }),
+        pkg("@b/pkg", {
+          manifest: { file_handlers: [{ accept: { "app/x": [".x2"] } }] },
+        }),
+      ],
+      undefined,
+    );
+    expect(merged.manifest?.file_handlers).toHaveLength(2);
+  });
+
+  it("never reports file_handlers from two packages as a scalar conflict", () => {
+    const onWarn = vi.fn();
+    mergePwaConfig(
+      [
+        pkg("@a/pkg", {
+          manifest: { file_handlers: [{ accept: { "app/x": [".x"] } }] },
+        }),
+        pkg("@b/pkg", {
+          manifest: { file_handlers: [{ accept: { "app/y": [".y"] } }] },
+        }),
+      ],
+      undefined,
+      onWarn,
+    );
+    expect(onWarn).not.toHaveBeenCalled();
+  });
+
+  it("does not warn when two packages agree on launch_handler (compared by value)", () => {
+    const onWarn = vi.fn();
+    const merged = mergePwaConfig(
+      [
+        pkg("@a/pkg", {
+          manifest: { launch_handler: { client_mode: "focus-existing" } },
+        }),
+        pkg("@b/pkg", {
+          manifest: { launch_handler: { client_mode: "focus-existing" } },
+        }),
+      ],
+      undefined,
+      onWarn,
+    );
+    expect(merged.manifest?.launch_handler).toEqual({
+      client_mode: "focus-existing",
+    });
+    expect(onWarn).not.toHaveBeenCalled();
+  });
+
+  it("warns on conflicting launch_handler values and lets the project settle it", () => {
+    const onWarn = vi.fn();
+    const merged = mergePwaConfig(
+      [
+        pkg("@a/pkg", {
+          manifest: { launch_handler: { client_mode: "focus-existing" } },
+        }),
+        pkg("@b/pkg", {
+          manifest: { launch_handler: { client_mode: "navigate-new" } },
+        }),
+      ],
+      undefined,
+      onWarn,
+    );
+    expect(merged.manifest?.launch_handler).toEqual({
+      client_mode: "navigate-new", // last-declared wins
+    });
+    expect(onWarn).toHaveBeenCalledTimes(1);
+    expect(onWarn.mock.calls[0][0]).toMatch(/launch_handler/);
+
+    const settled = vi.fn();
+    const withProject = mergePwaConfig(
+      [
+        pkg("@a/pkg", {
+          manifest: { launch_handler: { client_mode: "focus-existing" } },
+        }),
+        pkg("@b/pkg", {
+          manifest: { launch_handler: { client_mode: "navigate-new" } },
+        }),
+      ],
+      { manifest: { launch_handler: { client_mode: "auto" } } },
+      settled,
+    );
+    expect(withProject.manifest?.launch_handler).toEqual({
+      client_mode: "auto",
+    });
+    expect(settled).not.toHaveBeenCalled();
+  });
 });

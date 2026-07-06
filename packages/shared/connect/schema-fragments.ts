@@ -82,6 +82,19 @@ const pwaUrlPatternSchema = {
   ],
 } as const;
 
+// Reusable web-app-manifest icon shape (manifest.icons and file-handler icons).
+const pwaIconSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["src"],
+  properties: {
+    src: { type: "string" },
+    sizes: { type: "string" },
+    type: { type: "string" },
+    purpose: { type: "string" },
+  },
+} as const;
+
 export const phConnectRuntimeConfigSchema = {
   type: "object",
   additionalProperties: false,
@@ -247,7 +260,7 @@ export const phConnectRuntimeConfigSchema = {
       type: "object",
       additionalProperties: false,
       description:
-        "Progressive-web-app / service-worker overrides, layered on Connect's built-in PWA defaults at build time. Object fields deep-merge (this layer wins); icons, globs, runtimeCaching and denylist patterns are additive; maximumFileSizeToCacheInBytes takes the max across contributors. Only applied when connect.app.offline is true.",
+        "Progressive-web-app / service-worker overrides, layered on Connect's built-in PWA defaults at build time. Object fields deep-merge (this layer wins); icons, file_handlers, globs, runtimeCaching and denylist patterns are additive; maximumFileSizeToCacheInBytes takes the max across contributors. Only applied when connect.app.offline is true.",
       properties: {
         manifest: {
           type: "object",
@@ -269,15 +282,53 @@ export const phConnectRuntimeConfigSchema = {
               type: "array",
               description:
                 "Icons appended to the built-in set and de-duplicated by (src, sizes, purpose).",
+              items: pwaIconSchema,
+            },
+            file_handlers: {
+              type: "array",
+              description:
+                "File associations appended after Connect's built-in .phd/.phdm handler and de-duplicated on the whole entry. Entries only declare accepted types; there is no action field, because opening the files requires Connect's own runtime handling, so every handler opens at the app root.",
               items: {
                 type: "object",
                 additionalProperties: false,
-                required: ["src"],
+                required: ["accept"],
                 properties: {
-                  src: { type: "string" },
-                  sizes: { type: "string" },
-                  type: { type: "string" },
-                  purpose: { type: "string" },
+                  accept: {
+                    type: "object",
+                    description:
+                      "MIME type → file extensions. Each extension must start with '.'; browsers ignore entries without it.",
+                    additionalProperties: {
+                      type: "array",
+                      items: { type: "string", pattern: "^\\." },
+                    },
+                  },
+                  icons: {
+                    type: "array",
+                    description: "OS-level file-type icons.",
+                    items: pwaIconSchema,
+                  },
+                  launch_type: {
+                    type: "string",
+                    enum: ["single-client", "multiple-clients"],
+                  },
+                },
+              },
+            },
+            launch_handler: {
+              type: "object",
+              additionalProperties: false,
+              required: ["client_mode"],
+              description:
+                "How the OS launches the app for handled files/links. Connect defaults to focus-existing.",
+              properties: {
+                client_mode: {
+                  type: "string",
+                  enum: [
+                    "auto",
+                    "focus-existing",
+                    "navigate-existing",
+                    "navigate-new",
+                  ],
                 },
               },
             },

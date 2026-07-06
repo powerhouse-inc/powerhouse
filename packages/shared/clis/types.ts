@@ -130,6 +130,21 @@ export type PHConnectPwaIcon = {
   purpose?: string;
 };
 
+/**
+ * A File Handling API entry a package or project contributes: the OS-level
+ * file types the installed Connect PWA offers to open. There is deliberately
+ * no `action` field — consuming launched files requires runtime code that
+ * lives in Connect itself, so every handler (built-in or contributed) opens
+ * at Connect's app root, injected at build time.
+ */
+export type PHConnectPwaFileHandler = {
+  /** MIME type → file extensions (each must start with "."). */
+  accept: Record<string, string[]>;
+  /** OS-level file-type icons. */
+  icons?: PHConnectPwaIcon[];
+  launch_type?: "single-client" | "multiple-clients";
+};
+
 /** Web-app-manifest fields a package or project may override. */
 export type PHConnectPwaManifest = {
   name?: string;
@@ -141,15 +156,26 @@ export type PHConnectPwaManifest = {
   start_url?: string;
   scope?: string;
   icons?: PHConnectPwaIcon[];
+  /** Extra file associations, appended after Connect's built-in `.phd`/`.phdm` handler. */
+  file_handlers?: PHConnectPwaFileHandler[];
+  /** How the OS launches the app for handled files/links. */
+  launch_handler?: {
+    client_mode:
+      | "auto"
+      | "focus-existing"
+      | "navigate-existing"
+      | "navigate-new";
+  };
 };
 
 /**
  * PWA / service-worker overrides contributed by a package or the project.
  * Layered on top of Connect's hardcoded PWA defaults at build time. Object
- * fields deep-merge (later layer wins); `icons`, `globPatterns`,
- * `globIgnores`, `runtimeCaching` and `navigateFallbackDenylist` are additive
- * (concatenated/unioned); `maximumFileSizeToCacheInBytes` takes the max across
- * contributors. Precedence: defaults < package fragments < project config.
+ * fields deep-merge (later layer wins); `icons`, `file_handlers`,
+ * `globPatterns`, `globIgnores`, `runtimeCaching` and
+ * `navigateFallbackDenylist` are additive (concatenated/unioned);
+ * `maximumFileSizeToCacheInBytes` takes the max across contributors.
+ * Precedence: defaults < package fragments < project config.
  */
 export type PHConnectPwa = {
   manifest?: PHConnectPwaManifest;
