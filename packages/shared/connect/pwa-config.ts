@@ -255,7 +255,9 @@ export function mergePwaConfig(
     // via stableStringify, not by identity — launch_handler is object-valued,
     // and two packages sending equal objects (in any key order) must not read
     // as a conflict.
-    const distinctValues = new Set(setters.map((s) => stableStringify(s.value)));
+    const distinctValues = new Set(
+      setters.map((s) => stableStringify(s.value)),
+    );
     if (distinctValues.size < 2) continue;
     const sources = setters.map((s) => s.source);
     onWarn(
