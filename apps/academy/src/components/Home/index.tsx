@@ -173,13 +173,14 @@ export default function Home(): JSX.Element {
         Run it locally
       </Heading>
       <p className={styles.runSubtitle}>
-        One command spins up a local Vetra instance on your machine — no invite
-        code, nothing to install first.
+        One command installs the Vetra CLI and starts the agent on your machine
+        — no invite code, bring your own Anthropic key.
       </p>
       <section className={styles.commandWrap}>
         <CommandBlock code={LOCAL_INSTALL} />
         <span className={styles.commandNote}>
-          Runs on your own infrastructure · Docker &amp; Kubernetes · offline-first
+          Installs the <code>ph</code> + <code>vetra</code> CLIs · macOS &amp;
+          Linux · Node 24+
         </span>
       </section>
 

@@ -25,7 +25,7 @@ If your account is not yet enabled, `/user` shows the **early-access gate** ("Ve
 
 - **I have an invite code** — paste the code and click **Get Access**.
 - **I don't have a code** — join the waitlist by email, or **Request a code on Discord**.
-- **Run it locally** — no code needed; copy `curl -fsSL https://get.vetra.io | sh` to run your own instance (see the advanced section below).
+- **Run it locally** — no code needed; run Vetra Studio yourself with the `vetra` CLI (see [Running Vetra Studio locally](#running-vetra-studio-locally) below).
 
 The first time you enter, a notice reminds you the product is early:
 
@@ -246,87 +246,56 @@ The studio keeps its state in the URL, under `<slug>.vetra.io/d/<drive-id>`:
 
 ---
 
-Running Vetra Studio locally
+## Running Vetra Studio locally
 
-Prefer to run everything on your own machine? One command installs and starts a
-local Vetra instance — no invite code needed:
+Prefer to run everything on your own machine? Vetra Studio ships as a CLI you run
+yourself — no invite code needed. You bring your own **Anthropic API key** (the
+agent runs on Claude).
+
+**Prerequisites:** Node ≥ 24 on macOS or Linux. pnpm is optional — the installer
+uses it if present, otherwise offers to install it and falls back to npm.
+
+### Quick install
+
+One command installs the `ph` and `vetra` CLIs and offers to launch the agent:
 
 ```bash
 curl -fsSL https://get.vetra.io | sh
 ```
 
-It runs fully on your own infrastructure, supports Docker and Kubernetes out of
-the box, and is offline-first with peer-to-peer sync. When it is ready, open the
-URL the installer prints.
+The first launch sets up Claude auth (bring your own Anthropic API key), then
+prints the Studio URL — open **[http://localhost:8090/](http://localhost:8090/)**
+in a browser. Start the agent again any time with `vetra`.
 
-### From source (advanced)
+### From source
 
-From the `vetra-cli` directory:
-
-```bash
-pnpm dev -i          # dev mode (watch + Vite HMR in reactor-projects)
-# or
-pnpm start -i        # production-mode binaries
-```
-
-Both commands pass `--workdir ../../vetra-test` by default. Once running,
-open **[http://localhost:27370](http://localhost:27370)** in a browser. The terminal prints the URL when
-the embedded Connect server is ready.
-
-> If you see the generic Powerhouse drive explorer instead of Vetra Studio,
-> the SPA bundle is stale. Run both build commands listed under
-> "Rebuilding after editor changes" below and restart.
-
-### Rebuilding after editor changes
-
-Vetra Studio is a static SPA bundled at build time. After editing
-`vetra-app/editors/`\* or `vetra-app/powerhouse.manifest.json` you must run
-**two** commands and restart:
+Clone [vetra-cli](https://github.com/powerhouse-inc/vetra-cli), then install and
+start the agent:
 
 ```bash
-# 1. Rebuild the package exports (document models, editor registrations)
-pnpm --filter vetra-app build
-
-# 2. Rebuild the SPA bundle that connect-server.js serves
-pnpm --filter vetra-app exec ph-cli connect build \
-  --outDir dist/connect \
-  --default-drives-url http://__ph_drive_url__
+pnpm install
+pnpm dev            # interactive agent REPL + embedded Reactor and Switchboard
 ```
 
-Then restart `pnpm dev -i`. The `connect-drive-url` hook stamps the live
-Switchboard drive URL into the bundle on startup; the placeholder above is
-what it replaces.
-
-Skipping step 2 leaves the bundle carrying the pre-edit manifest, and Connect
-will fall back to the generic folder view instead of Vetra Studio.
-
-### Service ports (default)
-
-| Service                    | Port   | Purpose                            |
-| -------------------------- | ------ | ---------------------------------- |
-| Vetra Studio (Connect)     | 27370  | Browser entry point                |
-| Embedded Switchboard       | 59220  | GraphQL + MCP                      |
-| Preview server (local API) | 5180   | Preview state + SSE                |
-| Embedded reverse proxy     | 8090   | Single public port (deployed mode) |
-| Reactor-project Connect    | varies | Per-session BUILD preview          |
-
-### Diagnostics
+Authenticate the agent once:
 
 ```bash
-# Is the preview server up?
-curl -sS http://127.0.0.1:5180/healthz
-
-# What is the current preview target for a session?
-curl -sS "http://127.0.0.1:5180/resolve?project=<project-dir>&doc=<slug-or-id>"
-
-# Start a reactor project manually (idempotent)
-curl -sS -X POST "http://127.0.0.1:5180/start?project=<project-dir>"
-
-# Stream reactor-project lifecycle events
-curl -sS -N http://127.0.0.1:5180/events
-
-# Switchboard schema sanity check
-curl -sS -X POST http://localhost:59220/graphql \
-  -H "content-type: application/json" \
-  -d '{"query":"{ __schema { types { name } } }"}' | grep -i drive
+export ANTHROPIC_API_KEY=sk-ant-...
 ```
+
+When the agent starts a build, the logs print
+`Vetra Studio: http://localhost:8090/d/<driveId>` — open that URL to see your
+work live, and iterate by continuing the conversation. To wipe the local dev
+workspace and start clean, run `pnpm dev:reset`.
+
+### Service ports
+
+A single `vetra` process runs the REPL, an embedded Reactor, and an embedded
+Switchboard. It reserves three ports with no fallback, so free them first if
+they are already in use:
+
+| Service              | Port  | Purpose                                |
+| -------------------- | ----- | -------------------------------------- |
+| Vetra Studio (proxy) | 8090  | Browser entry point (the URL you open) |
+| Connect              | 27370 | Editor front-end                       |
+| Switchboard          | 59220 | GraphQL API                            |
