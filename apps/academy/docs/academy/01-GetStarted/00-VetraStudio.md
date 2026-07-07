@@ -2,7 +2,7 @@
 
 Vetra Studio is the browser UI for the Vetra agent. You chat with the agent, watch it work across the four-phase product cycle (Ideate → Specify → Build → Deploy), and see a live preview of the product it builds.
 
-Each Studio runs as a **dedicated cloud agent** tied to your identity. You provide an Anthropic API key, and Vetra provisions an isolated environment that hosts the agent, its workspace, and the preview services.
+Each Studio runs as a **dedicated cloud agent** tied to your identity. Vetra provisions an isolated environment that hosts the agent, its workspace, and the preview services.
 
 ## What you can build
 
@@ -16,34 +16,42 @@ With the Vetra agent you build **local-first, AI-ready, specification-driven** p
 
 ## Getting started
 
-Vetra Studio is in beta. You need an early-access code from Powerhouse.
+Vetra Studio is in **pre-alpha**. You reach it with an early-access code from Powerhouse.
 
 1. Open **[vetra.io](https://vetra.io)** and log in with your wallet (via Renown).
 2. Click **Vetra Studio** in the top-right header. This opens your **Products** dashboard at `/user`.
 
-Each product is one Vetra Studio instance, running on its own subdomain (`vetra-agent.<slug>.vetra.io`). A studio shows **Ready** once it is provisioned.
+If your account is not yet enabled, `/user` shows the **early-access gate** ("Vetra Studio — Early access — choose how you'd like to get started") with three paths:
+
+- **I have an invite code** — paste the code and click **Get Access**.
+- **I don't have a code** — join the waitlist by email, or **Request a code on Discord**.
+- **Run it locally** — no code needed; copy `curl -fsSL https://get.vetra.io | sh` to run your own instance (see the advanced section below).
+
+The first time you enter, a notice reminds you the product is early:
 
 <figure className="image-container">
   <img
-    src={require("./images/vetra-studio/products-dashboard.png").default}
-    alt="Vetra Studio Products dashboard"
+    src={require("./images/vetra-studio/prealpha-warning.png").default}
+    alt="Vetra Studio pre-alpha warning dialog"
   />
-  <figcaption>The Products dashboard lists your Vetra Studio instances. Each is a dedicated cloud agent on its own subdomain.</figcaption>
+  <figcaption>Vetra Studio is in pre-alpha. Download your documents or push them to GitHub as a back-up at the end of a cycle.</figcaption>
 </figure>
 
 ### Create a studio
 
-To create a new instance, click **Create new product…** and provide an **Anthropic API key**. The studio runs the agent on Claude using this key.
+On the Products dashboard, click **Create new product**. With an invite code the studio provisions right away — the API key that powers the agent is supplied for you behind the code, so there is no key to enter.
+
+The product card moves through **Provisioning…** (not yet openable) to **Ready**. Click **Open →** to launch the studio in a new tab.
 
 <figure className="image-container">
   <img
-    src={require("./images/vetra-studio/create-studio.png").default}
-    alt="Create a new Vetra Studio product"
+    src={require("./images/vetra-studio/products-dashboard.png").default}
+    alt="Vetra Studio Products dashboard with a Ready product"
   />
-  <figcaption>A studio runs as a dedicated cloud agent. Provide an Anthropic API key to start it.</figcaption>
+  <figcaption>The Products dashboard lists your studios. Each is a dedicated cloud agent on its own subdomain, shown as Ready once provisioned.</figcaption>
 </figure>
 
-The instance moves through **Provisioning…** (not yet openable) to **Ready**. Click **Open →** to launch the studio in a new tab.
+Each product is one Vetra Studio instance running on its own subdomain (`<slug>.vetra.io`). Opening it lands you in Powerhouse Connect at `<slug>.vetra.io/d/<drive-id>`.
 
 ---
 
@@ -53,17 +61,20 @@ A studio opens in Powerhouse Connect with two panes:
 
 - **Chat pane** (left): lists chat sessions, and renders the active session's message history when one is open.
 - **Resize handle** (vertical strip): drag to adjust pane width.
-- **Main pane** (right): shows the four phase-cycle cards by default, and opens a phase section, a document, or the build preview when you navigate.
+- **Main pane** (right): shows the phase-cycle cards by default, and opens a phase section, a document, or the build preview when you navigate.
 - **Toolbar** (far left): **Home**, **Open Account** (Renown), and **Settings**.
-- **Auto-follow agent** (top of the main pane, on by default): when checked, the main pane follows the agent and opens documents as the agent creates them.
+- **Main-pane top bar**: a **Version info** button, an **Authorize agent** button (see [Authorizing the agent](#authorizing-the-agent)), and the **Auto-follow agent** checkbox.
+- **Auto-follow agent** (on by default): when checked, the main pane follows the agent and opens documents as the agent creates them.
 
 <figure className="image-container">
   <img
     src={require("./images/vetra-studio/studio-home.png").default}
     alt="Vetra Studio home with empty session list and phase cards"
   />
-  <figcaption>A fresh studio: empty session list on the left, the four phase cards on the right.</figcaption>
+  <figcaption>A fresh studio: empty session list on the left, the four phase cards on the right under "Product development cycle."</figcaption>
 </figure>
+
+The main pane opens on **Product development cycle**. Alongside the four phase cards it offers a **Take a tour** button and an **example-prompt carousel** — cycle through the sample prompts and **Copy example prompt** to seed your first session.
 
 ---
 
@@ -81,37 +92,45 @@ Sessions are scoped to your identity: signing in with a different identity shows
 
 ## Talking to the agent
 
-The chat session is how you direct the agent. Type a message; the agent responds and runs tools. Each tool call appears inline as an expandable card showing its name, status (**Running** / **Completed** / **Error**), and a result preview. While the agent works, the send button becomes **Stop**.
+The chat session is how you direct the agent. Type a message; the agent responds and runs tools. Each tool call appears inline as an expandable card showing its name, status, and a result preview. While the agent works, the send button becomes **Stop**.
+
+<figure className="image-container">
+  <img
+    src={require("./images/vetra-studio/active-session.png").default}
+    alt="An active Vetra Studio session with agent tool cards and an auto-followed document"
+  />
+  <figcaption>An active session. Tool cards stream inline while the main pane auto-follows the document the agent is writing.</figcaption>
+</figure>
 
 Tools you will see include:
 
-- `skill` / `skill_read` — the agent loads a named skill (such as `document-modeling`, `drive-app-creation`) and reads its reference docs.
-- `spec-create`, `spec-generate`, `spec-update`, `spec-list` — create and edit specification documents.
-- `reactor-project-init`, `reactor-project-start`, `reactor-project-check`, `reactor-project-ls` — scaffold and run the project that hosts the preview.
-- `spec-preview-list`, `spec-preview-show` — surface a document in the BUILD pane.
-- `mastra_workspace_`\* — read, write, grep, and run commands in the agent's workspace.
+- `Using skill: <name>` / `Reading skill: <name>` — the agent loads a named skill (such as `document-modeling`, `document-editor-creation`, `drive-app-creation`) and reads its reference docs.
+- `spec-create`, `spec-generate`, `spec-update`, `spec-list`, `spec-schema` — create, generate, and edit specification documents. Create and update cards name the document, for example `spec-create · Hotel Breakfast Problem Sheet`.
+- `reactor-project-init`, `reactor-project-start`, `reactor-project-check`, `reactor-project-ls`, `reactor-project-ps` — scaffold, run, and inspect the project that hosts the preview.
+- Workspace actions in the agent's project appear as **Read**, **Write**, **Edit File**, **List**, and **Grep** cards with the file path.
+- `spec-preview-show` — surface a running app in the BUILD pane.
 
 A status bar at the bottom of the chat shows the session state: **Active**, start time, message count, token count, and tool-call count.
 
 The agent can:
 
-- Create and iterate on **spec documents** (problem and audience sheets, feature lists, document models).
+- Create and iterate on **spec documents** (problem, audience, and brand sheets, a feature, and a work breakdown structure).
+- Design **document models** and generate their reducers, editors, and apps.
 - Scaffold a **reactor project** that hosts a live editor preview.
-- Generate code (document models, editors, processors) into that project.
-- Surface a **preview document** in the BUILD pane.
+- Surface a **preview** in the BUILD pane and, when you're ready, publish to the cloud.
 
 ---
 
 ## The phase cycle
 
-The main pane shows four phase cards when no section is open. Click a card to open its section, or navigate with the breadcrumb (`Home › <Phase>`).
+The main pane shows four numbered phase cards when no section is open. Click a card to open its section, or navigate with the breadcrumb (`Home › <Phase>`).
 
-| Phase                                | What happens there                                            |
-| ------------------------------------ | ------------------------------------------------------------- |
-| **Ideate** — Problem Definition      | Problem and audience documents, feature lists                 |
-| **Specify** — Solution Design        | Document models and solution-design specs, grouped by project |
-| **Build** — Implementation & Testing | Live preview of the agent's in-progress work                  |
-| **Deploy** — Delivery                | Publish the studio's services to Vetra Cloud                  |
+| Phase                                | What happens there                                                                     |
+| ------------------------------------ | -------------------------------------------------------------------------------------- |
+| **1 · Ideate** — Problem Definition  | Frame the problem and audience — problem, audience, and brand sheets, a feature, a WBS  |
+| **2 · Specify** — Solution Design    | Pin down the data model, workflow, and states — document models grouped by project     |
+| **3 · Build** — Implementation & Testing | Watch the agent generate and test code, with a live preview of the running app       |
+| **4 · Deploy** — Delivery            | Publish the package and run it in your cloud environments                              |
 
 A card's availability depends on progress: BUILD shows a preview only after the agent scaffolds a project, and DEPLOY needs you to sign in with Renown.
 
@@ -119,7 +138,7 @@ A card's availability depends on progress: BUILD shows a preview only after the 
 
 ## Ideate and Specify
 
-The Ideate and Specify sections hold the documents the agent writes. Specify groups them into **projects**: each project is a folder of specs and document models.
+The Ideate and Specify sections hold the documents the agent writes. In Ideate the agent frames the product — a problem sheet, an audience sheet, a brand sheet, a feature, and a work breakdown structure. Specify then groups the **document models** into **projects**: each project is a folder of specs and models.
 
 <figure className="image-container">
   <img
@@ -129,30 +148,30 @@ The Ideate and Specify sections hold the documents the agent writes. Specify gro
   <figcaption>Specify groups documents into projects. Each project is a folder of specs and document models.</figcaption>
 </figure>
 
-With **Auto-follow agent** on, a document opens in the main pane as the agent creates it. Opening a document **pauses the agent** — the control bar reads "paused — close the document to resume." Close the document to let the agent continue.
+With **Auto-follow agent** on, a document opens in the main pane as the agent creates it, so you watch each sheet and model take shape without interrupting the run.
 
-A document editor has Undo / Redo / Download, a revision-history view, an **Open link in Switchboard** action, and a **Close document** button. For a document model you edit its type, description, and state schema directly.
+A document editor has a **Download** action and a revision-history view. For a **document model** you edit its Document Type, Description, Author, Website, and Model Extension, and its state schema under **Global** / **Local** tabs (with **Show standard library** for reference types).
 
 <figure className="image-container">
   <img
     src={require("./images/vetra-studio/document-editor.png").default}
     alt="Document-model editor in Vetra Studio"
   />
-  <figcaption>A document-model editor. Opening a document pauses the agent until you close it.</figcaption>
+  <figcaption>A document-model editor: Global and Local state-schema tabs, initial value, and operations.</figcaption>
 </figure>
 
 ---
 
 ## The BUILD preview
 
-The BUILD pane hosts an iframe that deep-links into the reactor project the agent spawned for the session. The sequence:
+The BUILD pane deep-links into the reactor project the agent spawned for the session. The sequence:
 
 1. The agent calls `reactor-project-init` and `reactor-project-start` — visible as tool cards in the chat.
-2. The dev server warms up (typically 10–30 seconds) and the project reports `[ready]`.
-3. The agent calls `spec-preview-show` with a project, drive, and app reference. The iframe loads that app inside the project's Connect, and a `<project> · running` chip appears in the breadcrumb.
-4. Any code the agent generates after that is picked up by Vite HMR — the iframe updates without a full reload.
+2. The dev server warms up (typically 10–30 seconds) and the project reports ready.
+3. The agent calls `spec-preview-show` with a project, drive, and app reference to surface the app in the BUILD pane.
+4. Any code the agent generates after that is picked up by Vite HMR — the preview updates without a full reload.
 
-Until the agent calls `spec-preview-show`, the pane reads **"No preview yet."** A running reactor project is not enough on its own; the agent has to surface a preview document.
+Until the agent surfaces a preview, the pane reads **"No preview yet — The BUILD preview appears once the agent scaffolds a project for this session."** A running reactor project is not enough on its own; the agent has to surface a preview.
 
 <figure className="image-container">
   <img
@@ -163,7 +182,7 @@ Until the agent calls `spec-preview-show`, the pane reads **"No preview yet."** 
 </figure>
 
 :::warning[The preview is a dev render, not a full runtime]
-The BUILD preview runs the editors and apps in a local dev reactor. **Processors do not run here** — they execute server-side in Switchboard once the studio is deployed. Preview drives are also ephemeral and reset between sessions. So an action wired through a processor (for example, syncing a guest order to a staff board) only takes effect after you deploy.
+The BUILD preview runs the editors and apps in a local dev reactor. **Processors do not run here** — they execute server-side in Switchboard once the studio is deployed. Preview drives are also ephemeral and reset between sessions. So an action wired through a processor (for example, syncing a guest order to a staff board) only takes effect after you deploy. Because it is pre-alpha, the preview does not always mount; if it stays on "No preview yet," deploy the app to see it running end to end.
 :::
 
 Use the breadcrumb at the top of the pane to navigate back to the phase-cycle home.
@@ -172,9 +191,23 @@ Use the breadcrumb at the top of the pane to navigate back to the phase-cycle ho
 
 ## Deploy
 
-The Deploy section publishes the studio's services to **Vetra Cloud**. Sign in with **Renown** to see and manage your environments. Each environment runs **Powerhouse Connect** at `connect.<slug>.vetra.io` and **Switchboard** (the GraphQL API) at `switchboard.<slug>.vetra.io/graphql`, and gets a public subdomain.
+The Deploy section publishes your project's package to **Vetra Cloud**. Sign in with **Renown** first (the top bar then shows your address with a **Disconnect** button).
 
-The environment view shows a deployment name, a **Changes pending / Ready** status, and a per-service list with enable toggles and copyable URLs. **Open in Vetra Cloud** opens the full environment dashboard.
+Deploy opens on a **Projects** list. Each project shows a status (**Not deployed**, **Needs release**) and a **Set up deploy** button. Click it to open the deploy detail:
+
+1. Under **Available environments**, the project version (for example `morning-order@1.0.0`) is listed. A new project isn't running anywhere yet.
+2. Click **New environment**, give it a name, and click **Create & deploy**. A `vetra.io` subdomain is assigned automatically.
+3. The environment rolls out: **Approved → Deploying → Ready**. When it reports **Up to date · v1.0.0**, the deploy is live.
+
+<figure className="image-container">
+  <img
+    src={require("./images/vetra-studio/deploy-ready.png").default}
+    alt="A deployed Vetra Studio environment showing Ready status and service links"
+  />
+  <figcaption>A live environment: Ready status, its subdomain, and Open / Connect / Switchboard actions.</figcaption>
+</figure>
+
+Each environment runs **Powerhouse Connect** at `<env-slug>-connect.vetra.io` and **Switchboard** (the GraphQL API) at `<env-slug>-switchboard.vetra.io/graphql`. Use **Open**, **Connect**, and **Switchboard** on the environment card to reach them.
 
 For environment management, services, sizing, and versions, see [Vetra Cloud](./01-VetraCloud.md).
 
@@ -182,21 +215,18 @@ For environment management, services, sizing, and versions, see [Vetra Cloud](./
 
 ## Authorizing the agent
 
-To let the agent sign actions with your identity, click **Authorize agent** (or **Connect with Renown** in Deploy). Renown shows a **Confirm Authorization** screen: it authorizes the studio's subdomain to sign actions on your behalf. Once confirmed, the control bar shows **Authorized via Renown** with your address and a **Disconnect** button.
+To let the agent sign actions with your identity, click **Authorize agent**. This runs the Renown flow that authorizes the studio's subdomain to sign actions on your behalf. Once confirmed, the top bar shows **Renown** with your address and a **Disconnect** button.
 
-Authorization is independent of chat sessions, and it switches the studio's active identity from a generated `did:key` to your wallet identity (`did:pkh`).
+Authorization is independent of chat sessions, and it switches the studio's active identity from a generated `did:key` to your wallet identity (`did:pkh`). Because sessions are scoped per identity, switching identity changes which sessions the list shows.
 
 ---
 
 ## Session URLs
 
-The selected session id is kept in the `?session=<id>` query parameter:
+The studio keeps its state in the URL, under `<slug>.vetra.io/d/<drive-id>`:
 
-- Sharing the URL opens the same session in another tab or browser.
-- Browser back/forward navigates between sessions.
-- Reloading restores the selection without losing your place.
-
-When the agent opens a document, the URL also carries a `doc=<id>` parameter.
+- The selected session id is the `?session=<id>` query parameter. Sharing the URL opens the same session in another tab or browser; browser back/forward navigates between sessions; reloading restores the selection.
+- When the agent opens a document, the URL also carries a `doc=<id>` parameter.
 
 ---
 
@@ -216,7 +246,20 @@ When the agent opens a document, the URL also carries a `doc=<id>` parameter.
 
 ---
 
-Running Vetra Studio locally (advanced)
+Running Vetra Studio locally
+
+Prefer to run everything on your own machine? One command installs and starts a
+local Vetra instance — no invite code needed:
+
+```bash
+curl -fsSL https://get.vetra.io | sh
+```
+
+It runs fully on your own infrastructure, supports Docker and Kubernetes out of
+the box, and is offline-first with peer-to-peer sync. When it is ready, open the
+URL the installer prints.
+
+### From source (advanced)
 
 From the `vetra-cli` directory:
 

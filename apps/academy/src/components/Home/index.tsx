@@ -4,15 +4,7 @@ import Link from "@docusaurus/Link";
 import Heading from "@theme/Heading";
 import styles from "./styles.module.css";
 
-const steps = [
-  { n: "1", label: "Install the CLI", code: "pnpm install -g ph-cmd" },
-  { n: "2", label: "Launch the agent", code: "placeholder curl" },
-  {
-    n: "3",
-    label: "Describe what you want",
-    code: '"Build a task tracker with…"',
-  },
-];
+const LOCAL_INSTALL = "curl -fsSL https://get.vetra.io | sh";
 
 /* Inline Lucide icons (lucide.dev) — no dependency, currentColor stroke. */
 type IconProps = { className?: string };
@@ -69,7 +61,7 @@ function CheckIcon(p: IconProps) {
   );
 }
 
-function StepCode({ code }: { code: string }): JSX.Element {
+function CommandBlock({ code }: { code: string }): JSX.Element {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
@@ -82,17 +74,28 @@ function StepCode({ code }: { code: string }): JSX.Element {
   return (
     <button
       type="button"
-      className={styles.stepCode}
+      className={styles.command}
       onClick={handleCopy}
       title="Copy to clipboard"
       aria-label={copied ? "Copied" : `Copy "${code}"`}
     >
-      <code className={styles.stepCodeText}>{code}</code>
-      {copied ? (
-        <CheckIcon className={styles.stepCodeIcon} />
-      ) : (
-        <CopyIcon className={styles.stepCodeIcon} />
-      )}
+      <span className={styles.commandPrompt} aria-hidden="true">
+        $
+      </span>
+      <code className={styles.commandText}>{code}</code>
+      <span className={styles.commandCopy}>
+        {copied ? (
+          <>
+            <CheckIcon className={styles.commandCopyIcon} />
+            Copied
+          </>
+        ) : (
+          <>
+            <CopyIcon className={styles.commandCopyIcon} />
+            Copy
+          </>
+        )}
+      </span>
     </button>
   );
 }
@@ -167,18 +170,17 @@ export default function Home(): JSX.Element {
       </header>
 
       <Heading as="h2" className={styles.stepsTitle}>
-        Run it locally with your own key
+        Run it locally
       </Heading>
-      <section className={styles.steps}>
-        {steps.map((s) => (
-          <div key={s.n} className={styles.step}>
-            <span className={styles.stepNumber}>{s.n}</span>
-            <div>
-              <div className={styles.stepLabel}>{s.label}</div>
-              <StepCode code={s.code} />
-            </div>
-          </div>
-        ))}
+      <p className={styles.runSubtitle}>
+        One command spins up a local Vetra instance on your machine — no invite
+        code, nothing to install first.
+      </p>
+      <section className={styles.commandWrap}>
+        <CommandBlock code={LOCAL_INSTALL} />
+        <span className={styles.commandNote}>
+          Runs on your own infrastructure · Docker &amp; Kubernetes · offline-first
+        </span>
       </section>
 
       <hr className={styles.divider} />
