@@ -4,7 +4,7 @@ import {
   ReactorBuilder,
   ReactorClientBuilder,
   type Database,
-  type ReactorClientModule,
+  type InProcessReactorClientModule,
 } from "@powerhousedao/reactor";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import { documentModelDocumentModelModule } from "document-model";
@@ -16,7 +16,7 @@ import { truncateAllTables } from "../src/pglite/drop.js";
 describe("truncateAllTables", () => {
   let pg: PGlite;
   let db: Kysely<any>;
-  let module: ReactorClientModule;
+  let module: InProcessReactorClientModule;
 
   beforeEach(() => {
     pg = new PGlite();

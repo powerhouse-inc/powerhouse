@@ -15,7 +15,10 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { IReactorClient } from "../../src/client/types.js";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import { ReactorClientBuilder } from "../../src/core/reactor-client-builder.js";
-import type { IReactor, ReactorClientModule } from "../../src/core/types.js";
+import type {
+  IReactor,
+  InProcessReactorClientModule,
+} from "../../src/core/types.js";
 
 const VERSIONED_DOC_TYPE = "test/versioned-items";
 
@@ -250,7 +253,7 @@ const upgradeManifest: UpgradeManifest<readonly [1, 2]> = {
 describe("ReactorClient Versioning Integration Tests", () => {
   let client: IReactorClient;
   let reactor: IReactor;
-  let module: ReactorClientModule;
+  let module: InProcessReactorClientModule;
 
   beforeEach(async () => {
     const reactorBuilder = new ReactorBuilder()

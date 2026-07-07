@@ -112,8 +112,10 @@ describe("SyncManager Integration", () => {
 
       const remotes = syncManager.list();
       expect(remotes).toHaveLength(1);
-      expect(remotes[0].name).toBe("remote1");
-      expect(remotes[0].collectionId.toString()).toBe("drive.main.collection1");
+      expect(remotes[0].meta.name).toBe("remote1");
+      expect(remotes[0].meta.collectionId.toString()).toBe(
+        "drive.main.collection1",
+      );
     });
 
     it("should shutdown cleanly", async () => {
@@ -142,9 +144,11 @@ describe("SyncManager Integration", () => {
         { sinceTimestampUtcMs: "0" },
       );
 
-      expect(remote.name).toBe("remote1");
-      expect(remote.collectionId.toString()).toBe("drive.main.collection1");
-      expect(remote.filter.documentId).toContain("doc1");
+      expect(remote.meta.name).toBe("remote1");
+      expect(remote.meta.collectionId.toString()).toBe(
+        "drive.main.collection1",
+      );
+      expect(remote.meta.filter.documentId).toContain("doc1");
 
       const storedRemote = await syncRemoteStorage.get("remote1");
       expect(storedRemote.name).toBe("remote1");
@@ -187,7 +191,7 @@ describe("SyncManager Integration", () => {
 
       const remote = syncManager.getByName("remote1");
 
-      expect(remote.name).toBe("remote1");
+      expect(remote.meta.name).toBe("remote1");
     });
 
     it("should list all remotes", async () => {
@@ -797,12 +801,12 @@ describe("SyncManager Integration", () => {
         },
       ];
 
-      const channel = channelRegistry.get(remote.id);
+      const channel = channelRegistry.get(remote.meta.id);
       expect(channel).toBeDefined();
 
       channel!.receive({
         type: "operations",
-        channelMeta: { id: remote.id },
+        channelMeta: { id: remote.meta.id },
         operations,
       });
 
@@ -868,10 +872,10 @@ describe("SyncManager Integration", () => {
         },
       ];
 
-      const channel = channelRegistry.get(remote.id);
+      const channel = channelRegistry.get(remote.meta.id);
       channel!.receive({
         type: "operations",
-        channelMeta: { id: remote.id },
+        channelMeta: { id: remote.meta.id },
         operations,
       });
 

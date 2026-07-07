@@ -1,3 +1,4 @@
+import { childLogger } from "document-model";
 import type { ModelManifestEntry } from "../executor/worker/protocol.js";
 import { DuplicateModuleError, ModuleNotFoundError } from "./errors.js";
 import type {
@@ -28,6 +29,9 @@ export class DocumentModelResolver implements IDocumentModelResolver {
   private loadingModels = new Map<string, Promise<void>>();
   private failedModelTypes = new Set<string>();
   private broadcastHook: ModelLoadedBroadcastHook | null = null;
+  private modelLoadedHook: ((documentType: string) => Promise<void>) | null =
+    null;
+  private readonly logger = childLogger(["reactor", "document-model-resolver"]);
 
   constructor(
     private registry: IDocumentModelRegistry,
@@ -41,6 +45,14 @@ export class DocumentModelResolver implements IDocumentModelResolver {
    */
   setBroadcastHook(hook: ModelLoadedBroadcastHook): void {
     this.broadcastHook = hook;
+  }
+
+  /**
+   * Post-success hook called with the document type after a model loads, so
+   * peers (tabs) can load the same type via the event bus.
+   */
+  setModelLoadedHook(hook: (documentType: string) => Promise<void>): void {
+    this.modelLoadedHook = hook;
   }
 
   async ensureModelLoaded(documentType: string): Promise<void> {
@@ -66,25 +78,42 @@ export class DocumentModelResolver implements IDocumentModelResolver {
 
     const loadPromise = (async () => {
       try {
-        const module = await this.loader.load(documentType);
-        const [result] = this.registry.registerModules(module);
-        if (
-          result.status === "error" &&
-          !DuplicateModuleError.isError(result.error)
-        ) {
-          throw result.error as Error;
-        }
-        await this.broadcastIfPossible(documentType);
+        await this.loadRegisterAndBroadcast(documentType);
       } catch (error) {
         this.failedModelTypes.add(documentType);
         throw error;
       } finally {
         this.loadingModels.delete(documentType);
       }
+      await this.notifyPeersModelLoaded(documentType);
     })();
 
     this.loadingModels.set(documentType, loadPromise);
     return loadPromise;
+  }
+
+  private async loadRegisterAndBroadcast(documentType: string): Promise<void> {
+    const module = await this.loader.load(documentType);
+    const [result] = this.registry.registerModules(module);
+    if (
+      result.status === "error" &&
+      !DuplicateModuleError.isError(result.error)
+    ) {
+      throw result.error as Error;
+    }
+    await this.broadcastIfPossible(documentType);
+  }
+
+  // Best-effort peer notification; its failure must not fail the registered load.
+  private async notifyPeersModelLoaded(documentType: string): Promise<void> {
+    if (!this.modelLoadedHook) {
+      return;
+    }
+    try {
+      await this.modelLoadedHook(documentType);
+    } catch (error) {
+      this.logger.warn(`MODEL_LOADED hook failed: ${documentType}`, error);
+    }
   }
 
   private async broadcastIfPossible(documentType: string): Promise<void> {

@@ -30,7 +30,9 @@ export function useGetSwitchboardLink(
     if (!isDefined(drive)) return false;
 
     return remotes.some((remote) =>
-      remote.collectionId.equals(DriveCollectionId.forDrive(drive.header.id)),
+      remote.meta.collectionId.equals(
+        DriveCollectionId.forDrive(drive.header.id),
+      ),
     );
   }, [remotes, drive]);
   const remoteUrl = useMemo(() => {
@@ -38,7 +40,9 @@ export function useGetSwitchboardLink(
 
     try {
       const remote = remotes.find((remote) =>
-        remote.collectionId.equals(DriveCollectionId.forDrive(drive.header.id)),
+        remote.meta.collectionId.equals(
+          DriveCollectionId.forDrive(drive.header.id),
+        ),
       );
 
       const channelUrl = (remote?.channel as GqlRequestChannel | undefined)

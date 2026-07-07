@@ -170,11 +170,14 @@ export class SyncManager implements ISyncManager {
       );
 
       const remote: Remote = {
-        id: record.id,
-        name: record.name,
-        collectionId: record.collectionId,
-        filter: record.filter,
-        options: record.options,
+        meta: {
+          id: record.id,
+          name: record.name,
+          collectionId: record.collectionId,
+          channelConfig: record.channelConfig,
+          filter: record.filter,
+          options: record.options,
+        },
         channel,
       };
 
@@ -209,7 +212,7 @@ export class SyncManager implements ISyncManager {
             if (backfillController.signal.aborted) return;
             this.logger.error(
               "Backfill failed for remote @RemoteName: @Error",
-              remote.name,
+              remote.meta.name,
               error instanceof Error ? error : new Error(String(error)),
             );
           })
@@ -283,7 +286,7 @@ export class SyncManager implements ISyncManager {
 
   getById(id: string): Remote {
     for (const remote of this.remotes.values()) {
-      if (remote.id === id) {
+      if (remote.meta.id === id) {
         return remote;
       }
     }
@@ -347,11 +350,14 @@ export class SyncManager implements ISyncManager {
     );
 
     const remote: Remote = {
-      id: remoteId,
-      name,
-      collectionId,
-      filter,
-      options,
+      meta: {
+        id: remoteId,
+        name,
+        collectionId,
+        channelConfig,
+        filter,
+        options,
+      },
       channel,
     };
 
@@ -380,7 +386,7 @@ export class SyncManager implements ISyncManager {
         if (backfillController.signal.aborted) return;
         this.logger.error(
           "Backfill failed for remote @RemoteName: @Error",
-          remote.name,
+          remote.meta.name,
           error instanceof Error ? error : new Error(String(error)),
         );
       })
@@ -462,26 +468,26 @@ export class SyncManager implements ISyncManager {
       this.handleInboxAdded(remote, syncOps),
     );
 
-    this.syncStatusTracker.trackRemote(remote.name, remote.channel);
+    this.syncStatusTracker.trackRemote(remote.meta.name, remote.channel);
 
     const unsubscribe = remote.channel.onConnectionStateChange((snapshot) => {
       void this.eventBus
         .emit(SyncEventTypes.CONNECTION_STATE_CHANGED, {
-          remoteName: remote.name,
-          remoteId: remote.id,
+          remoteName: remote.meta.name,
+          remoteId: remote.meta.id,
           previous: snapshot.state,
           current: snapshot.state,
           snapshot,
         } satisfies ConnectionStateChangedEvent)
         .catch(() => {});
     });
-    this.connectionStateUnsubscribes.set(remote.name, unsubscribe);
+    this.connectionStateUnsubscribes.set(remote.meta.name, unsubscribe);
 
     remote.channel.deadLetter.onAdded((syncOps) => {
       for (const syncOp of syncOps) {
         this.logger.error(
           "Dead letter (@remote, @documentId, @jobId, @error, @dependencies)",
-          remote.name,
+          remote.meta.name,
           syncOp.documentId,
           syncOp.jobId,
           syncOp.error?.message ?? "unknown",
@@ -535,7 +541,7 @@ export class SyncManager implements ISyncManager {
   private async loadDeadLetters(remote: Remote): Promise<void> {
     let records: DeadLetterRecord[];
     try {
-      const page = await this.deadLetterStorage.list(remote.name, {
+      const page = await this.deadLetterStorage.list(remote.meta.name, {
         cursor: "0",
         limit: this.config.maxDeadLettersPerRemote,
       });
@@ -543,7 +549,7 @@ export class SyncManager implements ISyncManager {
     } catch (error) {
       this.logger.error(
         "Failed to load dead letters for remote (@name, @error)",
-        remote.name,
+        remote.meta.name,
         error instanceof Error ? error.message : String(error),
       );
       return;
@@ -581,13 +587,13 @@ export class SyncManager implements ISyncManager {
     this.logger.debug(
       "Loaded @count persisted dead letters for remote @name",
       records.length,
-      remote.name,
+      remote.meta.name,
     );
   }
 
   private getRemotesForCollection(collectionId: string): Remote[] {
     return Array.from(this.remotes.values()).filter(
-      (remote) => remote.collectionId.key === collectionId,
+      (remote) => remote.meta.collectionId.key === collectionId,
     );
   }
 
@@ -695,14 +701,14 @@ export class SyncManager implements ISyncManager {
         syncOp.branch,
         operations,
         this.abortController.signal,
-        { sourceRemote: remote.name },
+        { sourceRemote: remote.meta.name },
       );
     } catch (error) {
       if (this.isShutdown) return;
       const err = error instanceof Error ? error : new Error(String(error));
       this.logger.error(
         "Failed to load operations from inbox (@remote, @documentId, @error)",
-        remote.name,
+        remote.meta.name,
         syncOp.documentId,
         err.message,
       );
@@ -724,7 +730,7 @@ export class SyncManager implements ISyncManager {
       const err = error instanceof Error ? error : new Error(String(error));
       this.logger.error(
         "Failed to wait for job completion (@remote, @documentId, @jobId, @error)",
-        remote.name,
+        remote.meta.name,
         syncOp.documentId,
         jobInfo.id,
         err.message,
@@ -742,7 +748,7 @@ export class SyncManager implements ISyncManager {
       const errorMessage = completedJobInfo.error?.message || "Unknown error";
       this.logger.error(
         "Failed to apply operations from inbox (@remote, @documentId, @jobId, @error)",
-        remote.name,
+        remote.meta.name,
         syncOp.documentId,
         completedJobInfo.id,
         errorMessage,
@@ -763,7 +769,7 @@ export class SyncManager implements ISyncManager {
   private async applyInboxBatch(
     items: Array<{ remote: Remote; syncOp: SyncOperation }>,
   ): Promise<void> {
-    const sourceRemote = items[0].remote.name;
+    const sourceRemote = items[0].remote.meta.name;
 
     const chunkKeys = new Set(items.map(({ syncOp }) => syncOp.jobId));
     const jobs = items.map(({ syncOp }) => {
@@ -826,7 +832,7 @@ export class SyncManager implements ISyncManager {
       if (!(syncOp.jobId in result.jobs)) {
         this.logger.error(
           "Job key missing from batch load result (@remote, @documentId, @jobId)",
-          remote.name,
+          remote.meta.name,
           syncOp.documentId,
           syncOp.jobId,
         );
@@ -889,7 +895,7 @@ export class SyncManager implements ISyncManager {
     let maxOrdinal = ackOrdinal;
     const lastJobByDoc = new Map<string, string>();
     let prevChainJobId: string | undefined;
-    const sinceTimestamp = remote.options.sinceTimestampUtcMs;
+    const sinceTimestamp = remote.meta.options.sinceTimestampUtcMs;
 
     const emitBatches = (operations: OperationWithContext[]): void => {
       if (operations.length === 0) {
@@ -917,7 +923,7 @@ export class SyncManager implements ISyncManager {
           crypto.randomUUID(),
           jobId,
           deps,
-          remote.name,
+          remote.meta.name,
           batch.documentId,
           [batch.scope],
           batch.branch,
@@ -933,9 +939,9 @@ export class SyncManager implements ISyncManager {
     };
 
     let page = await this.operationIndex.find(
-      remote.collectionId.key,
+      remote.meta.collectionId.key,
       ackOrdinal,
-      { excludeSourceRemote: remote.name },
+      { excludeSourceRemote: remote.meta.name },
       undefined,
       composedSignal,
     );
@@ -965,7 +971,7 @@ export class SyncManager implements ISyncManager {
           (op) => op.operation.timestampUtcMs >= sinceTimestamp,
         );
       }
-      operations = filterOperations(operations, remote.filter);
+      operations = filterOperations(operations, remote.meta.filter);
       operations = operations.filter(
         (op) => !this.quarantinedDocumentIds.has(op.context.documentId),
       );

@@ -1,5 +1,6 @@
 import { get as httpGet } from "node:http";
 import { get } from "node:https";
+import { pathToFileURL } from "node:url";
 
 /**
  * Node.js module loader hooks that enable importing from HTTP/HTTPS URLs.
@@ -68,7 +69,6 @@ export async function resolve(
     const isBareSpecifier =
       !specifier.startsWith("/") && !/^[a-z][a-z0-9+.-]*:/i.test(specifier);
     if (isBareSpecifier) {
-      const { pathToFileURL } = await import("node:url");
       const consumerRoot = pathToFileURL(process.cwd() + "/").href;
       try {
         return await nextResolve(specifier, {
@@ -125,11 +125,21 @@ export async function load(
 /**
  * Rewrite `createRequire(import.meta.url)` in HTTP-loaded modules so that
  * `createRequire` receives a local file URL instead of an HTTP URL it cannot handle.
+ *
+ * The base is baked in at hook time as a string literal. Injecting a live
+ * `process.cwd()` call into the module source (the previous approach) crashes
+ * with "process.cwd is not a function": HTTP-loaded modules execute in the
+ * module-customization realm, which has no full `process`. This hook itself
+ * runs where `process.cwd()` works, so we resolve the base here and embed the
+ * resulting file URL as a literal — no runtime `process` access in the loaded
+ * module. Any package whose bundle contains `createRequire(import.meta.url)`
+ * (common CJS interop) failed to load before this.
  */
 function patchCreateRequire(source: string): string {
+  const requireBase = pathToFileURL(process.cwd() + "/").href;
   return source.replace(
     /createRequire\(import\.meta\.url\)/g,
-    `createRequire(new URL("file://" + process.cwd() + "/"))`,
+    `createRequire(${JSON.stringify(requireBase)})`,
   );
 }
 

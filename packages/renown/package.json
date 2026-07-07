@@ -1,6 +1,6 @@
 {
   "name": "@renown/sdk",
-  "version": "6.2.0-rc.7",
+  "version": "6.2.0-dev.51",
   "description": "Renown SDK — wallet-based authentication and user identity management for Powerhouse React applications.",
   "license": "AGPL-3.0-only",
   "private": false,
@@ -25,6 +25,12 @@
       "types": "./dist/node.d.ts",
       "import": "./dist/node.js",
       "default": "./dist/node.js"
+    },
+    "./crypto": {
+      "source": "./src/crypto.ts",
+      "types": "./dist/crypto.d.ts",
+      "import": "./dist/crypto.js",
+      "default": "./dist/crypto.js"
     }
   },
   "types": "./dist/index.d.ts",

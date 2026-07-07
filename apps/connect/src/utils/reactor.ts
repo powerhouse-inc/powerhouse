@@ -73,8 +73,11 @@ export async function createBrowserReactor(
   const module = await builder.buildModule();
   return {
     ...module,
-    pg,
-  } as BrowserReactorClientModule;
+    kind: "browser",
+    reactorModule: module.reactorModule
+      ? { ...module.reactorModule, pg }
+      : undefined,
+  };
 }
 
 export function getDefaultDrives(

@@ -34,8 +34,11 @@ import {
   setSelectedDrive,
   setSelectedNode,
   setVetraPackageManager,
+  type BrowserReactorClientModule,
+  type IDocumentModelLoader,
   type IPackageManager,
   type PHToastFn,
+  type WorkerReactorClientModule,
 } from "@powerhousedao/reactor-browser";
 import {
   BrowserKeyStorage,
@@ -51,7 +54,14 @@ import { initFeatureFlags } from "../feature-flags.js";
 import { NoRegistryDiscoveryService } from "../no-registry-discovery.js";
 import { PackageDiscoveryService } from "../package-discovery.js";
 import { BrowserPackageManager } from "../package-manager.js";
+import { createWorkerReactorClientModule } from "../reactor-worker-client.js";
+import { bumpWorkerGen } from "../reactor-worker-name.js";
 import { getRuntimeConfig } from "../runtime-config.js";
+import { isReactorWorkerEnabled } from "../utils/reactor-worker-flag.js";
+import {
+  REACTOR_INSTANCE_NAMESPACE,
+  RELATIONAL_PGLITE_NAME,
+} from "../utils/storage-namespace.js";
 import { createProcessorHostModule } from "./processor-host-module.js";
 
 /**
@@ -165,7 +175,15 @@ function subscribeToPackagesChannel(packageManager: IPackageManager): void {
 }
 
 export async function clearReactorStorage() {
-  await window.ph?.reactorClientModule?.pg?.close();
+  const module = window.ph?.reactorClientModule;
+  if (module?.kind === "worker") {
+    // The worker holds the PGlite handles open, so it must close + clear them.
+    await module.adminClient.clearStorage();
+    return;
+  }
+  if (module?.kind === "browser") {
+    await module.reactorModule?.pg?.close();
+  }
 
   // Dropping tables in PGlite with relaxedDurability can lose pending IDB
   // writes on reload; delete the whole DB so startup re-migrates from scratch.
@@ -298,12 +316,78 @@ export async function createReactor(localPackage?: DocumentModelLib) {
 
   setPackageDiscoveryService(discoveryService);
 
-  const reactorClientModule = await createBrowserReactor(
-    documentModelModules,
-    upgradeManifests,
-    renown,
-    discoveryService,
-  );
+  // create reactor v2 with all versions and upgrade manifests
+  let reactorClientModule:
+    | BrowserReactorClientModule
+    | WorkerReactorClientModule;
+  if (isReactorWorkerEnabled()) {
+    const packageSpecs = packageManager
+      .getRegistryPackages()
+      .map((p) => (p.version ? `${p.name}@${p.version}` : p.name));
+    // Silent tab loader (no install prompt; the worker already loaded the model).
+    const registryClient = new RegistryClient(packageManager.cdnUrl ?? "");
+    const documentModelLoader: IDocumentModelLoader = {
+      async load(documentType) {
+        const names = packageManager.cdnUrl
+          ? await registryClient.getPackagesByDocumentType(documentType)
+          : [];
+        for (const name of names) {
+          const result = await packageManager.addPackage(name);
+          if (result.type === "error") {
+            throw new Error(
+              `Failed to install package "${name}" for document model: ${documentType}`,
+              { cause: result.error },
+            );
+          }
+        }
+        const module = packageManager.packages
+          .flatMap((p) => p.documentModels)
+          .find((m) => m.documentModel.global.id === documentType);
+        if (!module) {
+          throw new Error(
+            names.length > 0
+              ? `Installed [${names.join(", ")}] but document model not available: ${documentType}`
+              : `No package found for document model: ${documentType} (cdnUrl: ${packageManager.cdnUrl ?? "none"})`,
+          );
+        }
+        return module;
+      },
+    };
+    const workerClient = createWorkerReactorClientModule({
+      namespace: REACTOR_INSTANCE_NAMESPACE,
+      relationalNamespace: RELATIONAL_PGLITE_NAME,
+      cdnUrl: packageManager.cdnUrl ?? "",
+      packageSpecs,
+      documentModelModules,
+      upgradeManifests,
+      documentModelLoader,
+      renown,
+      onReload: (reason, workerGen) => {
+        logger.warn("Reactor worker requested reload: @reason", reason);
+        if (workerGen) {
+          bumpWorkerGen(REACTOR_INSTANCE_NAMESPACE, workerGen);
+        }
+        window.location.reload();
+      },
+    });
+    reactorClientModule = workerClient.reactorClientModule;
+    // Block boot until the sync manager seeds remotes from the worker, so
+    // list()/connection state are warm before consumers first read them.
+    try {
+      await workerClient.syncManagerProxy.startup();
+    } catch (error) {
+      window.ph.loading = false;
+      logger.error("Reactor worker failed to start: @error", error);
+      throw error;
+    }
+  } else {
+    reactorClientModule = await createBrowserReactor(
+      documentModelModules,
+      upgradeManifests,
+      renown,
+      discoveryService,
+    );
+  }
 
   const drives = await getDrives(reactorClientModule.client);
 
@@ -414,9 +498,21 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     (pkg) => pkg.processorFactory !== undefined,
   );
 
-  if (packagesWithProcessorFactories.length > 0) {
-    const readModels =
-      reactorClientModule.reactorModule?.readModelCoordinator?.readModels ?? [];
+  // processorManager lives in the worker on the cutover path and is not yet
+  // bridged, so surface the gap loudly rather than dropping factories silently.
+  const reactorModule =
+    reactorClientModule.kind === "browser"
+      ? reactorClientModule.reactorModule
+      : undefined;
+  if (packagesWithProcessorFactories.length > 0 && !reactorModule) {
+    for (const pkg of packagesWithProcessorFactories) {
+      logger.warn(
+        "Skipping processor factory @name: processors are not supported on the worker reactor path yet",
+        pkg.manifest.name,
+      );
+    }
+  } else if (packagesWithProcessorFactories.length > 0 && reactorModule) {
+    const readModels = reactorModule.readModelCoordinator.readModels;
     const processorHostModule = await createProcessorHostModule(
       reactorClientModule.client,
       readModels,
@@ -434,10 +530,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
           try {
             const factory = await processorFactory?.(processorHostModule);
             if (!factory) return;
-            await reactorClientModule.reactorModule?.processorManager.registerFactory(
-              id,
-              factory,
-            );
+            await reactorModule.processorManager.registerFactory(id, factory);
           } catch (error) {
             logger.error(`Error registering processor: @label`, label);
             logger.error("@error", error);

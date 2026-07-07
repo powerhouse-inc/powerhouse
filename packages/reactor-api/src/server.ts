@@ -9,7 +9,7 @@ import type {
   IReactorClient,
   IProcessorManager as IReactorProcessorManager,
   ISyncManager,
-  ReactorClientModule,
+  InProcessReactorClientModule,
   ProcessorRecord as ReactorProcessorRecord,
 } from "@powerhousedao/reactor";
 import { AttachmentBuilder } from "@powerhousedao/reactor-attachments";
@@ -939,7 +939,7 @@ function buildApiDispose(args: {
  * ops to it; legacy switchboards omit it.
  */
 export interface ClientInitializerResult {
-  module: ReactorClientModule;
+  module: InProcessReactorClientModule;
   reactorDriveClient?: IDriveClient;
 }
 
@@ -983,20 +983,24 @@ export async function initializeAndStartAPI(
   const syncManager =
     reactorClientModule.reactorModule?.syncModule?.syncManager;
   if (!syncManager) {
-    throw new Error("SyncManager not available from ReactorClientModule");
+    throw new Error(
+      "SyncManager not available from InProcessReactorClientModule",
+    );
   }
 
   const reactorProcessorManager =
     reactorClientModule.reactorModule?.processorManager;
   if (!reactorProcessorManager) {
-    throw new Error("ProcessorManager not available from ReactorClientModule");
+    throw new Error(
+      "ProcessorManager not available from InProcessReactorClientModule",
+    );
   }
 
   const documentModelRegistry =
     reactorClientModule.reactorModule?.documentModelRegistry;
   if (!documentModelRegistry) {
     throw new Error(
-      "DocumentModelRegistry not available from ReactorClientModule",
+      "DocumentModelRegistry not available from InProcessReactorClientModule",
     );
   }
 

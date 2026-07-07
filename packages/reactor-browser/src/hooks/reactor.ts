@@ -10,6 +10,7 @@ import type {
   BrowserReactorClientModule,
   SetPHGlobalValue,
   UsePHGlobalValue,
+  WorkerReactorClientModule,
 } from "@powerhousedao/reactor-browser";
 import type { Kysely } from "kysely";
 import { makePHEventFunctions } from "./make-ph-event-functions.js";
@@ -19,13 +20,15 @@ const reactorClientModuleEventFunctions = makePHEventFunctions(
 );
 const reactorClientEventFunctions = makePHEventFunctions("reactorClient");
 
-/** Returns the reactor client module */
-export const useReactorClientModule: UsePHGlobalValue<BrowserReactorClientModule> =
-  reactorClientModuleEventFunctions.useValue;
+/** Returns the reactor client module (in-process or worker-backed) */
+export const useReactorClientModule: UsePHGlobalValue<
+  BrowserReactorClientModule | WorkerReactorClientModule
+> = reactorClientModuleEventFunctions.useValue;
 
 /** Sets the reactor client module */
-export const setReactorClientModule: SetPHGlobalValue<BrowserReactorClientModule> =
-  reactorClientModuleEventFunctions.setValue;
+export const setReactorClientModule: SetPHGlobalValue<
+  BrowserReactorClientModule | WorkerReactorClientModule
+> = reactorClientModuleEventFunctions.setValue;
 
 /** Adds an event handler for the reactor client module */
 export const addReactorClientModuleEventHandler: AddPHGlobalEventHandler =
@@ -56,7 +59,14 @@ export const useSyncList = () => {
 export const useModelRegistry = (): IDocumentModelRegistry | undefined =>
   useReactorClientModule()?.reactorModule?.documentModelRegistry;
 
-export const useDatabase = (): Kysely<Database> | undefined =>
-  useReactorClientModule()?.reactorModule?.database;
+export const useDatabase = (): Kysely<Database> | undefined => {
+  const module = useReactorClientModule();
+  return module?.kind === "browser"
+    ? module.reactorModule?.database
+    : undefined;
+};
 
-export const usePGlite = (): PGlite | undefined => useReactorClientModule()?.pg;
+export const usePGlite = (): PGlite | undefined => {
+  const module = useReactorClientModule();
+  return module?.kind === "browser" ? module.reactorModule?.pg : undefined;
+};

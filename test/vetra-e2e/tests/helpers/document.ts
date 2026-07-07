@@ -1,5 +1,7 @@
 import type { Page } from "@playwright/test";
 import { expect } from "@playwright/test";
+import { LONG_VISIBLE_TIMEOUT } from "./timeouts.js";
+import { waitForAppReady } from "./wait.js";
 
 // Import shared types and functions from e2e-utils package
 export {
@@ -28,18 +30,18 @@ export async function createDocument(
   const addButton = page.getByRole("button", {
     name: `Add new specification ${documentType}`,
   });
-  await expect(addButton).toBeVisible({ timeout: 2 * 60 * 60 * 1000 });
+  await expect(addButton).toBeVisible({ timeout: LONG_VISIBLE_TIMEOUT });
   await addButton.isEnabled({ timeout: 2 * 60 * 60 * 1000 });
   await addButton.click();
 
   // Wait for the create document dialog to be visible
   // Look for the dialog that contains "Create a new document" text
   const dialog = page.getByRole("dialog");
-  await expect(dialog).toBeVisible({ timeout: 2 * 60 * 60 * 1000 });
+  await expect(dialog).toBeVisible({ timeout: LONG_VISIBLE_TIMEOUT });
 
   // Fill in the document name - find the input within the dialog
   const nameInput = dialog.getByPlaceholder("Document name");
-  await expect(nameInput).toBeVisible({ timeout: 2 * 60 * 60 * 1000 });
+  await expect(nameInput).toBeVisible({ timeout: LONG_VISIBLE_TIMEOUT });
   await nameInput.fill(documentName);
 
   // Wait for Create button to be enabled (validation passes)
@@ -48,7 +50,7 @@ export async function createDocument(
   await createButton.click();
 
   // Wait for navigation to the new document
-  await page.waitForLoadState("networkidle");
+  await waitForAppReady(page);
 
   // Return the current URL
   return page.url();
@@ -80,7 +82,7 @@ export async function navigateToVetraDrive(
 ): Promise<void> {
   // Go to home page
   await page.goto("/");
-  await page.waitForLoadState("networkidle");
+  await waitForAppReady(page);
 
   // Handle cookie consent if requested
   if (handleCookies) {
@@ -105,18 +107,18 @@ export async function navigateToVetraDrive(
     level: 3,
     exact: true,
   });
-  await expect(vetraDrive).toBeVisible({ timeout: 2 * 60 * 60 * 1000 });
+  await expect(vetraDrive).toBeVisible({ timeout: LONG_VISIBLE_TIMEOUT });
   await vetraDrive.click();
 
   // Wait for drive page to load
-  await page.waitForLoadState("networkidle");
+  await waitForAppReady(page);
 
   // Verify we're on the drive page
   const driveHeading = page.getByRole("heading", {
     name: "Vetra Studio Drive",
     level: 1,
   });
-  await expect(driveHeading).toBeVisible({ timeout: 2 * 60 * 60 * 1000 });
+  await expect(driveHeading).toBeVisible({ timeout: LONG_VISIBLE_TIMEOUT });
 }
 
 /**
@@ -130,14 +132,14 @@ export async function navigateBackToDrive(page: Page): Promise<void> {
   await backButton.click();
 
   // Wait for navigation
-  await page.waitForLoadState("networkidle");
+  await waitForAppReady(page);
 
   // Verify we're back on the drive page
   const driveHeading = page.getByRole("heading", {
     name: "Vetra Studio Drive",
     level: 1,
   });
-  await expect(driveHeading).toBeVisible({ timeout: 2 * 60 * 60 * 1000 });
+  await expect(driveHeading).toBeVisible({ timeout: LONG_VISIBLE_TIMEOUT });
 }
 
 /**
@@ -173,7 +175,7 @@ export async function createDocumentAndFillBasicData(
   if (data.global) {
     // Focus the first CodeMirror editor (global state schema)
     const schemaEditor = page.locator(".cm-content").first();
-    await expect(schemaEditor).toBeVisible({ timeout: 2 * 60 * 60 * 1000 });
+    await expect(schemaEditor).toBeVisible({ timeout: LONG_VISIBLE_TIMEOUT });
     await schemaEditor.click();
 
     // Select all and delete existing content
@@ -218,7 +220,7 @@ export async function createDocumentAndFillBasicData(
       const moduleInput = page
         .locator('textarea[placeholder="Add module"]')
         .last();
-      await expect(moduleInput).toBeVisible({ timeout: 2 * 60 * 60 * 1000 });
+      await expect(moduleInput).toBeVisible({ timeout: LONG_VISIBLE_TIMEOUT });
       await moduleInput.fill(module.name);
       await page.keyboard.press("Enter");
 

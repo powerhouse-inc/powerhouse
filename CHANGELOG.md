@@ -100,6 +100,111 @@
 
 ### ❤️ Thank You
 
+## 6.2.0-dev.51 (2026-07-07)
+
+This was a version bump only, there were no code changes.
+
+## 6.2.0-dev.50 (2026-07-06)
+
+This was a version bump only, there were no code changes.
+
+## 6.2.0-dev.49 (2026-07-05)
+
+This was a version bump only, there were no code changes.
+
+## 6.2.0-dev.48 (2026-07-04)
+
+This was a version bump only, there were no code changes.
+
+## 6.2.0-dev.47 (2026-07-03)
+
+This was a version bump only, there were no code changes.
+
+## 6.2.0-dev.46 (2026-07-02)
+
+### 🩹 Fixes
+
+- **reactor-api:** don't inject runtime process.cwd into HTTP-loaded modules ([#2803](https://github.com/powerhouse-inc/powerhouse/issues/2803))
+
+### ❤️ Thank You
+
+- Frank Pfeift
+
+## 6.2.0-dev.45 (2026-07-02)
+
+### 🩹 Fixes
+
+- **reactor-api:** guard top-level dotenv.config() against missing process.cwd ([541bae845](https://github.com/powerhouse-inc/powerhouse/commit/541bae845))
+
+### ❤️ Thank You
+
+- Frank Pfeift
+
+## 6.2.0-dev.44 (2026-07-02)
+
+### 🩹 Fixes
+
+- **academy:** broken mdx compilation & link ([2bffdb11a](https://github.com/powerhouse-inc/powerhouse/commit/2bffdb11a))
+
+### ❤️ Thank You
+
+- CallmeT-ty @CallmeT-ty
+
+## 6.2.0-dev.43 (2026-07-01)
+
+This was a version bump only, there were no code changes.
+
+## 6.2.0-dev.42 (2026-06-30)
+
+This was a version bump only, there were no code changes.
+
+## 6.2.0-dev.41 (2026-06-29)
+
+This was a version bump only, there were no code changes.
+
+## 6.2.0-dev.40 (2026-06-28)
+
+This was a version bump only, there were no code changes.
+
+## 6.2.0-dev.39 (2026-06-27)
+
+### 🚀 Features
+
+- adding ability to namespace connect instances ([88ea484d7](https://github.com/powerhouse-inc/powerhouse/commit/88ea484d7))
+- added good integration tests for the reactor message passing ([fd2b8bb3f](https://github.com/powerhouse-inc/powerhouse/commit/fd2b8bb3f))
+- reactor-host that supports many subs ([45d3607ca](https://github.com/powerhouse-inc/powerhouse/commit/45d3607ca))
+- we need a worker-package-loader since the current ones import editor code -- this is temp ([35c649930](https://github.com/powerhouse-inc/powerhouse/commit/35c649930))
+- reactor-host needs protocol adjustment to register packages ([164018eb7](https://github.com/powerhouse-inc/powerhouse/commit/164018eb7))
+- sharedworker entry ([7ba8a90bb](https://github.com/powerhouse-inc/powerhouse/commit/7ba8a90bb))
+- identity protocol for shared worker, and now we push and clear on login/logout ([165a79bae](https://github.com/powerhouse-inc/powerhouse/commit/165a79bae))
+- pushing toward distributed event bus ([17a0b628c](https://github.com/powerhouse-inc/powerhouse/commit/17a0b628c))
+- added flag to enable worker ([3d34b5d8a](https://github.com/powerhouse-inc/powerhouse/commit/3d34b5d8a))
+- adding worker restart admin and inspector ([d8a999550](https://github.com/powerhouse-inc/powerhouse/commit/d8a999550))
+- show placeholders when tabs are unavailable in inspector ([2a0075556](https://github.com/powerhouse-inc/powerhouse/commit/2a0075556))
+- db proxy now sits in between ([852a2d1f2](https://github.com/powerhouse-inc/powerhouse/commit/852a2d1f2))
+- added experimental heartbeat to detect silent worker failure ([8bdd3f923](https://github.com/powerhouse-inc/powerhouse/commit/8bdd3f923))
+- **reactor-browser:** introducing a protocol in front of IReactorClient for cross-worker support ([9b69babe7](https://github.com/powerhouse-inc/powerhouse/commit/9b69babe7))
+- **reactor-browser:** we have to reconstruct next lambdas because they cannot go across postMessage ([188e6fb44](https://github.com/powerhouse-inc/powerhouse/commit/188e6fb44))
+- **release:** support rc release channel in CLIs and docker pipeline ([36587b045](https://github.com/powerhouse-inc/powerhouse/commit/36587b045))
+
+### 🩹 Fixes
+
+- tsc issue ([e3abcfff3](https://github.com/powerhouse-inc/powerhouse/commit/e3abcfff3))
+- add vetra as a bundled model ([1b9d46ac6](https://github.com/powerhouse-inc/powerhouse/commit/1b9d46ac6))
+- fix failing tests ([0ec063544](https://github.com/powerhouse-inc/powerhouse/commit/0ec063544))
+- build fixes ([b6d768bdc](https://github.com/powerhouse-inc/powerhouse/commit/b6d768bdc))
+- code-review feedback ([f7844599d](https://github.com/powerhouse-inc/powerhouse/commit/f7844599d))
+- livequery and connection management fixes ([3dfc606db](https://github.com/powerhouse-inc/powerhouse/commit/3dfc606db))
+- fixing a few more code review issues ([24dd4a78c](https://github.com/powerhouse-inc/powerhouse/commit/24dd4a78c))
+- a few spots where we could permanently brick thiings, and a pglite migration fix ([b047007db](https://github.com/powerhouse-inc/powerhouse/commit/b047007db))
+- edge case fixes from code-review flow ([c6bb4e1b3](https://github.com/powerhouse-inc/powerhouse/commit/c6bb4e1b3))
+- install ph-cli@rc for rc-tagged connect/switchboard image builds ([461284463](https://github.com/powerhouse-inc/powerhouse/commit/461284463))
+- changed-files action is broken ([63c52e44b](https://github.com/powerhouse-inc/powerhouse/commit/63c52e44b))
+- **academy:** recipe script was out of date, plug regen ([d7d3cd967](https://github.com/powerhouse-inc/powerhouse/commit/d7d3cd967))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
 - Guillermo Puente @gpuente
 
 ## 6.2.0-dev.38 (2026-06-26)

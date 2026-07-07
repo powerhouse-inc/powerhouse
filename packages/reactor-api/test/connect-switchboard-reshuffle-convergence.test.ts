@@ -11,7 +11,7 @@ import {
   DriveCollectionId,
   type IReactor,
   type ISyncManager,
-  type ReactorModule,
+  type InProcessReactorModule,
 } from "@powerhousedao/reactor";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type {
@@ -24,9 +24,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createResolverBridge } from "./utils/gql-resolver-bridge.js";
 
 type Setup = {
-  connectA: ReactorModule;
-  connectB: ReactorModule;
-  switchboard: ReactorModule;
+  connectA: InProcessReactorModule;
+  connectB: InProcessReactorModule;
+  switchboard: InProcessReactorModule;
   bridge: typeof fetch;
 };
 
@@ -46,7 +46,7 @@ function createConnectModule(
   logger: ConsoleLogger,
   eventBus: EventBus,
   queue: InMemoryQueue,
-): Promise<ReactorModule> {
+): Promise<InProcessReactorModule> {
   return new ReactorBuilder()
     .withEventBus(eventBus)
     .withQueue(queue)
@@ -65,7 +65,7 @@ function createSwitchboardModule(
   logger: ConsoleLogger,
   eventBus: EventBus,
   queue: InMemoryQueue,
-): Promise<ReactorModule> {
+): Promise<InProcessReactorModule> {
   return new ReactorBuilder()
     .withEventBus(eventBus)
     .withQueue(queue)
@@ -207,9 +207,9 @@ function normalizeForComparison(entries: GlobalEntry[]) {
 }
 
 describe("Connect-Switchboard reshuffle rebroadcast convergence", () => {
-  let connectA: ReactorModule;
-  let connectB: ReactorModule;
-  let switchboard: ReactorModule;
+  let connectA: InProcessReactorModule;
+  let connectB: InProcessReactorModule;
+  let switchboard: InProcessReactorModule;
 
   afterEach(() => {
     connectA?.reactor.kill();

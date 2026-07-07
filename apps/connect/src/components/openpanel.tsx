@@ -57,7 +57,8 @@ declare global {
 export function OpenPanel(): null {
   const [{ analytics }] = useAcceptedCookies();
   const user = useUser();
-  const reactorClientModule = useReactorClientModule();
+  const module = useReactorClientModule();
+  const reactorClientModule = module?.kind === "browser" ? module : undefined;
 
   const [client, setClient] = useState<OpenPanelClient | undefined>();
 

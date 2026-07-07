@@ -86,6 +86,11 @@ export type PHConnectSentry = {
   tracing?: boolean;
 };
 
+export type PHConnectInstance = {
+  namespace: string | null;
+  reactorWorker: boolean;
+};
+
 export type PHConnectRuntimeConfig = {
   branding?: PHConnectBranding;
   app?: PHConnectApp;
@@ -93,6 +98,7 @@ export type PHConnectRuntimeConfig = {
   drives?: PHConnectDrives;
   renown?: PHConnectRenown;
   sentry?: PHConnectSentry;
+  instance?: PHConnectInstance;
 };
 
 export type PowerhouseConfig = {

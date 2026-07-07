@@ -41,6 +41,69 @@ By acting as the backbone for document models in the Powerhouse framework, they 
 Reactors provide the foundation for advanced features like real-time collaboration, history tracking, and decentralized audits.
 This modular, flexible infrastructure enables organizations to build efficient and robust decentralized systems, tailored for modern network organizations
 
+## Getting an IReactorClient
+
+There are a few ways to obtain an `IReactorClient`, depending on where your code runs.
+
+**In an app (React).** Call the `useReactorClient()` hook from `@powerhousedao/reactor-browser`. It returns the `IReactorClient` for the running reactor.
+
+```typescript
+import { useReactorClient } from "@powerhousedao/reactor-browser";
+
+const client = useReactorClient();
+```
+
+The same module exposes sibling hooks: `useSync` (the `ISyncManager`), `useSyncList` (its remotes), `useModelRegistry` (the document-model registry), `useDatabase` (the Kysely database), and `usePGlite` (the PGlite instance).
+
+**Standalone (scripts, tests, servers).** Build a client with `ReactorClientBuilder`. Wire a reactor with either `.withReactorBuilder(builder)` or `.withReactor(reactor, eventBus, documentIndexer, documentView)`, add `.withSigner(...)` and `.withDocumentModelLoader(...)` as needed, then call `.build()` (returns the client) or `.buildModule()` (returns the client plus the wired module).
+
+```typescript
+import { ReactorClientBuilder } from "@powerhousedao/reactor";
+
+const client = await new ReactorClientBuilder()
+  .withReactorBuilder(reactorBuilder)
+  .withSigner(signer)
+  .build();
+```
+
+`buildModule()` throws if neither `withReactorBuilder` nor `withReactor` was set. For the low-level builder detail, see [Advanced Reactor Usage](/academy/Reference/Reactor/AdvancedReactorUsage).
+
+**In a generated subgraph (server-side).** A generated subgraph extends `BaseSubgraph`, which holds the client as the `reactorClient` property. The generated `getResolvers(subgraph)` reads it off the instance; inside a method on the subgraph class, use `this.reactorClient`. The GraphQL resolver `context` does not carry the reactor.
+
+```typescript
+import { type BaseSubgraph } from "@powerhousedao/reactor-api";
+
+// resolvers.ts (generated scaffold)
+export const getResolvers = (subgraph: BaseSubgraph) => {
+  const reactor = subgraph.reactorClient; // IReactorClient
+
+  return {
+    Query: {
+      todoList: (_parent: unknown, args: { id: string }) => reactor.get(args.id),
+    },
+  };
+};
+```
+
+**In a generated processor (server-side).** The processor factory builder receives the host module; the client is `module.client`. The parameter is typed as the base `IProcessorHostModule`, which exposes `relationalDb`, `analyticsStore`, `dispatch`, and `getReadModel` but not `client`. Widen it to `IReactorProcessorHostModule` to reach `client` (and `attachments`). See [Processors](/academy/Reference/Reactor/Processors) for the full registration flow.
+
+```typescript
+import type {
+  IReactorProcessorHostModule,
+  ProcessorFactoryBuilder,
+} from "@powerhousedao/reactor-browser";
+
+// factory.ts (generated scaffold)
+export const factoryBuilder: ProcessorFactoryBuilder = (module) => {
+  // `module` is typed as the base IProcessorHostModule; widen it to reach `client`.
+  const { client } = module as IReactorProcessorHostModule; // client: IReactorClient
+  return async () => {
+    // use client.get(...), client.drives, client.execute(...)
+    return [];
+  };
+};
+```
+
 ## The ReactorClient API
 
 The `IReactorClient` is the primary interface for interacting with a reactor programmatically. It wraps lower-level APIs to provide a simpler, Promise-based interface for document operations.
@@ -50,7 +113,7 @@ import type { IReactorClient } from "@powerhousedao/reactor-browser";
 ```
 
 :::info[Import paths]
-`@powerhousedao/reactor-browser` re-exports all reactor types for convenience in browser environments (editors, drive-apps, subgraphs). If you are working outside the browser — for example in a standalone Node.js script, CLI tool, or server-side processor — import directly from `@powerhousedao/reactor`.
+`@powerhousedao/reactor-browser` re-exports a curated subset of reactor types for browser environments (editors, drive-apps, subgraphs) — including `IReactorClient`, `DocumentChangeType`, `ReactorBuilder`, and `ReactorClientBuilder`. Other types used on these pages (`ViewFilter`, `SearchFilter`, `PagingOptions`, `PagedResults`, `PropagationMode`, `JobInfo`, `JobStatus`, `DocumentChangeEvent`, `OperationFilter`, `IReactor`, `ReactorEventTypes`, `SyncEventTypes`, `QueueEventTypes`) are not re-exported; import them from `@powerhousedao/reactor`. Outside the browser, import everything from `@powerhousedao/reactor`.
 :::
 
 ### Reading documents
@@ -58,6 +121,7 @@ import type { IReactorClient } from "@powerhousedao/reactor-browser";
 | Method                                                                         | Description                                       |
 | ------------------------------------------------------------------------------ | ------------------------------------------------- |
 | `get(identifier, view?)`                                                       | Retrieve a document by id or slug                 |
+| `resolveIdOrSlug(identifier)`                                                  | Resolve an id or slug to the canonical document id |
 | `getOutgoingRelationships(sourceIdentifier, relationshipType, view?, paging?)` | List documents related from a source              |
 | `getIncomingRelationships(targetIdentifier, relationshipType, view?, paging?)` | List documents related into a target              |
 | `find(search, view?, paging?)`                                                 | Search documents by type, parentId, ids, or slugs |
@@ -94,15 +158,19 @@ All list methods support pagination via `PagingOptions` (`{ cursor, limit }`) an
 | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
 | `create(document, parentIdentifier?)`                                                       | Create a document from a full `PHDocument` object                  |
 | `createEmpty(documentModelType, options?)`                                                  | Create an empty document of a given type                           |
-| `createDocumentInDrive(driveId, document, parentFolder?)`                                   | Create a document inside a drive in a single batched operation     |
 | `execute(documentIdentifier, branch, actions)`                                              | Apply actions and wait for completion                              |
 | `executeAsync(documentIdentifier, branch, actions)`                                         | Submit actions and return immediately with a `JobInfo`             |
+| `executeBatch(request)`                                                                     | Apply multiple jobs in dependency order and wait for all          |
+| `loadBatch(request)`                                                                        | Load batches of pre-existing operations across documents          |
 | `rename(documentIdentifier, name, branch?)`                                                 | Rename a document                                                  |
+| `setPreferredEditor(documentIdentifier, preferredEditor, branch?)`                          | Set the document's preferred editor (`null` clears it)            |
 | `addRelationship(sourceIdentifier, targetIdentifier, relationshipType, branch?)`            | Add a typed relationship between two documents                     |
 | `removeRelationship(sourceIdentifier, targetIdentifier, relationshipType, branch?)`         | Remove a typed relationship between two documents                  |
 | `moveRelationship(sourceParent, targetParent, targetIdentifier, relationshipType, branch?)` | Move a relationship from one source to another                     |
 | `deleteDocument(identifier, propagate?)`                                                    | Delete a document (`PropagationMode.Cascade` deletes children too) |
 | `deleteDocuments(identifiers, propagate?)`                                                  | Bulk delete                                                        |
+
+To create a document inside a drive, use `client.drives.addFile`. See the [Drives](/academy/Reference/Reactor/ReactorClient#drives-clientdrives) section on the IReactorClient reference page.
 
 ### Subscribing to changes
 
@@ -111,7 +179,7 @@ const unsubscribe = reactorClient.subscribe(
   { type: "powerhouse/todo-list" }, // SearchFilter
   (event) => {
     // event.type is one of: Created, Deleted, Updated,
-    //   ParentAdded, ParentRemoved, ChildAdded, ChildRemoved
+    //   ChildAdded, ChildRemoved
     console.log(event.type, event.documents);
   },
 );
@@ -151,7 +219,7 @@ Only `READ_READY` and `FAILED` are terminal statuses. The `execute()` method on 
 
 ## Reactor event system
 
-The reactor uses an internal event bus to coordinate between subsystems. Events are grouped into three categories:
+The reactor uses an internal event bus to coordinate between subsystems. The event-type enums you subscribe to most often are:
 
 ### Core job events (`ReactorEventTypes`)
 
@@ -162,6 +230,9 @@ The reactor uses an internal event bus to coordinate between subsystems. Events 
 | `JOB_WRITE_READY` | 10003      | Operations are written to the operation store |
 | `JOB_READ_READY`  | 10004      | All read models have finished processing      |
 | `JOB_FAILED`      | 10005      | Job failed with an unrecoverable error        |
+| `READMODEL_BATCH_COMPLETED` | 10006 | The read-model coordinator finishes a projection batch (carries per-stage timings) |
+| `READMODEL_INDEXED` | 10007    | An individual read model finishes indexing a batch in one stage |
+| `MODEL_LOADED`    | 10008      | The resolver loads a document model module on demand |
 
 ### Sync events (`SyncEventTypes`)
 
@@ -179,6 +250,18 @@ The reactor uses an internal event bus to coordinate between subsystems. Events 
 | --------------- | ---------- | --------------------------------------- |
 | `JOB_AVAILABLE` | 10000      | Queue has work available for processing |
 
+### Executor lifecycle events (`JobExecutorEventTypes`)
+
+The executor managers emit a lower-level set of events for individual job execution and executor startup/shutdown. Most application code subscribes to `ReactorEventTypes` instead.
+
+| Event              | Numeric ID | When it fires                          |
+| ------------------ | ---------- | -------------------------------------- |
+| `JOB_STARTED`      | 20000      | An executor starts running a job       |
+| `JOB_COMPLETED`    | 20001      | An executor finishes a job             |
+| `JOB_FAILED`       | 20002      | An executor's job fails                |
+| `EXECUTOR_STARTED` | 20003      | An executor starts                     |
+| `EXECUTOR_STOPPED` | 20004      | An executor stops                      |
+
 ## Configuring your reactor
 
 In addition to the choice of storage, Reactors also have other configurations.
@@ -193,7 +276,7 @@ The processor pipeline works as follows:
 3. **`JOB_READ_READY` event fires** — signaling that the document is fully readable
 4. **Post-ready read models update** — the `ProcessorManager` routes matching operations to user-defined processors via `onOperations()`
 
-For a step-by-step guide to building processors, see [Building a Processor](/academy/Build/WorkWithData/BuildingAProcessor).
+For a step-by-step guide to building processors, see [Building a Processor](/academy/Build/WorkWithData/BuildingAProcessor). For the reactor-side registration API, see [Processors](/academy/Reference/Reactor/Processors).
 
 ### Ordering guarantees
 

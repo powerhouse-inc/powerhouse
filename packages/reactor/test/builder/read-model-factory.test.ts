@@ -1,7 +1,7 @@
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import { afterEach, describe, expect, it } from "vitest";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
-import type { IReactor, ReactorModule } from "../../src/core/types.js";
+import type { IReactor, InProcessReactorModule } from "../../src/core/types.js";
 import type { IReadModel } from "../../src/read-models/interfaces.js";
 
 class StubReadModel implements IReadModel {
@@ -16,7 +16,7 @@ class StubReadModel implements IReadModel {
 
 describe("ReactorBuilder.withReadModelFactory", () => {
   let reactor: IReactor;
-  let module: ReactorModule;
+  let module: InProcessReactorModule;
 
   afterEach(() => {
     reactor.kill();

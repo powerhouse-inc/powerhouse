@@ -6,7 +6,7 @@ import type {
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ReactorBuilder } from "../../../src/core/reactor-builder.js";
 import type { DocumentModelSpecInput } from "../../../src/core/reactor-builder.js";
-import type { ReactorModule } from "../../../src/core/types.js";
+import type { InProcessReactorModule } from "../../../src/core/types.js";
 import {
   ReactorEventTypes,
   type JobWriteReadyEvent,
@@ -164,7 +164,7 @@ function makeOpWithAction(
 }
 
 describe("Worker pool integration through ReactorBuilder", () => {
-  let modules: ReactorModule[] = [];
+  let modules: InProcessReactorModule[] = [];
 
   afterEach(async () => {
     for (const m of modules) {
@@ -180,7 +180,7 @@ describe("Worker pool integration through ReactorBuilder", () => {
   async function buildReactor(
     config: WorkerPoolConfig,
     factory: WorkerFactory,
-  ): Promise<ReactorModule> {
+  ): Promise<InProcessReactorModule> {
     const module = await new ReactorBuilder()
       .withDocumentModelSpecs(SPECS)
       .withWorkerPool(config)

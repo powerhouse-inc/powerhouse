@@ -71,7 +71,7 @@ function buildSnapshot(
   const map = new Map<string, ConnectionStateSnapshot>();
   if (!syncManager) return map;
   for (const remote of syncManager.list()) {
-    map.set(remote.name, remote.channel.getConnectionState());
+    map.set(remote.meta.name, remote.channel.getConnectionState());
   }
   return map;
 }

@@ -1,6 +1,7 @@
 import { expect, test } from "./helpers/fixtures.js";
+import { DESCRIBE_TIMEOUT, LONG_VISIBLE_TIMEOUT } from "./helpers/timeouts.js";
 
-test.describe.configure({ mode: "serial", timeout: 5 * 60 * 60 * 1000 });
+test.describe.configure({ mode: "serial", timeout: DESCRIBE_TIMEOUT });
 
 test.use({
   storageState: {
@@ -36,7 +37,7 @@ test("should not trigger a page reload when editing the manifest", async ({
     level: 3,
     exact: true,
   });
-  await expect(vetraDrive).toBeVisible({ timeout: 2 * 60 * 60 * 1000 });
+  await expect(vetraDrive).toBeVisible({ timeout: LONG_VISIBLE_TIMEOUT });
   await vetraDrive.click();
   await page.waitForLoadState("networkidle");
 
@@ -45,7 +46,7 @@ test("should not trigger a page reload when editing the manifest", async ({
     name: "Vetra Studio Drive",
     level: 1,
   });
-  await expect(driveHeading).toBeVisible({ timeout: 2 * 60 * 60 * 1000 });
+  await expect(driveHeading).toBeVisible({ timeout: LONG_VISIBLE_TIMEOUT });
 
   // Create the package manifest by clicking the prompt
   const createManifest = page.getByText("Click to create package manifest");
@@ -55,7 +56,7 @@ test("should not trigger a page reload when editing the manifest", async ({
 
   // Wait for the package editor to fully load
   const categorySelect = page.locator("select#package-category");
-  await expect(categorySelect).toBeVisible({ timeout: 2 * 60 * 60 * 1000 });
+  await expect(categorySelect).toBeVisible({ timeout: LONG_VISIBLE_TIMEOUT });
 
   // Change the category select to trigger codegen (manifest regeneration)
   await categorySelect.selectOption("Governance");

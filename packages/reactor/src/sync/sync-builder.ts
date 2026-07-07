@@ -1,7 +1,7 @@
 import type { ILogger } from "document-model";
 import type { Kysely } from "kysely";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
-import type { IReactor, SyncModule } from "../core/types.js";
+import type { IReactor, InProcessSyncModule } from "../core/types.js";
 import type { IEventBus } from "../events/interfaces.js";
 import type {
   ISyncCursorStorage,
@@ -78,7 +78,7 @@ export class SyncBuilder {
     eventBus: IEventBus,
     db: Kysely<Database>,
     driveContainerTypes: ReadonlySet<string>,
-  ): SyncModule {
+  ): InProcessSyncModule {
     if (!this.channelFactory) {
       throw new Error("Channel factory is required");
     }

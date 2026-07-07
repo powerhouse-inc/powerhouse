@@ -88,7 +88,7 @@ function ConnectedDrives() {
     () =>
       drives.filter((d) =>
         remotes.some((r) =>
-          r.collectionId.equals(DriveCollectionId.forDrive(d.header.id)),
+          r.meta.collectionId.equals(DriveCollectionId.forDrive(d.header.id)),
         ),
       ),
     [drives, remotes],

@@ -17,7 +17,7 @@ import {
   type ISyncManager,
   type JobReadReadyEvent,
   type OperationIndexEntry,
-  type ReactorModule,
+  type InProcessReactorModule,
 } from "@powerhousedao/reactor";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
@@ -28,8 +28,8 @@ import { createResolverBridge } from "./utils/gql-resolver-bridge.js";
 type ConnectSwitchboardSetup = {
   connectReactor: IReactor;
   switchboardReactor: IReactor;
-  connectModule: ReactorModule;
-  switchboardModule: ReactorModule;
+  connectModule: InProcessReactorModule;
+  switchboardModule: InProcessReactorModule;
   connectEventBus: IEventBus;
   switchboardEventBus: IEventBus;
   connectSyncManager: ISyncManager;
@@ -258,8 +258,8 @@ function waitForSyncStabilization(
 describe("Connect-Switchboard Sync", () => {
   let connectReactor: IReactor;
   let switchboardReactor: IReactor;
-  let connectModule: ReactorModule;
-  let switchboardModule: ReactorModule;
+  let connectModule: InProcessReactorModule;
+  let switchboardModule: InProcessReactorModule;
   let connectEventBus: IEventBus;
   let switchboardEventBus: IEventBus;
   let connectSyncManager: ISyncManager;

@@ -160,15 +160,18 @@ function createMockChannel(
 
 const mockRemotes: Remote[] = [
   {
-    id: "abc-123-def-456",
-    name: "remote-main",
-    collectionId: DriveCollectionId.forDrive("documents"),
-    filter: {
-      documentId: [],
-      scope: [],
-      branch: "main",
+    meta: {
+      id: "abc-123-def-456",
+      name: "remote-main",
+      collectionId: DriveCollectionId.forDrive("documents"),
+      channelConfig: { type: "gql", parameters: {} },
+      filter: {
+        documentId: [],
+        scope: [],
+        branch: "main",
+      },
+      options: { sinceTimestampUtcMs: "0" },
     },
-    options: { sinceTimestampUtcMs: "0" },
     channel: createMockChannel(
       [
         createMockSyncOperation(
@@ -208,15 +211,18 @@ const mockRemotes: Remote[] = [
     ),
   },
   {
-    id: "ghi-789-jkl-012",
-    name: "remote-dev",
-    collectionId: DriveCollectionId.forDrive("experiments", "dev"),
-    filter: {
-      documentId: ["doc-1", "doc-2"],
-      scope: ["scope-a"],
-      branch: "dev",
+    meta: {
+      id: "ghi-789-jkl-012",
+      name: "remote-dev",
+      collectionId: DriveCollectionId.forDrive("experiments", "dev"),
+      channelConfig: { type: "gql", parameters: {} },
+      filter: {
+        documentId: ["doc-1", "doc-2"],
+        scope: ["scope-a"],
+        branch: "dev",
+      },
+      options: { sinceTimestampUtcMs: "0" },
     },
-    options: { sinceTimestampUtcMs: "0" },
     channel: createMockChannel(
       [
         createMockSyncOperation(
@@ -232,15 +238,18 @@ const mockRemotes: Remote[] = [
     ),
   },
   {
-    id: "mno-345-pqr-678",
-    name: "remote-feature",
-    collectionId: DriveCollectionId.forDrive("new-ui", "feature"),
-    filter: {
-      documentId: [],
-      scope: ["ui", "components"],
-      branch: "feature/new-ui",
+    meta: {
+      id: "mno-345-pqr-678",
+      name: "remote-feature",
+      collectionId: DriveCollectionId.forDrive("new-ui", "feature"),
+      channelConfig: { type: "gql", parameters: {} },
+      filter: {
+        documentId: [],
+        scope: ["ui", "components"],
+        branch: "feature/new-ui",
+      },
+      options: { sinceTimestampUtcMs: "0" },
     },
-    options: { sinceTimestampUtcMs: "0" },
     channel: createMockChannel([], [], []),
   },
 ];

@@ -1,3 +1,4 @@
+import type { PGlite } from "@electric-sql/pglite";
 import {
   getCachedReactorPgMajor,
   loadPgDump,
@@ -7,6 +8,7 @@ import type {
   FilterGroup,
   SortOptions,
 } from "@powerhousedao/design-system/connect";
+import type { Database } from "@powerhousedao/reactor";
 import {
   REACTOR_SCHEMA,
   useDatabase,
@@ -14,8 +16,10 @@ import {
   useReactorClientModule,
   type IQueue,
 } from "@powerhousedao/reactor-browser";
-import { sql } from "kysely";
-import { useCallback } from "react";
+import type { IInspectorProxy } from "@powerhousedao/reactor-browser/rpc";
+import { Kysely, sql } from "kysely";
+import { PGliteDialect } from "kysely-pglite-dialect";
+import { useCallback, useMemo } from "react";
 
 async function quiesceQueue(queue: IQueue): Promise<void> {
   await new Promise<void>((resolve) => queue.block(() => resolve()));
@@ -79,12 +83,42 @@ const PRIORITY_COLUMNS = [
   "skip",
 ] as const;
 
+type ReactorPgliteAdapter = {
+  query: (
+    sql: string,
+    params?: unknown[],
+  ) => Promise<{ rows: unknown[]; affectedRows?: number }>;
+};
+
+function createWorkerReactorDatabase(
+  inspector: IInspectorProxy,
+): Kysely<Database> {
+  const adapter: ReactorPgliteAdapter = {
+    query: async (statement, params) => ({
+      rows: (await inspector.queryReactorDb(statement, params)) as unknown[],
+    }),
+  };
+  return new Kysely<Database>({
+    dialect: new PGliteDialect(adapter as unknown as PGlite),
+  });
+}
+
 export function useDbExplorer() {
-  const database = useDatabase();
+  const browserDatabase = useDatabase();
   const pglite = usePGlite();
-  const reactorClientModule = useReactorClientModule();
+  const module = useReactorClientModule();
+  const reactorClientModule = module?.kind === "browser" ? module : undefined;
   const reactor = reactorClientModule?.reactorModule?.reactor;
   const queue = reactorClientModule?.reactorModule?.queue;
+  const workerModule = module?.kind === "worker" ? module : undefined;
+  const workerDatabase = useMemo(
+    () =>
+      workerModule
+        ? createWorkerReactorDatabase(workerModule.inspector)
+        : undefined,
+    [workerModule],
+  );
+  const database = browserDatabase ?? workerDatabase;
 
   const getTables = useCallback(async (): Promise<TableInfo[]> => {
     if (!database) return [];
@@ -288,12 +322,7 @@ export function useDbExplorer() {
         await status.completed;
       }
 
-      // Drop every user-created schema before restoring. Processors may own
-      // schemas beyond `reactor`, so dropping only that one leaves orphans
-      // whose tables collide with whatever the dump recreates. The dump
-      // itself emits `CREATE SCHEMA ...;` statements, so we don't pre-create.
-      // `standard_conforming_strings=off` matches pg_dump's escape-string
-      // literals so doubled backslashes in JSONB collapse correctly.
+      // drop every user-created schema before restoring
       await pglite.transaction(async (tx) => {
         const schemas = await tx.query<{ nspname: string }>(
           `SELECT nspname FROM pg_namespace
@@ -313,14 +342,11 @@ export function useDbExplorer() {
         await tx.exec(`SET search_path TO ${REACTOR_SCHEMA}`);
       });
 
-      // Flush IDBFS → IndexedDB synchronously. PGlite's own syncToFs is
-      // fire-and-forget under relaxedDurability, and close() doesn't run
-      // a final sync, so we drive Emscripten's syncfs directly — its
-      // callback fires from the IDB transaction's oncomplete, guaranteeing
-      // the writes have committed before we reload.
+      // flush IDBFS → IndexedDB synchronously
       await syncPgliteToIdb(pglite);
 
       window.location.reload();
+
       // reload() is asynchronous; without blocking here the DBExplorer caller
       // would continue and call loadTables() against an in-flight shutdown.
       await new Promise(() => {});
@@ -338,11 +364,13 @@ export function useDbExplorer() {
     [],
   );
 
+  const canModifyDb = !!pglite;
+
   return {
     getTables,
     getTableRows,
     getDefaultSort,
-    onExportDb,
-    onImportDb,
+    onExportDb: canModifyDb ? onExportDb : undefined,
+    onImportDb: canModifyDb ? onImportDb : undefined,
   };
 }

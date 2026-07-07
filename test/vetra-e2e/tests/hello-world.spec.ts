@@ -1,6 +1,7 @@
 import { test, expect } from "./helpers/fixtures.js";
+import { DESCRIBE_TIMEOUT } from "./helpers/timeouts.js";
 
-test.describe.configure({ timeout: 5 * 60 * 60 * 1000 });
+test.describe.configure({ timeout: DESCRIBE_TIMEOUT });
 
 test("should load Vetra application successfully", async ({ page }) => {
   // Navigate to the root URL (port 3001)

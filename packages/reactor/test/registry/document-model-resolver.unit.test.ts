@@ -170,6 +170,21 @@ describe("DocumentModelResolver", () => {
     ).resolves.toBeUndefined();
   });
 
+  it("should not fail the load when the modelLoadedHook rejects", async () => {
+    const module = createMockModule("test/type");
+    vi.mocked(loader.load).mockResolvedValue(module);
+    resolver.setModelLoadedHook(() =>
+      Promise.reject(new Error("peer notify failed")),
+    );
+
+    // The model is registered, so a peer-notify failure must not reject the
+    // load (which would make the queue fail an already-loadable CREATE_DOCUMENT).
+    await expect(
+      resolver.ensureModelLoaded("test/type"),
+    ).resolves.toBeUndefined();
+    expect(registry.getModule("test/type")).toBe(module);
+  });
+
   it("should propagate non-ModuleNotFoundError from registry.getModule", async () => {
     const errorRegistry: IDocumentModelRegistry = {
       ...registry,

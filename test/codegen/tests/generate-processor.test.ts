@@ -1,6 +1,6 @@
 import { generateProcessor } from "@powerhousedao/codegen";
 import { fileExists } from "@powerhousedao/shared/clis";
-import type { ReactorModule } from "@powerhousedao/reactor";
+import type { InProcessReactorModule } from "@powerhousedao/reactor";
 import { ReactorBuilder } from "@powerhousedao/reactor";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 
@@ -415,7 +415,7 @@ function instrumentProcessorWithLog(indexFilePath: string) {
 }
 
 describe("processor e2e integration", () => {
-  let reactorModule: ReactorModule | undefined;
+  let reactorModule: InProcessReactorModule | undefined;
 
   afterEach(async () => {
     if (reactorModule) {

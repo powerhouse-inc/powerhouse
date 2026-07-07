@@ -21,8 +21,24 @@ import {
 } from "../../remotes-inspector/index.js";
 import { TabContent } from "../../tabs/tab-content.js";
 import { Tabs } from "../../tabs/tabs.js";
+import {
+  WorkerInspector,
+  type WorkerInspectorProps,
+} from "../../worker-inspector/index.js";
 
 type ModalProps = ComponentPropsWithoutRef<typeof Modal>;
+
+export type InspectorTab =
+  | "Database"
+  | "Remotes"
+  | "Queue"
+  | "Processors"
+  | "Integrity"
+  | "Worker";
+
+export type InspectorUnavailableTabs = {
+  readonly [K in InspectorTab]?: string;
+};
 
 export type InspectorModalProps = {
   readonly open: boolean;
@@ -34,13 +50,21 @@ export type InspectorModalProps = {
   readonly queueInspectorProps?: QueueInspectorProps;
   readonly processorsInspectorProps?: ProcessorsInspectorProps;
   readonly integrityInspectorProps?: IntegrityInspectorProps;
-  readonly defaultTab?:
-    | "Database"
-    | "Remotes"
-    | "Queue"
-    | "Processors"
-    | "Integrity";
+  readonly workerInspectorProps?: WorkerInspectorProps;
+  readonly unavailableTabs?: InspectorUnavailableTabs;
+  readonly defaultTab?: InspectorTab;
 };
+
+function InspectorUnavailable({ message }: { readonly message: string }) {
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-2 p-6 text-center">
+      <span className="text-sm font-semibold text-muted-foreground">
+        Not available here
+      </span>
+      <p className="max-w-md text-sm text-muted-foreground">{message}</p>
+    </div>
+  );
+}
 
 export function InspectorModal({
   open,
@@ -52,6 +76,8 @@ export function InspectorModal({
   queueInspectorProps,
   processorsInspectorProps,
   integrityInspectorProps,
+  workerInspectorProps,
+  unavailableTabs,
   defaultTab = "Database",
 }: InspectorModalProps) {
   return (
@@ -94,24 +120,43 @@ export function InspectorModal({
                 <RemotesInspector {...remotesInspectorProps} />
               </div>
             </TabContent>
-            {queueInspectorProps && (
+            {queueInspectorProps ? (
               <TabContent description="Queue inspector" label="Queue">
                 <div className="h-full">
                   <QueueInspector {...queueInspectorProps} />
                 </div>
               </TabContent>
-            )}
-            {processorsInspectorProps && (
+            ) : unavailableTabs?.Queue ? (
+              <TabContent description="Queue inspector" label="Queue">
+                <InspectorUnavailable message={unavailableTabs.Queue} />
+              </TabContent>
+            ) : null}
+            {processorsInspectorProps ? (
               <TabContent description="Processors inspector" label="Processors">
                 <div className="h-full">
                   <ProcessorsInspector {...processorsInspectorProps} />
                 </div>
               </TabContent>
-            )}
-            {integrityInspectorProps && (
+            ) : unavailableTabs?.Processors ? (
+              <TabContent description="Processors inspector" label="Processors">
+                <InspectorUnavailable message={unavailableTabs.Processors} />
+              </TabContent>
+            ) : null}
+            {integrityInspectorProps ? (
               <TabContent description="Integrity inspector" label="Integrity">
                 <div className="h-full">
                   <IntegrityInspector {...integrityInspectorProps} />
+                </div>
+              </TabContent>
+            ) : unavailableTabs?.Integrity ? (
+              <TabContent description="Integrity inspector" label="Integrity">
+                <InspectorUnavailable message={unavailableTabs.Integrity} />
+              </TabContent>
+            ) : null}
+            {workerInspectorProps && (
+              <TabContent description="Worker inspector" label="Worker">
+                <div className="h-full">
+                  <WorkerInspector {...workerInspectorProps} />
                 </div>
               </TabContent>
             )}
