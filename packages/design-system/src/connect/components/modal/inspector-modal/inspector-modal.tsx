@@ -73,6 +73,7 @@ export function InspectorModal({
       >
         <div className="flex shrink-0 items-center justify-end px-3 pt-3">
           <button
+            aria-label="Close"
             className="flex size-6 cursor-pointer items-center justify-center rounded-md text-muted-foreground outline-none hover:hover-effect"
             onClick={() => onOpenChange(false)}
             type="button"

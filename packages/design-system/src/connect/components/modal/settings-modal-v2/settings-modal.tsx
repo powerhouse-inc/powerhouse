@@ -60,11 +60,6 @@ export function SettingsModal(props: Props) {
           "min-h-full w-full max-w-4xl rounded-xl",
           contentProps?.className,
         ),
-        style: {
-          ...contentProps?.style,
-          boxShadow:
-            "0px 0px 16px 4px rgba(0, 0, 0, 0.04), 0px 33px 32px -16px rgba(0, 0, 0, 0.10)",
-        },
       }}
       onOpenChange={onOpenChange}
       overlayProps={{
@@ -79,6 +74,7 @@ export function SettingsModal(props: Props) {
         </h1>
         <button
           type="button"
+          aria-label="Close"
           className="flex size-6 items-center justify-center rounded-md text-foreground outline-none"
           onClick={() => onOpenChange?.(false)}
         >
