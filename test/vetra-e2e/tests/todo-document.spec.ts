@@ -705,6 +705,33 @@ test("Change registry URL at runtime and install from new registry", async () =>
   });
 
   // -------------------------------------------------------------------
+  // Step 5c: Accept the service-worker update so the patched index.html
+  //          (with the new CSP) is actually served.
+  // -------------------------------------------------------------------
+  // The consumer build ships Connect's offline/PWA service worker, which
+  // precached index.html on the first load. The reload above is therefore
+  // served from the OLD precache — including the old build-time CSP that only
+  // allowlists :8080 — so the dynamic import() of the package module from the
+  // new registry would be CSP-blocked. Patching the dist files changed the
+  // worker's precache manifest, so Connect detects the new version and shows
+  // the update prompt (registerType: "prompt", skipWaiting: false — see
+  // builder-tools connect-utils/vite-plugins/pwa.ts). Accept it: Refresh
+  // posts SKIP_WAITING, controllerchange fires, and the app reloads itself
+  // with the freshly precached (patched) index.html.
+  console.log("Accepting the service-worker update prompt...");
+  await expect(
+    page.getByText("A new version of Connect is available."),
+  ).toBeVisible({ timeout: 60_000 });
+  const swRefreshButton = page.getByRole("button", { name: "Refresh" });
+  await Promise.all([
+    page.waitForEvent("load", { timeout: 60_000 }),
+    swRefreshButton.click(),
+  ]);
+  await page
+    .locator(".skeleton-loader")
+    .waitFor({ state: "hidden", timeout: 60_000 });
+
+  // -------------------------------------------------------------------
   // Step 6: Install test-package-vetra from the new registry via the
   //          "Available Packages" dropdown menu (same pattern as uninstall).
   // -------------------------------------------------------------------
