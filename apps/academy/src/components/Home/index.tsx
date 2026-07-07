@@ -6,7 +6,7 @@ import styles from "./styles.module.css";
 
 const steps = [
   { n: "1", label: "Install the CLI", code: "pnpm install -g ph-cmd" },
-  { n: "2", label: "Launch the agent", code: "placeholder curl" },
+  { n: "2", label: "Launch the agent", code: "curl -fsSL https://get.vetra.io | sh" },
   {
     n: "3",
     label: "Describe what you want",

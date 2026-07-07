@@ -246,7 +246,20 @@ The studio keeps its state in the URL, under `<slug>.vetra.io/d/<drive-id>`:
 
 ---
 
-Running Vetra Studio locally (advanced)
+Running Vetra Studio locally
+
+Prefer to run everything on your own machine? One command installs and starts a
+local Vetra instance — no invite code needed:
+
+```bash
+curl -fsSL https://get.vetra.io | sh
+```
+
+It runs fully on your own infrastructure, supports Docker and Kubernetes out of
+the box, and is offline-first with peer-to-peer sync. When it is ready, open the
+URL the installer prints.
+
+### From source (advanced)
 
 From the `vetra-cli` directory:
 
