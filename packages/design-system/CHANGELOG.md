@@ -1,3 +1,78 @@
+## 6.2.0-rc.7 (2026-07-07)
+
+### 🚀 Features
+
+- **reactor-browser:** preload editor chunks during idle and on hover ([054797d95](https://github.com/powerhouse-inc/powerhouse/commit/054797d95))
+
+### 🩹 Fixes
+
+- **design-system:** resolve modal accessibility violations ([6059b82cf](https://github.com/powerhouse-inc/powerhouse/commit/6059b82cf))
+- **design-system:** add shadow to base Modal content ([cbac099ce](https://github.com/powerhouse-inc/powerhouse/commit/cbac099ce))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.0-rc.6 (2026-07-03)
+
+This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.
+
+## 6.2.0-rc.5 (2026-07-02)
+
+This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.
+
+## 6.2.0-rc.4 (2026-07-01)
+
+### 🩹 Fixes
+
+- **connect:** distinguish authenticated-but-unauthorized from anonymous in drive auth gate ([#2802](https://github.com/powerhouse-inc/powerhouse/pull/2802))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
+## 6.2.0-rc.3 (2026-06-30)
+
+### 🚀 Features
+
+- **connect:** add PWA offline support with Workbox service worker ([d65bbd886](https://github.com/powerhouse-inc/powerhouse/commit/d65bbd886))
+
+### 🩹 Fixes
+
+- fallback to global name in danger zone drive display ([e49dd2d40](https://github.com/powerhouse-inc/powerhouse/commit/e49dd2d40))
+
+### ❤️ Thank You
+
+- Yasiel Cabrera @YasielCabrera
+
+## 6.2.0-rc.2 (2026-06-26)
+
+### 🩹 Fixes
+
+- install ph-cli@rc for rc-tagged connect/switchboard image builds ([987d68eeb](https://github.com/powerhouse-inc/powerhouse/commit/987d68eeb))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 6.2.0-rc.1 (2026-06-26)
+
+### 🚀 Features
+
+- **release:** support rc release channel in CLIs and docker pipeline ([da765dcb4](https://github.com/powerhouse-inc/powerhouse/commit/da765dcb4))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 6.2.0-rc.0 (2026-06-26)
+
+### 🚀 Features
+
+- **release:** support release/rc/x.x.x branches publishing under -rc.x npm tag ([51a030c04](https://github.com/powerhouse-inc/powerhouse/commit/51a030c04))
+
+### ❤️ Thank You
+
 ## 6.2.0-dev.51 (2026-07-07)
 
 This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.

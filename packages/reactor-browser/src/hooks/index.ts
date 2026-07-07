@@ -20,6 +20,7 @@ export * from "./download-document.js";
 export * from "./drive-by-id.js";
 export * from "./drives.js";
 export * from "./editor-modules.js";
+export * from "./use-editor-preloader.js";
 export * from "./features.js";
 export * from "./file-drag-and-drop.js";
 export * from "./folder-by-id.js";

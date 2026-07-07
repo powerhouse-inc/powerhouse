@@ -9,7 +9,7 @@ import { buildCliConnectOverride } from "../utils/cli-connect-override.js";
 import { runBuild } from "./build.js";
 
 export async function runConnectBuild(args: ConnectBuildArgs) {
-  const { outDir, debug, dynamicBase } = args;
+  const { outDir, debug, dynamicBase, favicon } = args;
 
   const mode = "production";
   const dirname = process.cwd();
@@ -45,6 +45,7 @@ export async function runConnectBuild(args: ConnectBuildArgs) {
     cliConnectOverride: connectOverride,
     cliPackageRegistryUrl: packageRegistryUrl,
     dynamicBase,
+    favicon,
   });
 
   const buildConfig: InlineConfig = {

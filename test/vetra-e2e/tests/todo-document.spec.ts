@@ -705,6 +705,36 @@ test("Change registry URL at runtime and install from new registry", async () =>
   });
 
   // -------------------------------------------------------------------
+  // Step 5c: Drop the service worker + its precache so the patched
+  //          index.html (with the new CSP) is actually served.
+  // -------------------------------------------------------------------
+  // The consumer build ships Connect's offline/PWA service worker (Workbox
+  // generateSW — see builder-tools connect-utils/vite-plugins/pwa.ts), which
+  // precached index.html on the first load. The reload above is therefore
+  // served from that precache — including the old build-time CSP that only
+  // allowlists :8080 — so the dynamic import() of the package module from
+  // the new registry would be CSP-blocked. A real registry-URL change ships
+  // as a rebuild: `ph connect build` regenerates service-worker.js with a
+  // fresh precache revision for index.html, and clients pick it up through
+  // the update prompt. Hand-editing dist files as this test does is
+  // invisible to the installed worker — service-worker.js's bytes (and its
+  // build-time index.html revision) are unchanged, so no update is ever
+  // detected and the stale precache is served forever. Simulate the
+  // fresh-client-after-redeploy instead: unregister the worker, clear its
+  // caches, and reload straight from the (patched) server.
+  console.log("Resetting service worker to pick up patched dist files...");
+  await page.evaluate(async () => {
+    const regs = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(regs.map((r) => r.unregister()));
+    const keys = await caches.keys();
+    await Promise.all(keys.map((k) => caches.delete(k)));
+  });
+  await page.reload({ waitUntil: "networkidle" });
+  await page
+    .locator(".skeleton-loader")
+    .waitFor({ state: "hidden", timeout: 60_000 });
+
+  // -------------------------------------------------------------------
   // Step 6: Install test-package-vetra from the new registry via the
   //          "Available Packages" dropdown menu (same pattern as uninstall).
   // -------------------------------------------------------------------

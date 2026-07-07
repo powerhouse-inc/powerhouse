@@ -10,7 +10,8 @@ export type FailedInstallationReason =
   | "not-in-registry"
   | "registry-error"
   | "install-failed"
-  | "dismissed";
+  | "dismissed"
+  | "offline";
 
 export type FailedInstallation = {
   documentType: string;

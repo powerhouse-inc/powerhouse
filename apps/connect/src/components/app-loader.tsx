@@ -7,6 +7,7 @@ import { App, CookieBanner } from "./index.js";
 import { ConnectionBanner } from "./connection-banner.js";
 import { MigrationBanner } from "./migration-banner.js";
 import { ModalsContainer } from "./modal/modals-container.js";
+import { ServiceWorkerUpdatePrompt } from "./service-worker-update-prompt.js";
 
 export const AppLoader = (props: { localPackage?: DocumentModelLib }) => {
   const Load = lazy(() =>
@@ -34,6 +35,7 @@ export const AppLoader = (props: { localPackage?: DocumentModelLib }) => {
           <ModalsContainer />
         </Suspense>
         <MigrationBanner />
+        <ServiceWorkerUpdatePrompt />
         <ConnectionBanner />
       </ErrorBoundary>
     </StrictMode>

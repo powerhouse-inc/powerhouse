@@ -1,10 +1,12 @@
 import { Icon } from "#design-system";
 import {
   getSyncStatusSync,
+  preloadEditorModule,
   setSelectedNode,
   showDeleteNodeModal,
   useDownloadDocument,
   useDragNode,
+  useEditorModulesForDocumentType,
   useNodeActions,
   useSelectedDriveSafe,
   useUserPermissions,
@@ -56,6 +58,11 @@ export function FileItem(props: Props) {
     parentId: fileNode.parentFolder ?? undefined,
   });
   const { isAllowedToCreateDocuments } = useUserPermissions();
+  const editorModules = useEditorModulesForDocumentType(fileNode.documentType);
+  const preloadEditors = () =>
+    editorModules?.forEach((editorModule) => {
+      void preloadEditorModule(editorModule);
+    });
   const { onRenameNode, onRenameDriveNodes, onDuplicateNode } =
     useNodeActions();
   const downloadDocument = useDownloadDocument(fileNode.id);
@@ -186,6 +193,7 @@ export function FileItem(props: Props) {
     <div
       className="relative w-64"
       onClick={isReadMode ? () => setSelectedNode(fileNode) : undefined}
+      onMouseEnter={preloadEditors}
       {...dragProps}
     >
       <div className={containerStyles}>

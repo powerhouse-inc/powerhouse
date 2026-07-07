@@ -1,11 +1,11 @@
 import { Icon } from "#design-system";
-import { twMerge } from "tailwind-merge";
 import type {
   DocumentDriveDocument,
   SharingType,
 } from "@powerhousedao/shared/document-drive";
 import { capitalCase } from "change-case";
 import { useState } from "react";
+import { twMerge } from "tailwind-merge";
 import { ConnectDropdownMenu } from "../../dropdown-menu/dropdown-menu.js";
 
 function getDriveSharingType(drive: DocumentDriveDocument): SharingType {
@@ -108,7 +108,7 @@ function Drive(props: ModifyDrivesProps & { drive: DocumentDriveDocument }) {
       {icon}
       <div>
         <span className="block text-sm/4.5 font-medium">
-          {capitalCase(drive.header.name)}
+          {capitalCase(drive.header.name || drive.state.global.name)}
         </span>
         <div className="flex items-baseline gap-x-2 leading-4.5">
           <span className="text-sm text-foreground">

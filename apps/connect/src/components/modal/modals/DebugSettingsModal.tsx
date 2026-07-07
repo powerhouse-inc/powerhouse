@@ -120,7 +120,6 @@ export const DebugSettingsModal: React.FC = () => {
               size="small"
               disabled={appVersion === ""}
               onClick={() => {
-                // @ts-expect-error todo add send message method to service worker manager class
                 serviceWorkerManager.sendMessage({
                   type: "SET_APP_VERSION",
                   version: appVersion,

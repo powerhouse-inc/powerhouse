@@ -11,6 +11,7 @@ import {
 } from "@powerhousedao/design-system/connect";
 import {
   openRenown,
+  logout,
   setPHAppConfig,
   setPHDocumentEditorConfig,
   setSelectedDrive,
@@ -27,7 +28,7 @@ import { getRuntimeConfig } from "../runtime-config.js";
 import { useDriveAuthGate } from "../components/use-drive-auth-gate.js";
 
 export function Content() {
-  const { needsLogin } = useDriveAuthGate();
+  const { gate } = useDriveAuthGate();
   const [selectedDrive] = useSelectedDriveSafe();
   const selectedFolder = useSelectedFolder();
   const selectedDocumentId = useSelectedDocumentId();
@@ -48,9 +49,13 @@ export function Content() {
     !selectedDocumentId && !selectedDrive && !selectedFolder;
   return (
     <ContentContainer>
-      {needsLogin ? (
+      {gate ? (
         <div className="flex h-full items-center justify-center p-4">
-          <DriveAuthGate onLogin={openRenown} />
+          <DriveAuthGate
+            mode={gate}
+            onLogin={openRenown}
+            onLogout={() => void logout()}
+          />
         </div>
       ) : showHomeScreen ? (
         <HomeScreenContainer />

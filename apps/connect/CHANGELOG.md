@@ -1,3 +1,86 @@
+## 6.2.0-rc.7 (2026-07-07)
+
+### 🚀 Features
+
+- **reactor-browser:** preload editor chunks during idle and on hover ([054797d95](https://github.com/powerhouse-inc/powerhouse/commit/054797d95))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.0-rc.6 (2026-07-03)
+
+### 🩹 Fixes
+
+- **connect:** retry shared PGlite init on failure; drop unsafe dialect cast ([db4bfa3a7](https://github.com/powerhouse-inc/powerhouse/commit/db4bfa3a7))
+
+### 🔥 Performance
+
+- **connect:** keep Sentry SDK off the boot critical path ([df1aa0663](https://github.com/powerhouse-inc/powerhouse/commit/df1aa0663))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.0-rc.5 (2026-07-02)
+
+### 🚀 Features
+
+- pre-paint theme boot script and cross-context theme sync ([#2806](https://github.com/powerhouse-inc/powerhouse/pull/2806))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
+## 6.2.0-rc.4 (2026-07-01)
+
+### 🩹 Fixes
+
+- **connect:** distinguish authenticated-but-unauthorized from anonymous in drive auth gate ([#2802](https://github.com/powerhouse-inc/powerhouse/pull/2802))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
+## 6.2.0-rc.3 (2026-06-30)
+
+### 🚀 Features
+
+- **connect:** enhance offline handling in package discovery and service worker caching ([9569b0757](https://github.com/powerhouse-inc/powerhouse/commit/9569b0757))
+- **connect:** add PWA offline support with Workbox service worker ([d65bbd886](https://github.com/powerhouse-inc/powerhouse/commit/d65bbd886))
+
+### ❤️ Thank You
+
+- Yasiel Cabrera @YasielCabrera
+
+## 6.2.0-rc.2 (2026-06-26)
+
+### 🩹 Fixes
+
+- install ph-cli@rc for rc-tagged connect/switchboard image builds ([987d68eeb](https://github.com/powerhouse-inc/powerhouse/commit/987d68eeb))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 6.2.0-rc.1 (2026-06-26)
+
+### 🚀 Features
+
+- **release:** support rc release channel in CLIs and docker pipeline ([da765dcb4](https://github.com/powerhouse-inc/powerhouse/commit/da765dcb4))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 6.2.0-rc.0 (2026-06-26)
+
+### 🚀 Features
+
+- **release:** support release/rc/x.x.x branches publishing under -rc.x npm tag ([51a030c04](https://github.com/powerhouse-inc/powerhouse/commit/51a030c04))
+
+### ❤️ Thank You
+
 ## 6.2.0-dev.51 (2026-07-07)
 
 This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.

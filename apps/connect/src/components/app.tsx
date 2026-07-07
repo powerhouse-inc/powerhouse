@@ -4,12 +4,13 @@ import {
   Router,
 } from "@powerhousedao/connect/components";
 
+import { connectConfig } from "@powerhousedao/connect/config";
 import { SentryProvider } from "@powerhousedao/connect/context";
 import {
   DocumentEditorDebugTools,
   serviceWorkerManager,
 } from "@powerhousedao/connect/utils";
-import { useTheme } from "@powerhousedao/reactor-browser";
+import { useEditorPreloader, useTheme } from "@powerhousedao/reactor-browser";
 import { useEffect } from "react";
 import { ToastContainer } from "../services/toast.js";
 import { MissingModelBanner } from "./missing-model-banner.js";
@@ -17,6 +18,7 @@ import { PackageInstallPrompt } from "./package-install-prompt.js";
 
 export const App = () => {
   useTheme(); // keeps the OS-preference change listener active
+  useEditorPreloader(); // warms editor chunks during idle time
 
   // refresh page on vite preload error due to outdated chunks — but only when
   // the failing dynamic import is one of Connect's own chunks. External
@@ -55,8 +57,11 @@ export const App = () => {
   useEffect(() => {
     if (import.meta.env.MODE === "development") {
       window.documentEditorDebugTools = new DocumentEditorDebugTools();
-    } else {
+    } else if (connectConfig.offline) {
       serviceWorkerManager.registerServiceWorker(false);
+    } else {
+      // Offline disabled — drop any worker a previous offline build left running.
+      void serviceWorkerManager.unregisterAll();
     }
   }, []);
 

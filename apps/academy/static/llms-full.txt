@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-07-07T22:19:22.222Z
+> Generated: 2026-07-07T22:27:24.134Z
 > Total Documents: 105
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -13579,6 +13579,8 @@ Build has no read mode; passing only &lt;key&gt; without &lt;value&gt; errors ou
 **Sentry Env** - Override connect.sentry.env (Sentry environment label). - Usage: `--sentry-env <str>`
 
 **Sentry Tracing Enabled** - Override connect.sentry.tracing (Sentry performance tracing). - Usage: `--sentry-tracing-enabled <value>`
+
+**Favicon** - Path to a favicon file (e.g. .ico) to bundle in place of the default Connect icon. Emitted as icon.ico; resolved relative to the build cwd. - Usage: `--favicon <str>`
 
 **Base** - Base path for the app - Usage: `--base <str>`
 

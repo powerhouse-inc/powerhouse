@@ -1,7 +1,9 @@
 import { PowerhouseButton } from "@powerhousedao/design-system";
 import {
+  preloadEditorModule,
   showCreateDocumentModal,
   useDocumentModelModules,
+  useEditorModules,
   useUserPermissions,
 } from "@powerhousedao/reactor-browser";
 import type {
@@ -16,9 +18,18 @@ function getDocumentSpec(doc: DocumentModelModule): DocumentModelGlobalState {
 export function CreateDocument() {
   const { isAllowedToCreateDocuments } = useUserPermissions();
   const documentModelModules = useDocumentModelModules();
+  const editorModules = useEditorModules();
   const nonDriveDocumentModelModules = documentModelModules?.filter(
     (module) => module.documentModel.global.id !== "powerhouse/document-drive",
   );
+  const preloadEditorsForType = (documentType: string) =>
+    editorModules
+      ?.filter((editorModule) =>
+        editorModule.documentTypes.includes(documentType),
+      )
+      .forEach((editorModule) => {
+        void preloadEditorModule(editorModule);
+      });
   if (!isAllowedToCreateDocuments) return null;
   return (
     <div className="px-6 py-4">
@@ -33,6 +44,8 @@ export function CreateDocument() {
               color="light"
               title={`${spec.name}${versionLabel}`}
               aria-description={spec.description}
+              onMouseEnter={() => preloadEditorsForType(spec.id)}
+              onFocus={() => preloadEditorsForType(spec.id)}
               onClick={() => showCreateDocumentModal(spec.id)}
             >
               <span className="text-sm">
