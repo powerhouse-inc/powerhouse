@@ -1,3 +1,7 @@
+## 6.2.0-rc.7 (2026-07-07)
+
+This was a version bump only for @powerhousedao/ph-cli to align it with other projects, there were no code changes.
+
 ## 6.2.0-rc.6 (2026-07-03)
 
 This was a version bump only for @powerhousedao/ph-cli to align it with other projects, there were no code changes.

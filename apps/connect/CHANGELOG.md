@@ -1,3 +1,13 @@
+## 6.2.0-rc.7 (2026-07-07)
+
+### 🚀 Features
+
+- **reactor-browser:** preload editor chunks during idle and on hover ([054797d95](https://github.com/powerhouse-inc/powerhouse/commit/054797d95))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.0-rc.6 (2026-07-03)
 
 ### 🩹 Fixes
