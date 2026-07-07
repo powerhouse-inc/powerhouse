@@ -4,7 +4,7 @@ exports[`UpgradeDriveModal Component > should match snapshot 1`] = `
 <div
   aria-describedby="radix-_r_2_"
   aria-labelledby="radix-_r_1_"
-  class="overflow-hidden rounded-3xl bg-background data-[state=closed]:animate-zoom-out data-[state=open]:animate-zoom-in"
+  class="overflow-hidden rounded-3xl bg-background shadow-modal data-[state=closed]:animate-zoom-out data-[state=open]:animate-zoom-in"
   data-state="open"
   data-testid="upgrade-drive-modal"
   id="radix-_r_0_"
