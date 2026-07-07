@@ -705,28 +705,31 @@ test("Change registry URL at runtime and install from new registry", async () =>
   });
 
   // -------------------------------------------------------------------
-  // Step 5c: Accept the service-worker update so the patched index.html
-  //          (with the new CSP) is actually served.
+  // Step 5c: Drop the service worker + its precache so the patched
+  //          index.html (with the new CSP) is actually served.
   // -------------------------------------------------------------------
-  // The consumer build ships Connect's offline/PWA service worker, which
+  // The consumer build ships Connect's offline/PWA service worker (Workbox
+  // generateSW — see builder-tools connect-utils/vite-plugins/pwa.ts), which
   // precached index.html on the first load. The reload above is therefore
-  // served from the OLD precache — including the old build-time CSP that only
-  // allowlists :8080 — so the dynamic import() of the package module from the
-  // new registry would be CSP-blocked. Patching the dist files changed the
-  // worker's precache manifest, so Connect detects the new version and shows
-  // the update prompt (registerType: "prompt", skipWaiting: false — see
-  // builder-tools connect-utils/vite-plugins/pwa.ts). Accept it: Refresh
-  // posts SKIP_WAITING, controllerchange fires, and the app reloads itself
-  // with the freshly precached (patched) index.html.
-  console.log("Accepting the service-worker update prompt...");
-  await expect(
-    page.getByText("A new version of Connect is available."),
-  ).toBeVisible({ timeout: 60_000 });
-  const swRefreshButton = page.getByRole("button", { name: "Refresh" });
-  await Promise.all([
-    page.waitForEvent("load", { timeout: 60_000 }),
-    swRefreshButton.click(),
-  ]);
+  // served from that precache — including the old build-time CSP that only
+  // allowlists :8080 — so the dynamic import() of the package module from
+  // the new registry would be CSP-blocked. A real registry-URL change ships
+  // as a rebuild: `ph connect build` regenerates service-worker.js with a
+  // fresh precache revision for index.html, and clients pick it up through
+  // the update prompt. Hand-editing dist files as this test does is
+  // invisible to the installed worker — service-worker.js's bytes (and its
+  // build-time index.html revision) are unchanged, so no update is ever
+  // detected and the stale precache is served forever. Simulate the
+  // fresh-client-after-redeploy instead: unregister the worker, clear its
+  // caches, and reload straight from the (patched) server.
+  console.log("Resetting service worker to pick up patched dist files...");
+  await page.evaluate(async () => {
+    const regs = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(regs.map((r) => r.unregister()));
+    const keys = await caches.keys();
+    await Promise.all(keys.map((k) => caches.delete(k)));
+  });
+  await page.reload({ waitUntil: "networkidle" });
   await page
     .locator(".skeleton-loader")
     .waitFor({ state: "hidden", timeout: 60_000 });
