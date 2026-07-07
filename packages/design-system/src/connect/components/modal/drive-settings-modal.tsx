@@ -90,6 +90,7 @@ export function DriveSettingsModal(props: DriveSettingsModalProps) {
         <div className="flex justify-between">
           <h1 className="text-xl font-bold text-foreground">Drive settings</h1>
           <button
+            aria-label="Close"
             className="flex size-8 items-center justify-center rounded-md bg-muted text-muted-foreground outline-none hover:hover-effect"
             onClick={handleCancel}
             tabIndex={-1}
