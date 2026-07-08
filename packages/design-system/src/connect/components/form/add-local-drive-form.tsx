@@ -3,9 +3,7 @@ import type { SubmitHandler } from "react-hook-form";
 import { useForm } from "react-hook-form";
 import { FormInput } from "../form-input/form-input.js";
 import { AppFormInput } from "./inputs/app-form-input.js";
-import { AvailableOfflineToggle } from "./inputs/available-offline-toggle.js";
 import { Label } from "./inputs/label.js";
-import { SharingTypeFormInput } from "./inputs/sharing-type-form-input.js";
 
 type AddLocalDriveFormProps = {
   readonly onSubmit: CreateDriveFormSubmitHandler;
@@ -57,18 +55,6 @@ export function AddLocalDriveForm(props: AddLocalDriveFormProps) {
             Drive App
           </Label>
           <AppFormInput control={control} appOptions={props.appOptions} />
-        </div>
-        <div>
-          <Label
-            htmlFor="sharingType"
-            className="text-sm font-medium text-foreground"
-          >
-            Location
-          </Label>
-          <SharingTypeFormInput control={control} />
-        </div>
-        <div>
-          <AvailableOfflineToggle {...register("availableOffline")} />
         </div>
         <PowerhouseButton className="mt-2 w-full" type="submit">
           Create new drive
