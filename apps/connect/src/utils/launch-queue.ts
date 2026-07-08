@@ -1,13 +1,9 @@
-import {
-  PWA_SHARE_TARGET_INBOX_CACHE,
-  PWA_SHARE_TARGET_REDIRECT_PARAM,
-} from "@powerhousedao/shared/connect";
 import { showPHModal } from "@powerhousedao/reactor-browser";
 
-// PWA File Handling: consume documents the OS opens with the installed
-// Connect app (manifest file_handlers, see builder-tools' PWA plugin). The
-// consumer stashes the launched files in the pending store below and opens
-// the openFileDocuments modal, which owns the drive picking + import flow.
+// PWA launch handling: consume the files the OS hands the installed Connect app
+// via window.launchQueue when a document is opened through its file association
+// (manifest file_handlers) — stash the files in the pending store below and open
+// the openFileDocuments modal (drive picking + import).
 //
 // Same shape as registerServiceWorker.ts: a module singleton with a tiny
 // external store consumed via useSyncExternalStore.
@@ -63,7 +59,6 @@ async function handleLaunchParams(params: LaunchParams) {
   const handles = params.files.filter(
     (handle): handle is FileSystemFileHandle => handle.kind === "file",
   );
-  // A plain focus/navigate launch carries no files.
   if (handles.length === 0) return;
 
   const files: File[] = [];
@@ -91,50 +86,14 @@ function maybeReopenImportModal() {
   showPHModal({ type: "openFileDocuments" });
 }
 
-/**
- * Drain files the OS share sheet handed us. The service worker's share-target
- * route stashes shared files in a Cache and redirects here with a marker query
- * param; on boot we turn the stashed responses back into Files and feed them
- * into the same import flow as a file-handler launch. Best-effort and a no-op
- * when the marker is absent or the Cache API is unavailable.
- */
-async function drainShareTargetInbox() {
-  if (typeof caches === "undefined") return;
-  const url = new URL(window.location.href);
-  if (!url.searchParams.has(PWA_SHARE_TARGET_REDIRECT_PARAM)) return;
-  // Strip the marker so a reload doesn't re-open the picker.
-  url.searchParams.delete(PWA_SHARE_TARGET_REDIRECT_PARAM);
-  window.history.replaceState(window.history.state, "", url.toString());
-  try {
-    const cache = await caches.open(PWA_SHARE_TARGET_INBOX_CACHE);
-    const requests = await cache.keys();
-    const files: File[] = [];
-    for (const request of requests) {
-      const response = await cache.match(request);
-      if (!response) continue;
-      const blob = await response.blob();
-      const name = decodeURIComponent(
-        response.headers.get("X-PH-Share-Name") ?? "shared-file",
-      );
-      files.push(new File([blob], name, { type: blob.type }));
-      await cache.delete(request);
-    }
-    if (files.length === 0) return;
-    addPendingImportFiles(files);
-    showPHModal({ type: "openFileDocuments" });
-  } catch (error) {
-    console.error("Failed to drain the share-target inbox:", error);
-  }
-}
-
 let initialized = false;
 
 /**
  * Register the launchQueue consumer that receives files opened with Connect
- * through the OS file association, and drain any OS-shared files the service
- * worker stashed. Idempotent (safe under StrictMode double effects) and a no-op
- * where the File Handling API doesn't exist — Firefox, Safari, and any context
- * without an installed PWA manifest simply never deliver launches.
+ * through the OS file association. Idempotent (safe under StrictMode double
+ * effects) and a no-op where the File Handling API doesn't exist — Firefox,
+ * Safari, and any context without an installed PWA manifest simply never
+ * deliver launches.
  */
 export function initLaunchQueueFileHandling() {
   if (initialized) return;
@@ -143,5 +102,4 @@ export function initLaunchQueueFileHandling() {
   window.launchQueue?.setConsumer((params) => {
     void handleLaunchParams(params);
   });
-  void drainShareTargetInbox();
 }

@@ -347,7 +347,6 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     });
     const projectContribution = collectProjectPwaContribution({
       projectRoot: options.dirname,
-      onWarn: pwaWarn,
     });
     if (projectContribution) contributions.push(projectContribution);
     const mergedPwa = mergePwaConfig(contributions, projectPwa, pwaWarn);

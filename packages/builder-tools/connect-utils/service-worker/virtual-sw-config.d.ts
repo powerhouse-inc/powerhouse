@@ -19,10 +19,4 @@ declare module "virtual:ph-sw-config" {
 
   /** Extra SPA navigate-fallback denylist patterns. */
   export const NAVIGATE_FALLBACK_DENYLIST_EXTRA: PHConnectPwaUrlPattern[];
-
-  /** The in-scope path the OS share sheet POSTs to (Connect-owned). */
-  export const SHARE_TARGET_ACTION: string;
-
-  /** Cache name the SW stashes shared files under for the SPA to drain. */
-  export const SHARE_TARGET_INBOX_CACHE: string;
 }

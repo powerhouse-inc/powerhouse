@@ -22,8 +22,7 @@ function installLaunchQueue() {
   window.launchQueue = { setConsumer };
   return {
     setConsumer,
-    launch: (files: FileSystemHandle[]) =>
-      consumer?.({ files, targetURL: null }),
+    launch: (files: FileSystemHandle[]) => consumer?.({ files }),
   };
 }
 

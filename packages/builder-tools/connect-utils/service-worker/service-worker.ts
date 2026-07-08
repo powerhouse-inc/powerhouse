@@ -11,10 +11,9 @@
 //
 // It reproduces what Workbox `generateSW` used to bake from BASE_WORKBOX — the
 // precache, the runtime-caching rules, the navigation fallback and the
-// prompt/SKIP_WAITING lifecycle — PLUS the two things generateSW cannot do:
-//  1. serve a DYNAMIC web-app manifest, merging the build-embedded base with
-//     the fragments dynamically-installed packages mirror into IndexedDB;
-//  2. accept OS share-target POSTs, stashing the shared files for the SPA.
+// prompt/SKIP_WAITING lifecycle — PLUS the one thing generateSW cannot do:
+// serve a DYNAMIC web-app manifest, merging the build-embedded base with the
+// fragments dynamically-installed packages mirror into IndexedDB.
 //
 // Route registration order matters — Workbox is first-match-wins.
 
@@ -26,7 +25,7 @@ import {
   createHandlerBoundToURL,
   precacheAndRoute,
 } from "workbox-precaching";
-import { NavigationRoute, registerRoute } from "workbox-routing";
+import { registerRoute, Route } from "workbox-routing";
 import {
   CacheFirst,
   CacheOnly,
@@ -42,19 +41,17 @@ import {
 // (apps/connect/src/utils/pwa-idb.ts) so the two can't desync.
 import {
   mergeManifest,
+  type PHConnectPwaUrlPattern,
   PWA_IDB_KEY,
   PWA_IDB_NAME,
   PWA_IDB_STORE,
   PWA_IDB_VERSION,
-  PWA_SHARE_TARGET_REDIRECT_PARAM,
   toRegExpOrString,
 } from "@powerhousedao/shared/connect";
 import {
   EMBEDDED_BASE_MANIFEST,
   EXTRA_RUNTIME_CACHING,
   NAVIGATE_FALLBACK_DENYLIST_EXTRA,
-  SHARE_TARGET_ACTION,
-  SHARE_TARGET_INBOX_CACHE,
 } from "virtual:ph-sw-config";
 
 declare const self: ServiceWorkerGlobalScope &
@@ -73,15 +70,25 @@ self.addEventListener("message", (event) => {
 clientsClaim();
 cleanupOutdatedCaches();
 
+// A runtime-installed package may override cosmetic manifest scalars (name,
+// theme, display, …) — full parity with a build-time package — but NOT these
+// navigation-critical ones: re-pointing start_url or re-scoping the installed
+// PWA could break or hijack navigation, so they stay whatever the build baked.
+const RUNTIME_PROTECTED_SCALARS = ["start_url", "scope"] as const;
+
 // ── dynamic web-app manifest ─────────────────────────────────────────────────
 // Registered before precache so it always wins for manifest.webmanifest (which
 // is also excluded from the precache glob). Every request reads IndexedDB
 // fresh, so a package install/removal is reflected on the next manifest fetch
-// with no service-worker restart. Base-wins scalar policy: a dynamically
-// installed (untrusted) package can add icons/handlers but cannot rename or
-// re-theme Connect.
+// with no service-worker restart. Fragment-wins (with start_url/scope
+// protected), so a dynamically-installed package extends and overrides the
+// manifest exactly like a build-time contribution.
 type DynamicFragmentRecord = {
-  fragment?: { manifest?: unknown; runtimeCaching?: unknown };
+  fragment?: {
+    manifest?: unknown;
+    runtimeCaching?: unknown;
+    navigateFallbackDenylist?: unknown;
+  };
 };
 
 async function readDynamicFragmentRecord(): Promise<
@@ -146,7 +153,10 @@ registerRoute(
           EMBEDDED_BASE_MANIFEST as Record<string, unknown>,
           // The record was validated by the page before it was written.
           fragmentManifest as never,
-          { scalarPolicy: "base-wins" },
+          {
+            scalarPolicy: "fragment-wins",
+            protectedScalars: RUNTIME_PROTECTED_SCALARS,
+          },
         );
       }
     } catch {
@@ -160,42 +170,6 @@ registerRoute(
       },
     });
   },
-);
-
-// ── OS share target ──────────────────────────────────────────────────────────
-// The manifest's share_target.action points here (Connect-owned route). We
-// stash every shared file into a Cache and redirect to the app root; the SPA
-// drains the inbox on boot (see the launch-queue pickup). Field names are
-// contributor-declared, so we collect File values regardless of field name.
-registerRoute(
-  ({ url, request }) =>
-    request.method === "POST" && url.pathname.endsWith(SHARE_TARGET_ACTION),
-  async ({ request }) => {
-    try {
-      const formData = await request.formData();
-      const cache = await caches.open(SHARE_TARGET_INBOX_CACHE);
-      let index = 0;
-      for (const value of formData.values()) {
-        if (typeof value === "string") continue;
-        const file = value;
-        const key = `/__ph-share/${index++}/${encodeURIComponent(file.name)}`;
-        await cache.put(
-          new Request(key),
-          new Response(file, {
-            headers: {
-              "Content-Type": file.type || "application/octet-stream",
-              "X-PH-Share-Name": encodeURIComponent(file.name),
-            },
-          }),
-        );
-      }
-    } catch {
-      // Even if stashing fails, still redirect so the user lands in the app.
-    }
-    // 303 so the browser follows with GET. Relative redirect tracks the base.
-    return Response.redirect(`./?${PWA_SHARE_TARGET_REDIRECT_PARAM}=1`, 303);
-  },
-  "POST",
 );
 
 // ── precache ─────────────────────────────────────────────────────────────────
@@ -312,44 +286,67 @@ function registerRuntimeCachingRule(rule: RuntimeCachingRule) {
 
 for (const rule of EXTRA_RUNTIME_CACHING) registerRuntimeCachingRule(rule);
 
-// Runtime-installed packages' caching rules, mirrored to IndexedDB by the SPA.
-// Best-effort: routes register when this async read resolves (shortly after SW
-// startup), so a rule added by a package installed in THIS session only takes
-// full effect on the next SW activation. Build-time rules above are the
-// reliable path.
-void readDynamicFragmentRecord().then((record) => {
-  const rules = record?.fragment?.runtimeCaching;
-  if (!Array.isArray(rules)) return;
-  for (const rule of rules) {
-    try {
-      registerRuntimeCachingRule(rule as RuntimeCachingRule);
-    } catch {
-      // A malformed rule must not abort the rest.
-    }
-  }
-});
-
 // ── navigation fallback ──────────────────────────────────────────────────────
 // SPA fallback to index.html (resolved against the SW's own location, so it
-// tracks the deploy base). Denylist: the built-ins plus any BUILD-TIME
-// contributed patterns (NAVIGATE_FALLBACK_DENYLIST_EXTRA). This route is
-// registered synchronously at SW startup, before the async IDB read above, so
-// that offline SPA navigation works immediately on a cold SW start — which is
-// why navigateFallbackDenylist from a RUNTIME-installed package is intentionally
-// build-time-only (delaying this route to await IDB would break offline
-// navigation during that window). Documented in the PWA guide.
+// tracks the deploy base). The `denylist` is MUTABLE and read live on every
+// request: it is seeded synchronously with the built-ins plus the BUILD-TIME
+// contributed patterns (NAVIGATE_FALLBACK_DENYLIST_EXTRA), and the async read
+// below pushes any RUNTIME-installed package's patterns into it. Registering
+// the route synchronously keeps offline SPA navigation working the instant a
+// cold SW starts; the runtime patterns just join in once they've loaded.
 function escapeForRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+// Workbox denylists match against `pathname + search`; a plain string is
+// matched as a literal substring (escaped), mirroring the built-ins.
+function toDenylistRegExp(pattern: PHConnectPwaUrlPattern): RegExp {
+  const value = toRegExpOrString(pattern);
+  return typeof value === "string" ? new RegExp(escapeForRegExp(value)) : value;
 }
 const denylist: RegExp[] = [
   /\/powerhouse\.config\.json$/,
   /^\/health$/,
   /\/__/,
-  ...NAVIGATE_FALLBACK_DENYLIST_EXTRA.map((pattern) => {
-    const value = toRegExpOrString(pattern);
-    return typeof value === "string" ? new RegExp(escapeForRegExp(value)) : value;
-  }),
+  ...NAVIGATE_FALLBACK_DENYLIST_EXTRA.map(toDenylistRegExp),
 ];
+// A plain Route (not NavigationRoute, which snapshots its denylist at
+// construction) so the match reads the mutable `denylist` live — same
+// navigation-request + denylist semantics, minus the frozen list.
 registerRoute(
-  new NavigationRoute(createHandlerBoundToURL("index.html"), { denylist }),
+  new Route(
+    ({ request, url }) =>
+      request.mode === "navigate" &&
+      !denylist.some((re) => re.test(url.pathname + url.search)),
+    createHandlerBoundToURL("index.html"),
+  ),
 );
+
+// ── dynamic contributions from runtime-installed packages ────────────────────
+// One IndexedDB read at SW startup applies BOTH the runtime-caching rules and
+// the navigate-fallback denylist patterns a runtime-installed package
+// contributes (the SPA mirrors the merged fragment there). Best-effort: they
+// register shortly after startup, so a package installed in THIS session takes
+// full effect on the SW's next activation — the same model for both. The
+// manifest route above is the live path. A malformed entry never aborts the rest.
+void readDynamicFragmentRecord().then((record) => {
+  const rules = record?.fragment?.runtimeCaching;
+  if (Array.isArray(rules)) {
+    for (const rule of rules) {
+      try {
+        registerRuntimeCachingRule(rule as RuntimeCachingRule);
+      } catch {
+        // skip a malformed rule
+      }
+    }
+  }
+  const patterns = record?.fragment?.navigateFallbackDenylist;
+  if (Array.isArray(patterns)) {
+    for (const pattern of patterns) {
+      try {
+        denylist.push(toDenylistRegExp(pattern as PHConnectPwaUrlPattern));
+      } catch {
+        // skip a malformed pattern
+      }
+    }
+  }
+});

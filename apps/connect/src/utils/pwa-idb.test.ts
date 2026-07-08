@@ -21,22 +21,18 @@ describe("resolveFragmentAssetUrls", () => {
     expect(out.manifest?.icons?.[0].src).toBe("https://other.com/i.png");
   });
 
-  it("resolves file-handler icons, shortcut icons and screenshots too", () => {
+  it("resolves file-handler icons too", () => {
     const config: PHConnectPwa = {
       manifest: {
         file_handlers: [
           { accept: { "app/x": [".x"] }, icons: [{ src: "fh.png" }] },
         ],
-        shortcuts: [{ name: "S", url: "./s", icons: [{ src: "sc.png" }] }],
-        screenshots: [{ src: "shot.png" }],
       },
     };
     const out = resolveFragmentAssetUrls(config, base);
     expect(out.manifest?.file_handlers?.[0].icons?.[0].src).toBe(
       `${base}fh.png`,
     );
-    expect(out.manifest?.shortcuts?.[0].icons?.[0].src).toBe(`${base}sc.png`);
-    expect(out.manifest?.screenshots?.[0].src).toBe(`${base}shot.png`);
   });
 
   it("leaves srcs untouched for a local/bundled package (null base)", () => {

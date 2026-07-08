@@ -89,12 +89,11 @@ function resolveIconSrc(
 }
 
 /**
- * Rewrite a package fragment's relative asset srcs (manifest icons,
- * file-handler icons, shortcut icons, screenshots) to absolute URLs against the
- * package's base — a runtime package's assets live on the registry CDN, not the
- * app origin, so the served manifest must point there. `baseUrl` null (a
- * local/bundled package whose assets are app-origin-relative) leaves srcs
- * untouched.
+ * Rewrite a package fragment's relative asset srcs (manifest icons and
+ * file-handler icons) to absolute URLs against the package's base — a runtime
+ * package's assets live on the registry CDN, not the app origin, so the served
+ * manifest must point there. `baseUrl` null (a local/bundled package whose
+ * assets are app-origin-relative) leaves srcs untouched.
  */
 export function resolveFragmentAssetUrls(
   config: PHConnectPwa,
@@ -112,14 +111,6 @@ export function resolveFragmentAssetUrls(
       file_handlers: m.file_handlers?.map((handler) => ({
         ...handler,
         icons: resolveIcons(handler.icons),
-      })),
-      shortcuts: m.shortcuts?.map((shortcut) => ({
-        ...shortcut,
-        icons: resolveIcons(shortcut.icons),
-      })),
-      screenshots: m.screenshots?.map((shot) => ({
-        ...shot,
-        src: toAbsoluteAssetUrl(shot.src, baseUrl),
       })),
     },
   };

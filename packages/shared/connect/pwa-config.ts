@@ -27,15 +27,10 @@ import { deepMerge } from "./config-loader.js";
 export type {
   PHConnectPwa,
   PHConnectPwaCacheStrategy,
-  PHConnectPwaDisplayModeOverride,
   PHConnectPwaFileHandler,
   PHConnectPwaIcon,
   PHConnectPwaManifest,
-  PHConnectPwaProtocolHandler,
   PHConnectPwaRuntimeCaching,
-  PHConnectPwaScreenshot,
-  PHConnectPwaShareTarget,
-  PHConnectPwaShortcut,
   PHConnectPwaUrlPattern,
 } from "../clis/types.js";
 
@@ -48,8 +43,6 @@ export type PwaContribution = {
 
 // Manifest scalar fields — the ones where "two layers set it" is a genuine
 // conflict (as opposed to the additive arrays, which never conflict).
-// `share_target` is singular per the manifest spec, so it is treated as a
-// scalar: last layer wins, and two packages disagreeing is a warned conflict.
 const MANIFEST_SCALAR_KEYS: readonly (keyof PHConnectPwaManifest)[] = [
   "name",
   "short_name",
@@ -60,20 +53,16 @@ const MANIFEST_SCALAR_KEYS: readonly (keyof PHConnectPwaManifest)[] = [
   "start_url",
   "scope",
   "launch_handler",
-  "share_target",
 ];
 
 // Manifest fields merged additively (concatenated/unioned across every layer),
 // never as scalar conflicts. Kept out of the deepMerge path, which replaces
-// arrays wholesale and would drop earlier contributions.
+// arrays wholesale and would drop earlier contributions. `categories` is
+// derived (from the manifest `category` field) but merges the same additive way.
 const ADDITIVE_MANIFEST_KEYS = new Set<keyof PHConnectPwaManifest>([
   "icons",
   "file_handlers",
-  "shortcuts",
-  "protocol_handlers",
-  "screenshots",
   "categories",
-  "display_override",
 ]);
 
 // Structural icon shape shared by PHConnectPwaIcon and vite-plugin-pwa's
@@ -110,23 +99,6 @@ export function dedupeIcons<T extends IconLike>(icons: T[]): T[] {
   return dedupeBy(icons, iconKey);
 }
 
-/** Concatenate shortcuts, keeping the first occurrence of each `url`. */
-export function dedupeShortcuts<T extends { url: string }>(items: T[]): T[] {
-  return dedupeBy(items, (s) => s.url);
-}
-
-/** Concatenate protocol handlers, keeping the first occurrence per `protocol`. */
-export function dedupeProtocolHandlers<T extends { protocol: string }>(
-  items: T[],
-): T[] {
-  return dedupeBy(items, (p) => p.protocol);
-}
-
-/** Concatenate screenshots, keeping the first occurrence of each `src`. */
-export function dedupeScreenshots<T extends { src: string }>(items: T[]): T[] {
-  return dedupeBy(items, (s) => s.src);
-}
-
 /** `JSON.stringify` with object keys sorted recursively, so two structurally
  * equal values always serialise identically (accept-map key order etc.). */
 function stableStringify(value: unknown): string {
@@ -153,6 +125,22 @@ function stableStringify(value: unknown): string {
  */
 export function dedupeFileHandlers<T extends object>(handlers: T[]): T[] {
   return dedupeBy(handlers, stableStringify);
+}
+
+/** Fold a manifest's top-level `category` string into a PWA config as a
+ * `categories: [category]` entry. PWA `categories` is DERIVED from the
+ * `category` field of every contributing `powerhouse.manifest.json` (never
+ * authored under `pwa`); `mergePwaConfig`/`mergeManifest` then union them
+ * across contributors. No-op when there is no usable category. */
+export function withInferredCategory(
+  config: PHConnectPwa,
+  category: unknown,
+): PHConnectPwa {
+  if (typeof category !== "string" || !category) return config;
+  return {
+    ...config,
+    manifest: { ...config.manifest, categories: [category] },
+  };
 }
 
 /** Order-preserving string union (used for the precache glob lists). */
@@ -191,22 +179,9 @@ function unionPatterns(
  * rules/denylist are additive; size ceiling takes the max). */
 function mergeInto(target: PHConnectPwa, config: PHConnectPwa): void {
   if (config.manifest) {
-    // Additive arrays and the singular share_target are pulled out of the
-    // deepMerge path: deepMerge replaces arrays wholesale (dropping earlier
-    // contributions) AND recurses into objects — which would COMBINE two
-    // packages' share_targets into a spec-invalid hybrid. share_target must be
-    // replaced wholesale (last-wins, per spec it is singular), handled below.
-    const {
-      icons,
-      file_handlers,
-      shortcuts,
-      protocol_handlers,
-      screenshots,
-      categories,
-      display_override,
-      share_target,
-      ...scalars
-    } = config.manifest;
+    // The additive arrays are pulled out of the deepMerge path: deepMerge
+    // replaces arrays wholesale, which would drop earlier contributions.
+    const { icons, file_handlers, categories, ...scalars } = config.manifest;
     if (Object.keys(scalars).length > 0) {
       target.manifest = deepMerge(
         target.manifest ?? {},
@@ -228,57 +203,10 @@ function mergeInto(target: PHConnectPwa, config: PHConnectPwa): void {
         ]),
       };
     }
-    if (shortcuts?.length) {
-      target.manifest = {
-        ...(target.manifest ?? {}),
-        shortcuts: dedupeShortcuts([
-          ...(target.manifest?.shortcuts ?? []),
-          ...shortcuts,
-        ]),
-      };
-    }
-    if (protocol_handlers?.length) {
-      target.manifest = {
-        ...(target.manifest ?? {}),
-        protocol_handlers: dedupeProtocolHandlers([
-          ...(target.manifest?.protocol_handlers ?? []),
-          ...protocol_handlers,
-        ]),
-      };
-    }
-    if (screenshots?.length) {
-      target.manifest = {
-        ...(target.manifest ?? {}),
-        screenshots: dedupeScreenshots([
-          ...(target.manifest?.screenshots ?? []),
-          ...screenshots,
-        ]),
-      };
-    }
     if (categories?.length) {
       target.manifest = {
         ...(target.manifest ?? {}),
         categories: unionStrings(target.manifest?.categories, categories),
-      };
-    }
-    if (display_override?.length) {
-      target.manifest = {
-        ...(target.manifest ?? {}),
-        // Order-preserving union: display_override is a fallback chain, and the
-        // first contributor's ordering is kept.
-        display_override: unionStrings(
-          target.manifest?.display_override,
-          display_override,
-        ) as PHConnectPwaManifest["display_override"],
-      };
-    }
-    if (share_target !== undefined) {
-      // Singular per the manifest spec: the later layer's share_target replaces
-      // the earlier one wholesale (a conflict between two packages is warned in
-      // mergePwaConfig via MANIFEST_SCALAR_KEYS).
-      target.manifest = {
-        ...(target.manifest ?? {}),
-        share_target,
       };
     }
   }

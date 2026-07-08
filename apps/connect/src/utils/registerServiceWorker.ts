@@ -1,4 +1,5 @@
 import { connectConfig } from "@powerhousedao/connect/config";
+import { refreshPwaManifestLink } from "./pwa-manifest-link.js";
 
 const basePath = connectConfig.routerBasename;
 
@@ -88,6 +89,12 @@ class ServiceWorkerManager {
         // the page, so it never lands in the cache. Warm it now (clientsClaim
         // just gave us control) so a single online load is enough to go offline.
         this.#warmRuntimeConfigCache();
+        // The SW only serves the dynamic manifest.webmanifest once it controls
+        // the page. A package installed before that (its fragment already in
+        // IndexedDB) was re-consumed against the static base manifest; now that
+        // the dynamic route is live, re-attach the link so it picks up the
+        // package's PWA config without a manual reload.
+        refreshPwaManifestLink();
         // Reload once the worker we activated via applyUpdate() takes control.
         if (!this.#updateAccepted || this.#reloading) return;
         this.#reloading = true;

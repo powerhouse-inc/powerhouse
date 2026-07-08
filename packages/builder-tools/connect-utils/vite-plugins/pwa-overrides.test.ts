@@ -120,28 +120,12 @@ describe("applyPwaOverrides", () => {
     expect(manifest.file_handlers).toEqual([baseFileHandler]);
   });
 
-  it("injects Connect-owned routes into contributed protocol handlers and share target", () => {
+  it("unions the derived categories onto the manifest", () => {
+    // categories is derived from each manifest's `category` field, folded into
+    // the effective fragment as an additive array before it reaches here.
     const { manifest } = applyPwaOverrides(base, {
-      manifest: {
-        protocol_handlers: [{ protocol: "web+ph" }],
-        share_target: { params: { files: [{ name: "f", accept: [".phd"] }] } },
-        shortcuts: [{ name: "New", url: "./new" }],
-      },
-    }) as {
-      manifest: ConnectPwaManifest & {
-        protocol_handlers?: { protocol: string; url?: string }[];
-        share_target?: { action?: string; method?: string; enctype?: string };
-        shortcuts?: { name: string; url: string }[];
-      };
-    };
-    // Protocol handler gets Connect's fixed url template (contributor sets none).
-    expect(manifest.protocol_handlers).toEqual([
-      { protocol: "web+ph", url: "./?ph-protocol=%s" },
-    ]);
-    // Share target gets Connect's action + POST/multipart defaults (files present).
-    expect(manifest.share_target?.action).toBe("share-target");
-    expect(manifest.share_target?.method).toBe("POST");
-    expect(manifest.share_target?.enctype).toBe("multipart/form-data");
-    expect(manifest.shortcuts).toEqual([{ name: "New", url: "./new" }]);
+      manifest: { categories: ["productivity", "finance"] },
+    }) as { manifest: ConnectPwaManifest & { categories?: string[] } };
+    expect(manifest.categories).toEqual(["productivity", "finance"]);
   });
 });

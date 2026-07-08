@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-07-07T21:28:10.552Z
+> Generated: 2026-07-08T22:11:15.919Z
 > Total Documents: 100
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -26613,24 +26613,21 @@ The service worker is only built for production. During local development it is 
 
 ## Manifest
 
-`connect.pwa.manifest` overrides the [web app manifest](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Manifest) — the app's identity (name, colors, icons) and how the OS treats it once installed. Set only the fields you want; everything else keeps Connect's default. Scalar fields take your value, the array members are **added** to Connect's built-ins (so a package extends but never drops them), and the singular `share_target` is replaced.
+`connect.pwa.manifest` overrides the [web app manifest](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Manifest) — the app's identity (name, colors, icons) and how the OS treats it once installed. Set only the fields you want; everything else keeps Connect's default. Scalar fields take your value, and the array members are **added** to Connect's built-ins (so a package extends but never drops them).
 
 | Field                                                                                                                          | Default / what it does                                            | Your value                    |
 | ------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------- | ----------------------------- |
 | `name`                                                                                                                         | `"Powerhouse Connect"`                                            | replaces                      |
 | `short_name`                                                                                                                   | `"Connect"`                                                       | replaces                      |
+| `description`                                                                                                                  | Connect's default tagline                                        | replaces                      |
 | `theme_color` / `background_color`                                                                                             | `"#ffffff"`                                                       | replaces                      |
 | `display`                                                                                                                      | `"standalone"`                                                    | replaces                      |
 | `start_url` / `scope`                                                                                                          | `"."`                                                             | replaces                      |
 | `launch_handler`                                                                                                               | `{ "client_mode": "focus-existing" }`                            | replaces                      |
-| [`icons`](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Manifest/Reference/icons)                          | bundled 192 / 512 + maskable                                      | appended (de-duped by `src`)  |
+| [`icons`](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Manifest/Reference/icons)                          | bundled 192 / 512 + maskable                                      | appended (de-duped by `src`/`sizes`/`purpose`) |
 | [`file_handlers`](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Manifest/Reference/file_handlers)          | opens `.phd` / `.phdm` files ([File handling](#file-handling))    | appended after the built-ins  |
-| [`shortcuts`](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Manifest/Reference/shortcuts)                  | jump-list / long-press menu entries (`name` + in-scope `url`)     | appended (de-duped by `url`)  |
-| [`protocol_handlers`](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Manifest/Reference/protocol_handlers)  | handle a custom `web+…` link ([Protocol handlers](#protocol-handlers)) | appended (de-duped by `protocol`) |
-| [`share_target`](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Manifest/Reference/share_target)            | receive files from the OS share sheet ([Share target](#share-target))  | replaced (last wins)          |
-| [`screenshots`](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Manifest/Reference/screenshots)              | previews for the richer install UI (`form_factor` `narrow`/`wide`) | appended (de-duped by `src`)  |
-| [`categories`](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Manifest/Reference/categories)                | app-store category hints                                          | unioned                       |
-| [`display_override`](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Manifest/Reference/display_override)    | ordered display-mode fallback, tried before `display`             | unioned                       |
+
+The manifest's [`categories`](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Manifest/Reference/categories) are **not** set under `pwa`. Connect derives them from the top-level `category` field of every contributing `powerhouse.manifest.json` — the project's own and each build-time or runtime-installed package's — unioned and de-duplicated.
 
 To replace the browser-tab favicon too, pass `ph connect build --favicon ./icon.ico`.
 
@@ -26641,16 +26638,14 @@ To replace the browser-tab favicon too, pass `ph connect build --favicon ./icon.
       "manifest": {
         "name": "Acme Connect",
         "theme_color": "#00aaff",
-        "shortcuts": [{ "name": "New document", "url": "new" }],
-        "categories": ["productivity", "business"],
-        "display_override": ["window-controls-overlay", "standalone"]
+        "display": "standalone"
       }
     }
   }
 }
 ```
 
-Three members hand Connect an **OS launch** — `file_handlers`, `protocol_handlers` and `share_target` (detailed below). They declare only **what** they accept, never **where** or **how** it opens: those routes belong to Connect (so a package can't point the OS at an arbitrary URL, and consuming the launch runs Connect's own code). A fragment that sets `action`, `url`, `method` or `enctype` fails validation. All three take effect only for an **installed** PWA on a production build — never through `ph connect dev` — and browser/OS support varies (where it's unsupported the association is simply never registered, and Connect keeps working normally).
+One member hands Connect an **OS launch** — `file_handlers` (detailed below). It declares only **what** it accepts, never **where** or **how** it opens: that route belongs to Connect (so a package can't point the OS at an arbitrary URL, and consuming the launch runs Connect's own code). A fragment that sets its own `action` fails validation. It takes effect only for an **installed** PWA on a production build — never through `ph connect studio` — and browser/OS support varies (where it's unsupported the association is simply never registered, and Connect keeps working normally).
 
 ### File handling
 
@@ -26677,34 +26672,6 @@ A package or the project can associate **additional file types**:
 
 Each entry declares `accept` (MIME type → extensions), optional per-type `icons`, and optional `launch_type`. Extensions must start with a dot — browsers ignore dotless ones, so the build rejects them. Contributed entries are appended after the built-in handler, and browsers give each extension to the **first** handler that claims it, so a package can't take over the built-in `.phd`/`.phdm` association.
 
-### Protocol handlers
-
-Register the installed app as the OS handler for a custom `web+…` URL scheme, so opening e.g. `web+ph://drive/abc` from another app launches Connect at the matching in-app route (`<basePath>/drive/abc`). The scheme must be `web+<lowercase letters>` (browsers reject anything else); declare just the scheme:
-
-```json
-{ "connect": { "pwa": { "manifest": { "protocol_handlers": [{ "protocol": "web+ph" }] } } } }
-```
-
-Product code can listen for the `ph:protocolLaunch` event and call `preventDefault()` to route the link itself.
-
-### Share target
-
-Let the OS share sheet send files (or text) to Connect. Shared files arrive on the next load through the same flow as an opened file — the drive picker, then import. Declare the accepted shape under `params`:
-
-```json
-{
-  "connect": {
-    "pwa": {
-      "manifest": {
-        "share_target": {
-          "params": { "files": [{ "name": "documents", "accept": ["application/vnd.powerhouse.document+zip"] }] }
-        }
-      }
-    }
-  }
-}
-```
-
 ## Caching
 
 `connect.pwa` also exposes the Workbox knobs. Connect's offline-enabled build uses Workbox's [`injectManifest`](https://developer.chrome.com/docs/workbox/modules/workbox-build) mode with a hand-written service worker, so your precache globs feed the injected precache and your `runtimeCaching` rules ([strategies](https://developer.chrome.com/docs/workbox/modules/workbox-strategies)) are registered by that worker after its built-ins. Connect combines them with its defaults like this:
@@ -26718,7 +26685,7 @@ Let the OS share sheet send files (or text) to Connect. Shared files arrive on t
 
 Workbox is first-match-wins, and your `runtimeCaching` rules come after Connect's built-ins (Google Fonts, the `/-/cdn/` registry assets, `powerhouse.config.json`) — so they add coverage but can't override a built-in rule for the same URL. A rule's `urlPattern` is a string (matched verbatim) or `{ source, flags }` (rebuilt into a `RegExp`); function patterns aren't supported. For `NetworkFirst` rules, set `options.networkTimeoutSeconds` so a slow network falls back to the cache instead of stalling.
 
-`navigateFallbackDenylist` entries use the same two pattern shapes, with one difference: Workbox only accepts regular expressions there, so a plain string is escaped and matched as a literal substring of the URL path.
+`navigateFallbackDenylist` entries use the same two pattern shapes, with one difference: Workbox only accepts regular expressions there, so a plain string is escaped and matched as a literal substring of the request's path **and query string** (the denylist is tested against `pathname + search`).
 
 `connect.pwa` is validated at build time: an invalid block (unknown field, bad handler, non-compiling regex) fails `ph connect build` with a message naming the offending field.
 
@@ -26742,7 +26709,7 @@ For example, to brand the app and cache its API offline:
 }
 ```
 
-`connect.pwa` is an object, so the positional `ph connect config` form can't set it — edit `powerhouse.config.json` (its `$schema` gives autocomplete) or pass `ph connect build --json '{ "pwa": … }'`.
+`connect.pwa` is **build-time only**, so set it with `ph connect build` — not `ph connect config`, which writes the config file but can't rebuild the worker to apply the change. Edit `powerhouse.config.json` directly (its `$schema` gives autocomplete) or pass `ph connect build --json '{ "pwa": … }'`.
 
 ## Packages can contribute PWA config
 
@@ -26763,7 +26730,7 @@ The build reads `pwa` fragments from every package it knows about at build time:
 
 - **The project's own manifest** — `powerhouse.manifest.json` at the project root (the `dist/` copy is a fallback).
 - **Bundled packages** (`provider: "local"`) — read from `node_modules`.
-- **Registry packages** (`provider: "registry"`) — fetched from the registry CDN, using the same version-pinned spec Connect loads at runtime. If the registry is unreachable the build still succeeds; it warns and skips the fragment.
+- **Non-bundled packages** (any `provider` other than `"local"` — `"registry"`, `"npm"`, `"github"`, or omitted) — fetched from the registry CDN, using the same version-pinned spec Connect loads at runtime. If the registry is unreachable the build still succeeds; it warns and skips the fragment.
 
 A malformed package fragment is never fatal: the build warns (naming the package and field) and continues without it. A package installed **later, at runtime** isn't baked into the worker — but it isn't ignored either: Connect feeds its `pwa` fragment to the dynamically-served manifest, and its editor assets are runtime-cached by the built-in `/-/cdn/` rule so it works offline. See [Runtime-installed packages extend the manifest](#runtime-installed-packages-extend-the-manifest).
 
@@ -26771,24 +26738,29 @@ A malformed package fragment is never fatal: the build warns (naming the package
 
 Precedence is `Connect defaults < package fragments (declared order) < the project's own manifest < project connect.pwa`:
 
-| Field type                                                                                                                                     | Strategy                      |
-| ---------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
-| Manifest scalars, including `launch_handler` and the singular `share_target`                                                                   | Deep-merge — **project wins** |
-| `icons`, `file_handlers`, `shortcuts`, `protocol_handlers`, `screenshots`, `categories`, `display_override`, globs, `runtimeCaching`, denylist | **Additive**                  |
-| `maximumFileSizeToCacheInBytes`                                                                                                                | The **max** across layers     |
+| Field type                                                                          | Strategy                      |
+| ----------------------------------------------------------------------------------- | ----------------------------- |
+| Manifest scalars, including `launch_handler`                                        | Deep-merge — **project wins** |
+| `icons`, `file_handlers`, the derived `categories`, globs, `runtimeCaching`, denylist | **Additive**                  |
+| `maximumFileSizeToCacheInBytes`                                                     | The **max** across layers     |
 
 Additive fields let a package always add offline coverage without a later layer dropping it. If two packages set the same scalar to different values and the project doesn't settle it, the build warns and the last-loaded wins — set that field in `connect.pwa` to decide it explicitly (packages agreeing on the same value is fine and doesn't warn).
 
 ## Runtime-installed packages extend the manifest
 
-Everything above happens at build time. But Connect's service worker also serves the web-app manifest **dynamically**: it merges the manifest baked in at build time with the `pwa` fragments of packages you install **at runtime** through the package manager. So an installed package's icons, shortcuts, file handlers, protocol handlers and the rest show up in the live manifest without rebuilding Connect. Connect validates each fragment before it takes effect and mirrors the merged result where the worker can read it; a malformed fragment is skipped with a console warning.
+Everything above happens at build time. But Connect's service worker also serves the web-app manifest **dynamically**: it merges the manifest baked in at build time with the `pwa` fragments of packages you install **at runtime** through the package manager. A runtime-installed package extends the manifest **the same way a build-time package does** — its icons, file handlers, `category` (unioned into the manifest's `categories`), overridden scalars, `runtimeCaching` rules and `navigateFallbackDenylist` patterns all take effect without rebuilding Connect. Connect validates each fragment before it takes effect and mirrors the merged result where the worker can read it; a malformed fragment is skipped with a console warning.
 
-Runtime fragments are treated as **untrusted**, so the rules are stricter than for build-time `connect.pwa`:
+Two guardrails apply, since a runtime package is installed by the end user rather than chosen by the deployer:
 
-- **Scalars are base-wins.** A runtime package can _add_ members, but it can't rename or re-theme Connect — `name`, `theme_color`, `display` and the other scalars keep the values the build baked. (Build-time `connect.pwa` still wins those; see [How the layers merge](#how-the-layers-merge).)
+- **`start_url` and `scope` stay Connect's.** Every other scalar (`name`, `short_name`, `description`, `theme_color`, `background_color`, `display`, `launch_handler`) a runtime package sets overrides the baked value, exactly like a build-time contribution. Only these two navigation-critical fields are protected, so a package can't re-point or re-scope the installed app.
 - **Built-ins stay first.** Connect's `.phd`/`.phdm` file association is registered first and can't be displaced, exactly as for build-time contributions.
 
-**This is best-effort for OS integrations.** Browsers capture `file_handlers`, `protocol_handlers` and `launch_handler` at the moment the PWA is _installed_. A package installed afterward updates the manifest Connect serves immediately, but the OS only picks up a newly-added file or protocol association on the browser's own periodic manifest re-check (Chromium-only, on its own schedule) — never mid-session for the running window. Extra `runtimeCaching` rules a runtime package contributes register on the worker's next activation; `navigateFallbackDenylist` is build-time-only (the navigation route must be ready the instant the worker starts, so it can't wait on a runtime read). Opening that package's `.phd`/`.phdm` documents, however, works right away — those route on content, not on the OS association.
+Two timing caveats apply, neither specific to runtime installs:
+
+- **OS integrations lag.** Browsers capture `file_handlers` and `launch_handler` at the moment the PWA is _installed_. A package installed afterward updates the manifest Connect serves immediately, but the OS only picks up a newly-added file association on the browser's own periodic manifest re-check (Chromium-only, on its own schedule) — never mid-session for the running window. Opening that package's `.phd`/`.phdm` documents works right away regardless (routed by content, not the OS association).
+- **Caching applies on the worker's next start.** A runtime package's `runtimeCaching` rules and `navigateFallbackDenylist` patterns are read from the mirror when the service worker starts, so a package installed this session takes full effect on the worker's next activation. (The served manifest updates immediately, on the next fetch.)
+
+`globPatterns`, `globIgnores` and `maximumFileSizeToCacheInBytes` are the one exception that stays **build-time only**: they drive the precache list workbox bakes into the worker at build, and a runtime package's own assets aren't in the app bundle anyway — they're offline-cached by the built-in `/-/cdn/` rule instead.
 
 ## Apply and verify
 

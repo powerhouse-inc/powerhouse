@@ -2,8 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   mergeManifest,
   PWA_FILE_HANDLER_ACTION,
-  PWA_PROTOCOL_HANDLER_URL,
-  PWA_SHARE_TARGET_ACTION,
   type PwaWebManifest,
 } from "./pwa-manifest.js";
 
@@ -52,6 +50,23 @@ describe("mergeManifest", () => {
     expect(merged.name).toBe("Powerhouse Connect"); // untouched
   });
 
+  it("fragment-wins with protectedScalars overrides cosmetic scalars but keeps protected ones (runtime policy)", () => {
+    const merged = mergeManifest(
+      { name: "Connect", theme_color: "#ffffff", start_url: ".", scope: "." },
+      { name: "Acme", theme_color: "#000000", start_url: "/evil", scope: "/x" },
+      {
+        scalarPolicy: "fragment-wins",
+        protectedScalars: ["start_url", "scope"],
+      },
+    );
+    // Cosmetic scalars: fragment wins, exactly like a build-time contribution.
+    expect(merged.name).toBe("Acme");
+    expect(merged.theme_color).toBe("#000000");
+    // Navigation-critical scalars: base wins even under fragment-wins.
+    expect(merged.start_url).toBe(".");
+    expect(merged.scope).toBe(".");
+  });
+
   it("appends + dedupes icons, base first", () => {
     const merged = mergeManifest(base, {
       icons: [
@@ -81,54 +96,19 @@ describe("mergeManifest", () => {
     ]);
   });
 
-  it("injects the Connect-owned url into contributed protocol handlers", () => {
-    const merged = mergeManifest(base, {
-      protocol_handlers: [{ protocol: "web+ph" }],
-    });
-    expect(merged.protocol_handlers).toEqual([
-      { protocol: "web+ph", url: PWA_PROTOCOL_HANDLER_URL },
-    ]);
-  });
-
-  it("injects the Connect-owned action + POST/multipart defaults into share_target with files", () => {
-    const merged = mergeManifest(base, {
-      share_target: { params: { files: [{ name: "f", accept: [".phd"] }] } },
-    });
-    expect(merged.share_target).toEqual({
-      action: PWA_SHARE_TARGET_ACTION,
-      method: "POST",
-      enctype: "multipart/form-data",
-      params: { files: [{ name: "f", accept: [".phd"] }] },
-    });
-  });
-
-  it("defaults share_target without files to urlencoded", () => {
-    const merged = mergeManifest(base, {
-      share_target: { params: { title: "t" } },
-    });
-    expect(merged.share_target?.enctype).toBe(
-      "application/x-www-form-urlencoded",
-    );
-  });
-
-  it("unions categories and display_override", () => {
+  it("unions categories (derived, order-preserving, deduped)", () => {
     const merged = mergeManifest(
-      { categories: ["a"], display_override: ["standalone"] },
-      { categories: ["a", "b"], display_override: ["window-controls-overlay"] },
+      { categories: ["a"] },
+      { categories: ["a", "b"] },
     );
     expect(merged.categories).toEqual(["a", "b"]);
-    expect(merged.display_override).toEqual([
-      "standalone",
-      "window-controls-overlay",
-    ]);
   });
 
-  it("re-asserting routes on a base that already carries them is idempotent", () => {
+  it("re-asserting the file-handler action on a base that already carries it is idempotent", () => {
     const once = mergeManifest(base, {
-      protocol_handlers: [{ protocol: "web+ph" }],
+      file_handlers: [{ accept: { "app/x": [".x"] } }],
     });
     const twice = mergeManifest(once, undefined);
     expect(twice.file_handlers).toEqual(once.file_handlers);
-    expect(twice.protocol_handlers).toEqual(once.protocol_handlers);
   });
 });

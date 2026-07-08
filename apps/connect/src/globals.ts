@@ -6,7 +6,6 @@ declare global {
   // lib.dom has FileSystemHandle/FileSystemFileHandle but not these two.
   interface LaunchParams {
     readonly files: readonly FileSystemHandle[];
-    readonly targetURL: string | null;
   }
   interface LaunchQueue {
     setConsumer(consumer: (params: LaunchParams) => void): void;

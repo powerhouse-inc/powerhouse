@@ -9,7 +9,6 @@ import { SentryProvider } from "@powerhousedao/connect/context";
 import {
   DocumentEditorDebugTools,
   initLaunchQueueFileHandling,
-  initProtocolHandler,
   serviceWorkerManager,
 } from "@powerhousedao/connect/utils";
 import { useTheme } from "@powerhousedao/reactor-browser";
@@ -68,11 +67,10 @@ export const App = () => {
   }, []);
 
   // Files the OS opens with the installed PWA (manifest file_handlers).
-  // launchQueue buffers launches until a consumer registers, so nothing is
-  // lost by wiring it on mount; a no-op where the API doesn't exist.
+  // launchQueue buffers launches until a consumer registers, so nothing is lost
+  // by wiring it on mount; a no-op where the API doesn't exist.
   useEffect(() => {
     initLaunchQueueFileHandling();
-    initProtocolHandler();
   }, []);
 
   return (

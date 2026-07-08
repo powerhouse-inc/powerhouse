@@ -1,8 +1,4 @@
-import {
-  PWA_SHARE_TARGET_ACTION,
-  PWA_SHARE_TARGET_INBOX_CACHE,
-  type PHConnectPwa,
-} from "@powerhousedao/shared/connect";
+import { type PHConnectPwa } from "@powerhousedao/shared/connect";
 import { existsSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -212,8 +208,6 @@ export function connectPwaPlugins(options: {
     EMBEDDED_BASE_MANIFEST: manifest,
     EXTRA_RUNTIME_CACHING: pwa?.runtimeCaching ?? [],
     NAVIGATE_FALLBACK_DENYLIST_EXTRA: pwa?.navigateFallbackDenylist ?? [],
-    SHARE_TARGET_ACTION: PWA_SHARE_TARGET_ACTION,
-    SHARE_TARGET_INBOX_CACHE: PWA_SHARE_TARGET_INBOX_CACHE,
   };
 
   return [
@@ -228,7 +222,7 @@ export function connectPwaPlugins(options: {
       // posts SKIP_WAITING when the user accepts (see serviceWorkerManager).
       registerType: "prompt",
       injectRegister: null,
-      // ph connect dev keeps running without a service worker.
+      // ph connect studio keeps running without a service worker.
       devOptions: { enabled: false },
       // Icons are emitted by connectPwaIconsPlugin and precached via the png
       // glob, so the plugin must not also try to resolve them from /public.

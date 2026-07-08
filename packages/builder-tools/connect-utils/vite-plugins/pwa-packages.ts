@@ -3,6 +3,7 @@ import type {
   PHConnectPwa,
   PwaContribution,
 } from "@powerhousedao/shared/connect";
+import { withInferredCategory } from "@powerhousedao/shared/connect";
 import { PwaConfigSchema } from "@powerhousedao/shared/document-model";
 import { toCdnUrl } from "@powerhousedao/shared/registry/urls";
 import fs from "node:fs";
@@ -37,32 +38,42 @@ function formatZodIssues(error: ZodError): string {
     .join("; ");
 }
 
-/** Turn a parsed manifest JSON into a contribution: no `pwa` field → null
- * silently; a malformed one → warn + null. */
+/** Turn a parsed manifest JSON into a contribution: its `pwa` fragment (a
+ * malformed one → warn + skip that fragment, not the whole contribution) plus a
+ * `categories` entry derived from the manifest's `category` field. Returns null
+ * only when the manifest yields neither — no `pwa` and no `category`. */
 function toPwaContribution(
   manifest: unknown,
   fallbackLabel: string,
   onWarn: (message: string) => void,
 ): PwaContribution | null {
-  if (!isPlainObject(manifest) || manifest.pwa === undefined) return null;
+  if (!isPlainObject(manifest)) return null;
   const label =
     typeof manifest.name === "string" && manifest.name
       ? manifest.name
       : fallbackLabel;
-  if (!isPlainObject(manifest.pwa)) {
-    onWarn(
-      `PWA config: ${label} declares a non-object 'pwa' field in its manifest; ignored.`,
-    );
-    return null;
+
+  let config: PHConnectPwa = {};
+  if (manifest.pwa !== undefined) {
+    if (!isPlainObject(manifest.pwa)) {
+      onWarn(
+        `PWA config: ${label} declares a non-object 'pwa' field in its manifest; ignored.`,
+      );
+    } else {
+      const parsed = PwaConfigSchema.safeParse(manifest.pwa);
+      if (!parsed.success) {
+        onWarn(
+          `PWA config: ${label}'s pwa fragment is invalid; ignored. ${formatZodIssues(parsed.error)}`,
+        );
+      } else {
+        config = parsed.data;
+      }
+    }
   }
-  const parsed = PwaConfigSchema.safeParse(manifest.pwa);
-  if (!parsed.success) {
-    onWarn(
-      `PWA config: ${label}'s pwa fragment is invalid; ignored. ${formatZodIssues(parsed.error)}`,
-    );
-    return null;
-  }
-  return { source: label, config: parsed.data };
+
+  config = withInferredCategory(config, manifest.category);
+  if (Object.keys(config).length === 0) return null;
+  return { source: label, config };
 }
 
 /** Read the first parseable manifest among `candidates` (relative to `dir`)
@@ -212,20 +223,63 @@ export async function collectPackagePwaContributions(options: {
  * `dist/` copy the project build emits). The root file comes first — it is
  * the source the dist copy is made from, and a stale dist left by an older
  * build must not shadow it. Returns null silently when no manifest exists —
- * not every project ships one.
+ * not every project ships one — or when it carries neither a `pwa` block nor a
+ * `category` to derive `categories` from.
+ *
+ * The `pwa` block is parsed STRICTLY, like `connect.pwa` and unlike third-party
+ * package fragments: the project's own manifest is the developer's config, so
+ * an invalid `pwa` block (a typo, or a removed/unknown field such as
+ * `protocol_handlers`) FAILS the build instead of being silently skipped — a
+ * silently-dropped field would be far harder to notice.
  */
 export function collectProjectPwaContribution(options: {
   projectRoot?: string;
-  onWarn?: (message: string) => void;
 }): PwaContribution | null {
   const projectRoot = options.projectRoot ?? process.cwd();
-  const onWarn = options.onWarn ?? (() => {});
-  return readPwaFragmentFromDir(
-    projectRoot,
-    ["powerhouse.manifest.json", "dist/powerhouse.manifest.json"],
-    "project manifest",
-    onWarn,
-  );
+  for (const rel of [
+    "powerhouse.manifest.json",
+    "dist/powerhouse.manifest.json",
+  ]) {
+    const manifestPath = path.resolve(projectRoot, rel);
+    if (!fs.existsSync(manifestPath)) continue;
+    let manifest: unknown;
+    try {
+      manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`Could not parse ${manifestPath}: ${message}`);
+    }
+    if (!isPlainObject(manifest)) return null;
+    const label =
+      typeof manifest.name === "string" && manifest.name
+        ? manifest.name
+        : "project manifest";
+    const config =
+      manifest.pwa === undefined
+        ? {}
+        : parsePwaConfigStrict(manifest.pwa, `pwa in ${manifestPath}`);
+    const withCategory = withInferredCategory(config, manifest.category);
+    if (Object.keys(withCategory).length === 0) return null;
+    return { source: label, config: withCategory };
+  }
+  return null;
+}
+
+/** Strictly parse a PWA config block, throwing a build-failing error (naming
+ * the offending field) when it is invalid. Used for the developer's own config
+ * (`connect.pwa` and the project manifest's `pwa`), where a silent drop would
+ * be a footgun — unlike third-party package fragments, which warn + skip. */
+function parsePwaConfigStrict(
+  config: unknown,
+  description: string,
+): PHConnectPwa {
+  const parsed = PwaConfigSchema.safeParse(config);
+  if (!parsed.success) {
+    throw new Error(
+      `Invalid ${description}: ${formatZodIssues(parsed.error)}. Fix it or remove the field.`,
+    );
+  }
+  return parsed.data;
 }
 
 /**
@@ -237,11 +291,5 @@ export function validateProjectPwaConfig(
   config: unknown,
   configPath: string,
 ): PHConnectPwa {
-  const parsed = PwaConfigSchema.safeParse(config);
-  if (!parsed.success) {
-    throw new Error(
-      `Invalid connect.pwa in ${configPath}: ${formatZodIssues(parsed.error)}. Fix the config or remove the field.`,
-    );
-  }
-  return parsed.data;
+  return parsePwaConfigStrict(config, `connect.pwa in ${configPath}`);
 }

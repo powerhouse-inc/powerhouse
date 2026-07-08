@@ -153,13 +153,33 @@ describe("pwa fragment collection", () => {
       expect(contributions[0].config.manifest?.name).toBe("X");
     });
 
-    it("skips packages with no pwa fragment and missing packages", async () => {
+    it("skips packages with neither a pwa fragment nor a category, and missing packages", async () => {
       writePackage("@acme/plain", { name: "Plain" });
       const contributions = await collectPackagePwaContributions({
         packages: [local("@acme/plain"), local("@acme/absent")],
         projectRoot,
       });
       expect(contributions).toEqual([]);
+    });
+
+    it("infers categories from a package's `category` field", async () => {
+      // A package contributes its category even with no `pwa` block; two
+      // packages' categories union into one deduped list.
+      writePackage("@acme/a", { name: "A", category: "productivity" });
+      writePackage("@acme/b", {
+        name: "B",
+        category: "finance",
+        pwa: { manifest: { theme_color: "#0af" } },
+      });
+      const contributions = await collectPackagePwaContributions({
+        packages: [local("@acme/a"), local("@acme/b")],
+        projectRoot,
+      });
+      expect(contributions).toHaveLength(2);
+      expect(contributions[0].config.manifest?.categories).toEqual([
+        "productivity",
+      ]);
+      expect(contributions[1].config.manifest?.categories).toEqual(["finance"]);
     });
 
     it("warns and skips a non-object pwa field", async () => {
@@ -358,9 +378,68 @@ describe("pwa fragment collection", () => {
     });
 
     it("returns null silently when the project has no manifest", () => {
-      const onWarn = vi.fn();
-      expect(collectProjectPwaContribution({ projectRoot, onWarn })).toBeNull();
-      expect(onWarn).not.toHaveBeenCalled();
+      expect(collectProjectPwaContribution({ projectRoot })).toBeNull();
+    });
+
+    it("returns null when the manifest has no pwa fragment and no category", () => {
+      writeFileSync(
+        join(projectRoot, "powerhouse.manifest.json"),
+        JSON.stringify({ name: "@acme/project" }),
+      );
+      expect(collectProjectPwaContribution({ projectRoot })).toBeNull();
+    });
+
+    it("infers categories from the manifest `category` even without a pwa block", () => {
+      writeFileSync(
+        join(projectRoot, "powerhouse.manifest.json"),
+        JSON.stringify({ name: "@acme/project", category: "productivity" }),
+      );
+      const contribution = collectProjectPwaContribution({ projectRoot });
+      expect(contribution?.config.manifest?.categories).toEqual([
+        "productivity",
+      ]);
+    });
+
+    it("folds the inferred category alongside an authored pwa fragment", () => {
+      writeFileSync(
+        join(projectRoot, "powerhouse.manifest.json"),
+        JSON.stringify({
+          name: "@acme/project",
+          category: "finance",
+          pwa: { manifest: { theme_color: "#123" } },
+        }),
+      );
+      const contribution = collectProjectPwaContribution({ projectRoot });
+      expect(contribution?.config.manifest?.theme_color).toBe("#123");
+      expect(contribution?.config.manifest?.categories).toEqual(["finance"]);
+    });
+
+    it("THROWS (fails the build) on an invalid pwa fragment — unlike a third-party package", () => {
+      // The project's own manifest is the developer's config, so a removed /
+      // unknown field (e.g. protocol_handlers) must fail loudly, not be skipped.
+      writeFileSync(
+        join(projectRoot, "powerhouse.manifest.json"),
+        JSON.stringify({
+          name: "@acme/project",
+          pwa: { manifest: { protocol_handlers: [{ protocol: "web+ph" }] } },
+        }),
+      );
+      expect(() => collectProjectPwaContribution({ projectRoot })).toThrow(
+        /protocol_handlers|Unrecognized/,
+      );
+    });
+
+    it("THROWS on an unknown pwa field typo in the project manifest", () => {
+      writeFileSync(
+        join(projectRoot, "powerhouse.manifest.json"),
+        JSON.stringify({
+          name: "@acme/project",
+          pwa: { manifest: { theme_colr: "#123" } },
+        }),
+      );
+      expect(() => collectProjectPwaContribution({ projectRoot })).toThrow(
+        /theme_colr|Unrecognized/,
+      );
     });
   });
 
@@ -469,14 +548,9 @@ describe("pwa fragment collection", () => {
     it("passes the extended manifest members through", () => {
       const config = {
         manifest: {
-          shortcuts: [{ name: "New", url: "new" }],
-          protocol_handlers: [{ protocol: "web+ph" }],
-          share_target: {
-            params: { files: [{ name: "f", accept: [".phd"] }] },
-          },
-          screenshots: [{ src: "shot.png", form_factor: "wide" as const }],
-          categories: ["productivity"],
-          display_override: ["window-controls-overlay" as const],
+          icons: [{ src: "pkg.png", sizes: "512x512" }],
+          file_handlers: [{ accept: { "application/x-a+zip": [".aaa"] } }],
+          launch_handler: { client_mode: "navigate-new" as const },
         },
       };
       expect(
@@ -484,49 +558,33 @@ describe("pwa fragment collection", () => {
       ).toEqual(config);
     });
 
-    it("rejects a protocol handler with a non-web+ scheme", () => {
+    it("rejects an authored `categories` (derived from the manifest, not settable here)", () => {
+      // categories is inferred from each manifest's `category` field, so setting
+      // it under connect.pwa is a mistake the strict schema must surface.
       expect(() =>
         validateProjectPwaConfig(
-          { manifest: { protocol_handlers: [{ protocol: "mailto" }] } },
+          { manifest: { categories: ["productivity"] } },
           "/proj/powerhouse.config.json",
         ),
-      ).toThrow(/protocol/);
+      ).toThrow(/[Uu]nrecognized/);
     });
 
-    it("rejects a protocol handler that tries to set its own url route", () => {
-      // The launch route is Connect-owned (like the file-handler action).
-      expect(() =>
-        validateProjectPwaConfig(
-          {
-            manifest: {
-              protocol_handlers: [{ protocol: "web+ph", url: "/evil?%s" }],
-            },
-          },
-          "/proj/powerhouse.config.json",
-        ),
-      ).toThrow(/[Uu]nrecognized|url/);
-    });
-
-    it("rejects a share_target that tries to set the Connect-owned action/method", () => {
-      expect(() =>
-        validateProjectPwaConfig(
-          {
-            manifest: {
-              share_target: { action: "/evil", params: { title: "t" } },
-            },
-          },
-          "/proj/powerhouse.config.json",
-        ),
-      ).toThrow(/[Uu]nrecognized|action/);
-    });
-
-    it("rejects a screenshot missing its required src", () => {
-      expect(() =>
-        validateProjectPwaConfig(
-          { manifest: { screenshots: [{ sizes: "1280x720" }] } },
-          "/proj/powerhouse.config.json",
-        ),
-      ).toThrow(/src|screenshots/);
+    it("rejects a dropped manifest member (share_target/shortcuts/…)", () => {
+      // These members were removed; the strict schema rejects them as unknown
+      // rather than silently dropping them.
+      for (const manifest of [
+        { share_target: { params: { title: "t" } } },
+        { shortcuts: [{ name: "New", url: "./new" }] },
+        { screenshots: [{ src: "shot.png" }] },
+        { display_override: ["window-controls-overlay"] },
+      ]) {
+        expect(() =>
+          validateProjectPwaConfig(
+            { manifest },
+            "/proj/powerhouse.config.json",
+          ),
+        ).toThrow(/[Uu]nrecognized/);
+      }
     });
   });
 
