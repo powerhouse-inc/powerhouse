@@ -249,7 +249,7 @@
   --active: 0.9;
   --disabled: 0.5;
 
-  --destructive: var(--color-red-900);
+  --destructive: hsl(5 81% 45%);
   --destructive-foreground: var(--color-white);
   --info: var(--color-blue-900);
   --info-foreground: var(--color-white);
@@ -293,6 +293,9 @@
   --input: var(--color-slate-500);
   --hover: 1.25;
   --active: 1.4;
+
+  /* Lighter red reads better on the dark surface than the darkened light-theme value. */
+  --destructive: var(--color-red-900);
 }
 
 @theme inline {

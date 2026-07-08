@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ConnectionStateSnapshot } from "@powerhousedao/reactor-browser";
-import { computeNeedsLogin } from "./use-drive-auth-gate.js";
+import { computeAuthGate } from "./use-drive-auth-gate.js";
 
 // `state` + `requiresAuth` drive the decision; the rest are neutral.
 function snap(
@@ -19,31 +19,31 @@ function snap(
   };
 }
 
-describe("computeNeedsLogin", () => {
-  it("never gates an authenticated user, even with an auth-rejected channel", () => {
+describe("computeAuthGate", () => {
+  it("returns 'unauthorized' when an authenticated user has an auth-rejected channel", () => {
     const states = new Map([["studio", snap("error", true)]]);
-    expect(computeNeedsLogin(true, states)).toBe(false);
+    expect(computeAuthGate(true, states)).toBe("unauthorized");
   });
 
-  it("gates an anonymous user when a channel failed with an auth rejection", () => {
+  it("returns 'login' when an anonymous user has an auth-rejected channel", () => {
     const states = new Map([["studio", snap("error", true)]]);
-    expect(computeNeedsLogin(false, states)).toBe(true);
+    expect(computeAuthGate(false, states)).toBe("login");
   });
 
-  it("does not gate an anonymous user on a non-auth error", () => {
+  it("does not gate on a non-auth error (anonymous)", () => {
     const states = new Map([["studio", snap("error", false)]]);
-    expect(computeNeedsLogin(false, states)).toBe(false);
+    expect(computeAuthGate(false, states)).toBeNull();
   });
 
-  it("does not gate an anonymous user when all channels are healthy", () => {
+  it("does not gate when all channels are healthy", () => {
     const states = new Map([
       ["studio", snap("connected")],
       ["other", snap("connecting")],
     ]);
-    expect(computeNeedsLogin(false, states)).toBe(false);
+    expect(computeAuthGate(false, states)).toBeNull();
   });
 
-  it("does not gate an anonymous user with no channels", () => {
-    expect(computeNeedsLogin(false, new Map())).toBe(false);
+  it("does not gate with no channels", () => {
+    expect(computeAuthGate(false, new Map())).toBeNull();
   });
 });

@@ -2,7 +2,7 @@ import type { ProfileFetcher, RenownProfile } from "./types.js";
 
 export const fetchRenownProfile: ProfileFetcher = async (user, baseUrl) => {
   try {
-    const response = await fetch(`${baseUrl}/api/profile`, {
+    const response = await fetch(`${baseUrl.replace(/\/+$/, "")}/api/profile`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

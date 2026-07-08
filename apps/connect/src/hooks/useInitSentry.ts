@@ -10,6 +10,7 @@ import {
   useLocation,
   useNavigationType,
 } from "react-router-dom";
+import { setSentryModule } from "../services/sentry.js";
 import { useAcceptedCookies } from "./useAcceptedCookies.js";
 
 const logger = childLogger(["sentry"]);
@@ -68,6 +69,7 @@ async function initSentry() {
     },
   });
 
+  setSentryModule(Sentry);
   clientStarted = true;
 }
 
@@ -76,6 +78,7 @@ async function closeClient() {
     return;
   }
   const sentry = await getSentry();
+  setSentryModule(undefined);
   const client = sentry.getClient();
   return client?.close();
 }

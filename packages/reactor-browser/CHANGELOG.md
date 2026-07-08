@@ -1,3 +1,35 @@
+## 6.2.0-rc.8 (2026-07-08)
+
+This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.
+
+## 6.2.0-rc.7 (2026-07-07)
+
+### 🚀 Features
+
+- **reactor-browser:** preload editor chunks during idle and on hover ([054797d95](https://github.com/powerhouse-inc/powerhouse/commit/054797d95))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.0-rc.6 (2026-07-03)
+
+This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.
+
+## 6.2.0-rc.5 (2026-07-02)
+
+### 🚀 Features
+
+- pre-paint theme boot script and cross-context theme sync ([#2806](https://github.com/powerhouse-inc/powerhouse/pull/2806))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
+## 6.2.0-rc.4 (2026-07-01)
+
+This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.
+
 ## 6.2.0-rc.3 (2026-06-30)
 
 ### 🚀 Features

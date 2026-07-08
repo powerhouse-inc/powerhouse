@@ -1,3 +1,46 @@
+## 6.2.0-rc.8 (2026-07-08)
+
+### 🩹 Fixes
+
+- remove location and drive mode from modal ([e70bd81d4](https://github.com/powerhouse-inc/powerhouse/commit/e70bd81d4))
+
+### ❤️ Thank You
+
+- liberuum
+
+## 6.2.0-rc.7 (2026-07-07)
+
+### 🚀 Features
+
+- **reactor-browser:** preload editor chunks during idle and on hover ([054797d95](https://github.com/powerhouse-inc/powerhouse/commit/054797d95))
+
+### 🩹 Fixes
+
+- **design-system:** resolve modal accessibility violations ([6059b82cf](https://github.com/powerhouse-inc/powerhouse/commit/6059b82cf))
+- **design-system:** add shadow to base Modal content ([cbac099ce](https://github.com/powerhouse-inc/powerhouse/commit/cbac099ce))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.0-rc.6 (2026-07-03)
+
+This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.
+
+## 6.2.0-rc.5 (2026-07-02)
+
+This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.
+
+## 6.2.0-rc.4 (2026-07-01)
+
+### 🩹 Fixes
+
+- **connect:** distinguish authenticated-but-unauthorized from anonymous in drive auth gate ([#2802](https://github.com/powerhouse-inc/powerhouse/pull/2802))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.2.0-rc.3 (2026-06-30)
 
 ### 🚀 Features

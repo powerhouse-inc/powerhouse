@@ -1,5 +1,10 @@
 import { DriveAuthGate } from "@powerhousedao/design-system/connect";
-import { openRenown, usePHModal } from "@powerhousedao/reactor-browser";
+import {
+  logout,
+  openRenown,
+  usePHModal,
+  useUser,
+} from "@powerhousedao/reactor-browser";
 import React from "react";
 
 /**
@@ -15,17 +20,25 @@ import React from "react";
  */
 export const DriveAuthRequiredModal: React.FC = () => {
   const phModal = usePHModal();
+  const user = useUser();
+  const mode = user ? "unauthorized" : "login";
   if (phModal?.type !== "driveAuthRequired") return null;
 
   return (
     <div
       role="dialog"
       aria-modal="false"
-      aria-label="Log in to access this drive"
+      aria-label={
+        mode === "unauthorized"
+          ? "You don't have access to this drive"
+          : "Log in to access this drive"
+      }
       className="pointer-events-none fixed inset-0 z-50 grid place-items-center bg-primary/30"
     >
       <DriveAuthGate
+        mode={mode}
         onLogin={() => openRenown()}
+        onLogout={() => void logout()}
         className="pointer-events-auto"
       />
     </div>

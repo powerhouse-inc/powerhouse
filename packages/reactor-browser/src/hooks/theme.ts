@@ -110,9 +110,16 @@ export function initTheme() {
 
 function subscribeToStoredTheme(onStoreChange: () => void) {
   if (isServer) return () => {};
+  // `storage` fires in every OTHER same-origin browsing context (e.g. an
+  // embedding parent window), keeping embedded instances in sync live.
+  const handleStorage = (event: StorageEvent) => {
+    if (event.key === STORED_THEME_KEY || event.key === null) onStoreChange();
+  };
   window.addEventListener(STORED_THEME_UPDATED, onStoreChange);
+  window.addEventListener("storage", handleStorage);
   return () => {
     window.removeEventListener(STORED_THEME_UPDATED, onStoreChange);
+    window.removeEventListener("storage", handleStorage);
   };
 }
 

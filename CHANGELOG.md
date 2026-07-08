@@ -1,3 +1,72 @@
+## 6.2.0-rc.8 (2026-07-08)
+
+### 🩹 Fixes
+
+- remove location and drive mode from modal ([e70bd81d4](https://github.com/powerhouse-inc/powerhouse/commit/e70bd81d4))
+- remove vetra drive options and set general drive in last position ([da2b81299](https://github.com/powerhouse-inc/powerhouse/commit/da2b81299))
+- **connect:** sort generic drive explorer last in add-drive app options ([813d98892](https://github.com/powerhouse-inc/powerhouse/commit/813d98892))
+- **powerhouse-vetra-packages:** hide vetra spec documents from generic drive create list ([7df611e80](https://github.com/powerhouse-inc/powerhouse/commit/7df611e80))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+- liberuum
+
+## 6.2.0-rc.7 (2026-07-07)
+
+### 🚀 Features
+
+- **reactor-browser:** preload editor chunks during idle and on hover ([054797d95](https://github.com/powerhouse-inc/powerhouse/commit/054797d95))
+
+### 🩹 Fixes
+
+- **design-system:** add shadow to base Modal content ([cbac099ce](https://github.com/powerhouse-inc/powerhouse/commit/cbac099ce))
+- **design-system:** resolve modal accessibility violations ([6059b82cf](https://github.com/powerhouse-inc/powerhouse/commit/6059b82cf))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.0-rc.6 (2026-07-03)
+
+### 🩹 Fixes
+
+- **connect:** retry shared PGlite init on failure; drop unsafe dialect cast ([db4bfa3a7](https://github.com/powerhouse-inc/powerhouse/commit/db4bfa3a7))
+
+### 🔥 Performance
+
+- **connect:** keep Sentry SDK off the boot critical path ([df1aa0663](https://github.com/powerhouse-inc/powerhouse/commit/df1aa0663))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.0-rc.5 (2026-07-02)
+
+### 🚀 Features
+
+- pre-paint theme boot script and cross-context theme sync ([#2806](https://github.com/powerhouse-inc/powerhouse/pull/2806))
+
+### 🩹 Fixes
+
+- **renown:** poll cli login every 0.5s instead of 2s ([f2245aee3](https://github.com/powerhouse-inc/powerhouse/commit/f2245aee3))
+- **renown:** avoid double slash on renown fetch profile ([ea16a17d4](https://github.com/powerhouse-inc/powerhouse/commit/ea16a17d4))
+
+### ❤️ Thank You
+
+- acaldas
+- Guillermo Puente Sandoval @gpuente
+
+## 6.2.0-rc.4 (2026-07-01)
+
+### 🩹 Fixes
+
+- **connect:** distinguish authenticated-but-unauthorized from anonymous in drive auth gate ([#2802](https://github.com/powerhouse-inc/powerhouse/pull/2802))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.2.0-rc.3 (2026-06-30)
 
 ### 🚀 Features

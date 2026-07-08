@@ -4,6 +4,7 @@ export * from "./drives.js";
 export * from "./download-document.js";
 export * from "./get-revision-from-date.js";
 export * from "./nodes.js";
+export * from "./preload-editor.js";
 export * from "./switchboard.js";
 export * from "./url.js";
 export * from "./user.js";

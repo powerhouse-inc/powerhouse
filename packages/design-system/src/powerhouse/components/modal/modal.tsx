@@ -42,9 +42,7 @@ export function Modal(props: Props) {
             {...delegated}
             {...contentProps}
             className={twMerge(
-              // shadow-sidebar matches the settings modal's box-shadow, so
-              // every dialog carries the same elevation by default.
-              "overflow-hidden rounded-3xl bg-background shadow-sidebar data-[state=closed]:animate-zoom-out data-[state=open]:animate-zoom-in",
+              "overflow-hidden rounded-3xl bg-background shadow-modal data-[state=closed]:animate-zoom-out data-[state=open]:animate-zoom-in",
               contentProps?.className,
             )}
           >

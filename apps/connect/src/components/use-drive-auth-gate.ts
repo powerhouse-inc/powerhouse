@@ -4,22 +4,30 @@ import {
   type ConnectionStateSnapshot,
 } from "@powerhousedao/reactor-browser";
 
-/** Gate an anonymous user only when a remote failed with an auth rejection
- * (`requiresAuth`) — the switchboard refusing the caller for lack of login. */
-export function computeNeedsLogin(
+/** Return code for the auth gate decision:
+ * - `"login"`  : anonymous user, a channel rejected with `requiresAuth`.
+ * - `"unauthorized"` : signed in, but a channel was rejected — they aren't the owner.
+ * - `null`   : no auth barrier, carry on. */
+export type AuthGate = "login" | "unauthorized" | null;
+
+export function computeAuthGate(
   isAuthenticated: boolean,
   connectionStates: ReadonlyMap<string, ConnectionStateSnapshot>,
-): boolean {
-  if (isAuthenticated) return false;
+): AuthGate {
+  let sawAuthError = false;
   for (const snap of connectionStates.values()) {
-    if (snap.state === "error" && snap.requiresAuth) return true;
+    if (snap.state === "error" && snap.requiresAuth) {
+      sawAuthError = true;
+      break;
+    }
   }
-  return false;
+  if (!sawAuthError) return null;
+  return isAuthenticated ? "unauthorized" : "login";
 }
 
-/** Live wrapper over {@link computeNeedsLogin}. */
-export function useDriveAuthGate(): { needsLogin: boolean } {
+/** Live wrapper over {@link computeAuthGate}. */
+export function useDriveAuthGate(): { gate: AuthGate } {
   const user = useUser();
   const connectionStates = useConnectionStates();
-  return { needsLogin: computeNeedsLogin(Boolean(user), connectionStates) };
+  return { gate: computeAuthGate(Boolean(user), connectionStates) };
 }

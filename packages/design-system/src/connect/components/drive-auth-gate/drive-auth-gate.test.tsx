@@ -18,4 +18,24 @@ describe("DriveAuthGate", () => {
     fireEvent.click(screen.getByRole("button", { name: /log in with/i }));
     expect(onLogin).toHaveBeenCalledOnce();
   });
+
+  it('renders the unauthorized state with mode="unauthorized"', () => {
+    render(<DriveAuthGate mode="unauthorized" onLogout={() => {}} />);
+    expect(
+      screen.getByText("You don't have access to this drive"),
+    ).toBeDefined();
+    expect(
+      screen.getByText(
+        /the account you're signed in with isn't authorized to view or edit this drive/i,
+      ),
+    ).toBeDefined();
+    expect(screen.getByRole("button", { name: /log out/i })).toBeDefined();
+  });
+
+  it("calls onLogout when the Log out button is clicked", () => {
+    const onLogout = vi.fn();
+    render(<DriveAuthGate mode="unauthorized" onLogout={onLogout} />);
+    fireEvent.click(screen.getByRole("button", { name: /log out/i }));
+    expect(onLogout).toHaveBeenCalledOnce();
+  });
 });

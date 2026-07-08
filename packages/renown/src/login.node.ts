@@ -1,7 +1,7 @@
 import type { CreateBearerTokenOptions, IRenown, User } from "./types.js";
 
 const DEFAULT_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
-const POLL_INTERVAL_MS = 2000; // 2 seconds
+const POLL_INTERVAL_MS = 500; // 0.5s: session store is in-memory, cheap to poll
 const SECONDS_IN_DAY = 24 * 60 * 60;
 
 export interface BrowserLoginOptions {

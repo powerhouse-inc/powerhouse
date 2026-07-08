@@ -1,3 +1,30 @@
+## 6.2.0-rc.8 (2026-07-08)
+
+This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
+
+## 6.2.0-rc.7 (2026-07-07)
+
+This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
+
+## 6.2.0-rc.6 (2026-07-03)
+
+This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
+
+## 6.2.0-rc.5 (2026-07-02)
+
+### 🩹 Fixes
+
+- **renown:** avoid double slash on renown fetch profile ([ea16a17d4](https://github.com/powerhouse-inc/powerhouse/commit/ea16a17d4))
+- **renown:** poll cli login every 0.5s instead of 2s ([f2245aee3](https://github.com/powerhouse-inc/powerhouse/commit/f2245aee3))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.0-rc.4 (2026-07-01)
+
+This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
+
 ## 6.2.0-rc.3 (2026-06-30)
 
 ### 🚀 Features

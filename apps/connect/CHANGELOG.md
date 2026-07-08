@@ -1,3 +1,59 @@
+## 6.2.0-rc.8 (2026-07-08)
+
+### 🩹 Fixes
+
+- remove vetra drive options and set general drive in last position ([da2b81299](https://github.com/powerhouse-inc/powerhouse/commit/da2b81299))
+- **connect:** sort generic drive explorer last in add-drive app options ([813d98892](https://github.com/powerhouse-inc/powerhouse/commit/813d98892))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+- liberuum
+
+## 6.2.0-rc.7 (2026-07-07)
+
+### 🚀 Features
+
+- **reactor-browser:** preload editor chunks during idle and on hover ([054797d95](https://github.com/powerhouse-inc/powerhouse/commit/054797d95))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.0-rc.6 (2026-07-03)
+
+### 🩹 Fixes
+
+- **connect:** retry shared PGlite init on failure; drop unsafe dialect cast ([db4bfa3a7](https://github.com/powerhouse-inc/powerhouse/commit/db4bfa3a7))
+
+### 🔥 Performance
+
+- **connect:** keep Sentry SDK off the boot critical path ([df1aa0663](https://github.com/powerhouse-inc/powerhouse/commit/df1aa0663))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.0-rc.5 (2026-07-02)
+
+### 🚀 Features
+
+- pre-paint theme boot script and cross-context theme sync ([#2806](https://github.com/powerhouse-inc/powerhouse/pull/2806))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
+## 6.2.0-rc.4 (2026-07-01)
+
+### 🩹 Fixes
+
+- **connect:** distinguish authenticated-but-unauthorized from anonymous in drive auth gate ([#2802](https://github.com/powerhouse-inc/powerhouse/pull/2802))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.2.0-rc.3 (2026-06-30)
 
 ### 🚀 Features
