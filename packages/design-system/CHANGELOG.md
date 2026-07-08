@@ -1,3 +1,13 @@
+## 6.2.1 (2026-07-08)
+
+### 🩹 Fixes
+
+- remove location and drive mode from modal ([a360c0a3a](https://github.com/powerhouse-inc/powerhouse/commit/a360c0a3a))
+
+### ❤️ Thank You
+
+- liberuum
+
 ## 6.2.0 (2026-07-07)
 
 This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.
