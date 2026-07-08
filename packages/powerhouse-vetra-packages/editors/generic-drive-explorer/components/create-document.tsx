@@ -19,8 +19,19 @@ export function CreateDocument() {
   const { isAllowedToCreateDocuments } = useUserPermissions();
   const documentModelModules = useDocumentModelModules();
   const editorModules = useEditorModules();
-  const nonDriveDocumentModelModules = documentModelModules?.filter(
-    (module) => module.documentModel.global.id !== "powerhouse/document-drive",
+  // Hide "document-drive" (drive root) and vetra builder-spec types (App Module,
+  // Document Editor, Processor Module, Subgraph Module, Vetra Package) from the
+  // generic explorer's "New document" section.
+  const HIDDEN_DOCUMENT_TYPES = [
+    "powerhouse/document-drive",
+    "powerhouse/app",
+    "powerhouse/document-editor",
+    "powerhouse/processor",
+    "powerhouse/subgraph",
+    "powerhouse/package",
+  ];
+  const visibleDocumentModelModules = documentModelModules?.filter(
+    (module) => !HIDDEN_DOCUMENT_TYPES.includes(module.documentModel.global.id),
   );
   const preloadEditorsForType = (documentType: string) =>
     editorModules
@@ -35,7 +46,7 @@ export function CreateDocument() {
     <div className="px-6 py-4">
       <h3 className="mb-3 text-xl font-bold text-foreground">New document</h3>
       <div className="flex w-full flex-wrap gap-4">
-        {nonDriveDocumentModelModules?.map((doc) => {
+        {visibleDocumentModelModules?.map((doc) => {
           const spec = getDocumentSpec(doc);
           const versionLabel = doc.version ? ` v${doc.version}` : "";
           return (
