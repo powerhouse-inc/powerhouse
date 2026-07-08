@@ -465,6 +465,11 @@ test("Install Package in Consumer Project", async ({ browser }) => {
     const addDriveDialog = page.getByRole("dialog");
     await expect(addDriveDialog).toBeVisible({ timeout: 10_000 });
 
+    // Select "Drive Explorer App" explicitly (it's no longer the default after
+    // the sort change that puts it last in the app options list)
+    await addDriveDialog.getByText("Vetra Drive App").click();
+    await addDriveDialog.getByText("Drive Explorer App").click();
+
     // Fill in drive name
     const driveNameInput = page.locator('input[placeholder="Drive name"]');
     await expect(driveNameInput).toBeVisible({ timeout: 5_000 });
