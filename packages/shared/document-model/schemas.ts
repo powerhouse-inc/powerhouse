@@ -866,6 +866,55 @@ const PwaFileHandlerSchema = z.strictObject({
   launch_type: z.enum(["single-client", "multiple-clients"]).optional(),
 });
 
+// No `url` field: the route a launched `web+…` link opens at is fixed by
+// Connect (its own runtime handler parses the link), so contributors only
+// declare WHICH scheme they own. The scheme must be a custom `web+…` scheme —
+// the browser rejects arbitrary schemes, so fail loudly at build instead.
+const PwaProtocolHandlerSchema = z.strictObject({
+  protocol: z
+    .string()
+    .regex(
+      /^web\+[a-z]+$/,
+      "protocol must be a custom scheme of the form 'web+<lowercase letters>'",
+    ),
+});
+
+// Contributors declare only `params`: `action`, `method` and `enctype` are all
+// Connect-owned (its service worker only handles a POST), injected at build
+// time — same principle as the file-handler `action`. `strictObject` rejects a
+// fragment that tries to set them.
+const PwaShareTargetSchema = z.strictObject({
+  params: z.strictObject({
+    title: z.string().optional(),
+    text: z.string().optional(),
+    url: z.string().optional(),
+    files: z
+      .array(
+        z.strictObject({
+          name: z.string(),
+          accept: z.array(z.string()),
+        }),
+      )
+      .optional(),
+  }),
+});
+
+const PwaShortcutSchema = z.strictObject({
+  name: z.string(),
+  short_name: z.string().optional(),
+  description: z.string().optional(),
+  url: z.string(),
+  icons: z.array(PwaIconSchema).optional(),
+});
+
+const PwaScreenshotSchema = z.strictObject({
+  src: z.string(),
+  sizes: z.string().optional(),
+  type: z.string().optional(),
+  form_factor: z.enum(["narrow", "wide"]).optional(),
+  label: z.string().optional(),
+});
+
 const PwaManifestOverrideSchema = z.strictObject({
   name: z.string().optional(),
   short_name: z.string().optional(),
@@ -889,6 +938,23 @@ const PwaManifestOverrideSchema = z.strictObject({
       ]),
     })
     .optional(),
+  categories: z.array(z.string()).optional(),
+  display_override: z
+    .array(
+      z.enum([
+        "fullscreen",
+        "standalone",
+        "minimal-ui",
+        "browser",
+        "window-controls-overlay",
+        "tabbed",
+      ]),
+    )
+    .optional(),
+  screenshots: z.array(PwaScreenshotSchema).optional(),
+  shortcuts: z.array(PwaShortcutSchema).optional(),
+  protocol_handlers: z.array(PwaProtocolHandlerSchema).optional(),
+  share_target: PwaShareTargetSchema.optional(),
 });
 
 export const PwaConfigSchema: z.ZodType<PHConnectPwa> = z.strictObject({

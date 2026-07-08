@@ -264,7 +264,7 @@
         "pwa": {
           "type": "object",
           "additionalProperties": false,
-          "description": "Progressive-web-app / service-worker overrides, layered on Connect's built-in PWA defaults at build time. Object fields deep-merge (this layer wins); icons, file_handlers, globs, runtimeCaching and denylist patterns are additive; maximumFileSizeToCacheInBytes takes the max across contributors. Only applied when connect.app.offline is true.",
+          "description": "Progressive-web-app / service-worker overrides, layered on Connect's built-in PWA defaults at build time. Scalar fields deep-merge (this layer wins); the array members (icons, file_handlers, globs, runtimeCaching and denylist patterns) are additive; maximumFileSizeToCacheInBytes takes the max across contributors. (categories is not set here — it is derived from the manifest's category field.) Only applied when connect.app.offline is true.",
           "properties": {
             "manifest": {
               "type": "object",

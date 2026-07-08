@@ -112,10 +112,17 @@ describe("connectPwaPlugins e2e build", () => {
 
     expect(files).toContain("service-worker.js");
     const sw = readFileSync(join(outDir, "service-worker.js"), "utf-8");
-    // generateSW inlines the runtime-caching registrations into the worker.
+    // The contributed rule is serialised into the virtual config the SW imports.
     expect(sw).toContain("acme-api");
     // The built-in ph-runtime-config NetworkFirst rule carries its timeout.
     expect(sw).toContain("networkTimeoutSeconds");
+    // injectManifest built our hand-written worker and its manifest/config
+    // route code is bundled in (the runtime IDB-merge behavior itself is
+    // covered by the mergeManifest unit tests, not here). A passing build also
+    // proves the SW compiles with its workbox + shared + virtual-config imports
+    // resolved.
+    expect(sw).toContain("manifest.webmanifest");
+    expect(sw).toContain("ph-runtime-config");
   }, 60000);
 
   it("appends a contributed file handler after the built-in one", async () => {

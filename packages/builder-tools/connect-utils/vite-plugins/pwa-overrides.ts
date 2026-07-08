@@ -1,30 +1,25 @@
 import {
-  dedupeFileHandlers,
-  dedupeIcons,
-  deepMerge,
-  toRegExpOrString,
+  mergeManifest,
+  PWA_FILE_HANDLER_ACTION,
   unionStrings,
   type PHConnectPwa,
-  type PHConnectPwaRuntimeCaching,
-  type PHConnectPwaUrlPattern,
+  type PwaWebManifest,
 } from "@powerhousedao/shared/connect";
-import type { ManifestOptions, VitePWAOptions } from "vite-plugin-pwa";
-import { escapeForRegExp } from "./dynamic-base.js";
+import type { ManifestOptions } from "vite-plugin-pwa";
 
 // Applies the effective (already merged, see mergePwaConfig) serialisable PWA
-// fragment onto Connect's hardcoded VitePWA base. Lives here rather than in
-// @powerhousedao/shared so the base and result can use vite-plugin-pwa's own
-// option types — shared deliberately has no dependency on the PWA toolchain.
+// fragment onto Connect's hardcoded base. The manifest merge is delegated to
+// the browser-safe `mergeManifest` in @powerhousedao/shared/connect so the
+// exact same code shapes the manifest here (build time) and inside the service
+// worker (runtime, for dynamically-installed packages). This module only adds
+// the vite-plugin-pwa manifest TYPES and the precache-glob merge; the Workbox
+// runtime-caching / navigation behaviour now lives in the hand-written service
+// worker (see connect-utils/service-worker/service-worker.ts), because
+// `injectManifest` has no declarative runtimeCaching option.
 
-/**
- * The one route launched files open at, shared by the built-in handler and
- * injected into every contributed one. Not configurable: consuming launched
- * files takes runtime code that lives in Connect itself, and a relative "."
- * resolves against the manifest URL so it tracks any deploy base (the
- * webmanifest is never rewritten by the dynamic-base plugin) — same trick as
- * the base start_url/scope.
- */
-export const FILE_HANDLER_ACTION = ".";
+// Re-exported so existing importers (pwa.ts, the e2e test) keep a stable name
+// while the constant's source of truth moves to @powerhousedao/shared/connect.
+export { PWA_FILE_HANDLER_ACTION as FILE_HANDLER_ACTION };
 
 /** A manifest file-handler entry. vite-plugin-pwa's own type stops at
  * `{ action; accept }`; the spec'd `icons`/`launch_type` members are added
@@ -44,105 +39,56 @@ export type ConnectPwaManifest = Omit<
 > & {
   file_handlers?: ConnectPwaFileHandler[];
 };
-/** Workbox `generateSW` options exactly as VitePWA accepts them. */
-export type ConnectWorkboxOptions = NonNullable<VitePWAOptions["workbox"]>;
 
-type WorkboxRuntimeCaching = NonNullable<
-  ConnectWorkboxOptions["runtimeCaching"]
->[number];
-
-function toWorkboxRule(
-  rule: PHConnectPwaRuntimeCaching,
-): WorkboxRuntimeCaching {
-  return {
-    urlPattern: toRegExpOrString(rule.urlPattern),
-    handler: rule.handler,
-    ...(rule.method ? { method: rule.method } : {}),
-    ...(rule.options ? { options: rule.options } : {}),
-  };
-}
-
-/** Workbox's navigateFallbackDenylist only accepts RegExps (unlike
- * runtimeCaching, where a string is a valid exact-URL matcher), so a plain
- * string pattern is escaped and matched as a literal substring of the URL. */
-function toDenylistRegExp(pattern: PHConnectPwaUrlPattern): RegExp {
-  const value = toRegExpOrString(pattern);
-  return typeof value === "string" ? new RegExp(escapeForRegExp(value)) : value;
-}
+/** The precache-driving subset of the old Workbox config. Under injectManifest
+ * these are the `injectManifest` options; `self.__WB_MANIFEST` is generated
+ * from them. Everything else (runtimeCaching, navigation, clientsClaim, …) is
+ * imperative code in the service worker. */
+export type ConnectPrecacheOptions = {
+  globPatterns: string[];
+  globIgnores: string[];
+  maximumFileSizeToCacheInBytes: number;
+};
 
 /**
- * Lay an effective PWA fragment over the plugin's hardcoded manifest + Workbox
- * base. Manifest scalars deep-merge (override wins); icons and file handlers
- * concatenate after the base set (contributed handlers get Connect's fixed
- * action injected — the open route is not configurable); globs union; the
- * size ceiling takes the max; runtime-caching rules and denylist patterns are
- * appended AFTER the built-ins (Workbox is first-match-wins, so an override
- * cannot shadow a built-in rule for the same URL — that is intentional for v1).
+ * Lay an effective PWA fragment over the plugin's hardcoded manifest + precache
+ * base. The manifest is merged by the shared `mergeManifest` with
+ * `fragment-wins` scalars (the build-time effective config is the authority);
+ * icons and file handlers concatenate after the base set (contributed handlers
+ * get Connect's fixed action injected — the open route is not configurable);
+ * globs union; the size ceiling takes the max.
+ *
+ * The serialisable `runtimeCaching` / `navigateFallbackDenylist` overrides are
+ * NOT handled here — they are passed straight to the service worker (which
+ * registers them after its built-in rules), because injectManifest has no
+ * declarative runtimeCaching and Workbox is first-match-wins, so an override
+ * can only be appended after the built-ins (intentional for v1).
  */
 export function applyPwaOverrides(
-  base: { manifest: ConnectPwaManifest; workbox: ConnectWorkboxOptions },
+  base: { manifest: ConnectPwaManifest; precache: ConnectPrecacheOptions },
   override: PHConnectPwa,
-): { manifest: ConnectPwaManifest; workbox: ConnectWorkboxOptions } {
-  // Array fields stay out of the deepMerge path — deepMerge replaces arrays
-  // wholesale, which would drop the base entries.
-  const {
-    icons: overrideIcons,
-    file_handlers: overrideFileHandlers,
-    ...manifestScalars
-  } = override.manifest ?? {};
-  let manifest: ConnectPwaManifest = deepMerge(base.manifest, manifestScalars);
-  if (overrideIcons?.length) {
-    manifest = {
-      ...manifest,
-      icons: dedupeIcons([...(base.manifest.icons ?? []), ...overrideIcons]),
-    };
-  }
-  if (overrideFileHandlers?.length) {
-    manifest = {
-      ...manifest,
-      file_handlers: dedupeFileHandlers([
-        ...(base.manifest.file_handlers ?? []),
-        ...overrideFileHandlers.map(
-          (handler): ConnectPwaFileHandler => ({
-            action: FILE_HANDLER_ACTION,
-            ...handler,
-          }),
-        ),
-      ]),
-    };
-  }
+): { manifest: ConnectPwaManifest; precache: ConnectPrecacheOptions } {
+  const manifest = mergeManifest(
+    base.manifest as PwaWebManifest,
+    override.manifest,
+    { scalarPolicy: "fragment-wins" },
+  ) as ConnectPwaManifest;
 
-  const workbox: ConnectWorkboxOptions = { ...base.workbox };
-  if (override.globPatterns?.length) {
-    workbox.globPatterns = unionStrings(
-      workbox.globPatterns,
-      override.globPatterns,
-    );
-  }
-  if (override.globIgnores?.length) {
-    workbox.globIgnores = unionStrings(
-      workbox.globIgnores,
-      override.globIgnores,
-    );
-  }
-  if (typeof override.maximumFileSizeToCacheInBytes === "number") {
-    workbox.maximumFileSizeToCacheInBytes = Math.max(
-      workbox.maximumFileSizeToCacheInBytes ?? 0,
-      override.maximumFileSizeToCacheInBytes,
-    );
-  }
-  if (override.runtimeCaching?.length) {
-    workbox.runtimeCaching = [
-      ...(workbox.runtimeCaching ?? []),
-      ...override.runtimeCaching.map(toWorkboxRule),
-    ];
-  }
-  if (override.navigateFallbackDenylist?.length) {
-    workbox.navigateFallbackDenylist = [
-      ...(workbox.navigateFallbackDenylist ?? []),
-      ...override.navigateFallbackDenylist.map(toDenylistRegExp),
-    ];
-  }
+  const precache: ConnectPrecacheOptions = {
+    globPatterns: override.globPatterns?.length
+      ? unionStrings(base.precache.globPatterns, override.globPatterns)
+      : base.precache.globPatterns,
+    globIgnores: override.globIgnores?.length
+      ? unionStrings(base.precache.globIgnores, override.globIgnores)
+      : base.precache.globIgnores,
+    maximumFileSizeToCacheInBytes:
+      typeof override.maximumFileSizeToCacheInBytes === "number"
+        ? Math.max(
+            base.precache.maximumFileSizeToCacheInBytes,
+            override.maximumFileSizeToCacheInBytes,
+          )
+        : base.precache.maximumFileSizeToCacheInBytes,
+  };
 
-  return { manifest, workbox };
+  return { manifest, precache };
 }

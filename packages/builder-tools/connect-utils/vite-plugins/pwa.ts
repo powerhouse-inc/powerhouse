@@ -1,12 +1,19 @@
-import { type PHConnectPwa } from "@powerhousedao/shared/connect";
-import type { PluginOption } from "vite";
+import {
+  PWA_SHARE_TARGET_ACTION,
+  PWA_SHARE_TARGET_INBOX_CACHE,
+  type PHConnectPwa,
+} from "@powerhousedao/shared/connect";
+import { existsSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import type { Plugin, PluginOption } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 import { connectPwaIconsPlugin } from "./pwa-icons.js";
 import {
   applyPwaOverrides,
   FILE_HANDLER_ACTION,
+  type ConnectPrecacheOptions,
   type ConnectPwaManifest,
-  type ConnectWorkboxOptions,
 } from "./pwa-overrides.js";
 
 /**
@@ -80,16 +87,16 @@ const BASE_MANIFEST: ConnectPwaManifest = {
 };
 
 /**
- * Connect's hardcoded Workbox config. The base layer — overridable additively
- * (extra globs / runtime-caching rules) or by raising the size ceiling via
- * package/project `pwa` config. Function-valued urlPatterns stay here (they
- * are not serialisable, so config-driven rules can only be appended after
- * these, never replace them).
+ * Connect's hardcoded precache config — the base layer for the `injectManifest`
+ * precache. Overridable additively (extra globs) or by raising the size ceiling
+ * via package/project `pwa` config. The rest of the old Workbox config
+ * (runtime-caching rules with their function urlPatterns, the navigation
+ * fallback, clientsClaim/skipWaiting/cleanupOutdatedCaches) now lives as
+ * imperative code in the hand-written service worker
+ * (../service-worker/service-worker.ts), because `injectManifest` has no
+ * declarative runtimeCaching option.
  */
-const BASE_WORKBOX: ConnectWorkboxOptions = {
-  clientsClaim: true,
-  skipWaiting: false, // wait for the user to accept the refresh prompt
-  cleanupOutdatedCaches: true,
+const BASE_PRECACHE: ConnectPrecacheOptions = {
   // PGlite's wasm + fs bundles are several MB each; Workbox's 2 MiB
   // default would silently skip them and the in-browser Postgres would
   // fail to initialise offline. Raise the ceiling so they precache.
@@ -101,105 +108,73 @@ const BASE_WORKBOX: ConnectWorkboxOptions = {
   globPatterns: ["**/*.{js,css,html,wasm,data,ico,png,svg,webp,woff,woff2}"],
   // powerhouse.config.json is operator-editable and served no-cache, so
   // precaching it would freeze runtime config; source maps don't belong
-  // in the precache either.
+  // in the precache either. manifest.webmanifest is added at wiring time so
+  // the SW's dynamic manifest route is the sole producer at that URL.
   globIgnores: ["**/powerhouse.config.json", "**/*.map"],
-  navigateFallback: "index.html",
-  navigateFallbackDenylist: [
-    /\/powerhouse\.config\.json$/,
-    /^\/health$/,
-    /\/__/,
-  ],
-  runtimeCaching: [
-    // Inter font stays on Google's CDN (edge perf, no self-hosting); we
-    // just cache it after the first online load so it renders offline.
-    {
-      urlPattern: ({ url }: { url: URL }) =>
-        url.origin === "https://fonts.googleapis.com",
-      handler: "StaleWhileRevalidate",
-      options: { cacheName: "google-fonts-stylesheets" },
-    },
-    {
-      urlPattern: ({ url }: { url: URL }) =>
-        url.origin === "https://fonts.gstatic.com",
-      handler: "CacheFirst",
-      options: {
-        cacheName: "google-fonts-webfonts",
-        expiration: {
-          maxEntries: 30,
-          maxAgeSeconds: 60 * 60 * 24 * 365,
-        },
-        // statuses [0, 200]: 0 permits opaque cross-origin font responses.
-        cacheableResponse: { statuses: [0, 200] },
-      },
-    },
-    // Document-model editors/packages loaded at runtime from the registry
-    // CDN. The registry ORIGIN is a runtime value (packageRegistryUrl), so
-    // match the stable "/-/cdn/" path instead. Two rules (order matters —
-    // Workbox is first-match-wins): the unversioned ENTRY points first,
-    // then a catch-all for the content-hashed assets.
-    //
-    // statuses: [0, 200] on BOTH — the editor's JS is a CORS module import
-    // (200), but its stylesheet is mounted via cross-origin `@import`
-    // (no-cors → opaque/0) and its CSS-referenced images/fonts ≥14 KB are
-    // also no-cors (0). [200] alone silently dropped those, so styles and
-    // icons broke offline. Opaque responses are still applied/displayed by
-    // the browser when served from cache.
-    //
-    // Entry points (browser/index.js, style.css, package.json) are
-    // unversioned/mutable → SWR so installing a newer editor refreshes
-    // online; offline serves the cached copy.
-    {
-      urlPattern: ({ url }: { url: URL }) =>
-        url.pathname.includes("/-/cdn/") &&
-        (url.pathname.endsWith("/browser/index.js") ||
-          url.pathname.endsWith("/style.css") ||
-          url.pathname.endsWith("/package.json")),
-      handler: "StaleWhileRevalidate",
-      options: {
-        cacheName: "ph-package-cdn-entry",
-        expiration: { maxEntries: 60, maxAgeSeconds: 60 * 60 * 24 * 30 },
-        cacheableResponse: { statuses: [0, 200] },
-      },
-    },
-    // Everything else under /-/cdn/ is content-hashed → immutable.
-    // CacheFirst: no revalidation (clean offline network tab), never stale
-    // (the hash changes when content changes). Caches opaque (no-cors)
-    // images/fonts referenced by the editor CSS.
-    {
-      urlPattern: ({ url }: { url: URL }) => url.pathname.includes("/-/cdn/"),
-      handler: "CacheFirst",
-      options: {
-        cacheName: "ph-package-cdn",
-        expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 30 },
-        cacheableResponse: { statuses: [0, 200] },
-      },
-    },
-    // Runtime config: NetworkFirst so a fresh value wins when online, but
-    // the last-known config is still served offline (it is precache-
-    // ignored above). Without the timeout, a flaky-but-not-dead network
-    // stalls boot until the browser's own fetch timeout.
-    {
-      urlPattern: ({ url }: { url: URL }) =>
-        url.pathname.endsWith("/powerhouse.config.json"),
-      handler: "NetworkFirst",
-      options: { cacheName: "ph-runtime-config", networkTimeoutSeconds: 5 },
-    },
-  ],
 };
+
+const SW_FILENAME = "service-worker.ts";
+
+/**
+ * Absolute directory holding the hand-written service-worker source. Resolved
+ * relative to THIS module so it works from source
+ * (connect-utils/vite-plugins → ../service-worker) and from the bundled dist
+ * (dist/index.mjs → ./service-worker, where tsdown copies it). vite-plugin-pwa
+ * resolves `swSrc = path.resolve(root, srcDir, filename)`, and `path.resolve`
+ * ignores `root` when `srcDir` is absolute — so the SW ships with
+ * builder-tools instead of every project needing its own copy.
+ */
+function resolveServiceWorkerDir(): string {
+  const here = dirname(fileURLToPath(import.meta.url));
+  const candidates = [
+    resolve(here, "../service-worker"), // source layout
+    resolve(here, "service-worker"), // bundled dist layout
+  ];
+  return (
+    candidates.find((dir) => existsSync(join(dir, SW_FILENAME))) ??
+    candidates[0]
+  );
+}
+
+/**
+ * Virtual module that feeds the hand-written SW its build-time data. Passed
+ * into vite-plugin-pwa's SEPARATE injectManifest build via
+ * `injectManifest.buildPlugins.vite`: that build runs with `configFile: false`,
+ * so the app's own plugins aren't present, but buildPlugins (and `define`) are.
+ */
+function phSwConfigPlugin(data: Record<string, unknown>): Plugin {
+  const virtualId = "virtual:ph-sw-config";
+  const resolvedId = `\0${virtualId}`;
+  return {
+    name: "ph-sw-config",
+    resolveId(id) {
+      if (id === virtualId) return resolvedId;
+    },
+    load(id) {
+      if (id !== resolvedId) return;
+      return Object.entries(data)
+        .map(
+          ([key, value]) => `export const ${key} = ${JSON.stringify(value)};`,
+        )
+        .join("\n");
+    },
+  };
+}
 
 /**
  * Service-worker / PWA support for Connect, gated by `connect.app.offline`.
  *
- * When enabled (the default), Workbox `generateSW` precaches the built app
- * shell so Connect loads with no network, and runtime-caches the Google-hosted
- * Inter font + the runtime config. The manifest and Workbox config start from
- * the BASE_* defaults above and are extended by `pwa` — the effective,
- * already-merged PWA overrides from build-time packages and the project's
- * `connect.pwa` block (see mergePwaConfig). Registration is left to the
- * Connect SPA (`serviceWorkerManager`, `injectRegister: null`) rather than the
- * plugin's `virtual:pwa-register` module, so the published
- * `@powerhousedao/connect` tsdown build never has to resolve that virtual
- * import.
+ * When enabled (the default), Workbox `injectManifest` bundles Connect's
+ * hand-written service worker (../service-worker/service-worker.ts), which
+ * precaches the built app shell so Connect loads with no network, runtime-
+ * caches the Google-hosted Inter font + the registry CDN + the runtime config,
+ * AND serves a dynamic web-app manifest so packages installed AT RUNTIME can
+ * extend it (their fragments are mirrored into IndexedDB by the SPA; the base
+ * the SW merges onto is embedded here at build time). The manifest and precache
+ * config start from the BASE_* defaults above and are extended by `pwa` — the
+ * effective, already-merged overrides from build-time packages and the
+ * project's `connect.pwa` block (see mergePwaConfig). Registration is left to
+ * the Connect SPA (`serviceWorkerManager`, `injectRegister: null`).
  *
  * When disabled, a self-destroying worker is emitted at the same URL so any
  * worker a previous offline-enabled build installed unregisters itself and
@@ -224,30 +199,50 @@ export function connectPwaPlugins(options: {
     ];
   }
 
-  const { manifest, workbox } = applyPwaOverrides(
-    { manifest: BASE_MANIFEST, workbox: BASE_WORKBOX },
+  const { manifest, precache } = applyPwaOverrides(
+    { manifest: BASE_MANIFEST, precache: BASE_PRECACHE },
     pwa ?? {},
   );
+
+  // Build-time data handed to the SW via the virtual module. EMBEDDED_BASE_
+  // MANIFEST is the base the runtime manifest route merges dynamically-
+  // installed package fragments onto; the two EXTRA_* arrays are the
+  // serialisable build-time contributions the SW registers after its built-ins.
+  const swConfig = {
+    EMBEDDED_BASE_MANIFEST: manifest,
+    EXTRA_RUNTIME_CACHING: pwa?.runtimeCaching ?? [],
+    NAVIGATE_FALLBACK_DENYLIST_EXTRA: pwa?.navigateFallbackDenylist ?? [],
+    SHARE_TARGET_ACTION: PWA_SHARE_TARGET_ACTION,
+    SHARE_TARGET_INBOX_CACHE: PWA_SHARE_TARGET_INBOX_CACHE,
+  };
 
   return [
     connectPwaIconsPlugin(),
     VitePWA({
-      strategies: "generateSW",
-      // prompt → Workbox leaves the new worker waiting and emits a SKIP_WAITING
-      // message listener; the SPA surfaces a refresh prompt and posts that
-      // message when the user accepts (see serviceWorkerManager).
+      strategies: "injectManifest",
+      // Absolute srcDir → swSrc is builder-tools' own SW source; the emitted
+      // file is service-worker.js (vite-plugin-pwa maps the .ts source).
+      srcDir: resolveServiceWorkerDir(),
+      filename: SW_FILENAME,
+      // prompt → the new worker waits; the SPA surfaces a refresh prompt and
+      // posts SKIP_WAITING when the user accepts (see serviceWorkerManager).
       registerType: "prompt",
       injectRegister: null,
-      // Matches nginx's dedicated no-cache location and the SPA's existing
-      // registration path.
-      filename: "service-worker.js",
       // ph connect dev keeps running without a service worker.
       devOptions: { enabled: false },
       // Icons are emitted by connectPwaIconsPlugin and precached via the png
       // glob, so the plugin must not also try to resolve them from /public.
       includeManifestIcons: false,
+      // Still emitted as the static base/offline fallback + the <link>.
       manifest,
-      workbox,
+      injectManifest: {
+        globPatterns: precache.globPatterns,
+        // Exclude the webmanifest from precache so the SW's dynamic route is
+        // the sole producer at that URL.
+        globIgnores: [...precache.globIgnores, "**/manifest.webmanifest"],
+        maximumFileSizeToCacheInBytes: precache.maximumFileSizeToCacheInBytes,
+        buildPlugins: { vite: [phSwConfigPlugin(swConfig)] },
+      },
     }),
   ];
 }

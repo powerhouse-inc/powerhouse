@@ -63,8 +63,8 @@ const driveSectionSchema = {
 // Reusable shape for a runtime-caching / denylist URL match. A string is
 // handed to Workbox verbatim; `{ source, flags }` is rebuilt into a RegExp at
 // build time. Function patterns aren't serialisable and can't be expressed
-// from config — only Connect's built-in rules use them (see BASE_WORKBOX in
-// builder-tools).
+// from config — only Connect's built-in rules use them (see the runtime-caching
+// rules in builder-tools' connect-utils/service-worker/service-worker.ts).
 const pwaUrlPatternSchema = {
   description:
     "URL match. A string is matched verbatim by Workbox; { source, flags } is rebuilt into a RegExp at build time.",
@@ -260,7 +260,7 @@ export const phConnectRuntimeConfigSchema = {
       type: "object",
       additionalProperties: false,
       description:
-        "Progressive-web-app / service-worker overrides, layered on Connect's built-in PWA defaults at build time. Object fields deep-merge (this layer wins); icons, file_handlers, globs, runtimeCaching and denylist patterns are additive; maximumFileSizeToCacheInBytes takes the max across contributors. Only applied when connect.app.offline is true.",
+        "Progressive-web-app / service-worker overrides, layered on Connect's built-in PWA defaults at build time. Scalar fields deep-merge (this layer wins); every array member (icons, file_handlers, shortcuts, protocol_handlers, screenshots, categories, display_override, globs, runtimeCaching and denylist patterns) is additive; share_target is replaced (last layer wins); maximumFileSizeToCacheInBytes takes the max across contributors. Only applied when connect.app.offline is true.",
       properties: {
         manifest: {
           type: "object",
@@ -329,6 +329,105 @@ export const phConnectRuntimeConfigSchema = {
                     "navigate-existing",
                     "navigate-new",
                   ],
+                },
+              },
+            },
+            categories: {
+              type: "array",
+              description:
+                "App-store-style categories, unioned across contributors.",
+              items: { type: "string" },
+            },
+            display_override: {
+              type: "array",
+              description:
+                "Ordered display-mode fallback chain, unioned across contributors (first contributor's order kept).",
+              items: {
+                type: "string",
+                enum: [
+                  "fullscreen",
+                  "standalone",
+                  "minimal-ui",
+                  "browser",
+                  "window-controls-overlay",
+                  "tabbed",
+                ],
+              },
+            },
+            screenshots: {
+              type: "array",
+              description:
+                "Install-UI screenshots, appended and de-duplicated by src.",
+              items: {
+                type: "object",
+                additionalProperties: false,
+                required: ["src"],
+                properties: {
+                  src: { type: "string" },
+                  sizes: { type: "string" },
+                  type: { type: "string" },
+                  form_factor: { type: "string", enum: ["narrow", "wide"] },
+                  label: { type: "string" },
+                },
+              },
+            },
+            shortcuts: {
+              type: "array",
+              description:
+                "App shortcuts (jump-list entries), appended and de-duplicated by url. url must stay in-scope.",
+              items: {
+                type: "object",
+                additionalProperties: false,
+                required: ["name", "url"],
+                properties: {
+                  name: { type: "string" },
+                  short_name: { type: "string" },
+                  description: { type: "string" },
+                  url: { type: "string" },
+                  icons: { type: "array", items: pwaIconSchema },
+                },
+              },
+            },
+            protocol_handlers: {
+              type: "array",
+              description:
+                "Custom URL-protocol associations (e.g. 'web+ph'), appended and de-duplicated by protocol. There is no url field: the launch route is Connect-owned, so entries only declare the scheme. The scheme must be a custom 'web+<letters>' scheme.",
+              items: {
+                type: "object",
+                additionalProperties: false,
+                required: ["protocol"],
+                properties: {
+                  protocol: { type: "string", pattern: "^web\\+[a-z]+$" },
+                },
+              },
+            },
+            share_target: {
+              type: "object",
+              additionalProperties: false,
+              required: ["params"],
+              description:
+                "OS share-target integration (singular). action, method and enctype are all Connect-owned (its service worker only handles a POST), so entries declare only the accepted params.",
+              properties: {
+                params: {
+                  type: "object",
+                  additionalProperties: false,
+                  properties: {
+                    title: { type: "string" },
+                    text: { type: "string" },
+                    url: { type: "string" },
+                    files: {
+                      type: "array",
+                      items: {
+                        type: "object",
+                        additionalProperties: false,
+                        required: ["name", "accept"],
+                        properties: {
+                          name: { type: "string" },
+                          accept: { type: "array", items: { type: "string" } },
+                        },
+                      },
+                    },
+                  },
                 },
               },
             },

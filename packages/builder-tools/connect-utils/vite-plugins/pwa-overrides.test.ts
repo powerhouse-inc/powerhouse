@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   applyPwaOverrides,
   FILE_HANDLER_ACTION,
+  type ConnectPrecacheOptions,
   type ConnectPwaManifest,
-  type ConnectWorkboxOptions,
 } from "./pwa-overrides.js";
 
 describe("applyPwaOverrides", () => {
@@ -19,40 +19,26 @@ describe("applyPwaOverrides", () => {
     file_handlers: [baseFileHandler],
     launch_handler: { client_mode: "focus-existing" },
   };
-  const baseFn = ({ url }: { url: URL }) => url.origin === "https://x";
-  const baseWorkbox: ConnectWorkboxOptions = {
+  const basePrecache: ConnectPrecacheOptions = {
     maximumFileSizeToCacheInBytes: 16 * 1024 * 1024,
     globPatterns: ["**/*.js"],
-    runtimeCaching: [
-      {
-        urlPattern: baseFn,
-        handler: "CacheFirst",
-        options: { cacheName: "x" },
-      },
-    ],
-    navigateFallbackDenylist: [/^\/health$/],
+    globIgnores: ["**/powerhouse.config.json"],
   };
+  const base = { manifest: baseManifest, precache: basePrecache };
 
   it("returns the base untouched for an empty override", () => {
-    const { manifest, workbox } = applyPwaOverrides(
-      { manifest: baseManifest, workbox: baseWorkbox },
-      {},
-    );
+    const { manifest, precache } = applyPwaOverrides(base, {});
     expect(manifest).toEqual(baseManifest);
-    expect(workbox.runtimeCaching).toHaveLength(1);
-    expect(workbox.globPatterns).toEqual(["**/*.js"]);
+    expect(precache).toEqual(basePrecache);
   });
 
   it("overrides manifest scalars and appends icons", () => {
-    const { manifest } = applyPwaOverrides(
-      { manifest: baseManifest, workbox: baseWorkbox },
-      {
-        manifest: {
-          theme_color: "#000000",
-          icons: [{ src: "extra.png", sizes: "512x512" }],
-        },
+    const { manifest } = applyPwaOverrides(base, {
+      manifest: {
+        theme_color: "#000000",
+        icons: [{ src: "extra.png", sizes: "512x512" }],
       },
-    );
+    });
     expect(manifest.theme_color).toBe("#000000");
     expect(manifest.name).toBe("Powerhouse Connect"); // untouched
     expect(manifest.icons).toEqual([
@@ -61,96 +47,43 @@ describe("applyPwaOverrides", () => {
     ]);
   });
 
-  it("keeps base function rules first and appends config rules (with regex)", () => {
-    const { workbox } = applyPwaOverrides(
-      { manifest: baseManifest, workbox: baseWorkbox },
-      {
-        runtimeCaching: [
-          {
-            urlPattern: { source: "^https://api\\.acme\\.io/", flags: "i" },
-            handler: "NetworkFirst",
-            options: { cacheName: "acme", networkTimeoutSeconds: 3 },
-          },
-        ],
-      },
-    );
-    expect(workbox.runtimeCaching).toHaveLength(2);
-    // Base function rule preserved and stays first (Workbox first-match-wins).
-    expect(typeof workbox.runtimeCaching?.[0].urlPattern).toBe("function");
-    const appended = workbox.runtimeCaching?.[1];
-    expect(appended?.handler).toBe("NetworkFirst");
-    // Options pass through verbatim, networkTimeoutSeconds included.
-    expect(appended?.options).toEqual({
-      cacheName: "acme",
-      networkTimeoutSeconds: 3,
-    });
-    // Reconstructed from { source, flags } into a working RegExp. Assert
-    // behaviour rather than `.source` (the spec escapes `/` → `\/` there).
-    const re = appended?.urlPattern as RegExp;
-    expect(re).toBeInstanceOf(RegExp);
-    expect(re.flags).toContain("i");
-    expect(re.test("https://API.ACME.IO/thing")).toBe(true);
-    expect(re.test("https://other.example/thing")).toBe(false);
-  });
-
   it("raises the size ceiling via max and unions globs", () => {
-    const { workbox } = applyPwaOverrides(
-      { manifest: baseManifest, workbox: baseWorkbox },
-      {
-        maximumFileSizeToCacheInBytes: 32 * 1024 * 1024,
-        globPatterns: ["**/*.js", "**/*.wasm"],
-      },
-    );
-    expect(workbox.maximumFileSizeToCacheInBytes).toBe(32 * 1024 * 1024);
-    expect(workbox.globPatterns).toEqual(["**/*.js", "**/*.wasm"]);
+    const { precache } = applyPwaOverrides(base, {
+      maximumFileSizeToCacheInBytes: 32 * 1024 * 1024,
+      globPatterns: ["**/*.js", "**/*.wasm"],
+    });
+    expect(precache.maximumFileSizeToCacheInBytes).toBe(32 * 1024 * 1024);
+    expect(precache.globPatterns).toEqual(["**/*.js", "**/*.wasm"]);
   });
 
   it("does not lower the size ceiling below the base", () => {
-    const { workbox } = applyPwaOverrides(
-      { manifest: baseManifest, workbox: baseWorkbox },
-      { maximumFileSizeToCacheInBytes: 1024 },
-    );
-    expect(workbox.maximumFileSizeToCacheInBytes).toBe(16 * 1024 * 1024);
+    const { precache } = applyPwaOverrides(base, {
+      maximumFileSizeToCacheInBytes: 1024,
+    });
+    expect(precache.maximumFileSizeToCacheInBytes).toBe(16 * 1024 * 1024);
   });
 
-  it("appends denylist patterns after the base entries, always as RegExps", () => {
-    const { workbox } = applyPwaOverrides(
-      { manifest: baseManifest, workbox: baseWorkbox },
-      { navigateFallbackDenylist: ["/custom", { source: "^/z" }] },
-    );
-    const denylist = workbox.navigateFallbackDenylist;
-    expect(denylist).toHaveLength(3);
-    // Workbox only accepts RegExps here, so every entry must be one.
-    for (const entry of denylist ?? []) expect(entry).toBeInstanceOf(RegExp);
-    expect(denylist?.[0]).toEqual(/^\/health$/);
-    expect(denylist?.[2]?.test("/z/route")).toBe(true);
-  });
-
-  it("escapes string denylist patterns so they match literally", () => {
-    const { workbox } = applyPwaOverrides(
-      { manifest: baseManifest, workbox: baseWorkbox },
-      { navigateFallbackDenylist: ["/api?x=1"] },
-    );
-    const re = workbox.navigateFallbackDenylist?.[1];
-    expect(re?.test("/api?x=1")).toBe(true);
-    // An unescaped `?` would make the `i` optional and match this too.
-    expect(re?.test("/apx=1")).toBe(false);
+  it("unions globIgnores with the base", () => {
+    const { precache } = applyPwaOverrides(base, {
+      globIgnores: ["**/*.map", "**/powerhouse.config.json"],
+    });
+    expect(precache.globIgnores).toEqual([
+      "**/powerhouse.config.json",
+      "**/*.map",
+    ]);
   });
 
   it("appends file handlers after the base entry with the fixed action injected", () => {
-    const { manifest } = applyPwaOverrides(
-      { manifest: baseManifest, workbox: baseWorkbox },
-      {
-        manifest: {
-          file_handlers: [
-            {
-              accept: { "application/x-custom+zip": [".custom"] },
-              launch_type: "single-client",
-            },
-          ],
-        },
+    const { manifest } = applyPwaOverrides(base, {
+      manifest: {
+        file_handlers: [
+          {
+            accept: { "application/x-custom+zip": [".custom"] },
+            launch_type: "single-client",
+          },
+        ],
       },
-    );
+    });
     expect(manifest.file_handlers).toEqual([
       baseFileHandler, // base stays first → Chromium keeps .phd/.phdm on Connect
       {
@@ -159,37 +92,56 @@ describe("applyPwaOverrides", () => {
         launch_type: "single-client",
       },
     ]);
-    // The extra spec'd members survive vite-plugin-pwa's narrower typing.
     expect(manifest.file_handlers?.[1].launch_type).toBe("single-client");
   });
 
   it("drops an override handler that duplicates the base entry", () => {
-    const { manifest } = applyPwaOverrides(
-      { manifest: baseManifest, workbox: baseWorkbox },
-      {
-        manifest: {
-          // Same entry as the base once the fixed action is injected.
-          file_handlers: [
-            {
-              accept: { "application/vnd.powerhouse.document+zip": [".phd"] },
-              icons: [
-                { src: "pwa-192x192.png", sizes: "192x192", type: "image/png" },
-              ],
-            },
-          ],
-        },
+    const { manifest } = applyPwaOverrides(base, {
+      manifest: {
+        file_handlers: [
+          {
+            accept: { "application/vnd.powerhouse.document+zip": [".phd"] },
+            icons: [
+              { src: "pwa-192x192.png", sizes: "192x192", type: "image/png" },
+            ],
+          },
+        ],
       },
-    );
+    });
     expect(manifest.file_handlers).toEqual([baseFileHandler]);
   });
 
   it("lets the override replace launch_handler while leaving other scalars alone", () => {
-    const { manifest } = applyPwaOverrides(
-      { manifest: baseManifest, workbox: baseWorkbox },
-      { manifest: { launch_handler: { client_mode: "navigate-new" } } },
-    );
+    const { manifest } = applyPwaOverrides(base, {
+      manifest: { launch_handler: { client_mode: "navigate-new" } },
+    });
     expect(manifest.launch_handler).toEqual({ client_mode: "navigate-new" });
     expect(manifest.name).toBe("Powerhouse Connect");
     expect(manifest.file_handlers).toEqual([baseFileHandler]);
+  });
+
+  it("injects Connect-owned routes into contributed protocol handlers and share target", () => {
+    const { manifest } = applyPwaOverrides(base, {
+      manifest: {
+        protocol_handlers: [{ protocol: "web+ph" }],
+        share_target: { params: { files: [{ name: "f", accept: [".phd"] }] } },
+        shortcuts: [{ name: "New", url: "./new" }],
+      },
+    }) as {
+      manifest: ConnectPwaManifest & {
+        protocol_handlers?: { protocol: string; url?: string }[];
+        share_target?: { action?: string; method?: string; enctype?: string };
+        shortcuts?: { name: string; url: string }[];
+      };
+    };
+    // Protocol handler gets Connect's fixed url template (contributor sets none).
+    expect(manifest.protocol_handlers).toEqual([
+      { protocol: "web+ph", url: "./?ph-protocol=%s" },
+    ]);
+    // Share target gets Connect's action + POST/multipart defaults (files present).
+    expect(manifest.share_target?.action).toBe("share-target");
+    expect(manifest.share_target?.method).toBe("POST");
+    expect(manifest.share_target?.enctype).toBe("multipart/form-data");
+    expect(manifest.shortcuts).toEqual([{ name: "New", url: "./new" }]);
   });
 });

@@ -6,8 +6,9 @@ const serviceWorkerScriptPath = [basePath, "service-worker.js"]
   .join("/")
   .replace(/\/{2,}/gm, "/");
 
-// External store backing the refresh prompt: Workbox (generateSW + prompt mode)
-// parks a new worker as "waiting"; we flag that here so
+// External store backing the refresh prompt: our hand-written service worker
+// (injectManifest, registerType: prompt) parks a new worker as "waiting" by not
+// calling skipWaiting on install; we flag that here so
 // service-worker-update-prompt.tsx can offer a Refresh instead of reloading
 // from under the user.
 let updateAvailable = false;

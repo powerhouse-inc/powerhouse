@@ -145,6 +145,64 @@ export type PHConnectPwaFileHandler = {
   launch_type?: "single-client" | "multiple-clients";
 };
 
+/**
+ * A custom URL-protocol association a package contributes (e.g. `web+ph`), so
+ * the OS routes `web+ph://…` links to the installed Connect PWA. There is
+ * deliberately no `url` field: like file handlers, the route launched links
+ * open at is Connect-owned (its own runtime handler parses the link), injected
+ * at build time. Contributors only declare WHICH scheme they own.
+ */
+export type PHConnectPwaProtocolHandler = {
+  /** Custom scheme, e.g. "web+ph". Must be a `web+…` scheme or a safelisted
+   * built-in; the browser rejects arbitrary schemes. */
+  protocol: string;
+};
+
+/**
+ * A Web Share Target: lets the OS share sheet hand files/text to the installed
+ * Connect PWA. Singular per manifest (the spec allows one). Contributors
+ * declare only the accepted `params`: the `action` (endpoint), `method` and
+ * `enctype` are all Connect-owned — its service worker only handles a POST
+ * (reading `formData`), so those are injected, not declared (same principle as
+ * the Connect-owned file-handler `action`).
+ */
+export type PHConnectPwaShareTarget = {
+  params: {
+    title?: string;
+    text?: string;
+    url?: string;
+    files?: { name: string; accept: string[] }[];
+  };
+};
+
+/** An app shortcut (jump-list / long-press menu entry). */
+export type PHConnectPwaShortcut = {
+  name: string;
+  short_name?: string;
+  description?: string;
+  /** In-scope URL, resolved against the app scope (must stay app-root-anchored). */
+  url: string;
+  icons?: PHConnectPwaIcon[];
+};
+
+/** An install-UI screenshot. */
+export type PHConnectPwaScreenshot = {
+  src: string;
+  sizes?: string;
+  type?: string;
+  form_factor?: "narrow" | "wide";
+  label?: string;
+};
+
+/** A display mode usable in `display_override` (superset of `display`). */
+export type PHConnectPwaDisplayModeOverride =
+  | "fullscreen"
+  | "standalone"
+  | "minimal-ui"
+  | "browser"
+  | "window-controls-overlay"
+  | "tabbed";
+
 /** Web-app-manifest fields a package or project may override. */
 export type PHConnectPwaManifest = {
   name?: string;
@@ -166,14 +224,31 @@ export type PHConnectPwaManifest = {
       | "navigate-existing"
       | "navigate-new";
   };
+  /** App-store-style categories, unioned across contributors. */
+  categories?: string[];
+  /** Ordered display-mode fallback chain, unioned across contributors. */
+  display_override?: PHConnectPwaDisplayModeOverride[];
+  /** Install-UI screenshots, appended and de-duplicated by `src`. */
+  screenshots?: PHConnectPwaScreenshot[];
+  /** App shortcuts, appended and de-duplicated by `url`. */
+  shortcuts?: PHConnectPwaShortcut[];
+  /** Custom URL-protocol associations, appended and de-duplicated by `protocol`.
+   * The launch route is Connect-owned; contributors declare only the scheme. */
+  protocol_handlers?: PHConnectPwaProtocolHandler[];
+  /** OS share-target integration (singular). The share endpoint is
+   * Connect-owned; contributors declare only the accepted shape. */
+  share_target?: PHConnectPwaShareTarget;
 };
 
 /**
  * PWA / service-worker overrides contributed by a package or the project.
- * Layered on top of Connect's hardcoded PWA defaults at build time. Object
- * fields deep-merge (later layer wins); `icons`, `file_handlers`,
+ * Layered on top of Connect's hardcoded PWA defaults at build time. Scalar
+ * fields deep-merge (later layer wins); every array member — the manifest
+ * arrays (`icons`, `file_handlers`, `shortcuts`, `protocol_handlers`,
+ * `screenshots`, `categories`, `display_override`) plus the top-level
  * `globPatterns`, `globIgnores`, `runtimeCaching` and
- * `navigateFallbackDenylist` are additive (concatenated/unioned);
+ * `navigateFallbackDenylist` — is additive (concatenated/unioned); the
+ * singular `share_target` is replaced (last layer wins);
  * `maximumFileSizeToCacheInBytes` takes the max across contributors.
  * Precedence: defaults < package fragments < project config.
  */

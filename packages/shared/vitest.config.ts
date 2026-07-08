@@ -30,6 +30,7 @@ export default defineConfig({
       "connect/env-config.test.ts",
       "connect/entrypoint-seed.test.ts",
       "connect/pwa-config.test.ts",
+      "connect/pwa-manifest.test.ts",
       "document-drive/**/*.test.ts",
       "registry/manifest-slim.test.ts",
     ],

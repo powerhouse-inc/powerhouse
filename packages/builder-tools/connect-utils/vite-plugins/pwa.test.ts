@@ -465,6 +465,69 @@ describe("pwa fragment collection", () => {
         ),
       ).toThrow(/[Uu]nrecognized/);
     });
+
+    it("passes the extended manifest members through", () => {
+      const config = {
+        manifest: {
+          shortcuts: [{ name: "New", url: "new" }],
+          protocol_handlers: [{ protocol: "web+ph" }],
+          share_target: {
+            params: { files: [{ name: "f", accept: [".phd"] }] },
+          },
+          screenshots: [{ src: "shot.png", form_factor: "wide" as const }],
+          categories: ["productivity"],
+          display_override: ["window-controls-overlay" as const],
+        },
+      };
+      expect(
+        validateProjectPwaConfig(config, "powerhouse.config.json"),
+      ).toEqual(config);
+    });
+
+    it("rejects a protocol handler with a non-web+ scheme", () => {
+      expect(() =>
+        validateProjectPwaConfig(
+          { manifest: { protocol_handlers: [{ protocol: "mailto" }] } },
+          "/proj/powerhouse.config.json",
+        ),
+      ).toThrow(/protocol/);
+    });
+
+    it("rejects a protocol handler that tries to set its own url route", () => {
+      // The launch route is Connect-owned (like the file-handler action).
+      expect(() =>
+        validateProjectPwaConfig(
+          {
+            manifest: {
+              protocol_handlers: [{ protocol: "web+ph", url: "/evil?%s" }],
+            },
+          },
+          "/proj/powerhouse.config.json",
+        ),
+      ).toThrow(/[Uu]nrecognized|url/);
+    });
+
+    it("rejects a share_target that tries to set the Connect-owned action/method", () => {
+      expect(() =>
+        validateProjectPwaConfig(
+          {
+            manifest: {
+              share_target: { action: "/evil", params: { title: "t" } },
+            },
+          },
+          "/proj/powerhouse.config.json",
+        ),
+      ).toThrow(/[Uu]nrecognized|action/);
+    });
+
+    it("rejects a screenshot missing its required src", () => {
+      expect(() =>
+        validateProjectPwaConfig(
+          { manifest: { screenshots: [{ sizes: "1280x720" }] } },
+          "/proj/powerhouse.config.json",
+        ),
+      ).toThrow(/src|screenshots/);
+    });
   });
 
   describe("package fragments with file_handlers", () => {

@@ -270,4 +270,150 @@ describe("mergePwaConfig", () => {
     });
     expect(settled).not.toHaveBeenCalled();
   });
+
+  it("concatenates and dedupes shortcuts by url", () => {
+    const merged = mergePwaConfig(
+      [
+        pkg("@a/pkg", {
+          manifest: { shortcuts: [{ name: "A", url: "/a" }] },
+        }),
+        pkg("@b/pkg", {
+          manifest: {
+            shortcuts: [
+              { name: "A dup", url: "/a" }, // dup url → dropped
+              { name: "B", url: "/b" },
+            ],
+          },
+        }),
+      ],
+      undefined,
+    );
+    expect(merged.manifest?.shortcuts).toEqual([
+      { name: "A", url: "/a" },
+      { name: "B", url: "/b" },
+    ]);
+  });
+
+  it("concatenates and dedupes protocol_handlers by protocol", () => {
+    const merged = mergePwaConfig(
+      [
+        pkg("@a/pkg", {
+          manifest: { protocol_handlers: [{ protocol: "web+ph" }] },
+        }),
+        pkg("@b/pkg", {
+          manifest: {
+            protocol_handlers: [
+              { protocol: "web+ph" }, // dup → dropped
+              { protocol: "web+phd" },
+            ],
+          },
+        }),
+      ],
+      undefined,
+    );
+    expect(merged.manifest?.protocol_handlers).toEqual([
+      { protocol: "web+ph" },
+      { protocol: "web+phd" },
+    ]);
+  });
+
+  it("concatenates and dedupes screenshots by src", () => {
+    const merged = mergePwaConfig(
+      [
+        pkg("@a/pkg", {
+          manifest: { screenshots: [{ src: "s1.png" }] },
+        }),
+        pkg("@b/pkg", {
+          manifest: {
+            screenshots: [{ src: "s1.png" }, { src: "s2.png" }],
+          },
+        }),
+      ],
+      undefined,
+    );
+    expect(merged.manifest?.screenshots).toEqual([
+      { src: "s1.png" },
+      { src: "s2.png" },
+    ]);
+  });
+
+  it("unions categories and display_override (order-preserving)", () => {
+    const merged = mergePwaConfig(
+      [
+        pkg("@a/pkg", {
+          manifest: {
+            categories: ["productivity", "finance"],
+            display_override: ["window-controls-overlay", "standalone"],
+          },
+        }),
+        pkg("@b/pkg", {
+          manifest: {
+            categories: ["finance", "utilities"],
+            display_override: ["standalone", "browser"],
+          },
+        }),
+      ],
+      undefined,
+    );
+    expect(merged.manifest?.categories).toEqual([
+      "productivity",
+      "finance",
+      "utilities",
+    ]);
+    expect(merged.manifest?.display_override).toEqual([
+      "window-controls-overlay",
+      "standalone",
+      "browser",
+    ]);
+  });
+
+  it("replaces share_target wholesale (last-declared wins), not deep-merged", () => {
+    const onWarn = vi.fn();
+    const merged = mergePwaConfig(
+      [
+        // Disjoint fields: if share_target were deep-merged, title/text would
+        // survive into the winner. Wholesale replacement drops them.
+        pkg("@a/pkg", {
+          manifest: {
+            share_target: { params: { title: "a", text: "atext" } },
+          },
+        }),
+        pkg("@b/pkg", {
+          manifest: { share_target: { params: { url: "burl" } } },
+        }),
+      ],
+      undefined,
+      onWarn,
+    );
+    expect(merged.manifest?.share_target).toEqual({
+      params: { url: "burl" },
+    });
+    expect(onWarn).toHaveBeenCalledTimes(1);
+    expect(onWarn.mock.calls[0][0]).toMatch(/share_target/);
+  });
+
+  it("does not report additive manifest arrays as scalar conflicts", () => {
+    const onWarn = vi.fn();
+    mergePwaConfig(
+      [
+        pkg("@a/pkg", {
+          manifest: {
+            shortcuts: [{ name: "A", url: "/a" }],
+            protocol_handlers: [{ protocol: "web+ph" }],
+            categories: ["x"],
+          },
+        }),
+        pkg("@b/pkg", {
+          manifest: {
+            shortcuts: [{ name: "B", url: "/b" }],
+            protocol_handlers: [{ protocol: "web+phd" }],
+            categories: ["y"],
+          },
+        }),
+      ],
+      undefined,
+      onWarn,
+    );
+    expect(onWarn).not.toHaveBeenCalled();
+  });
 });

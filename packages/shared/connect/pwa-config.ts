@@ -12,8 +12,8 @@
 // scalar to different values.
 //
 // Laying the effective fragment over Connect's hardcoded VitePWA base happens
-// in builder-tools (`connect-utils/vite-plugins/pwa-overrides.ts`), where the
-// real vite-plugin-pwa/Workbox types are available.
+// in builder-tools (`connect-utils/vite-plugins/pwa-overrides.ts`), where
+// vite-plugin-pwa's manifest types are available.
 
 import type {
   PHConnectPwa,
@@ -27,10 +27,15 @@ import { deepMerge } from "./config-loader.js";
 export type {
   PHConnectPwa,
   PHConnectPwaCacheStrategy,
+  PHConnectPwaDisplayModeOverride,
   PHConnectPwaFileHandler,
   PHConnectPwaIcon,
   PHConnectPwaManifest,
+  PHConnectPwaProtocolHandler,
   PHConnectPwaRuntimeCaching,
+  PHConnectPwaScreenshot,
+  PHConnectPwaShareTarget,
+  PHConnectPwaShortcut,
   PHConnectPwaUrlPattern,
 } from "../clis/types.js";
 
@@ -43,6 +48,8 @@ export type PwaContribution = {
 
 // Manifest scalar fields — the ones where "two layers set it" is a genuine
 // conflict (as opposed to the additive arrays, which never conflict).
+// `share_target` is singular per the manifest spec, so it is treated as a
+// scalar: last layer wins, and two packages disagreeing is a warned conflict.
 const MANIFEST_SCALAR_KEYS: readonly (keyof PHConnectPwaManifest)[] = [
   "name",
   "short_name",
@@ -53,7 +60,21 @@ const MANIFEST_SCALAR_KEYS: readonly (keyof PHConnectPwaManifest)[] = [
   "start_url",
   "scope",
   "launch_handler",
+  "share_target",
 ];
+
+// Manifest fields merged additively (concatenated/unioned across every layer),
+// never as scalar conflicts. Kept out of the deepMerge path, which replaces
+// arrays wholesale and would drop earlier contributions.
+const ADDITIVE_MANIFEST_KEYS = new Set<keyof PHConnectPwaManifest>([
+  "icons",
+  "file_handlers",
+  "shortcuts",
+  "protocol_handlers",
+  "screenshots",
+  "categories",
+  "display_override",
+]);
 
 // Structural icon shape shared by PHConnectPwaIcon and vite-plugin-pwa's
 // IconResource (whose `purpose` may also be an array of purposes).
@@ -71,17 +92,39 @@ function iconKey(icon: IconLike): string {
   return `${icon.src}|${icon.sizes ?? ""}|${purpose}`;
 }
 
-/** Concatenate icons, keeping the first occurrence of each (src,sizes,purpose). */
-export function dedupeIcons<T extends IconLike>(icons: T[]): T[] {
+/** Concatenate, keeping the first occurrence per `key`. */
+function dedupeBy<T>(items: T[], key: (item: T) => string): T[] {
   const seen = new Set<string>();
   const result: T[] = [];
-  for (const icon of icons) {
-    const key = iconKey(icon);
-    if (seen.has(key)) continue;
-    seen.add(key);
-    result.push(icon);
+  for (const item of items) {
+    const k = key(item);
+    if (seen.has(k)) continue;
+    seen.add(k);
+    result.push(item);
   }
   return result;
+}
+
+/** Concatenate icons, keeping the first occurrence of each (src,sizes,purpose). */
+export function dedupeIcons<T extends IconLike>(icons: T[]): T[] {
+  return dedupeBy(icons, iconKey);
+}
+
+/** Concatenate shortcuts, keeping the first occurrence of each `url`. */
+export function dedupeShortcuts<T extends { url: string }>(items: T[]): T[] {
+  return dedupeBy(items, (s) => s.url);
+}
+
+/** Concatenate protocol handlers, keeping the first occurrence per `protocol`. */
+export function dedupeProtocolHandlers<T extends { protocol: string }>(
+  items: T[],
+): T[] {
+  return dedupeBy(items, (p) => p.protocol);
+}
+
+/** Concatenate screenshots, keeping the first occurrence of each `src`. */
+export function dedupeScreenshots<T extends { src: string }>(items: T[]): T[] {
+  return dedupeBy(items, (s) => s.src);
 }
 
 /** `JSON.stringify` with object keys sorted recursively, so two structurally
@@ -109,15 +152,7 @@ function stableStringify(value: unknown): string {
  * works on the vite-plugin-pwa handler shape in builder-tools.
  */
 export function dedupeFileHandlers<T extends object>(handlers: T[]): T[] {
-  const seen = new Set<string>();
-  const result: T[] = [];
-  for (const handler of handlers) {
-    const key = stableStringify(handler);
-    if (seen.has(key)) continue;
-    seen.add(key);
-    result.push(handler);
-  }
-  return result;
+  return dedupeBy(handlers, stableStringify);
 }
 
 /** Order-preserving string union (used for the precache glob lists). */
@@ -156,9 +191,22 @@ function unionPatterns(
  * rules/denylist are additive; size ceiling takes the max). */
 function mergeInto(target: PHConnectPwa, config: PHConnectPwa): void {
   if (config.manifest) {
-    // The array fields must stay out of the deepMerge path — deepMerge
-    // replaces arrays wholesale, which would drop earlier contributions.
-    const { icons, file_handlers, ...scalars } = config.manifest;
+    // Additive arrays and the singular share_target are pulled out of the
+    // deepMerge path: deepMerge replaces arrays wholesale (dropping earlier
+    // contributions) AND recurses into objects — which would COMBINE two
+    // packages' share_targets into a spec-invalid hybrid. share_target must be
+    // replaced wholesale (last-wins, per spec it is singular), handled below.
+    const {
+      icons,
+      file_handlers,
+      shortcuts,
+      protocol_handlers,
+      screenshots,
+      categories,
+      display_override,
+      share_target,
+      ...scalars
+    } = config.manifest;
     if (Object.keys(scalars).length > 0) {
       target.manifest = deepMerge(
         target.manifest ?? {},
@@ -178,6 +226,59 @@ function mergeInto(target: PHConnectPwa, config: PHConnectPwa): void {
           ...(target.manifest?.file_handlers ?? []),
           ...file_handlers,
         ]),
+      };
+    }
+    if (shortcuts?.length) {
+      target.manifest = {
+        ...(target.manifest ?? {}),
+        shortcuts: dedupeShortcuts([
+          ...(target.manifest?.shortcuts ?? []),
+          ...shortcuts,
+        ]),
+      };
+    }
+    if (protocol_handlers?.length) {
+      target.manifest = {
+        ...(target.manifest ?? {}),
+        protocol_handlers: dedupeProtocolHandlers([
+          ...(target.manifest?.protocol_handlers ?? []),
+          ...protocol_handlers,
+        ]),
+      };
+    }
+    if (screenshots?.length) {
+      target.manifest = {
+        ...(target.manifest ?? {}),
+        screenshots: dedupeScreenshots([
+          ...(target.manifest?.screenshots ?? []),
+          ...screenshots,
+        ]),
+      };
+    }
+    if (categories?.length) {
+      target.manifest = {
+        ...(target.manifest ?? {}),
+        categories: unionStrings(target.manifest?.categories, categories),
+      };
+    }
+    if (display_override?.length) {
+      target.manifest = {
+        ...(target.manifest ?? {}),
+        // Order-preserving union: display_override is a fallback chain, and the
+        // first contributor's ordering is kept.
+        display_override: unionStrings(
+          target.manifest?.display_override,
+          display_override,
+        ) as PHConnectPwaManifest["display_override"],
+      };
+    }
+    if (share_target !== undefined) {
+      // Singular per the manifest spec: the later layer's share_target replaces
+      // the earlier one wholesale (a conflict between two packages is warned in
+      // mergePwaConfig via MANIFEST_SCALAR_KEYS).
+      target.manifest = {
+        ...(target.manifest ?? {}),
+        share_target,
       };
     }
   }
@@ -240,7 +341,9 @@ export function mergePwaConfig(
   for (const { source, config } of packageContributions) {
     mergeInto(merged, config);
     for (const [key, value] of Object.entries(config.manifest ?? {})) {
-      if (key === "icons" || key === "file_handlers") continue;
+      if (ADDITIVE_MANIFEST_KEYS.has(key as keyof PHConnectPwaManifest)) {
+        continue;
+      }
       (packageScalarSetters[key] ??= []).push({ source, value });
     }
   }
