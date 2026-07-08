@@ -1,3 +1,13 @@
+## 6.2.0-rc.8 (2026-07-08)
+
+### 🩹 Fixes
+
+- **powerhouse-vetra-packages:** hide vetra spec documents from generic drive create list ([7df611e80](https://github.com/powerhouse-inc/powerhouse/commit/7df611e80))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 6.2.0-rc.7 (2026-07-07)
 
 ### 🚀 Features

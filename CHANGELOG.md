@@ -1,3 +1,17 @@
+## 6.2.0-rc.8 (2026-07-08)
+
+### 🩹 Fixes
+
+- remove location and drive mode from modal ([e70bd81d4](https://github.com/powerhouse-inc/powerhouse/commit/e70bd81d4))
+- remove vetra drive options and set general drive in last position ([da2b81299](https://github.com/powerhouse-inc/powerhouse/commit/da2b81299))
+- **connect:** sort generic drive explorer last in add-drive app options ([813d98892](https://github.com/powerhouse-inc/powerhouse/commit/813d98892))
+- **powerhouse-vetra-packages:** hide vetra spec documents from generic drive create list ([7df611e80](https://github.com/powerhouse-inc/powerhouse/commit/7df611e80))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+- liberuum
+
 ## 6.2.0-rc.7 (2026-07-07)
 
 ### 🚀 Features

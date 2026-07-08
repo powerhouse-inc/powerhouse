@@ -1,3 +1,13 @@
+## 6.2.0-rc.8 (2026-07-08)
+
+### 🩹 Fixes
+
+- remove location and drive mode from modal ([e70bd81d4](https://github.com/powerhouse-inc/powerhouse/commit/e70bd81d4))
+
+### ❤️ Thank You
+
+- liberuum
+
 ## 6.2.0-rc.7 (2026-07-07)
 
 ### 🚀 Features
