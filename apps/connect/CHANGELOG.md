@@ -1,3 +1,30 @@
+## 6.2.0-dev.52 (2026-07-08)
+
+### 🚀 Features
+
+- **reactor-browser:** preload editor chunks during idle and on hover ([054797d95](https://github.com/powerhouse-inc/powerhouse/commit/054797d95))
+- pre-paint theme boot script and cross-context theme sync ([#2806](https://github.com/powerhouse-inc/powerhouse/pull/2806))
+- **connect:** enhance offline handling in package discovery and service worker caching ([9569b0757](https://github.com/powerhouse-inc/powerhouse/commit/9569b0757))
+- **release:** support rc release channel in CLIs and docker pipeline ([da765dcb4](https://github.com/powerhouse-inc/powerhouse/commit/da765dcb4))
+- **connect:** add PWA offline support with Workbox service worker ([d65bbd886](https://github.com/powerhouse-inc/powerhouse/commit/d65bbd886))
+
+### 🩹 Fixes
+
+- **connect:** retry shared PGlite init on failure; drop unsafe dialect cast ([db4bfa3a7](https://github.com/powerhouse-inc/powerhouse/commit/db4bfa3a7))
+- **connect:** distinguish authenticated-but-unauthorized from anonymous in drive auth gate ([#2802](https://github.com/powerhouse-inc/powerhouse/pull/2802))
+- install ph-cli@rc for rc-tagged connect/switchboard image builds ([987d68eeb](https://github.com/powerhouse-inc/powerhouse/commit/987d68eeb))
+
+### 🔥 Performance
+
+- **connect:** keep Sentry SDK off the boot critical path ([df1aa0663](https://github.com/powerhouse-inc/powerhouse/commit/df1aa0663))
+
+### ❤️ Thank You
+
+- acaldas
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.0-rc.7 (2026-07-07)
 
 ### 🚀 Features

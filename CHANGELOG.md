@@ -1,3 +1,41 @@
+## 6.2.0-dev.52 (2026-07-08)
+
+### 🚀 Features
+
+- pre-paint theme boot script and cross-context theme sync ([#2806](https://github.com/powerhouse-inc/powerhouse/pull/2806))
+- **academy:** simplify homepage local-install to a single command ([811021438](https://github.com/powerhouse-inc/powerhouse/commit/811021438))
+- **connect:** add PWA offline support with Workbox service worker ([d65bbd886](https://github.com/powerhouse-inc/powerhouse/commit/d65bbd886))
+- **connect:** enhance offline handling in package discovery and service worker caching ([9569b0757](https://github.com/powerhouse-inc/powerhouse/commit/9569b0757))
+- **connect:** add PWA offline support ([#2792](https://github.com/powerhouse-inc/powerhouse/pull/2792))
+- **connect:** add --favicon flag to ph connect build ([#2797](https://github.com/powerhouse-inc/powerhouse/pull/2797))
+- **reactor-browser:** preload editor chunks during idle and on hover ([054797d95](https://github.com/powerhouse-inc/powerhouse/commit/054797d95))
+- **release:** support rc release channel in CLIs and docker pipeline ([da765dcb4](https://github.com/powerhouse-inc/powerhouse/commit/da765dcb4))
+
+### 🩹 Fixes
+
+- fallback to global name in danger zone drive display ([e49dd2d40](https://github.com/powerhouse-inc/powerhouse/commit/e49dd2d40))
+- install ph-cli@rc for rc-tagged connect/switchboard image builds ([987d68eeb](https://github.com/powerhouse-inc/powerhouse/commit/987d68eeb))
+- fallback to global name in danger zone drive display ([#2781](https://github.com/powerhouse-inc/powerhouse/pull/2781))
+- **connect:** distinguish authenticated-but-unauthorized from anonymous in drive auth gate ([#2802](https://github.com/powerhouse-inc/powerhouse/pull/2802))
+- **connect:** retry shared PGlite init on failure; drop unsafe dialect cast ([db4bfa3a7](https://github.com/powerhouse-inc/powerhouse/commit/db4bfa3a7))
+- **design-system:** add shadow to base Modal content ([cbac099ce](https://github.com/powerhouse-inc/powerhouse/commit/cbac099ce))
+- **design-system:** resolve modal accessibility violations ([6059b82cf](https://github.com/powerhouse-inc/powerhouse/commit/6059b82cf))
+- **renown:** poll cli login every 0.5s instead of 2s ([f2245aee3](https://github.com/powerhouse-inc/powerhouse/commit/f2245aee3))
+- **renown:** avoid double slash on renown fetch profile ([ea16a17d4](https://github.com/powerhouse-inc/powerhouse/commit/ea16a17d4))
+
+### 🔥 Performance
+
+- **connect:** keep Sentry SDK off the boot critical path ([df1aa0663](https://github.com/powerhouse-inc/powerhouse/commit/df1aa0663))
+
+### ❤️ Thank You
+
+- acaldas
+- CallmeT-ty @CallmeT-ty
+- Claude Opus 4.8
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.0-rc.7 (2026-07-07)
 
 ### 🚀 Features

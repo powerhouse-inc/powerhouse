@@ -1,3 +1,19 @@
+## 6.2.0-dev.52 (2026-07-08)
+
+### 🚀 Features
+
+- **release:** support rc release channel in CLIs and docker pipeline ([da765dcb4](https://github.com/powerhouse-inc/powerhouse/commit/da765dcb4))
+- **connect:** add PWA offline support with Workbox service worker ([d65bbd886](https://github.com/powerhouse-inc/powerhouse/commit/d65bbd886))
+
+### 🩹 Fixes
+
+- install ph-cli@rc for rc-tagged connect/switchboard image builds ([987d68eeb](https://github.com/powerhouse-inc/powerhouse/commit/987d68eeb))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.0-rc.7 (2026-07-07)
 
 This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.

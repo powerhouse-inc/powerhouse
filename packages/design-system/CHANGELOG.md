@@ -1,3 +1,26 @@
+## 6.2.0-dev.52 (2026-07-08)
+
+### 🚀 Features
+
+- **reactor-browser:** preload editor chunks during idle and on hover ([054797d95](https://github.com/powerhouse-inc/powerhouse/commit/054797d95))
+- **release:** support rc release channel in CLIs and docker pipeline ([da765dcb4](https://github.com/powerhouse-inc/powerhouse/commit/da765dcb4))
+- **connect:** add PWA offline support with Workbox service worker ([d65bbd886](https://github.com/powerhouse-inc/powerhouse/commit/d65bbd886))
+
+### 🩹 Fixes
+
+- **design-system:** resolve modal accessibility violations ([6059b82cf](https://github.com/powerhouse-inc/powerhouse/commit/6059b82cf))
+- **design-system:** add shadow to base Modal content ([cbac099ce](https://github.com/powerhouse-inc/powerhouse/commit/cbac099ce))
+- **connect:** distinguish authenticated-but-unauthorized from anonymous in drive auth gate ([#2802](https://github.com/powerhouse-inc/powerhouse/pull/2802))
+- install ph-cli@rc for rc-tagged connect/switchboard image builds ([987d68eeb](https://github.com/powerhouse-inc/powerhouse/commit/987d68eeb))
+- fallback to global name in danger zone drive display ([e49dd2d40](https://github.com/powerhouse-inc/powerhouse/commit/e49dd2d40))
+
+### ❤️ Thank You
+
+- acaldas
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.0-rc.7 (2026-07-07)
 
 ### 🚀 Features
