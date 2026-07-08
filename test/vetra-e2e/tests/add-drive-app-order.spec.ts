@@ -1,5 +1,4 @@
 import { expect, test } from "./helpers/fixtures.js";
-import { DESCRIBE_TIMEOUT } from "./helpers/timeouts.js";
 
 test.use({
   storageState: {
@@ -32,7 +31,9 @@ test.use({
 // packages installed). With Vetra Drive App hidden, "Drive Explorer App" is
 // the only option left, so it must be the pre-selected default and
 // "Vetra Drive App" must never appear — collapsed or expanded.
-test.describe.configure({ timeout: DESCRIBE_TIMEOUT });
+// Hardcoded like todo-document.spec.ts on this release branch: the
+// helpers/timeouts.ts module (22488f73f) was never cherry-picked here.
+test.describe.configure({ timeout: 5 * 60 * 60 * 1000 });
 
 test("should hide Vetra Drive App and default to Drive Explorer App in the Add Drive app options", async ({
   page,
