@@ -18,6 +18,7 @@ import {
   waitForDocumentReady,
 } from "@powerhousedao/reactor-browser";
 import { t } from "i18next";
+import { getCreateDriveAppOptions } from "../../../utils/create-drive-app-options.js";
 
 // Max wait for a remote drive's initial sync before skipping navigation.
 // Safe to be generous: navigation only fires if the user is still on home.
@@ -122,22 +123,6 @@ export function AddDriveModal() {
     closePHModal();
   }
 
-  const GENERIC_DRIVE_EXPLORER_APP_ID = "GenericDriveExplorer";
-
-  // Stable partition: keep GenericDriveExplorer last so any other app (custom
-  // installed, Vetra Drive App, etc.) lands first and becomes the default.
-  const appOptions: AppOptions[] =
-    appModules?.map((pkg) => ({
-      id: pkg.config.id,
-      name: pkg.config.name,
-      sharingType: "LOCAL",
-      availableOffline: false,
-    })) || [];
-  const appOptionsSorted = [
-    ...appOptions.filter((o) => o.id !== GENERIC_DRIVE_EXPLORER_APP_ID),
-    ...appOptions.filter((o) => o.id === GENERIC_DRIVE_EXPLORER_APP_ID),
-  ];
-
   const ready = !!appModules?.length;
 
   return (
@@ -170,7 +155,7 @@ export function AddDriveModal() {
       onOpenChange={(status) => {
         if (!status) return closePHModal();
       }}
-      appOptions={appOptionsSorted}
+      appOptions={getCreateDriveAppOptions(appModules)}
     />
   );
 }

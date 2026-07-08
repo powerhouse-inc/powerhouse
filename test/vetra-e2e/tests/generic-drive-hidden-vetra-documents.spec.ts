@@ -42,10 +42,11 @@ test("vetra document types are hidden in a generic drive", async ({ page }) => {
   const addDriveDialog = page.getByRole("dialog");
   await expect(addDriveDialog).toBeVisible({ timeout: 10_000 });
 
-  // Select "Drive Explorer App" explicitly (it's no longer the default after
-  // the sort change that puts it last in the app options list)
-  await addDriveDialog.getByText("Vetra Drive App").click();
-  await addDriveDialog.getByText("Drive Explorer App").click();
+  // "Drive Explorer App" is the pre-selected default: vetra-drive-app is
+  // hidden from the picker, leaving it as the only bundled app option.
+  await expect(
+    addDriveDialog.getByText("Drive Explorer App"),
+  ).toBeVisible({ timeout: 5_000 });
 
   const driveNameInput = page.locator('input[placeholder="Drive name"]');
   await expect(driveNameInput).toBeVisible({ timeout: 5_000 });
