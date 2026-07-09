@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/registry",
-  "version": "6.2.1-dev.0",
+  "version": "6.2.1-dev.1",
   "description": "Powerhouse package registry — resolves and manages document model package dependencies within the Powerhouse ecosystem.",
   "type": "module",
   "repository": {
