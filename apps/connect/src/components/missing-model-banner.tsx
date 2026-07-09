@@ -1,10 +1,10 @@
-import { Modal } from "@powerhousedao/design-system";
+import { Icon, Modal } from "@powerhousedao/design-system";
 import {
   usePackageDiscoveryService,
   type FailedInstallation,
   type FailedInstallationReason,
 } from "@powerhousedao/reactor-browser";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { twMerge } from "tailwind-merge";
 import { useFailedInstallations } from "../hooks/useFailedInstallations.js";
 
@@ -23,26 +23,50 @@ function canRetry(reason: FailedInstallationReason): boolean {
 
 export function MissingModelBanner() {
   const failed = useFailedInstallations();
+  const discoveryService = usePackageDiscoveryService();
   const [open, setOpen] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+
+  useEffect(() => {
+    return discoveryService?.subscribeEvents((event) => {
+      if (event.type === "load-failed") {
+        setDismissed(false);
+      }
+    });
+  }, [discoveryService]);
 
   if (failed.length === 0) return null;
 
   return (
     <>
-      <div className="flex items-center justify-between gap-3 bg-warning/10 px-4 py-2 text-sm text-warning">
-        <span>
-          {failed.length === 1
-            ? "1 document type couldn't load (missing model)."
-            : `${failed.length} document types couldn't load (missing models).`}
-        </span>
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="rounded-md border border-warning bg-background px-3 py-1 text-warning hover:hover-effect"
-        >
-          View
-        </button>
-      </div>
+      {dismissed ? null : (
+        <div className="absolute inset-x-0 top-0 z-200 bg-background">
+          <div className="flex items-center justify-between gap-3 bg-warning/10 px-4 py-2 text-sm text-warning">
+            <span>
+              {failed.length === 1
+                ? "1 document type couldn't load (missing model)."
+                : `${failed.length} document types couldn't load (missing models).`}
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setOpen(true)}
+                className="rounded-md border border-warning bg-background px-3 py-1 text-warning hover:hover-effect"
+              >
+                View
+              </button>
+              <button
+                type="button"
+                onClick={() => setDismissed(true)}
+                aria-label="Dismiss"
+                className="flex items-center text-warning hover:hover-effect"
+              >
+                <Icon name="XmarkLight" size={16} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <MissingModelDetailsModal
         open={open}
         failed={failed}
