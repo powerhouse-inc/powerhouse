@@ -781,12 +781,10 @@ test("Change registry URL at runtime and install from new registry", async () =>
   // -------------------------------------------------------------------
   // Step 7: Verify the install succeeded against the new registry
   // -------------------------------------------------------------------
-  // The strongest signal is that the "Installed Packages" count went up:
-  // before the install it sits at 3 (Common, Vetra, Local), after a
-  // successful fetch + register from the NEW registry it becomes 4. We
-  // poll the count heading so re-renders don't break the assertion.
+  // Installed count rose: before install it's 2 (Common, Local) — Vetra isn't
+  // loaded in a production build (studioMode off) — so after install it's 3.
   await expect(
-    settingsModal.getByRole("heading", { name: /Installed Packages 4/i }),
+    settingsModal.getByRole("heading", { name: /Installed Packages 3/i }),
   ).toBeVisible({ timeout: 60_000 });
 });
 
