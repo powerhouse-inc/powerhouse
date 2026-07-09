@@ -1,0 +1,141 @@
+name: Deploy Academy
+
+# Build the academy docs site from a branch and publish it to a site. Runnable
+# manually (defaults main -> production) and callable by other workflows.
+on:
+  workflow_call:
+    inputs:
+      branch:
+        description: "Branch to build and publish."
+        required: true
+        type: string
+      environment:
+        description: "Target site: academy (production), staging, or dev."
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Branch to build and publish."
+        required: true
+        default: main
+        type: string
+      environment:
+        description: "Where to publish."
+        type: choice
+        options:
+          - academy # academy.vetra.io (production)
+          - staging # academy.staging.vetra.io
+          - dev # academy.dev.vetra.io
+        default: academy
+
+permissions:
+  contents: read
+
+# One deploy per site at a time; queue rather than cancel.
+concurrency:
+  group: deploy-academy-${{ inputs.environment }}
+  cancel-in-progress: false
+
+env:
+  IMAGE: cr.vetra.io/academy/academy
+
+jobs:
+  publish:
+    name: Publish ${{ inputs.branch }} to ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout ${{ inputs.branch }}
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.branch }}
+
+      - name: Compute image tag and channel
+        id: meta
+        env:
+          TARGET_ENV: ${{ inputs.environment }}
+        run: |
+          set -euo pipefail
+          echo "sha=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+          # Channel pointer per target: production is `latest`, else the env name.
+          if [ "$TARGET_ENV" = "academy" ]; then
+            echo "channel=latest" >> "$GITHUB_OUTPUT"
+          else
+            echo "channel=$TARGET_ENV" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Harbor
+        uses: docker/login-action@v3
+        with:
+          registry: cr.vetra.io
+          username: ${{ secrets.HARBOR_USERNAME }}
+          password: ${{ secrets.HARBOR_PASSWORD }}
+
+      - name: Build and push academy image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./apps/academy
+          push: true
+          # Immutable per-commit tag (pinned by k8s) + moving channel pointer.
+          tags: |
+            ${{ env.IMAGE }}:${{ steps.meta.outputs.sha }}
+            ${{ env.IMAGE }}:${{ steps.meta.outputs.channel }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            TAG=${{ steps.meta.outputs.sha }}
+            GIT_SHA=${{ github.sha }}
+
+      - name: Deploy to k8s-hosting
+        env:
+          K8S_REPO_PAT: ${{ secrets.K8S_REPO_PAT }}
+          TAG: ${{ steps.meta.outputs.sha }}
+          TARGET_ENV: ${{ inputs.environment }}
+          BRANCH: ${{ inputs.branch }}
+        run: |
+          set -euo pipefail
+          git clone "https://x-access-token:${K8S_REPO_PAT}@github.com/powerhouse-inc/powerhouse-k8s-hosting.git"
+          cd powerhouse-k8s-hosting
+
+          git config user.name "Github Actions Bot"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          VALUES_FILE="tenants/${TARGET_ENV}/powerhouse-values.yaml"
+          sed -i '\|repository: cr.vetra.io/academy/academy|{n;s|\(.*tag: \).*|\1'"${TAG}"'|}' "$VALUES_FILE"
+
+          # Fail loudly if the tag wasn't set (block moved/reformatted → sed no-op).
+          got=$(sed -n '\|repository: cr.vetra.io/academy/academy|{n;s|.*tag: *||p;}' "$VALUES_FILE")
+          if [ "$got" != "$TAG" ]; then
+            echo "::error::Could not set academy tag in ${VALUES_FILE} (found '${got}', expected '${TAG}')"
+            exit 1
+          fi
+
+          git add "$VALUES_FILE"
+          if git diff --cached --quiet; then
+            echo "${TARGET_ENV} already on ${TAG} — nothing to deploy"
+            exit 0
+          fi
+          git commit -m "chore(academy): publish ${BRANCH}@${TAG} to ${TARGET_ENV}"
+
+          pushed=false
+          for i in 1 2 3; do
+            if git pull --rebase origin main && git push; then pushed=true; break; fi
+            # Leave no half-finished rebase behind, or the next attempt can't start clean.
+            git rebase --abort 2>/dev/null || true
+            echo "Push attempt $i failed, retrying..."
+            sleep 5
+          done
+          [ "$pushed" = true ] || { echo "::error::Failed to push to powerhouse-k8s-hosting after 3 attempts"; exit 1; }
+
+      - name: Summary
+        if: ${{ always() }}
+        env:
+          BRANCH: ${{ inputs.branch }}
+          TARGET_ENV: ${{ inputs.environment }}
+          TAG: ${{ steps.meta.outputs.sha }}
+        run: |
+          echo "Published \`${BRANCH}\` (\`${TAG}\`) to **${TARGET_ENV}**." >> "$GITHUB_STEP_SUMMARY"
