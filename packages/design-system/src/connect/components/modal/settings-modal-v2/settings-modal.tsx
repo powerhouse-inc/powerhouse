@@ -57,7 +57,7 @@ export function SettingsModal(props: Props) {
       contentProps={{
         ...contentProps,
         className: twMerge(
-          "min-h-full w-full max-w-4xl rounded-xl",
+          "flex min-h-full w-full max-w-4xl flex-col rounded-xl",
           contentProps?.className,
         ),
       }}
