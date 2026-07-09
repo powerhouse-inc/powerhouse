@@ -76,7 +76,7 @@ function TextFallback({
 }: {
   message?: string;
 }) {
-  return <div className="text-center">{message}</div>;
+  return <div className="text-center text-foreground">{message}</div>;
 }
 
 /**
@@ -94,10 +94,12 @@ function DetailedFallback({ error, resetErrorBoundary }: FallbackProps) {
 
   return (
     <div className="z-10 mx-auto flex max-w-[80%] flex-1 items-center justify-center p-6">
-      <div className="w-full max-w-lg rounded-lg border border-border bg-background p-6 shadow-sm">
+      <div className="w-full max-w-lg rounded-lg border border-border bg-card p-6 text-foreground shadow-sm">
         <div className="mb-3 flex items-center gap-2">
-          <Icon name="Error" className="size-5 shrink-0" />
-          <h1 className="text-lg font-semibold">Something went wrong</h1>
+          <Icon name="Error" className="size-5 shrink-0 text-destructive" />
+          <h1 className="text-lg font-semibold text-foreground">
+            Something went wrong
+          </h1>
         </div>
         <p className="mb-4 text-sm text-foreground">{errorMessage}</p>
         {hasDetails && (
@@ -105,7 +107,7 @@ function DetailedFallback({ error, resetErrorBoundary }: FallbackProps) {
             <summary className="cursor-pointer text-sm font-medium text-foreground underline select-none hover:hover-effect">
               Show details
             </summary>
-            <pre className="mt-2 max-h-48 overflow-auto rounded-sm bg-muted p-3 text-xs">
+            <pre className="mt-2 max-h-48 overflow-auto rounded-sm bg-muted p-3 text-xs text-foreground">
               {errorDetails}
             </pre>
           </details>
@@ -131,7 +133,7 @@ function CenteredErrorMessage({ error }: FallbackProps) {
   const errorMessage = error instanceof Error ? error.message : String(error);
   return (
     <div className="flex size-full items-center justify-center">
-      <h3 className="text-lg font-semibold">{errorMessage}</h3>
+      <h3 className="text-lg font-semibold text-foreground">{errorMessage}</h3>
     </div>
   );
 }
