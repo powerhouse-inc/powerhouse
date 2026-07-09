@@ -3,8 +3,8 @@
 Comprehensive documentation and learning resources for the Powerhouse ecosystem.
 
 This documentation website is built using [Docusaurus](https://docusaurus.io/), a modern static website generator.
-To contribute to the documentation please work on a feature branch in case of big refactors, and build & serve before pushing to the development branch.
-Pushing from the dev branch to the main branch will trigger an auto deployment in Heroku for the staging deployment.
+
+To contribute, edit the MDX under `docs/academy/` on a branch and open a PR against `main`. Build and serve locally before pushing — the build fails on broken links. Merging to `main` auto-deploys the **dev** site; see [Updating and deploying the docs](#updating-and-deploying-the-docs) for how changes reach staging and production.
 
 ## 🤖 LLM-Optimized Documentation
 
@@ -54,21 +54,27 @@ $ npm run build
 
 This command generates static content into the `build` directory and can be served using any static contents hosting service.
 
-### Deployment
+### Updating and deploying the docs
 
-Using SSH:
+The site is built as a Docker image (`cr.vetra.io/academy/academy`) and served on Kubernetes — it is **not** published to npm, GitHub Pages, or Heroku. Its build and deploy are fully decoupled from the monorepo's npm package releases.
 
-```
-$ USE_SSH=true yarn deploy
-```
+| Site | URL |
+| ---- | --- |
+| Production | https://academy.vetra.io |
+| Staging | https://academy.staging.vetra.io |
+| Dev | https://academy.dev.vetra.io |
 
-Not using SSH:
+There are two ways docs get deployed:
 
-```
-$ GIT_USER=<Your GitHub username> yarn deploy
-```
+1. **Automatic → dev.** Any change under `apps/academy` merged to `main` triggers the `Academy` workflow (`.github/workflows/academy.yml`): it builds a short-SHA-tagged image and deploys it to **academy.dev.vetra.io**.
 
-If you are using GitHub pages for hosting, this command is a convenient way to build the website and push to the `gh-pages` branch.
+2. **Manual publish → any site.** The `Deploy Academy` workflow (`.github/workflows/deploy-academy.yml`) builds a chosen branch and publishes it to a chosen site. GitHub → **Actions** → **Deploy Academy** → **Run workflow**:
+   - **branch** (default `main`) — the branch to build.
+   - **environment** (default `academy`) — the target site (`academy` = production).
+
+   Ship the latest docs to **production** by running it with the defaults. Preview a feature branch by picking it and targeting `dev`. Roll back by running it against an earlier branch or commit.
+
+Images are tagged `cr.vetra.io/academy/academy:<short-sha>` (immutable, pinned by Kubernetes) plus a moving channel pointer (`dev`, `staging`, or `latest` for production).
 
 ### Slides
 

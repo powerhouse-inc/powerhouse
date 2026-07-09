@@ -1,0 +1,20 @@
+name: Academy
+
+# Auto-build + deploy the docs site to dev on any docs change merged to main.
+# Promote to staging/production with the "Deploy Academy" workflow.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/academy/**"
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-dev:
+    uses: ./.github/workflows/deploy-academy.yml
+    with:
+      branch: main
+      environment: dev
+    secrets: inherit
