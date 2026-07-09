@@ -144,9 +144,10 @@ jobs:
           if [[ "$TAG" == *"-dev."* ]]; then
             echo "targets=dev" >> $GITHUB_OUTPUT
           elif [[ "$TAG" == *"-staging."* ]]; then
-            echo "targets=staging academy" >> $GITHUB_OUTPUT
+            echo "targets=staging" >> $GITHUB_OUTPUT
           else
-            echo "Skipping k8s update for production tags"
+            # Production tags publish academy.vetra.io (the `academy` tenant).
+            echo "targets=academy" >> $GITHUB_OUTPUT
           fi
 
       - name: Update academy image tag in k8s-hosting
