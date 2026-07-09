@@ -13,7 +13,6 @@ import {
   type DocumentModelLib,
   type DocumentModelModule,
 } from "@powerhousedao/shared/document-model";
-import * as vetra from "@powerhousedao/vetra";
 import vetraPkg from "@powerhousedao/vetra/package.json" with { type: "json" };
 
 type PackageMeta = {
@@ -91,9 +90,15 @@ export class BrowserPackageManager implements IPackageManager {
   async init(
     localPackage?: DocumentModelLib<any>,
     localPackageVersion?: string,
+    studioMode?: boolean,
   ) {
     this.addLocalPackage(common.manifest.name, common, commonPkg.version);
-    this.addLocalPackage(vetra.manifest.name, vetra, vetraPkg.version);
+    // Vetra is builder-only and not CDN-loadable; lazy-load it (code-split
+    // chunk, never fetched in production) only in studio mode.
+    if (studioMode) {
+      const vetra = await import("@powerhousedao/vetra");
+      this.addLocalPackage(vetra.manifest.name, vetra, vetraPkg.version);
+    }
     if (localPackage) {
       this.updateLocalPackage(localPackage, localPackageVersion);
     }

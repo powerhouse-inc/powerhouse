@@ -19,22 +19,11 @@ test.use({
   },
 });
 
-// Asserts the Add Drive modal's app options after getCreateDriveAppOptions
-// (apps/connect/src/utils/create-drive-app-options.ts): "vetra-drive-app" is
-// hidden from the picker and GenericDriveExplorer ("Drive Explorer App") is
-// sorted last so any other visible app becomes the pre-selected default.
-//
-// Assertion strategy, driven by ConnectSelect rendering (design-system
-// `select.tsx`): the collapsed header shows the currently selected item; the
-// expanded menu lists every item EXCEPT the selected one.
-//
-// This spec assumes exactly the two bundled apps are present (no local
-// packages installed). With Vetra Drive App hidden, "Drive Explorer App" is
-// the only option left, so it must be the pre-selected default and
-// "Vetra Drive App" must never appear — collapsed or expanded.
+// In studio mode both bundled apps are offered; getCreateDriveAppOptions ranks
+// the generic explorer before vetra, so Drive Explorer App is default and last.
 test.describe.configure({ timeout: DESCRIBE_TIMEOUT });
 
-test("should hide Vetra Drive App and default to Drive Explorer App in the Add Drive app options", async ({
+test("should default to Drive Explorer App and list Vetra Drive App last", async ({
   page,
 }) => {
   await page.goto("/");
@@ -48,17 +37,17 @@ test("should hide Vetra Drive App and default to Drive Explorer App in the Add D
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible({ timeout: 10_000 });
 
-  // Collapsed: "Drive Explorer App" is the default (visible in header).
+  // Collapsed: "Drive Explorer App" is the default (visible in the header).
   await expect(dialog.getByText("Drive Explorer App")).toBeVisible({
     timeout: 5_000,
   });
 
-  // "Vetra Drive App" is hidden from the options entirely.
-  await expect(dialog.getByText("Vetra Drive App")).toHaveCount(0);
-
-  // Expand the select and confirm Vetra Drive App is not listed there either.
+  // ConnectSelect hides non-selected items until expanded, so click to reveal
+  // "Vetra Drive App" — the other (last) option.
   await dialog.getByText("Drive Explorer App").click();
-  await expect(dialog.getByText("Vetra Drive App")).toHaveCount(0);
+  await expect(dialog.getByText("Vetra Drive App")).toBeVisible({
+    timeout: 5_000,
+  });
 
   // Close without creating a drive — keep the environment clean.
   await page.keyboard.press("Escape");

@@ -19,15 +19,16 @@ test.use({
   },
 });
 
+// DocumentModel and the vetra builder-spec types are authored via their own
+// drives, so none are creatable from a generic drive.
 const HIDDEN_DISPLAY_NAMES = [
+  "DocumentModel",
   "App Module",
   "Document Editor",
   "Processor Module",
   "Subgraph Module",
   "Vetra Package",
 ];
-
-const VISIBLE_DISPLAY_NAME = "DocumentModel";
 
 test("vetra document types are hidden in a generic drive", async ({ page }) => {
   // 1. Navigate to the home page
@@ -42,11 +43,11 @@ test("vetra document types are hidden in a generic drive", async ({ page }) => {
   const addDriveDialog = page.getByRole("dialog");
   await expect(addDriveDialog).toBeVisible({ timeout: 10_000 });
 
-  // "Drive Explorer App" is the pre-selected default: vetra-drive-app is
-  // hidden from the picker, leaving it as the only bundled app option.
-  await expect(
-    addDriveDialog.getByText("Drive Explorer App"),
-  ).toBeVisible({ timeout: 5_000 });
+  // "Drive Explorer App" is the pre-selected default (vetra is ranked last),
+  // so the created drive uses the generic explorer.
+  await expect(addDriveDialog.getByText("Drive Explorer App")).toBeVisible({
+    timeout: 5_000,
+  });
 
   const driveNameInput = page.locator('input[placeholder="Drive name"]');
   await expect(driveNameInput).toBeVisible({ timeout: 5_000 });
@@ -64,18 +65,13 @@ test("vetra document types are hidden in a generic drive", async ({ page }) => {
   await expect(page).toHaveURL(/\/d\/[^/?]+/, { timeout: 10_000 });
   await page.waitForLoadState("networkidle");
 
-  // 4. Locate the "New document" section
-  await expect(
-    page.getByRole("heading", { name: "New document" }),
-  ).toBeVisible({ timeout: 30_000 });
+  // 4. Positive control: the "New document" section renders.
+  await expect(page.getByRole("heading", { name: "New document" })).toBeVisible(
+    { timeout: 30_000 },
+  );
   const section = page.locator(".flex.w-full.flex-wrap.gap-4");
 
-  // 5. Positive control: DocumentModel must still be visible
-  await expect(
-    section.getByRole("button").filter({ hasText: VISIBLE_DISPLAY_NAME }),
-  ).toBeVisible({ timeout: 30_000 });
-
-  // 6. All five vetra builder-spec types must be absent
+  // 5. DocumentModel + every vetra builder-spec type must be absent.
   for (const hiddenName of HIDDEN_DISPLAY_NAMES) {
     await expect(
       section.getByRole("button").filter({ hasText: hiddenName }),

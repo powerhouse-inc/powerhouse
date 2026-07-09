@@ -40,6 +40,7 @@ export type WorkerReactorClientArgs = {
   relationalNamespace: string;
   cdnUrl: string;
   packageSpecs: string[];
+  studioMode?: boolean;
   documentModelModules: DocumentModelModule[];
   upgradeManifests: UpgradeManifest<readonly number[]>[];
   documentModelLoader: IDocumentModelLoader;
@@ -114,6 +115,7 @@ export function createWorkerReactorClientModule(
         relationalNamespace: args.relationalNamespace,
         cdnUrl: args.cdnUrl,
         packageSpecs: args.packageSpecs,
+        studioMode: args.studioMode,
       },
       packages: args.packageSpecs,
     },

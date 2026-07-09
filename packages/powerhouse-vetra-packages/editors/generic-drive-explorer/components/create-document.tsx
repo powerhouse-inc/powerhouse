@@ -2,7 +2,8 @@ import { PowerhouseButton } from "@powerhousedao/design-system";
 import {
   preloadEditorModule,
   showCreateDocumentModal,
-  useDocumentModelModules,
+  useAllowedDocumentModelModules,
+  useDisabledEditors,
   useEditorModules,
   useUserPermissions,
 } from "@powerhousedao/reactor-browser";
@@ -17,21 +18,24 @@ function getDocumentSpec(doc: DocumentModelModule): DocumentModelGlobalState {
 
 export function CreateDocument() {
   const { isAllowedToCreateDocuments } = useUserPermissions();
-  const documentModelModules = useDocumentModelModules();
+  // Respect Connect config: allowedDocumentTypes (allowlist) via the hook,
+  // disabledEditors (denylist) subtracted below.
+  const allowedDocumentModelModules = useAllowedDocumentModelModules();
   const editorModules = useEditorModules();
-  // Hide "document-drive" (drive root) and vetra builder-spec types (App Module,
-  // Document Editor, Processor Module, Subgraph Module, Vetra Package) from the
-  // generic explorer's "New document" section.
-  const HIDDEN_DOCUMENT_TYPES = [
+  const disabledEditors = useDisabledEditors() ?? [];
+  // Drive containers are never documents-in-a-drive; hide them structurally so
+  // this shared editor can't fail open when disabledEditors is unset.
+  const DRIVE_CONTAINER_TYPES = [
     "powerhouse/document-drive",
-    "powerhouse/app",
-    "powerhouse/document-editor",
-    "powerhouse/processor",
-    "powerhouse/subgraph",
-    "powerhouse/package",
+    "powerhouse/reactor-drive",
   ];
-  const visibleDocumentModelModules = documentModelModules?.filter(
-    (module) => !HIDDEN_DOCUMENT_TYPES.includes(module.documentModel.global.id),
+  const visibleDocumentModelModules = allowedDocumentModelModules?.filter(
+    (module) => {
+      const id = module.documentModel.global.id;
+      return (
+        !DRIVE_CONTAINER_TYPES.includes(id) && !disabledEditors.includes(id)
+      );
+    },
   );
   const preloadEditorsForType = (documentType: string) =>
     editorModules

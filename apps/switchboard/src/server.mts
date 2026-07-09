@@ -33,7 +33,6 @@ import {
   type ReactorDriveDatabase,
 } from "@powerhousedao/reactor-drive";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
-import { processorFactory as vetraProcessorFactory } from "@powerhousedao/vetra/processors";
 import type { IRenown } from "@renown/sdk/node";
 import * as Sentry from "@sentry/node";
 import { childLogger, setLogLevel, type ILogger } from "document-model";
@@ -393,8 +392,23 @@ async function initServer(
       reactorBuilder,
     );
 
+    // Subpath import keeps vetra's React editors out of the node bundle.
+    const vetraDocumentModels: DocumentModelModule[] = dev
+      ? (
+          Object.values(
+            await import("@powerhousedao/vetra/document-models"),
+          ) as unknown[]
+        ).filter(
+          (m): m is DocumentModelModule =>
+            typeof m === "object" &&
+            m !== null &&
+            "documentModel" in m &&
+            "reducer" in m,
+        )
+      : [];
+
     applySwitchboardReactorDefaults(reactorBuilder, clientBuilder, {
-      documentModels,
+      documentModels: [...documentModels, ...vetraDocumentModels],
       executorConfig: hasSkipThreshold ? { maxSkipThreshold } : undefined,
       documentModelLoader:
         httpLoader && dynamicModelLoading
@@ -463,6 +477,12 @@ async function initServer(
     viteLoader = VitePackageLoader.build(vite);
   }
 
+  // Vetra is builder-only and bundled (not CDN-loadable); lazy-load its
+  // processor only in dev, where builder tooling runs (e.g. `ph vetra`).
+  const vetraProcessorFactory = dev
+    ? (await import("@powerhousedao/vetra/processors")).processorFactory
+    : undefined;
+
   // get paths to local document models
   if (!options.disableLocalPackages) {
     packages.push(basePath);
@@ -517,9 +537,9 @@ async function initServer(
       packageLoaders: packageLoaders.length > 0 ? packageLoaders : undefined,
       packages: packages,
       processorConfig: options.processorConfig,
-      processors: {
-        "@powerhousedao/vetra": [vetraProcessorFactory],
-      },
+      processors: vetraProcessorFactory
+        ? { "@powerhousedao/vetra": [vetraProcessorFactory] }
+        : {},
       configFile:
         options.configFile ??
         path.join(process.cwd(), "powerhouse.config.json"),

@@ -250,7 +250,11 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     runtimeConfig.packageRegistryUrl ?? null,
   );
   setVetraPackageManager(packageManager);
-  await packageManager.init(localPackage, runtimeConfig.localPackage?.version);
+  await packageManager.init(
+    localPackage,
+    runtimeConfig.localPackage?.version,
+    phGlobalConfig.studioMode,
+  );
   // Register provider:"local" packages the vite plugin bundled in. The virtual
   // module only exists under phBundledPackagesPlugin (ph-cli), so a resolution
   // failure under plain vite dev is expected; the indirection + @vite-ignore
@@ -358,6 +362,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
       relationalNamespace: RELATIONAL_PGLITE_NAME,
       cdnUrl: packageManager.cdnUrl ?? "",
       packageSpecs,
+      studioMode: phGlobalConfig.studioMode,
       documentModelModules,
       upgradeManifests,
       documentModelLoader,

@@ -465,11 +465,11 @@ test("Install Package in Consumer Project", async ({ browser }) => {
     const addDriveDialog = page.getByRole("dialog");
     await expect(addDriveDialog).toBeVisible({ timeout: 10_000 });
 
-    // "Drive Explorer App" is the pre-selected default: vetra-drive-app is
-    // hidden from the picker, leaving it as the only bundled app option.
-    await expect(
-      addDriveDialog.getByText("Drive Explorer App"),
-    ).toBeVisible({ timeout: 5_000 });
+    // Consumer preview is a production build (studioMode off), so vetra isn't
+    // loaded and "Drive Explorer App" is the only bundled app / default.
+    await expect(addDriveDialog.getByText("Drive Explorer App")).toBeVisible({
+      timeout: 5_000,
+    });
 
     // Fill in drive name
     const driveNameInput = page.locator('input[placeholder="Drive name"]');

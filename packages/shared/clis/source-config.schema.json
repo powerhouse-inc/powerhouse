@@ -251,6 +251,11 @@
               "type": "boolean",
               "description": "When true (default), the build emits a precaching service worker so Connect's app shell works offline, and the SPA registers it at boot. Set false to opt this deployment out: no service worker is built, the SPA skips registration, and any previously-installed worker is unregistered.",
               "default": true
+            },
+            "studioMode": {
+              "type": "boolean",
+              "description": "Studio mode. Enables builder-only capabilities: Connect loads the vetra package and exposes DocumentModel (and vetra spec types) as creatable documents. Forced on by `ph vetra` / `ph connect studio`; false by default.",
+              "default": false
             }
           }
         },

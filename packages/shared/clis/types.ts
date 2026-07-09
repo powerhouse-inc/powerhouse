@@ -61,6 +61,9 @@ export type PHConnectApp = {
   logLevel?: "debug" | "info" | "warn" | "error";
   basePath?: string;
   offline?: boolean;
+  // Builder mode: Connect loads the vetra package and exposes DocumentModel +
+  // vetra spec types as creatable docs. Forced on by `ph vetra`/studio.
+  studioMode?: boolean;
 };
 
 export type PHConnectPackages = {
