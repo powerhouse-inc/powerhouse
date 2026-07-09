@@ -29,7 +29,6 @@ import {
   type IRelationalDb,
 } from "@powerhousedao/shared/processors";
 import * as commonDocumentModels from "@powerhousedao/powerhouse-vetra-packages/document-models";
-import * as vetraDocumentModels from "@powerhousedao/vetra/document-models";
 import {
   BrowserKeyStorage,
   createSignatureVerifier,
@@ -62,24 +61,36 @@ console.info("[reactor.worker] module evaluating");
 // Matches the main thread's RenownBuilder("connect").
 const RENOWN_APP_NAME = "connect";
 
-// Studio models the tab bundles as local packages; not CDN-loadable, so the worker imports them directly.
-const bundledModelCandidates: unknown[] = [
-  ...Object.values(commonDocumentModels),
-  ...Object.values(vetraDocumentModels),
-];
-const bundledDocumentModels = bundledModelCandidates.filter(
-  (m): m is DocumentModelModule =>
-    typeof m === "object" &&
-    m !== null &&
-    "documentModel" in m &&
-    "reducer" in m,
+// Common models the tab bundles as a local package; not CDN-loadable, so the
+// worker imports them directly. Vetra is builder-only and lazy-loaded below.
+function toDocumentModelModules(candidates: unknown[]): DocumentModelModule[] {
+  return candidates.filter(
+    (m): m is DocumentModelModule =>
+      typeof m === "object" &&
+      m !== null &&
+      "documentModel" in m &&
+      "reducer" in m,
+  );
+}
+
+const commonBundledModels = toDocumentModelModules(
+  Object.values(commonDocumentModels),
 );
+
+// Not CDN-loadable, so it can't ride the packageSpecs path; lazy-import the
+// bundled chunk only in studio mode.
+async function loadVetraDocumentModels(): Promise<DocumentModelModule[]> {
+  const vetraDocumentModels =
+    await import("@powerhousedao/vetra/document-models");
+  return toDocumentModelModules(Object.values(vetraDocumentModels));
+}
 
 type WorkerConstruct = {
   namespace: string;
   relationalNamespace: string;
   cdnUrl: string;
   packageSpecs: string[];
+  studioMode?: boolean;
 };
 
 type ModelRegistry = {
@@ -277,7 +288,14 @@ const host = new ReactorHost({
           import(/* @vite-ignore */ url) as Promise<Record<string, unknown>>,
       });
       const loaded = await loader.loadPackages(construct.packageSpecs);
-      const models = baseDocumentModels.concat(bundledDocumentModels, loaded);
+      const vetraModels = construct.studioMode
+        ? await loadVetraDocumentModels()
+        : [];
+      const models = baseDocumentModels.concat(
+        commonBundledModels,
+        vetraModels,
+        loaded,
+      );
       phase = "opening pglite stores";
       console.info(`[reactor.worker] boot: ${phase}`);
       const [reactor, relationalMajor] = await Promise.all([

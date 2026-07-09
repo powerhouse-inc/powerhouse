@@ -343,8 +343,13 @@ export function buildStudioConnectOverride(
     renownNamespace: args.renownNamespace,
   }) as PHConnectRuntimeConfig;
 
-  const hasFlag = Object.keys(flagOverride).length > 0;
-  if (!hasFlag) return callerOverride;
-  if (callerOverride === undefined) return flagOverride;
-  return deepMerge(callerOverride, flagOverride);
+  // Studio commands (`ph connect studio`, `ph vetra`) always run in studio
+  // mode: Connect loads the vetra package and offers builder document types.
+  const studioOverride: PHConnectRuntimeConfig = { app: { studioMode: true } };
+  return [callerOverride, flagOverride, studioOverride]
+    .filter(
+      (o): o is PHConnectRuntimeConfig =>
+        o !== undefined && Object.keys(o).length > 0,
+    )
+    .reduce((acc, o) => deepMerge(acc, o), {} as PHConnectRuntimeConfig);
 }

@@ -9,22 +9,14 @@ import { reactorDriveDocumentModelModule } from "@powerhousedao/reactor-drive";
 import { getUniqueDocumentModels } from "@powerhousedao/reactor-api";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
-import { documentModels as vetraDocumentModels } from "@powerhousedao/vetra";
 import { documentModelDocumentModelModule, type ILogger } from "document-model";
 
 export type SwitchboardReactorDefaultsOptions = {
-  /**
-   * Additional document models to register alongside switchboard's baseline.
-   * The baseline (document-model, drive, reactor-drive) is included unless
-   * `includeBaseModels` is `false`; vetra models are included unless
-   * `includeVetraModels` is `false`. Duplicates by id are removed via
-   * `getUniqueDocumentModels`.
-   */
+  // Extra models registered alongside the baseline (document-model, drive,
+  // reactor-drive). Pass vetra models here in studio/dev. Deduped by id.
   documentModels?: DocumentModelModule[];
   /** Default true. */
   includeBaseModels?: boolean;
-  /** Default true. */
-  includeVetraModels?: boolean;
   /**
    * Channel scheme. Defaults to `ChannelScheme.SWITCHBOARD`, which populates
    * `reactorModule.syncModule.syncManager` — required by reactor-api. Set
@@ -67,12 +59,10 @@ export function applySwitchboardReactorDefaults(
           reactorDriveDocumentModelModule,
         ]
       : [];
-  const vetraModels =
-    options.includeVetraModels !== false ? vetraDocumentModels : [];
   const extra = options.documentModels ?? [];
-  if (baseModels.length || vetraModels.length || extra.length) {
+  if (baseModels.length || extra.length) {
     reactorBuilder.withDocumentModels(
-      getUniqueDocumentModels(baseModels, vetraModels, extra),
+      getUniqueDocumentModels(baseModels, extra),
     );
   }
 

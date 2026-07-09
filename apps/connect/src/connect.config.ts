@@ -57,6 +57,19 @@ function getBuiltInDefaults(): Omit<
   PHGlobalConfig,
   "basePath" | "routerBasename"
 > {
+  const studioMode = runtime.app?.studioMode ?? false;
+  // Drive containers, DocumentModel, and vetra builder-spec types are authored
+  // via their own drives — never creatable from a generic drive.
+  const disabledEditors = [
+    "powerhouse/document-drive",
+    "powerhouse/reactor-drive",
+    "powerhouse/document-model",
+    "powerhouse/app",
+    "powerhouse/document-editor",
+    "powerhouse/processor",
+    "powerhouse/subgraph",
+    "powerhouse/package",
+  ];
   return {
     allowList: undefined,
     allowedDocumentTypes: [],
@@ -68,7 +81,7 @@ function getBuiltInDefaults(): Omit<
     logLevel: runtime.app?.logLevel,
     requiresHardRefresh: true,
     warnOutdatedApp: false,
-    studioMode: false,
+    studioMode,
     versionCheckInterval: 60 * 60 * 1000,
     cliVersion: env.PH_CONNECT_CLI_VERSION,
     fileUploadOperationsChunkSize: 50,
@@ -76,7 +89,7 @@ function getBuiltInDefaults(): Omit<
     defaultDrivesUrl: runtime.drives?.defaultDrives?.[0]?.url,
     drivesPreserveStrategy: runtime.drives?.preserveStrategy,
     enabledEditors: undefined,
-    disabledEditors: ["powerhouse/document-drive"],
+    disabledEditors,
 
     /* Processors */
     isExternalProcessorsEnabled: true,
@@ -183,7 +196,7 @@ const PH_CONNECT_ANALYTICS_DATABASE_NAME = `${PH_CONNECT_BASE_PATH.replace(
 // soon-to-be-removed CLOUD readers point at runtime.drives.sections.remote.
 export const connectConfig = {
   appVersion: env.PH_CONNECT_VERSION,
-  studioMode: false,
+  studioMode: runtime.app?.studioMode ?? false,
   warnOutdatedApp: false,
   appVersionCheckInterval: 60 * 60 * 1000,
   routerBasename: PH_CONNECT_BASE_PATH,
