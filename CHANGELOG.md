@@ -1,3 +1,13 @@
+## 6.2.1-dev.2 (2026-07-10)
+
+### 🩹 Fixes
+
+- apply dark/light theme styling to the error boundary card ([8caf3af33](https://github.com/powerhouse-inc/powerhouse/commit/8caf3af33))
+
+### ❤️ Thank You
+
+- liberuum
+
 ## 6.2.1-dev.1 (2026-07-09)
 
 ### 🩹 Fixes
