@@ -3,13 +3,52 @@ import {
   nodeBuildConfig,
 } from "@powerhousedao/shared/build-config";
 import { execSync } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { detect, resolveCommand } from "package-manager-detector";
+import { readPackage } from "read-pkg";
 import { build as tsdownBuild } from "tsdown";
 import type { BuildArgs } from "../types.js";
 
+/**
+ * A Powerhouse package's `powerhouse.manifest.json` "name" must match its
+ * `package.json` "name" — Connect and the registry resolve installed versions
+ * by treating the manifest name as the npm package name, so a mismatch silently
+ * breaks resolution. Fail the build early if they diverge. No-op when the
+ * project has no manifest (nothing to compare).
+ */
+export async function assertManifestNameMatchesPackage(projectPath: string) {
+  const manifestPath = join(projectPath, "powerhouse.manifest.json");
+  if (!existsSync(manifestPath)) return;
+
+  const { name: packageName } = await readPackage({ cwd: projectPath });
+
+  let manifestName: unknown;
+  try {
+    manifestName = (
+      JSON.parse(readFileSync(manifestPath, "utf-8")) as { name?: unknown }
+    ).name;
+  } catch {
+    throw new Error(
+      `Failed to parse "powerhouse.manifest.json" at ${manifestPath}. Make sure it is valid JSON.`,
+    );
+  }
+
+  if (manifestName !== packageName) {
+    throw new Error(
+      `Package name mismatch — "package.json" and "powerhouse.manifest.json" must have the same "name":\n` +
+        `  package.json             "name": ${JSON.stringify(packageName)}\n` +
+        `  powerhouse.manifest.json "name": ${JSON.stringify(manifestName)}\n\n` +
+        `Update one so they match, then run the build again.`,
+    );
+  }
+}
+
 export async function runBuild(args: BuildArgs) {
   const { outDir } = args;
+
+  // Fail fast if the manifest name and package.json name have drifted apart.
+  await assertManifestNameMatchesPackage(process.cwd());
 
   await tsdownBuild({
     ...browserBuildConfig,
