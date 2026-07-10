@@ -8,19 +8,40 @@ import {
   usePHModal,
   useVetraPackageManager,
 } from "@powerhousedao/reactor-browser";
+import type { RegistryPackage } from "@powerhousedao/shared/registry";
+import { useEffect, useState } from "react";
 
 export function ConnectMissingPackageModal() {
   const phModal = usePHModal();
-  const { registryPackageList, updateRegistryPackageStatus } =
+  const { updateRegistryPackageStatus, fetchPackagesByDocumentType } =
     useRegistryPackages();
   const packageManager = useVetraPackageManager();
   const open = phModal?.type === "missingPackage";
 
   const documentType = open ? phModal.documentType : undefined;
 
+  const [matches, setMatches] = useState<RegistryPackage[]>([]);
+
+  // The full registry listing is paginated and not loaded up front, so this
+  // modal fetches just the packages that provide the missing document type
+  // (targeted `?documentType=` query). The callback's identity changes when
+  // the package manager arrives, re-running until the fetch can proceed.
+  useEffect(() => {
+    if (!documentType) return;
+    let cancelled = false;
+    void fetchPackagesByDocumentType(documentType).then((pkgs) => {
+      if (!cancelled) setMatches(pkgs);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [documentType, fetchPackagesByDocumentType]);
+
   if (!packageManager || !documentType) return null;
 
-  const pendingInstallations: PendingPackageInstallation[] = registryPackageList
+  // Filter to the current document type: guards against a stale result set
+  // from a previous open while the new fetch is in flight.
+  const pendingInstallations: PendingPackageInstallation[] = matches
     .filter((rp) => rp.documentTypes.includes(documentType))
     .map((rp) => ({
       documentType,

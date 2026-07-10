@@ -1,10 +1,12 @@
 import {
-  getPackages,
+  getPackagePage,
+  getPackagesForDocumentType,
   trimTrailingSlash,
   useVetraPackageManager,
 } from "@powerhousedao/reactor-browser";
 import type {
   PackageInfo,
+  PackageListItem,
   RegistryPackage,
   RegistryPackageList,
   RegistryPackageMap,
@@ -13,8 +15,11 @@ import type {
 } from "@powerhousedao/shared/registry";
 import { slimManifest } from "@powerhousedao/shared/registry/manifest-slim";
 import type { DocumentModelLib } from "document-model";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getRuntimeConfig } from "../runtime-config.js";
+
+/** Page size for the paginated Available-packages listing. */
+const AVAILABLE_PAGE_SIZE = 30;
 
 export function useRegistryPackages() {
   const packageManager = useVetraPackageManager();
@@ -31,68 +36,224 @@ export function useRegistryPackages() {
       (p) => p !== undefined,
     );
   }, [registryPackagesMap]);
+  // Split for the two Package Manager tabs: installed is derivable from local
+  // state alone (no network), available/dismissed come from the registry
+  // fetch (or its localStorage cache).
+  const installedPackages: RegistryPackageList = useMemo(
+    () =>
+      registryPackageList.filter(
+        (p) => p.status === "local-install" || p.status === "registry-install",
+      ),
+    [registryPackageList],
+  );
+  // --- Available tab: paginated + server-searched, layered on the map ---
+  //
+  // The map above stays the single source of truth for each package's status,
+  // version metadata and install state. `availableOrder` is the ordering layer
+  // for the current search: a page-accumulated list of names. The rendered
+  // available list looks each name up in the map and drops anything that is
+  // now installed (it moves to the Installed tab) — so installing a row needs
+  // no extra bookkeeping.
+  const [availableOrder, setAvailableOrder] = useState<string[]>([]);
+  const [availableTotal, setAvailableTotal] = useState<number | null>(null);
+  const [availableHasMore, setAvailableHasMore] = useState(false);
+  const [isLoadingAvailable, setIsLoadingAvailable] = useState(false);
+  const [isLoadingMoreAvailable, setIsLoadingMoreAvailable] = useState(false);
+  const [availableError, setAvailableError] = useState(false);
 
-  useEffect(() => {
-    async function refreshPackages() {
+  // Latest search string (updated synchronously so a debounced fetch reads the
+  // freshest query), the server offset for the next page, and a monotonic
+  // request generation so out-of-order responses never clobber a newer query.
+  const availableQueryRef = useRef("");
+  const nextOffsetRef = useRef(0);
+  const requestGenerationRef = useRef(0);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const availablePackages: RegistryPackageList = useMemo(
+    () =>
+      availableOrder
+        .map((name) => registryPackagesMap[name])
+        .filter(
+          (p): p is RegistryPackage =>
+            p !== undefined &&
+            (p.status === "available" || p.status === "dismissed"),
+        ),
+    [availableOrder, registryPackagesMap],
+  );
+
+  const fetchAvailablePage = useCallback(
+    async ({ reset }: { reset: boolean }): Promise<void> => {
       if (registryUrl === null || !packageManager) return;
+      const generation = ++requestGenerationRef.current;
+      const offset = reset ? 0 : nextOffsetRef.current;
+      const search = availableQueryRef.current;
+      if (reset) setIsLoadingAvailable(true);
+      else setIsLoadingMoreAvailable(true);
+      setAvailableError(false);
 
-      const packageInfos = await getPackages(registryUrl);
+      try {
+        const page = await getPackagePage(registryUrl, {
+          limit: AVAILABLE_PAGE_SIZE,
+          offset,
+          search: search || undefined,
+        });
+        // A newer search/reset superseded this request — drop its result.
+        if (generation !== requestGenerationRef.current) return;
 
-      setRegistryPackagesMap((oldPackages) => {
-        const newRegistryPackages: RegistryPackageMap = {
-          ...oldPackages,
-        };
-
-        for (const packageInfo of packageInfos) {
-          const existingPackage = newRegistryPackages[packageInfo.name];
-
-          if (!existingPackage) {
-            const packageSource = packageManager.getPackageSource(
-              packageInfo.name,
-            );
-            const status = getPackageStatusFromPackageSource(packageSource);
-            newRegistryPackages[packageInfo.name] =
-              makeRegistryPackageFromPackageInfo(packageInfo, status);
-          } else {
-            // Keep the cached entry's status, but refresh anything the
-            // registry sent. This includes distTags and the versions list
-            // the Package Manager UI filters on.
-            //
-            // For `version`, prefer the actually-installed version from the
-            // package manager (set by the rehydration effect). `packageInfo.version`
-            // is the registry's newest-published version, which for installed
-            // packages would incorrectly overwrite the user's picked version
-            // on the next /packages refresh.
-            const installedVersion = packageManager.getPackageVersion(
-              packageInfo.name,
-            );
-            newRegistryPackages[packageInfo.name] = {
-              ...existingPackage,
-              manifest:
-                slimManifest(packageInfo.manifest) ?? existingPackage.manifest,
-              version:
-                installedVersion ??
-                packageInfo.version ??
-                existingPackage.version,
-              distTags: packageInfo.distTags ?? existingPackage.distTags,
-              versions: packageInfo.versions ?? existingPackage.versions,
-              documentTypes: packageInfo.documentTypes.length
-                ? packageInfo.documentTypes
-                : existingPackage.documentTypes,
-              status: promoteStatus(
-                existingPackage.status,
-                packageManager.getPackageSource(packageInfo.name),
-              ),
-            };
+        setRegistryPackagesMap((oldPackages) => {
+          const next: RegistryPackageMap = { ...oldPackages };
+          for (const item of page.items) {
+            const existing = next[item.name];
+            if (!existing) {
+              const status = getPackageStatusFromPackageSource(
+                packageManager.getPackageSource(item.name),
+              );
+              next[item.name] = makeRegistryPackageFromListItem(item, status);
+            } else {
+              // Keep the existing (possibly fuller) entry; just refresh the
+              // installed version and re-promote status. Never downgrade an
+              // installed/dismissed row from a trimmed list item.
+              next[item.name] = {
+                ...existing,
+                version:
+                  packageManager.getPackageVersion(item.name) ??
+                  item.version ??
+                  existing.version,
+                status: promoteStatus(
+                  existing.status,
+                  packageManager.getPackageSource(item.name),
+                ),
+              };
+            }
           }
+          return next;
+        });
+
+        setAvailableOrder((prev) => {
+          const base = reset ? [] : prev;
+          const seen = new Set(base);
+          const merged = [...base];
+          for (const item of page.items) {
+            if (!seen.has(item.name)) {
+              seen.add(item.name);
+              merged.push(item.name);
+            }
+          }
+          return merged;
+        });
+
+        nextOffsetRef.current = offset + page.items.length;
+        setAvailableTotal(page.total);
+        setAvailableHasMore(page.hasMore);
+      } catch (error: unknown) {
+        if (generation !== requestGenerationRef.current) return;
+        // Log the raw failure for debugging; the UI only gets a boolean so we
+        // never surface generic API / network messages to the user.
+        console.error(error);
+        setAvailableError(true);
+      } finally {
+        // Only the newest request clears the spinners.
+        if (generation === requestGenerationRef.current) {
+          setIsLoadingAvailable(false);
+          setIsLoadingMoreAvailable(false);
         }
+      }
+    },
+    [registryUrl, packageManager, setRegistryPackagesMap],
+  );
 
-        return newRegistryPackages;
-      });
+  /** Debounced server search — resets to page 1 for the new query. */
+  const setAvailableSearch = useCallback(
+    (query: string) => {
+      availableQueryRef.current = query;
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => {
+        void fetchAvailablePage({ reset: true });
+      }, 300);
+    },
+    [fetchAvailablePage],
+  );
+
+  /** Load the next page (infinite scroll). No-op when exhausted/busy. */
+  const loadMoreAvailable = useCallback(() => {
+    if (!availableHasMore || isLoadingAvailable || isLoadingMoreAvailable) {
+      return;
     }
+    void fetchAvailablePage({ reset: false });
+  }, [
+    availableHasMore,
+    isLoadingAvailable,
+    isLoadingMoreAvailable,
+    fetchAvailablePage,
+  ]);
 
-    refreshPackages().catch(console.error);
-  }, []);
+  /**
+   * Load page 1 the first time the Available tab is opened. Re-opening keeps
+   * the accumulated pages; a fetch error leaves the panel's Retry to re-fetch
+   * (this guard avoids auto-retry loops on tab re-open).
+   */
+  function ensureAvailableLoaded() {
+    if (availableOrder.length > 0 || isLoadingAvailable || availableError) {
+      return;
+    }
+    void fetchAvailablePage({ reset: true });
+  }
+
+  /**
+   * Fetch full package info for a document type (via the legacy
+   * `?documentType=` filter) and merge into the map. Lets MissingPackageModal
+   * offer installs without loading the whole paginated listing.
+   */
+  const fetchPackagesByDocumentType = useCallback(
+    async (documentType: string): Promise<RegistryPackage[]> => {
+      if (registryUrl === null || !packageManager) return [];
+      try {
+        const infos = await getPackagesForDocumentType(
+          registryUrl,
+          documentType,
+        );
+        setRegistryPackagesMap((oldPackages) => {
+          const next: RegistryPackageMap = { ...oldPackages };
+          for (const info of infos) {
+            const existing = next[info.name];
+            const status = getPackageStatusFromPackageSource(
+              packageManager.getPackageSource(info.name),
+            );
+            next[info.name] = existing
+              ? {
+                  ...existing,
+                  status: promoteStatus(
+                    existing.status,
+                    packageManager.getPackageSource(info.name),
+                  ),
+                }
+              : makeRegistryPackageFromPackageInfo(info, status);
+          }
+          return next;
+        });
+        return infos.map((info) =>
+          makeRegistryPackageFromPackageInfo(
+            info,
+            getPackageStatusFromPackageSource(
+              packageManager.getPackageSource(info.name),
+            ),
+          ),
+        );
+      } catch (error: unknown) {
+        console.error(error);
+        return [];
+      }
+    },
+    [registryUrl, packageManager, setRegistryPackagesMap],
+  );
+
+  // Clear any pending debounce on unmount.
+  useEffect(
+    () => () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!packageManager) return;
@@ -185,8 +346,47 @@ export function useRegistryPackages() {
   return {
     registryPackagesMap,
     registryPackageList,
+    installedPackages,
+    // Available tab (paginated + server search)
+    availablePackages,
+    availableTotal,
+    availableHasMore,
+    isLoadingAvailable,
+    isLoadingMoreAvailable,
+    availableError,
+    ensureAvailableLoaded,
+    fetchAvailablePage,
+    loadMoreAvailable,
+    setAvailableSearch,
+    fetchPackagesByDocumentType,
+    // Status mutations
     updateRegistryPackageStatus,
     registerFallbackRegistryPackage,
+  };
+}
+
+/**
+ * Build a RegistryPackage from a trimmed paginated list item. Version metadata
+ * (distTags/versions) and documentTypes are absent — the row lazy-loads them.
+ */
+function makeRegistryPackageFromListItem(
+  item: PackageListItem,
+  status: RegistryPackageStatus,
+): RegistryPackage {
+  return {
+    name: item.name,
+    path: item.path,
+    documentTypes: [],
+    version: item.version,
+    status,
+    manifest: {
+      name: item.name,
+      ...(item.description !== undefined
+        ? { description: item.description }
+        : {}),
+      ...(item.category !== undefined ? { category: item.category } : {}),
+      ...(item.publisher !== undefined ? { publisher: item.publisher } : {}),
+    },
   };
 }
 

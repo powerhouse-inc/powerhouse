@@ -1,6 +1,6 @@
 import type { Manifest } from "@powerhousedao/shared";
 import { execSync } from "node:child_process";
-import { writeFileSync } from "node:fs";
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { access, cp, mkdir, rm } from "node:fs/promises";
 import http from "node:http";
 import path from "node:path";
@@ -198,6 +198,196 @@ describe("registry e2e", () => {
 
       const vetra = packages.find((p) => p.name === "@powerhousedao/vetra");
       expect(vetra).toBeDefined();
+    });
+  });
+
+  describe("GET /packages pagination + search", () => {
+    // Seed a known, isolated set directly into the cdn-cache (no publish/warm
+    // needed — scanPackages reads folders synchronously, and entries without
+    // storage metadata are included). Unique name prefix so `?search=` scopes
+    // assertions deterministically regardless of other packages present.
+    const PREFIX = "pagination-fixture";
+    const cdnCacheDir = path.join(testDir, "./.test-output/cdn-cache");
+    const fixtureNames = Array.from(
+      { length: 5 },
+      (_, i) => `${PREFIX}-${String(i + 1).padStart(2, "0")}`,
+    );
+
+    beforeAll(() => {
+      fixtureNames.forEach((name, i) => {
+        const dir = path.join(cdnCacheDir, name);
+        mkdirSync(dir, { recursive: true });
+        writeFileSync(
+          path.join(dir, "powerhouse.manifest.json"),
+          JSON.stringify({
+            name,
+            // One fixture carries a unique word only in its description, to
+            // prove search matches description as well as name.
+            description: i === 2 ? "zebradescriptor unique blurb" : `pkg ${i}`,
+            category: "Testing",
+            publisher: { name: "@test", url: "https://test.example/" },
+            documentModels: [{ id: `test/${name}`, name }],
+          }),
+        );
+        writeFileSync(
+          path.join(dir, "package.json"),
+          JSON.stringify({ name, version: `1.0.${i}` }),
+        );
+      });
+    });
+
+    afterAll(() => {
+      fixtureNames.forEach((name) => {
+        rmSync(path.join(cdnCacheDir, name), { recursive: true, force: true });
+      });
+    });
+
+    type Page = {
+      items: Array<{
+        name: string;
+        version?: string;
+        description?: string;
+        category?: string;
+        manifest?: unknown;
+      }>;
+      total: number;
+      limit: number;
+      offset: number;
+      hasMore: boolean;
+    };
+
+    it("returns a paginated envelope with the first page", async () => {
+      const res = await fetch(
+        `${REGISTRY_URL}/packages?search=${PREFIX}&limit=2`,
+      );
+      expect(res.ok).toBe(true);
+      const page = (await res.json()) as Page;
+      expect(page.total).toBe(5);
+      expect(page.limit).toBe(2);
+      expect(page.offset).toBe(0);
+      expect(page.hasMore).toBe(true);
+      expect(page.items.map((p) => p.name)).toEqual([
+        `${PREFIX}-01`,
+        `${PREFIX}-02`,
+      ]);
+    });
+
+    it("pages through with offset (name-sorted, no overlap)", async () => {
+      const mid = (await (
+        await fetch(`${REGISTRY_URL}/packages?search=${PREFIX}&limit=2&offset=2`)
+      ).json()) as Page;
+      expect(mid.items.map((p) => p.name)).toEqual([
+        `${PREFIX}-03`,
+        `${PREFIX}-04`,
+      ]);
+      expect(mid.hasMore).toBe(true);
+
+      const last = (await (
+        await fetch(`${REGISTRY_URL}/packages?search=${PREFIX}&limit=2&offset=4`)
+      ).json()) as Page;
+      expect(last.items.map((p) => p.name)).toEqual([`${PREFIX}-05`]);
+      expect(last.hasMore).toBe(false);
+    });
+
+    it("returns trimmed list items (no full manifest)", async () => {
+      const page = (await (
+        await fetch(`${REGISTRY_URL}/packages?search=${PREFIX}&limit=50`)
+      ).json()) as Page;
+      expect(page.total).toBe(5);
+      const item = page.items[0];
+      expect(item.name).toBe(`${PREFIX}-01`);
+      expect(item.version).toBe("1.0.0");
+      expect(item.description).toBe("pkg 0");
+      expect(item.category).toBe("Testing");
+      expect(item.manifest).toBeUndefined();
+    });
+
+    it("clamps limit to the max page size", async () => {
+      const page = (await (
+        await fetch(`${REGISTRY_URL}/packages?search=${PREFIX}&limit=999`)
+      ).json()) as Page;
+      expect(page.limit).toBe(50);
+    });
+
+    it("matches on name only, not description", async () => {
+      // "zebradescriptor" appears only in one fixture's description, never in
+      // a name — so a name-only search must return nothing.
+      const page = (await (
+        await fetch(`${REGISTRY_URL}/packages?search=zebradescriptor&limit=10`)
+      ).json()) as Page;
+      expect(page.total).toBe(0);
+      expect(page.items).toEqual([]);
+    });
+
+    it("stays backward compatible without a limit param (bare array)", async () => {
+      const res = await fetch(`${REGISTRY_URL}/packages`);
+      const body = (await res.json()) as unknown;
+      expect(Array.isArray(body)).toBe(true);
+    });
+
+    it("stays backward compatible for ?documentType= (bare array)", async () => {
+      const res = await fetch(
+        `${REGISTRY_URL}/packages?documentType=${encodeURIComponent(
+          `test/${PREFIX}-01`,
+        )}`,
+      );
+      const body = (await res.json()) as Array<{ name: string }>;
+      expect(Array.isArray(body)).toBe(true);
+      expect(body.some((p) => p.name === `${PREFIX}-01`)).toBe(true);
+    });
+  });
+
+  describe("GET /packages/:name version metadata", () => {
+    // The single-package endpoint feeds the paginated UI's lazy version
+    // picker, so it must return distTags/versions from verdaccio storage
+    // metadata (loadPackage now reads it). Seed a cdn-cache manifest + a
+    // storage package.json with versions to exercise that path.
+    const NAME = "detail-version-fixture";
+    const cdnCacheDir = path.join(testDir, "./.test-output/cdn-cache");
+    const storageDir = path.join(testDir, "./.test-output/storage");
+
+    beforeAll(() => {
+      // Manifest lives under a version subdir, mirroring the real cdn-cache
+      // layout, so loadPackage resolves it whether or not a version is passed.
+      const versionDir = path.join(cdnCacheDir, NAME, "2.0.0");
+      mkdirSync(versionDir, { recursive: true });
+      writeFileSync(
+        path.join(versionDir, "powerhouse.manifest.json"),
+        JSON.stringify({ name: NAME, description: "detail fixture" }),
+      );
+      writeFileSync(
+        path.join(versionDir, "package.json"),
+        JSON.stringify({ name: NAME, version: "2.0.0" }),
+      );
+      const storagePkgDir = path.join(storageDir, NAME);
+      mkdirSync(storagePkgDir, { recursive: true });
+      writeFileSync(
+        path.join(storagePkgDir, "package.json"),
+        JSON.stringify({
+          name: NAME,
+          "dist-tags": { latest: "2.0.0", dev: "2.1.0-dev.1" },
+          versions: { "1.0.0": {}, "2.0.0": {}, "2.1.0-dev.1": {} },
+          _attachments: { [`${NAME}-2.0.0.tgz`]: { length: 1 } },
+        }),
+      );
+    });
+
+    afterAll(() => {
+      rmSync(path.join(cdnCacheDir, NAME), { recursive: true, force: true });
+      rmSync(path.join(storageDir, NAME), { recursive: true, force: true });
+    });
+
+    it("includes distTags and versions", async () => {
+      const res = await fetch(`${REGISTRY_URL}/packages/${NAME}`);
+      expect(res.ok).toBe(true);
+      const pkg = (await res.json()) as {
+        name: string;
+        distTags?: Record<string, string>;
+        versions?: string[];
+      };
+      expect(pkg.name).toBe(NAME);
+      expect(pkg.distTags).toEqual({ latest: "2.0.0", dev: "2.1.0-dev.1" });
+      expect(pkg.versions).toEqual(["1.0.0", "2.0.0", "2.1.0-dev.1"]);
     });
   });
 

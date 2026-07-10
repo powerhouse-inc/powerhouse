@@ -16,9 +16,28 @@ import {
   findPackagesByDocumentType,
   loadPackage,
   scanPackages,
+  toPackageListItem,
 } from "./packages.js";
 import type { RegistryConfig } from "./types.js";
 import { createWarmer } from "./warmup.js";
+
+// Paginated /packages mode: default and max page sizes.
+const DEFAULT_PAGE_SIZE = 30;
+const MAX_PAGE_SIZE = 50;
+
+/** Parse+clamp a `limit` query param to 1..MAX_PAGE_SIZE (default 30). */
+function clampPageSize(raw: unknown): number {
+  const n = Number.parseInt(String(raw), 10);
+  if (!Number.isFinite(n) || n <= 0) return DEFAULT_PAGE_SIZE;
+  return Math.min(n, MAX_PAGE_SIZE);
+}
+
+/** Parse a non-negative `offset` query param (default 0). */
+function parseOffset(raw: unknown): number {
+  const n = Number.parseInt(String(raw), 10);
+  if (!Number.isFinite(n) || n < 0) return 0;
+  return n;
+}
 
 const MIME_TYPES: Record<string, string> = {
   ".js": "application/javascript",
@@ -158,6 +177,9 @@ export function createPowerhouseRouter(
   router.get("/packages", (req: Request, res: Response) => {
     void warm();
     const packages = scanPackages(config.cdnCachePath, config.storagePath);
+
+    // Legacy mode 1 (unchanged): filter by document type, return the full
+    // PackageInfo array. Used by MissingPackageModal / package discovery.
     const documentType = req.query.documentType as string | undefined;
     if (documentType) {
       const filtered = packages.filter((pkg) =>
@@ -166,7 +188,40 @@ export function createPowerhouseRouter(
       res.json(filtered);
       return;
     }
-    res.json(packages);
+
+    // Legacy mode 2 (unchanged): no `limit` → full PackageInfo array in
+    // directory order. Keeps every existing consumer working.
+    if (req.query.limit === undefined) {
+      res.json(packages);
+      return;
+    }
+
+    // Paginated mode: `?limit=&offset=&search=` → trimmed-item envelope.
+    // Sort by name so offset paging is stable (scanPackages is dir order).
+    const limit = clampPageSize(req.query.limit);
+    const offset = parseOffset(req.query.offset);
+    const search =
+      typeof req.query.search === "string"
+        ? req.query.search.trim().toLowerCase()
+        : "";
+
+    // Match on package name only (not description).
+    const filtered = search
+      ? packages.filter((pkg) => pkg.name.toLowerCase().includes(search))
+      : packages;
+    const sorted = filtered
+      .slice()
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    const total = sorted.length;
+    const items = sorted.slice(offset, offset + limit).map(toPackageListItem);
+    res.json({
+      items,
+      total,
+      limit,
+      offset,
+      hasMore: offset + limit < total,
+    });
   });
 
   // Find packages by document type - returns array of package names
@@ -196,7 +251,12 @@ export function createPowerhouseRouter(
       return;
     }
     const version = resolution.kind === "ok" ? resolution.version : undefined;
-    const pkg = loadPackage(config.cdnCachePath, name, version);
+    const pkg = loadPackage(
+      config.cdnCachePath,
+      name,
+      version,
+      config.storagePath,
+    );
     if (!pkg) {
       res.status(404).send("Package not found");
       return;
