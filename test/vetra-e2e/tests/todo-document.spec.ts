@@ -445,9 +445,7 @@ test("Install Package in Consumer Project", async ({ browser }) => {
 
     // The row has TWO buttons: a version picker (first) and the 3-dot
     // dropdown menu (last, top-right). We need the latter.
-    const availableRowDotsButton = availablePackageRow
-      .locator("button")
-      .last();
+    const availableRowDotsButton = availablePackageRow.locator("button").last();
     await availableRowDotsButton.click();
     const installMenuItem = page.getByText("Install", { exact: true });
     await expect(installMenuItem).toBeVisible({ timeout: 10_000 });
@@ -475,9 +473,9 @@ test("Install Package in Consumer Project", async ({ browser }) => {
 
     // "Drive Explorer App" is the pre-selected default: vetra-drive-app is
     // hidden from the picker, leaving it as the only bundled app option.
-    await expect(
-      addDriveDialog.getByText("Drive Explorer App"),
-    ).toBeVisible({ timeout: 5_000 });
+    await expect(addDriveDialog.getByText("Drive Explorer App")).toBeVisible({
+      timeout: 5_000,
+    });
 
     // Fill in drive name
     const driveNameInput = page.locator('input[placeholder="Drive name"]');

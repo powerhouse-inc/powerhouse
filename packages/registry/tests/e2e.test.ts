@@ -274,7 +274,9 @@ describe("registry e2e", () => {
 
     it("pages through with offset (name-sorted, no overlap)", async () => {
       const mid = (await (
-        await fetch(`${REGISTRY_URL}/packages?search=${PREFIX}&limit=2&offset=2`)
+        await fetch(
+          `${REGISTRY_URL}/packages?search=${PREFIX}&limit=2&offset=2`,
+        )
       ).json()) as Page;
       expect(mid.items.map((p) => p.name)).toEqual([
         `${PREFIX}-03`,
@@ -283,7 +285,9 @@ describe("registry e2e", () => {
       expect(mid.hasMore).toBe(true);
 
       const last = (await (
-        await fetch(`${REGISTRY_URL}/packages?search=${PREFIX}&limit=2&offset=4`)
+        await fetch(
+          `${REGISTRY_URL}/packages?search=${PREFIX}&limit=2&offset=4`,
+        )
       ).json()) as Page;
       expect(last.items.map((p) => p.name)).toEqual([`${PREFIX}-05`]);
       expect(last.hasMore).toBe(false);
