@@ -1,6 +1,6 @@
 {
   "name": "@renown/sdk",
-  "version": "6.2.1-dev.2",
+  "version": "6.2.1-dev.3",
   "description": "Renown SDK — wallet-based authentication and user identity management for Powerhouse React applications.",
   "license": "AGPL-3.0-only",
   "private": false,

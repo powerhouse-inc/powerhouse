@@ -1,3 +1,13 @@
+## 6.2.1-dev.3 (2026-07-11)
+
+### 🚀 Features
+
+- gate vetra package loading behind studio mode ([bee2c6c2d](https://github.com/powerhouse-inc/powerhouse/commit/bee2c6c2d))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.1-dev.2 (2026-07-10)
 
 ### 🩹 Fixes
