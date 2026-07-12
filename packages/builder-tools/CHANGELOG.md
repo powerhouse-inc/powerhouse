@@ -1,3 +1,7 @@
+## 6.2.1-dev.4 (2026-07-12)
+
+This was a version bump only for @powerhousedao/builder-tools to align it with other projects, there were no code changes.
+
 ## 6.2.1-dev.3 (2026-07-11)
 
 ### 🚀 Features
