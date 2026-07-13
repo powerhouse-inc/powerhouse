@@ -4,7 +4,10 @@ import {
 } from "@powerhousedao/shared/document-model";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { KyselyOperationIndex } from "../../../src/cache/kysely-operation-index.js";
+import {
+  DEFAULT_PAGE_LIMIT,
+  KyselyOperationIndex,
+} from "../../../src/cache/kysely-operation-index.js";
 import type { IOperationIndex } from "../../../src/cache/operation-index-types.js";
 import { DriveCollectionId } from "../../../src/cache/operation-index-types.js";
 import type { Database } from "../../../src/storage/kysely/types.js";
@@ -1936,6 +1939,54 @@ describe("KyselyOperationIndex Integration", () => {
         "non-existent-doc-2",
       ]);
       expect(result).toEqual({});
+    });
+  });
+
+  describe("getSinceOrdinal() default paging", () => {
+    it("should bound the first page and stream the full set via next when no paging is given", async () => {
+      const documentId = "doc-default-paging";
+      const total = DEFAULT_PAGE_LIMIT + 50;
+
+      const txn = operationIndex.start();
+      txn.write(
+        Array.from({ length: total }, (_, i) => {
+          const actionId = generateId();
+          return {
+            id: deriveOperationId(documentId, "global", "main", actionId),
+            documentId,
+            documentType: "powerhouse/document-model",
+            branch: "main",
+            scope: "global",
+            sourceRemote: "",
+            index: i,
+            timestampUtcMs: String(1704067200000 + i),
+            hash: `hash-${i}`,
+            skip: 0,
+            action: {
+              id: actionId,
+              type: "TEST_ACTION",
+              scope: "global",
+              timestampUtcMs: String(1704067200000 + i),
+              input: {},
+            },
+          };
+        }),
+      );
+      await operationIndex.commit(txn);
+
+      let page = await operationIndex.getSinceOrdinal(0);
+      expect(page.results.length).toBe(DEFAULT_PAGE_LIMIT);
+      expect(page.next).toBeDefined();
+
+      const ordinals = page.results.map((op) => op.context.ordinal);
+      while (page.next) {
+        page = await page.next();
+        ordinals.push(...page.results.map((op) => op.context.ordinal));
+      }
+
+      expect(ordinals.length).toBe(total);
+      const ascending = ordinals.every((o, i) => i === 0 || o > ordinals[i - 1]!);
+      expect(ascending).toBe(true);
     });
   });
 });

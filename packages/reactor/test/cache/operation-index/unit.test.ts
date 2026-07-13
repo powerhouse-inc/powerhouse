@@ -1,5 +1,8 @@
 import { describe, it, expect, vi } from "vitest";
-import { KyselyOperationIndex } from "../../../src/cache/kysely-operation-index.js";
+import {
+  DEFAULT_PAGE_LIMIT,
+  KyselyOperationIndex,
+} from "../../../src/cache/kysely-operation-index.js";
 import type { OperationIndexEntry } from "../../../src/cache/operation-index-types.js";
 
 function createMockKysely() {
@@ -877,7 +880,7 @@ describe("KyselyOperationIndex.find()", () => {
     );
   });
 
-  it("handles missing PagingOptions", async () => {
+  it("applies the default page limit when PagingOptions are missing", async () => {
     const { db, mocks } = createMockKysely();
     const index = new KyselyOperationIndex(db);
 
@@ -885,7 +888,7 @@ describe("KyselyOperationIndex.find()", () => {
 
     await index.find("collection.doc-123");
 
-    expect(mocks.limit).not.toHaveBeenCalled();
+    expect(mocks.limit).toHaveBeenCalledWith(DEFAULT_PAGE_LIMIT + 1);
   });
 
   it("handles cursor from PagingOptions", async () => {

@@ -341,10 +341,8 @@ export class ProcessorManager
         }
       }
 
-      const maxOrdinal = Math.max(
-        ...page.results.map((op) => op.context.ordinal),
-      );
-      tracked.lastOrdinal = maxOrdinal;
+      const lastResult = page.results[page.results.length - 1]!;
+      tracked.lastOrdinal = lastResult.context.ordinal;
       await this.safeSaveProcessorCursor(tracked);
 
       if (!page.next) break;
@@ -389,7 +387,10 @@ export class ProcessorManager
   private async routeOperationsToProcessors(
     operations: OperationWithContext[],
   ): Promise<void> {
-    const maxOrdinal = Math.max(...operations.map((op) => op.context.ordinal));
+    let maxOrdinal = 0;
+    for (const op of operations) {
+      maxOrdinal = Math.max(maxOrdinal, op.context.ordinal);
+    }
     const allTracked = Array.from(this.allTrackedProcessors());
 
     await Promise.all(

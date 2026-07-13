@@ -27,6 +27,7 @@ import type { Database, InProcessReactorModule } from "../../src/core/types.js";
 import { ProcessorManager } from "../../src/processors/processor-manager.js";
 import type { DocumentViewDatabase } from "../../src/read-models/types.js";
 import { ConsistencyTracker } from "../../src/shared/consistency-tracker.js";
+import type { PagedResults } from "../../src/shared/types.js";
 import { JobStatus } from "../../src/shared/types.js";
 import type { Database as StorageDatabase } from "../../src/storage/kysely/types.js";
 import {
@@ -1380,5 +1381,100 @@ describe("ProcessorManager Standalone Tests", () => {
       // onOperations should only have been called once (the failing first call)
       expect(processor.onOperations).toHaveBeenCalledTimes(1);
     });
+  });
+});
+
+describe("ProcessorManager Backfill Paging Regression", () => {
+  // Large enough that spreading it as function arguments throws a RangeError.
+  const HUGE_PAGE_SIZE = 150_000;
+
+  it("should backfill a page too large to spread as function arguments", async () => {
+    const dialect = new PGliteDialect(new PGlite());
+    const baseDb = new Kysely<Database>({ dialect });
+    const result = await runMigrations(baseDb, REACTOR_SCHEMA);
+    if (!result.success && result.error) {
+      throw new Error(`Test migration failed: ${result.error.message}`);
+    }
+    const db = baseDb.withSchema(
+      REACTOR_SCHEMA,
+    ) as unknown as Kysely<CombinedDatabase>;
+
+    const driveId = generateId();
+    let serveHugePage = false;
+
+    const emptyPage: PagedResults<OperationWithContext> = {
+      results: [],
+      options: { cursor: "0", limit: HUGE_PAGE_SIZE },
+    };
+
+    const stubIndex = {
+      start: vi.fn(),
+      commit: vi.fn().mockResolvedValue([]),
+      find: vi.fn().mockResolvedValue(emptyPage),
+      get: vi.fn().mockResolvedValue(emptyPage),
+      getLatestTimestampForCollection: vi.fn().mockResolvedValue(null),
+      getCollectionsForDocuments: vi.fn().mockResolvedValue({}),
+      getSinceOrdinal: vi.fn().mockImplementation(() => {
+        if (!serveHugePage) {
+          return Promise.resolve(emptyPage);
+        }
+        serveHugePage = false;
+        const template = makeOp(driveId, 0);
+        const results = Array.from({ length: HUGE_PAGE_SIZE }, (_, i) => ({
+          operation: template.operation,
+          context: { ...template.context, ordinal: i + 1 },
+        }));
+        return Promise.resolve({ ...emptyPage, results });
+      }),
+    } as unknown as IOperationIndex;
+
+    const mockWriteCache: IWriteCache = {
+      getState: vi.fn().mockResolvedValue({}),
+      putState: vi.fn(),
+      invalidate: vi.fn().mockReturnValue(0),
+      clear: vi.fn(),
+      startup: vi.fn().mockResolvedValue(undefined),
+      shutdown: vi.fn().mockResolvedValue(undefined),
+    };
+
+    const processorManager = new ProcessorManager(
+      db as unknown as Kysely<DocumentViewDatabase>,
+      stubIndex,
+      mockWriteCache,
+      new ConsistencyTracker(),
+      new ConsoleLogger(["test"]),
+      DEFAULT_DRIVE_CONTAINER_TYPES,
+    );
+    await processorManager.init();
+
+    // Advance the manager cursor so late registration triggers a backfill
+    await processorManager.indexOperations([
+      makeDriveCreateOp(driveId, HUGE_PAGE_SIZE),
+    ]);
+
+    let receivedCount = 0;
+    let lastReceivedOrdinal = 0;
+    const processor: IProcessor = {
+      onOperations: (ops: OperationWithContext[]) => {
+        receivedCount += ops.length;
+        lastReceivedOrdinal = ops[ops.length - 1]!.context.ordinal;
+        return Promise.resolve();
+      },
+      onDisconnect: () => Promise.resolve(),
+    };
+
+    serveHugePage = true;
+    await processorManager.registerFactory("huge-backfill", () => [
+      { processor, filter: {} },
+    ]);
+
+    const tracked = processorManager.get(`huge-backfill:${driveId}:0`);
+    expect(tracked).toBeDefined();
+    expect(tracked!.status).toBe("active");
+    expect(tracked!.lastOrdinal).toBe(HUGE_PAGE_SIZE);
+    expect(receivedCount).toBe(HUGE_PAGE_SIZE);
+    expect(lastReceivedOrdinal).toBe(HUGE_PAGE_SIZE);
+
+    await db.destroy();
   });
 });

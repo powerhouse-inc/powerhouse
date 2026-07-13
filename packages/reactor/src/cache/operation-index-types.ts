@@ -22,6 +22,9 @@ export interface IOperationIndexTxn {
   write(operations: OperationIndexEntry[]): void;
 }
 
+/**
+ * Reads are paged with a default limit; follow `next` for the full set.
+ */
 export interface IOperationIndex {
   start(): IOperationIndexTxn;
   commit(txn: IOperationIndexTxn, signal?: AbortSignal): Promise<number[]>;

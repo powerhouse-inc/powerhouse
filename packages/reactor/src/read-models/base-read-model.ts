@@ -43,26 +43,19 @@ export class BaseReadModel implements IReadModel {
 
     if (viewState !== undefined) {
       this.lastOrdinal = viewState;
-      const missedOperations = await this.operationIndex.getSinceOrdinal(
-        this.lastOrdinal,
-      );
-
-      if (missedOperations.results.length > 0) {
-        const ops = this.config.rebuildStateOnInit
-          ? await this.rebuildStateForOperations(missedOperations.results)
-          : missedOperations.results;
-        await this.indexOperations(ops);
-      }
     } else {
       await this.initializeState();
-      const allOperations = await this.operationIndex.getSinceOrdinal(0);
+    }
 
-      if (allOperations.results.length > 0) {
-        const ops = this.config.rebuildStateOnInit
-          ? await this.rebuildStateForOperations(allOperations.results)
-          : allOperations.results;
-        await this.indexOperations(ops);
-      }
+    let page = await this.operationIndex.getSinceOrdinal(this.lastOrdinal);
+    while (page.results.length > 0) {
+      const ops = this.config.rebuildStateOnInit
+        ? await this.rebuildStateForOperations(page.results)
+        : page.results;
+      await this.indexOperations(ops);
+
+      if (!page.next) break;
+      page = await page.next();
     }
   }
 
@@ -169,7 +162,10 @@ export class BaseReadModel implements IReadModel {
     trx: Transaction<DocumentViewDatabase>,
     items: OperationWithContext[],
   ): Promise<void> {
-    const maxOrdinal = Math.max(...items.map((item) => item.context.ordinal));
+    let maxOrdinal = 0;
+    for (const item of items) {
+      maxOrdinal = Math.max(maxOrdinal, item.context.ordinal);
+    }
     this.lastOrdinal = maxOrdinal;
 
     await trx

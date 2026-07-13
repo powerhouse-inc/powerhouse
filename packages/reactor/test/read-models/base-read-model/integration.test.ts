@@ -4,7 +4,10 @@ import { generateId } from "@powerhousedao/shared/document-model";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { KyselyOperationIndex } from "../../../src/cache/kysely-operation-index.js";
+import {
+  DEFAULT_PAGE_LIMIT,
+  KyselyOperationIndex,
+} from "../../../src/cache/kysely-operation-index.js";
 import type { IOperationIndex } from "../../../src/cache/operation-index-types.js";
 import type { IWriteCache } from "../../../src/cache/write/interfaces.js";
 import { BaseReadModel } from "../../../src/read-models/base-read-model.js";
@@ -387,5 +390,44 @@ describe("BaseReadModel idempotency", () => {
       scope: "global",
       index: 2,
     });
+  });
+
+  it("should catch up past a single default page during init", async () => {
+    const documentId = generateId();
+    const total = DEFAULT_PAGE_LIMIT + 50;
+
+    const txn = operationIndex.start();
+    txn.write(
+      Array.from({ length: total }, (_, i) => ({
+        ...createOperation(documentId, "global", "main", i, i + 1).operation,
+        documentId,
+        documentType: "test/document",
+        scope: "global",
+        branch: "main",
+        sourceRemote: "",
+      })),
+    );
+    await operationIndex.commit(txn);
+
+    const spyModel = new SpyReadModel(
+      db as unknown as Kysely<DocumentViewDatabase>,
+      operationIndex,
+      mockWriteCache,
+      new ConsistencyTracker(),
+      { readModelId: READ_MODEL_ID, rebuildStateOnInit: true },
+    );
+    const indexSpy = vi.spyOn(spyModel, "indexOperations");
+
+    await spyModel.init();
+
+    expect(spyModel.indexedCoordinates).toHaveLength(total);
+    expect(indexSpy.mock.calls.length).toBeGreaterThan(1);
+
+    const viewState = await db
+      .selectFrom("ViewState")
+      .selectAll()
+      .where("readModelId", "=", READ_MODEL_ID)
+      .executeTakeFirst();
+    expect(viewState?.lastOrdinal).toBe(total);
   });
 });

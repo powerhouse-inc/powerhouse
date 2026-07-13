@@ -13,6 +13,8 @@ import type {
   OperationIndexOperationRow,
 } from "./operation-index-types.js";
 
+export const DEFAULT_PAGE_LIMIT = 500;
+
 type CollectionMembershipRecord = {
   collectionId: string;
   documentId: string;
@@ -227,6 +229,7 @@ export class KyselyOperationIndex implements IOperationIndex {
     }
 
     const outerCursor = cursor ?? -1;
+    const limit = paging?.limit ?? DEFAULT_PAGE_LIMIT;
     const pagingCursorOrdinal =
       paging?.cursor !== undefined ? Number.parseInt(paging.cursor, 10) : -1;
 
@@ -268,22 +271,19 @@ export class KyselyOperationIndex implements IOperationIndex {
       return qb;
     };
 
-    let unionQuery = buildBranch("joiner")
+    const unionQuery = buildBranch("joiner")
       .unionAll(buildBranch("newOps"))
-      .orderBy("ordinal", "asc");
-
-    if (paging?.limit) {
-      unionQuery = unionQuery.limit(paging.limit + 1);
-    }
+      .orderBy("ordinal", "asc")
+      .limit(limit + 1);
 
     const rows = await unionQuery.execute();
 
     let hasMore = false;
     let items = rows;
 
-    if (paging?.limit && rows.length > paging.limit) {
+    if (rows.length > limit) {
       hasMore = true;
-      items = rows.slice(0, paging.limit);
+      items = rows.slice(0, limit);
     }
 
     const nextCursor =
@@ -292,7 +292,6 @@ export class KyselyOperationIndex implements IOperationIndex {
         : undefined;
 
     const cursorValue = paging?.cursor || "0";
-    const limit = paging?.limit || 100;
     const entries = items.map((row) => this.rowToOperationIndexEntry(row));
 
     return {
@@ -322,6 +321,8 @@ export class KyselyOperationIndex implements IOperationIndex {
       throw new Error("Operation aborted");
     }
 
+    const limit = paging?.limit ?? DEFAULT_PAGE_LIMIT;
+
     let query = this.queryExecutor
       .selectFrom("operation_index_operations")
       .selectAll()
@@ -341,18 +342,16 @@ export class KyselyOperationIndex implements IOperationIndex {
       query = query.where("ordinal", ">", cursorOrdinal);
     }
 
-    if (paging?.limit) {
-      query = query.limit(paging.limit + 1);
-    }
+    query = query.limit(limit + 1);
 
     const rows = await query.execute();
 
     let hasMore = false;
     let items = rows;
 
-    if (paging?.limit && rows.length > paging.limit) {
+    if (rows.length > limit) {
       hasMore = true;
-      items = rows.slice(0, paging.limit);
+      items = rows.slice(0, limit);
     }
 
     const nextCursor =
@@ -361,7 +360,6 @@ export class KyselyOperationIndex implements IOperationIndex {
         : undefined;
 
     const cursorValue = paging?.cursor || "0";
-    const limit = paging?.limit || 100;
     const entries = items.map((row) => this.rowToOperationIndexEntry(row));
 
     return {
@@ -384,6 +382,8 @@ export class KyselyOperationIndex implements IOperationIndex {
       throw new Error("Operation aborted");
     }
 
+    const limit = paging?.limit ?? DEFAULT_PAGE_LIMIT;
+
     let query = this.queryExecutor
       .selectFrom("operation_index_operations")
       .selectAll()
@@ -395,18 +395,16 @@ export class KyselyOperationIndex implements IOperationIndex {
       query = query.where("ordinal", ">", cursorOrdinal);
     }
 
-    if (paging?.limit) {
-      query = query.limit(paging.limit + 1);
-    }
+    query = query.limit(limit + 1);
 
     const rows = await query.execute();
 
     let hasMore = false;
     let items = rows;
 
-    if (paging?.limit && rows.length > paging.limit) {
+    if (rows.length > limit) {
       hasMore = true;
-      items = rows.slice(0, paging.limit);
+      items = rows.slice(0, limit);
     }
 
     const nextCursor =
@@ -415,7 +413,6 @@ export class KyselyOperationIndex implements IOperationIndex {
         : undefined;
 
     const cursorValue = paging?.cursor || "0";
-    const limit = paging?.limit || 100;
     const operations = items.map((row) => this.rowToOperationWithContext(row));
 
     return {
