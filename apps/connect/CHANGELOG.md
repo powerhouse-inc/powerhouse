@@ -1,3 +1,7 @@
+## 6.2.1-dev.5 (2026-07-13)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
 ## 6.2.1-dev.4 (2026-07-12)
 
 This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
