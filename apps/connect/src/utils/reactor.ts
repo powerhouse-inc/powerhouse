@@ -22,7 +22,7 @@ import { createSignatureVerifier, type IRenown } from "@renown/sdk";
 import { ConsoleLogger } from "document-model";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
-import { getSharedPGlite } from "../pglite.db.js";
+import { getReactorPGlite } from "../pglite.db.js";
 
 /**
  * Creates a Reactor that plugs into legacy storage but syncs through the new
@@ -48,7 +48,7 @@ export async function createBrowserReactor(
     return renown.getBearerToken({ expiresIn: 10 });
   };
 
-  const pg = await getSharedPGlite();
+  const pg = await getReactorPGlite();
   const logger = new ConsoleLogger(["reactor-client"]);
   const builder = new ReactorClientBuilder()
     .withLogger(logger)

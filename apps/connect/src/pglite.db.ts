@@ -4,33 +4,46 @@ import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import {
   detectReactorPgMajor,
+  detectRelationalPgMajor,
   loadPGliteModule,
   resolvePgMajorForRuntime,
+  type DetectedMajor,
   type SupportedPgMajor,
 } from "./utils/pglite-runtime.js";
-import { REACTOR_PGLITE_NAME } from "./utils/storage-namespace.js";
+import {
+  REACTOR_PGLITE_NAME,
+  RELATIONAL_PGLITE_NAME,
+} from "./utils/storage-namespace.js";
 
-// Run the shared reactor/relational PGlite in a Web Worker instead of the main
-// thread. Off by default: the worker hides `Module.FS`, which the Inspector needs.
+// Separate reactor/relational instances so their transactions can't interleave
+// on one session; the wasm download is still shared — PGlite memoizes the
+// compiled module per JS realm.
+
+// Off by default: workers hide `Module.FS` (the Inspector needs it) and each
+// worker realm re-downloads the wasm.
 export const PGLITE_USE_WORKER: boolean = false;
 
 async function createMainThreadPGlite(
   major: SupportedPgMajor,
+  dbName: string,
 ): Promise<PGlite> {
   const { PGlite } = await loadPGliteModule(major);
   const { live } =
     major === 16
       ? await import("pglite-legacy-02/live")
       : await import("@electric-sql/pglite/live");
-  return new PGlite(`idb://${REACTOR_PGLITE_NAME}`, {
+  return new PGlite(`idb://${dbName}`, {
     relaxedDurability: true,
     extensions: { live },
   }) as unknown as PGlite;
 }
 
-async function createWorkerPGlite(major: SupportedPgMajor): Promise<PGlite> {
+async function createWorkerPGlite(
+  major: SupportedPgMajor,
+  dbName: string,
+): Promise<PGlite> {
   // dbName is owned here so the namespace matches the other origin-scoped stores.
-  const meta = { dbName: REACTOR_PGLITE_NAME };
+  const meta = { dbName };
   if (major === 16) {
     const [legacyWorker, legacyLive] = await Promise.all([
       import("pglite-legacy-02/worker"),
@@ -58,33 +71,58 @@ async function createWorkerPGlite(major: SupportedPgMajor): Promise<PGlite> {
   }) as unknown as PGlite;
 }
 
-let sharedPGlite: Promise<PGlite> | undefined;
+// Overlapping cold boots race on PGlite's un-cloned wasm fetch Response and
+// re-fetch the fs bundle; chaining avoids both.
+let bootChain: Promise<unknown> = Promise.resolve();
 
-// Single PGlite shared by the reactor store and the relational read models
-// (kept in their own schemas). Memoized so the WASM/data load happens once.
-export function getSharedPGlite(): Promise<PGlite> {
-  if (sharedPGlite) return sharedPGlite;
-  const pending = (async () => {
-    const major = resolvePgMajorForRuntime(await detectReactorPgMajor());
-    if (major !== 17) {
-      console.warn(
-        `[reactor] Opening legacy Postgres ${major} data dir. Migrate to PG17 from the banner or the Inspector → Debug tab.`,
-      );
-    }
-    return PGLITE_USE_WORKER
-      ? createWorkerPGlite(major)
-      : createMainThreadPGlite(major);
-  })();
-  // Don't cache a rejection: let a later call retry a transient IDB/wasm failure.
-  sharedPGlite = pending;
-  pending.catch(() => {
-    if (sharedPGlite === pending) sharedPGlite = undefined;
-  });
+function chainedCreate(create: () => Promise<PGlite>): Promise<PGlite> {
+  const pending = bootChain.then(create, create);
+  bootChain = pending.catch(() => undefined);
   return pending;
 }
 
+function pgliteSingleton(opts: {
+  dbName: string;
+  detectMajor: () => Promise<DetectedMajor>;
+  label: string;
+}): () => Promise<PGlite> {
+  let cached: Promise<PGlite> | undefined;
+  return function getPGlite(): Promise<PGlite> {
+    if (cached) return cached;
+    const pending = chainedCreate(async () => {
+      const major = resolvePgMajorForRuntime(await opts.detectMajor());
+      if (major !== 17) {
+        console.warn(
+          `[${opts.label}] Opening legacy Postgres ${major} data dir. Migrate to PG17 from the banner or the Inspector → Debug tab.`,
+        );
+      }
+      return PGLITE_USE_WORKER
+        ? createWorkerPGlite(major, opts.dbName)
+        : createMainThreadPGlite(major, opts.dbName);
+    });
+    // Don't cache a rejection: let a later call retry a transient IDB/wasm failure.
+    cached = pending;
+    pending.catch(() => {
+      if (cached === pending) cached = undefined;
+    });
+    return pending;
+  };
+}
+
+export const getReactorPGlite = pgliteSingleton({
+  dbName: REACTOR_PGLITE_NAME,
+  detectMajor: detectReactorPgMajor,
+  label: "reactor",
+});
+
+const getRelationalPGlite = pgliteSingleton({
+  dbName: RELATIONAL_PGLITE_NAME,
+  detectMajor: detectRelationalPgMajor,
+  label: "relational",
+});
+
 export async function getDb() {
-  const pgLite = await getSharedPGlite();
+  const pgLite = await getRelationalPGlite();
   const relationalDb = createRelationalDb(
     new Kysely({
       dialect: new PGliteDialect(pgLite),
