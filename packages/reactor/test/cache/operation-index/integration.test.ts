@@ -1985,7 +1985,9 @@ describe("KyselyOperationIndex Integration", () => {
       }
 
       expect(ordinals.length).toBe(total);
-      const ascending = ordinals.every((o, i) => i === 0 || o > ordinals[i - 1]!);
+      const ascending = ordinals.every(
+        (o, i) => i === 0 || o > ordinals[i - 1]!,
+      );
       expect(ascending).toBe(true);
     });
   });
