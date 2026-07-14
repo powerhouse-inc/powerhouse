@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/analytics-engine-knex",
-  "version": "6.2.1-dev.6",
+  "version": "6.2.2-dev.0",
   "license": "AGPL-3.0-only",
   "repository": {
     "type": "git",

@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-api",
-  "version": "6.2.1-dev.6",
+  "version": "6.2.2-dev.0",
   "description": "GraphQL API layer for the Powerhouse reactor — auto-generated subgraphs per document model plus the core reactor subgraph for drive and document management.",
   "type": "module",
   "repository": {

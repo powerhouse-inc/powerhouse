@@ -1,3 +1,13 @@
+## 6.2.2-dev.0 (2026-07-14)
+
+### 🩹 Fixes
+
+- **config:** add files allowlist so dist ships on publish ([e9c621ff1](https://github.com/powerhouse-inc/powerhouse/commit/e9c621ff1))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.1-dev.6 (2026-07-14)
 
 This was a version bump only for @powerhousedao/config to align it with other projects, there were no code changes.
