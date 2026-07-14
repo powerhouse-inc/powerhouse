@@ -1,3 +1,7 @@
+## 6.2.1-dev.6 (2026-07-14)
+
+This was a version bump only for @powerhousedao/analytics-engine-graphql to align it with other projects, there were no code changes.
+
 ## 6.2.1-dev.5 (2026-07-13)
 
 This was a version bump only for @powerhousedao/analytics-engine-graphql to align it with other projects, there were no code changes.

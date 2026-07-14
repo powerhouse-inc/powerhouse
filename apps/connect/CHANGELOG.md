@@ -1,3 +1,13 @@
+## 6.2.1-dev.6 (2026-07-14)
+
+### 🩹 Fixes
+
+- pulling apart pglite instances to fix contention issues ([02a2176c8](https://github.com/powerhouse-inc/powerhouse/commit/02a2176c8))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.2.1-dev.5 (2026-07-13)
 
 This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
