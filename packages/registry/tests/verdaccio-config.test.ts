@@ -5,6 +5,8 @@ import { buildVerdaccioConfig } from "../src/verdaccio-config.js";
 type VerdaccioConfig = ReturnType<typeof buildVerdaccioConfig> & {
   uplinks: Record<string, { url: string; maxage: string }>;
   packages: Record<string, { proxy?: string }>;
+  auth: Record<string, unknown>;
+  plugins?: string;
 };
 
 function baseConfig(overrides: Partial<RegistryConfig> = {}): RegistryConfig {
@@ -56,5 +58,25 @@ describe("buildVerdaccioConfig", () => {
     ) as VerdaccioConfig;
 
     expect(cfg.uplinks.npmjs.maxage).toBe("30s");
+  });
+
+  it("uses the htpasswd auth path and no plugins dir when no database is set", () => {
+    const cfg = buildVerdaccioConfig(baseConfig()) as VerdaccioConfig;
+
+    expect(cfg.auth.htpasswd).toBeDefined();
+    expect(cfg.auth["registry-auth"]).toBeUndefined();
+    expect(cfg.plugins).toBeUndefined();
+  });
+
+  it("wires the registry-auth plugin (with plugins dir) when a database is set", () => {
+    const cfg = buildVerdaccioConfig(
+      baseConfig({ databaseUrl: "postgres://u:p@host:5432/registry" }),
+    ) as VerdaccioConfig;
+
+    expect(cfg.auth["registry-auth"]).toEqual({
+      databaseUrl: "postgres://u:p@host:5432/registry",
+    });
+    expect(cfg.auth.htpasswd).toBeUndefined();
+    expect(cfg.plugins?.endsWith("/plugins")).toBe(true);
   });
 });

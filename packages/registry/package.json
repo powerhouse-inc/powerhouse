@@ -38,19 +38,25 @@
   "dependencies": {
     "@powerhousedao/shared": "workspace:*",
     "@renown/sdk": "workspace:*",
+    "@verdaccio/core": "8.0.0-next-8.37",
     "@verdaccio/signature": "8.0.0-next-8.29",
+    "bcryptjs": "^2.4.3",
     "cmd-ts": "catalog:",
     "express": "^4.22.1",
     "find-up": "^8.0.0",
+    "pg": "catalog:",
     "tar": "^7.5.11",
     "verdaccio": "^6.5.0",
     "verdaccio-aws-s3-storage": "^10.4.0"
   },
   "devDependencies": {
     "tsdown": "catalog:",
+    "@types/bcryptjs": "^2.4.6",
     "@types/express": "^4.17.21",
     "@types/node": "catalog:",
+    "@types/pg": "catalog:",
     "@types/supertest": "^6.0.2",
+    "pg-mem": "^3.0.14",
     "supertest": "^7.1.0",
     "vitest": "catalog:"
   },

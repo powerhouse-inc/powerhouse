@@ -1,10 +1,28 @@
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import type { RegistryConfig } from "./types.js";
 
 export function buildVerdaccioConfig(config: RegistryConfig) {
   const htpasswdPath = path.join(config.storagePath, "htpasswd");
 
   const uplinkUrl = config.uplink ?? "https://registry.npmjs.org/";
+
+  // With a database configured, use the Postgres-backed auth plugin
+  // (persistent accounts + npm-style package ownership). Verdaccio loads it
+  // via require() from the dist/plugins dir. Without a DB (local dev / tests),
+  // keep the built-in htpasswd path.
+  const usePgAuth = Boolean(config.databaseUrl || config.authStore);
+  const pluginsDir =
+    config.pluginsDir ??
+    path.join(path.dirname(fileURLToPath(import.meta.url)), "plugins");
+  const auth = usePgAuth
+    ? {
+        "registry-auth": {
+          ...(config.databaseUrl ? { databaseUrl: config.databaseUrl } : {}),
+          ...(config.authStore ? { store: config.authStore } : {}),
+        },
+      }
+    : { htpasswd: { file: htpasswdPath } };
 
   const base: Record<string, unknown> = {
     storage: config.storagePath,
@@ -23,11 +41,8 @@ export function buildVerdaccioConfig(config: RegistryConfig) {
         },
       },
     },
-    auth: {
-      htpasswd: {
-        file: htpasswdPath,
-      },
-    },
+    auth,
+    ...(usePgAuth ? { plugins: pluginsDir } : {}),
     uplinks: {
       npmjs: {
         url: uplinkUrl,
