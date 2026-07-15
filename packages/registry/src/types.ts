@@ -54,6 +54,10 @@ export interface RegistryConfig {
    *  re-publish a workspace package whose version already exists on npmjs
    *  without bumping (verdaccio would otherwise reject with 409). */
   localPackagePatterns?: string[];
+  /** Directory verdaccio loads the S3 auth plugin from. Defaults to the
+   *  `plugins` dir next to the compiled code (dist/plugins). Overridable so
+   *  tests can point at the built plugin while running from src. */
+  pluginsDir?: string;
 }
 
 export interface RegistryCommandArgs {
@@ -79,4 +83,6 @@ export interface RegistryCommandArgs {
   /** Comma-separated globs (e.g. "@powerhousedao/*,document-model,ph-cmd")
    *  served locally only — no npmjs uplink proxy. */
   localPackages?: string;
+  /** Override the dir verdaccio loads the S3 auth plugin from (tests). */
+  pluginsDir?: string;
 }

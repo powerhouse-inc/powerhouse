@@ -36,9 +36,12 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.700.0",
     "@powerhousedao/shared": "workspace:*",
     "@renown/sdk": "workspace:*",
+    "@verdaccio/core": "8.0.0-next-8.37",
     "@verdaccio/signature": "8.0.0-next-8.29",
+    "bcryptjs": "^2.4.3",
     "cmd-ts": "catalog:",
     "express": "^4.22.1",
     "find-up": "^8.0.0",
@@ -48,6 +51,7 @@
   },
   "devDependencies": {
     "tsdown": "catalog:",
+    "@types/bcryptjs": "^2.4.6",
     "@types/express": "^4.17.21",
     "@types/node": "catalog:",
     "@types/supertest": "^6.0.2",

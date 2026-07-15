@@ -50,6 +50,7 @@ export async function runRegistry(args: RegistryCommandArgs) {
     authRenown,
     verdaccioSecret: verdaccioSecretArg,
     localPackages,
+    pluginsDir,
   } = args;
   const storagePath = await resolveDir(storageDir);
   const cdnCachePath = await resolveDir(cdnCacheDir);
@@ -114,7 +115,14 @@ export async function runRegistry(args: RegistryCommandArgs) {
           s3ForcePathStyle,
         },
       }),
+    ...(pluginsDir ? { pluginsDir } : {}),
   };
+
+  if (config.s3) {
+    console.log(
+      "[registry] S3-backed auth plugin active (persistent accounts + package ownership)",
+    );
+  }
   // Ensure directories exist (for relative paths resolved via findUp)
   await mkdir(storagePath, { recursive: true });
   await mkdir(cdnCachePath, { recursive: true });

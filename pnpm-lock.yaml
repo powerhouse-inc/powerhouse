@@ -2321,15 +2321,24 @@ importers:
 
   packages/registry:
     dependencies:
+      '@aws-sdk/client-s3':
+        specifier: ^3.700.0
+        version: 3.1082.0
       '@powerhousedao/shared':
         specifier: workspace:*
         version: link:../shared
       '@renown/sdk':
         specifier: workspace:*
         version: link:../renown
+      '@verdaccio/core':
+        specifier: 8.0.0-next-8.37
+        version: 8.0.0-next-8.37
       '@verdaccio/signature':
         specifier: 8.0.0-next-8.29
         version: 8.0.0-next-8.29
+      bcryptjs:
+        specifier: ^2.4.3
+        version: 2.4.3
       cmd-ts:
         specifier: 'catalog:'
         version: 0.15.0
@@ -2349,6 +2358,9 @@ importers:
         specifier: ^10.4.0
         version: 10.4.0
     devDependencies:
+      '@types/bcryptjs':
+        specifier: ^2.4.6
+        version: 2.4.6
       '@types/express':
         specifier: ^4.17.21
         version: 4.17.25
@@ -2363,7 +2375,7 @@ importers:
         version: 7.2.2
       tsdown:
         specifier: 'catalog:'
-        version: 0.21.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@tsdown/css@0.21.1)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(synckit@0.11.12)(typescript@5.9.3)
+        version: 0.21.1(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@tsdown/css@0.21.1)(oxc-resolver@11.19.0(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(synckit@0.11.12)(typescript@5.9.3)
       vitest:
         specifier: 'catalog:'
         version: 4.1.1(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@4.1.1)(happy-dom@20.9.0)(jsdom@24.1.3)(msw@2.12.10(@types/node@25.2.3)(typescript@5.9.3))(vite@8.0.10(@types/node@25.2.3)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
@@ -3567,6 +3579,78 @@ packages:
 
   '@asamuzakjp/css-color@3.2.0':
     resolution: {integrity: sha512-K1A6z8tS3XsmCMM86xoWdn7Fkdn9m6RSVtocUrJYIwZnFVkng/PvkEoWtOWmP+Scc6saYWHWZYbndEEXxl24jw==}
+
+  '@aws-sdk/checksums@3.1000.15':
+    resolution: {integrity: sha512-hAdQvjHv7zijjhjumod+/k0xxlJEoKKKCuXarKturk3KebbVpzCo8k3XmobI6M7qK5Y3Zhnr9CUQJxrcPSQ80A==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/client-s3@3.1082.0':
+    resolution: {integrity: sha512-vY3uUgjYSWH+enoupP3NJ2iTYaGWc1jAjt7QdjyQLzEXZ9nCjbCZKUoHk5ZuBTgAGDhcOUvRkCxpHj1BA5AFvA==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/core@3.975.0':
+    resolution: {integrity: sha512-rro0KMJz0XBZw1HChXXgylx9aaf60ITyBmZtH0x+9QG6u3SOoyM81LI9ONSGQe0nuN4554LOg4xKIY7frHpgmg==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/credential-provider-env@3.972.56':
+    resolution: {integrity: sha512-cjFAqXcfmzxOyNE7vGfe8XTju6JJ7ch/2w+vr/mqQMdxukSkBpkaWd3ewXpaBQ7FP+IKYLT5eHjvwqCUQua8DA==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/credential-provider-http@3.972.58':
+    resolution: {integrity: sha512-UTHgQ6j3IkOMYLXXWpil56RfprNfx+GWKdGiwhWBqKNSnxm43uH1erWg2fDv+/qPndz+wwmiLlfRArQZFmtO0Q==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/credential-provider-ini@3.973.0':
+    resolution: {integrity: sha512-KZKwYIv7ZwcZuWWz1bb7MAr8rChzZzDXbNWNVxZlh6tbG+WwwdBBvyIwrzvCOSV+/7/q+gyd5uiAfDSK+61/1Q==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/credential-provider-login@3.972.62':
+    resolution: {integrity: sha512-RKVpKRuq2xSzidsSMIgFXBUvfeTP3Tu9F7FnCi6dyyjbwYupOwa+liJYu7fyhqpLUSKg+NAEFfUQvg1791Wb2Q==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/credential-provider-node@3.972.65':
+    resolution: {integrity: sha512-0+AbSk0KOk+5VR12KHy4PM2SDgGmO8tcdTVVSyvfG0k043i8sq4x7jSLTzNTI+BxUMjteIPSqFc8AfYm/PjxoQ==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/credential-provider-process@3.972.56':
+    resolution: {integrity: sha512-PC8w9452qVJCf0ZaGq/Gf7uxq2oX8dIE8ON//uoRt8Smhq3ihSWwSVdlFMIK89MCN53+wwif62FL/+sudBFpJQ==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/credential-provider-sso@3.973.0':
+    resolution: {integrity: sha512-ZCe6i8p6jl3OUKV1l8aOWI/gNUjFH/94M0LqfsRit7qGt0HdK+fdsqDOlH2H3yw15WUsFCJ+r1xqsE6kSdPVlw==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/credential-provider-web-identity@3.972.62':
+    resolution: {integrity: sha512-CrGUTJlMSkecTSSSA4J/BC+VmzXAgVXDkRKj4Wy1EvrsZPaT0L9tiCly6VPSfJTM4ypokARht+IgDSk38gmh9w==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/middleware-sdk-s3@3.972.61':
+    resolution: {integrity: sha512-L3YKtSu81xFfjUaNYJTPEWNz0KSPfKGDcDcblRC/JxVJ7/BNTskIX1lSWRd9nRKZg+3ilgvw7FTwCNPKJ0PAPQ==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/nested-clients@3.997.30':
+    resolution: {integrity: sha512-ZQpvaE4gKKChXIyU5nn/jJeA5TixpWeb3KToovyQ+Hj2HPHkTIjCWirnDHG9Za1HNwTFP4NHdAtuNuEU0PqDww==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/signature-v4-multi-region@3.996.39':
+    resolution: {integrity: sha512-8+srXqYIF8KYMLC4FxMLEM5Ek7kUNibJu1R4m8/fUhhNYIZZz26oGtKkCr8I/HiG2fFQxBvaGgQZT4/mqRCSnA==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/token-providers@3.1082.0':
+    resolution: {integrity: sha512-adHOgJ97jv3QkN8w9TNrDx+3SKAIi1+ihCsv2n4/hYMIvCuzD0QA6vgPGeb/R3fYk9ZVXD2/0SaluR0izcAY/Q==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/types@3.974.0':
+    resolution: {integrity: sha512-QIBrw90CDm4O0UaIIzkU6DrFdeJzEb2Va5EPEVpyldj6sHJxB6cshhStJuhZxk3wR3PmjJlYsjPmY1kNb+KGBg==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/xml-builder@3.972.34':
+    resolution: {integrity: sha512-wHhWL1y7sN3enBA8POrPpQM5jCcmu2ozyhbRei4c8OjVcEaEs6yLucLa/pla457ggS/ysuy7bosagz3HaJkZXA==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws/lambda-invoke-store@0.3.0':
+    resolution: {integrity: sha512-sl4Bm6yiMNYrZKkqqDFWN0UfnWhlS8ivKxrYl+6t0gCLrqr8y3B2IqZZbFRkfaVVp7C/baApyh71P+LeE1A2sQ==}
+    engines: {node: '>=18.0.0'}
 
   '@babel/code-frame@7.29.0':
     resolution: {integrity: sha512-9NhCeYjq9+3uxgdtp20LSiJXJvN0FeCtNGpJxuMFZ1Kv3cWUNb6DOhJwUvcVCzKGR66cw4njwM6hrJLqgOwbcw==}
@@ -8932,6 +9016,30 @@ packages:
   '@slorber/remark-comment@1.0.0':
     resolution: {integrity: sha512-RCE24n7jsOj1M0UPvIQCHTe7fI0sFL4S2nwKVWwHyVr/wI/H8GosgsJGyhnsZoGFnD/P2hLf1mSbrrgSLN93NA==}
 
+  '@smithy/core@3.29.2':
+    resolution: {integrity: sha512-DXUk6yU0C1Q1tYvJh1VCtl8QOBcSoZpKwjTPkxT6A4MUQYHvgeKGByL8mrEdxnvhdf9nq5GyzmRb5n/vPgu3Lw==}
+    engines: {node: '>=18.0.0'}
+
+  '@smithy/credential-provider-imds@4.4.7':
+    resolution: {integrity: sha512-UEMLOoA0Fl4uYBxh6l0uN0H6EJe/A89OGeDNTteQeXpJ20BcpfIr4wlCY9pel1jEAUHAxaYwuqrYlrKdXE1GKQ==}
+    engines: {node: '>=18.0.0'}
+
+  '@smithy/fetch-http-handler@5.6.4':
+    resolution: {integrity: sha512-psnst7NZWdAEvJvyW8YZEE7xNVMyLrQFfHtyrVFrxNyy+dKWkQ+rqC6oI5ZhxThpUy9RSfEshgm34zqbOxzsRw==}
+    engines: {node: '>=18.0.0'}
+
+  '@smithy/node-http-handler@4.9.4':
+    resolution: {integrity: sha512-BNTop/fSOptmoVk8g+efwHCofFh37g70OWGAFES1TeAAJja1K5aAI8rTE26ETSc5k8IQuWY2kAIoPla01NgYrA==}
+    engines: {node: '>=18.0.0'}
+
+  '@smithy/signature-v4@5.6.3':
+    resolution: {integrity: sha512-8qVKKzqh7naF27ePmx0SkUfnGP/wBI9dyaeAmhHvopnbIlItUAmB/e6PkPCU3rRb2v9BY8D4EZXSoydSibatvw==}
+    engines: {node: '>=18.0.0'}
+
+  '@smithy/types@4.16.0':
+    resolution: {integrity: sha512-aVUabzlBBmY0PfvVgLKQSOGFIL5/7R54JE3uD9a5Ay/jSED61SkuAcCYENNXJzYUvJ1NPrWO0P+rAXHCkbBUKw==}
+    engines: {node: '>=18.0.0'}
+
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
 
@@ -9604,6 +9712,9 @@ packages:
 
   '@types/babel__traverse@7.28.0':
     resolution: {integrity: sha512-8PvcXf70gTDZBgt9ptxJ8elBeBjcLOAcOtoO/mPJjtji1+CdGbHgm77om1GrsPxsiE+uXIpNSK64UYaIwQXd4Q==}
+
+  '@types/bcryptjs@2.4.6':
+    resolution: {integrity: sha512-9xlo6R2qDs5uixm0bcIqCeMCE6HiQsIyel9KQySStiyqNl2tnj2mP3DX1Nf56MD6KMenNNlBBsy3LJ7gUEQPXQ==}
 
   '@types/body-parser@1.19.6':
     resolution: {integrity: sha512-HLFeCYgz89uk22N5Qg3dvGvsv46B8GLvKKo1zKG4NybA8U2DiEO3w9lqGg29t/tfLRJpJ6iQxnVw4OnB7MoM9g==}
@@ -11032,6 +11143,9 @@ packages:
 
   boolbase@1.0.0:
     resolution: {integrity: sha512-JZOSA7Mo9sNGB8+UjSgzdLtokWAky1zbztM3WRLCbZ70/3cTANmQmOdR7y2g+J0e2WXywy1yS468tY+IruqEww==}
+
+  bowser@2.14.1:
+    resolution: {integrity: sha512-tzPjzCxygAKWFOJP011oxFHs57HzIhOEracIgAePE4pqB3LikALKnSzUyU4MGs9/iCEUuHlAJTjTc5M+u7YEGg==}
 
   boxen@5.1.2:
     resolution: {integrity: sha512-9gYgQKXx+1nP8mP7CzFyaUARhg7D3n1dF/FnErWmu9l6JvGpNUN278h0aSb+QjoiKSWG+iZ3uHrcqk0qrY9RQQ==}
@@ -20093,6 +20207,171 @@ snapshots:
       '@csstools/css-tokenizer': 3.0.4
       lru-cache: 10.4.3
 
+  '@aws-sdk/checksums@3.1000.15':
+    dependencies:
+      '@aws-sdk/core': 3.975.0
+      '@aws-sdk/types': 3.974.0
+      '@smithy/core': 3.29.2
+      '@smithy/types': 4.16.0
+      tslib: 2.8.1
+
+  '@aws-sdk/client-s3@3.1082.0':
+    dependencies:
+      '@aws-sdk/checksums': 3.1000.15
+      '@aws-sdk/core': 3.975.0
+      '@aws-sdk/credential-provider-node': 3.972.65
+      '@aws-sdk/middleware-sdk-s3': 3.972.61
+      '@aws-sdk/signature-v4-multi-region': 3.996.39
+      '@aws-sdk/types': 3.974.0
+      '@smithy/core': 3.29.2
+      '@smithy/fetch-http-handler': 5.6.4
+      '@smithy/node-http-handler': 4.9.4
+      '@smithy/types': 4.16.0
+      tslib: 2.8.1
+
+  '@aws-sdk/core@3.975.0':
+    dependencies:
+      '@aws-sdk/types': 3.974.0
+      '@aws-sdk/xml-builder': 3.972.34
+      '@aws/lambda-invoke-store': 0.3.0
+      '@smithy/core': 3.29.2
+      '@smithy/signature-v4': 5.6.3
+      '@smithy/types': 4.16.0
+      bowser: 2.14.1
+      tslib: 2.8.1
+
+  '@aws-sdk/credential-provider-env@3.972.56':
+    dependencies:
+      '@aws-sdk/core': 3.975.0
+      '@aws-sdk/types': 3.974.0
+      '@smithy/core': 3.29.2
+      '@smithy/types': 4.16.0
+      tslib: 2.8.1
+
+  '@aws-sdk/credential-provider-http@3.972.58':
+    dependencies:
+      '@aws-sdk/core': 3.975.0
+      '@aws-sdk/types': 3.974.0
+      '@smithy/core': 3.29.2
+      '@smithy/fetch-http-handler': 5.6.4
+      '@smithy/node-http-handler': 4.9.4
+      '@smithy/types': 4.16.0
+      tslib: 2.8.1
+
+  '@aws-sdk/credential-provider-ini@3.973.0':
+    dependencies:
+      '@aws-sdk/core': 3.975.0
+      '@aws-sdk/credential-provider-env': 3.972.56
+      '@aws-sdk/credential-provider-http': 3.972.58
+      '@aws-sdk/credential-provider-login': 3.972.62
+      '@aws-sdk/credential-provider-process': 3.972.56
+      '@aws-sdk/credential-provider-sso': 3.973.0
+      '@aws-sdk/credential-provider-web-identity': 3.972.62
+      '@aws-sdk/nested-clients': 3.997.30
+      '@aws-sdk/types': 3.974.0
+      '@smithy/core': 3.29.2
+      '@smithy/credential-provider-imds': 4.4.7
+      '@smithy/types': 4.16.0
+      tslib: 2.8.1
+
+  '@aws-sdk/credential-provider-login@3.972.62':
+    dependencies:
+      '@aws-sdk/core': 3.975.0
+      '@aws-sdk/nested-clients': 3.997.30
+      '@aws-sdk/types': 3.974.0
+      '@smithy/core': 3.29.2
+      '@smithy/types': 4.16.0
+      tslib: 2.8.1
+
+  '@aws-sdk/credential-provider-node@3.972.65':
+    dependencies:
+      '@aws-sdk/credential-provider-env': 3.972.56
+      '@aws-sdk/credential-provider-http': 3.972.58
+      '@aws-sdk/credential-provider-ini': 3.973.0
+      '@aws-sdk/credential-provider-process': 3.972.56
+      '@aws-sdk/credential-provider-sso': 3.973.0
+      '@aws-sdk/credential-provider-web-identity': 3.972.62
+      '@aws-sdk/types': 3.974.0
+      '@smithy/core': 3.29.2
+      '@smithy/credential-provider-imds': 4.4.7
+      '@smithy/types': 4.16.0
+      tslib: 2.8.1
+
+  '@aws-sdk/credential-provider-process@3.972.56':
+    dependencies:
+      '@aws-sdk/core': 3.975.0
+      '@aws-sdk/types': 3.974.0
+      '@smithy/core': 3.29.2
+      '@smithy/types': 4.16.0
+      tslib: 2.8.1
+
+  '@aws-sdk/credential-provider-sso@3.973.0':
+    dependencies:
+      '@aws-sdk/core': 3.975.0
+      '@aws-sdk/nested-clients': 3.997.30
+      '@aws-sdk/token-providers': 3.1082.0
+      '@aws-sdk/types': 3.974.0
+      '@smithy/core': 3.29.2
+      '@smithy/types': 4.16.0
+      tslib: 2.8.1
+
+  '@aws-sdk/credential-provider-web-identity@3.972.62':
+    dependencies:
+      '@aws-sdk/core': 3.975.0
+      '@aws-sdk/nested-clients': 3.997.30
+      '@aws-sdk/types': 3.974.0
+      '@smithy/core': 3.29.2
+      '@smithy/types': 4.16.0
+      tslib: 2.8.1
+
+  '@aws-sdk/middleware-sdk-s3@3.972.61':
+    dependencies:
+      '@aws-sdk/core': 3.975.0
+      '@aws-sdk/signature-v4-multi-region': 3.996.39
+      '@aws-sdk/types': 3.974.0
+      '@smithy/core': 3.29.2
+      '@smithy/types': 4.16.0
+      tslib: 2.8.1
+
+  '@aws-sdk/nested-clients@3.997.30':
+    dependencies:
+      '@aws-sdk/core': 3.975.0
+      '@aws-sdk/signature-v4-multi-region': 3.996.39
+      '@aws-sdk/types': 3.974.0
+      '@smithy/core': 3.29.2
+      '@smithy/fetch-http-handler': 5.6.4
+      '@smithy/node-http-handler': 4.9.4
+      '@smithy/types': 4.16.0
+      tslib: 2.8.1
+
+  '@aws-sdk/signature-v4-multi-region@3.996.39':
+    dependencies:
+      '@aws-sdk/types': 3.974.0
+      '@smithy/signature-v4': 5.6.3
+      '@smithy/types': 4.16.0
+      tslib: 2.8.1
+
+  '@aws-sdk/token-providers@3.1082.0':
+    dependencies:
+      '@aws-sdk/core': 3.975.0
+      '@aws-sdk/nested-clients': 3.997.30
+      '@aws-sdk/types': 3.974.0
+      '@smithy/core': 3.29.2
+      '@smithy/types': 4.16.0
+      tslib: 2.8.1
+
+  '@aws-sdk/types@3.974.0':
+    dependencies:
+      '@smithy/types': 4.16.0
+      tslib: 2.8.1
+
+  '@aws-sdk/xml-builder@3.972.34':
+    dependencies:
+      '@smithy/types': 4.16.0
+      tslib: 2.8.1
+
+  '@aws/lambda-invoke-store@0.3.0': {}
+
   '@babel/code-frame@7.29.0':
     dependencies:
       '@babel/helper-validator-identifier': 7.28.5
@@ -25451,6 +25730,14 @@ snapshots:
       - '@emnapi/runtime'
     optional: true
 
+  '@oxc-resolver/binding-wasm32-wasi@11.19.0(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)':
+    dependencies:
+      '@napi-rs/wasm-runtime': 1.1.4(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
+    transitivePeerDependencies:
+      - '@emnapi/core'
+      - '@emnapi/runtime'
+    optional: true
+
   '@oxc-resolver/binding-wasm32-wasi@5.3.0':
     dependencies:
       '@napi-rs/wasm-runtime': 0.2.12
@@ -26713,6 +27000,14 @@ snapshots:
       - '@emnapi/runtime'
     optional: true
 
+  '@rolldown/binding-wasm32-wasi@1.0.0-rc.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)':
+    dependencies:
+      '@napi-rs/wasm-runtime': 1.1.4(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
+    transitivePeerDependencies:
+      - '@emnapi/core'
+      - '@emnapi/runtime'
+    optional: true
+
   '@rolldown/binding-win32-arm64-msvc@1.0.0-rc.16':
     optional: true
 
@@ -27164,6 +27459,39 @@ snapshots:
       micromark-factory-space: 1.1.0
       micromark-util-character: 1.2.0
       micromark-util-symbol: 1.1.0
+
+  '@smithy/core@3.29.2':
+    dependencies:
+      '@smithy/types': 4.16.0
+      tslib: 2.8.1
+
+  '@smithy/credential-provider-imds@4.4.7':
+    dependencies:
+      '@smithy/core': 3.29.2
+      '@smithy/types': 4.16.0
+      tslib: 2.8.1
+
+  '@smithy/fetch-http-handler@5.6.4':
+    dependencies:
+      '@smithy/core': 3.29.2
+      '@smithy/types': 4.16.0
+      tslib: 2.8.1
+
+  '@smithy/node-http-handler@4.9.4':
+    dependencies:
+      '@smithy/core': 3.29.2
+      '@smithy/types': 4.16.0
+      tslib: 2.8.1
+
+  '@smithy/signature-v4@5.6.3':
+    dependencies:
+      '@smithy/core': 3.29.2
+      '@smithy/types': 4.16.0
+      tslib: 2.8.1
+
+  '@smithy/types@4.16.0':
+    dependencies:
+      tslib: 2.8.1
 
   '@standard-schema/spec@1.1.0': {}
 
@@ -27842,6 +28170,22 @@ snapshots:
       - tsx
       - yaml
 
+  '@tsdown/css@0.21.1(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(jiti@2.6.1)(postcss@8.5.12)(tsdown@0.21.1)(tsx@4.21.0)(yaml@2.8.3)':
+    dependencies:
+      lightningcss: 1.32.0
+      postcss-load-config: 6.0.1(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(yaml@2.8.3)
+      rolldown: 1.0.0-rc.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
+      tsdown: 0.21.1(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@tsdown/css@0.21.1)(oxc-resolver@11.19.0(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(synckit@0.11.12)(typescript@5.9.3)
+    optionalDependencies:
+      postcss: 8.5.12
+    transitivePeerDependencies:
+      - '@emnapi/core'
+      - '@emnapi/runtime'
+      - jiti
+      - tsx
+      - yaml
+    optional: true
+
   '@tybys/wasm-util@0.10.1':
     dependencies:
       tslib: 2.8.1
@@ -27873,6 +28217,8 @@ snapshots:
   '@types/babel__traverse@7.28.0':
     dependencies:
       '@babel/types': 7.29.0
+
+  '@types/bcryptjs@2.4.6': {}
 
   '@types/body-parser@1.19.6':
     dependencies:
@@ -27934,11 +28280,11 @@ snapshots:
   '@types/eslint-scope@3.7.7':
     dependencies:
       '@types/eslint': 9.6.1
-      '@types/estree': 1.0.8
+      '@types/estree': 1.0.9
 
   '@types/eslint@9.6.1':
     dependencies:
-      '@types/estree': 1.0.8
+      '@types/estree': 1.0.9
       '@types/json-schema': 7.0.15
 
   '@types/esquery@1.5.4':
@@ -29769,6 +30115,8 @@ snapshots:
 
   boolbase@1.0.0: {}
 
+  bowser@2.14.1: {}
+
   boxen@5.1.2:
     dependencies:
       ansi-align: 3.0.1
@@ -31157,6 +31505,10 @@ snapshots:
     optionalDependencies:
       oxc-resolver: 11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
 
+  dts-resolver@2.1.3(oxc-resolver@11.19.0(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)):
+    optionalDependencies:
+      oxc-resolver: 11.19.0(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
+
   dunder-proto@1.0.1:
     dependencies:
       call-bind-apply-helpers: 1.0.2
@@ -31872,7 +32224,7 @@ snapshots:
 
   estree-walker@3.0.3:
     dependencies:
-      '@types/estree': 1.0.8
+      '@types/estree': 1.0.9
 
   esutils@2.0.3: {}
 
@@ -36093,6 +36445,33 @@ snapshots:
       - '@emnapi/core'
       - '@emnapi/runtime'
 
+  oxc-resolver@11.19.0(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2):
+    optionalDependencies:
+      '@oxc-resolver/binding-android-arm-eabi': 11.19.0
+      '@oxc-resolver/binding-android-arm64': 11.19.0
+      '@oxc-resolver/binding-darwin-arm64': 11.19.0
+      '@oxc-resolver/binding-darwin-x64': 11.19.0
+      '@oxc-resolver/binding-freebsd-x64': 11.19.0
+      '@oxc-resolver/binding-linux-arm-gnueabihf': 11.19.0
+      '@oxc-resolver/binding-linux-arm-musleabihf': 11.19.0
+      '@oxc-resolver/binding-linux-arm64-gnu': 11.19.0
+      '@oxc-resolver/binding-linux-arm64-musl': 11.19.0
+      '@oxc-resolver/binding-linux-ppc64-gnu': 11.19.0
+      '@oxc-resolver/binding-linux-riscv64-gnu': 11.19.0
+      '@oxc-resolver/binding-linux-riscv64-musl': 11.19.0
+      '@oxc-resolver/binding-linux-s390x-gnu': 11.19.0
+      '@oxc-resolver/binding-linux-x64-gnu': 11.19.0
+      '@oxc-resolver/binding-linux-x64-musl': 11.19.0
+      '@oxc-resolver/binding-openharmony-arm64': 11.19.0
+      '@oxc-resolver/binding-wasm32-wasi': 11.19.0(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
+      '@oxc-resolver/binding-win32-arm64-msvc': 11.19.0
+      '@oxc-resolver/binding-win32-ia32-msvc': 11.19.0
+      '@oxc-resolver/binding-win32-x64-msvc': 11.19.0
+    transitivePeerDependencies:
+      - '@emnapi/core'
+      - '@emnapi/runtime'
+    optional: true
+
   oxc-resolver@5.3.0:
     optionalDependencies:
       '@oxc-resolver/binding-darwin-arm64': 5.3.0
@@ -37907,6 +38286,23 @@ snapshots:
     transitivePeerDependencies:
       - oxc-resolver
 
+  rolldown-plugin-dts@0.22.5(oxc-resolver@11.19.0(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(rolldown@1.0.0-rc.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(typescript@5.9.3):
+    dependencies:
+      '@babel/generator': 8.0.0-rc.2
+      '@babel/helper-validator-identifier': 8.0.0-rc.2
+      '@babel/parser': 8.0.0-rc.2
+      '@babel/types': 8.0.0-rc.2
+      ast-kit: 3.0.0-beta.1
+      birpc: 4.0.0
+      dts-resolver: 2.1.3(oxc-resolver@11.19.0(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))
+      get-tsconfig: 4.13.7
+      obug: 2.1.1
+      rolldown: 1.0.0-rc.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
+    optionalDependencies:
+      typescript: 5.9.3
+    transitivePeerDependencies:
+      - oxc-resolver
+
   rolldown@1.0.0-rc.16:
     dependencies:
       '@oxc-project/types': 0.126.0
@@ -37967,6 +38363,30 @@ snapshots:
       '@rolldown/binding-linux-x64-musl': 1.0.0-rc.8
       '@rolldown/binding-openharmony-arm64': 1.0.0-rc.8
       '@rolldown/binding-wasm32-wasi': 1.0.0-rc.8(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
+      '@rolldown/binding-win32-arm64-msvc': 1.0.0-rc.8
+      '@rolldown/binding-win32-x64-msvc': 1.0.0-rc.8
+    transitivePeerDependencies:
+      - '@emnapi/core'
+      - '@emnapi/runtime'
+
+  rolldown@1.0.0-rc.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2):
+    dependencies:
+      '@oxc-project/types': 0.115.0
+      '@rolldown/pluginutils': 1.0.0-rc.8
+    optionalDependencies:
+      '@rolldown/binding-android-arm64': 1.0.0-rc.8
+      '@rolldown/binding-darwin-arm64': 1.0.0-rc.8
+      '@rolldown/binding-darwin-x64': 1.0.0-rc.8
+      '@rolldown/binding-freebsd-x64': 1.0.0-rc.8
+      '@rolldown/binding-linux-arm-gnueabihf': 1.0.0-rc.8
+      '@rolldown/binding-linux-arm64-gnu': 1.0.0-rc.8
+      '@rolldown/binding-linux-arm64-musl': 1.0.0-rc.8
+      '@rolldown/binding-linux-ppc64-gnu': 1.0.0-rc.8
+      '@rolldown/binding-linux-s390x-gnu': 1.0.0-rc.8
+      '@rolldown/binding-linux-x64-gnu': 1.0.0-rc.8
+      '@rolldown/binding-linux-x64-musl': 1.0.0-rc.8
+      '@rolldown/binding-openharmony-arm64': 1.0.0-rc.8
+      '@rolldown/binding-wasm32-wasi': 1.0.0-rc.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
       '@rolldown/binding-win32-arm64-msvc': 1.0.0-rc.8
       '@rolldown/binding-win32-x64-msvc': 1.0.0-rc.8
     transitivePeerDependencies:
@@ -39282,6 +39702,36 @@ snapshots:
       - synckit
       - vue-tsc
 
+  tsdown@0.21.1(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@tsdown/css@0.21.1)(oxc-resolver@11.19.0(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(synckit@0.11.12)(typescript@5.9.3):
+    dependencies:
+      ansis: 4.2.0
+      cac: 7.0.0
+      defu: 6.1.7
+      empathic: 2.0.0
+      hookable: 6.1.1
+      import-without-cache: 0.2.5
+      obug: 2.1.1
+      picomatch: 4.0.4
+      rolldown: 1.0.0-rc.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
+      rolldown-plugin-dts: 0.22.5(oxc-resolver@11.19.0(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(rolldown@1.0.0-rc.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(typescript@5.9.3)
+      semver: 7.7.4
+      tinyexec: 1.1.1
+      tinyglobby: 0.2.16
+      tree-kill: 1.2.2
+      unconfig-core: 7.5.0
+      unrun: 0.2.36(synckit@0.11.12)
+    optionalDependencies:
+      '@tsdown/css': 0.21.1(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(jiti@2.6.1)(postcss@8.5.12)(tsdown@0.21.1)(tsx@4.21.0)(yaml@2.8.3)
+      typescript: 5.9.3
+    transitivePeerDependencies:
+      - '@emnapi/core'
+      - '@emnapi/runtime'
+      - '@ts-macro/tsc'
+      - '@typescript/native-preview'
+      - oxc-resolver
+      - synckit
+      - vue-tsc
+
   tslib@1.14.1: {}
 
   tslib@2.4.1: {}
@@ -40237,7 +40687,7 @@ snapshots:
   webpack@5.105.2(@swc/core@1.11.31)(esbuild@0.27.3):
     dependencies:
       '@types/eslint-scope': 3.7.7
-      '@types/estree': 1.0.8
+      '@types/estree': 1.0.9
       '@types/json-schema': 7.0.15
       '@webassemblyjs/ast': 1.14.1
       '@webassemblyjs/wasm-edit': 1.14.1

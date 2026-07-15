@@ -5,6 +5,15 @@ import { buildVerdaccioConfig } from "../src/verdaccio-config.js";
 type VerdaccioConfig = ReturnType<typeof buildVerdaccioConfig> & {
   uplinks: Record<string, { url: string; maxage: string }>;
   packages: Record<string, { proxy?: string }>;
+  auth: Record<string, unknown>;
+  plugins?: string;
+};
+
+const s3Config = {
+  bucket: "powerhouse-registry",
+  endpoint: "https://s3.example",
+  region: "test",
+  keyPrefix: "vetra/",
 };
 
 function baseConfig(overrides: Partial<RegistryConfig> = {}): RegistryConfig {
@@ -56,5 +65,24 @@ describe("buildVerdaccioConfig", () => {
     ) as VerdaccioConfig;
 
     expect(cfg.uplinks.npmjs.maxage).toBe("30s");
+  });
+
+  it("uses the htpasswd auth path and no plugins dir when S3 is absent", () => {
+    const cfg = buildVerdaccioConfig(baseConfig()) as VerdaccioConfig;
+
+    expect(cfg.auth.htpasswd).toBeDefined();
+    expect(cfg.auth["s3-auth"]).toBeUndefined();
+    expect(cfg.plugins).toBeUndefined();
+  });
+
+  it("wires the s3-auth plugin (with plugins dir) when S3 is configured", () => {
+    const cfg = buildVerdaccioConfig(
+      baseConfig({ s3: s3Config }),
+    ) as VerdaccioConfig;
+
+    expect(cfg.auth["s3-auth"]).toEqual({ s3: s3Config });
+    expect(cfg.auth.htpasswd).toBeUndefined();
+    expect(cfg.plugins).toBeDefined();
+    expect(cfg.plugins?.endsWith("/plugins")).toBe(true);
   });
 });

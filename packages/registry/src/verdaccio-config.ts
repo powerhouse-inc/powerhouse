@@ -1,10 +1,23 @@
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import type { RegistryConfig } from "./types.js";
 
 export function buildVerdaccioConfig(config: RegistryConfig) {
   const htpasswdPath = path.join(config.storagePath, "htpasswd");
 
   const uplinkUrl = config.uplink ?? "https://registry.npmjs.org/";
+
+  // With S3 configured, use the S3-backed auth plugin (persistent accounts +
+  // npm-style package ownership). Verdaccio loads it via require() from the
+  // dist/plugins dir — a `.js` marked CommonJS by dist/plugins/package.json.
+  // Without S3 (local dev / tests), keep the built-in htpasswd path.
+  const useS3Auth = Boolean(config.s3);
+  const pluginsDir =
+    config.pluginsDir ??
+    path.join(path.dirname(fileURLToPath(import.meta.url)), "plugins");
+  const auth = useS3Auth
+    ? { "s3-auth": { s3: config.s3 } }
+    : { htpasswd: { file: htpasswdPath } };
 
   const base: Record<string, unknown> = {
     storage: config.storagePath,
@@ -23,11 +36,8 @@ export function buildVerdaccioConfig(config: RegistryConfig) {
         },
       },
     },
-    auth: {
-      htpasswd: {
-        file: htpasswdPath,
-      },
-    },
+    auth,
+    ...(useS3Auth ? { plugins: pluginsDir } : {}),
     uplinks: {
       npmjs: {
         url: uplinkUrl,
