@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor",
-  "version": "6.2.2-dev.0",
+  "version": "6.2.2-dev.1",
   "description": "Core Powerhouse reactor — stores documents, resolves conflicts, and reprocesses operation histories. Supports local, cloud, and decentralized storage backends.",
   "repository": {
     "url": "https://github.com/powerhouse-inc/powerhouse",
