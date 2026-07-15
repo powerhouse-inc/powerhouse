@@ -54,6 +54,17 @@ export interface RegistryConfig {
    *  re-publish a workspace package whose version already exists on npmjs
    *  without bumping (verdaccio would otherwise reject with 409). */
   localPackagePatterns?: string[];
+  /** Postgres connection string. When set, the registry uses the DB-backed
+   *  auth plugin (persistent accounts + package ownership) instead of the
+   *  built-in htpasswd. */
+  databaseUrl?: string;
+  /** Directory verdaccio loads the auth plugin from. Defaults to the
+   *  `plugins` dir next to the compiled code (dist/plugins). Overridable so
+   *  tests can point at the built plugin while running from src. */
+  pluginsDir?: string;
+  /** Injected AuthStore (tests only) — passed to the auth plugin instead of
+   *  building one from `databaseUrl`. */
+  authStore?: unknown;
 }
 
 export interface RegistryCommandArgs {
@@ -79,4 +90,10 @@ export interface RegistryCommandArgs {
   /** Comma-separated globs (e.g. "@powerhousedao/*,document-model,ph-cmd")
    *  served locally only — no npmjs uplink proxy. */
   localPackages?: string;
+  /** Postgres connection string for the DB-backed auth plugin. */
+  databaseUrl?: string;
+  /** Override the dir verdaccio loads the auth plugin from (tests). */
+  pluginsDir?: string;
+  /** Injected AuthStore (tests only). */
+  authStore?: unknown;
 }

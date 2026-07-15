@@ -140,6 +140,15 @@ export const registryCommand = command({
       defaultValue: () => process.env.PH_REGISTRY_LOCAL_PACKAGES,
       defaultValueIsSerializable: true,
     }),
+    databaseUrl: option({
+      long: "database-url",
+      type: optional(string),
+      description:
+        "Postgres connection string. When set, the registry uses the DB-backed auth plugin (persistent accounts + npm-style package ownership) instead of the built-in htpasswd.",
+      defaultValue: () =>
+        process.env.PH_REGISTRY_DATABASE_URL ?? process.env.DATABASE_URL,
+      defaultValueIsSerializable: true,
+    }),
   },
   handler: async (args) => {
     console.log(args);

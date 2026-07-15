@@ -50,6 +50,9 @@ export async function runRegistry(args: RegistryCommandArgs) {
     authRenown,
     verdaccioSecret: verdaccioSecretArg,
     localPackages,
+    databaseUrl,
+    pluginsDir,
+    authStore,
   } = args;
   const storagePath = await resolveDir(storageDir);
   const cdnCachePath = await resolveDir(cdnCacheDir);
@@ -114,7 +117,16 @@ export async function runRegistry(args: RegistryCommandArgs) {
           s3ForcePathStyle,
         },
       }),
+    ...(databaseUrl ? { databaseUrl } : {}),
+    ...(pluginsDir ? { pluginsDir } : {}),
+    ...(authStore ? { authStore } : {}),
   };
+
+  if (config.databaseUrl || config.authStore) {
+    console.log(
+      "[registry] Postgres-backed auth plugin active (persistent accounts + package ownership)",
+    );
+  }
   // Ensure directories exist (for relative paths resolved via findUp)
   await mkdir(storagePath, { recursive: true });
   await mkdir(cdnCachePath, { recursive: true });
