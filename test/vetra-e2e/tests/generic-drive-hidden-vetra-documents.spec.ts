@@ -1,4 +1,5 @@
 import { expect, test } from "./helpers/fixtures.js";
+import { waitForAppReady } from "./helpers/wait.js";
 
 // Pre-accept cookie banner so it doesn't block the test
 test.use({
@@ -33,7 +34,7 @@ const HIDDEN_DISPLAY_NAMES = [
 test("vetra document types are hidden in a generic drive", async ({ page }) => {
   // 1. Navigate to the home page
   await page.goto("/");
-  await page.waitForLoadState("networkidle");
+  await waitForAppReady(page);
 
   // 2. Create a new local drive "Generic Docs Drive"
   const createDriveButton = page.getByText("Create New Drive");
@@ -60,10 +61,10 @@ test("vetra document types are hidden in a generic drive", async ({ page }) => {
   await createDriveSubmit.click();
 
   // 3. Wait for navigation into the new drive
-  await page.waitForLoadState("networkidle");
+  await waitForAppReady(page);
   await page.waitForTimeout(2_000);
   await expect(page).toHaveURL(/\/d\/[^/?]+/, { timeout: 10_000 });
-  await page.waitForLoadState("networkidle");
+  await waitForAppReady(page);
 
   // 4. Positive control: the "New document" section renders.
   await expect(page.getByRole("heading", { name: "New document" })).toBeVisible(

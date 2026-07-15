@@ -11,6 +11,7 @@
 
 import type { Page } from "@playwright/test";
 import { expect, test } from "./helpers/fixtures.js";
+import { waitForAppReady } from "./helpers/wait.js";
 
 type RuntimeConfig = {
   schemaVersion: 2;
@@ -105,7 +106,7 @@ test.describe("runtime-config-read", () => {
     });
 
     await page.goto("/");
-    await page.waitForLoadState("networkidle");
+    await waitForAppReady(page);
     // If main.tsx's top-level await missed any boot dependency, the SPA
     // would render with `DEFAULT_CONNECT_CONFIG` placeholders and crash on
     // null-deref of `runtimeConfig`. Either way the page would throw before
