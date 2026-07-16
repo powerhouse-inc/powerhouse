@@ -1,5 +1,6 @@
 import { expect, test } from "./helpers/fixtures.js";
 import { DESCRIBE_TIMEOUT } from "./helpers/timeouts.js";
+import { waitForAppReady } from "./helpers/wait.js";
 
 test.use({
   storageState: {
@@ -27,7 +28,7 @@ test("should default to Drive Explorer App and list Vetra Drive App last", async
   page,
 }) => {
   await page.goto("/");
-  await page.waitForLoadState("networkidle");
+  await waitForAppReady(page);
 
   // Open the Add Drive dialog.
   const createDriveButton = page.getByText("Create New Drive");

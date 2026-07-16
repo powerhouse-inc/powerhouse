@@ -1,5 +1,6 @@
 import { test, expect } from "./helpers/fixtures.js";
 import { DESCRIBE_TIMEOUT } from "./helpers/timeouts.js";
+import { waitForAppReady } from "./helpers/wait.js";
 
 test.describe.configure({ timeout: DESCRIBE_TIMEOUT });
 
@@ -8,7 +9,7 @@ test("should load Vetra application successfully", async ({ page }) => {
   await page.goto("/");
 
   // Wait for page to load
-  await page.waitForLoadState("networkidle");
+  await waitForAppReady(page);
 
   // Verify the page title exists (basic check that page loaded)
   const title = await page.title();
@@ -24,7 +25,7 @@ test("should load Vetra application successfully", async ({ page }) => {
 
 test("should verify basic page structure", async ({ page }) => {
   await page.goto("/");
-  await page.waitForLoadState("networkidle");
+  await waitForAppReady(page);
 
   // Check if the page has any visible content
   const bodyContent = await page.locator("body").textContent();

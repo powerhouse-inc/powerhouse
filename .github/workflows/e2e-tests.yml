@@ -18,9 +18,23 @@ concurrency:
 
 jobs:
   vetra-e2e-tests:
-    name: Run Vetra E2E Tests
+    # name-suffix keeps both check-run names identical to the former
+    # standalone jobs so branch protection and artifact consumers see no change.
+    name: Run Vetra E2E Tests${{ matrix.name-suffix }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - mode: dev
+            name-suffix: ""
+            test-script: test:e2e:vetra
+            artifact-prefix: vetra
+          - mode: worker
+            name-suffix: " (SharedWorker reactor)"
+            test-script: test:e2e:vetra:worker
+            artifact-prefix: vetra-worker
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -58,13 +72,13 @@ jobs:
         working-directory: ./test/vetra-e2e
 
       - name: Run Playwright tests
-        run: pnpm test:e2e:vetra
+        run: pnpm run ${{ matrix.test-script }}
 
       - name: Upload Playwright Report
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: vetra-playwright-report
+          name: ${{ matrix.artifact-prefix }}-playwright-report
           path: test/vetra-e2e/playwright-report/
           retention-days: 30
 
@@ -72,7 +86,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: vetra-test-results
+          name: ${{ matrix.artifact-prefix }}-test-results
           path: test/vetra-e2e/test-results/
           retention-days: 30
 
@@ -200,6 +214,7 @@ jobs:
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_FAILURES }}
           DISCORD_USER_MAPPING: ${{ secrets.DISCORD_USER_MAPPING }}
+          # Aggregate over the dev/worker matrix; the run link shows which leg failed.
           VETRA_RESULT: ${{ needs.vetra-e2e-tests.result }}
           PACKAGE_RESULT: ${{ needs.package-e2e-tests.result }}
         run: |
@@ -211,7 +226,7 @@ jobs:
 
           FAILED_JOBS=""
           if [ "$VETRA_RESULT" = "failure" ]; then
-            FAILED_JOBS="Vetra E2E"
+            FAILED_JOBS="Vetra E2E (dev/worker)"
           fi
           if [ "$PACKAGE_RESULT" = "failure" ]; then
             if [ -z "$FAILED_JOBS" ]; then

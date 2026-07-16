@@ -1,5 +1,6 @@
 import { expect, test } from "./helpers/fixtures.js";
 import { DESCRIBE_TIMEOUT, LONG_VISIBLE_TIMEOUT } from "./helpers/timeouts.js";
+import { waitForAppReady } from "./helpers/wait.js";
 
 test.describe.configure({ mode: "serial", timeout: DESCRIBE_TIMEOUT });
 
@@ -25,7 +26,7 @@ test("should not trigger a page reload when editing the manifest", async ({
   page,
 }) => {
   await page.goto("/");
-  await page.waitForLoadState("networkidle");
+  await waitForAppReady(page);
 
   await page
     .locator(".skeleton-loader")
@@ -39,7 +40,7 @@ test("should not trigger a page reload when editing the manifest", async ({
   });
   await expect(vetraDrive).toBeVisible({ timeout: LONG_VISIBLE_TIMEOUT });
   await vetraDrive.click();
-  await page.waitForLoadState("networkidle");
+  await waitForAppReady(page);
 
   // Verify we're on the drive page
   const driveHeading = page.getByRole("heading", {
@@ -52,7 +53,7 @@ test("should not trigger a page reload when editing the manifest", async ({
   const createManifest = page.getByText("Click to create package manifest");
   await expect(createManifest).toBeVisible({ timeout: 30000 });
   await createManifest.click();
-  await page.waitForLoadState("networkidle");
+  await waitForAppReady(page);
 
   // Wait for the package editor to fully load
   const categorySelect = page.locator("select#package-category");

@@ -11,6 +11,7 @@ import {
 } from "./helpers/document.js";
 import { expect, test } from "./helpers/fixtures.js";
 import { DESCRIBE_TIMEOUT } from "./helpers/timeouts.js";
+import { waitForAppReady } from "./helpers/wait.js";
 import {
   CONSUMER_CONNECT_URL,
   buildConsumerConnect,
@@ -198,7 +199,7 @@ test("Create ToDoDocument Editor", async ({ page }) => {
   await createDocument(page, "powerhouse/document-editor", "ToDoEditor");
 
   // Wait for the editor form to load
-  await page.waitForLoadState("networkidle");
+  await waitForAppReady(page);
 
   // Fill in the editor name
   const editorNameInput = page.locator("input#editor-name");
@@ -234,7 +235,7 @@ test("Create ToDoDocument Editor", async ({ page }) => {
   await confirmButton.click();
 
   // Wait for code generation to complete
-  await page.waitForLoadState("networkidle");
+  await waitForAppReady(page);
 
   // Poll for the generated editor files by waiting for editors/index.ts to be
   // updated with a real export (not just "export {};")
@@ -797,9 +798,9 @@ async function setupDocument(
   await navigateToVetraDrive(page);
   await createDocumentAndFillBasicData(page, DOCUMENT_NAME, data);
 
-  // Wait for code generation to complete by waiting for network idle
-  // and giving the codegen processor time to write files
-  await page.waitForLoadState("networkidle");
+  // Wait for the app to settle, then give the codegen processor time to
+  // write files
+  await waitForAppReady(page);
 
   // Poll for the generated files with a timeout
   // We need to wait for the full code generation including index.ts update

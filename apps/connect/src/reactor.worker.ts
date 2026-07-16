@@ -165,6 +165,7 @@ async function openReactorPglite(namespace: string) {
   }
   const { PGlite } = await loadPGliteModule(major);
   const pg = new PGlite(`idb://${namespace}`, { relaxedDurability: true });
+  await pg.waitReady;
   return { pg, detected };
 }
 
@@ -196,6 +197,7 @@ async function openRelational(namespace: string): Promise<DetectedMajor> {
       relaxedDurability: true,
       extensions: { live },
     });
+    await pg.waitReady;
     relational.pg = pg as unknown as PgLiveModuleNs.PGliteWithLive;
     relational.db = createRelationalDb(
       new Kysely({ dialect: new PGliteDialect(pg) }),
@@ -298,10 +300,13 @@ const host = new ReactorHost({
       );
       phase = "opening pglite stores";
       console.info(`[reactor.worker] boot: ${phase}`);
-      const [reactor, relationalMajor] = await Promise.all([
-        openReactorPglite(construct.namespace),
-        openRelational(construct.relationalNamespace),
-      ]);
+
+      //this has to be serial: concurrent PGlite constructors consume the same
+      // cached one-shot wasm "Response" object
+      const reactor = await openReactorPglite(construct.namespace);
+      const relationalMajor = await openRelational(
+        construct.relationalNamespace,
+      );
       const pg = reactor.pg;
       owned.reactorPg = pg;
       owned.reactorIdb = `/pglite/${construct.namespace}`;
