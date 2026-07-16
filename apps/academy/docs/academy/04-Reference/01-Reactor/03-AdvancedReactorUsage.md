@@ -75,7 +75,7 @@ const reactor = await new ReactorBuilder()
 | `withFeatures(features)`          | Set feature flags                                                        |
 | `withSignatureVerifier(verifier)` | Set a signature verification handler                                     |
 | `withJwtHandler(handler)`         | Set a JWT handler for authentication                                     |
-| `withDocumentModelLoader(loader)` | Set a custom document model loader                                       |
+| `withDocumentModelLoader(loader)` | Set a lazy document-model loader: `load(documentType)` returns a `DocumentModelSource`; importable sources are broadcast to executor workers, live modules stay host-only |
 | `withDriveContainerTypes(types)`  | Set the document types treated as drive containers                       |
 | `withInstrumentedPool(instrumentation)` | Register an externally-built `pg.Pool` so its metrics surface through `pools` |
 | `withShutdownHook(hook)`          | Register an async cleanup hook to run during graceful shutdown           |

@@ -1,4 +1,5 @@
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+import { fileURLToPath } from "node:url";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DocumentModelResolver } from "../../src/registry/document-model-resolver.js";
 import { DocumentModelRegistry } from "../../src/registry/implementation.js";
@@ -6,6 +7,10 @@ import type {
   IDocumentModelLoader,
   IDocumentModelRegistry,
 } from "../../src/registry/interfaces.js";
+
+const FIXTURE_PATH = fileURLToPath(
+  new URL("../core/fixtures/model-barrel.mjs", import.meta.url),
+);
 
 function createMockModule(documentType: string): DocumentModelModule<any> {
   return {
@@ -109,31 +114,39 @@ describe("DocumentModelResolver", () => {
     ).resolves.not.toThrow();
   });
 
-  it("should broadcast via the hook after a successful load when the loader exposes a spec", async () => {
-    const module = createMockModule("test/type");
-    const entry = {
-      documentType: "test/type",
-      version: "1.0.0",
-      spec: {
-        module: { packageName: "test/type", exportName: "documentModel" },
-      },
-    };
-    const resolveSpec = vi.fn().mockResolvedValue(entry);
-    loader = {
-      load: vi.fn().mockResolvedValue(module),
-      resolveSpec,
-    };
-    const localResolver = new DocumentModelResolver(registry, loader);
+  it("should broadcast manifest entries when the loader returns an importable source", async () => {
+    vi.mocked(loader.load).mockResolvedValue({
+      filePath: FIXTURE_PATH,
+      exportName: "alphaModel",
+    });
     const hook = vi.fn().mockResolvedValue(undefined);
-    localResolver.setBroadcastHook(hook);
+    resolver.setBroadcastHook(hook);
 
-    await localResolver.ensureModelLoaded("test/type");
+    await resolver.ensureModelLoaded("test/alpha");
 
-    expect(resolveSpec).toHaveBeenCalledWith("test/type");
-    expect(hook).toHaveBeenCalledWith(entry);
+    expect(registry.getModule("test/alpha")).toBeDefined();
+    expect(hook).toHaveBeenCalledWith({
+      documentType: "test/alpha",
+      version: "1",
+      spec: {
+        module: { filePath: FIXTURE_PATH, exportName: "alphaModel" },
+      },
+    });
   });
 
-  it("should skip broadcast when the loader does not expose a spec", async () => {
+  it("should register and broadcast every model from a multi-model source", async () => {
+    vi.mocked(loader.load).mockResolvedValue({ filePath: FIXTURE_PATH });
+    const hook = vi.fn().mockResolvedValue(undefined);
+    resolver.setBroadcastHook(hook);
+
+    await resolver.ensureModelLoaded("test/alpha");
+
+    expect(registry.getModule("test/alpha")).toBeDefined();
+    expect(registry.getModule("test/beta", 2)).toBeDefined();
+    expect(hook).toHaveBeenCalledTimes(2);
+  });
+
+  it("should skip broadcast when the loader returns a live module", async () => {
     const module = createMockModule("test/type");
     vi.mocked(loader.load).mockResolvedValue(module);
     const hook = vi.fn().mockResolvedValue(undefined);
@@ -141,32 +154,35 @@ describe("DocumentModelResolver", () => {
 
     await resolver.ensureModelLoaded("test/type");
 
+    expect(registry.getModule("test/type")).toBe(module);
     expect(hook).not.toHaveBeenCalled();
   });
 
-  it("should reject the initial load when the broadcast hook rejects", async () => {
-    const module = createMockModule("test/type");
-    const entry = {
-      documentType: "test/type",
-      version: "1.0.0",
-      spec: {
-        module: { packageName: "test/type", exportName: "documentModel" },
-      },
-    };
-    loader = {
-      load: vi.fn().mockResolvedValue(module),
-      resolveSpec: vi.fn().mockResolvedValue(entry),
-    };
-    const localResolver = new DocumentModelResolver(registry, loader);
-    localResolver.setBroadcastHook(() => Promise.reject(new Error("boom")));
+  it("should reject when the source does not contain the requested type", async () => {
+    vi.mocked(loader.load).mockResolvedValue({
+      filePath: FIXTURE_PATH,
+      exportName: "alphaModel",
+    });
 
-    await expect(localResolver.ensureModelLoaded("test/type")).rejects.toThrow(
+    await expect(resolver.ensureModelLoaded("test/missing")).rejects.toThrow(
+      /resolved no module for document type: test\/missing/,
+    );
+  });
+
+  it("should reject the initial load when the broadcast hook rejects", async () => {
+    vi.mocked(loader.load).mockResolvedValue({
+      filePath: FIXTURE_PATH,
+      exportName: "alphaModel",
+    });
+    resolver.setBroadcastHook(() => Promise.reject(new Error("boom")));
+
+    await expect(resolver.ensureModelLoaded("test/alpha")).rejects.toThrow(
       "boom",
     );
     // module is registered on the parent regardless of broadcast outcome, so
     // a subsequent call short-circuits on the registry hit.
     await expect(
-      localResolver.ensureModelLoaded("test/type"),
+      resolver.ensureModelLoaded("test/alpha"),
     ).resolves.toBeUndefined();
   });
 
