@@ -391,7 +391,7 @@ describe("DocumentCache class", () => {
       expect(docs).toEqual([]);
     });
 
-    it("should reject when one document does not exist", async () => {
+    it("should skip documents that do not exist instead of rejecting", async () => {
       const doc1 = createMockDocument("doc-1");
       const { client } = createMockClient([doc1]);
       const cache = new DocumentCache(client);
@@ -403,7 +403,9 @@ describe("DocumentCache class", () => {
       };
       window.addEventListener("unhandledrejection", handler);
 
-      await expect(cache.getBatch(["doc-1", "non-existent"])).rejects.toThrow();
+      const docs = await cache.getBatch(["doc-1", "non-existent"]);
+      expect(docs).toHaveLength(1);
+      expect(docs[0].header.id).toBe("doc-1");
 
       // Wait for async re-throw from readPromiseState
       await new Promise((resolve) => setTimeout(resolve, 10));
@@ -439,9 +441,11 @@ describe("DocumentCache class", () => {
         context: { childId: "doc-2" },
       });
 
-      // Subsequent batch request should detect the deletion and create a new batch
-      // that will fail (not return stale data)
-      await expect(cache.getBatch(["doc-1", "doc-2"])).rejects.toThrow();
+      // Subsequent batch request should detect the deletion and return a
+      // fresh batch with only the surviving document (not stale doc-2 data)
+      const refreshed = await cache.getBatch(["doc-1", "doc-2"]);
+      expect(refreshed).toHaveLength(1);
+      expect(refreshed[0].header.id).toBe("doc-1");
 
       // Wait for async re-throw from readPromiseState
       await new Promise((resolve) => setTimeout(resolve, 10));
@@ -486,13 +490,16 @@ describe("DocumentCache class", () => {
       const batch3 = cache.getBatch(["doc-1", "doc-3"]);
       await expect(batch3).resolves.toHaveLength(2);
 
-      // Batches containing deleted doc-2 should be invalidated (new promise, will fail)
+      // Batches containing deleted doc-2 should be invalidated (new promise
+      // resolving without the deleted document)
       const newBatch1 = cache.getBatch(["doc-1", "doc-2"]);
       const newBatch2 = cache.getBatch(["doc-2", "doc-3"]);
       expect(newBatch1).not.toBe(batch1);
       expect(newBatch2).not.toBe(batch2);
-      await expect(newBatch1).rejects.toThrow();
-      await expect(newBatch2).rejects.toThrow();
+      const newDocs1 = await newBatch1;
+      expect(newDocs1.map((d) => d.header.id)).toEqual(["doc-1"]);
+      const newDocs2 = await newBatch2;
+      expect(newDocs2.map((d) => d.header.id)).toEqual(["doc-3"]);
 
       // Wait for async re-throw from readPromiseState
       await new Promise((resolve) => setTimeout(resolve, 10));
