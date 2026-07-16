@@ -1,3 +1,13 @@
+## 6.2.2-dev.3 (2026-07-16)
+
+### 🚀 Features
+
+- **registry:** postgres-backed auth plugin with persistent accounts and package ownership ([0c1ffbeb4](https://github.com/powerhouse-inc/powerhouse/commit/0c1ffbeb4))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 6.2.2-dev.2 (2026-07-16)
 
 This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.
