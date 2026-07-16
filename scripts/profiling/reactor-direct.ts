@@ -465,9 +465,7 @@ function isPostgres(connectionString: string): boolean {
   );
 }
 
-async function createDatabase(
-  dbPath: string | undefined,
-): Promise<Kysely<any>> {
+function createDatabase(dbPath: string | undefined): Kysely<any> {
   if (!dbPath) {
     console.log("  Using in-memory PGlite database");
     return new Kysely({ dialect: new PGliteDialect(new PGlite()) });
@@ -613,7 +611,7 @@ async function main() {
     console.log("Initializing reactor directly (no GraphQL API)...");
     const initStart = Date.now();
 
-    const db = await createDatabase(dbPath);
+    const db = createDatabase(dbPath);
 
     console.log("  Running database migrations...");
     const migrationResult = await runMigrations(db, REACTOR_SCHEMA);
