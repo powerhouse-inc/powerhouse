@@ -125,12 +125,12 @@ The agent can:
 
 The main pane shows four numbered phase cards when no section is open. Click a card to open its section, or navigate with the breadcrumb (`Home › <Phase>`).
 
-| Phase                                | What happens there                                                                     |
-| ------------------------------------ | -------------------------------------------------------------------------------------- |
-| **1 · Ideate** — Problem Definition  | Frame the problem and audience — problem, audience, and brand sheets, a feature, a WBS  |
-| **2 · Specify** — Solution Design    | Pin down the data model, workflow, and states — document models grouped by project     |
-| **3 · Build** — Implementation & Testing | Watch the agent generate and test code, with a live preview of the running app       |
-| **4 · Deploy** — Delivery            | Publish the package and run it in your cloud environments                              |
+| Phase                                    | What happens there                                                                     |
+| ---------------------------------------- | -------------------------------------------------------------------------------------- |
+| **1 · Ideate** — Problem Definition      | Frame the problem and audience — problem, audience, and brand sheets, a feature, a WBS |
+| **2 · Specify** — Solution Design        | Pin down the data model, workflow, and states — document models grouped by project     |
+| **3 · Build** — Implementation & Testing | Watch the agent generate and test code, with a live preview of the running app         |
+| **4 · Deploy** — Delivery                | Publish the package and run it in your cloud environments                              |
 
 A card's availability depends on progress: BUILD shows a preview only after the agent scaffolds a project, and DEPLOY needs you to sign in with Renown.
 
@@ -257,11 +257,35 @@ uses it if present, otherwise offers to install it and falls back to npm.
 
 ### Quick install
 
-One command installs the `ph` and `vetra` CLIs and offers to launch the agent:
+**Option A — installer script**
+
+Downloads and runs the official installer, which sets up the `ph` and `vetra` CLIs and offers to launch the agent:
 
 ```bash
 curl -fsSL https://get.vetra.io | sh
 ```
+
+If you want to review the script before running it, download it first:
+
+```bash
+curl -fsSL https://get.vetra.io -o install-vetra.sh
+cat install-vetra.sh   # inspect
+sh install-vetra.sh
+```
+
+**Option B — npm / pnpm (no shell script)**
+
+Install the CLIs directly from the Vetra registry — nothing to pipe or inspect:
+
+```bash
+npm install -g ph-cmd vetra-cli --registry=https://registry.vetra.io
+```
+
+```bash
+pnpm add -g ph-cmd vetra-cli --registry=https://registry.vetra.io
+```
+
+---
 
 The first launch sets up Claude auth (bring your own Anthropic API key), then
 prints the Studio URL — open **[http://localhost:8090/](http://localhost:8090/)**

@@ -5,6 +5,8 @@ import Heading from "@theme/Heading";
 import styles from "./styles.module.css";
 
 const LOCAL_INSTALL = "curl -fsSL https://get.vetra.io | sh";
+const NPM_INSTALL =
+  "npm install -g ph-cmd vetra-cli --registry=https://registry.vetra.io";
 
 /* Inline Lucide icons (lucide.dev) — no dependency, currentColor stroke. */
 type IconProps = { className?: string };
@@ -182,6 +184,8 @@ export default function Home(): JSX.Element {
           Installs the <code>ph</code> + <code>vetra</code> CLIs · macOS &amp;
           Linux · Node 24+
         </span>
+        <span className={styles.commandOr}>or install with npm / pnpm</span>
+        <CommandBlock code={NPM_INSTALL} />
       </section>
 
       <hr className={styles.divider} />

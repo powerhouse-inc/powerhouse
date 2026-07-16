@@ -156,7 +156,7 @@ const config: Config = {
     image: "img/docusaurus-social-card.jpg",
     algolia: {
       appId: "2P4JJIQAAV",
-      apiKey: "b5d796c3c48626f107dabdcb1cd77f29",
+      apiKey: "63c2ee4d1a752c0b1b18c37ee584c911",
       indexName: "staging-powerhouse",
       contextualSearch: true,
     },
