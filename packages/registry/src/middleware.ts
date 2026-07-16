@@ -329,6 +329,18 @@ export function parseUnpublishRequest(
   return { packageName, version };
 }
 
+// PUT /<pkg>/-rev/<rev> is npm's manifest rewrite (single-version unpublish,
+// deprecate). Exclude the tarball-DELETE shape, which also carries /-rev/.
+export function parseManifestRewrite(
+  reqPath: string,
+): { packageName: string } | null {
+  const revIdx = reqPath.indexOf("/-rev/");
+  if (revIdx <= 0) return null;
+  const beforeRev = reqPath.slice(1, revIdx);
+  if (beforeRev.includes("/-/")) return null;
+  return { packageName: decodeURIComponent(beforeRev) };
+}
+
 export function createUnpublishHook(
   config: RegistryConfig,
   notifications: NotificationChannel,
@@ -338,7 +350,52 @@ export function createUnpublishHook(
     config.cdnCachePath,
   );
 
+  // Reconcile the CDN cache after verdaccio rewrites a manifest to drop a
+  // version. Re-fetch survivors — req.body isn't reliable on this route.
+  const handleManifestRewrite = (req: Request, res: Response) => {
+    const rewrite = parseManifestRewrite(req.path);
+    if (!rewrite) return;
+
+    const originalEnd = res.end.bind(res);
+    res.end = function (
+      this: Response,
+      chunk?: unknown,
+      encoding?: unknown,
+      cb?: () => void,
+    ) {
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        const renownUser = req.renownUser;
+        const publishedBy = renownUser
+          ? { address: renownUser.address, did: renownUser.did }
+          : undefined;
+        cdn
+          .reconcileWithRegistry(rewrite.packageName)
+          .then((removed) => {
+            for (const version of removed) {
+              notifications.notifyUnpublish({
+                packageName: rewrite.packageName,
+                version,
+                publishedBy,
+              });
+            }
+          })
+          .catch((err) => {
+            console.error(
+              `[registry] CDN reconcile failed for ${rewrite.packageName}:`,
+              err,
+            );
+          });
+      }
+      return originalEnd(chunk, encoding as BufferEncoding, cb);
+    };
+  };
+
   return (req: Request, res: Response, next: NextFunction) => {
+    if (req.method === "PUT") {
+      handleManifestRewrite(req, res);
+      next();
+      return;
+    }
     if (req.method !== "DELETE") {
       next();
       return;

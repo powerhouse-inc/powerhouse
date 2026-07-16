@@ -1,6 +1,6 @@
 import { execSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
@@ -102,6 +102,45 @@ async function publishPackage(
   }
 }
 
+// Unpublish one version the way npm does when others remain: fetch the
+// packument, drop the version, PUT the rewrite to /<pkg>/-rev/<rev>.
+async function unpublishVersion(name: string, version: string): Promise<void> {
+  const encoded = encodeURIComponent(name);
+  const res = await fetch(`${REGISTRY_URL}/${encoded}?write=true`, {
+    headers: {
+      Authorization: `Bearer ${authToken}`,
+      Accept: "application/json",
+    },
+  });
+  if (!res.ok) throw new Error(`fetch packument failed: ${res.status}`);
+  const doc = (await res.json()) as {
+    _rev: string;
+    versions: Record<string, unknown>;
+    "dist-tags"?: Record<string, string>;
+    _attachments?: Record<string, unknown>;
+  };
+
+  delete doc.versions[version];
+  const remaining = Object.keys(doc.versions);
+  for (const [tag, v] of Object.entries(doc["dist-tags"] ?? {})) {
+    if (v === version) doc["dist-tags"]![tag] = remaining[remaining.length - 1];
+  }
+  const shortName = name.startsWith("@") ? name.split("/")[1] : name;
+  if (doc._attachments) delete doc._attachments[`${shortName}-${version}.tgz`];
+
+  const put = await fetch(`${REGISTRY_URL}/${encoded}/-rev/${doc._rev}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${authToken}`,
+    },
+    body: JSON.stringify(doc),
+  });
+  if (!put.ok) {
+    throw new Error(`unpublish PUT failed: ${put.status} ${await put.text()}`);
+  }
+}
+
 describe("isExactVersion", () => {
   it("returns true for concrete semver", () => {
     expect(isExactVersion("1.0.0")).toBe(true);
@@ -155,6 +194,45 @@ describe("resolveVersion upstream failure (real, dead upstream)", () => {
     mkdirSync(path.join(cacheDir, "cached-pkg", "2.0.0"), { recursive: true });
     mkdirSync(path.join(cacheDir, "cached-pkg", "1.0.0"), { recursive: true });
     expect(cdn.getLatestCachedVersion("cached-pkg")).toBe("2.0.0");
+  });
+});
+
+describe("CdnCache.reconcileVersions", () => {
+  const testDir = import.meta.dirname;
+  const cacheDir = path.join(testDir, "./.test-output-reconcile");
+
+  beforeAll(async () => {
+    await rm(cacheDir, { recursive: true, force: true });
+    await mkdir(cacheDir, { recursive: true });
+  });
+
+  afterAll(async () => {
+    await rm(cacheDir, { recursive: true, force: true });
+  });
+
+  it("removes cached versions absent from the survivor set", () => {
+    const cdn = new CdnCache("http://127.0.0.1:1", cacheDir);
+    for (const v of ["1.0.0", "1.0.1", "2.0.0"]) {
+      mkdirSync(path.join(cacheDir, "recon-pkg", v), { recursive: true });
+    }
+    const removed = cdn.reconcileVersions("recon-pkg", ["1.0.1", "2.0.0"]);
+    expect(removed).toEqual(["1.0.0"]);
+    expect(existsSync(path.join(cacheDir, "recon-pkg", "1.0.0"))).toBe(false);
+    expect(existsSync(path.join(cacheDir, "recon-pkg", "1.0.1"))).toBe(true);
+    expect(existsSync(path.join(cacheDir, "recon-pkg", "2.0.0"))).toBe(true);
+  });
+
+  it("removes the package dir when no version survives locally", () => {
+    const cdn = new CdnCache("http://127.0.0.1:1", cacheDir);
+    mkdirSync(path.join(cacheDir, "gone-pkg", "0.0.5"), { recursive: true });
+    const removed = cdn.reconcileVersions("gone-pkg", ["0.0.3"]);
+    expect(removed).toEqual(["0.0.5"]);
+    expect(existsSync(path.join(cacheDir, "gone-pkg"))).toBe(false);
+  });
+
+  it("is a no-op for an uncached package", () => {
+    const cdn = new CdnCache("http://127.0.0.1:1", cacheDir);
+    expect(cdn.reconcileVersions("never-cached", ["1.0.0"])).toEqual([]);
   });
 });
 
@@ -309,4 +387,50 @@ describe("registry CDN serving", () => {
     );
     expect(res.status).toBe(404);
   });
+
+  // Single-version unpublish is a manifest rewrite, not a tarball DELETE, so
+  // the CDN cache must be reconciled or the removed version keeps serving.
+  it("purges the CDN cache when a single version is unpublished", async () => {
+    const pkg = "unpub-test-pkg";
+    await publishPackage(pkg, "1.0.0", { "index.js": "// v1" });
+    await publishPackage(pkg, "2.0.0", { "index.js": "// v2" });
+
+    // Both pinned versions warm into the cache via the publish hook.
+    for (const v of ["1.0.0", "2.0.0"]) {
+      await vi.waitFor(
+        async () => {
+          const res = await fetch(`${REGISTRY_URL}/-/cdn/${pkg}@${v}/index.js`);
+          expect(res.ok).toBe(true);
+        },
+        { timeout: POLL_TIMEOUT, interval: POLL_INTERVAL },
+      );
+    }
+
+    await unpublishVersion(pkg, "1.0.0");
+
+    // Reconcile is fired async from the manifest-rewrite response, so poll for
+    // the removed version's cache dir to disappear.
+    const goneDir = path.join(
+      workDir,
+      DEFAULT_REGISTRY_CDN_CACHE_DIR_NAME,
+      pkg,
+      "1.0.0",
+    );
+    const keptDir = path.join(
+      workDir,
+      DEFAULT_REGISTRY_CDN_CACHE_DIR_NAME,
+      pkg,
+      "2.0.0",
+    );
+    await vi.waitFor(() => expect(existsSync(goneDir)).toBe(false), {
+      timeout: POLL_TIMEOUT,
+      interval: POLL_INTERVAL,
+    });
+
+    // The surviving version's cache is untouched and still served.
+    expect(existsSync(keptDir)).toBe(true);
+    const kept = await fetch(`${REGISTRY_URL}/-/cdn/${pkg}@2.0.0/index.js`);
+    expect(kept.ok).toBe(true);
+    expect(await kept.text()).toBe("// v2");
+  }, 30000);
 });

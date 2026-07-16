@@ -223,6 +223,46 @@ export class CdnCache {
     }
   }
 
+  // Reconcile the cache against the registry's current version set; returns
+  // removed versions. Empty/failed listings are a no-op (never mass-purge).
+  async reconcileWithRegistry(packageName: string): Promise<string[]> {
+    const url = `${this.registryUrl}/${encodeURIComponent(packageName)}`;
+    let versions: string[];
+    try {
+      const res = await fetch(url, { headers: { Accept: "application/json" } });
+      if (!res.ok) return [];
+      const meta = (await res.json()) as { versions?: Record<string, unknown> };
+      versions = Object.keys(meta.versions ?? {});
+    } catch {
+      return [];
+    }
+    if (versions.length === 0) return [];
+    return this.reconcileVersions(packageName, versions);
+  }
+
+  // Drop cached version dirs absent from `keepVersions`; returns the removed
+  // ones. Mirrors single-version unpublish (a manifest rewrite, no DELETE).
+  reconcileVersions(
+    packageName: string,
+    keepVersions: Iterable<string>,
+  ): string[] {
+    const pkgDir = path.join(this.cdnCachePath, packageName);
+    const keep = new Set(keepVersions);
+    const removed: string[] = [];
+    let entries: fs.Dirent[];
+    try {
+      entries = fs.readdirSync(pkgDir, { withFileTypes: true });
+    } catch {
+      return removed;
+    }
+    for (const entry of entries) {
+      if (!entry.isDirectory() || keep.has(entry.name)) continue;
+      this.invalidateVersion(packageName, entry.name);
+      removed.push(entry.name);
+    }
+    return removed;
+  }
+
   /** Remove all cached version directories except the specified one. */
   pruneOldVersions(packageName: string, keepVersion: string): void {
     const pkgDir = path.join(this.cdnCachePath, packageName);
