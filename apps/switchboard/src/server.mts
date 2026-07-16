@@ -18,6 +18,7 @@ import {
   ImportPackageLoader,
   PackageManagementService,
   PackagesSubgraph,
+  getUniqueDocumentModels,
   initializeAndStartAPI,
   type IPackageLoader,
 } from "@powerhousedao/reactor-api";
@@ -45,7 +46,17 @@ import path from "path";
 import { Pool } from "pg";
 import type { ViteDevServer } from "vite";
 import { registerAttachmentRoutes } from "./attachments/index.js";
-import { applySwitchboardReactorDefaults } from "./builder-defaults.mjs";
+import {
+  applySwitchboardReactorDefaults,
+  switchboardBaseDocumentModels,
+} from "./builder-defaults.mjs";
+import {
+  buildWorkerDbConfig,
+  modelKey,
+  resolveWorkerModelSpecs,
+  resolveWorkerPoolOptions,
+  resolveWorkerSignatureVerifierSpec,
+} from "./worker-pool.mjs";
 import { initFeatureFlags } from "./feature-flags.js";
 import { ClosablePGliteDialect } from "./pglite-dialect.js";
 import { migratePgliteDir } from "./pglite-migration.js";
@@ -314,6 +325,26 @@ async function initServer(
     ? resolvePgliteMajorForDir(readModelPgliteDir)
     : null;
 
+  let workerPool = resolveWorkerPoolOptions(options.workerPool, process.env);
+  if (workerPool && options.reactor) {
+    logger.warn(
+      "Worker pool configuration ignored: the caller-provided reactor owns its own executor",
+    );
+    workerPool = null;
+  }
+  if (workerPool) {
+    if (dev) {
+      throw new Error(
+        "The executor worker pool (REACTOR_WORKERS) is not supported in dev mode: Vite-loaded document models cannot cross a worker-thread boundary",
+      );
+    }
+    if (!reactorDbUrl || !isPostgresUrl(reactorDbUrl)) {
+      throw new Error(
+        "The executor worker pool (REACTOR_WORKERS) requires a Postgres reactor database — set PH_REACTOR_DATABASE_URL or PH_SWITCHBOARD_DATABASE_URL. PGlite cannot be shared across worker threads.",
+      );
+    }
+  }
+
   // The reactor-api owns its own PGlite/HTTP/WS resources but has no shutdown
   // path of its own; we register `api.dispose` as a reactor shutdown hook so
   // those resources drain inside the reactor's SIGINT chain. The reference
@@ -383,6 +414,11 @@ async function initServer(
     if (hasSkipThreshold) {
       logger.info(`Reactor maxSkipThreshold set to ${maxSkipThreshold}`);
     }
+    if (hasSkipThreshold && workerPool) {
+      logger.warn(
+        "MAX_SKIP_THRESHOLD is not forwarded to executor workers and has no effect in worker-pool mode",
+      );
+    }
 
     const reactorBuilder = new ReactorBuilder()
       .withEventBus(new EventBus())
@@ -407,8 +443,13 @@ async function initServer(
         )
       : [];
 
+    // Worker-pool mode: the builder forbids withDocumentModels — models
+    // reach workers as importable specs instead.
     applySwitchboardReactorDefaults(reactorBuilder, clientBuilder, {
-      documentModels: [...documentModels, ...vetraDocumentModels],
+      documentModels: workerPool
+        ? []
+        : [...documentModels, ...vetraDocumentModels],
+      includeBaseModels: !workerPool,
       executorConfig: hasSkipThreshold ? { maxSkipThreshold } : undefined,
       documentModelLoader:
         httpLoader && dynamicModelLoading
@@ -419,6 +460,39 @@ async function initServer(
         ? getRenownSignerConfig(renown, options.identity?.requireSignatures)
         : undefined,
     });
+
+    const workerLiveModels = workerPool
+      ? getUniqueDocumentModels(switchboardBaseDocumentModels(), [
+          ...documentModels,
+          ...vetraDocumentModels,
+        ])
+      : [];
+    if (workerPool) {
+      if (!reactorDbUrl) {
+        throw new Error(
+          "unreachable: worker pool enabled without a reactor database URL",
+        );
+      }
+      const specs = await resolveWorkerModelSpecs({
+        packages,
+        requiredModelKeys: workerLiveModels.map(modelKey),
+        logger: reactorLogger,
+      });
+      reactorBuilder
+        .withDocumentModelSpecs(specs)
+        .withWorkerPool({
+          enabled: true,
+          numWorkers: workerPool.numWorkers,
+          workerType: "thread",
+        })
+        .withWorkerDbConfig(buildWorkerDbConfig(reactorDbUrl, workerPool))
+        .withWorkerSignatureVerifierSpec(resolveWorkerSignatureVerifierSpec());
+      reactorLogger.info(
+        `Executor worker pool enabled: ${workerPool.numWorkers} worker threads${
+          workerPool.mode === "auto" ? " (auto-sized from cores)" : ""
+        }, ${specs.length} model specs`,
+      );
+    }
 
     reactorBuilder.withReadModelFactory(
       async ({
@@ -443,6 +517,27 @@ async function initServer(
     });
 
     const module = await clientBuilder.buildModule();
+
+    // The host registry starts empty in worker-pool mode; register the live
+    // modules for reads, creates, and subgraph generation (the same channel
+    // reactor-api uses for dynamic package changes).
+    if (workerPool) {
+      const registry = module.reactorModule?.documentModelRegistry;
+      if (!registry) {
+        throw new Error(
+          "DocumentModelRegistry not available to register models in worker-pool mode",
+        );
+      }
+      const results = registry.registerModules(...workerLiveModels);
+      for (const result of results) {
+        if (result.status === "error") {
+          reactorLogger.error(
+            "Failed to register document model on host registry: @error",
+            result.error.message,
+          );
+        }
+      }
+    }
 
     if (module.reactorModule) {
       const instrumentation = new ReactorInstrumentation(module.reactorModule);

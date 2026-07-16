@@ -46,19 +46,22 @@ export type SwitchboardReactorDefaultsOptions = {
  * Does NOT touch kysely or read models — callers wire those themselves
  * (see `withKysely` / `withReadModelFactory` on the reactor builder).
  */
+/** The models switchboard always registers alongside package models. */
+export function switchboardBaseDocumentModels() {
+  return [
+    documentModelDocumentModelModule,
+    driveDocumentModelModule,
+    reactorDriveDocumentModelModule,
+  ];
+}
+
 export function applySwitchboardReactorDefaults(
   reactorBuilder: ReactorBuilder,
   clientBuilder: ReactorClientBuilder,
   options: SwitchboardReactorDefaultsOptions = {},
 ): void {
   const baseModels =
-    options.includeBaseModels !== false
-      ? [
-          documentModelDocumentModelModule,
-          driveDocumentModelModule,
-          reactorDriveDocumentModelModule,
-        ]
-      : [];
+    options.includeBaseModels !== false ? switchboardBaseDocumentModels() : [];
   const extra = options.documentModels ?? [];
   if (baseModels.length || extra.length) {
     reactorBuilder.withDocumentModels(

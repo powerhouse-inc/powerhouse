@@ -123,6 +123,22 @@ describe("ReactorBuilder", () => {
         expect(fileEntry.spec.module.exportName).toBe("documentModel");
       }
     });
+
+    it("carries an explicit exportName through to the manifest", async () => {
+      const specs: DocumentModelSpecInput[] = [
+        { packageName: "x", version: "1.0.0", exportName: "accountModel" },
+        { filePath: "/tmp/barrel.js", exportName: "invoiceModel" },
+      ];
+      const builder = new ReactorBuilder().withDocumentModelSpecs(specs);
+
+      const module = await builder.buildModule();
+      module.reactor.kill();
+
+      const manifest = builder.getResolvedModelManifest();
+      expect(manifest).toHaveLength(2);
+      expect(manifest![0].spec.module.exportName).toBe("accountModel");
+      expect(manifest![1].spec.module.exportName).toBe("invoiceModel");
+    });
   });
 
   describe("mutual-exclusion validation", () => {

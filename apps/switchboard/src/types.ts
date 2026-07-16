@@ -132,6 +132,19 @@ export type StartServerOptions = {
    * Triggered by `PH_FORCE_PG_VERSION=16|17`.
    */
   forcePgVersion?: 16 | 17;
+  /**
+   * Executor worker pool: `numWorkers > 0` runs jobs in N worker threads;
+   * `"auto"` sizes the pool from the machine's available cores; 0 or unset
+   * keeps the in-process executor (the default). Unset fields fall back to
+   * the REACTOR_WORKERS / REACTOR_DB_* env vars. Requires a Postgres reactor
+   * database; incompatible with `dev` mode (Vite-loaded models cannot cross
+   * a thread boundary).
+   */
+  workerPool?: {
+    numWorkers?: number | "auto";
+    dbPoolSizePerWorker?: number;
+    acquireTimeoutMs?: number;
+  };
 };
 
 export type SwitchboardReactor = {

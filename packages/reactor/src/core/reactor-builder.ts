@@ -115,11 +115,15 @@ export type ReadModelFactory = (
 
 /**
  * Describes a document-model package the worker should import at runtime.
- * Either a bare-specifier package or an absolute file path.
+ * Either a bare-specifier package or an absolute file path. `exportName`
+ * selects the export holding the DocumentModelModule (default
+ * "documentModel"), so a spec can point at a barrel exporting several models.
  */
 export type DocumentModelSpecInput =
-  | { packageName: string; version: string }
-  | { filePath: string };
+  | { packageName: string; version: string; exportName?: string }
+  | { filePath: string; exportName?: string };
+
+const DEFAULT_SPEC_EXPORT_NAME = "documentModel";
 
 /**
  * Caller-facing config for {@link ReactorBuilder.withProjectionShards}.
@@ -426,12 +430,13 @@ export class ReactorBuilder {
 
     if (this.documentModelSpecs.length > 0) {
       this.resolvedModelManifest = this.documentModelSpecs.map((input) => {
+        const exportName = input.exportName ?? DEFAULT_SPEC_EXPORT_NAME;
         if ("filePath" in input) {
           const entry: ModelManifestEntry = {
             documentType: "<unresolved>",
             version: "<unresolved>",
             spec: {
-              module: { filePath: input.filePath, exportName: "documentModel" },
+              module: { filePath: input.filePath, exportName },
             },
           };
           return entry;
@@ -442,7 +447,7 @@ export class ReactorBuilder {
           spec: {
             module: {
               packageName: input.packageName,
-              exportName: "documentModel",
+              exportName,
             },
           },
         };
