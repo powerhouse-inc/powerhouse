@@ -88,6 +88,9 @@ const unsafeIgnoredFiles = [
   "packages/reactor-api/src/packages/vite-loader.mts",
   // Bootstrap .mjs for worker entry test; not part of TypeScript project service
   "packages/reactor/test/executor/worker/entry/worker-bootstrap.mjs",
+  // Plain .mjs model-source fixture imported by both the host and worker
+  // threads; deliberately outside the TypeScript project service.
+  "packages/reactor/test/core/fixtures/model-barrel.mjs",
 ];
 
 /** All of the files that are ignored by eslint */

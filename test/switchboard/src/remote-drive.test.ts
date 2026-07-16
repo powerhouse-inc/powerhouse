@@ -69,7 +69,7 @@ async function createLocalReactor(
   const renown = await new RenownBuilder("Test Local").build();
 
   const reactorBuilder = new ReactorBuilder()
-    .withDocumentModels([
+    .withDocumentModelSources([
       driveDocumentModelModule,
       documentModelDocumentModelModule,
     ])

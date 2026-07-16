@@ -14,7 +14,7 @@ export async function createReactorWithSync(
   logger?: ILogger,
 ): Promise<InProcessReactorModule> {
   const builder = new ReactorBuilder()
-    .withDocumentModels([
+    .withDocumentModelSources([
       driveDocumentModelModule,
       reactorDriveDocumentModelModule,
       documentModelDocumentModelModule,

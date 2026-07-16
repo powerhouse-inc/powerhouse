@@ -46,6 +46,11 @@ import { Pool } from "pg";
 import type { ViteDevServer } from "vite";
 import { registerAttachmentRoutes } from "./attachments/index.js";
 import { applySwitchboardReactorDefaults } from "./builder-defaults.mjs";
+import {
+  buildWorkerDbConfig,
+  resolveWorkerModelSources,
+  resolveWorkerPoolOptions,
+} from "./worker-pool.mjs";
 import { initFeatureFlags } from "./feature-flags.js";
 import { ClosablePGliteDialect } from "./pglite-dialect.js";
 import { migratePgliteDir } from "./pglite-migration.js";
@@ -314,6 +319,26 @@ async function initServer(
     ? resolvePgliteMajorForDir(readModelPgliteDir)
     : null;
 
+  let workerPool = resolveWorkerPoolOptions(options.workerPool, process.env);
+  if (workerPool && options.reactor) {
+    logger.warn(
+      "Worker pool configuration ignored: the caller-provided reactor owns its own executor",
+    );
+    workerPool = null;
+  }
+  if (workerPool) {
+    if (dev) {
+      throw new Error(
+        "The executor worker pool (REACTOR_WORKERS) is not supported in dev mode: Vite-loaded document models cannot cross a worker-thread boundary",
+      );
+    }
+    if (!reactorDbUrl || !isPostgresUrl(reactorDbUrl)) {
+      throw new Error(
+        "The executor worker pool (REACTOR_WORKERS) requires a Postgres reactor database — set PH_REACTOR_DATABASE_URL or PH_SWITCHBOARD_DATABASE_URL. PGlite cannot be shared across worker threads.",
+      );
+    }
+  }
+
   // The reactor-api owns its own PGlite/HTTP/WS resources but has no shutdown
   // path of its own; we register `api.dispose` as a reactor shutdown hook so
   // those resources drain inside the reactor's SIGINT chain. The reference
@@ -383,6 +408,11 @@ async function initServer(
     if (hasSkipThreshold) {
       logger.info(`Reactor maxSkipThreshold set to ${maxSkipThreshold}`);
     }
+    if (hasSkipThreshold && workerPool) {
+      logger.warn(
+        "MAX_SKIP_THRESHOLD is not forwarded to executor workers and has no effect in worker-pool mode",
+      );
+    }
 
     const reactorBuilder = new ReactorBuilder()
       .withEventBus(new EventBus())
@@ -419,6 +449,30 @@ async function initServer(
         ? getRenownSignerConfig(renown, options.identity?.requireSignatures)
         : undefined,
     });
+
+    if (workerPool) {
+      if (!reactorDbUrl) {
+        throw new Error(
+          "unreachable: worker pool enabled without a reactor database URL",
+        );
+      }
+      // File sources give workers importable paths for the same models the
+      // live modules above registered; the builder dedupes and fails the
+      // boot if any model lacks an importable source.
+      const workerSources = await resolveWorkerModelSources(
+        packages,
+        reactorLogger,
+      );
+      reactorBuilder.withDocumentModelSources(workerSources).withWorkerPool({
+        numWorkers: workerPool.numWorkers,
+        db: buildWorkerDbConfig(reactorDbUrl, workerPool),
+      });
+      reactorLogger.info(
+        `Executor worker pool enabled: ${workerPool.numWorkers} worker threads${
+          workerPool.mode === "auto" ? " (auto-sized from cores)" : ""
+        }`,
+      );
+    }
 
     reactorBuilder.withReadModelFactory(
       async ({

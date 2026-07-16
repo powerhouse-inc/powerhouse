@@ -36,7 +36,7 @@ describe("ReactorClient Subscription Integration Tests", () => {
   }
 
   beforeEach(async () => {
-    const reactorBuilder = new ReactorBuilder().withDocumentModels([
+    const reactorBuilder = new ReactorBuilder().withDocumentModelSources([
       driveDocumentModelModule as unknown as DocumentModelModule,
     ]);
     module = await new ReactorClientBuilder()

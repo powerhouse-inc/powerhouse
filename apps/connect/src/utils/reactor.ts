@@ -55,7 +55,7 @@ export async function createBrowserReactor(
     .withSigner(signerConfig)
     .withReactorBuilder(
       new ReactorBuilder()
-        .withDocumentModels(documentModelModules)
+        .withDocumentModelSources(documentModelModules)
         .withUpgradeManifests(upgradeManifests)
         .withChannelScheme(ChannelScheme.CONNECT)
         .withJwtHandler(jwtHandler)

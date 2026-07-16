@@ -112,6 +112,50 @@ pnpm add -g @powerhousedao/switchboard
 
 See [Observability](#observability) below for Sentry and OpenTelemetry variables.
 
+### Executor Worker Pool
+
+By default the reactor executes jobs on a single in-process executor. Setting
+`REACTOR_WORKERS` to a value greater than 0 moves job execution into N
+`node:worker_threads` workers; jobs route to a worker stickily by document id,
+and each worker opens its own Postgres pool.
+
+| Variable                        | Description                                                    | Default |
+| ------------------------------- | -------------------------------------------------------------- | ------- |
+| `REACTOR_WORKERS`               | Executor worker threads: a number (0 = in-process) or `auto`   | `0`     |
+| `REACTOR_DB_POOL_SIZE_WORKER`   | Per-worker Postgres pool size                                  | `2`     |
+| `REACTOR_DB_ACQUIRE_TIMEOUT_MS` | Pool connection acquire timeout (ms)                           | `5000`  |
+
+`REACTOR_WORKERS=auto` lets the runtime size the pool from the machine's
+available cores (`os.availableParallelism()`, which respects container CPU
+limits): `max(1, min(8, cores - 2))`. Two cores stay reserved for the host
+event loop and the cap keeps the worker connection budget bounded; `auto`
+always enables worker mode with at least one worker.
+
+Requirements when `REACTOR_WORKERS > 0`:
+
+- **Postgres only.** The reactor database must be a `postgres://` URL with
+  explicit credentials (`PH_REACTOR_DATABASE_URL` or
+  `PH_SWITCHBOARD_DATABASE_URL`). PGlite cannot be shared across threads,
+  so switchboard refuses to start on local PGlite storage.
+- **Built packages only.** Worker threads import document models by file path,
+  so every configured package needs a built `document-models` entry. `dev`
+  mode (Vite-loaded models, e.g. `ph vetra`) is rejected.
+- **Connection budget.** Total Postgres connections are roughly
+  `host pool + REACTOR_WORKERS x REACTOR_DB_POOL_SIZE_WORKER`; keep this
+  under the server's `max_connections`.
+
+Example:
+
+```bash
+PH_SWITCHBOARD_DATABASE_URL=postgres://reactor:reactor@localhost:5433/switchboard \
+REACTOR_WORKERS=4 \
+ph switchboard
+```
+
+The same settings are available programmatically via
+`startSwitchboard({ workerPool: { numWorkers, dbPoolSizePerWorker, acquireTimeoutMs } })`,
+which takes precedence over the environment variables.
+
 ### Authentication Configuration
 
 ```typescript

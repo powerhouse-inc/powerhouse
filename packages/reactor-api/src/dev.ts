@@ -39,7 +39,7 @@ async function main() {
     const eventBus = new EventBus();
     const builder = new ReactorBuilder()
       .withEventBus(eventBus)
-      .withDocumentModels(documentModels)
+      .withDocumentModelSources(documentModels)
       .withChannelScheme(ChannelScheme.SWITCHBOARD);
 
     const module = await new ReactorClientBuilder()

@@ -25,7 +25,7 @@ Sync is off by default. A reactor has no sync manager unless you call either `wi
 import { ReactorBuilder, ChannelScheme } from "@powerhousedao/reactor";
 
 const module = await new ReactorBuilder()
-  .withDocumentModels([/* ... */])
+  .withDocumentModelSources([/* ... */])
   .withChannelScheme(ChannelScheme.CONNECT)
   .withJwtHandler(async (url) => getTokenForAudience(url)) // optional, CONNECT only
   .buildModule();
@@ -58,7 +58,7 @@ const syncBuilder = new SyncBuilder()
   .withMaxDeadLettersPerRemote(100);
 
 const module = await new ReactorBuilder()
-  .withDocumentModels([/* ... */])
+  .withDocumentModelSources([/* ... */])
   .withSync(syncBuilder)
   .buildModule();
 ```

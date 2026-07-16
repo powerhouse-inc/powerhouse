@@ -125,7 +125,7 @@ describe("Fault-Injection Sync", () => {
     serverModule = await new ReactorBuilder()
       .withEventBus(serverEventBus)
       .withQueue(serverQueue)
-      .withDocumentModels([
+      .withDocumentModelSources([
         driveDocumentModelModule as unknown as DocumentModelModule,
       ])
       .withSync(

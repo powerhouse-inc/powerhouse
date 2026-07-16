@@ -39,7 +39,7 @@ describe("DriveClient Integration Tests", () => {
     await documentIndexer.init();
 
     const reactorBuilder = new ReactorBuilder()
-      .withDocumentModels([
+      .withDocumentModelSources([
         driveDocumentModelModule as any,
         documentModelDocumentModelModule,
       ])

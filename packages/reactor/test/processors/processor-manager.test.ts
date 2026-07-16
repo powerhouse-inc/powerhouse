@@ -168,7 +168,7 @@ describe("ProcessorManager Integration Tests", () => {
 
   beforeEach(async () => {
     reactorModule = await new ReactorBuilder()
-      .withDocumentModels([
+      .withDocumentModelSources([
         documentModelDocumentModelModule as unknown as DocumentModelModule,
         driveDocumentModelModule as unknown as DocumentModelModule,
       ])

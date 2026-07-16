@@ -16,7 +16,7 @@ Out of the box the builder gives you an in-memory [PGlite](https://pglite.dev/) 
 import { ReactorBuilder } from "@powerhousedao/reactor";
 
 const reactor = await new ReactorBuilder()
-  .withDocumentModels([myDocumentModel])
+  .withDocumentModelSources([myDocumentModel])
   .build();
 ```
 
@@ -56,11 +56,11 @@ type Database = StorageDatabase & DocumentViewDatabase & DocumentIndexerDatabase
 
 `StorageDatabase` holds the operation log and sync tables (`Operation`, `Keyframe`, `document_collections`, `operation_index_operations`, `sync_remotes`, `sync_cursors`, `sync_dead_letters`); the other two cover the document view and the document indexer. `Database`, `StorageDatabase`, `DocumentIndexerDatabase`, and `OperationTable` are exported from the package root.
 
-A persistent backend needs a Postgres-compatible dialect and the `reactor` schema. Pass a real Postgres `Kysely` here when you want to control pool construction yourself; otherwise use the worker DB config (next section), which builds the pool for you. If you build the pool yourself, register its instrumentation with `withInstrumentedPool(instrumentation)` so pool stats surface through `module.pools`.
+A persistent backend needs a Postgres-compatible dialect and the `reactor` schema. Pass a real Postgres `Kysely` here when you want to control pool construction yourself; otherwise use the worker pool's `db` (next section), which builds the pool for you. If you build the pool yourself, register its instrumentation with `withInstrumentedPool(instrumentation)` so pool stats surface through `module.pools`.
 
-### Postgres via the worker DB config
+### Postgres via the worker pool's db
 
-When the worker pool is enabled (below), the builder builds the parent reactor's Postgres pool for you from the `DbConfig` you pass to `withWorkerDbConfig`. The internal `createPostgresDatabase` constructs a `pg.Pool` and wraps it in a `PostgresDialect`:
+When the worker pool is configured with a `db` (below), the builder builds the parent reactor's Postgres pool for you from that same `DbConfig`. The internal `createPostgresDatabase` constructs a `pg.Pool` and wraps it in a `PostgresDialect`:
 
 ```typescript
 new Pool({
@@ -105,31 +105,23 @@ if (!result.success && result.error) {
 
 The executor worker pool moves job execution out of the main thread into N `node:worker_threads` workers. Each worker opens its own Postgres pool and runs document models in isolation. Jobs route to a worker stickily by document id, so all work for one document lands on the same worker.
 
-Enable it with `withWorkerPool`, register document models as **specs** (not modules), and supply connection info and a signature-verifier spec:
+Enable it with `withWorkerPool` — calling it enables the pool; there is no `enabled` flag — and register document models as **importable sources** (`{ filePath }` or `{ packageName }` — workers re-import them; a live module cannot cross the thread boundary):
 
 ```typescript
 import { ReactorBuilder } from "@powerhousedao/reactor";
 
 const reactor = await new ReactorBuilder()
-  .withDocumentModelSpecs([
-    { packageName: "@my-org/account-document-model", version: "1.0.0" },
+  .withDocumentModelSources([
+    { packageName: "@my-org/account-document-model", subpath: "document-models" },
   ])
   .withWorkerPool({
-    enabled: true,
     numWorkers: 4,
-    workerType: "thread",
-  })
-  .withWorkerDbConfig({
-    host: "localhost",
-    port: 5432,
-    database: "reactor",
-    user: "reactor",
-    password: process.env.PGPASSWORD!,
-  })
-  .withWorkerSignatureVerifierSpec({
-    module: {
-      packageName: "@my-org/signing",
-      exportName: "createSignatureVerifier",
+    db: {
+      host: "localhost",
+      port: 5432,
+      database: "reactor",
+      user: "reactor",
+      password: process.env.PGPASSWORD!,
     },
   })
   .build();
@@ -137,19 +129,15 @@ const reactor = await new ReactorBuilder()
 
 ### Config shapes
 
-`WorkerPoolConfig`:
+`WorkerPoolOptions`:
 
 ```typescript
-type WorkerPoolConfig = {
-  enabled: boolean;                 // when false, the executor runs in-process
-  numWorkers: number;               // number of worker instances to spawn
-  workerType: "thread" | "process"; // worker isolation mode
-  heartbeatMs?: number;             // optional heartbeat interval (ms)
-  workerPgPoolSize?: number;        // optional per-worker pg pool size override
-};
+type WorkerPoolOptions =
+  | { numWorkers: number; db: DbConfig; verifier?: SignatureVerifierSpec; factory?: WorkerFactory }
+  | { numWorkers: number; factory: WorkerFactory; db?: DbConfig; verifier?: SignatureVerifierSpec };
 ```
 
-`enabled` gates everything; when `false` the executor stays in-process. `numWorkers` becomes the number of workers the manager spawns at `start()` and the modulus used for sticky routing.
+`numWorkers` is the number of workers the manager spawns at `start()` and the modulus used for sticky routing. Either `db` (the default thread transport; each worker opens its own Postgres pool) or a custom `factory` is required **by construction** — an enabled pool without connection info is unrepresentable rather than a runtime error.
 
 `DbConfig`:
 
@@ -170,56 +158,54 @@ type DbConfig = {
 
 `DbConfig` is sent across worker IPC, so it must be JSON-clonable. `ssl: true` maps to `{ rejectUnauthorized: false }`; `poolSize` maps to pg's `max`; `applicationName` maps to `application_name`.
 
-The signature-verifier spec is a `FactorySpec`: a `ModuleRef` (one of `{ packageName, exportName }` or `{ filePath, exportName }`) plus optional JSON-clonable `initArgs`. The worker imports the named export and invokes it to construct its signature verifier.
+The `verifier` field is optional: when omitted, workers perform no executor-side signature verification (parity with the in-process executor's default). To opt in, pass a `FactorySpec`: a `ModuleRef` (one of `{ packageName, exportName }` or `{ filePath, exportName }`) plus optional JSON-clonable `initArgs`. The worker imports the named export and invokes it to construct its signature verifier.
+
+### How sources resolve
+
+`buildModule()` resolves every registered source in one pass: file and package sources are imported host-side and their exports scanned for `DocumentModelModule` values; the resulting modules are registered on the host registry (identically in both executor modes), and the importable sources form the manifest each worker imports at boot. The host and workers are derived from the same list, so they cannot diverge.
 
 ### Build-time constraints that throw
 
-When `workerPool.enabled` is `true`, `buildModule()` enforces the wiring up front. Each of these throws:
+When a worker pool is configured, `buildModule()` enforces the model wiring up front. Each of these throws:
 
-- Calling `withDocumentModels()` in worker-pool mode: `"workerPool.enabled requires withDocumentModelSpecs; remove withDocumentModels() in worker-pool mode."` Models cross a thread boundary, so they are referenced by spec, not by live module.
-- No specs registered: `"workerPool.enabled requires at least one spec registered via withDocumentModelSpecs."`
-- No worker DB config (and no custom factory or executor): `"workerPool.enabled requires withWorkerDbConfig (or a custom withWorkerFactory / withExecutor)."`
-- No signature-verifier spec (and no custom factory or executor): `"workerPool.enabled requires withWorkerSignatureVerifierSpec (or a custom withWorkerFactory / withExecutor)."`
+- No importable sources: `"withWorkerPool requires at least one worker-importable document-model source ({ filePath } or { packageName })."`
+- A model registered only as a live module: `"withWorkerPool requires worker-importable sources, but these models were registered only as live modules: ..."` — provide a `{ filePath }` or `{ packageName }` source for each (a live module for the same `documentType@version` may coexist; the importable source covers it).
 
-The DB-config and verifier-spec checks only apply when the builder needs to build the default thread transport — that is, when you have not supplied a custom `withWorkerFactory` or `withExecutor`.
+Connection info is not a runtime check: the `WorkerPoolOptions` type requires `db` or a custom `factory`, so a misconfigured pool fails at compile time.
 
-The worker pool requires a real Postgres server. PGlite cannot be shared across threads, so the parent and the workers must point at the same Postgres instance. This is why `withWorkerDbConfig` is mandatory: the in-memory default does not work here. When the pool is enabled and a worker DB config is set, the builder builds the parent's database from that same config.
+The worker pool requires a real Postgres server. PGlite cannot be shared across threads, so the parent and the workers must point at the same Postgres instance. When the pool carries a `db`, the builder builds the parent's database from that same config (unless `withKysely` overrides it).
 
 ### Custom transports
 
-`withWorkerFactory` injects a custom `WorkerFactory`, skipping the default thread-transport wiring:
+Passing `factory` in the pool options injects a custom `WorkerFactory`, skipping the default thread-transport wiring:
 
 ```typescript
 type WorkerFactory = (index: number) => IExecutorWorker;
 ```
 
-Use this for tests or an alternative transport. When you supply one, the DB-config and verifier-spec validations above no longer apply (the builder is not building the default transport).
-
-:::warning Not yet stable
-`workerType: "process"` is declared in `WorkerPoolConfig`, but the built-in factory only ever spawns a `node:worker_threads` worker. To run workers as separate processes today you must supply your own `withWorkerFactory`. `heartbeatMs` and the heartbeat message are scaffolding for a future phase and are not yet active.
-:::
+Use this for tests or an alternative transport (e.g. a child-process adapter); `db` and `verifier` are then optional, since the builder is not constructing the default transport.
 
 ## Projection shards
 
 Projection shards move read-model indexing out of the main thread. Instead of the in-process read-model coordinator, the builder installs a shard manager that fans `JOB_WRITE_READY` events to N projection workers, sharded by document id. Each worker materializes the built-in read models against its own Postgres pool and re-emits `JOB_READ_READY` and read-model events back to the host bus, so [synchronization](/academy/Reference/Reactor/Synchronization), awaiters, and observers see them exactly once per job.
 
-Configure shards with `withProjectionShards`. This path reuses the same `DbConfig` you set with `withWorkerDbConfig`, so that call is mandatory.
+Configure shards with `withProjectionShards`. Projection workers open their own Postgres pools from the config's `db`; when the executor worker pool is also configured with a `db`, it may be omitted here and is reused.
 
 ```typescript
 import { ReactorBuilder } from "@powerhousedao/reactor";
 
 const reactor = await new ReactorBuilder()
-  .withDocumentModelSpecs([
-    { packageName: "@my-org/account-document-model", version: "1.0.0" },
+  .withDocumentModelSources([
+    { packageName: "@my-org/account-document-model", subpath: "document-models" },
   ])
-  .withWorkerDbConfig({
-    host: "localhost",
-    port: 5432,
-    database: "reactor",
-    user: "reactor",
-    password: process.env.PGPASSWORD!,
-  })
   .withProjectionShards({
+    db: {
+      host: "localhost",
+      port: 5432,
+      database: "reactor",
+      user: "reactor",
+      password: process.env.PGPASSWORD!,
+    },
     shardCount: 4,
     preReadyKinds: ["document-view"],
     postReadyKinds: ["document-indexer"],
@@ -251,12 +237,12 @@ Defaults applied when the optional fields are omitted: `initTimeoutMs` 30000, `s
 
 ### Build-time constraints that throw
 
-- `withProjectionShards` without `withWorkerDbConfig`: `"withProjectionShards requires withWorkerDbConfig; projection workers need connection info to open their own pools."`
+- `withProjectionShards` without a `db` anywhere: `"withProjectionShards requires a db (or an executor worker pool configured with one); projection workers need connection info to open their own pools."`
 - `shardCount < 1`: `` `ProjectionShardManager: shardCount must be >= 1 (got ${shardCount})` ``.
 
 Shards can run on their own or alongside the worker pool. They replace the read-model coordinator; the executor side is independent. As with the worker pool, projection shards require real Postgres — the workers open their own pools and PGlite cannot be shared across threads.
 
-`withProjectionWorkerFactory` injects a custom `ProjectionWorkerFactory` and skips the default thread-transport wiring, mirroring `withWorkerFactory` on the pool:
+`withProjectionWorkerFactory` injects a custom `ProjectionWorkerFactory` and skips the default thread-transport wiring, mirroring the pool options' `factory`:
 
 ```typescript
 type ProjectionWorkerFactory = (shardIndex: number, shardId: string) => IProjectionTransport;
@@ -269,8 +255,8 @@ Projection shards are a recent, design-doc-tracked feature. The shard-manager cl
 ## Decision guide
 
 - **In-memory PGlite (default).** Dev and tests. Zero setup, ephemeral, single process. Use it unless you need one of the below.
-- **Postgres (`withKysely` or `withWorkerDbConfig`).** When state must survive a restart or be shared across processes.
-- **Worker pool (`withWorkerPool`).** When job execution is CPU-bound and one thread is the bottleneck. Requires Postgres and document-model specs.
+- **Postgres (`withKysely` or the worker pool's `db`).** When state must survive a restart or be shared across processes.
+- **Worker pool (`withWorkerPool`).** When job execution is CPU-bound and one thread is the bottleneck. Requires Postgres and importable document-model sources.
 - **Projection shards (`withProjectionShards`).** When read-model indexing is the bottleneck. Requires Postgres. Combine with the worker pool when both write and read paths need to scale.
 
 Both scaling paths require real Postgres and trade simplicity for throughput. Start in-memory, move to Postgres for persistence, and reach for the worker pool or shards only when a single thread is the proven bottleneck.

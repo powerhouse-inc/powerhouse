@@ -199,6 +199,12 @@ export class HttpPackageLoader implements IPackageLoader {
   }
 }
 
+/**
+ * Returns live modules (host-only sources): dynamically loaded models are
+ * registered on the host registry but never reach executor worker threads.
+ * Making them worker-executable means returning an importable source here
+ * (the CDN URL as a package specifier, given process-wide https hooks).
+ */
 export class HttpDocumentModelLoader implements IDocumentModelLoader {
   private readonly loader: HttpPackageLoader;
   private readonly logger = childLogger([

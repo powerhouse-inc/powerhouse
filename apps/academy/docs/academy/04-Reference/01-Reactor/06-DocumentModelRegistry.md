@@ -12,7 +12,7 @@ You register modules and manifests on the [`ReactorBuilder`](/academy/Reference/
 import { ReactorBuilder } from "@powerhousedao/reactor";
 
 const reactor = await new ReactorBuilder()
-  .withDocumentModels([todoModuleV1, todoModuleV2])
+  .withDocumentModelSources([todoModuleV1, todoModuleV2])
   .withUpgradeManifests([todoUpgradeManifest])
   .build();
 ```

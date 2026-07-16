@@ -4,25 +4,25 @@ import type {
   UpgradeReducer,
   UpgradeTransition,
 } from "@powerhousedao/shared/document-model";
-import type { ModelManifestEntry } from "../executor/worker/protocol.js";
+import type { DocumentModelSource } from "../core/model-sources.js";
 
 export type RegistrationResult<T> =
   | { status: "success"; item: T }
   | { status: "error"; item: T; error: Error };
 
 /**
- * Loader that can asynchronously resolve and return a document model module
- * for a given document type. Used by the queue to gate CREATE_DOCUMENT jobs
- * until the required model is available in the registry.
+ * Loader that asynchronously resolves a document type to a
+ * {@link DocumentModelSource}. Used by the queue to gate CREATE_DOCUMENT
+ * jobs until the required model is available in the registry.
  *
- * `resolveSpec` is an optional companion that returns the IPC-clonable spec
- * for the same document type. Implementations that integrate with the worker
- * pool must provide it so the parent can broadcast `load-model` to workers
- * after registering the model on the parent.
+ * Return an importable source ({ filePath } or { packageName }) whenever
+ * possible: the resolver registers the resolved models on the host registry
+ * and broadcasts importable sources to executor workers. A live
+ * DocumentModelModule is also valid but host-only — it cannot cross a
+ * worker-thread boundary, so worker pools will not receive it.
  */
 export interface IDocumentModelLoader {
-  load(documentType: string): Promise<DocumentModelModule<any>>;
-  resolveSpec?(documentType: string): Promise<ModelManifestEntry | null>;
+  load(documentType: string): Promise<DocumentModelSource>;
 }
 
 /**

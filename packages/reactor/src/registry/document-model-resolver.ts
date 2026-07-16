@@ -1,4 +1,5 @@
 import { childLogger } from "document-model";
+import { resolveModelSources } from "../core/model-sources.js";
 import type { ModelManifestEntry } from "../executor/worker/protocol.js";
 import { DuplicateModuleError, ModuleNotFoundError } from "./errors.js";
 import type {
@@ -93,15 +94,32 @@ export class DocumentModelResolver implements IDocumentModelResolver {
   }
 
   private async loadRegisterAndBroadcast(documentType: string): Promise<void> {
-    const module = await this.loader.load(documentType);
-    const [result] = this.registry.registerModules(module);
-    if (
-      result.status === "error" &&
-      !DuplicateModuleError.isError(result.error)
-    ) {
-      throw result.error as Error;
+    const source = await this.loader.load(documentType);
+    const resolved = await resolveModelSources([source]);
+    const hasRequested = resolved.modules.some(
+      (module) => module.documentModel.global.id === documentType,
+    );
+    if (!hasRequested) {
+      throw new Error(
+        `Loader source resolved no module for document type: ${documentType}`,
+      );
     }
-    await this.broadcastIfPossible(documentType);
+    const results = this.registry.registerModules(...resolved.modules);
+    for (const result of results) {
+      if (
+        result.status === "error" &&
+        !DuplicateModuleError.isError(result.error)
+      ) {
+        throw result.error as Error;
+      }
+    }
+    // Importable sources carry manifest entries; live modules do not, so a
+    // module source registers host-side only and workers never hear of it.
+    if (this.broadcastHook) {
+      for (const entry of resolved.manifest) {
+        await this.broadcastHook(entry);
+      }
+    }
   }
 
   // Best-effort peer notification; its failure must not fail the registered load.
@@ -114,17 +132,6 @@ export class DocumentModelResolver implements IDocumentModelResolver {
     } catch (error) {
       this.logger.warn(`MODEL_LOADED hook failed: ${documentType}`, error);
     }
-  }
-
-  private async broadcastIfPossible(documentType: string): Promise<void> {
-    if (!this.broadcastHook || !this.loader.resolveSpec) {
-      return;
-    }
-    const entry = await this.loader.resolveSpec(documentType);
-    if (!entry) {
-      return;
-    }
-    await this.broadcastHook(entry);
   }
 }
 

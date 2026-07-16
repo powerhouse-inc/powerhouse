@@ -122,7 +122,7 @@ describe("Relationship Operations", () => {
 
     // Use ReactorBuilder from reactor package
     const builder = new ReactorBuilder()
-      .withDocumentModels([
+      .withDocumentModelSources([
         documentModelDocumentModelModule as any,
         driveDocumentModelModule as any,
       ])

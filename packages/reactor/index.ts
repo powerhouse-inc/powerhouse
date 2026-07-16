@@ -23,10 +23,13 @@ export {
 } from "./src/client/types.js";
 export {
   ReactorBuilder,
-  type DocumentModelSpecInput,
+  type DocumentModelSource,
+  type FileModelSource,
+  type PackageModelSource,
   type ProjectionShardBuilderConfig,
   type ReadModelFactory,
   type ReadModelFactoryDeps,
+  type WorkerPoolOptions,
 } from "./src/core/reactor-builder.js";
 export type {
   BuiltInReadModelKind,

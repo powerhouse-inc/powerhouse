@@ -1,7 +1,4 @@
-import type {
-  DocumentModelModule,
-  UpgradeManifest,
-} from "@powerhousedao/shared/document-model";
+import type { UpgradeManifest } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import { ConsoleLogger } from "document-model";
 import type { Kysely } from "kysely";
@@ -84,6 +81,8 @@ import type { JwtHandler } from "../sync/types.js";
 import { ChannelScheme } from "../sync/types.js";
 import { createDefaultDatabase } from "./create-default-database.js";
 import { DEFAULT_DRIVE_CONTAINER_TYPES } from "./drive-container-types.js";
+import { resolveModelSources } from "./model-sources.js";
+import type { DocumentModelSource } from "./model-sources.js";
 import { Reactor } from "./reactor.js";
 import type {
   Database,
@@ -113,13 +112,33 @@ export type ReadModelFactory = (
   deps: ReadModelFactoryDeps,
 ) => IReadModel | Promise<IReadModel>;
 
+export type {
+  DocumentModelSource,
+  FileModelSource,
+  PackageModelSource,
+  ResolvedModelSources,
+} from "./model-sources.js";
+
+type WorkerPoolBase = {
+  /** Number of worker threads to spawn; also the sticky-routing modulus. */
+  numWorkers: number;
+  /**
+   * Factory spec the default transport's workers import to instantiate
+   * their signature verifier. Omitted = no executor-side verification,
+   * parity with the in-process executor's default.
+   */
+  verifier?: SignatureVerifierSpec;
+};
+
 /**
- * Describes a document-model package the worker should import at runtime.
- * Either a bare-specifier package or an absolute file path.
+ * Executor worker-pool configuration. Either `db` (default thread
+ * transport; each worker opens its own Postgres pool) or a custom
+ * `factory` transport is required by construction — an enabled pool
+ * without connection info is unrepresentable.
  */
-export type DocumentModelSpecInput =
-  | { packageName: string; version: string }
-  | { filePath: string };
+export type WorkerPoolOptions =
+  | (WorkerPoolBase & { db: DbConfig; factory?: WorkerFactory })
+  | (WorkerPoolBase & { db?: DbConfig; factory: WorkerFactory });
 
 /**
  * Caller-facing config for {@link ReactorBuilder.withProjectionShards}.
@@ -135,6 +154,12 @@ export type ProjectionShardBuilderConfig = {
   shardCount: number;
   preReadyKinds: BuiltInReadModelKind[];
   postReadyKinds: BuiltInReadModelKind[];
+  /**
+   * Connection info for the projection workers' own pools. Falls back to
+   * the executor worker pool's `db` when {@link ReactorBuilder.withWorkerPool}
+   * is configured with one.
+   */
+  db?: DbConfig;
   poolSize?: number;
   initTimeoutMs?: number;
   shutdownGraceMs?: number;
@@ -142,9 +167,13 @@ export type ProjectionShardBuilderConfig = {
   chainDepthReportIntervalMs?: number;
 };
 
+function sameDatabaseTarget(a: DbConfig, b: DbConfig): boolean {
+  return a.host === b.host && a.port === b.port && a.database === b.database;
+}
+
 export class ReactorBuilder {
   private logger?: ILogger;
-  private documentModels: DocumentModelModule<any>[] = [];
+  private documentModelSources: DocumentModelSource[] = [];
   private upgradeManifests: UpgradeManifest<readonly number[]>[] = [];
   private features: ReactorFeatures = { legacyStorageEnabled: false };
   private readModels: IReadModel[] = [];
@@ -166,12 +195,8 @@ export class ReactorBuilder {
   private shutdownHooks: Array<() => Promise<void>> = [];
   private driveContainerTypes: ReadonlySet<string> =
     DEFAULT_DRIVE_CONTAINER_TYPES;
-  private documentModelSpecs: DocumentModelSpecInput[] = [];
-  private workerPoolConfig?: WorkerPoolConfig;
+  private workerPool?: WorkerPoolOptions;
   private resolvedModelManifest?: ModelManifestEntry[];
-  private workerDbConfig?: DbConfig;
-  private workerSignatureVerifierSpec?: SignatureVerifierSpec;
-  private workerFactory?: WorkerFactory;
   private projectionShardConfig?: ProjectionShardBuilderConfig;
   private projectionWorkerFactory?: ProjectionWorkerFactory;
   private instrumentedPools: PoolInstrumentation[] = [];
@@ -181,8 +206,15 @@ export class ReactorBuilder {
     return this;
   }
 
-  withDocumentModels(models: DocumentModelModule<any>[]): this {
-    this.documentModels = models;
+  /**
+   * Register document-model sources: live modules, importable files, or
+   * importable packages. Appends across calls. At `buildModule()` every
+   * source is resolved host-side and registered on the registry; file and
+   * package sources additionally form the worker manifest when the worker
+   * pool is enabled (live modules cannot cross a thread boundary).
+   */
+  withDocumentModelSources(sources: DocumentModelSource[]): this {
+    this.documentModelSources.push(...sources);
     return this;
   }
 
@@ -313,63 +345,31 @@ export class ReactorBuilder {
     return this;
   }
 
-  withDocumentModelSpecs(specs: DocumentModelSpecInput[]): this {
-    this.documentModelSpecs = specs;
-    return this;
-  }
-
   /**
-   * Stores the worker-pool configuration. When `config.enabled === true` the
-   * builder constructs a {@link WorkerPoolJobExecutorManager} in place of the
-   * in-process {@link SimpleJobExecutorManager}.
+   * Enable the executor worker pool: N `node:worker_threads` workers with
+   * sticky per-document routing, replacing the in-process executor. Calling
+   * this enables the pool — there is no `enabled` flag. Provide `db`
+   * (each worker opens its own Postgres pool; the parent database is built
+   * from it too unless {@link withKysely} is set) or a custom `factory`
+   * transport. `verifier` is imported by the default transport's workers;
+   * omitted = no executor-side signature verification.
    */
-  withWorkerPool(config: WorkerPoolConfig): this {
-    this.workerPoolConfig = config;
-    return this;
-  }
-
-  /**
-   * Postgres connection info forwarded to each worker so it can open its own
-   * pool. Required when `workerPool.enabled === true` unless a custom
-   * `withWorkerFactory` or `withExecutor` is provided.
-   */
-  withWorkerDbConfig(db: DbConfig): this {
-    this.workerDbConfig = db;
-    return this;
-  }
-
-  /**
-   * Factory spec the worker imports to instantiate its signature verifier.
-   * Required when `workerPool.enabled === true` unless a custom
-   * `withWorkerFactory` or `withExecutor` is provided.
-   */
-  withWorkerSignatureVerifierSpec(spec: SignatureVerifierSpec): this {
-    this.workerSignatureVerifierSpec = spec;
-    return this;
-  }
-
-  /**
-   * Inject a custom {@link WorkerFactory}. When set, the builder skips
-   * default thread-transport wiring and hands the factory directly to the
-   * pool manager. Use this in tests or to plug in a different transport
-   * (e.g. a child-process adapter).
-   */
-  withWorkerFactory(factory: WorkerFactory): this {
-    this.workerFactory = factory;
+  withWorkerPool(options: WorkerPoolOptions): this {
+    this.workerPool = options;
     return this;
   }
 
   /**
    * Configure N sharded projection workers. When set, the builder replaces
    * the default in-process {@link ReadModelCoordinator} with a
-   * {@link ProjectionShardManager}. The same `DbConfig` registered via
-   * {@link withWorkerDbConfig} is reused for the projection workers'
-   * connection info; only the `poolSize` is overridden by
-   * {@link ProjectionShardBuilderConfig.poolSize}.
+   * {@link ProjectionShardManager}.
    *
-   * Requires {@link withWorkerDbConfig} (the projection workers need
-   * connection info to open their own pools). The same model manifest
-   * resolved from {@link withDocumentModelSpecs} is forwarded.
+   * Projection workers open their own Postgres pools from `config.db`,
+   * falling back to the executor worker pool's `db` when
+   * {@link withWorkerPool} is configured with one; only the `poolSize` is
+   * overridden by {@link ProjectionShardBuilderConfig.poolSize}. The same
+   * model manifest resolved from {@link withDocumentModelSources} is
+   * forwarded.
    */
   withProjectionShards(config: ProjectionShardBuilderConfig): this {
     this.projectionShardConfig = config;
@@ -400,55 +400,28 @@ export class ReactorBuilder {
       this.logger = new ConsoleLogger(["reactor"]);
     }
 
-    if (this.workerPoolConfig?.enabled) {
-      if (this.documentModels.length > 0) {
+    // One resolution pass feeds both sides: the host registry gets every
+    // resolved module (in both executor modes), and importable sources form
+    // the worker manifest.
+    const resolvedSources = await resolveModelSources(
+      this.documentModelSources,
+    );
+    if (this.workerPool) {
+      if (resolvedSources.manifest.length === 0) {
         throw new Error(
-          "workerPool.enabled requires withDocumentModelSpecs; remove withDocumentModels() in worker-pool mode.",
+          "withWorkerPool requires at least one worker-importable document-model source ({ filePath } or { packageName }).",
         );
       }
-      if (this.documentModelSpecs.length === 0) {
+      if (resolvedSources.moduleOnlyKeys.length > 0) {
         throw new Error(
-          "workerPool.enabled requires at least one spec registered via withDocumentModelSpecs.",
-        );
-      }
-      const needsDefaultFactory = !this.executorManager && !this.workerFactory;
-      if (needsDefaultFactory && !this.workerDbConfig) {
-        throw new Error(
-          "workerPool.enabled requires withWorkerDbConfig (or a custom withWorkerFactory / withExecutor).",
-        );
-      }
-      if (needsDefaultFactory && !this.workerSignatureVerifierSpec) {
-        throw new Error(
-          "workerPool.enabled requires withWorkerSignatureVerifierSpec (or a custom withWorkerFactory / withExecutor).",
+          `withWorkerPool requires worker-importable sources, but these models were registered only as live modules: ${resolvedSources.moduleOnlyKeys.join(", ")}. Provide a { filePath } or { packageName } source for each.`,
         );
       }
     }
-
-    if (this.documentModelSpecs.length > 0) {
-      this.resolvedModelManifest = this.documentModelSpecs.map((input) => {
-        if ("filePath" in input) {
-          const entry: ModelManifestEntry = {
-            documentType: "<unresolved>",
-            version: "<unresolved>",
-            spec: {
-              module: { filePath: input.filePath, exportName: "documentModel" },
-            },
-          };
-          return entry;
-        }
-        const entry: ModelManifestEntry = {
-          documentType: "<unresolved>",
-          version: input.version,
-          spec: {
-            module: {
-              packageName: input.packageName,
-              exportName: "documentModel",
-            },
-          },
-        };
-        return entry;
-      });
-    }
+    this.resolvedModelManifest =
+      resolvedSources.manifest.length > 0
+        ? resolvedSources.manifest
+        : undefined;
 
     const documentModelRegistry = new DocumentModelRegistry();
     if (this.upgradeManifests.length > 0) {
@@ -464,9 +437,9 @@ export class ReactorBuilder {
         }
       }
     }
-    if (this.documentModels.length > 0) {
+    if (resolvedSources.modules.length > 0) {
       const results = documentModelRegistry.registerModules(
-        ...this.documentModels,
+        ...resolvedSources.modules,
       );
       for (const result of results) {
         if (result.status === "error") {
@@ -478,10 +451,11 @@ export class ReactorBuilder {
       }
     }
 
+    const reactorDbConfig = this.resolveReactorDbConfig();
     const baseDatabase =
       this.kyselyInstance ??
-      (this.workerPoolConfig?.enabled && this.workerDbConfig
-        ? await this.createPostgresDatabase(this.workerDbConfig)
+      (reactorDbConfig
+        ? await this.createPostgresDatabase(reactorDbConfig)
         : await createDefaultDatabase());
 
     if (this.migrationStrategy === "auto") {
@@ -555,10 +529,21 @@ export class ReactorBuilder {
     let executorManager = this.executorManager;
     let executorStartCount = this.executorConfig.maxConcurrency ?? 1;
     if (!executorManager) {
-      if (this.workerPoolConfig?.enabled) {
-        const factory =
-          this.workerFactory ??
-          (await this.createDefaultWorkerFactory(this.workerPoolConfig));
+      if (this.workerPool) {
+        const pool = this.workerPool;
+        let factory = pool.factory;
+        if (!factory) {
+          if (pool.db === undefined) {
+            throw new Error(
+              "unreachable: worker pool configured without db or factory",
+            );
+          }
+          factory = await this.createDefaultWorkerFactory(
+            pool.numWorkers,
+            pool.db,
+            pool.verifier,
+          );
+        }
         const poolManager = new WorkerPoolJobExecutorManager(
           factory,
           eventBus,
@@ -570,7 +555,7 @@ export class ReactorBuilder {
           this.executorConfig.jobTimeoutMs,
         );
         executorManager = poolManager;
-        executorStartCount = this.workerPoolConfig.numWorkers;
+        executorStartCount = pool.numWorkers;
         if (resolver instanceof DocumentModelResolver) {
           resolver.setBroadcastHook((entry) => poolManager.loadModel(entry));
         }
@@ -761,6 +746,28 @@ export class ReactorBuilder {
   }
 
   /**
+   * The single Postgres config for the parent, executor workers, and
+   * projection shards. They must share one physical database (the parent
+   * writes operations; workers and shards read them), so divergent
+   * worker/shard targets throw. `withKysely` overrides the parent and is not
+   * validated against a worker/shard `db`.
+   */
+  private resolveReactorDbConfig(): DbConfig | undefined {
+    const workerDb = this.workerPool?.db;
+    const projectionDb = this.projectionShardConfig?.db;
+    if (
+      workerDb &&
+      projectionDb &&
+      !sameDatabaseTarget(workerDb, projectionDb)
+    ) {
+      throw new Error(
+        "withWorkerPool({ db }) and withProjectionShards({ db }) must address the same Postgres database (same host, port, and database); the parent writes operations there and the projection shards read them.",
+      );
+    }
+    return workerDb ?? projectionDb;
+  }
+
+  /**
    * Constructs a {@link ProjectionShardManager} bound to the host event
    * bus. Builds the default thread-transport factory unless one was
    * injected via {@link withProjectionWorkerFactory}. Calls
@@ -771,15 +778,16 @@ export class ReactorBuilder {
     config: ProjectionShardBuilderConfig,
     eventBus: IEventBus,
   ): Promise<IReadModelCoordinator> {
-    if (!this.workerDbConfig) {
+    const baseDb = this.resolveReactorDbConfig();
+    if (!baseDb) {
       throw new Error(
-        "withProjectionShards requires withWorkerDbConfig; projection workers need connection info to open their own pools.",
+        "withProjectionShards requires a db (or an executor worker pool configured with one); projection workers need connection info to open their own pools.",
       );
     }
     const models = this.resolvedModelManifest ?? [];
     const db: DbConfig = {
-      ...this.workerDbConfig,
-      poolSize: config.poolSize ?? this.workerDbConfig.poolSize,
+      ...baseDb,
+      poolSize: config.poolSize ?? baseDb.poolSize,
       applicationName: "reactor-projection-shard",
     };
     const factory =
@@ -825,12 +833,14 @@ export class ReactorBuilder {
   }
 
   /**
-   * Default {@link WorkerFactory} used when `workerPool.enabled` is set and
-   * the caller did not inject `withWorkerFactory`. Each worker spawns a real
-   * `node:worker_threads` Worker pointing at the compiled `worker/entry.js`.
+   * Default {@link WorkerFactory} used when the pool options carry no
+   * custom `factory`. Each worker spawns a real `node:worker_threads`
+   * Worker pointing at the compiled `worker/entry.js`.
    */
   private async createDefaultWorkerFactory(
-    poolConfig: WorkerPoolConfig,
+    numWorkers: number,
+    db: DbConfig,
+    signatureVerifier: SignatureVerifierSpec | undefined,
   ): Promise<WorkerFactory> {
     const [{ WorkerHandle }, { createThreadTransport }, { workerEntryPath }] =
       await Promise.all([
@@ -838,8 +848,12 @@ export class ReactorBuilder {
         import("../executor/worker/transport.js"),
         import("../executor/worker/index.js"),
       ]);
-    const db = this.workerDbConfig!;
-    const signatureVerifier = this.workerSignatureVerifierSpec!;
+    // The wire protocol keeps its full shape; only "thread" is implemented.
+    const poolConfig: WorkerPoolConfig = {
+      enabled: true,
+      numWorkers,
+      workerType: "thread",
+    };
     const models = this.resolvedModelManifest ?? [];
     const logger = this.logger!;
     return (index: number) => {

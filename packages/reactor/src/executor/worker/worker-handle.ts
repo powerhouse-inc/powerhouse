@@ -55,7 +55,8 @@ const DEFAULT_SHUTDOWN_GRACE_MS = 5_000;
 export type WorkerInitPayload = {
   poolConfig: WorkerPoolConfig;
   db: DbConfig;
-  signatureVerifier: SignatureVerifierSpec;
+  /** Omitted = the worker performs no executor-side signature verification. */
+  signatureVerifier?: SignatureVerifierSpec;
   models: ModelManifestEntry[];
 };
 

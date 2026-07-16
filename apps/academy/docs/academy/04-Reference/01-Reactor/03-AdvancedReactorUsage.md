@@ -42,7 +42,7 @@ import { ReactorBuilder, ChannelScheme } from "@powerhousedao/reactor";
 import { ConsoleLogger } from "document-model";
 
 const reactor = await new ReactorBuilder()
-  .withDocumentModels([todoListModule, invoiceModule])
+  .withDocumentModelSources([todoListModule, invoiceModule])
   .withLogger(new ConsoleLogger())
   .withExecutorConfig({ maxConcurrency: 4, jobTimeoutMs: 30_000 })
   .withWriteCacheConfig({ maxDocuments: 100, ringBufferSize: 10 })
@@ -57,7 +57,7 @@ const reactor = await new ReactorBuilder()
 
 | Method                            | Description                                                              |
 | --------------------------------- | ------------------------------------------------------------------------ |
-| `withDocumentModels(models)`      | Register document model modules                                          |
+| `withDocumentModelSources(sources)` | Register document-model sources: live modules, importable `{ filePath }` files, or importable `{ packageName }` packages |
 | `withUpgradeManifests(manifests)` | Register [upgrade manifests](/academy/Reference/Reactor/DocumentModelRegistry) for document model versioning |
 | `withLogger(logger)`              | Set the logger (defaults to `ConsoleLogger`)                             |
 | `withExecutorConfig(config)`      | Configure `maxConcurrency` and `jobTimeoutMs`                            |
@@ -75,20 +75,16 @@ const reactor = await new ReactorBuilder()
 | `withFeatures(features)`          | Set feature flags                                                        |
 | `withSignatureVerifier(verifier)` | Set a signature verification handler                                     |
 | `withJwtHandler(handler)`         | Set a JWT handler for authentication                                     |
-| `withDocumentModelLoader(loader)` | Set a custom document model loader                                       |
-| `withDocumentModelSpecs(specs)`   | Register document model specs the reactor (or its workers) resolves by package or file path |
+| `withDocumentModelLoader(loader)` | Set a lazy document-model loader: `load(documentType)` returns a `DocumentModelSource`; importable sources are broadcast to executor workers, live modules stay host-only |
 | `withDriveContainerTypes(types)`  | Set the document types treated as drive containers                       |
 | `withInstrumentedPool(instrumentation)` | Register an externally-built `pg.Pool` so its metrics surface through `pools` |
 | `withShutdownHook(hook)`          | Register an async cleanup hook to run during graceful shutdown           |
 | `withSignalHandlers()`            | Register OS signal handlers for graceful shutdown                        |
-| `withWorkerPool(config)`          | Run jobs in a worker pool instead of in-process (see [Storage and scaling](/academy/Reference/Reactor/StorageAndScaling)) |
-| `withWorkerDbConfig(db)`          | Postgres connection info forwarded to each worker                        |
-| `withWorkerSignatureVerifierSpec(spec)` | Factory spec each worker imports to build its signature verifier   |
-| `withWorkerFactory(factory)`      | Inject a custom worker factory (transport)                               |
+| `withWorkerPool(options)`         | Run jobs in N worker threads instead of in-process — calling it enables the pool; `{ numWorkers, db, verifier? }` or `{ numWorkers, factory }` (see [Storage and scaling](/academy/Reference/Reactor/StorageAndScaling)) |
 | `withProjectionShards(config)`    | Run N sharded projection workers (see [Storage and scaling](/academy/Reference/Reactor/StorageAndScaling)) |
 | `withProjectionWorkerFactory(factory)` | Inject a custom projection worker factory                           |
 
-`withProjectionShards` (and worker-pool mode) require `withWorkerDbConfig`: the workers need connection info to open their own pools, and `build()` throws otherwise. See [Storage and scaling](/academy/Reference/Reactor/StorageAndScaling) for worker pools and projection shards, and [Synchronization and remote drives](/academy/Reference/Reactor/Synchronization) for sync.
+Workers open their own Postgres pools: the executor pool takes its connection info in `withWorkerPool({ db })`, and `withProjectionShards` takes its own `db` (falling back to the executor pool's when both are configured). See [Storage and scaling](/academy/Reference/Reactor/StorageAndScaling) for worker pools and projection shards, and [Synchronization and remote drives](/academy/Reference/Reactor/Synchronization) for sync.
 
 ## IReactor API
 
@@ -249,7 +245,7 @@ Without a consistency token, reads may return stale data if the read models have
 
 ```typescript
 const module = await new ReactorBuilder()
-  .withDocumentModels([todoListModule])
+  .withDocumentModelSources([todoListModule])
   .buildModule();
 
 const { reactor, eventBus, processorManager, operationStore } = module;
@@ -352,7 +348,7 @@ class MyCustomReadModel implements IReadModel {
 }
 
 const reactor = await new ReactorBuilder()
-  .withDocumentModels([todoListModule])
+  .withDocumentModelSources([todoListModule])
   .withReadModel(new MyCustomReadModel())
   .build();
 ```
@@ -371,7 +367,7 @@ import { ConsoleLogger } from "document-model";
 
 async function createTestReactor() {
   const builder = new ReactorBuilder()
-    .withDocumentModels([todoListModule])
+    .withDocumentModelSources([todoListModule])
     .withLogger(new ConsoleLogger());
 
   // buildModule returns both the client and the reactor module internals

@@ -46,7 +46,7 @@ describe("ReactorClient Integration Tests", () => {
     await documentIndexer.init();
 
     const reactorBuilder = new ReactorBuilder()
-      .withDocumentModels([
+      .withDocumentModelSources([
         driveDocumentModelModule as any,
         documentModelDocumentModelModule,
       ])
@@ -489,7 +489,7 @@ describe("ReactorClient Integration Tests", () => {
 
           const eventBus = new EventBus();
           const reactorBuilder = new ReactorBuilder()
-            .withDocumentModels([
+            .withDocumentModelSources([
               driveDocumentModelModule as any,
               documentModelDocumentModelModule,
             ])

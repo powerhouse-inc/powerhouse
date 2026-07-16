@@ -136,7 +136,7 @@ describe("document model e2e integration", () => {
 
     // Build a reactor with the generated document model and the drive model
     reactorModule = await new ReactorBuilder()
-      .withDocumentModels([
+      .withDocumentModelSources([
         driveDocumentModelModule as unknown as DocumentModelModule,
         BillingStatement,
       ])

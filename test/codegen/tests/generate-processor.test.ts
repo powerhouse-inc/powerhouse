@@ -516,7 +516,7 @@ describe("processor e2e integration", () => {
 
     // 4. Build a reactor with the drive document model
     reactorModule = await new ReactorBuilder()
-      .withDocumentModels([
+      .withDocumentModelSources([
         driveDocumentModelModule as unknown as DocumentModelModule,
       ])
       .buildModule();

@@ -132,17 +132,19 @@ export async function buildWorkerExecutor(
   await loadModelManifest(init.models, loadFactory, registry, logger);
 
   let signatureVerifier: SignatureVerificationHandler | undefined;
-  try {
-    signatureVerifier = (await loadFactory(
-      init.signatureVerifier,
-    )) as SignatureVerificationHandler;
-  } catch (error) {
-    logger.error(
-      "worker failed to load signature verifier: @spec @error",
-      init.signatureVerifier,
-      error,
-    );
-    throw error;
+  if (init.signatureVerifier) {
+    try {
+      signatureVerifier = (await loadFactory(
+        init.signatureVerifier,
+      )) as SignatureVerificationHandler;
+    } catch (error) {
+      logger.error(
+        "worker failed to load signature verifier: @spec @error",
+        init.signatureVerifier,
+        error,
+      );
+      throw error;
+    }
   }
 
   const database = baseDatabase.withSchema(REACTOR_SCHEMA);

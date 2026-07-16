@@ -2,9 +2,24 @@
 
 import {
   buildDocumentSubgraphUrl,
+  getDocumentGraphqlQuery,
   getSwitchboardGatewayUrlFromDriveUrl,
 } from "@powerhousedao/reactor-browser";
+import lzString from "lz-string";
 import { describe, it } from "vitest";
+
+// The explorerURLState value is an lz-compressed JSON payload wrapping the
+// GetDocumentWithOperations query; decode and assert on its contents rather
+// than a hardcoded blob that rots whenever the query document evolves.
+function decodeExplorerState(url: string) {
+  const state = new URL(url).searchParams.get("explorerURLState");
+  expect(state).toBeTruthy();
+  return JSON.parse(lzString.decompressFromEncodedURIComponent(state!)) as {
+    document: string;
+    variables: string;
+    headers?: string;
+  };
+}
 
 describe("Switchboard hooks", () => {
   it("should return the proper switchboard url", () => {
@@ -19,8 +34,29 @@ describe("Switchboard hooks", () => {
       "https://example.com/d/123",
       "test-document",
     );
-    expect(url).toBe(
-      "https://example.com/d/123?explorerURLState=N4IgJg9gxgrgtgUwHYBcQC4QEcYIE4CeABAOIIoAi08yKA6gJYoAWA8gA74CGKDESAZwAUAHSREJRACQMwtBgDMG+dEQDKKPAyQBzAIRjJ0gG7KA7qoBq5gGIMANinwBJJOxgpDkqRE54efIJ2jipEVLCIqBzcvPwCwU54ru6e4t6+MYECAApcOto6qrn5uskeXgCURMBeEpARtEKy8kqhMnKoisp4ADREpggWJuZVNWlG9TSo1bVGRAB0i9kAEuFTKHYI9mACs0YZ-rGCQkoheKo+fgFxCfh97HkFFwfXgsUFo3tzTAhwAjPjOZGbRyAAeXyBvEQAhQXDg7AAqigoABZXaAoESZhcATMCFzAQAawY7HxRnweAgeDJklkNIkXCgRwBmMxdIxrKIKAInHpkihCBhcMRyLRfIk2hS4qIAigGWlPFhUGYkRQ-zGnMxYB4XGlEjgDEQABUeQg9URsbjzQhQU5BIFzacEAA5OFmjmsgC+0rlqBtKBZmoJDB0SHwgaDcxgAnDGsjmK4YDAeEF6PjmLDKDMVMJzjA5qMyq42jzBaI3o9Qa47HYEfTkiQbrLEkJCAIZYr9ckAhDjZQMBTafrnfjI81Y8xE8hEFh9gAwhAYKgaZbnf7iu7NZbsinTIucnlN5zYHgBFT8VPy19lQ4wHmhxIRyOvAp-DpVUQVmtVZttv9+J+qzUB+cYSvmgICPYMA6LMjaILMkyqiavIQbCTizLuDA9nEAAyWEBqB3ZyihQKYdhSCzBOUApjwCBgAAgigSJQM4Z6zPYOIoCiEBgF0dGMcxrEQF4nogD0IDGFwWhcAARvYgoYCAcYiCAzSdK01IYEQKlODCAC0iG0CpPReCpyYMMYCCllpKkAIwAEwAMwqWIomekAA",
+
+    expect(url.startsWith("https://example.com/d/123?explorerURLState=")).toBe(
+      true,
     );
+
+    const payload = decodeExplorerState(url);
+    expect(payload.document).toBe(getDocumentGraphqlQuery().trim());
+    expect(JSON.parse(payload.variables)).toEqual({
+      identifier: "test-document",
+    });
+    expect(payload.headers).toBeUndefined();
+  });
+
+  it("should include an Authorization header when an auth token is given", () => {
+    const url = buildDocumentSubgraphUrl(
+      "https://example.com/d/123",
+      "test-document",
+      "tok-123",
+    );
+
+    const payload = decodeExplorerState(url);
+    expect(JSON.parse(payload.headers!)).toEqual({
+      Authorization: "Bearer tok-123",
+    });
   });
 });

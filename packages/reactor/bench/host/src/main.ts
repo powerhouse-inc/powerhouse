@@ -13,7 +13,6 @@ import {
   JobStatus,
   ReactorBuilder,
   type Database,
-  type DocumentModelSpecInput,
   type InProcessReactorModule,
 } from "@powerhousedao/reactor";
 import { ReactorInstrumentation } from "@powerhousedao/opentelemetry-instrumentation-reactor";
@@ -26,7 +25,6 @@ import {
   driveDocumentModelModule,
   setDriveName,
 } from "@powerhousedao/shared/document-drive";
-import { documentModelDocumentModelModule } from "document-model";
 import { Kysely, PostgresDialect } from "kysely";
 import http from "node:http";
 import path from "node:path";
@@ -95,28 +93,24 @@ async function buildReactor(signer: ISigner): Promise<State> {
   });
   builder.withKysely(hostKysely).withInstrumentedPool(hostPoolInstrumentation);
 
+  // Package sources are worker-importable, so the same registration serves
+  // both executor modes.
+  builder.withDocumentModelSources([
+    {
+      packageName: "document-model",
+      exportName: "documentModelDocumentModelModule",
+    },
+    {
+      packageName: "@powerhousedao/shared/document-drive",
+      exportName: "driveDocumentModelModule",
+    },
+  ]);
+
   if (REACTOR_WORKERS > 0) {
-    const modelFile = path.resolve(__dirname, "./document-model.mjs");
     const verifierFile = path.resolve(__dirname, "./signature-verifier.mjs");
-    const specs: DocumentModelSpecInput[] = [{ filePath: modelFile }];
-    builder
-      .withDocumentModelLoader({
-        load: (documentType: string) => {
-          if (documentType === "powerhouse/document-drive") {
-            return Promise.resolve(driveDocumentModelModule);
-          }
-          return Promise.reject(
-            new Error(`bench-host has no loader for ${documentType}`),
-          );
-        },
-      })
-      .withDocumentModelSpecs(specs)
-      .withWorkerPool({
-        enabled: true,
-        numWorkers: REACTOR_WORKERS,
-        workerType: "thread",
-      })
-      .withWorkerDbConfig({
+    builder.withWorkerPool({
+      numWorkers: REACTOR_WORKERS,
+      db: {
         host: DB_HOST,
         port: DB_PORT,
         database: DB_NAME,
@@ -125,13 +119,14 @@ async function buildReactor(signer: ISigner): Promise<State> {
         applicationName: "reactor-bench-worker",
         poolSize: DB_POOL_SIZE_WORKER,
         connectionTimeoutMillis: DB_ACQUIRE_TIMEOUT_MS,
-      })
-      .withWorkerSignatureVerifierSpec({
+      },
+      verifier: {
         module: {
           filePath: verifierFile,
           exportName: "createVerifier",
         },
-      });
+      },
+    });
     if (N_PROJECTION_SHARDS > 0) {
       builder.withProjectionShards({
         shardCount: N_PROJECTION_SHARDS,
@@ -140,11 +135,6 @@ async function buildReactor(signer: ISigner): Promise<State> {
         poolSize: DB_POOL_SIZE_PROJECTION,
       });
     }
-  } else {
-    builder.withDocumentModels([
-      documentModelDocumentModelModule,
-      driveDocumentModelModule,
-    ]);
   }
 
   const module = await builder.buildModule();

@@ -1,29 +1,15 @@
+import { documentModelDocumentModelModule } from "document-model";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
-import type { DocumentModelSpecInput } from "../../src/core/reactor-builder.js";
+import type { DocumentModelSource } from "../../src/core/reactor-builder.js";
 import type {
   IExecutorWorker,
   WorkerExecutionOutcome,
   WorkerInFlightSnapshot,
 } from "../../src/executor/interfaces.js";
 import type { Job } from "../../src/queue/types.js";
-import type {
-  DbConfig,
-  SignatureVerifierSpec,
-  WorkerPoolConfig,
-} from "../../src/executor/worker/protocol.js";
-
-const WORKER_POOL_ENABLED: WorkerPoolConfig = {
-  enabled: true,
-  numWorkers: 1,
-  workerType: "thread",
-};
-
-const WORKER_POOL_DISABLED: WorkerPoolConfig = {
-  enabled: false,
-  numWorkers: 1,
-  workerType: "thread",
-};
+import type { DbConfig } from "../../src/executor/worker/protocol.js";
 
 const TEST_DB_CONFIG: DbConfig = {
   host: "localhost",
@@ -33,13 +19,11 @@ const TEST_DB_CONFIG: DbConfig = {
   password: "test",
 };
 
-const TEST_VERIFIER_SPEC: SignatureVerifierSpec = {
-  module: { packageName: "test-verifier", exportName: "factory" },
-};
+const FIXTURE_PATH = fileURLToPath(
+  new URL("./fixtures/model-barrel.mjs", import.meta.url),
+);
 
-const TEST_SPECS: DocumentModelSpecInput[] = [
-  { packageName: "ph/test-model", version: "1.0.0" },
-];
+const FIXTURE_SOURCES: DocumentModelSource[] = [{ filePath: FIXTURE_PATH }];
 
 class FakeWorker implements IExecutorWorker {
   readonly workerId: string;
@@ -84,111 +68,214 @@ class FakeWorker implements IExecutorWorker {
 }
 
 describe("ReactorBuilder", () => {
-  describe("withDocumentModels (in-process path)", () => {
-    it("builds successfully without withDocumentModelSpecs; manifest is undefined", async () => {
+  describe("withDocumentModelSources", () => {
+    it("builds with no sources; manifest is undefined", async () => {
       const builder = new ReactorBuilder();
       const module = await builder.buildModule();
       module.reactor.kill();
 
       expect(builder.getResolvedModelManifest()).toBeUndefined();
     });
-  });
 
-  describe("withDocumentModelSpecs", () => {
-    it("populates the resolved manifest with correct ModuleRef discriminants", async () => {
-      const specs: DocumentModelSpecInput[] = [
-        { packageName: "x", version: "1.0.0" },
-        { filePath: "/tmp/x.js" },
-      ];
-      const builder = new ReactorBuilder().withDocumentModelSpecs(specs);
+    it("registers live-module sources on the registry without a manifest", async () => {
+      const builder = new ReactorBuilder().withDocumentModelSources([
+        documentModelDocumentModelModule,
+      ]);
 
       const module = await builder.buildModule();
-      module.reactor.kill();
-
-      const manifest = builder.getResolvedModelManifest();
-      expect(manifest).toHaveLength(2);
-
-      const [pkgEntry, fileEntry] = manifest!;
-
-      expect("packageName" in pkgEntry.spec.module).toBe(true);
-      if ("packageName" in pkgEntry.spec.module) {
-        expect(pkgEntry.spec.module.packageName).toBe("x");
-        expect(pkgEntry.spec.module.exportName).toBe("documentModel");
+      try {
+        const registered = module.documentModelRegistry.getModule(
+          documentModelDocumentModelModule.documentModel.global.id,
+        );
+        expect(registered).toBeDefined();
+        expect(builder.getResolvedModelManifest()).toBeUndefined();
+      } finally {
+        module.reactor.kill();
       }
-      expect(pkgEntry.version).toBe("1.0.0");
+    });
 
-      expect("filePath" in fileEntry.spec.module).toBe(true);
-      if ("filePath" in fileEntry.spec.module) {
-        expect(fileEntry.spec.module.filePath).toBe("/tmp/x.js");
-        expect(fileEntry.spec.module.exportName).toBe("documentModel");
+    it("resolves a file source: scans exports into registry and manifest", async () => {
+      const builder = new ReactorBuilder().withDocumentModelSources(
+        FIXTURE_SOURCES,
+      );
+
+      const module = await builder.buildModule();
+      try {
+        expect(
+          module.documentModelRegistry.getModule("test/alpha"),
+        ).toBeDefined();
+        expect(
+          module.documentModelRegistry.getModule("test/beta", 2),
+        ).toBeDefined();
+
+        const manifest = builder.getResolvedModelManifest();
+        expect(manifest).toHaveLength(2);
+        const byType = new Map(manifest!.map((e) => [e.documentType, e]));
+        const alpha = byType.get("test/alpha")!;
+        expect(alpha.version).toBe("1");
+        expect(alpha.spec.module).toEqual({
+          filePath: FIXTURE_PATH,
+          exportName: "alphaModel",
+        });
+        const beta = byType.get("test/beta")!;
+        expect(beta.version).toBe("2");
+        expect(beta.spec.module).toEqual({
+          filePath: FIXTURE_PATH,
+          exportName: "betaModel",
+        });
+      } finally {
+        module.reactor.kill();
       }
+    });
+
+    it("narrows a file source to a single model with an explicit exportName", async () => {
+      const builder = new ReactorBuilder().withDocumentModelSources([
+        { filePath: FIXTURE_PATH, exportName: "alphaModel" },
+      ]);
+
+      const module = await builder.buildModule();
+      try {
+        const manifest = builder.getResolvedModelManifest();
+        expect(manifest).toHaveLength(1);
+        expect(manifest![0].documentType).toBe("test/alpha");
+      } finally {
+        module.reactor.kill();
+      }
+    });
+
+    it("resolves a package source by specifier", async () => {
+      const builder = new ReactorBuilder().withDocumentModelSources([
+        {
+          packageName: "document-model",
+          exportName: "documentModelDocumentModelModule",
+        },
+      ]);
+
+      const module = await builder.buildModule();
+      try {
+        const manifest = builder.getResolvedModelManifest();
+        expect(manifest).toHaveLength(1);
+        expect(manifest![0].spec.module).toEqual({
+          packageName: "document-model",
+          exportName: "documentModelDocumentModelModule",
+        });
+        expect(
+          module.documentModelRegistry.getModule(manifest![0].documentType),
+        ).toBeDefined();
+      } finally {
+        module.reactor.kill();
+      }
+    });
+
+    it("dedupes by documentType@version: importable source backfills a live module", async () => {
+      const builder = new ReactorBuilder()
+        .withDocumentModelSources([documentModelDocumentModelModule])
+        .withDocumentModelSources([
+          {
+            packageName: "document-model",
+            exportName: "documentModelDocumentModelModule",
+          },
+        ]);
+
+      const module = await builder.buildModule();
+      try {
+        const manifest = builder.getResolvedModelManifest();
+        expect(manifest).toHaveLength(1);
+      } finally {
+        module.reactor.kill();
+      }
+    });
+
+    it("rejects an unimportable file source", async () => {
+      const builder = new ReactorBuilder().withDocumentModelSources([
+        { filePath: "/tmp/definitely-does-not-exist.mjs" },
+      ]);
+
+      await expect(builder.buildModule()).rejects.toThrow(/Failed to import/);
+    });
+
+    it("rejects a file source with no model exports", async () => {
+      const builder = new ReactorBuilder().withDocumentModelSources([
+        { filePath: FIXTURE_PATH, exportName: "notAModel" },
+      ]);
+
+      await expect(builder.buildModule()).rejects.toThrow(
+        /not a DocumentModelModule/,
+      );
     });
   });
 
-  describe("mutual-exclusion validation", () => {
-    it("rejects when withDocumentModels and workerPool.enabled are both set", async () => {
+  describe("worker-pool validation", () => {
+    it("rejects when enabled with no importable sources", async () => {
+      const builder = new ReactorBuilder().withWorkerPool({
+        numWorkers: 1,
+        factory: (index) => new FakeWorker(index),
+      });
+
+      await expect(builder.buildModule()).rejects.toThrow(/worker-importable/);
+    });
+
+    it("rejects models registered only as live modules", async () => {
       const builder = new ReactorBuilder()
-        .withDocumentModels([{} as any])
-        .withWorkerPool(WORKER_POOL_ENABLED);
+        .withDocumentModelSources([
+          ...FIXTURE_SOURCES,
+          documentModelDocumentModelModule,
+        ])
+        .withWorkerPool({
+          numWorkers: 1,
+          factory: (index) => new FakeWorker(index),
+        });
 
       await expect(builder.buildModule()).rejects.toThrow(
-        /withDocumentModelSpecs/,
+        /only as live modules.*powerhouse\/document-model/,
       );
     });
 
-    it("rejects when workerPool.enabled is true but no specs registered", async () => {
-      const builder = new ReactorBuilder().withWorkerPool(WORKER_POOL_ENABLED);
+    it("accepts a live module when an importable source covers the same model", async () => {
+      const builder = new ReactorBuilder()
+        .withDocumentModelSources([
+          documentModelDocumentModelModule,
+          {
+            packageName: "document-model",
+            exportName: "documentModelDocumentModelModule",
+          },
+        ])
+        .withWorkerPool({
+          numWorkers: 1,
+          factory: (index) => new FakeWorker(index),
+        });
 
-      await expect(builder.buildModule()).rejects.toThrow(
-        /withDocumentModelSpecs/,
-      );
+      const module = await builder.buildModule();
+      try {
+        expect(builder.getResolvedModelManifest()).toHaveLength(1);
+      } finally {
+        await module.reactor.kill();
+      }
     });
 
-    it("does not throw when workerPool.enabled is false and withDocumentModels is used", async () => {
-      const builder = new ReactorBuilder()
-        .withDocumentModels([{} as any])
-        .withWorkerPool(WORKER_POOL_DISABLED);
+    it("does not restrict live modules when no pool is configured", async () => {
+      const builder = new ReactorBuilder().withDocumentModelSources([
+        documentModelDocumentModelModule,
+      ]);
 
       const module = await builder.buildModule();
       module.reactor.kill();
 
       expect(builder.getResolvedModelManifest()).toBeUndefined();
     });
-  });
 
-  describe("worker-pool wiring", () => {
-    it("rejects when enabled and withWorkerDbConfig is missing", async () => {
+    it("builds without a signature-verifier spec (verification is optional)", async () => {
       const builder = new ReactorBuilder()
-        .withDocumentModelSpecs(TEST_SPECS)
-        .withWorkerPool(WORKER_POOL_ENABLED)
-        .withWorkerSignatureVerifierSpec(TEST_VERIFIER_SPEC);
-
-      await expect(builder.buildModule()).rejects.toThrow(/withWorkerDbConfig/);
-    });
-
-    it("rejects when enabled and withWorkerSignatureVerifierSpec is missing", async () => {
-      const builder = new ReactorBuilder()
-        .withDocumentModelSpecs(TEST_SPECS)
-        .withWorkerPool(WORKER_POOL_ENABLED)
-        .withWorkerDbConfig(TEST_DB_CONFIG);
-
-      await expect(builder.buildModule()).rejects.toThrow(
-        /withWorkerSignatureVerifierSpec/,
-      );
-    });
-
-    it("skips db / verifier validation when withWorkerFactory is provided", async () => {
-      const factory = (index: number) => new FakeWorker(index);
-      const builder = new ReactorBuilder()
-        .withDocumentModelSpecs(TEST_SPECS)
-        .withWorkerPool(WORKER_POOL_ENABLED)
-        .withWorkerFactory(factory);
+        .withDocumentModelSources(FIXTURE_SOURCES)
+        .withWorkerPool({
+          numWorkers: 1,
+          factory: (index) => new FakeWorker(index),
+        });
 
       const module = await builder.buildModule();
       try {
         const status = module.executorManager.getStatus();
-        expect(status.numExecutors).toBe(WORKER_POOL_ENABLED.numWorkers);
-        expect(module.executorManager.getExecutors()).toEqual([]);
+        expect(status.numExecutors).toBe(1);
       } finally {
         await module.reactor.kill();
       }
@@ -201,22 +288,15 @@ describe("ReactorBuilder", () => {
         created.push(w);
         return w;
       };
-      const config: WorkerPoolConfig = {
-        enabled: true,
-        numWorkers: 3,
-        workerType: "thread",
-      };
       const builder = new ReactorBuilder()
-        .withDocumentModelSpecs(TEST_SPECS)
-        .withWorkerPool(config)
-        .withWorkerFactory(factory);
+        .withDocumentModelSources(FIXTURE_SOURCES)
+        .withWorkerPool({ numWorkers: 3, factory });
 
       const module = await builder.buildModule();
       try {
         expect(created).toHaveLength(3);
         for (const w of created) {
           expect(w.startCalls).toBe(1);
-          expect(w.index).toBeGreaterThanOrEqual(0);
           expect(w.index).toBeLessThan(3);
         }
         expect(module.executorManager.getStatus().numExecutors).toBe(3);
@@ -260,9 +340,8 @@ describe("ReactorBuilder", () => {
       };
 
       const builder = new ReactorBuilder()
-        .withDocumentModelSpecs(TEST_SPECS)
-        .withWorkerPool(WORKER_POOL_ENABLED)
-        .withWorkerFactory(factory)
+        .withDocumentModelSources(FIXTURE_SOURCES)
+        .withWorkerPool({ numWorkers: 1, factory })
         .withExecutor(customManager);
 
       const module = await builder.buildModule();
@@ -275,7 +354,7 @@ describe("ReactorBuilder", () => {
       }
     });
 
-    it("routes parent database through createPostgresDatabase when workerPool.enabled and workerDbConfig is set", async () => {
+    it("routes parent database through createPostgresDatabase when the pool carries a db", async () => {
       const proto = ReactorBuilder.prototype as unknown as {
         createPostgresDatabase: (config: DbConfig) => Promise<unknown>;
       };
@@ -286,10 +365,8 @@ describe("ReactorBuilder", () => {
       try {
         const factory = (index: number) => new FakeWorker(index);
         const builder = new ReactorBuilder()
-          .withDocumentModelSpecs(TEST_SPECS)
-          .withWorkerPool(WORKER_POOL_ENABLED)
-          .withWorkerFactory(factory)
-          .withWorkerDbConfig(TEST_DB_CONFIG);
+          .withDocumentModelSources(FIXTURE_SOURCES)
+          .withWorkerPool({ numWorkers: 1, db: TEST_DB_CONFIG, factory });
 
         await expect(builder.buildModule()).rejects.toThrow(
           /postgres-was-called/,
@@ -300,7 +377,7 @@ describe("ReactorBuilder", () => {
       }
     });
 
-    it("uses PGlite default when workerPool.enabled but no workerDbConfig (custom factory path)", async () => {
+    it("uses PGlite default when the pool has a factory but no db", async () => {
       const proto = ReactorBuilder.prototype as unknown as {
         createPostgresDatabase: (config: DbConfig) => Promise<unknown>;
       };
@@ -309,9 +386,8 @@ describe("ReactorBuilder", () => {
       try {
         const factory = (index: number) => new FakeWorker(index);
         const builder = new ReactorBuilder()
-          .withDocumentModelSpecs(TEST_SPECS)
-          .withWorkerPool(WORKER_POOL_ENABLED)
-          .withWorkerFactory(factory);
+          .withDocumentModelSources(FIXTURE_SOURCES)
+          .withWorkerPool({ numWorkers: 1, factory });
 
         const module = await builder.buildModule();
         try {
@@ -324,10 +400,10 @@ describe("ReactorBuilder", () => {
       }
     });
 
-    it("falls back to SimpleJobExecutorManager when workerPool is disabled", async () => {
-      const builder = new ReactorBuilder()
-        .withDocumentModelSpecs(TEST_SPECS)
-        .withWorkerPool(WORKER_POOL_DISABLED);
+    it("falls back to SimpleJobExecutorManager when no pool is configured", async () => {
+      const builder = new ReactorBuilder().withDocumentModelSources(
+        FIXTURE_SOURCES,
+      );
 
       const module = await builder.buildModule();
       try {
@@ -336,6 +412,87 @@ describe("ReactorBuilder", () => {
         expect(module.executorManager.getExecutors().length).toBeGreaterThan(0);
       } finally {
         await module.reactor.kill();
+      }
+    });
+  });
+
+  describe("database configuration", () => {
+    it("builds the parent from the projection-shard db so reads and writes cannot diverge", async () => {
+      const proto = ReactorBuilder.prototype as unknown as {
+        createPostgresDatabase: (config: DbConfig) => Promise<unknown>;
+      };
+      const spy = vi
+        .spyOn(proto, "createPostgresDatabase")
+        .mockRejectedValue(new Error("postgres-was-called"));
+
+      try {
+        const builder = new ReactorBuilder()
+          .withDocumentModelSources(FIXTURE_SOURCES)
+          .withProjectionShards({
+            db: TEST_DB_CONFIG,
+            shardCount: 1,
+            preReadyKinds: [],
+            postReadyKinds: [],
+          });
+
+        await expect(builder.buildModule()).rejects.toThrow(
+          /postgres-was-called/,
+        );
+        expect(spy).toHaveBeenCalledWith(TEST_DB_CONFIG);
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
+    it("rejects a worker pool and projection shards pointed at different databases", async () => {
+      const builder = new ReactorBuilder()
+        .withDocumentModelSources(FIXTURE_SOURCES)
+        .withWorkerPool({
+          numWorkers: 1,
+          db: TEST_DB_CONFIG,
+          factory: (index) => new FakeWorker(index),
+        })
+        .withProjectionShards({
+          db: { ...TEST_DB_CONFIG, host: "other-host" },
+          shardCount: 1,
+          preReadyKinds: [],
+          postReadyKinds: [],
+        });
+
+      await expect(builder.buildModule()).rejects.toThrow(
+        /must address the same Postgres database/,
+      );
+    });
+
+    it("accepts a worker pool and projection shards on the same database", async () => {
+      const proto = ReactorBuilder.prototype as unknown as {
+        createPostgresDatabase: (config: DbConfig) => Promise<unknown>;
+      };
+      const spy = vi
+        .spyOn(proto, "createPostgresDatabase")
+        .mockRejectedValue(new Error("postgres-was-called"));
+
+      try {
+        const builder = new ReactorBuilder()
+          .withDocumentModelSources(FIXTURE_SOURCES)
+          .withWorkerPool({
+            numWorkers: 1,
+            db: TEST_DB_CONFIG,
+            factory: (index) => new FakeWorker(index),
+          })
+          .withProjectionShards({
+            db: { ...TEST_DB_CONFIG, poolSize: 9 },
+            shardCount: 1,
+            preReadyKinds: [],
+            postReadyKinds: [],
+          });
+
+        await expect(builder.buildModule()).rejects.toThrow(
+          /postgres-was-called/,
+        );
+        expect(spy).toHaveBeenCalledWith(TEST_DB_CONFIG);
+      } finally {
+        spy.mockRestore();
       }
     });
   });
