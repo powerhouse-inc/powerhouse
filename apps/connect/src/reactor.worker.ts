@@ -300,7 +300,9 @@ const host = new ReactorHost({
       );
       phase = "opening pglite stores";
       console.info(`[reactor.worker] boot: ${phase}`);
-      // Sequential since they are both using response
+
+      //this has to be serial: concurrent PGlite constructors consume the same
+      // cached one-shot wasm "Response" object
       const reactor = await openReactorPglite(construct.namespace);
       const relationalMajor = await openRelational(
         construct.relationalNamespace,
