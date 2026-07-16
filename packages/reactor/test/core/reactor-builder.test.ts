@@ -9,22 +9,7 @@ import type {
   WorkerInFlightSnapshot,
 } from "../../src/executor/interfaces.js";
 import type { Job } from "../../src/queue/types.js";
-import type {
-  DbConfig,
-  WorkerPoolConfig,
-} from "../../src/executor/worker/protocol.js";
-
-const WORKER_POOL_ENABLED: WorkerPoolConfig = {
-  enabled: true,
-  numWorkers: 1,
-  workerType: "thread",
-};
-
-const WORKER_POOL_DISABLED: WorkerPoolConfig = {
-  enabled: false,
-  numWorkers: 1,
-  workerType: "thread",
-};
+import type { DbConfig } from "../../src/executor/worker/protocol.js";
 
 const TEST_DB_CONFIG: DbConfig = {
   host: "localhost",
@@ -222,9 +207,10 @@ describe("ReactorBuilder", () => {
 
   describe("worker-pool validation", () => {
     it("rejects when enabled with no importable sources", async () => {
-      const builder = new ReactorBuilder()
-        .withWorkerPool(WORKER_POOL_ENABLED)
-        .withWorkerFactory((index) => new FakeWorker(index));
+      const builder = new ReactorBuilder().withWorkerPool({
+        numWorkers: 1,
+        factory: (index) => new FakeWorker(index),
+      });
 
       await expect(builder.buildModule()).rejects.toThrow(/worker-importable/);
     });
@@ -235,8 +221,10 @@ describe("ReactorBuilder", () => {
           ...FIXTURE_SOURCES,
           documentModelDocumentModelModule,
         ])
-        .withWorkerPool(WORKER_POOL_ENABLED)
-        .withWorkerFactory((index) => new FakeWorker(index));
+        .withWorkerPool({
+          numWorkers: 1,
+          factory: (index) => new FakeWorker(index),
+        });
 
       await expect(builder.buildModule()).rejects.toThrow(
         /only as live modules.*powerhouse\/document-model/,
@@ -252,8 +240,10 @@ describe("ReactorBuilder", () => {
             exportName: "documentModelDocumentModelModule",
           },
         ])
-        .withWorkerPool(WORKER_POOL_ENABLED)
-        .withWorkerFactory((index) => new FakeWorker(index));
+        .withWorkerPool({
+          numWorkers: 1,
+          factory: (index) => new FakeWorker(index),
+        });
 
       const module = await builder.buildModule();
       try {
@@ -263,10 +253,10 @@ describe("ReactorBuilder", () => {
       }
     });
 
-    it("does not restrict live modules when the pool is disabled", async () => {
-      const builder = new ReactorBuilder()
-        .withDocumentModelSources([documentModelDocumentModelModule])
-        .withWorkerPool(WORKER_POOL_DISABLED);
+    it("does not restrict live modules when no pool is configured", async () => {
+      const builder = new ReactorBuilder().withDocumentModelSources([
+        documentModelDocumentModelModule,
+      ]);
 
       const module = await builder.buildModule();
       module.reactor.kill();
@@ -274,24 +264,18 @@ describe("ReactorBuilder", () => {
       expect(builder.getResolvedModelManifest()).toBeUndefined();
     });
 
-    it("rejects when enabled and withWorkerDbConfig is missing (default factory)", async () => {
-      const builder = new ReactorBuilder()
-        .withDocumentModelSources(FIXTURE_SOURCES)
-        .withWorkerPool(WORKER_POOL_ENABLED);
-
-      await expect(builder.buildModule()).rejects.toThrow(/withWorkerDbConfig/);
-    });
-
     it("builds without a signature-verifier spec (verification is optional)", async () => {
       const builder = new ReactorBuilder()
         .withDocumentModelSources(FIXTURE_SOURCES)
-        .withWorkerPool(WORKER_POOL_ENABLED)
-        .withWorkerFactory((index) => new FakeWorker(index));
+        .withWorkerPool({
+          numWorkers: 1,
+          factory: (index) => new FakeWorker(index),
+        });
 
       const module = await builder.buildModule();
       try {
         const status = module.executorManager.getStatus();
-        expect(status.numExecutors).toBe(WORKER_POOL_ENABLED.numWorkers);
+        expect(status.numExecutors).toBe(1);
       } finally {
         await module.reactor.kill();
       }
@@ -304,15 +288,9 @@ describe("ReactorBuilder", () => {
         created.push(w);
         return w;
       };
-      const config: WorkerPoolConfig = {
-        enabled: true,
-        numWorkers: 3,
-        workerType: "thread",
-      };
       const builder = new ReactorBuilder()
         .withDocumentModelSources(FIXTURE_SOURCES)
-        .withWorkerPool(config)
-        .withWorkerFactory(factory);
+        .withWorkerPool({ numWorkers: 3, factory });
 
       const module = await builder.buildModule();
       try {
@@ -363,8 +341,7 @@ describe("ReactorBuilder", () => {
 
       const builder = new ReactorBuilder()
         .withDocumentModelSources(FIXTURE_SOURCES)
-        .withWorkerPool(WORKER_POOL_ENABLED)
-        .withWorkerFactory(factory)
+        .withWorkerPool({ numWorkers: 1, factory })
         .withExecutor(customManager);
 
       const module = await builder.buildModule();
@@ -377,7 +354,7 @@ describe("ReactorBuilder", () => {
       }
     });
 
-    it("routes parent database through createPostgresDatabase when workerPool.enabled and workerDbConfig is set", async () => {
+    it("routes parent database through createPostgresDatabase when the pool carries a db", async () => {
       const proto = ReactorBuilder.prototype as unknown as {
         createPostgresDatabase: (config: DbConfig) => Promise<unknown>;
       };
@@ -389,9 +366,7 @@ describe("ReactorBuilder", () => {
         const factory = (index: number) => new FakeWorker(index);
         const builder = new ReactorBuilder()
           .withDocumentModelSources(FIXTURE_SOURCES)
-          .withWorkerPool(WORKER_POOL_ENABLED)
-          .withWorkerFactory(factory)
-          .withWorkerDbConfig(TEST_DB_CONFIG);
+          .withWorkerPool({ numWorkers: 1, db: TEST_DB_CONFIG, factory });
 
         await expect(builder.buildModule()).rejects.toThrow(
           /postgres-was-called/,
@@ -402,7 +377,7 @@ describe("ReactorBuilder", () => {
       }
     });
 
-    it("uses PGlite default when workerPool.enabled but no workerDbConfig (custom factory path)", async () => {
+    it("uses PGlite default when the pool has a factory but no db", async () => {
       const proto = ReactorBuilder.prototype as unknown as {
         createPostgresDatabase: (config: DbConfig) => Promise<unknown>;
       };
@@ -412,8 +387,7 @@ describe("ReactorBuilder", () => {
         const factory = (index: number) => new FakeWorker(index);
         const builder = new ReactorBuilder()
           .withDocumentModelSources(FIXTURE_SOURCES)
-          .withWorkerPool(WORKER_POOL_ENABLED)
-          .withWorkerFactory(factory);
+          .withWorkerPool({ numWorkers: 1, factory });
 
         const module = await builder.buildModule();
         try {
@@ -426,10 +400,10 @@ describe("ReactorBuilder", () => {
       }
     });
 
-    it("falls back to SimpleJobExecutorManager when workerPool is disabled", async () => {
-      const builder = new ReactorBuilder()
-        .withDocumentModelSources(FIXTURE_SOURCES)
-        .withWorkerPool(WORKER_POOL_DISABLED);
+    it("falls back to SimpleJobExecutorManager when no pool is configured", async () => {
+      const builder = new ReactorBuilder().withDocumentModelSources(
+        FIXTURE_SOURCES,
+      );
 
       const module = await builder.buildModule();
       try {

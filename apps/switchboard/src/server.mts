@@ -463,14 +463,10 @@ async function initServer(
         packages,
         reactorLogger,
       );
-      reactorBuilder
-        .withDocumentModelSources(workerSources)
-        .withWorkerPool({
-          enabled: true,
-          numWorkers: workerPool.numWorkers,
-          workerType: "thread",
-        })
-        .withWorkerDbConfig(buildWorkerDbConfig(reactorDbUrl, workerPool));
+      reactorBuilder.withDocumentModelSources(workerSources).withWorkerPool({
+        numWorkers: workerPool.numWorkers,
+        db: buildWorkerDbConfig(reactorDbUrl, workerPool),
+      });
       reactorLogger.info(
         `Executor worker pool enabled: ${workerPool.numWorkers} worker threads${
           workerPool.mode === "auto" ? " (auto-sized from cores)" : ""

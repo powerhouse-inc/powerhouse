@@ -80,14 +80,11 @@ const reactor = await new ReactorBuilder()
 | `withInstrumentedPool(instrumentation)` | Register an externally-built `pg.Pool` so its metrics surface through `pools` |
 | `withShutdownHook(hook)`          | Register an async cleanup hook to run during graceful shutdown           |
 | `withSignalHandlers()`            | Register OS signal handlers for graceful shutdown                        |
-| `withWorkerPool(config)`          | Run jobs in a worker pool instead of in-process (see [Storage and scaling](/academy/Reference/Reactor/StorageAndScaling)) |
-| `withWorkerDbConfig(db)`          | Postgres connection info forwarded to each worker                        |
-| `withWorkerSignatureVerifierSpec(spec)` | Factory spec each worker imports to build its signature verifier   |
-| `withWorkerFactory(factory)`      | Inject a custom worker factory (transport)                               |
+| `withWorkerPool(options)`         | Run jobs in N worker threads instead of in-process — calling it enables the pool; `{ numWorkers, db, verifier? }` or `{ numWorkers, factory }` (see [Storage and scaling](/academy/Reference/Reactor/StorageAndScaling)) |
 | `withProjectionShards(config)`    | Run N sharded projection workers (see [Storage and scaling](/academy/Reference/Reactor/StorageAndScaling)) |
 | `withProjectionWorkerFactory(factory)` | Inject a custom projection worker factory                           |
 
-`withProjectionShards` (and worker-pool mode) require `withWorkerDbConfig`: the workers need connection info to open their own pools, and `build()` throws otherwise. See [Storage and scaling](/academy/Reference/Reactor/StorageAndScaling) for worker pools and projection shards, and [Synchronization and remote drives](/academy/Reference/Reactor/Synchronization) for sync.
+Workers open their own Postgres pools: the executor pool takes its connection info in `withWorkerPool({ db })`, and `withProjectionShards` takes its own `db` (falling back to the executor pool's when both are configured). See [Storage and scaling](/academy/Reference/Reactor/StorageAndScaling) for worker pools and projection shards, and [Synchronization and remote drives](/academy/Reference/Reactor/Synchronization) for sync.
 
 ## IReactor API
 

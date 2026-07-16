@@ -29,6 +29,7 @@ export {
   type ProjectionShardBuilderConfig,
   type ReadModelFactory,
   type ReadModelFactoryDeps,
+  type WorkerPoolOptions,
 } from "./src/core/reactor-builder.js";
 export type {
   BuiltInReadModelKind,

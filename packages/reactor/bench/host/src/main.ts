@@ -108,13 +108,9 @@ async function buildReactor(signer: ISigner): Promise<State> {
 
   if (REACTOR_WORKERS > 0) {
     const verifierFile = path.resolve(__dirname, "./signature-verifier.mjs");
-    builder
-      .withWorkerPool({
-        enabled: true,
-        numWorkers: REACTOR_WORKERS,
-        workerType: "thread",
-      })
-      .withWorkerDbConfig({
+    builder.withWorkerPool({
+      numWorkers: REACTOR_WORKERS,
+      db: {
         host: DB_HOST,
         port: DB_PORT,
         database: DB_NAME,
@@ -123,13 +119,14 @@ async function buildReactor(signer: ISigner): Promise<State> {
         applicationName: "reactor-bench-worker",
         poolSize: DB_POOL_SIZE_WORKER,
         connectionTimeoutMillis: DB_ACQUIRE_TIMEOUT_MS,
-      })
-      .withWorkerSignatureVerifierSpec({
+      },
+      verifier: {
         module: {
           filePath: verifierFile,
           exportName: "createVerifier",
         },
-      });
+      },
+    });
     if (N_PROJECTION_SHARDS > 0) {
       builder.withProjectionShards({
         shardCount: N_PROJECTION_SHARDS,

@@ -20,7 +20,6 @@ import type {
 import type { WorkerFactory } from "../../../src/executor/worker-pool-job-executor-manager.js";
 import { bucketFor } from "../../../src/executor/worker-pool-router.js";
 import type { JobWriteReadyPayload } from "../../../src/executor/worker/protocol.js";
-import type { WorkerPoolConfig } from "../../../src/executor/worker/protocol.js";
 import type { Job } from "../../../src/queue/types.js";
 import { JobStatus } from "../../../src/shared/types.js";
 
@@ -93,10 +92,6 @@ const SPECS: DocumentModelSource[] = [
     ),
   },
 ];
-
-function poolConfig(numWorkers: number): WorkerPoolConfig {
-  return { enabled: true, numWorkers, workerType: "thread" };
-}
 
 function makeJob(overrides: Partial<Job> = {}): Job {
   const id = overrides.id ?? `job-${Math.random().toString(36).slice(2)}`;
@@ -183,13 +178,12 @@ describe("Worker pool integration through ReactorBuilder", () => {
   });
 
   async function buildReactor(
-    config: WorkerPoolConfig,
+    numWorkers: number,
     factory: WorkerFactory,
   ): Promise<InProcessReactorModule> {
     const module = await new ReactorBuilder()
       .withDocumentModelSources(SPECS)
-      .withWorkerPool(config)
-      .withWorkerFactory(factory)
+      .withWorkerPool({ numWorkers, factory })
       .buildModule();
     modules.push(module);
     return module;
@@ -202,7 +196,7 @@ describe("Worker pool integration through ReactorBuilder", () => {
       created.push(w);
       return w;
     };
-    const module = await buildReactor(poolConfig(3), factory);
+    const module = await buildReactor(3, factory);
 
     const docId = findJobForBucket(2, 3);
     const job = makeJob({ id: "job-routed", documentId: docId });
@@ -241,7 +235,7 @@ describe("Worker pool integration through ReactorBuilder", () => {
             } as JobWriteReadyPayload,
           }),
       });
-    const module = await buildReactor(poolConfig(1), factory);
+    const module = await buildReactor(1, factory);
 
     const writeReady = new Promise<JobWriteReadyEvent>((resolve) => {
       module.eventBus.subscribe(
@@ -263,7 +257,7 @@ describe("Worker pool integration through ReactorBuilder", () => {
 
   it("reports numExecutors === numWorkers on the manager", async () => {
     const factory: WorkerFactory = (index) => new FakeWorker({ index });
-    const module = await buildReactor(poolConfig(4), factory);
+    const module = await buildReactor(4, factory);
     expect(module.executorManager.getStatus().numExecutors).toBe(4);
     expect(module.executorManager.getExecutors()).toEqual([]);
   });
@@ -275,7 +269,7 @@ describe("Worker pool integration through ReactorBuilder", () => {
       created.push(w);
       return w;
     };
-    const module = await buildReactor(poolConfig(2), factory);
+    const module = await buildReactor(2, factory);
     await module.reactor.kill();
     modules.pop();
     for (const w of created) {
@@ -291,7 +285,7 @@ describe("Worker pool integration through ReactorBuilder", () => {
       created.push(w);
       return w;
     };
-    const module = await buildReactor(poolConfig(N), factory);
+    const module = await buildReactor(N, factory);
 
     const jobs: Job[] = [];
     for (let i = 0; i < N; i++) {
