@@ -257,7 +257,7 @@ describe("ReactorClient Versioning Integration Tests", () => {
 
   beforeEach(async () => {
     const reactorBuilder = new ReactorBuilder()
-      .withDocumentModels([driveDocumentModelModule as any, v1Module, v2Module])
+      .withDocumentModelSources([driveDocumentModelModule as any, v1Module, v2Module])
       .withUpgradeManifests([
         upgradeManifest as unknown as UpgradeManifest<readonly number[]>,
       ]);

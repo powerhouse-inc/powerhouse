@@ -53,7 +53,7 @@ const createMockReactorClient = (): IReactorClient => {
 
 // Create a real reactor client for integration tests
 async function createReactorClientModule(): Promise<InProcessReactorClientModule> {
-  const reactorBuilder = new ReactorBuilder().withDocumentModels([
+  const reactorBuilder = new ReactorBuilder().withDocumentModelSources([
     documentModelDocumentModelModule,
     driveDocumentModelModule,
   ]);

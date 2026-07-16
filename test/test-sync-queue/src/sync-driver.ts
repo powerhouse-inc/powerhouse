@@ -63,7 +63,7 @@ export class SyncDriver {
     });
 
     const builder = new ReactorBuilder()
-      .withDocumentModels(baseDocumentModels)
+      .withDocumentModelSources(baseDocumentModels)
       .withChannelScheme(ChannelScheme.CONNECT)
       .withDocumentModelLoader(httpLoader.documentModelLoader);
 

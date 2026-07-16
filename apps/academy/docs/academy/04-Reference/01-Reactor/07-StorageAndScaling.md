@@ -16,7 +16,7 @@ Out of the box the builder gives you an in-memory [PGlite](https://pglite.dev/) 
 import { ReactorBuilder } from "@powerhousedao/reactor";
 
 const reactor = await new ReactorBuilder()
-  .withDocumentModels([myDocumentModel])
+  .withDocumentModelSources([myDocumentModel])
   .build();
 ```
 
@@ -105,14 +105,14 @@ if (!result.success && result.error) {
 
 The executor worker pool moves job execution out of the main thread into N `node:worker_threads` workers. Each worker opens its own Postgres pool and runs document models in isolation. Jobs route to a worker stickily by document id, so all work for one document lands on the same worker.
 
-Enable it with `withWorkerPool`, register document models as **specs** (not modules), and supply connection info and a signature-verifier spec:
+Enable it with `withWorkerPool`, register document models as **importable sources** (`{ filePath }` or `{ packageName }` — workers re-import them; a live module cannot cross the thread boundary), and supply connection info:
 
 ```typescript
 import { ReactorBuilder } from "@powerhousedao/reactor";
 
 const reactor = await new ReactorBuilder()
-  .withDocumentModelSpecs([
-    { packageName: "@my-org/account-document-model", version: "1.0.0" },
+  .withDocumentModelSources([
+    { packageName: "@my-org/account-document-model", subpath: "document-models" },
   ])
   .withWorkerPool({
     enabled: true,
@@ -125,12 +125,6 @@ const reactor = await new ReactorBuilder()
     database: "reactor",
     user: "reactor",
     password: process.env.PGPASSWORD!,
-  })
-  .withWorkerSignatureVerifierSpec({
-    module: {
-      packageName: "@my-org/signing",
-      exportName: "createSignatureVerifier",
-    },
   })
   .build();
 ```
@@ -170,18 +164,21 @@ type DbConfig = {
 
 `DbConfig` is sent across worker IPC, so it must be JSON-clonable. `ssl: true` maps to `{ rejectUnauthorized: false }`; `poolSize` maps to pg's `max`; `applicationName` maps to `application_name`.
 
-The signature-verifier spec is a `FactorySpec`: a `ModuleRef` (one of `{ packageName, exportName }` or `{ filePath, exportName }`) plus optional JSON-clonable `initArgs`. The worker imports the named export and invokes it to construct its signature verifier.
+A signature verifier is optional: when `withWorkerSignatureVerifierSpec` is omitted, workers perform no executor-side signature verification (parity with the in-process executor's default). To opt in, pass a `FactorySpec`: a `ModuleRef` (one of `{ packageName, exportName }` or `{ filePath, exportName }`) plus optional JSON-clonable `initArgs`. The worker imports the named export and invokes it to construct its signature verifier.
+
+### How sources resolve
+
+`buildModule()` resolves every registered source in one pass: file and package sources are imported host-side and their exports scanned for `DocumentModelModule` values; the resulting modules are registered on the host registry (identically in both executor modes), and the importable sources form the manifest each worker imports at boot. The host and workers are derived from the same list, so they cannot diverge.
 
 ### Build-time constraints that throw
 
 When `workerPool.enabled` is `true`, `buildModule()` enforces the wiring up front. Each of these throws:
 
-- Calling `withDocumentModels()` in worker-pool mode: `"workerPool.enabled requires withDocumentModelSpecs; remove withDocumentModels() in worker-pool mode."` Models cross a thread boundary, so they are referenced by spec, not by live module.
-- No specs registered: `"workerPool.enabled requires at least one spec registered via withDocumentModelSpecs."`
+- No importable sources: `"workerPool.enabled requires at least one worker-importable document-model source ({ filePath } or { packageName })."`
+- A model registered only as a live module: `"workerPool.enabled requires worker-importable sources, but these models were registered only as live modules: ..."` — provide a `{ filePath }` or `{ packageName }` source for each (a live module for the same `documentType@version` may coexist; the importable source covers it).
 - No worker DB config (and no custom factory or executor): `"workerPool.enabled requires withWorkerDbConfig (or a custom withWorkerFactory / withExecutor)."`
-- No signature-verifier spec (and no custom factory or executor): `"workerPool.enabled requires withWorkerSignatureVerifierSpec (or a custom withWorkerFactory / withExecutor)."`
 
-The DB-config and verifier-spec checks only apply when the builder needs to build the default thread transport — that is, when you have not supplied a custom `withWorkerFactory` or `withExecutor`.
+The DB-config check only applies when the builder needs to build the default thread transport — that is, when you have not supplied a custom `withWorkerFactory` or `withExecutor`.
 
 The worker pool requires a real Postgres server. PGlite cannot be shared across threads, so the parent and the workers must point at the same Postgres instance. This is why `withWorkerDbConfig` is mandatory: the in-memory default does not work here. When the pool is enabled and a worker DB config is set, the builder builds the parent's database from that same config.
 
@@ -209,8 +206,8 @@ Configure shards with `withProjectionShards`. This path reuses the same `DbConfi
 import { ReactorBuilder } from "@powerhousedao/reactor";
 
 const reactor = await new ReactorBuilder()
-  .withDocumentModelSpecs([
-    { packageName: "@my-org/account-document-model", version: "1.0.0" },
+  .withDocumentModelSources([
+    { packageName: "@my-org/account-document-model", subpath: "document-models" },
   ])
   .withWorkerDbConfig({
     host: "localhost",

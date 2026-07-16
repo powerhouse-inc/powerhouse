@@ -2587,7 +2587,7 @@ import { DocumentCountReadModel } from "./src/document-count-read-model.js";
 const countReadModel = new DocumentCountReadModel();
 
 const reactorModule = await new ReactorBuilder()
-  .withDocumentModels([/* your models */])
+  .withDocumentModelSources([/* your models */])
   .withReadModel(countReadModel)
   .buildModule();
 
@@ -2938,7 +2938,7 @@ Codegen already emits the structure a real package registers: each version's
 production is *who applies the upgrade*:
 
 - a reactor registers both
-  (`new ReactorBuilder().withDocumentModels(documentModels).withUpgradeManifests(upgradeManifests)`)
+  (`new ReactorBuilder().withDocumentModelSources(documentModels).withUpgradeManifests(upgradeManifests)`)
   and, on `UPGRADE_DOCUMENT`, computes the upgrade path from the manifest and applies it;
 - here, [`src/upgrade.ts`](https://github.com/powerhouse-inc/recipes/blob/main/document-versioning/src/upgrade.ts) runs that same
   compose-transitions-then-stamp-version sequence in-process, so the mechanics are visible

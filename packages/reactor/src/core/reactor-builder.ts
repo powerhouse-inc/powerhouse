@@ -1,7 +1,4 @@
-import type {
-  DocumentModelModule,
-  UpgradeManifest,
-} from "@powerhousedao/shared/document-model";
+import type { UpgradeManifest } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import { ConsoleLogger } from "document-model";
 import type { Kysely } from "kysely";
@@ -84,6 +81,8 @@ import type { JwtHandler } from "../sync/types.js";
 import { ChannelScheme } from "../sync/types.js";
 import { createDefaultDatabase } from "./create-default-database.js";
 import { DEFAULT_DRIVE_CONTAINER_TYPES } from "./drive-container-types.js";
+import { resolveModelSources } from "./model-sources.js";
+import type { DocumentModelSource } from "./model-sources.js";
 import { Reactor } from "./reactor.js";
 import type {
   Database,
@@ -113,17 +112,12 @@ export type ReadModelFactory = (
   deps: ReadModelFactoryDeps,
 ) => IReadModel | Promise<IReadModel>;
 
-/**
- * Describes a document-model package the worker should import at runtime.
- * Either a bare-specifier package or an absolute file path. `exportName`
- * selects the export holding the DocumentModelModule (default
- * "documentModel"), so a spec can point at a barrel exporting several models.
- */
-export type DocumentModelSpecInput =
-  | { packageName: string; version: string; exportName?: string }
-  | { filePath: string; exportName?: string };
-
-const DEFAULT_SPEC_EXPORT_NAME = "documentModel";
+export type {
+  DocumentModelSource,
+  FileModelSource,
+  PackageModelSource,
+  ResolvedModelSources,
+} from "./model-sources.js";
 
 /**
  * Caller-facing config for {@link ReactorBuilder.withProjectionShards}.
@@ -148,7 +142,7 @@ export type ProjectionShardBuilderConfig = {
 
 export class ReactorBuilder {
   private logger?: ILogger;
-  private documentModels: DocumentModelModule<any>[] = [];
+  private documentModelSources: DocumentModelSource[] = [];
   private upgradeManifests: UpgradeManifest<readonly number[]>[] = [];
   private features: ReactorFeatures = { legacyStorageEnabled: false };
   private readModels: IReadModel[] = [];
@@ -170,7 +164,6 @@ export class ReactorBuilder {
   private shutdownHooks: Array<() => Promise<void>> = [];
   private driveContainerTypes: ReadonlySet<string> =
     DEFAULT_DRIVE_CONTAINER_TYPES;
-  private documentModelSpecs: DocumentModelSpecInput[] = [];
   private workerPoolConfig?: WorkerPoolConfig;
   private resolvedModelManifest?: ModelManifestEntry[];
   private workerDbConfig?: DbConfig;
@@ -185,8 +178,15 @@ export class ReactorBuilder {
     return this;
   }
 
-  withDocumentModels(models: DocumentModelModule<any>[]): this {
-    this.documentModels = models;
+  /**
+   * Register document-model sources: live modules, importable files, or
+   * importable packages. Appends across calls. At `buildModule()` every
+   * source is resolved host-side and registered on the registry; file and
+   * package sources additionally form the worker manifest when the worker
+   * pool is enabled (live modules cannot cross a thread boundary).
+   */
+  withDocumentModelSources(sources: DocumentModelSource[]): this {
+    this.documentModelSources.push(...sources);
     return this;
   }
 
@@ -317,11 +317,6 @@ export class ReactorBuilder {
     return this;
   }
 
-  withDocumentModelSpecs(specs: DocumentModelSpecInput[]): this {
-    this.documentModelSpecs = specs;
-    return this;
-  }
-
   /**
    * Stores the worker-pool configuration. When `config.enabled === true` the
    * builder constructs a {@link WorkerPoolJobExecutorManager} in place of the
@@ -344,8 +339,8 @@ export class ReactorBuilder {
 
   /**
    * Factory spec the worker imports to instantiate its signature verifier.
-   * Required when `workerPool.enabled === true` unless a custom
-   * `withWorkerFactory` or `withExecutor` is provided.
+   * Optional: when omitted, workers perform no executor-side signature
+   * verification — parity with the in-process executor's default.
    */
   withWorkerSignatureVerifierSpec(spec: SignatureVerifierSpec): this {
     this.workerSignatureVerifierSpec = spec;
@@ -373,7 +368,7 @@ export class ReactorBuilder {
    *
    * Requires {@link withWorkerDbConfig} (the projection workers need
    * connection info to open their own pools). The same model manifest
-   * resolved from {@link withDocumentModelSpecs} is forwarded.
+   * resolved from {@link withDocumentModelSources} is forwarded.
    */
   withProjectionShards(config: ProjectionShardBuilderConfig): this {
     this.projectionShardConfig = config;
@@ -405,55 +400,36 @@ export class ReactorBuilder {
     }
 
     if (this.workerPoolConfig?.enabled) {
-      if (this.documentModels.length > 0) {
-        throw new Error(
-          "workerPool.enabled requires withDocumentModelSpecs; remove withDocumentModels() in worker-pool mode.",
-        );
-      }
-      if (this.documentModelSpecs.length === 0) {
-        throw new Error(
-          "workerPool.enabled requires at least one spec registered via withDocumentModelSpecs.",
-        );
-      }
       const needsDefaultFactory = !this.executorManager && !this.workerFactory;
       if (needsDefaultFactory && !this.workerDbConfig) {
         throw new Error(
           "workerPool.enabled requires withWorkerDbConfig (or a custom withWorkerFactory / withExecutor).",
         );
       }
-      if (needsDefaultFactory && !this.workerSignatureVerifierSpec) {
+    }
+
+    // One resolution pass feeds both sides: the host registry gets every
+    // resolved module (in both executor modes), and importable sources form
+    // the worker manifest.
+    const resolvedSources = await resolveModelSources(
+      this.documentModelSources,
+    );
+    if (this.workerPoolConfig?.enabled) {
+      if (resolvedSources.manifest.length === 0) {
         throw new Error(
-          "workerPool.enabled requires withWorkerSignatureVerifierSpec (or a custom withWorkerFactory / withExecutor).",
+          "workerPool.enabled requires at least one worker-importable document-model source ({ filePath } or { packageName }).",
+        );
+      }
+      if (resolvedSources.moduleOnlyKeys.length > 0) {
+        throw new Error(
+          `workerPool.enabled requires worker-importable sources, but these models were registered only as live modules: ${resolvedSources.moduleOnlyKeys.join(", ")}. Provide a { filePath } or { packageName } source for each.`,
         );
       }
     }
-
-    if (this.documentModelSpecs.length > 0) {
-      this.resolvedModelManifest = this.documentModelSpecs.map((input) => {
-        const exportName = input.exportName ?? DEFAULT_SPEC_EXPORT_NAME;
-        if ("filePath" in input) {
-          const entry: ModelManifestEntry = {
-            documentType: "<unresolved>",
-            version: "<unresolved>",
-            spec: {
-              module: { filePath: input.filePath, exportName },
-            },
-          };
-          return entry;
-        }
-        const entry: ModelManifestEntry = {
-          documentType: "<unresolved>",
-          version: input.version,
-          spec: {
-            module: {
-              packageName: input.packageName,
-              exportName,
-            },
-          },
-        };
-        return entry;
-      });
-    }
+    this.resolvedModelManifest =
+      resolvedSources.manifest.length > 0
+        ? resolvedSources.manifest
+        : undefined;
 
     const documentModelRegistry = new DocumentModelRegistry();
     if (this.upgradeManifests.length > 0) {
@@ -469,9 +445,9 @@ export class ReactorBuilder {
         }
       }
     }
-    if (this.documentModels.length > 0) {
+    if (resolvedSources.modules.length > 0) {
       const results = documentModelRegistry.registerModules(
-        ...this.documentModels,
+        ...resolvedSources.modules,
       );
       for (const result of results) {
         if (result.status === "error") {
@@ -844,7 +820,7 @@ export class ReactorBuilder {
         import("../executor/worker/index.js"),
       ]);
     const db = this.workerDbConfig!;
-    const signatureVerifier = this.workerSignatureVerifierSpec!;
+    const signatureVerifier = this.workerSignatureVerifierSpec;
     const models = this.resolvedModelManifest ?? [];
     const logger = this.logger!;
     return (index: number) => {

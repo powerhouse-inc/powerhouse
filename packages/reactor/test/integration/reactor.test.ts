@@ -90,7 +90,7 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
 
     // Use ReactorBuilder from reactor package and pass in our documentIndexer
     const builder = new ReactorBuilder()
-      .withDocumentModels([driveDocumentModelModule as any])
+      .withDocumentModelSources([driveDocumentModelModule as any])
       .withReadModel(documentIndexer);
     // Build returns IReactor
     reactor = await builder.build();

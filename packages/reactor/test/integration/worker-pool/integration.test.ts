@@ -5,7 +5,8 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ReactorBuilder } from "../../../src/core/reactor-builder.js";
-import type { DocumentModelSpecInput } from "../../../src/core/reactor-builder.js";
+import type { DocumentModelSource } from "../../../src/core/reactor-builder.js";
+import { fileURLToPath } from "node:url";
 import type { InProcessReactorModule } from "../../../src/core/types.js";
 import {
   ReactorEventTypes,
@@ -85,8 +86,12 @@ class FakeWorker implements IExecutorWorker {
   }
 }
 
-const SPECS: DocumentModelSpecInput[] = [
-  { packageName: "ph/test-model", version: "1.0.0" },
+const SPECS: DocumentModelSource[] = [
+  {
+    filePath: fileURLToPath(
+      new URL("../../core/fixtures/model-barrel.mjs", import.meta.url),
+    ),
+  },
 ];
 
 function poolConfig(numWorkers: number): WorkerPoolConfig {
@@ -182,7 +187,7 @@ describe("Worker pool integration through ReactorBuilder", () => {
     factory: WorkerFactory,
   ): Promise<InProcessReactorModule> {
     const module = await new ReactorBuilder()
-      .withDocumentModelSpecs(SPECS)
+      .withDocumentModelSources(SPECS)
       .withWorkerPool(config)
       .withWorkerFactory(factory)
       .buildModule();

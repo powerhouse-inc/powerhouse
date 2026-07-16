@@ -1,15 +1,10 @@
-import type {
-  DbConfig,
-  DocumentModelSpecInput,
-  SignatureVerifierSpec,
-} from "@powerhousedao/reactor";
-import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+import type { DbConfig, FileModelSource } from "@powerhousedao/reactor";
 import type { ILogger } from "document-model";
 import { existsSync, realpathSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 
 export type WorkerCountInput = number | "auto";
 
@@ -134,125 +129,37 @@ export function buildWorkerDbConfig(
   };
 }
 
-/**
- * The signature-verifier factory workers import at boot. Lives in
- * worker-support.mjs, a sibling dist entry of this module's bundle.
- */
-export function resolveWorkerSignatureVerifierSpec(): SignatureVerifierSpec {
-  const sibling = fileURLToPath(
-    new URL("./worker-support.mjs", import.meta.url),
-  );
-  if (!existsSync(sibling)) {
-    throw new Error(
-      `Worker support module not found at ${sibling}; build @powerhousedao/switchboard before enabling REACTOR_WORKERS`,
-    );
-  }
-  return {
-    module: { filePath: sibling, exportName: "createWorkerSignatureVerifier" },
-  };
-}
-
-/** Sources the worker model specs always include, ahead of package models. */
+/** Specifiers of the base models switchboard always registers. */
 const BASE_MODEL_SPECIFIERS = [
   "document-model",
   "@powerhousedao/shared/document-drive",
   "@powerhousedao/reactor-drive",
 ];
 
-export type ResolveWorkerModelSpecsArgs = {
-  /** Configured package identifiers: npm names and/or built project paths. */
-  packages: string[];
-  /**
-   * `id@version` keys of every live model. A key without a resolved spec
-   * fails the boot — a worker missing a model fails every job for that type.
-   */
-  requiredModelKeys: string[];
-  logger: ILogger;
-};
-
 /**
- * Resolves every document model to a `{ filePath, exportName }` spec a worker
- * thread can import directly. Resolution happens host-side because workers
- * resolve bare specifiers from the reactor package's own dependency context,
- * which cannot see switchboard or project packages.
+ * Resolves base models and configured package identifiers to `{ filePath }`
+ * sources for the reactor builder. Resolution to absolute paths happens here
+ * because workers (and the builder) resolve bare specifiers from the reactor
+ * package's own dependency context, which cannot see switchboard or project
+ * packages. Unresolvable identifiers are skipped with a warning; the builder
+ * fails the boot if a registered model ends up without an importable source.
  */
-export async function resolveWorkerModelSpecs(
-  args: ResolveWorkerModelSpecsArgs,
-): Promise<DocumentModelSpecInput[]> {
-  const { packages, requiredModelKeys, logger } = args;
-  const specs: DocumentModelSpecInput[] = [];
-  const covered = new Set<string>();
-
-  const sources: string[] = [...BASE_MODEL_SPECIFIERS];
-  for (const identifier of packages) {
-    sources.push(identifier);
-  }
-
-  for (const source of sources) {
-    const filePath = await resolveModelModuleFile(source);
+export async function resolveWorkerModelSources(
+  packages: string[],
+  logger: ILogger,
+): Promise<FileModelSource[]> {
+  const sources: FileModelSource[] = [];
+  for (const identifier of [...BASE_MODEL_SPECIFIERS, ...packages]) {
+    const filePath = await resolveModelModuleFile(identifier);
     if (!filePath) {
       logger.warn(
-        `Worker specs: no importable document-models entry for "${source}", skipping`,
+        `Worker model sources: no importable document-models entry for "${identifier}", skipping`,
       );
       continue;
     }
-
-    let moduleNs: Record<string, unknown>;
-    try {
-      moduleNs = (await import(pathToFileURL(filePath).href)) as Record<
-        string,
-        unknown
-      >;
-    } catch (error) {
-      logger.warn(
-        `Worker specs: failed to import ${filePath} for "${source}": @error`,
-        error,
-      );
-      continue;
-    }
-
-    for (const [exportName, value] of Object.entries(moduleNs)) {
-      if (!isDocumentModelModule(value)) {
-        continue;
-      }
-      const key = modelKey(value);
-      if (covered.has(key)) {
-        continue;
-      }
-      covered.add(key);
-      specs.push({ filePath, exportName });
-    }
+    sources.push({ filePath });
   }
-
-  const missing = requiredModelKeys.filter((key) => !covered.has(key));
-  if (missing.length > 0) {
-    throw new Error(
-      `Worker pool cannot resolve importable modules for document models: ${missing.join(", ")}. ` +
-        `Workers import models by file path, so every model must come from a built package ` +
-        `with a document-models entry (searched: ${sources.join(", ")}).`,
-    );
-  }
-
-  return specs;
-}
-
-/** `id@version` identity used for spec dedupe and coverage checks. */
-export function modelKey(module: DocumentModelModule): string {
-  return `${module.documentModel.global.id}@${module.version ?? 1}`;
-}
-
-function isDocumentModelModule(value: unknown): value is DocumentModelModule {
-  if (typeof value !== "object" || value === null) {
-    return false;
-  }
-  const candidate = value as {
-    documentModel?: { global?: { id?: unknown } };
-    reducer?: unknown;
-  };
-  return (
-    typeof candidate.reducer === "function" &&
-    typeof candidate.documentModel?.global?.id === "string"
-  );
+  return sources;
 }
 
 /**

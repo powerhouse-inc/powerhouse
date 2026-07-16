@@ -44,7 +44,7 @@ describe("Consistency Tokens with Document View", () => {
     testCoordinator = new TestReadModelCoordinator(eventBus);
 
     const builder = new ReactorBuilder()
-      .withDocumentModels([
+      .withDocumentModelSources([
         documentModelDocumentModelModule as any,
         driveDocumentModelModule as any,
       ])

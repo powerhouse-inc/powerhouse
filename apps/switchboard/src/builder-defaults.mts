@@ -64,7 +64,7 @@ export function applySwitchboardReactorDefaults(
     options.includeBaseModels !== false ? switchboardBaseDocumentModels() : [];
   const extra = options.documentModels ?? [];
   if (baseModels.length || extra.length) {
-    reactorBuilder.withDocumentModels(
+    reactorBuilder.withDocumentModelSources(
       getUniqueDocumentModels(baseModels, extra),
     );
   }

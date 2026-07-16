@@ -22,7 +22,7 @@ const baseDocumentModels: DocumentModelModule<any>[] = [
 ];
 
 async function createReactorClient(documentModels: DocumentModelModule[]) {
-  const reactorBuilder = new ReactorBuilder().withDocumentModels(
+  const reactorBuilder = new ReactorBuilder().withDocumentModelSources(
     baseDocumentModels.concat(documentModels),
   );
 

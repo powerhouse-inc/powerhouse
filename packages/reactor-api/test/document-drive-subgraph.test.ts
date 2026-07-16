@@ -193,7 +193,7 @@ describe("Document-Drive Subgraph", () => {
 
     beforeEach(async () => {
       const builder = new ReactorClientBuilder().withReactorBuilder(
-        new ReactorBuilder().withDocumentModels([driveModule]),
+        new ReactorBuilder().withDocumentModelSources([driveModule]),
       );
       const reactorClient = await builder.build();
 
@@ -282,7 +282,7 @@ describe("Document-Drive Subgraph", () => {
 
     beforeEach(async () => {
       const builder = new ReactorClientBuilder().withReactorBuilder(
-        new ReactorBuilder().withDocumentModels([driveModule]),
+        new ReactorBuilder().withDocumentModelSources([driveModule]),
       );
       const reactorClient = await builder.build();
 

@@ -18,7 +18,6 @@ import {
   ImportPackageLoader,
   PackageManagementService,
   PackagesSubgraph,
-  getUniqueDocumentModels,
   initializeAndStartAPI,
   type IPackageLoader,
 } from "@powerhousedao/reactor-api";
@@ -46,16 +45,11 @@ import path from "path";
 import { Pool } from "pg";
 import type { ViteDevServer } from "vite";
 import { registerAttachmentRoutes } from "./attachments/index.js";
-import {
-  applySwitchboardReactorDefaults,
-  switchboardBaseDocumentModels,
-} from "./builder-defaults.mjs";
+import { applySwitchboardReactorDefaults } from "./builder-defaults.mjs";
 import {
   buildWorkerDbConfig,
-  modelKey,
-  resolveWorkerModelSpecs,
+  resolveWorkerModelSources,
   resolveWorkerPoolOptions,
-  resolveWorkerSignatureVerifierSpec,
 } from "./worker-pool.mjs";
 import { initFeatureFlags } from "./feature-flags.js";
 import { ClosablePGliteDialect } from "./pglite-dialect.js";
@@ -443,13 +437,8 @@ async function initServer(
         )
       : [];
 
-    // Worker-pool mode: the builder forbids withDocumentModels — models
-    // reach workers as importable specs instead.
     applySwitchboardReactorDefaults(reactorBuilder, clientBuilder, {
-      documentModels: workerPool
-        ? []
-        : [...documentModels, ...vetraDocumentModels],
-      includeBaseModels: !workerPool,
+      documentModels: [...documentModels, ...vetraDocumentModels],
       executorConfig: hasSkipThreshold ? { maxSkipThreshold } : undefined,
       documentModelLoader:
         httpLoader && dynamicModelLoading
@@ -461,36 +450,31 @@ async function initServer(
         : undefined,
     });
 
-    const workerLiveModels = workerPool
-      ? getUniqueDocumentModels(switchboardBaseDocumentModels(), [
-          ...documentModels,
-          ...vetraDocumentModels,
-        ])
-      : [];
     if (workerPool) {
       if (!reactorDbUrl) {
         throw new Error(
           "unreachable: worker pool enabled without a reactor database URL",
         );
       }
-      const specs = await resolveWorkerModelSpecs({
+      // File sources give workers importable paths for the same models the
+      // live modules above registered; the builder dedupes and fails the
+      // boot if any model lacks an importable source.
+      const workerSources = await resolveWorkerModelSources(
         packages,
-        requiredModelKeys: workerLiveModels.map(modelKey),
-        logger: reactorLogger,
-      });
+        reactorLogger,
+      );
       reactorBuilder
-        .withDocumentModelSpecs(specs)
+        .withDocumentModelSources(workerSources)
         .withWorkerPool({
           enabled: true,
           numWorkers: workerPool.numWorkers,
           workerType: "thread",
         })
-        .withWorkerDbConfig(buildWorkerDbConfig(reactorDbUrl, workerPool))
-        .withWorkerSignatureVerifierSpec(resolveWorkerSignatureVerifierSpec());
+        .withWorkerDbConfig(buildWorkerDbConfig(reactorDbUrl, workerPool));
       reactorLogger.info(
         `Executor worker pool enabled: ${workerPool.numWorkers} worker threads${
           workerPool.mode === "auto" ? " (auto-sized from cores)" : ""
-        }, ${specs.length} model specs`,
+        }`,
       );
     }
 
@@ -517,27 +501,6 @@ async function initServer(
     });
 
     const module = await clientBuilder.buildModule();
-
-    // The host registry starts empty in worker-pool mode; register the live
-    // modules for reads, creates, and subgraph generation (the same channel
-    // reactor-api uses for dynamic package changes).
-    if (workerPool) {
-      const registry = module.reactorModule?.documentModelRegistry;
-      if (!registry) {
-        throw new Error(
-          "DocumentModelRegistry not available to register models in worker-pool mode",
-        );
-      }
-      const results = registry.registerModules(...workerLiveModels);
-      for (const result of results) {
-        if (result.status === "error") {
-          reactorLogger.error(
-            "Failed to register document model on host registry: @error",
-            result.error.message,
-          );
-        }
-      }
-    }
 
     if (module.reactorModule) {
       const instrumentation = new ReactorInstrumentation(module.reactorModule);

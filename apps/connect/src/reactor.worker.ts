@@ -337,7 +337,7 @@ const host = new ReactorHost({
         .withSigner({ signer, verifier: createSignatureVerifier() })
         .withReactorBuilder(
           new ReactorBuilder()
-            .withDocumentModels(models)
+            .withDocumentModelSources(models)
             .withChannelScheme(ChannelScheme.CONNECT)
             .withJwtHandler(jwtHandler)
             .withKysely(

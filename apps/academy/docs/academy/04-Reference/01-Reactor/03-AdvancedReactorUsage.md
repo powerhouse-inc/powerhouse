@@ -42,7 +42,7 @@ import { ReactorBuilder, ChannelScheme } from "@powerhousedao/reactor";
 import { ConsoleLogger } from "document-model";
 
 const reactor = await new ReactorBuilder()
-  .withDocumentModels([todoListModule, invoiceModule])
+  .withDocumentModelSources([todoListModule, invoiceModule])
   .withLogger(new ConsoleLogger())
   .withExecutorConfig({ maxConcurrency: 4, jobTimeoutMs: 30_000 })
   .withWriteCacheConfig({ maxDocuments: 100, ringBufferSize: 10 })
@@ -57,7 +57,7 @@ const reactor = await new ReactorBuilder()
 
 | Method                            | Description                                                              |
 | --------------------------------- | ------------------------------------------------------------------------ |
-| `withDocumentModels(models)`      | Register document model modules                                          |
+| `withDocumentModelSources(sources)` | Register document-model sources: live modules, importable `{ filePath }` files, or importable `{ packageName }` packages |
 | `withUpgradeManifests(manifests)` | Register [upgrade manifests](/academy/Reference/Reactor/DocumentModelRegistry) for document model versioning |
 | `withLogger(logger)`              | Set the logger (defaults to `ConsoleLogger`)                             |
 | `withExecutorConfig(config)`      | Configure `maxConcurrency` and `jobTimeoutMs`                            |
@@ -76,7 +76,6 @@ const reactor = await new ReactorBuilder()
 | `withSignatureVerifier(verifier)` | Set a signature verification handler                                     |
 | `withJwtHandler(handler)`         | Set a JWT handler for authentication                                     |
 | `withDocumentModelLoader(loader)` | Set a custom document model loader                                       |
-| `withDocumentModelSpecs(specs)`   | Register document model specs the reactor (or its workers) resolves by package or file path |
 | `withDriveContainerTypes(types)`  | Set the document types treated as drive containers                       |
 | `withInstrumentedPool(instrumentation)` | Register an externally-built `pg.Pool` so its metrics surface through `pools` |
 | `withShutdownHook(hook)`          | Register an async cleanup hook to run during graceful shutdown           |
@@ -249,7 +248,7 @@ Without a consistency token, reads may return stale data if the read models have
 
 ```typescript
 const module = await new ReactorBuilder()
-  .withDocumentModels([todoListModule])
+  .withDocumentModelSources([todoListModule])
   .buildModule();
 
 const { reactor, eventBus, processorManager, operationStore } = module;
@@ -352,7 +351,7 @@ class MyCustomReadModel implements IReadModel {
 }
 
 const reactor = await new ReactorBuilder()
-  .withDocumentModels([todoListModule])
+  .withDocumentModelSources([todoListModule])
   .withReadModel(new MyCustomReadModel())
   .build();
 ```
@@ -371,7 +370,7 @@ import { ConsoleLogger } from "document-model";
 
 async function createTestReactor() {
   const builder = new ReactorBuilder()
-    .withDocumentModels([todoListModule])
+    .withDocumentModelSources([todoListModule])
     .withLogger(new ConsoleLogger());
 
   // buildModule returns both the client and the reactor module internals

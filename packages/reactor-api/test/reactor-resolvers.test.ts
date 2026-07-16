@@ -20,7 +20,7 @@ describe("ReactorSubgraph Query Resolvers", () => {
   let module: InProcessReactorClientModule;
 
   beforeEach(async () => {
-    const reactorBuilder = new ReactorBuilder().withDocumentModels([
+    const reactorBuilder = new ReactorBuilder().withDocumentModelSources([
       driveDocumentModelModule as unknown as DocumentModelModule,
       documentModelDocumentModelModule as unknown as DocumentModelModule,
     ]);
@@ -163,7 +163,7 @@ describe("ReactorSubgraph Mutation Resolvers", () => {
   let module: InProcessReactorClientModule;
 
   beforeEach(async () => {
-    const reactorBuilder = new ReactorBuilder().withDocumentModels([
+    const reactorBuilder = new ReactorBuilder().withDocumentModelSources([
       driveDocumentModelModule as unknown as DocumentModelModule,
       documentModelDocumentModelModule as unknown as DocumentModelModule,
     ]);

@@ -177,7 +177,7 @@ describe("Reactor.load", () => {
   let queue: IQueue;
 
   beforeEach(async () => {
-    const builder = new ReactorBuilder().withDocumentModels([
+    const builder = new ReactorBuilder().withDocumentModelSources([
       documentModelDocumentModelModule,
       driveDocumentModelModule,
     ]);

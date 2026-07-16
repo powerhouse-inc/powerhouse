@@ -51,7 +51,7 @@ describe("Signature Preservation", () => {
 
     expect(signerA.app!.key).not.toBe(signerB.app!.key);
 
-    const reactorBuilder = new ReactorBuilder().withDocumentModels([
+    const reactorBuilder = new ReactorBuilder().withDocumentModelSources([
       documentModelDocumentModelModule,
     ]);
     reactorClient = await new ReactorClientBuilder()

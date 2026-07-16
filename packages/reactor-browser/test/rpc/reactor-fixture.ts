@@ -13,7 +13,7 @@ export type InMemoryReactor = {
 export async function createInMemoryReactorClient(): Promise<InMemoryReactor> {
   const module = await new ReactorClientBuilder()
     .withReactorBuilder(
-      new ReactorBuilder().withDocumentModels([driveDocumentModelModule]),
+      new ReactorBuilder().withDocumentModelSources([driveDocumentModelModule]),
     )
     .buildModule();
   return {

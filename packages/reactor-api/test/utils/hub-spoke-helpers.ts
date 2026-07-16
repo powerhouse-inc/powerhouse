@@ -85,7 +85,7 @@ export async function buildHubModule(
     .withQueue(queue)
     .withKysely(kysely)
     .withMigrationStrategy("none")
-    .withDocumentModels(allModules)
+    .withDocumentModelSources(allModules)
     .withSync(
       new SyncBuilder().withChannelFactory(
         new GqlResponseChannelFactory(logger),
@@ -114,7 +114,7 @@ export async function buildSpokeModule(
   const builder = new ReactorBuilder()
     .withEventBus(eventBus)
     .withQueue(queue)
-    .withDocumentModels(allModules)
+    .withDocumentModelSources(allModules)
     .withSync(
       new SyncBuilder().withChannelFactory(
         new GqlRequestChannelFactory(logger, undefined, queue),

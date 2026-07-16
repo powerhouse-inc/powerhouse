@@ -7,8 +7,6 @@ export default defineConfig({
     "src/utils.mts",
     "src/install-packages.mts",
     "src/migrate.mts",
-    // Standalone entry: executor worker threads import it by absolute path.
-    "src/worker-support.mts",
   ],
   platform: "node",
   outDir: "dist",

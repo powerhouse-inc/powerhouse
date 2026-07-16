@@ -110,7 +110,7 @@ async function setupPushBackfill(): Promise<PushBackfillSetup> {
   const connectModule = await new ReactorBuilder()
     .withEventBus(connectEventBus)
     .withQueue(connectQueue)
-    .withDocumentModels([
+    .withDocumentModelSources([
       driveDocumentModelModule as unknown as DocumentModelModule,
     ])
     .withSync(
@@ -123,7 +123,7 @@ async function setupPushBackfill(): Promise<PushBackfillSetup> {
   const switchboardModule = await new ReactorBuilder()
     .withEventBus(switchboardEventBus)
     .withQueue(switchboardQueue)
-    .withDocumentModels([
+    .withDocumentModelSources([
       driveDocumentModelModule as unknown as DocumentModelModule,
     ])
     .withSync(

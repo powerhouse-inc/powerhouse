@@ -74,7 +74,7 @@ describe("ReactorDriveClient Integration", () => {
     await nodeProcessor.init();
 
     const reactorBuilder = new ReactorBuilder()
-      .withDocumentModels([
+      .withDocumentModelSources([
         reactorDriveDocumentModelModule as unknown as DocumentModelModule,
         documentModelDocumentModelModule,
       ])

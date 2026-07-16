@@ -50,7 +50,7 @@ function createConnectModule(
   return new ReactorBuilder()
     .withEventBus(eventBus)
     .withQueue(queue)
-    .withDocumentModels([
+    .withDocumentModelSources([
       driveDocumentModelModule as unknown as DocumentModelModule,
     ])
     .withSync(
@@ -69,7 +69,7 @@ function createSwitchboardModule(
   return new ReactorBuilder()
     .withEventBus(eventBus)
     .withQueue(queue)
-    .withDocumentModels([
+    .withDocumentModelSources([
       driveDocumentModelModule as unknown as DocumentModelModule,
     ])
     .withSync(

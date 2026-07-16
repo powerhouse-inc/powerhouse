@@ -73,7 +73,7 @@ async function setupConnectSwitchboard(): Promise<ConnectSwitchboardSetup> {
   const connectModule = await new ReactorBuilder()
     .withEventBus(connectEventBus)
     .withQueue(connectQueue)
-    .withDocumentModels([
+    .withDocumentModelSources([
       driveDocumentModelModule as unknown as DocumentModelModule,
     ])
     .withSync(
@@ -86,7 +86,7 @@ async function setupConnectSwitchboard(): Promise<ConnectSwitchboardSetup> {
   const switchboardModule = await new ReactorBuilder()
     .withEventBus(switchboardEventBus)
     .withQueue(switchboardQueue)
-    .withDocumentModels([
+    .withDocumentModelSources([
       driveDocumentModelModule as unknown as DocumentModelModule,
     ])
     .withSync(

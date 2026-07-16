@@ -228,7 +228,8 @@ export type InitMessage = {
   workerId: string;
   poolConfig: WorkerPoolConfig;
   db: DbConfig;
-  signatureVerifier: SignatureVerifierSpec;
+  /** Omitted = the worker performs no executor-side signature verification. */
+  signatureVerifier?: SignatureVerifierSpec;
   models: ModelManifestEntry[];
 };
 

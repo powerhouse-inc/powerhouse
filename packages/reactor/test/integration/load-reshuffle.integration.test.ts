@@ -21,13 +21,13 @@ describe("Load Reshuffles", () => {
   beforeEach(async () => {
     vi.useFakeTimers();
 
-    const builderA = new ReactorBuilder().withDocumentModels([
+    const builderA = new ReactorBuilder().withDocumentModelSources([
       documentModelDocumentModelModule as any,
       driveDocumentModelModule as any,
     ]);
     reactorA = await builderA.build();
 
-    const builderB = new ReactorBuilder().withDocumentModels([
+    const builderB = new ReactorBuilder().withDocumentModelSources([
       documentModelDocumentModelModule as any,
       driveDocumentModelModule as any,
     ]);

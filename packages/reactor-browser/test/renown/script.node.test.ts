@@ -31,7 +31,7 @@ describe("Renown on script", () => {
     const signer = new RenownCryptoSigner(crypto, "script", testUser);
 
     // Build reactor
-    const reactorBuilder = new ReactorBuilder().withDocumentModels([
+    const reactorBuilder = new ReactorBuilder().withDocumentModelSources([
       documentModelDocumentModelModule,
     ]);
     const reactorClient = await new ReactorClientBuilder()
@@ -102,7 +102,7 @@ describe("Renown on script", () => {
     expect(signerA.app.key).not.toBe(signerB.app.key);
 
     // Build ReactorClient with signerB
-    const reactorBuilder = new ReactorBuilder().withDocumentModels([
+    const reactorBuilder = new ReactorBuilder().withDocumentModelSources([
       documentModelDocumentModelModule,
     ]);
     const reactorClient = await new ReactorClientBuilder()

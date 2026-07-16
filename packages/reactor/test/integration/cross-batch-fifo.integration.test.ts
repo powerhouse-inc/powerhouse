@@ -27,13 +27,13 @@ describe("cross-batch FIFO regression", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
 
-    const builderA = new ReactorBuilder().withDocumentModels([
+    const builderA = new ReactorBuilder().withDocumentModelSources([
       documentModelDocumentModelModule as any,
       driveDocumentModelModule as any,
     ]);
     reactorA = await builderA.build();
 
-    const builderB = new ReactorBuilder().withDocumentModels([
+    const builderB = new ReactorBuilder().withDocumentModelSources([
       documentModelDocumentModelModule as any,
       driveDocumentModelModule as any,
     ]);

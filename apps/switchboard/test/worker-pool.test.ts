@@ -1,15 +1,12 @@
-import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
-import { reactorDriveDocumentModelModule } from "@powerhousedao/reactor-drive";
-import { documentModelDocumentModelModule, type ILogger } from "document-model";
+import type { ILogger } from "document-model";
+import { existsSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import {
   autoWorkerCount,
   buildWorkerDbConfig,
-  modelKey,
-  resolveWorkerModelSpecs,
+  resolveWorkerModelSources,
   resolveWorkerPoolOptions,
 } from "../src/worker-pool.mjs";
-import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 
 function stubLogger(): ILogger {
   return {
@@ -214,56 +211,22 @@ describe("buildWorkerDbConfig", () => {
   });
 });
 
-describe("resolveWorkerModelSpecs", () => {
-  const baseModels = [
-    documentModelDocumentModelModule,
-    driveDocumentModelModule,
-    reactorDriveDocumentModelModule,
-  ] as unknown as DocumentModelModule[];
-
-  it("resolves the base models to importable file specs", async () => {
-    const specs = await resolveWorkerModelSpecs({
-      packages: [],
-      requiredModelKeys: baseModels.map(modelKey),
-      logger: stubLogger(),
-    });
-    expect(specs.length).toBeGreaterThanOrEqual(baseModels.length);
-    for (const spec of specs) {
-      expect("filePath" in spec && spec.filePath).toBeTruthy();
-      expect(spec.exportName).toBeTruthy();
+describe("resolveWorkerModelSources", () => {
+  it("resolves the base specifiers to existing files", async () => {
+    const sources = await resolveWorkerModelSources([], stubLogger());
+    expect(sources).toHaveLength(3);
+    for (const source of sources) {
+      expect(existsSync(source.filePath)).toBe(true);
     }
   });
 
-  it("skips unknown packages with a warning but keeps base coverage", async () => {
+  it("skips unknown packages with a warning but keeps base sources", async () => {
     const logger = stubLogger();
-    const specs = await resolveWorkerModelSpecs({
-      packages: ["@powerhousedao/definitely-not-a-package"],
-      requiredModelKeys: baseModels.map(modelKey),
+    const sources = await resolveWorkerModelSources(
+      ["@powerhousedao/definitely-not-a-package"],
       logger,
-    });
-    expect(specs.length).toBeGreaterThanOrEqual(baseModels.length);
-    expect(logger.warn).toHaveBeenCalled();
-  });
-
-  it("throws when a required model has no importable source", async () => {
-    await expect(
-      resolveWorkerModelSpecs({
-        packages: [],
-        requiredModelKeys: ["acme/unknown-type@1"],
-        logger: stubLogger(),
-      }),
-    ).rejects.toThrow(/acme\/unknown-type@1/);
-  });
-});
-
-describe("modelKey", () => {
-  it("defaults the version to 1", () => {
-    expect(
-      modelKey(
-        documentModelDocumentModelModule as unknown as DocumentModelModule,
-      ),
-    ).toBe(
-      `${documentModelDocumentModelModule.documentModel.global.id}@${documentModelDocumentModelModule.version ?? 1}`,
     );
+    expect(sources).toHaveLength(3);
+    expect(logger.warn).toHaveBeenCalledTimes(1);
   });
 });

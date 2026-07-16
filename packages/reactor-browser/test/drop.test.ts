@@ -32,7 +32,7 @@ describe("truncateAllTables", () => {
 
   it("should drop all tables after ReactorClient creates them", async () => {
     const reactorBuilder = new ReactorBuilder()
-      .withDocumentModels([
+      .withDocumentModelSources([
         driveDocumentModelModule,
         documentModelDocumentModelModule,
       ])
@@ -59,7 +59,7 @@ describe("truncateAllTables", () => {
 
   it("should handle empty database without errors", async () => {
     const reactorBuilder = new ReactorBuilder()
-      .withDocumentModels([documentModelDocumentModelModule])
+      .withDocumentModelSources([documentModelDocumentModelModule])
       .withKysely(db as Kysely<Database>);
     module = await new ReactorClientBuilder()
       .withReactorBuilder(reactorBuilder)
@@ -70,7 +70,7 @@ describe("truncateAllTables", () => {
 
   it("should drop multiple tables with data", async () => {
     const reactorBuilder = new ReactorBuilder()
-      .withDocumentModels([
+      .withDocumentModelSources([
         driveDocumentModelModule,
         documentModelDocumentModelModule,
       ])
