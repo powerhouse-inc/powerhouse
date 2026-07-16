@@ -622,7 +622,7 @@ async function main() {
     }
 
     const reactorModule = await new ReactorBuilder()
-      .withDocumentModels([documentModelDocumentModelModule])
+      .withDocumentModelSources([documentModelDocumentModelModule])
       .withKysely(db as Kysely<Database>)
       .withMigrationStrategy("none")
       .buildModule();

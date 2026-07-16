@@ -167,6 +167,10 @@ export type ProjectionShardBuilderConfig = {
   chainDepthReportIntervalMs?: number;
 };
 
+function sameDatabaseTarget(a: DbConfig, b: DbConfig): boolean {
+  return a.host === b.host && a.port === b.port && a.database === b.database;
+}
+
 export class ReactorBuilder {
   private logger?: ILogger;
   private documentModelSources: DocumentModelSource[] = [];
@@ -447,10 +451,11 @@ export class ReactorBuilder {
       }
     }
 
+    const reactorDbConfig = this.resolveReactorDbConfig();
     const baseDatabase =
       this.kyselyInstance ??
-      (this.workerPool?.db
-        ? await this.createPostgresDatabase(this.workerPool.db)
+      (reactorDbConfig
+        ? await this.createPostgresDatabase(reactorDbConfig)
         : await createDefaultDatabase());
 
     if (this.migrationStrategy === "auto") {
@@ -741,6 +746,28 @@ export class ReactorBuilder {
   }
 
   /**
+   * The single Postgres config for the parent, executor workers, and
+   * projection shards. They must share one physical database (the parent
+   * writes operations; workers and shards read them), so divergent
+   * worker/shard targets throw. `withKysely` overrides the parent and is not
+   * validated against a worker/shard `db`.
+   */
+  private resolveReactorDbConfig(): DbConfig | undefined {
+    const workerDb = this.workerPool?.db;
+    const projectionDb = this.projectionShardConfig?.db;
+    if (
+      workerDb &&
+      projectionDb &&
+      !sameDatabaseTarget(workerDb, projectionDb)
+    ) {
+      throw new Error(
+        "withWorkerPool({ db }) and withProjectionShards({ db }) must address the same Postgres database (same host, port, and database); the parent writes operations there and the projection shards read them.",
+      );
+    }
+    return workerDb ?? projectionDb;
+  }
+
+  /**
    * Constructs a {@link ProjectionShardManager} bound to the host event
    * bus. Builds the default thread-transport factory unless one was
    * injected via {@link withProjectionWorkerFactory}. Calls
@@ -751,7 +778,7 @@ export class ReactorBuilder {
     config: ProjectionShardBuilderConfig,
     eventBus: IEventBus,
   ): Promise<IReadModelCoordinator> {
-    const baseDb = config.db ?? this.workerPool?.db;
+    const baseDb = this.resolveReactorDbConfig();
     if (!baseDb) {
       throw new Error(
         "withProjectionShards requires a db (or an executor worker pool configured with one); projection workers need connection info to open their own pools.",

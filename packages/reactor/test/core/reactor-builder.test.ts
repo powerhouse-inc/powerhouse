@@ -415,4 +415,85 @@ describe("ReactorBuilder", () => {
       }
     });
   });
+
+  describe("database configuration", () => {
+    it("builds the parent from the projection-shard db so reads and writes cannot diverge", async () => {
+      const proto = ReactorBuilder.prototype as unknown as {
+        createPostgresDatabase: (config: DbConfig) => Promise<unknown>;
+      };
+      const spy = vi
+        .spyOn(proto, "createPostgresDatabase")
+        .mockRejectedValue(new Error("postgres-was-called"));
+
+      try {
+        const builder = new ReactorBuilder()
+          .withDocumentModelSources(FIXTURE_SOURCES)
+          .withProjectionShards({
+            db: TEST_DB_CONFIG,
+            shardCount: 1,
+            preReadyKinds: [],
+            postReadyKinds: [],
+          });
+
+        await expect(builder.buildModule()).rejects.toThrow(
+          /postgres-was-called/,
+        );
+        expect(spy).toHaveBeenCalledWith(TEST_DB_CONFIG);
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
+    it("rejects a worker pool and projection shards pointed at different databases", async () => {
+      const builder = new ReactorBuilder()
+        .withDocumentModelSources(FIXTURE_SOURCES)
+        .withWorkerPool({
+          numWorkers: 1,
+          db: TEST_DB_CONFIG,
+          factory: (index) => new FakeWorker(index),
+        })
+        .withProjectionShards({
+          db: { ...TEST_DB_CONFIG, host: "other-host" },
+          shardCount: 1,
+          preReadyKinds: [],
+          postReadyKinds: [],
+        });
+
+      await expect(builder.buildModule()).rejects.toThrow(
+        /must address the same Postgres database/,
+      );
+    });
+
+    it("accepts a worker pool and projection shards on the same database", async () => {
+      const proto = ReactorBuilder.prototype as unknown as {
+        createPostgresDatabase: (config: DbConfig) => Promise<unknown>;
+      };
+      const spy = vi
+        .spyOn(proto, "createPostgresDatabase")
+        .mockRejectedValue(new Error("postgres-was-called"));
+
+      try {
+        const builder = new ReactorBuilder()
+          .withDocumentModelSources(FIXTURE_SOURCES)
+          .withWorkerPool({
+            numWorkers: 1,
+            db: TEST_DB_CONFIG,
+            factory: (index) => new FakeWorker(index),
+          })
+          .withProjectionShards({
+            db: { ...TEST_DB_CONFIG, poolSize: 9 },
+            shardCount: 1,
+            preReadyKinds: [],
+            postReadyKinds: [],
+          });
+
+        await expect(builder.buildModule()).rejects.toThrow(
+          /postgres-was-called/,
+        );
+        expect(spy).toHaveBeenCalledWith(TEST_DB_CONFIG);
+      } finally {
+        spy.mockRestore();
+      }
+    });
+  });
 });
