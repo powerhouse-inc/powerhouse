@@ -46,7 +46,8 @@ function publisherFromRequest(
   const name = (req as { remote_user?: { name?: string } }).remote_user?.name;
   if (!name) return undefined;
   if (name.startsWith("did:pkh:")) {
-    return { address: name.split(":").pop() ?? name, did: name };
+    const address = (name.split(":").pop() ?? name).toLowerCase();
+    return { address, did: name };
   }
   return { address: name };
 }
