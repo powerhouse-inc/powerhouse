@@ -9,6 +9,9 @@ export interface PackageInfo {
   distTags?: Record<string, string>;
   /** All published versions of the package, sorted ascending by semver. */
   versions?: string[];
+  /** Accounts that own the name (publish/unpublish rights). Present only on
+   *  registries with the Postgres-backed auth; omitted when untracked. */
+  owners?: string[];
 }
 
 export type RegistryPackageStatus =

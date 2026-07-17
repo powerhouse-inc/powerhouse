@@ -29,6 +29,9 @@ export interface RenownAuthConfig {
   /** Public URL of this registry. Used as the expected `aud` claim on
    *  Renown-signed bearer tokens. Required when renown auth is enabled. */
   publicUrl: string;
+  /** Renown service base URL for credential verification (defaults to the
+   *  SDK default, https://www.renown.id). */
+  renownUrl?: string;
 }
 
 export interface RegistryConfig {
@@ -62,9 +65,12 @@ export interface RegistryConfig {
    *  `plugins` dir next to the compiled code (dist/plugins). Overridable so
    *  tests can point at the built plugin while running from src. */
   pluginsDir?: string;
-  /** Injected AuthStore (tests only) — passed to the auth plugin instead of
-   *  building one from `databaseUrl`. */
+  /** AuthStore instance shared by the auth plugin and owner-lookup routes
+   *  (one pool). Built from `databaseUrl` at runtime, or injected in tests. */
   authStore?: unknown;
+  /** Handoff token for `authStore`, carried through verdaccio's plugin config
+   *  (a live object can't survive it). Set at runtime; used for load detection. */
+  authStoreToken?: string;
 }
 
 export interface RegistryCommandArgs {
@@ -86,6 +92,8 @@ export interface RegistryCommandArgs {
   webhooks?: string;
   publicUrl?: string;
   authRenown?: boolean;
+  /** Renown service base URL (defaults to the SDK default). */
+  renownUrl?: string;
   verdaccioSecret?: string;
   /** Comma-separated globs (e.g. "@powerhousedao/*,document-model,ph-cmd")
    *  served locally only — no npmjs uplink proxy. */

@@ -125,3 +125,72 @@ describe("registry auth plugin — unpublish + access", () => {
     expect(res.res).toBe(true);
   });
 });
+
+describe("registry auth plugin — renown auth + ownership", () => {
+  const DID_A = "did:pkh:eip155:1:0xaaa";
+  const DID_B = "did:pkh:eip155:1:0xbbb";
+  const helpers = {
+    createRemoteUser: (name: string, groups: string[]) => ({
+      name,
+      groups,
+      real_groups: groups,
+    }),
+    createAnonymousRemoteUser: () => ({
+      name: undefined,
+      groups: [],
+      real_groups: [],
+    }),
+  };
+  const tokens: Record<string, string> = { "tok-a": DID_A, "tok-b": DID_B };
+  const verifier = (token: string) => Promise.resolve(tokens[token]);
+
+  // Drive the plugin's apiJWTmiddleware to resolve a bearer token to remote_user.
+  function authenticate(
+    plugin: ReturnType<typeof createRegistryAuthPlugin>,
+    token?: string,
+  ): Promise<{ name?: string }> {
+    const mw = plugin.apiJWTmiddleware!(helpers);
+    const req = {
+      headers: { authorization: token ? `Bearer ${token}` : undefined },
+      pause() {},
+      resume() {},
+      remote_user: undefined as unknown,
+    };
+    return new Promise((resolve) => {
+      mw(req, { locals: {} }, () =>
+        resolve(req.remote_user as { name?: string }),
+      );
+    });
+  }
+
+  it("authenticates a renown token to the owner DID and enforces ownership", async () => {
+    const p = createRegistryAuthPlugin(createMemoryAuthStore(), verifier);
+
+    const userA = await authenticate(p, "tok-a");
+    expect(userA.name).toBe(DID_A);
+    const claim = await call((cb) =>
+      p.allow_publish(userA, { name: "renown-pkg" }, cb),
+    );
+    expect(claim.res).toBe(true);
+
+    const userB = await authenticate(p, "tok-b");
+    expect(userB.name).toBe(DID_B);
+    const foreign = await call((cb) =>
+      p.allow_publish(userB, { name: "renown-pkg" }, cb),
+    );
+    expect(status(foreign.err)).toBe(403);
+  });
+
+  it("an unverifiable token stays anonymous and cannot publish", async () => {
+    const p = createRegistryAuthPlugin(createMemoryAuthStore(), verifier);
+    const anon = await authenticate(p, "bad-token");
+    expect(anon.name).toBeUndefined();
+    const denied = await call((cb) => p.allow_publish(anon, { name: "x" }, cb));
+    expect(status(denied.err)).toBe(403);
+  });
+
+  it("exposes no apiJWTmiddleware without a verifier", () => {
+    const p = createRegistryAuthPlugin(createMemoryAuthStore());
+    expect(p.apiJWTmiddleware).toBeUndefined();
+  });
+});

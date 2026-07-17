@@ -1,5 +1,7 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import type { AuthStore } from "./auth/auth-store.js";
+import { stashAuthStore } from "./auth/store-handoff.js";
 import type { RegistryConfig } from "./types.js";
 
 export function buildVerdaccioConfig(config: RegistryConfig) {
@@ -12,6 +14,13 @@ export function buildVerdaccioConfig(config: RegistryConfig) {
   // via require() from the dist/plugins dir. Without a DB (local dev / tests),
   // keep the built-in htpasswd path.
   const usePgAuth = Boolean(config.databaseUrl || config.authStore);
+  // Prefer a runtime-provided token (so the launcher owns it for load
+  // detection); otherwise stash the injected store here (direct callers/tests).
+  const storeToken =
+    config.authStoreToken ??
+    (config.authStore
+      ? stashAuthStore(config.authStore as AuthStore)
+      : undefined);
   const pluginsDir =
     config.pluginsDir ??
     path.join(path.dirname(fileURLToPath(import.meta.url)), "plugins");
@@ -19,7 +28,15 @@ export function buildVerdaccioConfig(config: RegistryConfig) {
     ? {
         "registry-auth": {
           ...(config.databaseUrl ? { databaseUrl: config.databaseUrl } : {}),
-          ...(config.authStore ? { store: config.authStore } : {}),
+          ...(storeToken ? { storeToken } : {}),
+          ...(config.renown
+            ? {
+                publicUrl: config.renown.publicUrl,
+                ...(config.renown.renownUrl
+                  ? { renownUrl: config.renown.renownUrl }
+                  : {}),
+              }
+            : {}),
         },
       }
     : { htpasswd: { file: htpasswdPath } };
