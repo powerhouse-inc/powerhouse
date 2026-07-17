@@ -1,3 +1,22 @@
+## 6.2.2-dev.4 (2026-07-17)
+
+### 🚀 Features
+
+- **switchboard, reactor:** worker config integration on switchboard, including auto mode ([38c3b3de6](https://github.com/powerhouse-inc/powerhouse/commit/38c3b3de6))
+- **vetra-e2e:** full e2e spec for shared worker ([ed1b3fbd2](https://github.com/powerhouse-inc/powerhouse/commit/ed1b3fbd2))
+- **vetra-e2e:** full e2e spec for shared worker ([#2861](https://github.com/powerhouse-inc/powerhouse/pull/2861))
+
+### 🩹 Fixes
+
+- academy search fix & local usage of vetra ([88bd81e4f](https://github.com/powerhouse-inc/powerhouse/commit/88bd81e4f))
+- failing tests ([9546708fc](https://github.com/powerhouse-inc/powerhouse/commit/9546708fc))
+- eliminate edge case where dbs could diverge ([2db8727bf](https://github.com/powerhouse-inc/powerhouse/commit/2db8727bf))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- CallmeT-ty @CallmeT-ty
+
 ## 6.2.2-dev.3 (2026-07-16)
 
 ### 🚀 Features

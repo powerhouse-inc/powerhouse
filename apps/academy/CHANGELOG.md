@@ -1,3 +1,18 @@
+## 6.2.2-dev.4 (2026-07-17)
+
+### 🚀 Features
+
+- **vetra-e2e:** full e2e spec for shared worker ([ed1b3fbd2](https://github.com/powerhouse-inc/powerhouse/commit/ed1b3fbd2))
+
+### 🩹 Fixes
+
+- academy search fix & local usage of vetra ([88bd81e4f](https://github.com/powerhouse-inc/powerhouse/commit/88bd81e4f))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- CallmeT-ty @CallmeT-ty
+
 ## 6.2.2-dev.3 (2026-07-16)
 
 ### 🚀 Features

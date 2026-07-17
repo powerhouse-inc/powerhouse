@@ -1,3 +1,17 @@
+## 6.2.2-dev.4 (2026-07-17)
+
+### 🚀 Features
+
+- **vetra-e2e:** full e2e spec for shared worker ([ed1b3fbd2](https://github.com/powerhouse-inc/powerhouse/commit/ed1b3fbd2))
+
+### 🩹 Fixes
+
+- failing tests ([9546708fc](https://github.com/powerhouse-inc/powerhouse/commit/9546708fc))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.2.2-dev.3 (2026-07-16)
 
 ### 🚀 Features
