@@ -1,7 +1,4 @@
-import {
-  verifyAuthBearerToken,
-  type PowerhouseVerifiableCredential,
-} from "@renown/sdk";
+import { fetchDelegationCredential, verifyAuthBearerToken } from "@renown/sdk";
 
 type VerifiedCredential =
   Awaited<ReturnType<typeof verifyAuthBearerToken>> extends false | infer T
@@ -254,40 +251,18 @@ export class AuthService {
     }
   }
 
-  /**
-   * Fetch the credential from the Renown API and validate it against the
-   * expected address, chainId and issuer. Never throws; returns false on any
-   * network or validation failure.
-   */
+  // Confirm the Renown credential exists and binds this address/chain to the
+  // app DID (shared SDK helper; also re-verifies the EIP-712 proof).
   private async fetchCredentialExists(
     address: string,
     chainId: number,
     appId: string,
   ): Promise<boolean> {
-    const url = `https://www.renown.id/api/auth/credential?address=${address}&chainId=${chainId}&connectId=${appId}&appId=${appId}`;
-    try {
-      const response = await fetch(url, {
-        method: "GET",
-      });
-      if (response.status !== 200) {
-        return false;
-      }
-      const body = (await response.json()) as {
-        credential: PowerhouseVerifiableCredential;
-      };
-      const credential = body.credential;
-
-      const appIdVerfied = credential.credentialSubject.id;
-      const addressVerfied = credential.issuer.id.split(":")[4];
-      const chainIdVerfied = credential.issuer.id.split(":")[3];
-
-      return (
-        appIdVerfied === appId &&
-        addressVerfied.toLocaleLowerCase() === address.toLocaleLowerCase() &&
-        chainIdVerfied === chainId.toString()
-      );
-    } catch {
-      return false;
-    }
+    const credential = await fetchDelegationCredential({
+      address,
+      chainId,
+      appDid: appId,
+    });
+    return credential !== undefined;
   }
 }

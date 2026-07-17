@@ -7,24 +7,19 @@
  * API fetch inside verifyCredentialExists().
  */
 
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi,
-  type MockInstance,
-} from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AuthService } from "../src/services/auth.service.js";
 
 // ─── mock @renown/sdk ─────────────────────────────────────────────────────────
 
 const mockVerifyAuthBearerToken = vi.fn();
+const mockFetchDelegationCredential = vi.fn();
 
 vi.mock("@renown/sdk", () => ({
   verifyAuthBearerToken: (...args: unknown[]) =>
     mockVerifyAuthBearerToken(...args),
+  fetchDelegationCredential: (...args: unknown[]) =>
+    mockFetchDelegationCredential(...args),
 }));
 
 // ─── fixtures ─────────────────────────────────────────────────────────────────
@@ -271,20 +266,10 @@ describe("AuthService.authenticateRequest()", () => {
   describe("credential verification caching", () => {
     const ADDRESS = "0xuser";
     const CHAIN_ID = 1;
-    const ISSUER = "did:ethr:0xapp";
-
-    /** A Renown API response that fetchCredentialExists() validates as matching the user. */
-    function makeCredentialResponse(): Response {
-      return new Response(
-        JSON.stringify({
-          credential: {
-            credentialSubject: { id: ISSUER },
-            issuer: { id: `did:pkh:eip155:${CHAIN_ID}:${ADDRESS}` },
-          },
-        }),
-        { status: 200 },
-      );
-    }
+    // A non-undefined credential means "exists" — AuthService only checks that.
+    const CREDENTIAL = {
+      issuer: { id: `did:pkh:eip155:${CHAIN_ID}:${ADDRESS}` },
+    };
 
     function makeService(credentialVerificationCacheTtlMs?: number) {
       return new AuthService({
@@ -301,20 +286,15 @@ describe("AuthService.authenticateRequest()", () => {
       );
     }
 
-    let fetchSpy: MockInstance<typeof globalThis.fetch>;
-
     beforeEach(() => {
       vi.useFakeTimers();
       mockVerifyAuthBearerToken.mockResolvedValue(
         makeVerified(ADDRESS, CHAIN_ID),
       );
-      fetchSpy = vi
-        .spyOn(globalThis, "fetch")
-        .mockImplementation(() => Promise.resolve(makeCredentialResponse()));
+      mockFetchDelegationCredential.mockResolvedValue(CREDENTIAL);
     });
 
     afterEach(() => {
-      fetchSpy.mockRestore();
       vi.useRealTimers();
     });
 
@@ -326,7 +306,7 @@ describe("AuthService.authenticateRequest()", () => {
 
       expect(first).not.toBeInstanceOf(Response);
       expect(second).not.toBeInstanceOf(Response);
-      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      expect(mockFetchDelegationCredential).toHaveBeenCalledTimes(1);
     });
 
     it("shares a single in-flight fetch across concurrent requests", async () => {
@@ -341,11 +321,11 @@ describe("AuthService.authenticateRequest()", () => {
       for (const result of results) {
         expect(result).not.toBeInstanceOf(Response);
       }
-      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      expect(mockFetchDelegationCredential).toHaveBeenCalledTimes(1);
     });
 
     it("does not cache failed checks", async () => {
-      fetchSpy.mockRejectedValue(new Error("network error"));
+      mockFetchDelegationCredential.mockResolvedValue(undefined);
       const service = makeService();
 
       const first = await authenticate(service);
@@ -354,24 +334,7 @@ describe("AuthService.authenticateRequest()", () => {
       expect(first).toBeInstanceOf(Response);
       expect((first as Response).status).toBe(401);
       expect(second).toBeInstanceOf(Response);
-      expect(fetchSpy).toHaveBeenCalledTimes(2);
-    });
-
-    it("rejects and does not cache when Renown responds with a non-200 status", async () => {
-      fetchSpy.mockImplementation(() =>
-        Promise.resolve(
-          new Response(makeCredentialResponse().body, { status: 503 }),
-        ),
-      );
-      const service = makeService();
-
-      const first = await authenticate(service);
-      const second = await authenticate(service);
-
-      expect(first).toBeInstanceOf(Response);
-      expect((first as Response).status).toBe(401);
-      expect(second).toBeInstanceOf(Response);
-      expect(fetchSpy).toHaveBeenCalledTimes(2);
+      expect(mockFetchDelegationCredential).toHaveBeenCalledTimes(2);
     });
 
     it("re-fetches after the TTL expires", async () => {
@@ -381,7 +344,7 @@ describe("AuthService.authenticateRequest()", () => {
       vi.advanceTimersByTime(1_001);
       await authenticate(service);
 
-      expect(fetchSpy).toHaveBeenCalledTimes(2);
+      expect(mockFetchDelegationCredential).toHaveBeenCalledTimes(2);
     });
 
     it("disables caching when the TTL is 0", async () => {
@@ -390,7 +353,7 @@ describe("AuthService.authenticateRequest()", () => {
       await authenticate(service);
       await authenticate(service);
 
-      expect(fetchSpy).toHaveBeenCalledTimes(2);
+      expect(mockFetchDelegationCredential).toHaveBeenCalledTimes(2);
     });
 
     it("caches per user, not globally", async () => {
@@ -402,7 +365,7 @@ describe("AuthService.authenticateRequest()", () => {
       );
       await authenticate(service);
 
-      expect(fetchSpy).toHaveBeenCalledTimes(2);
+      expect(mockFetchDelegationCredential).toHaveBeenCalledTimes(2);
     });
 
     it("evicts the oldest entries when the cache size cap is reached", async () => {
@@ -414,30 +377,26 @@ describe("AuthService.authenticateRequest()", () => {
         );
         await authenticate(service);
       }
-      expect(fetchSpy).toHaveBeenCalledTimes(1_000);
+      expect(mockFetchDelegationCredential).toHaveBeenCalledTimes(1_000);
 
       mockVerifyAuthBearerToken.mockResolvedValue(
         makeVerified("0xoverflow", CHAIN_ID),
       );
       await authenticate(service);
-      expect(fetchSpy).toHaveBeenCalledTimes(1_001);
+      expect(mockFetchDelegationCredential).toHaveBeenCalledTimes(1_001);
 
       mockVerifyAuthBearerToken.mockResolvedValue(
         makeVerified("0xuser0", CHAIN_ID),
       );
       await authenticate(service);
-      expect(fetchSpy).toHaveBeenCalledTimes(1_002);
+      expect(mockFetchDelegationCredential).toHaveBeenCalledTimes(1_002);
     });
   });
 
   describe("credential existence check", () => {
     it("returns 401 when the credential no longer exists on the Renown API", async () => {
       mockVerifyAuthBearerToken.mockResolvedValue(makeVerified("0xuser", 1));
-
-      // Mock global fetch to simulate Renown API returning a non-200 or bad body
-      const fetchSpy = vi
-        .spyOn(globalThis, "fetch")
-        .mockRejectedValue(new Error("network error"));
+      mockFetchDelegationCredential.mockResolvedValue(undefined);
 
       const service = new AuthService({
         enabled: true,
@@ -451,8 +410,6 @@ describe("AuthService.authenticateRequest()", () => {
 
       expect(result).toBeInstanceOf(Response);
       expect((result as Response).status).toBe(401);
-
-      fetchSpy.mockRestore();
     });
   });
 });

@@ -1,7 +1,8 @@
 import { privateKeyToAccount } from "viem/accounts";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   buildAndSignCredential,
+  fetchDelegationCredential,
   recoverCredentialSigner,
   verifyCredentialSignature,
   type SignCredentialTypedData,
@@ -75,5 +76,116 @@ describe("credential", () => {
 
     credential.proof.proofValue = "not-hex";
     expect(await verifyCredentialSignature(credential)).toBe(false);
+  });
+});
+
+describe("fetchDelegationCredential", () => {
+  const APP_DID = "did:key:test-app";
+  const BASE = "https://renown.test";
+
+  const validCredential = () =>
+    buildAndSignCredential({
+      signTypedData: sign,
+      address: account.address,
+      chainId: 1,
+      app: "test-app",
+      appId: APP_DID,
+    });
+
+  const mockFetch = (body: unknown, status = 200) =>
+    vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response(JSON.stringify(body), { status }));
+
+  afterEach(() => vi.restoreAllMocks());
+
+  it("returns the credential when it exists and the proof verifies", async () => {
+    mockFetch({ credential: await validCredential() });
+    const result = await fetchDelegationCredential({
+      address: account.address,
+      chainId: 1,
+      appDid: APP_DID,
+      baseUrl: BASE,
+    });
+    expect(result?.credentialSubject.id).toBe(APP_DID);
+  });
+
+  it("returns undefined when it delegates to a different app DID", async () => {
+    mockFetch({ credential: await validCredential() });
+    const result = await fetchDelegationCredential({
+      address: account.address,
+      chainId: 1,
+      appDid: "did:key:other-app",
+      baseUrl: BASE,
+    });
+    expect(result).toBeUndefined();
+  });
+
+  it("returns undefined when the address does not match the issuer", async () => {
+    mockFetch({ credential: await validCredential() });
+    const result = await fetchDelegationCredential({
+      address: privateKeyToAccount(KEY_2).address,
+      chainId: 1,
+      appDid: APP_DID,
+      baseUrl: BASE,
+    });
+    expect(result).toBeUndefined();
+  });
+
+  it("returns undefined on a non-200 response", async () => {
+    mockFetch({}, 503);
+    const result = await fetchDelegationCredential({
+      address: account.address,
+      chainId: 1,
+      appDid: APP_DID,
+      baseUrl: BASE,
+    });
+    expect(result).toBeUndefined();
+  });
+
+  it("returns undefined for an expired credential", async () => {
+    const credential = await buildAndSignCredential({
+      signTypedData: sign,
+      address: account.address,
+      chainId: 1,
+      app: "test-app",
+      appId: APP_DID,
+      expiresInDays: -1,
+    });
+    mockFetch({ credential });
+    const result = await fetchDelegationCredential({
+      address: account.address,
+      chainId: 1,
+      appDid: APP_DID,
+      baseUrl: BASE,
+    });
+    expect(result).toBeUndefined();
+  });
+
+  it("returns undefined when the EIP-712 proof is invalid", async () => {
+    const credential = await validCredential();
+    credential.proof.proofValue = "0xdeadbeef";
+    mockFetch({ credential });
+    const result = await fetchDelegationCredential({
+      address: account.address,
+      chainId: 1,
+      appDid: APP_DID,
+      baseUrl: BASE,
+    });
+    expect(result).toBeUndefined();
+  });
+
+  it("skips signature verification when verifySignature is false", async () => {
+    const credential = await validCredential();
+    credential.proof.proofValue = "0xdeadbeef";
+    mockFetch({ credential });
+    const result = await fetchDelegationCredential({
+      address: account.address,
+      chainId: 1,
+      appDid: APP_DID,
+      baseUrl: BASE,
+      verifySignature: false,
+    });
+    expect(result?.credentialSubject.id).toBe(APP_DID);
   });
 });
