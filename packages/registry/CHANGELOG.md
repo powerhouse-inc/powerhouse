@@ -1,3 +1,18 @@
+## 6.2.2-dev.5 (2026-07-17)
+
+### 🚀 Features
+
+- **registry:** renown auth + package ownership via verdaccio plugin ([616be7f8c](https://github.com/powerhouse-inc/powerhouse/commit/616be7f8c))
+
+### 🩹 Fixes
+
+- **registry:** lowercase the publisher address parsed from a pkh DID ([c1f08953f](https://github.com/powerhouse-inc/powerhouse/commit/c1f08953f))
+- **registry:** purge CDN cache on single-version unpublish ([35507ff6f](https://github.com/powerhouse-inc/powerhouse/commit/35507ff6f))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.2-dev.4 (2026-07-17)
 
 ### 🚀 Features

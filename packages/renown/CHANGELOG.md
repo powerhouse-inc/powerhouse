@@ -1,3 +1,17 @@
+## 6.2.2-dev.5 (2026-07-17)
+
+### 🚀 Features
+
+- **renown:** shared delegation-credential fetch/verify; adopt in reactor-api ([9117a24e4](https://github.com/powerhouse-inc/powerhouse/commit/9117a24e4))
+
+### 🩹 Fixes
+
+- **renown:** treat an unparseable credential expiry as invalid ([5129527fa](https://github.com/powerhouse-inc/powerhouse/commit/5129527fa))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.2-dev.4 (2026-07-17)
 
 ### 🚀 Features

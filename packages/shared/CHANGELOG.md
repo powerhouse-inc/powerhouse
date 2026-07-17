@@ -1,3 +1,13 @@
+## 6.2.2-dev.5 (2026-07-17)
+
+### 🚀 Features
+
+- **registry:** renown auth + package ownership via verdaccio plugin ([616be7f8c](https://github.com/powerhouse-inc/powerhouse/commit/616be7f8c))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.2-dev.4 (2026-07-17)
 
 ### 🚀 Features

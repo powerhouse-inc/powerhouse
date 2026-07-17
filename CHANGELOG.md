@@ -1,3 +1,20 @@
+## 6.2.2-dev.5 (2026-07-17)
+
+### 🚀 Features
+
+- **registry:** renown auth + package ownership via verdaccio plugin ([616be7f8c](https://github.com/powerhouse-inc/powerhouse/commit/616be7f8c))
+- **renown:** shared delegation-credential fetch/verify; adopt in reactor-api ([9117a24e4](https://github.com/powerhouse-inc/powerhouse/commit/9117a24e4))
+
+### 🩹 Fixes
+
+- **registry:** purge CDN cache on single-version unpublish ([35507ff6f](https://github.com/powerhouse-inc/powerhouse/commit/35507ff6f))
+- **registry:** lowercase the publisher address parsed from a pkh DID ([c1f08953f](https://github.com/powerhouse-inc/powerhouse/commit/c1f08953f))
+- **renown:** treat an unparseable credential expiry as invalid ([5129527fa](https://github.com/powerhouse-inc/powerhouse/commit/5129527fa))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.2-dev.4 (2026-07-17)
 
 ### 🚀 Features
