@@ -787,6 +787,7 @@ export const ManifestSchema = z.object({
   name: z.string(),
   description: z.string().optional(),
   category: z.string().optional(),
+  image: z.string().optional(),
   publisher: PublisherSchema.optional(),
   documentModels: PowerhouseModulesSchema,
   apps: PowerhouseModulesSchema,
