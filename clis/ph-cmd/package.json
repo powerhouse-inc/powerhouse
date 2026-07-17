@@ -1,6 +1,6 @@
 {
   "name": "ph-cmd",
-  "version": "6.2.2-dev.5",
+  "version": "6.2.2-dev.6",
   "description": "Powerhouse CLI — create Vetra projects, generate document models and editors, run local dev environments, and publish packages.",
   "license": "AGPL-3.0-only",
   "type": "module",

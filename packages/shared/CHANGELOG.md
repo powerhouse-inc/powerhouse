@@ -1,3 +1,14 @@
+## 6.2.2-dev.6 (2026-07-17)
+
+### 🚀 Features
+
+- **shared:** add optional image field to ManifestSchema ([f22cc24b0](https://github.com/powerhouse-inc/powerhouse/commit/f22cc24b0))
+
+### ❤️ Thank You
+
+- CallmeT-ty @CallmeT-ty
+- Claude Fable 5
+
 ## 6.2.2-dev.5 (2026-07-17)
 
 ### 🚀 Features

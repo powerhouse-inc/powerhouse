@@ -1,3 +1,7 @@
+## 6.2.2-dev.6 (2026-07-17)
+
+This was a version bump only for document-model to align it with other projects, there were no code changes.
+
 ## 6.2.2-dev.5 (2026-07-17)
 
 This was a version bump only for document-model to align it with other projects, there were no code changes.
