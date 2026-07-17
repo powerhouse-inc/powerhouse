@@ -162,6 +162,19 @@ describe("fetchDelegationCredential", () => {
     expect(result).toBeUndefined();
   });
 
+  it("returns undefined for a malformed expirationDate (not treated as non-expiring)", async () => {
+    const credential = await validCredential();
+    credential.expirationDate = "not-a-date";
+    mockFetch({ credential });
+    const result = await fetchDelegationCredential({
+      address: account.address,
+      chainId: 1,
+      appDid: APP_DID,
+      baseUrl: BASE,
+    });
+    expect(result).toBeUndefined();
+  });
+
   it("returns undefined when the EIP-712 proof is invalid", async () => {
     const credential = await validCredential();
     credential.proof.proofValue = "0xdeadbeef";

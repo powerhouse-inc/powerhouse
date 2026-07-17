@@ -227,13 +227,13 @@ export async function fetchDelegationCredential(
       return undefined;
     }
 
-    // Reject an expired credential. Renown revocation is expected to drop the
-    // credential from the endpoint (a failed fetch), not flag it here.
-    if (
-      credential.expirationDate &&
-      Date.parse(credential.expirationDate) <= Date.now()
-    ) {
-      return undefined;
+    // Reject an expired credential (revocation drops it from the endpoint
+    // instead); a malformed date (NaN) counts as invalid, not non-expiring.
+    if (credential.expirationDate) {
+      const expiresAt = Date.parse(credential.expirationDate);
+      if (Number.isNaN(expiresAt) || expiresAt <= Date.now()) {
+        return undefined;
+      }
     }
 
     if (verifySignature) {
