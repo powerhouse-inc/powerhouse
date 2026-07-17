@@ -2,6 +2,13 @@ import { errorUtils } from "@verdaccio/core";
 import bcrypt from "bcryptjs";
 import { type AuthStore } from "./auth-store.js";
 import { createPgPool, createPgStore } from "./pg-store.js";
+import { markStoreLoaded, takeAuthStore } from "./store-handoff.js";
+import {
+  createRenownVerifier,
+  renownApiJwtMiddleware,
+  type JwtMiddlewareHelpers,
+  type RenownVerifier,
+} from "./renown-verifier.js";
 
 /**
  * Postgres-backed Verdaccio auth plugin.
@@ -14,8 +21,13 @@ import { createPgPool, createPgStore } from "./pg-store.js";
  */
 export interface RegistryAuthPluginConfig {
   databaseUrl?: string;
-  /** Injected store (tests). Takes precedence over databaseUrl. */
-  store?: AuthStore;
+  /** Token for a store stashed via store-handoff. Never a `store` key: verdaccio
+   *  merges the app config (incl. the S3 `store` block) into every plugin config. */
+  storeToken?: string;
+  /** Renown audience (this registry's public URL). Enables renown auth. */
+  publicUrl?: string;
+  /** Renown service base URL (defaults to the SDK default). */
+  renownUrl?: string;
 }
 
 const BCRYPT_ROUNDS = 10;
@@ -36,7 +48,10 @@ function internal(err: unknown): Error {
  * Pure plugin factory over an injected store — the unit-testable core.
  * `registryAuthPlugin` below wires it to a real Postgres store.
  */
-export function createRegistryAuthPlugin(store: AuthStore) {
+export function createRegistryAuthPlugin(
+  store: AuthStore,
+  renownVerifier?: RenownVerifier,
+) {
   // Ensure the schema exists before any op; init() is idempotent + memoized.
   const ready = store.init();
 
@@ -127,6 +142,16 @@ export function createRegistryAuthPlugin(store: AuthStore) {
         })
         .catch((err) => cb(internal(err)));
     },
+
+    // Present only with renown configured — replaces verdaccio's default JWT
+    // handling to authenticate renown tokens into remote_user (the owner DID).
+    ...(renownVerifier
+      ? {
+          apiJWTmiddleware(helpers: JwtMiddlewareHelpers) {
+            return renownApiJwtMiddleware(renownVerifier, helpers);
+          },
+        }
+      : {}),
   };
 }
 
@@ -134,16 +159,26 @@ export function createRegistryAuthPlugin(store: AuthStore) {
  *  default export — both return the plugin object). */
 export default function registryAuthPlugin(config: RegistryAuthPluginConfig) {
   const store =
-    config.store ??
+    (config.storeToken ? takeAuthStore(config.storeToken) : undefined) ??
     createPgStore(
       createPgPool(
         config.databaseUrl ??
           (() => {
             throw new Error(
-              "registry-auth plugin requires a databaseUrl (or an injected store)",
+              "registry-auth plugin requires a databaseUrl (or a store token)",
             );
           })(),
       ),
     );
-  return createRegistryAuthPlugin(store);
+  const renownVerifier = config.publicUrl
+    ? createRenownVerifier({
+        publicUrl: config.publicUrl,
+        renownUrl: config.renownUrl,
+      })
+    : undefined;
+  const plugin = createRegistryAuthPlugin(store, renownVerifier);
+  // Signal a successful load so the launcher can fail fast if the plugin never
+  // engaged (a configured DB but no auth is worse than not starting).
+  if (config.storeToken) markStoreLoaded(config.storeToken);
+  return plugin;
 }

@@ -124,6 +124,14 @@ export const registryCommand = command({
       defaultValue: () => process.env.PH_REGISTRY_AUTH_RENOWN === "true",
       defaultValueIsSerializable: true,
     }),
+    renownUrl: option({
+      long: "renown-url",
+      type: optional(string),
+      description:
+        "Renown service base URL for credential verification. Defaults to https://www.renown.id.",
+      defaultValue: () => process.env.PH_REGISTRY_RENOWN_URL,
+      defaultValueIsSerializable: true,
+    }),
     verdaccioSecret: option({
       long: "verdaccio-secret",
       type: optional(string),
@@ -151,7 +159,15 @@ export const registryCommand = command({
     }),
   },
   handler: async (args) => {
-    console.log(args);
+    // Redact secrets — this object otherwise leaks the DB password / signing
+    // secret into logs.
+    const redact = (v?: string) => (v ? "[redacted]" : undefined);
+    console.log({
+      ...args,
+      databaseUrl: redact(args.databaseUrl),
+      verdaccioSecret: redact(args.verdaccioSecret),
+      s3SecretAccessKey: redact(args.s3SecretAccessKey),
+    });
 
     try {
       await runRegistry(args);

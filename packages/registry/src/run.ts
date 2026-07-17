@@ -5,7 +5,9 @@ import { mkdir } from "node:fs/promises";
 import type { Server } from "node:http";
 import path from "node:path";
 import { runServer } from "verdaccio";
-import { createRenownAuthMiddleware } from "./auth/renown-middleware.js";
+import type { AuthStore } from "./auth/auth-store.js";
+import { createPgPool, createPgStore } from "./auth/pg-store.js";
+import { stashAuthStore, wasStoreLoaded } from "./auth/store-handoff.js";
 import {
   createPowerhouseRouter,
   createPublishHook,
@@ -48,6 +50,7 @@ export async function runRegistry(args: RegistryCommandArgs) {
     s3SecretAccessKey,
     publicUrl,
     authRenown,
+    renownUrl,
     verdaccioSecret: verdaccioSecretArg,
     localPackages,
     databaseUrl,
@@ -74,6 +77,13 @@ export async function runRegistry(args: RegistryCommandArgs) {
       "[registry] auth-renown is enabled but --public-url / PH_REGISTRY_PUBLIC_URL is not set; Renown auth will be disabled.",
     );
   }
+  // Renown auth is served by the registry-auth plugin, which loads only with a
+  // database (it also holds ownership). Without one, renown can't engage.
+  if (renownEnabled && !databaseUrl && !authStore) {
+    console.warn(
+      "[registry] Renown auth requires a database (--database-url) for the auth plugin; renown will be inactive.",
+    );
+  }
 
   console.log({
     storagePath,
@@ -91,6 +101,17 @@ export async function runRegistry(args: RegistryCommandArgs) {
     .map((p) => p.trim())
     .filter(Boolean);
 
+  // One AuthStore, shared by the verdaccio auth plugin and the /packages owner
+  // enrichment — a single Postgres pool per process (injected store wins).
+  const sharedAuthStore: AuthStore | undefined =
+    (authStore as AuthStore | undefined) ??
+    (databaseUrl ? createPgStore(createPgPool(databaseUrl)) : undefined);
+  // Token carries the store through verdaccio's plugin config; we later assert
+  // the plugin loaded it, so a configured-but-broken auth setup fails to boot.
+  const authStoreToken = sharedAuthStore
+    ? stashAuthStore(sharedAuthStore)
+    : undefined;
+
   const config: RegistryConfig = {
     port,
     storagePath,
@@ -100,7 +121,9 @@ export async function runRegistry(args: RegistryCommandArgs) {
     webEnabled,
     verdaccioSecret,
     ...(localPackagePatterns?.length ? { localPackagePatterns } : {}),
-    ...(renownEnabled && publicUrl ? { renown: { publicUrl } } : {}),
+    ...(renownEnabled && publicUrl
+      ? { renown: { publicUrl, ...(renownUrl ? { renownUrl } : {}) } }
+      : {}),
     ...(webhookConfigs?.length && {
       notify: { webhooks: webhookConfigs },
     }),
@@ -119,7 +142,8 @@ export async function runRegistry(args: RegistryCommandArgs) {
       }),
     ...(databaseUrl ? { databaseUrl } : {}),
     ...(pluginsDir ? { pluginsDir } : {}),
-    ...(authStore ? { authStore } : {}),
+    ...(sharedAuthStore ? { authStore: sharedAuthStore } : {}),
+    ...(authStoreToken ? { authStoreToken } : {}),
   };
 
   if (config.databaseUrl || config.authStore) {
@@ -135,6 +159,15 @@ export async function runRegistry(args: RegistryCommandArgs) {
 
   // verdaccio's runServer returns Promise<any> (upstream type limitation)
   const verdaccioServer = (await runServer(verdaccioConfig)) as Server;
+
+  // Fail fast: a configured auth store that the plugin never loaded means
+  // verdaccio silently fell back to no auth — refuse to run without ownership.
+  if (authStoreToken && !wasStoreLoaded(authStoreToken)) {
+    verdaccioServer.close();
+    throw new Error(
+      "registry-auth plugin failed to load despite a configured database/auth store; refusing to start without auth and package-ownership enforcement.",
+    );
+  }
   const verdaccioHandler = verdaccioServer.listeners("request")[0] as (
     ...args: unknown[]
   ) => void;
@@ -152,19 +185,9 @@ export async function runRegistry(args: RegistryCommandArgs) {
   }
 
   // Our routes take priority over Verdaccio
-  app.use(createPowerhouseRouter(config, sseChannel, webhookChannel));
-
-  // Renown bearer-token auth runs before the publish/unpublish hooks so they
-  // see `req.renownUser`, and before verdaccio so the swapped Authorization
-  // header reaches verdaccio's apiJWTmiddleware.
-  if (config.renown) {
-    app.use(
-      createRenownAuthMiddleware({
-        publicUrl: config.renown.publicUrl,
-        verdaccioSecret,
-      }),
-    );
-  }
+  app.use(
+    createPowerhouseRouter(config, sseChannel, webhookChannel, sharedAuthStore),
+  );
 
   app.use(createPublishHook(config, notifications));
   app.use(createUnpublishHook(config, notifications));

@@ -8,7 +8,9 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { pipeline } from "node:stream/promises";
+import type { AuthStore } from "./auth/auth-store.js";
 import { CdnCache, isExactVersion, parsePackageSpec } from "./cdn.js";
+import type { PackageInfo } from "./types.js";
 import type { SSEChannel } from "./notifications/sse.js";
 import type { NotificationChannel } from "./notifications/types.js";
 import type { WebhookChannel } from "./notifications/webhook.js";
@@ -34,6 +36,19 @@ const MIME_TYPES: Record<string, string> = {
 function getContentType(filePath: string): string {
   const ext = path.extname(filePath).toLowerCase();
   return MIME_TYPES[ext] ?? "application/octet-stream";
+}
+
+// Publisher identity from verdaccio's remote_user (the renown middleware sets
+// its name to the owner pkh DID). undefined when anonymous.
+function publisherFromRequest(
+  req: Request,
+): { address: string; did?: string } | undefined {
+  const name = (req as { remote_user?: { name?: string } }).remote_user?.name;
+  if (!name) return undefined;
+  if (name.startsWith("did:pkh:")) {
+    return { address: name.split(":").pop() ?? name, did: name };
+  }
+  return { address: name };
 }
 
 type VersionResolution =
@@ -89,12 +104,29 @@ export function createPowerhouseRouter(
   config: RegistryConfig,
   sse: SSEChannel,
   webhooks: WebhookChannel,
+  ownerStore?: AuthStore,
 ): Router {
   const cdn = new CdnCache(
     `http://localhost:${config.port}`,
     config.cdnCachePath,
   );
   const router = Router();
+
+  // Attach package owners from the auth store. Best-effort: a missing store or
+  // DB error degrades to no `owners` (the /packages route feeds readiness).
+  const withOwners = async (pkgs: PackageInfo[]): Promise<PackageInfo[]> => {
+    if (!ownerStore || pkgs.length === 0) return pkgs;
+    try {
+      await ownerStore.init();
+      const map = await ownerStore.getOwnersFor(pkgs.map((p) => p.name));
+      return pkgs.map((p) =>
+        p.name in map ? { ...p, owners: map[p.name] } : p,
+      );
+    } catch (err) {
+      console.error("[registry] owner lookup failed:", err);
+      return pkgs;
+    }
+  };
 
   // CORS on every response
   router.use((_req: Request, res: Response, next: NextFunction) => {
@@ -155,18 +187,16 @@ export function createPowerhouseRouter(
   // so it must not synchronously fetch or extract). Each call also nudges
   // a background warm-up so newly-published packages appear in the listing
   // without operator intervention.
-  router.get("/packages", (req: Request, res: Response) => {
+  router.get("/packages", async (req: Request, res: Response) => {
     void warm();
     const packages = scanPackages(config.cdnCachePath, config.storagePath);
     const documentType = req.query.documentType as string | undefined;
-    if (documentType) {
-      const filtered = packages.filter((pkg) =>
-        pkg.manifest?.documentModels?.some((m) => m.id === documentType),
-      );
-      res.json(filtered);
-      return;
-    }
-    res.json(packages);
+    const selected = documentType
+      ? packages.filter((pkg) =>
+          pkg.manifest?.documentModels?.some((m) => m.id === documentType),
+        )
+      : packages;
+    res.json(await withOwners(selected));
   });
 
   // Find packages by document type - returns array of package names
@@ -201,7 +231,7 @@ export function createPowerhouseRouter(
       res.status(404).send("Package not found");
       return;
     }
-    res.json(pkg);
+    res.json((await withOwners([pkg]))[0]);
   });
 
   // CDN file serving
@@ -364,10 +394,7 @@ export function createUnpublishHook(
       cb?: () => void,
     ) {
       if (res.statusCode >= 200 && res.statusCode < 300) {
-        const renownUser = req.renownUser;
-        const publishedBy = renownUser
-          ? { address: renownUser.address, did: renownUser.did }
-          : undefined;
+        const publishedBy = publisherFromRequest(req);
         cdn
           .reconcileWithRegistry(rewrite.packageName)
           .then((removed) => {
@@ -421,13 +448,10 @@ export function createUnpublishHook(
           } else {
             cdn.invalidate(parsed.packageName);
           }
-          const renownUser = req.renownUser;
           notifications.notifyUnpublish({
             packageName: parsed.packageName,
             version: parsed.version,
-            publishedBy: renownUser
-              ? { address: renownUser.address, did: renownUser.did }
-              : undefined,
+            publishedBy: publisherFromRequest(req),
           });
         } catch (err) {
           console.error(
@@ -492,10 +516,7 @@ export function createPublishHook(
         );
       }
 
-      const renownUser = req.renownUser;
-      const publishedBy = renownUser
-        ? { address: renownUser.address, did: renownUser.did }
-        : undefined;
+      const publishedBy = publisherFromRequest(req);
       cdn
         .extractTarball(packageName, version)
         .then(() => {

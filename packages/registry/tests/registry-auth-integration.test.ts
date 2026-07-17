@@ -5,7 +5,7 @@ import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 import type { Pool } from "pg";
 import { newDb, type IMemoryDb } from "pg-mem";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import type { AuthStore } from "../src/auth/auth-store.js";
 import { createPgStore } from "../src/auth/pg-store.js";
 import {
@@ -88,6 +88,7 @@ async function publish(
   token: string,
   name: string,
   version: string,
+  withManifest = false,
 ): Promise<number> {
   const tmpDir = path.join(
     import.meta.dirname,
@@ -99,6 +100,14 @@ async function publish(
     JSON.stringify({ name, version, description: "t" }),
   );
   writeFileSync(path.join(tmpDir, "index.js"), "module.exports = 1;");
+  // A manifest makes the package loadable via /packages/:pkg (loadPackage
+  // returns null without one).
+  if (withManifest) {
+    writeFileSync(
+      path.join(tmpDir, "powerhouse.manifest.json"),
+      JSON.stringify({ name, description: "t" }),
+    );
+  }
   const tgz = execSync("npm pack --pack-destination .", {
     cwd: tmpDir,
     encoding: "utf-8",
@@ -200,6 +209,32 @@ describe("registry auth plugin — ownership + persistence (integration, verdacc
       300,
     );
   });
+
+  it("reports owners on /packages and /packages/:pkg", async () => {
+    const carol = await putUser(URL, "carol", "pw-c");
+    expect(carol.token).toBeTruthy();
+    expect(
+      await publish(URL, carol.token!, "carol-pkg", "1.0.0", true),
+    ).toBeLessThan(300);
+
+    // Poll the listing until the publish hook has warmed it into the cache.
+    let listed: { name: string; owners?: string[] } | undefined;
+    await vi.waitFor(
+      async () => {
+        const res = await fetch(`${URL}/packages`);
+        const arr = (await res.json()) as { name: string; owners?: string[] }[];
+        listed = arr.find((p) => p.name === "carol-pkg");
+        expect(listed).toBeTruthy();
+      },
+      { timeout: 15000, interval: 200 },
+    );
+    expect(listed!.owners).toEqual(["carol"]);
+
+    const single = await fetch(`${URL}/packages/carol-pkg`);
+    expect(single.status).toBe(200);
+    const body = (await single.json()) as { owners?: string[] };
+    expect(body.owners).toEqual(["carol"]);
+  }, 30000);
 
   it("accounts + ownership survive a fresh registry instance on the same Postgres", async () => {
     const PORT2 = 8295;

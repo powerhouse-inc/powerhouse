@@ -17,6 +17,8 @@ export interface AuthStore {
   /** Atomic create. Returns false if the username already exists. */
   createUser(username: string, passwordHash: string): Promise<boolean>;
   getOwners(pkg: string): Promise<string[] | null>;
+  /** Owners for many names in one round-trip; names with no row are omitted. */
+  getOwnersFor(pkgs: string[]): Promise<Record<string, string[]>>;
   /**
    * Atomically claim `pkg` for `username` if it has no owner, then return the
    * resulting owner list. If already owned, returns the existing owners
@@ -42,6 +44,14 @@ export function createMemoryAuthStore(): AuthStore {
       return Promise.resolve(true);
     },
     getOwners: (pkg) => Promise.resolve(owners.get(pkg) ?? null),
+    getOwnersFor: (pkgs) => {
+      const out: Record<string, string[]> = {};
+      for (const p of pkgs) {
+        const o = owners.get(p);
+        if (o) out[p] = o;
+      }
+      return Promise.resolve(out);
+    },
     claimOwner: (pkg, username) => {
       const existing = owners.get(pkg);
       if (existing) return Promise.resolve(existing);

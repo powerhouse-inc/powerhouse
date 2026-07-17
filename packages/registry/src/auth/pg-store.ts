@@ -71,6 +71,20 @@ export function createPgStore(pool: Pool): AuthStore {
       return res.rows[0]?.owners ?? null;
     },
 
+    async getOwnersFor(pkgs: string[]): Promise<Record<string, string[]>> {
+      if (pkgs.length === 0) return {};
+      // IN (...) with per-value placeholders — portable across pg and pg-mem,
+      // unlike `= ANY($1)` array binding.
+      const placeholders = pkgs.map((_, i) => `$${i + 1}`).join(",");
+      const res = await pool.query<{ package_name: string; owners: string[] }>(
+        `SELECT package_name, owners FROM registry_package_owners WHERE package_name IN (${placeholders})`,
+        pkgs,
+      );
+      const out: Record<string, string[]> = {};
+      for (const row of res.rows) out[row.package_name] = row.owners;
+      return out;
+    },
+
     async claimOwner(pkg: string, username: string): Promise<string[]> {
       // First publisher wins atomically; then read the actual owners.
       await pool.query(
