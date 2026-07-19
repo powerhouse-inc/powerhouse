@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-hypercore",
-  "version": "6.2.2-dev.7",
+  "version": "6.2.2-dev.8",
   "description": "Hypercore-backed IOperationStore for the Powerhouse Reactor",
   "repository": {
     "url": "https://github.com/powerhouse-inc/powerhouse",
