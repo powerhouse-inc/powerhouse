@@ -1,14 +1,5 @@
-/**
- * A signature of an action.
- *
- * This will be refactored in a future release.
- */
-//  [
-//     signerAddress,
-//     hash (docID, scope, operationID, operationName, operationInput),
-//     prevStateHash,
-//     signature bytes
-//  ]
+// Tuple from `buildOperationSignature`:
+// [timestamp, appKey, hash(docId+scope+type+input), previousStateHash, signatureHex].
 export type Signature = [string, string, string, string, string];
 
 /**
