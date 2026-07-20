@@ -14,7 +14,7 @@ Prerequisites:
 
 Usage:
   ph registry-login                          # uses powerhouse.config.json / PH_REGISTRY_URL
-  ph registry-login --registry https://registry.dev.vetra.io
+  ph registry-login --registry https://registry.vetra.io
   ph registry-login --expiry 7d
   `,
   args: registryLoginArgs,

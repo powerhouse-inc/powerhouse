@@ -12,7 +12,7 @@ export { DEFAULT_REGISTRY_URL } from "../clis/constants.js";
 
 /**
  * Extract the host portion of a registry URL — what npm uses as the key in
- * `~/.npmrc` for per-registry tokens (e.g. `//registry.dev.vetra.io/`).
+ * `~/.npmrc` for per-registry tokens (e.g. `//registry.vetra.io/`).
  */
 export function registryAuthKey(registryUrl: string): string {
   const url = new URL(registryUrl);

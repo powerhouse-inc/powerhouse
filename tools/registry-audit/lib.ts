@@ -28,7 +28,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 export const REPO_ROOT = resolve(__dirname, "..", "..");
 
 /** Default registry. Override with --registry or PH_REGISTRY. */
-export const DEFAULT_REGISTRY = "https://registry.dev.vetra.io";
+export const DEFAULT_REGISTRY = "https://registry.vetra.io";
 
 /** All audit state lives here (gitignored via .cache/). */
 export const CACHE_DIR = join(REPO_ROOT, ".cache", "registry-audit");

@@ -40,7 +40,7 @@ export const DEFAULT_CONNECT_OUTDIR = ".ph/connect-build/dist/" as const;
 
 export const DEFAULT_RENOWN_URL = "https://www.renown.id" as const;
 
-export const DEFAULT_REGISTRY_URL = "https://registry.dev.vetra.io" as const;
+export const DEFAULT_REGISTRY_URL = "https://registry.vetra.io" as const;
 
 export const DEFAULT_SWITCHBOARD_PORT = 4001 as const;
 

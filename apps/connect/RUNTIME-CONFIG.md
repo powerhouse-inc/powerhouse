@@ -44,7 +44,7 @@ Schema lives in `packages/builder-tools/connect-utils/runtime-config-schema.ts`.
   "packages": [
     { "packageName": "@scope/pkg", "version": "1.0.0", "provider": "registry" }
   ],
-  "packageRegistryUrl": "https://registry.dev.vetra.io",
+  "packageRegistryUrl": "https://registry.vetra.io",
   "localPackage": { "name": "...", "version": "..." } | null,
 
   // Connect-only runtime values:
