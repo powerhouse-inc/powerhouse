@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { PHConnectPwa } from "../clis/types.js";
 import type {
   AddChangeLogItemInput,
   AddModuleInput,
@@ -783,6 +784,127 @@ export const ConfigEntrySchema = z.object({
   default: z.boolean().optional(),
 });
 
+// PWA / service-worker overrides a package contributes to a Connect build.
+// The `z.ZodType<PHConnectPwa>` annotation pins the schema to the TS type in
+// packages/shared/clis/types.ts, so drift between them is a compile error;
+// the JSON-schema fragment in packages/shared/connect/schema-fragments.ts is
+// the remaining hand-kept mirror. Kept on the manifest (not a separate file)
+// so it ships in dist/powerhouse.manifest.json and the Connect build can read
+// it without executing package code.
+//
+// Every fixed-shape object below is strict (z.strictObject): an unknown key —
+// e.g. a `manifest.nam` typo — fails the build loudly instead of being
+// silently dropped, matching the JSON schema's `additionalProperties: false`.
+// Only the open MIME/header maps (z.record) accept arbitrary keys by design.
+const PwaUrlPatternSchema = z.union([
+  z.string(),
+  z
+    .strictObject({ source: z.string(), flags: z.string().optional() })
+    // The pair is rebuilt into a RegExp at build time; catch a non-compiling
+    // pattern here, where validation can still name the contributor.
+    .refine(
+      (p) => {
+        try {
+          new RegExp(p.source, p.flags);
+          return true;
+        } catch {
+          return false;
+        }
+      },
+      { message: "source/flags do not compile to a valid RegExp" },
+    ),
+]);
+
+const PwaRuntimeCachingSchema = z.strictObject({
+  urlPattern: PwaUrlPatternSchema,
+  handler: z.enum([
+    "CacheFirst",
+    "CacheOnly",
+    "NetworkFirst",
+    "NetworkOnly",
+    "StaleWhileRevalidate",
+  ]),
+  method: z.enum(["GET", "POST", "PUT", "DELETE", "HEAD", "PATCH"]).optional(),
+  options: z
+    .strictObject({
+      cacheName: z.string().optional(),
+      networkTimeoutSeconds: z.number().optional(),
+      expiration: z
+        .strictObject({
+          maxEntries: z.number().optional(),
+          maxAgeSeconds: z.number().optional(),
+        })
+        .optional(),
+      cacheableResponse: z
+        .strictObject({
+          statuses: z.array(z.number()).optional(),
+          headers: z.record(z.string(), z.string()).optional(),
+        })
+        .optional(),
+    })
+    .optional(),
+});
+
+const PwaIconSchema = z.strictObject({
+  src: z.string(),
+  sizes: z.string().optional(),
+  type: z.string().optional(),
+  purpose: z.string().optional(),
+});
+
+// No `action` field: the route launched files open at is fixed by Connect
+// (the runtime handling lives in Connect's own source), so contributors only
+// declare WHICH file types they accept. `strictObject` rejects a fragment
+// that tries to set its own route. Extensions must carry the leading dot —
+// Chromium silently ignores dotless entries, so fail loudly at build instead.
+const PwaFileHandlerSchema = z.strictObject({
+  accept: z.record(
+    z.string(),
+    z.array(z.string().regex(/^\./, "file extensions must start with '.'")),
+  ),
+  icons: z.array(PwaIconSchema).optional(),
+  launch_type: z.enum(["single-client", "multiple-clients"]).optional(),
+});
+
+// `categories` is intentionally NOT here: it is not authored under
+// `connect.pwa` — it is derived from the `category` field of the contributing
+// `powerhouse.manifest.json` files (see collectProjectPwaContribution /
+// toPwaContribution). `strictObject` therefore rejects an authored `categories`
+// (and the removed `shortcuts`/`screenshots`/`share_target`/`display_override`).
+const PwaManifestOverrideSchema = z.strictObject({
+  name: z.string().optional(),
+  short_name: z.string().optional(),
+  description: z.string().optional(),
+  theme_color: z.string().optional(),
+  background_color: z.string().optional(),
+  display: z
+    .enum(["fullscreen", "standalone", "minimal-ui", "browser"])
+    .optional(),
+  start_url: z.string().optional(),
+  scope: z.string().optional(),
+  icons: z.array(PwaIconSchema).optional(),
+  file_handlers: z.array(PwaFileHandlerSchema).optional(),
+  launch_handler: z
+    .strictObject({
+      client_mode: z.enum([
+        "auto",
+        "focus-existing",
+        "navigate-existing",
+        "navigate-new",
+      ]),
+    })
+    .optional(),
+});
+
+export const PwaConfigSchema: z.ZodType<PHConnectPwa> = z.strictObject({
+  manifest: PwaManifestOverrideSchema.optional(),
+  globPatterns: z.array(z.string()).optional(),
+  globIgnores: z.array(z.string()).optional(),
+  maximumFileSizeToCacheInBytes: z.number().optional(),
+  runtimeCaching: z.array(PwaRuntimeCachingSchema).optional(),
+  navigateFallbackDenylist: z.array(PwaUrlPatternSchema).optional(),
+});
+
 export const ManifestSchema = z.object({
   name: z.string(),
   description: z.string().optional(),
@@ -794,4 +916,5 @@ export const ManifestSchema = z.object({
   processors: PowerhouseModulesSchema,
   subgraphs: PowerhouseModulesSchema,
   config: z.array(ConfigEntrySchema).optional(),
+  pwa: PwaConfigSchema.optional(),
 });

@@ -15,6 +15,7 @@ export * from "./drive-auth-gate/drive-auth-gate.js";
 export * from "./drop-zone/drop-zone-wrapper.js";
 export * from "./drop-zone/drop-zone.js";
 export * from "./drop-zone/upload-file-list-container.js";
+export * from "./drop-zone/utils.js";
 export * from "./dropdown-menu/dropdown-menu.js";
 export * from "./editor-action-buttons/editor-action-buttons.js";
 export * from "./editor-undo-redo-buttons/editor-undo-redo-buttons.js";

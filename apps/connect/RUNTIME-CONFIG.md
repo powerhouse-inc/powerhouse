@@ -50,11 +50,12 @@ Schema lives in `packages/builder-tools/connect-utils/runtime-config-schema.ts`.
   // Connect-only runtime values:
   "connect": {
     "branding":  { "appName": "...", "homeBackground": "..." | null },
-    "app":       { "logLevel": "info", "basePath": "/" },
+    "app":       { "logLevel": "info", "basePath": "/", "offline": true },
     "renown":    { "url": "...", "networkId": "eip155", "chainId": 1 },
     "drives":    { "allowAddDrive": true, "defaultDrives": [...], "preserveStrategy": "...", "sections": {...} },
     "packages":  { "externalEnabled": true },
-    "sentry":    { "dsn": null, "env": "dev", "tracing": false }
+    "sentry":    { "dsn": null, "env": "dev", "tracing": false },
+    "pwa":       { ... } // build-time only, see below
   }
 }
 ```
@@ -76,6 +77,12 @@ packageRegistryUrl = cliPackageRegistryUrl ?? source.packageRegistryUrl ?? null
 ```
 
 Each layer can supply a partial value; missing leaves fall back to the layer below. Arrays replace (they don't append), and `undefined` in a patch means "leave alone".
+
+Two fields interact with the service worker and deserve a caveat:
+
+- **`connect.pwa` (the project's own block) is build-time only.** `ph connect build` merges it (together with build-time package `pwa` fragments) into the base `manifest.webmanifest` and the injectManifest `service-worker.js` — including the manifest's `icons`, `file_handlers` (the built-in `.phd`/`.phdm` OS file association plus any contributed types) and `launch_handler`. The manifest's `categories` is not authored here — it is derived from the top-level `category` field of every contributing `powerhouse.manifest.json` (project + packages), unioned. It is carried along in the dist file for transparency, but the SPA never reads the project block — editing the dist copy or injecting it via `PH_CONNECT_CONFIG_JSON` has no effect. See the Academy page "Configure the PWA" for the merge semantics.
+- **Packages installed AT RUNTIME extend the PWA config the same way build-time packages do.** The service worker serves `manifest.webmanifest` dynamically and reads its runtime-caching / navigate-fallback contributions from IndexedDB `ph-pwa` (mirrored by `BrowserPackageManager.#syncPwaFragments`), so a runtime package's manifest members, overridden scalars, `runtimeCaching` rules and `navigateFallbackDenylist` patterns all apply without a rebuild. Two guardrails vs. build-time: the manifest merge is fragment-wins **except `start_url`/`scope`** (protected, so an end-user-installed package can't re-scope the app), and `.phd`/`.phdm` stay first-registered. Timing caveats (not build-vs-runtime): `file_handlers`/`launch_handler` are captured by the OS at PWA install time (Chrome re-reads on its own periodic manifest check — never mid-session; content-based routing opens `.phd`/`.phdm` regardless), and `runtimeCaching`/`navigateFallbackDenylist` are read at worker startup (full effect on the worker's next activation). Only `globPatterns`/`globIgnores`/`maximumFileSizeToCacheInBytes` stay build-time only — they drive the workbox precache list baked at build.
+- **`connect.app.offline` is hybrid.** At build time it decides whether a precaching worker or a self-destroying one is emitted; at boot the SPA reads it to register or unregister the worker (`apps/connect/src/components/app.tsx`, default `true`). Flipping it to `false` at deploy time therefore unregisters the worker on the next load, but flipping it to `true` cannot conjure a worker the build didn't emit.
 
 ### The five ways to feed a value into a layer
 
@@ -165,6 +172,7 @@ Downstream consumers inside the SPA:
 | Renown auth flow                                | Reads `connect.renown.*`                                                                                                                |
 | Drives sidebar                                  | Reads `connect.drives.*`                                                                                                                |
 | Router                                          | Reads `connect.app.basePath`                                                                                                            |
+| `apps/connect/src/components/app.tsx`           | Reads `connect.app.offline` to register or unregister the service worker                                                                |
 
 A hard refresh in the browser tears down the module graph; the next module evaluation runs `loadRuntimeConfig()` again and the SPA picks up whatever the dist file holds now. This is the path operators use after `ph connect config --renown-url X`: write the new value, refresh the tab.
 
@@ -231,6 +239,17 @@ generated from them. Miss a step and the schemas silently drift from the types.
    ```
    This rewrites `packages/builder-tools/connect-utils/runtime-config.schema.json`
    and `packages/shared/clis/source-config.schema.json`. Commit both.
+
+**`connect.pwa.*` fields have a sixth artefact.** The zod `PwaConfigSchema` /
+`PwaManifestOverrideSchema` in `packages/shared/document-model/schemas.ts` is
+the validator `ph connect build` actually runs against `connect.pwa` (via
+`validateProjectPwaConfig`), and it is hand-maintained: `emit-schemas.ts` does
+not regenerate it, and the coverage test below does not cover it (there is no
+`pwa` default). The `z.ZodType<PHConnectPwa>` annotation only pins it to the TS
+type, not to the schema fragment, and does not force it to gain a newly-added
+optional field. So when you add a `connect.pwa.*` field, declare it there too —
+the objects are strict (`z.strictObject`), so a field the schema doesn't know
+fails the build as an unrecognized key rather than being silently dropped.
 
 Then consume it in the SPA via `getRuntimeConfig().connect?.<block>?.<field>`
 (or add a typed accessor in `apps/connect/src/connect.config.ts`).

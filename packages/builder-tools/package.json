@@ -37,7 +37,13 @@
     "magic-string": "^0.30.21",
     "vite": "catalog:",
     "vite-plugin-html": "catalog:",
-    "vite-plugin-pwa": "catalog:"
+    "vite-plugin-pwa": "catalog:",
+    "workbox-cacheable-response": "catalog:",
+    "workbox-core": "catalog:",
+    "workbox-expiration": "catalog:",
+    "workbox-precaching": "catalog:",
+    "workbox-routing": "catalog:",
+    "workbox-strategies": "catalog:"
   },
   "devDependencies": {
     "@sentry/vite-plugin": "^4.3.0",

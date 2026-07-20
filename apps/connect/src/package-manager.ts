@@ -10,9 +10,22 @@ import {
   type IPackageManager,
 } from "@powerhousedao/reactor-browser";
 import {
+  mergePwaConfig,
+  type PHConnectPwa,
+  type PwaContribution,
+  withInferredCategory,
+} from "@powerhousedao/shared/connect";
+import {
   type DocumentModelLib,
   type DocumentModelModule,
+  PwaConfigSchema,
 } from "@powerhousedao/shared/document-model";
+import { toCdnUrl } from "@powerhousedao/shared/registry/urls";
+import {
+  resolveFragmentAssetUrls,
+  writeMergedPwaFragment,
+} from "./utils/pwa-idb.js";
+import { refreshPwaManifestLink } from "./utils/pwa-manifest-link.js";
 import * as vetra from "@powerhousedao/vetra";
 import vetraPkg from "@powerhousedao/vetra/package.json" with { type: "json" };
 
@@ -73,19 +86,17 @@ export class BrowserPackageManager implements IPackageManager {
   #cdnUrl: string | null;
   #localPackageVersion: string | undefined;
   #localPackageNames: Set<string> = new Set([LOCAL_PACKAGE_NAME]);
+  #pwaSyncTimer: ReturnType<typeof setTimeout> | undefined;
+  /** Serialized last-mirrored PWA fragment; lets a sync skip the IndexedDB
+   * write + manifest re-attach when nothing PWA-relevant changed. */
+  #lastSyncedFragmentJson: string | undefined;
 
   constructor(namespace: string, registryUrl: string | null) {
     this.#storage = new BrowserLocalStorage<PackageMeta>(
       namespace + ":PH_PACKAGES",
     );
     this.registryUrl = registryUrl;
-    this.#cdnUrl = registryUrl !== null ? this.#toCdnUrl(registryUrl) : null;
-  }
-
-  #toCdnUrl(baseUrl: string): string {
-    if (baseUrl.includes("/-/cdn")) return baseUrl;
-    const base = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
-    return `${base}/-/cdn`;
+    this.#cdnUrl = registryUrl !== null ? toCdnUrl(registryUrl) : null;
   }
 
   async init(
@@ -431,5 +442,78 @@ export class BrowserPackageManager implements IPackageManager {
     this.#subscribers.forEach((handler) => {
       handler({ packages });
     });
+    this.#schedulePwaSync();
+  }
+
+  /**
+   * Debounced mirror of every loaded package's PWA fragment into IndexedDB, so
+   * the service worker can serve a web-app manifest that reflects packages
+   * installed AT RUNTIME (a SW can't read localStorage, where the package list
+   * lives). Debounced because `init()` rehydrates many packages in a burst;
+   * coalescing collapses that into a single write.
+   */
+  #schedulePwaSync() {
+    if (typeof indexedDB === "undefined") return;
+    clearTimeout(this.#pwaSyncTimer);
+    this.#pwaSyncTimer = setTimeout(() => {
+      void this.#syncPwaFragments();
+    }, 50);
+  }
+
+  async #syncPwaFragments() {
+    const contributions: PwaContribution[] = [];
+    for (const [name, loadedPackage] of this.#packages) {
+      const manifest = loadedPackage.manifest;
+      let config: PHConnectPwa = {};
+      if (manifest.pwa) {
+        // Third-party package code must not inject arbitrary manifest fields the
+        // SW will serve — validate strictly and skip (with a warning) on failure.
+        const parsed = PwaConfigSchema.safeParse(manifest.pwa);
+        if (parsed.success) {
+          // A package's assets live at its base (CDN for registry installs);
+          // make relative icon srcs absolute so the served manifest resolves.
+          const importUrl = this.#storage.get(name)?.importUrl ?? null;
+          const baseUrl = importUrl
+            ? importUrl.replace(/browser\/index\.js$/, "")
+            : null;
+          config = resolveFragmentAssetUrls(parsed.data, baseUrl);
+        } else {
+          console.warn(
+            `[Connect][PWA] "${name}" ships an invalid pwa fragment; skipped.`,
+            parsed.error,
+          );
+        }
+      }
+      // `categories` is derived from the manifest's `category` field (not
+      // authored under `pwa`); it unions into the SW-served manifest so a
+      // runtime-installed package's category shows up like a build-time one.
+      config = withInferredCategory(config, manifest.category);
+      if (Object.keys(config).length === 0) continue;
+      contributions.push({ source: name, config });
+    }
+    // Fold in load order (base-first ordering is preserved so a package cannot
+    // hijack the built-in .phd/.phdm handler at merge time either).
+    const merged = mergePwaConfig(contributions);
+    // Most package operations don't touch PWA config; skip the write + manifest
+    // re-attach (which forces a redundant manifest re-fetch) when unchanged.
+    const mergedJson = JSON.stringify(merged);
+    if (mergedJson === this.#lastSyncedFragmentJson) return;
+    try {
+      await writeMergedPwaFragment(merged);
+    } catch (error) {
+      // Leave #lastSyncedFragmentJson unset so a later sync retries the write.
+      console.debug(
+        "[Connect][PWA] fragment mirror to IndexedDB failed:",
+        error,
+      );
+      return;
+    }
+    this.#lastSyncedFragmentJson = mergedJson;
+    // The SW serves the manifest fresh from IndexedDB, but the browser only
+    // parsed <link rel="manifest"> at page load — re-attach it so it
+    // re-consumes the now-updated manifest without a manual reload. (Kept out
+    // of the write's try/catch so a DOM error isn't mislabeled as an IDB
+    // failure; refreshPwaManifestLink is itself non-throwing.)
+    refreshPwaManifestLink();
   }
 }
