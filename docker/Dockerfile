@@ -35,7 +35,7 @@ ARG PH_CONNECT_BASE_PATH="/"
 # top-level `packageRegistryUrl` the SPA reads at runtime. Without it the field
 # is absent and Connect's package manager fetches nothing (registryUrl === null
 # short-circuits useRegistryPackages). Overridable via --build-arg.
-ARG PH_CONNECT_PACKAGES_REGISTRY="https://registry.dev.vetra.io"
+ARG PH_CONNECT_PACKAGES_REGISTRY="https://registry.vetra.io"
 
 WORKDIR /app/project
 RUN ph connect build --base ${PH_CONNECT_BASE_PATH} --packages-registry ${PH_CONNECT_PACKAGES_REGISTRY}
@@ -96,7 +96,7 @@ RUN chmod +x /app/entrypoint.sh
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV PH_REGISTRY_PACKAGES=""
-ENV PH_REGISTRY_URL="https://registry.dev.vetra.io"
+ENV PH_REGISTRY_URL="https://registry.vetra.io"
 ENV PH_PACKAGE_REGISTRY_URL=""
 
 EXPOSE ${PORT}

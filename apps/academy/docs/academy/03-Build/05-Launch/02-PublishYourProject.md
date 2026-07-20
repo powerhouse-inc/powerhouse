@@ -291,22 +291,22 @@ Before publishing for the first time, update two files:
 - **`powerhouse.manifest.json`** — set `name`, `description`, and `publisher`
 - **`package.json`** — update the `name` field to match
 
-Then create an account on the Vetra dev registry:
+Then create an account on the Vetra registry:
 
 ```bash
-npm adduser --registry=https://registry.dev.vetra.io
+npm adduser --registry=https://registry.vetra.io
 ```
 
 ### 4.4. Publish
 
 ```bash
-ph publish --registry=https://registry.dev.vetra.io
+ph publish --registry=https://registry.vetra.io
 ```
 
 Your package will be available at:
 
-- Registry index: `https://registry.dev.vetra.io/`
-- Package page: `https://registry.dev.vetra.io/your-package-name`
+- Registry index: `https://registry.vetra.io/`
+- Package page: `https://registry.vetra.io/your-package-name`
 
 :::tip[Publishing new versions]
 Bump the `version` field in `package.json` before every subsequent publish.
