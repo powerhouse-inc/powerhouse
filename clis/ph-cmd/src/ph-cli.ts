@@ -42,7 +42,7 @@ export async function executePhCliCommand(phCliCommand: string) {
   ]);
   if (!resolved) {
     throw new Error(
-      `Command ${phCliCommand} is not executable by package manager ${packageManager}. Either install "@powerhousedao/ph-cli" in your local package, or run \`ph setup-globals\` to globally install the "@powerhousedao/ph-cli" package.`,
+      `Could not resolve a "${action}" command for package manager "${packageManager}" to run ph-cli. Supported package managers: npm, pnpm, yarn, bun.`,
     );
   }
 
