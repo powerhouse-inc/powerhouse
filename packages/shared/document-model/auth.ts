@@ -6,7 +6,14 @@ import {
   AuthAlreadyInitializedError,
   GrantNotFoundError,
 } from "./errors.js";
-import { createAuthState, type Grant, type PHBaseState } from "./state.js";
+import {
+  createAuthState,
+  type Capability,
+  type Grant,
+  type PHAuthState,
+  type PHBaseState,
+  type Principal,
+} from "./state.js";
 
 // --- Action types --------------------------------------------------------
 
@@ -272,4 +279,90 @@ export function assertAuthScopeActionAllowed(action: Action): void {
   ) {
     throw new AuthActionNotAllowedError(action.type);
   }
+}
+
+// --- Decision (read-only policy evaluation) ------------------------------
+
+export type AuthVerb = "read" | "execute";
+
+export type AuthRequest = {
+  verb: AuthVerb;
+  scope: string;
+  /** For execute: the operation (action type) being attempted. Omitted for reads. */
+  operation?: string;
+};
+
+export type AuthSubject = {
+  /** Verified signer address; undefined for an anonymous subject. */
+  address?: string;
+};
+
+export type AuthDecision = "allow" | "deny";
+
+function capabilityCovers(
+  capability: Capability,
+  request: AuthRequest,
+): boolean {
+  if (capability.can !== request.verb) {
+    return false;
+  }
+  const scope = capability.scope;
+  if (scope !== undefined && scope !== "*" && scope !== request.scope) {
+    return false;
+  }
+  if (capability.can === "execute") {
+    // An execute capability with no operation list covers every operation in the scope.
+    if (capability.operation === undefined) {
+      return true;
+    }
+    return (
+      request.operation !== undefined &&
+      capability.operation.includes(request.operation)
+    );
+  }
+  return true;
+}
+
+function principalMatches(principal: Principal, subject: AuthSubject): boolean {
+  if ("anyone" in principal) {
+    return true;
+  }
+  if ("address" in principal) {
+    return (
+      subject.address !== undefined &&
+      subject.address.toLowerCase() === principal.address.toLowerCase()
+    );
+  }
+  // { group } and { match } are not evaluated yet: group membership needs the
+  // PHGroup model (a missing group never widens access) and conditions are deferred.
+  return false;
+}
+
+/**
+ * Evaluates the auth policy for a single request. Pure and deterministic.
+ *
+ * An uninitialized policy (version 0, or absent auth state) leaves the document
+ * open (legacy). Once a policy exists the default is deny, and grants stack in
+ * order — the last grant whose capability and principal both match decides.
+ * Group principals and `where` conditions are not evaluated yet, so grants that
+ * rely on them never match.
+ */
+export function decide(
+  auth: PHAuthState | undefined,
+  subject: AuthSubject,
+  request: AuthRequest,
+): AuthDecision {
+  if (!auth || auth.version === 0) {
+    return "allow";
+  }
+  let decision: AuthDecision = "deny";
+  for (const grant of auth.grants) {
+    if (
+      capabilityCovers(grant.capability, request) &&
+      principalMatches(grant.principal, subject)
+    ) {
+      decision = grant.effect;
+    }
+  }
+  return decision;
 }

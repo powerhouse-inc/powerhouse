@@ -2321,4 +2321,115 @@ describe("SimpleJobExecutor", () => {
       });
     });
   });
+
+  describe("auth admission gate", () => {
+    const adminGrant = {
+      id: "admin",
+      description: "site admin",
+      effect: "allow" as const,
+      principal: { address: "0xadmin" },
+      capability: { can: "execute" as const, scope: "global" },
+    };
+
+    function authDoc(auth: unknown) {
+      return {
+        header: {
+          id: "auth-doc",
+          documentType: "powerhouse/document-model",
+          revision: { document: 1 },
+        },
+        operations: {
+          document: [
+            {
+              index: 0,
+              action: {
+                type: "CREATE_DOCUMENT",
+                id: "create-action",
+                scope: "document",
+                timestampUtcMs: "2024-01-01T00:00:00.000Z",
+                input: {
+                  documentId: "auth-doc",
+                  model: "powerhouse/document-model",
+                },
+              },
+            },
+          ],
+          global: [],
+          local: [],
+          auth: [],
+        },
+        state: {
+          global: {},
+          local: {},
+          document: { isDeleted: false },
+          auth,
+        },
+      };
+    }
+
+    function authJob(signerAddress?: string): Job {
+      return {
+        kind: "mutation",
+        id: "auth-job",
+        documentId: "auth-doc",
+        scope: "global",
+        branch: "main",
+        actions: [
+          {
+            id: "auth-action",
+            type: "SET_MODEL_NAME",
+            scope: "global",
+            timestampUtcMs: "2024-01-01T00:00:00.000Z",
+            input: { name: "x" },
+            context: signerAddress
+              ? {
+                  signer: {
+                    user: { address: signerAddress, networkId: "", chainId: 0 },
+                    app: { name: "", key: "" },
+                    signatures: [],
+                  },
+                }
+              : undefined,
+          },
+        ],
+        operations: [],
+        createdAt: "123",
+        queueHint: [],
+        errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["auth-job"] },
+      };
+    }
+
+    it("denies an action whose signer is not permitted by the policy", async () => {
+      mockWriteCache.getState = vi
+        .fn()
+        .mockResolvedValue(authDoc({ version: 1, grants: [adminGrant] }));
+
+      const result = await executor.executeJob(authJob("0xstranger"));
+
+      expect(result.success).toBe(false);
+      expect(result.error?.message).toContain("Authorization denied");
+    });
+
+    it("admits a signer that matches an allow grant (case-insensitive)", async () => {
+      mockWriteCache.getState = vi
+        .fn()
+        .mockResolvedValue(authDoc({ version: 1, grants: [adminGrant] }));
+
+      const result = await executor.executeJob(authJob("0xADMIN"));
+
+      // The gate admits the matching signer; any later failure is not an auth denial.
+      expect(result.error?.message ?? "").not.toContain("Authorization denied");
+    });
+
+    it("leaves a document with an uninitialized policy open", async () => {
+      mockWriteCache.getState = vi
+        .fn()
+        .mockResolvedValue(authDoc({ version: 0, grants: [] }));
+
+      const result = await executor.executeJob(authJob("0xstranger"));
+
+      expect(result.error?.message ?? "").not.toContain("Authorization denied");
+    });
+  });
 });

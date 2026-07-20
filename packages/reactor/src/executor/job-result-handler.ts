@@ -7,6 +7,7 @@ import type { IJobExecutionHandle, Job } from "../queue/types.js";
 import type { IDocumentModelResolver } from "../registry/document-model-resolver.js";
 import { ModuleNotFoundError } from "../registry/errors.js";
 import {
+  AuthorizationDeniedError,
   DocumentDeletedError,
   DocumentNotFoundError,
 } from "../shared/errors.js";
@@ -91,7 +92,11 @@ export class JobResultHandler implements IJobResultHandler {
       return;
     }
 
-    if (result.error && DocumentDeletedError.isError(result.error)) {
+    if (
+      result.error &&
+      (DocumentDeletedError.isError(result.error) ||
+        AuthorizationDeniedError.isError(result.error))
+    ) {
       const errorInfo = toErrorInfo(result.error);
       this.jobTracker.markFailed(handle.job.id, errorInfo, handle.job);
       this.eventBus

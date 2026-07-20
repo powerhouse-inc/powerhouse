@@ -5,7 +5,7 @@ import type {
   OperationWithContext,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
-import { isUndoRedo } from "@powerhousedao/shared/document-model";
+import { decide, isUndoRedo } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import type { ICollectionMembershipCache } from "../cache/collection-membership-cache.js";
 import type { IDocumentMetaCache } from "../cache/document-meta-cache-types.js";
@@ -18,7 +18,10 @@ import type { IEventBus } from "../events/interfaces.js";
 import { ReactorEventTypes, type JobWriteReadyEvent } from "../events/types.js";
 import type { Job } from "../queue/types.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
-import { DocumentDeletedError } from "../shared/errors.js";
+import {
+  AuthorizationDeniedError,
+  DocumentDeletedError,
+} from "../shared/errors.js";
 import { yieldToMain } from "../shared/utils.js";
 import type { SignatureVerificationHandler } from "../signer/types.js";
 import type { IOperationStore } from "../storage/interfaces.js";
@@ -447,6 +450,31 @@ export class SimpleJobExecutor implements IJobExecutor {
         error instanceof Error ? error : new Error(String(error)),
         startTime,
       );
+    }
+
+    // Auth admission gate. Skips load jobs (re-judging already-accepted sync/
+    // reshuffle history would drop operations and diverge replicas). Evaluated
+    // against current auth state: an uninitialized policy leaves the document
+    // open, so documents with no policy are unaffected.
+    if (job.kind !== "load") {
+      const subject = { address: action.context?.signer?.user.address };
+      const decision = decide(document.state.auth, subject, {
+        verb: "execute",
+        scope: action.scope,
+        operation: action.type,
+      });
+      if (decision === "deny") {
+        return buildErrorResult(
+          job,
+          new AuthorizationDeniedError(
+            job.documentId,
+            action.scope,
+            action.type,
+            subject.address,
+          ),
+          startTime,
+        );
+      }
     }
 
     let module: DocumentModelModule;
