@@ -6,6 +6,7 @@ import {
   operationFromAction,
   operationFromOperation,
 } from "./actions.js";
+import { applyAuthAction, assertAuthScopeActionAllowed } from "./auth.js";
 import {
   diffOperations,
   garbageCollect,
@@ -410,6 +411,10 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
 
   let _action: Action = actionFromAction(action);
 
+  // UNDO/REDO/PRUNE are rejected on the auth scope (PRUNE is hardcoded to the
+  // global scope, so an auth PRUNE would otherwise corrupt global history).
+  assertAuthScopeActionAllowed(_action);
+
   let skipValue = skip ?? options.replayOptions?.operation.skip ?? 0;
   let newDocument = {
     ...document,
@@ -547,6 +552,14 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
   // mutation bugs and allow writing reducers with
   // mutating code
   newDocument = create(newDocument, (draft) => {
+    // Auth-scope actions are applied by the dedicated auth handler
+    if (_action.scope === "auth") {
+      const authState = applyAuthAction(newDocument, _action).state;
+      unsafe(() => {
+        draft.state = castDraft(authState);
+      });
+      return;
+    }
     // the reducer runs on a immutable version of
     // provided state
     try {
