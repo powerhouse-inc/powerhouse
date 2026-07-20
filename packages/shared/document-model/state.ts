@@ -10,7 +10,10 @@ import type {
  * Creates a default PHAuthState
  */
 export function defaultAuthState(): PHAuthState {
-  return {};
+  return {
+    version: 0,
+    grants: [],
+  };
 }
 
 /**
@@ -71,6 +74,19 @@ export function createBaseState(
 }
 
 /**
+ * Backfills the auth scope to the default for legacy documents serialized with
+ * an empty `auth`. Replaces only `state.auth`. Idempotent.
+ */
+export function backfillAuthState<TState extends PHBaseState>(
+  state: TState,
+): TState {
+  return {
+    ...state,
+    auth: createAuthState(state.auth),
+  } as TState;
+}
+
+/**
  * The document state of the document.
  */
 export type PHDocumentState = {
@@ -98,11 +114,62 @@ export type PHDocumentState = {
 };
 
 /**
- * The authentication state of the document.
- *
- * This has yet to be implemented.
+ * The document's authorization policy: an ordered, stacked list of grants,
+ * where the last matching grant wins. `{ version: 0, grants: [] }` is
+ * uninitialized and leaves the document open.
  */
-export type PHAuthState = {};
+export type PHAuthState = {
+  version: number;
+  grants: Grant[];
+};
+
+export type Grant = {
+  /** Stable id. */
+  id: string;
+  description: string;
+  effect: "allow" | "deny";
+  principal: Principal;
+  capability: Capability;
+  /** The grant applies only when this condition holds. Not yet enforced. */
+  where?: Condition;
+};
+
+export type Principal =
+  | { anyone: true }
+  | { address: string }
+  | { group: string }
+  | { match: Condition };
+
+export type Capability =
+  | { can: "read"; scope?: string }
+  | { can: "execute"; scope?: string; operation?: string[] };
+
+/**
+ * Boolean condition language for grants: deterministic, total, and
+ * JSON-serializable, versioned by `PHAuthState.version`. Defined now but not
+ * yet evaluated or enforced.
+ */
+export type Condition =
+  | { eq: [Operand, Operand] }
+  | { ne: [Operand, Operand] }
+  | { in: [Operand, Operand[]] }
+  | { notIn: [Operand, Operand[]] }
+  | { lt: [Operand, Operand] }
+  | { lte: [Operand, Operand] }
+  | { gt: [Operand, Operand] }
+  | { gte: [Operand, Operand] }
+  | { exists: Operand }
+  | { and: Condition[] }
+  | { or: Condition[] }
+  | { not: Condition };
+
+/**
+ * A condition operand: `attr` is a dotted path into the decision context
+ * (e.g. "doc.global.status", "subject.address"); `lit` is a constant value.
+ */
+export type Operand =
+  | { attr: string }
+  | { lit: string | number | boolean | null };
 
 /**
  * The base state of the document.

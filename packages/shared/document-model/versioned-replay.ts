@@ -6,6 +6,7 @@ import {
 } from "./documents.js";
 import { HashMismatchError } from "./errors.js";
 import type { DocumentOperations, Operation } from "./operations.js";
+import { backfillAuthState } from "./state.js";
 import type { PHBaseState } from "./state.js";
 import type {
   Reducer,
@@ -199,10 +200,11 @@ export function replayDocumentVersioned<TState extends PHBaseState>(
     initialOperations[s] = [];
   }
 
+  const backfilledSeed = backfillAuthState(seedState);
   let document: PHDocument<TState> = {
     header,
-    state: seedState as TState,
-    initialState: seedState,
+    state: backfilledSeed,
+    initialState: backfilledSeed,
     operations: initialOperations,
     clipboard: [],
   };

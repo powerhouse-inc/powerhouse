@@ -1,6 +1,11 @@
-import type { PHDocument } from "@powerhousedao/shared/document-model";
+import type {
+  PHAuthState,
+  PHDocument,
+} from "@powerhousedao/shared/document-model";
 import {
+  backfillAuthState,
   createReducer,
+  defaultAuthState,
   HashMismatchError,
   noop,
   replayDocument,
@@ -199,5 +204,66 @@ describe("DocumentModel Replay", () => {
     } catch (e) {
       expect(e).toBeInstanceOf(HashMismatchError);
     }
+  });
+
+  it("backfills a legacy empty auth scope on replay and still verifies hashes", () => {
+    let newDocument = countReducer(initialDocument, increment());
+    newDocument = countReducer(newDocument, increment());
+
+    const legacyInitialState = {
+      ...createCountState(),
+      auth: {} as unknown as PHAuthState,
+    } as CountPHState;
+
+    const replayed = replayDocument(
+      legacyInitialState,
+      newDocument.operations,
+      countReducer,
+      newDocument.header,
+      undefined,
+      undefined,
+      { checkHashes: false },
+    );
+
+    expect(replayed.state.auth).toStrictEqual({ version: 0, grants: [] });
+    expect(replayed.initialState.auth).toStrictEqual({
+      version: 0,
+      grants: [],
+    });
+    expect(replayed.state.global.count).toBe(2);
+  });
+});
+
+describe("PHAuthState default and backfill", () => {
+  it("defaults to the uninitialized (open) policy", () => {
+    expect(defaultAuthState()).toStrictEqual({ version: 0, grants: [] });
+  });
+
+  it("backfills a legacy empty auth scope to the default", () => {
+    const legacy = {
+      ...createCountState(),
+      auth: {} as unknown as PHAuthState,
+    } as CountPHState;
+    expect(backfillAuthState(legacy).auth).toStrictEqual({
+      version: 0,
+      grants: [],
+    });
+  });
+
+  it("preserves an already-initialized policy", () => {
+    const policy: PHAuthState = {
+      version: 1,
+      grants: [
+        {
+          id: "g-read",
+          description: "anyone reads global",
+          effect: "allow",
+          principal: { anyone: true },
+          capability: { can: "read", scope: "global" },
+        },
+      ],
+    };
+    const state = { ...createCountState(), auth: policy } as CountPHState;
+    expect(backfillAuthState(state).auth).toStrictEqual(policy);
   });
 });
