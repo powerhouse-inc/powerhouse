@@ -10,6 +10,8 @@ import {
   navigateToVetraDrive,
 } from "./helpers/document.js";
 import { expect, test } from "./helpers/fixtures.js";
+import { DESCRIBE_TIMEOUT } from "./helpers/timeouts.js";
+import { waitForAppReady } from "./helpers/wait.js";
 import {
   CONSUMER_CONNECT_URL,
   buildConsumerConnect,
@@ -29,7 +31,7 @@ import {
 } from "@powerhousedao/e2e-utils";
 
 // Run serially to avoid conflicts with other tests that modify the shared Vetra drive
-test.describe.configure({ mode: "serial", timeout: 5 * 60 * 60 * 1000 });
+test.describe.configure({ mode: "serial", timeout: DESCRIBE_TIMEOUT });
 const DOCUMENT_NAME = "ToDoDocument";
 
 const TEST_DOCUMENT_DATA: DocumentBasicData = {
@@ -197,7 +199,7 @@ test("Create ToDoDocument Editor", async ({ page }) => {
   await createDocument(page, "powerhouse/document-editor", "ToDoEditor");
 
   // Wait for the editor form to load
-  await page.waitForLoadState("networkidle");
+  await waitForAppReady(page);
 
   // Fill in the editor name
   const editorNameInput = page.locator("input#editor-name");
@@ -233,7 +235,7 @@ test("Create ToDoDocument Editor", async ({ page }) => {
   await confirmButton.click();
 
   // Wait for code generation to complete
-  await page.waitForLoadState("networkidle");
+  await waitForAppReady(page);
 
   // Poll for the generated editor files by waiting for editors/index.ts to be
   // updated with a real export (not just "export {};")
@@ -422,8 +424,8 @@ test("Install Package in Consumer Project", async ({ browser }) => {
       settingsModal.getByRole("tab", { name: /^Installed/ }),
     ).toBeVisible({ timeout: 10_000 });
 
-    // Step 7: Switch to the Available tab. This is what triggers the lazy
-    // GET /packages fetch against the registry.
+    // Step 7: Switch to the Available tab — triggers the lazy GET /packages
+    // fetch against the registry.
     await settingsModal.getByRole("tab", { name: /^Available/ }).click();
 
     // Filter the list down to the published package. Match the placeholder
@@ -435,16 +437,15 @@ test("Install Package in Consumer Project", async ({ browser }) => {
     await searchInput.click();
     await searchInput.fill("test-package");
 
-    // The row appears once the registry fetch resolves. Install via the
-    // row's 3-dot dropdown (same pattern as the uninstall flow — it has
-    // proven more reliable than button-in-card selectors).
+    // The row appears once the registry fetch resolves. Install via the row's
+    // 3-dot dropdown (more reliable than button-in-card selectors).
     const availablePackageRow = settingsModal
       .locator("li")
       .filter({ has: page.locator('h3:has-text("test-package-vetra")') });
     await expect(availablePackageRow).toBeVisible({ timeout: 30_000 });
 
-    // The row has TWO buttons: a version picker (first) and the 3-dot
-    // dropdown menu (last, top-right). We need the latter.
+    // The row has two buttons: a version picker (first) and the 3-dot menu
+    // (last, top-right). We need the latter.
     const availableRowDotsButton = availablePackageRow.locator("button").last();
     await availableRowDotsButton.click();
     const installMenuItem = page.getByText("Install", { exact: true });
@@ -471,8 +472,8 @@ test("Install Package in Consumer Project", async ({ browser }) => {
     const addDriveDialog = page.getByRole("dialog");
     await expect(addDriveDialog).toBeVisible({ timeout: 10_000 });
 
-    // "Drive Explorer App" is the pre-selected default: vetra-drive-app is
-    // hidden from the picker, leaving it as the only bundled app option.
+    // Consumer preview is a production build (studioMode off), so vetra isn't
+    // loaded and "Drive Explorer App" is the only bundled app / default.
     await expect(addDriveDialog.getByText("Drive Explorer App")).toBeVisible({
       timeout: 5_000,
     });
@@ -566,8 +567,7 @@ test("Change registry URL at runtime and install from new registry", async () =>
   await expect(settingsModal).toBeVisible({ timeout: 10_000 });
 
   // The Package Manager opens on the "Installed" tab by default and its rows
-  // are always in the DOM (no collapsible sections anymore). Click the tab
-  // anyway to make the precondition explicit.
+  // are always in the DOM. Click the tab to make the precondition explicit.
   const installedTab = settingsModal.getByRole("tab", { name: /^Installed/ });
   await expect(installedTab).toBeVisible({ timeout: 10_000 });
   await installedTab.click();
@@ -746,7 +746,7 @@ test("Change registry URL at runtime and install from new registry", async () =>
 
   // -------------------------------------------------------------------
   // Step 6: Install test-package-vetra from the new registry via the
-  //          "Available" tab's row dropdown menu (same pattern as uninstall).
+  //          "Available" tab row dropdown menu (same pattern as uninstall).
   // -------------------------------------------------------------------
   console.log(
     "Installing test-package-vetra from new registry via the Available tab dropdown...",
@@ -755,9 +755,8 @@ test("Change registry URL at runtime and install from new registry", async () =>
   await settingsButton.click();
   await expect(settingsModal).toBeVisible({ timeout: 10_000 });
 
-  // Switch to the Available tab — this triggers the lazy GET /packages
-  // fetch against the NEW registry. The (just-republished) package shows up
-  // there because it isn't installed yet.
+  // Switch to the Available tab — triggers the lazy GET /packages fetch
+  // against the NEW registry; the republished package shows up (not installed).
   const availableTab = settingsModal.getByRole("tab", { name: /^Available/ });
   await expect(availableTab).toBeVisible({ timeout: 30_000 });
   await availableTab.click();
@@ -779,8 +778,8 @@ test("Change registry URL at runtime and install from new registry", async () =>
   // -------------------------------------------------------------------
   // Step 7: Verify the install succeeded against the new registry
   // -------------------------------------------------------------------
-  // Installed count rose from 2 (Common, Local — Vetra isn't loaded in a
-  // production build, studioMode off) to 3 in the "Installed (N)" tab label.
+  // Installed count rose: before install it's 2 (Common, Local) — Vetra isn't
+  // loaded in a production build (studioMode off) — so after install it's 3.
   await expect(
     settingsModal.getByRole("tab", { name: /^Installed \(3\)/ }),
   ).toBeVisible({ timeout: 60_000 });
@@ -795,9 +794,9 @@ async function setupDocument(
   await navigateToVetraDrive(page);
   await createDocumentAndFillBasicData(page, DOCUMENT_NAME, data);
 
-  // Wait for code generation to complete by waiting for network idle
-  // and giving the codegen processor time to write files
-  await page.waitForLoadState("networkidle");
+  // Wait for the app to settle, then give the codegen processor time to
+  // write files
+  await waitForAppReady(page);
 
   // Poll for the generated files with a timeout
   // We need to wait for the full code generation including index.ts update
