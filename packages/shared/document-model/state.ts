@@ -121,6 +121,12 @@ export type PHDocumentState = {
 export type PHAuthState = {
   version: number;
   grants: Grant[];
+  /**
+   * The did:key of the auth-policy creator, captured from the INITIALIZE_AUTH
+   * signer. The creator may always administer the auth scope, so a grant policy
+   * can never lock administration out of itself. Absent for an unsigned genesis.
+   */
+  creator?: string;
 };
 
 export type Grant = {

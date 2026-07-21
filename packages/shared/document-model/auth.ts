@@ -1,9 +1,11 @@
 import { z } from "zod";
 import { createAction, type Action } from "./actions.js";
+import { base58Decode, base64UrlToBytes } from "./crypto.js";
 import type { PHDocument } from "./documents.js";
 import {
   AuthActionNotAllowedError,
   AuthAlreadyInitializedError,
+  AuthInitializerNotCreatorError,
   GrantNotFoundError,
 } from "./errors.js";
 import {
@@ -171,9 +173,69 @@ function withGrants<TState extends PHBaseState>(
   };
 }
 
+const P256_PUBKEY_MULTICODEC = [0x80, 0x24] as const;
+const DID_KEY_PREFIX = "did:key:z";
+
+function bytesEqual(a: Uint8Array, b: Uint8Array): boolean {
+  if (a.length !== b.length) {
+    return false;
+  }
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
 /**
- * Genesis action: sets the initial policy. Valid only while the auth scope is
- * uninitialized (version 0); a second INITIALIZE_AUTH throws.
+ * True when `signerKey` (an ActionSigner app key, a did:key) identifies the same
+ * key recorded as the document creator. Returns false
+ * when there is no creator (empty JWK) or no signer key.
+ */
+export function isDocumentCreator(
+  creatorKey: JsonWebKey | undefined,
+  signerKey: string | undefined,
+): boolean {
+  if (!creatorKey?.x || !creatorKey.y) {
+    return false;
+  }
+  if (!signerKey || !signerKey.startsWith(DID_KEY_PREFIX)) {
+    return false;
+  }
+  const decoded = base58Decode(signerKey.slice(DID_KEY_PREFIX.length));
+  // 2-byte P-256 multicodec + 33-byte compressed point (prefix + 32-byte x).
+  if (!decoded || decoded.length !== 35) {
+    return false;
+  }
+  if (
+    decoded[0] !== P256_PUBKEY_MULTICODEC[0] ||
+    decoded[1] !== P256_PUBKEY_MULTICODEC[1]
+  ) {
+    return false;
+  }
+  const parityPrefix = decoded[2];
+  if (parityPrefix !== 0x02 && parityPrefix !== 0x03) {
+    return false;
+  }
+  const didX = decoded.subarray(3, 35);
+  const jwkX = base64UrlToBytes(creatorKey.x);
+  const jwkY = base64UrlToBytes(creatorKey.y);
+  if (jwkX.length !== 32 || jwkY.length !== 32) {
+    return false;
+  }
+  if (!bytesEqual(didX, jwkX)) {
+    return false;
+  }
+  const jwkYIsOdd = (jwkY[31] & 1) === 1;
+  const didYIsOdd = parityPrefix === 0x03;
+  return jwkYIsOdd === didYIsOdd;
+}
+
+/**
+ * Sets the initial policy. Valid only while the auth scope is uninitialized
+ * (version 0). On a signed-header document it must be signed by the document
+ * creator (`header.sig.publicKey`).
  */
 export function applyInitializeAuthAction<TState extends PHBaseState>(
   document: PHDocument<TState>,
@@ -182,12 +244,21 @@ export function applyInitializeAuthAction<TState extends PHBaseState>(
   if (document.state.auth.version !== 0) {
     throw new AuthAlreadyInitializedError(document.header.id);
   }
+  const creatorKey = document.header.sig.publicKey;
+  const signerKey = action.context?.signer?.app.key;
+  const hasCreator = Boolean(creatorKey.x && creatorKey.y);
+  if (hasCreator && !isDocumentCreator(creatorKey, signerKey)) {
+    throw new AuthInitializerNotCreatorError(document.header.id);
+  }
   const { version, grants } = action.input;
+  const creator = hasCreator ? signerKey : undefined;
   return {
     ...document,
     state: {
       ...document.state,
-      auth: createAuthState({ version, grants }),
+      auth: createAuthState(
+        creator ? { version, grants, creator } : { version, grants },
+      ),
     },
   };
 }
@@ -295,9 +366,16 @@ export type AuthRequest = {
 export type AuthSubject = {
   /** Verified signer address; undefined for an anonymous subject. */
   address?: string;
+  /** The signer's app key (a did:key), used to match the document creator. */
+  key?: string;
 };
 
 export type AuthDecision = "allow" | "deny";
+
+export type DecideOptions = {
+  /** Supreme-admin addresses that may always administer the auth scope. */
+  admins?: string[];
+};
 
 function capabilityCovers(
   capability: Capability,
@@ -342,8 +420,8 @@ function principalMatches(principal: Principal, subject: AuthSubject): boolean {
  * Evaluates the auth policy for a single request. Pure and deterministic.
  *
  * An uninitialized policy (version 0, or absent auth state) leaves the document
- * open (legacy). Once a policy exists the default is deny, and grants stack in
- * order — the last grant whose capability and principal both match decides.
+ * open. Once a policy exists the default is deny, and grants stack in order.
+ *
  * Group principals and `where` conditions are not evaluated yet, so grants that
  * rely on them never match.
  */
@@ -351,9 +429,23 @@ export function decide(
   auth: PHAuthState | undefined,
   subject: AuthSubject,
   request: AuthRequest,
+  options?: DecideOptions,
 ): AuthDecision {
   if (!auth || auth.version === 0) {
     return "allow";
+  }
+  // the creator can always execute auth-scope operations
+  if (request.verb === "execute" && request.scope === "auth") {
+    if (subject.key !== undefined && subject.key === auth.creator) {
+      return "allow";
+    }
+    const address = subject.address;
+    if (
+      address !== undefined &&
+      options?.admins?.some((a) => a.toLowerCase() === address.toLowerCase())
+    ) {
+      return "allow";
+    }
   }
   let decision: AuthDecision = "deny";
   for (const grant of auth.grants) {

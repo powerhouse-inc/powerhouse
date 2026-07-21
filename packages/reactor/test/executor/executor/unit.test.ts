@@ -2331,6 +2331,19 @@ describe("SimpleJobExecutor", () => {
       capability: { can: "execute" as const, scope: "global" },
     };
 
+    // did:key app keys, as ActionSigner.app.key / PHAuthState.creator take them.
+    const CREATOR_DID =
+      "did:key:zDnaexNjCKnPLh5Vhn1KqjmrLDFtXddrtTTE9gJmdWRSCG3wt";
+    const OTHER_DID =
+      "did:key:zDnaefv2pj8YQM2T6E3pnrJoGnDGbXsrvJiXhqHzh7d5RzncU";
+    const denyAllGrant = {
+      id: "lockdown",
+      description: "deny everything",
+      effect: "deny" as const,
+      principal: { anyone: true },
+      capability: { can: "execute" as const, scope: "*" },
+    };
+
     function authDoc(auth: unknown) {
       return {
         header: {
@@ -2367,25 +2380,42 @@ describe("SimpleJobExecutor", () => {
       };
     }
 
-    function authJob(signerAddress?: string): Job {
+    function authJob(
+      signerAddress?: string,
+      extra?: {
+        scope?: string;
+        type?: string;
+        input?: unknown;
+        appKey?: string;
+      },
+    ): Job {
+      const scope = extra?.scope ?? "global";
+      const type = extra?.type ?? "SET_MODEL_NAME";
+      const input = extra?.input ?? { name: "x" };
+      const hasSigner =
+        signerAddress !== undefined || extra?.appKey !== undefined;
       return {
         kind: "mutation",
         id: "auth-job",
         documentId: "auth-doc",
-        scope: "global",
+        scope,
         branch: "main",
         actions: [
           {
             id: "auth-action",
-            type: "SET_MODEL_NAME",
-            scope: "global",
+            type,
+            scope,
             timestampUtcMs: "2024-01-01T00:00:00.000Z",
-            input: { name: "x" },
-            context: signerAddress
+            input,
+            context: hasSigner
               ? {
                   signer: {
-                    user: { address: signerAddress, networkId: "", chainId: 0 },
-                    app: { name: "", key: "" },
+                    user: {
+                      address: signerAddress ?? "",
+                      networkId: "",
+                      chainId: 0,
+                    },
+                    app: { name: "", key: extra?.appKey ?? "" },
                     signatures: [],
                   },
                 }
@@ -2430,6 +2460,49 @@ describe("SimpleJobExecutor", () => {
       const result = await executor.executeJob(authJob("0xstranger"));
 
       expect(result.error?.message ?? "").not.toContain("Authorization denied");
+    });
+
+    it("admits the document creator on an auth-scope op despite a deny-all policy", async () => {
+      mockWriteCache.getState = vi.fn().mockResolvedValue(
+        authDoc({
+          version: 1,
+          grants: [denyAllGrant],
+          creator: CREATOR_DID,
+        }),
+      );
+
+      const result = await executor.executeJob(
+        authJob(undefined, {
+          scope: "auth",
+          type: "SET_GRANT",
+          appKey: CREATOR_DID,
+          input: { grant: adminGrant },
+        }),
+      );
+
+      expect(result.error?.message ?? "").not.toContain("Authorization denied");
+    });
+
+    it("denies a non-creator auth-scope op under a deny-all policy", async () => {
+      mockWriteCache.getState = vi.fn().mockResolvedValue(
+        authDoc({
+          version: 1,
+          grants: [denyAllGrant],
+          creator: CREATOR_DID,
+        }),
+      );
+
+      const result = await executor.executeJob(
+        authJob(undefined, {
+          scope: "auth",
+          type: "SET_GRANT",
+          appKey: OTHER_DID,
+          input: { grant: adminGrant },
+        }),
+      );
+
+      expect(result.success).toBe(false);
+      expect(result.error?.message).toContain("Authorization denied");
     });
   });
 });

@@ -457,7 +457,10 @@ export class SimpleJobExecutor implements IJobExecutor {
     // against current auth state: an uninitialized policy leaves the document
     // open, so documents with no policy are unaffected.
     if (job.kind !== "load") {
-      const subject = { address: action.context?.signer?.user.address };
+      const subject = {
+        address: action.context?.signer?.user.address,
+        key: action.context?.signer?.app.key,
+      };
       const decision = decide(document.state.auth, subject, {
         verb: "execute",
         scope: action.scope,

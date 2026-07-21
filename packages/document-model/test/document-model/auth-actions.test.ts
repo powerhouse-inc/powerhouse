@@ -6,6 +6,7 @@ import type {
 import {
   AuthActionNotAllowedError,
   AuthAlreadyInitializedError,
+  AuthInitializerNotCreatorError,
   GrantNotFoundError,
   initializeAuth,
   isAuthAction,
@@ -61,6 +62,38 @@ const initialDocument: PHDocument<CountPHState> = {
   clipboard: [],
 };
 
+// Canonical did:key <-> JWK for the same P-256 key. A signed header records the
+// creator as a JWK; the signer presents the same key as a did:key.
+const CREATOR_DID = "did:key:zDnaexNjCKnPLh5Vhn1KqjmrLDFtXddrtTTE9gJmdWRSCG3wt";
+const CREATOR_JWK = {
+  kty: "EC",
+  crv: "P-256",
+  x: "2qGULg46dKXbnsPdvI4AxOHiw94xJRDVAWuyHIyyGd8",
+  y: "V_jbfJ-wVhoUspPM9epxaJHUs_6TyMfrOgwB2Kcx170",
+};
+const OTHER_DID = "did:key:zDnaefv2pj8YQM2T6E3pnrJoGnDGbXsrvJiXhqHzh7d5RzncU";
+
+const signedDocument: PHDocument<CountPHState> = {
+  ...initialDocument,
+  header: {
+    ...initialDocument.header,
+    sig: { publicKey: CREATOR_JWK, nonce: "" },
+  },
+};
+
+function signedInit(appKey: string): Action {
+  return {
+    ...initializeAuth({ version: 1, grants: [] }),
+    context: {
+      signer: {
+        user: { address: "", networkId: "", chainId: 0 },
+        app: { name: "connect", key: appKey },
+        signatures: [],
+      },
+    },
+  };
+}
+
 describe("auth-scope action creators", () => {
   it("build auth-scoped actions", () => {
     const action = initializeAuth({ version: 1, grants: [] });
@@ -87,6 +120,26 @@ describe("auth-scope reducer", () => {
     expect(doc.header.revision.auth).toBe(1);
     // domain scopes are untouched
     expect(doc.state.global).toEqual(initialDocument.state.global);
+  });
+
+  it("records the creator when signed by the document creator", () => {
+    const doc = countReducer(signedDocument, signedInit(CREATOR_DID));
+    expect(doc.state.auth.creator).toBe(CREATOR_DID);
+  });
+
+  it("rejects INITIALIZE_AUTH signed by a non-creator", () => {
+    expect(() => countReducer(signedDocument, signedInit(OTHER_DID))).toThrow(
+      AuthInitializerNotCreatorError,
+    );
+  });
+
+  it("initializes an unsigned-header document with no recorded creator", () => {
+    const doc = countReducer(
+      initialDocument,
+      initializeAuth({ version: 1, grants: [] }),
+    );
+    expect(doc.state.auth.creator).toBeUndefined();
+    expect(doc.state.auth).toEqual({ version: 1, grants: [] });
   });
 
   it("rejects a second INITIALIZE_AUTH", () => {

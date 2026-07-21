@@ -61,6 +61,22 @@ export class AuthAlreadyInitializedError extends Error {
 }
 
 /**
+ * Thrown when INITIALIZE_AUTH is not signed by the document creator (its signer
+ * does not match `header.sig.publicKey`), so it cannot set the auth policy.
+ */
+export class AuthInitializerNotCreatorError extends Error {
+  public readonly documentId: string;
+
+  constructor(documentId: string) {
+    super(
+      `INITIALIZE_AUTH for document ${documentId} must be signed by the document creator`,
+    );
+    this.name = "AuthInitializerNotCreatorError";
+    this.documentId = documentId;
+  }
+}
+
+/**
  * Thrown when a grant referenced by REMOVE_GRANT or MOVE_GRANT does not exist.
  */
 export class GrantNotFoundError extends Error {
