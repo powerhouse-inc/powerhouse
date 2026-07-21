@@ -1,3 +1,13 @@
+## 6.2.2-dev.10 (2026-07-21)
+
+### 🚀 Features
+
+- **ph-cmd:** run auth commands outside a project ([e657be4a8](https://github.com/powerhouse-inc/powerhouse/commit/e657be4a8))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.2-dev.9 (2026-07-20)
 
 This was a version bump only for ph-cmd to align it with other projects, there were no code changes.
