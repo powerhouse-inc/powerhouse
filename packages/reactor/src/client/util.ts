@@ -1,6 +1,7 @@
 import type {
   AuthSubject,
   ISigner,
+  PHAuthState,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
 import { decide } from "@powerhousedao/shared/document-model";
@@ -11,6 +12,18 @@ const ALWAYS_READABLE_SCOPES = new Set(["auth", "document"]);
 
 export function authSubjectFromSigner(signer: ISigner): AuthSubject {
   return { address: signer.user?.address, key: signer.app?.key };
+}
+
+// True if the subject may read the scope (metadata scopes always readable).
+export function canReadScope(
+  auth: PHAuthState | undefined,
+  subject: AuthSubject,
+  scope: string,
+): boolean {
+  return (
+    ALWAYS_READABLE_SCOPES.has(scope) ||
+    decide(auth, subject, { verb: "read", scope }) === "allow"
+  );
 }
 
 // Ensures a scoped read still fetches the auth scope, so the gate sees the policy.
@@ -33,10 +46,7 @@ export function filterReadableScopes<TDocument extends PHDocument>(
   const auth = document.state.auth;
   const filtered: Record<string, unknown> = {};
   for (const scope of Object.keys(state)) {
-    if (
-      ALWAYS_READABLE_SCOPES.has(scope) ||
-      decide(auth, subject, { verb: "read", scope }) === "allow"
-    ) {
+    if (canReadScope(auth, subject, scope)) {
       filtered[scope] = state[scope];
     }
   }

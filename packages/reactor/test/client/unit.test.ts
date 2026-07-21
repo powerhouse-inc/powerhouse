@@ -1875,5 +1875,28 @@ describe("ReactorClient Unit Tests", () => {
         "global",
       ]);
     });
+
+    it("gates getOperations per scope, dropping denied scopes", async () => {
+      vi.mocked(mockReactor.getByIdOrSlug).mockResolvedValue(
+        docWithScopes("d1", readGlobalPolicy, {}),
+      );
+      vi.mocked(mockDocumentView.resolveIdOrSlug).mockResolvedValue("d1");
+      vi.mocked(mockReactor.getOperations).mockResolvedValue({
+        global: {
+          results: [mockOperation(0)],
+          options: { cursor: "0", limit: 100 },
+        },
+        local: {
+          results: [mockOperation(1)],
+          options: { cursor: "0", limit: 100 },
+        },
+      });
+
+      const page = await client.getOperations("d1", {
+        subject: { address: "0xreader" },
+      });
+
+      expect(page.results.map((op) => op.index)).toEqual([0]);
+    });
   });
 });

@@ -55,6 +55,7 @@ import {
 } from "./types.js";
 import {
   authSubjectFromSigner,
+  canReadScope,
   filterReadableScopes,
   withAuthScope,
 } from "./util.js";
@@ -203,6 +204,17 @@ export class ReactorClient implements IReactorClient {
       signal,
     );
 
+    // Read gate: exclude operations in scopes the subject may not read.
+    const authDoc = (await this.reactor.getByIdOrSlug(
+      documentId,
+      { scopes: ["auth"] },
+      undefined,
+      signal,
+    )) as PHDocument | undefined;
+    const subject = this.readSubject(view?.subject);
+    const canRead = (scope: string) =>
+      canReadScope(authDoc?.state.auth, subject, scope);
+
     if (paging?.cursor && isCompositeCursor(paging.cursor)) {
       return this.getOperationsWithCompositeCursor(
         documentId,
@@ -210,6 +222,7 @@ export class ReactorClient implements IReactorClient {
         filter,
         paging,
         signal,
+        canRead,
       );
     }
 
@@ -221,6 +234,12 @@ export class ReactorClient implements IReactorClient {
       undefined,
       signal,
     );
+
+    for (const scope of Object.keys(operationsByScope)) {
+      if (!canRead(scope)) {
+        delete operationsByScope[scope];
+      }
+    }
 
     const scopeEntries = Object.entries(operationsByScope);
     const effectivePaging = paging || { cursor: "0", limit: 100 };
@@ -260,12 +279,16 @@ export class ReactorClient implements IReactorClient {
     filter: OperationFilter | undefined,
     paging: PagingOptions,
     signal: AbortSignal | undefined,
+    canRead: (scope: string) => boolean,
   ): Promise<PagedResults<Operation>> {
     const scopeCursors = decodeCompositeCursor(paging.cursor);
     const allOperations: Operation[] = [];
     const activeCursors: Record<string, string> = {};
 
     for (const [scopeName, cursor] of Object.entries(scopeCursors)) {
+      if (!canRead(scopeName)) {
+        continue;
+      }
       const scopeView: ViewFilter = { ...view, scopes: [scopeName] };
       const scopePaging: PagingOptions = { cursor, limit: paging.limit };
 

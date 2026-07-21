@@ -135,10 +135,11 @@ export class ReactorSubgraph extends BaseSubgraph {
             timestampTo: args.filter?.timestampTo,
           };
 
-          return await resolvers.documentOperations(this.reactorClient, {
-            filter,
-            paging: args.paging,
-          });
+          return await resolvers.documentOperations(
+            this.reactorClient,
+            { filter, paging: args.paging },
+            this.viewSubject(ctx),
+          );
         } catch (error) {
           this.logger.error("Error in PHDocument.operations: @Error", error);
           throw error;
@@ -161,10 +162,11 @@ export class ReactorSubgraph extends BaseSubgraph {
         this.logger.debug("document(@args)", args);
         try {
           const handle = await this.assertCanRead(args.identifier, ctx);
-          return await resolvers.document(this.reactorClient, {
-            ...args,
-            identifier: handle.fetchIdentifier,
-          });
+          return await resolvers.document(
+            this.reactorClient,
+            { ...args, identifier: handle.fetchIdentifier },
+            this.viewSubject(ctx),
+          );
         } catch (error) {
           this.logger.error("Error in document: @Error", error);
           throw error;
@@ -178,6 +180,7 @@ export class ReactorSubgraph extends BaseSubgraph {
           return await resolvers.documentOutgoingRelationships(
             this.reactorClient,
             { ...args, sourceIdentifier: handle.fetchIdentifier },
+            this.viewSubject(ctx),
           );
         } catch (error) {
           this.logger.error(
@@ -195,6 +198,7 @@ export class ReactorSubgraph extends BaseSubgraph {
           const result = await resolvers.documentIncomingRelationships(
             this.reactorClient,
             { ...args, targetIdentifier: handle.fetchIdentifier },
+            this.viewSubject(ctx),
           );
           if (!this.authorizationService.isSupremeAdmin(ctx.user?.address)) {
             const filteredItems = [];
@@ -226,10 +230,11 @@ export class ReactorSubgraph extends BaseSubgraph {
       findDocuments: async (_parent, args, ctx: Context) => {
         this.logger.debug("findDocuments(@args)", args);
         try {
-          const result = await resolvers.findDocuments(this.reactorClient, {
-            ...args,
-            search: args.search ?? {},
-          });
+          const result = await resolvers.findDocuments(
+            this.reactorClient,
+            { ...args, search: args.search ?? {} },
+            this.viewSubject(ctx),
+          );
 
           // Filter results to only include documents the user can read
           if (!this.authorizationService.isSupremeAdmin(ctx.user?.address)) {
@@ -270,13 +275,17 @@ export class ReactorSubgraph extends BaseSubgraph {
         this.logger.debug("documentOperations(@args)", args);
         try {
           const handle = await this.assertCanRead(args.filter.documentId, ctx);
-          return await resolvers.documentOperations(this.reactorClient, {
-            ...args,
-            filter: {
-              ...args.filter,
-              documentId: handle.fetchIdentifier,
+          return await resolvers.documentOperations(
+            this.reactorClient,
+            {
+              ...args,
+              filter: {
+                ...args.filter,
+                documentId: handle.fetchIdentifier,
+              },
             },
-          });
+            this.viewSubject(ctx),
+          );
         } catch (error) {
           this.logger.error("Error in documentOperations: @Error", error);
           throw error;
