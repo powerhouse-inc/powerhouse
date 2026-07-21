@@ -1,5 +1,6 @@
 import type {
   Action,
+  AuthSubject,
   CreateDocumentActionInput,
   DocumentModelModule,
   ISigner,
@@ -52,6 +53,11 @@ import {
   type IDriveClient,
   type IReactorClient,
 } from "./types.js";
+import {
+  authSubjectFromSigner,
+  filterReadableScopes,
+  withAuthScope,
+} from "./util.js";
 
 /**
  * ReactorClient implementation that wraps lower-level APIs to provide
@@ -92,6 +98,10 @@ export class ReactorClient implements IReactorClient {
     this.documentView = documentView;
     this.drives = new DriveClient(this, logger, reactor, signer);
     this.logger.verbose("ReactorClient initialized");
+  }
+
+  private readSubject(subject?: AuthSubject): AuthSubject {
+    return subject ?? authSubjectFromSigner(this.signer);
   }
 
   /**
@@ -142,12 +152,13 @@ export class ReactorClient implements IReactorClient {
     signal?: AbortSignal,
   ): Promise<TDocument> {
     this.logger.verbose("get(@identifier, @view)", identifier, view);
-    return await this.reactor.getByIdOrSlug<TDocument>(
+    const document = await this.reactor.getByIdOrSlug<TDocument>(
       identifier,
-      view,
+      withAuthScope(view),
       undefined,
       signal,
     );
+    return filterReadableScopes(document, this.readSubject(view?.subject));
   }
 
   /**
@@ -326,13 +337,7 @@ export class ReactorClient implements IReactorClient {
       };
     }
 
-    return this.reactor.find(
-      { ids: targetIds },
-      view,
-      paging,
-      undefined,
-      signal,
-    );
+    return this.find({ ids: targetIds }, view, paging, signal);
   }
 
   /**
@@ -377,13 +382,7 @@ export class ReactorClient implements IReactorClient {
       };
     }
 
-    return this.reactor.find(
-      { ids: sourceIds },
-      view,
-      paging,
-      undefined,
-      signal,
-    );
+    return this.find({ ids: sourceIds }, view, paging, signal);
   }
 
   /**
@@ -396,7 +395,20 @@ export class ReactorClient implements IReactorClient {
     signal?: AbortSignal,
   ): Promise<PagedResults<PHDocument>> {
     this.logger.verbose("find(@search, @view, @paging)", search, view, paging);
-    return this.reactor.find(search, view, paging, undefined, signal);
+    const results = await this.reactor.find(
+      search,
+      withAuthScope(view),
+      paging,
+      undefined,
+      signal,
+    );
+    const readSubject = this.readSubject(view?.subject);
+    return {
+      ...results,
+      results: results.results.map((doc) =>
+        filterReadableScopes(doc, readSubject),
+      ),
+    };
   }
 
   /**

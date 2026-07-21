@@ -1717,4 +1717,163 @@ describe("ReactorClient Unit Tests", () => {
       ).rejects.toThrow("Delete child failed");
     });
   });
+
+  describe("read gating", () => {
+    const readGlobalPolicy = {
+      version: 1,
+      grants: [
+        {
+          id: "g-read-global",
+          description: "reader reads global",
+          effect: "allow",
+          principal: { address: "0xreader" },
+          capability: { can: "read", scope: "global" },
+        },
+      ],
+    };
+
+    function docWithScopes(
+      id: string,
+      auth: unknown,
+      scopes: Record<string, unknown>,
+    ): PHDocument {
+      return {
+        header: {
+          id,
+          documentType: "test",
+          slug: "",
+          name: "",
+          branch: "main",
+          meta: {},
+          sig: { publicKey: "k", nonce: "" },
+          createdAtUtcIso: new Date().toISOString(),
+          revision: {},
+        },
+        state: { auth, document: { version: 1 }, ...scopes },
+        initialState: {},
+        operations: {},
+        clipboard: [],
+      } as unknown as PHDocument;
+    }
+
+    it("drops domain scopes the subject may not read, keeping metadata", async () => {
+      vi.mocked(mockReactor.getByIdOrSlug).mockResolvedValue(
+        docWithScopes("d1", readGlobalPolicy, {
+          global: { x: 1 },
+          local: { y: 2 },
+        }),
+      );
+
+      const doc = await client.get("d1", {
+        subject: { address: "0xreader" },
+      });
+
+      expect(Object.keys(doc.state).sort()).toEqual([
+        "auth",
+        "document",
+        "global",
+      ]);
+      expect((doc.state as any).global).toEqual({ x: 1 });
+    });
+
+    it("denies every domain scope for a non-matching subject (auth stays visible)", async () => {
+      vi.mocked(mockReactor.getByIdOrSlug).mockResolvedValue(
+        docWithScopes("d1", readGlobalPolicy, {
+          global: { x: 1 },
+          local: { y: 2 },
+        }),
+      );
+
+      const doc = await client.get("d1", {
+        subject: { address: "0xstranger" },
+      });
+
+      expect(Object.keys(doc.state).sort()).toEqual(["auth", "document"]);
+    });
+
+    it("returns all scopes when the policy is uninitialized", async () => {
+      vi.mocked(mockReactor.getByIdOrSlug).mockResolvedValue(
+        docWithScopes(
+          "d1",
+          { version: 0, grants: [] },
+          { global: { x: 1 }, local: { y: 2 } },
+        ),
+      );
+
+      const doc = await client.get("d1", {
+        subject: { address: "0xstranger" },
+      });
+
+      expect(Object.keys(doc.state).sort()).toEqual([
+        "auth",
+        "document",
+        "global",
+        "local",
+      ]);
+    });
+
+    it("adds the auth scope to a scoped read so the policy is still evaluated", async () => {
+      vi.mocked(mockReactor.getByIdOrSlug).mockResolvedValue(
+        docWithScopes("d1", readGlobalPolicy, { global: { x: 1 } }),
+      );
+
+      await client.get("d1", {
+        scopes: ["global"],
+        subject: { address: "0xreader" },
+      });
+
+      const viewArg = vi.mocked(mockReactor.getByIdOrSlug).mock.calls[0][1];
+      expect(viewArg?.scopes).toContain("auth");
+      expect(viewArg?.scopes).toContain("global");
+    });
+
+    it("falls back to the client's own signer when no subject is given", async () => {
+      const signerClient = new ReactorClient(
+        createMockLogger(),
+        mockReactor,
+        createMockSigner({
+          user: { address: "0xreader", networkId: "", chainId: 0 },
+          app: { name: "connect", key: "did:key:zReader" },
+        }),
+        mockSubscriptionManager,
+        mockJobAwaiter,
+        mockDocumentIndexer,
+        mockDocumentView,
+      );
+      vi.mocked(mockReactor.getByIdOrSlug).mockResolvedValue(
+        docWithScopes("d1", readGlobalPolicy, {
+          global: { x: 1 },
+          local: { y: 2 },
+        }),
+      );
+
+      const doc = await signerClient.get("d1");
+
+      expect(Object.keys(doc.state).sort()).toEqual([
+        "auth",
+        "document",
+        "global",
+      ]);
+    });
+
+    it("filters each result of find", async () => {
+      vi.mocked(mockReactor.find).mockResolvedValue({
+        results: [
+          docWithScopes("d1", readGlobalPolicy, {
+            global: { x: 1 },
+            local: { y: 2 },
+          }),
+        ],
+        options: { cursor: "", limit: 10 },
+      });
+
+      const page = await client.find({}, { subject: { address: "0xreader" } });
+
+      expect(Object.keys(page.results[0].state).sort()).toEqual([
+        "auth",
+        "document",
+        "global",
+      ]);
+    });
+  });
 });
