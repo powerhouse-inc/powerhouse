@@ -1,7 +1,9 @@
 import type { PowerhouseConfig } from "@powerhousedao/config";
 import { getConfig } from "@powerhousedao/config/node";
 import {
+  deepMerge,
   loadConnectEnv,
+  mergePwaConfig,
   normalizeBasePath,
   setConnectEnv,
 } from "@powerhousedao/shared/connect";
@@ -28,6 +30,11 @@ import {
 import { connectFaviconPlugin } from "./vite-plugins/favicon.js";
 import { phBundledPackagesPlugin } from "./vite-plugins/ph-bundled-packages.js";
 import { phConfigPlugin } from "./vite-plugins/ph-config.js";
+import {
+  collectPackagePwaContributions,
+  collectProjectPwaContribution,
+  validateProjectPwaConfig,
+} from "./vite-plugins/pwa-packages.js";
 import { connectPwaPlugins } from "./vite-plugins/pwa.js";
 import { reactSelfHostPlugin } from "./vite-plugins/react-self-host.js";
 import { connectThemeBootPlugin } from "./vite-plugins/theme-boot.js";
@@ -307,6 +314,46 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
         },
       });
 
+  // PWA overrides ladder: build-time-known package `pwa` fragments merge UNDER
+  // the project's `connect.pwa` block (source deep-merged with the CLI/operator
+  // override, CLI wins). Scalars are project-wins; arrays (icons, globs,
+  // runtime-caching rules, denylist) are additive; the size ceiling takes the
+  // max. Fragments come from the configured packages (local from node_modules,
+  // registry from the CDN) and, last among packages, the project's own
+  // manifest. The user's own connect.pwa is validated strictly (fails the
+  // build); package fragments warn + skip inside the collectors.
+  const projectPwa = validateProjectPwaConfig(
+    deepMerge(
+      phConfig.connect?.pwa ?? {},
+      options.cliConnectOverride?.pwa ?? {},
+    ),
+    phConfigPath,
+  );
+  const pwaWarn = (msg: string) => (customLogger ?? console).warn(msg);
+  // Registry fragments need the network, so only production builds fetch them
+  // (dev/studio runs without a service worker and must not depend on the
+  // registry being reachable). Async: Vite resolves promised plugins, same
+  // pattern as the sentry plugin below.
+  const pwaPackagesForFragments =
+    mode === "production"
+      ? phPackages
+      : phPackages.filter((p) => p.provider === "local");
+  const pwaPlugins: PluginOption = (async () => {
+    if (!offlineEnabled) return connectPwaPlugins({ offlineEnabled });
+    const contributions = await collectPackagePwaContributions({
+      packages: pwaPackagesForFragments,
+      projectRoot: options.dirname,
+      registryUrl: phPackageRegistryUrl,
+      onWarn: pwaWarn,
+    });
+    const projectContribution = collectProjectPwaContribution({
+      projectRoot: options.dirname,
+    });
+    if (projectContribution) contributions.push(projectContribution);
+    const mergedPwa = mergePwaConfig(contributions, projectPwa, pwaWarn);
+    return connectPwaPlugins({ offlineEnabled, pwa: mergedPwa });
+  })();
+
   const reactExternal = [
     "react",
     "react-dom",
@@ -417,7 +464,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       ...(options.dynamicBase ? [connectDynamicBasePlugin()] : []),
       // PWA / service worker last, so its precache manifest sees every emitted
       // asset (including the icons connectPwaIconsPlugin emits).
-      ...connectPwaPlugins({ offlineEnabled }),
+      pwaPlugins,
     ],
     worker: {
       format: "es",

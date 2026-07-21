@@ -77,6 +77,22 @@
       "title": "Your document contains errors",
       "body": "Your document contains structure errors. Do you want to export it anyway?"
     },
+    "openFileDocuments": {
+      "title_one": "Open document",
+      "title_other": "Open documents",
+      "body": "Choose the drive to import into:",
+      "noDrives": "No drives available yet — remote drives may still be loading. Create a drive to import into, or try again in a moment.",
+      "notAllowed": "Your account is not allowed to create documents in this reactor.",
+      "createDrive": "Create drive",
+      "import": "Import",
+      "renameAndImport": "Rename and import",
+      "checking": "Checking…",
+      "invalidFile": "File is not a valid Powerhouse document",
+      "unsupportedType": "Document type is not supported",
+      "duplicateHint": "Already in this drive — will be imported as \"{{name}}\"",
+      "duplicateCopyHint": "Already in this drive — a copy will be created",
+      "renamedHint": "Renamed to \"{{name}}\" to avoid a name clash"
+    },
     "disclaimer": {
       "title": "Disclaimer",
       "body": "All content provided herein our website, hyperlinked sites, associated applications, forums, blogs, social media accounts and other platforms (“Site”) is for your general information only, procured from third party sources. We make no warranties of any kind in relation to our content, including but not limited to accuracy and updatedness. No part of the content that we provide constitutes financial advice, legal advice or any other form of advice meant for your specific reliance for any purpose. Any use or reliance on our content is solely at your own risk and discretion. You should conduct your own research, review, analyse and verify our content before relying on them. Trading is a highly risky activity that can lead to major losses, please therefore consult your financial advisor before making any decision. No content on our Site is meant to be a solicitation or offer."

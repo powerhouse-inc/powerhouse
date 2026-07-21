@@ -77,6 +77,11 @@ const DriveAuthRequiredModal = lazy(() =>
     default: m.DriveAuthRequiredModal,
   })),
 );
+const OpenFileDocumentsModal = lazy(() =>
+  import("./modals/OpenFileDocumentsModal.js").then((m) => ({
+    default: m.OpenFileDocumentsModal,
+  })),
+);
 const modalComponents = {
   addDrive: AddDriveModal,
   clearStorage: ClearStorageModal,
@@ -93,6 +98,7 @@ const modalComponents = {
   upgradeDrive: UpgradeDriveModal,
   missingPackage: MissingPackageModal,
   driveAuthRequired: DriveAuthRequiredModal,
+  openFileDocuments: OpenFileDocumentsModal,
 } as const;
 
 export const ModalsContainer = lazy(() => {

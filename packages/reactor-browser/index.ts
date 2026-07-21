@@ -4,6 +4,7 @@ export * from "./src/constants.js";
 export * from "./src/context/index.js";
 export * from "./src/document-cache.js";
 export * from "./src/document-model.js";
+export * from "./src/errors.js";
 export * from "./src/global/index.js";
 export * from "./src/graphql/index.js";
 export * from "./src/hooks/index.js";

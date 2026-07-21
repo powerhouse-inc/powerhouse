@@ -21,6 +21,16 @@ export const ConnectPackageManager: React.FC = () => {
   const packageManager = useVetraPackageManager();
   const {
     registryPackageList,
+    installedPackages,
+    availablePackages,
+    availableHasMore,
+    isLoadingAvailable,
+    isLoadingMoreAvailable,
+    availableError,
+    ensureAvailableLoaded,
+    fetchAvailablePage,
+    loadMoreAvailable,
+    setAvailableSearch,
     updateRegistryPackageStatus,
     registerFallbackRegistryPackage,
   } = useRegistryPackages();
@@ -60,16 +70,20 @@ export const ConnectPackageManager: React.FC = () => {
       });
     } else {
       const message = result.error.message;
+      console.error(
+        `[Connect][PackageManager] Install failed for "${packageSpec}":`,
+        result.error,
+      );
       // `BrowserPackageManager` raises a generic "Failed to fetch dynamically
       // imported module" when the registry CDN returns an error. That covers
       // both "the name exists nowhere (not on this registry AND not on the
       // npmjs uplink)" and "the tarball is there but doesn't look like a
-      // Powerhouse package". Tell the user in plain terms before dumping the
-      // raw error so the "install from npm" fallback case is self-explanatory.
+      // Powerhouse package". Map to plain-language copy — never dump the raw
+      // API / loader message into the toast.
       const isLikelyNotFound = /failed to fetch|404|not found/i.test(message);
       const userMessage = isLikelyNotFound
-        ? `Could not install "${packageSpec}". The package isn't available on this registry, and the npmjs.org fallback could not resolve it either.`
-        : `Failed to install "${packageSpec}": ${message}`;
+        ? `Couldn't install "${packageSpec}". It isn't available on this registry or via npm.`
+        : `Couldn't install "${packageSpec}". Please try again.`;
       toast(userMessage, { type: "error" });
     }
   }
@@ -84,18 +98,32 @@ export const ConnectPackageManager: React.FC = () => {
         type: "connect-success",
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unknown error";
-      toast(`Failed to uninstall "${packageName}": ${message}`, {
+      console.error(
+        `[Connect][PackageManager] Uninstall failed for "${packageName}":`,
+        error,
+      );
+      toast(`Couldn't uninstall "${packageName}". Please try again.`, {
         type: "error",
       });
     }
   }
 
   return (
-    <div className="flex h-full flex-1 flex-col">
+    <div className="flex min-h-0 flex-1 flex-col">
       <PackageManager
         mutable={true}
-        registryPackageList={registryPackageList}
+        installedPackages={installedPackages}
+        availablePackages={availablePackages}
+        isAvailableLoading={isLoadingAvailable}
+        isLoadingMoreAvailable={isLoadingMoreAvailable}
+        hasMoreAvailable={availableHasMore}
+        onLoadMoreAvailable={loadMoreAvailable}
+        availableError={availableError}
+        onAvailableRetry={() => {
+          void fetchAvailablePage({ reset: true });
+        }}
+        onAvailableSearchChange={setAvailableSearch}
+        onAvailableTabOpen={ensureAvailableLoaded}
         onInstall={handleInstall}
         onUninstall={handleUninstall}
       />
