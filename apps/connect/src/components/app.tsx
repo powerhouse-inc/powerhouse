@@ -8,12 +8,14 @@ import { connectConfig } from "@powerhousedao/connect/config";
 import { SentryProvider } from "@powerhousedao/connect/context";
 import {
   DocumentEditorDebugTools,
+  initLaunchQueueFileHandling,
   serviceWorkerManager,
 } from "@powerhousedao/connect/utils";
 import { useEditorPreloader, useTheme } from "@powerhousedao/reactor-browser";
 import { useEffect } from "react";
 import { ToastContainer } from "../services/toast.js";
 import { MissingModelBanner } from "./missing-model-banner.js";
+import { OpenFileUploadList } from "./open-file-upload-list.js";
 import { PackageInstallPrompt } from "./package-install-prompt.js";
 
 export const App = () => {
@@ -65,11 +67,19 @@ export const App = () => {
     }
   }, []);
 
+  // Files the OS opens with the installed PWA (manifest file_handlers).
+  // launchQueue buffers launches until a consumer registers, so nothing is lost
+  // by wiring it on mount; a no-op where the API doesn't exist.
+  useEffect(() => {
+    initLaunchQueueFileHandling();
+  }, []);
+
   return (
     <SentryProvider>
       <ToastContainer position="bottom-right" />
       <MissingModelBanner />
       <Router />
+      <OpenFileUploadList />
       <PackageInstallPrompt />
       <Analytics />
       <OpenPanel />

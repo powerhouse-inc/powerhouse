@@ -44,6 +44,10 @@ const normalIgnoredFiles = [
   // Stale code intentionally kept out of the active source tree (excluded
   // from tsconfig too); not type-checkable with the project service.
   "clis/ph-cmd/legacy/**",
+  // Connect's hand-written service worker: webworker-lib + a `virtual:` import,
+  // compiled by vite-plugin-pwa's own pass and excluded from the package
+  // tsconfig, so the typed project service can't lint it.
+  "packages/builder-tools/connect-utils/service-worker/**",
   "**/coverage/",
   "**/playwright-report/",
   // test/package-e2e runtime artifacts (registry storage, CDN cache) and

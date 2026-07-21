@@ -6,8 +6,15 @@ import type { Plugin } from "vite";
 // has no PWA icons of its own, so — like connectFaviconPlugin does for the
 // favicon — we resolve them out of the installed connect package and emit them
 // as build assets. vite-plugin-pwa references these filenames in the generated
-// manifest and precaches them via its png glob.
-const PWA_ICONS = ["pwa-192x192.png", "pwa-512x512.png"] as const;
+// manifest and precaches them via its png glob. The document icons are the
+// OS-level file-type icons referenced by the .phd/.phdm file_handlers.
+const PWA_ICONS = [
+  "pwa-192x192.png",
+  "pwa-512x512.png",
+  "pwa-512x512-maskable.png",
+  "document-icon-192x192.png",
+  "document-icon-512x512.png",
+] as const;
 
 export function connectPwaIconsPlugin(): Plugin {
   return {

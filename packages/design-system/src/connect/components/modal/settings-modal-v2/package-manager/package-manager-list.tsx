@@ -4,14 +4,14 @@ import type {
   RegistryPackageList,
 } from "@powerhousedao/shared/registry";
 import type { ReactNode } from "react";
-import { useCallback, useEffect, useLayoutEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { twMerge } from "tailwind-merge";
 import { ConnectDropdownMenu } from "../../../dropdown-menu/dropdown-menu.js";
 import { buildPackageSpec } from "./parse-package-spec.js";
 import type { VersionSelection } from "./version-picker.js";
 import {
-  resolveDefaultVersionSelection,
   VersionPicker,
+  resolveDefaultVersionSelection,
 } from "./version-picker.js";
 
 const PackageDetail: React.FC<{ label: string; value: ReactNode }> = ({
@@ -30,9 +30,15 @@ export const PackageManagerListItem = (props: {
   registryPackage: RegistryPackage;
   onInstall: (packageSpec: string) => Promise<void>;
   onUninstall: (packageName: string) => void;
+  /**
+   * Tag/version typed in the search query (`pkg@dev`) — preselects the
+   * matching entry in the version picker.
+   */
+  preferredTag?: string;
   className?: string;
 }) => {
-  const { registryPackage, onInstall, onUninstall, className } = props;
+  const { registryPackage, onInstall, onUninstall, preferredTag, className } =
+    props;
   const [isDropdownMenuOpen, setIsDropdownMenuOpen] = useState(false);
 
   const canPickVersion =
@@ -48,8 +54,21 @@ export const PackageManagerListItem = (props: {
       distTags: registryPackage.distTags,
       versions: registryPackage.versions,
       version: registryPackage.version,
+      preferredTag,
     }),
   );
+
+  // Re-sync when the typed tag changes (e.g. user edits the search query).
+  // Typing `pkg@dev` pre-selects the `dev` chip on matching rows.
+  useEffect(() => {
+    if (!preferredTag) return;
+    if (registryPackage.distTags && preferredTag in registryPackage.distTags) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSelected({ kind: "tag", value: preferredTag });
+    } else if (registryPackage.versions?.includes(preferredTag)) {
+      setSelected({ kind: "version", value: preferredTag });
+    }
+  }, [preferredTag, registryPackage.distTags, registryPackage.versions]);
 
   const installDropdownItem = {
     id: "install",
@@ -102,29 +121,41 @@ export const PackageManagerListItem = (props: {
       {registryPackage.manifest !== null &&
         (() => {
           const { description, category, publisher } = registryPackage.manifest;
-          const hasAnyField =
-            description != null ||
-            category != null ||
-            publisher?.name != null ||
-            publisher?.url != null;
-          if (!hasAnyField) return null;
+          const publisherName = publisher?.name;
+          const publisherUrl = publisher?.url;
+          // Treat empty / whitespace-only strings as absent so we don't render
+          // bare "Description:" / "Category:" labels with no value.
+          const hasText = (value: string | null | undefined): boolean =>
+            typeof value === "string" && value.trim() !== "";
+          const showDescription = hasText(description);
+          const showCategory = hasText(category);
+          const showPublisher = hasText(publisherName);
+          const showPublisherUrl = hasText(publisherUrl);
+          if (
+            !showDescription &&
+            !showCategory &&
+            !showPublisher &&
+            !showPublisherUrl
+          ) {
+            return null;
+          }
           return (
             <>
-              {description != null && (
+              {showDescription && (
                 <PackageDetail label="Description" value={description} />
               )}
-              {category != null && (
+              {showCategory && (
                 <PackageDetail label="Category" value={category} />
               )}
-              {publisher?.name != null && (
-                <PackageDetail label="Publisher" value={publisher.name} />
+              {showPublisher && (
+                <PackageDetail label="Publisher" value={publisherName} />
               )}
-              {publisher?.url != null && (
+              {showPublisherUrl && (
                 <PackageDetail
                   label="Publisher URL"
                   value={
-                    <a className="underline" href={publisher.url}>
-                      {publisher.url}
+                    <a className="underline" href={publisherUrl}>
+                      {publisherUrl}
                     </a>
                   }
                 />
@@ -132,235 +163,101 @@ export const PackageManagerListItem = (props: {
             </>
           );
         })()}
-      <ConnectDropdownMenu
-        items={dropdownItems}
-        onItemClick={(id) => {
-          if (id === "install") {
-            const spec =
-              canPickVersion && hasVersionMetadata
-                ? buildPackageSpec(registryPackage.name, selected.value)
-                : registryPackage.name;
-            onInstall(spec).catch(console.error);
-            return;
-          }
-          onUninstall(registryPackage.name);
-        }}
-        onOpenChange={setIsDropdownMenuOpen}
-        open={isDropdownMenuOpen}
-      >
-        <button
-          className="group absolute top-3 right-3"
-          onClick={(e) => {
-            e.stopPropagation();
-            setIsDropdownMenuOpen(true);
+      {dropdownItems.length > 0 && (
+        <ConnectDropdownMenu
+          items={dropdownItems}
+          onItemClick={(id) => {
+            if (id === "install") {
+              const spec =
+                canPickVersion && hasVersionMetadata
+                  ? buildPackageSpec(registryPackage.name, selected.value)
+                  : registryPackage.name;
+              onInstall(spec).catch(console.error);
+              return;
+            }
+            onUninstall(registryPackage.name);
           }}
+          onOpenChange={setIsDropdownMenuOpen}
+          open={isDropdownMenuOpen}
         >
-          <Icon
-            className="text-foreground group-hover:hover-effect"
-            name="VerticalDots"
-          />
-        </button>
-      </ConnectDropdownMenu>
+          <button
+            className="group absolute top-3 right-3"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsDropdownMenuOpen(true);
+            }}
+          >
+            <Icon
+              className="text-foreground group-hover:hover-effect"
+              name="VerticalDots"
+            />
+          </button>
+        </ConnectDropdownMenu>
+      )}
     </li>
   );
 };
 
-export const PackageManagerList = (props: {
-  registryPackageList: RegistryPackageList;
-  onInstall: (packageSpec: string) => Promise<void>;
-  onUninstall: (packageName: string) => void;
+/**
+ * Scroll region shared by both Package Manager tab panels. Fills the space
+ * the panel gives it and scrolls its overflow. This works because the tab
+ * panel sits inside the settings content card, which has a bounded height
+ * (`m-6 ... h-full flex-1 overflow-hidden`); the flex chain down to here is
+ * unbroken (`min-h-0` + `flex-1`/`h-full` at every level), so no
+ * viewport-measuring hack is needed.
+ */
+export const PackagePanelScrollArea: React.FC<{
+  children: ReactNode;
   className?: string;
-}) => {
-  const { className, registryPackageList, onInstall, onUninstall } = props;
-  const [maxHeight, setMaxHeight] = useState<number | undefined>();
+  /**
+   * Called when the bottom sentinel scrolls into view (infinite scroll). Only
+   * observed while a handler is provided — pass `undefined` to stop paging.
+   */
+  onReachEnd?: () => void;
+}> = ({ children, className, onReachEnd }) => {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  // Keep the latest handler without re-creating the observer each render
+  // (the handler identity changes as loading/hasMore state updates).
+  const onReachEndRef = useRef(onReachEnd);
+  useEffect(() => {
+    onReachEndRef.current = onReachEnd;
+  });
+  const hasHandler = onReachEnd !== undefined;
 
-  const locallyInstalledPackages = registryPackageList.filter(
-    (p) => p.status === "local-install",
-  );
-  const registryInstalledPackages = registryPackageList.filter(
-    (p) => p.status === "registry-install",
-  );
-  const availablePackages = registryPackageList.filter(
-    (p) => p.status === "available",
-  );
-  const dismissedPackages = registryPackageList.filter(
-    (p) => p.status === "dismissed",
-  );
-
-  useLayoutEffect(() => {
-    const calculateMaxHeight = () => {
-      const viewportHeight = window.innerHeight;
-      const availableHeight = viewportHeight - 516;
-      setMaxHeight(Math.max(200, availableHeight));
-    };
-
-    calculateMaxHeight();
-
-    window.addEventListener("resize", calculateMaxHeight);
-    return () => window.removeEventListener("resize", calculateMaxHeight);
-  }, []);
-
-  const hasLocallyInstalled = locallyInstalledPackages.length > 0;
-  const hasRegistryInstalled = registryInstalledPackages.length > 0;
-  const hasAnyInstalled = hasLocallyInstalled || hasRegistryInstalled;
-  const hasAvailable = availablePackages.length > 0;
-  const hasDismissed = dismissedPackages.length > 0;
-  const installedCount =
-    locallyInstalledPackages.length + registryInstalledPackages.length;
+  useEffect(() => {
+    if (!hasHandler) return;
+    const root = scrollRef.current;
+    const sentinel = sentinelRef.current;
+    if (!root || !sentinel) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) onReachEndRef.current?.();
+      },
+      { root, rootMargin: "200px" },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasHandler]);
 
   return (
     <div
-      className={twMerge(
-        "flex flex-col items-stretch overflow-hidden",
-        className,
-      )}
-      style={{ maxHeight }}
+      ref={scrollRef}
+      // Scroller is full-bleed to the card's right and bottom edges
+      // (PackageManager has no right/bottom padding). Content keeps pr-3/pb-3
+      // so cards align with the search above and stay inset from the border;
+      // the scrollbar sits in that outer strip.
+      className={twMerge("min-h-0 flex-1 overflow-y-auto", className)}
     >
-      <div className="flex-1 overflow-y-auto pr-2">
-        <PackageSection
-          sectionId="installed"
-          title="Installed Packages"
-          count={installedCount}
-          isEmpty={!hasAnyInstalled}
-          emptyText="No packages installed."
-        >
-          {hasLocallyInstalled && (
-            <PackageSubSection
-              title="Locally installed"
-              count={locallyInstalledPackages.length}
-            >
-              <PackageList
-                packages={locallyInstalledPackages}
-                onInstall={onInstall}
-                onUninstall={onUninstall}
-              />
-            </PackageSubSection>
-          )}
-          {hasRegistryInstalled && (
-            <PackageSubSection
-              title="Installed from registry"
-              count={registryInstalledPackages.length}
-            >
-              <PackageList
-                packages={registryInstalledPackages}
-                onInstall={onInstall}
-                onUninstall={onUninstall}
-              />
-            </PackageSubSection>
-          )}
-        </PackageSection>
-
-        <PackageSection
-          sectionId="available"
-          title="Available Packages"
-          count={availablePackages.length}
-          isEmpty={!hasAvailable}
-          emptyText="No packages available to install."
-        >
-          <PackageList
-            packages={availablePackages}
-            onInstall={onInstall}
-            onUninstall={onUninstall}
-          />
-        </PackageSection>
-
-        {hasDismissed && (
-          <PackageSection
-            sectionId="dismissed"
-            title="Dismissed Packages"
-            count={dismissedPackages.length}
-          >
-            <PackageList
-              packages={dismissedPackages}
-              onInstall={onInstall}
-              onUninstall={onUninstall}
-            />
-          </PackageSection>
-        )}
-      </div>
+      <div className="pr-3 pb-3">{children}</div>
+      {hasHandler && (
+        <div ref={sentinelRef} aria-hidden className="h-px w-full" />
+      )}
     </div>
   );
 };
 
-const STORAGE_KEY = "ph:package-manager:collapsed-sections";
-
-function loadCollapsedSections(): Record<string, boolean> {
-  if (typeof window === "undefined") return {};
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as Record<string, boolean>) : {};
-  } catch {
-    return {};
-  }
-}
-
-function useCollapsedSection(sectionId: string): [boolean, () => void] {
-  const [collapsed, setCollapsed] = useState<boolean>(
-    () => loadCollapsedSections()[sectionId] ?? true,
-  );
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      const current = loadCollapsedSections();
-      current[sectionId] = collapsed;
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(current));
-    } catch {
-      // ignore persistence errors
-    }
-  }, [sectionId, collapsed]);
-
-  const toggle = useCallback(() => setCollapsed((prev) => !prev), []);
-  return [collapsed, toggle];
-}
-
-const PackageSection: React.FC<{
-  sectionId: string;
-  title: string;
-  count: number;
-  isEmpty?: boolean;
-  emptyText?: string;
-  children?: ReactNode;
-}> = ({ sectionId, title, count, isEmpty, emptyText, children }) => {
-  const [collapsed, toggle] = useCollapsedSection(sectionId);
-  const contentId = `package-section-${sectionId}`;
-
-  return (
-    <section className="mb-6">
-      <h3 className="sticky top-0 z-10 mb-3 border-b border-border bg-background text-foreground">
-        <button
-          type="button"
-          onClick={toggle}
-          aria-expanded={!collapsed}
-          aria-controls={contentId}
-          className="flex w-full items-center gap-2 pb-2 text-left text-base font-semibold text-foreground hover:hover-effect"
-        >
-          <Icon
-            name="ChevronDown"
-            size={16}
-            className={twMerge(
-              "shrink-0 text-foreground transition-transform",
-              collapsed && "-rotate-90",
-            )}
-          />
-          <span>{title}</span>
-          <span className="text-xs font-medium text-foreground">{count}</span>
-        </button>
-      </h3>
-      {!collapsed && (
-        <div id={contentId}>
-          {isEmpty ? (
-            <p className="text-sm text-foreground">{emptyText}</p>
-          ) : (
-            <div className="flex flex-col gap-4">{children}</div>
-          )}
-        </div>
-      )}
-    </section>
-  );
-};
-
-const PackageSubSection: React.FC<{
+export const PackageSubSection: React.FC<{
   title: string;
   count: number;
   children: ReactNode;
@@ -378,19 +275,21 @@ const PackageSubSection: React.FC<{
   );
 };
 
-const PackageList: React.FC<{
+export const PackageList: React.FC<{
   packages: RegistryPackageList;
   onInstall: (packageSpec: string) => Promise<void>;
   onUninstall: (packageName: string) => void;
-}> = ({ packages, onInstall, onUninstall }) => {
+  preferredTag?: string;
+}> = ({ packages, onInstall, onUninstall, preferredTag }) => {
   return (
-    <ul className="flex flex-col items-stretch gap-4 pr-2">
+    <ul className="flex flex-col items-stretch gap-4">
       {packages.map((pkg) => (
         <PackageManagerListItem
           key={pkg.name}
           registryPackage={pkg}
           onInstall={onInstall}
           onUninstall={onUninstall}
+          preferredTag={preferredTag}
         />
       ))}
     </ul>

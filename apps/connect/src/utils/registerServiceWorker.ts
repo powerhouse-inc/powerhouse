@@ -1,4 +1,5 @@
 import { connectConfig } from "@powerhousedao/connect/config";
+import { refreshPwaManifestLink } from "./pwa-manifest-link.js";
 
 const basePath = connectConfig.routerBasename;
 
@@ -6,8 +7,9 @@ const serviceWorkerScriptPath = [basePath, "service-worker.js"]
   .join("/")
   .replace(/\/{2,}/gm, "/");
 
-// External store backing the refresh prompt: Workbox (generateSW + prompt mode)
-// parks a new worker as "waiting"; we flag that here so
+// External store backing the refresh prompt: our hand-written service worker
+// (injectManifest, registerType: prompt) parks a new worker as "waiting" by not
+// calling skipWaiting on install; we flag that here so
 // service-worker-update-prompt.tsx can offer a Refresh instead of reloading
 // from under the user.
 let updateAvailable = false;
@@ -87,6 +89,12 @@ class ServiceWorkerManager {
         // the page, so it never lands in the cache. Warm it now (clientsClaim
         // just gave us control) so a single online load is enough to go offline.
         this.#warmRuntimeConfigCache();
+        // The SW only serves the dynamic manifest.webmanifest once it controls
+        // the page. A package installed before that (its fragment already in
+        // IndexedDB) was re-consumed against the static base manifest; now that
+        // the dynamic route is live, re-attach the link so it picks up the
+        // package's PWA config without a manual reload.
+        refreshPwaManifestLink();
         // Reload once the worker we activated via applyUpdate() takes control.
         if (!this.#updateAccepted || this.#reloading) return;
         this.#reloading = true;

@@ -25,10 +25,9 @@ export class RegistryClient {
     const packages = await this.getPackages();
     if (!query) return packages;
     const lowerQuery = query.toLowerCase();
-    return packages.filter(
-      (pkg) =>
-        pkg.name.toLowerCase().includes(lowerQuery) ||
-        pkg.manifest?.description?.toLowerCase().includes(lowerQuery),
+    // Match on package name only (not description).
+    return packages.filter((pkg) =>
+      pkg.name.toLowerCase().includes(lowerQuery),
     );
   }
 
