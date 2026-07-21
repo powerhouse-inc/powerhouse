@@ -10,6 +10,7 @@ export {
 } from "./errors.js";
 export type {
   IAttachmentReader,
+  IAttachmentBackend,
   IAttachmentService,
   IAttachmentStore,
   IAttachmentTransport,
@@ -20,6 +21,11 @@ export type {
 } from "./interfaces.js";
 export type {
   AttachmentHeader,
+  AttachmentBackendHealth,
+  AttachmentBackendKind,
+  AttachmentDownloadTarget,
+  AttachmentTargetHeaders,
+  AttachmentUploadTarget,
   AttachmentMetadata,
   AttachmentResponse,
   AttachmentStatus,
@@ -32,6 +38,10 @@ export type {
   TransportFetchResult,
   TransportResponse,
 } from "./types.js";
+export {
+  parseAttachmentDownloadTarget,
+  parseAttachmentUploadTarget,
+} from "./targets.js";
 export { AttachmentService } from "./attachment-service.js";
 export { parseRef, createRef } from "./ref.js";
 export type { ParsedRef } from "./ref.js";
@@ -45,6 +55,8 @@ export type { AttachmentDatabase } from "./storage/index.js";
 export {
   DirectAttachmentUpload,
   DirectAttachmentUploadFactory,
+  FilesystemAttachmentBackend,
+  type FilesystemAttachmentBackendConfig,
 } from "./direct/index.js";
 export {
   SwitchboardAttachmentTransport,

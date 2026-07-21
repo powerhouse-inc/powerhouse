@@ -3,6 +3,7 @@ import { AttachmentAlreadyExists, ReservationNotFound } from "../errors.js";
 import type { IReservationStore } from "../interfaces.js";
 import { createRef, parseRef } from "../ref.js";
 import type { Reservation, ReserveAttachmentOptions } from "../types.js";
+import { parseAttachmentUploadTarget } from "../targets.js";
 import { buildAuthHeaders } from "./build-auth-headers.js";
 
 export type SwitchboardClientConfig = {
@@ -155,6 +156,7 @@ export class RemoteReservationStore implements IReservationStore {
       ref?: string | null;
       createdAtUtc?: string;
       expiresAtUtc?: string;
+      uploadTarget?: unknown;
     };
     // The server is the source of truth for both timestamps. We synthesize
     // only as a last-resort fallback for older switchboards that don't
@@ -172,6 +174,9 @@ export class RemoteReservationStore implements IReservationStore {
         new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString(),
       clientHash: options.clientHash ?? null,
       sizeBytes: options.sizeBytes ?? null,
+      ...(body.uploadTarget === undefined
+        ? {}
+        : { uploadTarget: parseAttachmentUploadTarget(body.uploadTarget) }),
     };
   }
 
@@ -211,6 +216,11 @@ export class RemoteReservationStore implements IReservationStore {
       // Normalize fields that may be absent on older switchboard responses.
       clientHash: parsed.clientHash ?? null,
       sizeBytes: parsed.sizeBytes ?? null,
+      ...(parsed.uploadTarget === undefined
+        ? {}
+        : {
+            uploadTarget: parseAttachmentUploadTarget(parsed.uploadTarget),
+          }),
     };
   }
 

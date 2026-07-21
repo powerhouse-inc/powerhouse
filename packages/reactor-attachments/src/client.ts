@@ -31,12 +31,15 @@ export type {
 export { parseRef, createRef } from "./ref.js";
 export type { ParsedRef } from "./ref.js";
 export type {
+  AttachmentDownloadTarget,
   AttachmentHeader,
   AttachmentMetadata,
   AttachmentResponse,
   AttachmentStatus,
   AttachmentTransportConfig,
   AttachmentUploadResult,
+  AttachmentTargetHeaders,
+  AttachmentUploadTarget,
   HashFirstReserveAttachmentOptions,
   UploadFirstReserveAttachmentOptions,
   Reservation,
@@ -44,6 +47,10 @@ export type {
   TransportFetchResult,
   TransportResponse,
 } from "./types.js";
+export {
+  parseAttachmentDownloadTarget,
+  parseAttachmentUploadTarget,
+} from "./targets.js";
 export {
   SwitchboardAttachmentTransport,
   type SwitchboardTransportConfig,

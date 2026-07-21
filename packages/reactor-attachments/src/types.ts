@@ -1,5 +1,12 @@
 import type { AttachmentHash, AttachmentRef } from "@powerhousedao/reactor";
 
+export type AttachmentBackendKind = "filesystem" | "s3";
+
+export type AttachmentBackendHealth = {
+  kind: AttachmentBackendKind;
+  ready: boolean;
+};
+
 /**
  * Status of attachment data in the local store.
  * 'pending' is a virtual status synthesized at query time from live,
@@ -112,6 +119,51 @@ export type AttachmentUploadResult = {
   header: AttachmentHeader;
 };
 
+/** Exact HTTP headers that must be sent with an attachment transfer target. */
+export type AttachmentTargetHeaders = Readonly<Record<string, string>>;
+
+export type SwitchboardAttachmentUploadTarget = {
+  kind: "switchboard";
+  method: "PUT";
+  url: string;
+  headers: AttachmentTargetHeaders;
+  expiresAtUtc?: string;
+};
+
+export type PresignedPutAttachmentUploadTarget = {
+  kind: "presigned-put";
+  method: "PUT";
+  url: string;
+  headers: AttachmentTargetHeaders;
+  expiresAtUtc: string;
+};
+
+/** Provider-neutral target returned to a client that needs to upload bytes. */
+export type AttachmentUploadTarget =
+  | SwitchboardAttachmentUploadTarget
+  | PresignedPutAttachmentUploadTarget;
+
+export type SwitchboardAttachmentDownloadTarget = {
+  kind: "switchboard";
+  method: "GET";
+  url: string;
+  headers: AttachmentTargetHeaders;
+  expiresAtUtc?: string;
+};
+
+export type PresignedGetAttachmentDownloadTarget = {
+  kind: "presigned-get";
+  method: "GET";
+  url: string;
+  headers: AttachmentTargetHeaders;
+  expiresAtUtc: string;
+};
+
+/** Provider-neutral target returned to a client that needs to download bytes. */
+export type AttachmentDownloadTarget =
+  | SwitchboardAttachmentDownloadTarget
+  | PresignedGetAttachmentDownloadTarget;
+
 /**
  * Response when retrieving attachment data from the local store.
  */
@@ -172,4 +224,10 @@ export type Reservation = {
   expiresAtUtc: string;
   clientHash: string | null;
   sizeBytes: number | null;
+  /**
+   * Additive wire contract. Older Switchboards omit this field; current
+   * upload handles therefore continue to support their established send()
+   * behavior while target-aware clients are introduced incrementally.
+   */
+  uploadTarget?: AttachmentUploadTarget;
 };

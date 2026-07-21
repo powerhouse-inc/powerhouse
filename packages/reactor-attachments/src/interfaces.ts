@@ -1,10 +1,14 @@
 import type { AttachmentHash, AttachmentRef } from "@powerhousedao/reactor";
 import type {
   AttachmentHeader,
+  AttachmentBackendHealth,
+  AttachmentBackendKind,
+  AttachmentDownloadTarget,
   AttachmentMetadata,
   AttachmentResponse,
   AttachmentTransportConfig,
   AttachmentUploadResult,
+  AttachmentUploadTarget,
   Reservation,
   ReserveAttachmentOptions,
   TransportFetchResult,
@@ -291,4 +295,21 @@ export interface IReservationStore {
  */
 export interface IAttachmentUploadFactory {
   createUpload(reservation: Reservation): IAttachmentUpload;
+}
+
+/**
+ * Server-side storage capability boundary. Authorization happens before these
+ * methods are called; actor, policy, and document concepts intentionally do
+ * not cross into the byte-storage backend.
+ */
+export interface IAttachmentBackend {
+  readonly kind: AttachmentBackendKind;
+  prepareUploadTarget(
+    reservation: Reservation,
+  ): Promise<AttachmentUploadTarget>;
+  prepareDownloadTarget(
+    hash: AttachmentHash,
+  ): Promise<AttachmentDownloadTarget>;
+  exists(hash: AttachmentHash): Promise<boolean>;
+  health(): Promise<AttachmentBackendHealth>;
 }
