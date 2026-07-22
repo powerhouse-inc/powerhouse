@@ -81,6 +81,54 @@ const { networkId, chainId, address } = parsePkhDid("did:pkh:eip155:1:0x...");
 const result = await verifyAuthBearerToken(jwt); // false | AuthVerifiedCredential
 ```
 
+## Wallet adapters (in-page sign-in)
+
+`@renown/sdk/wallet` provides pluggable wallet adapters so a host app (e.g.
+Connect) can sign a Renown credential **in-page**, without redirecting to the
+Renown portal. Each adapter is a separate subexport, loaded via dynamic
+`import()` so its wallet libraries are **optional peer dependencies** with zero
+startup cost until a login method is chosen.
+
+| Subexport                | Adapter  | Peer dependencies                                              |
+| ------------------------ | -------- | ------------------------------------------------------------- |
+| `@renown/sdk/wallet/rainbow` | RainbowKit + wagmi (external wallets) | `wagmi`, `@rainbow-me/rainbowkit`, `@tanstack/react-query`, `viem` |
+| `@renown/sdk/wallet/privy`   | Privy (embedded / social / email)     | `@privy-io/react-auth`, `viem`                                |
+| `@renown/sdk/wallet/mock`    | Headless test/dev signer (no UI)      | `viem`                                                        |
+
+Install only the peer deps for the adapters you enable.
+
+> **Host apps should not wire these adapters by hand.** Use the
+> `RenownWalletProvider` + `useRenownLoginMethods` + `useRenownAuth` primitives
+> from `@powerhousedao/reactor-browser/renown`, which handle the activator,
+> lazy-loading, controller merging and login UI wiring. See that package's
+> README ("Renown in-page sign-in"). `resolveAdapters` below is the low-level
+> primitive those build on.
+
+```typescript
+import { resolveAdapters } from "@renown/sdk/wallet";
+
+// Loads ONLY the configured adapters (dynamic import, on demand).
+const adapters = await resolveAdapters({
+  rainbow: { walletConnectProjectId: "..." },
+  privy: { appId: "...", methods: ["google", "email"] },
+});
+```
+
+Each adapter exposes a `Provider` (mount it around the app; it accepts a runtime
+`theme` of `"light" | "dark" | { mode, accentColor?, accentColorForeground? }`)
+and a controller with `connect(method?)`, `disconnect()`, and `getSession()`.
+`connect()` resolves a `WalletSession` (`{ address, chainId, signTypedData }`);
+pass it to `renown.signIn(session)` to write + log in the credential in-page.
+
+**Login methods.** Rainbow supports `wallet`; Privy supports `wallet`, `google`,
+`apple`, `email` (default `["google", "email"]`). Social/email flows run inside
+Privy's own modal (OAuth uses a popup, keeping the page alive) so sign-in
+completes in-page — no full-page redirect.
+
+**Configuration.** Only public identifiers belong in client config: Privy's
+`appId` (and optional `clientId`), and RainbowKit's `walletConnectProjectId`.
+Never put a Privy **App Secret** in browser config — it is server-only.
+
 ## Node.js
 
 For server-side usage, import from `@renown/sdk/node`:
