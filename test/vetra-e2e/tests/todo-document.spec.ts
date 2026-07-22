@@ -418,33 +418,39 @@ test("Install Package in Consumer Project", async ({ browser }) => {
     const settingsModal = page.getByRole("dialog");
     await expect(settingsModal).toBeVisible({ timeout: 10_000 });
 
-    // Package Manager tab is selected by default — verify it's showing
-    const installHeading = page.getByText("Install Package");
-    await expect(installHeading).toBeVisible({ timeout: 10_000 });
+    // Package Manager tab is selected by default — the "Installed" tab of
+    // the two-tab layout is showing.
+    await expect(
+      settingsModal.getByRole("tab", { name: /^Installed/ }),
+    ).toBeVisible({ timeout: 10_000 });
 
-    // Step 7: Install the package using the search autocomplete.
-    // Match the placeholder by prefix so the test keeps passing when the
-    // hint text is extended (e.g. to document name@tag / name@version
-    // support).
-    const searchInput = page.locator('input[placeholder^="Search packages"]');
+    // Step 7: Switch to the Available tab — triggers the lazy GET /packages
+    // fetch against the registry.
+    await settingsModal.getByRole("tab", { name: /^Available/ }).click();
+
+    // Filter the list down to the published package. Match the placeholder
+    // by prefix so the test keeps passing when the hint text is extended.
+    const searchInput = page.locator(
+      'input[placeholder^="Search available packages"]',
+    );
     await expect(searchInput).toBeVisible({ timeout: 10_000 });
-
-    // Type slowly to trigger the debounced search
     await searchInput.click();
     await searchInput.fill("test-package");
 
-    // Wait for the autocomplete popover to show results
-    // The popover content appears inside a [data-radix-popper-content-wrapper]
-    const popoverResult = page.locator("text=test-package-vetra").first();
-    await expect(popoverResult).toBeVisible({ timeout: 30_000 });
+    // The row appears once the registry fetch resolves. Install via the row's
+    // 3-dot dropdown (more reliable than button-in-card selectors).
+    const availablePackageRow = settingsModal
+      .locator("li")
+      .filter({ has: page.locator('h3:has-text("test-package-vetra")') });
+    await expect(availablePackageRow).toBeVisible({ timeout: 30_000 });
 
-    // Click the Install button next to the result inside the popover
-    const installButton = page
-      .locator("div")
-      .filter({ hasText: "test-package-vetra" })
-      .getByRole("button", { name: "Install" });
-    await expect(installButton).toBeVisible({ timeout: 5_000 });
-    await installButton.click();
+    // The row has two buttons: a version picker (first) and the 3-dot menu
+    // (last, top-right). We need the latter.
+    const availableRowDotsButton = availablePackageRow.locator("button").last();
+    await availableRowDotsButton.click();
+    const installMenuItem = page.getByText("Install", { exact: true });
+    await expect(installMenuItem).toBeVisible({ timeout: 10_000 });
+    await installMenuItem.click();
 
     // Wait for installation to complete
     await page.waitForTimeout(5000);
@@ -560,14 +566,11 @@ test("Change registry URL at runtime and install from new registry", async () =>
   const settingsModal = page.getByRole("dialog");
   await expect(settingsModal).toBeVisible({ timeout: 10_000 });
 
-  // The "Installed Packages" section is a collapsible PackageSection; it
-  // starts collapsed so the row isn't in the DOM yet. Click the section
-  // header to expand before looking for the row.
-  const installedSectionToggle = settingsModal.getByRole("button", {
-    name: /^Installed Packages/i,
-  });
-  await expect(installedSectionToggle).toBeVisible({ timeout: 10_000 });
-  await installedSectionToggle.click();
+  // The Package Manager opens on the "Installed" tab by default and its rows
+  // are always in the DOM. Click the tab to make the precondition explicit.
+  const installedTab = settingsModal.getByRole("tab", { name: /^Installed/ });
+  await expect(installedTab).toBeVisible({ timeout: 10_000 });
+  await installedTab.click();
 
   // Find the installed package row by its <h3>name and open its dropdown.
   const installedRow = settingsModal
@@ -743,27 +746,20 @@ test("Change registry URL at runtime and install from new registry", async () =>
 
   // -------------------------------------------------------------------
   // Step 6: Install test-package-vetra from the new registry via the
-  //          "Available Packages" dropdown menu (same pattern as uninstall).
+  //          "Available" tab row dropdown menu (same pattern as uninstall).
   // -------------------------------------------------------------------
-  // We use the Available-section row + dropdown menu rather than the search
-  // popover because the popover's "Install" affordance is a Combobox option,
-  // not a real button — selectors against it have proven flaky and the click
-  // doesn't always reliably trigger the install.
   console.log(
-    "Installing test-package-vetra from new registry via the Available Packages dropdown...",
+    "Installing test-package-vetra from new registry via the Available tab dropdown...",
   );
   await expect(settingsButton).toBeVisible({ timeout: 30_000 });
   await settingsButton.click();
   await expect(settingsModal).toBeVisible({ timeout: 10_000 });
 
-  // Expand the Available Packages section so its rows are in the DOM.
-  // It's "Available Packages 1" because the (just-republished) package shows
-  // up on the new registry but isn't installed yet.
-  const availableToggle = settingsModal.getByRole("button", {
-    name: /^Available Packages\b/i,
-  });
-  await expect(availableToggle).toBeVisible({ timeout: 30_000 });
-  await availableToggle.click();
+  // Switch to the Available tab — triggers the lazy GET /packages fetch
+  // against the NEW registry; the republished package shows up (not installed).
+  const availableTab = settingsModal.getByRole("tab", { name: /^Available/ });
+  await expect(availableTab).toBeVisible({ timeout: 30_000 });
+  await availableTab.click();
 
   const availableRow = settingsModal
     .locator("li")
@@ -785,7 +781,7 @@ test("Change registry URL at runtime and install from new registry", async () =>
   // Installed count rose: before install it's 2 (Common, Local) — Vetra isn't
   // loaded in a production build (studioMode off) — so after install it's 3.
   await expect(
-    settingsModal.getByRole("heading", { name: /Installed Packages 3/i }),
+    settingsModal.getByRole("tab", { name: /^Installed \(3\)/ }),
   ).toBeVisible({ timeout: 60_000 });
 });
 

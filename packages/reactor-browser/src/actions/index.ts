@@ -1,9 +1,11 @@
 export { dispatchActions } from "./dispatch.js";
 export {
   addDocument,
+  addFileWithProgress,
   addFolder,
   deleteNode,
   exportFile,
+  loadFile,
   renameDriveNode,
 } from "./document.js";
 export {

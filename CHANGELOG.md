@@ -1,3 +1,45 @@
+## 6.2.2-dev.11 (2026-07-22)
+
+### 🚀 Features
+
+- **connect:** add configurable PWA overrides via runtime config ([8631799cd](https://github.com/powerhouse-inc/powerhouse/commit/8631799cd))
+- **connect:** implement file handling for PWA, enabling OS-level document imports ([57c4a5e57](https://github.com/powerhouse-inc/powerhouse/commit/57c4a5e57))
+- **connect:** dynamic packages can contribute to the PWA configuration ([da867e21d](https://github.com/powerhouse-inc/powerhouse/commit/da867e21d))
+- **connect:** dynamic packages can contribute to the PWA configuration ([40610d2e7](https://github.com/powerhouse-inc/powerhouse/commit/40610d2e7))
+- **connect:** optimize available packages listing in settings package manager ([9f823e59a](https://github.com/powerhouse-inc/powerhouse/commit/9f823e59a))
+- **connect:** optimize available packages listing in settings package manager ([#2847](https://github.com/powerhouse-inc/powerhouse/pull/2847))
+- **connect:** configurable PWA overrides and OS file handling ([#2823](https://github.com/powerhouse-inc/powerhouse/pull/2823))
+- **ph-cli:** fail build when manifest name mismatches package.json ([4fa2ad1a4](https://github.com/powerhouse-inc/powerhouse/commit/4fa2ad1a4))
+- **ph-cli:** fail build when manifest name mismatches package.json ([#2846](https://github.com/powerhouse-inc/powerhouse/pull/2846))
+
+### 🩹 Fixes
+
+- remove location and drive mode from modal ([e70bd81d4](https://github.com/powerhouse-inc/powerhouse/commit/e70bd81d4))
+- remove vetra drive options and set general drive in last position ([da2b81299](https://github.com/powerhouse-inc/powerhouse/commit/da2b81299))
+- **connect:** linting ([96ec1b990](https://github.com/powerhouse-inc/powerhouse/commit/96ec1b990))
+- **connect:** sort generic drive explorer last in add-drive app options ([813d98892](https://github.com/powerhouse-inc/powerhouse/commit/813d98892))
+- **connect:** stop missing model banner from causing layout overflow ([#2830](https://github.com/powerhouse-inc/powerhouse/issues/2830))
+- **connect:** stop missing model banner from causing layout overflow ([#2844](https://github.com/powerhouse-inc/powerhouse/pull/2844))
+- **design-system:** prevent theme toggle jump in settings modal ([3fe8550f7](https://github.com/powerhouse-inc/powerhouse/commit/3fe8550f7))
+- **design-system:** prevent theme toggle jump in settings modal ([#2842](https://github.com/powerhouse-inc/powerhouse/pull/2842))
+- **powerhouse-vetra-packages:** hide vetra spec documents from generic drive create list ([7df611e80](https://github.com/powerhouse-inc/powerhouse/commit/7df611e80))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+- liberuum
+- Yasiel Cabrera @YasielCabrera
+
+## 6.2.2-dev.10 (2026-07-21)
+
+### 🚀 Features
+
+- **ph-cmd:** run auth commands outside a project ([e657be4a8](https://github.com/powerhouse-inc/powerhouse/commit/e657be4a8))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.2-dev.9 (2026-07-20)
 
 This was a version bump only, there were no code changes.

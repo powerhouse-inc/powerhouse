@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/builder-tools",
-  "version": "6.2.2-dev.9",
+  "version": "6.2.2-dev.11",
   "type": "module",
   "license": "AGPL-3.0-only",
   "publishConfig": {
@@ -37,7 +37,13 @@
     "magic-string": "^0.30.21",
     "vite": "catalog:",
     "vite-plugin-html": "catalog:",
-    "vite-plugin-pwa": "catalog:"
+    "vite-plugin-pwa": "catalog:",
+    "workbox-cacheable-response": "catalog:",
+    "workbox-core": "catalog:",
+    "workbox-expiration": "catalog:",
+    "workbox-precaching": "catalog:",
+    "workbox-routing": "catalog:",
+    "workbox-strategies": "catalog:"
   },
   "devDependencies": {
     "@sentry/vite-plugin": "^4.3.0",

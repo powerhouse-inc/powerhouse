@@ -29,10 +29,17 @@ type SchemaNode = Record<string, unknown> & {
   properties?: Record<string, SchemaNode>;
   items?: SchemaNode;
   oneOf?: SchemaNode[];
+  additionalProperties?: boolean | SchemaNode;
 };
 
 function findInSchema(schema: SchemaNode, key: string): SchemaNode | null {
   if (schema.properties?.[key]) return schema.properties[key];
+  // A map-shaped object (e.g. a file handler's MIME→extensions accept map)
+  // declares its values via a schema-valued additionalProperties instead of
+  // enumerated keys. `additionalProperties: false` stays a coverage failure.
+  if (typeof schema.additionalProperties === "object") {
+    return schema.additionalProperties;
+  }
   if (schema.oneOf) {
     for (const variant of schema.oneOf) {
       const found = findInSchema(variant, key);
@@ -134,6 +141,30 @@ describe("runtime-config schema", () => {
           url: "https://renown.example",
           networkId: "eip155",
           chainId: 1,
+        },
+        pwa: {
+          manifest: {
+            theme_color: "#123456",
+            icons: [{ src: "extra.png", sizes: "48x48" }],
+            file_handlers: [
+              {
+                accept: { "application/x-custom+zip": [".custom"] },
+                icons: [{ src: "custom.png", sizes: "192x192" }],
+                launch_type: "single-client",
+              },
+            ],
+            launch_handler: { client_mode: "focus-existing" },
+          },
+          globPatterns: ["**/*.custom"],
+          maximumFileSizeToCacheInBytes: 32 * 1024 * 1024,
+          runtimeCaching: [
+            {
+              urlPattern: { source: "^https://api\\.example/" },
+              handler: "NetworkFirst",
+              options: { cacheName: "api" },
+            },
+          ],
+          navigateFallbackDenylist: ["/api"],
         },
       },
     });

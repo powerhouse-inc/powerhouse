@@ -1,5 +1,6 @@
 import type { Manifest } from "@powerhousedao/shared";
 import { slimManifest } from "@powerhousedao/shared/registry";
+import type { PackageListItem } from "@powerhousedao/shared/registry";
 import fs from "node:fs";
 import path from "node:path";
 import { compareSemver } from "./semver.js";
@@ -113,6 +114,7 @@ export function loadPackage(
   cdnCachePath: string,
   name: string,
   version?: string,
+  storagePath?: string,
 ): PackageInfo | null {
   const pkgDir = path.join(cdnCachePath, name);
   const versionDir = version
@@ -124,12 +126,38 @@ export function loadPackage(
   if (!manifest) {
     return null;
   }
+  const resolvedName = manifest.name || name;
+  // Include dist-tags/versions so the paginated UI can lazy-load version
+  // metadata for a single package (the list DTO omits them). Falls back to
+  // undefined when storage metadata isn't available.
+  const { distTags, versions } = readPackageMetadata(storagePath, resolvedName);
   return {
-    name: manifest.name || name,
+    name: resolvedName,
     path: `/-/cdn/${name}`,
     manifest,
     documentTypes: getDocumentTypesFromManifest(manifest),
     version: readPackageJsonVersion(manifestDir),
+    distTags,
+    versions,
+  };
+}
+
+/**
+ * Project a full {@link PackageInfo} down to the trimmed shape the paginated
+ * package-listing UI renders per row. Version metadata and documentTypes are
+ * intentionally dropped — the client fetches them on demand.
+ */
+export function toPackageListItem(pkg: PackageInfo): PackageListItem {
+  const publisher = pkg.manifest?.publisher;
+  return {
+    name: pkg.name,
+    path: pkg.path,
+    version: pkg.version,
+    description: pkg.manifest?.description ?? undefined,
+    category: pkg.manifest?.category ?? undefined,
+    publisher: publisher
+      ? { name: publisher.name, url: publisher.url }
+      : undefined,
   };
 }
 

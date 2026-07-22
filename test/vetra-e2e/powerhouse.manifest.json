@@ -1,14 +1,14 @@
 {
+  "name": "test-package-vetra",
+  "description": "",
+  "category": "",
+  "publisher": {
     "name": "",
-    "description": "",
-    "category": "",
-    "publisher": {
-        "name": "",
-        "url": ""
-    },
-    "documentModels": [],
-    "editors": [],
-    "apps": [],
-    "subgraphs": [],
-    "importScripts": []
+    "url": ""
+  },
+  "documentModels": [],
+  "editors": [],
+  "apps": [],
+  "subgraphs": [],
+  "importScripts": []
 }

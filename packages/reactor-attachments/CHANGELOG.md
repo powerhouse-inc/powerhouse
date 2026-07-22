@@ -1,3 +1,17 @@
+## 6.2.2-dev.11 (2026-07-22)
+
+### 🚀 Features
+
+- **connect:** dynamic packages can contribute to the PWA configuration ([da867e21d](https://github.com/powerhouse-inc/powerhouse/commit/da867e21d))
+
+### ❤️ Thank You
+
+- Yasiel Cabrera @YasielCabrera
+
+## 6.2.2-dev.10 (2026-07-21)
+
+This was a version bump only for @powerhousedao/reactor-attachments to align it with other projects, there were no code changes.
+
 ## 6.2.2-dev.9 (2026-07-20)
 
 This was a version bump only for @powerhousedao/reactor-attachments to align it with other projects, there were no code changes.

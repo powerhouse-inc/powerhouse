@@ -133,6 +133,6 @@ export function connectDynamicBasePlugin(
   };
 }
 
-function escapeForRegExp(s: string): string {
+export function escapeForRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

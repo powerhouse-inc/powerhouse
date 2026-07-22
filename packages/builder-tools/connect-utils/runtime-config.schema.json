@@ -283,6 +283,270 @@
               "default": false
             }
           }
+        },
+        "pwa": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Progressive-web-app / service-worker overrides, layered on Connect's built-in PWA defaults at build time. Scalar fields deep-merge (this layer wins); the array members (icons, file_handlers, globs, runtimeCaching and denylist patterns) are additive; maximumFileSizeToCacheInBytes takes the max across contributors. (categories is not set here — it is derived from the manifest's category field.) Only applied when connect.app.offline is true.",
+          "properties": {
+            "manifest": {
+              "type": "object",
+              "additionalProperties": false,
+              "description": "Web-app-manifest field overrides.",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "short_name": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "theme_color": {
+                  "type": "string"
+                },
+                "background_color": {
+                  "type": "string"
+                },
+                "display": {
+                  "type": "string",
+                  "enum": ["fullscreen", "standalone", "minimal-ui", "browser"]
+                },
+                "start_url": {
+                  "type": "string"
+                },
+                "scope": {
+                  "type": "string"
+                },
+                "icons": {
+                  "type": "array",
+                  "description": "Icons appended to the built-in set and de-duplicated by (src, sizes, purpose).",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["src"],
+                    "properties": {
+                      "src": {
+                        "type": "string"
+                      },
+                      "sizes": {
+                        "type": "string"
+                      },
+                      "type": {
+                        "type": "string"
+                      },
+                      "purpose": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                },
+                "file_handlers": {
+                  "type": "array",
+                  "description": "File associations appended after Connect's built-in .phd/.phdm handler and de-duplicated on the whole entry. Entries only declare accepted types; there is no action field, because opening the files requires Connect's own runtime handling, so every handler opens at the app root.",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["accept"],
+                    "properties": {
+                      "accept": {
+                        "type": "object",
+                        "description": "MIME type → file extensions. Each extension must start with '.'; browsers ignore entries without it.",
+                        "additionalProperties": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "pattern": "^\\."
+                          }
+                        }
+                      },
+                      "icons": {
+                        "type": "array",
+                        "description": "OS-level file-type icons.",
+                        "items": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": ["src"],
+                          "properties": {
+                            "src": {
+                              "type": "string"
+                            },
+                            "sizes": {
+                              "type": "string"
+                            },
+                            "type": {
+                              "type": "string"
+                            },
+                            "purpose": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      },
+                      "launch_type": {
+                        "type": "string",
+                        "enum": ["single-client", "multiple-clients"]
+                      }
+                    }
+                  }
+                },
+                "launch_handler": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["client_mode"],
+                  "description": "How the OS launches the app for handled files/links. Connect defaults to focus-existing.",
+                  "properties": {
+                    "client_mode": {
+                      "type": "string",
+                      "enum": [
+                        "auto",
+                        "focus-existing",
+                        "navigate-existing",
+                        "navigate-new"
+                      ]
+                    }
+                  }
+                }
+              }
+            },
+            "globPatterns": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Extra Workbox precache globs, unioned with the built-ins."
+            },
+            "globIgnores": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Extra precache ignore globs, unioned with the built-ins."
+            },
+            "maximumFileSizeToCacheInBytes": {
+              "type": "number",
+              "description": "Raise the precache file-size ceiling. The max across all contributors wins, so no contributor can shrink another's limit."
+            },
+            "runtimeCaching": {
+              "type": "array",
+              "description": "Runtime-caching rules appended after the built-in rules. Workbox is first-match-wins, so these cannot override a built-in rule matching the same URL.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["urlPattern", "handler"],
+                "properties": {
+                  "urlPattern": {
+                    "description": "URL match. A string is matched verbatim by Workbox; { source, flags } is rebuilt into a RegExp at build time.",
+                    "oneOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": ["source"],
+                        "properties": {
+                          "source": {
+                            "type": "string",
+                            "description": "RegExp source."
+                          },
+                          "flags": {
+                            "type": "string",
+                            "description": "RegExp flags (e.g. 'i')."
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  "handler": {
+                    "type": "string",
+                    "enum": [
+                      "CacheFirst",
+                      "CacheOnly",
+                      "NetworkFirst",
+                      "NetworkOnly",
+                      "StaleWhileRevalidate"
+                    ]
+                  },
+                  "method": {
+                    "type": "string",
+                    "enum": ["GET", "POST", "PUT", "DELETE", "HEAD", "PATCH"]
+                  },
+                  "options": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "cacheName": {
+                        "type": "string"
+                      },
+                      "networkTimeoutSeconds": {
+                        "type": "number",
+                        "description": "Seconds a NetworkFirst rule waits for the network before falling back to the cache."
+                      },
+                      "expiration": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                          "maxEntries": {
+                            "type": "number"
+                          },
+                          "maxAgeSeconds": {
+                            "type": "number"
+                          }
+                        }
+                      },
+                      "cacheableResponse": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                          "statuses": {
+                            "type": "array",
+                            "items": {
+                              "type": "number"
+                            }
+                          },
+                          "headers": {
+                            "type": "object",
+                            "additionalProperties": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "navigateFallbackDenylist": {
+              "type": "array",
+              "description": "Extra SPA navigate-fallback denylist patterns, unioned with the built-ins.",
+              "items": {
+                "description": "URL match. A string is matched verbatim by Workbox; { source, flags } is rebuilt into a RegExp at build time.",
+                "oneOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["source"],
+                    "properties": {
+                      "source": {
+                        "type": "string",
+                        "description": "RegExp source."
+                      },
+                      "flags": {
+                        "type": "string",
+                        "description": "RegExp flags (e.g. 'i')."
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
         }
       }
     }
