@@ -436,9 +436,9 @@ Re-judgment walks the affected suffix once, so it costs about as much as loading
 
 ### Semantics
 
-Locally, in `reactor.mutate()`, auth enforcement is preventive. That is, the append condition rejects any decision whose read-set changed before commit, so nothing invalid is committed on this node.
+Locally, in `reactor.mutate()`, auth enforcement is preventive. That is, auth rejection throws an error with no `Operation` recorded.
 
-Across reactors, in `reactor.load()`, it is convergent. This means that a decision invalidated by remote writes is caught by re-judgment when they arrive as new operations. This means that a locally-accepted operation is provisional until the read-set streams settle. Once all replicas hold the same operations, they agree on every verdict, which is the same contract reshuffle already imposes on document state, extended to authorization.
+Across reactors, in `reactor.load()`, this is instead convergent. Auth rejection in a load stores does append an `Operation` and re-emitted in sync. This means that a locally-accepted operation is provisional until the read-set streams settle. Once all replicas hold the same operations, they agree on every verdict, which is the same contract reshuffle already imposes on document state, extended to authorization.
 
 ## Groups
 
