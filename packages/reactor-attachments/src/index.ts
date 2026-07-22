@@ -77,6 +77,21 @@ export {
   type IAttachmentSchemaCompiler,
 } from "./reference-index/index.js";
 export {
+  ATTACHMENT_REFERENCE_MIGRATION_LOCK_TABLE,
+  ATTACHMENT_REFERENCE_MIGRATION_TABLE,
+  ATTACHMENT_REFERENCE_SCHEMA,
+  AttachmentReferenceIndexBuilder,
+  KyselyAttachmentReferenceStore,
+  getAttachmentReferenceMigrationStatus,
+  rollbackAttachmentReferenceMigration,
+  runAttachmentReferenceMigrations,
+  type AttachmentReferenceIndexBuildResult,
+  type AttachmentReferenceInput,
+  type AttachmentReferenceMigrationResult,
+  type IAttachmentReferenceReader,
+  type IAttachmentReferenceWriter,
+} from "./read-models/attachment-reference/index.js";
+export {
   DEFAULT_S3_ATTACHMENT_PREFIX,
   DEFAULT_S3_DOWNLOAD_TTL_SECONDS,
   DEFAULT_S3_UPLOAD_TTL_SECONDS,
