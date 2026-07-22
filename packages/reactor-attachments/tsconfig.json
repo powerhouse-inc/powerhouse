@@ -8,6 +8,9 @@
   "references": [
     {
       "path": "../reactor"
+    },
+    {
+      "path": "../shared"
     }
   ]
 }

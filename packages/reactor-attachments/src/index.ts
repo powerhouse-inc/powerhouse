@@ -72,6 +72,11 @@ export { NullAttachmentTransport } from "./null-attachment-transport.js";
 export { AttachmentBuilder } from "./attachment-builder.js";
 export type { AttachmentBuildResult } from "./attachment-builder.js";
 export {
+  AttachmentSchemaCompiler,
+  type CompiledAttachmentExtractor,
+  type IAttachmentSchemaCompiler,
+} from "./reference-index/index.js";
+export {
   DEFAULT_S3_ATTACHMENT_PREFIX,
   DEFAULT_S3_DOWNLOAD_TTL_SECONDS,
   DEFAULT_S3_UPLOAD_TTL_SECONDS,
