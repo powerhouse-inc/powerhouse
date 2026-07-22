@@ -71,3 +71,19 @@ export {
 export { NullAttachmentTransport } from "./null-attachment-transport.js";
 export { AttachmentBuilder } from "./attachment-builder.js";
 export type { AttachmentBuildResult } from "./attachment-builder.js";
+export {
+  DEFAULT_S3_ATTACHMENT_PREFIX,
+  DEFAULT_S3_DOWNLOAD_TTL_SECONDS,
+  DEFAULT_S3_UPLOAD_TTL_SECONDS,
+  MAX_S3_PRESIGN_TTL_SECONDS,
+  S3AttachmentPrimitives,
+  createS3AttachmentPrimitives,
+  deriveS3AttachmentKey,
+  normalizeS3AttachmentPrefix,
+  parseAttachmentStorageConfig,
+  sha256HexToBase64,
+  type AttachmentStorageConfig,
+  type S3AttachmentConfig,
+  type S3CommandClient,
+  type S3Presigner,
+} from "./storage/s3/index.js";

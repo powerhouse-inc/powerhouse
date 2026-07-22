@@ -31,9 +31,12 @@
     "tsc": "tsc",
     "lint": "eslint",
     "build": "tsdown",
-    "test": "vitest --run"
+    "test": "vitest --run",
+    "verify:s3-compatibility": "tsx scripts/verify-s3-compatibility.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "catalog:",
+    "@aws-sdk/s3-request-presigner": "catalog:",
     "@powerhousedao/reactor": "workspace:*",
     "kysely": "catalog:"
   },
@@ -41,6 +44,7 @@
     "@electric-sql/pglite": "catalog:",
     "kysely-pglite-dialect": "catalog:",
     "tsdown": "catalog:",
+    "tsx": "catalog:",
     "vitest": "catalog:"
   },
   "description": "Content-addressed attachment service for the Powerhouse reactor — decouples large binaries from the action pipeline using opaque refs.",
