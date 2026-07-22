@@ -21,6 +21,14 @@ const account = privateKeyToAccount(KEY_1);
 const sign: SignCredentialTypedData = (args) =>
   account.signTypedData(args as Parameters<typeof account.signTypedData>[0]);
 
+// Extract the request URL as a string across the fetch input union.
+const toUrl = (input: string | URL | Request): string =>
+  typeof input === "string"
+    ? input
+    : input instanceof URL
+      ? input.href
+      : input.url;
+
 describe("credential", () => {
   it("builds, signs, and verifies a credential round-trip", async () => {
     const credential = await buildAndSignCredential({
@@ -92,10 +100,15 @@ describe("fetchDelegationCredential", () => {
       appId: APP_DID,
     });
 
+  // Route the discovery probe to a 404 (no switchboard advertised) so these
+  // tests exercise the REST fallback; a fresh Response per call avoids reuse.
   const mockFetch = (body: unknown, status = 200) =>
-    vi
-      .spyOn(globalThis, "fetch")
-      .mockResolvedValue(new Response(JSON.stringify(body), { status }));
+    vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
+      if (toUrl(input).includes("/api/switchboard")) {
+        return Promise.resolve(new Response("Not found", { status: 404 }));
+      }
+      return Promise.resolve(new Response(JSON.stringify(body), { status }));
+    });
 
   afterEach(() => vi.restoreAllMocks());
 
@@ -199,6 +212,109 @@ describe("fetchDelegationCredential", () => {
       baseUrl: BASE,
       verifySignature: false,
     });
+    expect(result?.credentialSubject.id).toBe(APP_DID);
+  });
+
+  const SB = "http://sb.test/graphql";
+
+  // Flatten a signed credential into the `renownCredentials` read-model row.
+  const toFlatRow = (c: Awaited<ReturnType<typeof validCredential>>) => ({
+    documentId: "doc-1",
+    credentialId: c.id,
+    context: c["@context"],
+    type: c.type,
+    issuerId: c.issuer.id,
+    issuerEthereumAddress: c.issuer.ethereumAddress,
+    issuanceDate: c.issuanceDate,
+    expirationDate: c.expirationDate,
+    credentialSubjectId: c.credentialSubject.id,
+    credentialSubjectApp: c.credentialSubject.app,
+    credentialStatusId: null,
+    credentialStatusType: null,
+    credentialSchemaId: c.credentialSchema.id,
+    credentialSchemaType: c.credentialSchema.type,
+    proofVerificationMethod: c.proof.verificationMethod,
+    proofEthereumAddress: c.proof.ethereumAddress,
+    proofCreated: c.proof.created,
+    proofPurpose: c.proof.proofPurpose,
+    proofType: c.proof.type,
+    proofValue: c.proof.proofValue,
+    proofEip712Domain: JSON.stringify(c.proof.eip712.domain),
+    proofEip712PrimaryType: c.proof.eip712.primaryType,
+    revoked: false,
+  });
+
+  // Route discovery + switchboard GraphQL responses by URL.
+  const mockSwitchboard = (rows: unknown[], endpoint?: string) =>
+    vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
+      if (toUrl(input).includes("/api/switchboard")) {
+        return Promise.resolve(
+          new Response(JSON.stringify({ endpoint }), { status: 200 }),
+        );
+      }
+      return Promise.resolve(
+        new Response(JSON.stringify({ data: { renownCredentials: rows } }), {
+          status: 200,
+        }),
+      );
+    });
+
+  it("reads from the switchboard when an explicit endpoint is given", async () => {
+    mockSwitchboard([toFlatRow(await validCredential())]);
+    const result = await fetchDelegationCredential({
+      address: account.address,
+      chainId: 1,
+      appDid: APP_DID,
+      switchboardUrl: SB,
+    });
+    expect(result?.credentialSubject.id).toBe(APP_DID);
+  });
+
+  it("uses the switchboard when discovery advertises an endpoint", async () => {
+    mockSwitchboard([toFlatRow(await validCredential())], SB);
+    const result = await fetchDelegationCredential({
+      address: account.address,
+      chainId: 1,
+      appDid: APP_DID,
+      baseUrl: BASE,
+    });
+    expect(result?.credentialSubject.id).toBe(APP_DID);
+  });
+
+  it("re-verifies the signature on the switchboard path", async () => {
+    const credential = await validCredential();
+    credential.proof.proofValue = "0xdeadbeef";
+    mockSwitchboard([toFlatRow(credential)]);
+    const result = await fetchDelegationCredential({
+      address: account.address,
+      chainId: 1,
+      appDid: APP_DID,
+      switchboardUrl: SB,
+    });
+    expect(result).toBeUndefined();
+  });
+
+  it("skips the discovery probe and uses REST when discover is false", async () => {
+    const probe = vi.fn();
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      if (toUrl(input).includes("/api/switchboard")) {
+        probe();
+        return new Response(JSON.stringify({ endpoint: SB }), { status: 200 });
+      }
+      return new Response(
+        JSON.stringify({ credential: await validCredential() }),
+        { status: 200 },
+      );
+    });
+    const result = await fetchDelegationCredential({
+      address: account.address,
+      chainId: 1,
+      appDid: APP_DID,
+      baseUrl: BASE,
+      discover: false,
+    });
+    // Discovery was never probed even though an endpoint was available.
+    expect(probe).not.toHaveBeenCalled();
     expect(result?.credentialSubject.id).toBe(APP_DID);
   });
 });

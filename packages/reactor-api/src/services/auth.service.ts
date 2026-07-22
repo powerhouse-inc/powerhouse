@@ -1,14 +1,24 @@
-import { fetchDelegationCredential, verifyAuthBearerToken } from "@renown/sdk";
+import { verifyAuthBearerToken } from "@renown/sdk";
 
 type VerifiedCredential =
   Awaited<ReturnType<typeof verifyAuthBearerToken>> extends false | infer T
     ? T
     : never;
+
+// Confirms an authenticated signer's credential is still valid. Injected so
+// AuthService stays agnostic to how/where credentials are verified.
+export type CredentialVerifier = (params: {
+  address: string;
+  chainId: number;
+  appId: string;
+}) => Promise<boolean>;
+
 export interface AuthConfig {
   enabled: boolean;
   admins: string[];
   skipCredentialVerification?: boolean; // DANGER: removes identity verification; boot-gated to test/dev
   credentialVerificationCacheTtlMs?: number; // How long successful Renown credential checks are cached; 0 disables caching
+  verifyCredential?: CredentialVerifier; // Injected credential check; required when verification is on
 }
 
 const DEFAULT_CREDENTIAL_CACHE_TTL_MS = 60_000;
@@ -251,18 +261,18 @@ export class AuthService {
     }
   }
 
-  // Confirm the Renown credential exists and binds this address/chain to the
-  // app DID (shared SDK helper; also re-verifies the EIP-712 proof).
+  // Confirm the signer's credential is still valid via the injected verifier.
+  // Reached only when verification is on, so a missing verifier is misconfig.
   private async fetchCredentialExists(
     address: string,
     chainId: number,
     appId: string,
   ): Promise<boolean> {
-    const credential = await fetchDelegationCredential({
-      address,
-      chainId,
-      appDid: appId,
-    });
-    return credential !== undefined;
+    if (!this.config.verifyCredential) {
+      throw new Error(
+        "AuthService: credential verification is enabled but no verifyCredential was provided",
+      );
+    }
+    return this.config.verifyCredential({ address, chainId, appId });
   }
 }

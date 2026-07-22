@@ -14,6 +14,7 @@ export * from "./src/packages/import-loader.js";
 export * from "./src/packages/package-manager.js";
 export * from "./src/server.js";
 export * from "./src/services/auth.service.js";
+export * from "./src/services/renown-credential-verifier.js";
 export * from "./src/services/document-permission.service.js";
 export * from "./src/services/package-management.service.js";
 export * from "./src/services/package-storage.js";

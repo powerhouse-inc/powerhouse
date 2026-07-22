@@ -13,12 +13,14 @@ export interface RenownInitOptions {
    */
   namespace?: string;
   url?: string;
+  switchboardUrl?: string;
 }
 
 async function initRenown(
   appName: string,
   namespace: string | undefined,
   url: string | undefined,
+  switchboardUrl: string | undefined,
 ): Promise<IRenown> {
   addRenownEventHandler();
   setRenown(loading);
@@ -26,6 +28,7 @@ async function initRenown(
   const builder = new RenownBuilder(appName, {
     basename: namespace,
     baseUrl: url,
+    switchboardUrl,
   });
   const renown = await builder.build();
   setRenown(renown);
@@ -52,6 +55,7 @@ export function useRenownInit({
   appName,
   namespace,
   url,
+  switchboardUrl,
 }: RenownInitOptions): Promise<IRenown> {
   // Stable promise returned every render; resolved later by the init effect.
   const promiseRef = useRef<PromiseWithResolvers<IRenown> | null>(null);
@@ -65,7 +69,7 @@ export function useRenownInit({
     if (initRef.current) return;
     initRef.current = true;
 
-    initRenown(appName, namespace, url)
+    initRenown(appName, namespace, url, switchboardUrl)
       .then(promiseRef.current!.resolve)
       .catch(promiseRef.current!.reject);
   }, []);

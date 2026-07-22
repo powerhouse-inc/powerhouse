@@ -13,6 +13,8 @@ export interface BrowserRenownBuilderOptions {
   basename?: string;
   /** Renown server URL. Defaults to https://www.renown.id */
   baseUrl?: string;
+  /** Switchboard GraphQL endpoint for the direct-to-reactor flow. */
+  switchboardUrl?: string;
   /** IndexedDB database name for key storage. Defaults to "renownKeyDB" */
   keyDbName?: string;
 }
@@ -37,6 +39,9 @@ export class RenownBuilder extends BaseRenownBuilder {
     this.withEventEmitter(new BrowserRenownEventEmitter());
     if (options.baseUrl) {
       this.withBaseUrl(options.baseUrl);
+    }
+    if (options.switchboardUrl) {
+      this.withSwitchboardUrl(options.switchboardUrl);
     }
   }
 
