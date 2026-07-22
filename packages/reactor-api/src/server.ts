@@ -13,7 +13,10 @@ import type {
   ProcessorRecord as ReactorProcessorRecord,
 } from "@powerhousedao/reactor";
 import { AttachmentBuilder } from "@powerhousedao/reactor-attachments";
-import type { AttachmentBuildResult } from "@powerhousedao/reactor-attachments";
+import type {
+  AttachmentBuildResult,
+  AttachmentDatabase,
+} from "@powerhousedao/reactor-attachments";
 import { createAttachmentClient } from "@powerhousedao/reactor-attachments/client";
 import { setupMcpServer } from "@powerhousedao/reactor-mcp";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
@@ -32,6 +35,7 @@ import {
 } from "@powerhousedao/shared/processors";
 import { childLogger, type ILogger } from "document-model";
 import { config, DefaultCoreSubgraphs } from "./config.js";
+import { createStartupAttachmentBackend } from "./attachment-backend.js";
 import { AuthSubgraph } from "./graphql/auth/subgraph.js";
 import {
   createAuthFetchMiddleware,
@@ -613,12 +617,15 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   } = getDbClient(options.dbPath, options.pgliteFactory);
   dbClosers.push(...makeDbClosers(attachmentKnex, attachmentPglite));
   const ATTACHMENT_SWEEP_INTERVAL_MS = 60 * 60 * 1000; // hourly
-  const attachments = await new AttachmentBuilder(
+  const attachmentBackend = await createStartupAttachmentBackend({
+    db: attachmentDb as Kysely<AttachmentDatabase>,
+  });
+  const attachmentBuilder = new AttachmentBuilder(
     attachmentDb,
     attachmentStoragePath,
-  )
-    .withReservationSweepMs(ATTACHMENT_SWEEP_INTERVAL_MS)
-    .build();
+  ).withReservationSweepMs(ATTACHMENT_SWEEP_INTERVAL_MS);
+  if (attachmentBackend) attachmentBuilder.withBackend(attachmentBackend);
+  const attachments: AttachmentBuildResult = await attachmentBuilder.build();
   dbClosers.push(() => {
     attachments.destroy();
     return Promise.resolve();

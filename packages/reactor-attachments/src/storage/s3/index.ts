@@ -15,3 +15,9 @@ export {
   type S3CommandClient,
   type S3Presigner,
 } from "./primitives.js";
+export {
+  S3AttachmentBackend,
+  createS3AttachmentBackend,
+  type S3AttachmentBackendDependencies,
+} from "./backend.js";
+export { S3AttachmentUploadFactory } from "./upload-factory.js";

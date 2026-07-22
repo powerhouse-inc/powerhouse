@@ -89,6 +89,9 @@ export interface IAttachmentUpload {
    */
   readonly expiresAtUtc: string;
 
+  /** Direct transfer target returned by target-capable server backends. */
+  readonly uploadTarget?: AttachmentUploadTarget;
+
   /**
    * Stream attachment data through this handle.
    *

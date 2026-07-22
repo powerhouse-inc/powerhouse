@@ -200,6 +200,7 @@ export function makeReserveHandler(attachments: AttachmentBuildResult) {
       reservationId: upload.reservationId,
       ref: upload.ref,
       expiresAtUtc: upload.expiresAtUtc,
+      ...(upload.uploadTarget ? { uploadTarget: upload.uploadTarget } : {}),
     });
   };
 }
@@ -209,6 +210,10 @@ export function makeUploadHandler(attachments: AttachmentBuildResult) {
     const reservationId = extractParam(req, "reservationId");
     if (!reservationId) {
       sendError(res, 400, "Missing reservationId");
+      return;
+    }
+    if (attachments.backend?.kind === "s3") {
+      sendError(res, 405, "Use the reservation uploadTarget for S3 uploads");
       return;
     }
 

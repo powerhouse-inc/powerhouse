@@ -32,7 +32,10 @@ export {
   DEFAULT_S3_DOWNLOAD_TTL_SECONDS,
   DEFAULT_S3_UPLOAD_TTL_SECONDS,
   MAX_S3_PRESIGN_TTL_SECONDS,
+  S3AttachmentBackend,
+  S3AttachmentUploadFactory,
   S3AttachmentPrimitives,
+  createS3AttachmentBackend,
   createS3AttachmentPrimitives,
   deriveS3AttachmentKey,
   normalizeS3AttachmentPrefix,
@@ -72,6 +75,7 @@ export {
   type AttachmentBuildResult,
   type AttachmentStorageConfig,
   type S3AttachmentConfig,
+  type S3AttachmentBackendDependencies,
   type S3CommandClient,
   type S3Presigner,
 } from "./src/index.js";

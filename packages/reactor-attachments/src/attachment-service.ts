@@ -6,6 +6,7 @@ import {
 } from "./errors.js";
 import type {
   IAttachmentReader,
+  IAttachmentBackend,
   IAttachmentService,
   IAttachmentUpload,
   IAttachmentUploadFactory,
@@ -25,11 +26,15 @@ export class AttachmentService implements IAttachmentService {
     private readonly store: IAttachmentReader,
     private readonly reservations: IReservationStore,
     private readonly uploadFactory: IAttachmentUploadFactory,
+    private readonly backend?: IAttachmentBackend,
   ) {}
 
   async reserve(options: ReserveAttachmentOptions): Promise<IAttachmentUpload> {
     if (options.clientHash !== undefined) {
       return this.reserveHashFirst(options);
+    }
+    if (this.backend?.kind === "s3") {
+      throw new Error("S3 attachment reservations require a client hash");
     }
     const reservation = await this.reservations.create(options);
     return this.uploadFactory.createUpload(reservation);
@@ -85,11 +90,21 @@ export class AttachmentService implements IAttachmentService {
       }
     }
 
-    if (existingHeader !== null && existingHeader.status === "available") {
-      throw new AttachmentAlreadyExists(normalized, createRef(normalized));
+    if (existingHeader !== null) {
+      if (this.backend?.kind === "s3") {
+        if (await this.backend.exists(normalized)) {
+          throw new AttachmentAlreadyExists(normalized, createRef(normalized));
+        }
+      } else if (existingHeader.status === "available") {
+        throw new AttachmentAlreadyExists(normalized, createRef(normalized));
+      }
     }
 
     const reservation = await this.reservations.create(normalizedOptions);
-    return this.uploadFactory.createUpload(reservation);
+    if (this.backend?.kind !== "s3") {
+      return this.uploadFactory.createUpload(reservation);
+    }
+    const uploadTarget = await this.backend.prepareUploadTarget(reservation);
+    return this.uploadFactory.createUpload({ ...reservation, uploadTarget });
   }
 }

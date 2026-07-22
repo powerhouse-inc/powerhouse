@@ -4,6 +4,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 export type NodeHandler = (
   req: IncomingMessage,
   res: ServerResponse,
+  body?: unknown,
 ) => Promise<void> | void;
 
 /**
@@ -16,7 +17,7 @@ export function requireAuth(
 ): NodeHandler {
   if (!authService) return handler;
 
-  return async (req, res) => {
+  return async (req, res, body) => {
     let result;
     try {
       result = await authService.verifyBearer(req.headers.authorization);
@@ -43,6 +44,10 @@ export function requireAuth(
       return;
     }
 
-    await handler(req, res);
+    if (body === undefined) {
+      await handler(req, res);
+    } else {
+      await handler(req, res, body);
+    }
   };
 }

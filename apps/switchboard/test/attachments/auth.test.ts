@@ -170,6 +170,25 @@ describe("requireAuth", () => {
     expect(res._headers["content-type"]).toBeUndefined();
   });
 
+  it("forwards the adapter-parsed body after successful authentication", async () => {
+    const { service } = makeAuthService(() =>
+      Promise.resolve({
+        user: { address: "0x123", chainId: 1, networkId: "mainnet" },
+        admins: [],
+        auth_enabled: true,
+      }),
+    );
+    const handler = vi.fn<NodeHandler>();
+    const wrapped = requireAuth(service, handler);
+    const req = makeReq({ headers: { authorization: "Bearer good-token" } });
+    const res = makeRes();
+    const body = { mimeType: "application/pdf" };
+
+    await wrapped(req, res, body);
+
+    expect(handler).toHaveBeenCalledWith(req, res, body);
+  });
+
   it("returns 500 with a sanitized body when AuthService throws", async () => {
     const { service } = makeAuthService(async () => {
       await Promise.resolve();

@@ -1,5 +1,6 @@
 import type { Kysely } from "kysely";
 import type {
+  IAttachmentBackend,
   IAttachmentTransport,
   IAttachmentUploadFactory,
 } from "./interfaces.js";
@@ -13,12 +14,15 @@ import {
   ATTACHMENT_SCHEMA,
 } from "./storage/migrations/migrator.js";
 import { NullAttachmentTransport } from "./null-attachment-transport.js";
+import { S3AttachmentUploadFactory } from "./storage/s3/upload-factory.js";
 
 export type AttachmentBuildResult = {
   service: AttachmentService;
   store: KyselyAttachmentStore;
   reservations: KyselyReservationStore;
   uploadFactory: IAttachmentUploadFactory;
+  /** Selected direct-transfer backend, when startup configured one. */
+  backend?: IAttachmentBackend;
   /** Stops the reservation sweep timer, if one was configured via withReservationSweepMs(). */
   destroy: () => void;
 };
@@ -28,6 +32,7 @@ export class AttachmentBuilder {
   private customUploadFactory?: IAttachmentUploadFactory;
   private maxUploadBytes?: number;
   private reservationSweepMs?: number;
+  private backend?: IAttachmentBackend;
 
   constructor(
     private readonly db: Kysely<any>,
@@ -41,6 +46,11 @@ export class AttachmentBuilder {
 
   withUploadFactory(factory: IAttachmentUploadFactory): this {
     this.customUploadFactory = factory;
+    return this;
+  }
+
+  withBackend(backend: IAttachmentBackend): this {
+    this.backend = backend;
     return this;
   }
 
@@ -81,14 +91,21 @@ export class AttachmentBuilder {
 
     const uploadFactory =
       this.customUploadFactory ??
-      new DirectAttachmentUploadFactory(
-        scopedDb,
-        this.storagePath,
-        reservations,
-        this.maxUploadBytes,
-      );
+      (this.backend?.kind === "s3"
+        ? new S3AttachmentUploadFactory()
+        : new DirectAttachmentUploadFactory(
+            scopedDb,
+            this.storagePath,
+            reservations,
+            this.maxUploadBytes,
+          ));
 
-    const service = new AttachmentService(store, reservations, uploadFactory);
+    const service = new AttachmentService(
+      store,
+      reservations,
+      uploadFactory,
+      this.backend,
+    );
 
     let sweepTimer: ReturnType<typeof setInterval> | undefined;
     if (this.reservationSweepMs !== undefined) {
@@ -110,6 +127,13 @@ export class AttachmentBuilder {
       }
     };
 
-    return { service, store, reservations, uploadFactory, destroy };
+    return {
+      service,
+      store,
+      reservations,
+      uploadFactory,
+      ...(this.backend ? { backend: this.backend } : {}),
+      destroy,
+    };
   }
 }
