@@ -16,6 +16,8 @@ export interface NodeRenownBuilderOptions {
   keyPath?: string;
   /** Renown server URL. Defaults to https://www.renown.id */
   baseUrl?: string;
+  /** Switchboard GraphQL endpoint for the direct-to-reactor flow. */
+  switchboardUrl?: string;
 }
 
 /**
@@ -34,6 +36,7 @@ export class RenownBuilder extends BaseRenownBuilder {
       storagePath = DEFAULT_RENOWN_STORAGE_PATH,
       keyPath,
       baseUrl,
+      switchboardUrl,
     } = options;
 
     this.withKeyPairStorage(new NodeKeyStorage(keyPath));
@@ -41,6 +44,9 @@ export class RenownBuilder extends BaseRenownBuilder {
     this.withEventEmitter(new NodeRenownEventEmitter());
     if (baseUrl) {
       this.withBaseUrl(baseUrl);
+    }
+    if (switchboardUrl) {
+      this.withSwitchboardUrl(switchboardUrl);
     }
   }
 }
