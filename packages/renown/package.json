@@ -31,6 +31,30 @@
       "types": "./dist/crypto.d.ts",
       "import": "./dist/crypto.js",
       "default": "./dist/crypto.js"
+    },
+    "./wallet": {
+      "source": "./src/wallet/index.ts",
+      "types": "./dist/wallet/index.d.ts",
+      "import": "./dist/wallet/index.js",
+      "default": "./dist/wallet/index.js"
+    },
+    "./wallet/rainbow": {
+      "source": "./src/wallet/rainbow/index.ts",
+      "types": "./dist/wallet/rainbow/index.d.ts",
+      "import": "./dist/wallet/rainbow/index.js",
+      "default": "./dist/wallet/rainbow/index.js"
+    },
+    "./wallet/privy": {
+      "source": "./src/wallet/privy/index.ts",
+      "types": "./dist/wallet/privy/index.d.ts",
+      "import": "./dist/wallet/privy/index.js",
+      "default": "./dist/wallet/privy/index.js"
+    },
+    "./wallet/mock": {
+      "source": "./src/wallet/mock/index.ts",
+      "types": "./dist/wallet/mock/index.d.ts",
+      "import": "./dist/wallet/mock/index.js",
+      "default": "./dist/wallet/mock/index.js"
     }
   },
   "types": "./dist/index.d.ts",
@@ -51,8 +75,14 @@
     "lint": "eslint"
   },
   "devDependencies": {
+    "@privy-io/react-auth": "^3.25.0",
+    "@rainbow-me/rainbowkit": "^2.2.11",
+    "@tanstack/react-query": "^5.90.2",
+    "@types/react": "catalog:",
+    "react": ">=19",
     "tsdown": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "wagmi": "^2.19.5"
   },
   "dependencies": {
     "@didtools/key-webcrypto": "^0.2.0",
@@ -62,6 +92,30 @@
     "key-did-resolver": "^4.0.0",
     "uint8arrays": "^5.1.0",
     "viem": "~2.50.4"
+  },
+  "peerDependencies": {
+    "@privy-io/react-auth": "^3.25.0",
+    "@rainbow-me/rainbowkit": "^2.2.11",
+    "@tanstack/react-query": "^5.90.2",
+    "react": ">=19",
+    "wagmi": "^2.19.5"
+  },
+  "peerDependenciesMeta": {
+    "@privy-io/react-auth": {
+      "optional": true
+    },
+    "@rainbow-me/rainbowkit": {
+      "optional": true
+    },
+    "@tanstack/react-query": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    },
+    "wagmi": {
+      "optional": true
+    }
   },
   "keywords": [
     "powerhouse",
