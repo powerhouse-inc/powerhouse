@@ -1,71 +1,96 @@
-import { AccountPopoverLogin } from "@powerhousedao/design-system/connect";
+import { Icon } from "@powerhousedao/design-system";
 import { Modal } from "@powerhousedao/design-system";
+import { RenownLoginMethods } from "@powerhousedao/design-system/connect";
 import {
   closePHModal,
   usePHModal,
   useUser,
 } from "@powerhousedao/reactor-browser";
-import React, { useLayoutEffect, useState } from "react";
+import React, { useLayoutEffect, useMemo } from "react";
 import { useRenownLoginProps } from "../../../hooks/use-renown-login.js";
 
-// Fixed-position style anchoring the card to the right of a rect (the sidebar
-// login button), with its bottom aligned to the button's bottom.
-type AnchorStyle = Pick<React.CSSProperties, "position" | "left" | "bottom">;
-
-function measureAnchor(): AnchorStyle | undefined {
-  if (typeof document === "undefined") return undefined;
-  const btn = document.querySelector('#sidebar [aria-label="Log in"]');
-  if (!btn) return undefined;
-  const rect = btn.getBoundingClientRect();
-  return {
-    position: "fixed",
-    left: rect.right + 12,
-    bottom: window.innerHeight - rect.bottom,
-  };
-}
-
-// Login popover opened via showPHModal({ type: "login" }); renders the shared
-// branded card + feedback and closes once the user is authenticated.
+// The single login surface, opened via showPHModal({ type: "login" }). Matches
+// the other modals' chrome (title + close, rounded-2xl, p-6).
 export const LoginModal: React.FC = () => {
   const phModal = usePHModal();
   const user = useUser();
-  const loginProps = useRenownLoginProps();
+  const {
+    methods: baseMethods,
+    onLogin,
+    loading,
+    error,
+  } = useRenownLoginProps();
   const open = phModal?.type === "login";
-  const [anchor, setAnchor] = useState<AnchorStyle | undefined>(undefined);
 
-  // Anchor next to the sidebar login button (recomputed on resize); falls back
-  // to centered if the button isn't found.
-  useLayoutEffect(() => {
-    if (!open) return;
-    const update = () => setAnchor(measureAnchor());
-    update();
-    window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
-  }, [open]);
+  // A method that opens its own modal (wallet/Privy) closes this one first, so
+  // the two surfaces never overlap.
+  const methods = useMemo(
+    () =>
+      baseMethods?.map((method) => ({
+        ...method,
+        onSelect: () => {
+          closePHModal();
+          method.onSelect();
+        },
+      })),
+    [baseMethods],
+  );
 
   useLayoutEffect(() => {
     if (open && user) closePHModal();
   }, [open, user]);
 
-  // modal={false} + non-dismiss-on-outside so the wallet adapter's own modal (a
-  // sibling portal, e.g. RainbowKit) stays interactive on top of this one.
+  const hasMethods = !!methods && methods.length > 0;
+
   return (
     <Modal
-      modal={false}
       open={open}
       onOpenChange={(next) => {
         if (!next) closePHModal();
       }}
       title="Log in"
-      overlayProps={{ className: "pointer-events-none bg-transparent" }}
-      contentProps={{
-        className: "w-64 max-w-[calc(100vw-2rem)]",
-        style: anchor,
-        onInteractOutside: (e) => e.preventDefault(),
-        onPointerDownOutside: (e) => e.preventDefault(),
-      }}
+      contentProps={{ className: "rounded-2xl" }}
     >
-      <AccountPopoverLogin {...loginProps} />
+      <div className="w-96 max-w-[calc(100vw-2rem)] rounded-2xl bg-background p-6 text-foreground">
+        <div className="mb-6 flex items-center justify-between">
+          <h1 className="text-xl font-bold text-foreground">Log in</h1>
+          <button
+            type="button"
+            aria-label="Close"
+            onClick={() => closePHModal()}
+            className="flex size-8 items-center justify-center rounded-md bg-muted text-muted-foreground outline-none hover:hover-effect"
+          >
+            <Icon name="Xmark" size={20} />
+          </button>
+        </div>
+        {hasMethods ? (
+          <RenownLoginMethods
+            methods={methods}
+            loading={loading}
+            error={error}
+          />
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={onLogin}
+              disabled={loading}
+              className="flex h-10 w-full items-center justify-center rounded-lg bg-primary text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/85 active:active-effect disabled:cursor-wait disabled:opacity-60"
+            >
+              {loading ? (
+                <Icon name="Reload" size={14} className="animate-spin" />
+              ) : (
+                <span>Connect</span>
+              )}
+            </button>
+            {error ? (
+              <p className="mt-2 text-center text-xs text-destructive">
+                {error}
+              </p>
+            ) : null}
+          </>
+        )}
+      </div>
     </Modal>
   );
 };
