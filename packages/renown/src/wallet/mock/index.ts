@@ -1,9 +1,9 @@
 import { privateKeyToAccount } from "viem/accounts";
 import type { ComponentType, ReactNode } from "react";
 import type { SignCredentialTypedData } from "../../credential.js";
+import type { LoginMethod } from "../types.js";
 import {
   DEFAULT_MOCK_METHODS,
-  LoginMethod,
   type WalletAdapter,
   type WalletController,
   type WalletSession,

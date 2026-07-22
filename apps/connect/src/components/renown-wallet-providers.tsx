@@ -25,17 +25,26 @@ export function RenownWalletProviders({ children }: { children: ReactNode }) {
     | undefined;
   const { theme } = useTheme();
 
-  const walletTheme = useMemo<WalletTheme>(
-    () => ({
-      mode: theme,
-      accentColor: resolveColor("var(--primary)", "#0084ff"),
-      accentColorForeground: resolveColor(
-        "var(--primary-foreground)",
-        "#ffffff",
-      ),
-    }),
-    [theme],
+  // Resolve colors (forced style reads) only when an adapter is configured,
+  // so a wallet-less deployment does no probing work at mount.
+  const walletTheme = useMemo<WalletTheme | undefined>(
+    () =>
+      adapters
+        ? {
+            mode: theme,
+            accentColor: resolveColor("var(--primary)", "#0084ff"),
+            accentColorForeground: resolveColor(
+              "var(--primary-foreground)",
+              "#ffffff",
+            ),
+          }
+        : undefined,
+    [theme, adapters],
   );
+
+  // No adapters configured: the provider's activator/effects are inert, so skip
+  // it entirely and keep the wallet controller module off the render path.
+  if (!adapters) return <>{children}</>;
 
   return (
     <RenownWalletProvider adapters={adapters} theme={walletTheme}>

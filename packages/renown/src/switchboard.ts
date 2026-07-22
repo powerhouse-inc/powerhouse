@@ -1,4 +1,7 @@
-import { createAction, type Action } from "@powerhousedao/shared/document-model";
+import {
+  createAction,
+  type Action,
+} from "@powerhousedao/shared/document-model";
 import { CREDENTIAL_TYPES } from "./constants.js";
 import type {
   PowerhouseVerifiableCredential,
@@ -347,7 +350,9 @@ export class SwitchboardClient {
   ): Promise<string> {
     const updates: Action[] = [];
     if (profile.username !== undefined) {
-      updates.push(createAction("SET_USERNAME", { username: profile.username }));
+      updates.push(
+        createAction("SET_USERNAME", { username: profile.username }),
+      );
     }
     if (profile.userImage !== undefined) {
       updates.push(

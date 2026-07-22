@@ -110,8 +110,12 @@ export const BOILERPLATE_ALLOWED_BUILDS = [
   "@apollo/protobufjs",
   "@datadog/pprof",
   "@parcel/watcher",
+  "@reown/appkit",
+  "bufferutil",
   "esbuild",
+  "keccak",
   "protobufjs",
+  "utf-8-validate",
 ] as const;
 
 // pnpm `overrides` written into the generated project's pnpm-workspace.yaml to

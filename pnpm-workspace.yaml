@@ -149,10 +149,13 @@ allowBuilds:
   "prisma": true
   "protobufjs": true
   "oxfmt": true
+  "sharp": true
   "unrs-resolver": true
   "utf-8-validate": true
   aws-sdk: true
   esbuild: true
+  '@reown/appkit': true
+  sqlite3: false
 overrides:
   axios: ">=1.15.0"
   defu: ">=6.1.5"
@@ -160,3 +163,7 @@ overrides:
   express-rate-limit@>=8: ">=8.2.2"
   picomatch@>=4: ">=4.0.4"
   picomatch@<4: ">=2.3.2"
+  zod@<3.25.0: "3.25.76"
+  # Dedupe the viem v2 tree to a single copy (Privy pins the highest, 2.52.0).
+  # v1.x (via @didtools/cacao) is a different major and left untouched.
+  viem@>=2 <3: "2.52.0"
