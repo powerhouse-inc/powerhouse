@@ -60,6 +60,17 @@ Store in sessionStorage
 Update auth state → Authorized
 ```
 
+#### In-page sign-in (wallet adapters)
+
+The redirect above is the default. A host app can instead sign in **in-page** by
+configuring a Switchboard URL and one or more wallet adapters (RainbowKit for
+external wallets, Privy for social/email). The user picks a method inside the
+app, signs the credential with the resulting wallet session, and `renown.signIn(session)`
+writes and logs it in — no redirect. It falls back to the redirect flow when no
+switchboard/adapter is available. See
+[Renown authentication flow → In-page sign-in in Connect](../../../03-Build/03-BuildingUserExperiences/07-Authorization/01-RenownAuthenticationFlow.md)
+and the `@renown/sdk/wallet` section of the SDK README for configuration.
+
 ### 3. Session Restoration
 
 ```

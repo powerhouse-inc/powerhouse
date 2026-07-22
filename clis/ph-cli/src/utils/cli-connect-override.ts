@@ -47,6 +47,7 @@ export type ConnectFlagInput = {
   renownNetworkId?: string | undefined;
   renownChainId?: number | undefined;
   renownNamespace?: string | undefined;
+  renownSwitchboardUrl?: string | undefined;
   allowAddDrive?: boolean | undefined;
   externalPackages?: boolean | undefined;
   remoteDrivesEnabled?: boolean | undefined;
@@ -144,6 +145,7 @@ export function buildConnectFlagPatch(args: ConnectFlagInput): PlainObject {
   setIfDefined(renown, "networkId", args.renownNetworkId);
   setIfDefined(renown, "chainId", args.renownChainId);
   setIfDefined(renown, "namespace", args.renownNamespace);
+  setIfDefined(renown, "switchboardUrl", args.renownSwitchboardUrl);
   if (Object.keys(renown).length > 0) out.renown = renown;
 
   const packages: PlainObject = {};
@@ -225,6 +227,7 @@ export function buildCliConnectOverride(args: ConnectBuildArgs): {
     renownNetworkId: args.renownNetworkId,
     renownChainId: args.renownChainId,
     renownNamespace: args.renownNamespace,
+    renownSwitchboardUrl: args.renownSwitchboardUrl,
     allowAddDrive: args.allowAddDrive,
     externalPackages: args.externalPackages,
     remoteDrivesEnabled: args.remoteDrivesEnabled,

@@ -184,6 +184,13 @@ export const renownNamespace = option({
     "Renown localStorage namespace; share it across Connects to share login.",
 });
 
+export const renownSwitchboardUrl = option({
+  type: optional(string),
+  long: "renown-switchboard-url",
+  description:
+    "Override connect.renown.switchboardUrl. When set, enables in-page Renown sign-in.",
+});
+
 export const drivesPreserveStrategy = option({
   type: oneOf(DRIVES_PRESERVE_STRATEGIES),
   long: "drive-preserve-strategy",

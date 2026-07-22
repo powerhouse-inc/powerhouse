@@ -8,4 +8,12 @@ export {
   type RenownAuthStatus,
 } from "./use-renown-auth.js";
 export { useRenownInit, type RenownInitOptions } from "./use-renown-init.js";
+export {
+  RenownWalletProvider,
+  type RenownWalletProviderProps,
+} from "./wallet-provider.js";
+export {
+  useRenownLoginMethods,
+  type RenownLoginMethod,
+} from "./login-methods.js";
 export * from "./utils.js";

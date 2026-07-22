@@ -9,7 +9,6 @@ import {
 
 import {
   logout,
-  openRenown,
   setSelectedDrive,
   showPHModal,
   useIsAddDriveEnabled,
@@ -51,7 +50,7 @@ export function Sidebar() {
         onClick={() => setSelectedDrive(undefined)}
         onClickSettings={onClickSettings}
         address={user?.address}
-        onLogin={openRenown}
+        onLogin={() => showPHModal({ type: "login" })}
         onDisconnect={() => {
           void logout();
         }}
