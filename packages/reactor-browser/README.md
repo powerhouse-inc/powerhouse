@@ -9,6 +9,7 @@ This document contains all documentation comments for the hooks exported from `p
 - [Config: Editor](#config-editor)
 - [Config: Set Config by Object](#config-set-config-by-object)
 - [Config: Use Value by Key](#config-use-value-by-key)
+- [Renown in-page sign-in](#renown-in-page-sign-in)
 - [Document by ID](#document-by-id)
 - [Document Cache](#document-cache)
 - [Document of Type](#document-of-type)
@@ -507,3 +508,109 @@ Strongly typed, inferred from type definition for the key.
 Gets the value of an item in the global document config for a given key.
 
 Strongly typed, inferred from type definition for the key.
+
+---
+
+## Renown in-page sign-in
+
+Let users authenticate with Renown **inside your app** — no redirect to the
+Renown portal — using pluggable wallet adapters (RainbowKit for external
+wallets, Privy for social/email). This is the same integration Connect and the
+`test-fusion` app use. Import from `@powerhousedao/reactor-browser/renown` (or
+the package root).
+
+### Setup (3 steps)
+
+**1. Initialize the SDK** — render `<Renown>` once, high in your tree, with your
+switchboard URL (enables in-page sign-in; without it the flow redirects):
+
+```tsx
+import { Renown } from "@powerhousedao/reactor-browser/renown";
+
+<Renown
+  appName="my-app"
+  namespace="my-app"
+  switchboardUrl="https://switchboard.example/graphql"
+/>;
+```
+
+**2. Mount `RenownWalletProvider`** around your app, passing the adapters config.
+Adapters and their libraries load lazily on the first login click — nothing
+wallet-related is imported at startup. Install only the peer deps you enable
+(see the `@renown/sdk` README "Wallet adapters"):
+
+```tsx
+import { RenownWalletProvider } from "@powerhousedao/reactor-browser/renown";
+
+<RenownWalletProvider
+  adapters={{
+    rainbow: { walletConnectProjectId: "..." },
+    privy: { appId: "...", methods: ["google", "email"] },
+  }}
+  theme="light" // or "dark" | { mode, accentColor?, accentColorForeground? }
+>
+  <App />
+</RenownWalletProvider>;
+```
+
+**3. Build the login UI** with `useRenownLoginMethods` (derives the button list
+from the same config) and `useRenownAuth` (login + user state):
+
+```tsx
+import {
+  useRenownAuth,
+  useRenownLoginMethods,
+} from "@powerhousedao/reactor-browser/renown";
+
+function Login({ adapters }) {
+  const { user, login, pending, error, logout } = useRenownAuth();
+  const methods = useRenownLoginMethods(adapters);
+  if (user) return <button onClick={() => void logout()}>Log out</button>;
+  return (
+    <>
+      {methods.map((m) => (
+        <button key={m.id} disabled={pending} onClick={() => login(undefined, m.id)}>
+          {m.label}
+        </button>
+      ))}
+      {error ? <p>{error.message}</p> : null}
+    </>
+  );
+}
+```
+
+`login(session?, method?)` activates the adapters on click, routes `method` to
+the adapter that supports it, produces a `WalletSession`, and completes the
+Renown credential sign-in via the switchboard — falling back to the redirect
+flow when no switchboard/adapter is available.
+
+### `RenownWalletProvider`
+
+Registers the login activator, lazy-mounts the configured adapters, and merges
+them into one controller for `useRenownAuth`. The wallet Provider tree wraps
+only the adapter bridges (each library's modal portals to `<body>`), never your
+`children`, so activating login never remounts your app. Props: `adapters`
+(config), `theme?`, `children`.
+
+### `useRenownLoginMethods(adapters, labels?)`
+
+Returns `{ id, label }[]` — one per configured login method (wallet + Privy
+methods, deduped) — reading config only (no wallet libraries load). Override
+labels via the second argument. Wire each to `login(undefined, id)`.
+
+### Testing (mock adapter)
+
+For e2e/dev, enable the **mock adapter** (`@renown/sdk/wallet/mock`) via the
+`mock` key. It's a headless signer backed by a viem local account — real EIP-712
+signatures, **no wallet extension or OAuth** — so sign-in runs deterministically
+in CI. **TEST/DEV ONLY; never enable in production** (it signs with a known key).
+
+```tsx
+<RenownWalletProvider adapters={{ mock: { methods: ["wallet", "google", "email"] } }}>
+  <App />
+</RenownWalletProvider>
+```
+
+See `test/test-fusion/e2e` (Playwright + mock adapter) and `test/vetra-e2e`
+(Connect login surface) for runnable examples, and the Powerhouse Academy
+"Renown authentication flow" guide for the full walkthrough.

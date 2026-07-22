@@ -117,7 +117,25 @@
     "vite-tsconfig-paths": "catalog:"
   },
   "peerDependencies": {
+    "@privy-io/react-auth": "^3.25.0",
+    "@rainbow-me/rainbowkit": "^2.2.11",
+    "@tanstack/react-query": "^5.90.2",
     "react": ">=19.0.0",
-    "react-dom": ">=19.0.0"
+    "react-dom": ">=19.0.0",
+    "wagmi": "2.19.5"
+  },
+  "peerDependenciesMeta": {
+    "@privy-io/react-auth": {
+      "optional": true
+    },
+    "@rainbow-me/rainbowkit": {
+      "optional": true
+    },
+    "@tanstack/react-query": {
+      "optional": true
+    },
+    "wagmi": {
+      "optional": true
+    }
   }
 }

@@ -131,6 +131,8 @@ function argsToFlagInput(args: ConnectConfigArgs): ConnectFlagInput {
     renownUrl: args.renownUrl,
     renownNetworkId: args.renownNetworkId,
     renownChainId: args.renownChainId,
+    renownNamespace: args.renownNamespace,
+    renownSwitchboardUrl: args.renownSwitchboardUrl,
     allowAddDrive: args.allowAddDrive,
     externalPackages: args.externalPackages,
     remoteDrivesEnabled: args.remoteDrivesEnabled,

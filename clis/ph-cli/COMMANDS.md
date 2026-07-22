@@ -523,6 +523,10 @@ Override connect.renown.chainId.<br><br>
 Renown localStorage namespace; share it across Connects to share login.<br><br>
 **usage:** `--renown-namespace <str>`<br>
 
+#### Renown Switchboard Url <br>
+Override connect.renown.switchboardUrl. When set, enables in-page Renown sign-in.<br><br>
+**usage:** `--renown-switchboard-url <str>`<br>
+
 #### Allow Add Drive <br>
 Override connect.drives.allowAddDrive (top-level add-drive toggle).<br><br>
 **usage:** `--allow-add-drive <value>`<br>

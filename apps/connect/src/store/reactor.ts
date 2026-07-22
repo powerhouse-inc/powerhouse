@@ -237,6 +237,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
       getRuntimeConfig().connect.renown?.namespace ??
       phGlobalConfig.routerBasename,
     baseUrl: phGlobalConfig.renownUrl,
+    switchboardUrl: phGlobalConfig.switchboardUrl,
   })
     .withCrypto(renownCrypto)
     .build();

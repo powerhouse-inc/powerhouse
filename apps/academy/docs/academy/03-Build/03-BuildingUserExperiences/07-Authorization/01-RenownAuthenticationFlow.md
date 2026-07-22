@@ -65,6 +65,86 @@ Renown is designed to address the challenge of trust within DAOs, where contribu
 - The operation is then either approved or rejected based on the verification results.
 - Approved operations are processed, and changes made within the Connect system are synchronized across the relevant nodes.
 
+### In-page sign-in in Connect (wallet adapters)
+
+By default, Connect authenticates by **redirecting** the user to the Renown portal to connect a wallet and mint the credential, then returning to the app. Connect can also sign in **in-page** — the user picks a login method inside Connect, signs the credential there, and it is written and logged in via Switchboard without ever leaving the app.
+
+In-page sign-in is opt-in and configured entirely through `powerhouse.config.json`:
+
+- **`connect.renown.switchboardUrl`** — the Switchboard GraphQL endpoint. When set, Connect attempts in-page sign-in; if it is absent (or no wallet session can be produced) Connect falls back to the redirect flow automatically, so nothing breaks when it is left unset.
+- **`connect.renown.adapters`** — selects the wallet adapters that power in-page sign-in. Presence of a key enables that adapter:
+  - **`rainbow`** (`{ walletConnectProjectId }`) — external wallets via RainbowKit + wagmi.
+  - **`privy`** (`{ appId, clientId?, methods? }`) — embedded wallets plus social / email login via Privy. `methods` defaults to `["google", "email"]`.
+
+```json
+"renown": {
+  "url": "https://www.renown.id",
+  "switchboardUrl": "https://switchboard.example/graphql",
+  "adapters": {
+    "rainbow": { "walletConnectProjectId": "..." },
+    "privy": { "appId": "...", "methods": ["google", "email"] }
+  }
+}
+```
+
+Each adapter's wallet libraries are optional peer dependencies, dynamically imported only on the first login click — so enabling in-page auth adds nothing to startup cost. Install the peer dependencies for the adapters you enable (see the Renown SDK `README`). Social and email login run inside Privy's own modal (OAuth in a popup, so the page stays alive and sign-in completes in-page). Only **public** identifiers belong in the config — a Privy **App Secret** is server-only and must never be placed in `powerhouse.config.json`. Each social/email method must be enabled in the Privy dashboard, with Connect's origin allowlisted.
+
+### Adding in-page sign-in to your own app
+
+Connect wires this through configuration, but any React app can add the same in-page sign-in using the primitives in `@powerhousedao/reactor-browser/renown`. There are three steps:
+
+1. **Initialize the SDK** — render `<Renown appName namespace switchboardUrl />` once, high in your tree. The `switchboardUrl` enables in-page sign-in; omit it to fall back to the redirect flow.
+2. **Mount `<RenownWalletProvider adapters={…} theme={…}>`** around your app. It registers the login activator, lazy-loads the configured adapters on the first click, and merges them into one controller. The adapter libraries are optional peer dependencies loaded on demand — nothing wallet-related runs at startup.
+3. **Build the login UI** with `useRenownLoginMethods(adapters)` (derives the button list from the same config) and `useRenownAuth()` (`login(session?, method?)`, `user`, `pending`, `error`, `logout`). Call `login(undefined, method.id)` per button.
+
+```tsx
+import {
+  Renown,
+  RenownWalletProvider,
+  useRenownAuth,
+  useRenownLoginMethods,
+} from "@powerhousedao/reactor-browser/renown";
+
+const adapters = {
+  rainbow: { walletConnectProjectId: "..." },
+  privy: { appId: "...", methods: ["google", "email"] },
+};
+
+function Providers({ children }) {
+  return (
+    <>
+      <Renown appName="my-app" switchboardUrl="https://switchboard.example/graphql" />
+      <RenownWalletProvider adapters={adapters} theme="light">
+        {children}
+      </RenownWalletProvider>
+    </>
+  );
+}
+
+function Login() {
+  const { user, login, pending, logout } = useRenownAuth();
+  const methods = useRenownLoginMethods(adapters);
+  if (user) return <button onClick={() => void logout()}>Log out</button>;
+  return methods.map((m) => (
+    <button key={m.id} disabled={pending} onClick={() => login(undefined, m.id)}>
+      {m.label}
+    </button>
+  ));
+}
+```
+
+In Next.js / SSR apps, load this subtree client-only (e.g. `next/dynamic` with `ssr: false`), since the wallet libraries are browser-only. A complete Next.js reference lives in the monorepo at `test/test-fusion`. See the `@powerhousedao/reactor-browser` README ("Renown in-page sign-in") for the full API.
+
+### Testing sign-in (mock adapter)
+
+Real wallets and Google OAuth can't run in headless CI, so `@renown/sdk` ships a **mock wallet adapter** (`@renown/sdk/wallet/mock`) for e2e/dev. Enable it via the `mock` key and it becomes a headless signer backed by a local key (real EIP-712 signatures, no wallet extension or OAuth), so sign-in runs deterministically:
+
+```tsx
+<RenownWalletProvider adapters={{ mock: { methods: ["wallet", "google", "email"] } }}>
+```
+
+It is **TEST/DEV only** — it signs with a well-known key and must never be enabled in production. Runnable Playwright examples: `test/test-fusion/e2e` (full mock sign-in flow) and `test/vetra-e2e` (Connect login surface).
+
 :::info
 **Key Components used during login-flow**
 
