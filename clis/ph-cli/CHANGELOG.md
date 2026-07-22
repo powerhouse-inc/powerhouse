@@ -1,3 +1,14 @@
+## 6.2.2-dev.11 (2026-07-22)
+
+### 🚀 Features
+
+- **ph-cli:** fail build when manifest name mismatches package.json ([4fa2ad1a4](https://github.com/powerhouse-inc/powerhouse/commit/4fa2ad1a4))
+- **connect:** dynamic packages can contribute to the PWA configuration ([da867e21d](https://github.com/powerhouse-inc/powerhouse/commit/da867e21d))
+
+### ❤️ Thank You
+
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.2-dev.10 (2026-07-21)
 
 This was a version bump only for @powerhousedao/ph-cli to align it with other projects, there were no code changes.

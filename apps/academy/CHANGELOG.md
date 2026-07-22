@@ -1,3 +1,16 @@
+## 6.2.2-dev.11 (2026-07-22)
+
+### 🚀 Features
+
+- **connect:** dynamic packages can contribute to the PWA configuration ([40610d2e7](https://github.com/powerhouse-inc/powerhouse/commit/40610d2e7))
+- **connect:** dynamic packages can contribute to the PWA configuration ([da867e21d](https://github.com/powerhouse-inc/powerhouse/commit/da867e21d))
+- **connect:** implement file handling for PWA, enabling OS-level document imports ([57c4a5e57](https://github.com/powerhouse-inc/powerhouse/commit/57c4a5e57))
+- **connect:** add configurable PWA overrides via runtime config ([8631799cd](https://github.com/powerhouse-inc/powerhouse/commit/8631799cd))
+
+### ❤️ Thank You
+
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.2-dev.10 (2026-07-21)
 
 This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.
