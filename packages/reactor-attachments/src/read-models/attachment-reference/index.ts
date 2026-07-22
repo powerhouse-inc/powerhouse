@@ -2,6 +2,10 @@ export {
   AttachmentReferenceIndexBuilder,
   type AttachmentReferenceIndexBuildResult,
 } from "./index-builder.js";
+export {
+  ATTACHMENT_REFERENCE_READ_MODEL_ID,
+  AttachmentReferenceReadModel,
+} from "./attachment-reference-read-model.js";
 export { KyselyAttachmentReferenceStore } from "./kysely-attachment-reference-store.js";
 export type {
   AttachmentReferenceInput,

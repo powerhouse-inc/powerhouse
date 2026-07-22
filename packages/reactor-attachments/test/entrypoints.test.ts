@@ -8,6 +8,10 @@ describe("package export surfaces", () => {
     expect(packageRoot.parseAttachmentDownloadTarget).toBeTypeOf("function");
     expect(packageRoot.FilesystemAttachmentBackend).toBeTypeOf("function");
     expect(packageRoot.AttachmentSchemaCompiler).toBeTypeOf("function");
+    expect(packageRoot.AttachmentReferenceReadModel).toBeTypeOf("function");
+    expect(packageRoot.ATTACHMENT_REFERENCE_READ_MODEL_ID).toBe(
+      "attachment-reference-read-model",
+    );
   });
 
   it("exposes target parsers but no server backend from the client entry", () => {
@@ -15,5 +19,6 @@ describe("package export surfaces", () => {
     expect(clientEntry.parseAttachmentDownloadTarget).toBeTypeOf("function");
     expect("FilesystemAttachmentBackend" in clientEntry).toBe(false);
     expect("AttachmentSchemaCompiler" in clientEntry).toBe(false);
+    expect("AttachmentReferenceReadModel" in clientEntry).toBe(false);
   });
 });
