@@ -163,8 +163,49 @@ function isUnknownExecuteField(error: unknown): boolean {
   );
 }
 
+// Dedicated renown-package mutations that write through the reactor client,
+// bypassing the authorization policy so unauthenticated sign-in can bootstrap.
+const ISSUE_CREDENTIAL_MUTATION = /* GraphQL */ `
+  mutation RenownIssueCredential(
+    $input: RenownCredential_InitInput!
+    $username: String
+    $userImage: String
+    $userDocId: PHID
+  ) {
+    renown_issueCredential(
+      input: $input
+      username: $username
+      userImage: $userImage
+      userDocId: $userDocId
+    )
+  }
+`;
+
 const RENOWN_CREDENTIAL_DOC_TYPE = "powerhouse/renown-credential";
 const RENOWN_USER_DOC_TYPE = "powerhouse/renown-user";
+
+// GraphQL validation-error fragments meaning the switchboard's schema lacks a
+// field/type — i.e. it runs an older renown-package without the custom subgraph.
+const SCHEMA_ERROR_HINTS = [
+  "Cannot query field",
+  "Unknown field",
+  "Unknown type",
+  "Unknown argument",
+  "not defined",
+];
+
+// True when `error` is a schema-shape error naming one of `identifiers` — a
+// missing custom mutation/input, not a resolver rejection (bad signature, etc.).
+function isUnknownSchemaError(
+  error: unknown,
+  ...identifiers: string[]
+): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return (
+    identifiers.some((id) => message.includes(id)) &&
+    SCHEMA_ERROR_HINTS.some((hint) => message.includes(hint))
+  );
+}
 
 // Rebuild the nested EIP-712 verifiable credential from a flat read-model row.
 function reshapeCredential(
@@ -254,11 +295,18 @@ function issuedTo(
   );
 }
 
+/** Per-request options: `token` is a Renown bearer token that authenticates
+ * the request (sent as `Authorization: Bearer <token>` over HTTP). */
+export interface SwitchboardRequestOptions {
+  token?: string;
+}
+
 /** Runs a GraphQL document against a Switchboard and resolves its `data`;
  * throws on transport or GraphQL errors. */
 export type SwitchboardRequestFn = (
   query: string,
   variables: Record<string, unknown>,
+  options?: SwitchboardRequestOptions,
 ) => Promise<unknown>;
 
 /** Where a SwitchboardClient reads from: an HTTP endpoint or a local executor. */
@@ -275,8 +323,8 @@ export class SwitchboardClient {
   constructor(source: SwitchboardSource) {
     if (typeof source === "string") {
       this.#endpoint = source;
-      this.#transport = (query, variables) =>
-        this.#post(source, query, variables);
+      this.#transport = (query, variables, options) =>
+        this.#post(source, query, variables, options?.token);
     } else {
       this.#transport = source;
     }
@@ -291,10 +339,14 @@ export class SwitchboardClient {
     endpoint: string,
     query: string,
     variables: Record<string, unknown>,
+    token?: string,
   ): Promise<unknown> {
     const response = await fetch(endpoint, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
       body: JSON.stringify({ query, variables }),
     });
     /* A validation failure comes back as 400 WITH a GraphQL error body, so read
@@ -316,8 +368,11 @@ export class SwitchboardClient {
   async #request<T>(
     query: string,
     variables: Record<string, unknown>,
+    token?: string,
   ): Promise<T> {
-    const data = await this.#transport(query, variables);
+    const data = await (token
+      ? this.#transport(query, variables, { token })
+      : this.#transport(query, variables));
     if (!data) {
       throw new Error("Switchboard returned no data");
     }
@@ -414,27 +469,35 @@ export class SwitchboardClient {
   }
 
   // Create an empty document of the given type; returns its document id.
+  // Pass a bearer token to authenticate the write when auth is enabled.
   async createEmptyDocument(
     documentType: string,
     parentIdentifier?: string,
+    token?: string,
   ): Promise<string> {
     const { createEmptyDocument } = await this.#request<{
       createEmptyDocument: { id: string };
-    }>(CREATE_EMPTY_DOCUMENT_MUTATION, { documentType, parentIdentifier });
+    }>(
+      CREATE_EMPTY_DOCUMENT_MUTATION,
+      { documentType, parentIdentifier },
+      token,
+    );
     return createEmptyDocument.id;
   }
 
   // Apply reactor action envelopes to a document; returns its document id.
+  // Pass a bearer token to authenticate the write when auth is enabled.
   async mutateDocument(
     documentIdentifier: string,
     actions: Action[],
+    token?: string,
   ): Promise<string> {
     const variables = { documentIdentifier, actions };
     if (!this.#legacyMutate) {
       try {
         const { mutateDocument } = await this.#request<{
           mutateDocument: { id: string };
-        }>(MUTATE_DOCUMENT_MUTATION, variables);
+        }>(MUTATE_DOCUMENT_MUTATION, variables, token);
         return mutateDocument.id;
       } catch (error) {
         if (!isUnknownExecuteField(error)) throw error;
@@ -443,19 +506,16 @@ export class SwitchboardClient {
     }
     const { mutateDocument } = await this.#request<{
       mutateDocument: { id: string };
-    }>(LEGACY_MUTATE_DOCUMENT_MUTATION, variables);
+    }>(LEGACY_MUTATE_DOCUMENT_MUTATION, variables, token);
     return mutateDocument.id;
   }
 
-  // Issue a signed credential: create a renown-credential doc and INIT it.
+  // Issue a signed credential via the renown-package `renown_issueCredential`
+  // mutation, which validates the proof and writes without requiring auth.
   async issueCredential(
     credential: PowerhouseVerifiableCredential,
     parentIdentifier?: string,
   ): Promise<string> {
-    const documentId = await this.createEmptyDocument(
-      RENOWN_CREDENTIAL_DOC_TYPE,
-      parentIdentifier,
-    );
     const input: Record<string, unknown> = {
       id: credential.id,
       context: credential["@context"],
@@ -490,22 +550,47 @@ export class SwitchboardClient {
         },
       },
     };
-    await this.mutateDocument(documentId, [createAction("INIT", input)]);
-    return documentId;
+    try {
+      const { renown_issueCredential } = await this.#request<{
+        renown_issueCredential: string;
+      }>(ISSUE_CREDENTIAL_MUTATION, { input });
+      return renown_issueCredential;
+    } catch (error) {
+      // Fallback for a switchboard on an older renown-package without the
+      // issuance subgraph: write via the generic reactor mutations instead.
+      if (
+        !isUnknownSchemaError(
+          error,
+          "renown_issueCredential",
+          "RenownCredential_InitInput",
+        )
+      ) {
+        throw error;
+      }
+      const documentId = await this.createEmptyDocument(
+        RENOWN_CREDENTIAL_DOC_TYPE,
+        parentIdentifier,
+      );
+      await this.mutateDocument(documentId, [createAction("INIT", input)]);
+      return documentId;
+    }
   }
 
-  // Find the RenownUser for an address or create one; returns its document id.
-  async findOrCreateUser(
+  // Create or update the RenownUser profile for an address. Pass a bearer token
+  // so the switchboard authorizes the write as that address (prevents spoofing).
+  async upsertUserProfile(
     address: string,
-    profile: { username?: string; userImage?: string } = {},
+    profile: { username?: string; userImage?: string },
+    options: { token?: string } = {},
   ): Promise<string> {
+    const { token } = options;
     const updates: Action[] = [];
-    if (profile.username !== undefined) {
+    if (profile.username != null) {
       updates.push(
         createAction("SET_USERNAME", { username: profile.username }),
       );
     }
-    if (profile.userImage !== undefined) {
+    if (profile.userImage != null) {
       updates.push(
         createAction("SET_USER_IMAGE", { userImage: profile.userImage }),
       );
@@ -514,15 +599,20 @@ export class SwitchboardClient {
     const existing = await this.getProfileByAddress(address);
     if (existing) {
       if (updates.length)
-        await this.mutateDocument(existing.documentId, updates);
+        await this.mutateDocument(existing.documentId, updates, token);
       return existing.documentId;
     }
 
-    const documentId = await this.createEmptyDocument(RENOWN_USER_DOC_TYPE);
-    await this.mutateDocument(documentId, [
-      createAction("SET_ETH_ADDRESS", { ethAddress: address }),
-      ...updates,
-    ]);
+    const documentId = await this.createEmptyDocument(
+      RENOWN_USER_DOC_TYPE,
+      undefined,
+      token,
+    );
+    await this.mutateDocument(
+      documentId,
+      [createAction("SET_ETH_ADDRESS", { ethAddress: address }), ...updates],
+      token,
+    );
     return documentId;
   }
 
