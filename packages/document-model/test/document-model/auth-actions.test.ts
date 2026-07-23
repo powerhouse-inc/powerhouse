@@ -5,11 +5,7 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import {
   AuthActionNotAllowedError,
-  AuthAlreadyInitializedError,
-  AuthInitializerNotCreatorError,
-  GrantNotFoundError,
   initializeAuth,
-  InvalidAuthVersionError,
   isAuthAction,
   moveGrant,
   removeGrant,
@@ -128,9 +124,12 @@ describe("auth-scope reducer", () => {
     expect(doc.state.auth.creator).toBe(CREATOR_DID);
   });
 
-  it("rejects INITIALIZE_AUTH signed by a non-creator", () => {
-    expect(() => countReducer(signedDocument, signedInit(OTHER_DID))).toThrow(
-      AuthInitializerNotCreatorError,
+  it("records an error operation for INITIALIZE_AUTH signed by a non-creator", () => {
+    const doc = countReducer(signedDocument, signedInit(OTHER_DID));
+    expect(doc.state.auth).toStrictEqual({ version: 0, grants: [] });
+    expect(doc.operations.auth).toHaveLength(1);
+    expect(doc.operations.auth[0].error).toContain(
+      "must be signed by the document creator",
     );
   });
 
@@ -146,8 +145,8 @@ describe("auth-scope reducer", () => {
   it("rejects INITIALIZE_AUTH with a version below 1 (0 means uninitialized)", () => {
     expect(() => initializeAuth({ version: 0, grants: [] })).toThrow();
 
-    // a raw action that bypassed the creator's schema is still rejected by the
-    // reducer itself, deterministically on every replica
+    // a raw action that bypassed the creator's schema is recorded as an error
+    // operation by the reducer itself, deterministically on every replica
     const raw: Action = {
       id: "act-init-v0",
       type: "INITIALIZE_AUTH",
@@ -155,19 +154,22 @@ describe("auth-scope reducer", () => {
       input: { version: 0, grants: [] },
       timestampUtcMs: "2024-01-01T00:00:00Z",
     };
-    expect(() => countReducer(initialDocument, raw)).toThrow(
-      InvalidAuthVersionError,
+    const doc = countReducer(initialDocument, raw);
+    expect(doc.state.auth).toStrictEqual({ version: 0, grants: [] });
+    expect(doc.operations.auth[0].error).toContain(
+      "requires an integer version >= 1",
     );
   });
 
-  it("rejects a second INITIALIZE_AUTH", () => {
+  it("records an error operation for a second INITIALIZE_AUTH", () => {
     const doc = countReducer(
       initialDocument,
       initializeAuth({ version: 1, grants: [] }),
     );
-    expect(() =>
-      countReducer(doc, initializeAuth({ version: 2, grants: [] })),
-    ).toThrow(AuthAlreadyInitializedError);
+    const next = countReducer(doc, initializeAuth({ version: 2, grants: [] }));
+    expect(next.state.auth).toStrictEqual({ version: 1, grants: [] });
+    expect(next.operations.auth).toHaveLength(2);
+    expect(next.operations.auth[1].error).toContain("already initialized");
   });
 
   it("SET_GRANT appends a new grant and replaces an existing one in place", () => {
@@ -186,16 +188,18 @@ describe("auth-scope reducer", () => {
     expect(doc.state.auth.grants[1].description).toBe("updated");
   });
 
-  it("REMOVE_GRANT deletes by id and throws for an unknown id", () => {
+  it("REMOVE_GRANT deletes by id and records an error operation for an unknown id", () => {
     let doc = countReducer(
       initialDocument,
       initializeAuth({ version: 1, grants: [makeGrant("a"), makeGrant("b")] }),
     );
     doc = countReducer(doc, removeGrant({ id: "a" }));
     expect(ids(doc)).toEqual(["b"]);
-    expect(() => countReducer(doc, removeGrant({ id: "zzz" }))).toThrow(
-      GrantNotFoundError,
-    );
+
+    const next = countReducer(doc, removeGrant({ id: "zzz" }));
+    expect(ids(next)).toEqual(["b"]);
+    const ops = next.operations.auth;
+    expect(ops[ops.length - 1].error).toContain("Grant not found");
   });
 
   it("MOVE_GRANT reorders a grant, clamps the index, and throws for an unknown id", () => {
@@ -212,9 +216,10 @@ describe("auth-scope reducer", () => {
     doc = countReducer(doc, moveGrant({ id: "c", index: 99 }));
     expect(ids(doc)).toEqual(["a", "b", "c"]);
 
-    expect(() => countReducer(doc, moveGrant({ id: "zzz", index: 0 }))).toThrow(
-      GrantNotFoundError,
-    );
+    const next = countReducer(doc, moveGrant({ id: "zzz", index: 0 }));
+    expect(ids(next)).toEqual(["a", "b", "c"]);
+    const ops = next.operations.auth;
+    expect(ops[ops.length - 1].error).toContain("Grant not found");
   });
 
   it("rejects UNDO, REDO and PRUNE on the auth scope", () => {
@@ -227,6 +232,29 @@ describe("auth-scope reducer", () => {
     expect(() =>
       countReducer(initialDocument, rawAction("REDO", "auth")),
     ).toThrow(AuthActionNotAllowedError);
+  });
+
+  it("replays a history containing an errored auth operation without throwing", () => {
+    let doc = countReducer(
+      initialDocument,
+      initializeAuth({ version: 1, grants: [makeGrant("a")] }),
+    );
+    doc = countReducer(doc, initializeAuth({ version: 2, grants: [] }));
+    expect(doc.operations.auth[1].error).toBeTruthy();
+
+    const replayed = replayDocument(
+      initialState,
+      doc.operations,
+      countReducer,
+      doc.header,
+      undefined,
+      undefined,
+      { checkHashes: false },
+    );
+
+    expect(replayed.state.auth).toStrictEqual(doc.state.auth);
+    expect(replayed.state.auth.version).toBe(1);
+    expect(replayed.operations.auth[1].error).toBeTruthy();
   });
 
   it("replays auth operations to reconstruct the auth state with matching hashes", () => {

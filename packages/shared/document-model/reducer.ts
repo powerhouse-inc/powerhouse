@@ -552,17 +552,18 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
   // mutation bugs and allow writing reducers with
   // mutating code
   newDocument = create(newDocument, (draft) => {
-    // Auth-scope actions are applied by the dedicated auth handler
-    if (_action.scope === "auth") {
-      const authState = applyAuthAction(newDocument, _action).state;
-      unsafe(() => {
-        draft.state = castDraft(authState);
-      });
-      return;
-    }
     // the reducer runs on a immutable version of
     // provided state
     try {
+      // auth scope actions have a specialized handler, but we need to catch failures
+      // on load (not mutate) to log them
+      if (_action.scope === "auth") {
+        const authState = applyAuthAction(newDocument, _action).state;
+        unsafe(() => {
+          draft.state = castDraft(authState);
+        });
+        return;
+      }
       const newState = customReducer(draft.state, _action, dispatch);
 
       // const clipboardValue = isUndoRedo(action) ? [...clipboard] : [];
