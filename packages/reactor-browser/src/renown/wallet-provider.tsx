@@ -105,6 +105,16 @@ export function RenownWalletProvider({
     return () => setWalletActivator(undefined);
   }, [config]);
 
+  // Privy social OAuth returns via full-page redirect (?privy_oauth_code=…); mount
+  // adapters on that load so PrivyProvider consumes the code and resumes login.
+  useEffect(() => {
+    if (!config || typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("privy_oauth_code") || params.has("privy_oauth_state")) {
+      setActive(true);
+    }
+  }, [config]);
+
   // Resolve + mount adapters only once activated; the dynamic import (and the
   // wallet library it pulls) fires here, on demand, not at startup.
   useEffect(() => {
