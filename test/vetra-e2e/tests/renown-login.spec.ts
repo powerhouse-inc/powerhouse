@@ -16,9 +16,19 @@ test("sidebar login opens the Renown modal with the configured methods", async (
 
   await page.goto("/");
   await waitForAppReady(page);
+  // Let the app finish booting so the runtime config (which carries
+  // connect.renown.adapters) is loaded; worker mode's networkidle never idles.
+  await page
+    .waitForLoadState("networkidle", { timeout: 15_000 })
+    .catch(() => {});
+  await expect(
+    page.getByRole("heading", { name: "Create New Drive" }),
+  ).toBeVisible({ timeout: 60_000 });
 
-  // Sidebar Renown login trigger (shown while signed out).
-  await page.locator('button[aria-label="Log in"]').click();
+  // Sidebar account button (shown while signed out) opens a popover whose
+  // "Connect" entry opens the Renown login modal.
+  await page.locator('button[aria-label="Open Account"]').click();
+  await page.getByRole("button", { name: "Connect", exact: true }).click();
 
   // Methods derived from connect.renown.adapters via useRenownLoginMethods.
   await expect(
