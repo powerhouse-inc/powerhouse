@@ -58,7 +58,14 @@ export class Renown implements IRenown {
     this.#appName = appName;
     this.#profileFetcher = profileFetcher;
     this.#switchboard = switchboard;
-    this.#signer = new RenownCryptoSigner(crypto, this.#appName, this.user);
+    const restoredUser = this.user;
+    this.#signer = new RenownCryptoSigner(crypto, this.#appName, restoredUser);
+
+    // A restored, previously-verified user is an authorized session; otherwise
+    // status stays "initial" after a reload while the user is present.
+    if (restoredUser) {
+      this.#status = "authorized";
+    }
 
     this.on("user", (user) => {
       this.#signer.user = user;
