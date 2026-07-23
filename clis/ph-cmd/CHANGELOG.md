@@ -1,3 +1,7 @@
+## 6.2.2-dev.12 (2026-07-23)
+
+This was a version bump only for ph-cmd to align it with other projects, there were no code changes.
+
 ## 6.2.2-dev.11 (2026-07-22)
 
 ### 🚀 Features
