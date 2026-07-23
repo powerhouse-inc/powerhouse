@@ -422,13 +422,13 @@ Error operations are already skipped for domain reducers, and we'll need to add 
 
 ### Re-evaluation
 
-When a reshuffle happens, the suffix from the first change must be re-evaluated, because auth decisions could flip in either direction: an allowed operation becomes denied once an earlier revocation arrives, or a denied one becomes allowed once an earlier grant arrives.
+When a reshuffle happens, the tail from the first change must be re-evaluated, because auth decisions could flip in either direction: an allowed operation becomes denied once an earlier revocation arrives, or a denied one becomes allowed once an earlier grant arrives.
 
-Re-evaluation is a reshuffle-style re-append. If any decision changes, the suffix from the first change is re-emitted as new operations: same `opId` and action id, but fresh indexes with skip.
+Re-evaluation is a reshuffle-style re-append. If any decision changes, the tail from the first change is re-emitted as new operations: same `opId` and action id, but fresh indexes with skip.
 
 A pass that changes nothing emits nothing.
 
-The re-append advances the stream heads, so a concurrent admission that read the old suffix fails its append condition and retries. It also propagates the result: re-emitted operations reach every remote through the normal reshuffle rebroadcast. Receivers do everything they already do: re-evaluating validity and re-executing reducers.
+The re-append advances the stream heads, so a concurrent admission that read the old tail fails its append condition and retries. It also propagates the result: re-emitted operations reach every remote through the normal reshuffle rebroadcast. Receivers do everything they already do: re-evaluating validity and re-executing reducers.
 
 #### Caveats
 
@@ -436,7 +436,7 @@ Re-evaluation runs in two places.
 
 When the loaded stream and the affected streams belong to the same document (an auth or document operation arrived, and the domain streams must be re-evaluated) the work runs inside the same load job, which already holds that document's execution slot. That is, the queue already serializes operations to the same document. When the loaded stream belongs to a group document, the affected documents are other documents, and each is re-evaluated in its own job.
 
-Re-evaluation walks the affected suffix once, so it costs about as much as loading the document with no caches. Two existing limits must account for this. The load-job timeout must allow for the extra work. The excessive-shuffle guard must not count re-evaluation re-appends, since a revocation over a long history legitimately supersedes many operations. Otherwise a policy operation would dead-letter simply because the document has a long history, and busy documents would become revocation-proof.
+Re-evaluation walks the affected tail once, so it costs about as much as loading the document with no caches. Two existing limits must account for this. The load-job timeout must allow for the extra work. The excessive-shuffle guard must not count re-evaluation re-appends, since a revocation over a long history legitimately supersedes many operations. Otherwise a policy operation would dead-letter simply because the document has a long history, and busy documents would become revocation-proof.
 
 ### Semantics
 
@@ -540,7 +540,9 @@ SET "joinedOrdinal" = LEAST("document_collections"."joinedOrdinal", EXCLUDED."jo
 
 ##### Note
 
-Both statements (`When a document joins a collection` and `When an auth operation commits`) only insert or reopen rows. A `REMOVE_GRANT` mentions no group, so it runs neither, and no path deletes from either table. Sync does not change: the outbox routes group operations because groups are members, and a newly inserted membership row triggers the same backfill as a late-joining document. A remote can still observe the referencing grant before the group's history finishes arriving. In this case, it will fail closed (deny) for that window and converge when the backfill arrives. This is the eventually consistent design the entire reactor relies on.
+Both statements (`When a document joins a collection` and `When an auth operation commits`) only insert or reopen rows. A `REMOVE_GRANT` mentions no group, so it runs neither, and no path deletes from either table. Deletion is forbidden rather than merely unimplemented. Auth evaluation is positional: if a grant named group G at one position and a later operation removed it, re-evaluating the earlier range still folds G's membership. The obligation is therefore the union of groups referenced anywhere in history, not the set referenced at the head. The cost is that a group referenced once, briefly, stays in the collection. Groups are small documents, and reclaiming stale references is a compaction question, not a correctness one. This spec leaves it open.
+
+Sync does not change: the outbox routes group operations because groups are members, and a newly inserted membership row triggers the same backfill as a late-joining document. A remote can still observe the referencing grant before the group's history finishes arriving. In this case, it will fail closed (deny) for that window and converge when the backfill arrives. This is the eventually consistent design the entire reactor relies on.
 
 #### When a group stream loads.
 
@@ -556,17 +558,9 @@ The list is complete because a group's auth scope cannot reference other groups.
 
 This is the second use of `group_references`. Looked up by `documentId`, the table tells sync which groups a document requires. Looked up by `groupId`, it tells auth re-evaluation which documents a group change affects.
 
-Two design choices define the relation, and both follow from how auth evaluation works rather than from sync convenience.
+References come from the operation's input, not from its outcome (i.e. from the `Action` input, not the `Operation` result). Any operation that names a group contributes a reference, including an operation later stored as an error. This over-approximates, so a denied `SET_GRANT` adds a reference that auth evaluation will never use. In exchange, sync topology is independent of auth evaluation. This means that re-evaluation can flip decisions across a whole tail without a single membership row changing, and a replica knows what to fetch before it has evaluated anything.
 
-References come from the operation's input, not from its outcome. Any operation that names a group contributes a reference, including an operation later stored as an error. This over-approximates: a denied `SET_GRANT` adds a reference that auth evaluation will never use. In exchange, sync topology is independent of auth evaluation. Re-evaluation can flip decisions across a whole suffix without a single membership row changing, and a replica knows what to fetch before it has evaluated anything.
-
-References are insert-only. Auth evaluation is positional: if a grant named group G at one position and a later operation removed it, re-evaluating the earlier range still folds G's membership, so the obligation is the union of groups referenced anywhere in history, not the set referenced at the head. An insert-only relation also behaves well under sync. Inserting the same reference twice changes nothing, and references discovered out of order — a backdated grant arriving late — insert the same rows they would have inserted in order. The cost is that a group referenced once, briefly, stays in the collection. Groups are small documents; reclaiming stale references is a compaction question, not a correctness one, and this spec leaves it open.
-
-References never chain. A group's auth scope cannot reference another group (see Actions), so folding a group's member list requires only that group's own streams, and reference cycles cannot form. This is the rule that keeps each statement above a single lookup.
-
-A remote that syncs one document rather than a collection gets the same answer at a different grain. The forward relation reports the document's recorded references when the subscription is established, and the set grows the same way afterward. The lookup replaces the collection; in either grain, routing an operation never reads `group_references`.
-
-A reference does not create the stream. A grant can name a group that no reachable remote holds — a typo, or a group that lives elsewhere. The write side can observe at admission that it holds no such document and surface a warning, but no membership row conjures history. Every replica fails closed until some remote supplies the stream, and access is never widened in the meantime.
+A remote can also subscribe to a single document rather than a collection. The obligation is the same: the remote must receive the document's recorded references, read from `group_references` when the subscription is established and as new references are inserted.
 
 Naming a group publishes its membership. Serving a group through a collection means every subscriber of that collection receives the group's member list, whatever the group's own read grants say. This is deliberate, and it is the posture the Reads section already takes for the `auth` and `document` scopes: state that replicas must fold in order to evaluate auth cannot be withheld from them without breaking convergence. A group is fit for policies whose audience may see its roster; a group whose membership must stay confidential should not be named in a grant.
 
@@ -578,7 +572,7 @@ A group's own auth scope cannot contain `{ group }` principals; the `AuthActionH
 
 Group streams get no special rule. The `groups` projection names them in the auth scope's grant list, which puts them in the read-set, and every stream in the read-set is folded by position in the same merged order. The fold respects auth evaluation: a membership write that the group's own policy denies is an error operation and contributes nothing. Membership operations sort against the target document's operations by timestamp like anything else, and every replica holding the same operations answers the membership question identically and deterministically.
 
-The read-set is therefore a sync obligation. A grant that names a group makes that group document part of what an enforcing replica must hold; the Synchronization section describes how that obligation is met. A load into a group stream re-evaluates every document whose grants reference it, each in its own job, using the reverse direction of the same group-reference relation. A replica that does not yet hold a group's history fails closed: the member list is empty, so the principal does not match. It converges when the stream arrives. Access is never widened by a missing group.
+The read-set is therefore a sync obligation. A grant that names a group makes that group document part of what an enforcing replica must hold; the Synchronization section describes how that obligation is met. A load into a group stream re-evaluates every document whose grants reference it, each in its own job, using the reverse direction of the same group-reference relation. A replica that does not yet hold a group's history fails closed: the member list is empty, so the principal does not match. It converges when the stream arrives. Access is never widened by a missing group. A grant can also name a group that no reachable remote holds, such as a typo or a group that lives elsewhere. In that case the same fail-closed posture holds indefinitely, and the write side can warn at admission that it holds no such document.
 
 ## Reads
 
