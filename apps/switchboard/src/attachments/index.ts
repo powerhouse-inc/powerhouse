@@ -13,11 +13,15 @@ import {
 export function registerAttachmentRoutes(api: API): void {
   const { attachments } = api;
 
+  // Anonymous-capable: the handler authorizes document-anchored reservations
+  // via the document's write permission and still requires an identity for
+  // unanchored ones.
   mountAuthenticatedNodeRoute(
     api,
     "POST",
     "/attachments/reservations",
-    makeReserveHandler(attachments),
+    makeReserveHandler(attachments, api.attachmentAccess),
+    { allowAnonymous: true },
   );
 
   mountAuthenticatedNodeRoute(
@@ -48,11 +52,14 @@ export function registerAttachmentRoutes(api: API): void {
     makeStatHandler(attachments),
   );
 
+  // Anonymous-capable: authorization is purely the document's — canRead plus
+  // the reference index decide, exactly as they do for the document itself.
   mountAuthenticatedNodeRoute(
     api,
     "GET",
     "/attachments/:hash/download-target",
     makeDownloadTargetHandler(attachments, api.attachmentAccess),
+    { allowAnonymous: true },
   );
 
   mountAuthenticatedNodeRoute(

@@ -97,6 +97,13 @@ export type AttachmentUploadInput = {
   file: Blob;
   fileName?: string;
   mimeType?: string;
+  /**
+   * Document that authorizes this upload. When present, the server decides
+   * by the document's write permission — attaching is editing — so anonymous
+   * actors may upload to documents they can write. Without it the server
+   * falls back to requiring a bearer identity.
+   */
+  documentId?: string;
   /** Per-item cancellation, checked between stages. */
   signal?: AbortSignal;
 };
@@ -215,7 +222,12 @@ class AttachmentClientImpl implements IAttachmentClient {
       handle = await this.service.reserve(options);
     } catch (err) {
       if (isAttachmentAlreadyExists(err)) {
-        const header = await this.service.stat(err.ref);
+        // Prefer the metadata carried on the 409 itself: the stat route is
+        // identity-gated, so an anonymous document-anchored uploader cannot
+        // fall back to it.
+        const header =
+          (err as { header?: AttachmentUploadResult["header"] }).header ??
+          (await this.service.stat(err.ref));
         return { hash: err.hash, ref: err.ref, header };
       }
       throw err;
@@ -237,7 +249,11 @@ class AttachmentClientImpl implements IAttachmentClient {
 
       input.signal?.throwIfAborted();
       onStage?.("reserving");
-      const result = await this.reserve(preprocessed.options, (handle) => {
+      const reserveOptions =
+        input.documentId === undefined
+          ? preprocessed.options
+          : { ...preprocessed.options, documentId: input.documentId };
+      const result = await this.reserve(reserveOptions, (handle) => {
         input.signal?.throwIfAborted();
         onStage?.("uploading");
         return handle.send(preprocessed.stream());

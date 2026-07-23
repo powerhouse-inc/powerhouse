@@ -1,9 +1,5 @@
 import type { AttachmentHash, AttachmentRef } from "@powerhousedao/reactor";
-import {
-  AttachmentAlreadyExists,
-  AttachmentNotFound,
-  AttachmentPending,
-} from "./errors.js";
+import { AttachmentAlreadyExists } from "./errors.js";
 import type {
   IAttachmentReader,
   IAttachmentBackend,
@@ -85,16 +81,16 @@ export class AttachmentService implements IAttachmentService {
       clientHash: normalized,
     };
 
-    let existingHeader: AttachmentHeader | null = null;
+    // The pre-stat is a dedup short-circuit, not a correctness requirement:
+    // the reservation store re-checks existence when the slot is created. A
+    // stat failure therefore means "existence unknown", not "abort" — remote
+    // stores refuse bare-hash stats from anonymous callers (401), and a
+    // document-anchored anonymous upload must still reach reserve().
+    let existingHeader: AttachmentHeader | null;
     try {
       existingHeader = await this.store.stat(normalized);
-    } catch (err) {
-      if (
-        !(err instanceof AttachmentNotFound) &&
-        !(err instanceof AttachmentPending)
-      ) {
-        throw err;
-      }
+    } catch {
+      existingHeader = null;
     }
 
     if (existingHeader !== null) {

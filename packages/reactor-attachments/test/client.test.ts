@@ -214,6 +214,34 @@ describe("createAttachmentClient", () => {
       ).rejects.toBe(boom);
     });
 
+    it("uses the header carried by AttachmentAlreadyExists without calling stat", async () => {
+      const statSpy = vi.fn();
+      const service = makeMockService({
+        reserve: vi
+          .fn()
+          .mockRejectedValue(
+            new AttachmentAlreadyExists(
+              EXPECTED_HASH,
+              EXPECTED_REF,
+              MOCK_HEADER,
+            ),
+          ),
+        stat: statSpy,
+      });
+      const client = createAttachmentClient(service);
+      const result = await client.reserve(
+        {
+          mimeType: "text/plain",
+          fileName: "f.txt",
+          clientHash: EXPECTED_HASH,
+          sizeBytes: BYTES.byteLength,
+        },
+        vi.fn(),
+      );
+      expect(result.header).toBe(MOCK_HEADER);
+      expect(statSpy).not.toHaveBeenCalled();
+    });
+
     it("re-throws stat errors from the dedup path", async () => {
       const statError = new Error("stat failed");
       const service = makeMockService({
@@ -236,6 +264,38 @@ describe("createAttachmentClient", () => {
           vi.fn(),
         ),
       ).rejects.toBe(statError);
+    });
+  });
+
+  describe("upload", () => {
+    it("threads the documentId anchor into the reserve options", async () => {
+      const reserveSpy = vi.fn().mockResolvedValue(makeMockHandle());
+      const service = makeMockService({ reserve: reserveSpy });
+      const client = createAttachmentClient(service);
+
+      await client.upload({
+        file: new Blob([BYTES], { type: "text/plain" }),
+        fileName: "f.txt",
+        documentId: "doc-1",
+      });
+
+      expect(reserveSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          clientHash: EXPECTED_HASH,
+          documentId: "doc-1",
+        }),
+      );
+    });
+
+    it("omits documentId from reserve options when not provided", async () => {
+      const reserveSpy = vi.fn().mockResolvedValue(makeMockHandle());
+      const service = makeMockService({ reserve: reserveSpy });
+      const client = createAttachmentClient(service);
+
+      await client.upload({ file: new Blob([BYTES], { type: "text/plain" }) });
+
+      const options = reserveSpy.mock.calls[0][0] as Record<string, unknown>;
+      expect("documentId" in options).toBe(false);
     });
   });
 });

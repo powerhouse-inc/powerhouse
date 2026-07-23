@@ -275,6 +275,73 @@ describe("requireAuth", () => {
     expect(spy).toHaveBeenCalledWith("Bearer t");
   });
 
+  describe("allowAnonymous", () => {
+    it("passes a missing bearer through as an anonymous actor with authEnabled true", async () => {
+      const { service } = makeAuthService(() =>
+        Promise.resolve({
+          user: undefined,
+          admins: [],
+          auth_enabled: true,
+        }),
+      );
+      const handler = vi.fn<NodeHandler>();
+      const wrapped = requireAuth(service, handler, { allowAnonymous: true });
+
+      const req = makeReq({ headers: {} });
+      const res = makeRes();
+      await wrapped(req, res);
+
+      expect(res.statusCode).toBe(200);
+      expect(handler).toHaveBeenCalledWith(req, res, undefined, {
+        user: undefined,
+        authEnabled: true,
+      });
+    });
+
+    it("still rejects an invalid bearer — a bad token is never downgraded to anonymous", async () => {
+      const { service } = makeAuthService(() =>
+        Promise.resolve(
+          new Response(JSON.stringify({ error: "Verification failed" }), {
+            status: 401,
+            headers: { "content-type": "application/json" },
+          }),
+        ),
+      );
+      const handler = vi.fn<NodeHandler>();
+      const wrapped = requireAuth(service, handler, { allowAnonymous: true });
+
+      const res = makeRes();
+      await wrapped(
+        makeReq({ headers: { authorization: "Bearer bad-token" } }),
+        res,
+      );
+
+      expect(res.statusCode).toBe(401);
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    it("still verifies and forwards a valid bearer identity", async () => {
+      const { service } = makeAuthService(() =>
+        Promise.resolve({
+          user: { address: "0x123", chainId: 1, networkId: "mainnet" },
+          admins: [],
+          auth_enabled: true,
+        }),
+      );
+      const handler = vi.fn<NodeHandler>();
+      const wrapped = requireAuth(service, handler, { allowAnonymous: true });
+
+      const req = makeReq({ headers: { authorization: "Bearer good-token" } });
+      const res = makeRes();
+      await wrapped(req, res);
+
+      expect(handler).toHaveBeenCalledWith(req, res, undefined, {
+        user: { address: "0x123", chainId: 1, networkId: "mainnet" },
+        authEnabled: true,
+      });
+    });
+  });
+
   it("calls verifyBearer with undefined when no authorization header is present", async () => {
     const { service, spy } = makeAuthService(() =>
       Promise.resolve({

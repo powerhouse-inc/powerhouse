@@ -71,6 +71,13 @@ export type UploadFirstReserveAttachmentOptions = {
   extension?: string | null;
   clientHash?: undefined;
   sizeBytes?: undefined;
+  /**
+   * Document that authorizes this upload. When present, the server decides
+   * by the document's write permission (anonymous actors included) instead
+   * of requiring a bearer identity. Authorization anchor only: it is never
+   * persisted on the reservation and never becomes part of the ref.
+   */
+  documentId?: string;
 };
 
 /**
@@ -94,6 +101,13 @@ export type HashFirstReserveAttachmentOptions = {
    * ingest: an upload whose actual byte count differs is rejected.
    */
   sizeBytes: number;
+  /**
+   * Document that authorizes this upload. When present, the server decides
+   * by the document's write permission (anonymous actors included) instead
+   * of requiring a bearer identity. Authorization anchor only: it is never
+   * persisted on the reservation and never becomes part of the ref.
+   */
+  documentId?: string;
 };
 
 /**

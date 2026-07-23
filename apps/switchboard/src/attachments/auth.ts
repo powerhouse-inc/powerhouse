@@ -24,15 +24,27 @@ export type NodeHandler = (
   actor?: AttachmentActorContext,
 ) => Promise<void> | void;
 
+export type RequireAuthOptions = {
+  /**
+   * Let requests without a bearer identity through as anonymous actors
+   * instead of answering 401, so the handler's own document authorization
+   * decides. A bearer that IS supplied must still verify — an invalid token
+   * is rejected, never downgraded to anonymous.
+   */
+  allowAnonymous?: boolean;
+};
+
 /**
  * Wrap a Node-style handler so that, when `authService` is provided and auth is
  * enabled, the request must carry a verifiable Bearer token. The handler always
  * receives an actor context: the verified bearer user when auth is enabled, or
- * the anonymous context when it is disabled.
+ * the anonymous context when it is disabled. With `allowAnonymous`, a missing
+ * bearer yields an anonymous actor with `authEnabled: true` instead of a 401.
  */
 export function requireAuth(
   authService: AuthService | undefined,
   handler: NodeHandler,
+  options?: RequireAuthOptions,
 ): NodeHandler {
   if (!authService) {
     return (req, res, body) => handler(req, res, body, ANONYMOUS_ACTOR);
@@ -58,7 +70,7 @@ export function requireAuth(
       return;
     }
 
-    if (result.auth_enabled && !result.user) {
+    if (result.auth_enabled && !result.user && !options?.allowAnonymous) {
       res.statusCode = 401;
       res.setHeader("Content-Type", "application/json");
       res.end(JSON.stringify({ error: "Authentication required" }));

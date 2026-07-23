@@ -312,6 +312,85 @@ describe("RemoteReservationStore", () => {
       expect(typed.ref).toBe(ref);
     });
 
+    it("includes documentId in the POST body when the options carry the anchor", async () => {
+      mockFetch.mockResolvedValue(
+        mockResponse(201, { json: { reservationId: "r-anchored" } }),
+      );
+
+      await store.create({
+        mimeType: "text/plain",
+        fileName: "anchored.txt",
+        documentId: "doc-1",
+      });
+
+      const callArgs = mockFetch.mock.calls[0] as [string, RequestInit];
+      const sentBody = JSON.parse(callArgs[1].body as string) as {
+        documentId?: string;
+      };
+      expect(sentBody.documentId).toBe("doc-1");
+    });
+
+    it("carries a well-formed header from the 409 body on AttachmentAlreadyExists", async () => {
+      const clientHash = "d".repeat(64);
+      const ref = `attachment://v1:${clientHash}`;
+      const header = {
+        hash: clientHash,
+        mimeType: "text/plain",
+        fileName: "dup.txt",
+        sizeBytes: 100,
+        extension: "txt",
+        status: "available",
+        source: "local",
+        createdAtUtc: "2026-01-01T00:00:00.000Z",
+        lastAccessedAtUtc: "2026-01-01T00:00:00.000Z",
+        expiresAtUtc: null,
+      };
+      mockFetch.mockResolvedValue(
+        mockResponse(409, {
+          json: { error: "already_exists", ref, header },
+          statusText: "Conflict",
+        }),
+      );
+
+      const err = await store
+        .create({
+          mimeType: "text/plain",
+          fileName: "dup.txt",
+          clientHash: clientHash as AttachmentHash,
+          sizeBytes: 100,
+        })
+        .catch((e: unknown) => e);
+
+      expect(err).toBeInstanceOf(AttachmentAlreadyExists);
+      expect((err as AttachmentAlreadyExists).header).toEqual(header);
+    });
+
+    it("drops a malformed 409 header instead of failing the dedup mapping", async () => {
+      const clientHash = "e".repeat(64);
+      mockFetch.mockResolvedValue(
+        mockResponse(409, {
+          json: {
+            error: "already_exists",
+            ref: `attachment://v1:${clientHash}`,
+            header: { fileName: 42 },
+          },
+          statusText: "Conflict",
+        }),
+      );
+
+      const err = await store
+        .create({
+          mimeType: "text/plain",
+          fileName: "dup.txt",
+          clientHash: clientHash as AttachmentHash,
+          sizeBytes: 100,
+        })
+        .catch((e: unknown) => e);
+
+      expect(err).toBeInstanceOf(AttachmentAlreadyExists);
+      expect((err as AttachmentAlreadyExists).header).toBeUndefined();
+    });
+
     it("treats 409 without { error: already_exists } as a generic error", async () => {
       const clientHash = "c".repeat(64);
       mockFetch.mockResolvedValue(

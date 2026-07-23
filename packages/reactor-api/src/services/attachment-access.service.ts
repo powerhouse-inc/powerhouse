@@ -42,10 +42,26 @@ export interface AttachmentAccessRequest {
   userAddress?: string;
 }
 
+export interface AttachmentAttachRequest {
+  documentId: string;
+  userAddress?: string;
+}
+
+/** Outcome of an upload (attach) authorization: plain document write access. */
+export type AttachmentAttachResult = { kind: "allowed" } | { kind: "denied" };
+
 export interface IAttachmentAccessService {
   canReadAttachment(
     request: AttachmentAccessRequest,
   ): Promise<AttachmentAccessResult>;
+  /**
+   * Whether the actor may attach bytes to the document. Attaching is editing:
+   * the decision is exactly the document's `canWrite`, anonymous actors
+   * included — attachments add no rules of their own on the upload side.
+   */
+  canAttachToDocument(
+    request: AttachmentAttachRequest,
+  ): Promise<AttachmentAttachResult>;
 }
 
 const HASH_PATTERN = /^[a-f0-9]{64}$/;
@@ -98,6 +114,27 @@ export class AttachmentAccessService implements IAttachmentAccessService {
     }
 
     return { kind: "allowed", documentId, ref };
+  }
+
+  async canAttachToDocument(
+    request: AttachmentAttachRequest,
+  ): Promise<AttachmentAttachResult> {
+    let documentId: CanonicalDocumentId;
+    try {
+      documentId = await this.resolveCanonicalId(request.documentId);
+    } catch {
+      return { kind: "denied" };
+    }
+
+    const writable = await this.authorization.canWrite(
+      documentId,
+      request.userAddress,
+    );
+    if (!writable) {
+      return { kind: "denied" };
+    }
+
+    return { kind: "allowed" };
   }
 }
 

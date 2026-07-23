@@ -77,7 +77,13 @@ function makeAccess(result: AttachmentAccessResult): {
   spy: ReturnType<typeof vi.fn>;
 } {
   const spy = vi.fn().mockResolvedValue(result);
-  return { access: { canReadAttachment: spy }, spy };
+  return {
+    access: {
+      canReadAttachment: spy,
+      canAttachToDocument: vi.fn().mockResolvedValue({ kind: "denied" }),
+    },
+    spy,
+  };
 }
 
 function makeAttachments(opts: {

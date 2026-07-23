@@ -111,6 +111,33 @@ describe("mountAuthenticatedNodeRoute", () => {
     expect(inner).toHaveBeenCalledTimes(1);
   });
 
+  it("passes allowAnonymous through: a missing bearer reaches the handler as an anonymous actor", async () => {
+    const verifyBearer = vi.fn(() =>
+      Promise.resolve({
+        user: undefined,
+        admins: [],
+        auth_enabled: true,
+      }),
+    );
+    const authService = { verifyBearer } as unknown as AuthService;
+    const { api, captured } = makeFakeApi(authService);
+    const inner = vi.fn();
+
+    mountAuthenticatedNodeRoute(api, "POST", "/x", inner, {
+      allowAnonymous: true,
+    });
+
+    const req = makeReq();
+    const res = makeRes();
+    await captured[0].handler(req, res);
+
+    expect(res.statusCode).toBe(200);
+    expect(inner).toHaveBeenCalledWith(req, res, undefined, {
+      user: undefined,
+      authEnabled: true,
+    });
+  });
+
   it("mounts a wrapper that forwards the anonymous actor when authService is undefined", async () => {
     const { api, captured } = makeFakeApi(undefined);
     const inner = vi.fn();

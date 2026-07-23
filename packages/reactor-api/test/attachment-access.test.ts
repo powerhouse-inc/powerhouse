@@ -49,6 +49,7 @@ function makeResolver(
 function makeAuthorization(
   recorded: Recorded,
   canRead: boolean,
+  canWrite = false,
 ): IAuthorizationService {
   return {
     config: { admins: [], defaultProtection: false, policy: "OPEN" },
@@ -58,7 +59,10 @@ function makeAuthorization(
       recorded.calls.push(`canRead:${documentId}:${userAddress ?? ""}`);
       return Promise.resolve(canRead);
     },
-    canWrite: () => Promise.resolve(false),
+    canWrite: (documentId: CanonicalDocumentId, userAddress?: string) => {
+      recorded.calls.push(`canWrite:${documentId}:${userAddress ?? ""}`);
+      return Promise.resolve(canWrite);
+    },
     canManage: () => Promise.resolve(false),
     canMutate: () => Promise.resolve(false),
   };
@@ -393,6 +397,144 @@ describe("AttachmentAccessService", () => {
       const auth = permissionsService(permissionData({ grant: null }));
       await expect(decide(auth, USER)).resolves.toEqual({ kind: "denied" });
     });
+  });
+});
+
+describe("AttachmentAccessService.canAttachToDocument", () => {
+  it("allows when the document is writable, resolving the canonical id first", async () => {
+    const recorded: Recorded = { calls: [] };
+    const access = service({
+      recorded,
+      resolver: makeResolver(recorded, "canonical-id"),
+      authorization: makeAuthorization(recorded, true, true),
+    });
+
+    const result = await access.canAttachToDocument({
+      documentId: "my-slug",
+      userAddress: USER,
+    });
+
+    expect(result).toEqual({ kind: "allowed" });
+    expect(recorded.calls).toEqual([
+      "resolve:my-slug",
+      `canWrite:canonical-id:${USER}`,
+    ]);
+  });
+
+  it("passes an anonymous actor through to canWrite as undefined", async () => {
+    const recorded: Recorded = { calls: [] };
+    const access = service({
+      recorded,
+      authorization: makeAuthorization(recorded, true, true),
+    });
+
+    const result = await access.canAttachToDocument({ documentId: DOC_ID });
+
+    expect(result).toEqual({ kind: "allowed" });
+    expect(recorded.calls).toEqual([
+      `resolve:${DOC_ID}`,
+      `canWrite:${DOC_ID}:`,
+    ]);
+  });
+
+  it("denies when the document is not writable", async () => {
+    const recorded: Recorded = { calls: [] };
+    const access = service({
+      recorded,
+      authorization: makeAuthorization(recorded, true, false),
+    });
+
+    const result = await access.canAttachToDocument({
+      documentId: DOC_ID,
+      userAddress: USER,
+    });
+
+    expect(result).toEqual({ kind: "denied" });
+  });
+
+  it("denies when canonical resolution fails, without an authorization call", async () => {
+    const recorded: Recorded = { calls: [] };
+    const access = service({
+      recorded,
+      resolver: makeResolver(
+        recorded,
+        new CanonicalDocumentIdResolutionError(),
+      ),
+      authorization: makeAuthorization(recorded, true, true),
+    });
+
+    const result = await access.canAttachToDocument({
+      documentId: "missing-doc",
+      userAddress: USER,
+    });
+
+    expect(result).toEqual({ kind: "denied" });
+    expect(recorded.calls).toEqual(["resolve:missing-doc"]);
+  });
+
+  it("decides even when the reference projection is unavailable", async () => {
+    // Uploads never consult the reference index, so projection health is
+    // irrelevant to the attach decision.
+    const recorded: Recorded = { calls: [] };
+    const access = service({
+      recorded,
+      projection: UNAVAILABLE,
+      authorization: makeAuthorization(recorded, true, true),
+    });
+
+    await expect(
+      access.canAttachToDocument({ documentId: DOC_ID, userAddress: USER }),
+    ).resolves.toEqual({ kind: "allowed" });
+  });
+
+  it("allows anonymous writers on an unprotected document under DOCUMENT_PERMISSIONS", async () => {
+    const permissions = {
+      isProtectedWithAncestors: vi.fn().mockResolvedValue(false),
+      getDocumentOwner: vi.fn().mockResolvedValue(null),
+      getUserPermission: vi.fn().mockResolvedValue(null),
+      isOperationRestricted: vi.fn().mockResolvedValue(false),
+      hasOperationGrant: vi.fn().mockResolvedValue(false),
+    } as unknown as DocumentPermissionService;
+    const auth = createAuthorizationService(
+      {
+        admins: [ADMIN],
+        defaultProtection: true,
+        policy: "DOCUMENT_PERMISSIONS",
+      },
+      permissions,
+      () => Promise.resolve([]),
+    );
+    const recorded: Recorded = { calls: [] };
+    const access = service({ recorded, authorization: auth });
+
+    await expect(
+      access.canAttachToDocument({ documentId: DOC_ID }),
+    ).resolves.toEqual({ kind: "allowed" });
+  });
+
+  it("denies anonymous writers on a protected document under DOCUMENT_PERMISSIONS", async () => {
+    const permissions = {
+      isProtectedWithAncestors: vi.fn().mockResolvedValue(true),
+      getDocumentOwner: vi.fn().mockResolvedValue(null),
+      getUserPermission: vi.fn().mockResolvedValue(null),
+      isOperationRestricted: vi.fn().mockResolvedValue(false),
+      hasOperationGrant: vi.fn().mockResolvedValue(false),
+    } as unknown as DocumentPermissionService;
+    const auth = createAuthorizationService(
+      {
+        admins: [ADMIN],
+        defaultProtection: true,
+        policy: "DOCUMENT_PERMISSIONS",
+      },
+      permissions,
+      () => Promise.resolve([]),
+    );
+    const recorded: Recorded = { calls: [] };
+    const access = service({ recorded, authorization: auth });
+
+    await expect(
+      access.canAttachToDocument({ documentId: DOC_ID }),
+    ).resolves.toEqual({ kind: "denied" });
   });
 });
 

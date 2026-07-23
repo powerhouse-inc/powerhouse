@@ -110,6 +110,10 @@ describe("attachment service built from deriveAttachmentServiceConfig round-trip
       httpAdapter: adapter,
       attachments,
       authService: undefined,
+      attachmentAccess: {
+        canReadAttachment: () => Promise.resolve({ kind: "denied" }),
+        canAttachToDocument: () => Promise.resolve({ kind: "allowed" }),
+      },
     } as unknown as API);
 
     server = await adapter.listen(0);

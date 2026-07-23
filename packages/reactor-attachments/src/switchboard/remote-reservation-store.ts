@@ -2,7 +2,11 @@ import type { AttachmentRef, JwtHandler } from "@powerhousedao/reactor";
 import { AttachmentAlreadyExists, ReservationNotFound } from "../errors.js";
 import type { IReservationStore } from "../interfaces.js";
 import { createRef, parseRef } from "../ref.js";
-import type { Reservation, ReserveAttachmentOptions } from "../types.js";
+import type {
+  AttachmentHeader,
+  Reservation,
+  ReserveAttachmentOptions,
+} from "../types.js";
 import { parseAttachmentUploadTarget } from "../targets.js";
 import { buildAuthHeaders } from "./build-auth-headers.js";
 
@@ -20,6 +24,28 @@ function deriveExtension(fileName: string): string | null {
   const idx = fileName.lastIndexOf(".");
   if (idx <= 0 || idx === fileName.length - 1) return null;
   return fileName.slice(idx + 1).toLowerCase();
+}
+
+/**
+ * Best-effort parse of the attachment header a Switchboard includes in its
+ * 409 already_exists body. Missing or malformed → undefined; the client then
+ * falls back to the stat route (which requires an identity).
+ */
+function parseAlreadyExistsHeader(
+  value: unknown,
+): AttachmentHeader | undefined {
+  if (!isRecord(value)) return undefined;
+  if (typeof value.hash !== "string") return undefined;
+  if (typeof value.mimeType !== "string") return undefined;
+  if (typeof value.fileName !== "string") return undefined;
+  if (typeof value.sizeBytes !== "number") return undefined;
+  if (value.extension !== null && typeof value.extension !== "string") {
+    return undefined;
+  }
+  if (typeof value.status !== "string") return undefined;
+  if (typeof value.createdAtUtc !== "string") return undefined;
+  if (typeof value.lastAccessedAtUtc !== "string") return undefined;
+  return value as unknown as AttachmentHeader;
 }
 
 function isReservationBase(value: unknown): value is Record<string, unknown> & {
@@ -90,6 +116,9 @@ export class RemoteReservationStore implements IReservationStore {
     if (options.sizeBytes !== undefined) {
       bodyObj.sizeBytes = options.sizeBytes;
     }
+    if (options.documentId !== undefined) {
+      bodyObj.documentId = options.documentId;
+    }
 
     const response = await this.fetchFn(url, {
       method: "POST",
@@ -122,7 +151,11 @@ export class RemoteReservationStore implements IReservationStore {
         } else {
           ref = createRef(options.clientHash);
         }
-        throw new AttachmentAlreadyExists(options.clientHash, ref);
+        throw new AttachmentAlreadyExists(
+          options.clientHash,
+          ref,
+          parseAlreadyExistsHeader(body.header),
+        );
       }
       throw new Error(
         `Reservation create failed: ${response.status} ${response.statusText}`,

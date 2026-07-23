@@ -43,6 +43,10 @@ describe("attachment routes through the real Express middleware stack", () => {
       httpAdapter: adapter,
       attachments,
       authService: undefined,
+      attachmentAccess: {
+        canReadAttachment: () => Promise.resolve({ kind: "denied" }),
+        canAttachToDocument: () => Promise.resolve({ kind: "allowed" }),
+      },
     } as unknown as API);
 
     server = await adapter.listen(0);
@@ -139,6 +143,10 @@ describe("authenticated S3 reservation production path", () => {
       httpAdapter: adapter,
       attachments,
       authService: { verifyBearer },
+      attachmentAccess: {
+        canReadAttachment: () => Promise.resolve({ kind: "denied" }),
+        canAttachToDocument: () => Promise.resolve({ kind: "allowed" }),
+      },
     } as unknown as API);
     const server = await adapter.listen(0);
     const address = server.address();

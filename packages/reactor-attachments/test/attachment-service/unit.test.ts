@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import type { AttachmentRef } from "@powerhousedao/reactor";
+import type { AttachmentHash, AttachmentRef } from "@powerhousedao/reactor";
 import { AttachmentService } from "../../src/attachment-service.js";
 import { AttachmentNotFound, InvalidAttachmentRef } from "../../src/errors.js";
 import type { AttachmentHeader, AttachmentResponse } from "../../src/types.js";
@@ -80,6 +80,36 @@ describe("AttachmentService", () => {
           fileName: "test",
         }),
       ).rejects.toThrow("db error");
+    });
+
+    it("hash-first: proceeds to reserve when the dedup pre-stat fails", async () => {
+      // Remote stores refuse bare-hash stats from anonymous callers (401);
+      // existence is re-checked at reservation time, so a failed pre-stat
+      // means "unknown", not "abort".
+      const clientHash = "a".repeat(64);
+      store.stat.mockRejectedValue(new Error("stat failed: 401 Unauthorized"));
+      reservations.create.mockResolvedValue({
+        reservationId: "res-open",
+        mimeType: "text/plain",
+        fileName: "test",
+        extension: null,
+        createdAtUtc: "2026-01-01T00:00:00.000Z",
+        expiresAtUtc: "2026-01-02T00:00:00.000Z",
+        clientHash,
+        sizeBytes: 5,
+      });
+
+      const handle = await service.reserve({
+        mimeType: "text/plain",
+        fileName: "test",
+        clientHash: clientHash as AttachmentHash,
+        sizeBytes: 5,
+      });
+
+      expect(reservations.create).toHaveBeenCalledWith(
+        expect.objectContaining({ clientHash }),
+      );
+      expect(handle.reservationId).toBe("mock-reservation-id");
     });
   });
 

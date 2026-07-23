@@ -11,6 +11,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Readable, Writable } from "node:stream";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import type { IAttachmentAccessService } from "@powerhousedao/reactor-api";
 import {
   buildContentDisposition,
   makeDeleteReservationHandler,
@@ -22,6 +23,14 @@ import {
   parseReserveOptions,
   quoteFilename,
 } from "../../src/attachments/routes.js";
+
+// Reserve-handler collaborator for tests that exercise the reservation
+// mechanics, not authorization. The dedicated authorization describe block
+// below covers the anchored/unanchored decision paths.
+const allowAllAccess: IAttachmentAccessService = {
+  canReadAttachment: () => Promise.resolve({ kind: "denied" }),
+  canAttachToDocument: () => Promise.resolve({ kind: "allowed" }),
+};
 
 type CapturedRes = ServerResponse & {
   _headers: Record<string, string>;
@@ -111,7 +120,7 @@ describe("attachment routes", () => {
   });
 
   it("POST reserve returns 201 with reservationId for valid body", async () => {
-    const handler = makeReserveHandler(attachments);
+    const handler = makeReserveHandler(attachments, allowAllAccess);
     const req = makeReq({
       method: "POST",
       body: JSON.stringify({ mimeType: "text/plain", fileName: "hello.txt" }),
@@ -127,7 +136,7 @@ describe("attachment routes", () => {
   });
 
   it("POST reserve returns 400 for missing fields", async () => {
-    const handler = makeReserveHandler(attachments);
+    const handler = makeReserveHandler(attachments, allowAllAccess);
     const req = makeReq({
       method: "POST",
       body: JSON.stringify({ mimeType: "text/plain" }),
@@ -153,7 +162,7 @@ describe("attachment routes", () => {
 
   it("full reserve -> upload -> download cycle round-trips bytes", async () => {
     // Reserve
-    const reserveHandler = makeReserveHandler(attachments);
+    const reserveHandler = makeReserveHandler(attachments, allowAllAccess);
     const reserveReq = makeReq({
       method: "POST",
       body: JSON.stringify({
@@ -237,7 +246,7 @@ describe("attachment routes", () => {
   });
 
   it("GET download Attachment-Metadata includes server-sourced timestamps", async () => {
-    const reserveHandler = makeReserveHandler(attachments);
+    const reserveHandler = makeReserveHandler(attachments, allowAllAccess);
     const reserveReq = makeReq({
       method: "POST",
       body: JSON.stringify({ mimeType: "text/plain", fileName: "ts.txt" }),
@@ -280,7 +289,7 @@ describe("attachment routes", () => {
   });
 
   it("HEAD stat returns 200 with Attachment-Metadata and zero-byte body", async () => {
-    const reserveHandler = makeReserveHandler(attachments);
+    const reserveHandler = makeReserveHandler(attachments, allowAllAccess);
     const reserveReq = makeReq({
       method: "POST",
       body: JSON.stringify({ mimeType: "text/plain", fileName: "head.txt" }),
@@ -338,7 +347,7 @@ describe("attachment routes", () => {
   });
 
   it("HEAD over a real http.Server returns headers with a 0-byte wire body", async () => {
-    const reserveHandler = makeReserveHandler(attachments);
+    const reserveHandler = makeReserveHandler(attachments, allowAllAccess);
     const reserveReq = makeReq({
       method: "POST",
       body: JSON.stringify({ mimeType: "text/plain", fileName: "wire.txt" }),
@@ -421,7 +430,7 @@ describe("attachment routes", () => {
   });
 
   it("GET reservation returns 200 with reservation JSON for active reservation", async () => {
-    const reserveHandler = makeReserveHandler(attachments);
+    const reserveHandler = makeReserveHandler(attachments, allowAllAccess);
     const reserveReq = makeReq({
       method: "POST",
       body: JSON.stringify({ mimeType: "text/plain", fileName: "r.txt" }),
@@ -463,7 +472,7 @@ describe("attachment routes", () => {
   });
 
   it("GET reservation returns 404 for soft-deleted id", async () => {
-    const reserveHandler = makeReserveHandler(attachments);
+    const reserveHandler = makeReserveHandler(attachments, allowAllAccess);
     const reserveReq = makeReq({
       method: "POST",
       body: JSON.stringify({ mimeType: "text/plain", fileName: "r.txt" }),
@@ -486,7 +495,7 @@ describe("attachment routes", () => {
   });
 
   it("DELETE reservation returns 204 and is idempotent", async () => {
-    const reserveHandler = makeReserveHandler(attachments);
+    const reserveHandler = makeReserveHandler(attachments, allowAllAccess);
     const reserveReq = makeReq({
       method: "POST",
       body: JSON.stringify({ mimeType: "text/plain", fileName: "r.txt" }),
@@ -540,7 +549,7 @@ describe("attachment routes", () => {
   it("GET download accepts an uppercase hash and canonicalises to lowercase", async () => {
     // Reserve, upload, then download using the uppercased hash. The route
     // must accept either case and look up the canonical (lowercase) entry.
-    const reserveHandler = makeReserveHandler(attachments);
+    const reserveHandler = makeReserveHandler(attachments, allowAllAccess);
     const reserveReq = makeReq({
       method: "POST",
       body: JSON.stringify({ mimeType: "text/plain", fileName: "u.txt" }),
@@ -578,7 +587,7 @@ describe("attachment routes", () => {
   });
 
   it("HEAD stat accepts an uppercase hash", async () => {
-    const reserveHandler = makeReserveHandler(attachments);
+    const reserveHandler = makeReserveHandler(attachments, allowAllAccess);
     const reserveReq = makeReq({
       method: "POST",
       body: JSON.stringify({ mimeType: "text/plain", fileName: "uh.txt" }),
@@ -669,7 +678,7 @@ describe("attachment routes", () => {
   });
 
   it("identical uploads dedupe to the same hash", async () => {
-    const reserveHandler = makeReserveHandler(attachments);
+    const reserveHandler = makeReserveHandler(attachments, allowAllAccess);
     const uploadHandler = makeUploadHandler(attachments);
 
     const doRoundTrip = async (): Promise<string> => {
@@ -704,7 +713,7 @@ describe("attachment routes", () => {
   describe("hash-first reserve: 409 already_exists", () => {
     it("returns 409 { error: already_exists, ref } when hash is already available", async () => {
       // Upload a file first using the legacy flow to populate the store.
-      const reserveHandler = makeReserveHandler(attachments);
+      const reserveHandler = makeReserveHandler(attachments, allowAllAccess);
       const uploadHandler = makeUploadHandler(attachments);
 
       const legacyReserveReq = makeReq({
@@ -750,11 +759,16 @@ describe("attachment routes", () => {
         error: string;
         ref: string;
         reservationId?: string;
+        header?: { fileName: string; sizeBytes: number; status: string };
       };
       expect(body.error).toBe("already_exists");
       expect(body.ref).toBe(existingRef);
       // The 409 body must not expose another reservation's ID.
       expect("reservationId" in body).toBe(false);
+      // It carries the existing attachment's metadata so anchored anonymous
+      // clients can complete the dedup fast path without the stat route.
+      expect(body.header?.status).toBe("available");
+      expect(body.header?.sizeBytes).toBe(Buffer.byteLength(payload, "utf8"));
     });
 
     it("reserve 201 body includes reservationId, ref, and expiresAtUtc in hash-first mode", async () => {
@@ -762,7 +776,7 @@ describe("attachment routes", () => {
       const payload = "some content for hash-first";
       const hash = createHash("sha256").update(payload, "utf8").digest("hex");
 
-      const handler = makeReserveHandler(attachments);
+      const handler = makeReserveHandler(attachments, allowAllAccess);
       const req = makeReq({
         method: "POST",
         body: JSON.stringify({
@@ -789,6 +803,166 @@ describe("attachment routes", () => {
     });
   });
 
+  describe("reserve authorization", () => {
+    const RESERVE_BODY = {
+      mimeType: "text/plain",
+      fileName: "authz.txt",
+    };
+    const USER_ACTOR = {
+      user: { address: "0xuser", chainId: 1, networkId: "mainnet" },
+      authEnabled: true,
+    };
+    const ANONYMOUS_ACTOR = { user: undefined, authEnabled: true };
+
+    function accessRecording(kind: "allowed" | "denied") {
+      const calls: { documentId: string; userAddress?: string }[] = [];
+      const access: IAttachmentAccessService = {
+        canReadAttachment: () => Promise.resolve({ kind: "denied" }),
+        canAttachToDocument: (request) => {
+          calls.push(request);
+          return Promise.resolve({ kind });
+        },
+      };
+      return { access, calls };
+    }
+
+    it("authorizes an anchored reservation through canAttachToDocument with the actor's address", async () => {
+      const { access, calls } = accessRecording("allowed");
+      const handler = makeReserveHandler(attachments, access);
+      const req = makeReq({
+        method: "POST",
+        body: JSON.stringify({ ...RESERVE_BODY, documentId: "doc-1" }),
+      });
+      const res = makeRes();
+      await handler(req, res, undefined, USER_ACTOR);
+      await waitFor(res);
+
+      expect(res.statusCode).toBe(201);
+      expect(calls).toEqual([{ documentId: "doc-1", userAddress: "0xuser" }]);
+    });
+
+    it("lets an anonymous actor reserve against a writable document", async () => {
+      const { access, calls } = accessRecording("allowed");
+      const handler = makeReserveHandler(attachments, access);
+      const req = makeReq({
+        method: "POST",
+        body: JSON.stringify({ ...RESERVE_BODY, documentId: "doc-1" }),
+      });
+      const res = makeRes();
+      await handler(req, res, undefined, ANONYMOUS_ACTOR);
+      await waitFor(res);
+
+      expect(res.statusCode).toBe(201);
+      expect(calls).toEqual([{ documentId: "doc-1", userAddress: undefined }]);
+    });
+
+    it("answers a generic 403 when the document denies the write, revealing nothing", async () => {
+      const { access } = accessRecording("denied");
+      const handler = makeReserveHandler(attachments, access);
+      const req = makeReq({
+        method: "POST",
+        body: JSON.stringify({ ...RESERVE_BODY, documentId: "doc-1" }),
+      });
+      const res = makeRes();
+      await handler(req, res, undefined, USER_ACTOR);
+      await waitFor(res);
+
+      expect(res.statusCode).toBe(403);
+      expect(JSON.parse(res._body.toString("utf8"))).toEqual({
+        error: "Forbidden",
+      });
+    });
+
+    it("still requires an identity for an unanchored reservation when auth is enabled", async () => {
+      const { access, calls } = accessRecording("allowed");
+      const handler = makeReserveHandler(attachments, access);
+      const req = makeReq({
+        method: "POST",
+        body: JSON.stringify(RESERVE_BODY),
+      });
+      const res = makeRes();
+      await handler(req, res, undefined, ANONYMOUS_ACTOR);
+      await waitFor(res);
+
+      expect(res.statusCode).toBe(401);
+      expect(JSON.parse(res._body.toString("utf8"))).toEqual({
+        error: "Authentication required",
+      });
+      expect(calls).toEqual([]);
+    });
+
+    it("accepts an unanchored reservation from an anonymous actor when auth is disabled", async () => {
+      const { access, calls } = accessRecording("allowed");
+      const handler = makeReserveHandler(attachments, access);
+      const req = makeReq({
+        method: "POST",
+        body: JSON.stringify(RESERVE_BODY),
+      });
+      const res = makeRes();
+      await handler(req, res, undefined, {
+        user: undefined,
+        authEnabled: false,
+      });
+      await waitFor(res);
+
+      expect(res.statusCode).toBe(201);
+      expect(calls).toEqual([]);
+    });
+
+    it("answers 500 without deciding when the access service itself fails", async () => {
+      const access: IAttachmentAccessService = {
+        canReadAttachment: () => Promise.resolve({ kind: "denied" }),
+        canAttachToDocument: () => Promise.reject(new Error("db outage")),
+      };
+      const handler = makeReserveHandler(attachments, access);
+      const req = makeReq({
+        method: "POST",
+        body: JSON.stringify({ ...RESERVE_BODY, documentId: "doc-1" }),
+      });
+      const res = makeRes();
+      await handler(req, res, undefined, USER_ACTOR);
+      await waitFor(res);
+
+      expect(res.statusCode).toBe(500);
+      expect(res._body.toString("utf8")).not.toContain("db outage");
+    });
+
+    it("rejects a malformed documentId (blank / oversized / non-string) with 400", async () => {
+      const { access, calls } = accessRecording("allowed");
+      const handler = makeReserveHandler(attachments, access);
+      for (const documentId of ["   ", "x".repeat(513), 42]) {
+        const req = makeReq({
+          method: "POST",
+          body: JSON.stringify({ ...RESERVE_BODY, documentId }),
+        });
+        const res = makeRes();
+        await handler(req, res, undefined, USER_ACTOR);
+        await waitFor(res);
+        expect(res.statusCode).toBe(400);
+      }
+      expect(calls).toEqual([]);
+    });
+
+    it("never persists the documentId anchor on the reservation", async () => {
+      const { access } = accessRecording("allowed");
+      const handler = makeReserveHandler(attachments, access);
+      const req = makeReq({
+        method: "POST",
+        body: JSON.stringify({ ...RESERVE_BODY, documentId: "doc-1" }),
+      });
+      const res = makeRes();
+      await handler(req, res, undefined, USER_ACTOR);
+      await waitFor(res);
+      expect(res.statusCode).toBe(201);
+      const { reservationId } = JSON.parse(res._body.toString("utf8")) as {
+        reservationId: string;
+      };
+
+      const reservation = await attachments.reservations.get(reservationId);
+      expect("documentId" in reservation).toBe(false);
+    });
+  });
+
   describe("hash-first upload: 422 responses", () => {
     it("returns 422 { error: hash_mismatch, claimed, actual } when uploaded bytes hash differently", async () => {
       const { createHash } = await import("node:crypto");
@@ -807,7 +981,7 @@ describe("attachment routes", () => {
       const sizeBytes = Buffer.byteLength(claimedContent, "utf8");
 
       // Reserve with the claimed hash.
-      const reserveHandler = makeReserveHandler(attachments);
+      const reserveHandler = makeReserveHandler(attachments, allowAllAccess);
       const reserveReq = makeReq({
         method: "POST",
         body: JSON.stringify({
@@ -856,7 +1030,7 @@ describe("attachment routes", () => {
         .update(actualContent, "utf8")
         .digest("hex");
 
-      const reserveHandler = makeReserveHandler(attachments);
+      const reserveHandler = makeReserveHandler(attachments, allowAllAccess);
       const reserveReq = makeReq({
         method: "POST",
         body: JSON.stringify({
@@ -903,7 +1077,7 @@ describe("attachment routes", () => {
       const { createHash } = await import("node:crypto");
       const hash = createHash("sha256").update(content, "utf8").digest("hex");
 
-      const reserveHandler = makeReserveHandler(attachments);
+      const reserveHandler = makeReserveHandler(attachments, allowAllAccess);
       const req = makeReq({
         method: "POST",
         body: JSON.stringify({
@@ -1221,7 +1395,7 @@ describe("attachment routes", () => {
     });
 
     it("POST reserve with CRLF in fileName returns 400 and persists no row", async () => {
-      const handler = makeReserveHandler(attachments);
+      const handler = makeReserveHandler(attachments, allowAllAccess);
       const req = makeReq({
         method: "POST",
         body: JSON.stringify({
@@ -1236,7 +1410,7 @@ describe("attachment routes", () => {
     });
 
     it("download with non-ASCII fileName produces RFC 6266 Content-Disposition", async () => {
-      const reserveHandler = makeReserveHandler(attachments);
+      const reserveHandler = makeReserveHandler(attachments, allowAllAccess);
       const uploadHandler = makeUploadHandler(attachments);
       const downloadHandler = makeDownloadHandler(attachments);
 

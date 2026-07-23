@@ -1,4 +1,5 @@
 import type { AttachmentHash, AttachmentRef } from "@powerhousedao/reactor";
+import type { AttachmentHeader } from "./types.js";
 
 /**
  * Thrown when an attachment ref or hash is not known to the store.
@@ -51,11 +52,23 @@ export class UploadTooLarge extends Error {
 export class AttachmentAlreadyExists extends Error {
   readonly hash: AttachmentHash;
   readonly ref: AttachmentRef;
-  constructor(hash: AttachmentHash, ref: AttachmentRef) {
+  /**
+   * Metadata of the existing attachment, when the thrower has it at hand
+   * (the Switchboard includes it in the 409 body). Lets document-anchored
+   * anonymous uploaders complete the dedup fast path without calling the
+   * identity-gated stat route.
+   */
+  readonly header?: AttachmentHeader;
+  constructor(
+    hash: AttachmentHash,
+    ref: AttachmentRef,
+    header?: AttachmentHeader,
+  ) {
     super(`Attachment already exists for hash: ${hash}`);
     this.name = "AttachmentAlreadyExists";
     this.hash = hash;
     this.ref = ref;
+    this.header = header;
   }
 }
 

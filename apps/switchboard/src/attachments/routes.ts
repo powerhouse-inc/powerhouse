@@ -114,6 +114,21 @@ export function parseReserveOptions(
     return null;
   }
 
+  // Optional document anchor for write-authorized uploads. Reuses the same
+  // bounds as the download-target query parameter.
+  let documentId: string | undefined;
+  if (typeof obj.documentId === "string") {
+    if (
+      obj.documentId.trim().length === 0 ||
+      obj.documentId.length > MAX_DOCUMENT_ID_LEN
+    ) {
+      return null;
+    }
+    documentId = obj.documentId;
+  } else if (obj.documentId !== undefined && obj.documentId !== null) {
+    return null;
+  }
+
   // Hash-first mode: clientHash triggers this path; sizeBytes is required alongside it.
   // A body with sizeBytes but no clientHash falls through to the legacy path unchanged.
   if (obj.clientHash !== undefined) {
@@ -137,6 +152,7 @@ export function parseReserveOptions(
       extension,
       clientHash: obj.clientHash.toLowerCase() as AttachmentHash,
       sizeBytes: obj.sizeBytes,
+      ...(documentId !== undefined ? { documentId } : {}),
     };
   }
 
@@ -144,6 +160,7 @@ export function parseReserveOptions(
     mimeType: obj.mimeType,
     fileName: obj.fileName,
     extension,
+    ...(documentId !== undefined ? { documentId } : {}),
   };
 }
 
@@ -166,11 +183,15 @@ export function buildContentDisposition(fileName: string): string {
   return `attachment; filename=${quoteFilename(ascii)}; filename*=UTF-8''${encoded}`;
 }
 
-export function makeReserveHandler(attachments: AttachmentBuildResult) {
+export function makeReserveHandler(
+  attachments: AttachmentBuildResult,
+  attachmentAccess: IAttachmentAccessService,
+) {
   return async (
     req: IncomingMessage,
     res: ServerResponse,
     body?: unknown,
+    actor?: AttachmentActorContext,
   ): Promise<void> => {
     let parsed: unknown;
     try {
@@ -184,17 +205,57 @@ export function makeReserveHandler(attachments: AttachmentBuildResult) {
       sendError(
         res,
         400,
-        "Body must be { mimeType: string (type/subtype), fileName: string (no control characters, max 255 chars), extension?: string|null, clientHash?: string (64 hex chars), sizeBytes?: number (required with clientHash) }",
+        "Body must be { mimeType: string (type/subtype), fileName: string (no control characters, max 255 chars), extension?: string|null, clientHash?: string (64 hex chars), sizeBytes?: number (required with clientHash), documentId?: string (max 512 chars) }",
       );
+      return;
+    }
+
+    // Authorization: an anchored reservation is decided by the document's
+    // write permission (attaching is editing — anonymous actors included);
+    // an unanchored reservation has no document to defer to, so the bearer
+    // identity requirement remains.
+    const { documentId, ...reserveOpts } = opts;
+    if (documentId !== undefined) {
+      let decision;
+      try {
+        decision = await attachmentAccess.canAttachToDocument({
+          documentId,
+          userAddress: actor?.user?.address,
+        });
+      } catch (err) {
+        logger.error("Attachment attach decision failed: @error", err);
+        sendError(res, 500, "Internal error");
+        return;
+      }
+      if (decision.kind !== "allowed") {
+        // Generic on purpose: does not reveal whether the document exists.
+        sendError(res, 403, "Forbidden");
+        return;
+      }
+    } else if (actor?.authEnabled && !actor.user) {
+      sendError(res, 401, "Authentication required");
       return;
     }
 
     let upload;
     try {
-      upload = await attachments.service.reserve(opts);
+      upload = await attachments.service.reserve(reserveOpts);
     } catch (err) {
       if (err instanceof AttachmentAlreadyExists) {
-        sendJson(res, 409, { error: "already_exists", ref: err.ref });
+        // Include the existing attachment's metadata so anchored anonymous
+        // clients can finish the dedup fast path without the identity-gated
+        // stat route. Best-effort: dedup still works without it.
+        let header;
+        try {
+          header = await attachments.store.stat(err.hash);
+        } catch {
+          header = undefined;
+        }
+        sendJson(res, 409, {
+          error: "already_exists",
+          ref: err.ref,
+          ...(header && header.status === "available" ? { header } : {}),
+        });
         return;
       }
       sendErrorFromException(res, err);
