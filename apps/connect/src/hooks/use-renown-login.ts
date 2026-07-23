@@ -1,11 +1,29 @@
 import type { RenownLoginOption } from "@powerhousedao/design-system/connect";
 import {
+  openRenown,
+  showPHModal,
   useRenownAuth,
   useRenownLoginMethods,
 } from "@powerhousedao/reactor-browser";
 import type { WalletAdaptersConfig } from "@renown/sdk/wallet";
 import { useCallback, useMemo } from "react";
 import { getRuntimeConfig } from "../runtime-config.js";
+
+// Opens the in-page login modal when wallet adapters are configured; otherwise
+// redirects straight to the Renown portal (no modal with only a redirect button).
+export function useOpenRenownLogin(): () => void {
+  const adapters = getRuntimeConfig().connect.renown?.adapters as
+    | WalletAdaptersConfig
+    | undefined;
+  const methods = useRenownLoginMethods(adapters);
+  return useCallback(() => {
+    if (methods.length > 0) {
+      showPHModal({ type: "login" });
+    } else {
+      openRenown();
+    }
+  }, [methods]);
+}
 
 export interface RenownLoginProps {
   onLogin: () => void;
