@@ -56,7 +56,7 @@ export function buildWagmiConfig(config: PHRenownRainbowAdapterConfig): Config {
   } = config;
 
   if (!walletConnectProjectId) {
-    console.warn(
+    console.debug(
       "renown rainbow adapter: walletConnectProjectId is not set — hiding the WalletConnect option; only injected/browser wallets are offered.",
     );
   }

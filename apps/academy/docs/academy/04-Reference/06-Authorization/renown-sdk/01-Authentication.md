@@ -540,28 +540,49 @@ function isSessionValid(timestamp: number): boolean {
 
 ### 5. Server-Side Verification
 
-**Never trust client-side auth alone**. Always verify on the server:
+**Never trust client-side auth alone**. To verify a raw bearer token (e.g. from an `Authorization` header), use `verifyAuthBearerToken` from `@renown/sdk/node`:
 
 ```typescript
-// Server-side API route
+import { verifyAuthBearerToken } from "@renown/sdk/node";
+
 export async function GET(request: Request) {
-  const authHeader = request.headers.get("authorization");
+  const token = request.headers.get("authorization")?.replace(/^Bearer /, "");
+  if (!token) return new Response("Unauthorized", { status: 401 });
 
-  if (!authHeader) {
-    return new Response("Unauthorized", { status: 401 });
-  }
+  const verified = await verifyAuthBearerToken(token);
+  if (!verified) return new Response("Invalid credentials", { status: 403 });
 
-  // Verify the JWT/credential with Renown
-  const isValid = await verifyRenownCredential(authHeader);
-
-  if (!isValid) {
-    return new Response("Invalid credentials", { status: 403 });
-  }
-
-  // Proceed with authorized request
-  return Response.json({ data: "Protected data" });
+  const { address } = verified.verifiableCredential.credentialSubject;
+  return Response.json({ address });
 }
 ```
+
+#### SSR session cookie
+
+To render authenticated pages on the server (Next.js and similar):
+
+1. On login the client mints a bearer token (`renown.getBearerToken()`) and stores it — with a small display hint (name/avatar) — in an HttpOnly cookie (name exported as `RENOWN_SESSION_COOKIE`, value built with `serializeRenownSessionCookie`). `RenownProvider`'s session-cookie sync does this automatically when given a `session`.
+2. A Data Access Layer reads the cookie and calls `verifyRenownSession`, memoized per request:
+
+```typescript
+import { RENOWN_SESSION_COOKIE, verifyRenownSession } from "@renown/sdk/node";
+import { cookies } from "next/headers";
+import { cache } from "react";
+
+export const verifySession = cache(async () => {
+  const cookie = (await cookies()).get(RENOWN_SESSION_COOKIE)?.value;
+  if (!cookie) return null;
+  return (await verifyRenownSession(cookie, { switchboardUrl: SWITCHBOARD_URL })) ?? null;
+});
+```
+
+`verifyRenownSession` takes the cookie value, verifies the JWT (signature + expiry), and merges the display hint into `user` (unverified — display only). Pass `verifyCredential: true` to also re-check the credential against the switchboard so a **revoked/expired** credential is rejected; it defaults to `false` (token-only, no network). `readSessionClaims(cookieValue)` gives a cheap, signature-free decode for optimistic checks only (e.g. an edge redirect) — never trust it for access control.
+
+3. Pass the result to `RenownProvider session={await verifySession()}` so the server render is authenticated (no flash), and consumers read it via `useRenownAuth()`.
+
+#### Revalidation on the client
+
+On mount the client re-checks the restored credential against the switchboard and logs out if it was revoked/expired (`revalidate` prop on `RenownProvider`, default `"always"`). In the browser this is **non-blocking and fail-open** (a transient outage keeps the session); Node scripts block on it. `renown.revalidate()` runs the same check on demand.
 
 ## Best Practices
 

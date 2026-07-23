@@ -1,5 +1,6 @@
 "use client";
 
+import { useRenownSessionSynced } from "@powerhousedao/reactor-browser/renown";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { RenownLogin } from "@/components/renown-login";
@@ -8,11 +9,14 @@ import { useAuthState } from "@/components/use-auth-state";
 export default function LoginPage() {
   const router = useRouter();
   const authState = useAuthState();
+  // Wait until the session cookie is written before navigating, so the
+  // server-side proxy sees it and doesn't bounce us back here.
+  const sessionSynced = useRenownSessionSynced();
 
-  // Already signed in? Send them to the app.
+  // Already signed in (and the cookie is set)? Send them to the app.
   useEffect(() => {
-    if (authState === "authenticated") router.replace("/");
-  }, [authState, router]);
+    if (authState === "authenticated" && sessionSynced) router.replace("/");
+  }, [authState, sessionSynced, router]);
 
   return (
     <main className="flex flex-1 flex-col items-center justify-center gap-8 p-16 text-center">

@@ -2,6 +2,9 @@ export const DEFAULT_RENOWN_URL = "https://www.renown.id";
 export const DEFAULT_RENOWN_NETWORK_ID = "eip155";
 export const DEFAULT_RENOWN_CHAIN_ID = "1";
 
+/** Default cookie name for a server-readable Renown session (bearer token). */
+export const RENOWN_SESSION_COOKIE = "renown_session";
+
 export const DOMAIN_TYPE = [
   { name: "version", type: "string" },
   { name: "chainId", type: "uint256" },

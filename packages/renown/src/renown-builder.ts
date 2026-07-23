@@ -154,15 +154,8 @@ export class BaseRenownBuilder {
       switchboard,
     );
 
-    // Re-authenticate stored user if present
-    if (renown.user) {
-      try {
-        await renown.login(renown.user.did);
-      } catch (error) {
-        console.error("Failed to re-authenticate user:", error);
-      }
-    }
-
+    // A stored user is loaded as-is for an instant, offline-safe start; callers
+    // revalidate against the source separately via renown.revalidate().
     return renown;
   }
 

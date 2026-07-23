@@ -265,6 +265,27 @@ export class Renown implements IRenown {
     return Promise.resolve();
   }
 
+  // Re-check the current user's credential at the source; logs out if it was
+  // revoked or expired. Network errors keep the session (fail open).
+  async revalidate(): Promise<boolean> {
+    const user = this.user;
+    if (!user) return false;
+    try {
+      const credential = await this.#getCredential(
+        user.address,
+        user.chainId,
+        this.#crypto.did,
+      );
+      if (!credential) {
+        await this.logout();
+        return false;
+      }
+      return true;
+    } catch {
+      return true;
+    }
+  }
+
   on<K extends keyof RenownEvents>(
     event: K,
     listener: (data: RenownEvents[K]) => void,
