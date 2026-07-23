@@ -302,7 +302,7 @@ covers(capability, request):
 matches(principal, subject, ctx):
    { anyone: true }      -> true
    { address }           -> principal.address == subject.address
-   { group }             -> membership folded at admission, recorded, pinned for replay (see Groups)
+   { group }             -> membership folded at the operation's position (see Groups)
    { match: Condition }  -> eval(Condition, ctx)
 ```
 
@@ -446,7 +446,7 @@ Across reactors, in `reactor.load()`, it is convergent. This means that a decisi
 
 A `PHGroup` (`@powerhousedao/document-group`) is an ordinary document whose state is a member address list, gated by its own auth scope. A `{ group }` principal names a group document id.
 
-Group streams get no special rule. The `groups` projection names them in the auth scope's grant list, which puts them in the read-set, and every stream in the read-set is folded by position in the same merged order. Membership operations sort against the target document's operations by timestamp like anything else, and every replica holding the same operations answers the membership question identically and deterministically.
+Group streams get no special rule. The `groups` projection names them in the auth scope's grant list, which puts them in the read-set, and every stream in the read-set is folded by position in the same merged order. The fold is over judged state: a membership write that the group's own policy denies is an error operation and contributes nothing. Membership operations sort against the target document's operations by timestamp like anything else, and every replica holding the same operations answers the membership question identically and deterministically.
 
 The read-set is therefore a sync obligation. A grant that names a group makes that group document part of what an enforcing replica must hold. A load into a group stream re-judges every document whose grants reference it, each in its own job, which requires an index from group streams to dependent documents. A replica that does not yet hold a group's history fails closed: the member list is empty, so the principal does not match. It converges when the stream arrives. Access is never widened by a missing group.
 
@@ -484,7 +484,7 @@ The rollout has four stages. Each stage ships on its own and changes no behavior
 
 1. The `auth` projection. `decide` gains the uninitialized, creator, and grant steps, and grants are enforced at admission and replay. The interim auth gate is deleted. Reads and the sync manager filter against the same model. This step brings the monotonic-timestamp rule for the auth stream, the excessive-shuffle exemption for re-judgment, and the load-path work for judging multiple streams in one job. Exit: two reactors that accept conflicting auth and domain operations offline converge to identical verdicts and identical state after sync, in both directions, and a revocation over a history longer than the excessive-shuffle bound completes without dead-lettering.
 2. Conditions. The `where` and `match` evaluators turn on. Conditional grants begin to apply only here.
-3. The `groups` projection. Ship the `PHGroup` model, derive group queries from the grant list, add group streams to the read-set and the append condition, build the index from group streams to dependent documents, and re-judge dependents in their own jobs. Group principals begin to match only here. Exit: a group-gated operation syncs to a replica that does not hold the group document and both replicas agree, and a membership removal denies later operations on every document that references the group.
+3. The `groups` projection. Ship the `PHGroup` model, derive group queries from the grant list, add group streams to the read-set and the append condition, build the index from group streams to dependent documents, and re-judge dependents in their own jobs. Group principals begin to match only here. Exit: a group-gated operation syncs to a replica that does not hold the group document and fails closed there until the group's history arrives, after which both replicas agree; and a membership removal denies later operations on every document that references the group.
 
 Registering decision models beyond auth is out of scope. The types are model-agnostic, so that work is registration, not new semantics.
 
