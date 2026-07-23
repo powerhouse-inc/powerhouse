@@ -77,6 +77,24 @@ export class AuthInitializerNotCreatorError extends Error {
 }
 
 /**
+ * Thrown when INITIALIZE_AUTH carries a version below 1. Version 0 is reserved
+ * for the uninitialized auth scope.
+ */
+export class InvalidAuthVersionError extends Error {
+  public readonly documentId: string;
+  public readonly version: number;
+
+  constructor(documentId: string, version: number) {
+    super(
+      `Invalid auth policy version ${version} for document ${documentId}: INITIALIZE_AUTH requires an integer version >= 1`,
+    );
+    this.name = "InvalidAuthVersionError";
+    this.documentId = documentId;
+    this.version = version;
+  }
+}
+
+/**
  * Thrown when a grant referenced by REMOVE_GRANT or MOVE_GRANT does not exist.
  */
 export class GrantNotFoundError extends Error {

@@ -9,6 +9,7 @@ import {
   AuthInitializerNotCreatorError,
   GrantNotFoundError,
   initializeAuth,
+  InvalidAuthVersionError,
   isAuthAction,
   moveGrant,
   removeGrant,
@@ -140,6 +141,23 @@ describe("auth-scope reducer", () => {
     );
     expect(doc.state.auth.creator).toBeUndefined();
     expect(doc.state.auth).toEqual({ version: 1, grants: [] });
+  });
+
+  it("rejects INITIALIZE_AUTH with a version below 1 (0 means uninitialized)", () => {
+    expect(() => initializeAuth({ version: 0, grants: [] })).toThrow();
+
+    // a raw action that bypassed the creator's schema is still rejected by the
+    // reducer itself, deterministically on every replica
+    const raw: Action = {
+      id: "act-init-v0",
+      type: "INITIALIZE_AUTH",
+      scope: "auth",
+      input: { version: 0, grants: [] },
+      timestampUtcMs: "2024-01-01T00:00:00Z",
+    };
+    expect(() => countReducer(initialDocument, raw)).toThrow(
+      InvalidAuthVersionError,
+    );
   });
 
   it("rejects a second INITIALIZE_AUTH", () => {

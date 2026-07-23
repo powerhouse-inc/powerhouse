@@ -7,6 +7,7 @@ import {
   AuthAlreadyInitializedError,
   AuthInitializerNotCreatorError,
   GrantNotFoundError,
+  InvalidAuthVersionError,
 } from "./errors.js";
 import {
   createAuthState,
@@ -100,7 +101,7 @@ const GrantSchema = () => z.custom<Grant>(isGrantShape);
 
 export const InitializeAuthActionInputSchema = () =>
   z.object({
-    version: z.number(),
+    version: z.number().int().min(1),
     grants: z.array(GrantSchema()),
   });
 
@@ -234,13 +235,18 @@ export function isDocumentCreator(
 
 /**
  * Sets the initial policy. Valid only while the auth scope is uninitialized
- * (version 0). On a signed-header document it must be signed by the document
- * creator (`header.sig.publicKey`).
+ * (version 0). The input version is the policy language version and must be an
+ * integer >= 1; 0 is reserved for the uninitialized state. On a signed-header
+ * document it must be signed by the document creator (`header.sig.publicKey`).
  */
 export function applyInitializeAuthAction<TState extends PHBaseState>(
   document: PHDocument<TState>,
   action: InitializeAuthAction,
 ): PHDocument<TState> {
+  const { version, grants } = action.input;
+  if (!Number.isInteger(version) || version < 1) {
+    throw new InvalidAuthVersionError(document.header.id, version);
+  }
   if (document.state.auth.version !== 0) {
     throw new AuthAlreadyInitializedError(document.header.id);
   }
@@ -250,7 +256,6 @@ export function applyInitializeAuthAction<TState extends PHBaseState>(
   if (hasCreator && !isDocumentCreator(creatorKey, signerKey)) {
     throw new AuthInitializerNotCreatorError(document.header.id);
   }
-  const { version, grants } = action.input;
   const creator = hasCreator ? signerKey : undefined;
   return {
     ...document,

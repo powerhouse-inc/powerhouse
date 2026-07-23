@@ -119,6 +119,10 @@ export type PHDocumentState = {
  * uninitialized and leaves the document open.
  */
 export type PHAuthState = {
+  /**
+   * Policy language version. 0 is the uninitialized state; INITIALIZE_AUTH
+   * sets an integer >= 1.
+   */
   version: number;
   grants: Grant[];
   /**

@@ -36,7 +36,7 @@ While DCB allows for arbitrary decision models, for now Auth is the first and on
 
 ```typescript
 type PHAuthState = {
-  version: number;
+  version: number;          // policy language version; 0 = uninitialized, genesis sets >= 1
   grants: Grant[];
   creator?: string;         // did:key of the genesis signer; set once by INITIALIZE_AUTH
 };
@@ -74,6 +74,7 @@ The auth scope has four actions. All are applied by the `AuthActionHandler`.
 
 ```typescript
 type InitializeAuthInput = {
+  version: number;
   grants: Grant[];
 };
 
@@ -91,7 +92,7 @@ type MoveGrantInput = {
 };
 ```
 
-`INITIALIZE_AUTH` is the genesis operation. It is valid only at auth revision zero and carries the document's initial grants. On a signed document its signer must match the header key, and that signer is stored as `creator` (see Administration and bootstrap).
+`INITIALIZE_AUTH` is the genesis operation. It is valid only at auth revision zero and carries the policy's `version` and the document's initial grants. The `version` names the policy language the grants are written in (see Condition language) and must be an integer of at least 1. The `AuthActionHandler` rejects anything less, because 0 is reserved to mean uninitialized. On a signed document its signer must match the header key, and that signer is stored as `creator` (see Administration and bootstrap).
 
 `SET_GRANT` upserts by `grant.id`. An existing id is replaced in place and keeps its position. A new id appends to the end of the list.
 
@@ -113,7 +114,7 @@ The list of `Grant` objects defines a policy. Each grant is applied on top of th
 
 ```typescript
 {
-  version: 0,
+  version: 1,
   grants: [
     // nobody executes anything, anywhere
     { id: "g-lockdown", description: "default lockdown", effect: "deny",
@@ -278,7 +279,7 @@ function decide(
 1. if model.document.isDeleted:
       return DENY                     # a deleted document refuses everything
 
-2. if the auth scope is uninitialized (no genesis operation):
+2. if the auth scope is uninitialized (version == 0, i.e. no genesis operation):
       return ALLOW                    # legacy: a document with no policy is unaffected
 
 3. if request is an execute in the "auth" scope
@@ -632,7 +633,7 @@ This is a TRP toll statement. The operation names are illustrative — the model
 
 ```json
 {
-  "version": 0,
+  "version": 1,
   "grants": [
     // the site administrator governs the policy and can act anywhere
     { "id": "g-admin", "description": "Site administrator: full governance", "effect": "allow",
