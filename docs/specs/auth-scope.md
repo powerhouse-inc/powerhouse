@@ -169,9 +169,9 @@ We define the following types to support the DCB pattern:
 type StreamQuery =
   { documentId: string; branch: string; scope: string };
 
-type Projection<S, M> = {
-  initialState: S;
-  apply: (state: S, operation: Operation) => S;
+// A projection names a stream. Its value in the model is that scope's state
+// from the rebuilt document, e.g. PHAuthState for an auth query.
+type Projection<M> = {
   // static, or derived from already-folded projections; this is how
   // projections compose
   query: StreamQuery | ((model: Partial<M>) => StreamQuery[]);
@@ -181,14 +181,16 @@ type Projection<S, M> = {
 type DecisionContext = { scopeState: unknown };
 
 type DecisionModel<M> = {
-  projections: { [K in keyof M]: Projection<M[K], M> };
+  projections: { [K in keyof M]: Projection<M> };
   decide(model: M, subject: Subject, request: Request, ctx: DecisionContext): "allow" | "deny";
 };
 ```
 
+A projection defines no fold function. Folding a stream is what the reactor already does when it rebuilds a document, using the reducers this spec has already named: model reducers for domain scopes, the auth reducer, and the document handler. A projection's value in the model is the named scope's state from that rebuild, so the `document` key holds `PHDocumentState` and the `auth` key holds `PHAuthState`. A derived query that returns several streams yields a map from document id to state. Keeping one fold implementation is the point. Skip handling, hash rules, and the rule that error operations contribute nothing all live in the rebuild path, and the decision model inherits them instead of restating them.
+
 A derived query may read only projections whose own queries are static. For instance, we may need to generate queries based on group streams. However, we only allow this one layer deep as a simple guard against potential cycles. The auth model fits this limit exactly: a group's auth scope cannot reference another group (see Actions), so group-derived queries never need a second layer.
 
-Building the model does two things at once: it "folds" the projections (i.e. creates the state), and it captures the exact position of each stream.
+Building the model does two things at once: it reads each stream's state, and it captures the exact revision each read observed. Neither is new machinery. The write cache already returns a document's state at a revision, hot from the cache or cold by replaying the operation log, so `buildDecisionModel` is one `IWriteCache.getState` read per stream plus a record of the revisions it read. Positional evaluation rides the same machinery: a position in the merged order names a revision per stream, and re-evaluation reaches those states by walking the tail forward rather than by point reads.
 
 ```typescript
 type DecisionTarget = { documentId: string; branch: string };
@@ -207,6 +209,8 @@ function buildDecisionModel<M>(
 
 The append condition, as described before, is the model's read-set. It has one entry per stream the projections read, and stores the revision it read to. This allows us to guarantee that the state of the document's scope applied by the reducer holds only as long as none of these streams has grown. The store enforces this at write time (see Enforcement), so a decision can never be committed against streams that changed during the reducer execution.
 
+Reading through the cache puts the cache's invalidation contract in the auth trust base. This is not new exposure. Every mutation already builds its document through the same cache.
+
 The full auth decision model composes three projections, and we can see easily how we might incrementally add the projections to the decision model to roll out this feature. There are two projections over the target document (i.e. we need `document` and `auth` streams), and a set of projections over the referenced group documents:
 
 ```typescript
@@ -217,18 +221,12 @@ const AuthDecisionModel = (target: DecisionTarget): DecisionModel<{
 }> => ({
   projections: {
     document: {
-      initialState: defaultDocumentState(),
-      apply: applyDocumentOperation,
       query: { documentId: target.documentId, branch: target.branch, scope: "document" },
     },
     auth: {
-      initialState: defaultAuthState(),
-      apply: applyAuthOperation,
       query: { documentId: target.documentId, branch: target.branch, scope: "auth" },
     },
     groups: {
-      initialState: {},
-      apply: applyGroupOperation,
       query: (model) => referencedGroupIds(model.auth.grants)
         .map((id) => ({ documentId: id, branch: "main", scope: "global" })),
     },
@@ -241,7 +239,7 @@ The `document` projection is intended to replace the current metadata cache used
 
 The `auth` projection rebuilds the grant list from the auth event stream.
 
-The `groups` projection is the most complicated, and should be the last to introduce. Its stream set is derived from the auth scope state (the auth projection's folded state), so adding a grant that names a new group pulls that group's stream into the model. Group queries pin the `main` branch. A group's member list lives on its main branch no matter which branch the referencing document is on.
+The `groups` projection is the most complicated, and should be the last to introduce. Its stream set is derived from the auth scope state (the auth projection's folded state), so adding a grant that names a new group pulls that group's stream into the model. Group queries pin the `main` branch. A group's member list lives on its main branch no matter which branch the referencing document is on. Folding a group's `global` scope requires the `PHGroup` document model to be registered, and it ships with the platform.
 
 The `ctx` on the `decide` function includes the executing scope's own state (for conditions reading `doc.global.*`).
 
@@ -607,7 +605,7 @@ The rollout has four stages. Each stage ships on its own and changes no behavior
 
 **Stage 1: data model, backward compatible (mostly done).** Fill out `PHAuthState` and backfill legacy documents so an empty `auth` loads as an empty policy. Ship the four auth actions and the auth reducer, with `UNDO`, `REDO`, and `PRUNE` rejected on the auth scope. The policy is now state that replicates with the document and is not yet consulted by anything. Remaining work: auth operations must survive document save/load and versioned replay. An interim admission gate that reads this state directly also exists on the branch. An interim read gate exists as well: `IReactorClient` filters domain scopes by the reading subject on its document reads, and reactor-api passes the authenticated caller as that subject. Stage 4 absorbs both gates into the model.
 
-**Stage 2: the decision model surface.** Introduce the types: `StreamQuery`, `Projection`, `DecisionContext`, `DecisionModel`, `AppendCondition`, and `buildDecisionModel`. Extend `IOperationStore.apply` to accept an append condition: the guarded insert, the per-stream advisory locks, and `AppendConditionFailedError`. A condition failure retries by rebuilding the model and does not count toward the job's failure limit. No model is registered, so nothing changes behavior. This stage is proven with store-level tests: a failed condition inserts nothing, lock acquisition cannot deadlock, and a retry lands against the new heads.
+**Stage 2: the decision model surface.** Introduce the types: `StreamQuery`, `Projection`, `DecisionContext`, `DecisionModel`, `AppendCondition`, and `buildDecisionModel`. `buildDecisionModel` reads stream states through the write cache and records the revisions it read, so it introduces no new fold machinery. Extend `IOperationStore.apply` to accept an append condition: the guarded insert, the per-stream advisory locks, and `AppendConditionFailedError`. A condition failure retries by rebuilding the model and does not count toward the job's failure limit. No model is registered, so nothing changes behavior. This stage is proven with store-level tests: a failed condition inserts nothing, lock acquisition cannot deadlock, and a retry lands against the new heads.
 
 **Stage 3: register the first model, document stream only.** One projection over the `document` stream and a `decide` that denies when the document is deleted. The executor now builds the model and calls `decide` at admission for the first time, which replaces the `isDeleted` check and retires the document meta cache. The replay half arrives in its smallest form: load jobs evaluate auth for operations at their merged position, denied operations are stored as error operations, and a load into the document stream re-evaluates the domain streams. The exit test: a backdated `DELETE_DOCUMENT` arriving by sync denies the operations that sort after it, on every replica, while operations before it survive.
 
