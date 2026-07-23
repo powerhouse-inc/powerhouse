@@ -442,13 +442,162 @@ Locally, in `reactor.mutate()`, auth enforcement is preventive. That is, the app
 
 Across reactors, in `reactor.load()`, it is convergent. This means that a decision invalidated by remote writes is caught by re-judgment when they arrive as new operations. This means that a locally-accepted operation is provisional until the read-set streams settle. Once all replicas hold the same operations, they agree on every verdict, which is the same contract reshuffle already imposes on document state, extended to authorization.
 
+### Synchronization
+
+Currently, synchronization is fully tied to drive membership, either through reactor-drive or document-drive. We do this through a mechanism **collections**, which essentially flatten the list of all operations on all documents in a drive. Collections are _forward-calculated_, meaning that we can determine the contents of a collection in the write model (i.e. in the write side of the CQRS partition) so that we can guarantee collections are built correctly before read-models can even read the operation from the log.
+
+This is a very strong guarantee. In fact, when using a Postgres store, collection membership is in the same transaction as the operation that changes it: `CREATE_DOCUMENT` adds the new document to the relevant drive collections, and relationship operations like `ADD_RELATIONSHIP` and `REMOVE_RELATIONSHIP` add and remove members. After an operation is commited, on the read side of the CQRS partition, the sync manager places the operation in the outbox of every remote subscribed to the collection. When a document joins a collection after the collection already has history, sync backfills that history to the collection's remotes. In short, collections allow use to synchronize a single, flattened list of operations using a single, per-channel cursor.
+
+With the introduction of the ph-group, however, we are creating a synchronization dependency between arbitrary documents. That is, for a replica to fully evaluate auth claims that references a group, it must be able to also build the group.
+
+Groups fit the shape of collections because the set of groups a document requires changes only when its auth stream changes, and auth operations pass through the same write path as everything else. When an auth operation commits, the executor can extract the named group ids and inserts them into the collection in the same transaction.
+
+```typescript
+// The group ids named by { group } principals in an auth action's input.
+// INITIALIZE_AUTH contributes the groups named across its grants; SET_GRANT
+// contributes the groups named by its one grant; REMOVE_GRANT and MOVE_GRANT
+// contribute nothing.
+function mentionedGroupIds(action: Action): string[];
+```
+
+We will need to add one table to the store, called `group_references`. This will record a direct lookup from document to group. The transitive closure (i.e. groups that reference groups) is computed from these rows by recursive queries at three moments, each described below: when an auth operation commits, when a document joins a collection, and when a group stream loads. These are outlined in more detail below, but all three of these moments exist in the write model.
+
+The sync manager (on the read side of the partition) never reads this table. Placing a committed operation into outboxes remains a membership lookup against `document_collections`, so the reference graph is walked only when the graph itself changes, never per operation.
+
+```sql
+-- new: one row per (document, group) reference ever discovered; rows are
+-- never updated or deleted
+CREATE TABLE "group_references" (
+  "documentId" text NOT NULL,  -- the document whose auth operation names the group
+  "groupId"    text NOT NULL,  -- the group document a { group } principal names
+  PRIMARY KEY ("documentId", "groupId")
+);
+
+-- the reverse direction: from a group to the documents that reference it
+CREATE INDEX "idx_group_references_groupId" ON "group_references" ("groupId");
+```
+
+Collection membership itself stays where it is, and groups become ordinary rows in it:
+
+```sql
+-- existing, unchanged. One row per (document, collection); joinedOrdinal and
+-- leftOrdinal bound the window during which the document's operations are
+-- served to the collection's remotes.
+CREATE TABLE "document_collections" (
+  "documentId"    text   NOT NULL,
+  "collectionId"  text   NOT NULL,  -- e.g. 'drive.main.drive-9'
+  "joinedOrdinal" bigint NOT NULL DEFAULT 0,
+  "leftOrdinal"   bigint,
+  PRIMARY KEY ("documentId", "collectionId")
+);
+```
+
+Two statements maintain these tables, and one query consumes them.
+
+**When an auth operation commits.** Suppose an operation on `doc-123` names the group `g-admins`, and the operation receives ordinal `812` in the operation index. In the same transaction, the executor inserts the reference row `('doc-123', 'g-admins')` and then inserts collection membership rows. Two questions determine which ones. Both are answered from `group_references` alone, reading each row as: this document's policy names this group.
+
+First, which groups must a replica hold to judge `doc-123`? `g-admins`, because judging `doc-123` folds its member list. But `g-admins` is a document with a policy of its own, and that policy may name another group — say `g-owners`, gating who may edit the member list. Folding `g-admins` means judging its membership operations, and judging them folds `g-owners`. So the answer is computed by repetition: start with `g-admins`; add every group named by a group already in the set; stop when nothing new appears. The `required_groups` query below is this repetition.
+
+Second, which documents' collections need those groups? `doc-123`'s own — and `doc-123` may itself be a group. If a grant on `doc-77` names `doc-123`, then judging `doc-77` folds `doc-123`'s member list, so whatever `doc-123` now requires, `doc-77` requires as well. The same repetition runs on the other column: start with `doc-123`; add every document that names a document already in the set. The `dependents` query below computes this, and the insert adds every required group to every collection that any dependent belongs to.
+
+```sql
+-- 1. record the reference; rediscovering a known reference changes nothing
+INSERT INTO "group_references" ("documentId", "groupId")
+VALUES ('doc-123', 'g-admins')
+ON CONFLICT DO NOTHING;
+
+-- 2. the membership rows the new reference implies
+WITH RECURSIVE
+-- doc-123, plus every document whose judgment folds it: any document that
+-- names a document already in the set
+dependents ("documentId") AS (
+  SELECT 'doc-123'
+  UNION
+  SELECT gr."documentId"
+  FROM "group_references" gr
+  JOIN dependents d ON gr."groupId" = d."documentId"
+),
+-- the groups required to judge doc-123: g-admins, plus any group named by a
+-- group already in the set
+required_groups ("groupId") AS (
+  SELECT 'g-admins'
+  UNION
+  SELECT gr."groupId"
+  FROM "group_references" gr
+  JOIN required_groups rg ON gr."documentId" = rg."groupId"
+)
+INSERT INTO "document_collections" ("documentId", "collectionId", "joinedOrdinal")
+SELECT rg."groupId", dc."collectionId", 812
+FROM dependents d
+JOIN "document_collections" dc ON dc."documentId" = d."documentId"
+CROSS JOIN required_groups rg
+ON CONFLICT ("documentId", "collectionId") DO UPDATE
+SET "joinedOrdinal" = LEAST("document_collections"."joinedOrdinal", EXCLUDED."joinedOrdinal"),
+    "leftOrdinal"   = NULL;
+```
+
+An operation that names several groups runs the second statement once per group id, or anchors `required_groups` with all of them.
+
+The conflict clause carries two rules. `LEAST` keeps the earliest join, so a rediscovered reference can never shrink a backfill window that remotes already rely on. Setting `leftOrdinal` to `NULL` reopens membership: the group may once have been an ordinary member of the drive and been removed, but a policy reference is not a removable membership, so the reference wins. For the same reason, the join against `document_collections` does not filter on `leftOrdinal` — a document that has left a collection still has served history inside its window, and remotes holding that history still judge it.
+
+`UNION` rather than `UNION ALL` is what stops the repetition on cycles: a value already in the set is not added again, so two groups that name each other end the query instead of looping it.
+
+**When a document joins a collection.** The relationship path that inserts the document's own membership row gains one statement: every group required to judge the joining document joins with it. Suppose `doc-123` is added to drive `drive-9` on `main` at ordinal `951`. The `required_groups` repetition is the same as before, except it starts from all of `doc-123`'s recorded references at once.
+
+```sql
+WITH RECURSIVE required_groups ("groupId") AS (
+  SELECT "groupId" FROM "group_references" WHERE "documentId" = 'doc-123'
+  UNION
+  SELECT gr."groupId"
+  FROM "group_references" gr
+  JOIN required_groups rg ON gr."documentId" = rg."groupId"
+)
+INSERT INTO "document_collections" ("documentId", "collectionId", "joinedOrdinal")
+SELECT rg."groupId", 'drive.main.drive-9', 951
+FROM required_groups rg
+ON CONFLICT ("documentId", "collectionId") DO UPDATE
+SET "joinedOrdinal" = LEAST("document_collections"."joinedOrdinal", EXCLUDED."joinedOrdinal"),
+    "leftOrdinal"   = NULL;
+```
+
+Both statements only insert or reopen rows. A `REMOVE_GRANT` mentions no group, so it runs neither, and no path deletes from either table. Serving does not change: the outbox routes group operations because groups are members, and a newly inserted membership row triggers the same backfill as a late-joining document. A remote can still observe the referencing grant before the group's history finishes arriving; it fails closed for that window and converges when the backfill lands, which is the contract replay imposes everywhere else.
+
+**When a group stream loads.** Re-evaluation needs the opposite direction: an operation arrived on `g-admins`, and every document whose judgment folds that stream must be re-judged. This is the `dependents` repetition from the first statement, anchored at the group: a document that names a group that names `g-admins` folds it too, so it is in the set.
+
+```sql
+WITH RECURSIVE dependents ("documentId") AS (
+  SELECT "documentId" FROM "group_references" WHERE "groupId" = 'g-admins'
+  UNION
+  SELECT gr."documentId"
+  FROM "group_references" gr
+  JOIN dependents d ON gr."groupId" = d."documentId"
+)
+SELECT "documentId" FROM dependents;
+```
+
+Each row becomes its own re-judgment job, as the Re-evaluation caveats describe. One relation, written once, serves both consumers: read forward it decides what sync must carry, read backward it decides what re-judgment must visit.
+
+Two decisions define the relation, and both follow from how judgment works rather than from sync convenience.
+
+References come from the operation's input, not from its verdict. Any operation that names a group contributes a reference, including an operation later judged an error. This over-approximates: a denied `SET_GRANT` adds a reference that judgment will never use. In exchange, sync topology is independent of judgment. Re-evaluation can flip verdicts across a whole suffix without a single membership row changing, and a replica knows what to fetch before it has judged anything.
+
+References are insert-only. Judgment is positional: if a grant named group G at one position and a later operation removed it, re-judging the earlier range still folds G's membership, so the obligation is the union of groups referenced anywhere in history, not the set referenced at the head. An insert-only relation also behaves well under sync. Inserting the same reference twice changes nothing, and references discovered out of order — a backdated grant arriving late — insert the same rows they would have inserted in order. The cost is that a group referenced once, briefly, stays in the collection. Groups are small documents; reclaiming stale references is a compaction question, not a correctness one, and this spec leaves it open.
+
+References close transitively. A group is an ordinary document: its membership writes are judged under its own policy, that policy can name other groups, and the fold is over judged state, so folding one group's members can require another group's stream. Membership therefore includes the closure. When a reference from a document to group G is inserted, G and every group reachable from G join the document's collections; when a new reference is written on G afterward, it propagates to every collection G already belongs to. Because rows are never deleted, maintaining the closure is incremental insertion, with no removal to recompute. Cycles between groups are harmless: the closure asks which streams are reachable, not in what order.
+
+A remote that syncs one document rather than a collection gets the same answer at a different grain. The forward relation reports the document's group closure when the subscription is established, and the closure grows the same way afterward. The lookup replaces the collection; in either grain, routing an operation never walks the reference graph.
+
+A reference does not create the stream. A grant can name a group that no reachable remote holds — a typo, or a group that lives elsewhere. The write side can observe at admission that it holds no such document and surface a warning, but no membership row conjures history. Every replica fails closed until some remote supplies the stream, and access is never widened in the meantime.
+
+Naming a group publishes its membership. Serving a group through a collection means every subscriber of that collection receives the group's member list, whatever the group's own read grants say. This is deliberate, and it is the posture the Reads section already takes for the `auth` and `document` scopes: state that replicas must fold in order to judge cannot be withheld from them without breaking convergence. A group is fit for policies whose audience may see its roster; a group whose membership must stay confidential should not be named in a grant.
+
 ## Groups
 
 A `PHGroup` (`@powerhousedao/document-group`) is an ordinary document whose state is a member address list, gated by its own auth scope. A `{ group }` principal names a group document id.
 
 Group streams get no special rule. The `groups` projection names them in the auth scope's grant list, which puts them in the read-set, and every stream in the read-set is folded by position in the same merged order. The fold is over judged state: a membership write that the group's own policy denies is an error operation and contributes nothing. Membership operations sort against the target document's operations by timestamp like anything else, and every replica holding the same operations answers the membership question identically and deterministically.
 
-The read-set is therefore a sync obligation. A grant that names a group makes that group document part of what an enforcing replica must hold. A load into a group stream re-judges every document whose grants reference it, each in its own job, which requires an index from group streams to dependent documents. A replica that does not yet hold a group's history fails closed: the member list is empty, so the principal does not match. It converges when the stream arrives. Access is never widened by a missing group.
+The read-set is therefore a sync obligation. A grant that names a group makes that group document part of what an enforcing replica must hold; the Synchronization section describes how that obligation is met. A load into a group stream re-judges every document whose grants reference it, each in its own job, using the reverse direction of the same group-reference relation. A replica that does not yet hold a group's history fails closed: the member list is empty, so the principal does not match. It converges when the stream arrives. Access is never widened by a missing group.
 
 ## Reads
 
@@ -461,6 +610,8 @@ Internal consumers are inside the trust boundary and see everything. The event b
 This placement changes the timing guarantee. An operation is judged at its position, so a revocation catches even operations that were accepted before it arrived. A read is judged at the moment it is served, so revoking read only stops future serving. It cannot recall bytes a replica already holds.
 
 One exemption is required. Suppose a policy could deny reading the `auth` scope itself. A peer could then sync a document without its policy, see an uninitialized auth scope, and allow every operation it holds. Replicas would diverge permanently. The `auth` and `document` scopes therefore bypass the grants: the policy and the document's metadata are visible to any holder of the document. Grants gate domain-scope reads only. A replica denied a domain scope never receives that stream, so it never holds or judges it, and partial replication stays consistent.
+
+The same reasoning extends to groups. A replica must fold a group's membership to judge with it, so a group document named by a policy is served to that policy's audience regardless of the group's own read grants (see Synchronization).
 
 ## Administration and bootstrap
 
@@ -484,7 +635,7 @@ The rollout has four stages. Each stage ships on its own and changes no behavior
 
 1. The `auth` projection. `decide` gains the uninitialized, creator, and grant steps, and grants are enforced at admission and replay. The interim auth gate is deleted. Reads and the sync manager filter against the same model. This step brings the monotonic-timestamp rule for the auth stream, the excessive-shuffle exemption for re-judgment, and the load-path work for judging multiple streams in one job. Exit: two reactors that accept conflicting auth and domain operations offline converge to identical verdicts and identical state after sync, in both directions, and a revocation over a history longer than the excessive-shuffle bound completes without dead-lettering.
 2. Conditions. The `where` and `match` evaluators turn on. Conditional grants begin to apply only here.
-3. The `groups` projection. Ship the `PHGroup` model, derive group queries from the grant list, add group streams to the read-set and the append condition, build the index from group streams to dependent documents, and re-judge dependents in their own jobs. Group principals begin to match only here. Exit: a group-gated operation syncs to a replica that does not hold the group document and fails closed there until the group's history arrives, after which both replicas agree; and a membership removal denies later operations on every document that references the group.
+3. The `groups` projection. Ship the `PHGroup` model, derive group queries from the grant list, add group streams to the read-set and the append condition, maintain the group-reference relation so sync carries referenced groups and re-judgment finds dependent documents (see Synchronization), and re-judge dependents in their own jobs. Group principals begin to match only here. Exit: a group-gated operation syncs to a replica that does not hold the group document and fails closed there until the group's history arrives, after which both replicas agree; and a membership removal denies later operations on every document that references the group.
 
 Registering decision models beyond auth is out of scope. The types are model-agnostic, so that work is registration, not new semantics.
 
