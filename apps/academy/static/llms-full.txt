@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-07-21T07:35:50.519Z
+> Generated: 2026-07-23T15:14:43.750Z
 > Total Documents: 106
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -6128,6 +6128,56 @@ setAgentImageOperation(state, action) {
 
 `parseRef(ref)` and `createRef(hash, version?)` are exported from the package, but refs should be treated as opaque outside the service itself. Reach for them only if you genuinely need to inspect or reconstruct a ref (for example, in tests or debugging tooling).
 
+## Storage backends and direct transfer
+
+Attachment bytes are stored through a pluggable, provider-neutral backend (`IAttachmentBackend`): the filesystem backend keeps the existing proxy-through-Switchboard behavior, and the S3-compatible backend transfers bytes directly between the client and object storage using short-lived presigned URLs. Switchboard always remains the control plane — authentication, authorization, metadata, reservations, and presigning — while in S3 mode object storage becomes the byte plane. Document models are unaffected either way: they store only opaque `AttachmentRef` values and never see storage configuration, credentials, or transfer mechanics.
+
+### Selecting a backend
+
+Filesystem is the default and requires no configuration. S3 is enabled per Switchboard environment exclusively through environment variables:
+
+| Variable | Required | Meaning |
+| --- | --- | --- |
+| `PH_ATTACHMENT_STORAGE` | — | `s3` enables S3; absent or `filesystem` keeps current behavior. |
+| `PH_ATTACHMENT_S3_ENDPOINT` | in S3 mode | HTTPS endpoint of the S3-compatible provider. |
+| `PH_ATTACHMENT_S3_REGION` | in S3 mode | Provider region. |
+| `PH_ATTACHMENT_S3_BUCKET` | in S3 mode | Private bucket name. |
+| `PH_ATTACHMENT_S3_ACCESS_KEY_ID` / `PH_ATTACHMENT_S3_SECRET_ACCESS_KEY` | in S3 mode | Permanent credentials; available only to Switchboard, never to clients. |
+| `S3_ATTACHMENT_PREFIX` | no | Object key prefix, default `attachments`. |
+| `PH_ATTACHMENT_S3_FORCE_PATH_STYLE` | no | `true` for path-style addressing, default `false`. |
+| `PH_ATTACHMENT_S3_UPLOAD_TTL_SECONDS` / `PH_ATTACHMENT_S3_DOWNLOAD_TTL_SECONDS` | no | Presigned URL lifetimes, defaults 900 / 300 seconds. |
+
+An incomplete or invalid S3 configuration fails startup loudly; S3 mode never falls back to filesystem silently. Object keys are `<prefix>/<first2>/<next2>/<sha256>` — the same content addressing as the filesystem layout.
+
+### Direct S3 upload
+
+The client hashes the file locally (the existing hash-first flow) and reserves through the same `POST /attachments/reservations` route. In S3 mode the reservation response carries a `presigned-put` upload target whose signed headers include the Base64 SHA-256 checksum (`x-amz-checksum-sha256`) and content type; the client PUTs the bytes directly to the provider with exactly those headers — never with a Switchboard JWT — and S3 itself rejects bytes that do not match the signed checksum. There is no finalize endpoint, no post-upload verification request, no temporary object, no CopyObject promotion, and no multipart path. A PUT 2xx (or a confirmed dedup, where the reservation short-circuits to the existing ref) is the signal after which the application may dispatch the `AttachmentRef` into a document operation. Because metadata becomes `available` optimistically at reserve time, an abandoned upload URL can leave metadata pointing at a missing object; a later reservation detects the missing object and issues a fresh target, and a direct GET of a missing object surfaces as `AttachmentNotFound`.
+
+### Document-authorized download
+
+Knowing a hash or ref is not download authority. Downloads are authorized per document through one new route:
+
+```
+GET /attachments/:hash/download-target?documentId=<id-or-slug>
+```
+
+It returns a validated, non-cacheable (`Cache-Control: no-store`) download target — `switchboard` (the existing authenticated byte route) for filesystem, or a short-lived `presigned-get` for S3. The decision requires both of the following, in order, before any metadata or presigner access:
+
+1. The verified caller can read the document (`IAuthorizationService.canRead` — the canonical service that already handles admins, owners, unprotected documents, READ/WRITE/ADMIN and inherited grants; attachment code does not reimplement these rules).
+2. The document has historically referenced the attachment, per the reference index below.
+
+The caller identity comes exclusively from verified bearer authentication; identity headers or query parameters are ignored. An unreadable document and an absent relationship both return the same `404 { "error": "Attachment not found" }`. The legacy `GET /attachments/:hash` byte route is unchanged in this phase; restricting it for ordinary clients in S3 mode is deferred hardening. There is no attachment policy package, plugin mechanism, ACL, or owner table — authorization is canonical document permission plus the indexed relationship, nothing else.
+
+### The attachment reference index
+
+`AttachmentReferenceReadModel` is a global read model (standard `BaseReadModel`, registered once through `ReactorBuilder.withReadModelFactory`) that observes successful document operations and maintains an append-only `documentId ↔ AttachmentRef` relationship. Discovery is schema-aware: values are extracted only from fields whose operation schema declares `AttachmentRef` — including nested inputs, lists, and nullable fields — so untyped string lookalikes never create authorization evidence. Extraction plans are compiled lazily per concrete document-model module and action, cached by module identity, and reused on the hot path; operations without attachment fields take a fast path with no database writes. The read model consults the live document-model registry at operation time, so packages installed after Switchboard startup are indexed without a restart (interpretation uses the latest registered schema for the type). Removing a ref from current document state does not erase the historical relationship: a user who can read the document history can still resolve attachments it referenced.
+
+The index persists in its own `attachment_reference_read_model` SQL schema with its own migrations and store (built by `AttachmentReferenceIndexBuilder`), sharing the physical database but leaving the original `attachments` schema, its migrations, and `AttachmentBuilder` untouched. Cursor recovery for failed batches is attachment-specific and scoped to this read model; generic `BaseReadModel` behavior is unchanged. In compositions where the projection cannot be hosted (an unusual caller-provided Reactor with a custom coordinator), Switchboard still starts with all existing routes and only the download-target route fails closed with a 503.
+
+### Client and hook additions
+
+`IAttachmentService.get` accepts an options form carrying the authorization anchor: `get(ref, { documentId, signal })`. Remote downloads negotiate the download target with the Switchboard JWT, then execute it — `switchboard` targets keep the authenticated byte semantics, `presigned-get` targets receive exactly the returned headers and never the JWT. `IAttachmentClient` adds `upload(input)`, document-aware `download({ documentId, ref })`, and bounded-concurrency `uploadMany` / `downloadMany` batch operations built on a reusable `runWithConcurrency` runner: concurrency bounds hashing and transfer together, results preserve input order, successes survive sibling failures, per-item signals cancel one item, and a batch signal stops unstarted work. Stage callbacks report `hashing`, `reserving`, `uploading`, `requesting-download-target`, `downloading`, `done`, and `error`; remote transfer failures throw `AttachmentTransferError` with a `stage` and no URL, signature, or credential detail. `useAttachments()` in `@powerhousedao/reactor-browser` returns this extended client; `useAttachmentUpload()` is unchanged and remains supported.
+
 ## Migrating from inline `data` fields
 
 If a document model previously inlined binary content, the migration is small and mechanical:
@@ -6139,7 +6189,7 @@ If a document model previously inlined binary content, the migration is small an
 
 ## Deep dive
 
-See `packages/reactor/docs/attachments.md` in the monorepo for the full design: storage internals, the LRU eviction policy, the `IAttachmentStore` and `IAttachmentTransport` interfaces, the switchboard upload protocol, and the planned S3 backend. For the hash-first reservation mode, hash/size verification on ingest, and the pending-upload lifecycle, see `packages/reactor/docs/attachments-hash-first.md`.
+See `packages/reactor/docs/attachments.md` in the monorepo for the full design: storage internals, the LRU eviction policy, the `IAttachmentStore` and `IAttachmentTransport` interfaces, the switchboard upload protocol, and the S3 backend. For the hash-first reservation mode, hash/size verification on ingest, and the pending-upload lifecycle, see `packages/reactor/docs/attachments-hash-first.md`.
 
 ---
 

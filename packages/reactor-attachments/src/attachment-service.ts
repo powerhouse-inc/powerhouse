@@ -14,6 +14,7 @@ import type {
 } from "./interfaces.js";
 import { createRef, parseRef } from "./ref.js";
 import type {
+  AttachmentDownloadOptions,
   AttachmentHeader,
   AttachmentResponse,
   ReserveAttachmentOptions,
@@ -47,10 +48,16 @@ export class AttachmentService implements IAttachmentService {
 
   async get(
     ref: AttachmentRef,
-    signal?: AbortSignal,
+    options?: AbortSignal | AttachmentDownloadOptions,
   ): Promise<AttachmentResponse> {
     const { hash } = parseRef(ref);
-    return this.store.get(hash, signal);
+    const normalized =
+      options === undefined || options instanceof AbortSignal
+        ? { signal: options }
+        : options;
+    return normalized.documentId === undefined
+      ? this.store.get(hash, normalized.signal)
+      : this.store.get(hash, normalized.signal, normalized.documentId);
   }
 
   private async reserveHashFirst(

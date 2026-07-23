@@ -7,14 +7,19 @@ import {
   ReservationNotFound,
   SizeMismatch,
   UploadTooLarge,
+  createRef,
+  parseAttachmentDownloadTarget,
   type AttachmentBuildResult,
+  type AttachmentDownloadTarget,
   type ReserveAttachmentOptions,
 } from "@powerhousedao/reactor-attachments";
+import type { IAttachmentAccessService } from "@powerhousedao/reactor-api";
 import type { AttachmentHash } from "@powerhousedao/reactor";
 import { childLogger } from "document-model";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { Readable } from "node:stream";
 import type { ReadableStream as NodeReadableStream } from "node:stream/web";
+import type { AttachmentActorContext } from "./auth.js";
 
 const logger = childLogger(["switchboard", "attachments"]);
 
@@ -410,4 +415,151 @@ function extractParam(req: IncomingMessage, name: string): string | undefined {
     }
   ).params;
   return expressParams?.[name];
+}
+
+const MAX_DOCUMENT_ID_LEN = 512;
+const ATTACHMENT_NOT_FOUND_BODY = { error: "Attachment not found" };
+
+/**
+ * Returns the single `documentId` query value, or null when it is missing,
+ * duplicated, blank, or oversized. Validation happens before authorization so
+ * malformed requests never reach the access service.
+ */
+function extractSingleDocumentId(req: IncomingMessage): string | null {
+  if (!req.url) return null;
+  let url: URL;
+  try {
+    url = new URL(req.url, "http://switchboard.invalid");
+  } catch {
+    return null;
+  }
+  const values = url.searchParams.getAll("documentId");
+  if (values.length !== 1) return null;
+  const value = values[0];
+  if (value.trim().length === 0 || value.length > MAX_DOCUMENT_ID_LEN) {
+    return null;
+  }
+  return value;
+}
+
+/**
+ * Base URL of this Switchboard as seen by the caller, used to build
+ * filesystem `switchboard` download targets that point back at the existing
+ * authenticated byte route.
+ */
+function requestBaseUrl(req: IncomingMessage): string | null {
+  const forwardedProto = req.headers["x-forwarded-proto"];
+  const proto =
+    (Array.isArray(forwardedProto) ? forwardedProto[0] : forwardedProto)
+      ?.split(",")[0]
+      ?.trim() ||
+    ((req.socket as { encrypted?: boolean }).encrypted ? "https" : "http");
+  const forwardedHost = req.headers["x-forwarded-host"];
+  const host =
+    (Array.isArray(forwardedHost) ? forwardedHost[0] : forwardedHost) ??
+    req.headers.host;
+  if (!host) return null;
+  return `${proto}://${host}`;
+}
+
+export function makeDownloadTargetHandler(
+  attachments: AttachmentBuildResult,
+  attachmentAccess: IAttachmentAccessService,
+) {
+  return async (
+    req: IncomingMessage,
+    res: ServerResponse,
+    _body?: unknown,
+    actor?: AttachmentActorContext,
+  ): Promise<void> => {
+    // Target responses carry short-lived URLs and authorization decisions;
+    // no intermediary may cache them.
+    res.setHeader("Cache-Control", "no-store");
+
+    const hash = extractParam(req, "hash");
+    if (!hash || !HASH_PATTERN.test(hash)) {
+      sendError(res, 400, "Invalid attachment hash");
+      return;
+    }
+    const documentId = extractSingleDocumentId(req);
+    if (documentId === null) {
+      sendError(
+        res,
+        400,
+        "documentId is required exactly once as a non-empty query parameter",
+      );
+      return;
+    }
+
+    const canonicalHash = hash.toLowerCase() as AttachmentHash;
+    let decision;
+    try {
+      decision = await attachmentAccess.canReadAttachment({
+        documentId,
+        attachmentRef: createRef(canonicalHash),
+        userAddress: actor?.user?.address,
+      });
+    } catch (err) {
+      logger.error("Attachment access decision failed: @error", err);
+      sendError(res, 500, "Internal error");
+      return;
+    }
+
+    if (decision.kind === "projection-unavailable") {
+      sendError(res, 503, "Attachment downloads are temporarily unavailable");
+      return;
+    }
+    if (decision.kind === "denied") {
+      sendJson(res, 404, ATTACHMENT_NOT_FOUND_BODY);
+      return;
+    }
+
+    let header;
+    try {
+      header = await attachments.store.stat(canonicalHash);
+    } catch (err) {
+      if (err instanceof AttachmentNotFound) {
+        sendJson(res, 404, ATTACHMENT_NOT_FOUND_BODY);
+        return;
+      }
+      logger.error("Attachment metadata lookup failed: @error", err);
+      sendError(res, 500, "Internal error");
+      return;
+    }
+    if (header.status !== "available") {
+      sendJson(res, 404, ATTACHMENT_NOT_FOUND_BODY);
+      return;
+    }
+
+    let target: AttachmentDownloadTarget;
+    if (attachments.backend && attachments.backend.kind !== "filesystem") {
+      try {
+        target = await attachments.backend.prepareDownloadTarget(canonicalHash);
+      } catch {
+        // Backend errors are sanitized at the backend boundary; no URLs or
+        // signatures reach this scope, and none may be logged from here.
+        sendError(res, 502, "Attachment download target unavailable");
+        return;
+      }
+    } else {
+      const base = requestBaseUrl(req);
+      if (!base) {
+        sendError(res, 500, "Internal error");
+        return;
+      }
+      try {
+        target = parseAttachmentDownloadTarget({
+          kind: "switchboard",
+          method: "GET",
+          url: `${base}/attachments/${canonicalHash}`,
+          headers: {},
+        });
+      } catch {
+        sendError(res, 500, "Internal error");
+        return;
+      }
+    }
+
+    sendJson(res, 200, target);
+  };
 }

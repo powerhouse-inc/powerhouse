@@ -3,6 +3,7 @@ import { mountAuthenticatedNodeRoute } from "./mount-auth.js";
 import {
   makeDeleteReservationHandler,
   makeDownloadHandler,
+  makeDownloadTargetHandler,
   makeGetReservationHandler,
   makeReserveHandler,
   makeStatHandler,
@@ -45,6 +46,13 @@ export function registerAttachmentRoutes(api: API): void {
     "HEAD",
     "/attachments/:hash",
     makeStatHandler(attachments),
+  );
+
+  mountAuthenticatedNodeRoute(
+    api,
+    "GET",
+    "/attachments/:hash/download-target",
+    makeDownloadTargetHandler(attachments, api.attachmentAccess),
   );
 
   mountAuthenticatedNodeRoute(

@@ -119,6 +119,16 @@ export type AttachmentUploadResult = {
   header: AttachmentHeader;
 };
 
+/**
+ * Options form of IAttachmentService.get. `documentId` anchors the download
+ * authorization for remote readers; it never becomes part of the ref or any
+ * global configuration.
+ */
+export type AttachmentDownloadOptions = {
+  documentId?: string;
+  signal?: AbortSignal;
+};
+
 /** Exact HTTP headers that must be sent with an attachment transfer target. */
 export type AttachmentTargetHeaders = Readonly<Record<string, string>>;
 

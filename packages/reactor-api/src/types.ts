@@ -14,6 +14,7 @@ import type {
 } from "@powerhousedao/shared/processors";
 import type { IHttpAdapter } from "./graphql/gateway/types.js";
 import type { IPackageManager } from "./packages/types.js";
+import type { IAttachmentAccessService } from "./services/attachment-access.service.js";
 import type { AuthService } from "./services/auth.service.js";
 export type {
   IPackageLoader,
@@ -36,6 +37,8 @@ export type API = {
   packages: IPackageManager;
   attachments: AttachmentBuildResult;
   attachmentReferenceIndex: AttachmentReferenceIndexBuildResult;
+  /** Document-authorized attachment read decisions; see AttachmentAccessService. */
+  attachmentAccess: IAttachmentAccessService;
   authService: AuthService | undefined;
   /**
    * Releases resources owned by the API: shuts down the GraphQL gateway,

@@ -60,20 +60,34 @@ function makeAuthService(
 }
 
 describe("requireAuth", () => {
-  it("returns the original handler unchanged when authService is undefined", () => {
-    const handler: NodeHandler = vi.fn();
-    const wrapped = requireAuth(undefined, handler);
-    expect(wrapped).toBe(handler);
-  });
-
-  it("invokes the handler when authService is undefined (auth disabled path)", async () => {
+  it("invokes the handler with the anonymous actor when authService is undefined (auth disabled path)", async () => {
     const handler = vi.fn<NodeHandler>();
     const wrapped = requireAuth(undefined, handler);
     const req = makeReq({});
     const res = makeRes();
     await wrapped(req, res);
     expect(handler).toHaveBeenCalledTimes(1);
-    expect(handler).toHaveBeenCalledWith(req, res);
+    expect(handler).toHaveBeenCalledWith(req, res, undefined, {
+      user: undefined,
+      authEnabled: false,
+    });
+  });
+
+  it("ignores caller identity headers in auth-disabled mode", async () => {
+    const handler = vi.fn<NodeHandler>();
+    const wrapped = requireAuth(undefined, handler);
+    const req = makeReq({
+      headers: {
+        "x-user-address": "0xspoofed",
+        "user-address": "0xspoofed",
+      },
+    });
+    const res = makeRes();
+    await wrapped(req, res);
+    expect(handler).toHaveBeenCalledWith(req, res, undefined, {
+      user: undefined,
+      authEnabled: false,
+    });
   });
 
   it("returns 401 with { error: 'Authentication required' } when Authorization header is missing", async () => {
@@ -163,11 +177,38 @@ describe("requireAuth", () => {
     await wrapped(req, res);
 
     expect(handler).toHaveBeenCalledTimes(1);
-    expect(handler).toHaveBeenCalledWith(req, res);
+    expect(handler).toHaveBeenCalledWith(req, res, undefined, {
+      user: { address: "0x123", chainId: 1, networkId: "mainnet" },
+      authEnabled: true,
+    });
     expect(res.statusCode).toBe(200);
     expect(res._body).toBe("");
     expect(res._ended).toBe(false);
     expect(res._headers["content-type"]).toBeUndefined();
+  });
+
+  it("derives the actor only from the verified bearer, ignoring spoofed identity headers", async () => {
+    const { service } = makeAuthService(() =>
+      Promise.resolve({
+        user: { address: "0xverified", chainId: 1, networkId: "mainnet" },
+        admins: [],
+        auth_enabled: true,
+      }),
+    );
+    const handler = vi.fn<NodeHandler>();
+    const wrapped = requireAuth(service, handler);
+    const req = makeReq({
+      headers: {
+        authorization: "Bearer good-token",
+        "x-user-address": "0xspoofed",
+        "user-address": "0xspoofed",
+      },
+    });
+    const res = makeRes();
+    await wrapped(req, res);
+
+    const actor = handler.mock.calls[0]?.[3];
+    expect(actor?.user?.address).toBe("0xverified");
   });
 
   it("forwards the adapter-parsed body after successful authentication", async () => {
@@ -186,7 +227,10 @@ describe("requireAuth", () => {
 
     await wrapped(req, res, body);
 
-    expect(handler).toHaveBeenCalledWith(req, res, body);
+    expect(handler).toHaveBeenCalledWith(req, res, body, {
+      user: { address: "0x123", chainId: 1, networkId: "mainnet" },
+      authEnabled: true,
+    });
   });
 
   it("returns 500 with a sanitized body when AuthService throws", async () => {

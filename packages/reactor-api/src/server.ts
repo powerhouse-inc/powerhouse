@@ -41,6 +41,12 @@ import {
 import { childLogger, type ILogger } from "document-model";
 import { config, DefaultCoreSubgraphs } from "./config.js";
 import { createStartupAttachmentBackend } from "./attachment-backend.js";
+import {
+  AttachmentAccessService,
+  type AttachmentReferenceProjectionCapability,
+  type IAttachmentAccessService,
+} from "./services/attachment-access.service.js";
+import { createCanonicalDocumentIdResolver } from "./services/canonical-document-id.js";
 import { AuthSubgraph } from "./graphql/auth/subgraph.js";
 import {
   createAuthFetchMiddleware,
@@ -690,6 +696,7 @@ async function _setupAPI(
   readModels: IReadModel[],
   attachments: AttachmentBuildResult,
   attachmentReferenceIndex: AttachmentReferenceIndexBuildResult,
+  attachmentReferenceProjection: AttachmentReferenceProjectionCapability,
   authorizationConfig: AuthorizationConfig,
   documentModelRegistry?: IDocumentModelRegistry,
   dbClosers: Array<() => Promise<void>> = [],
@@ -808,6 +815,17 @@ async function _setupAPI(
     `Authorization service initialized (policy: ${authorizationConfig.policy})`,
   );
 
+  // Attachment reads are authorized by document permission plus the projected
+  // document/ref relationship; the facade owns that composition so routes
+  // never consult the reference store or authorization service directly.
+  const attachmentAccess: IAttachmentAccessService =
+    new AttachmentAccessService(
+      createCanonicalDocumentIdResolver(reactorClient),
+      authorizationService,
+      attachmentReferenceIndex.store,
+      attachmentReferenceProjection,
+    );
+
   // set up subgraph manager
   const coreSubgraphs: SubgraphClass[] = DefaultCoreSubgraphs.slice();
   coreSubgraphs.push(ReactorSubgraph);
@@ -878,6 +896,7 @@ async function _setupAPI(
     packages,
     attachments,
     attachmentReferenceIndex,
+    attachmentAccess,
     authService,
     dispose,
   };
@@ -967,15 +986,7 @@ export interface ClientInitializerDependencies {
   attachmentReferenceWriter: IAttachmentReferenceWriter;
 }
 
-export type AttachmentReferenceProjectionCapability =
-  | { status: "available" }
-  | {
-      status: "unavailable";
-      reason:
-        | "live-read-model-registration-unsupported"
-        | "in-process-reactor-module-unavailable"
-        | "initializer-did-not-report";
-    };
+export type { AttachmentReferenceProjectionCapability } from "./services/attachment-access.service.js";
 
 export async function initializeAndStartAPI(
   clientInitializer: (
@@ -1072,6 +1083,7 @@ export async function initializeAndStartAPI(
     readModels,
     attachments,
     attachmentReferenceIndex,
+    attachmentReferenceProjection,
     authorizationConfig,
     documentModelRegistry,
     dbClosers,

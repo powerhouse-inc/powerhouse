@@ -17,6 +17,10 @@ import {
   type CanonicalDocumentId,
   type IAuthorizationService,
 } from "../services/authorization.service.js";
+import {
+  createCanonicalDocumentIdResolver,
+  type CanonicalDocumentIdResolver,
+} from "../services/canonical-document-id.js";
 import type { DocumentPermissionService } from "../services/document-permission.service.js";
 import type { Context } from "./types.js";
 
@@ -50,7 +54,12 @@ export class BaseSubgraph implements ISubgraph {
     Map<string, CanonicalDocumentId>
   >();
 
+  readonly #resolveCanonical: CanonicalDocumentIdResolver;
+
   constructor(args: SubgraphArgs) {
+    this.#resolveCanonical = createCanonicalDocumentIdResolver(
+      args.reactorClient,
+    );
     this.reactorClient = args.reactorClient;
     this.graphqlManager = args.graphqlManager;
     this.relationalDb = args.relationalDb;
@@ -89,14 +98,13 @@ export class BaseSubgraph implements ISubgraph {
     const cached = cache.get(identifier);
     if (cached !== undefined) return cached;
 
-    let resolved: string;
+    let canonical: CanonicalDocumentId;
     try {
-      resolved = await this.reactorClient.resolveIdOrSlug(identifier);
+      canonical = await this.#resolveCanonical(identifier);
     } catch {
       throw new ForbiddenError();
     }
 
-    const canonical = resolved as CanonicalDocumentId;
     cache.set(identifier, canonical);
     return canonical;
   }

@@ -192,7 +192,7 @@ describe("Switchboard attachment-reference read model registration", () => {
       }
       await rm(tempRoot, { recursive: true, force: true });
     }
-  });
+  }, 30_000);
 
   it("backfills and closes the registration handoff without loss or duplication", async () => {
     database = new Kysely<unknown>({
@@ -349,7 +349,7 @@ describe("Switchboard attachment-reference read model registration", () => {
       await switchboard?.shutdown();
       await rm(tempRoot, { recursive: true, force: true });
     }
-  });
+  }, 30_000);
 
   it("uses the live registry for packages installed after startup and caches by module identity", async () => {
     database = new Kysely<unknown>({

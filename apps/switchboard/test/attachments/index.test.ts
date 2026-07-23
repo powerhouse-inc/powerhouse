@@ -111,13 +111,21 @@ describe("mountAuthenticatedNodeRoute", () => {
     expect(inner).toHaveBeenCalledTimes(1);
   });
 
-  it("mounts the inner handler unwrapped when authService is undefined", () => {
+  it("mounts a wrapper that forwards the anonymous actor when authService is undefined", async () => {
     const { api, captured } = makeFakeApi(undefined);
     const inner = vi.fn();
 
     mountAuthenticatedNodeRoute(api, "PUT", "/x", inner);
 
     expect(captured).toHaveLength(1);
-    expect(captured[0].handler).toBe(inner);
+
+    const req = makeReq();
+    const res = makeRes();
+    await captured[0].handler(req, res);
+
+    expect(inner).toHaveBeenCalledWith(req, res, undefined, {
+      user: undefined,
+      authEnabled: false,
+    });
   });
 });

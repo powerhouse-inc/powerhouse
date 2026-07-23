@@ -1,8 +1,20 @@
-import type { AttachmentRef, JwtHandler } from "@powerhousedao/reactor";
-import { HashMismatch, SizeMismatch } from "../errors.js";
+import type {
+  AttachmentHash,
+  AttachmentRef,
+  JwtHandler,
+} from "@powerhousedao/reactor";
+import {
+  AttachmentTransferError,
+  HashMismatch,
+  SizeMismatch,
+} from "../errors.js";
 import type { IAttachmentUpload } from "../interfaces.js";
 import { createRef } from "../ref.js";
-import type { AttachmentUploadResult, Reservation } from "../types.js";
+import type {
+  AttachmentUploadResult,
+  AttachmentUploadTarget,
+  Reservation,
+} from "../types.js";
 import { buildAuthHeaders } from "./build-auth-headers.js";
 import type { SwitchboardClientConfig } from "./remote-reservation-store.js";
 
@@ -14,6 +26,8 @@ export class RemoteAttachmentUpload implements IAttachmentUpload {
   readonly reservationId: string;
   readonly ref: AttachmentRef | null;
   readonly expiresAtUtc: string;
+  readonly uploadTarget?: AttachmentUploadTarget;
+  private readonly reservation: Reservation;
   private readonly remoteUrl: string;
   private readonly jwtHandler?: JwtHandler;
   private readonly fetchFn: typeof fetch;
@@ -25,6 +39,10 @@ export class RemoteAttachmentUpload implements IAttachmentUpload {
         ? createRef(reservation.clientHash)
         : null;
     this.expiresAtUtc = reservation.expiresAtUtc;
+    if (reservation.uploadTarget) {
+      this.uploadTarget = reservation.uploadTarget;
+    }
+    this.reservation = reservation;
     this.remoteUrl = config.remoteUrl;
     this.jwtHandler = config.jwtHandler;
     this.fetchFn = (config.fetchFn ?? globalThis.fetch).bind(globalThis);
@@ -33,6 +51,12 @@ export class RemoteAttachmentUpload implements IAttachmentUpload {
   async send(
     data: ReadableStream<Uint8Array>,
   ): Promise<AttachmentUploadResult> {
+    // Presigned targets bypass Switchboard entirely: bytes go straight to the
+    // provider with the exact signed headers. Switchboard targets (and the
+    // legacy no-target wire) keep the authenticated reservation PUT below.
+    if (this.uploadTarget?.kind === "presigned-put") {
+      return this.sendPresigned(this.uploadTarget, data);
+    }
     const url = `${this.remoteUrl}/attachments/reservations/${this.reservationId}`;
     const authHeaders = await buildAuthHeaders(url, this.jwtHandler);
 
@@ -89,5 +113,53 @@ export class RemoteAttachmentUpload implements IAttachmentUpload {
     }
 
     return (await response.json()) as AttachmentUploadResult;
+  }
+
+  /**
+   * Direct provider upload: PUT the bytes to the presigned URL with exactly
+   * the returned headers — never the Switchboard JWT — and treat any 2xx as
+   * final success with no follow-up control request. The result is
+   * synthesized from the hash-first reservation, which is the only path that
+   * can produce a presigned target.
+   */
+  private async sendPresigned(
+    target: AttachmentUploadTarget,
+    data: ReadableStream<Uint8Array>,
+  ): Promise<AttachmentUploadResult> {
+    if (this.reservation.clientHash === null || this.ref === null) {
+      throw new Error(
+        "Presigned upload targets require a hash-first reservation",
+      );
+    }
+
+    // Buffer for the same browser-compatibility reasons as the proxy path.
+    const body = await new Response(data).blob();
+    const response = await this.fetchFn(target.url, {
+      method: target.method,
+      headers: { ...target.headers },
+      body,
+    });
+    if (!response.ok) {
+      throw new AttachmentTransferError("presigned-put", response.status);
+    }
+
+    const hash = this.reservation.clientHash as AttachmentHash;
+    const now = new Date().toISOString();
+    return {
+      hash,
+      ref: this.ref,
+      header: {
+        hash,
+        mimeType: this.reservation.mimeType,
+        fileName: this.reservation.fileName,
+        sizeBytes: this.reservation.sizeBytes ?? body.size,
+        extension: this.reservation.extension,
+        status: "available",
+        source: "local",
+        createdAtUtc: this.reservation.createdAtUtc || now,
+        lastAccessedAtUtc: now,
+        expiresAtUtc: null,
+      },
+    };
   }
 }

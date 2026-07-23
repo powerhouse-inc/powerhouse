@@ -1,21 +1,42 @@
-import type { AuthService } from "@powerhousedao/reactor-api";
+import type { AuthContext, AuthService } from "@powerhousedao/reactor-api";
 import type { IncomingMessage, ServerResponse } from "node:http";
+
+/**
+ * Verified actor context for authenticated attachment handlers. The user comes
+ * exclusively from bearer verification: when auth is disabled (OPEN mode)
+ * `user` is undefined and `authEnabled` is false, and handlers must treat the
+ * caller as anonymous. Caller-supplied identity headers are never consulted.
+ */
+export type AttachmentActorContext = {
+  user: AuthContext["user"];
+  authEnabled: boolean;
+};
+
+const ANONYMOUS_ACTOR: AttachmentActorContext = {
+  user: undefined,
+  authEnabled: false,
+};
 
 export type NodeHandler = (
   req: IncomingMessage,
   res: ServerResponse,
   body?: unknown,
+  actor?: AttachmentActorContext,
 ) => Promise<void> | void;
 
 /**
  * Wrap a Node-style handler so that, when `authService` is provided and auth is
- * enabled, the request must carry a verifiable Bearer token.
+ * enabled, the request must carry a verifiable Bearer token. The handler always
+ * receives an actor context: the verified bearer user when auth is enabled, or
+ * the anonymous context when it is disabled.
  */
 export function requireAuth(
   authService: AuthService | undefined,
   handler: NodeHandler,
 ): NodeHandler {
-  if (!authService) return handler;
+  if (!authService) {
+    return (req, res, body) => handler(req, res, body, ANONYMOUS_ACTOR);
+  }
 
   return async (req, res, body) => {
     let result;
@@ -44,10 +65,9 @@ export function requireAuth(
       return;
     }
 
-    if (body === undefined) {
-      await handler(req, res);
-    } else {
-      await handler(req, res, body);
-    }
+    await handler(req, res, body, {
+      user: result.user,
+      authEnabled: result.auth_enabled,
+    });
   };
 }

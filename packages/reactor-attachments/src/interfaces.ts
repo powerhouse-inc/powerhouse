@@ -3,6 +3,7 @@ import type {
   AttachmentHeader,
   AttachmentBackendHealth,
   AttachmentBackendKind,
+  AttachmentDownloadOptions,
   AttachmentDownloadTarget,
   AttachmentMetadata,
   AttachmentResponse,
@@ -61,8 +62,15 @@ export interface IAttachmentService {
    *         expiresAtUtc. A wait inside get() would hold request handlers
    *         open across multi-second windows and hide retry policy where
    *         callers cannot tune it.
+   *
+   * The options form carries the document id that authorizes a remote
+   * download; local/direct readers ignore it. The bare-signal form remains
+   * supported for source compatibility.
    */
-  get(ref: AttachmentRef, signal?: AbortSignal): Promise<AttachmentResponse>;
+  get(
+    ref: AttachmentRef,
+    options?: AbortSignal | AttachmentDownloadOptions,
+  ): Promise<AttachmentResponse>;
 }
 
 /**
@@ -154,8 +162,15 @@ export interface IAttachmentReader {
    * @throws AttachmentPending if the hash is reserved by an in-flight
    *         upload; bytes are not yet available. There is no store-level
    *         wait -- polling is the caller's responsibility.
+   *
+   * `documentId` is the authorization anchor for remote readers that must
+   * negotiate a download target; local/direct readers ignore it.
    */
-  get(hash: AttachmentHash, signal?: AbortSignal): Promise<AttachmentResponse>;
+  get(
+    hash: AttachmentHash,
+    signal?: AbortSignal,
+    documentId?: string,
+  ): Promise<AttachmentResponse>;
 }
 
 /**

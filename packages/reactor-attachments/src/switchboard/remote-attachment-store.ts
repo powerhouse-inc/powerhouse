@@ -1,8 +1,14 @@
 import type { AttachmentHash } from "@powerhousedao/reactor";
 import type { JwtHandler } from "@powerhousedao/reactor";
-import { AttachmentNotFound, AttachmentPending } from "../errors.js";
+import {
+  AttachmentNotFound,
+  AttachmentPending,
+  AttachmentTransferError,
+} from "../errors.js";
 import type { IAttachmentReader } from "../interfaces.js";
+import { parseAttachmentDownloadTarget } from "../targets.js";
 import type {
+  AttachmentDownloadTarget,
   AttachmentHeader,
   AttachmentMetadata,
   AttachmentResponse,
@@ -230,16 +236,85 @@ export class RemoteAttachmentStore implements IAttachmentReader {
   async get(
     hash: AttachmentHash,
     signal?: AbortSignal,
+    documentId?: string,
   ): Promise<AttachmentResponse> {
-    return this.fetchAttachment(hash, signal);
+    if (documentId === undefined) {
+      return this.fetchAttachment(hash, signal);
+    }
+    const target = await this.negotiateDownloadTarget(hash, documentId, signal);
+    if (target.kind === "presigned-get") {
+      return this.fetchPresigned(hash, target, signal);
+    }
+    // Switchboard targets keep the existing authenticated byte semantics;
+    // the target URL points at the same route the legacy path uses.
+    return this.fetchAttachment(hash, signal, target);
+  }
+
+  /**
+   * Asks Switchboard for an authorized download target. The request carries
+   * the JWT; the response is runtime-validated before any byte transfer.
+   */
+  private async negotiateDownloadTarget(
+    hash: AttachmentHash,
+    documentId: string,
+    signal?: AbortSignal,
+  ): Promise<AttachmentDownloadTarget> {
+    const url = `${this.remoteUrl}/attachments/${hash}/download-target?documentId=${encodeURIComponent(documentId)}`;
+    const headers = await buildAuthHeaders(url, this.jwtHandler);
+    const response = await this.fetchFn(url, { signal, headers });
+
+    if (response.status === 404) {
+      throw new AttachmentNotFound(hash);
+    }
+    if (!response.ok) {
+      throw new AttachmentTransferError("download-target", response.status);
+    }
+
+    let body: unknown;
+    try {
+      body = await response.json();
+    } catch {
+      throw new AttachmentTransferError("download-target");
+    }
+    return parseAttachmentDownloadTarget(body);
+  }
+
+  /**
+   * Executes a presigned GET with exactly the returned headers and no JWT.
+   * A provider 404 means the object is missing despite available metadata
+   * (the accepted abandoned-upload trade-off) and surfaces as the same typed
+   * not-found error callers already handle.
+   */
+  private async fetchPresigned(
+    hash: AttachmentHash,
+    target: AttachmentDownloadTarget,
+    signal?: AbortSignal,
+  ): Promise<AttachmentResponse> {
+    const response = await this.fetchFn(target.url, {
+      signal,
+      headers: { ...target.headers },
+    });
+    if (response.status === 404) {
+      throw new AttachmentNotFound(hash);
+    }
+    if (!response.ok) {
+      throw new AttachmentTransferError("presigned-get", response.status);
+    }
+    if (!response.body) {
+      throw new Error("Response body is null");
+    }
+    const metadata = parseMetadata(response);
+    return { header: buildHeader(hash, metadata), body: response.body };
   }
 
   private async fetchAttachment(
     hash: AttachmentHash,
     signal?: AbortSignal,
+    target?: AttachmentDownloadTarget,
   ): Promise<AttachmentResponse> {
-    const url = `${this.remoteUrl}/attachments/${hash}`;
-    const headers = await buildAuthHeaders(url, this.jwtHandler);
+    const url = target?.url ?? `${this.remoteUrl}/attachments/${hash}`;
+    const authHeaders = await buildAuthHeaders(url, this.jwtHandler);
+    const headers = { ...target?.headers, ...authHeaders };
 
     const response = await this.fetchFn(url, { signal, headers });
 

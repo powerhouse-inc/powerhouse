@@ -133,20 +133,19 @@ function parseOperations(
 function selectOperation(
   operations: ParsedOperation[],
   context: CompilerContext,
-): ParsedOperation {
+): ParsedOperation | null {
   const matches = operations.filter(
     ({ operation }) =>
       operation.name !== null &&
       constantCase(operation.name) === context.actionType,
   );
-  if (matches.length !== 1) {
-    throw compilationError(
-      context,
-      matches.length === 0
-        ? "the action is not declared by the specification"
-        : "multiple operations map to the action",
-    );
+  if (matches.length > 1) {
+    throw compilationError(context, "multiple operations map to the action");
   }
+  // Base/system actions (document creation, renames, undo) are not part of a
+  // model's specification, so they cannot declare AttachmentRef fields.
+  // They compile to the no-reference fast path instead of failing the stream.
+  if (matches.length === 0) return null;
   return matches[0];
 }
 
@@ -433,10 +432,10 @@ function compileExtractor(
   const specification = applicableSpecification(module, context);
   const operations = parseOperations(specification, context);
   const selected = selectOperation(operations, context);
-  const effectiveSchema = buildEffectiveSchema(specification, context);
-  if (selected.operation.schema === null) {
+  if (selected === null || selected.operation.schema === null) {
     return new SchemaCompiledAttachmentExtractor(context, null);
   }
+  const effectiveSchema = buildEffectiveSchema(specification, context);
 
   const operationName = selected.operation.name;
   if (operationName === null) {

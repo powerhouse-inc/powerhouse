@@ -55,6 +55,32 @@ describe("S3 attachment configuration", () => {
     });
   });
 
+  it("allows plain HTTP endpoints only for loopback hosts (local emulators)", () => {
+    for (const endpoint of [
+      "http://127.0.0.1:8333",
+      "http://localhost:8333",
+      "http://[::1]:8333",
+    ]) {
+      const parsed = parseAttachmentStorageConfig({
+        ...baseEnv,
+        PH_ATTACHMENT_S3_ENDPOINT: endpoint,
+      });
+      expect(parsed.kind === "s3" && parsed.s3.endpoint).toBe(endpoint);
+    }
+    expect(() =>
+      parseAttachmentStorageConfig({
+        ...baseEnv,
+        PH_ATTACHMENT_S3_ENDPOINT: "http://bucket.example.com",
+      }),
+    ).toThrow(/PH_ATTACHMENT_S3_ENDPOINT/);
+    expect(() =>
+      parseAttachmentStorageConfig({
+        ...baseEnv,
+        PH_ATTACHMENT_S3_ENDPOINT: "http://127.0.0.1.example.com:8333",
+      }),
+    ).toThrow(/PH_ATTACHMENT_S3_ENDPOINT/);
+  });
+
   it.each([
     [{ PH_ATTACHMENT_STORAGE: "other" }, "PH_ATTACHMENT_STORAGE"],
     [

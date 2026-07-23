@@ -32,22 +32,34 @@ function required(env: Environment, name: string): string {
   return value;
 }
 
+const LOOPBACK_HOSTNAMES = new Set(["127.0.0.1", "localhost", "[::1]"]);
+
+/** Plain HTTP is allowed only for loopback hosts (local S3 emulators). */
+function isLoopbackHost(endpoint: URL): boolean {
+  return LOOPBACK_HOSTNAMES.has(endpoint.hostname.toLowerCase());
+}
+
 function parseEndpoint(value: string): string {
+  const message =
+    "PH_ATTACHMENT_S3_ENDPOINT must be a valid HTTPS URL (HTTP is allowed only for loopback hosts)";
   let endpoint: URL;
   try {
     endpoint = new URL(value);
   } catch {
-    throw new Error("PH_ATTACHMENT_S3_ENDPOINT must be a valid HTTPS URL");
+    throw new Error(message);
   }
+  const protocolAllowed =
+    endpoint.protocol === "https:" ||
+    (endpoint.protocol === "http:" && isLoopbackHost(endpoint));
   if (
     value.trim() !== value ||
-    endpoint.protocol !== "https:" ||
+    !protocolAllowed ||
     endpoint.username !== "" ||
     endpoint.password !== "" ||
     endpoint.search !== "" ||
     endpoint.hash !== ""
   ) {
-    throw new Error("PH_ATTACHMENT_S3_ENDPOINT must be a valid HTTPS URL");
+    throw new Error(message);
   }
   return endpoint.toString().replace(/\/$/, "");
 }

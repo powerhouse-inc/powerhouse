@@ -108,6 +108,33 @@ export class SizeMismatch extends Error {
  * state is learned from a remote transport that did not supply the full
  * Attachment-Pending header (transport-pending / degraded wire case).
  */
+export type AttachmentTransferStage =
+  | "download-target"
+  | "switchboard-get"
+  | "presigned-get"
+  | "presigned-put";
+
+/**
+ * Thrown when a remote transfer step fails. Identifies the stage only; it
+ * intentionally carries no URL, signature query, bucket key, or bearer
+ * material so it is always safe to log or surface.
+ */
+export class AttachmentTransferError extends Error {
+  readonly stage: AttachmentTransferStage;
+  readonly status: number | undefined;
+
+  constructor(stage: AttachmentTransferStage, status?: number) {
+    super(
+      status === undefined
+        ? `Attachment ${stage} request failed`
+        : `Attachment ${stage} request failed with status ${status}`,
+    );
+    this.name = "AttachmentTransferError";
+    this.stage = stage;
+    this.status = status;
+  }
+}
+
 export class AttachmentPending extends Error {
   readonly hash: AttachmentHash;
   readonly expiresAtUtc: string;

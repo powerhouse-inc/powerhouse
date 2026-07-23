@@ -1,8 +1,16 @@
 import type { AttachmentHash, AttachmentRef } from "@powerhousedao/reactor";
+import { runWithConcurrency, type BatchItemResult } from "./concurrency.js";
 import { AttachmentAlreadyExists } from "./errors.js";
+export type { AttachmentTransferStage } from "./errors.js";
+export {
+  runWithConcurrency,
+  type BatchItemResult,
+  type RunWithConcurrencyOptions,
+} from "./concurrency.js";
 import type { IAttachmentService, IAttachmentUpload } from "./interfaces.js";
 import { createRef } from "./ref.js";
 import type {
+  AttachmentResponse,
   AttachmentUploadResult,
   HashFirstReserveAttachmentOptions,
 } from "./types.js";
@@ -12,6 +20,7 @@ export {
   AttachmentAlreadyExists,
   AttachmentNotFound,
   AttachmentPending,
+  AttachmentTransferError,
   HashMismatch,
   InvalidAttachmentRef,
   ReservationNotFound,
@@ -31,6 +40,7 @@ export type {
 export { parseRef, createRef } from "./ref.js";
 export type { ParsedRef } from "./ref.js";
 export type {
+  AttachmentDownloadOptions,
   AttachmentDownloadTarget,
   AttachmentHeader,
   AttachmentMetadata,
@@ -72,6 +82,45 @@ export type PreprocessResult = {
   stream: () => ReadableStream<Uint8Array>;
 };
 
+export type AttachmentStage =
+  | "hashing"
+  | "reserving"
+  | "uploading"
+  | "requesting-download-target"
+  | "downloading"
+  | "done"
+  | "error";
+
+export type AttachmentStageListener = (stage: AttachmentStage) => void;
+
+export type AttachmentUploadInput = {
+  file: Blob;
+  fileName?: string;
+  mimeType?: string;
+  /** Per-item cancellation, checked between stages. */
+  signal?: AbortSignal;
+};
+
+/**
+ * Every remote download names the document that authorizes its ref; batches
+ * may freely mix documents because the anchor travels with each item.
+ */
+export type AttachmentDownloadInput = {
+  documentId: string;
+  ref: AttachmentRef;
+  signal?: AbortSignal;
+};
+
+export type AttachmentBatchOptions = {
+  /** Bounds preprocessing and transfer together. Defaults to 4. */
+  concurrency?: number;
+  /** Whole-batch cancellation: stops unstarted items. */
+  signal?: AbortSignal;
+  onStage?: (index: number, stage: AttachmentStage) => void;
+};
+
+export const DEFAULT_ATTACHMENT_BATCH_CONCURRENCY = 4;
+
 export interface IAttachmentClient {
   preprocess(
     file: Blob,
@@ -81,6 +130,42 @@ export interface IAttachmentClient {
     options: HashFirstReserveAttachmentOptions,
     send: (handle: IAttachmentUpload) => Promise<AttachmentUploadResult>,
   ): Promise<AttachmentUploadResult>;
+  /** Hash, reserve, and transfer one file; confirmed dedup skips the transfer. */
+  upload(
+    input: AttachmentUploadInput,
+    onStage?: AttachmentStageListener,
+  ): Promise<AttachmentUploadResult>;
+  /** Document-authorized download of one ref. */
+  download(
+    input: AttachmentDownloadInput,
+    onStage?: AttachmentStageListener,
+  ): Promise<AttachmentResponse>;
+  uploadMany(
+    inputs: readonly AttachmentUploadInput[],
+    options?: AttachmentBatchOptions,
+  ): Promise<BatchItemResult<AttachmentUploadResult>[]>;
+  downloadMany(
+    inputs: readonly AttachmentDownloadInput[],
+    options?: AttachmentBatchOptions,
+  ): Promise<BatchItemResult<AttachmentResponse>[]>;
+}
+
+/**
+ * Duck-typed dedup detection: bundlers (notably Vite dev pre-bundling) can
+ * load two copies of this package's error classes, one for the service and
+ * one for the client wrapper, making a plain instanceof check miss the
+ * cross-copy throw. Name plus payload shape identifies the error reliably.
+ */
+function isAttachmentAlreadyExists(
+  err: unknown,
+): err is AttachmentAlreadyExists {
+  if (err instanceof AttachmentAlreadyExists) return true;
+  return (
+    err instanceof Error &&
+    err.name === "AttachmentAlreadyExists" &&
+    typeof (err as { hash?: unknown }).hash === "string" &&
+    typeof (err as { ref?: unknown }).ref === "string"
+  );
 }
 
 function streamFromBuffer(buf: Uint8Array): ReadableStream<Uint8Array> {
@@ -129,13 +214,92 @@ class AttachmentClientImpl implements IAttachmentClient {
     try {
       handle = await this.service.reserve(options);
     } catch (err) {
-      if (err instanceof AttachmentAlreadyExists) {
+      if (isAttachmentAlreadyExists(err)) {
         const header = await this.service.stat(err.ref);
         return { hash: err.hash, ref: err.ref, header };
       }
       throw err;
     }
     return send(handle);
+  }
+
+  async upload(
+    input: AttachmentUploadInput,
+    onStage?: AttachmentStageListener,
+  ): Promise<AttachmentUploadResult> {
+    try {
+      input.signal?.throwIfAborted();
+      onStage?.("hashing");
+      const preprocessed = await this.preprocess(input.file, {
+        ...(input.fileName !== undefined ? { fileName: input.fileName } : {}),
+        ...(input.mimeType !== undefined ? { mimeType: input.mimeType } : {}),
+      });
+
+      input.signal?.throwIfAborted();
+      onStage?.("reserving");
+      const result = await this.reserve(preprocessed.options, (handle) => {
+        input.signal?.throwIfAborted();
+        onStage?.("uploading");
+        return handle.send(preprocessed.stream());
+      });
+      onStage?.("done");
+      return result;
+    } catch (err) {
+      onStage?.("error");
+      throw err;
+    }
+  }
+
+  async download(
+    input: AttachmentDownloadInput,
+    onStage?: AttachmentStageListener,
+  ): Promise<AttachmentResponse> {
+    try {
+      input.signal?.throwIfAborted();
+      onStage?.("requesting-download-target");
+      const response = await this.service.get(input.ref, {
+        documentId: input.documentId,
+        signal: input.signal,
+      });
+      onStage?.("downloading");
+      onStage?.("done");
+      return response;
+    } catch (err) {
+      onStage?.("error");
+      throw err;
+    }
+  }
+
+  uploadMany(
+    inputs: readonly AttachmentUploadInput[],
+    options?: AttachmentBatchOptions,
+  ): Promise<BatchItemResult<AttachmentUploadResult>[]> {
+    return runWithConcurrency(
+      inputs,
+      (input, index) =>
+        this.upload(input, (stage) => options?.onStage?.(index, stage)),
+      {
+        concurrency:
+          options?.concurrency ?? DEFAULT_ATTACHMENT_BATCH_CONCURRENCY,
+        signal: options?.signal,
+      },
+    );
+  }
+
+  downloadMany(
+    inputs: readonly AttachmentDownloadInput[],
+    options?: AttachmentBatchOptions,
+  ): Promise<BatchItemResult<AttachmentResponse>[]> {
+    return runWithConcurrency(
+      inputs,
+      (input, index) =>
+        this.download(input, (stage) => options?.onStage?.(index, stage)),
+      {
+        concurrency:
+          options?.concurrency ?? DEFAULT_ATTACHMENT_BATCH_CONCURRENCY,
+        signal: options?.signal,
+      },
+    );
   }
 }
 

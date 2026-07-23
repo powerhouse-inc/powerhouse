@@ -2,12 +2,14 @@ export {
   AttachmentAlreadyExists,
   AttachmentNotFound,
   AttachmentPending,
+  AttachmentTransferError,
   HashMismatch,
   InvalidAttachmentRef,
   ReservationNotFound,
   SizeMismatch,
   UploadTooLarge,
 } from "./errors.js";
+export type { AttachmentTransferStage } from "./errors.js";
 export type {
   IAttachmentReader,
   IAttachmentBackend,
@@ -23,6 +25,7 @@ export type {
   AttachmentHeader,
   AttachmentBackendHealth,
   AttachmentBackendKind,
+  AttachmentDownloadOptions,
   AttachmentDownloadTarget,
   AttachmentTargetHeaders,
   AttachmentUploadTarget,

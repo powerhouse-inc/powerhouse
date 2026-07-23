@@ -421,7 +421,7 @@ describe("AttachmentSchemaCompiler", () => {
     ]);
   });
 
-  it("rejects missing actions and mismatched extractor actions", () => {
+  it("treats undeclared (base/system) actions as the no-reference fast path", () => {
     const module = documentModule([
       specification(1, [
         operation(
@@ -432,9 +432,26 @@ describe("AttachmentSchemaCompiler", () => {
     ]);
     const compiler = new AttachmentSchemaCompiler();
 
-    expect(() => compiler.forModuleAction(module, "MISSING_ACTION")).toThrow(
-      'document type "example/attachment-document", version 1, action "MISSING_ACTION"',
-    );
+    // Base document actions (e.g. CREATE_DOCUMENT, SET_NAME) are not part of
+    // any module specification; they cannot carry schema-declared refs and
+    // must not wedge the projection stream.
+    const extractor = compiler.forModuleAction(module, "CREATE_DOCUMENT");
+    expect(
+      extractor.extract(action("CREATE_DOCUMENT", { ref: REF_A })),
+    ).toEqual([]);
+  });
+
+  it("rejects mismatched extractor actions", () => {
+    const module = documentModule([
+      specification(1, [
+        operation(
+          "ATTACH_FILE",
+          "input AttachFileInput { ref: AttachmentRef }",
+        ),
+      ]),
+    ]);
+    const compiler = new AttachmentSchemaCompiler();
+
     const extractor = compiler.forModuleAction(module, "ATTACH_FILE");
     expect(() =>
       extractor.extract(action("OTHER_ACTION", { ref: REF_A })),
