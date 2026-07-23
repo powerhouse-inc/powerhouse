@@ -323,11 +323,11 @@ This creator check is safe because it can be verified on any replica. If we trie
 
 We already have a ruleset to order events in a single stream, but we now need to introduce a specific rule to relate two different streams. Ordering by timestamp is the base order, but then we need a few new rules:
 
-1. Auth scope operation timestamps must strictly increase, and are rejected otherwise. This is unlike all other scopes, but requires a human decision about required security guarantees. That is: we cannot resolve an auth decision on the basis of, for instance, which way a hash function leans.
+1. Auth scope operation timestamps must strictly increase, and are rejected otherwise. This scenario bubbles up as an exception, not a logged operation. This is unlike all other scopes, but requires a human decision about required security guarantees. That is: we cannot resolve an auth decision on the basis of, for instance, which way a hash function leans.
 
 2. In timestamp tie breakers, Auth scope operations win.
 
-3. For all other streams, we use a similar ruleset as reshuffle: timestamp, then action id, then operation id. No local-only information like logical index.
+3. For all other streams, we use timestamp, then action id, then operation id. No local-only information like logical index.
 
 ## Implementation
 
@@ -620,12 +620,12 @@ Registering decision models beyond auth is out of scope. The types are model-agn
 A document grants the legal-assistant group `execute` on the global scope. Reactor A and reactor B both hold the document and are offline from each other.
 
 1. On reactor A, the administrator executes `REMOVE_GRANT` for the group at 10:00.
-2. On reactor B, a legal assistant executes `SET_STATUS` at 10:05. B's admission gate allows it — B has not seen the revocation.
+2. On reactor B, a legal assistant executes `SET_STATUS` at 10:05. B's admission gate allows it because B has not seen the revocation.
 3. The reactors sync.
 
-Both replicas now merge the streams and re-evaluate. The revocation sorts first (10:00 < 10:05). At `SET_STATUS`'s position, the grant list no longer contains the group grant, so the decision is deny. On both replicas — including B, which originally accepted it — `SET_STATUS` becomes an error operation: still in the log, no state effect. The assistant's client sees its provisional operation fail after sync, which is ordinary local-first behavior.
+Both replicas now merge the streams and re-evaluate. The revocation sorts first (10:00 < 10:05). At `SET_STATUS`'s position, the grant list no longer contains the group grant, so the decision is deny. `SET_STATUS` becomes an error operation on both replicas, including B, which originally accepted it. The operation stays in the log and has no state effect. The assistant's client sees its provisional operation fail after sync, in the same way any local-first write can fail when a conflicting change arrives.
 
-The alternative — evaluating an operation once at its origin and pinning that decision forever — would let `SET_STATUS` survive everywhere despite the earlier revocation. Both outcomes are deterministic; this spec deliberately chooses the one where revocation wins.
+The alternative would be to evaluate an operation once at its origin and pin that decision forever. That would let `SET_STATUS` survive everywhere despite the earlier revocation. Both outcomes are deterministic, but this spec deliberately chooses to bubble up the error and let the application decide.
 
 ## Worked example: a toll statement
 
