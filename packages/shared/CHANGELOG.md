@@ -1,3 +1,13 @@
+## 6.2.2-dev.13 (2026-07-23)
+
+### 🚀 Features
+
+- **reactor-browser:** renown in-page sign-in primitives and wire Connect ([86bb6d06f](https://github.com/powerhouse-inc/powerhouse/commit/86bb6d06f))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.2-dev.12 (2026-07-23)
 
 This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.

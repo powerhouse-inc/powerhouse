@@ -1,3 +1,28 @@
+## 6.2.2-dev.13 (2026-07-23)
+
+### 🚀 Features
+
+- **reactor-browser:** renown in-page sign-in primitives and wire Connect ([86bb6d06f](https://github.com/powerhouse-inc/powerhouse/commit/86bb6d06f))
+- **renown:** direct-to-switchboard sign-in SDK flow ([18db475ac](https://github.com/powerhouse-inc/powerhouse/commit/18db475ac))
+- **renown:** pluggable wallet adapters (Rainbow, Privy, mock) ([b036298ce](https://github.com/powerhouse-inc/powerhouse/commit/b036298ce))
+- ⚠️  **renown:** server-side session support, revalidation, client seed ([f9c3648ea](https://github.com/powerhouse-inc/powerhouse/commit/f9c3648ea))
+
+### 🩹 Fixes
+
+- auto redirect instead of showing login modal when no renown adapters are configured ([bcaa4ae81](https://github.com/powerhouse-inc/powerhouse/commit/bcaa4ae81))
+
+### ⚠️  Breaking Changes
+
+- **renown:** server-side session support, revalidation, client seed  ([f9c3648ea](https://github.com/powerhouse-inc/powerhouse/commit/f9c3648ea))
+  BaseRenownBuilder.build() no longer re-authenticates a stored
+  user. The browser builder revalidates in the background (non-blocking, fail-open),
+  the node builder blocks; callers relying on the old auto re-auth must call
+  renown.revalidate() explicitly.
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.2-dev.12 (2026-07-23)
 
 This was a version bump only, there were no code changes.

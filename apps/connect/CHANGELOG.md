@@ -1,3 +1,17 @@
+## 6.2.2-dev.13 (2026-07-23)
+
+### 🚀 Features
+
+- **reactor-browser:** renown in-page sign-in primitives and wire Connect ([86bb6d06f](https://github.com/powerhouse-inc/powerhouse/commit/86bb6d06f))
+
+### 🩹 Fixes
+
+- auto redirect instead of showing login modal when no renown adapters are configured ([bcaa4ae81](https://github.com/powerhouse-inc/powerhouse/commit/bcaa4ae81))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.2-dev.12 (2026-07-23)
 
 This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
