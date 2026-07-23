@@ -159,6 +159,8 @@ A path that does not resolve yields undefined, as does a path resolving to an ob
 
 `SET_GRANT` caps grant count and condition size and depth at validation, because every replica re-evaluates the policy at every operation's position. It also rejects a path that names a scope other than the capability's own, since conditions read only the executing scope and such a path can never resolve.
 
+These validation rules are part of what a `version` means. Version 1 ships its rules complete and never changes them, because accepted operations are permanent history that every replica must fold identically. Any rule changes require a new version.
+
 ## Projections and the Decision Model
 
 We define the following types to support the DCB pattern:
