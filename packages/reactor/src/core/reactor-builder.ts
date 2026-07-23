@@ -47,7 +47,10 @@ import {
   NullDocumentModelResolver,
 } from "../registry/document-model-resolver.js";
 import { DocumentModelRegistry } from "../registry/implementation.js";
-import type { IDocumentModelLoader } from "../registry/interfaces.js";
+import type {
+  IDocumentModelLoader,
+  IDocumentModelRegistry,
+} from "../registry/interfaces.js";
 import {
   ConsistencyTracker,
   type IConsistencyTracker,
@@ -99,6 +102,7 @@ import type {
  * them (`BaseReadModel` subclasses, in particular).
  */
 export interface ReadModelFactoryDeps {
+  documentModelRegistry: IDocumentModelRegistry;
   operationIndex: IOperationIndex;
   writeCache: IWriteCache;
   processorManagerConsistencyTracker: IConsistencyTracker;
@@ -400,6 +404,15 @@ export class ReactorBuilder {
       this.logger = new ConsoleLogger(["reactor"]);
     }
 
+    if (
+      this.projectionShardConfig !== undefined &&
+      this.readModelFactories.length > 0
+    ) {
+      throw new Error(
+        "withProjectionShards does not support read models registered through withReadModelFactory; projection workers cannot receive host-only factory dependencies",
+      );
+    }
+
     // One resolution pass feeds both sides: the host registry gets every
     // resolved module (in both executor modes), and importable sources form
     // the worker manifest.
@@ -652,6 +665,7 @@ export class ReactorBuilder {
 
     for (const factory of this.readModelFactories) {
       const readModel = await factory({
+        documentModelRegistry,
         operationIndex,
         writeCache,
         processorManagerConsistencyTracker,

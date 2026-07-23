@@ -421,6 +421,27 @@ describe("AttachmentReferenceReadModel", () => {
     expect(db.cursor).toBe(1);
   });
 
+  it("keeps a missing-module cursor retryable and gap-recovers after registration", async () => {
+    const { db, index, model, registry } = dependencies({ cursor: 0 });
+    await model.init();
+    registry.getModule.mockImplementationOnce(() => {
+      throw new Error("module not registered");
+    });
+    await expect(model.indexOperations([op(1)])).rejects.toThrow(
+      "module not registered",
+    );
+    expect(db.cursor).toBe(0);
+
+    registry.getModule.mockReturnValue(standardModule);
+    index.getSinceOrdinal.mockResolvedValue(
+      page([op(1), op(2, "ATTACH_FILES", { refs: [REF_B] })]),
+    );
+    await model.indexOperations([op(2, "ATTACH_FILES", { refs: [REF_B] })]);
+
+    expect(index.getSinceOrdinal).toHaveBeenCalledWith(0);
+    expect(db.cursor).toBe(2);
+  });
+
   it("reuses one compiled extractor on the hot path and performs no no-ref write", async () => {
     class CountingCompiler extends AttachmentSchemaCompiler {
       readonly extractors = new Set<unknown>();

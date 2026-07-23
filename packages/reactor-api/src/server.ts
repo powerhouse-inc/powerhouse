@@ -12,10 +12,15 @@ import type {
   InProcessReactorClientModule,
   ProcessorRecord as ReactorProcessorRecord,
 } from "@powerhousedao/reactor";
-import { AttachmentBuilder } from "@powerhousedao/reactor-attachments";
+import {
+  AttachmentBuilder,
+  AttachmentReferenceIndexBuilder,
+} from "@powerhousedao/reactor-attachments";
 import type {
   AttachmentBuildResult,
   AttachmentDatabase,
+  AttachmentReferenceIndexBuildResult,
+  IAttachmentReferenceWriter,
 } from "@powerhousedao/reactor-attachments";
 import { createAttachmentClient } from "@powerhousedao/reactor-attachments/client";
 import { setupMcpServer } from "@powerhousedao/reactor-mcp";
@@ -443,6 +448,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   documentPermissionService: DocumentPermissionService | undefined;
   authorizationConfig: AuthorizationConfig;
   attachments: AttachmentBuildResult;
+  attachmentReferenceIndex: AttachmentReferenceIndexBuildResult;
   packages: PackageManager;
   dbClosers: Array<() => Promise<void>>;
   readiness: ReadinessGate;
@@ -626,6 +632,9 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   ).withReservationSweepMs(ATTACHMENT_SWEEP_INTERVAL_MS);
   if (attachmentBackend) attachmentBuilder.withBackend(attachmentBackend);
   const attachments: AttachmentBuildResult = await attachmentBuilder.build();
+  const attachmentReferenceIndex = await new AttachmentReferenceIndexBuilder(
+    attachmentDb,
+  ).build();
   dbClosers.push(() => {
     attachments.destroy();
     return Promise.resolve();
@@ -652,6 +661,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     documentPermissionService,
     authorizationConfig,
     attachments,
+    attachmentReferenceIndex,
     packages,
     dbClosers,
     readiness,
@@ -679,6 +689,7 @@ async function _setupAPI(
   processorApp: ProcessorApp,
   readModels: IReadModel[],
   attachments: AttachmentBuildResult,
+  attachmentReferenceIndex: AttachmentReferenceIndexBuildResult,
   authorizationConfig: AuthorizationConfig,
   documentModelRegistry?: IDocumentModelRegistry,
   dbClosers: Array<() => Promise<void>> = [],
@@ -866,6 +877,7 @@ async function _setupAPI(
     graphqlManager,
     packages,
     attachments,
+    attachmentReferenceIndex,
     authService,
     dispose,
   };
@@ -948,11 +960,27 @@ function buildApiDispose(args: {
 export interface ClientInitializerResult {
   module: InProcessReactorClientModule;
   reactorDriveClient?: IDriveClient;
+  attachmentReferenceProjection?: AttachmentReferenceProjectionCapability;
 }
+
+export interface ClientInitializerDependencies {
+  attachmentReferenceWriter: IAttachmentReferenceWriter;
+}
+
+export type AttachmentReferenceProjectionCapability =
+  | { status: "available" }
+  | {
+      status: "unavailable";
+      reason:
+        | "live-read-model-registration-unsupported"
+        | "in-process-reactor-module-unavailable"
+        | "initializer-did-not-report";
+    };
 
 export async function initializeAndStartAPI(
   clientInitializer: (
     documentModels: DocumentModelModule[],
+    dependencies: ClientInitializerDependencies,
   ) => Promise<ClientInitializerResult>,
   options: Options,
   processorApp: ProcessorApp,
@@ -962,6 +990,7 @@ export async function initializeAndStartAPI(
     syncManager: ISyncManager;
     documentModelRegistry: IDocumentModelRegistry;
     readiness: ReadinessGate;
+    attachmentReferenceProjection: AttachmentReferenceProjectionCapability;
   }
 > {
   const {
@@ -974,6 +1003,7 @@ export async function initializeAndStartAPI(
     documentPermissionService,
     authorizationConfig,
     attachments,
+    attachmentReferenceIndex,
     packages,
     dbClosers,
     readiness,
@@ -981,8 +1011,16 @@ export async function initializeAndStartAPI(
 
   const { documentModels, processors, subgraphs } = await packages.init();
 
-  const { module: reactorClientModule, reactorDriveClient } =
-    await clientInitializer(documentModels);
+  const {
+    module: reactorClientModule,
+    reactorDriveClient,
+    attachmentReferenceProjection = {
+      status: "unavailable",
+      reason: "initializer-did-not-report",
+    },
+  } = await clientInitializer(documentModels, {
+    attachmentReferenceWriter: attachmentReferenceIndex.store,
+  });
 
   // Extract client and syncManager from the module
   const reactorClient = reactorClientModule.client;
@@ -1033,6 +1071,7 @@ export async function initializeAndStartAPI(
     processorApp,
     readModels,
     attachments,
+    attachmentReferenceIndex,
     authorizationConfig,
     documentModelRegistry,
     dbClosers,
@@ -1045,5 +1084,6 @@ export async function initializeAndStartAPI(
     syncManager,
     documentModelRegistry,
     readiness,
+    attachmentReferenceProjection,
   };
 }

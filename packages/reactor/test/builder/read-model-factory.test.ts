@@ -26,6 +26,7 @@ describe("ReactorBuilder.withReadModelFactory", () => {
     let receivedDeps:
       | {
           operationIndex: unknown;
+          documentModelRegistry: unknown;
           writeCache: unknown;
           processorManagerConsistencyTracker: unknown;
         }
@@ -35,6 +36,7 @@ describe("ReactorBuilder.withReadModelFactory", () => {
     module = await new ReactorBuilder()
       .withReadModelFactory((deps) => {
         receivedDeps = {
+          documentModelRegistry: deps.documentModelRegistry,
           operationIndex: deps.operationIndex,
           writeCache: deps.writeCache,
           processorManagerConsistencyTracker:
@@ -46,6 +48,9 @@ describe("ReactorBuilder.withReadModelFactory", () => {
     reactor = module.reactor;
 
     expect(receivedDeps).toBeDefined();
+    expect(receivedDeps!.documentModelRegistry).toBe(
+      module.documentModelRegistry,
+    );
     expect(receivedDeps!.operationIndex).toBe(module.operationIndex);
     expect(receivedDeps!.writeCache).toBe(module.writeCache);
     expect(receivedDeps!.processorManagerConsistencyTracker).toBe(
@@ -66,5 +71,27 @@ describe("ReactorBuilder.withReadModelFactory", () => {
     reactor = module.reactor;
 
     expect(module.readModelCoordinator.readModels).toContain(stub);
+  });
+
+  it("rejects projection shards that would silently omit factory read models", async () => {
+    await expect(
+      new ReactorBuilder()
+        .withReadModelFactory(() => new StubReadModel())
+        .withProjectionShards({
+          shardCount: 1,
+          preReadyKinds: [],
+          postReadyKinds: [],
+          db: {
+            host: "localhost",
+            port: 5433,
+            database: "powerhouse",
+            user: "powerhouse",
+            password: "powerhouse",
+          },
+        })
+        .buildModule(),
+    ).rejects.toThrow(
+      /withProjectionShards does not support read models registered through withReadModelFactory/,
+    );
   });
 });

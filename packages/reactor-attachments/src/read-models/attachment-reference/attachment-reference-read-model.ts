@@ -36,9 +36,30 @@ export class AttachmentReferenceReadModel extends BaseReadModel {
   }
 
   override indexOperations(items: OperationWithContext[]): Promise<void> {
-    const result = this.indexingQueue.then(() =>
-      this.indexOperationsInOrdinalOrder(items),
-    );
+    return this.enqueue(() => this.indexOperationsInOrdinalOrder(items));
+  }
+
+  override init(): Promise<void> {
+    return this.enqueue(async () => {
+      const viewState = await this.loadState();
+
+      if (viewState !== undefined) {
+        this.lastOrdinal = viewState;
+      } else {
+        await this.initializeState();
+      }
+
+      let page = await this.operationIndex.getSinceOrdinal(this.lastOrdinal);
+      while (page.results.length > 0) {
+        await this.indexOperationsInOrdinalOrder(page.results);
+        if (!page.next) break;
+        page = await page.next();
+      }
+    });
+  }
+
+  private enqueue(work: () => Promise<void>): Promise<void> {
+    const result = this.indexingQueue.then(work);
     this.indexingQueue = result.catch(() => undefined);
     return result;
   }

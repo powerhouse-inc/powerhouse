@@ -2,6 +2,7 @@ import type {
   InProcessReactorClientModule,
   IReactorClient,
 } from "@powerhousedao/reactor";
+import type { AttachmentReferenceProjectionCapability } from "@powerhousedao/reactor-api";
 import type { IAttachmentService } from "@powerhousedao/reactor-attachments";
 import type { IRenown } from "@renown/sdk";
 import type { DriveInput } from "@powerhousedao/shared/document-drive";
@@ -152,6 +153,8 @@ export type SwitchboardReactor = {
   reactor: IReactorClient;
   /** Switchboard-backed remote attachment service over its own `/attachments/*` API, for downstream consumers. */
   attachmentService: IAttachmentService;
+  /** Whether the authoritative attachment-reference projection is active. */
+  attachmentReferenceProjection: AttachmentReferenceProjectionCapability;
   /** The Renown instance if identity was initialized */
   renown: IRenown | null;
   /**

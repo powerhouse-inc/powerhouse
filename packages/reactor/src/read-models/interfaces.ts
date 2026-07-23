@@ -51,3 +51,23 @@ export interface IReadModelCoordinator {
    */
   getChainDepth(): number;
 }
+
+export type ReadModelRegistrationStage = "pre_ready" | "post_ready";
+
+/**
+ * Optional capability exposed by coordinators that support adding read models
+ * after construction. Custom and remote coordinators are not required to
+ * implement it.
+ */
+export interface ILiveReadModelCoordinator extends IReadModelCoordinator {
+  addReadModel(readModel: IReadModel, stage: ReadModelRegistrationStage): void;
+}
+
+export function supportsLiveReadModelRegistration(
+  coordinator: IReadModelCoordinator,
+): coordinator is ILiveReadModelCoordinator {
+  return (
+    "addReadModel" in coordinator &&
+    typeof coordinator.addReadModel === "function"
+  );
+}

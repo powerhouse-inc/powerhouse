@@ -6,7 +6,11 @@ import {
   type JobReadReadyEvent,
 } from "../../src/events/types.js";
 import { ReadModelCoordinator } from "../../src/read-models/coordinator.js";
-import type { IReadModel } from "../../src/read-models/interfaces.js";
+import {
+  supportsLiveReadModelRegistration,
+  type IReadModel,
+  type IReadModelCoordinator,
+} from "../../src/read-models/interfaces.js";
 
 describe("ReadModelCoordinator", () => {
   const createMockOperations = (
@@ -47,6 +51,46 @@ describe("ReadModelCoordinator", () => {
       indexOperations: vi.fn().mockResolvedValue(undefined),
     };
   };
+
+  describe("live read-model registration", () => {
+    it("adds to the requested stage and public inventory", () => {
+      const coordinator = new ReadModelCoordinator(new EventBus(), [], []);
+      const preReady = createMockReadModel("pre");
+      const postReady = createMockReadModel("post");
+
+      expect(supportsLiveReadModelRegistration(coordinator)).toBe(true);
+      coordinator.addReadModel(preReady, "pre_ready");
+      coordinator.addReadModel(postReady, "post_ready");
+
+      expect(coordinator.preReady).toEqual([preReady]);
+      expect(coordinator.postReady).toEqual([postReady]);
+      expect(coordinator.readModels).toEqual([preReady, postReady]);
+    });
+
+    it("rejects duplicate names across stages", () => {
+      const coordinator = new ReadModelCoordinator(new EventBus(), [], []);
+      coordinator.addReadModel(createMockReadModel("duplicate"), "pre_ready");
+
+      expect(() =>
+        coordinator.addReadModel(
+          createMockReadModel("duplicate"),
+          "post_ready",
+        ),
+      ).toThrow('Read model "duplicate" is already registered');
+    });
+
+    it("does not require custom coordinators to support registration", () => {
+      const customCoordinator: IReadModelCoordinator = {
+        readModels: [],
+        start: vi.fn(),
+        stop: vi.fn(),
+        drain: vi.fn().mockResolvedValue(undefined),
+        getChainDepth: vi.fn().mockReturnValue(0),
+      };
+
+      expect(supportsLiveReadModelRegistration(customCoordinator)).toBe(false);
+    });
+  });
 
   describe("OPERATIONS_READY event", () => {
     it("should emit OPERATIONS_READY after all read models complete indexing", async () => {

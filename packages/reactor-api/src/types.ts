@@ -1,7 +1,10 @@
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import type { IReactorClient } from "@powerhousedao/reactor";
 import type { GraphQLManager } from "@powerhousedao/reactor-api";
-import type { AttachmentBuildResult } from "@powerhousedao/reactor-attachments";
+import type {
+  AttachmentBuildResult,
+  AttachmentReferenceIndexBuildResult,
+} from "@powerhousedao/reactor-attachments";
 import type { IAttachmentClient } from "@powerhousedao/reactor-attachments/client";
 import type { PHDocumentHeader } from "@powerhousedao/shared/document-model";
 import type {
@@ -32,6 +35,7 @@ export type API = {
   graphqlManager: GraphQLManager;
   packages: IPackageManager;
   attachments: AttachmentBuildResult;
+  attachmentReferenceIndex: AttachmentReferenceIndexBuildResult;
   authService: AuthService | undefined;
   /**
    * Releases resources owned by the API: shuts down the GraphQL gateway,

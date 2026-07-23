@@ -243,8 +243,11 @@ export { BaseReadModel } from "./src/read-models/base-read-model.js";
 export { ReadModelCoordinator } from "./src/read-models/coordinator.js";
 export { KyselyDocumentView } from "./src/read-models/document-view.js";
 export {
+  supportsLiveReadModelRegistration,
+  type ILiveReadModelCoordinator,
   type IReadModel,
   type IReadModelCoordinator,
+  type ReadModelRegistrationStage,
 } from "./src/read-models/interfaces.js";
 export type {
   DocumentViewDatabase,
