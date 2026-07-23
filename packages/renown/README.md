@@ -131,11 +131,65 @@ Never put a Privy **App Secret** in browser config — it is server-only.
 
 ## Node.js
 
-For server-side usage, import from `@renown/sdk/node`:
+For server-side usage, import from `@renown/sdk/node`.
+
+**Building an instance (scripts / CLI).** The Node `RenownBuilder` uses file-based
+storage. Its `build()` **blocks** on revalidating a stored credential against the
+switchboard before resolving (so a short-lived process acts on fresh state); pass
+`revalidate: "never"` to skip the network check.
 
 ```typescript
 import { RenownBuilder } from "@renown/sdk/node";
+
+const renown = await new RenownBuilder("my-cli", {
+  switchboardUrl: "https://switchboard.example/graphql",
+}).build();
+// renown.user is present only if the stored credential is still valid
 ```
+
+`renown.revalidate()` re-checks the current credential on demand and logs out if
+it was revoked/expired; it is **fail-open** (a network error keeps the session).
+
+### Verifying a session cookie (SSR)
+
+To gate server-rendered pages, store the bearer token from
+`renown.getBearerToken()` — plus an optional display hint (name/avatar) — in a
+cookie (name exported as `RENOWN_SESSION_COOKIE`), then verify it on the server:
+
+```typescript
+import {
+  serializeRenownSessionCookie,
+  verifyRenownSession,
+  readSessionClaims,
+} from "@renown/sdk/node";
+
+// Build the cookie value (token + display hint) when setting the cookie:
+const cookieValue = serializeRenownSessionCookie({
+  token,
+  profile: { name: "alice.eth", avatar: null },
+});
+
+// Verify the cookie value — checks the JWT (signature + expiry) and merges the
+// display hint (unverified). verifyCredential:true also re-checks vs switchboard.
+const session = await verifyRenownSession(cookieValue, {
+  switchboardUrl: "https://switchboard.example/graphql",
+  // verifyCredential: true, // default false = token-only, no network
+});
+if (session) {
+  // session.user (incl. display hint), session.appDid, session.expiresAt
+}
+
+// Cheap, signature-free decode for optimistic checks (e.g. a proxy redirect).
+// NEVER trust this for access control.
+const claims = readSessionClaims(cookieValue);
+```
+
+`verifyCredential` defaults to **`false`** (token-only, no network): the JWT is
+signed and expiring, and the switchboard enforces the credential on every real
+operation, so token-only is enough for optimistic SSR UI. Set it to `true` on
+routes that render sensitive data to also catch revocation server-side. To
+verify a bare bearer token (e.g. an `Authorization` header), use
+`verifyAuthBearerToken` instead.
 
 ## License
 

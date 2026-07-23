@@ -91,16 +91,11 @@ Each adapter's wallet libraries are optional peer dependencies, dynamically impo
 
 ### Adding in-page sign-in to your own app
 
-Connect wires this through configuration, but any React app can add the same in-page sign-in using the primitives in `@powerhousedao/reactor-browser/renown`. There are three steps:
-
-1. **Initialize the SDK** — render `<Renown appName namespace switchboardUrl />` once, high in your tree. The `switchboardUrl` enables in-page sign-in; omit it to fall back to the redirect flow.
-2. **Mount `<RenownWalletProvider adapters={…} theme={…}>`** around your app. It registers the login activator, lazy-loads the configured adapters on the first click, and merges them into one controller. The adapter libraries are optional peer dependencies loaded on demand — nothing wallet-related runs at startup.
-3. **Build the login UI** with `useRenownLoginMethods(adapters)` (derives the button list from the same config) and `useRenownAuth()` (`login(session?, method?)`, `user`, `pending`, `error`, `logout`). Call `login(undefined, method.id)` per button.
+Connect wires this through configuration, but any React app can add the same in-page sign-in using `@powerhousedao/reactor-browser/renown`. Mount a single `RenownProvider` high in your tree — it initializes the SDK, seeds the first render, lazy-mounts the wallet adapters on the first login click, and revalidates the stored credential in the background.
 
 ```tsx
 import {
-  Renown,
-  RenownWalletProvider,
+  RenownProvider,
   useRenownAuth,
   useRenownLoginMethods,
 } from "@powerhousedao/reactor-browser/renown";
@@ -112,12 +107,15 @@ const adapters = {
 
 function Providers({ children }) {
   return (
-    <>
-      <Renown appName="my-app" switchboardUrl="https://switchboard.example/graphql" />
-      <RenownWalletProvider adapters={adapters} theme="light">
-        {children}
-      </RenownWalletProvider>
-    </>
+    <RenownProvider
+      appName="my-app"
+      namespace="my-app"
+      switchboardUrl="https://switchboard.example/graphql"
+      adapters={adapters}
+      theme="light"
+    >
+      {children}
+    </RenownProvider>
   );
 }
 
@@ -133,7 +131,16 @@ function Login() {
 }
 ```
 
-In Next.js / SSR apps, load this subtree client-only (e.g. `next/dynamic` with `ssr: false`), since the wallet libraries are browser-only. A complete Next.js reference lives in the monorepo at `test/test-fusion`. See the `@powerhousedao/reactor-browser` README ("Renown in-page sign-in") for the full API.
+Gate any component on auth with a plain `if (!user)` from `useRenownAuth()`; for a no-Suspense "still resolving" state (useful in client-only apps), use `useRenownAuthAsync()`, which returns `state: "authenticated" | "resolving" | "unauthenticated"`.
+
+`switchboardUrl` enables in-page sign-in; omit it to fall back to the redirect flow. `RenownProvider` composes `<Renown>` (SDK init), `RenownWalletProvider` (adapters), and `RenownInitialUserProvider` (first-render seed), which you can also mount individually for a custom tree.
+
+#### SSR and client-only
+
+`RenownProvider` is **SSR-safe** — do **not** wrap it in `next/dynamic` with `ssr: false`. The wallet libraries load client-side on the first login click, so the provider renders on the server unchanged.
+
+- **Client-only apps** (Vite, etc.): the provider seeds the first render synchronously from `localStorage`, so a returning user is authenticated on the first paint with no flash.
+- **SSR apps** (Next.js): pass a server-resolved `session` (from a verified session cookie) so authenticated content renders on the server too. Read the cookie in a Data Access Layer with `verifyRenownSession` from `@renown/sdk/node`; passing `session` also keeps the cookie in sync after login/logout. A complete Next.js reference lives in the monorepo at `test/test-fusion`, and the `@powerhousedao/reactor-browser` README ("Renown in-page sign-in") has the full API.
 
 ### Testing sign-in (mock adapter)
 

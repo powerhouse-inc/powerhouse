@@ -519,42 +519,36 @@ wallets, Privy for social/email). This is the same integration Connect and the
 `test-fusion` app use. Import from `@powerhousedao/reactor-browser/renown` (or
 the package root).
 
-### Setup (3 steps)
+### Quick start — `RenownProvider`
 
-**1. Initialize the SDK** — render `<Renown>` once, high in your tree, with your
-switchboard URL (enables in-page sign-in; without it the flow redirects):
+Mount one provider high in your tree. It initializes the SDK, seeds the first
+render (from a server session cookie for SSR, or `localStorage` for client-only
+apps), mounts the wallet adapters (lazy-loaded on the first login click), keeps a
+server-readable session cookie in sync when running under SSR, and revalidates
+the stored credential against the switchboard.
 
 ```tsx
-import { Renown } from "@powerhousedao/reactor-browser/renown";
+import { RenownProvider } from "@powerhousedao/reactor-browser/renown";
 
-<Renown
+<RenownProvider
   appName="my-app"
   namespace="my-app"
   switchboardUrl="https://switchboard.example/graphql"
-/>;
-```
-
-**2. Mount `RenownWalletProvider`** around your app, passing the adapters config.
-Adapters and their libraries load lazily on the first login click — nothing
-wallet-related is imported at startup. Install only the peer deps you enable
-(see the `@renown/sdk` README "Wallet adapters"):
-
-```tsx
-import { RenownWalletProvider } from "@powerhousedao/reactor-browser/renown";
-
-<RenownWalletProvider
   adapters={{
     rainbow: { walletConnectProjectId: "..." },
     privy: { appId: "...", methods: ["google", "email"] },
   }}
-  theme="light" // or "dark" | { mode, accentColor?, accentColorForeground? }
+  theme="light" // "light" | "dark" | { mode, accentColor?, accentColorForeground? }
 >
   <App />
-</RenownWalletProvider>;
+</RenownProvider>;
 ```
 
-**3. Build the login UI** with `useRenownLoginMethods` (derives the button list
-from the same config) and `useRenownAuth` (login + user state):
+The provider is **SSR-safe** — it renders on the server without `ssr: false`;
+the wallet libraries only load client-side on the first login click.
+
+Then build the login UI with `useRenownLoginMethods` (derives the button list
+from the config) and `useRenownAuth` (login + user state):
 
 ```tsx
 import {
@@ -583,6 +577,83 @@ function Login({ adapters }) {
 the adapter that supports it, produces a `WalletSession`, and completes the
 Renown credential sign-in via the switchboard — falling back to the redirect
 flow when no switchboard/adapter is available.
+
+### À la carte
+
+`RenownProvider` composes pieces you can also mount yourself — use them directly
+only when you need a custom tree:
+
+- `<Renown appName namespace switchboardUrl revalidate? />` — SDK init (renders
+  `null`; place high in the tree).
+- `RenownWalletProvider` — wallet adapters (below).
+- `RenownInitialUserProvider` — seeds the first render with a `User` (see
+  [Server-side rendering](#server-side-rendering-ssr)).
+
+### Auth state — `useRenownAuth` / `useRenownAuthAsync`
+
+`useRenownAuth()` returns the live auth: `{ user, status, pending, error, login,
+logout, displayName, displayAddress, ... }`. Gate on it with a plain `if` — no
+wrapper component is needed:
+
+```tsx
+function EditButton() {
+  const { user } = useRenownAuth();
+  if (!user) return null;
+  return <button>Edit</button>;
+}
+```
+
+`useRenownAuthAsync()` adds a collapsed `state: "authenticated" | "resolving" |
+"unauthenticated"` (and `isResolving`) so you can show a skeleton during the
+resolving window **without a Suspense boundary** — handy for client-only apps:
+
+```tsx
+function EditButton() {
+  const { state } = useRenownAuthAsync();
+  if (state === "resolving") return <EditSkeleton />;
+  if (state === "unauthenticated") return null;
+  return <button>Edit</button>;
+}
+```
+
+### Server-side rendering (SSR)
+
+The provider tree is SSR-safe, so the logged-out shell renders on the server with
+no `ssr: false`. To render **authenticated** content on the server (no flash),
+give `RenownProvider` a server-resolved `session`:
+
+```tsx
+// app/layout.tsx (server component)
+import { verifySession } from "@/lib/dal";
+
+const session = await verifySession(); // reads + verifies the session cookie
+<RenownProvider appName="my-app" session={session}>
+  {children}
+</RenownProvider>;
+```
+
+Passing `session` also enables the **session-cookie sync**: after each login the
+client mints a bearer token and POSTs it to `sessionEndpoint` (default
+`/api/renown/session`), and clears it on logout. Your app provides the route
+handler that sets an HttpOnly cookie, and a Data Access Layer that verifies it
+with `verifyRenownSession` from `@renown/sdk/node` (see that package's README).
+
+### Client-only apps
+
+Omit `session` and the provider seeds the first render synchronously from
+`localStorage` (`readPersistedUser`), so a returning user renders authenticated
+on the first paint — no server, no flash. The stored credential is revalidated in
+the background (see below); `useRenownAuthAsync` exposes `resolving` for the cold
+start with no stored session.
+
+### Revalidation
+
+On mount the provider revalidates the restored credential against the switchboard
+and logs the user out if it was revoked or expired (`revalidate` prop, default
+`"always"`; set `"never"` to skip). In the browser this runs **non-blocking** in
+the background (fail-open — a transient outage keeps the session); Node scripts
+block on it (see `@renown/sdk`). This does not replace server-side checks: the
+switchboard enforces the credential on every real operation.
 
 ### `RenownWalletProvider`
 

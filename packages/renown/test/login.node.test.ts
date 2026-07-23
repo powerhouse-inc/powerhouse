@@ -118,6 +118,7 @@ function mockRenown(overrides: Partial<IRenown> = {}): IRenown {
     login: vi.fn(),
     signIn: vi.fn(),
     logout: vi.fn(),
+    revalidate: vi.fn().mockResolvedValue(true),
     crypto: {} as IRenown["crypto"],
     signer: {} as IRenown["signer"],
     did: "did:key:test123",

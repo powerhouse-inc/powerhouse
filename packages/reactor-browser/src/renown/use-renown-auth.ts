@@ -125,3 +125,35 @@ export function useRenownAuth(): RenownAuth {
     openProfile,
   };
 }
+
+export type RenownAuthResolution =
+  | "authenticated"
+  | "resolving"
+  | "unauthenticated";
+
+export interface RenownAuthAsync extends RenownAuth {
+  /** Collapsed routing state; "resolving" until auth is known. */
+  state: RenownAuthResolution;
+  isResolving: boolean;
+}
+
+// Auth as a resolved three-state value instead of via Suspense: renders a
+// "resolving" phase you can branch on, so no Suspense boundary is required.
+export function useRenownAuthAsync(): RenownAuthAsync {
+  const auth = useRenownAuth();
+  const { user, status, pending } = auth;
+  let state: RenownAuthResolution;
+  if (user) {
+    state = "authenticated";
+  } else if (
+    pending ||
+    status === undefined ||
+    status === "loading" ||
+    status === "checking"
+  ) {
+    state = "resolving";
+  } else {
+    state = "unauthenticated";
+  }
+  return { ...auth, state, isResolving: state === "resolving" };
+}

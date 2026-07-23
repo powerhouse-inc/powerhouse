@@ -279,6 +279,8 @@ export interface IRenown extends Pick<RenownEventEmitter, "on"> {
   login: (userDid: string) => Promise<User>;
   signIn: (params: SignInParams) => Promise<User>;
   logout: () => Promise<void>;
+  /** Re-check the current credential at the source; logs out if revoked/expired. */
+  revalidate: () => Promise<boolean>;
   readonly crypto: IRenownCrypto;
   readonly signer: ISigner;
   readonly did: string;

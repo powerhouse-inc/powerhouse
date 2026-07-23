@@ -1,9 +1,7 @@
 "use client";
 
-import {
-  Renown,
-  RenownWalletProvider,
-} from "@powerhousedao/reactor-browser/renown";
+import { RenownProvider } from "@powerhousedao/reactor-browser/renown";
+import type { User } from "@renown/sdk";
 import type { WalletTheme } from "@renown/sdk/wallet";
 import { useEffect, useState, type ReactNode } from "react";
 import {
@@ -25,21 +23,26 @@ function usePreferredMode(): "light" | "dark" {
   return mode;
 }
 
-// Initializes the Renown SDK once and mounts the shared wallet provider around
-// the whole app, so auth state (useRenownAuth) is available on every route.
-export function RenownProviders({ children }: { children: ReactNode }) {
+// One provider: SDK init, first-render seed, wallets, and session-cookie sync.
+export function RenownProviders({
+  children,
+  session,
+}: {
+  children: ReactNode;
+  session?: { user?: User } | null;
+}) {
   const theme: WalletTheme = usePreferredMode();
   return (
-    <>
-      <Renown
-        appName={RENOWN_APP_NAME}
-        namespace={RENOWN_APP_NAME}
-        switchboardUrl={SWITCHBOARD_URL}
-        onError={(e) => console.error("Renown init failed", e)}
-      />
-      <RenownWalletProvider adapters={WALLET_ADAPTERS} theme={theme}>
-        {children}
-      </RenownWalletProvider>
-    </>
+    <RenownProvider
+      appName={RENOWN_APP_NAME}
+      namespace={RENOWN_APP_NAME}
+      switchboardUrl={SWITCHBOARD_URL}
+      adapters={WALLET_ADAPTERS}
+      theme={theme}
+      session={session}
+      onError={(e) => console.error("Renown init failed", e)}
+    >
+      {children}
+    </RenownProvider>
   );
 }
