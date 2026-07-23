@@ -124,6 +124,21 @@ describe("auth-scope reducer", () => {
     expect(doc.state.auth.creator).toBe(CREATOR_DID);
   });
 
+  it("fails closed for a signed header with an unsupported key type", () => {
+    const okpDocument: PHDocument<CountPHState> = {
+      ...initialDocument,
+      header: {
+        ...initialDocument.header,
+        sig: { publicKey: { kty: "OKP", crv: "Ed25519", x: "abc" }, nonce: "" },
+      },
+    };
+    const doc = countReducer(okpDocument, signedInit(CREATOR_DID));
+    expect(doc.state.auth).toStrictEqual({ version: 0, grants: [] });
+    expect(doc.operations.auth[0].error).toContain(
+      "must be signed by the document creator",
+    );
+  });
+
   it("records an error operation for INITIALIZE_AUTH signed by a non-creator", () => {
     const doc = countReducer(signedDocument, signedInit(OTHER_DID));
     expect(doc.state.auth).toStrictEqual({ version: 0, grants: [] });

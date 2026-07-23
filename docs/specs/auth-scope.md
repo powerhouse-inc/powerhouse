@@ -66,11 +66,11 @@ type Capability = {
 };
 ```
 
-Auth scope actions are applied by a dedicated `AuthActionHandler` and are never passed to model reducers. This is the same approach as we've taken with the `document` scope reducer. The resulting state is event-sourced, signed, and replicates with the document, so the policy travels with the document instead of living outside of it.
+Auth scope actions are applied by a dedicated auth reducer, `applyAuthAction`, which the base reducer dispatches instead of the model reducer. This is the same approach as we've taken with the `document` scope reducer. The resulting state is event-sourced, signed, and replicates with the document, so the policy travels with the document instead of living outside of it.
 
 ### Actions
 
-The auth scope has four actions. All are applied by the `AuthActionHandler`.
+The auth scope has four actions. All are applied by the auth reducer.
 
 ```typescript
 type InitializeAuthInput = {
@@ -92,7 +92,7 @@ type MoveGrantInput = {
 };
 ```
 
-`INITIALIZE_AUTH` is the genesis operation. It is valid only at auth revision zero and carries the policy's `version` and the document's initial grants. The `version` names the policy language the grants are written in (see Condition language) and must be an integer of at least 1. The `AuthActionHandler` rejects anything less, because 0 is reserved to mean uninitialized. On a signed document its signer must match the header key, and that signer is stored as `creator` (see Administration and bootstrap).
+`INITIALIZE_AUTH` is the genesis operation. It is valid only at auth revision zero and carries the policy's `version` and the document's initial grants. The `version` names the policy language the grants are written in (see Condition language) and must be an integer of at least 1. The auth reducer rejects anything less, because 0 is reserved to mean uninitialized. On a signed document its signer must match the header key, and that signer is stored as `creator` (see Administration and bootstrap).
 
 `SET_GRANT` upserts by `grant.id`. An existing id is replaced in place and keeps its position. A new id appends to the end of the list.
 
@@ -102,7 +102,7 @@ type MoveGrantInput = {
 
 `UNDO`, `REDO`, and `PRUNE` are rejected on the auth scope.
 
-On a `PHGroup` document, `INITIALIZE_AUTH` and `SET_GRANT` reject any grant whose principal is `{ group }`. That is, **a group's auth scope cannot reference other groups**. The `AuthActionHandler` checks the document's own type, so the check is deterministic on every replica. We need this restriction to prevent reference cycles and to keep the systems that follow group references simple rather than potentially recursive (see Groups and Synchronization).
+On a `PHGroup` document, `INITIALIZE_AUTH` and `SET_GRANT` reject any grant whose principal is `{ group }`. That is, **a group's auth scope cannot reference other groups**. The auth reducer checks the document's own type, so the check is deterministic on every replica. We need this restriction to prevent reference cycles and to keep the systems that follow group references simple rather than potentially recursive (see Groups and Synchronization).
 
 ### Grants
 
@@ -169,10 +169,12 @@ We define the following types to support the DCB pattern:
 type StreamQuery =
   { documentId: string; branch: string; scope: string };
 
-type Projection<M> = {
-  reducer: Reducer;
-  // important point: we need to allow for composition with other projections
-  query: StreamQuery | ((model: M) => StreamQuery[]);
+type Projection<S, M> = {
+  initialState: S;
+  apply: (state: S, operation: Operation) => S;
+  // static, or derived from already-folded projections; this is how
+  // projections compose
+  query: StreamQuery | ((model: Partial<M>) => StreamQuery[]);
 };
 
 // the scope's state at the operation's index
@@ -217,12 +219,12 @@ const AuthDecisionModel = (target: DecisionTarget): DecisionModel<{
     document: {
       initialState: defaultDocumentState(),
       apply: applyDocumentOperation,
-      query: { documentId: target.documentId, branch, scope: "document" },
+      query: { documentId: target.documentId, branch: target.branch, scope: "document" },
     },
     auth: {
       initialState: defaultAuthState(),
       apply: applyAuthOperation,
-      query: { documentId: target.documentId, branch, scope: "auth" },
+      query: { documentId: target.documentId, branch: target.branch, scope: "auth" },
     },
     groups: {
       initialState: {},
@@ -239,7 +241,7 @@ The `document` projection is intended to replace the current metadata cache used
 
 The `auth` projection rebuilds the grant list from the auth event stream.
 
-The `groups` projection is the most complicated, and should be the last to introduce. Its stream set is derived from the auth scope state (the auth projection's folded state), so adding a grant that names a new group pulls that group's stream into the model.
+The `groups` projection is the most complicated, and should be the last to introduce. Its stream set is derived from the auth scope state (the auth projection's folded state), so adding a grant that names a new group pulls that group's stream into the model. Group queries pin the `main` branch. A group's member list lives on its main branch no matter which branch the referencing document is on.
 
 The `ctx` on the `decide` function includes the executing scope's own state (for conditions reading `doc.global.*`).
 
@@ -343,7 +345,7 @@ New mutation jobs are evaluated in `SimpleJobExecutor.executeRegularAction`, bet
 
 On allow, the reducer runs and the operation goes to `IOperationStore.apply` with the append condition. Inside the append transaction, the store verifies every stream in the condition is still at its recorded revision. If any has grown, it throws `AppendConditionFailedError` and writes nothing. The job then retries. This will rebuild the model, re-decide, and re-append. A condition failure is a concurrency conflict, not a fault, which is why retry is safe.
 
-This is optimistic locking. That is, the expected-revision check the store already performs for the written stream, extended to the streams the decision read. The queue already serializes jobs per document, so the target's own streams cannot grow between fold and append. The condition exists for group documents, which run on other queue keys and workers, where a membership write can be changed during the write.
+This is optimistic locking. That is, the expected-revision check the store already performs for the written stream, extended to the streams the decision read. The queue already serializes jobs per document, so the target's own streams cannot grow between fold and append. The condition exists for group documents, which run on other queue keys and workers, where a membership write can be changed during the write. It also protects multi-instance deployments. Two reactors sharing one database have no shared queue, so nothing serializes their jobs against each other. The advisory locks and the guarded insert are what make that safe, which is why they are required rather than optional hardening.
 
 ### The guard query
 
@@ -571,7 +573,7 @@ Naming a group publishes its membership. Serving a group through a collection me
 
 A `PHGroup` (`@powerhousedao/document-group`) is an ordinary document whose state is a member address list, gated by its own auth scope. A `{ group }` principal names a group document id.
 
-A group's own auth scope cannot contain `{ group }` principals; the `AuthActionHandler` rejects them on group documents (see Actions). A group's policy names signers directly — `{ address }`, `{ anyone }`, `{ match }` — so membership never chains through a second group, and evaluating auth for a group's operations requires no stream beyond the group's own.
+A group's own auth scope cannot contain `{ group }` principals; the auth reducer rejects them on group documents (see Actions). A group's policy names signers directly — `{ address }`, `{ anyone }`, `{ match }` — so membership never chains through a second group, and evaluating auth for a group's operations requires no stream beyond the group's own.
 
 Group streams get no special rule. The `groups` projection names them in the auth scope's grant list, which puts them in the read-set, and every stream in the read-set is folded by position in the same merged order. The fold respects auth evaluation: a membership write that the group's own policy denies is an error operation and contributes nothing. Membership operations sort against the target document's operations by timestamp like anything else, and every replica holding the same operations answers the membership question identically and deterministically.
 
@@ -603,7 +605,7 @@ Migration maps a legacy table owner to an `execute`-on-`auth` grant.
 
 The rollout has four stages. Each stage ships on its own and changes no behavior until the stage that turns it on.
 
-**Stage 1: data model, backward compatible (mostly done).** Fill out `PHAuthState` and backfill legacy documents so an empty `auth` loads as an empty policy. Ship the four auth actions and the `AuthActionHandler`, with `UNDO`, `REDO`, and `PRUNE` rejected on the auth scope. The policy is now state that replicates with the document and is not yet consulted by anything. Remaining work: auth operations must survive document save/load and versioned replay. An interim admission gate that reads this state directly also exists on the branch; stage 4 absorbs it into the model.
+**Stage 1: data model, backward compatible (mostly done).** Fill out `PHAuthState` and backfill legacy documents so an empty `auth` loads as an empty policy. Ship the four auth actions and the auth reducer, with `UNDO`, `REDO`, and `PRUNE` rejected on the auth scope. The policy is now state that replicates with the document and is not yet consulted by anything. Remaining work: auth operations must survive document save/load and versioned replay. An interim admission gate that reads this state directly also exists on the branch. An interim read gate exists as well: `IReactorClient` filters domain scopes by the reading subject on its document reads, and reactor-api passes the authenticated caller as that subject. Stage 4 absorbs both gates into the model.
 
 **Stage 2: the decision model surface.** Introduce the types: `StreamQuery`, `Projection`, `DecisionContext`, `DecisionModel`, `AppendCondition`, and `buildDecisionModel`. Extend `IOperationStore.apply` to accept an append condition: the guarded insert, the per-stream advisory locks, and `AppendConditionFailedError`. A condition failure retries by rebuilding the model and does not count toward the job's failure limit. No model is registered, so nothing changes behavior. This stage is proven with store-level tests: a failed condition inserts nothing, lock acquisition cannot deadlock, and a retry lands against the new heads.
 

@@ -252,7 +252,9 @@ export function applyInitializeAuthAction<TState extends PHBaseState>(
   }
   const creatorKey = document.header.sig.publicKey;
   const signerKey = action.context?.signer?.app.key;
-  const hasCreator = Boolean(creatorKey.x && creatorKey.y);
+  // Any key material marks a signed header. Unsupported key types then fail
+  // closed through isDocumentCreator instead of degrading to an open genesis.
+  const hasCreator = Boolean(creatorKey.kty || creatorKey.x || creatorKey.y);
   if (hasCreator && !isDocumentCreator(creatorKey, signerKey)) {
     throw new AuthInitializerNotCreatorError(document.header.id);
   }
@@ -377,11 +379,6 @@ export type AuthSubject = {
 
 export type AuthDecision = "allow" | "deny";
 
-export type DecideOptions = {
-  /** Supreme-admin addresses that may always administer the auth scope. */
-  admins?: string[];
-};
-
 function capabilityCovers(
   capability: Capability,
   request: AuthRequest,
@@ -434,23 +431,18 @@ export function decide(
   auth: PHAuthState | undefined,
   subject: AuthSubject,
   request: AuthRequest,
-  options?: DecideOptions,
 ): AuthDecision {
   if (!auth || auth.version === 0) {
     return "allow";
   }
   // the creator can always execute auth-scope operations
-  if (request.verb === "execute" && request.scope === "auth") {
-    if (subject.key !== undefined && subject.key === auth.creator) {
-      return "allow";
-    }
-    const address = subject.address;
-    if (
-      address !== undefined &&
-      options?.admins?.some((a) => a.toLowerCase() === address.toLowerCase())
-    ) {
-      return "allow";
-    }
+  if (
+    request.verb === "execute" &&
+    request.scope === "auth" &&
+    subject.key !== undefined &&
+    subject.key === auth.creator
+  ) {
+    return "allow";
   }
   let decision: AuthDecision = "deny";
   for (const grant of auth.grants) {

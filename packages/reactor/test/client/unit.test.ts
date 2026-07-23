@@ -1893,10 +1893,18 @@ describe("ReactorClient Unit Tests", () => {
       });
 
       const page = await client.getOperations("d1", {
+        branch: "main",
         subject: { address: "0xreader" },
       });
 
       expect(page.results.map((op) => op.index)).toEqual([0]);
+      // the policy fetch carries the view's branch
+      expect(vi.mocked(mockReactor.getByIdOrSlug)).toHaveBeenCalledWith(
+        "d1",
+        { scopes: ["auth"], branch: "main" },
+        undefined,
+        undefined,
+      );
     });
   });
 });

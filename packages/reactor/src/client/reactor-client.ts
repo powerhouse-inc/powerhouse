@@ -207,7 +207,7 @@ export class ReactorClient implements IReactorClient {
     // Read gate: exclude operations in scopes the subject may not read.
     const authDoc = (await this.reactor.getByIdOrSlug(
       documentId,
-      { scopes: ["auth"] },
+      { scopes: ["auth"], branch: view?.branch },
       undefined,
       signal,
     )) as PHDocument | undefined;

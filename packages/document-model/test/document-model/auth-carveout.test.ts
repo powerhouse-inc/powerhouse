@@ -123,12 +123,4 @@ describe("decide auth-scope carve-out", () => {
     expect(decide(noCreator, { key: CREATOR_DID }, authExecute)).toBe("deny");
     expect(decide(noCreator, {}, authExecute)).toBe("deny");
   });
-
-  it("lets a supreme admin execute auth-scope ops", () => {
-    expect(
-      decide(denyAll, { address: "0xADMIN" }, authExecute, {
-        admins: ["0xadmin"],
-      }),
-    ).toBe("allow");
-  });
 });
