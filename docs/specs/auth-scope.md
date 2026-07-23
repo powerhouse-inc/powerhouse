@@ -101,7 +101,7 @@ type MoveGrantInput = {
 
 `UNDO`, `REDO`, and `PRUNE` are rejected on the auth scope.
 
-On a `PHGroup` document, `INITIALIZE_AUTH` and `SET_GRANT` reject any grant whose principal is `{ group }`. That is, **a group's auth scope cannot reference other groups**. The `AuthActionHandler` checks the document's own type, so the check is deterministic on every replica. We need this restriction to prevent reference cycles and to keep the systems that follow group references simple rather than potentiall recursive (see Groups and Synchronization).
+On a `PHGroup` document, `INITIALIZE_AUTH` and `SET_GRANT` reject any grant whose principal is `{ group }`. That is, **a group's auth scope cannot reference other groups**. The `AuthActionHandler` checks the document's own type, so the check is deterministic on every replica. We need this restriction to prevent reference cycles and to keep the systems that follow group references simple rather than potentially recursive (see Groups and Synchronization).
 
 ### Grants
 
@@ -308,7 +308,7 @@ matches(principal, subject, ctx):
    { match: Condition }  -> eval(Condition, ctx)
 ```
 
-Deletion is judged at position like everything else, rather than absolutely, like the current Reactor implementation. This means that an operation that sorts before the `DELETE_DOCUMENT` still applies, and everything after it denies, across every replica.
+Deletion is evaluated at position like everything else, rather than absolutely, like the current Reactor implementation. This means that an operation that sorts before the `DELETE_DOCUMENT` still applies, and everything after it denies, across every replica.
 
 The grants are a stack. A capability that omits `scope` (or sets it to `"*"`) covers every scope. An `execute` capability that omits `operation` covers every operation in its scope.
 
@@ -316,7 +316,7 @@ A grant that uses a feature that doesn't yet exist never applies. For instance, 
 
 The creator can always execute `auth` operations, even against a grant list that tries to deny them, so that a document can never be bricked by locking out its own creator. However, this is deliberately narrow, covering only  `auth`-scope execution. The creator gets no special access to domain operations or reads.
 
-This creator carve-out is safe because it can be verified on any replica. If we tried to do this externally to the reactor, like by having an administrator list on Switchboard, replicas could hold different lists and would reach different verdicts. Admins at the API layer could gate requests but never change how an operation is judged internally to the reactor.
+This creator check is safe because it can be verified on any replica. If we tried to do this externally to the reactor, like by having an administrator list on Switchboard, replicas could hold different lists and could reach different decisions. Admins at the API layer can gate requests but this would never change how an operation is evaluated internally to the reactor.
 
 ## Ordering Consistency
 
@@ -334,7 +334,7 @@ Enforcement happens in two places with one evaluator: admission (before a new op
 
 ### Admission
 
-New mutation jobs are judged in `SimpleJobExecutor.executeRegularAction`, between the write-cache load and the reducer.
+New mutation jobs are evaluated in `SimpleJobExecutor.executeRegularAction`, between the write-cache load and the reducer.
 
 `buildDecisionModel` folds the model from the local streams' current heads and returns the append condition. A deny rejects the job with `AuthorizationDeniedError` before anything is written. The executor's current, separate `isDeleted` check is pulled into the decision model (fixing a bug that's been around for awhile...).
 
@@ -416,15 +416,15 @@ COMMIT;
 
 ### Replay
 
-Load jobs (used by sync and replay) judge every operation at its position in the merged order: the model is the read-set streams folded to that point. We must reevaluate the `decide` on load jobs in the case that an operation allowed on a remote is denied locally. This also means that we need to store auth failures from load jobs, rather than simply throw an error like an auth failure on mutation jobs: because a later-arriving but earlier sorting operation may flip the auth check.
+Load jobs (used by sync and replay) evaluate auth for every operation at its position in the merged order: the model is the read-set streams folded to that point. We must re-evaluate the `decide` on load jobs in the case that an operation allowed on a remote is denied locally. This also means that we need to store auth failures from load jobs, rather than simply throw an error like an auth failure on mutation jobs: because a later-arriving but earlier sorting operation may flip the auth check.
 
 Error operations are already skipped for domain reducers, and we'll need to add this same skip for auth errored operations, so that a logged auth deny does not change a document's state (projection). This will advance the stream which could fail a different in-flight append. However, this is a concurrency issue and is already handled by the internal retry.
 
 ### Re-evaluation
 
-When a reshuffle happens, the suffix from the first change must be re-judged, because auth verdicts could flip in either direction: an allowed operation becomes denied once an earlier revocation arrives, or a denied one becomes allowed once an earlier grant arrives.
+When a reshuffle happens, the suffix from the first change must be re-evaluated, because auth decisions could flip in either direction: an allowed operation becomes denied once an earlier revocation arrives, or a denied one becomes allowed once an earlier grant arrives.
 
-Re-judgment is a reshuffle-style re-append. If any verdict changes, the suffix from the first change is re-emitted as new operations: same `opId` and action id, but fresh indexes with skip.
+Re-evaluation is a reshuffle-style re-append. If any decision changes, the suffix from the first change is re-emitted as new operations: same `opId` and action id, but fresh indexes with skip.
 
 A pass that changes nothing emits nothing.
 
@@ -432,17 +432,17 @@ The re-append advances the stream heads, so a concurrent admission that read the
 
 #### Caveats
 
-Re-judgment runs in two places.
+Re-evaluation runs in two places.
 
-When the loaded stream and the affected streams belong to the same document (an auth or document operation arrived, and the domain streams must be re-judged) the work runs inside the same load job, which already holds that document's execution slot. That is, the queue already serializes operations to the same document. When the loaded stream belongs to a group document, the affected documents are other documents, and each is re-judged in its own job.
+When the loaded stream and the affected streams belong to the same document (an auth or document operation arrived, and the domain streams must be re-evaluated) the work runs inside the same load job, which already holds that document's execution slot. That is, the queue already serializes operations to the same document. When the loaded stream belongs to a group document, the affected documents are other documents, and each is re-evaluated in its own job.
 
-Re-judgment walks the affected suffix once, so it costs about as much as loading the document with no caches. Two existing limits must account for this. The load-job timeout must allow for the extra work. The excessive-shuffle guard must not count re-judgment re-appends, since a revocation over a long history legitimately supersedes many operations. Otherwise a policy operation would dead-letter simply because the document has a long history, and busy documents would become revocation-proof.
+Re-evaluation walks the affected suffix once, so it costs about as much as loading the document with no caches. Two existing limits must account for this. The load-job timeout must allow for the extra work. The excessive-shuffle guard must not count re-evaluation re-appends, since a revocation over a long history legitimately supersedes many operations. Otherwise a policy operation would dead-letter simply because the document has a long history, and busy documents would become revocation-proof.
 
 ### Semantics
 
 Locally, in `reactor.mutate()`, auth enforcement is preventive. That is, the append condition rejects any decision whose read-set changed before commit, so nothing invalid is committed on this node.
 
-Across reactors, in `reactor.load()`, it is convergent. This means that a decision invalidated by remote writes is caught by re-judgment when they arrive as new operations. This means that a locally-accepted operation is provisional until the read-set streams settle. Once all replicas hold the same operations, they agree on every verdict, which is the same contract reshuffle already imposes on document state, extended to authorization.
+Across reactors, in `reactor.load()`, it is convergent. This means that a decision invalidated by remote writes is caught by re-evaluation when they arrive as new operations. This means that a locally-accepted operation is provisional until the read-set streams settle. Once all replicas hold the same operations, they agree on every decision, which is the same contract reshuffle already imposes on document state, extended to authorization.
 
 ### Synchronization
 
@@ -526,7 +526,7 @@ The `ON CONFLICT` clause carries two important rules. `LEAST` keeps the earliest
 
 #### When a document joins a collection.
 
-The relationship path that inserts the document's own membership row gains one statement: the document's recorded references join with it. Suppose `doc-123` is added to drive `drive-9` on `main` at ordinal `951`.
+Suppose `doc-123` is added to drive `drive-9` on `main` at ordinal `951`. In this case, we need to, in the same transaction, also add the groups that `doc-123` has ever referenced as well.
 
 ```sql
 INSERT INTO "document_collections" ("documentId", "collectionId", "joinedOrdinal")
@@ -538,23 +538,29 @@ SET "joinedOrdinal" = LEAST("document_collections"."joinedOrdinal", EXCLUDED."jo
     "leftOrdinal"   = NULL;
 ```
 
-Both statements only insert or reopen rows. A `REMOVE_GRANT` mentions no group, so it runs neither, and no path deletes from either table. Serving does not change: the outbox routes group operations because groups are members, and a newly inserted membership row triggers the same backfill as a late-joining document. A remote can still observe the referencing grant before the group's history finishes arriving; it fails closed for that window and converges when the backfill lands, which is the contract replay imposes everywhere else.
+##### Note
+
+Both statements (`When a document joins a collection` and `When an auth operation commits`) only insert or reopen rows. A `REMOVE_GRANT` mentions no group, so it runs neither, and no path deletes from either table. Sync does not change: the outbox routes group operations because groups are members, and a newly inserted membership row triggers the same backfill as a late-joining document. A remote can still observe the referencing grant before the group's history finishes arriving. In this case, it will fail closed (deny) for that window and converge when the backfill arrives. This is the eventually consistent design the entire reactor relies on.
 
 #### When a group stream loads.
 
-Re-evaluation needs the opposite direction: an operation arrived on `g-admins`, and every document whose judgment folds that stream must be re-judged. The reverse index answers directly, and because references never chain, the documents that name `g-admins` are the complete set.
+The first two statements exist so that sync delivers group operations to every replica that needs them. This query runs when those operations arrive.
+
+Suppose an operation arrives on `g-admins` itself, and it removes a member. Any document with a grant naming `g-admins` may now come to different auth decisions. An operation that was allowed because its signer was a member may now be denied and stored as an error operation. Conversely, an operation that was denied may now be allowed. The Re-evaluation section describes how a single document is brought up to date. The only question here is which documents are affected, and the reverse index answers it:
 
 ```sql
 SELECT "documentId" FROM "group_references" WHERE "groupId" = 'g-admins';
 ```
 
-Each row becomes its own re-judgment job, as the Re-evaluation caveats describe. One relation, written once, serves both consumers: read forward it decides what sync must carry, read backward it decides what re-judgment must visit.
+The list is complete because a group's auth scope cannot reference other groups. A change to `g-admins` cannot alter another group's member list, so no document outside this list is affected. Each document in the result is re-evaluated in its own job, as the Re-evaluation caveats describe.
 
-Two decisions define the relation, and both follow from how judgment works rather than from sync convenience.
+This is the second use of `group_references`. Looked up by `documentId`, the table tells sync which groups a document requires. Looked up by `groupId`, it tells auth re-evaluation which documents a group change affects.
 
-References come from the operation's input, not from its verdict. Any operation that names a group contributes a reference, including an operation later judged an error. This over-approximates: a denied `SET_GRANT` adds a reference that judgment will never use. In exchange, sync topology is independent of judgment. Re-evaluation can flip verdicts across a whole suffix without a single membership row changing, and a replica knows what to fetch before it has judged anything.
+Two design choices define the relation, and both follow from how auth evaluation works rather than from sync convenience.
 
-References are insert-only. Judgment is positional: if a grant named group G at one position and a later operation removed it, re-judging the earlier range still folds G's membership, so the obligation is the union of groups referenced anywhere in history, not the set referenced at the head. An insert-only relation also behaves well under sync. Inserting the same reference twice changes nothing, and references discovered out of order — a backdated grant arriving late — insert the same rows they would have inserted in order. The cost is that a group referenced once, briefly, stays in the collection. Groups are small documents; reclaiming stale references is a compaction question, not a correctness one, and this spec leaves it open.
+References come from the operation's input, not from its outcome. Any operation that names a group contributes a reference, including an operation later stored as an error. This over-approximates: a denied `SET_GRANT` adds a reference that auth evaluation will never use. In exchange, sync topology is independent of auth evaluation. Re-evaluation can flip decisions across a whole suffix without a single membership row changing, and a replica knows what to fetch before it has evaluated anything.
+
+References are insert-only. Auth evaluation is positional: if a grant named group G at one position and a later operation removed it, re-evaluating the earlier range still folds G's membership, so the obligation is the union of groups referenced anywhere in history, not the set referenced at the head. An insert-only relation also behaves well under sync. Inserting the same reference twice changes nothing, and references discovered out of order — a backdated grant arriving late — insert the same rows they would have inserted in order. The cost is that a group referenced once, briefly, stays in the collection. Groups are small documents; reclaiming stale references is a compaction question, not a correctness one, and this spec leaves it open.
 
 References never chain. A group's auth scope cannot reference another group (see Actions), so folding a group's member list requires only that group's own streams, and reference cycles cannot form. This is the rule that keeps each statement above a single lookup.
 
@@ -562,37 +568,37 @@ A remote that syncs one document rather than a collection gets the same answer a
 
 A reference does not create the stream. A grant can name a group that no reachable remote holds — a typo, or a group that lives elsewhere. The write side can observe at admission that it holds no such document and surface a warning, but no membership row conjures history. Every replica fails closed until some remote supplies the stream, and access is never widened in the meantime.
 
-Naming a group publishes its membership. Serving a group through a collection means every subscriber of that collection receives the group's member list, whatever the group's own read grants say. This is deliberate, and it is the posture the Reads section already takes for the `auth` and `document` scopes: state that replicas must fold in order to judge cannot be withheld from them without breaking convergence. A group is fit for policies whose audience may see its roster; a group whose membership must stay confidential should not be named in a grant.
+Naming a group publishes its membership. Serving a group through a collection means every subscriber of that collection receives the group's member list, whatever the group's own read grants say. This is deliberate, and it is the posture the Reads section already takes for the `auth` and `document` scopes: state that replicas must fold in order to evaluate auth cannot be withheld from them without breaking convergence. A group is fit for policies whose audience may see its roster; a group whose membership must stay confidential should not be named in a grant.
 
 ## Groups
 
 A `PHGroup` (`@powerhousedao/document-group`) is an ordinary document whose state is a member address list, gated by its own auth scope. A `{ group }` principal names a group document id.
 
-A group's own auth scope cannot contain `{ group }` principals; the `AuthActionHandler` rejects them on group documents (see Actions). A group's policy names signers directly — `{ address }`, `{ anyone }`, `{ match }` — so membership never chains through a second group, and judging a group's operations requires no stream beyond the group's own.
+A group's own auth scope cannot contain `{ group }` principals; the `AuthActionHandler` rejects them on group documents (see Actions). A group's policy names signers directly — `{ address }`, `{ anyone }`, `{ match }` — so membership never chains through a second group, and evaluating auth for a group's operations requires no stream beyond the group's own.
 
-Group streams get no special rule. The `groups` projection names them in the auth scope's grant list, which puts them in the read-set, and every stream in the read-set is folded by position in the same merged order. The fold is over judged state: a membership write that the group's own policy denies is an error operation and contributes nothing. Membership operations sort against the target document's operations by timestamp like anything else, and every replica holding the same operations answers the membership question identically and deterministically.
+Group streams get no special rule. The `groups` projection names them in the auth scope's grant list, which puts them in the read-set, and every stream in the read-set is folded by position in the same merged order. The fold respects auth evaluation: a membership write that the group's own policy denies is an error operation and contributes nothing. Membership operations sort against the target document's operations by timestamp like anything else, and every replica holding the same operations answers the membership question identically and deterministically.
 
-The read-set is therefore a sync obligation. A grant that names a group makes that group document part of what an enforcing replica must hold; the Synchronization section describes how that obligation is met. A load into a group stream re-judges every document whose grants reference it, each in its own job, using the reverse direction of the same group-reference relation. A replica that does not yet hold a group's history fails closed: the member list is empty, so the principal does not match. It converges when the stream arrives. Access is never widened by a missing group.
+The read-set is therefore a sync obligation. A grant that names a group makes that group document part of what an enforcing replica must hold; the Synchronization section describes how that obligation is met. A load into a group stream re-evaluates every document whose grants reference it, each in its own job, using the reverse direction of the same group-reference relation. A replica that does not yet hold a group's history fails closed: the member list is empty, so the principal does not match. It converges when the stream arrives. Access is never widened by a missing group.
 
 ## Reads
 
-Everything in this spec so far judges operations. A read produces no operation. It has no position in any stream, so there is nothing for admission to gate, nothing for replay to re-judge, and nothing for an append condition to guard. The machinery above cannot see reads at all.
+Everything in this spec so far evaluates operations. A read produces no operation. It has no position in any stream, so there is nothing for admission to gate, nothing for replay to re-evaluate, and nothing for an append condition to guard. The machinery above cannot see reads at all.
 
 Read enforcement therefore lives on the reactor's own read surface, not in the servers built on top of it. Every read on the reactor client carries a subject. The client defaults it to its own signer, and a server passes the authenticated caller. The read functions evaluate `decide` with a `read` request against a model built from the current stream heads, and filter out the scopes the subject may not read. The sync manager applies the same filter per remote, because serving operations to a peer is a read on behalf of that peer. A custom subgraph or a custom server that reads through the reactor client inherits all of this and cannot forget to enforce.
 
 Internal consumers are inside the trust boundary and see everything. The event bus still dispatches all operations, and read models and processors need unfiltered data to build their projections. Whatever they re-expose is their own read surface to gate.
 
-This placement changes the timing guarantee. An operation is judged at its position, so a revocation catches even operations that were accepted before it arrived. A read is judged at the moment it is served, so revoking read only stops future serving. It cannot recall bytes a replica already holds.
+This placement changes the timing guarantee. An operation is evaluated at its position, so a revocation catches even operations that were accepted before it arrived. A read is evaluated at the moment it is served, so revoking read only stops future serving. It cannot recall bytes a replica already holds.
 
-One exemption is required. Suppose a policy could deny reading the `auth` scope itself. A peer could then sync a document without its policy, see an uninitialized auth scope, and allow every operation it holds. Replicas would diverge permanently. The `auth` and `document` scopes therefore bypass the grants: the policy and the document's metadata are visible to any holder of the document. Grants gate domain-scope reads only. A replica denied a domain scope never receives that stream, so it never holds or judges it, and partial replication stays consistent.
+One exemption is required. Suppose a policy could deny reading the `auth` scope itself. A peer could then sync a document without its policy, see an uninitialized auth scope, and allow every operation it holds. Replicas would diverge permanently. The `auth` and `document` scopes therefore bypass the grants: the policy and the document's metadata are visible to any holder of the document. Grants gate domain-scope reads only. A replica denied a domain scope never receives that stream, so it never holds or evaluates it, and partial replication stays consistent.
 
-The same reasoning extends to groups. A replica must fold a group's membership to judge with it, so a group document named by a policy is served to that policy's audience regardless of the group's own read grants (see Synchronization).
+The same reasoning extends to groups. A replica must fold a group's membership to evaluate auth with it, so a group document named by a policy is served to that policy's audience regardless of the group's own read grants (see Synchronization).
 
 ## Administration and bootstrap
 
 A document's policy begins with `INITIALIZE_AUTH` (see Actions). On acceptance, the signer's key is stored in the auth state as `creator`. The header is consulted only once, at this binding. From then on, the creator check in `decide` reads the stored key. A document that never runs `INITIALIZE_AUTH` has an uninitialized auth scope and stays open, so existing documents are unaffected.
 
-**Auth on an unsigned-header document does not resist an adversary.** An unsigned-header document has no creator, so its genesis is open. Anyone can run `INITIALIZE_AUTH` first, and anyone can backdate one that retroactively re-judges the whole history under a policy of their choosing. A document that wants an enforceable policy is created with a signed header, ideally with `INITIALIZE_AUTH` in its create batch.
+**Auth on an unsigned-header document does not resist an adversary.** An unsigned-header document has no creator, so its genesis is open. Anyone can run `INITIALIZE_AUTH` first, and anyone can backdate one that retroactively re-evaluates the whole history under a policy of their choosing. A document that wants an enforceable policy is created with a signed header, ideally with `INITIALIZE_AUTH` in its create batch.
 
 Migration maps a legacy table owner to an `execute`-on-`auth` grant.
 
@@ -604,13 +610,13 @@ The rollout has four stages. Each stage ships on its own and changes no behavior
 
 **Stage 2: the decision model surface.** Introduce the types: `StreamQuery`, `Projection`, `DecisionContext`, `DecisionModel`, `AppendCondition`, and `buildDecisionModel`. Extend `IOperationStore.apply` to accept an append condition: the guarded insert, the per-stream advisory locks, and `AppendConditionFailedError`. A condition failure retries by rebuilding the model and does not count toward the job's failure limit. No model is registered, so nothing changes behavior. This stage is proven with store-level tests: a failed condition inserts nothing, lock acquisition cannot deadlock, and a retry lands against the new heads.
 
-**Stage 3: register the first model, document stream only.** One projection over the `document` stream and a `decide` that denies when the document is deleted. The executor now builds the model and calls `decide` at admission for the first time, which replaces the `isDeleted` check and retires the document meta cache. The replay half arrives in its smallest form: load jobs judge operations at their merged position, denied operations are stored as error operations, and a load into the document stream re-judges the domain streams. The exit test: a backdated `DELETE_DOCUMENT` arriving by sync denies the operations that sort after it, on every replica, while operations before it survive.
+**Stage 3: register the first model, document stream only.** One projection over the `document` stream and a `decide` that denies when the document is deleted. The executor now builds the model and calls `decide` at admission for the first time, which replaces the `isDeleted` check and retires the document meta cache. The replay half arrives in its smallest form: load jobs evaluate auth for operations at their merged position, denied operations are stored as error operations, and a load into the document stream re-evaluates the domain streams. The exit test: a backdated `DELETE_DOCUMENT` arriving by sync denies the operations that sort after it, on every replica, while operations before it survive.
 
 **Stage 4: expand the model.** Grow the registered model one projection at a time.
 
-1. The `auth` projection. `decide` gains the uninitialized, creator, and grant steps, and grants are enforced at admission and replay. The interim auth gate is deleted. Reads and the sync manager filter against the same model. This step brings the monotonic-timestamp rule for the auth stream, the excessive-shuffle exemption for re-judgment, and the load-path work for judging multiple streams in one job. Exit: two reactors that accept conflicting auth and domain operations offline converge to identical verdicts and identical state after sync, in both directions, and a revocation over a history longer than the excessive-shuffle bound completes without dead-lettering.
+1. The `auth` projection. `decide` gains the uninitialized, creator, and grant steps, and grants are enforced at admission and replay. The interim auth gate is deleted. Reads and the sync manager filter against the same model. This step brings the monotonic-timestamp rule for the auth stream, the excessive-shuffle exemption for re-evaluation, and the load-path work for evaluating multiple streams in one job. Exit: two reactors that accept conflicting auth and domain operations offline converge to identical decisions and identical state after sync, in both directions, and a revocation over a history longer than the excessive-shuffle bound completes without dead-lettering.
 2. Conditions. The `where` and `match` evaluators turn on. Conditional grants begin to apply only here.
-3. The `groups` projection. Ship the `PHGroup` model, derive group queries from the grant list, add group streams to the read-set and the append condition, maintain the group-reference relation so sync carries referenced groups and re-judgment finds dependent documents (see Synchronization), and re-judge dependents in their own jobs. Group principals begin to match only here. Exit: a group-gated operation syncs to a replica that does not hold the group document and fails closed there until the group's history arrives, after which both replicas agree; and a membership removal denies later operations on every document that references the group.
+3. The `groups` projection. Ship the `PHGroup` model, derive group queries from the grant list, add group streams to the read-set and the append condition, maintain the group-reference relation so sync carries referenced groups and re-evaluation finds dependent documents (see Synchronization), and re-evaluate dependents in their own jobs. Group principals begin to match only here. Exit: a group-gated operation syncs to a replica that does not hold the group document and fails closed there until the group's history arrives, after which both replicas agree; and a membership removal denies later operations on every document that references the group.
 
 Registering decision models beyond auth is out of scope. The types are model-agnostic, so that work is registration, not new semantics.
 
@@ -622,9 +628,9 @@ A document grants the legal-assistant group `execute` on the global scope. React
 2. On reactor B, a legal assistant executes `SET_STATUS` at 10:05. B's admission gate allows it — B has not seen the revocation.
 3. The reactors sync.
 
-Both replicas now merge the streams and re-judge. The revocation sorts first (10:00 < 10:05). At `SET_STATUS`'s position, the grant list no longer contains the group grant, so the verdict is deny. On both replicas — including B, which originally accepted it — `SET_STATUS` becomes an error operation: still in the log, no state effect. The assistant's client sees its provisional operation fail after sync, which is ordinary local-first behavior.
+Both replicas now merge the streams and re-evaluate. The revocation sorts first (10:00 < 10:05). At `SET_STATUS`'s position, the grant list no longer contains the group grant, so the decision is deny. On both replicas — including B, which originally accepted it — `SET_STATUS` becomes an error operation: still in the log, no state effect. The assistant's client sees its provisional operation fail after sync, which is ordinary local-first behavior.
 
-The alternative — judging an operation once at its origin and pinning that verdict forever — would let `SET_STATUS` survive everywhere despite the earlier revocation. Both outcomes are deterministic; this spec deliberately chooses the one where revocation wins.
+The alternative — evaluating an operation once at its origin and pinning that decision forever — would let `SET_STATUS` survive everywhere despite the earlier revocation. Both outcomes are deterministic; this spec deliberately chooses the one where revocation wins.
 
 ## Worked example: a toll statement
 
