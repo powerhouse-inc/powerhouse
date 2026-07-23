@@ -1,3 +1,13 @@
+## 6.2.2-dev.14 (2026-07-23)
+
+### 🩹 Fixes
+
+- **reactor-browser:** mount wallet adapters on Privy OAuth return ([f4cd0306c](https://github.com/powerhouse-inc/powerhouse/commit/f4cd0306c))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.2-dev.13 (2026-07-23)
 
 ### 🚀 Features

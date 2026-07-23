@@ -1,3 +1,13 @@
+## 6.2.2-dev.14 (2026-07-23)
+
+### 🩹 Fixes
+
+- **renown:** treat a restored user as an authorized session ([1e7608ffb](https://github.com/powerhouse-inc/powerhouse/commit/1e7608ffb))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.2-dev.13 (2026-07-23)
 
 ### 🚀 Features
