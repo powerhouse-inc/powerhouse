@@ -2,18 +2,19 @@ import { DriveAuthGate } from "@powerhousedao/design-system/connect";
 import {
   closePHModal,
   logout,
-  showPHModal,
   usePHModal,
   useUser,
 } from "@powerhousedao/reactor-browser";
 import React from "react";
 import { createPortal } from "react-dom";
+import { useOpenRenownLogin } from "../../../hooks/use-renown-login.js";
 
 // Non-blocking overlay when a protected drive can't be added while signed out
 // (pointer-events-none backdrop keeps the cookie banner clickable). Opens login.
 export const DriveAuthRequiredModal: React.FC = () => {
   const phModal = usePHModal();
   const user = useUser();
+  const openLogin = useOpenRenownLogin();
   const mode = user ? "unauthorized" : "login";
   if (phModal?.type !== "driveAuthRequired") return null;
 
@@ -34,7 +35,7 @@ export const DriveAuthRequiredModal: React.FC = () => {
         mode={mode}
         onLogin={() => {
           closePHModal();
-          showPHModal({ type: "login" });
+          openLogin();
         }}
         onLogout={() => void logout()}
         className="pointer-events-auto"
