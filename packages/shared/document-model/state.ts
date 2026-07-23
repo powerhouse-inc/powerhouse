@@ -136,7 +136,10 @@ export type Grant = {
   effect: "allow" | "deny";
   principal: Principal;
   capability: Capability;
-  /** The grant applies only when this condition holds. Not yet enforced. */
+  /**
+   * The grant applies only when this condition holds. Until conditions are
+   * evaluated, a grant carrying one never applies.
+   */
   where?: Condition;
 };
 

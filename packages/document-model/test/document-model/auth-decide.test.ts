@@ -1,6 +1,7 @@
 import type {
   AuthRequest,
   Capability,
+  Condition,
   Grant,
   PHAuthState,
   Principal,
@@ -166,6 +167,44 @@ describe("decide", () => {
       "allow",
     );
     expect(decide(readOnly, {}, execGlobal)).toBe("deny");
+  });
+
+  it("does not yet evaluate where conditions (conditional grant never applies)", () => {
+    const whenTerminal: Condition = {
+      eq: [{ attr: "doc.global.status" }, { lit: "APPROVED" }],
+    };
+
+    // a conditional allow does not widen access
+    const conditionalAllow = policy({
+      ...grant(
+        "g",
+        "allow",
+        { anyone: true },
+        { can: "execute", scope: "global" },
+      ),
+      where: whenTerminal,
+    });
+    expect(decide(conditionalAllow, {}, execGlobal)).toBe("deny");
+
+    // a conditional deny does not fire; the unconditional allow stands
+    const conditionalDeny = policy(
+      grant(
+        "allow-all",
+        "allow",
+        { anyone: true },
+        { can: "execute", scope: "global" },
+      ),
+      {
+        ...grant(
+          "freeze",
+          "deny",
+          { anyone: true },
+          { can: "execute", scope: "global" },
+        ),
+        where: whenTerminal,
+      },
+    );
+    expect(decide(conditionalDeny, {}, execGlobal)).toBe("allow");
   });
 
   it("does not yet match group or condition principals (grant never applies)", () => {

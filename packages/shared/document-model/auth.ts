@@ -422,8 +422,8 @@ function principalMatches(principal: Principal, subject: AuthSubject): boolean {
  * An uninitialized policy (version 0, or absent auth state) leaves the document
  * open. Once a policy exists the default is deny, and grants stack in order.
  *
- * Group principals and `where` conditions are not evaluated yet, so grants that
- * rely on them never match.
+ * Group and match principals and `where` conditions are not evaluated yet; a
+ * grant that uses any of them never applies.
  */
 export function decide(
   auth: PHAuthState | undefined,
@@ -449,6 +449,10 @@ export function decide(
   }
   let decision: AuthDecision = "deny";
   for (const grant of auth.grants) {
+    // `where` is not evaluated yet; a conditional grant never applies.
+    if (grant.where !== undefined) {
+      continue;
+    }
     if (
       capabilityCovers(grant.capability, request) &&
       principalMatches(grant.principal, subject)

@@ -310,6 +310,8 @@ Deletion is judged at position like everything else, rather than absolutely, lik
 
 The grants are a stack. A capability that omits `scope` (or sets it to `"*"`) covers every scope. An `execute` capability that omits `operation` covers every operation in its scope.
 
+A grant that uses a feature that doesn't yet exist never applies. For instance, `{ group }` principals, `{ match }` principals, and `where` conditions will not apply in grants until the actual feature evaluator exists. Skipping an allow withholds access, so an unevaluated allow can never widen a policy. Skipping a deny withholds nothing: a policy that relies on a conditional or group-scoped deny is weaker than written until the feature it uses is live.
+
 The creator can always execute `auth` operations, even against a grant list that tries to deny them, so that a document can never be bricked by locking out its own creator. However, this is deliberately narrow, covering only  `auth`-scope execution. The creator gets no special access to domain operations or reads.
 
 This creator carve-out is safe because it can be verified on any replica. If we tried to do this externally to the reactor, like by having an administrator list on Switchboard, replicas could hold different lists and would reach different verdicts. Admins at the API layer could gate requests but never change how an operation is judged internally to the reactor.
@@ -481,7 +483,7 @@ The rollout has four stages. Each stage ships on its own and changes no behavior
 **Stage 4: expand the model.** Grow the registered model one projection at a time.
 
 1. The `auth` projection. `decide` gains the uninitialized, creator, and grant steps, and grants are enforced at admission and replay. The interim auth gate is deleted. Reads and the sync manager filter against the same model. This step brings the monotonic-timestamp rule for the auth stream, the excessive-shuffle exemption for re-judgment, and the load-path work for judging multiple streams in one job. Exit: two reactors that accept conflicting auth and domain operations offline converge to identical verdicts and identical state after sync, in both directions, and a revocation over a history longer than the excessive-shuffle bound completes without dead-lettering.
-2. Conditions. The `where` and `match` evaluators turn on.
+2. Conditions. The `where` and `match` evaluators turn on. Conditional grants begin to apply only here.
 3. The `groups` projection. Ship the `PHGroup` model, derive group queries from the grant list, add group streams to the read-set and the append condition, build the index from group streams to dependent documents, and re-judge dependents in their own jobs. Group principals begin to match only here. Exit: a group-gated operation syncs to a replica that does not hold the group document and both replicas agree, and a membership removal denies later operations on every document that references the group.
 
 Registering decision models beyond auth is out of scope. The types are model-agnostic, so that work is registration, not new semantics.
@@ -563,4 +565,3 @@ This is a TRP toll statement. The operation names are illustrative — the model
 2. To amend an approved statement, the administrator sets the status back to a working value: `g-terminal-freeze` does not list `SET_STATUS`, so it does not block the reopen, and `g-admin` allows it.
 
 Reads run on the same grants — the RTO sees their own statement; the legal-assistant group, the ingest service, and the admin see every statement; and nobody else reads anything.
-
