@@ -9,6 +9,7 @@ import type { IAttachmentReader } from "../interfaces.js";
 import { parseAttachmentDownloadTarget } from "../targets.js";
 import type {
   AttachmentDownloadTarget,
+  AttachmentDownloadTargetOptions,
   AttachmentHeader,
   AttachmentMetadata,
   AttachmentResponse,
@@ -241,7 +242,7 @@ export class RemoteAttachmentStore implements IAttachmentReader {
     if (documentId === undefined) {
       return this.fetchAttachment(hash, signal);
     }
-    const target = await this.negotiateDownloadTarget(hash, documentId, signal);
+    const target = await this.getDownloadTarget(hash, { documentId, signal });
     if (target.kind === "presigned-get") {
       return this.fetchPresigned(hash, target, signal);
     }
@@ -253,13 +254,19 @@ export class RemoteAttachmentStore implements IAttachmentReader {
   /**
    * Asks Switchboard for an authorized download target. The request carries
    * the JWT; the response is runtime-validated before any byte transfer.
+   * Public so callers can mint direct URLs (previews, share links) without
+   * transferring bytes; `expiresIn` requests a caller-chosen lifetime.
    */
-  private async negotiateDownloadTarget(
+  async getDownloadTarget(
     hash: AttachmentHash,
-    documentId: string,
-    signal?: AbortSignal,
+    options: AttachmentDownloadTargetOptions,
   ): Promise<AttachmentDownloadTarget> {
-    const url = `${this.remoteUrl}/attachments/${hash}/download-target?documentId=${encodeURIComponent(documentId)}`;
+    const { documentId, expiresIn, signal } = options;
+    const expiry =
+      expiresIn === undefined
+        ? ""
+        : `&expiresIn=${encodeURIComponent(String(expiresIn))}`;
+    const url = `${this.remoteUrl}/attachments/${hash}/download-target?documentId=${encodeURIComponent(documentId)}${expiry}`;
     const headers = await buildAuthHeaders(url, this.jwtHandler);
     const response = await this.fetchFn(url, { signal, headers });
 

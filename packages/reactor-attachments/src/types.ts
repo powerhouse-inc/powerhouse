@@ -129,6 +129,18 @@ export type AttachmentDownloadOptions = {
   signal?: AbortSignal;
 };
 
+/**
+ * Options for minting a raw download target without transferring bytes
+ * (previews, share links). `documentId` is required: targets are always
+ * document-authorized. `expiresIn` (seconds) requests a caller-chosen
+ * target lifetime; the server clamps it to its configured maximum.
+ */
+export type AttachmentDownloadTargetOptions = {
+  documentId: string;
+  expiresIn?: number;
+  signal?: AbortSignal;
+};
+
 /** Exact HTTP headers that must be sent with an attachment transfer target. */
 export type AttachmentTargetHeaders = Readonly<Record<string, string>>;
 

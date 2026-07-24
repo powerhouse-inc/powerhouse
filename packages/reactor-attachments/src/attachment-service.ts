@@ -15,6 +15,8 @@ import type {
 import { createRef, parseRef } from "./ref.js";
 import type {
   AttachmentDownloadOptions,
+  AttachmentDownloadTarget,
+  AttachmentDownloadTargetOptions,
   AttachmentHeader,
   AttachmentResponse,
   ReserveAttachmentOptions,
@@ -58,6 +60,22 @@ export class AttachmentService implements IAttachmentService {
     return normalized.documentId === undefined
       ? this.store.get(hash, normalized.signal)
       : this.store.get(hash, normalized.signal, normalized.documentId);
+  }
+
+  getDownloadTarget(
+    ref: AttachmentRef,
+    options: AttachmentDownloadTargetOptions,
+  ): Promise<AttachmentDownloadTarget> {
+    const { hash } = parseRef(ref);
+    const getTarget = this.store.getDownloadTarget?.bind(this.store);
+    if (getTarget === undefined) {
+      return Promise.reject(
+        new Error(
+          "Download targets are not supported by this attachment store: only remote stores negotiate direct URLs",
+        ),
+      );
+    }
+    return getTarget(hash, options);
   }
 
   private async reserveHashFirst(

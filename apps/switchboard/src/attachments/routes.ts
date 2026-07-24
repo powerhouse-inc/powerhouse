@@ -419,6 +419,9 @@ function extractParam(req: IncomingMessage, name: string): string | undefined {
 
 const MAX_DOCUMENT_ID_LEN = 512;
 const ATTACHMENT_NOT_FOUND_BODY = { error: "Attachment not found" };
+// SigV4 presigned URLs cannot outlive 7 days; requests above the cap are
+// clamped rather than rejected so clients need not know the ceiling.
+const MAX_DOWNLOAD_TARGET_TTL_SECONDS = 7 * 24 * 60 * 60;
 
 /**
  * Returns the single `documentId` query value, or null when it is missing,
@@ -440,6 +443,29 @@ function extractSingleDocumentId(req: IncomingMessage): string | null {
     return null;
   }
   return value;
+}
+
+/**
+ * Returns the requested target TTL in seconds: undefined when absent,
+ * "invalid" when malformed (duplicated, non-integer, or non-positive), and
+ * otherwise the value clamped to the presigning ceiling.
+ */
+function extractExpiresIn(
+  req: IncomingMessage,
+): number | undefined | "invalid" {
+  if (!req.url) return undefined;
+  let url: URL;
+  try {
+    url = new URL(req.url, "http://switchboard.invalid");
+  } catch {
+    return undefined;
+  }
+  const values = url.searchParams.getAll("expiresIn");
+  if (values.length === 0) return undefined;
+  if (values.length > 1) return "invalid";
+  const parsed = Number(values[0]);
+  if (!Number.isInteger(parsed) || parsed <= 0) return "invalid";
+  return Math.min(parsed, MAX_DOWNLOAD_TARGET_TTL_SECONDS);
 }
 
 /**
@@ -490,6 +516,15 @@ export function makeDownloadTargetHandler(
       );
       return;
     }
+    const expiresIn = extractExpiresIn(req);
+    if (expiresIn === "invalid") {
+      sendError(
+        res,
+        400,
+        "expiresIn must be a single positive integer number of seconds",
+      );
+      return;
+    }
 
     const canonicalHash = hash.toLowerCase() as AttachmentHash;
     let decision;
@@ -534,7 +569,10 @@ export function makeDownloadTargetHandler(
     let target: AttachmentDownloadTarget;
     if (attachments.backend && attachments.backend.kind !== "filesystem") {
       try {
-        target = await attachments.backend.prepareDownloadTarget(canonicalHash);
+        target = await attachments.backend.prepareDownloadTarget(
+          canonicalHash,
+          expiresIn,
+        );
       } catch {
         // Backend errors are sanitized at the backend boundary; no URLs or
         // signatures reach this scope, and none may be logged from here.

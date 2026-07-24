@@ -1,5 +1,6 @@
 import {
   createAttachmentClient,
+  type AttachmentDownloadTarget,
   type AttachmentHeader,
   type AttachmentResponse,
   type IAttachmentService,
@@ -26,6 +27,11 @@ class NullAttachmentService implements IAttachmentService {
     );
   }
   get(): Promise<AttachmentResponse> {
+    return Promise.reject(
+      new Error("NullAttachmentService: no attachment service configured"),
+    );
+  }
+  getDownloadTarget(): Promise<AttachmentDownloadTarget> {
     return Promise.reject(
       new Error("NullAttachmentService: no attachment service configured"),
     );

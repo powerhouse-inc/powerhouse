@@ -143,7 +143,106 @@ describe("makeDownloadTargetHandler", () => {
 
     expect(res.statusCode).toBe(200);
     expect(JSON.parse(res._body)).toMatchObject({ kind: "presigned-get" });
-    expect(prepareDownloadTarget).toHaveBeenCalledWith(HASH);
+    expect(prepareDownloadTarget).toHaveBeenCalledWith(HASH, undefined);
+  });
+
+  it("passes a requested expiresIn through to the backend presigner", async () => {
+    const { access } = makeAccess(ALLOWED);
+    const prepareDownloadTarget = vi.fn().mockResolvedValue({
+      kind: "presigned-get",
+      method: "GET",
+      url: "https://bucket.example.com/attachments/aa?sig=1",
+      headers: {},
+      expiresAtUtc: EXPIRES,
+    });
+    const attachments = makeAttachments({
+      backend: { kind: "s3", prepareDownloadTarget } as never,
+    });
+    const handler = makeDownloadTargetHandler(attachments, access);
+    const res = makeRes();
+
+    await handler(
+      makeReq({
+        url: `/attachments/${HASH}/download-target?documentId=${DOC_ID}&expiresIn=3600`,
+      }),
+      res,
+      undefined,
+      ACTOR,
+    );
+
+    expect(res.statusCode).toBe(200);
+    expect(prepareDownloadTarget).toHaveBeenCalledWith(HASH, 3600);
+  });
+
+  it("clamps expiresIn to the 7-day presigning ceiling", async () => {
+    const { access } = makeAccess(ALLOWED);
+    const prepareDownloadTarget = vi.fn().mockResolvedValue({
+      kind: "presigned-get",
+      method: "GET",
+      url: "https://bucket.example.com/attachments/aa?sig=1",
+      headers: {},
+      expiresAtUtc: EXPIRES,
+    });
+    const attachments = makeAttachments({
+      backend: { kind: "s3", prepareDownloadTarget } as never,
+    });
+    const handler = makeDownloadTargetHandler(attachments, access);
+    const res = makeRes();
+
+    await handler(
+      makeReq({
+        url: `/attachments/${HASH}/download-target?documentId=${DOC_ID}&expiresIn=99999999`,
+      }),
+      res,
+      undefined,
+      ACTOR,
+    );
+
+    expect(prepareDownloadTarget).toHaveBeenCalledWith(HASH, 604800);
+  });
+
+  it("omits the TTL override when expiresIn is absent", async () => {
+    const { access } = makeAccess(ALLOWED);
+    const prepareDownloadTarget = vi.fn().mockResolvedValue({
+      kind: "presigned-get",
+      method: "GET",
+      url: "https://bucket.example.com/attachments/aa?sig=1",
+      headers: {},
+      expiresAtUtc: EXPIRES,
+    });
+    const attachments = makeAttachments({
+      backend: { kind: "s3", prepareDownloadTarget } as never,
+    });
+    const handler = makeDownloadTargetHandler(attachments, access);
+
+    await handler(makeReq({}), makeRes(), undefined, ACTOR);
+
+    expect(prepareDownloadTarget).toHaveBeenCalledWith(HASH, undefined);
+  });
+
+  it.each([
+    ["duplicated", `expiresIn=60&expiresIn=120`],
+    ["non-integer", `expiresIn=6.5`],
+    ["non-numeric", `expiresIn=soon`],
+    ["zero", `expiresIn=0`],
+    ["negative", `expiresIn=-5`],
+  ])("rejects a %s expiresIn with 400 before authorization", async (_, qs) => {
+    const { access, spy } = makeAccess(ALLOWED);
+    const attachments = makeAttachments({});
+    const handler = makeDownloadTargetHandler(attachments, access);
+    const res = makeRes();
+
+    await handler(
+      makeReq({
+        url: `/attachments/${HASH}/download-target?documentId=${DOC_ID}&${qs}`,
+      }),
+      res,
+      undefined,
+      ACTOR,
+    );
+
+    expect(res.statusCode).toBe(400);
+    expect(spy).not.toHaveBeenCalled();
   });
 
   it("normalizes an uppercase path hash before authorization and lookup", async () => {

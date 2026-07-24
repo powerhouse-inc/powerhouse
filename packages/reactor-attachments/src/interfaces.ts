@@ -5,6 +5,7 @@ import type {
   AttachmentBackendKind,
   AttachmentDownloadOptions,
   AttachmentDownloadTarget,
+  AttachmentDownloadTargetOptions,
   AttachmentMetadata,
   AttachmentResponse,
   AttachmentTransportConfig,
@@ -71,6 +72,21 @@ export interface IAttachmentService {
     ref: AttachmentRef,
     options?: AbortSignal | AttachmentDownloadOptions,
   ): Promise<AttachmentResponse>;
+
+  /**
+   * Obtain the raw, document-authorized download target for a ref without
+   * transferring any bytes. Used to mint direct URLs (previews, share
+   * links): a presigned target URL is a self-contained public capability
+   * until its expiry. `expiresIn` (seconds) requests a caller-chosen
+   * lifetime; the server clamps it to its configured maximum.
+   *
+   * @throws when the underlying store cannot produce download targets
+   *         (local/direct stores serve bytes, not URLs).
+   */
+  getDownloadTarget(
+    ref: AttachmentRef,
+    options: AttachmentDownloadTargetOptions,
+  ): Promise<AttachmentDownloadTarget>;
 }
 
 /**
@@ -171,6 +187,16 @@ export interface IAttachmentReader {
     signal?: AbortSignal,
     documentId?: string,
   ): Promise<AttachmentResponse>;
+
+  /**
+   * Optional capability: readers that negotiate download targets with a
+   * remote control plane can expose the raw target so callers may mint
+   * direct URLs (previews, share links). Local/direct readers omit it.
+   */
+  getDownloadTarget?(
+    hash: AttachmentHash,
+    options: AttachmentDownloadTargetOptions,
+  ): Promise<AttachmentDownloadTarget>;
 }
 
 /**
@@ -325,8 +351,14 @@ export interface IAttachmentBackend {
   prepareUploadTarget(
     reservation: Reservation,
   ): Promise<AttachmentUploadTarget>;
+  /**
+   * `ttlSeconds` overrides the backend's configured download TTL for this
+   * one target (used for caller-chosen share-link lifetimes). Callers are
+   * responsible for bounding it; backends may still reject absurd values.
+   */
   prepareDownloadTarget(
     hash: AttachmentHash,
+    ttlSeconds?: number,
   ): Promise<AttachmentDownloadTarget>;
   exists(hash: AttachmentHash): Promise<boolean>;
   health(): Promise<AttachmentBackendHealth>;

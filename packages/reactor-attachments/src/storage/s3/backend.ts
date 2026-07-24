@@ -145,11 +145,12 @@ export class S3AttachmentBackend implements IAttachmentBackend {
 
   async prepareDownloadTarget(
     hash: AttachmentHash,
+    ttlSeconds?: number,
   ): Promise<AttachmentDownloadTarget> {
     try {
       return await this.primitives.createDownloadTarget(
         hash,
-        this.downloadTtlSeconds,
+        ttlSeconds ?? this.downloadTtlSeconds,
       );
     } catch {
       throw new Error("S3 attachment download target preparation failed");
