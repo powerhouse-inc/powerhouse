@@ -2321,4 +2321,199 @@ describe("SimpleJobExecutor", () => {
       });
     });
   });
+
+  describe("auth admission gate", () => {
+    const adminGrant = {
+      id: "admin",
+      description: "site admin",
+      effect: "allow" as const,
+      principal: { address: "0xadmin" },
+      capability: { can: "execute" as const, scope: "global" },
+    };
+
+    // did:key app keys, as ActionSigner.app.key / PHAuthState.creator take them.
+    const CREATOR_DID =
+      "did:key:zDnaexNjCKnPLh5Vhn1KqjmrLDFtXddrtTTE9gJmdWRSCG3wt";
+    const OTHER_DID =
+      "did:key:zDnaefv2pj8YQM2T6E3pnrJoGnDGbXsrvJiXhqHzh7d5RzncU";
+    const denyAllGrant = {
+      id: "lockdown",
+      description: "deny everything",
+      effect: "deny" as const,
+      principal: { anyone: true },
+      capability: { can: "execute" as const, scope: "*" },
+    };
+
+    function authDoc(auth: unknown) {
+      return {
+        header: {
+          id: "auth-doc",
+          documentType: "powerhouse/document-model",
+          revision: { document: 1 },
+        },
+        operations: {
+          document: [
+            {
+              index: 0,
+              action: {
+                type: "CREATE_DOCUMENT",
+                id: "create-action",
+                scope: "document",
+                timestampUtcMs: "2024-01-01T00:00:00.000Z",
+                input: {
+                  documentId: "auth-doc",
+                  model: "powerhouse/document-model",
+                },
+              },
+            },
+          ],
+          global: [],
+          local: [],
+          auth: [],
+        },
+        state: {
+          global: {},
+          local: {},
+          document: { isDeleted: false },
+          auth,
+        },
+      };
+    }
+
+    function authJob(
+      signerAddress?: string,
+      extra?: {
+        scope?: string;
+        type?: string;
+        input?: unknown;
+        appKey?: string;
+      },
+    ): Job {
+      const scope = extra?.scope ?? "global";
+      const type = extra?.type ?? "SET_MODEL_NAME";
+      const input = extra?.input ?? { name: "x" };
+      const hasSigner =
+        signerAddress !== undefined || extra?.appKey !== undefined;
+      return {
+        kind: "mutation",
+        id: "auth-job",
+        documentId: "auth-doc",
+        scope,
+        branch: "main",
+        actions: [
+          {
+            id: "auth-action",
+            type,
+            scope,
+            timestampUtcMs: "2024-01-01T00:00:00.000Z",
+            input,
+            context: hasSigner
+              ? {
+                  signer: {
+                    user: {
+                      address: signerAddress ?? "",
+                      networkId: "",
+                      chainId: 0,
+                    },
+                    app: { name: "", key: extra?.appKey ?? "" },
+                    signatures: [],
+                  },
+                }
+              : undefined,
+          },
+        ],
+        operations: [],
+        createdAt: "123",
+        queueHint: [],
+        errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["auth-job"] },
+      };
+    }
+
+    it("denies an action whose signer is not permitted by the policy", async () => {
+      mockWriteCache.getState = vi
+        .fn()
+        .mockResolvedValue(authDoc({ version: 1, grants: [adminGrant] }));
+
+      const result = await executor.executeJob(authJob("0xstranger"));
+
+      expect(result.success).toBe(false);
+      expect(result.error?.message).toContain("Authorization denied");
+    });
+
+    it("admits a signer that matches an allow grant (case-insensitive)", async () => {
+      mockWriteCache.getState = vi
+        .fn()
+        .mockResolvedValue(authDoc({ version: 1, grants: [adminGrant] }));
+
+      const result = await executor.executeJob(authJob("0xADMIN"));
+
+      // The gate admits the matching signer; any later failure is not an auth denial.
+      expect(result.error?.message ?? "").not.toContain("Authorization denied");
+    });
+
+    it("leaves a document with an uninitialized policy open", async () => {
+      mockWriteCache.getState = vi
+        .fn()
+        .mockResolvedValue(authDoc({ version: 0, grants: [] }));
+
+      const result = await executor.executeJob(authJob("0xstranger"));
+
+      expect(result.error?.message ?? "").not.toContain("Authorization denied");
+    });
+
+    it("leaves a legacy document with a pre-version auth scope ({}) open", async () => {
+      // pre-PHAuthState documents carry auth: {} in permanent history
+      // (e.g. UPGRADE_DOCUMENT initialState snapshots rebuilt by the write cache)
+      mockWriteCache.getState = vi.fn().mockResolvedValue(authDoc({}));
+
+      const result = await executor.executeJob(authJob("0xstranger"));
+
+      expect(result.error?.message ?? "").not.toContain("Authorization denied");
+      expect(result.error?.message ?? "").not.toContain("iterable");
+    });
+
+    it("admits the document creator on an auth-scope op despite a deny-all policy", async () => {
+      mockWriteCache.getState = vi.fn().mockResolvedValue(
+        authDoc({
+          version: 1,
+          grants: [denyAllGrant],
+          creator: CREATOR_DID,
+        }),
+      );
+
+      const result = await executor.executeJob(
+        authJob(undefined, {
+          scope: "auth",
+          type: "SET_GRANT",
+          appKey: CREATOR_DID,
+          input: { grant: adminGrant },
+        }),
+      );
+
+      expect(result.error?.message ?? "").not.toContain("Authorization denied");
+    });
+
+    it("denies a non-creator auth-scope op under a deny-all policy", async () => {
+      mockWriteCache.getState = vi.fn().mockResolvedValue(
+        authDoc({
+          version: 1,
+          grants: [denyAllGrant],
+          creator: CREATOR_DID,
+        }),
+      );
+
+      const result = await executor.executeJob(
+        authJob(undefined, {
+          scope: "auth",
+          type: "SET_GRANT",
+          appKey: OTHER_DID,
+          input: { grant: adminGrant },
+        }),
+      );
+
+      expect(result.success).toBe(false);
+      expect(result.error?.message).toContain("Authorization denied");
+    });
+  });
 });

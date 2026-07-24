@@ -29,6 +29,7 @@ import type {
   VersionedReplayConfig,
 } from "@powerhousedao/shared/document-model";
 import {
+  assertAuthPreservedOnDuplicate,
   baseLoadFromInput,
   baseLoadFromInputVersioned,
   baseSaveToFileHandle,
@@ -50,7 +51,6 @@ import { isDocumentTypeSupported } from "../utils/documents.js";
 import { getUserPermissions } from "../utils/user.js";
 import { queueActions, queueOperations, uploadOperations } from "./queue.js";
 
-const BASE_STATE_KEYS = new Set(["auth"]);
 const NON_DOMAIN_SCOPES = new Set(["auth", "document"]);
 
 async function isDocumentInLocation(
@@ -192,9 +192,8 @@ export async function fetchDocumentOperations(
   document: PHDocument,
   pageSize = 100,
 ): Promise<DocumentOperations> {
-  const scopes = Object.keys(document.state).filter(
-    (k) => !BASE_STATE_KEYS.has(k),
-  );
+  // includes auth: an export must carry the policy history
+  const scopes = Object.keys(document.state);
   const operations: DocumentOperations = {};
   for (const scope of scopes) {
     operations[scope] = [];
@@ -956,12 +955,18 @@ async function _duplicateDocument(
   const config: VersionedReplayConfig = { reducers, upgradeManifest };
   const header = createPresignedHeader(newId, documentType);
 
-  return replayDocumentVersioned(
+  const duplicated = replayDocumentVersioned(
     document.initialState,
     document.operations,
     config,
     header,
   );
+  assertAuthPreservedOnDuplicate(
+    document.header.id,
+    document.state.auth,
+    duplicated.state.auth,
+  );
+  return duplicated;
 }
 
 export async function copyNode(

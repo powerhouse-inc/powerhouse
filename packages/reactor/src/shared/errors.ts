@@ -24,6 +24,38 @@ export class DocumentDeletedError extends Error {
 }
 
 /**
+ * Error thrown when the auth policy denies an action at the executor gate.
+ */
+export class AuthorizationDeniedError extends Error {
+  public readonly documentId: string;
+  public readonly scope: string;
+  public readonly operation: string;
+  public readonly subject: string | undefined;
+
+  constructor(
+    documentId: string,
+    scope: string,
+    operation: string,
+    subject?: string,
+  ) {
+    super(
+      `Authorization denied: ${subject ?? "anonymous"} may not execute ${operation} in scope "${scope}" of document ${documentId}`,
+    );
+    this.name = "AuthorizationDeniedError";
+    this.documentId = documentId;
+    this.scope = scope;
+    this.operation = operation;
+    this.subject = subject;
+
+    Error.captureStackTrace(this, AuthorizationDeniedError);
+  }
+
+  static isError(error: unknown): error is AuthorizationDeniedError {
+    return Error.isError(error) && error.name === "AuthorizationDeniedError";
+  }
+}
+
+/**
  * Error thrown when attempting to add operations before CREATE_DOCUMENT.
  */
 export class CreateDocumentRequiredError extends Error {

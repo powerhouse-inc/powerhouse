@@ -3,6 +3,7 @@ import { castDraft, create } from "mutative";
 import { noop, type Action } from "./actions.js";
 import type { PHDocument } from "./documents.js";
 import { nextSkipNumber, sortOperations } from "./documents.js";
+import { backfillAuthState } from "./state.js";
 import type { PHBaseState } from "./state.js";
 import type { LoadStateActionInput } from "./types.js";
 
@@ -220,7 +221,7 @@ export function loadStateOperation<TState extends PHBaseState>(
   return {
     ...document,
     header: { ...document.header, name: action.state.name },
-    state: action.state.data as TState,
+    state: backfillAuthState(action.state.data as TState),
   };
 }
 

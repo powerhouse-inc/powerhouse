@@ -5,6 +5,7 @@ import { HashMismatchError } from "./errors.js";
 import { createPresignedHeader } from "./header.js";
 import type { DocumentOperations, Operation } from "./operations.js";
 import type { PHDocumentSignatureInfo } from "./signatures.js";
+import { backfillAuthState } from "./state.js";
 import type { PHBaseState } from "./state.js";
 import type {
   CreateDocumentActionInput,
@@ -438,7 +439,8 @@ export function replayDocument<TState extends PHBaseState = PHBaseState>(
     skipIndexValidation,
   } = options || {};
 
-  let documentState = initialState;
+  const backfilledInitialState = backfillAuthState(initialState);
+  let documentState = backfilledInitialState;
   const operationsToReplay: Operation[] = [];
   // Initialize with all scopes found in operations, plus global and local for backward compatibility
   const allScopes = new Set([...Object.keys(operations), "global", "local"]);
@@ -492,7 +494,7 @@ export function replayDocument<TState extends PHBaseState = PHBaseState>(
   const document: PHDocument<TState> = {
     header,
     state: defaultCreateState<TState>(documentState),
-    initialState,
+    initialState: backfilledInitialState,
     operations: initialOperations,
     clipboard: [],
   };

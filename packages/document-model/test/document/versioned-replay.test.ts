@@ -979,6 +979,40 @@ describe("versioned replay", () => {
       expect(result.state.document.version).toBe(1);
     });
 
+    it("backfills a legacy auth: {} carried by an initialState snapshot", () => {
+      const doc = baseCreateDocument<StateV1>(
+        createStateV1,
+        undefined,
+        "test/model",
+      );
+      const upgradeAction: UpgradeDocumentAction = {
+        id: "upgrade-1",
+        type: "UPGRADE_DOCUMENT",
+        scope: "document",
+        timestampUtcMs: "2024-01-01T00:00:01.000Z",
+        input: {
+          documentId: doc.header.id,
+          model: "test/model",
+          fromVersion: 0,
+          toVersion: 1,
+          // snapshots serialized before PHAuthState had a version carry auth: {}
+          initialState: {
+            ...defaultBaseState(),
+            auth: {},
+            global: { items: [] },
+            local: {},
+          } as unknown as StateV1,
+        },
+      };
+
+      const result = applyUpgradeDocumentAction(doc, upgradeAction);
+      expect(result.state.auth).toStrictEqual({ version: 0, grants: [] });
+      expect(result.initialState.auth).toStrictEqual({
+        version: 0,
+        grants: [],
+      });
+    });
+
     it("should handle state field instead of initialState", () => {
       const doc = baseCreateDocument<StateV1>(
         createStateV1,

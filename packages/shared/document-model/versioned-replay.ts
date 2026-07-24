@@ -6,6 +6,7 @@ import {
 } from "./documents.js";
 import { HashMismatchError } from "./errors.js";
 import type { DocumentOperations, Operation } from "./operations.js";
+import { backfillAuthState } from "./state.js";
 import type { PHBaseState } from "./state.js";
 import type {
   Reducer,
@@ -26,8 +27,6 @@ export type VersionedReplayConfig = {
   reducers: VersionedReducers;
   upgradeManifest?: UpgradeManifest<readonly number[]>;
 };
-
-const NON_DOMAIN_SCOPES = new Set(["auth", "document"]);
 
 function highestReducerVersion(reducers: VersionedReducers): number {
   const keys = Object.keys(reducers).map(Number);
@@ -76,8 +75,9 @@ export function replayDocumentVersioned<TState extends PHBaseState>(
   const upgrades = spine.filter((op) => op.action.type === "UPGRADE_DOCUMENT");
 
   const legacyFallback = (): PHDocument<TState> => {
-    const domainOps = Object.fromEntries(
-      Object.entries(operations).filter(([s]) => !NON_DOMAIN_SCOPES.has(s)),
+    // document-scope ops are applied by dedicated platform handlers; auth ops replay here
+    const replayOps = Object.fromEntries(
+      Object.entries(operations).filter(([s]) => s !== "document"),
     ) as DocumentOperations;
     const latestVersion = highestReducerVersion(config.reducers);
     const reducer = config.reducers[
@@ -85,7 +85,7 @@ export function replayDocumentVersioned<TState extends PHBaseState>(
     ] as unknown as Reducer<TState>;
     const result = replayDocument(
       initialState,
-      domainOps,
+      replayOps,
       reducer,
       header,
       dispatch,
@@ -139,11 +139,10 @@ export function replayDocumentVersioned<TState extends PHBaseState>(
     return a.input.fromVersion > 0 && a.input.fromVersion < a.input.toVersion;
   });
 
-  const domainScopes = Object.keys(operations).filter(
-    (s) => !NON_DOMAIN_SCOPES.has(s),
-  );
+  // the base reducer applies auth ops identically in every version segment
+  const replayScopes = Object.keys(operations).filter((s) => s !== "document");
   const scopeOps: Record<string, Operation[]> = {};
-  for (const s of domainScopes) {
+  for (const s of replayScopes) {
     scopeOps[s] = (operations[s] ?? [])
       .slice()
       .sort((a, b) => a.index - b.index);
@@ -156,7 +155,7 @@ export function replayDocumentVersioned<TState extends PHBaseState>(
       const upgradeTimestamp = upgradeOp.timestampUtcMs;
 
       const boundary: Record<string, number> = {};
-      for (const s of domainScopes) {
+      for (const s of replayScopes) {
         const ops = scopeOps[s] ?? [];
         if (revisionSnapshot !== undefined) {
           const rev = revisionSnapshot[s] ?? 0;
@@ -184,7 +183,7 @@ export function replayDocumentVersioned<TState extends PHBaseState>(
   );
 
   for (let i = 1; i < boundaries.length; i++) {
-    for (const s of domainScopes) {
+    for (const s of replayScopes) {
       const prev = boundaries[i - 1]?.[s] ?? 0;
       const curr = boundaries[i]?.[s] ?? 0;
       if (boundaries[i]) {
@@ -199,10 +198,11 @@ export function replayDocumentVersioned<TState extends PHBaseState>(
     initialOperations[s] = [];
   }
 
+  const backfilledSeed = backfillAuthState(seedState);
   let document: PHDocument<TState> = {
     header,
-    state: seedState as TState,
-    initialState: seedState,
+    state: backfilledSeed,
+    initialState: backfilledSeed,
     operations: initialOperations,
     clipboard: [],
   };
@@ -222,7 +222,7 @@ export function replayDocumentVersioned<TState extends PHBaseState>(
       );
     }
 
-    for (const s of domainScopes) {
+    for (const s of replayScopes) {
       const ops = scopeOps[s] ?? [];
       const segStart = k === 0 ? 0 : (boundaries[k - 1]?.[s] ?? 0);
       const segEnd =
@@ -313,7 +313,7 @@ export function replayDocumentVersioned<TState extends PHBaseState>(
   }
 
   if (!checkHashes) {
-    const allReplayedOps = domainScopes.flatMap((s) => scopeOps[s] ?? []);
+    const allReplayedOps = replayScopes.flatMap((s) => scopeOps[s] ?? []);
     for (const scope of Object.keys(document.state)) {
       const capturedHash = segmentEndHashPerScope.get(scope);
       const scopeHash =

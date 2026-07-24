@@ -1,6 +1,7 @@
 import type { Action } from "./actions.js";
 import type { PHDocument } from "./documents.js";
 import { DowngradeNotSupportedError } from "./errors.js";
+import { backfillAuthState } from "./state.js";
 import type { PHBaseState } from "./state.js";
 import type { DeleteDocumentAction, UpgradeDocumentAction } from "./types.js";
 
@@ -45,7 +46,8 @@ function applyInitialState(
 
   const newState = input.initialState || input.state;
   if (newState) {
-    document.state = { ...document.state, ...newState };
+    // snapshots serialized before PHAuthState had a version carry auth: {}
+    document.state = backfillAuthState({ ...document.state, ...newState });
     document.initialState = document.state;
   }
 }
