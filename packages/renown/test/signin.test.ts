@@ -17,6 +17,7 @@ const SB = "http://sb.test/graphql";
 interface ReactorCall {
   query: string;
   variables: Record<string, unknown>;
+  authorization?: string;
 }
 
 // Route reactor writes and the user existence-check; record request bodies.
@@ -26,10 +27,13 @@ function mockReactor() {
     const body = JSON.parse(
       (init?.body as string | undefined) ?? "{}",
     ) as ReactorCall;
-    calls.push(body);
+    const headers = (init?.headers ?? {}) as Record<string, string>;
+    calls.push({ ...body, authorization: headers.Authorization });
     let data: unknown = {};
     if (body.query.includes("renownUsers")) {
       data = { renownUsers: [] };
+    } else if (body.query.includes("renown_issueCredential")) {
+      data = { renown_issueCredential: "cred-doc" };
     } else if (body.query.includes("createEmptyDocument")) {
       data = { createEmptyDocument: { id: "doc-new" } };
     } else if (body.query.includes("mutateDocument")) {
@@ -57,15 +61,6 @@ async function makeRenown(withSwitchboard = true) {
   );
 }
 
-function actionTypes(calls: ReactorCall[]): string[] {
-  return calls.flatMap(
-    (c) =>
-      (c.variables.actions as { type: string }[] | undefined)?.map(
-        (a) => a.type,
-      ) ?? [],
-  );
-}
-
 describe("Renown.signIn", () => {
   afterEach(() => vi.restoreAllMocks());
 
@@ -77,6 +72,7 @@ describe("Renown.signIn", () => {
       address: ACCOUNT.address,
       chainId: 1,
       signTypedData: sign,
+      username: "alice",
     });
 
     expect(user.address).toBe(ACCOUNT.address);
@@ -85,10 +81,13 @@ describe("Renown.signIn", () => {
     expect(renown.status).toBe("authorized");
     expect(renown.user?.address).toBe(ACCOUNT.address);
 
-    // Credential was issued (INIT) and the user document created.
-    const types = actionTypes(calls);
-    expect(types).toContain("INIT");
-    expect(types).toContain("SET_ETH_ADDRESS");
+    // Credential issued via the auth-bypassing mutation; the profile is then
+    // written as a separate authenticated request (carries a bearer token).
+    expect(calls.some((c) => c.query.includes("renown_issueCredential"))).toBe(
+      true,
+    );
+    const profileWrite = calls.find((c) => c.query.includes("mutateDocument"));
+    expect(profileWrite?.authorization).toMatch(/^Bearer /);
   });
 
   it("throws when no switchboard endpoint is configured", async () => {

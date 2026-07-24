@@ -166,23 +166,48 @@ export class Renown implements IRenown {
       });
 
       await this.#switchboard.issueCredential(credential);
-      await this.#switchboard.findOrCreateUser(address, {
-        username,
-        userImage,
-      });
 
       const userDid = `did:pkh:${DEFAULT_RENOWN_NETWORK_ID}:${chainId}:${address.toLowerCase()}`;
       // Authenticate from the freshly signed credential — no read-back, which
       // avoids racing the read-model processor that indexes the write.
-      return await this.#completeLogin(
+      const user = await this.#completeLogin(
         userDid,
         parsePkhDid(userDid),
         credential,
       );
+
+      // Deferred best-effort profile write; never blocks or fails sign-in.
+      if (username !== undefined || userImage !== undefined) {
+        await this.#writeProfile(address, { username, userImage }).catch(
+          () => undefined,
+        );
+      }
+
+      return user;
     } catch (error) {
       this.#updateUser(undefined);
       this.#updateStatus("not-authorized");
       throw error;
+    }
+  }
+
+  // Write the profile via an authenticated request, retrying while the reactor's
+  // read model catches up to the just-issued credential (needed to authenticate).
+  async #writeProfile(
+    address: string,
+    profile: { username?: string; userImage?: string },
+  ): Promise<void> {
+    if (!this.#switchboard) return;
+    const token = await this.#crypto.getBearerToken(address);
+    const attempts = 5;
+    for (let attempt = 1; attempt <= attempts; attempt++) {
+      try {
+        await this.#switchboard.upsertUserProfile(address, profile, { token });
+        return;
+      } catch (error) {
+        if (attempt === attempts) throw error;
+        await new Promise((resolve) => setTimeout(resolve, 600));
+      }
     }
   }
 
