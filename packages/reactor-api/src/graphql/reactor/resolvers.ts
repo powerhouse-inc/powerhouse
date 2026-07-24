@@ -15,6 +15,7 @@ import {
   type ViewFilter,
 } from "@powerhousedao/reactor";
 import type {
+  AuthSubject,
   DocumentModelModule,
   Operation,
   PHDocument,
@@ -119,13 +120,15 @@ export async function document(
       scopes?: readonly string[] | null;
     } | null;
   },
+  subject?: AuthSubject,
 ): Promise<{
   document: ReturnType<typeof toGqlPhDocument>;
   childIds: string[];
 }> {
-  let view: ViewFilter | undefined;
+  let view: ViewFilter | undefined = subject ? { subject } : undefined;
   if (args.view) {
     view = {
+      subject,
       branch: fromInputMaybe(args.view.branch),
       scopes: toMutableArray(fromInputMaybe(args.view.scopes)),
     };
@@ -179,10 +182,12 @@ export async function documentOutgoingRelationships(
       limit?: number | null;
     } | null;
   },
+  subject?: AuthSubject,
 ): Promise<PhDocumentResultPage> {
-  let view: ViewFilter | undefined;
+  let view: ViewFilter | undefined = subject ? { subject } : undefined;
   if (args.view) {
     view = {
+      subject,
       branch: fromInputMaybe(args.view.branch),
       scopes: toMutableArray(fromInputMaybe(args.view.scopes)),
     };
@@ -237,10 +242,12 @@ export async function documentIncomingRelationships(
       limit?: number | null;
     } | null;
   },
+  subject?: AuthSubject,
 ): Promise<PhDocumentResultPage> {
-  let view: ViewFilter | undefined;
+  let view: ViewFilter | undefined = subject ? { subject } : undefined;
   if (args.view) {
     view = {
+      subject,
       branch: fromInputMaybe(args.view.branch),
       scopes: toMutableArray(fromInputMaybe(args.view.scopes)),
     };
@@ -297,10 +304,12 @@ export async function findDocuments(
       limit?: number | null;
     } | null;
   },
+  subject?: AuthSubject,
 ): Promise<PhDocumentResultPage> {
-  let view: ViewFilter | undefined;
+  let view: ViewFilter | undefined = subject ? { subject } : undefined;
   if (args.view) {
     view = {
+      subject,
       branch: fromInputMaybe(args.view.branch),
       scopes: toMutableArray(fromInputMaybe(args.view.scopes)),
     };
@@ -382,12 +391,13 @@ export async function documentOperations(
       limit?: number | null;
     } | null;
   },
+  subject?: AuthSubject,
 ): Promise<ReactorOperationResultPage> {
-  let view: ViewFilter | undefined;
+  let view: ViewFilter | undefined = subject ? { subject } : undefined;
   const branch = fromInputMaybe(args.filter.branch);
   const scopes = toMutableArray(fromInputMaybe(args.filter.scopes));
   if (branch || scopes) {
-    view = { branch, scopes };
+    view = { subject, branch, scopes };
   }
 
   const actionTypes = toMutableArray(fromInputMaybe(args.filter.actionTypes));

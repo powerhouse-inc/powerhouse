@@ -384,6 +384,58 @@
               "type": "number",
               "description": "CAIP-2 chain reference within the network namespace.",
               "default": 1
+            },
+            "namespace": {
+              "type": "string",
+              "description": "Renown localStorage namespace; share it across Connects to share login."
+            },
+            "switchboardUrl": {
+              "type": "string",
+              "description": "Switchboard GraphQL URL. When set, Connect enables in-page (no-redirect) Renown sign-in; otherwise it falls back to the redirect flow via `url`."
+            },
+            "adapters": {
+              "type": "object",
+              "additionalProperties": false,
+              "description": "Per-adapter wallet config for in-page auth. Presence of an adapter key enables it; omit or leave empty for redirect-only behaviour.",
+              "properties": {
+                "rainbow": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "description": "wagmi + RainbowKit external-wallet adapter config.",
+                  "properties": {
+                    "walletConnectProjectId": {
+                      "type": "string",
+                      "description": "WalletConnect project id; required for this adapter to function."
+                    },
+                    "infuraProjectId": {
+                      "type": "string",
+                      "description": "Optional Infura project id used to build RPC transports."
+                    }
+                  }
+                },
+                "privy": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "description": "Privy embedded/social adapter config.",
+                  "properties": {
+                    "appId": {
+                      "type": "string",
+                      "description": "Privy application id; required for this adapter to function."
+                    },
+                    "clientId": {
+                      "type": "string",
+                      "description": "Optional Privy client id."
+                    },
+                    "methods": {
+                      "type": "array",
+                      "description": "Login methods this adapter offers; default per adapter when omitted.",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
             }
           }
         },

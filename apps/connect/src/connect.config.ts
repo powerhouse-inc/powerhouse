@@ -105,6 +105,8 @@ function getBuiltInDefaults(): Omit<
     renownUrl: runtime.renown?.url,
     renownNetworkId: runtime.renown?.networkId,
     renownChainId: runtime.renown?.chainId,
+    switchboardUrl: runtime.renown?.switchboardUrl,
+    renownAdapters: runtime.renown?.adapters,
     sentryRelease: PH_CONNECT_SENTRY_RELEASE,
     sentryDsn: runtime.sentry?.dsn ?? undefined,
     sentryEnv: runtime.sentry?.env,
@@ -229,6 +231,9 @@ export const connectConfig = {
     url: runtime.renown?.url,
     networkId: runtime.renown?.networkId,
     chainId: runtime.renown?.chainId,
+    namespace: runtime.renown?.namespace,
+    switchboardUrl: runtime.renown?.switchboardUrl,
+    adapters: runtime.renown?.adapters,
   },
   sentry: {
     release: PH_CONNECT_SENTRY_RELEASE,

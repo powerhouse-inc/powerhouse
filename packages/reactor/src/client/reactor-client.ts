@@ -1,5 +1,6 @@
 import type {
   Action,
+  AuthSubject,
   CreateDocumentActionInput,
   DocumentModelModule,
   ISigner,
@@ -52,6 +53,12 @@ import {
   type IDriveClient,
   type IReactorClient,
 } from "./types.js";
+import {
+  authSubjectFromSigner,
+  canReadScope,
+  filterReadableScopes,
+  withAuthScope,
+} from "./util.js";
 
 /**
  * ReactorClient implementation that wraps lower-level APIs to provide
@@ -92,6 +99,10 @@ export class ReactorClient implements IReactorClient {
     this.documentView = documentView;
     this.drives = new DriveClient(this, logger, reactor, signer);
     this.logger.verbose("ReactorClient initialized");
+  }
+
+  private readSubject(subject?: AuthSubject): AuthSubject {
+    return subject ?? authSubjectFromSigner(this.signer);
   }
 
   /**
@@ -142,12 +153,13 @@ export class ReactorClient implements IReactorClient {
     signal?: AbortSignal,
   ): Promise<TDocument> {
     this.logger.verbose("get(@identifier, @view)", identifier, view);
-    return await this.reactor.getByIdOrSlug<TDocument>(
+    const document = await this.reactor.getByIdOrSlug<TDocument>(
       identifier,
-      view,
+      withAuthScope(view),
       undefined,
       signal,
     );
+    return filterReadableScopes(document, this.readSubject(view?.subject));
   }
 
   /**
@@ -192,6 +204,17 @@ export class ReactorClient implements IReactorClient {
       signal,
     );
 
+    // Read gate: exclude operations in scopes the subject may not read.
+    const authDoc = (await this.reactor.getByIdOrSlug(
+      documentId,
+      { scopes: ["auth"], branch: view?.branch },
+      undefined,
+      signal,
+    )) as PHDocument | undefined;
+    const subject = this.readSubject(view?.subject);
+    const canRead = (scope: string) =>
+      canReadScope(authDoc?.state.auth, subject, scope);
+
     if (paging?.cursor && isCompositeCursor(paging.cursor)) {
       return this.getOperationsWithCompositeCursor(
         documentId,
@@ -199,6 +222,7 @@ export class ReactorClient implements IReactorClient {
         filter,
         paging,
         signal,
+        canRead,
       );
     }
 
@@ -210,6 +234,12 @@ export class ReactorClient implements IReactorClient {
       undefined,
       signal,
     );
+
+    for (const scope of Object.keys(operationsByScope)) {
+      if (!canRead(scope)) {
+        delete operationsByScope[scope];
+      }
+    }
 
     const scopeEntries = Object.entries(operationsByScope);
     const effectivePaging = paging || { cursor: "0", limit: 100 };
@@ -249,12 +279,16 @@ export class ReactorClient implements IReactorClient {
     filter: OperationFilter | undefined,
     paging: PagingOptions,
     signal: AbortSignal | undefined,
+    canRead: (scope: string) => boolean,
   ): Promise<PagedResults<Operation>> {
     const scopeCursors = decodeCompositeCursor(paging.cursor);
     const allOperations: Operation[] = [];
     const activeCursors: Record<string, string> = {};
 
     for (const [scopeName, cursor] of Object.entries(scopeCursors)) {
+      if (!canRead(scopeName)) {
+        continue;
+      }
       const scopeView: ViewFilter = { ...view, scopes: [scopeName] };
       const scopePaging: PagingOptions = { cursor, limit: paging.limit };
 
@@ -326,13 +360,7 @@ export class ReactorClient implements IReactorClient {
       };
     }
 
-    return this.reactor.find(
-      { ids: targetIds },
-      view,
-      paging,
-      undefined,
-      signal,
-    );
+    return this.find({ ids: targetIds }, view, paging, signal);
   }
 
   /**
@@ -377,13 +405,7 @@ export class ReactorClient implements IReactorClient {
       };
     }
 
-    return this.reactor.find(
-      { ids: sourceIds },
-      view,
-      paging,
-      undefined,
-      signal,
-    );
+    return this.find({ ids: sourceIds }, view, paging, signal);
   }
 
   /**
@@ -396,7 +418,20 @@ export class ReactorClient implements IReactorClient {
     signal?: AbortSignal,
   ): Promise<PagedResults<PHDocument>> {
     this.logger.verbose("find(@search, @view, @paging)", search, view, paging);
-    return this.reactor.find(search, view, paging, undefined, signal);
+    const results = await this.reactor.find(
+      search,
+      withAuthScope(view),
+      paging,
+      undefined,
+      signal,
+    );
+    const readSubject = this.readSubject(view?.subject);
+    return {
+      ...results,
+      results: results.results.map((doc) =>
+        filterReadableScopes(doc, readSubject),
+      ),
+    };
   }
 
   /**

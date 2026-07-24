@@ -1,3 +1,38 @@
+## 6.2.2-dev.15 (2026-07-24)
+
+This was a version bump only for @powerhousedao/builder-tools to align it with other projects, there were no code changes.
+
+## 6.2.2-dev.14 (2026-07-23)
+
+This was a version bump only for @powerhousedao/builder-tools to align it with other projects, there were no code changes.
+
+## 6.2.2-dev.13 (2026-07-23)
+
+### 🚀 Features
+
+- **reactor-browser:** renown in-page sign-in primitives and wire Connect ([86bb6d06f](https://github.com/powerhouse-inc/powerhouse/commit/86bb6d06f))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.2-dev.12 (2026-07-23)
+
+This was a version bump only for @powerhousedao/builder-tools to align it with other projects, there were no code changes.
+
+## 6.2.2-dev.11 (2026-07-22)
+
+### 🚀 Features
+
+- **connect:** dynamic packages can contribute to the PWA configuration ([40610d2e7](https://github.com/powerhouse-inc/powerhouse/commit/40610d2e7))
+- **connect:** dynamic packages can contribute to the PWA configuration ([da867e21d](https://github.com/powerhouse-inc/powerhouse/commit/da867e21d))
+- **connect:** implement file handling for PWA, enabling OS-level document imports ([57c4a5e57](https://github.com/powerhouse-inc/powerhouse/commit/57c4a5e57))
+- **connect:** add configurable PWA overrides via runtime config ([8631799cd](https://github.com/powerhouse-inc/powerhouse/commit/8631799cd))
+
+### ❤️ Thank You
+
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.2-dev.10 (2026-07-21)
 
 This was a version bump only for @powerhousedao/builder-tools to align it with other projects, there were no code changes.

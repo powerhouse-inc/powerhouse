@@ -55,14 +55,14 @@ interface StateV2 extends PHBaseState {
 const defaultStateV1 = {
   global: { items: [] },
   local: {},
-  auth: {},
+  auth: { version: 0, grants: [] },
   document: { version: 1, hash: { algorithm: "sha256", encoding: "hex" } },
 } as StateV1;
 
 const defaultStateV2 = {
   global: { items: [], title: "" },
   local: {},
-  auth: {},
+  auth: { version: 0, grants: [] },
   document: { version: 2, hash: { algorithm: "sha256", encoding: "hex" } },
 } as StateV2;
 

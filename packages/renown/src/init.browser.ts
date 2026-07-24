@@ -3,18 +3,33 @@ import { BrowserKeyStorage } from "./crypto/browser-key-storage.js";
 import { BrowserEventEmitter } from "./event/event.browser.js";
 import { BaseRenownBuilder } from "./renown-builder.js";
 import { BrowserStorage } from "./storage/storage.browser.js";
-import type { RenownEvents, RenownStorageMap } from "./types.js";
+import type { RenownEvents, RenownStorageMap, User } from "./types.js";
 
 export class BrowserRenownStorage extends BrowserStorage<RenownStorageMap> {}
 export class BrowserRenownEventEmitter extends BrowserEventEmitter<RenownEvents> {}
+
+// Synchronously read the persisted user from localStorage (browser only) for an
+// instant optimistic first paint, before the async SDK build resolves.
+export function readPersistedUser(basename?: string): User | undefined {
+  if (typeof localStorage === "undefined") return undefined;
+  try {
+    return new BrowserStorage<RenownStorageMap>("renown", basename).get("user");
+  } catch {
+    return undefined;
+  }
+}
 
 export interface BrowserRenownBuilderOptions {
   /** Base path for storage keys (e.g., "/app" for multi-tenant apps) */
   basename?: string;
   /** Renown server URL. Defaults to https://www.renown.id */
   baseUrl?: string;
+  /** Switchboard GraphQL endpoint for the direct-to-reactor flow. */
+  switchboardUrl?: string;
   /** IndexedDB database name for key storage. Defaults to "renownKeyDB" */
   keyDbName?: string;
+  /** Re-check a stored credential on build (default "always"). */
+  revalidate?: "always" | "never";
 }
 
 /**
@@ -24,19 +39,20 @@ export interface BrowserRenownBuilderOptions {
 export class RenownBuilder extends BaseRenownBuilder {
   #basename?: string;
   #keyDbName?: string;
+  #revalidate: "always" | "never";
 
-  /**
-   * @param appName - Application name used for signing context
-   * @param options - Browser-specific configuration options
-   */
   constructor(appName: string, options: BrowserRenownBuilderOptions = {}) {
     super(appName);
     this.#basename = options.basename;
     this.#keyDbName = options.keyDbName;
+    this.#revalidate = options.revalidate ?? "always";
     this.withStorage(new BrowserRenownStorage("renown", this.#basename));
     this.withEventEmitter(new BrowserRenownEventEmitter());
     if (options.baseUrl) {
       this.withBaseUrl(options.baseUrl);
+    }
+    if (options.switchboardUrl) {
+      this.withSwitchboardUrl(options.switchboardUrl);
     }
   }
 
@@ -65,7 +81,13 @@ export class RenownBuilder extends BaseRenownBuilder {
   async build(): Promise<Renown> {
     const keyStorage = await BrowserKeyStorage.create(this.#keyDbName);
     this.withKeyPairStorage(keyStorage);
-    return super.build();
+    const renown = await super.build();
+    // Browser has a reactive UI, so revalidate in the background (fail-open) and
+    // let the store update if the credential was revoked; never block the paint.
+    if (this.#revalidate === "always" && renown.user) {
+      void renown.revalidate();
+    }
+    return renown;
   }
 }
 

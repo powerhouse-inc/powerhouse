@@ -4,18 +4,15 @@ import { twMerge } from "tailwind-merge";
 export interface DriveAuthGateProps {
   /** Visual state — `"login"` (anonymous) or `"unauthorized"` (already signed in, not the owner). Defaults to `"login"`. */
   readonly mode?: "login" | "unauthorized";
-  /** Login action; the caller wires this to Renown (e.g. `openRenown`). */
+  /** Opens the login flow (e.g. `showPHModal({ type: "login" })`); the login methods live in that modal, not here. */
   readonly onLogin?: () => void;
   /** Logout action used in `"unauthorized"` mode. */
   readonly onLogout?: () => void;
   readonly className?: string;
 }
 
-/**
- * Reusable "log in to access this drive" card. Used both as the content of the
- * drive-add auth modal and as the full-page gate shown when the user logs out
- * while inside a protected drive — so the two stay visually identical.
- */
+// Reusable "log in to access this drive" card (drive-add auth modal + full-page
+// gate). It only shows the message + a trigger; login methods live in the modal.
 export function DriveAuthGate(props: DriveAuthGateProps) {
   const { mode = "login", onLogin, onLogout, className } = props;
   return (

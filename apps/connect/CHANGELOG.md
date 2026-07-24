@@ -1,3 +1,51 @@
+## 6.2.2-dev.15 (2026-07-24)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
+## 6.2.2-dev.14 (2026-07-23)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
+## 6.2.2-dev.13 (2026-07-23)
+
+### 🚀 Features
+
+- **reactor-browser:** renown in-page sign-in primitives and wire Connect ([86bb6d06f](https://github.com/powerhouse-inc/powerhouse/commit/86bb6d06f))
+
+### 🩹 Fixes
+
+- auto redirect instead of showing login modal when no renown adapters are configured ([bcaa4ae81](https://github.com/powerhouse-inc/powerhouse/commit/bcaa4ae81))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.2-dev.12 (2026-07-23)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
+## 6.2.2-dev.11 (2026-07-22)
+
+### 🚀 Features
+
+- **connect:** optimize available packages listing in settings package manager ([9f823e59a](https://github.com/powerhouse-inc/powerhouse/commit/9f823e59a))
+- **connect:** dynamic packages can contribute to the PWA configuration ([40610d2e7](https://github.com/powerhouse-inc/powerhouse/commit/40610d2e7))
+- **connect:** dynamic packages can contribute to the PWA configuration ([da867e21d](https://github.com/powerhouse-inc/powerhouse/commit/da867e21d))
+- **connect:** implement file handling for PWA, enabling OS-level document imports ([57c4a5e57](https://github.com/powerhouse-inc/powerhouse/commit/57c4a5e57))
+- **connect:** add configurable PWA overrides via runtime config ([8631799cd](https://github.com/powerhouse-inc/powerhouse/commit/8631799cd))
+
+### 🩹 Fixes
+
+- **connect:** stop missing model banner from causing layout overflow ([#2830](https://github.com/powerhouse-inc/powerhouse/issues/2830))
+- remove vetra drive options and set general drive in last position ([da2b81299](https://github.com/powerhouse-inc/powerhouse/commit/da2b81299))
+- **connect:** sort generic drive explorer last in add-drive app options ([813d98892](https://github.com/powerhouse-inc/powerhouse/commit/813d98892))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+- liberuum
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.2-dev.10 (2026-07-21)
 
 This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.

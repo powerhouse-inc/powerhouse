@@ -10,7 +10,9 @@ export default defineConfig({
     // PGLite WASM cold boot + 14 migrations in beforeEach can exceed the
     // default 10s hookTimeout on CI runners under coverage instrumentation,
     // especially for AtomicNodeFs-backed tests that also do disk snapshot I/O.
-    hookTimeout: 30_000,
+    // 30s still trips on loaded runners (suites boot a fresh PGLite per test),
+    // so allow generous headroom; a hung hook still fails, just later.
+    hookTimeout: 120_000,
     testTimeout: 30_000,
     alias: {
       "#": new URL("./src/", import.meta.url).pathname,

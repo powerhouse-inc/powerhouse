@@ -208,6 +208,18 @@ export const {
 } = makePHEventFunctions("renownChainId");
 
 export const {
+  useValue: useSwitchboardUrl,
+  setValue: setSwitchboardUrl,
+  addEventHandler: addSwitchboardUrlEventHandler,
+} = makePHEventFunctions("switchboardUrl");
+
+export const {
+  useValue: useRenownAdapters,
+  setValue: setRenownAdapters,
+  addEventHandler: addRenownAdaptersEventHandler,
+} = makePHEventFunctions("renownAdapters");
+
+export const {
   useValue: useSentryRelease,
   setValue: setSentryRelease,
   addEventHandler: addSentryReleaseEventHandler,
@@ -412,6 +424,8 @@ const nonUserConfigSetters: NonUserConfigSetters = {
   renownUrl: setRenownUrl,
   renownNetworkId: setRenownNetworkId,
   renownChainId: setRenownChainId,
+  switchboardUrl: setSwitchboardUrl,
+  renownAdapters: setRenownAdapters,
   sentryRelease: setSentryRelease,
   sentryDsn: setSentryDsn,
   sentryEnv: setSentryEnv,
@@ -463,6 +477,8 @@ const nonUserConfigHooks: NonUserConfigHooks = {
   renownUrl: useRenownUrl,
   renownNetworkId: useRenownNetworkId,
   renownChainId: useRenownChainId,
+  switchboardUrl: useSwitchboardUrl,
+  renownAdapters: useRenownAdapters,
   sentryRelease: useSentryRelease,
   sentryDsn: useSentryDsn,
   sentryEnv: useSentryEnv,

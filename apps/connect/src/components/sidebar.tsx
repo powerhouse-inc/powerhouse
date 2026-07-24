@@ -9,7 +9,6 @@ import {
 
 import {
   logout,
-  openRenown,
   setSelectedDrive,
   showPHModal,
   useIsAddDriveEnabled,
@@ -17,10 +16,12 @@ import {
   useSelectedDriveSafe,
   useUser,
 } from "@powerhousedao/reactor-browser";
+import { useOpenRenownLogin } from "../hooks/use-renown-login.js";
 import { ErrorBoundary } from "./error-boundary.js";
 
 export function Sidebar() {
   const user = useUser();
+  const openLogin = useOpenRenownLogin();
   const drives = useDrives();
   const isAddDriveEnabled = useIsAddDriveEnabled();
   const [selectedDrive] = useSelectedDriveSafe();
@@ -51,7 +52,7 @@ export function Sidebar() {
         onClick={() => setSelectedDrive(undefined)}
         onClickSettings={onClickSettings}
         address={user?.address}
-        onLogin={openRenown}
+        onLogin={openLogin}
         onDisconnect={() => {
           void logout();
         }}

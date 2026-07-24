@@ -7,18 +7,20 @@ import { login } from "./utils.js";
 
 export interface RenownInitOptions {
   appName: string;
-  /**
-   * Prefix for localStorage keys, allowing multiple apps
-   * to use Renown on the same domain without conflicts.
-   */
+  /** Prefix for localStorage keys, so multiple apps can share a domain. */
   namespace?: string;
   url?: string;
+  switchboardUrl?: string;
+  /** Re-check the restored credential against the source (default "always"). */
+  revalidate?: "always" | "never";
 }
 
 async function initRenown(
   appName: string,
   namespace: string | undefined,
   url: string | undefined,
+  switchboardUrl: string | undefined,
+  revalidate: "always" | "never",
 ): Promise<IRenown> {
   addRenownEventHandler();
   setRenown(loading);
@@ -26,7 +28,10 @@ async function initRenown(
   const builder = new RenownBuilder(appName, {
     basename: namespace,
     baseUrl: url,
+    switchboardUrl,
+    revalidate,
   });
+  // Browser build() fires a non-blocking revalidate; init stays optimistic.
   const renown = await builder.build();
   setRenown(renown);
 
@@ -52,6 +57,8 @@ export function useRenownInit({
   appName,
   namespace,
   url,
+  switchboardUrl,
+  revalidate = "always",
 }: RenownInitOptions): Promise<IRenown> {
   // Stable promise returned every render; resolved later by the init effect.
   const promiseRef = useRef<PromiseWithResolvers<IRenown> | null>(null);
@@ -65,7 +72,7 @@ export function useRenownInit({
     if (initRef.current) return;
     initRef.current = true;
 
-    initRenown(appName, namespace, url)
+    initRenown(appName, namespace, url, switchboardUrl, revalidate)
       .then(promiseRef.current!.resolve)
       .catch(promiseRef.current!.reject);
   }, []);

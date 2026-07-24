@@ -1,7 +1,9 @@
 {
   "extends": "./tsconfig.options.json",
   "compilerOptions": {
-    "types": ["node"]
+    "types": [
+      "node"
+    ]
   },
   "references": [
     {
@@ -51,6 +53,9 @@
     },
     {
       "path": "test/test-connect"
+    },
+    {
+      "path": "test/test-fusion"
     },
     {
       "path": "test/test-sync-queue"

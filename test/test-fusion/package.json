@@ -1,0 +1,37 @@
+{
+  "name": "test-fusion",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
+  },
+  "dependencies": {
+    "@powerhousedao/reactor-browser": "workspace:*",
+    "@privy-io/react-auth": "^3.35.0",
+    "@rainbow-me/rainbowkit": "^2.2.11",
+    "@renown/sdk": "workspace:*",
+    "@tanstack/react-query": "^5.90.2",
+    "next": "16.2.10",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "viem": "~2.50.4",
+    "wagmi": "^2.19.5"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.60.0",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "babel-plugin-react-compiler": "1.0.0",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.10",
+    "tailwindcss": "catalog:",
+    "typescript": "catalog:"
+  }
+}

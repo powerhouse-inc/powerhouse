@@ -305,7 +305,7 @@ describe("RenownAuthButton", () => {
           auth.status !== "authorized" &&
           auth.status !== "loading" &&
           auth.status !== "checking" ? (
-            <button data-testid="custom-login" onClick={auth.login}>
+            <button data-testid="custom-login" onClick={() => auth.login()}>
               Custom Login
             </button>
           ) : null

@@ -4,6 +4,8 @@ import {
   DEFAULT_RENOWN_NETWORK_ID,
   DEFAULT_RENOWN_URL,
 } from "./constants.js";
+import { resolveSwitchboardEndpoint } from "./discovery.js";
+import { SwitchboardClient } from "./switchboard.js";
 import type { IProof, PowerhouseVerifiableCredential } from "./types.js";
 import { verifyAuthBearerToken } from "./utils.js";
 
@@ -186,8 +188,72 @@ export interface FetchDelegationCredentialOptions {
   appDid: string;
   /** Renown service base URL. Defaults to DEFAULT_RENOWN_URL. */
   baseUrl?: string;
+  /** Switchboard GraphQL endpoint; when reachable, read the reactor directly. */
+  switchboardUrl?: string;
+  /** Probe {baseUrl}/api/switchboard for an endpoint (default true). */
+  discover?: boolean;
   /** Re-verify the EIP-712 proof signature (default true). */
   verifySignature?: boolean;
+}
+
+// Fetch + binding/expiry-validate the credential over the Renown REST API.
+async function fetchDelegationCredentialRest(params: {
+  address: string;
+  chainId: number;
+  appDid: string;
+  baseUrl: string;
+}): Promise<PowerhouseVerifiableCredential | undefined> {
+  const { address, chainId, appDid, baseUrl } = params;
+  const url = new URL(
+    `/api/auth/credential?address=${encodeURIComponent(address)}&chainId=${encodeURIComponent(chainId)}&connectId=${encodeURIComponent(appDid)}&appId=${encodeURIComponent(appDid)}`,
+    baseUrl,
+  );
+  const response = await fetch(url, { method: "GET" });
+  if (!response.ok) return undefined;
+  const { credential } = (await response.json()) as {
+    credential?: PowerhouseVerifiableCredential;
+  };
+  if (!credential) return undefined;
+
+  // Binding: delegates to this app DID, issued by this address on this chain
+  // (issuer.id = did:pkh:<networkId>:<chainId>:<address>).
+  const [, , , issuerChainId, issuerAddress] = credential.issuer.id.split(":");
+  if (
+    credential.credentialSubject.id !== appDid ||
+    issuerChainId !== String(chainId) ||
+    issuerAddress.toLowerCase() !== address.toLowerCase() ||
+    credential.issuer.ethereumAddress.toLowerCase() !== address.toLowerCase()
+  ) {
+    return undefined;
+  }
+
+  // Reject an expired credential (revocation drops it from the endpoint
+  // instead); a malformed date (NaN) counts as invalid, not non-expiring.
+  if (credential.expirationDate) {
+    const expiresAt = Date.parse(credential.expirationDate);
+    if (Number.isNaN(expiresAt) || expiresAt <= Date.now()) {
+      return undefined;
+    }
+  }
+
+  return credential;
+}
+
+// Optionally re-verify the EIP-712 proof; returns the credential or undefined.
+async function finalizeCredential(
+  credential: PowerhouseVerifiableCredential,
+  chainId: number,
+  verifySignature: boolean,
+): Promise<PowerhouseVerifiableCredential | undefined> {
+  if (!verifySignature) return credential;
+  const withDomain = withEip712Domain(credential, chainId);
+  if (
+    withDomain.proof.eip712.domain.chainId !== chainId ||
+    !(await verifyCredentialSignature(withDomain))
+  ) {
+    return undefined;
+  }
+  return withDomain;
 }
 
 // Fetch the Renown delegation credential for (address, chainId) and validate it
@@ -199,54 +265,36 @@ export async function fetchDelegationCredential(
     address,
     chainId,
     appDid,
-    baseUrl = DEFAULT_RENOWN_URL,
+    switchboardUrl,
+    discover = true,
     verifySignature = true,
   } = options;
+  const explicitBaseUrl = options.baseUrl;
+  const baseUrl = explicitBaseUrl ?? DEFAULT_RENOWN_URL;
   try {
-    const url = new URL(
-      `/api/auth/credential?address=${encodeURIComponent(address)}&chainId=${encodeURIComponent(chainId)}&connectId=${encodeURIComponent(appDid)}&appId=${encodeURIComponent(appDid)}`,
-      baseUrl,
-    );
-    const response = await fetch(url, { method: "GET" });
-    if (!response.ok) return undefined;
-    const { credential } = (await response.json()) as {
-      credential?: PowerhouseVerifiableCredential;
-    };
+    // An explicit switchboardUrl is used directly; otherwise discover from the
+    // base URL unless disabled (callers that already resolved the endpoint).
+    const endpoint = switchboardUrl
+      ? switchboardUrl
+      : discover && explicitBaseUrl
+        ? await resolveSwitchboardEndpoint({ baseUrl })
+        : undefined;
+
+    const credential = endpoint
+      ? await new SwitchboardClient(endpoint).getCredential({
+          address,
+          chainId,
+          appDid,
+        })
+      : await fetchDelegationCredentialRest({
+          address,
+          chainId,
+          appDid,
+          baseUrl,
+        });
+
     if (!credential) return undefined;
-
-    // Binding: delegates to this app DID, issued by this address on this chain
-    // (issuer.id = did:pkh:<networkId>:<chainId>:<address>).
-    const [, , , issuerChainId, issuerAddress] =
-      credential.issuer.id.split(":");
-    if (
-      credential.credentialSubject.id !== appDid ||
-      issuerChainId !== String(chainId) ||
-      issuerAddress?.toLowerCase() !== address.toLowerCase() ||
-      credential.issuer.ethereumAddress.toLowerCase() !== address.toLowerCase()
-    ) {
-      return undefined;
-    }
-
-    // Reject an expired credential (revocation drops it from the endpoint
-    // instead); a malformed date (NaN) counts as invalid, not non-expiring.
-    if (credential.expirationDate) {
-      const expiresAt = Date.parse(credential.expirationDate);
-      if (Number.isNaN(expiresAt) || expiresAt <= Date.now()) {
-        return undefined;
-      }
-    }
-
-    if (verifySignature) {
-      const withDomain = withEip712Domain(credential, chainId);
-      if (
-        withDomain.proof.eip712.domain.chainId !== chainId ||
-        !(await verifyCredentialSignature(withDomain))
-      ) {
-        return undefined;
-      }
-      return withDomain;
-    }
-    return credential;
+    return await finalizeCredential(credential, chainId, verifySignature);
   } catch {
     return undefined;
   }
@@ -268,6 +316,8 @@ export interface VerifyAuthCredentialOptions {
   audience?: string;
   /** Renown service base URL. */
   renownUrl?: string;
+  /** Switchboard GraphQL endpoint; when reachable, read the reactor directly. */
+  switchboardUrl?: string;
   /** Re-verify the credential's EIP-712 proof (default true). */
   verifySignature?: boolean;
 }
@@ -291,6 +341,7 @@ export async function verifyAuthCredential(
     chainId,
     appDid,
     baseUrl: options.renownUrl,
+    switchboardUrl: options.switchboardUrl,
     verifySignature: options.verifySignature,
   });
   if (!credential) return undefined;

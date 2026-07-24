@@ -72,12 +72,37 @@ export type PHConnectPackages = {
   liveReload?: boolean;
 };
 
+export type PHRenownRainbowAdapterConfig = {
+  /** WalletConnect project id; required for the rainbow adapter to function. */
+  walletConnectProjectId?: string;
+  /** Optional Infura project id used to build RPC transports. */
+  infuraProjectId?: string;
+};
+
+export type PHRenownPrivyAdapterConfig = {
+  /** Privy application id; required for the privy adapter to function. */
+  appId?: string;
+  /** Optional Privy client id. */
+  clientId?: string;
+  /** Login methods this adapter offers; defaults per adapter when omitted. */
+  methods?: string[];
+};
+
+export type PHConnectRenownAdapters = {
+  rainbow?: PHRenownRainbowAdapterConfig;
+  privy?: PHRenownPrivyAdapterConfig;
+};
+
 export type PHConnectRenown = {
   url?: string;
   networkId?: string;
   chainId?: number;
   /** Renown localStorage namespace; share it across Connects to share login. */
   namespace?: string;
+  /** Switchboard GraphQL URL; when set, enables in-page (no-redirect) auth. */
+  switchboardUrl?: string;
+  /** Per-adapter wallet config; presence of a key enables that adapter. */
+  adapters?: PHConnectRenownAdapters;
 };
 
 export type PHConnectSentry = {

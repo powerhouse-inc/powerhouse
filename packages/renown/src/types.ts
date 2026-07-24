@@ -3,6 +3,7 @@ import type {
   ISigner,
 } from "@powerhousedao/shared/document-model";
 import type { CREDENTIAL_TYPES } from "./constants.js";
+import type { SignCredentialTypedData } from "./credential.js";
 import type { IRenownCrypto } from "./crypto/types.js";
 import type { IEventEmitter } from "./event/types.js";
 import type { IStorage } from "./storage/common.js";
@@ -237,6 +238,21 @@ export type ProfileFetcher = (
   baseUrl: string,
 ) => Promise<RenownProfile | undefined>;
 
+export interface SignInParams {
+  /** Ethereum address of the signing wallet. */
+  address: `0x${string}`;
+  /** Chain id the credential is scoped to. */
+  chainId: number;
+  /** Wallet/Privy EIP-712 typed-data signer that authorizes the app key. */
+  signTypedData: SignCredentialTypedData;
+  /** Optional profile username to set on the RenownUser. */
+  username?: string;
+  /** Optional profile image URL to set on the RenownUser. */
+  userImage?: string;
+  /** Delegation credential lifetime in days (default 7). */
+  expiresInDays?: number;
+}
+
 export type Unsubscribe = () => void;
 
 export type LoginStatus =
@@ -261,7 +277,10 @@ export interface IRenown extends Pick<RenownEventEmitter, "on"> {
   readonly user: User | undefined;
   readonly status: LoginStatus;
   login: (userDid: string) => Promise<User>;
+  signIn: (params: SignInParams) => Promise<User>;
   logout: () => Promise<void>;
+  /** Re-check the current credential at the source; logs out if revoked/expired. */
+  revalidate: () => Promise<boolean>;
   readonly crypto: IRenownCrypto;
   readonly signer: ISigner;
   readonly did: string;

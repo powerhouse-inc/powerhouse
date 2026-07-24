@@ -82,6 +82,11 @@ const OpenFileDocumentsModal = lazy(() =>
     default: m.OpenFileDocumentsModal,
   })),
 );
+const LoginModal = lazy(() =>
+  import("./modals/LoginModal.js").then((m) => ({
+    default: m.LoginModal,
+  })),
+);
 const modalComponents = {
   addDrive: AddDriveModal,
   clearStorage: ClearStorageModal,
@@ -99,6 +104,7 @@ const modalComponents = {
   missingPackage: MissingPackageModal,
   driveAuthRequired: DriveAuthRequiredModal,
   openFileDocuments: OpenFileDocumentsModal,
+  login: LoginModal,
 } as const;
 
 export const ModalsContainer = lazy(() => {

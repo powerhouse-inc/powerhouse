@@ -1,8 +1,10 @@
 import type {
   OperationWithContext,
+  PHAuthState,
   PHDocument,
   PHDocumentHeader,
 } from "@powerhousedao/shared/document-model";
+import { createAuthState } from "@powerhousedao/shared/document-model";
 import type { Kysely } from "kysely";
 import { v4 as uuidv4 } from "uuid";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
@@ -350,7 +352,11 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
         continue;
       }
 
-      state[snapshot.scope] = snapshot.content;
+      // snapshot rows written before PHAuthState had a version carry auth: {}
+      state[snapshot.scope] =
+        snapshot.scope === "auth"
+          ? createAuthState(snapshot.content as Partial<PHAuthState>)
+          : snapshot.content;
     }
 
     const document: PHDocument = {
@@ -457,7 +463,11 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
         if (snapshot.scope === "header") {
           continue;
         }
-        state[snapshot.scope] = snapshot.content;
+        // snapshot rows written before PHAuthState had a version carry auth: {}
+        state[snapshot.scope] =
+          snapshot.scope === "auth"
+            ? createAuthState(snapshot.content as Partial<PHAuthState>)
+            : snapshot.content;
       }
 
       const document: PHDocument = {

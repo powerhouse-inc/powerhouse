@@ -2,8 +2,10 @@ import { Renown, RenownMemoryStorage } from "./common.js";
 import { DEFAULT_RENOWN_URL } from "./constants.js";
 import { RenownCryptoBuilder } from "./crypto/renown-crypto-builder.js";
 import type { IRenownCrypto, JsonWebKeyPairStorage } from "./crypto/types.js";
+import { resolveSwitchboardEndpoint } from "./discovery.js";
 import { MemoryEventEmitter } from "./event/memory.js";
 import { fetchRenownProfile } from "./profile.js";
+import { SwitchboardClient } from "./switchboard.js";
 import type {
   ProfileFetcher,
   RenownEventEmitter,
@@ -17,6 +19,7 @@ export interface RenownBuilderOptions {
   crypto?: IRenownCrypto;
   keyPairStorage?: JsonWebKeyPairStorage;
   baseUrl?: string;
+  switchboardUrl?: string;
   profileFetcher?: ProfileFetcher;
 }
 
@@ -32,6 +35,7 @@ export class BaseRenownBuilder {
   #crypto?: IRenownCrypto;
   #keyPairStorage?: JsonWebKeyPairStorage;
   #baseUrl?: string;
+  #switchboardUrl?: string;
   #profileFetcher?: ProfileFetcher;
 
   /**
@@ -87,6 +91,13 @@ export class BaseRenownBuilder {
     return this;
   }
 
+  // Set the Switchboard GraphQL endpoint to read from the reactor directly.
+  // When unset, the SDK discovers it from the base URL, else uses the REST flow.
+  withSwitchboardUrl(switchboardUrl: string): this {
+    this.#switchboardUrl = switchboardUrl;
+    return this;
+  }
+
   /**
    * Set a profile fetcher strategy for enriching user data after login.
    * The fetcher receives the authenticated user and the base URL,
@@ -120,24 +131,31 @@ export class BaseRenownBuilder {
     const eventEmitter = this.#eventEmitter ?? new MemoryEventEmitter();
     const baseUrl = this.#baseUrl ?? DEFAULT_RENOWN_URL;
 
+    // Pick the transport once: direct-switchboard when an endpoint resolves,
+    // else the REST flow. A custom profile fetcher always takes precedence.
+    const switchboardEndpoint = await resolveSwitchboardEndpoint({
+      switchboardUrl: this.#switchboardUrl,
+      baseUrl,
+    });
+    const switchboard = switchboardEndpoint
+      ? new SwitchboardClient(switchboardEndpoint)
+      : undefined;
+    const profileFetcher =
+      this.#profileFetcher ??
+      (switchboard ? switchboard.profileFetcher : fetchRenownProfile);
+
     const renown = new Renown(
       storage,
       eventEmitter,
       crypto,
       this.#appName,
       baseUrl,
-      this.#profileFetcher ?? fetchRenownProfile,
+      profileFetcher,
+      switchboard,
     );
 
-    // Re-authenticate stored user if present
-    if (renown.user) {
-      try {
-        await renown.login(renown.user.did);
-      } catch (error) {
-        console.error("Failed to re-authenticate user:", error);
-      }
-    }
-
+    // A stored user is loaded as-is for an instant, offline-safe start; callers
+    // revalidate against the source separately via renown.revalidate().
     return renown;
   }
 
@@ -161,6 +179,9 @@ export class BaseRenownBuilder {
     }
     if (options.baseUrl) {
       builder.withBaseUrl(options.baseUrl);
+    }
+    if (options.switchboardUrl) {
+      builder.withSwitchboardUrl(options.switchboardUrl);
     }
     if (options.profileFetcher) {
       builder.withProfileFetcher(options.profileFetcher);

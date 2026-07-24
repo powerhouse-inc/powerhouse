@@ -17,6 +17,7 @@ import { ToastContainer } from "../services/toast.js";
 import { MissingModelBanner } from "./missing-model-banner.js";
 import { OpenFileUploadList } from "./open-file-upload-list.js";
 import { PackageInstallPrompt } from "./package-install-prompt.js";
+import { RenownWalletProviders } from "./renown-wallet-providers.js";
 
 export const App = () => {
   useTheme(); // keeps the OS-preference change listener active
@@ -76,13 +77,15 @@ export const App = () => {
 
   return (
     <SentryProvider>
-      <ToastContainer position="bottom-right" />
-      <MissingModelBanner />
-      <Router />
-      <OpenFileUploadList />
-      <PackageInstallPrompt />
-      <Analytics />
-      <OpenPanel />
+      <RenownWalletProviders>
+        <ToastContainer position="bottom-right" />
+        <MissingModelBanner />
+        <Router />
+        <OpenFileUploadList />
+        <PackageInstallPrompt />
+        <Analytics />
+        <OpenPanel />
+      </RenownWalletProviders>
     </SentryProvider>
   );
 };

@@ -1,3 +1,79 @@
+## 6.2.2-dev.15 (2026-07-24)
+
+This was a version bump only, there were no code changes.
+
+## 6.2.2-dev.14 (2026-07-23)
+
+### 🩹 Fixes
+
+- **reactor-browser:** mount wallet adapters on Privy OAuth return ([f4cd0306c](https://github.com/powerhouse-inc/powerhouse/commit/f4cd0306c))
+- **renown:** treat a restored user as an authorized session ([1e7608ffb](https://github.com/powerhouse-inc/powerhouse/commit/1e7608ffb))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.2-dev.13 (2026-07-23)
+
+### 🚀 Features
+
+- **reactor-browser:** renown in-page sign-in primitives and wire Connect ([86bb6d06f](https://github.com/powerhouse-inc/powerhouse/commit/86bb6d06f))
+- **renown:** direct-to-switchboard sign-in SDK flow ([18db475ac](https://github.com/powerhouse-inc/powerhouse/commit/18db475ac))
+- **renown:** pluggable wallet adapters (Rainbow, Privy, mock) ([b036298ce](https://github.com/powerhouse-inc/powerhouse/commit/b036298ce))
+- ⚠️  **renown:** server-side session support, revalidation, client seed ([f9c3648ea](https://github.com/powerhouse-inc/powerhouse/commit/f9c3648ea))
+
+### 🩹 Fixes
+
+- auto redirect instead of showing login modal when no renown adapters are configured ([bcaa4ae81](https://github.com/powerhouse-inc/powerhouse/commit/bcaa4ae81))
+
+### ⚠️  Breaking Changes
+
+- **renown:** server-side session support, revalidation, client seed  ([f9c3648ea](https://github.com/powerhouse-inc/powerhouse/commit/f9c3648ea))
+  BaseRenownBuilder.build() no longer re-authenticates a stored
+  user. The browser builder revalidates in the background (non-blocking, fail-open),
+  the node builder blocks; callers relying on the old auto re-auth must call
+  renown.revalidate() explicitly.
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.2-dev.12 (2026-07-23)
+
+This was a version bump only, there were no code changes.
+
+## 6.2.2-dev.11 (2026-07-22)
+
+### 🚀 Features
+
+- **connect:** add configurable PWA overrides via runtime config ([8631799cd](https://github.com/powerhouse-inc/powerhouse/commit/8631799cd))
+- **connect:** implement file handling for PWA, enabling OS-level document imports ([57c4a5e57](https://github.com/powerhouse-inc/powerhouse/commit/57c4a5e57))
+- **connect:** dynamic packages can contribute to the PWA configuration ([da867e21d](https://github.com/powerhouse-inc/powerhouse/commit/da867e21d))
+- **connect:** dynamic packages can contribute to the PWA configuration ([40610d2e7](https://github.com/powerhouse-inc/powerhouse/commit/40610d2e7))
+- **connect:** optimize available packages listing in settings package manager ([9f823e59a](https://github.com/powerhouse-inc/powerhouse/commit/9f823e59a))
+- **connect:** optimize available packages listing in settings package manager ([#2847](https://github.com/powerhouse-inc/powerhouse/pull/2847))
+- **connect:** configurable PWA overrides and OS file handling ([#2823](https://github.com/powerhouse-inc/powerhouse/pull/2823))
+- **ph-cli:** fail build when manifest name mismatches package.json ([4fa2ad1a4](https://github.com/powerhouse-inc/powerhouse/commit/4fa2ad1a4))
+- **ph-cli:** fail build when manifest name mismatches package.json ([#2846](https://github.com/powerhouse-inc/powerhouse/pull/2846))
+
+### 🩹 Fixes
+
+- remove location and drive mode from modal ([e70bd81d4](https://github.com/powerhouse-inc/powerhouse/commit/e70bd81d4))
+- remove vetra drive options and set general drive in last position ([da2b81299](https://github.com/powerhouse-inc/powerhouse/commit/da2b81299))
+- **connect:** linting ([96ec1b990](https://github.com/powerhouse-inc/powerhouse/commit/96ec1b990))
+- **connect:** sort generic drive explorer last in add-drive app options ([813d98892](https://github.com/powerhouse-inc/powerhouse/commit/813d98892))
+- **connect:** stop missing model banner from causing layout overflow ([#2830](https://github.com/powerhouse-inc/powerhouse/issues/2830))
+- **connect:** stop missing model banner from causing layout overflow ([#2844](https://github.com/powerhouse-inc/powerhouse/pull/2844))
+- **design-system:** prevent theme toggle jump in settings modal ([3fe8550f7](https://github.com/powerhouse-inc/powerhouse/commit/3fe8550f7))
+- **design-system:** prevent theme toggle jump in settings modal ([#2842](https://github.com/powerhouse-inc/powerhouse/pull/2842))
+- **powerhouse-vetra-packages:** hide vetra spec documents from generic drive create list ([7df611e80](https://github.com/powerhouse-inc/powerhouse/commit/7df611e80))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+- liberuum
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.2-dev.10 (2026-07-21)
 
 ### 🚀 Features

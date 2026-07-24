@@ -33,4 +33,5 @@ export type PHModal =
   | { type: "driveAuthRequired" }
   // Drive picker for documents launched via OS file association (PWA File
   // Handling). Payload-free: the pending files live in a Connect-side store.
-  | { type: "openFileDocuments" };
+  | { type: "openFileDocuments" }
+  | { type: "login" };

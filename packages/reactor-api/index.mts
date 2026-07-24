@@ -16,6 +16,7 @@ export * from "./src/server.js";
 export * from "./src/services/attachment-access.service.js";
 export * from "./src/services/auth.service.js";
 export * from "./src/services/canonical-document-id.js";
+export * from "./src/services/renown-credential-verifier.js";
 export * from "./src/services/document-permission.service.js";
 export * from "./src/services/package-management.service.js";
 export * from "./src/services/package-storage.js";

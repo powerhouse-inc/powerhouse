@@ -51,7 +51,7 @@ Schema lives in `packages/builder-tools/connect-utils/runtime-config-schema.ts`.
   "connect": {
     "branding":  { "appName": "...", "homeBackground": "..." | null },
     "app":       { "logLevel": "info", "basePath": "/", "offline": true },
-    "renown":    { "url": "...", "networkId": "eip155", "chainId": 1 },
+    "renown":    { "url": "...", "networkId": "eip155", "chainId": 1, "switchboardUrl": "..." | undefined, "adapters": {...} | undefined },
     "drives":    { "allowAddDrive": true, "defaultDrives": [...], "preserveStrategy": "...", "sections": {...} },
     "packages":  { "externalEnabled": true },
     "sentry":    { "dsn": null, "env": "dev", "tracing": false },
@@ -61,6 +61,27 @@ Schema lives in `packages/builder-tools/connect-utils/runtime-config-schema.ts`.
 ```
 
 The defaults for the `connect.*` block are defined once in `packages/shared/connect/runtime-config.ts` as `DEFAULT_CONNECT_CONFIG`. They are the floor of the precedence ladder, the scaffolded template for new projects, and the merge base that guarantees the SPA never sees a partially-populated `connect.*` block.
+
+### Renown in-page sign-in (`connect.renown.switchboardUrl` + `adapters`)
+
+By default Connect authenticates by **redirecting** to the Renown portal (`connect.renown.url`). Setting `connect.renown.switchboardUrl` enables **in-page** sign-in — the user signs a Renown credential inside Connect and it is written/logged in via that switchboard, with no redirect. If it isn't set, or no adapter can produce a wallet session, Connect falls back to the redirect flow automatically.
+
+`connect.renown.adapters` selects which wallet adapters power in-page sign-in. Presence of a key enables that adapter; its libraries are lazy-loaded on the first login click (nothing wallet-related loads at startup), so the operator must also install that adapter's peer dependencies (see the [Renown SDK README](../../packages/renown/README.md#wallet-adapters-in-page-sign-in)).
+
+```jsonc
+"renown": {
+  "url": "https://www.renown.id",           // redirect fallback
+  "switchboardUrl": "https://switchboard.example/graphql", // enables in-page auth
+  "adapters": {
+    "rainbow": { "walletConnectProjectId": "..." },        // external wallets
+    "privy":   { "appId": "...", "methods": ["google", "email"] } // social / email
+  }
+}
+```
+
+Only **public** identifiers belong here (`walletConnectProjectId`, Privy `appId`/`clientId`). Never place a Privy **App Secret** in this file — it is server-only and this file is fetched by the browser. Each configured social/email method must also be enabled in the Privy dashboard, and Connect's origin allowlisted there.
+
+`switchboardUrl` can be overridden at build time with `ph connect config --renown-switchboard-url <url>` (or the `PH_CONNECT_CONFIG_JSON` env override); `adapters` is set via the config file / `PH_CONNECT_CONFIG_JSON`.
 
 ## Setting values — the precedence ladder
 
