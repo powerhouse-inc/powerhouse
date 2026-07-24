@@ -414,7 +414,8 @@ export type AuthDecision = "allow" | "deny";
 /**
  * Evaluates the auth policy for a single request. Pure and deterministic.
  *
- * An uninitialized policy (version 0, or absent auth state) leaves the document
+ * An uninitialized policy (version 0, absent auth state, or a legacy `{}`
+ * auth scope serialized before PHAuthState had a version) leaves the document
  * open. Once a policy exists the default is deny, and grants stack in order.
  */
 export function decide(
@@ -422,7 +423,7 @@ export function decide(
   subject: AuthSubject,
   request: AuthRequest,
 ): AuthDecision {
-  if (!auth || auth.version === 0) {
+  if (!auth || !auth.version) {
     return "allow";
   }
 

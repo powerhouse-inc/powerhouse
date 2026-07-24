@@ -2462,6 +2462,17 @@ describe("SimpleJobExecutor", () => {
       expect(result.error?.message ?? "").not.toContain("Authorization denied");
     });
 
+    it("leaves a legacy document with a pre-version auth scope ({}) open", async () => {
+      // pre-PHAuthState documents carry auth: {} in permanent history
+      // (e.g. UPGRADE_DOCUMENT initialState snapshots rebuilt by the write cache)
+      mockWriteCache.getState = vi.fn().mockResolvedValue(authDoc({}));
+
+      const result = await executor.executeJob(authJob("0xstranger"));
+
+      expect(result.error?.message ?? "").not.toContain("Authorization denied");
+      expect(result.error?.message ?? "").not.toContain("iterable");
+    });
+
     it("admits the document creator on an auth-scope op despite a deny-all policy", async () => {
       mockWriteCache.getState = vi.fn().mockResolvedValue(
         authDoc({

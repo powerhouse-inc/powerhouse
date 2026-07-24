@@ -34,6 +34,15 @@ describe("decide", () => {
     expect(decide(uninit, { address: "0xabc" }, execGlobal)).toBe("allow");
   });
 
+  it("treats a legacy pre-version auth scope ({}) as uninitialized", () => {
+    // documents serialized before PHAuthState had a version carry auth: {},
+    // which is permanent history (e.g. UPGRADE_DOCUMENT initialState snapshots)
+    const legacy = {} as PHAuthState;
+    expect(decide(legacy, {}, execGlobal)).toBe("allow");
+    expect(decide(legacy, { address: "0xabc" }, execGlobal)).toBe("allow");
+    expect(decide(legacy, {}, { verb: "read", scope: "global" })).toBe("allow");
+  });
+
   it("defaults to deny once a policy exists", () => {
     expect(decide(policy(), { address: "0xabc" }, execGlobal)).toBe("deny");
   });
