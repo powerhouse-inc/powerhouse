@@ -85,3 +85,12 @@ export interface WalletAdapter {
 export type WalletAdapterFactory<Config = unknown> = (
   config: Config,
 ) => WalletAdapter;
+
+// Minimal descriptor an adapter exposes for eager import (no wallet library), so
+// a host can detect a redirect return without loading the adapter's heavy factory.
+export interface WalletAdapterMeta {
+  id: WalletAdapter["id"];
+  // URL params the adapter leaves when a full-page OAuth login returns; empty for
+  // adapters with no redirect flow.
+  redirectReturnParams: string[];
+}

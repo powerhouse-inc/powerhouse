@@ -1,7 +1,11 @@
+import { mockAdapterMeta } from "./mock/meta.js";
+import { privyAdapterMeta } from "./privy/meta.js";
+import { rainbowAdapterMeta } from "./rainbow/meta.js";
 import type {
   LoginMethod,
   WalletAdapter,
   WalletAdapterFactory,
+  WalletAdapterMeta,
 } from "./types.js";
 
 // Structural config slices the core codes against; each adapter subexport accepts
@@ -33,14 +37,21 @@ export interface WalletAdaptersConfig {
   mock?: WalletMockConfig;
 }
 
-// URL params a redirect-capable adapter leaves when a full-page OAuth login
-// returns. Declared in the registry so a host detects a return without an adapter.
-const REDIRECT_RETURN_PARAMS = ["privy_oauth_code", "privy_oauth_state"];
+// Adapter descriptors, imported eagerly (each is dependency-free — no wallet
+// library). Their factories still load lazily via resolveAdapters below.
+const ADAPTER_METAS: WalletAdapterMeta[] = [
+  rainbowAdapterMeta,
+  privyAdapterMeta,
+  mockAdapterMeta,
+];
 
-// True when a URL search string looks like a wallet OAuth redirect return.
+// True when a URL search string looks like a wallet OAuth redirect return, per
+// each adapter's own declared params — no adapter-specific strings live here.
 export function isWalletRedirectReturn(search: string): boolean {
   const params = new URLSearchParams(search);
-  return REDIRECT_RETURN_PARAMS.some((param) => params.has(param));
+  return ADAPTER_METAS.some((meta) =>
+    meta.redirectReturnParams.some((param) => params.has(param)),
+  );
 }
 
 // Peer dependencies each adapter subexport imports; listed in the error message
