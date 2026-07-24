@@ -63,6 +63,7 @@ export class PrivyCore {
   private bindings: PrivyBindings | null = null;
   private pending: PendingLogin | null = null;
   private session: WalletSession | undefined = undefined;
+  private listeners = new Set<(session: WalletSession | undefined) => void>();
 
   constructor(supportedMethods: LoginMethod[]) {
     this.supportedMethods = supportedMethods;
@@ -79,6 +80,20 @@ export class PrivyCore {
     return this.session;
   }
 
+  // Push session changes to subscribers, replaying the current one on subscribe.
+  // Lets the host complete sign-in when a session arrives with no pending connect().
+  subscribe(listener: (session: WalletSession | undefined) => void): () => void {
+    this.listeners.add(listener);
+    if (this.session) listener(this.session);
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+
+  private emit(session: WalletSession | undefined): void {
+    for (const listener of this.listeners) listener(session);
+  }
+
   // Called by the bridge when the embedded wallet is available. Builds the
   // session and resolves any pending login promise.
   syncFromEmbeddedWallet(wallet: ConnectedWallet): void {
@@ -92,16 +107,28 @@ export class PrivyCore {
       return this.bindings.signTypedData(args, address);
     };
 
-    const session: WalletSession = { address, chainId, signTypedData };
+    // Privy's embedded wallet signs without a prompt, so a host may auto-complete
+    // sign-in with this session after a full-page OAuth redirect return.
+    const session: WalletSession = {
+      address,
+      chainId,
+      signTypedData,
+      autoSignIn: true,
+    };
     this.session = session;
+    // A live connect() (in-page popup flow) consumes the session via its promise;
+    // otherwise the promise died with the pre-redirect page, so emit to subscribers.
     if (this.pending) {
       this.pending.resolve(session);
       this.pending = null;
+    } else {
+      this.emit(session);
     }
   }
 
   clearSession(): void {
     this.session = undefined;
+    this.emit(undefined);
   }
 
   // Called by the bridge on Privy's onError. String codes like `exited_auth_flow`
