@@ -94,6 +94,19 @@ export class InvalidAuthVersionError extends Error {
   }
 }
 
+/** Thrown when a duplicate would lose the source policy's version or creator binding. */
+export class AuthPolicyNotPreservedError extends Error {
+  public readonly documentId: string;
+
+  constructor(documentId: string) {
+    super(
+      `Duplicating document ${documentId} would not preserve its auth policy: the copy loses the policy version or its creator binding`,
+    );
+    this.name = "AuthPolicyNotPreservedError";
+    this.documentId = documentId;
+  }
+}
+
 /**
  * Thrown when a grant referenced by REMOVE_GRANT or MOVE_GRANT does not exist.
  */

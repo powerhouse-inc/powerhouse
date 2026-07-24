@@ -207,6 +207,33 @@ describe("decide", () => {
     expect(decide(conditionalDeny, {}, execGlobal)).toBe("allow");
   });
 
+  it("fails closed on a policy version newer than the software supports", () => {
+    const futurePolicy: PHAuthState = {
+      version: 2,
+      grants: [
+        grant("g", "allow", { anyone: true }, { can: "execute", scope: "*" }),
+      ],
+      creator: "did:key:zCreator",
+    };
+    // every request is denied, even ones the grant list would allow
+    expect(decide(futurePolicy, { address: "0xabc" }, execGlobal)).toBe("deny");
+    expect(
+      decide(
+        futurePolicy,
+        { address: "0xabc" },
+        { verb: "read", scope: "global" },
+      ),
+    ).toBe("deny");
+    // except the creator's administration of the auth scope
+    expect(
+      decide(
+        futurePolicy,
+        { key: "did:key:zCreator" },
+        { verb: "execute", scope: "auth", operation: "SET_GRANT" },
+      ),
+    ).toBe("allow");
+  });
+
   it("does not yet match group or condition principals (grant never applies)", () => {
     const groupPolicy = policy(
       grant(

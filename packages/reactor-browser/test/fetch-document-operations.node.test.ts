@@ -204,18 +204,22 @@ describe("fetchDocumentOperations", () => {
     expect(result.local).toHaveLength(0);
   });
 
-  it("derives scopes from document state keys, excluding auth", async () => {
+  it("derives scopes from document state keys, including auth", async () => {
     const customOps = Array.from({ length: 2 }, (_, i) =>
       createFakeOperation(i, "custom"),
     );
     const documentOps = Array.from({ length: 1 }, (_, i) =>
       createFakeOperation(i, "document"),
     );
+    const authOps = Array.from({ length: 1 }, (_, i) =>
+      createFakeOperation(i, "auth"),
+    );
     const client = createMockReactorClient({
       global: [],
       local: [],
       custom: customOps,
       document: documentOps,
+      auth: authOps,
     });
     const doc = createFakeDocument(["global", "local", "custom"]);
 
@@ -226,7 +230,8 @@ describe("fetchDocumentOperations", () => {
 
     expect(result.custom).toHaveLength(2);
     expect(result.document).toHaveLength(1);
-    expect(result).not.toHaveProperty("auth");
+    // an exported document carries its policy history
+    expect(result.auth).toHaveLength(1);
   });
 });
 

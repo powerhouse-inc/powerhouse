@@ -1,12 +1,23 @@
 import { z } from "zod";
 import { createAction, type Action } from "./actions.js";
+import {
+  GrantSchema,
+  grantProblem,
+  GroupPrincipalNotAllowedError,
+  InvalidGrantError,
+  isPlainValue,
+  MAX_AUTH_GRANTS,
+} from "./auth-v1.js";
 import { base58Decode, base64UrlToBytes } from "./crypto.js";
+import { groupDocumentType } from "./document-type.js";
 import type { PHDocument } from "./documents.js";
 import {
   AuthActionNotAllowedError,
   AuthAlreadyInitializedError,
   AuthInitializerNotCreatorError,
+  AuthPolicyNotPreservedError,
   GrantNotFoundError,
+  InvalidActionInputError,
   InvalidAuthVersionError,
 } from "./errors.js";
 import {
@@ -76,33 +87,17 @@ export function isAuthAction(action: Action): action is AuthAction {
   return (AUTH_ACTION_TYPES as readonly string[]).includes(action.type);
 }
 
+// --- Version-1 grant validation ------------------------------------------
+
+/** Highest known policy version; decide() fails closed above it. */
+export const MAX_SUPPORTED_AUTH_VERSION = 1;
+
 // --- Input schemas -------------------------------------------------------
-
-// Grants carry the not-yet-enforced policy shapes (principal/capability/where),
-// so only the scalar fields are validated; principal and capability are checked
-// as present objects, not by their full union shape.
-function isGrantShape(value: unknown): boolean {
-  if (typeof value !== "object" || value === null) {
-    return false;
-  }
-  const g = value as Record<string, unknown>;
-  return (
-    typeof g.id === "string" &&
-    typeof g.description === "string" &&
-    (g.effect === "allow" || g.effect === "deny") &&
-    typeof g.principal === "object" &&
-    g.principal !== null &&
-    typeof g.capability === "object" &&
-    g.capability !== null
-  );
-}
-
-const GrantSchema = () => z.custom<Grant>(isGrantShape);
 
 export const InitializeAuthActionInputSchema = () =>
   z.object({
     version: z.number().int().min(1),
-    grants: z.array(GrantSchema()),
+    grants: z.array(GrantSchema()).max(MAX_AUTH_GRANTS),
   });
 
 export const SetGrantActionInputSchema = () =>
@@ -160,6 +155,32 @@ export const moveGrant = (input: MoveGrantActionInput) =>
   );
 
 // --- Handlers ------------------------------------------------------------
+
+/**
+ * Destructuring a null input (reachable via raw synced operations) would
+ * store an engine-specific TypeError message on the error operation.
+ */
+function assertActionInputShape(input: unknown): void {
+  if (!isPlainValue(input)) {
+    throw new InvalidActionInputError({ input: "must be an object" });
+  }
+}
+
+/** V1 shape rules plus the group-document group-principal ban. */
+function assertValidGrant(grant: unknown, documentType: string): void {
+  const grantId =
+    isPlainValue(grant) && typeof grant.id === "string" ? grant.id : "";
+  const problem = grantProblem(grant);
+  if (problem !== null) {
+    throw new InvalidGrantError(grantId, problem);
+  }
+  if (
+    documentType === groupDocumentType &&
+    "group" in (grant as Grant).principal
+  ) {
+    throw new GroupPrincipalNotAllowedError(grantId);
+  }
+}
 
 function withGrants<TState extends PHBaseState>(
   document: PHDocument<TState>,
@@ -243,12 +264,22 @@ export function applyInitializeAuthAction<TState extends PHBaseState>(
   document: PHDocument<TState>,
   action: InitializeAuthAction,
 ): PHDocument<TState> {
+  assertActionInputShape(action.input);
   const { version, grants } = action.input;
   if (!Number.isInteger(version) || version < 1) {
     throw new InvalidAuthVersionError(document.header.id, version);
   }
   if (document.state.auth.version !== 0) {
     throw new AuthAlreadyInitializedError(document.header.id);
+  }
+  if (!Array.isArray(grants)) {
+    throw new InvalidActionInputError({ grants: "must be an array" });
+  }
+  if (grants.length > MAX_AUTH_GRANTS) {
+    throw new InvalidGrantError("", `policy exceeds ${MAX_AUTH_GRANTS} grants`);
+  }
+  for (const grant of grants) {
+    assertValidGrant(grant, document.header.documentType);
   }
   const creatorKey = document.header.sig.publicKey;
   const signerKey = action.context?.signer?.app.key;
@@ -275,9 +306,17 @@ export function applySetGrantAction<TState extends PHBaseState>(
   document: PHDocument<TState>,
   action: SetGrantAction,
 ): PHDocument<TState> {
+  assertActionInputShape(action.input);
   const { grant } = action.input;
+  assertValidGrant(grant, document.header.documentType);
   const grants = document.state.auth.grants;
   const exists = grants.some((g) => g.id === grant.id);
+  if (!exists && grants.length >= MAX_AUTH_GRANTS) {
+    throw new InvalidGrantError(
+      grant.id,
+      `policy exceeds ${MAX_AUTH_GRANTS} grants`,
+    );
+  }
   const next = exists
     ? grants.map((g) => (g.id === grant.id ? grant : g))
     : [...grants, grant];
@@ -289,6 +328,7 @@ export function applyRemoveGrantAction<TState extends PHBaseState>(
   document: PHDocument<TState>,
   action: RemoveGrantAction,
 ): PHDocument<TState> {
+  assertActionInputShape(action.input);
   const { id } = action.input;
   const grants = document.state.auth.grants;
   if (!grants.some((g) => g.id === id)) {
@@ -309,6 +349,7 @@ export function applyMoveGrantAction<TState extends PHBaseState>(
   document: PHDocument<TState>,
   action: MoveGrantAction,
 ): PHDocument<TState> {
+  assertActionInputShape(action.input);
   const { id, index } = action.input;
   const grants = document.state.auth.grants;
   const from = grants.findIndex((g) => g.id === id);
@@ -346,6 +387,27 @@ export function applyAuthAction<TState extends PHBaseState>(
       return applyMoveGrantAction(document, action as MoveGrantAction);
     default:
       return document;
+  }
+}
+
+/**
+ * Because only creators can initialize auth scopes, we must verify that either
+ * the document has no auth or the version and creator match.
+ */
+export function assertAuthPreservedOnDuplicate(
+  documentId: string,
+  source: PHAuthState | undefined,
+  duplicated: PHAuthState | undefined,
+): void {
+  if (!source || source.version === 0) {
+    return;
+  }
+  if (
+    duplicated === undefined ||
+    duplicated.version !== source.version ||
+    duplicated.creator !== source.creator
+  ) {
+    throw new AuthPolicyNotPreservedError(documentId);
   }
 }
 
@@ -435,7 +497,8 @@ export function decide(
   if (!auth || auth.version === 0) {
     return "allow";
   }
-  // the creator can always execute auth-scope operations
+
+  // creators can always administer the auth scope
   if (
     request.verb === "execute" &&
     request.scope === "auth" &&
@@ -444,6 +507,11 @@ export function decide(
   ) {
     return "allow";
   }
+
+  if (auth.version > MAX_SUPPORTED_AUTH_VERSION) {
+    return "deny";
+  }
+
   let decision: AuthDecision = "deny";
   for (const grant of auth.grants) {
     // `where` is not evaluated yet; a conditional grant never applies.

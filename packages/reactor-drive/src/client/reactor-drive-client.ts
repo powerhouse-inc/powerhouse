@@ -19,6 +19,7 @@ import type {
   Node,
 } from "@powerhousedao/shared/document-drive";
 import {
+  assertAuthPreservedOnDuplicate,
   createPresignedHeader,
   generateId,
   replayDocumentVersioned,
@@ -474,6 +475,11 @@ export class ReactorDriveClient implements IDriveClient {
         srcDoc.operations,
         config,
         createPresignedHeader(newId, documentType),
+      );
+      assertAuthPreservedOnDuplicate(
+        node.id,
+        srcDoc.state.auth,
+        duplicated.state.auth,
       );
       duplicated.header.name = node.name;
 
