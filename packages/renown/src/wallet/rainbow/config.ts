@@ -22,6 +22,7 @@ const getDefaultConfig = rainbowGetDefaultConfig as (params: {
   chains: readonly [unknown, ...unknown[]];
   wallets?: WalletGroup[];
   transports: Record<number, unknown>;
+  ssr?: boolean;
 }) => Config;
 const getDefaultWallets = rainbowGetDefaultWallets as () => {
   wallets: WalletGroup[];
@@ -33,6 +34,8 @@ export interface PHRenownRainbowAdapterConfig {
   walletConnectProjectId: string;
   infuraProjectId?: string;
   appName?: string;
+  // See WalletRainbowConfig.ssr: opt-in for server-rendered hosts.
+  ssr?: boolean;
 }
 
 // RainbowKit's default wallet list minus the WalletConnect option, used when no
@@ -53,6 +56,7 @@ export function buildWagmiConfig(config: PHRenownRainbowAdapterConfig): Config {
     walletConnectProjectId,
     infuraProjectId,
     appName = "Renown",
+    ssr,
   } = config;
 
   if (!walletConnectProjectId) {
@@ -70,6 +74,9 @@ export function buildWagmiConfig(config: PHRenownRainbowAdapterConfig): Config {
     appName,
     projectId: walletConnectProjectId || "MISSING_WALLET_CONNECT_PROJECT_ID",
     chains: [mainnet, sepolia, polygon, optimism, arbitrum, base],
+    // On SSR hosts wagmi's Hydrate defers reconnect to an effect; without it that
+    // runs during render, which setState-in-render warns via RainbowKit's modal.
+    ssr,
     // Omit `wallets` to keep RainbowKit's default set when a project id exists;
     // otherwise drop only the WalletConnect option from that default set.
     ...(walletConnectProjectId

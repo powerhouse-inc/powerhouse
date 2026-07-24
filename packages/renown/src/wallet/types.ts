@@ -53,6 +53,9 @@ export interface WalletSession {
   address: `0x${string}`;
   chainId: number;
   signTypedData: SignCredentialTypedData;
+  // Set when the session can sign without a user prompt (e.g. a Privy embedded
+  // wallet), so a host may complete sign-in with it silently on an OAuth return.
+  autoSignIn?: boolean;
 }
 
 // Imperative controls returned by an adapter's React hook (used inside its Provider).
@@ -60,6 +63,11 @@ export interface WalletController {
   connect(method?: LoginMethod): Promise<WalletSession>;
   disconnect(): Promise<void>;
   getSession(): WalletSession | undefined;
+  // Optional push stream of session changes (fires immediately with the current
+  // one), so a host can complete sign-in on an OAuth return with no live connect().
+  subscribe?(
+    listener: (session: WalletSession | undefined) => void,
+  ): () => void;
   supportedMethods: LoginMethod[];
 }
 
@@ -77,3 +85,12 @@ export interface WalletAdapter {
 export type WalletAdapterFactory<Config = unknown> = (
   config: Config,
 ) => WalletAdapter;
+
+// Minimal descriptor an adapter exposes for eager import (no wallet library), so
+// a host can detect a redirect return without loading the adapter's heavy factory.
+export interface WalletAdapterMeta {
+  id: WalletAdapter["id"];
+  // URL params the adapter leaves when a full-page OAuth login returns; empty for
+  // adapters with no redirect flow.
+  redirectReturnParams: string[];
+}

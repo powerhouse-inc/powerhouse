@@ -1,7 +1,11 @@
+import { mockAdapterMeta } from "./mock/meta.js";
+import { privyAdapterMeta } from "./privy/meta.js";
+import { rainbowAdapterMeta } from "./rainbow/meta.js";
 import type {
   LoginMethod,
   WalletAdapter,
   WalletAdapterFactory,
+  WalletAdapterMeta,
 } from "./types.js";
 
 // Structural config slices the core codes against; each adapter subexport accepts
@@ -9,6 +13,9 @@ import type {
 export interface WalletRainbowConfig {
   walletConnectProjectId: string;
   infuraProjectId?: string;
+  // Set on server-rendered hosts (e.g. Next.js) so wagmi defers its hydrate
+  // reconnect to an effect instead of running it during render.
+  ssr?: boolean;
 }
 
 export interface WalletPrivyConfig {
@@ -28,6 +35,23 @@ export interface WalletAdaptersConfig {
   rainbow?: WalletRainbowConfig;
   privy?: WalletPrivyConfig;
   mock?: WalletMockConfig;
+}
+
+// Adapter descriptors, imported eagerly (each is dependency-free — no wallet
+// library). Their factories still load lazily via resolveAdapters below.
+const ADAPTER_METAS: WalletAdapterMeta[] = [
+  rainbowAdapterMeta,
+  privyAdapterMeta,
+  mockAdapterMeta,
+];
+
+// True when a URL search string looks like a wallet OAuth redirect return, per
+// each adapter's own declared params — no adapter-specific strings live here.
+export function isWalletRedirectReturn(search: string): boolean {
+  const params = new URLSearchParams(search);
+  return ADAPTER_METAS.some((meta) =>
+    meta.redirectReturnParams.some((param) => params.has(param)),
+  );
 }
 
 // Peer dependencies each adapter subexport imports; listed in the error message
