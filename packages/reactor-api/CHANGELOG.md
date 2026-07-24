@@ -1,3 +1,25 @@
+## 6.2.2-dev.15 (2026-07-24)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
+## 6.2.2-dev.14 (2026-07-23)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
+## 6.2.2-dev.13 (2026-07-23)
+
+### 🚀 Features
+
+- **renown:** direct-to-switchboard sign-in SDK flow ([18db475ac](https://github.com/powerhouse-inc/powerhouse/commit/18db475ac))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.2-dev.12 (2026-07-23)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
 ## 6.2.2-dev.11 (2026-07-22)
 
 ### 🚀 Features

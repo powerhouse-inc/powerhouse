@@ -8,5 +8,26 @@
   },
   "reactor": {
     "port": 4001
+  },
+  "packages": [
+    {
+      "packageName": "@powerhousedao/renown-package",
+      "version": "latest",
+      "provider": "npm"
+    }
+  ],
+  "connect": {
+    "renown": {
+      "switchboardUrl": "https://switchboard.renown.vetra.io/graphql",
+      "adapters": {
+        "rainbow": {
+        },
+        "privy": {
+          "appId": "cmruc4ldh02wr0cjxhpdfjbso",
+          "clientId": "client-WY6bMp7uwaPvuL4wFm5b7Xj7x5wEFhGTLA4k8rwahyZbd",
+          "methods": ["google", "email"]
+        }
+      }
+    }
   }
 }

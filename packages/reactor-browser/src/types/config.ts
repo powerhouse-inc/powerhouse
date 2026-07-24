@@ -1,3 +1,5 @@
+import type { PHConnectRenownAdapters } from "@powerhousedao/shared/clis";
+
 export type PHGlobalConfig = PHCommonGlobalConfig &
   PHAppConfig &
   PHDocumentEditorConfig &
@@ -98,6 +100,8 @@ export type PHRenownGlobalConfig = {
   renownUrl?: string;
   renownNetworkId?: string;
   renownChainId?: number;
+  switchboardUrl?: string;
+  renownAdapters?: PHConnectRenownAdapters;
 };
 
 export type PHSentryGlobalConfig = {

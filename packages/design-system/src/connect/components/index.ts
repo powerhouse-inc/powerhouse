@@ -1,4 +1,6 @@
 export * from "./account-popover/account-popover.js";
+export * from "./account-popover/account-popover-login.js";
+export * from "./renown-login/renown-login-methods.js";
 export * from "./animated-loader/animated-loader.js";
 export * from "./breadcrumbs/breadcrumbs.js";
 export * from "./combobox/combobox.js";

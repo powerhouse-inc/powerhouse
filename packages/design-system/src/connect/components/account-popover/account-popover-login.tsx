@@ -1,31 +1,16 @@
 import { Icon } from "#design-system";
 import type { FC } from "react";
-import { useState } from "react";
-import { twMerge } from "tailwind-merge";
 
 export interface AccountPopoverLoginProps {
+  // Entry point for the sidebar popover; opens the shared login modal, which
+  // owns the actual login methods + feedback.
   onLogin: (() => void) | undefined;
 }
 
 export const AccountPopoverLogin: FC<AccountPopoverLoginProps> = ({
   onLogin,
 }) => {
-  const [loading, setLoading] = useState(false);
-
-  const allowLogin = !loading && !!onLogin;
-
-  const content = loading ? (
-    <Icon name="Reload" size={14} className="animate-spin" />
-  ) : (
-    <span>Connect</span>
-  );
-
-  const handleLogin = () => {
-    if (onLogin) {
-      setLoading(true);
-      onLogin();
-    }
-  };
+  const allowLogin = !!onLogin;
 
   return (
     <div className="p-4">
@@ -35,14 +20,15 @@ export const AccountPopoverLogin: FC<AccountPopoverLoginProps> = ({
         </div>
       </div>
       <button
-        onClick={allowLogin ? handleLogin : undefined}
-        className={twMerge(
-          "mt-4 flex h-7 w-full cursor-pointer items-center justify-center rounded-lg border border-border bg-transparent text-sm text-foreground active:active-effect",
-          allowLogin ? "cursor-pointer" : "cursor-wait",
-        )}
+        onClick={allowLogin ? onLogin : undefined}
+        className={
+          allowLogin
+            ? "mt-4 flex h-7 w-full cursor-pointer items-center justify-center rounded-lg border border-border bg-transparent text-sm text-foreground active:active-effect"
+            : "mt-4 flex h-7 w-full cursor-wait items-center justify-center rounded-lg border border-border bg-transparent text-sm text-foreground"
+        }
         type="button"
       >
-        {content}
+        <span>Connect</span>
       </button>
     </div>
   );

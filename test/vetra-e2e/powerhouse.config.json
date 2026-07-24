@@ -16,6 +16,16 @@
   "connect": {
     "branding": {
       "appName": "Vetra E2E"
+    },
+    "renown": {
+      "switchboardUrl": "https://switchboard.renown.vetra.io/graphql",
+      "adapters": {
+        "rainbow": { "walletConnectProjectId": "" },
+        "privy": {
+          "appId": "cmruc4ldh02wr0cjxhpdfjbso",
+          "methods": ["google", "email"]
+        }
+      }
     }
   }
 }

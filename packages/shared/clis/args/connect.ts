@@ -21,6 +21,7 @@ import {
   drivesPreserveStrategy,
   logLevel,
   renownNamespace,
+  renownSwitchboardUrl,
 } from "./common.js";
 
 // cmd-ts's built-in `boolean` is intended for `flag()` (presence/absence). With
@@ -92,6 +93,7 @@ const connectRuntimeOverrideArgs = {
     description: "Override connect.renown.chainId.",
   }),
   renownNamespace,
+  renownSwitchboardUrl,
   allowAddDrive: option({
     type: optional(cliBoolean),
     long: "allow-add-drive",

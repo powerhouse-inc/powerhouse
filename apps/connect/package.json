@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/connect",
   "productName": "Powerhouse-Connect",
-  "version": "6.2.2-dev.11",
+  "version": "6.2.2-dev.15",
   "description": "Powerhouse Connect",
   "main": "dist/index.html",
   "type": "module",
@@ -78,8 +78,11 @@
     "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
     "@powerhousedao/vetra": "workspace:*",
+    "@privy-io/react-auth": "^3.25.0",
+    "@rainbow-me/rainbowkit": "^2.2.11",
     "@renown/sdk": "workspace:*",
     "@sentry/react": "^10.17.0",
+    "@tanstack/react-query": "^5.90.2",
     "document-model": "workspace:*",
     "i18next": "^25.5.3",
     "kysely": "catalog:",
@@ -93,6 +96,7 @@
     "react-router-dom": "^6.11.2",
     "tailwind-merge": "catalog:",
     "usehooks-ts": "^3.1.1",
+    "wagmi": "2.19.5",
     "zod": "catalog:"
   },
   "devDependencies": {

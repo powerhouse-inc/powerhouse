@@ -1,5 +1,6 @@
 import type { IRenown, LoginStatus, User } from "@renown/sdk";
 import { useEffect, useState, useSyncExternalStore } from "react";
+import { useRenownInitialUser } from "../renown/initial-user.js";
 import type { LOADING } from "../types/global.js";
 import { loading } from "./loading.js";
 import { makePHEventFunctions } from "./make-ph-event-functions.js";
@@ -27,13 +28,20 @@ export function useDid() {
 /** Returns the current user from the renown instance, subscribing to user events */
 export function useUser(): User | undefined {
   const renown = useRenown();
-  const [user, setUser] = useState<User | undefined>(renown?.user);
+  // Seed (cookie for SSR, localStorage for client-only) covers the first paint;
+  // once the SDK is ready it is authoritative, so a logout/revoke clears it.
+  const initialUser = useRenownInitialUser();
+  const instance = renown ? renown : undefined;
+  const [user, setUser] = useState<User | undefined>(
+    instance ? instance.user : initialUser,
+  );
 
   useEffect(() => {
-    setUser(renown?.user);
-    if (!renown) return;
-    return renown.on("user", setUser);
-  }, [renown]);
+    if (instance) {
+      setUser(instance.user);
+      return instance.on("user", setUser);
+    }
+  }, [instance]);
 
   return user;
 }

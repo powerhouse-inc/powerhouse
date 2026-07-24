@@ -8,6 +8,8 @@ export interface RenownVerifierConfig {
   publicUrl: string;
   /** Renown service base URL (defaults to the SDK's default). */
   renownUrl?: string;
+  /** Switchboard GraphQL endpoint; when set, verify against the reactor directly. */
+  switchboardUrl?: string;
   /** Result cache TTL; 0 disables caching. Defaults to 60s. */
   cacheTtlMs?: number;
 }
@@ -32,6 +34,7 @@ export function createRenownVerifier(
     const result = await verifyAuthCredential(token, {
       audience: config.publicUrl,
       renownUrl: config.renownUrl,
+      switchboardUrl: config.switchboardUrl,
     });
     const did = result?.did;
     // Cache only positive results: a credential provisioned or revoked mid-TTL

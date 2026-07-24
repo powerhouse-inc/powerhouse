@@ -1,3 +1,41 @@
+## 6.2.2-dev.15 (2026-07-24)
+
+This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.
+
+## 6.2.2-dev.14 (2026-07-23)
+
+### 🩹 Fixes
+
+- **reactor-browser:** mount wallet adapters on Privy OAuth return ([f4cd0306c](https://github.com/powerhouse-inc/powerhouse/commit/f4cd0306c))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.2-dev.13 (2026-07-23)
+
+### 🚀 Features
+
+- ⚠️  **renown:** server-side session support, revalidation, client seed ([f9c3648ea](https://github.com/powerhouse-inc/powerhouse/commit/f9c3648ea))
+- **reactor-browser:** renown in-page sign-in primitives and wire Connect ([86bb6d06f](https://github.com/powerhouse-inc/powerhouse/commit/86bb6d06f))
+- **renown:** direct-to-switchboard sign-in SDK flow ([18db475ac](https://github.com/powerhouse-inc/powerhouse/commit/18db475ac))
+
+### ⚠️  Breaking Changes
+
+- **renown:** server-side session support, revalidation, client seed  ([f9c3648ea](https://github.com/powerhouse-inc/powerhouse/commit/f9c3648ea))
+  BaseRenownBuilder.build() no longer re-authenticates a stored
+  user. The browser builder revalidates in the background (non-blocking, fail-open),
+  the node builder blocks; callers relying on the old auto re-auth must call
+  renown.revalidate() explicitly.
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.2-dev.12 (2026-07-23)
+
+This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.
+
 ## 6.2.2-dev.11 (2026-07-22)
 
 ### 🚀 Features

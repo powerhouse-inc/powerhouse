@@ -28,6 +28,7 @@ export function Modal(props: Props) {
     children,
     ...delegated
   } = props;
+
   return (
     <Root defaultOpen={open} onOpenChange={onOpenChange} open={open}>
       <Portal>

@@ -50,6 +50,7 @@ import { runMigrations } from "./migrations/index.js";
 import { ImportPackageLoader } from "./packages/import-loader.js";
 import { PackageManager } from "./packages/package-manager.js";
 import { AuthService } from "./services/auth.service.js";
+import { createRenownCredentialVerifier } from "./services/renown-credential-verifier.js";
 import type {
   AuthorizationConfig,
   IAuthorizationService,
@@ -465,6 +466,8 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     DOCUMENT_PERMISSIONS_ENABLED,
     SKIP_CREDENTIAL_VERIFICATION,
     CREDENTIAL_VERIFICATION_CACHE_TTL_MS,
+    RENOWN_URL,
+    SWITCHBOARD_URL,
   } = process.env;
   if (AUTH_ENABLED !== undefined) {
     authEnabled = AUTH_ENABLED === "true";
@@ -553,6 +556,10 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
       admins,
       skipCredentialVerification,
       credentialVerificationCacheTtlMs,
+      verifyCredential: await createRenownCredentialVerifier({
+        renownUrl: RENOWN_URL,
+        switchboardUrl: SWITCHBOARD_URL,
+      }),
     });
     authFetchMiddleware = createAuthFetchMiddleware(authService);
   }

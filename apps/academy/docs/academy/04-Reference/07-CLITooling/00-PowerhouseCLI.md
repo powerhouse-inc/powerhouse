@@ -607,6 +607,8 @@ Build has no read mode; passing only &lt;key&gt; without &lt;value&gt; errors ou
 
 **Renown Namespace** - Renown localStorage namespace; share it across Connects to share login. - Usage: `--renown-namespace <str>`
 
+**Renown Switchboard Url** - Override connect.renown.switchboardUrl. When set, enables in-page Renown sign-in. - Usage: `--renown-switchboard-url <str>`
+
 **Allow Add Drive** - Override connect.drives.allowAddDrive (top-level add-drive toggle). - Usage: `--allow-add-drive <value>`
 
 **External Packages** - Override connect.packages.externalEnabled. - Usage: `--external-packages <value>`

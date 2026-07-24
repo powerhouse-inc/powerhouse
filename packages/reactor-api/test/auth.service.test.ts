@@ -13,13 +13,11 @@ import { AuthService } from "../src/services/auth.service.js";
 // ─── mock @renown/sdk ─────────────────────────────────────────────────────────
 
 const mockVerifyAuthBearerToken = vi.fn();
-const mockFetchDelegationCredential = vi.fn();
+const mockVerifyCredential = vi.fn();
 
 vi.mock("@renown/sdk", () => ({
   verifyAuthBearerToken: (...args: unknown[]) =>
     mockVerifyAuthBearerToken(...args),
-  fetchDelegationCredential: (...args: unknown[]) =>
-    mockFetchDelegationCredential(...args),
 }));
 
 // ─── fixtures ─────────────────────────────────────────────────────────────────
@@ -266,10 +264,6 @@ describe("AuthService.authenticateRequest()", () => {
   describe("credential verification caching", () => {
     const ADDRESS = "0xuser";
     const CHAIN_ID = 1;
-    // A non-undefined credential means "exists" — AuthService only checks that.
-    const CREDENTIAL = {
-      issuer: { id: `did:pkh:eip155:${CHAIN_ID}:${ADDRESS}` },
-    };
 
     function makeService(credentialVerificationCacheTtlMs?: number) {
       return new AuthService({
@@ -277,6 +271,7 @@ describe("AuthService.authenticateRequest()", () => {
         admins: ADMINS,
         skipCredentialVerification: false,
         credentialVerificationCacheTtlMs,
+        verifyCredential: mockVerifyCredential,
       });
     }
 
@@ -291,7 +286,7 @@ describe("AuthService.authenticateRequest()", () => {
       mockVerifyAuthBearerToken.mockResolvedValue(
         makeVerified(ADDRESS, CHAIN_ID),
       );
-      mockFetchDelegationCredential.mockResolvedValue(CREDENTIAL);
+      mockVerifyCredential.mockResolvedValue(true);
     });
 
     afterEach(() => {
@@ -306,7 +301,7 @@ describe("AuthService.authenticateRequest()", () => {
 
       expect(first).not.toBeInstanceOf(Response);
       expect(second).not.toBeInstanceOf(Response);
-      expect(mockFetchDelegationCredential).toHaveBeenCalledTimes(1);
+      expect(mockVerifyCredential).toHaveBeenCalledTimes(1);
     });
 
     it("shares a single in-flight fetch across concurrent requests", async () => {
@@ -321,11 +316,11 @@ describe("AuthService.authenticateRequest()", () => {
       for (const result of results) {
         expect(result).not.toBeInstanceOf(Response);
       }
-      expect(mockFetchDelegationCredential).toHaveBeenCalledTimes(1);
+      expect(mockVerifyCredential).toHaveBeenCalledTimes(1);
     });
 
     it("does not cache failed checks", async () => {
-      mockFetchDelegationCredential.mockResolvedValue(undefined);
+      mockVerifyCredential.mockResolvedValue(false);
       const service = makeService();
 
       const first = await authenticate(service);
@@ -334,7 +329,7 @@ describe("AuthService.authenticateRequest()", () => {
       expect(first).toBeInstanceOf(Response);
       expect((first as Response).status).toBe(401);
       expect(second).toBeInstanceOf(Response);
-      expect(mockFetchDelegationCredential).toHaveBeenCalledTimes(2);
+      expect(mockVerifyCredential).toHaveBeenCalledTimes(2);
     });
 
     it("re-fetches after the TTL expires", async () => {
@@ -344,7 +339,7 @@ describe("AuthService.authenticateRequest()", () => {
       vi.advanceTimersByTime(1_001);
       await authenticate(service);
 
-      expect(mockFetchDelegationCredential).toHaveBeenCalledTimes(2);
+      expect(mockVerifyCredential).toHaveBeenCalledTimes(2);
     });
 
     it("disables caching when the TTL is 0", async () => {
@@ -353,7 +348,7 @@ describe("AuthService.authenticateRequest()", () => {
       await authenticate(service);
       await authenticate(service);
 
-      expect(mockFetchDelegationCredential).toHaveBeenCalledTimes(2);
+      expect(mockVerifyCredential).toHaveBeenCalledTimes(2);
     });
 
     it("caches per user, not globally", async () => {
@@ -365,7 +360,7 @@ describe("AuthService.authenticateRequest()", () => {
       );
       await authenticate(service);
 
-      expect(mockFetchDelegationCredential).toHaveBeenCalledTimes(2);
+      expect(mockVerifyCredential).toHaveBeenCalledTimes(2);
     });
 
     it("evicts the oldest entries when the cache size cap is reached", async () => {
@@ -377,31 +372,32 @@ describe("AuthService.authenticateRequest()", () => {
         );
         await authenticate(service);
       }
-      expect(mockFetchDelegationCredential).toHaveBeenCalledTimes(1_000);
+      expect(mockVerifyCredential).toHaveBeenCalledTimes(1_000);
 
       mockVerifyAuthBearerToken.mockResolvedValue(
         makeVerified("0xoverflow", CHAIN_ID),
       );
       await authenticate(service);
-      expect(mockFetchDelegationCredential).toHaveBeenCalledTimes(1_001);
+      expect(mockVerifyCredential).toHaveBeenCalledTimes(1_001);
 
       mockVerifyAuthBearerToken.mockResolvedValue(
         makeVerified("0xuser0", CHAIN_ID),
       );
       await authenticate(service);
-      expect(mockFetchDelegationCredential).toHaveBeenCalledTimes(1_002);
+      expect(mockVerifyCredential).toHaveBeenCalledTimes(1_002);
     });
   });
 
   describe("credential existence check", () => {
     it("returns 401 when the credential no longer exists on the Renown API", async () => {
       mockVerifyAuthBearerToken.mockResolvedValue(makeVerified("0xuser", 1));
-      mockFetchDelegationCredential.mockResolvedValue(undefined);
+      mockVerifyCredential.mockResolvedValue(false);
 
       const service = new AuthService({
         enabled: true,
         admins: ADMINS,
         skipCredentialVerification: false,
+        verifyCredential: mockVerifyCredential,
       });
 
       const result = await service.authenticateRequest(

@@ -1,19 +1,29 @@
-import { CREDENTIAL_TYPES, DEFAULT_RENOWN_URL } from "./constants.js";
-import { verifyCredentialSignature } from "./credential.js";
+import {
+  CREDENTIAL_TYPES,
+  DEFAULT_RENOWN_NETWORK_ID,
+  DEFAULT_RENOWN_URL,
+} from "./constants.js";
+import {
+  buildAndSignCredential,
+  verifyCredentialSignature,
+} from "./credential.js";
 import { RenownCryptoSigner, type IRenownCrypto } from "./crypto/index.js";
 import { MemoryStorage } from "./storage/common.js";
+import type { SwitchboardClient } from "./switchboard.js";
 import type {
   CreateBearerTokenOptions,
   IProof,
   IRenown,
   ISigner,
   LoginStatus,
+  PKHDid,
   PowerhouseVerifiableCredential,
   ProfileFetcher,
   RenownEventEmitter,
   RenownEvents,
   RenownStorage,
   RenownStorageMap,
+  SignInParams,
   User,
 } from "./types.js";
 import { parsePkhDid, verifyAuthBearerToken } from "./utils.js";
@@ -29,6 +39,7 @@ export class Renown implements IRenown {
   #crypto: IRenownCrypto;
   #signer: ISigner;
   #profileFetcher?: ProfileFetcher;
+  #switchboard?: SwitchboardClient;
   #status: LoginStatus = "initial";
 
   constructor(
@@ -38,6 +49,7 @@ export class Renown implements IRenown {
     appName: string,
     baseUrl = DEFAULT_RENOWN_URL,
     profileFetcher?: ProfileFetcher,
+    switchboard?: SwitchboardClient,
   ) {
     this.#store = store;
     this.#eventEmitter = eventEmitter;
@@ -45,7 +57,15 @@ export class Renown implements IRenown {
     this.#crypto = crypto;
     this.#appName = appName;
     this.#profileFetcher = profileFetcher;
-    this.#signer = new RenownCryptoSigner(crypto, this.#appName, this.user);
+    this.#switchboard = switchboard;
+    const restoredUser = this.user;
+    this.#signer = new RenownCryptoSigner(crypto, this.#appName, restoredUser);
+
+    // A restored, previously-verified user is an authorized session; otherwise
+    // status stays "initial" after a reload while the user is present.
+    if (restoredUser) {
+      this.#status = "authorized";
+    }
 
     this.on("user", (user) => {
       this.#signer.user = user;
@@ -109,81 +129,7 @@ export class Renown implements IRenown {
         throw new Error("Credential not found");
       }
 
-      if (
-        !(
-          credential.issuer.id === userDid &&
-          credential.credentialSubject.id === this.did
-        )
-      ) {
-        throw new Error("Invalid credential");
-      }
-
-      // The deployed Renown credential API may return proof.eip712 without
-      // domain/types, despite the declared type. The domain is canonical
-      // (version "1", the DID's chainId), so reconstruct it — the signature
-      // verification below still fails if the credential wasn't signed for
-      // that domain.
-      const eip712 = credential.proof.eip712 as
-        | Partial<IProof["eip712"]>
-        | undefined;
-      const verifiableCredential: PowerhouseVerifiableCredential =
-        eip712?.domain
-          ? credential
-          : {
-              ...credential,
-              proof: {
-                ...credential.proof,
-                eip712: {
-                  domain: { version: "1", chainId: result.chainId },
-                  types: CREDENTIAL_TYPES,
-                  primaryType: "VerifiableCredential",
-                },
-              },
-            };
-
-      // Verify the EIP-712 proof was signed by the DID's address on its chain.
-      if (
-        credential.issuer.ethereumAddress.toLowerCase() !==
-          result.address.toLowerCase() ||
-        verifiableCredential.proof.eip712.domain.chainId !== result.chainId ||
-        !(await verifyCredentialSignature(verifiableCredential))
-      ) {
-        throw new Error("Invalid credential signature");
-      }
-
-      const user: User = {
-        ...result,
-        address: credential.issuer.ethereumAddress,
-        did: userDid,
-        credential: verifiableCredential,
-      };
-
-      this.#updateUser(user);
-      this.#updateStatus("authorized");
-
-      // Fetch profile data in the background if a fetcher is configured
-      if (this.#profileFetcher) {
-        this.#profileFetcher(user, this.#baseUrl)
-          .then((profile) => {
-            if (
-              profile &&
-              this.user?.address === user.address &&
-              this.user.chainId === user.chainId
-            ) {
-              this.#updateUser({
-                ...this.user,
-                profile,
-                ens: {
-                  name: profile.username ?? undefined,
-                  avatarUrl: profile.userImage ?? undefined,
-                },
-              });
-            }
-          })
-          .catch(console.error);
-      }
-
-      return user;
+      return await this.#completeLogin(userDid, result, credential);
     } catch (error) {
       this.#updateUser(undefined);
       this.#updateStatus("not-authorized");
@@ -191,10 +137,160 @@ export class Renown implements IRenown {
     }
   }
 
+  // Sign in without the Renown redirect: build + sign a delegation credential
+  // with the caller's wallet signer, write it to the switchboard, then log in.
+  async signIn(params: SignInParams): Promise<User> {
+    if (!this.#switchboard) {
+      throw new Error(
+        "signIn requires a switchboard endpoint. Set switchboardUrl or a discoverable baseUrl.",
+      );
+    }
+    const {
+      address,
+      chainId,
+      signTypedData,
+      username,
+      userImage,
+      expiresInDays,
+    } = params;
+
+    this.#updateStatus("checking");
+    try {
+      const credential = await buildAndSignCredential({
+        signTypedData,
+        address,
+        chainId,
+        app: this.#appName,
+        appId: this.did,
+        expiresInDays,
+      });
+
+      await this.#switchboard.issueCredential(credential);
+      await this.#switchboard.findOrCreateUser(address, {
+        username,
+        userImage,
+      });
+
+      const userDid = `did:pkh:${DEFAULT_RENOWN_NETWORK_ID}:${chainId}:${address.toLowerCase()}`;
+      // Authenticate from the freshly signed credential — no read-back, which
+      // avoids racing the read-model processor that indexes the write.
+      return await this.#completeLogin(
+        userDid,
+        parsePkhDid(userDid),
+        credential,
+      );
+    } catch (error) {
+      this.#updateUser(undefined);
+      this.#updateStatus("not-authorized");
+      throw error;
+    }
+  }
+
+  // Verify a credential binds to userDid + this app key, set the user, and
+  // start the background profile fetch. Throws if the credential is invalid.
+  async #completeLogin(
+    userDid: string,
+    result: PKHDid,
+    credential: PowerhouseVerifiableCredential,
+  ): Promise<User> {
+    if (
+      !(
+        credential.issuer.id === userDid &&
+        credential.credentialSubject.id === this.did
+      )
+    ) {
+      throw new Error("Invalid credential");
+    }
+
+    // The API may return proof.eip712 without domain/types; the domain is
+    // canonical (version "1", the chainId), so reconstruct it before verifying.
+    const eip712 = credential.proof.eip712 as
+      | Partial<IProof["eip712"]>
+      | undefined;
+    const verifiableCredential: PowerhouseVerifiableCredential = eip712?.domain
+      ? credential
+      : {
+          ...credential,
+          proof: {
+            ...credential.proof,
+            eip712: {
+              domain: { version: "1", chainId: result.chainId },
+              types: CREDENTIAL_TYPES,
+              primaryType: "VerifiableCredential",
+            },
+          },
+        };
+
+    // Verify the EIP-712 proof was signed by the DID's address on its chain.
+    if (
+      credential.issuer.ethereumAddress.toLowerCase() !==
+        result.address.toLowerCase() ||
+      verifiableCredential.proof.eip712.domain.chainId !== result.chainId ||
+      !(await verifyCredentialSignature(verifiableCredential))
+    ) {
+      throw new Error("Invalid credential signature");
+    }
+
+    const user: User = {
+      ...result,
+      address: credential.issuer.ethereumAddress,
+      did: userDid,
+      credential: verifiableCredential,
+    };
+
+    this.#updateUser(user);
+    this.#updateStatus("authorized");
+
+    // Fetch profile data in the background if a fetcher is configured
+    if (this.#profileFetcher) {
+      this.#profileFetcher(user, this.#baseUrl)
+        .then((profile) => {
+          if (
+            profile &&
+            this.user?.address === user.address &&
+            this.user.chainId === user.chainId
+          ) {
+            this.#updateUser({
+              ...this.user,
+              profile,
+              ens: {
+                name: profile.username ?? undefined,
+                avatarUrl: profile.userImage ?? undefined,
+              },
+            });
+          }
+        })
+        .catch(console.error);
+    }
+
+    return user;
+  }
+
   logout() {
     this.#updateUser(undefined);
     this.#updateStatus("initial");
     return Promise.resolve();
+  }
+
+  // Re-check the current user's credential at the source; logs out if it was
+  // revoked or expired. Network errors keep the session (fail open).
+  async revalidate(): Promise<boolean> {
+    const user = this.user;
+    if (!user) return false;
+    try {
+      const credential = await this.#getCredential(
+        user.address,
+        user.chainId,
+        this.#crypto.did,
+      );
+      if (!credential) {
+        await this.logout();
+        return false;
+      }
+      return true;
+    } catch {
+      return true;
+    }
   }
 
   on<K extends keyof RenownEvents>(
@@ -209,6 +305,10 @@ export class Renown implements IRenown {
     chainId: number,
     appDid: string,
   ): Promise<PowerhouseVerifiableCredential | undefined> {
+    // Direct-switchboard flow: read the credential from the reactor subgraph.
+    if (this.#switchboard) {
+      return this.#switchboard.getCredential({ address, chainId, appDid });
+    }
     if (!this.#baseUrl) {
       throw new Error("RENOWN_URL is not set");
     }

@@ -1,4 +1,4 @@
-# Powerhouse CLI Commands (6.2.2-dev.11)<br>
+# Powerhouse CLI Commands (6.2.2-dev.15)<br>
 This document provides detailed information about the available commands in the Powerhouse CLI.<br><br>
 The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essential commands for managing Powerhouse projects. The tool and it's commands are fundamental for creating, building, and running Document Models as a builder in studio mode.<br>
 ## Table of Contents
@@ -522,6 +522,10 @@ Override connect.renown.chainId.<br><br>
 #### Renown Namespace <br>
 Renown localStorage namespace; share it across Connects to share login.<br><br>
 **usage:** `--renown-namespace <str>`<br>
+
+#### Renown Switchboard Url <br>
+Override connect.renown.switchboardUrl. When set, enables in-page Renown sign-in.<br><br>
+**usage:** `--renown-switchboard-url <str>`<br>
 
 #### Allow Add Drive <br>
 Override connect.drives.allowAddDrive (top-level add-drive toggle).<br><br>
