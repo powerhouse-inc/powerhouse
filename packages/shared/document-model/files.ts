@@ -31,8 +31,6 @@ import {
   type VersionedReplayConfig,
 } from "./versioned-replay.js";
 
-const NON_DOMAIN_SCOPES = new Set(["auth", "document"]);
-
 function zipAsync(data: Zippable): Promise<Uint8Array> {
   return new Promise((resolve, reject) => {
     zip(data, (err, out) => (err ? reject(err) : resolve(out)));
@@ -207,15 +205,14 @@ async function loadFromZipData<TState extends PHBaseState>(
   const { initialState, header, clearedOperations } =
     await parseZipData<TState>(data);
 
-  const domainOperations = Object.fromEntries(
-    Object.entries(clearedOperations).filter(
-      ([scope]) => !NON_DOMAIN_SCOPES.has(scope),
-    ),
+  // document-scope ops are applied by dedicated platform handlers; auth ops replay here
+  const replayOperations = Object.fromEntries(
+    Object.entries(clearedOperations).filter(([scope]) => scope !== "document"),
   ) as DocumentOperations;
 
   const result = replayDocument(
     initialState,
-    domainOperations,
+    replayOperations,
     reducer,
     header,
     undefined,

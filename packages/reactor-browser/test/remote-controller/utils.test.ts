@@ -71,11 +71,11 @@ function makeInitialDoc(): PHDocument<PHBaseState> {
       sig: { publicKey: {}, nonce: "" },
     },
     state: {
-      auth: {},
+      auth: { version: 0, grants: [] },
       document: { version: 1, hash: { algorithm: "sha1", encoding: "base64" } },
     },
     initialState: {
-      auth: {},
+      auth: { version: 0, grants: [] },
       document: { version: 1, hash: { algorithm: "sha1", encoding: "base64" } },
     },
     operations: {},

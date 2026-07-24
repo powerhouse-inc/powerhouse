@@ -3,6 +3,7 @@ import type {
   IRelationalDb,
   ISyncManager,
 } from "@powerhousedao/reactor";
+import type { AuthSubject } from "@powerhousedao/shared/document-model";
 import type {
   GraphQLManager,
   ISubgraph,
@@ -147,6 +148,10 @@ export class BaseSubgraph implements ISubgraph {
     ctx: Context,
   ): Promise<boolean> {
     return this.authorizationService.canRead(documentId, ctx.user?.address);
+  }
+
+  protected viewSubject(ctx: Context): AuthSubject {
+    return { address: ctx.user?.address };
   }
 
   /**

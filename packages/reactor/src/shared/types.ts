@@ -1,3 +1,5 @@
+import type { AuthSubject } from "@powerhousedao/shared/document-model";
+
 /**
  * The document ID used for system operations (CREATE_DOCUMENT, DELETE_DOCUMENT, etc.)
  * System operations use this special ID along with the "system" scope.
@@ -124,6 +126,11 @@ export type ViewFilter = {
   branch?: string;
   scopes?: string[];
   revision?: number;
+  /**
+   * Read subject for the IReactorClient read gate; defaults to the client's
+   * signer. Set per request when serving many principals. Ignored by IReactor.
+   */
+  subject?: AuthSubject;
 };
 
 /**
