@@ -7,7 +7,7 @@ import type { JobResult } from "../../../src/executor/types.js";
 import type { IJobTracker } from "../../../src/job-tracker/interfaces.js";
 import type { IQueue } from "../../../src/queue/interfaces.js";
 import type { IJobExecutionHandle, Job } from "../../../src/queue/types.js";
-import { JobQueueState } from "../../../src/queue/types.js";
+import { JobQueueState, RetryAccounting } from "../../../src/queue/types.js";
 import type { IDocumentModelResolver } from "../../../src/registry/document-model-resolver.js";
 import { ModuleNotFoundError } from "../../../src/registry/errors.js";
 import {
@@ -15,6 +15,7 @@ import {
   DocumentNotFoundError,
 } from "../../../src/shared/errors.js";
 import type { ErrorInfo } from "../../../src/shared/types.js";
+import { AppendConditionFailedError } from "../../../src/storage/interfaces.js";
 
 function createTestJob(overrides: Partial<Job> = {}): Job {
   const id = overrides.id ?? "job-1";
@@ -413,6 +414,68 @@ describe("JobResultHandler", () => {
       await handler.handleResult(handle, result, callbacks());
 
       expect(capturedErrors[0].message).toBe("Unknown error");
+    });
+  });
+
+  describe("AppendConditionFailedError (uncounted retry)", () => {
+    it("retries without counting toward the retry limit", async () => {
+      const job = createTestJob({ retryCount: 5, maxRetries: 0 });
+      const handle = createTestHandle(job);
+      const result: JobResult = {
+        success: false,
+        job,
+        error: new AppendConditionFailedError({
+          streams: [
+            { documentId: "doc-1", scope: "auth", branch: "main", revision: 3 },
+          ],
+        }),
+      };
+
+      await handler.handleResult(handle, result, callbacks());
+
+      expect(queue.retryJob).toHaveBeenCalledWith(
+        job.id,
+        expect.objectContaining({
+          message: expect.stringContaining("Append condition failed"),
+        }),
+        RetryAccounting.ExemptFromLimit,
+      );
+      expect(jobTracker.markFailed).not.toHaveBeenCalled();
+      expect(handle.fail).not.toHaveBeenCalled();
+      expect(handle.defer).not.toHaveBeenCalled();
+    });
+
+    it("classifies by error name, surviving worker-boundary rehydration", async () => {
+      const job = createTestJob({ retryCount: 5, maxRetries: 0 });
+      const handle = createTestHandle(job);
+      const rehydrated = new Error("Append condition failed: rehydrated");
+      rehydrated.name = "AppendConditionFailedError";
+      const result: JobResult = { success: false, job, error: rehydrated };
+
+      await handler.handleResult(handle, result, callbacks());
+
+      expect(queue.retryJob).toHaveBeenCalledWith(
+        job.id,
+        expect.anything(),
+        RetryAccounting.ExemptFromLimit,
+      );
+      expect(jobTracker.markFailed).not.toHaveBeenCalled();
+    });
+
+    it("falls through to the normal failure path when the retry itself fails", async () => {
+      const job = createTestJob({ retryCount: 5, maxRetries: 0 });
+      const handle = createTestHandle(job);
+      vi.mocked(queue.retryJob).mockRejectedValue(new Error("queue down"));
+      const result: JobResult = {
+        success: false,
+        job,
+        error: new AppendConditionFailedError({ streams: [] }),
+      };
+
+      await handler.handleResult(handle, result, callbacks());
+
+      expect(jobTracker.markFailed).toHaveBeenCalled();
+      expect(handle.fail).toHaveBeenCalled();
     });
   });
 });

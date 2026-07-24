@@ -11,7 +11,7 @@ import type {
   JobAvailableEvent,
   JobRoutingMeta,
 } from "./types.js";
-import { JobQueueState, QueueEventTypes } from "./types.js";
+import { JobQueueState, QueueEventTypes, RetryAccounting } from "./types.js";
 
 /**
  * In-memory implementation of the IQueue interface.
@@ -529,7 +529,11 @@ export class InMemoryQueue implements IQueue {
     this.jobIndex.delete(jobId);
   }
 
-  async retryJob(jobId: string, error?: ErrorInfo): Promise<void> {
+  async retryJob(
+    jobId: string,
+    error?: ErrorInfo,
+    accounting: RetryAccounting = RetryAccounting.CountAgainstLimit,
+  ): Promise<void> {
     // Get the job from the index (it might be executing, not in queue)
     const job = this.jobIndex.get(jobId);
     if (!job) {
@@ -555,9 +559,13 @@ export class InMemoryQueue implements IQueue {
     }
 
     // Update retry count
+    const retryCount = job.retryCount || 0;
     const updatedJob: Job = {
       ...job,
-      retryCount: (job.retryCount || 0) + 1,
+      retryCount:
+        accounting === RetryAccounting.CountAgainstLimit
+          ? retryCount + 1
+          : retryCount,
       lastError: error,
     };
 

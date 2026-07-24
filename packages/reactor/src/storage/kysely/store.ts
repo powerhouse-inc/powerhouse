@@ -7,8 +7,10 @@ import type { PagedResults, PagingOptions } from "../../shared/types.js";
 import { throwIfAborted } from "../../shared/utils.js";
 import { paginateRows } from "./pagination.js";
 import {
+  AppendConditionFailedError,
   DuplicateOperationError,
   RevisionMismatchError,
+  type AppendCondition,
   type AtomicTxn,
   type DocumentRevisions,
   type IOperationStore,
@@ -53,6 +55,7 @@ export class KyselyOperationStore implements IOperationStore {
     revision: number,
     fn: (txn: AtomicTxn) => void | Promise<void>,
     signal?: AbortSignal,
+    condition?: AppendCondition,
   ): Promise<Operation[]> {
     if (this.trx) {
       let executeResult: Operation[] | null = null;
@@ -68,6 +71,7 @@ export class KyselyOperationStore implements IOperationStore {
           revision,
           fn,
           signal,
+          condition,
         );
       } catch (error) {
         if (error instanceof _UniqueConstraintContext) {
@@ -97,6 +101,7 @@ export class KyselyOperationStore implements IOperationStore {
             revision,
             fn,
             signal,
+            condition,
           );
         });
       } catch (error) {
@@ -152,6 +157,7 @@ export class KyselyOperationStore implements IOperationStore {
     revision: number,
     fn: (txn: AtomicTxn) => void | Promise<void>,
     signal?: AbortSignal,
+    condition?: AppendCondition,
   ): Promise<Operation[]> {
     throwIfAborted(signal);
 
@@ -169,6 +175,10 @@ export class KyselyOperationStore implements IOperationStore {
 
     if (operations.length === 0) {
       return [];
+    }
+
+    if (condition) {
+      await this.acquireStreamLocks(trx, documentId, scope, branch, condition);
     }
 
     const latestOp = await trx
@@ -211,8 +221,13 @@ export class KyselyOperationStore implements IOperationStore {
       prevOpId = op.opId;
     }
 
+    let insertedCount = operations.length;
     try {
-      await trx.insertInto("Operation").values(operations).execute();
+      if (condition && condition.streams.length > 0) {
+        insertedCount = await this.insertGuarded(trx, operations, condition);
+      } else {
+        await trx.insertInto("Operation").values(operations).execute();
+      }
     } catch (error: unknown) {
       if (
         error instanceof Error &&
@@ -230,6 +245,10 @@ export class KyselyOperationStore implements IOperationStore {
       throw error;
     }
 
+    if (insertedCount !== operations.length) {
+      throw new AppendConditionFailedError(condition!);
+    }
+
     return operations.map((op) => ({
       index: op.index,
       timestampUtcMs: op.timestampUtcMs.toISOString(),
@@ -239,6 +258,116 @@ export class KyselyOperationStore implements IOperationStore {
       id: op.opId,
       action: JSON.parse(op.action as string) as Operation["action"],
     }));
+  }
+
+  /**
+   * Locks the written stream and every read-set stream, in sorted key order
+   * so that overlapping concurrent appends serialize rather than deadlock.
+   * The locks are still taken one row at a time, so the query preserves that
+   * order. It must stay separate from the guarded insert, which would
+   * otherwise read a snapshot taken before the locks were held.
+   */
+  private async acquireStreamLocks(
+    trx: Transaction<Database>,
+    documentId: string,
+    scope: string,
+    branch: string,
+    condition: AppendCondition,
+  ): Promise<void> {
+    const keys = new Set<string>([`${documentId}:${scope}:${branch}`]);
+    for (const stream of condition.streams) {
+      keys.add(`${stream.documentId}:${stream.scope}:${stream.branch}`);
+    }
+
+    const sortedKeys = sql.join([...keys].sort());
+
+    await sql`
+      with ordered as materialized (
+        select key
+        from unnest(array[${sortedKeys}]::text[]) with ordinality as t(key, ord)
+        order by ord
+      )
+      select pg_advisory_xact_lock(hashtext(key)) from ordered
+    `.execute(trx);
+  }
+
+  /**
+   * Inserts the staged operations with the condition compiled in as a WHERE
+   * NOT EXISTS guard, making the check and the append one statement. Returns
+   * the rows inserted; zero means the guard failed and nothing was written.
+   */
+  private async insertGuarded(
+    trx: Transaction<Database>,
+    operations: InsertableOperation[],
+    condition: AppendCondition,
+  ): Promise<number> {
+    const branches = operations.map((op) =>
+      trx
+        .selectNoFrom([
+          sql<string>`${op.jobId}::text`.as("jobId"),
+          sql<string>`${op.opId}::text`.as("opId"),
+          sql<string>`${op.prevOpId}::text`.as("prevOpId"),
+          sql<string>`${op.documentId}::text`.as("documentId"),
+          sql<string>`${op.documentType}::text`.as("documentType"),
+          sql<string>`${op.scope}::text`.as("scope"),
+          sql<string>`${op.branch}::text`.as("branch"),
+          sql<Date>`${op.timestampUtcMs}::timestamptz`.as("timestampUtcMs"),
+          sql<number>`${op.index}::integer`.as("index"),
+          sql<unknown>`${op.action}::jsonb`.as("action"),
+          sql<number>`${op.skip}::integer`.as("skip"),
+          sql<string | null>`${op.error ?? null}::text`.as("error"),
+          sql<string>`${op.hash}::text`.as("hash"),
+        ])
+        .where((eb) =>
+          eb.not(
+            eb.exists(
+              eb
+                .selectFrom("Operation")
+                .select("Operation.id")
+                .where((web) =>
+                  web.or(
+                    condition.streams.map((s) =>
+                      web.and([
+                        web("Operation.documentId", "=", s.documentId),
+                        web("Operation.scope", "=", s.scope),
+                        web("Operation.branch", "=", s.branch),
+                        web("Operation.index", ">", s.revision),
+                      ]),
+                    ),
+                  ),
+                ),
+            ),
+          ),
+        ),
+    );
+
+    let expression = branches[0];
+    for (let i = 1; i < branches.length; i++) {
+      expression = expression.unionAll(branches[i]);
+    }
+
+    const inserted = await trx
+      .insertInto("Operation")
+      .columns([
+        "jobId",
+        "opId",
+        "prevOpId",
+        "documentId",
+        "documentType",
+        "scope",
+        "branch",
+        "timestampUtcMs",
+        "index",
+        "action",
+        "skip",
+        "error",
+        "hash",
+      ])
+      .expression(expression)
+      .returning("id")
+      .execute();
+
+    return inserted.length;
   }
 
   private async findIdempotentReplay(

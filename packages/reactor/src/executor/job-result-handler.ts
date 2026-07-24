@@ -3,6 +3,7 @@ import type { IEventBus } from "../events/interfaces.js";
 import { ReactorEventTypes } from "../events/types.js";
 import type { IJobTracker } from "../job-tracker/interfaces.js";
 import type { IQueue } from "../queue/interfaces.js";
+import { RetryAccounting } from "../queue/types.js";
 import type { IJobExecutionHandle, Job } from "../queue/types.js";
 import type { IDocumentModelResolver } from "../registry/document-model-resolver.js";
 import { ModuleNotFoundError } from "../registry/errors.js";
@@ -11,6 +12,7 @@ import {
   DocumentDeletedError,
   DocumentNotFoundError,
 } from "../shared/errors.js";
+import { AppendConditionFailedError } from "../storage/interfaces.js";
 import type { ErrorInfo } from "../shared/types.js";
 import type { JobResult } from "./types.js";
 
@@ -81,6 +83,23 @@ export class JobResultHandler implements IJobResultHandler {
         } catch {
           // Fall through to normal failure path
         }
+      }
+    }
+
+    // AppendConditionFailedError: a concurrency conflict, not a fault. Retry
+    // exempt from the retry limit; the executor already dropped the stale
+    // streams from the write cache.
+    if (result.error && AppendConditionFailedError.isError(result.error)) {
+      const errorInfo = toErrorInfo(result.error);
+      try {
+        await this.queue.retryJob(
+          handle.job.id,
+          errorInfo,
+          RetryAccounting.ExemptFromLimit,
+        );
+        return;
+      } catch {
+        // Fall through to normal failure path
       }
     }
 

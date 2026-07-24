@@ -24,7 +24,10 @@ import {
 } from "../shared/errors.js";
 import { yieldToMain } from "../shared/utils.js";
 import type { SignatureVerificationHandler } from "../signer/types.js";
-import type { IOperationStore } from "../storage/interfaces.js";
+import {
+  AppendConditionFailedError,
+  type IOperationStore,
+} from "../storage/interfaces.js";
 import { reshuffleByTimestamp } from "../utils/reshuffle.js";
 import { DocumentActionHandler } from "./document-action-handler.js";
 import type { ExecutionStores, IExecutionScope } from "./execution-scope.js";
@@ -567,12 +570,26 @@ export class SimpleJobExecutor implements IJobExecutor {
 
       stores.writeCache.invalidate(job.documentId, scope, job.branch);
 
+      // read-set streams must also leave the cache, or a retry rebuilds the
+      // same stale condition
+      if (AppendConditionFailedError.isError(error)) {
+        for (const stream of error.condition.streams) {
+          stores.writeCache.invalidate(
+            stream.documentId,
+            stream.scope,
+            stream.branch,
+          );
+        }
+      }
+
       return {
         job,
         success: false,
-        error: new Error(
-          `Failed to write operation to IOperationStore: ${error instanceof Error ? error.message : String(error)}`,
-        ),
+        error: AppendConditionFailedError.isError(error)
+          ? error
+          : new Error(
+              `Failed to write operation to IOperationStore: ${error instanceof Error ? error.message : String(error)}`,
+            ),
         duration: Date.now() - startTime,
       };
     }

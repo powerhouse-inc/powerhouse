@@ -3,6 +3,7 @@ import type {
   OperationWithContext,
 } from "@powerhousedao/shared/document-model";
 import type {
+  AppendCondition,
   AtomicTxn,
   DocumentRevisions,
   IOperationStore,
@@ -44,7 +45,14 @@ export class HypercoreOperationStore implements IOperationStore {
     revision: number,
     fn: (txn: AtomicTxn) => void | Promise<void>,
     signal?: AbortSignal,
+    condition?: AppendCondition,
   ): Promise<Operation[]> {
+    if (condition && condition.streams.length > 0) {
+      throw new Error(
+        "HypercoreOperationStore does not support append conditions",
+      );
+    }
+
     const prevLock = this.applyLock;
     let releaseLock: () => void;
     this.applyLock = new Promise<void>((resolve) => {

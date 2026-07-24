@@ -121,6 +121,7 @@ export { type IQueue } from "./src/queue/interfaces.js";
 export { InMemoryQueue } from "./src/queue/queue.js";
 export {
   QueueEventTypes,
+  RetryAccounting,
   type Job,
   type JobAvailableEvent,
 } from "./src/queue/types.js";
@@ -210,9 +211,12 @@ export type {
 } from "@powerhousedao/shared/document-model";
 export type { Database } from "./src/core/types.js";
 export {
+  AppendConditionFailedError,
   DuplicateOperationError,
   OptimisticLockError,
   RevisionMismatchError,
+  type AppendCondition,
+  type AppendConditionStream,
   type AtomicTxn,
   type DocumentGraphEdge,
   type DocumentRelationship,
@@ -224,6 +228,17 @@ export {
   type IOperationStore,
   type OperationFilter,
 } from "./src/storage/interfaces.js";
+
+// Decision Models
+export { buildDecisionModel } from "./src/decision/build-decision-model.js";
+export type {
+  BuiltDecisionModel,
+  DecisionContext,
+  DecisionModel,
+  DecisionTarget,
+  Projection,
+  StreamQuery,
+} from "./src/decision/types.js";
 export { KyselyDocumentIndexer } from "./src/storage/kysely/document-indexer.js";
 export { KyselyKeyframeStore } from "./src/storage/kysely/keyframe-store.js";
 export { KyselyOperationStore } from "./src/storage/kysely/store.js";

@@ -69,6 +69,58 @@ describe("HypercoreOperationStore", () => {
       expect(result.results[0].action.type).toBe("ADD_FOLDER");
     });
 
+    it("should reject a non-empty append condition", async () => {
+      const documentId = generateId();
+      const documentType = "powerhouse/test-doc";
+
+      await expect(
+        store.apply(
+          documentId,
+          documentType,
+          "global",
+          "main",
+          0,
+          (txn) => {
+            txn.addOperations(makeOp(0));
+          },
+          undefined,
+          {
+            streams: [
+              {
+                documentId: generateId(),
+                scope: "global",
+                branch: "main",
+                revision: -1,
+              },
+            ],
+          },
+        ),
+      ).rejects.toThrow("does not support append conditions");
+
+      const result = await store.getSince(documentId, "global", "main", -1);
+      expect(result.results).toHaveLength(0);
+    });
+
+    it("should accept an empty append condition", async () => {
+      const documentId = generateId();
+      const documentType = "powerhouse/test-doc";
+
+      const stored = await store.apply(
+        documentId,
+        documentType,
+        "global",
+        "main",
+        0,
+        (txn) => {
+          txn.addOperations(makeOp(0));
+        },
+        undefined,
+        { streams: [] },
+      );
+
+      expect(stored).toHaveLength(1);
+    });
+
     it("should enforce revision ordering", async () => {
       const documentId = generateId();
       const documentType = "powerhouse/test-doc";

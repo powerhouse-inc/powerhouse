@@ -1,5 +1,10 @@
 import type { ErrorInfo } from "../shared/types.js";
-import type { IJobExecutionHandle, Job, JobRoutingMeta } from "./types.js";
+import type {
+  IJobExecutionHandle,
+  Job,
+  JobRoutingMeta,
+  RetryAccounting,
+} from "./types.js";
 
 /**
  * Interface for a job queue that manages write operations.
@@ -116,9 +121,15 @@ export interface IQueue {
    * Retry a failed job.
    * @param jobId - The ID of the job to retry
    * @param error - Optional error information from the failure
+   * @param accounting - Whether the attempt counts against the job's retry
+   * limit; defaults to {@link RetryAccounting.CountAgainstLimit}
    * @returns Promise that resolves when the job is requeued for retry
    */
-  retryJob(jobId: string, error?: ErrorInfo): Promise<void>;
+  retryJob(
+    jobId: string,
+    error?: ErrorInfo,
+    accounting?: RetryAccounting,
+  ): Promise<void>;
 
   /**
    * Returns true if and only if all jobs have been resolved.

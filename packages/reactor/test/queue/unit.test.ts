@@ -12,7 +12,7 @@ import type {
   JobAvailableEvent,
   JobRoutingMeta,
 } from "../../src/queue/types.js";
-import { QueueEventTypes } from "../../src/queue/types.js";
+import { QueueEventTypes, RetryAccounting } from "../../src/queue/types.js";
 import {
   DocumentModelResolver,
   NullDocumentModelResolver,
@@ -1419,6 +1419,52 @@ describe("InMemoryQueue", () => {
       await expect(
         queue.retryJob("nonexistent", { message: "error", stack: "" }),
       ).resolves.not.toThrow();
+    });
+
+    it("should not increment retryCount when exempt from the limit", async () => {
+      const job = createTestJob({
+        id: "job-1",
+        maxRetries: 3,
+        errorHistory: [],
+      });
+      await queue.enqueue(job);
+
+      const dequeued = await queue.dequeueNext();
+      expect(dequeued).not.toBeNull();
+
+      const error = { message: "Concurrency conflict", stack: "" };
+      await queue.retryJob("job-1", error, RetryAccounting.ExemptFromLimit);
+
+      const retriedHandle = await queue.dequeueNext();
+      expect(retriedHandle).not.toBeNull();
+      expect(retriedHandle!.job.retryCount).toBe(0);
+      expect(retriedHandle!.job.errorHistory).toHaveLength(1);
+      expect(retriedHandle!.job.lastError?.message).toBe(
+        "Concurrency conflict",
+      );
+    });
+
+    it("should keep an existing retryCount when exempt from the limit", async () => {
+      const job = createTestJob({
+        id: "job-1",
+        maxRetries: 3,
+        errorHistory: [],
+      });
+      await queue.enqueue(job);
+
+      await queue.dequeueNext();
+      await queue.retryJob("job-1", { message: "fault", stack: "" });
+
+      await queue.dequeueNext();
+      await queue.retryJob(
+        "job-1",
+        { message: "conflict", stack: "" },
+        RetryAccounting.ExemptFromLimit,
+      );
+
+      const retriedHandle = await queue.dequeueNext();
+      expect(retriedHandle).not.toBeNull();
+      expect(retriedHandle!.job.retryCount).toBe(1);
     });
   });
 

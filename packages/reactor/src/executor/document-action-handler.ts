@@ -40,6 +40,7 @@ import { DriveCollectionId } from "../cache/operation-index-types.js";
 import type { Job } from "../queue/types.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import { DocumentDeletedError } from "../shared/errors.js";
+import { AppendConditionFailedError } from "../storage/interfaces.js";
 import type { ExecutionStores } from "./execution-scope.js";
 import type { JobResult } from "./types.js";
 import {
@@ -844,12 +845,26 @@ export class DocumentActionHandler {
 
       stores.writeCache.invalidate(documentId, scope, branch);
 
+      // read-set streams must also leave the cache, or a retry rebuilds the
+      // same stale condition
+      if (AppendConditionFailedError.isError(error)) {
+        for (const stream of error.condition.streams) {
+          stores.writeCache.invalidate(
+            stream.documentId,
+            stream.scope,
+            stream.branch,
+          );
+        }
+      }
+
       return {
         job,
         success: false,
-        error: new Error(
-          `Failed to write operation to IOperationStore: ${error instanceof Error ? error.message : String(error)}`,
-        ),
+        error: AppendConditionFailedError.isError(error)
+          ? error
+          : new Error(
+              `Failed to write operation to IOperationStore: ${error instanceof Error ? error.message : String(error)}`,
+            ),
         duration: Date.now() - startTime,
       };
     }

@@ -176,6 +176,49 @@ export async function createTestOperationStore(
 }
 
 /**
+ * KyselyOperationStore over a real Postgres at REACTOR_TEST_PG_URL, in a
+ * unique schema. Unlike PGlite (single connection), the pg pool supports the
+ * concurrent transactions advisory-lock tests require.
+ */
+export async function createTestOperationStorePostgres(): Promise<{
+  db: Kysely<DatabaseSchema>;
+  store: KyselyOperationStore;
+  keyframeStore: KyselyKeyframeStore;
+  cleanup: () => Promise<void>;
+}> {
+  const schema = `reactor_test_${process.pid}_${pgTestSchemaCounter++}`;
+  const baseDb = new Kysely<DatabaseSchema>({
+    dialect: new PostgresDialect({
+      pool: new Pool({ connectionString: PG_TEST_URL }),
+    }),
+  });
+
+  const result = await runMigrations(baseDb, schema);
+  if (!result.success && result.error) {
+    throw new Error(`Test migration failed: ${result.error.message}`);
+  }
+
+  const db = baseDb.withSchema(schema);
+  const store = new KyselyOperationStore(db);
+  const keyframeStore = new KyselyKeyframeStore(db);
+
+  return {
+    db,
+    store,
+    keyframeStore,
+    cleanup: async () => {
+      try {
+        await sql`DROP SCHEMA IF EXISTS ${sql.id(schema)} CASCADE`.execute(
+          baseDb,
+        );
+      } finally {
+        await baseDb.destroy();
+      }
+    },
+  };
+}
+
+/**
  * Creates a KyselyDocumentIndexer with mock operationIndex and writeCache,
  * backed by the given Kysely db instance.
  */

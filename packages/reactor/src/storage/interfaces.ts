@@ -46,6 +46,43 @@ export class RevisionMismatchError extends Error {
 }
 
 /**
+ * One read-set stream and the highest operation index observed on it, or -1
+ * if it was observed empty.
+ */
+export type AppendConditionStream = {
+  documentId: string;
+  scope: string;
+  branch: string;
+  revision: number;
+};
+
+/**
+ * A read-set enforced by {@link IOperationStore.apply}: the append fails if
+ * any stream has operations past its recorded revision.
+ */
+export type AppendCondition = {
+  streams: AppendConditionStream[];
+};
+
+/**
+ * A read-set stream grew before the append committed. A concurrency
+ * conflict, not a fault: the caller retries against the new stream heads.
+ */
+export class AppendConditionFailedError extends Error {
+  constructor(readonly condition: AppendCondition) {
+    const streams = condition.streams
+      .map((s) => `${s.documentId}:${s.scope}:${s.branch}@${s.revision}`)
+      .join(", ");
+    super(`Append condition failed: a read-set stream advanced [${streams}]`);
+    this.name = "AppendConditionFailedError";
+  }
+
+  static isError(error: unknown): error is AppendConditionFailedError {
+    return Error.isError(error) && error.name === "AppendConditionFailedError";
+  }
+}
+
+/**
  * A write transaction passed to {@link IOperationStore.apply}. Accumulates
  * operations that are committed atomically when the callback returns.
  */
@@ -84,6 +121,12 @@ export interface IOperationStore {
    * returned instead of throwing. If no matching stored row is found, the
    * original error is propagated unchanged.
    *
+   * With an {@link AppendCondition}, the append additionally fails with
+   * {@link AppendConditionFailedError} — writing nothing — if any read-set
+   * stream has operations past its recorded revision. The written and
+   * read-set streams are advisory-locked in sorted key order, so concurrent
+   * conditional appends on overlapping streams serialize.
+   *
    * @param documentId - The document id
    * @param documentType - The document type identifier
    * @param scope - The operation scope (e.g. "global", "local")
@@ -91,6 +134,7 @@ export interface IOperationStore {
    * @param revision - Expected current revision (optimistic lock)
    * @param fn - Callback that stages operations via {@link AtomicTxn}
    * @param signal - Optional abort signal to cancel the request
+   * @param condition - Optional read-set to enforce at write time
    * @returns The stored operations; empty array when no operations were staged
    */
   apply(
@@ -101,6 +145,7 @@ export interface IOperationStore {
     revision: number,
     fn: (txn: AtomicTxn) => void | Promise<void>,
     signal?: AbortSignal,
+    condition?: AppendCondition,
   ): Promise<Operation[]>;
 
   /**

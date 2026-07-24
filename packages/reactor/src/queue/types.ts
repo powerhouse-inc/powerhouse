@@ -16,6 +16,18 @@ export enum JobQueueState {
 }
 
 /**
+ * How a retry is accounted against the job's retry limit.
+ * - `CountAgainstLimit` (default): a fault; the job eventually exhausts its
+ *   retries and fails terminally.
+ * - `ExemptFromLimit`: not a fault, so the attempt is not charged to the job.
+ *   Used for concurrency conflicts, where the retry does new work.
+ */
+export enum RetryAccounting {
+  CountAgainstLimit = "count-against-limit",
+  ExemptFromLimit = "exempt-from-limit",
+}
+
+/**
  * Interface for a job execution handle
  */
 export interface IJobExecutionHandle {

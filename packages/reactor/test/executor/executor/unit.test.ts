@@ -6,7 +6,10 @@ import { SimpleJobExecutor } from "../../../src/executor/simple-job-executor.js"
 import type { Job } from "../../../src/queue/types.js";
 import type { IDocumentModelRegistry } from "../../../src/registry/interfaces.js";
 import { DocumentNotFoundError } from "../../../src/shared/errors.js";
-import type { IOperationStore } from "../../../src/storage/interfaces.js";
+import {
+  AppendConditionFailedError,
+  type IOperationStore,
+} from "../../../src/storage/interfaces.js";
 import {
   createMockCollectionMembershipCache,
   createMockDocumentMetaCache,
@@ -233,6 +236,64 @@ describe("SimpleJobExecutor", () => {
       expect(result.success).toBe(false);
       expect(result.error).toBeDefined();
       expect(result.error?.message).toContain("Storage error");
+    });
+
+    it("should preserve AppendConditionFailedError from the operation store", async () => {
+      mockOperationStore.apply = vi.fn().mockRejectedValue(
+        new AppendConditionFailedError({
+          streams: [
+            { documentId: "doc-1", scope: "auth", branch: "main", revision: 2 },
+            {
+              documentId: "group-1",
+              scope: "global",
+              branch: "main",
+              revision: 7,
+            },
+          ],
+        }),
+      );
+
+      const job: Job = {
+        kind: "mutation",
+        id: "job-acf",
+        documentId: "doc-1",
+        scope: "global",
+        branch: "main",
+        actions: [
+          {
+            id: "action-acf",
+            type: "SET_NAME",
+            scope: "global",
+            timestampUtcMs: "2024-06-15T12:30:00.000Z",
+            input: { name: "Test" },
+          },
+        ],
+        operations: [],
+        createdAt: new Date().toISOString(),
+        queueHint: [],
+        errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["job-acf"] },
+      };
+
+      const result = await executor.executeJob(job);
+
+      expect(result.success).toBe(false);
+      expect(AppendConditionFailedError.isError(result.error)).toBe(true);
+      expect(mockWriteCache.invalidate).toHaveBeenCalledWith(
+        "doc-1",
+        "global",
+        "main",
+      );
+      expect(mockWriteCache.invalidate).toHaveBeenCalledWith(
+        "doc-1",
+        "auth",
+        "main",
+      );
+      expect(mockWriteCache.invalidate).toHaveBeenCalledWith(
+        "group-1",
+        "global",
+        "main",
+      );
     });
 
     it("should return DocumentNotFoundError when document does not exist", async () => {
@@ -673,6 +734,75 @@ describe("SimpleJobExecutor", () => {
       expect(result.success).toBe(false);
       expect(result.error).toBeDefined();
       expect(result.error?.message).toContain("Failed to write operation");
+    });
+
+    it("should preserve AppendConditionFailedError from a document-scope write", async () => {
+      const documentId = "doc-delete-acf";
+
+      mockWriteCache.getState = vi.fn().mockResolvedValue({
+        header: {
+          id: documentId,
+          documentType: "powerhouse/document-model",
+          revision: { document: 1 },
+        },
+        operations: {
+          document: [
+            {
+              index: 0,
+              action: {
+                type: "CREATE_DOCUMENT",
+                id: "create-action",
+                scope: "document",
+                timestampUtcMs: "2024-01-01T00:00:00.000Z",
+                input: {
+                  documentId,
+                  model: "powerhouse/document-model",
+                },
+              },
+            },
+          ],
+          global: [],
+          local: [],
+        },
+        state: {
+          global: {},
+          local: {},
+          document: {
+            isDeleted: false,
+          },
+        },
+      });
+
+      const job: Job = {
+        kind: "mutation",
+        id: "delete-job-acf",
+        documentId,
+        scope: "document",
+        branch: "main",
+        actions: [
+          {
+            id: "delete-action-acf",
+            type: "DELETE_DOCUMENT",
+            scope: "document",
+            timestampUtcMs: "2024-01-01T00:00:00.000Z",
+            input: { documentId },
+          },
+        ],
+        operations: [],
+        createdAt: "1234567890",
+        queueHint: [],
+        errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["delete-job-acf"] },
+      };
+
+      mockOperationStore.apply = vi
+        .fn()
+        .mockRejectedValue(new AppendConditionFailedError({ streams: [] }));
+
+      const result = await executor.executeJob(job);
+
+      expect(result.success).toBe(false);
+      expect(AppendConditionFailedError.isError(result.error)).toBe(true);
     });
 
     it("should return error if documentId is missing from input", async () => {
