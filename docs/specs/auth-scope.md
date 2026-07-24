@@ -8,7 +8,7 @@ This spec pulls authorization into the core Reactor. This allows us to ride on t
 
 ## Overview
 
-From a high level: we propose expanding the current `auth` scope to hold a stacked list of **grants**. Grants apply either baked in policies or dynamically evaluated conditions to various **principals**. These principals are either specific users or refer to groups described by a new `PHGroup` document model (`powerhouse/document-group`).
+From a high level, we propose expanding the current `auth` scope to hold a stacked list of **grants**. Grants apply either baked in policies or dynamically evaluated conditions to various **principals**. These principals are either specific users or groups of users described by a new `PHGroup` document model (`@powerhousedao/document-group`).
 
 We will do this by generalizing consistency requirements between what are now independent event streams, dictated by `(docId, branch, scope)` tuples. That is, we need to be able to describe consistency guarantees between the `("A", "main", "global")` stream and the `("A", "main", "auth")` or even `("A-group", "main", "global")` streams.
 
@@ -98,7 +98,7 @@ type MoveGrantInput = {
 
 `REMOVE_GRANT` deletes by id. An unknown id is an error.
 
-`MOVE_GRANT` moves an existing grant to `index`. Order is significant because the last applicable grant wins.
+`MOVE_GRANT` moves an existing grant to `index`, clamping an out-of-range index to the valid range. Order is significant because the last applicable grant wins.
 
 `UNDO`, `REDO`, and `PRUNE` are rejected on the auth scope.
 
@@ -157,9 +157,16 @@ export type Operand =
 
 A path that does not resolve yields undefined, as does a path resolving to an object or array. Every comparison involving undefined is false. Exists tests presence explicitly. Numbers compare numerically and strings by code point.
 
-`SET_GRANT` caps grant count and condition size and depth at validation, because every replica re-evaluates the policy at every operation's position. It also rejects a path that names a scope other than the capability's own, since conditions read only the executing scope and such a path can never resolve.
+`INITIALIZE_AUTH` and `SET_GRANT` validate the grants they carry:
 
-These validation rules are part of what a `version` means. Version 1 ships its rules complete and never changes them, because accepted operations are permanent history that every replica must fold identically. Any rule changes require a new version.
+- A policy can hold at most 100 grants.
+- A condition tree can be at most 100 nodes with depth at most 10./
+- An execute capability lists at most 100 operations.
+- Rejects a path that names a scope other than the capability's own (this is because conditions read only the executing scope and such a path can never resolve).
+
+These caps exist because every replica re-evaluates the policy at every operation's position.
+
+These validation rules are part of what a `version` means. Version 1 ships its rules complete and never changes them, because accepted operations are permanent history that every replica must fold identically. Any rule changes require a new version. A replica that encounters a policy version newer than it supports fails closed: every request is denied except the creator's administration of the auth scope, until the software knows that version.
 
 ## Projections and the Decision Model
 
@@ -288,7 +295,10 @@ function decide(
       and subject is the creator (model.auth.creator):
       return ALLOW                    # administration can never be locked out of itself
 
-4. decision = DENY                    # default-deny once a policy exists
+4. if model.auth.version is newer than this software supports:
+      return DENY                     # fail closed until the software knows the policy language
+
+5. decision = DENY                    # default-deny once a policy exists
    for grant in model.auth.grants, in order:
       if covers(grant.capability, request)
          and matches(grant.principal, subject, ctx)
@@ -306,7 +316,7 @@ covers(capability, request):
 
 matches(principal, subject, ctx):
    { anyone: true }      -> true
-   { address }           -> principal.address == subject.address
+   { address }           -> principal.address == subject.address, compared case-insensitively
    { group }             -> membership folded at the operation's position (see Groups)
    { match: Condition }  -> eval(Condition, ctx)
 ```
@@ -596,6 +606,8 @@ The same reasoning extends to groups. A replica must fold a group's membership t
 A document's policy begins with `INITIALIZE_AUTH` (see Actions). On acceptance, the signer's key is stored in the auth state as `creator`. The header is consulted only once, at this binding. From then on, the creator check in `decide` reads the stored key. A document that never runs `INITIALIZE_AUTH` has an uninitialized auth scope and stays open, so existing documents are unaffected.
 
 **Auth on an unsigned-header document does not resist an adversary.** An unsigned-header document has no creator, so its genesis is open. Anyone can run `INITIALIZE_AUTH` first, and anyone can backdate one that retroactively re-evaluates the whole history under a policy of their choosing. A document that wants an enforceable policy is created with a signed header, ideally with `INITIALIZE_AUTH` in its create batch.
+
+A duplicated document inherits its source's policy. Duplication fails when the copy cannot preserve the policy rather than producing a policy that cannot be administered.
 
 Migration maps a legacy table owner to an `execute`-on-`auth` grant.
 
