@@ -2,7 +2,9 @@
 // by every replica; changing any of them requires a new policy version.
 
 import { z } from "zod";
-import type { Grant } from "./state.js";
+import type { AuthDecision, AuthRequest, AuthSubject } from "./auth.js";
+import { groupDocumentType } from "./document-type.js";
+import type { Capability, Grant, Principal } from "./state.js";
 
 /** Maximum number of grants in a policy. */
 export const MAX_AUTH_GRANTS = 100;
@@ -310,3 +312,113 @@ export function grantProblem(value: unknown): string | null {
 
 export const GrantSchema = () =>
   z.custom<Grant>((value) => grantProblem(value) === null);
+
+/** V1 shape rules plus the group-document group-principal ban. */
+export function assertValidGrant(grant: unknown, documentType: string): void {
+  const grantId =
+    isPlainValue(grant) && typeof grant.id === "string" ? grant.id : "";
+  const problem = grantProblem(grant);
+  if (problem !== null) {
+    throw new InvalidGrantError(grantId, problem);
+  }
+  if (
+    documentType === groupDocumentType &&
+    "group" in (grant as Grant).principal
+  ) {
+    throw new GroupPrincipalNotAllowedError(grantId);
+  }
+}
+
+/** Validates an initial grant list: the count cap plus every grant. */
+export function assertValidInitialGrants(
+  grants: Grant[],
+  documentType: string,
+): void {
+  if (grants.length > MAX_AUTH_GRANTS) {
+    throw new InvalidGrantError("", `policy exceeds ${MAX_AUTH_GRANTS} grants`);
+  }
+  for (const grant of grants) {
+    assertValidGrant(grant, documentType);
+  }
+}
+
+/** Validates a grant upsert: the grant itself plus the count cap on append. */
+export function assertValidGrantUpsert(
+  grant: Grant,
+  existing: Grant[],
+  documentType: string,
+): void {
+  assertValidGrant(grant, documentType);
+  const exists = existing.some((g) => g.id === grant.id);
+  if (!exists && existing.length >= MAX_AUTH_GRANTS) {
+    throw new InvalidGrantError(
+      grant.id,
+      `policy exceeds ${MAX_AUTH_GRANTS} grants`,
+    );
+  }
+}
+
+function capabilityCovers(
+  capability: Capability,
+  request: AuthRequest,
+): boolean {
+  if (capability.can !== request.verb) {
+    return false;
+  }
+  const scope = capability.scope;
+  if (scope !== undefined && scope !== "*" && scope !== request.scope) {
+    return false;
+  }
+  if (capability.can === "execute") {
+    // An execute capability with no operation list covers every operation in the scope.
+    if (capability.operation === undefined) {
+      return true;
+    }
+    return (
+      request.operation !== undefined &&
+      capability.operation.includes(request.operation)
+    );
+  }
+  return true;
+}
+
+function principalMatches(principal: Principal, subject: AuthSubject): boolean {
+  if ("anyone" in principal) {
+    return true;
+  }
+  if ("address" in principal) {
+    return (
+      subject.address !== undefined &&
+      subject.address.toLowerCase() === principal.address.toLowerCase()
+    );
+  }
+  // { group } and { match } are not evaluated yet: group membership needs the
+  // PHGroup model (a missing group never widens access) and conditions are deferred.
+  return false;
+}
+
+/**
+ * Evaluates a v1 grant stack: default deny, last applicable grant wins.
+ * Group and match principals and `where` conditions are not evaluated yet; a
+ * grant that uses any of them never applies.
+ */
+export function evaluateGrants(
+  grants: Grant[],
+  subject: AuthSubject,
+  request: AuthRequest,
+): AuthDecision {
+  let decision: AuthDecision = "deny";
+  for (const grant of grants) {
+    // `where` is not evaluated yet; a conditional grant never applies.
+    if (grant.where !== undefined) {
+      continue;
+    }
+    if (
+      capabilityCovers(grant.capability, request) &&
+      principalMatches(grant.principal, subject)
+    ) {
+      decision = grant.effect;
+    }
+  }
+  return decision;
+}
