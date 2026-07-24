@@ -9,6 +9,9 @@ import type {
 export interface WalletRainbowConfig {
   walletConnectProjectId: string;
   infuraProjectId?: string;
+  // Set on server-rendered hosts (e.g. Next.js) so wagmi defers its hydrate
+  // reconnect to an effect instead of running it during render.
+  ssr?: boolean;
 }
 
 export interface WalletPrivyConfig {
