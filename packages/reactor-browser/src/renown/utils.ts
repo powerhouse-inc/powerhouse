@@ -159,6 +159,14 @@ export async function logout() {
   const renown = window.ph?.renown;
   await renown?.logout();
 
+  // Disconnect the wallet too, else its session lingers and the auto sign-in in
+  // RenownWalletProvider would immediately log the user back in.
+  try {
+    await getActiveWalletController()?.disconnect();
+  } catch (error) {
+    logger.error(error instanceof Error ? error.message : String(error));
+  }
+
   // Clear the user parameter from URL to prevent auto-login on refresh
   const url = new URL(window.location.href);
   if (url.searchParams.has("user")) {
