@@ -13,15 +13,11 @@ import {
 export function registerAttachmentRoutes(api: API): void {
   const { attachments } = api;
 
-  // Anonymous-capable: the handler authorizes document-anchored reservations
-  // via the document's write permission and still requires an identity for
-  // unanchored ones.
   mountAuthenticatedNodeRoute(
     api,
     "POST",
     "/attachments/reservations",
-    makeReserveHandler(attachments, api.attachmentAccess),
-    { allowAnonymous: true },
+    makeReserveHandler(attachments),
   );
 
   mountAuthenticatedNodeRoute(
