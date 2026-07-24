@@ -33,6 +33,16 @@ export interface WalletAdaptersConfig {
   mock?: WalletMockConfig;
 }
 
+// URL params a redirect-capable adapter leaves when a full-page OAuth login
+// returns. Declared in the registry so a host detects a return without an adapter.
+const REDIRECT_RETURN_PARAMS = ["privy_oauth_code", "privy_oauth_state"];
+
+// True when a URL search string looks like a wallet OAuth redirect return.
+export function isWalletRedirectReturn(search: string): boolean {
+  const params = new URLSearchParams(search);
+  return REDIRECT_RETURN_PARAMS.some((param) => params.has(param));
+}
+
 // Peer dependencies each adapter subexport imports; listed in the error message
 // when a dynamic import fails so operators know exactly what to install.
 const ADAPTER_PEER_DEPS: Record<string, string[]> = {

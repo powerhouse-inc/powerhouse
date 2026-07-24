@@ -1,4 +1,4 @@
-import { resolveAdapters } from "@renown/sdk/wallet";
+import { isWalletRedirectReturn, resolveAdapters } from "@renown/sdk/wallet";
 import type {
   LoginMethod,
   WalletAdapter,
@@ -24,14 +24,6 @@ import {
   signIn,
   whenWalletControllerReady,
 } from "./utils.js";
-
-// True when this page load is a Privy OAuth redirect return. Read once at mount
-// (Privy strips the params after consuming them).
-function hadPrivyOAuthReturn(): boolean {
-  if (typeof window === "undefined") return false;
-  const params = new URLSearchParams(window.location.search);
-  return params.has("privy_oauth_code") || params.has("privy_oauth_state");
-}
 
 // Merge per-adapter controllers into one. A requested method routes to the
 // adapter that supports it; a method-less connect uses the first adapter.
@@ -121,7 +113,10 @@ export function RenownWalletProvider({
   const signingInRef = useRef(false);
   // Arm auto sign-in for the OAuth redirect return only, consumed once. A silent
   // session that lingers after logout must NOT hijack an explicit wallet login.
-  const oauthReturnRef = useRef(hadPrivyOAuthReturn());
+  const oauthReturnRef = useRef(
+    typeof window !== "undefined" &&
+      isWalletRedirectReturn(window.location.search),
+  );
 
   const onSession = useCallback(
     (_id: string, session: WalletSession | undefined) => {
@@ -160,12 +155,11 @@ export function RenownWalletProvider({
     return () => setWalletActivator(undefined);
   }, [config]);
 
-  // Privy social OAuth returns via full-page redirect (?privy_oauth_code=…); mount
-  // adapters on that load so PrivyProvider consumes the code and resumes login.
+  // A full-page OAuth redirect returns without a click; mount adapters on that
+  // load so the redirect-capable adapter consumes the code and resumes login.
   useEffect(() => {
     if (!config || typeof window === "undefined") return;
-    const params = new URLSearchParams(window.location.search);
-    if (params.has("privy_oauth_code") || params.has("privy_oauth_state")) {
+    if (isWalletRedirectReturn(window.location.search)) {
       setActive(true);
     }
   }, [config]);
