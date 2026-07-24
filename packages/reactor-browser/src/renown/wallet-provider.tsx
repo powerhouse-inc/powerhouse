@@ -15,12 +15,23 @@ import {
   type ComponentType,
   type ReactNode,
 } from "react";
+import { logger } from "document-model";
+import { useRenown, useUser } from "../hooks/renown.js";
 import {
   failWalletActivation,
   setActiveWalletController,
   setWalletActivator,
+  signIn,
   whenWalletControllerReady,
 } from "./utils.js";
+
+// True when this page load is a Privy OAuth redirect return. Read once at mount
+// (Privy strips the params after consuming them).
+function hadPrivyOAuthReturn(): boolean {
+  if (typeof window === "undefined") return false;
+  const params = new URLSearchParams(window.location.search);
+  return params.has("privy_oauth_code") || params.has("privy_oauth_state");
+}
 
 // Merge per-adapter controllers into one. A requested method routes to the
 // adapter that supports it; a method-less connect uses the first adapter.
@@ -66,13 +77,20 @@ function mergeControllers(
 function AdapterControllerBridge(props: {
   adapter: WalletAdapter;
   onController: (id: string, controller: WalletController | undefined) => void;
+  onSession: (id: string, session: WalletSession | undefined) => void;
 }) {
-  const { adapter, onController } = props;
+  const { adapter, onController, onSession } = props;
   const controller = adapter.useController();
   useEffect(() => {
     onController(adapter.id, controller);
     return () => onController(adapter.id, undefined);
   }, [adapter.id, controller, onController]);
+  // Adapters that push session changes (Privy) let sign-in complete on an OAuth
+  // return, where the connect() promise died with the pre-redirect page.
+  useEffect(() => {
+    if (!controller.subscribe) return;
+    return controller.subscribe((session) => onSession(adapter.id, session));
+  }, [adapter.id, controller, onSession]);
   return null;
 }
 
@@ -94,6 +112,43 @@ export function RenownWalletProvider({
   const [active, setActive] = useState(false);
   const [adapters, setAdapters] = useState<WalletAdapter[] | null>(null);
   const controllersRef = useRef(new Map<string, WalletController>());
+  const renown = useRenown();
+  const user = useUser();
+  // Latest adapter session that can sign silently (Privy embedded wallet). Non-
+  // silent sessions (injected wallets) never auto-sign — that'd pop a prompt.
+  const [pendingSilentSession, setPendingSilentSession] =
+    useState<WalletSession | null>(null);
+  const signingInRef = useRef(false);
+  // Arm auto sign-in for the OAuth redirect return only, consumed once. A silent
+  // session that lingers after logout must NOT hijack an explicit wallet login.
+  const oauthReturnRef = useRef(hadPrivyOAuthReturn());
+
+  const onSession = useCallback(
+    (_id: string, session: WalletSession | undefined) => {
+      setPendingSilentSession(session?.autoSignIn ? session : null);
+    },
+    [],
+  );
+
+  // Complete Renown sign-in from the session Privy pushes on an OAuth return,
+  // once the SDK is ready; disarm as soon as it's handled or a user is present.
+  useEffect(() => {
+    if (!oauthReturnRef.current) return;
+    if (user) {
+      oauthReturnRef.current = false;
+      return;
+    }
+    if (!pendingSilentSession || !renown || signingInRef.current) return;
+    signingInRef.current = true;
+    oauthReturnRef.current = false;
+    void Promise.resolve(signIn(pendingSilentSession))
+      .catch((error: unknown) =>
+        logger.error(error instanceof Error ? error.message : String(error)),
+      )
+      .finally(() => {
+        signingInRef.current = false;
+      });
+  }, [pendingSilentSession, renown, user]);
 
   // Register an activator so login() can mount + lazy-load adapters on click.
   useEffect(() => {
@@ -174,6 +229,7 @@ export function RenownWalletProvider({
                 key={adapter.id}
                 adapter={adapter}
                 onController={onController}
+                onSession={onSession}
               />
             ))}
           </>,
