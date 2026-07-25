@@ -1,3 +1,25 @@
+## 6.2.2-dev.16 (2026-07-25)
+
+### 🚀 Features
+
+- v1 auth initial implementation, backward compatible ([cee699601](https://github.com/powerhouse-inc/powerhouse/commit/cee699601))
+- enforce auth init action be done by the creator, and include an auth carveout for creator ([2f7bf22f8](https://github.com/powerhouse-inc/powerhouse/commit/2f7bf22f8))
+- decide engine v1 ([6f5a523e4](https://github.com/powerhouse-inc/powerhouse/commit/6f5a523e4))
+- introducing new dedicated auth reducer ([997c48223](https://github.com/powerhouse-inc/powerhouse/commit/997c48223))
+
+### 🩹 Fixes
+
+- **reactor:** fix a backwards compatibility issue where {} auth states were borked ([c345bd719](https://github.com/powerhouse-inc/powerhouse/commit/c345bd719))
+- code review fixes ([318cbefa9](https://github.com/powerhouse-inc/powerhouse/commit/318cbefa9))
+- auth errors need caught and loggs ([9519a4942](https://github.com/powerhouse-inc/powerhouse/commit/9519a4942))
+- version 0 is reserved and only 1 and on is available for setting ([193ac4c56](https://github.com/powerhouse-inc/powerhouse/commit/193ac4c56))
+- resolve a contradiction in group membership ([39845a65c](https://github.com/powerhouse-inc/powerhouse/commit/39845a65c))
+- grant evaluation needs to ignore features that do not exist yet ([0c1d06396](https://github.com/powerhouse-inc/powerhouse/commit/0c1d06396))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.2.2-dev.15 (2026-07-24)
 
 This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.

@@ -1,3 +1,16 @@
+## 6.2.2-dev.16 (2026-07-25)
+
+### 🩹 Fixes
+
+- code review fixes ([318cbefa9](https://github.com/powerhouse-inc/powerhouse/commit/318cbefa9))
+- version 0 is reserved and only 1 and on is available for setting ([193ac4c56](https://github.com/powerhouse-inc/powerhouse/commit/193ac4c56))
+- resolve a contradiction in group membership ([39845a65c](https://github.com/powerhouse-inc/powerhouse/commit/39845a65c))
+- grant evaluation needs to ignore features that do not exist yet ([0c1d06396](https://github.com/powerhouse-inc/powerhouse/commit/0c1d06396))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.2.2-dev.15 (2026-07-24)
 
 This was a version bump only for ph-cmd to align it with other projects, there were no code changes.

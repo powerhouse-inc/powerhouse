@@ -1,3 +1,29 @@
+## 6.2.2-dev.16 (2026-07-25)
+
+### 🚀 Features
+
+- introducing new dedicated auth reducer ([997c48223](https://github.com/powerhouse-inc/powerhouse/commit/997c48223))
+- decide engine v1 ([6f5a523e4](https://github.com/powerhouse-inc/powerhouse/commit/6f5a523e4))
+- enforce auth init action be done by the creator, and include an auth carveout for creator ([2f7bf22f8](https://github.com/powerhouse-inc/powerhouse/commit/2f7bf22f8))
+- read paths in subgraph behind auth ([64906a805](https://github.com/powerhouse-inc/powerhouse/commit/64906a805))
+- v1 auth initial implementation, backward compatible ([cee699601](https://github.com/powerhouse-inc/powerhouse/commit/cee699601))
+- **reactor:** initial DCB pieces, not yet integrated ([9ecf9d9d5](https://github.com/powerhouse-inc/powerhouse/commit/9ecf9d9d5))
+
+### 🩹 Fixes
+
+- grant evaluation needs to ignore features that do not exist yet ([0c1d06396](https://github.com/powerhouse-inc/powerhouse/commit/0c1d06396))
+- resolve a contradiction in group membership ([39845a65c](https://github.com/powerhouse-inc/powerhouse/commit/39845a65c))
+- version 0 is reserved and only 1 and on is available for setting ([193ac4c56](https://github.com/powerhouse-inc/powerhouse/commit/193ac4c56))
+- auth errors need caught and loggs ([9519a4942](https://github.com/powerhouse-inc/powerhouse/commit/9519a4942))
+- code review fixes ([318cbefa9](https://github.com/powerhouse-inc/powerhouse/commit/318cbefa9))
+- try increasing timeout for garbage github cloud instances ([6557fb1a3](https://github.com/powerhouse-inc/powerhouse/commit/6557fb1a3))
+- document-view backfill fix for empty auth ([b2e5e068a](https://github.com/powerhouse-inc/powerhouse/commit/b2e5e068a))
+- **reactor:** fix a backwards compatibility issue where {} auth states were borked ([c345bd719](https://github.com/powerhouse-inc/powerhouse/commit/c345bd719))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.2.2-dev.15 (2026-07-24)
 
 This was a version bump only, there were no code changes.
