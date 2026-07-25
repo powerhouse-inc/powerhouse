@@ -1,10 +1,16 @@
 import type { AttachmentHash, AttachmentRef } from "@powerhousedao/reactor";
 import type {
   AttachmentHeader,
+  AttachmentBackendHealth,
+  AttachmentBackendKind,
+  AttachmentDownloadOptions,
+  AttachmentDownloadTarget,
+  AttachmentDownloadTargetOptions,
   AttachmentMetadata,
   AttachmentResponse,
   AttachmentTransportConfig,
   AttachmentUploadResult,
+  AttachmentUploadTarget,
   Reservation,
   ReserveAttachmentOptions,
   TransportFetchResult,
@@ -57,8 +63,30 @@ export interface IAttachmentService {
    *         expiresAtUtc. A wait inside get() would hold request handlers
    *         open across multi-second windows and hide retry policy where
    *         callers cannot tune it.
+   *
+   * The options form carries the document id that authorizes a remote
+   * download; local/direct readers ignore it. The bare-signal form remains
+   * supported for source compatibility.
    */
-  get(ref: AttachmentRef, signal?: AbortSignal): Promise<AttachmentResponse>;
+  get(
+    ref: AttachmentRef,
+    options?: AbortSignal | AttachmentDownloadOptions,
+  ): Promise<AttachmentResponse>;
+
+  /**
+   * Obtain the raw, document-authorized download target for a ref without
+   * transferring any bytes. Used to mint direct URLs (previews, share
+   * links): a presigned target URL is a self-contained public capability
+   * until its expiry. `expiresIn` (seconds) requests a caller-chosen
+   * lifetime; the server clamps it to its configured maximum.
+   *
+   * @throws when the underlying store cannot produce download targets
+   *         (local/direct stores serve bytes, not URLs).
+   */
+  getDownloadTarget(
+    ref: AttachmentRef,
+    options: AttachmentDownloadTargetOptions,
+  ): Promise<AttachmentDownloadTarget>;
 }
 
 /**
@@ -84,6 +112,9 @@ export interface IAttachmentUpload {
    * Clients use this to bound retry windows and populate the pending-upload queue.
    */
   readonly expiresAtUtc: string;
+
+  /** Direct transfer target returned by target-capable server backends. */
+  readonly uploadTarget?: AttachmentUploadTarget;
 
   /**
    * Stream attachment data through this handle.
@@ -147,8 +178,25 @@ export interface IAttachmentReader {
    * @throws AttachmentPending if the hash is reserved by an in-flight
    *         upload; bytes are not yet available. There is no store-level
    *         wait -- polling is the caller's responsibility.
+   *
+   * `documentId` is the authorization anchor for remote readers that must
+   * negotiate a download target; local/direct readers ignore it.
    */
-  get(hash: AttachmentHash, signal?: AbortSignal): Promise<AttachmentResponse>;
+  get(
+    hash: AttachmentHash,
+    signal?: AbortSignal,
+    documentId?: string,
+  ): Promise<AttachmentResponse>;
+
+  /**
+   * Optional capability: readers that negotiate download targets with a
+   * remote control plane can expose the raw target so callers may mint
+   * direct URLs (previews, share links). Local/direct readers omit it.
+   */
+  getDownloadTarget?(
+    hash: AttachmentHash,
+    options: AttachmentDownloadTargetOptions,
+  ): Promise<AttachmentDownloadTarget>;
 }
 
 /**
@@ -291,4 +339,27 @@ export interface IReservationStore {
  */
 export interface IAttachmentUploadFactory {
   createUpload(reservation: Reservation): IAttachmentUpload;
+}
+
+/**
+ * Server-side storage capability boundary. Authorization happens before these
+ * methods are called; actor, policy, and document concepts intentionally do
+ * not cross into the byte-storage backend.
+ */
+export interface IAttachmentBackend {
+  readonly kind: AttachmentBackendKind;
+  prepareUploadTarget(
+    reservation: Reservation,
+  ): Promise<AttachmentUploadTarget>;
+  /**
+   * `ttlSeconds` overrides the backend's configured download TTL for this
+   * one target (used for caller-chosen share-link lifetimes). Callers are
+   * responsible for bounding it; backends may still reject absurd values.
+   */
+  prepareDownloadTarget(
+    hash: AttachmentHash,
+    ttlSeconds?: number,
+  ): Promise<AttachmentDownloadTarget>;
+  exists(hash: AttachmentHash): Promise<boolean>;
+  health(): Promise<AttachmentBackendHealth>;
 }

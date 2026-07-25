@@ -1,6 +1,7 @@
 import { PGlite } from "@electric-sql/pglite";
 import {
   AttachmentBuilder,
+  S3AttachmentBackend,
   type AttachmentBuildResult,
   createRemoteAttachmentService,
 } from "@powerhousedao/reactor-attachments";
@@ -12,7 +13,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import type { Server } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { registerAttachmentRoutes } from "../../src/attachments/index.js";
 
 // SHA-256 of the empty string. If body-parser drains the upload body, the
@@ -99,5 +100,101 @@ describe("attachment routes through the real Express middleware stack", () => {
       off += c.byteLength;
     }
     expect(new TextDecoder().decode(merged)).toBe(payload);
+  });
+});
+
+describe("authenticated S3 reservation production path", () => {
+  it("returns uploadTarget and refuses the legacy proxy PUT", async () => {
+    const pglite = new PGlite();
+    const db = new Kysely<unknown>({ dialect: new PGliteDialect(pglite) });
+    const storagePath = await mkdtemp(join(tmpdir(), "switchboard-s3-int-"));
+    const send = vi.fn().mockResolvedValue({});
+    const presign = vi.fn().mockResolvedValue("https://signed.example.test/x");
+    const backend = new S3AttachmentBackend(
+      db.withSchema("attachments") as never,
+      {
+        endpoint: "https://s3.example.test",
+        region: "eu-central",
+        bucket: "attachments",
+        accessKeyId: "test-key",
+        secretAccessKey: "test-secret",
+        prefix: "attachments",
+        forcePathStyle: false,
+        uploadTtlSeconds: 900,
+        downloadTtlSeconds: 300,
+      },
+      { client: { send }, presign },
+    );
+    const attachments = await new AttachmentBuilder(db, storagePath)
+      .withBackend(backend)
+      .build();
+    const { adapter } = await createHttpAdapter("express");
+    adapter.setupMiddleware({});
+    const verifyBearer = vi.fn().mockResolvedValue({
+      user: { address: "0xabc", chainId: 1, networkId: "mainnet" },
+      admins: [],
+      auth_enabled: true,
+    });
+    registerAttachmentRoutes({
+      httpAdapter: adapter,
+      attachments,
+      authService: { verifyBearer },
+    } as unknown as API);
+    const server = await adapter.listen(0);
+    const address = server.address();
+    if (!address || typeof address === "string") throw new Error("no addr");
+    const baseUrl = `http://127.0.0.1:${address.port}`;
+    const hash = "b".repeat(64);
+
+    try {
+      const response = await fetch(`${baseUrl}/attachments/reservations`, {
+        method: "POST",
+        headers: {
+          authorization: "Bearer valid-token",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          mimeType: "application/pdf",
+          fileName: "invoice.pdf",
+          clientHash: hash,
+          sizeBytes: 42,
+        }),
+      });
+      const responseText = await response.text();
+      expect(response.status, responseText).toBe(201);
+      const body = JSON.parse(responseText) as {
+        reservationId: string;
+        uploadTarget: { kind: string; method: string; url: string };
+      };
+      expect(body.uploadTarget).toMatchObject({
+        kind: "presigned-put",
+        method: "PUT",
+        url: "https://signed.example.test/x",
+      });
+      expect(verifyBearer).toHaveBeenCalledWith("Bearer valid-token");
+      expect(presign).toHaveBeenCalledOnce();
+      expect(send).not.toHaveBeenCalled();
+
+      const proxy = await fetch(
+        `${baseUrl}/attachments/reservations/${body.reservationId}`,
+        {
+          method: "PUT",
+          headers: { authorization: "Bearer valid-token" },
+          body: "must-not-reach-filesystem",
+        },
+      );
+      expect(proxy.status).toBe(405);
+      expect(await proxy.json()).toEqual({
+        error: "Use the reservation uploadTarget for S3 uploads",
+      });
+      await expect(
+        attachments.reservations.get(body.reservationId),
+      ).resolves.toBeDefined();
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+      attachments.destroy();
+      await db.destroy();
+      await rm(storagePath, { recursive: true, force: true });
+    }
   });
 });

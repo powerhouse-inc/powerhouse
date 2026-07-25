@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import type { AttachmentRef } from "@powerhousedao/reactor";
 import { AttachmentService } from "../../src/attachment-service.js";
 import { AttachmentNotFound, InvalidAttachmentRef } from "../../src/errors.js";
@@ -104,6 +104,39 @@ describe("AttachmentService", () => {
       store.stat.mockRejectedValue(new AttachmentNotFound(TEST_HASH));
 
       await expect(service.stat(TEST_REF)).rejects.toThrow(AttachmentNotFound);
+    });
+  });
+
+  describe("getDownloadTarget", () => {
+    it("delegates to the store with the parsed hash when supported", async () => {
+      const target = {
+        kind: "presigned-get",
+        method: "GET",
+        url: "https://bucket.example.com/x?sig=1",
+        headers: {},
+        expiresAtUtc: "2026-08-01T00:00:00.000Z",
+      };
+      const spy = vi.fn().mockResolvedValue(target);
+      (
+        store as unknown as { getDownloadTarget: typeof spy }
+      ).getDownloadTarget = spy;
+
+      const result = await service.getDownloadTarget(TEST_REF, {
+        documentId: "doc-1",
+        expiresIn: 60,
+      });
+
+      expect(result).toBe(target);
+      expect(spy).toHaveBeenCalledWith(TEST_HASH, {
+        documentId: "doc-1",
+        expiresIn: 60,
+      });
+    });
+
+    it("rejects when the store cannot produce download targets", async () => {
+      await expect(
+        service.getDownloadTarget(TEST_REF, { documentId: "doc-1" }),
+      ).rejects.toThrow(/not supported by this attachment store/);
     });
   });
 

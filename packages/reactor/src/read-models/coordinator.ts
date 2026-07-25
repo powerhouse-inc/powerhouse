@@ -9,7 +9,11 @@ import {
   type ReadModelIndexingStage,
   type Unsubscribe,
 } from "../events/types.js";
-import type { IReadModel, IReadModelCoordinator } from "./interfaces.js";
+import type {
+  ILiveReadModelCoordinator,
+  IReadModel,
+  ReadModelRegistrationStage,
+} from "./interfaces.js";
 
 /**
  * Coordinates read model synchronization by listening to operation write events
@@ -18,7 +22,7 @@ import type { IReadModel, IReadModelCoordinator } from "./interfaces.js";
  * serialized so the executor can return to dispatch without holding ordering
  * implicitly.
  */
-export class ReadModelCoordinator implements IReadModelCoordinator {
+export class ReadModelCoordinator implements ILiveReadModelCoordinator {
   private unsubscribe?: Unsubscribe;
   private isRunning = false;
   private readonly chains = new Map<string, Promise<void>>();
@@ -77,6 +81,19 @@ export class ReadModelCoordinator implements IReadModelCoordinator {
 
   getChainDepth(): number {
     return this.chains.size;
+  }
+
+  addReadModel(readModel: IReadModel, stage: ReadModelRegistrationStage): void {
+    if (this.readModels.some(({ name }) => name === readModel.name)) {
+      throw new Error(`Read model "${readModel.name}" is already registered`);
+    }
+
+    if (stage === "pre_ready") {
+      this.preReady.push(readModel);
+    } else {
+      this.postReady.push(readModel);
+    }
+    this.readModels.push(readModel);
   }
 
   private handleWriteReady(event: JobWriteReadyEvent): void {

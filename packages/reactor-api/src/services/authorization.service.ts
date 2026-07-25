@@ -12,7 +12,7 @@ import type {
  * must key on the canonical id, so branding it forces every caller to resolve a
  * slug to its id before consulting this service, closing the slug-aliasing
  * bypass (S-C1). The only sanctioned cast from string to CanonicalDocumentId
- * lives in the BaseSubgraph resolution helpers, immediately after the shared
+ * lives in createCanonicalDocumentIdResolver, immediately after the shared
  * resolveIdOrSlug lookup returns.
  */
 export type CanonicalDocumentId = string & {

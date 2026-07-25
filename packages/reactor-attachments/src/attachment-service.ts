@@ -6,6 +6,7 @@ import {
 } from "./errors.js";
 import type {
   IAttachmentReader,
+  IAttachmentBackend,
   IAttachmentService,
   IAttachmentUpload,
   IAttachmentUploadFactory,
@@ -13,6 +14,9 @@ import type {
 } from "./interfaces.js";
 import { createRef, parseRef } from "./ref.js";
 import type {
+  AttachmentDownloadOptions,
+  AttachmentDownloadTarget,
+  AttachmentDownloadTargetOptions,
   AttachmentHeader,
   AttachmentResponse,
   ReserveAttachmentOptions,
@@ -25,11 +29,15 @@ export class AttachmentService implements IAttachmentService {
     private readonly store: IAttachmentReader,
     private readonly reservations: IReservationStore,
     private readonly uploadFactory: IAttachmentUploadFactory,
+    private readonly backend?: IAttachmentBackend,
   ) {}
 
   async reserve(options: ReserveAttachmentOptions): Promise<IAttachmentUpload> {
     if (options.clientHash !== undefined) {
       return this.reserveHashFirst(options);
+    }
+    if (this.backend?.kind === "s3") {
+      throw new Error("S3 attachment reservations require a client hash");
     }
     const reservation = await this.reservations.create(options);
     return this.uploadFactory.createUpload(reservation);
@@ -42,10 +50,32 @@ export class AttachmentService implements IAttachmentService {
 
   async get(
     ref: AttachmentRef,
-    signal?: AbortSignal,
+    options?: AbortSignal | AttachmentDownloadOptions,
   ): Promise<AttachmentResponse> {
     const { hash } = parseRef(ref);
-    return this.store.get(hash, signal);
+    const normalized =
+      options === undefined || options instanceof AbortSignal
+        ? { signal: options }
+        : options;
+    return normalized.documentId === undefined
+      ? this.store.get(hash, normalized.signal)
+      : this.store.get(hash, normalized.signal, normalized.documentId);
+  }
+
+  getDownloadTarget(
+    ref: AttachmentRef,
+    options: AttachmentDownloadTargetOptions,
+  ): Promise<AttachmentDownloadTarget> {
+    const { hash } = parseRef(ref);
+    const getTarget = this.store.getDownloadTarget?.bind(this.store);
+    if (getTarget === undefined) {
+      return Promise.reject(
+        new Error(
+          "Download targets are not supported by this attachment store: only remote stores negotiate direct URLs",
+        ),
+      );
+    }
+    return getTarget(hash, options);
   }
 
   private async reserveHashFirst(
@@ -85,11 +115,21 @@ export class AttachmentService implements IAttachmentService {
       }
     }
 
-    if (existingHeader !== null && existingHeader.status === "available") {
-      throw new AttachmentAlreadyExists(normalized, createRef(normalized));
+    if (existingHeader !== null) {
+      if (this.backend?.kind === "s3") {
+        if (await this.backend.exists(normalized)) {
+          throw new AttachmentAlreadyExists(normalized, createRef(normalized));
+        }
+      } else if (existingHeader.status === "available") {
+        throw new AttachmentAlreadyExists(normalized, createRef(normalized));
+      }
     }
 
     const reservation = await this.reservations.create(normalizedOptions);
-    return this.uploadFactory.createUpload(reservation);
+    if (this.backend?.kind !== "s3") {
+      return this.uploadFactory.createUpload(reservation);
+    }
+    const uploadTarget = await this.backend.prepareUploadTarget(reservation);
+    return this.uploadFactory.createUpload({ ...reservation, uploadTarget });
   }
 }

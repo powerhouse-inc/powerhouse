@@ -22,6 +22,7 @@ import type { DocumentModelModule } from "document-model";
 import { logger } from "document-model";
 import dotenv from "dotenv";
 import { initializeAndStartAPI } from "./server.js";
+import type { ClientInitializerDependencies } from "./server.js";
 
 dotenv.config();
 
@@ -35,7 +36,10 @@ async function main() {
 
   process.env.LOG_LEVEL = process.env.LOG_LEVEL || "info";
 
-  const initializeClient = async (documentModels: DocumentModelModule[]) => {
+  const initializeClient = async (
+    documentModels: DocumentModelModule[],
+    _dependencies: ClientInitializerDependencies,
+  ) => {
     const eventBus = new EventBus();
     const builder = new ReactorBuilder()
       .withEventBus(eventBus)

@@ -21,6 +21,7 @@ import type {
   MockReservationStore,
   MockUploadFactory,
 } from "../factories.js";
+import type { IAttachmentBackend } from "../../src/interfaces.js";
 
 const VALID_HASH = "a".repeat(64) as AttachmentHash;
 const VALID_REF: AttachmentRef = createRef(VALID_HASH);
@@ -370,6 +371,110 @@ describe("AttachmentService.reserve hash-first mode", () => {
       });
 
       expect(handle.ref).toBeNull();
+    });
+  });
+
+  describe("S3 backend orchestration", () => {
+    const uploadTarget = {
+      kind: "presigned-put" as const,
+      method: "PUT" as const,
+      url: "https://signed.example.test/object",
+      headers: { "content-type": "application/pdf" },
+      expiresAtUtc: "2026-01-01T00:15:00.000Z",
+    };
+
+    function createBackend(exists: boolean) {
+      return {
+        kind: "s3",
+        exists: vi.fn().mockResolvedValue(exists),
+        prepareUploadTarget: vi.fn().mockResolvedValue(uploadTarget),
+        prepareDownloadTarget: vi.fn(),
+        health: vi.fn().mockResolvedValue({ kind: "s3", ready: true }),
+      } satisfies IAttachmentBackend;
+    }
+
+    it("uses provider existence for an available metadata candidate", async () => {
+      store.stat.mockResolvedValue(AVAILABLE_HEADER);
+      const backend = createBackend(true);
+      const s3Service = new AttachmentService(
+        store,
+        reservations,
+        uploadFactory,
+        backend,
+      );
+
+      await expect(
+        s3Service.reserve({
+          mimeType: "application/pdf",
+          fileName: "invoice",
+          clientHash: VALID_HASH,
+          sizeBytes: 512,
+        }),
+      ).rejects.toBeInstanceOf(AttachmentAlreadyExists);
+      expect(backend.exists).toHaveBeenCalledWith(VALID_HASH);
+      expect(reservations.create).not.toHaveBeenCalled();
+    });
+
+    it("creates a retained reservation and target when the candidate object is missing", async () => {
+      store.stat.mockResolvedValue(AVAILABLE_HEADER);
+      reservations.create.mockResolvedValue(MOCK_RESERVATION);
+      const backend = createBackend(false);
+      const s3Service = new AttachmentService(
+        store,
+        reservations,
+        uploadFactory,
+        backend,
+      );
+
+      await s3Service.reserve({
+        mimeType: "application/pdf",
+        fileName: "invoice",
+        clientHash: VALID_HASH,
+        sizeBytes: 512,
+      });
+      expect(backend.exists).toHaveBeenCalledWith(VALID_HASH);
+      expect(backend.prepareUploadTarget).toHaveBeenCalledWith(
+        MOCK_RESERVATION,
+      );
+      expect(uploadFactory.createUpload).toHaveBeenCalledWith({
+        ...MOCK_RESERVATION,
+        uploadTarget,
+      });
+      expect(reservations.delete).not.toHaveBeenCalled();
+    });
+
+    it("does not HEAD when no metadata candidate exists", async () => {
+      store.stat.mockRejectedValue(new AttachmentNotFound(VALID_HASH));
+      reservations.create.mockResolvedValue(MOCK_RESERVATION);
+      const backend = createBackend(false);
+      const s3Service = new AttachmentService(
+        store,
+        reservations,
+        uploadFactory,
+        backend,
+      );
+
+      await s3Service.reserve({
+        mimeType: "application/pdf",
+        fileName: "invoice",
+        clientHash: VALID_HASH,
+        sizeBytes: 512,
+      });
+      expect(backend.exists).not.toHaveBeenCalled();
+      expect(backend.prepareUploadTarget).toHaveBeenCalledOnce();
+    });
+
+    it("rejects upload-first before creating an S3 reservation", async () => {
+      const s3Service = new AttachmentService(
+        store,
+        reservations,
+        uploadFactory,
+        createBackend(false),
+      );
+      await expect(
+        s3Service.reserve({ mimeType: "application/pdf", fileName: "invoice" }),
+      ).rejects.toThrow("S3 attachment reservations require a client hash");
+      expect(reservations.create).not.toHaveBeenCalled();
     });
   });
 });

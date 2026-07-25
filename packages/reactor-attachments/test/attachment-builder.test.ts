@@ -6,6 +6,8 @@ import { PGlite } from "@electric-sql/pglite";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { AttachmentBuilder } from "../src/attachment-builder.js";
+import { AttachmentAlreadyExists } from "../src/errors.js";
+import { S3AttachmentBackend } from "../src/storage/s3/backend.js";
 import { createRef } from "../src/ref.js";
 import type { IAttachmentTransport } from "../src/interfaces.js";
 import { streamFromString, streamToBytes, computeHash } from "./factories.js";
@@ -180,6 +182,57 @@ describe("AttachmentBuilder", () => {
     });
     const result = await upload.send(streamFromString(TEST_CONTENT));
     expect(result.hash).toBe(TEST_HASH);
+  });
+
+  it("withBackend() connects S3 dedup and targets to the production service", async () => {
+    const ctx = await createTestContext();
+    cleanup = ctx.cleanup;
+    const send = vi.fn().mockResolvedValue({});
+    const presign = vi.fn().mockResolvedValue("https://signed.example.test/x");
+    const backend = new S3AttachmentBackend(
+      ctx.db.withSchema("attachments") as never,
+      {
+        endpoint: "https://s3.example.test",
+        region: "eu-central",
+        bucket: "attachments",
+        accessKeyId: "test-key",
+        secretAccessKey: "test-secret",
+        prefix: "attachments",
+        forcePathStyle: false,
+        uploadTtlSeconds: 900,
+        downloadTtlSeconds: 300,
+      },
+      { client: { send }, presign },
+    );
+    const built = await new AttachmentBuilder(ctx.db, ctx.storagePath)
+      .withBackend(backend)
+      .build();
+
+    const upload = await built.service.reserve({
+      mimeType: "text/plain",
+      fileName: "test.txt",
+      clientHash: TEST_HASH,
+      sizeBytes: TEST_BYTES.byteLength,
+    });
+    expect(upload.uploadTarget).toMatchObject({ kind: "presigned-put" });
+    expect(presign).toHaveBeenCalledOnce();
+    expect(send).not.toHaveBeenCalled();
+    await expect(upload.send(streamFromString(TEST_CONTENT))).rejects.toThrow(
+      "S3 attachment upload must use the presigned target",
+    );
+    await expect(
+      built.reservations.get(upload.reservationId),
+    ).resolves.toBeDefined();
+
+    await expect(
+      built.service.reserve({
+        mimeType: "text/plain",
+        fileName: "test.txt",
+        clientHash: TEST_HASH,
+        sizeBytes: TEST_BYTES.byteLength,
+      }),
+    ).rejects.toBeInstanceOf(AttachmentAlreadyExists);
+    expect(send).toHaveBeenCalledOnce();
   });
 
   describe("reservation sweep timer", () => {

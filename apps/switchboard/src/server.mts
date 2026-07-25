@@ -19,6 +19,7 @@ import {
   PackageManagementService,
   PackagesSubgraph,
   initializeAndStartAPI,
+  type ClientInitializerDependencies,
   type IPackageLoader,
 } from "@powerhousedao/reactor-api";
 import { httpsHooksPath } from "@powerhousedao/reactor-api/https-hooks";
@@ -45,6 +46,10 @@ import path from "path";
 import { Pool } from "pg";
 import type { ViteDevServer } from "vite";
 import { registerAttachmentRoutes } from "./attachments/index.js";
+import {
+  registerAttachmentReferenceReadModel,
+  registerAttachmentReferenceReadModelOnModule,
+} from "./attachment-reference-read-model.mjs";
 import { applySwitchboardReactorDefaults } from "./builder-defaults.mjs";
 import {
   buildWorkerDbConfig,
@@ -376,12 +381,20 @@ async function initServer(
   }
 
   const reactorLogger = logger.child(["reactor"]);
-  const initializeClient = async (documentModels: DocumentModelModule[]) => {
+  const initializeClient = async (
+    documentModels: DocumentModelModule[],
+    { attachmentReferenceWriter }: ClientInitializerDependencies,
+  ) => {
     // When the caller hands us a pre-built reactor module, reuse it
     // instead of constructing one. The caller owns the reactor lifecycle
     // and must call `switchboard.shutdown()` from their own teardown to
     // drain /graphql, MCP, attachments, etc.
     if (options.reactor) {
+      const attachmentReferenceProjection =
+        await registerAttachmentReferenceReadModelOnModule(
+          options.reactor,
+          attachmentReferenceWriter,
+        );
       if (options.reactor.reactorModule) {
         const instrumentation = new ReactorInstrumentation(
           options.reactor.reactorModule,
@@ -391,7 +404,10 @@ async function initServer(
           "Reactor metrics instrumentation started (using caller-provided reactor)",
         );
       }
-      return { module: options.reactor };
+      return {
+        module: options.reactor,
+        attachmentReferenceProjection,
+      };
     }
 
     const baseKysely = await createReactorKysely({
@@ -492,6 +508,11 @@ async function initServer(
       },
     );
 
+    registerAttachmentReferenceReadModel(reactorBuilder, {
+      baseKysely: baseKysely as unknown as Kysely<unknown>,
+      attachmentReferenceWriter,
+    });
+
     reactorBuilder.withShutdownHook(async () => {
       if (apiRef.current) await apiRef.current.dispose();
     });
@@ -513,7 +534,11 @@ async function initServer(
       readModel: driveNodeView,
     });
 
-    return { module, reactorDriveClient };
+    return {
+      module,
+      reactorDriveClient,
+      attachmentReferenceProjection: { status: "available" as const },
+    };
   };
 
   let defaultDriveUrl: undefined | string = undefined;
@@ -766,6 +791,7 @@ async function initServer(
     api,
     reactor: client,
     attachmentService,
+    attachmentReferenceProjection: api.attachmentReferenceProjection,
     renown,
     port: serverPort,
     shutdown: () => api.dispose(),

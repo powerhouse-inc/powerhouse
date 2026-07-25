@@ -223,6 +223,7 @@ export const getDocumentModelTypeDefs = (
   // add the mutation and query types
   const schema = gql`
     scalar JSONObject
+    scalar AttachmentRef
     ${scalarsTypeDefs.join("\n").replaceAll(";", "")}
 
     type PHOperationContext {
@@ -983,6 +984,7 @@ function generateNewApiSchema(
   return gql`
     scalar DateTime
     scalar JSONObject
+    scalar AttachmentRef
 
     ${revisionType}
 

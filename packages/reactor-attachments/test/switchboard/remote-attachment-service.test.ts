@@ -618,6 +618,47 @@ describe("RemoteAttachmentStore", () => {
     });
   });
 
+  it("getDownloadTarget appends expiresIn to the query and parses the target", async () => {
+    const target = {
+      kind: "presigned-get",
+      method: "GET",
+      url: "https://bucket.example.com/attachments/aa?sig=1",
+      headers: {},
+      expiresAtUtc: "2026-08-01T00:00:00.000Z",
+    };
+    mockFetch.mockResolvedValue(mockResponse(200, { json: target }));
+
+    const result = await store.getDownloadTarget("hash-1", {
+      documentId: "doc-1",
+      expiresIn: 3600,
+    });
+
+    expect(result).toEqual(target);
+    const calledUrl = (mockFetch.mock.calls[0] as [string])[0];
+    expect(calledUrl).toBe(
+      `${REMOTE_URL}/attachments/hash-1/download-target?documentId=doc-1&expiresIn=3600`,
+    );
+  });
+
+  it("getDownloadTarget omits expiresIn when not requested", async () => {
+    mockFetch.mockResolvedValue(
+      mockResponse(200, {
+        json: {
+          kind: "presigned-get",
+          method: "GET",
+          url: "https://bucket.example.com/attachments/aa?sig=1",
+          headers: {},
+          expiresAtUtc: "2026-08-01T00:00:00.000Z",
+        },
+      }),
+    );
+
+    await store.getDownloadTarget("hash-1", { documentId: "doc-1" });
+
+    const calledUrl = (mockFetch.mock.calls[0] as [string])[0];
+    expect(calledUrl).not.toContain("expiresIn");
+  });
+
   it("get returns AttachmentResponse with header populated from Attachment-Metadata (incl. server-sourced timestamps)", async () => {
     const body = streamFromString("file data");
     mockFetch.mockResolvedValue(

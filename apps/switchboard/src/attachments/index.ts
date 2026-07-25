@@ -3,6 +3,7 @@ import { mountAuthenticatedNodeRoute } from "./mount-auth.js";
 import {
   makeDeleteReservationHandler,
   makeDownloadHandler,
+  makeDownloadTargetHandler,
   makeGetReservationHandler,
   makeReserveHandler,
   makeStatHandler,
@@ -45,6 +46,16 @@ export function registerAttachmentRoutes(api: API): void {
     "HEAD",
     "/attachments/:hash",
     makeStatHandler(attachments),
+  );
+
+  // Anonymous-capable: authorization is purely the document's — canRead plus
+  // the reference index decide, exactly as they do for the document itself.
+  mountAuthenticatedNodeRoute(
+    api,
+    "GET",
+    "/attachments/:hash/download-target",
+    makeDownloadTargetHandler(attachments, api.attachmentAccess),
+    { allowAnonymous: true },
   );
 
   mountAuthenticatedNodeRoute(
