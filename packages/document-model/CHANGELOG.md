@@ -1,3 +1,13 @@
+## 6.2.2-dev.17 (2026-07-26)
+
+### 🚀 Features
+
+- **attachments:** S3-compatible storage, direct transfers, and document-derived authorization ([#2884](https://github.com/powerhouse-inc/powerhouse/pull/2884))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.2.2-dev.16 (2026-07-25)
 
 ### 🚀 Features
