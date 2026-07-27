@@ -1,3 +1,13 @@
+## 6.2.2-dev.20 (2026-07-27)
+
+### 🩹 Fixes
+
+- **renown:** start Privy OAuth logins at the provider ([decd6c971](https://github.com/powerhouse-inc/powerhouse/commit/decd6c971))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.2-dev.19 (2026-07-27)
 
 ### 🩹 Fixes
