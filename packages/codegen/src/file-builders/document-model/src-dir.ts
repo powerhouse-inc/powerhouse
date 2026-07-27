@@ -74,15 +74,22 @@ export async function makeReducerOperationHandlerForModule({
             importSpecifier.getName() === operationsInterfaceTypeName,
         ),
   );
-  if (existingOperationsInterfaceTypeImport) {
-    existingOperationsInterfaceTypeImport.remove();
-  }
 
-  sourceFile.addImportDeclaration({
-    namedImports: [operationsInterfaceTypeName],
-    moduleSpecifier: versionImportPath,
-    isTypeOnly: true,
-  });
+  // Only the module specifier is ours to manage here — it has to follow the
+  // model to a new version directory. Everything else in the declaration
+  // belongs to whoever wrote the reducer: authors routinely import state enums
+  // and other types on the same line as the operations interface. Removing the
+  // declaration and re-adding it with just our own name (as this used to do)
+  // silently deleted those siblings, and the reducer stopped compiling.
+  if (existingOperationsInterfaceTypeImport) {
+    existingOperationsInterfaceTypeImport.setModuleSpecifier(versionImportPath);
+  } else {
+    sourceFile.addImportDeclaration({
+      namedImports: [operationsInterfaceTypeName],
+      moduleSpecifier: versionImportPath,
+      isTypeOnly: true,
+    });
+  }
 
   // Read operation names from the generated operations interface's AST members;
   // it's a source file in this project already, so no module resolution needed.
