@@ -1,3 +1,13 @@
+## 6.2.2-dev.21 (2026-07-27)
+
+### 🩹 Fixes
+
+- **codegen:** stop overwriting hand-written files and fix custom-scalar mocks ([#2889](https://github.com/powerhouse-inc/powerhouse/pull/2889))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.2.2-dev.20 (2026-07-27)
 
 This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.
