@@ -108,6 +108,56 @@ async function isDocumentInLocation(
   return { isDuplicate: false };
 }
 
+/**
+ * Recognizes the failure raised when CREATE_DOCUMENT targets a document id the
+ * reactor still owns.
+ *
+ * Deleting a document appends a tombstone but retains its operation history, so
+ * the id stays owned. No read path reveals this before the write: the document
+ * view, `resolveIdOrSlug` and `getOperations` all hide soft-deleted documents,
+ * making a tombstoned id indistinguishable from an unused one. The operation
+ * store is the only component that still sees the history, and it rejects the
+ * create at revision 0. Callers recover by importing under a fresh id.
+ */
+export function isDocumentIdTakenError(error: unknown): boolean {
+  let current: unknown = error;
+  while (current instanceof Error) {
+    if (/revision mismatch/i.test(current.message)) {
+      return true;
+    }
+    current = current.cause;
+  }
+  return false;
+}
+
+/**
+ * Removes the drive node left behind by a create that failed on a taken id.
+ *
+ * `drives.addFile` submits the document create and the drive's ADD_FILE as two
+ * jobs, and their `dependsOn` link only orders them — it does not gate on
+ * success. A create rejected for a taken id therefore still commits the node,
+ * which then points at a document that was never created. Left in place it also
+ * collides with the retry, which would inherit a "(copy)" name.
+ *
+ * Removal is best effort: `removeNode` also tombstones the child document, which
+ * here does not exist, so it reports a failure after the node is already gone.
+ */
+async function removeDanglingNode(
+  driveId: string,
+  nodeId: string,
+): Promise<void> {
+  const reactorClient = window.ph?.reactorClient;
+  if (!reactorClient) {
+    return;
+  }
+
+  try {
+    await reactorClient.drives.removeNode(driveId, nodeId);
+  } catch {
+    // The node removal commits even when the child tombstone step reports failure.
+  }
+}
+
 function getDocumentTypeIcon(
   document: PHDocument,
 ): DocumentTypeIcon | undefined {
@@ -413,49 +463,63 @@ export async function addFile(
 
   const document = await loadFile(file);
 
-  let duplicateId = false;
-
   const reactorClient = window.ph?.reactorClient;
   if (!reactorClient) {
     throw new Error("ReactorClient not initialized");
   }
 
+  let duplicateId = false;
   try {
     await reactorClient.get(document.header.id);
     duplicateId = true;
   } catch {
-    // document id not found
+    // A rejection does not prove the id is free: the view hides soft-deleted
+    // documents whose retained history still owns it. That case is recovered
+    // below, once the create surfaces it.
   }
 
-  const documentId = duplicateId ? generateId() : document.header.id;
-  const header = createPresignedHeader(
-    documentId,
-    document.header.documentType,
-  );
-  header.lastModifiedAtUtcIso = document.header.createdAtUtcIso;
-  header.meta = document.header.meta;
-  header.name = name || document.header.name;
+  const buildInitialDocument = (id: string): PHDocument => {
+    const header = createPresignedHeader(id, document.header.documentType);
+    header.lastModifiedAtUtcIso = document.header.createdAtUtcIso;
+    header.meta = document.header.meta;
+    header.name = name || document.header.name;
 
-  // copy the document at it's initial state
-  const initialDocument = {
-    ...document,
-    header,
-    state: document.initialState,
-    operations: Object.keys(document.operations).reduce((acc, key) => {
-      acc[key] = [];
-      return acc;
-    }, {} as DocumentOperations),
+    // copy the document at it's initial state
+    return {
+      ...document,
+      header,
+      state: document.initialState,
+      operations: Object.keys(document.operations).reduce((acc, key) => {
+        acc[key] = [];
+        return acc;
+      }, {} as DocumentOperations),
+    };
   };
 
-  await addDocument(
-    driveId,
-    name || document.header.name,
-    document.header.documentType,
-    parentFolder,
-    initialDocument,
-    documentId,
-    document.header.meta?.preferredEditor,
-  );
+  const createDocumentWithId = (id: string) =>
+    addDocument(
+      driveId,
+      name || document.header.name,
+      document.header.documentType,
+      parentFolder,
+      buildInitialDocument(id),
+      id,
+      document.header.meta?.preferredEditor,
+    );
+
+  let documentId = duplicateId ? generateId() : document.header.id;
+  try {
+    await createDocumentWithId(documentId);
+  } catch (createError) {
+    if (!isDocumentIdTakenError(createError)) {
+      throw createError;
+    }
+    // The id is owned by a soft-deleted document — import as a copy, after
+    // clearing the node the failed create left pointing at nothing.
+    await removeDanglingNode(driveId, documentId);
+    documentId = generateId();
+    await createDocumentWithId(documentId);
+  }
 
   // then add all the operations in chunks (exclude document-scope ops —
   // the reactor already generated CREATE_DOCUMENT + UPGRADE_DOCUMENT above)
@@ -564,38 +628,54 @@ export async function addFileWithProgress(
       await reactor.get(document.header.id);
       duplicateId = true;
     } catch {
-      // document id not found
+      // A rejection does not prove the id is free: the view hides soft-deleted
+      // documents whose retained history still owns it. That case is recovered
+      // below, once the create surfaces it.
     }
 
-    const documentId = duplicateId ? generateId() : document.header.id;
-    const header = createPresignedHeader(
-      documentId,
-      document.header.documentType,
-    );
-    header.lastModifiedAtUtcIso = document.header.createdAtUtcIso;
-    header.meta = document.header.meta;
-    header.name = name || document.header.name;
+    const buildInitialDocument = (id: string): PHDocument => {
+      const header = createPresignedHeader(id, document.header.documentType);
+      header.lastModifiedAtUtcIso = document.header.createdAtUtcIso;
+      header.meta = document.header.meta;
+      header.name = name || document.header.name;
 
-    // copy the document at it's initial state
-    const initialDocument = {
-      ...document,
-      header,
-      state: document.initialState,
-      operations: Object.keys(document.operations).reduce((acc, key) => {
-        acc[key] = [];
-        return acc;
-      }, {} as DocumentOperations),
+      // copy the document at it's initial state
+      return {
+        ...document,
+        header,
+        state: document.initialState,
+        operations: Object.keys(document.operations).reduce((acc, key) => {
+          acc[key] = [];
+          return acc;
+        }, {} as DocumentOperations),
+      };
     };
 
-    const fileNode = await addDocument(
-      driveId,
-      name || document.header.name,
-      document.header.documentType,
-      parentFolder,
-      initialDocument,
-      documentId,
-      document.header.meta?.preferredEditor,
-    );
+    const createDocumentWithId = (id: string) =>
+      addDocument(
+        driveId,
+        name || document.header.name,
+        document.header.documentType,
+        parentFolder,
+        buildInitialDocument(id),
+        id,
+        document.header.meta?.preferredEditor,
+      );
+
+    let documentId = duplicateId ? generateId() : document.header.id;
+    let fileNode;
+    try {
+      fileNode = await createDocumentWithId(documentId);
+    } catch (createError) {
+      if (!isDocumentIdTakenError(createError)) {
+        throw createError;
+      }
+      // The id is owned by a soft-deleted document — import as a copy, after
+      // clearing the node the failed create left pointing at nothing.
+      await removeDanglingNode(driveId, documentId);
+      documentId = generateId();
+      fileNode = await createDocumentWithId(documentId);
+    }
 
     if (!fileNode) {
       throw new Error("There was an error adding file");
