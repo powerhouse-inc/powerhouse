@@ -1,3 +1,13 @@
+## 6.2.2-dev.19 (2026-07-27)
+
+### 🩹 Fixes
+
+- **renown:** complete Privy OAuth-redirect sign-in and rework wallet auth ([c91000842](https://github.com/powerhouse-inc/powerhouse/commit/c91000842))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.2-dev.18 (2026-07-27)
 
 This was a version bump only, there were no code changes.
