@@ -79,10 +79,19 @@ export const scalarsValidation = {
 const DATE_LIKE_SCALARS = new Set(["Date", "DateTime"]);
 
 // State-field scalar -> valid mock literal (emitted verbatim into generated tests).
+//
+// Two groups need an entry here. The date-like and URL scalars validate more
+// strictly than zocker generates, so a literal keeps the generated test green.
+// `AttachmentRef` and `Address` are a harder case: they are the scalars in
+// `scalarsValidation` above that compile to `z.custom(...)`, and zocker cannot
+// synthesise a value satisfying an arbitrary predicate at all — without a
+// literal here the generated test throws on its first run.
 const SCALAR_MOCK_OVERRIDES: Record<string, string> = {
   Date: `"2024-01-01T00:00:00.000Z"`,
   DateTime: `"2024-01-01T00:00:00.000Z"`,
   URL: `"https://example.com"`,
+  AttachmentRef: `"attachment://v1:${"a".repeat(64)}"`,
+  Address: `"eip155:0x${"0".repeat(40)}"`,
 };
 
 function unwrapNamedTypeName(type: TypeNode): string | null {
