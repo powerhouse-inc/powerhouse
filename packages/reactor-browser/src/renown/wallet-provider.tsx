@@ -1,4 +1,4 @@
-import { resolveAdapters } from "@renown/sdk/wallet";
+import { isWalletRedirectReturn, resolveAdapters } from "@renown/sdk/wallet";
 import type {
   LoginMethod,
   WalletAdapter,
@@ -15,12 +15,14 @@ import {
   type ComponentType,
   type ReactNode,
 } from "react";
+import { useUser } from "../hooks/renown.js";
 import {
   failWalletActivation,
   setActiveWalletController,
   setWalletActivator,
   whenWalletControllerReady,
-} from "./utils.js";
+} from "./wallet-registry.js";
+import { useCompleteRedirectSignIn } from "./use-complete-redirect-sign-in.js";
 
 // Merge per-adapter controllers into one. A requested method routes to the
 // adapter that supports it; a method-less connect uses the first adapter.
@@ -66,13 +68,20 @@ function mergeControllers(
 function AdapterControllerBridge(props: {
   adapter: WalletAdapter;
   onController: (id: string, controller: WalletController | undefined) => void;
+  onSession: (id: string, session: WalletSession | undefined) => void;
 }) {
-  const { adapter, onController } = props;
+  const { adapter, onController, onSession } = props;
   const controller = adapter.useController();
   useEffect(() => {
     onController(adapter.id, controller);
     return () => onController(adapter.id, undefined);
   }, [adapter.id, controller, onController]);
+  // Adapters that push session changes (Privy) let sign-in complete on an OAuth
+  // return, where the connect() promise died with the pre-redirect page.
+  useEffect(() => {
+    if (!controller.subscribe) return;
+    return controller.subscribe((session) => onSession(adapter.id, session));
+  }, [adapter.id, controller, onSession]);
   return null;
 }
 
@@ -91,28 +100,29 @@ export function RenownWalletProvider({
   children,
 }: RenownWalletProviderProps) {
   const [config] = useState(() => adaptersConfig);
-  const [active, setActive] = useState(false);
+  const user = useUser();
+  // Mount on a login click / OAuth redirect return, and latch on authentication so
+  // we stay mounted for the page's life — a logout->login remount breaks Privy's modal.
+  const [activated, setActivated] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      isWalletRedirectReturn(window.location.search),
+  );
+  if (user && !activated) setActivated(true);
+  const active = activated;
   const [adapters, setAdapters] = useState<WalletAdapter[] | null>(null);
   const controllersRef = useRef(new Map<string, WalletController>());
+  // Auto-completes sign-in from the session an adapter pushes on an OAuth return.
+  const { onSession } = useCompleteRedirectSignIn();
 
   // Register an activator so login() can mount + lazy-load adapters on click.
   useEffect(() => {
     if (!config) return;
     setWalletActivator(() => {
-      setActive(true);
+      setActivated(true);
       return whenWalletControllerReady();
     });
     return () => setWalletActivator(undefined);
-  }, [config]);
-
-  // Privy social OAuth returns via full-page redirect (?privy_oauth_code=…); mount
-  // adapters on that load so PrivyProvider consumes the code and resumes login.
-  useEffect(() => {
-    if (!config || typeof window === "undefined") return;
-    const params = new URLSearchParams(window.location.search);
-    if (params.has("privy_oauth_code") || params.has("privy_oauth_state")) {
-      setActive(true);
-    }
   }, [config]);
 
   // Resolve + mount adapters only once activated; the dynamic import (and the
@@ -174,6 +184,7 @@ export function RenownWalletProvider({
                 key={adapter.id}
                 adapter={adapter}
                 onController={onController}
+                onSession={onSession}
               />
             ))}
           </>,

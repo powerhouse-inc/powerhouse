@@ -1,4 +1,4 @@
-export { login, logout, openRenown } from "../renown/utils.js";
+export { login, logout, openRenown } from "../renown/session.js";
 export { addPHEventHandlers } from "./add-ph-event-handlers.js";
 export {
   setAllowList,

@@ -1,7 +1,8 @@
 import type { IRenown, User } from "@renown/sdk";
-import type { WalletController, WalletSession } from "@renown/sdk/wallet";
+import type { WalletSession } from "@renown/sdk/wallet";
 import { logger } from "document-model";
 import { RENOWN_CHAIN_ID, RENOWN_NETWORK_ID, RENOWN_URL } from "./constants.js";
+import { getActiveWalletController } from "./wallet-registry.js";
 
 export function openRenown(documentId?: string) {
   const renown = window.ph?.renown;
@@ -29,9 +30,7 @@ export function openRenown(documentId?: string) {
 
 // In-page Renown sign-in: signs an app-key credential with the wallet session
 // and logs in via the configured switchboard. Throws if no switchboard is set.
-export async function signIn(
-  session: WalletSession,
-): Promise<User | undefined> {
+async function signIn(session: WalletSession): Promise<User | undefined> {
   const renown = window.ph?.renown;
   if (!renown) {
     logger.warn("Renown instance not found, cannot sign in");
@@ -44,65 +43,41 @@ export async function signIn(
   });
 }
 
-// Module-level registry for the active wallet controller. Connect mounts the
-// configured adapter Providers and registers the controller for useRenownAuth.
-let activeWalletController: WalletController | undefined;
-let controllerWaiters: Array<{
-  resolve: (controller: WalletController) => void;
-  reject: (error: Error) => void;
-}> = [];
-let walletActivator: (() => Promise<WalletController>) | undefined;
+// Idempotent sign-in gate the explicit login and OAuth-return auto-sign both
+// funnel through, so a duplicate / in-flight / lingering trigger is a no-op.
+let inFlightSignIn: Promise<User | undefined> | undefined;
+let inFlightAddress: string | undefined;
+let lastSignedAddress: string | undefined;
 
-export function setActiveWalletController(
-  controller: WalletController | undefined,
-): void {
-  activeWalletController = controller;
-  if (controller) {
-    const waiters = controllerWaiters;
-    controllerWaiters = [];
-    waiters.forEach(({ resolve }) => resolve(controller));
-  }
+export async function completeSignIn(
+  session: WalletSession,
+): Promise<User | undefined> {
+  const { address } = session;
+  if (address === lastSignedAddress) return;
+  if (inFlightSignIn && address === inFlightAddress) return inFlightSignIn;
+
+  inFlightAddress = address;
+  inFlightSignIn = (async () => {
+    try {
+      const user = await signIn(session);
+      if (user) lastSignedAddress = address;
+      return user;
+    } finally {
+      inFlightSignIn = undefined;
+      inFlightAddress = undefined;
+    }
+  })();
+  return inFlightSignIn;
 }
 
-// Called when activation can't produce a controller (e.g. no adapter loaded
-// because a peer dep is missing) so a pending login() rejects instead of hanging.
-export function failWalletActivation(error: Error): void {
-  const waiters = controllerWaiters;
-  controllerWaiters = [];
-  waiters.forEach(({ reject }) => reject(error));
+// Cleared by logout so the same address can sign in again afterward.
+function resetSignInGuard(): void {
+  inFlightSignIn = undefined;
+  inFlightAddress = undefined;
+  lastSignedAddress = undefined;
 }
 
-export function getActiveWalletController(): WalletController | undefined {
-  return activeWalletController;
-}
-
-// Registered by the app's wallet-provider mount. Lets login() mount the adapter
-// Providers on demand (on click) instead of loading wallet libraries at startup.
-export function setWalletActivator(
-  activator: (() => Promise<WalletController>) | undefined,
-): void {
-  walletActivator = activator;
-}
-
-export function getWalletActivator():
-  | (() => Promise<WalletController>)
-  | undefined {
-  return walletActivator;
-}
-
-// Resolves once a wallet controller is registered (after on-demand mount), or
-// rejects if activation fails (see failWalletActivation).
-export function whenWalletControllerReady(): Promise<WalletController> {
-  if (activeWalletController) return Promise.resolve(activeWalletController);
-  return new Promise((resolve, reject) =>
-    controllerWaiters.push({ resolve, reject }),
-  );
-}
-
-/**
- * Reads the `?user=` DID from the URL if present.
- * Returns the DID and cleans up the URL parameter.
- */
+// Reads the `?user=` DID from the URL if present, then strips the param.
 function consumeDidFromUrl(): string | undefined {
   if (typeof window === "undefined") return;
 
@@ -120,12 +95,8 @@ function consumeDidFromUrl(): string | undefined {
   return userDid;
 }
 
-/**
- * Log in the user. Resolves the user DID from (in order):
- * 1. Explicit `userDid` argument
- * 2. `?user=` URL parameter (from Renown portal redirect)
- * 3. Previously stored session in the Renown instance
- */
+// Log in the user, resolving the DID from (in order): explicit arg, the `?user=`
+// redirect param, then the Renown instance's stored session.
 export async function login(
   userDid: string | undefined,
   renown: IRenown | undefined,
@@ -156,8 +127,17 @@ export async function login(
 }
 
 export async function logout() {
+  // Disconnect the wallet first — while still authenticated the adapters are
+  // mounted, so each adapter's own logout (Privy clears its session) runs first.
+  try {
+    await getActiveWalletController()?.disconnect();
+  } catch (error) {
+    logger.error(error instanceof Error ? error.message : String(error));
+  }
+
   const renown = window.ph?.renown;
   await renown?.logout();
+  resetSignInGuard();
 
   // Clear the user parameter from URL to prevent auto-login on refresh
   const url = new URL(window.location.href);

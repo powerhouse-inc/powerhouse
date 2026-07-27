@@ -3,7 +3,7 @@ import { RenownBuilder } from "@renown/sdk";
 import { useEffect, useRef } from "react";
 import { loading } from "../hooks/loading.js";
 import { addRenownEventHandler, setRenown } from "../hooks/renown.js";
-import { login } from "./utils.js";
+import { login } from "./session.js";
 
 export interface RenownInitOptions {
   appName: string;

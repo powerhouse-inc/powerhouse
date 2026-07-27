@@ -27,6 +27,7 @@ export function createPrivyAdapter(
       connect: (method) => core.connect(method),
       disconnect: () => core.disconnect(),
       getSession: () => core.getSession(),
+      subscribe: (listener) => core.subscribe(listener),
       supportedMethods,
     };
   }
