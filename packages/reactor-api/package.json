@@ -99,7 +99,7 @@
     "path-to-regexp": "^8.4.0",
     "pg": "catalog:",
     "read-pkg": "catalog:",
-    "ws": "^8.18.3",
+    "ws": "^8.21.0",
     "zod": "catalog:"
   },
   "devDependencies": {
