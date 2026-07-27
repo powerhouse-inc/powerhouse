@@ -3,16 +3,34 @@ import type { Project } from "ts-morph";
 
 /** Gets a SourceFile by name in a ts-morph Project, or creates a new one
  * if none with that path exists.
+ *
+ * "Exists" has to mean *on disk*, not merely "already loaded in this Project".
+ * Projects here are built with `skipAddingFilesFromTsConfig` (see
+ * `buildTsMorphProject`), so they start empty and `getSourceFile` alone reports
+ * every existing file as missing. Combined with `overwrite: true` that silently
+ * discarded whatever the user had written — `alreadyExists` was always `false`,
+ * so builders that scaffold-once-then-amend (tests, reducers, subgraphs,
+ * editors, processors) re-scaffolded from scratch on every run and hand-written
+ * code was lost on `project.save()`.
+ *
+ * Reading the file in when it is on disk but not yet loaded mirrors what
+ * `DirectoryManager.createSourceFile` already does. Files that codegen fully
+ * owns are unaffected: they call `replaceWithText` immediately afterwards.
  */
 export function getOrCreateSourceFile(project: Project, filePath: string) {
   const dirName = path.dirname(filePath);
   if (!project.getDirectory(dirName)) {
     project.createDirectory(dirName);
   }
-  const sourceFile = project.getSourceFile(filePath);
+  const sourceFile =
+    project.getSourceFile(filePath) ??
+    project.addSourceFileAtPathIfExists(filePath);
   if (!sourceFile) {
+    // `overwrite: false` so that a future regression here fails loudly instead
+    // of quietly truncating a file: reaching this line now means the path is
+    // genuinely absent from both the project and the disk.
     const newSourceFile = project.createSourceFile(filePath, "", {
-      overwrite: true,
+      overwrite: false,
     });
     return {
       alreadyExists: false,
