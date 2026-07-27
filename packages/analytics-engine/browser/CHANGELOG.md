@@ -1,3 +1,7 @@
+## 6.2.2-dev.18 (2026-07-27)
+
+This was a version bump only for @powerhousedao/analytics-engine-browser to align it with other projects, there were no code changes.
+
 ## 6.2.2-dev.17 (2026-07-26)
 
 ### 🚀 Features
