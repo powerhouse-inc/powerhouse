@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import {
   getEmbeddedConnectedWallet,
   useLogin,
+  useLoginWithOAuth,
   useLogout,
   usePrivy,
   useSignTypedData,
@@ -25,17 +26,23 @@ export function PrivyAdapterBridge({ core }: PrivyAdapterBridgeProps) {
   const { login: openLoginModal } = useLogin({
     onError: (error) => core.handleLoginError(error),
   });
+  // Also mounts this hook on the page Privy redirects back to, which is what
+  // lets it finish the OAuth flow there.
+  const { initOAuth } = useLoginWithOAuth({
+    onError: (error) => core.handleLoginError(error),
+  });
 
   // Privy returns fresh function references each render. A ref keeps the bind
   // stable so we bind once per core instead of re-binding every render.
-  const fnsRef = useRef({ openLoginModal, logout, signTypedData });
+  const fnsRef = useRef({ openLoginModal, initOAuth, logout, signTypedData });
   useEffect(() => {
-    fnsRef.current = { openLoginModal, logout, signTypedData };
-  }, [openLoginModal, logout, signTypedData]);
+    fnsRef.current = { openLoginModal, initOAuth, logout, signTypedData };
+  }, [openLoginModal, initOAuth, logout, signTypedData]);
 
   useEffect(() => {
     return core.bind({
       openLoginModal: (opts) => fnsRef.current.openLoginModal(opts),
+      initOAuth: (opts) => fnsRef.current.initOAuth(opts),
       logout: () => fnsRef.current.logout(),
       // Privy owns the embedded wallet keys, so showWalletUIs:false signs the
       // credential typed-data silently as part of login.

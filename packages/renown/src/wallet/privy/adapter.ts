@@ -24,6 +24,17 @@ const PRIVY_METHOD_MAP: Partial<Record<LoginMethod, PrivyLoginMethodId>> = {
   [LoginMethod.EMAIL]: "email",
 };
 
+type PrivyOAuthProviderId = "google" | "apple";
+
+// Methods Privy can start headlessly with initOAuth. Opening the modal for these
+// would only render a single button for a provider the caller already picked.
+const PRIVY_OAUTH_PROVIDERS: Partial<
+  Record<LoginMethod, PrivyOAuthProviderId>
+> = {
+  [LoginMethod.GOOGLE]: "google",
+  [LoginMethod.APPLE]: "apple",
+};
+
 // Resolve config `methods` (LoginMethod string values) to the supported set,
 // falling back to the default when none are provided.
 export function resolvePrivyMethods(methods?: string[]): LoginMethod[] {
@@ -43,6 +54,7 @@ export function resolvePrivyMethods(methods?: string[]): LoginMethod[] {
 // runs, connect/disconnect calls throw.
 export interface PrivyBindings {
   openLoginModal: (options?: LoginModalOptions) => void;
+  initOAuth: (options: { provider: PrivyOAuthProviderId }) => Promise<void>;
   logout: () => Promise<void>;
   signTypedData: (
     args: Parameters<SignCredentialTypedData>[0],
@@ -159,16 +171,24 @@ export class PrivyCore {
       throw new Error(`PrivyAdapter does not support login method "${chosen}"`);
     }
 
-    // Open Privy's modal (social OAuth runs in a popup, keeping this page alive)
-    // so the pending promise resolves in-page and Renown sign-in can run.
     const bindings = this.bindings;
+    const oauthProvider = PRIVY_OAUTH_PROVIDERS[chosen];
     return new Promise<WalletSession>((resolve, reject) => {
       this.pending = { resolve, reject };
-      try {
-        bindings.openLoginModal({ loginMethods: [privyMethod] });
-      } catch (error) {
+      const fail = (error: unknown) => {
         this.pending = null;
         reject(error instanceof Error ? error : new Error(String(error)));
+      };
+      try {
+        // initOAuth navigates away, so this promise stays pending until the page
+        // unloads; syncFromEmbeddedWallet emits the session on the redirect back.
+        if (oauthProvider) {
+          bindings.initOAuth({ provider: oauthProvider }).catch(fail);
+        } else {
+          bindings.openLoginModal({ loginMethods: [privyMethod] });
+        }
+      } catch (error) {
+        fail(error);
       }
     });
   }
