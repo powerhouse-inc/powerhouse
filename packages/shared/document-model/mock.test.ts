@@ -93,6 +93,8 @@ describe("generateMock", () => {
   it("throws for a z.custom field with no override", () => {
     const schema = z.object({ sourcePdf: attachmentRefSchema() });
 
-    expect(() => generateMock(schema)).toThrow(/No generator for schema custom/);
+    expect(() => generateMock(schema)).toThrow(
+      /No generator for schema custom/,
+    );
   });
 });
