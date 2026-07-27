@@ -15,7 +15,7 @@ export const WALLET_ADAPTERS: WalletAdaptersConfig =
   process.env.NEXT_PUBLIC_RENOWN_MOCK === "1"
     ? { mock: { methods: ["wallet", "google", "email"] } }
     : {
-        rainbow: { walletConnectProjectId: "" },
+        rainbow: { ssr: true },
         privy: {
           appId: "cmruc4ldh02wr0cjxhpdfjbso",
           clientId: "client-WY6bMp7uwaPvuL4wFm5b7Xj7x5wEFhGTLA4k8rwahyZbd",

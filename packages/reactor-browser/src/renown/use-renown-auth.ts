@@ -5,10 +5,8 @@ import { useLoginStatus, useUser } from "../hooks/renown.js";
 import {
   getActiveWalletController,
   getWalletActivator,
-  logout as logoutUtil,
-  openRenown,
-  signIn,
-} from "./utils.js";
+} from "./wallet-registry.js";
+import { completeSignIn, logout as logoutUtil, openRenown } from "./session.js";
 
 export type RenownAuthStatus = LoginStatus | "loading";
 
@@ -31,6 +29,19 @@ export interface RenownAuth {
 function truncateAddress(address: string): string {
   if (address.length <= 13) return address;
   return `${address.slice(0, 7)}...${address.slice(-5)}`;
+}
+
+// The user dismissed the provider modal (Privy `exited_auth_flow`, an injected
+// wallet reject) — a benign cancel, not a login failure, so don't surface it.
+function isUserCancellation(error: Error): boolean {
+  const msg = error.message.toLowerCase();
+  return (
+    msg.includes("exited_auth_flow") ||
+    msg.includes("user rejected") ||
+    msg.includes("user denied") ||
+    msg.includes("userrejected") ||
+    msg.includes("cancel")
+  );
 }
 
 function toRenownAuthStatus(
@@ -86,11 +97,13 @@ export function useRenownAuth(): RenownAuth {
           openRenown();
           return;
         }
-        // signIn throws when no switchboard is configured; fall back to the
-        // redirect flow only in that case so login still succeeds.
-        await signIn(resolved);
+        // completeSignIn throws when no switchboard is configured; fall back to
+        // the redirect flow only in that case so login still succeeds.
+        await completeSignIn(resolved);
       } catch (e) {
         const err = e instanceof Error ? e : new Error(String(e));
+        // A cancel clears pending (finally) without showing a red error.
+        if (isUserCancellation(err)) return;
         setError(err);
         if (/switchboard/i.test(err.message)) openRenown();
       } finally {

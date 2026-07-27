@@ -1,5 +1,5 @@
 import { useMemo, type ComponentType, type ReactNode } from "react";
-import { PrivyProvider } from "@privy-io/react-auth";
+import { PrivyProvider, type PrivyClientConfig } from "@privy-io/react-auth";
 import { normalizeWalletTheme, type WalletTheme } from "../types.js";
 import type { PrivyCore } from "./adapter.js";
 import { PrivyAdapterBridge } from "./bridge.js";
@@ -25,12 +25,18 @@ export function createPrivyProvider(
     const { mode } = normalizeWalletTheme(theme);
     // Memoize so a new config object per render doesn't rebuild PrivyProvider's
     // context and cascade re-renders into descendants.
-    const privyConfig = useMemo(
+    const privyConfig = useMemo<PrivyClientConfig>(
       () => ({
         appearance: { theme: mode },
         embeddedWallets: {
           ethereum: { createOnLogin: "users-without-wallets" as const },
           showWalletUIs: false,
+        },
+        // Social/email adapter only (external wallets go through the rainbow
+        // adapter), so don't init WalletConnect / fetch its registry on mount.
+        externalWallets: {
+          disableAllExternalWallets: true,
+          walletConnect: { enabled: false },
         },
       }),
       [mode],
