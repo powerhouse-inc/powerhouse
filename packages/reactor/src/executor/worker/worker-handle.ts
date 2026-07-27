@@ -19,6 +19,7 @@ import type {
   WorkerInFlightSnapshot,
 } from "../interfaces.js";
 import type { Job } from "../../queue/types.js";
+import type { JobExecutorConfig } from "../types.js";
 import { fromErrorInfo } from "./error-info.js";
 import {
   WorkerAbortTimeoutError,
@@ -58,6 +59,8 @@ export type WorkerInitPayload = {
   /** Omitted = the worker performs no executor-side signature verification. */
   signatureVerifier?: SignatureVerifierSpec;
   models: ModelManifestEntry[];
+  /** Omitted = the worker builds its executor with the built-in defaults. */
+  executorConfig?: JobExecutorConfig;
 };
 
 export type WorkerHandleOptions = {
@@ -178,6 +181,7 @@ export class WorkerHandle implements IExecutorWorker {
       db: this.initPayload.db,
       signatureVerifier: this.initPayload.signatureVerifier,
       models: this.initPayload.models,
+      executorConfig: this.initPayload.executorConfig,
     });
     await ready;
     this.phase = "ready";

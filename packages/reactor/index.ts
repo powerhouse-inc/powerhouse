@@ -211,6 +211,7 @@ export type {
 } from "@powerhousedao/shared/document-model";
 export type { Database } from "./src/core/types.js";
 export {
+  APPEND_CONDITION_FAILED_PREFIX,
   AppendConditionFailedError,
   DuplicateOperationError,
   OptimisticLockError,

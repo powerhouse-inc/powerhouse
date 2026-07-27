@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { KyselyWriteCache } from "../../../src/cache/kysely-write-cache.js";
 import type { WriteCacheConfig } from "../../../src/cache/write-cache-types.js";
 import { ModuleNotFoundError } from "../../../src/registry/errors.js";
+import { DocumentNotFoundError } from "../../../src/shared/errors.js";
 import type { IDocumentModelRegistry } from "../../../src/registry/interfaces.js";
 import type {
   IKeyframeStore,
@@ -860,7 +861,7 @@ describe("KyselyWriteCache - Error Handling", () => {
 
       await expect(
         testCache.getState("doc1", "global", "main", 1),
-      ).rejects.toThrow(/Failed to rebuild document doc1.*no.*operation/);
+      ).rejects.toThrow(DocumentNotFoundError);
     });
 
     it("should not create cache entry when no operations exist", async () => {

@@ -212,6 +212,7 @@ export function runWorker(
       init: msg,
       database: database.kysely,
       logger: new ConsoleLogger([`reactor-worker:${msg.workerId}`]),
+      executorConfig: msg.executorConfig,
       loadFactory: activeLoadFactory,
     });
     if (database.poolInstrumentation) {

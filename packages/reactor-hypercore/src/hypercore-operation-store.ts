@@ -12,6 +12,7 @@ import type {
   PagingOptions,
 } from "@powerhousedao/reactor";
 import {
+  AppendConditionFailedError,
   DuplicateOperationError,
   RevisionMismatchError,
 } from "@powerhousedao/reactor";
@@ -47,12 +48,6 @@ export class HypercoreOperationStore implements IOperationStore {
     signal?: AbortSignal,
     condition?: AppendCondition,
   ): Promise<Operation[]> {
-    if (condition && condition.streams.length > 0) {
-      throw new Error(
-        "HypercoreOperationStore does not support append conditions",
-      );
-    }
-
     const prevLock = this.applyLock;
     let releaseLock: () => void;
     this.applyLock = new Promise<void>((resolve) => {
@@ -62,6 +57,11 @@ export class HypercoreOperationStore implements IOperationStore {
     await prevLock;
 
     try {
+      // Single writer on applyLock: nothing can append between check and write.
+      if (condition) {
+        await this.assertConditionHolds(condition, signal);
+      }
+
       return await this.executeApply(
         documentId,
         documentType,
@@ -73,6 +73,27 @@ export class HypercoreOperationStore implements IOperationStore {
       );
     } finally {
       releaseLock!();
+    }
+  }
+
+  /** Throws if any read-set stream has grown past its recorded revision. */
+  private async assertConditionHolds(
+    condition: AppendCondition,
+    signal?: AbortSignal,
+  ): Promise<void> {
+    for (const stream of condition.streams) {
+      if (signal?.aborted) {
+        throw new Error("Operation aborted");
+      }
+
+      const entry = await this.bee.get(
+        headKey(stream.documentId, stream.scope, stream.branch),
+      );
+      const head = entry ? (entry.value as HeadEntryValue).index : -1;
+
+      if (head > stream.revision) {
+        throw new AppendConditionFailedError(condition);
+      }
     }
   }
 

@@ -16,6 +16,9 @@ import { AppendConditionFailedError } from "../storage/interfaces.js";
 import type { ErrorInfo } from "../shared/types.js";
 import type { JobResult } from "./types.js";
 
+/** Conflict retries a job may take without charging its retry limit. */
+const MAX_EXEMPT_CONFLICT_RETRIES = 20;
+
 export type JobResultCallbacks = {
   deferJob(documentId: string, job: Job): void;
   flushDeferredFor(documentId: string): Promise<void>;
@@ -89,7 +92,11 @@ export class JobResultHandler implements IJobResultHandler {
     // AppendConditionFailedError: a concurrency conflict, not a fault. Retry
     // exempt from the retry limit; the executor already dropped the stale
     // streams from the write cache.
-    if (result.error && AppendConditionFailedError.isError(result.error)) {
+    if (
+      result.error &&
+      AppendConditionFailedError.isError(result.error) &&
+      this.countConflicts(handle.job) < MAX_EXEMPT_CONFLICT_RETRIES
+    ) {
       const errorInfo = toErrorInfo(result.error);
       try {
         await this.queue.retryJob(
@@ -179,6 +186,17 @@ export class JobResultHandler implements IJobResultHandler {
 
       handle.fail(fullErrorInfo);
     }
+  }
+
+  /** How many times this job has already lost an append-condition race. */
+  private countConflicts(job: Job): number {
+    let conflicts = 0;
+    for (const error of job.errorHistory) {
+      if (AppendConditionFailedError.isFailureMessage(error.message)) {
+        conflicts++;
+      }
+    }
+    return conflicts;
   }
 
   private hasCreateDocumentAction(job: Job): boolean {

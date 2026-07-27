@@ -64,6 +64,9 @@ export type AppendCondition = {
   streams: AppendConditionStream[];
 };
 
+/** Error history keeps messages, not classes, so failures match by prefix. */
+export const APPEND_CONDITION_FAILED_PREFIX = "Append condition failed: ";
+
 /**
  * A read-set stream grew before the append committed. A concurrency
  * conflict, not a fault: the caller retries against the new stream heads.
@@ -73,12 +76,19 @@ export class AppendConditionFailedError extends Error {
     const streams = condition.streams
       .map((s) => `${s.documentId}:${s.scope}:${s.branch}@${s.revision}`)
       .join(", ");
-    super(`Append condition failed: a read-set stream advanced [${streams}]`);
+    super(
+      `${APPEND_CONDITION_FAILED_PREFIX}a read-set stream advanced [${streams}]`,
+    );
     this.name = "AppendConditionFailedError";
   }
 
   static isError(error: unknown): error is AppendConditionFailedError {
     return Error.isError(error) && error.name === "AppendConditionFailedError";
+  }
+
+  /** True when a recorded error message is an append-condition failure. */
+  static isFailureMessage(message: string): boolean {
+    return message.startsWith(APPEND_CONDITION_FAILED_PREFIX);
   }
 }
 

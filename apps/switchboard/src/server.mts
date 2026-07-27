@@ -424,11 +424,7 @@ async function initServer(
     if (hasSkipThreshold) {
       logger.info(`Reactor maxSkipThreshold set to ${maxSkipThreshold}`);
     }
-    if (hasSkipThreshold && workerPool) {
-      logger.warn(
-        "MAX_SKIP_THRESHOLD is not forwarded to executor workers and has no effect in worker-pool mode",
-      );
-    }
+
 
     const reactorBuilder = new ReactorBuilder()
       .withEventBus(new EventBus())

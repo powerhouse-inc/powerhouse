@@ -72,6 +72,9 @@ function makeInitPayload(): WorkerInitPayload {
       module: { packageName: "test-verifier", exportName: "factory" },
     },
     models: [],
+    executorConfig: {
+      maxSkipThreshold: 42,
+    },
   };
 }
 
@@ -106,6 +109,14 @@ describe("WorkerHandle", () => {
       expect(init.workerId).toBe("worker-0");
       expect(init.correlationId).toBeTruthy();
       expect(handle.isIdle()).toBe(true);
+    });
+
+    it("forwards the executor config so pooled workers see the feature flags", async () => {
+      const transport = new FakeWorkerTransport({ autoReady: true });
+      const handle = makeHandle(transport);
+      await handle.start();
+      const init = transport.getSentMessages()[0] as InitMessage;
+      expect(init.executorConfig).toEqual({ maxSkipThreshold: 42 });
     });
 
     it("rejects with WorkerInitFailedError if exit arrives before ready", async () => {

@@ -13,7 +13,8 @@ export interface IWriteCache {
    * @param documentId - The document identifier
    * @param scope - Operation scope
    * @param branch - Branch name
-   * @param targetRevision - The exact revision to retrieve (optional, defaults to latest)
+   * @param targetRevision - Index of the last operation to apply, defaulting
+   *   to latest. An operation index, never `header.revision[scope]`.
    * @param signal - Optional abort signal to cancel the operation
    * @returns The complete document at the specified revision
    *
@@ -46,7 +47,8 @@ export interface IWriteCache {
    * @param documentId - The document identifier
    * @param scope - Operation scope
    * @param branch - Branch name
-   * @param revision - The revision this document represents
+   * @param revision - Index of the last operation this document reflects, so
+   *   `header.revision[scope]` is one greater. -1 for an empty scope.
    * @param document - The document to cache
    *
    * @example

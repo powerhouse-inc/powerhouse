@@ -883,6 +883,7 @@ export class ReactorBuilder {
           db,
           signatureVerifier,
           models,
+          executorConfig: this.executorConfig,
         },
         logger,
         poolInstrumentation,

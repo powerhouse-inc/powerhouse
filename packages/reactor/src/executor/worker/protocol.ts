@@ -15,7 +15,7 @@
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import type { Job } from "../../queue/types.js";
 import type { JobMeta } from "../../shared/types.js";
-import type { JobResult } from "../types.js";
+import type { JobExecutorConfig, JobResult } from "../types.js";
 
 // ---------------------------------------------------------------------------
 // Sanitized values & structured-error payloads
@@ -231,6 +231,8 @@ export type InitMessage = {
   /** Omitted = the worker performs no executor-side signature verification. */
   signatureVerifier?: SignatureVerifierSpec;
   models: ModelManifestEntry[];
+  /** Omitted = the worker builds its executor with the built-in defaults. */
+  executorConfig?: JobExecutorConfig;
 };
 
 /**

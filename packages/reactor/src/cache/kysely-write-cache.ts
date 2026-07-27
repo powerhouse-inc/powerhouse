@@ -10,6 +10,7 @@ import {
 } from "@powerhousedao/shared/document-model";
 import { createDocumentFromAction } from "../executor/util.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
+import { DocumentNotFoundError } from "../shared/errors.js";
 import type { IKeyframeStore, IOperationStore } from "../storage/interfaces.js";
 import { RingBuffer } from "./buffer/ring-buffer.js";
 import { LRUTracker } from "./lru/lru-tracker.js";
@@ -37,6 +38,19 @@ function extractModuleVersion(doc: PHDocument): number | undefined {
   const v = (doc.state as Record<string, Record<string, unknown>>).document
     .version as number | undefined;
   return v === 0 ? undefined : v;
+}
+
+/** The stream's head: highest revision held, latest push winning a tie. */
+function highestRevision(
+  snapshots: CachedSnapshot[],
+): CachedSnapshot | undefined {
+  let newest: CachedSnapshot | undefined = undefined;
+  for (const snapshot of snapshots) {
+    if (!newest || snapshot.revision >= newest.revision) {
+      newest = snapshot;
+    }
+  }
+  return newest;
 }
 
 /**
@@ -169,13 +183,15 @@ export class KyselyWriteCache implements IWriteCache {
       const snapshots = stream.ringBuffer.getAll();
 
       if (targetRevision === undefined) {
-        if (snapshots.length > 0) {
-          const newest = snapshots[snapshots.length - 1];
+        const newest = highestRevision(snapshots);
+        if (newest) {
           this.lruTracker.touch(streamKey);
           return newest.document;
         }
       } else {
-        const exactMatch = snapshots.find((s) => s.revision === targetRevision);
+        const exactMatch = snapshots.findLast(
+          (s) => s.revision === targetRevision,
+        );
         if (exactMatch) {
           this.lruTracker.touch(streamKey);
           return exactMatch.document;
@@ -212,10 +228,9 @@ export class KyselyWriteCache implements IWriteCache {
       signal,
     );
 
-    let revision = targetRevision;
-    if (revision === undefined) {
-      revision = document.header.revision[scope] || 0;
-    }
+    // header.revision is a next index; a snapshot is labelled by last index.
+    const revision =
+      targetRevision ?? (document.header.revision[scope] ?? 0) - 1;
 
     this.putState(documentId, scope, branch, revision, document);
 
@@ -369,13 +384,31 @@ export class KyselyWriteCache implements IWriteCache {
       return undefined;
     }
 
-    return this.keyframeStore.findNearestKeyframe(
+    const keyframe = await this.keyframeStore.findNearestKeyframe(
       documentId,
       scope,
       branch,
       targetRevision,
       signal,
     );
+
+    if (!keyframe) {
+      return undefined;
+    }
+
+    // Where a replay resumes comes from the stored document, not the row's
+    // label: rows written before the label convention settled are off by one.
+    const nextIndex = keyframe.document.header.revision[scope];
+    if (typeof nextIndex !== "number") {
+      return keyframe;
+    }
+
+    // Clamped: a legacy positional row advertises the store head, far above
+    // the position it holds. The label is the bound both error modes respect.
+    return {
+      revision: Math.min(nextIndex - 1, keyframe.revision),
+      document: keyframe.document,
+    };
   }
 
   private async coldMissRebuild(
@@ -417,6 +450,10 @@ export class KyselyWriteCache implements IWriteCache {
       );
 
       for (const operation of docScopeOpsAfterKeyframe.results) {
+        if (operation.error) {
+          continue;
+        }
+
         if (operation.action.type === "UPGRADE_DOCUMENT") {
           const upgradeAction = operation.action as UpgradeDocumentAction;
           const fromVersion = upgradeAction.input.fromVersion;
@@ -471,10 +508,9 @@ export class KyselyWriteCache implements IWriteCache {
         signal,
       );
 
+      // Typed, so the executor defers the job until the document arrives.
       if (createOpResult.results.length === 0) {
-        throw new Error(
-          `Failed to rebuild document ${documentId}: no CREATE_DOCUMENT operation found in document scope`,
-        );
+        throw new DocumentNotFoundError(documentId);
       }
 
       const createOp = createOpResult.results[0];
@@ -510,6 +546,10 @@ export class KyselyWriteCache implements IWriteCache {
 
       for (const operation of docScopeOps.results) {
         if (operation.index === 0) {
+          continue;
+        }
+
+        if (operation.error) {
           continue;
         }
 
@@ -660,6 +700,14 @@ export class KyselyWriteCache implements IWriteCache {
       signal,
     );
     document.header.revision = revisions.revision;
+
+    // Positional rebuild: this scope's revision is the target, not the head.
+    if (targetRevision !== undefined) {
+      document.header.revision = {
+        ...document.header.revision,
+        [scope]: targetRevision + 1,
+      };
+    }
     document.header.lastModifiedAtUtcIso = revisions.latestTimestamp;
 
     return document;
@@ -798,6 +846,14 @@ export class KyselyWriteCache implements IWriteCache {
       signal,
     );
     document.header.revision = revisions.revision;
+
+    // Positional rebuild: this scope's revision is the target, not the head.
+    if (targetRevision !== undefined) {
+      document.header.revision = {
+        ...document.header.revision,
+        [scope]: targetRevision + 1,
+      };
+    }
     document.header.lastModifiedAtUtcIso = revisions.latestTimestamp;
 
     return document;

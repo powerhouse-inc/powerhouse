@@ -2,6 +2,7 @@ import type { Operation } from "@powerhousedao/shared/document-model";
 import { generateId } from "@powerhousedao/shared/document-model";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+  AppendConditionFailedError,
   DuplicateOperationError,
   RevisionMismatchError,
 } from "@powerhousedao/reactor";
@@ -69,9 +70,44 @@ describe("HypercoreOperationStore", () => {
       expect(result.results[0].action.type).toBe("ADD_FOLDER");
     });
 
-    it("should reject a non-empty append condition", async () => {
+    it("should append when every read-set stream is still at its revision", async () => {
       const documentId = generateId();
+      const readSetId = generateId();
       const documentType = "powerhouse/test-doc";
+
+      const stored = await store.apply(
+        documentId,
+        documentType,
+        "global",
+        "main",
+        0,
+        (txn) => {
+          txn.addOperations(makeOp(0));
+        },
+        undefined,
+        {
+          streams: [
+            {
+              documentId: readSetId,
+              scope: "global",
+              branch: "main",
+              revision: -1,
+            },
+          ],
+        },
+      );
+
+      expect(stored).toHaveLength(1);
+    });
+
+    it("should reject the append and write nothing when a read-set stream grew", async () => {
+      const documentId = generateId();
+      const readSetId = generateId();
+      const documentType = "powerhouse/test-doc";
+
+      await store.apply(readSetId, documentType, "global", "main", 0, (txn) => {
+        txn.addOperations(makeOp(0));
+      });
 
       await expect(
         store.apply(
@@ -87,7 +123,7 @@ describe("HypercoreOperationStore", () => {
           {
             streams: [
               {
-                documentId: generateId(),
+                documentId: readSetId,
                 scope: "global",
                 branch: "main",
                 revision: -1,
@@ -95,7 +131,7 @@ describe("HypercoreOperationStore", () => {
             ],
           },
         ),
-      ).rejects.toThrow("does not support append conditions");
+      ).rejects.toThrow(AppendConditionFailedError);
 
       const result = await store.getSince(documentId, "global", "main", -1);
       expect(result.results).toHaveLength(0);

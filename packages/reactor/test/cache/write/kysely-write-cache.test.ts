@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { KyselyWriteCache } from "../../../src/cache/kysely-write-cache.js";
 import type { WriteCacheConfig } from "../../../src/cache/write-cache-types.js";
 import type { IDocumentModelRegistry } from "../../../src/registry/interfaces.js";
+import { DocumentNotFoundError } from "../../../src/shared/errors.js";
 import type {
   IKeyframeStore,
   IOperationStore,
@@ -538,7 +539,7 @@ describe("KyselyWriteCache (Partial Integration) - Cold Miss Rebuild", () => {
 
     await expect(
       testCache.getState("non-existent", "global", "main", 1),
-    ).rejects.toThrow("Failed to rebuild document non-existent");
+    ).rejects.toThrow(DocumentNotFoundError);
   });
 
   it("should rebuild document from scratch on cold miss (no keyframe)", async () => {

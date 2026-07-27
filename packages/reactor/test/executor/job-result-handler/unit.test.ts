@@ -445,6 +445,82 @@ describe("JobResultHandler", () => {
       expect(handle.defer).not.toHaveBeenCalled();
     });
 
+    it("stops exempting once the job has lost the race too many times", async () => {
+      const conflict = new AppendConditionFailedError({
+        streams: [
+          { documentId: "doc-1", scope: "auth", branch: "main", revision: 3 },
+        ],
+      });
+      const job = createTestJob({
+        retryCount: 0,
+        maxRetries: 0,
+        errorHistory: Array.from({ length: 20 }, () => ({
+          message: conflict.message,
+          stack: "",
+        })),
+      });
+      const handle = createTestHandle(job);
+      const result: JobResult = { success: false, job, error: conflict };
+
+      await handler.handleResult(handle, result, callbacks());
+
+      expect(queue.retryJob).not.toHaveBeenCalled();
+      expect(jobTracker.markFailed).toHaveBeenCalled();
+      expect(handle.fail).toHaveBeenCalled();
+    });
+
+    it("keeps exempting while the job is still under the bound", async () => {
+      const conflict = new AppendConditionFailedError({
+        streams: [
+          { documentId: "doc-1", scope: "auth", branch: "main", revision: 3 },
+        ],
+      });
+      const job = createTestJob({
+        retryCount: 0,
+        maxRetries: 0,
+        errorHistory: Array.from({ length: 19 }, () => ({
+          message: conflict.message,
+          stack: "",
+        })),
+      });
+      const handle = createTestHandle(job);
+      const result: JobResult = { success: false, job, error: conflict };
+
+      await handler.handleResult(handle, result, callbacks());
+
+      expect(queue.retryJob).toHaveBeenCalledWith(
+        job.id,
+        expect.anything(),
+        RetryAccounting.ExemptFromLimit,
+      );
+    });
+
+    it("does not count unrelated failures toward the conflict bound", async () => {
+      const conflict = new AppendConditionFailedError({
+        streams: [
+          { documentId: "doc-1", scope: "auth", branch: "main", revision: 3 },
+        ],
+      });
+      const job = createTestJob({
+        retryCount: 0,
+        maxRetries: 0,
+        errorHistory: Array.from({ length: 40 }, () => ({
+          message: "some unrelated reducer failure",
+          stack: "",
+        })),
+      });
+      const handle = createTestHandle(job);
+      const result: JobResult = { success: false, job, error: conflict };
+
+      await handler.handleResult(handle, result, callbacks());
+
+      expect(queue.retryJob).toHaveBeenCalledWith(
+        job.id,
+        expect.anything(),
+        RetryAccounting.ExemptFromLimit,
+      );
+    });
+
     it("classifies by error name, surviving worker-boundary rehydration", async () => {
       const job = createTestJob({ retryCount: 5, maxRetries: 0 });
       const handle = createTestHandle(job);
