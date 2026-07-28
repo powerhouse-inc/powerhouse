@@ -1,5 +1,6 @@
 import type {
   CreateDocumentAction,
+  Operation,
   PHDocument,
   UpgradeDocumentAction,
   UpgradeTransition,
@@ -33,6 +34,27 @@ type ValidatedUpgrade = {
   revision: Record<string, number> | undefined;
   timestampUtcMs: string;
 };
+
+/**
+ * The last operation index a keyframe's document reflects for the scope. A
+ * keyframe only exists for a scope that has operations, so a missing entry
+ * means the stored row is corrupt.
+ */
+function keyframeRevision(
+  keyframe: { revision: number; document: PHDocument },
+  documentId: string,
+  scope: string,
+): number {
+  const nextIndex = keyframe.document.header.revision[scope];
+
+  if (typeof nextIndex !== "number") {
+    throw new Error(
+      `Corrupt keyframe for document ${documentId} at revision ${keyframe.revision}: header carries no ${scope} revision`,
+    );
+  }
+
+  return nextIndex - 1;
+}
 
 function extractModuleVersion(doc: PHDocument): number | undefined {
   const v = (doc.state as Record<string, Record<string, unknown>>).document
@@ -398,15 +420,13 @@ export class KyselyWriteCache implements IWriteCache {
 
     // Where a replay resumes comes from the stored document, not the row's
     // label: rows written before the label convention settled are off by one.
-    const nextIndex = keyframe.document.header.revision[scope];
-    if (typeof nextIndex !== "number") {
-      return keyframe;
-    }
-
     // Clamped: a legacy positional row advertises the store head, far above
     // the position it holds. The label is the bound both error modes respect.
     return {
-      revision: Math.min(nextIndex - 1, keyframe.revision),
+      revision: Math.min(
+        keyframeRevision(keyframe, documentId, scope),
+        keyframe.revision,
+      ),
       document: keyframe.document,
     };
   }
@@ -428,28 +448,51 @@ export class KyselyWriteCache implements IWriteCache {
       signal,
     );
 
+    // all scope rebuilds need the document scope for type, upgrades and deletion,
+    // but we need to special case for document scope rebuilds
+    const documentScopeBound =
+      scope === "document" ? targetRevision : undefined;
+
     let document: PHDocument | undefined;
     let startRevision: number;
     let documentType: string;
 
     const validatedUpgrades: ValidatedUpgrade[] = [];
 
+    let lastDocumentScopeOperation: Operation | undefined;
+
     if (keyframe) {
       document = keyframe.document;
       startRevision = keyframe.revision;
       documentType = keyframe.document.header.documentType;
 
+      // The keyframe's label indexes the scope it was written for, a different
+      // stream unless that scope is the document one.
+      const documentScopeResume =
+        scope === "document"
+          ? keyframe.revision
+          : keyframeRevision(keyframe, documentId, "document");
+
       const docScopeOpsAfterKeyframe = await this.operationStore.getSince(
         documentId,
         "document",
         branch,
-        keyframe.revision,
+        documentScopeResume,
         undefined,
         undefined,
         signal,
       );
 
       for (const operation of docScopeOpsAfterKeyframe.results) {
+        if (
+          documentScopeBound !== undefined &&
+          operation.index > documentScopeBound
+        ) {
+          break;
+        }
+
+        lastDocumentScopeOperation = operation;
+
         if (operation.error) {
           continue;
         }
@@ -529,6 +572,7 @@ export class KyselyWriteCache implements IWriteCache {
       }
 
       document = createDocumentFromAction(documentCreateAction);
+      lastDocumentScopeOperation = createOp;
 
       let docModule = this.registry.getModule(
         documentType,
@@ -545,6 +589,16 @@ export class KyselyWriteCache implements IWriteCache {
       );
 
       for (const operation of docScopeOps.results) {
+        if (
+          // in the case that the document scope was requested, we can exit early
+          documentScopeBound !== undefined &&
+          operation.index > documentScopeBound
+        ) {
+          break;
+        }
+
+        lastDocumentScopeOperation = operation;
+
         if (operation.index === 0) {
           continue;
         }
@@ -606,6 +660,52 @@ export class KyselyWriteCache implements IWriteCache {
             protocolVersion,
           });
         }
+      }
+    }
+
+    // we rebuild the document scope all the time, so if that is the scope
+    // requested, we're already done
+    if (scope === "document") {
+      const last =
+        lastDocumentScopeOperation ??
+        (await this.operationAt(
+          documentId,
+          "document",
+          branch,
+          startRevision,
+          signal,
+        ));
+
+      document.operations = {
+        ...document.operations,
+        document: last ? [last] : [],
+      };
+
+      return this.stampRevisions(
+        document,
+        documentId,
+        scope,
+        branch,
+        targetRevision,
+        signal,
+      );
+    }
+
+    // keyframes carry no operations, so we need to fill the operations list
+    if (keyframe) {
+      const resumeOperation = await this.operationAt(
+        documentId,
+        scope,
+        branch,
+        startRevision,
+        signal,
+      );
+
+      if (resumeOperation) {
+        document.operations = {
+          ...document.operations,
+          [scope]: [resumeOperation],
+        };
       }
     }
 
@@ -693,6 +793,28 @@ export class KyselyWriteCache implements IWriteCache {
       }
     } while (hasMorePages);
 
+    return this.stampRevisions(
+      document,
+      documentId,
+      scope,
+      branch,
+      targetRevision,
+      signal,
+    );
+  }
+
+  /**
+   * Copies the current document revisions onto the document. Overwrites the
+   * requested scope revision with the target revision, if provided.
+   */
+  private async stampRevisions(
+    document: PHDocument,
+    documentId: string,
+    scope: string,
+    branch: string,
+    targetRevision: number | undefined,
+    signal?: AbortSignal,
+  ): Promise<PHDocument> {
     // we let these errors bubble up to jobs
     const revisions = await this.operationStore.getRevisions(
       documentId,
@@ -701,7 +823,6 @@ export class KyselyWriteCache implements IWriteCache {
     );
     document.header.revision = revisions.revision;
 
-    // Positional rebuild: this scope's revision is the target, not the head.
     if (targetRevision !== undefined) {
       document.header.revision = {
         ...document.header.revision,
@@ -711,6 +832,32 @@ export class KyselyWriteCache implements IWriteCache {
     document.header.lastModifiedAtUtcIso = revisions.latestTimestamp;
 
     return document;
+  }
+
+  /** The stored operation at `index`, or undefined if it is no longer there. */
+  private async operationAt(
+    documentId: string,
+    scope: string,
+    branch: string,
+    index: number,
+    signal?: AbortSignal,
+  ): Promise<Operation | undefined> {
+    if (index < 0) {
+      return undefined;
+    }
+
+    const result = await this.operationStore.getSince(
+      documentId,
+      scope,
+      branch,
+      index - 1,
+      undefined,
+      { cursor: "0", limit: 1 },
+      signal,
+    );
+
+    const operation = result.results[0];
+    return operation && operation.index === index ? operation : undefined;
   }
 
   /**

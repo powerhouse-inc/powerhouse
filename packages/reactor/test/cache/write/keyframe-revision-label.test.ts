@@ -170,6 +170,24 @@ describe("write cache snapshot revision labels", () => {
     expect(moduleIds(viaLegacy)).toEqual(moduleIds(fromScratch));
   });
 
+  it("rejects a keyframe whose header omits the scope it was written for", async () => {
+    await appendGlobal(docId, 11);
+
+    const atTen = await cache.getState(docId, "global", BRANCH, 10);
+    await keyframeStore.putKeyframe(docId, "global", BRANCH, 10, {
+      ...atTen,
+      header: { ...atTen.header, revision: { document: 2 } },
+      operations: {},
+      clipboard: [],
+    } as never);
+
+    cache.invalidate(docId, "global", BRANCH);
+
+    await expect(cache.getState(docId, "global", BRANCH, 11)).rejects.toThrow(
+      /Corrupt keyframe/,
+    );
+  });
+
   it("reads a positional keyframe left over from the count convention", async () => {
     await appendGlobal(docId, 24);
 

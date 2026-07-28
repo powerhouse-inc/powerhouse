@@ -105,8 +105,8 @@ describe("Document Scope Cross-Scope Dependency Issue", () => {
     }
   });
 
-  describe("Scenario 1: Stale document metadata from keyframe", () => {
-    it("should demonstrate stale metadata from keyframe vs correct metadata from DocumentMetaCache", async () => {
+  describe("Scenario 1: document metadata behind a keyframe in another scope", () => {
+    it("applies the document-scope operations that arrive after the keyframe", async () => {
       const docId = "staleness-test-doc-1";
       const docType = "powerhouse/document-model";
 
@@ -199,16 +199,17 @@ describe("Document Scope Cross-Scope Dependency Issue", () => {
       // Step 7: Call getState(docId, "global", branch) - will load from keyframe
       const docFromKeyframe = await cache.getState(docId, "global", "main", 10);
 
-      // DEMONSTRATES THE BUG: getState returns stale version 1 from keyframe
-      expect(docFromKeyframe.state.document.version).toBe(1);
+      // The keyframe is labelled 10 in the global scope, which says nothing
+      // about the document scope. Resuming that from its own recorded position
+      // picks up the version 2 upgrade that landed afterwards.
+      expect(docFromKeyframe.state.document.version).toBe(2);
 
-      // Step 8: THE SOLUTION - Use DocumentMetaCache to get correct metadata
+      // Step 8: the meta cache reads the same operations and agrees
       const correctMeta = await documentMetaCache.getDocumentMeta(
         docId,
         "main",
       );
 
-      // DocumentMetaCache returns the correct, current version 2
       expect(correctMeta.state.version).toBe(2);
     });
   });
