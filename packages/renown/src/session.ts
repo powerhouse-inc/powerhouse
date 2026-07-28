@@ -164,7 +164,7 @@ export async function verifyRenownSession(
     const name = profile.name ?? profile.username ?? undefined;
     const avatarUrl = profile.avatar ?? profile.userImage ?? undefined;
     const user = { ...session.user };
-    if (name ?? avatarUrl) {
+    if (name || avatarUrl) {
       user.ens = { name, avatarUrl };
     }
     // Only `documentId` makes a seeded profile useful (profile links); display

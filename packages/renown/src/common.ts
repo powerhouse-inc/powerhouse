@@ -312,8 +312,11 @@ export class Renown implements IRenown {
       ) {
         return false;
       }
+      // Narrow `profile` first: the fetched payload is unvalidated JSON, so a
+      // missing documentId must not make the undefined case compare equal.
       const unchanged =
-        current.profile?.documentId === profile.documentId &&
+        current.profile !== undefined &&
+        current.profile.documentId === profile.documentId &&
         current.profile.username === profile.username &&
         current.profile.userImage === profile.userImage;
       if (unchanged) return false;
