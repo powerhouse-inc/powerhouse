@@ -287,9 +287,47 @@ export class Renown implements IRenown {
         await this.logout();
         return false;
       }
+      await this.refreshProfile();
       return true;
     } catch {
       return true;
+    }
+  }
+
+  // Re-read profile attributes at the source so a renamed user or changed avatar
+  // shows up on the next load. Carries no logout risk, unlike revalidate().
+  async refreshProfile(): Promise<boolean> {
+    const user = this.user;
+    if (!user || !this.#profileFetcher) return false;
+    try {
+      const profile = await this.#profileFetcher(user, this.#baseUrl);
+      if (!profile) return false;
+      // Asserted because narrowing from the pre-await read would otherwise hide
+      // that a logout during the fetch can clear this.
+      const current = this.user as User | undefined;
+      if (
+        !current ||
+        current.address !== user.address ||
+        current.chainId !== user.chainId
+      ) {
+        return false;
+      }
+      const unchanged =
+        current.profile?.documentId === profile.documentId &&
+        current.profile.username === profile.username &&
+        current.profile.userImage === profile.userImage;
+      if (unchanged) return false;
+      this.#updateUser({
+        ...current,
+        profile,
+        ens: {
+          name: profile.username ?? undefined,
+          avatarUrl: profile.userImage ?? undefined,
+        },
+      });
+      return true;
+    } catch {
+      return false;
     }
   }
 

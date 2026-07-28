@@ -133,6 +133,8 @@ function Login() {
 
 Gate any component on auth with a plain `if (!user)` from `useRenownAuth()`; for a no-Suspense "still resolving" state (useful in client-only apps), use `useRenownAuthAsync()`, which returns `state: "authenticated" | "resolving" | "unauthenticated"`.
 
+`"resolving"` appears only when the answer is genuinely unknown. A visitor the first render already knows is signed out — no session cookie, no persisted user — resolves straight to `"unauthenticated"`, so logged-out visitors never sit behind a spinner while the SDK builds its keypair.
+
 `switchboardUrl` enables in-page sign-in; omit it to fall back to the redirect flow. `RenownProvider` composes `<Renown>` (SDK init), `RenownWalletProvider` (adapters), and `RenownInitialUserProvider` (first-render seed), which you can also mount individually for a custom tree.
 
 #### SSR and client-only
@@ -141,6 +143,8 @@ Gate any component on auth with a plain `if (!user)` from `useRenownAuth()`; for
 
 - **Client-only apps** (Vite, etc.): the provider seeds the first render synchronously from `localStorage`, so a returning user is authenticated on the first paint with no flash.
 - **SSR apps** (Next.js): pass a server-resolved `session` (from a verified session cookie) so authenticated content renders on the server too. Read the cookie in a Data Access Layer with `verifyRenownSession` from `@renown/sdk/node`; passing `session` also keeps the cookie in sync after login/logout. A complete Next.js reference lives in the monorepo at `test/test-fusion`, and the `@powerhousedao/reactor-browser` README ("Renown in-page sign-in") has the full API.
+
+Under SSR the cookie seeds the server render and hydration (it is the only thing readable server-side), then `localStorage` takes over once mounted, since that is the credential the SDK actually restores. Include the `documentId`/`username`/`userImage` fields in the cookie's profile hint so both sources agree on name, avatar and profile links — type the route handler with `RenownSessionCookie` rather than redeclaring the payload shape.
 
 ### Testing sign-in (mock adapter)
 

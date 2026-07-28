@@ -586,8 +586,9 @@ only when you need a custom tree:
 - `<Renown appName namespace switchboardUrl revalidate? />` — SDK init (renders
   `null`; place high in the tree).
 - `RenownWalletProvider` — wallet adapters (below).
-- `RenownInitialUserProvider` — seeds the first render with a `User` (see
-  [Server-side rendering](#server-side-rendering-ssr)).
+- `RenownInitialUserProvider` — seeds the first render, via `initialAuth`
+  (three-state, preferred) or `initialUser` (a bare `User`; cannot express
+  "known signed out"). See [Server-side rendering](#server-side-rendering-ssr).
 
 ### Auth state — `useRenownAuth` / `useRenownAuthAsync`
 
@@ -616,6 +617,14 @@ function EditButton() {
 }
 ```
 
+`"resolving"` only appears when the answer is genuinely unknown. If the first
+render already knows the visitor is signed out — no session cookie on the server,
+no persisted user in `localStorage` — the state goes straight to
+`"unauthenticated"`, so a logged-out visitor never sees the skeleton while the
+SDK builds its keypair. A login you triggered (`pending`) still reports
+`"resolving"`. `useRenownInitialAuth()` exposes the underlying signal as
+`{ state: "authenticated" | "anonymous" | "unknown" }`.
+
 ### Server-side rendering (SSR)
 
 The provider tree is SSR-safe, so the logged-out shell renders on the server with
@@ -638,22 +647,43 @@ client mints a bearer token and POSTs it to `sessionEndpoint` (default
 handler that sets an HttpOnly cookie, and a Data Access Layer that verifies it
 with `verifyRenownSession` from `@renown/sdk/node` (see that package's README).
 
-### Client-only apps
+The POST body is a `RenownSessionCookie` — the bearer token plus a
+`RenownSessionProfile` display hint carrying `documentId`, `username` and
+`userImage`. Those let `verifyRenownSession` rebuild a `user.profile` matching
+the client's, so the server renders the same name, avatar and profile links the
+client will. Type your route handler with `RenownSessionCookie` rather than
+redeclaring the shape — three copies of it drift.
 
-Omit `session` and the provider seeds the first render synchronously from
-`localStorage` (`readPersistedUser`), so a returning user renders authenticated
-on the first paint — no server, no flash. The stored credential is revalidated in
-the background (see below); `useRenownAuthAsync` exposes `resolving` for the cold
-start with no stored session.
+### Seeding: which source wins
 
-### Revalidation
+The first render is seeded from whichever source can answer at that moment:
 
-On mount the provider revalidates the restored credential against the switchboard
-and logs the user out if it was revoked or expired (`revalidate` prop, default
-`"always"`; set `"never"` to skip). In the browser this runs **non-blocking** in
-the background (fail-open — a transient outage keeps the session); Node scripts
-block on it (see `@renown/sdk`). This does not replace server-side checks: the
-switchboard enforces the credential on every real operation.
+| Render | Source | Why |
+| --- | --- | --- |
+| Server | `session` (the cookie) | The only thing readable server-side |
+| Hydration | `session` | Must match the server output |
+| After mount | `localStorage` | Holds the credential the SDK actually restores |
+
+`localStorage` becomes authoritative once mounted because that is what the SDK
+reads on build; the cookie is a display hint that can go stale independently (it
+expires on its own schedule). Omit `session` entirely for client-only apps —
+`localStorage` then seeds every render, so a returning user is authenticated on
+the first paint with no server involved.
+
+### Revalidation and profile refresh
+
+Two separate background passes run on mount, neither blocking the paint:
+
+- **Credential revalidation** re-checks the restored credential against the
+  switchboard and logs the user out if it was revoked or expired. Gated by the
+  `revalidate` prop (default `"always"`; `"never"` skips it). Fail-open — a
+  transient outage keeps the session.
+- **Profile refresh** re-reads `username`/`userImage` and updates the store if
+  they changed. This runs **regardless of `revalidate`**, because it can never
+  log anyone out; apps that disabled revalidation still get fresh attributes.
+
+Neither replaces server-side checks: the switchboard enforces the credential on
+every real operation.
 
 ### `RenownWalletProvider`
 

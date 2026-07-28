@@ -1,15 +1,15 @@
 import {
   RENOWN_SESSION_COOKIE,
   serializeRenownSessionCookie,
+  type RenownSessionCookie,
 } from "@renown/sdk/node";
 import { cookies } from "next/headers";
 
 const MAX_AGE = 7 * 24 * 60 * 60; // 7 days, matching the token lifetime
 
-interface SessionBody {
-  token?: string;
-  profile?: { name?: string | null; avatar?: string | null } | null;
-}
+// The wire shape is the cookie payload itself, minus the SDK's required `token`
+// (untrusted input, validated below).
+type SessionBody = Partial<RenownSessionCookie>;
 
 // Client posts the minted bearer token (+ display hint) after sign-in; we store
 // them together in an HttpOnly cookie. DELETE clears it on logout.

@@ -16,6 +16,10 @@ export interface RenownSession {
 export interface RenownSessionProfile {
   name?: string | null;
   avatar?: string | null;
+  /** Renown profile document id, so SSR can resolve profile links. */
+  documentId?: string | null;
+  username?: string | null;
+  userImage?: string | null;
 }
 
 /** The `renown_session` cookie payload: the bearer token + a display hint. */
@@ -154,12 +158,26 @@ export async function verifyRenownSession(
 
   if (!session) return undefined;
 
-  // Merge the (unverified) display hint from the envelope — display only.
-  if (profile?.name) {
-    session.user = {
-      ...session.user,
-      ens: { name: profile.name, avatarUrl: profile.avatar ?? undefined },
-    };
+  // Merge the (unverified) display hint from the envelope — display only. The
+  // richer fields make this seed shape-identical to the client's restored user.
+  if (profile) {
+    const name = profile.name ?? profile.username ?? undefined;
+    const avatarUrl = profile.avatar ?? profile.userImage ?? undefined;
+    const user = { ...session.user };
+    if (name ?? avatarUrl) {
+      user.ens = { name, avatarUrl };
+    }
+    // Only `documentId` makes a seeded profile useful (profile links); display
+    // already flows through `ens`, so there is nothing to seed without it.
+    if (profile.documentId) {
+      user.profile = {
+        documentId: profile.documentId,
+        username: profile.username ?? null,
+        userImage: profile.userImage ?? null,
+        ethAddress: session.user.address,
+      };
+    }
+    session.user = user;
   }
   return session;
 }

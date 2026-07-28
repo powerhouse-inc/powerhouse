@@ -82,10 +82,14 @@ export class RenownBuilder extends BaseRenownBuilder {
     const keyStorage = await BrowserKeyStorage.create(this.#keyDbName);
     this.withKeyPairStorage(keyStorage);
     const renown = await super.build();
-    // Browser has a reactive UI, so revalidate in the background (fail-open) and
-    // let the store update if the credential was revoked; never block the paint.
-    if (this.#revalidate === "always" && renown.user) {
-      void renown.revalidate();
+    // Refresh in the background, never blocking the paint. Only the credential
+    // check can log a user out, so it stays gated; the profile refresh always runs.
+    if (renown.user) {
+      if (this.#revalidate === "always") {
+        void renown.revalidate();
+      } else {
+        void renown.refreshProfile();
+      }
     }
     return renown;
   }

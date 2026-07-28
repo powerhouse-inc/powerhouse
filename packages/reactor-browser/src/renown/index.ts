@@ -2,8 +2,12 @@ export * from "./components/index.js";
 export * from "./crypto.js";
 export * from "./constants.js";
 export {
+  RENOWN_INITIAL_ANONYMOUS,
+  RENOWN_INITIAL_UNKNOWN,
   RenownInitialUserProvider,
+  type RenownInitialAuth,
   type RenownInitialUserProviderProps,
+  useRenownInitialAuth,
   useRenownInitialUser,
 } from "./initial-user.js";
 export {

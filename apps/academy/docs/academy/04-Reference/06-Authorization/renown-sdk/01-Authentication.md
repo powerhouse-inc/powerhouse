@@ -561,7 +561,7 @@ export async function GET(request: Request) {
 
 To render authenticated pages on the server (Next.js and similar):
 
-1. On login the client mints a bearer token (`renown.getBearerToken()`) and stores it — with a small display hint (name/avatar) — in an HttpOnly cookie (name exported as `RENOWN_SESSION_COOKIE`, value built with `serializeRenownSessionCookie`). `RenownProvider`'s session-cookie sync does this automatically when given a `session`.
+1. On login the client mints a bearer token (`renown.getBearerToken()`) and stores it — with a `RenownSessionProfile` display hint (`name`/`avatar` plus `documentId`/`username`/`userImage`) — in an HttpOnly cookie (name exported as `RENOWN_SESSION_COOKIE`, value built with `serializeRenownSessionCookie`). `RenownProvider`'s session-cookie sync does this automatically when given a `session`. Type your route handler with the exported `RenownSessionCookie` instead of redeclaring the payload shape.
 2. A Data Access Layer reads the cookie and calls `verifyRenownSession`, memoized per request:
 
 ```typescript
@@ -576,13 +576,17 @@ export const verifySession = cache(async () => {
 });
 ```
 
-`verifyRenownSession` takes the cookie value, verifies the JWT (signature + expiry), and merges the display hint into `user` (unverified — display only). Pass `verifyCredential: true` to also re-check the credential against the switchboard so a **revoked/expired** credential is rejected; it defaults to `false` (token-only, no network). `readSessionClaims(cookieValue)` gives a cheap, signature-free decode for optimistic checks only (e.g. an edge redirect) — never trust it for access control.
+`verifyRenownSession` takes the cookie value, verifies the JWT (signature + expiry), and merges the display hint into `user` (unverified — display only), rebuilding `user.ens` and, when `documentId` is present, `user.profile`. Pass `verifyCredential: true` to also re-check the credential against the switchboard so a **revoked/expired** credential is rejected; it defaults to `false` (token-only, no network). `readSessionClaims(cookieValue)` gives a cheap, signature-free decode for optimistic checks only (e.g. an edge redirect) — never trust it for access control.
 
 3. Pass the result to `RenownProvider session={await verifySession()}` so the server render is authenticated (no flash), and consumers read it via `useRenownAuth()`.
 
-#### Revalidation on the client
+A `null` session is as useful as a populated one: it tells the first render the visitor is definitively signed out, so `useRenownAuthAsync()` reports `"unauthenticated"` immediately instead of spinning. The cookie seeds the server render and hydration; `localStorage` takes over after mount, since that holds the credential the SDK restores.
+
+#### Revalidation and profile refresh on the client
 
 On mount the client re-checks the restored credential against the switchboard and logs out if it was revoked/expired (`revalidate` prop on `RenownProvider`, default `"always"`). In the browser this is **non-blocking and fail-open** (a transient outage keeps the session); Node scripts block on it. `renown.revalidate()` runs the same check on demand.
+
+Separately, `renown.refreshProfile()` re-reads `username`/`userImage` and updates the store only if they changed. It runs on every browser start **regardless of `revalidate`**, because it can never log anyone out — so apps that set `revalidate: "never"` still pick up a renamed user or a new avatar.
 
 ## Best Practices
 
