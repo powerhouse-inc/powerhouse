@@ -1,4 +1,5 @@
 import type { PHDocument } from "@powerhousedao/shared/document-model";
+import type { SnapshotPosition } from "../write-cache-types.js";
 
 /**
  * IWriteCache is a write-side projection that optimizes document state retrieval
@@ -50,10 +51,13 @@ export interface IWriteCache {
    * @param revision - Index of the last operation this document reflects, so
    *   `header.revision[scope]` is one greater. -1 for an empty scope.
    * @param document - The document to cache
+   * @param position - Whether `revision` is the stream's head. Nothing checks
+   *   it: claiming `Head` for an earlier revision makes a getState() with no
+   *   target return stale state.
    *
    * @example
    * ```typescript
-   * cache.putState(docId, 'global', 'main', 42, document);
+   * cache.putState(docId, 'global', 'main', 42, document, SnapshotPosition.Head);
    * ```
    */
   putState(
@@ -62,6 +66,7 @@ export interface IWriteCache {
     branch: string,
     revision: number,
     document: PHDocument,
+    position: SnapshotPosition,
   ): void;
 
   /**

@@ -192,11 +192,6 @@ describe("cold rebuild passes", () => {
     await appendDelete(3);
 
     const atTwo = await cache.getState(docId, "document", BRANCH, 2);
-
-    // Needed: otherwise the head read gets the snapshot the positional read
-    // just cached, a separate getState bug.
-    cache.invalidate(docId, "document", BRANCH);
-
     const atHead = await cache.getState(docId, "document", BRANCH);
 
     expect(isDeleted(atTwo)).toBe(false);

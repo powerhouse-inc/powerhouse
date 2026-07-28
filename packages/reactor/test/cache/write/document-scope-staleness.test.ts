@@ -23,6 +23,7 @@ import {
   createTestOperationStore,
   createUpgradeDocumentOperation,
 } from "../../factories.js";
+import { SnapshotPosition } from "../../../src/cache/write-cache-types.js";
 
 function createDeleteDocumentOperation(
   documentId: string,
@@ -161,7 +162,14 @@ describe("Document Scope Cross-Scope Dependency Issue", () => {
 
       // Step 4: Store keyframe for global scope at revision 10
       const docAtRev10 = await cache.getState(docId, "global", "main", 10);
-      cache.putState(docId, "global", "main", 10, docAtRev10);
+      cache.putState(
+        docId,
+        "global",
+        "main",
+        10,
+        docAtRev10,
+        SnapshotPosition.Head,
+      );
 
       // Verify the document has version 1 at this point
       expect(docAtRev10.state.document.version).toBe(1);
@@ -263,7 +271,14 @@ describe("Document Scope Cross-Scope Dependency Issue", () => {
 
       // Get the document state and explicitly cache it
       const docBeforeDelete = await cache.getState(docId, "global", "main");
-      cache.putState(docId, "global", "main", 1, docBeforeDelete);
+      cache.putState(
+        docId,
+        "global",
+        "main",
+        1,
+        docBeforeDelete,
+        SnapshotPosition.Head,
+      );
 
       // Verify document is not deleted at this point
       expect(docBeforeDelete.state.document.isDeleted).toBeFalsy();

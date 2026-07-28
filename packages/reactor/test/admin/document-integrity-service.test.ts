@@ -21,6 +21,7 @@ import {
   createTestOperationStore,
   createUpgradeDocumentOperation,
 } from "../factories.js";
+import { SnapshotPosition } from "../../src/cache/write-cache-types.js";
 
 function createMockDocumentView(
   getImpl?: (id: string) => Promise<PHDocument>,
@@ -246,6 +247,7 @@ describe("DocumentIntegrityService", () => {
       "main",
       5,
       documentModelDocumentModelModule.utils.createDocument(),
+      SnapshotPosition.Head,
     );
 
     const streamBefore = writeCache.getStream(docId, "global", "main");

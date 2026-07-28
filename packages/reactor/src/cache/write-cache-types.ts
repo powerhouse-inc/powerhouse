@@ -29,6 +29,19 @@ export type DocumentStreamKey = {
 };
 
 /**
+ * Where a snapshot sits in its stream.
+ *
+ * - `Head`: the newest revision of the stream when it was stored. Only these
+ *   can answer a read that asks for the head.
+ * - `Historical`: state at an earlier revision. Usable as a starting point to
+ *   replay forward from, and as an answer to a read for that same revision.
+ */
+export enum SnapshotPosition {
+  Head = "head",
+  Historical = "historical",
+}
+
+/**
  * A cached document snapshot at a specific revision
  */
 export type CachedSnapshot = {
@@ -37,6 +50,9 @@ export type CachedSnapshot = {
 
   /** The document state at this revision */
   document: PHDocument;
+
+  /** Where this snapshot sat in the stream when it was stored */
+  position: SnapshotPosition;
 };
 
 /**

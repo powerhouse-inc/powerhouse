@@ -21,6 +21,7 @@ import {
   createTestOperation,
   createTestOperationStore,
 } from "../../factories.js";
+import { SnapshotPosition } from "../../../src/cache/write-cache-types.js";
 
 /**
  * Mirrors the write-cache slicing contract: putState keeps only the last
@@ -172,7 +173,7 @@ describe("KyselyWriteCache - Error Handling", () => {
 
     it("should propagate ModuleNotFoundError during warm miss", async () => {
       const doc = documentModelDocumentModelModule.utils.createDocument();
-      cache.putState("doc1", "global", "main", 1, doc);
+      cache.putState("doc1", "global", "main", 1, doc, SnapshotPosition.Head);
 
       const mockRegistry = createMockRegistry();
       mockRegistry.getModule = vi.fn().mockImplementation(() => {
@@ -186,7 +187,14 @@ describe("KyselyWriteCache - Error Handling", () => {
         config,
       );
 
-      testCache.putState("doc1", "global", "main", 1, doc);
+      testCache.putState(
+        "doc1",
+        "global",
+        "main",
+        1,
+        doc,
+        SnapshotPosition.Head,
+      );
 
       await expect(
         testCache.getState("doc1", "global", "main", 2),
@@ -336,11 +344,18 @@ describe("KyselyWriteCache - Error Handling", () => {
     it("should propagate reducer errors during warm miss rebuild", async () => {
       const doc = documentModelDocumentModelModule.utils.createDocument();
 
-      const mockGetSince = vi.fn().mockResolvedValue({
-        results: [createTestOperation("doc1", { index: 2, skip: 0 })],
-        options: { cursor: "0", limit: 100 },
-        nextCursor: undefined,
-      });
+      // Scope-aware: a document-scope operation since the base sends the
+      // rebuild down the cold path instead of the warm one under test.
+      const mockGetSince = vi
+        .fn()
+        .mockImplementation((_documentId: string, scope: string) => ({
+          results:
+            scope === "document"
+              ? []
+              : [createTestOperation("doc1", { index: 2, skip: 0 })],
+          options: { cursor: "0", limit: 100 },
+          nextCursor: undefined,
+        }));
 
       const mockOperationStore = {
         ...createMockOperationStore(),
@@ -365,7 +380,14 @@ describe("KyselyWriteCache - Error Handling", () => {
         config,
       );
 
-      testCache.putState("doc1", "global", "main", 1, doc);
+      testCache.putState(
+        "doc1",
+        "global",
+        "main",
+        1,
+        doc,
+        SnapshotPosition.Head,
+      );
 
       await expect(
         testCache.getState("doc1", "global", "main", 2),
@@ -374,7 +396,7 @@ describe("KyselyWriteCache - Error Handling", () => {
 
     it("should not corrupt cache state when reducer throws", async () => {
       const doc = documentModelDocumentModelModule.utils.createDocument();
-      cache.putState("doc1", "global", "main", 1, doc);
+      cache.putState("doc1", "global", "main", 1, doc, SnapshotPosition.Head);
 
       const mockGetSince = vi.fn().mockResolvedValue({
         results: [createTestOperation("doc1", { index: 2, skip: 0 })],
@@ -404,7 +426,14 @@ describe("KyselyWriteCache - Error Handling", () => {
         config,
       );
 
-      testCache.putState("doc1", "global", "main", 1, doc);
+      testCache.putState(
+        "doc1",
+        "global",
+        "main",
+        1,
+        doc,
+        SnapshotPosition.Head,
+      );
 
       try {
         await testCache.getState("doc1", "global", "main", 2);
@@ -669,7 +698,14 @@ describe("KyselyWriteCache - Error Handling", () => {
         config,
       );
 
-      testCache.putState("doc1", "global", "main", 1, doc);
+      testCache.putState(
+        "doc1",
+        "global",
+        "main",
+        1,
+        doc,
+        SnapshotPosition.Head,
+      );
 
       await expect(
         testCache.getState("doc1", "global", "main", 2),
@@ -796,7 +832,14 @@ describe("KyselyWriteCache - Error Handling", () => {
       const doc = documentModelDocumentModelModule.utils.createDocument();
 
       expect(() => {
-        testCache.putState("doc1", "global", "main", 10, doc);
+        testCache.putState(
+          "doc1",
+          "global",
+          "main",
+          10,
+          doc,
+          SnapshotPosition.Head,
+        );
       }).not.toThrow();
 
       await new Promise((resolve) => setTimeout(resolve, 10));
@@ -823,7 +866,14 @@ describe("KyselyWriteCache - Error Handling", () => {
       );
 
       const doc = documentModelDocumentModelModule.utils.createDocument();
-      testCache.putState("doc1", "global", "main", 10, doc);
+      testCache.putState(
+        "doc1",
+        "global",
+        "main",
+        10,
+        doc,
+        SnapshotPosition.Head,
+      );
 
       const retrieved = await testCache.getState("doc1", "global", "main", 10);
 
@@ -1013,7 +1063,7 @@ describe("KyselyWriteCache - Error Handling", () => {
     it("should not modify cache on warm miss failure", async () => {
       const doc = documentModelDocumentModelModule.utils.createDocument();
 
-      cache.putState("doc1", "global", "main", 1, doc);
+      cache.putState("doc1", "global", "main", 1, doc, SnapshotPosition.Head);
 
       const streamBefore = cache.getStream("doc1", "global", "main");
       expect(streamBefore?.ringBuffer.length).toBe(1);
@@ -1042,7 +1092,14 @@ describe("KyselyWriteCache - Error Handling", () => {
         config,
       );
 
-      testCache.putState("doc1", "global", "main", 1, doc);
+      testCache.putState(
+        "doc1",
+        "global",
+        "main",
+        1,
+        doc,
+        SnapshotPosition.Head,
+      );
 
       try {
         await testCache.getState("doc1", "global", "main", 2);
@@ -1081,9 +1138,30 @@ describe("KyselyWriteCache - Error Handling", () => {
         { ...config, maxDocuments: 3 },
       );
 
-      testCache.putState("doc1", "global", "main", 1, doc);
-      testCache.putState("doc2", "global", "main", 1, doc);
-      testCache.putState("doc3", "global", "main", 1, doc);
+      testCache.putState(
+        "doc1",
+        "global",
+        "main",
+        1,
+        doc,
+        SnapshotPosition.Head,
+      );
+      testCache.putState(
+        "doc2",
+        "global",
+        "main",
+        1,
+        doc,
+        SnapshotPosition.Head,
+      );
+      testCache.putState(
+        "doc3",
+        "global",
+        "main",
+        1,
+        doc,
+        SnapshotPosition.Head,
+      );
 
       try {
         await testCache.getState("doc4", "global", "main", 1);
@@ -1094,7 +1172,14 @@ describe("KyselyWriteCache - Error Handling", () => {
       const stream4 = testCache.getStream("doc4", "global", "main");
       expect(stream4).toBeUndefined();
 
-      testCache.putState("doc5", "global", "main", 1, doc);
+      testCache.putState(
+        "doc5",
+        "global",
+        "main",
+        1,
+        doc,
+        SnapshotPosition.Head,
+      );
 
       const evicted1 = testCache.invalidate("doc1", "global", "main");
       expect(evicted1).toBe(0);
@@ -1248,8 +1333,8 @@ describe("KyselyWriteCache - Error Handling", () => {
 
     it("should maintain cache consistency across error types", async () => {
       const doc = documentModelDocumentModelModule.utils.createDocument();
-      cache.putState("doc1", "global", "main", 1, doc);
-      cache.putState("doc2", "global", "main", 1, doc);
+      cache.putState("doc1", "global", "main", 1, doc, SnapshotPosition.Head);
+      cache.putState("doc2", "global", "main", 1, doc, SnapshotPosition.Head);
 
       const mockGetSince = vi
         .fn()
@@ -1274,8 +1359,22 @@ describe("KyselyWriteCache - Error Handling", () => {
         config,
       );
 
-      testCache1.putState("doc1", "global", "main", 1, doc);
-      testCache1.putState("doc2", "global", "main", 1, doc);
+      testCache1.putState(
+        "doc1",
+        "global",
+        "main",
+        1,
+        doc,
+        SnapshotPosition.Head,
+      );
+      testCache1.putState(
+        "doc2",
+        "global",
+        "main",
+        1,
+        doc,
+        SnapshotPosition.Head,
+      );
 
       try {
         await testCache1.getState("doc3", "global", "main", 1);
@@ -1298,8 +1397,22 @@ describe("KyselyWriteCache - Error Handling", () => {
         config,
       );
 
-      testCache2.putState("doc1", "global", "main", 1, doc);
-      testCache2.putState("doc2", "global", "main", 1, doc);
+      testCache2.putState(
+        "doc1",
+        "global",
+        "main",
+        1,
+        doc,
+        SnapshotPosition.Head,
+      );
+      testCache2.putState(
+        "doc2",
+        "global",
+        "main",
+        1,
+        doc,
+        SnapshotPosition.Head,
+      );
 
       try {
         await testCache2.getState("doc4", "global", "main", 2);

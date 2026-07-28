@@ -12,6 +12,7 @@ import {
   createMockDocumentMetaCache,
   createMockOperationStore,
 } from "../../factories.js";
+import { SnapshotPosition } from "../../../src/cache/write-cache-types.js";
 
 describe("DefaultExecutionScope", () => {
   it("should pass stores through unchanged", async () => {
@@ -180,7 +181,14 @@ describe("KyselyWriteCache.withScopedStores", () => {
       clipboard: [],
     } as any;
 
-    originalCache.putState("doc-1", "global", "main", 0, doc);
+    originalCache.putState(
+      "doc-1",
+      "global",
+      "main",
+      0,
+      doc,
+      SnapshotPosition.Head,
+    );
 
     const scoped = originalCache.withScopedStores(
       scopedOperationStore,
@@ -219,7 +227,7 @@ describe("KyselyWriteCache.withScopedStores", () => {
       clipboard: [],
     } as any;
 
-    scoped.putState("doc-1", "global", "main", 0, doc);
+    scoped.putState("doc-1", "global", "main", 0, doc, SnapshotPosition.Head);
 
     const originalStream = originalCache.getStream("doc-1", "global", "main");
     expect(originalStream).toBeDefined();
@@ -327,7 +335,14 @@ describe("KyselyWriteCache isolation", () => {
       clipboard: [],
     } as any;
 
-    originalCache.putState("doc-1", "global", "main", 0, doc);
+    originalCache.putState(
+      "doc-1",
+      "global",
+      "main",
+      0,
+      doc,
+      SnapshotPosition.Head,
+    );
 
     const isolated = new KyselyWriteCache(
       mockKeyframeStore,
@@ -338,7 +353,7 @@ describe("KyselyWriteCache isolation", () => {
 
     expect(isolated.getStream("doc-1", "global", "main")).toBeUndefined();
 
-    isolated.putState("doc-1", "global", "main", 1, doc);
+    isolated.putState("doc-1", "global", "main", 1, doc, SnapshotPosition.Head);
     const originalStream = originalCache.getStream("doc-1", "global", "main");
     const isolatedStream = isolated.getStream("doc-1", "global", "main");
     expect(originalStream).not.toBe(isolatedStream);
@@ -356,7 +371,14 @@ describe("KyselyWriteCache isolation", () => {
       clipboard: [],
     } as any;
 
-    originalCache.putState("doc-1", "global", "main", 0, doc);
+    originalCache.putState(
+      "doc-1",
+      "global",
+      "main",
+      0,
+      doc,
+      SnapshotPosition.Head,
+    );
 
     const isolated = new KyselyWriteCache(
       mockKeyframeStore,

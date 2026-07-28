@@ -53,6 +53,7 @@ import {
   getNextIndexForScope,
   updateDocumentRevision,
 } from "./util.js";
+import { SnapshotPosition } from "../cache/write-cache-types.js";
 
 export class DocumentActionHandler {
   constructor(
@@ -231,6 +232,7 @@ export class DocumentActionHandler {
       job.branch,
       operation.index,
       document,
+      SnapshotPosition.Head,
     );
 
     indexTxn.write([
@@ -375,6 +377,7 @@ export class DocumentActionHandler {
       job.branch,
       operation.index,
       document,
+      SnapshotPosition.Head,
     );
 
     indexTxn.write([
@@ -553,6 +556,7 @@ export class DocumentActionHandler {
       job.branch,
       operation.index,
       document,
+      SnapshotPosition.Head,
     );
 
     indexTxn.write([
@@ -778,6 +782,7 @@ export class DocumentActionHandler {
       job.branch,
       operation.index,
       sourceDoc,
+      SnapshotPosition.Head,
     );
 
     indexTxn.write([

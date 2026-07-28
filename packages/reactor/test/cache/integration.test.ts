@@ -28,6 +28,7 @@ import {
   createTestOperationStore,
   createUpgradeDocumentOperation,
 } from "../factories.js";
+import { SnapshotPosition } from "../../src/cache/write-cache-types.js";
 
 describe("KyselyWriteCache Integration Tests", () => {
   let cache: KyselyWriteCache;
@@ -147,10 +148,10 @@ describe("KyselyWriteCache Integration Tests", () => {
       });
 
       const doc10 = await cache.getState(docId, "global", "main", 10);
-      cache.putState(docId, "global", "main", 10, doc10);
+      cache.putState(docId, "global", "main", 10, doc10, SnapshotPosition.Head);
 
       const doc20 = await cache.getState(docId, "global", "main", 20);
-      cache.putState(docId, "global", "main", 20, doc20);
+      cache.putState(docId, "global", "main", 20, doc20, SnapshotPosition.Head);
 
       const keyframe10 = await keyframeStore.findNearestKeyframe(
         docId,
@@ -477,7 +478,14 @@ describe("KyselyWriteCache Integration Tests", () => {
       );
 
       const docAfterCreate = await cache.getState(docId, "document", "main", 0);
-      cache.putState(docId, "document", "main", 0, docAfterCreate);
+      cache.putState(
+        docId,
+        "document",
+        "main",
+        0,
+        docAfterCreate,
+        SnapshotPosition.Head,
+      );
 
       const docForUpgrade = await cache.getState(docId, "document", "main");
 

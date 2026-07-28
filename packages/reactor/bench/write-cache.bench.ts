@@ -10,6 +10,7 @@ import type { WriteCacheConfig } from "../src/cache/write-cache-types.js";
 import { DocumentModelRegistry } from "../src/registry/implementation.js";
 import type { IDocumentModelRegistry } from "../src/registry/interfaces.js";
 import { createTestOperationStore } from "../test/factories.js";
+import { SnapshotPosition } from "../src/cache/write-cache-types.js";
 
 const DOCUMENT_ID = "bench-doc-1";
 const DOCUMENT_TYPE = "powerhouse/document-drive";
@@ -189,7 +190,7 @@ describe("Write Cache Cold Miss Performance", () => {
       });
 
       const doc50 = await cache.getState(DOCUMENT_ID, SCOPE, BRANCH, 50);
-      cache.putState(DOCUMENT_ID, SCOPE, BRANCH, 50, doc50);
+      cache.putState(DOCUMENT_ID, SCOPE, BRANCH, 50, doc50, SnapshotPosition.Head);
 
       await new Promise((resolve) => setTimeout(resolve, 100));
 
@@ -229,7 +230,7 @@ describe("Write Cache Hit Performance", () => {
 
       for (let i = 91; i <= 100; i++) {
         const doc = await cache.getState(DOCUMENT_ID, SCOPE, BRANCH, i);
-        cache.putState(DOCUMENT_ID, SCOPE, BRANCH, i, doc);
+        cache.putState(DOCUMENT_ID, SCOPE, BRANCH, i, doc, SnapshotPosition.Head);
       }
 
       await cache.getState(DOCUMENT_ID, SCOPE, BRANCH, 95);
@@ -322,7 +323,7 @@ describe("Write Cache LRU Eviction Performance", () => {
         );
 
         const doc = await cache.getState(docId, SCOPE, BRANCH, 1);
-        cache.putState(docId, SCOPE, BRANCH, 1, doc);
+        cache.putState(docId, SCOPE, BRANCH, 1, doc, SnapshotPosition.Head);
       }
     },
     { time: 2000 },
@@ -377,7 +378,7 @@ describe("Write Cache LRU Eviction Performance", () => {
         );
 
         const doc = await cache.getState(docId, SCOPE, BRANCH, 1);
-        cache.putState(docId, SCOPE, BRANCH, 1, doc);
+        cache.putState(docId, SCOPE, BRANCH, 1, doc, SnapshotPosition.Head);
       }
 
       for (let i = 1; i <= 5; i++) {
@@ -576,7 +577,7 @@ describe("Write Cache Keyframe Performance", () => {
       const baseDoc = driveDocumentModelModule.utils.createDocument();
 
       for (let i = 1; i <= 100; i++) {
-        cache.putState(DOCUMENT_ID, SCOPE, BRANCH, i, baseDoc);
+        cache.putState(DOCUMENT_ID, SCOPE, BRANCH, i, baseDoc, SnapshotPosition.Head);
       }
 
       await new Promise((resolve) => setTimeout(resolve, 100));
@@ -596,7 +597,7 @@ describe("Write Cache Keyframe Performance", () => {
       const baseDoc = driveDocumentModelModule.utils.createDocument();
 
       for (let i = 1; i <= 100; i++) {
-        cache.putState(DOCUMENT_ID, SCOPE, BRANCH, i, baseDoc);
+        cache.putState(DOCUMENT_ID, SCOPE, BRANCH, i, baseDoc, SnapshotPosition.Head);
       }
 
       await new Promise((resolve) => setTimeout(resolve, 100));

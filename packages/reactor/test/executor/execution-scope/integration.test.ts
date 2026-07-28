@@ -18,6 +18,7 @@ import type { KyselyKeyframeStore } from "../../../src/storage/kysely/keyframe-s
 import type { KyselyOperationStore } from "../../../src/storage/kysely/store.js";
 import type { Database as DatabaseSchema } from "../../../src/storage/kysely/types.js";
 import { createTestOperationStore } from "../../factories.js";
+import { SnapshotPosition } from "../../../src/cache/write-cache-types.js";
 
 describe("KyselyExecutionScope Integration", () => {
   let db: Kysely<DatabaseSchema>;
@@ -376,6 +377,7 @@ describe("KyselyExecutionScope Integration", () => {
           "main",
           0,
           doc,
+          SnapshotPosition.Head,
         );
       });
 

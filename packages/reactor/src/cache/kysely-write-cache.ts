@@ -16,6 +16,7 @@ import type { IKeyframeStore, IOperationStore } from "../storage/interfaces.js";
 import { RingBuffer } from "./buffer/ring-buffer.js";
 import { LRUTracker } from "./lru/lru-tracker.js";
 import type { CachedSnapshot, WriteCacheConfig } from "./write-cache-types.js";
+import { SnapshotPosition } from "./write-cache-types.js";
 import type { IWriteCache } from "./write/interfaces.js";
 
 type DocumentStream = {
@@ -62,7 +63,7 @@ function extractModuleVersion(doc: PHDocument): number | undefined {
   return v === 0 ? undefined : v;
 }
 
-/** The stream's head: highest revision held, latest push winning a tie. */
+/** The highest revision held, latest push winning a tie. */
 function highestRevision(
   snapshots: CachedSnapshot[],
 ): CachedSnapshot | undefined {
@@ -73,6 +74,20 @@ function highestRevision(
     }
   }
   return newest;
+}
+
+/**
+ * Copies a document far enough that the caller cannot write through it. Inside
+ * this class, callers only ever replace whole fields on these four, so one
+ * level each is enough.
+ */
+function copyDocument(document: PHDocument): PHDocument {
+  return {
+    ...document,
+    header: { ...document.header },
+    state: { ...document.state },
+    operations: { ...document.operations },
+  };
 }
 
 /**
@@ -171,6 +186,8 @@ export class KyselyWriteCache implements IWriteCache {
   /**
    * Retrieves document state at a specific revision from cache or rebuilds it.
    *
+   * Note: this returns a _shallow_ copy of the document.
+   *
    * Cache hit path: Returns cached snapshot if available (O(1))
    * Warm miss path: Rebuilds from cached base revision + incremental ops
    * Cold miss path: Rebuilds from keyframe or from scratch using all operations
@@ -206,9 +223,36 @@ export class KyselyWriteCache implements IWriteCache {
 
       if (targetRevision === undefined) {
         const newest = highestRevision(snapshots);
-        if (newest) {
+
+        // Only the topmost snapshot can be the head, and only if it was stored
+        // as one: anything above it proves the stream has grown since.
+        if (newest?.position === SnapshotPosition.Head) {
           this.lruTracker.touch(streamKey);
-          return newest.document;
+          return copyDocument(newest.document);
+        }
+
+        if (newest) {
+          const document = await this.warmMissRebuild(
+            newest.document,
+            newest.revision,
+            documentId,
+            scope,
+            branch,
+            undefined,
+            signal,
+          );
+
+          this.store(
+            documentId,
+            scope,
+            branch,
+            (document.header.revision[scope] ?? 0) - 1,
+            document,
+            SnapshotPosition.Head,
+          );
+          this.lruTracker.touch(streamKey);
+
+          return document;
         }
       } else {
         const exactMatch = snapshots.findLast(
@@ -216,7 +260,7 @@ export class KyselyWriteCache implements IWriteCache {
         );
         if (exactMatch) {
           this.lruTracker.touch(streamKey);
-          return exactMatch.document;
+          return copyDocument(exactMatch.document);
         }
 
         const newestOlder = this.findNearestOlderSnapshot(
@@ -234,7 +278,14 @@ export class KyselyWriteCache implements IWriteCache {
             signal,
           );
 
-          this.putState(documentId, scope, branch, targetRevision, document);
+          this.store(
+            documentId,
+            scope,
+            branch,
+            targetRevision,
+            document,
+            SnapshotPosition.Historical,
+          );
           this.lruTracker.touch(streamKey);
 
           return document;
@@ -254,7 +305,16 @@ export class KyselyWriteCache implements IWriteCache {
     const revision =
       targetRevision ?? (document.header.revision[scope] ?? 0) - 1;
 
-    this.putState(documentId, scope, branch, revision, document);
+    this.store(
+      documentId,
+      scope,
+      branch,
+      revision,
+      document,
+      targetRevision === undefined
+        ? SnapshotPosition.Head
+        : SnapshotPosition.Historical,
+    );
 
     return document;
   }
@@ -285,6 +345,18 @@ export class KyselyWriteCache implements IWriteCache {
     branch: string,
     revision: number,
     document: PHDocument,
+    position: SnapshotPosition,
+  ): void {
+    this.store(documentId, scope, branch, revision, document, position);
+  }
+
+  private store(
+    documentId: string,
+    scope: string,
+    branch: string,
+    revision: number,
+    document: PHDocument,
+    position: SnapshotPosition,
   ): void {
     const streamKey = this.makeStreamKey(documentId, scope, branch);
     const stream = this.getOrCreateStream(streamKey);
@@ -293,8 +365,10 @@ export class KyselyWriteCache implements IWriteCache {
     // only needs at(-1).index to determine the next index, so carrying the
     // full history causes O(n²) array copies across n operations. UNDO, REDO,
     // and PRUNE bypass this by forcing a cold-miss rebuild in the job executor.
+    // Copied so a caller still holding the document cannot change what we
+    // stored.
     const slicedDocument: PHDocument = {
-      ...document,
+      ...copyDocument(document),
       operations: Object.fromEntries(
         Object.entries(document.operations).map(([k, ops]) => [
           k,
@@ -307,6 +381,7 @@ export class KyselyWriteCache implements IWriteCache {
     const snapshot: CachedSnapshot = {
       revision,
       document: slicedDocument,
+      position,
     };
 
     stream.ringBuffer.push(snapshot);
@@ -923,11 +998,10 @@ export class KyselyWriteCache implements IWriteCache {
       signal,
     );
 
-    const hasUpgradeCrossing = docScopeNewOps.results.some(
-      (op) => op.action.type === "UPGRADE_DOCUMENT",
-    );
-
-    if (hasUpgradeCrossing) {
+    // Only a cold rebuild applies document-scope operations properly; the model
+    // reducer below ignores them, so a delete or an upgrade since the base
+    // would go missing.
+    if (docScopeNewOps.results.length > 0) {
       return this.coldMissRebuild(
         documentId,
         scope,
@@ -941,7 +1015,9 @@ export class KyselyWriteCache implements IWriteCache {
       documentType,
       extractModuleVersion(baseDocument),
     );
-    let document = baseDocument;
+    // The base is a cached snapshot and the revisions below are written in
+    // place, so copy it first or a rebuild that applies nothing rewrites it.
+    let document = copyDocument(baseDocument);
 
     try {
       const pagedResults = await this.operationStore.getSince(

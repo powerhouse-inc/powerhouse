@@ -18,6 +18,7 @@ import {
   createTestOperationStore,
   createUpgradeDocumentOperation,
 } from "../../factories.js";
+import { SnapshotPosition } from "../../../src/cache/write-cache-types.js";
 
 function createMockOperationStore(): IOperationStore {
   return {
@@ -121,7 +122,7 @@ describe("KyselyWriteCache", () => {
     it("should store and track documents", async () => {
       const doc1 = createTestDocument();
 
-      cache.putState("doc1", "global", "main", 1, doc1);
+      cache.putState("doc1", "global", "main", 1, doc1, SnapshotPosition.Head);
 
       const retrieved = await cache.getState("doc1", "global", "main", 1);
 
@@ -132,7 +133,7 @@ describe("KyselyWriteCache", () => {
       const doc = createTestDocument();
       const originalDoc = structuredClone(doc);
 
-      cache.putState("doc1", "global", "main", 1, doc);
+      cache.putState("doc1", "global", "main", 1, doc, SnapshotPosition.Head);
 
       doc.state.document.version = 100;
 
@@ -143,12 +144,12 @@ describe("KyselyWriteCache", () => {
     it("should evict LRU stream when at capacity", () => {
       const doc = createTestDocument();
 
-      cache.putState("doc1", "global", "main", 1, doc);
-      cache.putState("doc2", "global", "main", 1, doc);
-      cache.putState("doc3", "global", "main", 1, doc);
+      cache.putState("doc1", "global", "main", 1, doc, SnapshotPosition.Head);
+      cache.putState("doc2", "global", "main", 1, doc, SnapshotPosition.Head);
+      cache.putState("doc3", "global", "main", 1, doc, SnapshotPosition.Head);
 
       // the LRU is set to capacity of 3, so doc1 should be evicted
-      cache.putState("doc4", "global", "main", 1, doc);
+      cache.putState("doc4", "global", "main", 1, doc, SnapshotPosition.Head);
 
       // evicting the doc that has already been evicted should not evict anything
       const evicted = cache.invalidate("doc1", "global", "main");
@@ -156,12 +157,54 @@ describe("KyselyWriteCache", () => {
     });
 
     it("should maintain ring buffer per stream", () => {
-      cache.putState("doc1", "global", "main", 1, createTestDocument());
-      cache.putState("doc1", "global", "main", 2, createTestDocument());
-      cache.putState("doc1", "global", "main", 3, createTestDocument());
-      cache.putState("doc1", "global", "main", 4, createTestDocument());
-      cache.putState("doc1", "global", "main", 5, createTestDocument());
-      cache.putState("doc1", "global", "main", 6, createTestDocument());
+      cache.putState(
+        "doc1",
+        "global",
+        "main",
+        1,
+        createTestDocument(),
+        SnapshotPosition.Head,
+      );
+      cache.putState(
+        "doc1",
+        "global",
+        "main",
+        2,
+        createTestDocument(),
+        SnapshotPosition.Head,
+      );
+      cache.putState(
+        "doc1",
+        "global",
+        "main",
+        3,
+        createTestDocument(),
+        SnapshotPosition.Head,
+      );
+      cache.putState(
+        "doc1",
+        "global",
+        "main",
+        4,
+        createTestDocument(),
+        SnapshotPosition.Head,
+      );
+      cache.putState(
+        "doc1",
+        "global",
+        "main",
+        5,
+        createTestDocument(),
+        SnapshotPosition.Head,
+      );
+      cache.putState(
+        "doc1",
+        "global",
+        "main",
+        6,
+        createTestDocument(),
+        SnapshotPosition.Head,
+      );
 
       const stream = cache.getStream("doc1", "global", "main");
       expect(stream).toBeDefined();
@@ -179,9 +222,16 @@ describe("KyselyWriteCache", () => {
     it("should handle multiple scopes/branches separately", () => {
       const doc = createTestDocument();
 
-      cache.putState("doc1", "global", "main", 1, doc);
-      cache.putState("doc1", "global", "feature", 1, doc);
-      cache.putState("doc1", "local", "main", 1, doc);
+      cache.putState("doc1", "global", "main", 1, doc, SnapshotPosition.Head);
+      cache.putState(
+        "doc1",
+        "global",
+        "feature",
+        1,
+        doc,
+        SnapshotPosition.Head,
+      );
+      cache.putState("doc1", "local", "main", 1, doc, SnapshotPosition.Head);
 
       const evicted = cache.invalidate("doc1");
       expect(evicted).toBe(3);
@@ -205,10 +255,38 @@ describe("KyselyWriteCache", () => {
       );
 
       const doc = createTestDocument();
-      cacheWithHigherCapacity.putState("doc1", "global", "main", 1, doc);
-      cacheWithHigherCapacity.putState("doc1", "global", "feature", 1, doc);
-      cacheWithHigherCapacity.putState("doc1", "local", "main", 1, doc);
-      cacheWithHigherCapacity.putState("doc2", "global", "main", 1, doc);
+      cacheWithHigherCapacity.putState(
+        "doc1",
+        "global",
+        "main",
+        1,
+        doc,
+        SnapshotPosition.Head,
+      );
+      cacheWithHigherCapacity.putState(
+        "doc1",
+        "global",
+        "feature",
+        1,
+        doc,
+        SnapshotPosition.Head,
+      );
+      cacheWithHigherCapacity.putState(
+        "doc1",
+        "local",
+        "main",
+        1,
+        doc,
+        SnapshotPosition.Head,
+      );
+      cacheWithHigherCapacity.putState(
+        "doc2",
+        "global",
+        "main",
+        1,
+        doc,
+        SnapshotPosition.Head,
+      );
     });
 
     it("should invalidate all streams for a document", () => {
@@ -259,8 +337,8 @@ describe("KyselyWriteCache", () => {
   describe("clear", () => {
     it("should clear entire cache", () => {
       const doc = createTestDocument();
-      cache.putState("doc1", "global", "main", 1, doc);
-      cache.putState("doc2", "global", "main", 1, doc);
+      cache.putState("doc1", "global", "main", 1, doc, SnapshotPosition.Head);
+      cache.putState("doc2", "global", "main", 1, doc, SnapshotPosition.Head);
 
       cache.clear();
 
@@ -276,10 +354,24 @@ describe("KyselyWriteCache", () => {
       const doc10 = createTestDocument();
       const doc20 = createTestDocument();
 
-      cache.putState("doc1", "global", "main", 0, doc0);
-      cache.putState("doc1", "global", "main", 2, doc2);
-      cache.putState("doc1", "global", "main", 10, doc10);
-      cache.putState("doc1", "global", "main", 20, doc20);
+      cache.putState("doc1", "global", "main", 0, doc0, SnapshotPosition.Head);
+      cache.putState("doc1", "global", "main", 2, doc2, SnapshotPosition.Head);
+      cache.putState(
+        "doc1",
+        "global",
+        "main",
+        10,
+        doc10,
+        SnapshotPosition.Head,
+      );
+      cache.putState(
+        "doc1",
+        "global",
+        "main",
+        20,
+        doc20,
+        SnapshotPosition.Head,
+      );
 
       expect(keyframeStore.putKeyframe).toHaveBeenCalledTimes(2);
       expect(keyframeStore.putKeyframe).toHaveBeenNthCalledWith(
@@ -314,8 +406,15 @@ describe("KyselyWriteCache", () => {
       const doc5 = createTestDocument();
       const doc15 = createTestDocument();
 
-      cache.putState("doc1", "global", "main", 5, doc5);
-      cache.putState("doc1", "global", "main", 15, doc15);
+      cache.putState("doc1", "global", "main", 5, doc5, SnapshotPosition.Head);
+      cache.putState(
+        "doc1",
+        "global",
+        "main",
+        15,
+        doc15,
+        SnapshotPosition.Head,
+      );
 
       expect(keyframeStore.putKeyframe).not.toHaveBeenCalled();
     });
@@ -336,7 +435,14 @@ describe("KyselyWriteCache", () => {
       const doc10 = createTestDocument();
 
       expect(() => {
-        failingCache.putState("doc1", "global", "main", 10, doc10);
+        failingCache.putState(
+          "doc1",
+          "global",
+          "main",
+          10,
+          doc10,
+          SnapshotPosition.Head,
+        );
       }).not.toThrow();
     });
   });
@@ -355,15 +461,15 @@ describe("KyselyWriteCache", () => {
     it("should evict least recently used stream", () => {
       const doc = createTestDocument();
 
-      cache.putState("doc1", "global", "main", 1, doc);
-      cache.putState("doc2", "global", "main", 1, doc);
-      cache.putState("doc3", "global", "main", 1, doc);
+      cache.putState("doc1", "global", "main", 1, doc, SnapshotPosition.Head);
+      cache.putState("doc2", "global", "main", 1, doc, SnapshotPosition.Head);
+      cache.putState("doc3", "global", "main", 1, doc, SnapshotPosition.Head);
 
       // make doc1 the most recently used
-      cache.putState("doc1", "global", "main", 2, doc);
+      cache.putState("doc1", "global", "main", 2, doc, SnapshotPosition.Head);
 
       // doc2 should be evicted now
-      cache.putState("doc4", "global", "main", 1, doc);
+      cache.putState("doc4", "global", "main", 1, doc, SnapshotPosition.Head);
 
       const evicted = cache.invalidate("doc2", "global", "main");
       expect(evicted).toBe(0);
@@ -372,16 +478,16 @@ describe("KyselyWriteCache", () => {
     it("should update LRU on putState", () => {
       const doc = createTestDocument();
 
-      cache.putState("doc1", "global", "main", 1, doc);
-      cache.putState("doc2", "global", "main", 1, doc);
-      cache.putState("doc3", "global", "main", 1, doc);
+      cache.putState("doc1", "global", "main", 1, doc, SnapshotPosition.Head);
+      cache.putState("doc2", "global", "main", 1, doc, SnapshotPosition.Head);
+      cache.putState("doc3", "global", "main", 1, doc, SnapshotPosition.Head);
 
       // make doc1 the most recently used
-      cache.putState("doc1", "global", "main", 2, doc);
-      cache.putState("doc1", "global", "main", 3, doc);
+      cache.putState("doc1", "global", "main", 2, doc, SnapshotPosition.Head);
+      cache.putState("doc1", "global", "main", 3, doc, SnapshotPosition.Head);
 
       // make doc4 the most recently used, which will evict doc2
-      cache.putState("doc4", "global", "main", 1, doc);
+      cache.putState("doc4", "global", "main", 1, doc, SnapshotPosition.Head);
 
       // now evict doc1
       const evicted1 = cache.invalidate("doc1", "global", "main");
@@ -398,9 +504,9 @@ describe("KyselyWriteCache", () => {
       const doc2 = createTestDocument();
       const doc3 = createTestDocument();
 
-      cache.putState("doc1", "global", "main", 1, doc1);
-      cache.putState("doc1", "global", "main", 2, doc2);
-      cache.putState("doc1", "global", "main", 3, doc3);
+      cache.putState("doc1", "global", "main", 1, doc1, SnapshotPosition.Head);
+      cache.putState("doc1", "global", "main", 2, doc2, SnapshotPosition.Head);
+      cache.putState("doc1", "global", "main", 3, doc3, SnapshotPosition.Head);
 
       const retrieved = await cache.getState("doc1", "global", "main", 2);
 
@@ -412,9 +518,9 @@ describe("KyselyWriteCache", () => {
       const doc2 = createTestDocument();
       const doc3 = createTestDocument();
 
-      cache.putState("doc1", "global", "main", 1, doc1);
-      cache.putState("doc1", "global", "main", 2, doc2);
-      cache.putState("doc1", "global", "main", 3, doc3);
+      cache.putState("doc1", "global", "main", 1, doc1, SnapshotPosition.Head);
+      cache.putState("doc1", "global", "main", 2, doc2, SnapshotPosition.Head);
+      cache.putState("doc1", "global", "main", 3, doc3, SnapshotPosition.Head);
 
       const retrieved = await cache.getState("doc1", "global", "main");
 
@@ -424,14 +530,14 @@ describe("KyselyWriteCache", () => {
     it("should update LRU on cache hit", async () => {
       const doc = createTestDocument();
 
-      cache.putState("doc1", "global", "main", 1, doc);
-      cache.putState("doc2", "global", "main", 1, doc);
-      cache.putState("doc3", "global", "main", 1, doc);
+      cache.putState("doc1", "global", "main", 1, doc, SnapshotPosition.Head);
+      cache.putState("doc2", "global", "main", 1, doc, SnapshotPosition.Head);
+      cache.putState("doc3", "global", "main", 1, doc, SnapshotPosition.Head);
 
       await cache.getState("doc1", "global", "main", 1);
 
       // this will evict doc2
-      cache.putState("doc4", "global", "main", 1, doc);
+      cache.putState("doc4", "global", "main", 1, doc, SnapshotPosition.Head);
 
       const evicted1 = cache.invalidate("doc1", "global", "main");
       expect(evicted1).toBe(1);
@@ -443,7 +549,7 @@ describe("KyselyWriteCache", () => {
 
     it("should respect abort signal", async () => {
       const doc = createTestDocument();
-      cache.putState("doc1", "global", "main", 1, doc);
+      cache.putState("doc1", "global", "main", 1, doc, SnapshotPosition.Head);
 
       const controller = new AbortController();
       controller.abort();

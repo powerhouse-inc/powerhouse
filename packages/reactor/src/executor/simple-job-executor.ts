@@ -36,6 +36,7 @@ import type { IJobExecutor } from "./interfaces.js";
 import { SignatureVerifier } from "./signature-verifier.js";
 import type { JobExecutorConfig, JobResult } from "./types.js";
 import { buildErrorResult } from "./util.js";
+import { SnapshotPosition } from "../cache/write-cache-types.js";
 
 const MAX_SKIP_THRESHOLD = 1000;
 
@@ -607,6 +608,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       job.branch,
       storedOperation.index,
       updatedDocument,
+      SnapshotPosition.Head,
     );
 
     indexTxn.write([
