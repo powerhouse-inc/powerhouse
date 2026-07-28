@@ -425,7 +425,6 @@ async function initServer(
       logger.info(`Reactor maxSkipThreshold set to ${maxSkipThreshold}`);
     }
 
-
     const reactorBuilder = new ReactorBuilder()
       .withEventBus(new EventBus())
       .withKysely(baseKysely);

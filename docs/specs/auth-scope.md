@@ -193,11 +193,13 @@ type DecisionModel<M> = {
 };
 ```
 
-A projection defines no fold function. Folding a stream is what the reactor already does when it rebuilds a document, using the reducers this spec has already named: model reducers for domain scopes, the auth reducer, and the document handler. A projection's value in the model is the named scope's state from that rebuild, so the `document` key holds `PHDocumentState` and the `auth` key holds `PHAuthState`. A derived query that returns several streams yields a map from document id to state. Keeping one fold implementation is the point. Skip handling, hash rules, and the rule that error operations contribute nothing all live in the rebuild path, and the decision model inherits them instead of restating them.
+A projection defines no reducer of its own. Applying a stream's operations is what the reactor already does when it rebuilds a document, using the reducers this spec has already named: model reducers for domain scopes, the auth reducer, and the document handler. A projection's value in the model is the named scope's state from that rebuild, so the `document` key holds `PHDocumentState` and the `auth` key holds `PHAuthState`. A derived query that returns several streams yields a map from document id to state. Keeping one implementation means skip handling and hash rules live in the rebuild path and the decision model inherits them. A denied operation is the exception, because nothing in the rebuild path checks for one today (see "The outcome belongs on the operation").
 
 A derived query may read only projections whose own queries are static. For instance, we may need to generate queries based on group streams. However, we only allow this one layer deep as a simple guard against potential cycles. The auth model fits this limit exactly: a group's auth scope cannot reference another group (see Actions), so group-derived queries never need a second layer.
 
-Building the model does two things at once: it reads each stream's state, and it captures the exact revision each read observed. Neither is new machinery. The write cache already returns a document's state at a revision, hot from the cache or cold by replaying the operation log, so `buildDecisionModel` is one `IWriteCache.getState` read per stream plus a record of the revisions it read. Positional evaluation rides the same machinery: a position in the merged order names a revision per stream, and re-evaluation reaches those states by walking the tail forward rather than by point reads.
+Building the model at the head reads each stream's state and records the revision each read observed. Neither is new machinery: the write cache already returns a document's state at a revision, so this is one `IWriteCache.getState` call per stream plus a record of what it read. Those recorded revisions are what the append condition guards.
+
+Evaluating at an earlier position works differently. A position in the merged order is a timestamp, and `getState` bounds by index, so a replay walks the read-set streams forward in timestamp order instead of reading each position directly (see "A position is a timestamp, not a revision").
 
 ```typescript
 type DecisionTarget = { documentId: string; branch: string };
@@ -216,7 +218,7 @@ function buildDecisionModel<M>(
 
 The append condition, as described before, is the model's read-set. It has one entry per stream the projections read, and stores the revision it read to. This allows us to guarantee that the state of the document's scope applied by the reducer holds only as long as none of these streams has grown. The store enforces this at write time (see Enforcement), so a decision can never be committed against streams that changed during the reducer execution.
 
-Reading through the cache puts the cache's invalidation contract in the auth trust base. This is not new exposure. Every mutation already builds its document through the same cache.
+Reading through the cache puts the cache's contract in the auth trust base. Every mutation already builds its document through the same cache, so the dependency is not new, but a decision relies on two specific guarantees from it that are described under Admission.
 
 The full auth decision model composes three projections, and we can see easily how we might incrementally add the projections to the decision model to roll out this feature. There are two projections over the target document (i.e. we need `document` and `auth` streams), and a set of projections over the referenced group documents:
 
@@ -349,6 +351,8 @@ Enforcement happens in two places with one evaluator: admission (before a new op
 
 New mutation jobs are evaluated in `SimpleJobExecutor.executeRegularAction`, between the write-cache load and the reducer.
 
+A decision reads through the write cache, so it depends on two guarantees the cache makes. A stored snapshot does not change after it is stored, so a decision reading an earlier position does not see a delete that had not happened there. And a read for the head is answered only by a snapshot recorded as the head, so a verdict does not depend on which reads happened to warm the cache. Neither is auth-specific, since any positional read can reach them, and both were fixed before this stage began.
+
 `buildDecisionModel` folds the model from the local streams' current heads and returns the append condition. A deny rejects the job with `AuthorizationDeniedError` before anything is written. The executor's current, separate `isDeleted` check is pulled into the decision model (fixing a bug that's been around for awhile...).
 
 On allow, the reducer runs and the operation goes to `IOperationStore.apply` with the append condition. Inside the append transaction, the store verifies every stream in the condition is still at its recorded revision. If any has grown, it throws `AppendConditionFailedError` and writes nothing. The job then retries. This will rebuild the model, re-decide, and re-append. A condition failure is a concurrency conflict, not a fault, which is why retry is safe.
@@ -429,9 +433,50 @@ COMMIT;
 
 ### Replay
 
-Load jobs (used by sync and replay) evaluate auth for every operation at its position in the merged order: the model is the read-set streams folded to that point. We must re-evaluate the `decide` on load jobs in the case that an operation allowed on a remote is denied locally. This also means that we need to store auth failures from load jobs, rather than simply throw an error like an auth failure on mutation jobs: because a later-arriving but earlier sorting operation may flip the auth check.
+Load jobs (used by sync and replay) evaluate auth for every operation at its position in the merged order: the model is the read-set streams applied to that point. We must re-evaluate the `decide` on load jobs in the case that an operation allowed on a remote is denied locally. This also means that we need to store auth failures from load jobs, rather than simply throw an error like an auth failure on mutation jobs: because a later-arriving but earlier sorting operation may flip the auth check.
 
-Error operations are already skipped for domain reducers, and we'll need to add this same skip for auth errored operations, so that a logged auth deny does not change a document's state (projection). This will advance the stream which could fail a different in-flight append. However, this is a concurrency issue and is already handled by the internal retry.
+#### A position is a timestamp, not a revision
+
+A position in the merged order is a timestamp. A stream's storage order is by index. These are not the same order, and treating them as the same is what makes positional evaluation diverge.
+
+They differ because an operation does not always land in timestamp order. The load path reshuffles only when an incoming operation conflicts with local history. When there is no conflict, the operation is appended at the head whatever its timestamp says, so a backdated delete arriving by sync sits after operations timestamped later than it. Nothing written later repairs that.
+
+There is therefore no revision that corresponds to a timestamp. The highest index whose timestamp is at or before T can sit above an operation timestamped after T, so a prefix taken at that index includes the operation the position was chosen to exclude. Two replicas holding the same operations in different stored order would choose different prefixes and reach different verdicts from identical logs.
+
+The rule is therefore stated on timestamps rather than indexes:
+
+> A read-set stream is applied, in its own stored order, through every operation whose timestamp is at or before the judged operation's. An operation with an equal timestamp in another stream sorts by action id, then by operation id.
+
+Stored order still decides how the operations are applied, because that is what the reducers and the skip bookkeeping require. The timestamp decides only how far to go.
+
+A replay therefore evaluates by walking forward rather than by reading each position. One pass visits the read-set streams in timestamp order, carrying the model along, and judges each operation against the model as it stood when the walk reached it. `IWriteCache.getState` bounds by index and cannot express "up to timestamp T", so a point read cannot answer the question at all.
+
+Admission usually reads the head, but not by definition. Timestamps are supplied by the caller and the reactor does not re-stamp them, so an offline or queued client can submit an action timestamped below operations already stored. An action at or above every timestamp in its read-set streams is at the head and a head read is correct; below them, admission takes the same walk a replay takes.
+
+#### The outcome belongs on the operation
+
+An action records what was attempted. A denial records what happened to it. These are separate facts, so the denial belongs on the operation rather than in a rewritten action.
+
+Rewriting the action fails in two ways. Substituting `NOOP` collides with the base reducer, where a `NOOP` carrying a skip is the marker that supersedes earlier operations. `garbageCollectV2` counts those markers and ignores skip magnitude, so a denied operation that also carried a reshuffle skip would retract one operation where it meant to retract several. Introducing a new action type such as `DENIED` avoids that collision but discards what was attempted, and three consumers need it: the client matches its own action id to learn which action was refused, sync deduplicates by action id, and re-evaluation needs the original action to re-append if the verdict later changes back. Nesting the original action inside a new one keeps those but breaks every consumer that reads `action.type`.
+
+The operation therefore carries an outcome:
+
+```typescript
+type OperationOutcome =
+  | { kind: "applied" }
+  | { kind: "reducer-error"; message: string }
+  | { kind: "denied"; reason: string };
+```
+
+`applied` is the default and needs no storage. The other two are the ways an operation can occupy an index without contributing state, and they are distinguishable, which `error?: string` alone is not: telling a policy denial from a reducer failure by matching a prefix on a human-readable message would make a consensus decision depend on a message string.
+
+The replay rule follows. An operation whose outcome is `denied` is appended to the history and its reducer is not run, so no action is substituted, no message is inspected, and the garbage collector never sees a synthetic marker. The operation still occupies its index, because removing it would shift every later index and break the guarantee the write cache makes about the last operation, which is what every append condition is measured against. A reducer failure needs no such rule today, since the reducer throws again on every rebuild and the state is preserved without anything checking `error`; a denied operation has no such property because its action is valid.
+
+The outcome affects consensus, since it is persisted, it travels by sync, and a replica that ignored it would apply an action every other replica refused. It therefore rolls out per document-sharing fleet, exactly as the enforcement flags do, which means it cannot ship ahead of the flag that produces it. This is stricter than a new action type would need to be: a replica that does not recognise an action type falls through its model reducer's `default` and leaves state unchanged, which happens to be correct, whereas a replica that ignores the outcome applies the action and diverges.
+
+Storing the outcome is a migration. `Operation` carries `error?: string` today in a `text` column, surfaced over sync and GraphQL. `reducer-error` keeps that column for its message, and `denied` needs storage of its own rather than a reserved prefix inside it.
+
+Writing a deny advances the stream, which could fail a different in-flight append. However, this is a concurrency issue and is already handled by the internal retry.
 
 ### Re-evaluation
 
@@ -442,6 +487,33 @@ Re-evaluation is a reshuffle-style re-append. If any decision changes, the tail 
 A pass that changes nothing emits nothing.
 
 The re-append advances the stream heads, so a concurrent admission that read the old tail fails its append condition and retries. It also propagates the result: re-emitted operations reach every remote through the normal reshuffle rebroadcast. Receivers do everything they already do: re-evaluating validity and re-executing reducers.
+
+#### What triggers a pass
+
+Re-evaluation is not a property of loading. It is owed whenever a read-set stream gains an operation that does not sort at the head, since that is exactly when an already-judged operation can change verdict. A load is the common way that happens, but not the only one.
+
+A locally executed operation can trigger it too. Timestamps are supplied by the caller and the reactor does not re-stamp them, so a mutation can carry a timestamp below operations already stored. `DELETE_DOCUMENT` is the case that matters. The reactor issuing the delete would be the one replica that keeps its own later-timestamped operations in effect, while every replica learning of the delete by sync denies them, leaving the deleting reactor as the sole dissenter. That inverts what enforcement is for.
+
+The trigger is therefore stated on the operation rather than the job:
+
+> A committed operation on a read-set stream owes a re-evaluation pass over the streams that read it, unless it sorts at the head of its own stream by timestamp. Admission and replay owe this equally.
+
+An operation that does sort at the head owes nothing, which is the common case, so the ordinary write path stays free. That is safe because a head-sorting operation cannot precede anything already judged.
+
+#### Retracting a tail
+
+A pass that changes a verdict has to retract the operations whose verdict changed. `NOOP` carrying a skip is the base reducer's marker for superseding earlier operations, and an N-operation retraction can be written two ways: a chain of N markers each carrying `skip: 1`, or a single marker carrying `skip: N`.
+
+The two base-reducer protocol versions read those forms as exact inverses. Measured against the reducer over a three-operation stream:
+
+| retraction form | protocol 1 | protocol 2 |
+|---|---|---|
+| chain of N markers, `skip: 1` each | retracts 1, whatever N is | retracts N |
+| one marker, `skip: N` | retracts N | retracts 1 |
+
+`garbageCollectV2` counts markers and ignores skip magnitude, so version 2 reads the chain. Version 1 resolves `skipUntil = index - skip - 1`, so consecutive markers consume each other and only the last one retracts anything, while a single skip spans the range it names.
+
+No encoding works for both, so re-evaluation emits the form the target document's `header.protocolVersions["base-reducer"]` selects. A header carrying no protocol version resolves to 1, since both the reducer and the write cache default it that way, while a document the reactor creates today carries 2, so both forms are live at once and neither can be dropped. The choice has to come from the document's own header rather than from configuration, or two replicas of one document could pick differently.
 
 #### Caveats
 
@@ -617,15 +689,21 @@ Stage 1 has shipped: `PHAuthState` with backfill for legacy documents, the four 
 
 ### Feature flags
 
-The reactor configuration carries three flags: `authEnforcement`, `authGroups`, and `authConditions`. Each flag selects an expansion of the registered decision model, and each implies its predecessors — `authGroups` and `authConditions` require `authEnforcement`. All default off. The flags govern enforcement only; the auth data model (actions, reducer, validation, replication) is always live, so a policy authored under any flag configuration is intact once enforcement turns on.
+The reactor configuration carries four flags: `documentDecisions`, `authEnforcement`, `authGroups`, and `authConditions`. Each flag selects an expansion of the registered decision model, and each implies its predecessors — `authGroups` and `authConditions` require `authEnforcement`, which requires `documentDecisions`. All default off. The flags govern enforcement only; the auth data model (actions, reducer, validation, replication) is always live, so a policy authored under any flag configuration is intact once enforcement turns on.
 
-A decision made at replay is a consensus outcome: a denied operation is stored as an error operation and changes the derived state. Two reactors that share documents but disagree on these flags therefore diverge, exactly as two reactors on incompatible software versions would. A flag flips on for a document-sharing fleet, not per node.
+A decision made at replay is a consensus outcome: a denied operation carries a `denied` outcome and contributes nothing to the derived state. Two reactors that share documents but disagree on these flags therefore diverge, exactly as two reactors on incompatible software versions would. A flag flips on for a document-sharing fleet, not per node.
 
-**Stage 2: the decision model surface, standalone.** Introduce the types: `StreamQuery`, `Projection`, `DecisionContext`, `DecisionModel`, `AppendCondition`, and `buildDecisionModel`. `buildDecisionModel` reads stream states through the write cache and records the revisions it read, so it introduces no new fold machinery. Extend `IOperationStore.apply` to accept an append condition: the guarded insert, the per-stream advisory locks, and `AppendConditionFailedError`. A condition failure retries by rebuilding the model and does not count toward the job's failure limit. No model is registered and nothing consults the machinery, so no flag is needed and nothing changes behavior. The stage is fully tested standalone: `buildDecisionModel` unit tests cover static and derived queries and revision recording, and store-level tests prove a failed condition inserts nothing, lock acquisition cannot deadlock, and a retry lands against the new heads.
+**Stage 2: the decision model surface, standalone.** Introduce the types: `StreamQuery`, `Projection`, `DecisionContext`, `DecisionModel`, `AppendCondition`, and `buildDecisionModel`. `buildDecisionModel` reads stream states through the write cache and records the revisions it read, so it introduces no new machinery for applying operations. Extend `IOperationStore.apply` to accept an append condition: the guarded insert, the per-stream advisory locks, and `AppendConditionFailedError`. A condition failure retries by rebuilding the model and does not count toward the job's failure limit. No model is registered and nothing consults the machinery, so no flag is needed and nothing changes behavior. The stage is fully tested standalone: `buildDecisionModel` unit tests cover static and derived queries and revision recording, and store-level tests prove a failed condition inserts nothing, lock acquisition cannot deadlock, and a retry lands against the new heads.
 
-**Stage 3: the document decision model replaces the document meta cache.** One projection over the `document` stream and a `decide` that denies when the document is deleted. The executor builds the model and calls `decide` at admission for the first time, which replaces the `isDeleted` check and retires the document meta cache. The replay half arrives in its smallest form: load jobs evaluate the decision model for operations at their merged position, denied operations are stored as error operations, and a load into the document stream re-evaluates the domain streams. This stage is not flag-gated: it is the new implementation of an existing check, and positional deletion is the corrected semantics on every reactor. The exit test: a backdated `DELETE_DOCUMENT` arriving by sync denies the operations that sort after it, on every replica, while operations before it survive.
+**Stage 3: the document decision model replaces the document meta cache (`documentDecisions`).** One projection over the `document` stream and a `decide` that denies when the document is deleted. The executor builds the model and calls `decide` at admission for the first time, which replaces the `isDeleted` check, and the append condition over the document stream turns stage 2's retry contract live. The replay half arrives in its smallest form: load jobs evaluate the decision model for operations at their merged position, denied operations carry a `denied` outcome, and an operation that does not sort at its stream's head re-evaluates the streams that read it. The exit test: a backdated `DELETE_DOCUMENT` arriving by sync denies the operations that sort after it, on every replica, while operations before it survive.
 
-**Stage 4: the auth projection (`authEnforcement`).** `decide` gains the uninitialized, creator, version, and grant steps, and grants are enforced at admission and replay. The interim gates from stage 1 are deleted; with the flag off, the reactor does not enforce policies at all. Reads and the sync manager filter against the same model. This stage brings the monotonic-timestamp rule for the auth stream, the excessive-shuffle exemption for re-evaluation, and the load-path work for evaluating multiple streams in one job. Exit: two reactors that accept conflicting auth and domain operations offline converge to identical decisions and identical state after sync, in both directions, and a revocation over a history longer than the excessive-shuffle bound completes without dead-lettering.
+Positional deletion is the corrected semantics on every reactor, so this stage would not need a flag on its own. It carries one because it changes replay outcomes and therefore has to roll out per fleet like the stages after it. The flag also keeps the document meta cache alive: the cache answers the deletion question while the flag is off, so retiring it, along with `rebuildAtRevision`, the eager `putDocumentMeta` calls, and its slot in `ExecutionStores`, waits until the flag defaults on.
+
+The stage was attempted once and reverted. Four mistakes from that attempt are stated as design above and are the stage's real content: it derived a revision from a timestamp (see "A position is a timestamp, not a revision"), it substituted `NOOP` for a denied action (see "The outcome belongs on the operation"), it used a single retraction encoding for both protocol versions (see "Retracting a tail"), and it triggered re-evaluation from the load path alone (see "What triggers a pass"). A fifth problem, the two write-cache guarantees a decision depends on, has since been fixed (see Admission).
+
+Two limits remain deliberate, both on the read side, and stage 4 moves reads onto the same model. A denied operation contributes nothing to state in the reactor's own rebuild path, but `replayDocument` in `shared/document-model` still applies it, so a client replaying history itself sees it apply. The read surface also continues to hide a deleted document outright rather than serving the state at the deletion boundary.
+
+**Stage 4: the auth projection (`authEnforcement`).** `decide` gains the uninitialized, creator, version, and grant steps, and grants are enforced at admission and replay. The interim gates from stage 1 are deleted; with the flag off, the reactor does not enforce policies at all. Reads and the sync manager filter against the same model, which is also where stage 3's two read-side limits are closed. The auth stream joins re-evaluation here, once the monotonic-timestamp rule says how a re-appended auth operation is ordered. This stage brings the monotonic-timestamp rule for the auth stream, the excessive-shuffle exemption for re-evaluation, and the load-path work for evaluating multiple streams in one job. Exit: two reactors that accept conflicting auth and domain operations offline converge to identical decisions and identical state after sync, in both directions, and a revocation over a history longer than the excessive-shuffle bound completes without dead-lettering.
 
 **Stage 5: the groups projection (`authGroups`).** Ship the `PHGroup` model, derive group queries from the grant list, add group streams to the read-set and the append condition, maintain the group-reference relation so sync carries referenced groups and re-evaluation finds dependent documents (see Synchronization), and re-evaluate dependents in their own jobs. Group principals begin to match only here. Until conditions ship, a group's own policy is limited to `address` and `anyone` principals, since `match` never applies. Exit: a group-gated operation syncs to a replica that does not hold the group document and fails closed there until the group's history arrives, after which both replicas agree; and a membership removal denies later operations on every document that references the group.
 
