@@ -104,10 +104,13 @@ async function readStream(
 
 /**
  * The highest operation index the document reflects for the scope, or -1 if
- * empty. The last operation's index is the one invariant the write cache
- * guarantees; header.revision (next-index semantics) is the fallback.
+ * empty. `header.revision` is authoritative, not the rebuilt operation list.
  */
 function observedRevision(document: PHDocument, scope: string): number {
+  if (scope in document.header.revision) {
+    return document.header.revision[scope] - 1;
+  }
+
   if (scope in document.operations) {
     const operations = document.operations[scope];
     if (operations.length > 0) {

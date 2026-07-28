@@ -148,7 +148,7 @@ describe("buildDecisionModel", () => {
     expect(authStream?.revision).toBe(-1);
   });
 
-  it("prefers the operations array over a conflicting header.revision", async () => {
+  it("prefers header.revision over a conflicting operations array", async () => {
     const cache = createMockCache({
       "doc-1:document:main": docStreamDoc,
       "doc-1:auth:main": fakeDoc({
@@ -164,11 +164,13 @@ describe("buildDecisionModel", () => {
       target,
     );
 
+    // tldr: coldMissRebuild erroneously walks document scope operations twice,
+    // so we need to make sure to read the revision directly
     const authStream = appendCondition.streams.find((s) => s.scope === "auth");
-    expect(authStream?.revision).toBe(3);
+    expect(authStream?.revision).toBe(8);
   });
 
-  it("falls back to header.revision when the operations array is empty", async () => {
+  it("reads header.revision when the operations array is empty", async () => {
     const cache = createMockCache({
       "doc-1:document:main": docStreamDoc,
       "doc-1:auth:main": fakeDoc({
