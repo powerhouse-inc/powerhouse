@@ -1,3 +1,13 @@
+## 6.2.2-dev.23 (2026-07-28)
+
+### 🩹 Fixes
+
+- **deps:** pin qr to 0.5.5 so RainbowKit can render the WalletConnect QR ([5343f9178](https://github.com/powerhouse-inc/powerhouse/commit/5343f9178))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.2-dev.22 (2026-07-28)
 
 This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.
