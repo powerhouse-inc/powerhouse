@@ -4,11 +4,8 @@ import { RenownProvider } from "@powerhousedao/reactor-browser/renown";
 import type { User } from "@renown/sdk";
 import type { WalletTheme } from "@renown/sdk/wallet";
 import { useEffect, useState, type ReactNode } from "react";
-import {
-  RENOWN_APP_NAME,
-  SWITCHBOARD_URL,
-  WALLET_ADAPTERS,
-} from "@/lib/renown";
+import { RENOWN_APP_NAME, SWITCHBOARD_URL } from "@/lib/renown";
+import { WALLET_ADAPTERS } from "@/lib/wallet-adapters";
 
 // Follows the OS light/dark preference so the wallet UIs match the page.
 function usePreferredMode(): "light" | "dark" {

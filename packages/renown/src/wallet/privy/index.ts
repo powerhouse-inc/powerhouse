@@ -1,46 +1,27 @@
-import type { LoginMethod, WalletAdapter, WalletController } from "../types.js";
-import { PrivyCore, resolvePrivyMethods } from "./adapter.js";
-import { createPrivyProvider } from "./provider.js";
+import type { WalletAdapterDescriptor } from "../types.js";
+import {
+  privyAdapterMeta,
+  resolvePrivyMethods,
+  type PHRenownPrivyAdapterConfig,
+} from "./meta.js";
 
-// Config slice for the Privy adapter (mirrors connect.renown.adapters.privy).
-// `methods` defaults to [GOOGLE, EMAIL] when omitted.
-export interface PHRenownPrivyAdapterConfig {
-  appId: string;
-  clientId?: string;
-  methods?: string[];
-}
-
-// Build the Privy WalletAdapter. Provider mounts PrivyProvider + a bridge;
-// useController exposes imperative connect/disconnect over the shared core.
-export function createPrivyAdapter(
+/** Privy wallet adapter (embedded wallets plus social / email login) for `RenownWalletProvider`. Importing this module loads no wallet library — `@privy-io/react-auth` is fetched by `load()` on the first login click — but it does make that package a build-time requirement, so install it alongside this import. */
+export function privyAdapter(
   config: PHRenownPrivyAdapterConfig,
-): WalletAdapter {
-  const supportedMethods: LoginMethod[] = resolvePrivyMethods(config.methods);
-  const core = new PrivyCore(supportedMethods);
-  const Provider = createPrivyProvider(core, {
-    appId: config.appId,
-    clientId: config.clientId,
-  });
-
-  function useController(): WalletController {
-    return {
-      connect: (method) => core.connect(method),
-      disconnect: () => core.disconnect(),
-      getSession: () => core.getSession(),
-      subscribe: (listener) => core.subscribe(listener),
-      supportedMethods,
-    };
-  }
-
+): WalletAdapterDescriptor {
   return {
-    id: "privy",
-    supportedMethods,
-    Provider,
-    useController,
+    meta: {
+      ...privyAdapterMeta,
+      supportedMethods: resolvePrivyMethods(config.methods),
+    },
+    load: () =>
+      import("./factory.js").then((m) => m.createPrivyAdapter(config)),
   };
 }
 
-export { PrivyCore, resolvePrivyMethods } from "./adapter.js";
-export type { PrivyBindings } from "./adapter.js";
-export { PrivyAdapterBridge } from "./bridge.js";
-export { createPrivyProvider } from "./provider.js";
+export {
+  DEFAULT_PRIVY_METHODS,
+  privyAdapterMeta,
+  resolvePrivyMethods,
+} from "./meta.js";
+export type { PHRenownPrivyAdapterConfig, PrivyLoginMethod } from "./meta.js";

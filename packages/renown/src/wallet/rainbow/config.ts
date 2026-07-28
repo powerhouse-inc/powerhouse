@@ -11,6 +11,7 @@ import {
   polygon,
   sepolia,
 } from "wagmi/chains";
+import type { PHRenownRainbowAdapterConfig } from "./meta.js";
 
 // RainbowKit ships types via an exports map with no "types" condition, so
 // type-aware lint sees them as error-typed; assert the shapes we rely on.
@@ -27,18 +28,6 @@ const getDefaultConfig = rainbowGetDefaultConfig as (params: {
 const getDefaultWallets = rainbowGetDefaultWallets as () => {
   wallets: WalletGroup[];
 };
-
-// Config slice this adapter consumes; mirrors WalletRainbowConfig in the core
-// controller so operators pass the same shape from powerhouse.config.json.
-export interface PHRenownRainbowAdapterConfig {
-  // Optional: when unset the WalletConnect option is hidden; injected/browser
-  // wallets (MetaMask, etc.) still work. See buildWagmiConfig.
-  walletConnectProjectId?: string;
-  infuraProjectId?: string;
-  appName?: string;
-  // See WalletRainbowConfig.ssr: opt-in for server-rendered hosts.
-  ssr?: boolean;
-}
 
 // RainbowKit's default wallet list minus the WalletConnect option, used when no
 // project id is set (WalletConnect can't work without one; injected wallets do).

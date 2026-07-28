@@ -5,7 +5,7 @@ import {
   useRenownLoginMethods,
 } from "@powerhousedao/reactor-browser/renown";
 import { LoginMethod } from "@renown/sdk/wallet";
-import { WALLET_ADAPTERS } from "@/lib/renown";
+import { WALLET_ADAPTERS } from "@/lib/wallet-adapters";
 
 export function RenownLogin() {
   const {

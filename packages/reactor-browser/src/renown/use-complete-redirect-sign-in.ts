@@ -1,4 +1,4 @@
-import type { WalletSession } from "@renown/sdk/wallet";
+import type { WalletAdapterMeta, WalletSession } from "@renown/sdk/wallet";
 import { isWalletRedirectReturn } from "@renown/sdk/wallet";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { logger } from "document-model";
@@ -12,7 +12,9 @@ export interface CompleteRedirectSignIn {
 
 // Completes Renown sign-in from the session an adapter pushes on a full-page
 // OAuth return (the original connect() promise died with the pre-redirect page).
-export function useCompleteRedirectSignIn(): CompleteRedirectSignIn {
+export function useCompleteRedirectSignIn(
+  metas: WalletAdapterMeta[],
+): CompleteRedirectSignIn {
   const renown = useRenown();
   const user = useUser();
   // Latest adapter session that can sign silently (Privy embedded wallet). Non-
@@ -23,7 +25,7 @@ export function useCompleteRedirectSignIn(): CompleteRedirectSignIn {
   // session that lingers after logout must NOT hijack an explicit wallet login.
   const oauthReturnRef = useRef(
     typeof window !== "undefined" &&
-      isWalletRedirectReturn(window.location.search),
+      isWalletRedirectReturn(window.location.search, metas),
   );
 
   const onSession = useCallback(

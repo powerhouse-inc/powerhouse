@@ -66,7 +66,7 @@ The defaults for the `connect.*` block are defined once in `packages/shared/conn
 
 By default Connect authenticates by **redirecting** to the Renown portal (`connect.renown.url`). Setting `connect.renown.switchboardUrl` enables **in-page** sign-in — the user signs a Renown credential inside Connect and it is written/logged in via that switchboard, with no redirect. If it isn't set, or no adapter can produce a wallet session, Connect falls back to the redirect flow automatically.
 
-`connect.renown.adapters` selects which wallet adapters power in-page sign-in. Presence of a key enables that adapter; its libraries are lazy-loaded on the first login click (nothing wallet-related loads at startup), so the operator must also install that adapter's peer dependencies (see the [Renown SDK README](../../packages/renown/README.md#wallet-adapters-in-page-sign-in)).
+`connect.renown.adapters` selects which wallet adapters power in-page sign-in. Presence of a key enables that adapter. Connect ships with every adapter's peer dependencies installed, so operators need only edit the config; each adapter's libraries are still lazy-loaded on the first login click, so a privy-only deployment never downloads the RainbowKit chunk. (Standalone apps embedding `RenownWalletProvider` install peers per adapter they import — see the [Renown SDK README](../../packages/renown/README.md#wallet-adapters-in-page-sign-in).) Connect's config-to-adapter mapping lives in `src/components/renown-adapter-descriptors.ts`.
 
 ```jsonc
 "renown": {

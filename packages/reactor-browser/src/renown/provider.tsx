@@ -1,7 +1,7 @@
 "use client";
 
 import { readPersistedUser, type User } from "@renown/sdk";
-import type { WalletAdaptersConfig, WalletTheme } from "@renown/sdk/wallet";
+import type { WalletAdapterDescriptor, WalletTheme } from "@renown/sdk/wallet";
 import { useMemo, useSyncExternalStore, type ReactNode } from "react";
 import {
   RENOWN_INITIAL_ANONYMOUS,
@@ -22,8 +22,8 @@ export interface RenownProviderProps {
   namespace?: string;
   url?: string;
   switchboardUrl?: string;
-  /** Wallet adapters for in-page sign-in; omit for redirect-only. */
-  adapters?: WalletAdaptersConfig;
+  /** Wallet adapter descriptors for in-page sign-in (see {@link RenownWalletProvider}); omit for redirect-only. */
+  adapters?: WalletAdapterDescriptor[];
   theme?: WalletTheme;
   /** Re-check the restored credential against the source (default "always"). */
   revalidate?: "always" | "never";

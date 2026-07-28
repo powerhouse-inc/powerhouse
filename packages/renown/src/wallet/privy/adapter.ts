@@ -4,20 +4,17 @@ import type {
   SignTypedDataParams,
 } from "@privy-io/react-auth";
 import type { SignCredentialTypedData } from "../../credential.js";
-import {
-  DEFAULT_PRIVY_METHODS,
-  LoginMethod,
-  type WalletSession,
-} from "../types.js";
+import { LoginMethod, type WalletSession } from "../types.js";
+import type { PrivyLoginMethod } from "./meta.js";
 
 type Hex = `0x${string}`;
 type PrivyLoginMethodId = NonNullable<
   LoginModalOptions["loginMethods"]
 >[number];
 
-// Login methods the Privy adapter can drive. Config `methods` is validated
-// against these; the default is [GOOGLE, EMAIL].
-const PRIVY_METHOD_MAP: Partial<Record<LoginMethod, PrivyLoginMethodId>> = {
+// Exhaustive over PrivyLoginMethod, so widening that union without adding the
+// Privy id here is a compile error.
+const PRIVY_METHOD_MAP: Record<PrivyLoginMethod, PrivyLoginMethodId> = {
   [LoginMethod.WALLET]: "wallet",
   [LoginMethod.GOOGLE]: "google",
   [LoginMethod.APPLE]: "apple",
@@ -34,21 +31,6 @@ const PRIVY_OAUTH_PROVIDERS: Partial<
   [LoginMethod.GOOGLE]: "google",
   [LoginMethod.APPLE]: "apple",
 };
-
-// Resolve config `methods` (LoginMethod string values) to the supported set,
-// falling back to the default when none are provided.
-export function resolvePrivyMethods(methods?: string[]): LoginMethod[] {
-  if (!methods || methods.length === 0) return [...DEFAULT_PRIVY_METHODS];
-  const resolved: LoginMethod[] = [];
-  for (const method of methods) {
-    const value = method as LoginMethod;
-    if (!(value in PRIVY_METHOD_MAP)) {
-      throw new Error(`PrivyAdapter cannot support login method "${method}"`);
-    }
-    resolved.push(value);
-  }
-  return resolved;
-}
 
 // Privy React functions captured by <PrivyAdapterBridge> via bind(). Until bind
 // runs, connect/disconnect calls throw.
@@ -166,10 +148,12 @@ export class PrivyCore {
     if (!chosen) {
       throw new Error("PrivyAdapter has no supported login methods configured");
     }
-    const privyMethod = PRIVY_METHOD_MAP[chosen];
-    if (!privyMethod || !this.supportedMethods.includes(chosen)) {
+    // PRIVY_METHOD_MAP is total over the methods Privy can drive, so only the
+    // configured subset needs checking here.
+    if (!this.supportedMethods.includes(chosen)) {
       throw new Error(`PrivyAdapter does not support login method "${chosen}"`);
     }
+    const privyMethod = PRIVY_METHOD_MAP[chosen];
 
     const bindings = this.bindings;
     const oauthProvider = PRIVY_OAUTH_PROVIDERS[chosen];
