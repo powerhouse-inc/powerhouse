@@ -14,37 +14,59 @@ export type ConnectRenownAdapters = PHConnectRenownAdapters & {
   mock?: PHRenownMockAdapterConfig;
 };
 
-/** Map Connect's declarative `connect.renown.adapters` config to the descriptors `RenownWalletProvider` takes. Array order sets the order of the login buttons. */
+// Adapters validate `methods` eagerly and throw on one they can't drive. This
+// runs during render, so a config typo costs one button, not the whole app.
+function describe(
+  id: string,
+  build: () => WalletAdapterDescriptor,
+): WalletAdapterDescriptor[] {
+  try {
+    return [build()];
+  } catch (error) {
+    console.error(
+      `[connect] Ignoring the "${id}" wallet adapter: connect.renown.adapters.${id} was rejected.`,
+      error,
+    );
+    return [];
+  }
+}
+
+/** Map Connect's declarative `connect.renown.adapters` config to the descriptors `RenownWalletProvider` takes. Array order sets the order of the login buttons. A rejected adapter config is dropped (logged), leaving the others working. */
 export function configToDescriptors(
   config: ConnectRenownAdapters | undefined,
 ): WalletAdapterDescriptor[] {
   if (!config) return [];
+  const { rainbow, privy, mock } = config;
   const descriptors: WalletAdapterDescriptor[] = [];
   // Every adapter Connect can offer is imported statically (hence Connect
   // installs all their peers), but each library stays behind a lazy loader.
-  if (config.rainbow) descriptors.push(rainbowAdapter(config.rainbow));
-  if (config.privy) {
+  if (rainbow) {
+    descriptors.push(...describe("rainbow", () => rainbowAdapter(rainbow)));
+  }
+  if (privy) {
     // appId is optional in the config schema but required by the adapter: an
     // operator who enables privy without one gets no privy login, not a crash.
-    const { appId, clientId, methods } = config.privy;
+    const { appId, clientId, methods } = privy;
     if (appId) {
       descriptors.push(
-        // Methods come from JSON, so they are unvalidated here; the adapter's
-        // resolver rejects anything it can't drive.
-        privyAdapter({
-          appId,
-          clientId,
-          methods: methods as PrivyLoginMethod[] | undefined,
-        }),
+        ...describe("privy", () =>
+          privyAdapter({
+            appId,
+            clientId,
+            // Methods come from JSON, so unvalidated here; the adapter's
+            // resolver rejects anything it can't drive.
+            methods: methods as PrivyLoginMethod[] | undefined,
+          })),
       );
     }
   }
-  if (config.mock) {
+  if (mock) {
     descriptors.push(
-      mockAdapter({
-        ...config.mock,
-        methods: config.mock.methods as MockLoginMethod[] | undefined,
-      }),
+      ...describe("mock", () =>
+        mockAdapter({
+          ...mock,
+          methods: mock.methods as MockLoginMethod[] | undefined,
+        })),
     );
   }
   return descriptors;
