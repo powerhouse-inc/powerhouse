@@ -1,24 +1,16 @@
 import type { ComponentType, ReactNode } from "react";
 import type { SignCredentialTypedData } from "../credential.js";
 
-export enum LoginMethod {
-  WALLET = "wallet",
-  GOOGLE = "google",
-  EMAIL = "email",
-  APPLE = "apple",
-}
+// Const object rather than an enum so config can be authored with plain string
+// literals (`methods: ["google"]`) while `LoginMethod.GOOGLE` still works.
+export const LoginMethod = {
+  WALLET: "wallet",
+  GOOGLE: "google",
+  EMAIL: "email",
+  APPLE: "apple",
+} as const;
 
-// Default login methods per adapter when config omits `methods`; single source
-// of truth shared by the adapters and useRenownLoginMethods so they can't drift.
-export const DEFAULT_PRIVY_METHODS: LoginMethod[] = [
-  LoginMethod.GOOGLE,
-  LoginMethod.EMAIL,
-];
-export const DEFAULT_MOCK_METHODS: LoginMethod[] = [
-  LoginMethod.WALLET,
-  LoginMethod.GOOGLE,
-  LoginMethod.EMAIL,
-];
+export type LoginMethod = (typeof LoginMethod)[keyof typeof LoginMethod];
 
 // Colors the host passes into an adapter Provider so its wallet UI matches.
 // The adapter stays agnostic to how the host derives them (CSS tokens, etc.).
@@ -68,29 +60,45 @@ export interface WalletController {
   subscribe?(
     listener: (session: WalletSession | undefined) => void,
   ): () => void;
+}
+
+// Identity + capabilities, declared once per adapter in a dependency-free module
+// so a host can list methods and detect a redirect return with no wallet library.
+export interface WalletAdapterMeta {
+  id: string;
+  // URL params the adapter leaves when a full-page OAuth login returns; empty for
+  // adapters with no redirect flow.
+  redirectReturnParams: string[];
+  // Must be known before load(): the login UI renders buttons before any wallet
+  // library is fetched.
   supportedMethods: LoginMethod[];
 }
 
-// What each adapter subexport default-exports (a factory over its own config slice).
-export interface WalletAdapter {
-  id: "rainbow" | "privy" | "mock";
-  supportedMethods: LoginMethod[];
-  // React provider that must wrap the app subtree for this adapter to work.
-  // The host passes its current theme so the adapter's UI can match.
+// Behaviour only — what an adapter factory returns. Identity lives in the meta.
+export interface WalletAdapterImpl {
+  // React provider that must wrap the app subtree for this adapter to work; the
+  // host passes its current theme so the adapter's UI can match.
   Provider: ComponentType<{ children: ReactNode; theme?: WalletTheme }>;
   // Hook returning imperative controls; MUST be called inside <Provider>.
   useController: () => WalletController;
 }
 
+// What the host consumes: resolveAdapters pairs an impl with its meta.
+export interface WalletAdapter extends WalletAdapterImpl {
+  meta: WalletAdapterMeta;
+}
+
+// An adapter's light entry: eager meta plus a lazy loader that pulls the factory
+// and its wallet library only once login is activated.
+export interface WalletAdapterDescriptor {
+  meta: WalletAdapterMeta;
+  load: () => Promise<WalletAdapterImpl>;
+}
+
 export type WalletAdapterFactory<Config = unknown> = (
   config: Config,
-) => WalletAdapter;
+) => WalletAdapterImpl;
 
-// Minimal descriptor an adapter exposes for eager import (no wallet library), so
-// a host can detect a redirect return without loading the adapter's heavy factory.
-export interface WalletAdapterMeta {
-  id: WalletAdapter["id"];
-  // URL params the adapter leaves when a full-page OAuth login returns; empty for
-  // adapters with no redirect flow.
-  redirectReturnParams: string[];
-}
+export type WalletAdapterProvider<Config = unknown> = (
+  config: Config,
+) => WalletAdapterDescriptor;

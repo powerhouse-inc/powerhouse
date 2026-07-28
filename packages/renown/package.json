@@ -1,7 +1,7 @@
 {
   "name": "@renown/sdk",
   "version": "6.2.2-dev.22",
-  "description": "Renown SDK — wallet-based authentication and user identity management for Powerhouse React applications.",
+  "description": "Renown SDK \u2014 wallet-based authentication and user identity management for Powerhouse React applications.",
   "license": "AGPL-3.0-only",
   "private": false,
   "type": "module",
@@ -44,17 +44,35 @@
       "import": "./dist/wallet/rainbow/index.js",
       "default": "./dist/wallet/rainbow/index.js"
     },
+    "./wallet/rainbow/factory": {
+      "source": "./src/wallet/rainbow/factory.ts",
+      "types": "./dist/wallet/rainbow/factory.d.ts",
+      "import": "./dist/wallet/rainbow/factory.js",
+      "default": "./dist/wallet/rainbow/factory.js"
+    },
     "./wallet/privy": {
       "source": "./src/wallet/privy/index.ts",
       "types": "./dist/wallet/privy/index.d.ts",
       "import": "./dist/wallet/privy/index.js",
       "default": "./dist/wallet/privy/index.js"
     },
+    "./wallet/privy/factory": {
+      "source": "./src/wallet/privy/factory.ts",
+      "types": "./dist/wallet/privy/factory.d.ts",
+      "import": "./dist/wallet/privy/factory.js",
+      "default": "./dist/wallet/privy/factory.js"
+    },
     "./wallet/mock": {
       "source": "./src/wallet/mock/index.ts",
       "types": "./dist/wallet/mock/index.d.ts",
       "import": "./dist/wallet/mock/index.js",
       "default": "./dist/wallet/mock/index.js"
+    },
+    "./wallet/mock/factory": {
+      "source": "./src/wallet/mock/factory.ts",
+      "types": "./dist/wallet/mock/factory.d.ts",
+      "import": "./dist/wallet/mock/factory.js",
+      "default": "./dist/wallet/mock/factory.js"
     }
   },
   "types": "./dist/index.d.ts",
@@ -71,6 +89,7 @@
   ],
   "scripts": {
     "build": "tsdown",
+    "test": "vitest --run",
     "tsc": "tsc",
     "lint": "eslint"
   },

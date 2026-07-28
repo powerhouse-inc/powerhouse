@@ -529,26 +529,36 @@ the stored credential against the switchboard.
 
 ```tsx
 import { RenownProvider } from "@powerhousedao/reactor-browser/renown";
+import { privyAdapter } from "@renown/sdk/wallet/privy";
+import { rainbowAdapter } from "@renown/sdk/wallet/rainbow";
+
+// Module scope: the provider snapshots this array on mount.
+const ADAPTERS = [
+  rainbowAdapter({ walletConnectProjectId: "..." }),
+  privyAdapter({ appId: "...", methods: ["google", "email"] }),
+];
 
 <RenownProvider
   appName="my-app"
   namespace="my-app"
   switchboardUrl="https://switchboard.example/graphql"
-  adapters={{
-    rainbow: { walletConnectProjectId: "..." },
-    privy: { appId: "...", methods: ["google", "email"] },
-  }}
+  adapters={ADAPTERS}
   theme="light" // "light" | "dark" | { mode, accentColor?, accentColorForeground? }
 >
   <App />
 </RenownProvider>;
 ```
 
+**Install only the peers of the adapters you import.** Importing
+`@renown/sdk/wallet/rainbow` is what makes RainbowKit a build requirement; an app
+that only imports `@renown/sdk/wallet/privy` needs no RainbowKit and no bundler
+aliases. See the `@renown/sdk` README for the per-adapter peer list.
+
 The provider is **SSR-safe** — it renders on the server without `ssr: false`;
 the wallet libraries only load client-side on the first login click.
 
 Then build the login UI with `useRenownLoginMethods` (derives the button list
-from the config) and `useRenownAuth` (login + user state):
+from the adapters) and `useRenownAuth` (login + user state):
 
 ```tsx
 import {
@@ -687,17 +697,68 @@ every real operation.
 
 ### `RenownWalletProvider`
 
-Registers the login activator, lazy-mounts the configured adapters, and merges
-them into one controller for `useRenownAuth`. The wallet Provider tree wraps
-only the adapter bridges (each library's modal portals to `<body>`), never your
+Registers the login activator, lazy-mounts the given adapters, and merges them
+into one controller for `useRenownAuth`. The wallet Provider tree wraps only the
+adapter bridges (each library's modal portals to `<body>`), never your
 `children`, so activating login never remounts your app. Props: `adapters`
-(config), `theme?`, `children`.
+(`WalletAdapterDescriptor[]`), `theme?`, `children`.
 
 ### `useRenownLoginMethods(adapters, labels?)`
 
-Returns `{ id, label }[]` — one per configured login method (wallet + Privy
-methods, deduped) — reading config only (no wallet libraries load). Override
-labels via the second argument. Wire each to `login(undefined, id)`.
+Returns `{ id, label }[]` — one per login method the adapters offer, deduped, in
+adapter-array order — reading each descriptor's eager metadata only (no wallet
+libraries load). Reorder the array to reorder the buttons. Override labels via
+the second argument. Wire each to `login(undefined, id)`.
+
+### Next.js
+
+The integration is the same, with four things worth knowing:
+
+- Pass `ssr: true` to `rainbowAdapter` so wagmi defers its hydrate reconnect to
+  an effect instead of running it during render.
+- Keep the descriptor array at **module scope** (or in a `useMemo`).
+  `RenownWalletProvider` snapshots it on mount, so an array rebuilt inline in JSX
+  silently pins the first render's value.
+- Give the descriptor array **its own module**, separate from config your server
+  code reads. Turbopack follows the adapters' lazy imports when computing RSC
+  boundaries, so a server module that imports anything sitting next to the
+  descriptors pulls the client-only wallet factories into the server graph and
+  the build fails.
+- `RenownProvider` is SSR-safe: no `ssr: false`, no dynamic import needed. Only
+  the component that renders login buttons needs `"use client"`.
+- Nothing needs a `next.config.ts` alias. If you find yourself stubbing
+  `@renown/sdk/wallet/<id>`, you are importing an adapter you don't use.
+
+`test/test-fusion` in the monorepo is a runnable Next.js example (App Router,
+server session cookie, Playwright e2e against the mock adapter).
+
+### Writing your own adapter
+
+`RenownWalletProvider` takes descriptors, not a fixed set of adapter ids, so any
+package can supply one. The contract is:
+
+```ts
+import type { WalletAdapterDescriptor } from "@renown/sdk/wallet";
+
+export function myAdapter(config: MyConfig): WalletAdapterDescriptor {
+  return {
+    meta: {
+      id: "my-adapter", // stable + unique among the host's adapters
+      supportedMethods: ["wallet"], // must be known before load()
+      redirectReturnParams: [], // URL params your full-page OAuth return leaves
+    },
+    load: () => import("./factory.js").then((m) => m.createMyAdapter(config)),
+  };
+}
+```
+
+`load()` resolves a `WalletAdapterImpl`: a `Provider` component and a
+`useController()` hook returning `connect(method?)` / `disconnect()` /
+`getSession()` and, if your flow leaves the page, `subscribe()` so sign-in can
+complete on the redirect back. Keep the module holding `myAdapter` free of your
+wallet library — `meta` is read before anything loads. `supportedMethods` must
+come from `LoginMethod` (`wallet`, `google`, `email`, `apple`); a method the host
+has no label for falls back to showing its id.
 
 ### Testing (mock adapter)
 

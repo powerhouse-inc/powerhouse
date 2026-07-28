@@ -85,17 +85,26 @@ const result = await verifyAuthBearerToken(jwt); // false | AuthVerifiedCredenti
 
 `@renown/sdk/wallet` provides pluggable wallet adapters so a host app (e.g.
 Connect) can sign a Renown credential **in-page**, without redirecting to the
-Renown portal. Each adapter is a separate subexport, loaded via dynamic
-`import()` so its wallet libraries are **optional peer dependencies** with zero
-startup cost until a login method is chosen.
+Renown portal. Each adapter lives behind its own subexport and hands the host a
+**descriptor** — eager metadata plus a lazy loader — so its wallet library is
+fetched only when a login method is actually chosen.
 
-| Subexport                | Adapter  | Peer dependencies                                              |
-| ------------------------ | -------- | ------------------------------------------------------------- |
-| `@renown/sdk/wallet/rainbow` | RainbowKit + wagmi (external wallets) | `wagmi`, `@rainbow-me/rainbowkit`, `@tanstack/react-query`, `viem` |
-| `@renown/sdk/wallet/privy`   | Privy (embedded / social / email)     | `@privy-io/react-auth`, `viem`                                |
-| `@renown/sdk/wallet/mock`    | Headless test/dev signer (no UI)      | `viem`                                                        |
+**You pay for the adapters you import.** Importing `@renown/sdk/wallet/<id>`
+loads no wallet library, but it does make that adapter's peer dependencies a
+build-time requirement for your bundler. An app that never imports
+`@renown/sdk/wallet/rainbow` does not need RainbowKit installed at all — no
+bundler aliases, no stub modules.
 
-Install only the peer deps for the adapters you enable.
+| Subexport | Adapter | Peer dependencies to install |
+| --- | --- | --- |
+| `@renown/sdk/wallet/rainbow` | RainbowKit + wagmi (external wallets) | `wagmi`, `@rainbow-me/rainbowkit`, `@tanstack/react-query` |
+| `@renown/sdk/wallet/privy` | Privy (embedded / social / email) | `@privy-io/react-auth` |
+| `@renown/sdk/wallet/mock` | Headless test/dev signer (no UI) | none (`viem` is a direct dependency) |
+
+Each subexport also has a `…/factory` sibling (e.g.
+`@renown/sdk/wallet/privy/factory`) holding the `create<Id>Adapter` function.
+That is the heavy half the descriptor's `load()` imports; you rarely need it
+directly.
 
 > **Host apps should not wire these adapters by hand.** Use the
 > `RenownWalletProvider` + `useRenownLoginMethods` + `useRenownAuth` primitives
@@ -106,24 +115,32 @@ Install only the peer deps for the adapters you enable.
 
 ```typescript
 import { resolveAdapters } from "@renown/sdk/wallet";
+import { privyAdapter } from "@renown/sdk/wallet/privy";
+import { rainbowAdapter } from "@renown/sdk/wallet/rainbow";
 
-// Loads ONLY the configured adapters (dynamic import, on demand).
-const adapters = await resolveAdapters({
-  rainbow: { walletConnectProjectId: "..." },
-  privy: { appId: "...", methods: ["google", "email"] },
-});
+// Descriptors are cheap: metadata only, no wallet library loaded yet.
+const descriptors = [
+  rainbowAdapter({ walletConnectProjectId: "..." }),
+  privyAdapter({ appId: "...", methods: ["google", "email"] }),
+];
+
+// This is where each adapter's library is actually fetched.
+const adapters = await resolveAdapters(descriptors);
 ```
 
-Each adapter exposes a `Provider` (mount it around the app; it accepts a runtime
-`theme` of `"light" | "dark" | { mode, accentColor?, accentColorForeground? }`)
-and a controller with `connect(method?)`, `disconnect()`, and `getSession()`.
+`resolveAdapters` keeps the adapters that loaded and logs the ones that didn't;
+it rejects only if none load. Each resolved adapter exposes its `meta`, a
+`Provider` (mount it around the app; it accepts a runtime `theme` of
+`"light" | "dark" | { mode, accentColor?, accentColorForeground? }`) and a
+controller with `connect(method?)`, `disconnect()`, and `getSession()`.
 `connect()` resolves a `WalletSession` (`{ address, chainId, signTypedData }`);
 pass it to `renown.signIn(session)` to write + log in the credential in-page.
 
 **Login methods.** Rainbow supports `wallet`; Privy supports `wallet`, `google`,
-`apple`, `email` (default `["google", "email"]`). Social/email flows run inside
-Privy's own modal (OAuth uses a popup, keeping the page alive) so sign-in
-completes in-page — no full-page redirect.
+`apple`, `email` (default `["google", "email"]`). Each adapter's config accepts
+only the methods it can drive, so a typo is a compile error. Social/email flows
+run inside Privy's own modal (OAuth uses a popup, keeping the page alive) so
+sign-in completes in-page — no full-page redirect.
 
 **Configuration.** Only public identifiers belong in client config: Privy's
 `appId` (and optional `clientId`), and RainbowKit's `walletConnectProjectId`.
