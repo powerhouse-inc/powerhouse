@@ -77,6 +77,13 @@ function resetSignInGuard(): void {
   lastSignedAddress = undefined;
 }
 
+// True while a redirect sign-in is still inbound: the DID is in the URL but
+// init has not consumed it yet, so an empty credential store is not the answer.
+export function hasRedirectSignIn(): boolean {
+  if (typeof window === "undefined") return false;
+  return new URLSearchParams(window.location.search).has("user");
+}
+
 // Reads the `?user=` DID from the URL if present, then strips the param.
 function consumeDidFromUrl(): string | undefined {
   if (typeof window === "undefined") return;

@@ -1,13 +1,18 @@
 import type { LoginStatus, User } from "@renown/sdk";
 import type { LoginMethod, WalletSession } from "@renown/sdk/wallet";
-import { useCallback, useState } from "react";
+import { useCallback, useState, useSyncExternalStore } from "react";
 import { useLoginStatus, useUser } from "../hooks/renown.js";
 import { useRenownInitialAuth } from "./initial-user.js";
 import {
   getActiveWalletController,
   getWalletActivator,
 } from "./wallet-registry.js";
-import { completeSignIn, logout as logoutUtil, openRenown } from "./session.js";
+import {
+  completeSignIn,
+  hasRedirectSignIn,
+  logout as logoutUtil,
+  openRenown,
+} from "./session.js";
 
 export type RenownAuthStatus = LoginStatus | "loading";
 
@@ -151,18 +156,33 @@ export interface RenownAuthAsync extends RenownAuth {
   isResolving: boolean;
 }
 
+const subscribeNothing = () => () => {};
+
 // Auth as a resolved three-state value instead of via Suspense: renders a
 // "resolving" phase you can branch on, so no Suspense boundary is required.
 export function useRenownAuthAsync(): RenownAuthAsync {
   const auth = useRenownAuth();
   const initial = useRenownInitialAuth();
+  // Server + hydration read false so the markup matches; the URL is checked
+  // once mounted, which is when init would consume the DID anyway.
+  const redirectSignIn = useSyncExternalStore(
+    subscribeNothing,
+    hasRedirectSignIn,
+    () => false,
+  );
   const { user, status, pending } = auth;
   let state: RenownAuthResolution;
   if (user) {
     state = "authenticated";
   } else if (pending) {
     state = "resolving";
-  } else if (initial.state === "anonymous" && status !== "checking") {
+  } else if (
+    initial.state === "anonymous" &&
+    // A redirect login is inbound, so the empty store is about to change; the
+    // SDK only reports "checking" once init has consumed the DID.
+    !redirectSignIn &&
+    status !== "checking"
+  ) {
     // Nothing to restore, so the SDK build cannot change the answer — resolve
     // now instead of spinning through IndexedDB and keypair setup.
     state = "unauthenticated";
