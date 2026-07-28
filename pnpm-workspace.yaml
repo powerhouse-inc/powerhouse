@@ -169,3 +169,6 @@ overrides:
   # Dedupe the viem v2 tree to a single copy (Privy pins the highest, 2.52.0).
   # v1.x (via @didtools/cacao) is a different major and left untouched.
   viem@>=2 <3: "2.52.0"
+  # cuer (RainbowKit's QR component) asks for `qr: ~0` but calls encodeQR with
+  # border: 0, which qr@0.6.0 started rejecting. 0.5.5 is the last one allowing it.
+  qr@>=0.6: "0.5.5"
