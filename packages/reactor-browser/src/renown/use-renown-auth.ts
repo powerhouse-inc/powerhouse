@@ -2,6 +2,7 @@ import type { LoginStatus, User } from "@renown/sdk";
 import type { LoginMethod, WalletSession } from "@renown/sdk/wallet";
 import { useCallback, useState } from "react";
 import { useLoginStatus, useUser } from "../hooks/renown.js";
+import { useRenownInitialAuth } from "./initial-user.js";
 import {
   getActiveWalletController,
   getWalletActivator,
@@ -154,12 +155,18 @@ export interface RenownAuthAsync extends RenownAuth {
 // "resolving" phase you can branch on, so no Suspense boundary is required.
 export function useRenownAuthAsync(): RenownAuthAsync {
   const auth = useRenownAuth();
+  const initial = useRenownInitialAuth();
   const { user, status, pending } = auth;
   let state: RenownAuthResolution;
   if (user) {
     state = "authenticated";
+  } else if (pending) {
+    state = "resolving";
+  } else if (initial.state === "anonymous" && status !== "checking") {
+    // Nothing to restore, so the SDK build cannot change the answer — resolve
+    // now instead of spinning through IndexedDB and keypair setup.
+    state = "unauthenticated";
   } else if (
-    pending ||
     status === undefined ||
     status === "loading" ||
     status === "checking"

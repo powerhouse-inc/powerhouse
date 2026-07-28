@@ -213,8 +213,9 @@ export type RenownProfile = {
   username: string | null;
   ethAddress: string | null;
   userImage: string | null;
-  createdAt: string;
-  updatedAt: string;
+  /** Absent on a profile seeded from the session cookie (see RenownSessionProfile). */
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 // Internal user type for Renown SDK (includes credential and profile)
@@ -281,6 +282,8 @@ export interface IRenown extends Pick<RenownEventEmitter, "on"> {
   logout: () => Promise<void>;
   /** Re-check the current credential at the source; logs out if revoked/expired. */
   revalidate: () => Promise<boolean>;
+  /** Re-read profile attributes at the source; never logs out. Resolves true if they changed. */
+  refreshProfile: () => Promise<boolean>;
   readonly crypto: IRenownCrypto;
   readonly signer: ISigner;
   readonly did: string;

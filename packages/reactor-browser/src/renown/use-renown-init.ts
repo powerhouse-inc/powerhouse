@@ -31,7 +31,8 @@ async function initRenown(
     switchboardUrl,
     revalidate,
   });
-  // Browser build() fires a non-blocking revalidate; init stays optimistic.
+  // Browser build() fires a non-blocking credential revalidate (when enabled)
+  // plus a profile refresh; init stays optimistic either way.
   const renown = await builder.build();
   setRenown(renown);
 

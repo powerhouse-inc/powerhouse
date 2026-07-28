@@ -2,8 +2,13 @@
 
 import { readPersistedUser, type User } from "@renown/sdk";
 import type { WalletAdaptersConfig, WalletTheme } from "@renown/sdk/wallet";
-import { useMemo, type ReactNode } from "react";
-import { RenownInitialUserProvider } from "./initial-user.js";
+import { useMemo, useSyncExternalStore, type ReactNode } from "react";
+import {
+  RENOWN_INITIAL_ANONYMOUS,
+  RENOWN_INITIAL_UNKNOWN,
+  RenownInitialUserProvider,
+  type RenownInitialAuth,
+} from "./initial-user.js";
 import { Renown } from "./renown-init.js";
 import {
   RenownSessionSyncedContext,
@@ -29,6 +34,8 @@ export interface RenownProviderProps {
   onError?: (error: unknown) => void;
   children: ReactNode;
 }
+
+const subscribeNothing = () => () => {};
 
 // Runs the cookie sync and publishes its `synced` state to descendants, so a
 // post-login navigation can wait for the cookie (see useRenownSessionSynced).
@@ -65,10 +72,27 @@ export function RenownProvider({
   children,
 }: RenownProviderProps) {
   const isServerSession = session !== undefined;
-  const seed = useMemo<User | undefined>(() => {
-    if (isServerSession) return session?.user ?? undefined;
-    return readPersistedUser(namespace);
-  }, [isServerSession, session, namespace]);
+  // Hydration must match SSR, so the cookie answers first and localStorage
+  // takes over once mounted.
+  const mounted = useSyncExternalStore(
+    subscribeNothing,
+    () => true,
+    () => false,
+  );
+  const seed = useMemo<RenownInitialAuth>(() => {
+    // localStorage holds the credential the SDK actually restores; the cookie is
+    // a display hint that is server-only and can go stale independently.
+    if (mounted) {
+      const persisted = readPersistedUser(namespace);
+      return persisted
+        ? { state: "authenticated", user: persisted }
+        : RENOWN_INITIAL_ANONYMOUS;
+    }
+    if (!isServerSession) return RENOWN_INITIAL_UNKNOWN;
+    return session?.user
+      ? { state: "authenticated", user: session.user }
+      : RENOWN_INITIAL_ANONYMOUS;
+  }, [mounted, isServerSession, session, namespace]);
 
   return (
     <>
@@ -80,7 +104,7 @@ export function RenownProvider({
         revalidate={revalidate}
         onError={onError}
       />
-      <RenownInitialUserProvider initialUser={seed}>
+      <RenownInitialUserProvider initialAuth={seed}>
         <RenownWalletProvider adapters={adapters} theme={theme}>
           <SessionSync enabled={isServerSession} endpoint={sessionEndpoint}>
             {children}

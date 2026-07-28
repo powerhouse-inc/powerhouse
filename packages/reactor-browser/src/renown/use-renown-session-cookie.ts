@@ -1,5 +1,6 @@
 "use client";
 
+import type { RenownSessionProfile } from "@renown/sdk";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { useRenown } from "../hooks/renown.js";
 import { useRenownAuth } from "./use-renown-auth.js";
@@ -32,6 +33,7 @@ export function useRenownSessionCookie(
   const { user, displayName, avatarUrl } = useRenownAuth();
   const renown = useRenown();
   const address = user?.address;
+  const profile = user?.profile;
   // Whether a prior render was authenticated, so we only DELETE on real logout
   // (not on an unauthenticated first load, which must not clobber the cookie).
   const hadUser = useRef(false);
@@ -52,7 +54,15 @@ export function useRenownSessionCookie(
             headers: { "content-type": "application/json" },
             body: JSON.stringify({
               token,
-              profile: { name: displayName ?? null, avatar: avatarUrl ?? null },
+              // The richer fields let verifyRenownSession seed a `user.profile`
+              // matching this one, so SSR renders the same identity.
+              profile: {
+                name: displayName ?? null,
+                avatar: avatarUrl ?? null,
+                documentId: profile?.documentId ?? null,
+                username: profile?.username ?? null,
+                userImage: profile?.userImage ?? null,
+              } satisfies RenownSessionProfile,
             }),
           });
           if (!cancelled) setSynced(true);
@@ -71,7 +81,18 @@ export function useRenownSessionCookie(
         void fetch(endpoint, { method: "DELETE" }).catch(() => {});
       }
     }
-  }, [address, displayName, avatarUrl, renown, endpoint, expiresIn, enabled]);
+  }, [
+    address,
+    displayName,
+    avatarUrl,
+    profile?.documentId,
+    profile?.username,
+    profile?.userImage,
+    renown,
+    endpoint,
+    expiresIn,
+    enabled,
+  ]);
 
   return { synced };
 }

@@ -149,12 +149,20 @@ const renown = await new RenownBuilder("my-cli", {
 
 `renown.revalidate()` re-checks the current credential on demand and logs out if
 it was revoked/expired; it is **fail-open** (a network error keeps the session).
+On success it then calls `renown.refreshProfile()`.
+
+`renown.refreshProfile()` re-reads profile attributes (`username`, `userImage`)
+at the source and updates the store only if they changed, resolving `true` when
+they did. It can never log anyone out, so the browser builder runs it on every
+start — including when `revalidate: "never"` disables the credential check.
 
 ### Verifying a session cookie (SSR)
 
 To gate server-rendered pages, store the bearer token from
-`renown.getBearerToken()` — plus an optional display hint (name/avatar) — in a
-cookie (name exported as `RENOWN_SESSION_COOKIE`), then verify it on the server:
+`renown.getBearerToken()` — plus an optional `RenownSessionProfile` display hint
+— in a cookie (name exported as `RENOWN_SESSION_COOKIE`), then verify it on the
+server. The payload type `RenownSessionCookie` is exported from both entry
+points; use it to type your route handler instead of redeclaring the shape:
 
 ```typescript
 import {
@@ -163,10 +171,17 @@ import {
   readSessionClaims,
 } from "@renown/sdk/node";
 
-// Build the cookie value (token + display hint) when setting the cookie:
+// Build the cookie value (token + display hint) when setting the cookie. The
+// documentId/username/userImage fields let verifySession rebuild `user.profile`.
 const cookieValue = serializeRenownSessionCookie({
   token,
-  profile: { name: "alice.eth", avatar: null },
+  profile: {
+    name: "alice.eth",
+    avatar: null,
+    documentId: "doc-123",
+    username: "alice.eth",
+    userImage: null,
+  },
 });
 
 // Verify the cookie value — checks the JWT (signature + expiry) and merges the

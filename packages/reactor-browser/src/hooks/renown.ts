@@ -28,8 +28,8 @@ export function useDid() {
 /** Returns the current user from the renown instance, subscribing to user events */
 export function useUser(): User | undefined {
   const renown = useRenown();
-  // Seed (cookie for SSR, localStorage for client-only) covers the first paint;
-  // once the SDK is ready it is authoritative, so a logout/revoke clears it.
+  // Seed (cookie on the server, localStorage once mounted) covers the first
+  // paint; the SDK is authoritative after, so a logout/revoke clears it.
   const initialUser = useRenownInitialUser();
   const instance = renown ? renown : undefined;
   const [user, setUser] = useState<User | undefined>(
@@ -43,7 +43,9 @@ export function useUser(): User | undefined {
     }
   }, [instance]);
 
-  return user;
+  // useState captured only the first render, so defer to the seed until the SDK
+  // exists — that is what lands the post-mount localStorage read.
+  return instance ? user : (initialUser ?? user);
 }
 
 /** Returns the login status, subscribing to renown status events */
