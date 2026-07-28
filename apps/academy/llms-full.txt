@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-07-28T11:09:31.654Z
+> Generated: 2026-07-28T14:24:50.667Z
 > Total Documents: 106
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -22610,11 +22610,13 @@ In-page sign-in is opt-in and configured entirely through `powerhouse.config.jso
 }
 ```
 
-Each adapter's wallet libraries are optional peer dependencies, dynamically imported only on the first login click — so enabling in-page auth adds nothing to startup cost. Install the peer dependencies for the adapters you enable (see the Renown SDK `README`). Social and email login run inside Privy's own modal (OAuth in a popup, so the page stays alive and sign-in completes in-page). Only **public** identifiers belong in the config — a Privy **App Secret** is server-only and must never be placed in `powerhouse.config.json`. Each social/email method must be enabled in the Privy dashboard, with Connect's origin allowlisted.
+Each adapter's wallet library is fetched only on the first login click, so enabling in-page auth adds nothing to startup cost. Connect ships with every adapter's peer dependencies installed, so operators only edit the config. Social and email login run inside Privy's own modal (OAuth in a popup, so the page stays alive and sign-in completes in-page). Only **public** identifiers belong in the config — a Privy **App Secret** is server-only and must never be placed in `powerhouse.config.json`. Each social/email method must be enabled in the Privy dashboard, with Connect's origin allowlisted.
 
 ### Adding in-page sign-in to your own app
 
 Connect wires this through configuration, but any React app can add the same in-page sign-in using `@powerhousedao/reactor-browser/renown`. Mount a single `RenownProvider` high in your tree — it initializes the SDK, seeds the first render, lazy-mounts the wallet adapters on the first login click, and revalidates the stored credential in the background.
+
+Import an adapter from `@renown/sdk/wallet/<id>` for each login route you want and pass the resulting descriptors in. **You install only the peer dependencies of the adapters you import** — an app that imports `@renown/sdk/wallet/privy` and not `.../rainbow` needs no RainbowKit and no bundler aliases. The `@renown/sdk` README lists the peers per adapter.
 
 ```tsx
 
@@ -22623,10 +22625,12 @@ Connect wires this through configuration, but any React app can add the same in-
   useRenownLoginMethods,
 } from "@powerhousedao/reactor-browser/renown";
 
-const adapters = {
-  rainbow: { walletConnectProjectId: "..." },
-  privy: { appId: "...", methods: ["google", "email"] },
-};
+
+// Module scope: RenownWalletProvider snapshots this array on mount.
+const adapters = [
+  rainbowAdapter({ walletConnectProjectId: "..." }),
+  privyAdapter({ appId: "...", methods: ["google", "email"] }),
+];
 
 function Providers({ children }) {
   return (
@@ -22671,10 +22675,14 @@ Under SSR the cookie seeds the server render and hydration (it is the only thing
 
 ### Testing sign-in (mock adapter)
 
-Real wallets and Google OAuth can't run in headless CI, so `@renown/sdk` ships a **mock wallet adapter** (`@renown/sdk/wallet/mock`) for e2e/dev. Enable it via the `mock` key and it becomes a headless signer backed by a local key (real EIP-712 signatures, no wallet extension or OAuth), so sign-in runs deterministically:
+Real wallets and Google OAuth can't run in headless CI, so `@renown/sdk` ships a **mock wallet adapter** (`@renown/sdk/wallet/mock`) for e2e/dev. It is a headless signer backed by a local key (real EIP-712 signatures, no wallet extension or OAuth), so sign-in runs deterministically:
 
 ```tsx
-<RenownWalletProvider adapters={{ mock: { methods: ["wallet", "google", "email"] } }}>
+
+
+const adapters = [mockAdapter({ methods: ["wallet", "google", "email"] })];
+
+<RenownWalletProvider adapters={adapters}>
 ```
 
 It is **TEST/DEV only** — it signs with a well-known key and must never be enabled in production. Runnable Playwright examples: `test/test-fusion/e2e` (full mock sign-in flow) and `test/vetra-e2e` (Connect login surface).
