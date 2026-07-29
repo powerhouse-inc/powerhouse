@@ -6,16 +6,19 @@ import {
 import { logger } from "document-model";
 
 export async function signAction(action: Action, document: PHDocument) {
-  const reactor = window.ph?.reactorClient;
-  if (!reactor) return action;
-
-  const documentModelModule = await reactor.getDocumentModelModule(
-    document.header.documentType,
-  );
-  const reducer = documentModelModule.reducer;
   const renown = window.ph?.renown;
   if (!renown?.user) return action;
   if (!action.context?.signer) return action;
+
+  // The document model module only exists on the full in-process reactor client;
+  // without it there is no reducer to build a signed action with.
+  const reactorClient = window.ph?.reactorClientModule?.client;
+  if (!reactorClient) return action;
+
+  const documentModelModule = await reactorClient.getDocumentModelModule(
+    document.header.documentType,
+  );
+  const reducer = documentModelModule.reducer;
 
   const actionSigner = action.context.signer;
   const unsafeSignedAction = await buildSignedAction(

@@ -1,8 +1,5 @@
-import {
-  DocumentChangeType,
-  type DocumentChangeEvent,
-  type IReactorClient,
-} from "@powerhousedao/reactor";
+import type { DocumentChangeEvent } from "@powerhousedao/reactor";
+import { DOCUMENT_CHANGE_TYPE } from "./reactor-interop.js";
 import type { PHDocument } from "@powerhousedao/shared/document-model";
 import type {
   FulfilledPromise,
@@ -11,6 +8,7 @@ import type {
   PromiseWithState,
   RejectedPromise,
 } from "./types/documents.js";
+import type { IReactorBrowserClient } from "./types/reactor-browser-client.js";
 
 export function addPromiseState<T>(promise: Promise<T>): PromiseWithState<T> {
   if ("status" in promise) {
@@ -68,7 +66,7 @@ function fulfilledOnly(promises: Promise<PHDocument>[]): Promise<PHDocument[]> {
 /**
  * Document cache implementation that uses the new ReactorClient API.
  *
- * This cache subscribes to document change events via IReactorClient.subscribe()
+ * This cache subscribes to document change events via IReactorBrowserClient.subscribe()
  * and automatically updates the cache when documents are created, updated, or deleted.
  */
 export class DocumentCache implements IDocumentCache {
@@ -80,19 +78,19 @@ export class DocumentCache implements IDocumentCache {
   private listeners = new Map<string, (() => void)[]>();
   private unsubscribe: (() => void) | null = null;
 
-  constructor(private client: IReactorClient) {
+  constructor(private client: IReactorBrowserClient) {
     this.unsubscribe = client.subscribe({}, (event: DocumentChangeEvent) => {
       this.handleDocumentChange(event);
     });
   }
 
   private handleDocumentChange(event: DocumentChangeEvent): void {
-    if (event.type === DocumentChangeType.Deleted) {
+    if (event.type === DOCUMENT_CHANGE_TYPE.Deleted) {
       const documentId = event.context?.childId;
       if (documentId) {
         this.handleDocumentDeleted(documentId);
       }
-    } else if (event.type === DocumentChangeType.Updated) {
+    } else if (event.type === DOCUMENT_CHANGE_TYPE.Updated) {
       for (const doc of event.documents) {
         this.handleDocumentUpdated(doc.header.id).catch(console.warn);
       }

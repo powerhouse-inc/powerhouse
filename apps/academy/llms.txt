@@ -60,6 +60,9 @@
 - [CLI Identity & Authentication](https://academy.vetra.io/academy/Reference/Authorization/renown-sdk/CLIIdentity): This guide covers how to authenticate the Powerhouse CLI with your Ethereum identity and use that identity in the Switchboard for authenticated operat
 - [Powerhouse CLI](https://academy.vetra.io/academy/Reference/CLITooling/PowerhouseCLI): The Powerhouse CLI tool is the only essential tool to install on this page. Install it with the command below.
 - [Vetra Remote Drive](https://academy.vetra.io/academy/Reference/CLITooling/VetraRemoteDrive): These commands enable collaborative development using Vetra remote drives. Instead of working with local drives only, you can connect your Powerhouse 
+- [Overview and quickstart](https://academy.vetra.io/academy/Reference/ReactorBrowserClient/OverviewAndQuickstart): GraphQLReactorClient is a light client for the @powerhousedao/reactor-browser hooks. It talks plain GraphQL to a Switchboard
+- [API reference](https://academy.vetra.io/academy/Reference/ReactorBrowserClient/ApiReference): Everything on this page is exported from @powerhousedao/reactor-browser.
+- [Subgraphs and attachments](https://academy.vetra.io/academy/Reference/ReactorBrowserClient/SubgraphsAndAttachments): A Switchboard serves more than the reactor's document API. Your project's own subgraphs sit next to it, and attachments come from a service the app su
 
 ## Book of Powerhouse
 

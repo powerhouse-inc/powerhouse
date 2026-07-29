@@ -9,6 +9,14 @@ This page provides a reference for the hooks available in `@powerhousedao/reacto
 - Learn more about [Editors](/academy/Build/BuildingUserExperiences/BuildingDocumentEditors)
 - Learn more about [Drive-apps](/academy/Build/BuildingUserExperiences/BuildingADriveExplorer)
 
+The document hooks also run on top of the light GraphQL client, which talks to a
+Switchboard instead of a full in-browser reactor. The drive, node and job hooks
+do not: that client implements a six-member subset of `IReactorClient`. Neither
+do the package and module hooks - `useVetraPackages`, `useDocumentModelModules`,
+`useEditorModules`, `useEditorModuleById` and the rest read
+`window.ph.vetraPackageManager`, which only a host application fills. See the
+[Reactor Browser Client](/academy/Reference/ReactorBrowserClient/OverviewAndQuickstart).
+
 <details>
 <summary>Need a refresher on React Hooks?</summary>
 

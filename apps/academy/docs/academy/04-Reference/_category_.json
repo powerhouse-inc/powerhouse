@@ -2,6 +2,6 @@
   "label": "API Reference",
   "link": {
     "type": "generated-index",
-    "description": "Technical reference organized by theme: Architecture, Reactor, Document Models, GraphQL & Data, Processors, Editors & UI, Authorization & Identity, CLI & Tooling, and Lookup resources."
+    "description": "Technical reference organized by theme: Architecture, Reactor, Document Models, GraphQL & Data, Processors, Editors & UI, Authorization & Identity, CLI & Tooling, Reactor Browser Client, and Lookup resources."
   }
 }

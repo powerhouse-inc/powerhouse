@@ -1,4 +1,4 @@
-import { GraphQLClient } from "graphql-request";
+import { GraphQLClient, type Variables } from "graphql-request";
 import {
   buildBatchDocumentWithOperationsQuery,
   buildBatchOperationsQuery,
@@ -12,9 +12,9 @@ import {
   type SdkFunctionWrapper,
   type ViewFilterInput,
 } from "./gen/schema.js";
-import type { ReactorGraphQLClient } from "./types.js";
+import type { ReactorGraphQLClient, RunDocumentOptions } from "./types.js";
 
-export type { ReactorGraphQLClient } from "./types.js";
+export type { ReactorGraphQLClient, RunDocumentOptions } from "./types.js";
 
 type DocumentOperationsPage = GetDocumentOperationsQuery["documentOperations"];
 
@@ -41,13 +41,38 @@ export function createClient(
   const runWithMiddleware = async <T>(
     operationName: string,
     run: (requestHeaders?: Record<string, string>) => Promise<T>,
+    operationType = "query",
+    variables?: Variables,
   ): Promise<T> => {
     if (!middleware) return run();
-    return middleware(run, operationName, "query");
+    return middleware(run, operationName, operationType, variables);
   };
 
   return {
     ...getSdk(client, middleware),
+
+    /**
+     * Run a hand-authored GraphQL document through the same transport and
+     * middleware as the generated SDK methods.
+     */
+    async RunDocument<TData>(options: RunDocumentOptions): Promise<TData> {
+      const { document, variables, signal } = options;
+      return runWithMiddleware<TData>(
+        options.operationName,
+        (wrappedRequestHeaders) =>
+          client.request<TData>({
+            document,
+            variables,
+            requestHeaders: {
+              ...options.requestHeaders,
+              ...wrappedRequestHeaders,
+            },
+            signal,
+          }),
+        options.operationType,
+        variables,
+      );
+    },
 
     /**
      * Fetch documentOperations for multiple filters in a single HTTP request

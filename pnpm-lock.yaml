@@ -2130,6 +2130,9 @@ importers:
       graphql-request:
         specifier: 'catalog:'
         version: 7.4.0(graphql@16.12.0)
+      graphql-ws:
+        specifier: 'catalog:'
+        version: 6.0.7(@fastify/websocket@11.2.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(crossws@0.3.5)(graphql@16.12.0)(ws@8.20.1(bufferutil@4.1.0)(utf-8-validate@5.0.10))
       kysely:
         specifier: 'catalog:'
         version: 0.28.16
@@ -3200,6 +3203,9 @@ importers:
       '@tanstack/react-query':
         specifier: ^5.90.2
         version: 5.90.21(react@19.2.6)
+      document-model:
+        specifier: workspace:*
+        version: link:../../packages/document-model
       next:
         specifier: 16.2.10
         version: 16.2.10(@babel/core@7.29.0)(@opentelemetry/api@1.9.1)(@playwright/test@1.60.0)(babel-plugin-macros@3.1.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)

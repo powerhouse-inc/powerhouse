@@ -1,7 +1,7 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-07-29T09:40:23.999Z
-> Total Documents: 106
+> Generated: 2026-07-30T13:21:57.173Z
+> Total Documents: 109
 > Source: https://academy.vetra.io/llms-full.txt
 
 
@@ -9080,6 +9080,14 @@ This page provides a reference for the hooks available in `@powerhousedao/reacto
 - Learn more about [Editors](/academy/Build/BuildingUserExperiences/BuildingDocumentEditors)
 - Learn more about [Drive-apps](/academy/Build/BuildingUserExperiences/BuildingADriveExplorer)
 
+The document hooks also run on top of the light GraphQL client, which talks to a
+Switchboard instead of a full in-browser reactor. The drive, node and job hooks
+do not: that client implements a six-member subset of `IReactorClient`. Neither
+do the package and module hooks - `useVetraPackages`, `useDocumentModelModules`,
+`useEditorModules`, `useEditorModuleById` and the rest read
+`window.ph.vetraPackageManager`, which only a host application fills. See the
+[Reactor Browser Client](/academy/Reference/ReactorBrowserClient/OverviewAndQuickstart).
+
 <details>
 <summary>Need a refresher on React Hooks?</summary>
 
@@ -14269,6 +14277,747 @@ ph vetra --watch
 - "Vetra Preview" drive: created locally with `--watch`, for testing local document models
 - Without `--watch`: safer, prevents untested code from affecting Connect
 - With `--watch`: enables rapid development and testing
+
+---
+
+
+## Overview and quickstart
+
+> Source: https://academy.vetra.io/academy/Reference/ReactorBrowserClient/OverviewAndQuickstart
+
+`GraphQLReactorClient` is a light client for the `@powerhousedao/reactor-browser`
+hooks. It talks plain GraphQL to a [Switchboard](/academy/Reference/Reactor/WorkingWithTheReactor)
+and fills the document slots of `window.ph` the full in-browser reactor fills, so
+`useDocument`, `useDispatch` and `useReactorClient` work in a plain web app with
+no reactor, no PGLite and no job queue in the bundle.
+
+It fills the document slots and no others. The provider publishes neither
+`window.ph.vetraPackageManager` nor `window.ph.reactorClientModule`, so the
+package, document-model and editor-module hooks find nothing below it. An app
+renders the components it imports itself and builds its own actions. See
+[Limitations](/academy/Reference/ReactorBrowserClient/ApiReference#limitations).
+
+```tsx
+
+  GraphQLReactorProvider,
+  useSwitchboardClient,
+} from "@powerhousedao/reactor-browser/graphql-client";
+```
+
+Two implementations satisfy the same interface. Connect and Vetra Studio run the
+full reactor client; a web app runs this one. The document hooks below the
+provider are identical either way, so a component that reads and writes
+documents moves between them unchanged.
+
+## When to use it
+
+Use the light client when the app reads and writes documents that live on a
+Switchboard, and does not need local-first editing. Everything is remote-first:
+a dispatch is a round trip to the server, and there is no offline queue.
+
+Use the full reactor (Connect, Vetra Studio, or your own `ReactorBuilder` setup)
+when you need local-first state, drives, jobs, or the document-model modules in
+the browser.
+
+## What you need
+
+- A running Switchboard with the document model your app writes. `ph switchboard`
+  in a Powerhouse project serves one on `http://localhost:4001/graphql`.
+- React 19 or later, the package's peer requirement. The document hooks read
+  through `use()`.
+- Any bundler. Import the `/graphql-client` subpath and no build configuration
+  is needed - see [Bundling](#bundling) below.
+
+## Mount the provider
+
+One provider is the whole integration. It builds the client, publishes it and a
+`DocumentCache` over it into `window.ph`, and registers the `window.ph` event
+handlers the hooks read through.
+
+```tsx
+"use client";
+
+
+const SWITCHBOARD_URL = "http://localhost:4001/graphql";
+
+export default function DocumentsPage() {
+  return (
+    <GraphQLReactorProvider url={SWITCHBOARD_URL}>
+      <TodoDemo />
+    </GraphQLReactorProvider>
+  );
+}
+```
+
+The client is built in the browser only. During server rendering the slots stay
+empty and the hooks report their loading states, which is why the provider and
+its children are client components.
+
+## Describe the document without a reducer
+
+The app builds actions and documents; the Switchboard owns the model and its
+reducer. Nothing generated has to ship to the browser.
+
+```ts
+
+  baseCreateDocument,
+  createAction,
+  createBaseState,
+  generateId,
+  type Action,
+  type PHBaseState,
+  type PHDocument,
+} from "document-model";
+
+export const TODO_DOCUMENT_TYPE = "test/todo";
+const TODO_DOCUMENT_VERSION = 2;
+
+export type TodoItem = { id: string; title: string; completed: boolean };
+
+type TodoPHState = PHBaseState & {
+  global: { title: string; todos: TodoItem[] };
+  local: Record<string, never>;
+};
+
+function createTodoState(state?: Partial<TodoPHState>): TodoPHState {
+  return {
+    ...createBaseState(state?.auth, {
+      version: TODO_DOCUMENT_VERSION,
+      ...state?.document,
+    }),
+    global: { title: "", todos: [], ...state?.global },
+    local: {},
+  };
+}
+
+export function createTodoDocument(): PHDocument<TodoPHState> {
+  return baseCreateDocument<TodoPHState>(
+    createTodoState,
+    undefined,
+    TODO_DOCUMENT_TYPE,
+  );
+}
+
+export function addTodo(title: string): Action {
+  return createAction(
+    "ADD_TODO",
+    { id: generateId(), title, completed: false },
+    undefined,
+    undefined,
+    "global",
+  );
+}
+
+/** Reads the todo list off a document whose state shape is not known statically. */
+export function readTodos(document: PHDocument | undefined): TodoItem[] {
+  const state = document?.state as Partial<TodoPHState> | undefined;
+  return state?.global?.todos ?? [];
+}
+```
+
+If the action's input does not match the model, the server says so per action
+and the dispatch error callback below receives it.
+
+## Create, read, dispatch
+
+`useReactorClient()` returns the client for imperative calls such as `create`.
+`useDocument(id)` reads through the cache and suspends while the document loads.
+`useDispatch(document)` pushes actions.
+
+```tsx
+"use client";
+
+
+  useDispatch,
+  useDocument,
+  useReactorClient,
+} from "@powerhousedao/reactor-browser/graphql-client";
+
+
+export function TodoDemo() {
+  const client = useReactorClient();
+  const [documentId, setDocumentId] = useState<string>();
+
+  async function create() {
+    if (!client) return;
+    const created = await client.create(createTodoDocument());
+    setDocumentId(created.header.id);
+  }
+
+  return (
+    <main>
+      <button disabled={!client} onClick={() => void create()}>
+        Create todo list
+      </button>
+      {documentId ? (
+        <Suspense fallback={<p>Loading document…</p>}>
+          <TodoList documentId={documentId} />
+        </Suspense>
+      ) : null}
+    </main>
+  );
+}
+
+function TodoList({ documentId }: { documentId: string }) {
+  const document = useDocument(documentId);
+  const [, dispatch] = useDispatch(document);
+  const [title, setTitle] = useState("");
+  const [error, setError] = useState<string>();
+  const todos = readTodos(document);
+
+  function add() {
+    dispatch(addTodo(title), (errors) =>
+      setError(errors.map((e) => e.message).join("; ")),
+    );
+    setTitle("");
+  }
+
+  return (
+    <section>
+      <input value={title} onChange={(e) => setTitle(e.target.value)} />
+      <button onClick={add}>Add</button>
+      {error ? <p>{error}</p> : null}
+      <ul>
+        {todos.map((todo) => (
+          <li key={todo.id}>{todo.title}</li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+```
+
+Read documents by id. The client's change events carry resolved document ids, so
+a cache entry keyed by slug is never invalidated.
+
+Keep the open document's id in the URL if you want a reload to prove the state
+came back from the Switchboard rather than from memory.
+
+## Realtime
+
+The first `subscribe` call opens a websocket to the Switchboard and subscribes to
+the `documentChanges` firehose. The `DocumentCache` the provider builds
+subscribes in its constructor, so the socket opens as soon as the provider
+mounts. A change written by another user, another tab or a server-side processor
+lands on the page with no reload.
+
+The websocket endpoint is derived from `url`: `http` becomes `ws`, `https`
+becomes `wss`, and `/subscriptions` is appended. For
+`http://localhost:4001/graphql` that is
+`ws://localhost:4001/graphql/subscriptions`. Override it with the
+`subscriptionsUrl` prop, or set `realtime={false}` where there is no websocket
+to talk to.
+
+Realtime is an enhancement, never a dependency. A socket that cannot be opened
+is logged once and ignored, and the app keeps working on the changes it makes
+itself. The failed socket is closed rather than kept, so the next component to
+subscribe tries again - but nothing subscribes on a sign-in of its own accord.
+An app on a Switchboard that refuses anonymous subscribers, and that
+authenticates after mount, should remount the provider once the user is in.
+
+## Signing
+
+With a logged-in [Renown](/academy/Reference/Authorization/renown-sdk/Authentication) user, a
+single-action dispatch is stamped with the previous operation's hash and index
+and signed before it is pushed. Nothing else is required: the client resolves
+the signer from `window.ph.renown` at push time, so a client built before login
+signs after login.
+
+A batch of more than one action is pushed unsigned with a warning. See
+[API reference](/academy/Reference/ReactorBrowserClient/ApiReference#signing)
+for why.
+
+## Bundling
+
+Import from `@powerhousedao/reactor-browser/graphql-client`, as every example on
+this page does. It bundles in Next, Vite or anything else with no alias, stub or
+other build configuration.
+
+Do not import the light client from the package root. The root barrel re-exports
+the whole package, and part of that value-imports `@powerhousedao/reactor`, whose
+single entry reaches `pg` (`dns`/`fs`/`net`/`tls`), `@electric-sql/pglite` and
+`node:worker_threads`. None of it runs on this path, but a browser bundler still
+has to resolve it, and Turbopack fails on `node:worker_threads` before any app
+code runs.
+
+The `/graphql-client` entry avoids that by importing the reactor for types only.
+Types are erased at compile time, so a bundler never sees them; the few runtime
+values the client needs are mirrored inside `reactor-browser` instead, with
+compile-time assertions that fail if they ever drift from the reactor's own
+definitions.
+
+The built entry imports exactly `react`, `document-model`, `graphql`,
+`graphql-request`, `graphql-tag`, `graphql-ws/client`,
+`@powerhousedao/shared/document-model`, `@powerhousedao/shared/document-drive`,
+`change-case`, `remeda` and `slug` - no database driver, no node built-ins. A
+test walks the entry's import graph and fails if that regresses.
+
+The monorepo's `test/test-fusion/` app is a worked example: it imports the
+subpath and has no bundler configuration at all.
+
+## Next
+
+- [API reference](/academy/Reference/ReactorBrowserClient/ApiReference) - provider
+  props, client methods, and the full limitations list.
+- [Subgraphs and attachments](/academy/Reference/ReactorBrowserClient/SubgraphsAndAttachments) -
+  typed access to your project's own subgraphs, and the attachment service.
+- [React Hooks](/academy/Reference/EditorsUI/ReactHooks) - the hooks that run on
+  top of this client.
+
+---
+
+
+## API reference
+
+> Source: https://academy.vetra.io/academy/Reference/ReactorBrowserClient/ApiReference
+
+Everything on this page is exported from `@powerhousedao/reactor-browser`.
+
+```typescript
+
+  GraphQLReactorClient,
+  GraphQLReactorProvider,
+  useSwitchboardClient,
+  type GraphQLReactorClientOptions,
+  type GraphQLReactorProviderProps,
+  type IReactorBrowserClient,
+} from "@powerhousedao/reactor-browser/graphql-client";
+```
+
+For the quickstart and how the entry stays browser-bundlable, see
+[Overview and quickstart](/academy/Reference/ReactorBrowserClient/OverviewAndQuickstart).
+
+## `IReactorBrowserClient`
+
+The contract the reactor-browser hooks depend on. It is declared as a `Pick` of
+the reactor's own `IReactorClient`, so the six member signatures cannot drift
+from the reactor's:
+
+```typescript
+export interface IReactorBrowserClient extends Pick<
+  IReactorClient,
+  | "get"
+  | "subscribe"
+  | "execute"
+  | "getOperations"
+  | "create"
+  | "deleteDocument"
+> {}
+```
+
+Two implementations satisfy it: the full in-browser reactor client, which gets it
+for free by implementing `IReactorClient`, and `GraphQLReactorClient`.
+
+Everything outside those six members is deliberately excluded and not
+implemented here: `drives`, `find`, `resolveIdOrSlug`, relationships,
+`executeAsync`, `executeBatch`, jobs, `createEmpty`, `rename`, and the
+document-model module getters. For the full-reactor versions of those, see
+[IReactorClient](/academy/Reference/Reactor/ReactorClient).
+
+### Methods
+
+| Method                                                        | Behaviour on the light client                                                                       |
+| ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `get(identifier, view?, signal?)`                             | Reads by id or slug. A `view.revision` throws: the GraphQL read API has no point-in-time reads.     |
+| `getOperations(identifier, view?, filter?, paging?, signal?)` | Paged. `next()` follows the returned cursor; the default page is `{ cursor: "0", limit: 100 }`.     |
+| `create(document, parentIdentifier?, signal?)`                | Creates the document and emits `Created`.                                                           |
+| `execute(identifier, branch, actions, signal?)`               | Reads the document, stamps and signs a single action, pushes it, emits `Updated`. Two round trips.  |
+| `deleteDocument(identifier, propagate?, signal?)`             | Deletes and emits `Deleted` carrying the identifier it was called with.                             |
+| `subscribe(search, callback, view?)`                          | Registers a change subscriber and returns its unsubscribe function. `view` is accepted and ignored. |
+
+`execute` returns the updated document with the operations this call appended,
+which is how `useDispatch` reports per-action errors: `dispatchActions` scans the
+returned operations for the action it sent and reads its `error` field.
+
+## `GraphQLReactorClient`
+
+```typescript
+new GraphQLReactorClient(options: GraphQLReactorClientOptions);
+```
+
+Construct it directly only outside React. Under React, mount
+`GraphQLReactorProvider` and read the client from a hook.
+
+### `GraphQLReactorClientOptions`
+
+| Option             | Type                                 | Default                      | Notes                                                                                                         |
+| ------------------ | ------------------------------------ | ---------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `url`              | `string`                             | required                     | The Switchboard's GraphQL endpoint, e.g. `http://localhost:4001/graphql`.                                     |
+| `tokenProvider`    | `() => Promise<string \| undefined>` | `ambientRenownTokenProvider` | Resolves the bearer token per request.                                                                        |
+| `subscriptionsUrl` | `string`                             | derived from `url`           | The websocket endpoint. `http` -> `ws`, `https` -> `wss`, `/subscriptions` appended.                          |
+| `realtime`         | `boolean`                            | `true`                       | `false` opens no websocket; the client then emits only its own changes.                                       |
+| `graphqlClient`    | `ReactorGraphQLClient`               | built from `url`             | A pre-built SDK, mainly a test seam. It owns its own transport and headers, so it carries no auth middleware. |
+
+### Methods beyond the interface
+
+```typescript
+subgraph<TSdk>(name: string, getSdk: SubgraphSdkFactory<TSdk>): TSdk;
+
+request<TResult = unknown, TVariables extends Variables = Variables>(
+  document: TypedGraphQLDocument<TResult, TVariables> | string,
+  variables?: TVariables,
+  options?: GraphQLRequestOptions,
+): Promise<TResult>;
+
+dispose(): void;
+```
+
+`subgraph` and `request` are covered in
+[Subgraphs and attachments](/academy/Reference/ReactorBrowserClient/SubgraphsAndAttachments).
+
+`dispose()` closes the realtime socket. The provider calls it on unmount.
+Registered subscribers are left in place, since they still receive the events the
+client produces itself.
+
+It is not final: a `subscribe` after a dispose opens a new socket. React remounts
+a tree by running an effect's cleanup and then the effect again on the same
+client - `StrictMode` does it on every mount - and a terminal dispose would leave
+those pages with no realtime at all and nothing logged.
+
+## `GraphQLReactorProvider`
+
+| Prop                | Type                                 | Default                   | What it does                                                                              |
+| ------------------- | ------------------------------------ | ------------------------- | ----------------------------------------------------------------------------------------- |
+| `url`               | `string`                             | required                  | The Switchboard's GraphQL endpoint.                                                       |
+| `tokenProvider`     | `() => Promise<string \| undefined>` | the logged-in Renown user | Resolves the bearer token, per request. Return `undefined` to send a request anonymously. |
+| `subscriptionsUrl`  | `string`                             | derived from `url`        | The websocket endpoint.                                                                   |
+| `realtime`          | `boolean`                            | `true`                    | Whether server-pushed changes reach subscribers.                                          |
+| `attachmentService` | `PHGlobal["attachmentService"]`      | none                      | Published into the slot the editors read.                                                 |
+| `children`          | `ReactNode`                          | required                  |                                                                                           |
+
+On mount the provider registers the `window.ph` event handlers once per page,
+publishes the client into `window.ph.reactorClient` and a `DocumentCache` built
+over it into `window.ph.documentCache`. On unmount it disposes the cache and the
+client, and leaves the slots populated, matching how Connect never unsets them.
+
+The props are read once, in the `useState` initialiser. Changing `url` or
+`tokenProvider` afterwards does not rebuild the client; remount the provider if
+the endpoint has to change. `attachmentService` is the exception: it is
+published from its own effect, so an app that builds it asynchronously can pass
+it later without throwing away every open document.
+
+## Hooks
+
+| Hook                     | Returns                              | Use it for                                                                       |
+| ------------------------ | ------------------------------------ | -------------------------------------------------------------------------------- |
+| `useReactorClient()`     | `IReactorBrowserClient \| undefined` | The six shared members. Works on both implementations.                           |
+| `useSwitchboardClient()` | `GraphQLReactorClient \| undefined`  | `subgraph`, `request` and `dispose`. `undefined` when a full reactor is mounted. |
+
+`useSwitchboardClient` is `useReactorClient()` narrowed to the light client, so a
+component reaches its extras without a cast, and a component running against a
+full reactor gets `undefined` rather than a runtime failure. The narrowing is by
+brand rather than by `instanceof`, so a client built by a second copy of the
+package - a bundled package carrying its own, or a hot-replaced module - is still
+recognised.
+
+**WARNING:**
+`useGraphQLReactorClient` is a different, older hook. It reads the legacy
+`window.ph.reactorGraphQLClient` slot and has nothing to do with this client.
+
+
+The document hooks (`useDocument`, `useDocuments`, `useDispatch`,
+`useDocumentOperations` and the rest) are unchanged. See
+[React Hooks](/academy/Reference/EditorsUI/ReactHooks).
+
+## Signing
+
+The signer is resolved from `window.ph.renown` at push time, so a client built
+before login signs after login with no rebuild.
+
+| Situation                              | What happens                                                         |
+| -------------------------------------- | -------------------------------------------------------------------- |
+| Logged-in Renown user, one action      | The action is stamped, then signed, then pushed.                     |
+| Logged-in Renown user, several actions | The batch is pushed unsigned and a warning is logged.                |
+| No user                                | Nothing is stamped or signed. The server computes the hashes itself. |
+
+Stamping writes two fields onto `action.context`:
+
+- `prevOpHash` = `hashDocumentStateForScope(document, scope)`, the hash of the
+  state the action applies to.
+- `prevOpIndex` = `header.revision[scope] - 1`, so an empty scope stamps `-1`.
+
+Order matters: the signer reads `context.prevOpHash` off the action, so the
+client stamps before it signs.
+
+Batch signing is not supported because the second action's baseline hash cannot
+be computed without running the reducer, and the light client deliberately ships
+no reducer.
+
+Two things are worth knowing when you verify signatures:
+
+- The Switchboard signs an unsigned action with its own `did:key`, so a
+  non-empty `signatures` list is not evidence of client-side signing. Check
+  `context.signer.user.address` instead.
+- The server does not validate `prevOpHash`. A wrong hash is accepted, so
+  conformance has to be asserted in tests rather than inferred from a write
+  succeeding.
+
+## Reactivity
+
+Every successful `create`, `execute` and `deleteDocument` emits a change event to
+matching subscribers. That is what makes a `DocumentCache` built on this client
+invalidate after a dispatch, with no websocket involved.
+
+`SearchFilter` is `{ type?, parentId?, ids?, slugs? }`. Each populated field is an
+AND condition tested by truthiness, so `ids: []` matches nothing and `{}` matches
+everything. `parentId` is ignored: this client has no drive concept.
+
+| Event     | Payload                                                     |
+| --------- | ----------------------------------------------------------- |
+| `Created` | `{ type, documents: [created] }`                            |
+| `Updated` | `{ type, documents: [updated] }`                            |
+| `Deleted` | `{ type, documents: [], context: { childId: identifier } }` |
+
+Events are emitted after the write resolves and before it returns, so a rejected
+write emits nothing.
+
+### Realtime
+
+The first `subscribe` opens one websocket for all subscribers and subscribes to
+`documentChanges` with no `search` argument. The server sends every change the
+connection may read, and this client applies each subscriber's filter on the way
+out.
+
+The endpoint is `<url>` with `http` swapped for `ws` and `/subscriptions`
+appended - `ws://localhost:4001/graphql/subscriptions` for a Switchboard on
+`http://localhost:4001/graphql`. There is one socket server for the whole
+Switchboard, not one per subgraph.
+
+Auth on the socket reuses the same `tokenProvider`, sent as the lowercase
+`authorization` connection param and re-resolved on every reconnect. A
+Switchboard with auth enabled refuses a connection that arrives without it, so
+an anonymous subscriber gets no realtime there.
+
+A socket that cannot be opened or is refused is logged once and then ignored.
+
+### Id space
+
+Change events carry resolved document ids, never the identifier a write was
+issued with. Read documents by id: a `DocumentCache` entry keyed by slug is never
+invalidated. The one exception is `deleteDocument`, which announces its
+identifier verbatim because the mutation returns a boolean and there is no
+document left to read an id off.
+
+## Auth
+
+One `tokenProvider`, resolved per request, applied to the generated SDK, the
+hand-authored mutation, subgraph SDKs and the websocket connection params alike.
+The HTTP header is a lowercase `authorization`.
+
+```tsx
+<GraphQLReactorProvider
+  url={switchboardUrl}
+  tokenProvider={async () => session?.accessToken}
+>
+```
+
+The default provider returns the logged-in Renown user's bearer token, and
+`undefined` when nobody is logged in. Returning `undefined` or an empty string
+sends the request with no authorization header at all. A provider that rejects
+fails the request rather than silently downgrading to anonymous.
+
+## Limitations
+
+Known and deliberate. None of these is a bug report.
+
+| Limitation                                      | Detail                                                                                                                                                                                                                                                                                                                                                                                      |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| No offline or local-first writing               | No IndexedDB, no outbox, no optimistic state, no reconnect flush. A dispatch that fails is a failed dispatch.                                                                                                                                                                                                                                                                               |
+| `execute` costs two round trips                 | One read for the signing and `sinceRevision` baseline, one mutation.                                                                                                                                                                                                                                                                                                                        |
+| No batch signing                                | More than one action in a batch is pushed unsigned with a warning.                                                                                                                                                                                                                                                                                                                          |
+| No point-in-time reads                          | A `view.revision` throws in `get` and `getOperations`.                                                                                                                                                                                                                                                                                                                                      |
+| Slug-keyed cache entries are never invalidated  | Change events carry resolved ids. Read by id.                                                                                                                                                                                                                                                                                                                                               |
+| Concurrent dispatches can leave the cache stale | A forced refetch that arrives while another is in flight returns the pending one instead of chaining. The next server event repairs it.                                                                                                                                                                                                                                                     |
+| A mixed-scope batch over-fetches                | The returned operations are windowed from the lowest head revision across the scopes the batch targets.                                                                                                                                                                                                                                                                                     |
+| No drives, no `find`, no jobs                   | Not on the interface. `create(document, parentIdentifier?)` is the only parenting there is.                                                                                                                                                                                                                                                                                                 |
+| Realtime degrades to local-only                 | An unreachable or refused socket is logged once and ignored. The failed socket is closed, so the next subscriber retries; nothing subscribes on sign-in of its own accord.                                                                                                                                                                                                                  |
+| No document-model or editor modules             | The provider populates neither `window.ph.vetraPackageManager` nor `window.ph.reactorClientModule`, so `useVetraPackages`, `useDocumentModelModules`, `useEditorModules` and `useEditorModuleById` return empty or `undefined`, and the exported `loadFile`, `addDocument`, `addFileWithProgress` and `copyNode` helpers throw or no-op. Render editor components the app imports directly. |
+| The attachment service is a wiring seam         | The prop reaches `useAttachmentService` below the provider and nothing more. No attachment has been read over this client end to end.                                                                                                                                                                                                                                                       |
+| Own writes are announced twice                  | Once locally, once by the server push, so the cache refetches twice. Harmless.                                                                                                                                                                                                                                                                                                              |
+| Import the `/graphql-client` subpath            | The package root reaches `@powerhousedao/reactor` and does not bundle for the browser. See [Bundling](/academy/Reference/ReactorBrowserClient/OverviewAndQuickstart#bundling).                                                                                                                                                                                                               |
+
+---
+
+
+## Subgraphs and attachments
+
+> Source: https://academy.vetra.io/academy/Reference/ReactorBrowserClient/SubgraphsAndAttachments
+
+A Switchboard serves more than the reactor's document API. Your project's own
+subgraphs sit next to it, and attachments come from a service the app supplies.
+The light client reaches both through the configuration it already has: one URL,
+one token provider.
+
+## Typed subgraphs
+
+A subgraph is served at `<graphql base>/<name>`. For a Switchboard on
+`http://localhost:4001/graphql`, the `renown-read-model` subgraph is at
+`http://localhost:4001/graphql/renown-read-model`.
+
+`client.subgraph(name, getSdk)` derives that URL from the client's `url`, keeps
+one transport per name, and hands the SDK the same auth middleware every reactor
+call goes through.
+
+```tsx
+"use client";
+
+
+const UNKNOWN_ADDRESS = "0x0000000000000000000000000000000000000000";
+
+export function Probe() {
+  const client = useSwitchboardClient();
+
+  async function probe() {
+    if (!client) return;
+    const sdk = client.subgraph("renown-read-model", getRenownReadModelSdk);
+    const { renownUsers } = await sdk.RenownUsers([UNKNOWN_ADDRESS]);
+    return renownUsers;
+  }
+
+  return (
+    <button disabled={!client} onClick={() => void probe()}>
+      Probe subgraph
+    </button>
+  );
+}
+```
+
+`subgraph` gives you transport, auth and typing. Results are not cached, produce
+no change events and never reach `useDocument`. Cache them with whatever the app
+already uses for server state.
+
+The registry caches the transport per name, but reuses the SDK only when the same
+factory function is passed again. Two callers with two different generated SDKs
+each get their own, rather than the first caller's methods under the second
+caller's type.
+
+**INFO:**
+The root supergraph federates every subgraph, so a field a subgraph defines is
+usually reachable at the base URL too. If you need to prove a request went to the
+subgraph's own endpoint, query `_service { sdl }`: the root has no `_service`
+field.
+
+
+### Generate the SDK
+
+Point `graphql-codegen` at the subgraph's endpoint and use the same three plugins
+`@powerhousedao/reactor-browser` generates its own SDK with:
+
+```ts
+// codegen.ts
+
+
+const config: CodegenConfig = {
+  schema: "http://localhost:4001/graphql/renown-read-model",
+  documents: ["src/**/*.graphql"],
+  generates: {
+    "./src/graphql/renown-read-model.ts": {
+      plugins: [
+        "typescript",
+        "typescript-operations",
+        "typescript-graphql-request",
+      ],
+      config: {
+        scalars: {
+          JSONObject: "NonNullable<unknown>",
+          DateTime: "string | Date",
+        },
+        skipTypename: true,
+        maybeValue: "T | null | undefined",
+        gqlImport: "graphql-tag#gql",
+      },
+    },
+  },
+};
+
+export default config;
+```
+
+The `typescript-graphql-request` plugin emits
+`getSdk(client: GraphQLClient, withWrapper?: SdkFunctionWrapper)`, which is
+exactly the `SubgraphSdkFactory<TSdk>` signature `subgraph` expects. Pass the
+generated function straight in.
+
+```typescript
+export type SubgraphSdkFactory<TSdk> = (
+  client: GraphQLClient,
+  withWrapper?: SdkFunctionWrapper,
+) => TSdk;
+```
+
+`SdkFunctionWrapper` is re-exported from `@powerhousedao/reactor-browser`, so a
+hand-written SDK can name the type without depending on `graphql-request`
+directly. An SDK the client builds is always called with the auth wrapper: apply
+it to every operation, exactly as the generated code does.
+
+### One-off documents
+
+For an operation not worth generating an SDK for, use `client.request`. It runs
+against the Switchboard's own endpoint, through the same transport and auth.
+
+```ts
+const DOCUMENT_MODEL_IDS = `
+  query DocumentModelIds {
+    documentModels {
+      items {
+        id
+      }
+    }
+  }
+`;
+
+type DocumentModelIds = {
+  documentModels: { items: { id: string }[] };
+};
+
+const { documentModels } =
+  await client.request<DocumentModelIds>(DOCUMENT_MODEL_IDS);
+```
+
+A document a code generator typed carries its own result type, so the type
+argument is only needed for hand-written documents and strings. The operation
+name and type are read off the document; override them through the third
+argument, which also takes an `AbortSignal`.
+
+## Attachments
+
+Attachments are configured at the same point as everything else, but the app
+constructs the service. Which storage it talks to is the app's business, and
+`@powerhousedao/reactor-browser` does not depend on the attachment
+implementation.
+
+```tsx
+<GraphQLReactorProvider
+  url={switchboardUrl}
+  attachmentService={attachmentService}
+>
+  <YourApp />
+</GraphQLReactorProvider>
+```
+
+The provider publishes it into the `window.ph.attachmentService` slot Connect
+publishes it into, so `useAttachmentService` and the editors below find it. Leave
+the prop out and the slot stays empty, exactly as it is without this provider.
+
+This prop is a wiring seam, and that is all it has been proven to be: the service
+an app passes in reaches `useAttachmentService` below the provider. No attachment
+has been read over the light client end to end.
+
+It is published from its own effect, keyed on the prop, so an app that builds the
+service asynchronously can pass it in later. Passing a new service does not
+rebuild the client or the document cache.
+
+Build the service with `createRemoteAttachmentService` from
+`@powerhousedao/reactor-attachments/client`, pointed at the same Switchboard.
+Import the `/client` subpath, not the package root: the root entry also exports
+the Kysely, S3 and filesystem backends, so a browser bundler has to resolve
+`kysely`, `@aws-sdk/client-s3` and `node:fs` and fails before any app code runs -
+the same failure class the light client's own
+[Bundling](/academy/Reference/ReactorBrowserClient/OverviewAndQuickstart#bundling)
+section describes, and it has the same shape of fix: import the browser subpath. See
+[Attachment service](/academy/Reference/Reactor/AttachmentService) for the
+service and client APIs, the reserve-send-read flow, and the `attachment://v1:`
+ref format.
 
 ---
 

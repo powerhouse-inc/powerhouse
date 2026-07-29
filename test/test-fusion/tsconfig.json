@@ -42,6 +42,9 @@
   ],
   "references": [
     {
+      "path": "../../packages/document-model"
+    },
+    {
       "path": "../../packages/reactor-browser"
     },
     {
