@@ -1,5 +1,10 @@
-import { LoginMethod, type WalletAdapterDescriptor } from "@renown/sdk/wallet";
-import { useMemo } from "react";
+import { LoginMethod } from "@renown/sdk/wallet";
+import { useMemo, useSyncExternalStore } from "react";
+import {
+  getServerWalletDescriptors,
+  getWalletDescriptors,
+  subscribeWalletDescriptors,
+} from "./wallet-registry.js";
 
 export interface RenownLoginMethod {
   id: LoginMethod;
@@ -13,16 +18,19 @@ const DEFAULT_METHOD_LABELS: Partial<Record<LoginMethod, string>> = {
   [LoginMethod.APPLE]: "Continue with Apple",
 };
 
-/** Derive the offered login methods from wallet adapter descriptors, for building a login UI. Reads each descriptor's eager metadata only — no wallet libraries load. Buttons follow the descriptor array order, deduped. Wire each to `useRenownAuth().login(undefined, id)`. Labels are overridable. See the reactor-browser README + Academy Renown auth guide. */
+/** The login methods the mounted {@link RenownWalletProvider}'s adapters offer, for building a login UI. Reads each descriptor's eager metadata only — no wallet libraries load. Buttons follow the provider's descriptor array order, deduped; empty when no provider is mounted (redirect-only). Wire each to `useRenownAuth().login(undefined, id)`. Labels are overridable. See the reactor-browser README + Academy Renown auth guide. */
 export function useRenownLoginMethods(
-  adapters: WalletAdapterDescriptor[] | undefined,
   labels?: Partial<Record<LoginMethod, string>>,
 ): RenownLoginMethod[] {
+  const descriptors = useSyncExternalStore(
+    subscribeWalletDescriptors,
+    getWalletDescriptors,
+    getServerWalletDescriptors,
+  );
   return useMemo(() => {
-    if (!adapters) return [];
     const seen = new Set<LoginMethod>();
     const methods: RenownLoginMethod[] = [];
-    for (const { meta } of adapters) {
+    for (const { meta } of descriptors) {
       for (const id of meta.supportedMethods) {
         if (seen.has(id)) continue;
         seen.add(id);
@@ -33,5 +41,5 @@ export function useRenownLoginMethods(
       }
     }
     return methods;
-  }, [adapters, labels]);
+  }, [descriptors, labels]);
 }

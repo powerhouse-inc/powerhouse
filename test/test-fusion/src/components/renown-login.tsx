@@ -5,7 +5,6 @@ import {
   useRenownLoginMethods,
 } from "@powerhousedao/reactor-browser/renown";
 import { LoginMethod } from "@renown/sdk/wallet";
-import { WALLET_ADAPTERS } from "@/lib/wallet-adapters";
 
 export function RenownLogin() {
   const {
@@ -18,7 +17,7 @@ export function RenownLogin() {
     error,
     logout,
   } = useRenownAuth();
-  const methods = useRenownLoginMethods(WALLET_ADAPTERS);
+  const methods = useRenownLoginMethods();
 
   if (user) {
     return (

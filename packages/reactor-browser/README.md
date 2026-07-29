@@ -557,8 +557,9 @@ aliases. See the `@renown/sdk` README for the per-adapter peer list.
 The provider is **SSR-safe** — it renders on the server without `ssr: false`;
 the wallet libraries only load client-side on the first login click.
 
-Then build the login UI with `useRenownLoginMethods` (derives the button list
-from the adapters) and `useRenownAuth` (login + user state):
+Then build the login UI with `useRenownLoginMethods` (the button list, read from
+the mounted provider) and `useRenownAuth` (login + user state). Neither takes the
+adapters, so the login UI need not sit inside the provider's subtree:
 
 ```tsx
 import {
@@ -566,9 +567,9 @@ import {
   useRenownLoginMethods,
 } from "@powerhousedao/reactor-browser/renown";
 
-function Login({ adapters }) {
+function Login() {
   const { user, login, pending, error, logout } = useRenownAuth();
-  const methods = useRenownLoginMethods(adapters);
+  const methods = useRenownLoginMethods();
   if (user) return <button onClick={() => void logout()}>Log out</button>;
   return (
     <>
@@ -703,12 +704,18 @@ adapter bridges (each library's modal portals to `<body>`), never your
 `children`, so activating login never remounts your app. Props: `adapters`
 (`WalletAdapterDescriptor[]`), `theme?`, `children`.
 
-### `useRenownLoginMethods(adapters, labels?)`
+### `useRenownLoginMethods(labels?)`
 
-Returns `{ id, label }[]` — one per login method the adapters offer, deduped, in
-adapter-array order — reading each descriptor's eager metadata only (no wallet
-libraries load). Reorder the array to reorder the buttons. Override labels via
-the second argument. Wire each to `login(undefined, id)`.
+Returns `{ id, label }[]` — one per login method the mounted
+`RenownWalletProvider`'s adapters offer, deduped, in descriptor-array order —
+reading each descriptor's eager metadata only (no wallet libraries load).
+Reorder the array you pass the provider to reorder the buttons. Override labels
+via the argument. Wire each to `login(undefined, id)`.
+
+The descriptors come from the provider, not from a prop or context, so a login UI
+mounted **outside** the provider's subtree still gets the full list — Connect
+renders its login modal as a sibling of the app. Empty when no provider is
+mounted, which is the redirect-only case.
 
 ### Next.js
 

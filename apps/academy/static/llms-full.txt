@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-07-28T14:24:50.667Z
+> Generated: 2026-07-29T08:13:38.146Z
 > Total Documents: 106
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -22646,9 +22646,11 @@ function Providers({ children }) {
   );
 }
 
+// useRenownLoginMethods reads the mounted provider's adapters, so a login UI
+// works even when it is not rendered inside `Providers`.
 function Login() {
   const { user, login, pending, logout } = useRenownAuth();
-  const methods = useRenownLoginMethods(adapters);
+  const methods = useRenownLoginMethods();
   if (user) return <button onClick={() => void logout()}>Log out</button>;
   return methods.map((m) => (
     <button key={m.id} disabled={pending} onClick={() => login(undefined, m.id)}>
