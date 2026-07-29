@@ -28,6 +28,16 @@ const renown = await new RenownBuilder("my-app")
 - `withCrypto(crypto)` — Pre-built crypto instance
 - `withKeyPairStorage(storage)` — Key pair storage (crypto is built from this)
 - `withProfileFetcher(fetcher)` — Custom profile enrichment strategy
+- `withChainId(chainId)` — Chain credentials are issued on (default `1`)
+
+**The chain id is part of the user's identity.** The issuer DID is
+`did:pkh:eip155:<chainId>:<address>`, so the same wallet on a different chain is a
+different user. `signIn` therefore rejects a wallet session whose chain differs
+from this one, and the bearer token is scoped to it too. When you pass a
+pre-built crypto via `withCrypto()`, give it the same chain
+(`RenownCryptoBuilder().withChainId(...)`) — the builder warns if the two
+disagree. Keep the wallet adapters' `chains` in step, so the wallet UI prompts a
+network switch instead of the user reaching a rejection at the end of the flow.
 
 ## Renown Instance
 
@@ -156,6 +166,12 @@ it the rainbow adapter offers only an installed browser wallet and the Safe App
 iframe. Every other RainbowKit wallet connects over WalletConnect — `rainbowWallet`
 always when its extension is absent, `metaMaskWallet` on desktop without the
 extension — so those are omitted rather than offered and failing on the relay.
+
+The rainbow adapter's `chains` (from `wagmi/chains`) defaults to Ethereum mainnet
+alone, matching the chain credentials are issued on. Widen it only alongside
+`withChainId`: a wallet on a chain outside the list has to switch networks to sign
+in, and one that signs on a chain Renown does not issue on is rejected. The
+adapter warns at config time if `chains` cannot produce the issuing chain.
 
 ## Node.js
 

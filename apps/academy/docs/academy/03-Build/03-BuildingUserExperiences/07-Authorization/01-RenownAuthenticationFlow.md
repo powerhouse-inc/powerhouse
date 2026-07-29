@@ -73,7 +73,7 @@ In-page sign-in is opt-in and configured entirely through `powerhouse.config.jso
 
 - **`connect.renown.switchboardUrl`** — the Switchboard GraphQL endpoint. When set, Connect attempts in-page sign-in; if it is absent (or no wallet session can be produced) Connect falls back to the redirect flow automatically, so nothing breaks when it is left unset.
 - **`connect.renown.adapters`** — selects the wallet adapters that power in-page sign-in. Presence of a key enables that adapter:
-  - **`rainbow`** (`{ walletConnectProjectId }`) — external wallets via RainbowKit + wagmi.
+  - **`rainbow`** (`{ walletConnectProjectId }`) — external wallets via RainbowKit + wagmi. Treat `walletConnectProjectId` as required in practice: without it only an installed browser wallet (or a Safe App iframe) can sign in, because every other RainbowKit wallet connects over the WalletConnect relay, which needs a project id. Those wallets are omitted rather than offered and failing.
   - **`privy`** (`{ appId, clientId?, methods? }`) — embedded wallets plus social / email login via Privy. `methods` defaults to `["google", "email"]`.
 
 ```json
@@ -86,6 +86,8 @@ In-page sign-in is opt-in and configured entirely through `powerhouse.config.jso
   }
 }
 ```
+
+Sign-in happens on **one chain**, Ethereum mainnet by default. The chain is part of the user's DID (`did:pkh:eip155:<chainId>:<address>`), so the same wallet on another chain would be a different user with different credentials; a wallet session from another chain is rejected rather than accepted as a second identity. Wallets are offered for the issuing chain only, so a user on another network is prompted to switch.
 
 Each adapter's wallet library is fetched only on the first login click, so enabling in-page auth adds nothing to startup cost. Connect ships with every adapter's peer dependencies installed, so operators only edit the config. Social and email login run inside Privy's own modal (OAuth in a popup, so the page stays alive and sign-in completes in-page). Only **public** identifiers belong in the config — a Privy **App Secret** is server-only and must never be placed in `powerhouse.config.json`. Each social/email method must be enabled in the Privy dashboard, with Connect's origin allowlisted.
 

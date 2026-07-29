@@ -549,6 +549,13 @@ const ADAPTERS = [
 </RenownProvider>;
 ```
 
+**One chain per app.** `chainId` (default `1`) is the chain credentials are issued
+on, and it is part of the user's DID (`did:pkh:eip155:<chainId>:<address>`), so the
+same wallet on another chain is a different user. Sign-in from a wallet on a
+different chain is rejected, so if you set `chainId`, pass matching `chains` to the
+wallet adapters — that is what makes the wallet UI prompt a network switch rather
+than failing at the end of the flow.
+
 **Install only the peers of the adapters you import.** Importing
 `@renown/sdk/wallet/rainbow` is what makes RainbowKit a build requirement; an app
 that only imports `@renown/sdk/wallet/privy` needs no RainbowKit and no bundler
