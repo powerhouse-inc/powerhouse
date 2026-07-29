@@ -91,6 +91,9 @@ type WorkerConstruct = {
   cdnUrl: string;
   packageSpecs: string[];
   studioMode?: boolean;
+  // The worker has no runtime config, so the chain its bearer tokens are scoped
+  // to is passed in; leaving it unset would sign for a chain nobody issues on.
+  renownChainId?: number;
 };
 
 type ModelRegistry = {
@@ -149,9 +152,13 @@ function registerNewModules(): void {
 }
 
 // Rebuild renown crypto from the shared renownKeyDB keypair (origin-scoped IndexedDB).
-async function buildWorkerCrypto() {
+async function buildWorkerCrypto(chainId: number | undefined) {
   const keyStorage = await BrowserKeyStorage.create();
-  return new RenownCryptoBuilder().withKeyPairStorage(keyStorage).build();
+  const builder = new RenownCryptoBuilder().withKeyPairStorage(keyStorage);
+  if (chainId !== undefined) {
+    builder.withChainId(chainId);
+  }
+  return builder.build();
 }
 
 // Open against the major already on disk so a legacy PG16 dir isn't read by PG17.
@@ -321,7 +328,7 @@ const host = new ReactorHost({
       }
       phase = "building crypto";
       console.info(`[reactor.worker] boot: ${phase}`);
-      const crypto = await buildWorkerCrypto();
+      const crypto = await buildWorkerCrypto(construct.renownChainId);
       signer = new RenownCryptoSigner(
         crypto,
         RENOWN_APP_NAME,

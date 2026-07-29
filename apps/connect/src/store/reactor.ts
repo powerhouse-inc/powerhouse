@@ -225,10 +225,18 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     JSON.stringify(Object.fromEntries(features), null, 2),
   );
 
+  // Credentials and the bearer token must be scoped to the same chain, and the
+  // worker mints its own tokens, so this value is passed to it too (see below).
+  const renownChainId = getRuntimeConfig().connect.renown?.chainId;
+
   const keyPairStorage = await BrowserKeyStorage.create();
-  const renownCrypto = await new RenownCryptoBuilder()
-    .withKeyPairStorage(keyPairStorage)
-    .build();
+  const cryptoBuilder = new RenownCryptoBuilder().withKeyPairStorage(
+    keyPairStorage,
+  );
+  if (renownChainId !== undefined) {
+    cryptoBuilder.withChainId(renownChainId);
+  }
+  const renownCrypto = await cryptoBuilder.build();
 
   // Renown namespace is a boot-time constant, so read it from runtime config
   // rather than the PHGlobalConfig machinery; baseUrl stays in phGlobalConfig.
@@ -238,6 +246,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
       phGlobalConfig.routerBasename,
     baseUrl: phGlobalConfig.renownUrl,
     switchboardUrl: phGlobalConfig.switchboardUrl,
+    chainId: renownChainId,
   })
     .withCrypto(renownCrypto)
     .build();
@@ -364,6 +373,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
       cdnUrl: packageManager.cdnUrl ?? "",
       packageSpecs,
       studioMode: phGlobalConfig.studioMode,
+      renownChainId,
       documentModelModules,
       upgradeManifests,
       documentModelLoader,

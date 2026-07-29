@@ -16,4 +16,4 @@ export function rainbowAdapter(
 }
 
 export { RAINBOW_METHODS, rainbowAdapterMeta } from "./meta.js";
-export type { PHRenownRainbowAdapterConfig } from "./meta.js";
+export type { PHRenownChain, PHRenownRainbowAdapterConfig } from "./meta.js";

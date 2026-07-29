@@ -83,7 +83,9 @@ Only **public** identifiers belong here (`walletConnectProjectId`, Privy `appId`
 
 `switchboardUrl` can be overridden at build time with `ph connect config --renown-switchboard-url <url>` (or the `PH_CONNECT_CONFIG_JSON` env override); `adapters` is set via the config file / `PH_CONNECT_CONFIG_JSON`.
 
-`networkId` and `chainId` are **not consumed yet**. They reach `phGlobalConfig` but nothing reads them, so Connect signs in on Ethereum mainnet whatever they say. `@renown/sdk` does support a configurable issuing chain (`RenownBuilder().withChainId()`); honouring these keys means passing it in `store/reactor.ts` **and** to the reactor worker, which builds its own crypto for bearer tokens and has no access to runtime config. Wiring only the main thread would leave the worker minting tokens for the wrong chain, so both move together or neither does.
+`chainId` (default `1`) is the chain Renown issues credentials on. It is part of the user's DID, so the same wallet on another chain is a different user, and sign-in from a wallet on a different chain is rejected. Setting it moves three things together: the credential, the bearer token — including the reactor worker's, which builds its own crypto and receives the chain through its construct message since it cannot read runtime config — and the chain the wallet UI offers, so the user is prompted to switch rather than rejected at the end of the flow.
+
+Only chains Connect bundles can be offered (`1`, `11155111`, `137`, `10`, `42161`, `8453`); any other id logs an error and leaves in-page sign-in unusable. `networkId` remains unread — `did:pkh` identities here are always `eip155`.
 
 ## Setting values — the precedence ladder
 
