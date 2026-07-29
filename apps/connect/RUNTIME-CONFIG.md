@@ -83,6 +83,8 @@ Only **public** identifiers belong here (`walletConnectProjectId`, Privy `appId`
 
 `switchboardUrl` can be overridden at build time with `ph connect config --renown-switchboard-url <url>` (or the `PH_CONNECT_CONFIG_JSON` env override); `adapters` is set via the config file / `PH_CONNECT_CONFIG_JSON`.
 
+`networkId` and `chainId` are **not consumed yet**. They reach `phGlobalConfig` but nothing reads them, so Connect signs in on Ethereum mainnet whatever they say. `@renown/sdk` does support a configurable issuing chain (`RenownBuilder().withChainId()`); honouring these keys means passing it in `store/reactor.ts` **and** to the reactor worker, which builds its own crypto for bearer tokens and has no access to runtime config. Wiring only the main thread would leave the worker minting tokens for the wrong chain, so both move together or neither does.
+
 ## Setting values — the precedence ladder
 
 When `ph connect build` runs, the _dist_ `powerhouse.config.json` is produced by deep-merging in this order (lowest → highest):
