@@ -1,3 +1,13 @@
+## 6.2.2-dev.24 (2026-07-29)
+
+### 🩹 Fixes
+
+- **reactor:** fix an issue exacerbated by auth where snapshots were ordered by insertion not revision ([4aa32fe1b](https://github.com/powerhouse-inc/powerhouse/commit/4aa32fe1b))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.2.2-dev.23 (2026-07-28)
 
 ### 🩹 Fixes

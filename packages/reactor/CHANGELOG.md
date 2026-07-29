@@ -1,3 +1,16 @@
+## 6.2.2-dev.24 (2026-07-29)
+
+### 🩹 Fixes
+
+- **reactor:** keep cached snapshots immutable and answer head reads only from the head ([66cbeadb6](https://github.com/powerhouse-inc/powerhouse/commit/66cbeadb6))
+- **reactor:** keyframes must return document scope, and do not replay document scope twice on cold rebuild ([f5ab26a0b](https://github.com/powerhouse-inc/powerhouse/commit/f5ab26a0b))
+- **reactor:** fix an issue where we were calculating indices incorrectly instead of using the authoritative revisions data ([f3be36c98](https://github.com/powerhouse-inc/powerhouse/commit/f3be36c98))
+- **reactor:** fix an issue exacerbated by auth where snapshots were ordered by insertion not revision ([4aa32fe1b](https://github.com/powerhouse-inc/powerhouse/commit/4aa32fe1b))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.2.2-dev.23 (2026-07-28)
 
 ### 🩹 Fixes

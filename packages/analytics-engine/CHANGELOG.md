@@ -1,3 +1,7 @@
+## 6.2.2-dev.24 (2026-07-29)
+
+This was a version bump only for analytics-engine to align it with other projects, there were no code changes.
+
 ## 6.2.2-dev.23 (2026-07-28)
 
 ### 🩹 Fixes
