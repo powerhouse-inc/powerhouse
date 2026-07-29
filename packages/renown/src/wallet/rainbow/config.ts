@@ -1,7 +1,8 @@
+import { getDefaultConfig as rainbowGetDefaultConfig } from "@rainbow-me/rainbowkit";
 import {
-  getDefaultConfig as rainbowGetDefaultConfig,
-  getDefaultWallets as rainbowGetDefaultWallets,
-} from "@rainbow-me/rainbowkit";
+  injectedWallet as rainbowInjectedWallet,
+  safeWallet as rainbowSafeWallet,
+} from "@rainbow-me/rainbowkit/wallets";
 import { http, type Config } from "wagmi";
 import {
   arbitrum,
@@ -15,8 +16,11 @@ import type { PHRenownRainbowAdapterConfig } from "./meta.js";
 
 // RainbowKit ships types via an exports map with no "types" condition, so
 // type-aware lint sees them as error-typed; assert the shapes we rely on.
-type WalletCreator = { name?: string };
-type WalletGroup = { groupName: string; wallets: WalletCreator[] };
+type WalletCreator = () => unknown;
+interface WalletGroup {
+  groupName: string;
+  wallets: WalletCreator[];
+}
 const getDefaultConfig = rainbowGetDefaultConfig as (params: {
   appName: string;
   projectId: string;
@@ -25,19 +29,12 @@ const getDefaultConfig = rainbowGetDefaultConfig as (params: {
   transports: Record<number, unknown>;
   ssr?: boolean;
 }) => Config;
-const getDefaultWallets = rainbowGetDefaultWallets as () => {
-  wallets: WalletGroup[];
-};
+const injectedWallet = rainbowInjectedWallet as WalletCreator;
+const safeWallet = rainbowSafeWallet as WalletCreator;
 
-// RainbowKit's default wallet list minus the WalletConnect option, used when no
-// project id is set (WalletConnect can't work without one; injected wallets do).
-function walletsWithoutWalletConnect(): WalletGroup[] {
-  return getDefaultWallets()
-    .wallets.map((group) => ({
-      ...group,
-      wallets: group.wallets.filter((w) => w.name !== "walletConnectWallet"),
-    }))
-    .filter((group) => group.wallets.length > 0);
+/** The wallets that work with no WalletConnect project id. Composed explicitly rather than subtracted from `getDefaultWallets()`: RainbowKit's other defaults fall back to WalletConnect themselves — `rainbowWallet` whenever its extension is absent, `metaMaskWallet` on desktop without the extension — so removing only the WalletConnect entry still leaves buttons that fail on the relay. `injectedWallet` and `safeWallet` are the two that never reach it. */
+export function walletsWithoutWalletConnect(): WalletGroup[] {
+  return [{ groupName: "Installed", wallets: [injectedWallet, safeWallet] }];
 }
 
 // Build the wagmi + RainbowKit config from operator-provided project ids.
@@ -51,8 +48,8 @@ export function buildWagmiConfig(config: PHRenownRainbowAdapterConfig): Config {
   } = config;
 
   if (!walletConnectProjectId) {
-    console.debug(
-      "renown rainbow adapter: walletConnectProjectId is not set — hiding the WalletConnect option; only injected/browser wallets are offered.",
+    console.warn(
+      "renown rainbow adapter: walletConnectProjectId is not set — only an installed browser wallet (or a Safe App iframe) can sign in. Every other RainbowKit wallet connects over WalletConnect, which needs a project id.",
     );
   }
 
@@ -68,8 +65,8 @@ export function buildWagmiConfig(config: PHRenownRainbowAdapterConfig): Config {
     // On SSR hosts wagmi's Hydrate defers reconnect to an effect; without it that
     // runs during render, which setState-in-render warns via RainbowKit's modal.
     ssr,
-    // Omit `wallets` to keep RainbowKit's default set when a project id exists;
-    // otherwise drop only the WalletConnect option from that default set.
+    // Omit `wallets` to keep RainbowKit's default set (which needs the project
+    // id) when one exists; otherwise offer only the WalletConnect-free wallets.
     ...(walletConnectProjectId
       ? {}
       : { wallets: walletsWithoutWalletConnect() }),

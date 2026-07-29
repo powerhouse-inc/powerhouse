@@ -3,8 +3,8 @@ import { LoginMethod, type WalletAdapterMeta } from "../types.js";
 // Config slice this adapter consumes; operators pass the same shape from
 // powerhouse.config.json. No `methods`: this adapter only does wallet login.
 export interface PHRenownRainbowAdapterConfig {
-  // Optional: when unset the WalletConnect option is hidden; injected/browser
-  // wallets (MetaMask, etc.) still work. See buildWagmiConfig.
+  // Optional, but without it only an installed browser wallet (or a Safe App
+  // iframe) can sign in — every other wallet needs it. See buildWagmiConfig.
   walletConnectProjectId?: string;
   infuraProjectId?: string;
   appName?: string;
