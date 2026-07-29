@@ -22,6 +22,7 @@ import {
   failWalletActivation,
   setActiveWalletController,
   setWalletActivator,
+  setWalletDescriptors,
   whenWalletControllerReady,
 } from "./wallet-registry.js";
 import { useCompleteRedirectSignIn } from "./use-complete-redirect-sign-in.js";
@@ -110,6 +111,26 @@ export function RenownWalletProvider({
 }: RenownWalletProviderProps) {
   const [descriptors] = useState(() => adaptersConfig);
   const user = useUser();
+  // The snapshot above means a caller who rebuilds the array every render loses
+  // every value after the first; say so instead of leaving it to the JSDoc.
+  useEffect(() => {
+    // `process` is not guaranteed to exist in a browser bundle, so probe it.
+    if (
+      typeof process !== "undefined" &&
+      process.env?.NODE_ENV === "production"
+    )
+      return;
+    if (adaptersConfig === descriptors) return;
+    console.error(
+      "RenownWalletProvider: the `adapters` array changed identity after mount, and the new value was ignored. Build it once at module scope (or memoize it) — see the @powerhousedao/reactor-browser README.",
+    );
+  }, [adaptersConfig, descriptors]);
+  // Published for useRenownLoginMethods, which a login UI can call from outside
+  // this provider's subtree.
+  useEffect(() => {
+    setWalletDescriptors(descriptors);
+    return () => setWalletDescriptors(undefined);
+  }, [descriptors]);
   // Eager metadata: enough to detect a redirect return and list login methods
   // without loading any wallet library.
   const metas = useMemo(

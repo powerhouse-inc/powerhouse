@@ -6,20 +6,11 @@ import {
   useRenownLoginMethods,
 } from "@powerhousedao/reactor-browser";
 import { useCallback, useMemo } from "react";
-import {
-  configToDescriptors,
-  type ConnectRenownAdapters,
-} from "../components/renown-adapter-descriptors.js";
-import { getRuntimeConfig } from "../runtime-config.js";
 
 // Opens the in-page login modal when wallet adapters are configured; otherwise
 // redirects straight to the Renown portal (no modal with only a redirect button).
 export function useOpenRenownLogin(): () => void {
-  const config = getRuntimeConfig().connect.renown?.adapters as
-    | ConnectRenownAdapters
-    | undefined;
-  const adapters = useMemo(() => configToDescriptors(config), [config]);
-  const methods = useRenownLoginMethods(adapters);
+  const methods = useRenownLoginMethods();
   return useCallback(() => {
     if (methods.length > 0) {
       showPHModal({ type: "login" });
@@ -62,13 +53,9 @@ export function useRenownLoginProps(): RenownLoginProps {
   const { login, pending, error } = useRenownAuth();
   const onLogin = useCallback(() => login(), [login]);
 
-  const config = getRuntimeConfig().connect.renown?.adapters as
-    | ConnectRenownAdapters
-    | undefined;
-  const adapters = useMemo(() => configToDescriptors(config), [config]);
   // Method list (labels) comes from the shared primitive; Connect adds the
   // last-used badge + the onSelect wiring for its design-system card.
-  const baseMethods = useRenownLoginMethods(adapters);
+  const baseMethods = useRenownLoginMethods();
 
   const methods = useMemo<RenownLoginOption[]>(() => {
     const lastUsed = getLastLoginMethod();

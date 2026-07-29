@@ -1,4 +1,7 @@
-import type { WalletController } from "@renown/sdk/wallet";
+import type {
+  WalletAdapterDescriptor,
+  WalletController,
+} from "@renown/sdk/wallet";
 
 // Module-level registry for the active wallet controller. Connect mounts the
 // configured adapter Providers and registers the controller for useRenownAuth.
@@ -53,4 +56,62 @@ export function whenWalletControllerReady(): Promise<WalletController> {
   return new Promise((resolve, reject) =>
     controllerWaiters.push({ resolve, reject }),
   );
+}
+
+// Descriptors the mounted provider snapshotted. A registry rather than context
+// because a login UI is not always inside the provider tree (see the controller).
+const NO_DESCRIPTORS: readonly WalletAdapterDescriptor[] = Object.freeze([]);
+
+interface DescriptorStore {
+  descriptors: readonly WalletAdapterDescriptor[];
+  listeners: Set<() => void>;
+}
+
+// Keyed in the global symbol registry, not a module-level `let`, so duplicate
+// copies of this package (separately-bundled consumer, plugin) share one store.
+const DESCRIPTOR_STORE = Symbol.for(
+  "@powerhousedao/reactor-browser:renown-wallet-descriptors",
+);
+
+// `globalThis` exists on the server too, and SSR never reads this store (see
+// getServerWalletDescriptors), so no state crosses requests.
+function descriptorStore(): DescriptorStore {
+  const host = globalThis as unknown as Record<
+    symbol,
+    DescriptorStore | undefined
+  >;
+  return (host[DESCRIPTOR_STORE] ??= {
+    descriptors: NO_DESCRIPTORS,
+    listeners: new Set(),
+  });
+}
+
+export function setWalletDescriptors(
+  descriptors: readonly WalletAdapterDescriptor[] | undefined,
+): void {
+  const store = descriptorStore();
+  const next = descriptors ?? NO_DESCRIPTORS;
+  if (next === store.descriptors) return;
+  // Each copy of this module has its own empty sentinel; treat them as equal so
+  // an unmount in one copy does not churn subscribers in another.
+  if (next.length === 0 && store.descriptors.length === 0) return;
+  store.descriptors = next;
+  store.listeners.forEach((listener) => listener());
+}
+
+// Identity-stable while unchanged, so useSyncExternalStore does not loop.
+export function getWalletDescriptors(): readonly WalletAdapterDescriptor[] {
+  return descriptorStore().descriptors;
+}
+
+// No provider is mounted during a server render; a constant keeps the hydration
+// snapshot stable until the client subscribes.
+export function getServerWalletDescriptors(): readonly WalletAdapterDescriptor[] {
+  return NO_DESCRIPTORS;
+}
+
+export function subscribeWalletDescriptors(listener: () => void): () => void {
+  const { listeners } = descriptorStore();
+  listeners.add(listener);
+  return () => listeners.delete(listener);
 }

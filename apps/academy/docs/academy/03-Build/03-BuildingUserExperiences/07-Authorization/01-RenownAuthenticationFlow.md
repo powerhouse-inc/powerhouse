@@ -125,9 +125,11 @@ function Providers({ children }) {
   );
 }
 
+// useRenownLoginMethods reads the mounted provider's adapters, so a login UI
+// works even when it is not rendered inside `Providers`.
 function Login() {
   const { user, login, pending, logout } = useRenownAuth();
-  const methods = useRenownLoginMethods(adapters);
+  const methods = useRenownLoginMethods();
   if (user) return <button onClick={() => void logout()}>Log out</button>;
   return methods.map((m) => (
     <button key={m.id} disabled={pending} onClick={() => login(undefined, m.id)}>
