@@ -41,6 +41,8 @@ export type WorkerReactorClientArgs = {
   cdnUrl: string;
   packageSpecs: string[];
   studioMode?: boolean;
+  /** Chain the worker's bearer tokens are scoped to; matches the main thread's Renown instance. */
+  renownChainId?: number;
   documentModelModules: DocumentModelModule[];
   upgradeManifests: UpgradeManifest<readonly number[]>[];
   documentModelLoader: IDocumentModelLoader;
@@ -116,6 +118,7 @@ export function createWorkerReactorClientModule(
         cdnUrl: args.cdnUrl,
         packageSpecs: args.packageSpecs,
         studioMode: args.studioMode,
+        renownChainId: args.renownChainId,
       },
       packages: args.packageSpecs,
     },

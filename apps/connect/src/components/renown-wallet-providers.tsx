@@ -27,9 +27,13 @@ export function RenownWalletProviders({ children }: { children: ReactNode }) {
   const config = getRuntimeConfig().connect.renown?.adapters as
     | ConnectRenownAdapters
     | undefined;
+  const chainId = getRuntimeConfig().connect.renown?.chainId;
   const { theme } = useTheme();
   // Descriptors carry only eager metadata; no wallet library loads here.
-  const adapters = useMemo(() => configToDescriptors(config), [config]);
+  const adapters = useMemo(
+    () => configToDescriptors(config, chainId),
+    [config, chainId],
+  );
 
   // Resolve colors (forced style reads) only when an adapter is configured,
   // so a wallet-less deployment does no probing work at mount.
