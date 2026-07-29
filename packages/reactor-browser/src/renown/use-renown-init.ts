@@ -13,6 +13,8 @@ export interface RenownInitOptions {
   switchboardUrl?: string;
   /** Re-check the restored credential against the source (default "always"). */
   revalidate?: "always" | "never";
+  /** Chain id credentials are issued on (default 1). It is part of the user's DID, so sign-in from a wallet on another chain is rejected. */
+  chainId?: number;
 }
 
 async function initRenown(
@@ -21,6 +23,7 @@ async function initRenown(
   url: string | undefined,
   switchboardUrl: string | undefined,
   revalidate: "always" | "never",
+  chainId: number | undefined,
 ): Promise<IRenown> {
   addRenownEventHandler();
   setRenown(loading);
@@ -30,6 +33,7 @@ async function initRenown(
     baseUrl: url,
     switchboardUrl,
     revalidate,
+    chainId,
   });
   // Browser build() fires a non-blocking credential revalidate (when enabled)
   // plus a profile refresh; init stays optimistic either way.
@@ -60,6 +64,7 @@ export function useRenownInit({
   url,
   switchboardUrl,
   revalidate = "always",
+  chainId,
 }: RenownInitOptions): Promise<IRenown> {
   // Stable promise returned every render; resolved later by the init effect.
   const promiseRef = useRef<PromiseWithResolvers<IRenown> | null>(null);
@@ -73,7 +78,7 @@ export function useRenownInit({
     if (initRef.current) return;
     initRef.current = true;
 
-    initRenown(appName, namespace, url, switchboardUrl, revalidate)
+    initRenown(appName, namespace, url, switchboardUrl, revalidate, chainId)
       .then(promiseRef.current!.resolve)
       .catch(promiseRef.current!.reject);
   }, []);

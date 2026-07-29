@@ -30,6 +30,8 @@ export interface BrowserRenownBuilderOptions {
   keyDbName?: string;
   /** Re-check a stored credential on build (default "always"). */
   revalidate?: "always" | "never";
+  /** Chain id credentials are issued on (default 1). It is part of the issuer DID, so `signIn` rejects a session from another chain. */
+  chainId?: number;
 }
 
 /**
@@ -53,6 +55,9 @@ export class RenownBuilder extends BaseRenownBuilder {
     }
     if (options.switchboardUrl) {
       this.withSwitchboardUrl(options.switchboardUrl);
+    }
+    if (options.chainId !== undefined) {
+      this.withChainId(options.chainId);
     }
   }
 

@@ -1,5 +1,6 @@
 import {
   CREDENTIAL_TYPES,
+  DEFAULT_RENOWN_CHAIN_ID,
   DEFAULT_RENOWN_NETWORK_ID,
   DEFAULT_RENOWN_URL,
 } from "./constants.js";
@@ -40,6 +41,7 @@ export class Renown implements IRenown {
   #signer: ISigner;
   #profileFetcher?: ProfileFetcher;
   #switchboard?: SwitchboardClient;
+  #chainId: number;
   #status: LoginStatus = "initial";
 
   constructor(
@@ -50,6 +52,7 @@ export class Renown implements IRenown {
     baseUrl = DEFAULT_RENOWN_URL,
     profileFetcher?: ProfileFetcher,
     switchboard?: SwitchboardClient,
+    chainId = Number(DEFAULT_RENOWN_CHAIN_ID),
   ) {
     this.#store = store;
     this.#eventEmitter = eventEmitter;
@@ -58,6 +61,7 @@ export class Renown implements IRenown {
     this.#appName = appName;
     this.#profileFetcher = profileFetcher;
     this.#switchboard = switchboard;
+    this.#chainId = chainId;
     const restoredUser = this.user;
     this.#signer = new RenownCryptoSigner(crypto, this.#appName, restoredUser);
 
@@ -74,6 +78,11 @@ export class Renown implements IRenown {
 
   get baseUrl() {
     return this.#baseUrl;
+  }
+
+  /** Chain id this app issues credentials on; a session from another chain is rejected by {@link signIn}. */
+  get chainId() {
+    return this.#chainId;
   }
 
   get user() {
@@ -153,6 +162,14 @@ export class Renown implements IRenown {
       userImage,
       expiresInDays,
     } = params;
+
+    // The chain id goes into the issuer DID and the EIP-712 domain, so signing on
+    // another chain would mint a second identity for the same wallet.
+    if (chainId !== this.#chainId) {
+      throw new Error(
+        `Renown signIn: wallet is on chain ${chainId}, but this app issues credentials on chain ${this.#chainId}. Switch networks and retry — signing here would create a separate identity for the same address.`,
+      );
+    }
 
     this.#updateStatus("checking");
     try {

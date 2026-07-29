@@ -27,6 +27,8 @@ export interface RenownProviderProps {
   theme?: WalletTheme;
   /** Re-check the restored credential against the source (default "always"). */
   revalidate?: "always" | "never";
+  /** Chain id credentials are issued on (default 1). Keep the adapters' chains in step: it is part of the user's DID, so a wallet on another chain is rejected. */
+  chainId?: number;
   /** Server-resolved session (SSR); its presence seeds from the cookie + enables cookie sync. Omit for client-only (seed = localStorage). */
   session?: { user?: User } | null;
   /** Endpoint for the session-cookie sync (SSR). Default /api/renown/session. */
@@ -66,6 +68,7 @@ export function RenownProvider({
   adapters,
   theme,
   revalidate,
+  chainId,
   session,
   sessionEndpoint,
   onError,
@@ -102,6 +105,7 @@ export function RenownProvider({
         url={url}
         switchboardUrl={switchboardUrl}
         revalidate={revalidate}
+        chainId={chainId}
         onError={onError}
       />
       <RenownInitialUserProvider initialAuth={seed}>

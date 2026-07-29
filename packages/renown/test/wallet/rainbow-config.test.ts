@@ -1,5 +1,7 @@
 import { getDefaultWallets as rainbowGetDefaultWallets } from "@rainbow-me/rainbowkit";
 import { describe, expect, it } from "vitest";
+import { base, mainnet, polygon } from "wagmi/chains";
+import { buildWagmiConfig } from "../../src/wallet/rainbow/config.js";
 import { walletsWithoutWalletConnect } from "../../src/wallet/rainbow/config.js";
 
 // RainbowKit's exports map has no "types" condition, so type-aware lint sees its
@@ -18,7 +20,7 @@ function ids(groups: { wallets: unknown[] }[]): (string | undefined)[] {
   );
 }
 
-/** All reach WalletConnect, so none work without a project id: `walletConnect` directly, `rainbow` whenever its extension is absent, `metaMask` on desktop without the extension. */
+// All reach WalletConnect, so none can work without a project id.
 const NEEDS_WALLET_CONNECT = ["walletConnect", "rainbow", "metaMask"];
 
 describe("walletsWithoutWalletConnect", () => {
@@ -33,8 +35,7 @@ describe("walletsWithoutWalletConnect", () => {
     }
   });
 
-  // Pins why the list is built by hand: RainbowKit's defaults are full of wallets
-  // that fall back to WalletConnect, so subtracting one entry is not enough.
+  // Pins why the list is built by hand rather than filtered.
   it("is not just RainbowKit's defaults minus WalletConnect", () => {
     const defaults = ids(getDefaultWallets().wallets);
     expect(defaults).toContain("walletConnect");
@@ -42,5 +43,36 @@ describe("walletsWithoutWalletConnect", () => {
       NEEDS_WALLET_CONNECT.includes(id ?? ""),
     );
     expect(dependent.length).toBeGreaterThan(1);
+  });
+});
+
+describe("buildWagmiConfig chains", () => {
+  // The narrow default is a bundle-size decision, so pin it.
+  it("defaults to Ethereum mainnet alone", () => {
+    const config = buildWagmiConfig({ walletConnectProjectId: "test" });
+    expect(config.chains.map((chain) => chain.id)).toEqual([mainnet.id]);
+  });
+
+  it("uses the chains it is given, in order", () => {
+    const config = buildWagmiConfig({
+      walletConnectProjectId: "test",
+      chains: [polygon, mainnet, base],
+    });
+    expect(config.chains.map((chain) => chain.id)).toEqual([
+      polygon.id,
+      mainnet.id,
+      base.id,
+    ]);
+  });
+
+  it("builds one transport per configured chain", () => {
+    const config = buildWagmiConfig({
+      walletConnectProjectId: "test",
+      chains: [mainnet, polygon],
+    });
+    expect(Object.keys(config._internal.transports).map(Number)).toEqual([
+      mainnet.id,
+      polygon.id,
+    ]);
   });
 });
