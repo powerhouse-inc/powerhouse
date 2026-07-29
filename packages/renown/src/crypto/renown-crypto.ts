@@ -1,11 +1,12 @@
 import { fromString, toString } from "uint8arrays";
+import {
+  DEFAULT_RENOWN_CHAIN_ID,
+  DEFAULT_RENOWN_NETWORK_ID,
+} from "../constants.js";
 import type { CreateBearerTokenOptions, Issuer } from "../types.js";
 import { createAuthBearerToken } from "../utils.js";
 import type { DID, IRenownCrypto, JsonWebKeyPairStorage } from "./types.js";
 import { ECDSA_ALGORITHM, ECDSA_SIGN_ALGORITHM } from "./utils.js";
-
-const RENOWN_NETWORK_ID = "eip155";
-const RENOWN_CHAIN_ID = 1;
 
 export class RenownCrypto implements IRenownCrypto {
   #subtleCrypto: SubtleCrypto;
@@ -13,6 +14,8 @@ export class RenownCrypto implements IRenownCrypto {
   #keyPairStorage: JsonWebKeyPairStorage;
 
   readonly did: DID;
+  /** Chain id the bearer token is scoped to; keep it equal to the issuing Renown instance's. */
+  readonly chainId: number;
 
   static algorithm = ECDSA_ALGORITHM;
   static signAlgorithm = ECDSA_SIGN_ALGORITHM;
@@ -22,11 +25,13 @@ export class RenownCrypto implements IRenownCrypto {
     crypto: SubtleCrypto,
     keyPair: CryptoKeyPair,
     did: DID,
+    chainId = Number(DEFAULT_RENOWN_CHAIN_ID),
   ) {
     this.#keyPairStorage = keyPairStorage;
     this.#subtleCrypto = crypto;
     this.#keyPair = keyPair;
     this.did = did;
+    this.chainId = chainId;
   }
 
   get publicKey() {
@@ -38,8 +43,8 @@ export class RenownCrypto implements IRenownCrypto {
     options?: CreateBearerTokenOptions,
   ): Promise<string> {
     return await createAuthBearerToken(
-      Number(RENOWN_CHAIN_ID),
-      RENOWN_NETWORK_ID,
+      this.chainId,
+      DEFAULT_RENOWN_NETWORK_ID,
       address || this.did,
       this.issuer,
       options,

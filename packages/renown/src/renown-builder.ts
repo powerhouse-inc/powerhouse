@@ -1,5 +1,5 @@
 import { Renown, RenownMemoryStorage } from "./common.js";
-import { DEFAULT_RENOWN_URL } from "./constants.js";
+import { DEFAULT_RENOWN_CHAIN_ID, DEFAULT_RENOWN_URL } from "./constants.js";
 import { RenownCryptoBuilder } from "./crypto/renown-crypto-builder.js";
 import type { IRenownCrypto, JsonWebKeyPairStorage } from "./crypto/types.js";
 import { resolveSwitchboardEndpoint } from "./discovery.js";
@@ -131,11 +131,21 @@ export class BaseRenownBuilder {
       );
     }
 
+    const chainId = this.#chainId ?? Number(DEFAULT_RENOWN_CHAIN_ID);
     const crypto =
       this.#crypto ??
       (await new RenownCryptoBuilder()
         .withKeyPairStorage(this.#keyPairStorage!)
+        .withChainId(chainId)
         .build());
+
+    // A crypto supplied via withCrypto() carries its own chain; the bearer token
+    // it mints would then disagree with the credentials issued here.
+    if (crypto.chainId !== undefined && crypto.chainId !== chainId) {
+      console.warn(
+        `Renown: the supplied crypto signs bearer tokens for chain ${crypto.chainId}, but credentials are issued on chain ${chainId}.`,
+      );
+    }
 
     const storage = this.#storage ?? new RenownMemoryStorage();
     const eventEmitter = this.#eventEmitter ?? new MemoryEventEmitter();
@@ -162,7 +172,7 @@ export class BaseRenownBuilder {
       baseUrl,
       profileFetcher,
       switchboard,
-      this.#chainId,
+      chainId,
     );
 
     // A stored user is loaded as-is for an instant, offline-safe start; callers
