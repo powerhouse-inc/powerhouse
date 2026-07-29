@@ -3,6 +3,7 @@ import { PrivyProvider, type PrivyClientConfig } from "@privy-io/react-auth";
 import { normalizeWalletTheme, type WalletTheme } from "../types.js";
 import type { PrivyCore } from "./adapter.js";
 import { PrivyAdapterBridge } from "./bridge.js";
+import { toPrivyAccentColor } from "./theme.js";
 
 interface PrivyProviderConfig {
   appId: string;
@@ -22,12 +23,14 @@ export function createPrivyProvider(
     children: ReactNode;
     theme?: WalletTheme;
   }) {
-    const { mode } = normalizeWalletTheme(theme);
+    const { mode, accentColor } = normalizeWalletTheme(theme);
+    const accent = toPrivyAccentColor(accentColor);
     // Memoize so a new config object per render doesn't rebuild PrivyProvider's
     // context and cascade re-renders into descendants.
     const privyConfig = useMemo<PrivyClientConfig>(
       () => ({
-        appearance: { theme: mode },
+        // Privy generates its own light/dark variants from the accent.
+        appearance: { theme: mode, ...(accent ? { accentColor: accent } : {}) },
         embeddedWallets: {
           ethereum: { createOnLogin: "users-without-wallets" as const },
           showWalletUIs: false,
@@ -39,7 +42,7 @@ export function createPrivyProvider(
           walletConnect: { enabled: false },
         },
       }),
-      [mode],
+      [mode, accent],
     );
 
     return (

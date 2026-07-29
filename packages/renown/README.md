@@ -136,6 +136,11 @@ controller with `connect(method?)`, `disconnect()`, and `getSession()`.
 `connect()` resolves a `WalletSession` (`{ address, chainId, signTypedData }`);
 pass it to `renown.signIn(session)` to write + log in the credential in-page.
 
+Both adapters honour `mode` and `accentColor`. `accentColorForeground` is
+RainbowKit-only — Privy derives its own contrast. Privy accepts hex only, so an
+accent it cannot convert to hex (a named or `hsl()` color) is dropped rather than
+forwarded; `rgb()`, which is what resolving a CSS token yields, converts fine.
+
 **Login methods.** Rainbow supports `wallet`; Privy supports `wallet`, `google`,
 `apple`, `email` (default `["google", "email"]`). Each adapter's config accepts
 only the methods it can drive, so a typo is a compile error. Social/email flows
