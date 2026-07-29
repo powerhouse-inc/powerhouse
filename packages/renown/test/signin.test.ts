@@ -42,7 +42,7 @@ function mockReactor() {
   return calls;
 }
 
-async function makeRenown(withSwitchboard = true) {
+async function makeRenown(withSwitchboard = true, chainId?: number) {
   const crypto = await new RenownCryptoBuilder()
     .withKeyPairStorage(new MemoryKeyStorage())
     .build();
@@ -54,6 +54,7 @@ async function makeRenown(withSwitchboard = true) {
     "https://renown.test",
     undefined,
     withSwitchboard ? new SwitchboardClient(SB) : undefined,
+    chainId,
   );
 }
 
@@ -101,5 +102,46 @@ describe("Renown.signIn", () => {
       }),
     ).rejects.toThrow(/switchboard/i);
     expect(renown.status).not.toBe("authorized");
+  });
+
+  // The chain id lands in the issuer DID, so accepting any chain would let one
+  // wallet hold several identities.
+  it("rejects a session from a chain it does not issue on", async () => {
+    const calls = mockReactor();
+    const renown = await makeRenown();
+
+    await expect(
+      renown.signIn({
+        address: ACCOUNT.address,
+        chainId: 137,
+        signTypedData: sign,
+      }),
+    ).rejects.toThrow(/chain 137.*chain 1/);
+    expect(renown.status).not.toBe("authorized");
+    // Rejected before anything was written.
+    expect(calls).toEqual([]);
+  });
+
+  it("issues on a configured non-default chain", async () => {
+    mockReactor();
+    const renown = await makeRenown(true, 137);
+    expect(renown.chainId).toBe(137);
+
+    const user = await renown.signIn({
+      address: ACCOUNT.address,
+      chainId: 137,
+      signTypedData: sign,
+    });
+
+    expect(user.did).toBe(
+      `did:pkh:eip155:137:${ACCOUNT.address.toLowerCase()}`,
+    );
+    await expect(
+      renown.signIn({
+        address: ACCOUNT.address,
+        chainId: 1,
+        signTypedData: sign,
+      }),
+    ).rejects.toThrow(/chain 1.*chain 137/);
   });
 });

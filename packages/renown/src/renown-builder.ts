@@ -21,6 +21,8 @@ export interface RenownBuilderOptions {
   baseUrl?: string;
   switchboardUrl?: string;
   profileFetcher?: ProfileFetcher;
+  /** Chain id credentials are issued on (default 1). The issuer DID embeds it, so `signIn` rejects a wallet session from another chain. */
+  chainId?: number;
 }
 
 /**
@@ -37,6 +39,7 @@ export class BaseRenownBuilder {
   #baseUrl?: string;
   #switchboardUrl?: string;
   #profileFetcher?: ProfileFetcher;
+  #chainId?: number;
 
   /**
    * @param appName - Application name used for signing context
@@ -98,6 +101,13 @@ export class BaseRenownBuilder {
     return this;
   }
 
+  // Set the chain id credentials are issued on (default 1). It is part of the
+  // issuer DID, so signIn rejects a wallet session from a different chain.
+  withChainId(chainId: number): this {
+    this.#chainId = chainId;
+    return this;
+  }
+
   /**
    * Set a profile fetcher strategy for enriching user data after login.
    * The fetcher receives the authenticated user and the base URL,
@@ -152,6 +162,7 @@ export class BaseRenownBuilder {
       baseUrl,
       profileFetcher,
       switchboard,
+      this.#chainId,
     );
 
     // A stored user is loaded as-is for an instant, offline-safe start; callers
@@ -185,6 +196,9 @@ export class BaseRenownBuilder {
     }
     if (options.profileFetcher) {
       builder.withProfileFetcher(options.profileFetcher);
+    }
+    if (options.chainId !== undefined) {
+      builder.withChainId(options.chainId);
     }
 
     return builder;
