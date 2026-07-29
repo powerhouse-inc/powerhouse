@@ -67,14 +67,14 @@ interface DescriptorStore {
   listeners: Set<() => void>;
 }
 
-// Keyed in the global symbol registry, not a module-level `let`, so duplicate
-// copies of this package (separately-bundled consumer, plugin) share one store.
+// In the global symbol registry, not a module-level `let`, so duplicate copies
+// of this package share one store.
 const DESCRIPTOR_STORE = Symbol.for(
   "@powerhousedao/reactor-browser:renown-wallet-descriptors",
 );
 
-// `globalThis` exists on the server too, and SSR never reads this store (see
-// getServerWalletDescriptors), so no state crosses requests.
+// Safe on the server: `globalThis` exists there and SSR reads the constant
+// below instead, so nothing crosses requests.
 function descriptorStore(): DescriptorStore {
   const host = globalThis as unknown as Record<
     symbol,
@@ -92,8 +92,7 @@ export function setWalletDescriptors(
   const store = descriptorStore();
   const next = descriptors ?? NO_DESCRIPTORS;
   if (next === store.descriptors) return;
-  // Each copy of this module has its own empty sentinel; treat them as equal so
-  // an unmount in one copy does not churn subscribers in another.
+  // Copies of this module have distinct empty sentinels; treat them as equal.
   if (next.length === 0 && store.descriptors.length === 0) return;
   store.descriptors = next;
   store.listeners.forEach((listener) => listener());

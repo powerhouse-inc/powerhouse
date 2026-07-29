@@ -14,8 +14,7 @@ function descriptor(
   } as unknown as WalletAdapterDescriptor;
 }
 
-// A login UI is not always inside RenownWalletProvider (Connect renders its login
-// modal as a sibling of the app), so the hook reads the registry, not context.
+// Deliberately not wrapped in a provider: the hook reads the registry.
 function Probe() {
   const methods = useRenownLoginMethods();
   return (

@@ -111,10 +111,9 @@ export function RenownWalletProvider({
 }: RenownWalletProviderProps) {
   const [descriptors] = useState(() => adaptersConfig);
   const user = useUser();
-  // The snapshot above means a caller who rebuilds the array every render loses
-  // every value after the first; say so instead of leaving it to the JSDoc.
+  // The snapshot above drops every array after the first; say so in dev.
   useEffect(() => {
-    // `process` is not guaranteed to exist in a browser bundle, so probe it.
+    // `process` need not exist in a browser bundle.
     if (
       typeof process !== "undefined" &&
       process.env?.NODE_ENV === "production"
@@ -125,8 +124,7 @@ export function RenownWalletProvider({
       "RenownWalletProvider: the `adapters` array changed identity after mount, and the new value was ignored. Build it once at module scope (or memoize it) — see the @powerhousedao/reactor-browser README.",
     );
   }, [adaptersConfig, descriptors]);
-  // Published for useRenownLoginMethods, which a login UI can call from outside
-  // this provider's subtree.
+  // For useRenownLoginMethods, callable from outside this subtree.
   useEffect(() => {
     setWalletDescriptors(descriptors);
     return () => setWalletDescriptors(undefined);
