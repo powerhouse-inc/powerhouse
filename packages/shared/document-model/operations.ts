@@ -275,6 +275,11 @@ export type Operation = {
   /** Error message for a failed action */
   error?: string;
 
+  /**
+   * If authorization rejected the action, this records the reason why.
+   */
+  deniedReason?: string;
+
   /** The resulting state after the operation */
   resultingState?: string;
 
@@ -293,6 +298,38 @@ export type Operation = {
  * but that is a breaking change for codegen + external doc models.
  */
 export type DocumentOperations = Record<string, Operation[]>;
+
+/**
+ * What happened to an operation. An operation that is not `applied` still
+ * occupies its index but contributes nothing to the document's state.
+ */
+export type OperationOutcome =
+  | { kind: "applied" }
+  | { kind: "reducer-error"; message: string }
+  | { kind: "denied"; reason: string };
+
+/**
+ * Reads an operation's outcome. A denial takes precedence over a reducer
+ * error, since a denied operation never reaches its reducer.
+ */
+export function operationOutcome(operation: Operation): OperationOutcome {
+  if (operation.deniedReason !== undefined) {
+    return { kind: "denied", reason: operation.deniedReason };
+  }
+
+  if (operation.error !== undefined) {
+    return { kind: "reducer-error", message: operation.error };
+  }
+
+  return { kind: "applied" };
+}
+
+/**
+ * True iff authorization rejected the action.
+ */
+export function isDenied(operation: Operation): boolean {
+  return operation.deniedReason !== undefined;
+}
 
 export type OperationContext = {
   documentId: string;

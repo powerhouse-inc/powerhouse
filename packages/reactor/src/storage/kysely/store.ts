@@ -255,6 +255,7 @@ export class KyselyOperationStore implements IOperationStore {
       hash: op.hash,
       skip: op.skip,
       error: op.error || undefined,
+      deniedReason: op.deniedReason || undefined,
       id: op.opId,
       action: JSON.parse(op.action as string) as Operation["action"],
     }));
@@ -316,6 +317,9 @@ export class KyselyOperationStore implements IOperationStore {
           sql<unknown>`${op.action}::jsonb`.as("action"),
           sql<number>`${op.skip}::integer`.as("skip"),
           sql<string | null>`${op.error ?? null}::text`.as("error"),
+          sql<string | null>`${op.deniedReason ?? null}::text`.as(
+            "deniedReason",
+          ),
           sql<string>`${op.hash}::text`.as("hash"),
         ])
         .where((eb) =>
@@ -361,6 +365,7 @@ export class KyselyOperationStore implements IOperationStore {
         "action",
         "skip",
         "error",
+        "deniedReason",
         "hash",
       ])
       .expression(expression)
@@ -629,6 +634,7 @@ export class KyselyOperationStore implements IOperationStore {
       hash: row.hash,
       skip: row.skip,
       error: row.error || undefined,
+      deniedReason: row.deniedReason || undefined,
       id: row.opId,
       action: row.action as Operation["action"],
     };

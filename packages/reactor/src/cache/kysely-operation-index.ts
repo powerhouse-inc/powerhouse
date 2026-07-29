@@ -163,6 +163,7 @@ export class KyselyOperationIndex implements IOperationIndex {
           skip: op.skip,
           hash: op.hash,
           action: op.action as unknown,
+          deniedReason: op.deniedReason ?? null,
           sourceRemote: op.sourceRemote,
         }),
       );
@@ -440,6 +441,7 @@ export class KyselyOperationIndex implements IOperationIndex {
         hash: row.hash,
         skip: row.skip,
         action: row.action as OperationWithContext["operation"]["action"],
+        deniedReason: row.deniedReason ?? undefined,
         id: row.opId,
       },
       context: {
@@ -466,6 +468,7 @@ export class KyselyOperationIndex implements IOperationIndex {
       hash: row.hash,
       skip: row.skip,
       action: row.action as OperationIndexEntry["action"],
+      deniedReason: row.deniedReason ?? undefined,
       id: row.opId,
       sourceRemote: row.sourceRemote,
     };

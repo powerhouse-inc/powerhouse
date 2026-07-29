@@ -64,6 +64,7 @@ export function serializeEnvelope(envelope: SyncEnvelope): unknown {
         hash: opWithContext.operation.hash,
         skip: opWithContext.operation.skip,
         error: opWithContext.operation.error,
+        deniedReason: opWithContext.operation.deniedReason,
         id: opWithContext.operation.id,
         action: serializeAction(opWithContext.operation.action),
       },

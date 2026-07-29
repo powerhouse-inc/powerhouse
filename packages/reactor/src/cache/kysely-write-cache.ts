@@ -8,6 +8,7 @@ import type {
 import {
   applyDeleteDocumentAction,
   applyUpgradeDocumentAction,
+  isDenied,
 } from "@powerhousedao/shared/document-model";
 import { createDocumentFromAction } from "../executor/util.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
@@ -55,6 +56,25 @@ function keyframeRevision(
   }
 
   return nextIndex - 1;
+}
+
+/**
+ * Records a denied operation in the history without applying it. This is used
+ * for auth-rejected operations, as these need to be recorded without being
+ * applied.
+ */
+function appendWithoutApplying(
+  document: PHDocument,
+  scope: string,
+  operation: Operation,
+): PHDocument {
+  return {
+    ...document,
+    operations: {
+      ...document.operations,
+      [scope]: [...(document.operations[scope] ?? []), operation],
+    },
+  };
 }
 
 function extractModuleVersion(doc: PHDocument): number | undefined {
@@ -568,7 +588,7 @@ export class KyselyWriteCache implements IWriteCache {
 
         lastDocumentScopeOperation = operation;
 
-        if (operation.error) {
+        if (operation.error || isDenied(operation)) {
           continue;
         }
 
@@ -678,7 +698,7 @@ export class KyselyWriteCache implements IWriteCache {
           continue;
         }
 
-        if (operation.error) {
+        if (operation.error || isDenied(operation)) {
           continue;
         }
 
@@ -837,18 +857,24 @@ export class KyselyWriteCache implements IWriteCache {
             extractModuleVersion(document),
           );
 
-          // Fail-fast: if reducer throws, error propagates immediately without caching partial state
-          const protocolVersion =
-            document.header.protocolVersions?.["base-reducer"] ?? 1;
-          document = getModuleCached(moduleVersion).reducer(
-            document,
-            operation.action,
-            undefined,
-            {
-              skip: operation.skip,
-              protocolVersion,
-            },
-          );
+          // A denied operation still carries a potentially valid action, so
+          // we must specifically skip without applying.
+          if (isDenied(operation)) {
+            document = appendWithoutApplying(document, scope, operation);
+          } else {
+            // Fail-fast: if reducer throws, error propagates immediately without caching partial state
+            const protocolVersion =
+              document.header.protocolVersions?.["base-reducer"] ?? 1;
+            document = getModuleCached(moduleVersion).reducer(
+              document,
+              operation.action,
+              undefined,
+              {
+                skip: operation.skip,
+                protocolVersion,
+              },
+            );
+          }
         }
 
         const reachedTarget =
@@ -1039,13 +1065,19 @@ export class KyselyWriteCache implements IWriteCache {
           break;
         }
 
-        // Fail-fast: if reducer throws, error propagates immediately without caching partial state
-        const protocolVersion =
-          document.header.protocolVersions?.["base-reducer"] ?? 1;
-        document = module.reducer(document, operation.action, undefined, {
-          skip: operation.skip,
-          protocolVersion,
-        });
+        // A denied operation still carries a potentially valid action, so
+        // we must specifically skip without applying.
+        if (isDenied(operation)) {
+          document = appendWithoutApplying(document, scope, operation);
+        } else {
+          // Fail-fast: if reducer throws, error propagates immediately without caching partial state
+          const protocolVersion =
+            document.header.protocolVersions?.["base-reducer"] ?? 1;
+          document = module.reducer(document, operation.action, undefined, {
+            skip: operation.skip,
+            protocolVersion,
+          });
+        }
 
         if (
           targetRevision !== undefined &&

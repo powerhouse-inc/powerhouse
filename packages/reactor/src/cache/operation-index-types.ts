@@ -83,6 +83,7 @@ export interface OperationIndexOperationTable {
   skip: number;
   hash: string;
   action: unknown;
+  deniedReason?: string | null;
   sourceRemote: Generated<string>;
 }
 

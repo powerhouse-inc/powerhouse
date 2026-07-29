@@ -258,6 +258,7 @@ export function toOperationWithContext(
       skip: entry.skip,
       hash: entry.hash,
       timestampUtcMs: entry.timestampUtcMs,
+      deniedReason: entry.deniedReason,
       action: entry.action,
     } as Operation,
     context: {

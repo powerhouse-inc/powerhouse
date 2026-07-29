@@ -15,6 +15,7 @@ export interface OperationTable {
   action: unknown; // JSONB type - stored as object
   skip: number;
   error?: string | null;
+  deniedReason?: string | null;
   hash: string;
 }
 
@@ -49,6 +50,7 @@ export interface OperationIndexOperationTable {
   skip: number;
   hash: string;
   action: unknown;
+  deniedReason?: string | null;
   sourceRemote: Generated<string>;
 }
 
