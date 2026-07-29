@@ -15,6 +15,8 @@ export type DID = `did:${string}`;
 
 export interface IRenownCrypto {
   did: DID;
+  /** Chain the bearer token is scoped to. Optional so an external implementation still satisfies this; the builder warns when it differs from the issuing chain. */
+  chainId?: number;
   publicKey: CryptoKey;
   removeDid(): Promise<void>;
   sign: (data: Uint8Array) => Promise<Uint8Array>;

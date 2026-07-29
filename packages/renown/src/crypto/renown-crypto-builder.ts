@@ -10,6 +10,7 @@ import {
 export class RenownCryptoBuilder {
   private keyPairStorage?: JsonWebKeyPairStorage;
   private subtleCrypto?: SubtleCrypto;
+  private chainId?: number;
 
   withKeyPairStorage(storage: JsonWebKeyPairStorage): this {
     this.keyPairStorage = storage;
@@ -18,6 +19,13 @@ export class RenownCryptoBuilder {
 
   withSubtleCrypto(crypto: SubtleCrypto): this {
     this.subtleCrypto = crypto;
+    return this;
+  }
+
+  // Scopes the bearer token to a chain (default 1). Match the Renown instance
+  // issuing credentials, or the token and the credential disagree.
+  withChainId(chainId: number): this {
+    this.chainId = chainId;
     return this;
   }
 
@@ -35,7 +43,13 @@ export class RenownCryptoBuilder {
     );
     const did = await parseDid(keyPair);
 
-    return new RenownCrypto(this.keyPairStorage, subtleCrypto, keyPair, did);
+    return new RenownCrypto(
+      this.keyPairStorage,
+      subtleCrypto,
+      keyPair,
+      did,
+      this.chainId,
+    );
   }
 
   async #initializeKeyPair(
