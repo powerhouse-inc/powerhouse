@@ -390,7 +390,7 @@ describe("Reshuffle Functions", () => {
         action: {
           id: "action-Z",
           type: "CREATE_DOCUMENT",
-          input: {},
+          input: { protocolVersions: { "base-reducer": 2 } },
           scope: "document",
           timestampUtcMs: sameTimestamp,
         },

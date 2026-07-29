@@ -1217,6 +1217,7 @@ describe("InMemoryQueue", () => {
               documentId: `doc-${id}`,
               model: documentType,
               version: 0,
+              protocolVersions: { "base-reducer": 2 },
             },
           }),
         ],

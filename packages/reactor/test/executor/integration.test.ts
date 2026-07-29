@@ -88,6 +88,7 @@ describe.each(scopeVariants)(
           input: {
             documentId,
             model: documentType,
+            protocolVersions: { "base-reducer": 2 },
           },
         },
       };
@@ -892,6 +893,7 @@ describe.each(scopeVariants)(
               input: {
                 documentId: "new-doc-1",
                 model: "powerhouse/document-drive",
+                protocolVersions: { "base-reducer": 2 },
               },
             },
           ],
@@ -935,6 +937,7 @@ describe.each(scopeVariants)(
               input: {
                 documentId: driveId,
                 model: "powerhouse/document-drive",
+                protocolVersions: { "base-reducer": 2 },
               },
             },
           ],

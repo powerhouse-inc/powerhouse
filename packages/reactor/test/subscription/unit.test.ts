@@ -508,7 +508,11 @@ describe("ReactorSubscriptionManager", () => {
         manager.notifyDocumentsCreated(["doc1"]);
         manager.notifyDocumentsDeleted(["doc2"]);
         const doc: PHDocument = {
-          header: { id: "doc3", documentType: "Task", slug: "task-3" },
+          header: {
+            id: "doc3",
+            documentType: "Task",
+            slug: "task-3",
+          },
         } as PHDocument;
         manager.notifyDocumentsUpdated([doc]);
         manager.notifyRelationshipChanged(
@@ -665,7 +669,11 @@ describe("ReactorSubscriptionManager", () => {
 
       // Notify updated - should only call updated callback
       const doc: PHDocument = {
-        header: { id: "doc3", documentType: "Task", slug: "task-3" },
+        header: {
+          id: "doc3",
+          documentType: "Task",
+          slug: "task-3",
+        },
       } as PHDocument;
       manager.notifyDocumentsUpdated([doc]);
       expect(createdCallback).toHaveBeenCalledTimes(1);
@@ -1019,7 +1027,10 @@ describe("SubscriptionNotificationReadModel", () => {
 
     const mockDocumentView = {
       get: vi.fn().mockResolvedValue({
-        header: { id: "doc1", documentType: "MyDocument" },
+        header: {
+          id: "doc1",
+          documentType: "MyDocument",
+        },
         state: { updated: true },
       }),
     };
@@ -1071,7 +1082,10 @@ describe("SubscriptionNotificationReadModel", () => {
 
     const mockDocumentView = {
       get: vi.fn().mockResolvedValue({
-        header: { id: "doc1", documentType: "MyDocument" },
+        header: {
+          id: "doc1",
+          documentType: "MyDocument",
+        },
         state: { initial: true },
       }),
     };
@@ -1093,7 +1107,7 @@ describe("SubscriptionNotificationReadModel", () => {
             type: "CREATE_DOCUMENT",
             scope: "global",
             timestampUtcMs: "2024-01-01T00:00:00.000Z",
-            input: {},
+            input: { protocolVersions: { "base-reducer": 2 } },
           },
           id: "op1",
           resultingState: JSON.stringify({ state: "initial" }),
@@ -1126,7 +1140,10 @@ describe("SubscriptionNotificationReadModel", () => {
 
     const mockDocumentView = {
       get: vi.fn().mockResolvedValue({
-        header: { id: "doc1", documentType: "MyDocument" },
+        header: {
+          id: "doc1",
+          documentType: "MyDocument",
+        },
         state: { updated: true },
       }),
     };
@@ -1148,7 +1165,7 @@ describe("SubscriptionNotificationReadModel", () => {
             type: "CREATE_DOCUMENT",
             scope: "global",
             timestampUtcMs: "2024-01-01T00:00:00.000Z",
-            input: {},
+            input: { protocolVersions: { "base-reducer": 2 } },
           },
           id: "op1",
           resultingState: JSON.stringify({ state: "initial" }),
@@ -1205,7 +1222,10 @@ describe("SubscriptionNotificationReadModel", () => {
 
     const mockDocumentView = {
       get: vi.fn().mockResolvedValue({
-        header: { id: "doc1", documentType: "MyDocument" },
+        header: {
+          id: "doc1",
+          documentType: "MyDocument",
+        },
         state: { state2: true },
       }),
     };

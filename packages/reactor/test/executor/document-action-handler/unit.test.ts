@@ -40,6 +40,7 @@ function createSourceDoc(
 ): PHDocument {
   return {
     header: {
+      protocolVersions: { "base-reducer": 2 },
       id: overrides.id ?? "drive-1",
       documentType: overrides.documentType ?? "powerhouse/document-drive",
       revision: { document: 1 },

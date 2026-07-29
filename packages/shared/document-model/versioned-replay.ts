@@ -1,4 +1,5 @@
 import {
+  baseReducerVersion,
   hashDocumentStateForScope,
   replayDocument,
   type PHDocument,
@@ -66,7 +67,7 @@ export function replayDocumentVersioned<TState extends PHBaseState>(
 ): PHDocument<TState> {
   const { checkHashes = true, skipIndexValidation } = options || {};
 
-  const protocolVersion = header.protocolVersions?.["base-reducer"] ?? 1;
+  const protocolVersion = baseReducerVersion(header);
 
   const spine = (operations["document"] ?? [])
     .slice()

@@ -321,10 +321,18 @@ export function createTestOperation(
 /**
  * Factory for creating CREATE_DOCUMENT operation
  */
+/**
+ * A CREATE_DOCUMENT operation as the reactor writes one. `protocolVersions` is
+ * carried in the action input because that is where a rebuild reads it from:
+ * the header factory does not set it, so an input without it rebuilds to
+ * base-reducer 1. Pass `protocolVersions: undefined` in `inputOverrides` for a
+ * document created before the reactor started stamping it.
+ */
 export function createCreateDocumentOperation(
   documentId: string,
   documentType: string,
   overrides: Partial<Operation> = {},
+  inputOverrides: Record<string, unknown> = {},
 ): Operation {
   const actionId = generateId();
 
@@ -345,6 +353,8 @@ export function createCreateDocumentOperation(
         documentId,
         model: documentType,
         version: 0,
+        protocolVersions: { "base-reducer": 2 },
+        ...inputOverrides,
       },
     } as Action,
     resultingState:

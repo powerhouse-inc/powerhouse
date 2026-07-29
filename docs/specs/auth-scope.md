@@ -502,18 +502,7 @@ An operation that does sort at the head owes nothing, which is the common case, 
 
 #### Retracting a tail
 
-A pass that changes a verdict has to retract the operations whose verdict changed. `NOOP` carrying a skip is the base reducer's marker for superseding earlier operations, and an N-operation retraction can be written two ways: a chain of N markers each carrying `skip: 1`, or a single marker carrying `skip: N`.
-
-The two base-reducer protocol versions read those forms as exact inverses. Measured against the reducer over a three-operation stream:
-
-| retraction form | protocol 1 | protocol 2 |
-|---|---|---|
-| chain of N markers, `skip: 1` each | retracts 1, whatever N is | retracts N |
-| one marker, `skip: N` | retracts N | retracts 1 |
-
-`garbageCollectV2` counts markers and ignores skip magnitude, so version 2 reads the chain. Version 1 resolves `skipUntil = index - skip - 1`, so consecutive markers consume each other and only the last one retracts anything, while a single skip spans the range it names.
-
-No encoding works for both, so re-evaluation emits the form the target document's `header.protocolVersions["base-reducer"]` selects. A header carrying no protocol version resolves to 1, since both the reducer and the write cache default it that way, while a document the reactor creates today carries 2, so both forms are live at once and neither can be dropped. The choice has to come from the document's own header rather than from configuration, or two replicas of one document could pick differently.
+A pass that changes a verdict has to retract the operations whose verdict changed. `NOOP` carrying a skip is the base reducer's marker for superseding earlier operations, and an N-operation retraction is a chain of N markers each carrying `skip: 1`. `garbageCollectV2` counts markers and ignores skip magnitude, so a single marker carrying `skip: N` would retract one operation rather than N.
 
 #### Caveats
 
@@ -699,7 +688,7 @@ A decision made at replay is a consensus outcome: a denied operation carries a `
 
 Positional deletion is the corrected semantics on every reactor, so this stage would not need a flag on its own. It carries one because it changes replay outcomes and therefore has to roll out per fleet like the stages after it. The flag also keeps the document meta cache alive: the cache answers the deletion question while the flag is off, so retiring it, along with `rebuildAtRevision`, the eager `putDocumentMeta` calls, and its slot in `ExecutionStores`, waits until the flag defaults on.
 
-The stage was attempted once and reverted. Four mistakes from that attempt are stated as design above and are the stage's real content: it derived a revision from a timestamp (see "A position is a timestamp, not a revision"), it substituted `NOOP` for a denied action (see "The outcome belongs on the operation"), it used a single retraction encoding for both protocol versions (see "Retracting a tail"), and it triggered re-evaluation from the load path alone (see "What triggers a pass"). A fifth problem, the two write-cache guarantees a decision depends on, has since been fixed (see Admission).
+The stage was attempted once and reverted. Four mistakes from that attempt are stated as design above and are the stage's real content: it derived a revision from a timestamp (see "A position is a timestamp, not a revision"), it substituted `NOOP` for a denied action (see "The outcome belongs on the operation"), it retracted a tail with a single marker carrying the whole skip (see "Retracting a tail"), and it triggered re-evaluation from the load path alone (see "What triggers a pass"). A fifth problem, the two write-cache guarantees a decision depends on, has since been fixed (see Admission).
 
 Two limits remain deliberate, both on the read side, and stage 4 moves reads onto the same model. A denied operation contributes nothing to state in the reactor's own rebuild path, but `replayDocument` in `shared/document-model` still applies it, so a client replaying history itself sees it apply. The read surface also continues to hide a deleted document outright rather than serving the state at the deletion boundary.
 

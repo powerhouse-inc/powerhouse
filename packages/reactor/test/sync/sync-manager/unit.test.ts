@@ -1668,7 +1668,7 @@ describe("SyncManager - Unit Tests", () => {
               type: "CREATE_DOCUMENT",
               scope: "document",
               timestampUtcMs: "1000",
-              input: {},
+              input: { protocolVersions: { "base-reducer": 2 } },
             } as any,
           },
           context: {
@@ -2312,7 +2312,7 @@ describe("SyncManager - Unit Tests", () => {
               type: "CREATE_DOCUMENT",
               scope: "document",
               timestampUtcMs: "1000",
-              input: {},
+              input: { protocolVersions: { "base-reducer": 2 } },
             } as any,
           },
           context: {

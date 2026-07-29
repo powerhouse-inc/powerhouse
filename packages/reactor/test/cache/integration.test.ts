@@ -633,6 +633,7 @@ describe("KyselyWriteCache Integration Tests", () => {
               scope: "document",
               timestampUtcMs: Date.now().toString(),
               input: {
+                protocolVersions: { "base-reducer": 2 },
                 documentId: docId,
                 model: docType,
                 version: 0,
@@ -867,6 +868,7 @@ describe("KyselyWriteCache Integration Tests", () => {
               scope: "document",
               timestampUtcMs: Date.now().toString(),
               input: {
+                protocolVersions: { "base-reducer": 2 },
                 documentId: docId,
                 model: docType,
                 version: 0,
@@ -978,6 +980,7 @@ describe("KyselyWriteCache Integration Tests", () => {
               scope: "document",
               timestampUtcMs: Date.now().toString(),
               input: {
+                protocolVersions: { "base-reducer": 2 },
                 documentId: docId,
                 model: docType,
                 version: 0,
@@ -1204,6 +1207,7 @@ describe("KyselyWriteCache Integration Tests", () => {
               scope: "document",
               timestampUtcMs: Date.now().toString(),
               input: {
+                protocolVersions: { "base-reducer": 2 },
                 documentId: docId,
                 model: docType,
                 version: 0,
@@ -1322,7 +1326,12 @@ describe("KyselyWriteCache Integration Tests", () => {
               type: "CREATE_DOCUMENT",
               scope: "document",
               timestampUtcMs: Date.now().toString(),
-              input: { documentId: docId, model: docType, version: 0 },
+              input: {
+                protocolVersions: { "base-reducer": 2 },
+                documentId: docId,
+                model: docType,
+                version: 0,
+              },
             },
           });
           txn.addOperations({

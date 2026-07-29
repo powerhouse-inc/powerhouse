@@ -53,6 +53,7 @@ describe("KyselyOperationIndex Integration", () => {
             scope: "document",
             timestampUtcMs: "1704067200000",
             input: {
+              protocolVersions: { "base-reducer": 2 },
               documentId: childDocId,
               model: "powerhouse/document-model",
             },
@@ -110,7 +111,11 @@ describe("KyselyOperationIndex Integration", () => {
             type: "CREATE_DOCUMENT",
             scope: "document",
             timestampUtcMs: "1704067202000",
-            input: { documentId: driveId, model: "powerhouse/document-drive" },
+            input: {
+              protocolVersions: { "base-reducer": 2 },
+              documentId: driveId,
+              model: "powerhouse/document-drive",
+            },
           },
         },
       ]);
@@ -206,7 +211,11 @@ describe("KyselyOperationIndex Integration", () => {
             type: "CREATE_DOCUMENT",
             scope: "document",
             timestampUtcMs: "1704067200000",
-            input: { documentId: driveId, model: "powerhouse/document-drive" },
+            input: {
+              protocolVersions: { "base-reducer": 2 },
+              documentId: driveId,
+              model: "powerhouse/document-drive",
+            },
           },
         },
       ]);
@@ -240,6 +249,7 @@ describe("KyselyOperationIndex Integration", () => {
             scope: "document",
             timestampUtcMs: "1704067201000",
             input: {
+              protocolVersions: { "base-reducer": 2 },
               documentId: childDocId,
               model: "powerhouse/document-model",
             },
@@ -386,7 +396,11 @@ describe("KyselyOperationIndex Integration", () => {
             type: "CREATE_DOCUMENT",
             scope: "document",
             timestampUtcMs: "1704067200000",
-            input: { documentId: driveId, model: "powerhouse/document-drive" },
+            input: {
+              protocolVersions: { "base-reducer": 2 },
+              documentId: driveId,
+              model: "powerhouse/document-drive",
+            },
           },
         },
       ]);
@@ -420,6 +434,7 @@ describe("KyselyOperationIndex Integration", () => {
             scope: "document",
             timestampUtcMs: "1704067201000",
             input: {
+              protocolVersions: { "base-reducer": 2 },
               documentId: childDocId,
               model: "powerhouse/document-model",
             },
@@ -594,7 +609,11 @@ describe("KyselyOperationIndex Integration", () => {
             type: "CREATE_DOCUMENT",
             scope: "document",
             timestampUtcMs: "1704067200000",
-            input: { documentId: driveId, model: "powerhouse/document-drive" },
+            input: {
+              protocolVersions: { "base-reducer": 2 },
+              documentId: driveId,
+              model: "powerhouse/document-drive",
+            },
           },
         },
       ]);
@@ -628,6 +647,7 @@ describe("KyselyOperationIndex Integration", () => {
             scope: "document",
             timestampUtcMs: "1704067201000",
             input: {
+              protocolVersions: { "base-reducer": 2 },
               documentId: childDocId,
               model: "powerhouse/document-model",
             },
@@ -767,7 +787,11 @@ describe("KyselyOperationIndex Integration", () => {
             type: "CREATE_DOCUMENT",
             scope: "document",
             timestampUtcMs: "1704067200000",
-            input: { documentId: driveId, model: "powerhouse/document-drive" },
+            input: {
+              protocolVersions: { "base-reducer": 2 },
+              documentId: driveId,
+              model: "powerhouse/document-drive",
+            },
           },
         },
       ]);
@@ -803,6 +827,7 @@ describe("KyselyOperationIndex Integration", () => {
             scope: "document",
             timestampUtcMs: "1704067201000",
             input: {
+              protocolVersions: { "base-reducer": 2 },
               documentId: childDocId,
               model: "powerhouse/document-model",
             },
@@ -1006,7 +1031,11 @@ describe("KyselyOperationIndex Integration", () => {
             type: "CREATE_DOCUMENT",
             scope: "document",
             timestampUtcMs: "1704067200000",
-            input: { documentId: driveId, model: "powerhouse/document-drive" },
+            input: {
+              protocolVersions: { "base-reducer": 2 },
+              documentId: driveId,
+              model: "powerhouse/document-drive",
+            },
           },
         },
       ]);
@@ -1039,6 +1068,7 @@ describe("KyselyOperationIndex Integration", () => {
             scope: "document",
             timestampUtcMs: "1704067201000",
             input: {
+              protocolVersions: { "base-reducer": 2 },
               documentId: childDocId,
               model: "powerhouse/document-model",
             },
@@ -1152,7 +1182,11 @@ describe("KyselyOperationIndex Integration", () => {
             type: "CREATE_DOCUMENT",
             scope: "document",
             timestampUtcMs: "1704067200000",
-            input: { documentId: driveId, model: "powerhouse/document-drive" },
+            input: {
+              protocolVersions: { "base-reducer": 2 },
+              documentId: driveId,
+              model: "powerhouse/document-drive",
+            },
           },
         },
       ]);
@@ -1185,6 +1219,7 @@ describe("KyselyOperationIndex Integration", () => {
             scope: "document",
             timestampUtcMs: "1704067201000",
             input: {
+              protocolVersions: { "base-reducer": 2 },
               documentId: childDocId,
               model: "powerhouse/document-model",
             },
@@ -1321,7 +1356,11 @@ describe("KyselyOperationIndex Integration", () => {
             type: "CREATE_DOCUMENT",
             scope: "document",
             timestampUtcMs: "1704067200000",
-            input: { documentId: driveId, model: "powerhouse/document-drive" },
+            input: {
+              protocolVersions: { "base-reducer": 2 },
+              documentId: driveId,
+              model: "powerhouse/document-drive",
+            },
           },
         },
       ]);
@@ -1354,6 +1393,7 @@ describe("KyselyOperationIndex Integration", () => {
             scope: "document",
             timestampUtcMs: "1704067205000",
             input: {
+              protocolVersions: { "base-reducer": 2 },
               documentId: childDocId,
               model: "powerhouse/document-model",
             },
@@ -1430,7 +1470,11 @@ describe("KyselyOperationIndex Integration", () => {
             type: "CREATE_DOCUMENT",
             scope: "document",
             timestampUtcMs: "1704067200000",
-            input: { documentId: driveId, model: "powerhouse/document-drive" },
+            input: {
+              protocolVersions: { "base-reducer": 2 },
+              documentId: driveId,
+              model: "powerhouse/document-drive",
+            },
           },
         },
       ]);
@@ -1463,6 +1507,7 @@ describe("KyselyOperationIndex Integration", () => {
             scope: "document",
             timestampUtcMs: "1704067201000",
             input: {
+              protocolVersions: { "base-reducer": 2 },
               documentId: childDocId,
               model: "powerhouse/document-model",
             },
@@ -1567,7 +1612,11 @@ describe("KyselyOperationIndex Integration", () => {
             type: "CREATE_DOCUMENT",
             scope: "document",
             timestampUtcMs: "1704067200000",
-            input: { documentId: docId, model: "powerhouse/document-model" },
+            input: {
+              protocolVersions: { "base-reducer": 2 },
+              documentId: docId,
+              model: "powerhouse/document-model",
+            },
           },
         },
       ]);
@@ -1634,7 +1683,11 @@ describe("KyselyOperationIndex Integration", () => {
             type: "CREATE_DOCUMENT",
             scope: "document",
             timestampUtcMs: "1704067200000",
-            input: { documentId: docId, model: "powerhouse/document-model" },
+            input: {
+              protocolVersions: { "base-reducer": 2 },
+              documentId: docId,
+              model: "powerhouse/document-model",
+            },
           },
         },
       ]);
@@ -1659,7 +1712,11 @@ describe("KyselyOperationIndex Integration", () => {
             type: "CREATE_DOCUMENT",
             scope: "document",
             timestampUtcMs: "1704067201000",
-            input: { documentId: docId, model: "powerhouse/document-model" },
+            input: {
+              protocolVersions: { "base-reducer": 2 },
+              documentId: docId,
+              model: "powerhouse/document-model",
+            },
           },
         },
       ]);
@@ -1696,7 +1753,11 @@ describe("KyselyOperationIndex Integration", () => {
             type: "CREATE_DOCUMENT",
             scope: "document",
             timestampUtcMs: "1704067200000",
-            input: { documentId: docId, model: "powerhouse/document-model" },
+            input: {
+              protocolVersions: { "base-reducer": 2 },
+              documentId: docId,
+              model: "powerhouse/document-model",
+            },
           },
         },
       ]);
@@ -1829,7 +1890,7 @@ describe("KyselyOperationIndex Integration", () => {
             type: "CREATE_DOCUMENT",
             scope: "document",
             timestampUtcMs: "1704067200000",
-            input: {},
+            input: { protocolVersions: { "base-reducer": 2 } },
           },
         },
       ]);
@@ -1851,7 +1912,7 @@ describe("KyselyOperationIndex Integration", () => {
             type: "CREATE_DOCUMENT",
             scope: "document",
             timestampUtcMs: "1704067201000",
-            input: {},
+            input: { protocolVersions: { "base-reducer": 2 } },
           },
         },
       ]);
@@ -1890,7 +1951,7 @@ describe("KyselyOperationIndex Integration", () => {
             type: "CREATE_DOCUMENT",
             scope: "document",
             timestampUtcMs: "1704067200000",
-            input: {},
+            input: { protocolVersions: { "base-reducer": 2 } },
           },
         },
       ]);

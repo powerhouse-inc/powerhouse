@@ -102,7 +102,11 @@ function makeDriveCreateOp(
         type: "CREATE_DOCUMENT",
         scope: "document",
         timestampUtcMs: new Date().toISOString(),
-        input: { documentId: driveId, model: DRIVE_DOCUMENT_TYPE },
+        input: {
+          protocolVersions: { "base-reducer": 2 },
+          documentId: driveId,
+          model: DRIVE_DOCUMENT_TYPE,
+        },
       },
     },
     context: {
@@ -113,6 +117,7 @@ function makeDriveCreateOp(
       ordinal,
       resultingState: JSON.stringify({
         header: {
+          protocolVersions: { "base-reducer": 2 },
           id: driveId,
           documentType: DRIVE_DOCUMENT_TYPE,
           revision: {},

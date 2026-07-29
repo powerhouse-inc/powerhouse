@@ -39,6 +39,7 @@ function createCreateDocumentOperation(
         documentId,
         model: documentType,
         version: 0,
+        protocolVersions: { "base-reducer": 2 },
       },
     } as Action,
     resultingState: JSON.stringify({ document: { id: documentId } }),

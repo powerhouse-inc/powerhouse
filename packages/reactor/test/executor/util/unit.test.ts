@@ -19,6 +19,7 @@ describe("createDocumentFromAction", () => {
       input: {
         documentId: "doc-123",
         model: "powerhouse/document-model",
+        protocolVersions: { "base-reducer": 2 },
       },
     } as CreateDocumentAction;
 
@@ -47,6 +48,7 @@ describe("createDocumentFromAction", () => {
           nonce: "12345",
           createdAtUtcIso: "2024-01-01T00:00:00.000Z",
         },
+        protocolVersions: { "base-reducer": 2 },
       },
     } as CreateDocumentAction;
 
@@ -77,6 +79,7 @@ describe("createDocumentFromAction", () => {
         meta: {
           customField: "customValue",
         },
+        protocolVersions: { "base-reducer": 2 },
       },
     } as CreateDocumentAction;
 
@@ -99,6 +102,7 @@ describe("createDocumentFromAction", () => {
       input: {
         documentId: "doc-456",
         model: "powerhouse/document-model",
+        protocolVersions: { "base-reducer": 2 },
       },
     } as CreateDocumentAction;
 
@@ -117,6 +121,7 @@ describe("createDocumentFromAction", () => {
         documentId: "doc-789",
         model: "powerhouse/document-model",
         slug: "",
+        protocolVersions: { "base-reducer": 2 },
       },
     } as CreateDocumentAction;
 
@@ -134,6 +139,7 @@ describe("createDocumentFromAction", () => {
       input: {
         documentId: "doc-123",
         model: "powerhouse/document-model",
+        protocolVersions: { "base-reducer": 2 },
       },
     } as CreateDocumentAction;
 
@@ -154,6 +160,7 @@ describe("createDocumentFromAction", () => {
       input: {
         documentId: "doc-123",
         model: "powerhouse/document-model",
+        protocolVersions: { "base-reducer": 2 },
       },
     } as CreateDocumentAction;
 
@@ -172,6 +179,7 @@ describe("createDocumentFromAction", () => {
       input: {
         documentId: "doc-123",
         model: "powerhouse/document-model",
+        protocolVersions: { "base-reducer": 2 },
       },
     } as CreateDocumentAction;
 
@@ -190,6 +198,7 @@ describe("createDocumentFromAction", () => {
       input: {
         documentId: "doc-123",
         model: "powerhouse/document-model",
+        protocolVersions: { "base-reducer": 2 },
       },
     } as CreateDocumentAction;
 
@@ -212,6 +221,7 @@ describe("applyUpgradeDocumentAction", () => {
       input: {
         documentId: "doc-123",
         model: "powerhouse/document-model",
+        protocolVersions: { "base-reducer": 2 },
       },
     } as CreateDocumentAction);
 
@@ -252,6 +262,7 @@ describe("applyUpgradeDocumentAction", () => {
       input: {
         documentId: "doc-123",
         model: "powerhouse/document-model",
+        protocolVersions: { "base-reducer": 2 },
       },
     } as CreateDocumentAction);
 
@@ -289,6 +300,7 @@ describe("applyUpgradeDocumentAction", () => {
       input: {
         documentId: "doc-123",
         model: "powerhouse/document-model",
+        protocolVersions: { "base-reducer": 2 },
       },
     } as CreateDocumentAction);
 
@@ -328,6 +340,7 @@ describe("applyUpgradeDocumentAction", () => {
       input: {
         documentId: "doc-123",
         model: "powerhouse/document-model",
+        protocolVersions: { "base-reducer": 2 },
       },
     } as CreateDocumentAction);
 
@@ -361,6 +374,7 @@ describe("applyUpgradeDocumentAction", () => {
       input: {
         documentId: "doc-123",
         model: "powerhouse/document-model",
+        protocolVersions: { "base-reducer": 2 },
       },
     } as CreateDocumentAction);
 
@@ -395,6 +409,7 @@ describe("applyDeleteDocumentAction", () => {
       input: {
         documentId: "doc-123",
         model: "powerhouse/document-model",
+        protocolVersions: { "base-reducer": 2 },
       },
     } as CreateDocumentAction);
 
@@ -425,6 +440,7 @@ describe("applyDeleteDocumentAction", () => {
       input: {
         documentId: "doc-123",
         model: "powerhouse/document-model",
+        protocolVersions: { "base-reducer": 2 },
       },
     } as CreateDocumentAction);
 
@@ -460,6 +476,7 @@ describe("applyDeleteDocumentAction", () => {
       input: {
         documentId: "doc-123",
         model: "powerhouse/document-model",
+        protocolVersions: { "base-reducer": 2 },
       },
     } as CreateDocumentAction);
 

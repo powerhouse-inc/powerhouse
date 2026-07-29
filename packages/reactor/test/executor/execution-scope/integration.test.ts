@@ -51,6 +51,7 @@ describe("KyselyExecutionScope Integration", () => {
         input: {
           documentId,
           model: documentType,
+          protocolVersions: { "base-reducer": 2 },
         },
       },
     };

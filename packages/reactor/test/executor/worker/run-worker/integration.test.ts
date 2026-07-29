@@ -171,6 +171,7 @@ async function preCreateDriveDocument(
       input: {
         documentId,
         model: "powerhouse/document-drive",
+        protocolVersions: { "base-reducer": 2 },
       },
     },
   };

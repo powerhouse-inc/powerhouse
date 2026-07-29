@@ -8,6 +8,7 @@ import type {
 import {
   applyDeleteDocumentAction,
   applyUpgradeDocumentAction,
+  baseReducerVersion,
   isDenied,
 } from "@powerhousedao/shared/document-model";
 import { createDocumentFromAction } from "../executor/util.js";
@@ -748,8 +749,7 @@ export class KyselyWriteCache implements IWriteCache {
         } else if (operation.action.type === "DELETE_DOCUMENT") {
           applyDeleteDocumentAction(document, operation.action as never);
         } else {
-          const protocolVersion =
-            document.header.protocolVersions?.["base-reducer"] ?? 1;
+          const protocolVersion = baseReducerVersion(document.header);
           document = docModule.reducer(document, operation.action, undefined, {
             skip: operation.skip,
             protocolVersion,
@@ -863,8 +863,7 @@ export class KyselyWriteCache implements IWriteCache {
             document = appendWithoutApplying(document, scope, operation);
           } else {
             // Fail-fast: if reducer throws, error propagates immediately without caching partial state
-            const protocolVersion =
-              document.header.protocolVersions?.["base-reducer"] ?? 1;
+            const protocolVersion = baseReducerVersion(document.header);
             document = getModuleCached(moduleVersion).reducer(
               document,
               operation.action,
@@ -1071,8 +1070,7 @@ export class KyselyWriteCache implements IWriteCache {
           document = appendWithoutApplying(document, scope, operation);
         } else {
           // Fail-fast: if reducer throws, error propagates immediately without caching partial state
-          const protocolVersion =
-            document.header.protocolVersions?.["base-reducer"] ?? 1;
+          const protocolVersion = baseReducerVersion(document.header);
           document = module.reducer(document, operation.action, undefined, {
             skip: operation.skip,
             protocolVersion,

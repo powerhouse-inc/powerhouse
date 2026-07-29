@@ -144,7 +144,7 @@ describe("JobResultHandler", () => {
             type: "CREATE_DOCUMENT",
             scope: "global",
             timestampUtcMs: "2024-01-01T00:00:00.000Z",
-            input: {},
+            input: { protocolVersions: { "base-reducer": 2 } },
           },
         ],
       });

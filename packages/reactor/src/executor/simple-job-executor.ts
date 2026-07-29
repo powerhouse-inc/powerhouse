@@ -5,7 +5,11 @@ import type {
   OperationWithContext,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
-import { decide, isUndoRedo } from "@powerhousedao/shared/document-model";
+import {
+  baseReducerVersion,
+  decide,
+  isUndoRedo,
+} from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import type { ICollectionMembershipCache } from "../cache/collection-membership-cache.js";
 import type { IDocumentMetaCache } from "../cache/document-meta-cache-types.js";
@@ -502,8 +506,7 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     let updatedDocument: PHDocument;
     try {
-      const protocolVersion =
-        document.header.protocolVersions?.["base-reducer"] ?? 1;
+      const protocolVersion = baseReducerVersion(document.header);
       const reducerOptions = sourceOperation
         ? {
             skip,

@@ -172,6 +172,7 @@ describe("KyselyWriteCache.withScopedStores", () => {
 
     const doc = {
       header: {
+        protocolVersions: { "base-reducer": 2 },
         id: "doc-1",
         documentType: "test/type",
         revision: { global: 1 },
@@ -218,6 +219,7 @@ describe("KyselyWriteCache.withScopedStores", () => {
 
     const doc = {
       header: {
+        protocolVersions: { "base-reducer": 2 },
         id: "doc-1",
         documentType: "test/type",
         revision: { global: 1 },
@@ -251,7 +253,11 @@ describe("KyselyWriteCache.withScopedStores", () => {
         type: "CREATE_DOCUMENT",
         scope: "document",
         timestampUtcMs: new Date().toISOString(),
-        input: { documentId: "doc-1", model: "test/type" },
+        input: {
+          protocolVersions: { "base-reducer": 2 },
+          documentId: "doc-1",
+          model: "test/type",
+        },
       },
     };
 
@@ -326,6 +332,7 @@ describe("KyselyWriteCache isolation", () => {
   it("isolated cache does not share streams with parent", () => {
     const doc = {
       header: {
+        protocolVersions: { "base-reducer": 2 },
         id: "doc-1",
         documentType: "test/type",
         revision: { global: 1 },
@@ -362,6 +369,7 @@ describe("KyselyWriteCache isolation", () => {
   it("invalidate on isolated cache does not affect parent", () => {
     const doc = {
       header: {
+        protocolVersions: { "base-reducer": 2 },
         id: "doc-1",
         documentType: "test/type",
         revision: { global: 1 },
@@ -447,7 +455,11 @@ describe("DocumentMetaCache.withScopedStore", () => {
         type: "CREATE_DOCUMENT",
         scope: "document",
         timestampUtcMs: new Date().toISOString(),
-        input: { documentId: "doc-miss", model: "test/type" },
+        input: {
+          protocolVersions: { "base-reducer": 2 },
+          documentId: "doc-miss",
+          model: "test/type",
+        },
       },
     };
 

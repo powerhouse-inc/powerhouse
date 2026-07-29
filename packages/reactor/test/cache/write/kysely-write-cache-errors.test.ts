@@ -130,6 +130,7 @@ describe("KyselyWriteCache - Error Handling", () => {
             documentId: "doc1",
             model: "test/unknown",
             version: 0,
+            protocolVersions: { "base-reducer": 2 },
           },
         },
       };
@@ -238,6 +239,7 @@ describe("KyselyWriteCache - Error Handling", () => {
             documentId: "doc1",
             model: documentType,
             version: 0,
+            protocolVersions: { "base-reducer": 2 },
           },
         },
       };
@@ -294,6 +296,7 @@ describe("KyselyWriteCache - Error Handling", () => {
             documentId: "doc1",
             model: "powerhouse/document-model",
             version: 0,
+            protocolVersions: { "base-reducer": 2 },
           },
         },
       };
@@ -461,6 +464,7 @@ describe("KyselyWriteCache - Error Handling", () => {
             documentId: "doc1",
             model: "powerhouse/document-model",
             version: 0,
+            protocolVersions: { "base-reducer": 2 },
           },
         },
       };
@@ -591,6 +595,7 @@ describe("KyselyWriteCache - Error Handling", () => {
             documentId: "doc1",
             model: "powerhouse/document-model",
             version: 0,
+            protocolVersions: { "base-reducer": 2 },
           },
         },
       };
@@ -1197,6 +1202,7 @@ describe("KyselyWriteCache - Error Handling", () => {
             documentId: "doc1",
             model: "powerhouse/document-model",
             version: 0,
+            protocolVersions: { "base-reducer": 2 },
           },
         },
       };
@@ -1267,6 +1273,7 @@ describe("KyselyWriteCache - Error Handling", () => {
             documentId: "doc1",
             model: "powerhouse/document-model",
             version: 0,
+            protocolVersions: { "base-reducer": 2 },
           },
         },
       };
@@ -1516,6 +1523,7 @@ describe("KyselyWriteCache - Error Handling (Integration)", () => {
             documentId: docId,
             model: docType,
             version: 0,
+            protocolVersions: { "base-reducer": 2 },
           },
         },
       });

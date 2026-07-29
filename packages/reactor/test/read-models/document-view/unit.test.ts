@@ -615,7 +615,11 @@ describe("KyselyDocumentView Unit Tests", () => {
       mockDb.execute.mockResolvedValue(snapshots);
 
       vi.spyOn(view, "get").mockResolvedValue({
-        header: { id: "doc-1", documentType: "test-type" },
+        header: {
+          protocolVersions: { "base-reducer": 2 },
+          id: "doc-1",
+          documentType: "test-type",
+        },
         state: {},
         operations: {},
         initialState: {},

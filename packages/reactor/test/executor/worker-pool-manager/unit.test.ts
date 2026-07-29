@@ -602,7 +602,10 @@ describe("WorkerPoolJobExecutorManager", () => {
               type: "CREATE_DOCUMENT",
               scope: "document",
               timestampUtcMs: "2024-01-01T00:00:00.000Z",
-              input: { documentId: "doc-x" },
+              input: {
+                protocolVersions: { "base-reducer": 2 },
+                documentId: "doc-x",
+              },
             } as Action,
           ],
           retryCount: 0,

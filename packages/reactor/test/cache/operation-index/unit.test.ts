@@ -143,7 +143,7 @@ describe("KyselyOperationIndexTxn", () => {
       action: {
         id: "action-1",
         type: "CREATE_DOCUMENT",
-        input: {},
+        input: { protocolVersions: { "base-reducer": 2 } },
         timestampUtcMs: "2021-01-01T00:00:00.000Z",
         scope: "document",
       },
@@ -181,7 +181,7 @@ describe("KyselyOperationIndexTxn", () => {
       action: {
         id: "action-1",
         type: "CREATE_DOCUMENT",
-        input: {},
+        input: { protocolVersions: { "base-reducer": 2 } },
         timestampUtcMs: "2021-01-01T00:00:00.000Z",
         scope: "document",
       },
@@ -211,7 +211,7 @@ describe("KyselyOperationIndexTxn", () => {
       action: {
         id: "action-1",
         type: "CREATE_DOCUMENT",
-        input: {},
+        input: { protocolVersions: { "base-reducer": 2 } },
         timestampUtcMs: "2021-01-01T00:00:00.000Z",
         scope: "document",
       },
@@ -231,7 +231,7 @@ describe("KyselyOperationIndexTxn", () => {
       action: {
         id: "action-2",
         type: "CREATE_DOCUMENT",
-        input: {},
+        input: { protocolVersions: { "base-reducer": 2 } },
         timestampUtcMs: "2021-01-01T00:00:00.001Z",
         scope: "document",
       },
@@ -352,7 +352,7 @@ describe("KyselyOperationIndex.commit()", () => {
       action: {
         id: "action-1",
         type: "CREATE_DOCUMENT",
-        input: {},
+        input: { protocolVersions: { "base-reducer": 2 } },
         timestampUtcMs: "2021-01-01T00:00:00.000Z",
         scope: "document",
       },
@@ -395,7 +395,7 @@ describe("KyselyOperationIndex.commit()", () => {
       action: {
         id: "action-1",
         type: "CREATE_DOCUMENT",
-        input: {},
+        input: { protocolVersions: { "base-reducer": 2 } },
         timestampUtcMs: "2021-01-01T00:00:00.000Z",
         scope: "document",
       },
@@ -429,7 +429,7 @@ describe("KyselyOperationIndex.commit()", () => {
         action: {
           id: "action-1",
           type: "CREATE_DOCUMENT",
-          input: {},
+          input: { protocolVersions: { "base-reducer": 2 } },
           timestampUtcMs: "2021-01-01T00:00:00.000Z",
           scope: "document",
         },
@@ -639,7 +639,7 @@ describe("KyselyOperationIndex.find()", () => {
         action: {
           id: "action-1",
           type: "CREATE_DOCUMENT",
-          input: {},
+          input: { protocolVersions: { "base-reducer": 2 } },
           timestampUtcMs: "2021-01-01T00:00:00.000Z",
           scope: "document",
         },
@@ -659,7 +659,7 @@ describe("KyselyOperationIndex.find()", () => {
         action: {
           id: "action-1",
           type: "CREATE_DOCUMENT",
-          input: {},
+          input: { protocolVersions: { "base-reducer": 2 } },
           timestampUtcMs: "2021-01-01T00:00:00.000Z",
           scope: "document",
         },
@@ -699,7 +699,7 @@ describe("KyselyOperationIndex.find()", () => {
         action: {
           id: "action-1",
           type: "CREATE_DOCUMENT",
-          input: {},
+          input: { protocolVersions: { "base-reducer": 2 } },
           timestampUtcMs: "2021-01-01T00:00:00.000Z",
           scope: "document",
         },
@@ -739,7 +739,7 @@ describe("KyselyOperationIndex.find()", () => {
         action: {
           id: "action-1",
           type: "CREATE_DOCUMENT",
-          input: {},
+          input: { protocolVersions: { "base-reducer": 2 } },
           timestampUtcMs: "2021-01-01T00:00:00.000Z",
           scope: "document",
         },
@@ -759,7 +759,7 @@ describe("KyselyOperationIndex.find()", () => {
         action: {
           id: "action-1",
           type: "CREATE_DOCUMENT",
-          input: {},
+          input: { protocolVersions: { "base-reducer": 2 } },
           timestampUtcMs: "2021-01-01T00:00:00.000Z",
           scope: "document",
         },
@@ -828,7 +828,7 @@ describe("KyselyOperationIndex.find()", () => {
         action: {
           id: "action-1",
           type: "CREATE_DOCUMENT",
-          input: {},
+          input: { protocolVersions: { "base-reducer": 2 } },
           timestampUtcMs: "2021-01-01T00:00:00.000Z",
           scope: "document",
         },
@@ -853,7 +853,7 @@ describe("KyselyOperationIndex.find()", () => {
       action: {
         id: "action-1",
         type: "CREATE_DOCUMENT",
-        input: {},
+        input: { protocolVersions: { "base-reducer": 2 } },
         timestampUtcMs: "2021-01-01T00:00:00.000Z",
         scope: "document",
       },

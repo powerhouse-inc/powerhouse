@@ -62,6 +62,7 @@ describe("SimpleJobExecutor load jobs", () => {
           id: "doc-1",
           documentType: "powerhouse/document",
           revision: { document: 5 },
+          protocolVersions: { "base-reducer": 2 },
         },
         state: {
           document: {

@@ -245,6 +245,13 @@ export function baseCreateDocument<TState extends PHBaseState = PHBaseState>(
 ): PHDocument<TState> {
   const state = createState(initialState);
   const header = createPresignedHeader(generateId(), documentType);
+
+  // The document's own CREATE_DOCUMENT operation records this, so the header
+  // has to agree with it. Left off the header factory itself, because that is
+  // also how a rebuild starts and a rebuild must take the version from the
+  // stored operation rather than assume one.
+  header.protocolVersions = { "base-reducer": 2 };
+
   const phDocument: PHDocument<TState> = {
     header,
     state,
@@ -371,6 +378,25 @@ export function mapSkippedOperationsV2(
  * Uses the V2 model where consecutive NOOPs form chains.
  * Unlike V1 garbageCollect, this preserves ALL operations but marks which to apply.
  */
+/**
+ * The base-reducer protocol version a document is written against. Every
+ * document carries one, set from the CREATE_DOCUMENT input. A header without
+ * one was built outside that path, and choosing a version on its behalf would
+ * replay the document through a reducer it was not written for, so it is an
+ * error rather than a default.
+ */
+export function baseReducerVersion(header: PHDocumentHeader): number {
+  const version = header.protocolVersions?.["base-reducer"];
+
+  if (typeof version !== "number") {
+    throw new Error(
+      `Document ${header.id} carries no base-reducer protocol version`,
+    );
+  }
+
+  return version;
+}
+
 export function garbageCollectV2<TOpIndex extends OperationIndex>(
   sortedOperations: TOpIndex[],
 ): TOpIndex[] {

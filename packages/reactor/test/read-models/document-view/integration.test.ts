@@ -435,6 +435,7 @@ describe("KyselyDocumentView", () => {
         scope: "header",
         timestampUtcMs: createdAt,
         input: {
+          protocolVersions: { "base-reducer": 2 },
           model: "powerhouse/document-drive",
           version: 0,
           documentId,
@@ -460,6 +461,7 @@ describe("KyselyDocumentView", () => {
             action: createAction,
             resultingState: JSON.stringify({
               header: {
+                protocolVersions: { "base-reducer": 2 },
                 id: documentId,
                 documentType,
                 slug: documentId,
@@ -482,6 +484,7 @@ describe("KyselyDocumentView", () => {
             branch,
             resultingState: JSON.stringify({
               header: {
+                protocolVersions: { "base-reducer": 2 },
                 id: documentId,
                 documentType,
                 slug: documentId,
@@ -548,6 +551,7 @@ describe("KyselyDocumentView", () => {
         scope: "header",
         timestampUtcMs: createdAt,
         input: {
+          protocolVersions: { "base-reducer": 2 },
           model: "powerhouse/document-drive",
           version: 0,
           documentId,
@@ -573,6 +577,7 @@ describe("KyselyDocumentView", () => {
             action: createAction,
             resultingState: JSON.stringify({
               header: {
+                protocolVersions: { "base-reducer": 2 },
                 id: documentId,
                 documentType,
                 slug: documentId,
@@ -595,6 +600,7 @@ describe("KyselyDocumentView", () => {
             branch,
             resultingState: JSON.stringify({
               header: {
+                protocolVersions: { "base-reducer": 2 },
                 id: documentId,
                 documentType,
                 slug: documentId,
@@ -686,6 +692,7 @@ describe("KyselyDocumentView", () => {
             action: setDriveName({ name: "Test Drive" }),
             resultingState: JSON.stringify({
               header: {
+                protocolVersions: { "base-reducer": 2 },
                 id: documentId,
                 documentType,
                 slug: documentId,
@@ -712,6 +719,7 @@ describe("KyselyDocumentView", () => {
             branch,
             resultingState: JSON.stringify({
               header: {
+                protocolVersions: { "base-reducer": 2 },
                 id: documentId,
                 documentType,
                 slug: documentId,
@@ -764,6 +772,7 @@ describe("KyselyDocumentView", () => {
         scope: "header",
         timestampUtcMs: createdAt,
         input: {
+          protocolVersions: { "base-reducer": 2 },
           model: "powerhouse/document-drive",
           version: 0,
           documentId,
@@ -789,6 +798,7 @@ describe("KyselyDocumentView", () => {
             action: createAction,
             resultingState: JSON.stringify({
               header: {
+                protocolVersions: { "base-reducer": 2 },
                 id: documentId,
                 documentType,
                 slug: documentId,
@@ -811,6 +821,7 @@ describe("KyselyDocumentView", () => {
             branch,
             resultingState: JSON.stringify({
               header: {
+                protocolVersions: { "base-reducer": 2 },
                 id: documentId,
                 documentType,
                 slug: documentId,
@@ -891,6 +902,7 @@ describe("KyselyDocumentView", () => {
             action: upgradeAction,
             resultingState: JSON.stringify({
               header: {
+                protocolVersions: { "base-reducer": 2 },
                 id: documentId,
                 documentType,
                 slug: documentId,
@@ -917,6 +929,7 @@ describe("KyselyDocumentView", () => {
             branch,
             resultingState: JSON.stringify({
               header: {
+                protocolVersions: { "base-reducer": 2 },
                 id: documentId,
                 documentType,
                 slug: documentId,
@@ -1031,7 +1044,11 @@ describe("KyselyDocumentView", () => {
               scope,
               branch,
               resultingState: JSON.stringify({
-                header: { id: docId, documentType },
+                header: {
+                  protocolVersions: { "base-reducer": 2 },
+                  id: docId,
+                  documentType,
+                },
                 document: {},
               }),
               ordinal: 1,
@@ -1094,7 +1111,11 @@ describe("KyselyDocumentView", () => {
             scope,
             branch,
             resultingState: JSON.stringify({
-              header: { id: existingDocId, documentType },
+              header: {
+                protocolVersions: { "base-reducer": 2 },
+                id: existingDocId,
+                documentType,
+              },
               document: {},
             }),
             ordinal: 1,
@@ -1154,7 +1175,11 @@ describe("KyselyDocumentView", () => {
             scope,
             branch,
             resultingState: JSON.stringify({
-              header: { id: documentId, documentType },
+              header: {
+                protocolVersions: { "base-reducer": 2 },
+                id: documentId,
+                documentType,
+              },
               document: {},
             }),
             ordinal: 1,
@@ -1235,7 +1260,11 @@ describe("KyselyDocumentView", () => {
               scope,
               branch,
               resultingState: JSON.stringify({
-                header: { id: documentId, documentType },
+                header: {
+                  protocolVersions: { "base-reducer": 2 },
+                  id: documentId,
+                  documentType,
+                },
                 document: {},
               }),
               ordinal: 1,
@@ -1299,7 +1328,11 @@ describe("KyselyDocumentView", () => {
             scope,
             branch,
             resultingState: JSON.stringify({
-              header: { id: documentId, documentType },
+              header: {
+                protocolVersions: { "base-reducer": 2 },
+                id: documentId,
+                documentType,
+              },
               document: {},
             }),
             ordinal: 1,
@@ -1379,7 +1412,11 @@ describe("KyselyDocumentView", () => {
             scope,
             branch,
             resultingState: JSON.stringify({
-              header: { id: documentId, documentType },
+              header: {
+                protocolVersions: { "base-reducer": 2 },
+                id: documentId,
+                documentType,
+              },
               document: {},
             }),
             ordinal: 1,
@@ -1441,7 +1478,11 @@ describe("KyselyDocumentView", () => {
             scope,
             branch,
             resultingState: JSON.stringify({
-              header: { id: documentId, documentType },
+              header: {
+                protocolVersions: { "base-reducer": 2 },
+                id: documentId,
+                documentType,
+              },
               document: {},
             }),
             ordinal: 1,
@@ -1524,7 +1565,11 @@ describe("KyselyDocumentView", () => {
               scope,
               branch,
               resultingState: JSON.stringify({
-                header: { id: documentId, documentType },
+                header: {
+                  protocolVersions: { "base-reducer": 2 },
+                  id: documentId,
+                  documentType,
+                },
                 document: {},
               }),
               ordinal: i + 1,
@@ -1597,7 +1642,11 @@ describe("KyselyDocumentView", () => {
               scope,
               branch,
               resultingState: JSON.stringify({
-                header: { id: documentId, documentType },
+                header: {
+                  protocolVersions: { "base-reducer": 2 },
+                  id: documentId,
+                  documentType,
+                },
                 document: {},
               }),
               ordinal: 1,
@@ -1663,7 +1712,11 @@ describe("KyselyDocumentView", () => {
             scope,
             branch,
             resultingState: JSON.stringify({
-              header: { id: documentId, documentType },
+              header: {
+                protocolVersions: { "base-reducer": 2 },
+                id: documentId,
+                documentType,
+              },
               document: {},
             }),
             ordinal: 1,
@@ -1791,7 +1844,11 @@ describe("KyselyDocumentView", () => {
             scope,
             branch,
             resultingState: JSON.stringify({
-              header: { id: documentId, documentType },
+              header: {
+                protocolVersions: { "base-reducer": 2 },
+                id: documentId,
+                documentType,
+              },
             }),
             ordinal: 1,
           },
@@ -1927,7 +1984,7 @@ describe("KyselyDocumentView", () => {
                 id: generateId(),
                 type: "CREATE_DOCUMENT",
                 scope: "document",
-                input: {},
+                input: { protocolVersions: { "base-reducer": 2 } },
               } as any,
             }),
             context: {
@@ -1971,7 +2028,7 @@ describe("KyselyDocumentView", () => {
                 id: generateId(),
                 type: "CREATE_DOCUMENT",
                 scope: "document",
-                input: {},
+                input: { protocolVersions: { "base-reducer": 2 } },
               } as any,
             }),
             context: {
@@ -2020,7 +2077,7 @@ describe("KyselyDocumentView", () => {
                 id: generateId(),
                 type: "CREATE_DOCUMENT",
                 scope: "document",
-                input: {},
+                input: { protocolVersions: { "base-reducer": 2 } },
               } as any,
             }),
             context: {
@@ -2066,7 +2123,7 @@ describe("KyselyDocumentView", () => {
                 id: generateId(),
                 type: "CREATE_DOCUMENT",
                 scope: "document",
-                input: {},
+                input: { protocolVersions: { "base-reducer": 2 } },
               } as any,
             }),
             context: {
@@ -2088,7 +2145,7 @@ describe("KyselyDocumentView", () => {
                 id: generateId(),
                 type: "CREATE_DOCUMENT",
                 scope: "document",
-                input: {},
+                input: { protocolVersions: { "base-reducer": 2 } },
               } as any,
             }),
             context: {
@@ -2139,7 +2196,7 @@ describe("KyselyDocumentView", () => {
               id: generateId(),
               type: "CREATE_DOCUMENT",
               scope: "document",
-              input: {},
+              input: { protocolVersions: { "base-reducer": 2 } },
             } as any,
           }),
           context: {
@@ -2158,7 +2215,7 @@ describe("KyselyDocumentView", () => {
               id: generateId(),
               type: "CREATE_DOCUMENT",
               scope: "document",
-              input: {},
+              input: { protocolVersions: { "base-reducer": 2 } },
             } as any,
           }),
           context: {
@@ -2177,6 +2234,7 @@ describe("KyselyDocumentView", () => {
       const deletedAt = new Date().toISOString();
       const resultingState = JSON.stringify({
         header: {
+          protocolVersions: { "base-reducer": 2 },
           id: documentId,
           documentType,
         },

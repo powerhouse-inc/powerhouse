@@ -91,7 +91,7 @@ describe("SyncManager Backfill", () => {
           scope: "global",
           id: "action1",
           timestampUtcMs: "2023-01-01T00:00:00.000Z",
-          input: {},
+          input: { protocolVersions: { "base-reducer": 2 } },
         },
       };
 
@@ -167,7 +167,7 @@ describe("SyncManager Backfill", () => {
           scope: "global",
           id: "action1",
           timestampUtcMs: "2023-01-01T00:00:00.000Z",
-          input: {},
+          input: { protocolVersions: { "base-reducer": 2 } },
         },
       };
 
@@ -252,7 +252,7 @@ describe("SyncManager Backfill", () => {
           scope: "global",
           id: "action-old",
           timestampUtcMs: "2023-01-01T00:00:00.000Z",
-          input: {},
+          input: { protocolVersions: { "base-reducer": 2 } },
         },
       };
 

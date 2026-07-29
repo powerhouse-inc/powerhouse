@@ -676,7 +676,10 @@ describe("SimpleJobExecutorManager", () => {
             type: "CREATE_DOCUMENT",
             scope: "document",
             timestampUtcMs: "2024-01-01T00:00:00.000Z",
-            input: { documentId: "doc-1" },
+            input: {
+              protocolVersions: { "base-reducer": 2 },
+              documentId: "doc-1",
+            },
           },
         ],
         retryCount: 0,

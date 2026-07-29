@@ -57,7 +57,6 @@ function createMockPHDocument(id: string, documentType = "test"): PHDocument {
         nonce: "mock-nonce",
       },
       createdAtUtcIso: new Date().toISOString(),
-      protocolVersions: { "base-reducer": 2 },
     },
     state: {
       document: { version: 1 },
@@ -158,7 +157,10 @@ describe("ReactorClient Unit Tests", () => {
   describe("get", () => {
     it("should call getByIdOrSlug with identifier", async () => {
       const mockDoc: PHDocument = {
-        header: { id: "doc-1", documentType: "test" },
+        header: {
+          id: "doc-1",
+          documentType: "test",
+        },
       } as PHDocument;
 
       vi.mocked(mockReactor.getByIdOrSlug).mockResolvedValue(mockDoc);
@@ -176,7 +178,11 @@ describe("ReactorClient Unit Tests", () => {
 
     it("should resolve both IDs and slugs", async () => {
       const mockDoc: PHDocument = {
-        header: { id: "doc-1", documentType: "test", slug: "my-doc" },
+        header: {
+          id: "doc-1",
+          documentType: "test",
+          slug: "my-doc",
+        },
       } as PHDocument;
 
       vi.mocked(mockReactor.getByIdOrSlug).mockResolvedValue(mockDoc);
@@ -815,7 +821,10 @@ describe("ReactorClient Unit Tests", () => {
       };
 
       const mockDoc: PHDocument = {
-        header: { id: documentId, documentType: "test" },
+        header: {
+          id: documentId,
+          documentType: "test",
+        },
       } as PHDocument;
 
       vi.mocked(mockReactor.execute).mockResolvedValue(jobInfo);
@@ -1070,7 +1079,10 @@ describe("ReactorClient Unit Tests", () => {
       };
 
       const mockDoc: PHDocument = {
-        header: { id: sourceId, documentType: "test" },
+        header: {
+          id: sourceId,
+          documentType: "test",
+        },
       } as PHDocument;
 
       vi.mocked(mockReactor.addRelationship).mockResolvedValue(jobInfo);
@@ -1125,7 +1137,10 @@ describe("ReactorClient Unit Tests", () => {
       };
 
       const mockDoc: PHDocument = {
-        header: { id: sourceId, documentType: "test" },
+        header: {
+          id: sourceId,
+          documentType: "test",
+        },
       } as PHDocument;
 
       vi.mocked(mockReactor.removeRelationship).mockResolvedValue(jobInfo);

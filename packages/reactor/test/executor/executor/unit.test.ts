@@ -37,6 +37,7 @@ describe("SimpleJobExecutor", () => {
       getState: vi.fn().mockImplementation((docId) =>
         Promise.resolve({
           header: {
+            protocolVersions: { "base-reducer": 2 },
             id: docId,
             documentType: "powerhouse/document-model",
             revision: { document: 1 },
@@ -51,6 +52,7 @@ describe("SimpleJobExecutor", () => {
                   scope: "document",
                   timestampUtcMs: "2024-01-01T00:00:00.000Z",
                   input: {
+                    protocolVersions: { "base-reducer": 2 },
                     documentId: docId,
                     model: "powerhouse/document-model",
                   },
@@ -145,6 +147,7 @@ describe("SimpleJobExecutor", () => {
       // Mock a document with unknown type but with CREATE_DOCUMENT to pass validation
       mockWriteCache.getState = vi.fn().mockResolvedValue({
         header: {
+          protocolVersions: { "base-reducer": 2 },
           id: "doc-1",
           documentType: "unknown/type",
         },
@@ -158,6 +161,7 @@ describe("SimpleJobExecutor", () => {
                 scope: "document",
                 timestampUtcMs: "2024-01-01T00:00:00.000Z",
                 input: {
+                  protocolVersions: { "base-reducer": 2 },
                   documentId: "doc-1",
                   model: "unknown/type",
                 },
@@ -403,6 +407,7 @@ describe("SimpleJobExecutor", () => {
       mockWriteCache.getState = vi.fn().mockImplementation((docId) =>
         Promise.resolve({
           header: {
+            protocolVersions: { "base-reducer": 2 },
             id: docId,
             documentType: "powerhouse/document-model",
             revision: { document: 1 },
@@ -418,6 +423,7 @@ describe("SimpleJobExecutor", () => {
                   scope: "document",
                   timestampUtcMs: "2024-01-01T00:00:00.000Z",
                   input: {
+                    protocolVersions: { "base-reducer": 2 },
                     documentId: docId,
                     model: "powerhouse/document-model",
                   },
@@ -605,6 +611,7 @@ describe("SimpleJobExecutor", () => {
 
       mockWriteCache.getState = vi.fn().mockResolvedValue({
         header: {
+          protocolVersions: { "base-reducer": 2 },
           id: documentId,
           documentType: "powerhouse/document-model",
           revision: { document: 1 },
@@ -619,6 +626,7 @@ describe("SimpleJobExecutor", () => {
                 scope: "document",
                 timestampUtcMs: "2024-01-01T00:00:00.000Z",
                 input: {
+                  protocolVersions: { "base-reducer": 2 },
                   documentId,
                   model: "powerhouse/document-model",
                 },
@@ -671,6 +679,7 @@ describe("SimpleJobExecutor", () => {
 
       mockWriteCache.getState = vi.fn().mockResolvedValue({
         header: {
+          protocolVersions: { "base-reducer": 2 },
           id: documentId,
           documentType: "powerhouse/document-model",
           revision: { document: 1 },
@@ -685,6 +694,7 @@ describe("SimpleJobExecutor", () => {
                 scope: "document",
                 timestampUtcMs: "2024-01-01T00:00:00.000Z",
                 input: {
+                  protocolVersions: { "base-reducer": 2 },
                   documentId,
                   model: "powerhouse/document-model",
                 },
@@ -741,6 +751,7 @@ describe("SimpleJobExecutor", () => {
 
       mockWriteCache.getState = vi.fn().mockResolvedValue({
         header: {
+          protocolVersions: { "base-reducer": 2 },
           id: documentId,
           documentType: "powerhouse/document-model",
           revision: { document: 1 },
@@ -755,6 +766,7 @@ describe("SimpleJobExecutor", () => {
                 scope: "document",
                 timestampUtcMs: "2024-01-01T00:00:00.000Z",
                 input: {
+                  protocolVersions: { "base-reducer": 2 },
                   documentId,
                   model: "powerhouse/document-model",
                 },
@@ -855,6 +867,7 @@ describe("SimpleJobExecutor", () => {
               scope: "document",
               timestampUtcMs: "2024-01-01T00:00:00.000Z",
               input: {
+                protocolVersions: { "base-reducer": 2 },
                 documentId,
                 model: "powerhouse/document-model",
                 slug: "test-doc",
@@ -884,6 +897,7 @@ describe("SimpleJobExecutor", () => {
         const documentId = "doc-with-ops";
         mockWriteCache.getState = vi.fn().mockResolvedValue({
           header: {
+            protocolVersions: { "base-reducer": 2 },
             id: documentId,
             documentType: "powerhouse/document-model",
             revision: {
@@ -920,7 +934,7 @@ describe("SimpleJobExecutor", () => {
               type: "DELETE_DOCUMENT",
               scope: "document",
               timestampUtcMs: "2024-01-01T00:00:00.000Z",
-              input: { documentId },
+              input: { protocolVersions: { "base-reducer": 2 }, documentId },
             },
           ],
           operations: [],
@@ -945,6 +959,7 @@ describe("SimpleJobExecutor", () => {
         const documentId = "doc-to-upgrade";
         mockWriteCache.getState = vi.fn().mockResolvedValue({
           header: {
+            protocolVersions: { "base-reducer": 2 },
             id: documentId,
             documentType: "powerhouse/document-model",
             revision: {
@@ -974,6 +989,7 @@ describe("SimpleJobExecutor", () => {
               scope: "document",
               timestampUtcMs: "2024-01-01T00:00:00.000Z",
               input: {
+                protocolVersions: { "base-reducer": 2 },
                 documentId,
                 initialState: {
                   global: { some: "state" },
@@ -1015,6 +1031,7 @@ describe("SimpleJobExecutor", () => {
               scope: "document",
               timestampUtcMs: "2024-01-01T00:00:00.000Z",
               input: {
+                protocolVersions: { "base-reducer": 2 },
                 documentId,
                 model: "powerhouse/document-model",
                 slug: "test-doc",
@@ -1045,6 +1062,7 @@ describe("SimpleJobExecutor", () => {
         // After CREATE, document will have one operation
         mockWriteCache.getState = vi.fn().mockResolvedValue({
           header: {
+            protocolVersions: { "base-reducer": 2 },
             id: documentId,
             documentType: "powerhouse/document-model",
             revision: {
@@ -1061,6 +1079,7 @@ describe("SimpleJobExecutor", () => {
                   scope: "document",
                   timestampUtcMs: "2024-01-01T00:00:00.000Z",
                   input: {
+                    protocolVersions: { "base-reducer": 2 },
                     documentId,
                     model: "powerhouse/document-model",
                   },
@@ -1101,6 +1120,7 @@ describe("SimpleJobExecutor", () => {
         // Set up document with index 0 in multiple scopes
         mockWriteCache.getState = vi.fn().mockResolvedValue({
           header: {
+            protocolVersions: { "base-reducer": 2 },
             id: documentId,
             documentType: "powerhouse/document-model",
             revision: {
@@ -1130,7 +1150,7 @@ describe("SimpleJobExecutor", () => {
               type: "DELETE_DOCUMENT",
               scope: "document",
               timestampUtcMs: "2024-01-01T00:00:00.000Z",
-              input: { documentId },
+              input: { protocolVersions: { "base-reducer": 2 }, documentId },
             },
           ],
           operations: [],
@@ -1155,6 +1175,7 @@ describe("SimpleJobExecutor", () => {
         // Create a document where different scopes have different index counts
         const document = {
           header: {
+            protocolVersions: { "base-reducer": 2 },
             id: documentId,
             documentType: "powerhouse/document-model",
             revision: {
@@ -1194,6 +1215,7 @@ describe("SimpleJobExecutor", () => {
               scope: "document",
               timestampUtcMs: "2024-01-01T00:00:00.000Z",
               input: {
+                protocolVersions: { "base-reducer": 2 },
                 documentId,
                 initialState: { global: {}, local: {} },
               },
@@ -1231,6 +1253,7 @@ describe("SimpleJobExecutor", () => {
               scope: "document",
               timestampUtcMs: "2024-01-01T00:00:00.000Z",
               input: {
+                protocolVersions: { "base-reducer": 2 },
                 documentId,
                 model: "powerhouse/document-model",
                 slug: "test-doc",
@@ -1261,6 +1284,7 @@ describe("SimpleJobExecutor", () => {
         // After CREATE, document will have one operation
         mockWriteCache.getState = vi.fn().mockResolvedValue({
           header: {
+            protocolVersions: { "base-reducer": 2 },
             id: documentId,
             documentType: "powerhouse/document-model",
             revision: {
@@ -1277,6 +1301,7 @@ describe("SimpleJobExecutor", () => {
                   scope: "document",
                   timestampUtcMs: "2024-01-01T00:00:00.000Z",
                   input: {
+                    protocolVersions: { "base-reducer": 2 },
                     documentId,
                     model: "powerhouse/document-model",
                   },
@@ -1345,6 +1370,7 @@ describe("SimpleJobExecutor", () => {
     it("should return error when deleting an already deleted document", async () => {
       mockWriteCache.getState = vi.fn().mockResolvedValue({
         header: {
+          protocolVersions: { "base-reducer": 2 },
           id: "doc-1",
           documentType: "powerhouse/document-model",
           revision: { document: 2 },
@@ -1375,7 +1401,10 @@ describe("SimpleJobExecutor", () => {
             type: "DELETE_DOCUMENT",
             scope: "document",
             timestampUtcMs: "2024-01-01T00:00:00.000Z",
-            input: { documentId: "doc-1" },
+            input: {
+              protocolVersions: { "base-reducer": 2 },
+              documentId: "doc-1",
+            },
           },
         ],
         operations: [],
@@ -1466,6 +1495,7 @@ describe("SimpleJobExecutor", () => {
     it("should return error when upgrading an already deleted document", async () => {
       mockWriteCache.getState = vi.fn().mockResolvedValue({
         header: {
+          protocolVersions: { "base-reducer": 2 },
           id: "doc-1",
           documentType: "powerhouse/document-model",
           revision: { document: 2 },
@@ -1497,6 +1527,7 @@ describe("SimpleJobExecutor", () => {
             scope: "document",
             timestampUtcMs: "2024-01-01T00:00:00.000Z",
             input: {
+              protocolVersions: { "base-reducer": 2 },
               documentId: "doc-1",
               fromVersion: 1,
               toVersion: 2,
@@ -1519,6 +1550,7 @@ describe("SimpleJobExecutor", () => {
     it("should return success no-op when fromVersion equals toVersion", async () => {
       mockWriteCache.getState = vi.fn().mockResolvedValue({
         header: {
+          protocolVersions: { "base-reducer": 2 },
           id: "doc-1",
           documentType: "powerhouse/document-model",
           revision: { document: 1 },
@@ -1546,6 +1578,7 @@ describe("SimpleJobExecutor", () => {
             scope: "document",
             timestampUtcMs: "2024-01-01T00:00:00.000Z",
             input: {
+              protocolVersions: { "base-reducer": 2 },
               documentId: "doc-1",
               fromVersion: 2,
               toVersion: 2,
@@ -1780,6 +1813,7 @@ describe("SimpleJobExecutor", () => {
     it("should return error when no operations are generated from action", async () => {
       mockWriteCache.getState = vi.fn().mockResolvedValue({
         header: {
+          protocolVersions: { "base-reducer": 2 },
           id: "doc-1",
           documentType: "powerhouse/document-model",
           revision: { global: 0 },
@@ -1797,6 +1831,7 @@ describe("SimpleJobExecutor", () => {
       const mockModule = {
         reducer: vi.fn().mockReturnValue({
           header: {
+            protocolVersions: { "base-reducer": 2 },
             id: "doc-1",
             documentType: "powerhouse/document-model",
             revision: { global: 0 },
@@ -1822,7 +1857,7 @@ describe("SimpleJobExecutor", () => {
             type: "SET_NAME",
             scope: "global",
             timestampUtcMs: "2024-01-01T00:00:00.000Z",
-            input: { name: "Test" },
+            input: { protocolVersions: { "base-reducer": 2 }, name: "Test" },
           },
         ],
         operations: [],
@@ -2036,6 +2071,7 @@ describe("SimpleJobExecutor", () => {
             scope: "document",
             timestampUtcMs: "2024-01-01T00:00:00.000Z",
             input: {
+              protocolVersions: { "base-reducer": 2 },
               documentId,
               model: "powerhouse/document-model",
               slug: "test-doc",
@@ -2076,6 +2112,7 @@ describe("SimpleJobExecutor", () => {
         callOrder.push("getState");
         return Promise.resolve({
           header: {
+            protocolVersions: { "base-reducer": 2 },
             id: docId,
             documentType: "powerhouse/document-model",
             revision: { document: 1, global: 1 },
@@ -2129,6 +2166,7 @@ describe("SimpleJobExecutor", () => {
         callOrder.push("getState");
         return Promise.resolve({
           header: {
+            protocolVersions: { "base-reducer": 2 },
             id: docId,
             documentType: "powerhouse/document-model",
             revision: { document: 1, global: 1 },
@@ -2182,6 +2220,7 @@ describe("SimpleJobExecutor", () => {
         callOrder.push("getState");
         return Promise.resolve({
           header: {
+            protocolVersions: { "base-reducer": 2 },
             id: docId,
             documentType: "powerhouse/document-model",
             revision: { document: 1, global: 1 },
@@ -2235,6 +2274,7 @@ describe("SimpleJobExecutor", () => {
         callOrder.push("getState");
         return Promise.resolve({
           header: {
+            protocolVersions: { "base-reducer": 2 },
             id: docId,
             documentType: "powerhouse/document-model",
             revision: { document: 1, global: 1 },
@@ -2249,6 +2289,7 @@ describe("SimpleJobExecutor", () => {
                   scope: "document",
                   timestampUtcMs: "2024-01-01T00:00:00.000Z",
                   input: {
+                    protocolVersions: { "base-reducer": 2 },
                     documentId: docId,
                     model: "powerhouse/document-model",
                   },
@@ -2392,6 +2433,7 @@ describe("SimpleJobExecutor", () => {
               scope: "global",
               timestampUtcMs: "2024-01-01T00:00:00.000Z",
               input: {
+                protocolVersions: { "base-reducer": 2 },
                 documentId,
                 model: "powerhouse/document-model",
                 slug: "test-doc",
@@ -2430,6 +2472,7 @@ describe("SimpleJobExecutor", () => {
               scope: "document",
               timestampUtcMs: "2024-01-01T00:00:00.000Z",
               input: {
+                protocolVersions: { "base-reducer": 2 },
                 documentId,
                 model: "powerhouse/document-model",
                 slug: "test-doc",
@@ -2477,6 +2520,7 @@ describe("SimpleJobExecutor", () => {
     function authDoc(auth: unknown) {
       return {
         header: {
+          protocolVersions: { "base-reducer": 2 },
           id: "auth-doc",
           documentType: "powerhouse/document-model",
           revision: { document: 1 },
@@ -2491,6 +2535,7 @@ describe("SimpleJobExecutor", () => {
                 scope: "document",
                 timestampUtcMs: "2024-01-01T00:00:00.000Z",
                 input: {
+                  protocolVersions: { "base-reducer": 2 },
                   documentId: "auth-doc",
                   model: "powerhouse/document-model",
                 },
