@@ -146,6 +146,12 @@ sign-in completes in-page — no full-page redirect.
 `appId` (and optional `clientId`), and RainbowKit's `walletConnectProjectId`.
 Never put a Privy **App Secret** in browser config — it is server-only.
 
+`walletConnectProjectId` is optional, but treat it as required in practice: without
+it the rainbow adapter offers only an installed browser wallet and the Safe App
+iframe. Every other RainbowKit wallet connects over WalletConnect — `rainbowWallet`
+always when its extension is absent, `metaMaskWallet` on desktop without the
+extension — so those are omitted rather than offered and failing on the relay.
+
 ## Node.js
 
 For server-side usage, import from `@renown/sdk/node`.
