@@ -437,19 +437,15 @@ Load jobs (used by sync and replay) evaluate auth for every operation at its pos
 
 #### A position is a timestamp, not a revision
 
-A position in the merged order is a timestamp. A stream's storage order is by index. These are not the same order, and treating them as the same is what makes positional evaluation diverge.
+A position in the merged order is a timestamp. The rows a stream stores are ordered by index, and the two are not the same order, because a row the store holds is not necessarily a row that still counts. A reshuffle appends the merged range and puts a skip on its first operation, superseding the rows it replaced rather than rewriting them, so the stored rows keep both the old order and the new one.
 
-They differ because an operation does not always land in timestamp order. The load path reshuffles only when an incoming operation conflicts with local history. When there is no conflict, the operation is appended at the head whatever its timestamp says, so a backdated delete arriving by sync sits after operations timestamped later than it. Nothing written later repairs that.
+The operations that count are the ones left after those skips are applied. Call that the effective stream. On it the two orders agree, because a reshuffle writes the range in merged order, and a reshuffle is what happens whenever an incoming operation sorts before something already stored.
 
-There is therefore no revision that corresponds to a timestamp. The highest index whose timestamp is at or before T can sit above an operation timestamped after T, so a prefix taken at that index includes the operation the position was chosen to exclude. Two replicas holding the same operations in different stored order would choose different prefixes and reach different verdicts from identical logs.
+The rule is therefore stated on the effective stream:
 
-The rule is therefore stated on timestamps rather than indexes:
+> A read-set stream is applied, in the order its effective operations run, through every operation whose timestamp is at or before the judged operation's. An operation with an equal timestamp in another stream sorts by action id, then by operation id.
 
-> A read-set stream is applied, in its own stored order, through every operation whose timestamp is at or before the judged operation's. An operation with an equal timestamp in another stream sorts by action id, then by operation id.
-
-Stored order still decides how the operations are applied, because that is what the reducers and the skip bookkeeping require. The timestamp decides only how far to go.
-
-A replay therefore evaluates by walking forward rather than by reading each position. One pass visits the read-set streams in timestamp order, carrying the model along, and judges each operation against the model as it stood when the walk reached it. `IWriteCache.getState` bounds by index and cannot express "up to timestamp T", so a point read cannot answer the question at all.
+A replay evaluates by walking forward rather than by reading each position. One pass visits the read-set streams in that order, carrying the model along, and judges each operation against the model as it stood when the walk reached it. Resolving skips first is what makes one pass enough: without it, an operation's position and its place in the stored rows can disagree, and no single forward pass can be correct for both. `IWriteCache.getState` bounds by index over the stored rows, so it cannot express "up to timestamp T" and a point read cannot answer the question at all.
 
 Admission usually reads the head, but not by definition. Timestamps are supplied by the caller and the reactor does not re-stamp them, so an offline or queued client can submit an action timestamped below operations already stored. An action at or above every timestamp in its read-set streams is at the head and a head read is correct; below them, admission takes the same walk a replay takes.
 

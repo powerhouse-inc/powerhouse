@@ -425,6 +425,12 @@ async function initServer(
       logger.info(`Reactor maxSkipThreshold set to ${maxSkipThreshold}`);
     }
 
+    // if true, the reactor will use the DCB's decision model (and NOT use the meta cache)
+    const documentDecisions = process.env.REACTOR_DOCUMENT_DECISIONS === "true";
+    if (documentDecisions) {
+      logger.info("Reactor document decisions enabled");
+    }
+
     const reactorBuilder = new ReactorBuilder()
       .withEventBus(new EventBus())
       .withKysely(baseKysely);
@@ -450,7 +456,15 @@ async function initServer(
 
     applySwitchboardReactorDefaults(reactorBuilder, clientBuilder, {
       documentModels: [...documentModels, ...vetraDocumentModels],
-      executorConfig: hasSkipThreshold ? { maxSkipThreshold } : undefined,
+      executorConfig:
+        hasSkipThreshold || documentDecisions
+          ? {
+              ...(hasSkipThreshold ? { maxSkipThreshold } : {}),
+              ...(documentDecisions
+                ? { featureFlags: { documentDecisions: true } }
+                : {}),
+            }
+          : undefined,
       documentModelLoader:
         httpLoader && dynamicModelLoading
           ? httpLoader.documentModelLoader

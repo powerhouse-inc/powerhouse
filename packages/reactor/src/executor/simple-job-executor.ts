@@ -30,15 +30,22 @@ import { yieldToMain } from "../shared/utils.js";
 import type { SignatureVerificationHandler } from "../signer/types.js";
 import {
   AppendConditionFailedError,
+  type AppendCondition,
   type IOperationStore,
 } from "../storage/interfaces.js";
 import { reshuffleByTimestamp } from "../utils/reshuffle.js";
+import { buildDecisionModel } from "../decision/build-decision-model.js";
+import { documentDecisionModel } from "../decision/document-decision-model.js";
 import { DocumentActionHandler } from "./document-action-handler.js";
 import type { ExecutionStores, IExecutionScope } from "./execution-scope.js";
 import { DefaultExecutionScope } from "./execution-scope.js";
 import type { IJobExecutor } from "./interfaces.js";
 import { SignatureVerifier } from "./signature-verifier.js";
-import type { JobExecutorConfig, JobResult } from "./types.js";
+import type {
+  JobExecutorConfig,
+  JobResult,
+  ReactorFeatureFlags,
+} from "./types.js";
 import { buildErrorResult } from "./util.js";
 import { SnapshotPosition } from "../cache/write-cache-types.js";
 
@@ -74,6 +81,7 @@ const documentScopeActions = [
  */
 export class SimpleJobExecutor implements IJobExecutor {
   private config: Required<JobExecutorConfig>;
+  private featureFlags: ReactorFeatureFlags;
   private signatureVerifierModule: SignatureVerifier;
   private documentActionHandler: DocumentActionHandler;
   private executionScope: IExecutionScope;
@@ -93,12 +101,19 @@ export class SimpleJobExecutor implements IJobExecutor {
     executionScope?: IExecutionScope,
   ) {
     this.config = {
+      featureFlags: config.featureFlags ?? {},
       maxSkipThreshold: config.maxSkipThreshold ?? MAX_SKIP_THRESHOLD,
       maxConcurrency: config.maxConcurrency ?? 1,
       jobTimeoutMs: config.jobTimeoutMs ?? 30000,
       retryBaseDelayMs: config.retryBaseDelayMs ?? 100,
       retryMaxDelayMs: config.retryMaxDelayMs ?? 5000,
       yieldDeadlineMs: config.yieldDeadlineMs ?? 50,
+    };
+
+    // Resolved separately so reads are plain booleans; the config keeps what
+    // the caller passed, because that is what crosses to a pooled worker.
+    this.featureFlags = {
+      documentDecisions: config.featureFlags?.documentDecisions ?? false,
     };
     this.signatureVerifierModule = new SignatureVerifier(signatureVerifier);
     this.documentActionHandler = new DocumentActionHandler(
@@ -406,28 +421,82 @@ export class SimpleJobExecutor implements IJobExecutor {
         };
       }>;
     }
-  > {
-    let docMeta;
-    try {
-      docMeta = await stores.documentMetaCache.getDocumentMeta(
-        job.documentId,
-        job.branch,
-        signal,
-      );
-    } catch (error) {
-      return buildErrorResult(
-        job,
-        error instanceof Error ? error : new Error(String(error)),
-        startTime,
-      );
-    }
+    > {
+    // append conditions are used iff the decision model flag is on
+    let appendCondition: AppendCondition | undefined;
+    let documentVersion: number | undefined;
 
-    if (docMeta.state.isDeleted) {
-      return buildErrorResult(
-        job,
-        new DocumentDeletedError(job.documentId, docMeta.state.deletedAtUtcIso),
-        startTime,
+    if (this.featureFlags.documentDecisions) {
+      const target = { documentId: job.documentId, branch: job.branch };
+      const definition = documentDecisionModel(target);
+
+      let built;
+      try {
+        built = await buildDecisionModel(
+          stores.writeCache,
+          () => definition,
+          target,
+          signal,
+        );
+      } catch (error) {
+        return buildErrorResult(
+          job,
+          error instanceof Error ? error : new Error(String(error)),
+          startTime,
+        );
+      }
+
+      const decision = definition.decide(
+        built.model,
+        {
+          address: action.context?.signer?.user.address,
+          key: action.context?.signer?.app.key,
+        },
+        { verb: "execute", scope: action.scope, operation: action.type },
+        { scopeState: undefined },
       );
+
+      if (decision === "deny") {
+        return buildErrorResult(
+          job,
+          new DocumentDeletedError(
+            job.documentId,
+            built.model.document.deletedAtUtcIso,
+          ),
+          startTime,
+        );
+      }
+
+      appendCondition = built.appendCondition;
+      documentVersion = built.model.document.version;
+    } else {
+      let docMeta;
+      try {
+        docMeta = await stores.documentMetaCache.getDocumentMeta(
+          job.documentId,
+          job.branch,
+          signal,
+        );
+      } catch (error) {
+        return buildErrorResult(
+          job,
+          error instanceof Error ? error : new Error(String(error)),
+          startTime,
+        );
+      }
+
+      if (docMeta.state.isDeleted) {
+        return buildErrorResult(
+          job,
+          new DocumentDeletedError(
+            job.documentId,
+            docMeta.state.deletedAtUtcIso,
+          ),
+          startTime,
+        );
+      }
+
+      documentVersion = docMeta.state.version;
     }
 
     // UNDO, REDO, PRUNE, and NOOP+skip need the full operation history to
@@ -490,8 +559,7 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     let module: DocumentModelModule;
     try {
-      const moduleVersion =
-        docMeta.state.version === 0 ? undefined : docMeta.state.version;
+      const moduleVersion = documentVersion === 0 ? undefined : documentVersion;
       module = this.registry.getModule(
         document.header.documentType,
         moduleVersion,
@@ -564,6 +632,9 @@ export class SimpleJobExecutor implements IJobExecutor {
           txn.addOperations(newOperation);
         },
         signal,
+        // Undefined unless a decision was made, so the store's guard is only
+        // enforced for a write a decision stands behind.
+        appendCondition,
       );
     } catch (error) {
       this.logger.error(

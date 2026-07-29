@@ -35,9 +35,29 @@ export type JobResult = {
 };
 
 /**
+ * Enforcement the reactor performs, each off by default.
+ *
+ * A verdict reached while replaying is part of the document's history, so two
+ * reactors that share documents and disagree on these diverge. A flag is turned
+ * on for a set of reactors that sync with each other, not for one node.
+ */
+export type ReactorFeatureFlags = {
+  /**
+   * Decide whether an operation may be admitted by building a decision model
+   * over the document stream, rather than reading the deleted flag from the
+   * document meta cache. Deletion then takes effect from the deleting
+   * operation's position rather than for the whole document.
+   */
+  documentDecisions: boolean;
+};
+
+/**
  * Configuration options for the job executor
  */
 export type JobExecutorConfig = {
+  /** Feature flags; anything unset is off. */
+  featureFlags?: Partial<ReactorFeatureFlags>;
+
   /** Maximum number of conflicting operations to skip when reshuffling. */
   maxSkipThreshold?: number;
 

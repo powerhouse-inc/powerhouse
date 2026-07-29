@@ -26,7 +26,10 @@ export type SwitchboardReactorDefaultsOptions = {
   /** Defaults to true. Set false when the caller owns SIGINT handling. */
   signalHandlers?: boolean;
   /** Executor tuning. Omit to use the reactor's own defaults. */
-  executorConfig?: { maxSkipThreshold?: number };
+  executorConfig?: {
+    maxSkipThreshold?: number;
+    featureFlags?: { documentDecisions?: boolean };
+  };
   /** Wire dynamic document-model loading via HTTP. */
   documentModelLoader?: IDocumentModelLoader;
   logger?: ILogger;
@@ -81,9 +84,17 @@ export function applySwitchboardReactorDefaults(
     reactorBuilder.withSignalHandlers();
   }
 
-  if (options.executorConfig?.maxSkipThreshold !== undefined) {
+  if (
+    options.executorConfig?.maxSkipThreshold !== undefined ||
+    options.executorConfig?.featureFlags !== undefined
+  ) {
     reactorBuilder.withExecutorConfig({
-      maxSkipThreshold: options.executorConfig.maxSkipThreshold,
+      ...(options.executorConfig.maxSkipThreshold !== undefined
+        ? { maxSkipThreshold: options.executorConfig.maxSkipThreshold }
+        : {}),
+      ...(options.executorConfig.featureFlags !== undefined
+        ? { featureFlags: options.executorConfig.featureFlags }
+        : {}),
     });
   }
 
