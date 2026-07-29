@@ -1,3 +1,13 @@
+## 6.2.2-dev.25 (2026-07-29)
+
+### 🩹 Fixes
+
+- **renown:** issue credentials on one chain instead of the wallet's current one ([12c60fe40](https://github.com/powerhouse-inc/powerhouse/commit/12c60fe40))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.2-dev.24 (2026-07-29)
 
 This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.

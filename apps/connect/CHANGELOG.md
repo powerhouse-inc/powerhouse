@@ -1,3 +1,13 @@
+## 6.2.2-dev.25 (2026-07-29)
+
+### 🚀 Features
+
+- **connect:** honour connect.renown.chainId ([da05c2e4d](https://github.com/powerhouse-inc/powerhouse/commit/da05c2e4d))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.2-dev.24 (2026-07-29)
 
 This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.

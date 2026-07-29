@@ -1,3 +1,20 @@
+## 6.2.2-dev.25 (2026-07-29)
+
+### 🚀 Features
+
+- **connect:** honour connect.renown.chainId ([da05c2e4d](https://github.com/powerhouse-inc/powerhouse/commit/da05c2e4d))
+- **renown:** apply the host accent color in the privy adapter ([26935ffdd](https://github.com/powerhouse-inc/powerhouse/commit/26935ffdd))
+
+### 🩹 Fixes
+
+- **renown:** scope the bearer token to the configured chain ([a5229d9b0](https://github.com/powerhouse-inc/powerhouse/commit/a5229d9b0))
+- **renown:** issue credentials on one chain instead of the wallet's current one ([12c60fe40](https://github.com/powerhouse-inc/powerhouse/commit/12c60fe40))
+- **renown:** only offer wallets that work without a WalletConnect project id ([044514dc8](https://github.com/powerhouse-inc/powerhouse/commit/044514dc8))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.2-dev.24 (2026-07-29)
 
 This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
