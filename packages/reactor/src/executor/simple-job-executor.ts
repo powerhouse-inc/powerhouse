@@ -8,6 +8,7 @@ import type {
 import {
   baseReducerVersion,
   decide,
+  hashDocumentStateForScope,
   isUndoRedo,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
@@ -36,6 +37,7 @@ import {
 import { reshuffleByTimestamp } from "../utils/reshuffle.js";
 import { buildDecisionModel } from "../decision/build-decision-model.js";
 import { documentDecisionModel } from "../decision/document-decision-model.js";
+import { deletionVerdictsByPosition } from "../decision/deletion-verdicts.js";
 import { DocumentActionHandler } from "./document-action-handler.js";
 import type { ExecutionStores, IExecutionScope } from "./execution-scope.js";
 import { DefaultExecutionScope } from "./execution-scope.js";
@@ -46,7 +48,11 @@ import type {
   JobResult,
   ReactorFeatureFlags,
 } from "./types.js";
-import { buildErrorResult } from "./util.js";
+import {
+  buildErrorResult,
+  createOperation,
+  getNextIndexForScope,
+} from "./util.js";
 import { SnapshotPosition } from "../cache/write-cache-types.js";
 
 const MAX_SKIP_THRESHOLD = 1000;
@@ -297,6 +303,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     sourceOperations?: (Operation | undefined)[],
     sourceRemote: string = "",
     signal?: AbortSignal,
+    deniedReasons?: Array<string | undefined>,
   ): Promise<ProcessActionsResult> {
     const generatedOperations: Operation[] = [];
     const operationsWithContext: OperationWithContext[] = [];
@@ -338,6 +345,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       const action = actions[actionIndex];
       const skip = skipValues?.[actionIndex] ?? 0;
       const sourceOperation = sourceOperations?.[actionIndex];
+      const deniedReason = deniedReasons?.[actionIndex];
 
       const isDocumentAction = documentScopeActions.includes(action.type);
       const result = isDocumentAction
@@ -361,6 +369,7 @@ export class SimpleJobExecutor implements IJobExecutor {
             sourceOperation,
             sourceRemote,
             signal,
+            deniedReason,
           );
 
       const error = this.accumulateResultOrReturnError(
@@ -409,6 +418,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     sourceOperation?: Operation,
     sourceRemote: string = "",
     signal?: AbortSignal,
+    deniedReason?: string,
   ): Promise<
     JobResult & {
       operationsWithContext?: Array<{
@@ -421,12 +431,16 @@ export class SimpleJobExecutor implements IJobExecutor {
         };
       }>;
     }
-    > {
+  > {
     // append conditions are used iff the decision model flag is on
     let appendCondition: AppendCondition | undefined;
     let documentVersion: number | undefined;
 
-    if (this.featureFlags.documentDecisions) {
+    // A load's operations were already judged at their own positions.
+    const verdictAlreadyDecided =
+      this.featureFlags.documentDecisions && job.kind === "load";
+
+    if (this.featureFlags.documentDecisions && !verdictAlreadyDecided) {
       const target = { documentId: job.documentId, branch: job.branch };
       const definition = documentDecisionModel(target);
 
@@ -469,6 +483,15 @@ export class SimpleJobExecutor implements IJobExecutor {
 
       appendCondition = built.appendCondition;
       documentVersion = built.model.document.version;
+    } else if (verdictAlreadyDecided) {
+      const documentScope = await stores.writeCache.getState(
+        job.documentId,
+        "document",
+        job.branch,
+        undefined,
+        signal,
+      );
+      documentVersion = documentScope.state.document.version;
     } else {
       let docMeta;
       try {
@@ -573,29 +596,50 @@ export class SimpleJobExecutor implements IJobExecutor {
     }
 
     let updatedDocument: PHDocument;
-    try {
-      const protocolVersion = baseReducerVersion(document.header);
-      const reducerOptions = sourceOperation
-        ? {
-            skip,
-            branch: job.branch,
-            replayOptions: { operation: sourceOperation },
-            protocolVersion,
-          }
-        : { skip, branch: job.branch, protocolVersion };
-      updatedDocument = module.reducer(
-        document as PHDocument,
+
+    if (deniedReason !== undefined) {
+      // A denied operation holds only a position but does not change state.
+      const denied = createOperation(
         action,
-        undefined,
-        reducerOptions,
+        getNextIndexForScope(document, job.scope),
+        skip,
+        { documentId: job.documentId, scope: job.scope, branch: job.branch },
       );
-    } catch (error) {
-      const contextMessage = `Failed to apply action to document:\n  Action type: ${action.type}\n  Document ID: ${job.documentId}\n  Document type: ${document.header.documentType}\n  Scope: ${job.scope}\n  Original error: ${error instanceof Error ? error.message : String(error)}`;
-      const enhancedError = new Error(contextMessage);
-      if (error instanceof Error && error.stack) {
-        enhancedError.stack = `${contextMessage}\n\nOriginal stack trace:\n${error.stack}`;
+      denied.deniedReason = deniedReason;
+      denied.hash = hashDocumentStateForScope(document, job.scope);
+
+      updatedDocument = {
+        ...document,
+        operations: {
+          ...document.operations,
+          [job.scope]: [...(document.operations[job.scope] ?? []), denied],
+        },
+      };
+    } else {
+      try {
+        const protocolVersion = baseReducerVersion(document.header);
+        const reducerOptions = sourceOperation
+          ? {
+              skip,
+              branch: job.branch,
+              replayOptions: { operation: sourceOperation },
+              protocolVersion,
+            }
+          : { skip, branch: job.branch, protocolVersion };
+        updatedDocument = module.reducer(
+          document as PHDocument,
+          action,
+          undefined,
+          reducerOptions,
+        );
+      } catch (error) {
+        const contextMessage = `Failed to apply action to document:\n  Action type: ${action.type}\n  Document ID: ${job.documentId}\n  Document type: ${document.header.documentType}\n  Scope: ${job.scope}\n  Original error: ${error instanceof Error ? error.message : String(error)}`;
+        const enhancedError = new Error(contextMessage);
+        if (error instanceof Error && error.stack) {
+          enhancedError.stack = `${contextMessage}\n\nOriginal stack trace:\n${error.stack}`;
+        }
+        return buildErrorResult(job, enhancedError, startTime);
       }
-      return buildErrorResult(job, enhancedError, startTime);
     }
 
     const scope = job.scope;
@@ -743,7 +787,9 @@ export class SimpleJobExecutor implements IJobExecutor {
       // Document meta not found -- continue with load (may be a new document)
     }
 
-    if (docMeta?.state.isDeleted) {
+    // Without DCB, we reject entire load jobs. With DCB we are able to
+    // accept/deny individual operations.
+    if (docMeta?.state.isDeleted && !this.featureFlags.documentDecisions) {
       return buildErrorResult(
         job,
         new DocumentDeletedError(job.documentId, docMeta.state.deletedAtUtcIso),
@@ -928,6 +974,30 @@ export class SimpleJobExecutor implements IJobExecutor {
     const actions = reshuffledOperations.map((operation) => operation.action);
     const skipValues = reshuffledOperations.map((operation) => operation.skip);
 
+    // A deletion refuses the operations that sort after it and leaves the
+    // earlier ones alone.
+    let deniedReasons: Array<string | undefined> | undefined;
+    if (this.featureFlags.documentDecisions) {
+      try {
+        deniedReasons = await deletionVerdictsByPosition(
+          job.documentId,
+          scope,
+          job.branch,
+          reshuffledOperations,
+          stores.writeCache,
+          stores.operationStore,
+          signal,
+        );
+      } catch (error) {
+        return {
+          job,
+          success: false,
+          error: error instanceof Error ? error : new Error(String(error)),
+          duration: Date.now() - startTime,
+        };
+      }
+    }
+
     const effectiveSourceRemote =
       skipCount > 0
         ? "" // reshuffle: send to all remotes including source
@@ -943,6 +1013,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       reshuffledOperations,
       effectiveSourceRemote,
       signal,
+      deniedReasons,
     );
 
     if (!result.success) {
