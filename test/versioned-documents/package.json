@@ -49,7 +49,7 @@
       "browser": "./dist/browser/processors/index.js",
       "node": "./dist/node/processors/index.mjs"
     },
-    "./manifest": "./dist/powerhouse.manifest.json",
+    "./manifest": "./powerhouse.manifest.json",
     "./style.css": "./dist/style.css"
   },
   "sideEffects": false,
