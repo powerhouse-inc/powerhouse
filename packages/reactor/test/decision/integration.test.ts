@@ -42,6 +42,7 @@ const definition = (
   projections: {
     document: {
       decidingActions: [],
+      apply: (document) => document,
       query: {
         documentId: target.documentId,
         branch: target.branch,
@@ -50,6 +51,7 @@ const definition = (
     },
     auth: {
       decidingActions: [],
+      apply: (document) => document,
       query: {
         documentId: target.documentId,
         branch: target.branch,

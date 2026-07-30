@@ -13,6 +13,7 @@ import { mergeByPosition } from "./merged-order.js";
 export type WalkStream = {
   streamKey: string;
   document: PHDocument;
+  apply: ApplyOperation;
   /** The stream's stored operations. Order and skips are resolved internally. */
   operations: Operation[];
 };
@@ -43,7 +44,6 @@ export type WalkPosition = {
  */
 export function* walkByPosition(
   streams: WalkStream[],
-  apply: ApplyOperation,
 ): Generator<WalkPosition> {
   const merged = mergeByPosition(
     streams.map((stream) => ({
@@ -63,11 +63,14 @@ export function* walkByPosition(
       continue;
     }
 
+    const stream = streams.find(
+      (candidate) => candidate.streamKey === streamKey,
+    );
     const before = states.get(streamKey);
-    if (before === undefined) {
+    if (before === undefined || stream === undefined) {
       throw new Error(`No state for stream ${streamKey}`);
     }
 
-    states.set(streamKey, apply(before, operation));
+    states.set(streamKey, stream.apply(before, operation));
   }
 }

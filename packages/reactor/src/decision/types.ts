@@ -1,4 +1,8 @@
 import type {
+  Operation,
+  PHDocument,
+} from "@powerhousedao/shared/document-model";
+import type {
   AuthDecision,
   AuthRequest,
   AuthSubject,
@@ -36,12 +40,16 @@ export type Projection<M> = {
    * are filtered to these, so anything left out is invisible to a decision.
    */
   decidingActions: string[];
+
+  /** Applies one of this stream's operations while deciding. */
+  apply: (document: PHDocument, operation: Operation) => PHDocument;
 };
 
-/** A stream a model reads, with the actions in it that matter. */
+/** A stream a model reads, with what it needs to be walked. */
 export type ReadStream = {
   query: StreamQuery;
   decidingActions: string[];
+  apply: (document: PHDocument, operation: Operation) => PHDocument;
 };
 
 /** Projections plus a decision function over the built model. */

@@ -143,6 +143,7 @@ export function staticReadSet<M>(definition: DecisionModel<M>): ReadStream[] {
     streams.push({
       query: projection.query,
       decidingActions: projection.decidingActions,
+      apply: projection.apply,
     });
   }
 

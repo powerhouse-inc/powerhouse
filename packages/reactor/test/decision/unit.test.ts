@@ -69,6 +69,7 @@ function staticDefinition(t: DecisionTarget): DecisionModel<TestModel> {
     projections: {
       document: {
         decidingActions: [],
+        apply: (document) => document,
         query: {
           documentId: t.documentId,
           branch: t.branch,
@@ -77,6 +78,7 @@ function staticDefinition(t: DecisionTarget): DecisionModel<TestModel> {
       },
       auth: {
         decidingActions: [],
+        apply: (document) => document,
         query: { documentId: t.documentId, branch: t.branch, scope: "auth" },
       },
     },
@@ -208,6 +210,7 @@ describe("buildDecisionModel", () => {
       projections: {
         document: {
           decidingActions: [],
+          apply: (document) => document,
           query: {
             documentId: t.documentId,
             branch: t.branch,
@@ -216,10 +219,12 @@ describe("buildDecisionModel", () => {
         },
         auth: {
           decidingActions: [],
+          apply: (document) => document,
           query: { documentId: t.documentId, branch: t.branch, scope: "auth" },
         },
         groups: {
           decidingActions: [],
+          apply: (document) => document,
           query: (partial) => {
             seenPartial = partial;
             return [{ documentId: "group-1", branch: "main", scope: "global" }];
@@ -257,6 +262,7 @@ describe("buildDecisionModel", () => {
       projections: {
         document: {
           decidingActions: [],
+          apply: (document) => document,
           query: {
             documentId: t.documentId,
             branch: t.branch,
@@ -265,10 +271,12 @@ describe("buildDecisionModel", () => {
         },
         auth: {
           decidingActions: [],
+          apply: (document) => document,
           query: { documentId: t.documentId, branch: t.branch, scope: "auth" },
         },
         groups: {
           decidingActions: [],
+          apply: (document) => document,
           query: () => [
             { documentId: t.documentId, branch: t.branch, scope: "auth" },
           ],
@@ -339,6 +347,7 @@ describe("buildDecisionModel", () => {
       projections: {
         document: {
           decidingActions: [],
+          apply: (document) => document,
           query: {
             documentId: t.documentId,
             branch: t.branch,
@@ -347,10 +356,12 @@ describe("buildDecisionModel", () => {
         },
         auth: {
           decidingActions: [],
+          apply: (document) => document,
           query: { documentId: t.documentId, branch: t.branch, scope: "auth" },
         },
         groups: {
           decidingActions: [],
+          apply: (document) => document,
           query: (): StreamQuery[] => [
             { documentId: "group-1", branch: "main", scope: "global" },
             { documentId: "group-2", branch: "main", scope: "global" },

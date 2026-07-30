@@ -63,21 +63,20 @@ function indexed(operations: Operation[]): Operation[] {
 describe("walkByPosition", () => {
   it("interleaves two streams by position", () => {
     const steps = [
-      ...walkByPosition(
-        [
-          {
-            streamKey: "a",
-            document: doc(),
-            operations: indexed([op("a1", 1), op("a2", 3)]),
-          },
-          {
-            streamKey: "b",
-            document: doc(),
-            operations: indexed([op("b1", 2), op("b2", 4)]),
-          },
-        ],
-        append,
-      ),
+      ...walkByPosition([
+        {
+          streamKey: "a",
+          document: doc(),
+          operations: indexed([op("a1", 1), op("a2", 3)]),
+          apply: append,
+        },
+        {
+          streamKey: "b",
+          document: doc(),
+          operations: indexed([op("b1", 2), op("b2", 4)]),
+          apply: append,
+        },
+      ]),
     ];
 
     expect(steps.map((s) => s.operation.action.id)).toEqual([
@@ -90,21 +89,20 @@ describe("walkByPosition", () => {
 
   it("reports each stream as it stood before the operation", () => {
     const steps = [
-      ...walkByPosition(
-        [
-          {
-            streamKey: "a",
-            document: doc(),
-            operations: indexed([op("a1", 1), op("a2", 3)]),
-          },
-          {
-            streamKey: "b",
-            document: doc(),
-            operations: indexed([op("b1", 2)]),
-          },
-        ],
-        append,
-      ),
+      ...walkByPosition([
+        {
+          streamKey: "a",
+          document: doc(),
+          operations: indexed([op("a1", 1), op("a2", 3)]),
+          apply: append,
+        },
+        {
+          streamKey: "b",
+          document: doc(),
+          operations: indexed([op("b1", 2)]),
+          apply: append,
+        },
+      ]),
     ];
 
     // At a2 the earlier operations have been applied, a2 itself has not.
@@ -124,10 +122,9 @@ describe("walkByPosition", () => {
     ] as Operation[];
 
     const steps = [
-      ...walkByPosition(
-        [{ streamKey: "a", document: doc(), operations }],
-        append,
-      ),
+      ...walkByPosition([
+        { streamKey: "a", document: doc(), operations, apply: append },
+      ]),
     ];
 
     expect(steps.map((s) => s.operation.action.id)).toEqual(["new1", "new2"]);
@@ -141,10 +138,9 @@ describe("walkByPosition", () => {
     ]);
 
     const steps = [
-      ...walkByPosition(
-        [{ streamKey: "a", document: doc(), operations }],
-        append,
-      ),
+      ...walkByPosition([
+        { streamKey: "a", document: doc(), operations, apply: append },
+      ]),
     ];
 
     expect(steps.map((s) => s.operation.action.id)).toEqual(["a1", "a2", "a3"]);
@@ -200,14 +196,19 @@ describe("walkByPosition", () => {
 
 describe("staticReadSet", () => {
   it("names each statically-queried stream and the actions that matter in it", () => {
+    const readSet = staticReadSet(
+      documentDecisionModel({ documentId: "d", branch: "main" }),
+    );
+
     expect(
-      staticReadSet(documentDecisionModel({ documentId: "d", branch: "main" })),
+      readSet.map(({ query, decidingActions }) => ({ query, decidingActions })),
     ).toEqual([
       {
         query: { documentId: "d", branch: "main", scope: "document" },
         decidingActions: ["DELETE_DOCUMENT"],
       },
     ]);
+    expect(typeof readSet[0].apply).toBe("function");
   });
 
   it("leaves out a derived query, whose streams are not known yet", () => {
@@ -215,6 +216,7 @@ describe("staticReadSet", () => {
       projections: {
         a: {
           decidingActions: ["X"],
+          apply: (document: PHDocument) => document,
           query: { documentId: "d", branch: "main", scope: "global" },
         },
         b: { decidingActions: ["Y"], query: () => [] },
