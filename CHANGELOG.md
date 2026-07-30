@@ -1,3 +1,19 @@
+## 6.2.2-dev.28 (2026-07-30)
+
+### 🚀 Features
+
+- re-evaluation and expanding the decision model interface for future compat ([9deba43a6](https://github.com/powerhouse-inc/powerhouse/commit/9deba43a6))
+- **reactor:** added an operation rejection reason in the case that auth rejects the action, and include it in sync ([a39e9307b](https://github.com/powerhouse-inc/powerhouse/commit/a39e9307b))
+- **reactor:** adding a walk stream generator for the decision model ([cf6e42d60](https://github.com/powerhouse-inc/powerhouse/commit/cf6e42d60))
+- **reactor:** plugging in the first decision model ([27e9b2772](https://github.com/powerhouse-inc/powerhouse/commit/27e9b2772))
+- **reactor:** now that we have DCB primitives, we can add positional deletion ([ccb9cfd99](https://github.com/powerhouse-inc/powerhouse/commit/ccb9cfd99))
+- **reactor-browser:** add IReactorBrowserClient and a light GraphQL client ([#2893](https://github.com/powerhouse-inc/powerhouse/pull/2893))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.2.2-dev.27 (2026-07-30)
 
 ### 🩹 Fixes

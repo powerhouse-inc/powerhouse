@@ -1,3 +1,16 @@
+## 6.2.2-dev.28 (2026-07-30)
+
+### 🚀 Features
+
+- **reactor-browser:** add IReactorBrowserClient and a light GraphQL client ([#2893](https://github.com/powerhouse-inc/powerhouse/pull/2893))
+- **reactor:** plugging in the first decision model ([27e9b2772](https://github.com/powerhouse-inc/powerhouse/commit/27e9b2772))
+- **reactor:** added an operation rejection reason in the case that auth rejects the action, and include it in sync ([a39e9307b](https://github.com/powerhouse-inc/powerhouse/commit/a39e9307b))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.2.2-dev.27 (2026-07-30)
 
 ### 🩹 Fixes
