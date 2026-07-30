@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import {
   getEmbeddedConnectedWallet,
+  useCreateWallet,
   useLogin,
   useLoginWithOAuth,
   useLogout,
@@ -11,6 +12,22 @@ import {
 import type { PrivyCore, SignTypedDataParams } from "./adapter.js";
 
 type Hex = `0x${string}`;
+
+// PrivyErrorCode is declared in the types but not exported at runtime, so match
+// the code by value.
+const EMBEDDED_WALLET_ALREADY_EXISTS = "embedded_wallet_already_exists";
+
+// onError is typed as the bare code, but Privy's error class carries it on
+// `privyErrorCode`, so accept either rather than trusting toString().
+function isAlreadyExistsError(error: unknown): boolean {
+  if (error === EMBEDDED_WALLET_ALREADY_EXISTS) return true;
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    (error as { privyErrorCode?: unknown }).privyErrorCode ===
+      EMBEDDED_WALLET_ALREADY_EXISTS
+  );
+}
 
 interface PrivyAdapterBridgeProps {
   core: PrivyCore;
@@ -23,6 +40,13 @@ export function PrivyAdapterBridge({ core }: PrivyAdapterBridgeProps) {
   const { wallets } = useWallets();
   const { signTypedData } = useSignTypedData();
   const { logout } = useLogout();
+  const { createWallet } = useCreateWallet({
+    // A wallet that already exists still arrives through useWallets(), so that
+    // code is not a login failure.
+    onError: (error) => {
+      if (!isAlreadyExistsError(error)) core.handleLoginError(error);
+    },
+  });
   const { login: openLoginModal } = useLogin({
     onError: (error) => core.handleLoginError(error),
   });
@@ -34,10 +58,25 @@ export function PrivyAdapterBridge({ core }: PrivyAdapterBridgeProps) {
 
   // Privy returns fresh function references each render. A ref keeps the bind
   // stable so we bind once per core instead of re-binding every render.
-  const fnsRef = useRef({ openLoginModal, initOAuth, logout, signTypedData });
+  const fnsRef = useRef({
+    openLoginModal,
+    initOAuth,
+    logout,
+    signTypedData,
+    createWallet,
+  });
   useEffect(() => {
-    fnsRef.current = { openLoginModal, initOAuth, logout, signTypedData };
-  }, [openLoginModal, initOAuth, logout, signTypedData]);
+    fnsRef.current = {
+      openLoginModal,
+      initOAuth,
+      logout,
+      signTypedData,
+      createWallet,
+    };
+  }, [openLoginModal, initOAuth, logout, signTypedData, createWallet]);
+
+  // One attempt per authenticated session, reset on logout.
+  const creatingWalletRef = useRef(false);
 
   useEffect(() => {
     return core.bind({
@@ -60,10 +99,21 @@ export function PrivyAdapterBridge({ core }: PrivyAdapterBridgeProps) {
     if (!ready) return;
     if (!authenticated) {
       core.clearSession();
+      creatingWalletRef.current = false;
       return;
     }
     const embedded = getEmbeddedConnectedWallet(wallets);
-    if (embedded) core.syncFromEmbeddedWallet(embedded);
+    if (embedded) {
+      core.syncFromEmbeddedWallet(embedded);
+      return;
+    }
+    // `createOnLogin` only fires for Privy's own modal, so initOAuth logins
+    // reach here with no wallet. Privy's docs prescribe creating it manually.
+    if (creatingWalletRef.current) return;
+    creatingWalletRef.current = true;
+    // Failures are reported through useCreateWallet's onError; this only keeps
+    // the rejection from surfacing as an unhandled one.
+    void fnsRef.current.createWallet().catch(() => undefined);
   }, [core, ready, authenticated, wallets]);
 
   return null;
