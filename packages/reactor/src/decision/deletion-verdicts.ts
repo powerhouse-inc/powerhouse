@@ -62,6 +62,9 @@ export async function deletionVerdictsByPosition(
     return operations.map(() => undefined);
   }
 
+  // Dedupe so we an op re-evaluation cannot refuse itself.
+  const judged = new Set(operations.map((operation) => operation.id));
+
   // Cheap and indexed. A document that has never been deleted -- nearly all of
   // them -- costs one query per read stream and stops here.
   const readStreams = await Promise.all(
@@ -77,7 +80,7 @@ export async function deletionVerdictsByPosition(
           undefined,
           signal,
         )
-      ).results,
+      ).results.filter((operation) => !judged.has(operation.id)),
     })),
   );
 

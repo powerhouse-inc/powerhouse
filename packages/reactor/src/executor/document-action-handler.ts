@@ -34,6 +34,7 @@ interface RelationshipPostWriteArgs {
   input: RelationshipActionShape;
   job: Job;
 }
+import { hashDocumentStateForScope } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import type { IOperationIndexTxn } from "../cache/operation-index-types.js";
 import { DriveCollectionId } from "../cache/operation-index-types.js";
@@ -72,6 +73,7 @@ export class DocumentActionHandler {
     sourceRemote: string = "",
     signal?: AbortSignal,
     verdictAlreadyDecided = false,
+    deniedReason?: string,
   ): Promise<
     JobResult & {
       operationsWithContext?: Array<{
@@ -85,6 +87,20 @@ export class DocumentActionHandler {
       }>;
     }
   > {
+    if (deniedReason !== undefined) {
+      return this.writeDenied(
+        job,
+        action,
+        startTime,
+        indexTxn,
+        stores,
+        skip,
+        sourceRemote,
+        deniedReason,
+        signal,
+      );
+    }
+
     switch (action.type) {
       case "CREATE_DOCUMENT":
         return this.executeCreate(
@@ -104,6 +120,7 @@ export class DocumentActionHandler {
           startTime,
           indexTxn,
           stores,
+          skip,
           sourceRemote,
           signal,
           verdictAlreadyDecided,
@@ -157,6 +174,106 @@ export class DocumentActionHandler {
           startTime,
         );
     }
+  }
+
+  /** A refused operation holds a position in the stream but changes nothing. */
+  private async writeDenied(
+    job: Job,
+    action: Action,
+    startTime: number,
+    indexTxn: IOperationIndexTxn,
+    stores: ExecutionStores,
+    skip: number,
+    sourceRemote: string,
+    deniedReason: string,
+    signal?: AbortSignal,
+  ): Promise<RelationshipJobResult> {
+    let document: PHDocument;
+    try {
+      document = await stores.writeCache.getState(
+        job.documentId,
+        job.scope,
+        job.branch,
+        undefined,
+        signal,
+      );
+    } catch (error) {
+      return buildErrorResult(
+        job,
+        error instanceof Error ? error : new Error(String(error)),
+        startTime,
+      );
+    }
+
+    let operation = createOperation(
+      action,
+      getNextIndexForScope(document, job.scope),
+      skip,
+      { documentId: job.documentId, scope: job.scope, branch: job.branch },
+    );
+    operation.deniedReason = deniedReason;
+    operation.hash = hashDocumentStateForScope(document, job.scope);
+
+    const writeResult = await this.writeOperationToStore(
+      job.documentId,
+      document.header.documentType,
+      job.scope,
+      job.branch,
+      operation,
+      job,
+      startTime,
+      stores,
+      signal,
+    );
+    if (!Array.isArray(writeResult)) {
+      return writeResult;
+    }
+    operation = writeResult[0];
+
+    updateDocumentRevision(document, job.scope, operation.index);
+
+    document.operations = {
+      ...document.operations,
+      [job.scope]: [...(document.operations[job.scope] ?? []), operation],
+    };
+
+    stores.writeCache.putState(
+      job.documentId,
+      job.scope,
+      job.branch,
+      operation.index,
+      document,
+      SnapshotPosition.Head,
+    );
+
+    indexTxn.write([
+      {
+        ...operation,
+        documentId: job.documentId,
+        documentType: document.header.documentType,
+        branch: job.branch,
+        scope: job.scope,
+        sourceRemote,
+      },
+    ]);
+
+    stores.documentMetaCache.putDocumentMeta(job.documentId, job.branch, {
+      state: document.state.document,
+      documentType: document.header.documentType,
+      documentScopeRevision: operation.index + 1,
+    });
+
+    return buildSuccessResult(
+      job,
+      operation,
+      job.documentId,
+      document.header.documentType,
+      JSON.stringify({
+        header: document.header,
+        document: document.state.document,
+      }),
+      startTime,
+    );
   }
 
   private async executeCreate(
@@ -280,6 +397,7 @@ export class DocumentActionHandler {
     startTime: number,
     indexTxn: IOperationIndexTxn,
     stores: ExecutionStores,
+    skip: number = 0,
     sourceRemote: string = "",
     signal?: AbortSignal,
     verdictAlreadyDecided = false,
@@ -340,7 +458,7 @@ export class DocumentActionHandler {
 
     const nextIndex = getNextIndexForScope(document, job.scope);
 
-    let operation = createOperation(action, nextIndex, 0, {
+    let operation = createOperation(action, nextIndex, skip, {
       documentId,
       scope: job.scope,
       branch: job.branch,

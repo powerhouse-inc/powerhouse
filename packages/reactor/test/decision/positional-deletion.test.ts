@@ -1,4 +1,5 @@
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
+import type { Operation } from "@powerhousedao/shared/document-model";
 import {
   addModule,
   garbageCollect,
@@ -20,6 +21,7 @@ import { createDocModelDocument } from "../factories.js";
 describe("positional deletion", () => {
   let source: IReactor;
   let target: IReactor;
+  let earlierSource: IReactor;
 
   async function build(documentDecisions: boolean): Promise<IReactor> {
     return new ReactorBuilder()
@@ -39,6 +41,7 @@ describe("positional deletion", () => {
   afterEach(() => {
     source?.kill();
     target?.kill();
+    earlierSource?.kill();
     vi.useRealTimers();
   });
 
@@ -349,4 +352,137 @@ describe("positional deletion", () => {
       ]);
     },
   );
+
+  /**
+   * A second delete, timestamped earlier still, has to retract a tail whose
+   * indices already have a gap in them, so the skip it carries has to span the
+   * distance rather than count the operations.
+   */
+  it("retracts a tail across the gap an earlier pass left", async () => {
+    source = await build(true);
+    earlierSource = await build(true);
+    target = await build(true);
+
+    const document = createDocModelDocument({ id: "gap-retraction-doc" });
+    const created = await source.create(document);
+    const createToken = await settle(source, created.id);
+    const docId = document.header.id;
+
+    const createOps = await source.getOperations(
+      docId,
+      { branch: "main", scopes: ["document"] },
+      undefined,
+      undefined,
+      createToken,
+    );
+    for (const replica of [earlierSource, target]) {
+      const load = await replica.load(
+        docId,
+        "main",
+        createOps.document.results,
+      );
+      await settle(replica, load.id);
+    }
+
+    async function deleteOperations(
+      replica: IReactor,
+      at: string,
+    ): Promise<Operation[]> {
+      vi.setSystemTime(new Date(at));
+      const job = await replica.deleteDocument(docId);
+      const token = await settle(replica, job.id);
+      const ops = await replica.getOperations(
+        docId,
+        { branch: "main", scopes: ["document"] },
+        undefined,
+        undefined,
+        token,
+      );
+      return ops.document.results.filter(
+        (op) => op.action.type === "DELETE_DOCUMENT",
+      );
+    }
+
+    const earlierDelete = await deleteOperations(
+      earlierSource,
+      "2026-01-01T00:00:00.200Z",
+    );
+    const laterDelete = await deleteOperations(
+      source,
+      "2026-01-01T00:00:01.000Z",
+    );
+
+    // The target writes on either side of the later delete.
+    vi.setSystemTime(new Date("2026-01-01T00:00:00.500Z"));
+    const beforeJob = await target.execute(docId, "main", [
+      addModule({ id: "before", name: "before" }),
+    ]);
+    await settle(target, beforeJob.id);
+
+    vi.setSystemTime(new Date("2026-01-01T00:00:20.000Z"));
+    const afterJob = await target.execute(docId, "main", [
+      addModule({ id: "after", name: "after" }),
+    ]);
+    await settle(target, afterJob.id);
+
+    // The later delete refuses only "after", leaving its superseded copy at an
+    // index the effective stream no longer visits.
+    const loadLater = await target.load(docId, "main", laterDelete);
+    await settle(target, loadLater.id);
+
+    const afterFirstPass = await target.getOperations(docId, {
+      branch: "main",
+      scopes: ["global"],
+    });
+    expect(
+      garbageCollect(sortOperations([...afterFirstPass.global.results])).map(
+        (op) => op.index,
+      ),
+    ).toEqual([0, 2]);
+
+    // The earlier delete now refuses both, so the retraction starts at index 0
+    // and has to reach across the gap at index 1.
+    const loadEarlier = await target.load(docId, "main", earlierDelete);
+    await settle(target, loadEarlier.id);
+
+    const stored = (
+      await target.getOperations(docId, { branch: "main", scopes: ["global"] })
+    ).global.results;
+
+    // Counting the retracted operations instead of spanning the distance would
+    // leave "before" standing beside its own replacement, applying it twice.
+    expect(
+      garbageCollect(sortOperations([...stored])).map((op) => ({
+        id: (op.action.input as { id?: string }).id,
+        denied: op.deniedReason !== undefined,
+      })),
+    ).toEqual([
+      { id: "before", denied: true },
+      { id: "after", denied: true },
+    ]);
+
+    // Two operations were retracted, but they spanned three indices.
+    expect(stored.find((op) => op.skip > 1)!.skip).toBe(3);
+
+    // The reshuffle put the earlier delete first, which refuses the later one,
+    // and the copy the reshuffle replaced is no longer in effect.
+    const docScope = (
+      await target.getOperations(docId, {
+        branch: "main",
+        scopes: ["document"],
+      })
+    ).document.results;
+
+    expect(
+      garbageCollect(sortOperations([...docScope])).map((op) => ({
+        type: op.action.type,
+        denied: op.deniedReason !== undefined,
+      })),
+    ).toEqual([
+      { type: "CREATE_DOCUMENT", denied: false },
+      { type: "UPGRADE_DOCUMENT", denied: false },
+      { type: "DELETE_DOCUMENT", denied: false },
+      { type: "DELETE_DOCUMENT", denied: true },
+    ]);
+  });
 });

@@ -363,6 +363,7 @@ export class SimpleJobExecutor implements IJobExecutor {
             sourceRemote,
             signal,
             this.featureFlags.documentDecisions && job.kind === "load",
+            deniedReason,
           )
         : await this.executeRegularAction(
             job,
