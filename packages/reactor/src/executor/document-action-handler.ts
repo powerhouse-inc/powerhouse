@@ -71,6 +71,7 @@ export class DocumentActionHandler {
     skip: number = 0,
     sourceRemote: string = "",
     signal?: AbortSignal,
+    verdictAlreadyDecided = false,
   ): Promise<
     JobResult & {
       operationsWithContext?: Array<{
@@ -105,6 +106,7 @@ export class DocumentActionHandler {
           stores,
           sourceRemote,
           signal,
+          verdictAlreadyDecided,
         );
       case "UPGRADE_DOCUMENT":
         return this.executeUpgrade(
@@ -116,6 +118,7 @@ export class DocumentActionHandler {
           skip,
           sourceRemote,
           signal,
+          verdictAlreadyDecided,
         );
       case "ADD_RELATIONSHIP":
         return this.executeAddRelationship(
@@ -279,6 +282,7 @@ export class DocumentActionHandler {
     stores: ExecutionStores,
     sourceRemote: string = "",
     signal?: AbortSignal,
+    verdictAlreadyDecided = false,
   ): Promise<
     JobResult & {
       operationsWithContext?: Array<{
@@ -323,8 +327,10 @@ export class DocumentActionHandler {
       );
     }
 
+    // DCB allows positional deletion, so we may have already determined the
+    // verdict
     const documentState = document.state.document;
-    if (documentState.isDeleted) {
+    if (documentState.isDeleted && !verdictAlreadyDecided) {
       return buildErrorResult(
         job,
         new DocumentDeletedError(documentId, documentState.deletedAtUtcIso),
@@ -416,6 +422,7 @@ export class DocumentActionHandler {
     skip: number = 0,
     sourceRemote: string = "",
     signal?: AbortSignal,
+    verdictAlreadyDecided = false,
   ): Promise<
     JobResult & {
       operationsWithContext?: Array<{
@@ -463,8 +470,10 @@ export class DocumentActionHandler {
       );
     }
 
+    // DCB allows for positional deletion, so the verdict may have already been
+    // decided
     const documentState = document.state.document;
-    if (documentState.isDeleted) {
+    if (documentState.isDeleted && !verdictAlreadyDecided) {
       return buildErrorResult(
         job,
         new DocumentDeletedError(documentId, documentState.deletedAtUtcIso),

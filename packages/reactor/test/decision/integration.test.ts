@@ -41,6 +41,7 @@ const definition = (
 ): DecisionModel<AuthDocumentModel> => ({
   projections: {
     document: {
+      decidingActions: [],
       query: {
         documentId: target.documentId,
         branch: target.branch,
@@ -48,6 +49,7 @@ const definition = (
       },
     },
     auth: {
+      decidingActions: [],
       query: {
         documentId: target.documentId,
         branch: target.branch,
@@ -55,6 +57,7 @@ const definition = (
       },
     },
   },
+  judgesScope: () => true,
   decide: (model) => (model.document.isDeleted ? "deny" : "allow"),
 });
 

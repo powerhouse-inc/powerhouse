@@ -1,5 +1,9 @@
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
-import { addModule } from "@powerhousedao/shared/document-model";
+import {
+  addModule,
+  garbageCollect,
+  sortOperations,
+} from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
@@ -253,5 +257,208 @@ describe("positional deletion", () => {
     );
 
     expect(verdicts).toEqual([undefined, undefined, "document deleted"]);
+  });
+
+  it.each([false, true])(
+    "re-judges committed operations when a delete arrives late (flag %s)",
+    async (documentDecisions) => {
+      source = await build(documentDecisions);
+      target = await build(documentDecisions);
+
+      const document = createDocModelDocument({ id: "late-delete-doc" });
+      const created = await source.create(document);
+      const createToken = await settle(source, created.id);
+      const docId = document.header.id;
+
+      const createOps = await source.getOperations(
+        docId,
+        { branch: "main", scopes: ["document"] },
+        undefined,
+        undefined,
+        createToken,
+      );
+      const loadCreate = await target.load(
+        docId,
+        "main",
+        createOps.document.results,
+      );
+      await settle(target, loadCreate.id);
+
+      // The source deletes early, and does not tell the target yet.
+      vi.advanceTimersByTime(1000);
+      const deleteJob = await source.deleteDocument(docId);
+      const deleteToken = await settle(source, deleteJob.id);
+
+      // The target writes one operation before that timestamp and one after.
+      vi.setSystemTime(new Date("2026-01-01T00:00:00.500Z"));
+      const beforeJob = await target.execute(docId, "main", [
+        addModule({ id: "before", name: "before" }),
+      ]);
+      await settle(target, beforeJob.id);
+
+      vi.setSystemTime(new Date("2026-01-01T00:00:20.000Z"));
+      const afterJob = await target.execute(docId, "main", [
+        addModule({ id: "after", name: "after" }),
+      ]);
+      await settle(target, afterJob.id);
+
+      // Now the delete arrives.
+      const deleteOps = await source.getOperations(
+        docId,
+        { branch: "main", scopes: ["document"] },
+        undefined,
+        undefined,
+        deleteToken,
+      );
+      const loadDelete = await target.load(
+        docId,
+        "main",
+        deleteOps.document.results.filter(
+          (op) => op.action.type === "DELETE_DOCUMENT",
+        ),
+      );
+      await settle(target, loadDelete.id);
+
+      const globalOps = await target.getOperations(docId, {
+        branch: "main",
+        scopes: ["global"],
+      });
+
+      // The stored rows keep the superseded copy; the effective stream is what
+      // a rebuild sees.
+      const effective = garbageCollect(
+        sortOperations([...globalOps.global.results]),
+      ).map((op) => ({
+        id: (op.action.input as { id?: string }).id,
+        denied: op.deniedReason !== undefined,
+      }));
+
+      if (!documentDecisions) {
+        // Without positional verdicts a delete says nothing about operations
+        // already committed, whenever they were timestamped.
+        expect(effective).toEqual([
+          { id: "before", denied: false },
+          { id: "after", denied: false },
+        ]);
+        return;
+      }
+
+      expect(effective).toEqual([
+        { id: "before", denied: false },
+        { id: "after", denied: true },
+      ]);
+    },
+  );
+
+  /**
+   * A pass leaves an index gap behind: what stood before the change keeps its
+   * index while the re-appended tail goes on the end. A second pass has to span
+   * that gap, which a count of the operations being retracted does not.
+   */
+  it("spans an index gap when a second pass re-appends", async () => {
+    source = await build(true);
+    target = await build(true);
+
+    const document = createDocModelDocument({ id: "twice-doc" });
+    const created = await source.create(document);
+    const createToken = await settle(source, created.id);
+    const docId = document.header.id;
+
+    const createOps = await source.getOperations(
+      docId,
+      { branch: "main", scopes: ["document"] },
+      undefined,
+      undefined,
+      createToken,
+    );
+    await settle(
+      target,
+      (await target.load(docId, "main", createOps.document.results)).id,
+    );
+
+    vi.setSystemTime(new Date("2026-01-01T00:00:10.000Z"));
+    const deletion = await source.deleteDocument(docId);
+    const deletionToken = await settle(source, deletion.id);
+    const deletionOp = (
+      await source.getOperations(
+        docId,
+        { branch: "main", scopes: ["document"] },
+        undefined,
+        undefined,
+        deletionToken,
+      )
+    ).document.results.find((op) => op.action.type === "DELETE_DOCUMENT")!;
+
+    // Two operations on the target, straddling that deletion.
+    vi.setSystemTime(new Date("2026-01-01T00:00:05.000Z"));
+    await settle(
+      target,
+      (await target.execute(docId, "main", [addModule({ id: "a", name: "a" })]))
+        .id,
+    );
+    vi.setSystemTime(new Date("2026-01-01T00:00:20.000Z"));
+    await settle(
+      target,
+      (await target.execute(docId, "main", [addModule({ id: "b", name: "b" })]))
+        .id,
+    );
+
+    // First pass: b is refused, a stands, leaving a gap in the stream.
+    await settle(target, (await target.load(docId, "main", [deletionOp])).id);
+    const afterFirst = garbageCollect(
+      sortOperations([
+        ...(
+          await target.getOperations(docId, {
+            branch: "main",
+            scopes: ["global"],
+          })
+        ).global.results,
+      ]),
+    );
+    expect(afterFirst.map((op) => op.index)).toEqual([0, 2]);
+
+    // An earlier deletion arrives, so a is refused too and the tail to retract
+    // starts at the survivor -- spanning the gap.
+    await settle(
+      target,
+      (
+        await target.load(docId, "main", [
+          {
+            ...deletionOp,
+            index: 3,
+            timestampUtcMs: "2026-01-01T00:00:01.000Z",
+            action: {
+              ...deletionOp.action,
+              id: "earlier-deletion",
+              timestampUtcMs: "2026-01-01T00:00:01.000Z",
+            },
+          },
+        ])
+      ).id,
+    );
+
+    const afterSecond = garbageCollect(
+      sortOperations([
+        ...(
+          await target.getOperations(docId, {
+            branch: "main",
+            scopes: ["global"],
+          })
+        ).global.results,
+      ]),
+    );
+
+    // Each operation appears once, and both are refused. A skip counting the
+    // retracted operations rather than spanning the gap would leave the original
+    // a standing beside its replacement.
+    expect(
+      afterSecond.map((op) => ({
+        id: (op.action.input as { id?: string }).id,
+        denied: op.deniedReason !== undefined,
+      })),
+    ).toEqual([
+      { id: "a", denied: true },
+      { id: "b", denied: true },
+    ]);
   });
 });

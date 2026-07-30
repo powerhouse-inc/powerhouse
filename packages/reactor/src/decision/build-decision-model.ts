@@ -6,6 +6,7 @@ import type {
   DecisionModel,
   DecisionTarget,
   Projection,
+  ReadStream,
   StreamQuery,
 } from "./types.js";
 
@@ -123,4 +124,27 @@ function observedRevision(document: PHDocument, scope: string): number {
   }
 
   return document.header.revision[scope] - 1;
+}
+
+/**
+ * The streams a model reads whose queries are known before it is built. A
+ * derived query needs the statically-queried projections first, so it is not
+ * included here.
+ */
+export function staticReadSet<M>(definition: DecisionModel<M>): ReadStream[] {
+  const streams: ReadStream[] = [];
+
+  for (const projection of Object.values(definition.projections) as Array<
+    Projection<M>
+  >) {
+    if (typeof projection.query === "function") {
+      continue;
+    }
+    streams.push({
+      query: projection.query,
+      decidingActions: projection.decidingActions,
+    });
+  }
+
+  return streams;
 }

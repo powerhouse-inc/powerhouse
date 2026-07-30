@@ -19,12 +19,18 @@ export function documentDecisionModel(
   return {
     projections: {
       document: {
+        decidingActions: ["DELETE_DOCUMENT"],
         query: {
           documentId: target.documentId,
           branch: target.branch,
           scope: "document",
         },
       },
+    },
+
+    // this model needs to judge all scopes
+    judgesScope() {
+      return true;
     },
 
     decide(model) {

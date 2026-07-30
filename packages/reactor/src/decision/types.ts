@@ -30,11 +30,30 @@ export type DecisionContext = {
  */
 export type Projection<M> = {
   query: StreamQuery | ((model: Partial<M>) => StreamQuery[]);
+
+  /**
+   * Action types in this stream that can change a verdict. Reads of the stream
+   * are filtered to these, so anything left out is invisible to a decision.
+   */
+  decidingActions: string[];
+};
+
+/** A stream a model reads, with the actions in it that matter. */
+export type ReadStream = {
+  query: StreamQuery;
+  decidingActions: string[];
 };
 
 /** Projections plus a decision function over the built model. */
 export type DecisionModel<M> = {
   projections: { [K in keyof M]: Projection<M> };
+
+  /**
+   * Whether or not this model decides about operations in a given scope. That
+   * is, a scope it reads is not necessarily one it judges, and vise-versa.
+   */
+  judgesScope(scope: string): boolean;
+
   decide(
     model: M,
     subject: AuthSubject,

@@ -71,3 +71,14 @@ export function mergeByPosition(
 
   return merged.sort(comparePositions);
 }
+
+/**
+ * For auth-related reshuffles, we may need to retract previous operations.
+ * This function calculates the needed skip value.
+ */
+export function retractionSkip(
+  nextIndex: number,
+  firstRetractedIndex: number,
+): number {
+  return nextIndex - firstRetractedIndex;
+}

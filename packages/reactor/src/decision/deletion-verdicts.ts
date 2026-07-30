@@ -5,27 +5,25 @@ import type {
 import { applyDeleteDocumentAction } from "@powerhousedao/shared/document-model";
 import type { IWriteCache } from "../cache/write/interfaces.js";
 import type { IOperationStore } from "../storage/interfaces.js";
+import { staticReadSet } from "./build-decision-model.js";
 import {
   documentDecisionModel,
   DOCUMENT_DELETED_REASON,
 } from "./document-decision-model.js";
+import { streamKey } from "./merged-order.js";
+import type { ReadStream } from "./types.js";
+import type { WalkStream } from "./walk.js";
 import { walkByPosition } from "./walk.js";
 
 type DocumentState = PHDocument["state"]["document"];
 
-const DOCUMENT_SCOPE = "document";
-const EXISTING = "existing";
 const INCOMING = "incoming";
 
-/**
- * We filter on these action types, as they are the only ones that can
- * currently affect decision making.
- */
-const REFUSING_ACTION_TYPES = ["DELETE_DOCUMENT"];
-
-/** Whether this operation is one that can cause others to be refused. */
-function canRefuseOthers(operation: Operation): boolean {
-  return REFUSING_ACTION_TYPES.includes(operation.action.type);
+/** Whether a read stream counts this action as one that changes a verdict. */
+function canRefuseOthers(operation: Operation, readSet: ReadStream[]): boolean {
+  return readSet.some((stream) =>
+    stream.decidingActions.includes(operation.action.type),
+  );
 }
 
 /**
@@ -33,7 +31,7 @@ function canRefuseOthers(operation: Operation): boolean {
  * verdict. The document is copied because the shared handler assigns to `state`.
  */
 function applyDeletion(document: PHDocument, operation: Operation): PHDocument {
-  if (!canRefuseOthers(operation)) {
+  if (operation.action.type !== "DELETE_DOCUMENT") {
     return document;
   }
 
@@ -73,56 +71,76 @@ export async function deletionVerdictsByPosition(
   operationStore: IOperationStore,
   signal?: AbortSignal,
 ): Promise<Array<string | undefined>> {
-  // Cheap and indexed. A document that has never been deleted -- nearly all of
-  // them -- costs this one query and stops here.
-  const existingDeletions = (
-    await operationStore.getSince(
-      documentId,
-      DOCUMENT_SCOPE,
-      branch,
-      0,
-      { actionTypes: REFUSING_ACTION_TYPES },
-      undefined,
-      signal,
-    )
-  ).results;
+  const definition = documentDecisionModel({ documentId, branch });
+  const readSet = staticReadSet(definition);
 
-  const arrivingDeletions = operations.filter(canRefuseOthers);
-
-  if (existingDeletions.length === 0 && arrivingDeletions.length === 0) {
+  if (!definition.judgesScope(scope)) {
     return operations.map(() => undefined);
   }
 
-  const definition = documentDecisionModel({ documentId, branch });
-
-  // We must walk the document scope, but we need the initial state.
-  const before = await writeCache.getState(
-    documentId,
-    DOCUMENT_SCOPE,
-    branch,
-    0,
-    signal,
+  // Cheap and indexed. A document that has never been deleted -- nearly all of
+  // them -- costs one query per read stream and stops here.
+  const stored = await Promise.all(
+    readSet.map(async (stream) => ({
+      stream,
+      operations: (
+        await operationStore.getSince(
+          stream.query.documentId,
+          stream.query.scope,
+          stream.query.branch,
+          0,
+          { actionTypes: stream.decidingActions },
+          undefined,
+          signal,
+        )
+      ).results,
+    })),
   );
+
+  const arriving = operations.filter((operation) =>
+    canRefuseOthers(operation, readSet),
+  );
+
+  if (
+    stored.every((read) => read.operations.length === 0) &&
+    arriving.length === 0
+  ) {
+    return operations.map(() => undefined);
+  }
+
+  const walked: WalkStream[] = [];
+  for (const read of stored) {
+    // We must walk each read stream, but we need the initial state.
+    const before = await writeCache.getState(
+      read.stream.query.documentId,
+      read.stream.query.scope,
+      read.stream.query.branch,
+      0,
+      signal,
+    );
+    walked.push({
+      streamKey: streamKey(read.stream.query),
+      document: before,
+      operations: read.operations,
+    });
+  }
+
+  // The operations being judged sit in their own stream, so a deletion arriving
+  // among them counts alongside one already stored.
+  walked.push({
+    streamKey: INCOMING,
+    document: walked[0].document,
+    operations,
+  });
 
   const reasons = new Map<string, string | undefined>();
 
-  for (const step of walkByPosition(
-    [
-      { streamKey: EXISTING, document: before, operations: existingDeletions },
-      { streamKey: INCOMING, document: before, operations },
-    ],
-    applyDeletion,
-  )) {
+  for (const step of walkByPosition(walked, applyDeletion)) {
     if (step.streamKey !== INCOMING) {
       continue;
     }
 
-    // A deletion refuses this operation whether it was already in the stream or
-    // arrived earlier in the same batch, so both are consulted.
-    const document = firstDeleted([
-      step.states.get(EXISTING),
-      step.states.get(INCOMING),
-    ]);
+    const document = firstDeleted([...step.states.values()]);
 
     const decision = definition.decide(
       { document },

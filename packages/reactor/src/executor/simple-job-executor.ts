@@ -8,8 +8,10 @@ import type {
 import {
   baseReducerVersion,
   decide,
+  garbageCollect,
   hashDocumentStateForScope,
   isUndoRedo,
+  sortOperations,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import type { ICollectionMembershipCache } from "../cache/collection-membership-cache.js";
@@ -38,6 +40,8 @@ import { reshuffleByTimestamp } from "../utils/reshuffle.js";
 import { buildDecisionModel } from "../decision/build-decision-model.js";
 import { documentDecisionModel } from "../decision/document-decision-model.js";
 import { deletionVerdictsByPosition } from "../decision/deletion-verdicts.js";
+import { staticReadSet } from "../decision/build-decision-model.js";
+import { retractionSkip } from "../decision/merged-order.js";
 import { DocumentActionHandler } from "./document-action-handler.js";
 import type { ExecutionStores, IExecutionScope } from "./execution-scope.js";
 import { DefaultExecutionScope } from "./execution-scope.js";
@@ -358,6 +362,7 @@ export class SimpleJobExecutor implements IJobExecutor {
             skip,
             sourceRemote,
             signal,
+            this.featureFlags.documentDecisions && job.kind === "load",
           )
         : await this.executeRegularAction(
             job,
@@ -761,6 +766,100 @@ export class SimpleJobExecutor implements IJobExecutor {
     };
   }
 
+  /**
+   * If an operation happened that could change a decision model verdict, we
+   * need to re-evaluate across the streams that could be affected. Previously
+   * approved operations may need to be denied, which will apply new denied
+   * operations with appropriate skip.
+   */
+  private async reevaluateReadingScopes(
+    job: Job,
+    startTime: number,
+    indexTxn: IOperationIndexTxn,
+    stores: ExecutionStores,
+    signal?: AbortSignal,
+  ): Promise<Error | undefined> {
+    const definition = documentDecisionModel({
+      documentId: job.documentId,
+      branch: job.branch,
+    });
+
+    const revisions = await stores.operationStore.getRevisions(
+      job.documentId,
+      job.branch,
+      signal,
+    );
+
+    for (const scope of Object.keys(revisions.revision)) {
+      if (!definition.judgesScope(scope)) {
+        continue;
+      }
+
+      const stored = (
+        await stores.operationStore.getSince(
+          job.documentId,
+          scope,
+          job.branch,
+          -1,
+          undefined,
+          undefined,
+          signal,
+        )
+      ).results;
+
+      const effective = garbageCollect(sortOperations([...stored]));
+      if (effective.length === 0) {
+        continue;
+      }
+
+      const recomputed = await deletionVerdictsByPosition(
+        job.documentId,
+        scope,
+        job.branch,
+        effective,
+        stores.writeCache,
+        stores.operationStore,
+        signal,
+      );
+
+      const firstChange = effective.findIndex(
+        (operation, i) => operation.deniedReason !== recomputed[i],
+      );
+      if (firstChange === -1) {
+        continue;
+      }
+
+      const tail = effective.slice(firstChange);
+      const nextIndex = revisions.revision[scope];
+
+      stores.writeCache.invalidate(job.documentId, scope, job.branch);
+
+      const result = await this.processActions(
+        { ...job, scope },
+        tail.map((operation) => operation.action),
+        startTime,
+        indexTxn,
+        stores,
+        tail.map((_, i) =>
+          i === 0 ? retractionSkip(nextIndex, tail[0].index) : 0,
+        ),
+        undefined,
+        "",
+        signal,
+        recomputed.slice(firstChange),
+      );
+
+      if (!result.success) {
+        return (
+          result.error ??
+          new Error(`Re-evaluation of ${job.documentId} ${scope} failed`)
+        );
+      }
+    }
+
+    return undefined;
+  }
+
   private async executeLoadJob(
     job: Job,
     startTime: number,
@@ -1029,6 +1128,50 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     if (scope === "document") {
       stores.documentMetaCache.invalidate(job.documentId, job.branch);
+    }
+
+    // With DCB, we need to re-evaluate scopes dependent on the potential
+    // reshuffle of the document scope.
+    const definition = documentDecisionModel({
+      documentId: job.documentId,
+      branch: job.branch,
+    });
+    const readsThisStream = staticReadSet(definition).some(
+      (stream) =>
+        stream.query.documentId === job.documentId &&
+        stream.query.scope === scope &&
+        stream.query.branch === job.branch,
+    );
+
+    if (this.featureFlags.documentDecisions && readsThisStream) {
+      const revisions = await stores.operationStore.getRevisions(
+        job.documentId,
+        job.branch,
+        signal,
+      );
+      const latest = Date.parse(revisions.latestTimestamp);
+
+      const owesPass = result.generatedOperations.some(
+        (operation) => Date.parse(operation.timestampUtcMs) < latest,
+      );
+
+      if (owesPass) {
+        const error = await this.reevaluateReadingScopes(
+          job,
+          startTime,
+          indexTxn,
+          stores,
+          signal,
+        );
+        if (error) {
+          return {
+            job,
+            success: false,
+            error,
+            duration: Date.now() - startTime,
+          };
+        }
+      }
     }
 
     return {

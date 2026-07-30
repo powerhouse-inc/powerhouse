@@ -7,6 +7,8 @@ import {
   comparePositions,
   mergeByPosition,
 } from "../../src/decision/merged-order.js";
+import { staticReadSet } from "../../src/decision/build-decision-model.js";
+import { documentDecisionModel } from "../../src/decision/document-decision-model.js";
 import { walkByPosition } from "../../src/decision/walk.js";
 
 /**
@@ -193,5 +195,36 @@ describe("walkByPosition", () => {
       "b2",
       "a2",
     ]);
+  });
+});
+
+describe("staticReadSet", () => {
+  it("names each statically-queried stream and the actions that matter in it", () => {
+    expect(
+      staticReadSet(documentDecisionModel({ documentId: "d", branch: "main" })),
+    ).toEqual([
+      {
+        query: { documentId: "d", branch: "main", scope: "document" },
+        decidingActions: ["DELETE_DOCUMENT"],
+      },
+    ]);
+  });
+
+  it("leaves out a derived query, whose streams are not known yet", () => {
+    const definition = {
+      projections: {
+        a: {
+          decidingActions: ["X"],
+          query: { documentId: "d", branch: "main", scope: "global" },
+        },
+        b: { decidingActions: ["Y"], query: () => [] },
+      },
+      judgesScope: () => true,
+      decide: () => "allow" as const,
+    };
+
+    expect(
+      staticReadSet(definition as never).map((s) => s.query.scope),
+    ).toEqual(["global"]);
   });
 });
