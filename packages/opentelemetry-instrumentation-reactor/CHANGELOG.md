@@ -1,3 +1,13 @@
+## 6.2.2-dev.27 (2026-07-30)
+
+### 🩹 Fixes
+
+- **connect:** pin @privy-io/react-auth to 3.35.0 ([909352ce3](https://github.com/powerhouse-inc/powerhouse/commit/909352ce3))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.2-dev.26 (2026-07-30)
 
 This was a version bump only for @powerhousedao/opentelemetry-instrumentation-reactor to align it with other projects, there were no code changes.
