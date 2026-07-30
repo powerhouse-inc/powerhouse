@@ -22,6 +22,8 @@ describe("DocumentModel Replay", () => {
   const initialState = createCountState();
   const initialDocument: PHDocument<CountPHState> = {
     header: {
+      // Protocol 1 undo semantics; v2 has its own coverage.
+      protocolVersions: { "base-reducer": 1 },
       id: "",
       sig: { publicKey: {}, nonce: "" },
       documentType: "",

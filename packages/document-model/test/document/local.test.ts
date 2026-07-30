@@ -26,6 +26,7 @@ describe("Local reducer", () => {
     const document = baseCreateDocument<TestPHState>(
       defaultPHDocumentCreateState,
     );
+    document.header.protocolVersions = { "base-reducer": 1 };
     const newDocument = wrappedEmptyReducer(
       document,
       fakeAction({
@@ -42,6 +43,7 @@ describe("Local reducer", () => {
     const document = baseCreateDocument<TestPHState>(
       defaultPHDocumentCreateState,
     );
+    document.header.protocolVersions = { "base-reducer": 1 };
     await new Promise((r) => {
       setTimeout(r, 100);
       vi.runOnlyPendingTimers();
@@ -65,6 +67,7 @@ describe("Local reducer", () => {
     const document = baseCreateDocument<TestPHState>(
       defaultPHDocumentCreateState,
     );
+    document.header.protocolVersions = { "base-reducer": 1 };
     const newDocument = wrappedEmptyReducer(
       document,
       fakeAction({
@@ -94,6 +97,7 @@ describe("Local reducer", () => {
     const document = baseCreateDocument<TestPHState>(
       defaultPHDocumentCreateState,
     );
+    document.header.protocolVersions = { "base-reducer": 1 };
     const newDocument = wrappedEmptyReducer(
       document,
       fakeAction({
@@ -123,6 +127,7 @@ describe("Local reducer", () => {
       createCountDocumentState,
       createCountState(),
     );
+    document.header.protocolVersions = { "base-reducer": 1 };
     const newDocument = countReducer(document, setLocalName("test"));
     expect(newDocument.header.revision.local).toStrictEqual(1);
     expect(document.header.revision.local).toBe(undefined);
@@ -148,6 +153,7 @@ describe("Local reducer", () => {
       createCountDocumentState,
       createCountState(),
     );
+    document.header.protocolVersions = { "base-reducer": 1 };
     let newDocument = countReducer(document, setLocalName("test"));
 
     expect(newDocument.header.revision).toStrictEqual({
@@ -190,6 +196,7 @@ describe("Local reducer", () => {
       createCountDocumentState,
       createCountState(),
     );
+    document.header.protocolVersions = { "base-reducer": 1 };
     let newDocument = countReducer(document, setLocalName("test"));
     newDocument = countReducer(newDocument, undo(1, "local"));
     newDocument = countReducer(newDocument, redo(1, "local"));
@@ -225,6 +232,7 @@ describe("Local reducer", () => {
       createCountDocumentState,
       createCountState(),
     );
+    document.header.protocolVersions = { "base-reducer": 1 };
     let newDocument = countReducer(document, setLocalName("test"));
     newDocument = countReducer(newDocument, setLocalName("test 2"));
     expect(newDocument.header.revision).toStrictEqual({ global: 0, local: 2 });

@@ -8,6 +8,7 @@ import {
 } from "./actions.js";
 import { applyAuthAction, assertAuthScopeActionAllowed } from "./auth.js";
 import {
+  baseReducerVersion,
   diffOperations,
   garbageCollect,
   garbageCollectDocumentOperations,
@@ -433,7 +434,7 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
       document,
       _action,
       skipValue,
-      options.protocolVersion ?? 1,
+      options.protocolVersion ?? baseReducerVersion(document.header),
     );
 
     _action = transformedAction;
@@ -474,7 +475,8 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
   // Only process undo for actual UNDO actions in protocol v1
   // For v2, NOOPs always have skip=1 and indices increment
   // NOOP operations with skip > 0 will have their clipboard populated server-side
-  const protocolVersion = options.protocolVersion ?? 1;
+  const protocolVersion =
+    options.protocolVersion ?? baseReducerVersion(document.header);
   if (isUndo(action) && protocolVersion < 2) {
     const result = processUndoOperation(
       newDocument,

@@ -7,7 +7,28 @@ import {
   isDenied,
   sortOperations,
 } from "@powerhousedao/shared/document-model";
-import { mergeByPosition } from "./merged-order.js";
+import { comparePositions, mergeByPosition } from "./merged-order.js";
+
+/**
+ * A single forward pass is only correct while a stream's effective operations
+ * are ordered.
+ */
+function assertPositionOrder(streamKey: string, operations: Operation[]): void {
+  for (let i = 1; i < operations.length; i++) {
+    const previous = operations[i - 1];
+    const current = operations[i];
+    if (
+      comparePositions(
+        { streamKey, operation: previous },
+        { streamKey, operation: current },
+      ) > 0
+    ) {
+      throw new Error(
+        `Stream ${streamKey} is out of position order: index ${previous.index} at ${previous.timestampUtcMs} precedes index ${current.index} at ${current.timestampUtcMs}`,
+      );
+    }
+  }
+}
 
 /** One read-set stream, with the state it holds before any of its operations. */
 export type WalkStream = {
@@ -46,10 +67,11 @@ export function* walkByPosition(
   streams: WalkStream[],
 ): Generator<WalkPosition> {
   const merged = mergeByPosition(
-    streams.map((stream) => ({
-      streamKey: stream.streamKey,
-      operations: garbageCollect(sortOperations([...stream.operations])),
-    })),
+    streams.map((stream) => {
+      const operations = garbageCollect(sortOperations([...stream.operations]));
+      assertPositionOrder(stream.streamKey, operations);
+      return { streamKey: stream.streamKey, operations };
+    }),
   );
 
   const states = new Map(

@@ -38,6 +38,12 @@ export function comparePositions(
     return aTime - bTime;
   }
 
+  // Within one stream the stored order decides, so a tie keeps it. The action
+  // and operation ids only break ties between separate streams.
+  if (a.streamKey === b.streamKey) {
+    return a.operation.index - b.operation.index;
+  }
+
   const actionIds = (a.operation.action.id ?? "").localeCompare(
     b.operation.action.id ?? "",
   );

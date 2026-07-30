@@ -486,19 +486,21 @@ The re-append advances the stream heads, so a concurrent admission that read the
 
 #### What triggers a pass
 
-Re-evaluation is not a property of loading. It is owed whenever a read-set stream gains an operation that does not sort at the head, since that is exactly when an already-judged operation can change verdict. A load is the common way that happens, but not the only one.
+Re-evaluation is not a property of loading. It is owed whenever a read-set stream gains an operation that something already judged sorts after, since that is exactly when a verdict can change. A load is the common way that happens, but not the only one.
 
 A locally executed operation can trigger it too. Timestamps are supplied by the caller and the reactor does not re-stamp them, so a mutation can carry a timestamp below operations already stored. `DELETE_DOCUMENT` is the case that matters. The reactor issuing the delete would be the one replica that keeps its own later-timestamped operations in effect, while every replica learning of the delete by sync denies them, leaving the deleting reactor as the sole dissenter. That inverts what enforcement is for.
 
 The trigger is therefore stated on the operation rather than the job:
 
-> A committed operation on a read-set stream owes a re-evaluation pass over the streams that read it, unless it sorts at the head of its own stream by timestamp. Admission and replay owe this equally.
+> A committed operation on a read-set stream owes a re-evaluation pass over the streams that read it, unless it sorts after every operation in those streams. Admission and replay owe this equally.
 
-An operation that does sort at the head owes nothing, which is the common case, so the ordinary write path stays free. That is safe because a head-sorting operation cannot precede anything already judged.
+Note that the comparison is against the streams that read the operation, not the stream it lives in. A deletion is normally the last thing in the document scope while the operations it refuses sit in another scope, so testing its own stream would exempt exactly the case the pass exists for. An operation later than everything that reads it owes nothing, which is the common case, so the ordinary write path stays free.
 
 #### Retracting a tail
 
-A pass that changes a verdict has to retract the operations whose verdict changed. `NOOP` carrying a skip is the base reducer's marker for superseding earlier operations, and an N-operation retraction is a chain of N markers each carrying `skip: 1`. `garbageCollectV2` counts markers and ignores skip magnitude, so a single marker carrying `skip: N` would retract one operation rather than N.
+A pass that changes a verdict re-appends the tail from that point, carrying a skip on the first re-appended operation the way a reshuffle does. Retraction never happens on its own, because a denied operation still occupies a position, so no separate marker is needed.
+
+The skip spans from the first retracted index to where the re-appended operation lands, rather than counting the operations retracted. Applying a skip resolves to `skipUntil = index - skip - 1`, and the two numbers agree only while the stream's indices run without gaps. A pass leaves a gap behind, so counting would leave an earlier copy standing beside its own replacement.
 
 #### Caveats
 
@@ -684,7 +686,7 @@ A decision made at replay is a consensus outcome: a denied operation carries a `
 
 Positional deletion is the corrected semantics on every reactor, so this stage would not need a flag on its own. It carries one because it changes replay outcomes and therefore has to roll out per fleet like the stages after it. The flag also keeps the document meta cache alive: the cache answers the deletion question while the flag is off, so retiring it, along with `rebuildAtRevision`, the eager `putDocumentMeta` calls, and its slot in `ExecutionStores`, waits until the flag defaults on.
 
-The stage was attempted once and reverted. Four mistakes from that attempt are stated as design above and are the stage's real content: it derived a revision from a timestamp (see "A position is a timestamp, not a revision"), it substituted `NOOP` for a denied action (see "The outcome belongs on the operation"), it retracted a tail with a single marker carrying the whole skip (see "Retracting a tail"), and it triggered re-evaluation from the load path alone (see "What triggers a pass"). A fifth problem, the two write-cache guarantees a decision depends on, has since been fixed (see Admission).
+The stage was attempted once and reverted. Four mistakes from that attempt are stated as design above and are the stage's real content: it derived a revision from a timestamp (see "A position is a timestamp, not a revision"), it substituted `NOOP` for a denied action (see "The outcome belongs on the operation"), it retracted a tail by counting the operations rather than spanning the indices (see "Retracting a tail"), and it triggered re-evaluation from the load path alone (see "What triggers a pass"). A fifth problem, the two write-cache guarantees a decision depends on, has since been fixed (see Admission).
 
 Two limits remain deliberate, both on the read side, and stage 4 moves reads onto the same model. A denied operation contributes nothing to state in the reactor's own rebuild path, but `replayDocument` in `shared/document-model` still applies it, so a client replaying history itself sees it apply. The read surface also continues to hide a deleted document outright rather than serving the state at the deletion boundary.
 
