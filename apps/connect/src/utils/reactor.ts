@@ -135,7 +135,8 @@ export async function addDefaultDrivesForNewReactor(
           // setDriveMetadata dispatches against the local drive document, which
           // only exists once initial backfill delivers it — wait for it first
           // so the name/icon override isn't lost to a sync race.
-          const reactorClient = window.ph?.reactorClient;
+          // waitForDocumentReady needs the full reactor client
+          const reactorClient = window.ph?.reactorClientModule?.client;
           if (reactorClient) {
             await waitForDocumentReady(reactorClient, driveId, {
               timeoutMs: 15_000,

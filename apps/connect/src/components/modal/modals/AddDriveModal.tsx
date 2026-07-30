@@ -86,7 +86,8 @@ export function AddDriveModal() {
 
       // Navigate into the drive if its initial sync lands in time.
       // Not awaited so the modal closes immediately.
-      const reactorClient = window.ph?.reactorClient;
+      // waiting for the drive and listing drives both need the full reactor client
+      const reactorClient = window.ph?.reactorClientModule?.client;
       // Only a still unselected, un-pinned (home) view gets pulled into the
       // new drive — the user may have navigated elsewhere meanwhile.
       const stillOnHome = () =>

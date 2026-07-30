@@ -1,9 +1,9 @@
-import {
-  DuplicateManifestError,
-  DuplicateModuleError,
-} from "@powerhousedao/reactor";
 import type { DocumentModelLib } from "document-model";
 import { useSyncExternalStore } from "react";
+import {
+  isDuplicateManifestError,
+  isDuplicateModuleError,
+} from "../reactor-interop.js";
 import type { IPackageManager } from "../types/vetra.js";
 import { makePHEventFunctions } from "./make-ph-event-functions.js";
 
@@ -49,7 +49,7 @@ function updateReactorClientDocumentModels(packages: DocumentModelLib[]) {
   const duplicates = [];
   for (const result of results) {
     if (result.status === "error") {
-      if (DuplicateModuleError.isError(result.error)) {
+      if (isDuplicateModuleError(result.error)) {
         duplicates.push(result);
       } else {
         console.error(
@@ -81,7 +81,7 @@ function updateReactorClientUpgradeManifests(packages: DocumentModelLib[]) {
   const duplicates = [];
   for (const result of results) {
     if (result.status === "error") {
-      if (DuplicateManifestError.isError(result.error)) {
+      if (isDuplicateManifestError(result.error)) {
         duplicates.push(result);
       } else {
         console.error("Failed to register upgrade manifest:", result.error);

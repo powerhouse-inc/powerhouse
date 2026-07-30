@@ -145,7 +145,8 @@ export async function addRemoteDrive(
   driveId?: string,
   options?: AddRemoteDriveOptions,
 ) {
-  const reactorClient = window.ph?.reactorClient;
+  // remote drives are a full reactor client feature (sync manager + find)
+  const reactorClient = window.ph?.reactorClientModule?.client;
   if (!reactorClient) {
     throw new Error("ReactorClient not initialized");
   }
@@ -256,7 +257,8 @@ export async function renameDrive(
     throw new Error("User is not allowed to rename drives");
   }
 
-  const reactorClient = window.ph?.reactorClient;
+  // drive renaming is only available on the full reactor client
+  const reactorClient = window.ph?.reactorClientModule?.client;
   if (!reactorClient) {
     throw new Error("ReactorClient not initialized");
   }

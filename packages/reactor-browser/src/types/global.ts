@@ -2,7 +2,6 @@ import type { PGlite } from "@electric-sql/pglite";
 import type {
   InProcessReactorClientModule,
   InProcessReactorModule,
-  IReactorClient,
   ReactorClientModule,
   ReactorModule,
 } from "@powerhousedao/reactor";
@@ -17,6 +16,7 @@ import type { PHGlobalConfig } from "./config.js";
 import type { IDocumentCache } from "./documents.js";
 import type { PHModal } from "./modals.js";
 import type { IPackageDiscoveryService } from "./package-discovery.js";
+import type { IReactorBrowserClient } from "./reactor-browser-client.js";
 import type { TimelineItem } from "./timeline.js";
 import type { PHToastFn } from "./toast.js";
 import type { IPackageManager } from "./vetra.js";
@@ -48,7 +48,7 @@ export type LOADING = null;
 export type PHGlobal = PHGlobalConfig & {
   loading?: boolean;
   reactorClientModule?: BrowserReactorClientModule | WorkerReactorClientModule;
-  reactorClient?: IReactorClient;
+  reactorClient?: IReactorBrowserClient;
   attachmentService?: IAttachmentService;
   reactorGraphQLClient?: ReactorGraphQLClient | undefined;
   renown?: IRenown | LOADING;

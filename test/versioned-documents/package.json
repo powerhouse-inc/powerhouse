@@ -15,41 +15,41 @@
   ],
   "exports": {
     ".": {
-      "types": "./dist/types/index.d.ts",
+      "types": "./.tsbuild/index.d.ts",
       "browser": "./dist/browser/index.js",
       "node": "./dist/node/index.mjs"
     },
     "./document-models": {
-      "types": "./dist/types/document-models/index.d.ts",
+      "types": "./.tsbuild/document-models/index.d.ts",
       "browser": "./dist/browser/document-models/index.js",
       "node": "./dist/node/document-models/index.mjs"
     },
     "./document-models/*": {
-      "types": "./dist/types/document-models/*/index.d.ts",
+      "types": "./.tsbuild/document-models/*/index.d.ts",
       "browser": "./dist/browser/document-models/*/index.js",
       "node": "./dist/node/document-models/*/index.mjs"
     },
     "./editors": {
-      "types": "./dist/types/editors/index.d.ts",
+      "types": "./.tsbuild/editors/index.d.ts",
       "browser": "./dist/browser/editors/index.js",
       "node": "./dist/node/editors/index.mjs"
     },
     "./editors/*": {
-      "types": "./dist/types/editors/*/editor.d.ts",
+      "types": "./.tsbuild/editors/*/editor.d.ts",
       "browser": "./dist/browser/editors/*/editor.js",
       "node": "./dist/node/editors/*/editor.mjs"
     },
     "./subgraphs": {
-      "types": "./dist/types/subgraphs/index.d.ts",
+      "types": "./.tsbuild/subgraphs/index.d.ts",
       "browser": "./dist/browser/subgraphs/index.js",
       "node": "./dist/node/subgraphs/index.mjs"
     },
     "./processors": {
-      "types": "./dist/types/processors/index.d.ts",
+      "types": "./.tsbuild/processors/index.d.ts",
       "browser": "./dist/browser/processors/index.js",
       "node": "./dist/node/processors/index.mjs"
     },
-    "./manifest": "./dist/powerhouse.manifest.json",
+    "./manifest": "./powerhouse.manifest.json",
     "./style.css": "./dist/style.css"
   },
   "sideEffects": false,
@@ -125,5 +125,8 @@
     "react": "catalog:",
     "react-dom": "catalog:",
     "zod": "catalog:"
+  },
+  "dependencies": {
+    "tslib": "^2.8.1"
   }
 }

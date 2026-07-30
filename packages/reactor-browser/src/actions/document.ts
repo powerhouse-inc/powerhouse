@@ -3,6 +3,7 @@ import type {
   ConflictResolution,
   DocumentTypeIcon,
   FileUploadProgressCallback,
+  IReactorBrowserClient,
 } from "@powerhousedao/reactor-browser";
 import type {
   DocumentDriveDocument,
@@ -168,7 +169,8 @@ async function getDocumentExtension(document: PHDocument): Promise<string> {
       .global;
     rawExtension = globalState?.extension;
   } else {
-    const reactorClient = window.ph?.reactorClient;
+    // document model modules are only available on the full reactor client
+    const reactorClient = window.ph?.reactorClientModule?.client;
     if (reactorClient) {
       const { results: documentModelModules } =
         await reactorClient.getDocumentModelModules();
@@ -188,7 +190,7 @@ async function getDocumentExtension(document: PHDocument): Promise<string> {
  * composite cursors, so all scopes are fetched in a single paginated stream.
  */
 export async function fetchDocumentOperations(
-  reactorClient: IReactorClient,
+  reactorClient: IReactorBrowserClient,
   document: PHDocument,
   pageSize = 100,
 ): Promise<DocumentOperations> {
@@ -304,7 +306,8 @@ export async function loadFile(path: string | File) {
     { checkHashes: true },
   );
 
-  const reactorClient = window.ph?.reactorClient;
+  // document model modules are only available on the full reactor client
+  const reactorClient = window.ph?.reactorClientModule?.client;
   if (!reactorClient) {
     throw new Error("ReactorClient not initialized");
   }
@@ -353,7 +356,9 @@ export async function addDocument(
     throw new Error("User is not allowed to create documents");
   }
 
-  const reactorClient = window.ph?.reactorClient;
+  // document model modules and drive operations are only available on the full
+  // reactor client
+  const reactorClient = window.ph?.reactorClientModule?.client;
   if (!reactorClient) {
     throw new Error("ReactorClient not initialized");
   }
@@ -477,7 +482,8 @@ export async function addFileWithProgress(
   logger.verbose(
     `addFileWithProgress(drive: ${driveId}, name: ${name}, folder: ${parentFolder})`,
   );
-  const reactor = window.ph?.reactorClient;
+  // importing a file into a drive is a full reactor client feature
+  const reactor = window.ph?.reactorClientModule?.client;
   if (!reactor) {
     return;
   }
@@ -764,7 +770,8 @@ export async function deleteNode(driveId: string, nodeId: string) {
     throw new Error("User is not allowed to delete documents");
   }
 
-  const reactorClient = window.ph?.reactorClient;
+  // drive operations are only available on the full reactor client
+  const reactorClient = window.ph?.reactorClientModule?.client;
   if (!reactorClient) {
     throw new Error("ReactorClient not initialized");
   }
@@ -974,7 +981,9 @@ export async function copyNode(
   src: Node,
   target: Node | undefined,
 ) {
-  const reactor = window.ph?.reactorClient;
+  // copying nodes duplicates documents and adds drive files, both of which are
+  // only available on the full reactor client
+  const reactor = window.ph?.reactorClientModule?.client;
   if (!reactor) {
     return;
   }

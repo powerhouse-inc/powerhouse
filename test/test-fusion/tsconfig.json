@@ -42,10 +42,16 @@
   ],
   "references": [
     {
+      "path": "../../packages/document-model"
+    },
+    {
       "path": "../../packages/reactor-browser"
     },
     {
       "path": "../../packages/renown"
+    },
+    {
+      "path": "../versioned-documents"
     }
   ]
 }

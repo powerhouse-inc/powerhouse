@@ -20,6 +20,11 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
+    "./graphql-client": {
+      "source": "./src/graphql-client/entry.ts",
+      "types": "./dist/src/graphql-client/entry.d.ts",
+      "import": "./dist/src/graphql-client/entry.js"
+    },
     "./analytics": {
       "source": "./src/analytics/index.ts",
       "types": "./dist/src/analytics/index.d.ts",
@@ -72,6 +77,7 @@
     "change-case": "catalog:",
     "document-model": "workspace:*",
     "graphql-request": "catalog:",
+    "graphql-ws": "catalog:",
     "kysely": "catalog:",
     "kysely-pglite-dialect": "catalog:",
     "lodash.isequal": "^4.5.0",

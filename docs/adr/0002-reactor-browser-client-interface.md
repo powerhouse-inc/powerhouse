@@ -1,9 +1,16 @@
 # ADR 0002 — `IReactorBrowserClient`: a swappable client interface for the reactor-browser hooks
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-07-16
 - **Deciders:** acaldas
-- **Implements:** TBD (proposal)
+- **Implemented by:** `packages/reactor-browser/src/graphql-client/`, on branch
+  `feat/reactor-browser-client`
+- **Implementation notes:** the MVP shipped. Batch signing, local-first writes
+  and point-in-time reads are deferred; the full list of what the shipped client
+  does not do is the Limitations section of
+  `packages/reactor-browser/src/graphql-client/README.md`, restated for readers
+  in the Academy under
+  `apps/academy/docs/academy/04-Reference/08-ReactorBrowserClient/`.
 
 ## Context
 

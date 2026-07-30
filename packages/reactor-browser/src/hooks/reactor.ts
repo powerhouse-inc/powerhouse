@@ -2,12 +2,12 @@ import type { PGlite } from "@electric-sql/pglite";
 import type {
   Database,
   IDocumentModelRegistry,
-  IReactorClient,
   ISyncManager,
 } from "@powerhousedao/reactor";
 import type {
   AddPHGlobalEventHandler,
   BrowserReactorClientModule,
+  IReactorBrowserClient,
   SetPHGlobalValue,
   UsePHGlobalValue,
   WorkerReactorClientModule,
@@ -35,11 +35,11 @@ export const addReactorClientModuleEventHandler: AddPHGlobalEventHandler =
   reactorClientModuleEventFunctions.addEventHandler;
 
 /** Returns the reactor client */
-export const useReactorClient: UsePHGlobalValue<IReactorClient> =
+export const useReactorClient: UsePHGlobalValue<IReactorBrowserClient> =
   reactorClientEventFunctions.useValue;
 
 /** Sets the reactor client */
-export const setReactorClient: SetPHGlobalValue<IReactorClient> =
+export const setReactorClient: SetPHGlobalValue<IReactorBrowserClient> =
   reactorClientEventFunctions.setValue;
 
 /** Adds an event handler for the reactor client */
