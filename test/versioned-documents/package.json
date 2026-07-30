@@ -88,7 +88,7 @@
     "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/renown-package": "latest",
     "@powerhousedao/shared": "workspace:*",
-    "@privy-io/react-auth": "^3.35.0",
+    "@privy-io/react-auth": "3.35.0",
     "@tailwindcss/cli": "catalog:",
     "@tailwindcss/vite": "^4.1.18",
     "@testing-library/jest-dom": "^6.9.1",

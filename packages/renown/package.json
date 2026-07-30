@@ -94,7 +94,7 @@
     "lint": "eslint"
   },
   "devDependencies": {
-    "@privy-io/react-auth": "^3.25.0",
+    "@privy-io/react-auth": "3.35.0",
     "@rainbow-me/rainbowkit": "^2.2.11",
     "@tanstack/react-query": "^5.90.2",
     "@types/react": "catalog:",
