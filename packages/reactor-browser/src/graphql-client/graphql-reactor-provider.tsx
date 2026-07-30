@@ -1,12 +1,18 @@
 "use client";
 
+import type { DocumentModelLib, DocumentModelModule } from "document-model";
 import { type ReactNode, useEffect, useState } from "react";
 import { DocumentCache } from "../document-cache.js";
 import { addPHEventHandlers } from "../hooks/add-ph-event-handlers.js";
 import { setAttachmentService } from "../hooks/attachment-service.js";
 import { setDocumentCache } from "../hooks/document-cache.js";
 import { setReactorClient, useReactorClient } from "../hooks/reactor.js";
+import { setVetraPackageManager } from "../hooks/vetra-packages.js";
 import type { PHGlobal } from "../types/global.js";
+import {
+  packageFromDocumentModels,
+  StaticPackageManager,
+} from "./static-package-manager.js";
 import {
   GraphQLReactorClient,
   isGraphQLReactorClient,
@@ -69,6 +75,41 @@ export type GraphQLReactorProviderProps = {
    */
   attachmentService?: PHGlobal["attachmentService"];
 
+  /**
+   * The packages the app works with, as real `DocumentModelLib`s built from
+   * each package's SUBPATH exports:
+   *
+   * ```tsx
+   * import { TodoV2 } from "my-models/document-models";
+   * import { TodoEditor } from "my-models/editors";
+   * import manifest from "my-models/manifest";
+   * <GraphQLReactorProvider url={url} packages={[{ manifest, documentModels: [TodoV2], editors: [TodoEditor] }]}>
+   * ```
+   *
+   * Published through a {@link StaticPackageManager} into the same
+   * `window.ph.vetraPackageManager` slot Connect fills, so the document-model
+   * hooks AND the editor hooks (`useEditorModules` and friends) work below
+   * this provider. Array order is precedence: hooks merge packages in order,
+   * and same-type collisions resolve to the earlier package.
+   *
+   * Import from the subpaths, never from the package ROOT: the root entry also
+   * exports the package's `processorFactory`, and module resolution happens
+   * before tree-shaking, so a root import drags processor (server-side) code
+   * into the browser bundle and can break the build outright.
+   *
+   * Optional on purpose: a light app may equally ship NO packages and let the
+   * Switchboard own the model entirely - both modes are supported.
+   */
+  packages?: readonly DocumentModelLib<any>[];
+
+  /**
+   * Sugar for hand-picked modules without package artifacts, wrapped via
+   * {@link packageFromDocumentModels} into one synthetic package (appended
+   * AFTER `packages` in precedence). Prefer `packages` when you have the real
+   * package - it also carries the editors.
+   */
+  documentModels?: readonly DocumentModelModule<any>[];
+
   children: ReactNode;
 };
 
@@ -78,10 +119,11 @@ export type GraphQLReactorProviderProps = {
  * `useReactorClient` work below it against a Switchboard, with no reactor in
  * the bundle.
  *
- * It fills the document slots only. `window.ph.vetraPackageManager` and
- * `window.ph.reactorClientModule` stay empty, so the package, document-model
- * and editor-module hooks find nothing - an app below this provider renders
- * components it imports itself.
+ * It fills the document slots, plus `window.ph.vetraPackageManager` when
+ * `documentModels` is given (a fixed {@link StaticPackageManager}, which makes
+ * the document-model hooks work). `window.ph.reactorClientModule` always stays
+ * empty, so full-reactor surfaces (drives, jobs, editor auto-discovery) find
+ * nothing - an app below this provider renders components it imports itself.
  *
  * The client is built on the client only: on the server the slots stay empty
  * and the hooks report their normal loading states. The props are read once,
@@ -97,6 +139,8 @@ export function GraphQLReactorProvider({
   subscriptionsUrl,
   realtime,
   attachmentService,
+  packages,
+  documentModels,
   children,
 }: GraphQLReactorProviderProps) {
   const [client] = useState(() =>
@@ -139,6 +183,25 @@ export function GraphQLReactorProvider({
     ensurePHEventHandlers();
     setAttachmentService(attachmentService);
   }, [attachmentService]);
+
+  // Its own effect for the same reason as the attachment service above: the
+  // packages must not rebuild the client and its cache. The slot stays
+  // populated on unmount, matching the other slots. setVetraPackageManager's
+  // reactor side effects no-op here - there is no reactorClientModule to
+  // register modules on.
+  useEffect(() => {
+    const libs = [
+      ...(packages ?? []),
+      ...(documentModels && documentModels.length > 0
+        ? [packageFromDocumentModels(documentModels)]
+        : []),
+    ];
+    if (libs.length === 0) {
+      return;
+    }
+    ensurePHEventHandlers();
+    setVetraPackageManager(new StaticPackageManager(libs));
+  }, [packages, documentModels]);
 
   return <>{children}</>;
 }

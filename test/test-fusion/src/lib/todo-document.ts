@@ -1,71 +1,44 @@
 import {
-  baseCreateDocument,
-  createAction,
-  createBaseState,
-  generateId,
-  type Action,
-  type PHBaseState,
-  type PHDocument,
-} from "document-model";
+  TodoV1,
+  TodoV2,
+} from "@powerhousedao/versioned-documents/document-models";
+import { todoUpgradeManifest } from "@powerhousedao/versioned-documents/document-models/todo";
+import { TodoEditor } from "@powerhousedao/versioned-documents/editors";
+import manifestJson from "@powerhousedao/versioned-documents/manifest";
+import type { DocumentModelLib, Manifest, PHDocument } from "document-model";
 
-// The `todo` model the local switchboard loads from `test/versioned-documents`
-// (`document-models/todo/todo.json`), at its current version.
-export const TODO_DOCUMENT_TYPE = "test/todo";
-const TODO_DOCUMENT_VERSION = 2;
-
-export type TodoItem = {
-  id: string;
-  title: string;
-  completed: boolean;
+// The real generated package - the same code the local switchboard loads from
+// `test/versioned-documents` - assembled from the package's SUBPATH exports and
+// handed to `GraphQLReactorProvider` via `packages`.
+//
+// Subpaths on purpose, never the package ROOT: the root entry also exports
+// `processorFactory`, and module resolution happens before tree-shaking, so
+// importing anything from the root drags the processor graph (switchboard-side
+// code) into the browser bundle and breaks the build.
+//
+// This is what makes the document-model hooks AND the editor hooks work below
+// the provider. (A light app may equally ship no packages at all and let the
+// switchboard own the model - both modes are supported.)
+//
+// DocumentModelLib<any>: the package carries BOTH todo versions, whose
+// concrete state generics differ - the same variance escape the provider prop
+// uses.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const todoPackage: DocumentModelLib<any> = {
+  manifest: manifestJson as Manifest,
+  documentModels: [TodoV1, TodoV2],
+  editors: [TodoEditor],
+  upgradeManifests: [todoUpgradeManifest],
 };
 
-export type TodoGlobalState = {
-  title: string;
-  todos: TodoItem[];
-};
+export const TODO_DOCUMENT_TYPE: string = TodoV2.documentModel.global.id;
 
-export type TodoPHState = PHBaseState & {
-  global: TodoGlobalState;
-  local: Record<string, never>;
-};
-
-// The demo deliberately keeps its own tiny mirror of the model instead of
-// importing the generated module: the point of the light client is that a web
-// app needs no reducer, no document-model module and no reactor in its bundle.
-// The switchboard owns the model and rejects anything that does not match it.
-function createTodoState(state?: Partial<TodoPHState>): TodoPHState {
-  return {
-    ...createBaseState(state?.auth, {
-      version: TODO_DOCUMENT_VERSION,
-      ...state?.document,
-    }),
-    global: { title: "", todos: [], ...state?.global },
-    local: {},
-  };
-}
-
-/** Builds an unsigned, empty todo document ready for `client.create`. */
-export function createTodoDocument(): PHDocument<TodoPHState> {
-  return baseCreateDocument<TodoPHState>(
-    createTodoState,
-    undefined,
-    TODO_DOCUMENT_TYPE,
-  );
-}
-
-/** The `ADD_TODO` action of the todo model's `todo_operations` module. */
-export function addTodo(title: string): Action {
-  return createAction(
-    "ADD_TODO",
-    { id: generateId(), title, completed: false },
-    undefined,
-    undefined,
-    "global",
-  );
-}
+export type TodoModule = typeof TodoV2;
+export type TodoDocument = ReturnType<TodoModule["utils"]["createDocument"]>;
+export type TodoItem = TodoDocument["state"]["global"]["todos"][number];
 
 /** Reads the todo list off a document whose state shape is not known statically. */
 export function readTodos(document: PHDocument | undefined): TodoItem[] {
-  const state = document?.state as Partial<TodoPHState> | undefined;
+  const state = document?.state as TodoDocument["state"] | undefined;
   return state?.global?.todos ?? [];
 }

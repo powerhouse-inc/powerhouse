@@ -1,3 +1,8 @@
+import type {
+  DocumentModelLib,
+  DocumentModelModule,
+  EditorModule,
+} from "document-model";
 import { StrictMode } from "react";
 import {
   afterEach,
@@ -11,6 +16,15 @@ import {
 import { render } from "vitest-browser-react";
 import { DocumentCache } from "../../src/document-cache.js";
 import { GraphQLReactorClient } from "../../src/graphql-client/graphql-reactor-client.js";
+import { StaticPackageManager } from "../../src/graphql-client/static-package-manager.js";
+import {
+  useDocumentModelModuleById,
+  useDocumentModelModules,
+} from "../../src/hooks/document-model-modules.js";
+import {
+  useEditorModules,
+  useFallbackEditorModule,
+} from "../../src/hooks/editor-modules.js";
 import {
   ensurePHEventHandlers,
   GraphQLReactorProvider,
@@ -325,9 +339,9 @@ describe("GraphQLReactorProvider", () => {
     // back the very service the app passed in, through the hook Connect's
     // editors read it with.
     const attachmentService = {} as NonNullable<PHGlobal["attachmentService"]>;
-    let seen: unknown;
+    const seen: unknown[] = [];
     function Probe() {
-      seen = useAttachmentService();
+      seen.push(useAttachmentService());
       return null;
     }
 
@@ -342,7 +356,7 @@ describe("GraphQLReactorProvider", () => {
     );
 
     expect(window.ph?.attachmentService).toBe(attachmentService);
-    expect(seen).toBe(attachmentService);
+    expect(seen.at(-1)).toBe(attachmentService);
   });
 
   it("leaves the attachment service slot alone when no service is given", () => {
@@ -367,9 +381,9 @@ describe("useSwitchboardClient", () => {
   });
 
   it("returns the client the provider mounted", () => {
-    let seen: GraphQLReactorClient | undefined;
+    const seen: (GraphQLReactorClient | undefined)[] = [];
     function Probe() {
-      seen = useSwitchboardClient();
+      seen.push(useSwitchboardClient());
       return null;
     }
 
@@ -379,8 +393,8 @@ describe("useSwitchboardClient", () => {
       </GraphQLReactorProvider>,
     );
 
-    expect(seen).toBe(window.ph?.reactorClient);
-    expect(seen).toBeInstanceOf(GraphQLReactorClient);
+    expect(seen.at(-1)).toBe(window.ph?.reactorClient);
+    expect(seen.at(-1)).toBeInstanceOf(GraphQLReactorClient);
   });
 
   it("returns a client built by a duplicate copy of the module", () => {
@@ -396,30 +410,31 @@ describe("useSwitchboardClient", () => {
 
     ensurePHEventHandlers();
     setReactorClient(fromOtherCopy);
-    let seen: GraphQLReactorClient | undefined;
+    const seen: (GraphQLReactorClient | undefined)[] = [];
     function Probe() {
-      seen = useSwitchboardClient();
+      seen.push(useSwitchboardClient());
       return null;
     }
 
     render(<Probe />);
 
-    expect(seen).toBe(fromOtherCopy);
+    expect(seen.at(-1)).toBe(fromOtherCopy);
   });
 
   it("returns nothing when the slot holds another implementation", () => {
     ensurePHEventHandlers();
     setReactorClient({} as IReactorBrowserClient);
-    let seen: GraphQLReactorClient | undefined;
+    const seen: (GraphQLReactorClient | undefined)[] = [];
     function Probe() {
-      seen = useSwitchboardClient();
+      seen.push(useSwitchboardClient());
       return null;
     }
 
     render(<Probe />);
 
     expect(window.ph?.reactorClient).toBeDefined();
-    expect(seen).toBeUndefined();
+    expect(seen.length).toBeGreaterThan(0);
+    expect(seen.at(-1)).toBeUndefined();
   });
 });
 
@@ -448,5 +463,246 @@ describe("ensurePHEventHandlers", () => {
     ensurePHEventHandlers();
 
     expect(addEventListener).not.toHaveBeenCalled();
+  });
+});
+
+// Minimal modules with the members the manager and the hooks' dedup key read.
+function makeModule(id: string, version: number): DocumentModelModule {
+  return {
+    version,
+    reducer: (document: unknown) => document,
+    actions: {},
+    utils: {},
+    documentModel: { global: { id }, local: {} },
+  } as unknown as DocumentModelModule;
+}
+
+const todoModule = makeModule("test/todo", 2);
+
+/** Renders what `useDocumentModelModules` sees below the provider. */
+function ModelsProbe() {
+  const models = useDocumentModelModules();
+  return (
+    <span data-testid="models">
+      {(models ?? [])
+        .map((module) => `${module.documentModel.global.id}@${module.version}`)
+        .join(",")}
+    </span>
+  );
+}
+
+function probedModels(screen: { container: HTMLElement }) {
+  return screen.container.querySelector("[data-testid=models]")?.textContent;
+}
+
+describe("GraphQLReactorProvider documentModels", () => {
+  beforeEach(() => {
+    window.ph = {};
+    delete window.__phEventHandlersRegistered;
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    window.ph = {};
+    delete window.__phEventHandlersRegistered;
+  });
+
+  it("publishes a StaticPackageManager carrying the given modules", () => {
+    render(
+      <GraphQLReactorProvider
+        url={url}
+        realtime={false}
+        documentModels={[todoModule]}
+      >
+        <span />
+      </GraphQLReactorProvider>,
+    );
+
+    const manager = window.ph?.vetraPackageManager;
+    expect(manager).toBeInstanceOf(StaticPackageManager);
+    expect(manager?.packages[0].documentModels).toEqual([todoModule]);
+  });
+
+  it("makes useDocumentModelModules work below the provider", async () => {
+    const screen = render(
+      <GraphQLReactorProvider
+        url={url}
+        realtime={false}
+        documentModels={[todoModule]}
+      >
+        <ModelsProbe />
+      </GraphQLReactorProvider>,
+    );
+
+    await expect.poll(() => probedModels(screen)).toBe("test/todo@2");
+  });
+
+  it("leaves the slot untouched without the prop", () => {
+    render(
+      <GraphQLReactorProvider url={url} realtime={false}>
+        <span />
+      </GraphQLReactorProvider>,
+    );
+
+    expect(window.ph?.vetraPackageManager).toBeUndefined();
+  });
+
+  it("survives a StrictMode double mount with one sane final state", async () => {
+    const screen = render(
+      <StrictMode>
+        <GraphQLReactorProvider
+          url={url}
+          realtime={false}
+          documentModels={[todoModule]}
+        >
+          <ModelsProbe />
+        </GraphQLReactorProvider>
+      </StrictMode>,
+    );
+
+    expect(window.ph?.vetraPackageManager).toBeInstanceOf(StaticPackageManager);
+    await expect.poll(() => probedModels(screen)).toBe("test/todo@2");
+  });
+});
+
+// Real-lib fixtures for the `packages` prop: two packages, two versions of the
+// same type spread across them, and one editor each for the same type.
+function makeEditor(id: string): EditorModule {
+  return {
+    Component: () => null,
+    documentTypes: ["test/todo"],
+    config: { id, name: id },
+  };
+}
+
+const editorA = makeEditor("editor-a");
+const editorB = makeEditor("editor-b");
+const libA: DocumentModelLib = {
+  manifest: { name: "package-a" },
+  documentModels: [makeModule("test/todo", 1)],
+  editors: [editorA],
+};
+const libB: DocumentModelLib = {
+  manifest: { name: "package-b" },
+  documentModels: [makeModule("test/todo", 2)],
+  editors: [editorB],
+};
+
+function VersionProbe({ version }: { version?: number }) {
+  const module = useDocumentModelModuleById("test/todo", version);
+  return (
+    <span data-testid="version">{module ? `v${module.version}` : "none"}</span>
+  );
+}
+
+function EditorsProbe() {
+  const editors = useEditorModules();
+  const fallback = useFallbackEditorModule("test/todo");
+  return (
+    <span data-testid="editors">
+      {(editors ?? []).map((module) => module.config.id).join(",")}|
+      {fallback?.config.id ?? "none"}
+    </span>
+  );
+}
+
+function probe(screen: { container: HTMLElement }, testId: string) {
+  return screen.container.querySelector(`[data-testid=${testId}]`)?.textContent;
+}
+
+describe("GraphQLReactorProvider packages", () => {
+  beforeEach(() => {
+    window.ph = {};
+    delete window.__phEventHandlersRegistered;
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    window.ph = {};
+    delete window.__phEventHandlersRegistered;
+  });
+
+  it("publishes the given packages exactly as given, in order", () => {
+    render(
+      <GraphQLReactorProvider
+        url={url}
+        realtime={false}
+        packages={[libA, libB]}
+      >
+        <span />
+      </GraphQLReactorProvider>,
+    );
+
+    const manager = window.ph?.vetraPackageManager;
+    expect(manager).toBeInstanceOf(StaticPackageManager);
+    expect(manager?.packages[0]).toBe(libA);
+    expect(manager?.packages[1]).toBe(libB);
+  });
+
+  it("resolves the module hook to the LATEST version across packages", async () => {
+    const screen = render(
+      <GraphQLReactorProvider
+        url={url}
+        realtime={false}
+        packages={[libA, libB]}
+      >
+        <VersionProbe />
+      </GraphQLReactorProvider>,
+    );
+
+    // libA (v1) comes first, but latest wins - the registry's semantics.
+    await expect.poll(() => probe(screen, "version")).toBe("v2");
+  });
+
+  it("resolves a pinned version exactly, or nothing", async () => {
+    const screen = render(
+      <GraphQLReactorProvider
+        url={url}
+        realtime={false}
+        packages={[libA, libB]}
+      >
+        <VersionProbe version={1} />
+        <span data-testid="wrap">
+          <VersionProbe version={3} />
+        </span>
+      </GraphQLReactorProvider>,
+    );
+
+    await expect.poll(() => probe(screen, "wrap")).toBe("none");
+    expect(probe(screen, "version")).toBe("v1");
+  });
+
+  it("makes the editor hooks work, honoring package order for the fallback", async () => {
+    const screen = render(
+      <GraphQLReactorProvider
+        url={url}
+        realtime={false}
+        packages={[libA, libB]}
+      >
+        <EditorsProbe />
+      </GraphQLReactorProvider>,
+    );
+
+    await expect
+      .poll(() => probe(screen, "editors"))
+      .toBe("editor-a,editor-b|editor-a");
+  });
+
+  it("appends the documentModels sugar AFTER the real packages", () => {
+    render(
+      <GraphQLReactorProvider
+        url={url}
+        realtime={false}
+        packages={[libA]}
+        documentModels={[makeModule("test/extra", 1)]}
+      >
+        <span />
+      </GraphQLReactorProvider>,
+    );
+
+    const manager = window.ph?.vetraPackageManager;
+    expect(manager?.packages).toHaveLength(2);
+    expect(manager?.packages[0]).toBe(libA);
+    expect(manager?.packages[1].manifest.name).toBe("graphql-reactor-provider");
   });
 });

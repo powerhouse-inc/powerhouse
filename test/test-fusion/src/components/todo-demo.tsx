@@ -3,31 +3,45 @@
 import {
   useDispatch,
   useDocument,
+  useDocumentModelModuleById,
+  useDocumentModelModules,
   useReactorClient,
 } from "@powerhousedao/reactor-browser/graphql-client";
-import type { PHDocument } from "document-model";
+import { generateId, type PHDocument } from "document-model";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
-import { addTodo, createTodoDocument, readTodos } from "@/lib/todo-document";
+import {
+  readTodos,
+  TODO_DOCUMENT_TYPE,
+  type TodoModule,
+} from "@/lib/todo-document";
 
 // The demo for the light GraphQL reactor client: create, read and dispatch
 // against a Switchboard through the same hooks Connect uses, with no reactor
 // in the bundle. The open document's id lives in the URL so a reload proves
 // the state came back from the server rather than from memory.
+//
+// The todo module itself is resolved through useDocumentModelModuleById - not
+// imported directly - so the page exercises the whole documentModels chain:
+// provider prop -> StaticPackageManager -> package-derived hooks.
 export function TodoDemo() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const client = useReactorClient();
+  const models = useDocumentModelModules();
+  const todoModule = useDocumentModelModuleById(TODO_DOCUMENT_TYPE) as
+    | TodoModule
+    | undefined;
   const documentId = searchParams.get("id");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string>();
 
   async function createDocument() {
-    if (!client) return;
+    if (!client || !todoModule) return;
     setCreating(true);
     setError(undefined);
     try {
-      const created = await client.create(createTodoDocument());
+      const created = await client.create(todoModule.utils.createDocument());
       router.replace(`/documents?id=${created.header.id}`);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
@@ -42,10 +56,20 @@ export function TodoDemo() {
       data-testid="todo-demo"
     >
       <h1 className="text-2xl font-semibold">Todo lists</h1>
+      <p
+        className="font-mono text-xs text-foreground/50"
+        data-testid="model-registered"
+      >
+        {(models ?? [])
+          .map(
+            (module) => `${module.documentModel.global.id}@${module.version}`,
+          )
+          .join(", ")}
+      </p>
       <button
         type="button"
         data-testid="create-document"
-        disabled={!client || creating}
+        disabled={!client || !todoModule || creating}
         onClick={() => void createDocument()}
         className="h-9 rounded-lg border border-black/15 px-4 text-sm font-medium transition-colors hover:bg-black/5 disabled:opacity-40 dark:border-white/20 dark:hover:bg-white/10"
       >
@@ -82,6 +106,9 @@ export function TodoDemo() {
 
 function TodoList({ documentId }: { documentId: string }) {
   const document = useDocument(documentId) as PHDocument | undefined;
+  const todoModule = useDocumentModelModuleById(TODO_DOCUMENT_TYPE) as
+    | TodoModule
+    | undefined;
   const [, dispatch] = useDispatch(document);
   const [title, setTitle] = useState("");
   const [error, setError] = useState<string>();
@@ -89,10 +116,15 @@ function TodoList({ documentId }: { documentId: string }) {
 
   function add() {
     const trimmed = title.trim();
-    if (!trimmed) return;
+    if (!trimmed || !todoModule) return;
     setError(undefined);
-    dispatch(addTodo(trimmed), (errors) =>
-      setError(errors.map((e) => e.message).join("; ")),
+    dispatch(
+      todoModule.actions.addTodo({
+        id: generateId(),
+        title: trimmed,
+        completed: false,
+      }),
+      (errors) => setError(errors.map((e) => e.message).join("; ")),
     );
     setTitle("");
   }

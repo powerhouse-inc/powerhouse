@@ -7,11 +7,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:e2e": "pnpm --filter @powerhousedao/reactor-browser build && playwright test",
+    "test:e2e": "pnpm --filter @powerhousedao/versioned-documents build && pnpm --filter @powerhousedao/versioned-documents tsc && pnpm --filter @powerhousedao/reactor-browser build && playwright test",
     "test:e2e:ui": "pnpm --filter @powerhousedao/reactor-browser build && playwright test --ui"
   },
   "dependencies": {
     "@powerhousedao/reactor-browser": "workspace:*",
+    "@powerhousedao/versioned-documents": "workspace:*",
     "@privy-io/react-auth": "3.35.0",
     "@rainbow-me/rainbowkit": "^2.2.11",
     "@renown/sdk": "workspace:*",

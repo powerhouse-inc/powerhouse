@@ -1,4 +1,4 @@
-import type { DocumentNode } from "graphql";
+import { Kind, type DocumentNode } from "graphql";
 import { GraphQLClient } from "graphql-request";
 import type { SdkFunctionWrapper } from "../graphql/gen/schema.js";
 
@@ -82,9 +82,9 @@ export function describeGraphQLDocument(document: string | DocumentNode): {
 } {
   if (typeof document !== "string") {
     const operation = document.definitions.find(
-      (definition) => definition.kind === "OperationDefinition",
+      (definition) => definition.kind === Kind.OPERATION_DEFINITION,
     );
-    if (!operation || operation.kind !== "OperationDefinition") {
+    if (!operation || operation.kind !== Kind.OPERATION_DEFINITION) {
       return {
         operationName: unnamedOperation,
         operationType: defaultOperationType,

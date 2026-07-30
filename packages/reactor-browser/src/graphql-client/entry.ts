@@ -40,5 +40,13 @@ export {
 } from "../hooks/document-cache.js";
 export { useDispatch } from "../hooks/dispatch.js";
 export type { DispatchFn, UseDispatchResult } from "../hooks/dispatch.js";
+export {
+  useDocumentModelModuleById,
+  useDocumentModelModules,
+} from "../hooks/document-model-modules.js";
 export { setReactorClient, useReactorClient } from "../hooks/reactor.js";
+export {
+  setVetraPackageManager,
+  useVetraPackages,
+} from "../hooks/vetra-packages.js";
 export type { IReactorBrowserClient } from "../types/reactor-browser-client.js";

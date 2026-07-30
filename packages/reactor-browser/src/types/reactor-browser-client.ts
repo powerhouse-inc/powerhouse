@@ -13,13 +13,12 @@ import type { IReactorClient } from "@powerhousedao/reactor";
  * `executeAsync`/`executeBatch`, jobs, `createEmpty`, `rename` and the document
  * model module getters.
  */
-export interface IReactorBrowserClient
-  extends Pick<
-    IReactorClient,
-    | "get"
-    | "subscribe"
-    | "execute"
-    | "getOperations"
-    | "create"
-    | "deleteDocument"
-  > {}
+export interface IReactorBrowserClient extends Pick<
+  IReactorClient,
+  | "get"
+  | "subscribe"
+  | "execute"
+  | "getOperations"
+  | "create"
+  | "deleteDocument"
+> {}
