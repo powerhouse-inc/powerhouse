@@ -87,7 +87,7 @@ export function CreateDocument() {
   if (!visibleDocumentModelModules?.length) return null;
   return (
     <div className="px-6 py-4">
-      <PowerhouseButton onClick={() => setShowModal(true)}>
+      <PowerhouseButton color="blue" onClick={() => setShowModal(true)}>
         Create New Document
       </PowerhouseButton>
       <CreateDocumentWithTypeModal
