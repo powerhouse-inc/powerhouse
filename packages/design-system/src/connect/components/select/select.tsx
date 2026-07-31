@@ -27,6 +27,8 @@ export type ConnectSelectProps<TValue extends string> = {
   itemClassName?: string;
   borderRadius?: CSSProperties["borderRadius"];
   absolutePositionMenu?: boolean;
+  /** Applied to the expanded options list, e.g. to cap its height and make it scrollable. */
+  listClassName?: string;
 };
 
 function fixedForwardRef<T, P = Record<string, never>>(
@@ -50,6 +52,7 @@ export const ConnectSelect = /* @__PURE__ */ fixedForwardRef(function Select<
     itemClassName,
     absolutePositionMenu = false,
     borderRadius = "6px",
+    listClassName,
   } = props;
   const [showItems, setShowItems] = useState(false);
   const selectedItem = getItemByValue(value) ?? items[0];
@@ -96,6 +99,7 @@ export const ConnectSelect = /* @__PURE__ */ fixedForwardRef(function Select<
           "max-h-0 w-full overflow-hidden bg-inherit transition-[max-height] ease-in-out",
           showItems && "max-h-screen",
           absolutePositionMenu && "absolute",
+          showItems && listClassName,
         )}
         style={{
           borderRadius: `0 0 ${borderRadius} ${borderRadius}`,

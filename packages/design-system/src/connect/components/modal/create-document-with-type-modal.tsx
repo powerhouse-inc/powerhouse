@@ -33,7 +33,7 @@ const CLOSE_ANIMATION_DURATION = 300;
 const PLACEHOLDER_KEY = "";
 
 function optionKey(option: DocumentTypeOption): string {
-  return `${option.documentType}::${option.version ?? 1}`;
+  return `${option.documentType}::${option.version ?? "latest"}`;
 }
 
 function optionDisplayName(option: DocumentTypeOption): string {
@@ -87,12 +87,17 @@ export function CreateDocumentWithTypeModal(
     }, CLOSE_ANIMATION_DURATION);
   }, []);
 
+  const handleOpenChange = (open: boolean) => {
+    onOpenChange?.(open);
+    if (!open) resetAfterClose();
+  };
+
   const handleCancel = () => {
-    onOpenChange?.(false);
-    resetAfterClose();
+    handleOpenChange(false);
   };
 
   const handleTypeChange = (value: string) => {
+    // Unreachable today (the sentinel never appears in the open list), kept as defense.
     if (value === PLACEHOLDER_KEY) return;
     setSelectedKey(value);
     const option = documentTypes.find((o) => optionKey(o) === value);
@@ -120,13 +125,14 @@ export function CreateDocumentWithTypeModal(
   return (
     <Modal
       contentProps={contentProps}
-      onOpenChange={onOpenChange}
+      onOpenChange={handleOpenChange}
       overlayProps={overlayProps}
+      title="Create a new document"
       {...restProps}
     >
       <form
         name="create-document-with-type"
-        className="w-100 rounded-xl bg-background p-6 text-foreground"
+        className="max-h-[85vh] w-100 overflow-y-auto rounded-xl bg-background p-6 text-foreground"
         onSubmit={handleSubmit}
       >
         <div className="pb-2 text-2xl font-bold text-foreground">
@@ -160,6 +166,7 @@ export function CreateDocumentWithTypeModal(
           <ConnectSelect
             id="document-type"
             items={items}
+            listClassName="max-h-80 overflow-y-auto overscroll-contain"
             menuClassName="min-w-0"
             onChange={handleTypeChange}
             value={selectedKey}
