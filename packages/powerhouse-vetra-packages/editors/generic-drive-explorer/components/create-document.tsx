@@ -90,6 +90,7 @@ export function CreateDocument() {
   return (
     <>
       <PowerhouseButton
+        className="py-2"
         color="blue"
         icon={<Icon name="Plus" size={14} />}
         onClick={() => setShowModal(true)}
