@@ -1,3 +1,13 @@
+## 6.2.2-dev.30 (2026-07-31)
+
+### 🩹 Fixes
+
+- **processors:** stop filtering drive analytics on a "*" wildcard ([4a3eaa7df](https://github.com/powerhouse-inc/powerhouse/commit/4a3eaa7df))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.2-dev.29 (2026-07-31)
 
 This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.

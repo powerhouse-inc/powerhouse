@@ -1,4 +1,4 @@
-# Powerhouse CLI Commands (6.2.2-dev.29)<br>
+# Powerhouse CLI Commands (6.2.2-dev.30)<br>
 This document provides detailed information about the available commands in the Powerhouse CLI.<br><br>
 The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essential commands for managing Powerhouse projects. The tool and it's commands are fundamental for creating, building, and running Document Models as a builder in studio mode.<br>
 ## Table of Contents
@@ -114,8 +114,8 @@ The name of the drive app to generate<br><br>
 **usage:** `--name, -n <str>`<br>
 
 #### Document Types <br>
-The document types allowed by the new app<br><br>
-**usage:** `--document-types <str>, -t=<str>`<br>
+The document types allowed by the new app (repeatable or comma-separated)<br><br>
+**usage:** `--document-types <value>, -t=<value>`<br>
 
 #### Document <br>
 Path to a powerhouse/app spec file (.phd or .json) to drive codegen<br><br>
@@ -160,8 +160,8 @@ The type of processor to generate<br><br>
 **usage:** `--type <value>`<br>
 **default**: `analytics`
 #### Document Types <br>
-The document types the processor will run on<br><br>
-**usage:** `--document-types <str>, -t=<str>`<br>
+The document types the processor will run on (repeatable or comma-separated)<br><br>
+**usage:** `--document-types <value>, -t=<value>`<br>
 **default**: ``
 #### Apps <br>
 Whether the processor will run in switchboard (nodejs), connect (browser), or both<br><br>

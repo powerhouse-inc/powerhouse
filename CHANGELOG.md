@@ -1,3 +1,19 @@
+## 6.2.2-dev.30 (2026-07-31)
+
+### 🩹 Fixes
+
+- **codegen:** refresh cached ts-morph source files from disk ([#1](https://github.com/powerhouse-inc/powerhouse/issues/1), [#2889](https://github.com/powerhouse-inc/powerhouse/issues/2889))
+- **codegen:** generate processor filters that can match documents ([70c897127](https://github.com/powerhouse-inc/powerhouse/commit/70c897127))
+- **codegen:** run a generated relational db processor's migrations ([455f802d6](https://github.com/powerhouse-inc/powerhouse/commit/455f802d6))
+- **ph-cli:** split comma-separated list options ([097c75424](https://github.com/powerhouse-inc/powerhouse/commit/097c75424))
+- **processors:** stop filtering drive analytics on a "*" wildcard ([4a3eaa7df](https://github.com/powerhouse-inc/powerhouse/commit/4a3eaa7df))
+- **reactor-browser:** take document models only, not whole packages ([#2896](https://github.com/powerhouse-inc/powerhouse/pull/2896))
+
+### ❤️ Thank You
+
+- acaldas
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.2.2-dev.29 (2026-07-31)
 
 This was a version bump only, there were no code changes.

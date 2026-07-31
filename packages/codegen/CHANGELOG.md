@@ -1,3 +1,15 @@
+## 6.2.2-dev.30 (2026-07-31)
+
+### 🩹 Fixes
+
+- **codegen:** run a generated relational db processor's migrations ([455f802d6](https://github.com/powerhouse-inc/powerhouse/commit/455f802d6))
+- **codegen:** generate processor filters that can match documents ([70c897127](https://github.com/powerhouse-inc/powerhouse/commit/70c897127))
+- **codegen:** refresh cached ts-morph source files from disk ([#1](https://github.com/powerhouse-inc/powerhouse/issues/1), [#2889](https://github.com/powerhouse-inc/powerhouse/issues/2889))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.2-dev.29 (2026-07-31)
 
 This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.

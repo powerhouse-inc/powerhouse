@@ -1,3 +1,13 @@
+## 6.2.2-dev.30 (2026-07-31)
+
+### 🩹 Fixes
+
+- **reactor-browser:** take document models only, not whole packages ([#2896](https://github.com/powerhouse-inc/powerhouse/pull/2896))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.2.2-dev.29 (2026-07-31)
 
 This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.

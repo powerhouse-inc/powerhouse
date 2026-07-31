@@ -1,3 +1,13 @@
+## 6.2.2-dev.30 (2026-07-31)
+
+### 🩹 Fixes
+
+- **ph-cli:** split comma-separated list options ([097c75424](https://github.com/powerhouse-inc/powerhouse/commit/097c75424))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.2-dev.29 (2026-07-31)
 
 This was a version bump only for @powerhousedao/ph-cli to align it with other projects, there were no code changes.
