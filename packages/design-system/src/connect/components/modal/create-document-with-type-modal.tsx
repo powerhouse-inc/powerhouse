@@ -62,11 +62,12 @@ export function CreateDocumentWithTypeModal(
   );
   const canCreate = isNameValid && selectedOption !== undefined;
 
+  // `option.description` is deliberately not forwarded: long descriptions make
+  // the option rows uneven and noisy, so the list shows names (+ version) only.
   const typeItems: ConnectSelectItem<string>[] = documentTypes.map(
     (option) => ({
       value: optionKey(option),
       displayValue: optionDisplayName(option),
-      description: option.description,
     }),
   );
   // The sentinel exists only while nothing is selected, so it can never be
