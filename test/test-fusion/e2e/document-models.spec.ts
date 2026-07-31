@@ -34,6 +34,20 @@ test("registers the app's document models and drives the flow through them", asy
     "from the generated module",
   ]);
 
+  // The operation log round-tripped through the same client: the
+  // entry-exported useDocumentOperations sees the operation the dispatch
+  // appended. No exact total - creation semantics may add operations of
+  // their own - just that the log is non-empty once ADD_TODO landed.
+  await expect
+    .poll(
+      async () => {
+        const text = await page.getByTestId("operations-count").textContent();
+        return Number(/\d+/.exec(text ?? "")?.[0] ?? "0");
+      },
+      { timeout: 15_000 },
+    )
+    .toBeGreaterThan(0);
+
   // The module-built document and the typed action both round-tripped without
   // a reducer or transport error.
   await expect(page.getByTestId("dispatch-error")).toHaveCount(0);

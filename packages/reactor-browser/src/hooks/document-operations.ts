@@ -9,7 +9,8 @@ type InternalState = {
   error: Error | undefined;
 };
 
-type DocumentOperationsState = InternalState & {
+/** What `useDocumentOperations` returns; exported so consumers can name it. */
+export type DocumentOperationsState = InternalState & {
   refetch: () => void;
 };
 
