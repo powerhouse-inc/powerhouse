@@ -67,6 +67,11 @@ test("vetra document types are hidden in a generic drive", async ({ page }) => {
   await waitForAppReady(page);
 
   // 4. Positive control: the "Create New Document" button renders.
+  // NOTE: this positive control depends on document-creation.spec.ts having
+  // run first (workers: 1, alphabetical file order): it generates a creatable
+  // project-local document model. With zero creatable types the footer
+  // deliberately renders nothing (see create-document.tsx), and this spec
+  // would fail here if run in isolation.
   const createDocumentButton = page.getByRole("button", {
     name: "Create New Document",
   });
@@ -81,8 +86,9 @@ test("vetra document types are hidden in a generic drive", async ({ page }) => {
     dialog.getByText("Select document type…", { exact: true }),
   ).toBeVisible({ timeout: 10_000 });
   for (const hiddenName of HIDDEN_DISPLAY_NAMES) {
+    const escaped = hiddenName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     await expect(
-      dialog.getByText(hiddenName, { exact: true }),
+      dialog.getByText(new RegExp(`^${escaped}( v\\d+)?$`)),
     ).toHaveCount(0, { timeout: 30_000 });
   }
 });
