@@ -44,5 +44,7 @@ export {
   useDocumentModelModuleById,
   useDocumentModelModules,
 } from "../hooks/document-model-modules.js";
+export { useDocumentOperations } from "../hooks/document-operations.js";
+export type { DocumentOperationsState } from "../hooks/document-operations.js";
 export { setReactorClient, useReactorClient } from "../hooks/reactor.js";
 export type { IReactorBrowserClient } from "../types/reactor-browser-client.js";

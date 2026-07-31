@@ -5,11 +5,12 @@ import {
   useDocument,
   useDocumentModelModuleById,
   useDocumentModelModules,
+  useDocumentOperations,
   useReactorClient,
 } from "@powerhousedao/reactor-browser/graphql-client";
 import { generateId, type PHDocument } from "document-model";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import {
   readTodos,
   TODO_DOCUMENT_TYPE,
@@ -114,6 +115,16 @@ function TodoList({ documentId }: { documentId: string }) {
   const [error, setError] = useState<string>();
   const todos = readTodos(document);
 
+  // The operation log through the same client the document came from - the
+  // primitive a fusion app derives a history view from. Refetching keyed on
+  // the document's last-modified stamp keeps it in step with every update the
+  // cache sees, including ones pushed over the realtime subscription.
+  const { globalOperations, refetch } = useDocumentOperations(documentId);
+  const lastModified = document?.header.lastModifiedAtUtcIso;
+  useEffect(() => {
+    if (lastModified) refetch();
+  }, [lastModified, refetch]);
+
   function add() {
     const trimmed = title.trim();
     if (!trimmed || !todoModule) return;
@@ -166,6 +177,12 @@ function TodoList({ documentId }: { documentId: string }) {
           </li>
         ))}
       </ul>
+      <p
+        className="font-mono text-xs text-foreground/50"
+        data-testid="operations-count"
+      >
+        {globalOperations.length} operations
+      </p>
     </section>
   );
 }
