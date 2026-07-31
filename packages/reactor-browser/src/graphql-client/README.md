@@ -39,69 +39,50 @@ uses the same document hooks Connect uses.
 | `subscriptionsUrl`  | derived from `url`        | The websocket endpoint, `http` -> `ws` plus `/subscriptions`.                             |
 | `realtime`          | `true`                    | Whether server-pushed changes reach subscribers.                                          |
 | `attachmentService` | none                      | The attachment service, published into the slot the editors read.                         |
-| `packages`          | none                      | The app's packages, as real `DocumentModelLib`s — makes the model AND editor hooks work.  |
-| `documentModels`    | none                      | Sugar for hand-picked modules without package artifacts (see below).                      |
+| `documentModels`    | none                      | The app's document model modules, published so the model hooks work (below).              |
 
 The props are read once, when the client is built. Changing `url` afterwards
 does not rebuild the client; remount the provider (or key it on the URL) if the
 endpoint has to change at runtime.
 
-### Packages and document models
+### Document models
 
-A light app has two equally supported modes. It can ship **no** packages and let
+A light app has two equally supported modes. It can ship **no** modules and let
 the Switchboard own the model entirely — actions are plain data, and the server
-runs the reducer. Or it can pass the real package it imports itself, assembled
-from the package's **subpath exports**:
+runs the reducer. Or it can pass the generated modules it imports itself, from
+the package's `document-models` **subpath**:
 
 ```tsx
-import { TodoV2 } from "my-models/document-models";
-import { TodoEditor } from "my-models/editors";
-import manifest from "my-models/manifest";
+import { TodoV1, TodoV2 } from "my-models/document-models";
 
-<GraphQLReactorProvider url={url} packages={[{ manifest, documentModels: [TodoV2], editors: [TodoEditor] }]}>
+<GraphQLReactorProvider url={url} documentModels={[TodoV1, TodoV2]}>
 ```
 
-Import from the subpaths, **never from the package root**. The root entry also
-exports the package's `processorFactory`, and module resolution happens before
-tree-shaking — a root import drags processor (server-side) code into the
-browser bundle and can break the build outright, named imports or not.
+Import from the `document-models` subpath, **never from the package root**. The
+root entry also exports the package's `processorFactory`, and module resolution
+happens before tree-shaking — a root import drags processor (server-side) code
+into the browser bundle and can break the build outright, named imports or not.
 
-`packages` publishes a fixed `StaticPackageManager` into the same
-`window.ph.vetraPackageManager` slot Connect fills, which makes the
-document-model hooks (`useDocumentModelModules`, `useDocumentModelModuleById`,
-`useVetraPackages`) AND the editor hooks (`useEditorModules`,
-`useEditorModulesForDocumentType`, `useFallbackEditorModule`, …) work below the
-provider. The manager is static: it never installs, updates or removes
-packages, and its mutating members throw.
-
-For several packages, pass several entries — a small per-package file avoids
-import aliasing:
-
-```ts
-// lib/todo-package.ts
-import { TodoV2 } from "my-models/document-models";
-import { TodoEditor } from "my-models/editors";
-import manifest from "my-models/manifest";
-export const todoPackage = { manifest, documentModels: [TodoV2], editors: [TodoEditor] };
-```
-
-**Array order is precedence.** Hooks merge packages in order: when two packages
-ship the same document type at the same version the earlier package wins, and
-`useFallbackEditorModule` picks the first matching editor in array order.
+`documentModels` publishes a fixed `StaticPackageManager` (one synthetic
+package, built by `packageFromDocumentModels`) into the same
+`window.ph.vetraPackageManager` slot Connect fills, which makes
+`useDocumentModelModules` and `useDocumentModelModuleById` work below the
+provider — typed action creators, `utils.createDocument()` for
+`client.create`, and model metadata for the UI. The manager is static: it never
+installs, updates or removes packages, and its mutating members throw.
 
 **Versions resolve like the registry.** `useDocumentModelModuleById(type)`
 returns the LATEST version of the type — the same choice the reactor makes when
 a document is created — and `useDocumentModelModuleById(type, version)` pins an
-exact one. A versioned package registers all of its versions.
+exact one. Pass every version your package ships (as above) and the hooks pick
+the right one.
 
-**Editor discovery is not a rendering guarantee.** The editor hooks find the
-modules; whether an editor runs in a light app depends on what its component
-touches — document hooks work, drive APIs do not exist here.
-
-`documentModels` remains as sugar for hand-picked modules without package
-artifacts, wrapped via `packageFromDocumentModels` into one synthetic package
-appended after `packages`. Prefer `packages` when you have the real package —
-it also carries the editors.
+**Modules only — not whole packages, and no editors.** Editors are not portable
+outside Connect yet: they read the selected document through Connect's
+drive/node selection (`useSelectedDocument`), which a light app deliberately
+does not have, and bundling them inflates the app for components that cannot
+run. Until editors take their document via props, a light app that wants an
+editor-like UI imports the React components directly.
 
 Server-side there is no client: the provider builds one only in the browser, so
 the slots stay empty during SSR and the hooks report their normal loading

@@ -1,6 +1,6 @@
 "use client";
 
-import type { DocumentModelLib, DocumentModelModule } from "document-model";
+import type { DocumentModelModule } from "document-model";
 import { type ReactNode, useEffect, useState } from "react";
 import { DocumentCache } from "../document-cache.js";
 import { addPHEventHandlers } from "../hooks/add-ph-event-handlers.js";
@@ -76,37 +76,31 @@ export type GraphQLReactorProviderProps = {
   attachmentService?: PHGlobal["attachmentService"];
 
   /**
-   * The packages the app works with, as real `DocumentModelLib`s built from
-   * each package's SUBPATH exports:
+   * The document model modules the app works with, imported from its generated
+   * package's `document-models` SUBPATH:
    *
    * ```tsx
-   * import { TodoV2 } from "my-models/document-models";
-   * import { TodoEditor } from "my-models/editors";
-   * import manifest from "my-models/manifest";
-   * <GraphQLReactorProvider url={url} packages={[{ manifest, documentModels: [TodoV2], editors: [TodoEditor] }]}>
+   * import { TodoV1, TodoV2 } from "my-models/document-models";
+   * <GraphQLReactorProvider url={url} documentModels={[TodoV1, TodoV2]}>
    * ```
    *
-   * Published through a {@link StaticPackageManager} into the same
-   * `window.ph.vetraPackageManager` slot Connect fills, so the document-model
-   * hooks AND the editor hooks (`useEditorModules` and friends) work below
-   * this provider. Array order is precedence: hooks merge packages in order,
-   * and same-type collisions resolve to the earlier package.
+   * Wrapped via {@link packageFromDocumentModels} and published through a
+   * {@link StaticPackageManager} into the same `window.ph.vetraPackageManager`
+   * slot Connect fills, so `useDocumentModelModules` and
+   * `useDocumentModelModuleById` work below this provider.
    *
-   * Import from the subpaths, never from the package ROOT: the root entry also
-   * exports the package's `processorFactory`, and module resolution happens
-   * before tree-shaking, so a root import drags processor (server-side) code
-   * into the browser bundle and can break the build outright.
+   * Modules only, deliberately - not whole packages. Editors are not portable
+   * outside Connect yet (they read the selected document from Connect's
+   * drive/node selection) and would inflate the bundle; a light app that needs
+   * an editor imports the React component directly.
    *
-   * Optional on purpose: a light app may equally ship NO packages and let the
+   * Import from the `document-models` subpath, never from the package ROOT:
+   * the root entry also exports the package's `processorFactory`, and module
+   * resolution happens before tree-shaking, so a root import drags processor
+   * (server-side) code into the browser bundle and can break the build.
+   *
+   * Optional on purpose: a light app may equally ship NO modules and let the
    * Switchboard own the model entirely - both modes are supported.
-   */
-  packages?: readonly DocumentModelLib<any>[];
-
-  /**
-   * Sugar for hand-picked modules without package artifacts, wrapped via
-   * {@link packageFromDocumentModels} into one synthetic package (appended
-   * AFTER `packages` in precedence). Prefer `packages` when you have the real
-   * package - it also carries the editors.
    */
   documentModels?: readonly DocumentModelModule<any>[];
 
@@ -139,7 +133,6 @@ export function GraphQLReactorProvider({
   subscriptionsUrl,
   realtime,
   attachmentService,
-  packages,
   documentModels,
   children,
 }: GraphQLReactorProviderProps) {
@@ -185,23 +178,19 @@ export function GraphQLReactorProvider({
   }, [attachmentService]);
 
   // Its own effect for the same reason as the attachment service above: the
-  // packages must not rebuild the client and its cache. The slot stays
+  // modules must not rebuild the client and its cache. The slot stays
   // populated on unmount, matching the other slots. setVetraPackageManager's
   // reactor side effects no-op here - there is no reactorClientModule to
   // register modules on.
   useEffect(() => {
-    const libs = [
-      ...(packages ?? []),
-      ...(documentModels && documentModels.length > 0
-        ? [packageFromDocumentModels(documentModels)]
-        : []),
-    ];
-    if (libs.length === 0) {
+    if (!documentModels || documentModels.length === 0) {
       return;
     }
     ensurePHEventHandlers();
-    setVetraPackageManager(new StaticPackageManager(libs));
-  }, [packages, documentModels]);
+    setVetraPackageManager(
+      new StaticPackageManager([packageFromDocumentModels(documentModels)]),
+    );
+  }, [documentModels]);
 
   return <>{children}</>;
 }

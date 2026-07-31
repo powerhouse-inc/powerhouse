@@ -45,8 +45,4 @@ export {
   useDocumentModelModules,
 } from "../hooks/document-model-modules.js";
 export { setReactorClient, useReactorClient } from "../hooks/reactor.js";
-export {
-  setVetraPackageManager,
-  useVetraPackages,
-} from "../hooks/vetra-packages.js";
 export type { IReactorBrowserClient } from "../types/reactor-browser-client.js";

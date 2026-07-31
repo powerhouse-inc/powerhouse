@@ -2,34 +2,29 @@ import {
   TodoV1,
   TodoV2,
 } from "@powerhousedao/versioned-documents/document-models";
-import { todoUpgradeManifest } from "@powerhousedao/versioned-documents/document-models/todo";
-import { TodoEditor } from "@powerhousedao/versioned-documents/editors";
-import manifestJson from "@powerhousedao/versioned-documents/manifest";
-import type { DocumentModelLib, Manifest, PHDocument } from "document-model";
+import type { DocumentModelModule, PHDocument } from "document-model";
 
-// The real generated package - the same code the local switchboard loads from
-// `test/versioned-documents` - assembled from the package's SUBPATH exports and
-// handed to `GraphQLReactorProvider` via `packages`.
+// The real generated todo modules - the same code the local switchboard loads
+// from `test/versioned-documents` - imported from the package's
+// `document-models` SUBPATH and handed to `GraphQLReactorProvider` via
+// `documentModels`. Both versions register, and the module hooks resolve the
+// latest, exactly like the reactor's registry does.
 //
-// Subpaths on purpose, never the package ROOT: the root entry also exports
-// `processorFactory`, and module resolution happens before tree-shaking, so
-// importing anything from the root drags the processor graph (switchboard-side
-// code) into the browser bundle and breaks the build.
-//
-// This is what makes the document-model hooks AND the editor hooks work below
-// the provider. (A light app may equally ship no packages at all and let the
-// switchboard own the model - both modes are supported.)
-//
-// DocumentModelLib<any>: the package carries BOTH todo versions, whose
-// concrete state generics differ - the same variance escape the provider prop
-// uses.
+// Modules only, deliberately: editors are not portable outside Connect yet
+// (they read the selected document from Connect's drive/node selection) and
+// would inflate the bundle - a light app that needs an editor imports the
+// React component directly. And never import from the package ROOT: its entry
+// also exports `processorFactory`, and module resolution happens before
+// tree-shaking, so a root import drags server-side processor code into the
+// browser bundle.
+// DocumentModelModule<any>: the two versions' concrete state generics differ -
+// the same variance escape the provider prop uses. The annotation also keeps
+// the exported type portable (TS2883).
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const todoPackage: DocumentModelLib<any> = {
-  manifest: manifestJson as Manifest,
-  documentModels: [TodoV1, TodoV2],
-  editors: [TodoEditor],
-  upgradeManifests: [todoUpgradeManifest],
-};
+export const todoDocumentModels: readonly DocumentModelModule<any>[] = [
+  TodoV1,
+  TodoV2,
+];
 
 export const TODO_DOCUMENT_TYPE: string = TodoV2.documentModel.global.id;
 
