@@ -37,6 +37,11 @@ export const ${v.camelCaseName}FactoryBuilder: ProcessorFactoryBuilder = (module
 
   // Create the processor
   const processor = new ${v.pascalCaseName}(namespace, filter, store);
+
+  // Run the processor's migrations. Nothing in the runtime calls this, so
+  // without it the first write hits a database with no tables.
+  await processor.initAndUpgrade();
+
   return [
     {
       processor,
