@@ -1,4 +1,4 @@
-import { PowerhouseButton } from "@powerhousedao/design-system";
+import { Icon, PowerhouseButton } from "@powerhousedao/design-system";
 import type { DocumentTypeOption } from "@powerhousedao/design-system/connect";
 import { CreateDocumentWithTypeModal } from "@powerhousedao/design-system/connect";
 import {
@@ -87,7 +87,11 @@ export function CreateDocument() {
   if (!visibleDocumentModelModules?.length) return null;
   return (
     <div className="px-6 py-4">
-      <PowerhouseButton color="blue" onClick={() => setShowModal(true)}>
+      <PowerhouseButton
+        color="blue"
+        icon={<Icon name="Plus" size={16} />}
+        onClick={() => setShowModal(true)}
+      >
         Create New Document
       </PowerhouseButton>
       <CreateDocumentWithTypeModal
