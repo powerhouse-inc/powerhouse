@@ -379,7 +379,7 @@ Enforcement happens in two places with one evaluator: admission (before a new op
 
 New mutation jobs are evaluated in `SimpleJobExecutor.executeRegularAction`, between the write-cache load and the reducer.
 
-A decision reads through the write cache, so it depends on two guarantees the cache makes. A stored snapshot does not change after it is stored, so a decision reading an earlier position does not see a delete that had not happened there. And a read for the head is answered only by a snapshot recorded as the head, so a verdict does not depend on which reads happened to warm the cache. Neither is auth-specific, since any positional read can reach them, and both were fixed before this stage began.
+A decision reads through the write cache, so it depends on two guarantees the cache makes. A stored snapshot does not change after it is stored, so a decision reading an earlier position does not see a delete that had not happened there. And a read for the head is answered only by a snapshot recorded as the head, so an evaluation does not depend on which reads happened to warm the cache. Neither is auth-specific, since any positional read can reach them, and both were fixed before this stage began.
 
 `buildDecisionModel` folds the model from the local streams' current heads and returns the append condition. A deny rejects the job with `AuthorizationDeniedError` before anything is written. The executor's current, separate `isDeleted` check is pulled into the decision model (fixing a bug that's been around for awhile...).
 
@@ -471,9 +471,9 @@ The operations that count are the ones left after those skips are applied. Call 
 
 The rule is therefore stated on the effective stream:
 
-> A read-set stream is applied, in the order its effective operations run, through every operation whose timestamp is at or before the judged operation's. An operation with an equal timestamp in another stream sorts by action id, then by operation id.
+> A read-set stream is applied, in the order its effective operations run, through every operation whose timestamp is at or before the evaluated operation's. An operation with an equal timestamp in another stream sorts by action id, then by operation id.
 
-A replay evaluates by walking forward rather than by reading each position. One pass visits the read-set streams in that order, carrying the model along, and judges each operation against the model as it stood when the walk reached it. Resolving skips first is what makes one pass enough: without it, an operation's position and its place in the stored rows can disagree, and no single forward pass can be correct for both. `IWriteCache.getState` bounds by index over the stored rows, so it cannot express "up to timestamp T" and a point read cannot answer the question at all.
+A replay evaluates by walking forward rather than by reading each position. One walk visits the read-set streams in that order, carrying the model along, and evaluates each operation against the model as it stood when the walk reached it. Resolving skips first is what makes one walk enough: without it, an operation's position and its place in the stored rows can disagree, and no single forward walk can be correct for both. `IWriteCache.getState` bounds by index over the stored rows, so it cannot express "up to timestamp T" and a point read cannot answer the question at all.
 
 Admission usually reads the head, but not by definition. Timestamps are supplied by the caller and the reactor does not re-stamp them, so an offline or queued client can submit an action timestamped below operations already stored. An action at or above every timestamp in its read-set streams is at the head and a head read is correct; below them, admission takes the same walk a replay takes.
 
@@ -481,7 +481,7 @@ Admission usually reads the head, but not by definition. Timestamps are supplied
 
 An action records what was attempted. A denial records what happened to it. These are separate facts, so the denial belongs on the operation rather than in a rewritten action.
 
-Rewriting the action fails in two ways. Substituting `NOOP` collides with the base reducer, where a `NOOP` carrying a skip is the marker that supersedes earlier operations. `garbageCollectV2` counts those markers and ignores skip magnitude, so a denied operation that also carried a reshuffle skip would retract one operation where it meant to retract several. Introducing a new action type such as `DENIED` avoids that collision but discards what was attempted, and three consumers need it: the client matches its own action id to learn which action was refused, sync deduplicates by action id, and re-evaluation needs the original action to re-append if the verdict later changes back. Nesting the original action inside a new one keeps those but breaks every consumer that reads `action.type`.
+Rewriting the action fails in two ways. Substituting `NOOP` collides with the base reducer, where a `NOOP` carrying a skip is the marker that supersedes earlier operations. `garbageCollectV2` counts those markers and ignores skip magnitude, so a denied operation that also carried a reshuffle skip would retract one operation where it meant to retract several. Introducing a new action type such as `DENIED` avoids that collision but discards what was attempted, and three consumers need it: the client matches its own action id to learn which action was refused, sync deduplicates by action id, and re-evaluation needs the original action to re-append if the evaluation later changes back. Nesting the original action inside a new one keeps those but breaks every consumer that reads `action.type`.
 
 The operation therefore carries an outcome:
 
@@ -508,13 +508,11 @@ When a reshuffle happens, the tail from the first change must be re-evaluated, b
 
 Re-evaluation is a reshuffle-style re-append. If any decision changes, the tail from the first change is re-emitted as new operations: same `opId` and action id, but fresh indexes with skip.
 
-A pass that changes nothing emits nothing.
-
 The re-append advances the stream heads, so a concurrent admission that read the old tail fails its append condition and retries. The re-appended operations do not travel to other replicas, and do not need to: a replica learning of the operation that triggered the pass evaluates its own history against it and reaches the same outcome. Two replicas may therefore store different rows while agreeing on which operations apply and on the state they produce.
 
 #### What triggers a pass
 
-Re-evaluation is not a property of loading. It is owed whenever a read-set stream gains an operation that something already judged sorts after, since that is exactly when a verdict can change. A load is the common way that happens, but not the only one.
+Re-evaluation is not a property of loading. It is owed whenever a read-set stream gains an operation that something already evaluated sorts after, since that is exactly when an evaluation can change. A load is the common way that happens, but not the only one.
 
 A locally executed operation can trigger it too. Timestamps are supplied by the caller and the reactor does not re-stamp them, so a mutation can carry a timestamp below operations already stored. `DELETE_DOCUMENT` is the case that matters. The reactor issuing the delete would be the one replica that keeps its own later-timestamped operations in effect, while every replica learning of the delete by sync denies them, leaving the deleting reactor as the sole dissenter. That inverts what enforcement is for.
 
@@ -526,7 +524,7 @@ Note that the comparison is against the streams that read the operation, not the
 
 #### Retracting a tail
 
-A pass that changes a verdict re-appends the tail from that point, carrying a skip on the first re-appended operation the way a reshuffle does. Retraction never happens on its own, because a denied operation still occupies a position, so no separate marker is needed.
+A pass that changes an evaluation re-appends the tail from that point, carrying a skip on the first re-appended operation the way a reshuffle does. Retraction never happens on its own, because a denied operation still occupies a position, so no separate marker is needed.
 
 The skip spans from the first retracted index to where the re-appended operation lands, rather than counting the operations retracted. Applying a skip resolves to `skipUntil = index - skip - 1`, and the two numbers agree only while the stream's indices run without gaps. A pass leaves a gap behind, so counting would leave an earlier copy standing beside its own replacement.
 
@@ -721,7 +719,7 @@ The stage was attempted once and reverted. Four mistakes from that attempt are s
 Two limits remain deliberate, both on the read side, and stage 4 moves reads onto the same model. A denied operation contributes nothing to state in the reactor's own rebuild path, but `replayDocument` in `shared/document-model` still applies it, so a client replaying history itself sees it apply. The read surface also continues to hide a deleted document outright rather than serving the state at the deletion boundary.
 
 **Stage 4: the auth projection (`authEnforcement`).**
-Expand `decide` to include the `auth` policy. The mechanism that makes this possible is already in place: stage 3's projection reads the `document` scope to judge an operation in other scopes at its merged position, and guards the write with an append condition with re-evaluation. Reading the `auth` scope to judge a domain write is that same arrangement with a second projection, so this stage adds projections and `decide` steps rather than new cross-scope machinery.
+Expand `decide` to include the `auth` policy. The mechanism that makes this possible is already in place: stage 3's projection reads the `document` scope to evaluate an operation in other scopes at its merged position, and guards the write with an append condition with re-evaluation. Reading the `auth` scope to evaluate a domain write is that same arrangement with a second projection, so this stage adds projections and `decide` steps rather than new cross-scope machinery.
 
 With the flag off, the reactor does not enforce policies at all. The auth stream joins re-evaluation here, once the monotonic-timestamp rule says how a re-appended auth operation is ordered.
 
@@ -734,6 +732,14 @@ Two reactors that accept conflicting auth and domain operations offline converge
 **Stage 6: conditions (`authConditions`).** The `where` and `match` evaluators turn on. Conditional grants begin to apply only here.
 
 Registering decision models beyond auth is out of scope. The types are model-agnostic, so that work is registration, not new semantics.
+
+### Defects to clear before stage 4
+
+**An evaluation pass can be skipped.** Whether an evaluation pass is owed is decided by comparing a committed operation against the latest timestamp in the streams that read it. The store reports the timestamp of each scope's last-indexed operation rather than the largest timestamp the scope holds. These are not guaranteed to be the same because a reshuffle can leave later-timestamped operations at lower indexes, where the comparison stops seeing them. It has to use the largest timestamp in those streams.
+
+**A relationship operation cannot carry a skip.** A reshuffle assigns `ADD_RELATIONSHIP`, `REMOVE_RELATIONSHIP`, and `UPDATE_RELATIONSHIP` a skip, but their handlers write zero, so the operations they replace stay in effect. `DELETE_DOCUMENT` had this defect and is fixed.
+
+**A reshuffle can reach the document's creation.** The conflict range and the predecessor filter are both computed from the incoming operations before duplicates are removed, so sending a replica operations it already holds drags the range back to the earliest of them. Where that reaches creation, the reshuffle puts genesis in the set it re-appends, the write is rejected on its revision, and the job exhausts its retries. `reactor.create` submits `CREATE_DOCUMENT` and its `UPGRADE_DOCUMENT` from version zero as one batch, and that pair holds the first two indexes for the life of the document, so neither is ever reshuffled.
 
 ## Worked example: a revocation race
 
