@@ -1,0 +1,111 @@
+# Review package: 592ffacc0..HEAD
+
+## Commits
+c43071052 test(vetra-e2e): script the Create New Document modal instead of per-type buttons
+
+## Files changed
+ .../generic-drive-hidden-vetra-documents.spec.ts   | 21 ++++++++++------
+ test/vetra-e2e/tests/todo-document.spec.ts         | 28 ++++++++++++++--------
+ 2 files changed, 32 insertions(+), 17 deletions(-)
+
+## Diff
+diff --git a/test/vetra-e2e/tests/generic-drive-hidden-vetra-documents.spec.ts b/test/vetra-e2e/tests/generic-drive-hidden-vetra-documents.spec.ts
+index e6eaaee3d..2696f4529 100644
+--- a/test/vetra-e2e/tests/generic-drive-hidden-vetra-documents.spec.ts
++++ b/test/vetra-e2e/tests/generic-drive-hidden-vetra-documents.spec.ts
+@@ -59,23 +59,30 @@ test("vetra document types are hidden in a generic drive", async ({ page }) => {
+   });
+   await expect(createDriveSubmit).toBeEnabled({ timeout: 5_000 });
+   await createDriveSubmit.click();
+ 
+   // 3. Wait for navigation into the new drive
+   await waitForAppReady(page);
+   await page.waitForTimeout(2_000);
+   await expect(page).toHaveURL(/\/d\/[^/?]+/, { timeout: 10_000 });
+   await waitForAppReady(page);
+ 
+-  // 4. Positive control: the "New document" section renders.
+-  await expect(page.getByRole("heading", { name: "New document" })).toBeVisible(
+-    { timeout: 30_000 },
+-  );
+-  const section = page.locator(".flex.w-full.flex-wrap.gap-4");
++  // 4. Positive control: the "Create New Document" button renders.
++  const createDocumentButton = page.getByRole("button", {
++    name: "Create New Document",
++  });
++  await expect(createDocumentButton).toBeVisible({ timeout: 30_000 });
++  await createDocumentButton.click();
+ 
+-  // 5. DocumentModel + every vetra builder-spec type must be absent.
++  // 5. DocumentModel + every vetra builder-spec type must be absent from the
++  // document-type select. ConnectSelect keeps its options in the DOM even
++  // while collapsed, so presence is checked without opening the menu.
++  const dialog = page.getByRole("dialog");
++  await expect(
++    dialog.getByText("Select document type…", { exact: true }),
++  ).toBeVisible({ timeout: 10_000 });
+   for (const hiddenName of HIDDEN_DISPLAY_NAMES) {
+     await expect(
+-      section.getByRole("button").filter({ hasText: hiddenName }),
++      dialog.getByText(hiddenName, { exact: true }),
+     ).toHaveCount(0, { timeout: 30_000 });
+   }
+ });
+diff --git a/test/vetra-e2e/tests/todo-document.spec.ts b/test/vetra-e2e/tests/todo-document.spec.ts
+index bb39e60a8..ebd21f6c1 100644
+--- a/test/vetra-e2e/tests/todo-document.spec.ts
++++ b/test/vetra-e2e/tests/todo-document.spec.ts
+@@ -492,35 +492,43 @@ test("Install Package in Consumer Project", async ({ browser }) => {
+ 
+     // Wait for drive to be created
+     await page.waitForLoadState("networkidle");
+     await page.waitForTimeout(2000);
+ 
+     // Step 10: creating a drive navigates straight into it (the URL segment
+     // is the drive's slug, which for a fresh local drive is its id)
+     await expect(page).toHaveURL(/\/d\/[^/?]+/, { timeout: 10_000 });
+     await page.waitForLoadState("networkidle");
+ 
+-    // Step 11: Create a document of the installed package type
+-    // In Connect, installed document types appear as buttons in "New document" section
+-    // The ToDoDocument from our published package shows as "ToDoDocument v1"
+-    const addDocButton = page
+-      .getByRole("button")
+-      .filter({ hasText: "ToDoDocument" });
+-    await expect(addDocButton).toBeVisible({ timeout: 30_000 });
+-    await addDocButton.click();
++    // Step 11: Create a document of the installed package type via the
++    // "Create New Document" modal.
++    const createDocumentButton = page.getByRole("button", {
++      name: "Create New Document",
++    });
++    await expect(createDocumentButton).toBeVisible({ timeout: 30_000 });
++    await createDocumentButton.click();
++
++    const dialog = page.getByRole("dialog");
+ 
+     // Fill in document name in the create document dialog
+-    const docNameInput = page.locator('input[placeholder="Document name"]');
++    const docNameInput = dialog.locator('input[placeholder="Document name"]');
+     await expect(docNameInput).toBeVisible({ timeout: 10_000 });
+     await docNameInput.fill("TestTodoDoc");
+ 
+-    const createDocButton = page.getByRole("button", { name: "Create" });
++    // Pick the ToDoDocument type from the select
++    await dialog.getByText("Select document type…", { exact: true }).click();
++    await dialog.getByText("ToDoDocument", { exact: false }).first().click();
++
++    const createDocButton = dialog.getByRole("button", {
++      name: "Create",
++      exact: true,
++    });
+     await expect(createDocButton).toBeEnabled({ timeout: 5_000 });
+     await createDocButton.click();
+ 
+     // Wait for document to be created and editor to load
+     await page.waitForLoadState("networkidle");
+ 
+     // Step 12: Verify the document was created and the editor loaded
+     // The URL should contain a document path
+     expect(page.url()).toContain("/d/");
+ 

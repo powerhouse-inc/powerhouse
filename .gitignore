@@ -34,6 +34,8 @@ __screenshots__/
 __pycache__/
 hotseat.json
 .hotseat
+# Local agent-workflow scratch (plans' ledgers, briefs, review packages)
+.superpowers/
 .mcp.json
 HOTSEAT.md
 # Per-run artifact written by `pnpm publish --report-summary` (test/package-e2e)
