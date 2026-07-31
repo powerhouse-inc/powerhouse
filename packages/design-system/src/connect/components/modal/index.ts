@@ -1,6 +1,7 @@
 export * from "./add-drive-modal/add-drive-modal.js";
 export * from "./confirmation-modal.js";
 export * from "./create-document-modal.js";
+export * from "./create-document-with-type-modal.js";
 export * from "./delete-drive-modal.js";
 export * from "./delete-item-modal.js";
 export * from "./drive-settings-modal.js";
