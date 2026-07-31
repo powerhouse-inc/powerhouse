@@ -1,6 +1,5 @@
 import { debugArgs } from "@powerhousedao/shared/clis/args";
 import {
-  array,
   boolean,
   command,
   flag,
@@ -10,6 +9,7 @@ import {
   string,
 } from "cmd-ts";
 import { Directory, File } from "cmd-ts/dist/cjs/batteries/fs.js";
+import { CommaSeparatedStrings } from "../utils/comma-separated.js";
 
 export const generateAppCmd = command({
   name: "app",
@@ -22,10 +22,11 @@ export const generateAppCmd = command({
       description: "The name of the drive app to generate",
     }),
     allowedDocumentTypes: multioption({
-      type: optional(array(string)),
+      type: optional(CommaSeparatedStrings),
       long: "document-types",
       short: "t",
-      description: "The document types allowed by the new app",
+      description:
+        "The document types allowed by the new app (repeatable or comma-separated)",
     }),
     document: option({
       type: optional(File),
