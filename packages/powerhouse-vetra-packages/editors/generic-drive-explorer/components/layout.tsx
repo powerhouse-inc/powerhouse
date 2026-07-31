@@ -62,16 +62,22 @@ DriveLayout.Content = function DriveLayoutContent({
 
 DriveLayout.ContentSection = function DriveLayoutContentSection({
   title,
+  actions,
   children,
   className,
   containerProps,
   ...props
-}: BaseProps & { title?: string }) {
+}: BaseProps & { title?: string; actions?: React.ReactNode }) {
   return (
     <div className={twMerge(className)} {...containerProps} {...props}>
-      {title && (
-        <div className="mb-4 text-base font-semibold text-foreground">
-          {title}
+      {(title || actions) && (
+        <div className="mb-4 flex items-center justify-between gap-3">
+          {title && (
+            <div className="text-base font-semibold text-foreground">
+              {title}
+            </div>
+          )}
+          {actions}
         </div>
       )}
       <div className="flex flex-wrap gap-2">{children}</div>

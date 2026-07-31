@@ -85,12 +85,15 @@ export function CreateDocument() {
   };
   if (!isAllowedToCreateDocuments) return null;
   if (!visibleDocumentModelModules?.length) return null;
+  // Rendered in the "Documents and files" heading row (see folder-view.tsx),
+  // so the button is compact and brings no layout wrapper of its own.
   return (
-    <div className="px-6 py-4">
+    <>
       <PowerhouseButton
         color="blue"
-        icon={<Icon name="Plus" size={16} />}
+        icon={<Icon name="Plus" size={14} />}
         onClick={() => setShowModal(true)}
+        size="small"
       >
         Create New Document
       </PowerhouseButton>
@@ -101,6 +104,6 @@ export function CreateDocument() {
         onTypeSelected={preloadEditorsForType}
         open={showModal}
       />
-    </div>
+    </>
   );
 }
