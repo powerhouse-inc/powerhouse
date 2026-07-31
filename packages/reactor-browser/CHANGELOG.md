@@ -1,3 +1,13 @@
+## 6.2.2-dev.31 (2026-07-31)
+
+### 🚀 Features
+
+- **reactor-browser:** export useDocumentOperations from the graphql-client entry ([#2897](https://github.com/powerhouse-inc/powerhouse/pull/2897))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.2.2-dev.30 (2026-07-31)
 
 ### 🩹 Fixes
