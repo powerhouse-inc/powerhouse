@@ -643,20 +643,42 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     if (deniedReason !== undefined) {
       // A denied operation holds only a position but does not change state.
-      const denied = createOperation(
-        action,
-        getNextIndexForScope(document, job.scope),
-        skip,
-        { documentId: job.documentId, scope: job.scope, branch: job.branch },
-      );
+      const index = getNextIndexForScope(document, job.scope);
+      const denied = createOperation(action, index, skip, {
+        documentId: job.documentId,
+        scope: job.scope,
+        branch: job.branch,
+      });
       denied.deniedReason = deniedReason;
-      denied.hash = hashDocumentStateForScope(document, job.scope);
+
+      // A denied operation does not change state, so it records the previous
+      // state. We need to add skip to get the actual previous state.
+      let standing = document;
+      if (skip > 0) {
+        try {
+          standing = await stores.writeCache.getState(
+            job.documentId,
+            job.scope,
+            job.branch,
+            index - skip - 1,
+            signal,
+          );
+        } catch (error) {
+          return buildErrorResult(
+            job,
+            error instanceof Error ? error : new Error(String(error)),
+            startTime,
+          );
+        }
+      }
+
+      denied.hash = hashDocumentStateForScope(standing, job.scope);
 
       updatedDocument = {
-        ...document,
+        ...standing,
         operations: {
-          ...document.operations,
-          [job.scope]: [...(document.operations[job.scope] ?? []), denied],
+          ...standing.operations,
+          [job.scope]: [...(standing.operations[job.scope] ?? []), denied],
         },
       };
     } else {

@@ -510,7 +510,7 @@ Re-evaluation is a reshuffle-style re-append. If any decision changes, the tail 
 
 A pass that changes nothing emits nothing.
 
-The re-append advances the stream heads, so a concurrent admission that read the old tail fails its append condition and retries. It also propagates the result: re-emitted operations reach every remote through the normal reshuffle rebroadcast. Receivers do everything they already do: re-evaluating validity and re-executing reducers.
+The re-append advances the stream heads, so a concurrent admission that read the old tail fails its append condition and retries. The re-appended operations do not travel to other replicas, and do not need to: a replica learning of the operation that triggered the pass evaluates its own history against it and reaches the same outcome. Two replicas may therefore store different rows while agreeing on which operations apply and on the state they produce.
 
 #### What triggers a pass
 
