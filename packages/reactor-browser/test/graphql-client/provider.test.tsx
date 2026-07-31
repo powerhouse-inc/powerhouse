@@ -1,8 +1,4 @@
-import type {
-  DocumentModelLib,
-  DocumentModelModule,
-  EditorModule,
-} from "document-model";
+import type { DocumentModelModule } from "document-model";
 import { StrictMode } from "react";
 import {
   afterEach,
@@ -21,10 +17,6 @@ import {
   useDocumentModelModuleById,
   useDocumentModelModules,
 } from "../../src/hooks/document-model-modules.js";
-import {
-  useEditorModules,
-  useFallbackEditorModule,
-} from "../../src/hooks/editor-modules.js";
 import {
   ensurePHEventHandlers,
   GraphQLReactorProvider,
@@ -565,28 +557,9 @@ describe("GraphQLReactorProvider documentModels", () => {
   });
 });
 
-// Real-lib fixtures for the `packages` prop: two packages, two versions of the
-// same type spread across them, and one editor each for the same type.
-function makeEditor(id: string): EditorModule {
-  return {
-    Component: () => null,
-    documentTypes: ["test/todo"],
-    config: { id, name: id },
-  };
-}
-
-const editorA = makeEditor("editor-a");
-const editorB = makeEditor("editor-b");
-const libA: DocumentModelLib = {
-  manifest: { name: "package-a" },
-  documentModels: [makeModule("test/todo", 1)],
-  editors: [editorA],
-};
-const libB: DocumentModelLib = {
-  manifest: { name: "package-b" },
-  documentModels: [makeModule("test/todo", 2)],
-  editors: [editorB],
-};
+// Two versions of the same type: the module hook must resolve them the way the
+// registry does - latest by default, exact when pinned.
+const todoV1 = makeModule("test/todo", 1);
 
 function VersionProbe({ version }: { version?: number }) {
   const module = useDocumentModelModuleById("test/todo", version);
@@ -595,22 +568,11 @@ function VersionProbe({ version }: { version?: number }) {
   );
 }
 
-function EditorsProbe() {
-  const editors = useEditorModules();
-  const fallback = useFallbackEditorModule("test/todo");
-  return (
-    <span data-testid="editors">
-      {(editors ?? []).map((module) => module.config.id).join(",")}|
-      {fallback?.config.id ?? "none"}
-    </span>
-  );
-}
-
 function probe(screen: { container: HTMLElement }, testId: string) {
   return screen.container.querySelector(`[data-testid=${testId}]`)?.textContent;
 }
 
-describe("GraphQLReactorProvider packages", () => {
+describe("GraphQLReactorProvider version resolution", () => {
   beforeEach(() => {
     window.ph = {};
     delete window.__phEventHandlersRegistered;
@@ -622,35 +584,18 @@ describe("GraphQLReactorProvider packages", () => {
     delete window.__phEventHandlersRegistered;
   });
 
-  it("publishes the given packages exactly as given, in order", () => {
-    render(
-      <GraphQLReactorProvider
-        url={url}
-        realtime={false}
-        packages={[libA, libB]}
-      >
-        <span />
-      </GraphQLReactorProvider>,
-    );
-
-    const manager = window.ph?.vetraPackageManager;
-    expect(manager).toBeInstanceOf(StaticPackageManager);
-    expect(manager?.packages[0]).toBe(libA);
-    expect(manager?.packages[1]).toBe(libB);
-  });
-
-  it("resolves the module hook to the LATEST version across packages", async () => {
+  it("resolves the module hook to the LATEST version", async () => {
     const screen = render(
       <GraphQLReactorProvider
         url={url}
         realtime={false}
-        packages={[libA, libB]}
+        documentModels={[todoV1, todoModule]}
       >
         <VersionProbe />
       </GraphQLReactorProvider>,
     );
 
-    // libA (v1) comes first, but latest wins - the registry's semantics.
+    // v1 comes first in the array, but latest wins - the registry's semantics.
     await expect.poll(() => probe(screen, "version")).toBe("v2");
   });
 
@@ -659,7 +604,7 @@ describe("GraphQLReactorProvider packages", () => {
       <GraphQLReactorProvider
         url={url}
         realtime={false}
-        packages={[libA, libB]}
+        documentModels={[todoV1, todoModule]}
       >
         <VersionProbe version={1} />
         <span data-testid="wrap">
@@ -670,39 +615,5 @@ describe("GraphQLReactorProvider packages", () => {
 
     await expect.poll(() => probe(screen, "wrap")).toBe("none");
     expect(probe(screen, "version")).toBe("v1");
-  });
-
-  it("makes the editor hooks work, honoring package order for the fallback", async () => {
-    const screen = render(
-      <GraphQLReactorProvider
-        url={url}
-        realtime={false}
-        packages={[libA, libB]}
-      >
-        <EditorsProbe />
-      </GraphQLReactorProvider>,
-    );
-
-    await expect
-      .poll(() => probe(screen, "editors"))
-      .toBe("editor-a,editor-b|editor-a");
-  });
-
-  it("appends the documentModels sugar AFTER the real packages", () => {
-    render(
-      <GraphQLReactorProvider
-        url={url}
-        realtime={false}
-        packages={[libA]}
-        documentModels={[makeModule("test/extra", 1)]}
-      >
-        <span />
-      </GraphQLReactorProvider>,
-    );
-
-    const manager = window.ph?.vetraPackageManager;
-    expect(manager?.packages).toHaveLength(2);
-    expect(manager?.packages[0]).toBe(libA);
-    expect(manager?.packages[1].manifest.name).toBe("graphql-reactor-provider");
   });
 });

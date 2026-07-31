@@ -1,9 +1,9 @@
 import { expect, test } from "@playwright/test";
 
-// The packages chain end to end: the page passes the REAL generated package
-// (manifest, both todo versions, editors) to `GraphQLReactorProvider`, a
-// StaticPackageManager publishes it into the `window.ph.vetraPackageManager`
-// slot, `useDocumentModelModuleById` resolves the LATEST version (registry
+// The documentModels chain end to end: the page passes the REAL generated todo
+// modules (both versions) to `GraphQLReactorProvider`, a StaticPackageManager
+// publishes them into the `window.ph.vetraPackageManager` slot,
+// `useDocumentModelModuleById` resolves the LATEST version (registry
 // semantics), and the module's own `utils.createDocument` and typed action
 // creators drive the same anonymous flow the switchboard accepts.
 
