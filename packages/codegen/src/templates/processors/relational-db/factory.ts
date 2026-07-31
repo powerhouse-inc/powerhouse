@@ -1,5 +1,5 @@
 import { ts } from "@tmpl/core";
-import { getDocumentType } from "../utils.js";
+import { renderProcessorFilter } from "../utils.js";
 
 export const relationalDbFactoryTemplate = (v: {
   camelCaseName: string;
@@ -26,13 +26,14 @@ export const ${v.camelCaseName}FactoryBuilder: ProcessorFactoryBuilder = (module
     namespace,
   );
 
-  // Create a filter for the processor
-  const filter: ProcessorFilter = {
+  // Create a filter for the processor. An omitted field matches every value.
+  // Only \`documentId\` honours "*", so "*" elsewhere would match nothing.
+  const filter: ProcessorFilter = ${renderProcessorFilter({
     branch: ["main"],
     documentId: ["*"],
-    documentType: [${getDocumentType(v.documentTypes)}],
+    documentType: v.documentTypes,
     scope: ["global"],
-  };
+  })};
 
   // Create the processor
   const processor = new ${v.pascalCaseName}(namespace, filter, store);

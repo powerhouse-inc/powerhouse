@@ -83,4 +83,5 @@ export * from "./processors/relational-db/index.js";
 export * from "./processors/relational-db/migrations.js";
 export * from "./processors/relational-db/processor.js";
 export * from "./processors/relational-db/schema.js";
+export * from "./processors/utils.js";
 export * from "./subgraphs/index.js";

@@ -1,5 +1,5 @@
 import { ts } from "@tmpl/core";
-import { getDocumentType } from "../utils.js";
+import { renderProcessorFilter } from "../utils.js";
 
 export const analyticsFactoryTemplate = (v: {
   pascalCaseName: string;
@@ -20,12 +20,12 @@ export const ${v.camelCaseName}FactoryBuilder: ProcessorFactoryBuilder = (module
   return [
     {
       processor: new ${v.pascalCaseName}(module.analyticsStore),
-      filter: {
+      // An omitted field matches every value. Only \`documentId\` honours "*".
+      filter: ${renderProcessorFilter({
         branch: ["main"],
         documentId: ["*"],
-        scope: ["*"],
-        documentType: [${getDocumentType(v.documentTypes)}],
-      },
+        documentType: v.documentTypes,
+      })},
     },
   ];
 }
