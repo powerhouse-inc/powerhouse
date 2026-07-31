@@ -1,6 +1,48 @@
-import type { OperationWithContext } from "@powerhousedao/shared/document-model";
+import type {
+  Action,
+  OperationWithContext,
+} from "@powerhousedao/shared/document-model";
 import type { Operation } from "@powerhousedao/shared/document-model";
 import type { Job } from "../queue/types.js";
+import type { IOperationIndexTxn } from "../cache/operation-index-types.js";
+import type { ExecutionStores } from "./execution-scope.js";
+
+/**
+ * One action to write, and everything known about it before it is written.
+ */
+export type PendingWrite = {
+  action: Action;
+
+  /** How many preceding operations this one supersedes. */
+  skip: number;
+
+  /** The operation being replayed, when this write came from a load. */
+  sourceOperation?: Operation;
+
+  /** The remote the write arrived from, or empty for a local write. */
+  sourceRemote: string;
+
+  /** Why the write was refused, when the evaluation is already decided. */
+  deniedReason?: string;
+};
+
+/**
+ * The job in flight, and what a write is committed through.
+ */
+export type ExecutingJob = {
+  job: Job;
+  startTime: number;
+  indexTxn: IOperationIndexTxn;
+  stores: ExecutionStores;
+  signal?: AbortSignal;
+
+  /**
+   * Whether these writes were accepted at their own positions already, which a
+   * load and a re-evaluation pass both are. Admission does not decide again,
+   * because re-deciding accepted history would drop operations.
+   */
+  replayingAcceptedHistory: boolean;
+};
 
 /**
  * Represents the result of a job execution

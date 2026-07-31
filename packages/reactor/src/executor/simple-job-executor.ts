@@ -48,8 +48,10 @@ import { DefaultExecutionScope } from "./execution-scope.js";
 import type { IJobExecutor } from "./interfaces.js";
 import { SignatureVerifier } from "./signature-verifier.js";
 import type {
+  ExecutingJob,
   JobExecutorConfig,
   JobResult,
+  PendingWrite,
   ReactorFeatureFlags,
 } from "./types.js";
 import {
@@ -85,15 +87,6 @@ type ProcessActionsResult = {
 type EvaluationCriteria = {
   scope: string;
   operations: Operation[];
-};
-
-/** The job in flight and what a re-evaluation writes its operations through. */
-type ExecutingJob = {
-  job: Job;
-  startTime: number;
-  indexTxn: IOperationIndexTxn;
-  stores: ExecutionStores;
-  signal?: AbortSignal;
 };
 
 const documentScopeActions = [
@@ -149,6 +142,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       registry,
       logger,
       driveContainerTypes,
+      this.featureFlags,
     );
     this.executionScope =
       executionScope ??
@@ -182,13 +176,14 @@ export class SimpleJobExecutor implements IJobExecutor {
         const indexTxn = stores.operationIndex.start();
 
         if (job.kind === "load") {
-          const loadResult = await this.executeLoadJob(
+          const loadResult = await this.executeLoadJob({
             job,
             startTime,
             indexTxn,
             stores,
             signal,
-          );
+            replayingAcceptedHistory: true,
+          });
           if (loadResult.success && loadResult.operationsWithContext) {
             for (const owc of loadResult.operationsWithContext) {
               touchedCacheEntries.push({
@@ -223,18 +218,23 @@ export class SimpleJobExecutor implements IJobExecutor {
           return loadResult;
         }
 
-        const positioned = await this.positionByTimestamp(job, stores, signal);
-
-        const actionResult = await this.processActions(
+        const executing: ExecutingJob = {
           job,
-          positioned.actions,
           startTime,
           indexTxn,
           stores,
-          positioned.skipValues,
-          undefined,
-          "",
           signal,
+          replayingAcceptedHistory: false,
+        };
+        const positioned = await this.positionByTimestamp(job, stores, signal);
+
+        const actionResult = await this.processActions(
+          positioned.actions.map((action, i) => ({
+            action,
+            skip: positioned.skipValues?.[i] ?? 0,
+            sourceRemote: "",
+          })),
+          executing,
         );
 
         if (!actionResult.success) {
@@ -260,7 +260,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         // transaction.
         const reevaluationError = await this.reevaluateIfCriteriaMet(
           { scope: job.scope, operations: actionResult.generatedOperations },
-          { job, startTime, indexTxn, stores, signal },
+          executing,
         );
         if (reevaluationError) {
           return {
@@ -334,17 +334,12 @@ export class SimpleJobExecutor implements IJobExecutor {
   }
 
   private async processActions(
-    job: Job,
-    actions: Action[],
-    startTime: number,
-    indexTxn: IOperationIndexTxn,
-    stores: ExecutionStores,
-    skipValues?: number[],
-    sourceOperations?: (Operation | undefined)[],
-    sourceRemote: string = "",
-    signal?: AbortSignal,
-    deniedReasons?: Array<string | undefined>,
+    writes: PendingWrite[],
+    executing: ExecutingJob,
   ): Promise<ProcessActionsResult> {
+    const { job, signal } = executing;
+    const actions = writes.map((write) => write.action);
+
     const generatedOperations: Operation[] = [];
     const operationsWithContext: OperationWithContext[] = [];
 
@@ -381,44 +376,11 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     let lastYield = performance.now();
 
-    // A load's operations were accepted at their own positions, and so were the
-    // operations a re-evaluation pass hands back.
-    const replayingAcceptedHistory =
-      job.kind === "load" || deniedReasons !== undefined;
-
-    for (let actionIndex = 0; actionIndex < actions.length; actionIndex++) {
-      const action = actions[actionIndex];
-      const skip = skipValues?.[actionIndex] ?? 0;
-      const sourceOperation = sourceOperations?.[actionIndex];
-      const deniedReason = deniedReasons?.[actionIndex];
-
-      const isDocumentAction = documentScopeActions.includes(action.type);
+    for (const write of writes) {
+      const isDocumentAction = documentScopeActions.includes(write.action.type);
       const result = isDocumentAction
-        ? await this.documentActionHandler.execute(
-            job,
-            action,
-            startTime,
-            indexTxn,
-            stores,
-            skip,
-            sourceRemote,
-            signal,
-            this.featureFlags.documentDecisions && replayingAcceptedHistory,
-            deniedReason,
-          )
-        : await this.executeRegularAction(
-            job,
-            action,
-            startTime,
-            indexTxn,
-            stores,
-            skip,
-            sourceOperation,
-            sourceRemote,
-            signal,
-            deniedReason,
-            replayingAcceptedHistory,
-          );
+        ? await this.documentActionHandler.execute(write, executing)
+        : await this.executeRegularAction(write, executing);
 
       const error = this.accumulateResultOrReturnError(
         result,
@@ -457,17 +419,8 @@ export class SimpleJobExecutor implements IJobExecutor {
   }
 
   private async executeRegularAction(
-    job: Job,
-    action: Action,
-    startTime: number,
-    indexTxn: IOperationIndexTxn,
-    stores: ExecutionStores,
-    skip: number = 0,
-    sourceOperation?: Operation,
-    sourceRemote: string = "",
-    signal?: AbortSignal,
-    deniedReason?: string,
-    replayingAcceptedHistory = false,
+    write: PendingWrite,
+    executing: ExecutingJob,
   ): Promise<
     JobResult & {
       operationsWithContext?: Array<{
@@ -481,12 +434,15 @@ export class SimpleJobExecutor implements IJobExecutor {
       }>;
     }
   > {
+    const { action, skip, sourceOperation, sourceRemote, deniedReason } = write;
+    const { job, startTime, indexTxn, stores, signal } = executing;
+
     // append conditions are used iff the decision model flag is on
     let appendCondition: AppendCondition | undefined;
     let documentVersion: number | undefined;
 
     const alreadyEvaluated =
-      this.featureFlags.documentDecisions && replayingAcceptedHistory;
+      this.featureFlags.documentDecisions && executing.replayingAcceptedHistory;
 
     if (this.featureFlags.documentDecisions && !alreadyEvaluated) {
       const target = { documentId: job.documentId, branch: job.branch };
@@ -603,10 +559,10 @@ export class SimpleJobExecutor implements IJobExecutor {
     // An auth decision should be made iff this set of operations have not
     // already been evaluated. Re-evaluating could drop operations and diverge
     // replicas.
-    if (!replayingAcceptedHistory) {
+    if (!executing.replayingAcceptedHistory) {
       const subject = {
-        address: action.context?.signer?.user.address,
-        key: action.context?.signer?.app.key,
+        address: write.action.context?.signer?.user.address,
+        key: write.action.context?.signer?.app.key,
       };
       const decision = decide(document.state.auth, subject, {
         verb: "execute",
@@ -967,7 +923,7 @@ export class SimpleJobExecutor implements IJobExecutor {
   private async reevaluateDocument(
     executing: ExecutingJob,
   ): Promise<Error | undefined> {
-    const { job, startTime, indexTxn, stores, signal } = executing;
+    const { job, stores, signal } = executing;
 
     const definition = documentDecisionModel({
       documentId: job.documentId,
@@ -1025,18 +981,17 @@ export class SimpleJobExecutor implements IJobExecutor {
       stores.writeCache.invalidate(job.documentId, scope, job.branch);
 
       const result = await this.processActions(
-        { ...job, scope },
-        tail.map((operation) => operation.action),
-        startTime,
-        indexTxn,
-        stores,
-        tail.map((_, i) =>
-          i === 0 ? retractionSkip(nextIndex, tail[0].index) : 0,
-        ),
-        undefined,
-        "",
-        signal,
-        reevaluated.slice(firstChange),
+        tail.map((operation, i) => ({
+          action: operation.action,
+          skip: i === 0 ? retractionSkip(nextIndex, tail[0].index) : 0,
+          sourceRemote: "",
+          deniedReason: reevaluated[firstChange + i],
+        })),
+        {
+          ...executing,
+          job: { ...job, scope },
+          replayingAcceptedHistory: true,
+        },
       );
 
       if (!result.success) {
@@ -1050,13 +1005,9 @@ export class SimpleJobExecutor implements IJobExecutor {
     return undefined;
   }
 
-  private async executeLoadJob(
-    job: Job,
-    startTime: number,
-    indexTxn: IOperationIndexTxn,
-    stores: ExecutionStores,
-    signal?: AbortSignal,
-  ): Promise<JobResult> {
+  private async executeLoadJob(executing: ExecutingJob): Promise<JobResult> {
+    const { job, startTime, indexTxn, stores, signal } = executing;
+
     if (job.operations.length === 0) {
       return buildErrorResult(
         job,
@@ -1264,9 +1215,6 @@ export class SimpleJobExecutor implements IJobExecutor {
       }
     }
 
-    const actions = reshuffledOperations.map((operation) => operation.action);
-    const skipValues = reshuffledOperations.map((operation) => operation.skip);
-
     // A deletion refuses the operations that sort after it and leaves the
     // earlier ones alone.
     let deniedReasons: Array<string | undefined> | undefined;
@@ -1297,16 +1245,14 @@ export class SimpleJobExecutor implements IJobExecutor {
         : (job.meta.sourceRemote as string) || ""; // trivial append: suppress echo to source
 
     const result = await this.processActions(
-      job,
-      actions,
-      startTime,
-      indexTxn,
-      stores,
-      skipValues,
-      reshuffledOperations,
-      effectiveSourceRemote,
-      signal,
-      deniedReasons,
+      reshuffledOperations.map((operation, i) => ({
+        action: operation.action,
+        skip: operation.skip,
+        sourceOperation: operation,
+        sourceRemote: effectiveSourceRemote,
+        deniedReason: deniedReasons?.[i],
+      })),
+      executing,
     );
 
     if (!result.success) {
@@ -1326,7 +1272,7 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     const reevaluationError = await this.reevaluateIfCriteriaMet(
       { scope, operations: result.generatedOperations },
-      { job, startTime, indexTxn, stores, signal },
+      executing,
     );
     if (reevaluationError) {
       return {
