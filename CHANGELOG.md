@@ -1,3 +1,21 @@
+## 6.2.2-dev.32 (2026-07-31)
+
+### 🚀 Features
+
+- **reactor:** feature flag guards and spec updates to make plan for guarded reshuffle edge cases ([20b0fd6be](https://github.com/powerhouse-inc/powerhouse/commit/20b0fd6be))
+
+### 🩹 Fixes
+
+- auth-scope spec updates, assert ordered streams, and fix some busted default protocol versions ([97c5a37b5](https://github.com/powerhouse-inc/powerhouse/commit/97c5a37b5))
+- **reactor:** fixes some delete reshuffle edge cases, operation self-rejection, delete operation skip, and document scope deny reason ([d7cca2364](https://github.com/powerhouse-inc/powerhouse/commit/d7cca2364))
+- **reactor:** fix convergence in the case we deny an operation that has a skip ([21cbb3ecb](https://github.com/powerhouse-inc/powerhouse/commit/21cbb3ecb))
+- **reactor-browser:** let useDocumentSafe observe the initial fetch settling ([#2899](https://github.com/powerhouse-inc/powerhouse/pull/2899))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.2.2-dev.31 (2026-07-31)
 
 ### 🚀 Features

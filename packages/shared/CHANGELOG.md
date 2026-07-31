@@ -1,3 +1,18 @@
+## 6.2.2-dev.32 (2026-07-31)
+
+### 🚀 Features
+
+- **reactor:** feature flag guards and spec updates to make plan for guarded reshuffle edge cases ([20b0fd6be](https://github.com/powerhouse-inc/powerhouse/commit/20b0fd6be))
+
+### 🩹 Fixes
+
+- **reactor:** fix convergence in the case we deny an operation that has a skip ([21cbb3ecb](https://github.com/powerhouse-inc/powerhouse/commit/21cbb3ecb))
+- auth-scope spec updates, assert ordered streams, and fix some busted default protocol versions ([97c5a37b5](https://github.com/powerhouse-inc/powerhouse/commit/97c5a37b5))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.2.2-dev.31 (2026-07-31)
 
 This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.
