@@ -1,3 +1,7 @@
+## 6.2.2-dev.29 (2026-07-31)
+
+This was a version bump only for @powerhousedao/pglite-fs to align it with other projects, there were no code changes.
+
 ## 6.2.2-dev.28 (2026-07-30)
 
 ### 🚀 Features
