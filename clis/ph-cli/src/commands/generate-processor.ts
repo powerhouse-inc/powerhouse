@@ -2,7 +2,6 @@ import { debugArgs } from "@powerhousedao/shared/clis/args";
 import { PROCESSOR_APPS } from "@powerhousedao/shared/processors";
 import type { Type } from "cmd-ts";
 import {
-  array,
   command,
   flag,
   multioption,
@@ -12,9 +11,14 @@ import {
   string,
 } from "cmd-ts";
 import { Directory, File } from "cmd-ts/dist/cjs/batteries/fs.js";
+import {
+  CommaSeparatedStrings,
+  splitCommaSeparated,
+} from "../utils/comma-separated.js";
 
 const ProcessorAppType: Type<string[], ("connect" | "switchboard")[]> = {
-  from(processorApps) {
+  from(rawProcessorApps) {
+    const processorApps = splitCommaSeparated(rawProcessorApps);
     if (processorApps.length === 0) {
       throw new Error(
         `No arguments provided for processor apps. Must be "connect" and/or "switchboard"`,
@@ -54,10 +58,11 @@ export const generateProcessorCmd = command({
       defaultValueIsSerializable: true,
     }),
     documentTypes: multioption({
-      type: array(string),
+      type: CommaSeparatedStrings,
       long: "document-types",
       short: "t",
-      description: "The document types the processor will run on",
+      description:
+        "The document types the processor will run on (repeatable or comma-separated)",
       defaultValue: () => [],
       defaultValueIsSerializable: true,
     }),
