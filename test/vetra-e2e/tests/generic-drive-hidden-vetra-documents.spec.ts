@@ -66,16 +66,23 @@ test("vetra document types are hidden in a generic drive", async ({ page }) => {
   await expect(page).toHaveURL(/\/d\/[^/?]+/, { timeout: 10_000 });
   await waitForAppReady(page);
 
-  // 4. Positive control: the "New document" section renders.
-  await expect(page.getByRole("heading", { name: "New document" })).toBeVisible(
-    { timeout: 30_000 },
-  );
-  const section = page.locator(".flex.w-full.flex-wrap.gap-4");
+  // 4. Positive control: the "Create New Document" button renders.
+  const createDocumentButton = page.getByRole("button", {
+    name: "Create New Document",
+  });
+  await expect(createDocumentButton).toBeVisible({ timeout: 30_000 });
+  await createDocumentButton.click();
 
-  // 5. DocumentModel + every vetra builder-spec type must be absent.
+  // 5. DocumentModel + every vetra builder-spec type must be absent from the
+  // document-type select. ConnectSelect keeps its options in the DOM even
+  // while collapsed, so presence is checked without opening the menu.
+  const dialog = page.getByRole("dialog");
+  await expect(
+    dialog.getByText("Select document type…", { exact: true }),
+  ).toBeVisible({ timeout: 10_000 });
   for (const hiddenName of HIDDEN_DISPLAY_NAMES) {
     await expect(
-      section.getByRole("button").filter({ hasText: hiddenName }),
+      dialog.getByText(hiddenName, { exact: true }),
     ).toHaveCount(0, { timeout: 30_000 });
   }
 });

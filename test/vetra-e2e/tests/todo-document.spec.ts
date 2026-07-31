@@ -499,21 +499,29 @@ test("Install Package in Consumer Project", async ({ browser }) => {
     await expect(page).toHaveURL(/\/d\/[^/?]+/, { timeout: 10_000 });
     await page.waitForLoadState("networkidle");
 
-    // Step 11: Create a document of the installed package type
-    // In Connect, installed document types appear as buttons in "New document" section
-    // The ToDoDocument from our published package shows as "ToDoDocument v1"
-    const addDocButton = page
-      .getByRole("button")
-      .filter({ hasText: "ToDoDocument" });
-    await expect(addDocButton).toBeVisible({ timeout: 30_000 });
-    await addDocButton.click();
+    // Step 11: Create a document of the installed package type via the
+    // "Create New Document" modal.
+    const createDocumentButton = page.getByRole("button", {
+      name: "Create New Document",
+    });
+    await expect(createDocumentButton).toBeVisible({ timeout: 30_000 });
+    await createDocumentButton.click();
+
+    const dialog = page.getByRole("dialog");
 
     // Fill in document name in the create document dialog
-    const docNameInput = page.locator('input[placeholder="Document name"]');
+    const docNameInput = dialog.locator('input[placeholder="Document name"]');
     await expect(docNameInput).toBeVisible({ timeout: 10_000 });
     await docNameInput.fill("TestTodoDoc");
 
-    const createDocButton = page.getByRole("button", { name: "Create" });
+    // Pick the ToDoDocument type from the select
+    await dialog.getByText("Select document type…", { exact: true }).click();
+    await dialog.getByText("ToDoDocument", { exact: false }).first().click();
+
+    const createDocButton = dialog.getByRole("button", {
+      name: "Create",
+      exact: true,
+    });
     await expect(createDocButton).toBeEnabled({ timeout: 5_000 });
     await createDocButton.click();
 
