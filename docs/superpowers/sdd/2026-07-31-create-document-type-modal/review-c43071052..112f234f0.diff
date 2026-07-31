@@ -1,0 +1,534 @@
+# Review package: c4307105296a1b1b9899ee09d2094f0978fb7f39..HEAD
+
+## Commits
+112f234f0 test(vetra-e2e): tighten hidden-type assertions and document spec ordering
+86347b7ac chore(powerhouse-vetra-packages): refresh fake-document-models scaffolding (comments + more types)
+6132dd7fa feat(design-system): cap and scroll the document-type list; reset modal on dismiss
+
+## Files changed
+ .../modal/create-document-with-type-modal.test.tsx | 51 +++++++++++++-
+ .../modal/create-document-with-type-modal.tsx      | 17 +++--
+ .../src/connect/components/select/select.tsx       |  4 ++
+ .../components/__fake-document-models.ts           | 79 ++++++++++++++++++++--
+ .../generic-drive-hidden-vetra-documents.spec.ts   |  8 ++-
+ test/vetra-e2e/tests/helpers/document.ts           | 15 ----
+ 6 files changed, 144 insertions(+), 30 deletions(-)
+
+## Diff
+diff --git a/packages/design-system/src/connect/components/modal/create-document-with-type-modal.test.tsx b/packages/design-system/src/connect/components/modal/create-document-with-type-modal.test.tsx
+index 3cfb2a24b..c3f47c36c 100644
+--- a/packages/design-system/src/connect/components/modal/create-document-with-type-modal.test.tsx
++++ b/packages/design-system/src/connect/components/modal/create-document-with-type-modal.test.tsx
+@@ -1,11 +1,11 @@
+-import { fireEvent, render, screen } from "@testing-library/react";
++import { act, fireEvent, render, screen } from "@testing-library/react";
+ import { describe, expect, it, vi } from "vitest";
+ import { CreateDocumentWithTypeModal } from "./create-document-with-type-modal.js";
+ 
+ const documentTypes = [
+   {
+     documentType: "powerhouse/invoice",
+     name: "Invoice",
+     description: "Billing document",
+   },
+   { documentType: "powerhouse/todo", name: "To-do List", version: 2 },
+@@ -38,21 +38,26 @@ function pickTodoType() {
+ }
+ 
+ function createButton() {
+   return screen.getByRole("button", { name: "Create" });
+ }
+ 
+ describe("CreateDocumentWithTypeModal", () => {
+   it("renders placeholder and a disabled Create button", () => {
+     setup();
+     expect(screen.getByText("Select document type…")).toBeInTheDocument();
+-    expect(screen.getByText("Create a new document")).toBeInTheDocument();
++    // "Create a new document" now also appears in the Modal's visually-hidden
++    // Radix Title/Description (accessible dialog name, see Fix 2), so match
++    // any occurrence rather than a single unique one.
++    expect(screen.getAllByText("Create a new document").length).toBeGreaterThan(
++      0,
++    );
+     expect(createButton()).toBeDisabled();
+   });
+ 
+   it("does not enable Create with a name but no type", () => {
+     setup();
+     fillName("My document");
+     expect(createButton()).toBeDisabled();
+   });
+ 
+   it("does not enable Create with a type but no name", () => {
+@@ -104,11 +109,53 @@ describe("CreateDocumentWithTypeModal", () => {
+     });
+   });
+ 
+   it("cancel closes without firing onCreate", () => {
+     const { onCreate, onOpenChange } = setup();
+     fillName("My document");
+     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+     expect(onOpenChange).toHaveBeenCalledWith(false);
+     expect(onCreate).not.toHaveBeenCalled();
+   });
++
++  it("reports the selected documentType via onTypeSelected", () => {
++    const onTypeSelected = vi.fn();
++    const onCreate = vi.fn();
++    render(
++      <CreateDocumentWithTypeModal
++        documentTypes={documentTypes}
++        onCreate={onCreate}
++        onTypeSelected={onTypeSelected}
++        open
++      />,
++    );
++    fireEvent.click(screen.getByText("Select document type…"));
++    fireEvent.click(screen.getByText("To-do List v2"));
++    expect(onTypeSelected).toHaveBeenCalledWith("powerhouse/todo");
++  });
++
++  it("resets name and selection when dismissed (Escape)", () => {
++    // Radix's DismissableLayer listens for Escape on `document`, not on the
++    // dialog element itself, so `fireEvent.keyDown(getByRole("dialog"), ...)`
++    // never reaches it under happy-dom — dispatch on `document` instead.
++    vi.useFakeTimers();
++    try {
++      setup();
++      fillName("My document");
++      pickTodoType();
++      fireEvent.keyDown(document, {
++        key: "Escape",
++        code: "Escape",
++      });
++      // The reset fires from a bare `setTimeout` (not a testing-library
++      // event), so advancing fake timers outside `act()` leaves React's
++      // state update unflushed — wrap it so the DOM reflects the reset.
++      act(() => {
++        vi.advanceTimersByTime(300);
++      });
++      expect(screen.getByPlaceholderText("Document name")).toHaveValue("");
++      expect(screen.getByText("Select document type…")).toBeInTheDocument();
++    } finally {
++      vi.useRealTimers();
++    }
++  });
+ });
+diff --git a/packages/design-system/src/connect/components/modal/create-document-with-type-modal.tsx b/packages/design-system/src/connect/components/modal/create-document-with-type-modal.tsx
+index 130d370f9..b5ee61167 100644
+--- a/packages/design-system/src/connect/components/modal/create-document-with-type-modal.tsx
++++ b/packages/design-system/src/connect/components/modal/create-document-with-type-modal.tsx
+@@ -26,21 +26,21 @@ export type CreateDocumentWithTypeModalProps = ComponentPropsWithoutRef<
+   }) => void;
+   readonly onTypeSelected?: (documentType: string) => void;
+ };
+ 
+ const CLOSE_ANIMATION_DURATION = 300;
+ // ConnectSelect has no placeholder support (it falls back to items[0]), so an
+ // empty-string sentinel item stands in until the user picks a real type.
+ const PLACEHOLDER_KEY = "";
+ 
+ function optionKey(option: DocumentTypeOption): string {
+-  return `${option.documentType}::${option.version ?? 1}`;
++  return `${option.documentType}::${option.version ?? "latest"}`;
+ }
+ 
+ function optionDisplayName(option: DocumentTypeOption): string {
+   return option.version ? `${option.name} v${option.version}` : option.name;
+ }
+ 
+ export function CreateDocumentWithTypeModal(
+   props: CreateDocumentWithTypeModalProps,
+ ) {
+   const {
+@@ -80,26 +80,31 @@ export function CreateDocumentWithTypeModal(
+       : typeItems;
+ 
+   const resetAfterClose = useCallback(() => {
+     setTimeout(() => {
+       setDocumentName("");
+       setIsNameValid(false);
+       setSelectedKey(PLACEHOLDER_KEY);
+     }, CLOSE_ANIMATION_DURATION);
+   }, []);
+ 
++  const handleOpenChange = (open: boolean) => {
++    onOpenChange?.(open);
++    if (!open) resetAfterClose();
++  };
++
+   const handleCancel = () => {
+-    onOpenChange?.(false);
+-    resetAfterClose();
++    handleOpenChange(false);
+   };
+ 
+   const handleTypeChange = (value: string) => {
++    // Unreachable today (the sentinel never appears in the open list), kept as defense.
+     if (value === PLACEHOLDER_KEY) return;
+     setSelectedKey(value);
+     const option = documentTypes.find((o) => optionKey(o) === value);
+     if (option) onTypeSelected?.(option.documentType);
+   };
+ 
+   const handleCreate = useCallback(() => {
+     if (!canCreate) return;
+     onCreate({
+       name: documentName,
+@@ -113,27 +118,28 @@ export function CreateDocumentWithTypeModal(
+     (e: React.FormEvent<HTMLFormElement>) => {
+       e.preventDefault();
+       handleCreate();
+     },
+     [handleCreate],
+   );
+ 
+   return (
+     <Modal
+       contentProps={contentProps}
+-      onOpenChange={onOpenChange}
++      onOpenChange={handleOpenChange}
+       overlayProps={overlayProps}
++      title="Create a new document"
+       {...restProps}
+     >
+       <form
+         name="create-document-with-type"
+-        className="w-100 rounded-xl bg-background p-6 text-foreground"
++        className="max-h-[85vh] w-100 overflow-y-auto rounded-xl bg-background p-6 text-foreground"
+         onSubmit={handleSubmit}
+       >
+         <div className="pb-2 text-2xl font-bold text-foreground">
+           Create a new document
+         </div>
+         <div className="my-6">
+           {!isNameValid && documentName ? (
+             <div className="mb-2 text-destructive">
+               Document name must not be empty or contain control characters.
+             </div>
+@@ -153,20 +159,21 @@ export function CreateDocumentWithTypeModal(
+         <div className="my-6">
+           <Label
+             className="mb-2 text-sm font-medium text-foreground"
+             htmlFor="document-type"
+           >
+             Document type
+           </Label>
+           <ConnectSelect
+             id="document-type"
+             items={items}
++            listClassName="max-h-80 overflow-y-auto overscroll-contain"
+             menuClassName="min-w-0"
+             onChange={handleTypeChange}
+             value={selectedKey}
+           />
+         </div>
+         <div className="mt-8 flex justify-between gap-3">
+           <ModalButton onClick={handleCancel} type="button" variant="cancel">
+             Cancel
+           </ModalButton>
+           <ModalButton disabled={!canCreate} type="submit" variant="confirm">
+diff --git a/packages/design-system/src/connect/components/select/select.tsx b/packages/design-system/src/connect/components/select/select.tsx
+index ba3d58cbf..0a6631dd6 100644
+--- a/packages/design-system/src/connect/components/select/select.tsx
++++ b/packages/design-system/src/connect/components/select/select.tsx
+@@ -20,20 +20,22 @@ export type ConnectSelectItem<TValue extends string> = {
+ export type ConnectSelectProps<TValue extends string> = {
+   items: readonly ConnectSelectItem<TValue>[];
+   value: TValue;
+   id: string;
+   onChange: (value: TValue) => void;
+   containerClassName?: string;
+   menuClassName?: string;
+   itemClassName?: string;
+   borderRadius?: CSSProperties["borderRadius"];
+   absolutePositionMenu?: boolean;
++  /** Applied to the expanded options list, e.g. to cap its height and make it scrollable. */
++  listClassName?: string;
+ };
+ 
+ function fixedForwardRef<T, P = Record<string, never>>(
+   render: (props: P, ref: Ref<T>) => ReactNode,
+ ): (props: P & RefAttributes<T>) => ReactNode {
+   // @ts-expect-error - This is a hack to make the types work
+   // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+   return forwardRef(render) as any;
+ }
+ 
+@@ -43,20 +45,21 @@ export const ConnectSelect = /* @__PURE__ */ fixedForwardRef(function Select<
+   const {
+     items,
+     value,
+     id,
+     onChange,
+     containerClassName,
+     menuClassName,
+     itemClassName,
+     absolutePositionMenu = false,
+     borderRadius = "6px",
++    listClassName,
+   } = props;
+   const [showItems, setShowItems] = useState(false);
+   const selectedItem = getItemByValue(value) ?? items[0];
+   function onItemClick(item: ConnectSelectItem<TValue>) {
+     if (item.disabled) return;
+     onChange(item.value);
+     setShowItems(false);
+   }
+   function getItemByValue(value: TValue) {
+     return items.find((item) => item.value === value);
+@@ -89,20 +92,21 @@ export const ConnectSelect = /* @__PURE__ */ fixedForwardRef(function Select<
+         <Icon
+           className={twJoin("transition", showItems ? "" : "-rotate-90")}
+           name="ChevronDown"
+         />
+       </div>
+       <div
+         className={twMerge(
+           "max-h-0 w-full overflow-hidden bg-inherit transition-[max-height] ease-in-out",
+           showItems && "max-h-screen",
+           absolutePositionMenu && "absolute",
++          showItems && listClassName,
+         )}
+         style={{
+           borderRadius: `0 0 ${borderRadius} ${borderRadius}`,
+         }}
+       >
+         {itemsToShow.map((item) => (
+           <ItemContainer
+             key={item.value}
+             {...item}
+             className={itemClassName}
+diff --git a/packages/powerhouse-vetra-packages/editors/generic-drive-explorer/components/__fake-document-models.ts b/packages/powerhouse-vetra-packages/editors/generic-drive-explorer/components/__fake-document-models.ts
+index 586f32c9e..d52ae3594 100644
+--- a/packages/powerhouse-vetra-packages/editors/generic-drive-explorer/components/__fake-document-models.ts
++++ b/packages/powerhouse-vetra-packages/editors/generic-drive-explorer/components/__fake-document-models.ts
+@@ -1,54 +1,59 @@
+ /**
+- * TEMPORARY dev scaffolding for styling the "New document" grid. Delete this
+- * file (and its two references in create-document.tsx) before committing.
++ * TEMPORARY dev scaffolding for styling the "New document" flow. Committed on
++ * purpose — this is not leftover debug code — so remove it (and its two
++ * references in create-document.tsx) once real packages are installed and the
++ * create-document UI work is finished.
+  *
+  * Why it's needed: in a bare Connect dev server the grid is always empty. The
+  * bundled Common package registers only powerhouse/document-model,
+  * powerhouse/document-drive and powerhouse/reactor-drive, and all three are
+  * removed again — the first two by Connect's default `disabledEditors`, the
+  * drive types also by the DRIVE_CONTAINER_TYPES guard. So there is nothing to
+  * render until a real package is installed from a registry.
+  *
+  * Toggle at runtime, no rebuild and no file edit:
+  *   localStorage.setItem("ph:fakeDocModels", "1"); location.reload();
+  *   localStorage.removeItem("ph:fakeDocModels"); location.reload();
+  *
+  * These are render-only. They are never registered with the reactor, so
+- * clicking one opens CreateDocumentModal and then no-ops: the modal bails at
+- * `if (!selectedDrive || !documentModel) return;` because
+- * useDocumentModelModuleById() can't resolve a fake document type. Nothing is
+- * written to any drive.
++ * picking one goes through the normal `addDocument` flow, which rejects the
++ * unknown fake document type; create-document.tsx's handleCreate catches that
++ * rejection and reports it via `console.error("Failed to create document:",
++ * error)`. Nothing is written to any drive.
+  */
+ import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+ 
+ const FLAG_KEY = "ph:fakeDocModels";
+ 
+ /** Whether the fake grid entries are switched on for this browser. */
+ export function isFakeDocumentModelsEnabled(): boolean {
+   try {
+-    return globalThis.localStorage?.getItem(FLAG_KEY) === "1";
++    return globalThis.localStorage.getItem(FLAG_KEY) === "1";
+   } catch {
+     // localStorage throws in some privacy modes / non-browser contexts.
+     return false;
+   }
+ }
+ 
+ type FakeSpec = {
+   id: string;
+   name: string;
+   description: string;
+   version?: number;
+ };
+ 
+ // Deliberately varied: short and long names, a duplicated name at two
+ // versions, and one very long label — the cases that break wrap/truncation.
++// ~20 entries total (8 original + 12 appended below) so the document-type
++// dropdown clearly overflows its capped, scrollable list (see Fix 0 in
++// create-document-with-type-modal.tsx).
+ const FAKE_SPECS: FakeSpec[] = [
+   { id: "fake/todo", name: "To-do List", description: "A simple task list" },
+   { id: "fake/invoice", name: "Invoice", description: "Billing document" },
+   { id: "fake/budget", name: "Budget", description: "Budget statement" },
+   { id: "fake/rfp", name: "RFP", description: "Request for proposals" },
+   {
+     id: "fake/scope-of-work",
+     name: "Scope of Work",
+     description: "Engagement scope and deliverables",
+   },
+@@ -62,20 +67,80 @@ const FAKE_SPECS: FakeSpec[] = [
+     name: "Versioned Model",
+     description: "v1",
+     version: 1,
+   },
+   {
+     id: "fake/versioned",
+     name: "Versioned Model",
+     description: "v2",
+     version: 2,
+   },
++  {
++    id: "fake/expense-report",
++    name: "Expense Report",
++    description: "Itemized employee expenses",
++  },
++  {
++    id: "fake/meeting-notes",
++    name: "Meeting Notes",
++    description: "Minutes and action items",
++  },
++  {
++    id: "fake/okr-tracker",
++    name: "OKR Tracker",
++    description: "Objectives and key results",
++  },
++  {
++    id: "fake/team-roster",
++    name: "Team Roster",
++    description: "Members, roles and contact info",
++  },
++  {
++    id: "fake/product-roadmap",
++    name: "Product Roadmap",
++    description: "Planned features by quarter",
++  },
++  {
++    id: "fake/bug-report",
++    name: "Bug Report",
++    description: "Steps to reproduce and severity",
++  },
++  {
++    id: "fake/design-review",
++    name: "Design Review",
++    description: "Feedback on a design proposal",
++  },
++  {
++    id: "fake/payroll-run",
++    name: "Payroll Run",
++    description: "Payout batch for a pay period",
++  },
++  {
++    id: "fake/grant-proposal",
++    name: "Grant Proposal",
++    description: "Funding request and milestones",
++  },
++  {
++    id: "fake/treasury-report",
++    name: "Treasury Report",
++    description: "Cash and token balances by account",
++  },
++  {
++    id: "fake/vendor-contract",
++    name: "Vendor Contract",
++    description: "Terms and deliverables for a vendor",
++  },
++  {
++    id: "fake/quarterly-forecast",
++    name: "Quarterly Forecast",
++    description: "Projected revenue and spend",
++  },
+ ];
+ 
+ function makeFakeModule(spec: FakeSpec): DocumentModelModule {
+   // Only `documentModel.global.{id,name,description}` and `version` are read
+   // by CreateDocument, so the rest of the DocumentModelModule surface is
+   // omitted and the shape is cast. Fine for render-only scaffolding.
+   return {
+     version: spec.version,
+     documentModel: {
+       global: {
+diff --git a/test/vetra-e2e/tests/generic-drive-hidden-vetra-documents.spec.ts b/test/vetra-e2e/tests/generic-drive-hidden-vetra-documents.spec.ts
+index 2696f4529..4e3e91fd6 100644
+--- a/test/vetra-e2e/tests/generic-drive-hidden-vetra-documents.spec.ts
++++ b/test/vetra-e2e/tests/generic-drive-hidden-vetra-documents.spec.ts
+@@ -60,29 +60,35 @@ test("vetra document types are hidden in a generic drive", async ({ page }) => {
+   await expect(createDriveSubmit).toBeEnabled({ timeout: 5_000 });
+   await createDriveSubmit.click();
+ 
+   // 3. Wait for navigation into the new drive
+   await waitForAppReady(page);
+   await page.waitForTimeout(2_000);
+   await expect(page).toHaveURL(/\/d\/[^/?]+/, { timeout: 10_000 });
+   await waitForAppReady(page);
+ 
+   // 4. Positive control: the "Create New Document" button renders.
++  // NOTE: this positive control depends on document-creation.spec.ts having
++  // run first (workers: 1, alphabetical file order): it generates a creatable
++  // project-local document model. With zero creatable types the footer
++  // deliberately renders nothing (see create-document.tsx), and this spec
++  // would fail here if run in isolation.
+   const createDocumentButton = page.getByRole("button", {
+     name: "Create New Document",
+   });
+   await expect(createDocumentButton).toBeVisible({ timeout: 30_000 });
+   await createDocumentButton.click();
+ 
+   // 5. DocumentModel + every vetra builder-spec type must be absent from the
+   // document-type select. ConnectSelect keeps its options in the DOM even
+   // while collapsed, so presence is checked without opening the menu.
+   const dialog = page.getByRole("dialog");
+   await expect(
+     dialog.getByText("Select document type…", { exact: true }),
+   ).toBeVisible({ timeout: 10_000 });
+   for (const hiddenName of HIDDEN_DISPLAY_NAMES) {
++    const escaped = hiddenName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+     await expect(
+-      dialog.getByText(hiddenName, { exact: true }),
++      dialog.getByText(new RegExp(`^${escaped}( v\\d+)?$`)),
+     ).toHaveCount(0, { timeout: 30_000 });
+   }
+ });
+diff --git a/test/vetra-e2e/tests/helpers/document.ts b/test/vetra-e2e/tests/helpers/document.ts
+index b28f8c70c..c28b25aa3 100644
+--- a/test/vetra-e2e/tests/helpers/document.ts
++++ b/test/vetra-e2e/tests/helpers/document.ts
+@@ -49,35 +49,20 @@ export async function createDocument(
+   await expect(createButton).toBeEnabled({ timeout: 2 * 60 * 60 * 1000 });
+   await createButton.click();
+ 
+   // Wait for navigation to the new document
+   await waitForAppReady(page);
+ 
+   // Return the current URL
+   return page.url();
+ }
+ 
+-/**
+- * Helper function to check if a document type is available for creation (Vetra-specific).
+- * @param page - Playwright Page object
+- * @param documentType - Type of document to check
+- */
+-export async function isDocumentAvailableForCreation(
+-  page: Page,
+-  documentType: string,
+-) {
+-  return await page
+-    .locator(".flex.w-full.flex-wrap.gap-4")
+-    .getByText(documentType)
+-    .isVisible();
+-}
+-
+ /**
+  * Navigate to Vetra drive from home page (Vetra-specific).
+  * @param page - Playwright Page object
+  * @param handleCookies - Whether to handle cookie consent (default: false)
+  */
+ export async function navigateToVetraDrive(
+   page: Page,
+   handleCookies = false,
+ ): Promise<void> {
+   // Go to home page
