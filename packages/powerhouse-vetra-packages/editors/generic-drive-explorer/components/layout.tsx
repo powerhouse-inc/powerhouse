@@ -84,20 +84,3 @@ DriveLayout.ContentSection = function DriveLayoutContentSection({
     </div>
   );
 };
-
-DriveLayout.Footer = function DriveLayoutFooter({
-  children,
-  className,
-  containerProps,
-  ...props
-}: BaseProps) {
-  return (
-    <div
-      className={twMerge("flex-0", className)}
-      {...containerProps}
-      {...props}
-    >
-      {children}
-    </div>
-  );
-};
