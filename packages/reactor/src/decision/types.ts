@@ -36,7 +36,7 @@ export type Projection<M> = {
   query: StreamQuery | ((model: Partial<M>) => StreamQuery[]);
 
   /**
-   * Action types in this stream that can change a verdict. Reads of the stream
+   * Action types in this stream that can change an evaluation. Reads of the stream
    * are filtered to these, so anything left out is invisible to a decision.
    */
   decidingActions: string[];
@@ -58,9 +58,9 @@ export type DecisionModel<M> = {
 
   /**
    * Whether or not this model decides about operations in a given scope. That
-   * is, a scope it reads is not necessarily one it judges, and vise-versa.
+   * is, a scope it reads is not necessarily one it evaluates, and vise-versa.
    */
-  judgesScope(scope: string): boolean;
+  evaluatesScope(scope: string): boolean;
 
   decide(
     model: M,

@@ -18,7 +18,7 @@ type DocumentState = PHDocument["state"]["document"];
 
 const WRITTEN = "written";
 
-/** Whether a read stream counts this action as one that changes a verdict. */
+/** Whether a read stream counts this action as one that changes an evaluation. */
 function canRefuseOthers(operation: Operation, readSet: ReadStream[]): boolean {
   return readSet.some((stream) =>
     stream.decidingActions.includes(operation.action.type),
@@ -46,7 +46,7 @@ function firstDeleted(
  * and leaves the earlier ones alone. A deletion among the ones passed in does
  * the same to those after it.
  */
-export async function deletionVerdictsByPosition(
+export async function evaluateDeletionsByPosition(
   documentId: string,
   scope: string,
   branch: string,
@@ -58,12 +58,12 @@ export async function deletionVerdictsByPosition(
   const definition = documentDecisionModel({ documentId, branch });
   const readSet = staticReadSet(definition);
 
-  if (!definition.judgesScope(scope)) {
+  if (!definition.evaluatesScope(scope)) {
     return operations.map(() => undefined);
   }
 
   // Dedupe so we an op re-evaluation cannot refuse itself.
-  const judged = new Set(operations.map((operation) => operation.id));
+  const evaluating = new Set(operations.map((operation) => operation.id));
 
   // Cheap and indexed. A document that has never been deleted -- nearly all of
   // them -- costs one query per read stream and stops here.
@@ -80,7 +80,7 @@ export async function deletionVerdictsByPosition(
           undefined,
           signal,
         )
-      ).results.filter((operation) => !judged.has(operation.id)),
+      ).results.filter((operation) => !evaluating.has(operation.id)),
     })),
   );
 
@@ -114,7 +114,7 @@ export async function deletionVerdictsByPosition(
   }
 
   // The stream being written to is walked alongside the stream(s) being read,
-  // so an operation is judged against the others passed in alongside it. It
+  // so an operation is evaluated against the others passed in alongside it. It
   // only applies if the write is in a stream the model reads.
   const writtenStreamIsRead = readSet.find(
     (stream) => stream.query.scope === scope,

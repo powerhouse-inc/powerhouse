@@ -82,7 +82,7 @@ function staticDefinition(t: DecisionTarget): DecisionModel<TestModel> {
         query: { documentId: t.documentId, branch: t.branch, scope: "auth" },
       },
     },
-    judgesScope: () => true,
+    evaluatesScope: () => true,
     decide: () => "allow",
   };
 }
@@ -231,7 +231,7 @@ describe("buildDecisionModel", () => {
           },
         },
       },
-      judgesScope: () => true,
+      evaluatesScope: () => true,
       decide: () => "allow",
     });
 
@@ -282,7 +282,7 @@ describe("buildDecisionModel", () => {
           ],
         },
       },
-      judgesScope: () => true,
+      evaluatesScope: () => true,
       decide: () => "allow",
     });
 
@@ -368,7 +368,7 @@ describe("buildDecisionModel", () => {
           ],
         },
       },
-      judgesScope: () => true,
+      evaluatesScope: () => true,
       decide: () => "allow",
     });
 

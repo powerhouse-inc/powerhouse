@@ -18,7 +18,7 @@ const DOC_ID = "doc-1";
 const DOC_TYPE = "powerhouse/document-model";
 
 /**
- * Which mechanism admission uses. The verdict is the same either way, so the
+ * Which mechanism admission uses. The evaluation is the same either way, so the
  * observable difference is the mechanism itself: whether the meta cache is
  * consulted, and whether the write carries a read-set for the store to enforce.
  */

@@ -39,7 +39,7 @@ import {
 import { reshuffleByTimestamp } from "../utils/reshuffle.js";
 import { buildDecisionModel } from "../decision/build-decision-model.js";
 import { documentDecisionModel } from "../decision/document-decision-model.js";
-import { deletionVerdictsByPosition } from "../decision/deletion-verdicts.js";
+import { evaluateDeletionsByPosition } from "../decision/deletion-evaluation.js";
 import { staticReadSet } from "../decision/build-decision-model.js";
 import { retractionSkip } from "../decision/merged-order.js";
 import { DocumentActionHandler } from "./document-action-handler.js";
@@ -75,6 +75,24 @@ type ProcessActionsResult = {
   generatedOperations: Operation[];
   operationsWithContext: OperationWithContext[];
   error?: Error;
+};
+
+/**
+ * A write that just committed, tested to decide whether earlier evaluations
+ * still hold. The operations all belong to `scope` of the job's document.
+ */
+type EvaluationCriteria = {
+  scope: string;
+  operations: Operation[];
+};
+
+/** The job in flight and what a re-evaluation writes its operations through. */
+type ExecutingJob = {
+  job: Job;
+  startTime: number;
+  indexTxn: IOperationIndexTxn;
+  stores: ExecutionStores;
+  signal?: AbortSignal;
 };
 
 const documentScopeActions = [
@@ -235,6 +253,21 @@ export class SimpleJobExecutor implements IJobExecutor {
           }
         }
 
+        // Put here because a re-eval pass writes through the same db db
+        // transaction.
+        const reevaluationError = await this.reevaluateIfCriteriaMet(
+          { scope: job.scope, operations: actionResult.generatedOperations },
+          { job, startTime, indexTxn, stores, signal },
+        );
+        if (reevaluationError) {
+          return {
+            job,
+            success: false as const,
+            error: reevaluationError,
+            duration: Date.now() - startTime,
+          };
+        }
+
         const ordinals = await stores.operationIndex.commit(indexTxn, signal);
 
         if (actionResult.operationsWithContext.length > 0) {
@@ -345,6 +378,11 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     let lastYield = performance.now();
 
+    // A load's operations were accepted at their own positions, and so were the
+    // operations a re-evaluation pass hands back.
+    const replayingAcceptedHistory =
+      job.kind === "load" || deniedReasons !== undefined;
+
     for (let actionIndex = 0; actionIndex < actions.length; actionIndex++) {
       const action = actions[actionIndex];
       const skip = skipValues?.[actionIndex] ?? 0;
@@ -362,7 +400,7 @@ export class SimpleJobExecutor implements IJobExecutor {
             skip,
             sourceRemote,
             signal,
-            this.featureFlags.documentDecisions && job.kind === "load",
+            this.featureFlags.documentDecisions && replayingAcceptedHistory,
             deniedReason,
           )
         : await this.executeRegularAction(
@@ -376,6 +414,7 @@ export class SimpleJobExecutor implements IJobExecutor {
             sourceRemote,
             signal,
             deniedReason,
+            replayingAcceptedHistory,
           );
 
       const error = this.accumulateResultOrReturnError(
@@ -425,6 +464,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     sourceRemote: string = "",
     signal?: AbortSignal,
     deniedReason?: string,
+    replayingAcceptedHistory = false,
   ): Promise<
     JobResult & {
       operationsWithContext?: Array<{
@@ -442,11 +482,10 @@ export class SimpleJobExecutor implements IJobExecutor {
     let appendCondition: AppendCondition | undefined;
     let documentVersion: number | undefined;
 
-    // A load's operations were already judged at their own positions.
-    const verdictAlreadyDecided =
-      this.featureFlags.documentDecisions && job.kind === "load";
+    const alreadyEvaluated =
+      this.featureFlags.documentDecisions && replayingAcceptedHistory;
 
-    if (this.featureFlags.documentDecisions && !verdictAlreadyDecided) {
+    if (this.featureFlags.documentDecisions && !alreadyEvaluated) {
       const target = { documentId: job.documentId, branch: job.branch };
       const definition = documentDecisionModel(target);
 
@@ -489,7 +528,7 @@ export class SimpleJobExecutor implements IJobExecutor {
 
       appendCondition = built.appendCondition;
       documentVersion = built.model.document.version;
-    } else if (verdictAlreadyDecided) {
+    } else if (alreadyEvaluated) {
       const documentScope = await stores.writeCache.getState(
         job.documentId,
         "document",
@@ -558,11 +597,10 @@ export class SimpleJobExecutor implements IJobExecutor {
       );
     }
 
-    // Auth admission gate. Skips load jobs (re-judging already-accepted sync/
-    // reshuffle history would drop operations and diverge replicas). Evaluated
-    // against current auth state: an uninitialized policy leaves the document
-    // open, so documents with no policy are unaffected.
-    if (job.kind !== "load") {
+    // An auth decision should be made iff this set of operations have not
+    // already been evaluated. Re-evaluating could drop operations and diverge
+    // replicas.
+    if (!replayingAcceptedHistory) {
       const subject = {
         address: action.context?.signer?.user.address,
         key: action.context?.signer?.app.key,
@@ -768,18 +806,63 @@ export class SimpleJobExecutor implements IJobExecutor {
   }
 
   /**
-   * If an operation happened that could change a decision model verdict, we
-   * need to re-evaluate across the streams that could be affected. Previously
-   * approved operations may need to be denied, which will apply new denied
-   * operations with appropriate skip.
+   * Re-evaluates the document when a write meets both criteria: it was written
+   * to a stream the model reads, and it is timestamped before an operation
+   * already stored. The caller supplies the timestamp and the reactor does not replace
+   * it, so a mutation job can write such an operation just as a load job can,
+   * which is why both executeJob and executeLoadJob call this.
    */
-  private async reevaluateReadingScopes(
-    job: Job,
-    startTime: number,
-    indexTxn: IOperationIndexTxn,
-    stores: ExecutionStores,
-    signal?: AbortSignal,
+  private async reevaluateIfCriteriaMet(
+    criteria: EvaluationCriteria,
+    executing: ExecutingJob,
   ): Promise<Error | undefined> {
+    if (!this.featureFlags.documentDecisions) {
+      return undefined;
+    }
+
+    const { job, stores, signal } = executing;
+
+    const definition = documentDecisionModel({
+      documentId: job.documentId,
+      branch: job.branch,
+    });
+    const inReadSet = staticReadSet(definition).some(
+      (stream) =>
+        stream.query.documentId === job.documentId &&
+        stream.query.scope === criteria.scope &&
+        stream.query.branch === job.branch,
+    );
+    if (!inReadSet) {
+      return undefined;
+    }
+
+    const revisions = await stores.operationStore.getRevisions(
+      job.documentId,
+      job.branch,
+      signal,
+    );
+    const latest = Date.parse(revisions.latestTimestamp);
+
+    const backdated = criteria.operations.some(
+      (operation) => Date.parse(operation.timestampUtcMs) < latest,
+    );
+    if (!backdated) {
+      return undefined;
+    }
+
+    return this.reevaluateDocument(executing);
+  }
+
+  /**
+   * Re-evaluates every scope the model evaluates. Where an operation's
+   * evaluation differs from what is stored, the tail from that operation is
+   * re-appended, carrying a skip that spans the indices it supersedes.
+   */
+  private async reevaluateDocument(
+    executing: ExecutingJob,
+  ): Promise<Error | undefined> {
+    const { job, startTime, indexTxn, stores, signal } = executing;
+
     const definition = documentDecisionModel({
       documentId: job.documentId,
       branch: job.branch,
@@ -792,7 +875,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     );
 
     for (const scope of Object.keys(revisions.revision)) {
-      if (!definition.judgesScope(scope)) {
+      if (!definition.evaluatesScope(scope)) {
         continue;
       }
 
@@ -813,7 +896,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         continue;
       }
 
-      const recomputed = await deletionVerdictsByPosition(
+      const reevaluated = await evaluateDeletionsByPosition(
         job.documentId,
         scope,
         job.branch,
@@ -824,7 +907,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       );
 
       const firstChange = effective.findIndex(
-        (operation, i) => operation.deniedReason !== recomputed[i],
+        (operation, i) => operation.deniedReason !== reevaluated[i],
       );
       if (firstChange === -1) {
         continue;
@@ -847,7 +930,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         undefined,
         "",
         signal,
-        recomputed.slice(firstChange),
+        reevaluated.slice(firstChange),
       );
 
       if (!result.success) {
@@ -1079,7 +1162,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     let deniedReasons: Array<string | undefined> | undefined;
     if (this.featureFlags.documentDecisions) {
       try {
-        deniedReasons = await deletionVerdictsByPosition(
+        deniedReasons = await evaluateDeletionsByPosition(
           job.documentId,
           scope,
           job.branch,
@@ -1131,48 +1214,17 @@ export class SimpleJobExecutor implements IJobExecutor {
       stores.documentMetaCache.invalidate(job.documentId, job.branch);
     }
 
-    // With DCB, we need to re-evaluate scopes dependent on the potential
-    // reshuffle of the document scope.
-    const definition = documentDecisionModel({
-      documentId: job.documentId,
-      branch: job.branch,
-    });
-    const readsThisStream = staticReadSet(definition).some(
-      (stream) =>
-        stream.query.documentId === job.documentId &&
-        stream.query.scope === scope &&
-        stream.query.branch === job.branch,
+    const reevaluationError = await this.reevaluateIfCriteriaMet(
+      { scope, operations: result.generatedOperations },
+      { job, startTime, indexTxn, stores, signal },
     );
-
-    if (this.featureFlags.documentDecisions && readsThisStream) {
-      const revisions = await stores.operationStore.getRevisions(
-        job.documentId,
-        job.branch,
-        signal,
-      );
-      const latest = Date.parse(revisions.latestTimestamp);
-
-      const owesPass = result.generatedOperations.some(
-        (operation) => Date.parse(operation.timestampUtcMs) < latest,
-      );
-
-      if (owesPass) {
-        const error = await this.reevaluateReadingScopes(
-          job,
-          startTime,
-          indexTxn,
-          stores,
-          signal,
-        );
-        if (error) {
-          return {
-            job,
-            success: false,
-            error,
-            duration: Date.now() - startTime,
-          };
-        }
-      }
+    if (reevaluationError) {
+      return {
+        job,
+        success: false,
+        error: reevaluationError,
+        duration: Date.now() - startTime,
+      };
     }
 
     return {

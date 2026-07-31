@@ -37,7 +37,7 @@ export type JobResult = {
 /**
  * Enforcement the reactor performs, each off by default.
  *
- * A verdict reached while replaying is part of the document's history, so two
+ * An evaluation made while replaying is part of the document's history, so two
  * reactors that share documents and disagree on these diverge. A flag is turned
  * on for a set of reactors that sync with each other, not for one node.
  */

@@ -36,34 +36,36 @@ While DCB allows for arbitrary decision models, for now Auth is the first and on
 
 ```typescript
 type PHAuthState = {
-  version: number;          // policy language version; 0 = uninitialized, genesis sets >= 1
+  version: number; // policy language version; 0 = uninitialized, genesis sets >= 1
   grants: Grant[];
-  creator?: string;         // did:key of the genesis signer; set once by INITIALIZE_AUTH
+  creator?: string; // did:key of the genesis signer; set once by INITIALIZE_AUTH
 };
 
 type Grant = {
-  id: string;               // stable; SET_GRANT upserts, REMOVE_GRANT deletes
-  description: string;      // intent, shows in the audit trail
+  id: string; // stable; SET_GRANT upserts, REMOVE_GRANT deletes
+  description: string; // intent, shows in the audit trail
   effect: "allow" | "deny";
-  principal: Principal;     // who
-  capability: Capability;   // what they may do
-  where?: Condition;        // optional; the grant applies only when this holds
+  principal: Principal; // who
+  capability: Capability; // what they may do
+  where?: Condition; // optional; the grant applies only when this holds
 };
 
 type Principal =
-  | { anyone: true }        // any signer, including anonymous
-  | { address: string }     // one wallet
-  | { group: string }       // a PHGroup document id
-  | { match: Condition };   // relationship, e.g. subject.address == doc.global.rtoAddress
+  | { anyone: true } // any signer, including anonymous
+  | { address: string } // one wallet
+  | { group: string } // a PHGroup document id
+  | { match: Condition }; // relationship, e.g. subject.address == doc.global.rtoAddress
 
-type Capability = {
-  can: "read";
-  scope?: string;
-} | {
-  can: "execute";
-  scope?: string;
-  operation?: string[];
-};
+type Capability =
+  | {
+      can: "read";
+      scope?: string;
+    }
+  | {
+      can: "execute";
+      scope?: string;
+      operation?: string[];
+    };
 ```
 
 Auth scope actions are applied by a dedicated auth reducer, `applyAuthAction`, which the base reducer dispatches instead of the model reducer. This is the same approach as we've taken with the `document` scope reducer. The resulting state is event-sourced, signed, and replicates with the document, so the policy travels with the document instead of living outside of it.
@@ -141,7 +143,7 @@ export type Condition =
   | { ne: [Operand, Operand] }
   | { in: [Operand, Operand[]] }
   | { notIn: [Operand, Operand[]] }
-  | { lt: [Operand, Operand] }        // numbers and strings; mixed types -> false
+  | { lt: [Operand, Operand] } // numbers and strings; mixed types -> false
   | { lte: [Operand, Operand] }
   | { gt: [Operand, Operand] }
   | { gte: [Operand, Operand] }
@@ -151,7 +153,7 @@ export type Condition =
   | { not: Condition };
 
 export type Operand =
-  | { attr: string }                  // "doc.global.status", "subject.address", "action.input.newStatus"
+  | { attr: string } // "doc.global.status", "subject.address", "action.input.newStatus"
   | { lit: string | number | boolean | null };
 ```
 
@@ -173,8 +175,7 @@ These validation rules are part of what a `version` means. Version 1 ships its r
 We define the following types to support the DCB pattern:
 
 ```typescript
-type StreamQuery =
-  { documentId: string; branch: string; scope: string };
+type StreamQuery = { documentId: string; branch: string; scope: string };
 
 // A projection names a stream. Its value in the model is that scope's state
 // from the rebuilt document, e.g. PHAuthState for an auth query.
@@ -189,7 +190,12 @@ type DecisionContext = { scopeState: unknown };
 
 type DecisionModel<M> = {
   projections: { [K in keyof M]: Projection<M> };
-  decide(model: M, subject: Subject, request: Request, ctx: DecisionContext): "allow" | "deny";
+  decide(
+    model: M,
+    subject: Subject,
+    request: Request,
+    ctx: DecisionContext,
+  ): "allow" | "deny";
 };
 ```
 
@@ -206,7 +212,12 @@ type DecisionTarget = { documentId: string; branch: string };
 
 // we need to fail the append if any of these streams has operations past `revision`
 type AppendCondition = {
-  streams: Array<{ documentId: string; scope: string; branch: string; revision: number }>;
+  streams: Array<{
+    documentId: string;
+    scope: string;
+    branch: string;
+    revision: number;
+  }>;
 };
 
 function buildDecisionModel<M>(
@@ -223,24 +234,40 @@ Reading through the cache puts the cache's contract in the auth trust base. Ever
 The full auth decision model composes three projections, and we can see easily how we might incrementally add the projections to the decision model to roll out this feature. There are two projections over the target document (i.e. we need `document` and `auth` streams), and a set of projections over the referenced group documents:
 
 ```typescript
-const AuthDecisionModel = (target: DecisionTarget): DecisionModel<{
+const AuthDecisionModel = (
+  target: DecisionTarget,
+): DecisionModel<{
   document: PHDocumentState;
   auth: PHAuthState;
-  groups: Record<string, PHGroupState>;   // group document id -> state
+  groups: Record<string, PHGroupState>; // group document id -> state
 }> => ({
   projections: {
     document: {
-      query: { documentId: target.documentId, branch: target.branch, scope: "document" },
+      query: {
+        documentId: target.documentId,
+        branch: target.branch,
+        scope: "document",
+      },
     },
     auth: {
-      query: { documentId: target.documentId, branch: target.branch, scope: "auth" },
+      query: {
+        documentId: target.documentId,
+        branch: target.branch,
+        scope: "auth",
+      },
     },
     groups: {
-      query: (model) => referencedGroupIds(model.auth.grants)
-        .map((id) => ({ documentId: id, branch: "main", scope: "global" })),
+      query: (model) =>
+        referencedGroupIds(model.auth.grants).map((id) => ({
+          documentId: id,
+          branch: "main",
+          scope: "global",
+        })),
     },
   },
-  decide(model, subject, request, ctx) { /* the decision algorithm below */ },
+  decide(model, subject, request, ctx) {
+    /* the decision algorithm below */
+  },
 });
 ```
 
@@ -257,6 +284,7 @@ The platform registers exactly this one model, although nothing in the evaluatio
 ## Decision algorithm
 
 Every request runs through this one function.
+
 ```typescript
 type AuthModel = {
   document: PHDocumentState;
@@ -329,7 +357,7 @@ The grants are a stack. A capability that omits `scope` (or sets it to `"*"`) co
 
 A grant that uses a feature that doesn't yet exist never applies. For instance, `{ group }` principals, `{ match }` principals, and `where` conditions will not apply in grants until the actual feature evaluator exists. Skipping an allow withholds access, so an unevaluated allow can never widen a policy. Skipping a deny withholds nothing: a policy that relies on a conditional or group-scoped deny is weaker than written until the feature it uses is live.
 
-The creator can always execute `auth` operations, even against a grant list that tries to deny them, so that a document can never be bricked by locking out its own creator. However, this is deliberately narrow, covering only  `auth`-scope execution. The creator gets no special access to domain operations or reads.
+The creator can always execute `auth` operations, even against a grant list that tries to deny them, so that a document can never be bricked by locking out its own creator. However, this is deliberately narrow, covering only `auth`-scope execution. The creator gets no special access to domain operations or reads.
 
 This creator check is safe because it can be verified on any replica. If we tried to do this externally to the reactor, like by having an administrator list on Switchboard, replicas could hold different lists and could reach different decisions. Admins at the API layer can gate requests but this would never change how an operation is evaluated internally to the reactor.
 
@@ -672,11 +700,13 @@ Migration maps a legacy table owner to an `execute`-on-`auth` grant.
 
 ## Implementation plan
 
-Stage 1 has shipped: `PHAuthState` with backfill for legacy documents, the four auth actions and the auth reducer, the version-1 validation rules, persistence through save/load and versioned replay, and interim admission and read gates that consult the policy directly. The policy is replicated state; stage 4 absorbs the interim gates into the decision model.
+Stage 1 has shipped: `PHAuthState` with backfill for legacy documents, the four auth actions and the auth reducer, the version-1 validation rules, persistence through save/load and versioned replay, and interim admission and read gates that consult the policy directly. The admission gate reads the policy out of the document loaded for the scope being written, so it reaches a real policy only for an operation in the `auth` scope. A domain write is handed the default state and allowed. Grants therefore do not gate a domain write before stage 4. The policy is replicated state; stage 4 absorbs the interim gates into the decision model.
 
 ### Feature flags
 
 The reactor configuration carries four flags: `documentDecisions`, `authEnforcement`, `authGroups`, and `authConditions`. Each flag selects an expansion of the registered decision model, and each implies its predecessors — `authGroups` and `authConditions` require `authEnforcement`, which requires `documentDecisions`. All default off. The flags govern enforcement only; the auth data model (actions, reducer, validation, replication) is always live, so a policy authored under any flag configuration is intact once enforcement turns on.
+
+`ReactorBuilder` validates the flag set and throws when there is inconsistent configuration. A flag set without its required predecessors is rejected, and so is a name the running version does not recognize.
 
 A decision made at replay is a consensus outcome: a denied operation carries a `denied` outcome and contributes nothing to the derived state. Two reactors that share documents but disagree on these flags therefore diverge, exactly as two reactors on incompatible software versions would. A flag flips on for a document-sharing fleet, not per node.
 
@@ -690,7 +720,14 @@ The stage was attempted once and reverted. Four mistakes from that attempt are s
 
 Two limits remain deliberate, both on the read side, and stage 4 moves reads onto the same model. A denied operation contributes nothing to state in the reactor's own rebuild path, but `replayDocument` in `shared/document-model` still applies it, so a client replaying history itself sees it apply. The read surface also continues to hide a deleted document outright rather than serving the state at the deletion boundary.
 
-**Stage 4: the auth projection (`authEnforcement`).** `decide` gains the uninitialized, creator, version, and grant steps, and grants are enforced at admission and replay. The interim gates from stage 1 are deleted; with the flag off, the reactor does not enforce policies at all. Reads and the sync manager filter against the same model, which is also where stage 3's two read-side limits are closed. The auth stream joins re-evaluation here, once the monotonic-timestamp rule says how a re-appended auth operation is ordered. This stage brings the monotonic-timestamp rule for the auth stream, the excessive-shuffle exemption for re-evaluation, and the load-path work for evaluating multiple streams in one job. Exit: two reactors that accept conflicting auth and domain operations offline converge to identical decisions and identical state after sync, in both directions, and a revocation over a history longer than the excessive-shuffle bound completes without dead-lettering.
+**Stage 4: the auth projection (`authEnforcement`).**
+Expand `decide` to include the `auth` policy. The mechanism that makes this possible is already in place: stage 3's projection reads the `document` scope to judge an operation in other scopes at its merged position, and guards the write with an append condition with re-evaluation. Reading the `auth` scope to judge a domain write is that same arrangement with a second projection, so this stage adds projections and `decide` steps rather than new cross-scope machinery.
+
+With the flag off, the reactor does not enforce policies at all. The auth stream joins re-evaluation here, once the monotonic-timestamp rule says how a re-appended auth operation is ordered.
+
+This stage brings the monotonic-timestamp rule for the auth stream, the excessive-shuffle exemption for re-evaluation, and the load-path work for evaluating multiple streams in one job.
+
+Two reactors that accept conflicting auth and domain operations offline converge to identical decisions and identical state after sync, in both directions, and a revocation over a history longer than the excessive-shuffle bound completes without dead-lettering.
 
 **Stage 5: the groups projection (`authGroups`).** Ship the `PHGroup` model, derive group queries from the grant list, add group streams to the read-set and the append condition, maintain the group-reference relation so sync carries referenced groups and re-evaluation finds dependent documents (see Synchronization), and re-evaluate dependents in their own jobs. Group principals begin to match only here. Until conditions ship, a group's own policy is limited to `address` and `anyone` principals, since `match` never applies. Exit: a group-gated operation syncs to a replica that does not hold the group document and fails closed there until the group's history arrives, after which both replicas agree; and a membership removal denies later operations on every document that references the group.
 
@@ -719,54 +756,146 @@ This is a TRP toll statement. The operation names are illustrative — the model
   "version": 1,
   "grants": [
     // the site administrator governs the policy and can act anywhere
-    { "id": "g-admin", "description": "Site administrator: full governance", "effect": "allow",
+    {
+      "id": "g-admin",
+      "description": "Site administrator: full governance",
+      "effect": "allow",
       "principal": { "address": "0x…site-admin" },
-      "capability": { "can": "execute", "scope": "*" } },
-    { "id": "g-admin-read", "description": "Site administrator: read everything", "effect": "allow",
+      "capability": { "can": "execute", "scope": "*" }
+    },
+    {
+      "id": "g-admin-read",
+      "description": "Site administrator: read everything",
+      "effect": "allow",
       "principal": { "address": "0x…site-admin" },
-      "capability": { "can": "read", "scope": "*" } },
+      "capability": { "can": "read", "scope": "*" }
+    },
 
     // the RTO reads their own statement
-    { "id": "g-rto-read", "description": "RTO reads their own statement", "effect": "allow",
-      "principal": { "match": { "eq": [ { "attr": "subject.address" },
-                                        { "attr": "doc.global.rtoAddress" } ] } },
-      "capability": { "can": "read", "scope": "global" } },
+    {
+      "id": "g-rto-read",
+      "description": "RTO reads their own statement",
+      "effect": "allow",
+      "principal": {
+        "match": {
+          "eq": [
+            { "attr": "subject.address" },
+            { "attr": "doc.global.rtoAddress" }
+          ]
+        }
+      },
+      "capability": { "can": "read", "scope": "global" }
+    },
 
     // the RTO may re-upload, but only after a failed extraction
-    { "id": "g-rto-reupload", "description": "RTO re-uploads after a failed extraction", "effect": "allow",
-      "principal": { "match": { "eq": [ { "attr": "subject.address" },
-                                        { "attr": "doc.global.rtoAddress" } ] } },
-      "capability": { "can": "execute", "scope": "global", "operation": ["REPLACE_STATEMENT_PDF"] },
-      "where": { "eq": [ { "attr": "doc.global.status" }, { "lit": "PROCESSING_ERROR" } ] } },
+    {
+      "id": "g-rto-reupload",
+      "description": "RTO re-uploads after a failed extraction",
+      "effect": "allow",
+      "principal": {
+        "match": {
+          "eq": [
+            { "attr": "subject.address" },
+            { "attr": "doc.global.rtoAddress" }
+          ]
+        }
+      },
+      "capability": {
+        "can": "execute",
+        "scope": "global",
+        "operation": ["REPLACE_STATEMENT_PDF"]
+      },
+      "where": {
+        "eq": [{ "attr": "doc.global.status" }, { "lit": "PROCESSING_ERROR" }]
+      }
+    },
 
     // the ingest service reads every statement and writes extraction results while it is processing
-    { "id": "g-sys-read", "description": "Ingest service reads every statement", "effect": "allow",
+    {
+      "id": "g-sys-read",
+      "description": "Ingest service reads every statement",
+      "effect": "allow",
       "principal": { "address": "0x…ingest-service" },
-      "capability": { "can": "read", "scope": "global" } },
-    { "id": "g-sys-ingest", "description": "Ingest service writes during processing", "effect": "allow",
+      "capability": { "can": "read", "scope": "global" }
+    },
+    {
+      "id": "g-sys-ingest",
+      "description": "Ingest service writes during processing",
+      "effect": "allow",
       "principal": { "address": "0x…ingest-service" },
-      "capability": { "can": "execute", "scope": "global", "operation": ["SET_EXTRACTED_FIELDS", "SET_STATUS"] },
-      "where": { "in": [ { "attr": "doc.global.status" },
-                         [ { "lit": "PROCESSING" }, { "lit": "PROCESSING_ERROR" } ] ] } },
+      "capability": {
+        "can": "execute",
+        "scope": "global",
+        "operation": ["SET_EXTRACTED_FIELDS", "SET_STATUS"]
+      },
+      "where": {
+        "in": [
+          { "attr": "doc.global.status" },
+          [{ "lit": "PROCESSING" }, { "lit": "PROCESSING_ERROR" }]
+        ]
+      }
+    },
 
     // legal assistants read every statement and drive review while it is not terminal
-    { "id": "g-las-read", "description": "Legal assistants read every statement", "effect": "allow",
+    {
+      "id": "g-las-read",
+      "description": "Legal assistants read every statement",
+      "effect": "allow",
       "principal": { "group": "phd…las-staff-group" },
-      "capability": { "can": "read", "scope": "global" } },
-    { "id": "g-las-review", "description": "Legal assistants review before terminal", "effect": "allow",
+      "capability": { "can": "read", "scope": "global" }
+    },
+    {
+      "id": "g-las-review",
+      "description": "Legal assistants review before terminal",
+      "effect": "allow",
       "principal": { "group": "phd…las-staff-group" },
-      "capability": { "can": "execute", "scope": "global",
-                      "operation": ["SET_STATUS", "SET_LINE_ITEM_DECISION", "VALIDATE_EXTRACTION"] },
-      "where": { "notIn": [ { "attr": "doc.global.status" },
-                            [ { "lit": "APPROVED" }, { "lit": "REJECTED" }, { "lit": "NOT_PURSUED" } ] ] } },
+      "capability": {
+        "can": "execute",
+        "scope": "global",
+        "operation": [
+          "SET_STATUS",
+          "SET_LINE_ITEM_DECISION",
+          "VALIDATE_EXTRACTION"
+        ]
+      },
+      "where": {
+        "notIn": [
+          { "attr": "doc.global.status" },
+          [
+            { "lit": "APPROVED" },
+            { "lit": "REJECTED" },
+            { "lit": "NOT_PURSUED" }
+          ]
+        ]
+      }
+    },
 
     // once terminal, content edits are frozen for everyone; this sits last, so it overrides the allows above
-    { "id": "g-terminal-freeze", "description": "Freeze content edits once terminal", "effect": "deny",
+    {
+      "id": "g-terminal-freeze",
+      "description": "Freeze content edits once terminal",
+      "effect": "deny",
       "principal": { "anyone": true },
-      "capability": { "can": "execute", "scope": "global",
-                      "operation": ["SET_EXTRACTED_FIELDS", "REPLACE_STATEMENT_PDF", "SET_LINE_ITEM_DECISION"] },
-      "where": { "in": [ { "attr": "doc.global.status" },
-                         [ { "lit": "APPROVED" }, { "lit": "REJECTED" }, { "lit": "NOT_PURSUED" } ] ] } }
+      "capability": {
+        "can": "execute",
+        "scope": "global",
+        "operation": [
+          "SET_EXTRACTED_FIELDS",
+          "REPLACE_STATEMENT_PDF",
+          "SET_LINE_ITEM_DECISION"
+        ]
+      },
+      "where": {
+        "in": [
+          { "attr": "doc.global.status" },
+          [
+            { "lit": "APPROVED" },
+            { "lit": "REJECTED" },
+            { "lit": "NOT_PURSUED" }
+          ]
+        ]
+      }
+    }
   ]
 }
 ```

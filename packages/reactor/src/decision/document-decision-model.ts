@@ -39,8 +39,8 @@ export function documentDecisionModel(
       },
     },
 
-    // this model needs to judge all scopes
-    judgesScope() {
+    // this model needs to evaluate all scopes
+    evaluatesScope() {
       return true;
     },
 

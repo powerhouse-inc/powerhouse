@@ -72,7 +72,7 @@ export class DocumentActionHandler {
     skip: number = 0,
     sourceRemote: string = "",
     signal?: AbortSignal,
-    verdictAlreadyDecided = false,
+    alreadyEvaluated = false,
     deniedReason?: string,
   ): Promise<
     JobResult & {
@@ -123,7 +123,7 @@ export class DocumentActionHandler {
           skip,
           sourceRemote,
           signal,
-          verdictAlreadyDecided,
+          alreadyEvaluated,
         );
       case "UPGRADE_DOCUMENT":
         return this.executeUpgrade(
@@ -135,7 +135,7 @@ export class DocumentActionHandler {
           skip,
           sourceRemote,
           signal,
-          verdictAlreadyDecided,
+          alreadyEvaluated,
         );
       case "ADD_RELATIONSHIP":
         return this.executeAddRelationship(
@@ -400,7 +400,7 @@ export class DocumentActionHandler {
     skip: number = 0,
     sourceRemote: string = "",
     signal?: AbortSignal,
-    verdictAlreadyDecided = false,
+    alreadyEvaluated = false,
   ): Promise<
     JobResult & {
       operationsWithContext?: Array<{
@@ -446,9 +446,9 @@ export class DocumentActionHandler {
     }
 
     // DCB allows positional deletion, so we may have already determined the
-    // verdict
+    // evaluation
     const documentState = document.state.document;
-    if (documentState.isDeleted && !verdictAlreadyDecided) {
+    if (documentState.isDeleted && !alreadyEvaluated) {
       return buildErrorResult(
         job,
         new DocumentDeletedError(documentId, documentState.deletedAtUtcIso),
@@ -540,7 +540,7 @@ export class DocumentActionHandler {
     skip: number = 0,
     sourceRemote: string = "",
     signal?: AbortSignal,
-    verdictAlreadyDecided = false,
+    alreadyEvaluated = false,
   ): Promise<
     JobResult & {
       operationsWithContext?: Array<{
@@ -588,10 +588,10 @@ export class DocumentActionHandler {
       );
     }
 
-    // DCB allows for positional deletion, so the verdict may have already been
+    // DCB allows for positional deletion, so the evaluation may have already been
     // decided
     const documentState = document.state.document;
-    if (documentState.isDeleted && !verdictAlreadyDecided) {
+    if (documentState.isDeleted && !alreadyEvaluated) {
       return buildErrorResult(
         job,
         new DocumentDeletedError(documentId, documentState.deletedAtUtcIso),

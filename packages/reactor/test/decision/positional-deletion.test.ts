@@ -10,7 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import type { IReactor } from "../../src/core/types.js";
 import { JobStatus, type ConsistencyToken } from "../../src/shared/types.js";
-import { deletionVerdictsByPosition } from "../../src/decision/deletion-verdicts.js";
+import { evaluateDeletionsByPosition } from "../../src/decision/deletion-evaluation.js";
 import { createDocModelDocument } from "../factories.js";
 
 /**
@@ -138,12 +138,12 @@ describe("positional deletion", () => {
         scopes: ["global"],
       });
 
-      const verdicts = globalOps.global.results.map((op) => ({
+      const evaluations = globalOps.global.results.map((op) => ({
         id: (op.action.input as { id?: string }).id,
         denied: op.deniedReason !== undefined,
       }));
 
-      expect(verdicts).toEqual([
+      expect(evaluations).toEqual([
         { id: "early", denied: false },
         { id: "late", denied: true },
       ]);
@@ -177,7 +177,7 @@ describe("positional deletion", () => {
       },
     } as never;
 
-    const verdicts = await deletionVerdictsByPosition(
+    const evaluations = await evaluateDeletionsByPosition(
       documentId,
       "global",
       "main",
@@ -201,7 +201,7 @@ describe("positional deletion", () => {
       operationStore,
     );
 
-    expect(verdicts).toEqual([undefined]);
+    expect(evaluations).toEqual([undefined]);
     expect(reads).toEqual([
       { scope: "document", actionTypes: ["DELETE_DOCUMENT"] },
     ]);
@@ -246,7 +246,7 @@ describe("positional deletion", () => {
         },
       }) as never;
 
-    const verdicts = await deletionVerdictsByPosition(
+    const evaluations = await evaluateDeletionsByPosition(
       documentId,
       "document",
       "main",
@@ -259,11 +259,11 @@ describe("positional deletion", () => {
       operationStore,
     );
 
-    expect(verdicts).toEqual([undefined, undefined, "document deleted"]);
+    expect(evaluations).toEqual([undefined, undefined, "document deleted"]);
   });
 
   it.each([false, true])(
-    "re-judges committed operations when a delete arrives late (flag %s)",
+    "re-evaluates committed operations when a delete arrives late (flag %s)",
     async (documentDecisions) => {
       source = await build(documentDecisions);
       target = await build(documentDecisions);
@@ -337,7 +337,7 @@ describe("positional deletion", () => {
       }));
 
       if (!documentDecisions) {
-        // Without positional verdicts a delete says nothing about operations
+        // Without positional evaluation a delete says nothing about operations
         // already committed, whenever they were timestamped.
         expect(effective).toEqual([
           { id: "before", denied: false },
@@ -485,4 +485,67 @@ describe("positional deletion", () => {
       { type: "DELETE_DOCUMENT", denied: true },
     ]);
   });
+
+  /**
+   * The caller supplies the timestamp and the reactor does not re-stamp it, so a
+   * locally executed delete can land below operations already stored. Without a
+   * pass here, the reactor issuing the delete would be the only replica keeping
+   * its own later operations in effect.
+   */
+  it.each([false, true])(
+    "re-evaluates after a local delete that sorts backwards (flag %s)",
+    async (documentDecisions) => {
+      target = await build(documentDecisions);
+
+      const document = createDocModelDocument({ id: "local-backdate-doc" });
+      const created = await target.create(document);
+      await settle(target, created.id);
+      const docId = document.header.id;
+
+      vi.setSystemTime(new Date("2026-01-01T00:00:00.500Z"));
+      const beforeJob = await target.execute(docId, "main", [
+        addModule({ id: "before", name: "before" }),
+      ]);
+      await settle(target, beforeJob.id);
+
+      vi.setSystemTime(new Date("2026-01-01T00:00:20.000Z"));
+      const afterJob = await target.execute(docId, "main", [
+        addModule({ id: "after", name: "after" }),
+      ]);
+      await settle(target, afterJob.id);
+
+      vi.setSystemTime(new Date("2026-01-01T00:00:01.000Z"));
+      const deleteJob = await target.deleteDocument(docId);
+      await settle(target, deleteJob.id);
+
+      const stored = (
+        await target.getOperations(docId, {
+          branch: "main",
+          scopes: ["global"],
+        })
+      ).global.results;
+
+      const effective = garbageCollect(sortOperations([...stored])).map(
+        (op) => ({
+          id: (op.action.input as { id?: string }).id,
+          denied: op.deniedReason !== undefined,
+        }),
+      );
+
+      if (!documentDecisions) {
+        // Without positional evaluation a delete says nothing about operations
+        // already committed.
+        expect(effective).toEqual([
+          { id: "before", denied: false },
+          { id: "after", denied: false },
+        ]);
+        return;
+      }
+
+      expect(effective).toEqual([
+        { id: "before", denied: false },
+        { id: "after", denied: true },
+      ]);
+    },
+  );
 });
