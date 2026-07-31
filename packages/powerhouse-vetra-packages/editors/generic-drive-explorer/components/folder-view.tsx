@@ -4,6 +4,7 @@ import {
   useNodesInSelectedDriveOrFolder,
 } from "@powerhousedao/reactor-browser";
 import { twMerge } from "tailwind-merge";
+import { CreateDocument } from "./create-document.js";
 import { FileContentView } from "./file-content-view.js";
 import { DriveLayout } from "./layout.js";
 
@@ -29,7 +30,10 @@ export function FolderView(props: { className?: string }) {
           </div>
         )}
       </DriveLayout.ContentSection>
-      <DriveLayout.ContentSection title="Documents and files">
+      <DriveLayout.ContentSection
+        title="Documents and files"
+        actions={<CreateDocument />}
+      >
         <div className="w-full">
           <FileContentView />
         </div>
