@@ -13,7 +13,9 @@ import {
 import type {
   IProcessor,
   IProcessorHostModule,
+  IRelationalDbProcessor,
   ProcessorApps,
+  ProcessorFactoryBuilder,
   ProcessorRecord,
 } from "@powerhousedao/shared/processors";
 import { afterEach, describe, expect, it } from "bun:test";
@@ -413,6 +415,64 @@ describe("generate processor", () => {
         expect(factory).toContain(`documentType: ["billing-statement"],`);
       }
     });
+  });
+
+  it("should run the generated relational db processor's migrations before returning it", async () => {
+    const outDir = join(parentOutDir, "relational-db-init-and-upgrade");
+    await cpForce(NEW_PROJECT, outDir);
+    const project = buildTsMorphProject(outDir);
+    await generateProcessor(
+      {
+        processorName: "relational-init-and-upgrade",
+        processorType: "relationalDb",
+        documentTypes: ["powerhouse/document-drive"],
+        processorApps: ["switchboard"],
+      },
+      project,
+    );
+    await project.save();
+
+    const factoryPath = join(
+      outDir,
+      "processors",
+      "relational-init-and-upgrade",
+      "factory.ts",
+    );
+    expect(await readFile(factoryPath, "utf-8")).toContain(
+      "await processor.initAndUpgrade();",
+    );
+
+    const { pgLite, relationalDb } = await getDb();
+    const { store } = await createAnalyticsStore({ pgLite });
+    const hostModule: IProcessorHostModule = {
+      processorApp: "switchboard",
+      analyticsStore: store,
+      relationalDb,
+      dispatch: {
+        execute: () => Promise.resolve({ id: "mock", status: "mock" }),
+      },
+      getReadModel: () => {
+        throw new Error("No read models in test");
+      },
+    };
+
+    const { relationalInitAndUpgradeFactoryBuilder: factoryBuilder } =
+      (await import(factoryPath)) as {
+        relationalInitAndUpgradeFactoryBuilder: ProcessorFactoryBuilder;
+      };
+    const factory = await factoryBuilder(hostModule);
+    const records = await factory(
+      { id: "init-and-upgrade-drive" } as PHDocumentHeader,
+      "switchboard",
+    );
+
+    // The scaffolded migration creates the `todo` table. Nothing in the runtime
+    // calls initAndUpgrade(), so this query only succeeds if the factory did.
+    const processor = records[0]!.processor as IRelationalDbProcessor<{
+      todo: { task: string; status: boolean | null };
+    }>;
+    const rows = await processor.query.selectFrom("todo").selectAll().execute();
+    expect(rows).toEqual([]);
   });
 
   // A customized processor's files are only on disk on a fresh project — the
