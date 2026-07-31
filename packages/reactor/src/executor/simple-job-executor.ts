@@ -56,6 +56,7 @@ import {
   buildErrorResult,
   createOperation,
   getNextIndexForScope,
+  isGenesisOperation,
 } from "./util.js";
 import { SnapshotPosition } from "../cache/write-cache-types.js";
 
@@ -222,13 +223,15 @@ export class SimpleJobExecutor implements IJobExecutor {
           return loadResult;
         }
 
+        const positioned = await this.positionByTimestamp(job, stores, signal);
+
         const actionResult = await this.processActions(
           job,
-          job.actions,
+          positioned.actions,
           startTime,
           indexTxn,
           stores,
-          undefined,
+          positioned.skipValues,
           undefined,
           "",
           signal,
@@ -828,6 +831,87 @@ export class SimpleJobExecutor implements IJobExecutor {
   }
 
   /**
+   * Orders a write by timestamp. The caller supplies the timestamp, so a write
+   * can belong before operations already stored, and appending it at the tail
+   * would leave the scope out of order. The operations it belongs before are
+   * re-appended alongside it, the way a load reshuffles.
+   */
+  private async positionByTimestamp(
+    job: Job,
+    stores: ExecutionStores,
+    signal?: AbortSignal,
+  ): Promise<{ actions: Action[]; skipValues?: number[] }> {
+    if (!this.featureFlags.documentDecisions || job.actions.length === 0) {
+      return { actions: job.actions };
+    }
+
+    let earliest = job.actions[0].timestampUtcMs;
+    for (const action of job.actions) {
+      if (action.timestampUtcMs < earliest) {
+        earliest = action.timestampUtcMs;
+      }
+    }
+
+    const revisions = await stores.operationStore.getRevisions(
+      job.documentId,
+      job.branch,
+      signal,
+    );
+    if (earliest >= revisions.latestTimestamp) {
+      return { actions: job.actions };
+    }
+
+    const conflicting = (
+      await stores.operationStore.getConflicting(
+        job.documentId,
+        job.scope,
+        job.branch,
+        earliest,
+        undefined,
+        signal,
+      )
+    ).results.filter((operation) => !isGenesisOperation(operation));
+    if (conflicting.length === 0) {
+      return { actions: job.actions };
+    }
+
+    const nextIndex = revisions.revision[job.scope] ?? 0;
+    let firstConflicting = conflicting[0].index;
+    for (const operation of conflicting) {
+      if (operation.index < firstConflicting) {
+        firstConflicting = operation.index;
+      }
+    }
+
+    // Given positions rather than stored rows, so a tie puts the new write
+    // after what is already there.
+    const incoming = job.actions.map(
+      (action, i) =>
+        ({
+          id: action.id,
+          index: nextIndex + i,
+          skip: 0,
+          hash: "",
+          timestampUtcMs: action.timestampUtcMs,
+          action,
+        }) as Operation,
+    );
+
+    const merged = reshuffleByTimestamp(
+      { index: nextIndex, skip: retractionSkip(nextIndex, firstConflicting) },
+      conflicting,
+      incoming,
+    );
+
+    stores.writeCache.invalidate(job.documentId, job.scope, job.branch);
+
+    return {
+      actions: merged.map((operation) => operation.action),
+      skipValues: merged.map((operation) => operation.skip),
+    };
+  }
+
+  /**
    * Re-evaluates the document when a write meets both criteria: it was written
    * to a stream the model reads, and it is timestamped before an operation
    * already stored. The caller supplies the timestamp and the reactor does not replace
@@ -1103,7 +1187,11 @@ export class SimpleJobExecutor implements IJobExecutor {
       return true;
     });
 
-    const existingOpsToReshuffle = nonSupersededOps;
+    // Creation holds the first two indexes for the life of the document, so it
+    // never moves however far back the conflicting range reaches.
+    const existingOpsToReshuffle = nonSupersededOps.filter(
+      (operation) => !isGenesisOperation(operation),
+    );
 
     if (existingOpsToReshuffle.length > this.config.maxSkipThreshold) {
       return {

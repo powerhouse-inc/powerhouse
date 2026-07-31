@@ -109,7 +109,7 @@ export type DocumentRevisions = {
   /** Map of scope to operation index for that scope */
   revision: Record<string, number>;
 
-  /** Latest timestamp across revisions */
+  /** The largest operation timestamp in the document, across every scope. */
   latestTimestamp: string;
 };
 

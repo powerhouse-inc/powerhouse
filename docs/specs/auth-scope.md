@@ -733,13 +733,17 @@ Two reactors that accept conflicting auth and domain operations offline converge
 
 Registering decision models beyond auth is out of scope. The types are model-agnostic, so that work is registration, not new semantics.
 
-### Defects to clear before stage 4
+### Ordering rules the write paths keep
 
-**An evaluation pass can be skipped.** Whether an evaluation pass is owed is decided by comparing a committed operation against the latest timestamp in the streams that read it. The store reports the timestamp of each scope's last-indexed operation rather than the largest timestamp the scope holds. These are not guaranteed to be the same because a reshuffle can leave later-timestamped operations at lower indexes, where the comparison stops seeing them. It has to use the largest timestamp in those streams.
+Four rules hold as of stage 3, and stage 4 depends on all of them. Each was broken when the stage began.
 
-**A relationship operation cannot carry a skip.** A reshuffle assigns `ADD_RELATIONSHIP`, `REMOVE_RELATIONSHIP`, and `UPDATE_RELATIONSHIP` a skip, but their handlers write zero, so the operations they replace stay in effect. `DELETE_DOCUMENT` had this defect and is fixed.
+An evaluation pass is owed by comparing a committed operation against the largest timestamp in the streams that read it, which is what the store reports as `latestTimestamp`. The last-indexed operation is not that timestamp, because a reshuffle can leave a later one behind it at a lower index.
 
-**A reshuffle can reach the document's creation.** The conflict range and the predecessor filter are both computed from the incoming operations before duplicates are removed, so sending a replica operations it already holds drags the range back to the earliest of them. Where that reaches creation, the reshuffle puts genesis in the set it re-appends, the write is rejected on its revision, and the job exhausts its retries. `reactor.create` submits `CREATE_DOCUMENT` and its `UPGRADE_DOCUMENT` from version zero as one batch, and that pair holds the first two indexes for the life of the document, so neither is ever reshuffled.
+A write is positioned by its timestamp on both paths, once `documentDecisions` is on. The caller supplies the timestamp, so a write can belong before operations already stored, and it is reshuffled into place rather than appended at the tail. Otherwise the scope is left out of timestamp order and no forward walk over it is correct.
+
+Creation does not move. `reactor.create` submits `CREATE_DOCUMENT` and its `UPGRADE_DOCUMENT` from version zero as one batch, and that pair holds the first two indexes for the life of the document, so no reshuffle includes it however far back the conflicting range reaches.
+
+Every re-appended operation carries the skip the reshuffle assigned it, so the operations it replaces stop counting. This reaches the relationship actions and `DELETE_DOCUMENT` through their own handlers.
 
 ## Worked example: a revocation race
 

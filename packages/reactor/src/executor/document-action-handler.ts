@@ -144,6 +144,7 @@ export class DocumentActionHandler {
           startTime,
           indexTxn,
           stores,
+          skip,
           sourceRemote,
           signal,
         );
@@ -154,6 +155,7 @@ export class DocumentActionHandler {
           startTime,
           indexTxn,
           stores,
+          skip,
           sourceRemote,
           signal,
         );
@@ -164,6 +166,7 @@ export class DocumentActionHandler {
           startTime,
           indexTxn,
           stores,
+          skip,
           sourceRemote,
           signal,
         );
@@ -719,6 +722,7 @@ export class DocumentActionHandler {
     startTime: number,
     indexTxn: IOperationIndexTxn,
     stores: ExecutionStores,
+    skip: number = 0,
     sourceRemote: string = "",
     signal?: AbortSignal,
   ): Promise<RelationshipJobResult> {
@@ -729,6 +733,7 @@ export class DocumentActionHandler {
       startTime,
       indexTxn,
       stores,
+      skip,
       sourceRemote,
       signal,
       (input) =>
@@ -756,6 +761,7 @@ export class DocumentActionHandler {
     startTime: number,
     indexTxn: IOperationIndexTxn,
     stores: ExecutionStores,
+    skip: number = 0,
     sourceRemote: string = "",
     signal?: AbortSignal,
   ): Promise<RelationshipJobResult> {
@@ -766,6 +772,7 @@ export class DocumentActionHandler {
       startTime,
       indexTxn,
       stores,
+      skip,
       sourceRemote,
       signal,
       null,
@@ -788,6 +795,7 @@ export class DocumentActionHandler {
     startTime: number,
     indexTxn: IOperationIndexTxn,
     stores: ExecutionStores,
+    skip: number = 0,
     sourceRemote: string = "",
     signal?: AbortSignal,
   ): Promise<RelationshipJobResult> {
@@ -798,6 +806,7 @@ export class DocumentActionHandler {
       startTime,
       indexTxn,
       stores,
+      skip,
       sourceRemote,
       signal,
       null,
@@ -812,6 +821,7 @@ export class DocumentActionHandler {
     startTime: number,
     indexTxn: IOperationIndexTxn,
     stores: ExecutionStores,
+    skip: number,
     sourceRemote: string,
     signal: AbortSignal | undefined,
     preValidate: ((input: RelationshipActionShape) => Error | null) | null,
@@ -866,7 +876,7 @@ export class DocumentActionHandler {
     }
 
     const nextIndex = getNextIndexForScope(sourceDoc, job.scope);
-    let operation = createOperation(action, nextIndex, 0, {
+    let operation = createOperation(action, nextIndex, skip, {
       documentId: input.sourceId,
       scope: job.scope,
       branch: job.branch,
