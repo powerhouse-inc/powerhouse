@@ -7,13 +7,14 @@ import { DriveAnalyticsProcessor } from "./drive-processor.js";
 export const processorFactory =
   (module: { analyticsStore: IAnalyticsStore }) =>
   (driveHeader: PHDocumentHeader): ProcessorRecord[] => {
+    // Omitted filter fields match every value. Only `documentId` honours "*",
+    // so "*" in `scope`/`documentType`/`branch` would match nothing at all.
     return [
       {
         processor: new DriveAnalyticsProcessor(module.analyticsStore),
         filter: {
           branch: ["main"],
           documentId: ["*"],
-          scope: ["*"],
           documentType: ["powerhouse/document-drive"],
         },
       },
@@ -22,8 +23,6 @@ export const processorFactory =
         filter: {
           branch: ["main"],
           documentId: ["*"],
-          scope: ["*"],
-          documentType: ["*"],
         },
       },
     ];
