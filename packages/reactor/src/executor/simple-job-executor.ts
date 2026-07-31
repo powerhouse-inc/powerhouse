@@ -959,12 +959,9 @@ export class SimpleJobExecutor implements IJobExecutor {
       }
 
       const reevaluated = await evaluateDeletionsByPosition(
-        job.documentId,
-        scope,
-        job.branch,
-        effective,
-        stores.writeCache,
-        stores.operationStore,
+        { documentId: job.documentId, branch: job.branch },
+        { scope, operations: effective },
+        stores,
         signal,
       );
 
@@ -1221,12 +1218,9 @@ export class SimpleJobExecutor implements IJobExecutor {
     if (this.featureFlags.documentDecisions) {
       try {
         deniedReasons = await evaluateDeletionsByPosition(
-          job.documentId,
-          scope,
-          job.branch,
-          reshuffledOperations,
-          stores.writeCache,
-          stores.operationStore,
+          { documentId: job.documentId, branch: job.branch },
+          { scope, operations: reshuffledOperations },
+          stores,
           signal,
         );
       } catch (error) {

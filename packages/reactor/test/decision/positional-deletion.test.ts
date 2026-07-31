@@ -178,27 +178,27 @@ describe("positional deletion", () => {
     } as never;
 
     const evaluations = await evaluateDeletionsByPosition(
-      documentId,
-      "global",
-      "main",
-      [
-        {
-          id: "op-1",
-          index: 0,
-          skip: 0,
-          hash: "h",
-          timestampUtcMs: "2026-01-01T00:00:00.000Z",
-          action: {
-            id: "a-1",
-            type: "ADD_MODULE",
-            scope: "global",
+      { documentId, branch: "main" },
+      {
+        scope: "global",
+        operations: [
+          {
+            id: "op-1",
+            index: 0,
+            skip: 0,
+            hash: "h",
             timestampUtcMs: "2026-01-01T00:00:00.000Z",
-            input: {},
-          },
-        } as never,
-      ],
-      writeCache,
-      operationStore,
+            action: {
+              id: "a-1",
+              type: "ADD_MODULE",
+              scope: "global",
+              timestampUtcMs: "2026-01-01T00:00:00.000Z",
+              input: {},
+            },
+          } as never,
+        ],
+      },
+      { writeCache, operationStore },
     );
 
     expect(evaluations).toEqual([undefined]);
@@ -247,16 +247,16 @@ describe("positional deletion", () => {
       }) as never;
 
     const evaluations = await evaluateDeletionsByPosition(
-      documentId,
-      "document",
-      "main",
-      [
-        op("a", 1, 1, "ADD_RELATIONSHIP"),
-        op("b", 2, 5, "DELETE_DOCUMENT"),
-        op("c", 3, 9, "ADD_RELATIONSHIP"),
-      ],
-      writeCache,
-      operationStore,
+      { documentId, branch: "main" },
+      {
+        scope: "document",
+        operations: [
+          op("a", 1, 1, "ADD_RELATIONSHIP"),
+          op("b", 2, 5, "DELETE_DOCUMENT"),
+          op("c", 3, 9, "ADD_RELATIONSHIP"),
+        ],
+      },
+      { writeCache, operationStore },
     );
 
     expect(evaluations).toEqual([undefined, undefined, "document deleted"]);

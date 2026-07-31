@@ -74,6 +74,7 @@ export function* walkByPosition(
     }),
   );
 
+  const byKey = new Map(streams.map((stream) => [stream.streamKey, stream]));
   const states = new Map(
     streams.map((stream) => [stream.streamKey, stream.document]),
   );
@@ -85,9 +86,7 @@ export function* walkByPosition(
       continue;
     }
 
-    const stream = streams.find(
-      (candidate) => candidate.streamKey === streamKey,
-    );
+    const stream = byKey.get(streamKey);
     const before = states.get(streamKey);
     if (before === undefined || stream === undefined) {
       throw new Error(`No state for stream ${streamKey}`);

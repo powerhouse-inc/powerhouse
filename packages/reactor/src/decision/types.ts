@@ -7,7 +7,11 @@ import type {
   AuthRequest,
   AuthSubject,
 } from "@powerhousedao/shared/document-model";
-import type { AppendCondition } from "../storage/interfaces.js";
+import type { IWriteCache } from "../cache/write/interfaces.js";
+import type {
+  AppendCondition,
+  IOperationStore,
+} from "../storage/interfaces.js";
 
 /** One operation stream. */
 export type StreamQuery = {
@@ -20,6 +24,22 @@ export type StreamQuery = {
 export type DecisionTarget = {
   documentId: string;
   branch: string;
+};
+
+/**
+ * The operations an evaluation is about, all in one scope of one document. This
+ * is what gets evaluated, as against the criteria that decide whether a
+ * re-evaluation is owed at all.
+ */
+export type EvaluationSubject = {
+  scope: string;
+  operations: Operation[];
+};
+
+/** What an evaluation reads the streams it needs through. */
+export type DecisionStores = {
+  writeCache: IWriteCache;
+  operationStore: IOperationStore;
 };
 
 /** The executing scope's own state, for conditions that read it. */

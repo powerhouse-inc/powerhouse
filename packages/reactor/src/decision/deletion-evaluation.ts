@@ -2,15 +2,18 @@ import type {
   Operation,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
-import type { IWriteCache } from "../cache/write/interfaces.js";
-import type { IOperationStore } from "../storage/interfaces.js";
 import { staticReadSet } from "./build-decision-model.js";
 import {
   documentDecisionModel,
   DOCUMENT_DELETED_REASON,
 } from "./document-decision-model.js";
 import { streamKey } from "./merged-order.js";
-import type { ReadStream } from "./types.js";
+import type {
+  DecisionStores,
+  DecisionTarget,
+  EvaluationSubject,
+  ReadStream,
+} from "./types.js";
 import type { WalkStream } from "./walk.js";
 import { walkByPosition } from "./walk.js";
 
@@ -47,15 +50,15 @@ function firstDeleted(
  * the same to those after it.
  */
 export async function evaluateDeletionsByPosition(
-  documentId: string,
-  scope: string,
-  branch: string,
-  operations: Operation[],
-  writeCache: IWriteCache,
-  operationStore: IOperationStore,
+  target: DecisionTarget,
+  subject: EvaluationSubject,
+  stores: DecisionStores,
   signal?: AbortSignal,
 ): Promise<Array<string | undefined>> {
-  const definition = documentDecisionModel({ documentId, branch });
+  const { scope, operations } = subject;
+  const { writeCache, operationStore } = stores;
+
+  const definition = documentDecisionModel(target);
   const readSet = staticReadSet(definition);
 
   if (!definition.evaluatesScope(scope)) {
@@ -93,6 +96,12 @@ export async function evaluateDeletionsByPosition(
     decidingWritten.length === 0
   ) {
     return operations.map(() => undefined);
+  }
+
+  if (readStreams.length === 0) {
+    throw new Error(
+      `Decision model for ${target.documentId} reads no stream whose query is known before it is built`,
+    );
   }
 
   const walked: WalkStream[] = [];
