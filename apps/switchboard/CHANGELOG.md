@@ -1,3 +1,13 @@
+## 6.2.2-dev.33 (2026-08-01)
+
+### 🩹 Fixes
+
+- **reactor:** fixing a few defects with document scope reshuffle specifics ([7546b9ff2](https://github.com/powerhouse-inc/powerhouse/commit/7546b9ff2))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.2.2-dev.32 (2026-07-31)
 
 ### 🚀 Features
