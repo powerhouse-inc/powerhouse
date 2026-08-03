@@ -123,7 +123,7 @@ export class DriveClient implements IDriveClient {
           documentId: document.header.id,
           model: document.header.documentType,
           fromVersion: 0,
-          toVersion: 1,
+          toVersion: document.state.document.version || 1,
           initialState: document.state,
         }),
         addRelationshipAction(driveIdentifier, documentId, "child"),

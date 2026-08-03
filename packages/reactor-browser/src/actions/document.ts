@@ -369,6 +369,9 @@ export async function addDocument(
 
   // create - use passed document's state if available
   const newDocument = document ?? documentModelModule.utils.createDocument();
+  if (!document) {
+    newDocument.state.document.version = documentModelModule.version ?? 1;
+  }
   newDocument.header.name = name;
   if (preferredEditor) {
     newDocument.header.meta = {

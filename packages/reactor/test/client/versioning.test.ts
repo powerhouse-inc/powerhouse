@@ -555,4 +555,21 @@ describe("ReactorClient Versioning Integration Tests", () => {
       );
     });
   });
+
+  describe("version integrity on create paths", () => {
+    it("getDocumentModelModule returns the latest module version for a type", async () => {
+      const module = await client.getDocumentModelModule(VERSIONED_DOC_TYPE);
+      expect(module.version).toBe(2);
+    });
+
+    it("drives.addFile preserves the document's model version", async () => {
+      const driveDoc = driveDocumentModelModule.utils.createDocument();
+      const drive = await client.create(driveDoc);
+
+      const v2Doc = createV2Document();
+      const added = await client.drives.addFile(drive.header.id, v2Doc);
+
+      expect(added.state.document.version).toBe(2);
+    });
+  });
 });

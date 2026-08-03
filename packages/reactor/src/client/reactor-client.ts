@@ -131,17 +131,27 @@ export class ReactorClient implements IReactorClient {
     documentType: string,
   ): Promise<DocumentModelModule<any>> {
     const modules = await this.reactor.getDocumentModels();
-    const module = modules.results.find(
-      (m) => m.documentModel.global.id === documentType,
-    );
 
-    if (!module) {
+    let latestModule: DocumentModelModule | undefined;
+    let latestVersion = -1;
+    for (const module of modules.results) {
+      if (module.documentModel.global.id !== documentType) {
+        continue;
+      }
+      const version = module.version ?? 1;
+      if (version > latestVersion) {
+        latestVersion = version;
+        latestModule = module;
+      }
+    }
+
+    if (!latestModule) {
       throw new Error(
         `Document model module not found for type: ${documentType}`,
       );
     }
 
-    return module as DocumentModelModule<any>;
+    return latestModule as DocumentModelModule<any>;
   }
 
   /**
