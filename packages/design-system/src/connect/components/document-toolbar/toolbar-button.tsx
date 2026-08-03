@@ -233,7 +233,9 @@ export function ToolbarUpgradeButton(props: ToolbarButtonProps) {
 
   const runUpgrade = () => {
     if (document) {
-      void upgradeDocument(document.header.id);
+      upgradeDocument(document.header.id).catch((error) =>
+        console.error("Error upgrading document:", error),
+      );
     }
   };
   const onClick = makeOnClick(document, onClickOverride, runUpgrade);

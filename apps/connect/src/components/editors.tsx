@@ -65,25 +65,24 @@ export const DocumentEditor: React.FC<Props> = (props) => {
   const fallbackEditorModule = useFallbackEditorModule(documentType);
   const editorModule = preferredEditorModule ?? fallbackEditorModule;
   const versionStatus = useDocumentVersionStatus(document ?? undefined);
+  const versionStatusKind = versionStatus?.kind;
+  const upgradeAvailable =
+    versionStatus?.kind === "upgrade-available" && versionStatus.canUpgrade;
   useEffect(() => {
-    if (
-      versionStatus?.kind === "upgrade-available" &&
-      versionStatus.canUpgrade &&
-      documentId
-    ) {
+    if (upgradeAvailable && documentId) {
       toast(createElement(DocumentUpgradeToast, { documentId }), {
         type: "connect-warning",
         toastId: `outdated-document-${documentId}`,
         autoClose: false,
       });
     } else if (
-      versionStatus &&
-      versionStatus.kind !== "upgrade-available" &&
+      versionStatusKind &&
+      versionStatusKind !== "upgrade-available" &&
       documentId
     ) {
       dismissToast(`outdated-document-${documentId}`);
     }
-  }, [versionStatus, documentId]);
+  }, [upgradeAvailable, versionStatusKind, documentId]);
   const vetraPackages = useVetraPackages();
   const packageManager = useVetraPackageManager();
   const owningPackageName = editorModule
