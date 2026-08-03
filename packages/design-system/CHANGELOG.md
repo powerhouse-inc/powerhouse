@@ -1,3 +1,7 @@
+## 6.2.2-dev.35 (2026-08-03)
+
+This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.
+
 ## 6.2.2-dev.34 (2026-08-02)
 
 This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.
