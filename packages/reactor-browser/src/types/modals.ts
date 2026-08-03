@@ -30,6 +30,12 @@ export type PHModal =
   | { type: "downloadDocumentWithErrors"; documentId: string }
   | { type: "inspector" }
   | { type: "missingPackage"; documentType: string }
+  | {
+      type: "documentVersionUnsupported";
+      documentType: string;
+      requiredVersion: number;
+      availableVersions: number[];
+    }
   | { type: "driveAuthRequired" }
   // Drive picker for documents launched via OS file association (PWA File
   // Handling). Payload-free: the pending files live in a Connect-side store.

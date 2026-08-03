@@ -27,6 +27,7 @@ import {
   usePHModal,
   useUserPermissions,
 } from "@powerhousedao/reactor-browser";
+import { UnsupportedDocumentModelVersionError } from "@powerhousedao/shared/document-model";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -58,6 +59,13 @@ async function parsePendingFile(file: File): Promise<ParsedFileInfo> {
       headerName: document.header.name,
     };
   } catch (error) {
+    if (UnsupportedDocumentModelVersionError.isError(error)) {
+      return {
+        state: "version-unsupported",
+        documentType: error.documentType,
+        requiredVersion: error.requiredVersion,
+      };
+    }
     // Missing document model ≠ invalid: the import path's package
     // auto-discovery may still resolve it.
     if (DocumentModelNotFoundError.isError(error)) {
@@ -196,6 +204,12 @@ export function OpenFileDocumentsModal() {
         return (
           <span className="text-xs text-destructive">
             {t("modals.openFileDocuments.invalidFile")}
+          </span>
+        );
+      case "version-unsupported":
+        return (
+          <span className="text-xs text-destructive">
+            {`Requires version ${row.requiredVersion} of ${row.documentType} — update the package`}
           </span>
         );
       case "unsupported":

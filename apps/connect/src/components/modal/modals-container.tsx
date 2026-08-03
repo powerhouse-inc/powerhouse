@@ -52,6 +52,11 @@ const DownloadDocumentWithErrorsModal = lazy(() =>
     default: m.DownloadDocumentWithErrorsModal,
   })),
 );
+const DocumentVersionUnsupportedModal = lazy(() =>
+  import("./modals/DocumentVersionUnsupportedModal.js").then((m) => ({
+    default: m.DocumentVersionUnsupportedModal,
+  })),
+);
 const SettingsModal = lazy(() =>
   import("./modals/SettingsModal.js").then((m) => ({
     default: m.SettingsModal,
@@ -98,6 +103,7 @@ const modalComponents = {
   disclaimer: DisclaimerModal,
   driveSettings: DriveSettingsModal,
   downloadDocumentWithErrors: DownloadDocumentWithErrorsModal,
+  documentVersionUnsupported: DocumentVersionUnsupportedModal,
   inspector: InspectorModal,
   settings: SettingsModal,
   upgradeDrive: UpgradeDriveModal,
