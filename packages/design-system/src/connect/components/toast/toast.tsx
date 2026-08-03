@@ -77,6 +77,10 @@ export function toast(content: ToastContent, options?: ConnectToastOptions) {
   return rToast(content, { ...defaultOptions, ...restOptions });
 }
 
+export function dismiss(toastId?: string | number) {
+  return rToast.dismiss(toastId);
+}
+
 const CloseButton: ToastContainerProps["closeButton"] = ({ closeToast }) => (
   <button
     className="flex items-center text-muted-foreground hover:hover-effect"

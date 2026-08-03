@@ -1,6 +1,7 @@
 import type { ConnectToastOptions } from "@powerhousedao/design-system/connect/toast";
 import {
   ToastContainer as BaseToastContainer,
+  dismiss as baseDismiss,
   toast as baseToast,
 } from "@powerhousedao/design-system/connect/toast";
 import { createElement, type ComponentProps } from "react";
@@ -25,4 +26,8 @@ export function toast(content: ToastArgs[0], options?: ConnectToastOptions) {
     ...restOptions
   } = options || {};
   return baseToast(content, { type, containerId, ...restOptions });
+}
+
+export function dismissToast(toastId: string | number) {
+  return baseDismiss(toastId);
 }

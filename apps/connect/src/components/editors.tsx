@@ -1,6 +1,6 @@
 import { EditorLoader } from "@powerhousedao/connect/components";
 import { useUndoRedoShortcuts } from "@powerhousedao/connect/hooks";
-import { toast } from "@powerhousedao/connect/services";
+import { dismissToast, toast } from "@powerhousedao/connect/services";
 import { RevisionHistory } from "@powerhousedao/design-system/connect";
 import {
   getRevisionFromDate,
@@ -9,6 +9,7 @@ import {
   useDocumentById,
   useDocumentModelModuleById,
   useDocumentOperations,
+  useDocumentVersionStatus,
   useEditorModuleById,
   useFallbackEditorModule,
   useRevisionHistoryVisible,
@@ -18,8 +19,9 @@ import {
 } from "@powerhousedao/reactor-browser";
 import type { PHDocument } from "@powerhousedao/shared/document-model";
 import { redo, undo } from "@powerhousedao/shared/document-model";
-import { Suspense, useEffect, useState } from "react";
+import { createElement, Suspense, useEffect, useState } from "react";
 import { CenteredErrorMessage, ErrorBoundary } from "./error-boundary.js";
+import { DocumentUpgradeToast } from "./document-upgrade-toast.js";
 
 type Props<TDocument extends PHDocument = PHDocument> = {
   document: TDocument;
@@ -62,6 +64,26 @@ export const DocumentEditor: React.FC<Props> = (props) => {
   const preferredEditorModule = useEditorModuleById(preferredEditor);
   const fallbackEditorModule = useFallbackEditorModule(documentType);
   const editorModule = preferredEditorModule ?? fallbackEditorModule;
+  const versionStatus = useDocumentVersionStatus(document ?? undefined);
+  useEffect(() => {
+    if (
+      versionStatus?.kind === "upgrade-available" &&
+      versionStatus.canUpgrade &&
+      documentId
+    ) {
+      toast(createElement(DocumentUpgradeToast, { documentId }), {
+        type: "connect-warning",
+        toastId: `outdated-document-${documentId}`,
+        autoClose: false,
+      });
+    } else if (
+      versionStatus &&
+      versionStatus.kind !== "upgrade-available" &&
+      documentId
+    ) {
+      dismissToast(`outdated-document-${documentId}`);
+    }
+  }, [versionStatus, documentId]);
   const vetraPackages = useVetraPackages();
   const packageManager = useVetraPackageManager();
   const owningPackageName = editorModule
