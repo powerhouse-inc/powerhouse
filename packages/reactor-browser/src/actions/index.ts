@@ -7,6 +7,7 @@ export {
   exportFile,
   loadFile,
   renameDriveNode,
+  upgradeDocument,
 } from "./document.js";
 export {
   addDrive,

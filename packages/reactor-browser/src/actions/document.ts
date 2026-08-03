@@ -1061,3 +1061,15 @@ export async function copyNode(
   );
   return await queueActions(drive, copyActions);
 }
+
+/**
+ * Upgrades a document to a newer document model version. Defaults to the
+ * latest registered version for the document's type.
+ */
+export async function upgradeDocument(documentId: string, toVersion?: number) {
+  const reactorClient = window.ph?.reactorClientModule?.client;
+  if (!reactorClient) {
+    throw new Error("ReactorClient not initialized");
+  }
+  return reactorClient.upgradeDocument(documentId, toVersion);
+}
