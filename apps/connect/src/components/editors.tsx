@@ -182,6 +182,38 @@ export const DocumentEditor: React.FC<Props> = (props) => {
     );
   }
 
+  if (versionStatus?.kind === "unsupported") {
+    return (
+      <EditorError
+        message={
+          <div className="text-center leading-10">
+            <p>
+              This document requires version {versionStatus.documentVersion} of
+              the "{documentType}" document model, but only version
+              {versionStatus.availableVersions.length > 1 ? "s" : ""}{" "}
+              {versionStatus.availableVersions.join(", ")}{" "}
+              {versionStatus.availableVersions.length > 1 ? "are" : "is"}{" "}
+              installed.
+            </p>
+            <p>
+              Go to the{" "}
+              <button
+                type="button"
+                className="cursor-pointer underline"
+                onClick={() => {
+                  showPHModal({ type: "settings" });
+                }}
+              >
+                package manager
+              </button>{" "}
+              to update the package that provides "{documentType}"
+            </p>
+          </div>
+        }
+      />
+    );
+  }
+
   if (!editorModule) {
     return (
       <EditorError
