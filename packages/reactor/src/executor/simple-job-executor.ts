@@ -39,7 +39,7 @@ import {
 import { reshuffleByTimestamp } from "../utils/reshuffle.js";
 import { buildDecisionModel } from "../decision/build-decision-model.js";
 import { documentDecisionModel } from "../decision/document-decision-model.js";
-import { evaluateDeletionsByPosition } from "../decision/deletion-evaluation.js";
+import { evaluateByPosition } from "../decision/evaluation.js";
 import { staticReadSet } from "../decision/build-decision-model.js";
 import { retractionSkip } from "../decision/merged-order.js";
 import { DocumentActionHandler } from "./document-action-handler.js";
@@ -958,7 +958,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         continue;
       }
 
-      const reevaluated = await evaluateDeletionsByPosition(
+      const reevaluated = await evaluateByPosition(
         documentDecisionModel,
         { documentId: job.documentId, branch: job.branch },
         { scope, operations: effective },
@@ -1218,7 +1218,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     let deniedReasons: Array<string | undefined> | undefined;
     if (this.featureFlags.documentDecisions) {
       try {
-        deniedReasons = await evaluateDeletionsByPosition(
+        deniedReasons = await evaluateByPosition(
           documentDecisionModel,
           { documentId: job.documentId, branch: job.branch },
           { scope, operations: reshuffledOperations },

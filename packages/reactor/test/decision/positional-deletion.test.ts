@@ -10,7 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import type { IReactor } from "../../src/core/types.js";
 import { JobStatus, type ConsistencyToken } from "../../src/shared/types.js";
-import { evaluateDeletionsByPosition } from "../../src/decision/deletion-evaluation.js";
+import { evaluateByPosition } from "../../src/decision/evaluation.js";
 import { documentDecisionModel } from "../../src/decision/document-decision-model.js";
 import { createDocModelDocument } from "../factories.js";
 
@@ -178,7 +178,7 @@ describe("positional deletion", () => {
       },
     } as never;
 
-    const evaluations = await evaluateDeletionsByPosition(
+    const evaluations = await evaluateByPosition(
       documentDecisionModel,
       { documentId, branch: "main" },
       {
@@ -248,7 +248,7 @@ describe("positional deletion", () => {
         },
       }) as never;
 
-    const evaluations = await evaluateDeletionsByPosition(
+    const evaluations = await evaluateByPosition(
       documentDecisionModel,
       { documentId, branch: "main" },
       {

@@ -58,7 +58,7 @@ function modelAt<M>(readSet: ReadStream[], states: Map<string, PHDocument>): M {
  * sorts after it, and the operations before it are left alone. That holds
  * whether the delete is already stored or is among the operations passed in.
  */
-export async function evaluateDeletionsByPosition<M>(
+export async function evaluateByPosition<M>(
   model: (target: DecisionTarget) => DecisionModel<M>,
   target: DecisionTarget,
   subject: EvaluationSubject,

@@ -4,7 +4,7 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import { describe, expect, it } from "vitest";
 import { staticReadSet } from "../../src/decision/build-decision-model.js";
-import { evaluateDeletionsByPosition } from "../../src/decision/deletion-evaluation.js";
+import { evaluateByPosition } from "../../src/decision/evaluation.js";
 import { documentDecisionModel } from "../../src/decision/document-decision-model.js";
 import type {
   DecisionModel,
@@ -123,7 +123,7 @@ describe("model assembly", () => {
         } as never as PHDocument),
     } as never;
 
-    const evaluations = await evaluateDeletionsByPosition(
+    const evaluations = await evaluateByPosition(
       twoProjectionModel,
       { documentId, branch: "main" },
       { scope: "global", operations: [op("write", "global", 5)] },

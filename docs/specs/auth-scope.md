@@ -725,13 +725,37 @@ With the flag off, the reactor does not enforce policies at all. The auth stream
 
 This stage brings the monotonic-timestamp rule for the auth stream, the excessive-shuffle exemption for re-evaluation, and the load-path work for evaluating multiple streams in one job.
 
-Two reactors that accept conflicting auth and domain operations offline converge to identical decisions and identical state after sync, in both directions, and a revocation over a history longer than the excessive-shuffle bound completes without dead-lettering.
+Two reactors that accept conflicting domain operations offline converge to identical decisions and identical state after sync, in both directions, and a revocation over a history longer than the excessive-shuffle bound completes without dead-lettering.
+
+Conflicting auth operations are the deliberate exception, and they do not converge. The monotonic rule is not symmetric: the replica whose auth stream already ran ahead rejects the arrival and dead-letters it, while the replica behind accepts. The two hold different policies until the application reconciles them from the dead letters.
 
 **Stage 5: the groups projection (`authGroups`).** Ship the `PHGroup` model, derive group queries from the grant list, add group streams to the read-set and the append condition, maintain the group-reference relation so sync carries referenced groups and re-evaluation finds dependent documents (see Synchronization), and re-evaluate dependents in their own jobs. Group principals begin to match only here. Until conditions ship, a group's own policy is limited to `address` and `anyone` principals, since `match` never applies. Exit: a group-gated operation syncs to a replica that does not hold the group document and fails closed there until the group's history arrives, after which both replicas agree; and a membership removal denies later operations on every document that references the group.
 
 **Stage 6: conditions (`authConditions`).** The `where` and `match` evaluators turn on. Conditional grants begin to apply only here.
 
 Registering decision models beyond auth is out of scope. The types are model-agnostic, so that work is registration, not new semantics.
+
+### Stage 4 in steps
+
+1. **Declare the flag.** `authEnforcement`, requiring `documentDecisions`. The prerequisite table is exhaustive over the flag type, so this is a type error until declared.
+
+2. **Add the auth projection.** A second projection on the document decision model, querying the `auth` scope, declaring the four auth actions as its deciding actions, and applying them with `applyAuthAction`. Nothing in the walk or the model assembly changes: a model already carries one value per projection, named by the projection.
+
+3. **Expand `decide`.** The uninitialized, creator, version, and grant steps already exist as `decide` in `shared/document-model`. This step calls them from the model's `decide` and returns the refusal each one implies, so an operation records why it was refused rather than a single reason for every refusal.
+
+4. **Enforce the monotonic-timestamp rule.** An auth operation entering the stream is rejected unless its timestamp is strictly greater than the newest already there, whether it was written locally or arrived by sync. The rejection is an exception rather than a refused operation, so the stream holds no ties and no arbitrary tie-break decides authority. The auth stream is therefore never reshuffled, and the write path rejects a backdated auth write rather than repositioning it.
+
+   A rejected arrival is a permanent failure for that sync operation, so it dead-letters under a new `SyncOperationErrorType`, keeping its operations for application-specific handling. This is the answer for two replicas that each accepted an auth operation offline: no ordering rule can reconcile them, because either order hands one replica authority the other never granted, so the reactor holds them rather than choosing.
+
+   A re-append is not an arrival. Re-evaluation keeps an operation's timestamp when it moves it to a new index, so the rule does not apply and a refusal from another scope can still retract the tail it invalidated.
+
+5. **Retire the interim gates.** The admission gate reaches a real policy only for an `auth`-scope operation (see stage 1), so removing it transfers live behavior for that scope and no behavior for the others. The auth projection covers both once step 3 lands.
+
+6. **Exempt re-evaluation from the excessive-shuffle guard.** A revocation over a long history legitimately supersedes many operations, and counting those re-appends would dead-letter the pass on exactly the busy documents that most need it.
+
+7. **Evaluate several streams in one load job.** A load carrying both auth and domain operations has to evaluate them together, because an auth operation in the batch decides the domain operations after it.
+
+8. **Filter reads and sync against the same model.** This is where stage 3's two read-side limits close: `replayDocument` applying denied operations, and reads hiding a deleted document rather than serving the state at the deletion boundary.
 
 ### Ordering rules the write paths keep
 
