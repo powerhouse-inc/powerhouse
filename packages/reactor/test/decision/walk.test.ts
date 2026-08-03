@@ -222,7 +222,7 @@ describe("staticReadSet", () => {
         b: { decidingActions: ["Y"], query: () => [] },
       },
       evaluatesScope: () => true,
-      decide: () => "allow" as const,
+      decide: () => ({ decision: "allow" as const }),
     };
 
     expect(

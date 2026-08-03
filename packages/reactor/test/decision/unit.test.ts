@@ -83,7 +83,7 @@ function staticDefinition(t: DecisionTarget): DecisionModel<TestModel> {
       },
     },
     evaluatesScope: () => true,
-    decide: () => "allow",
+    decide: () => ({ decision: "allow" as const }),
   };
 }
 
@@ -232,7 +232,7 @@ describe("buildDecisionModel", () => {
         },
       },
       evaluatesScope: () => true,
-      decide: () => "allow",
+      decide: () => ({ decision: "allow" as const }),
     });
 
     const { model, appendCondition } = await buildDecisionModel(
@@ -283,7 +283,7 @@ describe("buildDecisionModel", () => {
         },
       },
       evaluatesScope: () => true,
-      decide: () => "allow",
+      decide: () => ({ decision: "allow" as const }),
     });
 
     const { appendCondition } = await buildDecisionModel(
@@ -369,7 +369,7 @@ describe("buildDecisionModel", () => {
         },
       },
       evaluatesScope: () => true,
-      decide: () => "allow",
+      decide: () => ({ decision: "allow" as const }),
     });
 
     const { model, appendCondition } = await buildDecisionModel(

@@ -3,12 +3,9 @@ import type {
   PHDocument,
 } from "@powerhousedao/shared/document-model";
 import { staticReadSet } from "./build-decision-model.js";
-import {
-  documentDecisionModel,
-  DOCUMENT_DELETED_REASON,
-} from "./document-decision-model.js";
 import { streamKey } from "./merged-order.js";
 import type {
+  DecisionModel,
   DecisionStores,
   DecisionTarget,
   EvaluationSubject,
@@ -17,39 +14,52 @@ import type {
 import type { WalkStream } from "./walk.js";
 import { walkByPosition } from "./walk.js";
 
-type DocumentState = PHDocument["state"]["document"];
+/** The stream key for evaluated operations whose scope no projection reads. */
+const EVALUATED_ONLY = "evaluated";
 
-const WRITTEN = "written";
-
-/** Whether a read stream counts this action as one that changes an evaluation. */
-function canRefuseOthers(operation: Operation, readSet: ReadStream[]): boolean {
+/**
+ * Whether any stream the model reads declares this operation's action type as
+ * one that can change an evaluation.
+ */
+function isDecidingAction(
+  operation: Operation,
+  readSet: ReadStream[],
+): boolean {
   return readSet.some((stream) =>
     stream.decidingActions.includes(operation.action.type),
   );
 }
 
-/** The deleted one of these, or the first if none of them is deleted. */
-function firstDeleted(
-  candidates: Array<PHDocument | undefined>,
-): DocumentState {
-  for (const candidate of candidates) {
-    if (candidate?.state.document.isDeleted) {
-      return candidate.state.document;
+/**
+ * The model as the walk reached this operation: each projection's value is its
+ * own scope's state, taken from the stream that projection reads.
+ */
+function modelAt<M>(readSet: ReadStream[], states: Map<string, PHDocument>): M {
+  const model: Record<string, unknown> = {};
+
+  for (const stream of readSet) {
+    const document = states.get(streamKey(stream.query));
+    if (document === undefined) {
+      throw new Error(`No state walked for projection ${stream.name}`);
     }
+    model[stream.name] = (document.state as Record<string, unknown>)[
+      stream.query.scope
+    ];
   }
-  return candidates[0]!.state.document;
+
+  return model as M;
 }
 
 /**
- * This function determines which operations will be refused because of
- * deletes, returning reasons in a parallel array (undefined means the
- * operation is not refused).
+ * Evaluates each operation at its own position and returns the refusals in an
+ * array parallel to the operations, where undefined means allowed.
  *
- * A deletion already in the stream refuses the operations timestamped after it
- * and leaves the earlier ones alone. A deletion among the ones passed in does
- * the same to those after it.
+ * A position is a timestamp, so an operation refused by a delete is one that
+ * sorts after it, and the operations before it are left alone. That holds
+ * whether the delete is already stored or is among the operations passed in.
  */
-export async function evaluateDeletionsByPosition(
+export async function evaluateDeletionsByPosition<M>(
+  model: (target: DecisionTarget) => DecisionModel<M>,
   target: DecisionTarget,
   subject: EvaluationSubject,
   stores: DecisionStores,
@@ -58,18 +68,19 @@ export async function evaluateDeletionsByPosition(
   const { scope, operations } = subject;
   const { writeCache, operationStore } = stores;
 
-  const definition = documentDecisionModel(target);
+  const definition = model(target);
   const readSet = staticReadSet(definition);
 
   if (!definition.evaluatesScope(scope)) {
     return operations.map(() => undefined);
   }
 
-  // Dedupe so we an op re-evaluation cannot refuse itself.
+  // Re-evaluation passes in operations that are already stored, so the reads
+  // below exclude them and no operation is refused by its own stored copy.
   const evaluating = new Set(operations.map((operation) => operation.id));
 
-  // Cheap and indexed. A document that has never been deleted -- nearly all of
-  // them -- costs one query per read stream and stops here.
+  // One indexed query per read stream, narrowed to the actions that can change
+  // an evaluation. A document holding none of them returns just below.
   const readStreams = await Promise.all(
     readSet.map(async (stream) => ({
       stream,
@@ -87,13 +98,13 @@ export async function evaluateDeletionsByPosition(
     })),
   );
 
-  const decidingWritten = operations.filter((operation) =>
-    canRefuseOthers(operation, readSet),
+  const decidingOperations = operations.filter((operation) =>
+    isDecidingAction(operation, readSet),
   );
 
   if (
     readStreams.every((read) => read.operations.length === 0) &&
-    decidingWritten.length === 0
+    decidingOperations.length === 0
   ) {
     return operations.map(() => undefined);
   }
@@ -104,9 +115,15 @@ export async function evaluateDeletionsByPosition(
     );
   }
 
+  const writtenProjection = readSet.find(
+    (stream) => stream.query.scope === scope,
+  );
+
   const walked: WalkStream[] = [];
   for (const read of readStreams) {
-    // We must walk each read stream, but we need the initial state.
+    const isWritten = read.stream === writtenProjection;
+
+    // Each stream is walked from the state it held before any of its operations.
     const before = await writeCache.getState(
       read.stream.query.documentId,
       read.stream.query.scope,
@@ -117,35 +134,35 @@ export async function evaluateDeletionsByPosition(
     walked.push({
       streamKey: streamKey(read.stream.query),
       document: before,
-      operations: read.operations,
+      // Walked in the stream they are written to, so a delete among them is
+      // seen by the operations after it.
+      operations: isWritten
+        ? [...read.operations, ...operations]
+        : read.operations,
       apply: read.stream.apply,
     });
   }
 
-  // The stream being written to is walked alongside the stream(s) being read,
-  // so an operation is evaluated against the others passed in alongside it. It
-  // only applies if the write is in a stream the model reads.
-  const writtenStreamIsRead = readSet.find(
-    (stream) => stream.query.scope === scope,
-  );
-  walked.push({
-    streamKey: WRITTEN,
-    document: walked[0].document,
-    operations,
-    apply: writtenStreamIsRead?.apply ?? ((document) => document),
-  });
+  if (writtenProjection === undefined) {
+    // No projection reads this scope, so these take a position without
+    // contributing state to any of them.
+    walked.push({
+      streamKey: EVALUATED_ONLY,
+      document: walked[0].document,
+      operations,
+      apply: (document) => document,
+    });
+  }
 
   const reasons = new Map<string, string | undefined>();
 
   for (const step of walkByPosition(walked)) {
-    if (step.streamKey !== WRITTEN) {
+    if (!evaluating.has(step.operation.id)) {
       continue;
     }
 
-    const document = firstDeleted([...step.states.values()]);
-
-    const decision = definition.decide(
-      { document },
+    const evaluation = definition.decide(
+      modelAt<M>(readSet, step.states),
       { address: undefined, key: undefined },
       { verb: "execute", scope, operation: step.operation.action.type },
       { scopeState: undefined },
@@ -153,7 +170,7 @@ export async function evaluateDeletionsByPosition(
 
     reasons.set(
       step.operation.id,
-      decision === "deny" ? DOCUMENT_DELETED_REASON : undefined,
+      evaluation.decision === "deny" ? evaluation.reason : undefined,
     );
   }
 

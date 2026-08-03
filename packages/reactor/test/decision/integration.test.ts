@@ -60,7 +60,10 @@ const definition = (
     },
   },
   evaluatesScope: () => true,
-  decide: (model) => (model.document.isDeleted ? "deny" : "allow"),
+  decide: (model) =>
+    model.document.isDeleted
+      ? { decision: "deny" as const, reason: "document deleted" }
+      : { decision: "allow" as const },
 });
 
 describe("buildDecisionModel + IOperationStore.apply integration", () => {

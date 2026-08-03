@@ -45,7 +45,9 @@ export function documentDecisionModel(
     },
 
     decide(model) {
-      return model.document.isDeleted ? "deny" : "allow";
+      return model.document.isDeleted
+        ? { decision: "deny", reason: DOCUMENT_DELETED_REASON }
+        : { decision: "allow" };
     },
   };
 }

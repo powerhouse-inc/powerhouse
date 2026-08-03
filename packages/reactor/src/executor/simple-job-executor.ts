@@ -464,7 +464,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         );
       }
 
-      const decision = definition.decide(
+      const evaluation = definition.decide(
         built.model,
         {
           address: action.context?.signer?.user.address,
@@ -474,7 +474,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         { scopeState: undefined },
       );
 
-      if (decision === "deny") {
+      if (evaluation.decision === "deny") {
         return buildErrorResult(
           job,
           new DocumentDeletedError(
@@ -959,6 +959,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       }
 
       const reevaluated = await evaluateDeletionsByPosition(
+        documentDecisionModel,
         { documentId: job.documentId, branch: job.branch },
         { scope, operations: effective },
         stores,
@@ -1218,6 +1219,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     if (this.featureFlags.documentDecisions) {
       try {
         deniedReasons = await evaluateDeletionsByPosition(
+          documentDecisionModel,
           { documentId: job.documentId, branch: job.branch },
           { scope, operations: reshuffledOperations },
           stores,
