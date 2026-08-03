@@ -6,6 +6,7 @@ import {
   ToolbarRedoButton,
   ToolbarSwitchboardButton,
   ToolbarUndoButton,
+  ToolbarUpgradeButton,
 } from "./toolbar-button.js";
 import { ToolbarName } from "./toolbar-name.js";
 import type { DefaultToolbarControlComponents } from "./types.js";
@@ -22,7 +23,7 @@ import type { DefaultToolbarControlComponents } from "./types.js";
 export const defaultControlSlots = {
   first: ["undo", "redo", "download"],
   second: ["name"],
-  third: ["history", "switchboard", "close"],
+  third: ["update", "history", "switchboard", "close"],
 } as const;
 
 /**
@@ -52,6 +53,7 @@ export const defaultControlComponents: DefaultToolbarControlComponents = {
   redo: ToolbarRedoButton,
   download: ToolbarDownloadButton,
   name: ToolbarName,
+  update: ToolbarUpgradeButton,
   switchboard: ToolbarSwitchboardButton,
   history: ToolbarHistoryButton,
   close: ToolbarCloseButton,
