@@ -509,6 +509,37 @@ export class DocumentActionHandler {
       );
     }
 
+    const otherScopes = Object.keys(document.state).filter(
+      (scope) => scope !== job.scope,
+    );
+    for (const scope of otherScopes) {
+      let scopedDocument: PHDocument;
+      try {
+        scopedDocument = await stores.writeCache.getState(
+          documentId,
+          scope,
+          job.branch,
+          undefined,
+          signal,
+        );
+      } catch (error) {
+        return buildErrorResult(
+          job,
+          new Error(
+            `Failed to fetch ${scope} scope for upgrade: ${error instanceof Error ? error.message : String(error)}`,
+          ),
+          startTime,
+        );
+      }
+      document = {
+        ...document,
+        state: {
+          ...document.state,
+          [scope]: (scopedDocument.state as Record<string, unknown>)[scope],
+        } as typeof document.state,
+      };
+    }
+
     // DCB allows for positional deletion, so the evaluation may have already been
     // decided
     const documentState = document.state.document;
@@ -605,6 +636,10 @@ export class DocumentActionHandler {
       document,
       SnapshotPosition.Head,
     );
+
+    for (const scope of otherScopes) {
+      stores.writeCache.invalidate(documentId, scope, job.branch);
+    }
 
     indexTxn.write([
       {
