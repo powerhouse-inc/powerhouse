@@ -224,7 +224,9 @@ export class DocumentIntegrityService implements IDocumentIntegrityService {
         signal,
       );
 
-      const pair = firstOutOfOrderPair(stored.results);
+      const pair = firstOutOfOrderPair(stored.results, {
+        requireStrict: scope === "auth",
+      });
       if (pair !== undefined) {
         issues.push({ scope, branch, ...pair });
       }

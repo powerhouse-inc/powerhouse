@@ -1,4 +1,5 @@
 import type { Operation } from "@powerhousedao/shared/document-model";
+import type { OutOfOrderPair } from "../decision/stream-order.js";
 
 export type KeyframeValidationIssue = {
   scope: string;
@@ -21,6 +22,7 @@ export type StreamOrderIssue = {
   branch: string;
   previous: Operation;
   current: Operation;
+  kind: OutOfOrderPair["kind"];
 };
 
 export type ValidationResult = {
