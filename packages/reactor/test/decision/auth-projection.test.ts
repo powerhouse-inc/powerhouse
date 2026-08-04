@@ -209,8 +209,10 @@ describe("the auth projection", () => {
 
     await sync(source, target, docId, "document", createToken);
 
+    // The admin grant keeps the creator-less policy administrable once the
+    // open grant is revoked; the reducer rejects revoking the last one.
     const init = await source.execute(docId, "main", [
-      initializeAuth({ version: 1, grants: [OPEN_GRANT] }),
+      initializeAuth({ version: 1, grants: [AUTH_ADMIN_GRANT, OPEN_GRANT] }),
     ]);
     const initToken = await settle(source, init.id);
     await sync(source, target, docId, "auth", initToken);

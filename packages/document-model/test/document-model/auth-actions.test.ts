@@ -25,6 +25,17 @@ function makeGrant(id: string): Grant {
   };
 }
 
+function adminGrant(id: string, overrides?: Partial<Grant>): Grant {
+  return {
+    id,
+    description: `admin grant ${id}`,
+    effect: "allow",
+    principal: { anyone: true },
+    capability: { can: "execute", scope: "auth" },
+    ...overrides,
+  };
+}
+
 function rawAction(type: string, scope: string): Action {
   return {
     id: `act-${type}`,
@@ -79,9 +90,9 @@ const signedDocument: PHDocument<CountPHState> = {
   },
 };
 
-function signedInit(appKey: string): Action {
+function signedInit(appKey: string, grants: Grant[] = []): Action {
   return {
-    ...initializeAuth({ version: 1, grants: [] }),
+    ...initializeAuth({ version: 1, grants }),
     context: {
       signer: {
         user: { address: "", networkId: "", chainId: 0 },
@@ -293,5 +304,121 @@ describe("auth-scope reducer", () => {
 
     expect(replayed.state.auth).toEqual(doc.state.auth);
     expect(replayed.state.auth.grants.map((g) => g.id)).toEqual(["b", "a"]);
+  });
+});
+
+describe("creator-less auth administration retention", () => {
+  const LOCKOUT_MESSAGE = "last grant permitting execute on the auth scope";
+
+  it("rejects removing the last grant permitting execute on the auth scope", () => {
+    const doc = countReducer(
+      initialDocument,
+      initializeAuth({
+        version: 1,
+        grants: [adminGrant("admin"), makeGrant("reader")],
+      }),
+    );
+    const next = countReducer(doc, removeGrant({ id: "admin" }));
+    expect(ids(next)).toEqual(["admin", "reader"]);
+    const ops = next.operations.auth;
+    expect(ops[ops.length - 1].error).toContain(LOCKOUT_MESSAGE);
+  });
+
+  it("allows the removal when another administration grant remains", () => {
+    const doc = countReducer(
+      initialDocument,
+      initializeAuth({
+        version: 1,
+        grants: [
+          adminGrant("admin"),
+          adminGrant("limited", {
+            capability: {
+              can: "execute",
+              scope: "auth",
+              operation: ["SET_GRANT"],
+            },
+          }),
+        ],
+      }),
+    );
+    const next = countReducer(doc, removeGrant({ id: "admin" }));
+    expect(ids(next)).toEqual(["limited"]);
+    const ops = next.operations.auth;
+    expect(ops[ops.length - 1].error).toBeUndefined();
+  });
+
+  it("does not count a grant v1 never applies as retained administration", () => {
+    const doc = countReducer(
+      initialDocument,
+      initializeAuth({
+        version: 1,
+        grants: [
+          adminGrant("admin"),
+          adminGrant("denied", { effect: "deny" }),
+          adminGrant("conditional", {
+            where: { exists: { attr: "subject.address" } },
+          }),
+        ],
+      }),
+    );
+    const next = countReducer(doc, removeGrant({ id: "admin" }));
+    expect(ids(next)).toEqual(["admin", "denied", "conditional"]);
+    const ops = next.operations.auth;
+    expect(ops[ops.length - 1].error).toContain(LOCKOUT_MESSAGE);
+  });
+
+  it("lets a document with a creator remove its last administration grant", () => {
+    let doc = countReducer(
+      signedDocument,
+      signedInit(CREATOR_DID, [adminGrant("admin")]),
+    );
+    expect(doc.state.auth.creator).toBe(CREATOR_DID);
+    doc = countReducer(doc, removeGrant({ id: "admin" }));
+    expect(ids(doc)).toEqual([]);
+    const ops = doc.operations.auth;
+    expect(ops[ops.length - 1].error).toBeUndefined();
+  });
+
+  it("rejects re-upserting the last administration grant without auth execute", () => {
+    const doc = countReducer(
+      initialDocument,
+      initializeAuth({ version: 1, grants: [adminGrant("admin")] }),
+    );
+    const next = countReducer(
+      doc,
+      setGrant({
+        grant: adminGrant("admin", {
+          capability: { can: "read", scope: "auth" },
+        }),
+      }),
+    );
+    expect(next.state.auth.grants[0].capability).toEqual({
+      can: "execute",
+      scope: "auth",
+    });
+    const ops = next.operations.auth;
+    expect(ops[ops.length - 1].error).toContain(LOCKOUT_MESSAGE);
+  });
+
+  it("allows the downgrade when another administration grant remains", () => {
+    const doc = countReducer(
+      initialDocument,
+      initializeAuth({
+        version: 1,
+        grants: [adminGrant("a"), adminGrant("b")],
+      }),
+    );
+    const next = countReducer(
+      doc,
+      setGrant({
+        grant: adminGrant("a", { capability: { can: "read", scope: "auth" } }),
+      }),
+    );
+    expect(next.state.auth.grants[0].capability).toEqual({
+      can: "read",
+      scope: "auth",
+    });
+    const ops = next.operations.auth;
+    expect(ops[ops.length - 1].error).toBeUndefined();
   });
 });

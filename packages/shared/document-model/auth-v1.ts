@@ -47,6 +47,23 @@ export class GroupPrincipalNotAllowedError extends Error {
   }
 }
 
+/**
+ * Thrown when a change would leave a creator-less policy with no grant
+ * permitting execute on the auth scope. Without the creator carve-out no
+ * subject could ever administer such a policy again.
+ */
+export class AuthAdministrationLockoutError extends Error {
+  public readonly grantId: string;
+
+  constructor(grantId: string) {
+    super(
+      `Grant "${grantId}" is the last grant permitting execute on the auth scope: a policy with no creator must always retain one`,
+    );
+    this.name = "AuthAdministrationLockoutError";
+    this.grantId = grantId;
+  }
+}
+
 const GRANT_KEYS = new Set([
   "id",
   "description",
@@ -347,11 +364,16 @@ export function assertValidInitialGrants(
   }
 }
 
-/** Validates a grant upsert: the grant itself plus the count cap on append. */
+/**
+ * Validates a grant upsert: the grant itself, the count cap on append, and
+ * administration retention on an in-place replace (an append can only add a
+ * grant, so it can never take the last administration grant away).
+ */
 export function assertValidGrantUpsert(
   grant: Grant,
   existing: Grant[],
   documentType: string,
+  creator: string | undefined,
 ): void {
   assertValidGrant(grant, documentType);
   const exists = existing.some((g) => g.id === grant.id);
@@ -360,6 +382,58 @@ export function assertValidGrantUpsert(
       grant.id,
       `policy exceeds ${MAX_AUTH_GRANTS} grants`,
     );
+  }
+  if (exists) {
+    const next = existing.map((g) => (g.id === grant.id ? grant : g));
+    assertAuthAdministrationRetained(creator, existing, next, grant.id);
+  }
+}
+
+/**
+ * The request whose coverage keeps a policy administrable: a subject who may
+ * SET_GRANT can upsert any grant, so every other repair stays reachable.
+ */
+const AUTH_ADMINISTRATION_REQUEST: AuthRequest = {
+  verb: "execute",
+  scope: "auth",
+  operation: "SET_GRANT",
+};
+
+/**
+ * True when the grant can let some subject administer the auth scope under v1
+ * evaluation: an unconditional allow for an anyone or address principal whose
+ * capability covers executing SET_GRANT on auth. Grants v1 never applies
+ * (group and match principals, `where` conditions) keep nothing reachable.
+ */
+function isAuthAdministrationGrant(grant: Grant): boolean {
+  return (
+    grant.effect === "allow" &&
+    grant.where === undefined &&
+    ("anyone" in grant.principal || "address" in grant.principal) &&
+    capabilityCovers(grant.capability, AUTH_ADMINISTRATION_REQUEST)
+  );
+}
+
+/**
+ * A creator-less policy must always retain a grant permitting execute on the
+ * auth scope; on a signed document the creator carve-out keeps administration
+ * reachable instead. Rejects a change that takes the last such grant away. A
+ * policy already without one is left alone: the change is not what locks it.
+ */
+export function assertAuthAdministrationRetained(
+  creator: string | undefined,
+  previous: Grant[],
+  next: Grant[],
+  grantId: string,
+): void {
+  if (creator !== undefined) {
+    return;
+  }
+  if (
+    previous.some(isAuthAdministrationGrant) &&
+    !next.some(isAuthAdministrationGrant)
+  ) {
+    throw new AuthAdministrationLockoutError(grantId);
   }
 }
 

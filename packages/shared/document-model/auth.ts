@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { createAction, type Action } from "./actions.js";
 import {
+  assertAuthAdministrationRetained,
   assertValidGrantUpsert,
   assertValidInitialGrants,
   evaluateGrantStack,
@@ -285,7 +286,12 @@ export function applySetGrantAction<TState extends PHBaseState>(
   assertActionInputShape(action.input);
   const { grant } = action.input;
   const grants = document.state.auth.grants;
-  assertValidGrantUpsert(grant, grants, document.header.documentType);
+  assertValidGrantUpsert(
+    grant,
+    grants,
+    document.header.documentType,
+    document.state.auth.creator,
+  );
   const exists = grants.some((g) => g.id === grant.id);
   const next = exists
     ? grants.map((g) => (g.id === grant.id ? grant : g))
@@ -293,21 +299,23 @@ export function applySetGrantAction<TState extends PHBaseState>(
   return withGrants(document, next);
 }
 
-/** Removes a grant by id; throws if the id is not present. */
+/**
+ * Removes a grant by id; throws if the id is not present or if the removal
+ * would leave a creator-less policy with no auth-administration grant.
+ */
 export function applyRemoveGrantAction<TState extends PHBaseState>(
   document: PHDocument<TState>,
   action: RemoveGrantAction,
 ): PHDocument<TState> {
   assertActionInputShape(action.input);
   const { id } = action.input;
-  const grants = document.state.auth.grants;
+  const { grants, creator } = document.state.auth;
   if (!grants.some((g) => g.id === id)) {
     throw new GrantNotFoundError(id);
   }
-  return withGrants(
-    document,
-    grants.filter((g) => g.id !== id),
-  );
+  const next = grants.filter((g) => g.id !== id);
+  assertAuthAdministrationRetained(creator, grants, next, id);
+  return withGrants(document, next);
 }
 
 /**
