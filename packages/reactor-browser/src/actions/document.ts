@@ -352,6 +352,7 @@ export async function addDocument(
   document?: PHDocument,
   id?: string,
   preferredEditor?: string,
+  documentModelVersion?: number,
 ) {
   const { isAllowedToCreateDocuments } = getUserPermissions();
   if (!isAllowedToCreateDocuments) {
@@ -366,8 +367,25 @@ export async function addDocument(
   }
 
   // get the module
-  const documentModelModule =
-    await reactorClient.getDocumentModelModule(documentType);
+  let documentModelModule: DocumentModelModule;
+  if (documentModelVersion !== undefined) {
+    const { results: documentModelModules } =
+      await reactorClient.getDocumentModelModules();
+    const module = documentModelModules.find(
+      (m) =>
+        m.documentModel.global.id === documentType &&
+        (m.version ?? 1) === documentModelVersion,
+    );
+    if (!module) {
+      throw new Error(
+        `Document model not found for type: ${documentType} with version: ${documentModelVersion}`,
+      );
+    }
+    documentModelModule = module;
+  } else {
+    documentModelModule =
+      await reactorClient.getDocumentModelModule(documentType);
+  }
 
   // create - use passed document's state if available
   const newDocument = document ?? documentModelModule.utils.createDocument();

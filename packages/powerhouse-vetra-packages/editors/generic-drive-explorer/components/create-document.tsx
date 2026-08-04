@@ -61,7 +61,7 @@ export function CreateDocument() {
               aria-description={spec.description}
               onMouseEnter={() => preloadEditorsForType(spec.id)}
               onFocus={() => preloadEditorsForType(spec.id)}
-              onClick={() => showCreateDocumentModal(spec.id)}
+              onClick={() => showCreateDocumentModal(spec.id, doc.version)}
             >
               <span className="text-sm">
                 {spec.name}

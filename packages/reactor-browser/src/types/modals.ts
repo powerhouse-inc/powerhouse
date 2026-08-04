@@ -2,6 +2,7 @@ export type PHModal =
   | {
       type: "createDocument";
       documentType: string;
+      documentModelVersion?: number;
     }
   | {
       type: "deleteItem";
