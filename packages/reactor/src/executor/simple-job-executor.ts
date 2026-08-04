@@ -1298,7 +1298,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     for (const operation of job.operations) {
       minIncomingIndex = Math.min(minIncomingIndex, operation.index);
       const ts = operation.timestampUtcMs || "";
-      if (ts < minIncomingTimestamp) {
+      if (Date.parse(ts) < Date.parse(minIncomingTimestamp)) {
         minIncomingTimestamp = ts;
       }
     }

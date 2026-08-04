@@ -512,6 +512,8 @@ The re-append advances the stream heads, so a concurrent admission that read the
 
 Two rules follow from re-appends travelling. The monotonic-timestamp check on an arriving auth operation runs *after* the action-id dedup, because a re-appended auth operation keeps its original timestamp and so is at or below the receiving replica's auth head by definition — checked before the dedup it would reject traffic both replicas already agree about. And the excessive-shuffle guard does not count an operation whose action id the stream already holds, for the same reason.
 
+A pass visits each evaluated scope once, in the model's projection order. A verdict a pass writes is therefore visible to a later-visited scope and not to an earlier one. The pass is deterministic, so every replica computes the same verdicts from the same history; it is not iterated to a fixed point, so a verdict that would change under the state a later scope produced stands until the next arrival triggers another pass. Convergence between replicas is the guarantee; a fixed point is not.
+
 #### What triggers a pass
 
 Re-evaluation is not a property of loading. It is owed whenever a read-set stream gains an operation that something already evaluated sorts after, since that is exactly when an evaluation can change. A load is the common way that happens, but not the only one.

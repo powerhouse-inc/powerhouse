@@ -146,6 +146,10 @@ export class DocumentActionHandler {
       return undefined;
     }
 
+    // Unlike processWrite, the decision's appendCondition is deliberately
+    // dropped: a later-timestamped auth operation cannot retroactively deny
+    // this write, and a backdated one triggers reevaluateIfNeeded, so the
+    // repair path exists without conditioning on the auth head.
     let admission;
     try {
       admission = await decideAtHead(
