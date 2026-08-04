@@ -76,7 +76,9 @@ function TextFallback({
 }: {
   message?: string;
 }) {
-  return <div className="text-center text-foreground">{message}</div>;
+  return (
+    <div className="text-center wrap-break-word text-foreground">{message}</div>
+  );
 }
 
 /**
@@ -101,7 +103,9 @@ function DetailedFallback({ error, resetErrorBoundary }: FallbackProps) {
             Something went wrong
           </h1>
         </div>
-        <p className="mb-4 text-sm text-foreground">{errorMessage}</p>
+        <p className="mb-4 text-sm wrap-break-word text-foreground">
+          {errorMessage}
+        </p>
         {hasDetails && (
           <details className="group">
             <summary className="cursor-pointer text-sm font-medium text-foreground underline select-none hover:hover-effect">
@@ -132,8 +136,10 @@ function DetailedFallback({ error, resetErrorBoundary }: FallbackProps) {
 function CenteredErrorMessage({ error }: FallbackProps) {
   const errorMessage = error instanceof Error ? error.message : String(error);
   return (
-    <div className="flex size-full items-center justify-center">
-      <h3 className="text-lg font-semibold text-foreground">{errorMessage}</h3>
+    <div className="flex size-full items-center justify-center p-6">
+      <h3 className="max-w-lg min-w-0 text-center text-lg font-semibold wrap-break-word text-foreground">
+        {errorMessage}
+      </h3>
     </div>
   );
 }
