@@ -137,6 +137,17 @@ describe("getDocumentUpgradePreview", () => {
     expect(getDocumentUpgradePreview(doc, registry)).toBeUndefined();
   });
 
+  it("returns undefined when getLatestVersion throws", () => {
+    const doc = createFakeDocument({ title: "Doc" }, 1);
+    const registry = {
+      getLatestVersion: () => {
+        throw new Error("module not found for document type");
+      },
+      computeUpgradePath: () => [],
+    } as unknown as IDocumentModelRegistry;
+    expect(getDocumentUpgradePreview(doc, registry)).toBeUndefined();
+  });
+
   it("computes the version jump, steps, and field diff for a valid upgrade path", () => {
     const doc = createFakeDocument(
       {

@@ -96,7 +96,12 @@ export function getDocumentUpgradePreview(
 
   const documentType = document.header.documentType;
   const fromVersion = document.state.document.version || 1;
-  const latestVersion = registry.getLatestVersion(documentType);
+  let latestVersion: number;
+  try {
+    latestVersion = registry.getLatestVersion(documentType);
+  } catch {
+    return undefined;
+  }
   if (fromVersion >= latestVersion) {
     return undefined;
   }
