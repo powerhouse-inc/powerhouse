@@ -15,6 +15,10 @@ import {
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import type { ICollectionMembershipCache } from "../cache/collection-membership-cache.js";
+import {
+  FLAG_PREREQUISITES,
+  validateFeatureFlags,
+} from "../core/feature-flags.js";
 import type { IDocumentMetaCache } from "../cache/document-meta-cache-types.js";
 import type {
   IOperationIndex,
@@ -138,6 +142,9 @@ export class SimpleJobExecutor implements IJobExecutor {
       documentDecisions: config.featureFlags?.documentDecisions ?? false,
       authEnforcement: config.featureFlags?.authEnforcement ?? false,
     };
+    // The builder validates too, but a pooled worker is constructed directly
+    // from the flags that crossed the boundary.
+    validateFeatureFlags(this.featureFlags, FLAG_PREREQUISITES);
     this.decisionModel = selectDecisionModel(this.featureFlags);
     this.signatureVerifierModule = new SignatureVerifier(signatureVerifier);
     this.documentActionHandler = new DocumentActionHandler(

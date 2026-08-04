@@ -138,6 +138,7 @@ export class DocumentActionHandler {
     const { job, startTime, stores, signal } = executing;
 
     if (
+      !this.featureFlags.documentDecisions ||
       !this.featureFlags.authEnforcement ||
       this.alreadyEvaluated(executing) ||
       !GATED_DOCUMENT_ACTIONS.has(action.type)
