@@ -1,4 +1,5 @@
-import { ConnectConfirmationModal } from "@powerhousedao/design-system/connect";
+import { Modal } from "@powerhousedao/design-system";
+import { ModalButton } from "@powerhousedao/design-system/connect";
 import {
   closePHModal,
   getDocumentUpgradePreview,
@@ -10,6 +11,34 @@ import {
 import { childLogger } from "document-model";
 
 const logger = childLogger(["ConfirmDocumentUpgradeModal"]);
+
+const compactButtonStyle =
+  "min-h-0 min-w-0 flex-none rounded-lg px-6 py-1.5 text-sm whitespace-nowrap";
+
+function stripScope(fieldPath: string): string {
+  const separatorIndex = fieldPath.indexOf(".");
+  return separatorIndex === -1
+    ? fieldPath
+    : fieldPath.slice(separatorIndex + 1);
+}
+
+function FieldList({ label, fields }: { label: string; fields: string[] }) {
+  return (
+    <div className="mt-3">
+      <p className="mb-1.5">{label}</p>
+      <div className="flex flex-col items-start gap-1">
+        {fields.map((field) => (
+          <span
+            className="rounded-md bg-muted px-2 py-0.5 font-mono text-xs text-foreground"
+            key={field}
+          >
+            {stripScope(field)}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export function ConfirmDocumentUpgradeModal() {
   const phModal = usePHModal();
@@ -27,14 +56,28 @@ export function ConfirmDocumentUpgradeModal() {
 
   const { fromVersion, toVersion, steps, addedFields, removedFields } = preview;
 
+  const onContinue = () => {
+    upgradeDocument(document.header.id).catch((error) =>
+      logger.error("Error upgrading document: @error", error),
+    );
+    closePHModal();
+  };
+
   return (
-    <ConnectConfirmationModal
-      header="Update document"
-      body={
-        <div className="text-left text-sm">
+    <Modal
+      open={open}
+      onOpenChange={(status: boolean) => {
+        if (!status) return closePHModal();
+      }}
+    >
+      <div className="w-[400px] p-6">
+        <div className="pb-2 text-2xl font-bold text-foreground">
+          Update document
+        </div>
+        <div className="my-4 rounded-md bg-background p-4 text-left text-sm text-foreground">
           <p>
             This document will be updated from version {fromVersion} to version{" "}
-            {toVersion}.
+            {toVersion}. Update required for the latest features.
           </p>
           {steps
             .filter((step) => step.description)
@@ -44,40 +87,33 @@ export function ConfirmDocumentUpgradeModal() {
               </p>
             ))}
           {addedFields.length > 0 && (
-            <p className="mt-2">
-              New fields:{" "}
-              <code className="font-mono text-xs">
-                {addedFields.join(", ")}
-              </code>
-            </p>
+            <FieldList fields={addedFields} label="New fields:" />
           )}
           {removedFields.length > 0 && (
-            <p className="mt-2">
-              Removed fields:{" "}
-              <code className="font-mono text-xs">
-                {removedFields.join(", ")}
-              </code>
-            </p>
+            <FieldList fields={removedFields} label="Removed fields:" />
           )}
-          <p className="mt-2">
+          <p className="mt-3">
             Your existing content is preserved and migrated automatically. This
             update cannot be undone.
           </p>
         </div>
-      }
-      cancelLabel="Cancel"
-      continueLabel="Update document"
-      onCancel={() => closePHModal()}
-      onContinue={() => {
-        upgradeDocument(document.header.id).catch((error) =>
-          logger.error("Error upgrading document: @error", error),
-        );
-        closePHModal();
-      }}
-      open={open}
-      onOpenChange={(status: boolean) => {
-        if (!status) return closePHModal();
-      }}
-    />
+        <div className="mt-4 flex justify-between gap-3">
+          <ModalButton
+            className={compactButtonStyle}
+            variant="cancel"
+            onClick={() => closePHModal()}
+          >
+            Cancel
+          </ModalButton>
+          <ModalButton
+            className={compactButtonStyle}
+            variant="confirm"
+            onClick={onContinue}
+          >
+            Update document
+          </ModalButton>
+        </div>
+      </div>
+    </Modal>
   );
 }
