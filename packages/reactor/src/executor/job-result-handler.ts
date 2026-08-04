@@ -13,6 +13,7 @@ import {
   DocumentDeletedError,
   DocumentNotFoundError,
   ExcessiveReshuffleError,
+  InvalidOperationTimestampError,
 } from "../shared/errors.js";
 import { AppendConditionFailedError } from "../storage/interfaces.js";
 import type { ErrorInfo } from "../shared/types.js";
@@ -124,8 +125,9 @@ export class JobResultHandler implements IJobResultHandler {
       result.error &&
       (DocumentDeletedError.isError(result.error) ||
         AuthorizationDeniedError.isError(result.error) ||
-        // Both deterministic, so retrying only re-runs the load to fail the same.
+        // All deterministic, so retrying only re-runs the load to fail the same.
         AuthTimestampNotMonotonicError.isError(result.error) ||
+        InvalidOperationTimestampError.isError(result.error) ||
         ExcessiveReshuffleError.isError(result.error))
     ) {
       const errorInfo = toErrorInfo(result.error);

@@ -34,6 +34,7 @@ import {
   AuthTimestampNotMonotonicError,
   DocumentDeletedError,
   ExcessiveReshuffleError,
+  InvalidOperationTimestampError,
 } from "../shared/errors.js";
 import { yieldToMain } from "../shared/utils.js";
 import type { SignatureVerificationHandler } from "../signer/types.js";
@@ -379,8 +380,11 @@ export class SimpleJobExecutor implements IJobExecutor {
           success: false,
           generatedOperations,
           operationsWithContext,
-          error: new Error(
-            `Invalid timestamp "${action.timestampUtcMs}" on action ${action.type} (id: ${action.id})`,
+          error: new InvalidOperationTimestampError(
+            job.documentId,
+            action.scope,
+            action.timestampUtcMs,
+            `action ${action.type} (id: ${action.id})`,
           ),
         };
       }
@@ -1043,18 +1047,21 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     for (const entry of entries) {
       if (!isValidISOTimestamp(entry.timestampUtcMs)) {
-        return new Error(
-          `Invalid timestamp "${entry.timestampUtcMs}" on auth operation`,
+        return new InvalidOperationTimestampError(
+          documentId,
+          "auth",
+          entry.timestampUtcMs,
+          "auth operation",
         );
       }
 
       const at = Date.parse(entry.timestampUtcMs);
-      if (at <= bound) {
+      if (boundIso !== undefined && at <= bound) {
         return new AuthTimestampNotMonotonicError(
           documentId,
           branch,
           entry.timestampUtcMs,
-          boundIso ?? new Date(0).toISOString(),
+          boundIso,
         );
       }
 
@@ -1266,8 +1273,11 @@ export class SimpleJobExecutor implements IJobExecutor {
         return {
           job,
           success: false,
-          error: new Error(
-            `Invalid timestamp "${operation.timestampUtcMs}" on operation (index: ${operation.index})`,
+          error: new InvalidOperationTimestampError(
+            job.documentId,
+            scope,
+            operation.timestampUtcMs,
+            `operation (index: ${operation.index})`,
           ),
           duration: Date.now() - startTime,
         };

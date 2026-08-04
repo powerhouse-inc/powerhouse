@@ -543,6 +543,8 @@ export function classifyJobFailure(errorName: string): SyncOperationErrorType {
   switch (errorName) {
     case "AuthTimestampNotMonotonicError":
       return "AUTH_TIMESTAMP_NOT_MONOTONIC";
+    case "InvalidOperationTimestampError":
+      return "INVALID_TIMESTAMP";
     case "ExcessiveReshuffleError":
       return "EXCESSIVE_SHUFFLE";
     case "InvalidSignatureError":

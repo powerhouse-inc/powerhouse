@@ -14,6 +14,7 @@ import {
   AuthTimestampNotMonotonicError,
   DocumentDeletedError,
   DocumentNotFoundError,
+  InvalidOperationTimestampError,
 } from "../../../src/shared/errors.js";
 import type { ErrorInfo } from "../../../src/shared/types.js";
 import { AppendConditionFailedError } from "../../../src/storage/interfaces.js";
@@ -340,6 +341,57 @@ describe("JobResultHandler", () => {
       await handler.handleResult(
         handle,
         { success: false, job, error: violation() },
+        callbacks(),
+      );
+
+      expect(queue.retryJob).not.toHaveBeenCalled();
+    });
+  });
+
+  /**
+   * A malformed timestamp is the same on every attempt, so it is terminal
+   * rather than burning the retry budget.
+   */
+  describe("InvalidOperationTimestampError", () => {
+    function malformed(): InvalidOperationTimestampError {
+      return new InvalidOperationTimestampError(
+        "doc-1",
+        "auth",
+        "not-a-timestamp",
+        "auth operation",
+      );
+    }
+
+    it("marks failed, emits JOB_FAILED, and calls handle.fail()", async () => {
+      const error = malformed();
+      const job = createTestJob({ maxRetries: 3 });
+      const handle = createTestHandle(job);
+
+      await handler.handleResult(
+        handle,
+        { success: false, job, error },
+        callbacks(),
+      );
+
+      expect(jobTracker.markFailed).toHaveBeenCalledWith(
+        job.id,
+        expect.any(Object),
+        job,
+      );
+      expect(eventBus.emit).toHaveBeenCalledWith(
+        ReactorEventTypes.JOB_FAILED,
+        expect.objectContaining({ jobId: job.id, error }),
+      );
+      expect(handle.fail).toHaveBeenCalledTimes(1);
+    });
+
+    it("consumes no retry", async () => {
+      const job = createTestJob({ retryCount: 0, maxRetries: 5 });
+      const handle = createTestHandle(job);
+
+      await handler.handleResult(
+        handle,
+        { success: false, job, error: malformed() },
         callbacks(),
       );
 

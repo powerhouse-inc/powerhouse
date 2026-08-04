@@ -94,6 +94,45 @@ export class AuthTimestampNotMonotonicError extends Error {
 }
 
 /**
+ * An operation or action carried a timestamp that is not an ISO-8601 UTC
+ * instant.
+ *
+ * Terminal rather than retryable: the value does not change between attempts,
+ * so a retry re-runs the whole job to fail identically. Quarantining, unlike a
+ * held auth operation — this is malformed data rather than two replicas
+ * disagreeing, and nothing further from that source should be trusted until it
+ * is looked at.
+ */
+export class InvalidOperationTimestampError extends Error {
+  public readonly documentId: string;
+  public readonly scope: string;
+  public readonly timestampUtcMs: string;
+
+  constructor(
+    documentId: string,
+    scope: string,
+    timestampUtcMs: string,
+    context: string,
+  ) {
+    super(
+      `Invalid timestamp "${timestampUtcMs}" on ${context} in scope "${scope}" of document ${documentId}`,
+    );
+    this.name = "InvalidOperationTimestampError";
+    this.documentId = documentId;
+    this.scope = scope;
+    this.timestampUtcMs = timestampUtcMs;
+
+    Error.captureStackTrace(this, InvalidOperationTimestampError);
+  }
+
+  static isError(error: unknown): error is InvalidOperationTimestampError {
+    return (
+      Error.isError(error) && error.name === "InvalidOperationTimestampError"
+    );
+  }
+}
+
+/**
  * A load would move more operations than the bound allows, indicating a real
  * divergence between local and incoming history. Counts only first-time moves,
  * so a re-evaluation pass's re-appends do not make busy documents

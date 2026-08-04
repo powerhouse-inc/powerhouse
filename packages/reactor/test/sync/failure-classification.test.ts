@@ -3,6 +3,7 @@ import {
   AuthTimestampNotMonotonicError,
   AuthorizationDeniedError,
   ExcessiveReshuffleError,
+  InvalidOperationTimestampError,
 } from "../../src/shared/errors.js";
 import {
   classifyJobFailure,
@@ -30,6 +31,17 @@ describe("classifyJobFailure", () => {
     const error = new ExcessiveReshuffleError("doc", "global", 2000, 1000);
 
     expect(classifyJobFailure(error.name)).toBe("EXCESSIVE_SHUFFLE");
+  });
+
+  it("names a malformed timestamp", () => {
+    const error = new InvalidOperationTimestampError(
+      "doc",
+      "auth",
+      "not-a-timestamp",
+      "auth operation",
+    );
+
+    expect(classifyJobFailure(error.name)).toBe("INVALID_TIMESTAMP");
   });
 
   it("falls back to UNCLASSIFIED for anything it does not know", () => {
@@ -67,6 +79,7 @@ describe("quarantinesDocument", () => {
       "MISSING_OPERATIONS",
       "EXCESSIVE_SHUFFLE",
       "GRACEFUL_ABORT",
+      "INVALID_TIMESTAMP",
       "UNCLASSIFIED",
     ] as const) {
       expect(quarantinesDocument(errorType)).toBe(true);
