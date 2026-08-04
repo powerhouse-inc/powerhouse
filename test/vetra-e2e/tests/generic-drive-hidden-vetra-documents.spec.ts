@@ -66,12 +66,11 @@ test("vetra document types are hidden in a generic drive", async ({ page }) => {
   await expect(page).toHaveURL(/\/d\/[^/?]+/, { timeout: 10_000 });
   await waitForAppReady(page);
 
-  // 4. Positive control: the "Create New Document" button renders.
-  // NOTE: this positive control depends on document-creation.spec.ts having
-  // run first (workers: 1, alphabetical file order): it generates a creatable
-  // project-local document model. With zero creatable types the footer
-  // deliberately renders nothing (see create-document.tsx), and this spec
-  // would fail here if run in isolation.
+  // 4. Positive control: the "Create New Document" button renders. With zero
+  // creatable types the button deliberately renders nothing (see
+  // create-document.tsx); the project ships a static fixture document model
+  // (e2e-fixtures/sample-note-module.ts) so at least one creatable type
+  // always exists, independent of codegen side effects from other specs.
   const createDocumentButton = page.getByRole("button", {
     name: "Create New Document",
   });
