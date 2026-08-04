@@ -1,3 +1,7 @@
+## 6.2.2-dev.36 (2026-08-04)
+
+This was a version bump only for @powerhousedao/switchboard-gui to align it with other projects, there were no code changes.
+
 ## 6.2.2-dev.35 (2026-08-03)
 
 This was a version bump only for @powerhousedao/switchboard-gui to align it with other projects, there were no code changes.
