@@ -64,6 +64,20 @@ export class AuthAdministrationLockoutError extends Error {
   }
 }
 
+/**
+ * Thrown when INITIALIZE_AUTH would create a creator-less policy with no grant
+ * permitting execute on the auth scope. Such a policy would be born with no
+ * subject able to administer it.
+ */
+export class AuthAdministrationMissingError extends Error {
+  constructor() {
+    super(
+      "Initial grants include no grant permitting execute on the auth scope: a policy with no creator must always include one",
+    );
+    this.name = "AuthAdministrationMissingError";
+  }
+}
+
 const GRANT_KEYS = new Set([
   "id",
   "description",
@@ -351,16 +365,23 @@ export function assertValidGrant(grant: unknown, documentType: string): void {
   }
 }
 
-/** Validates an initial grant list: the count cap plus every grant. */
+/**
+ * Validates an initial grant list: the count cap, every grant, and — on a
+ * creator-less policy — that some grant keeps the auth scope administrable.
+ */
 export function assertValidInitialGrants(
   grants: Grant[],
   documentType: string,
+  creator: string | undefined,
 ): void {
   if (grants.length > MAX_AUTH_GRANTS) {
     throw new InvalidGrantError("", `policy exceeds ${MAX_AUTH_GRANTS} grants`);
   }
   for (const grant of grants) {
     assertValidGrant(grant, documentType);
+  }
+  if (creator === undefined && !grants.some(isAuthAdministrationGrant)) {
+    throw new AuthAdministrationMissingError();
   }
 }
 

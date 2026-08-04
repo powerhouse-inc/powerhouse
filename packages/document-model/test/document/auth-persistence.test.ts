@@ -96,6 +96,17 @@ function makeGrant(id: string): Grant {
   };
 }
 
+// Keeps a creator-less policy administrable, which genesis now requires.
+function adminGrant(id: string): Grant {
+  return {
+    id,
+    description: `admin grant ${id}`,
+    effect: "allow",
+    principal: { anyone: true },
+    capability: { can: "execute", scope: "auth" },
+  };
+}
+
 function initAuthAt(ts: string, grants: Grant[]): Action {
   return { ...initializeAuth({ version: 1, grants }), timestampUtcMs: ts };
 }
@@ -111,7 +122,7 @@ function buildLiveDocument(): PHDocument<CounterState> {
     undefined,
     docType,
   );
-  doc = counterReducer(doc, initAuthAt(makeTimestamp(0), [makeGrant("a")]));
+  doc = counterReducer(doc, initAuthAt(makeTimestamp(0), [adminGrant("a")]));
   doc = counterReducer(doc, increment(makeTimestamp(100)));
   doc = counterReducer(doc, setGrantAt(makeTimestamp(200), makeGrant("b")));
   doc = counterReducer(doc, increment(makeTimestamp(300)));

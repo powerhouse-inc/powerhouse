@@ -241,6 +241,8 @@ export function isDocumentCreator(
  * (version 0). The input version is the policy language version and must be an
  * integer >= 1; 0 is reserved for the uninitialized state. On a signed-header
  * document it must be signed by the document creator (`header.sig.publicKey`).
+ * A creator-less policy must include a grant permitting execute on the auth
+ * scope, or it would be born locked out.
  */
 export function applyInitializeAuthAction<TState extends PHBaseState>(
   document: PHDocument<TState>,
@@ -257,7 +259,6 @@ export function applyInitializeAuthAction<TState extends PHBaseState>(
   if (!Array.isArray(grants)) {
     throw new InvalidActionInputError({ grants: "must be an array" });
   }
-  assertValidInitialGrants(grants, document.header.documentType);
   const creatorKey = document.header.sig.publicKey;
   const signerKey = action.context?.signer?.app.key;
   // Any key material marks a signed header. Unsupported key types then fail
@@ -267,6 +268,7 @@ export function applyInitializeAuthAction<TState extends PHBaseState>(
     throw new AuthInitializerNotCreatorError(document.header.id);
   }
   const creator = hasCreator ? signerKey : undefined;
+  assertValidInitialGrants(grants, document.header.documentType, creator);
   return {
     ...document,
     state: {

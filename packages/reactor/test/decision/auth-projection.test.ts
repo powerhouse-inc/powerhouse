@@ -518,10 +518,13 @@ describe("the auth projection", () => {
     await settle(source, created.id);
     const docId = document.header.id;
 
+    // The deny grant alone is not administration, and genesis rejects a
+    // creator-less policy without one even with enforcement off.
     const init = await source.execute(docId, "main", [
       initializeAuth({
         version: 1,
         grants: [
+          AUTH_ADMIN_GRANT,
           {
             id: "g-lockdown",
             description: "nobody writes anything",

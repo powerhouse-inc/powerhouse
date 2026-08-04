@@ -118,7 +118,7 @@ describe("auth-scope action creators", () => {
 
 describe("auth-scope reducer", () => {
   it("INITIALIZE_AUTH sets the policy and records a hashed auth operation", () => {
-    const grant = makeGrant("g1");
+    const grant = adminGrant("g1");
     const doc = countReducer(
       initialDocument,
       initializeAuth({ version: 1, grants: [grant] }),
@@ -163,10 +163,13 @@ describe("auth-scope reducer", () => {
   it("initializes an unsigned-header document with no recorded creator", () => {
     const doc = countReducer(
       initialDocument,
-      initializeAuth({ version: 1, grants: [] }),
+      initializeAuth({ version: 1, grants: [adminGrant("admin")] }),
     );
     expect(doc.state.auth.creator).toBeUndefined();
-    expect(doc.state.auth).toEqual({ version: 1, grants: [] });
+    expect(doc.state.auth).toEqual({
+      version: 1,
+      grants: [adminGrant("admin")],
+    });
   });
 
   it("rejects INITIALIZE_AUTH with a version below 1 (0 means uninitialized)", () => {
@@ -191,10 +194,13 @@ describe("auth-scope reducer", () => {
   it("records an error operation for a second INITIALIZE_AUTH", () => {
     const doc = countReducer(
       initialDocument,
-      initializeAuth({ version: 1, grants: [] }),
+      initializeAuth({ version: 1, grants: [adminGrant("admin")] }),
     );
     const next = countReducer(doc, initializeAuth({ version: 2, grants: [] }));
-    expect(next.state.auth).toStrictEqual({ version: 1, grants: [] });
+    expect(next.state.auth).toStrictEqual({
+      version: 1,
+      grants: [adminGrant("admin")],
+    });
     expect(next.operations.auth).toHaveLength(2);
     expect(next.operations.auth[1].error).toContain("already initialized");
   });
@@ -202,7 +208,7 @@ describe("auth-scope reducer", () => {
   it("SET_GRANT appends a new grant and replaces an existing one in place", () => {
     let doc = countReducer(
       initialDocument,
-      initializeAuth({ version: 1, grants: [makeGrant("a"), makeGrant("b")] }),
+      initializeAuth({ version: 1, grants: [adminGrant("a"), makeGrant("b")] }),
     );
     doc = countReducer(doc, setGrant({ grant: makeGrant("c") }));
     expect(ids(doc)).toEqual(["a", "b", "c"]);
@@ -218,7 +224,7 @@ describe("auth-scope reducer", () => {
   it("REMOVE_GRANT deletes by id and records an error operation for an unknown id", () => {
     let doc = countReducer(
       initialDocument,
-      initializeAuth({ version: 1, grants: [makeGrant("a"), makeGrant("b")] }),
+      initializeAuth({ version: 1, grants: [makeGrant("a"), adminGrant("b")] }),
     );
     doc = countReducer(doc, removeGrant({ id: "a" }));
     expect(ids(doc)).toEqual(["b"]);
@@ -234,7 +240,7 @@ describe("auth-scope reducer", () => {
       initialDocument,
       initializeAuth({
         version: 1,
-        grants: [makeGrant("a"), makeGrant("b"), makeGrant("c")],
+        grants: [adminGrant("a"), makeGrant("b"), makeGrant("c")],
       }),
     );
     doc = countReducer(doc, moveGrant({ id: "c", index: 0 }));
@@ -264,7 +270,7 @@ describe("auth-scope reducer", () => {
   it("replays a history containing an errored auth operation without throwing", () => {
     let doc = countReducer(
       initialDocument,
-      initializeAuth({ version: 1, grants: [makeGrant("a")] }),
+      initializeAuth({ version: 1, grants: [adminGrant("a")] }),
     );
     doc = countReducer(doc, initializeAuth({ version: 2, grants: [] }));
     expect(doc.operations.auth[1].error).toBeTruthy();
@@ -287,7 +293,7 @@ describe("auth-scope reducer", () => {
   it("replays auth operations to reconstruct the auth state with matching hashes", () => {
     let doc = countReducer(
       initialDocument,
-      initializeAuth({ version: 1, grants: [makeGrant("a")] }),
+      initializeAuth({ version: 1, grants: [adminGrant("a")] }),
     );
     doc = countReducer(doc, setGrant({ grant: makeGrant("b") }));
     doc = countReducer(doc, moveGrant({ id: "b", index: 0 }));
@@ -420,5 +426,70 @@ describe("creator-less auth administration retention", () => {
     });
     const ops = next.operations.auth;
     expect(ops[ops.length - 1].error).toBeUndefined();
+  });
+});
+
+describe("creator-less auth administration at genesis", () => {
+  const GENESIS_MESSAGE =
+    "Initial grants include no grant permitting execute on the auth scope";
+
+  it("rejects a creator-less INITIALIZE_AUTH with no administration grant", () => {
+    const doc = countReducer(
+      initialDocument,
+      initializeAuth({ version: 1, grants: [makeGrant("reader")] }),
+    );
+    expect(doc.state.auth).toStrictEqual({ version: 0, grants: [] });
+    expect(doc.operations.auth[0].error).toContain(GENESIS_MESSAGE);
+  });
+
+  it("rejects a creator-less INITIALIZE_AUTH with no grants at all", () => {
+    const doc = countReducer(
+      initialDocument,
+      initializeAuth({ version: 1, grants: [] }),
+    );
+    expect(doc.state.auth).toStrictEqual({ version: 0, grants: [] });
+    expect(doc.operations.auth[0].error).toContain(GENESIS_MESSAGE);
+  });
+
+  it("accepts a creator-less INITIALIZE_AUTH carrying an administration grant", () => {
+    const doc = countReducer(
+      initialDocument,
+      initializeAuth({
+        version: 1,
+        grants: [adminGrant("admin"), makeGrant("reader")],
+      }),
+    );
+    expect(doc.state.auth.version).toBe(1);
+    expect(ids(doc)).toEqual(["admin", "reader"]);
+    expect(doc.operations.auth[0].error).toBeUndefined();
+  });
+
+  it("accepts an INITIALIZE_AUTH with a creator and no administration grant", () => {
+    const doc = countReducer(
+      signedDocument,
+      signedInit(CREATOR_DID, [makeGrant("reader")]),
+    );
+    expect(doc.state.auth.creator).toBe(CREATOR_DID);
+    expect(doc.state.auth.version).toBe(1);
+    expect(ids(doc)).toEqual(["reader"]);
+    expect(doc.operations.auth[0].error).toBeUndefined();
+  });
+
+  it("does not count a grant v1 never applies as administration at genesis", () => {
+    const doc = countReducer(
+      initialDocument,
+      initializeAuth({
+        version: 1,
+        grants: [
+          adminGrant("denied", { effect: "deny" }),
+          adminGrant("conditional", {
+            where: { exists: { attr: "subject.address" } },
+          }),
+          adminGrant("grouped", { principal: { group: "phd-admins" } }),
+        ],
+      }),
+    );
+    expect(doc.state.auth).toStrictEqual({ version: 0, grants: [] });
+    expect(doc.operations.auth[0].error).toContain(GENESIS_MESSAGE);
   });
 });
