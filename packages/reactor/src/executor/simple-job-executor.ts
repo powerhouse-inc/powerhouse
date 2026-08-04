@@ -1004,21 +1004,30 @@ export class SimpleJobExecutor implements IJobExecutor {
    * The scopes a re-evaluation pass visits, in a fixed order.
    *
    * The revisions map comes from a query with no ORDER BY, and the order is
-   * load-bearing: a denial this pass writes is visible to a later-visited scope
-   * and invisible to an earlier one. Deciding streams first, then the rest
-   * sorted, keeps the pass reproducible across replicas.
+   * load-bearing: each scope's pass re-reads the auth stream, and the walk skips
+   * an operation by its stored denial, so a denial this pass just wrote is
+   * visible to a later-visited scope and invisible to an earlier one. The model's
+   * own projection order leads, then the rest sorted, so the pass is reproducible
+   * across replicas and across runs.
    */
   private evaluationOrder(
     target: { documentId: string; branch: string },
     revision: Record<string, number>,
   ): string[] {
+    const definition = this.decisionModel(target);
+
     const evaluated = Object.keys(revision).filter((scope) =>
-      this.decisionModel(target).evaluatesScope(scope),
+      definition.evaluatesScope(scope),
     );
 
-    const leading = ["document", "auth"].filter((scope) =>
-      evaluated.includes(scope),
-    );
+    const leading: string[] = [];
+    for (const stream of staticReadSet(definition)) {
+      const scope = stream.query.scope;
+      if (evaluated.includes(scope) && !leading.includes(scope)) {
+        leading.push(scope);
+      }
+    }
+
     const rest = evaluated
       .filter((scope) => !leading.includes(scope))
       .sort((a, b) => a.localeCompare(b));

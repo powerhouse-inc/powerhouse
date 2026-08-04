@@ -2,6 +2,9 @@ import { setGrant } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_DRIVE_CONTAINER_TYPES } from "../../src/core/drive-container-types.js";
+import type { AuthDecisionModel } from "../../src/decision/auth-decision-model.js";
+import type { RegisteredDecisionModel } from "../../src/decision/registered-model.js";
+import type { DecisionModel, DecisionTarget } from "../../src/decision/types.js";
 import { SimpleJobExecutor } from "../../src/executor/simple-job-executor.js";
 import type { ReactorFeatureFlags } from "../../src/executor/types.js";
 import {
@@ -130,8 +133,10 @@ describe("re-evaluation scope order", () => {
       );
   });
 
-  async function run(featureFlags: Partial<ReactorFeatureFlags>) {
-    const executor = build(featureFlags);
+  async function run(
+    featureFlags: Partial<ReactorFeatureFlags>,
+    executor: SimpleJobExecutor = build(featureFlags),
+  ) {
     await executor.executeJob(
       createTestJob({
         documentId: DOC_ID,
@@ -156,6 +161,47 @@ describe("re-evaluation scope order", () => {
     await run({ documentDecisions: true, authEnforcement: true });
 
     expect(readScopes).toEqual(["document", "auth", "custom", "global"]);
+  });
+
+  // The leading scopes come from the model's projections, not a literal.
+  it("follows the model's own projection order", async () => {
+    function authFirstModel(
+      target: DecisionTarget,
+    ): DecisionModel<AuthDecisionModel> {
+      return {
+        projections: {
+          auth: {
+            decidingActions: [],
+            apply: (document) => document,
+            query: {
+              documentId: target.documentId,
+              branch: target.branch,
+              scope: "auth",
+            },
+          },
+          document: {
+            decidingActions: [],
+            apply: (document) => document,
+            query: {
+              documentId: target.documentId,
+              branch: target.branch,
+              scope: "document",
+            },
+          },
+        },
+        evaluatesScope: () => true,
+        decide: () => ({ decision: "allow" }),
+      };
+    }
+
+    const executor = build({ documentDecisions: true, authEnforcement: true });
+    (
+      executor as unknown as { decisionModel: RegisteredDecisionModel }
+    ).decisionModel = authFirstModel;
+
+    await run({ documentDecisions: true, authEnforcement: true }, executor);
+
+    expect(readScopes).toEqual(["auth", "document", "custom", "global"]);
   });
 
   // A pass is owed only for a scope the model reads.
