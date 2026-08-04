@@ -450,12 +450,15 @@ const defaultCreateState = <TState extends PHBaseState = PHBaseState>(
 /**
  * Records an operation in the history without applying it, which is what a
  * denied operation needs: it occupies its index and contributes no state.
+ *
+ * The scope defaults to the action's own, and is passed explicitly by a rebuild
+ * that is walking one stream and does not want to trust the action's copy.
  */
-function appendWithoutApplying<TState extends PHBaseState>(
+export function appendWithoutApplying<TState extends PHBaseState>(
   document: PHDocument<TState>,
   operation: Operation,
+  scope: string = operation.action.scope,
 ): PHDocument<TState> {
-  const scope = operation.action.scope;
   return {
     ...document,
     operations: {

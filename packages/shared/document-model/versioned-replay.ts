@@ -1,4 +1,5 @@
 import {
+  appendWithoutApplying,
   baseReducerVersion,
   hashDocumentStateForScope,
   replayDocument,
@@ -235,8 +236,12 @@ export function replayDocumentVersioned<TState extends PHBaseState>(
 
       for (const op of segOps) {
         // A denied operation holds its position without contributing state, the
-        // same way the reactor's own rebuild treats it.
-        if (!isDenied(op)) {
+        // same way the reactor's own rebuild treats it. It is still recorded, or
+        // the operation after it fails index validation and the timestamp remap
+        // below shifts onto the wrong rows.
+        if (isDenied(op)) {
+          document = appendWithoutApplying(document, op, s);
+        } else {
           document = reducer(document, op.action, dispatch, {
             ignoreSkipOperations: true,
             checkHashes,

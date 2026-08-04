@@ -6,6 +6,7 @@ import type {
   UpgradeTransition,
 } from "@powerhousedao/shared/document-model";
 import {
+  appendWithoutApplying,
   applyDeleteDocumentAction,
   applyUpgradeDocumentAction,
   baseReducerVersion,
@@ -57,25 +58,6 @@ function keyframeRevision(
   }
 
   return nextIndex - 1;
-}
-
-/**
- * Records a denied operation in the history without applying it. This is used
- * for auth-rejected operations, as these need to be recorded without being
- * applied.
- */
-function appendWithoutApplying(
-  document: PHDocument,
-  scope: string,
-  operation: Operation,
-): PHDocument {
-  return {
-    ...document,
-    operations: {
-      ...document.operations,
-      [scope]: [...(document.operations[scope] ?? []), operation],
-    },
-  };
 }
 
 function extractModuleVersion(doc: PHDocument): number | undefined {
@@ -860,7 +842,7 @@ export class KyselyWriteCache implements IWriteCache {
           // A denied operation still carries a potentially valid action, so
           // we must specifically skip without applying.
           if (isDenied(operation)) {
-            document = appendWithoutApplying(document, scope, operation);
+            document = appendWithoutApplying(document, operation, scope);
           } else {
             // Fail-fast: if reducer throws, error propagates immediately without caching partial state
             const protocolVersion = baseReducerVersion(document.header);
@@ -1067,7 +1049,7 @@ export class KyselyWriteCache implements IWriteCache {
         // A denied operation still carries a potentially valid action, so
         // we must specifically skip without applying.
         if (isDenied(operation)) {
-          document = appendWithoutApplying(document, scope, operation);
+          document = appendWithoutApplying(document, operation, scope);
         } else {
           // Fail-fast: if reducer throws, error propagates immediately without caching partial state
           const protocolVersion = baseReducerVersion(document.header);
