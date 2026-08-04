@@ -1,8 +1,5 @@
-import { upgradeDocument } from "@powerhousedao/reactor-browser";
-import { childLogger } from "document-model";
+import { showPHModal } from "@powerhousedao/reactor-browser";
 import { useTranslation } from "react-i18next";
-
-const logger = childLogger(["DocumentUpgradeToast"]);
 
 export const DocumentUpgradeToast = ({
   documentId,
@@ -18,9 +15,7 @@ export const DocumentUpgradeToast = ({
       </p>
       <button
         onClick={() => {
-          upgradeDocument(documentId).catch((error) =>
-            logger.error("Error upgrading document: @error", error),
-          );
+          showPHModal({ type: "confirmDocumentUpgrade", documentId });
         }}
         className="underline decoration-solid underline-offset-2"
       >

@@ -1,7 +1,7 @@
 import {
   setSelectedNode,
+  showPHModal,
   showRevisionHistory,
-  upgradeDocument,
   useDocumentVersionStatus,
   useDownloadDocument,
   useGetSwitchboardLink,
@@ -233,9 +233,10 @@ export function ToolbarUpgradeButton(props: ToolbarButtonProps) {
 
   const runUpgrade = () => {
     if (document) {
-      upgradeDocument(document.header.id).catch((error) =>
-        console.error("Error upgrading document:", error),
-      );
+      showPHModal({
+        type: "confirmDocumentUpgrade",
+        documentId: document.header.id,
+      });
     }
   };
   const onClick = makeOnClick(document, onClickOverride, runUpgrade);

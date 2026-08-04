@@ -37,6 +37,7 @@ export type PHModal =
       requiredVersion: number;
       availableVersions: number[];
     }
+  | { type: "confirmDocumentUpgrade"; documentId: string }
   | { type: "driveAuthRequired" }
   // Drive picker for documents launched via OS file association (PWA File
   // Handling). Payload-free: the pending files live in a Connect-side store.
