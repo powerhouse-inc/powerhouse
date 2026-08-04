@@ -1,4 +1,7 @@
-import { spawnAsync } from "@powerhousedao/shared/clis";
+import {
+  externalDevDependencies,
+  spawnAsync,
+} from "@powerhousedao/shared/clis";
 import { format as oxfmtFormat } from "oxfmt";
 import type { SourceFile } from "ts-morph";
 
@@ -35,6 +38,12 @@ export async function formatSafe(
   }
 }
 
+/**
+ * Formats the current working directory with the pinned oxfmt version.
+ * The pin matters when the project was scaffolded with skipInstall: with no
+ * local oxfmt, a bare `npx oxfmt` downloads the latest release, whose
+ * behavior can drift from the version the boilerplate depends on.
+ */
 export async function runOxfmt() {
-  await spawnAsync("npx", ["oxfmt", "."]);
+  await spawnAsync("npx", [`oxfmt@${externalDevDependencies.oxfmt}`, "."]);
 }
