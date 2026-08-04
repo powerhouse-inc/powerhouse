@@ -41,9 +41,11 @@ function EditorError({
       <div className="w-full max-w-lg rounded-lg border border-border bg-card p-6 text-foreground shadow-sm">
         <div className="mb-3 flex items-center gap-2">
           <Icon name="Error" className="size-5 shrink-0 text-destructive" />
-          <h3 className="text-lg font-semibold text-foreground">{title}</h3>
+          <h3 className="min-w-0 text-lg font-semibold wrap-break-word text-foreground">
+            {title}
+          </h3>
         </div>
-        {children}
+        <div className="wrap-break-word">{children}</div>
       </div>
     </div>
   );
