@@ -193,6 +193,64 @@ describe("the monotonic auth timestamp rule", () => {
     expect(firstOutOfOrderPair(authOps.auth.results)).toBeUndefined();
   });
 
+  // The strict pre-flight and the load path apply the same rule: a stream the
+  // pre-flight passes must load onto an empty replica without tripping it.
+  it("loads a stream the strict pre-flight passes onto an empty replica", async () => {
+    reactor = await build(true);
+    other = await build(true);
+
+    const document = createDocModelDocument({ id: "monotonic-preflight" });
+    const created = await reactor.create(document);
+    const createToken = await settle(reactor, created.id);
+    const docId = document.header.id;
+
+    const init = await reactor.execute(docId, "main", [
+      initializeAuth({
+        version: 1,
+        grants: [AUTH_ADMIN_GRANT, GLOBAL_GRANT],
+      }),
+    ]);
+    let token = await settle(reactor, init.id);
+
+    for (let i = 1; i <= 2; i++) {
+      vi.advanceTimersByTime(1_000);
+      const write = await reactor.execute(docId, "main", [
+        setGrant({ grant: { ...GLOBAL_GRANT, description: `v${i}` } }),
+      ]);
+      token = await settle(reactor, write.id);
+    }
+
+    const docOps = await reactor.getOperations(
+      docId,
+      { branch: "main", scopes: ["document"] },
+      undefined,
+      undefined,
+      createToken,
+    );
+    const authOps = await reactor.getOperations(
+      docId,
+      { branch: "main", scopes: ["auth"] },
+      undefined,
+      undefined,
+      token,
+    );
+
+    expect(
+      firstOutOfOrderPair(authOps.auth.results, { requireStrict: true }),
+    ).toBeUndefined();
+
+    const loadDoc = await other.load(docId, "main", docOps.document.results);
+    await settle(other, loadDoc.id);
+    const loadAuth = await other.load(docId, "main", authOps.auth.results);
+    await settle(other, loadAuth.id);
+
+    const otherAuth = await other.getOperations(docId, {
+      branch: "main",
+      scopes: ["auth"],
+    });
+    expect(otherAuth.auth.results).toHaveLength(3);
+  });
+
   /**
    * A re-append is not an arrival: it keeps its original timestamp, so the rule
    * must not apply or a refusal could never retract the tail it invalidated.

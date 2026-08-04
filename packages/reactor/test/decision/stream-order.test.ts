@@ -78,12 +78,39 @@ describe("firstOutOfOrderPair", () => {
     expect(firstOutOfOrderPair(operations)).toBeUndefined();
   });
 
-  it("keeps an equal timestamp in stored index order", () => {
+  it("reports a tie only when strictness is asked for", () => {
     const operations = [
       { ...op("first", 5), index: 0 },
       { ...op("second", 5), index: 1 },
     ] as Operation[];
 
     expect(firstOutOfOrderPair(operations)).toBeUndefined();
+    expect(firstOutOfOrderPair(operations, { requireStrict: true })).toMatchObject(
+      {
+        kind: "tied",
+        previous: { index: 0 },
+        current: { index: 1 },
+      },
+    );
+  });
+
+  it("reports descent whether or not strictness is asked for", () => {
+    const operations = [
+      { ...op("late", 10), index: 0 },
+      { ...op("early", 1), index: 1 },
+    ] as Operation[];
+
+    expect(firstOutOfOrderPair(operations)).toMatchObject({
+      kind: "descending",
+      previous: { index: 0 },
+      current: { index: 1 },
+    });
+    expect(firstOutOfOrderPair(operations, { requireStrict: true })).toMatchObject(
+      {
+        kind: "descending",
+        previous: { index: 0 },
+        current: { index: 1 },
+      },
+    );
   });
 });
