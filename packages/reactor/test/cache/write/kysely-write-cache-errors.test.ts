@@ -63,6 +63,7 @@ function createMockOperationStore(): IOperationStore {
       revision: {},
       latestTimestamp: new Date().toISOString(),
     }),
+    getStreamLatestTimestamp: vi.fn().mockResolvedValue(undefined),
   };
 }
 

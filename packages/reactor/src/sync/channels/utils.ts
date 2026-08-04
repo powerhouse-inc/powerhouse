@@ -64,7 +64,11 @@ export function serializeEnvelope(envelope: SyncEnvelope): unknown {
         hash: opWithContext.operation.hash,
         skip: opWithContext.operation.skip,
         error: opWithContext.operation.error,
-        deniedReason: opWithContext.operation.deniedReason,
+        // Omitted while undefined, so a peer whose schema predates the field only
+        // sees it on an operation that was actually denied.
+        ...(opWithContext.operation.deniedReason !== undefined
+          ? { deniedReason: opWithContext.operation.deniedReason }
+          : {}),
         id: opWithContext.operation.id,
         action: serializeAction(opWithContext.operation.action),
       },
@@ -96,27 +100,55 @@ function deserializeSignature(sig: Signature | string): Signature {
 }
 
 /**
- * Deserializes signatures in an operation's signer context from strings back to tuples.
- *
- * When operations are transported via GraphQL, signatures are serialized as comma-separated
- * strings. This function restores them to the Signature tuple format required for verification.
+ * The nullable operation fields as GraphQL delivers them: a selected field
+ * arrives as null rather than absent, which `Operation` does not admit.
  */
-function deserializeOperationSignatures(
+type WireNullableFields = {
+  error?: string | null;
+  deniedReason?: string | null;
+};
+
+/**
+ * `isDenied` tests strictly against undefined, so a null left in place would mark
+ * every synced operation denied. The key is removed rather than set to undefined,
+ * so an operation that arrived without it stays identical to the one sent.
+ */
+function normalizeAbsentFields(operation: Operation): Operation {
+  const wire: WireNullableFields = operation;
+  if (wire.error !== null && wire.deniedReason !== null) {
+    return operation;
+  }
+
+  const normalized = { ...operation };
+  if (wire.error === null) {
+    delete normalized.error;
+  }
+  if (wire.deniedReason === null) {
+    delete normalized.deniedReason;
+  }
+
+  return normalized;
+}
+
+/** Restores signature tuples and null-valued optional fields to undefined. */
+function deserializeOperation(
   opWithContext: OperationWithContext,
 ): OperationWithContext {
-  const signer = opWithContext.operation.action.context?.signer;
+  const operation = normalizeAbsentFields(opWithContext.operation);
+  const signer = operation.action.context?.signer;
+
   if (!signer?.signatures || signer.signatures.length === 0) {
-    return opWithContext;
+    return { ...opWithContext, operation };
   }
 
   const deserializedSignatures = signer.signatures.map(deserializeSignature);
 
   const deserializedOperation: Operation = {
-    ...opWithContext.operation,
+    ...operation,
     action: {
-      ...opWithContext.operation.action,
+      ...operation.action,
       context: {
-        ...opWithContext.operation.action.context,
+        ...operation.action.context,
         signer: {
           ...signer,
           signatures: deserializedSignatures,
@@ -154,9 +186,7 @@ export function envelopeToSyncOperation(
     );
   }
 
-  const deserializedOperations = envelope.operations.map(
-    deserializeOperationSignatures,
-  );
+  const deserializedOperations = envelope.operations.map(deserializeOperation);
   const firstOp = deserializedOperations[0];
   const documentId = firstOp.context.documentId;
   const branch = firstOp.context.branch;
@@ -198,9 +228,7 @@ export function envelopesToSyncOperations(
     return [];
   }
 
-  const deserializedOps = envelope.operations.map(
-    deserializeOperationSignatures,
-  );
+  const deserializedOps = envelope.operations.map(deserializeOperation);
   const batches = batchOperationsByDocument(deserializedOps);
 
   return batches.map((batch) => {

@@ -11,6 +11,7 @@ import { JobQueueState, RetryAccounting } from "../../../src/queue/types.js";
 import type { IDocumentModelResolver } from "../../../src/registry/document-model-resolver.js";
 import { ModuleNotFoundError } from "../../../src/registry/errors.js";
 import {
+  AuthTimestampNotMonotonicError,
   DocumentDeletedError,
   DocumentNotFoundError,
 } from "../../../src/shared/errors.js";
@@ -290,6 +291,57 @@ describe("JobResultHandler", () => {
       const result: JobResult = { success: false, job, error };
 
       await handler.handleResult(handle, result, callbacks());
+
+      expect(queue.retryJob).not.toHaveBeenCalled();
+    });
+  });
+
+  /**
+   * The rule is deterministic on every attempt, so a retry only re-runs the whole
+   * load to fail identically. It has to be terminal or it burns every retry.
+   */
+  describe("AuthTimestampNotMonotonicError", () => {
+    function violation(): AuthTimestampNotMonotonicError {
+      return new AuthTimestampNotMonotonicError(
+        "held-doc",
+        "main",
+        "2026-01-01T00:00:01.000Z",
+        "2026-01-01T00:00:02.000Z",
+      );
+    }
+
+    it("marks failed, emits JOB_FAILED, and calls handle.fail()", async () => {
+      const error = violation();
+      const job = createTestJob({ documentId: "held-doc", maxRetries: 3 });
+      const handle = createTestHandle(job);
+
+      await handler.handleResult(
+        handle,
+        { success: false, job, error },
+        callbacks(),
+      );
+
+      expect(jobTracker.markFailed).toHaveBeenCalledWith(
+        job.id,
+        expect.any(Object),
+        job,
+      );
+      expect(eventBus.emit).toHaveBeenCalledWith(
+        ReactorEventTypes.JOB_FAILED,
+        expect.objectContaining({ jobId: job.id, error }),
+      );
+      expect(handle.fail).toHaveBeenCalledTimes(1);
+    });
+
+    it("consumes no retry", async () => {
+      const job = createTestJob({ retryCount: 0, maxRetries: 5 });
+      const handle = createTestHandle(job);
+
+      await handler.handleResult(
+        handle,
+        { success: false, job, error: violation() },
+        callbacks(),
+      );
 
       expect(queue.retryJob).not.toHaveBeenCalled();
     });

@@ -1,3 +1,5 @@
+import type { Operation } from "@powerhousedao/shared/document-model";
+
 export type KeyframeValidationIssue = {
   scope: string;
   branch: string;
@@ -13,11 +15,20 @@ export type SnapshotValidationIssue = {
   replayedHash: string;
 };
 
+/** Effective operations whose stored order contradicts their timestamps. */
+export type StreamOrderIssue = {
+  scope: string;
+  branch: string;
+  previous: Operation;
+  current: Operation;
+};
+
 export type ValidationResult = {
   documentId: string;
   isConsistent: boolean;
   keyframeIssues: KeyframeValidationIssue[];
   snapshotIssues: SnapshotValidationIssue[];
+  streamOrderIssues: StreamOrderIssue[];
 };
 
 export type RebuildResult = {

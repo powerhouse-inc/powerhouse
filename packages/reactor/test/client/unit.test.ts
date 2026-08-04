@@ -1,13 +1,19 @@
 import type {
   Action,
+  AuthSubject,
   DocumentModelModule,
   ISigner,
   Operation,
+  PHAuthState,
   PHDocument,
+  PHDocumentState,
 } from "@powerhousedao/shared/document-model";
+import { MAX_SUPPORTED_AUTH_VERSION } from "@powerhousedao/shared/document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { encodeCompositeCursor } from "../../src/client/cursor.js";
 import { ReactorClient } from "../../src/client/reactor-client.js";
+import { canReadScope } from "../../src/client/util.js";
+import { authDecisionModel } from "../../src/decision/auth-decision-model.js";
 import type { IReactorClient } from "../../src/client/types.js";
 import type { BatchExecutionResult, IReactor } from "../../src/core/types.js";
 import type { IJobAwaiter } from "../../src/shared/awaiter.js";
@@ -1920,6 +1926,226 @@ describe("ReactorClient Unit Tests", () => {
         undefined,
         undefined,
       );
+    });
+
+    /**
+     * A subscription serves documents, so it is a read. The filter lives on the
+     * client because the read models feeding it see everything.
+     */
+    describe("subscribe", () => {
+      it("filters unreadable scopes out of the created callback", async () => {
+        const created = vi.fn();
+        let fire: ((result: { results: string[] }) => void) | undefined;
+        const manager = createMockSubscriptionManager({
+          onDocumentCreated: vi.fn((cb: (r: { results: string[] }) => void) => {
+            fire = cb;
+            return () => {};
+          }) as never,
+        });
+
+        const subscribing = new ReactorClient(
+          createMockLogger(),
+          mockReactor,
+          createMockSigner(),
+          manager,
+          mockJobAwaiter,
+          mockDocumentIndexer,
+          mockDocumentView,
+        );
+
+        vi.mocked(mockReactor.get).mockResolvedValue(
+          docWithScopes("d1", readGlobalPolicy, {
+            global: { x: 1 },
+            local: { y: 2 },
+          }),
+        );
+
+        subscribing.subscribe({}, created, {
+          subject: { address: "0xreader" },
+        });
+
+        fire?.({ results: ["d1"] });
+        await vi.waitFor(() => expect(created).toHaveBeenCalled());
+
+        const event = created.mock.calls[0][0] as {
+          documents: PHDocument[];
+        };
+        expect(Object.keys(event.documents[0].state).sort()).toEqual([
+          "auth",
+          "document",
+          "global",
+        ]);
+      });
+
+      it("filters unreadable scopes out of the updated callback", () => {
+        const updated = vi.fn();
+        let fire: ((result: { results: PHDocument[] }) => void) | undefined;
+        const manager = createMockSubscriptionManager({
+          onDocumentStateUpdated: vi.fn(
+            (cb: (r: { results: PHDocument[] }) => void) => {
+              fire = cb;
+              return () => {};
+            },
+          ) as never,
+        });
+
+        const subscribing = new ReactorClient(
+          createMockLogger(),
+          mockReactor,
+          createMockSigner(),
+          manager,
+          mockJobAwaiter,
+          mockDocumentIndexer,
+          mockDocumentView,
+        );
+
+        subscribing.subscribe({}, updated, {
+          subject: { address: "0xreader" },
+        });
+
+        fire?.({
+          results: [
+            docWithScopes("d1", readGlobalPolicy, {
+              global: { x: 1 },
+              local: { y: 2 },
+            }),
+          ],
+        });
+
+        const event = updated.mock.calls[0][0] as { documents: PHDocument[] };
+        expect(Object.keys(event.documents[0].state).sort()).toEqual([
+          "auth",
+          "document",
+          "global",
+        ]);
+      });
+    });
+
+    it("forwards a view when resolving an identifier", async () => {
+      vi.mocked(mockDocumentView.resolveIdOrSlug).mockResolvedValue("d1");
+
+      await client.resolveIdOrSlug("some-slug", { branch: "other" });
+
+      expect(vi.mocked(mockDocumentView.resolveIdOrSlug)).toHaveBeenCalledWith(
+        "some-slug",
+        { branch: "other" },
+        undefined,
+        undefined,
+      );
+    });
+
+    /**
+     * The read gate and the decision model must stay the same algorithm plus one
+     * named carve-out, or a document becomes readable on one path and not the
+     * other. This is what holds them together.
+     */
+    describe("agreement with the decision model", () => {
+      const uninitialized: PHAuthState = { version: 0, grants: [] };
+      const allowAll: PHAuthState = {
+        version: 1,
+        grants: [
+          {
+            id: "g-open",
+            description: "anyone reads anything",
+            effect: "allow",
+            principal: { anyone: true },
+            capability: { can: "read", scope: "*" },
+          },
+        ],
+      };
+      const denyAll: PHAuthState = { version: 1, grants: [] };
+      const addressMatched: PHAuthState =
+        readGlobalPolicy as unknown as PHAuthState;
+      const versionTooNew: PHAuthState = {
+        version: MAX_SUPPORTED_AUTH_VERSION + 1,
+        grants: [
+          {
+            id: "g-open",
+            description: "anyone reads anything",
+            effect: "allow",
+            principal: { anyone: true },
+            capability: { can: "read", scope: "*" },
+          },
+        ],
+      };
+
+      const policies: Array<[string, PHAuthState]> = [
+        ["uninitialized", uninitialized],
+        ["allow-all", allowAll],
+        ["deny-all", denyAll],
+        ["address-matched", addressMatched],
+        ["version-too-new", versionTooNew],
+      ];
+      const subjects: Array<[string, AuthSubject]> = [
+        ["the matched reader", { address: "0xreader" }],
+        ["another address", { address: "0xsomeone-else" }],
+        ["anonymous", {}],
+      ];
+
+      const definition = authDecisionModel({
+        documentId: "d1",
+        branch: "main",
+      });
+
+      function modelSays(
+        auth: PHAuthState,
+        subject: AuthSubject,
+        scope: string,
+        isDeleted: boolean,
+      ): boolean {
+        return (
+          definition.decide(
+            {
+              document: { isDeleted } as never as PHDocumentState,
+              auth,
+            },
+            subject,
+            { verb: "read", scope },
+            { scopeState: undefined },
+          ).decision === "allow"
+        );
+      }
+
+      it.each(policies)(
+        "agrees with the model on a domain scope under a %s policy",
+        (_name, auth) => {
+          for (const [, subject] of subjects) {
+            for (const isDeleted of [false, true]) {
+              expect(canReadScope(auth, subject, "global")).toBe(
+                modelSays(auth, subject, "global", isDeleted),
+              );
+              expect(canReadScope(auth, subject, "custom")).toBe(
+                modelSays(auth, subject, "custom", isDeleted),
+              );
+            }
+          }
+        },
+      );
+
+      /**
+       * The one carve-out, by name. A peer that synced a document without its
+       * policy would see an open auth scope and diverge permanently.
+       */
+      it.each(["auth", "document"])(
+        "always serves the %s scope, whatever the policy says",
+        (scope) => {
+          for (const [, auth] of policies) {
+            for (const [, subject] of subjects) {
+              expect(canReadScope(auth, subject, scope)).toBe(true);
+            }
+          }
+        },
+      );
+
+      // A read has no position, so the positional deletion step does not gate it.
+      it("does not let deletion change a read decision", () => {
+        expect(modelSays(allowAll, {}, "global", true)).toBe(
+          modelSays(allowAll, {}, "global", false),
+        );
+        expect(modelSays(denyAll, {}, "global", true)).toBe(
+          modelSays(denyAll, {}, "global", false),
+        );
+      });
     });
   });
 });

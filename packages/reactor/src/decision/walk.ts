@@ -13,14 +13,19 @@ import { comparePositions, mergeByPosition } from "./merged-order.js";
  * A single forward pass is only correct while a stream's effective operations
  * are ordered.
  */
-function assertPositionOrder(streamKey: string, operations: Operation[]): void {
+function assertPositionOrder(
+  streamKey: string,
+  scope: string,
+  operations: Operation[],
+): void {
   for (let i = 1; i < operations.length; i++) {
     const previous = operations[i - 1];
     const current = operations[i];
+    // The same scope on both sides, so only the intra-stream rules apply.
     if (
       comparePositions(
-        { streamKey, operation: previous },
-        { streamKey, operation: current },
+        { streamKey, scope, operation: previous },
+        { streamKey, scope, operation: current },
       ) > 0
     ) {
       throw new Error(
@@ -33,6 +38,8 @@ function assertPositionOrder(streamKey: string, operations: Operation[]): void {
 /** One read-set stream, with the state it holds before any of its operations. */
 export type WalkStream = {
   streamKey: string;
+  /** Decides a cross-stream timestamp tie, which an auth operation wins. */
+  scope: string;
   document: PHDocument;
   apply: ApplyOperation;
   /** The stream's stored operations. Order and skips are resolved internally. */
@@ -55,22 +62,29 @@ export type WalkPosition = {
 /**
  * Visits every operation in the read-set once, in the order their positions
  * fall, and hands back the state each stream held just before it. That state is
- * what a decision at that operation reads: everything ahead of it has been
- * applied and it has not.
+ * what a decision at that operation reads.
  *
  * Skips are resolved first (i.e. this is performed on a garbage collected
  * stream), which means we can do a single forward pass.
  *
- * A denied operation is visited but not applied.
+ * An operation that contributes no state, whether denied or holding a reducer
+ * error, is visited but not applied (this matches the write cache's rebuild).
+ *
+ * The consumer sends back whether it refused the operation it was handed: a
+ * refusal this pass produced must suppress it the same way a stored one does.
  */
 export function* walkByPosition(
   streams: WalkStream[],
-): Generator<WalkPosition> {
+): Generator<WalkPosition, void, boolean> {
   const merged = mergeByPosition(
     streams.map((stream) => {
       const operations = garbageCollect(sortOperations([...stream.operations]));
-      assertPositionOrder(stream.streamKey, operations);
-      return { streamKey: stream.streamKey, operations };
+      assertPositionOrder(stream.streamKey, stream.scope, operations);
+      return {
+        streamKey: stream.streamKey,
+        scope: stream.scope,
+        operations,
+      };
     }),
   );
 
@@ -80,9 +94,9 @@ export function* walkByPosition(
   );
 
   for (const { streamKey, operation } of merged) {
-    yield { streamKey, operation, states: new Map(states) };
+    const deniedNow = yield { streamKey, operation, states: new Map(states) };
 
-    if (isDenied(operation)) {
+    if (deniedNow || operation.error !== undefined || isDenied(operation)) {
       continue;
     }
 

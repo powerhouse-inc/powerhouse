@@ -13,6 +13,7 @@ export const FLAG_PREREQUISITES: Record<
   readonly (keyof ReactorFeatureFlags)[]
 > = {
   documentDecisions: [],
+  authEnforcement: ["documentDecisions"],
 };
 
 /**

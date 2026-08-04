@@ -7,6 +7,7 @@ import {
 } from "./documents.js";
 import { HashMismatchError } from "./errors.js";
 import type { DocumentOperations, Operation } from "./operations.js";
+import { isDenied } from "./operations.js";
 import { backfillAuthState } from "./state.js";
 import type { PHBaseState } from "./state.js";
 import type {
@@ -233,13 +234,17 @@ export function replayDocumentVersioned<TState extends PHBaseState>(
       const segOps = ops.slice(segStart, segEnd);
 
       for (const op of segOps) {
-        document = reducer(document, op.action, dispatch, {
-          ignoreSkipOperations: true,
-          checkHashes,
-          skipIndexValidation,
-          replayOptions: { operation: op },
-          protocolVersion,
-        }) as PHDocument<TState>;
+        // A denied operation holds its position without contributing state, the
+        // same way the reactor's own rebuild treats it.
+        if (!isDenied(op)) {
+          document = reducer(document, op.action, dispatch, {
+            ignoreSkipOperations: true,
+            checkHashes,
+            skipIndexValidation,
+            replayOptions: { operation: op },
+            protocolVersion,
+          }) as PHDocument<TState>;
+        }
         segmentEndHashPerScope.set(s, hashDocumentStateForScope(document, s));
       }
     }
@@ -259,6 +264,10 @@ export function replayDocumentVersioned<TState extends PHBaseState>(
         spineActionType === "CREATE_DOCUMENT" ||
         spineActionType === "UPGRADE_DOCUMENT"
       ) {
+        continue;
+      }
+      // As above: refused, so it occupies its position and changes nothing.
+      if (isDenied(spineOp)) {
         continue;
       }
       if (spineActionType === "DELETE_DOCUMENT") {

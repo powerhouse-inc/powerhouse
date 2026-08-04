@@ -6,7 +6,11 @@ import type {
   PHAuthState,
   Principal,
 } from "@powerhousedao/shared/document-model";
-import { decide } from "@powerhousedao/shared/document-model";
+import {
+  decide,
+  evaluate,
+  MAX_SUPPORTED_AUTH_VERSION,
+} from "@powerhousedao/shared/document-model";
 
 function grant(
   id: string,
@@ -263,5 +267,113 @@ describe("decide", () => {
       ),
     );
     expect(decide(matchPolicy, { address: "0xabc" }, execGlobal)).toBe("deny");
+  });
+});
+
+/**
+ * `decide` reports only the outcome. An operation records why it was refused, so
+ * each of the policy's ways of refusing has to be distinguishable.
+ */
+describe("evaluate", () => {
+  it("allows an uninitialized policy with no refusal", () => {
+    expect(evaluate({ version: 0, grants: [] }, {}, execGlobal)).toEqual({
+      decision: "allow",
+    });
+  });
+
+  it("names an unsupported policy version", () => {
+    const futurePolicy: PHAuthState = {
+      version: MAX_SUPPORTED_AUTH_VERSION + 1,
+      grants: [
+        grant("g", "allow", { anyone: true }, { can: "execute", scope: "*" }),
+      ],
+    };
+
+    expect(evaluate(futurePolicy, { address: "0xabc" }, execGlobal)).toEqual({
+      decision: "deny",
+      refusal: "version-unsupported",
+    });
+  });
+
+  it("keeps the creator carve-out ahead of the version gate", () => {
+    const futurePolicy: PHAuthState = {
+      version: MAX_SUPPORTED_AUTH_VERSION + 1,
+      grants: [],
+      creator: "did:key:zCreator",
+    };
+
+    expect(
+      evaluate(
+        futurePolicy,
+        { key: "did:key:zCreator" },
+        { verb: "execute", scope: "auth", operation: "SET_GRANT" },
+      ),
+    ).toEqual({ decision: "allow" });
+  });
+
+  it("distinguishes no applicable grant from an explicit deny", () => {
+    const noneApply = policy(
+      grant(
+        "g-other",
+        "allow",
+        { address: "0xsomeone-else" },
+        { can: "execute", scope: "global" },
+      ),
+    );
+    expect(evaluate(noneApply, { address: "0xabc" }, execGlobal)).toEqual({
+      decision: "deny",
+      refusal: "no-applicable-grant",
+    });
+
+    const explicitDeny = policy(
+      grant("g-allow", "allow", { anyone: true }, { can: "execute", scope: "*" }),
+      grant("g-deny", "deny", { anyone: true }, { can: "execute", scope: "*" }),
+    );
+    expect(evaluate(explicitDeny, { address: "0xabc" }, execGlobal)).toEqual({
+      decision: "deny",
+      refusal: "denied-by-grant",
+      grantId: "g-deny",
+    });
+  });
+
+  it("reports an empty grant list as no applicable grant", () => {
+    expect(evaluate(policy(), { address: "0xabc" }, execGlobal)).toEqual({
+      decision: "deny",
+      refusal: "no-applicable-grant",
+    });
+  });
+
+  // The two must not drift: decide is evaluate with the reason dropped.
+  it("agrees with decide on every case in this file's fixtures", () => {
+    const cases: Array<[PHAuthState, { address?: string; key?: string }]> = [
+      [{ version: 0, grants: [] }, {}],
+      [policy(), { address: "0xabc" }],
+      [
+        policy(
+          grant("g", "allow", { anyone: true }, { can: "execute", scope: "*" }),
+        ),
+        { address: "0xabc" },
+      ],
+      [
+        policy(
+          grant("g", "deny", { anyone: true }, { can: "execute", scope: "*" }),
+        ),
+        { address: "0xabc" },
+      ],
+      [
+        {
+          version: MAX_SUPPORTED_AUTH_VERSION + 1,
+          grants: [],
+          creator: "did:key:zCreator",
+        },
+        { key: "did:key:zCreator" },
+      ],
+    ];
+
+    for (const [auth, subject] of cases) {
+      expect(evaluate(auth, subject, execGlobal).decision).toBe(
+        decide(auth, subject, execGlobal),
+      );
+    }
   });
 });

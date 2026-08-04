@@ -2,7 +2,12 @@
 // by every replica; changing any of them requires a new policy version.
 
 import { z } from "zod";
-import type { AuthDecision, AuthRequest, AuthSubject } from "./auth.js";
+import type {
+  AuthDecision,
+  AuthEvaluation,
+  AuthRequest,
+  AuthSubject,
+} from "./auth.js";
 import { groupDocumentType } from "./document-type.js";
 import type { Capability, Grant, Principal } from "./state.js";
 
@@ -398,16 +403,16 @@ function principalMatches(principal: Principal, subject: AuthSubject): boolean {
 }
 
 /**
- * Evaluates a v1 grant stack: default deny, last applicable grant wins.
- * Group and match principals and `where` conditions are not evaluated yet; a
- * grant that uses any of them never applies.
+ * Evaluates a v1 grant stack: default deny, last applicable grant wins, and
+ * reports which grant decided it. Group and match principals and `where`
+ * conditions are not evaluated yet; a grant that uses any of them never applies.
  */
-export function evaluateGrants(
+export function evaluateGrantStack(
   grants: Grant[],
   subject: AuthSubject,
   request: AuthRequest,
-): AuthDecision {
-  let decision: AuthDecision = "deny";
+): AuthEvaluation {
+  let applicable: Grant | undefined;
   for (const grant of grants) {
     // `where` is not evaluated yet; a conditional grant never applies.
     if (grant.where !== undefined) {
@@ -417,8 +422,31 @@ export function evaluateGrants(
       capabilityCovers(grant.capability, request) &&
       principalMatches(grant.principal, subject)
     ) {
-      decision = grant.effect;
+      applicable = grant;
     }
   }
-  return decision;
+
+  if (applicable === undefined) {
+    return { decision: "deny", refusal: "no-applicable-grant" };
+  }
+  if (applicable.effect === "deny") {
+    return {
+      decision: "deny",
+      refusal: "denied-by-grant",
+      grantId: applicable.id,
+    };
+  }
+  return { decision: "allow" };
+}
+
+/**
+ * Evaluates a v1 grant stack: default deny, last applicable grant wins. This is
+ * {@link evaluateGrantStack} with the reason dropped.
+ */
+export function evaluateGrants(
+  grants: Grant[],
+  subject: AuthSubject,
+  request: AuthRequest,
+): AuthDecision {
+  return evaluateGrantStack(grants, subject, request).decision;
 }

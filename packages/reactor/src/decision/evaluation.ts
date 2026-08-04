@@ -1,4 +1,5 @@
 import type {
+  AuthSubject,
   Operation,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
@@ -28,6 +29,15 @@ function isDecidingAction(
   return readSet.some((stream) =>
     stream.decidingActions.includes(operation.action.type),
   );
+}
+
+/**
+ * Who an operation acts as. A replayed operation is evaluated as its own signer,
+ * so an address-scoped policy does not deny its own author's history.
+ */
+function subjectOf(operation: Operation): AuthSubject {
+  const signer = operation.action.context?.signer;
+  return { address: signer?.user.address, key: signer?.app.key };
 }
 
 /**
@@ -89,7 +99,7 @@ export async function evaluateByPosition<M>(
           stream.query.documentId,
           stream.query.scope,
           stream.query.branch,
-          0,
+          -1,
           { actionTypes: stream.decidingActions },
           undefined,
           signal,
@@ -123,16 +133,18 @@ export async function evaluateByPosition<M>(
   for (const read of readStreams) {
     const isWritten = read.stream === writtenProjection;
 
-    // Each stream is walked from the state it held before any of its operations.
+    // Walked from before any of its operations. On the auth stream index 0 is the
+    // genesis policy, which a bound of 0 would pre-apply without ever visiting.
     const before = await writeCache.getState(
       read.stream.query.documentId,
       read.stream.query.scope,
       read.stream.query.branch,
-      0,
+      -1,
       signal,
     );
     walked.push({
       streamKey: streamKey(read.stream.query),
+      scope: read.stream.query.scope,
       document: before,
       // Walked in the stream they are written to, so a delete among them is
       // seen by the operations after it.
@@ -148,6 +160,7 @@ export async function evaluateByPosition<M>(
     // contributing state to any of them.
     walked.push({
       streamKey: EVALUATED_ONLY,
+      scope,
       document: walked[0].document,
       operations,
       apply: (document) => document,
@@ -156,22 +169,30 @@ export async function evaluateByPosition<M>(
 
   const reasons = new Map<string, string | undefined>();
 
-  for (const step of walkByPosition(walked)) {
-    if (!evaluating.has(step.operation.id)) {
+  // By hand, because for...of cannot send the verdict back into the generator.
+  const walk = walkByPosition(walked);
+  let step = walk.next(false);
+  while (!step.done) {
+    const position = step.value;
+    if (!evaluating.has(position.operation.id)) {
+      step = walk.next(false);
       continue;
     }
 
     const evaluation = definition.decide(
-      modelAt<M>(readSet, step.states),
-      { address: undefined, key: undefined },
-      { verb: "execute", scope, operation: step.operation.action.type },
+      modelAt<M>(readSet, position.states),
+      subjectOf(position.operation),
+      {
+        verb: "execute",
+        scope: position.operation.action.scope,
+        operation: position.operation.action.type,
+      },
       { scopeState: undefined },
     );
 
-    reasons.set(
-      step.operation.id,
-      evaluation.decision === "deny" ? evaluation.reason : undefined,
-    );
+    const denied = evaluation.decision === "deny";
+    reasons.set(position.operation.id, denied ? evaluation.reason : undefined);
+    step = walk.next(denied);
   }
 
   return operations.map((operation) => reasons.get(operation.id));

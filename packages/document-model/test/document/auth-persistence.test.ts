@@ -217,6 +217,61 @@ describe("auth persistence through zip save/load", () => {
     expect(loaded.operations.auth?.[2].error).toBeTruthy();
   });
 
+  /**
+   * A document loaded from a file has to reach the same state the reactor that
+   * wrote it holds.
+   */
+  it("round-trips a history containing a denied auth operation without applying it", async () => {
+    const liveDoc = buildLiveDocument();
+
+    // A refused SET_GRANT: recorded, hashed over the standing state.
+    const authOps = liveDoc.operations.auth ?? [];
+    const standing = authOps[authOps.length - 1];
+    const deniedDoc = {
+      ...liveDoc,
+      operations: {
+        ...liveDoc.operations,
+        auth: [
+          ...authOps,
+          {
+            ...standing,
+            id: "op-denied-grant",
+            index: authOps.length,
+            action: {
+              ...standing.action,
+              id: "a-denied-grant",
+              type: "SET_GRANT",
+              input: { grant: makeGrant("denied") },
+            },
+            hash: standing.hash,
+            deniedReason: "no grant permits this operation",
+          },
+        ],
+      },
+    };
+
+    const zipData = await createZip(deniedDoc);
+
+    // The legacy path.
+    const loaded = await baseLoadFromInput<CounterState>(
+      zipData,
+      counterReducer,
+    );
+    expect(loaded.state.auth.grants.map((g) => g.id)).toEqual(["a", "b"]);
+    expect(loaded.operations.auth?.[2].deniedReason).toBe(
+      "no grant permits this operation",
+    );
+
+    // And the versioned path, which is what production calls.
+    const versioned = await baseLoadFromInputVersioned<CounterState>(zipData, {
+      reducers: { 1: r(counterReducer) },
+    });
+    expect(versioned.state.auth.grants.map((g) => g.id)).toEqual(["a", "b"]);
+    expect(versioned.operations.auth?.[2].deniedReason).toBe(
+      "no grant permits this operation",
+    );
+  });
+
   it("loads a legacy zip with no auth operations as an uninitialized policy", async () => {
     let doc = baseCreateDocument<CounterState>(
       createCounterState,

@@ -56,6 +56,79 @@ export class AuthorizationDeniedError extends Error {
 }
 
 /**
+ * An auth operation did not strictly exceed the newest timestamp in its stream.
+ *
+ * Terminal and asymmetric by design: no ordering rule can reconcile two replicas
+ * that each accepted an auth operation offline, because either order hands one
+ * authority the other never granted, so the replica ahead holds the arrival.
+ */
+export class AuthTimestampNotMonotonicError extends Error {
+  public readonly documentId: string;
+  public readonly branch: string;
+  public readonly timestampUtcMs: string;
+  public readonly newestTimestampUtcMs: string;
+
+  constructor(
+    documentId: string,
+    branch: string,
+    timestampUtcMs: string,
+    newestTimestampUtcMs: string,
+  ) {
+    super(
+      `Auth timestamp not monotonic: ${timestampUtcMs} does not exceed ${newestTimestampUtcMs} in the auth stream of document ${documentId} on branch ${branch}`,
+    );
+    this.name = "AuthTimestampNotMonotonicError";
+    this.documentId = documentId;
+    this.branch = branch;
+    this.timestampUtcMs = timestampUtcMs;
+    this.newestTimestampUtcMs = newestTimestampUtcMs;
+
+    Error.captureStackTrace(this, AuthTimestampNotMonotonicError);
+  }
+
+  static isError(error: unknown): error is AuthTimestampNotMonotonicError {
+    return (
+      Error.isError(error) && error.name === "AuthTimestampNotMonotonicError"
+    );
+  }
+}
+
+/**
+ * A load would move more operations than the bound allows, indicating a real
+ * divergence between local and incoming history. Counts only first-time moves,
+ * so a re-evaluation pass's re-appends do not make busy documents
+ * revocation-proof. Terminal: the condition is deterministic.
+ */
+export class ExcessiveReshuffleError extends Error {
+  public readonly documentId: string;
+  public readonly scope: string;
+  public readonly count: number;
+  public readonly threshold: number;
+
+  constructor(
+    documentId: string,
+    scope: string,
+    count: number,
+    threshold: number,
+  ) {
+    super(
+      `Excessive reshuffle detected: ${count} operations in scope "${scope}" of document ${documentId} exceeds the threshold of ${threshold}. This indicates a significant divergence between local and incoming operations.`,
+    );
+    this.name = "ExcessiveReshuffleError";
+    this.documentId = documentId;
+    this.scope = scope;
+    this.count = count;
+    this.threshold = threshold;
+
+    Error.captureStackTrace(this, ExcessiveReshuffleError);
+  }
+
+  static isError(error: unknown): error is ExcessiveReshuffleError {
+    return Error.isError(error) && error.name === "ExcessiveReshuffleError";
+  }
+}
+
+/**
  * Error thrown when attempting to add operations before CREATE_DOCUMENT.
  */
 export class CreateDocumentRequiredError extends Error {

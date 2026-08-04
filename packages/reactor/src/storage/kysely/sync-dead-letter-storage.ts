@@ -1,7 +1,11 @@
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import type { Kysely } from "kysely";
 import type { PagingOptions, PagedResults } from "../../shared/types.js";
-import type { ChannelErrorSource } from "../../sync/types.js";
+import type {
+  ChannelErrorSource,
+  SyncOperationErrorType,
+} from "../../sync/types.js";
+import { quarantinesDocument } from "../../sync/utils.js";
 import type { DeadLetterRecord } from "../interfaces.js";
 import type { ISyncDeadLetterStorage } from "../interfaces.js";
 import type {
@@ -22,6 +26,8 @@ function rowToDeadLetterRecord(row: SyncDeadLetterRow): DeadLetterRecord {
     operations: row.operations as OperationWithContext[],
     errorSource: row.error_source as ChannelErrorSource,
     errorMessage: row.error_message,
+    // Coalesced as well as defaulted, so a pre-existing row rehydrates either way.
+    errorType: (row.error_type ?? "UNCLASSIFIED") as SyncOperationErrorType,
   };
 }
 
@@ -39,6 +45,7 @@ function deadLetterRecordToRow(
     operations: JSON.stringify(record.operations),
     error_source: record.errorSource,
     error_message: record.errorMessage,
+    error_type: record.errorType,
   };
 }
 
@@ -151,7 +158,7 @@ export class KyselySyncDeadLetterStorage implements ISyncDeadLetterStorage {
 
     const rows = await this.db
       .selectFrom("sync_dead_letters")
-      .select("document_id")
+      .select(["document_id", "error_type"])
       .distinct()
       .execute();
 
@@ -159,6 +166,17 @@ export class KyselySyncDeadLetterStorage implements ISyncDeadLetterStorage {
       throw new Error("Operation aborted");
     }
 
-    return rows.map((row) => row.document_id);
+    // A document whose only dead letters are held auth operations keeps syncing
+    // across a restart too.
+    const quarantined = new Set<string>();
+    for (const row of rows) {
+      const errorType = (row.error_type ??
+        "UNCLASSIFIED") as SyncOperationErrorType;
+      if (quarantinesDocument(errorType)) {
+        quarantined.add(row.document_id);
+      }
+    }
+
+    return [...quarantined];
   }
 }

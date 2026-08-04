@@ -11,6 +11,7 @@ import {
   type PagingOptions,
   type RemoteFilter,
   type SearchFilter,
+  syncOperationErrorType,
   type SyncOperation,
   type ViewFilter,
 } from "@powerhousedao/reactor";
@@ -1075,6 +1076,7 @@ export function pollSyncEnvelopes(
   deadLetters: Array<{
     documentId: string;
     error: string;
+    errorType: string;
     jobId: string;
     branch: string;
     scopes: string[];
@@ -1099,6 +1101,9 @@ export function pollSyncEnvelopes(
     .map((syncOp) => ({
       documentId: syncOp.documentId,
       error: syncOp.error?.message ?? "Unknown error",
+      // Sent so a peer mirrors this replica's quarantine decision rather than
+      // freezing a document it is deliberately still syncing.
+      errorType: syncOperationErrorType(syncOp.error),
       jobId: syncOp.jobId,
       branch: syncOp.branch,
       scopes: syncOp.scopes,

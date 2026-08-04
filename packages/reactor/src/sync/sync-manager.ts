@@ -49,7 +49,9 @@ import {
   chunkSyncOperations,
   createIdleHealth,
   filterOperations,
+  quarantinesDocument,
   splitTrailingSameTimestampRun,
+  syncOperationErrorType,
   toOperationWithContext,
   trimMailboxFromBatch,
 } from "./utils.js";
@@ -494,7 +496,13 @@ export class SyncManager implements ISyncManager {
           syncOp.jobDependencies,
         );
 
-        this.quarantinedDocumentIds.add(syncOp.documentId);
+        const errorType = syncOperationErrorType(syncOp.error);
+
+        // A held auth operation must keep syncing: reconciling the two policies
+        // needs the traffic a quarantine would stop, in both directions.
+        if (quarantinesDocument(errorType)) {
+          this.quarantinedDocumentIds.add(syncOp.documentId);
+        }
 
         const record: DeadLetterRecord = {
           id: syncOp.id,
@@ -507,6 +515,7 @@ export class SyncManager implements ISyncManager {
           operations: syncOp.operations,
           errorSource: syncOp.error?.source ?? ChannelErrorSource.None,
           errorMessage: syncOp.error?.error.message ?? "unknown",
+          errorType,
         };
 
         void this.deadLetterStorage.add(record).catch((err) => {
@@ -524,6 +533,7 @@ export class SyncManager implements ISyncManager {
             remoteName: record.remoteName,
             documentId: record.documentId,
             errorSource: record.errorSource,
+            errorType: record.errorType,
           } satisfies DeadLetterAddedEvent)
           .catch(() => {});
       }

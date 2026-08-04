@@ -46,6 +46,7 @@ describe("KyselySyncDeadLetterStorage", () => {
       operations: [],
       errorSource: ChannelErrorSource.Inbox,
       errorMessage: "test error",
+      errorType: "UNCLASSIFIED",
       ...overrides,
     };
   }
@@ -302,6 +303,88 @@ describe("KyselySyncDeadLetterStorage", () => {
 
       const page = await storage.list("remote-1");
       expect(page.results).toHaveLength(0);
+    });
+  });
+
+  /** Stored, because it decides quarantine and the error is gone after restart. */
+  describe("errorType", () => {
+    it("round-trips through add and list", async () => {
+      await storage.add(
+        createDeadLetter({
+          id: "dl-typed",
+          errorType: "AUTH_TIMESTAMP_NOT_MONOTONIC",
+        }),
+      );
+
+      const page = await storage.list("remote-1");
+      expect(page.results[0].errorType).toBe("AUTH_TIMESTAMP_NOT_MONOTONIC");
+    });
+
+    // A row written before the column existed takes the schema default.
+    it("rehydrates a row inserted without an error type as UNCLASSIFIED", async () => {
+      await db
+        .insertInto("sync_dead_letters")
+        .values({
+          id: "dl-legacy",
+          job_id: "job-legacy",
+          job_dependencies: JSON.stringify([]),
+          remote_name: "remote-1",
+          document_id: "doc-legacy",
+          scopes: JSON.stringify(["global"]),
+          branch: "main",
+          operations: JSON.stringify([]),
+          error_source: ChannelErrorSource.Inbox,
+          error_message: "legacy error",
+        })
+        .execute();
+
+      const page = await storage.list("remote-1");
+      const legacy = page.results.find((r) => r.id === "dl-legacy");
+      expect(legacy?.errorType).toBe("UNCLASSIFIED");
+    });
+
+    it("omits a held auth operation from the quarantined documents", async () => {
+      await storage.add(
+        createDeadLetter({
+          id: "dl-held",
+          documentId: "held-doc",
+          errorType: "AUTH_TIMESTAMP_NOT_MONOTONIC",
+        }),
+      );
+      await storage.add(
+        createDeadLetter({
+          id: "dl-broken",
+          documentId: "broken-doc",
+          errorType: "HASH_MISMATCH",
+        }),
+      );
+
+      const quarantined = await storage.listQuarantinedDocumentIds();
+
+      expect(quarantined).toContain("broken-doc");
+      expect(quarantined).not.toContain("held-doc");
+    });
+
+    // One bad dead letter is enough to quarantine, even beside an exempt one.
+    it("quarantines a document that also has a non-exempt dead letter", async () => {
+      await storage.add(
+        createDeadLetter({
+          id: "dl-a",
+          documentId: "mixed-doc",
+          errorType: "AUTH_TIMESTAMP_NOT_MONOTONIC",
+        }),
+      );
+      await storage.add(
+        createDeadLetter({
+          id: "dl-b",
+          documentId: "mixed-doc",
+          errorType: "HASH_MISMATCH",
+        }),
+      );
+
+      await expect(storage.listQuarantinedDocumentIds()).resolves.toContain(
+        "mixed-doc",
+      );
     });
   });
 });

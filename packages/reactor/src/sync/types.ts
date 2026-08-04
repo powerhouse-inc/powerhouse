@@ -86,7 +86,15 @@ export type SyncOperationErrorType =
   | "LIBRARY_ERROR"
   | "MISSING_OPERATIONS"
   | "EXCESSIVE_SHUFFLE"
-  | "GRACEFUL_ABORT";
+  | "GRACEFUL_ABORT"
+  /**
+   * An arriving auth operation did not exceed the local auth head. Exempt from
+   * quarantine, because reconciling the two policies needs the traffic a
+   * quarantine would stop.
+   */
+  | "AUTH_TIMESTAMP_NOT_MONOTONIC"
+  /** No classification applies, including rows written before the field. */
+  | "UNCLASSIFIED";
 
 export type ChannelHealth = {
   state: "idle" | "running" | "error";
@@ -196,6 +204,7 @@ export type DeadLetterAddedEvent = {
   remoteName: string;
   documentId: string;
   errorSource: ChannelErrorSource;
+  errorType: SyncOperationErrorType;
 };
 
 /**

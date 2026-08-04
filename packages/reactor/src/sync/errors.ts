@@ -1,4 +1,4 @@
-import type { ChannelErrorSource } from "./types.js";
+import type { ChannelErrorSource, SyncOperationErrorType } from "./types.js";
 
 export type GraphQLRequestErrorCategory =
   | "network"
@@ -57,11 +57,22 @@ export class PollingChannelError extends Error {
 export class ChannelError extends Error {
   source: ChannelErrorSource;
   error: Error;
+  /**
+   * The classification when something other than the error carries it. Absent
+   * means derive it from `error.name`; a dead letter mirrored from a peer sets it,
+   * because only the message crosses the wire.
+   */
+  readonly errorType?: SyncOperationErrorType;
 
-  constructor(source: ChannelErrorSource, error: Error) {
+  constructor(
+    source: ChannelErrorSource,
+    error: Error,
+    errorType?: SyncOperationErrorType,
+  ) {
     super(`ChannelError[${source}]: ${error.message}`);
     this.name = "ChannelError";
     this.source = source;
     this.error = error;
+    this.errorType = errorType;
   }
 }

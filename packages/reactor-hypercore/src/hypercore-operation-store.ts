@@ -452,6 +452,41 @@ export class HypercoreOperationStore implements IOperationStore {
     return { revision, latestTimestamp };
   }
 
+  /**
+   * A real maximum over the rows, not the head record's `latestTimestampUtcMs`:
+   * that holds the last-indexed timestamp, which a re-append can leave behind a
+   * later one, so it would under-report and admit a backdated auth write.
+   */
+  async getStreamLatestTimestamp(
+    documentId: string,
+    scope: string,
+    branch: string,
+    signal?: AbortSignal,
+  ): Promise<string | undefined> {
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
+
+    const stored = await this.getSince(
+      documentId,
+      scope,
+      branch,
+      -1,
+      undefined,
+      undefined,
+      signal,
+    );
+
+    let latest: string | undefined;
+    for (const operation of stored.results) {
+      if (latest === undefined || operation.timestampUtcMs > latest) {
+        latest = operation.timestampUtcMs;
+      }
+    }
+
+    return latest;
+  }
+
   private serializeOperation(op: StoredOperation): StoredOperation {
     return {
       id: op.id,
@@ -460,6 +495,7 @@ export class HypercoreOperationStore implements IOperationStore {
       timestampUtcMs: op.timestampUtcMs,
       hash: op.hash,
       error: op.error,
+      deniedReason: op.deniedReason,
       action: op.action,
       documentId: op.documentId,
       documentType: op.documentType,
@@ -476,6 +512,7 @@ export class HypercoreOperationStore implements IOperationStore {
       timestampUtcMs: stored.timestampUtcMs,
       hash: stored.hash,
       error: stored.error || undefined,
+      deniedReason: stored.deniedReason || undefined,
       action: stored.action,
     };
   }

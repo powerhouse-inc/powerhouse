@@ -1,6 +1,7 @@
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import type { Operation } from "@powerhousedao/shared/document-model";
 import { type OperationIndexEntry } from "../cache/operation-index-types.js";
+import type { ChannelError } from "./errors.js";
 import type { PreparedBatch } from "./batch-aggregator.js";
 import type { IMailbox } from "./mailbox.js";
 import { SyncOperation } from "./sync-operation.js";
@@ -8,6 +9,7 @@ import {
   SyncOperationStatus,
   type ChannelHealth,
   type RemoteFilter,
+  type SyncOperationErrorType,
 } from "./types.js";
 
 export type OperationBatch = {
@@ -531,4 +533,44 @@ function splitComponent<T extends ChunkableItem>(
     chunks.push(sorted.slice(i, i + maxSize));
   }
   return chunks;
+}
+
+/**
+ * Classifies a failure by error name rather than `instanceof`, because a failure
+ * that crossed the pooled-worker boundary arrives as plain data.
+ */
+export function classifyJobFailure(errorName: string): SyncOperationErrorType {
+  switch (errorName) {
+    case "AuthTimestampNotMonotonicError":
+      return "AUTH_TIMESTAMP_NOT_MONOTONIC";
+    case "ExcessiveReshuffleError":
+      return "EXCESSIVE_SHUFFLE";
+    case "InvalidSignatureError":
+      return "SIGNATURE_INVALID";
+    case "HashMismatchError":
+      return "HASH_MISMATCH";
+    default:
+      return "UNCLASSIFIED";
+  }
+}
+
+/** The explicit type when something else carried it, else derived by name. */
+export function syncOperationErrorType(
+  error: ChannelError | undefined,
+): SyncOperationErrorType {
+  return error?.errorType ?? classifyJobFailure(error?.error?.name ?? "Error");
+}
+
+/** Dead-letter types that must not stop the document syncing. */
+const NON_QUARANTINING_ERROR_TYPES: ReadonlySet<SyncOperationErrorType> =
+  new Set(["AUTH_TIMESTAMP_NOT_MONOTONIC"]);
+
+/**
+ * A held auth operation must not quarantine: reconciling the two policies needs
+ * the traffic a quarantine would stop.
+ */
+export function quarantinesDocument(
+  errorType: SyncOperationErrorType,
+): boolean {
+  return !NON_QUARANTINING_ERROR_TYPES.has(errorType);
 }

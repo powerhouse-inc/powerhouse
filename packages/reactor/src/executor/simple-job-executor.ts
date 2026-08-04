@@ -27,7 +27,9 @@ import type { Job } from "../queue/types.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import {
   AuthorizationDeniedError,
+  AuthTimestampNotMonotonicError,
   DocumentDeletedError,
+  ExcessiveReshuffleError,
 } from "../shared/errors.js";
 import { yieldToMain } from "../shared/utils.js";
 import type { SignatureVerificationHandler } from "../signer/types.js";
@@ -37,10 +39,13 @@ import {
   type IOperationStore,
 } from "../storage/interfaces.js";
 import { reshuffleByTimestamp } from "../utils/reshuffle.js";
-import { buildDecisionModel } from "../decision/build-decision-model.js";
-import { documentDecisionModel } from "../decision/document-decision-model.js";
-import { evaluateByPosition } from "../decision/evaluation.js";
+import type { RegisteredDecisionModel } from "../decision/registered-model.js";
+import {
+  decideAtHead,
+  selectDecisionModel,
+} from "../decision/registered-model.js";
 import { staticReadSet } from "../decision/build-decision-model.js";
+import { evaluateByPosition } from "../decision/evaluation.js";
 import { retractionSkip } from "../decision/merged-order.js";
 import { DocumentActionHandler } from "./document-action-handler.js";
 import type { ExecutionStores, IExecutionScope } from "./execution-scope.js";
@@ -52,13 +57,16 @@ import type {
   JobExecutorConfig,
   JobResult,
   PendingWrite,
+  PositionedWrites,
   ReactorFeatureFlags,
 } from "./types.js";
 import {
   buildErrorResult,
   createOperation,
+  DOCUMENT_SCOPE_ACTIONS,
   getNextIndexForScope,
   isGenesisOperation,
+  refusalError,
 } from "./util.js";
 import { SnapshotPosition } from "../cache/write-cache-types.js";
 
@@ -89,21 +97,13 @@ type EvaluationCriteria = {
   operations: Operation[];
 };
 
-const documentScopeActions = [
-  "CREATE_DOCUMENT",
-  "DELETE_DOCUMENT",
-  "UPGRADE_DOCUMENT",
-  "ADD_RELATIONSHIP",
-  "REMOVE_RELATIONSHIP",
-  "UPDATE_RELATIONSHIP",
-];
-
 /**
  * Simple job executor that processes a job by applying actions through document model reducers.
  */
 export class SimpleJobExecutor implements IJobExecutor {
   private config: Required<JobExecutorConfig>;
   private featureFlags: ReactorFeatureFlags;
+  private decisionModel: RegisteredDecisionModel;
   private signatureVerifierModule: SignatureVerifier;
   private documentActionHandler: DocumentActionHandler;
   private executionScope: IExecutionScope;
@@ -136,13 +136,16 @@ export class SimpleJobExecutor implements IJobExecutor {
     // the caller passed, because that is what crosses to a pooled worker.
     this.featureFlags = {
       documentDecisions: config.featureFlags?.documentDecisions ?? false,
+      authEnforcement: config.featureFlags?.authEnforcement ?? false,
     };
+    this.decisionModel = selectDecisionModel(this.featureFlags);
     this.signatureVerifierModule = new SignatureVerifier(signatureVerifier);
     this.documentActionHandler = new DocumentActionHandler(
       registry,
       logger,
       driveContainerTypes,
       this.featureFlags,
+      this.decisionModel,
     );
     this.executionScope =
       executionScope ??
@@ -183,6 +186,7 @@ export class SimpleJobExecutor implements IJobExecutor {
             stores,
             signal,
             replayingAcceptedHistory: true,
+            evaluatedByPosition: false,
           });
           if (loadResult.success && loadResult.operationsWithContext) {
             for (const owc of loadResult.operationsWithContext) {
@@ -218,6 +222,11 @@ export class SimpleJobExecutor implements IJobExecutor {
           return loadResult;
         }
 
+        const positioned = await this.positionByTimestamp(job, stores, signal);
+        if (positioned.error) {
+          return buildErrorResult(job, positioned.error, startTime);
+        }
+
         const executing: ExecutingJob = {
           job,
           startTime,
@@ -225,15 +234,11 @@ export class SimpleJobExecutor implements IJobExecutor {
           stores,
           signal,
           replayingAcceptedHistory: false,
+          evaluatedByPosition: positioned.evaluatedByPosition,
         };
-        const positioned = await this.positionByTimestamp(job, stores, signal);
 
         const actionResult = await this.processActions(
-          positioned.actions.map((action, i) => ({
-            action,
-            skip: positioned.skipValues?.[i] ?? 0,
-            sourceRemote: "",
-          })),
+          positioned.writes,
           executing,
         );
 
@@ -377,7 +382,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     let lastYield = performance.now();
 
     for (const write of writes) {
-      const isDocumentAction = documentScopeActions.includes(write.action.type);
+      const isDocumentAction = DOCUMENT_SCOPE_ACTIONS.has(write.action.type);
       const result = isDocumentAction
         ? await this.documentActionHandler.execute(write, executing)
         : await this.executeRegularAction(write, executing);
@@ -442,18 +447,23 @@ export class SimpleJobExecutor implements IJobExecutor {
     let documentVersion: number | undefined;
 
     const alreadyEvaluated =
-      this.featureFlags.documentDecisions && executing.replayingAcceptedHistory;
+      this.featureFlags.documentDecisions &&
+      (executing.replayingAcceptedHistory || executing.evaluatedByPosition);
 
     if (this.featureFlags.documentDecisions && !alreadyEvaluated) {
       const target = { documentId: job.documentId, branch: job.branch };
-      const definition = documentDecisionModel(target);
 
-      let built;
+      let admission;
       try {
-        built = await buildDecisionModel(
+        admission = await decideAtHead(
+          this.decisionModel,
           stores.writeCache,
-          () => definition,
           target,
+          {
+            address: action.context?.signer?.user.address,
+            key: action.context?.signer?.app.key,
+          },
+          { verb: "execute", scope: action.scope, operation: action.type },
           signal,
         );
       } catch (error) {
@@ -464,29 +474,21 @@ export class SimpleJobExecutor implements IJobExecutor {
         );
       }
 
-      const evaluation = definition.decide(
-        built.model,
-        {
-          address: action.context?.signer?.user.address,
-          key: action.context?.signer?.app.key,
-        },
-        { verb: "execute", scope: action.scope, operation: action.type },
-        { scopeState: undefined },
-      );
-
-      if (evaluation.decision === "deny") {
+      if (admission.evaluation.decision === "deny") {
         return buildErrorResult(
           job,
-          new DocumentDeletedError(
+          refusalError(
+            admission.evaluation.reason,
             job.documentId,
-            built.model.document.deletedAtUtcIso,
+            admission.deletedAtUtcIso,
+            action,
           ),
           startTime,
         );
       }
 
-      appendCondition = built.appendCondition;
-      documentVersion = built.model.document.version;
+      appendCondition = admission.appendCondition;
+      documentVersion = admission.documentVersion;
     } else if (alreadyEvaluated) {
       const documentScope = await stores.writeCache.getState(
         job.documentId,
@@ -556,10 +558,12 @@ export class SimpleJobExecutor implements IJobExecutor {
       );
     }
 
-    // An auth decision should be made iff this set of operations have not
-    // already been evaluated. Re-evaluating could drop operations and diverge
-    // replicas.
-    if (!executing.replayingAcceptedHistory) {
+    // The interim gate, superseded by the auth projection. Re-evaluating already
+    // accepted operations could drop them and diverge replicas.
+    if (
+      !this.featureFlags.authEnforcement &&
+      !executing.replayingAcceptedHistory
+    ) {
       const subject = {
         address: write.action.context?.signer?.user.address,
         key: write.action.context?.signer?.app.key,
@@ -787,18 +791,29 @@ export class SimpleJobExecutor implements IJobExecutor {
   }
 
   /**
-   * Orders a write by timestamp. The caller supplies the timestamp, so a write
-   * can belong before operations already stored, and appending it at the tail
-   * would leave the scope out of order. The operations it belongs before are
-   * re-appended alongside it, the way a load reshuffles.
+   * Orders a write by timestamp and decides it where it lands. The caller
+   * supplies the timestamp, so a write can belong before operations already
+   * stored; those are re-appended alongside it, the way a load reshuffles.
+   *
+   * Deciding a backdated write at the stream heads instead of at its position
+   * would overwrite the verdict every other replica computes for it.
    */
   private async positionByTimestamp(
     job: Job,
     stores: ExecutionStores,
     signal?: AbortSignal,
-  ): Promise<{ actions: Action[]; skipValues?: number[] }> {
+  ): Promise<PositionedWrites> {
+    const plain = (): PositionedWrites => ({
+      writes: job.actions.map((action) => ({
+        action,
+        skip: 0,
+        sourceRemote: "",
+      })),
+      evaluatedByPosition: false,
+    });
+
     if (!this.featureFlags.documentDecisions || job.actions.length === 0) {
-      return { actions: job.actions };
+      return plain();
     }
 
     let earliest = job.actions[0].timestampUtcMs;
@@ -813,8 +828,44 @@ export class SimpleJobExecutor implements IJobExecutor {
       job.branch,
       signal,
     );
-    if (earliest >= revisions.latestTimestamp) {
-      return { actions: job.actions };
+
+    // Parsed, not compared as strings: a submitted timestamp may carry second
+    // precision, so "…:00Z" sorts after "…:00.000Z" lexically.
+    const backdated =
+      Date.parse(earliest) < Date.parse(revisions.latestTimestamp);
+
+    // The auth stream is never reshuffled: rejected by the monotonic rule, or
+    // evaluated where it lands without moving anything.
+    if (this.featureFlags.authEnforcement && job.scope === "auth") {
+      const newest = await stores.operationStore.getStreamLatestTimestamp(
+        job.documentId,
+        "auth",
+        job.branch,
+        signal,
+      );
+      const violation = this.firstNonMonotonicTimestamp(
+        job.actions,
+        newest,
+        job.documentId,
+        job.branch,
+      );
+      if (violation) {
+        return { writes: [], evaluatedByPosition: false, error: violation };
+      }
+
+      if (!backdated) {
+        return plain();
+      }
+      return this.evaluatePositioned(
+        job,
+        stores,
+        this.appendedOperations(job, revisions.revision[job.scope] ?? 0),
+        signal,
+      );
+    }
+
+    if (!backdated) {
+      return plain();
     }
 
     const conflicting = (
@@ -827,8 +878,18 @@ export class SimpleJobExecutor implements IJobExecutor {
         signal,
       )
     ).results.filter((operation) => !isGenesisOperation(operation));
+
+    // Nothing to move here, but still below another scope's newest operation.
     if (conflicting.length === 0) {
-      return { actions: job.actions };
+      if (!this.featureFlags.authEnforcement) {
+        return plain();
+      }
+      return this.evaluatePositioned(
+        job,
+        stores,
+        this.appendedOperations(job, revisions.revision[job.scope] ?? 0),
+        signal,
+      );
     }
 
     const nextIndex = revisions.revision[job.scope] ?? 0;
@@ -861,10 +922,155 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     stores.writeCache.invalidate(job.documentId, job.scope, job.branch);
 
+    // Without the auth projection the only refusal is a deletion, which fails the
+    // job outright, so a head decide is equivalent.
+    if (!this.featureFlags.authEnforcement) {
+      return {
+        writes: merged.map((operation) => ({
+          action: operation.action,
+          skip: operation.skip,
+          sourceRemote: "",
+        })),
+        evaluatedByPosition: false,
+      };
+    }
+
+    return this.evaluatePositioned(job, stores, merged, signal);
+  }
+
+  /**
+   * Decides each operation where it lands and carries the verdict on it. A
+   * refused submitted action is reported to the caller and nothing is stored; a
+   * refused operation the reshuffle merely moved keeps its verdict, because it
+   * already holds a position.
+   *
+   * The operations carry the indexes and skips they will be stored at, because
+   * the walk resolves skips before it orders them.
+   */
+  private async evaluatePositioned(
+    job: Job,
+    stores: ExecutionStores,
+    operations: Operation[],
+    signal?: AbortSignal,
+  ): Promise<PositionedWrites> {
+    const reasons = await evaluateByPosition(
+      this.decisionModel,
+      { documentId: job.documentId, branch: job.branch },
+      { scope: job.scope, operations },
+      stores,
+      signal,
+    );
+
+    const submitted = new Set(job.actions.map((action) => action.id));
+    for (let i = 0; i < operations.length; i++) {
+      const reason = reasons[i];
+      if (reason !== undefined && submitted.has(operations[i].action.id)) {
+        return {
+          writes: [],
+          evaluatedByPosition: false,
+          error: refusalError(
+            reason,
+            job.documentId,
+            null,
+            operations[i].action,
+          ),
+        };
+      }
+    }
+
     return {
-      actions: merged.map((operation) => operation.action),
-      skipValues: merged.map((operation) => operation.skip),
+      writes: operations.map((operation, i) => ({
+        action: operation.action,
+        skip: operation.skip,
+        sourceRemote: "",
+        deniedReason: reasons[i],
+      })),
+      evaluatedByPosition: true,
     };
+  }
+
+  /**
+   * The scopes a re-evaluation pass visits, in a fixed order.
+   *
+   * The revisions map comes from a query with no ORDER BY, and the order is
+   * load-bearing: a denial this pass writes is visible to a later-visited scope
+   * and invisible to an earlier one. Deciding streams first, then the rest
+   * sorted, keeps the pass reproducible across replicas.
+   */
+  private evaluationOrder(
+    target: { documentId: string; branch: string },
+    revision: Record<string, number>,
+  ): string[] {
+    const evaluated = Object.keys(revision).filter((scope) =>
+      this.decisionModel(target).evaluatesScope(scope),
+    );
+
+    const leading = ["document", "auth"].filter((scope) =>
+      evaluated.includes(scope),
+    );
+    const rest = evaluated
+      .filter((scope) => !leading.includes(scope))
+      .sort((a, b) => a.localeCompare(b));
+
+    return [...leading, ...rest];
+  }
+
+  /**
+   * The first timestamp in the batch that does not strictly exceed everything
+   * ahead of it, or undefined when the whole batch is monotonic.
+   *
+   * The bound is carried forward rather than compared against one stored maximum,
+   * because a single execute can carry several auth actions stamped in the same
+   * millisecond. Letting a tie through would store a stream the position walk
+   * then refuses to read, with no repair path.
+   */
+  private firstNonMonotonicTimestamp(
+    entries: Array<{ timestampUtcMs: string }>,
+    newest: string | undefined,
+    documentId: string,
+    branch: string,
+  ): Error | undefined {
+    let boundIso = newest;
+    let bound =
+      newest === undefined ? Number.NEGATIVE_INFINITY : Date.parse(newest);
+
+    for (const entry of entries) {
+      if (!isValidISOTimestamp(entry.timestampUtcMs)) {
+        return new Error(
+          `Invalid timestamp "${entry.timestampUtcMs}" on auth operation`,
+        );
+      }
+
+      const at = Date.parse(entry.timestampUtcMs);
+      if (at <= bound) {
+        return new AuthTimestampNotMonotonicError(
+          documentId,
+          branch,
+          entry.timestampUtcMs,
+          boundIso ?? new Date(0).toISOString(),
+        );
+      }
+
+      bound = at;
+      boundIso = entry.timestampUtcMs;
+    }
+
+    return undefined;
+  }
+
+  /** The operations a batch of submitted actions appends at the scope's tail. */
+  private appendedOperations(job: Job, nextIndex: number): Operation[] {
+    return job.actions.map(
+      (action, i) =>
+        ({
+          id: action.id,
+          index: nextIndex + i,
+          skip: 0,
+          hash: "",
+          timestampUtcMs: action.timestampUtcMs,
+          action,
+        }) as Operation,
+    );
   }
 
   /**
@@ -884,11 +1090,8 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     const { job, stores, signal } = executing;
 
-    const definition = documentDecisionModel({
-      documentId: job.documentId,
-      branch: job.branch,
-    });
-    const inReadSet = staticReadSet(definition).some(
+    const target = { documentId: job.documentId, branch: job.branch };
+    const inReadSet = staticReadSet(this.decisionModel(target)).some(
       (stream) =>
         stream.query.documentId === job.documentId &&
         stream.query.scope === criteria.scope &&
@@ -925,10 +1128,7 @@ export class SimpleJobExecutor implements IJobExecutor {
   ): Promise<Error | undefined> {
     const { job, stores, signal } = executing;
 
-    const definition = documentDecisionModel({
-      documentId: job.documentId,
-      branch: job.branch,
-    });
+    const target = { documentId: job.documentId, branch: job.branch };
 
     const revisions = await stores.operationStore.getRevisions(
       job.documentId,
@@ -936,11 +1136,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       signal,
     );
 
-    for (const scope of Object.keys(revisions.revision)) {
-      if (!definition.evaluatesScope(scope)) {
-        continue;
-      }
-
+    for (const scope of this.evaluationOrder(target, revisions.revision)) {
       const stored = (
         await stores.operationStore.getSince(
           job.documentId,
@@ -959,8 +1155,8 @@ export class SimpleJobExecutor implements IJobExecutor {
       }
 
       const reevaluated = await evaluateByPosition(
-        documentDecisionModel,
-        { documentId: job.documentId, branch: job.branch },
+        this.decisionModel,
+        target,
         { scope, operations: effective },
         stores,
         signal,
@@ -989,6 +1185,7 @@ export class SimpleJobExecutor implements IJobExecutor {
           ...executing,
           job: { ...job, scope },
           replayingAcceptedHistory: true,
+          evaluatedByPosition: true,
         },
       );
 
@@ -1036,6 +1233,11 @@ export class SimpleJobExecutor implements IJobExecutor {
     }
 
     const scope = job.scope;
+
+    // The auth stream holds no ties: an arrival that does not exceed its newest
+    // timestamp is rejected rather than repositioned.
+    const monotonicAuthStream =
+      this.featureFlags.authEnforcement && scope === "auth";
 
     let latestRevision: number;
     try {
@@ -1137,18 +1339,35 @@ export class SimpleJobExecutor implements IJobExecutor {
     });
 
     // Creation holds the first two indexes for the life of the document, so it
-    // never moves however far back the conflicting range reaches.
-    const existingOpsToReshuffle = nonSupersededOps.filter(
-      (operation) => !isGenesisOperation(operation),
-    );
+    // never moves however far back the conflicting range reaches. The auth stream
+    // moves nothing at all.
+    const existingOpsToReshuffle = monotonicAuthStream
+      ? []
+      : nonSupersededOps.filter((operation) => !isGenesisOperation(operation));
 
-    if (existingOpsToReshuffle.length > this.config.maxSkipThreshold) {
+    // Only work this load does for the first time counts. A re-append is an action
+    // the window already holds twice, so counting those would make the busiest
+    // documents revocation-proof.
+    const actionIdCounts = new Map<string, number>();
+    for (const operation of allOpsFromMinConflictingIndex) {
+      actionIdCounts.set(
+        operation.action.id,
+        (actionIdCounts.get(operation.action.id) ?? 0) + 1,
+      );
+    }
+    const reshuffleCost = existingOpsToReshuffle.filter(
+      (operation) => (actionIdCounts.get(operation.action.id) ?? 0) < 2,
+    ).length;
+
+    if (reshuffleCost > this.config.maxSkipThreshold) {
       return {
         job,
         success: false,
-        error: new Error(
-          `Excessive reshuffle detected: existing op count of ${existingOpsToReshuffle.length} exceeds threshold of ${this.config.maxSkipThreshold}. ` +
-            `This indicates a significant divergence between local and incoming operations.`,
+        error: new ExcessiveReshuffleError(
+          job.documentId,
+          scope,
+          reshuffleCost,
+          this.config.maxSkipThreshold,
         ),
         duration: Date.now() - startTime,
       };
@@ -1186,6 +1405,32 @@ export class SimpleJobExecutor implements IJobExecutor {
       };
     }
 
+    // After the dedup, never before: a re-appended auth operation keeps its
+    // original timestamp and does travel, so a re-delivered copy is at or below
+    // the local head and would dead-letter on traffic both replicas agree about.
+    if (monotonicAuthStream) {
+      const newest = await stores.operationStore.getStreamLatestTimestamp(
+        job.documentId,
+        "auth",
+        job.branch,
+        signal,
+      );
+      const violation = this.firstNonMonotonicTimestamp(
+        [...incomingOpsToApply].sort((a, b) => a.index - b.index),
+        newest,
+        job.documentId,
+        job.branch,
+      );
+      if (violation) {
+        return {
+          job,
+          success: false,
+          error: violation,
+          duration: Date.now() - startTime,
+        };
+      }
+    }
+
     const reshuffledOperations =
       existingOpsToReshuffle.length === 0 && skipCount === 0
         ? incomingOpsToApply
@@ -1219,7 +1464,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     if (this.featureFlags.documentDecisions) {
       try {
         deniedReasons = await evaluateByPosition(
-          documentDecisionModel,
+          this.decisionModel,
           { documentId: job.documentId, branch: job.branch },
           { scope, operations: reshuffledOperations },
           stores,

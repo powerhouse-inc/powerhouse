@@ -42,6 +42,20 @@ export type ExecutingJob = {
    * because re-deciding accepted history would drop operations.
    */
   replayingAcceptedHistory: boolean;
+
+  /**
+   * Whether every write already carries the verdict computed at its own position.
+   * Deciding again at the stream heads would overwrite a verdict the rest of the
+   * fleet computes differently.
+   */
+  evaluatedByPosition: boolean;
+};
+
+export type PositionedWrites = {
+  writes: PendingWrite[];
+  evaluatedByPosition: boolean;
+  /** Set when a submitted action was refused at its position. */
+  error?: Error;
 };
 
 /**
@@ -91,6 +105,12 @@ export type ReactorFeatureFlags = {
    * operation's position rather than for the whole document.
    */
   documentDecisions: boolean;
+
+  /**
+   * Evaluate the auth policy by reading the auth scope as a second projection.
+   * Requires documentDecisions.
+   */
+  authEnforcement: boolean;
 };
 
 /**

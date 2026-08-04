@@ -19,6 +19,7 @@ import type {
   JwtHandler,
   RemoteFilter,
   SyncEnvelope,
+  SyncOperationErrorType,
 } from "../types.js";
 import { ChannelErrorSource } from "../types.js";
 import {
@@ -353,6 +354,7 @@ export class GqlRequestChannel implements IChannel {
     deadLetters: Array<{
       documentId: string;
       error: string;
+      errorType?: string | null;
       jobId: string;
       branch: string;
       scopes: string[];
@@ -380,8 +382,15 @@ export class GqlRequestChannel implements IChannel {
         dl.branch,
         [],
       );
+      // Only the message crosses the wire, so the origin's classification is
+      // carried explicitly. Without it this replica would freeze a document the
+      // origin is deliberately still syncing.
       syncOp.failed(
-        new ChannelError(ChannelErrorSource.Outbox, new Error(dl.error)),
+        new ChannelError(
+          ChannelErrorSource.Outbox,
+          new Error(dl.error),
+          (dl.errorType ?? undefined) as SyncOperationErrorType | undefined,
+        ),
       );
       syncOps.push(syncOp);
     }
@@ -537,6 +546,7 @@ export class GqlRequestChannel implements IChannel {
     deadLetters: Array<{
       documentId: string;
       error: string;
+      errorType?: string | null;
       jobId: string;
       branch: string;
       scopes: string[];
@@ -559,6 +569,7 @@ export class GqlRequestChannel implements IChannel {
                 hash
                 skip
                 error
+                deniedReason
                 id
                 action {
                   id
@@ -602,6 +613,7 @@ export class GqlRequestChannel implements IChannel {
           deadLetters {
             documentId
             error
+            errorType
             jobId
             branch
             scopes
@@ -625,6 +637,7 @@ export class GqlRequestChannel implements IChannel {
         deadLetters?: Array<{
           documentId: string;
           error: string;
+          errorType?: string | null;
           jobId: string;
           branch: string;
           scopes: string[];

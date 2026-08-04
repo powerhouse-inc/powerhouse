@@ -234,6 +234,48 @@ describe("DocumentModel Replay", () => {
     });
     expect(replayed.state.global.count).toBe(2);
   });
+
+  /**
+   * A client replay that applied a denied operation would hold different state
+   * from the reactor that served it. The denied operation carries the hash of the
+   * state that still stands, so the trailing verification still lines up.
+   */
+  it("does not apply a denied operation, and still verifies hashes", () => {
+    let newDocument = countReducer(initialDocument, increment());
+    newDocument = countReducer(newDocument, increment());
+
+    const [first, second] = newDocument.operations.global;
+
+    // Hashed over the state `first` left behind.
+    const denied = {
+      ...first,
+      id: "op-denied",
+      index: 1,
+      action: { ...first.action, id: "a-denied" },
+      hash: first.hash,
+      deniedReason: "no grant permits this operation",
+    };
+
+    const replayed = replayDocument(
+      createCountState(),
+      {
+        ...newDocument.operations,
+        global: [first, denied, { ...second, index: 2 }],
+      },
+      countReducer,
+      newDocument.header,
+      undefined,
+      undefined,
+      { checkHashes: false },
+    );
+
+    expect(replayed.state.global.count).toBe(2);
+
+    expect(replayed.operations.global).toHaveLength(3);
+    expect(replayed.operations.global[1].deniedReason).toBe(
+      "no grant permits this operation",
+    );
+  });
 });
 
 describe("PHAuthState default and backfill", () => {

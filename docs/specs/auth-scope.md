@@ -508,7 +508,9 @@ When a reshuffle happens, the tail from the first change must be re-evaluated, b
 
 Re-evaluation is a reshuffle-style re-append. If any decision changes, the tail from the first change is re-emitted as new operations: same `opId` and action id, but fresh indexes with skip.
 
-The re-append advances the stream heads, so a concurrent admission that read the old tail fails its append condition and retries. The re-appended operations do not travel to other replicas, and do not need to: a replica learning of the operation that triggered the pass evaluates its own history against it and reaches the same outcome. Two replicas may therefore store different rows while agreeing on which operations apply and on the state they produce.
+The re-append advances the stream heads, so a concurrent admission that read the old tail fails its append condition and retries. The re-appended operations do travel to other replicas, and do not need to be understood as anything special when they arrive: a receiving replica recognises them by action id, applies nothing, and reaches the same outcome by evaluating its own history against the operation that triggered the pass. Two replicas may therefore store different rows while agreeing on which operations apply and on the state they produce.
+
+Two rules follow from re-appends travelling. The monotonic-timestamp check on an arriving auth operation runs *after* the action-id dedup, because a re-appended auth operation keeps its original timestamp and so is at or below the receiving replica's auth head by definition — checked before the dedup it would reject traffic both replicas already agree about. And the excessive-shuffle guard does not count an operation whose action id the stream already holds, for the same reason.
 
 #### What triggers a pass
 
@@ -692,6 +694,8 @@ A document's policy begins with `INITIALIZE_AUTH` (see Actions). On acceptance, 
 
 **Auth on an unsigned-header document does not resist an adversary.** An unsigned-header document has no creator, so its genesis is open. Anyone can run `INITIALIZE_AUTH` first, and anyone can backdate one that retroactively re-evaluates the whole history under a policy of their choosing. A document that wants an enforceable policy is created with a signed header, ideally with `INITIALIZE_AUTH` in its create batch.
 
+**And it can lock its own auth scope out permanently.** The creator carve-out is what keeps administration reachable, and an unsigned document has no creator to carve out for. A `REMOVE_GRANT` that leaves no grant permitting `execute` on `auth` therefore makes the auth scope unwritable for good, on every replica, with no recovery path. A policy on an unsigned document must always retain an auth-administration grant. On a signed document the carve-out covers this.
+
 A duplicated document inherits its source's policy. Duplication fails when the copy cannot preserve the policy rather than producing a policy that cannot be administered.
 
 Migration maps a legacy table owner to an `execute`-on-`auth` grant.
@@ -721,7 +725,7 @@ Two limits remain deliberate, both on the read side, and stage 4 moves reads ont
 **Stage 4: the auth projection (`authEnforcement`).**
 Expand `decide` to include the `auth` policy. The mechanism that makes this possible is already in place: stage 3's projection reads the `document` scope to evaluate an operation in other scopes at its merged position, and guards the write with an append condition with re-evaluation. Reading the `auth` scope to evaluate a domain write is that same arrangement with a second projection, so this stage adds projections and `decide` steps rather than new cross-scope machinery.
 
-With the flag off, the reactor does not enforce policies at all. The auth stream joins re-evaluation here, once the monotonic-timestamp rule says how a re-appended auth operation is ordered.
+With the flag off, the reactor enforces nothing beyond the stage-1 interim gate on auth-scope writes. That gate is not itself flag-gated, so it stays until `authEnforcement` defaults on; this sentence is not licence to delete it. The auth stream joins re-evaluation here, once the monotonic-timestamp rule says how a re-appended auth operation is ordered.
 
 This stage brings the monotonic-timestamp rule for the auth stream, the excessive-shuffle exemption for re-evaluation, and the load-path work for evaluating multiple streams in one job.
 
@@ -751,9 +755,9 @@ Registering decision models beyond auth is out of scope. The types are model-agn
 
 5. **Retire the interim gates.** The admission gate reaches a real policy only for an `auth`-scope operation (see stage 1), so removing it transfers live behavior for that scope and no behavior for the others. The auth projection covers both once step 3 lands.
 
-6. **Exempt re-evaluation from the excessive-shuffle guard.** A revocation over a long history legitimately supersedes many operations, and counting those re-appends would dead-letter the pass on exactly the busy documents that most need it.
+6. **Exempt re-evaluation from the excessive-shuffle guard.** A revocation over a long history legitimately supersedes many operations, and counting those re-appends would dead-letter the pass on exactly the busy documents that most need it. The pass itself is already exempt, because it re-appends outside the load path where the guard lives. What the guard has to stop counting is the *next* backdated arrival reaching into a range a pass already re-appended: a re-append is a second copy of an action the stream already holds, so it is not work that arrival is doing for the first time.
 
-7. **Evaluate several streams in one load job.** A load carrying both auth and domain operations has to evaluate them together, because an auth operation in the batch decides the domain operations after it.
+7. **Order the auth stream against the domain streams it decides.** An auth operation already in a document's stream decides the domain operations that sort after it, because the auth scope is a read-set stream. A load job carries one scope, so an envelope holding both becomes two jobs whose enqueue order is not guaranteed; when the domain job runs first it is admitted against the older policy and the auth arrival owes the re-evaluation pass that corrects it. Convergence holds either way, at the cost of a pass and a re-append.
 
 8. **Filter reads and sync against the same model.** This is where stage 3's two read-side limits close: `replayDocument` applying denied operations, and reads hiding a deleted document rather than serving the state at the deletion boundary.
 

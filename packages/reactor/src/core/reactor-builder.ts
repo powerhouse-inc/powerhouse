@@ -619,6 +619,7 @@ export class ReactorBuilder {
       operationIndex,
       writeCache,
       documentViewConsistencyTracker,
+      this.executorConfig.featureFlags?.documentDecisions ?? false,
     );
 
     try {

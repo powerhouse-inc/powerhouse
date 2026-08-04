@@ -55,6 +55,7 @@ query GetDocumentWithOperations(
           hash
           skip
           error
+          deniedReason
           id
           action {
             id
@@ -159,6 +160,7 @@ query GetDocumentOperations(
       hash
       skip
       error
+      deniedReason
       id
       action {
         id
@@ -388,6 +390,7 @@ query PollSyncEnvelopes(
           hash
           skip
           error
+          deniedReason
           id
           action {
             id
@@ -430,6 +433,7 @@ query PollSyncEnvelopes(
     deadLetters {
       documentId
       error
+      errorType
     }
     hasMore
   }

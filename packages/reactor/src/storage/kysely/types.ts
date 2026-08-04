@@ -99,6 +99,7 @@ export interface SyncDeadLetterTable {
   operations: unknown;
   error_source: string;
   error_message: string;
+  error_type: Generated<string>;
   created_at: Generated<Date>;
 }
 

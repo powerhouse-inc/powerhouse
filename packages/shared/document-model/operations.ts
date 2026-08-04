@@ -331,6 +331,17 @@ export function isDenied(operation: Operation): boolean {
   return operation.deniedReason !== undefined;
 }
 
+/**
+ * The closed set of strings persisted as `deniedReason`. Re-evaluation compares
+ * them, so they are consensus data: exact strings that embed no grant id,
+ * subject or timestamp. Changing one is history-visible.
+ */
+export const DOCUMENT_DELETED_REASON = "document deleted";
+export const AUTH_VERSION_UNSUPPORTED_REASON =
+  "auth policy version unsupported";
+export const AUTH_NO_GRANT_REASON = "no grant permits this operation";
+export const AUTH_DENIED_BY_GRANT_REASON = "denied by grant";
+
 export type OperationContext = {
   documentId: string;
   documentType: string;

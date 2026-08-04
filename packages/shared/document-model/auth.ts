@@ -3,7 +3,7 @@ import { createAction, type Action } from "./actions.js";
 import {
   assertValidGrantUpsert,
   assertValidInitialGrants,
-  evaluateGrants,
+  evaluateGrantStack,
   GrantSchema,
   isPlainValue,
   MAX_AUTH_GRANTS,
@@ -411,35 +411,64 @@ export type AuthSubject = {
 
 export type AuthDecision = "allow" | "deny";
 
+/** Why the policy refused a request. */
+export type AuthRefusal =
+  | "version-unsupported"
+  | "no-applicable-grant"
+  | "denied-by-grant";
+
 /**
- * Evaluates the auth policy for a single request. Pure and deterministic.
+ * A decision together with why it refused. A refusal names which of the
+ * policy's rules produced it, so an operation records the reason it was refused
+ * rather than one reason standing for every refusal.
+ */
+export type AuthEvaluation =
+  | { decision: "allow" }
+  | { decision: "deny"; refusal: AuthRefusal; grantId?: string };
+
+/**
+ * Evaluates the auth policy for a single request and reports why it refused.
+ * Pure and deterministic.
  *
  * An uninitialized policy (version 0, absent auth state, or a legacy `{}`
  * auth scope serialized before PHAuthState had a version) leaves the document
  * open. Once a policy exists the default is deny, and grants stack in order.
  */
-export function decide(
+export function evaluate(
   auth: PHAuthState | undefined,
   subject: AuthSubject,
   request: AuthRequest,
-): AuthDecision {
+): AuthEvaluation {
   if (!auth || !auth.version) {
-    return "allow";
+    return { decision: "allow" };
   }
 
-  // creators can always administer the auth scope
+  // creators can always administer the auth scope, checked before the version
+  // gate so an unknown policy version cannot brick its own administration
   if (
     request.verb === "execute" &&
     request.scope === "auth" &&
     subject.key !== undefined &&
     subject.key === auth.creator
   ) {
-    return "allow";
+    return { decision: "allow" };
   }
 
   if (auth.version > MAX_SUPPORTED_AUTH_VERSION) {
-    return "deny";
+    return { decision: "deny", refusal: "version-unsupported" };
   }
 
-  return evaluateGrants(auth.grants, subject, request);
+  return evaluateGrantStack(auth.grants, subject, request);
+}
+
+/**
+ * Evaluates the auth policy for a single request. Pure and deterministic. This
+ * is {@link evaluate} with the reason dropped.
+ */
+export function decide(
+  auth: PHAuthState | undefined,
+  subject: AuthSubject,
+  request: AuthRequest,
+): AuthDecision {
+  return evaluate(auth, subject, request).decision;
 }

@@ -29,6 +29,8 @@ type Database = StorageDatabase & DocumentViewDatabase;
 describe("KyselyDocumentView", () => {
   let db: Kysely<Database>;
   let view: KyselyDocumentView;
+  /** The same store, read by a view that serves the deletion boundary. */
+  let boundaryView: KyselyDocumentView;
   let operationStore: IOperationStore;
   let operationIndex: IOperationIndex;
   let mockWriteCache: IWriteCache;
@@ -74,6 +76,15 @@ describe("KyselyDocumentView", () => {
       operationIndex,
       mockWriteCache,
       consistencyTracker,
+      false,
+    );
+    boundaryView = new KyselyDocumentView(
+      db,
+      operationStore,
+      operationIndex,
+      mockWriteCache,
+      consistencyTracker,
+      true,
     );
   });
 
@@ -2300,6 +2311,16 @@ describe("KyselyDocumentView", () => {
       );
     });
 
+    it("get() should serve the deletion-boundary state when it serves it", async () => {
+      const documentId = generateId();
+      await createDocumentInView(documentId);
+      await deleteDocumentInView(documentId);
+
+      const document = await boundaryView.get(documentId);
+      expect(document.header.id).toBe(documentId);
+      expect(document.state.document.isDeleted).toBe(true);
+    });
+
     it("exists() should return false for deleted document", async () => {
       const documentId = generateId();
       await createDocumentInView(documentId);
@@ -2347,6 +2368,26 @@ describe("KyselyDocumentView", () => {
         `Document not found: ${documentId}`,
       );
       await expect(view.resolveIdOrSlug(slug)).rejects.toThrow(
+        `Document not found: ${slug}`,
+      );
+    });
+
+    /**
+     * The id resolves so a by-id read can reach the boundary state, or `get`
+     * would be unreachable through the client. The slug never resolves, because
+     * deleting a document removes its SlugMapping rows — which is what keeps a
+     * deleted document undiscoverable by name.
+     */
+    it("resolveIdOrSlug() resolves the id but never the slug when it serves the boundary", async () => {
+      const documentId = generateId();
+      const slug = "deleted-slug";
+      await createDocumentInView(documentId, slug);
+      await deleteDocumentInView(documentId);
+
+      await expect(boundaryView.resolveIdOrSlug(documentId)).resolves.toBe(
+        documentId,
+      );
+      await expect(boundaryView.resolveIdOrSlug(slug)).rejects.toThrow(
         `Document not found: ${slug}`,
       );
     });

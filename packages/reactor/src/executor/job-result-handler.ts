@@ -9,8 +9,10 @@ import type { IDocumentModelResolver } from "../registry/document-model-resolver
 import { ModuleNotFoundError } from "../registry/errors.js";
 import {
   AuthorizationDeniedError,
+  AuthTimestampNotMonotonicError,
   DocumentDeletedError,
   DocumentNotFoundError,
+  ExcessiveReshuffleError,
 } from "../shared/errors.js";
 import { AppendConditionFailedError } from "../storage/interfaces.js";
 import type { ErrorInfo } from "../shared/types.js";
@@ -121,7 +123,10 @@ export class JobResultHandler implements IJobResultHandler {
     if (
       result.error &&
       (DocumentDeletedError.isError(result.error) ||
-        AuthorizationDeniedError.isError(result.error))
+        AuthorizationDeniedError.isError(result.error) ||
+        // Both deterministic, so retrying only re-runs the load to fail the same.
+        AuthTimestampNotMonotonicError.isError(result.error) ||
+        ExcessiveReshuffleError.isError(result.error))
     ) {
       const errorInfo = toErrorInfo(result.error);
       this.jobTracker.markFailed(handle.job.id, errorInfo, handle.job);

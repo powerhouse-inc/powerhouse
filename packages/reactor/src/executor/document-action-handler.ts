@@ -56,6 +56,8 @@ import type {
   PendingWrite,
   ReactorFeatureFlags,
 } from "./types.js";
+import type { RegisteredDecisionModel } from "../decision/registered-model.js";
+import { decideAtHead } from "../decision/registered-model.js";
 import {
   applyDeleteDocumentAction,
   applyUpgradeDocumentAction,
@@ -63,7 +65,9 @@ import {
   buildSuccessResult,
   createDocumentFromAction,
   createOperation,
+  GATED_DOCUMENT_ACTIONS,
   getNextIndexForScope,
+  refusalError,
   updateDocumentRevision,
 } from "./util.js";
 import { SnapshotPosition } from "../cache/write-cache-types.js";
@@ -74,12 +78,14 @@ export class DocumentActionHandler {
     private logger: ILogger,
     private driveContainerTypes: ReadonlySet<string>,
     private featureFlags: ReactorFeatureFlags,
+    private decisionModel: RegisteredDecisionModel,
   ) {}
 
   /** Whether the write arrives with its evaluation already decided. */
   private alreadyEvaluated(executing: ExecutingJob): boolean {
     return (
-      this.featureFlags.documentDecisions && executing.replayingAcceptedHistory
+      this.featureFlags.documentDecisions &&
+      (executing.replayingAcceptedHistory || executing.evaluatedByPosition)
     );
   }
 
@@ -91,6 +97,11 @@ export class DocumentActionHandler {
 
     if (write.deniedReason !== undefined) {
       return this.writeDenied(write, executing);
+    }
+
+    const refusal = await this.refuseIfPolicyDenies(write, executing);
+    if (refusal) {
+      return refusal;
     }
 
     switch (action.type) {
@@ -113,6 +124,62 @@ export class DocumentActionHandler {
           executing.startTime,
         );
     }
+  }
+
+  /**
+   * Refuses a document-scope write the policy denies, or undefined to proceed.
+   * Without this an `execute`-on-`document` grant is unenforceable.
+   */
+  private async refuseIfPolicyDenies(
+    write: PendingWrite,
+    executing: ExecutingJob,
+  ): Promise<RelationshipJobResult | undefined> {
+    const { action } = write;
+    const { job, startTime, stores, signal } = executing;
+
+    if (
+      !this.featureFlags.authEnforcement ||
+      this.alreadyEvaluated(executing) ||
+      !GATED_DOCUMENT_ACTIONS.has(action.type)
+    ) {
+      return undefined;
+    }
+
+    let admission;
+    try {
+      admission = await decideAtHead(
+        this.decisionModel,
+        stores.writeCache,
+        { documentId: job.documentId, branch: job.branch },
+        {
+          address: action.context?.signer?.user.address,
+          key: action.context?.signer?.app.key,
+        },
+        { verb: "execute", scope: action.scope, operation: action.type },
+        signal,
+      );
+    } catch (error) {
+      return buildErrorResult(
+        job,
+        error instanceof Error ? error : new Error(String(error)),
+        startTime,
+      );
+    }
+
+    if (admission.evaluation.decision === "allow") {
+      return undefined;
+    }
+
+    return buildErrorResult(
+      job,
+      refusalError(
+        admission.evaluation.reason,
+        job.documentId,
+        admission.deletedAtUtcIso,
+        action,
+      ),
+      startTime,
+    );
   }
 
   /** A refused operation holds a position in the stream but changes nothing. */
@@ -140,14 +207,36 @@ export class DocumentActionHandler {
       );
     }
 
-    let operation = createOperation(
-      action,
-      getNextIndexForScope(document, job.scope),
-      skip,
-      { documentId: job.documentId, scope: job.scope, branch: job.branch },
-    );
+    const index = getNextIndexForScope(document, job.scope);
+
+    // A denied operation records the state that still stands. With a retraction
+    // skip the head includes what it supersedes, so read back past the skip.
+    let standing = document;
+    if (skip > 0) {
+      try {
+        standing = await stores.writeCache.getState(
+          job.documentId,
+          job.scope,
+          job.branch,
+          index - skip - 1,
+          signal,
+        );
+      } catch (error) {
+        return buildErrorResult(
+          job,
+          error instanceof Error ? error : new Error(String(error)),
+          startTime,
+        );
+      }
+    }
+
+    let operation = createOperation(action, index, skip, {
+      documentId: job.documentId,
+      scope: job.scope,
+      branch: job.branch,
+    });
     operation.deniedReason = deniedReason;
-    operation.hash = hashDocumentStateForScope(document, job.scope);
+    operation.hash = hashDocumentStateForScope(standing, job.scope);
 
     const writeResult = await this.writeOperationToStore(
       {
@@ -164,11 +253,11 @@ export class DocumentActionHandler {
     }
     operation = writeResult[0];
 
-    updateDocumentRevision(document, job.scope, operation.index);
+    updateDocumentRevision(standing, job.scope, operation.index);
 
-    document.operations = {
-      ...document.operations,
-      [job.scope]: [...(document.operations[job.scope] ?? []), operation],
+    standing.operations = {
+      ...standing.operations,
+      [job.scope]: [...(standing.operations[job.scope] ?? []), operation],
     };
 
     stores.writeCache.putState(
@@ -176,7 +265,7 @@ export class DocumentActionHandler {
       job.scope,
       job.branch,
       operation.index,
-      document,
+      standing,
       SnapshotPosition.Head,
     );
 
@@ -192,8 +281,8 @@ export class DocumentActionHandler {
     ]);
 
     stores.documentMetaCache.putDocumentMeta(job.documentId, job.branch, {
-      state: document.state.document,
-      documentType: document.header.documentType,
+      state: standing.state.document,
+      documentType: standing.header.documentType,
       documentScopeRevision: operation.index + 1,
     });
 
@@ -201,10 +290,10 @@ export class DocumentActionHandler {
       job,
       operation,
       job.documentId,
-      document.header.documentType,
+      standing.header.documentType,
       JSON.stringify({
-        header: document.header,
-        document: document.state.document,
+        header: standing.header,
+        document: standing.state.document,
       }),
       startTime,
     );

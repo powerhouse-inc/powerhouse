@@ -78,10 +78,13 @@ export type {
 export {
   batchOperationsByDocument,
   chunkSyncOperations,
+  classifyJobFailure,
   consolidateSyncOperations,
   createIdleHealth,
   filterOperations,
+  quarantinesDocument,
   splitTrailingSameTimestampRun,
+  syncOperationErrorType,
   trimMailboxFromAckOrdinal,
 } from "./utils.js";
 

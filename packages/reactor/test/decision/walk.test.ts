@@ -9,6 +9,7 @@ import {
 } from "../../src/decision/merged-order.js";
 import { staticReadSet } from "../../src/decision/build-decision-model.js";
 import { documentDecisionModel } from "../../src/decision/document-decision-model.js";
+import type { WalkPosition, WalkStream } from "../../src/decision/walk.js";
 import { walkByPosition } from "../../src/decision/walk.js";
 
 /**
@@ -60,24 +61,47 @@ function indexed(operations: Operation[]): Operation[] {
   return operations.map((operation, index) => ({ ...operation, index }));
 }
 
+/** Walks to completion refusing nothing, which is what most cases here want. */
+function walkAll(streams: WalkStream[]): WalkPosition[] {
+  return walkDeciding(streams, () => false);
+}
+
+/**
+ * Walks to completion, feeding each position's verdict back to the generator.
+ * `deny` receives the operation the walk just handed out.
+ */
+function walkDeciding(
+  streams: WalkStream[],
+  deny: (operation: Operation) => boolean,
+): WalkPosition[] {
+  const positions: WalkPosition[] = [];
+  const walk = walkByPosition(streams);
+  let step = walk.next(false);
+  while (!step.done) {
+    positions.push(step.value);
+    step = walk.next(deny(step.value.operation));
+  }
+  return positions;
+}
+
 describe("walkByPosition", () => {
   it("interleaves two streams by position", () => {
-    const steps = [
-      ...walkByPosition([
-        {
-          streamKey: "a",
-          document: doc(),
-          operations: indexed([op("a1", 1), op("a2", 3)]),
-          apply: append,
-        },
-        {
-          streamKey: "b",
-          document: doc(),
-          operations: indexed([op("b1", 2), op("b2", 4)]),
-          apply: append,
-        },
-      ]),
-    ];
+    const steps = walkAll([
+      {
+        streamKey: "a",
+        scope: "a",
+        document: doc(),
+        operations: indexed([op("a1", 1), op("a2", 3)]),
+        apply: append,
+      },
+      {
+        streamKey: "b",
+        scope: "b",
+        document: doc(),
+        operations: indexed([op("b1", 2), op("b2", 4)]),
+        apply: append,
+      },
+    ]);
 
     expect(steps.map((s) => s.operation.action.id)).toEqual([
       "a1",
@@ -88,22 +112,22 @@ describe("walkByPosition", () => {
   });
 
   it("reports each stream as it stood before the operation", () => {
-    const steps = [
-      ...walkByPosition([
-        {
-          streamKey: "a",
-          document: doc(),
-          operations: indexed([op("a1", 1), op("a2", 3)]),
-          apply: append,
-        },
-        {
-          streamKey: "b",
-          document: doc(),
-          operations: indexed([op("b1", 2)]),
-          apply: append,
-        },
-      ]),
-    ];
+    const steps = walkAll([
+      {
+        streamKey: "a",
+        scope: "a",
+        document: doc(),
+        operations: indexed([op("a1", 1), op("a2", 3)]),
+        apply: append,
+      },
+      {
+        streamKey: "b",
+        scope: "b",
+        document: doc(),
+        operations: indexed([op("b1", 2)]),
+        apply: append,
+      },
+    ]);
 
     // At a2 the earlier operations have been applied, a2 itself has not.
     const atA2 = steps.find((s) => s.operation.action.id === "a2")!;
@@ -121,11 +145,15 @@ describe("walkByPosition", () => {
       { ...op("new2", 2), index: 3 },
     ] as Operation[];
 
-    const steps = [
-      ...walkByPosition([
-        { streamKey: "a", document: doc(), operations, apply: append },
-      ]),
-    ];
+    const steps = walkAll([
+      {
+        streamKey: "a",
+        scope: "a",
+        document: doc(),
+        operations,
+        apply: append,
+      },
+    ]);
 
     expect(steps.map((s) => s.operation.action.id)).toEqual(["new1", "new2"]);
   });
@@ -137,15 +165,146 @@ describe("walkByPosition", () => {
       op("a3", 3),
     ]);
 
-    const steps = [
-      ...walkByPosition([
-        { streamKey: "a", document: doc(), operations, apply: append },
-      ]),
-    ];
+    const steps = walkAll([
+      {
+        streamKey: "a",
+        scope: "a",
+        document: doc(),
+        operations,
+        apply: append,
+      },
+    ]);
 
     expect(steps.map((s) => s.operation.action.id)).toEqual(["a1", "a2", "a3"]);
     const atA3 = steps.find((s) => s.operation.action.id === "a3")!;
     expect(applied(atA3.states.get("a")!)).toEqual(["a1"]);
+  });
+
+  // The base reducer commits a throwing operation with its message recorded, so
+  // an errored row is ordinary history that contributes no state.
+  it("visits an errored operation without applying it", () => {
+    const operations = indexed([
+      op("a1", 1),
+      op("a2", 2, { error: "boom" }),
+      op("a3", 3),
+    ]);
+
+    const steps = walkAll([
+      {
+        streamKey: "a",
+        scope: "a",
+        document: doc(),
+        operations,
+        apply: append,
+      },
+    ]);
+
+    expect(steps.map((s) => s.operation.action.id)).toEqual(["a1", "a2", "a3"]);
+    const atA3 = steps.find((s) => s.operation.action.id === "a3")!;
+    expect(applied(atA3.states.get("a")!)).toEqual(["a1"]);
+  });
+
+  /**
+   * The walk decides operations on a stream it also applies. A SET_GRANT the pass
+   * itself refuses must not change the policy the rest of the pass reads, which
+   * the stored deniedReason cannot express because it is not written yet.
+   */
+  it("does not apply an operation the consumer denied at its position", () => {
+    const operations = indexed([op("a1", 1), op("a2", 2), op("a3", 3)]);
+
+    const steps = walkDeciding(
+      [
+        {
+          streamKey: "a",
+          scope: "a",
+          document: doc(),
+          operations,
+          apply: append,
+        },
+      ],
+      (operation) => operation.action.id === "a2",
+    );
+
+    expect(steps.map((s) => s.operation.action.id)).toEqual(["a1", "a2", "a3"]);
+    const atA3 = steps.find((s) => s.operation.action.id === "a3")!;
+    expect(applied(atA3.states.get("a")!)).toEqual(["a1"]);
+  });
+
+  it("applies an operation the consumer allowed", () => {
+    const operations = indexed([op("a1", 1), op("a2", 2), op("a3", 3)]);
+
+    const steps = walkDeciding(
+      [
+        {
+          streamKey: "a",
+          scope: "a",
+          document: doc(),
+          operations,
+          apply: append,
+        },
+      ],
+      () => false,
+    );
+
+    const atA3 = steps.find((s) => s.operation.action.id === "a3")!;
+    expect(applied(atA3.states.get("a")!)).toEqual(["a1", "a2"]);
+  });
+
+  /**
+   * Spec ordering rule 2: without it, whether a grant applies at the same
+   * millisecond depends on a localeCompare of two uuids.
+   */
+  it("puts an auth operation first in a cross-stream timestamp tie", () => {
+    const sameTime = 5;
+
+    // The auth operation wins whichever way the action ids happen to sort.
+    const authLowerId = { ...op("aaa", sameTime), id: "op-1" } as Operation;
+    const domainHigherId = { ...op("zzz", sameTime), id: "op-2" } as Operation;
+    expect(
+      comparePositions(
+        { streamKey: "auth", scope: "auth", operation: authLowerId },
+        { streamKey: "global", scope: "global", operation: domainHigherId },
+      ),
+    ).toBeLessThan(0);
+
+    const authHigherId = { ...op("zzz", sameTime), id: "op-9" } as Operation;
+    const domainLowerId = { ...op("aaa", sameTime), id: "op-1" } as Operation;
+    expect(
+      comparePositions(
+        { streamKey: "auth", scope: "auth", operation: authHigherId },
+        { streamKey: "global", scope: "global", operation: domainLowerId },
+      ),
+    ).toBeLessThan(0);
+
+    // And symmetrically.
+    expect(
+      comparePositions(
+        { streamKey: "global", scope: "global", operation: domainLowerId },
+        { streamKey: "auth", scope: "auth", operation: authHigherId },
+      ),
+    ).toBeGreaterThan(0);
+  });
+
+  it("walks a tied auth operation before the domain operation it decides", () => {
+    const sameTime = 5;
+    const steps = walkAll([
+      {
+        streamKey: "auth",
+        scope: "auth",
+        document: doc(),
+        operations: indexed([op("grant", sameTime)]),
+        apply: append,
+      },
+      {
+        streamKey: "global",
+        scope: "global",
+        document: doc(),
+        operations: indexed([op("write", sameTime)]),
+        apply: append,
+      },
+    ]);
+
+    expect(steps.map((s) => s.operation.action.id)).toEqual(["grant", "write"]);
   });
 
   it("orders an equal timestamp by action id, then operation id", () => {
@@ -154,8 +313,8 @@ describe("walkByPosition", () => {
     const b = { ...op("aaa", sameTime), id: "op-2" } as Operation;
     expect(
       comparePositions(
-        { streamKey: "x", operation: a },
-        { streamKey: "y", operation: b },
+        { streamKey: "x", scope: "x", operation: a },
+        { streamKey: "y", scope: "y", operation: b },
       ),
     ).toBeGreaterThan(0);
 
@@ -163,8 +322,8 @@ describe("walkByPosition", () => {
     const d = { ...op("same", sameTime), id: "op-1" } as Operation;
     expect(
       comparePositions(
-        { streamKey: "x", operation: c },
-        { streamKey: "y", operation: d },
+        { streamKey: "x", scope: "x", operation: c },
+        { streamKey: "y", scope: "y", operation: d },
       ),
     ).toBeGreaterThan(0);
   });
@@ -174,12 +333,12 @@ describe("walkByPosition", () => {
     const b = indexed([op("b1", 2), op("b2", 3)]);
 
     const forwards = mergeByPosition([
-      { streamKey: "a", operations: a },
-      { streamKey: "b", operations: b },
+      { streamKey: "a", scope: "a", operations: a },
+      { streamKey: "b", scope: "b", operations: b },
     ]);
     const backwards = mergeByPosition([
-      { streamKey: "b", operations: [...b].reverse() },
-      { streamKey: "a", operations: [...a].reverse() },
+      { streamKey: "b", scope: "b", operations: [...b].reverse() },
+      { streamKey: "a", scope: "a", operations: [...a].reverse() },
     ]);
 
     expect(backwards.map((p) => p.operation.action.id)).toEqual(
@@ -238,11 +397,17 @@ describe("position order guard", () => {
       { ...op("early", 1), index: 1 },
     ] as Operation[];
 
-    expect(() => [
-      ...walkByPosition([
-        { streamKey: "a", document: doc(), operations, apply: append },
+    expect(() =>
+      walkAll([
+        {
+          streamKey: "a",
+          scope: "a",
+          document: doc(),
+          operations,
+          apply: append,
+        },
       ]),
-    ]).toThrow(/out of position order/);
+    ).toThrow(/out of position order/);
   });
 
   it("accepts a stream a reshuffle left in order", () => {
@@ -253,11 +418,15 @@ describe("position order guard", () => {
     ] as Operation[];
 
     expect(
-      [
-        ...walkByPosition([
-          { streamKey: "a", document: doc(), operations, apply: append },
-        ]),
-      ].map((s) => s.operation.action.id),
+      walkAll([
+        {
+          streamKey: "a",
+          scope: "a",
+          document: doc(),
+          operations,
+          apply: append,
+        },
+      ]).map((s) => s.operation.action.id),
     ).toEqual(["new1", "new2"]);
   });
 
@@ -269,11 +438,15 @@ describe("position order guard", () => {
     ] as Operation[];
 
     expect(
-      [
-        ...walkByPosition([
-          { streamKey: "a", document: doc(), operations, apply: append },
-        ]),
-      ].map((s) => s.operation.action.id),
+      walkAll([
+        {
+          streamKey: "a",
+          scope: "a",
+          document: doc(),
+          operations,
+          apply: append,
+        },
+      ]).map((s) => s.operation.action.id),
     ).toEqual(["zzz", "aaa"]);
   });
 });

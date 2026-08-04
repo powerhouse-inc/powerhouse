@@ -2,6 +2,7 @@ import type { PHDocument } from "@powerhousedao/shared/document-model";
 import { hashDocumentStateForScope } from "@powerhousedao/shared/document-model";
 import { KyselyWriteCache } from "../cache/kysely-write-cache.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
+import { firstOutOfOrderPair } from "../decision/stream-order.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import { throwIfAborted } from "../shared/utils.js";
 import type {
@@ -15,6 +16,7 @@ import type {
   KeyframeValidationIssue,
   RebuildResult,
   SnapshotValidationIssue,
+  StreamOrderIssue,
   ValidationResult,
 } from "./types.js";
 
@@ -46,6 +48,11 @@ export class DocumentIntegrityService implements IDocumentIntegrityService {
   ): Promise<ValidationResult> {
     const keyframeIssues: KeyframeValidationIssue[] = [];
     const snapshotIssues: SnapshotValidationIssue[] = [];
+    const streamOrderIssues = await this.findStreamOrderIssues(
+      documentId,
+      branch,
+      signal,
+    );
 
     const replayCache = new KyselyWriteCache(
       passthroughKeyframeStore,
@@ -100,9 +107,11 @@ export class DocumentIntegrityService implements IDocumentIntegrityService {
     } catch {
       return {
         documentId,
-        isConsistent: keyframeIssues.length === 0,
+        isConsistent:
+          keyframeIssues.length === 0 && streamOrderIssues.length === 0,
         keyframeIssues,
         snapshotIssues,
+        streamOrderIssues,
       };
     }
 
@@ -146,9 +155,13 @@ export class DocumentIntegrityService implements IDocumentIntegrityService {
 
     return {
       documentId,
-      isConsistent: keyframeIssues.length === 0 && snapshotIssues.length === 0,
+      isConsistent:
+        keyframeIssues.length === 0 &&
+        snapshotIssues.length === 0 &&
+        streamOrderIssues.length === 0,
       keyframeIssues,
       snapshotIssues,
+      streamOrderIssues,
     };
   }
 
@@ -188,6 +201,36 @@ export class DocumentIntegrityService implements IDocumentIntegrityService {
       keyframesDeleted: 0,
       scopesInvalidated: scopes.length,
     };
+  }
+
+  private async findStreamOrderIssues(
+    documentId: string,
+    branch: string,
+    signal?: AbortSignal,
+  ): Promise<StreamOrderIssue[]> {
+    const scopes = await this.discoverScopes(documentId, branch, signal);
+    const issues: StreamOrderIssue[] = [];
+
+    for (const scope of scopes) {
+      throwIfAborted(signal);
+
+      const stored = await this.operationStore.getSince(
+        documentId,
+        scope,
+        branch,
+        -1,
+        undefined,
+        undefined,
+        signal,
+      );
+
+      const pair = firstOutOfOrderPair(stored.results);
+      if (pair !== undefined) {
+        issues.push({ scope, branch, ...pair });
+      }
+    }
+
+    return issues;
   }
 
   private async discoverScopes(

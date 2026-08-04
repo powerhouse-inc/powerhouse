@@ -4,6 +4,7 @@ import { hashBrowser } from "./crypto.js";
 import { HashMismatchError } from "./errors.js";
 import { createPresignedHeader } from "./header.js";
 import type { DocumentOperations, Operation } from "./operations.js";
+import { isDenied } from "./operations.js";
 import type { PHDocumentSignatureInfo } from "./signatures.js";
 import { backfillAuthState } from "./state.js";
 import type { PHBaseState } from "./state.js";
@@ -446,6 +447,24 @@ const defaultCreateState = <TState extends PHBaseState = PHBaseState>(
   return state as TState;
 };
 
+/**
+ * Records an operation in the history without applying it, which is what a
+ * denied operation needs: it occupies its index and contributes no state.
+ */
+function appendWithoutApplying<TState extends PHBaseState>(
+  document: PHDocument<TState>,
+  operation: Operation,
+): PHDocument<TState> {
+  const scope = operation.action.scope;
+  return {
+    ...document,
+    operations: {
+      ...document.operations,
+      [scope]: [...(document.operations[scope] ?? []), operation],
+    },
+  };
+}
+
 // Runs the operations on the initial data using the
 // provided document reducer.
 // This rebuilds the document according to the provided actions.
@@ -531,6 +550,13 @@ export function replayDocument<TState extends PHBaseState = PHBaseState>(
   // then replays them
   if (operationsToReplay.length) {
     result = operationsToReplay.reduce((document, operation) => {
+      // A denied operation holds its position without contributing state. The
+      // reactor skips it on every rebuild, so a replay that applied it would
+      // produce different state from the reactor that served the history.
+      if (isDenied(operation)) {
+        return appendWithoutApplying(document, operation);
+      }
+
       const doc = reducer(document, operation.action, dispatch, {
         ignoreSkipOperations: true,
         checkHashes,

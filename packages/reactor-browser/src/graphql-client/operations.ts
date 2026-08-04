@@ -18,6 +18,7 @@ export const ReactorOperationFieldsFragmentDoc = gql`
     hash
     skip
     error
+    deniedReason
     id
     action {
       id

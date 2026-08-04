@@ -246,7 +246,11 @@ export interface IReactorClient {
    * @param signal - Optional abort signal to cancel the request
    * @returns The canonical document id
    */
-  resolveIdOrSlug(identifier: string, signal?: AbortSignal): Promise<string>;
+  resolveIdOrSlug(
+    identifier: string,
+    view?: ViewFilter,
+    signal?: AbortSignal,
+  ): Promise<string>;
 
   /**
    * Retrieves operations for a document.

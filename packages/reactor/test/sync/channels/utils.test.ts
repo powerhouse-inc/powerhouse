@@ -1,7 +1,9 @@
+import { isDenied } from "@powerhousedao/shared/document-model";
 import { describe, expect, it } from "vitest";
 import {
   envelopeToSyncOperation,
   envelopesToSyncOperations,
+  serializeEnvelope,
 } from "../../../src/sync/channels/utils.js";
 import type { SyncEnvelope } from "../../../src/sync/types.js";
 import { SyncOperationStatus } from "../../../src/sync/types.js";
@@ -597,5 +599,128 @@ describe("envelopesToSyncOperations", () => {
     const syncOps = envelopesToSyncOperations(envelope, "remote-1");
 
     expect(syncOps).toEqual([]);
+  });
+});
+
+describe("serializeEnvelope", () => {
+  function envelopeWith(deniedReason?: string): SyncEnvelope {
+    return {
+      type: "operations",
+      channelMeta: { id: "channel-1" },
+      operations: [
+        {
+          operation: {
+            index: 0,
+            skip: 0,
+            id: "op-1",
+            timestampUtcMs: "2024-01-01T00:00:00.000Z",
+            hash: "hash-1",
+            deniedReason,
+            action: {
+              type: "TEST_OP",
+              id: "action-1",
+              scope: "public",
+              timestampUtcMs: "2024-01-01T00:00:00.000Z",
+              input: {},
+            },
+          },
+          context: {
+            documentId: "doc-1",
+            documentType: "test/document",
+            scope: "public",
+            branch: "main",
+            ordinal: 1,
+          },
+        },
+      ],
+    };
+  }
+
+  function serializedOperation(
+    envelope: SyncEnvelope,
+  ): Record<string, unknown> {
+    const serialized = serializeEnvelope(envelope) as {
+      operations: Array<{ operation: Record<string, unknown> }>;
+    };
+    return serialized.operations[0].operation;
+  }
+
+  it("carries deniedReason when the operation was denied", () => {
+    const operation = serializedOperation(envelopeWith("document deleted"));
+
+    expect(operation.deniedReason).toBe("document deleted");
+  });
+
+  // A peer whose schema predates deniedReason rejects the unknown field during
+  // input coercion, so the key must be absent rather than explicitly null.
+  it("omits the deniedReason key entirely when the operation was not denied", () => {
+    const operation = serializedOperation(envelopeWith(undefined));
+
+    expect("deniedReason" in operation).toBe(false);
+    expect(Object.keys(operation)).not.toContain("deniedReason");
+  });
+});
+
+describe("deserializing an operation off the wire", () => {
+  // GraphQL returns null, not absence, for a selected nullable field. isDenied
+  // tests strictly against undefined, so a null left in place would mark every
+  // synced operation denied.
+  function envelopeWithNulls(): SyncEnvelope {
+    return {
+      type: "operations",
+      channelMeta: { id: "channel-1" },
+      operations: [
+        {
+          operation: {
+            index: 0,
+            skip: 0,
+            id: "op-1",
+            timestampUtcMs: "2024-01-01T00:00:00.000Z",
+            hash: "hash-1",
+            error: null,
+            deniedReason: null,
+            action: {
+              type: "TEST_OP",
+              id: "action-1",
+              scope: "public",
+              timestampUtcMs: "2024-01-01T00:00:00.000Z",
+              input: {},
+            },
+          },
+          context: {
+            documentId: "doc-1",
+            documentType: "test/document",
+            scope: "public",
+            branch: "main",
+            ordinal: 1,
+          },
+        },
+      ],
+    } as unknown as SyncEnvelope;
+  }
+
+  it("normalizes a null deniedReason to undefined so isDenied stays false", () => {
+    const syncOp = envelopeToSyncOperation(envelopeWithNulls(), "remote-1");
+    const operation = syncOp.operations[0].operation;
+
+    expect(operation.deniedReason).toBeUndefined();
+    expect(isDenied(operation)).toBe(false);
+  });
+
+  it("normalizes a null error to undefined", () => {
+    const syncOp = envelopeToSyncOperation(envelopeWithNulls(), "remote-1");
+
+    expect(syncOp.operations[0].operation.error).toBeUndefined();
+  });
+
+  it("preserves a real deniedReason through deserialization", () => {
+    const envelope = envelopeWithNulls();
+    envelope.operations![0].operation.deniedReason = "document deleted";
+
+    const syncOp = envelopeToSyncOperation(envelope, "remote-1");
+    const operation = syncOp.operations[0].operation;
+
+    expect(operation.deniedReason).toBe("document deleted");
+    expect(isDenied(operation)).toBe(true);
   });
 });
