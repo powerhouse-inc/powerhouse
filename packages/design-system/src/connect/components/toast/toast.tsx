@@ -47,13 +47,13 @@ function getDefaultOptions(type: ExtendedTypeOptions): ToastOptions {
       case "connect-warning":
         options.type = "warning";
         options.icon = (
-          <Icon className="text-foreground" name="WarningFill" size={24} />
+          <Icon className="text-warning" name="WarningFill" size={24} />
         );
         break;
       case "connect-loading":
         options.type = "default";
         options.icon = (
-          <Icon className="text-foreground" name="ClockFill" size={24} />
+          <Icon className="text-warning" name="ClockFill" size={24} />
         );
         break;
       case "connect-deleted":
