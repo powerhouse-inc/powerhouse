@@ -60,6 +60,7 @@ function makeDocument(documentType = ""): PHDocument<CountPHState> {
       revision: { global: 0, local: 0 },
       lastModifiedAtUtcIso: "",
       meta: {},
+      protocolVersions: { "base-reducer": 2 },
     },
     state: createCountState(),
     initialState: createCountState(),

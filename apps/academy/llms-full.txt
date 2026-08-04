@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-07-30T18:45:20.434Z
+> Generated: 2026-07-31T14:47:55.021Z
 > Total Documents: 109
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -14683,8 +14683,7 @@ those pages with no realtime at all and nothing logged.
 | `subscriptionsUrl`  | `string`                             | derived from `url`        | The websocket endpoint.                                                                   |
 | `realtime`          | `boolean`                            | `true`                    | Whether server-pushed changes reach subscribers.                                          |
 | `attachmentService` | `PHGlobal["attachmentService"]`      | none                      | Published into the slot the editors read.                                                 |
-| `packages`          | `readonly DocumentModelLib[]`        | none                      | The app's packages (real manifest, models, editors) — makes model and editor hooks work.  |
-| `documentModels`    | `readonly DocumentModelModule[]`     | none                      | Sugar for hand-picked modules; wrapped into one synthetic package after `packages`.       |
+| `documentModels`    | `readonly DocumentModelModule[]`     | none                      | The app's generated modules, published so the document-model hooks work.                  |
 | `children`          | `ReactNode`                          | required                  |                                                                                           |
 
 On mount the provider registers the `window.ph` event handlers once per page,
@@ -14694,24 +14693,23 @@ client, and leaves the slots populated, matching how Connect never unsets them.
 
 The props are read once, in the `useState` initialiser. Changing `url` or
 `tokenProvider` afterwards does not rebuild the client; remount the provider if
-the endpoint has to change. `attachmentService`, `packages` and
-`documentModels` are the exceptions: each is published from its own effect, so
-passing them later does not throw away every open document.
+the endpoint has to change. `attachmentService` and `documentModels` are the
+exceptions: each is published from its own effect, so passing them later does
+not throw away every open document.
 
-`packages` takes real `DocumentModelLib`s, assembled from a generated package's
-**subpath exports** (`my-models/document-models`, `my-models/editors`,
-`my-models/manifest`) — never from the package root, whose entry also exports
-`processorFactory` and would drag processor (server-side) code into the browser
-bundle. They publish through a fixed `StaticPackageManager` into the same
-`window.ph.vetraPackageManager` slot Connect fills, which makes the
-document-model hooks AND the editor hooks work below the provider. Array order
-is precedence (same-type collisions and the fallback editor resolve to the
-earlier package). `useDocumentModelModuleById(type, version?)` resolves the
-LATEST version when `version` is omitted — the registry's own semantics — and
-pins an exact one when given. Passing no packages is equally supported: actions
-are plain data and the Switchboard runs the reducer either way. Editor
-discovery is not a rendering guarantee: document hooks work in a light app,
-drive APIs do not exist.
+`documentModels` takes the app's generated modules, imported from the package's
+`document-models` **subpath** — never from the package root, whose entry also
+exports `processorFactory` and would drag processor (server-side) code into the
+browser bundle. They publish through a fixed `StaticPackageManager` into the
+same `window.ph.vetraPackageManager` slot Connect fills, which makes
+`useDocumentModelModules` and `useDocumentModelModuleById` work below the
+provider. `useDocumentModelModuleById(type, version?)` resolves the LATEST
+version when `version` is omitted — the registry's own semantics — and pins an
+exact one when given. Passing no modules is equally supported: actions are
+plain data and the Switchboard runs the reducer either way. Deliberately
+modules only, no editors: editors read the selected document through Connect's
+drive/node selection and are not portable to light apps yet — import an
+editor's React components directly if you need them.
 
 ## Hooks
 

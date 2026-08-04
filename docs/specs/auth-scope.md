@@ -36,34 +36,36 @@ While DCB allows for arbitrary decision models, for now Auth is the first and on
 
 ```typescript
 type PHAuthState = {
-  version: number;          // policy language version; 0 = uninitialized, genesis sets >= 1
+  version: number; // policy language version; 0 = uninitialized, genesis sets >= 1
   grants: Grant[];
-  creator?: string;         // did:key of the genesis signer; set once by INITIALIZE_AUTH
+  creator?: string; // did:key of the genesis signer; set once by INITIALIZE_AUTH
 };
 
 type Grant = {
-  id: string;               // stable; SET_GRANT upserts, REMOVE_GRANT deletes
-  description: string;      // intent, shows in the audit trail
+  id: string; // stable; SET_GRANT upserts, REMOVE_GRANT deletes
+  description: string; // intent, shows in the audit trail
   effect: "allow" | "deny";
-  principal: Principal;     // who
-  capability: Capability;   // what they may do
-  where?: Condition;        // optional; the grant applies only when this holds
+  principal: Principal; // who
+  capability: Capability; // what they may do
+  where?: Condition; // optional; the grant applies only when this holds
 };
 
 type Principal =
-  | { anyone: true }        // any signer, including anonymous
-  | { address: string }     // one wallet
-  | { group: string }       // a PHGroup document id
-  | { match: Condition };   // relationship, e.g. subject.address == doc.global.rtoAddress
+  | { anyone: true } // any signer, including anonymous
+  | { address: string } // one wallet
+  | { group: string } // a PHGroup document id
+  | { match: Condition }; // relationship, e.g. subject.address == doc.global.rtoAddress
 
-type Capability = {
-  can: "read";
-  scope?: string;
-} | {
-  can: "execute";
-  scope?: string;
-  operation?: string[];
-};
+type Capability =
+  | {
+      can: "read";
+      scope?: string;
+    }
+  | {
+      can: "execute";
+      scope?: string;
+      operation?: string[];
+    };
 ```
 
 Auth scope actions are applied by a dedicated auth reducer, `applyAuthAction`, which the base reducer dispatches instead of the model reducer. This is the same approach as we've taken with the `document` scope reducer. The resulting state is event-sourced, signed, and replicates with the document, so the policy travels with the document instead of living outside of it.
@@ -141,7 +143,7 @@ export type Condition =
   | { ne: [Operand, Operand] }
   | { in: [Operand, Operand[]] }
   | { notIn: [Operand, Operand[]] }
-  | { lt: [Operand, Operand] }        // numbers and strings; mixed types -> false
+  | { lt: [Operand, Operand] } // numbers and strings; mixed types -> false
   | { lte: [Operand, Operand] }
   | { gt: [Operand, Operand] }
   | { gte: [Operand, Operand] }
@@ -151,7 +153,7 @@ export type Condition =
   | { not: Condition };
 
 export type Operand =
-  | { attr: string }                  // "doc.global.status", "subject.address", "action.input.newStatus"
+  | { attr: string } // "doc.global.status", "subject.address", "action.input.newStatus"
   | { lit: string | number | boolean | null };
 ```
 
@@ -173,8 +175,7 @@ These validation rules are part of what a `version` means. Version 1 ships its r
 We define the following types to support the DCB pattern:
 
 ```typescript
-type StreamQuery =
-  { documentId: string; branch: string; scope: string };
+type StreamQuery = { documentId: string; branch: string; scope: string };
 
 // A projection names a stream. Its value in the model is that scope's state
 // from the rebuilt document, e.g. PHAuthState for an auth query.
@@ -189,7 +190,12 @@ type DecisionContext = { scopeState: unknown };
 
 type DecisionModel<M> = {
   projections: { [K in keyof M]: Projection<M> };
-  decide(model: M, subject: Subject, request: Request, ctx: DecisionContext): "allow" | "deny";
+  decide(
+    model: M,
+    subject: Subject,
+    request: Request,
+    ctx: DecisionContext,
+  ): "allow" | "deny";
 };
 ```
 
@@ -206,7 +212,12 @@ type DecisionTarget = { documentId: string; branch: string };
 
 // we need to fail the append if any of these streams has operations past `revision`
 type AppendCondition = {
-  streams: Array<{ documentId: string; scope: string; branch: string; revision: number }>;
+  streams: Array<{
+    documentId: string;
+    scope: string;
+    branch: string;
+    revision: number;
+  }>;
 };
 
 function buildDecisionModel<M>(
@@ -223,24 +234,40 @@ Reading through the cache puts the cache's contract in the auth trust base. Ever
 The full auth decision model composes three projections, and we can see easily how we might incrementally add the projections to the decision model to roll out this feature. There are two projections over the target document (i.e. we need `document` and `auth` streams), and a set of projections over the referenced group documents:
 
 ```typescript
-const AuthDecisionModel = (target: DecisionTarget): DecisionModel<{
+const AuthDecisionModel = (
+  target: DecisionTarget,
+): DecisionModel<{
   document: PHDocumentState;
   auth: PHAuthState;
-  groups: Record<string, PHGroupState>;   // group document id -> state
+  groups: Record<string, PHGroupState>; // group document id -> state
 }> => ({
   projections: {
     document: {
-      query: { documentId: target.documentId, branch: target.branch, scope: "document" },
+      query: {
+        documentId: target.documentId,
+        branch: target.branch,
+        scope: "document",
+      },
     },
     auth: {
-      query: { documentId: target.documentId, branch: target.branch, scope: "auth" },
+      query: {
+        documentId: target.documentId,
+        branch: target.branch,
+        scope: "auth",
+      },
     },
     groups: {
-      query: (model) => referencedGroupIds(model.auth.grants)
-        .map((id) => ({ documentId: id, branch: "main", scope: "global" })),
+      query: (model) =>
+        referencedGroupIds(model.auth.grants).map((id) => ({
+          documentId: id,
+          branch: "main",
+          scope: "global",
+        })),
     },
   },
-  decide(model, subject, request, ctx) { /* the decision algorithm below */ },
+  decide(model, subject, request, ctx) {
+    /* the decision algorithm below */
+  },
 });
 ```
 
@@ -257,6 +284,7 @@ The platform registers exactly this one model, although nothing in the evaluatio
 ## Decision algorithm
 
 Every request runs through this one function.
+
 ```typescript
 type AuthModel = {
   document: PHDocumentState;
@@ -329,7 +357,7 @@ The grants are a stack. A capability that omits `scope` (or sets it to `"*"`) co
 
 A grant that uses a feature that doesn't yet exist never applies. For instance, `{ group }` principals, `{ match }` principals, and `where` conditions will not apply in grants until the actual feature evaluator exists. Skipping an allow withholds access, so an unevaluated allow can never widen a policy. Skipping a deny withholds nothing: a policy that relies on a conditional or group-scoped deny is weaker than written until the feature it uses is live.
 
-The creator can always execute `auth` operations, even against a grant list that tries to deny them, so that a document can never be bricked by locking out its own creator. However, this is deliberately narrow, covering only  `auth`-scope execution. The creator gets no special access to domain operations or reads.
+The creator can always execute `auth` operations, even against a grant list that tries to deny them, so that a document can never be bricked by locking out its own creator. However, this is deliberately narrow, covering only `auth`-scope execution. The creator gets no special access to domain operations or reads.
 
 This creator check is safe because it can be verified on any replica. If we tried to do this externally to the reactor, like by having an administrator list on Switchboard, replicas could hold different lists and could reach different decisions. Admins at the API layer can gate requests but this would never change how an operation is evaluated internally to the reactor.
 
@@ -351,7 +379,7 @@ Enforcement happens in two places with one evaluator: admission (before a new op
 
 New mutation jobs are evaluated in `SimpleJobExecutor.executeRegularAction`, between the write-cache load and the reducer.
 
-A decision reads through the write cache, so it depends on two guarantees the cache makes. A stored snapshot does not change after it is stored, so a decision reading an earlier position does not see a delete that had not happened there. And a read for the head is answered only by a snapshot recorded as the head, so a verdict does not depend on which reads happened to warm the cache. Neither is auth-specific, since any positional read can reach them, and both were fixed before this stage began.
+A decision reads through the write cache, so it depends on two guarantees the cache makes. A stored snapshot does not change after it is stored, so a decision reading an earlier position does not see a delete that had not happened there. And a read for the head is answered only by a snapshot recorded as the head, so an evaluation does not depend on which reads happened to warm the cache. Neither is auth-specific, since any positional read can reach them, and both were fixed before this stage began.
 
 `buildDecisionModel` folds the model from the local streams' current heads and returns the append condition. A deny rejects the job with `AuthorizationDeniedError` before anything is written. The executor's current, separate `isDeleted` check is pulled into the decision model (fixing a bug that's been around for awhile...).
 
@@ -443,9 +471,9 @@ The operations that count are the ones left after those skips are applied. Call 
 
 The rule is therefore stated on the effective stream:
 
-> A read-set stream is applied, in the order its effective operations run, through every operation whose timestamp is at or before the judged operation's. An operation with an equal timestamp in another stream sorts by action id, then by operation id.
+> A read-set stream is applied, in the order its effective operations run, through every operation whose timestamp is at or before the evaluated operation's. An operation with an equal timestamp in another stream sorts by action id, then by operation id.
 
-A replay evaluates by walking forward rather than by reading each position. One pass visits the read-set streams in that order, carrying the model along, and judges each operation against the model as it stood when the walk reached it. Resolving skips first is what makes one pass enough: without it, an operation's position and its place in the stored rows can disagree, and no single forward pass can be correct for both. `IWriteCache.getState` bounds by index over the stored rows, so it cannot express "up to timestamp T" and a point read cannot answer the question at all.
+A replay evaluates by walking forward rather than by reading each position. One walk visits the read-set streams in that order, carrying the model along, and evaluates each operation against the model as it stood when the walk reached it. Resolving skips first is what makes one walk enough: without it, an operation's position and its place in the stored rows can disagree, and no single forward walk can be correct for both. `IWriteCache.getState` bounds by index over the stored rows, so it cannot express "up to timestamp T" and a point read cannot answer the question at all.
 
 Admission usually reads the head, but not by definition. Timestamps are supplied by the caller and the reactor does not re-stamp them, so an offline or queued client can submit an action timestamped below operations already stored. An action at or above every timestamp in its read-set streams is at the head and a head read is correct; below them, admission takes the same walk a replay takes.
 
@@ -453,7 +481,7 @@ Admission usually reads the head, but not by definition. Timestamps are supplied
 
 An action records what was attempted. A denial records what happened to it. These are separate facts, so the denial belongs on the operation rather than in a rewritten action.
 
-Rewriting the action fails in two ways. Substituting `NOOP` collides with the base reducer, where a `NOOP` carrying a skip is the marker that supersedes earlier operations. `garbageCollectV2` counts those markers and ignores skip magnitude, so a denied operation that also carried a reshuffle skip would retract one operation where it meant to retract several. Introducing a new action type such as `DENIED` avoids that collision but discards what was attempted, and three consumers need it: the client matches its own action id to learn which action was refused, sync deduplicates by action id, and re-evaluation needs the original action to re-append if the verdict later changes back. Nesting the original action inside a new one keeps those but breaks every consumer that reads `action.type`.
+Rewriting the action fails in two ways. Substituting `NOOP` collides with the base reducer, where a `NOOP` carrying a skip is the marker that supersedes earlier operations. `garbageCollectV2` counts those markers and ignores skip magnitude, so a denied operation that also carried a reshuffle skip would retract one operation where it meant to retract several. Introducing a new action type such as `DENIED` avoids that collision but discards what was attempted, and three consumers need it: the client matches its own action id to learn which action was refused, sync deduplicates by action id, and re-evaluation needs the original action to re-append if the evaluation later changes back. Nesting the original action inside a new one keeps those but breaks every consumer that reads `action.type`.
 
 The operation therefore carries an outcome:
 
@@ -480,25 +508,25 @@ When a reshuffle happens, the tail from the first change must be re-evaluated, b
 
 Re-evaluation is a reshuffle-style re-append. If any decision changes, the tail from the first change is re-emitted as new operations: same `opId` and action id, but fresh indexes with skip.
 
-A pass that changes nothing emits nothing.
-
-The re-append advances the stream heads, so a concurrent admission that read the old tail fails its append condition and retries. It also propagates the result: re-emitted operations reach every remote through the normal reshuffle rebroadcast. Receivers do everything they already do: re-evaluating validity and re-executing reducers.
+The re-append advances the stream heads, so a concurrent admission that read the old tail fails its append condition and retries. The re-appended operations do not travel to other replicas, and do not need to: a replica learning of the operation that triggered the pass evaluates its own history against it and reaches the same outcome. Two replicas may therefore store different rows while agreeing on which operations apply and on the state they produce.
 
 #### What triggers a pass
 
-Re-evaluation is not a property of loading. It is owed whenever a read-set stream gains an operation that does not sort at the head, since that is exactly when an already-judged operation can change verdict. A load is the common way that happens, but not the only one.
+Re-evaluation is not a property of loading. It is owed whenever a read-set stream gains an operation that something already evaluated sorts after, since that is exactly when an evaluation can change. A load is the common way that happens, but not the only one.
 
 A locally executed operation can trigger it too. Timestamps are supplied by the caller and the reactor does not re-stamp them, so a mutation can carry a timestamp below operations already stored. `DELETE_DOCUMENT` is the case that matters. The reactor issuing the delete would be the one replica that keeps its own later-timestamped operations in effect, while every replica learning of the delete by sync denies them, leaving the deleting reactor as the sole dissenter. That inverts what enforcement is for.
 
 The trigger is therefore stated on the operation rather than the job:
 
-> A committed operation on a read-set stream owes a re-evaluation pass over the streams that read it, unless it sorts at the head of its own stream by timestamp. Admission and replay owe this equally.
+> A committed operation on a read-set stream owes a re-evaluation pass over the streams that read it, unless it sorts after every operation in those streams. Admission and replay owe this equally.
 
-An operation that does sort at the head owes nothing, which is the common case, so the ordinary write path stays free. That is safe because a head-sorting operation cannot precede anything already judged.
+Note that the comparison is against the streams that read the operation, not the stream it lives in. A deletion is normally the last thing in the document scope while the operations it refuses sit in another scope, so testing its own stream would exempt exactly the case the pass exists for. An operation later than everything that reads it owes nothing, which is the common case, so the ordinary write path stays free.
 
 #### Retracting a tail
 
-A pass that changes a verdict has to retract the operations whose verdict changed. `NOOP` carrying a skip is the base reducer's marker for superseding earlier operations, and an N-operation retraction is a chain of N markers each carrying `skip: 1`. `garbageCollectV2` counts markers and ignores skip magnitude, so a single marker carrying `skip: N` would retract one operation rather than N.
+A pass that changes an evaluation re-appends the tail from that point, carrying a skip on the first re-appended operation the way a reshuffle does. Retraction never happens on its own, because a denied operation still occupies a position, so no separate marker is needed.
+
+The skip spans from the first retracted index to where the re-appended operation lands, rather than counting the operations retracted. Applying a skip resolves to `skipUntil = index - skip - 1`, and the two numbers agree only while the stream's indices run without gaps. A pass leaves a gap behind, so counting would leave an earlier copy standing beside its own replacement.
 
 #### Caveats
 
@@ -670,11 +698,13 @@ Migration maps a legacy table owner to an `execute`-on-`auth` grant.
 
 ## Implementation plan
 
-Stage 1 has shipped: `PHAuthState` with backfill for legacy documents, the four auth actions and the auth reducer, the version-1 validation rules, persistence through save/load and versioned replay, and interim admission and read gates that consult the policy directly. The policy is replicated state; stage 4 absorbs the interim gates into the decision model.
+Stage 1 has shipped: `PHAuthState` with backfill for legacy documents, the four auth actions and the auth reducer, the version-1 validation rules, persistence through save/load and versioned replay, and interim admission and read gates that consult the policy directly. The admission gate reads the policy out of the document loaded for the scope being written, so it reaches a real policy only for an operation in the `auth` scope. A domain write is handed the default state and allowed. Grants therefore do not gate a domain write before stage 4. The policy is replicated state; stage 4 absorbs the interim gates into the decision model.
 
 ### Feature flags
 
 The reactor configuration carries four flags: `documentDecisions`, `authEnforcement`, `authGroups`, and `authConditions`. Each flag selects an expansion of the registered decision model, and each implies its predecessors — `authGroups` and `authConditions` require `authEnforcement`, which requires `documentDecisions`. All default off. The flags govern enforcement only; the auth data model (actions, reducer, validation, replication) is always live, so a policy authored under any flag configuration is intact once enforcement turns on.
+
+`ReactorBuilder` validates the flag set and throws when there is inconsistent configuration. A flag set without its required predecessors is rejected, and so is a name the running version does not recognize.
 
 A decision made at replay is a consensus outcome: a denied operation carries a `denied` outcome and contributes nothing to the derived state. Two reactors that share documents but disagree on these flags therefore diverge, exactly as two reactors on incompatible software versions would. A flag flips on for a document-sharing fleet, not per node.
 
@@ -684,17 +714,36 @@ A decision made at replay is a consensus outcome: a denied operation carries a `
 
 Positional deletion is the corrected semantics on every reactor, so this stage would not need a flag on its own. It carries one because it changes replay outcomes and therefore has to roll out per fleet like the stages after it. The flag also keeps the document meta cache alive: the cache answers the deletion question while the flag is off, so retiring it, along with `rebuildAtRevision`, the eager `putDocumentMeta` calls, and its slot in `ExecutionStores`, waits until the flag defaults on.
 
-The stage was attempted once and reverted. Four mistakes from that attempt are stated as design above and are the stage's real content: it derived a revision from a timestamp (see "A position is a timestamp, not a revision"), it substituted `NOOP` for a denied action (see "The outcome belongs on the operation"), it retracted a tail with a single marker carrying the whole skip (see "Retracting a tail"), and it triggered re-evaluation from the load path alone (see "What triggers a pass"). A fifth problem, the two write-cache guarantees a decision depends on, has since been fixed (see Admission).
+The stage was attempted once and reverted. Four mistakes from that attempt are stated as design above and are the stage's real content: it derived a revision from a timestamp (see "A position is a timestamp, not a revision"), it substituted `NOOP` for a denied action (see "The outcome belongs on the operation"), it retracted a tail by counting the operations rather than spanning the indices (see "Retracting a tail"), and it triggered re-evaluation from the load path alone (see "What triggers a pass"). A fifth problem, the two write-cache guarantees a decision depends on, has since been fixed (see Admission).
 
 Two limits remain deliberate, both on the read side, and stage 4 moves reads onto the same model. A denied operation contributes nothing to state in the reactor's own rebuild path, but `replayDocument` in `shared/document-model` still applies it, so a client replaying history itself sees it apply. The read surface also continues to hide a deleted document outright rather than serving the state at the deletion boundary.
 
-**Stage 4: the auth projection (`authEnforcement`).** `decide` gains the uninitialized, creator, version, and grant steps, and grants are enforced at admission and replay. The interim gates from stage 1 are deleted; with the flag off, the reactor does not enforce policies at all. Reads and the sync manager filter against the same model, which is also where stage 3's two read-side limits are closed. The auth stream joins re-evaluation here, once the monotonic-timestamp rule says how a re-appended auth operation is ordered. This stage brings the monotonic-timestamp rule for the auth stream, the excessive-shuffle exemption for re-evaluation, and the load-path work for evaluating multiple streams in one job. Exit: two reactors that accept conflicting auth and domain operations offline converge to identical decisions and identical state after sync, in both directions, and a revocation over a history longer than the excessive-shuffle bound completes without dead-lettering.
+**Stage 4: the auth projection (`authEnforcement`).**
+Expand `decide` to include the `auth` policy. The mechanism that makes this possible is already in place: stage 3's projection reads the `document` scope to evaluate an operation in other scopes at its merged position, and guards the write with an append condition with re-evaluation. Reading the `auth` scope to evaluate a domain write is that same arrangement with a second projection, so this stage adds projections and `decide` steps rather than new cross-scope machinery.
+
+With the flag off, the reactor does not enforce policies at all. The auth stream joins re-evaluation here, once the monotonic-timestamp rule says how a re-appended auth operation is ordered.
+
+This stage brings the monotonic-timestamp rule for the auth stream, the excessive-shuffle exemption for re-evaluation, and the load-path work for evaluating multiple streams in one job.
+
+Two reactors that accept conflicting auth and domain operations offline converge to identical decisions and identical state after sync, in both directions, and a revocation over a history longer than the excessive-shuffle bound completes without dead-lettering.
 
 **Stage 5: the groups projection (`authGroups`).** Ship the `PHGroup` model, derive group queries from the grant list, add group streams to the read-set and the append condition, maintain the group-reference relation so sync carries referenced groups and re-evaluation finds dependent documents (see Synchronization), and re-evaluate dependents in their own jobs. Group principals begin to match only here. Until conditions ship, a group's own policy is limited to `address` and `anyone` principals, since `match` never applies. Exit: a group-gated operation syncs to a replica that does not hold the group document and fails closed there until the group's history arrives, after which both replicas agree; and a membership removal denies later operations on every document that references the group.
 
 **Stage 6: conditions (`authConditions`).** The `where` and `match` evaluators turn on. Conditional grants begin to apply only here.
 
 Registering decision models beyond auth is out of scope. The types are model-agnostic, so that work is registration, not new semantics.
+
+### Ordering rules the write paths keep
+
+Four rules hold as of stage 3, and stage 4 depends on all of them. Each was broken when the stage began.
+
+An evaluation pass is owed by comparing a committed operation against the largest timestamp in the streams that read it, which is what the store reports as `latestTimestamp`. The last-indexed operation is not that timestamp, because a reshuffle can leave a later one behind it at a lower index.
+
+A write is positioned by its timestamp on both paths, once `documentDecisions` is on. The caller supplies the timestamp, so a write can belong before operations already stored, and it is reshuffled into place rather than appended at the tail. Otherwise the scope is left out of timestamp order and no forward walk over it is correct.
+
+Creation does not move. `reactor.create` submits `CREATE_DOCUMENT` and its `UPGRADE_DOCUMENT` from version zero as one batch, and that pair holds the first two indexes for the life of the document, so no reshuffle includes it however far back the conflicting range reaches.
+
+Every re-appended operation carries the skip the reshuffle assigned it, so the operations it replaces stop counting. This reaches the relationship actions and `DELETE_DOCUMENT` through their own handlers.
 
 ## Worked example: a revocation race
 
@@ -717,54 +766,146 @@ This is a TRP toll statement. The operation names are illustrative — the model
   "version": 1,
   "grants": [
     // the site administrator governs the policy and can act anywhere
-    { "id": "g-admin", "description": "Site administrator: full governance", "effect": "allow",
+    {
+      "id": "g-admin",
+      "description": "Site administrator: full governance",
+      "effect": "allow",
       "principal": { "address": "0x…site-admin" },
-      "capability": { "can": "execute", "scope": "*" } },
-    { "id": "g-admin-read", "description": "Site administrator: read everything", "effect": "allow",
+      "capability": { "can": "execute", "scope": "*" }
+    },
+    {
+      "id": "g-admin-read",
+      "description": "Site administrator: read everything",
+      "effect": "allow",
       "principal": { "address": "0x…site-admin" },
-      "capability": { "can": "read", "scope": "*" } },
+      "capability": { "can": "read", "scope": "*" }
+    },
 
     // the RTO reads their own statement
-    { "id": "g-rto-read", "description": "RTO reads their own statement", "effect": "allow",
-      "principal": { "match": { "eq": [ { "attr": "subject.address" },
-                                        { "attr": "doc.global.rtoAddress" } ] } },
-      "capability": { "can": "read", "scope": "global" } },
+    {
+      "id": "g-rto-read",
+      "description": "RTO reads their own statement",
+      "effect": "allow",
+      "principal": {
+        "match": {
+          "eq": [
+            { "attr": "subject.address" },
+            { "attr": "doc.global.rtoAddress" }
+          ]
+        }
+      },
+      "capability": { "can": "read", "scope": "global" }
+    },
 
     // the RTO may re-upload, but only after a failed extraction
-    { "id": "g-rto-reupload", "description": "RTO re-uploads after a failed extraction", "effect": "allow",
-      "principal": { "match": { "eq": [ { "attr": "subject.address" },
-                                        { "attr": "doc.global.rtoAddress" } ] } },
-      "capability": { "can": "execute", "scope": "global", "operation": ["REPLACE_STATEMENT_PDF"] },
-      "where": { "eq": [ { "attr": "doc.global.status" }, { "lit": "PROCESSING_ERROR" } ] } },
+    {
+      "id": "g-rto-reupload",
+      "description": "RTO re-uploads after a failed extraction",
+      "effect": "allow",
+      "principal": {
+        "match": {
+          "eq": [
+            { "attr": "subject.address" },
+            { "attr": "doc.global.rtoAddress" }
+          ]
+        }
+      },
+      "capability": {
+        "can": "execute",
+        "scope": "global",
+        "operation": ["REPLACE_STATEMENT_PDF"]
+      },
+      "where": {
+        "eq": [{ "attr": "doc.global.status" }, { "lit": "PROCESSING_ERROR" }]
+      }
+    },
 
     // the ingest service reads every statement and writes extraction results while it is processing
-    { "id": "g-sys-read", "description": "Ingest service reads every statement", "effect": "allow",
+    {
+      "id": "g-sys-read",
+      "description": "Ingest service reads every statement",
+      "effect": "allow",
       "principal": { "address": "0x…ingest-service" },
-      "capability": { "can": "read", "scope": "global" } },
-    { "id": "g-sys-ingest", "description": "Ingest service writes during processing", "effect": "allow",
+      "capability": { "can": "read", "scope": "global" }
+    },
+    {
+      "id": "g-sys-ingest",
+      "description": "Ingest service writes during processing",
+      "effect": "allow",
       "principal": { "address": "0x…ingest-service" },
-      "capability": { "can": "execute", "scope": "global", "operation": ["SET_EXTRACTED_FIELDS", "SET_STATUS"] },
-      "where": { "in": [ { "attr": "doc.global.status" },
-                         [ { "lit": "PROCESSING" }, { "lit": "PROCESSING_ERROR" } ] ] } },
+      "capability": {
+        "can": "execute",
+        "scope": "global",
+        "operation": ["SET_EXTRACTED_FIELDS", "SET_STATUS"]
+      },
+      "where": {
+        "in": [
+          { "attr": "doc.global.status" },
+          [{ "lit": "PROCESSING" }, { "lit": "PROCESSING_ERROR" }]
+        ]
+      }
+    },
 
     // legal assistants read every statement and drive review while it is not terminal
-    { "id": "g-las-read", "description": "Legal assistants read every statement", "effect": "allow",
+    {
+      "id": "g-las-read",
+      "description": "Legal assistants read every statement",
+      "effect": "allow",
       "principal": { "group": "phd…las-staff-group" },
-      "capability": { "can": "read", "scope": "global" } },
-    { "id": "g-las-review", "description": "Legal assistants review before terminal", "effect": "allow",
+      "capability": { "can": "read", "scope": "global" }
+    },
+    {
+      "id": "g-las-review",
+      "description": "Legal assistants review before terminal",
+      "effect": "allow",
       "principal": { "group": "phd…las-staff-group" },
-      "capability": { "can": "execute", "scope": "global",
-                      "operation": ["SET_STATUS", "SET_LINE_ITEM_DECISION", "VALIDATE_EXTRACTION"] },
-      "where": { "notIn": [ { "attr": "doc.global.status" },
-                            [ { "lit": "APPROVED" }, { "lit": "REJECTED" }, { "lit": "NOT_PURSUED" } ] ] } },
+      "capability": {
+        "can": "execute",
+        "scope": "global",
+        "operation": [
+          "SET_STATUS",
+          "SET_LINE_ITEM_DECISION",
+          "VALIDATE_EXTRACTION"
+        ]
+      },
+      "where": {
+        "notIn": [
+          { "attr": "doc.global.status" },
+          [
+            { "lit": "APPROVED" },
+            { "lit": "REJECTED" },
+            { "lit": "NOT_PURSUED" }
+          ]
+        ]
+      }
+    },
 
     // once terminal, content edits are frozen for everyone; this sits last, so it overrides the allows above
-    { "id": "g-terminal-freeze", "description": "Freeze content edits once terminal", "effect": "deny",
+    {
+      "id": "g-terminal-freeze",
+      "description": "Freeze content edits once terminal",
+      "effect": "deny",
       "principal": { "anyone": true },
-      "capability": { "can": "execute", "scope": "global",
-                      "operation": ["SET_EXTRACTED_FIELDS", "REPLACE_STATEMENT_PDF", "SET_LINE_ITEM_DECISION"] },
-      "where": { "in": [ { "attr": "doc.global.status" },
-                         [ { "lit": "APPROVED" }, { "lit": "REJECTED" }, { "lit": "NOT_PURSUED" } ] ] } }
+      "capability": {
+        "can": "execute",
+        "scope": "global",
+        "operation": [
+          "SET_EXTRACTED_FIELDS",
+          "REPLACE_STATEMENT_PDF",
+          "SET_LINE_ITEM_DECISION"
+        ]
+      },
+      "where": {
+        "in": [
+          { "attr": "doc.global.status" },
+          [
+            { "lit": "APPROVED" },
+            { "lit": "REJECTED" },
+            { "lit": "NOT_PURSUED" }
+          ]
+        ]
+      }
+    }
   ]
 }
 ```

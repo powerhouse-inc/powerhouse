@@ -39,7 +39,7 @@ import {
 import { reshuffleByTimestamp } from "../utils/reshuffle.js";
 import { buildDecisionModel } from "../decision/build-decision-model.js";
 import { documentDecisionModel } from "../decision/document-decision-model.js";
-import { deletionVerdictsByPosition } from "../decision/deletion-verdicts.js";
+import { evaluateDeletionsByPosition } from "../decision/deletion-evaluation.js";
 import { staticReadSet } from "../decision/build-decision-model.js";
 import { retractionSkip } from "../decision/merged-order.js";
 import { DocumentActionHandler } from "./document-action-handler.js";
@@ -48,14 +48,17 @@ import { DefaultExecutionScope } from "./execution-scope.js";
 import type { IJobExecutor } from "./interfaces.js";
 import { SignatureVerifier } from "./signature-verifier.js";
 import type {
+  ExecutingJob,
   JobExecutorConfig,
   JobResult,
+  PendingWrite,
   ReactorFeatureFlags,
 } from "./types.js";
 import {
   buildErrorResult,
   createOperation,
   getNextIndexForScope,
+  isGenesisOperation,
 } from "./util.js";
 import { SnapshotPosition } from "../cache/write-cache-types.js";
 
@@ -75,6 +78,15 @@ type ProcessActionsResult = {
   generatedOperations: Operation[];
   operationsWithContext: OperationWithContext[];
   error?: Error;
+};
+
+/**
+ * A write that just committed, tested to decide whether earlier evaluations
+ * still hold. The operations all belong to `scope` of the job's document.
+ */
+type EvaluationCriteria = {
+  scope: string;
+  operations: Operation[];
 };
 
 const documentScopeActions = [
@@ -130,6 +142,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       registry,
       logger,
       driveContainerTypes,
+      this.featureFlags,
     );
     this.executionScope =
       executionScope ??
@@ -163,13 +176,14 @@ export class SimpleJobExecutor implements IJobExecutor {
         const indexTxn = stores.operationIndex.start();
 
         if (job.kind === "load") {
-          const loadResult = await this.executeLoadJob(
+          const loadResult = await this.executeLoadJob({
             job,
             startTime,
             indexTxn,
             stores,
             signal,
-          );
+            replayingAcceptedHistory: true,
+          });
           if (loadResult.success && loadResult.operationsWithContext) {
             for (const owc of loadResult.operationsWithContext) {
               touchedCacheEntries.push({
@@ -204,16 +218,23 @@ export class SimpleJobExecutor implements IJobExecutor {
           return loadResult;
         }
 
-        const actionResult = await this.processActions(
+        const executing: ExecutingJob = {
           job,
-          job.actions,
           startTime,
           indexTxn,
           stores,
-          undefined,
-          undefined,
-          "",
           signal,
+          replayingAcceptedHistory: false,
+        };
+        const positioned = await this.positionByTimestamp(job, stores, signal);
+
+        const actionResult = await this.processActions(
+          positioned.actions.map((action, i) => ({
+            action,
+            skip: positioned.skipValues?.[i] ?? 0,
+            sourceRemote: "",
+          })),
+          executing,
         );
 
         if (!actionResult.success) {
@@ -233,6 +254,21 @@ export class SimpleJobExecutor implements IJobExecutor {
               branch: owc.context.branch,
             });
           }
+        }
+
+        // Put here because a re-eval pass writes through the same db db
+        // transaction.
+        const reevaluationError = await this.reevaluateIfCriteriaMet(
+          { scope: job.scope, operations: actionResult.generatedOperations },
+          executing,
+        );
+        if (reevaluationError) {
+          return {
+            job,
+            success: false as const,
+            error: reevaluationError,
+            duration: Date.now() - startTime,
+          };
         }
 
         const ordinals = await stores.operationIndex.commit(indexTxn, signal);
@@ -298,17 +334,12 @@ export class SimpleJobExecutor implements IJobExecutor {
   }
 
   private async processActions(
-    job: Job,
-    actions: Action[],
-    startTime: number,
-    indexTxn: IOperationIndexTxn,
-    stores: ExecutionStores,
-    skipValues?: number[],
-    sourceOperations?: (Operation | undefined)[],
-    sourceRemote: string = "",
-    signal?: AbortSignal,
-    deniedReasons?: Array<string | undefined>,
+    writes: PendingWrite[],
+    executing: ExecutingJob,
   ): Promise<ProcessActionsResult> {
+    const { job, signal } = executing;
+    const actions = writes.map((write) => write.action);
+
     const generatedOperations: Operation[] = [];
     const operationsWithContext: OperationWithContext[] = [];
 
@@ -345,37 +376,11 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     let lastYield = performance.now();
 
-    for (let actionIndex = 0; actionIndex < actions.length; actionIndex++) {
-      const action = actions[actionIndex];
-      const skip = skipValues?.[actionIndex] ?? 0;
-      const sourceOperation = sourceOperations?.[actionIndex];
-      const deniedReason = deniedReasons?.[actionIndex];
-
-      const isDocumentAction = documentScopeActions.includes(action.type);
+    for (const write of writes) {
+      const isDocumentAction = documentScopeActions.includes(write.action.type);
       const result = isDocumentAction
-        ? await this.documentActionHandler.execute(
-            job,
-            action,
-            startTime,
-            indexTxn,
-            stores,
-            skip,
-            sourceRemote,
-            signal,
-            this.featureFlags.documentDecisions && job.kind === "load",
-          )
-        : await this.executeRegularAction(
-            job,
-            action,
-            startTime,
-            indexTxn,
-            stores,
-            skip,
-            sourceOperation,
-            sourceRemote,
-            signal,
-            deniedReason,
-          );
+        ? await this.documentActionHandler.execute(write, executing)
+        : await this.executeRegularAction(write, executing);
 
       const error = this.accumulateResultOrReturnError(
         result,
@@ -414,16 +419,8 @@ export class SimpleJobExecutor implements IJobExecutor {
   }
 
   private async executeRegularAction(
-    job: Job,
-    action: Action,
-    startTime: number,
-    indexTxn: IOperationIndexTxn,
-    stores: ExecutionStores,
-    skip: number = 0,
-    sourceOperation?: Operation,
-    sourceRemote: string = "",
-    signal?: AbortSignal,
-    deniedReason?: string,
+    write: PendingWrite,
+    executing: ExecutingJob,
   ): Promise<
     JobResult & {
       operationsWithContext?: Array<{
@@ -437,15 +434,17 @@ export class SimpleJobExecutor implements IJobExecutor {
       }>;
     }
   > {
+    const { action, skip, sourceOperation, sourceRemote, deniedReason } = write;
+    const { job, startTime, indexTxn, stores, signal } = executing;
+
     // append conditions are used iff the decision model flag is on
     let appendCondition: AppendCondition | undefined;
     let documentVersion: number | undefined;
 
-    // A load's operations were already judged at their own positions.
-    const verdictAlreadyDecided =
-      this.featureFlags.documentDecisions && job.kind === "load";
+    const alreadyEvaluated =
+      this.featureFlags.documentDecisions && executing.replayingAcceptedHistory;
 
-    if (this.featureFlags.documentDecisions && !verdictAlreadyDecided) {
+    if (this.featureFlags.documentDecisions && !alreadyEvaluated) {
       const target = { documentId: job.documentId, branch: job.branch };
       const definition = documentDecisionModel(target);
 
@@ -488,7 +487,7 @@ export class SimpleJobExecutor implements IJobExecutor {
 
       appendCondition = built.appendCondition;
       documentVersion = built.model.document.version;
-    } else if (verdictAlreadyDecided) {
+    } else if (alreadyEvaluated) {
       const documentScope = await stores.writeCache.getState(
         job.documentId,
         "document",
@@ -557,14 +556,13 @@ export class SimpleJobExecutor implements IJobExecutor {
       );
     }
 
-    // Auth admission gate. Skips load jobs (re-judging already-accepted sync/
-    // reshuffle history would drop operations and diverge replicas). Evaluated
-    // against current auth state: an uninitialized policy leaves the document
-    // open, so documents with no policy are unaffected.
-    if (job.kind !== "load") {
+    // An auth decision should be made iff this set of operations have not
+    // already been evaluated. Re-evaluating could drop operations and diverge
+    // replicas.
+    if (!executing.replayingAcceptedHistory) {
       const subject = {
-        address: action.context?.signer?.user.address,
-        key: action.context?.signer?.app.key,
+        address: write.action.context?.signer?.user.address,
+        key: write.action.context?.signer?.app.key,
       };
       const decision = decide(document.state.auth, subject, {
         verb: "execute",
@@ -604,20 +602,42 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     if (deniedReason !== undefined) {
       // A denied operation holds only a position but does not change state.
-      const denied = createOperation(
-        action,
-        getNextIndexForScope(document, job.scope),
-        skip,
-        { documentId: job.documentId, scope: job.scope, branch: job.branch },
-      );
+      const index = getNextIndexForScope(document, job.scope);
+      const denied = createOperation(action, index, skip, {
+        documentId: job.documentId,
+        scope: job.scope,
+        branch: job.branch,
+      });
       denied.deniedReason = deniedReason;
-      denied.hash = hashDocumentStateForScope(document, job.scope);
+
+      // A denied operation does not change state, so it records the previous
+      // state. We need to add skip to get the actual previous state.
+      let standing = document;
+      if (skip > 0) {
+        try {
+          standing = await stores.writeCache.getState(
+            job.documentId,
+            job.scope,
+            job.branch,
+            index - skip - 1,
+            signal,
+          );
+        } catch (error) {
+          return buildErrorResult(
+            job,
+            error instanceof Error ? error : new Error(String(error)),
+            startTime,
+          );
+        }
+      }
+
+      denied.hash = hashDocumentStateForScope(standing, job.scope);
 
       updatedDocument = {
-        ...document,
+        ...standing,
         operations: {
-          ...document.operations,
-          [job.scope]: [...(document.operations[job.scope] ?? []), denied],
+          ...standing.operations,
+          [job.scope]: [...(standing.operations[job.scope] ?? []), denied],
         },
       };
     } else {
@@ -767,18 +787,144 @@ export class SimpleJobExecutor implements IJobExecutor {
   }
 
   /**
-   * If an operation happened that could change a decision model verdict, we
-   * need to re-evaluate across the streams that could be affected. Previously
-   * approved operations may need to be denied, which will apply new denied
-   * operations with appropriate skip.
+   * Orders a write by timestamp. The caller supplies the timestamp, so a write
+   * can belong before operations already stored, and appending it at the tail
+   * would leave the scope out of order. The operations it belongs before are
+   * re-appended alongside it, the way a load reshuffles.
    */
-  private async reevaluateReadingScopes(
+  private async positionByTimestamp(
     job: Job,
-    startTime: number,
-    indexTxn: IOperationIndexTxn,
     stores: ExecutionStores,
     signal?: AbortSignal,
+  ): Promise<{ actions: Action[]; skipValues?: number[] }> {
+    if (!this.featureFlags.documentDecisions || job.actions.length === 0) {
+      return { actions: job.actions };
+    }
+
+    let earliest = job.actions[0].timestampUtcMs;
+    for (const action of job.actions) {
+      if (action.timestampUtcMs < earliest) {
+        earliest = action.timestampUtcMs;
+      }
+    }
+
+    const revisions = await stores.operationStore.getRevisions(
+      job.documentId,
+      job.branch,
+      signal,
+    );
+    if (earliest >= revisions.latestTimestamp) {
+      return { actions: job.actions };
+    }
+
+    const conflicting = (
+      await stores.operationStore.getConflicting(
+        job.documentId,
+        job.scope,
+        job.branch,
+        earliest,
+        undefined,
+        signal,
+      )
+    ).results.filter((operation) => !isGenesisOperation(operation));
+    if (conflicting.length === 0) {
+      return { actions: job.actions };
+    }
+
+    const nextIndex = revisions.revision[job.scope] ?? 0;
+    let firstConflicting = conflicting[0].index;
+    for (const operation of conflicting) {
+      if (operation.index < firstConflicting) {
+        firstConflicting = operation.index;
+      }
+    }
+
+    // Given positions rather than stored rows, so a tie puts the new write
+    // after what is already there.
+    const incoming = job.actions.map(
+      (action, i) =>
+        ({
+          id: action.id,
+          index: nextIndex + i,
+          skip: 0,
+          hash: "",
+          timestampUtcMs: action.timestampUtcMs,
+          action,
+        }) as Operation,
+    );
+
+    const merged = reshuffleByTimestamp(
+      { index: nextIndex, skip: retractionSkip(nextIndex, firstConflicting) },
+      conflicting,
+      incoming,
+    );
+
+    stores.writeCache.invalidate(job.documentId, job.scope, job.branch);
+
+    return {
+      actions: merged.map((operation) => operation.action),
+      skipValues: merged.map((operation) => operation.skip),
+    };
+  }
+
+  /**
+   * Re-evaluates the document when a write meets both criteria: it was written
+   * to a stream the model reads, and it is timestamped before an operation
+   * already stored. The caller supplies the timestamp and the reactor does not replace
+   * it, so a mutation job can write such an operation just as a load job can,
+   * which is why both executeJob and executeLoadJob call this.
+   */
+  private async reevaluateIfCriteriaMet(
+    criteria: EvaluationCriteria,
+    executing: ExecutingJob,
   ): Promise<Error | undefined> {
+    if (!this.featureFlags.documentDecisions) {
+      return undefined;
+    }
+
+    const { job, stores, signal } = executing;
+
+    const definition = documentDecisionModel({
+      documentId: job.documentId,
+      branch: job.branch,
+    });
+    const inReadSet = staticReadSet(definition).some(
+      (stream) =>
+        stream.query.documentId === job.documentId &&
+        stream.query.scope === criteria.scope &&
+        stream.query.branch === job.branch,
+    );
+    if (!inReadSet) {
+      return undefined;
+    }
+
+    const revisions = await stores.operationStore.getRevisions(
+      job.documentId,
+      job.branch,
+      signal,
+    );
+    const latest = Date.parse(revisions.latestTimestamp);
+
+    const backdated = criteria.operations.some(
+      (operation) => Date.parse(operation.timestampUtcMs) < latest,
+    );
+    if (!backdated) {
+      return undefined;
+    }
+
+    return this.reevaluateDocument(executing);
+  }
+
+  /**
+   * Re-evaluates every scope the model evaluates. Where an operation's
+   * evaluation differs from what is stored, the tail from that operation is
+   * re-appended, carrying a skip that spans the indices it supersedes.
+   */
+  private async reevaluateDocument(
+    executing: ExecutingJob,
+  ): Promise<Error | undefined> {
+    const { job, stores, signal } = executing;
+
     const definition = documentDecisionModel({
       documentId: job.documentId,
       branch: job.branch,
@@ -791,7 +937,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     );
 
     for (const scope of Object.keys(revisions.revision)) {
-      if (!definition.judgesScope(scope)) {
+      if (!definition.evaluatesScope(scope)) {
         continue;
       }
 
@@ -812,18 +958,15 @@ export class SimpleJobExecutor implements IJobExecutor {
         continue;
       }
 
-      const recomputed = await deletionVerdictsByPosition(
-        job.documentId,
-        scope,
-        job.branch,
-        effective,
-        stores.writeCache,
-        stores.operationStore,
+      const reevaluated = await evaluateDeletionsByPosition(
+        { documentId: job.documentId, branch: job.branch },
+        { scope, operations: effective },
+        stores,
         signal,
       );
 
       const firstChange = effective.findIndex(
-        (operation, i) => operation.deniedReason !== recomputed[i],
+        (operation, i) => operation.deniedReason !== reevaluated[i],
       );
       if (firstChange === -1) {
         continue;
@@ -835,18 +978,17 @@ export class SimpleJobExecutor implements IJobExecutor {
       stores.writeCache.invalidate(job.documentId, scope, job.branch);
 
       const result = await this.processActions(
-        { ...job, scope },
-        tail.map((operation) => operation.action),
-        startTime,
-        indexTxn,
-        stores,
-        tail.map((_, i) =>
-          i === 0 ? retractionSkip(nextIndex, tail[0].index) : 0,
-        ),
-        undefined,
-        "",
-        signal,
-        recomputed.slice(firstChange),
+        tail.map((operation, i) => ({
+          action: operation.action,
+          skip: i === 0 ? retractionSkip(nextIndex, tail[0].index) : 0,
+          sourceRemote: "",
+          deniedReason: reevaluated[firstChange + i],
+        })),
+        {
+          ...executing,
+          job: { ...job, scope },
+          replayingAcceptedHistory: true,
+        },
       );
 
       if (!result.success) {
@@ -860,13 +1002,9 @@ export class SimpleJobExecutor implements IJobExecutor {
     return undefined;
   }
 
-  private async executeLoadJob(
-    job: Job,
-    startTime: number,
-    indexTxn: IOperationIndexTxn,
-    stores: ExecutionStores,
-    signal?: AbortSignal,
-  ): Promise<JobResult> {
+  private async executeLoadJob(executing: ExecutingJob): Promise<JobResult> {
+    const { job, startTime, indexTxn, stores, signal } = executing;
+
     if (job.operations.length === 0) {
       return buildErrorResult(
         job,
@@ -997,7 +1135,11 @@ export class SimpleJobExecutor implements IJobExecutor {
       return true;
     });
 
-    const existingOpsToReshuffle = nonSupersededOps;
+    // Creation holds the first two indexes for the life of the document, so it
+    // never moves however far back the conflicting range reaches.
+    const existingOpsToReshuffle = nonSupersededOps.filter(
+      (operation) => !isGenesisOperation(operation),
+    );
 
     if (existingOpsToReshuffle.length > this.config.maxSkipThreshold) {
       return {
@@ -1070,21 +1212,15 @@ export class SimpleJobExecutor implements IJobExecutor {
       }
     }
 
-    const actions = reshuffledOperations.map((operation) => operation.action);
-    const skipValues = reshuffledOperations.map((operation) => operation.skip);
-
     // A deletion refuses the operations that sort after it and leaves the
     // earlier ones alone.
     let deniedReasons: Array<string | undefined> | undefined;
     if (this.featureFlags.documentDecisions) {
       try {
-        deniedReasons = await deletionVerdictsByPosition(
-          job.documentId,
-          scope,
-          job.branch,
-          reshuffledOperations,
-          stores.writeCache,
-          stores.operationStore,
+        deniedReasons = await evaluateDeletionsByPosition(
+          { documentId: job.documentId, branch: job.branch },
+          { scope, operations: reshuffledOperations },
+          stores,
           signal,
         );
       } catch (error) {
@@ -1103,16 +1239,14 @@ export class SimpleJobExecutor implements IJobExecutor {
         : (job.meta.sourceRemote as string) || ""; // trivial append: suppress echo to source
 
     const result = await this.processActions(
-      job,
-      actions,
-      startTime,
-      indexTxn,
-      stores,
-      skipValues,
-      reshuffledOperations,
-      effectiveSourceRemote,
-      signal,
-      deniedReasons,
+      reshuffledOperations.map((operation, i) => ({
+        action: operation.action,
+        skip: operation.skip,
+        sourceOperation: operation,
+        sourceRemote: effectiveSourceRemote,
+        deniedReason: deniedReasons?.[i],
+      })),
+      executing,
     );
 
     if (!result.success) {
@@ -1130,48 +1264,17 @@ export class SimpleJobExecutor implements IJobExecutor {
       stores.documentMetaCache.invalidate(job.documentId, job.branch);
     }
 
-    // With DCB, we need to re-evaluate scopes dependent on the potential
-    // reshuffle of the document scope.
-    const definition = documentDecisionModel({
-      documentId: job.documentId,
-      branch: job.branch,
-    });
-    const readsThisStream = staticReadSet(definition).some(
-      (stream) =>
-        stream.query.documentId === job.documentId &&
-        stream.query.scope === scope &&
-        stream.query.branch === job.branch,
+    const reevaluationError = await this.reevaluateIfCriteriaMet(
+      { scope, operations: result.generatedOperations },
+      executing,
     );
-
-    if (this.featureFlags.documentDecisions && readsThisStream) {
-      const revisions = await stores.operationStore.getRevisions(
-        job.documentId,
-        job.branch,
-        signal,
-      );
-      const latest = Date.parse(revisions.latestTimestamp);
-
-      const owesPass = result.generatedOperations.some(
-        (operation) => Date.parse(operation.timestampUtcMs) < latest,
-      );
-
-      if (owesPass) {
-        const error = await this.reevaluateReadingScopes(
-          job,
-          startTime,
-          indexTxn,
-          stores,
-          signal,
-        );
-        if (error) {
-          return {
-            job,
-            success: false,
-            error,
-            duration: Date.now() - startTime,
-          };
-        }
-      }
+    if (reevaluationError) {
+      return {
+        job,
+        success: false,
+        error: reevaluationError,
+        duration: Date.now() - startTime,
+      };
     }
 
     return {

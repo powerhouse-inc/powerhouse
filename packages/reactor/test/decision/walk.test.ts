@@ -221,12 +221,59 @@ describe("staticReadSet", () => {
         },
         b: { decidingActions: ["Y"], query: () => [] },
       },
-      judgesScope: () => true,
+      evaluatesScope: () => true,
       decide: () => "allow" as const,
     };
 
     expect(
       staticReadSet(definition as never).map((s) => s.query.scope),
     ).toEqual(["global"]);
+  });
+});
+
+describe("position order guard", () => {
+  it("rejects a stream whose effective operations run out of order", () => {
+    const operations = [
+      { ...op("late", 10), index: 0 },
+      { ...op("early", 1), index: 1 },
+    ] as Operation[];
+
+    expect(() => [
+      ...walkByPosition([
+        { streamKey: "a", document: doc(), operations, apply: append },
+      ]),
+    ]).toThrow(/out of position order/);
+  });
+
+  it("accepts a stream a reshuffle left in order", () => {
+    const operations = [
+      { ...op("old", 10), index: 0 },
+      { ...op("new1", 1), index: 1, skip: 1 },
+      { ...op("new2", 2), index: 2 },
+    ] as Operation[];
+
+    expect(
+      [
+        ...walkByPosition([
+          { streamKey: "a", document: doc(), operations, apply: append },
+        ]),
+      ].map((s) => s.operation.action.id),
+    ).toEqual(["new1", "new2"]);
+  });
+
+  it("keeps stored order for two operations sharing a timestamp", () => {
+    const same = 5;
+    const operations = [
+      { ...op("zzz", same), index: 0 },
+      { ...op("aaa", same), index: 1 },
+    ] as Operation[];
+
+    expect(
+      [
+        ...walkByPosition([
+          { streamKey: "a", document: doc(), operations, apply: append },
+        ]),
+      ].map((s) => s.operation.action.id),
+    ).toEqual(["zzz", "aaa"]);
   });
 });

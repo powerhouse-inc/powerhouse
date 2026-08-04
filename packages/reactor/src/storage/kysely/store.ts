@@ -610,20 +610,25 @@ export class KyselyOperationStore implements IOperationStore {
       )
       .execute();
 
-    const revision: Record<string, number> = {};
-    let latestTimestamp = new Date(0).toISOString();
+    // Asked separately because the largest timestamp is not always on the
+    // last-indexed operation: a reshuffle can leave a later one behind it.
+    const latest = await this.queryExecutor
+      .selectFrom("Operation")
+      .select((eb) => eb.fn.max("timestampUtcMs").as("latestTimestamp"))
+      .where("documentId", "=", documentId)
+      .where("branch", "=", branch)
+      .executeTakeFirst();
 
+    const revision: Record<string, number> = {};
     for (const row of scopeRevisions) {
       revision[row.scope] = row.index + 1;
-      const timestamp = row.timestampUtcMs.toISOString();
-      if (timestamp > latestTimestamp) {
-        latestTimestamp = timestamp;
-      }
     }
 
     return {
       revision,
-      latestTimestamp,
+      latestTimestamp: latest?.latestTimestamp
+        ? new Date(latest.latestTimestamp).toISOString()
+        : new Date(0).toISOString(),
     };
   }
 

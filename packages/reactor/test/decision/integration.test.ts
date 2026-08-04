@@ -59,7 +59,7 @@ const definition = (
       },
     },
   },
-  judgesScope: () => true,
+  evaluatesScope: () => true,
   decide: (model) => (model.document.isDeleted ? "deny" : "allow"),
 });
 

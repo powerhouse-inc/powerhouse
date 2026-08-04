@@ -18,6 +18,7 @@ import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { WriteCacheConfig } from "../cache/write-cache-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
 import { EventBus } from "../events/event-bus.js";
+import { FLAG_PREREQUISITES, validateFeatureFlags } from "./feature-flags.js";
 import type { IEventBus } from "../events/interfaces.js";
 import { ReactorEventTypes } from "../events/types.js";
 import {
@@ -403,6 +404,11 @@ export class ReactorBuilder {
     if (!this.logger) {
       this.logger = new ConsoleLogger(["reactor"]);
     }
+
+    validateFeatureFlags(
+      this.executorConfig.featureFlags ?? {},
+      FLAG_PREREQUISITES,
+    );
 
     if (
       this.projectionShardConfig !== undefined &&

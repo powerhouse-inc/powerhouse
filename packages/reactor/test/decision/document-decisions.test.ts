@@ -11,7 +11,7 @@ import { createDocModelDocument } from "../factories.js";
  * With the flag off the executor reads the deleted flag from the document meta
  * cache; with it on the executor builds a decision model over the document
  * stream. Both refuse an operation on a deleted document, so turning the flag on
- * must not change what callers see -- only how the verdict is reached, and that
+ * must not change what callers see -- only how the evaluation is made, and that
  * the write now carries a read-set the store enforces.
  */
 describe("document decisions", () => {

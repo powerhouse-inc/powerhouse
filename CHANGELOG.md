@@ -1,3 +1,69 @@
+## 6.2.2-dev.36 (2026-08-04)
+
+This was a version bump only, there were no code changes.
+
+## 6.2.2-dev.35 (2026-08-03)
+
+This was a version bump only, there were no code changes.
+
+## 6.2.2-dev.34 (2026-08-02)
+
+This was a version bump only, there were no code changes.
+
+## 6.2.2-dev.33 (2026-08-01)
+
+### 🩹 Fixes
+
+- **reactor:** fixing a few defects with document scope reshuffle specifics ([7546b9ff2](https://github.com/powerhouse-inc/powerhouse/commit/7546b9ff2))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
+## 6.2.2-dev.32 (2026-07-31)
+
+### 🚀 Features
+
+- **reactor:** feature flag guards and spec updates to make plan for guarded reshuffle edge cases ([20b0fd6be](https://github.com/powerhouse-inc/powerhouse/commit/20b0fd6be))
+
+### 🩹 Fixes
+
+- auth-scope spec updates, assert ordered streams, and fix some busted default protocol versions ([97c5a37b5](https://github.com/powerhouse-inc/powerhouse/commit/97c5a37b5))
+- **reactor:** fixes some delete reshuffle edge cases, operation self-rejection, delete operation skip, and document scope deny reason ([d7cca2364](https://github.com/powerhouse-inc/powerhouse/commit/d7cca2364))
+- **reactor:** fix convergence in the case we deny an operation that has a skip ([21cbb3ecb](https://github.com/powerhouse-inc/powerhouse/commit/21cbb3ecb))
+- **reactor-browser:** let useDocumentSafe observe the initial fetch settling ([#2899](https://github.com/powerhouse-inc/powerhouse/pull/2899))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Guillermo Puente Sandoval @gpuente
+
+## 6.2.2-dev.31 (2026-07-31)
+
+### 🚀 Features
+
+- **reactor-browser:** export useDocumentOperations from the graphql-client entry ([#2897](https://github.com/powerhouse-inc/powerhouse/pull/2897))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
+## 6.2.2-dev.30 (2026-07-31)
+
+### 🩹 Fixes
+
+- **codegen:** refresh cached ts-morph source files from disk ([#1](https://github.com/powerhouse-inc/powerhouse/issues/1), [#2889](https://github.com/powerhouse-inc/powerhouse/issues/2889))
+- **codegen:** generate processor filters that can match documents ([70c897127](https://github.com/powerhouse-inc/powerhouse/commit/70c897127))
+- **codegen:** run a generated relational db processor's migrations ([455f802d6](https://github.com/powerhouse-inc/powerhouse/commit/455f802d6))
+- **ph-cli:** split comma-separated list options ([097c75424](https://github.com/powerhouse-inc/powerhouse/commit/097c75424))
+- **processors:** stop filtering drive analytics on a "*" wildcard ([4a3eaa7df](https://github.com/powerhouse-inc/powerhouse/commit/4a3eaa7df))
+- **reactor-browser:** take document models only, not whole packages ([#2896](https://github.com/powerhouse-inc/powerhouse/pull/2896))
+
+### ❤️ Thank You
+
+- acaldas
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.2.2-dev.29 (2026-07-31)
 
 This was a version bump only, there were no code changes.

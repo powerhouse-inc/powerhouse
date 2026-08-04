@@ -1,9 +1,9 @@
 import { expect, test } from "@playwright/test";
 
-// The packages chain end to end: the page passes the REAL generated package
-// (manifest, both todo versions, editors) to `GraphQLReactorProvider`, a
-// StaticPackageManager publishes it into the `window.ph.vetraPackageManager`
-// slot, `useDocumentModelModuleById` resolves the LATEST version (registry
+// The documentModels chain end to end: the page passes the REAL generated todo
+// modules (both versions) to `GraphQLReactorProvider`, a StaticPackageManager
+// publishes them into the `window.ph.vetraPackageManager` slot,
+// `useDocumentModelModuleById` resolves the LATEST version (registry
 // semantics), and the module's own `utils.createDocument` and typed action
 // creators drive the same anonymous flow the switchboard accepts.
 
@@ -33,6 +33,20 @@ test("registers the app's document models and drives the flow through them", asy
   await expect(page.getByTestId("todo-item")).toHaveText([
     "from the generated module",
   ]);
+
+  // The operation log round-tripped through the same client: the
+  // entry-exported useDocumentOperations sees the operation the dispatch
+  // appended. No exact total - creation semantics may add operations of
+  // their own - just that the log is non-empty once ADD_TODO landed.
+  await expect
+    .poll(
+      async () => {
+        const text = await page.getByTestId("operations-count").textContent();
+        return Number(/\d+/.exec(text ?? "")?.[0] ?? "0");
+      },
+      { timeout: 15_000 },
+    )
+    .toBeGreaterThan(0);
 
   // The module-built document and the typed action both round-tripped without
   // a reducer or transport error.

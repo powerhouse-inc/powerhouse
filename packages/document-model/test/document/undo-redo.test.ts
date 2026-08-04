@@ -23,6 +23,7 @@ describe("UNDO/REDO", () => {
     const initialState = testCreateBaseState({ count: 0 }, { name: "" });
 
     document = baseCreateDocument(createCountDocumentState, initialState);
+    document.header.protocolVersions = { "base-reducer": 1 };
 
     document = countReducer(document, increment());
     document = countReducer(document, increment());
@@ -94,6 +95,7 @@ describe("UNDO/REDO", () => {
       const initialState = testCreateBaseState({ count: 0 }, { name: "" });
 
       document = baseCreateDocument(createCountDocumentState, initialState);
+      document.header.protocolVersions = { "base-reducer": 1 };
 
       const skip = 0;
       const undoAction = undo();
@@ -110,6 +112,7 @@ describe("UNDO/REDO", () => {
       const initialState = testCreateBaseState({ count: 0 }, { name: "" });
 
       document = baseCreateDocument(createCountDocumentState, initialState);
+      document.header.protocolVersions = { "base-reducer": 1 };
 
       const skip = 0;
       const redoAction = redo();

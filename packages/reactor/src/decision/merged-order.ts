@@ -12,10 +12,7 @@ export type PositionedOperation = {
   operation: Operation;
 };
 
-/**
- * One stream's operations, in the order the store returned them. That order is
- * kept for applying, because the reducers and the skip bookkeeping require it.
- */
+/** One stream's operations, with its skips already resolved. */
 export type StreamOperations = {
   streamKey: string;
   operations: Operation[];
@@ -38,6 +35,12 @@ export function comparePositions(
     return aTime - bTime;
   }
 
+  // Within one stream the stored order decides, so a tie keeps it. The action
+  // and operation ids only break ties between separate streams.
+  if (a.streamKey === b.streamKey) {
+    return a.operation.index - b.operation.index;
+  }
+
   const actionIds = (a.operation.action.id ?? "").localeCompare(
     b.operation.action.id ?? "",
   );
@@ -49,14 +52,9 @@ export function comparePositions(
 }
 
 /**
- * Merges the read-set streams into one sequence by position. Each stream keeps
- * its stored order; only how far to go is decided by the timestamp, so a stream
- * whose stored order disagrees with its timestamp order still applies in the
- * order it is stored.
- *
- * An operation's position in the result is the bound a decision at that
- * operation reads to: every operation before it has been applied, and it has
- * not.
+ * Merges the read-set streams into one sequence by position. An operation's
+ * place in the result is the bound a decision at that operation reads to: every
+ * operation before it has been applied, and it has not.
  */
 export function mergeByPosition(
   streams: StreamOperations[],
@@ -73,8 +71,9 @@ export function mergeByPosition(
 }
 
 /**
- * For auth-related reshuffles, we may need to retract previous operations.
- * This function calculates the needed skip value.
+ * The skip that retracts everything from `firstRetractedIndex` up to where the
+ * re-appended operation lands. It spans the indexes rather than counting the
+ * operations, because a stream with a gap in it makes those differ.
  */
 export function retractionSkip(
   nextIndex: number,

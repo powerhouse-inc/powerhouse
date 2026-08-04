@@ -13,7 +13,9 @@ import {
 import type {
   IProcessor,
   IProcessorHostModule,
+  IRelationalDbProcessor,
   ProcessorApps,
+  ProcessorFactoryBuilder,
   ProcessorRecord,
 } from "@powerhousedao/shared/processors";
 import { afterEach, describe, expect, it } from "bun:test";
@@ -300,6 +302,179 @@ describe("generate processor", () => {
       });
     });
   });
+  describe("processor filters", () => {
+    // `matchesFilter` only honours "*" for documentId, so a wildcard in any
+    // other field is a filter that matches nothing.
+    const WILDCARD_FIELD = /(?:documentType|scope|branch):\s*\[[^\]]*"\*"/;
+
+    function readFactory(outDir: string, processorDirName: string) {
+      return readFile(
+        join(outDir, "processors", processorDirName, "factory.ts"),
+        "utf-8",
+      );
+    }
+
+    it("should split a comma separated document types value into one entry per type", async () => {
+      const documentTypes = ["pfnur/rto-company,pfnur/toll-statement"];
+      const outDir = await runProcessorTests({
+        outDirName: "filter-comma-separated-document-types",
+        inputs: [
+          {
+            processorName: "relational-comma-separated",
+            processorType: "relationalDb",
+            documentTypes,
+            processorApps: ["switchboard"],
+          },
+          {
+            processorName: "analytics-comma-separated",
+            processorType: "analytics",
+            documentTypes,
+            processorApps: ["switchboard"],
+          },
+        ],
+      });
+
+      for (const dirName of [
+        "relational-comma-separated",
+        "analytics-comma-separated",
+      ]) {
+        const factory = await readFactory(outDir, dirName);
+        expect(factory).toContain(
+          `documentType: ["pfnur/rto-company", "pfnur/toll-statement"],`,
+        );
+        expect(factory).not.toContain(
+          `["pfnur/rto-company,pfnur/toll-statement"]`,
+        );
+      }
+    });
+
+    it("should omit filter fields with no values instead of emitting a wildcard", async () => {
+      const outDir = await runProcessorTests({
+        outDirName: "filter-without-document-types",
+        inputs: [
+          {
+            processorName: "relational-no-document-types",
+            processorType: "relationalDb",
+            documentTypes: [],
+            processorApps: ["switchboard"],
+          },
+          {
+            processorName: "analytics-no-document-types",
+            processorType: "analytics",
+            documentTypes: [],
+            processorApps: ["switchboard"],
+          },
+        ],
+      });
+
+      for (const dirName of [
+        "relational-no-document-types",
+        "analytics-no-document-types",
+      ]) {
+        const factory = await readFactory(outDir, dirName);
+        expect(factory).not.toMatch(WILDCARD_FIELD);
+        expect(factory).not.toContain("documentType");
+        // documentId is the one field for which the wildcard is honoured
+        expect(factory).toContain(`documentId: ["*"],`);
+      }
+
+      // the analytics factory used to pin `scope` to a wildcard, which meant it
+      // could never receive an operation
+      const analyticsFactory = await readFactory(
+        outDir,
+        "analytics-no-document-types",
+      );
+      expect(analyticsFactory).not.toContain("scope");
+    });
+
+    it("should not emit a wildcard filter field when document types are given", async () => {
+      const outDir = await runProcessorTests({
+        outDirName: "filter-with-document-types",
+        inputs: [
+          {
+            processorName: "relational-with-document-types",
+            processorType: "relationalDb",
+            documentTypes: ["billing-statement"],
+            processorApps: ["switchboard"],
+          },
+          {
+            processorName: "analytics-with-document-types",
+            processorType: "analytics",
+            documentTypes: ["billing-statement"],
+            processorApps: ["switchboard"],
+          },
+        ],
+      });
+
+      for (const dirName of [
+        "relational-with-document-types",
+        "analytics-with-document-types",
+      ]) {
+        const factory = await readFactory(outDir, dirName);
+        expect(factory).not.toMatch(WILDCARD_FIELD);
+        expect(factory).toContain(`documentType: ["billing-statement"],`);
+      }
+    });
+  });
+
+  it("should run the generated relational db processor's migrations before returning it", async () => {
+    const outDir = join(parentOutDir, "relational-db-init-and-upgrade");
+    await cpForce(NEW_PROJECT, outDir);
+    const project = buildTsMorphProject(outDir);
+    await generateProcessor(
+      {
+        processorName: "relational-init-and-upgrade",
+        processorType: "relationalDb",
+        documentTypes: ["powerhouse/document-drive"],
+        processorApps: ["switchboard"],
+      },
+      project,
+    );
+    await project.save();
+
+    const factoryPath = join(
+      outDir,
+      "processors",
+      "relational-init-and-upgrade",
+      "factory.ts",
+    );
+    expect(await readFile(factoryPath, "utf-8")).toContain(
+      "await processor.initAndUpgrade();",
+    );
+
+    const { pgLite, relationalDb } = await getDb();
+    const { store } = await createAnalyticsStore({ pgLite });
+    const hostModule: IProcessorHostModule = {
+      processorApp: "switchboard",
+      analyticsStore: store,
+      relationalDb,
+      dispatch: {
+        execute: () => Promise.resolve({ id: "mock", status: "mock" }),
+      },
+      getReadModel: () => {
+        throw new Error("No read models in test");
+      },
+    };
+
+    const { relationalInitAndUpgradeFactoryBuilder: factoryBuilder } =
+      (await import(factoryPath)) as {
+        relationalInitAndUpgradeFactoryBuilder: ProcessorFactoryBuilder;
+      };
+    const factory = await factoryBuilder(hostModule);
+    const records = await factory(
+      { id: "init-and-upgrade-drive" } as PHDocumentHeader,
+      "switchboard",
+    );
+
+    // The scaffolded migration creates the `todo` table. Nothing in the runtime
+    // calls initAndUpgrade(), so this query only succeeds if the factory did.
+    const processor = records[0]!.processor as IRelationalDbProcessor<{
+      todo: { task: string; status: boolean | null };
+    }>;
+    const rows = await processor.query.selectFrom("todo").selectAll().execute();
+    expect(rows).toEqual([]);
+  });
+
   // A customized processor's files are only on disk on a fresh project — the
   // case skipAddingFilesFromTsConfig regresses, overwriting user code.
   it("should not overwrite a customized processor on a fresh project", async () => {

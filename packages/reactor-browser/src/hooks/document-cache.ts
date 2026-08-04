@@ -1,5 +1,11 @@
 import type { PHDocument } from "@powerhousedao/shared/document-model";
-import { use, useCallback, useSyncExternalStore } from "react";
+import {
+  use,
+  useCallback,
+  useEffect,
+  useReducer,
+  useSyncExternalStore,
+} from "react";
 import { readPromiseState } from "../document-cache.js";
 import type { IDocumentCache } from "../types/documents.js";
 import type { SetPHGlobalValue, UsePHGlobalValue } from "../types/global.js";
@@ -89,6 +95,31 @@ export function useDocumentSafe(id: string | null | undefined) {
     (cb) => (id && documentCache ? documentCache.subscribe(id, cb) : () => {}),
     () => (id ? documentCache?.get(id) : undefined),
   );
+
+  // The cache notifies subscribers only when a document CHANGES (its stored
+  // promise is replaced); the INITIAL fetch settles without a notification,
+  // and since the snapshot above is the promise itself - same identity before
+  // and after settling - nothing re-renders this hook past "pending" on a
+  // page that is otherwise quiet. Watch the pending promise and bump local
+  // state when it settles, so the state below is re-read. The promise is
+  // captured at render time: if it settles before the effect runs, `.then`
+  // still fires the bump on the next microtask, so the race loses nothing.
+  // `useDocument` needs none of this - React itself resumes a component
+  // suspended on `use(promise)`.
+  const [, bumpOnSettle] = useReducer((count: number) => count + 1, 0);
+  const pendingPromise =
+    promise && readPromiseState(promise).status === "pending" ? promise : null;
+  useEffect(() => {
+    if (!pendingPromise) return;
+    let active = true;
+    const settled = () => {
+      if (active) bumpOnSettle();
+    };
+    pendingPromise.then(settled, settled);
+    return () => {
+      active = false;
+    };
+  }, [pendingPromise]);
 
   if (!promise || !documentCache || !id) {
     return {

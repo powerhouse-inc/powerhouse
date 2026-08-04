@@ -42,6 +42,7 @@ function ids(doc: PHDocument<CountPHState>): string[] {
 const initialState = createCountState();
 const initialDocument: PHDocument<CountPHState> = {
   header: {
+    protocolVersions: { "base-reducer": 2 },
     id: "doc-1",
     sig: { publicKey: {}, nonce: "" },
     documentType: "",

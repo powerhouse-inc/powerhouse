@@ -1,3 +1,62 @@
+## 6.2.2-dev.36 (2026-08-04)
+
+This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.
+
+## 6.2.2-dev.35 (2026-08-03)
+
+This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.
+
+## 6.2.2-dev.34 (2026-08-02)
+
+This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.
+
+## 6.2.2-dev.33 (2026-08-01)
+
+### 🩹 Fixes
+
+- **reactor:** fixing a few defects with document scope reshuffle specifics ([7546b9ff2](https://github.com/powerhouse-inc/powerhouse/commit/7546b9ff2))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
+## 6.2.2-dev.32 (2026-07-31)
+
+### 🚀 Features
+
+- **reactor:** feature flag guards and spec updates to make plan for guarded reshuffle edge cases ([20b0fd6be](https://github.com/powerhouse-inc/powerhouse/commit/20b0fd6be))
+
+### 🩹 Fixes
+
+- **reactor-browser:** let useDocumentSafe observe the initial fetch settling ([#2899](https://github.com/powerhouse-inc/powerhouse/pull/2899))
+- **reactor:** fix convergence in the case we deny an operation that has a skip ([21cbb3ecb](https://github.com/powerhouse-inc/powerhouse/commit/21cbb3ecb))
+- auth-scope spec updates, assert ordered streams, and fix some busted default protocol versions ([97c5a37b5](https://github.com/powerhouse-inc/powerhouse/commit/97c5a37b5))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Guillermo Puente Sandoval @gpuente
+
+## 6.2.2-dev.31 (2026-07-31)
+
+### 🚀 Features
+
+- **reactor-browser:** export useDocumentOperations from the graphql-client entry ([#2897](https://github.com/powerhouse-inc/powerhouse/pull/2897))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
+## 6.2.2-dev.30 (2026-07-31)
+
+### 🩹 Fixes
+
+- **reactor-browser:** take document models only, not whole packages ([#2896](https://github.com/powerhouse-inc/powerhouse/pull/2896))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.2.2-dev.29 (2026-07-31)
 
 This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.

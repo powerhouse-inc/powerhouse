@@ -229,3 +229,18 @@ export function buildErrorResult(
     duration: Date.now() - startTime,
   };
 }
+
+/**
+ * Whether this operation is part of the document's creation. The create and the
+ * upgrade from version zero hold the first two indexes for the life of the
+ * document, so a reshuffle has to leave them where they are.
+ */
+export function isGenesisOperation(operation: Operation): boolean {
+  if (operation.action.type === "CREATE_DOCUMENT") {
+    return true;
+  }
+  if (operation.action.type !== "UPGRADE_DOCUMENT") {
+    return false;
+  }
+  return (operation.action.input as { fromVersion?: number }).fromVersion === 0;
+}

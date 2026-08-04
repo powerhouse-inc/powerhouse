@@ -1,5 +1,4 @@
 import type {
-  Action,
   CreateDocumentAction,
   DeleteDocumentActionInput,
   Operation,
@@ -27,6 +26,14 @@ type RelationshipJobResult = JobResult & {
   }>;
 };
 
+/** The stream an operation is written to. */
+type WriteTarget = {
+  documentId: string;
+  documentType: string;
+  scope: string;
+  branch: string;
+};
+
 interface RelationshipPostWriteArgs {
   indexTxn: IOperationIndexTxn;
   stores: ExecutionStores;
@@ -34,6 +41,7 @@ interface RelationshipPostWriteArgs {
   input: RelationshipActionShape;
   job: Job;
 }
+import { hashDocumentStateForScope } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import type { IOperationIndexTxn } from "../cache/operation-index-types.js";
 import { DriveCollectionId } from "../cache/operation-index-types.js";
@@ -42,7 +50,12 @@ import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import { DocumentDeletedError } from "../shared/errors.js";
 import { AppendConditionFailedError } from "../storage/interfaces.js";
 import type { ExecutionStores } from "./execution-scope.js";
-import type { JobResult } from "./types.js";
+import type {
+  ExecutingJob,
+  JobResult,
+  PendingWrite,
+  ReactorFeatureFlags,
+} from "./types.js";
 import {
   applyDeleteDocumentAction,
   applyUpgradeDocumentAction,
@@ -60,114 +73,146 @@ export class DocumentActionHandler {
     private registry: IDocumentModelRegistry,
     private logger: ILogger,
     private driveContainerTypes: ReadonlySet<string>,
+    private featureFlags: ReactorFeatureFlags,
   ) {}
 
+  /** Whether the write arrives with its evaluation already decided. */
+  private alreadyEvaluated(executing: ExecutingJob): boolean {
+    return (
+      this.featureFlags.documentDecisions && executing.replayingAcceptedHistory
+    );
+  }
+
   async execute(
-    job: Job,
-    action: Action,
-    startTime: number,
-    indexTxn: IOperationIndexTxn,
-    stores: ExecutionStores,
-    skip: number = 0,
-    sourceRemote: string = "",
-    signal?: AbortSignal,
-    verdictAlreadyDecided = false,
-  ): Promise<
-    JobResult & {
-      operationsWithContext?: Array<{
-        operation: Operation;
-        context: {
-          documentId: string;
-          scope: string;
-          branch: string;
-          documentType: string;
-        };
-      }>;
+    write: PendingWrite,
+    executing: ExecutingJob,
+  ): Promise<RelationshipJobResult> {
+    const { action } = write;
+
+    if (write.deniedReason !== undefined) {
+      return this.writeDenied(write, executing);
     }
-  > {
+
     switch (action.type) {
       case "CREATE_DOCUMENT":
-        return this.executeCreate(
-          job,
-          action,
-          startTime,
-          indexTxn,
-          stores,
-          skip,
-          sourceRemote,
-          signal,
-        );
+        return this.executeCreate(write, executing);
       case "DELETE_DOCUMENT":
-        return this.executeDelete(
-          job,
-          action,
-          startTime,
-          indexTxn,
-          stores,
-          sourceRemote,
-          signal,
-          verdictAlreadyDecided,
-        );
+        return this.executeDelete(write, executing);
       case "UPGRADE_DOCUMENT":
-        return this.executeUpgrade(
-          job,
-          action,
-          startTime,
-          indexTxn,
-          stores,
-          skip,
-          sourceRemote,
-          signal,
-          verdictAlreadyDecided,
-        );
+        return this.executeUpgrade(write, executing);
       case "ADD_RELATIONSHIP":
-        return this.executeAddRelationship(
-          job,
-          action,
-          startTime,
-          indexTxn,
-          stores,
-          sourceRemote,
-          signal,
-        );
+        return this.executeAddRelationship(write, executing);
       case "REMOVE_RELATIONSHIP":
-        return this.executeRemoveRelationship(
-          job,
-          action,
-          startTime,
-          indexTxn,
-          stores,
-          sourceRemote,
-          signal,
-        );
+        return this.executeRemoveRelationship(write, executing);
       case "UPDATE_RELATIONSHIP":
-        return this.executeUpdateRelationship(
-          job,
-          action,
-          startTime,
-          indexTxn,
-          stores,
-          sourceRemote,
-          signal,
-        );
+        return this.executeUpdateRelationship(write, executing);
       default:
         return buildErrorResult(
-          job,
+          executing.job,
           new Error(`Unknown document action type: ${action.type}`),
-          startTime,
+          executing.startTime,
         );
     }
   }
 
+  /** A refused operation holds a position in the stream but changes nothing. */
+  private async writeDenied(
+    write: PendingWrite,
+    executing: ExecutingJob,
+  ): Promise<RelationshipJobResult> {
+    const { action, skip, sourceRemote, deniedReason } = write;
+    const { job, startTime, indexTxn, stores, signal } = executing;
+
+    let document: PHDocument;
+    try {
+      document = await stores.writeCache.getState(
+        job.documentId,
+        job.scope,
+        job.branch,
+        undefined,
+        signal,
+      );
+    } catch (error) {
+      return buildErrorResult(
+        job,
+        error instanceof Error ? error : new Error(String(error)),
+        startTime,
+      );
+    }
+
+    let operation = createOperation(
+      action,
+      getNextIndexForScope(document, job.scope),
+      skip,
+      { documentId: job.documentId, scope: job.scope, branch: job.branch },
+    );
+    operation.deniedReason = deniedReason;
+    operation.hash = hashDocumentStateForScope(document, job.scope);
+
+    const writeResult = await this.writeOperationToStore(
+      {
+        documentId: job.documentId,
+        documentType: document.header.documentType,
+        scope: job.scope,
+        branch: job.branch,
+      },
+      operation,
+      executing,
+    );
+    if (!Array.isArray(writeResult)) {
+      return writeResult;
+    }
+    operation = writeResult[0];
+
+    updateDocumentRevision(document, job.scope, operation.index);
+
+    document.operations = {
+      ...document.operations,
+      [job.scope]: [...(document.operations[job.scope] ?? []), operation],
+    };
+
+    stores.writeCache.putState(
+      job.documentId,
+      job.scope,
+      job.branch,
+      operation.index,
+      document,
+      SnapshotPosition.Head,
+    );
+
+    indexTxn.write([
+      {
+        ...operation,
+        documentId: job.documentId,
+        documentType: document.header.documentType,
+        branch: job.branch,
+        scope: job.scope,
+        sourceRemote,
+      },
+    ]);
+
+    stores.documentMetaCache.putDocumentMeta(job.documentId, job.branch, {
+      state: document.state.document,
+      documentType: document.header.documentType,
+      documentScopeRevision: operation.index + 1,
+    });
+
+    return buildSuccessResult(
+      job,
+      operation,
+      job.documentId,
+      document.header.documentType,
+      JSON.stringify({
+        header: document.header,
+        document: document.state.document,
+      }),
+      startTime,
+    );
+  }
+
   private async executeCreate(
-    job: Job,
-    action: Action,
-    startTime: number,
-    indexTxn: IOperationIndexTxn,
-    stores: ExecutionStores,
-    skip: number = 0,
-    sourceRemote: string = "",
-    signal?: AbortSignal,
+    write: PendingWrite,
+    executing: ExecutingJob,
   ): Promise<
     JobResult & {
       operationsWithContext?: Array<{
@@ -181,6 +226,9 @@ export class DocumentActionHandler {
       }>;
     }
   > {
+    const { action, skip, sourceRemote } = write;
+    const { job, startTime, indexTxn, stores, signal } = executing;
+
     if (job.scope !== "document") {
       return {
         job,
@@ -207,15 +255,14 @@ export class DocumentActionHandler {
     const resultingState = JSON.stringify(resultingStateObj);
 
     const writeResult = await this.writeOperationToStore(
-      document.header.id,
-      document.header.documentType,
-      job.scope,
-      job.branch,
+      {
+        documentId: document.header.id,
+        documentType: document.header.documentType,
+        scope: job.scope,
+        branch: job.branch,
+      },
       operation,
-      job,
-      startTime,
-      stores,
-      signal,
+      executing,
     );
     if (!Array.isArray(writeResult)) {
       return writeResult;
@@ -275,14 +322,8 @@ export class DocumentActionHandler {
   }
 
   private async executeDelete(
-    job: Job,
-    action: Action,
-    startTime: number,
-    indexTxn: IOperationIndexTxn,
-    stores: ExecutionStores,
-    sourceRemote: string = "",
-    signal?: AbortSignal,
-    verdictAlreadyDecided = false,
+    write: PendingWrite,
+    executing: ExecutingJob,
   ): Promise<
     JobResult & {
       operationsWithContext?: Array<{
@@ -296,6 +337,9 @@ export class DocumentActionHandler {
       }>;
     }
   > {
+    const { action, skip, sourceRemote } = write;
+    const { job, startTime, indexTxn, stores, signal } = executing;
+
     const input = action.input as DeleteDocumentActionInput;
 
     if (!input.documentId) {
@@ -328,9 +372,9 @@ export class DocumentActionHandler {
     }
 
     // DCB allows positional deletion, so we may have already determined the
-    // verdict
+    // evaluation
     const documentState = document.state.document;
-    if (documentState.isDeleted && !verdictAlreadyDecided) {
+    if (documentState.isDeleted && !this.alreadyEvaluated(executing)) {
       return buildErrorResult(
         job,
         new DocumentDeletedError(documentId, documentState.deletedAtUtcIso),
@@ -340,7 +384,7 @@ export class DocumentActionHandler {
 
     const nextIndex = getNextIndexForScope(document, job.scope);
 
-    let operation = createOperation(action, nextIndex, 0, {
+    let operation = createOperation(action, nextIndex, skip, {
       documentId,
       scope: job.scope,
       branch: job.branch,
@@ -355,15 +399,14 @@ export class DocumentActionHandler {
     const resultingState = JSON.stringify(resultingStateObj);
 
     const writeResult = await this.writeOperationToStore(
-      documentId,
-      document.header.documentType,
-      job.scope,
-      job.branch,
+      {
+        documentId: documentId,
+        documentType: document.header.documentType,
+        scope: job.scope,
+        branch: job.branch,
+      },
       operation,
-      job,
-      startTime,
-      stores,
-      signal,
+      executing,
     );
     if (!Array.isArray(writeResult)) {
       return writeResult;
@@ -414,15 +457,8 @@ export class DocumentActionHandler {
   }
 
   private async executeUpgrade(
-    job: Job,
-    action: Action,
-    startTime: number,
-    indexTxn: IOperationIndexTxn,
-    stores: ExecutionStores,
-    skip: number = 0,
-    sourceRemote: string = "",
-    signal?: AbortSignal,
-    verdictAlreadyDecided = false,
+    write: PendingWrite,
+    executing: ExecutingJob,
   ): Promise<
     JobResult & {
       operationsWithContext?: Array<{
@@ -436,6 +472,9 @@ export class DocumentActionHandler {
       }>;
     }
   > {
+    const { action, skip, sourceRemote } = write;
+    const { job, startTime, indexTxn, stores, signal } = executing;
+
     const input = action.input as UpgradeDocumentActionInput;
 
     if (!input.documentId) {
@@ -470,10 +509,10 @@ export class DocumentActionHandler {
       );
     }
 
-    // DCB allows for positional deletion, so the verdict may have already been
+    // DCB allows for positional deletion, so the evaluation may have already been
     // decided
     const documentState = document.state.document;
-    if (documentState.isDeleted && !verdictAlreadyDecided) {
+    if (documentState.isDeleted && !this.alreadyEvaluated(executing)) {
       return buildErrorResult(
         job,
         new DocumentDeletedError(documentId, documentState.deletedAtUtcIso),
@@ -537,15 +576,14 @@ export class DocumentActionHandler {
     const resultingState = JSON.stringify(resultingStateObj);
 
     const writeResult = await this.writeOperationToStore(
-      documentId,
-      document.header.documentType,
-      job.scope,
-      job.branch,
+      {
+        documentId: documentId,
+        documentType: document.header.documentType,
+        scope: job.scope,
+        branch: job.branch,
+      },
       operation,
-      job,
-      startTime,
-      stores,
-      signal,
+      executing,
     );
     if (!Array.isArray(writeResult)) {
       return writeResult;
@@ -596,23 +634,13 @@ export class DocumentActionHandler {
   }
 
   private executeAddRelationship(
-    job: Job,
-    action: Action,
-    startTime: number,
-    indexTxn: IOperationIndexTxn,
-    stores: ExecutionStores,
-    sourceRemote: string = "",
-    signal?: AbortSignal,
+    write: PendingWrite,
+    executing: ExecutingJob,
   ): Promise<RelationshipJobResult> {
     return this.withRelationshipAction(
       "ADD_RELATIONSHIP",
-      job,
-      action,
-      startTime,
-      indexTxn,
-      stores,
-      sourceRemote,
-      signal,
+      write,
+      executing,
       (input) =>
         input.sourceId === input.targetId
           ? new Error(
@@ -633,23 +661,13 @@ export class DocumentActionHandler {
   }
 
   private executeRemoveRelationship(
-    job: Job,
-    action: Action,
-    startTime: number,
-    indexTxn: IOperationIndexTxn,
-    stores: ExecutionStores,
-    sourceRemote: string = "",
-    signal?: AbortSignal,
+    write: PendingWrite,
+    executing: ExecutingJob,
   ): Promise<RelationshipJobResult> {
     return this.withRelationshipAction(
       "REMOVE_RELATIONSHIP",
-      job,
-      action,
-      startTime,
-      indexTxn,
-      stores,
-      sourceRemote,
-      signal,
+      write,
+      executing,
       null,
       ({ indexTxn: txn, stores: s, sourceDoc, input, job: j }) => {
         if (this.driveContainerTypes.has(sourceDoc.header.documentType)) {
@@ -665,23 +683,13 @@ export class DocumentActionHandler {
   }
 
   private executeUpdateRelationship(
-    job: Job,
-    action: Action,
-    startTime: number,
-    indexTxn: IOperationIndexTxn,
-    stores: ExecutionStores,
-    sourceRemote: string = "",
-    signal?: AbortSignal,
+    write: PendingWrite,
+    executing: ExecutingJob,
   ): Promise<RelationshipJobResult> {
     return this.withRelationshipAction(
       "UPDATE_RELATIONSHIP",
-      job,
-      action,
-      startTime,
-      indexTxn,
-      stores,
-      sourceRemote,
-      signal,
+      write,
+      executing,
       null,
       null,
     );
@@ -689,16 +697,14 @@ export class DocumentActionHandler {
 
   private async withRelationshipAction(
     actionTypeName: string,
-    job: Job,
-    action: Action,
-    startTime: number,
-    indexTxn: IOperationIndexTxn,
-    stores: ExecutionStores,
-    sourceRemote: string,
-    signal: AbortSignal | undefined,
+    write: PendingWrite,
+    executing: ExecutingJob,
     preValidate: ((input: RelationshipActionShape) => Error | null) | null,
     postWrite: ((args: RelationshipPostWriteArgs) => void) | null,
   ): Promise<RelationshipJobResult> {
+    const { action, skip, sourceRemote } = write;
+    const { job, startTime, indexTxn, stores, signal } = executing;
+
     if (job.scope !== "document") {
       return buildErrorResult(
         job,
@@ -748,22 +754,21 @@ export class DocumentActionHandler {
     }
 
     const nextIndex = getNextIndexForScope(sourceDoc, job.scope);
-    let operation = createOperation(action, nextIndex, 0, {
+    let operation = createOperation(action, nextIndex, skip, {
       documentId: input.sourceId,
       scope: job.scope,
       branch: job.branch,
     });
 
     const writeResult = await this.writeOperationToStore(
-      input.sourceId,
-      sourceDoc.header.documentType,
-      job.scope,
-      job.branch,
+      {
+        documentId: input.sourceId,
+        documentType: sourceDoc.header.documentType,
+        scope: job.scope,
+        branch: job.branch,
+      },
       operation,
-      job,
-      startTime,
-      stores,
-      signal,
+      executing,
     );
     if (!Array.isArray(writeResult)) {
       return writeResult;
@@ -826,16 +831,13 @@ export class DocumentActionHandler {
   }
 
   private async writeOperationToStore(
-    documentId: string,
-    documentType: string,
-    scope: string,
-    branch: string,
+    target: WriteTarget,
     operation: Operation,
-    job: Job,
-    startTime: number,
-    stores: ExecutionStores,
-    signal?: AbortSignal,
+    executing: ExecutingJob,
   ): Promise<Operation[] | JobResult> {
+    const { documentId, documentType, scope, branch } = target;
+    const { job, startTime, stores, signal } = executing;
+
     let storedOperations: Operation[];
 
     try {

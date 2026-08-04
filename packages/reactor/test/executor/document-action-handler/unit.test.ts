@@ -81,6 +81,7 @@ function createHarness(
     createTestRegistry(),
     createMockLogger(),
     DEFAULT_DRIVE_CONTAINER_TYPES,
+    { documentDecisions: false },
   );
   return {
     handler,
@@ -129,6 +130,28 @@ function buildAction(
   } as unknown as Action;
 }
 
+/** Runs one plain local write through the handler's parameter objects. */
+function execute(
+  harness: {
+    handler: DocumentActionHandler;
+    stores: ExecutionStores;
+    indexTxn: IOperationIndexTxn;
+  },
+  job: Job,
+  action: Action,
+) {
+  return harness.handler.execute(
+    { action, skip: 0, sourceRemote: "" },
+    {
+      job,
+      startTime: Date.now(),
+      indexTxn: harness.indexTxn,
+      stores: harness.stores,
+      replayingAcceptedHistory: false,
+    },
+  );
+}
+
 describe("DocumentActionHandler", () => {
   describe("executeAddRelationship", () => {
     let harness: HandlerHarness;
@@ -145,13 +168,7 @@ describe("DocumentActionHandler", () => {
       });
       const job = buildJob({ actions: [action] });
 
-      const result = await harness.handler.execute(
-        job,
-        action,
-        Date.now(),
-        harness.indexTxn,
-        harness.stores,
-      );
+      const result = await execute(harness, job, action);
 
       expect(result.success).toBe(true);
       expect(harness.stores.operationStore.apply).toHaveBeenCalledTimes(1);
@@ -183,13 +200,7 @@ describe("DocumentActionHandler", () => {
       });
       const job = buildJob({ documentId: "drive-rd", actions: [action] });
 
-      const result = await harness.handler.execute(
-        job,
-        action,
-        Date.now(),
-        harness.indexTxn,
-        harness.stores,
-      );
+      const result = await execute(harness, job, action);
 
       expect(result.success).toBe(true);
       expect(harness.indexTxn.addToCollection).toHaveBeenCalledWith(
@@ -212,13 +223,7 @@ describe("DocumentActionHandler", () => {
       });
       const job = buildJob({ documentId: "doc-1", actions: [action] });
 
-      const result = await harness.handler.execute(
-        job,
-        action,
-        Date.now(),
-        harness.indexTxn,
-        harness.stores,
-      );
+      const result = await execute(harness, job, action);
 
       expect(result.success).toBe(true);
       expect(harness.indexTxn.addToCollection).not.toHaveBeenCalled();
@@ -235,13 +240,7 @@ describe("DocumentActionHandler", () => {
       });
       const job = buildJob({ scope: "global", actions: [action] });
 
-      const result = await harness.handler.execute(
-        job,
-        action,
-        Date.now(),
-        harness.indexTxn,
-        harness.stores,
-      );
+      const result = await execute(harness, job, action);
 
       expect(result.success).toBe(false);
       expect(result.error?.message).toMatch(/must be in "document" scope/);
@@ -256,13 +255,7 @@ describe("DocumentActionHandler", () => {
       });
       const job = buildJob({ actions: [action] });
 
-      const result = await harness.handler.execute(
-        job,
-        action,
-        Date.now(),
-        harness.indexTxn,
-        harness.stores,
-      );
+      const result = await execute(harness, job, action);
 
       expect(result.success).toBe(false);
       expect(result.error?.message).toMatch(
@@ -279,13 +272,7 @@ describe("DocumentActionHandler", () => {
       });
       const job = buildJob({ documentId: "same", actions: [action] });
 
-      const result = await harness.handler.execute(
-        job,
-        action,
-        Date.now(),
-        harness.indexTxn,
-        harness.stores,
-      );
+      const result = await execute(harness, job, action);
 
       expect(result.success).toBe(false);
       expect(result.error?.message).toMatch(/self-relationships not allowed/);
@@ -303,13 +290,7 @@ describe("DocumentActionHandler", () => {
       });
       const job = buildJob({ actions: [action] });
 
-      const result = await harness.handler.execute(
-        job,
-        action,
-        Date.now(),
-        harness.indexTxn,
-        harness.stores,
-      );
+      const result = await execute(harness, job, action);
 
       expect(result.success).toBe(false);
       expect(result.error?.message).toMatch(
@@ -334,13 +315,7 @@ describe("DocumentActionHandler", () => {
       });
       const job = buildJob({ actions: [action] });
 
-      const result = await harness.handler.execute(
-        job,
-        action,
-        Date.now(),
-        harness.indexTxn,
-        harness.stores,
-      );
+      const result = await execute(harness, job, action);
 
       expect(result.success).toBe(true);
       expect(harness.indexTxn.removeFromCollection).toHaveBeenCalledWith(
@@ -366,13 +341,7 @@ describe("DocumentActionHandler", () => {
       });
       const job = buildJob({ documentId: "drive-rd", actions: [action] });
 
-      const result = await harness.handler.execute(
-        job,
-        action,
-        Date.now(),
-        harness.indexTxn,
-        harness.stores,
-      );
+      const result = await execute(harness, job, action);
 
       expect(result.success).toBe(true);
       expect(harness.indexTxn.removeFromCollection).toHaveBeenCalledWith(
@@ -395,13 +364,7 @@ describe("DocumentActionHandler", () => {
       });
       const job = buildJob({ documentId: "doc-1", actions: [action] });
 
-      const result = await harness.handler.execute(
-        job,
-        action,
-        Date.now(),
-        harness.indexTxn,
-        harness.stores,
-      );
+      const result = await execute(harness, job, action);
 
       expect(result.success).toBe(true);
       expect(harness.indexTxn.removeFromCollection).not.toHaveBeenCalled();
@@ -418,13 +381,7 @@ describe("DocumentActionHandler", () => {
       });
       const job = buildJob({ scope: "global", actions: [action] });
 
-      const result = await harness.handler.execute(
-        job,
-        action,
-        Date.now(),
-        harness.indexTxn,
-        harness.stores,
-      );
+      const result = await execute(harness, job, action);
 
       expect(result.success).toBe(false);
       expect(result.error?.message).toMatch(/must be in "document" scope/);
@@ -438,13 +395,7 @@ describe("DocumentActionHandler", () => {
       });
       const job = buildJob({ actions: [action] });
 
-      const result = await harness.handler.execute(
-        job,
-        action,
-        Date.now(),
-        harness.indexTxn,
-        harness.stores,
-      );
+      const result = await execute(harness, job, action);
 
       expect(result.success).toBe(false);
       expect(result.error?.message).toMatch(
@@ -463,13 +414,7 @@ describe("DocumentActionHandler", () => {
       });
       const job = buildJob({ actions: [action] });
 
-      const result = await harness.handler.execute(
-        job,
-        action,
-        Date.now(),
-        harness.indexTxn,
-        harness.stores,
-      );
+      const result = await execute(harness, job, action);
 
       expect(result.success).toBe(false);
       expect(result.error?.message).toMatch(
@@ -494,13 +439,7 @@ describe("DocumentActionHandler", () => {
       });
       const job = buildJob({ actions: [action] });
 
-      const result = await harness.handler.execute(
-        job,
-        action,
-        Date.now(),
-        harness.indexTxn,
-        harness.stores,
-      );
+      const result = await execute(harness, job, action);
 
       expect(result.success).toBe(true);
       expect(harness.indexTxn.write).toHaveBeenCalledTimes(1);
@@ -522,13 +461,7 @@ describe("DocumentActionHandler", () => {
       });
       const job = buildJob({ scope: "global", actions: [action] });
 
-      const result = await harness.handler.execute(
-        job,
-        action,
-        Date.now(),
-        harness.indexTxn,
-        harness.stores,
-      );
+      const result = await execute(harness, job, action);
 
       expect(result.success).toBe(false);
       expect(result.error?.message).toMatch(/must be in "document" scope/);
@@ -542,13 +475,7 @@ describe("DocumentActionHandler", () => {
       });
       const job = buildJob({ actions: [action] });
 
-      const result = await harness.handler.execute(
-        job,
-        action,
-        Date.now(),
-        harness.indexTxn,
-        harness.stores,
-      );
+      const result = await execute(harness, job, action);
 
       expect(result.success).toBe(false);
       expect(result.error?.message).toMatch(
@@ -567,13 +494,7 @@ describe("DocumentActionHandler", () => {
       });
       const job = buildJob({ actions: [action] });
 
-      const result = await harness.handler.execute(
-        job,
-        action,
-        Date.now(),
-        harness.indexTxn,
-        harness.stores,
-      );
+      const result = await execute(harness, job, action);
 
       expect(result.success).toBe(false);
       expect(result.error?.message).toMatch(
