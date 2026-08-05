@@ -12,6 +12,7 @@ import {
   deleteModule,
   deleteOperation,
   deleteOperationError,
+  releaseNewVersion,
   setAuthorName,
   setAuthorWebsite,
   setInitialState,
@@ -30,9 +31,15 @@ import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Divider } from "./components/divider.js";
 import ModelMetadata from "./components/model-metadata-form.js";
 import Modules from "./components/modules.js";
+import {
+  FrozenVersionBanner,
+  VersionControls,
+} from "./components/version-controls.js";
+import { VersionAdvisoryModal } from "./components/version-advisory-modal.js";
 import { editorConfig } from "./config.js";
 import { SchemaContextProvider } from "./context/schema-context.js";
 import { useSelectedDocumentModelDocument } from "./hooks/useDocumentModelDocument.js";
+import { useVersionAdvisory } from "./hooks/useVersionAdvisory.js";
 import type { Scope } from "./types/documents.js";
 import {
   compareStringsWithoutWhitespace,
@@ -57,6 +64,19 @@ export default function Editor() {
   } = document.state.global;
   const specifications = document.state.global.specifications;
   const latestSpec = specifications[specifications.length - 1];
+  const previousSpec =
+    specifications.length >= 2
+      ? specifications[specifications.length - 2]
+      : undefined;
+  const [viewedVersion, setViewedVersion] = useState<number | "latest">(
+    "latest",
+  );
+  const viewedSpec =
+    viewedVersion === "latest"
+      ? latestSpec
+      : (specifications.find((spec) => spec.version === viewedVersion) ??
+        latestSpec);
+  const isViewingFrozenVersion = viewedSpec.version !== latestSpec.version;
   const {
     state: {
       global: {
@@ -66,7 +86,7 @@ export default function Editor() {
       local: { schema: localStateSchema, initialValue: localStateInitialValue },
     },
     modules,
-  } = latestSpec;
+  } = viewedSpec;
   const operations = modules.flatMap((module) => module.operations);
   const shouldSetInitialName = useRef(
     !modelName && !!documentNodeName && operations.length === 0,
@@ -84,45 +104,78 @@ export default function Editor() {
     shouldSetInitialName.current = false;
   }, [documentNodeName, dispatch]);
 
+  const {
+    guardedDispatch,
+    prompt,
+    releaseFirst,
+    keepEditing,
+    cancelAdvisory,
+    markVersionInDevelopment,
+  } = useVersionAdvisory({
+    documentId: document.header.id,
+    latestSpec,
+    previousSpec,
+    dispatch,
+    onReleaseError: (message) => {
+      if (toast) toast(message, { type: "connect-warning" });
+    },
+  });
+
+  const handleReleaseNewVersion = () => {
+    const nextVersion = latestSpec.version + 1;
+    dispatch(
+      releaseNewVersion(),
+      (errors) => {
+        if (errors.length > 0 && toast) {
+          toast(errors[0].message, { type: "connect-warning" });
+        }
+      },
+      () => {
+        markVersionInDevelopment(nextVersion);
+        setViewedVersion("latest");
+      },
+    );
+  };
+
   const operationSchemasSdl = operations
     .flatMap((operation) => operation.schema ?? [])
     .join("\n");
 
   const handleSetModelId = (id: string) => {
     if (compareStringsWithoutWhitespace(id, documentType)) return;
-    dispatch([setModelId({ id })]);
+    guardedDispatch([setModelId({ id })]);
   };
 
   const handleSetModelDescription = (newDescription: string) => {
     if (compareStringsWithoutWhitespace(newDescription, description)) return;
-    dispatch(setModelDescription({ description: newDescription }));
+    guardedDispatch(setModelDescription({ description: newDescription }));
   };
 
   const handleSetModelExtension = (newExtension: string) => {
     if (compareStringsWithoutWhitespace(newExtension, extension)) return;
-    dispatch(setModelExtension({ extension: newExtension }));
+    guardedDispatch(setModelExtension({ extension: newExtension }));
   };
 
   const handleSetModelName = (newName: string) => {
     if (compareStringsWithoutWhitespace(newName, modelName)) return;
-    dispatch(setModelName({ name: newName }));
+    guardedDispatch(setModelName({ name: newName }));
   };
 
   const handleSetAuthorName = (newAuthorName: string) => {
     if (compareStringsWithoutWhitespace(newAuthorName, authorName)) return;
-    dispatch(setAuthorName({ authorName: newAuthorName }));
+    guardedDispatch(setAuthorName({ authorName: newAuthorName }));
   };
 
   const handleSetAuthorWebsite = (newAuthorWebsite: string) => {
     if (compareStringsWithoutWhitespace(newAuthorWebsite, authorWebsite ?? ""))
       return;
-    dispatch(setAuthorWebsite({ authorWebsite: newAuthorWebsite }));
+    guardedDispatch(setAuthorWebsite({ authorWebsite: newAuthorWebsite }));
   };
 
   const handleSetStateSchema = (newSchema: string, scope: Scope) => {
     const oldSchema = scope === "global" ? globalStateSchema : localStateSchema;
     if (compareStringsWithoutWhitespace(newSchema, oldSchema)) return;
-    dispatch(setStateSchema({ schema: newSchema, scope }));
+    guardedDispatch(setStateSchema({ schema: newSchema, scope }));
   };
 
   const handleSetInitialState = (newInitialValue: string, scope: Scope) => {
@@ -130,7 +183,7 @@ export default function Editor() {
       scope === "global" ? globalStateInitialValue : localStateInitialValue;
     if (compareStringsWithoutWhitespace(newInitialValue, oldInitialValue))
       return;
-    dispatch(setInitialState({ initialValue: newInitialValue, scope }));
+    guardedDispatch(setInitialState({ initialValue: newInitialValue, scope }));
   };
 
   const handleAddModule = (name: string): Promise<string | undefined> => {
@@ -145,7 +198,7 @@ export default function Editor() {
           return;
         }
         const id = generateId();
-        dispatch(addModule({ id, name }));
+        guardedDispatch(addModule({ id, name }));
         resolve(id);
       } catch (error) {
         console.error("Failed to add module:", error);
@@ -161,11 +214,11 @@ export default function Editor() {
       )
     )
       return;
-    dispatch(setModuleName({ id, name }));
+    guardedDispatch(setModuleName({ id, name }));
   };
 
   const handleDeleteModule = (id: string) => {
-    dispatch(deleteModule({ id }));
+    guardedDispatch(deleteModule({ id }));
   };
 
   const handleAddOperation = (
@@ -174,7 +227,7 @@ export default function Editor() {
   ): Promise<string | undefined> => {
     return new Promise((resolve) => {
       const id = generateId();
-      dispatch(
+      guardedDispatch(
         addOperation({ id, moduleId, name, scope }),
         (errors) => {
           if (errors.length > 0) {
@@ -192,7 +245,7 @@ export default function Editor() {
   };
 
   const handleSetOperationName = (id: string, name: string) => {
-    dispatch(setOperationName({ id, name }), (errors) => {
+    guardedDispatch(setOperationName({ id, name }), (errors) => {
       if (errors.length > 0 && toast) {
         toast(errors[0].message, { type: "connect-warning" });
       }
@@ -206,7 +259,7 @@ export default function Editor() {
       compareStringsWithoutWhitespace(newSchema, operation.schema)
     )
       return;
-    dispatch(setOperationSchema({ id, schema: newSchema }));
+    guardedDispatch(setOperationSchema({ id, schema: newSchema }));
   };
 
   const handleToggleNoInputRequired = (
@@ -217,14 +270,14 @@ export default function Editor() {
     if (!operation?.name) return;
 
     if (noInputRequired) {
-      dispatch(
+      guardedDispatch(
         setOperationSchema({
           id,
           schema: makeEmptyOperationSchema(operation.name),
         }),
       );
     } else {
-      dispatch(
+      guardedDispatch(
         setOperationSchema({
           id,
           schema: makeOperationInitialDoc(operation.name),
@@ -241,11 +294,13 @@ export default function Editor() {
       operations.find((operation) => operation.id === id)?.description ?? "";
     if (compareStringsWithoutWhitespace(operationDescription, newDescription))
       return;
-    dispatch(setOperationDescription({ id, description: newDescription }));
+    guardedDispatch(
+      setOperationDescription({ id, description: newDescription }),
+    );
   };
 
   const handleDeleteOperation = (id: string) => {
-    dispatch(deleteOperation({ id }));
+    guardedDispatch(deleteOperation({ id }));
   };
 
   const handleAddOperationError = (
@@ -269,7 +324,9 @@ export default function Editor() {
         }
         const id = generateId();
         const errorCode = pascalCase(errorName);
-        dispatch(addOperationError({ id, operationId, errorName, errorCode }));
+        guardedDispatch(
+          addOperationError({ id, operationId, errorName, errorCode }),
+        );
         resolve(id);
       } catch (error) {
         console.error("Failed to add operation error:", error);
@@ -279,7 +336,7 @@ export default function Editor() {
   };
 
   const handleDeleteOperationError = (id: string) => {
-    dispatch(deleteOperationError({ id }));
+    guardedDispatch(deleteOperationError({ id }));
   };
 
   const handleSetOperationErrorName = (
@@ -298,7 +355,7 @@ export default function Editor() {
       )
     )
       return;
-    dispatch(setOperationErrorName({ id: errorId, errorName }));
+    guardedDispatch(setOperationErrorName({ id: errorId, errorName }));
   };
 
   const addOperationAndInitialSchema = async (
@@ -330,6 +387,12 @@ export default function Editor() {
         operationSchemasSdl={operationSchemasSdl}
       >
         <div className="mx-auto max-w-6xl px-4 pt-8">
+          <VersionControls
+            specifications={specifications}
+            viewedVersion={viewedSpec.version}
+            onViewVersion={setViewedVersion}
+            onReleaseNewVersion={handleReleaseNewVersion}
+          />
           <ModelMetadata
             name={modelName}
             documentType={documentType}
@@ -348,7 +411,19 @@ export default function Editor() {
             setStateSchema={handleSetStateSchema}
           />
           <Divider />
-          <div>
+          {isViewingFrozenVersion && (
+            <FrozenVersionBanner
+              latestVersion={latestSpec.version}
+              viewedVersion={viewedSpec.version}
+            />
+          )}
+          <div
+            className={
+              isViewingFrozenVersion
+                ? "pointer-events-none opacity-80 select-none"
+                : undefined
+            }
+          >
             <Suspense>
               <StateSchemas
                 modelName={modelName}
@@ -390,6 +465,12 @@ export default function Editor() {
           </div>
         </div>
       </SchemaContextProvider>
+      <VersionAdvisoryModal
+        prompt={prompt}
+        onReleaseFirst={releaseFirst}
+        onKeepEditing={keepEditing}
+        onCancel={cancelAdvisory}
+      />
     </main>
   );
 }
