@@ -3009,6 +3009,18 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
+  test/recipes-e2e:
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 25.2.3
+      tsx:
+        specifier: ^4.19.2
+        version: 4.21.0
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
   test/switchboard:
     devDependencies:
       '@modelcontextprotocol/sdk':
