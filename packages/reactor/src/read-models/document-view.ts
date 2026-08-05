@@ -218,7 +218,12 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
               }
             }
 
-            if (slug && slug !== documentId) {
+            // Never for a deleted document. Deleting removes its SlugMapping
+            // rows, and resolveIdOrSlug relies on that to keep the slug branch
+            // from reaching one: re-inserting here would make the document
+            // resolvable by slug again, and the upsert would take the slug from
+            // a live document that has since claimed it.
+            if (slug && slug !== documentId && !existingSnapshot?.isDeleted) {
               await trx
                 .insertInto("SlugMapping")
                 .values({

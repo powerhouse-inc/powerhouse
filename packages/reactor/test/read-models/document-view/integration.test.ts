@@ -2391,5 +2391,70 @@ describe("KyselyDocumentView", () => {
         `Document not found: ${slug}`,
       );
     });
+
+    /**
+     * Indexing any later operation re-runs the header branch, and every
+     * resultingState carries the header with its slug. Without a guard the
+     * SlugMapping row comes back and the invariant above -- deleting removes
+     * it, so the slug branch can never reach a deleted document -- silently
+     * stops holding.
+     */
+    async function indexLaterOperation(documentId: string, slug: string) {
+      await view.indexOperations([
+        {
+          operation: createTestOperation(documentId, {
+            index: 2,
+            hash: "later-hash",
+            action: {
+              id: generateId(),
+              type: "SOME_ACTION",
+              scope: "global",
+              input: {},
+            } as any,
+          }),
+          context: {
+            documentId,
+            documentType,
+            scope: "global",
+            branch,
+            resultingState: JSON.stringify({
+              header: { id: documentId, documentType, slug, name: "Test" },
+              global: { touched: true },
+            }),
+            ordinal: 4,
+          },
+        },
+      ]);
+    }
+
+    it("does not restore the slug when an operation arrives after deletion", async () => {
+      const documentId = generateId();
+      const slug = "post-deletion-slug";
+      await createDocumentInView(documentId, slug);
+      await deleteDocumentInView(documentId);
+
+      await indexLaterOperation(documentId, slug);
+
+      expect(await view.resolveSlug(slug, { branch })).toBeUndefined();
+      await expect(boundaryView.resolveIdOrSlug(slug)).rejects.toThrow(
+        `Document not found: ${slug}`,
+      );
+    });
+
+    it("does not take a slug a live document claimed after the deletion", async () => {
+      const slug = "reclaimed-slug";
+      const deletedId = generateId();
+      await createDocumentInView(deletedId, slug);
+      await deleteDocumentInView(deletedId);
+
+      // A second document is free to claim the slug once it is released.
+      const liveId = generateId();
+      await createDocumentInView(liveId, slug);
+      expect(await view.resolveSlug(slug, { branch })).toBe(liveId);
+
+      await indexLaterOperation(deletedId, slug);
+
+      expect(await view.resolveSlug(slug, { branch })).toBe(liveId);
+    });
   });
 });
