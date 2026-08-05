@@ -68,6 +68,7 @@ import {
   GATED_DOCUMENT_ACTIONS,
   getNextIndexForScope,
   refusalError,
+  targetDocumentId,
   updateDocumentRevision,
 } from "./util.js";
 import { SnapshotPosition } from "../cache/write-cache-types.js";
@@ -146,6 +147,10 @@ export class DocumentActionHandler {
       return undefined;
     }
 
+    // Decided against the document the action writes to, which the job is not
+    // required to be keyed by.
+    const documentId = targetDocumentId(action, job.documentId);
+
     // Unlike processWrite, the decision's appendCondition is deliberately
     // dropped: a later-timestamped auth operation cannot retroactively deny
     // this write, and a backdated one triggers reevaluateIfNeeded, so the
@@ -155,7 +160,7 @@ export class DocumentActionHandler {
       admission = await decideAtHead(
         this.decisionModel,
         stores.writeCache,
-        { documentId: job.documentId, branch: job.branch },
+        { documentId, branch: job.branch },
         {
           address: action.context?.signer?.user.address,
           key: action.context?.signer?.app.key,
@@ -179,7 +184,7 @@ export class DocumentActionHandler {
       job,
       refusalError(
         admission.evaluation.reason,
-        job.documentId,
+        documentId,
         admission.deletedAtUtcIso,
         action,
       ),

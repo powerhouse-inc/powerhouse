@@ -46,6 +46,35 @@ export const GATED_DOCUMENT_ACTIONS: ReadonlySet<string> = new Set(
 );
 
 /**
+ * The document a document-scope action writes to, which is not always the job's
+ * own document: delete and upgrade name it in `input.documentId`, and the
+ * relationship actions in `input.sourceId`. `execute` only checks that a batch
+ * shares one scope, so a caller can submit an action whose target is a document
+ * other than the one the job is keyed by. The policy gate has to follow the
+ * action rather than the job, or it decides against a policy the caller may
+ * control instead of the one guarding the write.
+ */
+export function targetDocumentId(action: Action, fallback: string): string {
+  const input = action.input as
+    | { documentId?: unknown; sourceId?: unknown }
+    | undefined;
+
+  if (
+    action.type === "ADD_RELATIONSHIP" ||
+    action.type === "REMOVE_RELATIONSHIP" ||
+    action.type === "UPDATE_RELATIONSHIP"
+  ) {
+    return typeof input?.sourceId === "string" && input.sourceId.length > 0
+      ? input.sourceId
+      : fallback;
+  }
+
+  return typeof input?.documentId === "string" && input.documentId.length > 0
+    ? input.documentId
+    : fallback;
+}
+
+/**
  * Creates a PHDocument from a CREATE_DOCUMENT action input.
  * Reconstructs the document header and initializes the base state.
  *

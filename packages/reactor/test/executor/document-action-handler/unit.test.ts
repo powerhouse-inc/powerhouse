@@ -7,6 +7,7 @@ import { DEFAULT_DRIVE_CONTAINER_TYPES } from "../../../src/core/drive-container
 import { DocumentActionHandler } from "../../../src/executor/document-action-handler.js";
 import { selectDecisionModel } from "../../../src/decision/registered-model.js";
 import type { ExecutionStores } from "../../../src/executor/execution-scope.js";
+import { targetDocumentId } from "../../../src/executor/util.js";
 import type { Job } from "../../../src/queue/types.js";
 import {
   createMockCollectionMembershipCache,
@@ -505,5 +506,125 @@ describe("DocumentActionHandler", () => {
         /source document drive-1 not found.*doc missing/,
       );
     });
+  });
+
+  describe("the policy gate follows the action, not the job", () => {
+    /**
+     * A document-scope action does not have to write to the job's own
+     * document: delete and upgrade name the target in `input.documentId`,
+     * relationships in `input.sourceId`, and `execute` only checks that a batch
+     * shares one scope. Deciding against the job would consult a policy the
+     * caller may control instead of the one guarding the write.
+     */
+    function gatedHarness(sourceDoc: PHDocument) {
+      const flags = { documentDecisions: true, authEnforcement: true };
+      const harness = createHarness(sourceDoc);
+      return {
+        ...harness,
+        handler: new DocumentActionHandler(
+          createTestRegistry(),
+          createMockLogger(),
+          DEFAULT_DRIVE_CONTAINER_TYPES,
+          flags,
+          selectDecisionModel(flags),
+        ),
+      };
+    }
+
+    it("decides a relationship against the source document's policy", async () => {
+      const harness = gatedHarness(createSourceDoc({ id: "target-doc" }));
+      const action = buildAction("ADD_RELATIONSHIP", {
+        sourceId: "target-doc",
+        targetId: "doc-2",
+        relationshipType: "drive/child",
+      });
+      // The job is keyed by a different document than the action writes to.
+      const job = buildJob({ documentId: "attacker-doc", actions: [action] });
+
+      await execute(harness, job, action);
+
+      const gated = harness.writeCache.getState.mock.calls.filter(
+        (call) => call[1] === "auth",
+      );
+      expect(gated.length).toBeGreaterThan(0);
+      for (const call of gated) {
+        expect(call[0]).toBe("target-doc");
+      }
+    });
+
+    it("decides a delete against the document named in the input", async () => {
+      const harness = gatedHarness(createSourceDoc({ id: "victim-doc" }));
+      const action = {
+        id: "action-delete",
+        type: "DELETE_DOCUMENT",
+        scope: "document",
+        timestampUtcMs: "2024-01-01T00:00:00.000Z",
+        input: { documentId: "victim-doc" },
+      } as unknown as Action;
+      const job = buildJob({ documentId: "attacker-doc", actions: [action] });
+
+      await execute(harness, job, action);
+
+      const gated = harness.writeCache.getState.mock.calls.filter(
+        (call) => call[1] === "auth",
+      );
+      expect(gated.length).toBeGreaterThan(0);
+      for (const call of gated) {
+        expect(call[0]).toBe("victim-doc");
+      }
+    });
+  });
+});
+
+describe("targetDocumentId", () => {
+  const withInput = (type: string, input: unknown) =>
+    ({ id: "a", type, scope: "document", input }) as unknown as Action;
+
+  it("reads documentId for delete and upgrade", () => {
+    expect(
+      targetDocumentId(
+        withInput("DELETE_DOCUMENT", { documentId: "doc-b" }),
+        "job-doc",
+      ),
+    ).toBe("doc-b");
+    expect(
+      targetDocumentId(
+        withInput("UPGRADE_DOCUMENT", { documentId: "doc-b" }),
+        "job-doc",
+      ),
+    ).toBe("doc-b");
+  });
+
+  it("reads sourceId for the relationship actions", () => {
+    for (const type of [
+      "ADD_RELATIONSHIP",
+      "REMOVE_RELATIONSHIP",
+      "UPDATE_RELATIONSHIP",
+    ]) {
+      expect(
+        targetDocumentId(
+          withInput(type, { sourceId: "src", documentId: "ignored" }),
+          "job-doc",
+        ),
+      ).toBe("src");
+    }
+  });
+
+  it("falls back to the job's document when the input names none", () => {
+    expect(targetDocumentId(withInput("DELETE_DOCUMENT", {}), "job-doc")).toBe(
+      "job-doc",
+    );
+    expect(
+      targetDocumentId(
+        withInput("ADD_RELATIONSHIP", { sourceId: "" }),
+        "job-doc",
+      ),
+    ).toBe("job-doc");
+    expect(
+      targetDocumentId(
+        withInput("DELETE_DOCUMENT", { documentId: 42 }),
+        "job-doc",
+      ),
+    ).toBe("job-doc");
   });
 });
