@@ -182,8 +182,8 @@ async function createReactorKysely(opts: {
   const pglite = inMemory
     ? new PGlite()
     : new PGlite({
-      fs: new AtomicNodeFs(reactorPgliteDir, { logger, flushIntervalMs }),
-    });
+        fs: new AtomicNodeFs(reactorPgliteDir, { logger, flushIntervalMs }),
+      });
   logger.info(
     inMemory
       ? `Using in-memory PGlite (PG${reactorPgliteMajor}) for reactor storage [PH_PGLITE_IN_MEMORY=1]`
@@ -205,9 +205,9 @@ export function deriveAttachmentServiceConfig(
     `${protocol}://localhost:${serverPort}`;
   const jwtHandler: JwtHandler | undefined = renown
     ? async (url: string) =>
-      renown.user
-        ? renown.getBearerToken({ expiresIn: 10, aud: url })
-        : undefined
+        renown.user
+          ? renown.getBearerToken({ expiresIn: 10, aud: url })
+          : undefined
     : undefined;
   return { remoteUrl, jwtHandler };
 }
@@ -449,16 +449,16 @@ async function initServer(
     // Subpath import keeps vetra's React editors out of the node bundle.
     const vetraDocumentModels: DocumentModelModule[] = dev
       ? (
-        Object.values(
-          await import("@powerhousedao/vetra/document-models"),
-        ) as unknown[]
-      ).filter(
-        (m): m is DocumentModelModule =>
-          typeof m === "object" &&
-          m !== null &&
-          "documentModel" in m &&
-          "reducer" in m,
-      )
+          Object.values(
+            await import("@powerhousedao/vetra/document-models"),
+          ) as unknown[]
+        ).filter(
+          (m): m is DocumentModelModule =>
+            typeof m === "object" &&
+            m !== null &&
+            "documentModel" in m &&
+            "reducer" in m,
+        )
       : [];
 
     applySwitchboardReactorDefaults(reactorBuilder, clientBuilder, {
@@ -466,16 +466,16 @@ async function initServer(
       executorConfig:
         hasSkipThreshold || documentDecisions || authEnforcement
           ? {
-            ...(hasSkipThreshold ? { maxSkipThreshold } : {}),
-            ...(documentDecisions || authEnforcement
-              ? {
-                featureFlags: {
-                  ...(documentDecisions ? { documentDecisions: true } : {}),
-                  ...(authEnforcement ? { authEnforcement: true } : {}),
-                },
-              }
-              : {}),
-          }
+              ...(hasSkipThreshold ? { maxSkipThreshold } : {}),
+              ...(documentDecisions || authEnforcement
+                ? {
+                    featureFlags: {
+                      ...(documentDecisions ? { documentDecisions: true } : {}),
+                      ...(authEnforcement ? { authEnforcement: true } : {}),
+                    },
+                  }
+                : {}),
+            }
           : undefined,
       documentModelLoader:
         httpLoader && dynamicModelLoading
@@ -505,7 +505,8 @@ async function initServer(
         db: buildWorkerDbConfig(reactorDbUrl, workerPool),
       });
       reactorLogger.info(
-        `Executor worker pool enabled: ${workerPool.numWorkers} worker threads${workerPool.mode === "auto" ? " (auto-sized from cores)" : ""
+        `Executor worker pool enabled: ${workerPool.numWorkers} worker threads${
+          workerPool.mode === "auto" ? " (auto-sized from cores)" : ""
         }`,
       );
     }
@@ -618,12 +619,12 @@ async function initServer(
     pgliteFactory = PGLITE_IN_MEMORY
       ? () => new ReadModelPGlite()
       : (connectionString) =>
-        new ReadModelPGlite({
-          fs: new AtomicNodeFs(
-            connectionString ?? (readModelPgliteDir as string),
-            { logger, flushIntervalMs: PGLITE_FLUSH_INTERVAL_MS },
-          ),
-        });
+          new ReadModelPGlite({
+            fs: new AtomicNodeFs(
+              connectionString ?? (readModelPgliteDir as string),
+              { logger, flushIntervalMs: PGLITE_FLUSH_INTERVAL_MS },
+            ),
+          });
   }
 
   const api = await initializeAndStartAPI(
@@ -852,7 +853,7 @@ export const startSwitchboard = async (
   const enableDocumentModelSubgraphs = await featureFlags.getBooleanValue(
     DOCUMENT_MODEL_SUBGRAPHS_ENABLED,
     options.enableDocumentModelSubgraphs ??
-    DOCUMENT_MODEL_SUBGRAPHS_ENABLED_DEFAULT,
+      DOCUMENT_MODEL_SUBGRAPHS_ENABLED_DEFAULT,
   );
 
   options.enableDocumentModelSubgraphs = enableDocumentModelSubgraphs;

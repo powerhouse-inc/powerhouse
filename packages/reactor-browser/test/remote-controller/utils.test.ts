@@ -173,7 +173,9 @@ describe("remoteOperationToLocal", () => {
 
   it("preserves deniedReason string", () => {
     const remote = makeRemoteOp({ index: 0, deniedReason: "document deleted" });
-    expect(remoteOperationToLocal(remote).deniedReason).toBe("document deleted");
+    expect(remoteOperationToLocal(remote).deniedReason).toBe(
+      "document deleted",
+    );
   });
 
   it("converts signer context with signatures", () => {
