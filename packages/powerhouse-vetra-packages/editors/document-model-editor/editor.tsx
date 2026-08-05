@@ -49,6 +49,16 @@ import {
 } from "./utils/helpers.js";
 const StateSchemas = lazy(() => import("./components/state-schemas.js"));
 
+// Module-level no-ops so StateSchemas' props are stable across renders while
+// a frozen (non-latest) version is being viewed. They intentionally do
+// nothing: mutating handlers baseline on latestSpec, so if StateSchemas'
+// internal auto-sync effect were to fire while viewing an old version, it
+// would otherwise copy that old version's content into the latest spec.
+const noopSetStateSchema: (schema: string, scope: Scope) => void = () =>
+  undefined;
+const noopSetInitialState: (initialValue: string, scope: Scope) => void = () =>
+  undefined;
+
 export default function Editor() {
   useSetPHDocumentEditorConfig(editorConfig);
   const toast = usePHToast();
@@ -441,6 +451,7 @@ export default function Editor() {
                 ? "pointer-events-none opacity-80 select-none"
                 : undefined
             }
+            inert={isViewingFrozenVersion || undefined}
           >
             <Suspense>
               <StateSchemas
@@ -449,8 +460,16 @@ export default function Editor() {
                 globalStateInitialValue={globalStateInitialValue}
                 localStateSchema={localStateSchema}
                 localStateInitialValue={localStateInitialValue}
-                setStateSchema={handleSetStateSchema}
-                setInitialState={handleSetInitialState}
+                setStateSchema={
+                  isViewingFrozenVersion
+                    ? noopSetStateSchema
+                    : handleSetStateSchema
+                }
+                setInitialState={
+                  isViewingFrozenVersion
+                    ? noopSetInitialState
+                    : handleSetInitialState
+                }
                 currentScope={scope}
                 onScopeChange={setScope}
               />
