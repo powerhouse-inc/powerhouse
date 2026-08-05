@@ -185,6 +185,28 @@ describe("classifyDocumentModelAction", () => {
     expect(result.kind).toBe("safe");
   });
 
+  it("treats replacing a placeholder-only state schema as safe", () => {
+    const spec = makeSpec({
+      state: {
+        global: {
+          schema:
+            'type TodoState {\n  "Add your global state fields here"\n  _placeholder: String\n}',
+          initialValue: "{}",
+          examples: [],
+        },
+        local: { schema: "", initialValue: "", examples: [] },
+      },
+    });
+    const result = classifyDocumentModelAction(
+      setStateSchema({
+        schema: "type TodoState { title: String! }",
+        scope: "global",
+      }),
+      spec,
+    );
+    expect(result.kind).toBe("safe");
+  });
+
   it("flags an initial state change", () => {
     const result = classifyDocumentModelAction(
       setInitialState({ initialValue: '{ "title": "new" }', scope: "global" }),
@@ -235,6 +257,32 @@ describe("classifyDocumentModelAction", () => {
           name: "general",
           description: null,
           operations: [makeOperation({ schema: null })],
+        },
+      ],
+    });
+    const result = classifyDocumentModelAction(
+      setOperationSchema({
+        id: "op-1",
+        schema: "input SetTitleInput { title: String! }",
+      }),
+      spec,
+    );
+    expect(result.kind).toBe("safe");
+  });
+
+  it("treats replacing a placeholder-only operation schema as safe", () => {
+    const spec = makeSpec({
+      modules: [
+        {
+          id: "mod-1",
+          name: "general",
+          description: null,
+          operations: [
+            makeOperation({
+              schema:
+                'input SetTitleInput {\n  "Add your inputs here"\n  _placeholder: String\n}',
+            }),
+          ],
         },
       ],
     });

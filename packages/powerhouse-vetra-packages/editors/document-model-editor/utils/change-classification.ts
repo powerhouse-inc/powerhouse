@@ -177,6 +177,28 @@ function isBlank(value: string | null | undefined): boolean {
   return !value || !value.trim() || value.trim() === "{}";
 }
 
+/**
+ * True for a blank SDL, or an SDL whose types contain nothing but the
+ * `_placeholder` field the editor seeds new state/operation schemas with
+ * (see `makeInitialSchemaDoc` / `makeOperationInitialDoc` in ./helpers.ts).
+ * Replacing a placeholder-only schema with real fields is a user's first
+ * edit on a brand-new model, not a version-relevant change.
+ */
+function isPlaceholderOnlySchema(sdl: string): boolean {
+  if (isBlank(sdl)) return true;
+  let doc: DocumentNode;
+  try {
+    doc = parse(sdl);
+  } catch {
+    return false;
+  }
+  const types = collectTypeFields(doc);
+  return [...types.values()].every(
+    (fields) =>
+      fields.size === 0 || (fields.size === 1 && fields.has("_placeholder")),
+  );
+}
+
 function findOperation(
   spec: DocumentSpecification,
   operationId: string,
@@ -205,7 +227,7 @@ function classifySetStateSchema(
     input.scope === "local"
       ? latestSpec.state.local.schema
       : latestSpec.state.global.schema;
-  if (isBlank(currentSchema)) return SAFE;
+  if (isPlaceholderOnlySchema(currentSchema)) return SAFE;
   const diff = diffSdlShapes(currentSchema, input.schema);
   if (!hasShapeChange(diff)) return SAFE;
   return {
@@ -257,7 +279,7 @@ function classifyOperationChange(
       };
     }
     case "SET_OPERATION_SCHEMA": {
-      if (isBlank(operation.schema)) return SAFE;
+      if (isPlaceholderOnlySchema(operation.schema ?? "")) return SAFE;
       if (isBlank(action.input.schema)) {
         return {
           kind: "version-relevant",
