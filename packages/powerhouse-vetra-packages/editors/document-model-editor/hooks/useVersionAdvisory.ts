@@ -94,6 +94,7 @@ export function useVersionAdvisory(args: {
         }
       },
       () => {
+        if (!pendingRef.current) return;
         sessionVersionChoices.add(`${documentId}:${latestSpec.version + 1}`);
         flushPending();
       },
