@@ -55,6 +55,8 @@ export default function Editor() {
     description,
     author: { name: authorName, website: authorWebsite },
   } = document.state.global;
+  const specifications = document.state.global.specifications;
+  const latestSpec = specifications[specifications.length - 1];
   const {
     state: {
       global: {
@@ -64,7 +66,7 @@ export default function Editor() {
       local: { schema: localStateSchema, initialValue: localStateInitialValue },
     },
     modules,
-  } = document.state.global.specifications[0];
+  } = latestSpec;
   const operations = modules.flatMap((module) => module.operations);
   const shouldSetInitialName = useRef(
     !modelName && !!documentNodeName && operations.length === 0,
