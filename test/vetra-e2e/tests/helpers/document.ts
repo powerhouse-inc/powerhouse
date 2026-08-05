@@ -57,21 +57,6 @@ export async function createDocument(
 }
 
 /**
- * Helper function to check if a document type is available for creation (Vetra-specific).
- * @param page - Playwright Page object
- * @param documentType - Type of document to check
- */
-export async function isDocumentAvailableForCreation(
-  page: Page,
-  documentType: string,
-) {
-  return await page
-    .locator(".flex.w-full.flex-wrap.gap-4")
-    .getByText(documentType)
-    .isVisible();
-}
-
-/**
  * Navigate to Vetra drive from home page (Vetra-specific).
  * @param page - Playwright Page object
  * @param handleCookies - Whether to handle cookie consent (default: false)

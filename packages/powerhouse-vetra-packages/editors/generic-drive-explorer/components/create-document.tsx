@@ -1,28 +1,42 @@
-import { PowerhouseButton } from "@powerhousedao/design-system";
+import { Icon, PowerhouseButton } from "@powerhousedao/design-system";
+import type { DocumentTypeOption } from "@powerhousedao/design-system/connect";
+import { CreateDocumentWithTypeModal } from "@powerhousedao/design-system/connect";
 import {
+  addDocument,
   preloadEditorModule,
-  showCreateDocumentModal,
+  setSelectedNode,
   useAllowedDocumentModelModules,
   useDisabledEditors,
   useEditorModules,
+  useParentFolderForSelectedNode,
+  useSelectedDriveSafe,
+  useSelectedFolder,
   useUserPermissions,
 } from "@powerhousedao/reactor-browser";
-import type {
-  DocumentModelGlobalState,
-  DocumentModelModule,
-} from "@powerhousedao/shared/document-model";
+import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+import { useState } from "react";
 
-function getDocumentSpec(doc: DocumentModelModule): DocumentModelGlobalState {
-  return doc.documentModel.global;
+function toDocumentTypeOption(doc: DocumentModelModule): DocumentTypeOption {
+  const spec = doc.documentModel.global;
+  return {
+    documentType: spec.id,
+    name: spec.name,
+    version: doc.version,
+    description: spec.description,
+  };
 }
 
 export function CreateDocument() {
+  const [showModal, setShowModal] = useState(false);
   const { isAllowedToCreateDocuments } = useUserPermissions();
   // Respect Connect config: allowedDocumentTypes (allowlist) via the hook,
   // disabledEditors (denylist) subtracted below.
   const allowedDocumentModelModules = useAllowedDocumentModelModules();
   const editorModules = useEditorModules();
   const disabledEditors = useDisabledEditors() ?? [];
+  const [selectedDrive] = useSelectedDriveSafe();
+  const selectedFolder = useSelectedFolder();
+  const parentFolder = useParentFolderForSelectedNode();
   // Drive containers are never documents-in-a-drive; hide them structurally so
   // this shared editor can't fail open when disabledEditors is unset.
   const DRIVE_CONTAINER_TYPES = [
@@ -45,32 +59,55 @@ export function CreateDocument() {
       .forEach((editorModule) => {
         void preloadEditorModule(editorModule);
       });
+  const handleCreate = async ({
+    name,
+    documentType,
+    version,
+  }: {
+    name: string;
+    documentType: string;
+    version?: number;
+  }) => {
+    setShowModal(false);
+    if (!selectedDrive) return;
+    try {
+      const node = await addDocument(
+        selectedDrive.header.id,
+        name,
+        documentType,
+        selectedFolder?.id ?? parentFolder?.id,
+        undefined,
+        undefined,
+        undefined,
+        version,
+      );
+      setSelectedNode(node);
+    } catch (error) {
+      console.error("Failed to create document:", error);
+    }
+  };
   if (!isAllowedToCreateDocuments) return null;
+  if (!visibleDocumentModelModules?.length) return null;
+  // Rendered in the "Documents and files" heading row (see folder-view.tsx),
+  // so the button is compact and brings no layout wrapper of its own.
   return (
-    <div className="px-6 py-4">
-      <h3 className="mb-3 text-xl font-bold text-foreground">New document</h3>
-      <div className="flex w-full flex-wrap gap-4">
-        {visibleDocumentModelModules?.map((doc) => {
-          const spec = getDocumentSpec(doc);
-          const versionLabel = doc.version ? ` v${doc.version}` : "";
-          return (
-            <PowerhouseButton
-              key={`${spec.id}-v${doc.version ?? 1}`}
-              color="light"
-              title={`${spec.name}${versionLabel}`}
-              aria-description={spec.description}
-              onMouseEnter={() => preloadEditorsForType(spec.id)}
-              onFocus={() => preloadEditorsForType(spec.id)}
-              onClick={() => showCreateDocumentModal(spec.id, doc.version)}
-            >
-              <span className="text-sm">
-                {spec.name}
-                {versionLabel}
-              </span>
-            </PowerhouseButton>
-          );
-        })}
-      </div>
-    </div>
+    <>
+      <PowerhouseButton
+        className="py-2"
+        color="blue"
+        icon={<Icon name="Plus" size={14} />}
+        onClick={() => setShowModal(true)}
+        size="small"
+      >
+        Create New Document
+      </PowerhouseButton>
+      <CreateDocumentWithTypeModal
+        documentTypes={visibleDocumentModelModules.map(toDocumentTypeOption)}
+        onCreate={(input) => void handleCreate(input)}
+        onOpenChange={setShowModal}
+        onTypeSelected={preloadEditorsForType}
+        open={showModal}
+      />
+    </>
   );
 }

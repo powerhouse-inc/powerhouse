@@ -1,6 +1,7 @@
 import { EditorLoader } from "@powerhousedao/connect/components";
 import { useUndoRedoShortcuts } from "@powerhousedao/connect/hooks";
 import { dismissToast, toast } from "@powerhousedao/connect/services";
+import { Icon, PowerhouseButton } from "@powerhousedao/design-system";
 import { RevisionHistory } from "@powerhousedao/design-system/connect";
 import {
   getRevisionFromDate,
@@ -27,11 +28,42 @@ type Props<TDocument extends PHDocument = PHDocument> = {
   document: TDocument;
 };
 
-function EditorError({ message }: { message: React.ReactNode }) {
+// Card treatment mirrors DetailedFallback in error-boundary.tsx so editor
+// errors read the same as boundary errors, and stay legible in both themes
+// (bg-card/border-border/text-foreground tokens instead of bare text).
+function EditorError({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="flex size-full items-center justify-center">
-      <h3 className="text-lg font-semibold">{message}</h3>
+    <div className="flex size-full items-center justify-center p-6">
+      <div className="w-full max-w-lg rounded-lg border border-border bg-card p-6 text-foreground shadow-sm">
+        <div className="mb-3 flex items-center gap-2">
+          <Icon name="Error" className="size-5 shrink-0 text-destructive" />
+          <h3 className="min-w-0 text-lg font-semibold wrap-break-word text-foreground">
+            {title}
+          </h3>
+        </div>
+        <div className="wrap-break-word">{children}</div>
+      </div>
     </div>
+  );
+}
+
+function OpenPackageManagerButton() {
+  return (
+    <PowerhouseButton
+      className="px-3 py-1.5 text-base font-medium"
+      onClick={() => {
+        showPHModal({ type: "settings" });
+      }}
+      type="button"
+    >
+      Open package manager
+    </PowerhouseButton>
   );
 }
 
@@ -155,86 +187,43 @@ export const DocumentEditor: React.FC<Props> = (props) => {
 
   if (!documentModelModule) {
     return (
-      <EditorError
-        message={
-          <div className="text-center leading-10">
-            <p>
-              Unable to open the document because the document model "
-              {documentType}" is not supported.
-            </p>
-            <p>
-              Go to the{" "}
-              <button
-                type="button"
-                className="cursor-pointer underline"
-                onClick={() => {
-                  showPHModal({ type: "settings" });
-                }}
-              >
-                package manager
-              </button>{" "}
-              to install this document model
-            </p>
-          </div>
-        }
-      />
+      <EditorError title="Document type not supported">
+        <p className="mb-4 text-sm text-foreground">
+          This document can't be opened because the "{documentType}" document
+          model isn't installed. Install the package that provides it to open
+          the document.
+        </p>
+        <OpenPackageManagerButton />
+      </EditorError>
     );
   }
 
   if (versionStatus?.kind === "unsupported") {
     return (
-      <EditorError
-        message={
-          <div className="text-center leading-10">
-            <p>
-              This document requires version {versionStatus.documentVersion} of
-              the "{documentType}" document model, but only version
-              {versionStatus.availableVersions.length > 1 ? "s" : ""}{" "}
-              {versionStatus.availableVersions.join(", ")}{" "}
-              {versionStatus.availableVersions.length > 1 ? "are" : "is"}{" "}
-              installed.
-            </p>
-            <p>
-              Go to the{" "}
-              <button
-                type="button"
-                className="cursor-pointer underline"
-                onClick={() => {
-                  showPHModal({ type: "settings" });
-                }}
-              >
-                package manager
-              </button>{" "}
-              to update the package that provides "{documentType}"
-            </p>
-          </div>
-        }
-      />
+      <EditorError title="Document version not supported">
+        <p className="mb-4 text-sm text-foreground">
+          This document requires version {versionStatus.documentVersion} of the
+          "{documentType}" document model, but only version
+          {versionStatus.availableVersions.length > 1 ? "s" : ""}{" "}
+          {versionStatus.availableVersions.join(", ")}{" "}
+          {versionStatus.availableVersions.length > 1 ? "are" : "is"} installed.
+          Update the package that provides "{documentType}" to open it.
+        </p>
+        <OpenPackageManagerButton />
+      </EditorError>
     );
   }
 
   if (!editorModule) {
     return (
-      <EditorError
-        message={
-          <div className="text-center leading-10">
-            <p>Unable to open the document because no editor has been found</p>
-            <p>
-              Go to the{" "}
-              <button
-                type="button"
-                className="cursor-pointer underline"
-                onClick={() => {
-                  showPHModal({ type: "settings" });
-                }}
-              >
-                package manager
-              </button>{" "}
-              an editor for the "${documentType}" document type
-            </p>
-          </div>
-        }
-      />
+      <EditorError title="No editor available">
+        <p className="mb-4 text-sm text-foreground">
+          The "{documentType}" document model is installed, but no editor for it
+          was found. Install a package that provides an editor for this document
+          type.
+        </p>
+        <OpenPackageManagerButton />
+      </EditorError>
     );
   }
   const EditorComponent = editorModule.Component;

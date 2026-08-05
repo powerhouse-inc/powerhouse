@@ -1,3 +1,16 @@
+## 6.2.2-dev.37 (2026-08-05)
+
+### 🩹 Fixes
+
+- **connect:** prevent text overflow in error cards and fallbacks ([fe107b7f6](https://github.com/powerhouse-inc/powerhouse/commit/fe107b7f6))
+- **connect:** proper error card for unsupported document type and missing editor ([127ad5dfe](https://github.com/powerhouse-inc/powerhouse/commit/127ad5dfe))
+
+### ❤️ Thank You
+
+- Claude Fable 5
+- Claude Opus 5 (1M context)
+- liberuum
+
 ## 6.2.2-dev.36 (2026-08-04)
 
 This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.

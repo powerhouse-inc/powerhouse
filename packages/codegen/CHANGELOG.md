@@ -1,3 +1,14 @@
+## 6.2.2-dev.37 (2026-08-05)
+
+### 🩹 Fixes
+
+- **codegen:** pin oxfmt version in runOxfmt ([c03c55d1b](https://github.com/powerhouse-inc/powerhouse/commit/c03c55d1b))
+
+### ❤️ Thank You
+
+- Claude Fable 5
+- liberuum
+
 ## 6.2.2-dev.36 (2026-08-04)
 
 This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.

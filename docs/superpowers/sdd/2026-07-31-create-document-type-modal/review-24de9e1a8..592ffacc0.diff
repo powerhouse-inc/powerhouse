@@ -1,0 +1,260 @@
+# Review package: 24de9e1a8..HEAD
+
+## Commits
+592ffacc0 feat(powerhouse-vetra-packages): replace document-type button grid with Create New Document modal
+
+## Files changed
+ .../components/__fake-document-models.ts           | 95 +++++++++++++++++++++
+ .../components/create-document.tsx                 | 98 +++++++++++++++-------
+ 2 files changed, 162 insertions(+), 31 deletions(-)
+
+## Diff
+diff --git a/packages/powerhouse-vetra-packages/editors/generic-drive-explorer/components/__fake-document-models.ts b/packages/powerhouse-vetra-packages/editors/generic-drive-explorer/components/__fake-document-models.ts
+new file mode 100644
+index 000000000..586f32c9e
+--- /dev/null
++++ b/packages/powerhouse-vetra-packages/editors/generic-drive-explorer/components/__fake-document-models.ts
+@@ -0,0 +1,95 @@
++/**
++ * TEMPORARY dev scaffolding for styling the "New document" grid. Delete this
++ * file (and its two references in create-document.tsx) before committing.
++ *
++ * Why it's needed: in a bare Connect dev server the grid is always empty. The
++ * bundled Common package registers only powerhouse/document-model,
++ * powerhouse/document-drive and powerhouse/reactor-drive, and all three are
++ * removed again — the first two by Connect's default `disabledEditors`, the
++ * drive types also by the DRIVE_CONTAINER_TYPES guard. So there is nothing to
++ * render until a real package is installed from a registry.
++ *
++ * Toggle at runtime, no rebuild and no file edit:
++ *   localStorage.setItem("ph:fakeDocModels", "1"); location.reload();
++ *   localStorage.removeItem("ph:fakeDocModels"); location.reload();
++ *
++ * These are render-only. They are never registered with the reactor, so
++ * clicking one opens CreateDocumentModal and then no-ops: the modal bails at
++ * `if (!selectedDrive || !documentModel) return;` because
++ * useDocumentModelModuleById() can't resolve a fake document type. Nothing is
++ * written to any drive.
++ */
++import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
++
++const FLAG_KEY = "ph:fakeDocModels";
++
++/** Whether the fake grid entries are switched on for this browser. */
++export function isFakeDocumentModelsEnabled(): boolean {
++  try {
++    return globalThis.localStorage?.getItem(FLAG_KEY) === "1";
++  } catch {
++    // localStorage throws in some privacy modes / non-browser contexts.
++    return false;
++  }
++}
++
++type FakeSpec = {
++  id: string;
++  name: string;
++  description: string;
++  version?: number;
++};
++
++// Deliberately varied: short and long names, a duplicated name at two
++// versions, and one very long label — the cases that break wrap/truncation.
++const FAKE_SPECS: FakeSpec[] = [
++  { id: "fake/todo", name: "To-do List", description: "A simple task list" },
++  { id: "fake/invoice", name: "Invoice", description: "Billing document" },
++  { id: "fake/budget", name: "Budget", description: "Budget statement" },
++  { id: "fake/rfp", name: "RFP", description: "Request for proposals" },
++  {
++    id: "fake/scope-of-work",
++    name: "Scope of Work",
++    description: "Engagement scope and deliverables",
++  },
++  {
++    id: "fake/contributor-billing",
++    name: "Contributor Billing Statement",
++    description: "Per-contributor billing breakdown",
++  },
++  {
++    id: "fake/versioned",
++    name: "Versioned Model",
++    description: "v1",
++    version: 1,
++  },
++  {
++    id: "fake/versioned",
++    name: "Versioned Model",
++    description: "v2",
++    version: 2,
++  },
++];
++
++function makeFakeModule(spec: FakeSpec): DocumentModelModule {
++  // Only `documentModel.global.{id,name,description}` and `version` are read
++  // by CreateDocument, so the rest of the DocumentModelModule surface is
++  // omitted and the shape is cast. Fine for render-only scaffolding.
++  return {
++    version: spec.version,
++    documentModel: {
++      global: {
++        id: spec.id,
++        name: spec.name,
++        description: spec.description,
++        extension: "",
++        author: { name: "Fake", website: null },
++        specifications: [],
++      },
++      local: {},
++    },
++  } as unknown as DocumentModelModule;
++}
++
++export const fakeDocumentModelModules: DocumentModelModule[] =
++  FAKE_SPECS.map(makeFakeModule);
+diff --git a/packages/powerhouse-vetra-packages/editors/generic-drive-explorer/components/create-document.tsx b/packages/powerhouse-vetra-packages/editors/generic-drive-explorer/components/create-document.tsx
+index 6f24d4f06..93a8edd94 100644
+--- a/packages/powerhouse-vetra-packages/editors/generic-drive-explorer/components/create-document.tsx
++++ b/packages/powerhouse-vetra-packages/editors/generic-drive-explorer/components/create-document.tsx
+@@ -1,76 +1,112 @@
+ import { PowerhouseButton } from "@powerhousedao/design-system";
++import type { DocumentTypeOption } from "@powerhousedao/design-system/connect";
++import { CreateDocumentWithTypeModal } from "@powerhousedao/design-system/connect";
+ import {
++  addDocument,
+   preloadEditorModule,
+-  showCreateDocumentModal,
++  setSelectedNode,
+   useAllowedDocumentModelModules,
+   useDisabledEditors,
+   useEditorModules,
++  useParentFolderForSelectedNode,
++  useSelectedDriveSafe,
++  useSelectedFolder,
+   useUserPermissions,
+ } from "@powerhousedao/reactor-browser";
+-import type {
+-  DocumentModelGlobalState,
+-  DocumentModelModule,
+-} from "@powerhousedao/shared/document-model";
++import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
++import { useState } from "react";
++// TEMP(dev): remove together with __fake-document-models.ts.
++import {
++  fakeDocumentModelModules,
++  isFakeDocumentModelsEnabled,
++} from "./__fake-document-models.js";
+ 
+-function getDocumentSpec(doc: DocumentModelModule): DocumentModelGlobalState {
+-  return doc.documentModel.global;
++function toDocumentTypeOption(doc: DocumentModelModule): DocumentTypeOption {
++  const spec = doc.documentModel.global;
++  return {
++    documentType: spec.id,
++    name: spec.name,
++    version: doc.version,
++    description: spec.description,
++  };
+ }
+ 
+ export function CreateDocument() {
++  const [showModal, setShowModal] = useState(false);
+   const { isAllowedToCreateDocuments } = useUserPermissions();
+   // Respect Connect config: allowedDocumentTypes (allowlist) via the hook,
+   // disabledEditors (denylist) subtracted below.
+   const allowedDocumentModelModules = useAllowedDocumentModelModules();
+   const editorModules = useEditorModules();
+   const disabledEditors = useDisabledEditors() ?? [];
++  const [selectedDrive] = useSelectedDriveSafe();
++  const selectedFolder = useSelectedFolder();
++  const parentFolder = useParentFolderForSelectedNode();
+   // Drive containers are never documents-in-a-drive; hide them structurally so
+   // this shared editor can't fail open when disabledEditors is unset.
+   const DRIVE_CONTAINER_TYPES = [
+     "powerhouse/document-drive",
+     "powerhouse/reactor-drive",
+   ];
+-  const visibleDocumentModelModules = allowedDocumentModelModules?.filter(
++  const filteredDocumentModelModules = allowedDocumentModelModules?.filter(
+     (module) => {
+       const id = module.documentModel.global.id;
+       return (
+         !DRIVE_CONTAINER_TYPES.includes(id) && !disabledEditors.includes(id)
+       );
+     },
+   );
++  // TEMP(dev): remove together with __fake-document-models.ts. Off unless
++  // localStorage["ph:fakeDocModels"] === "1", so default behaviour is unchanged.
++  const visibleDocumentModelModules = isFakeDocumentModelsEnabled()
++    ? [...(filteredDocumentModelModules ?? []), ...fakeDocumentModelModules]
++    : filteredDocumentModelModules;
+   const preloadEditorsForType = (documentType: string) =>
+     editorModules
+       ?.filter((editorModule) =>
+         editorModule.documentTypes.includes(documentType),
+       )
+       .forEach((editorModule) => {
+         void preloadEditorModule(editorModule);
+       });
++  const handleCreate = async ({
++    name,
++    documentType,
++  }: {
++    name: string;
++    documentType: string;
++    version?: number;
++  }) => {
++    // version is display-only for now: addDocument has no version parameter,
++    // the reactor resolves the latest module for the type (spec section 5).
++    setShowModal(false);
++    if (!selectedDrive) return;
++    try {
++      const node = await addDocument(
++        selectedDrive.header.id,
++        name,
++        documentType,
++        selectedFolder?.id ?? parentFolder?.id,
++      );
++      setSelectedNode(node);
++    } catch (error) {
++      console.error("Failed to create document:", error);
++    }
++  };
+   if (!isAllowedToCreateDocuments) return null;
++  if (!visibleDocumentModelModules?.length) return null;
+   return (
+     <div className="px-6 py-4">
+-      <h3 className="mb-3 text-xl font-bold text-foreground">New document</h3>
+-      <div className="flex w-full flex-wrap gap-4">
+-        {visibleDocumentModelModules?.map((doc) => {
+-          const spec = getDocumentSpec(doc);
+-          const versionLabel = doc.version ? ` v${doc.version}` : "";
+-          return (
+-            <PowerhouseButton
+-              key={`${spec.id}-v${doc.version ?? 1}`}
+-              color="light"
+-              title={`${spec.name}${versionLabel}`}
+-              aria-description={spec.description}
+-              onMouseEnter={() => preloadEditorsForType(spec.id)}
+-              onFocus={() => preloadEditorsForType(spec.id)}
+-              onClick={() => showCreateDocumentModal(spec.id)}
+-            >
+-              <span className="text-sm">
+-                {spec.name}
+-                {versionLabel}
+-              </span>
+-            </PowerhouseButton>
+-          );
+-        })}
+-      </div>
++      <PowerhouseButton onClick={() => setShowModal(true)}>
++        Create New Document
++      </PowerhouseButton>
++      <CreateDocumentWithTypeModal
++        documentTypes={visibleDocumentModelModules.map(toDocumentTypeOption)}
++        onCreate={(input) => void handleCreate(input)}
++        onOpenChange={setShowModal}
++        onTypeSelected={preloadEditorsForType}
++        open={showModal}
++      />
+     </div>
+   );
+ }

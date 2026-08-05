@@ -99,6 +99,15 @@
   --shadow-modal:
     0px 0px 24px 4px rgba(0, 0, 0, 0.05),
     0px 44px 48px -12px rgba(0, 0, 0, 0.15), 0px 2px 8px 0px rgba(0, 0, 0, 0.05);
+  /* Dark-theme counterpart (used via `dark:shadow-modal-dark`): the black
+   * shadow above vanishes on a dark backdrop, so this is a faint white halo.
+   * Lower opacities than the light values — light-on-dark shadows read much
+   * stronger than dark-on-light. A separate token (not a `.dark` var override)
+   * because Tailwind inlines shadow values into utilities at build time. */
+  --shadow-modal-dark:
+    0px 0px 24px 4px rgba(255, 255, 255, 0.06),
+    0px 44px 48px -12px rgba(255, 255, 255, 0.08),
+    0px 2px 8px 0px rgba(255, 255, 255, 0.04);
   --shadow-tab: 0px 16px 16px -4px rgba(0, 0, 0, 0.1);
   --shadow-sidebar:
     0px 33px 32px -16px rgba(0, 0, 0, 0.1), 0px 0px 16px 4px rgba(0, 0, 0, 0.04);

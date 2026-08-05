@@ -66,16 +66,28 @@ test("vetra document types are hidden in a generic drive", async ({ page }) => {
   await expect(page).toHaveURL(/\/d\/[^/?]+/, { timeout: 10_000 });
   await waitForAppReady(page);
 
-  // 4. Positive control: the "New document" section renders.
-  await expect(page.getByRole("heading", { name: "New document" })).toBeVisible(
-    { timeout: 30_000 },
-  );
-  const section = page.locator(".flex.w-full.flex-wrap.gap-4");
+  // 4. Positive control: the "Create New Document" button renders. With zero
+  // creatable types the button deliberately renders nothing (see
+  // create-document.tsx); the project ships a static fixture document model
+  // (e2e-fixtures/sample-note-module.ts) so at least one creatable type
+  // always exists, independent of codegen side effects from other specs.
+  const createDocumentButton = page.getByRole("button", {
+    name: "Create New Document",
+  });
+  await expect(createDocumentButton).toBeVisible({ timeout: 30_000 });
+  await createDocumentButton.click();
 
-  // 5. DocumentModel + every vetra builder-spec type must be absent.
+  // 5. DocumentModel + every vetra builder-spec type must be absent from the
+  // document-type select. ConnectSelect keeps its options in the DOM even
+  // while collapsed, so presence is checked without opening the menu.
+  const dialog = page.getByRole("dialog");
+  await expect(
+    dialog.getByText("Select document type…", { exact: true }),
+  ).toBeVisible({ timeout: 10_000 });
   for (const hiddenName of HIDDEN_DISPLAY_NAMES) {
+    const escaped = hiddenName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     await expect(
-      section.getByRole("button").filter({ hasText: hiddenName }),
+      dialog.getByText(new RegExp(`^${escaped}( v\\d+)?$`)),
     ).toHaveCount(0, { timeout: 30_000 });
   }
 });
