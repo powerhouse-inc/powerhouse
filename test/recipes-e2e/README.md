@@ -33,37 +33,31 @@ missing from a package's `files` allowlist is still visible through it. For that
 see `test/package-e2e`, which publishes real tarballs to a local Verdaccio
 registry.
 
-## Not wired into CI
+## In CI
 
-Deliberately. The recipes repo is currently red against `main` for reasons that
-have nothing to do with this runner (see below), so a CI job would fail from its
-first commit.
+The `recipes-e2e-tests` job in `.github/workflows/e2e-tests.yml` runs the full
+suite on every PR to `main` and on push. It checks out `powerhouse-inc/recipes`
+(public, no token) into `recipes-checkout/`, points `RECIPES_DIR` at it, and
+raises the per-script timeout to 600s. A failure notifies Discord alongside the
+Vetra and Package E2E jobs.
 
-The entry point is `recipes`, not `test`, so `pnpm -r run test` and
-`nx affected --target=test` can't sweep it up — running the suite has to be an
-explicit choice. Unlike `test/package-e2e`, it isn't protected merely by being
-absent from an allowlist in the root `test:ci` filter. When the recipes are green
-again, the job to add mirrors the `test:e2e:package` step in
-`.github/workflows/e2e-tests.yml`, and needs `RECIPES_DIR` pointing at a checkout
-of the recipes repo.
+That job tracks the recipes **default branch** rather than a pinned ref, because
+the drift this catches runs in both directions. The tradeoff: a push to the
+recipes repo can turn this repo's CI red with no change here. If that becomes
+disruptive, pin `ref:` on the recipes checkout and bump it deliberately.
 
-### Known-red as of 2026-08-05
+The entry point is still named `recipes`, not `test`, so `pnpm -r run test` and
+`nx affected --target=test` cannot sweep it up. Only the explicit CI job and a
+deliberate `pnpm test:e2e:recipes` run it.
 
-33 of 52 scripts fail from two root causes, both from commits already on `main`:
+### History
 
-1. `ReactorBuilder.withDocumentModels` was renamed to `withDocumentModelSources`
-   (`61e778a5c`, 2026-07-16). This is ~90% of the failures — 16 builds, 17
-   starts, 2 tests — plus a tail of `TS7006` implicit-any errors that are
-   downstream of the broken builder chain, not independent breaks.
-2. `sync-health-monitor` is broken against four sync-surface changes:
-   `driveCollectionId` is no longer exported as a value (only the
-   `DriveCollectionId` type), `ConnectionStateSnapshot.requiresAuth` became
-   required (`1a6a3e702`), `DeadLetterAddedEvent` changed shape, and the channel
-   factory gained `options?: RemoteOptions` while `collectionId` narrowed from
-   `string`.
-
-Only `document-versioning`, `role-based-auth` and `signed-operations-verifier`
-are fully green.
+The runner's first sweep found 33 of 52 scripts failing, from two root causes
+that had been on `main` for roughly three weeks unnoticed:
+`ReactorBuilder.withDocumentModels` renamed to `withDocumentModelSources`
+(`61e778a5c`), and `sync-health-monitor` against four sync-surface changes. Both
+were fixed in the recipes repo (`6622677`, `556920e`); the suite has been green
+since.
 
 ## Recipe classification
 
