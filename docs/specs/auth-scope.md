@@ -769,6 +769,12 @@ Registering decision models beyond auth is out of scope. The types are model-agn
 
 8. **Filter reads and sync against the same model.** This is where stage 3's two read-side limits close: `replayDocument` applying denied operations, and reads hiding a deleted document rather than serving the state at the deletion boundary.
 
+9. **Degrade against a remote that predates the schema.** `deniedReason` and `errorType` are new fields on the sync schema, and GraphQL rejects a whole query for naming a field the schema does not have. A reactor at this stage polling a remote that has not upgraded would therefore fail every poll, and the failure classifies as unrecoverable, so the channel's polling stops until the process restarts. That is a sync outage caused by an upgrade, in a direction operators cannot always control: browser clients update on their own schedule, not the fleet's.
+
+   `GqlRequestChannel` selects the two fields only while the remote is known to serve them. A remote that rejects them once is polled without them for the rest of the channel's life, which loses nothing real, because a remote on the previous schema has neither a denied operation nor an `errorType` to report. The push direction is already safe: `serializeEnvelope` omits `deniedReason` when it is undefined.
+
+   The reactor-browser pull path (`GetDocumentOperations`) selects `deniedReason` from a static document and does not degrade, so that client still requires its server to be upgraded first.
+
 ### Ordering rules the write paths keep
 
 Four rules hold as of stage 3, and stage 4 depends on all of them. Each was broken when the stage began.
