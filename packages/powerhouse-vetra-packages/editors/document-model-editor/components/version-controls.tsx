@@ -32,6 +32,7 @@ export function VersionControls(props: VersionControlsProps) {
         </span>
         {specifications.length >= 2 && (
           <select
+            aria-label="Document model version"
             className="h-7 rounded-md border border-border bg-background px-2 text-xs text-foreground"
             data-testid="model-version-switcher"
             onChange={(event) => {
