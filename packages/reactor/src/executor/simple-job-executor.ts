@@ -827,10 +827,18 @@ export class SimpleJobExecutor implements IJobExecutor {
       return plain();
     }
 
+    // Parsed, not compared as strings, here and below: a submitted timestamp
+    // may carry second precision, and "…:00Z" sorts after "…:00.000Z"
+    // lexically though it is the earlier instant. Selecting the minimum by
+    // string would pick the later one, so a genuinely backdated action would
+    // read as current and be appended at the tail instead of positioned.
     let earliest = job.actions[0].timestampUtcMs;
+    let earliestAt = Date.parse(earliest);
     for (const action of job.actions) {
-      if (action.timestampUtcMs < earliest) {
+      const at = Date.parse(action.timestampUtcMs);
+      if (at < earliestAt) {
         earliest = action.timestampUtcMs;
+        earliestAt = at;
       }
     }
 
@@ -840,10 +848,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       signal,
     );
 
-    // Parsed, not compared as strings: a submitted timestamp may carry second
-    // precision, so "…:00Z" sorts after "…:00.000Z" lexically.
-    const backdated =
-      Date.parse(earliest) < Date.parse(revisions.latestTimestamp);
+    const backdated = earliestAt < Date.parse(revisions.latestTimestamp);
 
     // The auth stream is never reshuffled: rejected by the monotonic rule, or
     // evaluated where it lands without moving anything.
