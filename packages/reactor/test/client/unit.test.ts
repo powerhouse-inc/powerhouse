@@ -1446,7 +1446,7 @@ describe("ReactorClient Unit Tests", () => {
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
         meta: { batchId: "test", batchJobIds: ["job-1"] },
-        error: { message: "Create document failed", stack: "" },
+        error: { name: "Error", message: "Create document failed", stack: "" },
       };
 
       const batchResult: BatchExecutionResult = {
@@ -1488,7 +1488,7 @@ describe("ReactorClient Unit Tests", () => {
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
         meta: { batchId: "test", batchJobIds: ["job-1"] },
-        error: { message: "Execute action failed", stack: "" },
+        error: { name: "Error", message: "Execute action failed", stack: "" },
       };
 
       vi.mocked(mockReactor.execute).mockResolvedValue(jobInfo);
@@ -1517,7 +1517,7 @@ describe("ReactorClient Unit Tests", () => {
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
         meta: { batchId: "test", batchJobIds: ["job-1"] },
-        error: { message: "Add relationship failed", stack: "" },
+        error: { name: "Error", message: "Add relationship failed", stack: "" },
       };
 
       vi.mocked(mockReactor.addRelationship).mockResolvedValue(jobInfo);
@@ -1546,7 +1546,11 @@ describe("ReactorClient Unit Tests", () => {
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
         meta: { batchId: "test", batchJobIds: ["job-1"] },
-        error: { message: "Remove relationship failed", stack: "" },
+        error: {
+          name: "Error",
+          message: "Remove relationship failed",
+          stack: "",
+        },
       };
 
       vi.mocked(mockReactor.removeRelationship).mockResolvedValue(jobInfo);
@@ -1575,7 +1579,11 @@ describe("ReactorClient Unit Tests", () => {
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
         meta: { batchId: "test", batchJobIds: ["job-remove"] },
-        error: { message: "Remove from source failed", stack: "" },
+        error: {
+          name: "Error",
+          message: "Remove from source failed",
+          stack: "",
+        },
       };
 
       vi.mocked(mockReactor.removeRelationship).mockResolvedValue(
@@ -1626,7 +1634,7 @@ describe("ReactorClient Unit Tests", () => {
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
         meta: { batchId: "test", batchJobIds: ["job-add"] },
-        error: { message: "Add to target failed", stack: "" },
+        error: { name: "Error", message: "Add to target failed", stack: "" },
       };
 
       vi.mocked(mockReactor.removeRelationship).mockResolvedValue(
@@ -1660,7 +1668,7 @@ describe("ReactorClient Unit Tests", () => {
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
         meta: { batchId: "test", batchJobIds: ["job-1"] },
-        error: { message: "Delete document failed", stack: "" },
+        error: { name: "Error", message: "Delete document failed", stack: "" },
       };
 
       vi.mocked(mockReactor.deleteDocument).mockResolvedValue(jobInfo);
@@ -1700,7 +1708,7 @@ describe("ReactorClient Unit Tests", () => {
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
         meta: { batchId: "test", batchJobIds: ["job-child"] },
-        error: { message: "Delete child failed", stack: "" },
+        error: { name: "Error", message: "Delete child failed", stack: "" },
       };
 
       const completedParentJobInfo: JobInfo = {

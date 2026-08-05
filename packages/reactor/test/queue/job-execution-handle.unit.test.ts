@@ -215,7 +215,7 @@ describe("JobExecutionHandle", () => {
       const handle = new JobExecutionHandle(job, JobQueueState.READY);
       handle.start();
 
-      handle.fail({ message: "Test error", stack: "" });
+      handle.fail({ name: "Error", message: "Test error", stack: "" });
 
       expect(handle.state).toBe(JobQueueState.RESOLVED);
     });
@@ -228,7 +228,11 @@ describe("JobExecutionHandle", () => {
       });
       handle.start();
 
-      const errorInfo = { message: "Test error", stack: "test stack" };
+      const errorInfo = {
+        name: "Error",
+        message: "Test error",
+        stack: "test stack",
+      };
       handle.fail(errorInfo);
 
       expect(onFail).toHaveBeenCalledTimes(1);
@@ -239,36 +243,36 @@ describe("JobExecutionHandle", () => {
       const job = createTestJob();
       const handle = new JobExecutionHandle(job, JobQueueState.PREPROCESSING);
 
-      expect(() => handle.fail({ message: "error", stack: "" })).toThrow(
-        "Cannot fail job in state PREPROCESSING",
-      );
+      expect(() =>
+        handle.fail({ name: "Error", message: "error", stack: "" }),
+      ).toThrow("Cannot fail job in state PREPROCESSING");
     });
 
     it("should throw when failing from PENDING state", () => {
       const job = createTestJob();
       const handle = new JobExecutionHandle(job, JobQueueState.PENDING);
 
-      expect(() => handle.fail({ message: "error", stack: "" })).toThrow(
-        "Cannot fail job in state PENDING",
-      );
+      expect(() =>
+        handle.fail({ name: "Error", message: "error", stack: "" }),
+      ).toThrow("Cannot fail job in state PENDING");
     });
 
     it("should throw when failing from READY state", () => {
       const job = createTestJob();
       const handle = new JobExecutionHandle(job, JobQueueState.READY);
 
-      expect(() => handle.fail({ message: "error", stack: "" })).toThrow(
-        "Cannot fail job in state READY",
-      );
+      expect(() =>
+        handle.fail({ name: "Error", message: "error", stack: "" }),
+      ).toThrow("Cannot fail job in state READY");
     });
 
     it("should throw when failing from RESOLVED state", () => {
       const job = createTestJob();
       const handle = new JobExecutionHandle(job, JobQueueState.RESOLVED);
 
-      expect(() => handle.fail({ message: "error", stack: "" })).toThrow(
-        "Cannot fail job in state RESOLVED",
-      );
+      expect(() =>
+        handle.fail({ name: "Error", message: "error", stack: "" }),
+      ).toThrow("Cannot fail job in state RESOLVED");
     });
 
     it("should allow callback to throw without preventing state change", () => {
@@ -281,9 +285,9 @@ describe("JobExecutionHandle", () => {
       });
       handle.start();
 
-      expect(() => handle.fail({ message: "error", stack: "" })).toThrow(
-        "onFail error",
-      );
+      expect(() =>
+        handle.fail({ name: "Error", message: "error", stack: "" }),
+      ).toThrow("onFail error");
       expect(handle.state).toBe(JobQueueState.RESOLVED);
     });
   });
@@ -359,7 +363,7 @@ describe("JobExecutionHandle", () => {
       const job = createTestJob();
       const handle = new JobExecutionHandle(job, JobQueueState.READY);
       handle.start();
-      handle.fail({ message: "error", stack: "" });
+      handle.fail({ name: "Error", message: "error", stack: "" });
 
       expect(() => handle.defer()).toThrow(
         "Cannot defer job in state RESOLVED",
@@ -383,9 +387,9 @@ describe("JobExecutionHandle", () => {
       handle.start();
       handle.defer();
 
-      expect(() => handle.fail({ message: "error", stack: "" })).toThrow(
-        "Cannot fail job in state RESOLVED",
-      );
+      expect(() =>
+        handle.fail({ name: "Error", message: "error", stack: "" }),
+      ).toThrow("Cannot fail job in state RESOLVED");
     });
 
     it("should allow callback to throw without preventing state change", () => {
@@ -429,7 +433,7 @@ describe("JobExecutionHandle", () => {
         queueHint: ["dep-1", "dep-2"],
         retryCount: 2,
         maxRetries: 5,
-        errorHistory: [{ message: "previous error", stack: "" }],
+        errorHistory: [{ name: "Error", message: "previous error", stack: "" }],
         meta: { batchId: "test", batchJobIds: ["test-job-id"] },
       };
 
@@ -485,7 +489,7 @@ describe("JobExecutionHandle", () => {
       });
 
       handle.start();
-      handle.fail({ message: "test", stack: "" });
+      handle.fail({ name: "Error", message: "test", stack: "" });
 
       expect(onFail).toHaveBeenCalled();
     });

@@ -85,6 +85,7 @@ export class InMemoryJobTracker implements IJobTracker {
     this.markFailed(
       event.jobId,
       {
+        name: event.error.name,
         message: event.error.message,
         stack: event.error.stack || "",
       },

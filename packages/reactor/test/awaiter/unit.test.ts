@@ -66,7 +66,7 @@ describe("JobAwaiter", () => {
         documentId: "test-doc",
         status: JobStatus.FAILED,
         createdAtUtcIso: new Date().toISOString(),
-        error: { message: "Job failed", stack: "" },
+        error: { name: "Error", message: "Job failed", stack: "" },
         consistencyToken: createEmptyConsistencyToken(),
         meta: { batchId: "test", batchJobIds: [jobId] },
       };
@@ -200,7 +200,7 @@ describe("JobAwaiter", () => {
         documentId: "test-doc",
         status: JobStatus.FAILED,
         createdAtUtcIso: new Date().toISOString(),
-        error: { message: "Job failed", stack: "" },
+        error: { name: "Error", message: "Job failed", stack: "" },
         consistencyToken: createEmptyConsistencyToken(),
         meta: { batchId: "test", batchJobIds: [jobId] },
       };
@@ -245,7 +245,7 @@ describe("JobAwaiter", () => {
         documentId: "test-doc",
         status: JobStatus.FAILED,
         createdAtUtcIso: new Date().toISOString(),
-        error: { message: "Job 3 failed", stack: "" },
+        error: { name: "Error", message: "Job 3 failed", stack: "" },
         consistencyToken: createEmptyConsistencyToken(),
         meta: { batchId: "test", batchJobIds: ["job-3"] },
       };

@@ -864,7 +864,11 @@ describe("InMemoryQueue", () => {
       // Dequeue and fail job 1
       const d1 = await queue.dequeue(job1.documentId, job1.scope, job1.branch);
       expect(d1?.job.id).toBe("job-1");
-      await queue.failJob("job-1", { message: "Test error", stack: "" });
+      await queue.failJob("job-1", {
+        name: "Error",
+        message: "Test error",
+        stack: "",
+      });
 
       // Job 2 should be unblocked since job 1 is resolved (failed counts as resolved)
       const dequeuedJob = await queue.dequeue(
@@ -917,6 +921,7 @@ describe("InMemoryQueue", () => {
       expect(queue.isDrained).toBe(false);
 
       await queue.failJob(dequeuedJob!.job.id, {
+        name: "Error",
         message: "Test failure",
         stack: "",
       });
@@ -1100,6 +1105,7 @@ describe("InMemoryQueue", () => {
       // Retry should fail because queue is blocked
       await expect(
         queue.retryJob(dequeuedJob!.job.id, {
+          name: "Error",
           message: "Test error",
           stack: "",
         }),
@@ -1395,7 +1401,7 @@ describe("InMemoryQueue", () => {
       const dequeued = await queue.dequeueNext();
       expect(dequeued).not.toBeNull();
 
-      const error1 = { message: "First failure", stack: "" };
+      const error1 = { name: "Error", message: "First failure", stack: "" };
       await queue.retryJob("job-1", error1);
 
       const retriedHandle = await queue.dequeueNext();
@@ -1404,7 +1410,7 @@ describe("InMemoryQueue", () => {
       expect(retriedHandle!.job.errorHistory[0].message).toBe("First failure");
       expect(retriedHandle!.job.retryCount).toBe(1);
 
-      const error2 = { message: "Second failure", stack: "" };
+      const error2 = { name: "Error", message: "Second failure", stack: "" };
       await queue.retryJob("job-1", error2);
 
       const retriedHandle2 = await queue.dequeueNext();
@@ -1418,7 +1424,11 @@ describe("InMemoryQueue", () => {
 
     it("should no-op when retrying non-existent job", async () => {
       await expect(
-        queue.retryJob("nonexistent", { message: "error", stack: "" }),
+        queue.retryJob("nonexistent", {
+          name: "Error",
+          message: "error",
+          stack: "",
+        }),
       ).resolves.not.toThrow();
     });
 
@@ -1433,7 +1443,11 @@ describe("InMemoryQueue", () => {
       const dequeued = await queue.dequeueNext();
       expect(dequeued).not.toBeNull();
 
-      const error = { message: "Concurrency conflict", stack: "" };
+      const error = {
+        name: "Error",
+        message: "Concurrency conflict",
+        stack: "",
+      };
       await queue.retryJob("job-1", error, RetryAccounting.ExemptFromLimit);
 
       const retriedHandle = await queue.dequeueNext();
@@ -1454,12 +1468,16 @@ describe("InMemoryQueue", () => {
       await queue.enqueue(job);
 
       await queue.dequeueNext();
-      await queue.retryJob("job-1", { message: "fault", stack: "" });
+      await queue.retryJob("job-1", {
+        name: "Error",
+        message: "fault",
+        stack: "",
+      });
 
       await queue.dequeueNext();
       await queue.retryJob(
         "job-1",
-        { message: "conflict", stack: "" },
+        { name: "Error", message: "conflict", stack: "" },
         RetryAccounting.ExemptFromLimit,
       );
 

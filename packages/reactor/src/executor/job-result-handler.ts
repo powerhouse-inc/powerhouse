@@ -38,11 +38,13 @@ export interface IJobResultHandler {
 export function toErrorInfo(error: Error | string): ErrorInfo {
   if (error instanceof Error) {
     return {
+      name: error.name,
       message: error.message,
       stack: error.stack || new Error().stack || "",
     };
   }
   return {
+    name: "Error",
     message: error,
     stack: new Error().stack || "",
   };
@@ -240,6 +242,8 @@ export class JobResultHandler implements IJobResultHandler {
     });
 
     return {
+      // The attempt that ended the job is the one a consumer classifies by.
+      name: currentError.name,
       message: messageLines.join("\n"),
       stack: stackLines.join("\n\n"),
     };

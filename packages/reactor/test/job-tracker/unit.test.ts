@@ -91,6 +91,7 @@ describe("InMemoryJobTracker", () => {
 
       tracker.registerJob(jobInfo);
       tracker.markFailed("job-1", {
+        name: "Error",
         message: "Something went wrong",
         stack: "",
       });
@@ -103,6 +104,7 @@ describe("InMemoryJobTracker", () => {
 
     it("should create entry if job not found", () => {
       tracker.markFailed("unknown-job", {
+        name: "Error",
         message: "Error occurred",
         stack: "",
       });
@@ -181,7 +183,11 @@ describe("InMemoryJobTracker", () => {
       expect(tracker.getJobStatus("job-1")?.status).toBe(JobStatus.RUNNING);
 
       // Mark failed
-      tracker.markFailed("job-1", { message: "Test error", stack: "" });
+      tracker.markFailed("job-1", {
+        name: "Error",
+        message: "Test error",
+        stack: "",
+      });
       const finalStatus = tracker.getJobStatus("job-1");
       expect(finalStatus?.status).toBe(JobStatus.FAILED);
       expect(finalStatus?.error?.message).toBe("Test error");
@@ -216,7 +222,11 @@ describe("InMemoryJobTracker", () => {
 
       // Update job2
       tracker.markRunning("job-2");
-      tracker.markFailed("job-2", { message: "Job 2 failed", stack: "" });
+      tracker.markFailed("job-2", {
+        name: "Error",
+        message: "Job 2 failed",
+        stack: "",
+      });
 
       // Verify independent states
       expect(tracker.getJobStatus("job-1")?.status).toBe(JobStatus.RUNNING);

@@ -7,9 +7,14 @@ import type { AuthSubject } from "@powerhousedao/shared/document-model";
 export const SYSTEM_DOCUMENT_ID = "00000000-0000-0000-0000-000000000000";
 
 /**
- * Information about an error including message and stack trace.
+ * Information about an error including its name, message and stack trace.
+ *
+ * The name is what survives the crossing out of the executor: a consumer that
+ * has to tell a terminal failure from a retryable one, or classify a dead
+ * letter, only ever sees this record rather than the thrown error.
  */
 export type ErrorInfo = {
+  name: string;
   message: string;
   stack: string;
 };

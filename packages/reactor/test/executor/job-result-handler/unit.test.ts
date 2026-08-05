@@ -456,7 +456,11 @@ describe("JobResultHandler", () => {
     });
 
     it("includes aggregated error history in the failure info", async () => {
-      const prevError: ErrorInfo = { message: "attempt 1 error", stack: "" };
+      const prevError: ErrorInfo = {
+        name: "Error",
+        message: "attempt 1 error",
+        stack: "",
+      };
       const currentError = new Error("attempt 2 error");
       const job = createTestJob({
         retryCount: 1,
@@ -559,6 +563,7 @@ describe("JobResultHandler", () => {
         retryCount: 0,
         maxRetries: 0,
         errorHistory: Array.from({ length: 20 }, () => ({
+          name: "Error",
           message: conflict.message,
           stack: "",
         })),
@@ -583,6 +588,7 @@ describe("JobResultHandler", () => {
         retryCount: 0,
         maxRetries: 0,
         errorHistory: Array.from({ length: 19 }, () => ({
+          name: "Error",
           message: conflict.message,
           stack: "",
         })),
@@ -609,6 +615,7 @@ describe("JobResultHandler", () => {
         retryCount: 0,
         maxRetries: 0,
         errorHistory: Array.from({ length: 40 }, () => ({
+          name: "Error",
           message: "some unrelated reducer failure",
           stack: "",
         })),
