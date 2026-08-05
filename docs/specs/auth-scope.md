@@ -777,6 +777,14 @@ Registering decision models beyond auth is out of scope. The types are model-agn
 
    The reactor-browser pull path (`GetDocumentOperations`) selects `deniedReason` from a static document and does not degrade, so that client still requires its server to be upgraded first.
 
+10. **Check the fleet before enabling the flag.** The monotonic rule refuses to replicate an auth stream holding a tie, and the walk cannot read one stored out of timestamp order at all. Neither is repairable after the fact, because the auth stream is never reshuffled, so a fleet is checked before `authEnforcement` is turned on rather than after:
+
+    ```
+    pnpm preflight:auth --pg <connection-string>     # or --pglite <data-directory>
+    ```
+
+    It reports each unsafe stream and exits non-zero, so it can gate a rollout. The target is required: the tool reads a fleet's own store, and a run that quietly opened an empty database would report every fleet as safe, which is the one answer it must never give by accident.
+
 ### Ordering rules the write paths keep
 
 Four rules hold as of stage 3, and stage 4 depends on all of them. Each was broken when the stage began.
