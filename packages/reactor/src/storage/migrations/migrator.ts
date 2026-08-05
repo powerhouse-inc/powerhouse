@@ -18,6 +18,7 @@ import * as migration012 from "./012_add_source_remote_column.js";
 import * as migration013 from "./013_create_sync_dead_letters_table.js";
 import * as migration014 from "./014_create_processor_cursor_table.js";
 import * as migration015 from "./015_add_operation_denied_reason.js";
+import * as migration016 from "./016_add_dead_letter_error_type.js";
 
 const migrations = {
   "001_create_operation_table": migration001,
@@ -35,6 +36,7 @@ const migrations = {
   "013_create_sync_dead_letters_table": migration013,
   "014_create_processor_cursor_table": migration014,
   "015_add_operation_denied_reason": migration015,
+  "016_add_dead_letter_error_type": migration016,
 };
 
 class ProgrammaticMigrationProvider implements MigrationProvider {

@@ -19,6 +19,7 @@ import type {
   JwtHandler,
   RemoteFilter,
   SyncEnvelope,
+  SyncOperationErrorType,
 } from "../types.js";
 import { ChannelErrorSource } from "../types.js";
 import {
@@ -54,6 +55,30 @@ export type GqlChannelConfig = {
 };
 
 /**
+ * Fields the auth projection added to the sync schema. A remote that predates
+ * them rejects the whole query for naming one, so they are selected only while
+ * the remote is known to serve them.
+ */
+const DECISION_FIELDS = ["deniedReason", "errorType"] as const;
+
+type PollSyncEnvelopesResult = {
+  pollSyncEnvelopes: {
+    envelopes: SyncEnvelope[];
+    ackOrdinal: number;
+    deadLetters?: Array<{
+      documentId: string;
+      error: string;
+      errorType?: string | null;
+      jobId: string;
+      branch: string;
+      scopes: string[];
+      operationCount: number;
+    }>;
+    hasMore: boolean;
+  };
+};
+
+/**
  * GraphQL-based synchronization channel for network communication between reactors.
  */
 export class GqlRequestChannel implements IChannel {
@@ -81,6 +106,8 @@ export class GqlRequestChannel implements IChannel {
   private isPushing: boolean = false;
   private pendingDrain: boolean = false;
   private receivingPages: boolean = false;
+  /** Cleared for good the first time the remote rejects {@link DECISION_FIELDS}. */
+  private peerServesDecisionFields: boolean = true;
   private isRecovering: boolean = false;
   private connectionState: ConnectionState = "connecting";
   /** Latest unrecoverable error was an auth rejection; cleared on connect. */
@@ -353,6 +380,7 @@ export class GqlRequestChannel implements IChannel {
     deadLetters: Array<{
       documentId: string;
       error: string;
+      errorType?: string | null;
       jobId: string;
       branch: string;
       scopes: string[];
@@ -380,8 +408,15 @@ export class GqlRequestChannel implements IChannel {
         dl.branch,
         [],
       );
+      // Only the message crosses the wire, so the origin's classification is
+      // carried explicitly. Without it this replica would freeze a document the
+      // origin is deliberately still syncing.
       syncOp.failed(
-        new ChannelError(ChannelErrorSource.Outbox, new Error(dl.error)),
+        new ChannelError(
+          ChannelErrorSource.Outbox,
+          new Error(dl.error),
+          (dl.errorType ?? undefined) as SyncOperationErrorType | undefined,
+        ),
       );
       syncOps.push(syncOp);
     }
@@ -537,6 +572,7 @@ export class GqlRequestChannel implements IChannel {
     deadLetters: Array<{
       documentId: string;
       error: string;
+      errorType?: string | null;
       jobId: string;
       branch: string;
       scopes: string[];
@@ -544,7 +580,69 @@ export class GqlRequestChannel implements IChannel {
     }>;
     hasMore: boolean;
   }> {
-    const query = `
+    const variables = {
+      channelId: this.channelId,
+      outboxAck: ackOrdinal,
+      outboxLatest: latestOrdinal,
+    };
+
+    let response: PollSyncEnvelopesResult;
+    try {
+      response = await this.executeGraphQL<PollSyncEnvelopesResult>(
+        this.pollQuery(this.peerServesDecisionFields),
+        variables,
+      );
+    } catch (error) {
+      if (!this.rejectsDecisionFields(error)) {
+        throw error;
+      }
+      this.logger.warn(
+        "Remote @channelId does not serve deniedReason/errorType; polling without them. The remote is on an older schema, so it has neither to report.",
+        this.channelId,
+      );
+      this.peerServesDecisionFields = false;
+      response = await this.executeGraphQL<PollSyncEnvelopesResult>(
+        this.pollQuery(false),
+        variables,
+      );
+    }
+
+    return {
+      envelopes: response.pollSyncEnvelopes.envelopes,
+      ackOrdinal: response.pollSyncEnvelopes.ackOrdinal,
+      deadLetters: response.pollSyncEnvelopes.deadLetters ?? [],
+      hasMore: response.pollSyncEnvelopes.hasMore,
+    };
+  }
+
+  /**
+   * True when the remote rejected the query for naming a field it does not
+   * have. Selecting an unknown field fails validation for the whole query, so
+   * an unhandled one takes the channel's polling down until the process
+   * restarts rather than degrading.
+   */
+  private rejectsDecisionFields(error: unknown): boolean {
+    if (!this.peerServesDecisionFields) {
+      return false;
+    }
+    if (
+      !(error instanceof GraphQLRequestError) ||
+      error.category !== "graphql"
+    ) {
+      return false;
+    }
+    return DECISION_FIELDS.some((field) => error.message.includes(field));
+  }
+
+  /**
+   * The poll query. `withDecisionFields` selects the two fields added with the
+   * auth projection; a remote on the previous schema is polled without them.
+   */
+  private pollQuery(withDecisionFields: boolean): string {
+    const deniedReason = withDecisionFields ? "deniedReason" : "";
+    const errorType = withDecisionFields ? "errorType" : "";
+
+    return `
       query PollSyncEnvelopes($channelId: String!, $outboxAck: Int!, $outboxLatest: Int!) {
         pollSyncEnvelopes(channelId: $channelId, outboxAck: $outboxAck, outboxLatest: $outboxLatest) {
           envelopes {
@@ -559,6 +657,7 @@ export class GqlRequestChannel implements IChannel {
                 hash
                 skip
                 error
+                ${deniedReason}
                 id
                 action {
                   id
@@ -602,6 +701,7 @@ export class GqlRequestChannel implements IChannel {
           deadLetters {
             documentId
             error
+            ${errorType}
             jobId
             branch
             scopes
@@ -611,35 +711,6 @@ export class GqlRequestChannel implements IChannel {
         }
       }
     `;
-
-    const variables = {
-      channelId: this.channelId,
-      outboxAck: ackOrdinal,
-      outboxLatest: latestOrdinal,
-    };
-
-    const response = await this.executeGraphQL<{
-      pollSyncEnvelopes: {
-        envelopes: SyncEnvelope[];
-        ackOrdinal: number;
-        deadLetters?: Array<{
-          documentId: string;
-          error: string;
-          jobId: string;
-          branch: string;
-          scopes: string[];
-          operationCount: number;
-        }>;
-        hasMore: boolean;
-      };
-    }>(query, variables);
-
-    return {
-      envelopes: response.pollSyncEnvelopes.envelopes,
-      ackOrdinal: response.pollSyncEnvelopes.ackOrdinal,
-      deadLetters: response.pollSyncEnvelopes.deadLetters ?? [],
-      hasMore: response.pollSyncEnvelopes.hasMore,
-    };
   }
 
   /**

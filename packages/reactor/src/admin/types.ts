@@ -1,3 +1,6 @@
+import type { Operation } from "@powerhousedao/shared/document-model";
+import type { OutOfOrderPair } from "../decision/stream-order.js";
+
 export type KeyframeValidationIssue = {
   scope: string;
   branch: string;
@@ -13,11 +16,21 @@ export type SnapshotValidationIssue = {
   replayedHash: string;
 };
 
+/** Effective operations whose stored order contradicts their timestamps. */
+export type StreamOrderIssue = {
+  scope: string;
+  branch: string;
+  previous: Operation;
+  current: Operation;
+  kind: OutOfOrderPair["kind"];
+};
+
 export type ValidationResult = {
   documentId: string;
   isConsistent: boolean;
   keyframeIssues: KeyframeValidationIssue[];
   snapshotIssues: SnapshotValidationIssue[];
+  streamOrderIssues: StreamOrderIssue[];
 };
 
 export type RebuildResult = {

@@ -5,6 +5,7 @@ import { DriveCollectionId } from "../../../src/cache/operation-index-types.js";
 import type { IWriteCache } from "../../../src/cache/write/interfaces.js";
 import { DEFAULT_DRIVE_CONTAINER_TYPES } from "../../../src/core/drive-container-types.js";
 import { DocumentActionHandler } from "../../../src/executor/document-action-handler.js";
+import { selectDecisionModel } from "../../../src/decision/registered-model.js";
 import type { ExecutionStores } from "../../../src/executor/execution-scope.js";
 import type { Job } from "../../../src/queue/types.js";
 import {
@@ -77,11 +78,13 @@ function createHarness(
     documentMetaCache,
     collectionMembershipCache,
   };
+  const flags = { documentDecisions: false, authEnforcement: false };
   const handler = new DocumentActionHandler(
     createTestRegistry(),
     createMockLogger(),
     DEFAULT_DRIVE_CONTAINER_TYPES,
-    { documentDecisions: false },
+    flags,
+    selectDecisionModel(flags),
   );
   return {
     handler,
@@ -148,6 +151,7 @@ function execute(
       indexTxn: harness.indexTxn,
       stores: harness.stores,
       replayingAcceptedHistory: false,
+      evaluatedByPosition: false,
     },
   );
 }

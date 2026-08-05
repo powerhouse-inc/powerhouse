@@ -9,7 +9,10 @@ import type {
   PagedResults,
   PagingOptions,
 } from "../shared/types.js";
-import type { ChannelErrorSource } from "../sync/types.js";
+import type {
+  ChannelErrorSource,
+  SyncOperationErrorType,
+} from "../sync/types.js";
 import type { RemoteCursor, RemoteRecord } from "../sync/types.js";
 
 export type { PagedResults, PagingOptions } from "../shared/types.js";
@@ -230,6 +233,22 @@ export interface IOperationStore {
     branch: string,
     signal?: AbortSignal,
   ): Promise<DocumentRevisions>;
+
+  /**
+   * The largest operation timestamp in one stream, or undefined when it is empty.
+   * Distinct from {@link DocumentRevisions.latestTimestamp}, which maxes over
+   * every scope.
+   *
+   * Must be a real maximum, not the last-indexed operation's timestamp: a
+   * re-evaluation pass re-appends at a fresh index while keeping the original
+   * timestamp, so a later timestamp can sit behind the last row.
+   */
+  getStreamLatestTimestamp(
+    documentId: string,
+    scope: string,
+    branch: string,
+    signal?: AbortSignal,
+  ): Promise<string | undefined>;
 }
 
 /**
@@ -829,6 +848,8 @@ export type DeadLetterRecord = {
   operations: OperationWithContext[];
   errorSource: ChannelErrorSource;
   errorMessage: string;
+  /** Why it failed, in the closed set sync classifies failures into. */
+  errorType: SyncOperationErrorType;
 };
 
 /**

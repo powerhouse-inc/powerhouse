@@ -431,6 +431,13 @@ async function initServer(
       logger.info("Reactor document decisions enabled");
     }
 
+    // if true, the reactor will use the DCB decision model that includes auth
+    // note that this only works if documentDecisiopns is true.
+    const authEnforcement = process.env.REACTOR_AUTH_ENFORCEMENT === "true";
+    if (authEnforcement) {
+      logger.info("Reactor auth enforcement enabled");
+    }
+
     const reactorBuilder = new ReactorBuilder()
       .withEventBus(new EventBus())
       .withKysely(baseKysely);
@@ -457,11 +464,16 @@ async function initServer(
     applySwitchboardReactorDefaults(reactorBuilder, clientBuilder, {
       documentModels: [...documentModels, ...vetraDocumentModels],
       executorConfig:
-        hasSkipThreshold || documentDecisions
+        hasSkipThreshold || documentDecisions || authEnforcement
           ? {
               ...(hasSkipThreshold ? { maxSkipThreshold } : {}),
-              ...(documentDecisions
-                ? { featureFlags: { documentDecisions: true } }
+              ...(documentDecisions || authEnforcement
+                ? {
+                    featureFlags: {
+                      ...(documentDecisions ? { documentDecisions: true } : {}),
+                      ...(authEnforcement ? { authEnforcement: true } : {}),
+                    },
+                  }
                 : {}),
             }
           : undefined,

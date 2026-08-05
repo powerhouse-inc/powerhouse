@@ -134,13 +134,14 @@ function observedRevision(document: PHDocument, scope: string): number {
 export function staticReadSet<M>(definition: DecisionModel<M>): ReadStream[] {
   const streams: ReadStream[] = [];
 
-  for (const projection of Object.values(definition.projections) as Array<
-    Projection<M>
-  >) {
+  for (const [name, projection] of Object.entries(
+    definition.projections,
+  ) as Array<[string, Projection<M>]>) {
     if (typeof projection.query === "function") {
       continue;
     }
     streams.push({
+      name,
       query: projection.query,
       decidingActions: projection.decidingActions,
       apply: projection.apply,

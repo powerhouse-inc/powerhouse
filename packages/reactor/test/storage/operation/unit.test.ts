@@ -594,6 +594,83 @@ describe.each(testFsBackends)("KyselyOperationStore [$name]", ({ backend }) => {
     });
   });
 
+  describe("getStreamLatestTimestamp", () => {
+    const documentType = "powerhouse/document-drive";
+
+    async function writeAt(
+      documentId: string,
+      scope: string,
+      index: number,
+      timestampUtcMs: string,
+    ): Promise<void> {
+      await store.apply(
+        documentId,
+        documentType,
+        scope,
+        "main",
+        index,
+        (txn) => {
+          txn.addOperations({
+            index,
+            timestampUtcMs,
+            hash: `hash-${scope}-${index}`,
+            skip: 0,
+            id: generateId(),
+            action: addFolder({
+              id: generateId(),
+              name: `f-${index}`,
+              parentFolder: null,
+            }),
+          });
+        },
+      );
+    }
+
+    it("returns undefined for an empty stream", async () => {
+      const documentId = generateId();
+
+      await expect(
+        store.getStreamLatestTimestamp(documentId, "auth", "main"),
+      ).resolves.toBeUndefined();
+    });
+
+    it("maxes over one scope only, not every scope of the document", async () => {
+      const documentId = generateId();
+      await writeAt(documentId, "auth", 0, "2026-01-01T00:00:01.000Z");
+      await writeAt(documentId, "global", 0, "2026-01-01T00:00:09.000Z");
+
+      // getRevisions maxes across every scope, which is the wrong number here.
+      const revisions = await store.getRevisions(documentId, "main");
+      expect(revisions.latestTimestamp).toBe("2026-01-01T00:00:09.000Z");
+
+      await expect(
+        store.getStreamLatestTimestamp(documentId, "auth", "main"),
+      ).resolves.toBe("2026-01-01T00:00:01.000Z");
+    });
+
+    // The reason this is a real maximum rather than the last-indexed row: a
+    // re-evaluation pass re-appends at a fresh higher index while keeping the
+    // operation's original timestamp, so a later timestamp can sit behind it.
+    it("finds a later timestamp sitting at a lower index", async () => {
+      const documentId = generateId();
+      await writeAt(documentId, "auth", 0, "2026-01-01T00:00:05.000Z");
+      await writeAt(documentId, "auth", 1, "2026-01-01T00:00:02.000Z");
+
+      await expect(
+        store.getStreamLatestTimestamp(documentId, "auth", "main"),
+      ).resolves.toBe("2026-01-01T00:00:05.000Z");
+    });
+
+    it("distinguishes branches", async () => {
+      const documentId = generateId();
+      await writeAt(documentId, "auth", 0, "2026-01-01T00:00:03.000Z");
+
+      await expect(
+        store.getStreamLatestTimestamp(documentId, "auth", "other"),
+      ).resolves.toBeUndefined();
+    });
+  });
+
   describe("abort signal handling", () => {
     it("should abort apply operation", async () => {
       const controller = new AbortController();

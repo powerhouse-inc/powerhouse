@@ -108,6 +108,28 @@ describe("SimpleJobExecutor", () => {
     );
   });
 
+  describe("constructor", () => {
+    it("rejects authEnforcement without documentDecisions", () => {
+      expect(
+        () =>
+          new SimpleJobExecutor(
+            createMockLogger(),
+            registry,
+            mockOperationStore,
+            createTestEventBus(),
+            mockWriteCache,
+            {} as never,
+            createMockDocumentMetaCache(),
+            createMockCollectionMembershipCache(),
+            DEFAULT_DRIVE_CONTAINER_TYPES,
+            { featureFlags: { authEnforcement: true } },
+          ),
+      ).toThrow(
+        "Reactor feature flag authEnforcement requires documentDecisions",
+      );
+    });
+  });
+
   describe("executeJob", () => {
     it("should handle document not found", async () => {
       mockWriteCache.getState = vi

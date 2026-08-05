@@ -39,6 +39,12 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
     operationIndex: IOperationIndex,
     writeCache: IWriteCache,
     consistencyTracker: IConsistencyTracker,
+    /**
+     * Whether a single-document read serves a deleted document's state as of the
+     * deletion rather than hiding it. Only meaningful with `documentDecisions`,
+     * which is what makes deletion positional. Listings omit it either way.
+     */
+    private readonly servesDeletionBoundary: boolean,
   ) {
     super(
       db as unknown as Kysely<DocumentViewDatabase>,
@@ -101,6 +107,21 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
             .where("documentId", "=", documentId)
             .where("branch", "=", branch)
             .execute();
+
+          // The content has to say so too, or a caller served the boundary state
+          // would get state claiming the document is live.
+          const deletedDocumentScope = (
+            fullState as Record<string, unknown> | undefined
+          )?.document;
+          if (deletedDocumentScope !== undefined) {
+            await trx
+              .updateTable("DocumentSnapshot")
+              .set({ content: deletedDocumentScope })
+              .where("documentId", "=", documentId)
+              .where("branch", "=", branch)
+              .where("scope", "=", "document")
+              .execute();
+          }
 
           await trx
             .deleteFrom("SlugMapping")
@@ -310,12 +331,17 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
       scopesToQuery = [];
     }
 
+    // Unfiltered when serving the boundary state; `state.document.isDeleted` tells
+    // the caller what it holds. Listings keep the filter either way.
     let query = this._db
       .selectFrom("DocumentSnapshot")
       .selectAll()
       .where("documentId", "=", documentId)
-      .where("branch", "=", branch)
-      .where("isDeleted", "=", false);
+      .where("branch", "=", branch);
+
+    if (!this.servesDeletionBoundary) {
+      query = query.where("isDeleted", "=", false);
+    }
 
     if (scopesToQuery.length > 0) {
       query = query.where("scope", "in", scopesToQuery);
@@ -671,13 +697,19 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
 
     const branch = view?.branch || "main";
 
-    const idCheckPromise = this._db
+    // The id branch relaxes with `get`, or resolution throws before it. The slug
+    // branch never does: deleting a document removes its SlugMapping rows.
+    let idCheckQuery = this._db
       .selectFrom("DocumentSnapshot")
       .select("documentId")
       .where("documentId", "=", identifier)
-      .where("branch", "=", branch)
-      .where("isDeleted", "=", false)
-      .executeTakeFirst();
+      .where("branch", "=", branch);
+
+    if (!this.servesDeletionBoundary) {
+      idCheckQuery = idCheckQuery.where("isDeleted", "=", false);
+    }
+
+    const idCheckPromise = idCheckQuery.executeTakeFirst();
 
     const slugCheckPromise = this._db
       .selectFrom("SlugMapping")

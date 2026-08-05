@@ -5,6 +5,7 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import {
   AuthActionNotAllowedError,
+  decide,
   initializeAuth,
   isAuthAction,
   moveGrant,
@@ -22,6 +23,17 @@ function makeGrant(id: string): Grant {
     effect: "allow",
     principal: { anyone: true },
     capability: { can: "read", scope: "global" },
+  };
+}
+
+function adminGrant(id: string, overrides?: Partial<Grant>): Grant {
+  return {
+    id,
+    description: `admin grant ${id}`,
+    effect: "allow",
+    principal: { anyone: true },
+    capability: { can: "execute", scope: "auth" },
+    ...overrides,
   };
 }
 
@@ -79,9 +91,9 @@ const signedDocument: PHDocument<CountPHState> = {
   },
 };
 
-function signedInit(appKey: string): Action {
+function signedInit(appKey: string, grants: Grant[] = []): Action {
   return {
-    ...initializeAuth({ version: 1, grants: [] }),
+    ...initializeAuth({ version: 1, grants }),
     context: {
       signer: {
         user: { address: "", networkId: "", chainId: 0 },
@@ -107,7 +119,7 @@ describe("auth-scope action creators", () => {
 
 describe("auth-scope reducer", () => {
   it("INITIALIZE_AUTH sets the policy and records a hashed auth operation", () => {
-    const grant = makeGrant("g1");
+    const grant = adminGrant("g1");
     const doc = countReducer(
       initialDocument,
       initializeAuth({ version: 1, grants: [grant] }),
@@ -152,10 +164,13 @@ describe("auth-scope reducer", () => {
   it("initializes an unsigned-header document with no recorded creator", () => {
     const doc = countReducer(
       initialDocument,
-      initializeAuth({ version: 1, grants: [] }),
+      initializeAuth({ version: 1, grants: [adminGrant("admin")] }),
     );
     expect(doc.state.auth.creator).toBeUndefined();
-    expect(doc.state.auth).toEqual({ version: 1, grants: [] });
+    expect(doc.state.auth).toEqual({
+      version: 1,
+      grants: [adminGrant("admin")],
+    });
   });
 
   it("rejects INITIALIZE_AUTH with a version below 1 (0 means uninitialized)", () => {
@@ -180,10 +195,13 @@ describe("auth-scope reducer", () => {
   it("records an error operation for a second INITIALIZE_AUTH", () => {
     const doc = countReducer(
       initialDocument,
-      initializeAuth({ version: 1, grants: [] }),
+      initializeAuth({ version: 1, grants: [adminGrant("admin")] }),
     );
     const next = countReducer(doc, initializeAuth({ version: 2, grants: [] }));
-    expect(next.state.auth).toStrictEqual({ version: 1, grants: [] });
+    expect(next.state.auth).toStrictEqual({
+      version: 1,
+      grants: [adminGrant("admin")],
+    });
     expect(next.operations.auth).toHaveLength(2);
     expect(next.operations.auth[1].error).toContain("already initialized");
   });
@@ -191,7 +209,7 @@ describe("auth-scope reducer", () => {
   it("SET_GRANT appends a new grant and replaces an existing one in place", () => {
     let doc = countReducer(
       initialDocument,
-      initializeAuth({ version: 1, grants: [makeGrant("a"), makeGrant("b")] }),
+      initializeAuth({ version: 1, grants: [adminGrant("a"), makeGrant("b")] }),
     );
     doc = countReducer(doc, setGrant({ grant: makeGrant("c") }));
     expect(ids(doc)).toEqual(["a", "b", "c"]);
@@ -207,7 +225,7 @@ describe("auth-scope reducer", () => {
   it("REMOVE_GRANT deletes by id and records an error operation for an unknown id", () => {
     let doc = countReducer(
       initialDocument,
-      initializeAuth({ version: 1, grants: [makeGrant("a"), makeGrant("b")] }),
+      initializeAuth({ version: 1, grants: [makeGrant("a"), adminGrant("b")] }),
     );
     doc = countReducer(doc, removeGrant({ id: "a" }));
     expect(ids(doc)).toEqual(["b"]);
@@ -223,7 +241,7 @@ describe("auth-scope reducer", () => {
       initialDocument,
       initializeAuth({
         version: 1,
-        grants: [makeGrant("a"), makeGrant("b"), makeGrant("c")],
+        grants: [adminGrant("a"), makeGrant("b"), makeGrant("c")],
       }),
     );
     doc = countReducer(doc, moveGrant({ id: "c", index: 0 }));
@@ -253,7 +271,7 @@ describe("auth-scope reducer", () => {
   it("replays a history containing an errored auth operation without throwing", () => {
     let doc = countReducer(
       initialDocument,
-      initializeAuth({ version: 1, grants: [makeGrant("a")] }),
+      initializeAuth({ version: 1, grants: [adminGrant("a")] }),
     );
     doc = countReducer(doc, initializeAuth({ version: 2, grants: [] }));
     expect(doc.operations.auth[1].error).toBeTruthy();
@@ -276,7 +294,7 @@ describe("auth-scope reducer", () => {
   it("replays auth operations to reconstruct the auth state with matching hashes", () => {
     let doc = countReducer(
       initialDocument,
-      initializeAuth({ version: 1, grants: [makeGrant("a")] }),
+      initializeAuth({ version: 1, grants: [adminGrant("a")] }),
     );
     doc = countReducer(doc, setGrant({ grant: makeGrant("b") }));
     doc = countReducer(doc, moveGrant({ id: "b", index: 0 }));
@@ -293,5 +311,269 @@ describe("auth-scope reducer", () => {
 
     expect(replayed.state.auth).toEqual(doc.state.auth);
     expect(replayed.state.auth.grants.map((g) => g.id)).toEqual(["b", "a"]);
+  });
+});
+
+describe("creator-less auth administration retention", () => {
+  const LOCKOUT_MESSAGE =
+    "no reachable grant permitting execute on the auth scope";
+
+  it("rejects removing the last grant permitting execute on the auth scope", () => {
+    const doc = countReducer(
+      initialDocument,
+      initializeAuth({
+        version: 1,
+        grants: [adminGrant("admin"), makeGrant("reader")],
+      }),
+    );
+    const next = countReducer(doc, removeGrant({ id: "admin" }));
+    expect(ids(next)).toEqual(["admin", "reader"]);
+    const ops = next.operations.auth;
+    expect(ops[ops.length - 1].error).toContain(LOCKOUT_MESSAGE);
+  });
+
+  it("allows the removal when another administration grant remains", () => {
+    const doc = countReducer(
+      initialDocument,
+      initializeAuth({
+        version: 1,
+        grants: [
+          adminGrant("admin"),
+          adminGrant("limited", {
+            capability: {
+              can: "execute",
+              scope: "auth",
+              operation: ["SET_GRANT"],
+            },
+          }),
+        ],
+      }),
+    );
+    const next = countReducer(doc, removeGrant({ id: "admin" }));
+    expect(ids(next)).toEqual(["limited"]);
+    const ops = next.operations.auth;
+    expect(ops[ops.length - 1].error).toBeUndefined();
+  });
+
+  it("does not count a grant v1 never applies as retained administration", () => {
+    // The admin grant is last so genesis is administrable: a deny ahead of it
+    // does not shadow it, and the two non-applying grants are what is left
+    // behind once it is removed.
+    const doc = countReducer(
+      initialDocument,
+      initializeAuth({
+        version: 1,
+        grants: [
+          adminGrant("denied", { effect: "deny" }),
+          adminGrant("conditional", {
+            where: { exists: { attr: "subject.address" } },
+          }),
+          adminGrant("admin"),
+        ],
+      }),
+    );
+    const next = countReducer(doc, removeGrant({ id: "admin" }));
+    expect(ids(next)).toEqual(["denied", "conditional", "admin"]);
+    const ops = next.operations.auth;
+    expect(ops[ops.length - 1].error).toContain(LOCKOUT_MESSAGE);
+  });
+
+  it("rejects a genesis whose administration grant a later deny shadows", () => {
+    // Evaluation is last-applicable-grant-wins, so the admin grant is present
+    // but unreachable. Accepting this policy would create a born-locked-out
+    // document with no recovery path.
+    const doc = countReducer(
+      initialDocument,
+      initializeAuth({
+        version: 1,
+        grants: [adminGrant("admin"), adminGrant("freeze", { effect: "deny" })],
+      }),
+    );
+    expect(doc.state.auth.version).toBe(0);
+    expect(doc.operations.auth[0].error).toContain(
+      "no reachable grant permitting execute on the auth scope",
+    );
+  });
+
+  it("rejects appending a deny that shadows the last administration grant", () => {
+    const doc = countReducer(
+      initialDocument,
+      initializeAuth({ version: 1, grants: [adminGrant("admin")] }),
+    );
+    const next = countReducer(
+      doc,
+      setGrant({ grant: adminGrant("freeze", { effect: "deny" }) }),
+    );
+    expect(ids(next)).toEqual(["admin"]);
+    const ops = next.operations.auth;
+    expect(ops[ops.length - 1].error).toContain(LOCKOUT_MESSAGE);
+  });
+
+  it("rejects a move that reorders the last administration grant into shadow", () => {
+    let doc = countReducer(
+      initialDocument,
+      initializeAuth({
+        version: 1,
+        grants: [adminGrant("freeze", { effect: "deny" }), adminGrant("admin")],
+      }),
+    );
+    doc = countReducer(doc, moveGrant({ id: "admin", index: 0 }));
+    expect(ids(doc)).toEqual(["freeze", "admin"]);
+    const ops = doc.operations.auth;
+    expect(ops[ops.length - 1].error).toContain(LOCKOUT_MESSAGE);
+  });
+
+  it("keeps the auth scope administrable after every accepted mutation", () => {
+    // The property the rule exists to guarantee. Asserted on the resulting
+    // policy rather than on the grant list, because a present grant a later
+    // deny shadows keeps nothing reachable.
+    const administrable = (doc: PHDocument<CountPHState>) =>
+      decide(
+        doc.state.auth,
+        { address: undefined, key: undefined },
+        {
+          verb: "execute",
+          scope: "auth",
+          operation: "SET_GRANT",
+        },
+      );
+
+    let doc = countReducer(
+      initialDocument,
+      initializeAuth({ version: 1, grants: [adminGrant("admin")] }),
+    );
+    expect(administrable(doc)).toBe("allow");
+
+    doc = countReducer(doc, setGrant({ grant: makeGrant("reader") }));
+    expect(administrable(doc)).toBe("allow");
+
+    doc = countReducer(doc, setGrant({ grant: adminGrant("second") }));
+    expect(administrable(doc)).toBe("allow");
+
+    doc = countReducer(doc, removeGrant({ id: "admin" }));
+    expect(administrable(doc)).toBe("allow");
+
+    doc = countReducer(doc, moveGrant({ id: "reader", index: 0 }));
+    expect(administrable(doc)).toBe("allow");
+  });
+
+  it("lets a document with a creator remove its last administration grant", () => {
+    let doc = countReducer(
+      signedDocument,
+      signedInit(CREATOR_DID, [adminGrant("admin")]),
+    );
+    expect(doc.state.auth.creator).toBe(CREATOR_DID);
+    doc = countReducer(doc, removeGrant({ id: "admin" }));
+    expect(ids(doc)).toEqual([]);
+    const ops = doc.operations.auth;
+    expect(ops[ops.length - 1].error).toBeUndefined();
+  });
+
+  it("rejects re-upserting the last administration grant without auth execute", () => {
+    const doc = countReducer(
+      initialDocument,
+      initializeAuth({ version: 1, grants: [adminGrant("admin")] }),
+    );
+    const next = countReducer(
+      doc,
+      setGrant({
+        grant: adminGrant("admin", {
+          capability: { can: "read", scope: "auth" },
+        }),
+      }),
+    );
+    expect(next.state.auth.grants[0].capability).toEqual({
+      can: "execute",
+      scope: "auth",
+    });
+    const ops = next.operations.auth;
+    expect(ops[ops.length - 1].error).toContain(LOCKOUT_MESSAGE);
+  });
+
+  it("allows the downgrade when another administration grant remains", () => {
+    const doc = countReducer(
+      initialDocument,
+      initializeAuth({
+        version: 1,
+        grants: [adminGrant("a"), adminGrant("b")],
+      }),
+    );
+    const next = countReducer(
+      doc,
+      setGrant({
+        grant: adminGrant("a", { capability: { can: "read", scope: "auth" } }),
+      }),
+    );
+    expect(next.state.auth.grants[0].capability).toEqual({
+      can: "read",
+      scope: "auth",
+    });
+    const ops = next.operations.auth;
+    expect(ops[ops.length - 1].error).toBeUndefined();
+  });
+});
+
+describe("creator-less auth administration at genesis", () => {
+  const GENESIS_MESSAGE =
+    "Initial grants include no reachable grant permitting execute on the auth scope";
+
+  it("rejects a creator-less INITIALIZE_AUTH with no administration grant", () => {
+    const doc = countReducer(
+      initialDocument,
+      initializeAuth({ version: 1, grants: [makeGrant("reader")] }),
+    );
+    expect(doc.state.auth).toStrictEqual({ version: 0, grants: [] });
+    expect(doc.operations.auth[0].error).toContain(GENESIS_MESSAGE);
+  });
+
+  it("rejects a creator-less INITIALIZE_AUTH with no grants at all", () => {
+    const doc = countReducer(
+      initialDocument,
+      initializeAuth({ version: 1, grants: [] }),
+    );
+    expect(doc.state.auth).toStrictEqual({ version: 0, grants: [] });
+    expect(doc.operations.auth[0].error).toContain(GENESIS_MESSAGE);
+  });
+
+  it("accepts a creator-less INITIALIZE_AUTH carrying an administration grant", () => {
+    const doc = countReducer(
+      initialDocument,
+      initializeAuth({
+        version: 1,
+        grants: [adminGrant("admin"), makeGrant("reader")],
+      }),
+    );
+    expect(doc.state.auth.version).toBe(1);
+    expect(ids(doc)).toEqual(["admin", "reader"]);
+    expect(doc.operations.auth[0].error).toBeUndefined();
+  });
+
+  it("accepts an INITIALIZE_AUTH with a creator and no administration grant", () => {
+    const doc = countReducer(
+      signedDocument,
+      signedInit(CREATOR_DID, [makeGrant("reader")]),
+    );
+    expect(doc.state.auth.creator).toBe(CREATOR_DID);
+    expect(doc.state.auth.version).toBe(1);
+    expect(ids(doc)).toEqual(["reader"]);
+    expect(doc.operations.auth[0].error).toBeUndefined();
+  });
+
+  it("does not count a grant v1 never applies as administration at genesis", () => {
+    const doc = countReducer(
+      initialDocument,
+      initializeAuth({
+        version: 1,
+        grants: [
+          adminGrant("denied", { effect: "deny" }),
+          adminGrant("conditional", {
+            where: { exists: { attr: "subject.address" } },
+          }),
+          adminGrant("grouped", { principal: { group: "phd-admins" } }),
+        ],
+      }),
+    );
+    expect(doc.state.auth).toStrictEqual({ version: 0, grants: [] });
+    expect(doc.operations.auth[0].error).toContain(GENESIS_MESSAGE);
   });
 });

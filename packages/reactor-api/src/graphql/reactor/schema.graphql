@@ -112,6 +112,12 @@ type ReactorOperationResultPage {
 type DeadLetterInfo {
   documentId: String!
   error: String!
+  """
+  How the origin classified the failure. A peer needs this to mirror the origin's
+  quarantine decision; without it a held auth operation would freeze the document
+  on the peer side while the origin kept syncing.
+  """
+  errorType: String
   jobId: String!
   branch: String!
   scopes: [String!]!
@@ -230,6 +236,7 @@ type ReactorOperation {
   hash: String!
   skip: Int!
   error: String
+  deniedReason: String
   id: String
   action: Action!
 }
@@ -240,6 +247,7 @@ input OperationInput {
   hash: String!
   skip: Int!
   error: String
+  deniedReason: String
   id: String
   action: ActionInput!
 }

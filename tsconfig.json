@@ -49,6 +49,9 @@
       "path": "test/package-e2e"
     },
     {
+      "path": "test/recipes-e2e"
+    },
+    {
       "path": "test/switchboard"
     },
     {

@@ -96,6 +96,17 @@ function makeGrant(id: string): Grant {
   };
 }
 
+// Keeps a creator-less policy administrable, which genesis now requires.
+function adminGrant(id: string): Grant {
+  return {
+    id,
+    description: `admin grant ${id}`,
+    effect: "allow",
+    principal: { anyone: true },
+    capability: { can: "execute", scope: "auth" },
+  };
+}
+
 function initAuthAt(ts: string, grants: Grant[]): Action {
   return { ...initializeAuth({ version: 1, grants }), timestampUtcMs: ts };
 }
@@ -111,7 +122,7 @@ function buildLiveDocument(): PHDocument<CounterState> {
     undefined,
     docType,
   );
-  doc = counterReducer(doc, initAuthAt(makeTimestamp(0), [makeGrant("a")]));
+  doc = counterReducer(doc, initAuthAt(makeTimestamp(0), [adminGrant("a")]));
   doc = counterReducer(doc, increment(makeTimestamp(100)));
   doc = counterReducer(doc, setGrantAt(makeTimestamp(200), makeGrant("b")));
   doc = counterReducer(doc, increment(makeTimestamp(300)));
@@ -217,6 +228,61 @@ describe("auth persistence through zip save/load", () => {
     expect(loaded.operations.auth?.[2].error).toBeTruthy();
   });
 
+  /**
+   * A document loaded from a file has to reach the same state the reactor that
+   * wrote it holds.
+   */
+  it("round-trips a history containing a denied auth operation without applying it", async () => {
+    const liveDoc = buildLiveDocument();
+
+    // A refused SET_GRANT: recorded, hashed over the standing state.
+    const authOps = liveDoc.operations.auth ?? [];
+    const standing = authOps[authOps.length - 1];
+    const deniedDoc = {
+      ...liveDoc,
+      operations: {
+        ...liveDoc.operations,
+        auth: [
+          ...authOps,
+          {
+            ...standing,
+            id: "op-denied-grant",
+            index: authOps.length,
+            action: {
+              ...standing.action,
+              id: "a-denied-grant",
+              type: "SET_GRANT",
+              input: { grant: makeGrant("denied") },
+            },
+            hash: standing.hash,
+            deniedReason: "no grant permits this operation",
+          },
+        ],
+      },
+    };
+
+    const zipData = await createZip(deniedDoc);
+
+    // The legacy path.
+    const loaded = await baseLoadFromInput<CounterState>(
+      zipData,
+      counterReducer,
+    );
+    expect(loaded.state.auth.grants.map((g) => g.id)).toEqual(["a", "b"]);
+    expect(loaded.operations.auth?.[2].deniedReason).toBe(
+      "no grant permits this operation",
+    );
+
+    // And the versioned path, which is what production calls.
+    const versioned = await baseLoadFromInputVersioned<CounterState>(zipData, {
+      reducers: { 1: r(counterReducer) },
+    });
+    expect(versioned.state.auth.grants.map((g) => g.id)).toEqual(["a", "b"]);
+    expect(versioned.operations.auth?.[2].deniedReason).toBe(
+      "no grant permits this operation",
+    );
+  });
+
   it("loads a legacy zip with no auth operations as an uninitialized policy", async () => {
     let doc = baseCreateDocument<CounterState>(
       createCounterState,
@@ -301,5 +367,132 @@ describe("auth persistence through versioned replay", () => {
     expect(loaded.state.auth).toEqual(liveDoc.state.auth);
     expect(loaded.operations.auth).toHaveLength(2);
     expect(loaded.state.global.count).toBe(2);
+  });
+});
+
+describe("a state snapshot is not a door onto the auth policy", () => {
+  const initialized = (grants: Grant[]) => {
+    const doc = baseCreateDocument<CounterState>(
+      createCounterState,
+      undefined,
+      docType,
+    );
+    return {
+      ...doc,
+      state: { ...doc.state, auth: { version: 1, grants } },
+    } as PHDocument<CounterState>;
+  };
+
+  const upgradeWith = (state: Record<string, unknown>) =>
+    ({
+      type: "UPGRADE_DOCUMENT",
+      scope: "document",
+      input: {
+        documentId: "doc-1",
+        fromVersion: 0,
+        toVersion: 1,
+        initialState: state,
+      },
+    }) as unknown as UpgradeDocumentAction;
+
+  it("rejects replacing an initialized policy, including a self-assigned creator", () => {
+    // UPGRADE_DOCUMENT is authorized as a document-scope write, so without this
+    // a subject with no auth grant could install a policy of its choosing and
+    // name itself creator, which exempts the policy from retention for good.
+    expect(() =>
+      applyUpgradeDocumentAction(
+        initialized([adminGrant("a")]),
+        upgradeWith({
+          auth: {
+            version: 1,
+            grants: [adminGrant("attacker")],
+            creator: "did:key:zATTACKER",
+          },
+        }),
+      ),
+    ).toThrow(/policy/i);
+  });
+
+  it("keeps the existing policy when a snapshot carries the default one", () => {
+    const upgraded = applyUpgradeDocumentAction(
+      initialized([adminGrant("a")]),
+      upgradeWith({ auth: { version: 0, grants: [] } }),
+    );
+    expect(upgraded.state.auth).toEqual({
+      version: 1,
+      grants: [adminGrant("a")],
+    });
+  });
+
+  it("rejects installing a born-locked-out policy on an uninitialized document", () => {
+    expect(() =>
+      applyUpgradeDocumentAction(
+        baseCreateDocument<CounterState>(
+          createCounterState,
+          undefined,
+          docType,
+        ),
+        upgradeWith({ auth: { version: 1, grants: [] } }),
+      ),
+    ).toThrow(/no reachable grant permitting execute on the auth scope/);
+  });
+
+  it("installs a source policy onto an uninitialized document, as duplication does", () => {
+    const upgraded = applyUpgradeDocumentAction(
+      baseCreateDocument<CounterState>(createCounterState, undefined, docType),
+      upgradeWith({ auth: { version: 1, grants: [adminGrant("a")] } }),
+    );
+    expect(upgraded.state.auth.grants.map((g) => g.id)).toEqual(["a"]);
+  });
+
+  it("leaves the policy alone for a snapshot carrying only domain state", () => {
+    const upgraded = applyUpgradeDocumentAction(
+      initialized([adminGrant("a")]),
+      upgradeWith({ global: { count: 5 } }),
+    );
+    expect(upgraded.state.auth.grants.map((g) => g.id)).toEqual(["a"]);
+    expect((upgraded.state as CounterState).global.count).toBe(5);
+  });
+
+  it("rejects a LOAD_STATE that replaces an initialized policy", () => {
+    const doc = initialized([adminGrant("a")]);
+    const load = {
+      id: "act-load",
+      type: "LOAD_STATE",
+      scope: "global",
+      input: {
+        operations: 0,
+        state: {
+          name: "loaded",
+          data: {
+            ...doc.state,
+            auth: { version: 1, grants: [adminGrant("attacker")] },
+          },
+        },
+      },
+      timestampUtcMs: makeTimestamp(0),
+    } as unknown as Action;
+
+    // Throws rather than recording an error operation, which is how this path
+    // already treats an unusable LOAD_STATE input; the executor turns it into a
+    // failed job and nothing is stored.
+    expect(() => counterReducer(doc, load)).toThrow(/preserve its auth policy/);
+  });
+
+  it("accepts a LOAD_STATE carrying the policy the document already has", () => {
+    const doc = initialized([adminGrant("a")]);
+    const load = {
+      id: "act-load-same",
+      type: "LOAD_STATE",
+      scope: "global",
+      input: {
+        operations: 0,
+        state: { name: "loaded", data: { ...doc.state } },
+      },
+      timestampUtcMs: makeTimestamp(0),
+    } as unknown as Action;
+
+    const next = counterReducer(doc, load);
+    expect(next.state.auth.grants.map((g) => g.id)).toEqual(["a"]);
   });
 });

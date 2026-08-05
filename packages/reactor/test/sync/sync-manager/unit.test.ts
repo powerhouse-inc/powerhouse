@@ -4044,6 +4044,7 @@ describe("SyncManager - Unit Tests", () => {
           operations: [],
           errorSource: ChannelErrorSource.Inbox,
           errorMessage: "persisted error",
+          errorType: "UNCLASSIFIED",
         },
       ];
 
@@ -4101,6 +4102,7 @@ describe("SyncManager - Unit Tests", () => {
           operations: [],
           errorSource: ChannelErrorSource.Channel,
           errorMessage: "channel error",
+          errorType: "UNCLASSIFIED",
         },
       ];
 
@@ -4652,6 +4654,149 @@ describe("SyncManager - Unit Tests", () => {
       const outboxDocIds = addedOps.map((op: SyncOperation) => op.documentId);
       expect(outboxDocIds).toContain("healthy-doc");
       expect(outboxDocIds).not.toContain("quarantined-doc");
+    });
+
+    /**
+     * A held auth operation is deliberately not a quarantine: reconciling the two
+     * policies needs the traffic one would stop, and nothing ever clears one.
+     */
+    it("does not quarantine a document whose dead letter is a held auth operation", async () => {
+      await syncManager.startup();
+
+      const remote = await syncManager.add(
+        "remote-held-auth",
+        DriveCollectionId.forDrive("col1"),
+        {
+          type: "internal",
+          parameters: {},
+        } as ChannelConfig,
+      );
+
+      const ch = remote.channel;
+      const onAddedCalls = vi.mocked(ch.deadLetter.onAdded).mock.calls;
+      const deadLetterCb = onAddedCalls[onAddedCalls.length - 1][0];
+
+      const syncOp = new SyncOperation(
+        "dl-held",
+        "job-held",
+        [],
+        "remote-held-auth",
+        "held-doc",
+        ["auth"],
+        "main",
+        [],
+      );
+      const { AuthTimestampNotMonotonicError } =
+        await import("../../../src/shared/errors.js");
+      syncOp.failed(
+        new (await import("../../../src/sync/errors.js")).ChannelError(
+          ChannelErrorSource.Inbox,
+          new AuthTimestampNotMonotonicError(
+            "held-doc",
+            "main",
+            "2026-01-01T00:00:01.000Z",
+            "2026-01-01T00:00:02.000Z",
+          ),
+        ),
+      );
+
+      deadLetterCb([syncOp]);
+
+      vi.mocked(mockOperationIndex.find).mockResolvedValueOnce(
+        createFindResult([
+          {
+            id: "op-held",
+            documentId: "held-doc",
+            scope: "global",
+            branch: "main",
+            ordinal: 20,
+          },
+        ]),
+      );
+      vi.mocked(
+        mockOperationIndex.getCollectionsForDocuments,
+      ).mockResolvedValue({ "held-doc": ["drive.main.col1"] });
+
+      await emitWriteReady({
+        jobId: "j-held",
+        operations: [
+          {
+            operation: {
+              index: 0,
+              skip: 0,
+              id: "op-held",
+              hash: "h",
+              timestampUtcMs: "1000",
+              action: { type: "CREATE", scope: "global" },
+            },
+            context: {
+              documentId: "held-doc",
+              documentType: "test",
+              scope: "global",
+              branch: "main",
+              ordinal: 20,
+            },
+          },
+        ],
+        collectionMemberships: { "held-doc": ["drive.main.col1"] },
+        jobMeta: { batchId: "batch-held", batchJobIds: ["j-held"] },
+      });
+
+      // Keeps syncing, so the held policy can be reconciled.
+      const addedOps = vi.mocked(ch.outbox.add).mock.calls.flat();
+      expect(addedOps.map((op: SyncOperation) => op.documentId)).toContain(
+        "held-doc",
+      );
+    });
+
+    it("records the classification on the persisted dead letter", async () => {
+      await syncManager.startup();
+
+      const remote = await syncManager.add(
+        "remote-classified",
+        DriveCollectionId.forDrive("col1"),
+        { type: "internal", parameters: {} } as ChannelConfig,
+      );
+
+      const onAddedCalls = vi.mocked(remote.channel.deadLetter.onAdded).mock
+        .calls;
+      const deadLetterCb = onAddedCalls[onAddedCalls.length - 1][0];
+
+      const syncOp = new SyncOperation(
+        "dl-classified",
+        "job-classified",
+        [],
+        "remote-classified",
+        "classified-doc",
+        ["auth"],
+        "main",
+        [],
+      );
+      const { AuthTimestampNotMonotonicError } =
+        await import("../../../src/shared/errors.js");
+      syncOp.failed(
+        new (await import("../../../src/sync/errors.js")).ChannelError(
+          ChannelErrorSource.Inbox,
+          new AuthTimestampNotMonotonicError(
+            "classified-doc",
+            "main",
+            "2026-01-01T00:00:01.000Z",
+            "2026-01-01T00:00:02.000Z",
+          ),
+        ),
+      );
+
+      deadLetterCb([syncOp]);
+      await vi.waitFor(() =>
+        expect(mockDeadLetterStorage.add).toHaveBeenCalled(),
+      );
+
+      expect(mockDeadLetterStorage.add).toHaveBeenCalledWith(
+        expect.objectContaining({
+          documentId: "classified-doc",
+          errorType: "AUTH_TIMESTAMP_NOT_MONOTONIC",
+        }),
+      );
     });
 
     it("should filter quarantined docs in handleInboxAdded", async () => {
