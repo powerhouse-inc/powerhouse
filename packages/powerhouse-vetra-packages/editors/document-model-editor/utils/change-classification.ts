@@ -5,6 +5,13 @@ import type {
   ObjectTypeDefinitionNode,
 } from "graphql";
 import { Kind, parse, print } from "graphql";
+import type {
+  DocumentModelAction,
+  DocumentSpecification,
+  ModuleSpecification,
+  OperationSpecification,
+} from "@powerhousedao/shared/document-model";
+import { compareStringsWithoutWhitespace } from "./helpers.js";
 
 export type StateShapeDiff = {
   addedFields: string[];
@@ -64,7 +71,9 @@ function replaceTypeName(
 
 function typeSignature(name: string, fields: Map<string, string>): string {
   return [...fields.entries()]
-    .map(([field, type]) => `${field}:${replaceTypeName(type, name, "__SELF__")}`)
+    .map(
+      ([field, type]) => `${field}:${replaceTypeName(type, name, "__SELF__")}`,
+    )
     .sort()
     .join("|");
 }
@@ -91,7 +100,10 @@ function detectTypeRenames(
   return renames;
 }
 
-function flattenFields(types: TypeFields, renames: Map<string, string>): FieldMap {
+function flattenFields(
+  types: TypeFields,
+  renames: Map<string, string>,
+): FieldMap {
   const fields: FieldMap = new Map();
   for (const [typeName, typeFields] of types) {
     const resolvedTypeName = renames.get(typeName) ?? typeName;
@@ -152,4 +164,194 @@ export function diffSdlShapes(oldSdl: string, newSdl: string): StateShapeDiff {
     }
   }
   return diff;
+}
+
+export type ActionClassification =
+  | { kind: "safe" }
+  | { kind: "version-relevant"; reason: string; diff?: StateShapeDiff };
+
+const SAFE: ActionClassification = { kind: "safe" };
+
+function isBlank(value: string | null | undefined): boolean {
+  return !value || !value.trim() || value.trim() === "{}";
+}
+
+function findOperation(
+  spec: DocumentSpecification,
+  operationId: string,
+): OperationSpecification | undefined {
+  for (const module of spec.modules) {
+    const operation = module.operations.find((op) => op.id === operationId);
+    if (operation) return operation;
+  }
+  return undefined;
+}
+
+function addedSinceLastRelease(
+  operationId: string,
+  previousSpec: DocumentSpecification | undefined,
+): boolean {
+  return (
+    previousSpec !== undefined && !findOperation(previousSpec, operationId)
+  );
+}
+
+function classifySetStateSchema(
+  input: { schema: string; scope: string },
+  latestSpec: DocumentSpecification,
+): ActionClassification {
+  const currentSchema =
+    input.scope === "local"
+      ? latestSpec.state.local.schema
+      : latestSpec.state.global.schema;
+  if (isBlank(currentSchema)) return SAFE;
+  const diff = diffSdlShapes(currentSchema, input.schema);
+  if (!hasShapeChange(diff)) return SAFE;
+  return {
+    kind: "version-relevant",
+    reason: `This change alters the ${input.scope} state schema of version ${latestSpec.version}.`,
+    diff,
+  };
+}
+
+function classifySetInitialState(
+  input: { initialValue: string; scope: string },
+  latestSpec: DocumentSpecification,
+): ActionClassification {
+  const currentValue =
+    input.scope === "local"
+      ? latestSpec.state.local.initialValue
+      : latestSpec.state.global.initialValue;
+  if (isBlank(currentValue)) return SAFE;
+  if (compareStringsWithoutWhitespace(currentValue, input.initialValue)) {
+    return SAFE;
+  }
+  return {
+    kind: "version-relevant",
+    reason: `This change alters the initial ${input.scope} state of version ${latestSpec.version}, which is the replay baseline for existing documents.`,
+  };
+}
+
+function classifyOperationChange(
+  action: DocumentModelAction,
+  operationId: string,
+  latestSpec: DocumentSpecification,
+  previousSpec: DocumentSpecification | undefined,
+): ActionClassification {
+  if (addedSinceLastRelease(operationId, previousSpec)) return SAFE;
+  const operation = findOperation(latestSpec, operationId);
+  if (!operation) return SAFE;
+  const operationLabel = operation.name || "an operation";
+  switch (action.type) {
+    case "DELETE_OPERATION":
+      return {
+        kind: "version-relevant",
+        reason: `Deleting the "${operationLabel}" operation removes it from version ${latestSpec.version}.`,
+      };
+    case "SET_OPERATION_NAME": {
+      if (isBlank(operation.name)) return SAFE;
+      return {
+        kind: "version-relevant",
+        reason: `Renaming the "${operationLabel}" operation changes how version ${latestSpec.version} documents replay.`,
+      };
+    }
+    case "SET_OPERATION_SCHEMA": {
+      if (isBlank(operation.schema)) return SAFE;
+      const diff = diffSdlShapes(
+        operation.schema ?? "",
+        action.input.schema ?? "",
+      );
+      if (!hasShapeChange(diff)) return SAFE;
+      return {
+        kind: "version-relevant",
+        reason: `This change alters the input of the "${operationLabel}" operation in version ${latestSpec.version}.`,
+        diff,
+      };
+    }
+    default:
+      return SAFE;
+  }
+}
+
+function classifyDeleteModule(
+  moduleId: string,
+  latestSpec: DocumentSpecification,
+  previousSpec: DocumentSpecification | undefined,
+): ActionClassification {
+  const module: ModuleSpecification | undefined = latestSpec.modules.find(
+    (candidate) => candidate.id === moduleId,
+  );
+  if (!module || module.operations.length === 0) return SAFE;
+  const allAddedSinceRelease = module.operations.every((operation) =>
+    addedSinceLastRelease(operation.id, previousSpec),
+  );
+  if (allAddedSinceRelease) return SAFE;
+  return {
+    kind: "version-relevant",
+    reason: `Deleting the "${module.name}" module removes its operations from version ${latestSpec.version}.`,
+  };
+}
+
+/**
+ * Classifies a document-model action as version-relevant (would break
+ * documents created with the current version) or safe. `previousSpec` is the
+ * last released specification, used to exempt operations added since the
+ * release.
+ */
+export function classifyDocumentModelAction(
+  action: DocumentModelAction,
+  latestSpec: DocumentSpecification,
+  previousSpec?: DocumentSpecification,
+): ActionClassification {
+  switch (action.type) {
+    case "SET_STATE_SCHEMA":
+      return classifySetStateSchema(action.input, latestSpec);
+    case "SET_INITIAL_STATE":
+      return classifySetInitialState(action.input, latestSpec);
+    case "DELETE_OPERATION":
+    case "SET_OPERATION_NAME":
+    case "SET_OPERATION_SCHEMA":
+      return classifyOperationChange(
+        action,
+        action.input.id,
+        latestSpec,
+        previousSpec,
+      );
+    case "DELETE_MODULE":
+      return classifyDeleteModule(action.input.id, latestSpec, previousSpec);
+    default:
+      return SAFE;
+  }
+}
+
+export type DispatchDecision =
+  | { kind: "dispatch" }
+  | { kind: "prompt"; reason: string; diff?: StateShapeDiff };
+
+/**
+ * Pure decision core of the version advisory: given the actions about to be
+ * dispatched, decide whether to dispatch immediately or prompt the user.
+ */
+export function decideDispatch(
+  actions: DocumentModelAction[],
+  latestSpec: DocumentSpecification,
+  previousSpec: DocumentSpecification | undefined,
+  hasSessionChoice: boolean,
+): DispatchDecision {
+  if (hasSessionChoice) return { kind: "dispatch" };
+  for (const action of actions) {
+    const classification = classifyDocumentModelAction(
+      action,
+      latestSpec,
+      previousSpec,
+    );
+    if (classification.kind === "version-relevant") {
+      return {
+        kind: "prompt",
+        reason: classification.reason,
+        diff: classification.diff,
+      };
+    }
+  }
+  return { kind: "dispatch" };
 }
