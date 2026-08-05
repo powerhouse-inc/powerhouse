@@ -1,10 +1,10 @@
 import { stringify } from "safe-stable-stringify";
 import type { Action } from "./actions.js";
 import { hashBrowser } from "./crypto.js";
+import { isDenied } from "./denied.js";
 import { HashMismatchError } from "./errors.js";
 import { createPresignedHeader } from "./header.js";
 import type { DocumentOperations, Operation } from "./operations.js";
-import { isDenied } from "./operations.js";
 import type { PHDocumentSignatureInfo } from "./signatures.js";
 import { backfillAuthState } from "./state.js";
 import type { PHBaseState } from "./state.js";

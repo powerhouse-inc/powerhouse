@@ -1,3 +1,4 @@
+import { isDenied } from "./denied.js";
 import {
   appendWithoutApplying,
   baseReducerVersion,
@@ -8,7 +9,6 @@ import {
 } from "./documents.js";
 import { HashMismatchError } from "./errors.js";
 import type { DocumentOperations, Operation } from "./operations.js";
-import { isDenied } from "./operations.js";
 import { backfillAuthState } from "./state.js";
 import type { PHBaseState } from "./state.js";
 import type {
