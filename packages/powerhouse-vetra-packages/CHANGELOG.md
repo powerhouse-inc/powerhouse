@@ -1,3 +1,17 @@
+## 6.2.2-dev.37 (2026-08-05)
+
+### 🚀 Features
+
+- **powerhouse-vetra-packages:** move Create New Document into the Documents and files heading row ([37d1e2a1d](https://github.com/powerhouse-inc/powerhouse/commit/37d1e2a1d))
+- **powerhouse-vetra-packages:** add plus icon to the Create New Document button ([ddb99afbd](https://github.com/powerhouse-inc/powerhouse/commit/ddb99afbd))
+- **powerhouse-vetra-packages:** use the info-blue accent on the Create New Document button ([09bc62018](https://github.com/powerhouse-inc/powerhouse/commit/09bc62018))
+- **powerhouse-vetra-packages:** replace document-type button grid with Create New Document modal ([e460e06dd](https://github.com/powerhouse-inc/powerhouse/commit/e460e06dd))
+
+### ❤️ Thank You
+
+- Claude Opus 5 (1M context)
+- liberuum
+
 ## 6.2.2-dev.36 (2026-08-04)
 
 This was a version bump only for @powerhousedao/powerhouse-vetra-packages to align it with other projects, there were no code changes.

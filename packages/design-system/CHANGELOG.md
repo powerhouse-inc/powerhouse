@@ -1,3 +1,22 @@
+## 6.2.2-dev.37 (2026-08-05)
+
+### 🚀 Features
+
+- **design-system:** cap and scroll the document-type list; reset modal on dismiss ([5f79e12e5](https://github.com/powerhouse-inc/powerhouse/commit/5f79e12e5))
+- **design-system:** add CreateDocumentWithTypeModal with document-type select ([7c370c917](https://github.com/powerhouse-inc/powerhouse/commit/7c370c917))
+
+### 🩹 Fixes
+
+- **design-system:** tailwind class order in modal content ([107af91cc](https://github.com/powerhouse-inc/powerhouse/commit/107af91cc))
+- **design-system:** show only name and version in the document-type select options ([e53990e8b](https://github.com/powerhouse-inc/powerhouse/commit/e53990e8b))
+- **design-system:** make the modal shadow visible in dark mode ([fe9d655e9](https://github.com/powerhouse-inc/powerhouse/commit/fe9d655e9))
+
+### ❤️ Thank You
+
+- Claude Fable 5
+- Claude Opus 5 (1M context)
+- liberuum
+
 ## 6.2.2-dev.36 (2026-08-04)
 
 This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.
