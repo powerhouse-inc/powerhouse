@@ -5,6 +5,7 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import {
   AuthActionNotAllowedError,
+  decide,
   initializeAuth,
   isAuthAction,
   moveGrant,
@@ -314,7 +315,8 @@ describe("auth-scope reducer", () => {
 });
 
 describe("creator-less auth administration retention", () => {
-  const LOCKOUT_MESSAGE = "last grant permitting execute on the auth scope";
+  const LOCKOUT_MESSAGE =
+    "no reachable grant permitting execute on the auth scope";
 
   it("rejects removing the last grant permitting execute on the auth scope", () => {
     const doc = countReducer(
@@ -354,23 +356,105 @@ describe("creator-less auth administration retention", () => {
   });
 
   it("does not count a grant v1 never applies as retained administration", () => {
+    // The admin grant is last so genesis is administrable: a deny ahead of it
+    // does not shadow it, and the two non-applying grants are what is left
+    // behind once it is removed.
     const doc = countReducer(
       initialDocument,
       initializeAuth({
         version: 1,
         grants: [
-          adminGrant("admin"),
           adminGrant("denied", { effect: "deny" }),
           adminGrant("conditional", {
             where: { exists: { attr: "subject.address" } },
           }),
+          adminGrant("admin"),
         ],
       }),
     );
     const next = countReducer(doc, removeGrant({ id: "admin" }));
-    expect(ids(next)).toEqual(["admin", "denied", "conditional"]);
+    expect(ids(next)).toEqual(["denied", "conditional", "admin"]);
     const ops = next.operations.auth;
     expect(ops[ops.length - 1].error).toContain(LOCKOUT_MESSAGE);
+  });
+
+  it("rejects a genesis whose administration grant a later deny shadows", () => {
+    // Evaluation is last-applicable-grant-wins, so the admin grant is present
+    // but unreachable. Accepting this policy would create a born-locked-out
+    // document with no recovery path.
+    const doc = countReducer(
+      initialDocument,
+      initializeAuth({
+        version: 1,
+        grants: [adminGrant("admin"), adminGrant("freeze", { effect: "deny" })],
+      }),
+    );
+    expect(doc.state.auth.version).toBe(0);
+    expect(doc.operations.auth[0].error).toContain(
+      "no reachable grant permitting execute on the auth scope",
+    );
+  });
+
+  it("rejects appending a deny that shadows the last administration grant", () => {
+    const doc = countReducer(
+      initialDocument,
+      initializeAuth({ version: 1, grants: [adminGrant("admin")] }),
+    );
+    const next = countReducer(
+      doc,
+      setGrant({ grant: adminGrant("freeze", { effect: "deny" }) }),
+    );
+    expect(ids(next)).toEqual(["admin"]);
+    const ops = next.operations.auth;
+    expect(ops[ops.length - 1].error).toContain(LOCKOUT_MESSAGE);
+  });
+
+  it("rejects a move that reorders the last administration grant into shadow", () => {
+    let doc = countReducer(
+      initialDocument,
+      initializeAuth({
+        version: 1,
+        grants: [adminGrant("freeze", { effect: "deny" }), adminGrant("admin")],
+      }),
+    );
+    doc = countReducer(doc, moveGrant({ id: "admin", index: 0 }));
+    expect(ids(doc)).toEqual(["freeze", "admin"]);
+    const ops = doc.operations.auth;
+    expect(ops[ops.length - 1].error).toContain(LOCKOUT_MESSAGE);
+  });
+
+  it("keeps the auth scope administrable after every accepted mutation", () => {
+    // The property the rule exists to guarantee. Asserted on the resulting
+    // policy rather than on the grant list, because a present grant a later
+    // deny shadows keeps nothing reachable.
+    const administrable = (doc: PHDocument<CountPHState>) =>
+      decide(
+        doc.state.auth,
+        { address: undefined, key: undefined },
+        {
+          verb: "execute",
+          scope: "auth",
+          operation: "SET_GRANT",
+        },
+      );
+
+    let doc = countReducer(
+      initialDocument,
+      initializeAuth({ version: 1, grants: [adminGrant("admin")] }),
+    );
+    expect(administrable(doc)).toBe("allow");
+
+    doc = countReducer(doc, setGrant({ grant: makeGrant("reader") }));
+    expect(administrable(doc)).toBe("allow");
+
+    doc = countReducer(doc, setGrant({ grant: adminGrant("second") }));
+    expect(administrable(doc)).toBe("allow");
+
+    doc = countReducer(doc, removeGrant({ id: "admin" }));
+    expect(administrable(doc)).toBe("allow");
+
+    doc = countReducer(doc, moveGrant({ id: "reader", index: 0 }));
+    expect(administrable(doc)).toBe("allow");
   });
 
   it("lets a document with a creator remove its last administration grant", () => {
@@ -431,7 +515,7 @@ describe("creator-less auth administration retention", () => {
 
 describe("creator-less auth administration at genesis", () => {
   const GENESIS_MESSAGE =
-    "Initial grants include no grant permitting execute on the auth scope";
+    "Initial grants include no reachable grant permitting execute on the auth scope";
 
   it("rejects a creator-less INITIALIZE_AUTH with no administration grant", () => {
     const doc = countReducer(

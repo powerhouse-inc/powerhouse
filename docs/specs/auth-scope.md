@@ -133,6 +133,8 @@ The list of `Grant` objects defines a policy. Each grant is applied on top of th
 }
 ```
 
+This policy needs a creator to be legal: the blanket `g-lockdown` denies `execute` on every scope including `auth`, and the group grant is not administration v1 can reach, so a creator-less document would be rejected as born locked out (see Unsigned documents).
+
 ### Condition language
 
 Conditions must be deterministic, total (meaning that they must _never throw_, given any state shape), pure, JSON-serializable, and versioned by `PHAuthState.version`. An evaluator object consumes these conditions and is a small pure function in `shared/document-model`.
@@ -510,7 +512,7 @@ Re-evaluation is a reshuffle-style re-append. If any decision changes, the tail 
 
 The re-append advances the stream heads, so a concurrent admission that read the old tail fails its append condition and retries. The re-appended operations do travel to other replicas, and do not need to be understood as anything special when they arrive: a receiving replica recognises them by action id, applies nothing, and reaches the same outcome by evaluating its own history against the operation that triggered the pass. Two replicas may therefore store different rows while agreeing on which operations apply and on the state they produce.
 
-Two rules follow from re-appends travelling. The monotonic-timestamp check on an arriving auth operation runs *after* the action-id dedup, because a re-appended auth operation keeps its original timestamp and so is at or below the receiving replica's auth head by definition — checked before the dedup it would reject traffic both replicas already agree about. And the excessive-shuffle guard does not count an operation whose action id the stream already holds, for the same reason.
+Two rules follow from re-appends travelling. The monotonic-timestamp check on an arriving auth operation runs _after_ the action-id dedup, because a re-appended auth operation keeps its original timestamp and so is at or below the receiving replica's auth head by definition — checked before the dedup it would reject traffic both replicas already agree about. And the excessive-shuffle guard does not count an operation whose action id the stream already holds, for the same reason.
 
 A pass visits each evaluated scope once, in the model's projection order. A verdict a pass writes is therefore visible to a later-visited scope and not to an earlier one. The pass is deterministic, so every replica computes the same verdicts from the same history; it is not iterated to a fixed point, so a verdict that would change under the state a later scope produced stands until the next arrival triggers another pass. Convergence between replicas is the guarantee; a fixed point is not.
 
@@ -696,7 +698,9 @@ A document's policy begins with `INITIALIZE_AUTH` (see Actions). On acceptance, 
 
 **Auth on an unsigned-header document does not resist an adversary.** An unsigned-header document has no creator, so its genesis is open. Anyone can run `INITIALIZE_AUTH` first, and anyone can backdate one that retroactively re-evaluates the whole history under a policy of their choosing. A document that wants an enforceable policy is created with a signed header, ideally with `INITIALIZE_AUTH` in its create batch.
 
-**And it can lock its own auth scope out permanently.** The creator carve-out is what keeps administration reachable, and an unsigned document has no creator to carve out for. A `REMOVE_GRANT` that leaves no grant permitting `execute` on `auth` therefore makes the auth scope unwritable for good, on every replica, with no recovery path. A policy on an unsigned document must always retain an auth-administration grant. On a signed document the carve-out covers this.
+**And it can lock its own auth scope out permanently.** The creator carve-out is what keeps administration reachable, and an unsigned document has no creator to carve out for. A change that leaves no grant permitting `execute` on `auth` therefore makes the auth scope unwritable for good, on every replica, with no recovery path. A policy on an unsigned document must always retain an auth-administration grant. On a signed document the carve-out covers this.
+
+The rule is about _reachability_, not about a grant being present. Evaluation is last-applicable-grant-wins, so an administration grant that a later `deny` shadows keeps nothing reachable, and every way of reordering or adding grants can take administration away without removing it: `REMOVE_GRANT`, a `SET_GRANT` that replaces the grant in place, a `SET_GRANT` that appends a deny covering `auth`, and a `MOVE_GRANT` that reorders the administration grant into shadow. All four are rejected on a creator-less policy, and `INITIALIZE_AUTH` rejects a genesis that is born unreachable. A consequence worth knowing: a creator-less policy cannot carry a blanket `deny` on `execute` for `*`, because that denies its own administration; such a policy has to scope its deny to the domain scopes it means.
 
 A duplicated document inherits its source's policy. Duplication fails when the copy cannot preserve the policy rather than producing a policy that cannot be administered.
 
@@ -757,7 +761,7 @@ Registering decision models beyond auth is out of scope. The types are model-agn
 
 5. **Retire the interim gates.** The admission gate reaches a real policy only for an `auth`-scope operation (see stage 1), so removing it transfers live behavior for that scope and no behavior for the others. The auth projection covers both once step 3 lands.
 
-6. **Exempt re-evaluation from the excessive-shuffle guard.** A revocation over a long history legitimately supersedes many operations, and counting those re-appends would dead-letter the pass on exactly the busy documents that most need it. The pass itself is already exempt, because it re-appends outside the load path where the guard lives. What the guard has to stop counting is the *next* backdated arrival reaching into a range a pass already re-appended: a re-append is a second copy of an action the stream already holds, so it is not work that arrival is doing for the first time.
+6. **Exempt re-evaluation from the excessive-shuffle guard.** A revocation over a long history legitimately supersedes many operations, and counting those re-appends would dead-letter the pass on exactly the busy documents that most need it. The pass itself is already exempt, because it re-appends outside the load path where the guard lives. What the guard has to stop counting is the _next_ backdated arrival reaching into a range a pass already re-appended: a re-append is a second copy of an action the stream already holds, so it is not work that arrival is doing for the first time.
 
 7. **Order the auth stream against the domain streams it decides.** An auth operation already in a document's stream decides the domain operations that sort after it, because the auth scope is a read-set stream. A load job carries one scope, so an envelope holding both becomes two jobs whose enqueue order is not guaranteed; when the domain job runs first it is admitted against the older policy and the auth arrival owes the re-evaluation pass that corrects it. Convergence holds either way, at the cost of a pass and a re-append.
 

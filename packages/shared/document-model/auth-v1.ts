@@ -57,7 +57,7 @@ export class AuthAdministrationLockoutError extends Error {
 
   constructor(grantId: string) {
     super(
-      `Grant "${grantId}" is the last grant permitting execute on the auth scope: a policy with no creator must always retain one`,
+      `Change to grant "${grantId}" would leave no reachable grant permitting execute on the auth scope: a policy with no creator must always retain one`,
     );
     this.name = "AuthAdministrationLockoutError";
     this.grantId = grantId;
@@ -72,7 +72,7 @@ export class AuthAdministrationLockoutError extends Error {
 export class AuthAdministrationMissingError extends Error {
   constructor() {
     super(
-      "Initial grants include no grant permitting execute on the auth scope: a policy with no creator must always include one",
+      "Initial grants include no reachable grant permitting execute on the auth scope: a policy with no creator must always include one",
     );
     this.name = "AuthAdministrationMissingError";
   }
@@ -380,15 +380,17 @@ export function assertValidInitialGrants(
   for (const grant of grants) {
     assertValidGrant(grant, documentType);
   }
-  if (creator === undefined && !grants.some(isAuthAdministrationGrant)) {
+  if (creator === undefined && !administrationReachable(grants)) {
     throw new AuthAdministrationMissingError();
   }
 }
 
 /**
  * Validates a grant upsert: the grant itself, the count cap on append, and
- * administration retention on an in-place replace (an append can only add a
- * grant, so it can never take the last administration grant away).
+ * administration retention. Retention is checked on an append as well as an
+ * in-place replace, because a grant appended after the administration grant can
+ * shadow it (evaluation is last-applicable-grant-wins) and so take
+ * administration away without removing anything.
  */
 export function assertValidGrantUpsert(
   grant: Grant,
@@ -404,10 +406,11 @@ export function assertValidGrantUpsert(
       `policy exceeds ${MAX_AUTH_GRANTS} grants`,
     );
   }
-  if (exists) {
-    const next = existing.map((g) => (g.id === grant.id ? grant : g));
-    assertAuthAdministrationRetained(creator, existing, next, grant.id);
-  }
+  // Built the same way applySetGrantAction builds it, so the two cannot drift.
+  const next = exists
+    ? existing.map((g) => (g.id === grant.id ? grant : g))
+    : [...existing, grant];
+  assertAuthAdministrationRetained(creator, existing, next, grant.id);
 }
 
 /**
@@ -421,18 +424,46 @@ const AUTH_ADMINISTRATION_REQUEST: AuthRequest = {
 };
 
 /**
- * True when the grant can let some subject administer the auth scope under v1
- * evaluation: an unconditional allow for an anyone or address principal whose
- * capability covers executing SET_GRANT on auth. Grants v1 never applies
- * (group and match principals, `where` conditions) keep nothing reachable.
+ * Whether some subject can still administer the auth scope under this grant list.
+ *
+ * Asks the evaluator rather than pattern-matching a single grant: evaluation is
+ * last-applicable-grant-wins, so an allow that some later deny shadows keeps
+ * nothing reachable even though it is still present in the list. Only anyone and
+ * address principals are candidates, because those are the ones v1 can match at
+ * all; a `where` condition or a group or match principal never applies.
  */
-function isAuthAdministrationGrant(grant: Grant): boolean {
-  return (
-    grant.effect === "allow" &&
-    grant.where === undefined &&
-    ("anyone" in grant.principal || "address" in grant.principal) &&
-    capabilityCovers(grant.capability, AUTH_ADMINISTRATION_REQUEST)
-  );
+function administrationReachable(grants: Grant[]): boolean {
+  return grants.some((grant) => {
+    const subject = administrationCandidate(grant);
+    if (subject === undefined) {
+      return false;
+    }
+    return (
+      evaluateGrantStack(grants, subject, AUTH_ADMINISTRATION_REQUEST)
+        .decision === "allow"
+    );
+  });
+}
+
+/**
+ * The subject to test this grant with, or undefined when the grant could never
+ * carry administration for anyone.
+ */
+function administrationCandidate(grant: Grant): AuthSubject | undefined {
+  if (
+    grant.effect !== "allow" ||
+    grant.where !== undefined ||
+    !capabilityCovers(grant.capability, AUTH_ADMINISTRATION_REQUEST)
+  ) {
+    return undefined;
+  }
+  if ("address" in grant.principal) {
+    return { address: grant.principal.address, key: undefined };
+  }
+  if ("anyone" in grant.principal) {
+    return { address: undefined, key: undefined };
+  }
+  return undefined;
 }
 
 /**
@@ -450,10 +481,7 @@ export function assertAuthAdministrationRetained(
   if (creator !== undefined) {
     return;
   }
-  if (
-    previous.some(isAuthAdministrationGrant) &&
-    !next.some(isAuthAdministrationGrant)
-  ) {
+  if (administrationReachable(previous) && !administrationReachable(next)) {
     throw new AuthAdministrationLockoutError(grantId);
   }
 }

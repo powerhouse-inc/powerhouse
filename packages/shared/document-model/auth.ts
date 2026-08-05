@@ -324,6 +324,10 @@ export function applyRemoveGrantAction<TState extends PHBaseState>(
  * Moves a grant by id to a new index. Order is load-bearing (the last
  * applicable grant wins), so the relative order of the other grants is kept.
  * The target index is clamped to the valid range; an unknown id throws.
+ *
+ * Order alone decides which grant wins, so a move can take administration away
+ * without changing the list's contents. It carries the same retention rule as
+ * the two mutation paths.
  */
 export function applyMoveGrantAction<TState extends PHBaseState>(
   document: PHDocument<TState>,
@@ -331,7 +335,7 @@ export function applyMoveGrantAction<TState extends PHBaseState>(
 ): PHDocument<TState> {
   assertActionInputShape(action.input);
   const { id, index } = action.input;
-  const grants = document.state.auth.grants;
+  const { grants, creator } = document.state.auth;
   const from = grants.findIndex((g) => g.id === id);
   if (from === -1) {
     throw new GrantNotFoundError(id);
@@ -340,6 +344,7 @@ export function applyMoveGrantAction<TState extends PHBaseState>(
   const [moved] = next.splice(from, 1);
   const to = Math.max(0, Math.min(index, next.length));
   next.splice(to, 0, moved);
+  assertAuthAdministrationRetained(creator, grants, next, id);
   return withGrants(document, next);
 }
 

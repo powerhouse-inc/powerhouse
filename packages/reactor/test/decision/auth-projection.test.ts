@@ -486,15 +486,17 @@ describe("the auth projection", () => {
     await settle(source, allowed.id);
 
     // An explicit deny stacked on top of the open grant refuses at admission.
+    // Scoped to `global` rather than `*`: a creator-less policy may not deny
+    // itself execute on `auth`, which a blanket deny would do.
     vi.advanceTimersByTime(1_000);
     const freeze = await source.execute(docId, "main", [
       setGrant({
         grant: {
           id: "g-freeze",
-          description: "freeze every write",
+          description: "freeze every global write",
           effect: "deny",
           principal: { anyone: true },
-          capability: { can: "execute", scope: "*" },
+          capability: { can: "execute", scope: "global" },
         },
       }),
     ]);
@@ -518,13 +520,14 @@ describe("the auth projection", () => {
     await settle(source, created.id);
     const docId = document.header.id;
 
-    // The deny grant alone is not administration, and genesis rejects a
-    // creator-less policy without one even with enforcement off.
+    // The admin grant comes last so it is the one that wins for the auth scope:
+    // genesis rejects a creator-less policy whose administration a later deny
+    // shadows, even with enforcement off. The lockdown grant still denies the
+    // domain write below, which is what this test is about.
     const init = await source.execute(docId, "main", [
       initializeAuth({
         version: 1,
         grants: [
-          AUTH_ADMIN_GRANT,
           {
             id: "g-lockdown",
             description: "nobody writes anything",
@@ -532,6 +535,7 @@ describe("the auth projection", () => {
             principal: { anyone: true },
             capability: { can: "execute", scope: "*" },
           },
+          AUTH_ADMIN_GRANT,
         ],
       }),
     ]);
