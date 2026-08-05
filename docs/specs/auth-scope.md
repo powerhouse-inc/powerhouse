@@ -704,6 +704,8 @@ The rule is about _reachability_, not about a grant being present. Evaluation is
 
 A duplicated document inherits its source's policy. Duplication fails when the copy cannot preserve the policy rather than producing a policy that cannot be administered.
 
+**A state snapshot is not a door onto the policy.** `applyAuthAction` is the validated way into `state.auth`, but `UPGRADE_DOCUMENT`'s `initialState` and `LOAD_STATE`'s `data` replace whole scopes at once, and both are authorized as `document`-scope writes. Without a rule there, a subject holding `execute` on `document` and no auth grant could install a policy of its choosing, name itself `creator` (which exempts the policy from retention permanently), or wipe an existing policy by carrying the default uninitialized one. A snapshot's auth scope is therefore resolved rather than assigned: a snapshot with no policy or an uninitialized one leaves the document's own policy standing, an uninitialized document accepts a policy only after the validation genesis applies, and a snapshot reaching an already-initialized document must carry that same policy exactly, grants included. Duplication and import satisfy the last rule because they run against a freshly created document; anything else is an attempt to swap one policy for another.
+
 Migration maps a legacy table owner to an `execute`-on-`auth` grant.
 
 ## Implementation plan

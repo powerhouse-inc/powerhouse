@@ -1,3 +1,4 @@
+import { stringify } from "safe-stable-stringify";
 import { z } from "zod";
 import { createAction, type Action } from "./actions.js";
 import {
@@ -394,6 +395,58 @@ export function assertAuthPreservedOnDuplicate(
   ) {
     throw new AuthPolicyNotPreservedError(documentId);
   }
+}
+
+/**
+ * The auth scope a state snapshot may install, given the policy already there.
+ *
+ * `applyAuthAction` is the validated door onto `state.auth`, but a whole-state
+ * snapshot (UPGRADE_DOCUMENT's `initialState`, LOAD_STATE's `data`) replaces the
+ * scope wholesale and is authorized as a `document`-scope write. Without this,
+ * a subject holding `execute` on `document` and no auth grant at all can install
+ * a policy of its choosing, name itself `creator` (which exempts the policy from
+ * the retention rule for good), or wipe an existing policy by carrying the
+ * default uninitialized one.
+ *
+ * Three cases:
+ *
+ *   - the snapshot carries no policy, or an uninitialized one: the document
+ *     keeps the policy it has, so a default-state upgrade cannot reset it;
+ *   - the document is uninitialized and the snapshot carries a policy: the
+ *     policy is installed after the same validation genesis applies, so it
+ *     cannot be born locked out;
+ *   - both carry a policy: they must agree. A duplicate preserves its source's
+ *     policy (see {@link assertAuthPreservedOnDuplicate}), and anything else is
+ *     an attempt to replace one policy with another.
+ */
+export function resolveSnapshotAuth(
+  documentId: string,
+  documentType: string,
+  current: PHAuthState | undefined,
+  incoming: PHAuthState | undefined,
+): PHAuthState {
+  const currentAuth = current ?? createAuthState({ version: 0, grants: [] });
+
+  if (!incoming || !incoming.version) {
+    return currentAuth;
+  }
+
+  if (currentAuth.version !== 0) {
+    // The whole policy has to match, grants included: version and creator alone
+    // would let one policy be swapped for another with the same version and no
+    // creator. Serialized with sorted keys, because jsonb storage does not
+    // preserve key order.
+    if (stringify(incoming) !== stringify(currentAuth)) {
+      throw new AuthPolicyNotPreservedError(documentId);
+    }
+    return incoming;
+  }
+
+  if (!Array.isArray(incoming.grants)) {
+    throw new InvalidActionInputError({ grants: "must be an array" });
+  }
+  assertValidInitialGrants(incoming.grants, documentType, incoming.creator);
+  return incoming;
 }
 
 /** UNDO, REDO and PRUNE are rejected on the auth scope. */
