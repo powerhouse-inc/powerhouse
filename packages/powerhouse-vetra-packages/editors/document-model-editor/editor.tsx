@@ -88,8 +88,22 @@ export default function Editor() {
     modules,
   } = viewedSpec;
   const operations = modules.flatMap((module) => module.operations);
+  const {
+    state: {
+      global: {
+        schema: latestGlobalStateSchema,
+        initialValue: latestGlobalStateInitialValue,
+      },
+      local: {
+        schema: latestLocalStateSchema,
+        initialValue: latestLocalStateInitialValue,
+      },
+    },
+    modules: latestModules,
+  } = latestSpec;
+  const latestOperations = latestModules.flatMap((module) => module.operations);
   const shouldSetInitialName = useRef(
-    !modelName && !!documentNodeName && operations.length === 0,
+    !modelName && !!documentNodeName && latestOperations.length === 0,
   );
 
   useEffect(() => {
@@ -173,14 +187,17 @@ export default function Editor() {
   };
 
   const handleSetStateSchema = (newSchema: string, scope: Scope) => {
-    const oldSchema = scope === "global" ? globalStateSchema : localStateSchema;
+    const oldSchema =
+      scope === "global" ? latestGlobalStateSchema : latestLocalStateSchema;
     if (compareStringsWithoutWhitespace(newSchema, oldSchema)) return;
     guardedDispatch(setStateSchema({ schema: newSchema, scope }));
   };
 
   const handleSetInitialState = (newInitialValue: string, scope: Scope) => {
     const oldInitialValue =
-      scope === "global" ? globalStateInitialValue : localStateInitialValue;
+      scope === "global"
+        ? latestGlobalStateInitialValue
+        : latestLocalStateInitialValue;
     if (compareStringsWithoutWhitespace(newInitialValue, oldInitialValue))
       return;
     guardedDispatch(setInitialState({ initialValue: newInitialValue, scope }));
@@ -190,7 +207,7 @@ export default function Editor() {
     return new Promise((resolve) => {
       try {
         if (
-          modules.some((module) =>
+          latestModules.some((module) =>
             compareStringsWithoutWhitespace(module.name, name),
           )
         ) {
@@ -209,7 +226,7 @@ export default function Editor() {
 
   const handleSetModuleName = (id: string, name: string) => {
     if (
-      modules.some((module) =>
+      latestModules.some((module) =>
         compareStringsWithoutWhitespace(module.name, name),
       )
     )
@@ -253,7 +270,7 @@ export default function Editor() {
   };
 
   const handleSetOperationSchema = (id: string, newSchema: string) => {
-    const operation = operations.find((operation) => operation.id === id);
+    const operation = latestOperations.find((operation) => operation.id === id);
     if (
       operation?.schema &&
       compareStringsWithoutWhitespace(newSchema, operation.schema)
@@ -266,7 +283,7 @@ export default function Editor() {
     id: string,
     noInputRequired: boolean,
   ) => {
-    const operation = operations.find((op) => op.id === id);
+    const operation = latestOperations.find((op) => op.id === id);
     if (!operation?.name) return;
 
     if (noInputRequired) {
@@ -291,7 +308,8 @@ export default function Editor() {
     newDescription: string,
   ) => {
     const operationDescription =
-      operations.find((operation) => operation.id === id)?.description ?? "";
+      latestOperations.find((operation) => operation.id === id)?.description ??
+      "";
     if (compareStringsWithoutWhitespace(operationDescription, newDescription))
       return;
     guardedDispatch(
@@ -309,7 +327,7 @@ export default function Editor() {
   ): Promise<string | undefined> => {
     return new Promise((resolve) => {
       try {
-        const operation = operations.find(
+        const operation = latestOperations.find(
           (operation) => operation.id === operationId,
         );
         const operationErrorNames =
@@ -344,7 +362,7 @@ export default function Editor() {
     errorId: string,
     errorName: string,
   ) => {
-    const operation = operations.find(
+    const operation = latestOperations.find(
       (operation) => operation.id === operationId,
     );
     const operationErrorNames =
@@ -400,8 +418,8 @@ export default function Editor() {
             description={description}
             authorName={authorName}
             authorWebsite={authorWebsite ?? ""}
-            globalStateSchema={globalStateSchema}
-            localStateSchema={localStateSchema}
+            globalStateSchema={latestGlobalStateSchema}
+            localStateSchema={latestLocalStateSchema}
             setModelId={handleSetModelId}
             setModelDescription={handleSetModelDescription}
             setModelExtension={handleSetModelExtension}
