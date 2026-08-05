@@ -1848,6 +1848,59 @@ describe("ReactorClient Unit Tests", () => {
       expect(viewArg?.scopes).toContain("global");
     });
 
+    it("filters initialState, not just state", async () => {
+      // initialState carries the same scopes, so filtering one and spreading
+      // the other hands back the contents just removed.
+      const doc = docWithScopes("d1", readGlobalPolicy, {
+        global: { x: 1 },
+        local: { y: 2 },
+      });
+      vi.mocked(mockReactor.getByIdOrSlug).mockResolvedValue({
+        ...doc,
+        initialState: { ...doc.state },
+      } as unknown as PHDocument);
+
+      const filtered = await client.get("d1", {
+        subject: { address: "0xreader" },
+      });
+
+      expect(Object.keys(filtered.initialState).sort()).toEqual([
+        "auth",
+        "document",
+        "global",
+      ]);
+      expect((filtered.initialState as any).local).toBeUndefined();
+    });
+
+    it("keeps the auth scope in a scope-narrowed subscription fetch", async () => {
+      // Without it the fetch omits the policy, decide() reads an absent policy
+      // as uninitialized, and the gate allows everything.
+      let onCreated: ((result: { results: string[] }) => void) | undefined;
+      vi.mocked(mockSubscriptionManager.onDocumentCreated).mockImplementation(
+        (handler: any) => {
+          onCreated = handler;
+          return () => {};
+        },
+      );
+      vi.mocked(mockReactor.get).mockResolvedValue(
+        docWithScopes("d1", readGlobalPolicy, { global: { x: 1 } }),
+      );
+
+      client.subscribe({} as any, () => {}, {
+        scopes: ["global"],
+        subject: { address: "0xreader" },
+      });
+
+      onCreated?.({ results: ["d1"] });
+
+      await vi.waitFor(() => {
+        expect(mockReactor.get).toHaveBeenCalled();
+      });
+      const viewArg = vi.mocked(mockReactor.get).mock.calls[0][1];
+      expect(viewArg?.scopes).toContain("auth");
+      expect(viewArg?.scopes).toContain("global");
+    });
+
     it("falls back to the client's own signer when no subject is given", async () => {
       const signerClient = new ReactorClient(
         createMockLogger(),

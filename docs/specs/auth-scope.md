@@ -686,6 +686,8 @@ Read enforcement therefore lives on the reactor's own read surface, not in the s
 
 Internal consumers are inside the trust boundary and see everything. The event bus still dispatches all operations, and read models and processors need unfiltered data to build their projections. Whatever they re-expose is their own read surface to gate.
 
+Filtering is per scope, and a document carries its scopes in more than one place: `initialState` holds the same scope names as `state`, so both are filtered. A read that narrows scopes has the `auth` scope added back before the fetch, because a model built without the policy reads as uninitialized, which allows everything — the gate must never be handed a document whose policy was filtered out on the way in. Both apply to a subscription's documents exactly as they do to a direct read.
+
 This placement changes the timing guarantee. An operation is evaluated at its position, so a revocation catches even operations that were accepted before it arrived. A read is evaluated at the moment it is served, so revoking read only stops future serving. It cannot recall bytes a replica already holds.
 
 One exemption is required. Suppose a policy could deny reading the `auth` scope itself. A peer could then sync a document without its policy, see an uninitialized auth scope, and allow every operation it holds. Replicas would diverge permanently. The `auth` and `document` scopes therefore bypass the grants: the policy and the document's metadata are visible to any holder of the document. Grants gate domain-scope reads only. A replica denied a domain scope never receives that stream, so it never holds or evaluates it, and partial replication stays consistent.

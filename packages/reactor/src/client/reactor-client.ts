@@ -1071,9 +1071,12 @@ export class ReactorClient implements IReactorClient {
       (result) => {
         void (async () => {
           try {
+            // withAuthScope, or a view that narrows scopes would leave the
+            // policy out of the fetch and the gate would read an absent one as
+            // uninitialized, which allows everything.
             const documents = await Promise.all(
               result.results.map((id) =>
-                this.reactor.get(id, view, undefined, undefined),
+                this.reactor.get(id, withAuthScope(view), undefined, undefined),
               ),
             );
 
