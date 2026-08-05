@@ -259,6 +259,17 @@ describe("classifyDocumentModelAction", () => {
     expect(result.kind).toBe("version-relevant");
   });
 
+  it("flags clearing an operation schema as version-relevant", () => {
+    const result = classifyDocumentModelAction(
+      setOperationSchema({
+        id: "op-1",
+        schema: "",
+      }),
+      makeSpec(),
+    );
+    expect(result.kind).toBe("version-relevant");
+  });
+
   it("flags deleting a module with pre-existing operations", () => {
     const result = classifyDocumentModelAction(
       deleteModule({ id: "mod-1" }),

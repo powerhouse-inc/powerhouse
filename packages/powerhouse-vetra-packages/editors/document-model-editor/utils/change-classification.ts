@@ -1,4 +1,5 @@
 import type {
+  DefinitionNode,
   DocumentNode,
   EnumTypeDefinitionNode,
   InputObjectTypeDefinitionNode,
@@ -27,7 +28,7 @@ type ShapeTypeNode =
   | InputObjectTypeDefinitionNode
   | EnumTypeDefinitionNode;
 
-function isShapeTypeNode(node: { kind: string }): node is ShapeTypeNode {
+function isShapeTypeNode(node: DefinitionNode): node is ShapeTypeNode {
   return (
     node.kind === Kind.OBJECT_TYPE_DEFINITION ||
     node.kind === Kind.INPUT_OBJECT_TYPE_DEFINITION ||
@@ -257,6 +258,12 @@ function classifyOperationChange(
     }
     case "SET_OPERATION_SCHEMA": {
       if (isBlank(operation.schema)) return SAFE;
+      if (isBlank(action.input.schema)) {
+        return {
+          kind: "version-relevant",
+          reason: `This change alters the input of the "${operationLabel}" operation in version ${latestSpec.version}.`,
+        };
+      }
       const diff = diffSdlShapes(
         operation.schema ?? "",
         action.input.schema ?? "",
