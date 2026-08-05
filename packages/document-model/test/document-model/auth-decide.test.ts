@@ -326,7 +326,12 @@ describe("evaluate", () => {
     });
 
     const explicitDeny = policy(
-      grant("g-allow", "allow", { anyone: true }, { can: "execute", scope: "*" }),
+      grant(
+        "g-allow",
+        "allow",
+        { anyone: true },
+        { can: "execute", scope: "*" },
+      ),
       grant("g-deny", "deny", { anyone: true }, { can: "execute", scope: "*" }),
     );
     expect(evaluate(explicitDeny, { address: "0xabc" }, execGlobal)).toEqual({

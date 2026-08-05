@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# Format and lint staged files before anything else looks at them.
+pnpm exec lint-staged
+
 # Files to monitor for CLI docs generation
 CLI_MONITORED_FILES="clis/ph-cmd/COMMANDS.md clis/ph-cli/COMMANDS.md"
 

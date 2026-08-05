@@ -85,13 +85,13 @@ describe("firstOutOfOrderPair", () => {
     ] as Operation[];
 
     expect(firstOutOfOrderPair(operations)).toBeUndefined();
-    expect(firstOutOfOrderPair(operations, { requireStrict: true })).toMatchObject(
-      {
-        kind: "tied",
-        previous: { index: 0 },
-        current: { index: 1 },
-      },
-    );
+    expect(
+      firstOutOfOrderPair(operations, { requireStrict: true }),
+    ).toMatchObject({
+      kind: "tied",
+      previous: { index: 0 },
+      current: { index: 1 },
+    });
   });
 
   it("reports descent whether or not strictness is asked for", () => {
@@ -105,12 +105,12 @@ describe("firstOutOfOrderPair", () => {
       previous: { index: 0 },
       current: { index: 1 },
     });
-    expect(firstOutOfOrderPair(operations, { requireStrict: true })).toMatchObject(
-      {
-        kind: "descending",
-        previous: { index: 0 },
-        current: { index: 1 },
-      },
-    );
+    expect(
+      firstOutOfOrderPair(operations, { requireStrict: true }),
+    ).toMatchObject({
+      kind: "descending",
+      previous: { index: 0 },
+      current: { index: 1 },
+    });
   });
 });

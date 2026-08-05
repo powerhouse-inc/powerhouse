@@ -4,7 +4,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_DRIVE_CONTAINER_TYPES } from "../../src/core/drive-container-types.js";
 import type { AuthDecisionModel } from "../../src/decision/auth-decision-model.js";
 import type { RegisteredDecisionModel } from "../../src/decision/registered-model.js";
-import type { DecisionModel, DecisionTarget } from "../../src/decision/types.js";
+import type {
+  DecisionModel,
+  DecisionTarget,
+} from "../../src/decision/types.js";
 import { SimpleJobExecutor } from "../../src/executor/simple-job-executor.js";
 import type { ReactorFeatureFlags } from "../../src/executor/types.js";
 import {
