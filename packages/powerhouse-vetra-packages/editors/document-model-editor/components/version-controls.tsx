@@ -1,5 +1,8 @@
 import { Modal } from "@powerhousedao/design-system";
-import { ModalButton } from "@powerhousedao/design-system/connect";
+import {
+  ConnectSelect,
+  ModalButton,
+} from "@powerhousedao/design-system/connect";
 import type { DocumentSpecification } from "@powerhousedao/shared/document-model";
 import { useState } from "react";
 import { Button } from "./button.js";
@@ -31,24 +34,34 @@ export function VersionControls(props: VersionControlsProps) {
           Version {viewedVersion}
         </span>
         {specifications.length >= 2 && (
-          <select
+          <div
             aria-label="Document model version"
-            className="h-7 rounded-md border border-border bg-background px-2 text-xs text-foreground"
             data-testid="model-version-switcher"
-            onChange={(event) => {
-              const version = Number(event.target.value);
-              onViewVersion(version === latestVersion ? "latest" : version);
-            }}
-            value={viewedVersion}
           >
-            {specifications.map((spec) => (
-              <option key={spec.version} value={spec.version}>
-                {spec.version === latestVersion
-                  ? `v${spec.version} (latest)`
-                  : `v${spec.version} (frozen)`}
-              </option>
-            ))}
-          </select>
+            <ConnectSelect
+              absolutePositionMenu
+              containerClassName="z-10"
+              id="model-version-switcher"
+              itemClassName="gap-1 px-2 py-1.5"
+              items={specifications.map((spec) => ({
+                value: String(spec.version),
+                displayValue: (
+                  <span className="font-mono text-xs normal-case">
+                    {spec.version === latestVersion
+                      ? `v${spec.version} (latest)`
+                      : `v${spec.version} (frozen)`}
+                  </span>
+                ),
+              }))}
+              listClassName="border border-t-0 border-border shadow-md"
+              menuClassName="min-w-0"
+              onChange={(value) => {
+                const version = Number(value);
+                onViewVersion(version === latestVersion ? "latest" : version);
+              }}
+              value={String(viewedVersion)}
+            />
+          </div>
         )}
       </div>
       <Button
