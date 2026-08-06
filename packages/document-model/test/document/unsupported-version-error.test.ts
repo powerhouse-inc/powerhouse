@@ -16,6 +16,8 @@ describe("UnsupportedDocumentModelVersionError", () => {
   it("is detected by the isError guard", () => {
     const error = new UnsupportedDocumentModelVersionError("test/todo", 2, [1]);
     expect(UnsupportedDocumentModelVersionError.isError(error)).toBe(true);
-    expect(UnsupportedDocumentModelVersionError.isError(new Error("x"))).toBe(false);
+    expect(UnsupportedDocumentModelVersionError.isError(new Error("x"))).toBe(
+      false,
+    );
   });
 });
