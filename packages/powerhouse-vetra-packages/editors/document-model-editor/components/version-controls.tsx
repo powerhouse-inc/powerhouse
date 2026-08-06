@@ -52,7 +52,7 @@ export function VersionControls(props: VersionControlsProps) {
         )}
       </div>
       <Button
-        className="h-8"
+        className="inline-flex h-8 items-center justify-center py-0"
         data-testid="release-new-version-button"
         onClick={() => setShowReleaseModal(true)}
         type="button"
