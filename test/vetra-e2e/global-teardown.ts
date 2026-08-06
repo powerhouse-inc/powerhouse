@@ -35,7 +35,12 @@ function cleanupDirectory(
   }
 
   const entries = fs.readdirSync(dirPath, { withFileTypes: true });
-  const preservedFiles = ["index.ts", "document-models.ts", "editors.ts"];
+  const preservedFiles = [
+    "index.ts",
+    "document-models.ts",
+    "editors.ts",
+    "upgrade-manifests.ts",
+  ];
 
   for (const entry of entries) {
     const fullPath = path.join(dirPath, entry.name);
@@ -109,6 +114,11 @@ async function globalTeardown() {
       documentModelsDir,
       "document-models.ts",
       'import type { DocumentModelModule } from "document-model";\n\nexport const documentModels: DocumentModelModule<any>[] = [];\n',
+    );
+    resetBaseStateFiles(
+      documentModelsDir,
+      "upgrade-manifests.ts",
+      'import type { UpgradeManifest } from "document-model";\n\nexport const upgradeManifests: UpgradeManifest<readonly number[]>[] = [];\n',
     );
     console.log("✅ Cleaned up document-models folder");
 
