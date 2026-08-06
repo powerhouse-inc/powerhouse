@@ -71,15 +71,7 @@ export function VersionAdvisoryModal(props: VersionAdvisoryModalProps) {
             {nextVersion} first so existing documents can be upgraded.
           </p>
         </div>
-        <div className="mt-4 flex justify-between gap-3">
-          <ModalButton
-            className={compactButtonStyle}
-            data-testid="advisory-keep-editing"
-            onClick={onKeepEditing}
-            variant="cancel"
-          >
-            Still in development — keep editing v{version}
-          </ModalButton>
+        <div className="mt-4 flex flex-col gap-2">
           <ModalButton
             className={compactButtonStyle}
             data-testid="advisory-release-first"
@@ -87,6 +79,14 @@ export function VersionAdvisoryModal(props: VersionAdvisoryModalProps) {
             variant="confirm"
           >
             {`It's in use — release v${nextVersion} first`}
+          </ModalButton>
+          <ModalButton
+            className={compactButtonStyle}
+            data-testid="advisory-keep-editing"
+            onClick={onKeepEditing}
+            variant="cancel"
+          >
+            Still in development — keep editing v{version}
           </ModalButton>
         </div>
       </div>
