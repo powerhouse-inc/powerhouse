@@ -161,6 +161,7 @@ function ItemContainer<TValue extends string>(
           ? "cursor-not-allowed text-muted-foreground"
           : "text-foreground",
         "flex size-full cursor-pointer items-center gap-2 bg-inherit py-3 pl-3 text-start outline-none",
+        onItemClick && !disabled && "hover:bg-muted",
         className,
       )}
       onClick={onItemClick}
