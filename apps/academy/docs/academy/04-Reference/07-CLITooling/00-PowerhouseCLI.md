@@ -310,7 +310,7 @@ Generate a drive app
 ### Options
 **Name** - The name of the drive app to generate - Usage: `--name, -n <str>`
 
-**Document Types** - The document types allowed by the new app - Usage: `--document-types <str>, -t=<str>`
+**Document Types** - The document types allowed by the new app (repeatable or comma-separated) - Usage: `--document-types <value>, -t=<value>`
 
 **Document** - Path to a powerhouse/app spec file (.phd or .json) to drive codegen - Usage: `--document, -d <file>`
 
@@ -343,7 +343,7 @@ Generate a processor
 **Type** - The type of processor to generate - Usage: `--type <value>`
 
 **Default:** `analytics`
-**Document Types** - The document types the processor will run on - Usage: `--document-types <str>, -t=<str>`
+**Document Types** - The document types the processor will run on (repeatable or comma-separated) - Usage: `--document-types <value>, -t=<value>`
 
 **Default:** ``
 **Apps** - Whether the processor will run in switchboard (nodejs), connect (browser), or both - Usage: `--apps <value>`
