@@ -6,7 +6,7 @@ import type {
   Ref,
   RefAttributes,
 } from "react";
-import { forwardRef, useState } from "react";
+import { forwardRef, useEffect, useRef, useState } from "react";
 import { twJoin, twMerge } from "tailwind-merge";
 
 export type ConnectSelectItem<TValue extends string> = {
@@ -55,6 +55,19 @@ export const ConnectSelect = /* @__PURE__ */ fixedForwardRef(function Select<
     listClassName,
   } = props;
   const [showItems, setShowItems] = useState(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!showItems) return;
+    function onPointerDown(event: PointerEvent) {
+      if (!containerRef.current?.contains(event.target as Node)) {
+        setShowItems(false);
+      }
+    }
+    window.addEventListener("pointerdown", onPointerDown);
+    return () => window.removeEventListener("pointerdown", onPointerDown);
+  }, [showItems]);
+
   const selectedItem = getItemByValue(value) ?? items[0];
   function onItemClick(item: ConnectSelectItem<TValue>) {
     if (item.disabled) return;
@@ -75,7 +88,14 @@ export const ConnectSelect = /* @__PURE__ */ fixedForwardRef(function Select<
         containerClassName,
       )}
       data-open={showItems}
-      ref={ref}
+      ref={(node) => {
+        containerRef.current = node;
+        if (typeof ref === "function") {
+          ref(node);
+        } else if (ref) {
+          ref.current = node;
+        }
+      }}
       style={{
         borderRadius: borderRadius,
       }}
