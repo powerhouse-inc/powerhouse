@@ -215,6 +215,16 @@ describe("classifyDocumentModelAction", () => {
     expect(result.kind).toBe("version-relevant");
   });
 
+  it("treats replacing a placeholder-only initial state as safe", () => {
+    const spec = makeSpec();
+    spec.state.global.initialValue = '{ "_placeholder": null }';
+    const result = classifyDocumentModelAction(
+      setInitialState({ initialValue: '{ "todos": [] }', scope: "global" }),
+      spec,
+    );
+    expect(result.kind).toBe("safe");
+  });
+
   it("treats a whitespace-only initial state edit as safe", () => {
     const result = classifyDocumentModelAction(
       setInitialState({ initialValue: '{"title":""}', scope: "global" }),

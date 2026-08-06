@@ -240,6 +240,23 @@ function classifySetStateSchema(
   };
 }
 
+/**
+ * The editor pre-fills a fresh model's initial value from the placeholder
+ * schema, so a value that is blank or carries only the `_placeholder` key is
+ * still being initialized rather than changed.
+ */
+function isPlaceholderOnlyInitialValue(value: string): boolean {
+  if (isBlank(value)) return true;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(value);
+  } catch {
+    return false;
+  }
+  if (typeof parsed !== "object" || parsed === null) return false;
+  return Object.keys(parsed).every((key) => key === "_placeholder");
+}
+
 function classifySetInitialState(
   input: { initialValue: string; scope: string },
   latestSpec: DocumentSpecification,
@@ -248,7 +265,7 @@ function classifySetInitialState(
     input.scope === "local"
       ? latestSpec.state.local.initialValue
       : latestSpec.state.global.initialValue;
-  if (isBlank(currentValue)) return SAFE;
+  if (isPlaceholderOnlyInitialValue(currentValue)) return SAFE;
   if (compareStringsWithoutWhitespace(currentValue, input.initialValue)) {
     return SAFE;
   }
