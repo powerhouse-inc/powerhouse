@@ -42,11 +42,11 @@ export function VersionControls(props: VersionControlsProps) {
               absolutePositionMenu
               containerClassName="z-10 [&_svg]:size-4"
               id="model-version-switcher"
-              itemClassName="gap-1 px-2 py-0.5 [&_p:empty]:hidden"
+              itemClassName="gap-1 px-2 py-1 font-mono text-xs leading-none [&_p:empty]:hidden"
               items={specifications.map((spec) => ({
                 value: String(spec.version),
                 displayValue: (
-                  <span className="font-mono text-xs normal-case">
+                  <span className="normal-case">
                     {spec.version === latestVersion
                       ? `v${spec.version} (latest)`
                       : `v${spec.version} (frozen)`}
