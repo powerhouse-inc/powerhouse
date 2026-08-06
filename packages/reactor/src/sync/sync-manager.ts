@@ -16,7 +16,11 @@ import {
   type JobWriteReadyEvent,
 } from "../events/types.js";
 import { JobAwaiter } from "../shared/awaiter.js";
-import { JobStatus, type ShutdownStatus } from "../shared/types.js";
+import {
+  JobStatus,
+  type ErrorInfo,
+  type ShutdownStatus,
+} from "../shared/types.js";
 import type {
   DeadLetterRecord,
   ISyncCursorStorage,
@@ -47,9 +51,12 @@ import { ChannelErrorSource, SyncEventTypes } from "./types.js";
 import {
   batchOperationsByDocument,
   chunkSyncOperations,
+  classifyJobFailure,
   createIdleHealth,
   filterOperations,
+  quarantinesDocument,
   splitTrailingSameTimestampRun,
+  syncOperationErrorType,
   toOperationWithContext,
   trimMailboxFromBatch,
 } from "./utils.js";
@@ -494,7 +501,13 @@ export class SyncManager implements ISyncManager {
           syncOp.jobDependencies,
         );
 
-        this.quarantinedDocumentIds.add(syncOp.documentId);
+        const errorType = syncOperationErrorType(syncOp.error);
+
+        // A held auth operation must keep syncing: reconciling the two policies
+        // needs the traffic a quarantine would stop, in both directions.
+        if (quarantinesDocument(errorType)) {
+          this.quarantinedDocumentIds.add(syncOp.documentId);
+        }
 
         const record: DeadLetterRecord = {
           id: syncOp.id,
@@ -507,6 +520,7 @@ export class SyncManager implements ISyncManager {
           operations: syncOp.operations,
           errorSource: syncOp.error?.source ?? ChannelErrorSource.None,
           errorMessage: syncOp.error?.error.message ?? "unknown",
+          errorType,
         };
 
         void this.deadLetterStorage.add(record).catch((err) => {
@@ -524,6 +538,7 @@ export class SyncManager implements ISyncManager {
             remoteName: record.remoteName,
             documentId: record.documentId,
             errorSource: record.errorSource,
+            errorType: record.errorType,
           } satisfies DeadLetterAddedEvent)
           .catch(() => {});
       }
@@ -576,8 +591,15 @@ export class SyncManager implements ISyncManager {
         record.branch,
         record.operations,
       );
+      // The stored classification is carried rather than re-derived: only the
+      // message was persisted, so a rebuilt Error has no name to classify by,
+      // and a non-quarantining type would come back as quarantining.
       syncOp.failed(
-        new ChannelError(record.errorSource, new Error(record.errorMessage)),
+        new ChannelError(
+          record.errorSource,
+          new Error(record.errorMessage),
+          record.errorType,
+        ),
       );
       syncOps.push(syncOp);
     }
@@ -753,11 +775,7 @@ export class SyncManager implements ISyncManager {
         completedJobInfo.id,
         errorMessage,
       );
-      const error = new ChannelError(
-        ChannelErrorSource.Inbox,
-        new Error(`Failed to apply operations: ${errorMessage}`),
-      );
-      syncOp.failed(error);
+      syncOp.failed(this.inboxFailure(completedJobInfo.error));
       remote.channel.deadLetter.add(syncOp);
     } else {
       syncOp.executed();
@@ -867,12 +885,7 @@ export class SyncManager implements ISyncManager {
       if (this.isShutdown) return;
 
       if (completedJobInfo.status === JobStatus.FAILED) {
-        const errorMessage = completedJobInfo.error?.message || "Unknown error";
-        const channelError = new ChannelError(
-          ChannelErrorSource.Inbox,
-          new Error(`Failed to apply operations: ${errorMessage}`),
-        );
-        syncOp.failed(channelError);
+        syncOp.failed(this.inboxFailure(completedJobInfo.error));
         remote.channel.deadLetter.add(syncOp);
       } else {
         syncOp.executed();
@@ -880,6 +893,25 @@ export class SyncManager implements ISyncManager {
 
       remote.channel.inbox.remove(syncOp);
     }
+  }
+
+  /**
+   * The dead letter for a load job the executor failed.
+   *
+   * The classification is passed explicitly because it cannot be recovered
+   * downstream: the wrapper carries the failure's message, not the failure, so
+   * deriving it from the wrapper's own name would classify every one of these
+   * as unclassified and quarantine the document. A held auth operation must
+   * keep syncing, because reconciling the two policies needs the traffic a
+   * quarantine would stop.
+   */
+  private inboxFailure(error: ErrorInfo | undefined): ChannelError {
+    const message = error?.message || "Unknown error";
+    return new ChannelError(
+      ChannelErrorSource.Inbox,
+      new Error(`Failed to apply operations: ${message}`),
+      classifyJobFailure(error?.name ?? "Error"),
+    );
   }
 
   private async updateOutbox(

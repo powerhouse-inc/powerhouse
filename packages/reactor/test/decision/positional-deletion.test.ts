@@ -10,7 +10,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import type { IReactor } from "../../src/core/types.js";
 import { JobStatus, type ConsistencyToken } from "../../src/shared/types.js";
-import { evaluateDeletionsByPosition } from "../../src/decision/deletion-evaluation.js";
+import { evaluateByPosition } from "../../src/decision/evaluation.js";
+import { documentDecisionModel } from "../../src/decision/document-decision-model.js";
 import { createDocModelDocument } from "../factories.js";
 
 /**
@@ -147,22 +148,32 @@ describe("positional deletion", () => {
         { id: "early", denied: false },
         { id: "late", denied: true },
       ]);
+
+      // The read-side form: served rather than hidden, carrying the state as of
+      // the delete, because what sorts after it was denied.
+      const readBack = await target.get(docId);
+      expect(readBack.state.document.isDeleted).toBe(true);
+      expect(moduleIds(readBack)).toEqual(["early"]);
     },
   );
 
   it("reads only deletions from the document scope, and stops when there are none", async () => {
     const documentId = "counted-doc";
-    const reads: Array<{ scope: string; actionTypes?: string[] }> = [];
+    const reads: Array<{
+      scope: string;
+      revision: number;
+      actionTypes?: string[];
+    }> = [];
 
     const operationStore = {
       getSince: (
         _documentId: string,
         scope: string,
         _branch: string,
-        _revision: number,
+        revision: number,
         filter?: { actionTypes?: string[] },
       ) => {
-        reads.push({ scope, actionTypes: filter?.actionTypes });
+        reads.push({ scope, revision, actionTypes: filter?.actionTypes });
         return Promise.resolve({
           results: [],
           options: {},
@@ -177,7 +188,8 @@ describe("positional deletion", () => {
       },
     } as never;
 
-    const evaluations = await evaluateDeletionsByPosition(
+    const evaluations = await evaluateByPosition(
+      documentDecisionModel,
       { documentId, branch: "main" },
       {
         scope: "global",
@@ -202,8 +214,9 @@ describe("positional deletion", () => {
     );
 
     expect(evaluations).toEqual([undefined]);
+    // -1 so an index-0 operation is visited rather than pre-applied.
     expect(reads).toEqual([
-      { scope: "document", actionTypes: ["DELETE_DOCUMENT"] },
+      { scope: "document", revision: -1, actionTypes: ["DELETE_DOCUMENT"] },
     ]);
   });
 
@@ -246,7 +259,8 @@ describe("positional deletion", () => {
         },
       }) as never;
 
-    const evaluations = await evaluateDeletionsByPosition(
+    const evaluations = await evaluateByPosition(
+      documentDecisionModel,
       { documentId, branch: "main" },
       {
         scope: "document",

@@ -58,12 +58,15 @@ describe("feature flag validation", () => {
 
   it("rejects a name this reactor does not know", () => {
     expect(() =>
-      validateFeatureFlags({ authEnforcement: true }, FLAG_PREREQUISITES),
-    ).toThrow(/Unrecognized reactor feature flag: authEnforcement/);
+      validateFeatureFlags({ authGroups: true }, FLAG_PREREQUISITES),
+    ).toThrow(/Unrecognized reactor feature flag: authGroups/);
   });
 
   it("declares only the flags that are implemented", () => {
-    expect(Object.keys(FLAG_PREREQUISITES)).toEqual(["documentDecisions"]);
+    expect(Object.keys(FLAG_PREREQUISITES)).toEqual([
+      "documentDecisions",
+      "authEnforcement",
+    ]);
   });
 
   it("throws from the builder rather than at the first operation", async () => {
@@ -73,12 +76,39 @@ describe("feature flag validation", () => {
         driveDocumentModelModule as never,
       ])
       .withExecutorConfig({
-        featureFlags: { authEnforcement: true } as never,
+        featureFlags: { authGroups: true } as never,
       });
 
     await expect(builder.build()).rejects.toThrow(
-      /Unrecognized reactor feature flag: authEnforcement/,
+      /Unrecognized reactor feature flag: authGroups/,
     );
+  });
+
+  it("rejects authEnforcement without documentDecisions from the builder", async () => {
+    const builder = new ReactorBuilder()
+      .withDocumentModelSources([
+        documentModelDocumentModelModule as never,
+        driveDocumentModelModule as never,
+      ])
+      .withExecutorConfig({ featureFlags: { authEnforcement: true } });
+
+    await expect(builder.build()).rejects.toThrow(
+      /authEnforcement requires documentDecisions/,
+    );
+  });
+
+  it("builds with authEnforcement once documentDecisions is on", async () => {
+    const reactor = await new ReactorBuilder()
+      .withDocumentModelSources([
+        documentModelDocumentModelModule as never,
+        driveDocumentModelModule as never,
+      ])
+      .withExecutorConfig({
+        featureFlags: { documentDecisions: true, authEnforcement: true },
+      })
+      .build();
+
+    reactor.kill();
   });
 
   it("builds with a flag it knows", async () => {

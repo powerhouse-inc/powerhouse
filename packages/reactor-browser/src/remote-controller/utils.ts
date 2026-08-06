@@ -34,6 +34,7 @@ export function remoteOperationToLocal(remote: RemoteOperation): Operation {
     timestampUtcMs: remote.timestampUtcMs,
     hash: remote.hash,
     error: remote.error ?? undefined,
+    deniedReason: remote.deniedReason ?? undefined,
     action: {
       id: remote.action.id,
       type: remote.action.type,

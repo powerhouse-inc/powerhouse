@@ -1,4 +1,5 @@
 import type { Action } from "./actions.js";
+import { resolveSnapshotAuth } from "./auth.js";
 import type { PHDocument } from "./documents.js";
 import { DowngradeNotSupportedError } from "./errors.js";
 import { backfillAuthState } from "./state.js";
@@ -47,7 +48,16 @@ function applyInitialState(
   const newState = input.initialState || input.state;
   if (newState) {
     // snapshots serialized before PHAuthState had a version carry auth: {}
-    document.state = backfillAuthState({ ...document.state, ...newState });
+    const merged = backfillAuthState({ ...document.state, ...newState });
+    // The snapshot is authorized as a document-scope write, so it does not get
+    // to install or replace a policy on its own terms.
+    merged.auth = resolveSnapshotAuth(
+      document.header.id,
+      document.header.documentType,
+      backfillAuthState({ ...document.state }).auth,
+      merged.auth,
+    );
+    document.state = merged;
     document.initialState = document.state;
   }
 }

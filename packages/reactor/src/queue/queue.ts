@@ -38,11 +38,13 @@ export class InMemoryQueue implements IQueue {
   private toErrorInfo(error: Error | string): ErrorInfo {
     if (error instanceof Error) {
       return {
+        name: error.name,
         message: error.message,
         stack: error.stack || new Error().stack || "",
       };
     }
     return {
+      name: "Error",
       message: error,
       stack: new Error().stack || "",
     };
@@ -170,6 +172,7 @@ export class InMemoryQueue implements IQueue {
         await this.resolver.ensureModelLoaded(documentType);
       } catch {
         await this.failJob(job.id, {
+          name: "Error",
           message: `Failed to load document model for type: ${documentType}`,
           stack: new Error().stack || "",
         });

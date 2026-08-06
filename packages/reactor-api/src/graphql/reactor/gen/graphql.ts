@@ -79,6 +79,12 @@ export type DeadLetterInfo = {
   readonly branch: Scalars["String"]["output"];
   readonly documentId: Scalars["String"]["output"];
   readonly error: Scalars["String"]["output"];
+  /**
+   * How the origin classified the failure. A peer needs this to mirror the origin's
+   * quarantine decision; without it a held auth operation would freeze the document
+   * on the peer side while the origin kept syncing.
+   */
+  readonly errorType?: Maybe<Scalars["String"]["output"]>;
   readonly jobId: Scalars["String"]["output"];
   readonly operationCount: Scalars["Int"]["output"];
   readonly scopes: ReadonlyArray<Scalars["String"]["output"]>;
@@ -264,6 +270,7 @@ export type OperationContextInput = {
 
 export type OperationInput = {
   readonly action: ActionInput;
+  readonly deniedReason?: InputMaybe<Scalars["String"]["input"]>;
   readonly error?: InputMaybe<Scalars["String"]["input"]>;
   readonly hash: Scalars["String"]["input"];
   readonly id?: InputMaybe<Scalars["String"]["input"]>;
@@ -394,6 +401,7 @@ export type QueryPollSyncEnvelopesArgs = {
 
 export type ReactorOperation = {
   readonly action: Action;
+  readonly deniedReason?: Maybe<Scalars["String"]["output"]>;
   readonly error?: Maybe<Scalars["String"]["output"]>;
   readonly hash: Scalars["String"]["output"];
   readonly id?: Maybe<Scalars["String"]["output"]>;
@@ -621,6 +629,7 @@ export type GetDocumentWithOperationsQuery = {
                   readonly hash: string;
                   readonly skip: number;
                   readonly error?: string | null | undefined;
+                  readonly deniedReason?: string | null | undefined;
                   readonly id?: string | null | undefined;
                   readonly action: {
                     readonly id: string;
@@ -772,6 +781,7 @@ export type GetDocumentOperationsQuery = {
       readonly hash: string;
       readonly skip: number;
       readonly error?: string | null | undefined;
+      readonly deniedReason?: string | null | undefined;
       readonly id?: string | null | undefined;
       readonly action: {
         readonly id: string;
@@ -1109,6 +1119,7 @@ export type PollSyncEnvelopesQuery = {
               readonly hash: string;
               readonly skip: number;
               readonly error?: string | null | undefined;
+              readonly deniedReason?: string | null | undefined;
               readonly id?: string | null | undefined;
               readonly action: {
                 readonly id: string;
@@ -1162,6 +1173,7 @@ export type PollSyncEnvelopesQuery = {
     readonly deadLetters: ReadonlyArray<{
       readonly documentId: string;
       readonly error: string;
+      readonly errorType?: string | null | undefined;
     }>;
   };
 };
@@ -1470,6 +1482,11 @@ export type DeadLetterInfoResolvers<
   branch?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
   documentId?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
   error?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
+  errorType?: Resolver<
+    Maybe<ResolversTypes["String"]>,
+    ParentType,
+    ContextType
+  >;
   jobId?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
   operationCount?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
   scopes?: Resolver<
@@ -1883,6 +1900,11 @@ export type ReactorOperationResolvers<
     ResolversParentTypes["ReactorOperation"],
 > = ResolversObject<{
   action?: Resolver<ResolversTypes["Action"], ParentType, ContextType>;
+  deniedReason?: Resolver<
+    Maybe<ResolversTypes["String"]>,
+    ParentType,
+    ContextType
+  >;
   error?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
   hash?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
   id?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
@@ -2144,6 +2166,7 @@ export function OperationInputSchema(): z.ZodObject<
 > {
   return z.object({
     action: z.lazy(() => ActionInputSchema()),
+    deniedReason: z.string().nullish(),
     error: z.string().nullish(),
     hash: z.string(),
     id: z.string().nullish(),
@@ -2339,6 +2362,7 @@ export const GetDocumentWithOperationsDocument = gql`
             hash
             skip
             error
+            deniedReason
             id
             action {
               id
@@ -2451,6 +2475,7 @@ export const GetDocumentOperationsDocument = gql`
         hash
         skip
         error
+        deniedReason
         id
         action {
           id
@@ -2701,6 +2726,7 @@ export const PollSyncEnvelopesDocument = gql`
             hash
             skip
             error
+            deniedReason
             id
             action {
               id
@@ -2743,6 +2769,7 @@ export const PollSyncEnvelopesDocument = gql`
       deadLetters {
         documentId
         error
+        errorType
       }
       hasMore
     }

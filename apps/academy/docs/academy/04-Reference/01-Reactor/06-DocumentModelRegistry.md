@@ -17,7 +17,7 @@ const reactor = await new ReactorBuilder()
   .build();
 ```
 
-`withDocumentModels` and `withUpgradeManifests` each **replace** the array passed to them — calling either twice keeps only the last array, it does not append. Order between the two calls does not matter: the builder always registers manifests before modules.
+The two methods differ in how repeat calls combine. `withDocumentModelSources` **appends** — calling it twice registers both arrays. `withUpgradeManifests` **replaces** — calling it twice keeps only the last array. Order between the two calls does not matter: the builder always registers manifests before modules.
 
 Registration at build time is non-fatal. A duplicate or invalid module or manifest is logged through the builder's logger and skipped; the build still completes. Do not wrap `.build()` in a try/catch expecting a registration failure to throw — check the logs instead.
 

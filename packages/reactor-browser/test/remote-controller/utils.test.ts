@@ -166,6 +166,18 @@ describe("remoteOperationToLocal", () => {
     expect(remoteOperationToLocal(remote).error).toBe("some error");
   });
 
+  it("converts deniedReason from null to undefined", () => {
+    const remote = makeRemoteOp({ index: 0, deniedReason: null });
+    expect(remoteOperationToLocal(remote).deniedReason).toBeUndefined();
+  });
+
+  it("preserves deniedReason string", () => {
+    const remote = makeRemoteOp({ index: 0, deniedReason: "document deleted" });
+    expect(remoteOperationToLocal(remote).deniedReason).toBe(
+      "document deleted",
+    );
+  });
+
   it("converts signer context with signatures", () => {
     const remote: RemoteOperation = {
       ...makeRemoteOp({ index: 0 }),

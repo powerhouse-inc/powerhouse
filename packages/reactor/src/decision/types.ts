@@ -3,7 +3,6 @@ import type {
   PHDocument,
 } from "@powerhousedao/shared/document-model";
 import type {
-  AuthDecision,
   AuthRequest,
   AuthSubject,
 } from "@powerhousedao/shared/document-model";
@@ -65,8 +64,19 @@ export type Projection<M> = {
   apply: (document: PHDocument, operation: Operation) => PHDocument;
 };
 
+/**
+ * The outcome of evaluating one operation. A refusal carries the reason it is
+ * recorded with, because a model has more than one way to refuse.
+ */
+export type Evaluation =
+  | { decision: "allow" }
+  | { decision: "deny"; reason: string };
+
 /** A stream a model reads, with what it needs to be walked. */
 export type ReadStream = {
+  /** The projection this stream belongs to, which is its name in the model. */
+  name: string;
+
   query: StreamQuery;
   decidingActions: string[];
   apply: (document: PHDocument, operation: Operation) => PHDocument;
@@ -87,7 +97,7 @@ export type DecisionModel<M> = {
     subject: AuthSubject,
     request: AuthRequest,
     ctx: DecisionContext,
-  ): AuthDecision;
+  ): Evaluation;
 };
 
 /** A built model plus the read-set condition recording what the build read. */

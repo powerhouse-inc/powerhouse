@@ -182,11 +182,12 @@ export class ReactorClient implements IReactorClient {
    */
   async resolveIdOrSlug(
     identifier: string,
+    view?: ViewFilter,
     signal?: AbortSignal,
   ): Promise<string> {
     return this.documentView.resolveIdOrSlug(
       identifier,
-      undefined,
+      view,
       undefined,
       signal,
     );
@@ -1132,19 +1133,30 @@ export class ReactorClient implements IReactorClient {
     view?: ViewFilter,
   ): () => void {
     this.logger.verbose("subscribe(@search, @view)", search, view);
+
+    // A subscription is a read. The filter lives here because the subscription
+    // manager is a read model, which sees everything.
+    const subject = this.readSubject(view?.subject);
+    const readable = <TDocument extends PHDocument>(
+      document: TDocument,
+    ): TDocument => filterReadableScopes(document, subject);
+
     const unsubscribeCreated = this.subscriptionManager.onDocumentCreated(
       (result) => {
         void (async () => {
           try {
+            // withAuthScope, or a view that narrows scopes would leave the
+            // policy out of the fetch and the gate would read an absent one as
+            // uninitialized, which allows everything.
             const documents = await Promise.all(
               result.results.map((id) =>
-                this.reactor.get(id, view, undefined, undefined),
+                this.reactor.get(id, withAuthScope(view), undefined, undefined),
               ),
             );
 
             callback({
               type: DocumentChangeType.Created,
-              documents,
+              documents: documents.map(readable),
             });
           } catch {
             // Silently ignore errors when fetching created documents
@@ -1169,7 +1181,7 @@ export class ReactorClient implements IReactorClient {
       (result) => {
         callback({
           type: DocumentChangeType.Updated,
-          documents: result.results,
+          documents: result.results.map(readable),
         });
       },
       search,

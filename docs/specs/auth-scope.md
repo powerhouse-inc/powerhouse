@@ -133,6 +133,8 @@ The list of `Grant` objects defines a policy. Each grant is applied on top of th
 }
 ```
 
+This policy needs a creator to be legal: the blanket `g-lockdown` denies `execute` on every scope including `auth`, and the group grant is not administration v1 can reach, so a creator-less document would be rejected as born locked out (see Unsigned documents).
+
 ### Condition language
 
 Conditions must be deterministic, total (meaning that they must _never throw_, given any state shape), pure, JSON-serializable, and versioned by `PHAuthState.version`. An evaluator object consumes these conditions and is a small pure function in `shared/document-model`.
@@ -508,7 +510,11 @@ When a reshuffle happens, the tail from the first change must be re-evaluated, b
 
 Re-evaluation is a reshuffle-style re-append. If any decision changes, the tail from the first change is re-emitted as new operations: same `opId` and action id, but fresh indexes with skip.
 
-The re-append advances the stream heads, so a concurrent admission that read the old tail fails its append condition and retries. The re-appended operations do not travel to other replicas, and do not need to: a replica learning of the operation that triggered the pass evaluates its own history against it and reaches the same outcome. Two replicas may therefore store different rows while agreeing on which operations apply and on the state they produce.
+The re-append advances the stream heads, so a concurrent admission that read the old tail fails its append condition and retries. The re-appended operations do travel to other replicas, and do not need to be understood as anything special when they arrive: a receiving replica recognises them by action id, applies nothing, and reaches the same outcome by evaluating its own history against the operation that triggered the pass. Two replicas may therefore store different rows while agreeing on which operations apply and on the state they produce.
+
+Two rules follow from re-appends travelling. The monotonic-timestamp check on an arriving auth operation runs _after_ the action-id dedup, because a re-appended auth operation keeps its original timestamp and so is at or below the receiving replica's auth head by definition — checked before the dedup it would reject traffic both replicas already agree about. And the excessive-shuffle guard does not count an operation whose action id the stream already holds, for the same reason.
+
+A pass visits each evaluated scope once, in the model's projection order. A verdict a pass writes is therefore visible to a later-visited scope and not to an earlier one. The pass is deterministic, so every replica computes the same verdicts from the same history; it is not iterated to a fixed point, so a verdict that would change under the state a later scope produced stands until the next arrival triggers another pass. Convergence between replicas is the guarantee; a fixed point is not.
 
 #### What triggers a pass
 
@@ -680,6 +686,8 @@ Read enforcement therefore lives on the reactor's own read surface, not in the s
 
 Internal consumers are inside the trust boundary and see everything. The event bus still dispatches all operations, and read models and processors need unfiltered data to build their projections. Whatever they re-expose is their own read surface to gate.
 
+Filtering is per scope, and a document carries its scopes in more than one place: `initialState` holds the same scope names as `state`, so both are filtered. A read that narrows scopes has the `auth` scope added back before the fetch, because a model built without the policy reads as uninitialized, which allows everything — the gate must never be handed a document whose policy was filtered out on the way in. Both apply to a subscription's documents exactly as they do to a direct read.
+
 This placement changes the timing guarantee. An operation is evaluated at its position, so a revocation catches even operations that were accepted before it arrived. A read is evaluated at the moment it is served, so revoking read only stops future serving. It cannot recall bytes a replica already holds.
 
 One exemption is required. Suppose a policy could deny reading the `auth` scope itself. A peer could then sync a document without its policy, see an uninitialized auth scope, and allow every operation it holds. Replicas would diverge permanently. The `auth` and `document` scopes therefore bypass the grants: the policy and the document's metadata are visible to any holder of the document. Grants gate domain-scope reads only. A replica denied a domain scope never receives that stream, so it never holds or evaluates it, and partial replication stays consistent.
@@ -692,7 +700,13 @@ A document's policy begins with `INITIALIZE_AUTH` (see Actions). On acceptance, 
 
 **Auth on an unsigned-header document does not resist an adversary.** An unsigned-header document has no creator, so its genesis is open. Anyone can run `INITIALIZE_AUTH` first, and anyone can backdate one that retroactively re-evaluates the whole history under a policy of their choosing. A document that wants an enforceable policy is created with a signed header, ideally with `INITIALIZE_AUTH` in its create batch.
 
+**And it can lock its own auth scope out permanently.** The creator carve-out is what keeps administration reachable, and an unsigned document has no creator to carve out for. A change that leaves no grant permitting `execute` on `auth` therefore makes the auth scope unwritable for good, on every replica, with no recovery path. A policy on an unsigned document must always retain an auth-administration grant. On a signed document the carve-out covers this.
+
+The rule is about _reachability_, not about a grant being present. Evaluation is last-applicable-grant-wins, so an administration grant that a later `deny` shadows keeps nothing reachable, and every way of reordering or adding grants can take administration away without removing it: `REMOVE_GRANT`, a `SET_GRANT` that replaces the grant in place, a `SET_GRANT` that appends a deny covering `auth`, and a `MOVE_GRANT` that reorders the administration grant into shadow. All four are rejected on a creator-less policy, and `INITIALIZE_AUTH` rejects a genesis that is born unreachable. A consequence worth knowing: a creator-less policy cannot carry a blanket `deny` on `execute` for `*`, because that denies its own administration; such a policy has to scope its deny to the domain scopes it means.
+
 A duplicated document inherits its source's policy. Duplication fails when the copy cannot preserve the policy rather than producing a policy that cannot be administered.
+
+**A state snapshot is not a door onto the policy.** `applyAuthAction` is the validated way into `state.auth`, but `UPGRADE_DOCUMENT`'s `initialState` and `LOAD_STATE`'s `data` replace whole scopes at once, and both are authorized as `document`-scope writes. Without a rule there, a subject holding `execute` on `document` and no auth grant could install a policy of its choosing, name itself `creator` (which exempts the policy from retention permanently), or wipe an existing policy by carrying the default uninitialized one. A snapshot's auth scope is therefore resolved rather than assigned: a snapshot with no policy or an uninitialized one leaves the document's own policy standing, an uninitialized document accepts a policy only after the validation genesis applies, and a snapshot reaching an already-initialized document must carry that same policy exactly, grants included. Duplication and import satisfy the last rule because they run against a freshly created document; anything else is an attempt to swap one policy for another.
 
 Migration maps a legacy table owner to an `execute`-on-`auth` grant.
 
@@ -721,17 +735,55 @@ Two limits remain deliberate, both on the read side, and stage 4 moves reads ont
 **Stage 4: the auth projection (`authEnforcement`).**
 Expand `decide` to include the `auth` policy. The mechanism that makes this possible is already in place: stage 3's projection reads the `document` scope to evaluate an operation in other scopes at its merged position, and guards the write with an append condition with re-evaluation. Reading the `auth` scope to evaluate a domain write is that same arrangement with a second projection, so this stage adds projections and `decide` steps rather than new cross-scope machinery.
 
-With the flag off, the reactor does not enforce policies at all. The auth stream joins re-evaluation here, once the monotonic-timestamp rule says how a re-appended auth operation is ordered.
+With the flag off, the reactor enforces nothing beyond the stage-1 interim gate on auth-scope writes. That gate is not itself flag-gated, so it stays until `authEnforcement` defaults on; this sentence is not licence to delete it. The auth stream joins re-evaluation here, once the monotonic-timestamp rule says how a re-appended auth operation is ordered.
 
 This stage brings the monotonic-timestamp rule for the auth stream, the excessive-shuffle exemption for re-evaluation, and the load-path work for evaluating multiple streams in one job.
 
-Two reactors that accept conflicting auth and domain operations offline converge to identical decisions and identical state after sync, in both directions, and a revocation over a history longer than the excessive-shuffle bound completes without dead-lettering.
+Two reactors that accept conflicting domain operations offline converge to identical decisions and identical state after sync, in both directions, and a revocation over a history longer than the excessive-shuffle bound completes without dead-lettering.
+
+Conflicting auth operations are the deliberate exception, and they do not converge. The monotonic rule is not symmetric: the replica whose auth stream already ran ahead rejects the arrival and dead-letters it, while the replica behind accepts. The two hold different policies until the application reconciles them from the dead letters.
 
 **Stage 5: the groups projection (`authGroups`).** Ship the `PHGroup` model, derive group queries from the grant list, add group streams to the read-set and the append condition, maintain the group-reference relation so sync carries referenced groups and re-evaluation finds dependent documents (see Synchronization), and re-evaluate dependents in their own jobs. Group principals begin to match only here. Until conditions ship, a group's own policy is limited to `address` and `anyone` principals, since `match` never applies. Exit: a group-gated operation syncs to a replica that does not hold the group document and fails closed there until the group's history arrives, after which both replicas agree; and a membership removal denies later operations on every document that references the group.
 
 **Stage 6: conditions (`authConditions`).** The `where` and `match` evaluators turn on. Conditional grants begin to apply only here.
 
 Registering decision models beyond auth is out of scope. The types are model-agnostic, so that work is registration, not new semantics.
+
+### Stage 4 in steps
+
+1. **Declare the flag.** `authEnforcement`, requiring `documentDecisions`. The prerequisite table is exhaustive over the flag type, so this is a type error until declared.
+
+2. **Add the auth projection.** A second projection on the document decision model, querying the `auth` scope, declaring the four auth actions as its deciding actions, and applying them with `applyAuthAction`. Nothing in the walk or the model assembly changes: a model already carries one value per projection, named by the projection.
+
+3. **Expand `decide`.** The uninitialized, creator, version, and grant steps already exist as `decide` in `shared/document-model`. This step calls them from the model's `decide` and returns the refusal each one implies, so an operation records why it was refused rather than a single reason for every refusal.
+
+4. **Enforce the monotonic-timestamp rule.** An auth operation entering the stream is rejected unless its timestamp is strictly greater than the newest already there, whether it was written locally or arrived by sync. The rejection is an exception rather than a refused operation, so the stream holds no ties and no arbitrary tie-break decides authority. The auth stream is therefore never reshuffled, and the write path rejects a backdated auth write rather than repositioning it.
+
+   A rejected arrival is a permanent failure for that sync operation, so it dead-letters under a new `SyncOperationErrorType`, keeping its operations for application-specific handling. This is the answer for two replicas that each accepted an auth operation offline: no ordering rule can reconcile them, because either order hands one replica authority the other never granted, so the reactor holds them rather than choosing.
+
+   A re-append is not an arrival. Re-evaluation keeps an operation's timestamp when it moves it to a new index, so the rule does not apply and a refusal from another scope can still retract the tail it invalidated.
+
+5. **Retire the interim gates.** The admission gate reaches a real policy only for an `auth`-scope operation (see stage 1), so removing it transfers live behavior for that scope and no behavior for the others. The auth projection covers both once step 3 lands.
+
+6. **Exempt re-evaluation from the excessive-shuffle guard.** A revocation over a long history legitimately supersedes many operations, and counting those re-appends would dead-letter the pass on exactly the busy documents that most need it. The pass itself is already exempt, because it re-appends outside the load path where the guard lives. What the guard has to stop counting is the _next_ backdated arrival reaching into a range a pass already re-appended: a re-append is a second copy of an action the stream already holds, so it is not work that arrival is doing for the first time.
+
+7. **Order the auth stream against the domain streams it decides.** An auth operation already in a document's stream decides the domain operations that sort after it, because the auth scope is a read-set stream. A load job carries one scope, so an envelope holding both becomes two jobs whose enqueue order is not guaranteed; when the domain job runs first it is admitted against the older policy and the auth arrival owes the re-evaluation pass that corrects it. Convergence holds either way, at the cost of a pass and a re-append.
+
+8. **Filter reads and sync against the same model.** This is where stage 3's two read-side limits close: `replayDocument` applying denied operations, and reads hiding a deleted document rather than serving the state at the deletion boundary.
+
+9. **Degrade against a remote that predates the schema.** `deniedReason` and `errorType` are new fields on the sync schema, and GraphQL rejects a whole query for naming a field the schema does not have. A reactor at this stage polling a remote that has not upgraded would therefore fail every poll, and the failure classifies as unrecoverable, so the channel's polling stops until the process restarts. That is a sync outage caused by an upgrade, in a direction operators cannot always control: browser clients update on their own schedule, not the fleet's.
+
+   `GqlRequestChannel` selects the two fields only while the remote is known to serve them. A remote that rejects them once is polled without them for the rest of the channel's life, which loses nothing real, because a remote on the previous schema has neither a denied operation nor an `errorType` to report. The push direction is already safe: `serializeEnvelope` omits `deniedReason` when it is undefined.
+
+   The reactor-browser pull path (`GetDocumentOperations`) selects `deniedReason` from a static document and does not degrade, so that client still requires its server to be upgraded first.
+
+10. **Check the fleet before enabling the flag.** The monotonic rule refuses to replicate an auth stream holding a tie, and the walk cannot read one stored out of timestamp order at all. Neither is repairable after the fact, because the auth stream is never reshuffled, so a fleet is checked before `authEnforcement` is turned on rather than after:
+
+    ```
+    pnpm preflight:auth --pg <connection-string>     # or --pglite <data-directory>
+    ```
+
+    It reports each unsafe stream and exits non-zero, so it can gate a rollout. The target is required: the tool reads a fleet's own store, and a run that quietly opened an empty database would report every fleet as safe, which is the one answer it must never give by accident.
 
 ### Ordering rules the write paths keep
 

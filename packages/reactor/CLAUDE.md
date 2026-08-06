@@ -134,7 +134,7 @@ A token capturing operation coordinates, used for read-after-write consistency. 
 
 ### Adding a new document model
 1. Create the model using document-model tools
-2. Register via `ReactorBuilder.withDocumentModels([module])`
+2. Register via `ReactorBuilder.withDocumentModelSources([module])`
 
 ### Adding a new storage backend
 1. Implement IOperationStore interface

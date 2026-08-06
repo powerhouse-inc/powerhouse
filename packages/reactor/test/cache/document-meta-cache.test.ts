@@ -16,6 +16,7 @@ function createMockOperationStore(): IOperationStore {
     getSinceId: vi.fn(),
     getConflicting: vi.fn(),
     getRevisions: vi.fn(),
+    getStreamLatestTimestamp: vi.fn().mockResolvedValue(undefined),
   };
 }
 

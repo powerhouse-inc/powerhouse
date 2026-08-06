@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor",
-  "version": "6.2.2-dev.37",
+  "version": "6.2.2-dev.38",
   "description": "Core Powerhouse reactor — stores documents, resolves conflicts, and reprocesses operation histories. Supports local, cloud, and decentralized storage backends.",
   "repository": {
     "url": "https://github.com/powerhouse-inc/powerhouse",
@@ -31,6 +31,7 @@
     "claude": "pnpm build && pnpm test && pnpm exec prettier --write \"**/*.ts\" && pnpm lint",
     "migrate": "tsx src/storage/migrations/run-migrations.ts",
     "migrate:status": "tsx src/storage/migrations/run-migrations.ts status",
+    "preflight:auth": "tsx src/admin/run-stream-order-check.ts",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down"
   },

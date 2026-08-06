@@ -2,7 +2,12 @@
 // by every replica; changing any of them requires a new policy version.
 
 import { z } from "zod";
-import type { AuthDecision, AuthRequest, AuthSubject } from "./auth.js";
+import type {
+  AuthDecision,
+  AuthEvaluation,
+  AuthRequest,
+  AuthSubject,
+} from "./auth.js";
 import { groupDocumentType } from "./document-type.js";
 import type { Capability, Grant, Principal } from "./state.js";
 
@@ -39,6 +44,37 @@ export class GroupPrincipalNotAllowedError extends Error {
     );
     this.name = "GroupPrincipalNotAllowedError";
     this.grantId = grantId;
+  }
+}
+
+/**
+ * Thrown when a change would leave a creator-less policy with no grant
+ * permitting execute on the auth scope. Without the creator carve-out no
+ * subject could ever administer such a policy again.
+ */
+export class AuthAdministrationLockoutError extends Error {
+  public readonly grantId: string;
+
+  constructor(grantId: string) {
+    super(
+      `Change to grant "${grantId}" would leave no reachable grant permitting execute on the auth scope: a policy with no creator must always retain one`,
+    );
+    this.name = "AuthAdministrationLockoutError";
+    this.grantId = grantId;
+  }
+}
+
+/**
+ * Thrown when INITIALIZE_AUTH would create a creator-less policy with no grant
+ * permitting execute on the auth scope. Such a policy would be born with no
+ * subject able to administer it.
+ */
+export class AuthAdministrationMissingError extends Error {
+  constructor() {
+    super(
+      "Initial grants include no reachable grant permitting execute on the auth scope: a policy with no creator must always include one",
+    );
+    this.name = "AuthAdministrationMissingError";
   }
 }
 
@@ -329,10 +365,14 @@ export function assertValidGrant(grant: unknown, documentType: string): void {
   }
 }
 
-/** Validates an initial grant list: the count cap plus every grant. */
+/**
+ * Validates an initial grant list: the count cap, every grant, and — on a
+ * creator-less policy — that some grant keeps the auth scope administrable.
+ */
 export function assertValidInitialGrants(
   grants: Grant[],
   documentType: string,
+  creator: string | undefined,
 ): void {
   if (grants.length > MAX_AUTH_GRANTS) {
     throw new InvalidGrantError("", `policy exceeds ${MAX_AUTH_GRANTS} grants`);
@@ -340,13 +380,23 @@ export function assertValidInitialGrants(
   for (const grant of grants) {
     assertValidGrant(grant, documentType);
   }
+  if (creator === undefined && !administrationReachable(grants)) {
+    throw new AuthAdministrationMissingError();
+  }
 }
 
-/** Validates a grant upsert: the grant itself plus the count cap on append. */
+/**
+ * Validates a grant upsert: the grant itself, the count cap on append, and
+ * administration retention. Retention is checked on an append as well as an
+ * in-place replace, because a grant appended after the administration grant can
+ * shadow it (evaluation is last-applicable-grant-wins) and so take
+ * administration away without removing anything.
+ */
 export function assertValidGrantUpsert(
   grant: Grant,
   existing: Grant[],
   documentType: string,
+  creator: string | undefined,
 ): void {
   assertValidGrant(grant, documentType);
   const exists = existing.some((g) => g.id === grant.id);
@@ -355,6 +405,84 @@ export function assertValidGrantUpsert(
       grant.id,
       `policy exceeds ${MAX_AUTH_GRANTS} grants`,
     );
+  }
+  // Built the same way applySetGrantAction builds it, so the two cannot drift.
+  const next = exists
+    ? existing.map((g) => (g.id === grant.id ? grant : g))
+    : [...existing, grant];
+  assertAuthAdministrationRetained(creator, existing, next, grant.id);
+}
+
+/**
+ * The request whose coverage keeps a policy administrable: a subject who may
+ * SET_GRANT can upsert any grant, so every other repair stays reachable.
+ */
+const AUTH_ADMINISTRATION_REQUEST: AuthRequest = {
+  verb: "execute",
+  scope: "auth",
+  operation: "SET_GRANT",
+};
+
+/**
+ * Whether some subject can still administer the auth scope under this grant list.
+ *
+ * Asks the evaluator rather than pattern-matching a single grant: evaluation is
+ * last-applicable-grant-wins, so an allow that some later deny shadows keeps
+ * nothing reachable even though it is still present in the list. Only anyone and
+ * address principals are candidates, because those are the ones v1 can match at
+ * all; a `where` condition or a group or match principal never applies.
+ */
+function administrationReachable(grants: Grant[]): boolean {
+  return grants.some((grant) => {
+    const subject = administrationCandidate(grant);
+    if (subject === undefined) {
+      return false;
+    }
+    return (
+      evaluateGrantStack(grants, subject, AUTH_ADMINISTRATION_REQUEST)
+        .decision === "allow"
+    );
+  });
+}
+
+/**
+ * The subject to test this grant with, or undefined when the grant could never
+ * carry administration for anyone.
+ */
+function administrationCandidate(grant: Grant): AuthSubject | undefined {
+  if (
+    grant.effect !== "allow" ||
+    grant.where !== undefined ||
+    !capabilityCovers(grant.capability, AUTH_ADMINISTRATION_REQUEST)
+  ) {
+    return undefined;
+  }
+  if ("address" in grant.principal) {
+    return { address: grant.principal.address, key: undefined };
+  }
+  if ("anyone" in grant.principal) {
+    return { address: undefined, key: undefined };
+  }
+  return undefined;
+}
+
+/**
+ * A creator-less policy must always retain a grant permitting execute on the
+ * auth scope; on a signed document the creator carve-out keeps administration
+ * reachable instead. Rejects a change that takes the last such grant away. A
+ * policy already without one is left alone: the change is not what locks it.
+ */
+export function assertAuthAdministrationRetained(
+  creator: string | undefined,
+  previous: Grant[],
+  next: Grant[],
+  grantId: string,
+): void {
+  if (creator !== undefined) {
+    return;
+  }
+  if (administrationReachable(previous) && !administrationReachable(next)) {
+    throw new AuthAdministrationLockoutError(grantId);
   }
 }
 
@@ -398,16 +526,16 @@ function principalMatches(principal: Principal, subject: AuthSubject): boolean {
 }
 
 /**
- * Evaluates a v1 grant stack: default deny, last applicable grant wins.
- * Group and match principals and `where` conditions are not evaluated yet; a
- * grant that uses any of them never applies.
+ * Evaluates a v1 grant stack: default deny, last applicable grant wins, and
+ * reports which grant decided it. Group and match principals and `where`
+ * conditions are not evaluated yet; a grant that uses any of them never applies.
  */
-export function evaluateGrants(
+export function evaluateGrantStack(
   grants: Grant[],
   subject: AuthSubject,
   request: AuthRequest,
-): AuthDecision {
-  let decision: AuthDecision = "deny";
+): AuthEvaluation {
+  let applicable: Grant | undefined;
   for (const grant of grants) {
     // `where` is not evaluated yet; a conditional grant never applies.
     if (grant.where !== undefined) {
@@ -417,8 +545,31 @@ export function evaluateGrants(
       capabilityCovers(grant.capability, request) &&
       principalMatches(grant.principal, subject)
     ) {
-      decision = grant.effect;
+      applicable = grant;
     }
   }
-  return decision;
+
+  if (applicable === undefined) {
+    return { decision: "deny", refusal: "no-applicable-grant" };
+  }
+  if (applicable.effect === "deny") {
+    return {
+      decision: "deny",
+      refusal: "denied-by-grant",
+      grantId: applicable.id,
+    };
+  }
+  return { decision: "allow" };
+}
+
+/**
+ * Evaluates a v1 grant stack: default deny, last applicable grant wins. This is
+ * {@link evaluateGrantStack} with the reason dropped.
+ */
+export function evaluateGrants(
+  grants: Grant[],
+  subject: AuthSubject,
+  request: AuthRequest,
+): AuthDecision {
+  return evaluateGrantStack(grants, subject, request).decision;
 }

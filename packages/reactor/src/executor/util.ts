@@ -12,8 +12,13 @@ import {
   createPresignedHeader,
   defaultBaseState,
   deriveOperationId,
+  DOCUMENT_DELETED_REASON,
 } from "@powerhousedao/shared/document-model";
 import type { Job } from "../queue/types.js";
+import {
+  AuthorizationDeniedError,
+  DocumentDeletedError,
+} from "../shared/errors.js";
 import type {
   ConsistencyCoordinate,
   ConsistencyToken,
@@ -21,6 +26,53 @@ import type {
 import type { JobResult } from "./types.js";
 
 export { applyDeleteDocumentAction, applyUpgradeDocumentAction };
+
+/** Actions the reactor reduces itself, onto the document scope. */
+export const DOCUMENT_SCOPE_ACTIONS: ReadonlySet<string> = new Set([
+  "CREATE_DOCUMENT",
+  "DELETE_DOCUMENT",
+  "UPGRADE_DOCUMENT",
+  "ADD_RELATIONSHIP",
+  "REMOVE_RELATIONSHIP",
+  "UPDATE_RELATIONSHIP",
+]);
+
+/**
+ * `CREATE_DOCUMENT` is exempt by necessity: it runs before the document exists,
+ * so building a decision model would throw and defer the job forever.
+ */
+export const GATED_DOCUMENT_ACTIONS: ReadonlySet<string> = new Set(
+  [...DOCUMENT_SCOPE_ACTIONS].filter((type) => type !== "CREATE_DOCUMENT"),
+);
+
+/**
+ * The document a document-scope action writes to, which is not always the job's
+ * own document: delete and upgrade name it in `input.documentId`, and the
+ * relationship actions in `input.sourceId`. `execute` only checks that a batch
+ * shares one scope, so a caller can submit an action whose target is a document
+ * other than the one the job is keyed by. The policy gate has to follow the
+ * action rather than the job, or it decides against a policy the caller may
+ * control instead of the one guarding the write.
+ */
+export function targetDocumentId(action: Action, fallback: string): string {
+  const input = action.input as
+    | { documentId?: unknown; sourceId?: unknown }
+    | undefined;
+
+  if (
+    action.type === "ADD_RELATIONSHIP" ||
+    action.type === "REMOVE_RELATIONSHIP" ||
+    action.type === "UPDATE_RELATIONSHIP"
+  ) {
+    return typeof input?.sourceId === "string" && input.sourceId.length > 0
+      ? input.sourceId
+      : fallback;
+  }
+
+  return typeof input?.documentId === "string" && input.documentId.length > 0
+    ? input.documentId
+    : fallback;
+}
 
 /**
  * Creates a PHDocument from a CREATE_DOCUMENT action input.
@@ -228,6 +280,27 @@ export function buildErrorResult(
     error: error,
     duration: Date.now() - startTime,
   };
+}
+
+/**
+ * The error a refusal surfaces as. Both classes are already terminal in the job
+ * result handler, so a refusal never burns a retry.
+ */
+export function refusalError(
+  reason: string,
+  documentId: string,
+  deletedAtUtcIso: string | null,
+  action: Action,
+): Error {
+  if (reason === DOCUMENT_DELETED_REASON) {
+    return new DocumentDeletedError(documentId, deletedAtUtcIso);
+  }
+  return new AuthorizationDeniedError(
+    documentId,
+    action.scope,
+    action.type,
+    action.context?.signer?.user.address,
+  );
 }
 
 /**

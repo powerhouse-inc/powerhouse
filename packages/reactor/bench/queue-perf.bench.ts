@@ -208,6 +208,7 @@ describe("InMemoryQueue hot-path performance", () => {
       if (!handle) break;
       handle.start();
       await queue.retryJob(handle.job.id, {
+        name: "Error",
         message: "retrying",
         stack: "",
       });

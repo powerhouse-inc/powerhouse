@@ -152,6 +152,7 @@ export {
   type JobFailedEvent,
   type JobResult,
   type JobStartedEvent,
+  type ReactorFeatureFlags,
 } from "./src/executor/types.js";
 
 // Executor Worker Utilities
@@ -237,9 +238,28 @@ export type {
   DecisionContext,
   DecisionModel,
   DecisionTarget,
+  Evaluation,
   Projection,
   StreamQuery,
 } from "./src/decision/types.js";
+export {
+  authDecisionModel,
+  type AuthDecisionModel,
+} from "./src/decision/auth-decision-model.js";
+export {
+  documentDecisionModel,
+  type DocumentDecisionModel,
+} from "./src/decision/document-decision-model.js";
+export {
+  decideAtHead,
+  selectDecisionModel,
+  type AdmissionDecision,
+  type RegisteredDecisionModel,
+} from "./src/decision/registered-model.js";
+export {
+  firstOutOfOrderPair,
+  type OutOfOrderPair,
+} from "./src/decision/stream-order.js";
 export { KyselyDocumentIndexer } from "./src/storage/kysely/document-indexer.js";
 export { KyselyKeyframeStore } from "./src/storage/kysely/keyframe-store.js";
 export { KyselyOperationStore } from "./src/storage/kysely/store.js";
@@ -344,6 +364,9 @@ export {
   type Remote,
   type RemoteCursor,
   type RemoteMeta,
+  classifyJobFailure,
+  quarantinesDocument,
+  syncOperationErrorType,
   type RemoteFilter,
   type RemoteOptions,
   type RemoteRecord,
@@ -381,6 +404,7 @@ export type {
   KeyframeValidationIssue,
   RebuildResult,
   SnapshotValidationIssue,
+  StreamOrderIssue,
   ValidationResult,
 } from "./src/admin/types.js";
 export { ProcessorManager } from "./src/processors/index.js";

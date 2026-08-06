@@ -3,6 +3,7 @@ import { documentModelDocumentModelModule } from "document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_DRIVE_CONTAINER_TYPES } from "../../src/core/drive-container-types.js";
 import { SimpleJobExecutor } from "../../src/executor/simple-job-executor.js";
+import type { ReactorFeatureFlags } from "../../src/executor/types.js";
 import type { AppendCondition } from "../../src/storage/interfaces.js";
 import {
   createMockCollectionMembershipCache,
@@ -36,11 +37,16 @@ describe("admission mechanism", () => {
         revision: { document: 1, global: 0 },
       },
       operations: { document: [], global: [], local: [] },
-      state: { global: {}, local: {}, document: { isDeleted: false } },
+      state: {
+        global: {},
+        local: {},
+        document: { isDeleted: false },
+        auth: { version: 0, grants: [] },
+      },
     };
   }
 
-  function build(featureFlags?: { documentDecisions: boolean }) {
+  function build(featureFlags?: Partial<ReactorFeatureFlags>) {
     const writeCache: any = {
       getState: vi.fn().mockResolvedValue(document()),
       putState: vi.fn(),
@@ -100,7 +106,7 @@ describe("admission mechanism", () => {
     mockDocumentMetaCache = createMockDocumentMetaCache();
   });
 
-  async function run(featureFlags?: { documentDecisions: boolean }) {
+  async function run(featureFlags?: Partial<ReactorFeatureFlags>) {
     const executor = build(featureFlags);
     return executor.executeJob(
       createTestJob({
@@ -133,6 +139,25 @@ describe("admission mechanism", () => {
     expect(conditions).toHaveLength(1);
     expect(conditions[0]?.streams).toEqual([
       { documentId: DOC_ID, scope: "document", branch: "main", revision: 0 },
+    ]);
+  });
+
+  // A flag off means the stream is not read at all, so it cannot appear in the
+  // read-set the store enforces.
+  it("leaves the auth stream out of the read-set with authEnforcement off", async () => {
+    await run({ documentDecisions: true, authEnforcement: false });
+
+    expect(conditions[0]?.streams.map((s) => s.scope)).toEqual(["document"]);
+  });
+
+  it("adds the auth stream to the read-set with authEnforcement on", async () => {
+    await run({ documentDecisions: true, authEnforcement: true });
+
+    expect(conditions).toHaveLength(1);
+    expect(conditions[0]?.streams).toEqual([
+      { documentId: DOC_ID, scope: "document", branch: "main", revision: 0 },
+      // -1 because the auth stream holds no operations yet
+      { documentId: DOC_ID, scope: "auth", branch: "main", revision: -1 },
     ]);
   });
 });

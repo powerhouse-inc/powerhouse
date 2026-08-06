@@ -23,6 +23,7 @@ describe("KyselyDocumentView Unit Tests", () => {
       getSinceId: vi.fn(),
       getConflicting: vi.fn(),
       getRevisions: vi.fn(),
+      getStreamLatestTimestamp: vi.fn().mockResolvedValue(undefined),
     };
 
     mockOperationIndex = {
@@ -68,8 +69,21 @@ describe("KyselyDocumentView Unit Tests", () => {
       mockOperationIndex,
       mockWriteCache,
       mockConsistencyTracker,
+      false,
     );
   });
+
+  /** A view that serves a deleted document's state as of the deletion. */
+  function viewServingBoundary(): KyselyDocumentView {
+    return new KyselyDocumentView(
+      mockDb,
+      mockOperationStore,
+      mockOperationIndex,
+      mockWriteCache,
+      mockConsistencyTracker,
+      true,
+    );
+  }
 
   function createMockKyselyDb(): Kysely<any> {
     const mockQueryBuilder: any = {
@@ -192,6 +206,19 @@ describe("KyselyDocumentView Unit Tests", () => {
       expect(mockDb.selectFrom).toHaveBeenCalledWith("DocumentSnapshot");
       expect(mockDb.where).toHaveBeenCalledWith("documentId", "=", "doc-123");
       expect(mockDb.where).toHaveBeenCalledWith("isDeleted", "=", false);
+    });
+
+    /**
+     * Only once deletion takes effect from its own position is there a boundary
+     * state to serve. Without that, a load onto a deleted document is refused
+     * outright, so the document is hidden as before.
+     */
+    it("drops the isDeleted filter only when it serves the deletion boundary", async () => {
+      mockDb.execute.mockResolvedValue([]);
+
+      await expect(viewServingBoundary().get("doc-123")).rejects.toThrow();
+
+      expect(mockDb.where).not.toHaveBeenCalledWith("isDeleted", "=", false);
     });
 
     it("should throw when document not found", async () => {

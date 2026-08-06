@@ -1,14 +1,14 @@
 import type { PHDocumentState } from "@powerhousedao/shared/document-model";
-import { applyDeleteDocumentAction } from "@powerhousedao/shared/document-model";
+import {
+  applyDeleteDocumentAction,
+  DOCUMENT_DELETED_REASON,
+} from "@powerhousedao/shared/document-model";
 import type { DecisionModel, DecisionTarget } from "./types.js";
 
 /** What the document decision model reads: the target's document scope. */
 export type DocumentDecisionModel = {
   document: PHDocumentState;
 };
-
-/** Why the model refused an operation. */
-export const DOCUMENT_DELETED_REASON = "document deleted";
 
 /**
  * The simplest decision model: one projection over the document scope, which
@@ -45,7 +45,9 @@ export function documentDecisionModel(
     },
 
     decide(model) {
-      return model.document.isDeleted ? "deny" : "allow";
+      return model.document.isDeleted
+        ? { decision: "deny", reason: DOCUMENT_DELETED_REASON }
+        : { decision: "allow" };
     },
   };
 }

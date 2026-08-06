@@ -627,6 +627,7 @@ export function createMockOperationStore(
       revision: {},
       latestTimestamp: new Date(0).toISOString(),
     }),
+    getStreamLatestTimestamp: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   } as unknown as IOperationStore;
 }

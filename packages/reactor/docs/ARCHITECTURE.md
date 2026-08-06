@@ -638,7 +638,7 @@ Remote Sync:
 
 ```typescript
 const reactor = await new ReactorBuilder()
-  .withDocumentModels([myModule])
+  .withDocumentModelSources([myModule])
   .build();
 ```
 

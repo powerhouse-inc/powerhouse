@@ -147,6 +147,31 @@ describe("DocumentIntegrityService", () => {
     });
   }
 
+  async function seedTimestampedStream(
+    scope: string,
+    timestamps: string[],
+  ): Promise<void> {
+    for (let i = 0; i < timestamps.length; i++) {
+      const action: Action = {
+        type: "TEST_ACTION",
+        input: {},
+        scope,
+        id: generateId(),
+        timestampUtcMs: timestamps[i],
+      };
+      await operationStore.apply(docId, docType, scope, "main", i, (txn) => {
+        txn.addOperations({
+          index: i,
+          timestampUtcMs: timestamps[i],
+          hash: generateId(),
+          skip: 0,
+          id: generateId(),
+          action,
+        });
+      });
+    }
+  }
+
   function createService(
     documentView?: IDocumentView,
   ): DocumentIntegrityService {
@@ -346,6 +371,36 @@ describe("DocumentIntegrityService", () => {
 
     expect(result.keyframeIssues.length).toBeGreaterThan(0);
     expect(result.snapshotIssues).toHaveLength(0);
+  });
+
+  it("reports a same-millisecond pair in the auth scope as tied", async () => {
+    await seedTimestampedStream("auth", [
+      "2026-01-01T00:00:01.000Z",
+      "2026-01-01T00:00:01.000Z",
+    ]);
+
+    const service = createService();
+    const result = await service.validateDocument(docId);
+
+    expect(result.isConsistent).toBe(false);
+    expect(result.streamOrderIssues).toHaveLength(1);
+    expect(result.streamOrderIssues[0].scope).toBe("auth");
+    expect(result.streamOrderIssues[0].kind).toBe("tied");
+    expect(result.streamOrderIssues[0].previous.index).toBe(0);
+    expect(result.streamOrderIssues[0].current.index).toBe(1);
+  });
+
+  it("does not report a same-millisecond pair in a non-auth scope", async () => {
+    await seedTimestampedStream("global", [
+      "2026-01-01T00:00:01.000Z",
+      "2026-01-01T00:00:01.000Z",
+    ]);
+
+    const service = createService();
+    const result = await service.validateDocument(docId);
+
+    expect(result.isConsistent).toBe(true);
+    expect(result.streamOrderIssues).toHaveLength(0);
   });
 
   it("should validate snapshots across all scopes from getRevisions", async () => {

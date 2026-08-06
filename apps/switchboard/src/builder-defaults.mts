@@ -1,4 +1,7 @@
-import type { ReactorBuilder } from "@powerhousedao/reactor";
+import type {
+  ReactorBuilder,
+  ReactorFeatureFlags,
+} from "@powerhousedao/reactor";
 import {
   ChannelScheme,
   type IDocumentModelLoader,
@@ -28,7 +31,7 @@ export type SwitchboardReactorDefaultsOptions = {
   /** Executor tuning. Omit to use the reactor's own defaults. */
   executorConfig?: {
     maxSkipThreshold?: number;
-    featureFlags?: { documentDecisions?: boolean };
+    featureFlags?: Partial<ReactorFeatureFlags>;
   };
   /** Wire dynamic document-model loading via HTTP. */
   documentModelLoader?: IDocumentModelLoader;

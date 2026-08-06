@@ -1,3 +1,24 @@
+## 6.2.2-dev.38 (2026-08-06)
+
+### 🚀 Features
+
+- added recipe e2e tests to the suite ([88cd1a55c](https://github.com/powerhouse-inc/powerhouse/commit/88cd1a55c))
+- auth phase 4 ([28aa9ad6a](https://github.com/powerhouse-inc/powerhouse/commit/28aa9ad6a))
+
+### 🩹 Fixes
+
+- stage llm files from pre-commit hook ([0af2ab705](https://github.com/powerhouse-inc/powerhouse/commit/0af2ab705))
+- **reactor:** point preflight:auth at a real store ([c1315a9f9](https://github.com/powerhouse-inc/powerhouse/commit/c1315a9f9))
+- **reactor:** filter initialState and keep auth in a scoped subscription read ([77fee70b4](https://github.com/powerhouse-inc/powerhouse/commit/77fee70b4))
+- **reactor:** degrade the poll query against a remote on the older schema ([0c3aefe65](https://github.com/powerhouse-inc/powerhouse/commit/0c3aefe65))
+- **shared:** stop a state snapshot from installing or replacing a policy ([f947e562e](https://github.com/powerhouse-inc/powerhouse/commit/f947e562e))
+- **shared:** make auth-administration retention a reachability rule ([3db42daac](https://github.com/powerhouse-inc/powerhouse/commit/3db42daac))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5
+
 ## 6.2.2-dev.37 (2026-08-05)
 
 This was a version bump only for @powerhousedao/pglite-fs to align it with other projects, there were no code changes.

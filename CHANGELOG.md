@@ -1,3 +1,36 @@
+## 6.2.2-dev.38 (2026-08-06)
+
+### 🚀 Features
+
+- auth phase 4 ([28aa9ad6a](https://github.com/powerhouse-inc/powerhouse/commit/28aa9ad6a))
+- added recipe e2e tests to the suite ([88cd1a55c](https://github.com/powerhouse-inc/powerhouse/commit/88cd1a55c))
+- **reactor:** add operator entry point for the auth stream-order pre-flight ([64d9c3408](https://github.com/powerhouse-inc/powerhouse/commit/64d9c3408))
+- **shared:** enforce auth-administration retention on creator-less policies ([ffc0a3d40](https://github.com/powerhouse-inc/powerhouse/commit/ffc0a3d40))
+- **shared:** enforce auth administration at genesis for creator-less policies ([13a32f911](https://github.com/powerhouse-inc/powerhouse/commit/13a32f911))
+
+### 🩹 Fixes
+
+- stage llm files from pre-commit hook ([0af2ab705](https://github.com/powerhouse-inc/powerhouse/commit/0af2ab705))
+- **reactor:** make the auth stream-order pre-flight see equal timestamps ([d62e23450](https://github.com/powerhouse-inc/powerhouse/commit/d62e23450))
+- **reactor:** gate refuseIfPolicyDenies on documentDecisions and validate executor flags ([408d0320a](https://github.com/powerhouse-inc/powerhouse/commit/408d0320a))
+- **reactor:** type invalid-timestamp failures so they fail terminally and quarantine ([33cd95642](https://github.com/powerhouse-inc/powerhouse/commit/33cd95642))
+- **reactor:** make the integrity service strict on auth-stream order ([2fea285b8](https://github.com/powerhouse-inc/powerhouse/commit/2fea285b8))
+- **reactor:** degrade the poll query against a remote on the older schema ([0c3aefe65](https://github.com/powerhouse-inc/powerhouse/commit/0c3aefe65))
+- **reactor:** filter initialState and keep auth in a scoped subscription read ([77fee70b4](https://github.com/powerhouse-inc/powerhouse/commit/77fee70b4))
+- **reactor:** classify a failed inbox job from the job result ([448867beb](https://github.com/powerhouse-inc/powerhouse/commit/448867beb))
+- **reactor:** gate a document action against the document it writes to ([dd89140d3](https://github.com/powerhouse-inc/powerhouse/commit/dd89140d3))
+- **reactor:** select the batch's earliest timestamp by instant ([90f57253e](https://github.com/powerhouse-inc/powerhouse/commit/90f57253e))
+- **reactor:** never restore the slug mapping of a deleted document ([7da9003d8](https://github.com/powerhouse-inc/powerhouse/commit/7da9003d8))
+- **reactor:** point preflight:auth at a real store ([c1315a9f9](https://github.com/powerhouse-inc/powerhouse/commit/c1315a9f9))
+- **shared:** record denied operations in versioned replay instead of dropping them ([e8186ff83](https://github.com/powerhouse-inc/powerhouse/commit/e8186ff83))
+- **shared:** make auth-administration retention a reachability rule ([3db42daac](https://github.com/powerhouse-inc/powerhouse/commit/3db42daac))
+- **shared:** stop a state snapshot from installing or replacing a policy ([f947e562e](https://github.com/powerhouse-inc/powerhouse/commit/f947e562e))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5
+
 ## 6.2.2-dev.37 (2026-08-05)
 
 ### 🚀 Features

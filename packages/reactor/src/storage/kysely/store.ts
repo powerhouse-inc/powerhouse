@@ -632,6 +632,25 @@ export class KyselyOperationStore implements IOperationStore {
     };
   }
 
+  async getStreamLatestTimestamp(
+    documentId: string,
+    scope: string,
+    branch: string,
+    signal?: AbortSignal,
+  ): Promise<string | undefined> {
+    const latest = await this.queryExecutor
+      .selectFrom("Operation")
+      .select((eb) => eb.fn.max("timestampUtcMs").as("latestTimestamp"))
+      .where("documentId", "=", documentId)
+      .where("scope", "=", scope)
+      .where("branch", "=", branch)
+      .executeTakeFirst();
+
+    return latest?.latestTimestamp
+      ? new Date(latest.latestTimestamp).toISOString()
+      : undefined;
+  }
+
   private rowToOperation(row: OperationRow): Operation {
     return {
       index: row.index,

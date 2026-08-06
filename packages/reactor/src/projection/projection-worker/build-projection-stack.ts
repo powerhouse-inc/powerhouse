@@ -127,6 +127,9 @@ function instantiateReadModel(
         operationIndex,
         writeCache,
         new ConsistencyTracker(),
+        // The init payload carries no feature flags, so this view keeps hiding a
+        // deleted document. Read-side only, so it cannot diverge state.
+        false,
       );
     }
     case "document-indexer": {

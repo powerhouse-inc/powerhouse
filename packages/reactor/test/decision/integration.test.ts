@@ -60,7 +60,10 @@ const definition = (
     },
   },
   evaluatesScope: () => true,
-  decide: (model) => (model.document.isDeleted ? "deny" : "allow"),
+  decide: (model) =>
+    model.document.isDeleted
+      ? { decision: "deny" as const, reason: "document deleted" }
+      : { decision: "allow" as const },
 });
 
 describe("buildDecisionModel + IOperationStore.apply integration", () => {
@@ -168,7 +171,19 @@ describe("buildDecisionModel + IOperationStore.apply integration", () => {
   it("a stale condition fails after the auth stream grows, and an invalidate-rebuild retry lands", async () => {
     const staleBuild = await buildDecisionModel(cache, definition, target());
 
-    const authAction = initializeAuth({ version: 1, grants: [] });
+    // Genesis rejects a creator-less policy without an administration grant.
+    const authAction = initializeAuth({
+      version: 1,
+      grants: [
+        {
+          id: "g-auth-admin",
+          description: "anyone may administer the policy",
+          effect: "allow",
+          principal: { anyone: true },
+          capability: { can: "execute", scope: "auth" },
+        },
+      ],
+    });
     const authOperation: Operation = {
       id: generateId(),
       index: 0,

@@ -3,6 +3,7 @@ export * from "./auth.js";
 export * from "./auth-v1.js";
 export * from "./constants.js";
 export * from "./crypto.js";
+export * from "./denied.js";
 export * from "./document-schema.js";
 export * from "./document-type.js";
 export * from "./documents.js";

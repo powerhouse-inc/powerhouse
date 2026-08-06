@@ -9,20 +9,22 @@ export function streamKey(query: StreamQuery): string {
 /** An operation together with the stream it belongs to. */
 export type PositionedOperation = {
   streamKey: string;
+  scope: string;
   operation: Operation;
 };
 
 /** One stream's operations, with its skips already resolved. */
 export type StreamOperations = {
   streamKey: string;
+  scope: string;
   operations: Operation[];
 };
 
 /**
  * Orders two operations from different streams by position. Timestamp decides;
- * an equal timestamp falls to the action id and then the operation id, so that
- * two replicas holding the same operations agree on the order whatever order
- * they happen to store them in.
+ * an equal timestamp puts an auth operation first, and otherwise falls to the
+ * action id and then the operation id, so that two replicas holding the same
+ * operations agree on the order whatever order they happen to store them in.
  */
 export function comparePositions(
   a: PositionedOperation,
@@ -35,10 +37,18 @@ export function comparePositions(
     return aTime - bTime;
   }
 
-  // Within one stream the stored order decides, so a tie keeps it. The action
-  // and operation ids only break ties between separate streams.
+  // Within one stream the stored order decides, so a tie keeps it. The rules
+  // below only break ties between separate streams.
   if (a.streamKey === b.streamKey) {
     return a.operation.index - b.operation.index;
+  }
+
+  // An auth operation wins a tie, so a grant applying at the same millisecond is
+  // not decided by the results of a hash function, for instance.
+  const aAuth = a.scope === "auth";
+  const bAuth = b.scope === "auth";
+  if (aAuth !== bAuth) {
+    return aAuth ? -1 : 1;
   }
 
   const actionIds = (a.operation.action.id ?? "").localeCompare(
@@ -63,7 +73,11 @@ export function mergeByPosition(
 
   for (const stream of streams) {
     for (const operation of stream.operations) {
-      merged.push({ streamKey: stream.streamKey, operation });
+      merged.push({
+        streamKey: stream.streamKey,
+        scope: stream.scope,
+        operation,
+      });
     }
   }
 

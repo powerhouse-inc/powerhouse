@@ -187,11 +187,13 @@ export function topologicalSort(jobs: JobPlanForSorting[]): string[] {
 export function toErrorInfo(error: Error | string): ErrorInfo {
   if (error instanceof Error) {
     return {
+      name: error.name,
       message: error.message,
       stack: error.stack || new Error().stack || "",
     };
   }
   return {
+    name: "Error",
     message: error,
     stack: new Error().stack || "",
   };

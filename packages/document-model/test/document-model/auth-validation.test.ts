@@ -27,6 +27,11 @@ function makeGrant(id: string, overrides?: Partial<Grant>): Grant {
   };
 }
 
+// Keeps a creator-less policy administrable, which genesis now requires.
+const ADMIN_GRANT = makeGrant("admin", {
+  capability: { can: "execute", scope: "auth" },
+});
+
 function rawSetGrant(grant: unknown): Action {
   return {
     id: `act-set-${JSON.stringify(grant).length}`,
@@ -69,7 +74,9 @@ function makeDocument(documentType = ""): PHDocument<CountPHState> {
   };
 }
 
-function initializedDocument(grants: Grant[] = []): PHDocument<CountPHState> {
+function initializedDocument(
+  grants: Grant[] = [ADMIN_GRANT],
+): PHDocument<CountPHState> {
   return countReducer(makeDocument(), initializeAuth({ version: 1, grants }));
 }
 
@@ -104,7 +111,7 @@ describe("auth-scope v1 grant validation", () => {
     });
     const doc = countReducer(initializedDocument(), rawSetGrant(grant));
     expect(lastAuthError(doc)).toBeUndefined();
-    expect(doc.state.auth.grants.map((g) => g.id)).toEqual(["g1"]);
+    expect(doc.state.auth.grants.map((g) => g.id)).toEqual(["admin", "g1"]);
   });
 
   it("records an error operation for a malformed principal", () => {
@@ -117,7 +124,7 @@ describe("auth-scope v1 grant validation", () => {
     expect(lastAuthError(doc)).toContain(
       "principal must have exactly one of anyone, address, group, or match",
     );
-    expect(doc.state.auth.grants).toEqual([]);
+    expect(doc.state.auth.grants).toEqual([ADMIN_GRANT]);
   });
 
   it("records an error operation for an unknown grant key", () => {
@@ -239,7 +246,9 @@ describe("auth-scope v1 grant validation", () => {
 
   it("caps the number of grants on append but allows replacement at the cap", () => {
     const grants = Array.from({ length: MAX_AUTH_GRANTS }, (_, i) =>
-      makeGrant(`g${i}`),
+      i === 1
+        ? makeGrant(`g${i}`, { capability: { can: "execute", scope: "auth" } })
+        : makeGrant(`g${i}`),
     );
     const doc = initializedDocument(grants);
     expect(doc.state.auth.grants).toHaveLength(MAX_AUTH_GRANTS);
@@ -446,7 +455,7 @@ describe("auth-scope group document restriction", () => {
   it("rejects group principals on a group document via SET_GRANT", () => {
     const doc = countReducer(
       makeDocument(groupDocumentType),
-      initializeAuth({ version: 1, grants: [] }),
+      initializeAuth({ version: 1, grants: [ADMIN_GRANT] }),
     );
     const next = countReducer(
       doc,
@@ -455,25 +464,31 @@ describe("auth-scope group document restriction", () => {
     expect(lastAuthError(next)).toContain(
       "a group's auth scope cannot reference other groups",
     );
-    expect(next.state.auth.grants).toEqual([]);
+    expect(next.state.auth.grants).toEqual([ADMIN_GRANT]);
   });
 
   it("allows non-group principals on a group document", () => {
     const doc = countReducer(
       makeDocument(groupDocumentType),
-      rawInitializeAuth([makeGrant("g1", { principal: { address: "0xa" } })]),
+      rawInitializeAuth([
+        ADMIN_GRANT,
+        makeGrant("g1", { principal: { address: "0xa" } }),
+      ]),
     );
     expect(lastAuthError(doc)).toBeUndefined();
-    expect(doc.state.auth.grants.map((g) => g.id)).toEqual(["g1"]);
+    expect(doc.state.auth.grants.map((g) => g.id)).toEqual(["admin", "g1"]);
   });
 
   it("allows group principals on a non-group document", () => {
     const doc = countReducer(
       makeDocument("test/statement"),
-      rawInitializeAuth([makeGrant("g1", { principal: { group: "phd-las" } })]),
+      rawInitializeAuth([
+        ADMIN_GRANT,
+        makeGrant("g1", { principal: { group: "phd-las" } }),
+      ]),
     );
     expect(lastAuthError(doc)).toBeUndefined();
-    expect(doc.state.auth.grants.map((g) => g.id)).toEqual(["g1"]);
+    expect(doc.state.auth.grants.map((g) => g.id)).toEqual(["admin", "g1"]);
   });
 });
 

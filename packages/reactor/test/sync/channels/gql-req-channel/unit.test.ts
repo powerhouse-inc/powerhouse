@@ -343,6 +343,137 @@ describe("GqlRequestChannel", () => {
     });
   });
 
+  describe("polling a remote on the previous schema", () => {
+    /**
+     * Stands in for a server that predates the auth projection: it rejects any
+     * query naming a field its schema does not have, the way GraphQL validation
+     * does, and serves the poll otherwise.
+     */
+    const createPreviousSchemaFetch = () => {
+      const polls: string[] = [];
+      const fetchFn = vi
+        .fn()
+        .mockImplementation((_url: string, options: RequestInit) => {
+          const body = JSON.parse(options.body as string) as { query: string };
+
+          if (body.query.includes("touchChannel")) {
+            return Promise.resolve({
+              ok: true,
+              json: () =>
+                Promise.resolve({
+                  data: { touchChannel: { success: true, ackOrdinal: 0 } },
+                }),
+            });
+          }
+
+          polls.push(body.query);
+
+          const unknown = ["deniedReason", "errorType"].find((field) =>
+            body.query.includes(field),
+          );
+          if (unknown) {
+            return Promise.resolve({
+              ok: true,
+              json: () =>
+                Promise.resolve({
+                  errors: [
+                    {
+                      message: `Cannot query field "${unknown}" on type "ReactorOperation".`,
+                      extensions: { code: "GRAPHQL_VALIDATION_FAILED" },
+                    },
+                  ],
+                }),
+            });
+          }
+
+          return Promise.resolve({
+            ok: true,
+            json: () =>
+              Promise.resolve({
+                data: {
+                  pollSyncEnvelopes: {
+                    envelopes: [],
+                    ackOrdinal: 0,
+                    deadLetters: [],
+                    hasMore: false,
+                  },
+                },
+              }),
+          });
+        });
+
+      return { fetchFn, polls };
+    };
+
+    it("drops the fields the remote does not have and keeps polling", async () => {
+      const { fetchFn, polls } = createPreviousSchemaFetch();
+      global.fetch = fetchFn as unknown as typeof global.fetch;
+
+      const channel = new GqlRequestChannel(
+        createMockLogger(),
+        "channel-1",
+        "remote-1",
+        createMockCursorStorage(),
+        createTestConfig(),
+        createMockOperationIndex(),
+        createPollTimer(3000),
+      );
+      await channel.init();
+
+      // The first poll is rejected, then retried without the two fields.
+      await vi.waitFor(() => {
+        expect(polls.length).toBe(2);
+      });
+      expect(polls[0]).toContain("deniedReason");
+      expect(polls[1]).not.toContain("deniedReason");
+      expect(polls[1]).not.toContain("errorType");
+
+      // The channel is still connected: a rejected selection must not take
+      // polling down until the process restarts.
+      expect(channel.getConnectionState().state).not.toBe("error");
+
+      // Later polls go straight to the reduced query rather than re-probing.
+      await vi.advanceTimersByTimeAsync(3000);
+      await vi.waitFor(() => {
+        expect(polls.length).toBe(3);
+      });
+      expect(polls[2]).not.toContain("deniedReason");
+
+      await channel.shutdown();
+    });
+
+    it("keeps selecting the fields against a remote that serves them", async () => {
+      const mockFetch = createMockFetch({
+        pollSyncEnvelopes: [],
+        touchChannel: true,
+      });
+      global.fetch = mockFetch as unknown as typeof global.fetch;
+
+      const channel = new GqlRequestChannel(
+        createMockLogger(),
+        "channel-1",
+        "remote-1",
+        createMockCursorStorage(),
+        createTestConfig(),
+        createMockOperationIndex(),
+        createPollTimer(3000),
+      );
+      await channel.init();
+
+      await vi.waitFor(() => {
+        expect(mockFetch).toHaveBeenCalledTimes(2);
+      });
+
+      const polled = mockFetch.mock.calls
+        .map((call) => JSON.parse(call[1].body as string) as { query: string })
+        .filter((body) => body.query.includes("pollSyncEnvelopes"));
+      expect(polled[0].query).toContain("deniedReason");
+      expect(polled[0].query).toContain("errorType");
+
+      await channel.shutdown();
+    });
+  });
+
   describe("polling", () => {
     it("should poll remote for operations at configured interval", async () => {
       const cursorStorage = createMockCursorStorage();

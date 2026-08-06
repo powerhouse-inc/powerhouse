@@ -11,8 +11,10 @@ import { JobQueueState, RetryAccounting } from "../../../src/queue/types.js";
 import type { IDocumentModelResolver } from "../../../src/registry/document-model-resolver.js";
 import { ModuleNotFoundError } from "../../../src/registry/errors.js";
 import {
+  AuthTimestampNotMonotonicError,
   DocumentDeletedError,
   DocumentNotFoundError,
+  InvalidOperationTimestampError,
 } from "../../../src/shared/errors.js";
 import type { ErrorInfo } from "../../../src/shared/types.js";
 import { AppendConditionFailedError } from "../../../src/storage/interfaces.js";
@@ -295,6 +297,108 @@ describe("JobResultHandler", () => {
     });
   });
 
+  /**
+   * The rule is deterministic on every attempt, so a retry only re-runs the whole
+   * load to fail identically. It has to be terminal or it burns every retry.
+   */
+  describe("AuthTimestampNotMonotonicError", () => {
+    function violation(): AuthTimestampNotMonotonicError {
+      return new AuthTimestampNotMonotonicError(
+        "held-doc",
+        "main",
+        "2026-01-01T00:00:01.000Z",
+        "2026-01-01T00:00:02.000Z",
+      );
+    }
+
+    it("marks failed, emits JOB_FAILED, and calls handle.fail()", async () => {
+      const error = violation();
+      const job = createTestJob({ documentId: "held-doc", maxRetries: 3 });
+      const handle = createTestHandle(job);
+
+      await handler.handleResult(
+        handle,
+        { success: false, job, error },
+        callbacks(),
+      );
+
+      expect(jobTracker.markFailed).toHaveBeenCalledWith(
+        job.id,
+        expect.any(Object),
+        job,
+      );
+      expect(eventBus.emit).toHaveBeenCalledWith(
+        ReactorEventTypes.JOB_FAILED,
+        expect.objectContaining({ jobId: job.id, error }),
+      );
+      expect(handle.fail).toHaveBeenCalledTimes(1);
+    });
+
+    it("consumes no retry", async () => {
+      const job = createTestJob({ retryCount: 0, maxRetries: 5 });
+      const handle = createTestHandle(job);
+
+      await handler.handleResult(
+        handle,
+        { success: false, job, error: violation() },
+        callbacks(),
+      );
+
+      expect(queue.retryJob).not.toHaveBeenCalled();
+    });
+  });
+
+  /**
+   * A malformed timestamp is the same on every attempt, so it is terminal
+   * rather than burning the retry budget.
+   */
+  describe("InvalidOperationTimestampError", () => {
+    function malformed(): InvalidOperationTimestampError {
+      return new InvalidOperationTimestampError(
+        "doc-1",
+        "auth",
+        "not-a-timestamp",
+        "auth operation",
+      );
+    }
+
+    it("marks failed, emits JOB_FAILED, and calls handle.fail()", async () => {
+      const error = malformed();
+      const job = createTestJob({ maxRetries: 3 });
+      const handle = createTestHandle(job);
+
+      await handler.handleResult(
+        handle,
+        { success: false, job, error },
+        callbacks(),
+      );
+
+      expect(jobTracker.markFailed).toHaveBeenCalledWith(
+        job.id,
+        expect.any(Object),
+        job,
+      );
+      expect(eventBus.emit).toHaveBeenCalledWith(
+        ReactorEventTypes.JOB_FAILED,
+        expect.objectContaining({ jobId: job.id, error }),
+      );
+      expect(handle.fail).toHaveBeenCalledTimes(1);
+    });
+
+    it("consumes no retry", async () => {
+      const job = createTestJob({ retryCount: 0, maxRetries: 5 });
+      const handle = createTestHandle(job);
+
+      await handler.handleResult(
+        handle,
+        { success: false, job, error: malformed() },
+        callbacks(),
+      );
+
+      expect(queue.retryJob).not.toHaveBeenCalled();
+    });
+  });
+
   describe("retry path (retryCount < maxRetries)", () => {
     it("calls queue.retryJob when retries remain", async () => {
       const error = new Error("transient failure");
@@ -352,7 +456,11 @@ describe("JobResultHandler", () => {
     });
 
     it("includes aggregated error history in the failure info", async () => {
-      const prevError: ErrorInfo = { message: "attempt 1 error", stack: "" };
+      const prevError: ErrorInfo = {
+        name: "Error",
+        message: "attempt 1 error",
+        stack: "",
+      };
       const currentError = new Error("attempt 2 error");
       const job = createTestJob({
         retryCount: 1,
@@ -455,6 +563,7 @@ describe("JobResultHandler", () => {
         retryCount: 0,
         maxRetries: 0,
         errorHistory: Array.from({ length: 20 }, () => ({
+          name: "Error",
           message: conflict.message,
           stack: "",
         })),
@@ -479,6 +588,7 @@ describe("JobResultHandler", () => {
         retryCount: 0,
         maxRetries: 0,
         errorHistory: Array.from({ length: 19 }, () => ({
+          name: "Error",
           message: conflict.message,
           stack: "",
         })),
@@ -505,6 +615,7 @@ describe("JobResultHandler", () => {
         retryCount: 0,
         maxRetries: 0,
         errorHistory: Array.from({ length: 40 }, () => ({
+          name: "Error",
           message: "some unrelated reducer failure",
           stack: "",
         })),

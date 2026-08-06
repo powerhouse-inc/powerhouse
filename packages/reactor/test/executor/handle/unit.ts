@@ -118,7 +118,7 @@ describe("JobExecutionHandle", () => {
       const handle = new JobExecutionHandle(job, JobQueueState.READY);
 
       handle.start();
-      handle.fail({ message: "Test error", stack: "" });
+      handle.fail({ name: "Error", message: "Test error", stack: "" });
 
       expect(handle.state).toBe(JobQueueState.RESOLVED);
     });
@@ -131,7 +131,7 @@ describe("JobExecutionHandle", () => {
       });
 
       handle.start();
-      handle.fail({ message: "Test error", stack: "" });
+      handle.fail({ name: "Error", message: "Test error", stack: "" });
 
       expect(onFail).toHaveBeenCalledTimes(1);
       expect(onFail).toHaveBeenCalledWith("Test error");
@@ -141,18 +141,18 @@ describe("JobExecutionHandle", () => {
       const job = createTestJob();
       const handle = new JobExecutionHandle(job, JobQueueState.READY);
 
-      expect(() => handle.fail({ message: "Test error", stack: "" })).toThrow(
-        "Cannot fail job in state READY",
-      );
+      expect(() =>
+        handle.fail({ name: "Error", message: "Test error", stack: "" }),
+      ).toThrow("Cannot fail job in state READY");
     });
 
     it("should throw error if already RESOLVED", () => {
       const job = createTestJob();
       const handle = new JobExecutionHandle(job, JobQueueState.RESOLVED);
 
-      expect(() => handle.fail({ message: "Test error", stack: "" })).toThrow(
-        "Cannot fail job in state RESOLVED",
-      );
+      expect(() =>
+        handle.fail({ name: "Error", message: "Test error", stack: "" }),
+      ).toThrow("Cannot fail job in state RESOLVED");
     });
   });
 
@@ -179,7 +179,7 @@ describe("JobExecutionHandle", () => {
       handle.start();
       expect(handle.state).toBe(JobQueueState.RUNNING);
 
-      handle.fail({ message: "Test error", stack: "" });
+      handle.fail({ name: "Error", message: "Test error", stack: "" });
       expect(handle.state).toBe(JobQueueState.RESOLVED);
     });
 
@@ -192,7 +192,9 @@ describe("JobExecutionHandle", () => {
 
       expect(() => handle.start()).toThrow();
       expect(() => handle.complete()).toThrow();
-      expect(() => handle.fail({ message: "error", stack: "" })).toThrow();
+      expect(() =>
+        handle.fail({ name: "Error", message: "error", stack: "" }),
+      ).toThrow();
     });
   });
 
@@ -238,7 +240,7 @@ describe("JobExecutionHandle", () => {
       });
 
       handle.start();
-      handle.fail({ message: "Test error", stack: "" });
+      handle.fail({ name: "Error", message: "Test error", stack: "" });
 
       expect(order).toEqual(["start", "fail"]);
     });
@@ -254,7 +256,7 @@ describe("JobExecutionHandle", () => {
       });
 
       handle.start();
-      handle.fail({ message: "Test error", stack: "" });
+      handle.fail({ name: "Error", message: "Test error", stack: "" });
 
       expect(onComplete).not.toHaveBeenCalled();
       expect(onFail).toHaveBeenCalledTimes(1);
@@ -299,7 +301,7 @@ describe("JobExecutionHandle", () => {
         branch: "test-branch",
         retryCount: 2,
         maxRetries: 5,
-        lastError: { message: "previous error", stack: "" },
+        lastError: { name: "Error", message: "previous error", stack: "" },
       });
 
       const handle = new JobExecutionHandle(job, JobQueueState.READY);
