@@ -40,9 +40,9 @@ export function VersionControls(props: VersionControlsProps) {
           >
             <ConnectSelect
               absolutePositionMenu
-              containerClassName="z-10"
+              containerClassName="z-10 [&_svg]:size-4"
               id="model-version-switcher"
-              itemClassName="gap-1 px-2 py-1.5"
+              itemClassName="gap-1 px-2 py-1"
               items={specifications.map((spec) => ({
                 value: String(spec.version),
                 displayValue: (
@@ -54,7 +54,7 @@ export function VersionControls(props: VersionControlsProps) {
                 ),
               }))}
               listClassName="border border-t-0 border-border shadow-md"
-              menuClassName="min-w-0"
+              menuClassName="min-w-0 pr-1.5"
               onChange={(value) => {
                 const version = Number(value);
                 onViewVersion(version === latestVersion ? "latest" : version);
