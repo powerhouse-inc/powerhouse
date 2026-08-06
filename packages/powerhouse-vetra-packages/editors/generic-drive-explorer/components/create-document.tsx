@@ -11,17 +11,24 @@ import {
   useParentFolderForSelectedNode,
   useSelectedDriveSafe,
   useSelectedFolder,
+  useStudioMode,
   useUserPermissions,
 } from "@powerhousedao/reactor-browser";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import { useState } from "react";
+import { selectCreatableModules } from "../utils/select-creatable-modules.js";
 
-function toDocumentTypeOption(doc: DocumentModelModule): DocumentTypeOption {
+function toDocumentTypeOption(
+  doc: DocumentModelModule,
+  studioMode: boolean,
+): DocumentTypeOption {
   const spec = doc.documentModel.global;
   return {
     documentType: spec.id,
     name: spec.name,
-    version: doc.version,
+    // Outside studio mode only the latest version is offered, so the version
+    // suffix is dropped from the label and creation resolves latest-wins.
+    version: studioMode ? doc.version : undefined,
     description: spec.description,
   };
 }
@@ -43,14 +50,14 @@ export function CreateDocument() {
     "powerhouse/document-drive",
     "powerhouse/reactor-drive",
   ];
-  const visibleDocumentModelModules = allowedDocumentModelModules?.filter(
-    (module) => {
-      const id = module.documentModel.global.id;
-      return (
-        !DRIVE_CONTAINER_TYPES.includes(id) && !disabledEditors.includes(id)
-      );
-    },
-  );
+  const studioMode = useStudioMode() ?? false;
+  const visibleDocumentModelModules = selectCreatableModules(
+    allowedDocumentModelModules ?? [],
+    studioMode,
+  ).filter((module) => {
+    const id = module.documentModel.global.id;
+    return !DRIVE_CONTAINER_TYPES.includes(id) && !disabledEditors.includes(id);
+  });
   const preloadEditorsForType = (documentType: string) =>
     editorModules
       ?.filter((editorModule) =>
@@ -87,7 +94,7 @@ export function CreateDocument() {
     }
   };
   if (!isAllowedToCreateDocuments) return null;
-  if (!visibleDocumentModelModules?.length) return null;
+  if (!visibleDocumentModelModules.length) return null;
   // Rendered in the "Documents and files" heading row (see folder-view.tsx),
   // so the button is compact and brings no layout wrapper of its own.
   return (
@@ -102,7 +109,9 @@ export function CreateDocument() {
         Create New Document
       </PowerhouseButton>
       <CreateDocumentWithTypeModal
-        documentTypes={visibleDocumentModelModules.map(toDocumentTypeOption)}
+        documentTypes={visibleDocumentModelModules.map((module) =>
+          toDocumentTypeOption(module, studioMode),
+        )}
         onCreate={(input) => void handleCreate(input)}
         onOpenChange={setShowModal}
         onTypeSelected={preloadEditorsForType}
