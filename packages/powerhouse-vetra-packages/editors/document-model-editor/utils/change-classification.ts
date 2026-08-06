@@ -232,7 +232,10 @@ function classifySetStateSchema(
   if (!hasShapeChange(diff)) return SAFE;
   return {
     kind: "version-relevant",
-    reason: `This change alters the ${input.scope} state schema of version ${latestSpec.version}.`,
+    reason:
+      input.scope === "local"
+        ? `You're changing the local fields that version ${latestSpec.version} documents store.`
+        : `You're changing the fields that version ${latestSpec.version} documents store.`,
     diff,
   };
 }
@@ -251,7 +254,7 @@ function classifySetInitialState(
   }
   return {
     kind: "version-relevant",
-    reason: `This change alters the initial ${input.scope} state of version ${latestSpec.version}, which is the replay baseline for existing documents.`,
+    reason: `You're changing the starting content that version ${latestSpec.version} documents are built on.`,
   };
 }
 
@@ -269,13 +272,13 @@ function classifyOperationChange(
     case "DELETE_OPERATION":
       return {
         kind: "version-relevant",
-        reason: `Deleting the "${operationLabel}" operation removes it from version ${latestSpec.version}.`,
+        reason: `You're removing the "${operationLabel}" operation from version ${latestSpec.version}.`,
       };
     case "SET_OPERATION_NAME": {
       if (isBlank(operation.name)) return SAFE;
       return {
         kind: "version-relevant",
-        reason: `Renaming the "${operationLabel}" operation changes how version ${latestSpec.version} documents replay.`,
+        reason: `You're renaming the "${operationLabel}" operation in version ${latestSpec.version}.`,
       };
     }
     case "SET_OPERATION_SCHEMA": {
@@ -283,7 +286,7 @@ function classifyOperationChange(
       if (isBlank(action.input.schema)) {
         return {
           kind: "version-relevant",
-          reason: `This change alters the input of the "${operationLabel}" operation in version ${latestSpec.version}.`,
+          reason: `You're changing the information that the "${operationLabel}" operation accepts in version ${latestSpec.version}.`,
         };
       }
       const diff = diffSdlShapes(
@@ -293,7 +296,7 @@ function classifyOperationChange(
       if (!hasShapeChange(diff)) return SAFE;
       return {
         kind: "version-relevant",
-        reason: `This change alters the input of the "${operationLabel}" operation in version ${latestSpec.version}.`,
+        reason: `You're changing the information that the "${operationLabel}" operation accepts in version ${latestSpec.version}.`,
         diff,
       };
     }
@@ -317,7 +320,7 @@ function classifyDeleteModule(
   if (allAddedSinceRelease) return SAFE;
   return {
     kind: "version-relevant",
-    reason: `Deleting the "${module.name}" module removes its operations from version ${latestSpec.version}.`,
+    reason: `You're removing the "${module.name}" module and all of its operations from version ${latestSpec.version}.`,
   };
 }
 

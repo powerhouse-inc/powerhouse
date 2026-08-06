@@ -51,7 +51,8 @@ export function VersionAdvisoryModal(props: VersionAdvisoryModalProps) {
         </div>
         <div className="my-4 rounded-md bg-background p-4 text-left text-sm text-foreground">
           <p>
-            {reason} Documents created with version {version} would be affected.
+            {reason} Documents that were already created with version {version}{" "}
+            may stop working correctly.
           </p>
           {diff && (
             <>
@@ -67,8 +68,9 @@ export function VersionAdvisoryModal(props: VersionAdvisoryModalProps) {
             </>
           )}
           <p className="mt-3">
-            If version {version} is already published, release version{" "}
-            {nextVersion} first so existing documents can be upgraded.
+            If others are already using version {version}, release version{" "}
+            {nextVersion} first. Your change will go into version {nextVersion},
+            and existing documents can be updated safely.
           </p>
         </div>
         <div className="mt-4 flex flex-col gap-2">
