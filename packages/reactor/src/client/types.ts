@@ -350,6 +350,24 @@ export interface IReactorClient {
   ): Promise<TDocument>;
 
   /**
+   * Upgrades a document to a newer document model version by dispatching an
+   * UPGRADE_DOCUMENT action. When toVersion is omitted, upgrades to the
+   * latest registered module version for the document's type. Returns the
+   * document unchanged when it is already at the target version.
+   *
+   * @param documentIdentifier - Target document id or slug
+   * @param toVersion - Optional target document model version; defaults to latest
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The upgraded document
+   * @throws DowngradeNotSupportedError if toVersion is less than the document's current version
+   */
+  upgradeDocument<TDocument extends PHDocument = PHDocument>(
+    documentIdentifier: string,
+    toVersion?: number,
+    signal?: AbortSignal,
+  ): Promise<TDocument>;
+
+  /**
    * Creates an empty document in a drive as a single batched operation.
    * This is more efficient than createEmpty + addFile as it batches all
    * actions into dependent jobs and waits for them to complete together.

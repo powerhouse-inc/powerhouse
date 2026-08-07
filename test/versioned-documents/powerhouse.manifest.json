@@ -12,20 +12,8 @@
       "name": "Todo"
     }
   ],
-  "apps": [
-    {
-      "id": "todo-editor",
-      "name": "TodoEditor",
-      "documentTypes": ["powerhouse/document-drive"]
-    }
-  ],
-  "editors": [
-    {
-      "id": "todo-editor",
-      "name": "Todo Editor",
-      "documentTypes": ["test/todo"]
-    }
-  ],
+  "apps": [],
+  "editors": [],
   "processors": [],
   "subgraphs": [],
   "config": []

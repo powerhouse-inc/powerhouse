@@ -41,6 +41,7 @@ import {
   replayDocumentVersioned,
   setName,
   setPreferredEditor,
+  UnsupportedDocumentModelVersionError,
 } from "@powerhousedao/shared/document-model";
 import { logger } from "document-model";
 import { conditional, constant, isDefined, isNot, isStrictEqual } from "remeda";
@@ -48,6 +49,7 @@ import {
   DocumentModelNotFoundError,
   UnsupportedDocumentTypeError,
 } from "../errors.js";
+import { showPHModal } from "../hooks/modals.js";
 import { isDocumentTypeSupported } from "../utils/documents.js";
 import { getUserPermissions } from "../utils/user.js";
 import { queueActions, queueOperations, uploadOperations } from "./queue.js";
@@ -350,6 +352,7 @@ export async function addDocument(
   document?: PHDocument,
   id?: string,
   preferredEditor?: string,
+  documentModelVersion?: number,
 ) {
   const { isAllowedToCreateDocuments } = getUserPermissions();
   if (!isAllowedToCreateDocuments) {
@@ -364,11 +367,31 @@ export async function addDocument(
   }
 
   // get the module
-  const documentModelModule =
-    await reactorClient.getDocumentModelModule(documentType);
+  let documentModelModule: DocumentModelModule;
+  if (documentModelVersion !== undefined) {
+    const { results: documentModelModules } =
+      await reactorClient.getDocumentModelModules();
+    const module = documentModelModules.find(
+      (m) =>
+        m.documentModel.global.id === documentType &&
+        (m.version ?? 1) === documentModelVersion,
+    );
+    if (!module) {
+      throw new Error(
+        `Document model not found for type: ${documentType} with version: ${documentModelVersion}`,
+      );
+    }
+    documentModelModule = module;
+  } else {
+    documentModelModule =
+      await reactorClient.getDocumentModelModule(documentType);
+  }
 
   // create - use passed document's state if available
   const newDocument = document ?? documentModelModule.utils.createDocument();
+  if (!document) {
+    newDocument.state.document.version = documentModelModule.version ?? 1;
+  }
   newDocument.header.name = name;
   if (preferredEditor) {
     newDocument.header.meta = {
@@ -500,6 +523,21 @@ export async function addFileWithProgress(
     try {
       document = await loadFile(file);
     } catch (loadError) {
+      if (UnsupportedDocumentModelVersionError.isError(loadError)) {
+        showPHModal({
+          type: "documentVersionUnsupported",
+          documentType: loadError.documentType,
+          requiredVersion: loadError.requiredVersion,
+          availableVersions: loadError.availableVersions,
+        });
+        onProgress?.({
+          stage: "failed",
+          progress: 100,
+          error: loadError.message,
+        });
+        return;
+      }
+
       // Only attempt discovery if the failure is specifically a missing
       // document model module, not for other errors like corrupt files.
       const discoveryService = window.ph?.packageDiscoveryService;
@@ -1057,4 +1095,16 @@ export async function copyNode(
     baseCopyNode(copyNodeInput),
   );
   return await queueActions(drive, copyActions);
+}
+
+/**
+ * Upgrades a document to a newer document model version. Defaults to the
+ * latest registered version for the document's type.
+ */
+export async function upgradeDocument(documentId: string, toVersion?: number) {
+  const reactorClient = window.ph?.reactorClientModule?.client;
+  if (!reactorClient) {
+    throw new Error("ReactorClient not initialized");
+  }
+  return reactorClient.upgradeDocument(documentId, toVersion);
 }

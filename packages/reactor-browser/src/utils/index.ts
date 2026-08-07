@@ -6,6 +6,7 @@ export * from "./get-revision-from-date.js";
 export * from "./nodes.js";
 export * from "./preload-editor.js";
 export * from "./switchboard.js";
+export * from "./upgrade-preview.js";
 export * from "./url.js";
 export * from "./user.js";
 export * from "./validate-document.js";

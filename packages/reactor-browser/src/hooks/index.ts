@@ -16,6 +16,7 @@ export * from "./document-model-modules.js";
 export * from "./document-of-type.js";
 export * from "./document-operations.js";
 export * from "./document-types.js";
+export * from "./document-version-status.js";
 export * from "./download-document.js";
 export * from "./drive-by-id.js";
 export * from "./drives.js";

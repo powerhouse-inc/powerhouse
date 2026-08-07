@@ -168,3 +168,36 @@ export class HashMismatchError extends Error {
     return this._operation;
   }
 }
+
+/**
+ * Thrown when replay or import requires a document model version that is not
+ * registered. Carries the data the UI needs to explain the mismatch.
+ */
+export class UnsupportedDocumentModelVersionError extends Error {
+  public readonly documentType: string;
+  public readonly requiredVersion: number;
+  public readonly availableVersions: number[];
+
+  constructor(
+    documentType: string,
+    requiredVersion: number,
+    availableVersions: number[],
+  ) {
+    super(
+      `No reducer registered for document version ${requiredVersion}. Available versions: ${availableVersions.join(", ")}`,
+    );
+    this.name = "UnsupportedDocumentModelVersionError";
+    this.documentType = documentType;
+    this.requiredVersion = requiredVersion;
+    this.availableVersions = availableVersions;
+  }
+
+  static isError(
+    error: unknown,
+  ): error is UnsupportedDocumentModelVersionError {
+    return (
+      Error.isError(error) &&
+      error.name === "UnsupportedDocumentModelVersionError"
+    );
+  }
+}

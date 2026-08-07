@@ -7,7 +7,10 @@ import type {
   Operation,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
-import { actions } from "@powerhousedao/shared/document-model";
+import {
+  actions,
+  DowngradeNotSupportedError,
+} from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import {
   addRelationshipAction,
@@ -131,17 +134,27 @@ export class ReactorClient implements IReactorClient {
     documentType: string,
   ): Promise<DocumentModelModule<any>> {
     const modules = await this.reactor.getDocumentModels();
-    const module = modules.results.find(
-      (m) => m.documentModel.global.id === documentType,
-    );
 
-    if (!module) {
+    let latestModule: DocumentModelModule | undefined;
+    let latestVersion = -1;
+    for (const module of modules.results) {
+      if (module.documentModel.global.id !== documentType) {
+        continue;
+      }
+      const version = module.version ?? 1;
+      if (version > latestVersion) {
+        latestVersion = version;
+        latestModule = module;
+      }
+    }
+
+    if (!latestModule) {
       throw new Error(
         `Document model module not found for type: ${documentType}`,
       );
     }
 
-    return module as DocumentModelModule<any>;
+    return latestModule as DocumentModelModule<any>;
   }
 
   /**
@@ -585,6 +598,67 @@ export class ReactorClient implements IReactorClient {
     document.state.document.version = module.version ?? 1;
 
     return this.create<TDocument>(document, options?.parentIdentifier, signal);
+  }
+
+  /**
+   * Upgrades a document to a newer document model version by dispatching an
+   * UPGRADE_DOCUMENT action. When toVersion is omitted, upgrades to the
+   * latest registered module version for the document's type. Returns the
+   * document unchanged when it is already at the target version.
+   */
+  async upgradeDocument<TDocument extends PHDocument = PHDocument>(
+    documentIdentifier: string,
+    toVersion?: number,
+    signal?: AbortSignal,
+  ): Promise<TDocument> {
+    this.logger.verbose(
+      "upgradeDocument(@documentIdentifier, @toVersion)",
+      documentIdentifier,
+      toVersion,
+    );
+
+    const document = await this.reactor.getByIdOrSlug<TDocument>(
+      documentIdentifier,
+      undefined,
+      undefined,
+      signal,
+    );
+
+    const documentId = document.header.id;
+    const documentType = document.header.documentType;
+    const fromVersion = document.state.document.version || 1;
+
+    let targetVersion = toVersion;
+    if (targetVersion === undefined) {
+      const module = await this.getDocumentModelModule(documentType);
+      targetVersion = module.version ?? 1;
+    }
+
+    if (targetVersion === fromVersion) {
+      return document;
+    }
+    if (targetVersion < fromVersion) {
+      throw new DowngradeNotSupportedError(
+        documentType,
+        fromVersion,
+        targetVersion,
+      );
+    }
+
+    const action = upgradeDocumentAction({
+      documentId,
+      model: documentType,
+      fromVersion,
+      toVersion: targetVersion,
+      revision: { ...document.header.revision },
+    });
+
+    return this.execute<TDocument>(
+      documentId,
+      document.header.branch || "main",
+      [action],
+      signal,
+    );
   }
 
   /**

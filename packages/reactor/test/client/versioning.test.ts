@@ -555,4 +555,83 @@ describe("ReactorClient Versioning Integration Tests", () => {
       );
     });
   });
+
+  describe("version integrity on create paths", () => {
+    it("getDocumentModelModule returns the latest module version for a type", async () => {
+      const module = await client.getDocumentModelModule(VERSIONED_DOC_TYPE);
+      expect(module.version).toBe(2);
+    });
+
+    it("drives.addFile preserves the document's model version", async () => {
+      const driveDoc = driveDocumentModelModule.utils.createDocument();
+      const drive = await client.create(driveDoc);
+
+      const v2Doc = createV2Document();
+      const added = await client.drives.addFile(drive.header.id, v2Doc);
+
+      expect(added.state.document.version).toBe(2);
+    });
+  });
+
+  describe("upgradeDocument", () => {
+    it("upgrades a v1 document to v2 and applies the upgrade reducer", async () => {
+      const doc = await client.createEmpty(VERSIONED_DOC_TYPE, {
+        documentModelVersion: 1,
+      });
+      await client.execute(doc.header.id, "main", [
+        v1Actions.addItem({ id: "1", name: "First" }),
+      ]);
+
+      const upgraded = await client.upgradeDocument(doc.header.id);
+
+      expect(upgraded.state.document.version).toBe(2);
+      const state = upgraded.state as unknown as StateV2;
+      expect(state.global.title).toBe("");
+      expect(state.global.items[0]).toEqual({
+        id: "1",
+        name: "First",
+        addedAt: "",
+      });
+    });
+
+    it("applies v2 actions with the v2 reducer after upgrade and keeps migrated state", async () => {
+      const doc = await client.createEmpty(VERSIONED_DOC_TYPE, {
+        documentModelVersion: 1,
+      });
+      await client.execute(doc.header.id, "main", [
+        v1Actions.addItem({ id: "1", name: "Old" }),
+      ]);
+
+      await client.upgradeDocument(doc.header.id);
+
+      await client.execute(doc.header.id, "main", [
+        v2Actions.addItem({ id: "2", name: "New" }),
+        v2Actions.setTitle({ title: "Upgraded" }),
+      ]);
+
+      const retrieved = await client.get(doc.header.id);
+      const state = retrieved.state as unknown as StateV2;
+      expect(state.global.title).toBe("Upgraded");
+      expect(state.global.items.length).toBe(2);
+      expect(state.global.items[0]).toHaveProperty("addedAt");
+      expect(state.global.items[1].addedAt.length).toBeGreaterThan(0);
+    });
+
+    it("no-ops when the document is already at the target version", async () => {
+      const doc = await client.createEmpty(VERSIONED_DOC_TYPE, {
+        documentModelVersion: 2,
+      });
+      const result = await client.upgradeDocument(doc.header.id);
+      expect(result.state.document.version).toBe(2);
+    });
+
+    it("throws DowngradeNotSupportedError when target version is lower", async () => {
+      const doc = await client.createEmpty(VERSIONED_DOC_TYPE, {
+        documentModelVersion: 2,
+      });
+      await expect(client.upgradeDocument(doc.header.id, 1)).rejects.toThrow(
+        "Downgrade not supported",
+      );
+    });
+  });
 });

@@ -24,8 +24,15 @@ export function closePHModal() {
 }
 
 /** Shows the create document modal */
-export function showCreateDocumentModal(documentType: string) {
-  setPHModal({ type: "createDocument", documentType });
+export function showCreateDocumentModal(
+  documentType: string,
+  documentModelVersion?: number,
+) {
+  setPHModal({
+    type: "createDocument",
+    documentType,
+    ...(documentModelVersion !== undefined && { documentModelVersion }),
+  });
 }
 
 /** Shows the delete node modal */
