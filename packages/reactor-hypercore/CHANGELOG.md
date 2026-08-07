@@ -1,3 +1,7 @@
+## 6.2.2-dev.39 (2026-08-07)
+
+This was a version bump only for @powerhousedao/reactor-hypercore to align it with other projects, there were no code changes.
+
 ## 6.2.2-dev.38 (2026-08-06)
 
 ### 🚀 Features
