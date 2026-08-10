@@ -3,6 +3,7 @@ import { documentModels as generatedDocumentModels } from "./document-models/doc
 import { e2eFixtureDocumentModels } from "./e2e-fixtures/sample-note-module.js";
 import manifestJson from "./powerhouse.manifest.json" with { type: "json" };
 export { editors } from "./editors/editors.js";
+export { upgradeManifests } from "./document-models/upgrade-manifests.js";
 export const documentModels: DocumentModelModule<any>[] = [
   ...e2eFixtureDocumentModels,
   ...generatedDocumentModels,

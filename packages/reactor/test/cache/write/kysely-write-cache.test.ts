@@ -851,8 +851,9 @@ describe("KyselyWriteCache (Partial Integration) - Cold Miss Rebuild", () => {
     await versionCache.getState(docId, "global", "main");
 
     const calls = versionAwareGetModule.mock.calls;
+    // unversioned documents normalize to version 1, never "latest"
     const initialCall = calls.find(
-      (c: unknown[]) => c[0] === docType && c[1] === undefined,
+      (c: unknown[]) => c[0] === docType && c[1] === 1,
     );
     expect(initialCall).toBeDefined();
 

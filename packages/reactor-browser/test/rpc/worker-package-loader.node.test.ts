@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { WorkerPackageLoader } from "../../src/rpc/worker-package-loader.js";
 
-function fakeModel(id: string) {
-  return { documentModel: { global: { id } }, reducer: () => undefined };
+function fakeModel(id: string, version?: number) {
+  return {
+    documentModel: { global: { id } },
+    reducer: () => undefined,
+    ...(version === undefined ? {} : { version }),
+  };
 }
 
 describe("WorkerPackageLoader", () => {
@@ -103,6 +107,38 @@ describe("WorkerPackageLoader", () => {
     const models = await loader.loadPackages(["pkg"]);
     expect(models).toHaveLength(1);
     expect(attempt).toBe(2);
+  });
+
+  it("keeps every version of a type a package exports", async () => {
+    const loader = new WorkerPackageLoader({
+      cdnUrl: "https://cdn.example",
+      importPackage: () =>
+        Promise.resolve({
+          TodoV1: fakeModel("ph/todo", 1),
+          TodoV2: fakeModel("ph/todo", 2),
+        }),
+    });
+
+    const models = await loader.loadPackages(["todo-pkg"]);
+
+    expect(models.map((m) => m.version).sort()).toEqual([1, 2]);
+  });
+
+  it("resolves a bare load to the highest registered version", async () => {
+    const loader = new WorkerPackageLoader({
+      cdnUrl: "https://cdn.example",
+      importPackage: (url) =>
+        Promise.resolve(
+          url.includes("v1")
+            ? { TodoV1: fakeModel("ph/todo", 1) }
+            : { TodoV2: fakeModel("ph/todo", 2) },
+        ),
+    });
+    await loader.loadPackages(["todo-v2", "todo-v1"]);
+
+    const module = await loader.load("ph/todo");
+
+    expect(module.version).toBe(2);
   });
 
   it("records a failed package without aborting the others", async () => {

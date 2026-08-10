@@ -63,6 +63,25 @@ describe("planOpenFileImports", () => {
     expect(plan.get("doc.phd")).toEqual({ kind: "invalid" });
   });
 
+  it("marks version-unsupported files, excluded from import", () => {
+    const plan = planOpenFileImports({
+      entries: [
+        entry("doc.phd", {
+          state: "version-unsupported",
+          documentType: "test/todo",
+          requiredVersion: 2,
+        }),
+      ],
+      nodes: [],
+      documentTypes: undefined,
+    });
+    expect(plan.get("doc.phd")).toEqual({
+      kind: "version-unsupported",
+      documentType: "test/todo",
+      requiredVersion: 2,
+    });
+  });
+
   it("marks unsupported document types, but is permissive without a list", () => {
     const strict = planOpenFileImports({
       entries: [entry("doc.phd", parsed({ documentType: "acme/thing" }))],

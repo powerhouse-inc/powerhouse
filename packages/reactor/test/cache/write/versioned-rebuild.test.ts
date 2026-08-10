@@ -634,3 +634,476 @@ describe("KyselyWriteCache D8 - warm rebuild version pinning", () => {
     expect(docScopeFullRebuildCalls.length).toBeLessThan(5);
   });
 });
+
+describe("KyselyWriteCache D9 - upgrade reducers run at the boundary", () => {
+  let keyframeStore: IKeyframeStore;
+  let operationStore: IOperationStore;
+  let cache: KyselyWriteCache;
+  let db: unknown;
+
+  beforeEach(async () => {
+    const setup = await createTestOperationStore();
+    operationStore = setup.store;
+    keyframeStore = setup.keyframeStore;
+    db = setup.db;
+  });
+
+  afterEach(async () => {
+    await cache?.shutdown();
+    try {
+      await (db as { destroy: () => Promise<void> }).destroy();
+    } catch {
+      // ignore
+    }
+  });
+
+  it("applies the upgrade reducer to boundary state, not initial state", async () => {
+    const docId = "d9-boundary-state";
+
+    const v1Reducer = vi.fn().mockImplementation((doc: PHDocument) => {
+      const state = doc.state as unknown as { global: { items: string[] } };
+      return {
+        ...doc,
+        state: {
+          ...doc.state,
+          global: { ...state.global, items: [...state.global.items, "x"] },
+        },
+      } as PHDocument;
+    });
+    const v2Reducer = vi.fn().mockImplementation((doc: PHDocument) => doc);
+
+    const upgradeReducer = (doc: PHDocument) => {
+      const state = doc.state as unknown as {
+        global: { items: string[]; title?: string };
+      };
+      return {
+        ...doc,
+        state: {
+          ...doc.state,
+          global: {
+            ...state.global,
+            title: `migrated-${state.global.items.length}`,
+          },
+        },
+      } as PHDocument;
+    };
+
+    const getModuleFn = vi
+      .fn()
+      .mockImplementation((_dt: string, version?: number) => ({
+        reducer: version === 1 ? v1Reducer : v2Reducer,
+      }));
+    const computeUpgradePathFn = vi
+      .fn()
+      .mockReturnValue([{ toVersion: 2, upgradeReducer, description: "" }]);
+
+    const registry = makeVersionedRegistry(getModuleFn, computeUpgradePathFn);
+    cache = new KyselyWriteCache(
+      keyframeStore,
+      operationStore,
+      registry,
+      makeConfig(),
+    );
+    await cache.startup();
+
+    const t1 = "2024-01-01T00:00:01.000Z";
+    const t2 = "2024-01-01T00:00:02.000Z";
+    const t3 = "2024-01-01T00:00:03.000Z";
+    const t4 = "2024-01-01T00:00:04.000Z";
+    const t5 = "2024-01-01T00:00:05.000Z";
+
+    await operationStore.apply(
+      docId,
+      DOC_TYPE,
+      "document",
+      "main",
+      0,
+      (txn) => {
+        txn.addOperations(
+          createCreateDocumentOperation(docId, DOC_TYPE, {
+            timestampUtcMs: t1,
+          }),
+        );
+        txn.addOperations(
+          createUpgradeDocumentOperation(
+            docId,
+            0,
+            1,
+            { global: { items: [] }, document: { version: 1 } },
+            { index: 1, timestampUtcMs: t2 },
+          ),
+        );
+        txn.addOperations(
+          createUpgradeDocumentOperation(
+            docId,
+            1,
+            2,
+            {},
+            {
+              index: 2,
+              timestampUtcMs: t4,
+              action: {
+                id: "upgrade-boundary",
+                type: "UPGRADE_DOCUMENT",
+                scope: "document",
+                timestampUtcMs: t4,
+                input: {
+                  documentId: docId,
+                  fromVersion: 1,
+                  toVersion: 2,
+                  revision: { global: 1 },
+                },
+              },
+            },
+          ),
+        );
+      },
+    );
+
+    await operationStore.apply(docId, DOC_TYPE, "global", "main", 0, (txn) => {
+      txn.addOperations(
+        createTestOperation(docId, { index: 0, skip: 0, timestampUtcMs: t3 }),
+      );
+      txn.addOperations(
+        createTestOperation(docId, { index: 1, skip: 0, timestampUtcMs: t5 }),
+      );
+    });
+
+    const result = await cache.getState(docId, "global", "main");
+    const state = result.state as unknown as {
+      global: { items: string[]; title?: string };
+    };
+
+    expect(state.global.title).toBe("migrated-1");
+  });
+});
+
+describe("KyselyWriteCache - held-back upgrades respect document-scope order", () => {
+  let keyframeStore: IKeyframeStore;
+  let operationStore: IOperationStore;
+  let cache: KyselyWriteCache;
+  let db: unknown;
+
+  beforeEach(async () => {
+    const setup = await createTestOperationStore();
+    operationStore = setup.store;
+    keyframeStore = setup.keyframeStore;
+    db = setup.db;
+  });
+
+  afterEach(async () => {
+    await cache?.shutdown();
+    try {
+      await (db as { destroy: () => Promise<void> }).destroy();
+    } catch {
+      // ignore
+    }
+  });
+
+  function deleteDocumentOperation(
+    docId: string,
+    index: number,
+    timestampUtcMs: string,
+  ): Operation {
+    return {
+      id: `op-delete-${index}`,
+      index,
+      skip: 0,
+      hash: `hash-delete-${index}`,
+      timestampUtcMs,
+      action: {
+        id: `delete-${index}`,
+        type: "DELETE_DOCUMENT",
+        scope: "document",
+        timestampUtcMs,
+        input: { documentId: docId },
+      },
+    } as unknown as Operation;
+  }
+
+  it("keeps a document deleted when the delete follows a held-back initialState upgrade", async () => {
+    const docId = "order-delete-after-upgrade";
+
+    // no manifest: the validated upgrade falls back to its initialState
+    const registry = makeVersionedRegistry((_dt, _v) => ({
+      reducer: (doc: PHDocument) => doc,
+    }));
+
+    cache = new KyselyWriteCache(
+      keyframeStore,
+      operationStore,
+      registry,
+      makeConfig(),
+    );
+    await cache.startup();
+
+    const t1 = "2024-01-01T00:00:01.000Z";
+    const t2 = "2024-01-01T00:00:02.000Z";
+    const t3 = "2024-01-01T00:00:03.000Z";
+    const t4 = "2024-01-01T00:00:04.000Z";
+
+    await operationStore.apply(
+      docId,
+      DOC_TYPE,
+      "document",
+      "main",
+      0,
+      (txn) => {
+        txn.addOperations(
+          createCreateDocumentOperation(docId, DOC_TYPE, {
+            timestampUtcMs: t1,
+          }),
+        );
+        txn.addOperations(
+          createUpgradeDocumentOperation(
+            docId,
+            0,
+            1,
+            {},
+            { index: 1, timestampUtcMs: t2 },
+          ),
+        );
+        txn.addOperations(
+          createUpgradeDocumentOperation(
+            docId,
+            1,
+            2,
+            { document: { version: 2 }, global: { migrated: true } },
+            { index: 2, timestampUtcMs: t3 },
+          ),
+        );
+        txn.addOperations(deleteDocumentOperation(docId, 3, t4));
+      },
+    );
+
+    const result = await cache.getState(docId, "document", "main");
+
+    expect(result.state.document.isDeleted).toBe(true);
+    expect(result.state.document.version).toBe(2);
+  });
+
+  it("keeps a rebuilt non-document scope deleted as well", async () => {
+    const docId = "order-delete-after-upgrade-global";
+
+    const registry = makeVersionedRegistry((_dt, _v) => ({
+      reducer: (doc: PHDocument) => doc,
+    }));
+
+    cache = new KyselyWriteCache(
+      keyframeStore,
+      operationStore,
+      registry,
+      makeConfig(),
+    );
+    await cache.startup();
+
+    const t1 = "2024-01-01T00:00:01.000Z";
+    const t2 = "2024-01-01T00:00:02.000Z";
+    const t3 = "2024-01-01T00:00:03.000Z";
+    const t4 = "2024-01-01T00:00:04.000Z";
+
+    await operationStore.apply(
+      docId,
+      DOC_TYPE,
+      "document",
+      "main",
+      0,
+      (txn) => {
+        txn.addOperations(
+          createCreateDocumentOperation(docId, DOC_TYPE, {
+            timestampUtcMs: t1,
+          }),
+        );
+        txn.addOperations(
+          createUpgradeDocumentOperation(
+            docId,
+            0,
+            1,
+            {},
+            { index: 1, timestampUtcMs: t2 },
+          ),
+        );
+        txn.addOperations(
+          createUpgradeDocumentOperation(
+            docId,
+            1,
+            2,
+            { document: { version: 2 } },
+            { index: 2, timestampUtcMs: t3 },
+          ),
+        );
+        txn.addOperations(deleteDocumentOperation(docId, 3, t4));
+      },
+    );
+
+    const result = await cache.getState(docId, "global", "main");
+
+    expect(result.state.document.isDeleted).toBe(true);
+    expect(result.state.document.version).toBe(2);
+  });
+});
+
+describe("KyselyWriteCache - positional reads below the upgrade boundary", () => {
+  let keyframeStore: IKeyframeStore;
+  let operationStore: IOperationStore;
+  let cache: KyselyWriteCache;
+  let db: unknown;
+
+  beforeEach(async () => {
+    const setup = await createTestOperationStore();
+    operationStore = setup.store;
+    keyframeStore = setup.keyframeStore;
+    db = setup.db;
+  });
+
+  afterEach(async () => {
+    await cache?.shutdown();
+    try {
+      await (db as { destroy: () => Promise<void> }).destroy();
+    } catch {
+      // ignore
+    }
+  });
+
+  async function seedUpgradeAtBoundaryTwo(docId: string): Promise<void> {
+    const t1 = "2024-01-01T00:00:01.000Z";
+    const t2 = "2024-01-01T00:00:02.000Z";
+    const t3 = "2024-01-01T00:00:03.000Z";
+    const t4 = "2024-01-01T00:00:04.000Z";
+    const t5 = "2024-01-01T00:00:05.000Z";
+    const t6 = "2024-01-01T00:00:06.000Z";
+
+    await operationStore.apply(
+      docId,
+      DOC_TYPE,
+      "document",
+      "main",
+      0,
+      (txn) => {
+        txn.addOperations(
+          createCreateDocumentOperation(docId, DOC_TYPE, {
+            timestampUtcMs: t1,
+          }),
+        );
+        txn.addOperations(
+          createUpgradeDocumentOperation(
+            docId,
+            0,
+            1,
+            {},
+            { index: 1, timestampUtcMs: t2 },
+          ),
+        );
+        txn.addOperations(
+          createUpgradeDocumentOperation(
+            docId,
+            1,
+            2,
+            {},
+            {
+              index: 2,
+              timestampUtcMs: t5,
+              action: {
+                id: "upgrade-positional",
+                type: "UPGRADE_DOCUMENT",
+                scope: "document",
+                timestampUtcMs: t5,
+                input: {
+                  documentId: docId,
+                  fromVersion: 1,
+                  toVersion: 2,
+                  revision: { global: 2 },
+                },
+              } as unknown as Operation["action"],
+            },
+          ),
+        );
+      },
+    );
+
+    await operationStore.apply(docId, DOC_TYPE, "global", "main", 0, (txn) => {
+      txn.addOperations(
+        createTestOperation(docId, { index: 0, skip: 0, timestampUtcMs: t3 }),
+      );
+      txn.addOperations(
+        createTestOperation(docId, { index: 1, skip: 0, timestampUtcMs: t4 }),
+      );
+      txn.addOperations(
+        createTestOperation(docId, { index: 2, skip: 0, timestampUtcMs: t6 }),
+      );
+    });
+  }
+
+  it("does not apply an upgrade past the target revision, and clamps the document-scope revision", async () => {
+    const docId = "positional-below-boundary";
+
+    const registry = makeVersionedRegistry(
+      (_dt, _v) => ({ reducer: (doc: PHDocument) => doc }),
+      () => [],
+    );
+
+    cache = new KyselyWriteCache(
+      keyframeStore,
+      operationStore,
+      registry,
+      makeConfig(),
+    );
+    await cache.startup();
+
+    await seedUpgradeAtBoundaryTwo(docId);
+
+    // boundary is global revision 2: ops 0 and 1 predate the upgrade
+    const positional = await cache.getState(docId, "global", "main", 1);
+
+    expect(positional.state.document.version).toBe(1);
+    // clamped to the upgrade's document-scope index so a resume re-reads it
+    expect(positional.header.revision.document).toBe(2);
+  });
+
+  it("still applies every upgrade on head reads", async () => {
+    const docId = "positional-head-read";
+
+    const registry = makeVersionedRegistry(
+      (_dt, _v) => ({ reducer: (doc: PHDocument) => doc }),
+      () => [],
+    );
+
+    cache = new KyselyWriteCache(
+      keyframeStore,
+      operationStore,
+      registry,
+      makeConfig(),
+    );
+    await cache.startup();
+
+    await seedUpgradeAtBoundaryTwo(docId);
+
+    const head = await cache.getState(docId, "global", "main");
+
+    expect(head.state.document.version).toBe(2);
+    expect(head.header.revision.document).toBe(3);
+  });
+
+  it("applies the upgrade for positional reads at or past its boundary", async () => {
+    const docId = "positional-at-boundary";
+
+    const registry = makeVersionedRegistry(
+      (_dt, _v) => ({ reducer: (doc: PHDocument) => doc }),
+      () => [],
+    );
+
+    cache = new KyselyWriteCache(
+      keyframeStore,
+      operationStore,
+      registry,
+      makeConfig(),
+    );
+    await cache.startup();
+
+    await seedUpgradeAtBoundaryTwo(docId);
+
+    const positional = await cache.getState(docId, "global", "main", 2);
+
+    expect(positional.state.document.version).toBe(2);
+  });
+});

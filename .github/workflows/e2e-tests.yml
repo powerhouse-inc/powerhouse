@@ -252,6 +252,18 @@ jobs:
       - name: Re-link workspace bins now that dist files exist
         run: pnpm rebuild --recursive
 
+      # semantic-search's demo downloads a ~25 MB model from the HuggingFace
+      # Hub on first use, and the Hub rate-limits runner IPs (429), reddening
+      # the whole job for a reason unrelated to either repo. The recipe caches
+      # the model under semantic-search/.model-cache and the runner mirrors the
+      # recipes tree wholesale, so a cache restored into the checkout rides
+      # along into the scratch copy and the download is skipped entirely.
+      - name: Cache the semantic-search embedding model
+        uses: actions/cache@v4
+        with:
+          path: recipes-checkout/semantic-search/.model-cache
+          key: hf-model-Xenova-all-MiniLM-L6-v2-q8
+
       # drive-override's demo creates 10,000 documents and takes ~112s locally;
       # every other recipe is under 7s. 600s leaves headroom on a slow runner
       # without masking a genuine hang.

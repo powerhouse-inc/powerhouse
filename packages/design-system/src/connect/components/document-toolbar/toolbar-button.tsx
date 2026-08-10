@@ -1,6 +1,8 @@
 import {
   setSelectedNode,
+  showPHModal,
   showRevisionHistory,
+  useDocumentVersionStatus,
   useDownloadDocument,
   useGetSwitchboardLink,
   useNodeParentFolderById,
@@ -216,6 +218,45 @@ export function ToolbarCloseButton(props: ToolbarButtonProps) {
       onClick={onClick}
     >
       {children}
+    </ToolbarButton>
+  );
+}
+
+/**
+ * Toolbar control for upgrading the document to the latest installed
+ * document model version. Renders nothing when the document is already
+ * current or no upgrade path is registered.
+ */
+export function ToolbarUpgradeButton(props: ToolbarButtonProps) {
+  const { className, onClick: onClickOverride, document, children } = props;
+  const versionStatus = useDocumentVersionStatus(document);
+
+  const runUpgrade = () => {
+    if (document) {
+      showPHModal({
+        type: "confirmDocumentUpgrade",
+        documentId: document.header.id,
+      });
+    }
+  };
+  const onClick = makeOnClick(document, onClickOverride, runUpgrade);
+
+  if (
+    !versionStatus ||
+    versionStatus.kind !== "upgrade-available" ||
+    !versionStatus.canUpgrade
+  ) {
+    return null;
+  }
+
+  return (
+    <ToolbarButton
+      data-testid="toolbar-upgrade-button"
+      aria-label="Update document"
+      className={className}
+      onClick={onClick}
+    >
+      {children ?? <span className="px-1 text-xs">Update available</span>}
     </ToolbarButton>
   );
 }

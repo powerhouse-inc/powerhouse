@@ -1,6 +1,6 @@
 import { EditorLoader } from "@powerhousedao/connect/components";
 import { useUndoRedoShortcuts } from "@powerhousedao/connect/hooks";
-import { toast } from "@powerhousedao/connect/services";
+import { dismissToast, toast } from "@powerhousedao/connect/services";
 import { Icon, PowerhouseButton } from "@powerhousedao/design-system";
 import { RevisionHistory } from "@powerhousedao/design-system/connect";
 import {
@@ -10,6 +10,7 @@ import {
   useDocumentById,
   useDocumentModelModuleById,
   useDocumentOperations,
+  useDocumentVersionStatus,
   useEditorModuleById,
   useFallbackEditorModule,
   useRevisionHistoryVisible,
@@ -19,8 +20,9 @@ import {
 } from "@powerhousedao/reactor-browser";
 import type { PHDocument } from "@powerhousedao/shared/document-model";
 import { redo, undo } from "@powerhousedao/shared/document-model";
-import { Suspense, useEffect, useState } from "react";
+import { createElement, Suspense, useEffect, useState } from "react";
 import { CenteredErrorMessage, ErrorBoundary } from "./error-boundary.js";
+import { DocumentUpgradeToast } from "./document-upgrade-toast.js";
 
 type Props<TDocument extends PHDocument = PHDocument> = {
   document: TDocument;
@@ -94,6 +96,25 @@ export const DocumentEditor: React.FC<Props> = (props) => {
   const preferredEditorModule = useEditorModuleById(preferredEditor);
   const fallbackEditorModule = useFallbackEditorModule(documentType);
   const editorModule = preferredEditorModule ?? fallbackEditorModule;
+  const versionStatus = useDocumentVersionStatus(document ?? undefined);
+  const versionStatusKind = versionStatus?.kind;
+  const upgradeAvailable =
+    versionStatus?.kind === "upgrade-available" && versionStatus.canUpgrade;
+  useEffect(() => {
+    if (upgradeAvailable && documentId) {
+      toast(createElement(DocumentUpgradeToast, { documentId }), {
+        type: "connect-warning",
+        toastId: `outdated-document-${documentId}`,
+        autoClose: false,
+      });
+    } else if (
+      versionStatusKind &&
+      versionStatusKind !== "upgrade-available" &&
+      documentId
+    ) {
+      dismissToast(`outdated-document-${documentId}`);
+    }
+  }, [upgradeAvailable, versionStatusKind, documentId]);
   const vetraPackages = useVetraPackages();
   const packageManager = useVetraPackageManager();
   const owningPackageName = editorModule
@@ -171,6 +192,22 @@ export const DocumentEditor: React.FC<Props> = (props) => {
           This document can't be opened because the "{documentType}" document
           model isn't installed. Install the package that provides it to open
           the document.
+        </p>
+        <OpenPackageManagerButton />
+      </EditorError>
+    );
+  }
+
+  if (versionStatus?.kind === "unsupported") {
+    return (
+      <EditorError title="Document version not supported">
+        <p className="mb-4 text-sm text-foreground">
+          This document requires version {versionStatus.documentVersion} of the
+          "{documentType}" document model, but only version
+          {versionStatus.availableVersions.length > 1 ? "s" : ""}{" "}
+          {versionStatus.availableVersions.join(", ")}{" "}
+          {versionStatus.availableVersions.length > 1 ? "are" : "is"} installed.
+          Update the package that provides "{documentType}" to open it.
         </p>
         <OpenPackageManagerButton />
       </EditorError>

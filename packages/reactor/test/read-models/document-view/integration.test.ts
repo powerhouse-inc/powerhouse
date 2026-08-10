@@ -2457,4 +2457,196 @@ describe("KyselyDocumentView", () => {
       expect(await view.resolveSlug(slug, { branch })).toBe(liveId);
     });
   });
+
+  describe("UPGRADE_DOCUMENT sibling-scope guard", () => {
+    const branch = "main";
+    const documentType = "powerhouse/document-drive";
+    const createdAt = "2024-01-01T00:00:00.000Z";
+
+    function headerEcho(documentId: string) {
+      return {
+        protocolVersions: { "base-reducer": 2 },
+        id: documentId,
+        documentType,
+        slug: documentId,
+        name: "",
+        branch,
+        revision: { global: 1, document: 1 },
+        lastModifiedAtUtcIso: createdAt,
+        createdAtUtcIso: createdAt,
+        sig: {
+          nonce: "nonce",
+          publicKey: { kty: "EC", crv: "P-256", x: "x", y: "y" },
+        },
+      };
+    }
+
+    async function indexGlobalOp(
+      documentId: string,
+      content: Record<string, unknown>,
+      ordinal: number,
+    ): Promise<void> {
+      const action = {
+        id: generateId(),
+        type: "SET_STATE",
+        scope: "global",
+        timestampUtcMs: createdAt,
+        input: {},
+      };
+      const resultingState = JSON.stringify({
+        header: headerEcho(documentId),
+        global: content,
+      });
+      await view.indexOperations([
+        {
+          operation: {
+            index: 0,
+            timestampUtcMs: createdAt,
+            hash: "hash-global-0",
+            skip: 0,
+            id: generateId(),
+            action,
+            resultingState,
+          },
+          context: {
+            documentId,
+            documentType,
+            scope: "global",
+            branch,
+            resultingState,
+            ordinal,
+          },
+        },
+      ]);
+    }
+
+    async function indexUpgradeOp(
+      documentId: string,
+      options: {
+        fromVersion: number;
+        toVersion: number;
+        initialState?: Record<string, unknown>;
+        migrated?: boolean;
+        globalEcho: Record<string, unknown>;
+        ordinal: number;
+      },
+    ): Promise<void> {
+      const action = {
+        id: generateId(),
+        type: "UPGRADE_DOCUMENT",
+        scope: "document",
+        timestampUtcMs: createdAt,
+        input: {
+          documentId,
+          model: documentType,
+          fromVersion: options.fromVersion,
+          toVersion: options.toVersion,
+          ...(options.initialState !== undefined
+            ? { initialState: options.initialState }
+            : {}),
+        },
+      };
+      const resultingState = JSON.stringify({
+        header: headerEcho(documentId),
+        document: { version: options.toVersion, isDeleted: false },
+        global: options.globalEcho,
+        ...(options.migrated ? { __migrated: true } : {}),
+      });
+      await view.indexOperations([
+        {
+          operation: {
+            index: 1,
+            timestampUtcMs: createdAt,
+            hash: "hash-doc-1",
+            skip: 0,
+            id: generateId(),
+            action,
+            resultingState,
+          },
+          context: {
+            documentId,
+            documentType,
+            scope: "document",
+            branch,
+            resultingState,
+            ordinal: options.ordinal,
+          },
+        },
+      ]);
+    }
+
+    async function globalSnapshotContent(
+      documentId: string,
+    ): Promise<Record<string, unknown> | undefined> {
+      const row = await db
+        .selectFrom("DocumentSnapshot")
+        .selectAll()
+        .where("documentId", "=", documentId)
+        .where("scope", "=", "global")
+        .where("branch", "=", branch)
+        .executeTakeFirst();
+      return row?.content as Record<string, unknown> | undefined;
+    }
+
+    it("does not reindex sibling scopes from an unvouched upgrade", async () => {
+      await view.init();
+      const documentId = generateId();
+
+      await indexGlobalOp(documentId, { count: 5 }, 1);
+      await indexUpgradeOp(documentId, {
+        fromVersion: 1,
+        toVersion: 2,
+        globalEcho: { count: 0 },
+        ordinal: 2,
+      });
+
+      expect(await globalSnapshotContent(documentId)).toEqual({ count: 5 });
+
+      const snapshotScopes = await db
+        .selectFrom("DocumentSnapshot")
+        .select("scope")
+        .where("documentId", "=", documentId)
+        .execute();
+      expect(snapshotScopes.map((r) => r.scope)).not.toContain("__migrated");
+    });
+
+    it("reindexes sibling scopes when the executor vouched via __migrated", async () => {
+      await view.init();
+      const documentId = generateId();
+
+      await indexGlobalOp(documentId, { count: 5 }, 1);
+      await indexUpgradeOp(documentId, {
+        fromVersion: 1,
+        toVersion: 2,
+        migrated: true,
+        globalEcho: { count: 99 },
+        ordinal: 2,
+      });
+
+      expect(await globalSnapshotContent(documentId)).toEqual({ count: 99 });
+
+      const snapshotScopes = await db
+        .selectFrom("DocumentSnapshot")
+        .select("scope")
+        .where("documentId", "=", documentId)
+        .execute();
+      expect(snapshotScopes.map((r) => r.scope)).not.toContain("__migrated");
+    });
+
+    it("reindexes sibling scopes for a seed carrying initialState", async () => {
+      await view.init();
+      const documentId = generateId();
+
+      await indexGlobalOp(documentId, { count: 5 }, 1);
+      await indexUpgradeOp(documentId, {
+        fromVersion: 0,
+        toVersion: 2,
+        initialState: { global: { count: 42 } },
+        globalEcho: { count: 42 },
+        ordinal: 2,
+      });
+
+      expect(await globalSnapshotContent(documentId)).toEqual({ count: 42 });
+    });
+  });
 });

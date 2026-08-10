@@ -14,7 +14,11 @@ export const CreateDocumentModal: React.FC = () => {
   const phModal = usePHModal();
   const open = phModal?.type === "createDocument";
   const documentType = open ? phModal.documentType : undefined;
-  const documentModel = useDocumentModelModuleById(documentType);
+  const documentModelVersion = open ? phModal.documentModelVersion : undefined;
+  const documentModel = useDocumentModelModuleById(
+    documentType,
+    documentModelVersion,
+  );
   const [selectedDrive] = useSelectedDriveSafe();
   const selectedFolder = useSelectedFolder();
   const parentFolder = useParentFolderForSelectedNode();
@@ -28,6 +32,10 @@ export const CreateDocumentModal: React.FC = () => {
       documentName || `New ${documentModel.documentModel.global.name}`,
       documentModel.documentModel.global.id,
       selectedFolder?.id ?? parentFolder?.id,
+      undefined,
+      undefined,
+      undefined,
+      documentModelVersion,
     );
     setSelectedNode(node);
   };

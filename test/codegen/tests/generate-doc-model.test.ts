@@ -90,6 +90,36 @@ describe("versioned document models", () => {
 
       expect(v1ModuleContent).toContain("version: 1,");
       expect(v2ModuleContent).toContain("version: 2,");
+
+      const v1SchemaPath = join(
+        testOutDir,
+        "document-models",
+        "test-doc",
+        "v1",
+        "gen",
+        "document-schema.ts",
+      );
+      const v2SchemaPath = join(
+        testOutDir,
+        "document-models",
+        "test-doc",
+        "v2",
+        "gen",
+        "document-schema.ts",
+      );
+
+      const v1SchemaContent = await Bun.file(v1SchemaPath).text();
+      const v2SchemaContent = await Bun.file(v2SchemaPath).text();
+
+      // v1 keeps the single-version validators; only the latest version
+      // dispatches on the document's stamped version so pre-upgrade documents
+      // validate against the schema they were created with.
+      expect(v1SchemaContent).not.toContain("SchemasByVersion");
+      expect(v2SchemaContent).toContain(
+        'from "../../v1/gen/document-schema.js"',
+      );
+      expect(v2SchemaContent).toContain("SchemasByVersion");
+      expect(v2SchemaContent).toContain("stampedDocumentModelVersion");
     });
     test("should persist existing reducers, tests, utils, and custom files when generating a new spec version", async () => {
       await runDocumentModelTests({
@@ -97,6 +127,62 @@ describe("versioned document models", () => {
         specDirName: SPEC_VERSION_2,
         testOutputParentDir: parentOutDir,
       });
+    });
+
+    // v2 adds a non-nullable field that v1 documents cannot have until they
+    // are upgraded, so the generated validators must dispatch on the version
+    // stamped in the document instead of always using the latest schema.
+    // Generation is asserted at runtime without tsc: the fresh upgrade stub
+    // intentionally does not compile until the migration is hand-written.
+    test("validates documents against the schema of their stamped version", async () => {
+      const outDir = join(parentOutDir, "version-aware-validation");
+      await rmForce(outDir);
+      await cpForce(NEW_PROJECT, outDir);
+
+      const testDoc = await loadDocumentModel(
+        join(
+          DATA,
+          "spec-version-2-with-required-field",
+          "test-doc",
+          "test-doc.json",
+        ),
+      );
+      const project = buildTsMorphProject(outDir);
+      await generateDocumentModel(testDoc, project);
+      await project.save();
+
+      type GeneratedDocument = {
+        state: { document: { version: number } };
+        initialState: { document: { version: number } };
+      };
+      type SchemaModule = {
+        isTestDocDocument: (document: unknown) => boolean;
+      };
+      type UtilsModule = {
+        utils: { createDocument: () => GeneratedDocument };
+      };
+
+      const modelDir = join(outDir, "document-models", "test-doc");
+      const schemaModule = (await import(
+        join(modelDir, "v2", "gen", "document-schema.ts")
+      )) as SchemaModule;
+      const v1Utils = (await import(
+        join(modelDir, "v1", "gen", "utils.ts")
+      )) as UtilsModule;
+      const v2Utils = (await import(
+        join(modelDir, "v2", "gen", "utils.ts")
+      )) as UtilsModule;
+
+      const v1Document = v1Utils.utils.createDocument();
+      expect(schemaModule.isTestDocDocument(v1Document)).toBe(true);
+
+      const v2Document = v2Utils.utils.createDocument();
+      expect(schemaModule.isTestDocDocument(v2Document)).toBe(true);
+
+      const v1ShapeStampedAsV2 = structuredClone(v1Document);
+      v1ShapeStampedAsV2.state.document.version = 2;
+      v1ShapeStampedAsV2.initialState.document.version = 2;
+      expect(schemaModule.isTestDocDocument(v1ShapeStampedAsV2)).toBe(false);
     });
 
     test("should throw a typescript error in upgrades when new state does not match old state", () => {

@@ -7,7 +7,12 @@ import type {
   Operation,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
-import { actions } from "@powerhousedao/shared/document-model";
+import {
+  actions,
+  DowngradeNotSupportedError,
+  normalizeDocumentModelVersion,
+  UnsupportedDocumentModelVersionError,
+} from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import {
   addRelationshipAction,
@@ -47,11 +52,13 @@ import {
 } from "./cursor.js";
 import { DriveClient } from "./drive-client.js";
 import {
+  DEFAULT_UPGRADE_CONFLICT_RETRIES,
   DocumentChangeType,
   type CreateDocumentOptions,
   type DocumentChangeEvent,
   type IDriveClient,
   type IReactorClient,
+  type UpgradeDocumentOptions,
 } from "./types.js";
 import {
   authSubjectFromSigner,
@@ -131,17 +138,61 @@ export class ReactorClient implements IReactorClient {
     documentType: string,
   ): Promise<DocumentModelModule<any>> {
     const modules = await this.reactor.getDocumentModels();
-    const module = modules.results.find(
-      (m) => m.documentModel.global.id === documentType,
-    );
 
-    if (!module) {
+    let latestModule: DocumentModelModule | undefined;
+    let latestVersion = -1;
+    for (const module of modules.results) {
+      if (module.documentModel.global.id !== documentType) {
+        continue;
+      }
+      const version = module.version ?? 1;
+      if (version > latestVersion) {
+        latestVersion = version;
+        latestModule = module;
+      }
+    }
+
+    if (!latestModule) {
       throw new Error(
         `Document model module not found for type: ${documentType}`,
       );
     }
 
-    return module as DocumentModelModule<any>;
+    return latestModule as DocumentModelModule<any>;
+  }
+
+  /**
+   * Retrieves the document model module matching the version the document is
+   * stamped with, so not-yet-upgraded documents get the reducer their
+   * history was written with rather than the latest.
+   */
+  async getDocumentModelModuleForDocument(
+    document: PHDocument,
+  ): Promise<DocumentModelModule<any>> {
+    const documentType = document.header.documentType;
+    const version = normalizeDocumentModelVersion(
+      (document.state as Partial<typeof document.state>).document?.version,
+    );
+
+    const modules = await this.reactor.getDocumentModels();
+
+    const availableVersions: number[] = [];
+    for (const module of modules.results) {
+      if (module.documentModel.global.id !== documentType) {
+        continue;
+      }
+      const moduleVersion = normalizeDocumentModelVersion(module.version);
+      if (moduleVersion === version) {
+        return module as DocumentModelModule<any>;
+      }
+      availableVersions.push(moduleVersion);
+    }
+
+    throw new UnsupportedDocumentModelVersionError(
+      documentType,
+      version,
+      availableVersions.sort((a, b) => a - b),
+    );
   }
 
   /**
@@ -478,7 +529,10 @@ export class ReactorClient implements IReactorClient {
           documentId,
           model: document.header.documentType,
           fromVersion: 0,
-          toVersion: document.state.document.version,
+          toVersion: normalizeDocumentModelVersion(
+            (document.state as Partial<typeof document.state>).document
+              ?.version,
+          ),
           initialState: document.state,
         }),
       ],
@@ -556,8 +610,11 @@ export class ReactorClient implements IReactorClient {
 
     let module: DocumentModelModule | undefined;
     if (options?.documentModelVersion !== undefined) {
+      const requestedVersion = normalizeDocumentModelVersion(
+        options.documentModelVersion,
+      );
       module = matchingModules.find(
-        (m) => m.version === options.documentModelVersion,
+        (m) => normalizeDocumentModelVersion(m.version) === requestedVersion,
       );
       if (!module) {
         throw new Error(
@@ -568,8 +625,8 @@ export class ReactorClient implements IReactorClient {
       module = matchingModules.reduce<DocumentModelModule | undefined>(
         (latest, current) => {
           if (latest === undefined) return current;
-          const currentVersion = current.version ?? 0;
-          const latestVersion = latest.version ?? 0;
+          const currentVersion = normalizeDocumentModelVersion(current.version);
+          const latestVersion = normalizeDocumentModelVersion(latest.version);
           return currentVersion > latestVersion ? current : latest;
         },
         undefined,
@@ -582,9 +639,107 @@ export class ReactorClient implements IReactorClient {
     }
 
     const document = module.utils.createDocument();
-    document.state.document.version = module.version ?? 1;
+    document.state.document.version = normalizeDocumentModelVersion(
+      module.version,
+    );
 
     return this.create<TDocument>(document, options?.parentIdentifier, signal);
+  }
+
+  /**
+   * Upgrades a document to a newer document model version by dispatching an
+   * UPGRADE_DOCUMENT action. When toVersion is omitted, upgrades to the
+   * latest registered module version for the document's type. Returns the
+   * document unchanged when it is already at the target version.
+   *
+   * The executor validates the action's version and revision snapshot against
+   * the state the migration actually runs on. When a concurrent edit
+   * invalidates the snapshot, the upgrade is rebuilt from a fresh read and
+   * retried up to maxConflictRetries times before the conflict is surfaced.
+   */
+  async upgradeDocument<TDocument extends PHDocument = PHDocument>(
+    documentIdentifier: string,
+    toVersion?: number,
+    options?: UpgradeDocumentOptions,
+    signal?: AbortSignal,
+  ): Promise<TDocument> {
+    this.logger.verbose(
+      "upgradeDocument(@documentIdentifier, @toVersion)",
+      documentIdentifier,
+      toVersion,
+    );
+
+    const maxConflictRetries =
+      options?.maxConflictRetries ?? DEFAULT_UPGRADE_CONFLICT_RETRIES;
+
+    let lastConflictMessage = "";
+    for (let attempt = 0; attempt <= maxConflictRetries; attempt++) {
+      const document = await this.reactor.getByIdOrSlug<TDocument>(
+        documentIdentifier,
+        undefined,
+        undefined,
+        signal,
+      );
+
+      const documentId = document.header.id;
+      const documentType = document.header.documentType;
+      const branch = document.header.branch || "main";
+      const fromVersion = normalizeDocumentModelVersion(
+        (document.state as Partial<typeof document.state>).document?.version,
+      );
+
+      let targetVersion = toVersion;
+      if (targetVersion === undefined) {
+        const module = await this.getDocumentModelModule(documentType);
+        targetVersion = normalizeDocumentModelVersion(module.version);
+      }
+
+      if (targetVersion === fromVersion) {
+        return document;
+      }
+      if (targetVersion < fromVersion) {
+        throw new DowngradeNotSupportedError(
+          documentType,
+          fromVersion,
+          targetVersion,
+        );
+      }
+
+      const action = upgradeDocumentAction({
+        documentId,
+        model: documentType,
+        fromVersion,
+        toVersion: targetVersion,
+        revision: { ...document.header.revision },
+      });
+
+      const signedActions = await signActions([action], this.signer, signal);
+      const jobInfo = await this.reactor.execute(
+        documentId,
+        branch,
+        signedActions,
+        signal,
+      );
+      const completedJob = await this.waitForJob(jobInfo, signal);
+
+      if (completedJob.status !== JobStatus.FAILED) {
+        return await this.reactor.getByIdOrSlug<TDocument>(
+          documentId,
+          { branch },
+          completedJob.consistencyToken,
+          signal,
+        );
+      }
+
+      if (completedJob.error?.name !== "UpgradePreconditionFailedError") {
+        throw new Error(completedJob.error?.message);
+      }
+      lastConflictMessage = completedJob.error.message;
+    }
+
+    throw new Error(
+      `Upgrade of document ${documentIdentifier} conflicted with concurrent edits after ${maxConflictRetries + 1} attempts: ${lastConflictMessage}`,
+    );
   }
 
   /**

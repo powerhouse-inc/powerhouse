@@ -6,6 +6,8 @@ import type {
   SearchFilter,
   ViewFilter,
 } from "@powerhousedao/reactor";
+import type { PHDocument } from "@powerhousedao/shared/document-model";
+import { normalizeDocumentModelVersion } from "@powerhousedao/shared/document-model";
 import { fromErrorInfo } from "./error-info.js";
 import type { MessageRouter } from "./message-router.js";
 import { rehydratePage } from "./paging.js";
@@ -140,6 +142,18 @@ export function createReactorClientProxy(
         if (prop === "getDocumentModelModule") {
           return (documentType: string) =>
             Promise.resolve().then(() => registry.getModule(documentType));
+        }
+        if (prop === "getDocumentModelModuleForDocument") {
+          return (document: PHDocument) =>
+            Promise.resolve().then(() =>
+              registry.getModule(
+                document.header.documentType,
+                normalizeDocumentModelVersion(
+                  (document.state as Partial<typeof document.state>).document
+                    ?.version,
+                ),
+              ),
+            );
         }
         if (prop === "getDocumentModelModules") {
           return (_namespace?: string, paging?: PagingOptions) =>

@@ -6,6 +6,7 @@ import type {
   Operation,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
+import { normalizeDocumentModelVersion } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import { v4 as uuidv4 } from "uuid";
 import {
@@ -475,7 +476,10 @@ export class Reactor implements IReactor {
       documentId: document.header.id,
       model: document.header.documentType,
       fromVersion: 0,
-      toVersion: document.state.document.version,
+      // imported documents may predate the document scope entirely
+      toVersion: normalizeDocumentModelVersion(
+        (document.state as Partial<typeof document.state>).document?.version,
+      ),
       initialState: document.state,
     });
 

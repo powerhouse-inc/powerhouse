@@ -7,7 +7,10 @@ import {
   type PHDocument,
   type PHDocumentHeader,
 } from "./documents.js";
-import { HashMismatchError } from "./errors.js";
+import {
+  HashMismatchError,
+  UnsupportedDocumentModelVersionError,
+} from "./errors.js";
 import type { DocumentOperations, Operation } from "./operations.js";
 import { backfillAuthState } from "./state.js";
 import type { PHBaseState } from "./state.js";
@@ -219,9 +222,12 @@ export function replayDocumentVersioned<TState extends PHBaseState>(
       | Reducer<TState>
       | undefined;
     if (!reducer) {
-      const available = Object.keys(config.reducers).join(", ");
-      throw new Error(
-        `No reducer registered for document version ${currentVersion}. Available versions: ${available}`,
+      throw new UnsupportedDocumentModelVersionError(
+        header.documentType,
+        currentVersion,
+        Object.keys(config.reducers)
+          .map(Number)
+          .sort((a, b) => a - b),
       );
     }
 

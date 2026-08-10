@@ -52,8 +52,7 @@ describe("DocumentModel", () => {
         input: { id: "powerhouse/test" },
         scope: "global",
         type: "SET_MODEL_ID",
-        timestamp,
-        error: undefined,
+        timestampUtcMs: timestamp,
       },
     ]);
   });
@@ -127,8 +126,16 @@ describe("DocumentModel", () => {
       },
     ]);
 
-    const expectedLoadedDocumentModel = { ...documentModel };
-    expectedLoadedDocumentModel.clipboard = [];
+    // replay compacts skipped operations (asserted above), so the loaded
+    // document keeps only the NOOP while the in-memory one still holds both
+    const expectedLoadedDocumentModel = {
+      ...documentModel,
+      clipboard: [],
+      operations: {
+        ...documentModel.operations,
+        global: documentModel.operations.global!.slice(1),
+      },
+    };
     expect(JSON.parse(JSON.stringify(loadedDocumentModel))).toStrictEqual(
       JSON.parse(JSON.stringify(expectedLoadedDocumentModel)),
     );

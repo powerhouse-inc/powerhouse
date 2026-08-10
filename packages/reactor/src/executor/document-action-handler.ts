@@ -41,13 +41,19 @@ interface RelationshipPostWriteArgs {
   input: RelationshipActionShape;
   job: Job;
 }
-import { hashDocumentStateForScope } from "@powerhousedao/shared/document-model";
+import {
+  hashDocumentStateForScope,
+  normalizeDocumentModelVersion,
+} from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import type { IOperationIndexTxn } from "../cache/operation-index-types.js";
 import { DriveCollectionId } from "../cache/operation-index-types.js";
 import type { Job } from "../queue/types.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
-import { DocumentDeletedError } from "../shared/errors.js";
+import {
+  DocumentDeletedError,
+  UpgradePreconditionFailedError,
+} from "../shared/errors.js";
 import { AppendConditionFailedError } from "../storage/interfaces.js";
 import type { ExecutionStores } from "./execution-scope.js";
 import type {
@@ -619,7 +625,80 @@ export class DocumentActionHandler {
       );
     }
 
-    const nextIndex = getNextIndexForScope(document, job.scope);
+    if (fromVersion === toVersion && fromVersion > 0) {
+      return {
+        job,
+        success: true,
+        operations: [],
+        operationsWithContext: [],
+        duration: Date.now() - startTime,
+      };
+    }
+
+    // The action carries the client's snapshot of the document version and
+    // per-scope revisions. Replay treats both as ground truth when segmenting
+    // history, so a snapshot that no longer matches must be rejected here and
+    // rebuilt by the client rather than persisted. Writes that arrive with
+    // their evaluation already decided replay accepted history and are exempt.
+    const arrivesDecided =
+      executing.replayingAcceptedHistory || executing.evaluatedByPosition;
+    if (fromVersion > 0 && !arrivesDecided) {
+      const stampedVersion = normalizeDocumentModelVersion(
+        documentState.version,
+      );
+      if (fromVersion !== stampedVersion) {
+        return buildErrorResult(
+          job,
+          new UpgradePreconditionFailedError(
+            documentId,
+            `fromVersion ${fromVersion} does not match the document's version ${stampedVersion}`,
+          ),
+          startTime,
+        );
+      }
+
+      if (input.revision !== undefined) {
+        // The cached document's header carries revisions stamped when its
+        // snapshot was built; sibling-scope writes since then do not refresh
+        // it, so the store is asked directly.
+        let actualRevisions: Record<string, number>;
+        try {
+          const revisions = await stores.operationStore.getRevisions(
+            documentId,
+            job.branch,
+            signal,
+          );
+          actualRevisions = revisions.revision;
+        } catch (error) {
+          return buildErrorResult(
+            job,
+            new Error(
+              `Failed to fetch revisions for upgrade: ${error instanceof Error ? error.message : String(error)}`,
+            ),
+            startTime,
+          );
+        }
+
+        const revisionScopes = new Set([
+          ...Object.keys(input.revision),
+          ...Object.keys(actualRevisions),
+        ]);
+        for (const revisionScope of revisionScopes) {
+          const snapshot = input.revision[revisionScope] ?? 0;
+          const actual = actualRevisions[revisionScope] ?? 0;
+          if (snapshot !== actual) {
+            return buildErrorResult(
+              job,
+              new UpgradePreconditionFailedError(
+                documentId,
+                `revision snapshot for scope "${revisionScope}" is ${snapshot} but the document is at ${actual}`,
+              ),
+              startTime,
+            );
+          }
+        }
+      }
+    }
 
     let upgradePath: UpgradeTransition[] | undefined;
     if (fromVersion > 0 && fromVersion < toVersion) {
@@ -638,15 +717,45 @@ export class DocumentActionHandler {
       }
     }
 
-    if (fromVersion === toVersion && fromVersion > 0) {
-      return {
-        job,
-        success: true,
-        operations: [],
-        operationsWithContext: [],
-        duration: Date.now() - startTime,
-      };
+    const otherScopes = Object.keys(document.state).filter(
+      (scope) => scope !== job.scope,
+    );
+
+    // Migration reducers reshape every scope, so validated upgrades need
+    // accurate sibling state. Seed upgrades (fromVersion 0) run no
+    // transitions and take their state from the action's initialState, so
+    // the fetches would be pure overhead in every create batch.
+    if (fromVersion > 0) {
+      for (const scope of otherScopes) {
+        let scopedDocument: PHDocument;
+        try {
+          scopedDocument = await stores.writeCache.getState(
+            documentId,
+            scope,
+            job.branch,
+            undefined,
+            signal,
+          );
+        } catch (error) {
+          return buildErrorResult(
+            job,
+            new Error(
+              `Failed to fetch ${scope} scope for upgrade: ${error instanceof Error ? error.message : String(error)}`,
+            ),
+            startTime,
+          );
+        }
+        document = {
+          ...document,
+          state: {
+            ...document.state,
+            [scope]: (scopedDocument.state as Record<string, unknown>)[scope],
+          } as typeof document.state,
+        };
+      }
     }
+
+    const nextIndex = getNextIndexForScope(document, job.scope);
 
     try {
       document = applyUpgradeDocumentAction(
@@ -672,6 +781,13 @@ export class DocumentActionHandler {
       header: document.header,
       ...document.state,
     };
+    // Vouches that every scope echoed here was fetched fresh before the
+    // migration ran. Upgrade operations persisted by executors that never
+    // fetched sibling scopes carry stale echoes, and the document view must
+    // not reindex sibling scopes from those.
+    if (fromVersion > 0) {
+      resultingStateObj.__migrated = true;
+    }
     const resultingState = JSON.stringify(resultingStateObj);
 
     const writeResult = await this.writeOperationToStore(
@@ -704,6 +820,17 @@ export class DocumentActionHandler {
       document,
       SnapshotPosition.Head,
     );
+
+    // Sibling snapshots hold pre-upgrade state, but evicting them before the
+    // transaction commits lets a concurrent read repopulate the cache with
+    // that same state, so the eviction is deferred to after the commit.
+    for (const scope of otherScopes) {
+      executing.postCommitInvalidations.push({
+        documentId,
+        scope,
+        branch: job.branch,
+      });
+    }
 
     indexTxn.write([
       {

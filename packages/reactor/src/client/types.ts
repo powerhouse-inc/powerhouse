@@ -62,6 +62,21 @@ export type CreateDocumentOptions = {
   documentModelVersion?: number;
 };
 
+/** Retries taken when an upgrade conflicts with concurrent edits. */
+export const DEFAULT_UPGRADE_CONFLICT_RETRIES = 3;
+
+/**
+ * Options for upgrading a document.
+ */
+export type UpgradeDocumentOptions = {
+  /**
+   * How many times to retry with a fresh read when the executor rejects the
+   * upgrade because the document changed after it was read. Defaults to
+   * {@link DEFAULT_UPGRADE_CONFLICT_RETRIES}.
+   */
+  maxConflictRetries?: number;
+};
+
 /**
  * Drive-aware operations grouped under `client.drives`.
  *
@@ -346,6 +361,47 @@ export interface IReactorClient {
   createEmpty<TDocument extends PHDocument>(
     documentModelType: string,
     options?: CreateDocumentOptions,
+    signal?: AbortSignal,
+  ): Promise<TDocument>;
+
+  /**
+   * Retrieves the document model module matching the version a document is
+   * stamped with. Use this instead of {@link getDocumentModelModule}
+   * whenever a specific document is in hand: the latest-wins lookup feeds
+   * not-yet-upgraded documents the wrong reducer, diverging from replay.
+   *
+   * @param document - The document whose stamped version selects the module
+   * @returns The document model module registered for that version
+   * @throws UnsupportedDocumentModelVersionError if no module is registered for the stamped version
+   */
+  getDocumentModelModuleForDocument(
+    document: PHDocument,
+  ): Promise<DocumentModelModule<any>>;
+
+  /**
+   * Upgrades a document to a newer document model version by dispatching an
+   * UPGRADE_DOCUMENT action. When toVersion is omitted, upgrades to the
+   * latest registered module version for the document's type. Returns the
+   * document unchanged when it is already at the target version.
+   *
+   * The action carries a snapshot of the document's version and per-scope
+   * revisions, which the executor validates before persisting. When an edit
+   * lands between the read and the upgrade executing, the upgrade is
+   * rejected and retried with a fresh read up to
+   * {@link UpgradeDocumentOptions.maxConflictRetries} times before the
+   * conflict is surfaced.
+   *
+   * @param documentIdentifier - Target document id or slug
+   * @param toVersion - Optional target document model version; defaults to latest
+   * @param options - Optional upgrade options (maxConflictRetries)
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The upgraded document
+   * @throws DowngradeNotSupportedError if toVersion is less than the document's current version
+   */
+  upgradeDocument<TDocument extends PHDocument = PHDocument>(
+    documentIdentifier: string,
+    toVersion?: number,
+    options?: UpgradeDocumentOptions,
     signal?: AbortSignal,
   ): Promise<TDocument>;
 

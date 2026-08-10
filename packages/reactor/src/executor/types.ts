@@ -49,6 +49,18 @@ export type ExecutingJob = {
    * fleet computes differently.
    */
   evaluatedByPosition: boolean;
+
+  /**
+   * Cache entries to invalidate only after the execution transaction commits.
+   * An UPGRADE_DOCUMENT reshapes sibling scopes it writes no operation to;
+   * invalidating them mid-transaction lets a concurrent read repopulate the
+   * cache with pre-upgrade state that then survives the commit.
+   */
+  postCommitInvalidations: Array<{
+    documentId: string;
+    scope: string;
+    branch: string;
+  }>;
 };
 
 export type PositionedWrites = {

@@ -511,11 +511,16 @@ export class InMemoryQueue implements IQueue {
     // In a persistent queue, this would update the job status and store the error
     await this.remove(jobId);
 
-    // Emit JOB_FAILED so subscribers (sync manager, job tracker, etc.) can react
+    // Emit JOB_FAILED so subscribers (sync manager, job tracker, etc.) can react.
+    // The name is preserved because consumers classify failures by it.
+    const emittedError = new Error(error?.message ?? "Job failed");
+    if (error?.name) {
+      emittedError.name = error.name;
+    }
     this.eventBus
       .emit(ReactorEventTypes.JOB_FAILED, {
         jobId,
-        error: new Error(error?.message ?? "Job failed"),
+        error: emittedError,
         job,
       })
       .catch(() => {});

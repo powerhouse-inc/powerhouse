@@ -1,4 +1,8 @@
-import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
+import {
+  driveDocumentModelModule,
+  isFileNode,
+  type DocumentDriveDocument,
+} from "@powerhousedao/shared/document-drive";
 import type {
   Action,
   DocumentModelModule,
@@ -209,6 +213,12 @@ const v2Module: DocumentModelModule = {
     },
     local: {},
   },
+} as unknown as DocumentModelModule;
+
+/** A module from a package that has not adopted versioning: the registry treats it as v1. */
+const unversionedModule: DocumentModelModule = {
+  ...v1Module,
+  version: undefined,
 } as unknown as DocumentModelModule;
 
 function upgradeV1ToV2(document: PHDocument): PHDocument {
@@ -554,5 +564,313 @@ describe("ReactorClient Versioning Integration Tests", () => {
         "Document model not found for type: non/existent",
       );
     });
+  });
+
+  describe("version integrity on create paths", () => {
+    it("getDocumentModelModule returns the latest module version for a type", async () => {
+      const module = await client.getDocumentModelModule(VERSIONED_DOC_TYPE);
+      expect(module.version).toBe(2);
+    });
+
+    it("drives.addFile preserves the document's model version", async () => {
+      const driveDoc = driveDocumentModelModule.utils.createDocument();
+      const drive = await client.create(driveDoc);
+
+      const v2Doc = createV2Document();
+      const added = await client.drives.addFile(drive.header.id, v2Doc);
+
+      expect(added.state.document.version).toBe(2);
+    });
+
+    it("drives.copyNode preserves a v1 document's version and unmigrated state", async () => {
+      const driveDoc = driveDocumentModelModule.utils.createDocument();
+      const drive = await client.create(driveDoc);
+
+      const v1Doc = await client.drives.addFile(
+        drive.header.id,
+        createV1Document(),
+      );
+      expect(v1Doc.state.document.version).toBe(1);
+
+      await client.execute(v1Doc.header.id, "main", [
+        v1Actions.addItem({ id: "1", name: "First" }),
+      ]);
+
+      await client.drives.copyNode(drive.header.id, v1Doc.header.id, undefined);
+
+      const reloaded = await client.get<DocumentDriveDocument>(drive.header.id);
+      const copiedNode = reloaded.state.global.nodes
+        .filter(isFileNode)
+        .find((n) => n.id !== v1Doc.header.id);
+      expect(copiedNode).toBeDefined();
+
+      const copied = await client.get(copiedNode!.id);
+      expect(copied.state.document.version).toBe(1);
+      const state = copied.state as unknown as StateV1;
+      expect(state.global).not.toHaveProperty("title");
+      expect(state.global.items).toEqual([{ id: "1", name: "First" }]);
+    });
+  });
+
+  describe("getDocumentModelModuleForDocument", () => {
+    it("resolves the module matching the document's stamped version", async () => {
+      const doc = await client.createEmpty(VERSIONED_DOC_TYPE, {
+        documentModelVersion: 1,
+      });
+
+      const module = await client.getDocumentModelModuleForDocument(doc);
+      expect(module.version).toBe(1);
+
+      const upgraded = await client.upgradeDocument(doc.header.id);
+      const upgradedModule =
+        await client.getDocumentModelModuleForDocument(upgraded);
+      expect(upgradedModule.version).toBe(2);
+    });
+
+    it("throws for a version with no registered module", async () => {
+      const doc = await client.createEmpty(VERSIONED_DOC_TYPE, {
+        documentModelVersion: 2,
+      });
+      doc.state.document.version = 9;
+
+      await expect(
+        client.getDocumentModelModuleForDocument(doc),
+      ).rejects.toThrow("No reducer registered for document version 9");
+    });
+  });
+
+  describe("upgradeDocument", () => {
+    it("upgrades a v1 document to v2 and applies the upgrade reducer", async () => {
+      const doc = await client.createEmpty(VERSIONED_DOC_TYPE, {
+        documentModelVersion: 1,
+      });
+      await client.execute(doc.header.id, "main", [
+        v1Actions.addItem({ id: "1", name: "First" }),
+      ]);
+
+      const upgraded = await client.upgradeDocument(doc.header.id);
+
+      expect(upgraded.state.document.version).toBe(2);
+      const state = upgraded.state as unknown as StateV2;
+      expect(state.global.title).toBe("");
+      expect(state.global.items[0]).toEqual({
+        id: "1",
+        name: "First",
+        addedAt: "",
+      });
+    });
+
+    it("applies v2 actions with the v2 reducer after upgrade and keeps migrated state", async () => {
+      const doc = await client.createEmpty(VERSIONED_DOC_TYPE, {
+        documentModelVersion: 1,
+      });
+      await client.execute(doc.header.id, "main", [
+        v1Actions.addItem({ id: "1", name: "Old" }),
+      ]);
+
+      await client.upgradeDocument(doc.header.id);
+
+      await client.execute(doc.header.id, "main", [
+        v2Actions.addItem({ id: "2", name: "New" }),
+        v2Actions.setTitle({ title: "Upgraded" }),
+      ]);
+
+      const retrieved = await client.get(doc.header.id);
+      const state = retrieved.state as unknown as StateV2;
+      expect(state.global.title).toBe("Upgraded");
+      expect(state.global.items.length).toBe(2);
+      expect(state.global.items[0]).toHaveProperty("addedAt");
+      expect(state.global.items[1].addedAt.length).toBeGreaterThan(0);
+    });
+
+    it("no-ops when the document is already at the target version", async () => {
+      const doc = await client.createEmpty(VERSIONED_DOC_TYPE, {
+        documentModelVersion: 2,
+      });
+      const result = await client.upgradeDocument(doc.header.id);
+      expect(result.state.document.version).toBe(2);
+    });
+
+    it("throws DowngradeNotSupportedError when target version is lower", async () => {
+      const doc = await client.createEmpty(VERSIONED_DOC_TYPE, {
+        documentModelVersion: 2,
+      });
+      await expect(client.upgradeDocument(doc.header.id, 1)).rejects.toThrow(
+        "Downgrade not supported",
+      );
+    });
+  });
+
+  describe("upgrade preconditions", () => {
+    function upgradeAction(
+      documentId: string,
+      fromVersion: number,
+      toVersion: number,
+      revision: Record<string, number>,
+    ): Action {
+      return {
+        id: generateId(),
+        type: "UPGRADE_DOCUMENT",
+        scope: "document",
+        timestampUtcMs: new Date().toISOString(),
+        input: {
+          documentId,
+          model: VERSIONED_DOC_TYPE,
+          fromVersion,
+          toVersion,
+          revision,
+        },
+      } as unknown as Action;
+    }
+
+    it("rejects an upgrade whose revision snapshot is stale", async () => {
+      const doc = await client.createEmpty(VERSIONED_DOC_TYPE, {
+        documentModelVersion: 1,
+      });
+      await client.execute(doc.header.id, "main", [
+        v1Actions.addItem({ id: "1", name: "First" }),
+      ]);
+
+      const current = await client.get(doc.header.id);
+      const staleRevision = {
+        ...current.header.revision,
+        global: (current.header.revision.global ?? 0) + 5,
+      };
+
+      await expect(
+        client.execute(doc.header.id, "main", [
+          upgradeAction(doc.header.id, 1, 2, staleRevision),
+        ]),
+      ).rejects.toThrow("Upgrade precondition failed");
+    });
+
+    it("rejects an upgrade whose fromVersion does not match the document", async () => {
+      const doc = await client.createEmpty(VERSIONED_DOC_TYPE, {
+        documentModelVersion: 1,
+      });
+      const current = await client.get(doc.header.id);
+
+      await expect(
+        client.execute(doc.header.id, "main", [
+          upgradeAction(doc.header.id, 2, 3, {
+            ...current.header.revision,
+          }),
+        ]),
+      ).rejects.toThrow("does not match the document's version");
+    });
+
+    it("retries with a fresh read when an edit races the upgrade", async () => {
+      const doc = await client.createEmpty(VERSIONED_DOC_TYPE, {
+        documentModelVersion: 1,
+      });
+      await client.execute(doc.header.id, "main", [
+        v1Actions.addItem({ id: "1", name: "First" }),
+      ]);
+
+      const originalExecute = reactor.execute.bind(reactor);
+      let raced = false;
+      reactor.execute = (async (
+        documentId: string,
+        branch: string,
+        actions: Action[],
+        signal?: AbortSignal,
+      ) => {
+        if (!raced && actions.some((a) => a.type === "UPGRADE_DOCUMENT")) {
+          raced = true;
+          await client.execute(documentId, branch, [
+            v1Actions.addItem({ id: "2", name: "Raced" }),
+          ]);
+        }
+        return originalExecute(documentId, branch, actions, signal);
+      }) as typeof reactor.execute;
+
+      const upgraded = await client.upgradeDocument(doc.header.id);
+
+      expect(raced).toBe(true);
+      expect(upgraded.state.document.version).toBe(2);
+      const state = upgraded.state as unknown as StateV2;
+      expect(state.global.items.length).toBe(2);
+    });
+
+    it("surfaces the conflict after exhausting retries", async () => {
+      const doc = await client.createEmpty(VERSIONED_DOC_TYPE, {
+        documentModelVersion: 1,
+      });
+
+      const originalExecute = reactor.execute.bind(reactor);
+      let itemId = 0;
+      reactor.execute = (async (
+        documentId: string,
+        branch: string,
+        actions: Action[],
+        signal?: AbortSignal,
+      ) => {
+        if (actions.some((a) => a.type === "UPGRADE_DOCUMENT")) {
+          itemId += 1;
+          await client.execute(documentId, branch, [
+            v1Actions.addItem({ id: `${itemId}`, name: "Raced" }),
+          ]);
+        }
+        return originalExecute(documentId, branch, actions, signal);
+      }) as typeof reactor.execute;
+
+      await expect(
+        client.upgradeDocument(doc.header.id, undefined, {
+          maxConflictRetries: 1,
+        }),
+      ).rejects.toThrow("conflicted with concurrent edits after 2 attempts");
+    });
+
+    it("upgrades a document whose state carries no document scope", async () => {
+      const doc = await client.createEmpty(VERSIONED_DOC_TYPE, {
+        documentModelVersion: 1,
+      });
+
+      const originalGet = reactor.getByIdOrSlug.bind(reactor);
+      let stripped = false;
+      reactor.getByIdOrSlug = (async (
+        ...args: Parameters<typeof originalGet>
+      ) => {
+        const result = await originalGet(...args);
+        if (!stripped) {
+          stripped = true;
+          delete (result.state as Partial<PHBaseState>).document;
+        }
+        return result;
+      }) as typeof reactor.getByIdOrSlug;
+
+      const upgraded = await client.upgradeDocument(doc.header.id);
+
+      expect(upgraded.state.document.version).toBe(2);
+    });
+  });
+});
+
+describe("ReactorClient createEmpty with an unversioned module", () => {
+  let client: IReactorClient;
+  let module: InProcessReactorClientModule;
+
+  beforeEach(async () => {
+    const reactorBuilder = new ReactorBuilder().withDocumentModelSources([
+      driveDocumentModelModule as any,
+      unversionedModule,
+    ]);
+    module = await new ReactorClientBuilder()
+      .withReactorBuilder(reactorBuilder)
+      .buildModule();
+    client = module.client;
+  });
+
+  afterEach(() => {
+    module.reactor.kill();
+  });
+
+  it("resolves an explicit version 1 request against a module with no version field", async () => {
+    const result = await client.createEmpty(VERSIONED_DOC_TYPE, {
+      documentModelVersion: 1,
+    });
+
+    expect(result.header.documentType).toBe(VERSIONED_DOC_TYPE);
+    expect(result.state.document.version).toBe(1);
   });
 });

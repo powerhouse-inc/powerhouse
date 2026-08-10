@@ -11,6 +11,7 @@ import {
   garbageCollect,
   hashDocumentStateForScope,
   isUndoRedo,
+  normalizeDocumentModelVersion,
   sortOperations,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
@@ -180,6 +181,13 @@ export class SimpleJobExecutor implements IJobExecutor {
       branch: string;
     }> = [];
 
+    // Entries handlers request invalidated only after the transaction commits
+    const postCommitInvalidations: Array<{
+      documentId: string;
+      scope: string;
+      branch: string;
+    }> = [];
+
     let pendingEvent: JobWriteReadyEvent | undefined;
     let result: JobResult;
     try {
@@ -195,6 +203,7 @@ export class SimpleJobExecutor implements IJobExecutor {
             signal,
             replayingAcceptedHistory: true,
             evaluatedByPosition: false,
+            postCommitInvalidations,
           });
           if (loadResult.success && loadResult.operationsWithContext) {
             for (const owc of loadResult.operationsWithContext) {
@@ -243,6 +252,7 @@ export class SimpleJobExecutor implements IJobExecutor {
           signal,
           replayingAcceptedHistory: false,
           evaluatedByPosition: positioned.evaluatedByPosition,
+          postCommitInvalidations,
         };
 
         const actionResult = await this.processActions(
@@ -317,6 +327,12 @@ export class SimpleJobExecutor implements IJobExecutor {
         this.documentMetaCache.invalidate(entry.documentId, entry.branch);
       }
       throw error;
+    }
+
+    if (result.success) {
+      for (const entry of postCommitInvalidations) {
+        this.writeCache.invalidate(entry.documentId, entry.scope, entry.branch);
+      }
     }
 
     if (pendingEvent) {
@@ -600,10 +616,9 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     let module: DocumentModelModule;
     try {
-      const moduleVersion = documentVersion === 0 ? undefined : documentVersion;
       module = this.registry.getModule(
         document.header.documentType,
-        moduleVersion,
+        normalizeDocumentModelVersion(documentVersion),
       );
     } catch (error) {
       return buildErrorResult(

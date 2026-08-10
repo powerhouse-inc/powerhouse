@@ -20,7 +20,7 @@ import {
   actions,
   createPresignedHeader,
   generateId,
-  replayDocument,
+  normalizeDocumentModelVersion,
   type Action,
   type CreateDocumentActionInput,
   type ISigner,
@@ -123,7 +123,11 @@ export class DriveClient implements IDriveClient {
           documentId: document.header.id,
           model: document.header.documentType,
           fromVersion: 0,
-          toVersion: 1,
+          // imported files may predate the document scope entirely
+          toVersion: normalizeDocumentModelVersion(
+            (document.state as Partial<typeof document.state>).document
+              ?.version,
+          ),
           initialState: document.state,
         }),
         addRelationshipAction(driveIdentifier, documentId, "child"),
@@ -387,15 +391,21 @@ export class DriveClient implements IDriveClient {
       const node = drive.state.global.nodes.find((n) => n.id === entry.srcId);
       if (!node || !isFileNode(node)) continue;
       const srcDoc = await this.client.get(entry.srcId, undefined, signal);
-      const module = await this.client.getDocumentModelModule(
-        srcDoc.header.documentType,
-      );
-      const duplicated = replayDocument(
-        srcDoc.initialState,
-        srcDoc.operations,
-        module.reducer,
-        createPresignedHeader(entry.targetId, srcDoc.header.documentType),
-      );
+
+      // Read snapshots carry no operations, so the copy is seeded from the
+      // source's current state rather than replayed. Replaying here would also
+      // pick a reducer by document type alone and apply it to state that is
+      // already current.
+      const duplicated: PHDocument = {
+        ...srcDoc,
+        header: createPresignedHeader(
+          entry.targetId,
+          srcDoc.header.documentType,
+        ),
+        initialState: srcDoc.state,
+        operations: {},
+      };
+
       const resolvedName = resolvedNamesByTargetId.get(entry.targetId);
       if (resolvedName) {
         duplicated.header.name = resolvedName;

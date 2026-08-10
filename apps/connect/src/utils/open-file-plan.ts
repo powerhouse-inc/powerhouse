@@ -18,12 +18,24 @@ export type ParsedFileInfo =
   // auto-discovery may still resolve it, so the file stays importable —
   // but its header is unknown, so no duplicate check is possible.
   | { state: "model-missing" }
+  // The document needs a newer document model version than any installed
+  // module can replay.
+  | {
+      state: "version-unsupported";
+      documentType: string;
+      requiredVersion: number;
+    }
   // Corrupt zip / not a Powerhouse document.
   | { state: "invalid" };
 
 export type PlannedRow =
   | { kind: "checking" }
   | { kind: "invalid" }
+  | {
+      kind: "version-unsupported";
+      documentType: string;
+      requiredVersion: number;
+    }
   | { kind: "unsupported" }
   | {
       kind: "ready";
@@ -79,6 +91,15 @@ export function planOpenFileImports(args: {
     }
     if (parsed.state === "invalid") {
       rows.set(key, { kind: "invalid" });
+      continue;
+    }
+
+    if (parsed.state === "version-unsupported") {
+      rows.set(key, {
+        kind: "version-unsupported",
+        documentType: parsed.documentType,
+        requiredVersion: parsed.requiredVersion,
+      });
       continue;
     }
 
