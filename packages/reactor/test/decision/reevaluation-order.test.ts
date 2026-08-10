@@ -71,6 +71,7 @@ describe("re-evaluation scope order", () => {
       commit: vi.fn().mockResolvedValue([]),
       find: vi.fn().mockResolvedValue({ items: [], total: 0 }),
       getCollectionsForDocuments: vi.fn().mockResolvedValue({}),
+      getGroupReferencers: vi.fn().mockResolvedValue([]),
     };
 
     return new SimpleJobExecutor(

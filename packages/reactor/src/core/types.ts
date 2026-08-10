@@ -16,6 +16,7 @@ import type { IEventBus } from "../events/interfaces.js";
 import type { IJobExecutorManager } from "../executor/interfaces.js";
 import type { IJobTracker } from "../job-tracker/interfaces.js";
 import type { IQueue } from "../queue/interfaces.js";
+import type { GroupReevaluationTrigger } from "./group-reevaluation-trigger.js";
 import type { IReadModelCoordinator } from "../read-models/interfaces.js";
 import type { DocumentViewDatabase } from "../read-models/types.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
@@ -473,6 +474,12 @@ export interface InProcessReactorModule extends ReactorModule {
   processorManagerConsistencyTracker: IConsistencyTracker;
   reactor: IReactor;
   syncModule: InProcessSyncModule | undefined;
+  /**
+   * Present when authGroups is on: enqueues re-evaluation jobs for the
+   * documents a group membership change affects. Started by the builder;
+   * hosts shut it down alongside the sync manager.
+   */
+  groupReevaluationTrigger: GroupReevaluationTrigger | undefined;
   /**
    * Instrumented pg.Pool handles registered with the builder, either by
    * createPostgresDatabase or by withInstrumentedPool. Empty when no pg

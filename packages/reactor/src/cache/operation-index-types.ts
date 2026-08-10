@@ -70,6 +70,13 @@ export interface IOperationIndex {
   getCollectionsForDocuments(
     documentIds: string[],
   ): Promise<Record<string, string[]>>;
+  /**
+   * The documents whose auth history has ever referenced the group, from the
+   * group-reference relation. This is the set a group-stream change owes a
+   * re-evaluation pass to; it is complete because a group's auth scope cannot
+   * reference other groups.
+   */
+  getGroupReferencers(groupId: string, signal?: AbortSignal): Promise<string[]>;
 }
 
 export interface DocumentCollectionTable {

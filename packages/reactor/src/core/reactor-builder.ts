@@ -78,6 +78,7 @@ import type { MigrationStrategy } from "../storage/migrations/types.js";
 import { DefaultSubscriptionErrorHandler } from "../subs/default-error-handler.js";
 import { ReactorSubscriptionManager } from "../subs/react-subscription-manager.js";
 import { SubscriptionNotificationReadModel } from "../subs/subscription-notification-read-model.js";
+import { GroupReevaluationTrigger } from "./group-reevaluation-trigger.js";
 import { GqlRequestChannelFactory } from "../sync/channels/gql-request-channel-factory.js";
 import { GqlResponseChannelFactory } from "../sync/channels/gql-response-channel-factory.js";
 import { SyncBuilder } from "../sync/sync-builder.js";
@@ -735,6 +736,17 @@ export class ReactorBuilder {
       await syncModule.syncManager.startup();
     }
 
+    let groupReevaluationTrigger: GroupReevaluationTrigger | undefined;
+    if (this.executorConfig.featureFlags?.authGroups) {
+      groupReevaluationTrigger = new GroupReevaluationTrigger(
+        this.logger,
+        eventBus,
+        queue,
+        operationIndex,
+      );
+      groupReevaluationTrigger.startup();
+    }
+
     const module: InProcessReactorModule = {
       eventBus,
       documentModelRegistry,
@@ -756,6 +768,7 @@ export class ReactorBuilder {
       processorManagerConsistencyTracker,
       syncModule,
       reactor,
+      groupReevaluationTrigger,
       pools: this.instrumentedPools,
     };
 

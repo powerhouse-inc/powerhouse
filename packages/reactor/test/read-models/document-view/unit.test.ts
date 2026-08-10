@@ -44,6 +44,7 @@ describe("KyselyDocumentView Unit Tests", () => {
       }),
       getLatestTimestampForCollection: vi.fn().mockResolvedValue(null),
       getCollectionsForDocuments: vi.fn().mockResolvedValue({}),
+      getGroupReferencers: vi.fn().mockResolvedValue([]),
     };
 
     mockWriteCache = {

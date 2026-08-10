@@ -331,6 +331,24 @@ export class KyselyOperationIndex implements IOperationIndex {
     return operationOrdinals;
   }
 
+  async getGroupReferencers(
+    groupId: string,
+    signal?: AbortSignal,
+  ): Promise<string[]> {
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
+
+    const rows = await this.queryExecutor
+      .selectFrom("group_references")
+      .select("documentId")
+      .where("groupId", "=", groupId)
+      .orderBy("documentId")
+      .execute();
+
+    return rows.map((row) => row.documentId);
+  }
+
   async find(
     collectionId: string,
     cursor?: number,

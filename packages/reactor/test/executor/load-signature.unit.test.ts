@@ -119,6 +119,7 @@ describe("SimpleJobExecutor signature verification", () => {
         options: { cursor: "0", limit: 100 },
       }),
       getCollectionsForDocuments: vi.fn().mockResolvedValue({}),
+      getGroupReferencers: vi.fn().mockResolvedValue([]),
     } as never;
 
     const verificationHandler: SignatureVerificationHandler = async (

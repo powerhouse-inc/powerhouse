@@ -114,6 +114,7 @@ describe("SimpleJobExecutor mutation signature verification", () => {
       commit: vi.fn().mockResolvedValue([]),
       find: vi.fn().mockResolvedValue({ items: [], total: 0 }),
       getCollectionsForDocuments: vi.fn().mockResolvedValue({}),
+      getGroupReferencers: vi.fn().mockResolvedValue([]),
     } as never;
 
     const verificationHandler: SignatureVerificationHandler = async (

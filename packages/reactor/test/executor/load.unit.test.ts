@@ -96,6 +96,7 @@ describe("SimpleJobExecutor load jobs", () => {
         options: { cursor: "0", limit: 100 },
       }),
       getCollectionsForDocuments: vi.fn().mockResolvedValue({}),
+      getGroupReferencers: vi.fn().mockResolvedValue([]),
     };
 
     const mockDocumentMetaCache = createMockDocumentMetaCache();

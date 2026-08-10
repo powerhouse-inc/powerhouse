@@ -1,7 +1,14 @@
 import type { Action, Operation } from "@powerhousedao/shared/document-model";
 import type { ErrorInfo, JobMeta } from "../shared/types.js";
 
-export type JobKind = "mutation" | "load";
+/**
+ * What a job carries: a mutation applies actions, a load imports synced
+ * operations, and a reevaluation re-judges a document's stored operations
+ * because a read-set stream elsewhere (a group document) changed. A
+ * reevaluation job carries no actions or operations; its work is derived
+ * from what is already stored.
+ */
+export type JobKind = "mutation" | "load" | "reevaluation";
 
 /**
  * State of a job in the queue
