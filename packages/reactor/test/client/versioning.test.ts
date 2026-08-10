@@ -211,6 +211,12 @@ const v2Module: DocumentModelModule = {
   },
 } as unknown as DocumentModelModule;
 
+/** A module from a package that has not adopted versioning: the registry treats it as v1. */
+const unversionedModule: DocumentModelModule = {
+  ...v1Module,
+  version: undefined,
+} as unknown as DocumentModelModule;
+
 function upgradeV1ToV2(document: PHDocument): PHDocument {
   const stateV1 = document.state as StateV1;
   const initialStateV1 = document.initialState as StateV1;
@@ -781,5 +787,57 @@ describe("ReactorClient Versioning Integration Tests", () => {
         }),
       ).rejects.toThrow("conflicted with concurrent edits after 2 attempts");
     });
+
+    it("upgrades a document whose state carries no document scope", async () => {
+      const doc = await client.createEmpty(VERSIONED_DOC_TYPE, {
+        documentModelVersion: 1,
+      });
+
+      const originalGet = reactor.getByIdOrSlug.bind(reactor);
+      let stripped = false;
+      reactor.getByIdOrSlug = (async (
+        ...args: Parameters<typeof originalGet>
+      ) => {
+        const result = await originalGet(...args);
+        if (!stripped) {
+          stripped = true;
+          delete (result.state as Partial<PHBaseState>).document;
+        }
+        return result;
+      }) as typeof reactor.getByIdOrSlug;
+
+      const upgraded = await client.upgradeDocument(doc.header.id);
+
+      expect(upgraded.state.document.version).toBe(2);
+    });
+  });
+});
+
+describe("ReactorClient createEmpty with an unversioned module", () => {
+  let client: IReactorClient;
+  let module: InProcessReactorClientModule;
+
+  beforeEach(async () => {
+    const reactorBuilder = new ReactorBuilder().withDocumentModelSources([
+      driveDocumentModelModule as any,
+      unversionedModule,
+    ]);
+    module = await new ReactorClientBuilder()
+      .withReactorBuilder(reactorBuilder)
+      .buildModule();
+    client = module.client;
+  });
+
+  afterEach(() => {
+    module.reactor.kill();
+  });
+
+  it("resolves an explicit version 1 request against a module with no version field", async () => {
+    const result = await client.createEmpty(VERSIONED_DOC_TYPE, {
+      documentModelVersion: 1,
+    });
+
+    expect(result.header.documentType).toBe(VERSIONED_DOC_TYPE);
+    expect(result.state.document.version).toBe(1);
   });
 });

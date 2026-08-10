@@ -610,8 +610,11 @@ export class ReactorClient implements IReactorClient {
 
     let module: DocumentModelModule | undefined;
     if (options?.documentModelVersion !== undefined) {
+      const requestedVersion = normalizeDocumentModelVersion(
+        options.documentModelVersion,
+      );
       module = matchingModules.find(
-        (m) => m.version === options.documentModelVersion,
+        (m) => normalizeDocumentModelVersion(m.version) === requestedVersion,
       );
       if (!module) {
         throw new Error(
@@ -622,8 +625,8 @@ export class ReactorClient implements IReactorClient {
       module = matchingModules.reduce<DocumentModelModule | undefined>(
         (latest, current) => {
           if (latest === undefined) return current;
-          const currentVersion = current.version ?? 0;
-          const latestVersion = latest.version ?? 0;
+          const currentVersion = normalizeDocumentModelVersion(current.version);
+          const latestVersion = normalizeDocumentModelVersion(latest.version);
           return currentVersion > latestVersion ? current : latest;
         },
         undefined,
@@ -682,7 +685,7 @@ export class ReactorClient implements IReactorClient {
       const documentType = document.header.documentType;
       const branch = document.header.branch || "main";
       const fromVersion = normalizeDocumentModelVersion(
-        document.state.document.version,
+        (document.state as Partial<typeof document.state>).document?.version,
       );
 
       let targetVersion = toVersion;
