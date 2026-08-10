@@ -1,4 +1,8 @@
-import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
+import {
+  driveDocumentModelModule,
+  isFileNode,
+  type DocumentDriveDocument,
+} from "@powerhousedao/shared/document-drive";
 import type {
   Action,
   DocumentModelModule,
@@ -576,6 +580,35 @@ describe("ReactorClient Versioning Integration Tests", () => {
       const added = await client.drives.addFile(drive.header.id, v2Doc);
 
       expect(added.state.document.version).toBe(2);
+    });
+
+    it("drives.copyNode preserves a v1 document's version and unmigrated state", async () => {
+      const driveDoc = driveDocumentModelModule.utils.createDocument();
+      const drive = await client.create(driveDoc);
+
+      const v1Doc = await client.drives.addFile(
+        drive.header.id,
+        createV1Document(),
+      );
+      expect(v1Doc.state.document.version).toBe(1);
+
+      await client.execute(v1Doc.header.id, "main", [
+        v1Actions.addItem({ id: "1", name: "First" }),
+      ]);
+
+      await client.drives.copyNode(drive.header.id, v1Doc.header.id, undefined);
+
+      const reloaded = await client.get<DocumentDriveDocument>(drive.header.id);
+      const copiedNode = reloaded.state.global.nodes
+        .filter(isFileNode)
+        .find((n) => n.id !== v1Doc.header.id);
+      expect(copiedNode).toBeDefined();
+
+      const copied = await client.get(copiedNode!.id);
+      expect(copied.state.document.version).toBe(1);
+      const state = copied.state as unknown as StateV1;
+      expect(state.global).not.toHaveProperty("title");
+      expect(state.global.items).toEqual([{ id: "1", name: "First" }]);
     });
   });
 
