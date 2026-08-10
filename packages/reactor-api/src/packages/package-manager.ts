@@ -6,7 +6,10 @@ import type {
 } from "@powerhousedao/reactor-api";
 import { reactorDriveDocumentModelModule } from "@powerhousedao/reactor-drive";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
-import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+import type {
+  DocumentModelModule,
+  UpgradeManifest,
+} from "@powerhousedao/shared/document-model";
 import { childLogger, documentModelDocumentModelModule } from "document-model";
 import EventEmitter from "node:events";
 import type { StatWatcher } from "node:fs";
@@ -51,6 +54,20 @@ export function isExpectedLoaderMiss(error: unknown, pkg: string): boolean {
   return false;
 }
 
+export function getUniqueUpgradeManifests(
+  ...manifests: readonly (readonly UpgradeManifest<readonly number[]>[])[]
+): UpgradeManifest<readonly number[]>[] {
+  const uniqueManifests = new Map<string, UpgradeManifest<readonly number[]>>();
+
+  for (const manifestList of manifests) {
+    for (const manifest of manifestList) {
+      uniqueManifests.set(manifest.documentType, manifest);
+    }
+  }
+
+  return Array.from(uniqueManifests.values());
+}
+
 export function getUniqueDocumentModels(
   ...documentModels: readonly (readonly DocumentModelModule<any>[])[]
 ): DocumentModelModule[] {
@@ -70,12 +87,19 @@ export class PackageManager implements IPackageManager {
   private loaders: ISubscribablePackageLoader[];
 
   private docModelsMap = new Map<string, DocumentModelModule[]>();
+  private upgradeManifestsMap = new Map<
+    string,
+    UpgradeManifest<readonly number[]>[]
+  >();
   private subgraphsMap = new Map<string, SubgraphClass[]>();
   private processorMap = new Map<string, Processor>();
   private configWatcher: StatWatcher | undefined;
   private debouncedUpdateCallbacks = new Map<string, () => void>();
   private eventEmitter = new EventEmitter<{
     documentModelsChange: [Record<string, DocumentModelModule[]>];
+    upgradeManifestsChange: [
+      Record<string, UpgradeManifest<readonly number[]>[]>,
+    ];
     subgraphsChange: [Map<string, SubgraphClass[]>];
     processorsChange: [Map<string, Processor>];
   }>();
@@ -102,10 +126,12 @@ export class PackageManager implements IPackageManager {
     this.logger.info("Loading packages: @packages", packages.join(", "));
 
     const documentModelsMap = await this.loadDocumentModels(packages);
+    const upgradeManifestsMap = await this.loadUpgradeManifests(packages);
     const subgraphsMap = await this.loadSubgraphs(packages);
     const processorsMap = await this.loadProcessors(packages);
 
     this.updatePackagesMap(documentModelsMap);
+    this.updateUpgradeManifestsMap(upgradeManifestsMap);
     this.updateSubgraphsMap(subgraphsMap);
     this.updateProcessorsMap(processorsMap);
 
@@ -118,6 +144,9 @@ export class PackageManager implements IPackageManager {
     return {
       documentModels: getUniqueDocumentModels(
         ...Array.from(documentModelsMap.values()),
+      ),
+      upgradeManifests: getUniqueUpgradeManifests(
+        ...Array.from(upgradeManifestsMap.values()),
       ),
       subgraphs: subgraphsMap,
       processors: processorsMap,
@@ -184,6 +213,51 @@ export class PackageManager implements IPackageManager {
     }
 
     return documentModelModuleMap;
+  }
+
+  private async loadUpgradeManifests(
+    packages: string[],
+  ): Promise<Map<string, UpgradeManifest<readonly number[]>[]>> {
+    this.logger.debug(
+      `Loading upgrade manifests from packages: ${packages.join(", ")}`,
+    );
+
+    const upgradeManifestsMap = new Map<
+      string,
+      UpgradeManifest<readonly number[]>[]
+    >();
+
+    for (const pkg of packages) {
+      const allManifests: UpgradeManifest<readonly number[]>[] = [];
+
+      for (const loader of this.loaders) {
+        if (!loader.loadUpgradeManifests) {
+          continue;
+        }
+        try {
+          const manifests = await loader.loadUpgradeManifests(pkg);
+          if (manifests.length > 0) {
+            allManifests.push(...manifests);
+            this.logger.info(
+              `[${loader.name}] Loaded upgrade manifests from package @pkg: @manifests`,
+              pkg,
+              manifests.map((manifest) => manifest.documentType),
+            );
+          }
+          break;
+        } catch (error) {
+          this.logger.debug(
+            `[${loader.name}] Failed to load upgrade manifests from package @pkg: @error`,
+            pkg,
+            error,
+          );
+        }
+      }
+
+      upgradeManifestsMap.set(pkg, allManifests);
+    }
+
+    return upgradeManifestsMap;
   }
 
   private async loadSubgraphs(
@@ -301,6 +375,13 @@ export class PackageManager implements IPackageManager {
     const documentModelsMap = new Map(this.docModelsMap);
     documentModelsMap.set(pkg, documentModels.get(pkg) ?? []);
     this.updatePackagesMap(documentModelsMap);
+
+    // The upgrade manifests live inside the document-models directory, so the
+    // same watcher that triggered this update covers manifest changes too.
+    const upgradeManifests = await this.loadUpgradeManifests([pkg]);
+    const upgradeManifestsMap = new Map(this.upgradeManifestsMap);
+    upgradeManifestsMap.set(pkg, upgradeManifests.get(pkg) ?? []);
+    this.updateUpgradeManifestsMap(upgradeManifestsMap);
   }
 
   private subscribePackages(packages: string[]) {
@@ -378,6 +459,16 @@ export class PackageManager implements IPackageManager {
     );
   }
 
+  private updateUpgradeManifestsMap(
+    upgradeManifestsMap: Map<string, UpgradeManifest<readonly number[]>[]>,
+  ) {
+    this.upgradeManifestsMap = upgradeManifestsMap;
+    this.eventEmitter.emit(
+      "upgradeManifestsChange",
+      Object.fromEntries(upgradeManifestsMap),
+    );
+  }
+
   private updateSubgraphsMap(subgraphsMap: Map<string, SubgraphClass[]>) {
     const oldPackages = Array.from(this.subgraphsMap.keys());
     const newPackages = Array.from(subgraphsMap.keys());
@@ -407,6 +498,14 @@ export class PackageManager implements IPackageManager {
     handler: (documentModels: Record<string, DocumentModelModule[]>) => void,
   ): void {
     this.eventEmitter.on("documentModelsChange", handler);
+  }
+
+  onUpgradeManifestsChange(
+    handler: (
+      upgradeManifests: Record<string, UpgradeManifest<readonly number[]>[]>,
+    ) => void,
+  ): void {
+    this.eventEmitter.on("upgradeManifestsChange", handler);
   }
 
   onSubgraphsChange(

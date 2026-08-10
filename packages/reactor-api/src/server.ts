@@ -360,6 +360,34 @@ function setupEventListeners(
     void graphqlManager.regenerateDocumentModelSubgraphs();
   });
 
+  pkgManager.onUpgradeManifestsChange((packagedManifests) => {
+    if (!documentModelRegistry) {
+      return;
+    }
+    const manifests = Object.values(packagedManifests).flat();
+    if (manifests.length === 0) {
+      return;
+    }
+    // Re-register so a hot-reloaded manifest replaces its previous version.
+    documentModelRegistry.unregisterUpgradeManifests(
+      ...manifests.map((manifest) => manifest.documentType),
+    );
+    const results = documentModelRegistry.registerUpgradeManifests(
+      ...manifests,
+    );
+    for (const result of results) {
+      if (result.status === "success") {
+        defaultLogger.info(
+          `Registered upgrade manifest: ${result.item.documentType}`,
+        );
+      } else {
+        defaultLogger.error(
+          `Failed to register upgrade manifest: ${result.error.message}`,
+        );
+      }
+    }
+  });
+
   pkgManager.onSubgraphsChange((packagedSubgraphs) => {
     void (async () => {
       for (const [, subgraphs] of packagedSubgraphs) {
@@ -1027,7 +1055,8 @@ export async function initializeAndStartAPI(
     readiness,
   } = await _setupCommonInfrastructure(options);
 
-  const { documentModels, processors, subgraphs } = await packages.init();
+  const { documentModels, upgradeManifests, processors, subgraphs } =
+    await packages.init();
 
   const {
     module: reactorClientModule,
@@ -1065,6 +1094,22 @@ export async function initializeAndStartAPI(
     throw new Error(
       "DocumentModelRegistry not available from InProcessReactorClientModule",
     );
+  }
+
+  // packages.init() ran before the registry existed, so the initial
+  // upgradeManifestsChange event had no listener; register that first batch
+  // here. Later hot-reload batches arrive through setupEventListeners.
+  if (upgradeManifests.length > 0) {
+    const manifestResults = documentModelRegistry.registerUpgradeManifests(
+      ...upgradeManifests,
+    );
+    for (const result of manifestResults) {
+      if (result.status === "error") {
+        defaultLogger.error(
+          `Failed to register upgrade manifest: ${result.error.message}`,
+        );
+      }
+    }
   }
 
   const readModelCoordinator =

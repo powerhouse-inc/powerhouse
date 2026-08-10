@@ -3,7 +3,10 @@ import type {
   ProcessorFactoryBuilder,
   SubgraphClass,
 } from "@powerhousedao/reactor-api";
-import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+import type {
+  DocumentModelModule,
+  UpgradeManifest,
+} from "@powerhousedao/shared/document-model";
 import { childLogger, type ILogger } from "document-model";
 import path from "node:path";
 import { readPackage } from "read-pkg";
@@ -43,6 +46,10 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
 
   private getDocumentModelsPath(identifier: string): string {
     return path.join(identifier, "./document-models");
+  }
+
+  private getUpgradeManifestsPath(identifier: string): string {
+    return path.join(identifier, "./document-models/upgrade-manifests");
   }
 
   private getSubgraphsPath(identifier: string): string {
@@ -91,6 +98,40 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
       return documentModels;
     } catch (e) {
       this.logger.debug(`  ➜  No Document Models found for: ${identifier}`, e);
+    }
+
+    return [];
+  }
+
+  async loadUpgradeManifests(
+    identifier: string,
+  ): Promise<UpgradeManifest<readonly number[]>[]> {
+    const fullPath = this.getUpgradeManifestsPath(identifier);
+    this.logger.debug("Loading upgrade manifests from", fullPath);
+
+    try {
+      const module = (await this.vite.ssrLoadModule(fullPath)) as {
+        upgradeManifests?: UpgradeManifest<readonly number[]>[];
+      };
+
+      const manifests = Array.isArray(module.upgradeManifests)
+        ? module.upgradeManifests.filter(
+            (manifest) =>
+              typeof manifest.documentType === "string" &&
+              manifest.upgrades !== undefined,
+          )
+        : [];
+
+      this.logger.verbose(
+        `  ➜  Loaded ${manifests.length} Upgrade Manifests from: ${identifier}`,
+      );
+
+      return manifests;
+    } catch (e) {
+      this.logger.debug(
+        `  ➜  No Upgrade Manifests found for: ${identifier}`,
+        e,
+      );
     }
 
     return [];
