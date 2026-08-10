@@ -21,6 +21,10 @@ function packageName(spec: string): string {
   return at > 0 ? spec.slice(0, at) : spec;
 }
 
+function moduleKey(module: DocumentModelModule): string {
+  return `${module.documentModel.global.id}@${module.version ?? 1}`;
+}
+
 function isDocumentModelModule(value: unknown): value is DocumentModelModule {
   if (typeof value !== "object" || value === null) {
     return false;
@@ -39,7 +43,9 @@ export class WorkerPackageLoader implements IDocumentModelLoader {
   private readonly cdnUrl: string;
   private readonly importPackage: PackageImporter;
   private readonly resolvePackages: (documentType: string) => Promise<string[]>;
-  private readonly modulesByType = new Map<string, DocumentModelModule>();
+  // Keyed by `documentType@version`: a type can ship several module versions
+  // side by side, and keying by type alone would evict all but the last.
+  private readonly modulesByKey = new Map<string, DocumentModelModule>();
   private readonly loadedSpecs = new Set<string>();
   private readonly failures: PackageLoadFailure[] = [];
 
@@ -62,7 +68,7 @@ export class WorkerPackageLoader implements IDocumentModelLoader {
 
   // On a miss, discover the package(s) for the type and import them on demand.
   async load(documentType: string): Promise<DocumentModelModule> {
-    const existing = this.modulesByType.get(documentType);
+    const existing = this.latestForType(documentType);
     if (existing) {
       return existing;
     }
@@ -71,7 +77,7 @@ export class WorkerPackageLoader implements IDocumentModelLoader {
     await Promise.all(
       [...new Set(packageNames)].map((name) => this.loadPackage(name)),
     );
-    const loaded = this.modulesByType.get(documentType);
+    const loaded = this.latestForType(documentType);
     if (loaded) {
       return loaded;
     }
@@ -83,11 +89,25 @@ export class WorkerPackageLoader implements IDocumentModelLoader {
   }
 
   get models(): DocumentModelModule[] {
-    return [...new Set(this.modulesByType.values())];
+    return [...new Set(this.modulesByKey.values())];
   }
 
   get loadFailures(): PackageLoadFailure[] {
     return [...this.failures];
+  }
+
+  /** The highest registered version for a type, which is what a bare load resolves to. */
+  private latestForType(documentType: string): DocumentModelModule | undefined {
+    let latest: DocumentModelModule | undefined;
+    for (const module of this.modulesByKey.values()) {
+      if (module.documentModel.global.id !== documentType) {
+        continue;
+      }
+      if (!latest || (module.version ?? 1) > (latest.version ?? 1)) {
+        latest = module;
+      }
+    }
+    return latest;
   }
 
   private notLoadedError(
@@ -123,7 +143,7 @@ export class WorkerPackageLoader implements IDocumentModelLoader {
       const namespace = await this.importPackage(url);
       for (const value of Object.values(namespace)) {
         if (isDocumentModelModule(value)) {
-          this.modulesByType.set(value.documentModel.global.id, value);
+          this.modulesByKey.set(moduleKey(value), value);
         }
       }
       this.loadedSpecs.add(spec);
