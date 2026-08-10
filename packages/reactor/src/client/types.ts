@@ -62,6 +62,21 @@ export type CreateDocumentOptions = {
   documentModelVersion?: number;
 };
 
+/** Retries taken when an upgrade conflicts with concurrent edits. */
+export const DEFAULT_UPGRADE_CONFLICT_RETRIES = 3;
+
+/**
+ * Options for upgrading a document.
+ */
+export type UpgradeDocumentOptions = {
+  /**
+   * How many times to retry with a fresh read when the executor rejects the
+   * upgrade because the document changed after it was read. Defaults to
+   * {@link DEFAULT_UPGRADE_CONFLICT_RETRIES}.
+   */
+  maxConflictRetries?: number;
+};
+
 /**
  * Drive-aware operations grouped under `client.drives`.
  *
@@ -355,8 +370,16 @@ export interface IReactorClient {
    * latest registered module version for the document's type. Returns the
    * document unchanged when it is already at the target version.
    *
+   * The action carries a snapshot of the document's version and per-scope
+   * revisions, which the executor validates before persisting. When an edit
+   * lands between the read and the upgrade executing, the upgrade is
+   * rejected and retried with a fresh read up to
+   * {@link UpgradeDocumentOptions.maxConflictRetries} times before the
+   * conflict is surfaced.
+   *
    * @param documentIdentifier - Target document id or slug
    * @param toVersion - Optional target document model version; defaults to latest
+   * @param options - Optional upgrade options (maxConflictRetries)
    * @param signal - Optional abort signal to cancel the request
    * @returns The upgraded document
    * @throws DowngradeNotSupportedError if toVersion is less than the document's current version
@@ -364,6 +387,7 @@ export interface IReactorClient {
   upgradeDocument<TDocument extends PHDocument = PHDocument>(
     documentIdentifier: string,
     toVersion?: number,
+    options?: UpgradeDocumentOptions,
     signal?: AbortSignal,
   ): Promise<TDocument>;
 

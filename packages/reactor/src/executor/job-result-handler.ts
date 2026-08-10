@@ -14,6 +14,7 @@ import {
   DocumentNotFoundError,
   ExcessiveReshuffleError,
   InvalidOperationTimestampError,
+  UpgradePreconditionFailedError,
 } from "../shared/errors.js";
 import { AppendConditionFailedError } from "../storage/interfaces.js";
 import type { ErrorInfo } from "../shared/types.js";
@@ -130,7 +131,9 @@ export class JobResultHandler implements IJobResultHandler {
         // All deterministic, so retrying only re-runs the load to fail the same.
         AuthTimestampNotMonotonicError.isError(result.error) ||
         InvalidOperationTimestampError.isError(result.error) ||
-        ExcessiveReshuffleError.isError(result.error))
+        ExcessiveReshuffleError.isError(result.error) ||
+        // The action's snapshot stays stale; the client retries with a fresh read.
+        UpgradePreconditionFailedError.isError(result.error))
     ) {
       const errorInfo = toErrorInfo(result.error);
       this.jobTracker.markFailed(handle.job.id, errorInfo, handle.job);

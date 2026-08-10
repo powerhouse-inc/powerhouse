@@ -50,11 +50,13 @@ import {
 } from "./cursor.js";
 import { DriveClient } from "./drive-client.js";
 import {
+  DEFAULT_UPGRADE_CONFLICT_RETRIES,
   DocumentChangeType,
   type CreateDocumentOptions,
   type DocumentChangeEvent,
   type IDriveClient,
   type IReactorClient,
+  type UpgradeDocumentOptions,
 } from "./types.js";
 import {
   authSubjectFromSigner,
@@ -605,10 +607,16 @@ export class ReactorClient implements IReactorClient {
    * UPGRADE_DOCUMENT action. When toVersion is omitted, upgrades to the
    * latest registered module version for the document's type. Returns the
    * document unchanged when it is already at the target version.
+   *
+   * The executor validates the action's version and revision snapshot against
+   * the state the migration actually runs on. When a concurrent edit
+   * invalidates the snapshot, the upgrade is rebuilt from a fresh read and
+   * retried up to maxConflictRetries times before the conflict is surfaced.
    */
   async upgradeDocument<TDocument extends PHDocument = PHDocument>(
     documentIdentifier: string,
     toVersion?: number,
+    options?: UpgradeDocumentOptions,
     signal?: AbortSignal,
   ): Promise<TDocument> {
     this.logger.verbose(
@@ -617,47 +625,74 @@ export class ReactorClient implements IReactorClient {
       toVersion,
     );
 
-    const document = await this.reactor.getByIdOrSlug<TDocument>(
-      documentIdentifier,
-      undefined,
-      undefined,
-      signal,
-    );
+    const maxConflictRetries =
+      options?.maxConflictRetries ?? DEFAULT_UPGRADE_CONFLICT_RETRIES;
 
-    const documentId = document.header.id;
-    const documentType = document.header.documentType;
-    const fromVersion = document.state.document.version || 1;
-
-    let targetVersion = toVersion;
-    if (targetVersion === undefined) {
-      const module = await this.getDocumentModelModule(documentType);
-      targetVersion = module.version ?? 1;
-    }
-
-    if (targetVersion === fromVersion) {
-      return document;
-    }
-    if (targetVersion < fromVersion) {
-      throw new DowngradeNotSupportedError(
-        documentType,
-        fromVersion,
-        targetVersion,
+    let lastConflictMessage = "";
+    for (let attempt = 0; attempt <= maxConflictRetries; attempt++) {
+      const document = await this.reactor.getByIdOrSlug<TDocument>(
+        documentIdentifier,
+        undefined,
+        undefined,
+        signal,
       );
+
+      const documentId = document.header.id;
+      const documentType = document.header.documentType;
+      const branch = document.header.branch || "main";
+      const fromVersion = document.state.document.version || 1;
+
+      let targetVersion = toVersion;
+      if (targetVersion === undefined) {
+        const module = await this.getDocumentModelModule(documentType);
+        targetVersion = module.version ?? 1;
+      }
+
+      if (targetVersion === fromVersion) {
+        return document;
+      }
+      if (targetVersion < fromVersion) {
+        throw new DowngradeNotSupportedError(
+          documentType,
+          fromVersion,
+          targetVersion,
+        );
+      }
+
+      const action = upgradeDocumentAction({
+        documentId,
+        model: documentType,
+        fromVersion,
+        toVersion: targetVersion,
+        revision: { ...document.header.revision },
+      });
+
+      const signedActions = await signActions([action], this.signer, signal);
+      const jobInfo = await this.reactor.execute(
+        documentId,
+        branch,
+        signedActions,
+        signal,
+      );
+      const completedJob = await this.waitForJob(jobInfo, signal);
+
+      if (completedJob.status !== JobStatus.FAILED) {
+        return await this.reactor.getByIdOrSlug<TDocument>(
+          documentId,
+          { branch },
+          completedJob.consistencyToken,
+          signal,
+        );
+      }
+
+      if (completedJob.error?.name !== "UpgradePreconditionFailedError") {
+        throw new Error(completedJob.error?.message);
+      }
+      lastConflictMessage = completedJob.error.message;
     }
 
-    const action = upgradeDocumentAction({
-      documentId,
-      model: documentType,
-      fromVersion,
-      toVersion: targetVersion,
-      revision: { ...document.header.revision },
-    });
-
-    return this.execute<TDocument>(
-      documentId,
-      document.header.branch || "main",
-      [action],
-      signal,
+    throw new Error(
+      `Upgrade of document ${documentIdentifier} conflicted with concurrent edits after ${maxConflictRetries + 1} attempts: ${lastConflictMessage}`,
     );
   }
 

@@ -206,6 +206,34 @@ export class InvalidSignatureError extends Error {
 export { DowngradeNotSupportedError } from "@powerhousedao/shared/document-model";
 
 /**
+ * An UPGRADE_DOCUMENT action's preconditions (fromVersion and the per-scope
+ * revision snapshot) did not match the document state the executor loaded.
+ *
+ * Terminal rather than retryable: the action carries the client's snapshot,
+ * which stays stale no matter how often the job re-runs. The client is
+ * expected to re-read the document and submit a fresh action instead.
+ */
+export class UpgradePreconditionFailedError extends Error {
+  public readonly documentId: string;
+  public readonly detail: string;
+
+  constructor(documentId: string, detail: string) {
+    super(`Upgrade precondition failed for document ${documentId}: ${detail}`);
+    this.name = "UpgradePreconditionFailedError";
+    this.documentId = documentId;
+    this.detail = detail;
+
+    Error.captureStackTrace(this, UpgradePreconditionFailedError);
+  }
+
+  static isError(error: unknown): error is UpgradePreconditionFailedError {
+    return (
+      Error.isError(error) && error.name === "UpgradePreconditionFailedError"
+    );
+  }
+}
+
+/**
  * Error thrown when an upgrade manifest is required but not registered.
  */
 export class UpgradeManifestNotFoundError extends Error {

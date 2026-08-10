@@ -634,4 +634,125 @@ describe("ReactorClient Versioning Integration Tests", () => {
       );
     });
   });
+
+  describe("upgrade preconditions", () => {
+    function upgradeAction(
+      documentId: string,
+      fromVersion: number,
+      toVersion: number,
+      revision: Record<string, number>,
+    ): Action {
+      return {
+        id: generateId(),
+        type: "UPGRADE_DOCUMENT",
+        scope: "document",
+        timestampUtcMs: new Date().toISOString(),
+        input: {
+          documentId,
+          model: VERSIONED_DOC_TYPE,
+          fromVersion,
+          toVersion,
+          revision,
+        },
+      } as unknown as Action;
+    }
+
+    it("rejects an upgrade whose revision snapshot is stale", async () => {
+      const doc = await client.createEmpty(VERSIONED_DOC_TYPE, {
+        documentModelVersion: 1,
+      });
+      await client.execute(doc.header.id, "main", [
+        v1Actions.addItem({ id: "1", name: "First" }),
+      ]);
+
+      const current = await client.get(doc.header.id);
+      const staleRevision = {
+        ...current.header.revision,
+        global: (current.header.revision.global ?? 0) + 5,
+      };
+
+      await expect(
+        client.execute(doc.header.id, "main", [
+          upgradeAction(doc.header.id, 1, 2, staleRevision),
+        ]),
+      ).rejects.toThrow("Upgrade precondition failed");
+    });
+
+    it("rejects an upgrade whose fromVersion does not match the document", async () => {
+      const doc = await client.createEmpty(VERSIONED_DOC_TYPE, {
+        documentModelVersion: 1,
+      });
+      const current = await client.get(doc.header.id);
+
+      await expect(
+        client.execute(doc.header.id, "main", [
+          upgradeAction(doc.header.id, 2, 3, {
+            ...current.header.revision,
+          }),
+        ]),
+      ).rejects.toThrow("does not match the document's version");
+    });
+
+    it("retries with a fresh read when an edit races the upgrade", async () => {
+      const doc = await client.createEmpty(VERSIONED_DOC_TYPE, {
+        documentModelVersion: 1,
+      });
+      await client.execute(doc.header.id, "main", [
+        v1Actions.addItem({ id: "1", name: "First" }),
+      ]);
+
+      const originalExecute = reactor.execute.bind(reactor);
+      let raced = false;
+      reactor.execute = (async (
+        documentId: string,
+        branch: string,
+        actions: Action[],
+        signal?: AbortSignal,
+      ) => {
+        if (!raced && actions.some((a) => a.type === "UPGRADE_DOCUMENT")) {
+          raced = true;
+          await client.execute(documentId, branch, [
+            v1Actions.addItem({ id: "2", name: "Raced" }),
+          ]);
+        }
+        return originalExecute(documentId, branch, actions, signal);
+      }) as typeof reactor.execute;
+
+      const upgraded = await client.upgradeDocument(doc.header.id);
+
+      expect(raced).toBe(true);
+      expect(upgraded.state.document.version).toBe(2);
+      const state = upgraded.state as unknown as StateV2;
+      expect(state.global.items.length).toBe(2);
+    });
+
+    it("surfaces the conflict after exhausting retries", async () => {
+      const doc = await client.createEmpty(VERSIONED_DOC_TYPE, {
+        documentModelVersion: 1,
+      });
+
+      const originalExecute = reactor.execute.bind(reactor);
+      let itemId = 0;
+      reactor.execute = (async (
+        documentId: string,
+        branch: string,
+        actions: Action[],
+        signal?: AbortSignal,
+      ) => {
+        if (actions.some((a) => a.type === "UPGRADE_DOCUMENT")) {
+          itemId += 1;
+          await client.execute(documentId, branch, [
+            v1Actions.addItem({ id: `${itemId}`, name: "Raced" }),
+          ]);
+        }
+        return originalExecute(documentId, branch, actions, signal);
+      }) as typeof reactor.execute;
+
+      await expect(
+        client.upgradeDocument(doc.header.id, undefined, {
+          maxConflictRetries: 1,
+        }),
+      ).rejects.toThrow("conflicted with concurrent edits after 2 attempts");
+    });
+  });
 });
