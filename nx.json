@@ -47,6 +47,5 @@
     "@nx/js": {
       "projectsAffectedByDependencyUpdates": "auto"
     }
-  },
-  "analytics": true
+  }
 }
