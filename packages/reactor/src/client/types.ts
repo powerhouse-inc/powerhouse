@@ -365,6 +365,20 @@ export interface IReactorClient {
   ): Promise<TDocument>;
 
   /**
+   * Retrieves the document model module matching the version a document is
+   * stamped with. Use this instead of {@link getDocumentModelModule}
+   * whenever a specific document is in hand: the latest-wins lookup feeds
+   * not-yet-upgraded documents the wrong reducer, diverging from replay.
+   *
+   * @param document - The document whose stamped version selects the module
+   * @returns The document model module registered for that version
+   * @throws UnsupportedDocumentModelVersionError if no module is registered for the stamped version
+   */
+  getDocumentModelModuleForDocument(
+    document: PHDocument,
+  ): Promise<DocumentModelModule<any>>;
+
+  /**
    * Upgrades a document to a newer document model version by dispatching an
    * UPGRADE_DOCUMENT action. When toVersion is omitted, upgrades to the
    * latest registered module version for the document's type. Returns the

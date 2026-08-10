@@ -573,6 +573,33 @@ describe("ReactorClient Versioning Integration Tests", () => {
     });
   });
 
+  describe("getDocumentModelModuleForDocument", () => {
+    it("resolves the module matching the document's stamped version", async () => {
+      const doc = await client.createEmpty(VERSIONED_DOC_TYPE, {
+        documentModelVersion: 1,
+      });
+
+      const module = await client.getDocumentModelModuleForDocument(doc);
+      expect(module.version).toBe(1);
+
+      const upgraded = await client.upgradeDocument(doc.header.id);
+      const upgradedModule =
+        await client.getDocumentModelModuleForDocument(upgraded);
+      expect(upgradedModule.version).toBe(2);
+    });
+
+    it("throws for a version with no registered module", async () => {
+      const doc = await client.createEmpty(VERSIONED_DOC_TYPE, {
+        documentModelVersion: 2,
+      });
+      doc.state.document.version = 9;
+
+      await expect(
+        client.getDocumentModelModuleForDocument(doc),
+      ).rejects.toThrow("No reducer registered for document version 9");
+    });
+  });
+
   describe("upgradeDocument", () => {
     it("upgrades a v1 document to v2 and applies the upgrade reducer", async () => {
       const doc = await client.createEmpty(VERSIONED_DOC_TYPE, {

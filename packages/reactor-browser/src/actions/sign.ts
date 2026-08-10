@@ -15,9 +15,10 @@ export async function signAction(action: Action, document: PHDocument) {
   const reactorClient = window.ph?.reactorClientModule?.client;
   if (!reactorClient) return action;
 
-  const documentModelModule = await reactorClient.getDocumentModelModule(
-    document.header.documentType,
-  );
+  // Resolved by the document's stamped version: signing a not-yet-upgraded
+  // document with the latest reducer builds an operation replay can't verify.
+  const documentModelModule =
+    await reactorClient.getDocumentModelModuleForDocument(document);
   const reducer = documentModelModule.reducer;
 
   const actionSigner = action.context.signer;

@@ -11,6 +11,7 @@ import {
   actions,
   DowngradeNotSupportedError,
   normalizeDocumentModelVersion,
+  UnsupportedDocumentModelVersionError,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import {
@@ -158,6 +159,40 @@ export class ReactorClient implements IReactorClient {
     }
 
     return latestModule as DocumentModelModule<any>;
+  }
+
+  /**
+   * Retrieves the document model module matching the version the document is
+   * stamped with, so not-yet-upgraded documents get the reducer their
+   * history was written with rather than the latest.
+   */
+  async getDocumentModelModuleForDocument(
+    document: PHDocument,
+  ): Promise<DocumentModelModule<any>> {
+    const documentType = document.header.documentType;
+    const version = normalizeDocumentModelVersion(
+      (document.state as Partial<typeof document.state>).document?.version,
+    );
+
+    const modules = await this.reactor.getDocumentModels();
+
+    const availableVersions: number[] = [];
+    for (const module of modules.results) {
+      if (module.documentModel.global.id !== documentType) {
+        continue;
+      }
+      const moduleVersion = normalizeDocumentModelVersion(module.version);
+      if (moduleVersion === version) {
+        return module as DocumentModelModule<any>;
+      }
+      availableVersions.push(moduleVersion);
+    }
+
+    throw new UnsupportedDocumentModelVersionError(
+      documentType,
+      version,
+      availableVersions.sort((a, b) => a - b),
+    );
   }
 
   /**
