@@ -42,6 +42,7 @@ import {
   setName,
   setPreferredEditor,
   UnsupportedDocumentModelVersionError,
+  type UpgradeDocumentActionInput,
 } from "@powerhousedao/shared/document-model";
 import { logger } from "document-model";
 import { conditional, constant, isDefined, isNot, isStrictEqual } from "remeda";
@@ -258,6 +259,102 @@ export function filterDomainOperations(
       ([scope]) => !NON_DOMAIN_SCOPES.has(scope),
     ),
   );
+}
+
+/** Domain operations to replay, and the version to upgrade to afterwards. */
+export interface ImportSegment {
+  operations: DocumentOperations;
+  /** Absent on the final segment. */
+  upgradeTo?: number;
+}
+
+function countOperations(operations: DocumentOperations): number {
+  let total = 0;
+  for (const ops of Object.values(operations)) {
+    total += ops?.length ?? 0;
+  }
+  return total;
+}
+
+/**
+ * Split an imported document's domain operations at its mid-history upgrade
+ * boundaries, so the caller can re-dispatch each upgrade between segments.
+ *
+ * The seed's CREATE_DOCUMENT and 0 -> N upgrade are replayed by the creation
+ * path and must not be repeated. A later upgrade must be: it is where the
+ * reducer version changes, and dropping it replays everything after it through
+ * the module the document was created with.
+ */
+export function splitAtUpgradeBoundaries(
+  operations: DocumentOperations,
+): ImportSegment[] {
+  const upgrades = (operations.document ?? [])
+    .filter((op) => op.action.type === "UPGRADE_DOCUMENT")
+    .filter(
+      (op) => (op.action.input as UpgradeDocumentActionInput).fromVersion > 0,
+    )
+    .sort((a, b) => a.index - b.index);
+
+  const domain = filterDomainOperations(operations);
+  if (upgrades.length === 0) {
+    return [{ operations: domain }];
+  }
+
+  const segments: ImportSegment[] = [];
+  const consumed = new Map<string, number>();
+
+  const take = (until: (scope: string, ops: Operation[]) => number) => {
+    const slice: DocumentOperations = {};
+    for (const [scope, ops] of Object.entries(domain)) {
+      if (!ops) continue;
+      const from = consumed.get(scope) ?? 0;
+      const stop = Math.max(from, until(scope, ops));
+      const chunk = ops.slice(from, stop);
+      if (chunk.length > 0) slice[scope] = chunk;
+      consumed.set(scope, stop);
+    }
+    return slice;
+  };
+
+  for (const upgrade of upgrades) {
+    const input = upgrade.action.input as UpgradeDocumentActionInput;
+    const slice = take((scope, ops) => boundary(upgrade, scope, ops));
+    segments.push({ operations: slice, upgradeTo: input.toVersion });
+  }
+
+  const tail = take((_scope, ops) => ops.length);
+  if (countOperations(tail) > 0) {
+    segments.push({ operations: tail });
+  }
+
+  return segments;
+}
+
+/**
+ * How many of a scope's operations precede an upgrade. Must stay identical to
+ * the boundary computation in `replayDocumentVersioned` — snapshots compare
+ * against operation indices, not array positions, and the timestamp fallback
+ * excludes the upgrade's own instant.
+ */
+function boundary(upgrade: Operation, scope: string, ops: Operation[]): number {
+  const snapshot = (upgrade.action.input as UpgradeDocumentActionInput)
+    .revision;
+
+  if (snapshot !== undefined) {
+    const revision = snapshot[scope] ?? 0;
+    let count = 0;
+    for (let i = 0; i < ops.length; i++) {
+      if (ops[i].index < revision) count = i + 1;
+    }
+    return count;
+  }
+
+  for (let i = 0; i < ops.length; i++) {
+    if (ops[i].timestampUtcMs >= upgrade.timestampUtcMs) {
+      return i;
+    }
+  }
+  return ops.length;
 }
 
 export async function exportFile(document: PHDocument, suggestedName?: string) {
@@ -484,13 +581,14 @@ export async function addFile(
     document.header.meta?.preferredEditor,
   );
 
-  // then add all the operations in chunks (exclude document-scope ops —
-  // the reactor already generated CREATE_DOCUMENT + UPGRADE_DOCUMENT above)
-  await uploadOperations(
-    documentId,
-    filterDomainOperations(document.operations),
-    queueOperations,
-  );
+  // then add all the operations in chunks, re-dispatching each mid-history
+  // upgrade at its boundary
+  for (const segment of splitAtUpgradeBoundaries(document.operations)) {
+    await uploadOperations(documentId, segment.operations, queueOperations);
+    if (segment.upgradeTo !== undefined) {
+      await upgradeDocument(documentId, segment.upgradeTo);
+    }
+  }
 }
 
 export async function addFileWithProgress(
@@ -648,33 +746,40 @@ export async function addFileWithProgress(
 
     const _doc = await reactor.get(documentId);
     console.log("Document created, starting upload of operations");
-    // Uploading stage (20-100%)
-    await uploadOperations(
-      documentId,
-      filterDomainOperations(document.operations),
-      queueOperations,
-      {
-        onProgress: (uploadProgress) => {
-          if (
-            uploadProgress.totalOperations &&
-            uploadProgress.uploadedOperations !== undefined
-          ) {
-            const uploadPercent =
-              uploadProgress.totalOperations > 0
-                ? uploadProgress.uploadedOperations /
-                  uploadProgress.totalOperations
-                : 0;
-            const overallProgress = 20 + Math.round(uploadPercent * 80);
-            onProgress?.({
-              stage: "uploading",
-              progress: overallProgress,
-              totalOperations: uploadProgress.totalOperations,
-              uploadedOperations: uploadProgress.uploadedOperations,
-            });
-          }
-        },
-      },
+
+    // Uploading stage (20-100%), re-dispatching each mid-history upgrade at
+    // its boundary
+    const segments = splitAtUpgradeBoundaries(document.operations);
+    const totalOperations = segments.reduce(
+      (total, segment) => total + countOperations(segment.operations),
+      0,
     );
+    let uploadedBefore = 0;
+
+    for (const segment of segments) {
+      await uploadOperations(documentId, segment.operations, queueOperations, {
+        onProgress: (uploadProgress) => {
+          if (uploadProgress.uploadedOperations === undefined) {
+            return;
+          }
+          const uploaded = uploadedBefore + uploadProgress.uploadedOperations;
+          const uploadPercent =
+            totalOperations > 0 ? uploaded / totalOperations : 0;
+          onProgress?.({
+            stage: "uploading",
+            progress: 20 + Math.round(uploadPercent * 80),
+            totalOperations,
+            uploadedOperations: uploaded,
+          });
+        },
+      });
+
+      uploadedBefore += countOperations(segment.operations);
+
+      if (segment.upgradeTo !== undefined) {
+        await reactor.upgradeDocument(documentId, segment.upgradeTo);
+      }
+    }
 
     onProgress?.({ stage: "complete", progress: 100, fileNode });
 

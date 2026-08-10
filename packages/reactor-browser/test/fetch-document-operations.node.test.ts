@@ -18,6 +18,7 @@ import {
   extractInitialState,
   fetchDocumentOperations,
   filterDomainOperations,
+  splitAtUpgradeBoundaries,
 } from "../src/actions/document.js";
 
 function createFakeOperation(index: number, scope = "global"): Operation {
@@ -493,6 +494,136 @@ describe("filterDomainOperations", () => {
     expect(result).toHaveProperty("local");
     expect(result).not.toHaveProperty("document");
     expect(result).not.toHaveProperty("auth");
+  });
+});
+
+describe("splitAtUpgradeBoundaries", () => {
+  function midHistoryUpgrade(
+    index: number,
+    toVersion: number,
+    revision?: Record<string, number>,
+  ): Operation {
+    return {
+      id: `op-document-${index}`,
+      index,
+      skip: 0,
+      hash: `hash-upgrade-${index}`,
+      timestampUtcMs: new Date(2000 + index, 0, 1).toISOString(),
+      action: {
+        id: `action-document-${index}`,
+        type: "UPGRADE_DOCUMENT",
+        input: {
+          model: "test/counter",
+          fromVersion: toVersion - 1,
+          toVersion,
+          documentId: "doc-1",
+          revision,
+        },
+        scope: "document",
+        timestampUtcMs: new Date(2000 + index, 0, 1).toISOString(),
+      },
+    } as Operation;
+  }
+
+  function stamped(index: number, year: number, scope = "global"): Operation {
+    const at = new Date(year, 0, 1).toISOString();
+    const op = createFakeOperation(index, scope);
+    op.timestampUtcMs = at;
+    op.action.timestampUtcMs = at;
+    return op;
+  }
+
+  it("returns a single segment when the document was never upgraded", () => {
+    const ops: DocumentOperations = {
+      global: [createFakeOperation(0), createFakeOperation(1)],
+      local: [],
+      document: [createCreateDocumentOperation()],
+      auth: [],
+    };
+
+    const segments = splitAtUpgradeBoundaries(ops);
+
+    expect(segments).toHaveLength(1);
+    expect(segments[0].upgradeTo).toBeUndefined();
+    expect(segments[0].operations.global).toHaveLength(2);
+  });
+
+  it("ignores the 0 -> N seed upgrade, which creation already replays", () => {
+    const ops: DocumentOperations = {
+      global: [createFakeOperation(0)],
+      document: [
+        createCreateDocumentOperation(),
+        createUpgradeDocumentOperation({ count: 0 } as never),
+      ],
+    };
+
+    const segments = splitAtUpgradeBoundaries(ops);
+
+    expect(segments).toHaveLength(1);
+    expect(segments[0].upgradeTo).toBeUndefined();
+  });
+
+  it("splits at a mid-history upgrade using its revision snapshot", () => {
+    const ops: DocumentOperations = {
+      global: [
+        createFakeOperation(0),
+        createFakeOperation(1),
+        createFakeOperation(2),
+      ],
+      document: [
+        createCreateDocumentOperation(),
+        createUpgradeDocumentOperation({ count: 0 } as never),
+        midHistoryUpgrade(2, 2, { global: 2 }),
+      ],
+    };
+
+    const segments = splitAtUpgradeBoundaries(ops);
+
+    expect(segments).toHaveLength(2);
+    expect(segments[0].operations.global?.map((o) => o.index)).toEqual([0, 1]);
+    expect(segments[0].upgradeTo).toBe(2);
+    expect(segments[1].operations.global?.map((o) => o.index)).toEqual([2]);
+    expect(segments[1].upgradeTo).toBeUndefined();
+  });
+
+  it("replays every domain operation exactly once across the split", () => {
+    const ops: DocumentOperations = {
+      global: [0, 1, 2, 3, 4].map((i) => createFakeOperation(i)),
+      local: [0, 1].map((i) => createFakeOperation(i, "local")),
+      document: [
+        createCreateDocumentOperation(),
+        createUpgradeDocumentOperation({ count: 0 } as never),
+        midHistoryUpgrade(2, 2, { global: 2, local: 1 }),
+        midHistoryUpgrade(3, 3, { global: 4, local: 2 }),
+      ],
+    };
+
+    const segments = splitAtUpgradeBoundaries(ops);
+
+    expect(segments.map((s) => s.upgradeTo)).toEqual([2, 3, undefined]);
+    expect(segments.flatMap((s) => s.operations.global ?? [])).toHaveLength(5);
+    expect(segments.flatMap((s) => s.operations.local ?? [])).toHaveLength(2);
+    expect(
+      segments.flatMap((s) => (s.operations.global ?? []).map((o) => o.index)),
+    ).toEqual([0, 1, 2, 3, 4]);
+  });
+
+  // The upgrade is stamped 2003; the boundary excludes that instant.
+  it("falls back to timestamp order when the upgrade carries no revision", () => {
+    const ops: DocumentOperations = {
+      global: [stamped(0, 2001), stamped(1, 2002), stamped(2, 2004)],
+      document: [
+        createCreateDocumentOperation(),
+        createUpgradeDocumentOperation({ count: 0 } as never),
+        midHistoryUpgrade(3, 2),
+      ],
+    };
+
+    const segments = splitAtUpgradeBoundaries(ops);
+
+    expect(segments).toHaveLength(2);
+    expect(segments[0].operations.global?.map((o) => o.index)).toEqual([0, 1]);
+    expect(segments[1].operations.global?.map((o) => o.index)).toEqual([2]);
   });
 });
 
