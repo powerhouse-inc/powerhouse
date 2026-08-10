@@ -45,9 +45,10 @@ export function useVersionAdvisory(args: {
   const [prompt, setPrompt] = useState<VersionAdvisoryPrompt | undefined>(
     undefined,
   );
-  const pendingRef = useRef<Parameters<DocumentModelDispatch> | undefined>(
-    undefined,
-  );
+  // Every dispatch held back while the prompt is open is queued, so a second
+  // edit arriving mid-prompt (e.g. a blur-committed field as the modal steals
+  // focus) is not silently discarded.
+  const pendingRef = useRef<Parameters<DocumentModelDispatch>[]>([]);
   const choiceKey = `${documentId}:${latestSpec.version}`;
 
   const guardedDispatch: DocumentModelDispatch = (...dispatchArgs) => {
@@ -66,7 +67,7 @@ export function useVersionAdvisory(args: {
       dispatch(...dispatchArgs);
       return;
     }
-    pendingRef.current = dispatchArgs;
+    pendingRef.current.push(dispatchArgs);
     setPrompt({
       version: latestSpec.version,
       reason: decision.reason,
@@ -76,25 +77,25 @@ export function useVersionAdvisory(args: {
 
   const flushPending = () => {
     const pending = pendingRef.current;
-    pendingRef.current = undefined;
-    if (pending) {
-      dispatch(...pending);
+    pendingRef.current = [];
+    for (const dispatchArgs of pending) {
+      dispatch(...dispatchArgs);
     }
   };
 
   const releaseFirst = () => {
     setPrompt(undefined);
-    if (!pendingRef.current) return;
+    if (pendingRef.current.length === 0) return;
     dispatch(
       releaseNewVersion(),
       (errors) => {
         if (errors.length > 0) {
-          pendingRef.current = undefined;
+          pendingRef.current = [];
           onReleaseError?.(errors[0].message);
         }
       },
       () => {
-        if (!pendingRef.current) return;
+        if (pendingRef.current.length === 0) return;
         sessionVersionChoices.add(`${documentId}:${latestSpec.version + 1}`);
         flushPending();
       },
@@ -108,7 +109,7 @@ export function useVersionAdvisory(args: {
   };
 
   const cancelAdvisory = () => {
-    pendingRef.current = undefined;
+    pendingRef.current = [];
     setPrompt(undefined);
   };
 

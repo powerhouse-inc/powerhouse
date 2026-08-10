@@ -130,9 +130,15 @@ export function getDocumentUpgradePreview(
     },
   };
 
+  // Upgrade reducers are third-party package code; a throwing migration must
+  // degrade to "no preview" rather than propagate into the caller's render.
   let upgraded = structuredClone(document);
-  for (const transition of transitions) {
-    upgraded = transition.upgradeReducer(upgraded, stubAction);
+  try {
+    for (const transition of transitions) {
+      upgraded = transition.upgradeReducer(upgraded, stubAction);
+    }
+  } catch {
+    return undefined;
   }
 
   const addedFields: string[] = [];

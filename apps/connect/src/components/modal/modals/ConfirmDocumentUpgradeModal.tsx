@@ -9,6 +9,7 @@ import {
   usePHModal,
 } from "@powerhousedao/reactor-browser";
 import { childLogger } from "document-model";
+import { useEffect, useMemo } from "react";
 
 const logger = childLogger(["ConfirmDocumentUpgradeModal"]);
 
@@ -46,9 +47,29 @@ export function ConfirmDocumentUpgradeModal() {
   const documentId = open ? phModal.documentId : undefined;
   const [document] = useDocumentById(documentId);
   const registry = useModelRegistry();
-  const preview = document
-    ? getDocumentUpgradePreview(document, registry)
-    : undefined;
+  // Upgrade reducers are third-party code running a dry-run over a cloned
+  // document: memoize so they run once per document revision, and guard so a
+  // throwing migration degrades to a closed modal instead of a dead modal
+  // container.
+  const preview = useMemo(() => {
+    if (!document) return undefined;
+    try {
+      return getDocumentUpgradePreview(document, registry);
+    } catch (error) {
+      logger.error("Failed to compute upgrade preview: @error", error);
+      return undefined;
+    }
+  }, [document, registry]);
+
+  // With the document and registry loaded but no preview, there is nothing to
+  // upgrade (already latest, or the migration dry-run failed) — close so the
+  // modal system is not stuck on an invisible modal. A missing document or
+  // registry only means the hooks are still warming up: stay open and render
+  // nothing until they resolve.
+  const stuckOpen = open && !!document && !!registry && !preview;
+  useEffect(() => {
+    if (stuckOpen) closePHModal();
+  }, [stuckOpen]);
 
   if (!document || !preview) {
     return null;

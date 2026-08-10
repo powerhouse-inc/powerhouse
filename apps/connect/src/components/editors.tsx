@@ -20,7 +20,7 @@ import {
 } from "@powerhousedao/reactor-browser";
 import type { PHDocument } from "@powerhousedao/shared/document-model";
 import { redo, undo } from "@powerhousedao/shared/document-model";
-import { createElement, Suspense, useEffect, useState } from "react";
+import { createElement, Suspense, useEffect, useRef, useState } from "react";
 import { CenteredErrorMessage, ErrorBoundary } from "./error-boundary.js";
 import { DocumentUpgradeToast } from "./document-upgrade-toast.js";
 
@@ -100,20 +100,38 @@ export const DocumentEditor: React.FC<Props> = (props) => {
   const versionStatusKind = versionStatus?.kind;
   const upgradeAvailable =
     versionStatus?.kind === "upgrade-available" && versionStatus.canUpgrade;
+  const pendingToastDismiss = useRef<{
+    id: string;
+    handle: ReturnType<typeof setTimeout>;
+  } | null>(null);
   useEffect(() => {
-    if (upgradeAvailable && documentId) {
+    if (!documentId) return;
+    const toastId = `outdated-document-${documentId}`;
+    if (upgradeAvailable) {
+      // Cancel a dismissal this same toast scheduled in its own cleanup:
+      // dismissing and re-adding a toastId within the exit transition corrupts
+      // react-toastify's state (StrictMode remounts hit this every time).
+      if (pendingToastDismiss.current?.id === toastId) {
+        clearTimeout(pendingToastDismiss.current.handle);
+        pendingToastDismiss.current = null;
+      }
       toast(createElement(DocumentUpgradeToast, { documentId }), {
         type: "connect-warning",
-        toastId: `outdated-document-${documentId}`,
+        toastId,
         autoClose: false,
       });
-    } else if (
-      versionStatusKind &&
-      versionStatusKind !== "upgrade-available" &&
-      documentId
-    ) {
-      dismissToast(`outdated-document-${documentId}`);
+    } else if (versionStatusKind && versionStatusKind !== "upgrade-available") {
+      dismissToast(toastId);
     }
+    // The toast is persistent (autoClose: false), so it must not outlive the
+    // document it belongs to. The dismissal is deferred a tick so a remount or
+    // dependency flip that immediately re-shows the same toast wins instead.
+    return () => {
+      pendingToastDismiss.current = {
+        id: toastId,
+        handle: setTimeout(() => dismissToast(toastId), 0),
+      };
+    };
   }, [upgradeAvailable, versionStatusKind, documentId]);
   const vetraPackages = useVetraPackages();
   const packageManager = useVetraPackageManager();
