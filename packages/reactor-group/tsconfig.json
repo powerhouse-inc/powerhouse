@@ -1,0 +1,34 @@
+{
+  "extends": "../../tsconfig.options.json",
+  "compilerOptions": {
+    "outDir": "./.tsbuild",
+    "resolveJsonModule": true,
+    "types": ["node", "vitest/globals"],
+    "paths": {
+      "@powerhousedao/reactor-group/document-models": [
+        "./document-models/index.ts"
+      ],
+      "@powerhousedao/reactor-group/document-models/*": [
+        "./document-models/*/index.ts"
+      ],
+      "document-models": ["./document-models/index.ts"],
+      "document-models/*": ["./document-models/*/index.ts"]
+    }
+  },
+  "include": ["**/*", "./document-models/**/*.json"],
+  "exclude": ["dist", "node_modules", ".ph"],
+  "references": [
+    {
+      "path": "../document-model"
+    },
+    {
+      "path": "../reactor"
+    },
+    {
+      "path": "../reactor-browser"
+    },
+    {
+      "path": "../shared"
+    }
+  ]
+}

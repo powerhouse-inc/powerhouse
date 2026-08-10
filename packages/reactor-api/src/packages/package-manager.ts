@@ -5,6 +5,7 @@ import type {
   SubgraphClass,
 } from "@powerhousedao/reactor-api";
 import { reactorDriveDocumentModelModule } from "@powerhousedao/reactor-drive";
+import { ReactorGroupV1 } from "@powerhousedao/reactor-group";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import { childLogger, documentModelDocumentModelModule } from "document-model";
@@ -144,6 +145,10 @@ export class PackageManager implements IPackageManager {
 
     documentModelModuleMap.set("reactor-drive", [
       reactorDriveDocumentModelModule as unknown as DocumentModelModule,
+    ]);
+
+    documentModelModuleMap.set("reactor-group", [
+      ReactorGroupV1 as unknown as DocumentModelModule,
     ]);
 
     for (const pkg of packages) {
