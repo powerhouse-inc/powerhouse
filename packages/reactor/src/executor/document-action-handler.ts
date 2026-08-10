@@ -48,7 +48,10 @@ import { DriveCollectionId } from "../cache/operation-index-types.js";
 import type { Job } from "../queue/types.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import { DocumentDeletedError } from "../shared/errors.js";
-import { AppendConditionFailedError } from "../storage/interfaces.js";
+import {
+  AppendConditionFailedError,
+  type DocumentRevisions,
+} from "../storage/interfaces.js";
 import type { ExecutionStores } from "./execution-scope.js";
 import type {
   ExecutingJob,
@@ -87,6 +90,31 @@ export class DocumentActionHandler {
     return (
       this.featureFlags.documentDecisions &&
       (executing.replayingAcceptedHistory || executing.evaluatedByPosition)
+    );
+  }
+
+  /**
+   * Whether an upgrade's per-scope boundary is re-derived from the store rather
+   * than taken from the action.
+   *
+   * The client stamps `input.revision` when it builds the action, from a read
+   * that happened before the job was enqueued, so anything committed in between
+   * puts the stamp below the index the upgrade actually lands at. A fresh local
+   * submission is the only write that can be corrected: one that arrived from a
+   * remote, is replaying an operation, or is being re-appended carries the
+   * boundary its origin recorded, and every replica has to keep reading the same
+   * one.
+   */
+  private rederivesUpgradeBoundary(
+    write: PendingWrite,
+    executing: ExecutingJob,
+  ): boolean {
+    return (
+      write.sourceRemote === "" &&
+      write.sourceOperation === undefined &&
+      write.skip === 0 &&
+      !executing.replayingAcceptedHistory &&
+      !executing.evaluatedByPosition
     );
   }
 
@@ -608,35 +636,52 @@ export class DocumentActionHandler {
       );
     }
 
+    // Nothing to upgrade, so nothing below has to be read either.
+    if (fromVersion === toVersion && fromVersion > 0) {
+      return {
+        job,
+        success: true,
+        operations: [],
+        operationsWithContext: [],
+        duration: Date.now() - startTime,
+      };
+    }
+
     const otherScopes = Object.keys(document.state).filter(
       (scope) => scope !== job.scope,
     );
-    for (const scope of otherScopes) {
-      let scopedDocument: PHDocument;
-      try {
-        scopedDocument = await stores.writeCache.getState(
-          documentId,
-          scope,
-          job.branch,
-          undefined,
-          signal,
-        );
-      } catch (error) {
-        return buildErrorResult(
-          job,
-          new Error(
-            `Failed to fetch ${scope} scope for upgrade: ${error instanceof Error ? error.message : String(error)}`,
-          ),
-          startTime,
-        );
+
+    // The sibling scopes feed the migration reducers and the resultingState the
+    // read models reindex every scope from. A genesis upgrade carries its own
+    // initialState for every scope, so there is nothing to read for it.
+    if (fromVersion > 0) {
+      for (const scope of otherScopes) {
+        let scopedDocument: PHDocument;
+        try {
+          scopedDocument = await stores.writeCache.getState(
+            documentId,
+            scope,
+            job.branch,
+            undefined,
+            signal,
+          );
+        } catch (error) {
+          return buildErrorResult(
+            job,
+            new Error(
+              `Failed to fetch ${scope} scope for upgrade: ${error instanceof Error ? error.message : String(error)}`,
+            ),
+            startTime,
+          );
+        }
+        document = {
+          ...document,
+          state: {
+            ...document.state,
+            [scope]: (scopedDocument.state as Record<string, unknown>)[scope],
+          } as typeof document.state,
+        };
       }
-      document = {
-        ...document,
-        state: {
-          ...document.state,
-          [scope]: (scopedDocument.state as Record<string, unknown>)[scope],
-        } as typeof document.state,
-      };
     }
 
     // DCB allows for positional deletion, so the evaluation may have already been
@@ -669,20 +714,42 @@ export class DocumentActionHandler {
       }
     }
 
-    if (fromVersion === toVersion && fromVersion > 0) {
-      return {
-        job,
-        success: true,
-        operations: [],
-        operationsWithContext: [],
-        duration: Date.now() - startTime,
+    // A reshuffle re-executes a document-scope operation that already ran, so an
+    // upgrade can arrive against a document that has reached its target version.
+    // Running the transitions again would migrate migrated state. Genesis
+    // upgrades are exempt: they carry the initial state, not a migration.
+    if (fromVersion > 0 && documentState.version >= toVersion) {
+      upgradePath = undefined;
+    }
+
+    let upgradeAction = action as UpgradeDocumentAction;
+    if (this.rederivesUpgradeBoundary(write, executing)) {
+      let revisions: DocumentRevisions;
+      try {
+        revisions = await stores.operationStore.getRevisions(
+          documentId,
+          job.branch,
+          signal,
+        );
+      } catch (error) {
+        return buildErrorResult(
+          job,
+          new Error(
+            `Failed to derive upgrade boundary: ${error instanceof Error ? error.message : String(error)}`,
+          ),
+          startTime,
+        );
+      }
+      upgradeAction = {
+        ...upgradeAction,
+        input: { ...upgradeAction.input, revision: revisions.revision },
       };
     }
 
     try {
       document = applyUpgradeDocumentAction(
         document,
-        action as UpgradeDocumentAction,
+        upgradeAction,
         upgradePath,
       );
     } catch (error) {
@@ -693,7 +760,7 @@ export class DocumentActionHandler {
       );
     }
 
-    let operation = createOperation(action, nextIndex, skip, {
+    let operation = createOperation(upgradeAction, nextIndex, skip, {
       documentId,
       scope: job.scope,
       branch: job.branch,

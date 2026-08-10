@@ -233,6 +233,82 @@ describe("KyselyDocumentView", () => {
       expect(snapshots[0].lastOperationHash).toBe("hash-0");
     });
 
+    /**
+     * An upgrade reindexes every scope its resultingState carries, so the keys a
+     * serialized document holds alongside its scopes must not reach the table.
+     */
+    it("does not index the non-scope keys of an upgrade's resultingState", async () => {
+      const documentId = generateId();
+      const branch = "main";
+      const documentType = "powerhouse/document-drive";
+      const timestampUtcMs = new Date().toISOString();
+
+      const upgradeAction = {
+        id: generateId(),
+        type: "UPGRADE_DOCUMENT",
+        scope: "document",
+        timestampUtcMs,
+        input: {
+          documentId,
+          model: documentType,
+          fromVersion: 0,
+          toVersion: 1,
+        },
+      };
+
+      await view.indexOperations([
+        {
+          operation: {
+            index: 0,
+            timestampUtcMs,
+            hash: "hash-upgrade",
+            skip: 0,
+            id: generateId(),
+            action: upgradeAction,
+          },
+          context: {
+            documentId,
+            documentType,
+            scope: "document",
+            branch,
+            resultingState: JSON.stringify({
+              header: {
+                protocolVersions: { "base-reducer": 2 },
+                id: documentId,
+                documentType,
+                slug: documentId,
+                name: "",
+                branch,
+                revision: { document: 0 },
+                lastModifiedAtUtcIso: timestampUtcMs,
+                createdAtUtcIso: timestampUtcMs,
+              },
+              document: { version: 1, isDeleted: false },
+              global: { nodes: [] },
+              state: { global: { nodes: ["leaked"] } },
+              initialState: { global: { nodes: [] } },
+              operations: { global: [] },
+              clipboard: [],
+              attachments: {},
+            }),
+            ordinal: 1,
+          },
+        },
+      ] as never);
+
+      const rows = await db
+        .selectFrom("DocumentSnapshot")
+        .select("scope")
+        .where("documentId", "=", documentId)
+        .execute();
+
+      expect(rows.map((row) => row.scope).sort()).toEqual([
+        "document",
+        "global",
+        "header",
+      ]);
+    });
+
     it("should update existing snapshots", async () => {
       const documentId = generateId();
       const scope = "global";

@@ -30,6 +30,19 @@ import type {
 
 type Database = StorageDatabase & DocumentViewDatabase;
 
+/**
+ * Keys a serialized resultingState can carry that are document fields rather
+ * than scopes. Indexing one as a scope would write a DocumentSnapshot row no
+ * read ever asks for, and `state` in particular would shadow the real scopes.
+ */
+const NON_SCOPE_KEYS = new Set([
+  "state",
+  "initialState",
+  "operations",
+  "clipboard",
+  "attachments",
+]);
+
 export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
   private _db: Kysely<Database>;
 
@@ -148,7 +161,9 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
             ([key]) => key === "header" || key === "document" || key === "auth",
           );
         } else if (operationType === "UPGRADE_DOCUMENT") {
-          scopesToIndex = Object.entries(fullState);
+          scopesToIndex = Object.entries(fullState).filter(
+            ([key]) => !NON_SCOPE_KEYS.has(key),
+          );
         } else {
           scopesToIndex = [];
 

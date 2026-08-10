@@ -9,6 +9,7 @@ import { selectDecisionModel } from "../../../src/decision/registered-model.js";
 import type { ExecutionStores } from "../../../src/executor/execution-scope.js";
 import { targetDocumentId } from "../../../src/executor/util.js";
 import type { Job } from "../../../src/queue/types.js";
+import type { IDocumentModelRegistry } from "../../../src/registry/interfaces.js";
 import {
   createMockCollectionMembershipCache,
   createMockDocumentMetaCache,
@@ -505,6 +506,190 @@ describe("DocumentActionHandler", () => {
       expect(result.error?.message).toMatch(
         /source document drive-1 not found.*doc missing/,
       );
+    });
+  });
+
+  describe("executeUpgrade", () => {
+    const UPGRADE_DOC_ID = "doc-up";
+
+    /** A document whose global scope carries a value a migration can change. */
+    function createUpgradableDoc(version: number, counter: number): PHDocument {
+      return {
+        header: {
+          protocolVersions: { "base-reducer": 2 },
+          id: UPGRADE_DOC_ID,
+          documentType: "powerhouse/document-model",
+          revision: { document: 2, global: 3 },
+          lastModifiedAtUtcIso: "2024-01-01T00:00:00.000Z",
+        },
+        operations: { document: [], global: [], local: [] },
+        state: { document: { version }, global: { counter }, local: {} },
+      } as unknown as PHDocument;
+    }
+
+    function counterOf(document: PHDocument): number {
+      return (document.state as unknown as { global: { counter: number } })
+        .global.counter;
+    }
+
+    function upgradingRegistry(
+      migration: (document: PHDocument) => PHDocument,
+    ): IDocumentModelRegistry {
+      return {
+        computeUpgradePath: vi
+          .fn()
+          .mockReturnValue([{ toVersion: 2, upgradeReducer: migration }]),
+      } as unknown as IDocumentModelRegistry;
+    }
+
+    function upgradeHarness(
+      sourceDoc: PHDocument,
+      registry: IDocumentModelRegistry,
+    ): HandlerHarness {
+      const base = createHarness(sourceDoc);
+      const flags = { documentDecisions: false, authEnforcement: false };
+      return {
+        ...base,
+        handler: new DocumentActionHandler(
+          registry,
+          createMockLogger(),
+          DEFAULT_DRIVE_CONTAINER_TYPES,
+          flags,
+          selectDecisionModel(flags),
+        ),
+      };
+    }
+
+    function upgradeAction(
+      fromVersion: number,
+      toVersion: number,
+      revision?: Record<string, number>,
+    ): Action {
+      return {
+        id: "action-upgrade",
+        type: "UPGRADE_DOCUMENT",
+        scope: "document",
+        timestampUtcMs: "2024-01-01T00:00:00.000Z",
+        input: {
+          documentId: UPGRADE_DOC_ID,
+          model: "powerhouse/document-model",
+          fromVersion,
+          toVersion,
+          revision,
+        },
+      } as unknown as Action;
+    }
+
+    function storedRevision(
+      result: Awaited<ReturnType<DocumentActionHandler["execute"]>>,
+    ): Record<string, number> | undefined {
+      const input = result.operations?.[0].action.input as {
+        revision?: Record<string, number>;
+      };
+      return input.revision;
+    }
+
+    /**
+     * A reshuffle re-appends document-scope operations, so an upgrade can execute
+     * a second time against a document that has already reached its target
+     * version. The migration must not run against migrated state.
+     */
+    it("does not re-run the migration when the document already reached the target version", async () => {
+      const migration = vi.fn().mockImplementation((document: PHDocument) => {
+        const state = document.state as unknown as {
+          global: { counter: number };
+        };
+        state.global = { counter: state.global.counter + 1 };
+        return document;
+      });
+
+      const action = upgradeAction(1, 2);
+      const job = buildJob({ documentId: UPGRADE_DOC_ID, actions: [action] });
+
+      const first = upgradeHarness(
+        createUpgradableDoc(1, 0),
+        upgradingRegistry(migration),
+      );
+      const firstResult = await execute(first, job, action);
+
+      expect(firstResult.success).toBe(true);
+      expect(migration).toHaveBeenCalledTimes(1);
+
+      const upgraded = first.writeCache.putState.mock.calls[0][4] as PHDocument;
+      expect(upgraded.state.document.version).toBe(2);
+      expect(counterOf(upgraded)).toBe(1);
+
+      const second = upgradeHarness(upgraded, upgradingRegistry(migration));
+      const secondResult = await execute(second, job, action);
+
+      expect(secondResult.success).toBe(true);
+      expect(migration).toHaveBeenCalledTimes(1);
+
+      const reapplied = second.writeCache.putState.mock
+        .calls[0][4] as PHDocument;
+      expect(reapplied.state.document.version).toBe(2);
+      expect(counterOf(reapplied)).toBe(1);
+    });
+
+    it("persists the store's revisions over a stale client boundary", async () => {
+      const harness = upgradeHarness(
+        createUpgradableDoc(1, 0),
+        upgradingRegistry((document) => document),
+      );
+      const storeRevisions = { document: 2, global: 7 };
+      (
+        harness.stores.operationStore.getRevisions as ReturnType<typeof vi.fn>
+      ).mockResolvedValue({
+        revision: storeRevisions,
+        latestTimestamp: "2024-01-01T00:00:00.000Z",
+      });
+
+      const action = upgradeAction(1, 2, { document: 2, global: 3 });
+      const job = buildJob({ documentId: UPGRADE_DOC_ID, actions: [action] });
+
+      const result = await execute(harness, job, action);
+
+      expect(result.success).toBe(true);
+      expect(storedRevision(result)).toEqual(storeRevisions);
+      expect(
+        (
+          harness.indexTxn.write.mock.calls[0][0][0] as {
+            action: { input: { revision?: Record<string, number> } };
+          }
+        ).action.input.revision,
+      ).toEqual(storeRevisions);
+    });
+
+    it("keeps the boundary an operation arrived with when it is replayed", async () => {
+      const harness = upgradeHarness(
+        createUpgradableDoc(1, 0),
+        upgradingRegistry((document) => document),
+      );
+      (
+        harness.stores.operationStore.getRevisions as ReturnType<typeof vi.fn>
+      ).mockResolvedValue({
+        revision: { document: 9, global: 9 },
+        latestTimestamp: "2024-01-01T00:00:00.000Z",
+      });
+
+      const clientBoundary = { document: 2, global: 3 };
+      const action = upgradeAction(1, 2, clientBoundary);
+      const job = buildJob({ documentId: UPGRADE_DOC_ID, actions: [action] });
+
+      const result = await harness.handler.execute(
+        { action, skip: 0, sourceRemote: "remote-a" },
+        {
+          job,
+          startTime: Date.now(),
+          indexTxn: harness.indexTxn,
+          stores: harness.stores,
+          replayingAcceptedHistory: true,
+          evaluatedByPosition: false,
+        },
+      );
+
+      expect(result.success).toBe(true);
+      expect(storedRevision(result)).toEqual(clientBoundary);
     });
   });
 

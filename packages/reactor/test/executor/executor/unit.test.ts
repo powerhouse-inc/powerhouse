@@ -2713,4 +2713,116 @@ describe("SimpleJobExecutor", () => {
       expect(result.error?.message).toContain("Authorization denied");
     });
   });
+
+  describe("post-commit invalidation after an upgrade", () => {
+    /**
+     * A scope loaded while the transaction was open was rebuilt under the version
+     * the document held then, so the whole document has to leave the cache once
+     * the upgrade commits.
+     */
+    it("drops every cached stream of a document an upgrade committed for", async () => {
+      registry.computeUpgradePath = vi
+        .fn()
+        .mockReturnValue([
+          { toVersion: 2, upgradeReducer: (document: unknown) => document },
+        ]);
+
+      const job: Job = {
+        kind: "mutation",
+        id: "job-upgrade",
+        documentId: "doc-1",
+        scope: "document",
+        branch: "main",
+        actions: [
+          {
+            id: "action-upgrade",
+            type: "UPGRADE_DOCUMENT",
+            scope: "document",
+            timestampUtcMs: "2024-01-01T00:00:00.000Z",
+            input: {
+              documentId: "doc-1",
+              model: "powerhouse/document-model",
+              fromVersion: 1,
+              toVersion: 2,
+              initialState: { document: { version: 2 } },
+            },
+          },
+        ],
+        operations: [],
+        createdAt: "123",
+        queueHint: [],
+        errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["job-upgrade"] },
+      } as unknown as Job;
+
+      const result = await executor.executeJob(job);
+
+      expect(result.success).toBe(true);
+      expect(mockWriteCache.invalidate).toHaveBeenCalledWith("doc-1");
+    });
+
+    it("leaves the cache alone for a genesis upgrade", async () => {
+      const job: Job = {
+        kind: "mutation",
+        id: "job-genesis",
+        documentId: "doc-1",
+        scope: "document",
+        branch: "main",
+        actions: [
+          {
+            id: "action-genesis",
+            type: "UPGRADE_DOCUMENT",
+            scope: "document",
+            timestampUtcMs: "2024-01-01T00:00:00.000Z",
+            input: {
+              documentId: "doc-1",
+              model: "powerhouse/document-model",
+              fromVersion: 0,
+              toVersion: 1,
+              initialState: { document: { version: 1 } },
+            },
+          },
+        ],
+        operations: [],
+        createdAt: "123",
+        queueHint: [],
+        errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["job-genesis"] },
+      } as unknown as Job;
+
+      const result = await executor.executeJob(job);
+
+      expect(result.success).toBe(true);
+      expect(mockWriteCache.invalidate).not.toHaveBeenCalledWith("doc-1");
+    });
+
+    it("leaves the cache alone when the job wrote no upgrade", async () => {
+      const job: Job = {
+        kind: "mutation",
+        id: "job-plain",
+        documentId: "doc-1",
+        scope: "global",
+        branch: "main",
+        actions: [
+          {
+            id: "action-plain",
+            type: "SET_MODEL_NAME",
+            scope: "global",
+            timestampUtcMs: "2024-01-01T00:00:00.000Z",
+            input: { name: "Test" },
+          },
+        ],
+        operations: [],
+        createdAt: "123",
+        queueHint: [],
+        errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["job-plain"] },
+      } as unknown as Job;
+
+      const result = await executor.executeJob(job);
+
+      expect(result.success).toBe(true);
+      expect(mockWriteCache.invalidate).not.toHaveBeenCalledWith("doc-1");
+    });
+  });
 });

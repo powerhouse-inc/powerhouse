@@ -1257,7 +1257,10 @@ export type UpgradeDocumentActionInput = {
   /**
    * Per-scope next-operation-index snapshot at the moment the upgrade executes.
    * Absent on legacy operations; loaders fall back to timestamp ordering when missing.
-   * Stamped CLIENT-SIDE at action creation (before signing), NEVER at execution.
+   * Stamped client-side at action creation, but the executor re-derives it from the
+   * operation store for fresh local submissions: the client snapshot can be stale by
+   * the time the job runs. Signatures over this input therefore cannot survive
+   * execution; a verifier must exclude it or verify pre-rewrite.
    */
   revision?: Record<string, number>;
 };

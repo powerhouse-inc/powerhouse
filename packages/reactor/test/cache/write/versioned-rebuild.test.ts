@@ -777,3 +777,218 @@ describe("KyselyWriteCache D9 - upgrade reducers run at the boundary", () => {
     expect(state.global.title).toBe("migrated-1");
   });
 });
+
+describe("KyselyWriteCache D9 - pending upgrade drains", () => {
+  let keyframeStore: IKeyframeStore;
+  let operationStore: IOperationStore;
+  let cache: KyselyWriteCache;
+  let db: unknown;
+
+  beforeEach(async () => {
+    const setup = await createTestOperationStore();
+    operationStore = setup.store;
+    keyframeStore = setup.keyframeStore;
+    db = setup.db;
+  });
+
+  afterEach(async () => {
+    await cache?.shutdown();
+    try {
+      await (db as { destroy: () => Promise<void> }).destroy();
+    } catch {
+      // ignore
+    }
+  });
+
+  function deleteDocumentOperation(
+    documentId: string,
+    index: number,
+    timestampUtcMs: string,
+  ): Operation {
+    return createTestOperation(documentId, {
+      index,
+      skip: 0,
+      timestampUtcMs,
+      action: {
+        id: `delete-${index}`,
+        type: "DELETE_DOCUMENT",
+        scope: "document",
+        timestampUtcMs,
+        input: { documentId },
+      },
+    });
+  }
+
+  /**
+   * An upgrade carrying an initialState snapshot replaces the document scope
+   * wholesale, so a deletion recorded before it must survive the drain.
+   */
+  it("keeps a document deleted when a pending upgrade drains after the deletion", async () => {
+    const docId = "d9-delete-then-upgrade";
+
+    const registry = makeVersionedRegistry(() => ({
+      reducer: (doc: PHDocument) => doc,
+    }));
+
+    cache = new KyselyWriteCache(
+      keyframeStore,
+      operationStore,
+      registry,
+      makeConfig(),
+    );
+    await cache.startup();
+
+    const t1 = "2024-01-01T00:00:01.000Z";
+    const t2 = "2024-01-01T00:00:02.000Z";
+    const t3 = "2024-01-01T00:00:03.000Z";
+    const t4 = "2024-01-01T00:00:04.000Z";
+
+    await operationStore.apply(
+      docId,
+      DOC_TYPE,
+      "document",
+      "main",
+      0,
+      (txn) => {
+        txn.addOperations(
+          createCreateDocumentOperation(docId, DOC_TYPE, {
+            timestampUtcMs: t1,
+          }),
+        );
+        txn.addOperations(
+          createUpgradeDocumentOperation(
+            docId,
+            0,
+            1,
+            { document: { version: 1 }, global: { items: [] } },
+            { index: 1, timestampUtcMs: t2 },
+          ),
+        );
+        txn.addOperations(deleteDocumentOperation(docId, 2, t3));
+        txn.addOperations(
+          createUpgradeDocumentOperation(
+            docId,
+            1,
+            2,
+            { document: { version: 2 }, global: { items: ["migrated"] } },
+            { index: 3, timestampUtcMs: t4 },
+          ),
+        );
+      },
+    );
+
+    const documentScope = await cache.getState(docId, "document", "main");
+    expect(documentScope.state.document.version).toBe(2);
+    expect(documentScope.state.document.isDeleted).toBe(true);
+    expect(documentScope.state.document.deletedAtUtcIso).toBe(t3);
+
+    cache.clear();
+
+    const globalScope = await cache.getState(docId, "global", "main");
+    expect(globalScope.state.document.version).toBe(2);
+    expect(globalScope.state.document.isDeleted).toBe(true);
+    expect(globalScope.state.document.deletedAtUtcIso).toBe(t3);
+  });
+
+  /**
+   * The tail drain runs after the replay stops, so it has to respect the bound
+   * the replay stopped at: an upgrade whose boundary lies above the requested
+   * revision belongs to a position the read did not ask for.
+   */
+  it("does not apply an upgrade whose boundary lies past the requested revision", async () => {
+    const docId = "d9-tail-gate";
+
+    const registry = makeVersionedRegistry(() => ({
+      reducer: (doc: PHDocument) => doc,
+    }));
+
+    cache = new KyselyWriteCache(
+      keyframeStore,
+      operationStore,
+      registry,
+      makeConfig(),
+    );
+    await cache.startup();
+
+    const t1 = "2024-01-01T00:00:01.000Z";
+    const t2 = "2024-01-01T00:00:02.000Z";
+    const t3 = "2024-01-01T00:00:03.000Z";
+
+    await operationStore.apply(
+      docId,
+      DOC_TYPE,
+      "document",
+      "main",
+      0,
+      (txn) => {
+        txn.addOperations(
+          createCreateDocumentOperation(docId, DOC_TYPE, {
+            timestampUtcMs: t1,
+          }),
+        );
+        txn.addOperations(
+          createUpgradeDocumentOperation(
+            docId,
+            0,
+            1,
+            { document: { version: 1 }, global: { label: "one" } },
+            { index: 1, timestampUtcMs: t2 },
+          ),
+        );
+        txn.addOperations(
+          createUpgradeDocumentOperation(
+            docId,
+            1,
+            2,
+            {},
+            {
+              index: 2,
+              timestampUtcMs: t3,
+              action: {
+                id: "upgrade-past-target",
+                type: "UPGRADE_DOCUMENT",
+                scope: "document",
+                timestampUtcMs: t3,
+                input: {
+                  documentId: docId,
+                  fromVersion: 1,
+                  toVersion: 2,
+                  revision: { global: 3 },
+                  initialState: {
+                    document: { version: 2 },
+                    global: { label: "two" },
+                  },
+                },
+              },
+            },
+          ),
+        );
+      },
+    );
+
+    await operationStore.apply(docId, DOC_TYPE, "global", "main", 0, (txn) => {
+      for (let index = 0; index < 4; index++) {
+        txn.addOperations(
+          createTestOperation(docId, {
+            index,
+            skip: 0,
+            timestampUtcMs: `2024-01-01T00:00:1${index}.000Z`,
+          }),
+        );
+      }
+    });
+
+    const label = (document: PHDocument) =>
+      (document.state as unknown as { global: { label: string } }).global.label;
+
+    const atHead = await cache.getState(docId, "global", "main");
+    expect(atHead.state.document.version).toBe(2);
+    expect(label(atHead)).toBe("two");
+
+    cache.clear();
+
+    const beforeBoundary = await cache.getState(docId, "global", "main", 1);
+    expect(beforeBoundary.state.document.version).toBe(1);
+    expect(label(beforeBoundary)).toBe("one");
+  });
+});
