@@ -1,4 +1,7 @@
-import { groupDocumentType } from "@powerhousedao/shared/document-model";
+import {
+  groupDocumentType,
+  groupMembershipActionTypes,
+} from "@powerhousedao/shared/document-model";
 import {
   addMember,
   reactorGroupDocumentType,
@@ -20,6 +23,19 @@ describe("document type", () => {
   it("matches the groupDocumentType constant the auth scope checks", () => {
     expect(reactorGroupDocumentType).toBe(groupDocumentType);
     expect(ReactorGroup.documentModel.global.id).toBe(groupDocumentType);
+  });
+
+  it("declares every membership action type the groups projection reads", () => {
+    const operationNames =
+      ReactorGroup.documentModel.global.specifications.flatMap(
+        (specification) =>
+          specification.modules.flatMap((module) =>
+            module.operations.map((operation) => operation.name),
+          ),
+      );
+    for (const type of groupMembershipActionTypes) {
+      expect(operationNames).toContain(type);
+    }
   });
 });
 

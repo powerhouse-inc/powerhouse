@@ -21,6 +21,7 @@ describe("feature flag validation", () => {
     documentDecisions: [],
     authEnforcement: ["documentDecisions"],
     authGroups: ["authEnforcement"],
+    authConditions: ["authGroups"],
   };
 
   it("accepts a flag whose prerequisites are all on", () => {
@@ -58,14 +59,15 @@ describe("feature flag validation", () => {
 
   it("rejects a name this reactor does not know", () => {
     expect(() =>
-      validateFeatureFlags({ authGroups: true }, FLAG_PREREQUISITES),
-    ).toThrow(/Unrecognized reactor feature flag: authGroups/);
+      validateFeatureFlags({ authConditions: true }, FLAG_PREREQUISITES),
+    ).toThrow(/Unrecognized reactor feature flag: authConditions/);
   });
 
   it("declares only the flags that are implemented", () => {
     expect(Object.keys(FLAG_PREREQUISITES)).toEqual([
       "documentDecisions",
       "authEnforcement",
+      "authGroups",
     ]);
   });
 
@@ -76,11 +78,26 @@ describe("feature flag validation", () => {
         driveDocumentModelModule as never,
       ])
       .withExecutorConfig({
-        featureFlags: { authGroups: true } as never,
+        featureFlags: { authConditions: true } as never,
       });
 
     await expect(builder.build()).rejects.toThrow(
-      /Unrecognized reactor feature flag: authGroups/,
+      /Unrecognized reactor feature flag: authConditions/,
+    );
+  });
+
+  it("rejects authGroups without authEnforcement from the builder", async () => {
+    const builder = new ReactorBuilder()
+      .withDocumentModelSources([
+        documentModelDocumentModelModule as never,
+        driveDocumentModelModule as never,
+      ])
+      .withExecutorConfig({
+        featureFlags: { documentDecisions: true, authGroups: true },
+      });
+
+    await expect(builder.build()).rejects.toThrow(
+      /authGroups requires authEnforcement/,
     );
   });
 

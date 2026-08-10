@@ -65,6 +65,7 @@ describe("re-evaluation scope order", () => {
         createCollection: vi.fn(),
         addToCollection: vi.fn(),
         removeFromCollection: vi.fn(),
+        recordGroupReferences: vi.fn(),
         write: vi.fn(),
       }),
       commit: vi.fn().mockResolvedValue([]),

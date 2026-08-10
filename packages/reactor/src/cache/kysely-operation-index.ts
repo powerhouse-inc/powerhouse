@@ -24,10 +24,19 @@ type CollectionMembershipRecord = {
   operationIndex: number;
 };
 
+type GroupReferenceRecord = {
+  documentId: string;
+  groupIds: string[];
+
+  // the index of the referencing auth operation in the operations array
+  operationIndex: number;
+};
+
 class KyselyOperationIndexTxn implements IOperationIndexTxn {
   private collections: string[] = [];
   private collectionMemberships: CollectionMembershipRecord[] = [];
   private collectionRemovals: CollectionMembershipRecord[] = [];
+  private groupReferences: GroupReferenceRecord[] = [];
   private operations: OperationIndexEntry[] = [];
 
   createCollection(collectionId: string): void {
@@ -62,12 +71,33 @@ class KyselyOperationIndexTxn implements IOperationIndexTxn {
     });
   }
 
+  recordGroupReferences(documentId: string, groupIds: string[]): void {
+    const lastOpIndex = this.operations.length - 1;
+    if (lastOpIndex < 0) {
+      throw new Error(
+        "recordGroupReferences must be called after write() - no operations in transaction",
+      );
+    }
+    if (groupIds.length === 0) {
+      return;
+    }
+    this.groupReferences.push({
+      documentId,
+      groupIds,
+      operationIndex: lastOpIndex,
+    });
+  }
+
   write(operations: OperationIndexEntry[]): void {
     this.operations.push(...operations);
   }
 
   getCollections(): string[] {
     return this.collections;
+  }
+
+  getGroupReferenceRecords(): GroupReferenceRecord[] {
+    return this.groupReferences;
   }
 
   getCollectionMembershipRecords(): CollectionMembershipRecord[] {
@@ -123,6 +153,34 @@ export class KyselyOperationIndex implements IOperationIndex {
     return resultOrdinals;
   }
 
+  /**
+   * A policy-driven join: keeps the earliest join so a rediscovered reference
+   * never shrinks a backfill window remotes already rely on, and reopens a
+   * closed membership because a policy reference is not a removable one.
+   */
+  private async joinKeepingEarliest(
+    trx: Transaction<Database>,
+    documentId: string,
+    collectionId: string,
+    ordinal: bigint,
+  ): Promise<void> {
+    await trx
+      .insertInto("document_collections")
+      .values({
+        documentId,
+        collectionId,
+        joinedOrdinal: ordinal,
+        leftOrdinal: null,
+      })
+      .onConflict((oc) =>
+        oc.columns(["documentId", "collectionId"]).doUpdateSet({
+          joinedOrdinal: sql`LEAST("document_collections"."joinedOrdinal", EXCLUDED."joinedOrdinal")`,
+          leftOrdinal: null,
+        }),
+      )
+      .execute();
+  }
+
   private async executeCommit(
     trx: Transaction<Database>,
     kyselyTxn: KyselyOperationIndexTxn,
@@ -130,6 +188,7 @@ export class KyselyOperationIndex implements IOperationIndex {
     const collections = kyselyTxn.getCollections();
     const memberships = kyselyTxn.getCollectionMembershipRecords();
     const removals = kyselyTxn.getCollectionRemovals();
+    const groupReferences = kyselyTxn.getGroupReferenceRecords();
     const operations = kyselyTxn.getOperations();
 
     if (collections.length > 0) {
@@ -196,6 +255,22 @@ export class KyselyOperationIndex implements IOperationIndex {
             }),
           )
           .execute();
+
+        // A joining document brings the groups it has ever referenced, so a
+        // remote backfilling it can also fold the group streams its policy reads.
+        const references = await trx
+          .selectFrom("group_references")
+          .select("groupId")
+          .where("documentId", "=", m.documentId)
+          .execute();
+        for (const { groupId } of references) {
+          await this.joinKeepingEarliest(
+            trx,
+            groupId,
+            m.collectionId,
+            BigInt(ordinal),
+          );
+        }
       }
     }
 
@@ -212,6 +287,44 @@ export class KyselyOperationIndex implements IOperationIndex {
           .where("documentId", "=", r.documentId)
           .where("leftOrdinal", "is", null)
           .execute();
+      }
+    }
+
+    if (groupReferences.length > 0) {
+      for (const record of groupReferences) {
+        const ordinal = operationOrdinals[record.operationIndex];
+
+        // Rediscovering a known reference changes nothing.
+        await trx
+          .insertInto("group_references")
+          .values(
+            record.groupIds.map((groupId) => ({
+              documentId: record.documentId,
+              groupId,
+            })),
+          )
+          .onConflict((oc) => oc.doNothing())
+          .execute();
+
+        // Each named group joins every collection the referencing document
+        // belongs to. The join does not filter on leftOrdinal: a document
+        // that left a collection still has served history inside its window,
+        // and remotes holding that history still need the group.
+        const rows = await trx
+          .selectFrom("document_collections")
+          .select("collectionId")
+          .where("documentId", "=", record.documentId)
+          .execute();
+        for (const groupId of record.groupIds) {
+          for (const { collectionId } of rows) {
+            await this.joinKeepingEarliest(
+              trx,
+              groupId,
+              collectionId,
+              BigInt(ordinal),
+            );
+          }
+        }
       }
     }
 

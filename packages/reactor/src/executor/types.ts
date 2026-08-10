@@ -123,6 +123,12 @@ export type ReactorFeatureFlags = {
    * Requires documentDecisions.
    */
   authEnforcement: boolean;
+
+  /**
+   * Match { group } principals by folding the referenced PHGroup documents as
+   * derived projections. Requires authEnforcement.
+   */
+  authGroups: boolean;
 };
 
 /**

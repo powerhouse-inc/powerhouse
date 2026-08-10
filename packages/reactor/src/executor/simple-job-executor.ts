@@ -11,6 +11,7 @@ import {
   garbageCollect,
   hashDocumentStateForScope,
   isUndoRedo,
+  mentionedGroupIds,
   normalizeDocumentModelVersion,
   sortOperations,
 } from "@powerhousedao/shared/document-model";
@@ -143,11 +144,12 @@ export class SimpleJobExecutor implements IJobExecutor {
     this.featureFlags = {
       documentDecisions: config.featureFlags?.documentDecisions ?? false,
       authEnforcement: config.featureFlags?.authEnforcement ?? false,
+      authGroups: config.featureFlags?.authGroups ?? false,
     };
     // The builder validates too, but a pooled worker is constructed directly
     // from the flags that crossed the boundary.
     validateFeatureFlags(this.featureFlags, FLAG_PREREQUISITES);
-    this.decisionModel = selectDecisionModel(this.featureFlags);
+    this.decisionModel = selectDecisionModel(this.featureFlags, registry);
     this.signatureVerifierModule = new SignatureVerifier(signatureVerifier);
     this.documentActionHandler = new DocumentActionHandler(
       registry,
@@ -794,6 +796,12 @@ export class SimpleJobExecutor implements IJobExecutor {
         sourceRemote,
       },
     ]);
+
+    // References come from the input as it arrived, including operations
+    // stored denied or errored, so sync topology never depends on evaluation.
+    if (scope === "auth") {
+      indexTxn.recordGroupReferences(job.documentId, mentionedGroupIds(action));
+    }
 
     return {
       job,

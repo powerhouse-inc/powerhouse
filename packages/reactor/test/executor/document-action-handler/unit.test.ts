@@ -68,6 +68,7 @@ function createHarness(
     createCollection: vi.fn(),
     addToCollection: vi.fn(),
     removeFromCollection: vi.fn(),
+    recordGroupReferences: vi.fn(),
     write: vi.fn(),
   };
   const documentMetaCache = createMockDocumentMetaCache();
@@ -79,13 +80,18 @@ function createHarness(
     documentMetaCache,
     collectionMembershipCache,
   };
-  const flags = { documentDecisions: false, authEnforcement: false };
+  const flags = {
+    documentDecisions: false,
+    authEnforcement: false,
+    authGroups: false,
+  };
+  const registry = createTestRegistry();
   const handler = new DocumentActionHandler(
-    createTestRegistry(),
+    registry,
     createMockLogger(),
     DEFAULT_DRIVE_CONTAINER_TYPES,
     flags,
-    selectDecisionModel(flags),
+    selectDecisionModel(flags, registry),
   );
   return {
     handler,
@@ -518,16 +524,21 @@ describe("DocumentActionHandler", () => {
      * caller may control instead of the one guarding the write.
      */
     function gatedHarness(sourceDoc: PHDocument) {
-      const flags = { documentDecisions: true, authEnforcement: true };
+      const flags = {
+        documentDecisions: true,
+        authEnforcement: true,
+        authGroups: false,
+      };
       const harness = createHarness(sourceDoc);
+      const registry = createTestRegistry();
       return {
         ...harness,
         handler: new DocumentActionHandler(
-          createTestRegistry(),
+          registry,
           createMockLogger(),
           DEFAULT_DRIVE_CONTAINER_TYPES,
           flags,
-          selectDecisionModel(flags),
+          selectDecisionModel(flags, registry),
         ),
       };
     }

@@ -14,6 +14,7 @@ export const FLAG_PREREQUISITES: Record<
 > = {
   documentDecisions: [],
   authEnforcement: ["documentDecisions"],
+  authGroups: ["authEnforcement"],
 };
 
 /**
