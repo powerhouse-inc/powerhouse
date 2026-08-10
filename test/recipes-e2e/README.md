@@ -74,7 +74,10 @@ competing for CPU.
 its `start` demo loads a real `Xenova/all-MiniLM-L6-v2` ONNX model. That's a
 ~23MB download on a cold cache, then cached in `semantic-search/.model-cache`.
 The mirror step copies that cache across, so a warm local checkout does no
-network I/O; CI will pay the download once per run.
+network I/O. CI restores the same directory into the recipes checkout from an
+`actions/cache` entry before the mirror runs, so it pays the download once ever
+rather than once per run — the Hub rate-limits runner IPs, and a 429 there used
+to redden the whole job.
 
 ## Options
 
@@ -103,6 +106,11 @@ pnpm test:e2e:recipes --filter drive-override --only build,test --verbose
 A **timeout** is reported distinctly from a **failure**. If a demo that used to
 exit starts hanging, you get `⏱` rather than a red herring about the assertion
 that never ran.
+
+Nothing is retried. A red run means a red run — including the occasional
+external-network failure, which reads as a recipe failure but isn't one. The
+`semantic-search` model download is the known instance, and the CI cache above
+is what keeps it from recurring; check the error class before blaming the diff.
 
 After installing, the runner asserts that every linked package in every recipe's
 `node_modules` really is a symlink into this checkout, and hard-fails if any
