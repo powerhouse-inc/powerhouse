@@ -11,6 +11,7 @@ import {
   garbageCollect,
   hashDocumentStateForScope,
   isUndoRedo,
+  normalizeDocumentModelVersion,
   sortOperations,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
@@ -615,10 +616,9 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     let module: DocumentModelModule;
     try {
-      const moduleVersion = documentVersion === 0 ? undefined : documentVersion;
       module = this.registry.getModule(
         document.header.documentType,
-        moduleVersion,
+        normalizeDocumentModelVersion(documentVersion),
       );
     } catch (error) {
       return buildErrorResult(

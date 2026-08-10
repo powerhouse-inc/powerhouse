@@ -65,18 +65,17 @@ const ${v.phStateName}SchemasByVersion: Record<number, z.ZodType> = ${makeStateS
 
 const ${v.phDocumentSchemaName}sByVersion: Record<number, z.ZodType> = ${makeDocumentSchemasByVersion(v.versions, v.version, v)};
 
-/** The document model version stamped in a state's document scope. */
-function stampedDocumentModelVersion(state: unknown): number | undefined {
-  if (typeof state !== "object" || state === null) return undefined;
+/** The document model version stamped in a state's document scope. States stamped with 0 or nothing predate versioning and are treated as version 1. */
+function stampedDocumentModelVersion(state: unknown): number {
+  if (typeof state !== "object" || state === null) return 1;
   const documentScope = (state as { document?: unknown }).document;
-  if (typeof documentScope !== "object" || documentScope === null) return undefined;
+  if (typeof documentScope !== "object" || documentScope === null) return 1;
   const version = (documentScope as { version?: unknown }).version;
-  return typeof version === "number" ? version : undefined;
+  return normalizeDocumentModelVersion(typeof version === "number" ? version : undefined);
 }
 
 function resolve${v.phStateName}Schema(state: unknown): z.ZodType {
-  const version = stampedDocumentModelVersion(state);
-  const schema = version === undefined ? undefined : ${v.phStateName}SchemasByVersion[version];
+  const schema = ${v.phStateName}SchemasByVersion[stampedDocumentModelVersion(state)];
   return schema ?? ${v.phStateName}Schema;
 }
 
@@ -84,8 +83,7 @@ function resolve${v.phDocumentSchemaName}(document: unknown): z.ZodType {
   const state = typeof document === "object" && document !== null
     ? (document as { state?: unknown }).state
     : undefined;
-  const version = stampedDocumentModelVersion(state);
-  const schema = version === undefined ? undefined : ${v.phDocumentSchemaName}sByVersion[version];
+  const schema = ${v.phDocumentSchemaName}sByVersion[stampedDocumentModelVersion(state)];
   return schema ?? ${v.phDocumentSchemaName};
 }
 
@@ -167,7 +165,7 @@ export const documentModelDocumentSchemaFileTemplate = (
  */
 import {
   BaseDocumentHeaderSchema,
-  BaseDocumentStateSchema,
+  BaseDocumentStateSchema,${hasPriorVersions ? "\n  normalizeDocumentModelVersion," : ""}
 } from "document-model";
 import { z } from "zod";
 import { ${v.documentTypeVariableName} } from "./document-type.js";

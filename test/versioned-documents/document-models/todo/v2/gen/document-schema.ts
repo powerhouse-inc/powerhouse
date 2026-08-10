@@ -5,6 +5,7 @@
 import {
   BaseDocumentHeaderSchema,
   BaseDocumentStateSchema,
+  normalizeDocumentModelVersion,
 } from "document-model";
 import { z } from "zod";
 import { TodoPHStateSchema as TodoPHStateSchemaV1 } from "../../v1/gen/document-schema.js";
@@ -42,20 +43,20 @@ const TodoDocumentSchemasByVersion: Record<number, z.ZodType> = {
   2: TodoDocumentSchema,
 };
 
-/** The document model version stamped in a state's document scope. */
-function stampedDocumentModelVersion(state: unknown): number | undefined {
-  if (typeof state !== "object" || state === null) return undefined;
+/** The document model version stamped in a state's document scope. States stamped with 0 or nothing predate versioning and are treated as version 1. */
+function stampedDocumentModelVersion(state: unknown): number {
+  if (typeof state !== "object" || state === null) return 1;
   const documentScope = (state as { document?: unknown }).document;
-  if (typeof documentScope !== "object" || documentScope === null)
-    return undefined;
+  if (typeof documentScope !== "object" || documentScope === null) return 1;
   const version = (documentScope as { version?: unknown }).version;
-  return typeof version === "number" ? version : undefined;
+  return normalizeDocumentModelVersion(
+    typeof version === "number" ? version : undefined,
+  );
 }
 
 function resolveTodoPHStateSchema(state: unknown): z.ZodType {
-  const version = stampedDocumentModelVersion(state);
   const schema =
-    version === undefined ? undefined : TodoPHStateSchemasByVersion[version];
+    TodoPHStateSchemasByVersion[stampedDocumentModelVersion(state)];
   return schema ?? TodoPHStateSchema;
 }
 
@@ -64,9 +65,8 @@ function resolveTodoDocumentSchema(document: unknown): z.ZodType {
     typeof document === "object" && document !== null
       ? (document as { state?: unknown }).state
       : undefined;
-  const version = stampedDocumentModelVersion(state);
   const schema =
-    version === undefined ? undefined : TodoDocumentSchemasByVersion[version];
+    TodoDocumentSchemasByVersion[stampedDocumentModelVersion(state)];
   return schema ?? TodoDocumentSchema;
 }
 

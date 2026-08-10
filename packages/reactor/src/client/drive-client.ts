@@ -20,6 +20,7 @@ import {
   actions,
   createPresignedHeader,
   generateId,
+  normalizeDocumentModelVersion,
   replayDocument,
   type Action,
   type CreateDocumentActionInput,
@@ -123,7 +124,11 @@ export class DriveClient implements IDriveClient {
           documentId: document.header.id,
           model: document.header.documentType,
           fromVersion: 0,
-          toVersion: document.state.document.version || 1,
+          // imported files may predate the document scope entirely
+          toVersion: normalizeDocumentModelVersion(
+            (document.state as Partial<typeof document.state>).document
+              ?.version,
+          ),
           initialState: document.state,
         }),
         addRelationshipAction(driveIdentifier, documentId, "child"),

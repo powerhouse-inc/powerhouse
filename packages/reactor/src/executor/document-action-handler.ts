@@ -41,7 +41,10 @@ interface RelationshipPostWriteArgs {
   input: RelationshipActionShape;
   job: Job;
 }
-import { hashDocumentStateForScope } from "@powerhousedao/shared/document-model";
+import {
+  hashDocumentStateForScope,
+  normalizeDocumentModelVersion,
+} from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import type { IOperationIndexTxn } from "../cache/operation-index-types.js";
 import { DriveCollectionId } from "../cache/operation-index-types.js";
@@ -640,7 +643,9 @@ export class DocumentActionHandler {
     const arrivesDecided =
       executing.replayingAcceptedHistory || executing.evaluatedByPosition;
     if (fromVersion > 0 && !arrivesDecided) {
-      const stampedVersion = documentState.version || 1;
+      const stampedVersion = normalizeDocumentModelVersion(
+        documentState.version,
+      );
       if (fromVersion !== stampedVersion) {
         return buildErrorResult(
           job,

@@ -11,6 +11,7 @@ import {
   applyUpgradeDocumentAction,
   baseReducerVersion,
   isDenied,
+  normalizeDocumentModelVersion,
 } from "@powerhousedao/shared/document-model";
 import { createDocumentFromAction } from "../executor/util.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
@@ -70,17 +71,10 @@ function keyframeRevision(
   return nextIndex - 1;
 }
 
-/** Version 0 means unversioned, which the registry expresses as undefined. */
-function normalizeModuleVersion(
-  version: number | undefined,
-): number | undefined {
-  return version === 0 ? undefined : version;
-}
-
-function extractModuleVersion(doc: PHDocument): number | undefined {
+function extractModuleVersion(doc: PHDocument): number {
   const v = (doc.state as Record<string, Record<string, unknown>>).document
     .version as number | undefined;
-  return normalizeModuleVersion(v);
+  return normalizeDocumentModelVersion(v);
 }
 
 /** The highest revision held, latest push winning a tie. */
@@ -754,7 +748,7 @@ export class KyselyWriteCache implements IWriteCache {
 
           docModule = this.registry.getModule(
             documentType,
-            normalizeModuleVersion(toVersion),
+            normalizeDocumentModelVersion(toVersion),
           );
         } else if (operation.action.type === "DELETE_DOCUMENT") {
           applyDeleteDocumentAction(document, operation.action as never);

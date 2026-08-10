@@ -10,6 +10,7 @@ import type {
 import {
   actions,
   DowngradeNotSupportedError,
+  normalizeDocumentModelVersion,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import {
@@ -493,7 +494,10 @@ export class ReactorClient implements IReactorClient {
           documentId,
           model: document.header.documentType,
           fromVersion: 0,
-          toVersion: document.state.document.version,
+          toVersion: normalizeDocumentModelVersion(
+            (document.state as Partial<typeof document.state>).document
+              ?.version,
+          ),
           initialState: document.state,
         }),
       ],
@@ -597,7 +601,9 @@ export class ReactorClient implements IReactorClient {
     }
 
     const document = module.utils.createDocument();
-    document.state.document.version = module.version ?? 1;
+    document.state.document.version = normalizeDocumentModelVersion(
+      module.version,
+    );
 
     return this.create<TDocument>(document, options?.parentIdentifier, signal);
   }
@@ -640,12 +646,14 @@ export class ReactorClient implements IReactorClient {
       const documentId = document.header.id;
       const documentType = document.header.documentType;
       const branch = document.header.branch || "main";
-      const fromVersion = document.state.document.version || 1;
+      const fromVersion = normalizeDocumentModelVersion(
+        document.state.document.version,
+      );
 
       let targetVersion = toVersion;
       if (targetVersion === undefined) {
         const module = await this.getDocumentModelModule(documentType);
-        targetVersion = module.version ?? 1;
+        targetVersion = normalizeDocumentModelVersion(module.version);
       }
 
       if (targetVersion === fromVersion) {
