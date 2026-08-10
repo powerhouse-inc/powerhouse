@@ -216,10 +216,12 @@ export interface IReactorClient {
    * Retrieves a specific document model module by document type.
    *
    * @param documentType - The document type identifier
+   * @param version - Optional model version; defaults to the latest registered
    * @returns The document model module
    */
   getDocumentModelModule(
     documentType: string,
+    version?: number,
   ): Promise<DocumentModelModule<any>>;
 
   /**

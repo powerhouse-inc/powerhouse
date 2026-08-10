@@ -12,7 +12,7 @@ import {
   UnsupportedDocumentModelVersionError,
 } from "./errors.js";
 import type { DocumentOperations, Operation } from "./operations.js";
-import { backfillAuthState } from "./state.js";
+import { backfillAuthState, backfillDocumentState } from "./state.js";
 import type { PHBaseState } from "./state.js";
 import type {
   Reducer,
@@ -138,7 +138,7 @@ export function replayDocumentVersioned<TState extends PHBaseState>(
     return legacyFallback();
   }
 
-  const startVersion = seedAction.input.toVersion;
+  const startVersion = seedAction.input.toVersion || 1;
 
   const validatedUpgrades = upgrades.filter((op) => {
     const a = op.action as UpgradeDocumentAction;
@@ -204,7 +204,7 @@ export function replayDocumentVersioned<TState extends PHBaseState>(
     initialOperations[s] = [];
   }
 
-  const backfilledSeed = backfillAuthState(seedState);
+  const backfilledSeed = backfillDocumentState(backfillAuthState(seedState));
   let document: PHDocument<TState> = {
     header,
     state: backfilledSeed,

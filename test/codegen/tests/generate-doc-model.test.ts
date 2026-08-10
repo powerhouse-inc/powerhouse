@@ -183,6 +183,11 @@ describe("versioned document models", () => {
       v1ShapeStampedAsV2.state.document.version = 2;
       v1ShapeStampedAsV2.initialState.document.version = 2;
       expect(schemaModule.isTestDocDocument(v1ShapeStampedAsV2)).toBe(false);
+
+      const v1ShapeStampedAsV0 = structuredClone(v1Document);
+      v1ShapeStampedAsV0.state.document.version = 0;
+      v1ShapeStampedAsV0.initialState.document.version = 0;
+      expect(schemaModule.isTestDocDocument(v1ShapeStampedAsV0)).toBe(true);
     });
 
     test("should throw a typescript error in upgrades when new state does not match old state", () => {

@@ -138,8 +138,10 @@ export function createReactorClientProxy(
       }
       if (registry) {
         if (prop === "getDocumentModelModule") {
-          return (documentType: string) =>
-            Promise.resolve().then(() => registry.getModule(documentType));
+          return (documentType: string, version?: number) =>
+            Promise.resolve().then(() =>
+              registry.getModule(documentType, version),
+            );
         }
         if (prop === "getDocumentModelModules") {
           return (_namespace?: string, paging?: PagingOptions) =>

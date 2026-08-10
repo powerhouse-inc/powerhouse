@@ -12,6 +12,7 @@ import {
   generateId,
 } from "@powerhousedao/shared/document-model";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import type { IWriteCache } from "../../src/cache/write/interfaces.js";
 import type { IReactorClient } from "../../src/client/types.js";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import { ReactorClientBuilder } from "../../src/core/reactor-client-builder.js";
@@ -632,6 +633,71 @@ describe("ReactorClient Versioning Integration Tests", () => {
       await expect(client.upgradeDocument(doc.header.id, 1)).rejects.toThrow(
         "Downgrade not supported",
       );
+    });
+  });
+
+  describe("documents stamped with model version 0", () => {
+    async function createVersionZeroDocument(): Promise<PHDocument> {
+      const doc = createV1Document();
+      doc.state.document.version = 0;
+      doc.initialState.document.version = 0;
+      return client.create(doc as unknown as PHDocument);
+    }
+
+    function writeCache(): IWriteCache {
+      const reactorModule = module.reactorModule;
+      if (!reactorModule) {
+        throw new Error("Expected an in-process reactor module");
+      }
+      return reactorModule.writeCache;
+    }
+
+    it("treats version 0 as version 1 for live execution and cold rebuild alike", async () => {
+      const created = await createVersionZeroDocument();
+      expect(created.state.document.version).toBe(0);
+
+      await client.execute(created.header.id, "main", [
+        v1Actions.addItem({ id: "1", name: "First" }),
+      ]);
+
+      const cache = writeCache();
+      const live = await cache.getState(created.header.id, "global", "main");
+      const liveState = live.state as unknown as StateV1;
+      expect(liveState.global.items.length).toBe(1);
+      expect(liveState.global.items[0]).not.toHaveProperty("addedAt");
+
+      cache.invalidate(created.header.id);
+      const rebuilt = await cache.getState(created.header.id, "global", "main");
+      const rebuiltState = rebuilt.state as unknown as StateV1;
+
+      expect(rebuiltState.global).toEqual(liveState.global);
+    });
+
+    it("upgrades a version-0 document without double-migrating on cold rebuild", async () => {
+      const created = await createVersionZeroDocument();
+      await client.execute(created.header.id, "main", [
+        v1Actions.addItem({ id: "1", name: "First" }),
+      ]);
+
+      await client.upgradeDocument(created.header.id);
+
+      await client.execute(created.header.id, "main", [
+        v2Actions.setTitle({ title: "Upgraded" }),
+      ]);
+
+      const cache = writeCache();
+      const live = await cache.getState(created.header.id, "global", "main");
+      const liveState = live.state as unknown as StateV2;
+
+      cache.invalidate(created.header.id);
+      const rebuilt = await cache.getState(created.header.id, "global", "main");
+      const rebuiltState = rebuilt.state as unknown as StateV2;
+
+      expect(rebuiltState.global).toEqual(liveState.global);
+      expect(rebuiltState.global.title).toBe("Upgraded");
+      expect(rebuiltState.global.items).toEqual([
+        { id: "1", name: "First", addedAt: "" },
+      ]);
     });
   });
 });

@@ -87,6 +87,19 @@ export function backfillAuthState<TState extends PHBaseState>(
 }
 
 /**
+ * Backfills the document scope for snapshots serialized before PHDocumentState
+ * existed. Replaces only `state.document`. Idempotent.
+ */
+export function backfillDocumentState<TState extends PHBaseState>(
+  state: TState,
+): TState {
+  return {
+    ...state,
+    document: createDocumentState(state.document),
+  } as TState;
+}
+
+/**
  * The document state of the document.
  */
 export type PHDocumentState = {

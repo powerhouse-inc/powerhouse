@@ -123,7 +123,7 @@ export class DriveClient implements IDriveClient {
           documentId: document.header.id,
           model: document.header.documentType,
           fromVersion: 0,
-          toVersion: document.state.document.version || 1,
+          toVersion: document.state.document?.version || 1,
           initialState: document.state,
         }),
         addRelationshipAction(driveIdentifier, documentId, "child"),
@@ -389,6 +389,7 @@ export class DriveClient implements IDriveClient {
       const srcDoc = await this.client.get(entry.srcId, undefined, signal);
       const module = await this.client.getDocumentModelModule(
         srcDoc.header.documentType,
+        srcDoc.state.document?.version || 1,
       );
       const duplicated = replayDocument(
         srcDoc.initialState,

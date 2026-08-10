@@ -128,10 +128,12 @@ export class ReactorClient implements IReactorClient {
    * Retrieves a specific document model module by document type.
    *
    * @param documentType - The document type identifier
+   * @param version - Optional model version; defaults to the latest registered
    * @returns The document model module
    */
   async getDocumentModelModule(
     documentType: string,
+    version?: number,
   ): Promise<DocumentModelModule<any>> {
     const modules = await this.reactor.getDocumentModels();
 
@@ -141,16 +143,24 @@ export class ReactorClient implements IReactorClient {
       if (module.documentModel.global.id !== documentType) {
         continue;
       }
-      const version = module.version ?? 1;
-      if (version > latestVersion) {
-        latestVersion = version;
+      const moduleVersion = module.version ?? 1;
+      if (version !== undefined) {
+        if (moduleVersion === version) {
+          return module as DocumentModelModule<any>;
+        }
+        continue;
+      }
+      if (moduleVersion > latestVersion) {
+        latestVersion = moduleVersion;
         latestModule = module;
       }
     }
 
     if (!latestModule) {
       throw new Error(
-        `Document model module not found for type: ${documentType}`,
+        `Document model module not found for type: ${documentType}${
+          version === undefined ? "" : ` with version: ${version}`
+        }`,
       );
     }
 

@@ -852,7 +852,7 @@ describe("KyselyWriteCache (Partial Integration) - Cold Miss Rebuild", () => {
 
     const calls = versionAwareGetModule.mock.calls;
     const initialCall = calls.find(
-      (c: unknown[]) => c[0] === docType && c[1] === undefined,
+      (c: unknown[]) => c[0] === docType && c[1] === 1,
     );
     expect(initialCall).toBeDefined();
 

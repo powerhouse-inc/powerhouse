@@ -17,6 +17,7 @@ export async function signAction(action: Action, document: PHDocument) {
 
   const documentModelModule = await reactorClient.getDocumentModelModule(
     document.header.documentType,
+    document.state.document?.version || 1,
   );
   const reducer = documentModelModule.reducer;
 

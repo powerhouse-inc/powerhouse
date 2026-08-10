@@ -319,6 +319,8 @@ export class SimpleJobExecutor implements IJobExecutor {
       throw error;
     }
 
+    this.invalidateUpgradedDocuments(result);
+
     if (pendingEvent) {
       this.eventBus
         .emit(ReactorEventTypes.JOB_WRITE_READY, pendingEvent)
@@ -332,6 +334,36 @@ export class SimpleJobExecutor implements IJobExecutor {
     }
 
     return result;
+  }
+
+  /**
+   * Drops every cached stream of a document an upgrade just committed for.
+   *
+   * A scope loaded while the transaction was open was rebuilt under the version
+   * the document held then, and the reducer that produced it is not the one the
+   * next write has to use. Only reachable after the commit, so a rollback leaves
+   * the cache the way the transaction found it. Genesis upgrades (fromVersion 0)
+   * are exempt: nothing could have been cached under an older version.
+   */
+  private invalidateUpgradedDocuments(result: JobResult): void {
+    if (!result.success || !result.operationsWithContext) {
+      return;
+    }
+
+    const upgraded = new Set<string>();
+    for (const owc of result.operationsWithContext) {
+      if (owc.operation.action.type !== "UPGRADE_DOCUMENT") {
+        continue;
+      }
+      const input = owc.operation.action.input as { fromVersion?: number };
+      if ((input.fromVersion ?? 0) > 0) {
+        upgraded.add(owc.context.documentId);
+      }
+    }
+
+    for (const documentId of upgraded) {
+      this.writeCache.invalidate(documentId);
+    }
   }
 
   private async getCollectionMembershipsForOperations(
@@ -600,10 +632,9 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     let module: DocumentModelModule;
     try {
-      const moduleVersion = documentVersion === 0 ? undefined : documentVersion;
       module = this.registry.getModule(
         document.header.documentType,
-        moduleVersion,
+        documentVersion || 1,
       );
     } catch (error) {
       return buildErrorResult(

@@ -2,11 +2,14 @@ import type {
   Operation,
   PHAuthState,
   PHDocument,
+  PHDocumentState,
 } from "@powerhousedao/shared/document-model";
 import {
   backfillAuthState,
+  backfillDocumentState,
   createReducer,
   defaultAuthState,
+  defaultDocumentState,
   HashMismatchError,
   noop,
   replayDocument,
@@ -396,5 +399,27 @@ describe("PHAuthState default and backfill", () => {
     };
     const state = { ...createCountState(), auth: policy } as CountPHState;
     expect(backfillAuthState(state).auth).toStrictEqual(policy);
+  });
+});
+
+describe("PHDocumentState backfill", () => {
+  it("backfills a document scope missing from a legacy snapshot", () => {
+    const legacy = { ...createCountState() } as CountPHState;
+    delete (legacy as unknown as { document?: PHDocumentState }).document;
+
+    expect(backfillDocumentState(legacy).document).toStrictEqual(
+      defaultDocumentState(),
+    );
+  });
+
+  it("preserves an existing document scope", () => {
+    const state = createCountState() as CountPHState;
+    state.document = {
+      ...state.document,
+      version: 3,
+      isDeleted: true,
+    };
+
+    expect(backfillDocumentState(state).document).toStrictEqual(state.document);
   });
 });

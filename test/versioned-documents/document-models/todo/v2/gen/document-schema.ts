@@ -53,9 +53,8 @@ function stampedDocumentModelVersion(state: unknown): number | undefined {
 }
 
 function resolveTodoPHStateSchema(state: unknown): z.ZodType {
-  const version = stampedDocumentModelVersion(state);
-  const schema =
-    version === undefined ? undefined : TodoPHStateSchemasByVersion[version];
+  const version = stampedDocumentModelVersion(state) || 1;
+  const schema = TodoPHStateSchemasByVersion[version];
   return schema ?? TodoPHStateSchema;
 }
 
@@ -64,9 +63,8 @@ function resolveTodoDocumentSchema(document: unknown): z.ZodType {
     typeof document === "object" && document !== null
       ? (document as { state?: unknown }).state
       : undefined;
-  const version = stampedDocumentModelVersion(state);
-  const schema =
-    version === undefined ? undefined : TodoDocumentSchemasByVersion[version];
+  const version = stampedDocumentModelVersion(state) || 1;
+  const schema = TodoDocumentSchemasByVersion[version];
   return schema ?? TodoDocumentSchema;
 }
 

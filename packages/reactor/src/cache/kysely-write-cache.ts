@@ -70,17 +70,16 @@ function keyframeRevision(
   return nextIndex - 1;
 }
 
-/** Version 0 means unversioned, which the registry expresses as undefined. */
-function normalizeModuleVersion(
-  version: number | undefined,
-): number | undefined {
-  return version === 0 ? undefined : version;
+/** Version 0 and a missing stamp both mean the first model version. */
+function normalizeModuleVersion(version: number | undefined): number {
+  return version || 1;
 }
 
-function extractModuleVersion(doc: PHDocument): number | undefined {
-  const v = (doc.state as Record<string, Record<string, unknown>>).document
-    .version as number | undefined;
-  return normalizeModuleVersion(v);
+function extractModuleVersion(doc: PHDocument): number {
+  const documentScope = (
+    doc.state as Record<string, Record<string, unknown> | undefined>
+  ).document;
+  return normalizeModuleVersion(documentScope?.version as number | undefined);
 }
 
 /** The highest revision held, latest push winning a tie. */
@@ -825,12 +824,11 @@ export class KyselyWriteCache implements IWriteCache {
       ReturnType<typeof this.registry.getModule>
     >();
 
-    const getModuleCached = (version: number | undefined) => {
-      const key = version ?? 0;
-      let mod = moduleCache.get(key);
+    const getModuleCached = (version: number) => {
+      let mod = moduleCache.get(version);
       if (!mod) {
         mod = this.registry.getModule(documentType, version);
-        moduleCache.set(key, mod);
+        moduleCache.set(version, mod);
       }
       return mod;
     };
@@ -879,7 +877,7 @@ export class KyselyWriteCache implements IWriteCache {
           document = this.applyPendingUpgrades(
             document,
             pendingUpgrades,
-            moduleVersion ?? Number.MAX_SAFE_INTEGER,
+            moduleVersion,
           );
 
           // A denied operation still carries a potentially valid action, so
@@ -918,10 +916,11 @@ export class KyselyWriteCache implements IWriteCache {
       }
     } while (hasMorePages);
 
-    document = this.applyPendingUpgrades(
+    document = this.applyReachedPendingUpgrades(
       document,
       pendingUpgrades,
-      Number.MAX_SAFE_INTEGER,
+      scope,
+      targetRevision ?? Number.MAX_SAFE_INTEGER,
     );
 
     return this.stampRevisions(
@@ -943,19 +942,76 @@ export class KyselyWriteCache implements IWriteCache {
     pendingUpgrades: PendingUpgrade[],
     throughVersion: number,
   ): PHDocument {
+    return this.drainPendingUpgrades(
+      document,
+      pendingUpgrades,
+      (pending) => throughVersion >= pending.action.input.toVersion,
+    );
+  }
+
+  /**
+   * Applies and removes every held-back upgrade whose boundary the replay has
+   * reached, for the tail of a rebuild that stopped at `targetRevision`.
+   *
+   * An upgrade whose boundary lies above the target belongs to a position the
+   * read did not ask for, so applying it would let a positional read see state
+   * from the document's future. A legacy upgrade with no boundary recorded is
+   * applied, because the timestamp fallback cannot place it here.
+   */
+  private applyReachedPendingUpgrades(
+    document: PHDocument,
+    pendingUpgrades: PendingUpgrade[],
+    scope: string,
+    targetRevision: number,
+  ): PHDocument {
+    return this.drainPendingUpgrades(document, pendingUpgrades, (pending) => {
+      const boundary = pending.action.input.revision?.[scope];
+      return boundary === undefined || boundary <= targetRevision;
+    });
+  }
+
+  /**
+   * Drains the front of the held-back queue for as long as `reached` accepts it,
+   * then puts back a deletion the drain dropped.
+   *
+   * An upgrade carrying an initialState snapshot replaces the document scope
+   * wholesale, so a deletion the rebuild had already established would come out
+   * of the drain as a live document.
+   */
+  private drainPendingUpgrades(
+    document: PHDocument,
+    pendingUpgrades: PendingUpgrade[],
+    reached: (pending: PendingUpgrade) => boolean,
+  ): PHDocument {
+    const deletedBeforeDrain = document.state.document.isDeleted === true;
+    const deletedAtUtcIso = document.state.document.deletedAtUtcIso;
+    let drained = false;
+
     while (pendingUpgrades.length > 0) {
       const pending = pendingUpgrades[0];
 
-      if (throughVersion < pending.action.input.toVersion) {
+      if (!reached(pending)) {
         break;
       }
 
       pendingUpgrades.shift();
+      drained = true;
       document = applyUpgradeDocumentAction(
         document,
         pending.action,
         pending.upgradePath,
       );
+    }
+
+    if (drained && deletedBeforeDrain && !document.state.document.isDeleted) {
+      document.state = {
+        ...document.state,
+        document: {
+          ...document.state.document,
+          isDeleted: true,
+          deletedAtUtcIso,
+        },
+      };
     }
 
     return document;
@@ -1031,13 +1087,14 @@ export class KyselyWriteCache implements IWriteCache {
     opTimestamp: string,
     scope: string,
     validatedUpgrades: ValidatedUpgrade[],
-    finalVersion: number | undefined,
-  ): number | undefined {
+    finalVersion: number,
+  ): number {
     if (validatedUpgrades.length === 0) {
       return finalVersion;
     }
 
-    let currentVersion: number | undefined = validatedUpgrades[0]?.fromVersion;
+    let currentVersion: number =
+      validatedUpgrades[0]?.fromVersion ?? finalVersion;
 
     for (const upgrade of validatedUpgrades) {
       let beforeUpgrade: boolean;
