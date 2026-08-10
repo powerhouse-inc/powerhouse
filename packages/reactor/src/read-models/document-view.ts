@@ -59,11 +59,12 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
   /**
    * Indexes committed operations into DocumentSnapshot rows. CREATE_DOCUMENT
    * only seeds header/document/auth. UPGRADE_DOCUMENT reindexes every scope
-   * present in resultingState unconditionally, since the upgrade reducer may
-   * have reshaped any of them (including scopes with pre-existing
-   * snapshots, e.g. an in-place upgrade of an already-populated document) —
-   * unlike other action types, which only ever touch their own scope. All
-   * other action types index only header and their own scope.
+   * present in resultingState when the operation vouches for them — a seed
+   * carrying initialState or a migration stamped with the __migrated marker
+   * — since the upgrade reducer may have reshaped any of them; upgrades
+   * without either fall back to header/document/auth, because their sibling
+   * echoes may be stale. All other action types index only header and their
+   * own scope.
    */
   protected override async commitOperations(
     items: OperationWithContext[],
@@ -148,7 +149,26 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
             ([key]) => key === "header" || key === "document" || key === "auth",
           );
         } else if (operationType === "UPGRADE_DOCUMENT") {
-          scopesToIndex = Object.entries(fullState);
+          // Sibling-scope echoes are only trustworthy when the operation
+          // itself defines them: a seed carrying initialState, or a migration
+          // whose executor vouched (via the __migrated marker) that it
+          // fetched every scope fresh. Upgrades persisted by executors that
+          // never fetched sibling scopes echo whatever stale state the write
+          // cache held, and indexing those would clobber good snapshots.
+          const upgradeInput = operation.action.input as {
+            initialState?: unknown;
+          };
+          const scopesVouchedFor =
+            fullState.__migrated === true ||
+            upgradeInput.initialState !== undefined;
+          delete fullState.__migrated;
+
+          scopesToIndex = scopesVouchedFor
+            ? Object.entries(fullState)
+            : Object.entries(fullState).filter(
+                ([key]) =>
+                  key === "header" || key === "document" || key === "auth",
+              );
         } else {
           scopesToIndex = [];
 

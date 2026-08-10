@@ -209,10 +209,14 @@ describe("Document Scope Cross-Scope Dependency Issue", () => {
 
       // The keyframe is labelled 10 in the global scope, which says nothing
       // about the document scope. Resuming that from its own recorded position
-      // picks up the version 2 upgrade that landed afterwards.
-      expect(docFromKeyframe.state.document.version).toBe(2);
+      // picks up the version 2 upgrade that landed afterwards — but a
+      // positional read at 10 predates that upgrade, so the state stays at
+      // version 1 and the document-scope revision points at the upgrade the
+      // state never saw, so a resume from this snapshot re-reads it.
+      expect(docFromKeyframe.state.document.version).toBe(1);
+      expect(docFromKeyframe.header.revision.document).toBe(2);
 
-      // Step 8: the meta cache reads the same operations and agrees
+      // Step 8: the meta cache reads the same operations and sees the upgrade
       const correctMeta = await documentMetaCache.getDocumentMeta(
         docId,
         "main",

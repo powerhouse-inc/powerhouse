@@ -781,6 +781,13 @@ export class DocumentActionHandler {
       header: document.header,
       ...document.state,
     };
+    // Vouches that every scope echoed here was fetched fresh before the
+    // migration ran. Upgrade operations persisted by executors that never
+    // fetched sibling scopes carry stale echoes, and the document view must
+    // not reindex sibling scopes from those.
+    if (fromVersion > 0) {
+      resultingStateObj.__migrated = true;
+    }
     const resultingState = JSON.stringify(resultingStateObj);
 
     const writeResult = await this.writeOperationToStore(

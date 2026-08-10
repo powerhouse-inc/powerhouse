@@ -1,5 +1,6 @@
 import type {
   CreateDocumentAction,
+  DeleteDocumentAction,
   Operation,
   PHDocument,
   UpgradeDocumentAction,
@@ -48,6 +49,16 @@ type ValidatedUpgrade = {
 type PendingUpgrade = {
   action: UpgradeDocumentAction;
   upgradePath: UpgradeTransition[] | undefined;
+  /** The upgrade operation's index in the document scope. */
+  index: number;
+  /**
+   * DELETE_DOCUMENT actions the document scope recorded after this upgrade.
+   * The document-scope pass applies deletes inline while the upgrade is held
+   * back, inverting log order; re-applying them after the upgrade restores it
+   * — without this, an upgrade seeded from an initialState snapshot replaces
+   * the state wholesale and a rebuilt deleted document comes back live.
+   */
+  subsequentDeletes: DeleteDocumentAction[];
 };
 
 /**
@@ -631,10 +642,20 @@ export class KyselyWriteCache implements IWriteCache {
               revision: upgradeAction.input.revision,
               timestampUtcMs: operation.timestampUtcMs,
             });
-            pendingUpgrades.push({ action: upgradeAction, upgradePath });
+            pendingUpgrades.push({
+              action: upgradeAction,
+              upgradePath,
+              index: operation.index,
+              subsequentDeletes: [],
+            });
           }
         } else if (operation.action.type === "DELETE_DOCUMENT") {
           applyDeleteDocumentAction(document, operation.action as never);
+          for (const pending of pendingUpgrades) {
+            pending.subsequentDeletes.push(
+              operation.action as DeleteDocumentAction,
+            );
+          }
         }
       }
     } else {
@@ -737,7 +758,12 @@ export class KyselyWriteCache implements IWriteCache {
               revision: upgradeAction.input.revision,
               timestampUtcMs: operation.timestampUtcMs,
             });
-            pendingUpgrades.push({ action: upgradeAction, upgradePath });
+            pendingUpgrades.push({
+              action: upgradeAction,
+              upgradePath,
+              index: operation.index,
+              subsequentDeletes: [],
+            });
           } else {
             document = applyUpgradeDocumentAction(
               document,
@@ -752,6 +778,11 @@ export class KyselyWriteCache implements IWriteCache {
           );
         } else if (operation.action.type === "DELETE_DOCUMENT") {
           applyDeleteDocumentAction(document, operation.action as never);
+          for (const pending of pendingUpgrades) {
+            pending.subsequentDeletes.push(
+              operation.action as DeleteDocumentAction,
+            );
+          }
         } else {
           const protocolVersion = baseReducerVersion(document.header);
           document = docModule.reducer(document, operation.action, undefined, {
@@ -912,13 +943,14 @@ export class KyselyWriteCache implements IWriteCache {
       }
     } while (hasMorePages);
 
-    document = this.applyPendingUpgrades(
+    document = this.applyTailPendingUpgrades(
       document,
       pendingUpgrades,
-      Number.MAX_SAFE_INTEGER,
+      scope,
+      targetRevision,
     );
 
-    return this.stampRevisions(
+    document = await this.stampRevisions(
       document,
       documentId,
       scope,
@@ -926,6 +958,22 @@ export class KyselyWriteCache implements IWriteCache {
       targetRevision,
       signal,
     );
+
+    // A held-back upgrade means this positional state predates it, but the
+    // stamped document-scope revision advertises the store head. A snapshot
+    // stored from here can become a keyframe, and a rebuild resuming from it
+    // trusts that revision to decide where to re-read the document scope —
+    // so it must not point past the first upgrade this state never saw.
+    if (pendingUpgrades.length > 0) {
+      const firstHeldBack = pendingUpgrades[0];
+      const stamped = document.header.revision["document"] ?? 0;
+      document.header.revision = {
+        ...document.header.revision,
+        document: Math.min(stamped, firstHeldBack.index),
+      };
+    }
+
+    return document;
   }
 
   /**
@@ -945,11 +993,65 @@ export class KyselyWriteCache implements IWriteCache {
       }
 
       pendingUpgrades.shift();
-      document = applyUpgradeDocumentAction(
-        document,
-        pending.action,
-        pending.upgradePath,
-      );
+      document = this.applyPendingUpgrade(document, pending);
+    }
+
+    return document;
+  }
+
+  /**
+   * Applies the remaining held-back upgrades after the requested scope's
+   * replay has finished. A head read applies them all. A positional read
+   * applies only those whose boundary for this scope lies at or before the
+   * target position: applying a later one would label migrated state with a
+   * pre-upgrade revision, and a keyframe stored from that poisons every
+   * rebuild that resumes from it. Boundaries come from the upgrade's revision
+   * snapshot; an upgrade without one records no position for this scope, and
+   * the replay loop not having crossed it already places it past the target.
+   */
+  private applyTailPendingUpgrades(
+    document: PHDocument,
+    pendingUpgrades: PendingUpgrade[],
+    scope: string,
+    targetRevision: number | undefined,
+  ): PHDocument {
+    while (pendingUpgrades.length > 0) {
+      const pending = pendingUpgrades[0];
+
+      if (targetRevision !== undefined) {
+        const snapshot = pending.action.input.revision;
+        if (snapshot === undefined) {
+          break;
+        }
+        const boundary = snapshot[scope] ?? 0;
+        if (boundary > targetRevision) {
+          break;
+        }
+      }
+
+      pendingUpgrades.shift();
+      document = this.applyPendingUpgrade(document, pending);
+    }
+
+    return document;
+  }
+
+  /**
+   * Applies one held-back upgrade, then re-applies the deletes the document
+   * scope recorded after it so the hold-back cannot invert their order.
+   */
+  private applyPendingUpgrade(
+    document: PHDocument,
+    pending: PendingUpgrade,
+  ): PHDocument {
+    document = applyUpgradeDocumentAction(
+      document,
+      pending.action,
+      pending.upgradePath,
+    );
+
+    for (const deleteAction of pending.subsequentDeletes) {
+      document = applyDeleteDocumentAction(document, deleteAction);
     }
 
     return document;
