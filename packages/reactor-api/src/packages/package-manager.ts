@@ -59,7 +59,12 @@ export function getUniqueDocumentModels(
 
   for (const models of documentModels) {
     for (const model of models) {
-      uniqueModels.set(model.documentModel.global.id, model);
+      // versions of a document type are distinct modules; keying by type
+      // alone would keep only the last version of a versioned model
+      uniqueModels.set(
+        `${model.documentModel.global.id}@${model.version ?? 1}`,
+        model,
+      );
     }
   }
 
