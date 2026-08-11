@@ -8,6 +8,7 @@ import {
   getOrCreateSourceFile,
   getVariableDeclarationByTypeName,
 } from "utils";
+import { buildMigrationPlan } from "./upgrade-migration.js";
 
 export async function makeUpgradeFile(args: DocumentModelFileMakerArgs) {
   const { project, version, upgradesDirPath } = args;
@@ -21,7 +22,16 @@ export async function makeUpgradeFile(args: DocumentModelFileMakerArgs) {
 
   if (alreadyExists) return;
 
-  const template = upgradeTransitionTemplate(args);
+  const previousSpec = args.documentModelState.specifications.find(
+    (specification) => specification.version === version - 1,
+  );
+  const plan = buildMigrationPlan({
+    previousSpec,
+    specification: args.specification,
+    stateName: args.stateName,
+    localStateName: args.localStateName,
+  });
+  const template = upgradeTransitionTemplate({ ...args, plan });
 
   sourceFile.replaceWithText(template);
   await formatSourceFileWithPrettier(sourceFile);

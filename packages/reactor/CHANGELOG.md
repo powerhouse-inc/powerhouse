@@ -1,3 +1,28 @@
+## 6.2.2-dev.43 (2026-08-11)
+
+### 🚀 Features
+
+- **reactor,reactor-browser:** resolve modules by a document's stamped version ([3f2108a81](https://github.com/powerhouse-inc/powerhouse/commit/3f2108a81))
+- **reactor:** add IReactorClient.upgradeDocument with client-side revision stamping ([c471e75e8](https://github.com/powerhouse-inc/powerhouse/commit/c471e75e8))
+
+### 🩹 Fixes
+
+- **reactor:** stop replaying history in drive copy ([c7dfe76c9](https://github.com/powerhouse-inc/powerhouse/commit/c7dfe76c9))
+- **reactor:** normalize versions consistently in createEmpty and upgradeDocument ([aedb04217](https://github.com/powerhouse-inc/powerhouse/commit/aedb04217))
+- **reactor:** keep versioned rebuilds faithful to document-scope order and position ([26cc34183](https://github.com/powerhouse-inc/powerhouse/commit/26cc34183))
+- **shared,reactor,codegen:** one canonical document-model version normalization ([9dfb47326](https://github.com/powerhouse-inc/powerhouse/commit/9dfb47326))
+- **reactor:** validate upgrade preconditions at the executor, retry conflicts client-side ([c320f464a](https://github.com/powerhouse-inc/powerhouse/commit/c320f464a))
+- **reactor:** apply upgrade reducers at the version boundary during cold rebuild ([a90d5af25](https://github.com/powerhouse-inc/powerhouse/commit/a90d5af25))
+- **reactor:** cross-scope-consistent reads and invalidation for UPGRADE_DOCUMENT ([6c38e082d](https://github.com/powerhouse-inc/powerhouse/commit/6c38e082d))
+- **reactor:** reindex every scope in DocumentView on UPGRADE_DOCUMENT ([0302b0dbf](https://github.com/powerhouse-inc/powerhouse/commit/0302b0dbf))
+- **reactor:** preserve document model version on drive addFile and latest-wins module resolution ([c0ae359e5](https://github.com/powerhouse-inc/powerhouse/commit/c0ae359e5))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5
+- liberuum
+
 ## 6.2.2-dev.42 (2026-08-10)
 
 This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.

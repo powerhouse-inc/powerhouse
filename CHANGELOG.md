@@ -1,3 +1,74 @@
+## 6.2.2-dev.43 (2026-08-11)
+
+### 🚀 Features
+
+- **codegen:** version-aware document validators for versioned models ([50ca37a95](https://github.com/powerhouse-inc/powerhouse/commit/50ca37a95))
+- **connect:** warning toast with update action when an outdated document is opened ([9d83eb202](https://github.com/powerhouse-inc/powerhouse/commit/9d83eb202))
+- **connect:** documentVersionUnsupported modal wired into both import paths ([19f5032c9](https://github.com/powerhouse-inc/powerhouse/commit/19f5032c9))
+- **connect:** block editors for documents newer than installed model versions ([50bf70b50](https://github.com/powerhouse-inc/powerhouse/commit/50bf70b50))
+- **connect:** compact upgrade modal with field badges and refined copy ([08b30a735](https://github.com/powerhouse-inc/powerhouse/commit/08b30a735))
+- **connect:** dev-server source-condition resolution and local package dist rewrite ([6945e1053](https://github.com/powerhouse-inc/powerhouse/commit/6945e1053))
+- **connect,design-system:** confirmation modal with field preview before document upgrade ([bb88c0277](https://github.com/powerhouse-inc/powerhouse/commit/bb88c0277))
+- **design-system:** built-in Update control in DocumentToolbar ([530ccb93c](https://github.com/powerhouse-inc/powerhouse/commit/530ccb93c))
+- **design-system:** hover highlight on ConnectSelect menu items ([cb1989329](https://github.com/powerhouse-inc/powerhouse/commit/cb1989329))
+- **document-model-editor:** sdl state-shape diff for version guidance ([bdb92ab17](https://github.com/powerhouse-inc/powerhouse/commit/bdb92ab17))
+- **document-model-editor:** classify version-relevant model changes ([8c8d2e174](https://github.com/powerhouse-inc/powerhouse/commit/8c8d2e174))
+- **document-model-editor:** version advisory dispatch guard hook ([9364b069a](https://github.com/powerhouse-inc/powerhouse/commit/9364b069a))
+- **document-model-editor:** version badge, switcher, and release controls ([c46c5091a](https://github.com/powerhouse-inc/powerhouse/commit/c46c5091a))
+- **document-model-editor:** version advisory modal with field diff ([4a6496355](https://github.com/powerhouse-inc/powerhouse/commit/4a6496355))
+- **document-model-editor:** surface versioning with release and advisory flows ([2d57355f8](https://github.com/powerhouse-inc/powerhouse/commit/2d57355f8))
+- **document-model-editor:** use ConnectSelect for the version switcher ([d30cb98ed](https://github.com/powerhouse-inc/powerhouse/commit/d30cb98ed))
+- **generic-drive-explorer:** offer only latest document versions outside studio mode ([df8b2c2e8](https://github.com/powerhouse-inc/powerhouse/commit/df8b2c2e8))
+- **reactor:** add IReactorClient.upgradeDocument with client-side revision stamping ([c471e75e8](https://github.com/powerhouse-inc/powerhouse/commit/c471e75e8))
+- **reactor,reactor-browser:** resolve modules by a document's stamped version ([3f2108a81](https://github.com/powerhouse-inc/powerhouse/commit/3f2108a81))
+- **reactor-browser:** upgradeDocument action and useDocumentVersionStatus hook ([194269740](https://github.com/powerhouse-inc/powerhouse/commit/194269740))
+- **reactor-browser:** document upgrade preview with dry-run field diff ([b68d7827f](https://github.com/powerhouse-inc/powerhouse/commit/b68d7827f))
+- **shared:** typed UnsupportedDocumentModelVersionError for version-aware replay failures ([cb58dbfe5](https://github.com/powerhouse-inc/powerhouse/commit/cb58dbfe5))
+- **versioned-documents:** usable todo editor with title editing and version tolerance ([723926c4a](https://github.com/powerhouse-inc/powerhouse/commit/723926c4a))
+
+### 🩹 Fixes
+
+- **connect,design-system:** toast dismiss lifecycle and upgrade error handling from final review ([6bbc737ef](https://github.com/powerhouse-inc/powerhouse/commit/6bbc737ef))
+- **design-system:** warning and loading toast icons use theme-stable warning color ([efb7c5308](https://github.com/powerhouse-inc/powerhouse/commit/efb7c5308))
+- **design-system:** close ConnectSelect on outside click ([10a28e95d](https://github.com/powerhouse-inc/powerhouse/commit/10a28e95d))
+- **document-model-editor:** edit the latest specification, not the first ([eda296737](https://github.com/powerhouse-inc/powerhouse/commit/eda296737))
+- **document-model-editor:** narrow vitest config scope to editors directory ([9c0dd1d9c](https://github.com/powerhouse-inc/powerhouse/commit/9c0dd1d9c))
+- **document-model-editor:** fix enum comparison lint error and handle schema wipe edge case ([ee04b95ac](https://github.com/powerhouse-inc/powerhouse/commit/ee04b95ac))
+- **document-model-editor:** guard releaseFirst success against prior error ([baa238735](https://github.com/powerhouse-inc/powerhouse/commit/baa238735))
+- **document-model-editor:** use latest-spec baselines for mutation guards ([614aeff1e](https://github.com/powerhouse-inc/powerhouse/commit/614aeff1e))
+- **document-model-editor:** don't flag placeholder-only schema edits as version-relevant ([561efb03d](https://github.com/powerhouse-inc/powerhouse/commit/561efb03d))
+- **document-model-editor:** prevent frozen-version view from clobbering latest spec ([49051edc6](https://github.com/powerhouse-inc/powerhouse/commit/49051edc6))
+- **document-model-editor:** add aria-label to version switcher select ([7e7032914](https://github.com/powerhouse-inc/powerhouse/commit/7e7032914))
+- **document-model-editor:** stack advisory modal buttons vertically ([914553456](https://github.com/powerhouse-inc/powerhouse/commit/914553456))
+- **document-model-editor:** plain-language advisory copy ([5cd2eb6e6](https://github.com/powerhouse-inc/powerhouse/commit/5cd2eb6e6))
+- **document-model-editor:** vertically center release button label ([2c6d7db79](https://github.com/powerhouse-inc/powerhouse/commit/2c6d7db79))
+- **document-model-editor:** compact version switcher padding ([8306c5457](https://github.com/powerhouse-inc/powerhouse/commit/8306c5457))
+- **document-model-editor:** center version switcher label and shrink height ([7a518be3b](https://github.com/powerhouse-inc/powerhouse/commit/7a518be3b))
+- **document-model-editor:** align version switcher label line box ([870414ffa](https://github.com/powerhouse-inc/powerhouse/commit/870414ffa))
+- **document-model-editor:** treat placeholder-only initial value as initialization ([23a335e3e](https://github.com/powerhouse-inc/powerhouse/commit/23a335e3e))
+- **powerhouse-vetra-packages:** run document-model suites in vitest again ([518d57e69](https://github.com/powerhouse-inc/powerhouse/commit/518d57e69))
+- **reactor:** preserve document model version on drive addFile and latest-wins module resolution ([c0ae359e5](https://github.com/powerhouse-inc/powerhouse/commit/c0ae359e5))
+- **reactor:** reindex every scope in DocumentView on UPGRADE_DOCUMENT ([0302b0dbf](https://github.com/powerhouse-inc/powerhouse/commit/0302b0dbf))
+- **reactor:** cross-scope-consistent reads and invalidation for UPGRADE_DOCUMENT ([6c38e082d](https://github.com/powerhouse-inc/powerhouse/commit/6c38e082d))
+- **reactor:** apply upgrade reducers at the version boundary during cold rebuild ([a90d5af25](https://github.com/powerhouse-inc/powerhouse/commit/a90d5af25))
+- **reactor:** validate upgrade preconditions at the executor, retry conflicts client-side ([c320f464a](https://github.com/powerhouse-inc/powerhouse/commit/c320f464a))
+- **reactor:** keep versioned rebuilds faithful to document-scope order and position ([26cc34183](https://github.com/powerhouse-inc/powerhouse/commit/26cc34183))
+- **reactor:** normalize versions consistently in createEmpty and upgradeDocument ([aedb04217](https://github.com/powerhouse-inc/powerhouse/commit/aedb04217))
+- **reactor:** stop replaying history in drive copy ([c7dfe76c9](https://github.com/powerhouse-inc/powerhouse/commit/c7dfe76c9))
+- **reactor-browser:** guard getLatestVersion in upgrade preview ([d52b5a1e7](https://github.com/powerhouse-inc/powerhouse/commit/d52b5a1e7))
+- **reactor-browser:** keep every module version in the worker package loader ([4c5c5cfaa](https://github.com/powerhouse-inc/powerhouse/commit/4c5c5cfaa))
+- **reactor-browser:** replay mid-history upgrades on import ([35546ea52](https://github.com/powerhouse-inc/powerhouse/commit/35546ea52))
+- **reactor-browser,connect:** thread document model version through the create-document flow ([2cf6a379d](https://github.com/powerhouse-inc/powerhouse/commit/2cf6a379d))
+- **shared,reactor,codegen:** one canonical document-model version normalization ([9dfb47326](https://github.com/powerhouse-inc/powerhouse/commit/9dfb47326))
+- **vetra:** export upgradeManifests so Connect can register them ([3b26c00d1](https://github.com/powerhouse-inc/powerhouse/commit/3b26c00d1))
+- **vetra-e2e:** expose upgradeManifests from the project package ([d357e9161](https://github.com/powerhouse-inc/powerhouse/commit/d357e9161))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5
+- liberuum
+
 ## 6.2.2-dev.42 (2026-08-10)
 
 This was a version bump only, there were no code changes.

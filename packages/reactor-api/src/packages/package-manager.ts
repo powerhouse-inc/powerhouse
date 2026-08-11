@@ -7,7 +7,10 @@ import type {
 import { reactorDriveDocumentModelModule } from "@powerhousedao/reactor-drive";
 import { ReactorGroupV1 } from "@powerhousedao/reactor-group";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
-import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+import type {
+  DocumentModelModule,
+  UpgradeManifest,
+} from "@powerhousedao/shared/document-model";
 import { childLogger, documentModelDocumentModelModule } from "document-model";
 import EventEmitter from "node:events";
 import type { StatWatcher } from "node:fs";
@@ -59,11 +62,32 @@ export function getUniqueDocumentModels(
 
   for (const models of documentModels) {
     for (const model of models) {
-      uniqueModels.set(model.documentModel.global.id, model);
+      // versions of a document type are distinct modules; keying by type
+      // alone would keep only the last version of a versioned model
+      uniqueModels.set(
+        `${model.documentModel.global.id}@${model.version ?? 1}`,
+        model,
+      );
     }
   }
 
   return Array.from(uniqueModels.values());
+}
+
+export function getUniqueUpgradeManifests(
+  ...upgradeManifests: readonly (readonly UpgradeManifest<
+    readonly number[]
+  >[])[]
+): UpgradeManifest<readonly number[]>[] {
+  const uniqueManifests = new Map<string, UpgradeManifest<readonly number[]>>();
+
+  for (const manifests of upgradeManifests) {
+    for (const manifest of manifests) {
+      uniqueManifests.set(manifest.documentType, manifest);
+    }
+  }
+
+  return Array.from(uniqueManifests.values());
 }
 
 export class PackageManager implements IPackageManager {
@@ -71,6 +95,10 @@ export class PackageManager implements IPackageManager {
   private loaders: ISubscribablePackageLoader[];
 
   private docModelsMap = new Map<string, DocumentModelModule[]>();
+  private upgradeManifestsMap = new Map<
+    string,
+    UpgradeManifest<readonly number[]>[]
+  >();
   private subgraphsMap = new Map<string, SubgraphClass[]>();
   private processorMap = new Map<string, Processor>();
   private configWatcher: StatWatcher | undefined;
@@ -103,9 +131,11 @@ export class PackageManager implements IPackageManager {
     this.logger.info("Loading packages: @packages", packages.join(", "));
 
     const documentModelsMap = await this.loadDocumentModels(packages);
+    const upgradeManifestsMap = await this.loadUpgradeManifests(packages);
     const subgraphsMap = await this.loadSubgraphs(packages);
     const processorsMap = await this.loadProcessors(packages);
 
+    this.upgradeManifestsMap = upgradeManifestsMap;
     this.updatePackagesMap(documentModelsMap);
     this.updateSubgraphsMap(subgraphsMap);
     this.updateProcessorsMap(processorsMap);
@@ -120,6 +150,7 @@ export class PackageManager implements IPackageManager {
       documentModels: getUniqueDocumentModels(
         ...Array.from(documentModelsMap.values()),
       ),
+      upgradeManifests: this.getUniqueUpgradeManifests(),
       subgraphs: subgraphsMap,
       processors: processorsMap,
     };
@@ -189,6 +220,43 @@ export class PackageManager implements IPackageManager {
     }
 
     return documentModelModuleMap;
+  }
+
+  /** Upgrade manifests currently loaded across all packages, one per type. */
+  public getUniqueUpgradeManifests(): UpgradeManifest<readonly number[]>[] {
+    return getUniqueUpgradeManifests(
+      ...Array.from(this.upgradeManifestsMap.values()),
+    );
+  }
+
+  private async loadUpgradeManifests(
+    packages: string[],
+  ): Promise<Map<string, UpgradeManifest<readonly number[]>[]>> {
+    const manifestsMap = new Map<
+      string,
+      UpgradeManifest<readonly number[]>[]
+    >();
+
+    for (const pkg of packages) {
+      for (const loader of this.loaders) {
+        if (!loader.loadUpgradeManifests) continue;
+        try {
+          const manifests = await loader.loadUpgradeManifests(pkg);
+          if (manifests.length > 0) {
+            manifestsMap.set(pkg, manifests);
+            break;
+          }
+        } catch (error) {
+          this.logger.debug(
+            `[${loader.name}] Failed to load upgrade manifests from package @pkg: @error`,
+            pkg,
+            error,
+          );
+        }
+      }
+    }
+
+    return manifestsMap;
   }
 
   private async loadSubgraphs(
@@ -303,6 +371,10 @@ export class PackageManager implements IPackageManager {
   private async updateDocumentModelsForPackage(pkg: string): Promise<void> {
     this.logger.debug(`Updating document models for package: ${pkg}`);
     const documentModels = await this.loadDocumentModels([pkg]);
+    const upgradeManifests = await this.loadUpgradeManifests([pkg]);
+    const upgradeManifestsMap = new Map(this.upgradeManifestsMap);
+    upgradeManifestsMap.set(pkg, upgradeManifests.get(pkg) ?? []);
+    this.upgradeManifestsMap = upgradeManifestsMap;
     const documentModelsMap = new Map(this.docModelsMap);
     documentModelsMap.set(pkg, documentModels.get(pkg) ?? []);
     this.updatePackagesMap(documentModelsMap);

@@ -1,3 +1,27 @@
+## 6.2.2-dev.43 (2026-08-11)
+
+### 🚀 Features
+
+- **reactor,reactor-browser:** resolve modules by a document's stamped version ([3f2108a81](https://github.com/powerhouse-inc/powerhouse/commit/3f2108a81))
+- **connect,design-system:** confirmation modal with field preview before document upgrade ([bb88c0277](https://github.com/powerhouse-inc/powerhouse/commit/bb88c0277))
+- **reactor-browser:** document upgrade preview with dry-run field diff ([b68d7827f](https://github.com/powerhouse-inc/powerhouse/commit/b68d7827f))
+- **connect:** documentVersionUnsupported modal wired into both import paths ([19f5032c9](https://github.com/powerhouse-inc/powerhouse/commit/19f5032c9))
+- **reactor-browser:** upgradeDocument action and useDocumentVersionStatus hook ([194269740](https://github.com/powerhouse-inc/powerhouse/commit/194269740))
+
+### 🩹 Fixes
+
+- **reactor-browser:** replay mid-history upgrades on import ([35546ea52](https://github.com/powerhouse-inc/powerhouse/commit/35546ea52))
+- **reactor-browser:** keep every module version in the worker package loader ([4c5c5cfaa](https://github.com/powerhouse-inc/powerhouse/commit/4c5c5cfaa))
+- **reactor-browser:** guard getLatestVersion in upgrade preview ([d52b5a1e7](https://github.com/powerhouse-inc/powerhouse/commit/d52b5a1e7))
+- **reactor-browser,connect:** thread document model version through the create-document flow ([2cf6a379d](https://github.com/powerhouse-inc/powerhouse/commit/2cf6a379d))
+- **reactor:** preserve document model version on drive addFile and latest-wins module resolution ([c0ae359e5](https://github.com/powerhouse-inc/powerhouse/commit/c0ae359e5))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5
+- liberuum
+
 ## 6.2.2-dev.42 (2026-08-10)
 
 This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.

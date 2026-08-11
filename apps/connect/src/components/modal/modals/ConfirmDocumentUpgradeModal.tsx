@@ -9,6 +9,7 @@ import {
   usePHModal,
 } from "@powerhousedao/reactor-browser";
 import { childLogger } from "document-model";
+import { toast } from "../../../services/toast.js";
 
 const logger = childLogger(["ConfirmDocumentUpgradeModal"]);
 
@@ -57,9 +58,10 @@ export function ConfirmDocumentUpgradeModal() {
   const { fromVersion, toVersion, steps, addedFields, removedFields } = preview;
 
   const onContinue = () => {
-    upgradeDocument(document.header.id).catch((error) =>
-      logger.error("Error upgrading document: @error", error),
-    );
+    upgradeDocument(document.header.id).catch((error) => {
+      logger.error("Error upgrading document: @error", error);
+      toast("The document could not be updated.", { type: "connect-warning" });
+    });
     closePHModal();
   };
 

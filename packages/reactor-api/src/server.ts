@@ -24,7 +24,10 @@ import type {
 } from "@powerhousedao/reactor-attachments";
 import { createAttachmentClient } from "@powerhousedao/reactor-attachments/client";
 import { setupMcpServer } from "@powerhousedao/reactor-mcp";
-import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+import type {
+  DocumentModelModule,
+  UpgradeManifest,
+} from "@powerhousedao/shared/document-model";
 import type { Kysely } from "kysely";
 import { mkdir } from "node:fs/promises";
 import type http from "node:http";
@@ -63,7 +66,10 @@ import { ReactorSubgraph } from "./graphql/reactor/subgraph.js";
 import type { SubgraphClass } from "./graphql/types.js";
 import { runMigrations } from "./migrations/index.js";
 import { ImportPackageLoader } from "./packages/import-loader.js";
-import { PackageManager } from "./packages/package-manager.js";
+import {
+  getUniqueDocumentModels,
+  PackageManager,
+} from "./packages/package-manager.js";
 import { AuthService } from "./services/auth.service.js";
 import { createRenownCredentialVerifier } from "./services/renown-credential-verifier.js";
 import type {
@@ -331,27 +337,47 @@ function setupEventListeners(
 ): void {
   pkgManager.onDocumentModelsChange((packagedModels) => {
     if (documentModelRegistry) {
-      const newModules = Object.values(packagedModels).flat();
-      const registeredModules = documentModelRegistry.getAllModules();
-      const registeredTypes = new Set(
-        registeredModules.map((m) => m.documentModel.global.id),
+      // Replace each incoming type's whole version family: skipping types
+      // that are already registered would never pick up a new version of a
+      // versioned model (or regenerated code for an existing one), and
+      // unregisterModules is type-scoped so partial re-registration would
+      // drop sibling versions.
+      const newModules = getUniqueDocumentModels(
+        Object.values(packagedModels).flat(),
       );
-
-      const modulesToRegister = newModules.filter(
-        (mod) => !registeredTypes.has(mod.documentModel.global.id),
+      const incomingTypes = new Set(
+        newModules.map((m) => m.documentModel.global.id),
       );
-      if (modulesToRegister.length > 0) {
-        const results = documentModelRegistry.registerModules(
-          ...modulesToRegister,
-        );
+      if (incomingTypes.size > 0) {
+        documentModelRegistry.unregisterModules(...incomingTypes);
+        const results = documentModelRegistry.registerModules(...newModules);
         for (const result of results) {
           if (result.status === "success") {
             defaultLogger.info(
-              `Registered new document model: ${result.item.documentModel.global.id}`,
+              `Registered document model: ${result.item.documentModel.global.id} v${result.item.version ?? 1}`,
             );
           } else {
             defaultLogger.error(
               `Failed to register document model: ${result.error.message}`,
+            );
+          }
+        }
+      }
+
+      // Manifests change together with document models (they live under the
+      // same document-models/ tree), so swap them here as well.
+      const manifests = pkgManager.getUniqueUpgradeManifests();
+      if (manifests.length > 0) {
+        documentModelRegistry.unregisterUpgradeManifests(
+          ...manifests.map((m) => m.documentType),
+        );
+        const manifestResults = documentModelRegistry.registerUpgradeManifests(
+          ...manifests,
+        );
+        for (const result of manifestResults) {
+          if (result.status === "error") {
+            defaultLogger.error(
+              `Failed to register upgrade manifest: ${result.error.message}`,
             );
           }
         }
@@ -991,6 +1017,8 @@ export interface ClientInitializerResult {
 
 export interface ClientInitializerDependencies {
   attachmentReferenceWriter: IAttachmentReferenceWriter;
+  /** Upgrade manifests exported by the loaded packages, one per type. */
+  upgradeManifests: UpgradeManifest<readonly number[]>[];
 }
 
 export type { AttachmentReferenceProjectionCapability } from "./services/attachment-access.service.js";
@@ -1027,7 +1055,8 @@ export async function initializeAndStartAPI(
     readiness,
   } = await _setupCommonInfrastructure(options);
 
-  const { documentModels, processors, subgraphs } = await packages.init();
+  const { documentModels, upgradeManifests, processors, subgraphs } =
+    await packages.init();
 
   const {
     module: reactorClientModule,
@@ -1038,6 +1067,7 @@ export async function initializeAndStartAPI(
     },
   } = await clientInitializer(documentModels, {
     attachmentReferenceWriter: attachmentReferenceIndex.store,
+    upgradeManifests,
   });
 
   // Extract client and syncManager from the module

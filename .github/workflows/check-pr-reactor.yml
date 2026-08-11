@@ -140,3 +140,24 @@ jobs:
 
       - name: Run integration tests
         run: pnpm test:integration
+
+  duration-watch:
+    name: CI duration watch
+    # Warn-only trend guard: compares each job's duration against the median
+    # of recent green main runs, so a slow creep is flagged the week it
+    # starts instead of the day it walks into a timeout.
+    needs: [test-reactor, integration-test]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      pull-requests: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Compare against baseline
+        uses: ./.github/actions/duration-watch
+        with:
+          workflow-file: check-pr-reactor.yml
+          github-token: ${{ secrets.GITHUB_TOKEN }}

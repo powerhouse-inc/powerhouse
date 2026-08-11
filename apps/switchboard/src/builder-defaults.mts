@@ -12,7 +12,10 @@ import { reactorDriveDocumentModelModule } from "@powerhousedao/reactor-drive";
 import { ReactorGroupV1 } from "@powerhousedao/reactor-group";
 import { getUniqueDocumentModels } from "@powerhousedao/reactor-api";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
-import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+import type {
+  DocumentModelModule,
+  UpgradeManifest,
+} from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule, type ILogger } from "document-model";
 
 export type SwitchboardReactorDefaultsOptions = {
@@ -20,6 +23,8 @@ export type SwitchboardReactorDefaultsOptions = {
   // reactor-drive, reactor-group). Pass vetra models here in studio/dev.
   // Deduped by id.
   documentModels?: DocumentModelModule[];
+  /** Upgrade manifests for versioned models, one per document type. */
+  upgradeManifests?: UpgradeManifest<readonly number[]>[];
   /** Default true. */
   includeBaseModels?: boolean;
   /**
@@ -76,6 +81,10 @@ export function applySwitchboardReactorDefaults(
     reactorBuilder.withDocumentModelSources(
       getUniqueDocumentModels(baseModels, extra),
     );
+  }
+
+  if (options.upgradeManifests?.length) {
+    reactorBuilder.withUpgradeManifests(options.upgradeManifests);
   }
 
   const scheme =

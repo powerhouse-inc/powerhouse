@@ -383,7 +383,10 @@ async function initServer(
   const reactorLogger = logger.child(["reactor"]);
   const initializeClient = async (
     documentModels: DocumentModelModule[],
-    { attachmentReferenceWriter }: ClientInitializerDependencies,
+    {
+      attachmentReferenceWriter,
+      upgradeManifests,
+    }: ClientInitializerDependencies,
   ) => {
     // When the caller hands us a pre-built reactor module, reuse it
     // instead of constructing one. The caller owns the reactor lifecycle
@@ -463,6 +466,7 @@ async function initServer(
 
     applySwitchboardReactorDefaults(reactorBuilder, clientBuilder, {
       documentModels: [...documentModels, ...vetraDocumentModels],
+      upgradeManifests,
       executorConfig:
         hasSkipThreshold || documentDecisions || authEnforcement
           ? {
