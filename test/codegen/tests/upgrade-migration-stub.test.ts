@@ -14,7 +14,7 @@ import { DATA, NEW_PROJECT, TEST_OUTPUT } from "../constants.js";
 import { cpForce, rmForce } from "../utils.js";
 
 /**
- * Repro for the Vetra studio upgrade bug:
+ * Regression test for the Vetra studio upgrade bug:
  *
  * 1. `ph vetra --watch` in a fresh project; create a document model (v1).
  * 2. Create a document with v1 in the preview drive.
@@ -22,21 +22,21 @@ import { cpForce, rmForce } from "../utils.js";
  *    codegen writes the v2 folder plus upgrades/v2.ts and the manifest.
  * 4. Open the document and click "Update document".
  *
- * The generated upgrades/v2.ts migration is a no-op stub (`{ ...document }`).
- * Its type annotation (PHDocument<StateV1> -> PHDocument<StateV2>) fails tsc
- * until the migration is hand-written, but studio serves it through
- * vite/esbuild with types stripped, so the upgrade executes it as-is: the
- * document is stamped version 2 while its state keeps the v1 shape. The
- * version-aware validator in the generated `useSelected<Name>Document` hook
- * then throws during the editor render:
+ * The generated upgrades/v2.ts migration used to be a no-op stub
+ * (`{ ...document }`). Its type annotation failed tsc until hand-written,
+ * but studio serves it through vite/esbuild with types stripped, so the
+ * upgrade executed it as-is: the document was stamped version 2 while its
+ * state kept the v1 shape, and the version-aware validator in the generated
+ * `useSelected<Name>Document` hook threw during the editor render:
  *
  *   ZodError: [{ path: ["state", "global", "requiredInV2"],
  *                message: "Invalid input: expected string, received undefined" }]
  *
- * and the editor is replaced by the error boundary. This test runs the same
- * upgrade path the reactor executor runs (manifest transitions +
- * applyUpgradeDocumentAction) against the freshly generated code and asserts
- * the result is a valid v2 document.
+ * replacing the editor with the error boundary. Codegen now derives the
+ * migration for mechanical schema changes (and generates a throwing stub for
+ * the rest). This test runs the same upgrade path the reactor executor runs
+ * (manifest transitions + applyUpgradeDocumentAction) against the freshly
+ * generated code and asserts the result is a valid v2 document.
  */
 describe("generated upgrade migrations", () => {
   test("upgrading a v1 document along the generated manifest produces a valid v2 document", async () => {
@@ -115,9 +115,7 @@ describe("generated upgrade migrations", () => {
 
     // ...and must migrate the state so the document validates against the
     // generated v2 schema — the exact check useSelected<Name>Document runs
-    // on every editor render. Today the generated migration is a no-op stub,
-    // requiredInV2 is missing, and this assertion fails the same way the
-    // editor crashes in Connect.
+    // on every editor render.
     expect(schemaModule.isTestDocDocument(upgraded)).toBe(true);
   });
 });

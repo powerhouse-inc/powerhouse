@@ -130,9 +130,16 @@ export function getDocumentUpgradePreview(
     },
   };
 
+  // The dry-run executes real upgrade reducers during render; a migration
+  // that is not implemented yet (codegen's manual stub throws) must not
+  // crash the caller.
   let upgraded = structuredClone(document);
-  for (const transition of transitions) {
-    upgraded = transition.upgradeReducer(upgraded, stubAction);
+  try {
+    for (const transition of transitions) {
+      upgraded = transition.upgradeReducer(upgraded, stubAction);
+    }
+  } catch {
+    return undefined;
   }
 
   const addedFields: string[] = [];

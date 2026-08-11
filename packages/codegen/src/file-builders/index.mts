@@ -4,6 +4,7 @@ export * from "./boilerplate/package.json.js";
 export * from "./clis/generate-cli-docs.js";
 export * from "./document-editor.js";
 export * from "./document-model/document-model.js";
+export * from "./document-model/upgrade-migration.js";
 export * from "./document-model/utils.js";
 export * from "./editor-common.js";
 export * from "./index-files.js";
