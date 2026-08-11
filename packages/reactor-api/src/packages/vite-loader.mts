@@ -102,21 +102,32 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
   async loadUpgradeManifests(
     identifier: string,
   ): Promise<UpgradeManifest<readonly number[]>[]> {
-    const fullPath = this.getDocumentModelsPath(identifier);
-    try {
-      const namespace = (await this.vite.ssrLoadModule(fullPath)) as Record<
-        string,
-        unknown
-      >;
-      const manifests = extractUpgradeManifests(namespace);
-      if (manifests.length > 0) {
-        this.logger.verbose(
-          `  ➜  Loaded ${manifests.length} Upgrade Manifests from: ${identifier}`,
+    // Projects generated before the aggregate index re-exported the
+    // manifests only expose them at document-models/upgrade-manifests, so
+    // try both without requiring a regeneration.
+    const candidatePaths = [
+      this.getDocumentModelsPath(identifier),
+      path.join(this.getDocumentModelsPath(identifier), "upgrade-manifests"),
+    ];
+    for (const fullPath of candidatePaths) {
+      try {
+        const namespace = (await this.vite.ssrLoadModule(fullPath)) as Record<
+          string,
+          unknown
+        >;
+        const manifests = extractUpgradeManifests(namespace);
+        if (manifests.length > 0) {
+          this.logger.verbose(
+            `  ➜  Loaded ${manifests.length} Upgrade Manifests from: ${identifier}`,
+          );
+          return manifests;
+        }
+      } catch (e) {
+        this.logger.debug(
+          `  ➜  No Upgrade Manifests found at ${fullPath} for: ${identifier}`,
+          e,
         );
       }
-      return manifests;
-    } catch (e) {
-      this.logger.debug(`  ➜  No Upgrade Manifests found for: ${identifier}`, e);
     }
     return [];
   }
