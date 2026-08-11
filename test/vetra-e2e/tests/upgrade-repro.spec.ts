@@ -26,8 +26,11 @@ import { waitForAppReady } from "./helpers/wait.js";
 
 test.describe.configure({ mode: "serial", timeout: 10 * 60 * 1000 });
 
-const REACTOR_URL = "http://localhost:4002";
-const VETRA_DRIVE = "vetra-e4fc1809";
+const REACTOR_URL = process.env.REPRO_REACTOR_URL ?? "http://localhost:4002";
+// Both default to this project; override to run the repro against another
+// project (e.g. a clean `ph init` scaffold serving on the same ports).
+const PROJECT_DIR = process.env.REPRO_PROJECT_DIR ?? process.cwd();
+const VETRA_DRIVE = process.env.REPRO_VETRA_DRIVE ?? "vetra-e4fc1809";
 
 const MODEL_NAME = "BugRepro";
 const MODEL_DIR = "bug-repro";
@@ -234,7 +237,7 @@ test("repro: v1 doc upgrade after v2 release errors", async ({ page }) => {
   test.setTimeout(8 * 60 * 1000);
   attachDiagnostics(page);
 
-  const modelsDir = path.join(process.cwd(), "document-models");
+  const modelsDir = path.join(PROJECT_DIR, "document-models");
 
   // ---------------------------------------------------------------
   // Step 1 (server): author the document model -> v1 codegen
@@ -349,7 +352,7 @@ test("repro: v1 doc upgrade after v2 release errors", async ({ page }) => {
   });
 
   const editorsOk = await pollForFile(
-    path.join(process.cwd(), "editors", "editors.ts"),
+    path.join(PROJECT_DIR, "editors", "editors.ts"),
     "BugReproEditor",
     90_000,
   );
