@@ -1,3 +1,13 @@
+## 6.2.2-dev.43 (2026-08-11)
+
+### 🩹 Fixes
+
+- **vetra:** export upgradeManifests so Connect can register them ([3b26c00d1](https://github.com/powerhouse-inc/powerhouse/commit/3b26c00d1))
+
+### ❤️ Thank You
+
+- liberuum
+
 ## 6.2.2-dev.42 (2026-08-10)
 
 This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.

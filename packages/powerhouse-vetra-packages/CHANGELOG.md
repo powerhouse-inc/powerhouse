@@ -1,3 +1,42 @@
+## 6.2.2-dev.43 (2026-08-11)
+
+### 🚀 Features
+
+- **generic-drive-explorer:** offer only latest document versions outside studio mode ([df8b2c2e8](https://github.com/powerhouse-inc/powerhouse/commit/df8b2c2e8))
+- **document-model-editor:** use ConnectSelect for the version switcher ([d30cb98ed](https://github.com/powerhouse-inc/powerhouse/commit/d30cb98ed))
+- **document-model-editor:** surface versioning with release and advisory flows ([2d57355f8](https://github.com/powerhouse-inc/powerhouse/commit/2d57355f8))
+- **document-model-editor:** version advisory modal with field diff ([4a6496355](https://github.com/powerhouse-inc/powerhouse/commit/4a6496355))
+- **document-model-editor:** version badge, switcher, and release controls ([c46c5091a](https://github.com/powerhouse-inc/powerhouse/commit/c46c5091a))
+- **document-model-editor:** version advisory dispatch guard hook ([9364b069a](https://github.com/powerhouse-inc/powerhouse/commit/9364b069a))
+- **document-model-editor:** classify version-relevant model changes ([8c8d2e174](https://github.com/powerhouse-inc/powerhouse/commit/8c8d2e174))
+- **document-model-editor:** sdl state-shape diff for version guidance ([bdb92ab17](https://github.com/powerhouse-inc/powerhouse/commit/bdb92ab17))
+
+### 🩹 Fixes
+
+- **powerhouse-vetra-packages:** run document-model suites in vitest again ([518d57e69](https://github.com/powerhouse-inc/powerhouse/commit/518d57e69))
+- **document-model-editor:** treat placeholder-only initial value as initialization ([23a335e3e](https://github.com/powerhouse-inc/powerhouse/commit/23a335e3e))
+- **document-model-editor:** align version switcher label line box ([870414ffa](https://github.com/powerhouse-inc/powerhouse/commit/870414ffa))
+- **document-model-editor:** center version switcher label and shrink height ([7a518be3b](https://github.com/powerhouse-inc/powerhouse/commit/7a518be3b))
+- **document-model-editor:** compact version switcher padding ([8306c5457](https://github.com/powerhouse-inc/powerhouse/commit/8306c5457))
+- **document-model-editor:** vertically center release button label ([2c6d7db79](https://github.com/powerhouse-inc/powerhouse/commit/2c6d7db79))
+- **document-model-editor:** plain-language advisory copy ([5cd2eb6e6](https://github.com/powerhouse-inc/powerhouse/commit/5cd2eb6e6))
+- **document-model-editor:** stack advisory modal buttons vertically ([914553456](https://github.com/powerhouse-inc/powerhouse/commit/914553456))
+- **document-model-editor:** add aria-label to version switcher select ([7e7032914](https://github.com/powerhouse-inc/powerhouse/commit/7e7032914))
+- **document-model-editor:** prevent frozen-version view from clobbering latest spec ([49051edc6](https://github.com/powerhouse-inc/powerhouse/commit/49051edc6))
+- **document-model-editor:** don't flag placeholder-only schema edits as version-relevant ([561efb03d](https://github.com/powerhouse-inc/powerhouse/commit/561efb03d))
+- **document-model-editor:** use latest-spec baselines for mutation guards ([614aeff1e](https://github.com/powerhouse-inc/powerhouse/commit/614aeff1e))
+- **document-model-editor:** guard releaseFirst success against prior error ([baa238735](https://github.com/powerhouse-inc/powerhouse/commit/baa238735))
+- **document-model-editor:** fix enum comparison lint error and handle schema wipe edge case ([ee04b95ac](https://github.com/powerhouse-inc/powerhouse/commit/ee04b95ac))
+- **document-model-editor:** narrow vitest config scope to editors directory ([9c0dd1d9c](https://github.com/powerhouse-inc/powerhouse/commit/9c0dd1d9c))
+- **document-model-editor:** edit the latest specification, not the first ([eda296737](https://github.com/powerhouse-inc/powerhouse/commit/eda296737))
+- **reactor-browser,connect:** thread document model version through the create-document flow ([2cf6a379d](https://github.com/powerhouse-inc/powerhouse/commit/2cf6a379d))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5
+- liberuum
+
 ## 6.2.2-dev.42 (2026-08-10)
 
 This was a version bump only for @powerhousedao/powerhouse-vetra-packages to align it with other projects, there were no code changes.
