@@ -24,7 +24,10 @@ import type {
 } from "@powerhousedao/reactor-attachments";
 import { createAttachmentClient } from "@powerhousedao/reactor-attachments/client";
 import { setupMcpServer } from "@powerhousedao/reactor-mcp";
-import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+import type {
+  DocumentModelModule,
+  UpgradeManifest,
+} from "@powerhousedao/shared/document-model";
 import type { Kysely } from "kysely";
 import { mkdir } from "node:fs/promises";
 import type http from "node:http";
@@ -356,6 +359,25 @@ function setupEventListeners(
           } else {
             defaultLogger.error(
               `Failed to register document model: ${result.error.message}`,
+            );
+          }
+        }
+      }
+
+      // Manifests change together with document models (they live under the
+      // same document-models/ tree), so swap them here as well.
+      const manifests = pkgManager.getUniqueUpgradeManifests();
+      if (manifests.length > 0) {
+        documentModelRegistry.unregisterUpgradeManifests(
+          ...manifests.map((m) => m.documentType),
+        );
+        const manifestResults = documentModelRegistry.registerUpgradeManifests(
+          ...manifests,
+        );
+        for (const result of manifestResults) {
+          if (result.status === "error") {
+            defaultLogger.error(
+              `Failed to register upgrade manifest: ${result.error.message}`,
             );
           }
         }
@@ -995,6 +1017,8 @@ export interface ClientInitializerResult {
 
 export interface ClientInitializerDependencies {
   attachmentReferenceWriter: IAttachmentReferenceWriter;
+  /** Upgrade manifests exported by the loaded packages, one per type. */
+  upgradeManifests: UpgradeManifest<readonly number[]>[];
 }
 
 export type { AttachmentReferenceProjectionCapability } from "./services/attachment-access.service.js";
@@ -1031,7 +1055,8 @@ export async function initializeAndStartAPI(
     readiness,
   } = await _setupCommonInfrastructure(options);
 
-  const { documentModels, processors, subgraphs } = await packages.init();
+  const { documentModels, upgradeManifests, processors, subgraphs } =
+    await packages.init();
 
   const {
     module: reactorClientModule,
@@ -1042,6 +1067,7 @@ export async function initializeAndStartAPI(
     },
   } = await clientInitializer(documentModels, {
     attachmentReferenceWriter: attachmentReferenceIndex.store,
+    upgradeManifests,
   });
 
   // Extract client and syncManager from the module

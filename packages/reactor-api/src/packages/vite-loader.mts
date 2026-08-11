@@ -3,7 +3,10 @@ import type {
   ProcessorFactoryBuilder,
   SubgraphClass,
 } from "@powerhousedao/reactor-api";
-import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+import type {
+  DocumentModelModule,
+  UpgradeManifest,
+} from "@powerhousedao/shared/document-model";
 import { childLogger, type ILogger } from "document-model";
 import path from "node:path";
 import { readPackage } from "read-pkg";
@@ -14,7 +17,7 @@ import type {
   ISubscribablePackageLoader,
   ISubscriptionOptions,
 } from "./types.js";
-import { debounce, isSubpath } from "./util.js";
+import { debounce, extractUpgradeManifests, isSubpath } from "./util.js";
 
 export function createViteLogger(logger: ILogger, prefix = "") {
   const customLogger = createLogger("info", {
@@ -93,6 +96,28 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
       this.logger.debug(`  ➜  No Document Models found for: ${identifier}`, e);
     }
 
+    return [];
+  }
+
+  async loadUpgradeManifests(
+    identifier: string,
+  ): Promise<UpgradeManifest<readonly number[]>[]> {
+    const fullPath = this.getDocumentModelsPath(identifier);
+    try {
+      const namespace = (await this.vite.ssrLoadModule(fullPath)) as Record<
+        string,
+        unknown
+      >;
+      const manifests = extractUpgradeManifests(namespace);
+      if (manifests.length > 0) {
+        this.logger.verbose(
+          `  ➜  Loaded ${manifests.length} Upgrade Manifests from: ${identifier}`,
+        );
+      }
+      return manifests;
+    } catch (e) {
+      this.logger.debug(`  ➜  No Upgrade Manifests found for: ${identifier}`, e);
+    }
     return [];
   }
 

@@ -398,6 +398,13 @@ async function makeDocumentModelsIndexFile(args: {
       });
     }),
   );
+  // Upgrade manifests ride the same subpath so node-side package loaders
+  // (reactor-api) can pick them up without importing the package root, which
+  // would pull editors into a node process.
+  sourceFile.addExportDeclaration({
+    namedExports: ["upgradeManifests"],
+    moduleSpecifier: "./upgrade-manifests.js",
+  });
   await formatSourceFileWithPrettier(sourceFile);
 }
 

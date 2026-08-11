@@ -2,7 +2,10 @@ import type {
   ProcessorFactoryBuilder,
   SubgraphClass,
 } from "@powerhousedao/reactor-api";
-import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+import type {
+  DocumentModelModule,
+  UpgradeManifest,
+} from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 
 export interface IPackageLoader {
@@ -11,6 +14,13 @@ export interface IPackageLoader {
     identifier: string,
     immediate?: boolean,
   ): Promise<DocumentModelModule[]>;
+  /**
+   * Loads the upgrade manifests a package exports alongside its document
+   * models. Optional: loaders that predate versioned models may omit it.
+   */
+  loadUpgradeManifests?(
+    identifier: string,
+  ): Promise<UpgradeManifest<readonly number[]>[]>;
   loadSubgraphs(
     identifier: string,
     immediate?: boolean,
@@ -68,6 +78,7 @@ export interface PowerhouseConfig {
 
 export type PackageManagerResult = {
   documentModels: DocumentModelModule[];
+  upgradeManifests: UpgradeManifest<readonly number[]>[];
   subgraphs: Map<string, SubgraphClass[]>;
   processors: Map<string, ProcessorFactoryBuilder[]>;
 };
