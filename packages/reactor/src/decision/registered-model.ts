@@ -7,6 +7,7 @@ import type { ReactorFeatureFlags } from "../executor/types.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import type { AppendCondition } from "../storage/interfaces.js";
 import {
+  authConditionsDecisionModel,
   authDecisionModel,
   authGroupsDecisionModel,
 } from "./auth-decision-model.js";
@@ -33,8 +34,22 @@ export type AdmissionDecision = {
 };
 
 /**
+ * What decideAtHead resolves a condition context from: the action's input,
+ * with the executing scope's state read at the head. Supplied only while
+ * authConditions is on.
+ */
+export type AdmissionConditions = {
+  actionInput?: unknown;
+};
+
+/**
  * Builds the model at the stream heads and decides one request against it. The
  * append condition it returns is the read-set the store enforces at write time.
+ *
+ * With `conditions` supplied, the executing scope's state is read at the head
+ * for `doc.<scope>.*` paths. That read carries no append-condition entry of
+ * its own: the written stream's expected-revision check already refuses a
+ * write whose scope grew between the read and the append.
  */
 export async function decideAtHead(
   model: RegisteredDecisionModel,
@@ -43,12 +58,26 @@ export async function decideAtHead(
   subject: AuthSubject,
   request: AuthRequest,
   signal?: AbortSignal,
+  conditions?: AdmissionConditions,
 ): Promise<AdmissionDecision> {
   const built = await buildDecisionModel(cache, model, target, signal);
 
+  let scopeState: unknown;
+  if (conditions !== undefined) {
+    const document = await cache.getState(
+      target.documentId,
+      request.scope,
+      target.branch,
+      undefined,
+      signal,
+    );
+    scopeState = (document.state as Record<string, unknown>)[request.scope];
+  }
+
   return {
     evaluation: model(target).decide(built.model, subject, request, {
-      scopeState: undefined,
+      scopeState,
+      actionInput: conditions?.actionInput,
     }),
     appendCondition: built.appendCondition,
     documentVersion: built.model.document.version,
@@ -66,6 +95,9 @@ export function selectDecisionModel(
   flags: ReactorFeatureFlags,
   registry: IDocumentModelRegistry,
 ): RegisteredDecisionModel {
+  if (flags.authConditions) {
+    return authConditionsDecisionModel(registry);
+  }
   if (flags.authGroups) {
     return authGroupsDecisionModel(registry);
   }

@@ -84,6 +84,7 @@ function createHarness(
     documentDecisions: false,
     authEnforcement: false,
     authGroups: false,
+    authConditions: false,
   };
   const registry = createTestRegistry();
   const handler = new DocumentActionHandler(
@@ -528,6 +529,7 @@ describe("DocumentActionHandler", () => {
         documentDecisions: true,
         authEnforcement: true,
         authGroups: false,
+        authConditions: false,
       };
       const harness = createHarness(sourceDoc);
       const registry = createTestRegistry();

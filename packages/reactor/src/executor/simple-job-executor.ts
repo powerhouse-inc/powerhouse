@@ -145,6 +145,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       documentDecisions: config.featureFlags?.documentDecisions ?? false,
       authEnforcement: config.featureFlags?.authEnforcement ?? false,
       authGroups: config.featureFlags?.authGroups ?? false,
+      authConditions: config.featureFlags?.authConditions ?? false,
     };
     // The builder validates too, but a pooled worker is constructed directly
     // from the flags that crossed the boundary.
@@ -544,6 +545,9 @@ export class SimpleJobExecutor implements IJobExecutor {
           },
           { verb: "execute", scope: action.scope, operation: action.type },
           signal,
+          this.featureFlags.authConditions
+            ? { actionInput: action.input }
+            : undefined,
         );
       } catch (error) {
         return buildErrorResult(

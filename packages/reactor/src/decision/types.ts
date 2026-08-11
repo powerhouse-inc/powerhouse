@@ -41,9 +41,15 @@ export type DecisionStores = {
   operationStore: IOperationStore;
 };
 
-/** The executing scope's own state, for conditions that read it. */
+/**
+ * What a decision's conditions may read beyond the projections: the executing
+ * scope's own state and the attempted action's input. Populated only while
+ * authConditions is on; otherwise both stay undefined and conditional grants
+ * never apply.
+ */
 export type DecisionContext = {
   scopeState: unknown;
+  actionInput?: unknown;
 };
 
 /** A statically-queried stream's operations, named after its projection. */
@@ -102,6 +108,18 @@ export type ReadStream = {
 /** Projections plus a decision function over the built model. */
 export type DecisionModel<M> = {
   projections: { [K in keyof M]: Projection<M> };
+
+  /**
+   * Present when decide reads the executing scope's state through the
+   * decision context. A positional walk then folds the evaluated stream with
+   * this, from its base state through every effective operation, so
+   * conditions read the state as it stood at each operation's position
+   * rather than at the head.
+   */
+  foldEvaluatedScope?: (
+    document: PHDocument,
+    operation: Operation,
+  ) => PHDocument;
 
   /**
    * Whether or not this model decides about operations in a given scope. That

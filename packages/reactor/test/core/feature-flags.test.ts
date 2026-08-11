@@ -22,6 +22,7 @@ describe("feature flag validation", () => {
     authEnforcement: ["documentDecisions"],
     authGroups: ["authEnforcement"],
     authConditions: ["authGroups"],
+    hypotheticalLaterStage: ["authConditions"],
   };
 
   it("accepts a flag whose prerequisites are all on", () => {
@@ -59,8 +60,11 @@ describe("feature flag validation", () => {
 
   it("rejects a name this reactor does not know", () => {
     expect(() =>
-      validateFeatureFlags({ authConditions: true }, FLAG_PREREQUISITES),
-    ).toThrow(/Unrecognized reactor feature flag: authConditions/);
+      validateFeatureFlags(
+        { hypotheticalLaterStage: true },
+        FLAG_PREREQUISITES,
+      ),
+    ).toThrow(/Unrecognized reactor feature flag: hypotheticalLaterStage/);
   });
 
   it("declares only the flags that are implemented", () => {
@@ -68,6 +72,7 @@ describe("feature flag validation", () => {
       "documentDecisions",
       "authEnforcement",
       "authGroups",
+      "authConditions",
     ]);
   });
 
@@ -78,11 +83,30 @@ describe("feature flag validation", () => {
         driveDocumentModelModule as never,
       ])
       .withExecutorConfig({
-        featureFlags: { authConditions: true } as never,
+        featureFlags: { hypotheticalLaterStage: true } as never,
       });
 
     await expect(builder.build()).rejects.toThrow(
-      /Unrecognized reactor feature flag: authConditions/,
+      /Unrecognized reactor feature flag: hypotheticalLaterStage/,
+    );
+  });
+
+  it("rejects authConditions without authGroups from the builder", async () => {
+    const builder = new ReactorBuilder()
+      .withDocumentModelSources([
+        documentModelDocumentModelModule as never,
+        driveDocumentModelModule as never,
+      ])
+      .withExecutorConfig({
+        featureFlags: {
+          documentDecisions: true,
+          authEnforcement: true,
+          authConditions: true,
+        },
+      });
+
+    await expect(builder.build()).rejects.toThrow(
+      /authConditions requires authGroups/,
     );
   });
 

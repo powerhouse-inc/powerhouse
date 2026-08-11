@@ -478,6 +478,18 @@ export type AuthSubject = {
   key?: string;
 };
 
+/**
+ * What condition attr paths resolve against, beyond the subject. Supplied
+ * only while authConditions enforcement is on: with no context a grant
+ * carrying `where` or a { match } principal never applies.
+ */
+export type ConditionContext = {
+  /** The executing scope's own state, for `doc.<scope>.*` paths. */
+  scopeState: unknown;
+  /** The action's input, for `action.input.*` paths. Absent for reads. */
+  actionInput?: unknown;
+};
+
 export type AuthDecision = "allow" | "deny";
 
 /** Why the policy refused a request. */
@@ -505,12 +517,15 @@ export type AuthEvaluation =
  *
  * Group principals match only against a supplied groups map (the groups
  * projection, present when authGroups is on); with no map they never apply.
+ * `where` clauses and { match } principals likewise evaluate only against a
+ * supplied condition context (present when authConditions is on).
  */
 export function evaluate(
   auth: PHAuthState | undefined,
   subject: AuthSubject,
   request: AuthRequest,
   groups?: AuthGroups,
+  conditions?: ConditionContext,
 ): AuthEvaluation {
   if (!auth || !auth.version) {
     return { decision: "allow" };
@@ -531,7 +546,7 @@ export function evaluate(
     return { decision: "deny", refusal: "version-unsupported" };
   }
 
-  return evaluateGrantStack(auth.grants, subject, request, groups);
+  return evaluateGrantStack(auth.grants, subject, request, groups, conditions);
 }
 
 /**
@@ -543,8 +558,9 @@ export function decide(
   subject: AuthSubject,
   request: AuthRequest,
   groups?: AuthGroups,
+  conditions?: ConditionContext,
 ): AuthDecision {
-  return evaluate(auth, subject, request, groups).decision;
+  return evaluate(auth, subject, request, groups, conditions).decision;
 }
 
 /**

@@ -7,11 +7,13 @@ import type {
   AuthEvaluation,
   AuthRequest,
   AuthSubject,
+  ConditionContext,
 } from "./auth.js";
 import { groupDocumentType } from "./document-type.js";
 import type {
   AuthGroups,
   Capability,
+  Condition,
   Grant,
   PHGroupState,
   Principal,
@@ -492,6 +494,272 @@ export function assertAuthAdministrationRetained(
   }
 }
 
+// --- Condition evaluation (version 1) -------------------------------------
+
+/** A resolved operand value; undefined marks a path that did not resolve. */
+type ConditionValue = string | number | boolean | null;
+
+/**
+ * An operand whose shape validation would have rejected. Distinguished from
+ * an unresolved path so a structurally malformed operand poisons its whole
+ * condition to false rather than reading as "absent", which `not` would
+ * otherwise widen to true.
+ */
+const INVALID_OPERAND = Symbol("invalid-operand");
+type ResolvedOperand = ConditionValue | undefined | typeof INVALID_OPERAND;
+
+/**
+ * Narrows to the values conditions compare. An object, array, or non-finite
+ * number resolves to undefined, and every comparison involving undefined is
+ * false.
+ */
+function asConditionValue(value: unknown): ConditionValue | undefined {
+  if (
+    value === null ||
+    typeof value === "string" ||
+    typeof value === "boolean"
+  ) {
+    return value;
+  }
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  return undefined;
+}
+
+/**
+ * Resolves one operand. Attr roots: `subject.*`, `doc.<scope>.*` where the
+ * scope must be the executing scope (validation already rejects any other,
+ * but resolution stays total), and `action.input.*`. Path steps read own
+ * properties only, so prototype members can never influence a verdict.
+ */
+function resolveOperand(
+  operand: unknown,
+  subject: AuthSubject,
+  request: AuthRequest,
+  conditions: ConditionContext,
+): ResolvedOperand {
+  if (!isPlainValue(operand)) {
+    return INVALID_OPERAND;
+  }
+  const keys = Object.keys(operand);
+  if (keys.length !== 1) {
+    return INVALID_OPERAND;
+  }
+
+  if (keys[0] === "lit") {
+    const value = asConditionValue(operand.lit);
+    // A lit holds a plain finite value by validation; anything else is shape.
+    return value === undefined ? INVALID_OPERAND : value;
+  }
+
+  if (keys[0] !== "attr") {
+    return INVALID_OPERAND;
+  }
+  const attr = operand.attr;
+  if (typeof attr !== "string" || attr.length === 0) {
+    return INVALID_OPERAND;
+  }
+  const path = attr.split(".");
+
+  let value: unknown;
+  let rest: string[];
+  if (path[0] === "subject") {
+    value = subject;
+    rest = path.slice(1);
+  } else if (path[0] === "doc") {
+    if (path[1] !== request.scope) {
+      return undefined;
+    }
+    value = conditions.scopeState;
+    rest = path.slice(2);
+  } else if (path[0] === "action" && path[1] === "input") {
+    value = conditions.actionInput;
+    rest = path.slice(2);
+  } else {
+    return undefined;
+  }
+
+  for (const segment of rest) {
+    if (!isPlainValue(value) || !Object.hasOwn(value, segment)) {
+      return undefined;
+    }
+    value = value[segment];
+  }
+  return asConditionValue(value);
+}
+
+/**
+ * Total order within one type: numbers numerically, strings by code point.
+ * Everything else, including mixed types, does not order.
+ */
+function compareValues(
+  left: ConditionValue,
+  right: ConditionValue,
+): number | undefined {
+  if (typeof left === "number" && typeof right === "number") {
+    return left < right ? -1 : left > right ? 1 : 0;
+  }
+  if (typeof left === "string" && typeof right === "string") {
+    const leftPoints = Array.from(left);
+    const rightPoints = Array.from(right);
+    const shared = Math.min(leftPoints.length, rightPoints.length);
+    for (let i = 0; i < shared; i++) {
+      const a = leftPoints[i].codePointAt(0) ?? 0;
+      const b = rightPoints[i].codePointAt(0) ?? 0;
+      if (a !== b) {
+        return a < b ? -1 : 1;
+      }
+    }
+    return leftPoints.length === rightPoints.length
+      ? 0
+      : leftPoints.length < rightPoints.length
+        ? -1
+        : 1;
+  }
+  return undefined;
+}
+
+/**
+ * Tri-state evaluation: undefined marks a structurally invalid node, which
+ * poisons the whole tree to false at the top — and a structurally malformed
+ * operand poisons its condition the same way. Both are distinct from an
+ * operand whose path fails to resolve, which is a valid comparison that is
+ * false. The distinction keeps `not` from widening over malformed input.
+ */
+function evaluateNode(
+  node: unknown,
+  subject: AuthSubject,
+  request: AuthRequest,
+  conditions: ConditionContext,
+): boolean | undefined {
+  if (!isPlainValue(node)) {
+    return undefined;
+  }
+  const keys = Object.keys(node);
+  if (keys.length !== 1) {
+    return undefined;
+  }
+  const kind = keys[0];
+  const body = node[kind];
+
+  switch (kind) {
+    case "eq":
+    case "ne":
+    case "lt":
+    case "lte":
+    case "gt":
+    case "gte": {
+      if (!Array.isArray(body) || body.length !== 2) {
+        return undefined;
+      }
+      const left = resolveOperand(body[0], subject, request, conditions);
+      const right = resolveOperand(body[1], subject, request, conditions);
+      if (left === INVALID_OPERAND || right === INVALID_OPERAND) {
+        return undefined;
+      }
+      if (left === undefined || right === undefined) {
+        return false;
+      }
+      if (kind === "eq") {
+        return left === right;
+      }
+      if (kind === "ne") {
+        return left !== right;
+      }
+      const order = compareValues(left, right);
+      if (order === undefined) {
+        return false;
+      }
+      switch (kind) {
+        case "lt":
+          return order < 0;
+        case "lte":
+          return order <= 0;
+        case "gt":
+          return order > 0;
+        case "gte":
+          return order >= 0;
+      }
+      return undefined;
+    }
+    case "in":
+    case "notIn": {
+      if (
+        !Array.isArray(body) ||
+        body.length !== 2 ||
+        !Array.isArray(body[1])
+      ) {
+        return undefined;
+      }
+      const left = resolveOperand(body[0], subject, request, conditions);
+      if (left === INVALID_OPERAND) {
+        return undefined;
+      }
+      const elements = body[1].map((element) =>
+        resolveOperand(element, subject, request, conditions),
+      );
+      if (elements.some((value) => value === INVALID_OPERAND)) {
+        return undefined;
+      }
+      if (left === undefined) {
+        return false;
+      }
+      const found = elements.some(
+        (value) => value !== undefined && value === left,
+      );
+      return kind === "in" ? found : !found;
+    }
+    case "exists": {
+      const value = resolveOperand(body, subject, request, conditions);
+      if (value === INVALID_OPERAND) {
+        return undefined;
+      }
+      return value !== undefined;
+    }
+    case "and":
+    case "or": {
+      if (!Array.isArray(body)) {
+        return undefined;
+      }
+      let result = kind === "and";
+      for (const child of body) {
+        const value = evaluateNode(child, subject, request, conditions);
+        if (value === undefined) {
+          return undefined;
+        }
+        if (kind === "and") {
+          result = result && value;
+        } else {
+          result = result || value;
+        }
+      }
+      return result;
+    }
+    case "not": {
+      const value = evaluateNode(body, subject, request, conditions);
+      return value === undefined ? undefined : !value;
+    }
+    default:
+      return undefined;
+  }
+}
+
+/**
+ * Evaluates a version-1 condition. Deterministic, total, and pure: any input
+ * shape yields a boolean and never throws, and a malformed condition is
+ * false. These are consensus semantics, versioned by `PHAuthState.version`;
+ * changing them requires a new version.
+ */
+export function evaluateCondition(
+  condition: Condition,
+  subject: AuthSubject,
+  request: AuthRequest,
+  conditions: ConditionContext,
+): boolean {
+  return evaluateNode(condition, subject, request, conditions) === true;
+}
+
 function capabilityCovers(
   capability: Capability,
   request: AuthRequest,
@@ -519,7 +787,9 @@ function capabilityCovers(
 function principalMatches(
   principal: Principal,
   subject: AuthSubject,
+  request: AuthRequest,
   groups?: AuthGroups,
+  conditions?: ConditionContext,
 ): boolean {
   if ("anyone" in principal) {
     return true;
@@ -546,7 +816,13 @@ function principalMatches(
     const address = subject.address.toLowerCase();
     return group.members.some((member) => member.toLowerCase() === address);
   }
-  // { match } is not evaluated yet: conditions are deferred.
+  if ("match" in principal) {
+    // Matches only when a condition context is supplied (authConditions on).
+    if (conditions === undefined) {
+      return false;
+    }
+    return evaluateCondition(principal.match, subject, request, conditions);
+  }
   return false;
 }
 
@@ -567,24 +843,31 @@ export function referencedGroupIds(grants: Grant[]): string[] {
 /**
  * Evaluates a v1 grant stack: default deny, last applicable grant wins, and
  * reports which grant decided it. Group principals match only against a
- * supplied groups map; match principals and `where` conditions are not
- * evaluated yet, so a grant that uses one never applies.
+ * supplied groups map, and `where` clauses and { match } principals evaluate
+ * only against a supplied condition context; a grant that uses an unsupplied
+ * feature never applies.
  */
 export function evaluateGrantStack(
   grants: Grant[],
   subject: AuthSubject,
   request: AuthRequest,
   groups?: AuthGroups,
+  conditions?: ConditionContext,
 ): AuthEvaluation {
   let applicable: Grant | undefined;
   for (const grant of grants) {
-    // `where` is not evaluated yet; a conditional grant never applies.
     if (grant.where !== undefined) {
-      continue;
+      // With no condition context a conditional grant never applies.
+      if (conditions === undefined) {
+        continue;
+      }
+      if (!evaluateCondition(grant.where, subject, request, conditions)) {
+        continue;
+      }
     }
     if (
       capabilityCovers(grant.capability, request) &&
-      principalMatches(grant.principal, subject, groups)
+      principalMatches(grant.principal, subject, request, groups, conditions)
     ) {
       applicable = grant;
     }
@@ -612,6 +895,8 @@ export function evaluateGrants(
   subject: AuthSubject,
   request: AuthRequest,
   groups?: AuthGroups,
+  conditions?: ConditionContext,
 ): AuthDecision {
-  return evaluateGrantStack(grants, subject, request, groups).decision;
+  return evaluateGrantStack(grants, subject, request, groups, conditions)
+    .decision;
 }

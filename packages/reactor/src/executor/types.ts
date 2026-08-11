@@ -129,6 +129,12 @@ export type ReactorFeatureFlags = {
    * derived projections. Requires authEnforcement.
    */
   authGroups: boolean;
+
+  /**
+   * Evaluate `where` clauses and { match } principals against the executing
+   * scope's state, the subject, and the action input. Requires authGroups.
+   */
+  authConditions: boolean;
 };
 
 /**
