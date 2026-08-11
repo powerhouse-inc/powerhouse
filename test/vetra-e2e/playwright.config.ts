@@ -79,7 +79,11 @@ export default defineConfig({
   projects: [
     {
       name: "vetra-dev",
-      testIgnore: /runtime-config-preview\.spec\.ts/,
+      // upgrade-repro is a diagnostic harness with its own configs
+      // (playwright.repro.config.ts / playwright.repro-external.config.ts);
+      // its setup expects a project-specific vetra drive that does not exist
+      // under this suite's fixture, so it can never pass here.
+      testIgnore: /runtime-config-preview\.spec\.ts|upgrade-repro\.spec\.ts/,
       use: { ...devices["Desktop Chrome"], baseURL: CONNECT_URL },
     },
     ...(workerMode ? [] : [previewProject]),
