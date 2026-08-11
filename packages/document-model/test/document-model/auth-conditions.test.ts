@@ -224,6 +224,40 @@ describe("totality", () => {
       ),
     ).toBe(false);
   });
+
+  it("a malformed operand poisons its condition, even under not", () => {
+    expect(evalCond({ not: { exists: { frob: 1 } } } as never)).toBe(false);
+    expect(
+      evalCond({ not: { eq: [{ frob: 1 }, { lit: "x" }] } } as never),
+    ).toBe(false);
+    expect(
+      evalCond({ not: { in: [{ lit: "x" }, [{ frob: 1 }]] } } as never),
+    ).toBe(false);
+    expect(
+      evalCond({ not: { eq: [{ lit: {} }, { lit: "x" }] } } as never),
+    ).toBe(false);
+  });
+
+  it("reads own properties only: prototype members never resolve", () => {
+    expect(
+      evalCond(
+        { exists: { attr: "doc.global.toString" } },
+        { scopeState: { status: "OPEN" } },
+      ),
+    ).toBe(false);
+    expect(
+      evalCond(
+        { exists: { attr: "doc.global.__proto__" } },
+        { scopeState: { status: "OPEN" } },
+      ),
+    ).toBe(false);
+    expect(
+      evalCond(
+        { eq: [{ attr: "doc.global.constructor.name" }, { lit: "Object" }] },
+        { scopeState: { status: "OPEN" } },
+      ),
+    ).toBe(false);
+  });
 });
 
 describe("conditions in the grant stack", () => {

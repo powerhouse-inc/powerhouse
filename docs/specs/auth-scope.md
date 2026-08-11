@@ -745,7 +745,7 @@ Conflicting auth operations are the deliberate exception, and they do not conver
 
 **Stage 5: the groups projection (`authGroups`).** Ship the `PHGroup` model, derive group queries from the grant list, add group streams to the read-set and the append condition, maintain the group-reference relation so sync carries referenced groups and re-evaluation finds dependent documents (see Synchronization), and re-evaluate dependents in their own jobs. Group principals begin to match only here. Until conditions ship, a group's own policy is limited to `address` and `anyone` principals, since `match` never applies. Exit: a group-gated operation syncs to a replica that does not hold the group document and fails closed there until the group's history arrives, after which both replicas agree; and a membership removal denies later operations on every document that references the group.
 
-**Stage 6: conditions (`authConditions`).** The `where` and `match` evaluators turn on. Conditional grants begin to apply only here.
+**Stage 6: conditions (`authConditions`).** The `where` and `match` evaluators turn on. Conditional grants begin to apply only here — for `execute` requests. The read surface does not yet supply a condition context (or a groups map), so a `read` grant that uses `where`, `match`, or `{ group }` still never applies; that lands with the read-path work described under Reads.
 
 Registering decision models beyond auth is out of scope. The types are model-agnostic, so that work is registration, not new semantics.
 

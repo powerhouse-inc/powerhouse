@@ -500,6 +500,15 @@ export function assertAuthAdministrationRetained(
 type ConditionValue = string | number | boolean | null;
 
 /**
+ * An operand whose shape validation would have rejected. Distinguished from
+ * an unresolved path so a structurally malformed operand poisons its whole
+ * condition to false rather than reading as "absent", which `not` would
+ * otherwise widen to true.
+ */
+const INVALID_OPERAND = Symbol("invalid-operand");
+type ResolvedOperand = ConditionValue | undefined | typeof INVALID_OPERAND;
+
+/**
  * Narrows to the values conditions compare. An object, array, or non-finite
  * number resolves to undefined, and every comparison involving undefined is
  * false.
@@ -521,24 +530,35 @@ function asConditionValue(value: unknown): ConditionValue | undefined {
 /**
  * Resolves one operand. Attr roots: `subject.*`, `doc.<scope>.*` where the
  * scope must be the executing scope (validation already rejects any other,
- * but resolution stays total), and `action.input.*`.
+ * but resolution stays total), and `action.input.*`. Path steps read own
+ * properties only, so prototype members can never influence a verdict.
  */
 function resolveOperand(
   operand: unknown,
   subject: AuthSubject,
   request: AuthRequest,
   conditions: ConditionContext,
-): ConditionValue | undefined {
+): ResolvedOperand {
   if (!isPlainValue(operand)) {
-    return undefined;
+    return INVALID_OPERAND;
   }
-  if ("lit" in operand) {
-    return asConditionValue(operand.lit);
+  const keys = Object.keys(operand);
+  if (keys.length !== 1) {
+    return INVALID_OPERAND;
   }
 
+  if (keys[0] === "lit") {
+    const value = asConditionValue(operand.lit);
+    // A lit holds a plain finite value by validation; anything else is shape.
+    return value === undefined ? INVALID_OPERAND : value;
+  }
+
+  if (keys[0] !== "attr") {
+    return INVALID_OPERAND;
+  }
   const attr = operand.attr;
   if (typeof attr !== "string" || attr.length === 0) {
-    return undefined;
+    return INVALID_OPERAND;
   }
   const path = attr.split(".");
 
@@ -561,7 +581,7 @@ function resolveOperand(
   }
 
   for (const segment of rest) {
-    if (!isPlainValue(value)) {
+    if (!isPlainValue(value) || !Object.hasOwn(value, segment)) {
       return undefined;
     }
     value = value[segment];
@@ -602,9 +622,10 @@ function compareValues(
 
 /**
  * Tri-state evaluation: undefined marks a structurally invalid node, which
- * poisons the whole tree to false at the top. That is distinct from an
- * operand that fails to resolve, which is a valid comparison that is false.
- * The distinction keeps `not` from widening over malformed input.
+ * poisons the whole tree to false at the top — and a structurally malformed
+ * operand poisons its condition the same way. Both are distinct from an
+ * operand whose path fails to resolve, which is a valid comparison that is
+ * false. The distinction keeps `not` from widening over malformed input.
  */
 function evaluateNode(
   node: unknown,
@@ -634,6 +655,9 @@ function evaluateNode(
       }
       const left = resolveOperand(body[0], subject, request, conditions);
       const right = resolveOperand(body[1], subject, request, conditions);
+      if (left === INVALID_OPERAND || right === INVALID_OPERAND) {
+        return undefined;
+      }
       if (left === undefined || right === undefined) {
         return false;
       }
@@ -669,20 +693,29 @@ function evaluateNode(
         return undefined;
       }
       const left = resolveOperand(body[0], subject, request, conditions);
+      if (left === INVALID_OPERAND) {
+        return undefined;
+      }
+      const elements = body[1].map((element) =>
+        resolveOperand(element, subject, request, conditions),
+      );
+      if (elements.some((value) => value === INVALID_OPERAND)) {
+        return undefined;
+      }
       if (left === undefined) {
         return false;
       }
-      const found = body[1].some((element) => {
-        const value = resolveOperand(element, subject, request, conditions);
-        return value !== undefined && value === left;
-      });
+      const found = elements.some(
+        (value) => value !== undefined && value === left,
+      );
       return kind === "in" ? found : !found;
     }
     case "exists": {
-      if (!isPlainValue(body)) {
+      const value = resolveOperand(body, subject, request, conditions);
+      if (value === INVALID_OPERAND) {
         return undefined;
       }
-      return resolveOperand(body, subject, request, conditions) !== undefined;
+      return value !== undefined;
     }
     case "and":
     case "or": {
