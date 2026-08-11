@@ -39,18 +39,28 @@ export function setVetraPackageManager(packageManager: IPackageManager) {
 }
 
 function updateReactorClientDocumentModels(packages: DocumentModelLib[]) {
-  const documentModelModules = packages.flatMap((pkg) => pkg.documentModels);
+  const documentModelModules = packages
+    .flatMap((pkg) => pkg.documentModels)
+    .filter(
+      (module, index, modules) =>
+        // dedupe by documentType and version
+        modules.findIndex(
+          (m) =>
+            m.documentModel.global.id === module.documentModel.global.id &&
+            (m.version ?? 1) === (module.version ?? 1),
+        ) === index,
+    );
 
   const registry =
     window.ph?.reactorClientModule?.reactorModule?.documentModelRegistry;
   if (!registry || documentModelModules.length === 0) return;
 
   const results = registry.registerModules(...documentModelModules);
-  const duplicates = [];
+  const duplicateTypes = new Set<string>();
   for (const result of results) {
     if (result.status === "error") {
       if (isDuplicateModuleError(result.error)) {
-        duplicates.push(result);
+        duplicateTypes.add(result.item.documentModel.global.id);
       } else {
         console.error(
           "Failed to register document model module:",
@@ -59,12 +69,16 @@ function updateReactorClientDocumentModels(packages: DocumentModelLib[]) {
       }
     }
   }
-  if (duplicates.length > 0) {
-    const duplicateTypes = duplicates.map(
-      (r) => r.item.documentModel.global.id,
-    );
+  if (duplicateTypes.size > 0) {
+    // unregisterModules is type-scoped, so replace the whole version family
+    // with the incoming package's modules: re-registering only the duplicated
+    // items would purge any new version that registered successfully above.
     registry.unregisterModules(...duplicateTypes);
-    registry.registerModules(...duplicates.map((r) => r.item));
+    registry.registerModules(
+      ...documentModelModules.filter((module) =>
+        duplicateTypes.has(module.documentModel.global.id),
+      ),
+    );
   }
 }
 
