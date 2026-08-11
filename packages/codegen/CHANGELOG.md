@@ -1,3 +1,19 @@
+## 6.2.2-dev.43 (2026-08-11)
+
+### 🚀 Features
+
+- **codegen:** version-aware document validators for versioned models ([50ca37a95](https://github.com/powerhouse-inc/powerhouse/commit/50ca37a95))
+
+### 🩹 Fixes
+
+- **shared,reactor,codegen:** one canonical document-model version normalization ([9dfb47326](https://github.com/powerhouse-inc/powerhouse/commit/9dfb47326))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5
+- liberuum
+
 ## 6.2.2-dev.42 (2026-08-10)
 
 This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.

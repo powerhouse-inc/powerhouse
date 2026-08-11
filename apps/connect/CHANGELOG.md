@@ -1,3 +1,24 @@
+## 6.2.2-dev.43 (2026-08-11)
+
+### 🚀 Features
+
+- **connect:** dev-server source-condition resolution and local package dist rewrite ([6945e1053](https://github.com/powerhouse-inc/powerhouse/commit/6945e1053))
+- **connect:** compact upgrade modal with field badges and refined copy ([08b30a735](https://github.com/powerhouse-inc/powerhouse/commit/08b30a735))
+- **connect,design-system:** confirmation modal with field preview before document upgrade ([bb88c0277](https://github.com/powerhouse-inc/powerhouse/commit/bb88c0277))
+- **connect:** block editors for documents newer than installed model versions ([50bf70b50](https://github.com/powerhouse-inc/powerhouse/commit/50bf70b50))
+- **connect:** documentVersionUnsupported modal wired into both import paths ([19f5032c9](https://github.com/powerhouse-inc/powerhouse/commit/19f5032c9))
+- **connect:** warning toast with update action when an outdated document is opened ([9d83eb202](https://github.com/powerhouse-inc/powerhouse/commit/9d83eb202))
+
+### 🩹 Fixes
+
+- **reactor-browser,connect:** thread document model version through the create-document flow ([2cf6a379d](https://github.com/powerhouse-inc/powerhouse/commit/2cf6a379d))
+- **connect,design-system:** toast dismiss lifecycle and upgrade error handling from final review ([6bbc737ef](https://github.com/powerhouse-inc/powerhouse/commit/6bbc737ef))
+
+### ❤️ Thank You
+
+- Claude Fable 5
+- liberuum
+
 ## 6.2.2-dev.42 (2026-08-10)
 
 This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.

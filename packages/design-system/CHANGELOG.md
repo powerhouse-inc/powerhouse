@@ -1,3 +1,23 @@
+## 6.2.2-dev.43 (2026-08-11)
+
+### 🚀 Features
+
+- **design-system:** hover highlight on ConnectSelect menu items ([cb1989329](https://github.com/powerhouse-inc/powerhouse/commit/cb1989329))
+- **connect,design-system:** confirmation modal with field preview before document upgrade ([bb88c0277](https://github.com/powerhouse-inc/powerhouse/commit/bb88c0277))
+- **connect:** warning toast with update action when an outdated document is opened ([9d83eb202](https://github.com/powerhouse-inc/powerhouse/commit/9d83eb202))
+- **design-system:** built-in Update control in DocumentToolbar ([530ccb93c](https://github.com/powerhouse-inc/powerhouse/commit/530ccb93c))
+
+### 🩹 Fixes
+
+- **design-system:** close ConnectSelect on outside click ([10a28e95d](https://github.com/powerhouse-inc/powerhouse/commit/10a28e95d))
+- **design-system:** warning and loading toast icons use theme-stable warning color ([efb7c5308](https://github.com/powerhouse-inc/powerhouse/commit/efb7c5308))
+- **connect,design-system:** toast dismiss lifecycle and upgrade error handling from final review ([6bbc737ef](https://github.com/powerhouse-inc/powerhouse/commit/6bbc737ef))
+
+### ❤️ Thank You
+
+- Claude Fable 5
+- liberuum
+
 ## 6.2.2-dev.42 (2026-08-10)
 
 This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.
