@@ -1,0 +1,45 @@
+name: CI duration watch
+description: >
+  Compares this run's per-job durations against the median of recent green
+  baseline-branch runs of the same workflow, using GitHub's own run history
+  as the dataset. Warn-only: a regression produces warning annotations, a
+  step-summary table, and a sticky PR comment — never a red X — so a slow
+  creep gets flagged the week it starts instead of the day it hits a
+  timeout.
+
+inputs:
+  workflow-file:
+    description: Workflow file name to baseline against (e.g. e2e-tests.yml).
+    required: true
+  baseline-branch:
+    description: Branch whose green runs form the baseline.
+    default: main
+  samples:
+    description: How many recent green baseline runs to sample.
+    default: "10"
+  relative-threshold:
+    description: >
+      Flag a job when current > median * this factor (and the absolute floor
+      is also exceeded). Both gates together keep runner noise quiet.
+    default: "1.25"
+  absolute-floor-seconds:
+    description: Flag only when current also exceeds median + this many seconds.
+    default: "60"
+  github-token:
+    description: Token with actions:read (and pull-requests:write for comments).
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Compare job durations against baseline
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        WORKFLOW_FILE: ${{ inputs.workflow-file }}
+        BASELINE_BRANCH: ${{ inputs.baseline-branch }}
+        SAMPLES: ${{ inputs.samples }}
+        RELATIVE_THRESHOLD: ${{ inputs.relative-threshold }}
+        ABSOLUTE_FLOOR_SECONDS: ${{ inputs.absolute-floor-seconds }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+      run: bash "${GITHUB_ACTION_PATH}/compare.sh"

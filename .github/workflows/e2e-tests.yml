@@ -318,3 +318,30 @@ jobs:
               "color": 16711680
             }]
           }'
+
+  duration-watch:
+    name: CI duration watch
+    # Warn-only trend guard: compares each job's duration against the median
+    # of recent green main runs, so a slow creep is flagged the week it
+    # starts instead of the day it walks into a timeout.
+    needs:
+      [
+        vetra-e2e-tests,
+        package-e2e-tests,
+        recipes-e2e-tests,
+        analytics-engine-integration-tests,
+      ]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      pull-requests: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Compare against baseline
+        uses: ./.github/actions/duration-watch
+        with:
+          workflow-file: e2e-tests.yml
+          github-token: ${{ secrets.GITHUB_TOKEN }}
