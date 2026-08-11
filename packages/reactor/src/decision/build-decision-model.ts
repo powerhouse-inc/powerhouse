@@ -1,5 +1,9 @@
-import type { PHDocument } from "@powerhousedao/shared/document-model";
+import type {
+  Operation,
+  PHDocument,
+} from "@powerhousedao/shared/document-model";
 import type { IWriteCache } from "../cache/write/interfaces.js";
+import { DocumentNotFoundError } from "../shared/errors.js";
 import type { AppendConditionStream } from "../storage/interfaces.js";
 import type {
   BuiltDecisionModel,
@@ -7,6 +11,7 @@ import type {
   DecisionTarget,
   Projection,
   ReadStream,
+  StreamHistory,
   StreamQuery,
 } from "./types.js";
 
@@ -54,7 +59,20 @@ export async function buildDecisionModel<M>(
     const queries = projection.query(staticModel);
     const value: Record<string, unknown> = {};
     for (const query of queries) {
-      const read = await readStream(cache, query, reads, signal);
+      // A derived stream can name a document this replica does not hold (a
+      // group not yet synced, or never reachable). It stays out of the model,
+      // which fails closed, but its condition entry still guards the append:
+      // the document arriving with operations before commit is a conflict.
+      let read: StreamRead;
+      try {
+        read = await readStream(cache, query, reads, signal);
+      } catch (error) {
+        if (error instanceof DocumentNotFoundError) {
+          recordEmptyStream(query, reads);
+          continue;
+        }
+        throw error;
+      }
       value[query.documentId] = read.state;
     }
 
@@ -67,6 +85,26 @@ export async function buildDecisionModel<M>(
     model: model as M,
     appendCondition: { streams },
   };
+}
+
+/** Guards a stream that holds nothing yet: any operation appearing is growth. */
+function recordEmptyStream(
+  query: StreamQuery,
+  reads: Map<string, StreamRead>,
+): void {
+  const key = `${query.documentId}:${query.scope}:${query.branch}`;
+  if (reads.has(key)) {
+    return;
+  }
+  reads.set(key, {
+    state: undefined,
+    stream: {
+      documentId: query.documentId,
+      scope: query.scope,
+      branch: query.branch,
+      revision: -1,
+    },
+  });
 }
 
 async function readStream(
@@ -124,6 +162,41 @@ function observedRevision(document: PHDocument, scope: string): number {
   }
 
   return document.header.revision[scope] - 1;
+}
+
+/** A derived projection, named; its streams are known only per evaluated range. */
+export type DerivedProjection = {
+  name: string;
+  decidingActions: string[];
+  apply: (document: PHDocument, operation: Operation) => PHDocument;
+  queryOverHistory?: (reads: StreamHistory[]) => StreamQuery[];
+};
+
+/**
+ * The projections whose queries depend on folded state. A positional walk
+ * resolves their streams through `queryOverHistory`; a projection without one
+ * contributes no streams to a walk.
+ */
+export function derivedReadSet<M>(
+  definition: DecisionModel<M>,
+): DerivedProjection[] {
+  const projections: DerivedProjection[] = [];
+
+  for (const [name, projection] of Object.entries(
+    definition.projections,
+  ) as Array<[string, Projection<M>]>) {
+    if (typeof projection.query !== "function") {
+      continue;
+    }
+    projections.push({
+      name,
+      decidingActions: projection.decidingActions,
+      apply: projection.apply,
+      queryOverHistory: projection.queryOverHistory,
+    });
+  }
+
+  return projections;
 }
 
 /**

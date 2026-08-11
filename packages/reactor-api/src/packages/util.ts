@@ -2,7 +2,10 @@ import type {
   ProcessorFactoryBuilder,
   SubgraphClass,
 } from "@powerhousedao/reactor-api";
-import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+import type {
+  DocumentModelModule,
+  UpgradeManifest,
+} from "@powerhousedao/shared/document-model";
 import { childLogger } from "document-model";
 import { execSync } from "node:child_process";
 import path from "node:path";
@@ -87,6 +90,42 @@ async function loadDependency<T = unknown>(
     }
     throw e;
   }
+}
+
+function isUpgradeManifest(
+  value: unknown,
+): value is UpgradeManifest<readonly number[]> {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "documentType" in value &&
+    "supportedVersions" in value &&
+    "upgrades" in value
+  );
+}
+
+/**
+ * Collects upgrade manifests from a package's document-models namespace.
+ * Handles both the aggregate `upgradeManifests` array export and individual
+ * manifest exports; dedupes by documentType.
+ */
+export function extractUpgradeManifests(
+  namespace: Record<string, unknown>,
+): UpgradeManifest<readonly number[]>[] {
+  const manifests = new Map<string, UpgradeManifest<readonly number[]>>();
+  const add = (value: unknown) => {
+    if (isUpgradeManifest(value)) {
+      manifests.set(value.documentType, value);
+    }
+  };
+  for (const value of Object.values(namespace)) {
+    if (Array.isArray(value)) {
+      value.forEach(add);
+    } else {
+      add(value);
+    }
+  }
+  return Array.from(manifests.values());
 }
 
 export function debounce<T extends unknown[], R>(

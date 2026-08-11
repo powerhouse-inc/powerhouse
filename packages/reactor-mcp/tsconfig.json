@@ -16,6 +16,9 @@
       "path": "../reactor-drive"
     },
     {
+      "path": "../reactor-group"
+    },
+    {
       "path": "../shared"
     }
   ]

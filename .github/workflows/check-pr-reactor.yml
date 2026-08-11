@@ -78,7 +78,10 @@ jobs:
     needs: test-reactor
     runs-on: ubuntu-24.04
     container: node:24
-    timeout-minutes: 15
+    # The last green main run took 14m22s against the previous 15m budget:
+    # two ~6m hub-spoke legs plus the load test left no headroom, and runner
+    # variance tipped it into cancellation mid-leg.
+    timeout-minutes: 25
 
     services:
       postgres:

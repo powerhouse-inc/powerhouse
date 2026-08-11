@@ -2,6 +2,7 @@ import type { PHDocument } from "@powerhousedao/shared/document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { IWriteCache } from "../../src/cache/write/interfaces.js";
 import { buildDecisionModel } from "../../src/decision/build-decision-model.js";
+import { DocumentNotFoundError } from "../../src/shared/errors.js";
 import type {
   DecisionModel,
   DecisionTarget,
@@ -380,5 +381,95 @@ describe("buildDecisionModel", () => {
 
     expect(Object.keys(model.groups)).toEqual(["group-1", "group-2"]);
     expect(appendCondition.streams).toHaveLength(4);
+  });
+
+  it("guards a derived stream this replica does not hold without failing the build", async () => {
+    const cache = createMockCache({
+      "doc-1:document:main": docStreamDoc,
+      "doc-1:auth:main": authStreamDoc,
+      "group-2:global:main": fakeDoc({
+        states: { global: { members: ["0xdef"] } },
+        lastIndexes: { global: 4 },
+      }),
+    });
+    cache.getState.mockImplementation(
+      (documentId: string, scope: string, branch: string) => {
+        if (documentId === "group-1") {
+          return Promise.reject(new DocumentNotFoundError("group-1"));
+        }
+        const docs: Record<string, PHDocument> = {
+          "doc-1:document:main": docStreamDoc,
+          "doc-1:auth:main": authStreamDoc,
+          "group-2:global:main": fakeDoc({
+            states: { global: { members: ["0xdef"] } },
+            lastIndexes: { global: 4 },
+          }),
+        };
+        const doc = docs[`${documentId}:${scope}:${branch}`];
+        return doc
+          ? Promise.resolve(doc)
+          : Promise.reject(new Error(`no stream ${documentId}`));
+      },
+    );
+
+    const definition = (t: DecisionTarget): DecisionModel<GroupedModel> => ({
+      projections: {
+        document: {
+          decidingActions: [],
+          apply: (document) => document,
+          query: {
+            documentId: t.documentId,
+            branch: t.branch,
+            scope: "document",
+          },
+        },
+        auth: {
+          decidingActions: [],
+          apply: (document) => document,
+          query: { documentId: t.documentId, branch: t.branch, scope: "auth" },
+        },
+        groups: {
+          decidingActions: [],
+          apply: (document) => document,
+          query: (): StreamQuery[] => [
+            { documentId: "group-1", branch: "main", scope: "global" },
+            { documentId: "group-2", branch: "main", scope: "global" },
+          ],
+        },
+      },
+      evaluatesScope: () => true,
+      decide: () => ({ decision: "allow" as const }),
+    });
+
+    const { model, appendCondition } = await buildDecisionModel(
+      cache,
+      definition,
+      target,
+    );
+
+    // The unheld group stays out of the model, which fails closed.
+    expect(Object.keys(model.groups)).toEqual(["group-2"]);
+    // Its stream still guards the append: any arrival before commit conflicts.
+    expect(appendCondition.streams).toContainEqual({
+      documentId: "group-1",
+      scope: "global",
+      branch: "main",
+      revision: -1,
+    });
+  });
+
+  it("still propagates a missing static stream", async () => {
+    const cache = createMockCache({
+      "doc-1:document:main": docStreamDoc,
+    });
+    cache.getState.mockImplementation((documentId: string, scope: string) =>
+      scope === "auth"
+        ? Promise.reject(new DocumentNotFoundError("doc-1"))
+        : Promise.resolve(docStreamDoc),
+    );
+
+    await expect(
+      buildDecisionModel(cache, staticDefinition, target),
+    ).rejects.toThrow(DocumentNotFoundError);
   });
 });

@@ -46,6 +46,12 @@ export type DecisionContext = {
   scopeState: unknown;
 };
 
+/** A statically-queried stream's operations, named after its projection. */
+export type StreamHistory = {
+  name: string;
+  operations: Operation[];
+};
+
 /**
  * A named stream whose value in the model is that scope's state from the
  * document rebuild the reactor already performs. A derived query may read
@@ -53,6 +59,17 @@ export type DecisionContext = {
  */
 export type Projection<M> = {
   query: StreamQuery | ((model: Partial<M>) => StreamQuery[]);
+
+  /**
+   * For a derived projection, the streams it may read anywhere in an
+   * evaluated range, derived from the statically-queried streams' operations
+   * (including the operations under evaluation). A positional walk cannot use
+   * `query`, because the folded state it depends on changes over the range;
+   * this over-approximates by design, since a stream referenced at any
+   * position stays readable when the earlier range is re-evaluated even if a
+   * later operation removes the reference. Ignored on static projections.
+   */
+  queryOverHistory?: (reads: StreamHistory[]) => StreamQuery[];
 
   /**
    * Action types in this stream that can change an evaluation. Reads of the stream

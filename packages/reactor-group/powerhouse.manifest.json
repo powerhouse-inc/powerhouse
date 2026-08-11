@@ -1,0 +1,20 @@
+{
+  "name": "",
+  "description": "",
+  "category": "",
+  "publisher": {
+    "name": "",
+    "url": ""
+  },
+  "documentModels": [
+    {
+      "name": "Reactor Group",
+      "id": "powerhouse/reactor-group"
+    }
+  ],
+  "apps": [],
+  "editors": [],
+  "processors": [],
+  "subgraphs": [],
+  "config": []
+}

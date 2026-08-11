@@ -25,6 +25,7 @@ describe("DefaultExecutionScope", () => {
       getSinceOrdinal: vi.fn(),
       getLatestTimestampForCollection: vi.fn(),
       getCollectionsForDocuments: vi.fn(),
+      getGroupReferencers: vi.fn().mockResolvedValue([]),
     } as unknown as IOperationIndex;
     const writeCache = {
       getState: vi.fn(),
@@ -64,6 +65,7 @@ describe("DefaultExecutionScope", () => {
       getSinceOrdinal: vi.fn(),
       getLatestTimestampForCollection: vi.fn(),
       getCollectionsForDocuments: vi.fn(),
+      getGroupReferencers: vi.fn().mockResolvedValue([]),
     } as unknown as IOperationIndex;
     const writeCache = {
       getState: vi.fn(),
@@ -105,6 +107,7 @@ describe("DefaultExecutionScope", () => {
       getSinceOrdinal: vi.fn(),
       getLatestTimestampForCollection: vi.fn(),
       getCollectionsForDocuments: vi.fn(),
+      getGroupReferencers: vi.fn().mockResolvedValue([]),
     } as unknown as IOperationIndex;
     const writeCache = {
       getState: vi.fn(),
@@ -506,6 +509,7 @@ describe("CollectionMembershipCache.withScopedIndex", () => {
     const scopedIndex = {
       ...mockIndex,
       getCollectionsForDocuments: vi.fn().mockResolvedValue({}),
+      getGroupReferencers: vi.fn().mockResolvedValue([]),
     } as unknown as IOperationIndex;
 
     const scoped = originalCache.withScopedIndex(scopedIndex);

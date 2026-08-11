@@ -9,15 +9,22 @@ import {
   type SignerConfig,
 } from "@powerhousedao/reactor";
 import { reactorDriveDocumentModelModule } from "@powerhousedao/reactor-drive";
+import { ReactorGroupV1 } from "@powerhousedao/reactor-group";
 import { getUniqueDocumentModels } from "@powerhousedao/reactor-api";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
-import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+import type {
+  DocumentModelModule,
+  UpgradeManifest,
+} from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule, type ILogger } from "document-model";
 
 export type SwitchboardReactorDefaultsOptions = {
   // Extra models registered alongside the baseline (document-model, drive,
-  // reactor-drive). Pass vetra models here in studio/dev. Deduped by id.
+  // reactor-drive, reactor-group). Pass vetra models here in studio/dev.
+  // Deduped by id.
   documentModels?: DocumentModelModule[];
+  /** Upgrade manifests for versioned models, one per document type. */
+  upgradeManifests?: UpgradeManifest<readonly number[]>[];
   /** Default true. */
   includeBaseModels?: boolean;
   /**
@@ -58,6 +65,7 @@ export function switchboardBaseDocumentModels() {
     documentModelDocumentModelModule,
     driveDocumentModelModule,
     reactorDriveDocumentModelModule,
+    ReactorGroupV1 as unknown as DocumentModelModule,
   ];
 }
 
@@ -73,6 +81,10 @@ export function applySwitchboardReactorDefaults(
     reactorBuilder.withDocumentModelSources(
       getUniqueDocumentModels(baseModels, extra),
     );
+  }
+
+  if (options.upgradeManifests?.length) {
+    reactorBuilder.withUpgradeManifests(options.upgradeManifests);
   }
 
   const scheme =

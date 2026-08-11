@@ -1,8 +1,12 @@
 import type { SubgraphClass } from "@powerhousedao/reactor-api";
-import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+import type {
+  DocumentModelModule,
+  UpgradeManifest,
+} from "@powerhousedao/shared/document-model";
 import { childLogger } from "document-model";
 import type { IPackageLoader, ProcessorFactoryBuilder } from "../types.js";
 import {
+  extractUpgradeManifests,
   loadDocumentModels as loadDocumentModelsUtil,
   loadProcessors as loadProcessorsUtil,
   loadSubgraphs as loadSubgraphsUtil,
@@ -22,7 +26,12 @@ export class ImportPackageLoader implements IPackageLoader {
     const pkgModule = await loadDocumentModelsUtil(identifier);
 
     if (pkgModule) {
-      const models = Object.values(pkgModule);
+      // duck type: the namespace also carries non-module exports such as the
+      // upgradeManifests aggregate
+      const models = Object.values(pkgModule).filter(
+        (m: unknown): m is DocumentModelModule =>
+          m !== null && typeof m === "object" && "documentModel" in m,
+      );
       this.logger.verbose(
         `  ➜  Loaded ${models.length} Document Models from: ${identifier}`,
       );
@@ -31,6 +40,21 @@ export class ImportPackageLoader implements IPackageLoader {
       this.logger.verbose(`  ➜  No Document Models found: ${identifier}`);
       return [];
     }
+  }
+
+  async loadUpgradeManifests(
+    identifier: string,
+  ): Promise<UpgradeManifest<readonly number[]>[]> {
+    const pkgModule = await loadDocumentModelsUtil(identifier);
+    if (!pkgModule) return [];
+
+    const manifests = extractUpgradeManifests(pkgModule);
+    if (manifests.length > 0) {
+      this.logger.verbose(
+        `  ➜  Loaded ${manifests.length} Upgrade Manifests from: ${identifier}`,
+      );
+    }
+    return manifests;
   }
 
   async loadSubgraphs(identifier: string): Promise<SubgraphClass[]> {

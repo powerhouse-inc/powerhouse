@@ -103,11 +103,21 @@ export interface SyncDeadLetterTable {
   created_at: Generated<Date>;
 }
 
+/**
+ * One (document, group) reference ever discovered from an auth operation's
+ * input. Rows are never updated or deleted (see migration 017).
+ */
+export interface GroupReferenceTable {
+  documentId: string;
+  groupId: string;
+}
+
 export interface Database {
   Operation: OperationTable;
   Keyframe: KeyframeTable;
   document_collections: DocumentCollectionTable;
   operation_index_operations: OperationIndexOperationTable;
+  group_references: GroupReferenceTable;
   sync_remotes: SyncRemoteTable;
   sync_cursors: SyncCursorTable;
   sync_dead_letters: SyncDeadLetterTable;

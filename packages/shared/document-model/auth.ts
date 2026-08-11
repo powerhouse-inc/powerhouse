@@ -23,6 +23,7 @@ import {
 } from "./errors.js";
 import {
   createAuthState,
+  type AuthGroups,
   type Grant,
   type PHAuthState,
   type PHBaseState,
@@ -501,11 +502,15 @@ export type AuthEvaluation =
  * An uninitialized policy (version 0, absent auth state, or a legacy `{}`
  * auth scope serialized before PHAuthState had a version) leaves the document
  * open. Once a policy exists the default is deny, and grants stack in order.
+ *
+ * Group principals match only against a supplied groups map (the groups
+ * projection, present when authGroups is on); with no map they never apply.
  */
 export function evaluate(
   auth: PHAuthState | undefined,
   subject: AuthSubject,
   request: AuthRequest,
+  groups?: AuthGroups,
 ): AuthEvaluation {
   if (!auth || !auth.version) {
     return { decision: "allow" };
@@ -526,7 +531,7 @@ export function evaluate(
     return { decision: "deny", refusal: "version-unsupported" };
   }
 
-  return evaluateGrantStack(auth.grants, subject, request);
+  return evaluateGrantStack(auth.grants, subject, request, groups);
 }
 
 /**
@@ -537,6 +542,42 @@ export function decide(
   auth: PHAuthState | undefined,
   subject: AuthSubject,
   request: AuthRequest,
+  groups?: AuthGroups,
 ): AuthDecision {
-  return evaluate(auth, subject, request).decision;
+  return evaluate(auth, subject, request, groups).decision;
+}
+
+/**
+ * The group document ids a single auth action's input names with `{ group }`
+ * principals. INITIALIZE_AUTH contributes the groups named across its grants,
+ * SET_GRANT the groups named by its one grant; REMOVE_GRANT and MOVE_GRANT
+ * contribute nothing. Total over any input shape, because references are read
+ * from the input as it arrived, including inputs later stored as errors.
+ */
+export function mentionedGroupIds(action: Action): string[] {
+  const input = action.input as Record<string, unknown> | null | undefined;
+  const candidates: unknown[] = [];
+
+  if (action.type === "INITIALIZE_AUTH" && Array.isArray(input?.grants)) {
+    candidates.push(...(input.grants as unknown[]));
+  }
+  if (action.type === "SET_GRANT" && input?.grant !== undefined) {
+    candidates.push(input.grant);
+  }
+
+  const ids: string[] = [];
+  for (const candidate of candidates) {
+    if (typeof candidate !== "object" || candidate === null) {
+      continue;
+    }
+    const principal = (candidate as Record<string, unknown>).principal;
+    if (typeof principal !== "object" || principal === null) {
+      continue;
+    }
+    const group = (principal as Record<string, unknown>).group;
+    if (typeof group === "string" && group !== "" && !ids.includes(group)) {
+      ids.push(group);
+    }
+  }
+  return ids;
 }

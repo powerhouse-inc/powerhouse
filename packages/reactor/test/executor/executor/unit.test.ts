@@ -84,11 +84,13 @@ describe("SimpleJobExecutor", () => {
         createCollection: vi.fn(),
         addToCollection: vi.fn(),
         removeFromCollection: vi.fn(),
+        recordGroupReferences: vi.fn(),
         write: vi.fn(),
       }),
       commit: vi.fn().mockResolvedValue([]),
       find: vi.fn().mockResolvedValue({ items: [], total: 0 }),
       getCollectionsForDocuments: vi.fn().mockResolvedValue({}),
+      getGroupReferencers: vi.fn().mockResolvedValue([]),
     };
 
     const eventBus = createTestEventBus();
@@ -345,6 +347,7 @@ describe("SimpleJobExecutor", () => {
           commit: vi.fn().mockResolvedValue([]),
           find: vi.fn().mockResolvedValue({ items: [], total: 0 }),
           getCollectionsForDocuments: vi.fn().mockResolvedValue({}),
+          getGroupReferencers: vi.fn().mockResolvedValue([]),
         } as any,
         mockDocumentMetaCache,
         createMockCollectionMembershipCache(),
@@ -2072,6 +2075,7 @@ describe("SimpleJobExecutor", () => {
           commit: vi.fn().mockResolvedValue([1]),
           find: vi.fn().mockResolvedValue({ items: [], total: 0 }),
           getCollectionsForDocuments: vi.fn().mockResolvedValue({}),
+          getGroupReferencers: vi.fn().mockResolvedValue([]),
         } as any,
         createMockDocumentMetaCache(),
         createMockCollectionMembershipCache(),

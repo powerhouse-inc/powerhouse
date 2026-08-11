@@ -1,8 +1,12 @@
 import type { IDocumentModelLoader } from "@powerhousedao/reactor";
 import type { SubgraphClass } from "@powerhousedao/reactor-api";
-import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+import type {
+  DocumentModelModule,
+  UpgradeManifest,
+} from "@powerhousedao/shared/document-model";
 import { childLogger } from "document-model";
 import type { IPackageLoader, ProcessorFactoryBuilder } from "../types.js";
+import { extractUpgradeManifests } from "./util.js";
 
 export interface HttpPackageLoaderOptions {
   registryUrl: string;
@@ -118,6 +122,26 @@ export class HttpPackageLoader implements IPackageLoader {
       `Loaded ${models.length} document models from ${packageName}`,
     );
     return models;
+  }
+
+  async loadUpgradeManifests(
+    packageSpec: string,
+  ): Promise<UpgradeManifest<readonly number[]>[]> {
+    const { name: packageName } = this.parsePackageSpec(packageSpec);
+    if (!this.isValidPackageName(packageName)) {
+      throw new Error(`Invalid package name: ${packageName}`);
+    }
+
+    const url = `${this.registryUrl}-/cdn/${packageSpec}/node/document-models/index.mjs`;
+    const module = (await import(url)) as Record<string, unknown>;
+
+    const manifests = extractUpgradeManifests(module);
+    if (manifests.length > 0) {
+      this.logger.verbose(
+        `Loaded ${manifests.length} upgrade manifests from ${packageName}`,
+      );
+    }
+    return manifests;
   }
 
   async loadSubgraphs(packageSpec: string): Promise<SubgraphClass[]> {
