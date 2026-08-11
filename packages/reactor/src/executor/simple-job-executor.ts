@@ -545,6 +545,9 @@ export class SimpleJobExecutor implements IJobExecutor {
           },
           { verb: "execute", scope: action.scope, operation: action.type },
           signal,
+          this.featureFlags.authConditions
+            ? { actionInput: action.input }
+            : undefined,
         );
       } catch (error) {
         return buildErrorResult(

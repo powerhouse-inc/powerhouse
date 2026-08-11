@@ -197,9 +197,50 @@ export async function evaluateByPosition<M>(
     });
   }
 
-  if (writtenProjection === undefined) {
-    // No projection reads this scope, so these take a position without
-    // contributing state to any of them.
+  // Whether the evaluated scope's state is walked, and under which key. A
+  // projection-read scope folds through its projection; otherwise a model
+  // that reads the executing scope (conditions) folds the full effective
+  // stream itself, and a model that does not lets the evaluated operations
+  // take positions without contributing state.
+  let evaluatedStateKey: string | undefined;
+  if (writtenProjection !== undefined) {
+    evaluatedStateKey = streamKey(writtenProjection.query);
+  } else if (definition.foldEvaluatedScope !== undefined) {
+    const query: StreamQuery = {
+      documentId: target.documentId,
+      scope,
+      branch: target.branch,
+    };
+    // Every effective operation moves state, so this read is unfiltered.
+    const storedOperations = (
+      await operationStore.getSince(
+        query.documentId,
+        query.scope,
+        query.branch,
+        -1,
+        undefined,
+        undefined,
+        signal,
+      )
+    ).results.filter((operation) => !evaluating.has(operation.id));
+
+    const before = await writeCache.getState(
+      query.documentId,
+      query.scope,
+      query.branch,
+      -1,
+      signal,
+    );
+
+    evaluatedStateKey = streamKey(query);
+    walked.push({
+      streamKey: evaluatedStateKey,
+      scope,
+      document: before,
+      operations: [...storedOperations, ...operations],
+      apply: definition.foldEvaluatedScope,
+    });
+  } else {
     walked.push({
       streamKey: EVALUATED_ONLY,
       scope,
@@ -274,6 +315,17 @@ export async function evaluateByPosition<M>(
       continue;
     }
 
+    // The executing scope's state as the walk reached this operation, for
+    // conditions that read it. Undefined when the model does not fold it.
+    const evaluatedDocument =
+      evaluatedStateKey === undefined
+        ? undefined
+        : position.states.get(evaluatedStateKey);
+    const scopeState =
+      evaluatedDocument === undefined
+        ? undefined
+        : (evaluatedDocument.state as Record<string, unknown>)[scope];
+
     const evaluation = definition.decide(
       modelAt<M>(
         readSet,
@@ -287,7 +339,7 @@ export async function evaluateByPosition<M>(
         scope: position.operation.action.scope,
         operation: position.operation.action.type,
       },
-      { scopeState: undefined },
+      { scopeState, actionInput: position.operation.action.input },
     );
 
     const denied = evaluation.decision === "deny";

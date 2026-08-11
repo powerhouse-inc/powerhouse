@@ -3,6 +3,7 @@ import type {
   AuthRefusal,
   AuthRequest,
   AuthSubject,
+  ConditionContext,
   Operation,
   PHAuthState,
   PHDocument,
@@ -20,6 +21,7 @@ import {
   groupDocumentType,
   groupMembershipActionTypes,
   mentionedGroupIds,
+  normalizeDocumentModelVersion,
   referencedGroupIds,
 } from "@powerhousedao/shared/document-model";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
@@ -56,13 +58,14 @@ function decideAuthModel(
   subject: AuthSubject,
   request: AuthRequest,
   groups?: AuthGroups,
+  conditions?: ConditionContext,
 ): Evaluation {
   // A read has no position, so deletion does not gate it.
   if (request.verb === "execute" && model.document.isDeleted) {
     return { decision: "deny", reason: DOCUMENT_DELETED_REASON };
   }
 
-  const evaluation = evaluate(model.auth, subject, request, groups);
+  const evaluation = evaluate(model.auth, subject, request, groups, conditions);
   if (evaluation.decision === "allow") {
     return { decision: "allow" };
   }
@@ -150,12 +153,83 @@ function applyGroupOperation(
 }
 
 /**
+ * Folds one evaluated-scope operation with the reducer registered for the
+ * document's own type, at the document's stamped version. A reactor without
+ * that module folds nothing, so conditions read the base state and an
+ * unresolvable reducer never widens access.
+ */
+function applyModelOperation(
+  registry: IDocumentModelRegistry,
+  document: PHDocument,
+  operation: Operation,
+): PHDocument {
+  let reducer: (document: PHDocument, action: unknown) => PHDocument;
+  try {
+    const version = normalizeDocumentModelVersion(
+      (document.state as { document?: { version?: number } }).document?.version,
+    );
+    const module = registry.getModule(
+      document.header.documentType,
+      version,
+    ) as {
+      reducer: (document: PHDocument, action: unknown) => PHDocument;
+    };
+    reducer = module.reducer;
+  } catch {
+    return document;
+  }
+  return reducer(document, operation.action);
+}
+
+/**
  * The auth model extended with a derived groups projection: the streams it
  * reads are the group documents the folded grant list names, so adding a
  * grant that names a new group pulls that group's stream into the read-set.
  * Group queries pin the main branch, because a group's member list lives on
  * its main branch no matter which branch the referencing document is on.
  */
+function groupsProjection(
+  registry: IDocumentModelRegistry,
+): Projection<AuthGroupsDecisionModel> {
+  return {
+    decidingActions: [...groupMembershipActionTypes],
+
+    apply: (document, operation) =>
+      applyGroupOperation(registry, document, operation),
+
+    query: (model) =>
+      referencedGroupIds(model.auth?.grants ?? []).map((id) => ({
+        documentId: id,
+        branch: "main",
+        scope: "global",
+      })),
+
+    // A positional walk reads the union of groups the auth range ever
+    // names, because a grant referenced at one position folds membership
+    // there even if a later operation removes it.
+    queryOverHistory: (reads) => {
+      const ids: string[] = [];
+      for (const read of reads) {
+        if (read.name !== "auth") {
+          continue;
+        }
+        for (const operation of read.operations) {
+          for (const id of mentionedGroupIds(operation.action)) {
+            if (!ids.includes(id)) {
+              ids.push(id);
+            }
+          }
+        }
+      }
+      return ids.map((id) => ({
+        documentId: id,
+        branch: "main",
+        scope: "global",
+      }));
+    },
+  };
+}
+
 export function authGroupsDecisionModel(
   registry: IDocumentModelRegistry,
 ): (target: DecisionTarget) => DecisionModel<AuthGroupsDecisionModel> {
@@ -163,44 +237,7 @@ export function authGroupsDecisionModel(
     projections: {
       document: documentProjection(target),
       auth: authProjection(target),
-
-      groups: {
-        decidingActions: [...groupMembershipActionTypes],
-
-        apply: (document, operation) =>
-          applyGroupOperation(registry, document, operation),
-
-        query: (model) =>
-          referencedGroupIds(model.auth?.grants ?? []).map((id) => ({
-            documentId: id,
-            branch: "main",
-            scope: "global",
-          })),
-
-        // A positional walk reads the union of groups the auth range ever
-        // names, because a grant referenced at one position folds membership
-        // there even if a later operation removes it.
-        queryOverHistory: (reads) => {
-          const ids: string[] = [];
-          for (const read of reads) {
-            if (read.name !== "auth") {
-              continue;
-            }
-            for (const operation of read.operations) {
-              for (const id of mentionedGroupIds(operation.action)) {
-                if (!ids.includes(id)) {
-                  ids.push(id);
-                }
-              }
-            }
-          }
-          return ids.map((id) => ({
-            documentId: id,
-            branch: "main",
-            scope: "global",
-          }));
-        },
-      },
+      groups: groupsProjection(registry),
     },
 
     evaluatesScope() {
@@ -209,6 +246,39 @@ export function authGroupsDecisionModel(
 
     decide(model, subject, request): Evaluation {
       return decideAuthModel(model, subject, request, model.groups);
+    },
+  });
+}
+
+/**
+ * The groups model with conditions live: decide hands the executing scope's
+ * state and the action input through to the evaluator, so `where` clauses
+ * and { match } principals apply. The model folds the evaluated scope during
+ * a positional walk, so a condition reads the state as it stood at each
+ * operation's position.
+ */
+export function authConditionsDecisionModel(
+  registry: IDocumentModelRegistry,
+): (target: DecisionTarget) => DecisionModel<AuthGroupsDecisionModel> {
+  return (target) => ({
+    projections: {
+      document: documentProjection(target),
+      auth: authProjection(target),
+      groups: groupsProjection(registry),
+    },
+
+    foldEvaluatedScope: (document, operation) =>
+      applyModelOperation(registry, document, operation),
+
+    evaluatesScope() {
+      return true;
+    },
+
+    decide(model, subject, request, ctx): Evaluation {
+      return decideAuthModel(model, subject, request, model.groups, {
+        scopeState: ctx.scopeState,
+        actionInput: ctx.actionInput,
+      });
     },
   });
 }
