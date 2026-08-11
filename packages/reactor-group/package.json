@@ -1,0 +1,66 @@
+{
+  "name": "@powerhousedao/reactor-group",
+  "version": "6.2.2-dev.39",
+  "description": "Platform document model for groups of member addresses, referenced by { group } principals in the auth scope.",
+  "keywords": [
+    "powerhouse",
+    "vetra",
+    "document-model",
+    "local-first",
+    "event-sourcing",
+    "auth",
+    "groups"
+  ],
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/powerhouse-inc/powerhouse",
+    "directory": "packages/reactor-group"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "source": "./index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./document-models": {
+      "source": "./document-models/index.ts",
+      "types": "./dist/document-models/index.d.ts",
+      "import": "./dist/document-models/index.js"
+    },
+    "./document-models/*": {
+      "source": "./document-models/*/index.ts",
+      "types": "./dist/document-models/*/index.d.ts",
+      "import": "./dist/document-models/*/index.js"
+    }
+  },
+  "scripts": {
+    "tsc": "tsc",
+    "lint": "eslint",
+    "build": "tsdown",
+    "test": "vitest --run",
+    "generate": "ph-cli generate"
+  },
+  "dependencies": {
+    "@powerhousedao/reactor-browser": "workspace:*",
+    "@powerhousedao/shared": "workspace:*",
+    "document-model": "workspace:*",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "catalog:",
+    "@powerhousedao/reactor": "workspace:*",
+    "kysely": "catalog:",
+    "kysely-pglite-dialect": "catalog:",
+    "tsdown": "catalog:",
+    "vitest": "catalog:"
+  }
+}

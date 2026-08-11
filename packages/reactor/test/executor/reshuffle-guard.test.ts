@@ -84,11 +84,13 @@ describe("the excessive reshuffle guard", () => {
         createCollection: vi.fn(),
         addToCollection: vi.fn(),
         removeFromCollection: vi.fn(),
+        recordGroupReferences: vi.fn(),
         write: vi.fn(),
       }),
       commit: vi.fn().mockResolvedValue([]),
       find: vi.fn().mockResolvedValue({ items: [], total: 0 }),
       getCollectionsForDocuments: vi.fn().mockResolvedValue({}),
+      getGroupReferencers: vi.fn().mockResolvedValue([]),
     };
 
     return new SimpleJobExecutor(

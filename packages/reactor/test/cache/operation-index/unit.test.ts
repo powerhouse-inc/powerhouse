@@ -365,7 +365,9 @@ describe("KyselyOperationIndex.commit()", () => {
     mocks.transactionExecute.mockImplementation(async (fn) => {
       const mockTrx = {
         insertInto: mocks.insertInto,
+        selectFrom: mocks.selectFrom,
       };
+      mocks.execute.mockResolvedValue([]);
       mocks.execute.mockResolvedValueOnce([{ ordinal: 1 }]);
       return await fn(mockTrx);
     });

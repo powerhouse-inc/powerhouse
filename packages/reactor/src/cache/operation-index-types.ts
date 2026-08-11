@@ -19,6 +19,15 @@ export interface IOperationIndexTxn {
   createCollection(collectionId: string): void;
   addToCollection(collectionId: string, documentId: string): void;
   removeFromCollection(collectionId: string, documentId: string): void;
+  /**
+   * Records the group documents an auth operation's input names, tied to the
+   * last written operation like addToCollection. At commit each reference is
+   * remembered permanently and the group joins every collection the
+   * referencing document belongs to, keeping the earliest join and reopening
+   * a closed membership, so sync serves the group's history to every remote
+   * that can observe the referencing grant.
+   */
+  recordGroupReferences(documentId: string, groupIds: string[]): void;
   write(operations: OperationIndexEntry[]): void;
 }
 
@@ -61,6 +70,13 @@ export interface IOperationIndex {
   getCollectionsForDocuments(
     documentIds: string[],
   ): Promise<Record<string, string[]>>;
+  /**
+   * The documents whose auth history has ever referenced the group, from the
+   * group-reference relation. This is the set a group-stream change owes a
+   * re-evaluation pass to; it is complete because a group's auth scope cannot
+   * reference other groups.
+   */
+  getGroupReferencers(groupId: string, signal?: AbortSignal): Promise<string[]>;
 }
 
 export interface DocumentCollectionTable {

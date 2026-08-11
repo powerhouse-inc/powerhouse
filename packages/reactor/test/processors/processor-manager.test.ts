@@ -1419,6 +1419,7 @@ describe("ProcessorManager Backfill Paging Regression", () => {
       get: vi.fn().mockResolvedValue(emptyPage),
       getLatestTimestampForCollection: vi.fn().mockResolvedValue(null),
       getCollectionsForDocuments: vi.fn().mockResolvedValue({}),
+      getGroupReferencers: vi.fn().mockResolvedValue([]),
       getSinceOrdinal: vi.fn().mockImplementation(() => {
         if (!serveHugePage) {
           return Promise.resolve(emptyPage);

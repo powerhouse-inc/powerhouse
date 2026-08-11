@@ -29,6 +29,7 @@ export const WORKSPACE_PUBLISH_PACKAGES = [
   "@powerhousedao/reactor-browser",
   "@powerhousedao/reactor",
   "@powerhousedao/reactor-drive",
+  "@powerhousedao/reactor-group",
   "@powerhousedao/reactor-hypercore",
   "@powerhousedao/reactor-mcp",
   "@powerhousedao/opentelemetry-instrumentation-reactor",

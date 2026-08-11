@@ -1,0 +1,52 @@
+scalar Unknown
+scalar DateTime
+scalar Address
+scalar AttachmentRef
+scalar Amount_Tokens
+scalar EthereumAddress
+scalar EmailAddress
+scalar Amount_Percentage
+scalar Date
+scalar URL
+scalar Amount_Money
+scalar OLabel
+scalar Currency
+scalar PHID
+scalar OID
+scalar Amount_Fiat
+scalar Amount_Currency
+scalar Amount_Crypto
+scalar Amount
+scalar Upload
+
+"""
+A member address list gated by the group document's own auth scope. Addresses
+are stored as given and compared case-insensitively, matching how { address }
+principals are compared during auth evaluation.
+"""
+type ReactorGroupState {
+  """Display name of the group."""
+  name: String!
+  """Free-text description of the group's purpose."""
+  description: String!
+  """Member wallet addresses. No duplicates under case-insensitive comparison."""
+  members: [String!]!
+}
+
+# group
+
+input SetGroupNameInput {
+  name: String!
+}
+
+input SetGroupDescriptionInput {
+  description: String!
+}
+
+input AddMemberInput {
+  address: String!
+}
+
+input RemoveMemberInput {
+  address: String!
+}

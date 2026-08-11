@@ -110,6 +110,7 @@ describe("SimpleJobExecutor signature verification", () => {
         createCollection: vi.fn(),
         addToCollection: vi.fn(),
         removeFromCollection: vi.fn(),
+        recordGroupReferences: vi.fn(),
         write: vi.fn(),
       }),
       commit: vi.fn().mockResolvedValue([]),
@@ -118,6 +119,7 @@ describe("SimpleJobExecutor signature verification", () => {
         options: { cursor: "0", limit: 100 },
       }),
       getCollectionsForDocuments: vi.fn().mockResolvedValue({}),
+      getGroupReferencers: vi.fn().mockResolvedValue([]),
     } as never;
 
     const verificationHandler: SignatureVerificationHandler = async (

@@ -9,6 +9,7 @@ import {
   type SignerConfig,
 } from "@powerhousedao/reactor";
 import { reactorDriveDocumentModelModule } from "@powerhousedao/reactor-drive";
+import { ReactorGroupV1 } from "@powerhousedao/reactor-group";
 import { getUniqueDocumentModels } from "@powerhousedao/reactor-api";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
@@ -16,7 +17,8 @@ import { documentModelDocumentModelModule, type ILogger } from "document-model";
 
 export type SwitchboardReactorDefaultsOptions = {
   // Extra models registered alongside the baseline (document-model, drive,
-  // reactor-drive). Pass vetra models here in studio/dev. Deduped by id.
+  // reactor-drive, reactor-group). Pass vetra models here in studio/dev.
+  // Deduped by id.
   documentModels?: DocumentModelModule[];
   /** Default true. */
   includeBaseModels?: boolean;
@@ -58,6 +60,7 @@ export function switchboardBaseDocumentModels() {
     documentModelDocumentModelModule,
     driveDocumentModelModule,
     reactorDriveDocumentModelModule,
+    ReactorGroupV1 as unknown as DocumentModelModule,
   ];
 }
 

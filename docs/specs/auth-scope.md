@@ -8,7 +8,7 @@ This spec pulls authorization into the core Reactor. This allows us to ride on t
 
 ## Overview
 
-From a high level, we propose expanding the current `auth` scope to hold a stacked list of **grants**. Grants apply either baked in policies or dynamically evaluated conditions to various **principals**. These principals are either specific users or groups of users described by a new `PHGroup` document model (`@powerhousedao/document-group`).
+From a high level, we propose expanding the current `auth` scope to hold a stacked list of **grants**. Grants apply either baked in policies or dynamically evaluated conditions to various **principals**. These principals are either specific users or groups of users described by a new `PHGroup` document model (`powerhouse/reactor-group`).
 
 We will do this by generalizing consistency requirements between what are now independent event streams, dictated by `(docId, branch, scope)` tuples. That is, we need to be able to describe consistency guarantees between the `("A", "main", "global")` stream and the `("A", "main", "auth")` or even `("A-group", "main", "global")` streams.
 
@@ -670,7 +670,7 @@ Naming a group publishes its membership. Serving a group through a collection me
 
 ## Groups
 
-A `PHGroup` (`@powerhousedao/document-group`) is an ordinary document whose state is a member address list, gated by its own auth scope. A `{ group }` principal names a group document id.
+A `PHGroup` (`powerhouse/reactor-group`) is an ordinary document whose state is a member address list, gated by its own auth scope. A `{ group }` principal names a group document id.
 
 A group's own auth scope cannot contain `{ group }` principals; the auth reducer rejects them on group documents (see Actions). A group's policy names signers directly — `{ address }`, `{ anyone }`, `{ match }` — so membership never chains through a second group, and evaluating auth for a group's operations requires no stream beyond the group's own.
 

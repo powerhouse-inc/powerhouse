@@ -4,8 +4,12 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import type { IWriteCache } from "../cache/write/interfaces.js";
 import type { ReactorFeatureFlags } from "../executor/types.js";
+import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import type { AppendCondition } from "../storage/interfaces.js";
-import { authDecisionModel } from "./auth-decision-model.js";
+import {
+  authDecisionModel,
+  authGroupsDecisionModel,
+} from "./auth-decision-model.js";
 import { buildDecisionModel } from "./build-decision-model.js";
 import type { DocumentDecisionModel } from "./document-decision-model.js";
 import { documentDecisionModel } from "./document-decision-model.js";
@@ -54,10 +58,16 @@ export async function decideAtHead(
 
 /**
  * The model this reactor enforces. With `authEnforcement` off the auth scope is
- * absent from every append condition and no load walks it.
+ * absent from every append condition and no load walks it; with `authGroups`
+ * on, the group documents the grant list names join the read-set and the
+ * registry supplies the reducer that folds them.
  */
 export function selectDecisionModel(
   flags: ReactorFeatureFlags,
+  registry: IDocumentModelRegistry,
 ): RegisteredDecisionModel {
+  if (flags.authGroups) {
+    return authGroupsDecisionModel(registry);
+  }
   return flags.authEnforcement ? authDecisionModel : documentDecisionModel;
 }

@@ -11,6 +11,7 @@ import {
   garbageCollect,
   hashDocumentStateForScope,
   isUndoRedo,
+  mentionedGroupIds,
   normalizeDocumentModelVersion,
   sortOperations,
 } from "@powerhousedao/shared/document-model";
@@ -143,11 +144,12 @@ export class SimpleJobExecutor implements IJobExecutor {
     this.featureFlags = {
       documentDecisions: config.featureFlags?.documentDecisions ?? false,
       authEnforcement: config.featureFlags?.authEnforcement ?? false,
+      authGroups: config.featureFlags?.authGroups ?? false,
     };
     // The builder validates too, but a pooled worker is constructed directly
     // from the flags that crossed the boundary.
     validateFeatureFlags(this.featureFlags, FLAG_PREREQUISITES);
-    this.decisionModel = selectDecisionModel(this.featureFlags);
+    this.decisionModel = selectDecisionModel(this.featureFlags, registry);
     this.signatureVerifierModule = new SignatureVerifier(signatureVerifier);
     this.documentActionHandler = new DocumentActionHandler(
       registry,
@@ -237,6 +239,56 @@ export class SimpleJobExecutor implements IJobExecutor {
             };
           }
           return loadResult;
+        }
+
+        if (job.kind === "reevaluation") {
+          const reevalResult = await this.executeReevaluationJob({
+            job,
+            startTime,
+            indexTxn,
+            stores,
+            signal,
+            replayingAcceptedHistory: false,
+            evaluatedByPosition: false,
+            postCommitInvalidations,
+          });
+          if (reevalResult.success && reevalResult.operationsWithContext) {
+            for (const owc of reevalResult.operationsWithContext) {
+              touchedCacheEntries.push({
+                documentId: owc.context.documentId,
+                scope: owc.context.scope,
+                branch: owc.context.branch,
+              });
+            }
+
+            const ordinals = await stores.operationIndex.commit(
+              indexTxn,
+              signal,
+            );
+
+            for (
+              let i = 0;
+              i < reevalResult.operationsWithContext.length;
+              i++
+            ) {
+              reevalResult.operationsWithContext[i].context.ordinal =
+                ordinals[i];
+            }
+            if (reevalResult.operationsWithContext.length > 0) {
+              const collectionMemberships =
+                await this.getCollectionMembershipsForOperations(
+                  reevalResult.operationsWithContext,
+                  stores,
+                );
+              pendingEvent = {
+                jobId: job.id,
+                operations: reevalResult.operationsWithContext,
+                jobMeta: job.meta,
+                collectionMemberships,
+              };
+            }
+          }
+          return reevalResult;
         }
 
         const positioned = await this.positionByTimestamp(job, stores, signal);
@@ -795,6 +847,12 @@ export class SimpleJobExecutor implements IJobExecutor {
       },
     ]);
 
+    // References come from the input as it arrived, including operations
+    // stored denied or errored, so sync topology never depends on evaluation.
+    if (scope === "auth") {
+      indexTxn.recordGroupReferences(job.documentId, mentionedGroupIds(action));
+    }
+
     return {
       job,
       success: true,
@@ -1158,7 +1216,8 @@ export class SimpleJobExecutor implements IJobExecutor {
       return undefined;
     }
 
-    return this.reevaluateDocument(executing);
+    const outcome = await this.reevaluateDocument(executing);
+    return outcome.error;
   }
 
   /**
@@ -1168,10 +1227,11 @@ export class SimpleJobExecutor implements IJobExecutor {
    */
   private async reevaluateDocument(
     executing: ExecutingJob,
-  ): Promise<Error | undefined> {
+  ): Promise<{ error?: Error; operationsWithContext: OperationWithContext[] }> {
     const { job, stores, signal } = executing;
 
     const target = { documentId: job.documentId, branch: job.branch };
+    const reappended: OperationWithContext[] = [];
 
     const revisions = await stores.operationStore.getRevisions(
       job.documentId,
@@ -1233,14 +1293,85 @@ export class SimpleJobExecutor implements IJobExecutor {
       );
 
       if (!result.success) {
-        return (
-          result.error ??
-          new Error(`Re-evaluation of ${job.documentId} ${scope} failed`)
+        return {
+          error:
+            result.error ??
+            new Error(`Re-evaluation of ${job.documentId} ${scope} failed`),
+          operationsWithContext: reappended,
+        };
+      }
+
+      reappended.push(...result.operationsWithContext);
+    }
+
+    return { operationsWithContext: reappended };
+  }
+
+  /**
+   * Re-judges a document's stored operations because a read-set stream in
+   * another document (a group) gained an operation. The trigger timestamp
+   * bounds the work: an operation later than everything this document holds
+   * cannot change any evaluation, so the pass is skipped.
+   */
+  private async executeReevaluationJob(
+    executing: ExecutingJob,
+  ): Promise<JobResult> {
+    const { job, startTime, stores, signal } = executing;
+
+    if (!this.featureFlags.documentDecisions) {
+      return {
+        job,
+        success: true,
+        operations: [],
+        operationsWithContext: [],
+        duration: Date.now() - startTime,
+      };
+    }
+
+    const trigger = job.meta.triggerTimestampUtcMs;
+    if (typeof trigger === "string") {
+      let latestTimestamp: string;
+      try {
+        const revisions = await stores.operationStore.getRevisions(
+          job.documentId,
+          job.branch,
+          signal,
         );
+        latestTimestamp = revisions.latestTimestamp;
+      } catch {
+        // Nothing stored for this document here, so nothing to re-judge.
+        return {
+          job,
+          success: true,
+          operations: [],
+          operationsWithContext: [],
+          duration: Date.now() - startTime,
+        };
+      }
+
+      if (Date.parse(trigger) > Date.parse(latestTimestamp)) {
+        return {
+          job,
+          success: true,
+          operations: [],
+          operationsWithContext: [],
+          duration: Date.now() - startTime,
+        };
       }
     }
 
-    return undefined;
+    const outcome = await this.reevaluateDocument(executing);
+    if (outcome.error) {
+      return buildErrorResult(job, outcome.error, startTime);
+    }
+
+    return {
+      job,
+      success: true,
+      operations: outcome.operationsWithContext.map((owc) => owc.operation),
+      operationsWithContext: outcome.operationsWithContext,
+      duration: Date.now() - startTime,
+    };
   }
 
   private async executeLoadJob(executing: ExecutingJob): Promise<JobResult> {

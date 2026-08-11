@@ -153,6 +153,22 @@ export type Principal =
   | { group: string }
   | { match: Condition };
 
+/**
+ * The folded global state of a PHGroup (powerhouse/reactor-group) document,
+ * narrowed to what auth evaluation reads. Membership is matched
+ * case-insensitively against the subject's address.
+ */
+export type PHGroupState = {
+  members: string[];
+};
+
+/**
+ * Folded group states keyed by group document id, as the groups projection
+ * provides them. A group id a policy names but the map does not hold fails
+ * closed: the principal does not match.
+ */
+export type AuthGroups = Record<string, PHGroupState>;
+
 export type Capability =
   | { can: "read"; scope?: string }
   | { can: "execute"; scope?: string; operation?: string[] };

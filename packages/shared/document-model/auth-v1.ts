@@ -9,7 +9,13 @@ import type {
   AuthSubject,
 } from "./auth.js";
 import { groupDocumentType } from "./document-type.js";
-import type { Capability, Grant, Principal } from "./state.js";
+import type {
+  AuthGroups,
+  Capability,
+  Grant,
+  PHGroupState,
+  Principal,
+} from "./state.js";
 
 /** Maximum number of grants in a policy. */
 export const MAX_AUTH_GRANTS = 100;
@@ -510,7 +516,11 @@ function capabilityCovers(
   return true;
 }
 
-function principalMatches(principal: Principal, subject: AuthSubject): boolean {
+function principalMatches(
+  principal: Principal,
+  subject: AuthSubject,
+  groups?: AuthGroups,
+): boolean {
   if ("anyone" in principal) {
     return true;
   }
@@ -520,20 +530,51 @@ function principalMatches(principal: Principal, subject: AuthSubject): boolean {
       subject.address.toLowerCase() === principal.address.toLowerCase()
     );
   }
-  // { group } and { match } are not evaluated yet: group membership needs the
-  // PHGroup model (a missing group never widens access) and conditions are deferred.
+  if ("group" in principal) {
+    // Groups match only when the groups projection is supplied (authGroups
+    // on). A group the map does not hold fails closed: access is never
+    // widened by a missing group.
+    if (groups === undefined || subject.address === undefined) {
+      return false;
+    }
+    // Total over malformed folded state: an index miss or a non-list member
+    // field never widens access.
+    const group = groups[principal.group] as PHGroupState | undefined;
+    if (group === undefined || !Array.isArray(group.members)) {
+      return false;
+    }
+    const address = subject.address.toLowerCase();
+    return group.members.some((member) => member.toLowerCase() === address);
+  }
+  // { match } is not evaluated yet: conditions are deferred.
   return false;
 }
 
 /**
+ * The group document ids named by `{ group }` principals in a grant list, in
+ * order of first appearance. These are the streams the groups projection reads.
+ */
+export function referencedGroupIds(grants: Grant[]): string[] {
+  const ids: string[] = [];
+  for (const grant of grants) {
+    if ("group" in grant.principal && !ids.includes(grant.principal.group)) {
+      ids.push(grant.principal.group);
+    }
+  }
+  return ids;
+}
+
+/**
  * Evaluates a v1 grant stack: default deny, last applicable grant wins, and
- * reports which grant decided it. Group and match principals and `where`
- * conditions are not evaluated yet; a grant that uses any of them never applies.
+ * reports which grant decided it. Group principals match only against a
+ * supplied groups map; match principals and `where` conditions are not
+ * evaluated yet, so a grant that uses one never applies.
  */
 export function evaluateGrantStack(
   grants: Grant[],
   subject: AuthSubject,
   request: AuthRequest,
+  groups?: AuthGroups,
 ): AuthEvaluation {
   let applicable: Grant | undefined;
   for (const grant of grants) {
@@ -543,7 +584,7 @@ export function evaluateGrantStack(
     }
     if (
       capabilityCovers(grant.capability, request) &&
-      principalMatches(grant.principal, subject)
+      principalMatches(grant.principal, subject, groups)
     ) {
       applicable = grant;
     }
@@ -570,6 +611,7 @@ export function evaluateGrants(
   grants: Grant[],
   subject: AuthSubject,
   request: AuthRequest,
+  groups?: AuthGroups,
 ): AuthDecision {
-  return evaluateGrantStack(grants, subject, request).decision;
+  return evaluateGrantStack(grants, subject, request, groups).decision;
 }
