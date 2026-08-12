@@ -149,7 +149,12 @@ export class ReactorClientBuilder {
     );
     return model === undefined
       ? new BareReadGate()
-      : new ModelReadGate(model, documentView);
+      : new ModelReadGate(
+          model,
+          documentView,
+          reactorModule.operationIndex,
+          this.logger,
+        );
   }
 
   public async build(): Promise<ReactorClient> {

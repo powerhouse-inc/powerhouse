@@ -3,7 +3,10 @@ import type {
   PHAuthState,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
+import { groupDocumentType } from "@powerhousedao/shared/document-model";
+import type { ILogger } from "document-model";
 import { describe, expect, it, vi } from "vitest";
+import type { IOperationIndex } from "../../src/cache/operation-index-types.js";
 import { resolveFeatureFlags } from "../../src/core/feature-flags.js";
 import type { IReadGate } from "../../src/decision/read-gate.js";
 import {
@@ -416,6 +419,227 @@ describe("the model read gate", () => {
     );
 
     expect(view.get).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * A replica must fold a group's membership to evaluate auth with it, so a group
+ * a grant names is served to the audience of the document naming it, whatever
+ * the group's own read grants say. Naming a group publishes its roster to that
+ * policy's audience.
+ */
+describe("serving a policy-named group to the policy's audience", () => {
+  const GROUP = "grp-1";
+  const REFERENCER = "stmt-1";
+
+  function groupDoc(auth?: PHAuthState): PHDocument {
+    return doc({
+      id: GROUP,
+      documentType: groupDocumentType,
+      auth: auth ?? policy([]),
+      global: { members: [MEMBER] },
+    });
+  }
+
+  function referencer(auth: PHAuthState, id = REFERENCER): PHDocument {
+    return doc({ id, documentType: "test/statement", auth });
+  }
+
+  function mockIndex(
+    referencers: Record<string, string[]>,
+  ): IOperationIndex & { getGroupReferencers: ReturnType<typeof vi.fn> } {
+    return {
+      getGroupReferencers: vi
+        .fn()
+        .mockImplementation((groupId: string) =>
+          Promise.resolve(referencers[groupId] ?? []),
+        ),
+    } as unknown as IOperationIndex & {
+      getGroupReferencers: ReturnType<typeof vi.fn>;
+    };
+  }
+
+  function groupGate(
+    view: IDocumentView,
+    index: IOperationIndex,
+    logger?: ILogger,
+  ): ModelReadGate {
+    const model = readDecisionModel(flags(allFlags), emptyRegistry);
+    if (!model) {
+      throw new Error("expected a model");
+    }
+    return new ModelReadGate(model, view, index, logger);
+  }
+
+  it("serves the group to a subject the referencing document serves", async () => {
+    const view = mockView({
+      [REFERENCER]: referencer(policy([readGlobal({ address: MEMBER })])),
+    });
+    const readable = await groupGate(
+      view,
+      mockIndex({ [GROUP]: [REFERENCER] }),
+    ).scopePredicate(groupDoc(), { address: MEMBER }, "main");
+
+    expect(readable("global")).toBe(true);
+  });
+
+  it("does not serve it to a subject no referencer serves", async () => {
+    const view = mockView({
+      [REFERENCER]: referencer(policy([readGlobal({ address: MEMBER })])),
+    });
+    const readable = await groupGate(
+      view,
+      mockIndex({ [GROUP]: [REFERENCER] }),
+    ).scopePredicate(groupDoc(), { address: OTHER }, "main");
+
+    expect(readable("global")).toBe(false);
+    expect(readable("auth")).toBe(true);
+  });
+
+  /**
+   * Every holder reads a document's auth and document scopes, so testing those
+   * would serve every referenced group to everybody. Only a domain scope counts.
+   */
+  it("does not serve it on the referencer's always-readable scopes alone", async () => {
+    const view = mockView({ [REFERENCER]: referencer(policy([])) });
+    const readable = await groupGate(
+      view,
+      mockIndex({ [GROUP]: [REFERENCER] }),
+    ).scopePredicate(groupDoc(), { address: MEMBER }, "main");
+
+    expect(readable("global")).toBe(false);
+  });
+
+  it("serves it when any one of several referencers serves the subject", async () => {
+    const view = mockView({
+      "stmt-a": referencer(policy([]), "stmt-a"),
+      "stmt-b": referencer(policy([readGlobal({ address: MEMBER })]), "stmt-b"),
+    });
+    const index = mockIndex({ [GROUP]: ["stmt-a", "stmt-b"] });
+
+    const readable = await groupGate(view, index).scopePredicate(
+      groupDoc(),
+      { address: MEMBER },
+      "main",
+    );
+
+    expect(readable("global")).toBe(true);
+  });
+
+  it("skips a referencer this replica does not hold rather than throwing", async () => {
+    const view = mockView({
+      [REFERENCER]: referencer(policy([readGlobal({ address: MEMBER })])),
+    });
+    const index = mockIndex({ [GROUP]: ["gone", REFERENCER] });
+
+    const readable = await groupGate(view, index).scopePredicate(
+      groupDoc(),
+      { address: MEMBER },
+      "main",
+    );
+
+    expect(readable("global")).toBe(true);
+  });
+
+  /**
+   * A denied SET_GRANT still records its reference, so a group naming a group
+   * is reachable even though validation forbids it. One level only, so it
+   * terminates.
+   */
+  it("skips a referencer that is itself a group, so a cycle terminates", async () => {
+    const other = doc({
+      id: "grp-2",
+      documentType: groupDocumentType,
+      auth: policy([readGlobal({ anyone: true })]),
+    });
+    const view = mockView({ "grp-2": other, [GROUP]: groupDoc() });
+    const index = mockIndex({ [GROUP]: ["grp-2"], "grp-2": [GROUP] });
+
+    const readable = await groupGate(view, index).scopePredicate(
+      groupDoc(),
+      { address: MEMBER },
+      "main",
+    );
+
+    expect(readable("global")).toBe(false);
+  });
+
+  /**
+   * The audience is owed the member list, because that is what it must fold to
+   * evaluate auth with this group. A group's other scopes stay behind its own
+   * grants.
+   */
+  it("serves only the member list, not the group's other scopes", async () => {
+    const view = mockView({
+      [REFERENCER]: referencer(policy([readGlobal({ address: MEMBER })])),
+    });
+    const readable = await groupGate(
+      view,
+      mockIndex({ [GROUP]: [REFERENCER] }),
+    ).scopePredicate(groupDoc(), { address: MEMBER }, "main");
+
+    expect(readable("global")).toBe(true);
+    expect(readable("local")).toBe(false);
+  });
+
+  it("does not consult the relation for a non-group document", async () => {
+    const index = mockIndex({});
+    await groupGate(mockView(), index).scopePredicate(
+      doc({ auth: policy([]) }),
+      { address: OTHER },
+      "main",
+    );
+
+    expect(index.getGroupReferencers).not.toHaveBeenCalled();
+  });
+
+  it("does not consult the relation when the group's own policy already serves", async () => {
+    const index = mockIndex({});
+    const readable = await groupGate(mockView(), index).scopePredicate(
+      groupDoc(policy([readGlobal({ anyone: true })])),
+      { address: OTHER },
+      "main",
+    );
+
+    expect(readable("global")).toBe(true);
+    expect(index.getGroupReferencers).not.toHaveBeenCalled();
+  });
+
+  it("does nothing without an operation index to consult", async () => {
+    const model = readDecisionModel(flags(allFlags), emptyRegistry);
+    if (!model) {
+      throw new Error("expected a model");
+    }
+    const readable = await new ModelReadGate(model, mockView()).scopePredicate(
+      groupDoc(),
+      { address: MEMBER },
+      "main",
+    );
+
+    expect(readable("global")).toBe(false);
+  });
+
+  it("withholds and warns past the referencer bound", async () => {
+    const ids = Array.from({ length: 101 }, (_, i) => `stmt-${i}`);
+    const documents: Record<string, PHDocument> = {};
+    for (const id of ids) {
+      documents[id] = referencer(policy([]), id);
+    }
+    // Only the last one would serve, and it is past the bound.
+    documents[ids[100]] = referencer(
+      policy([readGlobal({ address: MEMBER })]),
+      ids[100],
+    );
+
+    const warn = vi.fn();
+    const readable = await groupGate(
+      mockView(documents),
+      mockIndex({ [GROUP]: ids }),
+      { warn } as unknown as ILogger,
+    ).scopePredicate(groupDoc(), { address: MEMBER }, "main");
+
+    expect(readable("global")).toBe(false);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("101 documents"));
   });
 });
 

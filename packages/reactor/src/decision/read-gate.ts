@@ -3,7 +3,12 @@ import type {
   PHAuthState,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
-import { decide } from "@powerhousedao/shared/document-model";
+import {
+  decide,
+  groupDocumentType,
+} from "@powerhousedao/shared/document-model";
+import type { ILogger } from "document-model";
+import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { ReactorFeatureFlags } from "../executor/types.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import { DocumentNotFoundError } from "../shared/errors.js";
@@ -24,6 +29,28 @@ export const ALWAYS_READABLE_SCOPES: ReadonlySet<string> = new Set([
   "auth",
   "document",
 ]);
+
+/**
+ * The branch a group is read on. A group's member list lives on its main
+ * branch whatever branch the document naming it is on, and the reference
+ * relation records no branch of its own.
+ */
+const GROUP_BRANCH = "main";
+
+/**
+ * The scope of a group document that holds its member list. It is the only
+ * scope group serving reaches, because it is the only one the audience must
+ * fold in order to evaluate auth with the group.
+ */
+const GROUP_MEMBERSHIP_SCOPE = "global";
+
+/**
+ * How many of a group's referencing documents are examined before a read of
+ * that group gives up and withholds. Each one costs a model build, and the
+ * relation is append-only, so an old and briefly-held reference still counts.
+ * Matches the cap a version-1 policy carries on its own grant list.
+ */
+const MAX_EXAMINED_REFERENCERS = 100;
 
 /**
  * The policy carried on a document, if it carries one. A document handed to the
@@ -177,9 +204,140 @@ export class ModelReadGate implements IReadGate {
   constructor(
     private readonly model: RegisteredDecisionModel,
     private readonly documentView: IDocumentView,
+    private readonly operationIndex?: IOperationIndex,
+    private readonly logger?: ILogger,
   ) {}
 
   async scopePredicate(
+    document: PHDocument,
+    subject: AuthSubject,
+    branch: string,
+    signal?: AbortSignal,
+  ): Promise<(scope: string) => boolean> {
+    const own = await this.ownPolicyPredicate(
+      document,
+      subject,
+      branch,
+      signal,
+    );
+
+    // The member list, and only it. What the audience is owed is the state it
+    // must fold to evaluate auth with this group; a group's other scopes are
+    // its own business and stay behind its own grants.
+    if (!this.servesGroup(document) || own(GROUP_MEMBERSHIP_SCOPE)) {
+      return own;
+    }
+
+    const audience = await this.servesGroupTo(
+      document.header.id,
+      subject,
+      signal,
+    );
+
+    return (scope: string) =>
+      own(scope) || (audience && scope === GROUP_MEMBERSHIP_SCOPE);
+  }
+
+  /**
+   * Whether the subject is served this group because a policy names it.
+   *
+   * A replica must fold a group's membership to evaluate auth with it, so a
+   * group a grant names is served to the audience of the document that names
+   * it, whatever the group's own read grants say. Naming a group in a policy
+   * publishes its roster to that policy's audience; a group whose membership
+   * must stay confidential does not belong in a grant.
+   *
+   * The referencing document's own domain scopes are the test. Its `auth` and
+   * `document` scopes are readable by every holder, so testing those would
+   * serve every referenced group to everybody.
+   *
+   * One level only. A referencer that is itself a group is skipped, and a
+   * referencer's own readability is decided from its policy alone, so a
+   * reference cycle terminates. Cycles are reachable: the reference relation
+   * is recorded from an operation's input, including one later stored denied,
+   * so a refused grant naming a group from inside another group leaves a row
+   * behind that validation never saw.
+   */
+  private async servesGroupTo(
+    groupId: string,
+    subject: AuthSubject,
+    signal?: AbortSignal,
+  ): Promise<boolean> {
+    if (!this.operationIndex) {
+      return false;
+    }
+
+    const referencers = await this.operationIndex.getGroupReferencers(
+      groupId,
+      signal,
+    );
+
+    // A group named by an unbounded number of documents would otherwise cost
+    // one model build each on every read of it. Truncating denies, which is
+    // the direction that withholds.
+    const examined = referencers.slice(0, MAX_EXAMINED_REFERENCERS);
+    if (examined.length < referencers.length) {
+      this.logger?.warn(
+        `Group ${groupId} is referenced by ${referencers.length} documents; only the first ${MAX_EXAMINED_REFERENCERS} decide whether it is served`,
+      );
+    }
+
+    for (const referencerId of examined) {
+      if (await this.servesThrough(referencerId, subject, signal)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /** Whether one referencing document serves the subject any domain scope. */
+  private async servesThrough(
+    referencerId: string,
+    subject: AuthSubject,
+    signal?: AbortSignal,
+  ): Promise<boolean> {
+    let referencer: PHDocument;
+    try {
+      // The main branch, because the reference relation records no branch: a
+      // group's member list lives there whatever branch names it.
+      referencer = await this.documentView.get(
+        referencerId,
+        { branch: GROUP_BRANCH },
+        undefined,
+        signal,
+      );
+    } catch {
+      // A referencer this replica does not hold serves nothing, which fails
+      // closed the same way a group it does not hold does.
+      return false;
+    }
+
+    if (this.servesGroup(referencer)) {
+      return false;
+    }
+
+    const readable = await this.ownPolicyPredicate(
+      referencer,
+      subject,
+      GROUP_BRANCH,
+      signal,
+    );
+
+    return Object.keys((referencer.state ?? {}) as Record<string, unknown>)
+      .filter((scope) => !ALWAYS_READABLE_SCOPES.has(scope))
+      .some((scope) => readable(scope));
+  }
+
+  private servesGroup(document: PHDocument): boolean {
+    return (
+      this.operationIndex !== undefined &&
+      document.header.documentType === groupDocumentType
+    );
+  }
+
+  /** What this document's own policy says, with no group serving applied. */
+  private async ownPolicyPredicate(
     document: PHDocument,
     subject: AuthSubject,
     branch: string,
