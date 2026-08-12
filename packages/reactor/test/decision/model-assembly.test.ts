@@ -379,6 +379,40 @@ describe("the auth model's decision steps", () => {
 });
 
 /**
+ * The document-only model carries the same read exemption as the auth model, so
+ * a read reaching either one is answered the same way.
+ */
+describe("the document model's deletion refusal", () => {
+  const definition = documentDecisionModel({ documentId: "d", branch: "main" });
+
+  function model(isDeleted: boolean) {
+    return { document: { isDeleted } as never as PHDocumentState };
+  }
+
+  it("refuses a write on a deleted document", () => {
+    expect(
+      definition.decide(
+        model(true),
+        { address: "0xabc" },
+        { verb: "execute", scope: "global", operation: "SET_NAME" },
+        { scopeState: undefined },
+      ),
+    ).toEqual({ decision: "deny", reason: DOCUMENT_DELETED_REASON });
+  });
+
+  it("does not refuse a read on a deleted document", () => {
+    expect(
+      definition.decide(
+        model(true),
+        { address: "0xabc" },
+        { verb: "read", scope: "global" },
+        { scopeState: undefined },
+      ),
+    ).toEqual({ decision: "allow" });
+  });
+});
+
+/**
  * The carve-out matches on `subject.key` and an `{address}` grant on
  * `subject.address`, so an anonymous replay would let a policy deny its own
  * author's history.
