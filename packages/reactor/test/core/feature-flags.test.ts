@@ -3,6 +3,7 @@ import { documentModelDocumentModelModule } from "document-model";
 import { describe, expect, it } from "vitest";
 import {
   FLAG_PREREQUISITES,
+  resolveFeatureFlags,
   validateFeatureFlags,
 } from "../../src/core/feature-flags.js";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
@@ -162,5 +163,60 @@ describe("feature flag validation", () => {
       .build();
 
     reactor.kill();
+  });
+});
+
+/**
+ * Every consumer resolves the same partial flag set, and the read surface is
+ * one of them, so the resolution is shared rather than repeated.
+ */
+describe("resolveFeatureFlags", () => {
+  it("defaults every flag off", () => {
+    expect(resolveFeatureFlags()).toEqual({
+      documentDecisions: false,
+      authEnforcement: false,
+      authGroups: false,
+      authConditions: false,
+    });
+    expect(resolveFeatureFlags({})).toEqual(resolveFeatureFlags());
+  });
+
+  it("fills in the flags the caller left out", () => {
+    expect(resolveFeatureFlags({ documentDecisions: true })).toEqual({
+      documentDecisions: true,
+      authEnforcement: false,
+      authGroups: false,
+      authConditions: false,
+    });
+  });
+
+  it("still validates what the caller passed", () => {
+    expect(() => resolveFeatureFlags({ authEnforcement: true })).toThrow(
+      /authEnforcement requires documentDecisions/,
+    );
+    expect(() =>
+      resolveFeatureFlags({ hypotheticalLaterStage: true } as never),
+    ).toThrow(/Unrecognized reactor feature flag/);
+  });
+
+  it("reports the resolved flags on the module the client is built from", async () => {
+    const module = await new ReactorBuilder()
+      .withDocumentModelSources([
+        documentModelDocumentModelModule as never,
+        driveDocumentModelModule as never,
+      ])
+      .withExecutorConfig({
+        featureFlags: { documentDecisions: true, authEnforcement: true },
+      })
+      .buildModule();
+
+    expect(module.featureFlags).toEqual({
+      documentDecisions: true,
+      authEnforcement: true,
+      authGroups: false,
+      authConditions: false,
+    });
+
+    module.reactor.kill();
   });
 });
