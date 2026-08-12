@@ -3,6 +3,7 @@ import { KyselyOperationStore } from "../storage/kysely/store.js";
 import type { PreflightOptions } from "./preflight-options.js";
 import { parsePreflightOptions, PREFLIGHT_USAGE } from "./preflight-options.js";
 import type { Database } from "../storage/kysely/types.js";
+import { sweepDocumentVersions } from "./document-version-sweep.js";
 import { sweepStreamOrder } from "./stream-order-sweep.js";
 
 async function openDatabase(
@@ -68,6 +69,20 @@ async function main() {
 
     console.log(
       `${streamsChecked} stream(s) checked in ${options.schema}, ${failed} unsafe for authEnforcement`,
+    );
+
+    const versions = await sweepDocumentVersions(scoped);
+    for (const failure of versions.failures) {
+      console.error(
+        `${failure.documentId} document@${failure.branch}: reducer version ` +
+          `${failure.fromVersion} -> ${failure.toVersion} at index ${failure.index}`,
+      );
+    }
+
+    failed += versions.failures.length;
+    console.log(
+      `${versions.documentsChecked} document(s) checked in ${options.schema}, ` +
+        `${versions.failures.length} unsafe for authConditions`,
     );
   } catch (error) {
     console.error(

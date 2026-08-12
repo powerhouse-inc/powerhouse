@@ -1,6 +1,7 @@
 import { generateId, type Action } from "@powerhousedao/shared/document-model";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { sweepDocumentVersions } from "../../src/admin/document-version-sweep.js";
 import { parsePreflightOptions } from "../../src/admin/preflight-options.js";
 import { sweepStreamOrder } from "../../src/admin/stream-order-sweep.js";
 import { REACTOR_SCHEMA } from "../../src/storage/migrations/migrator.js";
@@ -107,6 +108,118 @@ describe("sweepStreamOrder", () => {
     const result = await sweepStreamOrder(db, store, "global");
 
     expect(result.streamsChecked).toBe(1);
+    expect(result.failures).toHaveLength(0);
+  });
+});
+
+/**
+ * A positional walk resolves one reducer for the whole range, so a history that
+ * crosses a reducer-version boundary folds with the wrong one and admission and
+ * replay disagree about a condition. The sweep is what keeps authConditions off
+ * a fleet holding one.
+ */
+describe("sweepDocumentVersions", () => {
+  let db: Kysely<DatabaseSchema>;
+  let store: KyselyOperationStore;
+
+  const branch = "main";
+  const documentType = "powerhouse/test";
+
+  beforeEach(async () => {
+    const setup = await createTestOperationStore();
+    db = setup.db;
+    store = setup.store;
+  });
+
+  afterEach(async () => {
+    await db.destroy();
+  });
+
+  async function seedUpgrades(
+    documentId: string,
+    upgrades: Array<{ fromVersion: number; toVersion: number }>,
+  ): Promise<void> {
+    for (let i = 0; i < upgrades.length; i++) {
+      const action: Action = {
+        type: "UPGRADE_DOCUMENT",
+        input: upgrades[i],
+        scope: "document",
+        id: generateId(),
+        timestampUtcMs: `2026-01-01T00:00:0${i}.000Z`,
+      };
+      await store.apply(
+        documentId,
+        documentType,
+        "document",
+        branch,
+        i,
+        (txn) => {
+          txn.addOperations({
+            index: i,
+            timestampUtcMs: action.timestampUtcMs,
+            hash: generateId(),
+            skip: 0,
+            id: generateId(),
+            action,
+          });
+        },
+      );
+    }
+  }
+
+  /**
+   * reactor.create submits an upgrade from version zero in the create batch, and
+   * the rebuild applies those inline, so they are not boundaries. Reporting them
+   * would report every document in every fleet.
+   */
+  it("passes a store holding only creation-time seeds", async () => {
+    await seedUpgrades(generateId(), [{ fromVersion: 0, toVersion: 1 }]);
+    await seedUpgrades(generateId(), [{ fromVersion: 0, toVersion: 3 }]);
+
+    const result = await sweepDocumentVersions(db);
+
+    expect(result.documentsChecked).toBe(2);
+    expect(result.failures).toHaveLength(0);
+  });
+
+  it("reports a document upgraded across a reducer version", async () => {
+    const upgradedId = generateId();
+    await seedUpgrades(generateId(), [{ fromVersion: 0, toVersion: 1 }]);
+    await seedUpgrades(upgradedId, [
+      { fromVersion: 0, toVersion: 1 },
+      { fromVersion: 1, toVersion: 2 },
+    ]);
+
+    const result = await sweepDocumentVersions(db);
+
+    expect(result.documentsChecked).toBe(2);
+    expect(result.failures).toHaveLength(1);
+    expect(result.failures[0]).toMatchObject({
+      documentId: upgradedId,
+      branch,
+      fromVersion: 1,
+      toVersion: 2,
+      index: 1,
+    });
+  });
+
+  it("reports every boundary in a document that crossed more than one", async () => {
+    const documentId = generateId();
+    await seedUpgrades(documentId, [
+      { fromVersion: 0, toVersion: 1 },
+      { fromVersion: 1, toVersion: 2 },
+      { fromVersion: 2, toVersion: 3 },
+    ]);
+
+    const result = await sweepDocumentVersions(db);
+
+    expect(result.failures.map((f) => f.toVersion)).toEqual([2, 3]);
+  });
+
+  it("passes an empty store", async () => {
+    const result = await sweepDocumentVersions(db);
+
+    expect(result.documentsChecked).toBe(0);
     expect(result.failures).toHaveLength(0);
   });
 });
