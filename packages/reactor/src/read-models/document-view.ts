@@ -4,7 +4,10 @@ import type {
   PHDocument,
   PHDocumentHeader,
 } from "@powerhousedao/shared/document-model";
-import { createAuthState } from "@powerhousedao/shared/document-model";
+import {
+  createAuthState,
+  isDenied,
+} from "@powerhousedao/shared/document-model";
 import type { Kysely } from "kysely";
 import { v4 as uuidv4 } from "uuid";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
@@ -95,15 +98,23 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
 
         const operationType = operation.action.type;
 
+        // A refused operation holds its index and changes nothing, so it must
+        // not carry its action type's side effects. A refused DELETE_DOCUMENT
+        // is the case that matters: taking the branch below would hide the
+        // document from every listing and destroy its slug mapping, with
+        // nothing in any path to put either back.
+        const denied = isDenied(operation);
+
         // Non-header ops carry a denormalized header echo with possibly stale
         // `meta`; only header-scope ops and CREATE/UPGRADE/DELETE may write it.
         const preserveHeaderMeta =
-          operationType !== "CREATE_DOCUMENT" &&
-          operationType !== "UPGRADE_DOCUMENT" &&
-          operationType !== "DELETE_DOCUMENT" &&
-          scope !== "header";
+          denied ||
+          (operationType !== "CREATE_DOCUMENT" &&
+            operationType !== "UPGRADE_DOCUMENT" &&
+            operationType !== "DELETE_DOCUMENT" &&
+            scope !== "header");
 
-        if (operationType === "DELETE_DOCUMENT") {
+        if (operationType === "DELETE_DOCUMENT" && !denied) {
           const now = new Date();
           await trx
             .updateTable("DocumentSnapshot")
