@@ -817,37 +817,51 @@ Exit test: a document whose policy grants a peer `read` on one domain scope and 
 A migration reads the tables and submits a genesis per document. It cannot write rows: grants are event-sourced, so installing one means an operation through the executor.
 
 ```
-INITIALIZE_AUTH per document, from:
-  DocumentProtection.owner    -> allow {address: owner}  read (all scopes)
-                              -> allow {address: owner}  execute on "auth"
-  DocumentPermission READ     -> allow {address}         read (all scopes)
-  DocumentPermission WRITE    -> allow {address}         read, and execute on
-                                 each domain scope named explicitly
-  DocumentPermission ADMIN    -> allow {address}         read and execute (all scopes)
+INITIALIZE_AUTH per document, one ordered grant list:
+
+  1. READ  rows      -> allow {address}      read     "*"
+  2. WRITE rows      -> allow {address}      read     "*"
+                     -> allow {address}      execute  "*"
+  3. restricted ops  -> deny  {anyone}       execute  {scope, operation: [OP]}
+                     -> allow {address}      execute  {scope, operation: [OP]}
+                        for each address the restriction names
+  4.                 -> deny  {anyone}       execute  "auth"
+  5. owner,          -> allow {address}      read     "*"
+     ADMIN rows      -> allow {address}      execute  "*"
 ```
 
-`WRITE` is the trap. An `execute` capability that omits its scope covers `auth`, so the obvious translation hands policy administration to everyone the table names, permanently and replicated. Enumerating the domain scopes instead is correct for the scopes that exist and silently fails to cover one added later.
+The order carries the whole translation, and every step exists to claw something back that the step before it granted too widely.
 
-No document has a signed header, so a genesis binds no creator whoever signs it, and the creator carve-out that keeps administration reachable does not exist for any migrated document. Every migrated policy must therefore carry an explicit `execute`-on-`auth` grant or the genesis is rejected as born locked out — and whose address that is becomes the fleet's administration root.
+An `execute` capability that omits its scope covers `auth`, so a `WRITE` row written as a bare execute grant would hand policy administration to everyone the table names, permanently and replicated. Step four takes it back and step five returns it to the owner and the administrators alone — which is what `WRITE` meant. A per-operation restriction works the same way one level down: the table restricts an operation by holding a row for it at all, so step three denies it to everyone and re-allows only the addresses the restriction names. Step five passes over both, which is the table's rule that an owner and an administrator are not subject to either.
+
+Reclaiming by order rather than by enumerating the domain scopes matters beyond tidiness. An enumerated list is correct for the scopes a document has on the day it migrates and silently fails to cover one added afterwards, which turns a write nobody authorized into a write nobody can make.
+
+No document has a signed header, so a genesis binds no creator whoever signs it, and the creator carve-out that keeps administration reachable does not exist for any migrated document. Every migrated policy must therefore carry an explicit `execute`-on-`auth` grant or the genesis is rejected as born locked out. The owner supplies that address. A document with no owner has nobody the tables name as its administrator, and the migration refuses it and reports it rather than choosing one: inventing an administrator is granting permanent control of a document to an address its access list never mentioned.
 
 What has no faithful translation is refused and reported, never approximated, because every approximation changes live access silently:
 
 - Protection inherited from an ancestor. Grants do not inherit, so the closure has to be materialized onto every descendant, and a document added to that drive afterwards inherits nothing.
 - A document whose principals exceed the version-1 cap of 100 grants.
-- Node-local administrators, which have no in-document form at all. A replicated policy cannot express "the operator of this node reads everything", because a replica cannot verify it.
+- Node-local administrators. These are not refused, they are dropped, because there is nothing to translate: the reactor has no such concept and never had one. The only carve-out in `decide` is the per-document creator, deliberately, since a node-local list cannot be verified by a replica and an operation one admitted would replay as refused everywhere else. An administrator who could read past a document's policy at the host while the reactor denies the same read is an inconsistency, not a feature, so the migration does not preserve it.
 - A host configured to protect by default, where a missing row means closed rather than open. The migration refuses to run against one rather than writing a genesis onto every document in the store.
 
-Migrating also publishes every access list. The auth scope is readable by every holder of a document, so a grant naming an address tells every replica who that address is. The tables are private to the host today.
+Migrating publishes every access list, and that is accepted rather than mitigated. The auth scope is readable by every holder of a document, so a grant naming an address tells every replica who that address is, where the tables are private to one host today. It is the same posture the spec already takes for a group's roster: state a replica must fold to evaluate a policy cannot be withheld from it without breaking convergence. A document whose access list must stay confidential cannot have a replicated policy at all.
 
 The migration runs on one replica with auth writes quiesced, because two writers produce tied timestamps on a stream the monotonic rule refuses to replicate and that is never reshuffled — an unrepairable state. It is idempotent by skipping any document whose auth scope is already initialized, and it writes nothing for a document with no rows, whose empty policy is already the correct translation of "unprotected".
 
-Exit test: against a store carrying each construct — a protected drive with an inherited grant, a protected document with an owner, an unprotected document, a restricted operation, and one document past the grant cap — a dry run reports exactly what it cannot express and writes nothing. A real run then produces, for every migrated document, a policy under which the read gate and the permission tables return the same answer for every subject, scope and operation in the fixture; the over-cap document is untouched and reported; a second run writes no operation; and `preflight:auth` reports the fleet clean.
+Exit test: against a store carrying each construct — a protected drive with an inherited grant, a protected document with an owner, an unprotected document, a restricted operation, and one document past the grant cap — a dry run reports exactly what it cannot express and writes nothing. A real run then produces, for every migrated document, a policy under which the read gate and the permission tables return the same answer for every subject, scope and operation in the fixture — with one deliberate exception, a node administrator, who the tables answer for and the policy does not. The over-cap document is untouched and reported, a second run writes no operation, and `preflight:auth` reports the fleet clean.
 
 **Stage 10: retiring the permission tables (`authEnforcement`).** The host stops consulting its tables on the read path: the subgraph read helpers, the per-item list filters, the subscription predicates, the attachment gate, and the intersection stage 8 introduced. The auth scope becomes the only read authorization.
 
 Turning this on for a fleet that never migrated makes every document readable by anyone, silently — every policy is uninitialized, so the gate allows everything. That is the one failure this stage must make impossible, so it is a boot assertion rather than a note: a reactor refuses to start with `authEnforcement` on when the tables hold rows and the migration has not run.
 
-Two things do not port and need their own answer rather than a translation. Listings drop whole documents today, while the gate withholds scopes and always serves the header — so a listing that only filtered scopes would make every id, slug, name and access list enumerable. A document-level verdict has to be synthesized for them: readable if any gated scope is. And the surfaces that never consulted the tables at all — drive node trees, analytics, package listings, the MCP endpoint — are not made safe by this stage and are not made less safe by it; each is its own read surface to gate.
+Two things do not port and need their own answer rather than a translation.
+
+Listings keep dropping whole documents. The gate withholds scopes and always serves the header, so a listing that only filtered scopes would leave every id, slug, name and access list enumerable by anyone who can reach the endpoint. A listing therefore synthesizes a document-level verdict from the gate — readable if any gated scope is — and omits the rest, which is what it does today and what the read surface already does for a deleted document.
+
+The surfaces that never consulted the tables at all — drive node trees, analytics, package listings, the MCP endpoint — are neither made safe by this stage nor made less safe by it. Each is its own read surface to gate, and saying so here is not a plan to do it.
+
+Administration of the node survives this stage; administration of a document does not. Installing a package or reaching the MCP endpoint is not a read of any document and no policy governs it, so the operator check stays where it is. What goes is the shortcut that let that same check skip a document's read filter.
 
 Exit test: the existing read-denial suites pass with `authEnforcement` on against the migrated fixture, with their assertions restated from which check was called to what the caller received. And a reactor booting with the flag on, against a store holding unmigrated rows, fails to boot rather than serving.
 
