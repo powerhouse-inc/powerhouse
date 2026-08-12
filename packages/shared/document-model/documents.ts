@@ -555,9 +555,14 @@ export function replayDocument<TState extends PHBaseState = PHBaseState>(
     result = operationsToReplay.reduce((document, operation) => {
       // A denied operation holds its position without contributing state. The
       // reactor skips it on every rebuild, so a replay that applied it would
-      // produce different state from the reactor that served the history.
+      // produce different state from the reactor that served the history. It
+      // still occupies its index, so the scope's revision counts it.
       if (isDenied(operation)) {
-        return appendWithoutApplying(document, operation);
+        return updateHeaderRevision(
+          appendWithoutApplying(document, operation),
+          operation.action.scope,
+          operation.timestampUtcMs,
+        ) as PHDocument<TState>;
       }
 
       const doc = reducer(document, operation.action, dispatch, {
