@@ -12,8 +12,13 @@ import { MAX_SUPPORTED_AUTH_VERSION } from "@powerhousedao/shared/document-model
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { encodeCompositeCursor } from "../../src/client/cursor.js";
 import { ReactorClient } from "../../src/client/reactor-client.js";
-import { canReadScope } from "../../src/client/util.js";
-import { authDecisionModel } from "../../src/decision/auth-decision-model.js";
+import { resolveFeatureFlags } from "../../src/core/feature-flags.js";
+import type { IReadGate } from "../../src/decision/read-gate.js";
+import {
+  BareReadGate,
+  ModelReadGate,
+  readDecisionModel,
+} from "../../src/decision/read-gate.js";
 import type { IReactorClient } from "../../src/client/types.js";
 import type { BatchExecutionResult, IReactor } from "../../src/core/types.js";
 import type { IJobAwaiter } from "../../src/shared/awaiter.js";
@@ -1980,10 +1985,11 @@ describe("ReactorClient Unit Tests", () => {
       });
 
       expect(page.results.map((op) => op.index)).toEqual([0]);
-      // the policy fetch carries the view's branch
+      // The whole document, not only the policy: a conditional read grant
+      // reads the state of the scope it gates.
       expect(vi.mocked(mockReactor.getByIdOrSlug)).toHaveBeenCalledWith(
         "d1",
-        { scopes: ["auth"], branch: "main" },
+        { branch: "main" },
         undefined,
         undefined,
       );
@@ -2038,7 +2044,7 @@ describe("ReactorClient Unit Tests", () => {
         ]);
       });
 
-      it("filters unreadable scopes out of the updated callback", () => {
+      it("filters unreadable scopes out of the updated callback", async () => {
         const updated = vi.fn();
         let fire: ((result: { results: PHDocument[] }) => void) | undefined;
         const manager = createMockSubscriptionManager({
@@ -2073,6 +2079,8 @@ describe("ReactorClient Unit Tests", () => {
           ],
         });
 
+        await vi.waitFor(() => expect(updated).toHaveBeenCalled());
+
         const event = updated.mock.calls[0][0] as { documents: PHDocument[] };
         expect(Object.keys(event.documents[0].state).sort()).toEqual([
           "auth",
@@ -2096,11 +2104,15 @@ describe("ReactorClient Unit Tests", () => {
     });
 
     /**
-     * The read gate and the decision model must stay the same algorithm plus one
-     * named carve-out, or a document becomes readable on one path and not the
-     * other. This is what holds them together.
+     * Turning authEnforcement on must not change what a policy that uses no
+     * groups and no conditions serves. The two gates are different code paths --
+     * one evaluates the policy directly, the other builds the decision model
+     * and asks it -- so this pins them to the same answer over the policies
+     * where they are meant to agree, including the carve-out and the version
+     * gate. Where they are meant to differ is covered in the read-gate tests:
+     * only the model gate applies a group or conditional grant.
      */
-    describe("agreement with the decision model", () => {
+    describe("agreement between the bare and model read gates", () => {
       const uninitialized: PHAuthState = { version: 0, grants: [] };
       const allowAll: PHAuthState = {
         version: 1,
@@ -2143,41 +2155,59 @@ describe("ReactorClient Unit Tests", () => {
         ["anonymous", {}],
       ];
 
-      const definition = authDecisionModel({
-        documentId: "d1",
-        branch: "main",
-      });
+      const bare: IReadGate = new BareReadGate();
 
-      function modelSays(
+      function modelGate(): IReadGate {
+        const model = readDecisionModel(
+          resolveFeatureFlags({
+            documentDecisions: true,
+            authEnforcement: true,
+            authGroups: true,
+            authConditions: true,
+          }),
+          { getModule: () => ({}) } as never,
+        );
+        if (!model) {
+          throw new Error("expected a model");
+        }
+        return new ModelReadGate(model, mockDocumentView);
+      }
+
+      async function bothSay(
         auth: PHAuthState,
         subject: AuthSubject,
         scope: string,
         isDeleted: boolean,
-      ): boolean {
-        return (
-          definition.decide(
-            {
-              document: { isDeleted } as never as PHDocumentState,
-              auth,
-            },
-            subject,
-            { verb: "read", scope },
-            { scopeState: undefined },
-          ).decision === "allow"
+      ): Promise<[boolean, boolean]> {
+        const document = docWithScopes("d1", auth, {
+          global: {},
+          custom: {},
+        });
+        (document.state as Record<string, unknown>).document = { isDeleted };
+
+        const bareSays = await bare.scopePredicate(document, subject, "main");
+        const modelSays = await modelGate().scopePredicate(
+          document,
+          subject,
+          "main",
         );
+        return [bareSays(scope), modelSays(scope)];
       }
 
       it.each(policies)(
-        "agrees with the model on a domain scope under a %s policy",
-        (_name, auth) => {
+        "agree on a domain scope under a %s policy",
+        async (_name, auth) => {
           for (const [, subject] of subjects) {
             for (const isDeleted of [false, true]) {
-              expect(canReadScope(auth, subject, "global")).toBe(
-                modelSays(auth, subject, "global", isDeleted),
-              );
-              expect(canReadScope(auth, subject, "custom")).toBe(
-                modelSays(auth, subject, "custom", isDeleted),
-              );
+              for (const scope of ["global", "custom"]) {
+                const [bareSays, modelSays] = await bothSay(
+                  auth,
+                  subject,
+                  scope,
+                  isDeleted,
+                );
+                expect(modelSays).toBe(bareSays);
+              }
             }
           }
         },
@@ -2188,24 +2218,30 @@ describe("ReactorClient Unit Tests", () => {
        * policy would see an open auth scope and diverge permanently.
        */
       it.each(["auth", "document"])(
-        "always serves the %s scope, whatever the policy says",
-        (scope) => {
+        "both always serve the %s scope, whatever the policy says",
+        async (scope) => {
           for (const [, auth] of policies) {
             for (const [, subject] of subjects) {
-              expect(canReadScope(auth, subject, scope)).toBe(true);
+              const [bareSays, modelSays] = await bothSay(
+                auth,
+                subject,
+                scope,
+                false,
+              );
+              expect(bareSays).toBe(true);
+              expect(modelSays).toBe(true);
             }
           }
         },
       );
 
       // A read has no position, so the positional deletion step does not gate it.
-      it("does not let deletion change a read decision", () => {
-        expect(modelSays(allowAll, {}, "global", true)).toBe(
-          modelSays(allowAll, {}, "global", false),
-        );
-        expect(modelSays(denyAll, {}, "global", true)).toBe(
-          modelSays(denyAll, {}, "global", false),
-        );
+      it("neither lets deletion change a read decision", async () => {
+        for (const auth of [allowAll, denyAll]) {
+          const deleted = await bothSay(auth, {}, "global", true);
+          const live = await bothSay(auth, {}, "global", false);
+          expect(deleted).toEqual(live);
+        }
       });
     });
   });

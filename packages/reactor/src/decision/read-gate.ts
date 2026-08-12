@@ -25,6 +25,15 @@ export const ALWAYS_READABLE_SCOPES: ReadonlySet<string> = new Set([
   "document",
 ]);
 
+/**
+ * The policy carried on a document, if it carries one. A document handed to the
+ * gate with no state at all is not policied, so it is not gated.
+ */
+function authOf(document: PHDocument): PHAuthState | undefined {
+  const state = document.state as { auth?: PHAuthState } | undefined;
+  return state?.auth;
+}
+
 /** Whether a subject may read each scope of one document. */
 export interface IReadGate {
   /**
@@ -69,7 +78,7 @@ export class BareReadGate implements IReadGate {
     document: PHDocument,
     subject: AuthSubject,
   ): Promise<(scope: string) => boolean> {
-    const auth = (document.state as { auth?: PHAuthState }).auth;
+    const auth = authOf(document);
     return Promise.resolve(
       (scope: string) =>
         ALWAYS_READABLE_SCOPES.has(scope) ||
@@ -176,7 +185,7 @@ export class ModelReadGate implements IReadGate {
     branch: string,
     signal?: AbortSignal,
   ): Promise<(scope: string) => boolean> {
-    const auth = (document.state as { auth?: PHAuthState }).auth;
+    const auth = authOf(document);
 
     // An unpoliced document is readable in full, which is the common case and
     // the one worth answering without building anything. The test is the one
@@ -197,7 +206,7 @@ export class ModelReadGate implements IReadGate {
 
     // The read-set the build recorded guards a write, and a read makes none.
     const definition = this.model(target);
-    const scopeStates = document.state as Record<string, unknown>;
+    const scopeStates = (document.state ?? {}) as Record<string, unknown>;
 
     return (scope: string) =>
       ALWAYS_READABLE_SCOPES.has(scope) ||
