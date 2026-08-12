@@ -1,3 +1,21 @@
+## 6.2.2-dev.44 (2026-08-12)
+
+### 🚀 Features
+
+- **reactor-api,codegen:** register upgrade manifests on the switchboard ([85383aa0f](https://github.com/powerhouse-inc/powerhouse/commit/85383aa0f))
+- **reactor-group:** ship the PHGroup document model as @powerhousedao/reactor-group ([d5a323016](https://github.com/powerhouse-inc/powerhouse/commit/d5a323016))
+
+### 🩹 Fixes
+
+- **shared:** harden the condition evaluator per review ([eea3fb475](https://github.com/powerhouse-inc/powerhouse/commit/eea3fb475))
+- **reactor-api:** load upgrade manifests from projects generated before the aggregate re-export ([3b26efce8](https://github.com/powerhouse-inc/powerhouse/commit/3b26efce8))
+- **reactor-api:** keep every document model version in the switchboard registry ([bcc8bd19f](https://github.com/powerhouse-inc/powerhouse/commit/bcc8bd19f))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5
+
 ## 6.2.2-dev.43 (2026-08-11)
 
 This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.

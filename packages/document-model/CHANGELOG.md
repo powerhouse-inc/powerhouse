@@ -1,3 +1,20 @@
+## 6.2.2-dev.44 (2026-08-12)
+
+### 🚀 Features
+
+- **shared:** version-1 condition evaluator behind a condition context ([7268bc40a](https://github.com/powerhouse-inc/powerhouse/commit/7268bc40a))
+- **shared:** group membership evaluators for the auth scope ([b66ce3167](https://github.com/powerhouse-inc/powerhouse/commit/b66ce3167))
+- **reactor-group:** ship the PHGroup document model as @powerhousedao/reactor-group ([d5a323016](https://github.com/powerhouse-inc/powerhouse/commit/d5a323016))
+
+### 🩹 Fixes
+
+- **shared:** harden the condition evaluator per review ([eea3fb475](https://github.com/powerhouse-inc/powerhouse/commit/eea3fb475))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5
+
 ## 6.2.2-dev.43 (2026-08-11)
 
 ### 🚀 Features

@@ -1,3 +1,20 @@
+## 6.2.2-dev.44 (2026-08-12)
+
+### 🚀 Features
+
+- **codegen:** derive upgrade migrations instead of generating a no-op stub ([f197a13cb](https://github.com/powerhouse-inc/powerhouse/commit/f197a13cb))
+- **reactor-api,codegen:** register upgrade manifests on the switchboard ([85383aa0f](https://github.com/powerhouse-inc/powerhouse/commit/85383aa0f))
+- **reactor-group:** ship the PHGroup document model as @powerhousedao/reactor-group ([d5a323016](https://github.com/powerhouse-inc/powerhouse/commit/d5a323016))
+
+### 🩹 Fixes
+
+- **shared:** harden the condition evaluator per review ([eea3fb475](https://github.com/powerhouse-inc/powerhouse/commit/eea3fb475))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5
+
 ## 6.2.2-dev.43 (2026-08-11)
 
 ### 🚀 Features

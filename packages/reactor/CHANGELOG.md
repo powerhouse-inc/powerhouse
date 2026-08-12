@@ -1,3 +1,22 @@
+## 6.2.2-dev.44 (2026-08-12)
+
+### 🚀 Features
+
+- **reactor:** evaluate conditions against state at position (authConditions) ([9f0bae788](https://github.com/powerhouse-inc/powerhouse/commit/9f0bae788))
+- **reactor:** declare the authConditions flag ([72aac005f](https://github.com/powerhouse-inc/powerhouse/commit/72aac005f))
+- **reactor:** re-evaluate referencing documents when a group's membership changes ([351a1c893](https://github.com/powerhouse-inc/powerhouse/commit/351a1c893))
+- **reactor:** authGroups enforcement - groups projection, positional walk, group references ([afb95e3ff](https://github.com/powerhouse-inc/powerhouse/commit/afb95e3ff))
+- **reactor-group:** ship the PHGroup document model as @powerhousedao/reactor-group ([d5a323016](https://github.com/powerhouse-inc/powerhouse/commit/d5a323016))
+
+### 🩹 Fixes
+
+- **shared:** harden the condition evaluator per review ([eea3fb475](https://github.com/powerhouse-inc/powerhouse/commit/eea3fb475))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5
+
 ## 6.2.2-dev.43 (2026-08-11)
 
 ### 🚀 Features

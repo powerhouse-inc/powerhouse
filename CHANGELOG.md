@@ -1,3 +1,35 @@
+## 6.2.2-dev.44 (2026-08-12)
+
+### 🚀 Features
+
+- **codegen:** derive upgrade migrations instead of generating a no-op stub ([f197a13cb](https://github.com/powerhouse-inc/powerhouse/commit/f197a13cb))
+- **reactor:** authGroups enforcement - groups projection, positional walk, group references ([afb95e3ff](https://github.com/powerhouse-inc/powerhouse/commit/afb95e3ff))
+- **reactor:** re-evaluate referencing documents when a group's membership changes ([351a1c893](https://github.com/powerhouse-inc/powerhouse/commit/351a1c893))
+- **reactor:** declare the authConditions flag ([72aac005f](https://github.com/powerhouse-inc/powerhouse/commit/72aac005f))
+- **reactor:** evaluate conditions against state at position (authConditions) ([9f0bae788](https://github.com/powerhouse-inc/powerhouse/commit/9f0bae788))
+- **reactor:** auth-scope stage 5 — group principals (authGroups) ([#2903](https://github.com/powerhouse-inc/powerhouse/pull/2903))
+- **reactor:** auth-scope stage 6 — conditions (authConditions) ([#2905](https://github.com/powerhouse-inc/powerhouse/pull/2905))
+- **reactor-api,codegen:** register upgrade manifests on the switchboard ([85383aa0f](https://github.com/powerhouse-inc/powerhouse/commit/85383aa0f))
+- **reactor-group:** ship the PHGroup document model as @powerhousedao/reactor-group ([d5a323016](https://github.com/powerhouse-inc/powerhouse/commit/d5a323016))
+- **shared:** group membership evaluators for the auth scope ([b66ce3167](https://github.com/powerhouse-inc/powerhouse/commit/b66ce3167))
+- **shared:** version-1 condition evaluator behind a condition context ([7268bc40a](https://github.com/powerhouse-inc/powerhouse/commit/7268bc40a))
+
+### 🩹 Fixes
+
+- **connect:** surface a toast when a document upgrade fails ([fe9e35afe](https://github.com/powerhouse-inc/powerhouse/commit/fe9e35afe))
+- **package-e2e:** publish reactor-group to the local registry ([fce2627d6](https://github.com/powerhouse-inc/powerhouse/commit/fce2627d6))
+- **reactor-api:** keep every document model version in the switchboard registry ([bcc8bd19f](https://github.com/powerhouse-inc/powerhouse/commit/bcc8bd19f))
+- **reactor-api:** load upgrade manifests from projects generated before the aggregate re-export ([3b26efce8](https://github.com/powerhouse-inc/powerhouse/commit/3b26efce8))
+- **reactor-browser:** keep every module version across hot package updates ([5f262873a](https://github.com/powerhouse-inc/powerhouse/commit/5f262873a))
+- **shared:** harden the condition evaluator per review ([eea3fb475](https://github.com/powerhouse-inc/powerhouse/commit/eea3fb475))
+- **vetra-e2e:** keep the upgrade-repro diagnostic out of the default suite ([15b999529](https://github.com/powerhouse-inc/powerhouse/commit/15b999529))
+- **vetra-e2e:** keep the upgrade-repro diagnostic out of the default suite ([#2906](https://github.com/powerhouse-inc/powerhouse/pull/2906))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5
+
 ## 6.2.2-dev.43 (2026-08-11)
 
 ### 🚀 Features

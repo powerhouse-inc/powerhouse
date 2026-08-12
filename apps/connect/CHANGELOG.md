@@ -1,3 +1,19 @@
+## 6.2.2-dev.44 (2026-08-12)
+
+### 🚀 Features
+
+- **reactor-group:** ship the PHGroup document model as @powerhousedao/reactor-group ([d5a323016](https://github.com/powerhouse-inc/powerhouse/commit/d5a323016))
+
+### 🩹 Fixes
+
+- **shared:** harden the condition evaluator per review ([eea3fb475](https://github.com/powerhouse-inc/powerhouse/commit/eea3fb475))
+- **connect:** surface a toast when a document upgrade fails ([fe9e35afe](https://github.com/powerhouse-inc/powerhouse/commit/fe9e35afe))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5
+
 ## 6.2.2-dev.43 (2026-08-11)
 
 ### 🚀 Features
