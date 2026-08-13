@@ -1,3 +1,7 @@
+## 6.2.2-dev.45 (2026-08-13)
+
+This was a version bump only, there were no code changes.
+
 ## 6.2.2-dev.44 (2026-08-12)
 
 ### 🚀 Features
