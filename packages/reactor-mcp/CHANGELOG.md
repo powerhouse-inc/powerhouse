@@ -1,3 +1,7 @@
+## 6.2.2-dev.46 (2026-08-14)
+
+This was a version bump only for @powerhousedao/reactor-mcp to align it with other projects, there were no code changes.
+
 ## 6.2.2-dev.45 (2026-08-13)
 
 This was a version bump only for @powerhousedao/reactor-mcp to align it with other projects, there were no code changes.
