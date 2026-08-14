@@ -1,3 +1,13 @@
+## 6.2.2-dev.47 (2026-08-14)
+
+### 🩹 Fixes
+
+- **connect:** sync CSP registry origin to runtime packageRegistryUrl ([418652419](https://github.com/powerhouse-inc/powerhouse/commit/418652419))
+
+### ❤️ Thank You
+
+- Frank Pfeift
+
 ## 6.2.2-dev.46 (2026-08-14)
 
 This was a version bump only for @powerhousedao/registry to align it with other projects, there were no code changes.
