@@ -109,6 +109,39 @@ if [ -f "$RUNTIME_FILE" ] && [ -n "${PH_CONNECT_CONFIG_JSON:-}" ]; then
   rm -f "${RUNTIME_FILE}.tmp"
 fi
 
+# ============================================================
+# Content-Security-Policy registry-origin sync
+# ============================================================
+#
+# The CSP `script-src` allowance for the package-registry CDN is baked into
+# index.html at BUILD time (getConnectHtmlTags in connect-utils/vite-config.ts)
+# from the build's packageRegistryUrl. The package LOADER, in contrast, reads
+# the registry at RUNTIME from the merged powerhouse.config.json above. When an
+# operator points a studio at a different registry
+# (PH_CONNECT_CONFIG_JSON.packageRegistryUrl) than the one baked into the image
+# — e.g. a dev-registry studio running a prod-built Connect image — the loader
+# fetches package scripts from an origin the baked CSP does not allow, and the
+# browser blocks every install ("Failed to install package … CSP blocked
+# script-src-elem"). Re-sync the CSP origin to the effective registry here so
+# the two can never diverge, whatever the operator chose.
+#
+# The build emits single quotes HTML-escaped as `&#39;`; the fixed keyword tail
+# `&#39;unsafe-eval&#39;` anchors the single optional registry origin, which
+# runs to the directive-terminating `;`. Replacing that origin — or dropping it
+# when the effective registry is null — is idempotent, so this also runs
+# harmlessly when the operator made no override (origin already matches).
+INDEX_FILE="${DIST_DIR}/index.html"
+if [ -f "$INDEX_FILE" ] && [ -f "$RUNTIME_FILE" ]; then
+  REG=$(jq -r '.packageRegistryUrl // empty' "$RUNTIME_FILE")
+  if [ -n "$REG" ]; then
+    # Escape sed replacement metacharacters (& \ |) in the URL before splicing.
+    REG_ESC=$(printf '%s' "$REG" | sed -e 's/[&\\|]/\\&/g')
+    sed -i "s|\(&#39;unsafe-eval&#39;\)[^;]*;|\1 ${REG_ESC};|" "$INDEX_FILE"
+  else
+    sed -i "s|\(&#39;unsafe-eval&#39;\)[^;]*;|\1;|" "$INDEX_FILE"
+  fi
+fi
+
 echo "Testing nginx configuration..."
 nginx -t
 
