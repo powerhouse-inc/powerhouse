@@ -375,3 +375,160 @@ describe.skipIf(NEEDS_JQ)(
     });
   },
 );
+
+// The CSP `script-src` allowance for the package-registry CDN is baked into
+// index.html at BUILD time from `phPackageRegistryUrl` (getConnectHtmlTags in
+// connect-utils/vite-config.ts). The package LOADER, however, reads the
+// registry at RUNTIME from the merged powerhouse.config.json. When an operator
+// overrides `packageRegistryUrl` via PH_CONNECT_CONFIG_JSON (e.g. a dev-registry
+// studio running a prod-built image), the loader fetches from the new registry
+// but the baked CSP still only allows the old one — the browser blocks every
+// package script. The entrypoint must therefore re-sync the CSP registry origin
+// to the effective packageRegistryUrl after the config merge. Single quotes are
+// HTML-escaped as `&#39;` in the built artifact — the real serialization.
+describe.skipIf(NEEDS_JQ)(
+  "docker/connect-entrypoint.sh CSP registry sync",
+  () => {
+    let workDir: string;
+    let distDir: string;
+    let runtimeFile: string;
+    let indexFile: string;
+    let scriptPath: string;
+
+    // A minimal built index.html carrying the exact CSP <meta> the build emits.
+    function cspMeta(registry: string | null): string {
+      const origin = registry ? ` ${registry}` : "";
+      return (
+        `<meta http-equiv="Content-Security-Policy" content="script-src ` +
+        `&#39;self&#39; &#39;unsafe-inline&#39; &#39;unsafe-eval&#39;${origin}; ` +
+        `worker-src &#39;self&#39; blob:; object-src &#39;none&#39;; base-uri &#39;self&#39;;">`
+      );
+    }
+    function indexHtml(registry: string | null): string {
+      return `<!doctype html><html><head>${cspMeta(
+        registry,
+      )}<title>Connect</title></head><body><div id="root"></div></body></html>`;
+    }
+    // The script-src directive with a given registry origin, as it appears in
+    // the served HTML. Note `&#39;` embeds its own `;`, so a naive split on `;`
+    // is wrong — assert on this full fragment instead.
+    function scriptSrcFragment(registry: string | null): string {
+      const origin = registry ? ` ${registry}` : "";
+      return `script-src &#39;self&#39; &#39;unsafe-inline&#39; &#39;unsafe-eval&#39;${origin};`;
+    }
+
+    beforeEach(() => {
+      workDir = mkdtempSync(join(tmpdir(), "entrypoint-csp-test-"));
+      distDir = join(workDir, "dist");
+      mkdirSync(distDir, { recursive: true });
+      runtimeFile = join(distDir, "powerhouse.config.json");
+      indexFile = join(distDir, "index.html");
+      scriptPath = join(workDir, "connect-entrypoint.sh");
+      patchEntrypoint(ENTRYPOINT_SOURCE, scriptPath);
+    });
+
+    afterEach(() => {
+      rmSync(workDir, { recursive: true, force: true });
+    });
+
+    it("rewrites the CSP registry origin when the operator overrides packageRegistryUrl", () => {
+      // Image baked with the prod registry; operator points the studio at dev.
+      writeFileSync(
+        runtimeFile,
+        JSON.stringify({
+          schemaVersion: 2,
+          packages: [],
+          packageRegistryUrl: "https://registry.vetra.io",
+          localPackage: null,
+          connect: {},
+        }),
+        "utf-8",
+      );
+      writeFileSync(indexFile, indexHtml("https://registry.vetra.io"), "utf-8");
+
+      const res = runEntrypoint({
+        scriptPath,
+        distDir,
+        env: {
+          PH_CONNECT_CONFIG_JSON: JSON.stringify({
+            packageRegistryUrl: "https://registry.dev.vetra.io",
+          }),
+        },
+      });
+      expect(res.status).toBe(0);
+
+      // Loader registry updated by the merge …
+      expect(
+        (readConfig(runtimeFile) as { packageRegistryUrl: string })
+          .packageRegistryUrl,
+      ).toBe("https://registry.dev.vetra.io");
+
+      // … and the CSP now allows exactly that registry, prod origin gone.
+      const html = readFileSync(indexFile, "utf-8");
+      expect(html).toContain(
+        scriptSrcFragment("https://registry.dev.vetra.io"),
+      );
+      // The prod origin is no longer allowed …
+      expect(html).not.toContain(
+        "&#39;unsafe-eval&#39; https://registry.vetra.io;",
+      );
+      // … and the other directives are untouched.
+      expect(html).toContain("worker-src &#39;self&#39; blob:;");
+      expect(html).toContain("object-src &#39;none&#39;;");
+      expect(html).toContain("base-uri &#39;self&#39;;");
+    });
+
+    it("syncs the CSP to the baked registry when no operator override is given", () => {
+      // No PH_CONNECT_CONFIG_JSON; CSP already matches — must stay correct and
+      // not corrupt the directive (idempotent sync).
+      writeFileSync(
+        runtimeFile,
+        JSON.stringify({
+          schemaVersion: 2,
+          packages: [],
+          packageRegistryUrl: "https://registry.dev.vetra.io",
+          localPackage: null,
+          connect: {},
+        }),
+        "utf-8",
+      );
+      writeFileSync(
+        indexFile,
+        indexHtml("https://registry.dev.vetra.io"),
+        "utf-8",
+      );
+
+      const res = runEntrypoint({ scriptPath, distDir, env: {} });
+      expect(res.status).toBe(0);
+
+      const html = readFileSync(indexFile, "utf-8");
+      expect(html).toContain(
+        scriptSrcFragment("https://registry.dev.vetra.io"),
+      );
+    });
+
+    it("drops the CSP registry origin when the effective registry is null", () => {
+      writeFileSync(
+        runtimeFile,
+        JSON.stringify({
+          schemaVersion: 2,
+          packages: [],
+          packageRegistryUrl: null,
+          localPackage: null,
+          connect: {},
+        }),
+        "utf-8",
+      );
+      // Image baked with an origin the operator no longer wants allowed.
+      writeFileSync(indexFile, indexHtml("https://registry.vetra.io"), "utf-8");
+
+      const res = runEntrypoint({ scriptPath, distDir, env: {} });
+      expect(res.status).toBe(0);
+
+      const html = readFileSync(indexFile, "utf-8");
+      // The registry origin is dropped; only the keyword allowances remain.
+      expect(html).toContain(scriptSrcFragment(null));
+      expect(html).not.toContain("https://");
+    });
+  },
+);
