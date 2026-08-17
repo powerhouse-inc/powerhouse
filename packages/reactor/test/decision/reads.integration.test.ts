@@ -164,7 +164,9 @@ describe("the read path", () => {
             description: "administration stays reachable",
             effect: "allow",
             principal: { anyone: true },
-            capability: { can: "execute", scope: "*" },
+            // The auth scope, not every scope: an execute grant confers read,
+            // so "*" here would publish the domain scopes to everybody.
+            capability: { can: "execute", scope: "auth" },
           },
         ],
       }),
@@ -246,7 +248,9 @@ describe("the read path", () => {
             description: "administration stays reachable",
             effect: "allow",
             principal: { anyone: true },
-            capability: { can: "execute", scope: "*" },
+            // The auth scope, not every scope: an execute grant confers read,
+            // so "*" here would publish the domain scopes to everybody.
+            capability: { can: "execute", scope: "auth" },
           },
         ],
       }),
@@ -262,7 +266,9 @@ describe("the read path", () => {
             description: "administration stays reachable",
             effect: "allow",
             principal: { anyone: true },
-            capability: { can: "execute", scope: "*" },
+            // The auth scope, not every scope: an execute grant confers read,
+            // so "*" here would publish the domain scopes to everybody.
+            capability: { can: "execute", scope: "auth" },
           },
         ],
       }),

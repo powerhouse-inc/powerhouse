@@ -160,7 +160,12 @@ describe("decide", () => {
     ).toBe("allow");
   });
 
-  it("distinguishes read from execute", () => {
+  /**
+   * Executing an operation means reading the state it applies to, so an allow on
+   * execute carries the read with it. The converse does not hold: reading a
+   * scope is the lesser power and confers no write.
+   */
+  it("lets an execute grant confer read, and not the reverse", () => {
     const executeOnly = policy(
       grant(
         "g",
@@ -170,7 +175,7 @@ describe("decide", () => {
       ),
     );
     expect(decide(executeOnly, {}, { verb: "read", scope: "global" })).toBe(
-      "deny",
+      "allow",
     );
 
     const readOnly = policy(
@@ -180,6 +185,66 @@ describe("decide", () => {
       "allow",
     );
     expect(decide(readOnly, {}, execGlobal)).toBe("deny");
+  });
+
+  it("carries an execute grant's read no further than its own scope", () => {
+    const executeGlobal = policy(
+      grant(
+        "g",
+        "allow",
+        { anyone: true },
+        { can: "execute", scope: "global" },
+      ),
+    );
+
+    expect(decide(executeGlobal, {}, { verb: "read", scope: "global" })).toBe(
+      "allow",
+    );
+    expect(decide(executeGlobal, {}, { verb: "read", scope: "other" })).toBe(
+      "deny",
+    );
+  });
+
+  /**
+   * A deny on execute withholds the write and says nothing about the read.
+   * Otherwise a policy locking writes down would silently revoke a read grant
+   * standing before it, since the last applicable grant wins.
+   */
+  it("does not let a deny on execute revoke a read", () => {
+    const lockedDown = policy(
+      grant(
+        "g-read",
+        "allow",
+        { anyone: true },
+        { can: "read", scope: "global" },
+      ),
+      grant("g-lock", "deny", { anyone: true }, { can: "execute", scope: "*" }),
+    );
+
+    expect(decide(lockedDown, {}, { verb: "read", scope: "global" })).toBe(
+      "allow",
+    );
+    expect(decide(lockedDown, {}, execGlobal)).toBe("deny");
+  });
+
+  /**
+   * The operation list restricts which operations may be executed, not whether
+   * the scope is visible, and a read carries no operation to match against. A
+   * narrowed execute grant would otherwise confer less read than a broad one.
+   */
+  it("confers read from an execute grant limited to some operations", () => {
+    const someOps = policy(
+      grant(
+        "g",
+        "allow",
+        { anyone: true },
+        { can: "execute", scope: "global", operation: ["SET_STATUS"] },
+      ),
+    );
+
+    expect(decide(someOps, {}, { verb: "read", scope: "global" })).toBe(
+      "allow",
+    );
   });
 
   it("does not yet evaluate where conditions (conditional grant never applies)", () => {
