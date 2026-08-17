@@ -66,6 +66,7 @@ import {
   readPgVersionFile,
   type SupportedPgMajor,
 } from "./pglite-version.js";
+import { resolveReactorFeatureFlags } from "./reactor-feature-flags.mjs";
 import { getRenownSignerConfig, initRenown } from "./renown.js";
 import type { StartServerOptions, SwitchboardReactor } from "./types.js";
 import {
@@ -428,17 +429,14 @@ async function initServer(
       logger.info(`Reactor maxSkipThreshold set to ${maxSkipThreshold}`);
     }
 
-    // if true, the reactor will use the DCB's decision model (and NOT use the meta cache)
-    const documentDecisions = process.env.REACTOR_DOCUMENT_DECISIONS === "true";
-    if (documentDecisions) {
-      logger.info("Reactor document decisions enabled");
-    }
-
-    // if true, the reactor will use the DCB decision model that includes auth
-    // note that this only works if documentDecisiopns is true.
-    const authEnforcement = process.env.REACTOR_AUTH_ENFORCEMENT === "true";
-    if (authEnforcement) {
-      logger.info("Reactor auth enforcement enabled");
+    // Flip these per document-sharing fleet, never per node: replay decisions
+    // are consensus outcomes, so nodes that disagree on the flags diverge.
+    const { flags: reactorFeatureFlags, enabled: enabledFeatureFlags } =
+      resolveReactorFeatureFlags(process.env);
+    if (enabledFeatureFlags.length > 0) {
+      logger.info(
+        `Reactor feature flags enabled: ${enabledFeatureFlags.join(", ")}`,
+      );
     }
 
     const reactorBuilder = new ReactorBuilder()
@@ -468,16 +466,11 @@ async function initServer(
       documentModels: [...documentModels, ...vetraDocumentModels],
       upgradeManifests,
       executorConfig:
-        hasSkipThreshold || documentDecisions || authEnforcement
+        hasSkipThreshold || enabledFeatureFlags.length > 0
           ? {
               ...(hasSkipThreshold ? { maxSkipThreshold } : {}),
-              ...(documentDecisions || authEnforcement
-                ? {
-                    featureFlags: {
-                      ...(documentDecisions ? { documentDecisions: true } : {}),
-                      ...(authEnforcement ? { authEnforcement: true } : {}),
-                    },
-                  }
+              ...(enabledFeatureFlags.length > 0
+                ? { featureFlags: reactorFeatureFlags }
                 : {}),
             }
           : undefined,

@@ -52,6 +52,9 @@ export type VersionFingerprint = {
   appBuildId: string;
   rpcProtocolVersion: number;
   models: { id: string; version: number }[];
+  // Enabled enforcement flags, sorted and joined. In the fingerprint so a
+  // worker cannot keep enforcing the set it booted with after a config change.
+  featureFlags?: string;
 };
 
 export type RpcHello = {
@@ -103,6 +106,8 @@ export type WorkerInspectorInfo = {
   connectedClients: number;
   appBuildId: string;
   rpcProtocolVersion: number;
+  /** Flags this worker is enforcing, from the fingerprint that built it. */
+  featureFlags?: string;
 };
 
 // Cloneable subset of renown's user (matches UserActionSigner); token minting + attribution.

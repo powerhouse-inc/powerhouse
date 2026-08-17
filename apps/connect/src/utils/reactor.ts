@@ -10,6 +10,7 @@ import {
   type Database,
   type IDocumentModelLoader,
   type JwtHandler,
+  type ReactorFeatureFlags,
   type SignerConfig,
 } from "@powerhousedao/reactor-browser";
 import type { PHConnectDefaultDrive } from "@powerhousedao/shared/clis";
@@ -32,6 +33,7 @@ export async function createBrowserReactor(
   documentModelModules: DocumentModelModule[],
   upgradeManifests: UpgradeManifest<readonly number[]>[],
   renown: IRenown,
+  featureFlags: Partial<ReactorFeatureFlags>,
   documentModelLoader?: IDocumentModelLoader,
 ): Promise<BrowserReactorClientModule> {
   const signerConfig: SignerConfig = {
@@ -58,6 +60,7 @@ export async function createBrowserReactor(
         .withDocumentModelSources(documentModelModules)
         .withUpgradeManifests(upgradeManifests)
         .withChannelScheme(ChannelScheme.CONNECT)
+        .withExecutorConfig({ featureFlags })
         .withJwtHandler(jwtHandler)
         .withKysely(
           new Kysely<Database>({

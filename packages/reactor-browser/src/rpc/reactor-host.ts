@@ -65,13 +65,40 @@ function versionsCompatible(
 ): boolean {
   return (
     a.appBuildId === b.appBuildId &&
-    a.rpcProtocolVersion === b.rpcProtocolVersion
+    a.rpcProtocolVersion === b.rpcProtocolVersion &&
+    (a.featureFlags ?? "") === (b.featureFlags ?? "")
   );
 }
 
-// Deterministic per version so every new-build tab converges on one fresh worker.
+// Deterministic per version so every new-build tab converges on one fresh
+// worker; the flags are in it so a flag-only change lands on a fresh one too.
 function workerGenForVersion(version: VersionFingerprint): string {
-  return `v${version.rpcProtocolVersion}-${version.appBuildId}`;
+  const flags = version.featureFlags ?? "";
+  const suffix = flags === "" ? "" : `-${hashFlags(flags)}`;
+  return `v${version.rpcProtocolVersion}-${version.appBuildId}${suffix}`;
+}
+
+/** Names what differs, so a reload is diagnosable from the tab's console. */
+function mismatchReason(
+  baseline: VersionFingerprint,
+  incoming: VersionFingerprint,
+): string {
+  if ((baseline.featureFlags ?? "") !== (incoming.featureFlags ?? "")) {
+    return `reactor enforcement flags changed (worker: ${
+      baseline.featureFlags || "none"
+    }, tab: ${incoming.featureFlags || "none"})`;
+  }
+  return "reactor version mismatch";
+}
+
+// Worker names end up in devtools and IndexedDB keys, so the flag set is
+// folded to a short stable token rather than spelled out.
+function hashFlags(flags: string): string {
+  let hash = 0;
+  for (let i = 0; i < flags.length; i++) {
+    hash = (hash * 31 + flags.charCodeAt(i)) | 0;
+  }
+  return (hash >>> 0).toString(36);
 }
 
 export class ReactorHost {
@@ -261,6 +288,7 @@ export class ReactorHost {
         this.baseline?.appBuildId ?? this.options.appBuildId ?? "unknown",
       rpcProtocolVersion:
         this.baseline?.rpcProtocolVersion ?? RPC_PROTOCOL_VERSION,
+      featureFlags: this.baseline?.featureFlags ?? "",
     };
     reply.ok(message.id, info);
   }
@@ -324,7 +352,7 @@ export class ReactorHost {
       if (!versionsCompatible(this.baseline, message.version)) {
         transport.post({
           k: "reload",
-          reason: "reactor version mismatch",
+          reason: mismatchReason(this.baseline, message.version),
           workerGen: workerGenForVersion(message.version),
         });
         reply.ok(message.id, { ok: false });

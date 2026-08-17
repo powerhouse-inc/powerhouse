@@ -119,6 +119,23 @@ export type PHConnectInstance = {
   reactorWorker: boolean;
 };
 
+/** Each flag implies its predecessors, and must match the fleet Connect syncs
+ * with or the two compute different replay outcomes. */
+export type PHConnectReactorFeatureFlags = {
+  /** Decide writes from the document stream instead of the meta cache. */
+  documentDecisions?: boolean;
+  /** Enforce the auth scope's policy at admission, replay, and read. */
+  authEnforcement?: boolean;
+  /** Let `{ group }` principals match, via the group documents' rosters. */
+  authGroups?: boolean;
+  /** Evaluate `where` / `match` conditions on grants. */
+  authConditions?: boolean;
+};
+
+export type PHConnectReactor = {
+  featureFlags?: PHConnectReactorFeatureFlags;
+};
+
 /**
  * A URL-matching pattern for a service-worker runtime-caching rule, in
  * JSON-serialisable form. A plain string is handed to Workbox verbatim (exact
@@ -237,6 +254,7 @@ export type PHConnectRuntimeConfig = {
   renown?: PHConnectRenown;
   sentry?: PHConnectSentry;
   instance?: PHConnectInstance;
+  reactor?: PHConnectReactor;
   pwa?: PHConnectPwa;
 };
 

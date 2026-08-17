@@ -33,6 +33,7 @@ function rawTab(port: MessagePort) {
     { resolve: (value: unknown) => void; reject: (error: unknown) => void }
   >();
   const reloads: string[] = [];
+  const workerGens: (string | undefined)[] = [];
   const migrations: unknown[] = [];
   port.onmessage = (event: MessageEvent) => {
     const msg = event.data as {
@@ -41,6 +42,7 @@ function rawTab(port: MessagePort) {
       value?: unknown;
       error?: { message: string };
       reason?: string;
+      workerGen?: string;
       state?: unknown;
     };
     if (msg.k === "res" && msg.id) {
@@ -49,6 +51,7 @@ function rawTab(port: MessagePort) {
       pending.get(msg.id)?.reject(new Error(msg.error?.message));
     } else if (msg.k === "reload") {
       reloads.push(msg.reason ?? "");
+      workerGens.push(msg.workerGen);
     } else if (msg.k === "migration") {
       migrations.push(msg.state);
     }
@@ -61,7 +64,7 @@ function rawTab(port: MessagePort) {
     port.postMessage({ ...msg, id });
     return promise;
   };
-  return { send, reloads, migrations };
+  return { send, reloads, workerGens, migrations };
 }
 
 function fakeClient(calls: string[]): IReactorClient {
@@ -117,6 +120,52 @@ describe("ReactorHost protocol (hello / version / register)", () => {
     const result = await tab2.send({ k: "hello", version: V2 });
     expect(result).toMatchObject({ ok: false });
     expect(tab2.reloads).toContain("reactor version mismatch");
+  });
+
+  it("reloads a tab whose enforcement flags differ from the running worker's", async () => {
+    // A flag flip is a config change, not a rebuild: same build id, and serving
+    // the tab from the running worker would enforce the flags it booted with.
+    const host = new ReactorHost({
+      build: () => Promise.resolve(fakeClient([])),
+    });
+
+    const ch1 = new MessageChannel();
+    host.connect(createPortTransport(ch1.port1));
+    const tab1 = rawTab(ch1.port2);
+    await tab1.send({ k: "hello", version: V1 });
+
+    const ch2 = new MessageChannel();
+    host.connect(createPortTransport(ch2.port1));
+    const tab2 = rawTab(ch2.port2);
+    const enforcing: VersionFingerprint = {
+      ...V1,
+      featureFlags: "authEnforcement,documentDecisions",
+    };
+    expect(await tab2.send({ k: "hello", version: enforcing })).toMatchObject({
+      ok: false,
+    });
+    expect(tab2.reloads[0]).toContain("reactor enforcement flags changed");
+    // A fresh worker name, or the reload would land on this same worker again.
+    expect(tab2.workerGens[0]).not.toBe(`v${V1.rpcProtocolVersion}-build-1`);
+  });
+
+  it("treats an absent flag set and an all-off one as the same worker", async () => {
+    const host = new ReactorHost({
+      build: () => Promise.resolve(fakeClient([])),
+    });
+
+    const ch1 = new MessageChannel();
+    host.connect(createPortTransport(ch1.port1));
+    const tab1 = rawTab(ch1.port2);
+    await tab1.send({ k: "hello", version: V1 });
+
+    const ch2 = new MessageChannel();
+    host.connect(createPortTransport(ch2.port1));
+    const tab2 = rawTab(ch2.port2);
+    expect(
+      await tab2.send({ k: "hello", version: { ...V1, featureFlags: "" } }),
+    ).toEqual({ ok: true });
+    expect(tab2.reloads).toEqual([]);
   });
 
   it("answers a ping with a pong carrying ownerId/bootedAtMs before any build", async () => {

@@ -211,6 +211,28 @@ describe("runtime-config loader", () => {
     expect(after.connect.app?.basePath).toBe("/refreshed");
   });
 
+  it("carries reactor enforcement flags from the file, defaulting the rest to off", async () => {
+    stubFetch({
+      schemaVersion: 2,
+      packages: [],
+      localPackage: null,
+      connect: {
+        reactor: {
+          featureFlags: { documentDecisions: true, authEnforcement: true },
+        },
+      },
+    });
+    const { loadRuntimeConfig } = await import("../src/runtime-config.js");
+    const config = await loadRuntimeConfig();
+
+    expect(config.connect.reactor?.featureFlags).toEqual({
+      documentDecisions: true,
+      authEnforcement: true,
+      authGroups: false,
+      authConditions: false,
+    });
+  });
+
   it("returns source values for connect.app and connect.drives when set in the file", async () => {
     stubFetch({
       schemaVersion: 2,

@@ -479,6 +479,40 @@
             }
           }
         },
+        "reactor": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Settings for the reactor Connect runs in the browser, on the main thread or in the shared worker alike.",
+          "properties": {
+            "featureFlags": {
+              "type": "object",
+              "additionalProperties": false,
+              "description": "Enforcement flags. Each implies its predecessors, and the reactor refuses to boot on a set that names a later flag without an earlier one. These are consensus settings: a Connect syncing with a fleet must carry the same flags the fleet does, or the two reach different replay outcomes for the same history and diverge.",
+              "properties": {
+                "documentDecisions": {
+                  "type": "boolean",
+                  "description": "Decide writes from the document stream rather than the document meta cache, so a backdated deletion denies the operations that sort after it.",
+                  "default": false
+                },
+                "authEnforcement": {
+                  "type": "boolean",
+                  "description": "Enforce the auth scope's policy at admission, replay, and read. Requires documentDecisions.",
+                  "default": false
+                },
+                "authGroups": {
+                  "type": "boolean",
+                  "description": "Let `{ group }` principals match against the rosters of the group documents a policy names. Requires authEnforcement.",
+                  "default": false
+                },
+                "authConditions": {
+                  "type": "boolean",
+                  "description": "Evaluate `where` and `match` conditions on grants. Requires authGroups. Do not enable on a fleet `preflight:auth` reports as crossing a reducer version.",
+                  "default": false
+                }
+              }
+            }
+          }
+        },
         "pwa": {
           "type": "object",
           "additionalProperties": false,

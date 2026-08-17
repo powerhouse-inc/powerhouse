@@ -9,6 +9,8 @@ export type WorkerInfo = {
   readonly connectedClients: number;
   readonly appBuildId: string;
   readonly rpcProtocolVersion: number;
+  /** Enforcement flags the running worker booted with; empty means none. */
+  readonly featureFlags?: string;
 };
 
 export type WorkerInspectorProps = {
@@ -117,6 +119,14 @@ export function WorkerInspector({ getInfo, onRestart }: WorkerInspectorProps) {
           <Field label="Connected tabs" value={String(info.connectedClients)} />
           <Field label="App build" value={info.appBuildId} />
           <Field label="RPC protocol" value={String(info.rpcProtocolVersion)} />
+          <Field
+            label="Enforcement flags"
+            value={
+              info.featureFlags === undefined || info.featureFlags === ""
+                ? "none"
+                : info.featureFlags
+            }
+          />
         </div>
       )}
     </div>

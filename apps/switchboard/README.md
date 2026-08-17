@@ -156,6 +156,43 @@ The same settings are available programmatically via
 `startSwitchboard({ workerPool: { numWorkers, dbPoolSizePerWorker, acquireTimeoutMs } })`,
 which takes precedence over the environment variables.
 
+### Reactor Enforcement Flags
+
+| Variable                       | Description                                                        | Default |
+| ------------------------------ | ------------------------------------------------------------------ | ------- |
+| `REACTOR_DOCUMENT_DECISIONS`   | Decide writes from the document stream, not the meta cache         | `false` |
+| `REACTOR_AUTH_ENFORCEMENT`     | Enforce the auth scope's policy at admission, replay and read      | `false` |
+| `REACTOR_AUTH_GROUPS`          | Let `{ group }` principals match against group-document rosters    | `false` |
+| `REACTOR_AUTH_CONDITIONS`      | Evaluate `where` / `match` conditions on grants                    | `false` |
+
+Set each to the literal `true` to enable. Each flag requires the one above it,
+and switchboard refuses to start on a set that skips one — a partially enforcing
+reactor would apply less than the operator asked for.
+
+These change replay outcomes, which are consensus outcomes, so **a flag flips
+for a whole document-sharing fleet, never per node**. Two nodes that share
+documents and disagree on the flags diverge, exactly as two nodes on
+incompatible versions would. Connect carries the same flags in
+`connect.reactor.featureFlags` (see `apps/connect/RUNTIME-CONFIG.md`); a fleet
+that includes browser replicas has to set them there too.
+
+Sweep the store before enabling either auth flag — neither unsafe condition is
+repairable after the fact, because the auth stream is never reshuffled:
+
+```bash
+cd packages/reactor && pnpm preflight:auth --pg <connection-string>
+```
+
+Exit `0` is clean for both; `1` means streams unsafe for `authEnforcement`, `2`
+means documents unsafe for `authConditions`, `3` both, and `68` means the run
+died having checked nothing. Gate on the whole code, not on a bit.
+
+One expectation worth stating: turning enforcement on protects nothing that
+already exists. The host's permission tables still own sync serving and the
+GraphQL boundary, and every document that predates the auth scope carries an
+uninitialized policy, which allows everything. Enforcement bites only on
+documents that have emitted `INITIALIZE_AUTH`.
+
 ### Authentication Configuration
 
 ```typescript

@@ -34,6 +34,7 @@ export type {
   ProcessorFactoryBuilder,
   ProcessorFilter,
   ProcessorRecord,
+  ReactorFeatureFlags,
   RebuildResult,
   Remote,
   RemoteFilter,
