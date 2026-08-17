@@ -135,6 +135,23 @@ export class ReactorClient implements IReactorClient {
   }
 
   /**
+   * One document, filtered to the scopes the subject may read. Every method
+   * that hands a document back goes through here, including the ones that
+   * follow a write: a document returned from a mutation is a read like any
+   * other, and returning it whole served scopes the same subject would be
+   * refused by `get`. Its author still sees what it wrote, because an allow on
+   * execute confers read of that scope.
+   */
+  private async gateDocument<TDocument extends PHDocument>(
+    document: TDocument,
+    view: ViewFilter | undefined,
+    signal: AbortSignal | undefined,
+  ): Promise<TDocument> {
+    const readable = await this.readableScopes(document, view, signal);
+    return filterReadableScopes(document, readable);
+  }
+
+  /**
    * Retrieves a list of document model modules.
    */
   async getDocumentModelModules(
@@ -232,8 +249,7 @@ export class ReactorClient implements IReactorClient {
       undefined,
       signal,
     );
-    const readable = await this.readableScopes(document, view, signal);
-    return filterReadableScopes(document, readable);
+    return this.gateDocument(document, view, signal);
   }
 
   /**
@@ -610,7 +626,8 @@ export class ReactorClient implements IReactorClient {
       }
     }
 
-    return await this.reactor.get<TDocument>(documentId);
+    const created = await this.reactor.get<TDocument>(documentId);
+    return this.gateDocument(created, undefined, signal);
   }
 
   /**
@@ -723,7 +740,7 @@ export class ReactorClient implements IReactorClient {
       }
 
       if (targetVersion === fromVersion) {
-        return document;
+        return this.gateDocument(document, { branch }, signal);
       }
       if (targetVersion < fromVersion) {
         throw new DowngradeNotSupportedError(
@@ -751,12 +768,13 @@ export class ReactorClient implements IReactorClient {
       const completedJob = await this.waitForJob(jobInfo, signal);
 
       if (completedJob.status !== JobStatus.FAILED) {
-        return await this.reactor.getByIdOrSlug<TDocument>(
+        const upgraded = await this.reactor.getByIdOrSlug<TDocument>(
           documentId,
           { branch },
           completedJob.consistencyToken,
           signal,
         );
+        return this.gateDocument(upgraded, { branch }, signal);
       }
 
       if (completedJob.error?.name !== "UpgradePreconditionFailedError") {
@@ -828,7 +846,7 @@ export class ReactorClient implements IReactorClient {
       completedJob.consistencyToken,
       signal,
     );
-    return result;
+    return this.gateDocument(result, view, signal);
   }
 
   /**
@@ -974,7 +992,7 @@ export class ReactorClient implements IReactorClient {
       completedJob.consistencyToken,
       signal,
     );
-    return result;
+    return this.gateDocument(result, { branch }, signal);
   }
 
   /**
@@ -1015,7 +1033,7 @@ export class ReactorClient implements IReactorClient {
       completedJob.consistencyToken,
       signal,
     );
-    return result;
+    return this.gateDocument(result, { branch }, signal);
   }
 
   /**
@@ -1085,8 +1103,8 @@ export class ReactorClient implements IReactorClient {
     );
 
     return {
-      source: sourceResult,
-      target: targetResult,
+      source: await this.gateDocument(sourceResult, { branch }, signal),
+      target: await this.gateDocument(targetResult, { branch }, signal),
     };
   }
 

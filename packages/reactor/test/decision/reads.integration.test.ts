@@ -204,6 +204,58 @@ describe("the read path", () => {
   });
 
   /**
+   * A document handed back from a write is a read like any other. The writer
+   * sees the scope it wrote, because an allow on execute confers read of it,
+   * and not the scopes the policy withholds -- returning those served exactly
+   * what `get` would have refused the same subject.
+   */
+  it("gates the document a write hands back", async () => {
+    const client = await build({
+      documentDecisions: true,
+      authEnforcement: true,
+    });
+
+    const group = baseCreateDocument(
+      groupCreateState,
+      undefined,
+      groupDocumentType,
+    );
+    const groupId = group.header.id;
+    await client.create(group);
+    await client.execute(groupId, "main", [
+      initializeAuth({
+        version: 1,
+        grants: [
+          {
+            id: "g-write-global",
+            description: "anyone writes the member list",
+            effect: "allow",
+            principal: { anyone: true },
+            capability: { can: "execute", scope: "global" },
+          },
+          {
+            id: "g-admin",
+            description: "administration stays reachable",
+            effect: "allow",
+            principal: { anyone: true },
+            capability: { can: "execute", scope: "auth" },
+          },
+        ],
+      }),
+    ]);
+
+    const written = await client.execute(groupId, "main", [
+      action("ADD_MEMBER", "global", { address: MEMBER }),
+    ]);
+
+    // The scope it wrote comes back, so the write is not hidden from its
+    // author; the scope no grant covers does not.
+    expect(Object.keys(written.state)).toContain("global");
+    expect(Object.keys(written.state)).not.toContain("local");
+    expect(await scopesOf(client, groupId, MEMBER)).not.toContain("local");
+  });
+
+  /**
    * A statement whose policy names a group, and a group carrying a deny-all
    * policy of its own. Returns the group's id. Shared by the two cases that
    * differ only in whether `authGroups` is on.
