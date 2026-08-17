@@ -49,8 +49,9 @@ const GROUP_MEMBERSHIP_SCOPE = "global";
  * How many of a group's referencing documents are examined before a read of
  * that group gives up and withholds. Each one costs a model build, and the
  * relation is append-only, so an old and briefly-held reference still counts.
- * It is the cap a version-1 policy carries on its own grant list, taken from
- * there rather than restated: raising that cap raises the read fan-out here.
+ * Truncating denies, which is the direction that withholds. It is the cap a
+ * version-1 policy carries on its own grant list, taken from there rather than
+ * restated: raising that cap raises the read fan-out here.
  */
 const MAX_EXAMINED_REFERENCERS = MAX_AUTH_GRANTS;
 
@@ -152,6 +153,14 @@ class SeededStateReader implements IStreamStateReader {
     private readonly branch: string,
   ) {}
 
+  /**
+   * A stream this replica does not hold has to reach buildDecisionModel as the
+   * absence it recognises, or the whole read fails instead of leaving the group
+   * out of the model, where its principal does not match and the policy fails
+   * closed. The read side reports absence as a plain Error, so the absence is
+   * confirmed rather than inferred from the message: a transient failure must
+   * surface, not silently deny.
+   */
   async getState(
     documentId: string,
     scope: string,
@@ -176,12 +185,6 @@ class SeededStateReader implements IStreamStateReader {
         signal,
       );
     } catch (error) {
-      // A stream this replica does not hold has to reach buildDecisionModel as
-      // the absence it recognises, or the whole read fails instead of leaving
-      // the group out of the model, where its principal does not match and the
-      // policy fails closed. The read side reports absence as a plain Error, so
-      // the absence is confirmed rather than inferred from the message: a
-      // transient failure must surface, not silently deny.
       await this.assertAbsent(documentId, error, signal);
       throw new DocumentNotFoundError(documentId);
     }
@@ -237,6 +240,11 @@ export class ModelReadGate implements IReadGate {
     private readonly logger?: ILogger,
   ) {}
 
+  /**
+   * A served group yields its member list and nothing else. What the audience
+   * is owed is the state it must fold to evaluate auth with the group; a
+   * group's other scopes are its own business and stay behind its own grants.
+   */
   async scopePredicate(
     document: PHDocument,
     subject: AuthSubject,
@@ -250,9 +258,6 @@ export class ModelReadGate implements IReadGate {
       signal,
     );
 
-    // The member list, and only it. What the audience is owed is the state it
-    // must fold to evaluate auth with this group; a group's other scopes are
-    // its own business and stay behind its own grants.
     if (!this.servesGroup(document) || own(GROUP_MEMBERSHIP_SCOPE)) {
       return own;
     }
@@ -294,6 +299,10 @@ export class ModelReadGate implements IReadGate {
    * stops one unreachable referencer from turning an allow already in hand into
    * a denial. A read records no operation, so replicas differing over a
    * transient failure has no consensus consequence.
+   *
+   * The probes are awaited together rather than raced, so none is ever left
+   * running with nobody awaiting it, which is where unhandled rejections come
+   * from.
    */
   private async servesGroupTo(
     groupId: string,
@@ -309,9 +318,6 @@ export class ModelReadGate implements IReadGate {
       signal,
     );
 
-    // A group named by an unbounded number of documents would otherwise cost
-    // one model build each on every read of it. Truncating denies, which is
-    // the direction that withholds.
     const examined = referencers.slice(0, MAX_EXAMINED_REFERENCERS);
     if (examined.length < referencers.length) {
       this.logger?.warn(
@@ -346,8 +352,6 @@ export class ModelReadGate implements IReadGate {
       }
     };
 
-    // Promise.all rather than a race, so no probe is ever left running with
-    // nobody awaiting it, which is where unhandled rejections come from.
     await Promise.all(
       Array.from(
         { length: Math.min(REFERENCER_PROBE_CONCURRENCY, examined.length) },
@@ -362,7 +366,11 @@ export class ModelReadGate implements IReadGate {
     return walk.served;
   }
 
-  /** Whether one referencing document serves the subject any domain scope. */
+  /**
+   * Whether one referencing document serves the subject any domain scope. A
+   * referencer this replica does not hold serves nothing, which fails closed
+   * the same way a group it does not hold does.
+   */
   private async servesThrough(
     referencerId: string,
     subject: AuthSubject,
@@ -370,8 +378,6 @@ export class ModelReadGate implements IReadGate {
   ): Promise<boolean> {
     let referencer: PHDocument;
     try {
-      // The main branch, because the reference relation records no branch: a
-      // group's member list lives there whatever branch names it.
       referencer = await this.documentView.get(
         referencerId,
         { branch: GROUP_BRANCH },
@@ -379,8 +385,6 @@ export class ModelReadGate implements IReadGate {
         signal,
       );
     } catch {
-      // A referencer this replica does not hold serves nothing, which fails
-      // closed the same way a group it does not hold does.
       return false;
     }
 
@@ -408,7 +412,15 @@ export class ModelReadGate implements IReadGate {
     );
   }
 
-  /** What this document's own policy says, with no group serving applied. */
+  /**
+   * What this document's own policy says, with no group serving applied.
+   *
+   * An unpoliced document is readable in full, which is the common case and the
+   * one worth answering without building anything. The test is the one
+   * `evaluate` makes: a legacy `{}` auth scope and version 0 both mean
+   * uninitialized, and "no grants" does not, because a policy with a version and
+   * an empty grant list denies everything.
+   */
   private async ownPolicyPredicate(
     document: PHDocument,
     subject: AuthSubject,
@@ -417,11 +429,6 @@ export class ModelReadGate implements IReadGate {
   ): Promise<(scope: string) => boolean> {
     const auth = authOf(document);
 
-    // An unpoliced document is readable in full, which is the common case and
-    // the one worth answering without building anything. The test is the one
-    // `evaluate` makes: a legacy `{}` auth scope and version 0 both mean
-    // uninitialized, and "no grants" does not, because a policy with a
-    // version and an empty grant list denies everything.
     if (!auth || !auth.version) {
       return () => true;
     }
