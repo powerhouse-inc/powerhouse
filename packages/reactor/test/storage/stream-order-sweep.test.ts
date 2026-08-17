@@ -2,7 +2,11 @@ import { generateId, type Action } from "@powerhousedao/shared/document-model";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { sweepDocumentVersions } from "../../src/admin/document-version-sweep.js";
-import { parsePreflightOptions } from "../../src/admin/preflight-options.js";
+import {
+  parsePreflightOptions,
+  preflightExitCode,
+  PREFLIGHT_EXIT,
+} from "../../src/admin/preflight-options.js";
 import { sweepStreamOrder } from "../../src/admin/stream-order-sweep.js";
 import { REACTOR_SCHEMA } from "../../src/storage/migrations/migrator.js";
 import type { KyselyOperationStore } from "../../src/storage/kysely/store.js";
@@ -328,5 +332,45 @@ describe("parsePreflightOptions", () => {
       scope: "global",
       schema: "other",
     });
+  });
+});
+
+/**
+ * The two sweeps gate different flags, so an operator turning on one must not
+ * be blocked by a finding that only concerns the other.
+ */
+describe("preflightExitCode", () => {
+  it("reports the two sweeps in separate bits", () => {
+    expect(preflightExitCode(0, 0)).toBe(PREFLIGHT_EXIT.clean);
+    expect(preflightExitCode(1, 0)).toBe(PREFLIGHT_EXIT.streamOrderUnsafe);
+    expect(preflightExitCode(0, 1)).toBe(PREFLIGHT_EXIT.versionsUnsafe);
+    expect(preflightExitCode(2, 3)).toBe(
+      PREFLIGHT_EXIT.streamOrderUnsafe | PREFLIGHT_EXIT.versionsUnsafe,
+    );
+  });
+
+  /**
+   * A run that died reports no bits, so a gate reading a missing bit as safe
+   * would read "nothing was checked" as "nothing is wrong".
+   */
+  it("keeps the did-not-run codes clear of the finding bits", () => {
+    const findings =
+      PREFLIGHT_EXIT.streamOrderUnsafe | PREFLIGHT_EXIT.versionsUnsafe;
+
+    expect(PREFLIGHT_EXIT.usage & findings).toBe(0);
+    expect(PREFLIGHT_EXIT.error & findings).toBe(0);
+    expect(PREFLIGHT_EXIT.usage).not.toBe(0);
+    expect(PREFLIGHT_EXIT.error).not.toBe(0);
+  });
+
+  it("makes a clean fleet the only zero", () => {
+    expect(PREFLIGHT_EXIT.clean).toBe(0);
+
+    const nonZero = Object.entries(PREFLIGHT_EXIT).filter(
+      ([name]) => name !== "clean",
+    );
+    for (const [, code] of nonZero) {
+      expect(code).not.toBe(0);
+    }
   });
 });
