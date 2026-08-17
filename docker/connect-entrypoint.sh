@@ -136,10 +136,17 @@ if [ -f "$INDEX_FILE" ] && [ -f "$RUNTIME_FILE" ]; then
   if [ -n "$REG" ]; then
     # Escape sed replacement metacharacters (& \ |) in the URL before splicing.
     REG_ESC=$(printf '%s' "$REG" | sed -e 's/[&\\|]/\\&/g')
-    sed -i "s|\(&#39;unsafe-eval&#39;\)[^;]*;|\1 ${REG_ESC};|" "$INDEX_FILE"
+    CSP_EXPR="s|\(&#39;unsafe-eval&#39;\)[^;]*;|\1 ${REG_ESC};|"
   else
-    sed -i "s|\(&#39;unsafe-eval&#39;\)[^;]*;|\1;|" "$INDEX_FILE"
+    CSP_EXPR="s|\(&#39;unsafe-eval&#39;\)[^;]*;|\1;|"
   fi
+  # Staged rather than `sed -i`, which needs a suffix argument on BSD sed and so
+  # fails wherever this script is exercised outside the image. Same shape as the
+  # merge above: a failed rewrite leaves the served file untouched.
+  if sed "$CSP_EXPR" "$INDEX_FILE" > "${INDEX_FILE}.tmp"; then
+    cat "${INDEX_FILE}.tmp" > "$INDEX_FILE"
+  fi
+  rm -f "${INDEX_FILE}.tmp"
 fi
 
 echo "Testing nginx configuration..."
