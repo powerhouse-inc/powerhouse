@@ -19,6 +19,26 @@ export const FLAG_PREREQUISITES: Record<
 };
 
 /**
+ * The flags as plain booleans, with anything unset off, validated. Callers hold
+ * a partial set, because that is what crosses to a pooled worker, and every
+ * consumer needs the same resolution of it.
+ */
+export function resolveFeatureFlags(
+  flags: Partial<ReactorFeatureFlags> = {},
+): ReactorFeatureFlags {
+  const resolved: ReactorFeatureFlags = {
+    documentDecisions: flags.documentDecisions ?? false,
+    authEnforcement: flags.authEnforcement ?? false,
+    authGroups: flags.authGroups ?? false,
+    authConditions: flags.authConditions ?? false,
+  };
+
+  // Against what the caller passed, so an unrecognized name is still reported.
+  validateFeatureFlags(flags, FLAG_PREREQUISITES);
+  return resolved;
+}
+
+/**
  * Throws when the flags ask for enforcement the reactor cannot deliver. Either
  * failure would otherwise read as enforcement being on while the reactor
  * applies less than the caller asked for.

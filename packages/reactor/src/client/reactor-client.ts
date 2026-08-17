@@ -60,9 +60,10 @@ import {
   type IReactorClient,
   type UpgradeDocumentOptions,
 } from "./types.js";
+import type { IReadGate } from "../decision/read-gate.js";
+import { BareReadGate } from "../decision/read-gate.js";
 import {
   authSubjectFromSigner,
-  canReadScope,
   filterReadableScopes,
   withAuthScope,
 } from "./util.js";
@@ -85,6 +86,7 @@ export class ReactorClient implements IReactorClient {
   private jobAwaiter: IJobAwaiter;
   private documentIndexer: IDocumentIndexer;
   private documentView: IDocumentView;
+  private readGate: IReadGate;
 
   readonly drives: IDriveClient;
 
@@ -96,6 +98,7 @@ export class ReactorClient implements IReactorClient {
     jobAwaiter: IJobAwaiter,
     documentIndexer: IDocumentIndexer,
     documentView: IDocumentView,
+    readGate: IReadGate = new BareReadGate(),
   ) {
     this.logger = logger;
     this.reactor = reactor;
@@ -104,12 +107,48 @@ export class ReactorClient implements IReactorClient {
     this.jobAwaiter = jobAwaiter;
     this.documentIndexer = documentIndexer;
     this.documentView = documentView;
+    this.readGate = readGate;
     this.drives = new DriveClient(this, logger, reactor, signer);
     this.logger.verbose("ReactorClient initialized");
   }
 
   private readSubject(subject?: AuthSubject): AuthSubject {
     return subject ?? authSubjectFromSigner(this.signer);
+  }
+
+  /**
+   * Which scopes of one document the subject may read. Resolved once per
+   * document, so the gate builds its model once however many scopes are then
+   * tested, and the filtering itself stays synchronous.
+   */
+  private readableScopes(
+    document: PHDocument,
+    view?: ViewFilter,
+    signal?: AbortSignal,
+  ): Promise<(scope: string) => boolean> {
+    return this.readGate.scopePredicate(
+      document,
+      this.readSubject(view?.subject),
+      view?.branch ?? "main",
+      signal,
+    );
+  }
+
+  /**
+   * One document, filtered to the scopes the subject may read. Every method
+   * that hands a document back goes through here, including the ones that
+   * follow a write: a document returned from a mutation is a read like any
+   * other, and returning it whole served scopes the same subject would be
+   * refused by `get`. Its author still sees what it wrote, because an allow on
+   * execute confers read of that scope.
+   */
+  private async gateDocument<TDocument extends PHDocument>(
+    document: TDocument,
+    view: ViewFilter | undefined,
+    signal: AbortSignal | undefined,
+  ): Promise<TDocument> {
+    const readable = await this.readableScopes(document, view, signal);
+    return filterReadableScopes(document, readable);
   }
 
   /**
@@ -210,7 +249,7 @@ export class ReactorClient implements IReactorClient {
       undefined,
       signal,
     );
-    return filterReadableScopes(document, this.readSubject(view?.subject));
+    return this.gateDocument(document, view, signal);
   }
 
   /**
@@ -256,16 +295,17 @@ export class ReactorClient implements IReactorClient {
       signal,
     );
 
-    // Read gate: exclude operations in scopes the subject may not read.
-    const authDoc = (await this.reactor.getByIdOrSlug(
+    // Read gate: exclude operations in scopes the subject may not read. The
+    // fetch carries the scopes about to be paged, not the policy alone, because
+    // a conditional read grant reads the state of the scope it gates; a
+    // condition can name no other scope, so the scopes not paged are not owed.
+    const gated = await this.reactor.getByIdOrSlug<PHDocument>(
       documentId,
-      { scopes: ["auth"], branch: view?.branch },
+      withAuthScope(view),
       undefined,
       signal,
-    )) as PHDocument | undefined;
-    const subject = this.readSubject(view?.subject);
-    const canRead = (scope: string) =>
-      canReadScope(authDoc?.state.auth, subject, scope);
+    );
+    const canRead = await this.readableScopes(gated, view, signal);
 
     if (paging?.cursor && isCompositeCursor(paging.cursor)) {
       return this.getOperationsWithCompositeCursor(
@@ -477,11 +517,15 @@ export class ReactorClient implements IReactorClient {
       undefined,
       signal,
     );
-    const readSubject = this.readSubject(view?.subject);
     return {
       ...results,
-      results: results.results.map((doc) =>
-        filterReadableScopes(doc, readSubject),
+      results: await Promise.all(
+        results.results.map(async (doc) =>
+          filterReadableScopes(
+            doc,
+            await this.readableScopes(doc, view, signal),
+          ),
+        ),
       ),
     };
   }
@@ -582,7 +626,8 @@ export class ReactorClient implements IReactorClient {
       }
     }
 
-    return await this.reactor.get<TDocument>(documentId);
+    const created = await this.reactor.get<TDocument>(documentId);
+    return this.gateDocument(created, undefined, signal);
   }
 
   /**
@@ -695,7 +740,7 @@ export class ReactorClient implements IReactorClient {
       }
 
       if (targetVersion === fromVersion) {
-        return document;
+        return this.gateDocument(document, { branch }, signal);
       }
       if (targetVersion < fromVersion) {
         throw new DowngradeNotSupportedError(
@@ -723,12 +768,13 @@ export class ReactorClient implements IReactorClient {
       const completedJob = await this.waitForJob(jobInfo, signal);
 
       if (completedJob.status !== JobStatus.FAILED) {
-        return await this.reactor.getByIdOrSlug<TDocument>(
+        const upgraded = await this.reactor.getByIdOrSlug<TDocument>(
           documentId,
           { branch },
           completedJob.consistencyToken,
           signal,
         );
+        return this.gateDocument(upgraded, { branch }, signal);
       }
 
       if (completedJob.error?.name !== "UpgradePreconditionFailedError") {
@@ -800,7 +846,7 @@ export class ReactorClient implements IReactorClient {
       completedJob.consistencyToken,
       signal,
     );
-    return result;
+    return this.gateDocument(result, view, signal);
   }
 
   /**
@@ -946,7 +992,7 @@ export class ReactorClient implements IReactorClient {
       completedJob.consistencyToken,
       signal,
     );
-    return result;
+    return this.gateDocument(result, { branch }, signal);
   }
 
   /**
@@ -987,7 +1033,7 @@ export class ReactorClient implements IReactorClient {
       completedJob.consistencyToken,
       signal,
     );
-    return result;
+    return this.gateDocument(result, { branch }, signal);
   }
 
   /**
@@ -1057,8 +1103,8 @@ export class ReactorClient implements IReactorClient {
     );
 
     return {
-      source: sourceResult,
-      target: targetResult,
+      source: await this.gateDocument(sourceResult, { branch }, signal),
+      target: await this.gateDocument(targetResult, { branch }, signal),
     };
   }
 
@@ -1217,15 +1263,55 @@ export class ReactorClient implements IReactorClient {
 
     // A subscription is a read. The filter lives here because the subscription
     // manager is a read model, which sees everything.
-    const subject = this.readSubject(view?.subject);
-    const readable = <TDocument extends PHDocument>(
+    const readable = async <TDocument extends PHDocument>(
       document: TDocument,
-    ): TDocument => filterReadableScopes(document, subject);
+    ): Promise<TDocument> =>
+      filterReadableScopes(document, await this.readableScopes(document, view));
+
+    let disposed = false;
+    let delivering: Promise<void> = Promise.resolve();
+
+    /**
+     * Queues one event behind those already queued. Gating an event resolves
+     * asynchronously, so an event needing a group fetch would otherwise be
+     * overtaken by the one behind it, and one still in flight would reach a
+     * subscriber that has already unsubscribed. Only delivery is ordered, not
+     * the gating: a single subscription can cover every document in the
+     * reactor, so serializing that work would make its delivery rate the sum
+     * of every gate build rather than the slowest. An event that cannot be
+     * gated is withheld, because serving it unfiltered would leak the scopes
+     * the gate did not clear -- but it is logged rather than swallowed, since
+     * the gate rethrows a transient failure precisely so it is not read as a
+     * denial.
+     */
+    const deliver = (
+      event: DocumentChangeEvent | Promise<DocumentChangeEvent>,
+    ): void => {
+      // Attached now, or a rejection while the chain is parked on real I/O
+      // waits a full turn with no handler, which Node reports as unhandled.
+      void Promise.resolve(event).catch(() => undefined);
+
+      delivering = delivering
+        .then(async () => {
+          const built = await event;
+          if (disposed) {
+            return;
+          }
+          callback(built);
+        })
+        .catch((error: unknown) => {
+          this.logger.error(
+            "Subscription delivery failed for @search: @Error",
+            { search },
+            error,
+          );
+        });
+    };
 
     const unsubscribeCreated = this.subscriptionManager.onDocumentCreated(
       (result) => {
-        void (async () => {
-          try {
+        deliver(
+          (async () => {
             // withAuthScope, or a view that narrows scopes would leave the
             // policy out of the fetch and the gate would read an absent one as
             // uninitialized, which allows everything.
@@ -1235,21 +1321,19 @@ export class ReactorClient implements IReactorClient {
               ),
             );
 
-            callback({
+            return {
               type: DocumentChangeType.Created,
-              documents: documents.map(readable),
-            });
-          } catch {
-            // Silently ignore errors when fetching created documents
-          }
-        })();
+              documents: await Promise.all(documents.map(readable)),
+            };
+          })(),
+        );
       },
       search,
     );
 
     const unsubscribeDeleted = this.subscriptionManager.onDocumentDeleted(
       (documentIds) => {
-        callback({
+        deliver({
           type: DocumentChangeType.Deleted,
           documents: [],
           context: { childId: documentIds[0] },
@@ -1260,10 +1344,12 @@ export class ReactorClient implements IReactorClient {
 
     const unsubscribeUpdated = this.subscriptionManager.onDocumentStateUpdated(
       (result) => {
-        callback({
-          type: DocumentChangeType.Updated,
-          documents: result.results.map(readable),
-        });
+        deliver(
+          (async () => ({
+            type: DocumentChangeType.Updated,
+            documents: await Promise.all(result.results.map(readable)),
+          }))(),
+        );
       },
       search,
       view,
@@ -1272,7 +1358,7 @@ export class ReactorClient implements IReactorClient {
     const unsubscribeRelationship =
       this.subscriptionManager.onRelationshipChanged(
         (parentId, childId, changeType) => {
-          callback({
+          deliver({
             type:
               changeType === RelationshipChangeType.Added
                 ? DocumentChangeType.ChildAdded
@@ -1288,6 +1374,7 @@ export class ReactorClient implements IReactorClient {
       );
 
     return () => {
+      disposed = true;
       unsubscribeCreated();
       unsubscribeDeleted();
       unsubscribeUpdated();

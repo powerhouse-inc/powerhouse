@@ -2,13 +2,13 @@ import type {
   Operation,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
-import type { IWriteCache } from "../cache/write/interfaces.js";
 import { DocumentNotFoundError } from "../shared/errors.js";
 import type { AppendConditionStream } from "../storage/interfaces.js";
 import type {
   BuiltDecisionModel,
   DecisionModel,
   DecisionTarget,
+  IStreamStateReader,
   Projection,
   ReadStream,
   StreamHistory,
@@ -21,13 +21,13 @@ type StreamRead = {
 };
 
 /**
- * Reads each projection's stream through the write cache, recording the
+ * Reads each projection's stream through the supplied reader, recording the
  * revision observed. Static projections resolve first; derived projections
  * see only those and contribute a map from document id to state. Each
  * distinct stream is read once and yields one append condition entry.
  */
 export async function buildDecisionModel<M>(
-  cache: IWriteCache,
+  reader: IStreamStateReader,
   definition: (target: DecisionTarget) => DecisionModel<M>,
   target: DecisionTarget,
   signal?: AbortSignal,
@@ -45,7 +45,7 @@ export async function buildDecisionModel<M>(
       continue;
     }
 
-    const read = await readStream(cache, projection.query, reads, signal);
+    const read = await readStream(reader, projection.query, reads, signal);
     model[key] = read.state;
   }
 
@@ -65,7 +65,7 @@ export async function buildDecisionModel<M>(
       // the document arriving with operations before commit is a conflict.
       let read: StreamRead;
       try {
-        read = await readStream(cache, query, reads, signal);
+        read = await readStream(reader, query, reads, signal);
       } catch (error) {
         if (error instanceof DocumentNotFoundError) {
           recordEmptyStream(query, reads);
@@ -108,7 +108,7 @@ function recordEmptyStream(
 }
 
 async function readStream(
-  cache: IWriteCache,
+  reader: IStreamStateReader,
   query: StreamQuery,
   reads: Map<string, StreamRead>,
   signal?: AbortSignal,
@@ -119,7 +119,7 @@ async function readStream(
     return existing;
   }
 
-  const document = await cache.getState(
+  const document = await reader.getState(
     query.documentId,
     query.scope,
     query.branch,

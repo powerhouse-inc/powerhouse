@@ -19,6 +19,26 @@ export type StreamQuery = {
   scope: string;
 };
 
+/**
+ * What building a decision model reads a stream's state through.
+ *
+ * `IWriteCache` satisfies this and is what the write paths pass. The read path
+ * cannot: the write cache is a write-side projection invalidated by the process
+ * that runs the executor, so a reactor whose executors live in worker processes
+ * holds state in its parent that no commit ever invalidates. A read there would
+ * decide against a policy arbitrarily far behind the one the write paths
+ * enforce. Reads therefore pass a reader backed by the read side.
+ */
+export interface IStreamStateReader {
+  getState(
+    documentId: string,
+    scope: string,
+    branch: string,
+    targetRevision?: number,
+    signal?: AbortSignal,
+  ): Promise<PHDocument>;
+}
+
 /** The document and branch a decision model is built for. */
 export type DecisionTarget = {
   documentId: string;

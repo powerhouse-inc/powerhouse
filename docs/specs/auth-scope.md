@@ -339,12 +339,22 @@ function decide(
    return decision
 
 
-covers(capability, request):
-   capability.can == request.verb
-   and (capability.scope is absent or capability.scope == "*" or capability.scope == request.scope)
-   and (request.verb == "read"                 # a read has no operation
-        or capability.operation is absent      # execute: absent = every operation in the scope
-        or request.operation in capability.operation)
+covers(grant, request):
+   scopeReaches(grant.capability.scope, request.scope)
+   and (
+      # the verb the grant names
+      (grant.capability.can == request.verb
+       and (request.verb == "read"                        # a read has no operation
+            or grant.capability.operation is absent       # execute: absent = every operation
+            or request.operation in grant.capability.operation))
+      # or an allow on execute, which carries the read of that scope with it
+      or (request.verb == "read"
+          and grant.effect == "allow"
+          and grant.capability.can == "execute")
+   )
+
+scopeReaches(scope, requested):
+   scope is absent or scope == "*" or scope == requested
 
 matches(principal, subject, ctx):
    { anyone: true }      -> true
@@ -356,6 +366,10 @@ matches(principal, subject, ctx):
 Deletion is evaluated at position like everything else, rather than absolutely, like the current Reactor implementation. This means that an operation that sorts before the `DELETE_DOCUMENT` still applies, and everything after it denies, across every replica.
 
 The grants are a stack. A capability that omits `scope` (or sets it to `"*"`) covers every scope. An `execute` capability that omits `operation` covers every operation in its scope.
+
+Executing an operation means reading the state it applies to, so an allow on `execute` also allows reading that scope. The converse does not hold: reading is the lesser power and confers no write. Two exclusions keep the implication from reaching further than that. A `deny` on `execute` withholds the write and says nothing about the read, or a policy locking writes down would silently revoke a read grant standing before it. And the `operation` list is not consulted for a read, because it restricts which operations may be executed rather than whether the scope is visible -- consulting it would mean a narrowed execute grant conferred less read than a broad one.
+
+This makes the shape of an administration grant matter. A grant of `execute` on `"*"` now also serves every scope of the document to whoever it names, so a policy that means "administration stays reachable" should name the `auth` scope, which is all the retention rule requires.
 
 A grant that uses a feature that doesn't yet exist never applies. For instance, `{ group }` principals, `{ match }` principals, and `where` conditions will not apply in grants until the actual feature evaluator exists. Skipping an allow withholds access, so an unevaluated allow can never widen a policy. Skipping a deny withholds nothing: a policy that relies on a conditional or group-scoped deny is weaker than written until the feature it uses is live.
 
@@ -682,17 +696,38 @@ The read-set is therefore a sync obligation. A grant that names a group makes th
 
 Everything in this spec so far evaluates operations. A read produces no operation. It has no position in any stream, so there is nothing for admission to gate, nothing for replay to re-evaluate, and nothing for an append condition to guard. The machinery above cannot see reads at all.
 
-Read enforcement therefore lives on the reactor's own read surface, not in the servers built on top of it. Every read on the reactor client carries a subject. The client defaults it to its own signer, and a server passes the authenticated caller. The read functions evaluate `decide` with a `read` request against a model built from the current stream heads, and filter out the scopes the subject may not read. The sync manager applies the same filter per remote, because serving operations to a peer is a read on behalf of that peer. A custom subgraph or a custom server that reads through the reactor client inherits all of this and cannot forget to enforce.
+Read enforcement therefore lives on the reactor's own read surface, not in the servers built on top of it. Every read on the reactor client carries a subject. The client defaults it to its own signer, and a server passes the authenticated caller. The read functions evaluate `decide` with a `read` request against a model built from the current stream heads, and filter out the scopes the subject may not read. A custom subgraph or a custom server that reads through the reactor client inherits all of this and cannot forget to enforce.
+
+A read builds its model through the read side, never the write cache. The write cache is a write-side projection invalidated by whichever process runs the executor, so a reactor whose executors live in worker processes holds state in its parent that no commit ever invalidates; a read there would decide against a policy arbitrarily far behind the one the write paths enforce. The document being read is what seeds the model, so its own `document` and `auth` streams cost nothing extra and only a group the grant list names is fetched.
+
+The gate is selected by `authEnforcement`, not by whether a model happens to be registered. Below that flag the registered model is the document-only one, which ignores the auth scope entirely, so routing a read through it would serve every domain scope of every policied document to anyone. Below `authEnforcement` a read therefore evaluates the policy alone.
+
+Serving operations to a peer is a read on behalf of that peer, and the subject is available for it. Every authorization decision the host makes is made on an inbound call, and serving a peer is one: the peer polls for envelopes over the same authenticated surface as any other caller, and the address its credential establishes is the subject that read is for. Receiving from a peer is not a read at all — it is a write, refused at its position by admission and replay like any other.
+
+Two things about that subject decide the shape of the work. It is established **per poll, not per channel**: a replication channel carries a client-supplied id and no identity, so consecutive polls on one channel can come from different callers, or from none. And it can be **absent**: a request with no bearer token is not refused, it is admitted with no caller, so an anonymous poll is a subject with no address rather than an error. A serving gate must therefore hold what it withholds rather than consuming it, because the delivery state it would consume is shared across every subject that ever polls that channel.
+
+What the serving path does not yet do is evaluate the policy. It gates against the host's own permission tables, which are a second and older authorization system, and it withholds whole documents rather than scopes. Stages 8 through 10 close that.
 
 Internal consumers are inside the trust boundary and see everything. The event bus still dispatches all operations, and read models and processors need unfiltered data to build their projections. Whatever they re-expose is their own read surface to gate.
 
 Filtering is per scope, and a document carries its scopes in more than one place: `initialState` holds the same scope names as `state`, so both are filtered. A read that narrows scopes has the `auth` scope added back before the fetch, because a model built without the policy reads as uninitialized, which allows everything — the gate must never be handed a document whose policy was filtered out on the way in. Both apply to a subscription's documents exactly as they do to a direct read.
 
+A single-document read of a deleted document serves the state at the deletion boundary rather than nothing, because deletion is positional. A listing does not: `find` and its relatives keep omitting a deleted document, or every drive listing would start returning them. A slug never resolves to a deleted document either, because deleting one destroys its slug mappings, which is what keeps it undiscoverable by name.
+
 This placement changes the timing guarantee. An operation is evaluated at its position, so a revocation catches even operations that were accepted before it arrived. A read is evaluated at the moment it is served, so revoking read only stops future serving. It cannot recall bytes a replica already holds.
+
+An uninitialized policy leaves a document open, which is what keeps existing documents unaffected — but a host may need the opposite default. Hosts exist whose own access control closes a document until something opens it, and for them "no policy" has always meant "closed", not "open". Such a host configures the read surface to withhold every gated scope of an uninitialized document rather than serving it.
+
+That is a second authorization system, deliberately, and it is safe for one reason: it only ever withholds. A read decision is made when the read is served and is never part of any document's history, so a host that serves less than the policy allows is a host that serves less. This is the mirror of why a node-local administrator list is not allowed to widen a read (stage 9): withholding locally costs a caller some data, while granting locally means a replica reaching a conclusion no other replica can verify. The closure lives in the host's configuration rather than in the document, so the same document read from a host without that configuration is open — which is a reason to migrate a policy onto it, not a reason to withhold differently.
 
 One exemption is required. Suppose a policy could deny reading the `auth` scope itself. A peer could then sync a document without its policy, see an uninitialized auth scope, and allow every operation it holds. Replicas would diverge permanently. The `auth` and `document` scopes therefore bypass the grants: the policy and the document's metadata are visible to any holder of the document. Grants gate domain-scope reads only. A replica denied a domain scope never receives that stream, so it never holds or evaluates it, and partial replication stays consistent.
 
-The same reasoning extends to groups. A replica must fold a group's membership to evaluate auth with it, so a group document named by a policy is served to that policy's audience regardless of the group's own read grants (see Synchronization).
+The same reasoning extends to groups. A replica must fold a group's membership to evaluate auth with it, so a group document named by a policy is served to that policy's audience regardless of the group's own read grants (see Synchronization). Four rules bound that:
+
+- Only the group's member list is served. A group's other scopes stay behind its own grants, because the member list is the only thing the audience must fold.
+- Only a referencing document's _domain_ scopes decide its audience. Every holder of a document reads its `auth` and `document` scopes, so testing those would serve every referenced group to everybody.
+- One level. A referencer that is itself a group is skipped, and a referencer's own readability comes from its policy alone, so a reference cycle terminates. Cycles are reachable even though the reducer forbids a group naming a group: the reference relation is recorded from an operation's input, including an operation later stored denied, so a refused grant leaves a row behind that validation never saw.
+- At most a hundred referencers are examined. Each costs a model build and the relation is append-only, so an unbounded scan would make a widely-named group permanently expensive to read. Past the bound the group is withheld, which is the direction that fails closed, and the truncation is logged.
 
 ## Administration and bootstrap
 
@@ -708,11 +743,15 @@ A duplicated document inherits its source's policy. Duplication fails when the c
 
 **A state snapshot is not a door onto the policy.** `applyAuthAction` is the validated way into `state.auth`, but `UPGRADE_DOCUMENT`'s `initialState` and `LOAD_STATE`'s `data` replace whole scopes at once, and both are authorized as `document`-scope writes. Without a rule there, a subject holding `execute` on `document` and no auth grant could install a policy of its choosing, name itself `creator` (which exempts the policy from retention permanently), or wipe an existing policy by carrying the default uninitialized one. A snapshot's auth scope is therefore resolved rather than assigned: a snapshot with no policy or an uninitialized one leaves the document's own policy standing, an uninitialized document accepts a policy only after the validation genesis applies, and a snapshot reaching an already-initialized document must carry that same policy exactly, grants included. Duplication and import satisfy the last rule because they run against a freshly created document; anything else is an attempt to swap one policy for another.
 
-Migration maps a legacy table owner to an `execute`-on-`auth` grant.
+Migrating a host's own permission tables into grants is stage 9. A table owner needs both a `read` grant and an `execute`-on-`auth` one: the second because a migrated document has no creator to carve out for, so a policy that does not name its own administrator is born locked out.
 
 ## Implementation plan
 
-Stage 1 has shipped: `PHAuthState` with backfill for legacy documents, the four auth actions and the auth reducer, the version-1 validation rules, persistence through save/load and versioned replay, and interim admission and read gates that consult the policy directly. The admission gate reads the policy out of the document loaded for the scope being written, so it reaches a real policy only for an operation in the `auth` scope. A domain write is handed the default state and allowed. Grants therefore do not gate a domain write before stage 4. The policy is replicated state; stage 4 absorbs the interim gates into the decision model.
+Stages 1 through 6 have shipped, in order: the auth data model with backfill for legacy documents, the four auth actions and reducer, version-1 validation, and persistence through save/load and versioned replay (stage 1); the decision-model surface and the store's append condition (stage 2); the document decision model replacing the document meta cache (stage 3, `documentDecisions`); the auth projection with admission, replay, and re-evaluation (stage 4, `authEnforcement`); group principals — the `powerhouse/reactor-group` model, the derived groups projection, the group-reference relation, and cross-document re-evaluation (stage 5, `authGroups`); and the condition evaluators with position-correct scope state (stage 6, `authConditions`). All four flags default off.
+
+Stage 7, the read path, has shipped too. Reads no longer run through the stage-1 interim gate: with `authEnforcement` on they build the registered model and decide a `read` request per scope, so group principals and conditional grants apply to a read for the first time. One piece of it is a documented limitation, recorded in stage 7 below.
+
+What remains is stages 8 through 10: the reactor client's reads are gated by the policy, but the host built on top of it still has an authorization system of its own — private permission tables that decide sync serving and every other read at the GraphQL boundary. Those three stages move sync serving onto the policy, express the tables as grants, and then retire them. Until they are done, `authEnforcement` cannot be turned on for a fleet that uses those tables, because every document's policy is uninitialized and an uninitialized policy allows everything.
 
 ### Feature flags
 
@@ -730,7 +769,7 @@ Positional deletion is the corrected semantics on every reactor, so this stage w
 
 The stage was attempted once and reverted. Four mistakes from that attempt are stated as design above and are the stage's real content: it derived a revision from a timestamp (see "A position is a timestamp, not a revision"), it substituted `NOOP` for a denied action (see "The outcome belongs on the operation"), it retracted a tail by counting the operations rather than spanning the indices (see "Retracting a tail"), and it triggered re-evaluation from the load path alone (see "What triggers a pass"). A fifth problem, the two write-cache guarantees a decision depends on, has since been fixed (see Admission).
 
-Two limits remain deliberate, both on the read side, and stage 4 moves reads onto the same model. A denied operation contributes nothing to state in the reactor's own rebuild path, but `replayDocument` in `shared/document-model` still applies it, so a client replaying history itself sees it apply. The read surface also continues to hide a deleted document outright rather than serving the state at the deletion boundary.
+Two limits were named here as deliberate and on the read side: `replayDocument` applying a denied operation, and the read surface hiding a deleted document rather than serving the boundary state. Both were in fact closed as this stage shipped, and stage 7 verifies them by exit test rather than building them again.
 
 **Stage 4: the auth projection (`authEnforcement`).**
 Expand `decide` to include the `auth` policy. The mechanism that makes this possible is already in place: stage 3's projection reads the `document` scope to evaluate an operation in other scopes at its merged position, and guards the write with an append condition with re-evaluation. Reading the `auth` scope to evaluate a domain write is that same arrangement with a second projection, so this stage adds projections and `decide` steps rather than new cross-scope machinery.
@@ -745,7 +784,110 @@ Conflicting auth operations are the deliberate exception, and they do not conver
 
 **Stage 5: the groups projection (`authGroups`).** Ship the `PHGroup` model, derive group queries from the grant list, add group streams to the read-set and the append condition, maintain the group-reference relation so sync carries referenced groups and re-evaluation finds dependent documents (see Synchronization), and re-evaluate dependents in their own jobs. Group principals begin to match only here. Until conditions ship, a group's own policy is limited to `address` and `anyone` principals, since `match` never applies. Exit: a group-gated operation syncs to a replica that does not hold the group document and fails closed there until the group's history arrives, after which both replicas agree; and a membership removal denies later operations on every document that references the group.
 
-**Stage 6: conditions (`authConditions`).** The `where` and `match` evaluators turn on. Conditional grants begin to apply only here — for `execute` requests. The read surface does not yet supply a condition context (or a groups map), so a `read` grant that uses `where`, `match`, or `{ group }` still never applies; that lands with the read-path work described under Reads.
+**Stage 6: conditions (`authConditions`).** The `where` and `match` evaluators turn on. Conditional grants begin to apply only here — for `execute` requests. The read surface does not yet supply a condition context (or a groups map), so a `read` grant that uses `where`, `match`, or `{ group }` still never applies; that lands in stage 7.
+
+**Stage 7: the read path.** Reads are evaluated at serve time rather than at a position, so a read decision is not a consensus outcome and this stage carries no flag of its own — each piece turns on with the flag whose feature it completes (`authEnforcement` for the model unification, `authGroups` for group grants and group serving, `authConditions` for conditional read grants).
+
+Two things in this list turned out to have shipped already, with stage 4 rather than here, and are struck below with the defects that remained in them. One thing in it moved to a stage of its own: filtering what sync serves, which is not blocked on anything but is a larger change than it looked, because the serving path gates against a second authorization system (stage 8).
+
+1. **Route reads through the registered decision model.** The read filter — `filterReadableScopes` in `packages/reactor/src/client/util.ts`, applied by the reactor client's read functions — evaluated the bare policy: no groups map, no condition context, no document projection. It now asks a read gate, which builds the registered model at the stream heads and evaluates a `read` request per scope. With that, `{ group }` and conditional read grants apply for the first time. A read's condition context carries the scope's own state and no action input, so a condition on `action.input.*` never holds for a read. The `auth` and `document` scopes stay exempt (see Reads).
+
+   The gate resolves one predicate per document rather than answering per scope, so the model is built once however many scopes are then tested and the filtering itself stays synchronous. Three things about how it reads are load-bearing, and all three are stated under Reads: it reads through the read side rather than the write cache, it is selected by `authEnforcement` rather than by whether a model is registered, and the document already fetched seeds the model so its own streams cost nothing.
+
+   Two call sites needed more than an awaited predicate. Fetching only the policy is enough to evaluate a policy and not enough to evaluate a condition on the state of the scope it gates, so a read of a document's _operations_ fetches the whole document; otherwise a subject who can read a scope's state could not read its operations. And a subscription's update callback fires on a later turn, as its create callback already did.
+
+   A stream this replica does not hold has to reach the model builder as an absence, or the whole read fails where it should have failed closed on one group. The read side reports absence as an untyped error, so the absence is confirmed rather than matched on a message: a transient failure must surface rather than silently deny.
+
+2. **Serve policy-named groups to the policy's audience.** A group document named by a grant is served to any subject the naming document's policy serves, regardless of the group's own read grants. `getGroupReferencers` on the operation index is the lookup. The four rules that bound it — the membership scope only, domain scopes only, one level, and a hundred referencers — are stated under Reads.
+
+3. ~~**Skip denied operations in `replayDocument`.**~~ Shipped with stage 4. Both `replayDocument` and `replayDocumentVersioned` skip a denied operation. One half was missing: they appended it without advancing the scope's revision, because the header is advanced on the applied path alone, so a history whose last operation in a scope was denied replayed one revision short of what the reactor stamps. Matching state and a revision one short is still not the document the server holds, so the exit test asserts both.
+
+4. ~~**Serve deletion-boundary state.**~~ Shipped with stage 4, gated on `documentDecisions`. One defect remained: the read model keyed its deletion branch on the action type alone, so a `DELETE_DOCUMENT` stored denied still marked every snapshot row deleted and destroyed the document's slug mappings, with nothing in any path to put either back. Reachable on the replay path, where a refused delete is written rather than thrown. A listing still omits a deleted document (see Reads).
+
+5. **Close the versioned-documents gap in the positional walk.** `foldEvaluatedScope` (stage 6) resolves one reducer version for the entire walk, and the direction of the error is the opposite of what this step first claimed. The walk reads its base state positionally, below every upgrade boundary, and the cache deliberately withholds version-changing upgrades from a positional read — so the base carries the document's _creation-time_ version, the migration never runs during the walk at all, and the range folds with the **pre**-upgrade reducer against un-migrated state. A condition reading a field a migration introduced reads undefined for the whole history.
+
+   That is worse than one stale answer, because admission and replay disagree. Admission reads the condition's state at the head, where every upgrade has been applied, while re-evaluation walks from below them. An operation admitted against post-upgrade state can therefore be refused when a later arrival makes the walk visit it again, retracting a tail for no reason.
+
+   **Resolved as a documented limitation rather than an upgrade-aware walk.** Making the walk upgrade-aware means growing the fold's signature with a version context and first extracting the write cache's twice-duplicated boundary segmentation into something shared — a refactor of the hottest rebuild path, which does not belong inside the read-path stage, and which two implementations of the boundary rule would drift apart on. So `preflight:auth` reports the documents that cross a reducer version alongside the streams it already checks, and **`authConditions` must not be enabled on a fleet the sweep reports**. Creation-time upgrades from version zero are not boundaries: `reactor.create` submits one in the create batch and the rebuild applies it inline, so the sweep uses the write cache's own predicate to tell them apart.
+
+Exit tests, all met: the worked toll statement's read grants hold — the RTO's `match` grant serves them their own statement and nobody else's, and a group-gated read grant follows a membership change with the gated document's policy revision unchanged across the whole test; a client replaying exported history containing a denied operation reproduces the state _and the revision_ the server holds; and a deleted document reads as the state at its deletion boundary rather than vanishing, while staying out of a listing.
+
+**Stage 8: the serving path (`authEnforcement`).** Sync serving evaluates the policy. `pollSyncEnvelopes` withholds scopes the polling subject may not read, instead of asking the host's permission tables which whole documents to drop.
+
+The protocol already withholds scopes: a remote's filter names the scopes it replicates, and the outbox is built to it, so a peer routinely holds a scope-subset of a document. This stage adds a second, per-poll predicate over the same shape. It cannot reuse the remote's filter, which is declared by the client, fixed when the channel is created, and applied for every subject alike.
+
+Three rules make that predicate safe.
+
+**Whole runs only.** An outbox entry is one `(document, scope, branch)` run and an envelope is a contiguous slice of one entry. Withholding a whole entry is a scope the peer does not receive. Withholding part of one is silent corruption: the receiving executor renumbers arriving operations against its own head and validates no hashes, so a partial run applies as though it were complete.
+
+**Hold, never consume.** The present filter marks a refused entry fully delivered, which the acknowledgement trim then evicts. That is irreversible — the refill cursor has already passed it, so widening a grant later never backfills it — and, because a channel has no identity, it is performed by whichever subject happened to poll. A subject that polls while logged out would permanently evict operations its logged-in identity was entitled to. A held entry costs memory instead, which the channel's existing bounds have to cover.
+
+**The metadata scopes are never withheld.** The `auth` and `document` scopes are what a replica folds to evaluate anything (see Reads), so withholding them would leave a peer unable to reach the decision the origin reached. This is also what keeps ordering intact: an entry that names another as its predecessor is dropped when that predecessor never arrives, and the entries that decide anything are the ones never withheld.
+
+The verdict is intersected with the host's existing check, never unioned. Every document today carries an uninitialized policy, which allows everything, so intersecting is what makes this stage safe to ship before the migration: on an unmigrated fleet it changes nothing except withholding domain scopes on documents that actually carry a policy.
+
+A host that closes a document by default carries that setting into the gate (see Reads), so an uninitialized policy withholds every gated scope instead of serving it. Serving is where this matters most, because it is the path that hands a whole document to another machine.
+
+Two consequences follow from the subject being per-poll and possibly absent. A channel is bound to the address that created it, and a poll under a different address is refused rather than served from the first one's delivery state. And an anonymous poll is a subject with no address, which a policy may legitimately serve — so the coarse drive-level check that stops it today stays until the migration is done.
+
+Exit test: a document whose policy grants a peer `read` on one domain scope and not another syncs to that peer. The peer converges on the granted scope, holds the `auth` and `document` scopes intact, receives nothing of the withheld scope, and raises no dead letter. The grant is then widened with no other change, and on the next poll the withheld operations arrive and the peer converges on the origin's state and revision — which is the test that the entries were held and not consumed. A poll under a second address on the same channel id is refused. And on a host that closes by default, a poll for a document with no policy at all serves its `auth` and `document` scopes and no domain scope, where the same poll on a host that opens by default serves everything.
+
+**Stage 9: migrating the permission tables (no flag).** The host's permission tables are the fleet's live access control, and the auth scope is empty on every document that exists: nothing in production has ever emitted `INITIALIZE_AUTH`. Enforcement therefore cannot be turned on until the tables are expressed as grants, and the two systems disagree in the direction that matters. They agree that an unprotected document is open. They disagree about a protected one, which is closed today and, under a policy that was never initialized, open to everyone.
+
+A migration reads the tables and submits a genesis per document. It cannot write rows: grants are event-sourced, so installing one means an operation through the executor.
+
+```
+INITIALIZE_AUTH per document, one ordered grant list:
+
+  1. READ  rows      -> allow {address}      read     "*"
+  2. WRITE rows      -> allow {address}      read     "*"
+                     -> allow {address}      execute  "*"
+  3. restricted ops  -> deny  {anyone}       execute  {scope, operation: [OP]}
+                     -> allow {address}      execute  {scope, operation: [OP]}
+                        for each address the restriction names
+  4.                 -> deny  {anyone}       execute  "auth"
+  5. owner,          -> allow {address}      read     "*"
+     ADMIN rows      -> allow {address}      execute  "*"
+```
+
+The order carries the whole translation, and every step exists to claw something back that the step before it granted too widely.
+
+An `execute` capability that omits its scope covers `auth`, so a `WRITE` row written as a bare execute grant would hand policy administration to everyone the table names, permanently and replicated. Step four takes it back and step five returns it to the owner and the administrators alone — which is what `WRITE` meant. A per-operation restriction works the same way one level down: the table restricts an operation by holding a row for it at all, so step three denies it to everyone and re-allows only the addresses the restriction names. Step five passes over both, which is the table's rule that an owner and an administrator are not subject to either.
+
+Reclaiming by order rather than by enumerating the domain scopes matters beyond tidiness. An enumerated list is correct for the scopes a document has on the day it migrates and silently fails to cover one added afterwards, which turns a write nobody authorized into a write nobody can make.
+
+No document has a signed header, so a genesis binds no creator whoever signs it, and the creator carve-out that keeps administration reachable does not exist for any migrated document. Every migrated policy must therefore carry an explicit `execute`-on-`auth` grant or the genesis is rejected as born locked out. The owner supplies that address. A document with no owner has nobody the tables name as its administrator, and the migration refuses it and reports it rather than choosing one: inventing an administrator is granting permanent control of a document to an address its access list never mentioned.
+
+What has no faithful translation is refused and reported, never approximated, because every approximation changes live access silently:
+
+- Protection inherited from an ancestor. Grants do not inherit, so the closure has to be materialized onto every descendant, and a document added to that drive afterwards inherits nothing.
+- A document whose principals exceed the version-1 cap of 100 grants.
+- Node-local administrators. These are not refused, they are dropped, because there is nothing to translate: the reactor has no such concept and never had one. The only carve-out in `decide` is the per-document creator, deliberately, since a node-local list cannot be verified by a replica and an operation one admitted would replay as refused everywhere else. An administrator who could read past a document's policy at the host while the reactor denies the same read is an inconsistency, not a feature, so the migration does not preserve it.
+- Nothing, in the case of a host that protects by default. A document with no rows there is closed, and the faithful per-document translation would be a genesis on every document in the store — one that names an administrator none of them has, so most would be refused as born locked out anyway. The host default covers these instead (see Reads), and the migration writes nothing for them, exactly as it writes nothing for an unrowed document on a host that opens by default. What the migration covers on either kind of host is the same thing: the documents the tables actually name.
+
+Migrating publishes every access list, and that is accepted rather than mitigated. The auth scope is readable by every holder of a document, so a grant naming an address tells every replica who that address is, where the tables are private to one host today. It is the same posture the spec already takes for a group's roster: state a replica must fold to evaluate a policy cannot be withheld from it without breaking convergence. A document whose access list must stay confidential cannot have a replicated policy at all.
+
+The migration runs on one replica with auth writes quiesced, because two writers produce tied timestamps on a stream the monotonic rule refuses to replicate and that is never reshuffled — an unrepairable state. It is idempotent by skipping any document whose auth scope is already initialized, and it writes nothing for a document with no rows — whose empty policy is the correct translation of "unprotected" on a host that opens by default, and is covered by the host default on one that closes.
+
+Exit test: against a store carrying each construct — a protected drive with an inherited grant, a protected document with an owner, an unprotected document, a restricted operation, and one document past the grant cap — a dry run reports exactly what it cannot express and writes nothing. A real run then produces, for every migrated document, a policy under which the read gate and the permission tables return the same answer for every subject, scope and operation in the fixture — with one deliberate exception, a node administrator, who the tables answer for and the policy does not. The over-cap document is untouched and reported, a second run writes no operation, and `preflight:auth` reports the fleet clean.
+
+**Stage 10: retiring the permission tables (`authEnforcement`).** The host stops consulting its tables on the read path: the subgraph read helpers, the per-item list filters, the subscription predicates, the attachment gate, and the intersection stage 8 introduced. The auth scope becomes the only read authorization.
+
+What does not go is the host's own default. Retiring the tables retires a per-document access list, not the answer a host gives for a document no list mentions, and on a host that closes by default that answer is the only thing holding most of its documents shut. It survives as one setting on the read surface (see Reads) rather than as a table, and it is the reason this stage does not require every document to be migrated first.
+
+Turning this on for a fleet that never migrated, and that opens by default, makes every document readable by anyone, silently — every policy is uninitialized, so the gate allows everything. That is the one failure this stage must make impossible, so it is a boot assertion rather than a note: a reactor refuses to start with `authEnforcement` on when the tables hold rows the migration has not translated, unless the host closes by default, where an untranslated row narrows access rather than widening it.
+
+The write door needs the same treatment and does not get it from the read gate. A host that protects by default refuses writes to an unrowed document too, through the same tables, and the auth scope would allow them. So the check on the receiving door — the one that authorizes an operation arriving over the API before it is submitted — keeps the host default as well. That check is a local refusal: it stops an operation from being submitted, and it never writes a refusal into any document's history. It must stay that way. A host default that reached the replay evaluation would record a `denied` outcome that a host without the setting never records, and two replicas would hold different state — which is the whole reason enforcement flags flip per fleet rather than per node.
+
+Two things do not port and need their own answer rather than a translation.
+
+Listings keep dropping whole documents. The gate withholds scopes and always serves the header, so a listing that only filtered scopes would leave every id, slug, name and access list enumerable by anyone who can reach the endpoint. A listing therefore synthesizes a document-level verdict from the gate — readable if any gated scope is — and omits the rest, which is what it does today and what the read surface already does for a deleted document.
+
+The surfaces that never consulted the tables at all — drive node trees, analytics, package listings, the MCP endpoint — are neither made safe by this stage nor made less safe by it. Each is its own read surface to gate, and saying so here is not a plan to do it.
+
+Administration of the node survives this stage; administration of a document does not. Installing a package or reaching the MCP endpoint is not a read of any document and no policy governs it, so the operator check stays where it is. What goes is the shortcut that let that same check skip a document's read filter.
+
+Exit test: the existing read-denial suites pass with `authEnforcement` on against the migrated fixture, with their assertions restated from which check was called to what the caller received. And a reactor booting with the flag on, against a store holding unmigrated rows, fails to boot rather than serving.
 
 Registering decision models beyond auth is out of scope. The types are model-agnostic, so that work is registration, not new semantics.
 
@@ -769,7 +911,7 @@ Registering decision models beyond auth is out of scope. The types are model-agn
 
 7. **Order the auth stream against the domain streams it decides.** An auth operation already in a document's stream decides the domain operations that sort after it, because the auth scope is a read-set stream. A load job carries one scope, so an envelope holding both becomes two jobs whose enqueue order is not guaranteed; when the domain job runs first it is admitted against the older policy and the auth arrival owes the re-evaluation pass that corrects it. Convergence holds either way, at the cost of a pass and a re-append.
 
-8. **Filter reads and sync against the same model.** This is where stage 3's two read-side limits close: `replayDocument` applying denied operations, and reads hiding a deleted document rather than serving the state at the deletion boundary.
+8. **Filter reads and sync against the same model.** Stage 3's two read-side limits closed here: `replayDocument` applying denied operations, and reads hiding a deleted document rather than serving the state at the deletion boundary. Routing the read _filter_ through the model did not ship here; that is stage 7, which also cleared the defects left in these two.
 
 9. **Degrade against a remote that predates the schema.** `deniedReason` and `errorType` are new fields on the sync schema, and GraphQL rejects a whole query for naming a field the schema does not have. A reactor at this stage polling a remote that has not upgraded would therefore fail every poll, and the failure classifies as unrecoverable, so the channel's polling stops until the process restarts. That is a sync outage caused by an upgrade, in a direction operators cannot always control: browser clients update on their own schedule, not the fleet's.
 
@@ -784,6 +926,8 @@ Registering decision models beyond auth is out of scope. The types are model-agn
     ```
 
     It reports each unsafe stream and exits non-zero, so it can gate a rollout. The target is required: the tool reads a fleet's own store, and a run that quietly opened an empty database would report every fleet as safe, which is the one answer it must never give by accident.
+
+    The same tool reports the documents that cross a reducer version, which gate `authConditions` rather than `authEnforcement` (see stage 7, step 5). The two are reported separately, because a fleet can be safe for one and not the other.
 
 ### Ordering rules the write paths keep
 
@@ -817,20 +961,15 @@ This is a TRP toll statement. The operation names are illustrative — the model
 {
   "version": 1,
   "grants": [
-    // the site administrator governs the policy and can act anywhere
+    // the site administrator governs the policy and can act anywhere. No
+    // companion read grant: an allow on execute carries the read with it, so
+    // this one grant already serves every scope to that address.
     {
       "id": "g-admin",
       "description": "Site administrator: full governance",
       "effect": "allow",
       "principal": { "address": "0x…site-admin" },
       "capability": { "can": "execute", "scope": "*" }
-    },
-    {
-      "id": "g-admin-read",
-      "description": "Site administrator: read everything",
-      "effect": "allow",
-      "principal": { "address": "0x…site-admin" },
-      "capability": { "can": "read", "scope": "*" }
     },
 
     // the RTO reads their own statement

@@ -12,9 +12,15 @@ import { MAX_SUPPORTED_AUTH_VERSION } from "@powerhousedao/shared/document-model
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { encodeCompositeCursor } from "../../src/client/cursor.js";
 import { ReactorClient } from "../../src/client/reactor-client.js";
-import { canReadScope } from "../../src/client/util.js";
-import { authDecisionModel } from "../../src/decision/auth-decision-model.js";
+import { resolveFeatureFlags } from "../../src/core/feature-flags.js";
+import type { IReadGate } from "../../src/decision/read-gate.js";
+import {
+  BareReadGate,
+  ModelReadGate,
+  readDecisionModel,
+} from "../../src/decision/read-gate.js";
 import type { IReactorClient } from "../../src/client/types.js";
+import { DocumentChangeType } from "../../src/client/types.js";
 import type { BatchExecutionResult, IReactor } from "../../src/core/types.js";
 import type { IJobAwaiter } from "../../src/shared/awaiter.js";
 import {
@@ -92,7 +98,9 @@ describe("ReactorClient Unit Tests", () => {
       }),
       get: vi.fn(),
       getBySlug: vi.fn(),
-      getByIdOrSlug: vi.fn(),
+      getByIdOrSlug: vi
+        .fn()
+        .mockResolvedValue(createMockPHDocument("mock-doc")),
       getOperations: vi.fn().mockResolvedValue({}),
       find: vi.fn().mockResolvedValue({
         results: [],
@@ -1980,13 +1988,128 @@ describe("ReactorClient Unit Tests", () => {
       });
 
       expect(page.results.map((op) => op.index)).toEqual([0]);
-      // the policy fetch carries the view's branch
+      // An unnarrowed call is about to page every scope, so the gate is owed
+      // every scope's state.
       expect(vi.mocked(mockReactor.getByIdOrSlug)).toHaveBeenCalledWith(
         "d1",
-        { scopes: ["auth"], branch: "main" },
+        { branch: "main", subject: { address: "0xreader" } },
         undefined,
         undefined,
       );
+    });
+
+    /**
+     * Paging a narrowed set of scopes must not materialize every other scope of
+     * the document, which this surface pays for on every page.
+     */
+    it("narrows the gating fetch to the scopes it will page", async () => {
+      vi.mocked(mockReactor.getByIdOrSlug).mockResolvedValue(
+        docWithScopes("d1", readGlobalPolicy, { global: { x: 1 } }),
+      );
+      vi.mocked(mockDocumentView.resolveIdOrSlug).mockResolvedValue("d1");
+
+      await client.getOperations("d1", {
+        branch: "main",
+        scopes: ["global"],
+        subject: { address: "0xreader" },
+      });
+
+      const [, fetched] = vi.mocked(mockReactor.getByIdOrSlug).mock.calls[0];
+
+      expect(fetched?.scopes).toContain("global");
+      expect(fetched?.scopes).toContain("auth");
+      expect(fetched?.scopes).not.toContain("local");
+    });
+
+    /**
+     * A gate that cannot resolve must not degrade into an ungated read. The
+     * fetch throws on absence, which is what every other read path here does.
+     */
+    it("propagates a failed gate fetch rather than serving ungated operations", async () => {
+      vi.mocked(mockDocumentView.resolveIdOrSlug).mockResolvedValue("d1");
+      vi.mocked(mockReactor.getByIdOrSlug).mockRejectedValue(
+        new Error("Document not found: d1"),
+      );
+
+      await expect(client.getOperations("d1")).rejects.toThrow(
+        "Document not found",
+      );
+      expect(mockReactor.getOperations).not.toHaveBeenCalled();
+    });
+
+    /**
+     * The narrowing must keep the paged scope's own state, which is the one
+     * thing the wide fetch was protecting: a conditional read grant resolves
+     * against the state of the scope it gates.
+     */
+    describe("a conditional read grant on a scope-narrowed getOperations", () => {
+      const conditionalPolicy = {
+        version: 1,
+        grants: [
+          {
+            id: "g-read-open",
+            description: "anyone reads global while it is open",
+            effect: "allow",
+            principal: { anyone: true },
+            capability: { can: "read", scope: "global" },
+            where: { eq: [{ attr: "doc.global.status" }, { lit: "OPEN" }] },
+          },
+        ],
+      };
+
+      async function pageGlobal(status: string): Promise<number[]> {
+        const model = readDecisionModel(
+          resolveFeatureFlags({
+            documentDecisions: true,
+            authEnforcement: true,
+            authGroups: true,
+            authConditions: true,
+          }),
+          { getModule: () => ({}) } as never,
+        );
+        if (!model) {
+          throw new Error("expected a model");
+        }
+
+        const gating = new ReactorClient(
+          createMockLogger(),
+          mockReactor,
+          createMockSigner(),
+          mockSubscriptionManager,
+          mockJobAwaiter,
+          mockDocumentIndexer,
+          mockDocumentView,
+          new ModelReadGate(model, mockDocumentView, true),
+        );
+
+        // Only what a narrowed fetch yields, so the test cannot pass by
+        // reading state the narrowing would have dropped.
+        vi.mocked(mockReactor.getByIdOrSlug).mockResolvedValue(
+          docWithScopes("d1", conditionalPolicy, { global: { status } }),
+        );
+        vi.mocked(mockDocumentView.resolveIdOrSlug).mockResolvedValue("d1");
+        vi.mocked(mockReactor.getOperations).mockResolvedValue({
+          global: {
+            results: [mockOperation(0)],
+            options: { cursor: "0", limit: 100 },
+          },
+        });
+
+        const page = await gating.getOperations("d1", {
+          branch: "main",
+          scopes: ["global"],
+          subject: { address: "0xother" },
+        });
+        return page.results.map((op) => op.index);
+      }
+
+      it("serves the scope while its own state satisfies the condition", async () => {
+        expect(await pageGlobal("OPEN")).toEqual([0]);
+      });
+
+      it("withholds the scope when its state does not", async () => {
+        expect(await pageGlobal("CLOSED")).toEqual([]);
+      });
     });
 
     /**
@@ -2038,7 +2161,7 @@ describe("ReactorClient Unit Tests", () => {
         ]);
       });
 
-      it("filters unreadable scopes out of the updated callback", () => {
+      it("filters unreadable scopes out of the updated callback", async () => {
         const updated = vi.fn();
         let fire: ((result: { results: PHDocument[] }) => void) | undefined;
         const manager = createMockSubscriptionManager({
@@ -2073,12 +2196,202 @@ describe("ReactorClient Unit Tests", () => {
           ],
         });
 
+        await vi.waitFor(() => expect(updated).toHaveBeenCalled());
+
         const event = updated.mock.calls[0][0] as { documents: PHDocument[] };
         expect(Object.keys(event.documents[0].state).sort()).toEqual([
           "auth",
           "document",
           "global",
         ]);
+      });
+
+      /**
+       * Gating is asynchronous, so an event needing a slow group fetch can be
+       * overtaken by the event behind it unless delivery is ordered.
+       */
+      describe("ordering and disposal", () => {
+        type Fired = { results: PHDocument[] };
+
+        /** A gate that holds its first answer open until released. */
+        function holdingGate(): {
+          gate: IReadGate;
+          release: () => void;
+          gated: () => number;
+        } {
+          let release: () => void = () => {};
+          const held = new Promise<void>((resolve) => {
+            release = resolve;
+          });
+          let gated = 0;
+
+          return {
+            gate: {
+              scopePredicate: async () => {
+                gated += 1;
+                if (gated === 1) {
+                  await held;
+                }
+                return () => true;
+              },
+            },
+            release: () => release(),
+            gated: () => gated,
+          };
+        }
+
+        function subscribeWith(gate: IReadGate, logger = createMockLogger()) {
+          const callback = vi.fn();
+          let fireUpdated: ((result: Fired) => void) | undefined;
+          let fireDeleted: ((ids: string[]) => void) | undefined;
+          const manager = createMockSubscriptionManager({
+            onDocumentCreated: vi.fn(() => () => {}) as never,
+            onRelationshipChanged: vi.fn(() => () => {}) as never,
+            onDocumentStateUpdated: vi.fn((cb: (r: Fired) => void) => {
+              fireUpdated = cb;
+              return () => {};
+            }) as never,
+            onDocumentDeleted: vi.fn((cb: (ids: string[]) => void) => {
+              fireDeleted = cb;
+              return () => {};
+            }) as never,
+          });
+
+          const client = new ReactorClient(
+            logger,
+            mockReactor,
+            createMockSigner(),
+            manager,
+            mockJobAwaiter,
+            mockDocumentIndexer,
+            mockDocumentView,
+            gate,
+          );
+
+          const unsubscribe = client.subscribe({}, callback, {
+            subject: { address: "0xreader" },
+          });
+
+          return {
+            callback,
+            unsubscribe,
+            update: (x: number) =>
+              fireUpdated?.({
+                results: [
+                  docWithScopes("d1", readGlobalPolicy, { global: { x } }),
+                ],
+              }),
+            del: () => fireDeleted?.(["d1"]),
+          };
+        }
+
+        /** Lets the queue drain, including its macrotask boundary. */
+        const settle = () =>
+          new Promise((resolve) => {
+            setTimeout(resolve, 0);
+          });
+
+        function deliveredXs(callback: ReturnType<typeof vi.fn>): number[] {
+          return callback.mock.calls.map((call) => {
+            const event = call[0] as { documents: PHDocument[] };
+            const state = event.documents[0].state as unknown as {
+              global: { x: number };
+            };
+            return state.global.x;
+          });
+        }
+
+        it("delivers updated batches in notification order when the gate is slow", async () => {
+          const { gate, release } = holdingGate();
+          const { callback, update } = subscribeWith(gate);
+
+          update(1);
+          update(2);
+          release();
+
+          await vi.waitFor(() => expect(callback).toHaveBeenCalledTimes(2));
+          expect(deliveredXs(callback)).toEqual([1, 2]);
+        });
+
+        /**
+         * A delete is built synchronously, so without one queue it lands ahead
+         * of an update the gate is still resolving -- state arriving after the
+         * deletion that supersedes it.
+         */
+        it("keeps a delete behind an update that is still being gated", async () => {
+          const { gate, release } = holdingGate();
+          const { callback, update, del } = subscribeWith(gate);
+
+          update(1);
+          del();
+          release();
+
+          await vi.waitFor(() => expect(callback).toHaveBeenCalledTimes(2));
+          expect(
+            callback.mock.calls.map(
+              (call) => (call[0] as { type: string }).type,
+            ),
+          ).toEqual([DocumentChangeType.Updated, DocumentChangeType.Deleted]);
+        });
+
+        it("does not deliver a batch that was in flight when unsubscribe ran", async () => {
+          const { gate, release, gated } = holdingGate();
+          const { callback, unsubscribe, update } = subscribeWith(gate);
+
+          update(1);
+          await vi.waitFor(() => expect(gated()).toBe(1));
+          unsubscribe();
+          release();
+          await settle();
+
+          expect(callback).not.toHaveBeenCalled();
+        });
+
+        it("does not deliver a batch that was queued when unsubscribe ran", async () => {
+          const { gate, release } = holdingGate();
+          const { callback, unsubscribe, update } = subscribeWith(gate);
+
+          update(1);
+          unsubscribe();
+          release();
+          await settle();
+
+          expect(callback).not.toHaveBeenCalled();
+        });
+
+        it("logs, and withholds, a batch it cannot gate", async () => {
+          const logger = createMockLogger();
+          const failed = vi.spyOn(logger, "error");
+          const gate: IReadGate = {
+            scopePredicate: () =>
+              Promise.reject(new Error("read side unavailable")),
+          };
+          const { callback, update } = subscribeWith(gate, logger);
+
+          update(1);
+
+          await vi.waitFor(() => expect(failed).toHaveBeenCalled());
+          expect(callback).not.toHaveBeenCalled();
+        });
+
+        it("keeps delivering after a batch it could not gate", async () => {
+          let gated = 0;
+          const gate: IReadGate = {
+            scopePredicate: () => {
+              gated += 1;
+              return gated === 1
+                ? Promise.reject(new Error("read side unavailable"))
+                : Promise.resolve(() => true);
+            },
+          };
+          const { callback, update } = subscribeWith(gate);
+
+          update(1);
+          update(2);
+
+          await vi.waitFor(() => expect(callback).toHaveBeenCalledTimes(1));
+          expect(deliveredXs(callback)).toEqual([2]);
+        });
       });
     });
 
@@ -2096,11 +2409,15 @@ describe("ReactorClient Unit Tests", () => {
     });
 
     /**
-     * The read gate and the decision model must stay the same algorithm plus one
-     * named carve-out, or a document becomes readable on one path and not the
-     * other. This is what holds them together.
+     * Turning authEnforcement on must not change what a policy that uses no
+     * groups and no conditions serves. The two gates are different code paths --
+     * one evaluates the policy directly, the other builds the decision model
+     * and asks it -- so this pins them to the same answer over the policies
+     * where they are meant to agree, including the carve-out and the version
+     * gate. Where they are meant to differ is covered in the read-gate tests:
+     * only the model gate applies a group or conditional grant.
      */
-    describe("agreement with the decision model", () => {
+    describe("agreement between the bare and model read gates", () => {
       const uninitialized: PHAuthState = { version: 0, grants: [] };
       const allowAll: PHAuthState = {
         version: 1,
@@ -2143,41 +2460,59 @@ describe("ReactorClient Unit Tests", () => {
         ["anonymous", {}],
       ];
 
-      const definition = authDecisionModel({
-        documentId: "d1",
-        branch: "main",
-      });
+      const bare: IReadGate = new BareReadGate();
 
-      function modelSays(
+      function modelGate(): IReadGate {
+        const model = readDecisionModel(
+          resolveFeatureFlags({
+            documentDecisions: true,
+            authEnforcement: true,
+            authGroups: true,
+            authConditions: true,
+          }),
+          { getModule: () => ({}) } as never,
+        );
+        if (!model) {
+          throw new Error("expected a model");
+        }
+        return new ModelReadGate(model, mockDocumentView, true);
+      }
+
+      async function bothSay(
         auth: PHAuthState,
         subject: AuthSubject,
         scope: string,
         isDeleted: boolean,
-      ): boolean {
-        return (
-          definition.decide(
-            {
-              document: { isDeleted } as never as PHDocumentState,
-              auth,
-            },
-            subject,
-            { verb: "read", scope },
-            { scopeState: undefined },
-          ).decision === "allow"
+      ): Promise<[boolean, boolean]> {
+        const document = docWithScopes("d1", auth, {
+          global: {},
+          custom: {},
+        });
+        (document.state as Record<string, unknown>).document = { isDeleted };
+
+        const bareSays = await bare.scopePredicate(document, subject, "main");
+        const modelSays = await modelGate().scopePredicate(
+          document,
+          subject,
+          "main",
         );
+        return [bareSays(scope), modelSays(scope)];
       }
 
       it.each(policies)(
-        "agrees with the model on a domain scope under a %s policy",
-        (_name, auth) => {
+        "agree on a domain scope under a %s policy",
+        async (_name, auth) => {
           for (const [, subject] of subjects) {
             for (const isDeleted of [false, true]) {
-              expect(canReadScope(auth, subject, "global")).toBe(
-                modelSays(auth, subject, "global", isDeleted),
-              );
-              expect(canReadScope(auth, subject, "custom")).toBe(
-                modelSays(auth, subject, "custom", isDeleted),
-              );
+              for (const scope of ["global", "custom"]) {
+                const [bareSays, modelSays] = await bothSay(
+                  auth,
+                  subject,
+                  scope,
+                  isDeleted,
+                );
+                expect(modelSays).toBe(bareSays);
+              }
             }
           }
         },
@@ -2188,24 +2523,30 @@ describe("ReactorClient Unit Tests", () => {
        * policy would see an open auth scope and diverge permanently.
        */
       it.each(["auth", "document"])(
-        "always serves the %s scope, whatever the policy says",
-        (scope) => {
+        "both always serve the %s scope, whatever the policy says",
+        async (scope) => {
           for (const [, auth] of policies) {
             for (const [, subject] of subjects) {
-              expect(canReadScope(auth, subject, scope)).toBe(true);
+              const [bareSays, modelSays] = await bothSay(
+                auth,
+                subject,
+                scope,
+                false,
+              );
+              expect(bareSays).toBe(true);
+              expect(modelSays).toBe(true);
             }
           }
         },
       );
 
       // A read has no position, so the positional deletion step does not gate it.
-      it("does not let deletion change a read decision", () => {
-        expect(modelSays(allowAll, {}, "global", true)).toBe(
-          modelSays(allowAll, {}, "global", false),
-        );
-        expect(modelSays(denyAll, {}, "global", true)).toBe(
-          modelSays(denyAll, {}, "global", false),
-        );
+      it("neither lets deletion change a read decision", async () => {
+        for (const auth of [allowAll, denyAll]) {
+          const deleted = await bothSay(auth, {}, "global", true);
+          const live = await bothSay(auth, {}, "global", false);
+          expect(deleted).toEqual(live);
+        }
       });
     });
   });

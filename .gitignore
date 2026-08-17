@@ -26,6 +26,7 @@ CLAUDE.md
 !.claude/skills/
 coverage/
 coverage-reports/
+vitest-timings.json
 .env
 playwright-report/
 test-results/

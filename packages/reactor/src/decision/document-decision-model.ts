@@ -44,8 +44,10 @@ export function documentDecisionModel(
       return true;
     },
 
-    decide(model) {
-      return model.document.isDeleted
+    decide(model, subject, request) {
+      // A read has no position, so deletion does not gate it: the read surface
+      // serves the state at the deletion boundary rather than refusing.
+      return request.verb === "execute" && model.document.isDeleted
         ? { decision: "deny", reason: DOCUMENT_DELETED_REASON }
         : { decision: "allow" };
     },

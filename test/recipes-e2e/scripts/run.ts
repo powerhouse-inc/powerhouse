@@ -235,6 +235,38 @@ function mirrorRecipes(from: string, to: string): void {
   });
 }
 
+/**
+ * Exempt Powerhouse packages from the registry's release-age policy in
+ * `workDir`.
+ *
+ * pnpm refuses a lockfile entry published more recently than
+ * `minimumReleaseAge`, which defaults to a day. The recipes repo pins a dev
+ * version of every Powerhouse package, so for the first day after a release
+ * this runner cannot install at all — and the packages it is blocked on are
+ * the ones under test, freshly published from this very repo. Those are the
+ * one set of packages the policy is not protecting anyone from.
+ *
+ * `applyLinks` covers only the packages a recipe depends on directly. The
+ * transitive ones still resolve from the registry at the pinned version, so
+ * rewriting specifiers is not enough on its own.
+ *
+ * The exempted set is the one this runner's header names: the packages the
+ * recipes pin to a dev version, which are released together from here.
+ */
+function exemptPowerhouseFromReleaseAge(workDir: string): void {
+  const file = path.join(workDir, "pnpm-workspace.yaml");
+  const existing = fs.readFileSync(file, "utf-8");
+  if (existing.includes("minimumReleaseAgeExclude")) {
+    return;
+  }
+
+  const separator = existing.endsWith("\n") ? "" : "\n";
+  fs.writeFileSync(
+    file,
+    `${existing}${separator}\n# Added by test/recipes-e2e: the pinned Powerhouse dev version is published\n# from this checkout, so the release-age policy would block the packages\n# under test for a day after every release.\nminimumReleaseAgeExclude:\n  - "@powerhousedao/*"\n  - "@renown/*"\n  - "document-model"\n`,
+  );
+}
+
 /** Rewrite the Powerhouse specifiers of every recipe in `workDir` to `link:`. */
 function applyLinks(
   workDir: string,
@@ -468,6 +500,7 @@ async function main(): Promise<void> {
       const targets = [
         ...allRecipes.map((r) => path.join(r.dir, "package.json")),
         path.join(options.recipesDir, "pnpm-lock.yaml"),
+        path.join(options.recipesDir, "pnpm-workspace.yaml"),
       ].filter((f) => fs.existsSync(f));
       const saved = targets.map(
         (f) => [f, fs.readFileSync(f)] as [string, Buffer],
@@ -489,6 +522,9 @@ async function main(): Promise<void> {
 
     step("Rewriting Powerhouse specifiers to link:");
     applyLinks(options.workDir, allRecipes, linkMap);
+
+    step("Exempting Powerhouse packages from the release-age policy");
+    exemptPowerhouseFromReleaseAge(options.workDir);
 
     if (options.install) {
       step("Installing");

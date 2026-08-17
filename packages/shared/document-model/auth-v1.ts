@@ -760,6 +760,42 @@ export function evaluateCondition(
   return evaluateNode(condition, subject, request, conditions) === true;
 }
 
+/** Whether a capability's scope reaches the requested one. */
+function scopeCovers(scope: string | undefined, requested: string): boolean {
+  return scope === undefined || scope === "*" || scope === requested;
+}
+
+/**
+ * Whether one grant answers this request.
+ *
+ * A grant allowing execute on a scope also allows reading it: executing an
+ * operation means reading the state it applies to, so permitting the write while
+ * withholding the read would describe an access nobody could use. The converse
+ * does not hold -- a read grant confers no write.
+ *
+ * Only an allow carries across. A deny on execute withholds the write and says
+ * nothing about the read, so a policy locking writes down does not silently
+ * revoke a read grant sitting before it. The operation list is not consulted
+ * either: it restricts which operations may be executed, not whether the scope
+ * is visible, and a read carries no operation to match against.
+ *
+ * Reads are not consensus -- no replica records a read, and the two read call
+ * sites are both inside the read gate -- so this rule is not part of what makes
+ * an operation valid, and does not need a policy version of its own.
+ */
+function grantAnswers(grant: Grant, request: AuthRequest): boolean {
+  if (capabilityCovers(grant.capability, request)) {
+    return true;
+  }
+
+  return (
+    request.verb === "read" &&
+    grant.effect === "allow" &&
+    grant.capability.can === "execute" &&
+    scopeCovers(grant.capability.scope, request.scope)
+  );
+}
+
 function capabilityCovers(
   capability: Capability,
   request: AuthRequest,
@@ -767,8 +803,7 @@ function capabilityCovers(
   if (capability.can !== request.verb) {
     return false;
   }
-  const scope = capability.scope;
-  if (scope !== undefined && scope !== "*" && scope !== request.scope) {
+  if (!scopeCovers(capability.scope, request.scope)) {
     return false;
   }
   if (capability.can === "execute") {
@@ -866,7 +901,7 @@ export function evaluateGrantStack(
       }
     }
     if (
-      capabilityCovers(grant.capability, request) &&
+      grantAnswers(grant, request) &&
       principalMatches(grant.principal, subject, request, groups, conditions)
     ) {
       applicable = grant;

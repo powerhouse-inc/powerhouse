@@ -71,7 +71,25 @@ jobs:
         working-directory: packages/reactor
 
       - name: Run tests
-        run: pnpm test:reactor
+        run: >-
+          pnpm test:reactor
+          --reporter=default
+          --reporter=json
+          --outputFile.json=vitest-timings.json
+
+      # This step's duration swings by ~50% run to run on identical code, while
+      # install, build and lint stay flat — so it is the suite, not the runner.
+      # Answering "which files" needs per-file timings from a fast run and a
+      # slow one, and a slow run is only diagnosable if it was already being
+      # recorded. Uploaded unconditionally for that reason.
+      - name: Upload test timings
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reactor-test-timings-${{ github.run_id }}-${{ github.run_attempt }}
+          path: packages/reactor/vitest-timings.json
+          if-no-files-found: warn
+          retention-days: 90
 
   integration-test:
     name: Sync Integration Tests

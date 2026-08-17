@@ -2241,7 +2241,10 @@ describe("KyselyDocumentView", () => {
       ]);
     }
 
-    async function deleteDocumentInView(documentId: string) {
+    async function deleteDocumentInView(
+      documentId: string,
+      deniedReason?: string,
+    ) {
       const deletedAt = new Date().toISOString();
       const resultingState = JSON.stringify({
         header: {
@@ -2260,6 +2263,7 @@ describe("KyselyDocumentView", () => {
           operation: createTestOperation(documentId, {
             index: 1,
             hash: "delete-hash",
+            deniedReason,
             action: {
               id: generateId(),
               type: "DELETE_DOCUMENT",
@@ -2309,6 +2313,35 @@ describe("KyselyDocumentView", () => {
       await expect(view.get(documentId)).rejects.toThrow(
         `Document not found: ${documentId}`,
       );
+    });
+
+    /**
+     * A refused delete occupies its index and changes nothing, so it must not
+     * hide the document or destroy its slug. Nothing puts either back.
+     */
+    it("should not delete anything for a refused DELETE_DOCUMENT", async () => {
+      const documentId = generateId();
+      const slug = "refused-delete-slug";
+      await createDocumentInView(documentId, slug);
+      await deleteDocumentInView(documentId, "no grant permits this operation");
+
+      const snapshots = await db
+        .selectFrom("DocumentSnapshot")
+        .selectAll()
+        .where("documentId", "=", documentId)
+        .execute();
+
+      expect(snapshots.length).toBeGreaterThan(0);
+      for (const snapshot of snapshots) {
+        expect(snapshot.isDeleted).toBe(false);
+        expect(snapshot.deletedAt).toBeNull();
+      }
+
+      expect(await view.resolveSlug(slug, { branch })).toBe(documentId);
+      expect(await view.exists([documentId])).toEqual([true]);
+      await expect(view.get(documentId)).resolves.toMatchObject({
+        header: { id: documentId },
+      });
     });
 
     it("get() should serve the deletion-boundary state when it serves it", async () => {

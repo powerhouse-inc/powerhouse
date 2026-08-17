@@ -2,6 +2,12 @@ import type { ISigner } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import { ConsoleLogger } from "document-model";
 import { ReactorClient } from "../client/reactor-client.js";
+import type { IReadGate } from "../decision/read-gate.js";
+import {
+  BareReadGate,
+  ModelReadGate,
+  readDecisionModel,
+} from "../decision/read-gate.js";
 import type { IEventBus } from "../events/interfaces.js";
 import type { IDocumentModelLoader } from "../registry/interfaces.js";
 import { JobAwaiter, type IJobAwaiter } from "../shared/awaiter.js";
@@ -36,6 +42,7 @@ export class ReactorClientBuilder {
   private subscriptionManager?: IReactorSubscriptionManager;
   private jobAwaiter?: IJobAwaiter;
   private documentModelLoader?: IDocumentModelLoader;
+  private readGate?: IReadGate;
 
   /**
    * Sets the logger for the ReactorClient.
@@ -111,6 +118,48 @@ export class ReactorClientBuilder {
     return this;
   }
 
+  /**
+   * Overrides how reads are gated. A client built from a ReactorBuilder derives
+   * this from that reactor's flags; one built from `withReactor` cannot, because
+   * it is handed no flags and no registry, so it gates on the policy alone
+   * unless a gate is supplied here.
+   */
+  public withReadGate(readGate: IReadGate): this {
+    this.readGate = readGate;
+    return this;
+  }
+
+  /**
+   * The gate this reactor's flags call for. Below authEnforcement there is no
+   * model to enforce -- the registered one ignores the auth scope -- so the
+   * policy is evaluated on its own, which is what reads did before the model
+   * existed. Group serving turns on with authGroups, because below it a
+   * `{ group }` grant does not match, so a served roster is one no grant can
+   * use.
+   */
+  private resolveReadGate(
+    reactorModule: InProcessReactorModule | undefined,
+    documentView: IDocumentView,
+  ): IReadGate {
+    if (!reactorModule) {
+      return new BareReadGate();
+    }
+
+    const model = readDecisionModel(
+      reactorModule.featureFlags,
+      reactorModule.documentModelRegistry,
+    );
+    return model === undefined
+      ? new BareReadGate()
+      : new ModelReadGate(
+          model,
+          documentView,
+          reactorModule.featureFlags.authGroups,
+          reactorModule.operationIndex,
+          this.logger,
+        );
+  }
+
   public async build(): Promise<ReactorClient> {
     const module = await this.buildModule();
     return module.client;
@@ -177,6 +226,7 @@ export class ReactorClientBuilder {
       jobAwaiter,
       documentIndexer,
       documentView,
+      this.readGate ?? this.resolveReadGate(reactorModule, documentView),
     );
 
     return {

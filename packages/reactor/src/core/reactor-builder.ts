@@ -18,7 +18,7 @@ import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { WriteCacheConfig } from "../cache/write-cache-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
 import { EventBus } from "../events/event-bus.js";
-import { FLAG_PREREQUISITES, validateFeatureFlags } from "./feature-flags.js";
+import { resolveFeatureFlags } from "./feature-flags.js";
 import type { IEventBus } from "../events/interfaces.js";
 import { ReactorEventTypes } from "../events/types.js";
 import {
@@ -406,10 +406,7 @@ export class ReactorBuilder {
       this.logger = new ConsoleLogger(["reactor"]);
     }
 
-    validateFeatureFlags(
-      this.executorConfig.featureFlags ?? {},
-      FLAG_PREREQUISITES,
-    );
+    const featureFlags = resolveFeatureFlags(this.executorConfig.featureFlags);
 
     if (
       this.projectionShardConfig !== undefined &&
@@ -620,7 +617,7 @@ export class ReactorBuilder {
       operationIndex,
       writeCache,
       documentViewConsistencyTracker,
-      this.executorConfig.featureFlags?.documentDecisions ?? false,
+      featureFlags.documentDecisions,
     );
 
     try {
@@ -737,7 +734,7 @@ export class ReactorBuilder {
     }
 
     let groupReevaluationTrigger: GroupReevaluationTrigger | undefined;
-    if (this.executorConfig.featureFlags?.authGroups) {
+    if (featureFlags.authGroups) {
       groupReevaluationTrigger = new GroupReevaluationTrigger(
         this.logger,
         eventBus,
@@ -750,6 +747,7 @@ export class ReactorBuilder {
     const module: InProcessReactorModule = {
       eventBus,
       documentModelRegistry,
+      featureFlags,
       queue,
       jobTracker,
       executorManager,

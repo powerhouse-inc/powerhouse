@@ -14,6 +14,7 @@ import type { ReactorClient } from "../client/reactor-client.js";
 import type { IReactorClient } from "../client/types.js";
 import type { IEventBus } from "../events/interfaces.js";
 import type { IJobExecutorManager } from "../executor/interfaces.js";
+import type { ReactorFeatureFlags } from "../executor/types.js";
 import type { IJobTracker } from "../job-tracker/interfaces.js";
 import type { IQueue } from "../queue/interfaces.js";
 import type { GroupReevaluationTrigger } from "./group-reevaluation-trigger.js";
@@ -456,6 +457,12 @@ export interface ReactorModule {
  * integration scenarios.
  */
 export interface InProcessReactorModule extends ReactorModule {
+  /**
+   * The enforcement flags this reactor resolved, as plain booleans. Held on the
+   * module because they select what a read enforces as well as what a write
+   * does, and the read surface is composed outside the reactor.
+   */
+  featureFlags: ReactorFeatureFlags;
   queue: IQueue;
   jobTracker: IJobTracker;
   executorManager: IJobExecutorManager;

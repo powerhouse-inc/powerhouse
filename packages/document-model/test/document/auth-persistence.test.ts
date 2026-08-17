@@ -272,6 +272,10 @@ describe("auth persistence through zip save/load", () => {
     expect(loaded.operations.auth?.[2].deniedReason).toBe(
       "no grant permits this operation",
     );
+    // The refusal occupies index 2, so the scope stands at revision 3. The
+    // reactor stamps it that way, and a replay one short of it is a document
+    // that does not match the server after all.
+    expect(loaded.header.revision.auth).toBe(3);
 
     // And the versioned path, which is what production calls.
     const versioned = await baseLoadFromInputVersioned<CounterState>(zipData, {
@@ -281,6 +285,7 @@ describe("auth persistence through zip save/load", () => {
     expect(versioned.operations.auth?.[2].deniedReason).toBe(
       "no grant permits this operation",
     );
+    expect(versioned.header.revision.auth).toBe(3);
   });
 
   it("loads a legacy zip with no auth operations as an uninitialized policy", async () => {

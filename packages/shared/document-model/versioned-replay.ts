@@ -4,6 +4,7 @@ import {
   baseReducerVersion,
   hashDocumentStateForScope,
   replayDocument,
+  updateHeaderRevision,
   type PHDocument,
   type PHDocumentHeader,
 } from "./documents.js";
@@ -246,7 +247,11 @@ export function replayDocumentVersioned<TState extends PHBaseState>(
         // the operation after it fails index validation and the timestamp remap
         // below shifts onto the wrong rows.
         if (isDenied(op)) {
-          document = appendWithoutApplying(document, op, s);
+          document = updateHeaderRevision(
+            appendWithoutApplying(document, op, s),
+            s,
+            op.timestampUtcMs,
+          ) as PHDocument<TState>;
         } else {
           document = reducer(document, op.action, dispatch, {
             ignoreSkipOperations: true,

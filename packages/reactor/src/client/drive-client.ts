@@ -185,7 +185,9 @@ export class DriveClient implements IDriveClient {
       }
     }
 
-    return this.reactor.get<TDocument>(documentId);
+    // Through the client, not the reactor: this one holds the read gate, and a
+    // document handed back from a write is a read like any other.
+    return this.client.get<TDocument>(documentId, undefined, signal);
   }
 
   async addFolder(
@@ -207,7 +209,11 @@ export class DriveClient implements IDriveClient {
       [addFolderAction({ id: folderId, name, parentFolder })],
       signal,
     );
-    const node = updated.state.global.nodes.find((n) => n.id === folderId);
+    // A denied action still completes its job, so a caller with no grant gets
+    // the document back without the scope it tried to write.
+    const node = (
+      updated.state as Partial<typeof updated.state>
+    ).global?.nodes.find((n) => n.id === folderId);
     if (!node || !isFolderNode(node)) {
       throw new Error("Folder creation failed");
     }
@@ -290,7 +296,9 @@ export class DriveClient implements IDriveClient {
       [updateNodeAction({ id: nodeId, name })],
       signal,
     );
-    const node = drive.state.global.nodes.find((n) => n.id === nodeId);
+    const node = (
+      drive.state as Partial<typeof drive.state>
+    ).global?.nodes.find((n) => n.id === nodeId);
     if (!node) {
       throw new Error("Node missing from drive after rename");
     }

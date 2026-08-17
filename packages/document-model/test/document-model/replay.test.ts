@@ -279,6 +279,41 @@ describe("DocumentModel Replay", () => {
     );
   });
 
+  /**
+   * A denied operation occupies its index, so the scope's revision counts it.
+   * A trailing one is the case that can go wrong, because the applied path is
+   * what advances the header and a refusal never reaches it.
+   */
+  it("advances the revision past a trailing denied operation", () => {
+    let newDocument = countReducer(initialDocument, increment());
+    newDocument = countReducer(newDocument, increment());
+
+    const [first, second] = newDocument.operations.global;
+
+    const denied = {
+      ...second,
+      id: "op-denied",
+      index: 2,
+      action: { ...second.action, id: "a-denied" },
+      hash: second.hash,
+      deniedReason: "no grant permits this operation",
+    };
+
+    const replayed = replayDocument(
+      createCountState(),
+      { ...newDocument.operations, global: [first, second, denied] },
+      countReducer,
+      newDocument.header,
+      undefined,
+      undefined,
+      { checkHashes: false },
+    );
+
+    expect(replayed.state.global.count).toBe(2);
+    expect(replayed.operations.global).toHaveLength(3);
+    expect(replayed.header.revision.global).toBe(3);
+  });
+
   it("records a denied operation in a versioned replay without applying it", () => {
     const seed = createCountState();
     const header = {
@@ -362,6 +397,80 @@ describe("DocumentModel Replay", () => {
     );
     // Index validation did not fire, which is what the append is for.
     expect(result.operations.global.map((o) => o.index)).toEqual([0, 1, 2]);
+  });
+
+  it("advances the revision past a trailing denied operation when versioned", () => {
+    const seed = createCountState();
+    const header = {
+      ...initialDocument.header,
+      revision: { global: 0, local: 0, document: 0 },
+    };
+
+    let doc = countReducer(
+      {
+        header,
+        state: seed,
+        initialState: seed,
+        operations: { global: [], local: [] },
+        clipboard: [],
+      } as never,
+      increment(),
+    );
+    doc = countReducer(doc, increment());
+    const [first, second] = doc.operations.global;
+
+    const denied = {
+      ...second,
+      id: "op-denied",
+      index: 2,
+      action: { ...second.action, id: "a-denied" },
+      hash: second.hash,
+      deniedReason: "no grant permits this operation",
+    } as Operation;
+
+    const documentOps = [
+      {
+        id: "op-create",
+        index: 0,
+        skip: 0,
+        hash: "",
+        timestampUtcMs: "2026-01-01T00:00:00.000Z",
+        action: {
+          id: "a-create",
+          type: "CREATE_DOCUMENT",
+          scope: "document",
+          timestampUtcMs: "2026-01-01T00:00:00.000Z",
+          input: { model: "count" },
+        },
+      },
+      {
+        id: "op-upgrade",
+        index: 1,
+        skip: 0,
+        hash: "",
+        timestampUtcMs: "2026-01-01T00:00:00.000Z",
+        action: {
+          id: "a-upgrade",
+          type: "UPGRADE_DOCUMENT",
+          scope: "document",
+          timestampUtcMs: "2026-01-01T00:00:00.000Z",
+          input: { fromVersion: 0, toVersion: 1, initialState: seed },
+        },
+      },
+    ] as unknown as Operation[];
+
+    const result = replayDocumentVersioned(
+      seed,
+      { document: documentOps, global: [first, second, denied], local: [] },
+      { reducers: { 1: countReducer as never } },
+      header,
+      undefined,
+      { checkHashes: false },
+    );
+
+    expect(result.state.global.count).toBe(2);
+    expect(result.operations.global).toHaveLength(3);
+    expect(result.header.revision.global).toBe(3);
   });
 });
 

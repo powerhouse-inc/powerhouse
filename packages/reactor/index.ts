@@ -239,6 +239,7 @@ export type {
   DecisionModel,
   DecisionTarget,
   Evaluation,
+  IStreamStateReader,
   Projection,
   StreamQuery,
 } from "./src/decision/types.js";
@@ -256,6 +257,13 @@ export {
   type AdmissionDecision,
   type RegisteredDecisionModel,
 } from "./src/decision/registered-model.js";
+export {
+  ALWAYS_READABLE_SCOPES,
+  BareReadGate,
+  ModelReadGate,
+  readDecisionModel,
+  type IReadGate,
+} from "./src/decision/read-gate.js";
 export {
   firstOutOfOrderPair,
   type OutOfOrderPair,
