@@ -670,6 +670,154 @@ describe("serving a policy-named group to the policy's audience", () => {
     expect(readable("global")).toBe(false);
     expect(warn).toHaveBeenCalledWith(expect.stringContaining("101 documents"));
   });
+
+  /**
+   * A subject outside the audience walks the whole bound, which is the case
+   * worth not paying serially.
+   */
+  describe("probing the referencers", () => {
+    /** A view that records how many fetches overlap, and holds each one open. */
+    function countingView(documents: Record<string, PHDocument>): {
+      view: IDocumentView;
+      peak: () => number;
+      fetched: () => number;
+    } {
+      let inFlight = 0;
+      let peak = 0;
+      let fetched = 0;
+
+      return {
+        view: {
+          get: vi.fn().mockImplementation(async (id: string) => {
+            inFlight += 1;
+            fetched += 1;
+            peak = Math.max(peak, inFlight);
+            await Promise.resolve();
+            inFlight -= 1;
+            return documents[id];
+          }),
+          exists: vi.fn().mockResolvedValue([true]),
+        } as unknown as IDocumentView,
+        peak: () => peak,
+        fetched: () => fetched,
+      };
+    }
+
+    function manyReferencers(count: number): {
+      ids: string[];
+      documents: Record<string, PHDocument>;
+    } {
+      const ids = Array.from({ length: count }, (_, i) => `stmt-${i}`);
+      const documents: Record<string, PHDocument> = {};
+      for (const id of ids) {
+        documents[id] = referencer(policy([]), id);
+      }
+      return { ids, documents };
+    }
+
+    it("probes several at once, but not all of them", async () => {
+      const { ids, documents } = manyReferencers(40);
+      const counting = countingView(documents);
+
+      const readable = await groupGate(
+        counting.view,
+        mockIndex({ [GROUP]: ids }),
+      ).scopePredicate(groupDoc(), { address: MEMBER }, "main");
+
+      expect(readable("global")).toBe(false);
+      expect(counting.peak()).toBeGreaterThan(1);
+      expect(counting.peak()).toBeLessThanOrEqual(4);
+    });
+
+    it("stops at the first referencer that serves", async () => {
+      const { ids, documents } = manyReferencers(40);
+      documents[ids[0]] = referencer(
+        policy([readGlobal({ address: MEMBER })]),
+        ids[0],
+      );
+      const counting = countingView(documents);
+
+      const readable = await groupGate(
+        counting.view,
+        mockIndex({ [GROUP]: ids }),
+      ).scopePredicate(groupDoc(), { address: MEMBER }, "main");
+
+      expect(readable("global")).toBe(true);
+      expect(counting.fetched()).toBeLessThan(ids.length);
+    });
+
+    /**
+     * Serving rests on a real allow, so a referencer this replica could not
+     * read must not turn an allow already in hand into a denial.
+     */
+    /**
+     * A probe that could not be answered must not turn an allow another
+     * referencer already granted into a denial. The failing referencer here
+     * names a group of its own, which is what the model has to fetch.
+     */
+    /** A view where one named group cannot be reached right now. */
+    function viewFailing(
+      documents: Record<string, PHDocument>,
+      unreachable: string,
+    ): MockView {
+      return {
+        get: vi
+          .fn()
+          .mockImplementation((id: string) =>
+            id === unreachable
+              ? Promise.reject(new Error("connection terminated"))
+              : Promise.resolve(documents[id]),
+          ),
+        // Confirmed present, so the gate rethrows instead of reading the
+        // failure as an absence.
+        exists: vi.fn().mockResolvedValue([true]),
+      } as unknown as MockView;
+    }
+
+    it("serves despite a failed probe when another referencer serves", async () => {
+      const view = viewFailing(
+        {
+          "stmt-a": referencer(
+            policy([readGlobal({ group: "grp-2" })]),
+            "stmt-a",
+          ),
+          "stmt-b": referencer(
+            policy([readGlobal({ address: MEMBER })]),
+            "stmt-b",
+          ),
+        },
+        "grp-2",
+      );
+
+      const readable = await groupGate(
+        view,
+        mockIndex({ [GROUP]: ["stmt-a", "stmt-b"] }),
+      ).scopePredicate(groupDoc(), { address: MEMBER }, "main");
+
+      expect(readable("global")).toBe(true);
+    });
+
+    /** Denying on an outage would make it look like a policy. */
+    it("surfaces a failed probe when nothing served", async () => {
+      const view = viewFailing(
+        {
+          "stmt-a": referencer(
+            policy([readGlobal({ group: "grp-2" })]),
+            "stmt-a",
+          ),
+        },
+        "grp-2",
+      );
+
+      await expect(
+        groupGate(view, mockIndex({ [GROUP]: ["stmt-a"] })).scopePredicate(
+          groupDoc(),
+          { address: MEMBER },
+          "main",
+        ),
+      ).rejects.toThrow("connection terminated");
+    });
+  });
 });
 
 describe("the always-readable scopes", () => {

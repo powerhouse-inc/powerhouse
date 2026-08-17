@@ -6,6 +6,7 @@ import type {
 import {
   decide,
   groupDocumentType,
+  MAX_AUTH_GRANTS,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
@@ -48,9 +49,30 @@ const GROUP_MEMBERSHIP_SCOPE = "global";
  * How many of a group's referencing documents are examined before a read of
  * that group gives up and withholds. Each one costs a model build, and the
  * relation is append-only, so an old and briefly-held reference still counts.
- * Matches the cap a version-1 policy carries on its own grant list.
+ * It is the cap a version-1 policy carries on its own grant list, taken from
+ * there rather than restated: raising that cap raises the read fan-out here.
  */
-const MAX_EXAMINED_REFERENCERS = 100;
+const MAX_EXAMINED_REFERENCERS = MAX_AUTH_GRANTS;
+
+/**
+ * How many referencers are probed at once. The reactor's Postgres pool size is
+ * optional and defaults to ten, and a listing resolves one gate per result, so
+ * per-gate fan-out multiplies: a handful keeps one group read from claiming the
+ * whole pool while still cutting the walk several times over. On PGlite the
+ * queries serialize regardless, so a larger number buys nothing in a browser.
+ */
+const REFERENCER_PROBE_CONCURRENCY = 4;
+
+/**
+ * The shared cursor a set of referencer probes pulls from, and what they found.
+ * One record rather than three variables, because a probe reads its siblings'
+ * answers across an await.
+ */
+type ReferencerWalk = {
+  next: number;
+  served: boolean;
+  failure: Error | undefined;
+};
 
 /**
  * The policy carried on a document, if it carries one. A document handed to the
@@ -264,6 +286,14 @@ export class ModelReadGate implements IReadGate {
    * is recorded from an operation's input, including one later stored denied,
    * so a refused grant naming a group from inside another group leaves a row
    * behind that validation never saw.
+   *
+   * The referencers are probed a few at a time and the walk stops at the first
+   * that serves, because a subject outside the audience is the case that runs to
+   * the bound, and it is the common one. A probe that failed decides only when
+   * nothing served: serving rests on a real allow, so this cannot widen, and it
+   * stops one unreachable referencer from turning an allow already in hand into
+   * a denial. A read records no operation, so replicas differing over a
+   * transient failure has no consensus consequence.
    */
   private async servesGroupTo(
     groupId: string,
@@ -289,13 +319,47 @@ export class ModelReadGate implements IReadGate {
       );
     }
 
-    for (const referencerId of examined) {
-      if (await this.servesThrough(referencerId, subject, signal)) {
-        return true;
+    const walk: ReferencerWalk = {
+      next: 0,
+      served: false,
+      failure: undefined,
+    };
+
+    const probe = async (): Promise<void> => {
+      while (!walk.served && walk.next < examined.length) {
+        const referencerId = examined[walk.next++];
+
+        // Held in a local rather than assigned straight to the walk: reading
+        // that back after the await could overwrite another probe's answer.
+        let serves = false;
+        try {
+          serves = await this.servesThrough(referencerId, subject, signal);
+        } catch (error) {
+          walk.failure ??= Error.isError(error)
+            ? error
+            : new Error(`Probing referencer ${referencerId} failed`);
+        }
+
+        if (serves) {
+          walk.served = true;
+        }
       }
+    };
+
+    // Promise.all rather than a race, so no probe is ever left running with
+    // nobody awaiting it, which is where unhandled rejections come from.
+    await Promise.all(
+      Array.from(
+        { length: Math.min(REFERENCER_PROBE_CONCURRENCY, examined.length) },
+        probe,
+      ),
+    );
+
+    if (!walk.served && walk.failure) {
+      throw walk.failure;
     }
 
-    return false;
+    return walk.served;
   }
 
   /** Whether one referencing document serves the subject any domain scope. */
