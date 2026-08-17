@@ -12,18 +12,8 @@ export type RuntimePowerhouseConfig = {
   connect: PHConnectRuntimeConfig;
 };
 
-/**
- * Default values for every Connect-relevant field. Merged with the
- * `connect.*` block of whatever `powerhouse.config.json` Connect is pointed
- * at, so the SPA never has to guard against undefined fields.
- *
- * Scoped to fields Connect actually reads at runtime — build-time concerns
- * (studio port, switchboard port, reactor.*, auth.*) live in the source
- * config but are not Connect's business and not represented here.
- *
- * Single source of truth for defaults across Connect's runtime read (via
- * ConfigLoader merge), the dist emitter, and the codegen scaffold template.
- */
+/** Defaults for every field Connect reads at runtime, merged into the
+ * `connect.*` block at boot; also the dist emitter's and the scaffold's base. */
 export const DEFAULT_CONNECT_CONFIG: PHConnectRuntimeConfig = {
   branding: {
     appName: "Powerhouse Connect",
@@ -63,6 +53,14 @@ export const DEFAULT_CONNECT_CONFIG: PHConnectRuntimeConfig = {
   instance: {
     namespace: null,
     reactorWorker: false,
+  },
+  reactor: {
+    featureFlags: {
+      documentDecisions: false,
+      authEnforcement: false,
+      authGroups: false,
+      authConditions: false,
+    },
   },
 };
 
