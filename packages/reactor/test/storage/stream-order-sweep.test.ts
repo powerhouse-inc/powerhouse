@@ -135,14 +135,21 @@ describe("sweepDocumentVersions", () => {
     await db.destroy();
   });
 
-  async function seedUpgrades(
+  type SeededUpgrade = {
+    input: unknown;
+    deniedReason: string;
+    error: string;
+  };
+
+  /** Empty string means "none": the txn maps a falsy reason to null. */
+  async function seedUpgradeRows(
     documentId: string,
-    upgrades: Array<{ fromVersion: number; toVersion: number }>,
+    rows: SeededUpgrade[],
   ): Promise<void> {
-    for (let i = 0; i < upgrades.length; i++) {
+    for (let i = 0; i < rows.length; i++) {
       const action: Action = {
         type: "UPGRADE_DOCUMENT",
-        input: upgrades[i],
+        input: rows[i].input,
         scope: "document",
         id: generateId(),
         timestampUtcMs: `2026-01-01T00:00:0${i}.000Z`,
@@ -161,10 +168,22 @@ describe("sweepDocumentVersions", () => {
             skip: 0,
             id: generateId(),
             action,
+            deniedReason: rows[i].deniedReason || undefined,
+            error: rows[i].error || undefined,
           });
         },
       );
     }
+  }
+
+  async function seedUpgrades(
+    documentId: string,
+    upgrades: Array<{ fromVersion: number; toVersion: number }>,
+  ): Promise<void> {
+    await seedUpgradeRows(
+      documentId,
+      upgrades.map((input) => ({ input, deniedReason: "", error: "" })),
+    );
   }
 
   /**
@@ -176,7 +195,7 @@ describe("sweepDocumentVersions", () => {
     await seedUpgrades(generateId(), [{ fromVersion: 0, toVersion: 1 }]);
     await seedUpgrades(generateId(), [{ fromVersion: 0, toVersion: 3 }]);
 
-    const result = await sweepDocumentVersions(db);
+    const result = await sweepDocumentVersions(db, store);
 
     expect(result.documentsChecked).toBe(2);
     expect(result.failures).toHaveLength(0);
@@ -190,7 +209,7 @@ describe("sweepDocumentVersions", () => {
       { fromVersion: 1, toVersion: 2 },
     ]);
 
-    const result = await sweepDocumentVersions(db);
+    const result = await sweepDocumentVersions(db, store);
 
     expect(result.documentsChecked).toBe(2);
     expect(result.failures).toHaveLength(1);
@@ -211,15 +230,54 @@ describe("sweepDocumentVersions", () => {
       { fromVersion: 2, toVersion: 3 },
     ]);
 
-    const result = await sweepDocumentVersions(db);
+    const result = await sweepDocumentVersions(db, store);
 
     expect(result.failures.map((f) => f.toVersion)).toEqual([2, 3]);
   });
 
   it("passes an empty store", async () => {
-    const result = await sweepDocumentVersions(db);
+    const result = await sweepDocumentVersions(db, store);
 
     expect(result.documentsChecked).toBe(0);
+    expect(result.failures).toHaveLength(0);
+  });
+
+  /**
+   * The rebuild skips a denied or errored operation before it tests the
+   * version, so neither changes the reducer. Reporting one would call a
+   * document unsafe forever, because the document scope is append-only and a
+   * delete-then-upgrade leaves exactly that row.
+   */
+  it("passes an upgrade the executor stored denied", async () => {
+    const documentId = generateId();
+    await seedUpgradeRows(documentId, [
+      { input: { fromVersion: 0, toVersion: 1 }, deniedReason: "", error: "" },
+      {
+        input: { fromVersion: 1, toVersion: 2 },
+        deniedReason: "document deleted",
+        error: "",
+      },
+    ]);
+
+    const result = await sweepDocumentVersions(db, store);
+
+    expect(result.documentsChecked).toBe(1);
+    expect(result.failures).toHaveLength(0);
+  });
+
+  it("passes an upgrade whose reducer errored", async () => {
+    const documentId = generateId();
+    await seedUpgradeRows(documentId, [
+      { input: { fromVersion: 0, toVersion: 1 }, deniedReason: "", error: "" },
+      {
+        input: { fromVersion: 1, toVersion: 2 },
+        deniedReason: "",
+        error: "no upgrade manifest",
+      },
+    ]);
+
+    const result = await sweepDocumentVersions(db, store);
+
     expect(result.failures).toHaveLength(0);
   });
 });

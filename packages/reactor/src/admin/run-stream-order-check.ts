@@ -50,11 +50,13 @@ async function main() {
   // Scoped the way the reactor scopes it, or every query misses the tables.
   const scoped = db.withSchema(options.schema) as Kysely<Database>;
 
+  const store = new KyselyOperationStore(scoped);
+
   let failed = 0;
   try {
     const { streamsChecked, failures } = await sweepStreamOrder(
       scoped,
-      new KyselyOperationStore(scoped),
+      store,
       options.scope,
     );
 
@@ -71,7 +73,7 @@ async function main() {
       `${streamsChecked} stream(s) checked in ${options.schema}, ${failed} unsafe for authEnforcement`,
     );
 
-    const versions = await sweepDocumentVersions(scoped);
+    const versions = await sweepDocumentVersions(scoped, store);
     for (const failure of versions.failures) {
       console.error(
         `${failure.documentId} document@${failure.branch}: reducer version ` +

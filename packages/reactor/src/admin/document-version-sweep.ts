@@ -1,4 +1,6 @@
+import { isDenied } from "@powerhousedao/shared/document-model";
 import type { Kysely } from "kysely";
+import type { IOperationStore } from "../storage/interfaces.js";
 import type { Database } from "../storage/kysely/types.js";
 
 /** A document whose history crosses a reducer-version boundary. */
@@ -31,9 +33,16 @@ export type DocumentVersionSweepResult = {
  * from version zero as part of the create batch, and the rebuild applies those
  * inline; this uses the same predicate the write cache uses to tell one from a
  * real version change.
+ *
+ * Read through the operation store the way the write cache reads, so a denied
+ * or errored upgrade is visible: the cache skips both before it tests the
+ * version, so neither changes the reducer, and a delete-then-upgrade leaves
+ * exactly that row. Reporting one would call a document permanently unsafe
+ * with no remediation, because the document scope is append-only.
  */
 export async function sweepDocumentVersions(
   db: Kysely<Database>,
+  operationStore: IOperationStore,
 ): Promise<DocumentVersionSweepResult> {
   const documents = await db
     .selectFrom("Operation")
@@ -42,59 +51,42 @@ export async function sweepDocumentVersions(
     .distinct()
     .execute();
 
-  const upgrades = await db
-    .selectFrom("Operation")
-    .select(["documentId", "branch", "index", "action"])
-    .where("scope", "=", "document")
-    .orderBy("documentId")
-    .orderBy("branch")
-    .orderBy("index")
-    .execute();
-
   const failures: DocumentVersionFailure[] = [];
-  for (const row of upgrades) {
-    const action = parseAction(row.action);
-    if (action === undefined || action.type !== "UPGRADE_DOCUMENT") {
-      continue;
-    }
+  for (const { documentId, branch } of documents) {
+    const stored = await operationStore.getSince(
+      documentId,
+      "document",
+      branch,
+      -1,
+      { actionTypes: ["UPGRADE_DOCUMENT"] },
+    );
 
-    const fromVersion = numberOf(action.input?.fromVersion);
-    const toVersion = numberOf(action.input?.toVersion);
+    for (const operation of stored.results) {
+      if (operation.error || isDenied(operation)) {
+        continue;
+      }
 
-    // The write cache's own test for an upgrade that changes the reducer, so a
-    // creation-time 0 -> N seed is correctly not a boundary.
-    if (fromVersion > 0 && fromVersion < toVersion) {
-      failures.push({
-        documentId: row.documentId,
-        branch: row.branch,
-        fromVersion,
-        toVersion,
-        index: row.index,
-      });
+      const input = operation.action.input as
+        | { fromVersion?: unknown; toVersion?: unknown }
+        | undefined;
+      const fromVersion = numberOf(input?.fromVersion);
+      const toVersion = numberOf(input?.toVersion);
+
+      // The write cache's own test for an upgrade that changes the reducer, so
+      // a creation-time 0 -> N seed is correctly not a boundary.
+      if (fromVersion > 0 && fromVersion < toVersion) {
+        failures.push({
+          documentId,
+          branch,
+          fromVersion,
+          toVersion,
+          index: operation.index,
+        });
+      }
     }
   }
 
   return { documentsChecked: documents.length, failures };
-}
-
-type UpgradeShape = {
-  type?: string;
-  input?: { fromVersion?: unknown; toVersion?: unknown };
-};
-
-/** The action column is jsonb on Postgres and text on some stores. */
-function parseAction(action: unknown): UpgradeShape | undefined {
-  if (typeof action === "string") {
-    try {
-      return JSON.parse(action) as UpgradeShape;
-    } catch {
-      return undefined;
-    }
-  }
-  if (typeof action === "object" && action !== null) {
-    return action as UpgradeShape;
-  }
-  return undefined;
 }
 
 function numberOf(value: unknown): number {
