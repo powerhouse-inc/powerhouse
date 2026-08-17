@@ -79,14 +79,25 @@ async function runSweeps(
     );
   }
 
+  for (const row of versions.malformed) {
+    console.error(
+      `${row.documentId} document@${row.branch}: UPGRADE_DOCUMENT at index ` +
+        `${row.index} has fromVersion ${row.fromVersion} and toVersion ` +
+        `${row.toVersion}, not a number pair, so it cannot be classified`,
+    );
+  }
+
   console.log(
     `${versions.documentsChecked} document(s) checked in ${options.schema}, ` +
-      `${versions.failures.length} unsafe for authConditions`,
+      `${versions.failures.length} unsafe for authConditions, ` +
+      `${versions.malformed.length} unclassifiable`,
   );
 
+  // A row the rule cannot classify blocks authConditions the same way a
+  // boundary does: the fleet is not known safe, which is not the same as safe.
   return preflightExitCode(
     streamOrder.failures.length,
-    versions.failures.length,
+    versions.failures.length + versions.malformed.length,
   );
 }
 

@@ -203,6 +203,7 @@ describe("sweepDocumentVersions", () => {
 
     expect(result.documentsChecked).toBe(2);
     expect(result.failures).toHaveLength(0);
+    expect(result.malformed).toHaveLength(0);
   });
 
   it("reports a document upgraded across a reducer version", async () => {
@@ -267,6 +268,65 @@ describe("sweepDocumentVersions", () => {
 
     expect(result.documentsChecked).toBe(1);
     expect(result.failures).toHaveLength(0);
+  });
+
+  /**
+   * The write cache compares the raw values, where "1" > 0 and "1" < 2 both
+   * hold, so a string pair is a boundary to the rebuild. Coercing it to zero
+   * here would file it as a creation-time seed and call the fleet safe.
+   */
+  it("reports a version pair that is not two numbers rather than coercing it", async () => {
+    const documentId = generateId();
+    await seedUpgradeRows(documentId, [
+      { input: { fromVersion: 0, toVersion: 1 }, deniedReason: "", error: "" },
+      {
+        input: { fromVersion: "1", toVersion: "2" },
+        deniedReason: "",
+        error: "",
+      },
+    ]);
+
+    const result = await sweepDocumentVersions(db, store);
+
+    expect(result.failures).toHaveLength(0);
+    expect(result.malformed).toHaveLength(1);
+    expect(result.malformed[0]).toMatchObject({
+      documentId,
+      branch,
+      index: 1,
+      fromVersion: '"1"',
+      toVersion: '"2"',
+    });
+  });
+
+  it("reports an upgrade missing a version entirely", async () => {
+    await seedUpgradeRows(generateId(), [
+      { input: { toVersion: 2 }, deniedReason: "", error: "" },
+    ]);
+
+    const result = await sweepDocumentVersions(db, store);
+
+    expect(result.failures).toHaveLength(0);
+    expect(result.malformed[0]).toMatchObject({
+      fromVersion: "undefined",
+      toVersion: "2",
+    });
+  });
+
+  /** Denied first: a row that changes nothing needs no classifying. */
+  it("passes a malformed pair the executor stored denied", async () => {
+    await seedUpgradeRows(generateId(), [
+      {
+        input: { fromVersion: "1", toVersion: "2" },
+        deniedReason: "document deleted",
+        error: "",
+      },
+    ]);
+
+    const result = await sweepDocumentVersions(db, store);
+
+    expect(result.failures).toHaveLength(0);
+    expect(result.malformed).toHaveLength(0);
   });
 
   it("passes an upgrade whose reducer errored", async () => {
