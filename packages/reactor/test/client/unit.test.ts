@@ -20,6 +20,7 @@ import {
   readDecisionModel,
 } from "../../src/decision/read-gate.js";
 import type { IReactorClient } from "../../src/client/types.js";
+import { DocumentChangeType } from "../../src/client/types.js";
 import type { BatchExecutionResult, IReactor } from "../../src/core/types.js";
 import type { IJobAwaiter } from "../../src/shared/awaiter.js";
 import {
@@ -2203,6 +2204,194 @@ describe("ReactorClient Unit Tests", () => {
           "document",
           "global",
         ]);
+      });
+
+      /**
+       * Gating is asynchronous, so an event needing a slow group fetch can be
+       * overtaken by the event behind it unless delivery is ordered.
+       */
+      describe("ordering and disposal", () => {
+        type Fired = { results: PHDocument[] };
+
+        /** A gate that holds its first answer open until released. */
+        function holdingGate(): {
+          gate: IReadGate;
+          release: () => void;
+          gated: () => number;
+        } {
+          let release: () => void = () => {};
+          const held = new Promise<void>((resolve) => {
+            release = resolve;
+          });
+          let gated = 0;
+
+          return {
+            gate: {
+              scopePredicate: async () => {
+                gated += 1;
+                if (gated === 1) {
+                  await held;
+                }
+                return () => true;
+              },
+            },
+            release: () => release(),
+            gated: () => gated,
+          };
+        }
+
+        function subscribeWith(gate: IReadGate, logger = createMockLogger()) {
+          const callback = vi.fn();
+          let fireUpdated: ((result: Fired) => void) | undefined;
+          let fireDeleted: ((ids: string[]) => void) | undefined;
+          const manager = createMockSubscriptionManager({
+            onDocumentCreated: vi.fn(() => () => {}) as never,
+            onRelationshipChanged: vi.fn(() => () => {}) as never,
+            onDocumentStateUpdated: vi.fn((cb: (r: Fired) => void) => {
+              fireUpdated = cb;
+              return () => {};
+            }) as never,
+            onDocumentDeleted: vi.fn((cb: (ids: string[]) => void) => {
+              fireDeleted = cb;
+              return () => {};
+            }) as never,
+          });
+
+          const client = new ReactorClient(
+            logger,
+            mockReactor,
+            createMockSigner(),
+            manager,
+            mockJobAwaiter,
+            mockDocumentIndexer,
+            mockDocumentView,
+            gate,
+          );
+
+          const unsubscribe = client.subscribe({}, callback, {
+            subject: { address: "0xreader" },
+          });
+
+          return {
+            callback,
+            unsubscribe,
+            update: (x: number) =>
+              fireUpdated?.({
+                results: [
+                  docWithScopes("d1", readGlobalPolicy, { global: { x } }),
+                ],
+              }),
+            del: () => fireDeleted?.(["d1"]),
+          };
+        }
+
+        /** Lets the queue drain, including its macrotask boundary. */
+        const settle = () =>
+          new Promise((resolve) => {
+            setTimeout(resolve, 0);
+          });
+
+        function deliveredXs(callback: ReturnType<typeof vi.fn>): number[] {
+          return callback.mock.calls.map((call) => {
+            const event = call[0] as { documents: PHDocument[] };
+            const state = event.documents[0].state as unknown as {
+              global: { x: number };
+            };
+            return state.global.x;
+          });
+        }
+
+        it("delivers updated batches in notification order when the gate is slow", async () => {
+          const { gate, release } = holdingGate();
+          const { callback, update } = subscribeWith(gate);
+
+          update(1);
+          update(2);
+          release();
+
+          await vi.waitFor(() => expect(callback).toHaveBeenCalledTimes(2));
+          expect(deliveredXs(callback)).toEqual([1, 2]);
+        });
+
+        /**
+         * A delete is built synchronously, so without one queue it lands ahead
+         * of an update the gate is still resolving -- state arriving after the
+         * deletion that supersedes it.
+         */
+        it("keeps a delete behind an update that is still being gated", async () => {
+          const { gate, release } = holdingGate();
+          const { callback, update, del } = subscribeWith(gate);
+
+          update(1);
+          del();
+          release();
+
+          await vi.waitFor(() => expect(callback).toHaveBeenCalledTimes(2));
+          expect(
+            callback.mock.calls.map(
+              (call) => (call[0] as { type: string }).type,
+            ),
+          ).toEqual([DocumentChangeType.Updated, DocumentChangeType.Deleted]);
+        });
+
+        it("does not deliver a batch that was in flight when unsubscribe ran", async () => {
+          const { gate, release, gated } = holdingGate();
+          const { callback, unsubscribe, update } = subscribeWith(gate);
+
+          update(1);
+          await vi.waitFor(() => expect(gated()).toBe(1));
+          unsubscribe();
+          release();
+          await settle();
+
+          expect(callback).not.toHaveBeenCalled();
+        });
+
+        it("does not deliver a batch that was queued when unsubscribe ran", async () => {
+          const { gate, release } = holdingGate();
+          const { callback, unsubscribe, update } = subscribeWith(gate);
+
+          update(1);
+          unsubscribe();
+          release();
+          await settle();
+
+          expect(callback).not.toHaveBeenCalled();
+        });
+
+        it("logs, and withholds, a batch it cannot gate", async () => {
+          const logger = createMockLogger();
+          const failed = vi.spyOn(logger, "error");
+          const gate: IReadGate = {
+            scopePredicate: () =>
+              Promise.reject(new Error("read side unavailable")),
+          };
+          const { callback, update } = subscribeWith(gate, logger);
+
+          update(1);
+
+          await vi.waitFor(() => expect(failed).toHaveBeenCalled());
+          expect(callback).not.toHaveBeenCalled();
+        });
+
+        it("keeps delivering after a batch it could not gate", async () => {
+          let gated = 0;
+          const gate: IReadGate = {
+            scopePredicate: () => {
+              gated += 1;
+              return gated === 1
+                ? Promise.reject(new Error("read side unavailable"))
+                : Promise.resolve(() => true);
+            },
+          };
+          const { callback, update } = subscribeWith(gate);
+
+          update(1);
+          update(2);
+
+          await vi.waitFor(() => expect(callback).toHaveBeenCalledTimes(1));
+          expect(deliveredXs(callback)).toEqual([2]);
+        });
       });
     });
 

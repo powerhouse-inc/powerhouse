@@ -1250,10 +1250,50 @@ export class ReactorClient implements IReactorClient {
     ): Promise<TDocument> =>
       filterReadableScopes(document, await this.readableScopes(document, view));
 
+    let disposed = false;
+    let delivering: Promise<void> = Promise.resolve();
+
+    /**
+     * Queues one event behind those already queued. Gating an event resolves
+     * asynchronously, so an event needing a group fetch would otherwise be
+     * overtaken by the one behind it, and one still in flight would reach a
+     * subscriber that has already unsubscribed. Only delivery is ordered, not
+     * the gating: a single subscription can cover every document in the
+     * reactor, so serializing that work would make its delivery rate the sum
+     * of every gate build rather than the slowest. An event that cannot be
+     * gated is withheld, because serving it unfiltered would leak the scopes
+     * the gate did not clear -- but it is logged rather than swallowed, since
+     * the gate rethrows a transient failure precisely so it is not read as a
+     * denial.
+     */
+    const deliver = (
+      event: DocumentChangeEvent | Promise<DocumentChangeEvent>,
+    ): void => {
+      // Attached now, or a rejection while the chain is parked on real I/O
+      // waits a full turn with no handler, which Node reports as unhandled.
+      void Promise.resolve(event).catch(() => undefined);
+
+      delivering = delivering
+        .then(async () => {
+          const built = await event;
+          if (disposed) {
+            return;
+          }
+          callback(built);
+        })
+        .catch((error: unknown) => {
+          this.logger.error(
+            "Subscription delivery failed for @search: @Error",
+            { search },
+            error,
+          );
+        });
+    };
+
     const unsubscribeCreated = this.subscriptionManager.onDocumentCreated(
       (result) => {
-        void (async () => {
-          try {
+        deliver(
+          (async () => {
             // withAuthScope, or a view that narrows scopes would leave the
             // policy out of the fetch and the gate would read an absent one as
             // uninitialized, which allows everything.
@@ -1263,21 +1303,19 @@ export class ReactorClient implements IReactorClient {
               ),
             );
 
-            callback({
+            return {
               type: DocumentChangeType.Created,
               documents: await Promise.all(documents.map(readable)),
-            });
-          } catch {
-            // Silently ignore errors when fetching created documents
-          }
-        })();
+            };
+          })(),
+        );
       },
       search,
     );
 
     const unsubscribeDeleted = this.subscriptionManager.onDocumentDeleted(
       (documentIds) => {
-        callback({
+        deliver({
           type: DocumentChangeType.Deleted,
           documents: [],
           context: { childId: documentIds[0] },
@@ -1288,18 +1326,12 @@ export class ReactorClient implements IReactorClient {
 
     const unsubscribeUpdated = this.subscriptionManager.onDocumentStateUpdated(
       (result) => {
-        // The gate resolves asynchronously, so the callback fires on a later
-        // turn, the way the created path already does.
-        void (async () => {
-          try {
-            callback({
-              type: DocumentChangeType.Updated,
-              documents: await Promise.all(result.results.map(readable)),
-            });
-          } catch {
-            // Silently ignore errors gating an update
-          }
-        })();
+        deliver(
+          (async () => ({
+            type: DocumentChangeType.Updated,
+            documents: await Promise.all(result.results.map(readable)),
+          }))(),
+        );
       },
       search,
       view,
@@ -1308,7 +1340,7 @@ export class ReactorClient implements IReactorClient {
     const unsubscribeRelationship =
       this.subscriptionManager.onRelationshipChanged(
         (parentId, childId, changeType) => {
-          callback({
+          deliver({
             type:
               changeType === RelationshipChangeType.Added
                 ? DocumentChangeType.ChildAdded
@@ -1324,6 +1356,7 @@ export class ReactorClient implements IReactorClient {
       );
 
     return () => {
+      disposed = true;
       unsubscribeCreated();
       unsubscribeDeleted();
       unsubscribeUpdated();
