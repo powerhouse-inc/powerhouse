@@ -339,12 +339,22 @@ function decide(
    return decision
 
 
-covers(capability, request):
-   capability.can == request.verb
-   and (capability.scope is absent or capability.scope == "*" or capability.scope == request.scope)
-   and (request.verb == "read"                 # a read has no operation
-        or capability.operation is absent      # execute: absent = every operation in the scope
-        or request.operation in capability.operation)
+covers(grant, request):
+   scopeReaches(grant.capability.scope, request.scope)
+   and (
+      # the verb the grant names
+      (grant.capability.can == request.verb
+       and (request.verb == "read"                        # a read has no operation
+            or grant.capability.operation is absent       # execute: absent = every operation
+            or request.operation in grant.capability.operation))
+      # or an allow on execute, which carries the read of that scope with it
+      or (request.verb == "read"
+          and grant.effect == "allow"
+          and grant.capability.can == "execute")
+   )
+
+scopeReaches(scope, requested):
+   scope is absent or scope == "*" or scope == requested
 
 matches(principal, subject, ctx):
    { anyone: true }      -> true
@@ -356,6 +366,10 @@ matches(principal, subject, ctx):
 Deletion is evaluated at position like everything else, rather than absolutely, like the current Reactor implementation. This means that an operation that sorts before the `DELETE_DOCUMENT` still applies, and everything after it denies, across every replica.
 
 The grants are a stack. A capability that omits `scope` (or sets it to `"*"`) covers every scope. An `execute` capability that omits `operation` covers every operation in its scope.
+
+Executing an operation means reading the state it applies to, so an allow on `execute` also allows reading that scope. The converse does not hold: reading is the lesser power and confers no write. Two exclusions keep the implication from reaching further than that. A `deny` on `execute` withholds the write and says nothing about the read, or a policy locking writes down would silently revoke a read grant standing before it. And the `operation` list is not consulted for a read, because it restricts which operations may be executed rather than whether the scope is visible -- consulting it would mean a narrowed execute grant conferred less read than a broad one.
+
+This makes the shape of an administration grant matter. A grant of `execute` on `"*"` now also serves every scope of the document to whoever it names, so a policy that means "administration stays reachable" should name the `auth` scope, which is all the retention rule requires.
 
 A grant that uses a feature that doesn't yet exist never applies. For instance, `{ group }` principals, `{ match }` principals, and `where` conditions will not apply in grants until the actual feature evaluator exists. Skipping an allow withholds access, so an unevaluated allow can never widen a policy. Skipping a deny withholds nothing: a policy that relies on a conditional or group-scoped deny is weaker than written until the feature it uses is live.
 
@@ -947,20 +961,15 @@ This is a TRP toll statement. The operation names are illustrative — the model
 {
   "version": 1,
   "grants": [
-    // the site administrator governs the policy and can act anywhere
+    // the site administrator governs the policy and can act anywhere. No
+    // companion read grant: an allow on execute carries the read with it, so
+    // this one grant already serves every scope to that address.
     {
       "id": "g-admin",
       "description": "Site administrator: full governance",
       "effect": "allow",
       "principal": { "address": "0x…site-admin" },
       "capability": { "can": "execute", "scope": "*" }
-    },
-    {
-      "id": "g-admin-read",
-      "description": "Site administrator: read everything",
-      "effect": "allow",
-      "principal": { "address": "0x…site-admin" },
-      "capability": { "can": "read", "scope": "*" }
     },
 
     // the RTO reads their own statement
