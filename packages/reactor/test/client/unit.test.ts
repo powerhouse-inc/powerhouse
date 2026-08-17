@@ -2170,7 +2170,7 @@ describe("ReactorClient Unit Tests", () => {
         if (!model) {
           throw new Error("expected a model");
         }
-        return new ModelReadGate(model, mockDocumentView);
+        return new ModelReadGate(model, mockDocumentView, true);
       }
 
       async function bothSay(

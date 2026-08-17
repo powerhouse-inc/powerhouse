@@ -115,11 +115,12 @@ function gate(
   view: IDocumentView,
   registry: IDocumentModelRegistry = emptyRegistry,
 ): ModelReadGate {
-  const model = readDecisionModel(flags(partial), registry);
+  const resolved = flags(partial);
+  const model = readDecisionModel(resolved, registry);
   if (!model) {
     throw new Error("expected a model");
   }
-  return new ModelReadGate(model, view);
+  return new ModelReadGate(model, view, resolved.authGroups);
 }
 
 const allFlags: Partial<ReactorFeatureFlags> = {
@@ -468,7 +469,7 @@ describe("serving a policy-named group to the policy's audience", () => {
     if (!model) {
       throw new Error("expected a model");
     }
-    return new ModelReadGate(model, view, index, logger);
+    return new ModelReadGate(model, view, true, index, logger);
   }
 
   it("serves the group to a subject the referencing document serves", async () => {
@@ -610,13 +611,41 @@ describe("serving a policy-named group to the policy's audience", () => {
     if (!model) {
       throw new Error("expected a model");
     }
-    const readable = await new ModelReadGate(model, mockView()).scopePredicate(
-      groupDoc(),
-      { address: MEMBER },
-      "main",
-    );
+    const readable = await new ModelReadGate(
+      model,
+      mockView(),
+      true,
+    ).scopePredicate(groupDoc(), { address: MEMBER }, "main");
 
     expect(readable("global")).toBe(false);
+  });
+
+  /**
+   * Below authGroups a `{ group }` grant never matches, so serving the roster
+   * would publish a member list for grants that cannot use it.
+   */
+  it("does not serve the group with authGroups off", async () => {
+    const model = readDecisionModel(
+      flags({ documentDecisions: true, authEnforcement: true }),
+      emptyRegistry,
+    );
+    if (!model) {
+      throw new Error("expected a model");
+    }
+    const view = mockView({
+      [REFERENCER]: referencer(policy([readGlobal({ address: MEMBER })])),
+    });
+    const index = mockIndex({ [GROUP]: [REFERENCER] });
+
+    const readable = await new ModelReadGate(
+      model,
+      view,
+      false,
+      index,
+    ).scopePredicate(groupDoc(), { address: MEMBER }, "main");
+
+    expect(readable("global")).toBe(false);
+    expect(index.getGroupReferencers).not.toHaveBeenCalled();
   });
 
   it("withholds and warns past the referencer bound", async () => {

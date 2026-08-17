@@ -204,6 +204,13 @@ export class ModelReadGate implements IReadGate {
   constructor(
     private readonly model: RegisteredDecisionModel,
     private readonly documentView: IDocumentView,
+    /**
+     * Whether a group a policy names is served to that policy's audience. Only
+     * meaningful with `authGroups`, which is what makes a `{ group }` grant
+     * match at all; below it the grant fails closed, so serving the roster
+     * would publish a member list no read grant can use.
+     */
+    private readonly servesGroups: boolean,
     private readonly operationIndex?: IOperationIndex,
     private readonly logger?: ILogger,
   ) {}
@@ -331,6 +338,7 @@ export class ModelReadGate implements IReadGate {
 
   private servesGroup(document: PHDocument): boolean {
     return (
+      this.servesGroups &&
       this.operationIndex !== undefined &&
       document.header.documentType === groupDocumentType
     );

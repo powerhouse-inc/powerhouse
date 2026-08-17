@@ -202,16 +202,14 @@ describe("the read path", () => {
   });
 
   /**
-   * The group document itself is served to the audience of the document naming
-   * it, because a replica must fold the member list to evaluate auth with it.
+   * A statement whose policy names a group, and a group carrying a deny-all
+   * policy of its own. Returns the group's id. Shared by the two cases that
+   * differ only in whether `authGroups` is on.
    */
-  it("serves a policy-named group to the naming document's audience", async () => {
-    const client = await build({
-      documentDecisions: true,
-      authEnforcement: true,
-      authGroups: true,
-    });
-
+  async function groupNamedByServedStatement(
+    client: ReactorClient,
+    seedId: string,
+  ): Promise<string> {
     const group = baseCreateDocument(
       groupCreateState,
       undefined,
@@ -220,7 +218,7 @@ describe("the read path", () => {
     const groupId = group.header.id;
     await client.create(group);
 
-    const statement = createDocModelDocument({ id: "reads-serving-doc" });
+    const statement = createDocModelDocument({ id: seedId });
     const statementId = statement.header.id;
     await client.create(statement);
     await client.execute(statementId, "main", [
@@ -270,10 +268,50 @@ describe("the read path", () => {
       }),
     ]);
 
+    return groupId;
+  }
+
+  /**
+   * The group document itself is served to the audience of the document naming
+   * it, because a replica must fold the member list to evaluate auth with it.
+   */
+  it("serves a policy-named group to the naming document's audience", async () => {
+    const client = await build({
+      documentDecisions: true,
+      authEnforcement: true,
+      authGroups: true,
+    });
+    const groupId = await groupNamedByServedStatement(
+      client,
+      "reads-serving-doc",
+    );
+
     // Served anyway to the subject the naming document serves, and to nobody
     // else, because the roster is what that subject must fold.
     expect(await scopesOf(client, groupId, MEMBER)).toContain("global");
     expect(await scopesOf(client, groupId, OUTSIDER)).not.toContain("global");
+  });
+
+  /**
+   * Below authGroups the `{ group }` grant naming it cannot match, so serving
+   * the roster would publish a member list for a grant that can never use it.
+   * This reads through the builder, which is what a gate constructed with
+   * serving hardcoded on would still pass.
+   */
+  it("withholds a policy-named group's roster with authGroups off", async () => {
+    const client = await build({
+      documentDecisions: true,
+      authEnforcement: true,
+    });
+    const groupId = await groupNamedByServedStatement(
+      client,
+      "reads-serving-doc-off",
+    );
+
+    const served = await scopesOf(client, groupId, MEMBER);
+
+    expect(served).not.toContain("global");
+    expect(served).toEqual(expect.arrayContaining(["auth", "document"]));
   });
 
   /**

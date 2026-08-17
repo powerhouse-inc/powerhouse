@@ -133,7 +133,9 @@ export class ReactorClientBuilder {
    * The gate this reactor's flags call for. Below authEnforcement there is no
    * model to enforce -- the registered one ignores the auth scope -- so the
    * policy is evaluated on its own, which is what reads did before the model
-   * existed.
+   * existed. Group serving turns on with authGroups, because below it a
+   * `{ group }` grant does not match, so a served roster is one no grant can
+   * use.
    */
   private resolveReadGate(
     reactorModule: InProcessReactorModule | undefined,
@@ -152,6 +154,7 @@ export class ReactorClientBuilder {
       : new ModelReadGate(
           model,
           documentView,
+          reactorModule.featureFlags.authGroups,
           reactorModule.operationIndex,
           this.logger,
         );
