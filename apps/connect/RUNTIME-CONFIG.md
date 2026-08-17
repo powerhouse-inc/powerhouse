@@ -55,6 +55,7 @@ Schema lives in `packages/builder-tools/connect-utils/runtime-config-schema.ts`.
     "drives":    { "allowAddDrive": true, "defaultDrives": [...], "preserveStrategy": "...", "sections": {...} },
     "packages":  { "externalEnabled": true },
     "sentry":    { "dsn": null, "env": "dev", "tracing": false },
+    "reactor":   { "featureFlags": { "documentDecisions": false, "authEnforcement": false, "authGroups": false, "authConditions": false } },
     "pwa":       { ... } // build-time only, see below
   }
 }
@@ -86,6 +87,44 @@ Only **public** identifiers belong here (`walletConnectProjectId`, Privy `appId`
 `chainId` (default `1`) is the chain Renown issues credentials on. It is part of the user's DID, so the same wallet on another chain is a different user, and sign-in from a wallet on a different chain is rejected. Setting it moves three things together: the credential, the bearer token — including the reactor worker's, which builds its own crypto and receives the chain through its construct message since it cannot read runtime config — and the chain the wallet UI offers, so the user is prompted to switch rather than rejected at the end of the flow.
 
 Only chains Connect bundles can be offered (`1`, `11155111`, `137`, `10`, `42161`, `8453`); any other id logs an error and leaves in-page sign-in unusable. `networkId` remains unread — `did:pkh` identities here are always `eip155`.
+
+### Reactor enforcement flags (`connect.reactor.featureFlags`)
+
+The reactor Connect runs in the browser takes the same four enforcement flags a
+switchboard does: `documentDecisions`, `authEnforcement`, `authGroups`,
+`authConditions`. Each requires the one before it, and the reactor refuses to
+build a set that skips one. All default `false`.
+
+```jsonc
+"reactor": {
+  "featureFlags": {
+    "documentDecisions": true,
+    "authEnforcement": true,
+    "authGroups": true,
+    "authConditions": true
+  }
+}
+```
+
+These are the one part of `connect.*` that is not a local preference. A flag
+changes how stored history is replayed, and a replay verdict is a consensus
+outcome, so **a Connect must carry the same flags as the fleet it syncs with**.
+A flags-off Connect syncing an enforcing switchboard applies operations that
+switchboard denied and the two diverge. Set them per fleet, alongside the
+switchboard's `REACTOR_*` env vars (see `apps/switchboard/README.md`).
+
+Both reactor hosts read them: the main-thread reactor takes the value from this
+file directly, and the SharedWorker gets it in its construct message, for the
+same reason it gets `renown.chainId` — a worker has no runtime config of its
+own. There is deliberately no query-param or localStorage override, unlike
+`connect.instance.reactorWorker`: a per-tab flag would be a per-node flag.
+
+The flag set is part of the worker's version fingerprint, so a flip is picked up
+even though it isn't a rebuild. A tab whose flags differ from the running
+worker's is told to reload onto a fresh worker, exactly as it would be after a
+new build — without that, the worker would keep enforcing the flags it booted
+with while the tab believed the new set was live. Other tabs still on the old
+worker reload as they refresh.
 
 ## Setting values — the precedence ladder
 
@@ -193,7 +232,7 @@ Downstream consumers inside the SPA:
 | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | `apps/connect/src/connect.config.ts`            | Re-exports the cached config behind getters (`getConnectConfig()`) so the rest of the SPA reads typed accessors instead of dotted paths |
 | `apps/connect/src/hooks/useRegistryPackages.ts` | `getRuntimeConfig().packageRegistryUrl`                                                                                                 |
-| `apps/connect/src/store/reactor.ts`             | Passes `packageRegistryUrl` to `BrowserPackageManager`                                                                                  |
+| `apps/connect/src/store/reactor.ts`             | Passes `packageRegistryUrl` to `BrowserPackageManager`; reads `connect.reactor.featureFlags` for both reactor hosts                     |
 | Renown auth flow                                | Reads `connect.renown.*`                                                                                                                |
 | Drives sidebar                                  | Reads `connect.drives.*`                                                                                                                |
 | Router                                          | Reads `connect.app.basePath`                                                                                                            |
@@ -236,6 +275,22 @@ docker run -e PH_CONNECT_CONFIG_JSON='{
 ```
 
 `dsn: null` (the default) disables Sentry — the SPA never loads the Sentry SDK chunk. The Sentry **release** tag, in contrast, stays build-time (stamped via Vite's `define` from `WORKSPACE_VERSION`) so it always matches the sourcemap upload tag CI used.
+
+**"I'm turning auth enforcement on for this fleet."**
+Set the whole flag set on the container, matching the switchboard's `REACTOR_*` env vars exactly:
+
+```bash
+docker run -e PH_CONNECT_CONFIG_JSON='{
+  "connect": {
+    "reactor": { "featureFlags": {
+      "documentDecisions": true, "authEnforcement": true,
+      "authGroups": true, "authConditions": true
+    } }
+  }
+}' connect:latest
+```
+
+Partial sets are rejected at boot — `authConditions` requires `authGroups`, which requires `authEnforcement`, which requires `documentDecisions`. In worker mode, confirm what the running worker actually enforces in the inspector modal's worker panel ("Enforcement flags").
 
 **"I want to verify what Connect will actually use without booting it."**
 `ph connect config` (no args) prints the effective `connect.*` block (defaults merged with source). `ph connect config connect.renown.url` (or the equivalent `--get connect.renown.url`) prints a single value.

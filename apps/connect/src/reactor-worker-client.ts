@@ -4,6 +4,7 @@ import {
   ReactorEventTypes,
   type IDocumentModelLoader,
   type ModelLoadedEvent,
+  type ReactorFeatureFlags,
 } from "@powerhousedao/reactor";
 import {
   setPGliteDB,
@@ -43,6 +44,8 @@ export type WorkerReactorClientArgs = {
   studioMode?: boolean;
   /** Chain the worker's bearer tokens are scoped to; matches the main thread's Renown instance. */
   renownChainId?: number;
+  /** Enforcement flags for the worker's reactor; it has no runtime config to read them from. */
+  featureFlags: Partial<ReactorFeatureFlags>;
   documentModelModules: DocumentModelModule[];
   upgradeManifests: UpgradeManifest<readonly number[]>[];
   documentModelLoader: IDocumentModelLoader;
@@ -55,6 +58,15 @@ export type WorkerReactorClient = {
   syncManagerProxy: SyncManagerProxy;
   dispose: () => void;
 };
+
+/** Sorted so the same set always produces the same fingerprint. */
+function enabledFlagList(flags: Partial<ReactorFeatureFlags>): string {
+  return Object.entries(flags)
+    .filter(([, enabled]) => enabled)
+    .map(([name]) => name)
+    .sort()
+    .join(",");
+}
 
 function toReactorIdentity(user: User | undefined): ReactorIdentity | null {
   if (!user) {
@@ -111,6 +123,7 @@ export function createWorkerReactorClientModule(
           id: m.documentModel.global.id,
           version: m.version ?? 1,
         })),
+        featureFlags: enabledFlagList(args.featureFlags),
       },
       construct: {
         namespace: args.namespace,
@@ -119,6 +132,7 @@ export function createWorkerReactorClientModule(
         packageSpecs: args.packageSpecs,
         studioMode: args.studioMode,
         renownChainId: args.renownChainId,
+        featureFlags: args.featureFlags,
       },
       packages: args.packageSpecs,
     },

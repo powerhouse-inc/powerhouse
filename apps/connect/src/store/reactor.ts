@@ -38,6 +38,7 @@ import {
   type IDocumentModelLoader,
   type IPackageManager,
   type PHToastFn,
+  type ReactorFeatureFlags,
   type WorkerReactorClientModule,
 } from "@powerhousedao/reactor-browser";
 import {
@@ -330,6 +331,17 @@ export async function createReactor(localPackage?: DocumentModelLib) {
 
   setPackageDiscoveryService(discoveryService);
 
+  // Config alone, no per-tab override: these must match the fleet Connect syncs
+  // with. The worker gets them in its construct message.
+  const reactorFeatureFlags: Partial<ReactorFeatureFlags> =
+    runtimeConfig.connect?.reactor?.featureFlags ?? {};
+  const enabledReactorFlags = Object.entries(reactorFeatureFlags)
+    .filter(([, enabled]) => enabled)
+    .map(([name]) => name);
+  if (enabledReactorFlags.length > 0) {
+    logger.info(`Reactor feature flags: ${enabledReactorFlags.join(", ")}`);
+  }
+
   // create reactor v2 with all versions and upgrade manifests
   let reactorClientModule:
     | BrowserReactorClientModule
@@ -374,6 +386,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
       packageSpecs,
       studioMode: phGlobalConfig.studioMode,
       renownChainId,
+      featureFlags: reactorFeatureFlags,
       documentModelModules,
       upgradeManifests,
       documentModelLoader,
@@ -401,6 +414,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
       documentModelModules,
       upgradeManifests,
       renown,
+      reactorFeatureFlags,
       discoveryService,
     );
   }

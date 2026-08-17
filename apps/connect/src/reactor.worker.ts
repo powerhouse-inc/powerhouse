@@ -9,6 +9,7 @@ import {
   type Database,
   type ISyncManager,
   type JwtHandler,
+  type ReactorFeatureFlags,
   type Remote,
   type RemoteFilter,
   type RemoteOptions,
@@ -94,6 +95,9 @@ type WorkerConstruct = {
   // The worker has no runtime config, so the chain its bearer tokens are scoped
   // to is passed in; leaving it unset would sign for a chain nobody issues on.
   renownChainId?: number;
+  // Same reason: enforcement flags arrive from the tab. Absent means all off,
+  // which is what a tab on an older build sends.
+  featureFlags?: Partial<ReactorFeatureFlags>;
 };
 
 type ModelRegistry = {
@@ -346,6 +350,7 @@ const host = new ReactorHost({
           new ReactorBuilder()
             .withDocumentModelSources(models)
             .withChannelScheme(ChannelScheme.CONNECT)
+            .withExecutorConfig({ featureFlags: construct.featureFlags ?? {} })
             .withJwtHandler(jwtHandler)
             .withKysely(
               new Kysely<Database>({ dialect: new PGliteDialect(pg) }),
