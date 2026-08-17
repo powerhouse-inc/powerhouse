@@ -710,6 +710,9 @@ describe("export pipeline with document-scope operations", () => {
         slug: "test",
         branch: "main",
         revision: {},
+        // Replay reads the protocol version off the header, as baseCreateDocument
+        // sets it; without it the import fails instead of replaying.
+        protocolVersions: { "base-reducer": 2 },
       },
       state: initialState,
       initialState,
