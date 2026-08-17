@@ -81,10 +81,12 @@ jobs:
         run: echo "No changed files; skipping linting."
 
       # reactor-browser runs half its suite in a real chromium (vitest browser
-      # mode), so test:ci needs a browser present.
+      # mode), so test:ci needs a browser present. Run from the package that
+      # owns the playwright devDependency: the root has no such bin to exec.
       - name: Install playwright chromium
         if: ${{ steps.diff.outputs.files != '' }}
         run: pnpm exec playwright install --with-deps chromium
+        working-directory: ./packages/reactor-browser
 
       - name: Run tests
         if: ${{ steps.diff.outputs.files != '' }}
