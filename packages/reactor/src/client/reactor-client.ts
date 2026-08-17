@@ -280,19 +280,16 @@ export class ReactorClient implements IReactorClient {
     );
 
     // Read gate: exclude operations in scopes the subject may not read. The
-    // whole document is fetched rather than only the policy, because a
-    // conditional read grant reads the state of the scope it gates, and one
-    // evaluated against a scope that was never fetched would deny a subject
-    // who can read that scope's state.
-    const gated = (await this.reactor.getByIdOrSlug(
+    // fetch carries the scopes about to be paged, not the policy alone, because
+    // a conditional read grant reads the state of the scope it gates; a
+    // condition can name no other scope, so the scopes not paged are not owed.
+    const gated = await this.reactor.getByIdOrSlug<PHDocument>(
       documentId,
-      { branch: view?.branch },
+      withAuthScope(view),
       undefined,
       signal,
-    )) as PHDocument | undefined;
-    const canRead = gated
-      ? await this.readableScopes(gated, view, signal)
-      : () => true;
+    );
+    const canRead = await this.readableScopes(gated, view, signal);
 
     if (paging?.cursor && isCompositeCursor(paging.cursor)) {
       return this.getOperationsWithCompositeCursor(

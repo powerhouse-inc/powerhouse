@@ -97,7 +97,9 @@ describe("ReactorClient Unit Tests", () => {
       }),
       get: vi.fn(),
       getBySlug: vi.fn(),
-      getByIdOrSlug: vi.fn(),
+      getByIdOrSlug: vi
+        .fn()
+        .mockResolvedValue(createMockPHDocument("mock-doc")),
       getOperations: vi.fn().mockResolvedValue({}),
       find: vi.fn().mockResolvedValue({
         results: [],
@@ -1985,14 +1987,128 @@ describe("ReactorClient Unit Tests", () => {
       });
 
       expect(page.results.map((op) => op.index)).toEqual([0]);
-      // The whole document, not only the policy: a conditional read grant
-      // reads the state of the scope it gates.
+      // An unnarrowed call is about to page every scope, so the gate is owed
+      // every scope's state.
       expect(vi.mocked(mockReactor.getByIdOrSlug)).toHaveBeenCalledWith(
         "d1",
-        { branch: "main" },
+        { branch: "main", subject: { address: "0xreader" } },
         undefined,
         undefined,
       );
+    });
+
+    /**
+     * Paging a narrowed set of scopes must not materialize every other scope of
+     * the document, which this surface pays for on every page.
+     */
+    it("narrows the gating fetch to the scopes it will page", async () => {
+      vi.mocked(mockReactor.getByIdOrSlug).mockResolvedValue(
+        docWithScopes("d1", readGlobalPolicy, { global: { x: 1 } }),
+      );
+      vi.mocked(mockDocumentView.resolveIdOrSlug).mockResolvedValue("d1");
+
+      await client.getOperations("d1", {
+        branch: "main",
+        scopes: ["global"],
+        subject: { address: "0xreader" },
+      });
+
+      const [, fetched] = vi.mocked(mockReactor.getByIdOrSlug).mock.calls[0];
+
+      expect(fetched?.scopes).toContain("global");
+      expect(fetched?.scopes).toContain("auth");
+      expect(fetched?.scopes).not.toContain("local");
+    });
+
+    /**
+     * A gate that cannot resolve must not degrade into an ungated read. The
+     * fetch throws on absence, which is what every other read path here does.
+     */
+    it("propagates a failed gate fetch rather than serving ungated operations", async () => {
+      vi.mocked(mockDocumentView.resolveIdOrSlug).mockResolvedValue("d1");
+      vi.mocked(mockReactor.getByIdOrSlug).mockRejectedValue(
+        new Error("Document not found: d1"),
+      );
+
+      await expect(client.getOperations("d1")).rejects.toThrow(
+        "Document not found",
+      );
+      expect(mockReactor.getOperations).not.toHaveBeenCalled();
+    });
+
+    /**
+     * The narrowing must keep the paged scope's own state, which is the one
+     * thing the wide fetch was protecting: a conditional read grant resolves
+     * against the state of the scope it gates.
+     */
+    describe("a conditional read grant on a scope-narrowed getOperations", () => {
+      const conditionalPolicy = {
+        version: 1,
+        grants: [
+          {
+            id: "g-read-open",
+            description: "anyone reads global while it is open",
+            effect: "allow",
+            principal: { anyone: true },
+            capability: { can: "read", scope: "global" },
+            where: { eq: [{ attr: "doc.global.status" }, { lit: "OPEN" }] },
+          },
+        ],
+      };
+
+      async function pageGlobal(status: string): Promise<number[]> {
+        const model = readDecisionModel(
+          resolveFeatureFlags({
+            documentDecisions: true,
+            authEnforcement: true,
+            authGroups: true,
+            authConditions: true,
+          }),
+          { getModule: () => ({}) } as never,
+        );
+        if (!model) {
+          throw new Error("expected a model");
+        }
+
+        const gating = new ReactorClient(
+          createMockLogger(),
+          mockReactor,
+          createMockSigner(),
+          mockSubscriptionManager,
+          mockJobAwaiter,
+          mockDocumentIndexer,
+          mockDocumentView,
+          new ModelReadGate(model, mockDocumentView, true),
+        );
+
+        // Only what a narrowed fetch yields, so the test cannot pass by
+        // reading state the narrowing would have dropped.
+        vi.mocked(mockReactor.getByIdOrSlug).mockResolvedValue(
+          docWithScopes("d1", conditionalPolicy, { global: { status } }),
+        );
+        vi.mocked(mockDocumentView.resolveIdOrSlug).mockResolvedValue("d1");
+        vi.mocked(mockReactor.getOperations).mockResolvedValue({
+          global: {
+            results: [mockOperation(0)],
+            options: { cursor: "0", limit: 100 },
+          },
+        });
+
+        const page = await gating.getOperations("d1", {
+          branch: "main",
+          scopes: ["global"],
+          subject: { address: "0xother" },
+        });
+        return page.results.map((op) => op.index);
+      }
+
+      it("serves the scope while its own state satisfies the condition", async () => {
+        expect(await pageGlobal("OPEN")).toEqual([0]);
+      });
+
+      it("withholds the scope when its state does not", async () => {
+        expect(await pageGlobal("CLOSED")).toEqual([]);
+      });
     });
 
     /**
