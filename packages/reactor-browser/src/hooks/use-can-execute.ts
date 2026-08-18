@@ -140,6 +140,17 @@ export function useCanExecute(
   const stableSubject = useMemo(() => subject, [subjectKey]);
 
   const settled = subject !== undefined || subjectSettled(loginStatus, user);
+
+  // Who the verdicts are for, not just whether somebody has settled. An account
+  // switch through signIn never passes back through `checking`, and a failed
+  // signIn wipes the user while staying settled, so keying the evaluation off
+  // `settled` alone would keep the previous subject's verdicts. The address is
+  // the identity; a profile refresh replaces the user object without changing
+  // it and must not re-evaluate.
+  const subjectIdentity =
+    subject !== undefined
+      ? subjectKey
+      : `${loginStatus ?? ""}:${user?.address ?? ""}`;
   const revisionKey = JSON.stringify(revision);
 
   const refetch = useCallback(() => {
@@ -203,6 +214,7 @@ export function useCanExecute(
     stableCandidates,
     stableSubject,
     settled,
+    subjectIdentity,
     revisionKey,
     nonce,
   ]);

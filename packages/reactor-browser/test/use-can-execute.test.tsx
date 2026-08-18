@@ -26,6 +26,15 @@ const ANONYMOUS = {
   on: () => () => undefined,
 } as unknown as IRenown;
 
+/** An authorized session for the named address, settled. */
+function authorizedAs(address: string): IRenown {
+  return {
+    status: "authorized",
+    user: { address },
+    on: () => () => undefined,
+  } as unknown as IRenown;
+}
+
 /** The status a failed login leaves behind: anonymous and settled too. */
 const LOGIN_FAILED = {
   status: "not-authorized",
@@ -202,6 +211,62 @@ describe("useCanExecute", () => {
 
     await vi.waitFor(() => {
       expect(textOf(screen, "status")).toBe("ready");
+    });
+  });
+
+  /**
+   * signIn from an authorized session goes straight to the new user without
+   * passing back through `checking`, so the settled flag never flips. The
+   * verdicts have to follow the identity, or userA's ALLOWs persist for userB.
+   */
+  it("re-evaluates when the authorized user changes", async () => {
+    const evaluate = vi.fn().mockResolvedValue(evaluations(["allow"]));
+    setClient(evaluate as unknown as IReactorClient["evaluateActions"]);
+    setRenown(authorizedAs("0xUserA"));
+
+    const screen = render(
+      <StrictMode>
+        <Probe />
+      </StrictMode>,
+    );
+
+    await vi.waitFor(() => {
+      expect(textOf(screen, "status")).toBe("ready");
+    });
+    const callsForUserA = evaluate.mock.calls.length;
+
+    setRenown(authorizedAs("0xUserB"));
+
+    await vi.waitFor(() => {
+      expect(evaluate.mock.calls.length).toBeGreaterThan(callsForUserA);
+    });
+  });
+
+  /**
+   * A failed signIn from an authorized session wipes the user and lands on
+   * `not-authorized` -- settled before and settled after. The now-anonymous
+   * subject must not keep the previous subject's verdicts.
+   */
+  it("re-evaluates when a failed sign-in demotes the subject to anonymous", async () => {
+    const evaluate = vi.fn().mockResolvedValue(evaluations(["allow"]));
+    setClient(evaluate as unknown as IReactorClient["evaluateActions"]);
+    setRenown(authorizedAs("0xUserA"));
+
+    const screen = render(
+      <StrictMode>
+        <Probe />
+      </StrictMode>,
+    );
+
+    await vi.waitFor(() => {
+      expect(textOf(screen, "status")).toBe("ready");
+    });
+    const callsForUserA = evaluate.mock.calls.length;
+
+    setRenown(LOGIN_FAILED);
+
+    await vi.waitFor(() => {
+      expect(evaluate.mock.calls.length).toBeGreaterThan(callsForUserA);
     });
   });
 
