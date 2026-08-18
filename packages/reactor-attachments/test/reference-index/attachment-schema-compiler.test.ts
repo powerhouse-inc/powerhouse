@@ -322,8 +322,8 @@ describe("AttachmentSchemaCompiler", () => {
     );
   });
 
-  it("rejects duplicate input definitions as ambiguous", () => {
-    const module = documentModule([
+  it("collapses identical duplicate definitions but rejects conflicting ones", () => {
+    const identical = documentModule([
       specification(1, [
         operation(
           "ATTACH_FILE",
@@ -337,9 +337,33 @@ describe("AttachmentSchemaCompiler", () => {
         ),
       ]),
     ]);
+    const extractor = new AttachmentSchemaCompiler().forModuleAction(
+      identical,
+      "ATTACH_FILE",
+    );
+    expect(
+      extractor.extract(action("ATTACH_FILE", { nested: { ref: REF_A } })),
+    ).toEqual([REF_A]);
 
+    const conflicting = documentModule([
+      specification(1, [
+        operation(
+          "ATTACH_FILE",
+          `input AttachFileInput { nested: SharedInput }
+           input SharedInput { ref: AttachmentRef }`,
+        ),
+        operation(
+          "OTHER_ACTION",
+          `input OtherActionInput { nested: SharedInput }
+           input SharedInput { ref: AttachmentRef, label: String }`,
+        ),
+      ]),
+    ]);
     expect(() =>
-      new AttachmentSchemaCompiler().forModuleAction(module, "ATTACH_FILE"),
+      new AttachmentSchemaCompiler().forModuleAction(
+        conflicting,
+        "ATTACH_FILE",
+      ),
     ).toThrow("the effective GraphQL schema is invalid");
   });
 
