@@ -69,8 +69,12 @@ export class AuthService {
     if (!this.config.enabled) {
       return { user: undefined, admins: [], auth_enabled: false };
     }
-    const method = request.method;
-    if (method === "OPTIONS" || method === "GET") {
+    // OPTIONS is a CORS preflight: it never carries application auth. Every
+    // other method verifies whatever token it carries -- a GET query's payload
+    // can be an authorization verdict, so discarding its token would silently
+    // answer for the anonymous subject instead of the authenticated caller.
+    // A GET without a token stays anonymous, as verifyBearer already allows.
+    if (request.method === "OPTIONS") {
       return {
         user: undefined,
         admins: this.config.admins,

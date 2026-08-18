@@ -83,7 +83,7 @@ describe("AuthService.authenticateRequest()", () => {
       expect(mockVerifyAuthBearerToken).not.toHaveBeenCalled();
     });
 
-    it("passes GET requests through without verification", async () => {
+    it("passes GET requests with no Authorization header through (anonymous reads allowed)", async () => {
       const result = await service.authenticateRequest(makeRequest("GET"));
 
       expect(result).toEqual({
@@ -92,6 +92,43 @@ describe("AuthService.authenticateRequest()", () => {
         auth_enabled: true,
       });
       expect(mockVerifyAuthBearerToken).not.toHaveBeenCalled();
+    });
+
+    /**
+     * A GET query's payload can itself be an authorization verdict (e.g.
+     * evaluateActions over a persisted query), so a token on a GET must
+     * authenticate the caller rather than be silently discarded and answer
+     * for the anonymous subject.
+     */
+    it("verifies the token a GET request carries", async () => {
+      mockVerifyAuthBearerToken.mockResolvedValue(makeVerified());
+
+      const result = await service.authenticateRequest(
+        makeRequest("GET", { authorization: "Bearer valid-token" }),
+      );
+
+      expect(mockVerifyAuthBearerToken).toHaveBeenCalledWith("valid-token");
+      expect(result).toEqual({
+        user: {
+          address: "0xuser",
+          chainId: 1,
+          networkId: "eip155",
+          appKey: "did:ethr:0xapp",
+        },
+        admins: ADMINS,
+        auth_enabled: true,
+      });
+    });
+
+    it("returns a 401 Response for a GET carrying an invalid token", async () => {
+      mockVerifyAuthBearerToken.mockResolvedValue(false);
+
+      const result = await service.authenticateRequest(
+        makeRequest("GET", { authorization: "Bearer bad-token" }),
+      );
+
+      expect(result).toBeInstanceOf(Response);
+      expect((result as Response).status).toBe(401);
     });
 
     it("passes POST requests with no Authorization header through (anonymous reads allowed)", async () => {
