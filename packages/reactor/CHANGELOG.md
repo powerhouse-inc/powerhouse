@@ -1,3 +1,38 @@
+## 6.2.2-dev.50 (2026-08-18)
+
+### 🚀 Features
+
+- **shared:** let an allow on execute confer read of that scope ([12c3e94a7](https://github.com/powerhouse-inc/powerhouse/commit/12c3e94a7))
+- **reactor:** preflight the fleet for documents authConditions cannot evaluate ([1f0734856](https://github.com/powerhouse-inc/powerhouse/commit/1f0734856))
+- **reactor:** serve a policy-named group to the policy's audience ([fd6e242fb](https://github.com/powerhouse-inc/powerhouse/commit/fd6e242fb))
+- **reactor:** route the reactor client's reads through the decision model ([0277a5c06](https://github.com/powerhouse-inc/powerhouse/commit/0277a5c06))
+- **reactor:** a model-backed read gate ([9ea552deb](https://github.com/powerhouse-inc/powerhouse/commit/9ea552deb))
+- **reactor:** resolve the feature flags once and expose them on the module ([2bd0949e9](https://github.com/powerhouse-inc/powerhouse/commit/2bd0949e9))
+
+### 🩹 Fixes
+
+- **ci:** install chromium from the package that owns playwright ([653349ee0](https://github.com/powerhouse-inc/powerhouse/commit/653349ee0))
+- **connect:** stage the CSP rewrite instead of sed -i ([ab5cd1d8f](https://github.com/powerhouse-inc/powerhouse/commit/ab5cd1d8f))
+- **reactor:** gate the document a mutation hands back ([e42fe603d](https://github.com/powerhouse-inc/powerhouse/commit/e42fe603d))
+- **reactor:** report unclassifiable upgrade versions instead of coercing them ([8e32446ce](https://github.com/powerhouse-inc/powerhouse/commit/8e32446ce))
+- **reactor:** give the two preflight sweeps separate exit codes ([8e065dea1](https://github.com/powerhouse-inc/powerhouse/commit/8e065dea1))
+- **reactor:** stop the version sweep counting denied upgrades as boundaries ([f53555297](https://github.com/powerhouse-inc/powerhouse/commit/f53555297))
+- **reactor:** order subscription delivery and stop swallowing gate failures ([67db4e33a](https://github.com/powerhouse-inc/powerhouse/commit/67db4e33a))
+- **reactor:** stop getOperations failing open, and narrow its gate fetch ([80f5e703b](https://github.com/powerhouse-inc/powerhouse/commit/80f5e703b))
+- **reactor:** gate group-roster serving on authGroups ([1f37ef0b3](https://github.com/powerhouse-inc/powerhouse/commit/1f37ef0b3))
+- **reactor:** do not delete a document from a refused DELETE_DOCUMENT ([680031ffa](https://github.com/powerhouse-inc/powerhouse/commit/680031ffa))
+- **reactor:** exempt a read from the document model's deletion deny ([dca322d58](https://github.com/powerhouse-inc/powerhouse/commit/dca322d58))
+
+### 🔥 Performance
+
+- **reactor:** probe group referencers concurrently and stop at the first hit ([398f5dfe7](https://github.com/powerhouse-inc/powerhouse/commit/398f5dfe7))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5
+- Claude Opus 5 (1M context)
+
 ## 6.2.2-dev.49 (2026-08-17)
 
 This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.

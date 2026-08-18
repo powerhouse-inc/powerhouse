@@ -1,3 +1,47 @@
+## 6.2.2-dev.50 (2026-08-18)
+
+### 🚀 Features
+
+- turn auth enforcement fully on, in switchboard and Connect alike ([#2909](https://github.com/powerhouse-inc/powerhouse/pull/2909))
+- **connect:** enforce the auth flags in both reactor hosts ([a0592c973](https://github.com/powerhouse-inc/powerhouse/commit/a0592c973))
+- **reactor:** resolve the feature flags once and expose them on the module ([2bd0949e9](https://github.com/powerhouse-inc/powerhouse/commit/2bd0949e9))
+- **reactor:** a model-backed read gate ([9ea552deb](https://github.com/powerhouse-inc/powerhouse/commit/9ea552deb))
+- **reactor:** route the reactor client's reads through the decision model ([0277a5c06](https://github.com/powerhouse-inc/powerhouse/commit/0277a5c06))
+- **reactor:** serve a policy-named group to the policy's audience ([fd6e242fb](https://github.com/powerhouse-inc/powerhouse/commit/fd6e242fb))
+- **reactor:** preflight the fleet for documents authConditions cannot evaluate ([1f0734856](https://github.com/powerhouse-inc/powerhouse/commit/1f0734856))
+- **reactor:** auth-scope stage 7 — the read path ([#2907](https://github.com/powerhouse-inc/powerhouse/pull/2907))
+- **shared:** let an allow on execute confer read of that scope ([12c3e94a7](https://github.com/powerhouse-inc/powerhouse/commit/12c3e94a7))
+- **shared:** declare connect.reactor.featureFlags ([29cb164b9](https://github.com/powerhouse-inc/powerhouse/commit/29cb164b9))
+- **switchboard:** read the group and condition enforcement flags ([e3d72b0a8](https://github.com/powerhouse-inc/powerhouse/commit/e3d72b0a8))
+
+### 🩹 Fixes
+
+- **ci:** install chromium from the package that owns playwright ([653349ee0](https://github.com/powerhouse-inc/powerhouse/commit/653349ee0))
+- **connect:** stage the CSP rewrite instead of sed -i ([ab5cd1d8f](https://github.com/powerhouse-inc/powerhouse/commit/ab5cd1d8f))
+- **reactor:** exempt a read from the document model's deletion deny ([dca322d58](https://github.com/powerhouse-inc/powerhouse/commit/dca322d58))
+- **reactor:** do not delete a document from a refused DELETE_DOCUMENT ([680031ffa](https://github.com/powerhouse-inc/powerhouse/commit/680031ffa))
+- **reactor:** gate group-roster serving on authGroups ([1f37ef0b3](https://github.com/powerhouse-inc/powerhouse/commit/1f37ef0b3))
+- **reactor:** stop getOperations failing open, and narrow its gate fetch ([80f5e703b](https://github.com/powerhouse-inc/powerhouse/commit/80f5e703b))
+- **reactor:** order subscription delivery and stop swallowing gate failures ([67db4e33a](https://github.com/powerhouse-inc/powerhouse/commit/67db4e33a))
+- **reactor:** stop the version sweep counting denied upgrades as boundaries ([f53555297](https://github.com/powerhouse-inc/powerhouse/commit/f53555297))
+- **reactor:** give the two preflight sweeps separate exit codes ([8e065dea1](https://github.com/powerhouse-inc/powerhouse/commit/8e065dea1))
+- **reactor:** report unclassifiable upgrade versions instead of coercing them ([8e32446ce](https://github.com/powerhouse-inc/powerhouse/commit/8e32446ce))
+- **reactor:** gate the document a mutation hands back ([e42fe603d](https://github.com/powerhouse-inc/powerhouse/commit/e42fe603d))
+- **reactor-browser:** give the import fixture a base-reducer version ([2b0855401](https://github.com/powerhouse-inc/powerhouse/commit/2b0855401))
+- **reactor-browser:** put the enforcement flags in the worker fingerprint ([5a6d924bf](https://github.com/powerhouse-inc/powerhouse/commit/5a6d924bf))
+- **recipes-e2e:** exempt the packages under test from the release-age policy ([cabdea4e4](https://github.com/powerhouse-inc/powerhouse/commit/cabdea4e4))
+- **shared:** advance the header revision past a trailing denied operation ([74f8858bf](https://github.com/powerhouse-inc/powerhouse/commit/74f8858bf))
+
+### 🔥 Performance
+
+- **reactor:** probe group referencers concurrently and stop at the first hit ([398f5dfe7](https://github.com/powerhouse-inc/powerhouse/commit/398f5dfe7))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5
+- Claude Opus 5 (1M context)
+
 ## 6.2.2-dev.49 (2026-08-17)
 
 This was a version bump only, there were no code changes.

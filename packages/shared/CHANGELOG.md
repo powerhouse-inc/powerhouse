@@ -1,3 +1,22 @@
+## 6.2.2-dev.50 (2026-08-18)
+
+### 🚀 Features
+
+- **shared:** declare connect.reactor.featureFlags ([29cb164b9](https://github.com/powerhouse-inc/powerhouse/commit/29cb164b9))
+- **shared:** let an allow on execute confer read of that scope ([12c3e94a7](https://github.com/powerhouse-inc/powerhouse/commit/12c3e94a7))
+
+### 🩹 Fixes
+
+- **ci:** install chromium from the package that owns playwright ([653349ee0](https://github.com/powerhouse-inc/powerhouse/commit/653349ee0))
+- **connect:** stage the CSP rewrite instead of sed -i ([ab5cd1d8f](https://github.com/powerhouse-inc/powerhouse/commit/ab5cd1d8f))
+- **shared:** advance the header revision past a trailing denied operation ([74f8858bf](https://github.com/powerhouse-inc/powerhouse/commit/74f8858bf))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5
+- Claude Opus 5 (1M context)
+
 ## 6.2.2-dev.49 (2026-08-17)
 
 This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.

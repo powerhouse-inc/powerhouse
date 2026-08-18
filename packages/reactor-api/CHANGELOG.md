@@ -1,3 +1,15 @@
+## 6.2.2-dev.50 (2026-08-18)
+
+### 🩹 Fixes
+
+- **ci:** install chromium from the package that owns playwright ([653349ee0](https://github.com/powerhouse-inc/powerhouse/commit/653349ee0))
+- **connect:** stage the CSP rewrite instead of sed -i ([ab5cd1d8f](https://github.com/powerhouse-inc/powerhouse/commit/ab5cd1d8f))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5 (1M context)
+
 ## 6.2.2-dev.49 (2026-08-17)
 
 This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
