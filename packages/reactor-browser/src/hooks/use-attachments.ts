@@ -3,18 +3,33 @@ import {
   type AttachmentDownloadInput,
   type AttachmentHeader,
   type IAttachmentClient,
+  type IAttachmentService,
   type PreprocessResult,
 } from "@powerhousedao/reactor-attachments/client";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAttachmentService } from "./attachment-service.js";
+
+/**
+ * One client per service, shared across every component.
+ *
+ * A per-component `useMemo` handed each caller its own wrapper, so nothing
+ * client-scoped could ever be shared or cached. Keyed weakly so a replaced
+ * service is collectable.
+ */
+const clientsByService = new WeakMap<IAttachmentService, IAttachmentClient>();
+
+function clientFor(service: IAttachmentService): IAttachmentClient {
+  const existing = clientsByService.get(service);
+  if (existing) return existing;
+  const created = createAttachmentClient(service);
+  clientsByService.set(service, created);
+  return created;
+}
 
 /** Returns an IAttachmentClient wrapping the current IAttachmentService, or undefined if none is set. */
 export function useAttachments(): IAttachmentClient | undefined {
   const service = useAttachmentService();
-  return useMemo(
-    () => (service ? createAttachmentClient(service) : undefined),
-    [service],
-  );
+  return service ? clientFor(service) : undefined;
 }
 
 export type UseAttachmentPreviewInput = {
