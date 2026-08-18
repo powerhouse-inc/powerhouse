@@ -4,6 +4,12 @@ export {
 } from "./switchboard-attachment-transport.js";
 export { buildAuthHeaders } from "./build-auth-headers.js";
 export {
+  createFetchUploadTransport,
+  type AttachmentUploadRequest,
+  type AttachmentUploadResponse,
+  type AttachmentUploadTransport,
+} from "./upload-transport.js";
+export {
   RemoteReservationStore,
   type SwitchboardClientConfig,
 } from "./remote-reservation-store.js";

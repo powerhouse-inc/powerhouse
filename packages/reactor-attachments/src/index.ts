@@ -70,7 +70,11 @@ export {
   RemoteAttachmentUploadFactory,
   RemoteAttachmentStore,
   createRemoteAttachmentService,
+  createFetchUploadTransport,
   type SwitchboardClientConfig,
+  type AttachmentUploadRequest,
+  type AttachmentUploadResponse,
+  type AttachmentUploadTransport,
 } from "./switchboard/index.js";
 export { NullAttachmentTransport } from "./null-attachment-transport.js";
 export { AttachmentBuilder } from "./attachment-builder.js";

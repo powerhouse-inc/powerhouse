@@ -18,6 +18,10 @@ import type {
 } from "../types.js";
 import { buildAuthHeaders } from "./build-auth-headers.js";
 import type { SwitchboardClientConfig } from "./remote-reservation-store.js";
+import {
+  createFetchUploadTransport,
+  type AttachmentUploadTransport,
+} from "./upload-transport.js";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -31,7 +35,7 @@ export class RemoteAttachmentUpload implements IAttachmentUpload {
   private readonly reservation: Reservation;
   private readonly remoteUrl: string;
   private readonly jwtHandler?: JwtHandler;
-  private readonly fetchFn: typeof fetch;
+  private readonly uploadTransport: AttachmentUploadTransport;
 
   constructor(reservation: Reservation, config: SwitchboardClientConfig) {
     this.reservationId = reservation.reservationId;
@@ -46,7 +50,8 @@ export class RemoteAttachmentUpload implements IAttachmentUpload {
     this.reservation = reservation;
     this.remoteUrl = config.remoteUrl;
     this.jwtHandler = config.jwtHandler;
-    this.fetchFn = (config.fetchFn ?? globalThis.fetch).bind(globalThis);
+    const fetchFn = (config.fetchFn ?? globalThis.fetch).bind(globalThis);
+    this.uploadTransport = createFetchUploadTransport(fetchFn);
   }
 
   async send(
@@ -72,10 +77,17 @@ export class RemoteAttachmentUpload implements IAttachmentUpload {
     // the reservation row; sending the user's mime type here (e.g. application/json)
     // would let Express body-parser drain the request body before our handler runs,
     // silently writing zero bytes.
-    const response = await this.fetchFn(url, {
+    const response = await this.uploadTransport({
+      url,
       method: "PUT",
       headers: { ...authHeaders, "Content-Type": "application/octet-stream" },
       body,
+      ...(options?.onProgress
+        ? {
+            onProgress: (loaded: number, total: number) =>
+              options.onProgress?.(loaded, total),
+          }
+        : {}),
       ...(options?.signal ? { signal: options.signal } : {}),
     });
 
@@ -138,10 +150,17 @@ export class RemoteAttachmentUpload implements IAttachmentUpload {
 
     // Buffer for the same browser-compatibility reasons as the proxy path.
     const body = await new Response(data).blob();
-    const response = await this.fetchFn(target.url, {
+    const response = await this.uploadTransport({
+      url: target.url,
       method: target.method,
       headers: { ...target.headers },
       body,
+      ...(options?.onProgress
+        ? {
+            onProgress: (loaded: number, total: number) =>
+              options.onProgress?.(loaded, total),
+          }
+        : {}),
       ...(options?.signal ? { signal: options.signal } : {}),
     });
     if (!response.ok) {
