@@ -913,6 +913,25 @@ export type GetJobStatusQuery = {
     | undefined;
 };
 
+export type EvaluateActionsQueryVariables = Exact<{
+  documentIdentifier: Scalars["String"]["input"];
+  branch?: InputMaybe<Scalars["String"]["input"]>;
+  candidates: ReadonlyArray<ActionCandidateInput>;
+}>;
+
+export type EvaluateActionsQuery = {
+  readonly evaluateActions: {
+    readonly allAllowed: boolean;
+    readonly anyAllowed: boolean;
+    readonly allDenied: boolean;
+    readonly anyDenied: boolean;
+    readonly evaluations: ReadonlyArray<{
+      readonly decision: AuthDecision;
+      readonly reason?: string | null | undefined;
+    }>;
+  };
+};
+
 export type CreateDocumentMutationVariables = Exact<{
   document: Scalars["JSONObject"]["input"];
   parentIdentifier?: InputMaybe<Scalars["String"]["input"]>;
@@ -2648,6 +2667,28 @@ export const GetJobStatusDocument = gql`
     }
   }
 `;
+export const EvaluateActionsDocument = gql`
+  query EvaluateActions(
+    $documentIdentifier: String!
+    $branch: String
+    $candidates: [ActionCandidateInput!]!
+  ) {
+    evaluateActions(
+      documentIdentifier: $documentIdentifier
+      branch: $branch
+      candidates: $candidates
+    ) {
+      evaluations {
+        decision
+        reason
+      }
+      allAllowed
+      anyAllowed
+      allDenied
+      anyDenied
+    }
+  }
+`;
 export const CreateDocumentDocument = gql`
   mutation CreateDocument($document: JSONObject!, $parentIdentifier: String) {
     createDocument(document: $document, parentIdentifier: $parentIdentifier) {
@@ -3016,6 +3057,16 @@ export function getSdk<C>(requester: Requester<C>) {
         variables,
         options,
       ) as Promise<GetJobStatusQuery>;
+    },
+    EvaluateActions(
+      variables: EvaluateActionsQueryVariables,
+      options?: C,
+    ): Promise<EvaluateActionsQuery> {
+      return requester<EvaluateActionsQuery, EvaluateActionsQueryVariables>(
+        EvaluateActionsDocument,
+        variables,
+        options,
+      ) as Promise<EvaluateActionsQuery>;
     },
     CreateDocument(
       variables: CreateDocumentMutationVariables,
