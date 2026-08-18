@@ -20,3 +20,23 @@ export class AuthenticationRequiredError extends GraphQLError {
     });
   }
 }
+
+/**
+ * The reactor holds no decision model, so no authorization preflight can be
+ * answered.
+ *
+ * Distinct from a denial, and deliberately so: a caller that cannot get a
+ * prediction should render its controls as it did before it asked and let the
+ * submit path refuse. Reading this as a denial would disable every control on a
+ * switchboard running without authEnforcement. The code is what a client
+ * branches on, since the message is not a contract.
+ */
+export class AuthEvaluationUnsupportedError extends GraphQLError {
+  constructor() {
+    super(
+      "Authorization evaluation is unavailable: this reactor runs without the " +
+        "authEnforcement feature flag, so it holds no decision model",
+      { extensions: { code: "AUTH_EVALUATION_UNSUPPORTED" } },
+    );
+  }
+}

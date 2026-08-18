@@ -83,6 +83,7 @@ function dispatch(
 | **Items in Drive**    | `useNodesInSelectedDrive`, `useFileNodesInSelectedDrive`, `useFolderNodesInSelectedDrive`, `useDocumentsInSelectedDrive`     |
 | **Items in Folder**   | `useNodesInSelectedFolder`, `useFileNodesInSelectedFolder`, `useFolderNodesInSelectedFolder`, `useDocumentsInSelectedFolder` |
 | **Node Actions**      | `useNodeActions`                                                                                                             |
+| **Authorization**     | `useCanExecute`                                                                                                              |
 | **Modals**            | `usePHModal`, `showPHModal`, `closePHModal`, `showCreateDocumentModal`, `showDeleteNodeModal`                                |
 | **Revision History**  | `useRevisionHistoryVisible`, `showRevisionHistory`, `hideRevisionHistory`                                                    |
 | **Timeline**          | `useSelectedTimelineItem`, `useSelectedTimelineRevision`                                                                     |
@@ -826,6 +827,80 @@ function FileUploader() {
   );
 }
 ```
+
+---
+
+## Authorization
+
+### `useCanExecute`
+
+Predicts whether the current user may execute each of a set of candidate operations on a document, so you can disable a control instead of rendering one that fails on submit. Wraps [`IReactorClient.evaluateActions`](/academy/Reference/Reactor/ReactorClient).
+
+```typescript
+function useCanExecute(
+  documentId: string | null | undefined,
+  candidates: ActionCandidate[],
+  branch?: string,
+  subject?: AuthSubject,
+): CanExecuteState;
+```
+
+**Parameters:**
+
+| Name         | Type                | Required | Description                                             |
+| ------------ | ------------------- | -------- | ------------------------------------------------------- |
+| `documentId` | `string \| null`    | Yes      | Document to ask about; null or undefined stays `"idle"` |
+| `candidates` | `ActionCandidate[]` | Yes      | Operations to predict a verdict for                     |
+| `branch`     | `string`            | No       | Defaults to `"main"`                                    |
+| `subject`    | `AuthSubject`       | No       | Defaults to the signed-in user                          |
+
+**Returns:**
+
+```typescript
+type CanExecuteState = {
+  status: "idle" | "loading" | "ready" | "unsupported" | "error";
+  evaluations?: Evaluation[];
+  allAllowed?: boolean;
+  anyAllowed?: boolean;
+  allDenied?: boolean;
+  anyDenied?: boolean;
+  error?: Error;
+  refetch: () => void;
+};
+```
+
+`status: "unsupported"` is not a denial. It means this deployment answers no authorization preflight, either because no reactor client module is set or because the reactor runs without the `authEnforcement` feature flag. Render your controls as you would have without asking; treating it as a denial disables every control on a deployment that never enabled enforcement.
+
+The hook waits for the signed-in identity to settle before evaluating, so a toolbar does not grey itself out on first paint and then ungrey. It re-evaluates when the document's revision moves. Two gaps are worth knowing: a `{ group }` grant depends on a roster held in a different document, whose membership change fires no event for this one, and a change event carries no scope, so any write to the document re-evaluates.
+
+Candidates are read by content rather than identity, so an inline array is fine and does not re-request on every render.
+
+**Example:**
+
+```tsx
+import { useCanExecute } from "@powerhousedao/reactor-browser";
+
+function ApproveButton({ documentId, id }: { documentId: string; id: string }) {
+  const { status, allAllowed, evaluations } = useCanExecute(documentId, [
+    { scope: "global", type: "APPROVE_EXPENSE", input: { id } },
+  ]);
+
+  // "unsupported" means no verdict is available, so leave the control enabled.
+  const disabled = status === "ready" && !allAllowed;
+  const reason =
+    evaluations?.[0].decision === "deny" ? evaluations[0].reason : undefined;
+
+  return (
+    <button disabled={disabled} title={reason}>
+      Approve
+    </button>
+  );
+}
+```
+
+:::warning[The answer is a prediction, not a promise]
+A policy change landing between the answer and the submit changes the verdict. Keep handling the failure from `dispatch`; an allow here means the control is worth offering, not that the write will succeed.
+:::
 
 ---
 

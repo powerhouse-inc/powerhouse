@@ -146,7 +146,7 @@ export class BareReadGate implements IReadGate {
  * projections, and the caller has both in hand. Only a group stream the grant
  * list names is fetched.
  */
-class SeededStateReader implements IStreamStateReader {
+export class SeededStateReader implements IStreamStateReader {
   constructor(
     private readonly documentView: IDocumentView,
     private readonly seed: PHDocument,

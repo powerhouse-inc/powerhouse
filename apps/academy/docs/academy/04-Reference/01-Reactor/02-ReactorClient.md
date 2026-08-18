@@ -441,6 +441,87 @@ getDocumentModelModule(
 
 ---
 
+### `evaluateActions`
+
+Ask what the reactor **would** decide about a set of candidate operations, without submitting any of them. Use it to disable a control rather than offer an action that fails on submit.
+
+```typescript
+evaluateActions(
+  documentIdentifier: string,
+  branch: string,
+  candidates: ActionCandidate[],
+  subject?: AuthSubject,
+  signal?: AbortSignal,
+): Promise<ActionEvaluations>
+```
+
+**Parameters:**
+
+| Name                 | Type                | Required | Description                                            |
+| -------------------- | ------------------- | -------- | ------------------------------------------------------ |
+| `documentIdentifier` | `string`            | Yes      | Document id or slug the candidates target              |
+| `branch`             | `string`            | Yes      | Branch to evaluate against                             |
+| `candidates`         | `ActionCandidate[]` | Yes      | Operations to predict a verdict for                    |
+| `subject`            | `AuthSubject`       | No       | Who to decide for; defaults to the client's own signer |
+| `signal`             | `AbortSignal`       | No       | Cancel the request                                     |
+
+**`ActionCandidate` and `ActionEvaluations`:**
+
+```typescript
+interface ActionCandidate {
+  scope: string; // the scope the operation would execute in
+  type: string; // the action type, e.g. "SUBMIT_EXPENSE"
+  input?: unknown; // the action input, when a grant depends on it
+}
+
+interface ActionEvaluations {
+  evaluations: Evaluation[]; // one per candidate, in the order given
+  allAllowed: boolean;
+  anyAllowed: boolean;
+  allDenied: boolean;
+  anyDenied: boolean;
+}
+
+type Evaluation =
+  | { decision: "allow" }
+  | { decision: "deny"; reason: string };
+```
+
+A denial's `reason` is the same string the reactor would record on the refused operation, so a control can explain itself rather than going grey with no reason. Over an empty candidate list every aggregate is `false`: nothing asked about is nothing allowed *and* nothing denied.
+
+```typescript
+const answer = await client.evaluateActions(documentId, "main", [
+  { scope: "global", type: "SUBMIT_EXPENSE", input: { amountCents: 900 } },
+  { scope: "global", type: "APPROVE_EXPENSE", input: { id: "e1" } },
+]);
+
+submitButton.disabled = answer.evaluations[0].decision === "deny";
+```
+
+:::warning[The answer is a prediction, not a promise]
+`evaluateActions` decides through the same model that admits a real write, but it reads no future. A policy change landing between the answer and the submit changes the verdict, so **the submit path stays the only authority** — keep handling the refusal when you write. Treat an allow as "worth offering", never as "will succeed".
+:::
+
+Three further contract details are worth knowing:
+
+- **Supply the input when a grant depends on it.** With `authConditions` enabled, a conditional grant reads `action.input`, so a candidate standing for a half-filled form predicts the verdict a half-filled form earns — not the verdict the completed form will get.
+- **Document-scope candidates are judged by the document they name.** `DELETE_DOCUMENT` and `UPGRADE_DOCUMENT` name their target in `input.documentId`, the relationship actions in `input.sourceId`, and the policy consulted is that document's rather than the one passed as `documentIdentifier`. `CREATE_DOCUMENT` is exempt, matching the executor: it runs before its document exists, so it always predicts allow.
+- **The verdict is evaluated at the stream heads.** That is correct for a candidate about to be submitted. A backdated submission is out of contract, because the reactor decides that one by position against the policy as it stood there.
+
+**Requires the `authEnforcement` feature flag.** Without it the reactor holds no decision model and there is nothing to answer from, so the call rejects with `AuthEnforcementDisabledError`. Treat that as "cannot know" and leave your controls as they were — reading it as a denial would disable every control on a deployment that never enabled enforcement. Detect it by name, which is all that survives the SharedWorker RPC boundary:
+
+```typescript
+import { AuthEnforcementDisabledError } from "@powerhousedao/reactor";
+
+if (AuthEnforcementDisabledError.isError(error)) {
+  // no verdict available here; render as if unasked
+}
+```
+
+In React, prefer the [`useCanExecute`](/academy/Reference/EditorsUI/ReactHooks) hook, which wraps this call and reports the flags-off case as `status: "unsupported"`. Over GraphQL the same question is the `evaluateActions` query on the reactor subgraph, which decides for the authenticated caller and answers the flags-off case with an `AUTH_EVALUATION_UNSUPPORTED` error code.
+
+---
+
 ## Write methods
 
 All write methods internally create jobs and wait for them to reach `READ_READY` before resolving (except `executeAsync` which returns immediately).

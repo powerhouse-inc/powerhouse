@@ -5,6 +5,21 @@ This documentation is still being written and may be incomplete.
 The feature is not yet available on production.
 :::
 
+:::info[Two authorization systems, and this is one of them]
+This page covers the **host-side permission tables**: which addresses a reactor
+lets near a drive or document, enforced at the GraphQL boundary and when serving
+sync. They are what a deployment runs today.
+
+A second mechanism decides authorization *inside* the reactor, from a policy
+stored on the document's own `auth` scope, at admission, replay and read. It is
+staged behind feature flags and covered in
+[Authorization](/academy/Reference/Reactor/Authorization).
+
+Both call their unit a *grant*, and they are not the same thing. A permission
+here is a READ/WRITE/ADMIN level held in a host database table. A grant there is
+an operation on the document, folded into its state and synced with it.
+:::
+
 ## Introduction
 
 The **Reactor API** is the API interface to a Powerhouse **Reactor**—a storage node responsible for storing documents, resolving conflicts, and verifying document event histories. Reactors can be configured for local storage, cloud storage, or decentralized storage networks.

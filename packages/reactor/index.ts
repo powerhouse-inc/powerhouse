@@ -14,9 +14,14 @@ export {
 
 // Reactor Interface and Implementation
 export { DriveClient } from "./src/client/drive-client.js";
-export { ReactorClient } from "./src/client/reactor-client.js";
+export {
+  ReactorClient,
+  type ActionEvaluationConfig,
+} from "./src/client/reactor-client.js";
 export {
   DocumentChangeType,
+  type ActionCandidate,
+  type ActionEvaluations,
   type DocumentChangeEvent,
   type IDriveClient,
   type IReactorClient,
@@ -67,6 +72,7 @@ export {
   parseDriveUrl,
   type ParsedDriveUrl,
 } from "./src/shared/drive-url.js";
+export { AuthEnforcementDisabledError } from "./src/shared/errors.js";
 export { createMutableShutdownStatus } from "./src/shared/factories.js";
 export { parsePagingOptions, type ParsedPaging } from "./src/shared/utils.js";
 export {
@@ -262,6 +268,7 @@ export {
   BareReadGate,
   ModelReadGate,
   readDecisionModel,
+  SeededStateReader,
   type IReadGate,
 } from "./src/decision/read-gate.js";
 export {

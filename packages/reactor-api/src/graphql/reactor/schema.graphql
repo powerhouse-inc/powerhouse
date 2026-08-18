@@ -198,6 +198,50 @@ type Action {
   context: ActionContext
 }
 
+"""
+One operation an authorization preflight predicts a verdict for.
+
+`input` is what a conditional grant reads, so a candidate standing for a
+filled-in form carries that form's input. Omitting it predicts the verdict an
+empty input earns, not the verdict the filled-in form will get.
+"""
+input ActionCandidateInput {
+  scope: String!
+  type: String!
+  input: JSONObject
+}
+
+enum AuthDecision {
+  ALLOW
+  DENY
+}
+
+"""
+One candidate's predicted verdict. `reason` carries the refusal a DENY is
+recorded with, and is null on an ALLOW.
+"""
+type ActionEvaluation {
+  decision: AuthDecision!
+  reason: String
+}
+
+"""
+The predicted verdicts for a set of candidates, in the order they were given,
+with the aggregates a caller branches on.
+
+The aggregates are redundant -- a verdict is binary -- and all four are returned
+so a caller reads the one its question is phrased in rather than negating
+another. Over no candidates every aggregate is false: nothing is allowed and
+nothing is denied.
+"""
+type ActionEvaluations {
+  evaluations: [ActionEvaluation!]!
+  allAllowed: Boolean!
+  anyAllowed: Boolean!
+  allDenied: Boolean!
+  anyDenied: Boolean!
+}
+
 # Input types for sync operations
 input ActionContextInput {
   signer: ReactorSignerInput
@@ -381,6 +425,39 @@ type Query {
     filter: OperationsFilterInput!
     paging: PagingInput
   ): ReactorOperationResultPage!
+
+  """
+  Predicts whether the calling subject would be admitted to execute each of a
+  set of candidate operations, without submitting any of them. A UI asks this to
+  disable a control rather than offer an action that fails on submit.
+
+  The answer is a prediction, not a promise:
+
+  - Real admission compiles an append condition over everything it read and the
+    store enforces it at write time. A preflight reads no future, so a policy
+    change landing between this answer and the submit changes the verdict. The
+    submit path stays the only authority.
+  - The verdict is evaluated at the stream heads, so it is correct for a
+    candidate about to be submitted. A backdated submission is out of contract;
+    the reactor decides that one by position.
+  - A candidate whose verdict depends on its input has to carry that input, since
+    a conditional grant reads it.
+
+  The subject is the authenticated caller and cannot be named in the request:
+  answering for an arbitrary subject would disclose what a policy grants
+  somebody else. It carries both the caller's address and the did:key of the app
+  instance whose token authenticated the request, so a policy naming either
+  matches the same principal the write path presents.
+
+  Requires the reactor's authEnforcement feature flag. Without it the reactor
+  holds no decision model, so this fails with extensions.code
+  AUTH_EVALUATION_UNSUPPORTED rather than guessing.
+  """
+  evaluateActions(
+    documentIdentifier: String!
+    branch: String
+    candidates: [ActionCandidateInput!]!
+  ): ActionEvaluations!
 
   # Poll for sync envelopes from a channel
   pollSyncEnvelopes(

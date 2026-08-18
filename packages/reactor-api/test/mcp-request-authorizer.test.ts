@@ -26,7 +26,12 @@ const makeAuthService = (result: AuthContext | Response): AuthService =>
     verifyBearer: vi.fn().mockResolvedValue(result),
   }) as unknown as AuthService;
 
-const user = { address: "0xadmin", chainId: 1, networkId: "eip155" };
+const user = {
+  address: "0xadmin",
+  chainId: 1,
+  networkId: "eip155",
+  appKey: "did:key:zAppTest",
+};
 
 describe("createMcpRequestAuthorizer", () => {
   it("allows every request when auth is disabled and the policy is OPEN", async () => {

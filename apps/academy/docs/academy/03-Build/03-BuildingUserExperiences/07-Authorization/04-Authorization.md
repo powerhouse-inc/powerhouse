@@ -4,6 +4,21 @@
 This documentation is still being written and may be incomplete.
 :::
 
+:::info[Two authorization systems, and this is one of them]
+This page covers the **host-side permission tables**: which addresses a reactor
+lets near a drive or document, enforced at the GraphQL boundary and when serving
+sync. They are what a deployment runs today.
+
+A second mechanism decides authorization *inside* the reactor, from a policy
+stored on the document's own `auth` scope, at admission, replay and read. It is
+staged behind feature flags and covered in
+[Authorization](/academy/Reference/Reactor/Authorization).
+
+The two answer different questions and neither replaces the other. A GraphQL
+write passes the tables first, and then the document's own policy where
+enforcement is enabled.
+:::
+
 This guide explains how to configure **authorization** for the Powerhouse Reactor API. Authorization controls who can access your Reactor and what they can do.
 
 ## Introduction

@@ -20,7 +20,12 @@ const DOC_ID = "doc-1";
 const EXPIRES = "2026-07-23T00:00:00.000Z";
 
 const ACTOR: AttachmentActorContext = {
-  user: { address: "0xverified", chainId: 1, networkId: "mainnet" },
+  user: {
+    address: "0xverified",
+    chainId: 1,
+    networkId: "mainnet",
+    appKey: "did:key:zAppTest",
+  },
   authEnabled: true,
 };
 
