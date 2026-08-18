@@ -46,6 +46,17 @@ export const GATED_DOCUMENT_ACTIONS: ReadonlySet<string> = new Set(
 );
 
 /**
+ * What naming a document-scope action's target takes: its type, and the input
+ * the target is read out of. Narrower than `Action` so that a candidate
+ * operation nobody has stamped or signed yet can be routed the same way a
+ * submitted one is.
+ */
+export type TargetedAction = {
+  type: string;
+  input: unknown;
+};
+
+/**
  * The document a document-scope action writes to, which is not always the job's
  * own document: delete and upgrade name it in `input.documentId`, and the
  * relationship actions in `input.sourceId`. `execute` only checks that a batch
@@ -54,7 +65,10 @@ export const GATED_DOCUMENT_ACTIONS: ReadonlySet<string> = new Set(
  * action rather than the job, or it decides against a policy the caller may
  * control instead of the one guarding the write.
  */
-export function targetDocumentId(action: Action, fallback: string): string {
+export function targetDocumentId(
+  action: TargetedAction,
+  fallback: string,
+): string {
   const input = action.input as
     | { documentId?: unknown; sourceId?: unknown }
     | undefined;

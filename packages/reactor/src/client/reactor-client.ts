@@ -29,6 +29,7 @@ import type {
 } from "../core/types.js";
 import { getSharedActionScope, signActions } from "../core/utils.js";
 import { type IJobAwaiter } from "../shared/awaiter.js";
+import { AuthEnforcementDisabledError } from "../shared/errors.js";
 import {
   JobStatus,
   PropagationMode,
@@ -54,19 +55,97 @@ import { DriveClient } from "./drive-client.js";
 import {
   DEFAULT_UPGRADE_CONFLICT_RETRIES,
   DocumentChangeType,
+  type ActionCandidate,
+  type ActionEvaluations,
   type CreateDocumentOptions,
   type DocumentChangeEvent,
   type IDriveClient,
   type IReactorClient,
   type UpgradeDocumentOptions,
 } from "./types.js";
+import { buildDecisionModel } from "../decision/build-decision-model.js";
 import type { IReadGate } from "../decision/read-gate.js";
-import { BareReadGate } from "../decision/read-gate.js";
+import { BareReadGate, SeededStateReader } from "../decision/read-gate.js";
+import type { DocumentDecisionModel } from "../decision/document-decision-model.js";
+import type { RegisteredDecisionModel } from "../decision/registered-model.js";
+import type { DecisionModel, Evaluation } from "../decision/types.js";
+import { GATED_DOCUMENT_ACTIONS, targetDocumentId } from "../executor/util.js";
+import type { ReactorFeatureFlags } from "../executor/types.js";
 import {
   authSubjectFromSigner,
   filterReadableScopes,
   withAuthScope,
 } from "./util.js";
+
+/**
+ * A decision model built for one target document, with what deciding a candidate
+ * against it needs: the definition that decides, the built model it decides
+ * over, and the scope states a condition reads.
+ */
+type EvaluationTarget = {
+  definition: DecisionModel<DocumentDecisionModel>;
+  model: DocumentDecisionModel;
+  scopeStates: Record<string, unknown>;
+};
+
+/**
+ * The document a candidate is decided against. Routed on the action type alone,
+ * which is what the executor routes on: every action the reactor reduces onto
+ * the document scope carries that scope already, and the gate follows the
+ * action's own target rather than the document the request named.
+ */
+function evaluationTargetId(
+  candidate: ActionCandidate,
+  fallback: string,
+): string {
+  return GATED_DOCUMENT_ACTIONS.has(candidate.type)
+    ? targetDocumentId(
+        { type: candidate.type, input: candidate.input },
+        fallback,
+      )
+    : fallback;
+}
+
+/**
+ * One candidate's verdict, decided exactly as admission decides it: the same
+ * request, and a condition context populated only while authConditions is on,
+ * so a conditional grant applies here precisely when it would apply there.
+ * Groups need nothing added, because the selected model carries them.
+ */
+function decideCandidate(
+  config: ActionEvaluationConfig,
+  target: EvaluationTarget,
+  subject: AuthSubject,
+  candidate: ActionCandidate,
+): Evaluation {
+  return target.definition.decide(
+    target.model,
+    subject,
+    { verb: "execute", scope: candidate.scope, operation: candidate.type },
+    config.flags.authConditions
+      ? {
+          scopeState: target.scopeStates[candidate.scope],
+          actionInput: candidate.input,
+        }
+      : { scopeState: undefined, actionInput: undefined },
+  );
+}
+
+/**
+ * What {@link IReactorClient.evaluateActions} decides against: the decision
+ * model this reactor enforces, and the flags that selected it.
+ *
+ * Both, because neither alone is enough. The flags say which of the model's
+ * inputs a decision may read, and the model itself cannot be derived from them
+ * here: selecting one needs the document model registry, which a client does not
+ * hold. Absent, this client answers no preflight at all -- which is the whole of
+ * the non-coexistence guarantee, since a client built without a reactor holding
+ * a decision model has nothing to answer from.
+ */
+export type ActionEvaluationConfig = {
+  model: RegisteredDecisionModel;
+  flags: ReactorFeatureFlags;
+};
 
 /**
  * ReactorClient implementation that wraps lower-level APIs to provide
@@ -87,6 +166,7 @@ export class ReactorClient implements IReactorClient {
   private documentIndexer: IDocumentIndexer;
   private documentView: IDocumentView;
   private readGate: IReadGate;
+  private actionEvaluation: ActionEvaluationConfig | undefined;
 
   readonly drives: IDriveClient;
 
@@ -99,6 +179,7 @@ export class ReactorClient implements IReactorClient {
     documentIndexer: IDocumentIndexer,
     documentView: IDocumentView,
     readGate: IReadGate = new BareReadGate(),
+    actionEvaluation?: ActionEvaluationConfig,
   ) {
     this.logger = logger;
     this.reactor = reactor;
@@ -108,6 +189,7 @@ export class ReactorClient implements IReactorClient {
     this.documentIndexer = documentIndexer;
     this.documentView = documentView;
     this.readGate = readGate;
+    this.actionEvaluation = actionEvaluation;
     this.drives = new DriveClient(this, logger, reactor, signer);
     this.logger.verbose("ReactorClient initialized");
   }
@@ -527,6 +609,120 @@ export class ReactorClient implements IReactorClient {
           ),
         ),
       ),
+    };
+  }
+
+  /**
+   * Predicts the admission verdict for each candidate. See
+   * {@link IReactorClient.evaluateActions} for the contract and its caveats.
+   *
+   * Read-only throughout, and never through the write cache: that cache is
+   * invalidated by whichever process runs the executor, so a reactor running
+   * its executors in worker processes would answer here from state no commit
+   * ever invalidates.
+   */
+  async evaluateActions(
+    documentIdentifier: string,
+    branch: string,
+    candidates: ActionCandidate[],
+    view?: ViewFilter,
+    signal?: AbortSignal,
+  ): Promise<ActionEvaluations> {
+    this.logger.verbose(
+      "evaluateActions(@documentIdentifier, @branch, @count candidates)",
+      documentIdentifier,
+      branch,
+      candidates.length,
+    );
+
+    // No model, no answer. The legacy host-table permission system is not
+    // consulted and not composed with: see AuthEnforcementDisabledError.
+    const config = this.actionEvaluation;
+    if (config === undefined) {
+      throw new AuthEnforcementDisabledError();
+    }
+
+    const subject = this.readSubject(view?.subject);
+    const resolvedId = await this.documentView.resolveIdOrSlug(
+      documentIdentifier,
+      { branch },
+      undefined,
+      signal,
+    );
+
+    // Built once per distinct target rather than once per candidate, so a batch
+    // of candidates against one document reads its streams once.
+    const targets = new Map<string, EvaluationTarget>();
+    const evaluations: Evaluation[] = [];
+
+    for (const candidate of candidates) {
+      const targetId = evaluationTargetId(candidate, resolvedId);
+
+      let target = targets.get(targetId);
+      if (target === undefined) {
+        target = await this.buildEvaluationTarget(
+          config,
+          targetId,
+          branch,
+          signal,
+        );
+        targets.set(targetId, target);
+      }
+
+      evaluations.push(decideCandidate(config, target, subject, candidate));
+    }
+
+    const allowed = evaluations.filter(
+      (evaluation) => evaluation.decision === "allow",
+    ).length;
+
+    return {
+      evaluations,
+      allAllowed: candidates.length > 0 && allowed === candidates.length,
+      anyAllowed: allowed > 0,
+      allDenied: candidates.length > 0 && allowed === 0,
+      anyDenied: allowed < candidates.length,
+    };
+  }
+
+  /**
+   * The decision model for one target document, built at its stream heads.
+   *
+   * The document is fetched unfiltered, because the policy is what decides:
+   * reading it through the read gate would withhold the very scopes the
+   * decision is about. A deleted document is served at its deletion boundary,
+   * which is what lets the model refuse an execute against it -- authEnforcement
+   * requires documentDecisions, so that read is available whenever this runs.
+   *
+   * The append condition the build records is dropped. It guards a write, and
+   * this makes none; reproducing it is also what the preflight cannot do, which
+   * is why the answer is a prediction.
+   */
+  private async buildEvaluationTarget(
+    config: ActionEvaluationConfig,
+    documentId: string,
+    branch: string,
+    signal?: AbortSignal,
+  ): Promise<EvaluationTarget> {
+    const document = await this.documentView.get(
+      documentId,
+      { branch },
+      undefined,
+      signal,
+    );
+
+    const target = { documentId, branch };
+    const built = await buildDecisionModel(
+      new SeededStateReader(this.documentView, document, branch),
+      config.model,
+      target,
+      signal,
+    );
+
+    return {
+      definition: config.model(target),
+      model: built.model,
+      scopeStates: (document.state ?? {}) as Record<string, unknown>,
     };
   }
 
