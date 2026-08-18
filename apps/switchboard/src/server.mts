@@ -19,6 +19,7 @@ import {
   ImportPackageLoader,
   PackageManagementService,
   PackagesSubgraph,
+  PGLITE_UTC_PARSERS,
   initializeAndStartAPI,
   resolveRenownConfig,
   type ClientInitializerDependencies,
@@ -671,13 +672,14 @@ async function initServer(
     const { PGlite: ReadModelPGlite } =
       await loadPGliteModule(readModelPgliteMajor);
     pgliteFactory = PGLITE_IN_MEMORY
-      ? () => new ReadModelPGlite()
+      ? () => new ReadModelPGlite({ parsers: PGLITE_UTC_PARSERS })
       : (connectionString) =>
           new ReadModelPGlite({
             fs: new AtomicNodeFs(
               connectionString ?? (readModelPgliteDir as string),
               { logger, flushIntervalMs: PGLITE_FLUSH_INTERVAL_MS },
             ),
+            parsers: PGLITE_UTC_PARSERS,
           });
   }
 
