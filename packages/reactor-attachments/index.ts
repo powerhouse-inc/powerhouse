@@ -61,6 +61,7 @@ export {
   type AttachmentDownloadTarget,
   type AttachmentMetadata,
   type AttachmentResponse,
+  type AttachmentSendOptions,
   type AttachmentStatus,
   type AttachmentTransportConfig,
   type AttachmentUploadResult,

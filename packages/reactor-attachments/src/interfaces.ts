@@ -8,6 +8,7 @@ import type {
   AttachmentDownloadTargetOptions,
   AttachmentMetadata,
   AttachmentResponse,
+  AttachmentSendOptions,
   AttachmentTransportConfig,
   AttachmentUploadResult,
   AttachmentUploadTarget,
@@ -138,8 +139,16 @@ export interface IAttachmentUpload {
    *   so the client can retry with the correct bytes.
    *
    * @returns The content hash, ref, and header for the uploaded attachment.
+   *
+   * `options.onProgress` reports bytes handed to the transport, when the
+   * transport can observe them at all; `options.signal` aborts the transfer
+   * in flight. Both are optional, so implementations may declare fewer
+   * parameters and ignore them entirely.
    */
-  send(data: ReadableStream<Uint8Array>): Promise<AttachmentUploadResult>;
+  send(
+    data: ReadableStream<Uint8Array>,
+    options?: AttachmentSendOptions,
+  ): Promise<AttachmentUploadResult>;
 }
 
 /**

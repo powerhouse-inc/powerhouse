@@ -48,6 +48,7 @@ export type {
   AttachmentHeader,
   AttachmentMetadata,
   AttachmentResponse,
+  AttachmentSendOptions,
   AttachmentStatus,
   AttachmentTransportConfig,
   AttachmentUploadResult,

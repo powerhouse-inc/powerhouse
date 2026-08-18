@@ -11,6 +11,7 @@ import {
 import type { IAttachmentUpload } from "../interfaces.js";
 import { createRef } from "../ref.js";
 import type {
+  AttachmentSendOptions,
   AttachmentUploadResult,
   AttachmentUploadTarget,
   Reservation,
@@ -50,12 +51,13 @@ export class RemoteAttachmentUpload implements IAttachmentUpload {
 
   async send(
     data: ReadableStream<Uint8Array>,
+    options?: AttachmentSendOptions,
   ): Promise<AttachmentUploadResult> {
     // Presigned targets bypass Switchboard entirely: bytes go straight to the
     // provider with the exact signed headers. Switchboard targets (and the
     // legacy no-target wire) keep the authenticated reservation PUT below.
     if (this.uploadTarget?.kind === "presigned-put") {
-      return this.sendPresigned(this.uploadTarget, data);
+      return this.sendPresigned(this.uploadTarget, data, options);
     }
     const url = `${this.remoteUrl}/attachments/reservations/${this.reservationId}`;
     const authHeaders = await buildAuthHeaders(url, this.jwtHandler);
@@ -74,6 +76,7 @@ export class RemoteAttachmentUpload implements IAttachmentUpload {
       method: "PUT",
       headers: { ...authHeaders, "Content-Type": "application/octet-stream" },
       body,
+      ...(options?.signal ? { signal: options.signal } : {}),
     });
 
     if (response.status === 422) {
@@ -125,6 +128,7 @@ export class RemoteAttachmentUpload implements IAttachmentUpload {
   private async sendPresigned(
     target: AttachmentUploadTarget,
     data: ReadableStream<Uint8Array>,
+    options?: AttachmentSendOptions,
   ): Promise<AttachmentUploadResult> {
     if (this.reservation.clientHash === null || this.ref === null) {
       throw new Error(
@@ -138,6 +142,7 @@ export class RemoteAttachmentUpload implements IAttachmentUpload {
       method: target.method,
       headers: { ...target.headers },
       body,
+      ...(options?.signal ? { signal: options.signal } : {}),
     });
     if (!response.ok) {
       throw new AttachmentTransferError("presigned-put", response.status);
