@@ -352,9 +352,11 @@ export class SwitchboardClient {
   // Issue a signed credential: create a renown-credential doc and INIT it.
   async issueCredential(
     credential: PowerhouseVerifiableCredential,
+    parentIdentifier?: string,
   ): Promise<string> {
     const documentId = await this.createEmptyDocument(
       RENOWN_CREDENTIAL_DOC_TYPE,
+      parentIdentifier,
     );
     const input: Record<string, unknown> = {
       id: credential.id,
