@@ -694,6 +694,13 @@ export class ReactorClient implements IReactorClient {
    * which is what lets the model refuse an execute against it -- authEnforcement
    * requires documentDecisions, so that read is available whenever this runs.
    *
+   * Reading past the gate discloses nothing a submit does not. The `auth` and
+   * `document` scopes are readable by every holder, so a verdict resting on the
+   * policy alone is one the caller could compute unaided; and a verdict resting
+   * on a conditional grant reads the executing scope's state exactly as
+   * admission reads it, so the answer here is what submitting and being refused
+   * would have revealed anyway.
+   *
    * The append condition the build records is dropped. It guards a write, and
    * this makes none; reproducing it is also what the preflight cannot do, which
    * is why the answer is a prediction.
