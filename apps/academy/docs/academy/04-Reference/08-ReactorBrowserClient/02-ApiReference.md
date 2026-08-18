@@ -43,8 +43,9 @@ for free by implementing `IReactorClient`, and `GraphQLReactorClient`.
 
 Everything outside those six members is deliberately excluded and not
 implemented here: `drives`, `find`, `resolveIdOrSlug`, relationships,
-`executeAsync`, `executeBatch`, jobs, `createEmpty`, `rename`, and the
-document-model module getters. For the full-reactor versions of those, see
+`executeAsync`, `executeBatch`, jobs, `createEmpty`, `rename`,
+`evaluateActions`, and the document-model module getters. For the
+full-reactor versions of those, see
 [IReactorClient](/academy/Reference/Reactor/ReactorClient).
 
 ### Methods
@@ -270,6 +271,7 @@ Known and deliberate. None of these is a bug report.
 
 | Limitation                                      | Detail                                                                                                                                                                                                                                                                                                                                                                                      |
 | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| No authorization preflight                      | `useCanExecute` reports `status: "unsupported"` here. The hook reads the reactor client module, which this setup never sets, and `evaluateActions` is not on the light client. Controls render as if unasked; the submit still refuses. |
 | No offline or local-first writing               | No IndexedDB, no outbox, no optimistic state, no reconnect flush. A dispatch that fails is a failed dispatch.                                                                                                                                                                                                                                                                               |
 | `execute` costs two round trips                 | One read for the signing and `sinceRevision` baseline, one mutation.                                                                                                                                                                                                                                                                                                                        |
 | No batch signing                                | More than one action in a batch is pushed unsigned with a warning.                                                                                                                                                                                                                                                                                                                          |
