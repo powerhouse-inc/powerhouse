@@ -440,22 +440,18 @@ type Query {
   - The verdict is evaluated at the stream heads, so it is correct for a
     candidate about to be submitted. A backdated submission is out of contract;
     the reactor decides that one by position.
-  - This reports the DOCUMENT policy only. On a switchboard running the
-    DOCUMENT_PERMISSIONS authorization policy a write must also pass the host
-    permission tables, which `canExecuteOperation` on the auth subgraph answers.
-    An ALLOW here is therefore necessary but not always sufficient. The two are
-    reported separately rather than combined, because they answer different
-    questions and a single verdict stitched from both is one neither system
-    would reach.
+  - A candidate whose verdict depends on its input has to carry that input, since
+    a conditional grant reads it.
 
   The subject is the authenticated caller and cannot be named in the request:
   answering for an arbitrary subject would disclose what a policy grants
-  somebody else.
+  somebody else. It carries both the caller's address and the did:key of the app
+  instance whose token authenticated the request, so a policy naming either
+  matches the same principal the write path presents.
 
   Requires the reactor's authEnforcement feature flag. Without it the reactor
-  holds no decision model, and the host permission tables cannot answer for one,
-  so this fails with extensions.code AUTH_EVALUATION_UNSUPPORTED rather than
-  guessing.
+  holds no decision model, so this fails with extensions.code
+  AUTH_EVALUATION_UNSUPPORTED rather than guessing.
   """
   evaluateActions(
     documentIdentifier: String!

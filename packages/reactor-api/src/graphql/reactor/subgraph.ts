@@ -296,12 +296,8 @@ export class ReactorSubgraph extends BaseSubgraph {
        * Gated on reading the document, the same gate every other read here
        * carries: a verdict is derived from the document's policy, so a caller
        * who may not read the document may not preflight against it either.
-       *
-       * The host tables gate the query; they do not contribute to the answer.
-       * On a DOCUMENT_PERMISSIONS switchboard a write must also clear
-       * `canExecuteOperation`, so an ALLOW here is necessary and not always
-       * sufficient -- reported separately rather than combined, because the two
-       * answer different questions.
+       * That gate decides whether the query runs; the answer comes entirely
+       * from the reactor's decision model.
        */
       evaluateActions: async (_parent, args, ctx: Context) => {
         this.logger.debug("evaluateActions(@args)", args);

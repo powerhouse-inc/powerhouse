@@ -35,8 +35,7 @@ export class AuthEvaluationUnsupportedError extends GraphQLError {
   constructor() {
     super(
       "Authorization evaluation is unavailable: this reactor runs without the " +
-        "authEnforcement feature flag, so it holds no decision model, and the " +
-        "host permission tables cannot answer for one",
+        "authEnforcement feature flag, so it holds no decision model",
       { extensions: { code: "AUTH_EVALUATION_UNSUPPORTED" } },
     );
   }

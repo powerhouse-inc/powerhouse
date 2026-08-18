@@ -469,15 +469,12 @@ export async function documentOperations(
  *
  * The subject is supplied by the subgraph from the authenticated request, never
  * by the caller: answering for an arbitrary subject would disclose what a policy
- * grants somebody else. Note that a subject assembled from a GraphQL request
- * carries no app key, so the creator carve-out on the auth scope -- which
- * matches `subject.key` against the policy's creator -- cannot fire here unless
- * the request's verified issuer supplied one.
+ * grants somebody else. It carries the caller's address and the app key their
+ * token authenticated with, which is the same pair a signed action presents, so
+ * a grant naming either matches here exactly as it would at admission.
  *
  * A reactor without authEnforcement raises the named error, which becomes an
- * "unsupported" code rather than a denial. Composing an answer out of the host
- * permission tables is deliberately not attempted: they record which addresses a
- * host lets near a drive, not what a document's grants permit.
+ * "unsupported" code rather than a denial.
  */
 export async function evaluateActions(
   reactorClient: IReactorClient,
