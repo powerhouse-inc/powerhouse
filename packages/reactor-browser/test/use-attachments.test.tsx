@@ -15,6 +15,7 @@ import {
   setAttachmentService,
 } from "../src/hooks/attachment-service.js";
 import {
+  useAttachmentPreview,
   useAttachmentUpload,
   useAttachments,
 } from "../src/hooks/use-attachments.js";
@@ -390,5 +391,151 @@ describe("useAttachmentUpload", () => {
       await firstUpload.catch(() => undefined);
     });
     expect(result.current.stage).toBe("done");
+  });
+});
+
+describe("useAttachmentPreview", () => {
+  beforeEach(() => {
+    delete (window as { ph?: unknown }).ph;
+  });
+
+  it("stays idle without a ref", () => {
+    install(makeService());
+    const { result } = renderHook(() =>
+      useAttachmentPreview({ documentId: "doc-1", ref: null }),
+    );
+
+    expect(result.current.stage).toBe("idle");
+    expect(result.current.loading).toBe(false);
+    expect(result.current.attempt).toBe(0);
+  });
+
+  it("reports download stages and settles complete", async () => {
+    install(makeService());
+    const { result } = renderHook(() =>
+      useAttachmentPreview({ documentId: "doc-1", ref: REF }),
+    );
+
+    await vi.waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.url?.startsWith("blob:")).toBe(true);
+    expect(result.current.header?.sizeBytes).toBe(SIZE);
+    expect(result.current.stage).toBe("done");
+    expect(result.current.progress).toEqual({
+      percent: 100,
+      loaded: SIZE,
+      total: SIZE,
+      indeterminate: false,
+    });
+    expect(result.current.error).toBeUndefined();
+  });
+
+  it("exposes the intermediate failure while it is still retrying", async () => {
+    install(
+      makeService({
+        get: vi.fn(() =>
+          Promise.reject(new Error("not indexed yet")),
+        ) as unknown as IAttachmentService["get"],
+      }),
+    );
+    // A long delay keeps the hook parked between attempts, which is the state
+    // under test: today that window is an unexplained spinner.
+    const { result, unmount } = renderHook(() =>
+      useAttachmentPreview({
+        documentId: "doc-1",
+        ref: REF,
+        retries: 1,
+        retryDelayMs: 60_000,
+      }),
+    );
+
+    await vi.waitFor(() =>
+      expect(result.current.lastError?.message).toBe("not indexed yet"),
+    );
+
+    expect(result.current.loading).toBe(true);
+    expect(result.current.error).toBeUndefined();
+    expect(result.current.attempt).toBe(2);
+    expect(result.current.maxAttempts).toBe(2);
+
+    unmount();
+  });
+
+  it("recovers when a retry succeeds", async () => {
+    let attempts = 0;
+    install(
+      makeService({
+        get: vi.fn(() => {
+          attempts += 1;
+          if (attempts === 1) {
+            return Promise.reject(new Error("not indexed yet"));
+          }
+          return Promise.resolve({ header: HEADER, body: bodyStream() });
+        }) as unknown as IAttachmentService["get"],
+      }),
+    );
+    const { result } = renderHook(() =>
+      useAttachmentPreview({
+        documentId: "doc-1",
+        ref: REF,
+        retries: 1,
+        retryDelayMs: 1,
+      }),
+    );
+
+    await vi.waitFor(() => expect(result.current.stage).toBe("done"));
+
+    expect(result.current.url?.startsWith("blob:")).toBe(true);
+    expect(result.current.error).toBeUndefined();
+    // The failed first attempt stays visible for diagnostics.
+    expect(result.current.lastError?.message).toBe("not indexed yet");
+    expect(result.current.progress.percent).toBe(100);
+  });
+
+  it("settles on error once the attempts are exhausted", async () => {
+    install(
+      makeService({
+        get: vi.fn(() =>
+          Promise.reject(new Error("denied")),
+        ) as unknown as IAttachmentService["get"],
+      }),
+    );
+    const { result } = renderHook(() =>
+      useAttachmentPreview({
+        documentId: "doc-1",
+        ref: REF,
+        retries: 1,
+        retryDelayMs: 1,
+      }),
+    );
+
+    await vi.waitFor(() => expect(result.current.stage).toBe("error"));
+    expect(result.current.loading).toBe(false);
+    expect(result.current.error?.message).toBe("denied");
+    expect(result.current.url).toBeUndefined();
+  });
+
+  it("aborts the download when the consumer unmounts", async () => {
+    let observed: AbortSignal | undefined;
+    install(
+      makeService({
+        get: vi.fn((_ref: unknown, options?: { signal?: AbortSignal }) => {
+          observed = options?.signal;
+          return new Promise(() => {
+            /* never settles: only the abort can end this */
+          });
+        }) as unknown as IAttachmentService["get"],
+      }),
+    );
+    const view = renderHook(() =>
+      useAttachmentPreview({ documentId: "doc-1", ref: REF }),
+    );
+
+    await vi.waitFor(() => expect(observed).toBeDefined());
+    expect(observed?.aborted).toBe(false);
+
+    view.unmount();
+
+    expect(observed?.aborted).toBe(true);
   });
 });

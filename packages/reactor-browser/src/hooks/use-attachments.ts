@@ -121,6 +121,29 @@ export type UseAttachmentPreviewReturn = {
   header: AttachmentHeader | undefined;
   loading: boolean;
   error: Error | undefined;
+  stage: AttachmentDownloadStage;
+  progress: AttachmentProgressState;
+  /** 1-based attempt currently in flight; 0 while idle. */
+  attempt: number;
+  maxAttempts: number;
+  /**
+   * The most recent failed attempt while the hook is still retrying. Exposed
+   * because the retry loop otherwise swallows it, leaving a preview requested
+   * right after attaching as an indefinite spinner with no explanation.
+   */
+  lastError: Error | undefined;
+};
+
+const IDLE_PREVIEW: UseAttachmentPreviewReturn = {
+  url: undefined,
+  header: undefined,
+  loading: false,
+  error: undefined,
+  stage: "idle",
+  progress: IDLE_PROGRESS,
+  attempt: 0,
+  maxAttempts: 1,
+  lastError: undefined,
 };
 
 /**
@@ -129,7 +152,8 @@ export type UseAttachmentPreviewReturn = {
  * revokes it automatically on unmount and whenever documentId/ref change —
  * editors never touch blobs or URL lifecycles. Failed attempts are retried
  * (`retries` × `retryDelayMs`) so a preview requested right after attaching
- * appears as soon as the server's reference index catches up.
+ * appears as soon as the server's reference index catches up. Progress resets
+ * per attempt; nothing resumes.
  */
 export function useAttachmentPreview({
   documentId,
@@ -138,68 +162,108 @@ export function useAttachmentPreview({
   retryDelayMs = DEFAULT_PREVIEW_RETRY_DELAY_MS,
 }: UseAttachmentPreviewInput): UseAttachmentPreviewReturn {
   const client = useAttachments();
-  const [state, setState] = useState<UseAttachmentPreviewReturn>({
-    url: undefined,
-    header: undefined,
-    loading: false,
-    error: undefined,
-  });
+  const [state, setState] = useState<UseAttachmentPreviewReturn>(IDLE_PREVIEW);
 
   useEffect(() => {
     if (!client || !ref) {
-      setState({
-        url: undefined,
-        header: undefined,
-        loading: false,
-        error: undefined,
-      });
+      setState(IDLE_PREVIEW);
       return;
     }
-    let cancelled = false;
+    const maxAttempts = retries + 1;
+    // StrictMode runs mount -> cleanup -> mount, so this must be re-armed in
+    // the effect body: a ref initialized once stays false on the second mount.
+    let live = true;
+    const controller = new AbortController();
     let revoke: (() => void) | undefined;
     let timer: ReturnType<typeof setTimeout> | undefined;
     let attempt = 0;
+
     setState({
-      url: undefined,
-      header: undefined,
+      ...IDLE_PREVIEW,
       loading: true,
-      error: undefined,
+      attempt: 1,
+      maxAttempts,
     });
+
     const load = () => {
+      attempt += 1;
+      const gate = createProgressGate();
+      const attemptNumber = attempt;
       client
-        .downloadObjectUrl({ documentId, ref })
+        .downloadObjectUrl(
+          { documentId, ref, signal: controller.signal },
+          {
+            onProgress: (progress: AttachmentProgress) => {
+              if (!live) return;
+              // Terminal frames are written on resolution instead, so the
+              // client can never render `done` before the URL exists.
+              if (progress.stage === "done" || progress.stage === "error") {
+                return;
+              }
+              if (!gate(progress)) return;
+              setState((prev) => ({
+                ...prev,
+                stage: progress.stage as AttachmentDownloadStage,
+                progress: toProgressState(progress),
+              }));
+            },
+          },
+        )
         .then((result) => {
-          if (cancelled) {
+          if (!live) {
             result.revoke();
             return;
           }
           revoke = result.revoke;
-          setState({
+          setState((prev) => ({
+            ...prev,
             url: result.url,
             header: result.header,
             loading: false,
             error: undefined,
-          });
+            stage: "done",
+            progress: doneProgress(result.header.sizeBytes),
+            attempt: attemptNumber,
+            maxAttempts,
+          }));
         })
         .catch((err: unknown) => {
-          if (cancelled) return;
-          if (attempt < retries) {
-            attempt += 1;
+          if (!live) return;
+          const error = err instanceof Error ? err : new Error(String(err));
+          if (attempt < maxAttempts) {
+            // Stay in loading state while the index catches up, but say what
+            // went wrong and which attempt is next.
+            setState((prev) => ({
+              ...prev,
+              lastError: error,
+              attempt: attempt + 1,
+              progress: IDLE_PROGRESS,
+              stage: "idle",
+            }));
             timer = setTimeout(load, retryDelayMs);
-            return; // stay in loading state while the index catches up
+            return;
           }
-          setState({
+          setState((prev) => ({
+            ...prev,
             url: undefined,
             header: undefined,
             loading: false,
-            error: err instanceof Error ? err : new Error(String(err)),
-          });
+            error,
+            lastError: error,
+            stage: "error",
+            attempt: attemptNumber,
+            maxAttempts,
+          }));
         });
     };
     load();
+
     return () => {
-      cancelled = true;
+      live = false;
       if (timer !== undefined) clearTimeout(timer);
+      // Without this the whole download ran to completion in the background
+      // after unmount, with nowhere to go.
+      controller.abort();
       revoke?.();
     };
   }, [client, documentId, ref, retries, retryDelayMs]);
