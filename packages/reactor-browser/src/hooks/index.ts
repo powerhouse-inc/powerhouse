@@ -51,6 +51,7 @@ export * from "./supported-document-types.js";
 export * from "./theme.js";
 export * from "./timeline-revision.js";
 export * from "./toast.js";
+export * from "./use-can-execute.js";
 export * from "./use-drive-system-info.js";
 export * from "./use-editor-file-drop.js";
 export * from "./use-get-switchboard-link.js";
