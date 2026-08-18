@@ -8,7 +8,10 @@ import {
   createBrowserReactor,
   getDefaultDrives,
 } from "@powerhousedao/connect/utils";
-import { createRemoteAttachmentService } from "@powerhousedao/reactor-attachments/client";
+import {
+  createRemoteAttachmentService,
+  createXhrUploadTransport,
+} from "@powerhousedao/reactor-attachments/client";
 import {
   addPHEventHandlers,
   addRemoteDrive,
@@ -460,6 +463,9 @@ export async function createReactor(localPackage?: DocumentModelLib) {
       const attachmentService = createRemoteAttachmentService({
         remoteUrl: switchboardOrigin,
         jwtHandler: attachmentJwtHandler,
+        // XMLHttpRequest is the only browser API that reports upload byte
+        // progress; everything else about the request is unchanged.
+        uploadTransport: createXhrUploadTransport(),
       });
       setAttachmentService(attachmentService);
     }
