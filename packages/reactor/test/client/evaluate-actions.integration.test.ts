@@ -14,8 +14,14 @@ import {
   generateId,
   groupDocumentType,
   initializeAuth,
+  normalizeDocumentModelVersion,
+  setModelName,
 } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
+import {
+  createDocumentAction,
+  upgradeDocumentAction,
+} from "../../src/actions/index.js";
 import { afterEach, describe, expect, it } from "vitest";
 import type { ReactorClient } from "../../src/client/reactor-client.js";
 import type { ActionCandidate } from "../../src/client/types.js";
@@ -486,6 +492,110 @@ describe("the authorization preflight end to end", () => {
 
       expect(answer.evaluations).toEqual([
         { decision: "allow" },
+        { decision: "deny", reason: AUTH_NO_GRANT_REASON },
+      ]);
+    });
+  });
+
+  /**
+   * The preflight's condition context and admission's are read from different
+   * sources -- the DocumentSnapshot projection versus the write cache -- which
+   * was suspected to diverge on an upgrade persisted without initialState and
+   * without the executor's __migrated voucher: the snapshot indexes nothing
+   * but header/document/auth from such an operation. Empirically the two
+   * sources agree in that shape, because the write cache materializes nothing
+   * either (createDocumentFromAction seeds defaultBaseState, not the model's
+   * default, and an unvouched upgrade adds no scope state), so a conditional
+   * grant reading `doc.<scope>.*` resolves undefined on both sides and both
+   * deny. These tests pin that agreement: if either side ever starts
+   * materializing what the other does not, one of them breaks.
+   */
+  describe("a condition over a scope an unvouched upgrade never indexed", () => {
+    const openWhileUnnamed: Grant = {
+      id: "g-open-while-unnamed",
+      description: "anyone writes the global scope while the name is unset",
+      effect: "allow",
+      principal: { anyone: true },
+      capability: { can: "execute", scope: "global" },
+      where: { eq: [{ attr: "doc.global.name" }, { lit: "" }] },
+    };
+
+    const CONDITIONAL: Partial<ReactorFeatureFlags> = {
+      ...ENFORCING,
+      authGroups: true,
+      authConditions: true,
+    };
+
+    /**
+     * A policied document whose UPGRADE_DOCUMENT carries no initialState and
+     * earns no __migrated voucher (fromVersion 0), so the document view
+     * indexes only header/document/auth from it while the write cache still
+     * materializes the global scope's default.
+     */
+    async function unvouchedPolicied(
+      client: ReactorClient,
+      id: string,
+    ): Promise<string> {
+      const document = createDocModelDocument({ id });
+      const header = document.header;
+      await client.execute(header.id, "main", [
+        createDocumentAction({
+          model: header.documentType,
+          version: 0,
+          documentId: header.id,
+          signing: {
+            signature: header.id,
+            publicKey: header.sig.publicKey,
+            nonce: header.sig.nonce,
+            createdAtUtcIso: header.createdAtUtcIso,
+            documentType: header.documentType,
+          },
+          slug: header.slug,
+          name: header.name,
+          branch: header.branch,
+          meta: header.meta,
+          protocolVersions: header.protocolVersions ?? { "base-reducer": 2 },
+        }),
+        upgradeDocumentAction({
+          documentId: header.id,
+          model: header.documentType,
+          fromVersion: 0,
+          toVersion: normalizeDocumentModelVersion(
+            (document.state as Partial<typeof document.state>).document
+              ?.version,
+          ),
+        }),
+      ]);
+      await client.execute(header.id, "main", [
+        initializeAuth({ version: 1, grants: [openWhileUnnamed, adminGrant] }),
+      ]);
+      return header.id;
+    }
+
+    it("admission denies: the condition resolves undefined against the write cache", async () => {
+      const client = await build(CONDITIONAL);
+      const documentId = await unvouchedPolicied(
+        client,
+        "preflight-unvouched-admitted",
+      );
+
+      await expect(
+        client.execute(documentId, "main", [setModelName({ name: "renamed" })]),
+      ).rejects.toThrow(/Authorization denied/);
+    });
+
+    it("the preflight predicts the verdict admission reaches", async () => {
+      const client = await build(CONDITIONAL);
+      const documentId = await unvouchedPolicied(
+        client,
+        "preflight-unvouched-predicted",
+      );
+
+      const answer = await client.evaluateActions(documentId, "main", [
+        execute("global", "SET_MODEL_NAME", { name: "renamed" }),
+      ]);
+
+      expect(answer.evaluations).toEqual([
         { decision: "deny", reason: AUTH_NO_GRANT_REASON },
       ]);
     });
