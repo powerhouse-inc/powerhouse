@@ -502,7 +502,7 @@ export async function evaluateActions(
       args.documentIdentifier,
       branch,
       candidates,
-      subject ? { subject } : undefined,
+      subject,
     );
   } catch (error) {
     if (AuthEnforcementDisabledError.isError(error)) {

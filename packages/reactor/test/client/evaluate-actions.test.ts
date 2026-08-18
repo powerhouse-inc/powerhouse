@@ -329,12 +329,12 @@ describe("evaluateActions", () => {
       });
     });
 
-    it("takes the subject the view names over the signer's", async () => {
+    it("takes the named subject over the signer's", async () => {
       await client({ A: { decision: "allow" } }).evaluateActions(
         DOCUMENT_ID,
         "main",
         [candidate("A")],
-        { subject: { address: "0xSomebodyElse" } },
+        { address: "0xSomebodyElse" },
       );
 
       expect(decided[0].subject).toEqual({ address: "0xSomebodyElse" });

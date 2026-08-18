@@ -625,7 +625,7 @@ export class ReactorClient implements IReactorClient {
     documentIdentifier: string,
     branch: string,
     candidates: ActionCandidate[],
-    view?: ViewFilter,
+    subject?: AuthSubject,
     signal?: AbortSignal,
   ): Promise<ActionEvaluations> {
     this.logger.verbose(
@@ -642,7 +642,7 @@ export class ReactorClient implements IReactorClient {
       throw new AuthEnforcementDisabledError();
     }
 
-    const subject = this.readSubject(view?.subject);
+    const decidedSubject = this.readSubject(subject);
     const resolvedId = await this.documentView.resolveIdOrSlug(
       documentIdentifier,
       { branch },
@@ -679,7 +679,9 @@ export class ReactorClient implements IReactorClient {
         targets.set(targetId, target);
       }
 
-      evaluations.push(decideCandidate(config, target, subject, candidate));
+      evaluations.push(
+        decideCandidate(config, target, decidedSubject, candidate),
+      );
     }
 
     const allowed = evaluations.filter(

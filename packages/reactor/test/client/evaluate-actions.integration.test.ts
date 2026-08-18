@@ -189,13 +189,13 @@ describe("the authorization preflight end to end", () => {
       documentId,
       "main",
       [execute("global", "SET_MODEL_NAME")],
-      { subject: { address: WRITER } },
+      { address: WRITER },
     );
     const refused = await client.evaluateActions(
       documentId,
       "main",
       [execute("global", "SET_MODEL_NAME")],
-      { subject: { address: OUTSIDER } },
+      { address: OUTSIDER },
     );
 
     expect(allowed.evaluations).toEqual([{ decision: "allow" }]);
@@ -208,11 +208,11 @@ describe("the authorization preflight end to end", () => {
 
   /**
    * The subject defaults to the client's own signer, which is the anonymous
-   * passthrough here, and `view.subject` replaces it. A server answering many
+   * passthrough here, and a named subject replaces it. A server answering many
    * principals over one client depends on the override being the deciding
    * subject rather than an annotation.
    */
-  it("decides for the signer by default and for the subject the view names", async () => {
+  it("decides for the signer by default and for the named subject", async () => {
     const client = await build(ENFORCING);
     const documentId = await policied(client, "preflight-subject", [
       {
@@ -232,7 +232,7 @@ describe("the authorization preflight end to end", () => {
       documentId,
       "main",
       [execute("global", "SET_MODEL_NAME")],
-      { subject: { address: WRITER } },
+      { address: WRITER },
     );
 
     expect(asSigner.anyAllowed).toBe(false);
@@ -257,7 +257,7 @@ describe("the authorization preflight end to end", () => {
         execute("local", "SET_MODEL_NAME"),
         execute("auth", "SET_GRANT"),
       ],
-      { subject: { address: OUTSIDER } },
+      { address: OUTSIDER },
     );
 
     expect(answer.allAllowed).toBe(true);
@@ -330,13 +330,13 @@ describe("the authorization preflight end to end", () => {
         documentId,
         "main",
         [execute("global", "SET_MODEL_NAME")],
-        { subject: { address: MEMBER } },
+        { address: MEMBER },
       );
       const outsider = await client.evaluateActions(
         documentId,
         "main",
         [execute("global", "SET_MODEL_NAME")],
-        { subject: { address: OUTSIDER } },
+        { address: OUTSIDER },
       );
 
       expect(member.allAllowed).toBe(true);
@@ -351,7 +351,7 @@ describe("the authorization preflight end to end", () => {
         documentId,
         "main",
         [execute("global", "SET_MODEL_NAME")],
-        { subject: { address: MEMBER } },
+        { address: MEMBER },
       );
 
       expect(member.allDenied).toBe(true);

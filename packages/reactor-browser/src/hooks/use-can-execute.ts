@@ -2,9 +2,9 @@ import type {
   ActionCandidate,
   ActionEvaluations,
   Evaluation,
-  ViewFilter,
 } from "@powerhousedao/reactor";
 import { AuthEnforcementDisabledError } from "@powerhousedao/reactor";
+import type { AuthSubject } from "@powerhousedao/shared/document-model";
 import type { LoginStatus, User } from "@renown/sdk";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDocumentSafe } from "./document-cache.js";
@@ -70,7 +70,7 @@ function readyState(answer: ActionEvaluations): InternalState {
  *
  * An absent status counts as unsettled, which is one render in a host that wires
  * renown -- and forever in a host that does not. Such a host names its subject
- * through `view.subject` instead, which needs nothing to settle.
+ * through the `subject` parameter instead, which needs nothing to settle.
  */
 function subjectSettled(
   loginStatus: LoginStatus | "loading" | undefined,
@@ -114,13 +114,13 @@ function subjectSettled(
  * @param documentId - The document the candidates target, or null/undefined to stay idle
  * @param candidates - Operations to predict a verdict for. Read by content, so an inline array is fine
  * @param branch - Branch to evaluate against, defaulting to main
- * @param view - Optional filter; `view.subject` names the subject instead of the client's signer
+ * @param subject - Optional subject to decide for instead of the client's signer
  */
 export function useCanExecute(
   documentId: string | null | undefined,
   candidates: ActionCandidate[],
   branch = "main",
-  view?: ViewFilter,
+  subject?: AuthSubject,
 ): CanExecuteState {
   const client = useReactorClientModule()?.client;
   const loginStatus = useLoginStatus();
@@ -135,12 +135,11 @@ export function useCanExecute(
   // forever. The memo hands back the array from the render whose content
   // changed, so the values stay exactly what the caller passed.
   const candidateKey = JSON.stringify(candidates);
-  const viewKey = JSON.stringify(view);
+  const subjectKey = JSON.stringify(subject);
   const stableCandidates = useMemo(() => candidates, [candidateKey]);
-  const stableView = useMemo(() => view, [viewKey]);
+  const stableSubject = useMemo(() => subject, [subjectKey]);
 
-  const settled =
-    view?.subject !== undefined || subjectSettled(loginStatus, user);
+  const settled = subject !== undefined || subjectSettled(loginStatus, user);
   const revisionKey = JSON.stringify(revision);
 
   const refetch = useCallback(() => {
@@ -172,7 +171,7 @@ export function useCanExecute(
             documentId,
             branch,
             stableCandidates,
-            stableView,
+            stableSubject,
           ),
         );
       } catch (error) {
@@ -202,7 +201,7 @@ export function useCanExecute(
     documentId,
     branch,
     stableCandidates,
-    stableView,
+    stableSubject,
     settled,
     revisionKey,
     nonce,

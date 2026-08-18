@@ -6,6 +6,7 @@ import type {
 } from "@powerhousedao/shared/document-drive";
 import type {
   Action,
+  AuthSubject,
   DocumentModelModule,
   Operation,
   PHDocument,
@@ -399,7 +400,7 @@ export interface IReactorClient {
    * @param documentIdentifier - Document "id" or "slug" the candidates target
    * @param branch - Branch to evaluate against
    * @param candidates - Operations to predict a verdict for, each with the scope it would execute in
-   * @param view - Optional filter; `view.subject` names the subject, defaulting to the client's own signer
+   * @param subject - Optional subject to decide for, defaulting to the client's own signer. A plain subject rather than a ViewFilter: the evaluation reads no view, so a filter's branch or scopes would be silently ignored here
    * @param signal - Optional abort signal to cancel the request
    * @returns One evaluation per candidate, in the order given, with the aggregates over them
    * @throws AuthEnforcementDisabledError if the reactor's authEnforcement flag is off, in which case it holds no decision model and the legacy host-table permission system cannot answer for one
@@ -408,7 +409,7 @@ export interface IReactorClient {
     documentIdentifier: string,
     branch: string,
     candidates: ActionCandidate[],
-    view?: ViewFilter,
+    subject?: AuthSubject,
     signal?: AbortSignal,
   ): Promise<ActionEvaluations>;
 
