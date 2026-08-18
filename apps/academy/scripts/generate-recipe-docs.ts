@@ -124,10 +124,10 @@ function deriveDescription(readme: string | null, slug: string): string {
   }
   const paragraph = buf.join(" ").trim();
   const sentence = paragraph.match(/^(.+?\.)(?:\s|$)/);
-  return (
-    (sentence ? sentence[1] : paragraph) ||
-    `Reactor recipe: ${titleCase(slug)}.`
-  );
+  const description = sentence ? sentence[1] : paragraph;
+  return description
+    ? absolutizeLinks(description, slug)
+    : `Reactor recipe: ${titleCase(slug)}.`;
 }
 
 /** Escape MDX-hostile characters outside inline code spans. */
@@ -152,6 +152,45 @@ function escapeTableCell(text: string): string {
 }
 
 /**
+ * Resolve a recipe-relative path against the recipe folder, so a sibling
+ * reference like `../full-text-search` becomes `full-text-search` rather than
+ * a URL carrying a literal `/..` segment.
+ */
+function resolveAgainstRecipe(slug: string, target: string): string {
+  const segments = [slug, ...target.split("/")];
+  const out: string[] = [];
+  for (const segment of segments) {
+    if (segment === "" || segment === ".") continue;
+    if (segment === "..") {
+      out.pop();
+      continue;
+    }
+    out.push(segment);
+  }
+  return out.join("/");
+}
+
+/**
+ * Rewrite recipe-relative links and images to absolute repo URLs. Images point
+ * at raw, links at blob; GitHub redirects a blob URL for a directory to its
+ * tree view, so a sibling-recipe link still lands.
+ *
+ * Applied to the inlined README *and* to the derived description, because the
+ * description is a slice of that README and can carry a relative link of its
+ * own. Left unrewritten it resolves against the Cookbook's own URL, which is a
+ * broken link the Docusaurus build refuses.
+ */
+function absolutizeLinks(text: string, slug: string): string {
+  return text.replace(
+    /(!?)\[([^\]]*)\]\((?!https?:\/\/|#|mailto:)([^)]+)\)/g,
+    (_m, bang: string, label: string, target: string) => {
+      const base = bang ? RAW_BASE : BLOB_BASE;
+      return `${bang}[${label}](${base}/${resolveAgainstRecipe(slug, target)})`;
+    },
+  );
+}
+
+/**
  * Make README markdown safe to embed in an MDX page. Fence-aware: fenced code
  * blocks are left untouched (MDX never parses JSX inside them, and generics
  * like `Kysely<DB>` must survive). Only prose segments are transformed.
@@ -172,15 +211,7 @@ function transformProse(text: string, slug: string): string {
   });
 
   // 2) Rewrite relative links/images to absolute repo URLs.
-  //    Images → raw; links → blob (file) — both rooted at the recipe folder.
-  text = text.replace(
-    /(!?)\[([^\]]*)\]\((?!https?:\/\/|#|mailto:)([^)]+)\)/g,
-    (_m, bang: string, label: string, target: string) => {
-      const clean = target.replace(/^\.\//, "");
-      const base = bang ? `${RAW_BASE}/${slug}` : `${BLOB_BASE}/${slug}`;
-      return `${bang}[${label}](${base}/${clean})`;
-    },
-  );
+  text = absolutizeLinks(text, slug);
 
   // 3) Escape MDX-hostile characters outside inline code spans.
   return escapeMdxProse(text);

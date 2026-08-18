@@ -1,7 +1,7 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-08-18T20:36:54.516Z
-> Total Documents: 109
+> Generated: 2026-08-18T21:08:29.027Z
+> Total Documents: 110
 > Source: https://academy.vetra.io/llms-full.txt
 
 
@@ -6554,6 +6554,127 @@ Three Bash scripts that export, import, and migrate a PostgreSQL database by run
 
 **Source** · [`migrate.sh`](https://github.com/powerhouse-inc/recipes/blob/main/db-migrate/migrate.sh) · [`export.sh`](https://github.com/powerhouse-inc/recipes/blob/main/db-migrate/export.sh)
 **Concepts** · `pg_dump` · `pg_restore` · Docker — see [Storage and Scaling](/academy/Reference/Reactor/StorageAndScaling)
+
+---
+
+
+## Authorization
+
+> Source: https://academy.vetra.io/academy/Reference/Reactor/Authorization
+
+The reactor decides who may do what from a policy stored on the document itself, in its `auth` scope. The policy is a list of **grants** that the reducer folds like any other state, so it syncs, replays and converges the same way document content does. Reducers contain no authorization code.
+
+This is separate from the host-side permission tables described in [Reactor API Authorization](/academy/Build/BuildingUserExperiences/Authorization/Authorization), which decide which addresses a host lets near a drive. The two answer different questions and neither substitutes for the other.
+
+**INFO:**
+Every flag below defaults to off, and enforcement protects nothing that already exists: a document that never emitted `INITIALIZE_AUTH` carries an uninitialized policy, which allows everything. Enforcement bites only on documents that have a policy.
+
+
+## Feature flags
+
+Enforcement is staged. Each flag requires the one above it, and a reactor refuses to start on a set that skips one, because a partially enforcing reactor applies less than the operator asked for.
+
+| Flag                | Env var                      | What it turns on                                                    |
+| ------------------- | ---------------------------- | ------------------------------------------------------------------- |
+| `documentDecisions` | `REACTOR_DOCUMENT_DECISIONS` | Decide writes from the document stream rather than the meta cache    |
+| `authEnforcement`   | `REACTOR_AUTH_ENFORCEMENT`   | Enforce the policy at admission, replay and read                     |
+| `authGroups`        | `REACTOR_AUTH_GROUPS`        | Let `{ group }` principals match against a roster document           |
+| `authConditions`    | `REACTOR_AUTH_CONDITIONS`    | Evaluate `where` clauses and `{ match }` principals                  |
+
+```typescript
+new ReactorBuilder().withExecutorConfig({
+  featureFlags: {
+    documentDecisions: true,
+    authEnforcement: true,
+  },
+});
+```
+
+The flags govern **enforcement only**. The data model is always live, so a grant written on a reactor with the flags off is stored and syncs; it is not enforced there.
+
+**WARNING:**
+A replay decision is a consensus outcome. Two replicas of the same document running different flags compute different verdicts for the same operation and diverge permanently. Move every node that shares a document together.
+
+
+## The policy
+
+An uninitialized policy leaves the document open. `INITIALIZE_AUTH` installs the first grant list; after that the default is deny and only a grant can permit anything.
+
+Four actions write the `auth` scope:
+
+| Action             | Effect                                            |
+| ------------------ | ------------------------------------------------- |
+| `INITIALIZE_AUTH`  | Installs the initial policy. Genesis only         |
+| `SET_GRANT`        | Adds a grant, or replaces the one with that `id`  |
+| `REMOVE_GRANT`     | Removes a grant by `id`                           |
+| `MOVE_GRANT`       | Reorders a grant, which can change the outcome    |
+
+`UNDO`, `REDO` and `PRUNE` are refused on the `auth` scope.
+
+### Grants
+
+```typescript
+type Grant = {
+  id: string;
+  description: string;
+  effect: "allow" | "deny";
+  principal:
+    | { anyone: true }
+    | { address: string }
+    | { group: string } // a powerhouse/reactor-group document id
+    | { match: Condition };
+  capability:
+    | { can: "read"; scope?: string }
+    | { can: "execute"; scope?: string; operation?: string[] };
+  where?: Condition;
+};
+```
+
+`scope` accepts `"*"` for every scope. Omitting `operation` covers every action in the scope.
+
+A `{ group }` principal names a roster document (`powerhouse/reactor-group`) and resolves live, so hiring and offboarding are single membership operations on the roster rather than edits to every policy that trusts it. A `where` clause reads `subject.*`, `doc.<scope>.*` and `action.input.*`, which is how a grant can depend on the values of the operation it gates.
+
+### How a decision is made
+
+Grants are walked in list order and **the last applicable one wins**. A grant applies when its capability covers the request and its principal matches the subject. If none applies, the request is denied.
+
+Three rules are easy to miss:
+
+- **An allow on `execute` confers `read` of that scope.** A grant of `{ can: "execute", scope: "*" }` therefore publishes every domain scope to whoever it names. Grant administration on `scope: "auth"` rather than `"*"`.
+- **A grant that cannot apply is skipped, not honoured.** Below `authGroups` a `{ group }` principal never matches; below `authConditions` a `where` clause never holds. Both fail closed, so a policy relying on a conditional *deny* is weaker than it reads on a reactor that cannot evaluate it.
+- **The creator keeps the auth scope.** The key that signed the document's header may always execute in `scope: "auth"`, so a policy cannot lock its own owner out. On an unsigned document there is no creator, and validation instead refuses any policy that would leave nobody able to administer it.
+
+## Scopes every holder reads
+
+The `auth` and `document` scopes are readable by anyone holding the document, whatever the grants say. A replica that could not read the policy would sync a document, see an uninitialized policy, and allow everything on it. Grants gate the domain scopes.
+
+Read filtering happens on the [`IReactorClient`](/academy/Reference/Reactor/ReactorClient), not inside the reactor, so `reactor.get()` and `client.get()` return different documents in the same process. A withheld scope is absent from `state` rather than present and empty.
+
+## Refusal reasons
+
+A refused operation is stored with a `deniedReason` drawn from a closed set. Re-evaluation compares these strings, so they are consensus data and carry no grant id, subject or timestamp.
+
+| Reason                              | Meaning                                        |
+| ----------------------------------- | ---------------------------------------------- |
+| `no grant permits this operation`   | Default deny; nothing applied                  |
+| `denied by grant`                   | The last applicable grant had `effect: "deny"` |
+| `document deleted`                  | The document was deleted at this position      |
+| `auth policy version unsupported`   | The policy declares a version this build cannot evaluate |
+
+## Limits
+
+A version-1 policy holds at most 100 grants. A condition holds at most 100 nodes and nests at most 10 deep. These bound the work a single decision can cost.
+
+## Asking before you write
+
+[`evaluateActions`](/academy/Reference/Reactor/ReactorClient) predicts what the policy would decide about candidate operations without submitting them, so a control can be disabled rather than offered and refused. In React, [`useCanExecute`](/academy/Reference/EditorsUI/ReactHooks) wraps it.
+
+## Related
+
+- [IReactorClient](/academy/Reference/Reactor/ReactorClient) — `evaluateActions` and the read methods the gate filters.
+- [React Hooks](/academy/Reference/EditorsUI/ReactHooks) — `useCanExecute`.
+- [Signing](/academy/Build/BuildingUserExperiences/Authorization/Signing) — where a subject's address and app key come from.
+- [Cookbook](/academy/Lookup/Cookbook) — runnable recipes: `document-acl`, `scoped-reads`, `group-principals`, `revocation-race`.
 
 ---
 
@@ -23636,6 +23757,21 @@ This documentation is still being written and may be incomplete.
 The feature is not yet available on production.
 
 
+**INFO:**
+This page covers the **host-side permission tables**: which addresses a reactor
+lets near a drive or document, enforced at the GraphQL boundary and when serving
+sync. They are what a deployment runs today.
+
+A second mechanism decides authorization *inside* the reactor, from a policy
+stored on the document's own `auth` scope, at admission, replay and read. It is
+staged behind feature flags and covered in
+[Authorization](/academy/Reference/Reactor/Authorization).
+
+Both call their unit a *grant*, and they are not the same thing. A permission
+here is a READ/WRITE/ADMIN level held in a host database table. A grant there is
+an operation on the document, folded into its state and synced with it.
+
+
 ## Introduction
 
 The **Reactor API** is the API interface to a Powerhouse **Reactor**—a storage node responsible for storing documents, resolving conflicts, and verifying document event histories. Reactors can be configured for local storage, cloud storage, or decentralized storage networks.
@@ -25536,6 +25672,21 @@ Pre-signed actions are detected by checking for existing signatures in `action.c
 
 **WARNING:**
 This documentation is still being written and may be incomplete.
+
+
+**INFO:**
+This page covers the **host-side permission tables**: which addresses a reactor
+lets near a drive or document, enforced at the GraphQL boundary and when serving
+sync. They are what a deployment runs today.
+
+A second mechanism decides authorization *inside* the reactor, from a policy
+stored on the document's own `auth` scope, at admission, replay and read. It is
+staged behind feature flags and covered in
+[Authorization](/academy/Reference/Reactor/Authorization).
+
+The two answer different questions and neither replaces the other. A GraphQL
+write passes the tables first, and then the document's own policy where
+enforcement is enabled.
 
 
 This guide explains how to configure **authorization** for the Powerhouse Reactor API. Authorization controls who can access your Reactor and what they can do.
@@ -33999,17 +34150,22 @@ The [Powerhouse Recipes](https://github.com/powerhouse-inc/recipes) repository c
 | [Custom Read Model](https://github.com/powerhouse-inc/recipes/tree/main/custom-read-model) | A custom `IReadModel` implementation registered via `ReactorBuilder.withReadModel()` that maintains a document-count-per-type materialized view. |
 | [DB Migrate](https://github.com/powerhouse-inc/recipes/tree/main/db-migrate) | PostgreSQL database export, import, and migration scripts using Docker. |
 | [Discord Webhook Processor](https://github.com/powerhouse-inc/recipes/tree/main/discord-webhook-processor) | A Reactor `IProcessor` that posts document operations to a Discord channel via webhook. |
+| [Document ACL](https://github.com/powerhouse-inc/recipes/tree/main/document-acl) | A custom `team-journal` document model whose write access is governed entirely by the platform auth scope — no authorization code in any reducer. |
 | [Document Snapshot Exporter](https://github.com/powerhouse-inc/recipes/tree/main/document-snapshot-exporter) | CLI tool that exports document state and operation history to JSON files, demonstrating reliable read-after-write consistency using the Reactor API. |
 | [Document Versioning](https://github.com/powerhouse-inc/recipes/tree/main/document-versioning) | Evolve a document model's schema from v1 to v2 with an `UpgradeManifest` and a pure `upgradeReducer`, so documents created under the old schema keep loading and replaying correctly. |
 | [Drive Override](https://github.com/powerhouse-inc/recipes/tree/main/drive-override) | A custom container document that tracks its children via the reactor's `ADD_RELATIONSHIP` system action instead of the `document-drive` model's `ADD_FILE`. |
 | [External Feed Ingest](https://github.com/powerhouse-inc/recipes/tree/main/external-feed-ingest) | A polling worker that pulls an off-platform feed into event-sourced documents **idempotently**. |
 | [Full-Text Search Processor](https://github.com/powerhouse-inc/recipes/tree/main/full-text-search) | A Reactor `IProcessor` that indexes document state into a PostgreSQL full-text search table, enabling ranked keyword search across all documents managed by a Reactor instance. |
+| [Group Principals](https://github.com/powerhouse-inc/recipes/tree/main/group-principals) | Who may approve an expense is a question a **roster document** answers. |
 | [Inbound Webhook Bridge](https://github.com/powerhouse-inc/recipes/tree/main/inbound-webhook-bridge) | Receive external webhooks (Stripe-style), verify the signature **server-side against the raw request bytes**, and map verified events onto document actions. |
+| [Positional Delete](https://github.com/powerhouse-inc/recipes/tree/main/positional-delete) | Deletion as a **position in the merged operation order**, not a document-wide tombstone. |
 | [Rate Limiter](https://github.com/powerhouse-inc/recipes/tree/main/rate-limiter) | A Reactor `IProcessor` paired with an `AuthService` gate to throttle users by signer address, preventing any single user from overwhelming the system with excessive operations. |
 | [Relational DB Subgraph](https://github.com/powerhouse-inc/recipes/tree/main/relational-db-subgraph) | A complete relational DB processor recipe demonstrating the academy flagship tutorial pattern: |
+| [Revocation Race](https://github.com/powerhouse-inc/recipes/tree/main/revocation-race) | Convergent authorization across reactors. |
 | [Role-Based Auth](https://github.com/powerhouse-inc/recipes/tree/main/role-based-auth) | A custom document model where the creator is promoted to admin on first action, admins can grant or revoke admin and member roles, and a domain action (`writeNote`) is gated on member-or-higher. |
 | [Saga](https://github.com/powerhouse-inc/recipes/tree/main/saga) | Saga pattern via Reactor processor: operations on one document trigger operations on others, linked by a traceable saga context. |
-| [Semantic Search Processor](https://github.com/powerhouse-inc/recipes/tree/main/semantic-search) | A Reactor `IProcessor` that embeds document content with an in-process model (Transformers.js) into PGlite's `vector` extension and answers cosine-similarity queries — the semantic sibling of the [full-text-search](#recipe-full-text-search) recipe. |
+| [Scoped Reads](https://github.com/powerhouse-inc/recipes/tree/main/scoped-reads) | The same policy that refuses a write decides what a read returns. |
+| [Semantic Search Processor](https://github.com/powerhouse-inc/recipes/tree/main/semantic-search) | A Reactor `IProcessor` that embeds document content with an in-process model (Transformers.js) into PGlite's `vector` extension and answers cosine-similarity queries — the semantic sibling of the [full-text-search](https://github.com/powerhouse-inc/recipes/blob/main/full-text-search) recipe. |
 | [Signed Operations Verifier](https://github.com/powerhouse-inc/recipes/tree/main/signed-operations-verifier) | A standalone script that builds a document operation history with cryptographic signatures, then verifies each one. |
 | [Subscription CLI](https://github.com/powerhouse-inc/recipes/tree/main/subscription-cli) | A standalone CLI for monitoring Powerhouse Reactor GraphQL subscriptions over WebSocket in real time. |
 | [Sync Health Monitor](https://github.com/powerhouse-inc/recipes/tree/main/sync-health-monitor) | Subscribes to `SyncEventTypes` on the Reactor EventBus and maintains a live health dashboard. |
@@ -34624,6 +34780,161 @@ pnpm test
 [View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/discord-webhook-processor)
 </details>
 
+<details id="recipe-document-acl">
+<summary><strong>Document ACL</strong> — A custom `team-journal` document model whose write access is governed entirely by the platform auth scope — no authorization code in any reducer.</summary>
+
+### Document ACL
+
+A custom `team-journal` document model whose write access is governed entirely by the
+platform auth scope — no authorization code in any reducer. Policy lives in the
+document as ordinary replicated state (`state.auth`), is edited with four platform
+actions, and is enforced at admission by the reactor when the `authEnforcement`
+feature flag is on.
+
+This recipe is the deliberate counterpart to [`role-based-auth`](https://github.com/powerhouse-inc/recipes/blob/main/role-based-auth):
+same outcome (callers gated per operation), opposite mechanism. There, every reducer
+starts with signer checks and the rules are baked into the model. Here the reducers
+validate domain invariants only, and the rules are data — inspectable, replicated,
+and changeable at runtime without touching the model.
+
+#### What it demonstrates
+
+- **The cascading feature flags** — `authEnforcement` requires `documentDecisions`;
+  the builder validates the combination eagerly and rejects unknown flag names.
+- **Open until initialized** — an uninitialized policy (`state.auth.version === 0`)
+  leaves the document open; `initializeAuth` flips the default to deny.
+- **Grant anatomy** — principals (`{anyone}`, `{address}`), capabilities with exact
+  operation lists (`{can: "execute", scope: "global", operation: ["ADD_ENTRY"]}`),
+  allow and deny effects.
+- **Last applicable grant wins** — a deny appended after an allow refuses what the
+  allow permitted, and `moveGrant` changes the verdict without changing any grant.
+- **The auth scope is just another scope** — who may edit the policy is itself
+  policy: a grant on `scope: "auth"`.
+- **Admission-level refusal** — a denied write fails the job with
+  `AuthorizationDeniedError` and nothing is stored; the reducer never runs.
+- **Self-lockout guardrail** — an initial policy with no reachable auth-administration
+  grant is refused by the platform reducer.
+
+#### The policy the demo installs
+
+| id | effect | principal | capability |
+|---|---|---|---|
+| `g-alice-admin` | allow | Alice | `execute` on scope `auth` |
+| `g-alice-all` | allow | Alice | `execute` on scope `*` |
+| `g-anyone-add` | allow | anyone | `execute` `ADD_ENTRY` on scope `global` |
+
+Evaluation is **default deny, last applicable grant wins**. The demo then appends
+`g-deny-bob` (deny Bob `ADD_ENTRY`) — Bob is refused; moves it to index 0 — the
+later `g-anyone-add` wins again and Bob is back. Order decides, not existence.
+
+#### The feature flags
+
+```ts
+const reactor = await new ReactorBuilder()
+  .withDocumentModelSources([TeamJournal, documentModelDocumentModelModule])
+  .withExecutorConfig({
+    featureFlags: {
+      documentDecisions: true, // decision model replaces the meta-cache gate
+      authEnforcement: true,   // auth projection; requires documentDecisions
+    },
+  })
+  .build();
+```
+
+The flags govern **enforcement only** — the auth data model is always live. A policy
+written on a flags-on reactor is silently unenforced on a flags-off reactor, which is
+why the flags flip per document-sharing fleet, never per node. Asking for
+`authEnforcement` without `documentDecisions` throws at build time, as does any flag
+name this reactor version doesn't know.
+
+#### State shape
+
+```graphql
+type TeamJournalState {
+  title: String!
+  entries: [JournalEntry!]!
+}
+
+type JournalEntry {
+  id: ID!
+  author: String!
+  text: String!
+  pinned: Boolean!
+}
+```
+
+The reducers (`document-models/team-journal/v1/src/reducers/journal.ts`) throw
+`DuplicateEntry` / `EntryNotFound` — domain invariants — and read the signer only to
+record an entry's `author` for display. There is no access check anywhere in the
+model.
+
+#### Gotchas worth knowing
+
+- **One scope per `execute`** — all actions in a single `reactor.execute` call must
+  share a scope, so policy changes (`scope: "auth"`) can't be batched with domain
+  actions (`scope: "global"`).
+- **The auth stream is strictly timestamp-monotonic** — two policy edits in the same
+  millisecond are refused (`AuthTimestampNotMonotonicError`), and auth operations are
+  never reshuffled. The demo and tests space auth writes by a few milliseconds.
+- **Signer context** — the demo attaches `action.context.signer` by hand to play two
+  callers from one process. In production the `ReactorClient` populates and signs it
+  via `.withSigner(...)` (see the [`audit-trail`](https://github.com/powerhouse-inc/recipes/blob/main/audit-trail) recipe for a real
+  `RenownCryptoSigner` setup).
+- **Unsigned documents have no creator carve-out** — a document created without a
+  signing key must include a reachable auth-administration grant in its initial
+  policy, or `initializeAuth` is refused.
+
+#### Non-goals here
+
+Grants with a `{group: ...}` or `{match: ...}` principal, or a `where` condition,
+parse and store but **never match** on a reactor without the `authGroups` /
+`authConditions` stages — the evaluator skips them. Don't demo a group grant on
+an older release and conclude enforcement is broken. Group principals have their
+own recipe: [`group-principals`](https://github.com/powerhouse-inc/recipes/blob/main/group-principals), which needs a release
+carrying the `authGroups` stage.
+
+#### Running
+
+```sh
+pnpm install
+pnpm start   # runs src/demo.ts
+```
+
+The demo walks: Bob writes before any policy exists, Alice initializes the three-grant
+policy, Bob's `ADD_ENTRY` still lands while `SET_TITLE` / `PIN_ENTRY` / `SET_GRANT`
+are refused, Alice stacks a deny on Bob, reorders it with `moveGrant`, and retires it
+with `removeGrant`.
+
+#### Tests
+
+```sh
+pnpm test
+```
+
+`tests/enforcement.test.ts` runs the same behaviors against a real flags-on reactor,
+including proof that a denied write stores nothing, plus the self-lockout guardrail
+(surfaced as `operation.error`, not a failed job). The generated model tests live
+under `document-models/team-journal/v1/tests/`.
+
+#### Regenerating
+
+The document-model spec lives in `document-models/team-journal/team-journal.json`.
+To regenerate the `gen/` tree after editing it:
+
+```sh
+pnpm run generate
+```
+
+The reducer implementations in `v1/src/reducers/` are scaffolded once and then left
+alone by codegen.
+
+#### License
+
+AGPL-3.0-only
+
+[View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/document-acl)
+</details>
+
 <details id="recipe-document-snapshot-exporter">
 <summary><strong>Document Snapshot Exporter</strong> — CLI tool that exports document state and operation history to JSON files, demonstrating reliable read-after-write consistency using the Reactor API.</summary>
 
@@ -34954,7 +35265,7 @@ Expect total runtime in the tens of seconds to a few minutes depending on hardwa
 
 A polling worker that pulls an off-platform feed into event-sourced documents
 **idempotently**. It is the external-input counterpart to
-[`cross-document-reactor`](https://github.com/powerhouse-inc/recipes/blob/main/external-feed-ingest/../cross-document-reactor) (which automates on
+[`cross-document-reactor`](https://github.com/powerhouse-inc/recipes/blob/main/cross-document-reactor) (which automates on
 *internal* events): here the trigger comes from outside the reactor.
 
 This generalizes what `defi-united-package` does for real against Ethereum — a
@@ -35114,14 +35425,14 @@ pnpm --filter @powerhousedao/example-external-feed-ingest test
 
 #### Related recipes
 
-- [`cross-document-reactor`](https://github.com/powerhouse-inc/recipes/blob/main/external-feed-ingest/../cross-document-reactor) / [`saga`](https://github.com/powerhouse-inc/recipes/blob/main/external-feed-ingest/../saga) —
+- [`cross-document-reactor`](https://github.com/powerhouse-inc/recipes/blob/main/cross-document-reactor) / [`saga`](https://github.com/powerhouse-inc/recipes/blob/main/saga) —
   internal-event automation; this is the external-input counterpart.
-- [`inbound-webhook-bridge`](https://github.com/powerhouse-inc/recipes/blob/main/external-feed-ingest/../inbound-webhook-bridge) — the *push* twin: the
+- [`inbound-webhook-bridge`](https://github.com/powerhouse-inc/recipes/blob/main/inbound-webhook-bridge) — the *push* twin: the
   feed calls you. Same idempotency idea (dedup ids in document state), different
   trigger.
-- [`sync-health-monitor`](https://github.com/powerhouse-inc/recipes/blob/main/external-feed-ingest/../sync-health-monitor) — similar long-running observer
+- [`sync-health-monitor`](https://github.com/powerhouse-inc/recipes/blob/main/sync-health-monitor) — similar long-running observer
   wiring.
-- [`batch-progress`](https://github.com/powerhouse-inc/recipes/blob/main/external-feed-ingest/../batch-progress) — bulk dispatch ergonomics if the feed
+- [`batch-progress`](https://github.com/powerhouse-inc/recipes/blob/main/batch-progress) — bulk dispatch ergonomics if the feed
   delivers in batches.
 
 [View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/external-feed-ingest)
@@ -35200,6 +35511,93 @@ export { up, down } from "./migrations.js";
 [View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/full-text-search)
 </details>
 
+<details id="recipe-group-principals">
+<summary><strong>Group Principals</strong> — Who may approve an expense is a question a **roster document** answers.</summary>
+
+### Group Principals
+
+Who may approve an expense is a question a **roster document** answers. The
+expense report's policy names a [`reactor-group`](https://npmjs.com/package/@powerhousedao/reactor-group)
+document with a `{ group: <documentId> }` principal, and the reactor folds that
+roster's membership — at each operation's position — whenever it decides an
+approval. Hiring and offboarding are single membership operations on the
+roster: no policy write, no per-document sweep, every referencing document
+picks the change up at its next decision.
+
+This recipe picks up where [`document-acl`](https://github.com/powerhouse-inc/recipes/blob/main/document-acl) (grant anatomy,
+admission) and [`revocation-race`](https://github.com/powerhouse-inc/recipes/blob/main/revocation-race) (positional, convergent
+verdicts) stop: it re-runs the revocation race where the revocation is a
+**membership removal on a different document** than the one being judged.
+
+#### What it demonstrates
+
+- **The `authGroups` flag** — third in the cascade
+  (`documentDecisions` → `authEnforcement` → `authGroups`); group principals
+  never apply while it is off.
+- **The roster is an ordinary document** — a `powerhouse/reactor-group` with
+  `{ name, description, members }` state, replicated and event-sourced like
+  everything else, and governed by its own auth scope: the demo's roster is
+  Alice-only, so Bob cannot enroll himself.
+- **Hire/offboard is one operation** — `addMember` / `removeMember` on the
+  roster; the expense report's auth stream never grows (the test asserts it
+  stays at its genesis operation).
+- **Membership is positional** — a `removeMember` timestamped *before* an
+  already-accepted approval re-judges it: the reactor re-evaluates every
+  document whose policy references the group, in that document's own job, and
+  the approval flips to a stored denied operation.
+- **Fail closed without the roster** — a replica that receives the expense
+  report but not the roster document cannot fold membership, so the group
+  principal matches nobody and the synced approval is denied there. When the
+  roster's history arrives, the replica re-judges and converges with the
+  origin, verdict for verdict.
+- **No group can reference another group** — the platform rejects `{ group }`
+  principals on a group document's own policy, so membership never chains and
+  the read-set stays flat.
+
+#### Version requirement
+
+Group principals shipped with the `authGroups` reactor stage. This recipe
+needs `@powerhousedao/reactor`, `@powerhousedao/shared`, and
+`@powerhousedao/reactor-group` from a release that carries it — older
+releases skip group grants entirely (that is what the disclaimers in the
+other auth recipes describe). Until such a release is on the `dev` dist-tag,
+run this recipe through the monorepo's `test/recipes-e2e` link harness, which
+executes it against a local checkout.
+
+#### Run it
+
+```sh
+pnpm install
+pnpm test    # vitest: admission, positional flip, two-replica convergence
+pnpm start   # narrated single-reactor walkthrough
+```
+
+The demo attaches unsigned signer context (`action.context.signer`) directly;
+a production client populates and signs it via `ReactorClient.withSigner()`.
+Signature verification is a separate, composable concern — see
+[`signed-operations-verifier`](https://github.com/powerhouse-inc/recipes/blob/main/signed-operations-verifier).
+
+#### The shape of the policy
+
+```ts
+{
+  id: "g-reviewers-approve",
+  description: "the reviewers group may approve expenses",
+  effect: "allow",
+  principal: { group: rosterDocumentId },
+  capability: { can: "execute", scope: "global", operation: ["APPROVE_EXPENSE"] },
+}
+```
+
+The roster's document id is data, so which humans that means is decided by
+folding the roster's stream to the position of the operation being judged —
+locally at admission, and again on every replica during replay. A replica
+holding the same operations reaches the same verdicts; a replica missing the
+roster denies until it arrives. Access is never widened by absence.
+
+[View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/group-principals)
+</details>
+
 <details id="recipe-inbound-webhook-bridge">
 <summary><strong>Inbound Webhook Bridge</strong> — Receive external webhooks (Stripe-style), verify the signature **server-side against the raw request bytes**, and map verified events onto document actions.</summary>
 
@@ -35207,7 +35605,7 @@ export { up, down } from "./migrations.js";
 
 Receive external webhooks (Stripe-style), verify the signature **server-side
 against the raw request bytes**, and map verified events onto document actions.
-This is the inbound twin of [`discord-webhook-processor`](https://github.com/powerhouse-inc/recipes/blob/main/inbound-webhook-bridge/../discord-webhook-processor)
+This is the inbound twin of [`discord-webhook-processor`](https://github.com/powerhouse-inc/recipes/blob/main/discord-webhook-processor)
 (documents → external service); here the flow runs the other way: external
 service → documents.
 
@@ -35325,13 +35723,144 @@ state-changing operation despite the tampered, duplicate, and stale deliveries.
 
 #### Related recipes
 
-- [`discord-webhook-processor`](https://github.com/powerhouse-inc/recipes/blob/main/inbound-webhook-bridge/../discord-webhook-processor) — the outbound
+- [`discord-webhook-processor`](https://github.com/powerhouse-inc/recipes/blob/main/discord-webhook-processor) — the outbound
   twin (documents → external service).
-- [`rate-limiter`](https://github.com/powerhouse-inc/recipes/blob/main/inbound-webhook-bridge/../rate-limiter) — precedent for gating the write path.
-- [`saga`](https://github.com/powerhouse-inc/recipes/blob/main/inbound-webhook-bridge/../saga) — what to read next if one webhook should fan out across
+- [`rate-limiter`](https://github.com/powerhouse-inc/recipes/blob/main/rate-limiter) — precedent for gating the write path.
+- [`saga`](https://github.com/powerhouse-inc/recipes/blob/main/saga) — what to read next if one webhook should fan out across
   multiple documents.
 
 [View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/inbound-webhook-bridge)
+</details>
+
+<details id="recipe-positional-delete">
+<summary><strong>Positional Delete</strong> — Deletion as a **position in the merged operation order**, not a document-wide tombstone.</summary>
+
+### Positional Delete
+
+Deletion as a **position in the merged operation order**, not a document-wide
+tombstone. A `deleteDocument` refuses only the operations that sort after it;
+operations that sort before it are legitimate history — even when they arrive later
+over sync. Refused operations are stored as **denied operations** (`deniedReason:
+"document deleted"`) rather than silently dropped, so every reactor can independently
+reach the same verdict for the same history.
+
+The demo is a plain split-brain with a custom `field-log` document model: Station B
+keeps logging observations while Station A deletes the document. No backdating, no
+clock tricks — B's second observation genuinely happens after the delete in wall-clock
+time, B just doesn't know yet.
+
+#### What it demonstrates
+
+- **Per-operation verdicts** — after syncing both directions, both reactors agree:
+  the observation that sorts before the delete is applied, the one after it is denied.
+- **Denied, not dropped** — the refused operation keeps its place in the stored
+  stream with `deniedReason` set; inspect with `isDenied(operation)` and
+  `garbageCollect(sortOperations(...))` from `@powerhousedao/shared/document-model`.
+- **Convergence without coordination** — each reactor judges arriving history at its
+  position in the merged order; no origin verdict is shipped or trusted.
+- **Origin refusal** — once a reactor knows the delete, a newly submitted write fails
+  its job outright (`DocumentDeletedError`); nothing is stored.
+- **Reading a deleted document** — a single-document read serves the state as of the
+  deletion boundary instead of a hole (see the scope note below).
+- **The legacy cliff** — without the decision model, one deleted flag rejects a whole
+  incoming load, discarding even the history that sorts before the delete.
+
+#### Running
+
+```sh
+pnpm install
+pnpm start   # runs src/demo.ts
+```
+
+```text
+[Station B] log "temp 18 °C" → ok
+[Station A] deleteDocument → ok (B doesn't know yet)
+[Station B] log "humidity 80 %" → ok
+
+=== effective operations on Station A ===
+  "wind 12 kn" → applied
+  "temp 18 °C" → applied
+  "humidity 80 %" → DENIED (document deleted)
+=== effective operations on Station B ===   (identical)
+```
+
+#### How it works
+
+The reactor is built with the `documentDecisions` feature flag, which replaces the
+meta-cache `isDeleted` check with a decision model built over the document stream:
+
+```ts
+const reactor = await new ReactorBuilder()
+  .withDocumentModelSources([FieldLog, documentModelDocumentModelModule])
+  .withExecutorConfig({ featureFlags: { documentDecisions: true } })
+  .build();
+```
+
+Admission decides at the head and appends under a condition on the streams it read
+(the DCB mechanic); a load evaluates each operation at its own position; a delete
+arriving late triggers re-evaluation of the tail it now precedes, which re-appends
+retracted operations with a skip rather than rewriting history. The stored rows keep
+both copies — `garbageCollect(sortOperations(...))` resolves to the effective stream.
+
+#### Scope note: views on the retraction path
+
+The "state as of the deletion" read is a **load-path** guarantee: on the reactor that
+received the denied operation via sync, it was never applied, and `reactor.get()`
+serves history up to the boundary. A reactor that had **already applied** an
+operation before learning of the delete keeps its materialized view; the retraction
+lands in the effective operation stream, which is the consensus artifact — any
+rebuild or replay from it sees the boundary state. The test suite pins down both
+sides of this.
+
+#### State shape
+
+```graphql
+type FieldLogState {
+  observations: [Observation!]!
+}
+
+type Observation {
+  id: ID!
+  note: String!
+  recordedBy: String!
+}
+```
+
+One operation, `LOG_OBSERVATION` — the reducer's only invariant is id uniqueness.
+Deletion never touches model code: `DELETE_DOCUMENT` is a platform action on the
+`document` scope, and all of the semantics above live in the platform.
+
+#### Tests
+
+```sh
+pnpm test
+```
+
+`tests/positional-delete.test.ts` covers: convergent per-position verdicts on both
+reactors, the refused operation being stored rather than dropped, the boundary-state
+read on the load path, origin failure once the delete is known, and the legacy
+whole-load rejection with the decision model off.
+
+#### Regenerating
+
+The document-model spec lives in `document-models/field-log/field-log.json`:
+
+```sh
+pnpm run generate
+```
+
+#### Related recipes
+
+- [`document-acl`](https://github.com/powerhouse-inc/recipes/blob/main/document-acl) — the auth scope rides the same decision-model
+  machinery: authorization verdicts are also computed per operation at its position.
+- [`document-versioning`](https://github.com/powerhouse-inc/recipes/blob/main/document-versioning) — replaying stored history is what
+  makes "the effective stream is the consensus artifact" matter.
+
+#### License
+
+AGPL-3.0-only
+
+[View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/positional-delete)
 </details>
 
 <details id="recipe-rate-limiter">
@@ -35505,6 +36034,128 @@ Tests use PGlite (embedded PostgreSQL) — no external database required.
 AGPL-3.0-only
 
 [View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/relational-db-subgraph)
+</details>
+
+<details id="recipe-revocation-race">
+<summary><strong>Revocation Race</strong> — Convergent authorization across reactors.</summary>
+
+### Revocation Race
+
+Convergent authorization across reactors. Alice revokes Bob's approval grant on one
+reactor while Bob approves an expense on another — **both succeed locally**, because
+no transaction spans two reactors. What keeps the fleet honest is that every reactor
+judges every operation **at its position in the merged order**: after syncing both
+directions, both reactors independently reach the same verdict, with no origin
+verdict shipped or trusted.
+
+The demo runs the race twice on one `expense-report` document, with honest wall-clock
+ordering both times:
+
+- **Revocation sorts first** → both reactors deny the approval; the expense stays
+  `PENDING`, and the refused approval is stored with
+  `deniedReason: "no grant permits this operation"`.
+- **Approval sorts first** → both reactors keep it; the expense is `APPROVED` and
+  records Bob as approver.
+
+Same operation type, opposite verdicts, decided purely by position.
+
+#### What it demonstrates
+
+- **One rule, two times** — enforcement is *preventive* locally (a fresh approval
+  fails at origin once the revocation is known; nothing is stored) and *convergent*
+  across reactors (remote history is re-judged on arrival at its own position).
+- **Denials are consensus artifacts** — a refused operation keeps its place in the
+  stored stream with a reason from a closed, replicated set; inspect with
+  `isDenied` / `garbageCollect(sortOperations(...))`.
+- **Re-judgment on late policy arrival** — when the revocation reaches the reactor
+  that had already applied the approval, that reactor retracts it in the effective
+  stream (see the view scope note in [`positional-delete`](https://github.com/powerhouse-inc/recipes/blob/main/positional-delete)).
+- **The auth stream is strictly timestamp-monotonic** — a backdated policy edit is
+  refused outright (`AuthTimestampNotMonotonicError`), and auth operations are never
+  reshuffled. Positional judgment of domain operations only works because the policy
+  stream itself has one authoritative order.
+
+#### The rejected alternative
+
+The obvious design is to judge an operation once, at its origin, and ship the verdict
+with it. That verdict would be wrong the moment a concurrent policy change sorts
+before the operation — and every reactor would have to either trust it (divergence)
+or re-derive it anyway. Position-based judgment makes the verdict a pure function of
+the merged history, so agreement on history *is* agreement on authorization.
+
+#### Policy setup
+
+| id | effect | principal | capability |
+|---|---|---|---|
+| `g-alice-admin` | allow | Alice | `execute` on scope `auth` |
+| `g-alice-all` | allow | Alice | `execute` on scope `*` |
+| `g-anyone-submit` | allow | anyone | `execute` `SUBMIT_EXPENSE` on `global` |
+| `g-bob-approve` | allow | Bob | `execute` `APPROVE_EXPENSE` on `global` |
+
+Only Alice's reactor ever writes the auth scope. That is a deliberate pattern, not
+just demo simplification: because the auth stream must stay strictly monotonic and is
+never reshuffled, concurrent policy edits from multiple reactors can conflict on
+merge — a single policy-writing home (or coordinated administration) avoids that
+class of problem entirely.
+
+#### State shape
+
+```graphql
+type ExpenseReportState {
+  expenses: [Expense!]!
+}
+
+type Expense {
+  id: ID!
+  memo: String!
+  amountCents: Int!
+  status: ExpenseStatus!   # PENDING | APPROVED
+  approvedBy: String
+}
+```
+
+`SUBMIT_EXPENSE` and `APPROVE_EXPENSE` reducers validate domain invariants only
+(duplicate id, unknown expense, double approval). Who may approve is platform policy.
+
+#### Running
+
+```sh
+pnpm install
+pnpm start   # runs src/demo.ts
+```
+
+#### Tests
+
+```sh
+pnpm test
+```
+
+`tests/revocation-race.test.ts` covers both race orderings converging on both
+reactors (with the denied reason pinned to the platform's consensus constant
+`AUTH_NO_GRANT_REASON`), origin refusal once the revocation is known, and the
+backdated-auth-operation guard.
+
+#### Regenerating
+
+The document-model spec lives in
+`document-models/expense-report/expense-report.json`:
+
+```sh
+pnpm run generate
+```
+
+#### Related recipes
+
+- [`document-acl`](https://github.com/powerhouse-inc/recipes/blob/main/document-acl) — the grant stack this recipe races: principals,
+  capabilities, last-applicable-grant-wins.
+- [`positional-delete`](https://github.com/powerhouse-inc/recipes/blob/main/positional-delete) — the same positional machinery applied
+  to deletion, including the load-path vs retraction-path view guarantee.
+
+#### License
+
+AGPL-3.0-only
+
+[View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/revocation-race)
 </details>
 
 <details id="recipe-role-based-auth">
@@ -35682,12 +36333,112 @@ AGPL-3.0-only
 [View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/saga)
 </details>
 
+<details id="recipe-scoped-reads">
+<summary><strong>Scoped Reads</strong> — The same policy that refuses a write decides what a read returns.</summary>
+
+### Scoped Reads
+
+The same policy that refuses a write decides what a read returns. A subject
+that may not read a scope does not receive it — the document comes back
+without that key, not with an empty one — while the `auth` and `document`
+scopes come back for every holder, so anyone can still evaluate the policy and
+see the metadata.
+
+Two things about *where* that happens are worth knowing first. It happens on
+the `ReactorClient`, not in the reactor: `IReactor` is inside the trust
+boundary and serves every scope of every document to every caller, so
+`reactor.get()` and `client.get()` return different documents in the same
+process. And it carries no feature flag of its own — a client over a reactor
+with every flag off still filters reads, so a policy is enforced against
+readers before it is enforced against writers.
+
+This recipe picks up where [`document-acl`](https://github.com/powerhouse-inc/recipes/blob/main/document-acl) (grant anatomy,
+admission) and [`group-principals`](https://github.com/powerhouse-inc/recipes/blob/main/group-principals) (a roster deciding who
+may approve) stop. Those recipes drive a raw `ReactorBuilder` and so never see
+a gate at all; this one builds a `ReactorClientBuilder` over the same kind of
+reactor and reads one expense report as four identities.
+
+#### What it demonstrates
+
+- **The gate is on the client** — in one process, on one document,
+  `reactor.getByIdOrSlug()` serves all four scopes to anyone while
+  `client.get()` serves Mallory only `auth` and `document`.
+- **It carries no feature flag** — with `featureFlags: {}` the read is still
+  filtered. Admission is staged behind flags; reading is not.
+- **Per scope, not per document** — four identities get three views of one
+  report, and a withheld scope is *absent* from `document.state` rather than
+  present and empty.
+- **An allow on execute confers read** — Alice holds no read grant at all. She
+  reads `global` because she may write it, and she reads the whole scope even
+  though her grant names a single operation: the operation list restricts what
+  she may execute, not what she may see. The converse does not hold, so Carol
+  reads the expenses and still cannot submit one.
+- **A write hands back a read** — the document `client.execute()` returns is
+  gated exactly like `get()`, as the client's own identity. Alice sees the
+  scope she wrote and not the notes her policy withholds from her.
+- **A `{ group }` read grant follows the roster** — offboarding Bob withdraws
+  his `local` scope with no write to the report's policy at all; its
+  `header.revision.auth` never moves.
+- **Naming a group publishes its roster to that audience** — Carol reads the
+  reviewers roster she is not on, past the roster's own Alice-only policy,
+  because a replica must fold that membership to evaluate the report's grants.
+  Mallory, whom the report serves nothing, does not. Below `authGroups` nobody
+  does.
+
+#### The administration grant
+
+`document-acl`, `revocation-race` and `group-principals` all install an
+administration grant of `{ can: "execute", scope: "*" }`. Because an allow on
+execute now confers read, that shape publishes **every** domain scope of the
+document to whoever it names. Every administration grant in this recipe is
+scoped to `auth`, which is all the auth-administration retention rule requires.
+
+#### The two domain scopes
+
+A `PHDocument` has four state scopes — `auth`, `document`, `global` and
+`local` — and the first two are always readable, so `global` and `local` are
+the only pair a read can tell apart. This recipe puts the expenses in `global`
+and the reviewers' confidential notes in `local`. `local` is conventionally
+node-local data; it is used here as the second gateable scope because there is
+no third.
+
+#### Running it
+
+```sh
+pnpm install
+pnpm --filter @powerhousedao/example-scoped-reads start
+```
+
+#### Version requirement
+
+The read path ships in the monorepo's stage-7 work, which is newer than the
+version this repo's catalog pins. Until a dev release carrying it is published
+and the catalog is bumped, `build`, `test` and `start` pass only against a
+local checkout of the monorepo:
+
+```sh
+cd ../powerhouse
+pnpm build
+pnpm test:e2e:recipes --filter scoped-reads --verbose
+```
+
+#### Files
+
+| Path | What it is |
+| --- | --- |
+| `src/demo.ts` | The narrated walkthrough, in six acts |
+| `tests/scoped-reads.test.ts` | One test per claim above |
+| `document-models/expense-report/` | The model: expenses in `global`, review notes in `local` |
+
+[View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/scoped-reads)
+</details>
+
 <details id="recipe-semantic-search">
-<summary><strong>Semantic Search Processor</strong> — A Reactor `IProcessor` that embeds document content with an in-process model (Transformers.js) into PGlite's `vector` extension and answers cosine-similarity queries — the semantic sibling of the [full-text-search](#recipe-full-text-search) recipe.</summary>
+<summary><strong>Semantic Search Processor</strong> — A Reactor `IProcessor` that embeds document content with an in-process model (Transformers.js) into PGlite's `vector` extension and answers cosine-similarity queries — the semantic sibling of the [full-text-search](https://github.com/powerhouse-inc/recipes/blob/main/full-text-search) recipe.</summary>
 
 ### Semantic Search Processor
 
-A Reactor `IProcessor` that embeds document content with an in-process model (Transformers.js) into PGlite's `vector` extension and answers cosine-similarity queries — the semantic sibling of the [full-text-search](https://github.com/powerhouse-inc/recipes/blob/main/semantic-search/../full-text-search) recipe. No external API, no API key, no server: the `all-MiniLM-L6-v2` model runs in-process via ONNX, and pgvector runs inside PGlite.
+A Reactor `IProcessor` that embeds document content with an in-process model (Transformers.js) into PGlite's `vector` extension and answers cosine-similarity queries — the semantic sibling of the [full-text-search](https://github.com/powerhouse-inc/recipes/blob/main/full-text-search) recipe. No external API, no API key, no server: the `all-MiniLM-L6-v2` model runs in-process via ONNX, and pgvector runs inside PGlite.
 
 #### How it works
 
@@ -35756,8 +36507,8 @@ const results = await query.searchSimilar("budget allocation", 10);
 
 #### Related recipes
 
-- [full-text-search](https://github.com/powerhouse-inc/recipes/blob/main/semantic-search/../full-text-search) — the lexical sibling; same layout, same text extraction, so the two approaches diff cleanly.
-- [relational-db-subgraph](https://github.com/powerhouse-inc/recipes/blob/main/semantic-search/../relational-db-subgraph) — how to expose a read model like this one over GraphQL.
+- [full-text-search](https://github.com/powerhouse-inc/recipes/blob/main/full-text-search) — the lexical sibling; same layout, same text extraction, so the two approaches diff cleanly.
+- [relational-db-subgraph](https://github.com/powerhouse-inc/recipes/blob/main/relational-db-subgraph) — how to expose a read model like this one over GraphQL.
 
 [View source on GitHub →](https://github.com/powerhouse-inc/recipes/tree/main/semantic-search)
 </details>
