@@ -8,6 +8,7 @@ import type { AttachmentHeader, AttachmentUploadResult } from "../src/types.js";
 import {
   AttachmentAlreadyExists,
   createAttachmentClient,
+  type AttachmentProgress,
 } from "../src/client.js";
 import { createRef } from "../src/ref.js";
 import { computeHash } from "./factories.js";
@@ -62,6 +63,21 @@ function streamOf(bytes: Uint8Array): ReadableStream<Uint8Array> {
   return new ReadableStream({
     start(controller) {
       controller.enqueue(bytes);
+      controller.close();
+    },
+  });
+}
+
+/** Split so the download byte counter has more than one observation to make. */
+function chunkedStreamOf(
+  bytes: Uint8Array,
+  chunkSize: number,
+): ReadableStream<Uint8Array> {
+  return new ReadableStream({
+    start(controller) {
+      for (let offset = 0; offset < bytes.byteLength; offset += chunkSize) {
+        controller.enqueue(bytes.subarray(offset, offset + chunkSize));
+      }
       controller.close();
     },
   });
@@ -293,16 +309,174 @@ describe("createAttachmentClient", () => {
         get: vi.fn().mockRejectedValue(boom),
       });
       const client = createAttachmentClient(service);
-      const stages: string[] = [];
+      const events: AttachmentProgress[] = [];
 
       await expect(
         client.downloadBlob(
           { documentId: "doc-1", ref: EXPECTED_REF },
-          undefined,
-          (stage) => stages.push(stage),
+          { onProgress: (p) => events.push(p), throttleMs: 0 },
         ),
       ).rejects.toBe(boom);
-      expect(stages).toEqual(["requesting-download-target", "error"]);
+      expect(events.map((e) => e.stage)).toEqual([
+        "requesting-download-target",
+        "error",
+      ]);
+    });
+
+    it("reports byte progress against the header size and finishes at 100%", async () => {
+      const service = makeMockService({
+        get: vi.fn().mockResolvedValue({
+          header: MOCK_HEADER,
+          body: chunkedStreamOf(BYTES, 8),
+        }),
+      });
+      const client = createAttachmentClient(service);
+      const events: AttachmentProgress[] = [];
+
+      await client.downloadBlob(
+        { documentId: "doc-1", ref: EXPECTED_REF },
+        { onProgress: (p) => events.push(p), throttleMs: 0 },
+      );
+
+      expect(events[0]).toEqual({
+        stage: "requesting-download-target",
+        loaded: 0,
+        total: undefined,
+        indeterminate: true,
+      });
+      expect(events[1]).toEqual({
+        stage: "downloading",
+        loaded: 0,
+        total: BYTES.byteLength,
+        indeterminate: true,
+      });
+      const downloading = events.filter((e) => e.stage === "downloading");
+      expect(downloading.map((e) => e.loaded)).toEqual([
+        0,
+        8,
+        16,
+        BYTES.byteLength,
+      ]);
+      expect(events.at(-1)).toEqual({
+        stage: "done",
+        loaded: BYTES.byteLength,
+        total: BYTES.byteLength,
+        indeterminate: false,
+      });
+    });
+
+    it("carries the mimeType override and progress options in one bag", async () => {
+      const service = makeMockService({
+        get: vi
+          .fn()
+          .mockResolvedValue({ header: MOCK_HEADER, body: streamOf(BYTES) }),
+      });
+      const client = createAttachmentClient(service);
+      const events: AttachmentProgress[] = [];
+
+      const { blob } = await client.downloadBlob(
+        { documentId: "doc-1", ref: EXPECTED_REF },
+        {
+          mimeType: "application/pdf",
+          onProgress: (p) => events.push(p),
+          throttleMs: 0,
+        },
+      );
+
+      expect(blob.type).toBe("application/pdf");
+      expect(events.at(-1)?.stage).toBe("done");
+    });
+  });
+
+  describe("download", () => {
+    it("resolves at `downloading` with no bytes moved, then finishes as the caller reads", async () => {
+      const service = makeMockService({
+        get: vi.fn().mockResolvedValue({
+          header: MOCK_HEADER,
+          body: chunkedStreamOf(BYTES, 8),
+        }),
+      });
+      const client = createAttachmentClient(service);
+      const events: AttachmentProgress[] = [];
+
+      const response = await client.download(
+        { documentId: "doc-1", ref: EXPECTED_REF },
+        { onProgress: (p) => events.push(p), throttleMs: 0 },
+      );
+
+      expect(events.map((e) => e.stage)).toEqual([
+        "requesting-download-target",
+        "downloading",
+      ]);
+      expect(events.at(-1)?.loaded).toBe(0);
+
+      const reader = response.body.getReader();
+      for (;;) {
+        const { done } = await reader.read();
+        if (done) break;
+      }
+
+      expect(events.at(-1)).toEqual({
+        stage: "done",
+        loaded: BYTES.byteLength,
+        total: BYTES.byteLength,
+        indeterminate: false,
+      });
+    });
+
+    it("never fires a terminal event for an abandoned download", async () => {
+      const service = makeMockService({
+        get: vi.fn().mockResolvedValue({
+          header: MOCK_HEADER,
+          body: chunkedStreamOf(BYTES, 8),
+        }),
+      });
+      const client = createAttachmentClient(service);
+      const events: AttachmentProgress[] = [];
+
+      const response = await client.download(
+        { documentId: "doc-1", ref: EXPECTED_REF },
+        { onProgress: (p) => events.push(p), throttleMs: 0 },
+      );
+      await response.body.cancel();
+
+      expect(
+        events.some((e) => e.stage === "done" || e.stage === "error"),
+      ).toBe(false);
+    });
+
+    it("reports an error that surfaces mid-stream, with the bytes seen so far", async () => {
+      const boom = new Error("connection reset");
+      const service = makeMockService({
+        get: vi.fn().mockResolvedValue({
+          header: MOCK_HEADER,
+          body: new ReadableStream<Uint8Array>({
+            start(controller) {
+              controller.enqueue(BYTES.subarray(0, 8));
+            },
+            pull(controller) {
+              controller.error(boom);
+            },
+          }),
+        }),
+      });
+      const client = createAttachmentClient(service);
+      const events: AttachmentProgress[] = [];
+
+      const response = await client.download(
+        { documentId: "doc-1", ref: EXPECTED_REF },
+        { onProgress: (p) => events.push(p), throttleMs: 0 },
+      );
+      const reader = response.body.getReader();
+      await reader.read();
+      await expect(reader.read()).rejects.toBe(boom);
+
+      expect(events.at(-1)).toEqual({
+        stage: "error",
+        loaded: 8,
+        total: BYTES.byteLength,
+        indeterminate: false,
+      });
     });
   });
 
