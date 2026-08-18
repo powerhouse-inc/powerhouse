@@ -8,6 +8,7 @@ export {
   type RunWithConcurrencyOptions,
 } from "./concurrency.js";
 import type { IAttachmentService, IAttachmentUpload } from "./interfaces.js";
+import type { AttachmentStage } from "./progress.js";
 import { createRef } from "./ref.js";
 import type {
   AttachmentHeader,
@@ -74,6 +75,18 @@ export {
   createRemoteAttachmentService,
 } from "./switchboard/index.js";
 export { NullAttachmentTransport } from "./null-attachment-transport.js";
+export {
+  DEFAULT_PROGRESS_THROTTLE_MS,
+  progressFraction,
+  ProgressEmitter,
+  withByteProgress,
+  type AttachmentProgress,
+  type AttachmentProgressListener,
+  type AttachmentProgressOptions,
+  type AttachmentStage,
+  type ByteProgressHooks,
+  type ProgressEmitterOptions,
+} from "./progress.js";
 
 export type PreprocessResult = {
   ref: AttachmentRef;
@@ -83,15 +96,6 @@ export type PreprocessResult = {
   data: ReadableStream<Uint8Array>;
   stream: () => ReadableStream<Uint8Array>;
 };
-
-export type AttachmentStage =
-  | "hashing"
-  | "reserving"
-  | "uploading"
-  | "requesting-download-target"
-  | "downloading"
-  | "done"
-  | "error";
 
 export type AttachmentStageListener = (stage: AttachmentStage) => void;
 
