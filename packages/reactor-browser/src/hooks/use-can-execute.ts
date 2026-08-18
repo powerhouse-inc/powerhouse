@@ -61,12 +61,12 @@ function readyState(answer: ActionEvaluations): InternalState {
  * Whether the subject the reactor client would decide for now is the one it is
  * going to keep.
  *
- * The client decides for its own signer, and a signer's identity is pushed to it
- * after the first paint. Evaluating before then predicts verdicts for the
- * anonymous subject, so a toolbar greys itself out and then ungreys, and a
- * component that never re-renders stays grey. Renown's login status is the
- * signal, because it is what settles: `authorized` without a user yet is still
- * mid-resolution.
+ * Renown's login status is the signal. Only `checking` is transient --
+ * mid-login, about to resolve -- and `authorized` without a user yet is still
+ * mid-resolution. Everything else is a steady state: `initial` is the anonymous
+ * subject for a user who never logged in or just logged out (a restored session
+ * is `authorized` from construction, so `initial` is not a pre-login window),
+ * and `not-authorized` is a failed login, anonymous too.
  *
  * An absent status counts as unsettled, which is one render in a host that wires
  * renown -- and forever in a host that does not. Such a host names its subject
@@ -79,7 +79,7 @@ function subjectSettled(
   if (loginStatus === "authorized") {
     return user !== undefined;
   }
-  return loginStatus === "not-authorized";
+  return loginStatus === "initial" || loginStatus === "not-authorized";
 }
 
 /**

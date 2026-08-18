@@ -15,8 +15,19 @@ import type { IReactorBrowserClient } from "../src/types/reactor-browser-client.
 
 const DOCUMENT_ID = "doc-1";
 
-/** A settled anonymous identity, so the hook stops waiting for one. */
+/**
+ * A settled anonymous identity, so the hook stops waiting for one. `initial`
+ * is the status real renown holds for a user who never logged in (or logged
+ * out); a restored session is `authorized` from construction.
+ */
 const ANONYMOUS = {
+  status: "initial",
+  user: undefined,
+  on: () => () => undefined,
+} as unknown as IRenown;
+
+/** The status a failed login leaves behind: anonymous and settled too. */
+const LOGIN_FAILED = {
   status: "not-authorized",
   user: undefined,
   on: () => () => undefined,
@@ -177,6 +188,21 @@ describe("useCanExecute", () => {
       expect(textOf(screen, "status")).toBe("error");
     });
     expect(textOf(screen, "error")).toBe("reactor unreachable");
+  });
+
+  it("evaluates for a failed login as the settled anonymous subject", async () => {
+    setRenown(LOGIN_FAILED);
+    setClient(() => Promise.resolve(evaluations(["allow"])));
+
+    const screen = render(
+      <StrictMode>
+        <Probe />
+      </StrictMode>,
+    );
+
+    await vi.waitFor(() => {
+      expect(textOf(screen, "status")).toBe("ready");
+    });
   });
 
   /**
