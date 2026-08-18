@@ -11,6 +11,7 @@ import {
   ReactorClientBuilder,
   parseDriveUrl,
   type Database,
+  type InProcessReactorClientModule,
   type JwtHandler,
 } from "@powerhousedao/reactor";
 import {
@@ -19,8 +20,11 @@ import {
   PackageManagementService,
   PackagesSubgraph,
   initializeAndStartAPI,
+  resolveRenownConfig,
   type ClientInitializerDependencies,
+  type CredentialVerifier,
   type IPackageLoader,
+  type ResolvedRenownConfig,
 } from "@powerhousedao/reactor-api";
 import { httpsHooksPath } from "@powerhousedao/reactor-api/https-hooks";
 import type { VitePackageLoader } from "@powerhousedao/reactor-api/vite";
@@ -34,7 +38,12 @@ import {
   type ReactorDriveDatabase,
 } from "@powerhousedao/reactor-drive";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
-import type { IRenown } from "@renown/sdk/node";
+import {
+  createLocalCredentialVerifier,
+  RENOWN_READ_MODEL_SUBGRAPH,
+  type CredentialCheck,
+  type IRenown,
+} from "@renown/sdk/node";
 import * as Sentry from "@sentry/node";
 import { childLogger, setLogLevel, type ILogger } from "document-model";
 import dotenv from "dotenv";
@@ -128,6 +137,11 @@ export function isPortAvailable(port: number): Promise<boolean> {
   });
 }
 
+/** The powerhouse.config.json this run reads, defaulting to the cwd copy. */
+function resolveConfigPath(configFile: string | undefined): string {
+  return configFile ?? path.join(process.cwd(), "powerhouse.config.json");
+}
+
 async function resolveServerPort(
   requested: number,
   strictPort: boolean,
@@ -217,6 +231,7 @@ async function initServer(
   serverPort: number,
   options: StartServerOptions,
   renown: IRenown | null,
+  renownConfig: ResolvedRenownConfig,
 ) {
   const {
     dev,
@@ -357,8 +372,7 @@ async function initServer(
   let driveNodeView: DriveNodeView | undefined;
 
   // HTTP registry package loading
-  const configPath =
-    options.configFile ?? path.join(process.cwd(), "powerhouse.config.json");
+  const configPath = resolveConfigPath(options.configFile);
   const config = getConfig(configPath);
   const registryUrl =
     options.registryUrl ??
@@ -382,6 +396,9 @@ async function initServer(
   }
 
   const reactorLogger = logger.child(["reactor"]);
+  // Set only when we build the reactor ourselves; a caller-provided one keeps
+  // its own lifecycle and must not be torn down here.
+  let ownedReactorModule: InProcessReactorClientModule | undefined;
   const initializeClient = async (
     documentModels: DocumentModelModule[],
     {
@@ -552,12 +569,52 @@ async function initServer(
       readModel: driveNodeView,
     });
 
+    ownedReactorModule = module;
+
     return {
       module,
       reactorDriveClient,
       attachmentReferenceProjection: { status: "available" as const },
     };
   };
+
+  // Tear down a partially booted stack in the reactor's own order: reactor
+  // first, then the api's HTTP/WS/db handles, then the database pool.
+  const abortBoot = async (api: { dispose: () => Promise<void> }) => {
+    const owned = ownedReactorModule;
+    if (owned) {
+      try {
+        await owned.reactor.kill().completed;
+      } catch (error) {
+        logger.error("Aborting boot: reactor shutdown failed: @error", error);
+      }
+    }
+    try {
+      await api.dispose();
+    } catch (error) {
+      logger.error("Aborting boot: api dispose failed: @error", error);
+    }
+    if (owned?.reactorModule) {
+      try {
+        await owned.reactorModule.database.destroy();
+      } catch (error) {
+        logger.error("Aborting boot: database destroy failed: @error", error);
+      }
+    }
+  };
+
+  // Reading credentials from this switchboard's own reactor needs the GraphQL
+  // manager, which only exists once the api is up: bind the check afterwards.
+  let localCredentialCheck: CredentialCheck | undefined;
+  const verifyCredential: CredentialVerifier | undefined =
+    renownConfig.source === "self"
+      ? (params) =>
+          localCredentialCheck
+            ? localCredentialCheck(params)
+            : Promise.reject(
+                new Error("The local renown read model is not bound yet"),
+              )
+      : undefined;
 
   let defaultDriveUrl: undefined | string = undefined;
 
@@ -637,16 +694,49 @@ async function initServer(
       processors: vetraProcessorFactory
         ? { "@powerhousedao/vetra": [vetraProcessorFactory] }
         : {},
-      configFile:
-        options.configFile ??
-        path.join(process.cwd(), "powerhouse.config.json"),
+      configFile: configPath,
       mcp: options.mcp ?? true,
       logger: apiLogger,
       enableDocumentModelSubgraphs: options.enableDocumentModelSubgraphs,
+      // Already resolved for this reactor's own identity; reuse it so an
+      // invalid RENOWN_SOURCE is reported once, not once per resolution.
+      renown: renownConfig,
+      verifyCredential,
     },
     "switchboard",
   );
   apiRef.current = api;
+
+  if (renownConfig.source === "self") {
+    const { graphqlManager: manager } = api;
+    // Refuse to serve rather than 401 every request: the read model comes from
+    // a loaded package, so a missing one is a deployment mistake.
+    if (!manager.hasSubgraphHandler(RENOWN_READ_MODEL_SUBGRAPH)) {
+      await abortBoot(api);
+      throw new Error(
+        'Renown credential verification is set to "self" (auth.renown.source ' +
+          `or RENOWN_SOURCE) but no loaded package serves the ` +
+          `"${RENOWN_READ_MODEL_SUBGRAPH}" subgraph. Install one ` +
+          "(@powerhousedao/renown-package) or set RENOWN_SOURCE=remote.",
+      );
+    }
+    localCredentialCheck = createLocalCredentialVerifier(
+      (query, variables) =>
+        manager.executeSubgraphQuery(
+          RENOWN_READ_MODEL_SUBGRAPH,
+          query,
+          variables,
+        ),
+      {
+        onError: (error) =>
+          logger.error("Renown read model query failed: @error", error),
+      },
+    );
+    logger.info(
+      "Renown credentials will be verified against this switchboard's own " +
+        "renown read model",
+    );
+  }
 
   registerAttachmentRoutes(api);
 
@@ -861,7 +951,18 @@ export const startSwitchboard = async (
       REQUIRE_SIGNATURES,
       REQUIRE_SIGNATURES_DEFAULT,
     ));
-  options.identity = { ...options.identity, requireSignatures };
+  // This switchboard's own identity authenticates against the same Renown
+  // instance it verifies incoming credentials against, unless told otherwise.
+  const renownConfig = resolveRenownConfig(
+    getConfig(resolveConfigPath(options.configFile)).auth?.renown,
+    process.env,
+    logger,
+  );
+  options.identity = {
+    ...options.identity,
+    requireSignatures,
+    baseUrl: options.identity?.baseUrl ?? renownConfig.url,
+  };
 
   logger.info(
     "Feature flags: @flags",
@@ -890,7 +991,7 @@ export const startSwitchboard = async (
   }
 
   try {
-    return await initServer(serverPort, options, renown);
+    return await initServer(serverPort, options, renown, renownConfig);
   } catch (e) {
     Sentry.captureException(e);
     logger.error("App crashed: @error", e);

@@ -112,7 +112,7 @@ interface VerifiableCredential {
 1. **Token Decoding**: Extract credential information from JWT
 2. **Credential Validation**: Verify against W3C standards
 3. **Issuer Verification**: Check credential issuer authenticity
-4. **Renown API Check**: Validate credential still exists and is valid
+4. **Credential Existence Check**: Validate credential still exists and is valid — against a remote Renown/Switchboard or this switchboard's own read model (see [Which Renown Instance Is Used](#which-renown-instance-is-used))
 5. **User Extraction**: Create user object from verified credentials
 
 ### 5. **Authorization**
@@ -183,6 +183,64 @@ export ADMINS="0x111,0x222,0x333"
   }
 }
 ```
+
+#### Which Renown Instance Is Used
+
+Step 4 of the verification process re-checks that the signer's Renown credential
+still exists. `auth.renown` says which instance answers that question:
+
+```json
+{
+  "auth": {
+    "enabled": true,
+    "admins": ["0x111"],
+    "renown": {
+      "source": "remote",
+      "url": "https://renown.acme.io",
+      "switchboardUrl": "https://sb.acme.io/graphql"
+    }
+  }
+}
+```
+
+| Field | Env override | Meaning |
+| --- | --- | --- |
+| `source` | `RENOWN_SOURCE` | `remote` (default) queries another instance; `self` reads this switchboard's own `renown-read-model` subgraph in-process. |
+| `url` | `RENOWN_URL` | Renown base URL, used for discovery and the REST fallback. Defaults to `https://www.renown.id`. |
+| `switchboardUrl` | `SWITCHBOARD_URL` | A switchboard's GraphQL endpoint to read credentials from directly, skipping discovery. |
+
+Env vars win over the config file field by field; a blank value counts as unset.
+With `source: "remote"` the order is `switchboardUrl`, then discovery via `url`,
+then the Renown REST API at `url`. With `source: "self"` both URLs are ignored
+for verification — but `url` still applies to this switchboard's own identity
+(below).
+
+Either way the credential's EIP-712 proof is re-verified and expiry and
+delegation binding are re-checked, so a locally stored credential is held to the
+same standard as a remote one. Successful checks are cached per identity for
+`CREDENTIAL_VERIFICATION_CACHE_TTL_MS` (60s default) in both modes, so
+revocation still lags by up to that TTL.
+
+`self` requires a loaded package that provides the `renown-read-model` subgraph
+(`@powerhousedao/renown-package`). Startup fails if none does, rather than booting
+a switchboard that rejects every authenticated request.
+
+Where the pieces live: `@renown/sdk` owns the read-model contract
+(`RENOWN_READ_MODEL_SUBGRAPH`, `createLocalCredentialVerifier`), this app wires
+it to the running reactor after the API is up, and `reactor-api` only supplies
+the generic `GraphQLManager.executeSubgraphQuery` plus an injectable
+`verifyCredential` — core has no knowledge of the renown package. A host that
+sets `source: "self"` without injecting a verifier is refused at boot rather
+than silently verified against a remote Renown.
+
+#### The Switchboard's Own Identity
+
+Separately from verifying incoming credentials, a switchboard has its own
+identity — the `ph login` keypair it uses to authenticate *outbound* to remote
+drives and services. It authenticates against `auth.renown.url` too, so one
+setting covers both directions. Pass `identity.baseUrl` when starting the server
+to point it somewhere else; unset everywhere, it falls back to
+`https://www.renown.id`.
 
 ### 2. **Frontend Integration**
 

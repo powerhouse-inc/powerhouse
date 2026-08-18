@@ -317,4 +317,61 @@ describe("fetchDelegationCredential", () => {
     expect(probe).not.toHaveBeenCalled();
     expect(result?.credentialSubject.id).toBe(APP_DID);
   });
+
+  it("reads through switchboardRequest without any network call", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const request = vi.fn().mockResolvedValue({
+      renownCredentials: [toFlatRow(await validCredential())],
+    });
+    const result = await fetchDelegationCredential({
+      address: account.address,
+      chainId: 1,
+      appDid: APP_DID,
+      switchboardRequest: request,
+    });
+    expect(result?.credentialSubject.id).toBe(APP_DID);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("prefers switchboardRequest over a switchboard URL and base URL", async () => {
+    mockSwitchboard([toFlatRow(await validCredential())], SB);
+    const request = vi.fn().mockResolvedValue({ renownCredentials: [] });
+    const result = await fetchDelegationCredential({
+      address: account.address,
+      chainId: 1,
+      appDid: APP_DID,
+      baseUrl: BASE,
+      switchboardUrl: SB,
+      switchboardRequest: request,
+    });
+    // The local reader answered (empty), so no remote credential was used.
+    expect(request).toHaveBeenCalledOnce();
+    expect(result).toBeUndefined();
+  });
+
+  it("re-verifies the signature on the local reader path", async () => {
+    const credential = await validCredential();
+    credential.proof.proofValue = "0xdeadbeef";
+    const request = vi
+      .fn()
+      .mockResolvedValue({ renownCredentials: [toFlatRow(credential)] });
+    const result = await fetchDelegationCredential({
+      address: account.address,
+      chainId: 1,
+      appDid: APP_DID,
+      switchboardRequest: request,
+    });
+    expect(result).toBeUndefined();
+  });
+
+  it("returns undefined when the local reader throws", async () => {
+    const request = vi.fn().mockRejectedValue(new Error("read model down"));
+    const result = await fetchDelegationCredential({
+      address: account.address,
+      chainId: 1,
+      appDid: APP_DID,
+      switchboardRequest: request,
+    });
+    expect(result).toBeUndefined();
+  });
 });

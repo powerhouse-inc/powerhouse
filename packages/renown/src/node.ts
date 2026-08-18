@@ -4,6 +4,7 @@ export * from "./crypto/node.js";
 export * from "./discovery.js";
 export * from "./event/event.node.js";
 export * from "./init.node.js";
+export * from "./local-credential-verifier.js";
 export * from "./login.node.js";
 export * from "./profile.js";
 export * from "./renown-builder.js";

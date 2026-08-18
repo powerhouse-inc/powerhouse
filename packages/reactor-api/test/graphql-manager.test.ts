@@ -722,6 +722,192 @@ describe("GraphQLManager", () => {
     });
   });
 
+  // ── in-process subgraph queries ────────────────────────────────────────────
+
+  describe("executeSubgraphQuery", () => {
+    const ECHO_QUERY = "query Echo($input: String!) { echo(input: $input) }";
+
+    // Register a subgraph, then have the gateway answer its requests with
+    // `respond`, mirroring the JSON body a real subgraph handler returns.
+    async function makeSubgraphHarness(
+      respond: (body: {
+        query: string;
+        variables: Record<string, unknown>;
+      }) => Response,
+    ) {
+      const harness = makeHarness();
+      const { gql } = await import("graphql-tag");
+      await harness.manager.registerSubgraphInstance(
+        {
+          name: "echo",
+          typeDefs: gql`
+            type Query {
+              echo(input: String!): String
+            }
+          `,
+          resolvers: {},
+          relationalDb: {} as IRelationalDb,
+          reactorClient: {} as IReactorClient,
+        },
+        "graphql",
+      );
+      const requests: Request[] = [];
+      harness.gatewayAdapter.createHandler.mockResolvedValue(
+        async (request: Request) => {
+          requests.push(request.clone());
+          return respond(
+            (await request.json()) as {
+              query: string;
+              variables: Record<string, unknown>;
+            },
+          );
+        },
+      );
+      return { ...harness, requests };
+    }
+
+    const jsonOk = (data: unknown) =>
+      new Response(JSON.stringify({ data }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+
+    it("returns the data a registered subgraph resolves", async () => {
+      const { manager } = await makeSubgraphHarness(({ variables }) =>
+        jsonOk({ echo: `got:${(variables as { input: string }).input}` }),
+      );
+      await initAndFlush(manager);
+
+      const data = await manager.executeSubgraphQuery<{ echo: string }>(
+        "echo",
+        ECHO_QUERY,
+        { input: "hi" },
+      );
+
+      expect(data).toEqual({ echo: "got:hi" });
+    });
+
+    it("posts the query and variables as JSON", async () => {
+      const { manager, requests } = await makeSubgraphHarness(() =>
+        jsonOk({ echo: "ok" }),
+      );
+      await initAndFlush(manager);
+
+      await manager.executeSubgraphQuery("echo", ECHO_QUERY, { input: "hi" });
+
+      expect(requests).toHaveLength(1);
+      expect(requests[0].method).toBe("POST");
+      expect(requests[0].headers.get("content-type")).toBe("application/json");
+      expect(await requests[0].json()).toEqual({
+        query: ECHO_QUERY,
+        variables: { input: "hi" },
+      });
+    });
+
+    // The middleware authenticates callers; an internal read has no caller, so
+    // it must reach the subgraph handler directly.
+    it("bypasses the auth middleware", async () => {
+      const { manager } = await makeSubgraphHarness(() =>
+        jsonOk({ echo: "x" }),
+      );
+      const intercepted: Request[] = [];
+      const authMiddleware =
+        (next: FetchHandler): FetchHandler =>
+        (request: Request) => {
+          intercepted.push(request);
+          return next(request);
+        };
+
+      const initPromise = manager.init([], authMiddleware);
+      await vi.runAllTimersAsync();
+      await initPromise;
+
+      await manager.executeSubgraphQuery("echo", ECHO_QUERY, { input: "hi" });
+
+      expect(intercepted).toHaveLength(0);
+    });
+
+    it("finds subgraphs by name", async () => {
+      const { manager } = await makeSubgraphHarness(() => jsonOk({}));
+      await initAndFlush(manager);
+
+      expect(manager.getSubgraphByName("echo")?.name).toBe("echo");
+      expect(manager.getSubgraphByName("nope")).toBeUndefined();
+    });
+
+    it("throws when the subgraph is not registered", async () => {
+      const { manager } = makeHarness();
+      await initAndFlush(manager);
+
+      await expect(
+        manager.executeSubgraphQuery("not-installed", ECHO_QUERY, {
+          input: "hi",
+        }),
+      ).rejects.toThrow(/"not-installed" is not registered/);
+    });
+
+    it("throws on GraphQL errors instead of returning partial data", async () => {
+      const { manager } = await makeSubgraphHarness(
+        () =>
+          new Response(
+            JSON.stringify({ errors: [{ message: "read model down" }] }),
+            { status: 200, headers: { "content-type": "application/json" } },
+          ),
+      );
+      await initAndFlush(manager);
+
+      await expect(
+        manager.executeSubgraphQuery("echo", ECHO_QUERY, { input: "hi" }),
+      ).rejects.toThrow(/read model down/);
+    });
+
+    it("throws when the subgraph handler fails, keeping the body", async () => {
+      const { manager } = await makeSubgraphHarness(
+        () => new Response("boom", { status: 500 }),
+      );
+      await initAndFlush(manager);
+
+      await expect(
+        manager.executeSubgraphQuery("echo", ECHO_QUERY, { input: "hi" }),
+      ).rejects.toThrow(/query failed: 500 boom/);
+    });
+
+    it("targets the subgraph's real mount path", async () => {
+      const { manager, requests } = await makeSubgraphHarness(() =>
+        jsonOk({ echo: "ok" }),
+      );
+      await initAndFlush(manager);
+
+      await manager.executeSubgraphQuery("echo", ECHO_QUERY, { input: "hi" });
+
+      expect(new URL(requests[0].url).pathname).toBe("/graphql/echo");
+    });
+
+    // A subgraph whose schema fails to build is registered but unreachable;
+    // callers gating on availability must see the handler, not the entry.
+    it("reports no handler when the schema failed to build", async () => {
+      const { manager, gatewayAdapter } = await makeSubgraphHarness(() =>
+        jsonOk({}),
+      );
+      gatewayAdapter.createHandler.mockRejectedValue(new Error("bad schema"));
+      await initAndFlush(manager);
+
+      expect(manager.getSubgraphByName("echo")?.name).toBe("echo");
+      expect(manager.hasSubgraphHandler("echo")).toBe(false);
+      await expect(
+        manager.executeSubgraphQuery("echo", ECHO_QUERY, { input: "hi" }),
+      ).rejects.toThrow(/registered but has no handler yet/);
+    });
+
+    it("reports a handler once the subgraph is set up", async () => {
+      const { manager } = await makeSubgraphHarness(() => jsonOk({}));
+      await initAndFlush(manager);
+
+      expect(manager.hasSubgraphHandler("echo")).toBe(true);
+      expect(manager.hasSubgraphHandler("nope")).toBe(false);
+    });
+  });
+
   // ── handler cache ──────────────────────────────────────────────────────────
 
   describe("subgraph handler cache", () => {
