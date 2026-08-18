@@ -656,6 +656,16 @@ export class ReactorClient implements IReactorClient {
     const evaluations: Evaluation[] = [];
 
     for (const candidate of candidates) {
+      // CREATE_DOCUMENT is exempt from the executor's policy gate by necessity:
+      // it runs before the document exists, so there is no policy to decide
+      // against (see GATED_DOCUMENT_ACTIONS). Mirror the exemption rather than
+      // deciding the candidate against the named document's policy, which would
+      // predict a denial the submit path never issues.
+      if (candidate.type === "CREATE_DOCUMENT") {
+        evaluations.push({ decision: "allow" });
+        continue;
+      }
+
       const targetId = evaluationTargetId(candidate, resolvedId);
 
       let target = targets.get(targetId);

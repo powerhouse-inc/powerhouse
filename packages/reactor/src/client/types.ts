@@ -392,7 +392,9 @@ export interface IReactorClient {
    * their input names, not the one passed here: delete and upgrade name it in
    * `input.documentId`, and the relationship actions in `input.sourceId`. This
    * follows the executor's own gate, which decides against the document
-   * guarding the write.
+   * guarding the write. `CREATE_DOCUMENT` follows the gate's exemption: it runs
+   * before its document exists, so the executor never decides it against a
+   * policy and the preflight predicts allow.
    *
    * @param documentIdentifier - Document "id" or "slug" the candidates target
    * @param branch - Branch to evaluate against

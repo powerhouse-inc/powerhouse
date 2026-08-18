@@ -375,6 +375,47 @@ describe("evaluateActions", () => {
   });
 
   /**
+   * The executor never decides CREATE_DOCUMENT against a policy -- the document
+   * does not exist yet when it runs (GATED_DOCUMENT_ACTIONS excludes it) -- so
+   * the preflight must not predict a denial the submit path never issues, even
+   * against a deny-all policy.
+   */
+  describe("CREATE_DOCUMENT", () => {
+    it("predicts allow without consulting the policy", async () => {
+      const answer = await client({}).evaluateActions(DOCUMENT_ID, "main", [
+        {
+          scope: "document",
+          type: "CREATE_DOCUMENT",
+          input: { model: "test" },
+        },
+      ]);
+
+      expect(answer.evaluations).toEqual([{ decision: "allow" }]);
+      expect(answer.allAllowed).toBe(true);
+      expect(decided).toHaveLength(0);
+    });
+
+    it("exempts only the create in a mixed batch", async () => {
+      const answer = await client({
+        DELETE_DOCUMENT: { decision: "deny", reason: "denied by grant" },
+      }).evaluateActions(DOCUMENT_ID, "main", [
+        { scope: "document", type: "CREATE_DOCUMENT" },
+        {
+          scope: "document",
+          type: "DELETE_DOCUMENT",
+          input: { documentId: DOCUMENT_ID },
+        },
+      ]);
+
+      expect(answer.evaluations).toEqual([
+        { decision: "allow" },
+        { decision: "deny", reason: "denied by grant" },
+      ]);
+      expect(decided).toHaveLength(1);
+    });
+  });
+
+  /**
    * A batch of candidates against one document is one model build. The
    * projections are the same for every candidate in it, so reading them per
    * candidate would multiply the cost of a toolbar by its button count.
