@@ -12,18 +12,19 @@
   },
   "devDependencies": {
     "@modelcontextprotocol/sdk": "catalog:",
-    "@powerhousedao/switchboard": "workspace:*",
     "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/reactor-api": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
+    "@powerhousedao/switchboard": "workspace:*",
     "@renown/sdk": "workspace:*",
-    "document-model": "workspace:*",
-    "graphql-ws": "catalog:",
-    "graphql-sse": "catalog:",
-    "ws": "catalog:",
     "@types/ws": "catalog:",
+    "document-model": "workspace:*",
+    "graphql-sse": "catalog:",
+    "graphql-ws": "catalog:",
     "tsdown": "catalog:",
-    "vitest": "catalog:"
+    "viem": "~2.50.4",
+    "vitest": "catalog:",
+    "ws": "catalog:"
   }
 }
