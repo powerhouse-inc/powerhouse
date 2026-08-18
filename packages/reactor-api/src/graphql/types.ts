@@ -24,6 +24,9 @@ export type Context = {
     address: string;
     chainId: number;
     networkId: string;
+
+    /** The did:key of the app instance that issued this request's token. */
+    appKey: string;
   };
 };
 

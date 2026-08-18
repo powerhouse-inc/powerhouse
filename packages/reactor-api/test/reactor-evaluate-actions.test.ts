@@ -1,4 +1,5 @@
 import {
+  type ISyncManager,
   ReactorBuilder,
   ReactorClientBuilder,
   type InProcessReactorClientModule,
@@ -10,12 +11,17 @@ import {
   initializeAuth,
   type DocumentModelModule,
   type Grant,
+  type ISigner,
   type PHDocument,
+  type Signature,
 } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { GraphQLError } from "graphql";
 import { afterEach, describe, expect, it } from "vitest";
 import * as resolvers from "../src/graphql/reactor/resolvers.js";
+import { ReactorSubgraph } from "../src/graphql/reactor/subgraph.js";
+import type { Context, SubgraphArgs } from "../src/graphql/types.js";
+import type { IAuthorizationService } from "../src/services/authorization.service.js";
 
 const WRITER = "0xWriter";
 const OUTSIDER = "0xOutsider";
@@ -255,5 +261,182 @@ describe("the evaluateActions resolver", () => {
 
       expect(answer.allAllowed).toBe(true);
     });
+  });
+});
+
+/**
+ * The document creator's standing permission over the auth scope is matched on
+ * the app key, not the address. A request subject assembled without one decides
+ * as a different principal than the same signer's writes do, so the creator is
+ * refused an auth-scope operation their own signed action would be admitted
+ * for. This walks the whole path -- token-derived context, viewSubject, the
+ * preflight, the carve-out -- because every hop of it has to carry the key for
+ * the answer to come out right.
+ *
+ * Canonical did:key/JWK pair for one P-256 key, shared with the carve-out suite
+ * in document-model.
+ */
+const CREATOR_DID = "did:key:zDnaexNjCKnPLh5Vhn1KqjmrLDFtXddrtTTE9gJmdWRSCG3wt";
+const CREATOR_JWK = {
+  kty: "EC",
+  crv: "P-256",
+  x: "2qGULg46dKXbnsPdvI4AxOHiw94xJRDVAWuyHIyyGd8",
+  y: "V_jbfJ-wVhoUspPM9epxaJHUs_6TyMfrOgwB2Kcx170",
+};
+const OTHER_DID = "did:key:zDnaefv2pj8YQM2T6E3pnrJoGnDGbXsrvJiXhqHzh7d5RzncU";
+const CREATOR_ADDRESS = "0xCreator";
+
+/** A signer presenting one app key; signatures are never verified here. */
+function signerWithAppKey(appKey: string): ISigner {
+  return {
+    publicKey: {} as unknown as CryptoKey,
+    user: { address: CREATOR_ADDRESS, networkId: "eip155", chainId: 1 },
+    app: { name: "test", key: appKey },
+    sign: () => Promise.resolve(new Uint8Array(0)),
+    verify: () => Promise.resolve(),
+    signAction: () => Promise.resolve(["", "", "", "", ""] as Signature),
+  };
+}
+
+describe("the creator carve-out over GraphQL", () => {
+  let module: InProcessReactorClientModule | undefined;
+
+  afterEach(() => {
+    module?.reactor.kill();
+    module = undefined;
+  });
+
+  /**
+   * Reads are permitted wholesale, so the query always runs and every verdict
+   * below is the decision model's alone.
+   */
+  function subgraphOver(client: InProcessReactorClientModule): ReactorSubgraph {
+    const permitEverything = {
+      isSupremeAdmin: () => true,
+      canRead: () => Promise.resolve(true),
+      canWrite: () => Promise.resolve(true),
+      canMutate: () => Promise.resolve(true),
+      canCreate: () => true,
+    } as unknown as IAuthorizationService;
+
+    return new ReactorSubgraph({
+      reactorClient: client.client,
+      authorizationService: permitEverything,
+      relationalDb: {} as never,
+      analyticsStore: {} as never,
+      graphqlManager: {
+        driveOwnershipCache: {
+          has: () => false,
+          add: () => undefined,
+          remove: () => undefined,
+          size: () => 0,
+        },
+      } as never,
+      syncManager: {} as unknown as ISyncManager,
+    } as SubgraphArgs);
+  }
+
+  function contextFor(appKey: string): Context {
+    return {
+      user: {
+        address: CREATOR_ADDRESS,
+        chainId: 1,
+        networkId: "eip155",
+        appKey,
+      },
+      headers: {},
+      db: {},
+    };
+  }
+
+  /**
+   * A document signed by the creator key, carrying a policy that denies
+   * everything: only the carve-out can permit an auth-scope operation on it.
+   */
+  async function lockedDownDocument(): Promise<{
+    subgraph: ReactorSubgraph;
+    documentId: string;
+  }> {
+    module = await new ReactorClientBuilder()
+      .withSigner(signerWithAppKey(CREATOR_DID))
+      .withReactorBuilder(
+        new ReactorBuilder()
+          .withDocumentModelSources([
+            driveDocumentModelModule as unknown as DocumentModelModule,
+            documentModelDocumentModelModule as unknown as DocumentModelModule,
+          ])
+          .withExecutorConfig({ featureFlags: ENFORCING }),
+      )
+      .buildModule();
+
+    const document = createTestDocument();
+    document.header.sig.publicKey = CREATOR_JWK;
+    await module.client.create(document);
+    await module.client.execute(document.header.id, "main", [
+      initializeAuth({
+        version: 1,
+        grants: [
+          {
+            id: "lockdown",
+            description: "deny everything",
+            effect: "deny",
+            principal: { anyone: true },
+            capability: { can: "execute", scope: "*" },
+          },
+        ],
+      }),
+    ]);
+
+    return { subgraph: subgraphOver(module), documentId: document.header.id };
+  }
+
+  function evaluate(
+    subgraph: ReactorSubgraph,
+    documentId: string,
+    ctx: Context,
+  ): Promise<{ allAllowed: boolean }> {
+    const query = (
+      subgraph.resolvers.Query as Record<
+        string,
+        (
+          parent: unknown,
+          args: unknown,
+          ctx: Context,
+        ) => Promise<{ allAllowed: boolean }>
+      >
+    ).evaluateActions;
+    return query(
+      null,
+      {
+        documentIdentifier: documentId,
+        candidates: [{ scope: "auth", type: "SET_GRANT" }],
+      },
+      ctx,
+    );
+  }
+
+  it("permits the creator an auth-scope operation a deny-all policy refuses", async () => {
+    const { subgraph, documentId } = await lockedDownDocument();
+
+    const answer = await evaluate(
+      subgraph,
+      documentId,
+      contextFor(CREATOR_DID),
+    );
+
+    expect(answer.allAllowed).toBe(true);
+  });
+
+  /**
+   * The same address on a different app instance is not the creator, so the
+   * carve-out does not reach it. This is what proves the key decides rather
+   * than merely riding along.
+   */
+  it("refuses the same address holding a different app key", async () => {
+    const { subgraph, documentId } = await lockedDownDocument();
+
+    const answer = await evaluate(subgraph, documentId, contextFor(OTHER_DID));
+
+    expect(answer.allAllowed).toBe(false);
   });
 });

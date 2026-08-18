@@ -33,6 +33,20 @@ export interface User {
   address: string;
   chainId: number;
   networkId: string;
+
+  /**
+   * The did:key of the app instance that issued this request's token, taken
+   * from the verified credential's issuer.
+   *
+   * It is the same value a signer presents as its app key when it signs an
+   * action, which is what a document records as its creator. Carrying it here
+   * is what lets a request decide as the same principal the write path
+   * presents, rather than as an address with no key.
+   *
+   * Authenticated, not asserted: the token is verified by resolving this very
+   * DID, so a caller cannot name someone else's.
+   */
+  appKey: string;
 }
 
 export interface AuthContext {
@@ -170,7 +184,12 @@ export class AuthService {
   }
 
   /**
-   * Extract user information from verification result
+   * Extract user information from verification result.
+   *
+   * The issuer is required along with the credential subject. A credential that
+   * verified must carry one -- resolving it is how the signature was checked --
+   * so this rejects a shape that cannot have come from verification rather than
+   * admitting a keyless principal.
    */
   private extractUserFromVerification(
     verified: VerifiedCredential,
@@ -178,8 +197,9 @@ export class AuthService {
     try {
       const { address, chainId, networkId } =
         verified.verifiableCredential.credentialSubject;
+      const appKey = verified.issuer;
 
-      if (!address || !chainId || !networkId) {
+      if (!address || !chainId || !networkId || !appKey) {
         return null;
       }
 
@@ -187,6 +207,7 @@ export class AuthService {
         address,
         chainId,
         networkId,
+        appKey,
       };
     } catch {
       return null;

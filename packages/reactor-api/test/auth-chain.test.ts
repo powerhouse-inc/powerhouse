@@ -122,10 +122,13 @@ describe("Auth chain integration (AuthService → authFetchMiddleware → handle
       expect(res.status).toBe(200);
       expect(intercepted).toContain(req);
       const ctx = getAuthContext(req);
+      // The app key rides the whole chain, so a resolver decides as the same
+      // principal the token authenticated.
       expect(ctx?.user).toEqual({
         address: "0xuser",
         chainId: 1,
         networkId: "eip155",
+        appKey: "did:ethr:0xapp",
       });
       expect(ctx?.auth_enabled).toBe(true);
       expect(ctx?.admins).toEqual(ADMINS);

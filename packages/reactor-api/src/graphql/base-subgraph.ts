@@ -158,8 +158,18 @@ export class BaseSubgraph implements ISubgraph {
     return this.authorizationService.canRead(documentId, ctx.user?.address);
   }
 
+  /**
+   * The principal a request decides as: the authenticated caller's address, and
+   * the did:key of the app instance whose token authenticated it.
+   *
+   * Both, because a policy can name either. The key is what a document records
+   * as its creator, so a subject built without one cannot match the creator's
+   * standing permission over the auth scope -- the document's own creator would
+   * be refused an operation the write path accepts, since a signed action
+   * carries the same key. Anonymous callers supply neither.
+   */
   protected viewSubject(ctx: Context): AuthSubject {
-    return { address: ctx.user?.address };
+    return { address: ctx.user?.address, key: ctx.user?.appKey };
   }
 
   /**

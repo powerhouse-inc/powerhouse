@@ -52,8 +52,16 @@ describe("ReactorSubgraph Permission Checks", () => {
   );
 
   // Helper to create context with different user states
-  const createContext = (options: { userAddress?: string }) => ({
-    user: options.userAddress ? { address: options.userAddress } : undefined,
+  const createContext = (options: {
+    userAddress?: string;
+    appKey?: string;
+  }) => ({
+    user: options.userAddress
+      ? {
+          address: options.userAddress,
+          appKey: options.appKey ?? "did:key:zCallerApp",
+        }
+      : undefined,
     headers: {},
     db: {},
   });
@@ -249,7 +257,29 @@ describe("ReactorSubgraph Permission Checks", () => {
         "doc-123",
         "main",
         [{ scope: "global", type: "SET_NAME", input: undefined }],
-        { subject: { address: "0xpermitted" } },
+        { subject: { address: "0xpermitted", key: "did:key:zCallerApp" } },
+      );
+    });
+
+    /**
+     * The key is what a document records as its creator, so a subject built
+     * without one refuses the document's own creator an auth-scope operation
+     * their signed write would be admitted for.
+     */
+    it("should carry the caller's app key into the subject", async () => {
+      vi.mocked(mockAuthorizationService.canRead!).mockResolvedValue(true);
+      const ctx = createContext({
+        userAddress: "0xcreator",
+        appKey: "did:key:zCreatorApp",
+      });
+
+      await callEvaluateActions(ctx);
+
+      expect(mockReactorClient.evaluateActions).toHaveBeenCalledWith(
+        "doc-123",
+        "main",
+        expect.anything(),
+        { subject: { address: "0xcreator", key: "did:key:zCreatorApp" } },
       );
     });
   });

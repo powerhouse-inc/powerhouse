@@ -159,7 +159,12 @@ describe("AuthService.authenticateRequest()", () => {
       );
 
       expect(result).toEqual({
-        user: { address: "0xuser", chainId: 1, networkId: "eip155" },
+        user: {
+          address: "0xuser",
+          chainId: 1,
+          networkId: "eip155",
+          appKey: "did:ethr:0xapp",
+        },
         admins: ADMINS,
         auth_enabled: true,
       });
@@ -177,6 +182,69 @@ describe("AuthService.authenticateRequest()", () => {
   });
 
   // ── verifyBearer (method-agnostic) ──────────────────────────────────────────
+
+  /**
+   * The app key is what a document records as its creator, so a request that
+   * arrives without one decides as a different principal than the same signer's
+   * writes do -- and the document's own creator is refused an operation the
+   * write path accepts. It comes from the credential's issuer, which is the DID
+   * the token's signature was verified against, so it is authenticated rather
+   * than asserted.
+   */
+  describe("the authenticated app key", () => {
+    let service: AuthService;
+
+    beforeEach(() => {
+      service = new AuthService({
+        enabled: true,
+        admins: ADMINS,
+        skipCredentialVerification: true,
+      });
+    });
+
+    it("carries the verified credential's issuer", async () => {
+      const verified = makeVerified();
+      verified.issuer = "did:key:zSomeAppInstance";
+      mockVerifyAuthBearerToken.mockResolvedValue(verified);
+
+      const result = await service.verifyBearer("Bearer valid-token");
+
+      expect(result).toMatchObject({
+        user: { appKey: "did:key:zSomeAppInstance" },
+      });
+    });
+
+    it("distinguishes two app instances of the same address", async () => {
+      const first = makeVerified();
+      first.issuer = "did:key:zFirstDevice";
+      mockVerifyAuthBearerToken.mockResolvedValue(first);
+      const one = await service.verifyBearer("Bearer first");
+
+      const second = makeVerified();
+      second.issuer = "did:key:zSecondDevice";
+      mockVerifyAuthBearerToken.mockResolvedValue(second);
+      const two = await service.verifyBearer("Bearer second");
+
+      expect(one).toMatchObject({ user: { appKey: "did:key:zFirstDevice" } });
+      expect(two).toMatchObject({ user: { appKey: "did:key:zSecondDevice" } });
+    });
+
+    /**
+     * Unreachable through real verification -- resolving the issuer is how the
+     * signature was checked -- so a credential without one did not come from
+     * there. Refused rather than admitted as a keyless principal.
+     */
+    it("refuses a credential carrying no issuer", async () => {
+      const verified = makeVerified();
+      verified.issuer = "";
+      mockVerifyAuthBearerToken.mockResolvedValue(verified);
+
+      const result = await service.verifyBearer("Bearer valid-token");
+
+      expect(result).toBeInstanceOf(Response);
+      expect((result as Response).status).toBe(401);
+    });
+  });
 
   describe("AuthService.verifyBearer()", () => {
     it("returns auth_enabled=false when auth is disabled", async () => {
@@ -222,7 +290,12 @@ describe("AuthService.authenticateRequest()", () => {
       const result = await service.verifyBearer("Bearer valid-token");
 
       expect(result).toEqual({
-        user: { address: "0xuser", chainId: 1, networkId: "eip155" },
+        user: {
+          address: "0xuser",
+          chainId: 1,
+          networkId: "eip155",
+          appKey: "did:ethr:0xapp",
+        },
         admins: ADMINS,
         auth_enabled: true,
       });
