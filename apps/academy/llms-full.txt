@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-08-06T10:48:55.260Z
+> Generated: 2026-08-18T22:00:50.039Z
 > Total Documents: 109
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -6016,11 +6016,12 @@ await Promise.all([
 
 ### React
 
-`@powerhousedao/reactor-browser` exposes hooks built on the client. `useAttachments()` returns an `IAttachmentClient` for the current service (or `undefined` if none is configured). `useAttachmentUpload()` drives the full preprocess + upload lifecycle and tracks its status:
+`@powerhousedao/reactor-browser` exposes hooks built on the client. `useAttachments()` returns an `IAttachmentClient` for the current service (or `undefined` if none is configured) — one client per service, shared across every consumer. `useAttachmentUpload()` drives the full preprocess + upload lifecycle with byte-level progress:
 
 ```tsx
 const client = useReactorClient();
-const { preprocess, upload, status, progress, error } = useAttachmentUpload();
+const { preprocess, upload, cancel, reset, stage, progress, result, error } =
+  useAttachmentUpload();
 
 const submit = useCallback(async () => {
   // Buffers the file in memory and hands back the ref. Async because it has to
@@ -6041,11 +6042,24 @@ const submit = useCallback(async () => {
 
 In render, read the lifecycle straight off the hook:
 
-- `status` — `UploadStatus`: `None | Hashing | Uploading | Done | Error`
-- `progress` — coarse/stage-based; the remote transport buffers then issues a single PUT, so byte-level progress is not available yet
-- `error` — the upload failure, if any
+- `stage` — `"idle" | "hashing" | "reserving" | "uploading" | "done" | "error"`
+- `progress` — `{ percent, loaded, total, indeterminate }`. `percent` is 0-100, matching the design-system progress bar; `loaded`/`total` are raw bytes for a "3.2 / 10 MB" label. `indeterminate` is true while a stage is running whose bytes cannot be observed, and `percent` is 0 for the whole of it.
+- `result` — the `AttachmentUploadResult` once the upload is done
+- `error` — the upload failure, if any. Progress is left where it stopped rather than reset to zero.
+- `cancel()` — aborts the transfer in flight; the `upload` promise rejects with an `AbortError`
+- `reset()` — returns the hook to idle, discarding the previous result and error
 
-`preprocess` and `upload` are stable callbacks. `upload(results)` wraps `client.reserve(results.options, (handle) => handle.send(results.stream()))` and updates `status`/`progress`/`error`. Because React runs in the browser, this mirrors the buffered flow above; the ref still only exists after `preprocess` resolves, so submission is async — you cannot produce a ref inside the synchronous action input.
+`preprocess` and `upload` are stable callbacks. `upload(results)` calls `client.upload({ preprocessed: results })`, so progress, dedup reporting and cancellation are identical to the non-React path. The two-call split is deliberate: the ref must reach the document before the bytes are committed. The ref only exists after `preprocess` resolves, so submission is async — you cannot produce a ref inside the synchronous action input.
+
+Progress is byte-level where the transport can report bytes:
+
+- **Downloads** always report bytes, against `header.sizeBytes`.
+- **Uploads** report bytes only through an upload transport that can observe them. `fetch` cannot — it has no upload-side progress event — so the default transport reports the `uploading` stage as indeterminate and stays silent until the request resolves. Pass `uploadTransport: createXhrUploadTransport()` in the `createRemoteAttachmentService` config to get real upload progress in a browser; Connect does this already.
+- **Hashing** has no byte progress and cannot: `preprocess` runs a single `crypto.subtle.digest` over the whole file and WebCrypto has no streaming digest. For a large file this is a visibly long indeterminate phase.
+- **Deduplication** finishes an upload having sent nothing. The terminal event carries `deduped: true` with `loaded: 0, total: 0`, and the hook reports 100%.
+- **`upload.progress` measures bytes handed to the socket, not server acknowledgement.** For a small file you get one event at 100% immediately and then a wait for the response, so the stage stays `uploading` until `send()` resolves.
+
+`useAttachmentPreview()` reports the same shape for the download side, plus retry visibility — `stage`, `progress`, `attempt`, `maxAttempts`, and `lastError` (the failure of an attempt that is about to be retried, exposed while the hook is still `loading`). It aborts the download on unmount.
 
 ## Declaring attachment fields in a document model
 
@@ -6176,14 +6190,20 @@ The index persists in its own `attachment_reference_read_model` SQL schema with 
 
 ### Client and hook additions
 
-`IAttachmentService.get` accepts an options form carrying the authorization anchor: `get(ref, { documentId, signal })`. Remote downloads negotiate the download target with the Switchboard JWT, then execute it — `switchboard` targets keep the authenticated byte semantics, `presigned-get` targets receive exactly the returned headers and never the JWT. `IAttachmentClient` adds `upload(input)`, document-aware `download({ documentId, ref })`, and bounded-concurrency `uploadMany` / `downloadMany` batch operations built on a reusable `runWithConcurrency` runner: concurrency bounds hashing and transfer together, results preserve input order, successes survive sibling failures, per-item signals cancel one item, and a batch signal stops unstarted work. Stage callbacks report `hashing`, `reserving`, `uploading`, `requesting-download-target`, `downloading`, `done`, and `error`; remote transfer failures throw `AttachmentTransferError` with a `stage` and no URL, signature, or credential detail. `useAttachments()` in `@powerhousedao/reactor-browser` returns this extended client; `useAttachmentUpload()` is unchanged and remains supported.
+`IAttachmentService.get` accepts an options form carrying the authorization anchor: `get(ref, { documentId, signal })`. Remote downloads negotiate the download target with the Switchboard JWT, then execute it — `switchboard` targets keep the authenticated byte semantics, `presigned-get` targets receive exactly the returned headers and never the JWT. `IAttachmentClient` adds `upload(input)`, document-aware `download({ documentId, ref })`, and bounded-concurrency `uploadMany` / `downloadMany` batch operations built on a reusable `runWithConcurrency` runner: concurrency bounds hashing and transfer together, results preserve input order, successes survive sibling failures, per-item signals cancel one item, and a batch signal stops unstarted work.
+
+Every single-item method takes an options bag as its second argument carrying `onProgress` and `throttleMs`, and reports `AttachmentProgress` — `{ stage, loaded, total, indeterminate }` — where `stage` is one of `hashing`, `reserving`, `uploading`, `requesting-download-target`, `downloading`, `done`, `error`. `loaded`/`total` are per-stage, not per-operation: a per-operation denominator would have to weight hashing against transfer, and a dedup would shrink it mid-flight. Exactly one terminal event is emitted per operation; `done` always carries `loaded === total`. Byte events are throttled to one per 100ms by default.
+
+`download()` is the one asymmetric case: it resolves as soon as the stream is available, with `downloading` as the last event and `loaded: 0`. Byte events and the terminal `done` arrive as the caller reads the stream, and never arrive if the caller abandons it — so `downloadMany`'s `concurrency` bounds target negotiation rather than simultaneous transfer. Batch progress is per item, stamped with `index`, alongside an `onItemSettled` callback carrying `{ settled, completed, failed, total }`.
+
+Upload bytes are only observable through an `uploadTransport` that can see them; `fetch` cannot, so the default transport reports `uploading` as indeterminate and stays silent. `createXhrUploadTransport()` is the browser-side opt-in, set on `SwitchboardClientConfig.uploadTransport`. An explicit `fetchFn` always wins over it, so adding `uploadTransport` to a config that already pins fetch is a no-op. Remote transfer failures throw `AttachmentTransferError` with a `stage` and no URL, signature, or credential detail. `useAttachments()` in `@powerhousedao/reactor-browser` returns this extended client, `useAttachmentUpload()` exposes upload progress with `cancel`/`reset`/`result`, and `useAttachmentPreview()` exposes download progress with `attempt`/`lastError`.
 
 ## Migrating from inline `data` fields
 
 If a document model previously inlined binary content, the migration is small and mechanical:
 
 - **Schema** — replace `data: String` (or composite fields like `{ image, imageMediaType, imageUrl }`) with a single `attachment: AttachmentRef` field on the input and the state type.
-- **Write path** — replace the base64-encoding step with a reservation and upload. Either reserve on the service directly (`attachments.reserve({ mimeType, fileName })` then `upload.send(stream)`, dispatching with `result.ref`), or use the client (`attachments.preprocess(file)` then `client.execute(...)` with `results.ref` and `attachments.reserve(results.options, ...)`). In the browser, `useAttachmentUpload()` wraps the client flow.
+- **Write path** — replace the base64-encoding step with a reservation and upload. Either reserve on the service directly (`attachments.reserve({ mimeType, fileName })` then `upload.send(stream)`, dispatching with `result.ref`), or use the client (`attachments.preprocess(file)` then `client.execute(...)` with `results.ref` and `attachments.reserve(results.options, ...)`). In the browser, `useAttachmentUpload()` wraps the client flow and reports byte progress.
 - **Read path** — replace data-URI assembly with `attachments.get(ref)`. In a browser, drain the stream into a `Blob` and use `URL.createObjectURL` (remember to `revokeObjectURL` on cleanup).
 - **Graceful degradation** — code paths that may run without an attachment service (mock environments, tests, off-line previews) should branch on `if (!attachments)`. Writers should surface a clear error to the user; readers should skip the attachment and render a placeholder.
 
