@@ -257,7 +257,7 @@ describe("ReactorSubgraph Permission Checks", () => {
         "doc-123",
         "main",
         [{ scope: "global", type: "SET_NAME", input: undefined }],
-        { subject: { address: "0xpermitted", key: "did:key:zCallerApp" } },
+        { address: "0xpermitted", key: "did:key:zCallerApp" },
       );
     });
 
@@ -279,7 +279,7 @@ describe("ReactorSubgraph Permission Checks", () => {
         "doc-123",
         "main",
         expect.anything(),
-        { subject: { address: "0xcreator", key: "did:key:zCreatorApp" } },
+        { address: "0xcreator", key: "did:key:zCreatorApp" },
       );
     });
   });
