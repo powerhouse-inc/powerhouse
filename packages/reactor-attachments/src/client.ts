@@ -84,9 +84,11 @@ export {
   RemoteAttachmentStore,
   createRemoteAttachmentService,
   createFetchUploadTransport,
+  createXhrUploadTransport,
   type AttachmentUploadRequest,
   type AttachmentUploadResponse,
   type AttachmentUploadTransport,
+  type XhrUploadTransportOptions,
 } from "./switchboard/index.js";
 export { NullAttachmentTransport } from "./null-attachment-transport.js";
 export {

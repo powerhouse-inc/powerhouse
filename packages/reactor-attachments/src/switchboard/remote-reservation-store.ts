@@ -5,11 +5,23 @@ import { createRef, parseRef } from "../ref.js";
 import type { Reservation, ReserveAttachmentOptions } from "../types.js";
 import { parseAttachmentUploadTarget } from "../targets.js";
 import { buildAuthHeaders } from "./build-auth-headers.js";
+import type { AttachmentUploadTransport } from "./upload-transport.js";
 
 export type SwitchboardClientConfig = {
   remoteUrl: string;
   jwtHandler?: JwtHandler;
   fetchFn?: typeof fetch;
+  /**
+   * Transport for upload PUTs only, so a browser host can opt into
+   * XMLHttpRequest and get real upload progress.
+   *
+   * An explicit `fetchFn` always wins over this. The precedence is
+   * one-directional on purpose: under this rule, adding `uploadTransport` to a
+   * config that already pins `fetchFn` is a provable no-op, whereas the
+   * reverse rule would let `{ ...config, uploadTransport }` silently route the
+   * largest request in the system around a test's mock and onto the network.
+   */
+  uploadTransport?: AttachmentUploadTransport;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {

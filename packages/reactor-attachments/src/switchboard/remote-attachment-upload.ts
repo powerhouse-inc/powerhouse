@@ -50,8 +50,11 @@ export class RemoteAttachmentUpload implements IAttachmentUpload {
     this.reservation = reservation;
     this.remoteUrl = config.remoteUrl;
     this.jwtHandler = config.jwtHandler;
-    const fetchFn = (config.fetchFn ?? globalThis.fetch).bind(globalThis);
-    this.uploadTransport = createFetchUploadTransport(fetchFn);
+    // fetchFn wins: pinning fetch must not be silently overridden.
+    this.uploadTransport = config.fetchFn
+      ? createFetchUploadTransport(config.fetchFn.bind(globalThis))
+      : (config.uploadTransport ??
+        createFetchUploadTransport(globalThis.fetch.bind(globalThis)));
   }
 
   async send(

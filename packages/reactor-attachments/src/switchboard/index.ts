@@ -10,6 +10,10 @@ export {
   type AttachmentUploadTransport,
 } from "./upload-transport.js";
 export {
+  createXhrUploadTransport,
+  type XhrUploadTransportOptions,
+} from "./xhr-upload-transport.js";
+export {
   RemoteReservationStore,
   type SwitchboardClientConfig,
 } from "./remote-reservation-store.js";
