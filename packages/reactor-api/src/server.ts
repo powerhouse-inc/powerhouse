@@ -70,7 +70,10 @@ import {
   getUniqueDocumentModels,
   PackageManager,
 } from "./packages/package-manager.js";
-import { AuthService } from "./services/auth.service.js";
+import {
+  AuthService,
+  type CredentialVerifier,
+} from "./services/auth.service.js";
 import { createRenownCredentialVerifier } from "./services/renown-credential-verifier.js";
 import type {
   AuthorizationConfig,
@@ -83,6 +86,12 @@ import {
 import { DocumentPermissionService } from "./services/document-permission.service.js";
 import { createGetParentIdsFn } from "./services/get-parent-ids.js";
 import { createMcpRequestAuthorizer } from "./services/mcp-request-authorizer.js";
+import {
+  assertCredentialVerifierForSource,
+  resolveRenownConfig,
+  type RenownConfig,
+  type ResolvedRenownConfig,
+} from "./services/renown-config.js";
 import type {
   API,
   IPackageLoader,
@@ -118,6 +127,12 @@ type Options = {
     enabled: boolean;
     admins: string[];
   };
+  /** Renown coordinates the host already resolved, used verbatim instead of
+   * resolving `auth.renown` and the env again (which would warn twice). */
+  renown?: ResolvedRenownConfig;
+  /** Credential check replacing the built-in remote Renown one; required when
+   * the resolved source is "self" (see assertCredentialVerifierForSource). */
+  verifyCredential?: CredentialVerifier;
   https?:
     | {
         keyPath: string;
@@ -493,10 +508,12 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   // Setup auth configuration
   let admins: string[] = [];
   let authEnabled = false;
+  let configuredRenown: RenownConfig | undefined;
   if (options.configFile) {
     const config = getConfig(options.configFile);
     admins = config.auth?.admins.map((a) => a.toLowerCase()) ?? [];
     authEnabled = config.auth?.enabled ?? false;
+    configuredRenown = config.auth?.renown;
   } else if (options.auth) {
     admins = options.auth.admins.map((a) => a.toLowerCase());
     authEnabled = options.auth.enabled;
@@ -508,8 +525,6 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     DOCUMENT_PERMISSIONS_ENABLED,
     SKIP_CREDENTIAL_VERIFICATION,
     CREDENTIAL_VERIFICATION_CACHE_TTL_MS,
-    RENOWN_URL,
-    SWITCHBOARD_URL,
   } = process.env;
   if (AUTH_ENABLED !== undefined) {
     authEnabled = AUTH_ENABLED === "true";
@@ -593,15 +608,32 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   let authService: AuthService | undefined;
   if (authEnabled) {
     logger.info("Setting up Auth middleware");
+    const renown =
+      options.renown ??
+      resolveRenownConfig(configuredRenown, process.env, logger);
+    assertCredentialVerifierForSource(
+      renown.source,
+      options.verifyCredential !== undefined,
+    );
+    if (options.verifyCredential) {
+      logger.info("Renown credentials will be verified by the host's verifier");
+    } else {
+      logger.info(
+        "Renown credentials will be verified against @url",
+        renown.switchboardUrl ?? renown.url ?? "the default Renown instance",
+      );
+    }
     authService = new AuthService({
       enabled: authEnabled,
       admins,
       skipCredentialVerification,
       credentialVerificationCacheTtlMs,
-      verifyCredential: await createRenownCredentialVerifier({
-        renownUrl: RENOWN_URL,
-        switchboardUrl: SWITCHBOARD_URL,
-      }),
+      verifyCredential:
+        options.verifyCredential ??
+        (await createRenownCredentialVerifier({
+          renownUrl: renown.url,
+          switchboardUrl: renown.switchboardUrl,
+        })),
     });
     authFetchMiddleware = createAuthFetchMiddleware(authService);
   }

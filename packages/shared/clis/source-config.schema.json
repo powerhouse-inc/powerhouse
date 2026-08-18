@@ -117,6 +117,26 @@
             "type": "string"
           },
           "description": "DIDs granted admin role."
+        },
+        "renown": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Which Renown instance this reactor authenticates against, server-side.",
+          "properties": {
+            "source": {
+              "type": "string",
+              "enum": ["remote", "self"],
+              "description": "Source of truth for credential checks. \"self\" reads this reactor's own renown read model; \"remote\" (default) queries a Renown or Switchboard instance. Overridden by RENOWN_SOURCE."
+            },
+            "url": {
+              "type": "string",
+              "description": "Renown base URL, also used by this reactor's own identity. Defaults to https://www.renown.id. Overridden by RENOWN_URL."
+            },
+            "switchboardUrl": {
+              "type": "string",
+              "description": "Switchboard GraphQL endpoint to read credentials from directly, skipping Renown discovery. Overridden by SWITCHBOARD_URL."
+            }
+          }
         }
       }
     },

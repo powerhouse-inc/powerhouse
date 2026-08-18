@@ -198,6 +198,76 @@ describe("SwitchboardClient", () => {
       });
       expect(credential).toBeUndefined();
     });
+
+    // The read model is trusted to filter by `did`/`ethAddress`/`revoked`, but a
+    // loose filter must not become an auth bypass, so the binding is re-checked.
+    it.each([
+      [
+        "delegated to a different app DID",
+        { credentialSubjectId: "did:key:other" },
+      ],
+      [
+        "issued by a different address in the issuer DID",
+        {
+          issuerId:
+            "did:pkh:eip155:1:0x0000000000000000000000000000000000000002",
+        },
+      ],
+      [
+        "issued by a different issuer ethereumAddress",
+        { issuerEthereumAddress: "0x0000000000000000000000000000000000000002" },
+      ],
+      ["revoked", { revoked: true }],
+    ])("rejects a credential %s", async (_name, overrides) => {
+      mockGraphql({ renownCredentials: [makeRow(overrides)] });
+      const credential = await client.getCredential({
+        address: ADDRESS,
+        chainId: 1,
+        appDid: APP_DID,
+      });
+      expect(credential).toBeUndefined();
+    });
+
+    it("matches the address case-insensitively", async () => {
+      mockGraphql({ renownCredentials: [makeRow()] });
+      const credential = await client.getCredential({
+        address: ADDRESS.toUpperCase().replace("0X", "0x"),
+        chainId: 1,
+        appDid: APP_DID,
+      });
+      expect(credential?.id).toBe("urn:uuid:cred-1");
+    });
+
+    it("reads through a request function without touching fetch", async () => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch");
+      const request = vi
+        .fn()
+        .mockResolvedValue({ renownCredentials: [makeRow()] });
+      const local = new SwitchboardClient(request);
+
+      const credential = await local.getCredential({
+        address: ADDRESS,
+        chainId: 1,
+        appDid: APP_DID,
+      });
+
+      expect(credential?.id).toBe("urn:uuid:cred-1");
+      expect(local.endpoint).toBeUndefined();
+      expect(fetchSpy).not.toHaveBeenCalled();
+      const [query, variables] = request.mock.calls[0] as [
+        string,
+        Record<string, unknown>,
+      ];
+      expect(query).toContain("renownCredentials");
+      expect(variables).toEqual({
+        input: {
+          driveId: `renown-${ADDRESS.toLowerCase()}`,
+          ethAddress: ADDRESS.toLowerCase(),
+          did: APP_DID,
+          includeRevoked: false,
+        },
+      });
+    });
   });
 
   describe("getProfileByAddress", () => {

@@ -258,6 +258,17 @@ export type PHConnectRuntimeConfig = {
   pwa?: PHConnectPwa;
 };
 
+/** Which Renown instance a reactor authenticates against, server-side. */
+export type PHReactorRenown = {
+  /** "self" reads this reactor's own renown read model; "remote" (default)
+   * queries a Renown or Switchboard instance. */
+  source?: "remote" | "self";
+  /** Renown base URL; also the instance this reactor's own identity uses. */
+  url?: string;
+  /** Switchboard GraphQL endpoint to read credentials from directly. */
+  switchboardUrl?: string;
+};
+
 export type PowerhouseConfig = {
   // required
   logLevel: LogLevel;
@@ -289,6 +300,7 @@ export type PowerhouseConfig = {
   auth?: {
     enabled?: boolean;
     admins: string[];
+    renown?: PHReactorRenown;
   };
   switchboard?: {
     database?: {
