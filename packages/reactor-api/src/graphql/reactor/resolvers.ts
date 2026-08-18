@@ -1,4 +1,7 @@
 import {
+  type ActionCandidate,
+  type ActionEvaluations,
+  AuthEnforcementDisabledError,
   consolidateSyncOperations,
   DriveCollectionId,
   envelopesToSyncOperations,
@@ -23,6 +26,7 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import { GraphQLError } from "graphql";
 
+import { AuthEvaluationUnsupportedError } from "../errors.js";
 import { isDriveContainerType } from "./constants.js";
 
 const REACTOR_DRIVE_DOCUMENT_TYPE = "powerhouse/reactor-drive";
@@ -53,6 +57,7 @@ export const MAX_OPERATIONS_PER_PAGE = 100;
 import {
   fromInputMaybe,
   serializeOperationForGraphQL,
+  toGqlActionEvaluation,
   toDocumentModelResultPage,
   toGqlJobInfo,
   toGqlPhDocument,
@@ -63,6 +68,7 @@ import {
   validateActions,
 } from "./adapters.js";
 import type {
+  ActionEvaluations as GqlActionEvaluations,
   DocumentModelResultPage,
   JobInfo as GqlJobInfo,
   PropagationMode as GqlPropagationMode,
@@ -455,6 +461,68 @@ export async function documentOperations(
       `Failed to convert operations to GraphQL: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
+}
+
+/**
+ * Predicts the admission verdict for each candidate operation, deciding against
+ * the document policy through the reactor's own decision model.
+ *
+ * The subject is supplied by the subgraph from the authenticated request, never
+ * by the caller: answering for an arbitrary subject would disclose what a policy
+ * grants somebody else. Note that a subject assembled from a GraphQL request
+ * carries no app key, so the creator carve-out on the auth scope -- which
+ * matches `subject.key` against the policy's creator -- cannot fire here unless
+ * the request's verified issuer supplied one.
+ *
+ * A reactor without authEnforcement raises the named error, which becomes an
+ * "unsupported" code rather than a denial. Composing an answer out of the host
+ * permission tables is deliberately not attempted: they record which addresses a
+ * host lets near a drive, not what a document's grants permit.
+ */
+export async function evaluateActions(
+  reactorClient: IReactorClient,
+  args: {
+    documentIdentifier: string;
+    branch?: string | null;
+    candidates: ReadonlyArray<{
+      scope: string;
+      type: string;
+      input?: unknown;
+    }>;
+  },
+  subject?: AuthSubject,
+): Promise<GqlActionEvaluations> {
+  const branch = fromInputMaybe(args.branch) ?? "main";
+  const candidates: ActionCandidate[] = args.candidates.map((candidate) => ({
+    scope: candidate.scope,
+    type: candidate.type,
+    input: fromInputMaybe(candidate.input),
+  }));
+
+  let result: ActionEvaluations;
+  try {
+    result = await reactorClient.evaluateActions(
+      args.documentIdentifier,
+      branch,
+      candidates,
+      subject ? { subject } : undefined,
+    );
+  } catch (error) {
+    if (AuthEnforcementDisabledError.isError(error)) {
+      throw new AuthEvaluationUnsupportedError();
+    }
+    throw new GraphQLError(
+      `Failed to evaluate actions: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+
+  return {
+    evaluations: result.evaluations.map(toGqlActionEvaluation),
+    allAllowed: result.allAllowed,
+    anyAllowed: result.anyAllowed,
+    allDenied: result.allDenied,
+    anyDenied: result.anyDenied,
+  };
 }
 
 export async function createDocument(

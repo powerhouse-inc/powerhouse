@@ -50,12 +50,51 @@ export type Action = {
   readonly type: Scalars["String"]["output"];
 };
 
+/**
+ * One operation an authorization preflight predicts a verdict for.
+ *
+ * `input` is what a conditional grant reads, so a candidate standing for a
+ * filled-in form carries that form's input. Omitting it predicts the verdict an
+ * empty input earns, not the verdict the filled-in form will get.
+ */
+export type ActionCandidateInput = {
+  readonly input?: InputMaybe<Scalars["JSONObject"]["input"]>;
+  readonly scope: Scalars["String"]["input"];
+  readonly type: Scalars["String"]["input"];
+};
+
 export type ActionContext = {
   readonly signer?: Maybe<ReactorSigner>;
 };
 
 export type ActionContextInput = {
   readonly signer?: InputMaybe<ReactorSignerInput>;
+};
+
+/**
+ * One candidate's predicted verdict. `reason` carries the refusal a DENY is
+ * recorded with, and is null on an ALLOW.
+ */
+export type ActionEvaluation = {
+  readonly decision: AuthDecision;
+  readonly reason?: Maybe<Scalars["String"]["output"]>;
+};
+
+/**
+ * The predicted verdicts for a set of candidates, in the order they were given,
+ * with the aggregates a caller branches on.
+ *
+ * The aggregates are redundant -- a verdict is binary -- and all four are returned
+ * so a caller reads the one its question is phrased in rather than negating
+ * another. Over no candidates every aggregate is false: nothing is allowed and
+ * nothing is denied.
+ */
+export type ActionEvaluations = {
+  readonly allAllowed: Scalars["Boolean"]["output"];
+  readonly allDenied: Scalars["Boolean"]["output"];
+  readonly anyAllowed: Scalars["Boolean"]["output"];
+  readonly anyDenied: Scalars["Boolean"]["output"];
+  readonly evaluations: ReadonlyArray<ActionEvaluation>;
 };
 
 export type ActionInput = {
@@ -66,6 +105,11 @@ export type ActionInput = {
   readonly timestampUtcMs: Scalars["String"]["input"];
   readonly type: Scalars["String"]["input"];
 };
+
+export enum AuthDecision {
+  Allow = "ALLOW",
+  Deny = "DENY",
+}
 
 export type ChannelMeta = {
   readonly id: Scalars["String"]["output"];
@@ -349,6 +393,38 @@ export type Query = {
   readonly documentModels: DocumentModelResultPage;
   readonly documentOperations: ReactorOperationResultPage;
   readonly documentOutgoingRelationships: PhDocumentResultPage;
+  /**
+   * Predicts whether the calling subject would be admitted to execute each of a
+   * set of candidate operations, without submitting any of them. A UI asks this to
+   * disable a control rather than offer an action that fails on submit.
+   *
+   * The answer is a prediction, not a promise:
+   *
+   * - Real admission compiles an append condition over everything it read and the
+   *   store enforces it at write time. A preflight reads no future, so a policy
+   *   change landing between this answer and the submit changes the verdict. The
+   *   submit path stays the only authority.
+   * - The verdict is evaluated at the stream heads, so it is correct for a
+   *   candidate about to be submitted. A backdated submission is out of contract;
+   *   the reactor decides that one by position.
+   * - This reports the DOCUMENT policy only. On a switchboard running the
+   *   DOCUMENT_PERMISSIONS authorization policy a write must also pass the host
+   *   permission tables, which `canExecuteOperation` on the auth subgraph answers.
+   *   An ALLOW here is therefore necessary but not always sufficient. The two are
+   *   reported separately rather than combined, because they answer different
+   *   questions and a single verdict stitched from both is one neither system
+   *   would reach.
+   *
+   * The subject is the authenticated caller and cannot be named in the request:
+   * answering for an arbitrary subject would disclose what a policy grants
+   * somebody else.
+   *
+   * Requires the reactor's authEnforcement feature flag. Without it the reactor
+   * holds no decision model, and the host permission tables cannot answer for one,
+   * so this fails with extensions.code AUTH_EVALUATION_UNSUPPORTED rather than
+   * guessing.
+   */
+  readonly evaluateActions: ActionEvaluations;
   readonly findDocuments: PhDocumentResultPage;
   readonly jobStatus?: Maybe<JobInfo>;
   readonly pollSyncEnvelopes: PollSyncEnvelopesResult;
@@ -381,6 +457,12 @@ export type QueryDocumentOutgoingRelationshipsArgs = {
   relationshipType: Scalars["String"]["input"];
   sourceIdentifier: Scalars["String"]["input"];
   view?: InputMaybe<ViewFilterInput>;
+};
+
+export type QueryEvaluateActionsArgs = {
+  branch?: InputMaybe<Scalars["String"]["input"]>;
+  candidates: ReadonlyArray<ActionCandidateInput>;
+  documentIdentifier: Scalars["String"]["input"];
 };
 
 export type QueryFindDocumentsArgs = {
@@ -1318,9 +1400,13 @@ export type DirectiveResolverFn<
 /** Mapping between all available schema types and the resolvers types */
 export type ResolversTypes = ResolversObject<{
   Action: ResolverTypeWrapper<Action>;
+  ActionCandidateInput: ActionCandidateInput;
   ActionContext: ResolverTypeWrapper<ActionContext>;
   ActionContextInput: ActionContextInput;
+  ActionEvaluation: ResolverTypeWrapper<ActionEvaluation>;
+  ActionEvaluations: ResolverTypeWrapper<ActionEvaluations>;
   ActionInput: ActionInput;
+  AuthDecision: AuthDecision;
   Boolean: ResolverTypeWrapper<Scalars["Boolean"]["output"]>;
   ChannelMeta: ResolverTypeWrapper<ChannelMeta>;
   ChannelMetaInput: ChannelMetaInput;
@@ -1377,8 +1463,11 @@ export type ResolversTypes = ResolversObject<{
 /** Mapping between all available schema types and the resolvers parents */
 export type ResolversParentTypes = ResolversObject<{
   Action: Action;
+  ActionCandidateInput: ActionCandidateInput;
   ActionContext: ActionContext;
   ActionContextInput: ActionContextInput;
+  ActionEvaluation: ActionEvaluation;
+  ActionEvaluations: ActionEvaluations;
   ActionInput: ActionInput;
   Boolean: Scalars["Boolean"]["output"];
   ChannelMeta: ChannelMeta;
@@ -1454,6 +1543,31 @@ export type ActionContextResolvers<
 > = ResolversObject<{
   signer?: Resolver<
     Maybe<ResolversTypes["ReactorSigner"]>,
+    ParentType,
+    ContextType
+  >;
+}>;
+
+export type ActionEvaluationResolvers<
+  ContextType = Context,
+  ParentType extends ResolversParentTypes["ActionEvaluation"] =
+    ResolversParentTypes["ActionEvaluation"],
+> = ResolversObject<{
+  decision?: Resolver<ResolversTypes["AuthDecision"], ParentType, ContextType>;
+  reason?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
+}>;
+
+export type ActionEvaluationsResolvers<
+  ContextType = Context,
+  ParentType extends ResolversParentTypes["ActionEvaluations"] =
+    ResolversParentTypes["ActionEvaluations"],
+> = ResolversObject<{
+  allAllowed?: Resolver<ResolversTypes["Boolean"], ParentType, ContextType>;
+  allDenied?: Resolver<ResolversTypes["Boolean"], ParentType, ContextType>;
+  anyAllowed?: Resolver<ResolversTypes["Boolean"], ParentType, ContextType>;
+  anyDenied?: Resolver<ResolversTypes["Boolean"], ParentType, ContextType>;
+  evaluations?: Resolver<
+    ReadonlyArray<ResolversTypes["ActionEvaluation"]>,
     ParentType,
     ContextType
   >;
@@ -1871,6 +1985,12 @@ export type QueryResolvers<
       "relationshipType" | "sourceIdentifier"
     >
   >;
+  evaluateActions?: Resolver<
+    ResolversTypes["ActionEvaluations"],
+    ParentType,
+    ContextType,
+    RequireFields<QueryEvaluateActionsArgs, "candidates" | "documentIdentifier">
+  >;
   findDocuments?: Resolver<
     ResolversTypes["PHDocumentResultPage"],
     ParentType,
@@ -2059,6 +2179,8 @@ export type TouchChannelResultResolvers<
 export type Resolvers<ContextType = Context> = ResolversObject<{
   Action?: ActionResolvers<ContextType>;
   ActionContext?: ActionContextResolvers<ContextType>;
+  ActionEvaluation?: ActionEvaluationResolvers<ContextType>;
+  ActionEvaluations?: ActionEvaluationsResolvers<ContextType>;
   ChannelMeta?: ChannelMetaResolvers<ContextType>;
   DateTime?: GraphQLScalarType;
   DeadLetterInfo?: DeadLetterInfoResolvers<ContextType>;
@@ -2103,11 +2225,23 @@ export const definedNonNullAnySchema = z
   .any()
   .refine((v) => isDefinedNonNullAny(v));
 
+export const AuthDecisionSchema = z.enum(AuthDecision);
+
 export const DocumentChangeTypeSchema = z.enum(DocumentChangeType);
 
 export const PropagationModeSchema = z.enum(PropagationMode);
 
 export const SyncEnvelopeTypeSchema = z.enum(SyncEnvelopeType);
+
+export function ActionCandidateInputSchema(): z.ZodObject<
+  Properties<ActionCandidateInput>
+> {
+  return z.object({
+    input: z.custom<NonNullable<unknown>>((v) => v != null).nullish(),
+    scope: z.string(),
+    type: z.string(),
+  });
+}
 
 export function ActionContextInputSchema(): z.ZodObject<
   Properties<ActionContextInput>
