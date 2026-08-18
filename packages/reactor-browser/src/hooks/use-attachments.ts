@@ -2,12 +2,22 @@ import {
   createAttachmentClient,
   type AttachmentDownloadInput,
   type AttachmentHeader,
+  type AttachmentProgress,
+  type AttachmentStage,
+  type AttachmentUploadResult,
   type IAttachmentClient,
   type IAttachmentService,
   type PreprocessResult,
 } from "@powerhousedao/reactor-attachments/client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAttachmentService } from "./attachment-service.js";
+import {
+  createProgressGate,
+  doneProgress,
+  IDLE_PROGRESS,
+  toProgressState,
+  type AttachmentProgressState,
+} from "./attachment-progress.js";
 
 /**
  * One client per service, shared across every component.
@@ -31,6 +41,60 @@ export function useAttachments(): IAttachmentClient | undefined {
   const service = useAttachmentService();
   return service ? clientFor(service) : undefined;
 }
+
+/**
+ * Upload lifecycle stage, derived from the client's own `AttachmentStage` plus
+ * an `idle` state the client has no reason to model.
+ *
+ * The compile-time guard below is the point: a stage added upstream becomes a
+ * type error here rather than a string that silently never matches. The old
+ * `UploadStatus` enum was a parallel vocabulary that had already drifted (it
+ * never gained `Reserving`).
+ */
+export type AttachmentUploadStage =
+  | "idle"
+  | "hashing"
+  | "reserving"
+  | "uploading"
+  | "done"
+  | "error";
+
+export type AttachmentDownloadStage =
+  | "idle"
+  | "requesting-download-target"
+  | "downloading"
+  | "done"
+  | "error";
+
+type UploadStages = Extract<
+  AttachmentStage,
+  "hashing" | "reserving" | "uploading" | "done" | "error"
+>;
+type DownloadStages = Extract<
+  AttachmentStage,
+  "requesting-download-target" | "downloading" | "done" | "error"
+>;
+
+type Covers<Wider, Narrower> =
+  Exclude<Wider, Narrower> extends never ? true : never;
+
+// Each of these fails to compile if a stage is added upstream without being
+// mapped here, or mapped without being exposed.
+type UploadUnionCoversClient = Covers<UploadStages, AttachmentUploadStage>;
+type DownloadUnionCoversClient = Covers<
+  DownloadStages,
+  AttachmentDownloadStage
+>;
+type EveryClientStageIsMapped = Covers<
+  AttachmentStage,
+  UploadStages | DownloadStages
+>;
+const stageDriftGuards: [
+  UploadUnionCoversClient,
+  DownloadUnionCoversClient,
+  EveryClientStageIsMapped,
+] = [true, true, true];
+void stageDriftGuards;
 
 export type UseAttachmentPreviewInput = {
   documentId: string;
@@ -143,40 +207,63 @@ export function useAttachmentPreview({
   return state;
 }
 
-/** Upload lifecycle status. progress is coarse (0 before/during, 1 on Done) because RemoteAttachmentUpload buffers the full body before issuing a single PUT. */
-export enum UploadStatus {
-  None = "None",
-  Hashing = "Hashing",
-  Uploading = "Uploading",
-  Done = "Done",
-  Error = "Error",
-}
-
 export type UseAttachmentUploadReturn = {
   preprocess: (file: Blob) => Promise<PreprocessResult>;
   upload: (results: PreprocessResult) => Promise<void>;
-  status: UploadStatus;
-  progress: number;
+  /** Aborts the transfer in flight; the upload promise rejects. */
+  cancel: () => void;
+  /** Returns to idle, discarding the previous result and error. */
+  reset: () => void;
+  stage: AttachmentUploadStage;
+  progress: AttachmentProgressState;
+  result: AttachmentUploadResult | undefined;
   error: Error | undefined;
 };
 
-/** Hook for managing the full attachment preprocess + upload lifecycle. preprocess and upload callbacks are stable (useCallback) and depend only on the current IAttachmentClient reference. */
+const IDLE_UPLOAD = {
+  stage: "idle" as AttachmentUploadStage,
+  progress: IDLE_PROGRESS,
+  result: undefined as AttachmentUploadResult | undefined,
+  error: undefined as Error | undefined,
+};
+
+/**
+ * Full attachment preprocess + upload lifecycle with byte-level progress.
+ *
+ * The two-call split is kept on purpose: the ref must reach the document
+ * before the bytes are committed, so callers preprocess, dispatch the
+ * operation, then upload. The second call routes through `client.upload`
+ * rather than reimplementing the flow, which is what makes progress, dedup
+ * reporting and cancellation identical to the non-React path.
+ */
 export function useAttachmentUpload(): UseAttachmentUploadReturn {
-  const [status, setStatus] = useState<UploadStatus>(UploadStatus.None);
-  const [progress, setProgress] = useState(0);
-  const [error, setError] = useState<Error | undefined>(undefined);
+  const [state, setState] = useState(IDLE_UPLOAD);
   const client = useAttachments();
+  const abortRef = useRef<AbortController | undefined>(undefined);
+  const mountedRef = useRef(true);
+  // Generation counter: a slow first upload's late 40% tick must not land on
+  // top of a fast second upload's 90%.
+  const runIdRef = useRef(0);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const preprocess = useCallback(
     async (file: Blob): Promise<PreprocessResult> => {
       if (!client) throw new Error("AttachmentClient not available");
-      setError(undefined);
-      setStatus(UploadStatus.Hashing);
+      const runId = ++runIdRef.current;
+      setState({ ...IDLE_UPLOAD, stage: "hashing" });
       try {
         return await client.preprocess(file);
       } catch (err) {
-        setError(err instanceof Error ? err : new Error(String(err)));
-        setStatus(UploadStatus.Error);
+        const error = err instanceof Error ? err : new Error(String(err));
+        if (mountedRef.current && runId === runIdRef.current) {
+          setState((prev) => ({ ...prev, stage: "error", error }));
+        }
         throw err;
       }
     },
@@ -186,23 +273,76 @@ export function useAttachmentUpload(): UseAttachmentUploadReturn {
   const upload = useCallback(
     async (results: PreprocessResult): Promise<void> => {
       if (!client) throw new Error("AttachmentClient not available");
-      setError(undefined);
-      setStatus(UploadStatus.Uploading);
-      setProgress(0);
+      const runId = ++runIdRef.current;
+      const controller = new AbortController();
+      abortRef.current = controller;
+      const gate = createProgressGate();
+      const isCurrent = () => mountedRef.current && runId === runIdRef.current;
+
+      setState({ ...IDLE_UPLOAD, stage: "reserving" });
+      let uploadResult: AttachmentUploadResult;
       try {
-        await client.reserve(results.options, (handle) =>
-          handle.send(results.stream()),
+        uploadResult = await client.upload(
+          { preprocessed: results, signal: controller.signal },
+          {
+            onProgress: (progress: AttachmentProgress) => {
+              if (!isCurrent()) return;
+              // The terminal frame is written after the await instead: XHR does
+              // not guarantee a final loaded === total, and a dedup emits no
+              // byte events at all.
+              if (progress.stage === "done" || progress.stage === "error") {
+                return;
+              }
+              if (!gate(progress)) return;
+              setState((prev) => ({
+                ...prev,
+                stage: progress.stage as AttachmentUploadStage,
+                progress: toProgressState(progress),
+              }));
+            },
+          },
         );
       } catch (err) {
-        setError(err instanceof Error ? err : new Error(String(err)));
-        setStatus(UploadStatus.Error);
+        const error = err instanceof Error ? err : new Error(String(err));
+        // Progress is left where it stopped: a bar snapping to zero hides how
+        // far the transfer actually got.
+        if (isCurrent()) {
+          setState((prev) => ({ ...prev, stage: "error", error }));
+        }
         throw err;
       }
-      setProgress(1);
-      setStatus(UploadStatus.Done);
+
+      if (isCurrent()) {
+        setState((prev) => ({
+          ...prev,
+          stage: "done",
+          progress: doneProgress(results.sizeBytes),
+          result: uploadResult,
+          error: undefined,
+        }));
+      }
     },
     [client],
   );
 
-  return { preprocess, upload, status, progress, error };
+  const cancel = useCallback(() => {
+    abortRef.current?.abort();
+  }, []);
+
+  const reset = useCallback(() => {
+    runIdRef.current += 1;
+    abortRef.current = undefined;
+    setState(IDLE_UPLOAD);
+  }, []);
+
+  return {
+    preprocess,
+    upload,
+    cancel,
+    reset,
+    stage: state.stage,
+    progress: state.progress,
+    result: state.result,
+    error: state.error,
+  };
 }
