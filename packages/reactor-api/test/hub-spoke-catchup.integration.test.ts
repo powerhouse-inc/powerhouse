@@ -3,6 +3,7 @@
 // in REACTOR_TEST_PG_* (defaults to localhost:5433 via `pnpm --filter
 // @powerhousedao/reactor docker:up`) and outbound access to PH_REGISTRY_URL.
 import {
+  runMigrations,
   type ISyncManager,
   type InProcessReactorModule,
 } from "@powerhousedao/reactor";
@@ -128,6 +129,22 @@ describe.each(DRIVE_TYPES)(
       const handle = createPostgresKysely(connStr);
       hubKysely = handle.kysely as unknown as Kysely<unknown>;
       hubPool = handle.pool;
+
+      // The dump carries the schema as it stood when it was captured, and its
+      // kysely bookkeeping with it, so migrating brings it forward exactly as a
+      // real deployment restoring an old database would. Without this the
+      // fixture pins the schema and every later migration breaks this test.
+      const migrated = await runMigrations(handle.kysely);
+      if (!migrated.success) {
+        throw new Error(
+          `Failed to migrate the restored fixture: ${migrated.error?.message ?? "unknown error"}`,
+        );
+      }
+      if (migrated.migrationsExecuted.length > 0) {
+        logger.info(
+          `migrated restored fixture: ${migrated.migrationsExecuted.join(", ")}`,
+        );
+      }
 
       hub = await buildHubModule(
         logger,
