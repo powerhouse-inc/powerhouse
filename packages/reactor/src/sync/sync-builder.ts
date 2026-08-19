@@ -52,6 +52,11 @@ export class SyncBuilder {
     return this;
   }
 
+  withMaxHeldOperationsPerRemote(limit: number): this {
+    this.config.maxHeldOperationsPerRemote = limit;
+    return this;
+  }
+
   build(
     reactor: IReactor,
     logger: ILogger,
