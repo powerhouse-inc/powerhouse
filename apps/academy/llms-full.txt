@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-08-18T22:00:50.039Z
+> Generated: 2026-08-19T15:14:41.754Z
 > Total Documents: 109
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -6194,7 +6194,7 @@ The index persists in its own `attachment_reference_read_model` SQL schema with 
 
 Every single-item method takes an options bag as its second argument carrying `onProgress` and `throttleMs`, and reports `AttachmentProgress` — `{ stage, loaded, total, indeterminate }` — where `stage` is one of `hashing`, `reserving`, `uploading`, `requesting-download-target`, `downloading`, `done`, `error`. `loaded`/`total` are per-stage, not per-operation: a per-operation denominator would have to weight hashing against transfer, and a dedup would shrink it mid-flight. Exactly one terminal event is emitted per operation; `done` always carries `loaded === total`. Byte events are throttled to one per 100ms by default.
 
-`download()` is the one asymmetric case: it resolves as soon as the stream is available, with `downloading` as the last event and `loaded: 0`. Byte events and the terminal `done` arrive as the caller reads the stream, and never arrive if the caller abandons it — so `downloadMany`'s `concurrency` bounds target negotiation rather than simultaneous transfer. Batch progress is per item, stamped with `index`, alongside an `onItemSettled` callback carrying `{ settled, completed, failed, total }`.
+`download()` is the one asymmetric case: it resolves as soon as the stream is available, with `downloading` as the last event and `loaded: 0`. Byte events and the terminal `done` arrive as the caller reads the stream — so `downloadMany`'s `concurrency` bounds target negotiation rather than simultaneous transfer. Abandoning the stream is a failure, not a completion: cancelling it emits the terminal `error`, carrying the bytes that did arrive and the cancel reason (an `AbortError` when none was given), the same way an aborted request reports itself. Batch progress is per item, stamped with `index`, alongside an `onItemSettled` callback carrying `{ settled, completed, failed, total }`.
 
 Upload bytes are only observable through an `uploadTransport` that can see them; `fetch` cannot, so the default transport reports `uploading` as indeterminate and stays silent. `createXhrUploadTransport()` is the browser-side opt-in, set on `SwitchboardClientConfig.uploadTransport`. An explicit `fetchFn` always wins over it, so adding `uploadTransport` to a config that already pins fetch is a no-op. Remote transfer failures throw `AttachmentTransferError` with a `stage` and no URL, signature, or credential detail. `useAttachments()` in `@powerhousedao/reactor-browser` returns this extended client, `useAttachmentUpload()` exposes upload progress with `cancel`/`reset`/`result`, and `useAttachmentPreview()` exposes download progress with `attempt`/`lastError`.
 

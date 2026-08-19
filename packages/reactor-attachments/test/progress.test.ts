@@ -412,7 +412,7 @@ describe("withByteProgress", () => {
     expect(captured).toBe(failure);
   });
 
-  it("propagates cancel to the source without a terminal hook", async () => {
+  it("reports a cancel as an error carrying the reason, not as completion", async () => {
     let cancelReason: unknown;
     const source = new ReadableStream<Uint8Array>({
       start(controller) {
@@ -423,15 +423,13 @@ describe("withByteProgress", () => {
       },
     });
     let done = false;
-    let errored = false;
+    const errors: unknown[] = [];
     const wrapped = withByteProgress(source, {
       onBytes: () => {},
       onDone: () => {
         done = true;
       },
-      onError: () => {
-        errored = true;
-      },
+      onError: (err) => errors.push(err),
     });
 
     const reader = wrapped.getReader();
@@ -440,6 +438,56 @@ describe("withByteProgress", () => {
 
     expect(cancelReason).toBe("abandoned");
     expect(done).toBe(false);
-    expect(errored).toBe(false);
+    expect(errors).toEqual(["abandoned"]);
+  });
+
+  it("synthesizes an AbortError when cancelled with no reason", async () => {
+    const errors: unknown[] = [];
+    const wrapped = withByteProgress(streamOf(new Uint8Array(4)), {
+      onBytes: () => {},
+      onError: (err) => errors.push(err),
+    });
+
+    const reader = wrapped.getReader();
+    await reader.read();
+    await reader.cancel();
+
+    expect(errors).toHaveLength(1);
+    expect((errors[0] as DOMException).name).toBe("AbortError");
+  });
+
+  it("reports a cancel landing mid-read once, as an error", async () => {
+    const events: unknown[][] = [];
+    // Never resolves a second read, so the cancel lands while the wrapper's
+    // read of the source is genuinely in flight. That read then comes back as
+    // `done` because of the cancel itself -- which must not read as a
+    // completed transfer, and must not close an already-closed controller.
+    const source = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new Uint8Array(4));
+      },
+      pull() {
+        return new Promise<void>(() => {});
+      },
+    });
+    const wrapped = withByteProgress(source, {
+      onBytes: (loaded) => events.push(["bytes", loaded]),
+      onDone: () => events.push(["done"]),
+      onError: (err) => events.push(["error", err]),
+    });
+
+    const reader = wrapped.getReader();
+    await reader.read();
+    const pending = reader.read();
+    // A macrotask, so pull() has entered and is awaiting the source.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await reader.cancel("abandoned");
+    await pending;
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(events).toEqual([
+      ["bytes", 4],
+      ["error", "abandoned"],
+    ]);
   });
 });

@@ -194,7 +194,9 @@ export type ByteProgressHooks = {
  *
  * `cancel` propagates to the source, which is what keeps reader refcounts
  * (e.g. `KyselyAttachmentStore`'s) correct. Cancelling is an abandonment, not
- * a completion, so it fires neither `onDone` nor `onError`.
+ * a completion, so it reports `onError` — never `onDone` — carrying the
+ * cancel reason the way an `AbortSignal` carries its own, with the DOM's
+ * default `AbortError` when the canceller gave none.
  *
  * Returns `source` unchanged when no hook is supplied, so a caller with no
  * listener pays nothing.
@@ -206,12 +208,19 @@ export function withByteProgress(
   if (!hooks.onBytes && !hooks.onDone && !hooks.onError) return source;
 
   let loaded = 0;
+  let cancelled = false;
   const reader = source.getReader();
   return new ReadableStream<Uint8Array>(
     {
       async pull(controller) {
         try {
           const { done, value } = await reader.read();
+          // A cancel that lands while this read is in flight resolves it as
+          // `done`, and closes the stream. Bailing out here is what stops an
+          // abandoned transfer from reporting completion, and stops the
+          // already-closed controller from throwing a fabricated error into
+          // the catch below.
+          if (cancelled) return;
           if (done) {
             hooks.onDone?.();
             controller.close();
@@ -221,14 +230,22 @@ export function withByteProgress(
           hooks.onBytes?.(loaded);
           controller.enqueue(value);
         } catch (err) {
+          if (cancelled) return;
           hooks.onError?.(err);
           controller.error(err);
         }
       },
       cancel(reason) {
+        cancelled = true;
         reader.cancel(reason).catch(() => {});
+        hooks.onError?.(reason ?? abortError());
       },
     },
     { highWaterMark: 0 },
   );
+}
+
+/** What an `AbortSignal` carries when `abort()` is called with no reason. */
+function abortError(): DOMException {
+  return new DOMException("The operation was aborted", "AbortError");
 }

@@ -424,7 +424,10 @@ describe("createAttachmentClient", () => {
       });
     });
 
-    it("never fires a terminal event for an abandoned download", async () => {
+    // An abandoned download is a failure, not a completion. Reporting `done`
+    // would tell a UI the file arrived; reporting nothing would leave the bar
+    // frozen mid-transfer forever.
+    it("reports an abandoned download as an error, never as done", async () => {
       const service = makeMockService({
         get: vi.fn().mockResolvedValue({
           header: MOCK_HEADER,
@@ -438,11 +441,16 @@ describe("createAttachmentClient", () => {
         { documentId: "doc-1", ref: EXPECTED_REF },
         { onProgress: (p) => events.push(p), throttleMs: 0 },
       );
-      await response.body.cancel();
+      const reader = response.body.getReader();
+      await reader.read();
+      await reader.cancel();
 
-      expect(
-        events.some((e) => e.stage === "done" || e.stage === "error"),
-      ).toBe(false);
+      expect(events.some((e) => e.stage === "done")).toBe(false);
+      const terminal = events.filter((e) => e.stage === "error");
+      expect(terminal).toHaveLength(1);
+      // Carries the bytes that did arrive, not a fabricated 100%.
+      expect(terminal[0].loaded).toBe(8);
+      expect(terminal[0].total).toBe(BYTES.byteLength);
     });
 
     it("reports an error that surfaces mid-stream, with the bytes seen so far", async () => {
