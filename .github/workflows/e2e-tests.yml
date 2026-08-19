@@ -67,6 +67,19 @@ jobs:
       - name: Build packages that depend on generated binaries
         run: pnpm --filter=@powerhousedao/versioned-documents --no-bail run build
 
+      # The chromium download is the most variance-prone step in these jobs
+      # (~1m to ~6m depending on CDN); cache it keyed on the playwright version.
+      - name: Resolve Playwright version
+        id: playwright-version
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+        working-directory: ./test/vetra-e2e
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+
       - name: Install Playwright Browsers
         run: pnpm exec playwright install --with-deps chromium
         working-directory: ./test/vetra-e2e
@@ -122,6 +135,17 @@ jobs:
 
       - name: Re-link workspace bins now that dist files exist
         run: pnpm rebuild --recursive
+
+      - name: Resolve Playwright version
+        id: playwright-version
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+        working-directory: ./test/package-e2e
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
 
       - name: Install Playwright Browsers
         run: pnpm exec playwright install --with-deps chromium
@@ -181,6 +205,19 @@ jobs:
 
       - name: Build packages that depend on generated binaries
         run: pnpm --filter=@powerhousedao/versioned-documents --no-bail run build
+
+      - name: Resolve Playwright version
+        id: playwright-version
+        run: echo "version=$(node -p "require('playwright/package.json').version")" >> "$GITHUB_OUTPUT"
+        working-directory: packages/analytics-engine/browser
+
+      # This job installs every browser, so it gets its own key ("all") — sharing
+      # the chromium key would pin whichever job saved first and miss forever.
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-all-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
 
       - name: Install Playwright Browsers
         run: pnpm exec playwright install
