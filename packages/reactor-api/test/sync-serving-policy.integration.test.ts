@@ -19,6 +19,7 @@ import {
   type IReactor,
   type ISyncManager,
 } from "@powerhousedao/reactor";
+import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type {
   DocumentModelModule,
@@ -330,8 +331,13 @@ describe("serving sync through the document's policy", () => {
   }
 
   async function converged(fx: Fixture, driveId: string): Promise<boolean> {
-    const origin = await fx.origin.reactor.get(driveId, { branch: "main" });
-    const peer = await fx.peer.module.reactor.get(driveId, { branch: "main" });
+    const origin = await fx.origin.reactor.get<DocumentDriveDocument>(driveId, {
+      branch: "main",
+    });
+    const peer = await fx.peer.module.reactor.get<DocumentDriveDocument>(
+      driveId,
+      { branch: "main" },
+    );
     return (
       peer.header.revision.global === origin.header.revision.global &&
       JSON.stringify(peer.state.global) === JSON.stringify(origin.state.global)
