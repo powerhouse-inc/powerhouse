@@ -373,8 +373,30 @@ export class ReactorSubgraph extends BaseSubgraph {
             );
           }
 
+          // Tier 2/3 again, from the document's own policy this time. The two
+          // verdicts are intersected rather than swapped: every document
+          // predating the policy migration reads as uninitialized, so trusting
+          // the policy alone would open whatever the host's tables still
+          // protect. Held entries are withheld, not consumed, so a grant that
+          // widens later serves them whole on the next poll.
+          const heldOpIds = this.syncServingGate
+            ? await resolvers.collectHeldSyncOperations(
+                [
+                  ...remote.channel.outbox.items,
+                  ...remote.channel.deadLetter.items,
+                ],
+                this.syncServingGate,
+                this.viewSubject(ctx),
+              )
+            : new Set<string>();
+
           const { envelopes, ackOrdinal, deadLetters, hasMore } =
-            resolvers.pollSyncEnvelopes(this.syncManager, args, forbiddenIds);
+            resolvers.pollSyncEnvelopes(
+              this.syncManager,
+              args,
+              forbiddenIds,
+              heldOpIds,
+            );
           return {
             envelopes,
             ackOrdinal,
