@@ -20,6 +20,7 @@ import * as migration014 from "./014_create_processor_cursor_table.js";
 import * as migration015 from "./015_add_operation_denied_reason.js";
 import * as migration016 from "./016_add_dead_letter_error_type.js";
 import * as migration017 from "./017_create_group_references.js";
+import * as migration018 from "./018_add_sync_remote_bound_address.js";
 
 const migrations = {
   "001_create_operation_table": migration001,
@@ -39,6 +40,7 @@ const migrations = {
   "015_add_operation_denied_reason": migration015,
   "016_add_dead_letter_error_type": migration016,
   "017_create_group_references": migration017,
+  "018_add_sync_remote_bound_address": migration018,
 };
 
 class ProgrammaticMigrationProvider implements MigrationProvider {

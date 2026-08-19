@@ -19,7 +19,10 @@ function rowToRemoteRecord(row: SyncRemoteRow): RemoteRecord {
       scope: (row.filter_scopes ?? []) as string[],
       branch: row.filter_branch,
     },
-    options: { sinceTimestampUtcMs: "0" },
+    options: {
+      sinceTimestampUtcMs: "0",
+      boundAddress: row.bound_address ?? undefined,
+    },
     status: {
       push: {
         state: row.push_state as "idle" | "running" | "error",
@@ -83,6 +86,7 @@ function remoteRecordToRow(remote: RemoteRecord): InsertableSyncRemote {
       ? new Date(remote.status.pull.lastFailureUtcMs).toISOString()
       : null,
     pull_failure_count: remote.status.pull.failureCount,
+    bound_address: remote.options.boundAddress ?? null,
   };
 }
 

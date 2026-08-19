@@ -537,5 +537,46 @@ describe.each(testSyncStorageBackends)(
         expect(remotes[0].name).toBe("concurrent-remote");
       });
     });
+
+    /**
+     * The address a channel belongs to has to survive a restart, or every
+     * channel would come back unbound and adoptable by whoever polls first.
+     */
+    describe("the address a channel is bound to", () => {
+      const record = (boundAddress?: string): RemoteRecord => ({
+        id: "bound-id",
+        name: "bound-remote",
+        collectionId: DriveCollectionId.forDrive("collection-bound"),
+        channelConfig: { type: "internal", parameters: {} },
+        filter: { documentId: [], scope: [], branch: "main" },
+        options: { sinceTimestampUtcMs: "0", boundAddress },
+        status: {
+          push: { state: "idle", failureCount: 0 },
+          pull: { state: "idle", failureCount: 0 },
+        },
+      });
+
+      it("round-trips through storage", async () => {
+        await storage.upsert(record("0xowner"));
+
+        const stored = await storage.get("bound-remote");
+        expect(stored.options.boundAddress).toBe("0xowner");
+      });
+
+      it("reads back as unbound when nothing claimed the channel", async () => {
+        await storage.upsert(record());
+
+        const stored = await storage.get("bound-remote");
+        expect(stored.options.boundAddress).toBeUndefined();
+      });
+
+      it("takes the binding an upsert adds to an unbound channel", async () => {
+        await storage.upsert(record());
+        await storage.upsert(record("0xadopter"));
+
+        const stored = await storage.get("bound-remote");
+        expect(stored.options.boundAddress).toBe("0xadopter");
+      });
+    });
   },
 );

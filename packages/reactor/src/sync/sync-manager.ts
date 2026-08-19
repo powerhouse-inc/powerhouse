@@ -324,6 +324,36 @@ export class SyncManager implements ISyncManager {
     throw new Error(`Remote with id '${id}' does not exist`);
   }
 
+  async bindRemote(id: string, boundAddress: string): Promise<void> {
+    const remote = this.getById(id);
+    const bound = remote.meta.options.boundAddress;
+
+    if (bound === boundAddress) {
+      return;
+    }
+
+    if (bound !== undefined) {
+      throw new Error(
+        `Remote with id '${id}' is already bound to another address`,
+      );
+    }
+
+    remote.meta.options = { ...remote.meta.options, boundAddress };
+
+    await this.remoteStorage.upsert({
+      id: remote.meta.id,
+      name: remote.meta.name,
+      collectionId: remote.meta.collectionId,
+      channelConfig: remote.meta.channelConfig,
+      filter: remote.meta.filter,
+      options: remote.meta.options,
+      status: {
+        push: createIdleHealth(),
+        pull: createIdleHealth(),
+      },
+    });
+  }
+
   async add(
     name: string,
     collectionId: DriveCollectionId,

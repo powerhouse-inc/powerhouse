@@ -35,6 +35,16 @@ export type RemoteOptions = {
    * Polling cadence for this remote. Defaults to `PollBehavior.Auto` when omitted.
    */
   pollBehavior?: PollBehavior;
+  /**
+   * The address this channel belongs to, once one has claimed it.
+   *
+   * Undefined is unbound and adoptable: a channel created anonymously, or one
+   * that predates binding. The first authenticated subject to poll or touch it
+   * takes it, and from then on it answers to that address alone. There is no
+   * sentinel for "anonymous" -- an anonymous holder is exactly one that has not
+   * claimed the channel.
+   */
+  boundAddress?: string;
 };
 
 export type RemoteFilter = {

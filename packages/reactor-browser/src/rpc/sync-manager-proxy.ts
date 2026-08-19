@@ -198,6 +198,11 @@ export class SyncManagerProxy implements ISyncManager {
     return this.getByName(name);
   }
 
+  async bindRemote(id: string, boundAddress: string): Promise<void> {
+    await this.callSyncOp("bindRemote", [id, boundAddress]);
+    await this.refreshRemotes();
+  }
+
   triggerPull(name: string): void {
     this.callSyncOp("triggerPull", [name]).catch((error: unknown) => {
       console.error(`triggerPull failed for remote "${name}":`, error);
