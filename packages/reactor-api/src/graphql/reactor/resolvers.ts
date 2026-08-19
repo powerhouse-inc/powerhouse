@@ -1120,6 +1120,13 @@ export async function touchChannel(
  * Polls the switchboard for new sync envelopes and acknowledges previously
  * received operations.
  *
+ * `forbiddenIds` and `heldOpIds` are two different refusals. A forbidden
+ * document is consumed: its delivery counters are advanced as though it had
+ * been sent, so it is never reconsidered. A held sync operation is withheld:
+ * nothing about it is touched, so a policy that later widens serves it whole on
+ * a subsequent poll. Which one applies is the caller's decision, and the two
+ * are intersected, so a document refused either way is not served.
+ *
  * Ordinal frames of reference:
  * - `outboxAck` / `outboxLatest`: switchboard's ordinals (used to trim/filter
  *   the switchboard's outbox)
@@ -1135,6 +1142,7 @@ export function pollSyncEnvelopes(
     outboxLatest: number;
   },
   forbiddenIds: ReadonlySet<string> = new Set(),
+  heldOpIds: ReadonlySet<string> = new Set(),
 ): {
   envelopes: any[];
   ackOrdinal: number;
@@ -1162,7 +1170,10 @@ export function pollSyncEnvelopes(
   // outside this channel's collection, so they are filtered by the caller's read
   // access independently of the outbox (see the poll resolver in subgraph.ts).
   const deadLetters = remote.channel.deadLetter.items
-    .filter((syncOp) => !forbiddenIds.has(syncOp.documentId))
+    .filter(
+      (syncOp) =>
+        !forbiddenIds.has(syncOp.documentId) && !heldOpIds.has(syncOp.id),
+    )
     .map((syncOp) => ({
       documentId: syncOp.documentId,
       error: syncOp.error?.message ?? "Unknown error",
@@ -1247,6 +1258,13 @@ export function pollSyncEnvelopes(
       hasMore = true;
       break;
     }
+
+    // Before the delivery cursor is read or written, because holding must leave
+    // no trace: the counters are what a later ack sweep consults to decide the
+    // entry was delivered and may be evicted. A hold sets no hasMore either --
+    // there is no later page that would serve it, so claiming one would spin the
+    // puller.
+    if (heldOpIds.has(syncOp.id)) continue;
 
     // Advance the per-syncOp delivery cursor past leading ops the client has
     // both received (outboxLatest) and we have previously emitted

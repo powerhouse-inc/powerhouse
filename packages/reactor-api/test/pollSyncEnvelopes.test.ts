@@ -478,3 +478,224 @@ describe("pollSyncEnvelopes paging caps", () => {
     expect(docB.deliveredCount).toBe(2);
   });
 });
+
+/**
+ * Holding an outbox entry rather than consuming it. The distinction is the whole
+ * point: a consumed entry has had its delivery counters advanced as though it
+ * were sent, so no later poll reconsiders it, while a held entry is left exactly
+ * as it was found and is served in full once the hold lifts.
+ */
+describe("holding outbox entries the caller may not read", () => {
+  type EvictableRemote = {
+    meta: { name: string };
+    channel: {
+      outbox: {
+        items: SyncOperation[];
+        remove: (...items: SyncOperation[]) => void;
+      };
+      inbox: { ackOrdinal: number };
+      deadLetter: { items: SyncOperation[] };
+    };
+  };
+
+  /** Records what the ack sweep did, which is what a hold must not provoke. */
+  function makeEvictingSyncManager(items: SyncOperation[]): {
+    syncManager: ISyncManager;
+    executed: string[];
+    removed: string[];
+    remote: EvictableRemote;
+  } {
+    const executed: string[] = [];
+    const removed: string[] = [];
+    for (const item of items) {
+      (item as unknown as { executed: () => void }).executed = () => {
+        executed.push(item.id);
+      };
+    }
+    const remote: EvictableRemote = {
+      meta: { name: REMOTE_NAME },
+      channel: {
+        outbox: {
+          items,
+          remove: (...toRemove: SyncOperation[]) => {
+            for (const syncOp of toRemove) {
+              removed.push(syncOp.id);
+              const at = items.indexOf(syncOp);
+              if (at >= 0) items.splice(at, 1);
+            }
+          },
+        },
+        inbox: { ackOrdinal: 0 },
+        deadLetter: { items: [] },
+      },
+    };
+    const syncManager = {
+      getById: (id: string) => {
+        if (id !== CHANNEL_ID) throw new Error(`Unknown channel: ${id}`);
+        return remote;
+      },
+    } as unknown as ISyncManager;
+    return { syncManager, executed, removed, remote };
+  }
+
+  function ordinalsOf(result: { envelopes: any[] }): number[] {
+    return result.envelopes
+      .flatMap((e) =>
+        e.operations.map((o: OperationWithContext) => o.context.ordinal),
+      )
+      .sort((a: number, b: number) => a - b);
+  }
+
+  it("leaves the delivery counters of a held entry untouched", () => {
+    const held = makeSyncOp("job-held", "doc-held", [1, 2, 3]);
+    const syncManager = makeSyncManager([held]);
+
+    const result = pollSyncEnvelopes(
+      syncManager,
+      { channelId: CHANNEL_ID, outboxAck: 0, outboxLatest: 0 },
+      new Set(),
+      new Set(["job-held"]),
+    );
+
+    expect(result.envelopes).toHaveLength(0);
+    expect(held.deliveredCount).toBe(0);
+    expect(held.emittedCount).toBe(0);
+  });
+
+  it("serves the other entries in the same poll", () => {
+    const held = makeSyncOp("job-held", "doc-held", [1, 2]);
+    const served = makeSyncOp("job-served", "doc-served", [3, 4]);
+    const syncManager = makeSyncManager([held, served]);
+
+    const result = pollSyncEnvelopes(
+      syncManager,
+      { channelId: CHANNEL_ID, outboxAck: 0, outboxLatest: 0 },
+      new Set(),
+      new Set(["job-held"]),
+    );
+
+    expect(ordinalsOf(result)).toEqual([3, 4]);
+  });
+
+  /**
+   * The failure this guards against is silent and permanent: an ack that sweeps
+   * past a held entry's ordinals would call executed() on it and remove it, and
+   * an outbox entry removed as delivered is never re-derived.
+   */
+  it("cannot be evicted by an ack sweeping past its ordinals", () => {
+    const held = makeSyncOp("job-held", "doc-held", [1, 2]);
+    const served = makeSyncOp("job-served", "doc-served", [3, 4]);
+    const { syncManager, executed, removed, remote } = makeEvictingSyncManager([
+      held,
+      served,
+    ]);
+
+    pollSyncEnvelopes(
+      syncManager,
+      { channelId: CHANNEL_ID, outboxAck: 0, outboxLatest: 0 },
+      new Set(),
+      new Set(["job-held"]),
+    );
+    pollSyncEnvelopes(
+      syncManager,
+      { channelId: CHANNEL_ID, outboxAck: 4, outboxLatest: 4 },
+      new Set(),
+      new Set(["job-held"]),
+    );
+
+    expect(executed).toEqual(["job-served"]);
+    expect(removed).toEqual(["job-served"]);
+    expect(remote.channel.outbox.items).toContain(held);
+  });
+
+  it("serves the whole run once the hold lifts", () => {
+    const held = makeSyncOp("job-held", "doc-held", [1, 2, 3]);
+    const syncManager = makeSyncManager([held]);
+
+    pollSyncEnvelopes(
+      syncManager,
+      { channelId: CHANNEL_ID, outboxAck: 0, outboxLatest: 0 },
+      new Set(),
+      new Set(["job-held"]),
+    );
+    const after = pollSyncEnvelopes(syncManager, {
+      channelId: CHANNEL_ID,
+      outboxAck: 0,
+      outboxLatest: 0,
+    });
+
+    expect(ordinalsOf(after)).toEqual([1, 2, 3]);
+  });
+
+  /**
+   * A cursor that had already moved is not rewound by a hold, and not carried
+   * past the ops the hold withheld either.
+   */
+  it("resumes where it left off when a partly-delivered entry is held and then released", () => {
+    const partial = makeSyncOp("job-partial", "doc-partial", [10, 20, 30]);
+    const syncManager = makeSyncManager([partial]);
+
+    pollSyncEnvelopes(syncManager, {
+      channelId: CHANNEL_ID,
+      outboxAck: 0,
+      outboxLatest: 0,
+    });
+    pollSyncEnvelopes(syncManager, {
+      channelId: CHANNEL_ID,
+      outboxAck: 0,
+      outboxLatest: 20,
+    });
+    expect(partial.deliveredCount).toBe(2);
+
+    const whileHeld = pollSyncEnvelopes(
+      syncManager,
+      { channelId: CHANNEL_ID, outboxAck: 0, outboxLatest: 20 },
+      new Set(),
+      new Set(["job-partial"]),
+    );
+    expect(whileHeld.envelopes).toHaveLength(0);
+    expect(partial.deliveredCount).toBe(2);
+
+    const released = pollSyncEnvelopes(syncManager, {
+      channelId: CHANNEL_ID,
+      outboxAck: 0,
+      outboxLatest: 20,
+    });
+    expect(ordinalsOf(released)).toEqual([30]);
+  });
+
+  it("reports no further page when every entry is held", () => {
+    const first = makeSyncOp("job-1", "doc-1", [1]);
+    const second = makeSyncOp("job-2", "doc-2", [2]);
+    const syncManager = makeSyncManager([first, second]);
+
+    const result = pollSyncEnvelopes(
+      syncManager,
+      { channelId: CHANNEL_ID, outboxAck: 0, outboxLatest: 0 },
+      new Set(),
+      new Set(["job-1", "job-2"]),
+    );
+
+    expect(result.envelopes).toEqual([]);
+    expect(result.hasMore).toBe(false);
+  });
+
+  it("withholds a held dead letter without disturbing the rest", () => {
+    const heldLetter = makeSyncOp("dl-held", "doc-held", [1]);
+    const servedLetter = makeSyncOp("dl-served", "doc-served", [2]);
+    const syncManager = makeSyncManager([]);
+    const remote = (
+      syncManager as unknown as { getById: (id: string) => FakeRemote }
+    ).getById(CHANNEL_ID);
+    remote.channel.deadLetter.items.push(heldLetter, servedLetter);
+
+    const result = pollSyncEnvelopes(
+      syncManager,
+      { channelId: CHANNEL_ID, outboxAck: 0, outboxLatest: 0 },
+      new Set(),
+      new Set(["dl-held"]),
+    );
+
+    expect(result.deadLetters.map((d) => d.documentId)).toEqual(["doc-served"]);
+  });
+});
