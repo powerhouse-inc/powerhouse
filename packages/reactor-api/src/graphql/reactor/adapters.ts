@@ -14,6 +14,7 @@ import type {
   PHDocument,
 } from "@powerhousedao/shared/document-model";
 import { GraphQLError } from "graphql";
+import { MalformedStoredOperationError } from "../errors.js";
 import {
   type ActionEvaluation as GqlActionEvaluation,
   AuthDecision as GqlAuthDecision,
@@ -309,12 +310,103 @@ export function validateActions(actions: readonly unknown[]): Action[] {
   return convertedActions;
 }
 
+/** The operation fields the schema declares non-null. */
+const REQUIRED_OPERATION_FIELDS = [
+  "index",
+  "timestampUtcMs",
+  "hash",
+  "skip",
+] as const;
+
+/** The action fields the schema declares non-null. */
+const REQUIRED_ACTION_FIELDS = [
+  "id",
+  "type",
+  "timestampUtcMs",
+  "input",
+  "scope",
+] as const;
+
+/**
+ * An operation as storage actually hands it over.
+ *
+ * `rowToOperation` casts a jsonb column straight to `Operation`, so every field
+ * the declared type promises is present may be absent at runtime - that cast is
+ * why TypeScript never caught this. Read through this view instead, or the
+ * checks below look impossible to the compiler.
+ */
+type StoredOperation = Record<string, unknown> & {
+  action?: Record<string, unknown> | null;
+};
+
+/**
+ * Names an operation well enough to find the row it came from, without assuming
+ * the fields that might be the missing ones.
+ */
+function describeOperation(stored: StoredOperation): string {
+  const parts = [
+    typeof stored.id === "string" && stored.id
+      ? `operation ${stored.id}`
+      : "operation with no id",
+  ];
+  if (typeof stored.index === "number") {
+    parts.push(`index ${stored.index}`);
+  }
+  const scope = stored.action?.scope;
+  if (typeof scope === "string" && scope) {
+    parts.push(`scope ${scope}`);
+  }
+  return parts.join(", ");
+}
+
+/**
+ * Refuses an operation the schema cannot represent, naming the field.
+ *
+ * The alternative is what execution does unaided: nullify the field, bubble that
+ * up the non-null chain until it takes out the envelope's whole operation list,
+ * and report a bare "Cannot return null for non-nullable field" with no way to
+ * tell which of a hundred operations was at fault. Checked before the response
+ * is built so the failure is typed and attributable.
+ *
+ * Presence is all that is checked. The schema's own serialization still rejects
+ * a value of the wrong type, and inventing further rules here would put a second
+ * contract beside the one the schema already states.
+ */
+function assertServable(operation: Operation): void {
+  const stored = operation as unknown as StoredOperation;
+
+  for (const field of REQUIRED_OPERATION_FIELDS) {
+    if (stored[field] === undefined || stored[field] === null) {
+      throw new MalformedStoredOperationError(
+        `${describeOperation(stored)} has no ${field}`,
+      );
+    }
+  }
+
+  const action = stored.action;
+  if (action === undefined || action === null) {
+    throw new MalformedStoredOperationError(
+      `${describeOperation(stored)} has no action`,
+    );
+  }
+
+  for (const field of REQUIRED_ACTION_FIELDS) {
+    if (action[field] === undefined || action[field] === null) {
+      throw new MalformedStoredOperationError(
+        `${describeOperation(stored)} has an action with no ${field}`,
+      );
+    }
+  }
+}
+
 /**
  * Transforms an operation to serialize signatures from tuples to strings for GraphQL compatibility.
  */
 export function serializeOperationForGraphQL(
   operation: Operation,
 ): ReactorOperation {
+  assertServable(operation);
+
   const signer = operation.action.context?.signer;
   if (!signer?.signatures) {
     return operation as unknown as ReactorOperation;

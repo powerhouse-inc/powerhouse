@@ -3,7 +3,10 @@ import type { IQueue } from "../../../../src/queue/interfaces.js";
 import { GqlRequestChannel } from "../../../../src/sync/channels/gql-req-channel.js";
 import { IntervalPollTimer } from "../../../../src/sync/channels/interval-poll-timer.js";
 import type { IPollTimer } from "../../../../src/sync/channels/poll-timer.js";
-import { GraphQLRequestError } from "../../../../src/sync/errors.js";
+import {
+  GraphQLRequestError,
+  RECOVERABLE_GRAPHQL_ERROR_CODES,
+} from "../../../../src/sync/errors.js";
 import {
   SyncOperationStatus,
   type SyncEnvelope,
@@ -1230,6 +1233,110 @@ describe("GqlRequestChannel", () => {
       // Timer is stopped for unrecoverable errors, so further ticks do nothing
       await manualTimer.tick().catch(() => {});
       expect(channel.getConnectionState().failureCount).toBe(1);
+      expect(manualTimer.isRunning()).toBe(false);
+      await channel.shutdown();
+    });
+
+    it("keeps polling through a GraphQL error the remote classified as recoverable", async () => {
+      // One document holding an unservable operation must not take the channel
+      // down: it serves every other document, and a peer that stopped polling
+      // would stop receiving those too. Nothing restarts a stopped poll timer.
+      const cursorStorage = createMockCursorStorage();
+      const manualTimer = new ManualPollTimer(true);
+      const mockFetch = vi
+        .fn()
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              data: { touchChannel: { success: true, ackOrdinal: 0 } },
+            }),
+        })
+        .mockResolvedValue({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              errors: [
+                {
+                  message:
+                    "Stored operation cannot be served: operation op-1 has an action with no id",
+                  extensions: {
+                    code: RECOVERABLE_GRAPHQL_ERROR_CODES.malformedStoredOperation,
+                  },
+                },
+              ],
+            }),
+        });
+      global.fetch = mockFetch as unknown as typeof global.fetch;
+
+      const channel = new GqlRequestChannel(
+        createMockLogger(),
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig(),
+        createMockOperationIndex(),
+        manualTimer,
+      );
+      await channel.init();
+
+      await vi.waitFor(() => {
+        expect(channel.getConnectionState().failureCount).toBe(1);
+      });
+
+      expect(manualTimer.isRunning()).toBe(true);
+      // A recoverable failure backs off and comes round again.
+      await manualTimer.tick().catch(() => {});
+      expect(channel.getConnectionState().failureCount).toBe(2);
+      expect(manualTimer.isRunning()).toBe(true);
+      await channel.shutdown();
+    });
+
+    it("stops polling when a recoverable code arrives beside an unclassified error", async () => {
+      // Something else also went wrong, so polling through it would be guessing.
+      const cursorStorage = createMockCursorStorage();
+      const manualTimer = new ManualPollTimer(true);
+      const mockFetch = vi
+        .fn()
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              data: { touchChannel: { success: true, ackOrdinal: 0 } },
+            }),
+        })
+        .mockResolvedValue({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              errors: [
+                {
+                  message: "Stored operation cannot be served: op-1",
+                  extensions: {
+                    code: RECOVERABLE_GRAPHQL_ERROR_CODES.malformedStoredOperation,
+                  },
+                },
+                { message: "something else broke" },
+              ],
+            }),
+        });
+      global.fetch = mockFetch as unknown as typeof global.fetch;
+
+      const channel = new GqlRequestChannel(
+        createMockLogger(),
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig(),
+        createMockOperationIndex(),
+        manualTimer,
+      );
+      await channel.init();
+
+      await vi.waitFor(() => {
+        expect(channel.getConnectionState().failureCount).toBe(1);
+      });
+
       expect(manualTimer.isRunning()).toBe(false);
       await channel.shutdown();
     });

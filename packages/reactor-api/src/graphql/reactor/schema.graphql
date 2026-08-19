@@ -459,7 +459,17 @@ type Query {
     candidates: [ActionCandidateInput!]!
   ): ActionEvaluations!
 
-  # Poll for sync envelopes from a channel
+  """
+  Polls for sync envelopes from a channel.
+
+  An operation stored before the API required an action id cannot be
+  represented by this schema, and rather than serving a partial response beside
+  a bare non-null violation, this fails with extensions.code
+  MALFORMED_STORED_OPERATION naming the operation. That code means the failure
+  is worth polling through: the document holding the operation needs repairing,
+  but the channel serves every other document, and a peer that stopped polling
+  would stop receiving those too.
+  """
   pollSyncEnvelopes(
     channelId: String!
     outboxAck: Int!
