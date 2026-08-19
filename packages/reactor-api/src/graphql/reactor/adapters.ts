@@ -13,6 +13,10 @@ import type {
   Operation,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
+import {
+  deserializeSignature,
+  serializeSignature,
+} from "@powerhousedao/shared/document-model";
 import { GraphQLError } from "graphql";
 import { MalformedStoredOperationError } from "../errors.js";
 import {
@@ -202,6 +206,37 @@ function validateActionStructure(obj: unknown): obj is Action {
 }
 
 /**
+ * Restores an action's signatures to the tuples verification reads.
+ *
+ * A signature is a five-param tuple, and GraphQL declares `signatures` as a
+ * list of strings, so a client joins each one for transport. The sync path
+ * already splits them on arrival; this is the same step for the mutation path,
+ * which had none - an action submitted there kept whatever shape it arrived in,
+ * so the same signature was persisted as a tuple or as one joined string
+ * depending on which door it came through.
+ *
+ * A tuple passes through untouched, so an in-process caller handing over real
+ * signatures is unaffected.
+ */
+function withDeserializedSignatures(action: Action): Action {
+  const signer = action.context?.signer;
+  if (!signer?.signatures || signer.signatures.length === 0) {
+    return action;
+  }
+
+  return {
+    ...action,
+    context: {
+      ...action.context,
+      signer: {
+        ...signer,
+        signatures: signer.signatures.map(deserializeSignature),
+      },
+    },
+  };
+}
+
+/**
  * Converts a JSONObject to an Action, validating basic structure
  */
 export function jsonObjectToAction(obj: unknown): Action {
@@ -211,7 +246,7 @@ export function jsonObjectToAction(obj: unknown): Action {
     );
   }
 
-  return obj as Action;
+  return withDeserializedSignatures(obj as Action);
 }
 
 /**
@@ -420,9 +455,7 @@ export function serializeOperationForGraphQL(
         ...operation.action.context,
         signer: {
           ...signer,
-          signatures: signer.signatures.map((sig) =>
-            Array.isArray(sig) ? sig.join(", ") : sig,
-          ),
+          signatures: signer.signatures.map(serializeSignature),
         },
       },
     },

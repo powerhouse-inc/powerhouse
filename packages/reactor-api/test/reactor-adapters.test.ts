@@ -424,6 +424,61 @@ describe("Reactor Adapters", () => {
     });
   });
 
+  describe("signatures arriving over the wire", () => {
+    const signed = (signatures: unknown[]) => ({
+      id: "act-1",
+      type: "SET_NAME",
+      scope: "global",
+      input: { name: "x" },
+      timestampUtcMs: "2026-01-01T00:00:00.000Z",
+      context: {
+        signer: {
+          user: { address: "0x1", networkId: "eip155", chainId: 1 },
+          app: { name: "Connect", key: "did:key:z6Mk" },
+          signatures,
+        },
+      },
+    });
+
+    it("restores a joined signature to the tuple verification reads", () => {
+      // GraphQL declares signatures as strings, so a client joins each tuple.
+      // Verification reads the params by position and would see one long param.
+      const [action] = adapters.validateActions([
+        signed(["1700000000, did:key:z6Mk, 0xhash, 0xprev, 0xsig"]),
+      ]);
+
+      expect(action.context?.signer?.signatures).toEqual([
+        ["1700000000", "did:key:z6Mk", "0xhash", "0xprev", "0xsig"],
+      ]);
+    });
+
+    it("leaves a signature that already arrived as a tuple alone", () => {
+      const tuple = ["a", "b", "c", "d", "e"];
+      const [action] = adapters.validateActions([signed([tuple])]);
+
+      expect(action.context?.signer?.signatures).toEqual([tuple]);
+    });
+
+    it("does not mutate the action it was handed", () => {
+      const incoming = signed(["a, b, c, d, e"]);
+      adapters.validateActions([incoming]);
+
+      expect(incoming.context.signer.signatures).toEqual(["a, b, c, d, e"]);
+    });
+
+    it("leaves an unsigned action untouched", () => {
+      const action = {
+        id: "act-1",
+        type: "SET_NAME",
+        scope: "global",
+        input: { name: "x" },
+        timestampUtcMs: "2026-01-01T00:00:00.000Z",
+      };
+
+      expect(adapters.validateActions([action])[0]).toBe(action);
+    });
+  });
+
   describe("validateActions", () => {
     it("should validate multiple actions successfully", () => {
       const actions = [
