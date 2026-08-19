@@ -1,11 +1,16 @@
 import { createClient } from "@powerhousedao/reactor-browser";
 import { GraphQLReactorClient } from "@powerhousedao/reactor-browser/graphql-client";
-import type { Action, PHDocument } from "@powerhousedao/shared/document-model";
+import type {
+  Action,
+  PHDocument,
+  Signature,
+} from "@powerhousedao/shared/document-model";
 import {
   setModelDescription,
   setModelName,
   setName,
 } from "@powerhousedao/shared/document-model";
+import { createSignatureVerifier } from "@renown/sdk/crypto";
 import {
   MemoryKeyStorage,
   RenownCryptoBuilder,
@@ -59,6 +64,25 @@ async function countMutations<T>(
   }
 }
 
+/**
+ * The action hash a signature commits to, as `RenownCryptoSigner.hashAction`
+ * computes it. Recomputed here from the operation the SERVER stored, so the
+ * assertion below proves the signature covers that exact action rather than
+ * whatever the client happened to hold.
+ */
+async function hashAction(action: Action): Promise<string> {
+  const payload = [
+    action.scope,
+    action.type,
+    JSON.stringify(action.input),
+  ].join("");
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(payload),
+  );
+  return Buffer.from(digest).toString("base64");
+}
+
 describe("GraphQLReactorClient signed batches e2e", () => {
   let signer: RenownCryptoSigner;
 
@@ -99,7 +123,11 @@ describe("GraphQLReactorClient signed batches e2e", () => {
     const before = await reactorClient.get<PHDocument>(documentId, {
       branch: "main",
     });
-    const startRevision = before.header.revision.global;
+    // The header types every scope as present; a freshly created document has
+    // no `global` revision at all until its first operation lands.
+    const revisions: Record<string, number | undefined> =
+      before.header.revision;
+    const startRevision = revisions.global ?? 0;
 
     const actions: Action[] = [
       setName({ name: "Signed Batch Document" }),
@@ -155,6 +183,60 @@ describe("GraphQLReactorClient signed batches e2e", () => {
     // action's prevOpHash is the hash the previous operation resulted in.
     expect(pushed[1].context?.prevOpHash).toBe(storedBatch[0].hash);
     expect(pushed[2].context?.prevOpHash).toBe(storedBatch[1].hash);
+
+    // And the signatures the server stored hold up cryptographically. The
+    // Switchboard does not verify them itself - nothing in the monorepo wires
+    // `withSignatureVerifier` - so this runs the real Renown verifier over what
+    // came back, which is what proves the batch is signed CORRECTLY and not
+    // merely signed.
+    const verify = createSignatureVerifier(true);
+    for (const operation of storedBatch) {
+      const signer = operation.action.context?.signer;
+      expect(signer).toBeDefined();
+      await expect(verify(operation, signer!.app.key)).resolves.toBe(true);
+    }
+
+    // Guard against a vacuous check: one flipped byte and the same verifier
+    // must say no.
+    const [head] = storedBatch;
+    const headSigner = head.action.context!.signer!;
+    const [timestamp, did, actionHash, prevOpHash, signatureHex] =
+      headSigner.signatures[0];
+    const tampered = {
+      ...head,
+      action: {
+        ...head.action,
+        context: {
+          signer: {
+            ...headSigner,
+            signatures: [
+              [
+                timestamp,
+                did,
+                actionHash,
+                prevOpHash,
+                `${signatureHex.slice(0, -1)}${signatureHex.endsWith("0") ? "1" : "0"}`,
+              ] as Signature,
+            ],
+          },
+        },
+      },
+    };
+    await expect(verify(tampered, headSigner.app.key)).resolves.toBe(false);
+
+    // What each signature actually committed to: this action, at this point in
+    // the chain. Without correct sequential stamping the third signature would
+    // attest to the first action's state hash while sitting at revision+2.
+    for (const [offset, operation] of storedBatch.entries()) {
+      const [, , signedActionHash, signedPrevOpHash] =
+        operation.action.context!.signer!.signatures[0];
+      expect(signedActionHash).toBe(await hashAction(operation.action));
+      expect(signedPrevOpHash).toBe(
+        offset === 0
+          ? (pushed[0].context?.prevOpHash as string)
+          : storedBatch[offset - 1].hash,
+      );
+    }
 
     const after = await reactorClient.get<PHDocument>(documentId, {
       branch: "main",
