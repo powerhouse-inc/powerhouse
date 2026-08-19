@@ -243,7 +243,28 @@ type ActionEvaluations {
 }
 
 # Input types for sync operations
+"""
+An action's context, as a caller submits it.
+
+Declares every field `ActionContext` carries, because an input object rejects a
+field it does not declare: an action stamped with the head it applies to - which
+is what a signing client sends - is refused outright if these are missing, and
+that refusal is a whole-request one, not a per-field one.
+
+`prevOpHash` and `prevOpIndex` are the scope head the action was composed
+against. They are recorded rather than enforced; a signature is verified from
+the params carried in its own tuple, which do not include them.
+"""
 input ActionContextInput {
+  """The index of the last operation in the scope the action applies to."""
+  prevOpIndex: Int
+
+  """The hash of the state the action applies to."""
+  prevOpHash: String
+
+  """Covers replay of an operation that would otherwise be a no-op."""
+  nonce: String
+
   signer: ReactorSignerInput
 }
 

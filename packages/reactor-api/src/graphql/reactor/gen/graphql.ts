@@ -67,7 +67,25 @@ export type ActionContext = {
   readonly signer?: Maybe<ReactorSigner>;
 };
 
+/**
+ * An action's context, as a caller submits it.
+ *
+ * Declares every field `ActionContext` carries, because an input object rejects a
+ * field it does not declare: an action stamped with the head it applies to - which
+ * is what a signing client sends - is refused outright if these are missing, and
+ * that refusal is a whole-request one, not a per-field one.
+ *
+ * `prevOpHash` and `prevOpIndex` are the scope head the action was composed
+ * against. They are recorded rather than enforced; a signature is verified from
+ * the params carried in its own tuple, which do not include them.
+ */
 export type ActionContextInput = {
+  /** Covers replay of an operation that would otherwise be a no-op. */
+  readonly nonce?: InputMaybe<Scalars["String"]["input"]>;
+  /** The hash of the state the action applies to. */
+  readonly prevOpHash?: InputMaybe<Scalars["String"]["input"]>;
+  /** The index of the last operation in the scope the action applies to. */
+  readonly prevOpIndex?: InputMaybe<Scalars["Int"]["input"]>;
   readonly signer?: InputMaybe<ReactorSignerInput>;
 };
 
@@ -2273,6 +2291,9 @@ export function ActionContextInputSchema(): z.ZodObject<
   Properties<ActionContextInput>
 > {
   return z.object({
+    nonce: z.string().nullish(),
+    prevOpHash: z.string().nullish(),
+    prevOpIndex: z.number().nullish(),
     signer: z.lazy(() => ReactorSignerInputSchema().nullish()),
   });
 }
