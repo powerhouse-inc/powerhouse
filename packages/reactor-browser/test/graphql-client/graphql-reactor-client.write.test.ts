@@ -8,6 +8,7 @@ import type { PHBaseState } from "@powerhousedao/shared/document-model";
 import {
   createReducer,
   hashDocumentStateForScope,
+  serializeSignature,
 } from "@powerhousedao/shared/document-model";
 import type { IRenown } from "@renown/sdk";
 import type { DocumentModelModule, PHDocument } from "document-model";
@@ -352,7 +353,11 @@ describe("GraphQLReactorClient.execute", () => {
       hashDocumentStateForScope({ state }, "global"),
     );
     expect(pushed.context?.prevOpIndex).toBe(6);
-    expect(pushed.context?.signer?.signatures).toEqual([signature]);
+    // Joined for transport: GraphQL declares signatures as a list of strings,
+    // not of lists, and the server splits them again on arrival.
+    expect(pushed.context?.signer?.signatures).toEqual([
+      serializeSignature(signature),
+    ]);
     expect(signAction).toHaveBeenCalledTimes(1);
 
     // The signer reads prevOpHash off the action, so stamping must come first.
@@ -394,7 +399,9 @@ describe("GraphQLReactorClient.execute", () => {
       "action-3",
     ]);
     for (const pushedAction of pushed) {
-      expect(pushedAction.context?.signer?.signatures).toEqual([signature]);
+      expect(pushedAction.context?.signer?.signatures).toEqual([
+        serializeSignature(signature),
+      ]);
     }
   });
 
@@ -550,7 +557,9 @@ describe("GraphQLReactorClient.execute", () => {
 
     expect(signAction).toHaveBeenCalledTimes(1);
     const pushed = runDocumentVariables(sdk).actions[0] as Action;
-    expect(pushed.context?.signer?.signatures).toEqual([signature]);
+    expect(pushed.context?.signer?.signatures).toEqual([
+      serializeSignature(signature),
+    ]);
   });
 
   it("signs with an explicitly supplied signer instead of renown", async () => {
