@@ -16,6 +16,7 @@ import {
   type SearchFilter,
   syncOperationErrorType,
   type SyncOperation,
+  type SyncScopeGate,
   type ViewFilter,
 } from "@powerhousedao/reactor";
 import type {
@@ -1114,6 +1115,56 @@ export async function touchChannel(
   }
 
   return { success: true, ackOrdinal: 0 };
+}
+
+/**
+ * The sync operations in `syncOps` this subject may not be served.
+ *
+ * A sync operation is one document, one branch and (from the outbox) one scope,
+ * so the answer is per entry rather than per operation: an entry is withheld
+ * whole or served whole, which is what keeps a scope's operation sequence
+ * unbroken for whoever does receive it. A dead letter can name several scopes,
+ * and is withheld only when the policy serves none of them -- the metadata
+ * scopes are readable by every holder, so in practice a dead letter naming one
+ * is always served.
+ *
+ * The policy is read once per document and branch, and the memo lives no longer
+ * than this call: a poll must not answer from a policy that changed between
+ * polls, since the widening case is exactly the one holding exists to serve.
+ *
+ * A read that fails for any reason other than the document being absent is
+ * allowed to propagate. The poll then fails, the puller retries, and nothing is
+ * served in the meantime -- which is the safe direction, and a visible one.
+ */
+export async function collectHeldSyncOperations(
+  syncOps: ReadonlyArray<SyncOperation>,
+  gate: SyncScopeGate,
+  subject: AuthSubject,
+  signal?: AbortSignal,
+): Promise<Set<string>> {
+  const held = new Set<string>();
+  const predicates = new Map<string, Promise<(scope: string) => boolean>>();
+
+  for (const syncOp of syncOps) {
+    const key = `${syncOp.documentId}\u0000${syncOp.branch}`;
+    let predicate = predicates.get(key);
+    if (!predicate) {
+      predicate = gate.scopePredicateById(
+        syncOp.documentId,
+        subject,
+        syncOp.branch,
+        signal,
+      );
+      predicates.set(key, predicate);
+    }
+
+    const readable = await predicate;
+    if (!syncOp.scopes.some((scope) => readable(scope))) {
+      held.add(syncOp.id);
+    }
+  }
+
+  return held;
 }
 
 /**
