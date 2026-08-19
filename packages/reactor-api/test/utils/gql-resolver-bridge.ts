@@ -1,11 +1,29 @@
-import type { ISyncManager } from "@powerhousedao/reactor";
+import type { ISyncManager, SyncScopeGate } from "@powerhousedao/reactor";
+import type { AuthSubject } from "@powerhousedao/shared/document-model";
 import {
+  collectHeldSyncOperations,
   touchChannel,
   pollSyncEnvelopes,
   pushSyncEnvelopes,
 } from "../../src/graphql/reactor/resolvers.js";
 
-type SyncManagerRegistry = Map<string, ISyncManager>;
+/**
+ * A reactor the bridge serves, and how it serves it. A bare sync manager is the
+ * ungated case every pre-existing test uses; the gated form adds the policy
+ * evaluation the poll resolver performs in the subgraph, under one fixed
+ * subject, since a bridge has no request context to take one from.
+ */
+export type BridgeTarget = {
+  syncManager: ISyncManager;
+  servingGate?: SyncScopeGate;
+  subject?: AuthSubject;
+};
+
+type SyncManagerRegistry = Map<string, ISyncManager | BridgeTarget>;
+
+function targetOf(entry: ISyncManager | BridgeTarget): BridgeTarget {
+  return "syncManager" in entry ? entry : { syncManager: entry };
+}
 
 type GraphQLRequest = {
   query: string;
@@ -24,19 +42,19 @@ function createMockResponse<T>(data: T): Response {
   });
 }
 
-function extractSyncManagerFromUrl(
+function extractTargetFromUrl(
   url: string,
   registry: SyncManagerRegistry,
-): ISyncManager {
+): BridgeTarget {
   const urlObj = new URL(url);
   const reactorName = urlObj.hostname.toLowerCase();
 
-  const syncManager = registry.get(reactorName);
-  if (!syncManager) {
+  const entry = registry.get(reactorName);
+  if (!entry) {
     throw new Error(`SyncManager not found for reactor: ${reactorName}`);
   }
 
-  return syncManager;
+  return targetOf(entry);
 }
 
 /**
@@ -84,7 +102,8 @@ export function createResolverBridge(
     }
 
     const body = JSON.parse(init.body as string) as GraphQLRequest;
-    const syncManager = extractSyncManagerFromUrl(url, syncManagers);
+    const target = extractTargetFromUrl(url, syncManagers);
+    const syncManager = target.syncManager;
 
     if (body.query.includes("pollSyncEnvelopes")) {
       const variables = body.variables as {
@@ -93,7 +112,26 @@ export function createResolverBridge(
         outboxLatest: number;
       };
 
-      const result = pollSyncEnvelopes(syncManager, variables);
+      // Resolved only for a gated target: an ungated poll must reach the
+      // resolver's own channel lookup, whose "Channel not found" is what a
+      // puller recovering from a deleted channel branches on.
+      let held = new Set<string>();
+      if (target.servingGate) {
+        const remote = syncManager.getById(variables.channelId);
+        held = await collectHeldSyncOperations(
+          [...remote.channel.outbox.items, ...remote.channel.deadLetter.items],
+          target.servingGate,
+          target.subject ?? {},
+          undefined,
+        );
+      }
+
+      const result = pollSyncEnvelopes(
+        syncManager,
+        variables,
+        new Set<string>(),
+        held,
+      );
 
       if (logEnabled && result.envelopes.length > 0) {
         console.log(
