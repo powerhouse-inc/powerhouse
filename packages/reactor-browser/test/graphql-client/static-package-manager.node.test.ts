@@ -6,6 +6,7 @@ import {
 import { describe, expect, it } from "vitest";
 import {
   packageFromDocumentModels,
+  resolveDocumentModelModule,
   StaticPackageManager,
 } from "../../src/graphql-client/static-package-manager.js";
 
@@ -109,6 +110,57 @@ describe("StaticPackageManager", () => {
     expect(manager.getPackageSource("some-package")).toBeNull();
     expect(manager.getPackageVersion("some-package")).toBeUndefined();
     expect(manager.getRegistryPackages()).toEqual([]);
+  });
+});
+
+describe("resolveDocumentModelModule", () => {
+  const modules = [todoV1, todoV2, unversioned];
+
+  it("returns the EXACT version when one is asked for", () => {
+    expect(resolveDocumentModelModule(modules, "test/todo", 1)).toBe(todoV1);
+    expect(resolveDocumentModelModule(modules, "test/todo", 2)).toBe(todoV2);
+  });
+
+  it("treats an absent module version as 1 when matching exactly", () => {
+    expect(resolveDocumentModelModule(modules, "test/legacy", 1)).toBe(
+      unversioned,
+    );
+  });
+
+  it("returns the LATEST version when none is asked for", () => {
+    expect(resolveDocumentModelModule(modules, "test/todo")).toBe(todoV2);
+  });
+
+  it("never falls back to another version when an exact one is missing", () => {
+    // The whole point of the exact rule: v3 is absent, so this must throw
+    // rather than silently sign with the v2 reducer.
+    expect(() => resolveDocumentModelModule(modules, "test/todo", 3)).toThrow(
+      "Unknown document model version: test/todo v3",
+    );
+  });
+
+  it("names the versions it does have when the exact one is missing", () => {
+    expect(() => resolveDocumentModelModule(modules, "test/todo", 3)).toThrow(
+      "available: 1, 2",
+    );
+  });
+
+  it("reports an unknown type for a versioned lookup too", () => {
+    expect(() =>
+      resolveDocumentModelModule(modules, "test/unknown", 1),
+    ).toThrow("Unknown document model version: test/unknown v1");
+  });
+
+  it("reports an unknown type for an unversioned lookup", () => {
+    expect(() => resolveDocumentModelModule(modules, "test/unknown")).toThrow(
+      "Unknown document type: test/unknown",
+    );
+  });
+
+  it("resolves nothing from an empty module list", () => {
+    expect(() => resolveDocumentModelModule([], "test/todo")).toThrow(
+      "Unknown document type: test/todo",
+    );
   });
 });
 

@@ -99,8 +99,16 @@ export type GraphQLReactorProviderProps = {
    * resolution happens before tree-shaking, so a root import drags processor
    * (server-side) code into the browser bundle and can break the build.
    *
+   * They are also what lets the client SIGN a batch of two or more actions:
+   * signing the second action needs the state the first one leaves behind, and
+   * only the document's own reducer can predict it, so a batch is signable only
+   * while the module matching the document's type and exact version is here.
+   * Single actions are signed without any of this.
+   *
    * Optional on purpose: a light app may equally ship NO modules and let the
    * Switchboard own the model entirely - both modes are supported.
+   *
+   * Like `url`, this is read once, when the client is built.
    */
   documentModels?: readonly DocumentModelModule<any>[];
 
@@ -115,9 +123,11 @@ export type GraphQLReactorProviderProps = {
  *
  * It fills the document slots, plus `window.ph.vetraPackageManager` when
  * `documentModels` is given (a fixed {@link StaticPackageManager}, which makes
- * the document-model hooks work). `window.ph.reactorClientModule` always stays
- * empty, so full-reactor surfaces (drives, jobs, editor auto-discovery) find
- * nothing - an app below this provider renders components it imports itself.
+ * the document-model hooks work). The same modules go to the client itself, so
+ * a dispatch of two or more actions is signed rather than refused.
+ * `window.ph.reactorClientModule` always stays empty, so full-reactor surfaces
+ * (drives, jobs, editor auto-discovery) find nothing - an app below this
+ * provider renders components it imports itself.
  *
  * The client is built on the client only: on the server the slots stay empty
  * and the hooks report their normal loading states. The props are read once,
@@ -144,6 +154,7 @@ export function GraphQLReactorProvider({
           tokenProvider,
           subscriptionsUrl,
           realtime,
+          documentModels,
         }),
   );
 
