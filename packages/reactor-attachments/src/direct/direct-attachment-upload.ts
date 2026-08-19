@@ -5,6 +5,7 @@ import type { AttachmentRef } from "@powerhousedao/reactor";
 import type { IAttachmentUpload, IReservationStore } from "../interfaces.js";
 import type {
   AttachmentHeader,
+  AttachmentSendOptions,
   AttachmentUploadResult,
   Reservation,
 } from "../types.js";
@@ -55,6 +56,7 @@ export class DirectAttachmentUpload implements IAttachmentUpload {
 
   async send(
     data: ReadableStream<Uint8Array>,
+    options?: AttachmentSendOptions,
   ): Promise<AttachmentUploadResult> {
     if (
       this.reservation.clientHash != null &&
@@ -71,10 +73,16 @@ export class DirectAttachmentUpload implements IAttachmentUpload {
       this.reservation.clientHash != null
         ? (this.reservation.sizeBytes ?? undefined)
         : undefined;
+    // The signal is honoured for the streaming write, the only part of this
+    // send that can run long: a cancel there rejects and commits nothing.
     const { tempPath, hash, sizeBytes } = await streamHashAndWrite(
       this.basePath,
       data,
-      { maxBytes: this.maxBytes, declaredSizeBytes },
+      {
+        maxBytes: this.maxBytes,
+        declaredSizeBytes,
+        ...(options?.signal ? { signal: options.signal } : {}),
+      },
     );
 
     // Hash verification: if the client claimed a hash, compare before any

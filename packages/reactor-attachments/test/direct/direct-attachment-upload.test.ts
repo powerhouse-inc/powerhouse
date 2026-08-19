@@ -197,6 +197,81 @@ describe("DirectAttachmentUpload", () => {
       );
     });
 
+    describe("with a caller signal", () => {
+      /** Nothing may be left behind in the staging directory. */
+      async function tempLeftovers(): Promise<string[]> {
+        return readdir(join(testStoragePath, ".tmp")).catch(
+          () => [] as string[],
+        );
+      }
+
+      it("rejects with AbortError and writes nothing when already aborted", async () => {
+        const controller = new AbortController();
+        controller.abort();
+
+        await expect(
+          upload.send(streamFromString(TEST_CONTENT), {
+            signal: controller.signal,
+          }),
+        ).rejects.toMatchObject({ name: "AbortError" });
+
+        expect(
+          await attachmentBytesExist(storagePath(testStoragePath, TEST_HASH)),
+        ).toBe(false);
+        expect(await tempLeftovers()).toEqual([]);
+      });
+
+      it("stops a transfer in flight, leaving no bytes and no record", async () => {
+        const controller = new AbortController();
+        let chunks = 0;
+        // Never closes: only the abort can end this transfer, which is what a
+        // user cancelling a large upload looks like from here.
+        const endless = new ReadableStream<Uint8Array>({
+          pull(streamController) {
+            chunks += 1;
+            if (chunks === 3) controller.abort();
+            streamController.enqueue(new Uint8Array(4096));
+          },
+        });
+
+        await expect(
+          upload.send(endless, { signal: controller.signal }),
+        ).rejects.toMatchObject({ name: "AbortError" });
+
+        const rows = await db.selectFrom("attachment").selectAll().execute();
+        expect(rows).toEqual([]);
+        expect(await tempLeftovers()).toEqual([]);
+        // The reservation survives, so the caller can retry.
+        await expect(
+          reservationStore.get(reservationId),
+        ).resolves.toBeDefined();
+      });
+
+      it("stops a transfer whose source has stalled", async () => {
+        const controller = new AbortController();
+        // One chunk, then a read that never resolves -- a dropped connection.
+        // Only cancelling the source can end this; a signal check between
+        // chunks would wait forever for a chunk that never comes.
+        const stalled = new ReadableStream<Uint8Array>({
+          start(streamController) {
+            streamController.enqueue(new Uint8Array(2048));
+          },
+          pull() {
+            return new Promise<void>(() => {});
+          },
+        });
+
+        const pending = upload.send(stalled, { signal: controller.signal });
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        controller.abort();
+
+        await expect(pending).rejects.toMatchObject({ name: "AbortError" });
+        const rows = await db.selectFrom("attachment").selectAll().execute();
+        expect(rows).toEqual([]);
+        expect(await tempLeftovers()).toEqual([]);
+      });
+    });
+
     it("handles multi-chunk stream", async () => {
       const chunk1 = new TextEncoder().encode("hello ");
       const chunk2 = new TextEncoder().encode("world");
