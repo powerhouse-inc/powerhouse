@@ -276,7 +276,10 @@ export type UseAttachmentUploadReturn = {
   upload: (results: PreprocessResult) => Promise<void>;
   /** Aborts the transfer in flight; the upload promise rejects. */
   cancel: () => void;
-  /** Returns to idle, discarding the previous result and error. */
+  /**
+   * Returns to idle, discarding the previous result and error. Aborts a
+   * transfer still in flight, so the `upload` promise rejects.
+   */
   reset: () => void;
   stage: AttachmentUploadStage;
   progress: AttachmentProgressState;
@@ -395,6 +398,11 @@ export function useAttachmentUpload(): UseAttachmentUploadReturn {
 
   const reset = useCallback(() => {
     runIdRef.current += 1;
+    // Abort before dropping the handle. Without this, a reset during a large
+    // upload snaps the UI to idle while the transfer keeps streaming and
+    // holding its reservation -- and with the only controller discarded,
+    // nothing can ever stop it.
+    abortRef.current?.abort();
     abortRef.current = undefined;
     setState(IDLE_UPLOAD);
   }, []);

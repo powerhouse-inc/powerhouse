@@ -344,6 +344,46 @@ describe("useAttachmentUpload", () => {
     expect(result.current.progress.percent).toBe(0);
   });
 
+  it("aborts a transfer in flight when reset mid-upload", async () => {
+    let observed: AbortSignal | undefined;
+    const gate = deferred<AttachmentUploadResult>();
+    install(
+      makeService({
+        send: (options) => {
+          observed = options?.signal;
+          options?.signal?.addEventListener("abort", () =>
+            gate.reject(new DOMException("aborted", "AbortError")),
+          );
+          return gate.promise;
+        },
+      }),
+    );
+    const { result } = renderHook(() => useAttachmentUpload());
+    const preprocessed = await act(() =>
+      result.current.preprocess(new Blob([CONTENT])),
+    );
+
+    let uploaded!: Promise<void>;
+    act(() => {
+      uploaded = result.current.upload(preprocessed);
+    });
+    await vi.waitFor(() => expect(observed).toBeDefined());
+
+    act(() => result.current.reset());
+
+    // Reset drops the only handle on the controller, so an upload it leaves
+    // running can never be stopped afterwards: it keeps streaming bytes and
+    // holding its reservation with the UI already back at idle. Waiting on the
+    // signal rather than the promise keeps the failure a fast assertion --
+    // an unaborted upload never settles at all.
+    await vi.waitFor(() => expect(observed?.aborted).toBe(true));
+    await act(async () => {
+      await uploaded.catch(() => undefined);
+    });
+
+    expect(result.current.stage).toBe("idle");
+  });
+
   it("ignores a superseded upload's late progress tick", async () => {
     const first = deferred<AttachmentUploadResult>();
     const second = deferred<AttachmentUploadResult>();

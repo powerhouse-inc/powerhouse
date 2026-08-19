@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-08-19T15:15:38.074Z
+> Generated: 2026-08-19T15:17:10.005Z
 > Total Documents: 109
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -6047,7 +6047,7 @@ In render, read the lifecycle straight off the hook:
 - `result` — the `AttachmentUploadResult` once the upload is done
 - `error` — the upload failure, if any. Progress is left where it stopped rather than reset to zero.
 - `cancel()` — aborts the transfer in flight; the `upload` promise rejects with an `AbortError`
-- `reset()` — returns the hook to idle, discarding the previous result and error
+- `reset()` — returns the hook to idle, discarding the previous result and error. A transfer still in flight is aborted, so it cannot keep streaming behind an idle UI
 
 `preprocess` and `upload` are stable callbacks. `upload(results)` calls `client.upload({ preprocessed: results })`, so progress, dedup reporting and cancellation are identical to the non-React path. The two-call split is deliberate: the ref must reach the document before the bytes are committed. The ref only exists after `preprocess` resolves, so submission is async — you cannot produce a ref inside the synchronous action input.
 
