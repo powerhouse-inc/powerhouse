@@ -270,6 +270,7 @@ export {
   readDecisionModel,
   SeededStateReader,
   type IReadGate,
+  type ReadGateOptions,
 } from "./src/decision/read-gate.js";
 export {
   firstOutOfOrderPair,

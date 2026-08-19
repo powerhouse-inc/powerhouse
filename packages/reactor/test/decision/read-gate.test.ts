@@ -825,3 +825,142 @@ describe("the always-readable scopes", () => {
     expect([...ALWAYS_READABLE_SCOPES].sort()).toEqual(["auth", "document"]);
   });
 });
+
+/**
+ * A host that closes by default. The distinction that matters is between "no
+ * policy has been written" and "a policy was written and it allows this": the
+ * first is the one this option withholds, and the second must stay exactly as
+ * it reads, or the option would be a second policy layered over the first.
+ */
+describe("withholding an uninitialized policy", () => {
+  const GROUP = "grp-closed";
+  const REFERENCER = "stmt-closed";
+
+  function closedGate(
+    view: IDocumentView,
+    index?: IOperationIndex,
+  ): ModelReadGate {
+    const resolved = flags(allFlags);
+    const model = readDecisionModel(resolved, emptyRegistry);
+    if (!model) {
+      throw new Error("expected a model");
+    }
+    return new ModelReadGate(
+      model,
+      view,
+      resolved.authGroups,
+      index,
+      undefined,
+      {
+        withholdUninitialized: true,
+      },
+    );
+  }
+
+  it("withholds the domain scopes of a document nobody has policied", async () => {
+    const readable = await closedGate(mockView()).scopePredicate(
+      doc(),
+      { address: OTHER },
+      "main",
+    );
+
+    expect(readable("global")).toBe(false);
+    expect(readable("local")).toBe(false);
+  });
+
+  it("still serves the metadata, so a replica can see there is no policy", async () => {
+    const readable = await closedGate(mockView()).scopePredicate(
+      doc(),
+      { address: OTHER },
+      "main",
+    );
+
+    expect(readable("auth")).toBe(true);
+    expect(readable("document")).toBe(true);
+  });
+
+  it("withholds a legacy empty auth scope the same way", async () => {
+    const legacy = doc();
+    (legacy.state as Record<string, unknown>).auth = {};
+
+    const readable = await closedGate(mockView()).scopePredicate(
+      legacy,
+      { address: OTHER },
+      "main",
+    );
+
+    expect(readable("global")).toBe(false);
+    expect(readable("auth")).toBe(true);
+  });
+
+  it("leaves a written policy's allow exactly as written", async () => {
+    const readable = await closedGate(mockView()).scopePredicate(
+      doc({ auth: policy([readGlobal({ address: RTO })]) }),
+      { address: RTO },
+      "main",
+    );
+
+    expect(readable("global")).toBe(true);
+  });
+
+  it("leaves a written policy's denial exactly as written", async () => {
+    const readable = await closedGate(mockView()).scopePredicate(
+      doc({ auth: policy([readGlobal({ address: RTO })]) }),
+      { address: OTHER },
+      "main",
+    );
+
+    expect(readable("global")).toBe(false);
+  });
+
+  /**
+   * The audience of a real policy still needs the roster of the group that
+   * policy names, whether or not the group carries a policy of its own. This is
+   * why the option lives inside the gate: a wrapper around it would withhold the
+   * group before the referencer was ever consulted.
+   */
+  it("serves an unpoliced group to the audience of a policy that names it", async () => {
+    const view = mockView({
+      [REFERENCER]: doc({
+        id: REFERENCER,
+        auth: policy([readGlobal({ address: MEMBER })]),
+      }),
+    });
+    const index = {
+      getGroupReferencers: vi.fn().mockResolvedValue([REFERENCER]),
+    } as unknown as IOperationIndex;
+
+    const readable = await closedGate(view, index).scopePredicate(
+      doc({
+        id: GROUP,
+        documentType: groupDocumentType,
+        auth: { version: 0, grants: [] },
+        global: { members: [MEMBER] },
+      }),
+      { address: MEMBER },
+      "main",
+    );
+
+    expect(readable("global")).toBe(true);
+  });
+
+  it("withholds an unpoliced group whose referencer is unpoliced too", async () => {
+    const view = mockView({ [REFERENCER]: doc({ id: REFERENCER }) });
+    const index = {
+      getGroupReferencers: vi.fn().mockResolvedValue([REFERENCER]),
+    } as unknown as IOperationIndex;
+
+    const readable = await closedGate(view, index).scopePredicate(
+      doc({
+        id: GROUP,
+        documentType: groupDocumentType,
+        auth: { version: 0, grants: [] },
+        global: { members: [MEMBER] },
+      }),
+      { address: MEMBER },
+      "main",
+    );
+
+    expect(readable("global")).toBe(false);
+  });
+});
