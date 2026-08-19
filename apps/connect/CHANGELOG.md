@@ -1,3 +1,14 @@
+## 6.2.2-dev.52 (2026-08-19)
+
+### 🚀 Features
+
+- **connect:** use the XHR upload transport ([cf4896951](https://github.com/powerhouse-inc/powerhouse/commit/cf4896951))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5
+
 ## 6.2.2-dev.51 (2026-08-19)
 
 ### 🚀 Features

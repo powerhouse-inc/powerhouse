@@ -1,3 +1,14 @@
+## 6.2.2-dev.52 (2026-08-19)
+
+### 🚀 Features
+
+- **renown:** let issueCredential place the document under a parent ([b80166872](https://github.com/powerhouse-inc/powerhouse/commit/b80166872))
+- **switchboard:** verify renown credentials against the reactor's own read model ([9e7efe532](https://github.com/powerhouse-inc/powerhouse/commit/9e7efe532))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.2-dev.51 (2026-08-19)
 
 This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
