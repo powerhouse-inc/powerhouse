@@ -63,8 +63,13 @@ export type ProgressGate = (progress: AttachmentProgress) => boolean;
  *
  * - a determinate tick commits only when the whole percent changes, capping
  *   commits at ~101 per transfer no matter how many byte events arrive;
- * - an indeterminate tick has no percent to change, so it falls back to a time
- *   budget — otherwise a byte counter with no denominator would never update;
+ * - a tick with no position — indeterminate, or determinate with no
+ *   denominator — has no percent to change, so it falls back to a time
+ *   budget; otherwise a byte counter with no denominator would never update;
+ * - gaining or losing a position always commits, since the UI switches between
+ *   a spinner and a bar. Stage entry is indeterminate at 0%, so without this
+ *   the first byte event of a stage reads as "still 0%" and is dropped, and a
+ *   50 MB upload sits on the spinner until it crosses 1%;
  * - a stage change always commits, because the label changed.
  *
  * Uses `Date.now()` so tests can drive it with fake timers.
@@ -78,18 +83,24 @@ export function createProgressGate(options?: {
 
   let lastStage: string | undefined;
   let lastPercent = -1;
+  let lastIndeterminate: boolean | undefined;
+  let lastTotalKnown: boolean | undefined;
   let lastCommitAt = Number.NEGATIVE_INFINITY;
 
   return (progress) => {
     const commit = () => {
       lastStage = progress.stage;
       lastPercent = Math.floor(toPercent(progress));
+      lastIndeterminate = progress.indeterminate;
+      lastTotalKnown = progress.total !== undefined;
       lastCommitAt = now();
       return true;
     };
 
     if (progress.stage !== lastStage) return commit();
-    if (progress.indeterminate) {
+    if (progress.indeterminate !== lastIndeterminate) return commit();
+    if ((progress.total !== undefined) !== lastTotalKnown) return commit();
+    if (progress.indeterminate || progress.total === undefined) {
       return now() - lastCommitAt >= budget ? commit() : false;
     }
     return Math.floor(toPercent(progress)) !== lastPercent ? commit() : false;
