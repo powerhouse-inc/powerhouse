@@ -1,8 +1,8 @@
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
-import type {
-  Action,
-  Operation,
-  Signature,
+import type { Action, Operation } from "@powerhousedao/shared/document-model";
+import {
+  deserializeSignature,
+  serializeSignature,
 } from "@powerhousedao/shared/document-model";
 import { SyncOperation } from "../sync-operation.js";
 import { SyncOperationStatus, type SyncEnvelope } from "../types.js";
@@ -38,9 +38,7 @@ export function serializeAction(action: Action): unknown {
       ...action.context,
       signer: {
         ...signer,
-        signatures: signer.signatures.map((sig: Signature | string) =>
-          Array.isArray(sig) ? sig.join(", ") : sig,
-        ),
+        signatures: signer.signatures.map(serializeSignature),
       },
     },
   };
@@ -84,19 +82,6 @@ export function serializeEnvelope(envelope: SyncEnvelope): unknown {
     key: envelope.key,
     dependsOn: envelope.dependsOn,
   };
-}
-
-/**
- * Deserializes a signature from a comma-separated string back to a tuple.
- *
- * GraphQL serializes Signature tuples as comma-separated strings for transport.
- * This function converts them back to the expected [string, string, string, string, string] format.
- */
-function deserializeSignature(sig: Signature | string): Signature {
-  if (Array.isArray(sig)) {
-    return sig;
-  }
-  return sig.split(", ") as Signature;
 }
 
 /**

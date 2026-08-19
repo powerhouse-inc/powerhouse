@@ -33,6 +33,7 @@ export default defineConfig({
       "connect/pwa-manifest.test.ts",
       "document-drive/**/*.test.ts",
       "document-model/mock.test.ts",
+      "document-model/signature-transport.test.ts",
       "registry/manifest-slim.test.ts",
     ],
     exclude: ["**/node_modules/**", "**/dist/**"],
