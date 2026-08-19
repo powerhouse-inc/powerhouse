@@ -137,6 +137,9 @@ export type ReactorFeatureFlags = {
   authConditions: boolean;
 };
 
+/** How long a deferred job waits for its document before it fails. */
+export const DEFAULT_DEFERRED_JOB_TTL_MS = 30_000;
+
 /**
  * Configuration options for the job executor
  */
@@ -152,6 +155,10 @@ export type JobExecutorConfig = {
 
   /** Maximum time in milliseconds a job can run before being considered timed out */
   jobTimeoutMs?: number;
+
+  /** How long a job whose document is missing waits for it before failing.
+   *  Unbounded deferral never resolves the caller awaiting the job. */
+  deferredJobTtlMs?: number;
 
   /** Base delay in milliseconds for exponential backoff retries */
   retryBaseDelayMs?: number;

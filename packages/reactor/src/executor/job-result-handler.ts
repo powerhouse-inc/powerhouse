@@ -116,17 +116,31 @@ export class JobResultHandler implements IJobResultHandler {
       }
     }
 
-    // DocumentNotFoundError: defer the job instead of failing immediately.
-    // A CREATE_DOCUMENT job may arrive later and unblock it.
-    if (result.error && DocumentNotFoundError.isError(result.error)) {
+    // DocumentNotFoundError on a load job: the operations came from a remote and
+    // may have arrived ahead of the ones that create the document, so the job is
+    // held for a CREATE_DOCUMENT that could still land. Held against the id the
+    // error names, which is the document a flush has to create - not necessarily
+    // the job's own, since a relationship reads its source.
+    //
+    // A mutation is not held. It names its document itself, and nothing in
+    // flight will create one the caller got wrong, so holding it only delays the
+    // refusal until the deferral deadline. It falls through to the deterministic
+    // failures below.
+    if (
+      result.error &&
+      DocumentNotFoundError.isError(result.error) &&
+      handle.job.kind === "load"
+    ) {
       handle.defer();
-      callbacks.deferJob(handle.job.documentId, handle.job);
+      callbacks.deferJob(result.error.documentId, handle.job);
       return;
     }
 
     if (
       result.error &&
       (DocumentDeletedError.isError(result.error) ||
+        // A document that is not there will not appear because a load ran again.
+        DocumentNotFoundError.isError(result.error) ||
         AuthorizationDeniedError.isError(result.error) ||
         // All deterministic, so retrying only re-runs the load to fail the same.
         AuthTimestampNotMonotonicError.isError(result.error) ||

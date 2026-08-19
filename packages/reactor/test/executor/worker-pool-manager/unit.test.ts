@@ -583,6 +583,7 @@ describe("WorkerPoolJobExecutorManager", () => {
       await queue.enqueue(
         createTestJob({
           id: "set-name-job",
+          kind: "load",
           documentId: "doc-x",
           scope: "global",
           retryCount: 0,
@@ -594,6 +595,7 @@ describe("WorkerPoolJobExecutorManager", () => {
       await queue.enqueue(
         createTestJob({
           id: "create-job",
+          kind: "load",
           documentId: "doc-x",
           scope: "document",
           actions: [
@@ -637,6 +639,7 @@ describe("WorkerPoolJobExecutorManager", () => {
       await queue.enqueue(
         createTestJob({
           id: "deferred-job",
+          kind: "load",
           documentId: "missing-doc",
           retryCount: 0,
           maxRetries: 3,

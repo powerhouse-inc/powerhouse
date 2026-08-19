@@ -16,19 +16,20 @@ import type {
 } from "../queue/types.js";
 import { QueueEventTypes } from "../queue/types.js";
 import type { IDocumentModelResolver } from "../registry/document-model-resolver.js";
-import { DocumentNotFoundError } from "../shared/errors.js";
 import type {
   IExecutorWorker,
   IJobExecutor,
   IJobExecutorManager,
   WorkerExecutionOutcome,
 } from "./interfaces.js";
+import { DeferredJobs } from "./deferred-jobs.js";
 import {
   JobResultHandler,
   toErrorInfo,
   type IJobResultHandler,
 } from "./job-result-handler.js";
 import {
+  DEFAULT_DEFERRED_JOB_TTL_MS,
   JobExecutorEventTypes,
   type ExecutorManagerStatus,
   type JobCompletedEvent,
@@ -90,7 +91,7 @@ export class WorkerPoolJobExecutorManager implements IJobExecutorManager {
   private activeJobs = 0;
   private totalJobsProcessed = 0;
   private unsubscribe?: () => void;
-  private deferredJobs = new Map<string, Job[]>();
+  private deferredJobs: DeferredJobs;
   private resultHandler: IJobResultHandler;
   private jobTimeoutMs: number;
 
@@ -103,8 +104,17 @@ export class WorkerPoolJobExecutorManager implements IJobExecutorManager {
     private resolver: IDocumentModelResolver,
     private collectionMembershipCache: ICollectionMembershipCache,
     jobTimeoutMs: number = 30_000,
+    deferredJobTtlMs: number = DEFAULT_DEFERRED_JOB_TTL_MS,
   ) {
     this.jobTimeoutMs = jobTimeoutMs;
+    this.deferredJobs = new DeferredJobs(
+      queue,
+      jobTracker,
+      eventBus,
+      logger,
+      deferredJobTtlMs,
+      () => this.tryDispatchAll(),
+    );
     this.resultHandler = new JobResultHandler(
       queue,
       jobTracker,
@@ -154,22 +164,7 @@ export class WorkerPoolJobExecutorManager implements IJobExecutorManager {
       }
     }
 
-    for (const [, jobs] of this.deferredJobs) {
-      for (const job of jobs) {
-        const errorInfo = toErrorInfo(
-          new DocumentNotFoundError(job.documentId),
-        );
-        this.jobTracker.markFailed(job.id, errorInfo, job);
-        this.eventBus
-          .emit(ReactorEventTypes.JOB_FAILED, {
-            jobId: job.id,
-            error: new DocumentNotFoundError(job.documentId),
-            job,
-          })
-          .catch(() => {});
-      }
-    }
-    this.deferredJobs.clear();
+    this.deferredJobs.failAll();
 
     await Promise.all(
       this.workers.map((w) =>
@@ -360,12 +355,8 @@ export class WorkerPoolJobExecutorManager implements IJobExecutorManager {
     }
 
     await this.resultHandler.handleResult(handle, outcome.result, {
-      deferJob: (documentId, job) => {
-        const existing = this.deferredJobs.get(documentId) ?? [];
-        existing.push(job);
-        this.deferredJobs.set(documentId, existing);
-      },
-      flushDeferredFor: (documentId) => this.flushDeferredJobs(documentId),
+      deferJob: (documentId, job) => this.deferredJobs.add(documentId, job),
+      flushDeferredFor: (documentId) => this.deferredJobs.flush(documentId),
     });
 
     this.activeJobs--;
@@ -496,22 +487,6 @@ export class WorkerPoolJobExecutorManager implements IJobExecutorManager {
 
     this.workers[deadIndex] = fresh;
     await this.tryDispatchFor(fresh);
-  }
-
-  private async flushDeferredJobs(documentId: string): Promise<void> {
-    const jobs = this.deferredJobs.get(documentId);
-    if (!jobs || jobs.length === 0) {
-      return;
-    }
-    this.deferredJobs.delete(documentId);
-
-    for (const job of jobs) {
-      try {
-        await this.queue.enqueue(job);
-      } catch (error) {
-        this.logger.error("Error re-enqueuing deferred job: @Error", error);
-      }
-    }
   }
 }
 
