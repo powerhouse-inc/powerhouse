@@ -8,6 +8,7 @@ import type {
   AttachmentDownloadTargetOptions,
   AttachmentMetadata,
   AttachmentResponse,
+  AttachmentSendOptions,
   AttachmentTransportConfig,
   AttachmentUploadResult,
   AttachmentUploadTarget,
@@ -138,8 +139,22 @@ export interface IAttachmentUpload {
    *   so the client can retry with the correct bytes.
    *
    * @returns The content hash, ref, and header for the uploaded attachment.
+   *
+   * `options.onProgress` reports bytes handed to the transport, when the
+   * transport can observe them at all -- some cannot, so it may never fire,
+   * and an implementation is free to ignore it.
+   *
+   * `options.signal` aborts the transfer in flight, and any implementation
+   * that moves bytes must honour it: reject with an `AbortError` and commit
+   * nothing. `useAttachmentUpload().cancel()` promises exactly that, so an
+   * implementation that quietly ran to completion would report a cancelled
+   * upload as done. A handle that transfers nothing itself (the S3 handle,
+   * which requires its presigned target) has nothing to abort.
    */
-  send(data: ReadableStream<Uint8Array>): Promise<AttachmentUploadResult>;
+  send(
+    data: ReadableStream<Uint8Array>,
+    options?: AttachmentSendOptions,
+  ): Promise<AttachmentUploadResult>;
 }
 
 /**

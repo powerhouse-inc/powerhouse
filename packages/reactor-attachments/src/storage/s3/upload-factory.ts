@@ -26,6 +26,9 @@ class S3AttachmentUpload implements IAttachmentUpload {
     this.uploadTarget = reservation.uploadTarget;
   }
 
+  // No `options`: this handle never transfers bytes, so there is no progress
+  // to report and nothing for a signal to abort. Callers must use the
+  // presigned target, which honours both.
   async send(
     data: ReadableStream<Uint8Array>,
   ): Promise<AttachmentUploadResult> {

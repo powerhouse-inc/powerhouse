@@ -120,6 +120,19 @@ export type AttachmentUploadResult = {
 };
 
 /**
+ * Options for one byte transfer through an upload handle.
+ *
+ * `onProgress` is best-effort: a transport that cannot observe its own
+ * upload bytes (notably `fetch`, which exposes no upload-side progress)
+ * simply never calls it. Absence is the signal — there is no capability
+ * negotiation.
+ */
+export type AttachmentSendOptions = {
+  onProgress?: (loaded: number, total?: number) => void;
+  signal?: AbortSignal;
+};
+
+/**
  * Options form of IAttachmentService.get. `documentId` anchors the download
  * authorization for remote readers; it never becomes part of the ref or any
  * global configuration.

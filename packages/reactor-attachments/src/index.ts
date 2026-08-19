@@ -31,6 +31,7 @@ export type {
   AttachmentUploadTarget,
   AttachmentMetadata,
   AttachmentResponse,
+  AttachmentSendOptions,
   AttachmentStatus,
   AttachmentTransportConfig,
   AttachmentUploadResult,
@@ -69,7 +70,13 @@ export {
   RemoteAttachmentUploadFactory,
   RemoteAttachmentStore,
   createRemoteAttachmentService,
+  createFetchUploadTransport,
+  createXhrUploadTransport,
   type SwitchboardClientConfig,
+  type AttachmentUploadRequest,
+  type AttachmentUploadResponse,
+  type AttachmentUploadTransport,
+  type XhrUploadTransportOptions,
 } from "./switchboard/index.js";
 export { NullAttachmentTransport } from "./null-attachment-transport.js";
 export { AttachmentBuilder } from "./attachment-builder.js";

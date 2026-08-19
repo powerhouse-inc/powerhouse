@@ -124,13 +124,23 @@ export function streamFromBuffer(data: Uint8Array): ReadableStream<Uint8Array> {
  * stream. At stream end, if the count does not equal the declaration,
  * `SizeMismatch` is thrown. Both the `maxBytes` and `declaredSizeBytes`
  * checks apply; `maxBytes` is evaluated first on each chunk.
+ *
+ * If `signal` aborts, the temp file is removed and the signal's reason is
+ * thrown. Nothing partial is ever returned, so a cancelled transfer cannot be
+ * committed.
  */
 export async function streamHashAndWrite(
   basePath: string,
   data: ReadableStream<Uint8Array>,
-  options: { maxBytes?: number; declaredSizeBytes?: number } = {},
+  options: {
+    maxBytes?: number;
+    declaredSizeBytes?: number;
+    signal?: AbortSignal;
+  } = {},
 ): Promise<{ tempPath: string; hash: string; sizeBytes: number }> {
-  const { maxBytes, declaredSizeBytes } = options;
+  const { maxBytes, declaredSizeBytes, signal } = options;
+  // Before the temp file exists: an already-aborted transfer leaves no trace.
+  signal?.throwIfAborted();
   const tmpDir = join(basePath, ".tmp");
   await mkdir(tmpDir, { recursive: true });
   const tempPath = join(tmpDir, randomUUID());
@@ -138,11 +148,20 @@ export async function streamHashAndWrite(
   const hasher = createHash("sha256");
   const writer = createWriteStream(tempPath);
   const reader = data.getReader();
+  // Cancelling the source is what makes an abort observable while a read is
+  // stalled -- it resolves the pending read as `done`. The post-loop
+  // `throwIfAborted` is what stops that resolution being mistaken for the end
+  // of the stream, which would commit a truncated attachment.
+  const onAbort = () => {
+    reader.cancel(signal?.reason).catch(() => {});
+  };
+  signal?.addEventListener("abort", onAbort, { once: true });
   let sizeBytes = 0;
   let caughtError: Error | undefined;
 
   try {
     for (;;) {
+      signal?.throwIfAborted();
       const { done, value } = await reader.read();
       if (done) break;
       sizeBytes += value.byteLength;
@@ -169,9 +188,11 @@ export async function streamHashAndWrite(
         });
       }
     }
+    signal?.throwIfAborted();
   } catch (err) {
     caughtError = err instanceof Error ? err : new Error(String(err));
   } finally {
+    signal?.removeEventListener("abort", onAbort);
     reader.releaseLock();
   }
 

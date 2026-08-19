@@ -1,5 +1,9 @@
 import type { AttachmentHash, AttachmentRef } from "@powerhousedao/reactor";
-import { runWithConcurrency, type BatchItemResult } from "./concurrency.js";
+import {
+  runWithConcurrency,
+  type BatchItemResult,
+  type RunWithConcurrencyOptions,
+} from "./concurrency.js";
 import { AttachmentAlreadyExists } from "./errors.js";
 export type { AttachmentTransferStage } from "./errors.js";
 export {
@@ -8,10 +12,17 @@ export {
   type RunWithConcurrencyOptions,
 } from "./concurrency.js";
 import type { IAttachmentService, IAttachmentUpload } from "./interfaces.js";
+import {
+  ProgressEmitter,
+  withByteProgress,
+  type AttachmentProgress,
+  type AttachmentProgressOptions,
+} from "./progress.js";
 import { createRef } from "./ref.js";
 import type {
   AttachmentHeader,
   AttachmentResponse,
+  AttachmentSendOptions,
   AttachmentUploadResult,
   HashFirstReserveAttachmentOptions,
 } from "./types.js";
@@ -47,6 +58,7 @@ export type {
   AttachmentHeader,
   AttachmentMetadata,
   AttachmentResponse,
+  AttachmentSendOptions,
   AttachmentStatus,
   AttachmentTransportConfig,
   AttachmentUploadResult,
@@ -72,8 +84,26 @@ export {
   RemoteAttachmentUploadFactory,
   RemoteAttachmentStore,
   createRemoteAttachmentService,
+  createFetchUploadTransport,
+  createXhrUploadTransport,
+  type AttachmentUploadRequest,
+  type AttachmentUploadResponse,
+  type AttachmentUploadTransport,
+  type XhrUploadTransportOptions,
 } from "./switchboard/index.js";
 export { NullAttachmentTransport } from "./null-attachment-transport.js";
+export {
+  DEFAULT_PROGRESS_THROTTLE_MS,
+  progressFraction,
+  ProgressEmitter,
+  withByteProgress,
+  type AttachmentProgress,
+  type AttachmentProgressListener,
+  type AttachmentProgressOptions,
+  type AttachmentStage,
+  type ByteProgressHooks,
+  type ProgressEmitterOptions,
+} from "./progress.js";
 
 export type PreprocessResult = {
   ref: AttachmentRef;
@@ -84,22 +114,24 @@ export type PreprocessResult = {
   stream: () => ReadableStream<Uint8Array>;
 };
 
-export type AttachmentStage =
-  | "hashing"
-  | "reserving"
-  | "uploading"
-  | "requesting-download-target"
-  | "downloading"
-  | "done"
-  | "error";
-
-export type AttachmentStageListener = (stage: AttachmentStage) => void;
-
 export type AttachmentUploadInput = {
   file: Blob;
   fileName?: string;
   mimeType?: string;
   /** Per-item cancellation, checked between stages. */
+  signal?: AbortSignal;
+};
+
+/**
+ * Upload bytes that were already hashed by a separate `preprocess()` call.
+ *
+ * This is the canonical two-call flow: the ref must reach the document before
+ * the bytes are committed, so callers preprocess, dispatch the operation, then
+ * upload. Passing the result back in skips the hashing stage rather than
+ * faking a zero-millisecond one.
+ */
+export type AttachmentPreprocessedUploadInput = {
+  preprocessed: PreprocessResult;
   signal?: AbortSignal;
 };
 
@@ -158,12 +190,32 @@ export type AttachmentShareLink = {
   expiresAtUtc: string;
 };
 
+/**
+ * Batch progress is per item, carrying the item's `index`. There is
+ * deliberately no batch-wide byte total: weighting items against each other is
+ * a presentation decision the client cannot make, and a confirmed dedup would
+ * shrink the denominator mid-flight.
+ */
 export type AttachmentBatchOptions = {
   /** Bounds preprocessing and transfer together. Defaults to 4. */
   concurrency?: number;
   /** Whole-batch cancellation: stops unstarted items. */
   signal?: AbortSignal;
-  onStage?: (index: number, stage: AttachmentStage) => void;
+  onProgress?: (progress: AttachmentProgress & { index: number }) => void;
+  /**
+   * Fired as each item settles, including items the signal skipped before they
+   * started, so `settled` always reaches `total`.
+   */
+  onItemSettled?: (counts: AttachmentBatchCounts) => void;
+  /** Min ms between byte events, applied per item rather than batch-wide. */
+  throttleMs?: number;
+};
+
+export type AttachmentBatchCounts = {
+  settled: number;
+  completed: number;
+  failed: number;
+  total: number;
 };
 
 export const DEFAULT_ATTACHMENT_BATCH_CONCURRENCY = 4;
@@ -177,15 +229,28 @@ export interface IAttachmentClient {
     options: HashFirstReserveAttachmentOptions,
     send: (handle: IAttachmentUpload) => Promise<AttachmentUploadResult>,
   ): Promise<AttachmentUploadResult>;
-  /** Hash, reserve, and transfer one file; confirmed dedup skips the transfer. */
+  /**
+   * Hash, reserve, and transfer one file; a confirmed dedup skips the transfer
+   * and reports a terminal `done` carrying `deduped: true` and zero bytes.
+   *
+   * Also accepts an already-preprocessed payload, so the canonical
+   * preprocess -> dispatch -> upload flow reports progress too.
+   */
   upload(
-    input: AttachmentUploadInput,
-    onStage?: AttachmentStageListener,
+    input: AttachmentUploadInput | AttachmentPreprocessedUploadInput,
+    options?: AttachmentProgressOptions,
   ): Promise<AttachmentUploadResult>;
-  /** Document-authorized download of one ref. */
+  /**
+   * Document-authorized download of one ref.
+   *
+   * Resolves as soon as the byte stream is available, with `downloading` as
+   * the last event emitted and `loaded: 0`. Byte events and the terminal
+   * `done` arrive as the caller reads the stream — and never arrive at all if
+   * the caller abandons it.
+   */
   download(
     input: AttachmentDownloadInput,
-    onStage?: AttachmentStageListener,
+    options?: AttachmentProgressOptions,
   ): Promise<AttachmentResponse>;
   /**
    * Document-authorized download materialized as a typed Blob. The Blob's
@@ -194,8 +259,7 @@ export interface IAttachmentClient {
    */
   downloadBlob(
     input: AttachmentDownloadInput,
-    options?: AttachmentBlobOptions,
-    onStage?: AttachmentStageListener,
+    options?: AttachmentBlobOptions & AttachmentProgressOptions,
   ): Promise<AttachmentBlobResult>;
   /**
    * Download and hand the bytes to the browser's save-file flow. Browser
@@ -204,8 +268,7 @@ export interface IAttachmentClient {
    */
   saveAttachment(
     input: AttachmentDownloadInput,
-    options?: AttachmentSaveOptions,
-    onStage?: AttachmentStageListener,
+    options?: AttachmentSaveOptions & AttachmentProgressOptions,
   ): Promise<void>;
   /**
    * Download and expose the bytes as an object URL for inline rendering
@@ -214,8 +277,7 @@ export interface IAttachmentClient {
    */
   downloadObjectUrl(
     input: AttachmentDownloadInput,
-    options?: AttachmentBlobOptions,
-    onStage?: AttachmentStageListener,
+    options?: AttachmentBlobOptions & AttachmentProgressOptions,
   ): Promise<AttachmentObjectUrl>;
   /**
    * Mint a public share link: a presigned URL anyone can fetch until it
@@ -262,6 +324,51 @@ function streamFromBuffer(buf: Uint8Array): ReadableStream<Uint8Array> {
   });
 }
 
+/** Stamps an item's index onto its progress events. */
+function itemProgress(
+  options: AttachmentBatchOptions | undefined,
+  index: number,
+): AttachmentProgressOptions | undefined {
+  if (!options?.onProgress && options?.throttleMs === undefined) {
+    return undefined;
+  }
+  return {
+    ...(options.onProgress
+      ? {
+          onProgress: (progress: AttachmentProgress) =>
+            options.onProgress?.({ ...progress, index }),
+        }
+      : {}),
+    ...(options.throttleMs !== undefined
+      ? { throttleMs: options.throttleMs }
+      : {}),
+  };
+}
+
+function batchRunOptions<R>(
+  total: number,
+  options: AttachmentBatchOptions | undefined,
+): RunWithConcurrencyOptions<R> {
+  const onItemSettled = options?.onItemSettled;
+  let settled = 0;
+  let completed = 0;
+  let failed = 0;
+  return {
+    concurrency: options?.concurrency ?? DEFAULT_ATTACHMENT_BATCH_CONCURRENCY,
+    ...(options?.signal ? { signal: options.signal } : {}),
+    ...(onItemSettled
+      ? {
+          onSettled: (result: BatchItemResult<R>) => {
+            settled += 1;
+            if (result.status === "fulfilled") completed += 1;
+            else failed += 1;
+            onItemSettled({ settled, completed, failed, total });
+          },
+        }
+      : {}),
+  };
+}
+
 class AttachmentClientImpl implements IAttachmentClient {
   constructor(private readonly service: IAttachmentService) {}
 
@@ -291,83 +398,158 @@ class AttachmentClientImpl implements IAttachmentClient {
     return { ref, hash, sizeBytes, options, data, stream };
   }
 
+  /**
+   * Reserve, distinguishing a confirmed dedup from a live upload handle in the
+   * type rather than with a flag: the two outcomes move a different number of
+   * bytes, and every caller has to account for that.
+   */
+  private async reserveOrDedup(
+    options: HashFirstReserveAttachmentOptions,
+  ): Promise<
+    | { kind: "handle"; handle: IAttachmentUpload }
+    | { kind: "deduped"; result: AttachmentUploadResult }
+  > {
+    try {
+      return { kind: "handle", handle: await this.service.reserve(options) };
+    } catch (err) {
+      if (!isAttachmentAlreadyExists(err)) throw err;
+      const header = await this.service.stat(err.ref);
+      return {
+        kind: "deduped",
+        result: { hash: err.hash, ref: err.ref, header },
+      };
+    }
+  }
+
   async reserve(
     options: HashFirstReserveAttachmentOptions,
     send: (handle: IAttachmentUpload) => Promise<AttachmentUploadResult>,
   ): Promise<AttachmentUploadResult> {
-    let handle: IAttachmentUpload;
-    try {
-      handle = await this.service.reserve(options);
-    } catch (err) {
-      if (isAttachmentAlreadyExists(err)) {
-        const header = await this.service.stat(err.ref);
-        return { hash: err.hash, ref: err.ref, header };
-      }
-      throw err;
-    }
-    return send(handle);
+    const outcome = await this.reserveOrDedup(options);
+    if (outcome.kind === "deduped") return outcome.result;
+    return send(outcome.handle);
   }
 
   async upload(
-    input: AttachmentUploadInput,
-    onStage?: AttachmentStageListener,
+    input: AttachmentUploadInput | AttachmentPreprocessedUploadInput,
+    options?: AttachmentProgressOptions,
   ): Promise<AttachmentUploadResult> {
+    const emitter = new ProgressEmitter(options);
+    const signal = input.signal;
     try {
-      input.signal?.throwIfAborted();
-      onStage?.("hashing");
-      const preprocessed = await this.preprocess(input.file, {
-        ...(input.fileName !== undefined ? { fileName: input.fileName } : {}),
-        ...(input.mimeType !== undefined ? { mimeType: input.mimeType } : {}),
-      });
+      signal?.throwIfAborted();
 
-      input.signal?.throwIfAborted();
-      onStage?.("reserving");
-      const result = await this.reserve(preprocessed.options, (handle) => {
-        input.signal?.throwIfAborted();
-        onStage?.("uploading");
-        return handle.send(preprocessed.stream());
-      });
-      onStage?.("done");
+      let preprocessed: PreprocessResult;
+      if ("preprocessed" in input) {
+        preprocessed = input.preprocessed;
+      } else {
+        // Hashing is genuinely unobservable: preprocess() runs one
+        // crypto.subtle.digest over the whole buffer and WebCrypto has no
+        // streaming digest. The stage is still reported, with a denominator
+        // and indeterminate never cleared, so a UI can name what it waits on.
+        emitter.stage("hashing", { total: input.file.size });
+        preprocessed = await this.preprocess(input.file, {
+          ...(input.fileName !== undefined ? { fileName: input.fileName } : {}),
+          ...(input.mimeType !== undefined ? { mimeType: input.mimeType } : {}),
+        });
+      }
+      const sizeBytes = preprocessed.sizeBytes;
+
+      signal?.throwIfAborted();
+      emitter.stage("reserving");
+      const outcome = await this.reserveOrDedup(preprocessed.options);
+
+      // A confirmed dedup never enters `uploading` — the server already holds
+      // these bytes, so none are sent. Reporting zero of zero keeps the byte
+      // model honest instead of stalling at 0 and then jumping to done.
+      if (outcome.kind === "deduped") {
+        emitter.finishDeduped();
+        return outcome.result;
+      }
+
+      signal?.throwIfAborted();
+      emitter.stage("uploading", { total: sizeBytes });
+      // `onProgress` only when someone is listening. The XHR transport keys
+      // its `upload.onprogress` registration off the option being present, and
+      // that registration alone forces a CORS preflight on a presigned PUT —
+      // a cost an unwatched upload must not pay for a callback that would
+      // discard every event anyway.
+      const sendOptions: AttachmentSendOptions = {
+        ...(emitter.active
+          ? {
+              onProgress: (loaded: number, total?: number) =>
+                emitter.bytes(loaded, total ?? sizeBytes),
+            }
+          : {}),
+        ...(signal ? { signal } : {}),
+      };
+      const result = await outcome.handle.send(
+        preprocessed.stream(),
+        sendOptions,
+      );
+      emitter.finish();
       return result;
     } catch (err) {
-      onStage?.("error");
+      emitter.fail();
       throw err;
     }
+  }
+
+  /**
+   * The single site where download bytes are instrumented.
+   *
+   * It sits here, above the service, rather than in any store or transport:
+   * one logical get can be several byte streams underneath (an evicted
+   * attachment is fetched from the transport, written to disk, then re-read),
+   * so counting lower down would double-count that path and still miss
+   * local-filesystem reads. Wrapping what `service.get` returns covers the
+   * presigned, switchboard, legacy and local paths by construction, and
+   * `downloadBlob`/`saveAttachment`/`downloadObjectUrl` inherit it.
+   */
+  private async getWithProgress(
+    input: AttachmentDownloadInput,
+    emitter: ProgressEmitter,
+  ): Promise<AttachmentResponse> {
+    const { header, body } = await this.service.get(input.ref, {
+      documentId: input.documentId,
+      signal: input.signal,
+    });
+    emitter.stage("downloading", { total: header.sizeBytes });
+    if (!emitter.active) return { header, body };
+    return {
+      header,
+      body: withByteProgress(body, {
+        onBytes: (loaded) => emitter.bytes(loaded),
+        onDone: () => emitter.finish(),
+        onError: () => emitter.fail(),
+      }),
+    };
   }
 
   async download(
     input: AttachmentDownloadInput,
-    onStage?: AttachmentStageListener,
+    options?: AttachmentProgressOptions,
   ): Promise<AttachmentResponse> {
+    const emitter = new ProgressEmitter(options);
     try {
       input.signal?.throwIfAborted();
-      onStage?.("requesting-download-target");
-      const response = await this.service.get(input.ref, {
-        documentId: input.documentId,
-        signal: input.signal,
-      });
-      onStage?.("downloading");
-      onStage?.("done");
-      return response;
+      emitter.stage("requesting-download-target");
+      return await this.getWithProgress(input, emitter);
     } catch (err) {
-      onStage?.("error");
+      emitter.fail();
       throw err;
     }
   }
 
   async downloadBlob(
     input: AttachmentDownloadInput,
-    options?: AttachmentBlobOptions,
-    onStage?: AttachmentStageListener,
+    options?: AttachmentBlobOptions & AttachmentProgressOptions,
   ): Promise<AttachmentBlobResult> {
+    const emitter = new ProgressEmitter(options);
     try {
       input.signal?.throwIfAborted();
-      onStage?.("requesting-download-target");
-      const { header, body } = await this.service.get(input.ref, {
-        documentId: input.documentId,
-        signal: input.signal,
-      });
-      onStage?.("downloading");
+      emitter.stage("requesting-download-target");
+      const { header, body } = await this.getWithProgress(input, emitter);
       const reader = body.getReader();
       const chunks: BlobPart[] = [];
       for (;;) {
@@ -378,29 +560,26 @@ class AttachmentClientImpl implements IAttachmentClient {
       const blob = new Blob(chunks, {
         type: options?.mimeType ?? header.mimeType,
       });
-      onStage?.("done");
+      // Draining the stream already finished the emitter; latching makes this
+      // a no-op there, and a guarantee for any body that closes without one.
+      emitter.finish();
       return { blob, header };
     } catch (err) {
-      onStage?.("error");
+      emitter.fail();
       throw err;
     }
   }
 
   async saveAttachment(
     input: AttachmentDownloadInput,
-    options?: AttachmentSaveOptions,
-    onStage?: AttachmentStageListener,
+    options?: AttachmentSaveOptions & AttachmentProgressOptions,
   ): Promise<void> {
     if (typeof document === "undefined") {
       throw new Error(
         "saveAttachment requires a browser environment; use downloadBlob elsewhere",
       );
     }
-    const { blob, header } = await this.downloadBlob(
-      input,
-      { mimeType: options?.mimeType },
-      onStage,
-    );
+    const { blob, header } = await this.downloadBlob(input, options);
     const url = URL.createObjectURL(blob);
     try {
       const anchor = document.createElement("a");
@@ -414,10 +593,9 @@ class AttachmentClientImpl implements IAttachmentClient {
 
   async downloadObjectUrl(
     input: AttachmentDownloadInput,
-    options?: AttachmentBlobOptions,
-    onStage?: AttachmentStageListener,
+    options?: AttachmentBlobOptions & AttachmentProgressOptions,
   ): Promise<AttachmentObjectUrl> {
-    const { blob, header } = await this.downloadBlob(input, options, onStage);
+    const { blob, header } = await this.downloadBlob(input, options);
     const url = URL.createObjectURL(blob);
     let revoked = false;
     return {
@@ -454,29 +632,25 @@ class AttachmentClientImpl implements IAttachmentClient {
   ): Promise<BatchItemResult<AttachmentUploadResult>[]> {
     return runWithConcurrency(
       inputs,
-      (input, index) =>
-        this.upload(input, (stage) => options?.onStage?.(index, stage)),
-      {
-        concurrency:
-          options?.concurrency ?? DEFAULT_ATTACHMENT_BATCH_CONCURRENCY,
-        signal: options?.signal,
-      },
+      (input, index) => this.upload(input, itemProgress(options, index)),
+      batchRunOptions(inputs.length, options),
     );
   }
 
+  /**
+   * `concurrency` bounds download-target negotiation, not simultaneous byte
+   * transfer: each item resolves when its stream is handed over, and the bytes
+   * move only as the caller reads. Byte progress makes that pre-existing
+   * behavior visible; it does not change it.
+   */
   downloadMany(
     inputs: readonly AttachmentDownloadInput[],
     options?: AttachmentBatchOptions,
   ): Promise<BatchItemResult<AttachmentResponse>[]> {
     return runWithConcurrency(
       inputs,
-      (input, index) =>
-        this.download(input, (stage) => options?.onStage?.(index, stage)),
-      {
-        concurrency:
-          options?.concurrency ?? DEFAULT_ATTACHMENT_BATCH_CONCURRENCY,
-        signal: options?.signal,
-      },
+      (input, index) => this.download(input, itemProgress(options, index)),
+      batchRunOptions(inputs.length, options),
     );
   }
 }

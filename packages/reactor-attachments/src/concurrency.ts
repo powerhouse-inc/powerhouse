@@ -7,7 +7,7 @@ export type BatchItemResult<R> =
   | { index: number; status: "fulfilled"; value: R }
   | { index: number; status: "rejected"; error: unknown };
 
-export type RunWithConcurrencyOptions = {
+export type RunWithConcurrencyOptions<R = unknown> = {
   /** Maximum simultaneously running workers. Must be a positive integer. */
   concurrency: number;
   /**
@@ -16,6 +16,13 @@ export type RunWithConcurrencyOptions = {
    * per-item signals are the mechanism for interrupting active work.
    */
   signal?: AbortSignal;
+  /**
+   * Called once per item as it settles, in completion order, including items
+   * the signal skipped before they ever started. That completeness is the
+   * point: a caller counting settlements must still reach `items.length`
+   * after a whole-batch abort.
+   */
+  onSettled?: (result: BatchItemResult<R>) => void;
 };
 
 /**
@@ -26,9 +33,9 @@ export type RunWithConcurrencyOptions = {
 export async function runWithConcurrency<T, R>(
   items: readonly T[],
   worker: (item: T, index: number) => Promise<R>,
-  options: RunWithConcurrencyOptions,
+  options: RunWithConcurrencyOptions<R>,
 ): Promise<BatchItemResult<R>[]> {
-  const { concurrency, signal } = options;
+  const { concurrency, signal, onSettled } = options;
   if (!Number.isInteger(concurrency) || concurrency < 1) {
     throw new Error(
       `concurrency must be a positive integer, got: ${concurrency}`,
@@ -50,6 +57,7 @@ export async function runWithConcurrency<T, R>(
           status: "rejected",
           error: signalReason(signal),
         };
+        onSettled?.(results[index]);
         continue;
       }
       try {
@@ -58,6 +66,7 @@ export async function runWithConcurrency<T, R>(
       } catch (error) {
         results[index] = { index, status: "rejected", error };
       }
+      onSettled?.(results[index]);
     }
   }
 
