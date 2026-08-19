@@ -1059,6 +1059,13 @@ export async function deleteDocuments(
   }
 }
 
+/**
+ * Registers a sync channel, or reports the state of one already registered.
+ *
+ * `boundAddress` claims a channel at creation for the subject that created it.
+ * An anonymously created channel is left unbound, which is not a permission but
+ * an unanswered question: the first authenticated subject to use it adopts it.
+ */
 export async function touchChannel(
   syncManager: ISyncManager,
   args: {
@@ -1074,6 +1081,7 @@ export async function touchChannel(
       sinceTimestampUtcMs: string;
     };
   },
+  boundAddress?: string,
 ): Promise<{ success: boolean; ackOrdinal: number }> {
   try {
     const remote = syncManager.getById(args.input.id);
@@ -1094,6 +1102,7 @@ export async function touchChannel(
 
   const options = {
     sinceTimestampUtcMs: args.input.sinceTimestampUtcMs,
+    boundAddress,
   };
 
   try {

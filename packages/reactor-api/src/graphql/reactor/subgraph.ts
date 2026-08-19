@@ -1,6 +1,7 @@
 import { ConsoleLogger } from "document-model";
 import { DriveCollectionId } from "@powerhousedao/reactor";
 import { GraphQLError } from "graphql";
+import { ForbiddenError } from "../errors.js";
 import { withFilter } from "graphql-subscriptions";
 import { gql } from "graphql-tag";
 import schemaSource from "./schema.graphql";
@@ -104,6 +105,58 @@ export class ReactorSubgraph extends BaseSubgraph {
       );
       if (!canRead) forbidden.add(documentId);
     }
+  }
+
+  /**
+   * Enforces which subject a sync channel answers to, adopting an unclaimed one.
+   *
+   * A channel is a private queue: it names a collection, and it accumulates
+   * exactly the operations one subject is owed, so serving it to a second
+   * subject would hand over that subject's cursor as well as its contents. An
+   * unbound channel -- created anonymously, or created before binding existed --
+   * is claimed by the first authenticated subject to use it, and answers to that
+   * address alone thereafter. Adoption is safe precisely because serving
+   * withholds rather than consumes: before it was claimed the channel served
+   * only what an anonymous subject may read, and everything withheld is still
+   * queued for the adopter.
+   *
+   * The refusal is the shape a read denial takes, so a puller treats it as a
+   * signal to authenticate again rather than as a transport failure.
+   *
+   * Nothing is enforced or adopted without a serving gate. Below
+   * `authEnforcement` there is no policy being enforced for the channel to
+   * belong to, and refusing a poll there would break sync for no gain.
+   */
+  async #bindOrRefuseChannel(channelId: string, ctx: Context): Promise<void> {
+    if (!this.syncServingGate) return;
+
+    let remote;
+    try {
+      remote = this.syncManager.getById(channelId);
+    } catch {
+      // Not registered yet: touchChannel is about to create it, bound to its
+      // creator.
+      return;
+    }
+
+    const bound = remote.meta.options.boundAddress;
+    const address = ctx.user?.address;
+
+    if (bound === undefined) {
+      if (address !== undefined) {
+        await this.syncManager.bindRemote(channelId, address);
+      }
+      return;
+    }
+
+    if (bound !== address) {
+      throw new ForbiddenError("to poll this sync channel");
+    }
+  }
+
+  /** The address a channel created by this request belongs to, if any. */
+  #creatorBinding(ctx: Context): string | undefined {
+    return this.syncServingGate ? ctx.user?.address : undefined;
   }
 
   typeDefs = gql(schemaSource);
@@ -330,6 +383,8 @@ export class ReactorSubgraph extends BaseSubgraph {
               `Channel not found: ${error instanceof Error ? error.message : "Unknown error"}`,
             );
           }
+
+          await this.#bindOrRefuseChannel(args.channelId, ctx);
 
           // A collection is a drive-level abstraction; its canonical drive id is
           // carried by the collection id (never a slug).
@@ -749,7 +804,13 @@ export class ReactorSubgraph extends BaseSubgraph {
             await this.assertCanReadCanonical(driveId, ctx);
           }
 
-          return await resolvers.touchChannel(this.syncManager, args);
+          await this.#bindOrRefuseChannel(args.input.id, ctx);
+
+          return await resolvers.touchChannel(
+            this.syncManager,
+            args,
+            this.#creatorBinding(ctx),
+          );
         } catch (error) {
           this.logger.error(
             "Error in touchChannel(@args): @Error",
