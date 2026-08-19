@@ -1,3 +1,37 @@
+## 6.2.2-dev.51 (2026-08-19)
+
+### 🚀 Features
+
+- **reactor-attachments:** add an XMLHttpRequest upload transport ([43a786886](https://github.com/powerhouse-inc/powerhouse/commit/43a786886))
+- ⚠️  **reactor-attachments:** byte-level progress on IAttachmentClient ([65041f1f9](https://github.com/powerhouse-inc/powerhouse/commit/65041f1f9))
+- **reactor-attachments:** route uploads through AttachmentUploadTransport ([9f99a332f](https://github.com/powerhouse-inc/powerhouse/commit/9f99a332f))
+- ⚠️  **reactor-attachments:** send(data, options?) with progress and signal ([26a73b745](https://github.com/powerhouse-inc/powerhouse/commit/26a73b745))
+- **reactor-attachments:** progress primitives ([56a42da1f](https://github.com/powerhouse-inc/powerhouse/commit/56a42da1f))
+
+### 🩹 Fixes
+
+- **reactor-attachments:** honour the caller's signal in a direct upload ([9c588c855](https://github.com/powerhouse-inc/powerhouse/commit/9c588c855))
+- **reactor-attachments:** only instrument uploads a caller is watching ([d350375ac](https://github.com/powerhouse-inc/powerhouse/commit/d350375ac))
+- **reactor-attachments:** report a cancelled transfer as an error, not a completion ([8555bc301](https://github.com/powerhouse-inc/powerhouse/commit/8555bc301))
+
+### ⚠️  Breaking Changes
+
+- **reactor-attachments:** byte-level progress on IAttachmentClient  ([65041f1f9](https://github.com/powerhouse-inc/powerhouse/commit/65041f1f9))
+  AttachmentStageListener and AttachmentBatchOptions.onStage
+  are removed. Pass `{ onProgress }` as the second argument instead;
+  `AttachmentProgress` carries the stage plus byte counts. downloadBlob,
+  saveAttachment and downloadObjectUrl take one merged options bag.
+  Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+- **reactor-attachments:** send(data, options?) with progress and signal  ([26a73b745](https://github.com/powerhouse-inc/powerhouse/commit/26a73b745))
+  IAttachmentUpload.send takes an optional second
+  parameter. Implementations that declare only `data` are unaffected.
+  Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5
+
 ## 6.2.2-dev.50 (2026-08-18)
 
 ### 🩹 Fixes
