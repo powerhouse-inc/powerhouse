@@ -1,3 +1,10 @@
+import type {
+  Action,
+  ISigner,
+  PHBaseState,
+  Signature,
+} from "@powerhousedao/shared/document-model";
+import { createReducer } from "@powerhousedao/shared/document-model";
 import type { DocumentModelModule } from "document-model";
 import { StrictMode } from "react";
 import {
@@ -615,5 +622,187 @@ describe("GraphQLReactorProvider version resolution", () => {
 
     await expect.poll(() => probe(screen, "wrap")).toBe("none");
     expect(probe(screen, "version")).toBe("v1");
+  });
+});
+
+// The whole point of the `documentModels` prop on the write side: the client
+// built by the provider must be able to sign a BATCH, which needs the reducer
+// of the document's exact version. Everything here goes over the same `fetch`
+// seam the read tests use.
+const signingDocumentFields = {
+  ...documentFields,
+  state: { global: { name: "hello" }, local: {}, document: { version: 1 } },
+};
+
+/** Answers reads AND the write mutation, recording the mutation bodies. */
+function stubSigningSwitchboard(): Record<string, unknown>[] {
+  const mutations: Record<string, unknown>[] = [];
+  vi.spyOn(globalThis, "fetch").mockImplementation((_input, init) => {
+    const body = JSON.parse(
+      typeof init?.body === "string" ? init.body : "{}",
+    ) as {
+      query?: string;
+      variables?: Record<string, unknown>;
+    };
+    const isMutation = Boolean(body.query?.includes("mutation MutateDocument"));
+    if (isMutation) {
+      mutations.push(body.variables ?? {});
+    }
+    const data = isMutation
+      ? {
+          mutateDocument: {
+            ...signingDocumentFields,
+            revisionsList: [{ scope: "global", revision: 9 }],
+            operations: { items: [] },
+          },
+        }
+      : { document: { document: signingDocumentFields } };
+    return Promise.resolve(
+      new Response(JSON.stringify({ data }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+  });
+  return mutations;
+}
+
+const signature: Signature = [
+  "1700000007",
+  "did:key:test",
+  "action-hash",
+  "prev-hash",
+  "0xdeadbeef",
+];
+
+/** Logs a user in, the way the light client reads one: off `window.ph.renown`. */
+function installAmbientSigner() {
+  const signAction = vi.fn().mockResolvedValue(signature);
+  const signer = {
+    user: { address: "0x1", networkId: "eip155", chainId: 1 },
+    app: { name: "test-app", key: "app-key" },
+    signAction,
+  } as unknown as ISigner;
+  window.ph = {
+    ...window.ph,
+    // `getBearerToken` is what the ambient token provider calls on every
+    // request; a logged-in renown always has it.
+    renown: {
+      user: signer.user,
+      signer,
+      getBearerToken: vi.fn().mockResolvedValue("test-token"),
+    } as never,
+  };
+  return signAction;
+}
+
+/** The shape the test module's reducer writes to. */
+type TestState = PHBaseState & { global: { name: string } };
+
+// A real base reducer: signing a batch means running it between signatures.
+const signableModule = {
+  version: 1,
+  reducer: createReducer<TestState>((draft, reduced) => {
+    if (reduced.type === "SET_TEST_NAME") {
+      draft.global.name = (reduced.input as { name: string }).name;
+    }
+  }),
+  actions: {},
+  utils: {},
+  documentModel: { global: { id: "powerhouse/test" }, local: {} },
+} as unknown as DocumentModelModule;
+
+const signableBatch: Action[] = [
+  {
+    id: "action-1",
+    type: "SET_TEST_NAME",
+    timestampUtcMs: "1700000007000",
+    input: { name: "first" },
+    scope: "global",
+  },
+  {
+    id: "action-2",
+    type: "SET_TEST_NAME",
+    timestampUtcMs: "1700000008000",
+    input: { name: "second" },
+    scope: "global",
+  },
+];
+
+describe("GraphQLReactorProvider signed batches", () => {
+  beforeEach(() => {
+    resetPHGlobals();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    resetPHGlobals();
+  });
+
+  it("signs a batch dispatched through the published client", async () => {
+    const signAction = installAmbientSigner();
+    const mutations = stubSigningSwitchboard();
+
+    render(
+      <GraphQLReactorProvider
+        url={url}
+        realtime={false}
+        documentModels={[signableModule]}
+      >
+        <span />
+      </GraphQLReactorProvider>,
+    );
+
+    await window.ph!.reactorClient!.execute("doc-1", "main", signableBatch);
+
+    expect(mutations).toHaveLength(1);
+    expect(signAction).toHaveBeenCalledTimes(2);
+    const pushed = (mutations[0] as { actions: Action[] }).actions;
+    expect(pushed.map((a) => a.id)).toEqual(["action-1", "action-2"]);
+    expect(pushed.map((a) => a.context?.signer?.signatures)).toEqual([
+      [signature],
+      [signature],
+    ]);
+    // The document is at global revision 7, so the batch continues from 6.
+    expect(pushed.map((a) => a.context?.prevOpIndex)).toEqual([6, 7]);
+    expect(pushed[1].context?.prevOpHash).not.toBe(
+      pushed[0].context?.prevOpHash,
+    );
+  });
+
+  it("refuses the batch when the provider was given no models", async () => {
+    const signAction = installAmbientSigner();
+    const mutations = stubSigningSwitchboard();
+
+    render(
+      <GraphQLReactorProvider url={url} realtime={false}>
+        <span />
+      </GraphQLReactorProvider>,
+    );
+
+    await expect(
+      window.ph!.reactorClient!.execute("doc-1", "main", signableBatch),
+    ).rejects.toThrow("Unknown document model version: powerhouse/test v1");
+    expect(mutations).toHaveLength(0);
+    expect(signAction).not.toHaveBeenCalled();
+  });
+
+  it("still reads and pushes unsigned without models and without a user", async () => {
+    const mutations = stubSigningSwitchboard();
+
+    render(
+      <GraphQLReactorProvider url={url} realtime={false}>
+        <span />
+      </GraphQLReactorProvider>,
+    );
+
+    const document = await window.ph!.reactorClient!.get("doc-1");
+    expect(document.header.revision).toEqual({ global: 7 });
+
+    await window.ph!.reactorClient!.execute("doc-1", "main", signableBatch);
+
+    expect(mutations).toHaveLength(1);
+    const pushed = (mutations[0] as { actions: Action[] }).actions;
+    expect(pushed).toEqual(signableBatch);
   });
 });

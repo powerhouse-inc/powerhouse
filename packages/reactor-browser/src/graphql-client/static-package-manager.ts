@@ -38,23 +38,12 @@ export class StaticPackageManager implements IPackageManager {
    * version wins, with `version ?? 1` as each module's default.
    */
   load(documentType: string): Promise<DocumentModelSource> {
-    let latestModule: DocumentModelModule<any> | undefined;
-    let latestVersion = -1;
-    for (const pkg of this.packages) {
-      for (const module of pkg.documentModels) {
-        if (module.documentModel.global.id !== documentType) {
-          continue;
-        }
-        const moduleVersion = module.version ?? 1;
-        if (moduleVersion > latestVersion) {
-          latestVersion = moduleVersion;
-          latestModule = module;
-        }
-      }
+    const modules = this.packages.flatMap((pkg) => pkg.documentModels);
+    try {
+      return Promise.resolve(resolveDocumentModelModule(modules, documentType));
+    } catch (error) {
+      return Promise.reject(error as Error);
     }
-    return latestModule
-      ? Promise.resolve(latestModule)
-      : Promise.reject(new Error(`Unknown document type: ${documentType}`));
   }
 
   subscribe(_handler: IPackagesListener): IPackageListerUnsubscribe {
@@ -96,6 +85,66 @@ export class StaticPackageManager implements IPackageManager {
   ): void {
     throw staticPackageManagerError("addLocalPackage");
   }
+}
+
+/**
+ * Resolves one document-model module out of a flat module list, with the same
+ * rule the reactor registry uses (`IDocumentModelRegistry.getModule`, at
+ * packages/reactor/src/registry/implementation.ts): with a `version`, only an
+ * EXACT `version ?? 1` match resolves; without one, the LATEST version wins.
+ *
+ * Signing an existing document needs the exact rule. A document carries the
+ * model version it was written with in `state.document.version`, and its
+ * reducer is the only one whose operations that document's history can accept -
+ * so "latest" is correct only when no version is asked for.
+ *
+ * Pure and dependency-free on purpose: this is reachable from the browser
+ * entry, so it must not pull the reactor registry in as a value.
+ */
+export function resolveDocumentModelModule(
+  modules: readonly DocumentModelModule<any>[],
+  documentType: string,
+  version?: number,
+): DocumentModelModule<any> {
+  let latestModule: DocumentModelModule<any> | undefined;
+  let latestVersion = -1;
+
+  for (const module of modules) {
+    if (module.documentModel.global.id !== documentType) {
+      continue;
+    }
+    const moduleVersion = module.version ?? 1;
+    if (version !== undefined && moduleVersion === version) {
+      return module;
+    }
+    if (moduleVersion > latestVersion) {
+      latestVersion = moduleVersion;
+      latestModule = module;
+    }
+  }
+
+  if (version === undefined && latestModule) {
+    return latestModule;
+  }
+
+  throw new Error(
+    version === undefined
+      ? `Unknown document type: ${documentType}`
+      : `Unknown document model version: ${documentType} v${version}` +
+          (latestModule
+            ? ` (available: ${availableVersions(modules, documentType).join(", ")})`
+            : " (no module for this document type)"),
+  );
+}
+
+function availableVersions(
+  modules: readonly DocumentModelModule<any>[],
+  documentType: string,
+): number[] {
+  return modules
+    .filter((module) => module.documentModel.global.id === documentType)
+    .map((module) => module.version ?? 1)
+    .sort((a, b) => a - b);
 }
 
 function staticPackageManagerError(member: string): Error {

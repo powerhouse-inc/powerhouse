@@ -8,8 +8,17 @@ import type {
   SearchFilter,
   ViewFilter,
 } from "@powerhousedao/reactor";
-import type { ISigner } from "@powerhousedao/shared/document-model";
-import type { Action, Operation, PHDocument } from "document-model";
+import type {
+  ISigner,
+  PHDocumentState,
+} from "@powerhousedao/shared/document-model";
+import { normalizeDocumentModelVersion } from "@powerhousedao/shared/document-model";
+import type {
+  Action,
+  DocumentModelModule,
+  Operation,
+  PHDocument,
+} from "document-model";
 import { logger } from "document-model";
 import type { Variables } from "graphql-request";
 import { createClient } from "../graphql/client.js";
@@ -38,7 +47,8 @@ import {
   type MutateDocumentWithOperationsResult,
   type MutateDocumentWithOperationsVariables,
 } from "./operations.js";
-import { signStampedAction, stampAction } from "./signing.js";
+import { prepareSignedActions } from "./signing.js";
+import { resolveDocumentModelModule } from "./static-package-manager.js";
 import {
   describeGraphQLDocument,
   SubgraphSdkRegistry,
@@ -94,6 +104,30 @@ export type GraphQLReactorClientOptions = {
    * only emits the changes it made itself.
    */
   realtime?: boolean;
+
+  /**
+   * The document model modules used to sign a batch of two or more actions.
+   *
+   * Signing action N+1 needs the state action N leaves behind, and only the
+   * document's own reducer can predict it - so a batch is signable only when
+   * the module matching the document's type AND its exact
+   * `state.document.version` is here. One action needs no prediction and is
+   * signed without any of this.
+   *
+   * Read once, when the client is built. Below `GraphQLReactorProvider` this
+   * is its `documentModels` prop; a client constructed directly passes its own.
+   */
+  documentModels?: readonly DocumentModelModule<any>[];
+
+  /**
+   * Signs the actions this client pushes, instead of the logged-in Renown user.
+   *
+   * Left out - the normal case - the signer is resolved per push from
+   * `window.ph.renown`, so a page signs as whoever is logged in and pushes
+   * unsigned when nobody is. Set it where there is no Renown to read: tests,
+   * scripts, and integration suites that must sign deterministically.
+   */
+  signer?: ISigner;
 };
 
 /** Paging defaults, matching the reactor's own client. */
@@ -131,6 +165,8 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
   private readonly listeners: ChangeListener[] = [];
   private readonly tokenProvider: BearerTokenProvider;
   private readonly subscriptionsUrl: string | undefined;
+  private readonly documentModels: readonly DocumentModelModule<any>[];
+  private readonly signer: ISigner | undefined;
   private stopRealtime: (() => void) | undefined;
   private realtimeStarted = false;
   private realtimeGeneration = 0;
@@ -138,6 +174,10 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
 
   constructor(options: GraphQLReactorClientOptions) {
     this.tokenProvider = options.tokenProvider ?? ambientRenownTokenProvider;
+    // Copied, not held: the caller's array must not be able to change which
+    // reducer a later batch is signed with.
+    this.documentModels = [...(options.documentModels ?? [])];
+    this.signer = options.signer;
     this.subscriptionsUrl =
       options.realtime === false
         ? undefined
@@ -262,7 +302,13 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     signal?: AbortSignal,
   ): Promise<TDocument> {
     const document = await this.get(documentIdentifier, { branch }, signal);
-    const preparedActions = await prepareActionsForPush(actions, document);
+    const preparedActions = await prepareActionsForPush(
+      actions,
+      document,
+      this.documentModels,
+      this.signer,
+      signal,
+    );
 
     const variables: MutateDocumentWithOperationsVariables = {
       documentIdentifier,
@@ -669,28 +715,54 @@ function propagationModeInput(
 /**
  * Stamps and signs the actions about to be pushed.
  *
- * Signing needs the state the action applies to, so only a single action can be
- * signed per call: the second action of a batch applies to a state this client
- * cannot compute without running the reducer. Batches are pushed unsigned.
+ * With no signer the actions go out exactly as given, batch or not - this
+ * client does not require signatures. With one, every action is signed:
+ * {@link prepareSignedActions} predicts the chain a batch will produce by
+ * running the document's own reducer between signatures, which is why a batch
+ * needs the module matching the document's type and exact version.
+ *
+ * A batch that cannot be predicted - no matching module, mixed scopes, an
+ * action needing history - throws here, before the mutation. Sending it
+ * unsigned instead would silently drop the signatures the caller asked for.
  */
 async function prepareActionsForPush(
   actions: Action[],
   document: PHDocument,
+  documentModels: readonly DocumentModelModule<any>[],
+  explicitSigner: ISigner | undefined,
+  signal?: AbortSignal,
 ): Promise<Action[]> {
-  const signer = resolveAmbientSigner();
+  const signer = explicitSigner ?? resolveAmbientSigner();
   if (!signer || actions.length === 0) {
     return actions;
   }
 
-  if (actions.length > 1) {
-    logger.warn(
-      "GraphQLReactorClient: pushing a multi-action batch unsigned, only single actions can be signed",
-    );
-    return actions;
-  }
+  // Only a batch needs the reducer, and it needs the EXACT one the document was
+  // written with - the same rule the server applies in `SimpleJobExecutor`.
+  const module =
+    actions.length > 1
+      ? resolveDocumentModelModule(
+          documentModels,
+          document.header.documentType,
+          documentModelVersion(document),
+        )
+      : undefined;
 
-  const stamped = stampAction(actions[0], document);
-  return [await signStampedAction(stamped, signer)];
+  return prepareSignedActions(actions, document, signer, module, signal);
+}
+
+/**
+ * The document-model version the document's actions must be reduced with.
+ *
+ * `state` arrives as JSON over GraphQL, so its `document` scope is only as
+ * reliable as the server that sent it - one written before that scope existed
+ * carries no version at all. `normalizeDocumentModelVersion` maps that, and 0,
+ * to 1: the same rule `SimpleJobExecutor` applies before asking the registry
+ * for a module, so client and server cannot resolve different reducers.
+ */
+function documentModelVersion(document: PHDocument): number {
+  const documentScope = document.state.document as PHDocumentState | undefined;
+  return normalizeDocumentModelVersion(documentScope?.version);
 }
 
 /** Resolves the signer of the logged-in user, if there is one. */

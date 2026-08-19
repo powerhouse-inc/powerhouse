@@ -4,16 +4,23 @@ import type {
   ISigner,
   Signature,
 } from "@powerhousedao/shared/document-model";
-import { hashDocumentStateForScope } from "@powerhousedao/shared/document-model";
+import type { PHBaseState } from "@powerhousedao/shared/document-model";
+import {
+  createReducer,
+  hashDocumentStateForScope,
+} from "@powerhousedao/shared/document-model";
 import type { IRenown } from "@renown/sdk";
-import { logger } from "document-model";
+import type { DocumentModelModule, PHDocument } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { GetDocumentQuery } from "../../src/graphql/gen/schema.js";
 import type {
   ReactorGraphQLClient,
   RunDocumentOptions,
 } from "../../src/graphql/types.js";
-import { GraphQLReactorClient } from "../../src/graphql-client/graphql-reactor-client.js";
+import {
+  GraphQLReactorClient,
+  type GraphQLReactorClientOptions,
+} from "../../src/graphql-client/graphql-reactor-client.js";
 import type {
   MutateDocumentWithOperationsResult,
   MutateDocumentWithOperationsVariables,
@@ -105,10 +112,14 @@ function createMockSdk(overrides: Partial<MockSdk> = {}): MockSdk {
   };
 }
 
-function createClientWith(sdk: MockSdk): GraphQLReactorClient {
+function createClientWith(
+  sdk: MockSdk,
+  options: Partial<GraphQLReactorClientOptions> = {},
+): GraphQLReactorClient {
   return new GraphQLReactorClient({
     url: "http://localhost:4001/graphql",
     graphqlClient: sdk as unknown as ReactorGraphQLClient,
+    ...options,
   });
 }
 
@@ -156,6 +167,74 @@ afterEach(() => {
   window.ph = {};
   vi.restoreAllMocks();
 });
+
+/** The shape the test module's reducer writes to, i.e. `documentPayload.state`. */
+type TestState = PHBaseState & { global: { name: string } };
+
+// A real base reducer over a trivial state reducer: batch signing is only
+// meaningful against a reducer that actually appends operations and moves the
+// state the next signature hashes.
+function createTestModule(
+  version: number | undefined,
+  transform: (name: string) => string = (name) => name,
+): DocumentModelModule<any> {
+  return {
+    version,
+    reducer: createReducer<TestState>((draft, reduced) => {
+      if (reduced.type === "SET_TEST_NAME") {
+        draft.global.name = transform((reduced.input as { name: string }).name);
+      }
+    }),
+    actions: {},
+    utils: {},
+    documentModel: { global: { id: "powerhouse/test" }, local: {} },
+  } as unknown as DocumentModelModule<any>;
+}
+
+function batchAction(id: string, name: string): Action {
+  return {
+    id,
+    type: "SET_TEST_NAME",
+    timestampUtcMs: "1700000007000",
+    input: { name },
+    scope: "global",
+  };
+}
+
+const batch: Action[] = [
+  batchAction("action-1", "first"),
+  batchAction("action-2", "second"),
+  batchAction("action-3", "third"),
+];
+
+/** The snapshot the client builds out of `documentPayload`, for hand-folding. */
+function snapshotForFold(): PHDocument {
+  return {
+    header: {
+      id: "doc-1",
+      revision: { global: 7, document: 1 },
+    },
+    state,
+    initialState: state,
+    operations: { global: [], document: [] },
+    clipboard: [],
+  } as unknown as PHDocument;
+}
+
+function foldScopeHashes(
+  module: DocumentModelModule<any>,
+  actions: readonly Action[],
+): string[] {
+  let document = snapshotForFold();
+  const hashes: string[] = [];
+  for (const folded of actions) {
+    hashes.push(hashDocumentStateForScope(document, "global"));
+    document = module.reducer(document as never, folded, undefined, {
+      protocolVersion: 2,
+    }) as unknown as PHDocument;
+  }
+  return hashes;
+}
 
 describe("GraphQLReactorClient.execute", () => {
   it("fetches the document before pushing and narrows the returned operations", async () => {
@@ -283,20 +362,234 @@ describe("GraphQLReactorClient.execute", () => {
     );
   });
 
-  it("pushes multi-action batches unsigned and warns", async () => {
-    const { signAction } = installSigner();
-    const warn = vi.spyOn(logger, "warn").mockImplementation(() => undefined);
+  it("pushes a multi-action batch unsigned when there is no signer", async () => {
     const sdk = createMockSdk();
 
+    // No signer, no signatures to protect - and therefore no models needed.
     await createClientWith(sdk).execute("doc-1", "main", [
       action,
       secondAction,
     ]);
 
-    expect(signAction).not.toHaveBeenCalled();
     expect(runDocumentVariables(sdk).actions).toEqual([action, secondAction]);
-    expect(warn).toHaveBeenCalledTimes(1);
-    expect(String(warn.mock.calls[0][0])).toContain("unsigned");
+  });
+
+  it("signs every action of a batch in one mutation", async () => {
+    const { signAction } = installSigner();
+    const sdk = createMockSdk();
+    const module = createTestModule(1);
+
+    await createClientWith(sdk, { documentModels: [module] }).execute(
+      "doc-1",
+      "main",
+      batch,
+    );
+
+    expect(sdk.RunDocument).toHaveBeenCalledTimes(1);
+    expect(signAction).toHaveBeenCalledTimes(3);
+    const pushed = runDocumentVariables(sdk).actions as Action[];
+    expect(pushed.map((a) => a.id)).toEqual([
+      "action-1",
+      "action-2",
+      "action-3",
+    ]);
+    for (const pushedAction of pushed) {
+      expect(pushedAction.context?.signer?.signatures).toEqual([signature]);
+    }
+  });
+
+  it("chains the batch onto the document's own head", async () => {
+    installSigner();
+    const sdk = createMockSdk();
+    const module = createTestModule(1);
+
+    await createClientWith(sdk, { documentModels: [module] }).execute(
+      "doc-1",
+      "main",
+      batch,
+    );
+
+    const pushed = runDocumentVariables(sdk).actions as Action[];
+    // The document is at global revision 7, so the batch continues from index 6.
+    expect(pushed.map((a) => a.context?.prevOpIndex)).toEqual([6, 7, 8]);
+    expect(pushed.map((a) => a.context?.prevOpHash)).toEqual(
+      foldScopeHashes(module, batch),
+    );
+  });
+
+  it("signs a batch with the module matching the document's exact version", async () => {
+    installSigner();
+    const sdk = createMockSdk({
+      GetDocument: vi.fn().mockResolvedValue({
+        document: {
+          ...documentPayload.document!,
+          document: {
+            ...documentPayload.document!.document,
+            state: { ...state, document: { version: 2 } },
+          },
+        },
+      }),
+    });
+    // v1 and v2 write different state, so the hash chain says which one ran.
+    const v1 = createTestModule(1);
+    const v2 = createTestModule(2, (name) => name.toUpperCase());
+
+    await createClientWith(sdk, { documentModels: [v1, v2] }).execute(
+      "doc-1",
+      "main",
+      batch,
+    );
+
+    const pushed = runDocumentVariables(sdk).actions as Action[];
+    expect(pushed.map((a) => a.context?.prevOpHash)).toEqual(
+      foldScopeHashes(v2, batch),
+    );
+    expect(pushed.map((a) => a.context?.prevOpHash)).not.toEqual(
+      foldScopeHashes(v1, batch),
+    );
+  });
+
+  it("treats an unversioned document as version 1", async () => {
+    installSigner();
+    const sdk = createMockSdk();
+    // `documentPayload` carries no `state.document`, which is what a document
+    // written before versioning looks like.
+    const v1 = createTestModule(1);
+    const v2 = createTestModule(2, (name) => name.toUpperCase());
+
+    await createClientWith(sdk, { documentModels: [v2, v1] }).execute(
+      "doc-1",
+      "main",
+      batch,
+    );
+
+    const pushed = runDocumentVariables(sdk).actions as Action[];
+    expect(pushed.map((a) => a.context?.prevOpHash)).toEqual(
+      foldScopeHashes(v1, batch),
+    );
+  });
+
+  it("forwards the abort signal to the signer", async () => {
+    const { signAction } = installSigner();
+    const sdk = createMockSdk();
+    const controller = new AbortController();
+
+    await createClientWith(sdk, {
+      documentModels: [createTestModule(1)],
+    }).execute("doc-1", "main", batch, controller.signal);
+
+    for (const call of signAction.mock.calls) {
+      expect(call[1]).toBe(controller.signal);
+    }
+  });
+
+  it("does not mutate the actions it was given", async () => {
+    installSigner();
+    const sdk = createMockSdk();
+    const before = JSON.stringify(batch);
+
+    await createClientWith(sdk, {
+      documentModels: [createTestModule(1)],
+    }).execute("doc-1", "main", batch);
+
+    expect(JSON.stringify(batch)).toBe(before);
+  });
+
+  it("refuses a batch when no models were given, instead of sending it unsigned", async () => {
+    installSigner();
+    const sdk = createMockSdk();
+
+    await expect(
+      createClientWith(sdk).execute("doc-1", "main", batch),
+    ).rejects.toThrow("Unknown document model version: powerhouse/test v1");
+    expect(sdk.RunDocument).not.toHaveBeenCalled();
+  });
+
+  it("refuses a batch when the document's exact version is missing", async () => {
+    installSigner();
+    const sdk = createMockSdk({
+      GetDocument: vi.fn().mockResolvedValue({
+        document: {
+          ...documentPayload.document!,
+          document: {
+            ...documentPayload.document!.document,
+            state: { ...state, document: { version: 3 } },
+          },
+        },
+      }),
+    });
+
+    await expect(
+      createClientWith(sdk, {
+        documentModels: [createTestModule(1), createTestModule(2)],
+      }).execute("doc-1", "main", batch),
+    ).rejects.toThrow("Unknown document model version: powerhouse/test v3");
+    expect(sdk.RunDocument).not.toHaveBeenCalled();
+  });
+
+  it("refuses a batch of actions in different scopes", async () => {
+    installSigner();
+    const sdk = createMockSdk();
+
+    await expect(
+      createClientWith(sdk, {
+        documentModels: [createTestModule(1)],
+      }).execute("doc-1", "main", [
+        batch[0],
+        { ...batch[1], scope: "document" },
+      ]),
+    ).rejects.toThrow('spanning scopes "global" and "document"');
+    expect(sdk.RunDocument).not.toHaveBeenCalled();
+  });
+
+  it("signs a single action without any document models", async () => {
+    const { signAction } = installSigner();
+    const sdk = createMockSdk();
+
+    await createClientWith(sdk).execute("doc-1", "main", [action]);
+
+    expect(signAction).toHaveBeenCalledTimes(1);
+    const pushed = runDocumentVariables(sdk).actions[0] as Action;
+    expect(pushed.context?.signer?.signatures).toEqual([signature]);
+  });
+
+  it("signs with an explicitly supplied signer instead of renown", async () => {
+    const explicitSign = vi.fn().mockResolvedValue(signature);
+    const explicitSigner = {
+      user: { address: "0x9", networkId: "eip155", chainId: 1 },
+      app: { name: "explicit-app", key: "explicit-key" },
+      signAction: explicitSign,
+    } as unknown as ISigner;
+    const { signAction: ambientSign } = installSigner();
+    const sdk = createMockSdk();
+
+    await createClientWith(sdk, {
+      signer: explicitSigner,
+      documentModels: [createTestModule(1)],
+    }).execute("doc-1", "main", batch);
+
+    expect(explicitSign).toHaveBeenCalledTimes(3);
+    expect(ambientSign).not.toHaveBeenCalled();
+    const pushed = runDocumentVariables(sdk).actions as Action[];
+    expect(pushed[0].context?.signer?.app).toEqual(explicitSigner.app);
+  });
+
+  it("signs with an explicit signer when nobody is logged in", async () => {
+    const explicitSign = vi.fn().mockResolvedValue(signature);
+    const explicitSigner = {
+      user: { address: "0x9", networkId: "eip155", chainId: 1 },
+      app: { name: "explicit-app", key: "explicit-key" },
+      signAction: explicitSign,
+    } as unknown as ISigner;
+    const sdk = createMockSdk();
+
+    await createClientWith(sdk, { signer: explicitSigner }).execute(
+      "doc-1",
+      "main",
+      [action],
+    );
+
+    expect(explicitSign).toHaveBeenCalledTimes(1);
   });
 
   it("does not sign when renown has no logged-in user", async () => {
