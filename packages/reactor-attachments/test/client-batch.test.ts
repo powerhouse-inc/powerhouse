@@ -12,7 +12,11 @@ import type {
   IAttachmentUpload,
 } from "../src/interfaces.js";
 import { createRef } from "../src/ref.js";
-import type { AttachmentHeader, AttachmentResponse } from "../src/types.js";
+import type {
+  AttachmentHeader,
+  AttachmentResponse,
+  AttachmentSendOptions,
+} from "../src/types.js";
 
 function deferred<T>(): {
   promise: Promise<T>;
@@ -330,6 +334,62 @@ describe("AttachmentClient upload/download batches", () => {
       [2, false],
       [5, false],
     ]);
+  });
+
+  describe("onProgress forwarding to the handle", () => {
+    function serviceRecordingSendOptions() {
+      const seen: Array<AttachmentSendOptions | undefined> = [];
+      const send = vi.fn(
+        (
+          _data: ReadableStream<Uint8Array>,
+          options?: AttachmentSendOptions,
+        ) => {
+          seen.push(options);
+          return Promise.resolve({
+            hash: HEADER.hash,
+            ref: createRef(HEADER.hash),
+            header: HEADER,
+          });
+        },
+      );
+      const { service } = makeService({
+        reserve: vi.fn(
+          () =>
+            Promise.resolve({
+              reservationId: "res",
+              ref: null,
+              expiresAtUtc: "",
+              send,
+            }) as unknown as Promise<IAttachmentUpload>,
+        ),
+      });
+      return { service, seen };
+    }
+
+    // The XHR transport keys off this option to decide whether to register an
+    // upload-progress listener, which forces a CORS preflight on presigned
+    // PUTs. Passing an inert callback would make that guard unreachable.
+    it("omits onProgress when the caller supplied no listener", async () => {
+      const { service, seen } = serviceRecordingSendOptions();
+      const client = createAttachmentClient(service);
+
+      await client.upload({ file: new Blob(["hello"]) });
+
+      expect(seen).toHaveLength(1);
+      expect(seen[0]?.onProgress).toBeUndefined();
+    });
+
+    it("passes onProgress when the caller is listening", async () => {
+      const { service, seen } = serviceRecordingSendOptions();
+      const client = createAttachmentClient(service);
+
+      await client.upload(
+        { file: new Blob(["hello"]) },
+        { onProgress: () => {} },
+      );
+
+      expect(typeof seen[0]?.onProgress).toBe("function");
+    });
   });
 
   it("reports a confirmed dedup as zero bytes with no uploading stage", async () => {

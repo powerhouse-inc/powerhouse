@@ -22,6 +22,7 @@ import { createRef } from "./ref.js";
 import type {
   AttachmentHeader,
   AttachmentResponse,
+  AttachmentSendOptions,
   AttachmentUploadResult,
   HashFirstReserveAttachmentOptions,
 } from "./types.js";
@@ -468,11 +469,24 @@ class AttachmentClientImpl implements IAttachmentClient {
 
       signal?.throwIfAborted();
       emitter.stage("uploading", { total: sizeBytes });
-      const result = await outcome.handle.send(preprocessed.stream(), {
-        onProgress: (loaded, total) =>
-          emitter.bytes(loaded, total ?? sizeBytes),
+      // `onProgress` only when someone is listening. The XHR transport keys
+      // its `upload.onprogress` registration off the option being present, and
+      // that registration alone forces a CORS preflight on a presigned PUT —
+      // a cost an unwatched upload must not pay for a callback that would
+      // discard every event anyway.
+      const sendOptions: AttachmentSendOptions = {
+        ...(emitter.active
+          ? {
+              onProgress: (loaded: number, total?: number) =>
+                emitter.bytes(loaded, total ?? sizeBytes),
+            }
+          : {}),
         ...(signal ? { signal } : {}),
-      });
+      };
+      const result = await outcome.handle.send(
+        preprocessed.stream(),
+        sendOptions,
+      );
       emitter.finish();
       return result;
     } catch (err) {
