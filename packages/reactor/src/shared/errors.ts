@@ -266,3 +266,38 @@ export class DocumentNotFoundError extends Error {
     return Error.isError(error) && error.name === "DocumentNotFoundError";
   }
 }
+
+/**
+ * An authorization preflight was asked for while the reactor's decision model
+ * is off, so there is no model to answer from.
+ *
+ * Thrown rather than answered from the legacy host-side permission tables. The
+ * two systems do not compose: the tables record which addresses a host lets
+ * near a drive, the policy records what a document's own grants permit, and an
+ * answer stitched from both would report an admission verdict neither system
+ * would reach. A caller that cannot get a prediction disables nothing, which
+ * leaves the submit path -- and its real gate -- as the only authority.
+ *
+ * Detection is by `name`, not `instanceof`: the SharedWorker RPC boundary
+ * rebuilds a thrown error from `{ name, message, stack, cause }` alone
+ * (`reactor-browser/src/rpc/error-info.ts`), so the class identity and any
+ * custom field are lost in transit. This error therefore carries no fields.
+ */
+export class AuthEnforcementDisabledError extends Error {
+  constructor() {
+    super(
+      "Authorization evaluation requires the authEnforcement feature flag; " +
+        "this reactor holds no decision model, and the legacy host-table " +
+        "permission system cannot answer for one",
+    );
+    this.name = "AuthEnforcementDisabledError";
+
+    Error.captureStackTrace(this, AuthEnforcementDisabledError);
+  }
+
+  static isError(error: unknown): error is AuthEnforcementDisabledError {
+    return (
+      Error.isError(error) && error.name === "AuthEnforcementDisabledError"
+    );
+  }
+}

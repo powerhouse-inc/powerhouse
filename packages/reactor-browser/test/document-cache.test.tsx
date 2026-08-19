@@ -664,6 +664,113 @@ describe("DocumentCache class", () => {
     });
   });
 
+  /**
+   * `client.get` resolves slugs, but change events dispatch by `header.id`. A
+   * slug-keyed entry has to follow the id the events carry, or a subscriber
+   * keyed by slug (e.g. useCanExecute watching a revision) never re-renders
+   * after the initial fetch -- a completely silent staleness trap.
+   */
+  describe("slug-keyed entries", () => {
+    function slugAwareClient(doc: PHDocument, slug: string) {
+      const mock = createMockClient([doc]);
+      mock.getMock.mockImplementation((key: string) => {
+        const id = key === slug ? doc.header.id : key;
+        const found = mock.documents.get(id);
+        if (found) return Promise.resolve(found);
+        return Promise.reject(new Error(`Document not found: ${key}`));
+      });
+      return mock;
+    }
+
+    it("notifies a slug-keyed listener when the document updates by id", async () => {
+      const doc = createMockDocument("doc-1", "Original Name");
+      const { client, emitEvent, updateDocument } = slugAwareClient(
+        doc,
+        "my-slug",
+      );
+      const cache = new DocumentCache(client);
+      const callback = vi.fn();
+
+      await cache.get("my-slug");
+      cache.subscribe("my-slug", callback);
+
+      const updatedDoc = createMockDocument("doc-1", "Updated Name");
+      updateDocument("doc-1", updatedDoc);
+      emitEvent({
+        type: DocumentChangeType.Updated,
+        documents: [updatedDoc],
+      });
+
+      await vi.waitFor(() => {
+        expect(callback).toHaveBeenCalled();
+      });
+
+      const refetched = await cache.get("my-slug");
+      expect(refetched.header.name).toBe("Updated Name");
+    });
+
+    it("evicts and notifies a slug-keyed entry when the document is deleted by id", async () => {
+      const doc = createMockDocument("doc-1");
+      const { client, emitEvent, deleteDocument } = slugAwareClient(
+        doc,
+        "my-slug",
+      );
+      const cache = new DocumentCache(client);
+      const callback = vi.fn();
+
+      // Suppress unhandled rejection from readPromiseState's re-throw
+      const handler = (e: PromiseRejectionEvent) => {
+        if ((e.reason as Error)?.message?.includes("my-slug"))
+          e.preventDefault();
+      };
+      window.addEventListener("unhandledrejection", handler);
+
+      await cache.get("my-slug");
+      cache.subscribe("my-slug", callback);
+
+      deleteDocument("doc-1");
+      emitEvent({
+        type: DocumentChangeType.Deleted,
+        documents: [],
+        context: { childId: "doc-1" },
+      });
+
+      expect(callback).toHaveBeenCalled();
+      await expect(cache.get("my-slug")).rejects.toThrow();
+
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      window.removeEventListener("unhandledrejection", handler);
+    });
+
+    it("keeps an id-keyed entry unaffected by another document's alias", async () => {
+      const doc = createMockDocument("doc-1", "Original Name");
+      const { client, emitEvent, updateDocument } = slugAwareClient(
+        doc,
+        "my-slug",
+      );
+      const cache = new DocumentCache(client);
+      const slugCallback = vi.fn();
+      const idCallback = vi.fn();
+
+      await cache.get("my-slug");
+      await cache.get("doc-1");
+      cache.subscribe("my-slug", slugCallback);
+      cache.subscribe("doc-1", idCallback);
+
+      const updatedDoc = createMockDocument("doc-1", "Updated Name");
+      updateDocument("doc-1", updatedDoc);
+      emitEvent({
+        type: DocumentChangeType.Updated,
+        documents: [updatedDoc],
+      });
+
+      await vi.waitFor(() => {
+        expect(slugCallback).toHaveBeenCalled();
+        expect(idCallback).toHaveBeenCalled();
+      });
+    });
+  });
+
   describe("stale-while-revalidate behavior", () => {
     it("should return stale data while refetch is triggered by Updated event", async () => {
       const doc = createMockDocument("test", "Original Name");

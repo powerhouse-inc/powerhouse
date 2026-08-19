@@ -76,6 +76,16 @@ export class DocumentCache implements IDocumentCache {
     { promises: Promise<PHDocument>[]; promise: Promise<PHDocument[]> }
   >();
   private listeners = new Map<string, (() => void)[]>();
+
+  /**
+   * Cache keys that fetched a document under a name other than its id --
+   * slugs, which `client.get` resolves. Change events dispatch by `header.id`,
+   * so without this mapping a slug-keyed entry (and its listeners) would never
+   * see an update: keyed by the id the events carry, valued by the other keys
+   * the same document is cached under.
+   */
+  private aliasKeys = new Map<string, Set<string>>();
+
   private unsubscribe: (() => void) | null = null;
 
   constructor(private client: IReactorBrowserClient) {
@@ -98,23 +108,41 @@ export class DocumentCache implements IDocumentCache {
   }
 
   private handleDocumentDeleted(documentId: string): void {
-    const listeners = this.listeners.get(documentId);
-    this.documents.delete(documentId);
-    this.invalidateBatchesContaining(documentId);
-    if (listeners) {
-      listeners.forEach((listener) => listener());
+    for (const key of this.cacheKeysFor(documentId)) {
+      const listeners = this.listeners.get(key);
+      this.documents.delete(key);
+      this.invalidateBatchesContaining(key);
+      if (listeners) {
+        listeners.forEach((listener) => listener());
+      }
+      this.listeners.delete(key);
     }
-    this.listeners.delete(documentId);
+    this.aliasKeys.delete(documentId);
   }
 
   private async handleDocumentUpdated(documentId: string): Promise<void> {
-    if (this.documents.has(documentId)) {
-      await this.get(documentId, true);
-      const listeners = this.listeners.get(documentId);
+    for (const key of this.cacheKeysFor(documentId)) {
+      if (!this.documents.has(key)) {
+        continue;
+      }
+      await this.get(key, true);
+      const listeners = this.listeners.get(key);
       if (listeners) {
         listeners.forEach((listener) => listener());
       }
     }
+  }
+
+  /** The id an event dispatches by, plus every alias the document is cached under. */
+  private cacheKeysFor(documentId: string): string[] {
+    return [documentId, ...(this.aliasKeys.get(documentId) ?? [])];
+  }
+
+  /** Records that `key` cached the document change events know as `header.id`. */
+  private recordAlias(documentId: string, key: string): void {
+    const keys = this.aliasKeys.get(documentId) ?? new Set<string>();
+    keys.add(key);
+    this.aliasKeys.set(documentId, keys);
   }
 
   private invalidateBatchesContaining(documentId: string): void {
@@ -137,6 +165,15 @@ export class DocumentCache implements IDocumentCache {
     }
 
     const documentPromise = this.client.get(id);
+    documentPromise.then(
+      (doc) => {
+        if (doc.header.id !== id) {
+          this.recordAlias(doc.header.id, id);
+        }
+      },
+      // Rejections are surfaced by the stored promise; this chain only learns aliases.
+      () => undefined,
+    );
     this.documents.set(id, addPromiseState(documentPromise));
     return documentPromise;
   }

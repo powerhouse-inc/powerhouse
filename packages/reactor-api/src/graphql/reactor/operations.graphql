@@ -202,6 +202,27 @@ query GetJobStatus($jobId: String!) {
   }
 }
 
+query EvaluateActions(
+  $documentIdentifier: String!
+  $branch: String
+  $candidates: [ActionCandidateInput!]!
+) {
+  evaluateActions(
+    documentIdentifier: $documentIdentifier
+    branch: $branch
+    candidates: $candidates
+  ) {
+    evaluations {
+      decision
+      reason
+    }
+    allAllowed
+    anyAllowed
+    allDenied
+    anyDenied
+  }
+}
+
 # Mutation operations
 mutation CreateDocument($document: JSONObject!, $parentIdentifier: String) {
   createDocument(document: $document, parentIdentifier: $parentIdentifier) {

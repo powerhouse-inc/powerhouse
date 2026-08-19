@@ -10,6 +10,7 @@ import type {
 import type { FetchLike } from "./requester.js";
 import { createFetchRequester } from "./requester.js";
 import {
+  ActionEvaluationsDTO,
   DocumentChangeEventDTO,
   DocumentModelResultPageDTO,
   DocumentWithChildrenAndOperationsDTO,
@@ -76,6 +77,11 @@ const operationValidators: OperationValidators = {
   GetJobStatus: (data) => {
     if (data.jobStatus) {
       JobInfoDTO.parse(data.jobStatus as JobInfo);
+    }
+  },
+  EvaluateActions: (data) => {
+    if (data.evaluateActions) {
+      ActionEvaluationsDTO.parse(data.evaluateActions);
     }
   },
   // Mutations

@@ -434,7 +434,12 @@ describe("GraphQLManager", () => {
       // Simulate the auth middleware having run and set context for this request
       const mockService = {
         authenticateRequest: vi.fn().mockResolvedValue({
-          user: { address: "0xabc", chainId: 1, networkId: "eip155" },
+          user: {
+            address: "0xabc",
+            chainId: 1,
+            networkId: "eip155",
+            appKey: "did:key:zAppTest",
+          },
           admins: ["0xadmin"],
           auth_enabled: true,
         } satisfies AuthContext),
@@ -448,6 +453,7 @@ describe("GraphQLManager", () => {
         address: "0xabc",
         chainId: 1,
         networkId: "eip155",
+        appKey: "did:key:zAppTest",
       });
     });
 
@@ -467,6 +473,7 @@ describe("GraphQLManager", () => {
         address: "0xreal",
         chainId: 1,
         networkId: "eip155",
+        appKey: "did:key:zAppTest",
       };
       const mockService = {
         authenticateRequest: vi.fn().mockResolvedValue({

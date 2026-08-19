@@ -166,6 +166,23 @@ export const DocumentChangeEventDTO = z
   })
   .strip();
 
+export const ActionEvaluationDTO = z
+  .object({
+    decision: z.enum(["ALLOW", "DENY"]),
+    reason: z.string().nullable().optional(),
+  })
+  .strip();
+
+export const ActionEvaluationsDTO = z
+  .object({
+    evaluations: z.array(ActionEvaluationDTO),
+    allAllowed: z.boolean(),
+    anyAllowed: z.boolean(),
+    allDenied: z.boolean(),
+    anyDenied: z.boolean(),
+  })
+  .strip();
+
 export const JobChangeEventDTO = z
   .object({
     jobId: z.string(),

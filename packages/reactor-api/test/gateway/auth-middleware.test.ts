@@ -30,7 +30,12 @@ function makeRequest(url = "http://localhost/graphql"): globalThis.Request {
 }
 
 const AUTH_CTX: AuthContext = {
-  user: { address: "0xabc", chainId: 1, networkId: "eip155" },
+  user: {
+    address: "0xabc",
+    chainId: 1,
+    networkId: "eip155",
+    appKey: "did:key:zAppTest",
+  },
   admins: ["0xadmin"],
   auth_enabled: true,
 };

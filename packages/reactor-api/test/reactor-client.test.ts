@@ -2,6 +2,7 @@ import { print } from "graphql";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createReactorGraphQLClient } from "../src/graphql/index.js";
 import {
+  EvaluateActionsDocument,
   GetDocumentDocument,
   GetDocumentOperationsDocument,
   GetDocumentWithOperationsDocument,
@@ -382,6 +383,81 @@ describe("ReactorSDK", () => {
         requester(
           GetDocumentWithOperationsDocument,
           { identifier: "doc-123" },
+          {},
+        ),
+      ).rejects.toThrow();
+    });
+
+    it("should validate a successful EvaluateActions response", async () => {
+      const validResponse = {
+        evaluateActions: {
+          evaluations: [
+            { decision: "ALLOW", reason: null },
+            { decision: "DENY", reason: "no grant permits this operation" },
+          ],
+          allAllowed: false,
+          anyAllowed: true,
+          allDenied: false,
+          anyDenied: true,
+        },
+      };
+
+      const mockResponse = {
+        ok: true,
+        json: vi.fn().mockResolvedValue({ data: validResponse }),
+      };
+      (mockFetch as any).mockResolvedValue(mockResponse);
+
+      const requester = createValidatingRequester(
+        "https://api.test.com/graphql",
+        mockFetch,
+      );
+
+      const result = await requester(
+        EvaluateActionsDocument,
+        {
+          documentIdentifier: "doc-123",
+          candidates: [{ scope: "global", type: "SET_NAME" }],
+        },
+        {},
+      );
+
+      expect(result).toEqual(validResponse);
+    });
+
+    /**
+     * A verdict outside the enum is not a value a client can branch on, so it
+     * is refused rather than passed through as an unrecognised string.
+     */
+    it("should reject an EvaluateActions response carrying an unknown decision", async () => {
+      const mockResponse = {
+        ok: true,
+        json: vi.fn().mockResolvedValue({
+          data: {
+            evaluateActions: {
+              evaluations: [{ decision: "MAYBE", reason: null }],
+              allAllowed: false,
+              anyAllowed: false,
+              allDenied: true,
+              anyDenied: true,
+            },
+          },
+        }),
+      };
+      (mockFetch as any).mockResolvedValue(mockResponse);
+
+      const requester = createValidatingRequester(
+        "https://api.test.com/graphql",
+        mockFetch,
+      );
+
+      await expect(
+        requester(
+          EvaluateActionsDocument,
+          {
+            documentIdentifier: "doc-123",
+            candidates: [{ scope: "global", type: "SET_NAME" }],
+          },
           {},
         ),
       ).rejects.toThrow();

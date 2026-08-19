@@ -1,6 +1,7 @@
 import {
   type JobInfo as ClientJobInfo,
   type DocumentChangeEvent,
+  type Evaluation,
   type PagedResults,
   PropagationMode,
 } from "@powerhousedao/reactor";
@@ -14,6 +15,8 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import { GraphQLError } from "graphql";
 import {
+  type ActionEvaluation as GqlActionEvaluation,
+  AuthDecision as GqlAuthDecision,
   type DocumentModelResultPage,
   type DocumentChangeEvent as GqlDocumentChangeEvent,
   type DocumentModelGlobalState as GqlDocumentModelGlobalState,
@@ -146,6 +149,19 @@ export function toReactorPropagationMode(
     case GqlPropagationMode.Orphan:
       return PropagationMode.None;
   }
+}
+
+/**
+ * Maps one predicted verdict to its GraphQL shape. A refusal's reason is the
+ * consensus string the reactor would record for it, carried through verbatim so
+ * a client can tell a deletion refusal from a missing grant; an allow has none.
+ */
+export function toGqlActionEvaluation(
+  evaluation: Evaluation,
+): GqlActionEvaluation {
+  return evaluation.decision === "allow"
+    ? { decision: GqlAuthDecision.Allow, reason: null }
+    : { decision: GqlAuthDecision.Deny, reason: evaluation.reason };
 }
 
 /**

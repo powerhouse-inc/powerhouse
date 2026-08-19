@@ -6,6 +6,7 @@ import type {
 } from "@powerhousedao/shared/document-drive";
 import type {
   Action,
+  AuthSubject,
   DocumentModelModule,
   Operation,
   PHDocument,
@@ -17,6 +18,7 @@ import type {
   BatchLoadRequest,
   BatchLoadResult,
 } from "../core/types.js";
+import type { Evaluation } from "../decision/types.js";
 import type {
   JobInfo,
   PagedResults,
@@ -198,6 +200,35 @@ export interface IDriveClient {
 }
 
 /**
+ * One operation an authorization preflight predicts a verdict for. The input is
+ * what a conditional grant reads, so a candidate standing for a filled-in form
+ * carries that form's input.
+ */
+export type ActionCandidate = {
+  scope: string;
+  type: string;
+  input?: unknown;
+};
+
+/**
+ * The predicted verdicts for a set of candidates, in the order they were given,
+ * with the aggregates a UI branches on.
+ *
+ * The aggregates are redundant -- a verdict is binary, so `allDenied` is
+ * `!anyAllowed` and `anyDenied` is `!allAllowed` -- and all four are returned
+ * so that a caller reads the one its question is phrased in rather than
+ * negating another. Over no candidates every aggregate is false: nothing is
+ * allowed and nothing is denied.
+ */
+export type ActionEvaluations = {
+  evaluations: Evaluation[];
+  allAllowed: boolean;
+  anyAllowed: boolean;
+  allDenied: boolean;
+  anyDenied: boolean;
+};
+
+/**
  * The ReactorClient interface that wraps lower-level APIs to provide
  * a simpler interface for document operations.
  *
@@ -336,6 +367,51 @@ export interface IReactorClient {
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<PHDocument>>;
+
+  /**
+   * Predicts whether the subject would be admitted to execute each of a set of
+   * candidate operations, without submitting any of them. A UI asks this to
+   * disable a control rather than offer an action that fails on submit.
+   *
+   * The answer is a prediction, not a promise. Three caveats hold:
+   *
+   * - Real admission compiles an append condition over everything it read and
+   *   the store enforces it at write time. A preflight reads no future, so a
+   *   policy change landing between this answer and the submit changes the
+   *   verdict. The submit path stays the only authority.
+   * - The verdict is evaluated at the stream heads. It is therefore correct for
+   *   a candidate that will be stamped at or after every timestamp the
+   *   evaluation read, which is the normal case for a control the user is about
+   *   to click. A backdated submission is out of contract: the reactor decides
+   *   that one by position, against the policy as it stood there.
+   * - A candidate whose input decides the verdict needs that input supplied.
+   *   With `authConditions` on, a conditional grant reads `action.input`, so
+   *   omitting the input predicts the denial an empty input would earn rather
+   *   than the verdict the filled-in form will get.
+   *
+   * Document-scope candidates are decided against the policy of the document
+   * their input names, not the one passed here: delete and upgrade name it in
+   * `input.documentId`, and the relationship actions in `input.sourceId`. This
+   * follows the executor's own gate, which decides against the document
+   * guarding the write. `CREATE_DOCUMENT` follows the gate's exemption: it runs
+   * before its document exists, so the executor never decides it against a
+   * policy and the preflight predicts allow.
+   *
+   * @param documentIdentifier - Document "id" or "slug" the candidates target
+   * @param branch - Branch to evaluate against
+   * @param candidates - Operations to predict a verdict for, each with the scope it would execute in
+   * @param subject - Optional subject to decide for, defaulting to the client's own signer. A plain subject rather than a ViewFilter: the evaluation reads no view, so a filter's branch or scopes would be silently ignored here
+   * @param signal - Optional abort signal to cancel the request
+   * @returns One evaluation per candidate, in the order given, with the aggregates over them
+   * @throws AuthEnforcementDisabledError if the reactor's authEnforcement flag is off, in which case it holds no decision model and the legacy host-table permission system cannot answer for one
+   */
+  evaluateActions(
+    documentIdentifier: string,
+    branch: string,
+    candidates: ActionCandidate[],
+    subject?: AuthSubject,
+    signal?: AbortSignal,
+  ): Promise<ActionEvaluations>;
 
   /**
    * Creates a document and waits for completion

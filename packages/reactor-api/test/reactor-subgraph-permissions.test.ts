@@ -52,8 +52,16 @@ describe("ReactorSubgraph Permission Checks", () => {
   );
 
   // Helper to create context with different user states
-  const createContext = (options: { userAddress?: string }) => ({
-    user: options.userAddress ? { address: options.userAddress } : undefined,
+  const createContext = (options: {
+    userAddress?: string;
+    appKey?: string;
+  }) => ({
+    user: options.userAddress
+      ? {
+          address: options.userAddress,
+          appKey: options.appKey ?? "did:key:zCallerApp",
+        }
+      : undefined,
     headers: {},
     db: {},
   });
@@ -133,6 +141,13 @@ describe("ReactorSubgraph Permission Checks", () => {
       getJobStatus: vi.fn(),
       waitForJob: vi.fn(),
       subscribe: vi.fn(),
+      evaluateActions: vi.fn().mockResolvedValue({
+        evaluations: [{ decision: "allow" }],
+        allAllowed: true,
+        anyAllowed: true,
+        allDenied: false,
+        anyDenied: false,
+      }),
     };
 
     reactorSubgraph = buildSubgraph(mockAuthorizationService);
@@ -168,6 +183,104 @@ describe("ReactorSubgraph Permission Checks", () => {
       const ctx = createContext({});
 
       await expect(callDocument(ctx)).rejects.toThrow("Forbidden");
+    });
+  });
+
+  // ============================================================
+  // Query: evaluateActions
+  // ============================================================
+  describe("Query: evaluateActions", () => {
+    const callEvaluateActions = (ctx: any) => {
+      const query = (reactorSubgraph.resolvers.Query as any)?.evaluateActions;
+      return query(
+        null,
+        {
+          documentIdentifier: "doc-123",
+          candidates: [{ scope: "global", type: "SET_NAME" }],
+        },
+        ctx,
+      );
+    };
+
+    it("should answer when canRead resolves true", async () => {
+      vi.mocked(mockAuthorizationService.canRead!).mockResolvedValue(true);
+      const ctx = createContext({ userAddress: "0xpermitted" });
+
+      const result = await callEvaluateActions(ctx);
+
+      expect(result.allAllowed).toBe(true);
+      expect(mockAuthorizationService.canRead).toHaveBeenCalled();
+    });
+
+    /**
+     * A verdict is derived from the document's policy, so answering for a caller
+     * who may not read the document would disclose that policy through the back
+     * door. The preflight must not even be attempted.
+     */
+    it("should not preflight at all when canRead resolves false", async () => {
+      vi.mocked(mockAuthorizationService.canRead!).mockResolvedValue(false);
+      const ctx = createContext({ userAddress: "0xunpermitted" });
+
+      await expect(callEvaluateActions(ctx)).rejects.toThrow("Forbidden");
+      expect(mockReactorClient.evaluateActions).not.toHaveBeenCalled();
+    });
+
+    it("should deny an unauthenticated caller", async () => {
+      const ctx = createContext({});
+
+      await expect(callEvaluateActions(ctx)).rejects.toThrow("Forbidden");
+      expect(mockReactorClient.evaluateActions).not.toHaveBeenCalled();
+    });
+
+    /**
+     * The subject is the authenticated caller, never something the request can
+     * name: answering for an arbitrary subject would disclose what a policy
+     * grants somebody else.
+     */
+    it("should decide for the authenticated caller, not a requested subject", async () => {
+      vi.mocked(mockAuthorizationService.canRead!).mockResolvedValue(true);
+      const ctx = createContext({ userAddress: "0xpermitted" });
+      const query = (reactorSubgraph.resolvers.Query as any)?.evaluateActions;
+
+      await query(
+        null,
+        {
+          documentIdentifier: "doc-123",
+          candidates: [{ scope: "global", type: "SET_NAME" }],
+          // Not part of the schema; present to prove it is ignored even so.
+          view: { subject: { address: "0xsomebodyelse" } },
+        },
+        ctx,
+      );
+
+      expect(mockReactorClient.evaluateActions).toHaveBeenCalledWith(
+        "doc-123",
+        "main",
+        [{ scope: "global", type: "SET_NAME", input: undefined }],
+        { address: "0xpermitted", key: "did:key:zCallerApp" },
+      );
+    });
+
+    /**
+     * The key is what a document records as its creator, so a subject built
+     * without one refuses the document's own creator an auth-scope operation
+     * their signed write would be admitted for.
+     */
+    it("should carry the caller's app key into the subject", async () => {
+      vi.mocked(mockAuthorizationService.canRead!).mockResolvedValue(true);
+      const ctx = createContext({
+        userAddress: "0xcreator",
+        appKey: "did:key:zCreatorApp",
+      });
+
+      await callEvaluateActions(ctx);
+
+      expect(mockReactorClient.evaluateActions).toHaveBeenCalledWith(
+        "doc-123",
+        "main",
+        expect.anything(),
+        { address: "0xcreator", key: "did:key:zCreatorApp" },
+      );
     });
   });
 

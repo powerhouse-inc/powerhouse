@@ -1,6 +1,7 @@
 import type { ISigner } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import { ConsoleLogger } from "document-model";
+import type { ActionEvaluationConfig } from "../client/reactor-client.js";
 import { ReactorClient } from "../client/reactor-client.js";
 import type { IReadGate } from "../decision/read-gate.js";
 import {
@@ -8,6 +9,7 @@ import {
   ModelReadGate,
   readDecisionModel,
 } from "../decision/read-gate.js";
+import type { RegisteredDecisionModel } from "../decision/registered-model.js";
 import type { IEventBus } from "../events/interfaces.js";
 import type { IDocumentModelLoader } from "../registry/interfaces.js";
 import { JobAwaiter, type IJobAwaiter } from "../shared/awaiter.js";
@@ -130,7 +132,7 @@ export class ReactorClientBuilder {
   }
 
   /**
-   * The gate this reactor's flags call for. Below authEnforcement there is no
+   * The gate the resolved model calls for. Below authEnforcement there is no
    * model to enforce -- the registered one ignores the auth scope -- so the
    * policy is evaluated on its own, which is what reads did before the model
    * existed. Group serving turns on with authGroups, because below it a
@@ -140,24 +142,41 @@ export class ReactorClientBuilder {
   private resolveReadGate(
     reactorModule: InProcessReactorModule | undefined,
     documentView: IDocumentView,
+    model: RegisteredDecisionModel | undefined,
   ): IReadGate {
-    if (!reactorModule) {
+    if (!reactorModule || model === undefined) {
       return new BareReadGate();
     }
 
-    const model = readDecisionModel(
-      reactorModule.featureFlags,
-      reactorModule.documentModelRegistry,
+    return new ModelReadGate(
+      model,
+      documentView,
+      reactorModule.featureFlags.authGroups,
+      reactorModule.operationIndex,
+      this.logger,
     );
-    return model === undefined
-      ? new BareReadGate()
-      : new ModelReadGate(
-          model,
-          documentView,
-          reactorModule.featureFlags.authGroups,
-          reactorModule.operationIndex,
-          this.logger,
-        );
+  }
+
+  /**
+   * What the client answers an authorization preflight from, or undefined when
+   * it answers none.
+   *
+   * Resolved from the same model reads enforce, so a preflight and a read can
+   * never decide against different models. Undefined below authEnforcement, and
+   * undefined on the `withReactor` path, where there are no flags and no
+   * registry to select a model with -- a client with no model refuses the
+   * preflight rather than answering it from the legacy host-side permission
+   * tables. Deliberately not derived from the read gate: `withReadGate`
+   * overrides that, so sniffing the gate's type would report enforcement from a
+   * caller's substitution.
+   */
+  private resolveActionEvaluation(
+    reactorModule: InProcessReactorModule | undefined,
+    model: RegisteredDecisionModel | undefined,
+  ): ActionEvaluationConfig | undefined {
+    return reactorModule && model
+      ? { model, flags: reactorModule.featureFlags }
+      : undefined;
   }
 
   public async build(): Promise<ReactorClient> {
@@ -218,6 +237,13 @@ export class ReactorClientBuilder {
         reactor.getJobStatus(jobId, signal),
       );
 
+    const decisionModel = reactorModule
+      ? readDecisionModel(
+          reactorModule.featureFlags,
+          reactorModule.documentModelRegistry,
+        )
+      : undefined;
+
     const client = new ReactorClient(
       this.logger,
       reactor,
@@ -226,7 +252,9 @@ export class ReactorClientBuilder {
       jobAwaiter,
       documentIndexer,
       documentView,
-      this.readGate ?? this.resolveReadGate(reactorModule, documentView),
+      this.readGate ??
+        this.resolveReadGate(reactorModule, documentView, decisionModel),
+      this.resolveActionEvaluation(reactorModule, decisionModel),
     );
 
     return {

@@ -292,6 +292,28 @@ export class ReactorSubgraph extends BaseSubgraph {
         }
       },
 
+      /**
+       * Gated on reading the document, the same gate every other read here
+       * carries: a verdict is derived from the document's policy, so a caller
+       * who may not read the document may not preflight against it either.
+       * That gate decides whether the query runs; the answer comes entirely
+       * from the reactor's decision model.
+       */
+      evaluateActions: async (_parent, args, ctx: Context) => {
+        this.logger.debug("evaluateActions(@args)", args);
+        try {
+          const handle = await this.assertCanRead(args.documentIdentifier, ctx);
+          return await resolvers.evaluateActions(
+            this.reactorClient,
+            { ...args, documentIdentifier: handle.fetchIdentifier },
+            this.viewSubject(ctx),
+          );
+        } catch (error) {
+          this.logger.error("Error in evaluateActions: @Error", error);
+          throw error;
+        }
+      },
+
       pollSyncEnvelopes: async (
         _parent: unknown,
         args: { channelId: string; outboxAck: number; outboxLatest: number },
