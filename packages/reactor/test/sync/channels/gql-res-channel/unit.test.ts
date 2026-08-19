@@ -553,3 +553,106 @@ describe("GqlResponseChannel", () => {
     });
   });
 });
+
+/**
+ * The outbox cursor is where a restart resumes deriving operations from, so it
+ * is the one number that can lose a withheld entry permanently: acking a later
+ * entry must not sweep it past an earlier one this remote has never been served.
+ */
+describe("the outbox cursor and entries that were never served", () => {
+  const channelWith = (cursorStorage: ISyncCursorStorage) =>
+    new GqlResponseChannel(
+      createMockLogger(),
+      "channel-1",
+      "remote-1",
+      cursorStorage,
+    );
+
+  it("does not advance past an entry still queued in the outbox", () => {
+    const cursorStorage = createMockCursorStorage();
+    const channel = channelWith(cursorStorage);
+
+    const withheld = createMockSyncOperation("syncop-held", "remote-1", 3);
+    const served = createMockSyncOperation("syncop-served", "remote-1", 7);
+    channel.outbox.add(withheld, served);
+
+    served.executed();
+    channel.outbox.remove(served);
+
+    expect(cursorStorage.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ cursorType: "outbox", cursorOrdinal: 2 }),
+    );
+  });
+
+  it("advances to the applied high-water mark once the withheld entry goes out", () => {
+    const cursorStorage = createMockCursorStorage();
+    const channel = channelWith(cursorStorage);
+
+    const withheld = createMockSyncOperation("syncop-held", "remote-1", 3);
+    const served = createMockSyncOperation("syncop-served", "remote-1", 7);
+    channel.outbox.add(withheld, served);
+
+    served.executed();
+    channel.outbox.remove(served);
+    withheld.executed();
+    channel.outbox.remove(withheld);
+
+    expect(cursorStorage.upsert).toHaveBeenLastCalledWith(
+      expect.objectContaining({ cursorOrdinal: 7 }),
+    );
+  });
+
+  /**
+   * An evicted entry is still owed, and unlike a queued one it is no longer in
+   * the outbox to hold the cursor down, so the floor has to be remembered.
+   */
+  it("does not advance past an entry evicted without being served", () => {
+    const cursorStorage = createMockCursorStorage();
+    const channel = channelWith(cursorStorage);
+
+    const evicted = createMockSyncOperation("syncop-evicted", "remote-1", 4);
+    channel.outbox.add(evicted);
+    channel.outbox.remove(evicted);
+
+    const served = createMockSyncOperation("syncop-served", "remote-1", 9);
+    channel.outbox.add(served);
+    served.executed();
+    channel.outbox.remove(served);
+
+    expect(cursorStorage.upsert).toHaveBeenLastCalledWith(
+      expect.objectContaining({ cursorOrdinal: 3 }),
+    );
+  });
+
+  it("lifts the evicted floor once the refill re-derives it", () => {
+    const cursorStorage = createMockCursorStorage();
+    const channel = channelWith(cursorStorage);
+
+    const evicted = createMockSyncOperation("syncop-evicted", "remote-1", 4);
+    channel.outbox.add(evicted);
+    channel.outbox.remove(evicted);
+
+    const rederived = createMockSyncOperation("syncop-refill", "remote-1", 4);
+    channel.outbox.add(rederived);
+    rederived.executed();
+    channel.outbox.remove(rederived);
+
+    expect(cursorStorage.upsert).toHaveBeenLastCalledWith(
+      expect.objectContaining({ cursorOrdinal: 4 }),
+    );
+  });
+
+  it("persists nothing while the lowest entry of all is the withheld one", () => {
+    const cursorStorage = createMockCursorStorage();
+    const channel = channelWith(cursorStorage);
+
+    const withheld = createMockSyncOperation("syncop-held", "remote-1", 1);
+    const served = createMockSyncOperation("syncop-served", "remote-1", 5);
+    channel.outbox.add(withheld, served);
+
+    served.executed();
+    channel.outbox.remove(served);
+
+    expect(cursorStorage.upsert).not.toHaveBeenCalled();
+  });
+});
