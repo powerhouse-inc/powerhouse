@@ -6,21 +6,39 @@ import type { PowerhouseVerifiableCredential } from "../src/types.js";
 interface ReactorCall {
   query: string;
   variables: Record<string, unknown>;
+  authorization?: string;
 }
 
-// Route reactor mutations/queries by operation and record request bodies.
+// Route reactor mutations/queries by operation and record request bodies. Any
+// request matching an `errors` marker fails, simulating a missing operation.
 function mockReactor(
-  opts: { renownUsers?: unknown[]; createId?: string } = {},
+  opts: {
+    renownUsers?: unknown[];
+    createId?: string;
+    errors?: { match: string; message: string }[];
+  } = {},
 ) {
   const calls: ReactorCall[] = [];
   vi.spyOn(globalThis, "fetch").mockImplementation((_input, init) => {
     const body = JSON.parse(
       (init?.body as string | undefined) ?? "{}",
     ) as ReactorCall;
-    calls.push(body);
+    const headers = (init?.headers ?? {}) as Record<string, string>;
+    calls.push({ ...body, authorization: headers.Authorization });
+    const failure = opts.errors?.find((e) => body.query.includes(e.match));
+    if (failure) {
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({ errors: [{ message: failure.message }] }),
+          { status: 200 },
+        ),
+      );
+    }
     let data: unknown = {};
     if (body.query.includes("renownUsers")) {
       data = { renownUsers: opts.renownUsers ?? [] };
+    } else if (body.query.includes("renown_issueCredential")) {
+      data = { renown_issueCredential: opts.createId ?? "doc-new" };
     } else if (body.query.includes("createEmptyDocument")) {
       data = { createEmptyDocument: { id: opts.createId ?? "doc-new" } };
     } else if (body.query.includes("mutateDocument")) {
@@ -233,46 +251,106 @@ describe("SwitchboardClient", () => {
   });
 
   describe("issueCredential", () => {
-    it("creates a credential doc and INITs it with the credential fields", async () => {
+    it("issues via renown_issueCredential with the credential fields", async () => {
       const calls = mockReactor({ createId: "cred-doc-1" });
       const documentId = await client.issueCredential(makeCredential());
 
       expect(documentId).toBe("cred-doc-1");
-      const [init] = mutateActions(calls);
-      expect(init.type).toBe("INIT");
-      expect(init.input.id).toBe("urn:uuid:cred-1");
-      expect(init.input.credentialSubject).toEqual({
+      const issue = calls.find((c) =>
+        c.query.includes("renown_issueCredential"),
+      );
+      const input = issue?.variables.input as {
+        id: string;
+        credentialSubject: { id: string; app: string };
+        proof: { proofValue: string };
+      };
+      expect(input.id).toBe("urn:uuid:cred-1");
+      expect(input.credentialSubject).toEqual({
         id: APP_DID,
         app: "test-app",
       });
-      const proof = init.input.proof as { proofValue: string };
-      expect(proof.proofValue).toBe("0xsignature");
+      expect(input.proof.proofValue).toBe("0xsignature");
+    });
+
+    it("falls back to generic createEmptyDocument + INIT on an older switchboard", async () => {
+      const calls = mockReactor({
+        createId: "cred-doc-1",
+        errors: [
+          {
+            match: "renown_issueCredential",
+            message:
+              'Cannot query field "renown_issueCredential" on type "Mutation".',
+          },
+        ],
+      });
+      const documentId = await client.issueCredential(makeCredential());
+
+      expect(documentId).toBe("cred-doc-1");
+      expect(
+        calls.some((c) => c.query.includes("renown_issueCredential")),
+      ).toBe(true);
+      expect(calls.some((c) => c.query.includes("createEmptyDocument"))).toBe(
+        true,
+      );
+      const [init] = mutateActions(calls);
+      expect(init.type).toBe("INIT");
+    });
+
+    it("does NOT fall back when the resolver rejects the credential", async () => {
+      const calls = mockReactor({
+        errors: [
+          {
+            match: "renown_issueCredential",
+            message:
+              "Invalid request: EIP-712 proof signature does not match issuer",
+          },
+        ],
+      });
+
+      await expect(client.issueCredential(makeCredential())).rejects.toThrow(
+        /signature/i,
+      );
+      // A resolver rejection must not silently write via the generic path.
+      expect(calls.some((c) => c.query.includes("createEmptyDocument"))).toBe(
+        false,
+      );
     });
   });
 
-  describe("findOrCreateUser", () => {
-    it("creates a user with SET_ETH_ADDRESS when none exists", async () => {
+  describe("upsertUserProfile", () => {
+    it("creates a user and sends the bearer token when none exists", async () => {
       const calls = mockReactor({ renownUsers: [], createId: "user-doc-1" });
-      const documentId = await client.findOrCreateUser(ADDRESS, {
-        username: "alice",
-      });
+      const documentId = await client.upsertUserProfile(
+        ADDRESS,
+        { username: "alice" },
+        { token: "jwt-token" },
+      );
 
       expect(documentId).toBe("user-doc-1");
+      expect(calls.some((c) => c.query.includes("createEmptyDocument"))).toBe(
+        true,
+      );
       const actions = mutateActions(calls);
       expect(actions.map((a) => a.type)).toEqual([
         "SET_ETH_ADDRESS",
         "SET_USERNAME",
       ]);
-      expect(actions[0].input).toEqual({ ethAddress: ADDRESS });
+      // The write carried the bearer token so the switchboard can authorize it.
+      const createCall = calls.find((c) =>
+        c.query.includes("createEmptyDocument"),
+      );
+      expect(createCall?.authorization).toBe("Bearer jwt-token");
     });
 
-    it("updates an existing user without recreating it", async () => {
+    it("updates an existing user without creating a document", async () => {
       const calls = mockReactor({
         renownUsers: [{ documentId: "user-doc-9", ethAddress: ADDRESS }],
       });
-      const documentId = await client.findOrCreateUser(ADDRESS, {
-        userImage: "http://img.test/a.png",
-      });
+      const documentId = await client.upsertUserProfile(
+        ADDRESS,
+        { userImage: "http://img.test/a.png" },
+        { token: "jwt-token" },
+      );
 
       expect(documentId).toBe("user-doc-9");
       expect(calls.some((c) => c.query.includes("createEmptyDocument"))).toBe(
