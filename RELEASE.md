@@ -347,10 +347,21 @@ A failure in any of those steps posts to Discord via the `DISCORD_FAILURES` webh
 
 > For production releases, after this section runs green, post the Discord message from Production [Step 5](#step-5--announce-in-coredev-releases) to `#coredev-releases`. This is **not** the same channel as the failure webhook.
 
+## npm authentication
+
+Publishing uses [trusted publishing](https://docs.npmjs.com/trusted-publishers/) (OIDC) — no npm token is configured in CI. Each released package has `release-branch.yml` in `powerhouse-inc/powerhouse` registered as its trusted publisher on npmjs.com, and provenance attestations are generated automatically.
+
+**Adding a new package to the release?** Trusted publishing can't create a package that doesn't exist on the registry yet. Publish it once manually (or with a token), then register the trusted publisher:
+
+```bash
+npm trust github <pkg> --file release-branch.yml --repo powerhouse-inc/powerhouse --allow-publish
+```
+
 ## Troubleshooting
 
 - **"Cannot do a prerelease on production"** — you triggered the workflow on `release/production/*` with `release_mode=prerelease`. Use `patch`.
 - **"Branch ... is invalid" / "must start with release/" / "invalid tag"** — branch name doesn't match `main`, `release/staging/<label>`, or `release/production/<label>`.
+- **npm publish fails with 404/permission error for one package** — its trusted publisher config on npmjs.com is missing or doesn't match (`npm trust list <pkg>` to inspect). See [npm authentication](#npm-authentication).
 - **"No version changes detected — skipping release"** — Nx didn't find new commits worth releasing on this branch since the last tag. Confirm there are real commits since the last release tag.
 - **Mixed versions across packages after `npx nx release version`** — a workspace is missing from the `projects` glob in `releases/release.ts` (currently: `packages/*`, `packages/analytics-engine/*`, `clis/*`, `apps/*`). Either add it there or hand-edit the missing `package.json` to the same baseline before committing.
 - **Wrong base version published** — you ran a fresh staging or production cut without setting the baseline you needed. The npm version is now burned; cut a new line one prerelease number higher and move on.
