@@ -1,0 +1,10 @@
+{
+  "logLevel": "info",
+  "auth": {
+    "enabled": true,
+    "admins": ["0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"],
+    "renown": {
+      "source": "self"
+    }
+  }
+}

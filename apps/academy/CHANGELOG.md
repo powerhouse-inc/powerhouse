@@ -1,3 +1,29 @@
+## 6.2.2-dev.52 (2026-08-19)
+
+### 🩹 Fixes
+
+- **reactor-browser:** abort an in-flight upload on reset ([1d5dd68a9](https://github.com/powerhouse-inc/powerhouse/commit/1d5dd68a9))
+- **reactor-attachments:** only instrument uploads a caller is watching ([d350375ac](https://github.com/powerhouse-inc/powerhouse/commit/d350375ac))
+- **reactor-attachments:** report a cancelled transfer as an error, not a completion ([8555bc301](https://github.com/powerhouse-inc/powerhouse/commit/8555bc301))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5
+
+## 6.2.2-dev.51 (2026-08-19)
+
+### 🩹 Fixes
+
+- **reactor-browser:** abort an in-flight upload on reset ([1d5dd68a9](https://github.com/powerhouse-inc/powerhouse/commit/1d5dd68a9))
+- **reactor-attachments:** only instrument uploads a caller is watching ([d350375ac](https://github.com/powerhouse-inc/powerhouse/commit/d350375ac))
+- **reactor-attachments:** report a cancelled transfer as an error, not a completion ([8555bc301](https://github.com/powerhouse-inc/powerhouse/commit/8555bc301))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5
+
 ## 6.2.2-dev.50 (2026-08-18)
 
 ### 🩹 Fixes

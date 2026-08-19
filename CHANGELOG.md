@@ -1,3 +1,110 @@
+## 6.2.2-dev.52 (2026-08-19)
+
+### 🚀 Features
+
+- byte-level attachment upload and download progress ([#2911](https://github.com/powerhouse-inc/powerhouse/pull/2911))
+- **connect:** use the XHR upload transport ([cf4896951](https://github.com/powerhouse-inc/powerhouse/commit/cf4896951))
+- **reactor-attachments:** progress primitives ([56a42da1f](https://github.com/powerhouse-inc/powerhouse/commit/56a42da1f))
+- ⚠️  **reactor-attachments:** send(data, options?) with progress and signal ([26a73b745](https://github.com/powerhouse-inc/powerhouse/commit/26a73b745))
+- **reactor-attachments:** route uploads through AttachmentUploadTransport ([9f99a332f](https://github.com/powerhouse-inc/powerhouse/commit/9f99a332f))
+- ⚠️  **reactor-attachments:** byte-level progress on IAttachmentClient ([65041f1f9](https://github.com/powerhouse-inc/powerhouse/commit/65041f1f9))
+- **reactor-attachments:** add an XMLHttpRequest upload transport ([43a786886](https://github.com/powerhouse-inc/powerhouse/commit/43a786886))
+- **reactor-browser:** add an attachment progress coalescer ([73e483f09](https://github.com/powerhouse-inc/powerhouse/commit/73e483f09))
+- ⚠️  **reactor-browser:** real upload progress in useAttachmentUpload ([2bb2906e9](https://github.com/powerhouse-inc/powerhouse/commit/2bb2906e9))
+- ⚠️  **reactor-browser:** download progress and retry visibility in useAttachmentPreview ([eec3cb3e1](https://github.com/powerhouse-inc/powerhouse/commit/eec3cb3e1))
+- **renown:** let issueCredential place the document under a parent ([b80166872](https://github.com/powerhouse-inc/powerhouse/commit/b80166872))
+- **switchboard:** verify renown credentials against the reactor's own read model ([9e7efe532](https://github.com/powerhouse-inc/powerhouse/commit/9e7efe532))
+
+### 🩹 Fixes
+
+- **reactor-api,switchboard:** parse PGlite read-model timestamps as UTC ([e6e25758b](https://github.com/powerhouse-inc/powerhouse/commit/e6e25758b))
+- **reactor-attachments:** report a cancelled transfer as an error, not a completion ([8555bc301](https://github.com/powerhouse-inc/powerhouse/commit/8555bc301))
+- **reactor-attachments:** only instrument uploads a caller is watching ([d350375ac](https://github.com/powerhouse-inc/powerhouse/commit/d350375ac))
+- **reactor-attachments:** honour the caller's signal in a direct upload ([9c588c855](https://github.com/powerhouse-inc/powerhouse/commit/9c588c855))
+- **reactor-attachments:** collapse identical duplicate type definitions in the effective schema ([9a32b87fb](https://github.com/powerhouse-inc/powerhouse/commit/9a32b87fb))
+- **reactor-browser:** commit the progress tick that clears the spinner ([d509f8c2f](https://github.com/powerhouse-inc/powerhouse/commit/d509f8c2f))
+- **reactor-browser:** abort an in-flight upload on reset ([1d5dd68a9](https://github.com/powerhouse-inc/powerhouse/commit/1d5dd68a9))
+
+### ⚠️  Breaking Changes
+
+- **reactor-browser:** download progress and retry visibility in useAttachmentPreview  ([eec3cb3e1](https://github.com/powerhouse-inc/powerhouse/commit/eec3cb3e1))
+  adds stage, progress, attempt, maxAttempts and lastError
+  to the return value. Existing url/header/loading/error fields are unchanged.
+  Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+- **reactor-browser:** real upload progress in useAttachmentUpload  ([2bb2906e9](https://github.com/powerhouse-inc/powerhouse/commit/2bb2906e9))
+  the UploadStatus enum is removed and `status` is replaced
+  by `stage` ("idle" | "hashing" | "reserving" | "uploading" | "done" |
+  "error"). `progress` is now an object -- { percent (0-100), loaded, total,
+  indeterminate } -- not a 0..1 number. Adds cancel, reset and result.
+  Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+- **reactor-attachments:** byte-level progress on IAttachmentClient  ([65041f1f9](https://github.com/powerhouse-inc/powerhouse/commit/65041f1f9))
+  AttachmentStageListener and AttachmentBatchOptions.onStage
+  are removed. Pass `{ onProgress }` as the second argument instead;
+  `AttachmentProgress` carries the stage plus byte counts. downloadBlob,
+  saveAttachment and downloadObjectUrl take one merged options bag.
+  Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+- **reactor-attachments:** send(data, options?) with progress and signal  ([26a73b745](https://github.com/powerhouse-inc/powerhouse/commit/26a73b745))
+  IAttachmentUpload.send takes an optional second
+  parameter. Implementations that declare only `data` are unaffected.
+  Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5
+
+## 6.2.2-dev.51 (2026-08-19)
+
+### 🚀 Features
+
+- byte-level attachment upload and download progress ([#2911](https://github.com/powerhouse-inc/powerhouse/pull/2911))
+- **connect:** use the XHR upload transport ([cf4896951](https://github.com/powerhouse-inc/powerhouse/commit/cf4896951))
+- **reactor-attachments:** progress primitives ([56a42da1f](https://github.com/powerhouse-inc/powerhouse/commit/56a42da1f))
+- ⚠️  **reactor-attachments:** send(data, options?) with progress and signal ([26a73b745](https://github.com/powerhouse-inc/powerhouse/commit/26a73b745))
+- **reactor-attachments:** route uploads through AttachmentUploadTransport ([9f99a332f](https://github.com/powerhouse-inc/powerhouse/commit/9f99a332f))
+- ⚠️  **reactor-attachments:** byte-level progress on IAttachmentClient ([65041f1f9](https://github.com/powerhouse-inc/powerhouse/commit/65041f1f9))
+- **reactor-attachments:** add an XMLHttpRequest upload transport ([43a786886](https://github.com/powerhouse-inc/powerhouse/commit/43a786886))
+- **reactor-browser:** add an attachment progress coalescer ([73e483f09](https://github.com/powerhouse-inc/powerhouse/commit/73e483f09))
+- ⚠️  **reactor-browser:** real upload progress in useAttachmentUpload ([2bb2906e9](https://github.com/powerhouse-inc/powerhouse/commit/2bb2906e9))
+- ⚠️  **reactor-browser:** download progress and retry visibility in useAttachmentPreview ([eec3cb3e1](https://github.com/powerhouse-inc/powerhouse/commit/eec3cb3e1))
+
+### 🩹 Fixes
+
+- **reactor-attachments:** report a cancelled transfer as an error, not a completion ([8555bc301](https://github.com/powerhouse-inc/powerhouse/commit/8555bc301))
+- **reactor-attachments:** only instrument uploads a caller is watching ([d350375ac](https://github.com/powerhouse-inc/powerhouse/commit/d350375ac))
+- **reactor-attachments:** honour the caller's signal in a direct upload ([9c588c855](https://github.com/powerhouse-inc/powerhouse/commit/9c588c855))
+- **reactor-browser:** commit the progress tick that clears the spinner ([d509f8c2f](https://github.com/powerhouse-inc/powerhouse/commit/d509f8c2f))
+- **reactor-browser:** abort an in-flight upload on reset ([1d5dd68a9](https://github.com/powerhouse-inc/powerhouse/commit/1d5dd68a9))
+
+### ⚠️  Breaking Changes
+
+- **reactor-browser:** download progress and retry visibility in useAttachmentPreview  ([eec3cb3e1](https://github.com/powerhouse-inc/powerhouse/commit/eec3cb3e1))
+  adds stage, progress, attempt, maxAttempts and lastError
+  to the return value. Existing url/header/loading/error fields are unchanged.
+  Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+- **reactor-browser:** real upload progress in useAttachmentUpload  ([2bb2906e9](https://github.com/powerhouse-inc/powerhouse/commit/2bb2906e9))
+  the UploadStatus enum is removed and `status` is replaced
+  by `stage` ("idle" | "hashing" | "reserving" | "uploading" | "done" |
+  "error"). `progress` is now an object -- { percent (0-100), loaded, total,
+  indeterminate } -- not a 0..1 number. Adds cancel, reset and result.
+  Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+- **reactor-attachments:** byte-level progress on IAttachmentClient  ([65041f1f9](https://github.com/powerhouse-inc/powerhouse/commit/65041f1f9))
+  AttachmentStageListener and AttachmentBatchOptions.onStage
+  are removed. Pass `{ onProgress }` as the second argument instead;
+  `AttachmentProgress` carries the stage plus byte counts. downloadBlob,
+  saveAttachment and downloadObjectUrl take one merged options bag.
+  Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+- **reactor-attachments:** send(data, options?) with progress and signal  ([26a73b745](https://github.com/powerhouse-inc/powerhouse/commit/26a73b745))
+  IAttachmentUpload.send takes an optional second
+  parameter. Implementations that declare only `data` are unaffected.
+  Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5
+
 ## 6.2.2-dev.50 (2026-08-18)
 
 ### 🚀 Features

@@ -1,3 +1,65 @@
+## 6.2.2-dev.52 (2026-08-19)
+
+### 🚀 Features
+
+- ⚠️  **reactor-browser:** download progress and retry visibility in useAttachmentPreview ([eec3cb3e1](https://github.com/powerhouse-inc/powerhouse/commit/eec3cb3e1))
+- ⚠️  **reactor-browser:** real upload progress in useAttachmentUpload ([2bb2906e9](https://github.com/powerhouse-inc/powerhouse/commit/2bb2906e9))
+- **reactor-browser:** add an attachment progress coalescer ([73e483f09](https://github.com/powerhouse-inc/powerhouse/commit/73e483f09))
+
+### 🩹 Fixes
+
+- **reactor-browser:** abort an in-flight upload on reset ([1d5dd68a9](https://github.com/powerhouse-inc/powerhouse/commit/1d5dd68a9))
+- **reactor-browser:** commit the progress tick that clears the spinner ([d509f8c2f](https://github.com/powerhouse-inc/powerhouse/commit/d509f8c2f))
+
+### ⚠️  Breaking Changes
+
+- **reactor-browser:** download progress and retry visibility in useAttachmentPreview  ([eec3cb3e1](https://github.com/powerhouse-inc/powerhouse/commit/eec3cb3e1))
+  adds stage, progress, attempt, maxAttempts and lastError
+  to the return value. Existing url/header/loading/error fields are unchanged.
+  Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+- **reactor-browser:** real upload progress in useAttachmentUpload  ([2bb2906e9](https://github.com/powerhouse-inc/powerhouse/commit/2bb2906e9))
+  the UploadStatus enum is removed and `status` is replaced
+  by `stage` ("idle" | "hashing" | "reserving" | "uploading" | "done" |
+  "error"). `progress` is now an object -- { percent (0-100), loaded, total,
+  indeterminate } -- not a 0..1 number. Adds cancel, reset and result.
+  Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5
+
+## 6.2.2-dev.51 (2026-08-19)
+
+### 🚀 Features
+
+- ⚠️  **reactor-browser:** download progress and retry visibility in useAttachmentPreview ([eec3cb3e1](https://github.com/powerhouse-inc/powerhouse/commit/eec3cb3e1))
+- ⚠️  **reactor-browser:** real upload progress in useAttachmentUpload ([2bb2906e9](https://github.com/powerhouse-inc/powerhouse/commit/2bb2906e9))
+- **reactor-browser:** add an attachment progress coalescer ([73e483f09](https://github.com/powerhouse-inc/powerhouse/commit/73e483f09))
+
+### 🩹 Fixes
+
+- **reactor-browser:** abort an in-flight upload on reset ([1d5dd68a9](https://github.com/powerhouse-inc/powerhouse/commit/1d5dd68a9))
+- **reactor-browser:** commit the progress tick that clears the spinner ([d509f8c2f](https://github.com/powerhouse-inc/powerhouse/commit/d509f8c2f))
+
+### ⚠️  Breaking Changes
+
+- **reactor-browser:** download progress and retry visibility in useAttachmentPreview  ([eec3cb3e1](https://github.com/powerhouse-inc/powerhouse/commit/eec3cb3e1))
+  adds stage, progress, attempt, maxAttempts and lastError
+  to the return value. Existing url/header/loading/error fields are unchanged.
+  Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+- **reactor-browser:** real upload progress in useAttachmentUpload  ([2bb2906e9](https://github.com/powerhouse-inc/powerhouse/commit/2bb2906e9))
+  the UploadStatus enum is removed and `status` is replaced
+  by `stage` ("idle" | "hashing" | "reserving" | "uploading" | "done" |
+  "error"). `progress` is now an object -- { percent (0-100), loaded, total,
+  indeterminate } -- not a 0..1 number. Adds cancel, reset and result.
+  Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5
+
 ## 6.2.2-dev.50 (2026-08-18)
 
 ### 🩹 Fixes

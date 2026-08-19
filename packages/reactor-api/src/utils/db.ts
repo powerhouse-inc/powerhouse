@@ -56,6 +56,13 @@ export interface OperationUserPermissionTable {
 
 type Db = Kysely<any>;
 
+// PGlite parses `timestamp` (no tz) columns as local time; read-model columns
+// store UTC, so parse them as UTC or values shift by the host's TZ offset.
+export const PGLITE_UTC_PARSERS = {
+  // 1114 = timestamp without time zone
+  1114: (value: string) => new Date(`${value.replace(" ", "T")}Z`),
+} as const;
+
 function isPG(connectionString: string) {
   if (
     connectionString.startsWith("postgresql://") ||
@@ -119,8 +126,11 @@ export function getDbClient(
     : pgliteFactory
       ? pgliteFactory(connectionString)
       : connectionString
-        ? new PGlite({ fs: new AtomicNodeFs(connectionString) })
-        : new PGlite();
+        ? new PGlite({
+            fs: new AtomicNodeFs(connectionString),
+            parsers: PGLITE_UTC_PARSERS,
+          })
+        : new PGlite({ parsers: PGLITE_UTC_PARSERS });
   const connection = isPg ? { connectionString } : { pglite: pgliteInstance };
 
   // If path is not postgres then it is a filesystem path.

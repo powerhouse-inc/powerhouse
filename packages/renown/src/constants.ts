@@ -5,6 +5,10 @@ export const DEFAULT_RENOWN_CHAIN_ID = "1";
 /** Default cookie name for a server-readable Renown session (bearer token). */
 export const RENOWN_SESSION_COOKIE = "renown_session";
 
+/** Subgraph a Switchboard exposes the renown read model under; the queries in
+ * `switchboard.ts` are written against it. */
+export const RENOWN_READ_MODEL_SUBGRAPH = "renown-read-model";
+
 export const DOMAIN_TYPE = [
   { name: "version", type: "string" },
   { name: "chainId", type: "uint256" },

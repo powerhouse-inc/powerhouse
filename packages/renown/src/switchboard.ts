@@ -180,24 +180,66 @@ function issuerChainId(issuerId: string): string | undefined {
   return issuerId.split(":")[3];
 }
 
-// Reads a Switchboard reactor's `renown-read-model` subgraph directly over
-// GraphQL, replacing the Renown Next.js REST proxy. Read-only; plain `fetch`.
-export class SwitchboardClient {
-  #endpoint: string;
+// The address in a `did:pkh:<net>:<chainId>:<address>` issuer id.
+function issuerDidAddress(issuerId: string): string | undefined {
+  return issuerId.split(":")[4];
+}
 
-  constructor(endpoint: string) {
-    this.#endpoint = endpoint;
+// Re-check the delegation binding instead of trusting the read-model's
+// `did`/`ethAddress` filters, matching the REST path in `credential.ts`.
+function bindsTo(
+  row: ReadRenownCredential,
+  address: string,
+  chainId: number,
+  appDid: string,
+): boolean {
+  const expected = address.toLowerCase();
+  return (
+    !row.revoked &&
+    row.credentialSubjectId === appDid &&
+    issuerChainId(row.issuerId) === String(chainId) &&
+    issuerDidAddress(row.issuerId)?.toLowerCase() === expected &&
+    row.issuerEthereumAddress.toLowerCase() === expected
+  );
+}
+
+/** Runs a GraphQL document against a Switchboard and resolves its `data`;
+ * throws on transport or GraphQL errors. */
+export type SwitchboardRequestFn = (
+  query: string,
+  variables: Record<string, unknown>,
+) => Promise<unknown>;
+
+/** Where a SwitchboardClient reads from: an HTTP endpoint or a local executor. */
+export type SwitchboardSource = string | SwitchboardRequestFn;
+
+// Reads and writes a Switchboard reactor's `renown-read-model` subgraph and
+// document mutations over GraphQL, replacing the Renown Next.js REST proxy.
+export class SwitchboardClient {
+  #endpoint: string | undefined;
+  #transport: SwitchboardRequestFn;
+
+  constructor(source: SwitchboardSource) {
+    if (typeof source === "string") {
+      this.#endpoint = source;
+      this.#transport = (query, variables) =>
+        this.#post(source, query, variables);
+    } else {
+      this.#transport = source;
+    }
   }
 
-  get endpoint() {
+  /** The HTTP endpoint, or undefined when reading through a local executor. */
+  get endpoint(): string | undefined {
     return this.#endpoint;
   }
 
-  async #request<T>(
+  async #post(
+    endpoint: string,
     query: string,
     variables: Record<string, unknown>,
-  ): Promise<T> {
-    const response = await fetch(this.#endpoint, {
+  ): Promise<unknown> {
+    const response = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ query, variables }),
@@ -206,20 +248,29 @@ export class SwitchboardClient {
       throw new Error(`Switchboard request failed: ${response.status}`);
     }
     const body = (await response.json()) as {
-      data?: T;
+      data?: unknown;
       errors?: { message: string }[];
     };
     if (body.errors?.length) {
       throw new Error(body.errors.map((e) => e.message).join("; "));
     }
-    if (!body.data) {
-      throw new Error("Switchboard returned no data");
-    }
+    // `#request` rejects an empty `data` for every transport, HTTP or local.
     return body.data;
   }
 
+  async #request<T>(
+    query: string,
+    variables: Record<string, unknown>,
+  ): Promise<T> {
+    const data = await this.#transport(query, variables);
+    if (!data) {
+      throw new Error("Switchboard returned no data");
+    }
+    return data as T;
+  }
+
   // Fetch the active delegation credential for (address, chainId) that delegates
-  // to `appDid`: filter by chainId, drop expired, return most recent.
+  // to `appDid`: re-check the binding, drop expired, return most recent.
   async getCredential(params: {
     address: string;
     chainId: number;
@@ -239,7 +290,7 @@ export class SwitchboardClient {
 
     const now = Date.now();
     const candidates = renownCredentials
-      .filter((row) => issuerChainId(row.issuerId) === String(chainId))
+      .filter((row) => bindsTo(row, address, chainId, appDid))
       .filter((row) => {
         if (!row.expirationDate) return true;
         const expiresAt = Date.parse(row.expirationDate);
@@ -301,9 +352,11 @@ export class SwitchboardClient {
   // Issue a signed credential: create a renown-credential doc and INIT it.
   async issueCredential(
     credential: PowerhouseVerifiableCredential,
+    parentIdentifier?: string,
   ): Promise<string> {
     const documentId = await this.createEmptyDocument(
       RENOWN_CREDENTIAL_DOC_TYPE,
+      parentIdentifier,
     );
     const input: Record<string, unknown> = {
       id: credential.id,

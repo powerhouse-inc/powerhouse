@@ -1,3 +1,17 @@
+## 6.2.2-dev.52 (2026-08-19)
+
+### 🚀 Features
+
+- **switchboard:** verify renown credentials against the reactor's own read model ([9e7efe532](https://github.com/powerhouse-inc/powerhouse/commit/9e7efe532))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.2-dev.51 (2026-08-19)
+
+This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.
+
 ## 6.2.2-dev.50 (2026-08-18)
 
 ### 🚀 Features

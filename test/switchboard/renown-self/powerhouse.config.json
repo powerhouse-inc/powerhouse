@@ -1,0 +1,17 @@
+{
+  "logLevel": "info",
+  "packages": [
+    {
+      "packageName": "@powerhousedao/renown-package",
+      "version": "1.3.9",
+      "provider": "npm"
+    }
+  ],
+  "auth": {
+    "enabled": true,
+    "admins": ["0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"],
+    "renown": {
+      "source": "self"
+    }
+  }
+}

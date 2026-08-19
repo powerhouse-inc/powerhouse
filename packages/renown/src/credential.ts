@@ -5,7 +5,11 @@ import {
   DEFAULT_RENOWN_URL,
 } from "./constants.js";
 import { resolveSwitchboardEndpoint } from "./discovery.js";
-import { SwitchboardClient } from "./switchboard.js";
+import {
+  SwitchboardClient,
+  type SwitchboardRequestFn,
+  type SwitchboardSource,
+} from "./switchboard.js";
 import type { IProof, PowerhouseVerifiableCredential } from "./types.js";
 import { verifyAuthBearerToken } from "./utils.js";
 
@@ -190,6 +194,8 @@ export interface FetchDelegationCredentialOptions {
   baseUrl?: string;
   /** Switchboard GraphQL endpoint; when reachable, read the reactor directly. */
   switchboardUrl?: string;
+  /** In-process Switchboard reader; wins over any URL and skips discovery. */
+  switchboardRequest?: SwitchboardRequestFn;
   /** Probe {baseUrl}/api/switchboard for an endpoint (default true). */
   discover?: boolean;
   /** Re-verify the EIP-712 proof signature (default true). */
@@ -266,22 +272,25 @@ export async function fetchDelegationCredential(
     chainId,
     appDid,
     switchboardUrl,
+    switchboardRequest,
     discover = true,
     verifySignature = true,
   } = options;
   const explicitBaseUrl = options.baseUrl;
   const baseUrl = explicitBaseUrl ?? DEFAULT_RENOWN_URL;
   try {
-    // An explicit switchboardUrl is used directly; otherwise discover from the
-    // base URL unless disabled (callers that already resolved the endpoint).
-    const endpoint = switchboardUrl
-      ? switchboardUrl
-      : discover && explicitBaseUrl
-        ? await resolveSwitchboardEndpoint({ baseUrl })
-        : undefined;
+    // A local reader or explicit switchboardUrl is used directly; otherwise
+    // discover from the base URL unless the caller already resolved it.
+    const source: SwitchboardSource | undefined =
+      switchboardRequest ??
+      (switchboardUrl
+        ? switchboardUrl
+        : discover && explicitBaseUrl
+          ? await resolveSwitchboardEndpoint({ baseUrl })
+          : undefined);
 
-    const credential = endpoint
-      ? await new SwitchboardClient(endpoint).getCredential({
+    const credential = source
+      ? await new SwitchboardClient(source).getCredential({
           address,
           chainId,
           appDid,
@@ -318,6 +327,8 @@ export interface VerifyAuthCredentialOptions {
   renownUrl?: string;
   /** Switchboard GraphQL endpoint; when reachable, read the reactor directly. */
   switchboardUrl?: string;
+  /** In-process Switchboard reader; wins over any URL and skips discovery. */
+  switchboardRequest?: SwitchboardRequestFn;
   /** Re-verify the credential's EIP-712 proof (default true). */
   verifySignature?: boolean;
 }
@@ -342,6 +353,7 @@ export async function verifyAuthCredential(
     appDid,
     baseUrl: options.renownUrl,
     switchboardUrl: options.switchboardUrl,
+    switchboardRequest: options.switchboardRequest,
     verifySignature: options.verifySignature,
   });
   if (!credential) return undefined;

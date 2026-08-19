@@ -121,6 +121,13 @@ export class GraphQLManager {
 
   private readonly subgraphHandlerCache = new Map<string, FetchHandler>();
 
+  /** Per-subgraph handlers by name, before auth/drive middleware is applied,
+   * for in-process queries by trusted internals. */
+  readonly #internalSubgraphHandlers = new Map<
+    string,
+    { subgraph: ISubgraph; path: string; handler: FetchHandler }
+  >();
+
   /**
    * Optional reactor-drive client. When the switchboard is configured with a
    * reactor-drive container, this is provided and the resolvers dispatch to
@@ -441,6 +448,79 @@ export class GraphQLManager {
     return this.#addSubgraphInstance(subgraphInstance, supergraph, core);
   }
 
+  /** Find a registered subgraph by name, core or package-contributed. */
+  getSubgraphByName(name: string): ISubgraph | undefined {
+    for (const subgraphs of [
+      ...this.coreSubgraphsMap.values(),
+      ...this.subgraphs.values(),
+    ]) {
+      const found = subgraphs.find((subgraph) => subgraph.name === name);
+      if (found) {
+        return found;
+      }
+    }
+    return undefined;
+  }
+
+  /** Whether a registered subgraph has a live handler, i.e. whether
+   * {@link executeSubgraphQuery} can reach it right now. */
+  hasSubgraphHandler(name: string): boolean {
+    return this.#internalSubgraphHandlers.has(name);
+  }
+
+  /** Run a query against one registered subgraph in-process: the subgraph's own
+   * handler, without a socket or the auth/drive middleware. Trusted callers. */
+  async executeSubgraphQuery<T>(
+    subgraphName: string,
+    query: string,
+    variables: Record<string, unknown>,
+  ): Promise<T> {
+    const entry = this.#internalSubgraphHandlers.get(subgraphName);
+    if (!entry) {
+      throw new Error(
+        this.getSubgraphByName(subgraphName)
+          ? `Subgraph "${subgraphName}" is registered but has no handler yet`
+          : `Subgraph "${subgraphName}" is not registered`,
+      );
+    }
+
+    // Address the subgraph at its real mount path so resolvers and plugins that
+    // read the request URL see what an external caller would.
+    const url = new URL(entry.path, `http://localhost:${this.port}/`);
+    const response = await entry.handler(
+      new Request(url, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          accept: "application/json",
+        },
+        body: JSON.stringify({ query, variables }),
+      }),
+    );
+    if (!response.ok) {
+      // Keep the body: Apollo reports validation failures as a 400 whose only
+      // description of what went wrong is in there.
+      const detail = await response.text().catch(() => "");
+      throw new Error(
+        `Subgraph "${subgraphName}" query failed: ${response.status}${
+          detail ? ` ${detail}` : ""
+        }`,
+      );
+    }
+
+    const body = (await response.json()) as {
+      data?: T;
+      errors?: { message: string }[];
+    };
+    if (body.errors?.length) {
+      throw new Error(body.errors.map((error) => error.message).join("; "));
+    }
+    if (!body.data) {
+      throw new Error(`Subgraph "${subgraphName}" returned no data`);
+    }
+    return body.data;
+  }
+
   updateRouter = debounce(this._updateRouter.bind(this), 1000);
 
   private async _updateRouter() {
@@ -556,6 +636,30 @@ export class GraphQLManager {
     return path.join(subgraph.path ?? "", supergraph, subgraph.name);
   }
 
+  /** The in-process handler map is keyed by bare name, so two distinct
+   * subgraphs sharing one name would shadow each other: keep the first. */
+  #setInternalSubgraphHandler(
+    subgraph: ISubgraph,
+    subgraphPath: string,
+    handler: FetchHandler,
+  ) {
+    const existing = this.#internalSubgraphHandlers.get(subgraph.name);
+    if (existing && existing.subgraph !== subgraph) {
+      this.logger.warn(
+        "Two subgraphs are named @name (@kept and @ignored); in-process queries keep the first",
+        subgraph.name,
+        existing.path,
+        subgraphPath,
+      );
+      return;
+    }
+    this.#internalSubgraphHandlers.set(subgraph.name, {
+      subgraph,
+      path: subgraphPath,
+      handler,
+    });
+  }
+
   async #setupSubgraphs(subgraphsMap: Map<string, ISubgraph[]>) {
     for (const [supergraph, subgraphs] of subgraphsMap.entries()) {
       for (const subgraph of subgraphs) {
@@ -583,6 +687,7 @@ export class GraphQLManager {
           );
           const fetchHandler = this.#composeFetchMiddleware(rawHandler);
           this.subgraphHandlerCache.set(subgraphPath, fetchHandler);
+          this.#setInternalSubgraphHandler(subgraph, subgraphPath, rawHandler);
           this.httpAdapter.mount(subgraphPath, fetchHandler);
 
           if (subgraph.hasSubscriptions) {

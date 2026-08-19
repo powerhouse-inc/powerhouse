@@ -353,6 +353,9 @@ importers:
       '@powerhousedao/ph-cli':
         specifier: workspace:*
         version: link:clis/ph-cli
+      '@powerhousedao/renown-package':
+        specifier: 1.3.9
+        version: 1.3.9(da07d0fb7707ab4ae9bd3aab5d6659ee)
       '@powerhousedao/shared':
         specifier: workspace:*
         version: link:packages/shared
@@ -457,19 +460,19 @@ importers:
         version: 2.20.0(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@docusaurus/core':
         specifier: 3.10.0
-        version: 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
+        version: 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
       '@docusaurus/faster':
         specifier: 3.10.0
         version: 3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3)
       '@docusaurus/plugin-content-docs':
         specifier: 3.10.0
-        version: 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
+        version: 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
       '@docusaurus/preset-classic':
         specifier: 3.10.0
-        version: 3.10.0(@algolia/client-search@5.49.1)(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(@types/react@19.2.14)(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(search-insights@2.17.3)(typescript@6.0.3)(utf-8-validate@5.0.10)
+        version: 3.10.0(@algolia/client-search@5.49.1)(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(@types/react@19.2.14)(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(search-insights@2.17.3)(typescript@6.0.3)(utf-8-validate@5.0.10)
       '@docusaurus/theme-search-algolia':
         specifier: 3.10.0
-        version: 3.10.0(@algolia/client-search@5.49.1)(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(@types/react@19.2.14)(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(search-insights@2.17.3)(typescript@6.0.3)(utf-8-validate@5.0.10)
+        version: 3.10.0(@algolia/client-search@5.49.1)(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(@types/react@19.2.14)(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(search-insights@2.17.3)(typescript@6.0.3)(utf-8-validate@5.0.10)
       '@mdx-js/react':
         specifier: ^3.0.0
         version: 3.1.1(@types/react@19.2.14)(react@19.2.6)
@@ -491,7 +494,7 @@ importers:
         version: 3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@docusaurus/plugin-client-redirects':
         specifier: 3.10.0
-        version: 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
+        version: 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
       '@docusaurus/tsconfig':
         specifier: 3.10.0
         version: 3.10.0
@@ -3071,7 +3074,7 @@ importers:
     devDependencies:
       '@modelcontextprotocol/sdk':
         specifier: 'catalog:'
-        version: 1.29.0(zod@4.3.6)
+        version: 1.29.0(zod@3.25.76)
       '@powerhousedao/reactor':
         specifier: workspace:*
         version: link:../../packages/reactor
@@ -3105,6 +3108,9 @@ importers:
       tsdown:
         specifier: 'catalog:'
         version: 0.21.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@tsdown/css@0.21.1)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(synckit@0.11.12)(typescript@5.9.3)
+      viem:
+        specifier: 2.52.0
+        version: 2.52.0(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76)
       vitest:
         specifier: 'catalog:'
         version: 4.1.1(@opentelemetry/api@1.9.1)(@types/node@25.5.0)(@vitest/browser-playwright@4.1.1)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.5.0)(typescript@5.9.3))(vite@8.0.10(@types/node@25.5.0)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.9.0))
@@ -3389,13 +3395,13 @@ importers:
         version: link:../../packages/reactor-browser
       '@powerhousedao/renown-package':
         specifier: latest
-        version: 1.3.9(da07d0fb7707ab4ae9bd3aab5d6659ee)
+        version: 1.3.9(c2fbd7e2d20fd6decc95bef654f6438e)
       '@powerhousedao/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       '@privy-io/react-auth':
         specifier: 3.35.0
-        version: 3.35.0(@date-fns/tz@1.4.1)(@solana-program/system@0.10.0(@solana/kit@5.5.1(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)))(@solana-program/token@0.9.0(@solana/kit@5.5.1(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)))(@solana/kit@5.5.1(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10))(@solana/sysvars@5.5.1(typescript@6.0.3))(@tanstack/query-core@5.90.20)(@tanstack/react-query@5.90.21(react@19.2.6))(@types/react@19.2.14)(bufferutil@4.1.0)(date-fns@4.1.0)(encoding@0.1.13)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(use-sync-external-store@1.4.0(react@19.2.6))(utf-8-validate@5.0.10)(zod@4.3.6)
+        version: 3.35.0(@date-fns/tz@1.4.1)(@solana-program/system@0.10.0(@solana/kit@5.5.1(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)))(@solana-program/token@0.9.0(@solana/kit@5.5.1(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)))(@solana/kit@5.5.1(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10))(@solana/sysvars@5.5.1(typescript@6.0.3))(@tanstack/query-core@5.90.20)(@tanstack/react-query@5.90.21(react@19.2.6))(@types/react@19.2.14)(bufferutil@4.1.0)(date-fns@4.1.0)(encoding@0.1.13)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(use-sync-external-store@1.6.0(react@19.2.6))(utf-8-validate@5.0.10)(zod@4.3.6)
       '@tailwindcss/cli':
         specifier: 'catalog:'
         version: 4.2.2
@@ -15810,7 +15816,7 @@ packages:
   git-raw-commits@4.0.0:
     resolution: {integrity: sha512-ICsMM1Wk8xSGMowkOmPrzo2Fgmfo4bMHLNX6ytHjajRJUqvHOw/TFapQ+QG75c3X/tTDDhOSRPGC52dDbNM8FQ==}
     engines: {node: '>=16'}
-    deprecated: This package is no longer maintained. For the JavaScript API, please use @conventional-changelog/git-client instead.
+    deprecated: Deprecated and no longer maintained. Use @conventional-changelog/git-client instead.
     hasBin: true
 
   github-from-package@0.0.0:
@@ -24149,7 +24155,7 @@ snapshots:
     dependencies:
       '@babel/core': 7.29.0
       '@babel/helper-create-class-features-plugin': 7.28.6(@babel/core@7.29.0)
-      '@babel/helper-plugin-utils': 7.28.6
+      '@babel/helper-plugin-utils': 7.29.7
     transitivePeerDependencies:
       - supports-color
 
@@ -24167,7 +24173,7 @@ snapshots:
       '@babel/compat-data': 7.29.0
       '@babel/core': 7.29.0
       '@babel/helper-compilation-targets': 7.28.6
-      '@babel/helper-plugin-utils': 7.28.6
+      '@babel/helper-plugin-utils': 7.29.7
       '@babel/plugin-syntax-object-rest-spread': 7.8.3(@babel/core@7.29.0)
       '@babel/plugin-transform-parameters': 7.27.7(@babel/core@7.29.0)
 
@@ -24208,7 +24214,7 @@ snapshots:
   '@babel/plugin-syntax-flow@7.28.6(@babel/core@7.29.0)':
     dependencies:
       '@babel/core': 7.29.0
-      '@babel/helper-plugin-utils': 7.28.6
+      '@babel/helper-plugin-utils': 7.29.7
 
   '@babel/plugin-syntax-import-assertions@7.28.6(@babel/core@7.29.0)':
     dependencies:
@@ -24404,7 +24410,7 @@ snapshots:
   '@babel/plugin-transform-flow-strip-types@7.27.1(@babel/core@7.29.0)':
     dependencies:
       '@babel/core': 7.29.0
-      '@babel/helper-plugin-utils': 7.28.6
+      '@babel/helper-plugin-utils': 7.29.7
       '@babel/plugin-syntax-flow': 7.28.6(@babel/core@7.29.0)
 
   '@babel/plugin-transform-for-of@7.27.1(@babel/core@7.29.0)':
@@ -24873,16 +24879,16 @@ snapshots:
       - utf-8-validate
       - zod
 
-  '@base-org/account@1.1.1(@types/react@19.2.14)(bufferutil@4.1.0)(react@19.2.6)(typescript@6.0.3)(use-sync-external-store@1.4.0(react@19.2.6))(utf-8-validate@5.0.10)(zod@4.3.6)':
+  '@base-org/account@1.1.1(@types/react@19.2.14)(bufferutil@4.1.0)(react@19.2.6)(typescript@6.0.3)(use-sync-external-store@1.6.0(react@19.2.6))(utf-8-validate@5.0.10)(zod@3.25.76)':
     dependencies:
       '@noble/hashes': 1.4.0
       clsx: 1.2.1
       eventemitter3: 5.0.1
       idb-keyval: 6.2.1
-      ox: 0.6.9(typescript@6.0.3)(zod@4.3.6)
+      ox: 0.6.9(typescript@6.0.3)(zod@3.25.76)
       preact: 10.24.2
-      viem: 2.52.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6)
-      zustand: 5.0.3(@types/react@19.2.14)(react@19.2.6)(use-sync-external-store@1.4.0(react@19.2.6))
+      viem: 2.52.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@3.25.76)
+      zustand: 5.0.3(@types/react@19.2.14)(react@19.2.6)(use-sync-external-store@1.6.0(react@19.2.6))
     transitivePeerDependencies:
       - '@types/react'
       - bufferutil
@@ -24893,15 +24899,15 @@ snapshots:
       - utf-8-validate
       - zod
 
-  '@base-org/account@1.1.1(@types/react@19.2.14)(bufferutil@4.1.0)(react@19.2.6)(typescript@6.0.3)(use-sync-external-store@1.6.0(react@19.2.6))(utf-8-validate@5.0.10)(zod@3.25.76)':
+  '@base-org/account@1.1.1(@types/react@19.2.14)(bufferutil@4.1.0)(react@19.2.6)(typescript@6.0.3)(use-sync-external-store@1.6.0(react@19.2.6))(utf-8-validate@5.0.10)(zod@4.3.6)':
     dependencies:
       '@noble/hashes': 1.4.0
       clsx: 1.2.1
       eventemitter3: 5.0.1
       idb-keyval: 6.2.1
-      ox: 0.6.9(typescript@6.0.3)(zod@3.25.76)
+      ox: 0.6.9(typescript@6.0.3)(zod@4.3.6)
       preact: 10.24.2
-      viem: 2.52.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@3.25.76)
+      viem: 2.52.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6)
       zustand: 5.0.3(@types/react@19.2.14)(react@19.2.6)(use-sync-external-store@1.6.0(react@19.2.6))
     transitivePeerDependencies:
       - '@types/react'
@@ -25264,6 +25270,27 @@ snapshots:
       preact: 10.24.2
       viem: 2.52.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6)
       zustand: 5.0.3(@types/react@19.2.14)(react@19.2.6)(use-sync-external-store@1.4.0(react@19.2.6))
+    transitivePeerDependencies:
+      - '@types/react'
+      - bufferutil
+      - immer
+      - react
+      - typescript
+      - use-sync-external-store
+      - utf-8-validate
+      - zod
+    optional: true
+
+  '@coinbase/wallet-sdk@4.3.6(@types/react@19.2.14)(bufferutil@4.1.0)(react@19.2.6)(typescript@6.0.3)(use-sync-external-store@1.6.0(react@19.2.6))(utf-8-validate@5.0.10)(zod@4.3.6)':
+    dependencies:
+      '@noble/hashes': 1.4.0
+      clsx: 1.2.1
+      eventemitter3: 5.0.1
+      idb-keyval: 6.2.1
+      ox: 0.6.9(typescript@6.0.3)(zod@4.3.6)
+      preact: 10.24.2
+      viem: 2.52.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6)
+      zustand: 5.0.3(@types/react@19.2.14)(react@19.2.6)(use-sync-external-store@1.6.0(react@19.2.6))
     transitivePeerDependencies:
       - '@types/react'
       - bufferutil
@@ -25840,7 +25867,7 @@ snapshots:
       - uglify-js
       - webpack-cli
 
-  '@docusaurus/bundler@3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)':
+  '@docusaurus/bundler@3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)':
     dependencies:
       '@babel/core': 7.29.0
       '@docusaurus/babel': 3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -25852,7 +25879,7 @@ snapshots:
       clean-css: 5.3.3
       copy-webpack-plugin: 11.0.0(webpack@5.105.2(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3))
       css-loader: 6.11.0(@rspack/core@1.7.11(@swc/helpers@0.5.23))(webpack@5.105.2(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3))
-      css-minimizer-webpack-plugin: 5.0.1(clean-css@5.3.3)(esbuild@0.27.3)(webpack@5.105.2(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3))
+      css-minimizer-webpack-plugin: 5.0.1(clean-css@5.3.3)(esbuild@0.27.3)(lightningcss@1.32.0)(webpack@5.105.2(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3))
       cssnano: 6.1.2(postcss@8.5.12)
       file-loader: 6.2.0(webpack@5.105.2(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3))
       html-minifier-terser: 7.2.0
@@ -25883,10 +25910,10 @@ snapshots:
       - uglify-js
       - webpack-cli
 
-  '@docusaurus/core@3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)':
+  '@docusaurus/core@3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)':
     dependencies:
       '@docusaurus/babel': 3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
-      '@docusaurus/bundler': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)
+      '@docusaurus/bundler': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)
       '@docusaurus/logger': 3.10.0
       '@docusaurus/mdx-loader': 3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@docusaurus/utils': 3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -26031,9 +26058,9 @@ snapshots:
       - uglify-js
       - webpack-cli
 
-  '@docusaurus/plugin-client-redirects@3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)':
+  '@docusaurus/plugin-client-redirects@3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)':
     dependencies:
-      '@docusaurus/core': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
+      '@docusaurus/core': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
       '@docusaurus/logger': 3.10.0
       '@docusaurus/utils': 3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@docusaurus/utils-common': 3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -26062,13 +26089,13 @@ snapshots:
       - utf-8-validate
       - webpack-cli
 
-  '@docusaurus/plugin-content-blog@3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@docusaurus/plugin-content-docs@3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)':
-    dependencies:
-      '@docusaurus/core': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
+  ? '@docusaurus/plugin-content-blog@3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@docusaurus/plugin-content-docs@3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)'
+  : dependencies:
+      '@docusaurus/core': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
       '@docusaurus/logger': 3.10.0
       '@docusaurus/mdx-loader': 3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
-      '@docusaurus/plugin-content-docs': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
-      '@docusaurus/theme-common': 3.10.0(@docusaurus/plugin-content-docs@3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10))(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      '@docusaurus/plugin-content-docs': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
+      '@docusaurus/theme-common': 3.10.0(@docusaurus/plugin-content-docs@3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10))(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@docusaurus/types': 3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@docusaurus/utils': 3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@docusaurus/utils-common': 3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -26104,13 +26131,13 @@ snapshots:
       - utf-8-validate
       - webpack-cli
 
-  '@docusaurus/plugin-content-docs@3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)':
+  '@docusaurus/plugin-content-docs@3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)':
     dependencies:
-      '@docusaurus/core': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
+      '@docusaurus/core': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
       '@docusaurus/logger': 3.10.0
       '@docusaurus/mdx-loader': 3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@docusaurus/module-type-aliases': 3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
-      '@docusaurus/theme-common': 3.10.0(@docusaurus/plugin-content-docs@3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10))(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      '@docusaurus/theme-common': 3.10.0(@docusaurus/plugin-content-docs@3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10))(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@docusaurus/types': 3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@docusaurus/utils': 3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@docusaurus/utils-common': 3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -26144,9 +26171,9 @@ snapshots:
       - utf-8-validate
       - webpack-cli
 
-  '@docusaurus/plugin-content-pages@3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)':
+  '@docusaurus/plugin-content-pages@3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)':
     dependencies:
-      '@docusaurus/core': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
+      '@docusaurus/core': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
       '@docusaurus/mdx-loader': 3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@docusaurus/types': 3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@docusaurus/utils': 3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -26174,9 +26201,9 @@ snapshots:
       - utf-8-validate
       - webpack-cli
 
-  '@docusaurus/plugin-css-cascade-layers@3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)':
+  '@docusaurus/plugin-css-cascade-layers@3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)':
     dependencies:
-      '@docusaurus/core': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
+      '@docusaurus/core': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
       '@docusaurus/types': 3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@docusaurus/utils': 3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@docusaurus/utils-validation': 3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -26201,9 +26228,9 @@ snapshots:
       - utf-8-validate
       - webpack-cli
 
-  '@docusaurus/plugin-debug@3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)':
+  '@docusaurus/plugin-debug@3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)':
     dependencies:
-      '@docusaurus/core': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
+      '@docusaurus/core': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
       '@docusaurus/types': 3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@docusaurus/utils': 3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       fs-extra: 11.3.3
@@ -26229,9 +26256,9 @@ snapshots:
       - utf-8-validate
       - webpack-cli
 
-  '@docusaurus/plugin-google-analytics@3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)':
+  '@docusaurus/plugin-google-analytics@3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)':
     dependencies:
-      '@docusaurus/core': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
+      '@docusaurus/core': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
       '@docusaurus/types': 3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@docusaurus/utils-validation': 3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       react: 19.2.6
@@ -26255,9 +26282,9 @@ snapshots:
       - utf-8-validate
       - webpack-cli
 
-  '@docusaurus/plugin-google-gtag@3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)':
+  '@docusaurus/plugin-google-gtag@3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)':
     dependencies:
-      '@docusaurus/core': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
+      '@docusaurus/core': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
       '@docusaurus/types': 3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@docusaurus/utils-validation': 3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@types/gtag.js': 0.0.20
@@ -26282,9 +26309,9 @@ snapshots:
       - utf-8-validate
       - webpack-cli
 
-  '@docusaurus/plugin-google-tag-manager@3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)':
+  '@docusaurus/plugin-google-tag-manager@3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)':
     dependencies:
-      '@docusaurus/core': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
+      '@docusaurus/core': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
       '@docusaurus/types': 3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@docusaurus/utils-validation': 3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       react: 19.2.6
@@ -26308,9 +26335,9 @@ snapshots:
       - utf-8-validate
       - webpack-cli
 
-  '@docusaurus/plugin-sitemap@3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)':
+  '@docusaurus/plugin-sitemap@3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)':
     dependencies:
-      '@docusaurus/core': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
+      '@docusaurus/core': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
       '@docusaurus/logger': 3.10.0
       '@docusaurus/types': 3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@docusaurus/utils': 3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -26339,9 +26366,9 @@ snapshots:
       - utf-8-validate
       - webpack-cli
 
-  '@docusaurus/plugin-svgr@3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)':
+  '@docusaurus/plugin-svgr@3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)':
     dependencies:
-      '@docusaurus/core': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
+      '@docusaurus/core': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
       '@docusaurus/types': 3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@docusaurus/utils': 3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@docusaurus/utils-validation': 3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -26369,22 +26396,22 @@ snapshots:
       - utf-8-validate
       - webpack-cli
 
-  '@docusaurus/preset-classic@3.10.0(@algolia/client-search@5.49.1)(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(@types/react@19.2.14)(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(search-insights@2.17.3)(typescript@6.0.3)(utf-8-validate@5.0.10)':
+  '@docusaurus/preset-classic@3.10.0(@algolia/client-search@5.49.1)(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(@types/react@19.2.14)(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(search-insights@2.17.3)(typescript@6.0.3)(utf-8-validate@5.0.10)':
     dependencies:
-      '@docusaurus/core': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
-      '@docusaurus/plugin-content-blog': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@docusaurus/plugin-content-docs@3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
-      '@docusaurus/plugin-content-docs': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
-      '@docusaurus/plugin-content-pages': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
-      '@docusaurus/plugin-css-cascade-layers': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
-      '@docusaurus/plugin-debug': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
-      '@docusaurus/plugin-google-analytics': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
-      '@docusaurus/plugin-google-gtag': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
-      '@docusaurus/plugin-google-tag-manager': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
-      '@docusaurus/plugin-sitemap': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
-      '@docusaurus/plugin-svgr': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
-      '@docusaurus/theme-classic': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(@types/react@19.2.14)(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
-      '@docusaurus/theme-common': 3.10.0(@docusaurus/plugin-content-docs@3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10))(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
-      '@docusaurus/theme-search-algolia': 3.10.0(@algolia/client-search@5.49.1)(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(@types/react@19.2.14)(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(search-insights@2.17.3)(typescript@6.0.3)(utf-8-validate@5.0.10)
+      '@docusaurus/core': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
+      '@docusaurus/plugin-content-blog': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@docusaurus/plugin-content-docs@3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
+      '@docusaurus/plugin-content-docs': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
+      '@docusaurus/plugin-content-pages': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
+      '@docusaurus/plugin-css-cascade-layers': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
+      '@docusaurus/plugin-debug': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
+      '@docusaurus/plugin-google-analytics': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
+      '@docusaurus/plugin-google-gtag': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
+      '@docusaurus/plugin-google-tag-manager': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
+      '@docusaurus/plugin-sitemap': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
+      '@docusaurus/plugin-svgr': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
+      '@docusaurus/theme-classic': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(@types/react@19.2.14)(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
+      '@docusaurus/theme-common': 3.10.0(@docusaurus/plugin-content-docs@3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10))(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      '@docusaurus/theme-search-algolia': 3.10.0(@algolia/client-search@5.49.1)(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(@types/react@19.2.14)(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(search-insights@2.17.3)(typescript@6.0.3)(utf-8-validate@5.0.10)
       '@docusaurus/types': 3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       react: 19.2.6
       react-dom: 19.2.6(react@19.2.6)
@@ -26414,16 +26441,16 @@ snapshots:
       '@types/react': 19.2.14
       react: 19.2.6
 
-  '@docusaurus/theme-classic@3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(@types/react@19.2.14)(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)':
+  '@docusaurus/theme-classic@3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(@types/react@19.2.14)(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)':
     dependencies:
-      '@docusaurus/core': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
+      '@docusaurus/core': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
       '@docusaurus/logger': 3.10.0
       '@docusaurus/mdx-loader': 3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@docusaurus/module-type-aliases': 3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
-      '@docusaurus/plugin-content-blog': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@docusaurus/plugin-content-docs@3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
-      '@docusaurus/plugin-content-docs': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
-      '@docusaurus/plugin-content-pages': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
-      '@docusaurus/theme-common': 3.10.0(@docusaurus/plugin-content-docs@3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10))(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      '@docusaurus/plugin-content-blog': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@docusaurus/plugin-content-docs@3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
+      '@docusaurus/plugin-content-docs': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
+      '@docusaurus/plugin-content-pages': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
+      '@docusaurus/theme-common': 3.10.0(@docusaurus/plugin-content-docs@3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10))(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@docusaurus/theme-translations': 3.10.0
       '@docusaurus/types': 3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@docusaurus/utils': 3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -26462,11 +26489,11 @@ snapshots:
       - utf-8-validate
       - webpack-cli
 
-  '@docusaurus/theme-common@3.10.0(@docusaurus/plugin-content-docs@3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10))(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)':
+  '@docusaurus/theme-common@3.10.0(@docusaurus/plugin-content-docs@3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10))(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)':
     dependencies:
       '@docusaurus/mdx-loader': 3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@docusaurus/module-type-aliases': 3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
-      '@docusaurus/plugin-content-docs': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
+      '@docusaurus/plugin-content-docs': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
       '@docusaurus/utils': 3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@docusaurus/utils-common': 3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@types/history': 4.7.11
@@ -26486,14 +26513,14 @@ snapshots:
       - uglify-js
       - webpack-cli
 
-  '@docusaurus/theme-search-algolia@3.10.0(@algolia/client-search@5.49.1)(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(@types/react@19.2.14)(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(search-insights@2.17.3)(typescript@6.0.3)(utf-8-validate@5.0.10)':
+  '@docusaurus/theme-search-algolia@3.10.0(@algolia/client-search@5.49.1)(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(@types/react@19.2.14)(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(search-insights@2.17.3)(typescript@6.0.3)(utf-8-validate@5.0.10)':
     dependencies:
       '@algolia/autocomplete-core': 1.19.2(@algolia/client-search@5.49.1)(algoliasearch@5.49.1)(search-insights@2.17.3)
       '@docsearch/react': 4.6.0(@algolia/client-search@5.49.1)(@types/react@19.2.14)(algoliasearch@5.49.1)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(search-insights@2.17.3)
-      '@docusaurus/core': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
+      '@docusaurus/core': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
       '@docusaurus/logger': 3.10.0
-      '@docusaurus/plugin-content-docs': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
-      '@docusaurus/theme-common': 3.10.0(@docusaurus/plugin-content-docs@3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10))(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      '@docusaurus/plugin-content-docs': 3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
+      '@docusaurus/theme-common': 3.10.0(@docusaurus/plugin-content-docs@3.10.0(@docusaurus/faster@3.10.0(@docusaurus/types@3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@swc/helpers@0.5.23)(esbuild@0.27.3))(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@rspack/core@1.7.11(@swc/helpers@0.5.23))(@swc/core@1.11.31(@swc/helpers@0.5.23))(bufferutil@4.1.0)(esbuild@0.27.3)(lightningcss@1.32.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10))(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@docusaurus/theme-translations': 3.10.0
       '@docusaurus/utils': 3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@docusaurus/utils-validation': 3.10.0(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -27881,10 +27908,10 @@ snapshots:
       '@whatwg-node/fetch': 0.10.13
       '@whatwg-node/promise-helpers': 1.3.2
       graphql: 16.12.0
-      isomorphic-ws: 5.0.0(ws@8.20.1(bufferutil@4.1.0)(utf-8-validate@5.0.10))
+      isomorphic-ws: 5.0.0(ws@8.21.1(bufferutil@4.1.0)(utf-8-validate@5.0.10))
       sync-fetch: 0.6.0
       tslib: 2.8.1
-      ws: 8.20.1(bufferutil@4.1.0)(utf-8-validate@5.0.10)
+      ws: 8.21.1(bufferutil@4.1.0)(utf-8-validate@5.0.10)
     transitivePeerDependencies:
       - '@fastify/websocket'
       - '@types/node'
@@ -27903,10 +27930,10 @@ snapshots:
       '@whatwg-node/fetch': 0.10.13
       '@whatwg-node/promise-helpers': 1.3.2
       graphql: 16.12.0
-      isomorphic-ws: 5.0.0(ws@8.20.1(bufferutil@4.1.0)(utf-8-validate@5.0.10))
+      isomorphic-ws: 5.0.0(ws@8.21.1(bufferutil@4.1.0)(utf-8-validate@5.0.10))
       sync-fetch: 0.6.0
       tslib: 2.8.1
-      ws: 8.20.1(bufferutil@4.1.0)(utf-8-validate@5.0.10)
+      ws: 8.21.1(bufferutil@4.1.0)(utf-8-validate@5.0.10)
     transitivePeerDependencies:
       - '@fastify/websocket'
       - '@types/node'
@@ -28962,7 +28989,7 @@ snapshots:
       '@fastify/error': 4.2.0
       graphql: 16.12.0
       secure-json-parse: 3.0.2
-      ws: 8.20.1(bufferutil@4.1.0)(utf-8-validate@5.0.10)
+      ws: 8.21.1(bufferutil@4.1.0)(utf-8-validate@5.0.10)
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
@@ -29149,6 +29176,28 @@ snapshots:
       pony-cause: 2.1.11
       semver: 7.7.4
       uuid: 9.0.1
+    transitivePeerDependencies:
+      - supports-color
+
+  '@modelcontextprotocol/sdk@1.29.0(zod@3.25.76)':
+    dependencies:
+      '@hono/node-server': 1.19.10(hono@4.12.9)
+      ajv: 8.18.0
+      ajv-formats: 3.0.1(ajv@8.18.0)
+      content-type: 1.0.5
+      cors: 2.8.6
+      cross-spawn: 7.0.6
+      eventsource: 3.0.7
+      eventsource-parser: 3.0.6
+      express: 5.2.1
+      express-rate-limit: 8.3.2(express@5.2.1)
+      hono: 4.12.9
+      jose: 6.1.3
+      json-schema-typed: 8.0.2
+      pkce-challenge: 5.0.1
+      raw-body: 3.0.2
+      zod: 3.25.76
+      zod-to-json-schema: 3.25.1(zod@3.25.76)
     transitivePeerDependencies:
       - supports-color
 
@@ -30715,6 +30764,64 @@ snapshots:
 
   '@powerhousedao/config@6.0.1-staging.0': {}
 
+  '@powerhousedao/connect@6.0.1-staging.0(18c2d7834ddcca84a7113c54affb450a)':
+    dependencies:
+      '@electric-sql/pglite': 0.3.15
+      '@electric-sql/pglite-tools': 0.2.20(@electric-sql/pglite@0.3.15)
+      '@openfeature/web-sdk': 1.6.2(@openfeature/core@1.9.1)
+      '@powerhousedao/design-system': 6.0.1-staging.0(@coinbase/wallet-sdk@4.3.6(@types/react@19.2.14)(bufferutil@4.1.0)(react@19.2.6)(typescript@6.0.3)(use-sync-external-store@1.6.0(react@19.2.6))(utf-8-validate@5.0.10)(zod@4.3.6))(@electric-sql/pglite@0.3.15)(@safe-global/safe-apps-provider@0.18.6(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))(@safe-global/safe-apps-sdk@9.1.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))(@tanstack/query-core@5.90.20)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(@walletconnect/ethereum-provider@2.22.4(@types/react@19.2.14)(bufferutil@4.1.0)(encoding@0.1.13)(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))(bufferutil@4.1.0)(porto@0.2.35)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6)
+      '@powerhousedao/powerhouse-vetra-packages': 6.0.1-staging.0(@coinbase/wallet-sdk@4.3.6(@types/react@19.2.14)(bufferutil@4.1.0)(react@19.2.6)(typescript@6.0.3)(use-sync-external-store@1.6.0(react@19.2.6))(utf-8-validate@5.0.10)(zod@4.3.6))(@electric-sql/pglite@0.3.15)(@lezer/highlight@1.2.3)(@safe-global/safe-apps-provider@0.18.6(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))(@safe-global/safe-apps-sdk@9.1.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))(@tanstack/query-core@5.90.20)(@types/express@4.17.25)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(@walletconnect/ethereum-provider@2.22.4(@types/react@19.2.14)(bufferutil@4.1.0)(encoding@0.1.13)(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))(bufferutil@4.1.0)(i18next@25.8.13(typescript@6.0.3))(porto@0.2.35)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
+      '@powerhousedao/reactor-browser': 6.0.1-staging.0(@electric-sql/pglite@0.3.15)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      '@powerhousedao/shared': 6.0.1-staging.0
+      '@renown/sdk': 6.0.1-staging.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6)
+      '@sentry/react': 10.40.0(react@19.2.6)
+      document-drive: 6.0.1-staging.0
+      document-model: 6.0.1-staging.0
+      graphql-request: 7.4.0(graphql@16.12.0)
+      i18next: 25.8.13(typescript@6.0.3)
+      kysely: 0.28.11
+      kysely-pglite-dialect: 1.2.0(@electric-sql/pglite@0.3.15)(kysely@0.28.11)
+      react: 19.2.6
+      react-dom: 19.2.6(react@19.2.6)
+      react-error-boundary: 4.1.2(react@19.2.6)
+      react-hotkeys-hook: 4.6.2(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      react-i18next: 16.5.4(i18next@25.8.13(typescript@6.0.3))(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)
+      react-router-dom: 6.30.3(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      tailwind-merge: 3.4.0
+    transitivePeerDependencies:
+      - '@base-org/account'
+      - '@coinbase/wallet-sdk'
+      - '@lezer/highlight'
+      - '@metamask/connect-evm'
+      - '@openfeature/core'
+      - '@safe-global/safe-apps-provider'
+      - '@safe-global/safe-apps-sdk'
+      - '@tanstack/query-core'
+      - '@types/express'
+      - '@types/koa'
+      - '@types/react'
+      - '@types/react-dom'
+      - '@walletconnect/ethereum-provider'
+      - accounts
+      - bluebird
+      - bufferutil
+      - graphql
+      - ibm_db
+      - immer
+      - mariadb
+      - mysql2
+      - oracledb
+      - pg
+      - pg-hstore
+      - porto
+      - react-native
+      - snowflake-sdk
+      - supports-color
+      - tedious
+      - typescript
+      - utf-8-validate
+      - zod
+
   '@powerhousedao/connect@6.0.1-staging.0(6a122ea7cbc5828d0e0cb23dfd1078fe)':
     dependencies:
       '@electric-sql/pglite': 0.3.15
@@ -30781,7 +30888,7 @@ snapshots:
       '@radix-ui/react-dropdown-menu': 2.1.16(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@radix-ui/react-popover': 1.1.15(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@radix-ui/react-radio-group': 1.3.8(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
-      '@radix-ui/react-slot': 1.2.4(@types/react@19.2.14)(react@19.2.6)
+      '@radix-ui/react-slot': 1.3.0(@types/react@19.2.14)(react@19.2.6)
       '@radix-ui/react-tabs': 1.1.13(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@radix-ui/react-tooltip': 1.2.8(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@radix-ui/react-visually-hidden': 1.2.4(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -30841,6 +30948,74 @@ snapshots:
       - utf-8-validate
       - zod
 
+  '@powerhousedao/design-system@6.0.1-staging.0(@coinbase/wallet-sdk@4.3.6(@types/react@19.2.14)(bufferutil@4.1.0)(react@19.2.6)(typescript@6.0.3)(use-sync-external-store@1.6.0(react@19.2.6))(utf-8-validate@5.0.10)(zod@4.3.6))(@electric-sql/pglite@0.3.15)(@safe-global/safe-apps-provider@0.18.6(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))(@safe-global/safe-apps-sdk@9.1.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))(@tanstack/query-core@5.90.20)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(@walletconnect/ethereum-provider@2.22.4(@types/react@19.2.14)(bufferutil@4.1.0)(encoding@0.1.13)(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))(bufferutil@4.1.0)(porto@0.2.35)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6)':
+    dependencies:
+      '@powerhousedao/reactor-browser': 6.0.1-staging.0(@electric-sql/pglite@0.3.15)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      '@radix-ui/react-checkbox': 1.3.3(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      '@radix-ui/react-dialog': 1.1.15(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      '@radix-ui/react-dropdown-menu': 2.1.16(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      '@radix-ui/react-popover': 1.1.15(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      '@radix-ui/react-radio-group': 1.3.8(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      '@radix-ui/react-slot': 1.3.0(@types/react@19.2.14)(react@19.2.6)
+      '@radix-ui/react-tabs': 1.1.13(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      '@radix-ui/react-tooltip': 1.2.8(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      '@radix-ui/react-visually-hidden': 1.2.4(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      '@tanstack/react-query': 5.90.21(react@19.2.6)
+      '@tanstack/react-virtual': 3.13.19(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      change-case: 5.4.4
+      class-variance-authority: 0.7.0
+      clsx: 2.1.1
+      cmdk: 1.1.1(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      copyfiles: 2.4.1
+      date-fns: 4.1.0
+      date-fns-tz: 3.2.0(date-fns@4.1.0)
+      diff: 7.0.0
+      document-drive: 6.0.1-staging.0
+      document-model: 6.0.1-staging.0
+      mathjs: 13.2.3
+      natural-orderby: 4.0.0
+      react: 19.2.6
+      react-dom: 19.2.6(react@19.2.6)
+      react-hook-form: 7.71.2(react@19.2.6)
+      react-json-view-lite: 2.5.0(react@19.2.6)
+      react-multi-select-component: 4.3.4(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      react-number-format: 5.4.5(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      react-select: 5.10.2(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      react-toastify: 10.0.6(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      tailwind-merge: 3.4.0
+      tsx: 4.21.0
+      usehooks-ts: 3.1.1(react@19.2.6)
+      viem: 2.52.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6)
+      wagmi: 3.7.1(@coinbase/wallet-sdk@4.3.6(@types/react@19.2.14)(bufferutil@4.1.0)(react@19.2.6)(typescript@6.0.3)(use-sync-external-store@1.6.0(react@19.2.6))(utf-8-validate@5.0.10)(zod@4.3.6))(@safe-global/safe-apps-provider@0.18.6(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))(@safe-global/safe-apps-sdk@9.1.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))(@tanstack/query-core@5.90.20)(@tanstack/react-query@5.90.21(react@19.2.6))(@types/react@19.2.14)(@walletconnect/ethereum-provider@2.22.4(@types/react@19.2.14)(bufferutil@4.1.0)(encoding@0.1.13)(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))(porto@0.2.35)(react@19.2.6)(typescript@6.0.3)(viem@2.52.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))
+    transitivePeerDependencies:
+      - '@base-org/account'
+      - '@coinbase/wallet-sdk'
+      - '@electric-sql/pglite'
+      - '@metamask/connect-evm'
+      - '@safe-global/safe-apps-provider'
+      - '@safe-global/safe-apps-sdk'
+      - '@tanstack/query-core'
+      - '@types/react'
+      - '@types/react-dom'
+      - '@walletconnect/ethereum-provider'
+      - accounts
+      - bluebird
+      - bufferutil
+      - ibm_db
+      - immer
+      - mariadb
+      - mysql2
+      - oracledb
+      - pg
+      - pg-hstore
+      - porto
+      - snowflake-sdk
+      - supports-color
+      - tedious
+      - typescript
+      - utf-8-validate
+      - zod
+
   '@powerhousedao/document-engineering@1.40.1(@types/express@4.17.25)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(bufferutil@4.1.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)':
     dependencies:
       '@internationalized/date': 3.12.2
@@ -30851,7 +31026,7 @@ snapshots:
       '@radix-ui/react-progress': 1.1.8(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@radix-ui/react-radio-group': 1.3.8(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@radix-ui/react-separator': 1.1.11(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
-      '@radix-ui/react-slot': 1.2.4(@types/react@19.2.14)(react@19.2.6)
+      '@radix-ui/react-slot': 1.3.0(@types/react@19.2.14)(react@19.2.6)
       '@radix-ui/react-switch': 1.2.6(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@radix-ui/react-tabs': 1.1.13(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@radix-ui/react-tooltip': 1.2.8(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -30964,7 +31139,73 @@ snapshots:
       '@powerhousedao/document-engineering': 1.40.1(@types/express@4.17.25)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(bufferutil@4.1.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
       '@powerhousedao/reactor-browser': 6.0.1-staging.0(@electric-sql/pglite@0.3.15)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@radix-ui/react-label': 2.1.8(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
-      '@radix-ui/react-slot': 1.2.4(@types/react@19.2.14)(react@19.2.6)
+      '@radix-ui/react-slot': 1.3.0(@types/react@19.2.14)(react@19.2.6)
+      '@radix-ui/react-tabs': 1.1.13(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      '@tanstack/react-virtual': 3.13.19(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      change-case: 5.4.4
+      class-variance-authority: 0.7.0
+      clsx: 2.1.1
+      cm6-graphql: 0.2.1(@codemirror/autocomplete@6.18.6)(@codemirror/language@6.11.0)(@codemirror/lint@6.8.5)(@codemirror/state@6.5.2)(@codemirror/view@6.36.7)(@lezer/highlight@1.2.3)(graphql@16.12.0)
+      document-model: 6.0.1-staging.0
+      graphql: 16.12.0
+      react: 19.2.6
+      react-dom: 19.2.6(react@19.2.6)
+      react-hook-form: 7.71.2(react@19.2.6)
+      react-i18next: 16.5.4(i18next@25.8.13(typescript@6.0.3))(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)
+      tailwind-merge: 3.4.0
+      thememirror: 2.0.1(@codemirror/language@6.11.0)(@codemirror/state@6.5.2)(@codemirror/view@6.36.7)
+      validator: 13.15.26
+      zod: 4.3.6
+    transitivePeerDependencies:
+      - '@base-org/account'
+      - '@coinbase/wallet-sdk'
+      - '@electric-sql/pglite'
+      - '@lezer/highlight'
+      - '@metamask/connect-evm'
+      - '@safe-global/safe-apps-provider'
+      - '@safe-global/safe-apps-sdk'
+      - '@tanstack/query-core'
+      - '@types/express'
+      - '@types/koa'
+      - '@types/react'
+      - '@types/react-dom'
+      - '@walletconnect/ethereum-provider'
+      - accounts
+      - bluebird
+      - bufferutil
+      - i18next
+      - ibm_db
+      - immer
+      - mariadb
+      - mysql2
+      - oracledb
+      - pg
+      - pg-hstore
+      - porto
+      - react-native
+      - snowflake-sdk
+      - supports-color
+      - tedious
+      - typescript
+      - utf-8-validate
+
+  '@powerhousedao/powerhouse-vetra-packages@6.0.1-staging.0(@coinbase/wallet-sdk@4.3.6(@types/react@19.2.14)(bufferutil@4.1.0)(react@19.2.6)(typescript@6.0.3)(use-sync-external-store@1.6.0(react@19.2.6))(utf-8-validate@5.0.10)(zod@4.3.6))(@electric-sql/pglite@0.3.15)(@lezer/highlight@1.2.3)(@safe-global/safe-apps-provider@0.18.6(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))(@safe-global/safe-apps-sdk@9.1.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))(@tanstack/query-core@5.90.20)(@types/express@4.17.25)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(@walletconnect/ethereum-provider@2.22.4(@types/react@19.2.14)(bufferutil@4.1.0)(encoding@0.1.13)(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))(bufferutil@4.1.0)(i18next@25.8.13(typescript@6.0.3))(porto@0.2.35)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)':
+    dependencies:
+      '@codemirror/autocomplete': 6.18.6
+      '@codemirror/commands': 6.8.1
+      '@codemirror/lang-json': 6.0.1
+      '@codemirror/language': 6.11.0
+      '@codemirror/lint': 6.8.5
+      '@codemirror/search': 6.5.10
+      '@codemirror/state': 6.5.2
+      '@codemirror/view': 6.36.7
+      '@graphql-tools/utils': 11.0.0(graphql@16.12.0)
+      '@hookform/resolvers': 5.2.2(react-hook-form@7.71.2(react@19.2.6))
+      '@powerhousedao/design-system': 6.0.1-staging.0(@coinbase/wallet-sdk@4.3.6(@types/react@19.2.14)(bufferutil@4.1.0)(react@19.2.6)(typescript@6.0.3)(use-sync-external-store@1.6.0(react@19.2.6))(utf-8-validate@5.0.10)(zod@4.3.6))(@electric-sql/pglite@0.3.15)(@safe-global/safe-apps-provider@0.18.6(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))(@safe-global/safe-apps-sdk@9.1.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))(@tanstack/query-core@5.90.20)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(@walletconnect/ethereum-provider@2.22.4(@types/react@19.2.14)(bufferutil@4.1.0)(encoding@0.1.13)(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))(bufferutil@4.1.0)(porto@0.2.35)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6)
+      '@powerhousedao/document-engineering': 1.40.1(@types/express@4.17.25)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(bufferutil@4.1.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
+      '@powerhousedao/reactor-browser': 6.0.1-staging.0(@electric-sql/pglite@0.3.15)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      '@radix-ui/react-label': 2.1.8(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      '@radix-ui/react-slot': 1.3.0(@types/react@19.2.14)(react@19.2.6)
       '@radix-ui/react-tabs': 1.1.13(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@tanstack/react-virtual': 3.13.19(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       change-case: 5.4.4
@@ -31039,6 +31280,70 @@ snapshots:
       '@electric-sql/pglite': 0.3.15
       document-drive: 6.0.1-staging.0
       document-model: 6.0.1-staging.0
+
+  '@powerhousedao/renown-package@1.3.9(c2fbd7e2d20fd6decc95bef654f6438e)':
+    dependencies:
+      '@powerhousedao/builder-tools': 6.0.1-staging.0(@types/node@25.2.3)(jiti@2.7.0)(lightningcss@1.32.0)(rollup@4.62.2)(terser@5.46.1)(tsx@4.21.0)(typescript@6.0.3)(yaml@2.9.0)
+      '@powerhousedao/common': 6.0.1-staging.0(@electric-sql/pglite@0.3.15)(graphql@16.12.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(zod@4.3.6)
+      '@powerhousedao/design-system': 6.0.1-staging.0(@coinbase/wallet-sdk@4.3.6(@types/react@19.2.14)(bufferutil@4.1.0)(react@19.2.6)(typescript@6.0.3)(use-sync-external-store@1.6.0(react@19.2.6))(utf-8-validate@5.0.10)(zod@4.3.6))(@electric-sql/pglite@0.3.15)(@safe-global/safe-apps-provider@0.18.6(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))(@safe-global/safe-apps-sdk@9.1.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))(@tanstack/query-core@5.90.20)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(@walletconnect/ethereum-provider@2.22.4(@types/react@19.2.14)(bufferutil@4.1.0)(encoding@0.1.13)(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))(bufferutil@4.1.0)(porto@0.2.35)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6)
+      '@powerhousedao/document-engineering': 1.40.5(@types/express@4.17.25)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(graphql@16.12.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(zod@4.3.6)
+      '@powerhousedao/vetra': 6.0.1-staging.0(@coinbase/wallet-sdk@4.3.6(@types/react@19.2.14)(bufferutil@4.1.0)(react@19.2.6)(typescript@6.0.3)(use-sync-external-store@1.6.0(react@19.2.6))(utf-8-validate@5.0.10)(zod@4.3.6))(@electric-sql/pglite@0.3.15)(@lezer/highlight@1.2.3)(@openfeature/core@1.9.1)(@safe-global/safe-apps-provider@0.18.6(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))(@safe-global/safe-apps-sdk@9.1.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))(@tanstack/query-core@5.90.20)(@types/express@4.17.25)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(@walletconnect/ethereum-provider@2.22.4(@types/react@19.2.14)(bufferutil@4.1.0)(encoding@0.1.13)(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))(bufferutil@4.1.0)(document-drive@6.0.1-staging.0)(porto@0.2.35)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
+      document-model: 6.0.1-staging.0
+      graphql: 16.12.0
+      graphql-request: 7.4.0(graphql@16.12.0)
+      graphql-tag: 2.12.6(graphql@16.12.0)
+      kysely: 0.28.16
+      luxon: 3.7.2
+      nanoid: 5.1.6
+      react: 19.2.6
+      react-dom: 19.2.6(react@19.2.6)
+      uuid: 11.1.1
+      zod: 4.3.6
+    transitivePeerDependencies:
+      - '@base-org/account'
+      - '@coinbase/wallet-sdk'
+      - '@electric-sql/pglite'
+      - '@lezer/highlight'
+      - '@metamask/connect-evm'
+      - '@openfeature/core'
+      - '@safe-global/safe-apps-provider'
+      - '@safe-global/safe-apps-sdk'
+      - '@tanstack/query-core'
+      - '@types/express'
+      - '@types/koa'
+      - '@types/node'
+      - '@types/react'
+      - '@types/react-dom'
+      - '@walletconnect/ethereum-provider'
+      - accounts
+      - bluebird
+      - bufferutil
+      - document-drive
+      - ibm_db
+      - immer
+      - jiti
+      - less
+      - lightningcss
+      - mariadb
+      - mysql2
+      - oracledb
+      - pg
+      - pg-hstore
+      - porto
+      - react-native
+      - rollup
+      - sass
+      - sass-embedded
+      - snowflake-sdk
+      - stylus
+      - sugarss
+      - supports-color
+      - tedious
+      - terser
+      - tsx
+      - typescript
+      - utf-8-validate
+      - yaml
 
   '@powerhousedao/renown-package@1.3.9(da07d0fb7707ab4ae9bd3aab5d6659ee)':
     dependencies:
@@ -31118,6 +31423,58 @@ snapshots:
       '@powerhousedao/config': 6.0.1-staging.0
       '@powerhousedao/connect': 6.0.1-staging.0(6a122ea7cbc5828d0e0cb23dfd1078fe)
       '@powerhousedao/design-system': 6.0.1-staging.0(@coinbase/wallet-sdk@4.3.6(@types/react@19.2.14)(bufferutil@4.1.0)(react@19.2.6)(typescript@6.0.3)(use-sync-external-store@1.4.0(react@19.2.6))(utf-8-validate@5.0.10)(zod@4.3.6))(@electric-sql/pglite@0.3.15)(@safe-global/safe-apps-provider@0.18.6(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))(@safe-global/safe-apps-sdk@9.1.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))(@tanstack/query-core@5.90.20)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(@walletconnect/ethereum-provider@2.22.4(@types/react@19.2.14)(bufferutil@4.1.0)(encoding@0.1.13)(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))(bufferutil@4.1.0)(porto@0.2.35)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6)
+      '@powerhousedao/reactor-browser': 6.0.1-staging.0(@electric-sql/pglite@0.3.15)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      '@powerhousedao/shared': 6.0.1-staging.0
+      change-case: 5.4.4
+      colorette: 2.0.20
+      document-model: 6.0.1-staging.0
+      graphql: 16.12.0
+      graphql-tag: 2.12.6(graphql@16.12.0)
+      kysely: 0.28.11
+      react: 19.2.6
+      react-dom: 19.2.6(react@19.2.6)
+      zod: 4.3.6
+    transitivePeerDependencies:
+      - '@base-org/account'
+      - '@coinbase/wallet-sdk'
+      - '@lezer/highlight'
+      - '@metamask/connect-evm'
+      - '@openfeature/core'
+      - '@safe-global/safe-apps-provider'
+      - '@safe-global/safe-apps-sdk'
+      - '@tanstack/query-core'
+      - '@types/express'
+      - '@types/koa'
+      - '@types/react'
+      - '@types/react-dom'
+      - '@walletconnect/ethereum-provider'
+      - accounts
+      - bluebird
+      - bufferutil
+      - document-drive
+      - ibm_db
+      - immer
+      - mariadb
+      - mysql2
+      - oracledb
+      - pg
+      - pg-hstore
+      - porto
+      - react-native
+      - snowflake-sdk
+      - supports-color
+      - tedious
+      - typescript
+      - utf-8-validate
+
+  '@powerhousedao/vetra@6.0.1-staging.0(@coinbase/wallet-sdk@4.3.6(@types/react@19.2.14)(bufferutil@4.1.0)(react@19.2.6)(typescript@6.0.3)(use-sync-external-store@1.6.0(react@19.2.6))(utf-8-validate@5.0.10)(zod@4.3.6))(@electric-sql/pglite@0.3.15)(@lezer/highlight@1.2.3)(@openfeature/core@1.9.1)(@safe-global/safe-apps-provider@0.18.6(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))(@safe-global/safe-apps-sdk@9.1.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))(@tanstack/query-core@5.90.20)(@types/express@4.17.25)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(@walletconnect/ethereum-provider@2.22.4(@types/react@19.2.14)(bufferutil@4.1.0)(encoding@0.1.13)(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))(bufferutil@4.1.0)(document-drive@6.0.1-staging.0)(porto@0.2.35)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)':
+    dependencies:
+      '@electric-sql/pglite': 0.3.15
+      '@electric-sql/pglite-tools': 0.2.20(@electric-sql/pglite@0.3.15)
+      '@powerhousedao/common': 6.0.1-staging.0(@electric-sql/pglite@0.3.15)(graphql@16.12.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(zod@4.3.6)
+      '@powerhousedao/config': 6.0.1-staging.0
+      '@powerhousedao/connect': 6.0.1-staging.0(18c2d7834ddcca84a7113c54affb450a)
+      '@powerhousedao/design-system': 6.0.1-staging.0(@coinbase/wallet-sdk@4.3.6(@types/react@19.2.14)(bufferutil@4.1.0)(react@19.2.6)(typescript@6.0.3)(use-sync-external-store@1.6.0(react@19.2.6))(utf-8-validate@5.0.10)(zod@4.3.6))(@electric-sql/pglite@0.3.15)(@safe-global/safe-apps-provider@0.18.6(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))(@safe-global/safe-apps-sdk@9.1.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))(@tanstack/query-core@5.90.20)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(@walletconnect/ethereum-provider@2.22.4(@types/react@19.2.14)(bufferutil@4.1.0)(encoding@0.1.13)(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))(bufferutil@4.1.0)(porto@0.2.35)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6)
       '@powerhousedao/reactor-browser': 6.0.1-staging.0(@electric-sql/pglite@0.3.15)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@powerhousedao/shared': 6.0.1-staging.0
       change-case: 5.4.4
@@ -31559,9 +31916,9 @@ snapshots:
       - utf-8-validate
       - zod
 
-  '@privy-io/react-auth@3.35.0(@date-fns/tz@1.4.1)(@solana-program/system@0.10.0(@solana/kit@5.5.1(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)))(@solana-program/token@0.9.0(@solana/kit@5.5.1(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)))(@solana/kit@5.5.1(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10))(@solana/sysvars@5.5.1(typescript@6.0.3))(@tanstack/query-core@5.90.20)(@tanstack/react-query@5.90.21(react@19.2.6))(@types/react@19.2.14)(bufferutil@4.1.0)(date-fns@4.1.0)(encoding@0.1.13)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(use-sync-external-store@1.4.0(react@19.2.6))(utf-8-validate@5.0.10)(zod@4.3.6)':
+  '@privy-io/react-auth@3.35.0(@date-fns/tz@1.4.1)(@solana-program/system@0.10.0(@solana/kit@5.5.1(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)))(@solana-program/token@0.9.0(@solana/kit@5.5.1(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)))(@solana/kit@5.5.1(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10))(@solana/sysvars@5.5.1(typescript@6.0.3))(@tanstack/query-core@5.90.20)(@tanstack/react-query@5.90.21(react@19.2.6))(@types/react@19.2.14)(bufferutil@4.1.0)(date-fns@4.1.0)(encoding@0.1.13)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(use-sync-external-store@1.6.0(react@19.2.6))(utf-8-validate@5.0.10)(zod@3.25.76)':
     dependencies:
-      '@base-org/account': 1.1.1(@types/react@19.2.14)(bufferutil@4.1.0)(react@19.2.6)(typescript@6.0.3)(use-sync-external-store@1.4.0(react@19.2.6))(utf-8-validate@5.0.10)(zod@4.3.6)
+      '@base-org/account': 1.1.1(@types/react@19.2.14)(bufferutil@4.1.0)(react@19.2.6)(typescript@6.0.3)(use-sync-external-store@1.6.0(react@19.2.6))(utf-8-validate@5.0.10)(zod@3.25.76)
       '@base-ui/react': 1.6.0(@date-fns/tz@1.4.1)(@types/react@19.2.14)(date-fns@4.1.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@coinbase/wallet-sdk': 4.3.2
       '@floating-ui/react': 0.26.28(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -31571,11 +31928,11 @@ snapshots:
       '@marsidev/react-turnstile': 1.5.3(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@privy-io/api-base': 1.9.3
       '@privy-io/api-types': 0.16.0
-      '@privy-io/are-addresses-equal': 0.0.9(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6)
+      '@privy-io/are-addresses-equal': 0.0.9(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@3.25.76)
       '@privy-io/chains': 0.5.0
       '@privy-io/encoding': 0.2.1
-      '@privy-io/ethereum': 0.2.0(viem@2.52.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))
-      '@privy-io/js-sdk-core': 0.68.2(viem@2.52.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))
+      '@privy-io/ethereum': 0.2.0(viem@2.52.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@3.25.76))
+      '@privy-io/js-sdk-core': 0.68.2(viem@2.52.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@3.25.76))
       '@privy-io/popup': 0.0.4
       '@privy-io/routes': 0.2.6
       '@privy-io/urls': 0.0.4
@@ -31583,8 +31940,8 @@ snapshots:
       '@simplewebauthn/browser': 13.3.0
       '@tanstack/react-virtual': 3.13.19(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@wallet-standard/app': 1.1.1
-      '@walletconnect/ethereum-provider': 2.22.4(@types/react@19.2.14)(bufferutil@4.1.0)(encoding@0.1.13)(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6)
-      '@walletconnect/universal-provider': 2.22.4(bufferutil@4.1.0)(encoding@0.1.13)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6)
+      '@walletconnect/ethereum-provider': 2.22.4(@types/react@19.2.14)(bufferutil@4.1.0)(encoding@0.1.13)(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@3.25.76)
+      '@walletconnect/universal-provider': 2.22.4(bufferutil@4.1.0)(encoding@0.1.13)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@3.25.76)
       eventemitter3: 5.0.4
       fast-password-entropy: 1.1.1
       jose: 4.15.9
@@ -31601,9 +31958,9 @@ snapshots:
       styled-components: 6.4.3(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       stylis: 4.4.0
       tinycolor2: 1.6.0
-      viem: 2.52.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6)
+      viem: 2.52.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@3.25.76)
       x402: 0.7.3(@solana/sysvars@5.5.1(typescript@6.0.3))(@tanstack/query-core@5.90.20)(@tanstack/react-query@5.90.21(react@19.2.6))(@types/react@19.2.14)(bufferutil@4.1.0)(encoding@0.1.13)(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
-      zustand: 5.0.14(@types/react@19.2.14)(react@19.2.6)(use-sync-external-store@1.4.0(react@19.2.6))
+      zustand: 5.0.14(@types/react@19.2.14)(react@19.2.6)(use-sync-external-store@1.6.0(react@19.2.6))
     optionalDependencies:
       '@solana-program/system': 0.10.0(@solana/kit@5.5.1(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10))
       '@solana-program/token': 0.9.0(@solana/kit@5.5.1(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10))
@@ -31650,9 +32007,9 @@ snapshots:
       - utf-8-validate
       - zod
 
-  '@privy-io/react-auth@3.35.0(@date-fns/tz@1.4.1)(@solana-program/system@0.10.0(@solana/kit@5.5.1(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)))(@solana-program/token@0.9.0(@solana/kit@5.5.1(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)))(@solana/kit@5.5.1(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10))(@solana/sysvars@5.5.1(typescript@6.0.3))(@tanstack/query-core@5.90.20)(@tanstack/react-query@5.90.21(react@19.2.6))(@types/react@19.2.14)(bufferutil@4.1.0)(date-fns@4.1.0)(encoding@0.1.13)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(use-sync-external-store@1.6.0(react@19.2.6))(utf-8-validate@5.0.10)(zod@3.25.76)':
+  '@privy-io/react-auth@3.35.0(@date-fns/tz@1.4.1)(@solana-program/system@0.10.0(@solana/kit@5.5.1(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)))(@solana-program/token@0.9.0(@solana/kit@5.5.1(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)))(@solana/kit@5.5.1(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10))(@solana/sysvars@5.5.1(typescript@6.0.3))(@tanstack/query-core@5.90.20)(@tanstack/react-query@5.90.21(react@19.2.6))(@types/react@19.2.14)(bufferutil@4.1.0)(date-fns@4.1.0)(encoding@0.1.13)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)(use-sync-external-store@1.6.0(react@19.2.6))(utf-8-validate@5.0.10)(zod@4.3.6)':
     dependencies:
-      '@base-org/account': 1.1.1(@types/react@19.2.14)(bufferutil@4.1.0)(react@19.2.6)(typescript@6.0.3)(use-sync-external-store@1.6.0(react@19.2.6))(utf-8-validate@5.0.10)(zod@3.25.76)
+      '@base-org/account': 1.1.1(@types/react@19.2.14)(bufferutil@4.1.0)(react@19.2.6)(typescript@6.0.3)(use-sync-external-store@1.6.0(react@19.2.6))(utf-8-validate@5.0.10)(zod@4.3.6)
       '@base-ui/react': 1.6.0(@date-fns/tz@1.4.1)(@types/react@19.2.14)(date-fns@4.1.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@coinbase/wallet-sdk': 4.3.2
       '@floating-ui/react': 0.26.28(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -31662,11 +32019,11 @@ snapshots:
       '@marsidev/react-turnstile': 1.5.3(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@privy-io/api-base': 1.9.3
       '@privy-io/api-types': 0.16.0
-      '@privy-io/are-addresses-equal': 0.0.9(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@3.25.76)
+      '@privy-io/are-addresses-equal': 0.0.9(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6)
       '@privy-io/chains': 0.5.0
       '@privy-io/encoding': 0.2.1
-      '@privy-io/ethereum': 0.2.0(viem@2.52.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@3.25.76))
-      '@privy-io/js-sdk-core': 0.68.2(viem@2.52.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@3.25.76))
+      '@privy-io/ethereum': 0.2.0(viem@2.52.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))
+      '@privy-io/js-sdk-core': 0.68.2(viem@2.52.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))
       '@privy-io/popup': 0.0.4
       '@privy-io/routes': 0.2.6
       '@privy-io/urls': 0.0.4
@@ -31674,8 +32031,8 @@ snapshots:
       '@simplewebauthn/browser': 13.3.0
       '@tanstack/react-virtual': 3.13.19(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@wallet-standard/app': 1.1.1
-      '@walletconnect/ethereum-provider': 2.22.4(@types/react@19.2.14)(bufferutil@4.1.0)(encoding@0.1.13)(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@3.25.76)
-      '@walletconnect/universal-provider': 2.22.4(bufferutil@4.1.0)(encoding@0.1.13)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@3.25.76)
+      '@walletconnect/ethereum-provider': 2.22.4(@types/react@19.2.14)(bufferutil@4.1.0)(encoding@0.1.13)(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6)
+      '@walletconnect/universal-provider': 2.22.4(bufferutil@4.1.0)(encoding@0.1.13)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6)
       eventemitter3: 5.0.4
       fast-password-entropy: 1.1.1
       jose: 4.15.9
@@ -31692,7 +32049,7 @@ snapshots:
       styled-components: 6.4.3(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       stylis: 4.4.0
       tinycolor2: 1.6.0
-      viem: 2.52.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@3.25.76)
+      viem: 2.52.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6)
       x402: 0.7.3(@solana/sysvars@5.5.1(typescript@6.0.3))(@tanstack/query-core@5.90.20)(@tanstack/react-query@5.90.21(react@19.2.6))(@types/react@19.2.14)(bufferutil@4.1.0)(encoding@0.1.13)(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)
       zustand: 5.0.14(@types/react@19.2.14)(react@19.2.6)(use-sync-external-store@1.6.0(react@19.2.6))
     optionalDependencies:
@@ -35917,7 +36274,7 @@ snapshots:
       recast: 0.23.11
       semver: 7.7.4
       util: 0.12.5
-      ws: 8.20.1(bufferutil@4.1.0)(utf-8-validate@5.0.10)
+      ws: 8.21.1(bufferutil@4.1.0)(utf-8-validate@5.0.10)
     optionalDependencies:
       prettier: 3.8.1
     transitivePeerDependencies:
@@ -36267,7 +36624,7 @@ snapshots:
   '@tailwindcss/node@4.1.18':
     dependencies:
       '@jridgewell/remapping': 2.3.5
-      enhanced-resolve: 5.21.3
+      enhanced-resolve: 5.21.6
       jiti: 2.6.1
       lightningcss: 1.30.2
       magic-string: 0.30.21
@@ -37955,6 +38312,18 @@ snapshots:
       porto: 0.2.35(@tanstack/react-query@5.90.21(react@19.2.6))(@types/react@19.2.14)(@wagmi/core@3.6.1(@tanstack/query-core@5.90.20)(@types/react@19.2.14)(react@19.2.6)(typescript@6.0.3)(use-sync-external-store@1.4.0(react@19.2.6))(viem@2.52.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6)))(react@19.2.6)(typescript@6.0.3)(use-sync-external-store@1.4.0(react@19.2.6))(viem@2.52.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))(wagmi@3.7.1)
       typescript: 6.0.3
 
+  '@wagmi/connectors@8.0.22(@coinbase/wallet-sdk@4.3.6(@types/react@19.2.14)(bufferutil@4.1.0)(react@19.2.6)(typescript@6.0.3)(use-sync-external-store@1.6.0(react@19.2.6))(utf-8-validate@5.0.10)(zod@4.3.6))(@safe-global/safe-apps-provider@0.18.6(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))(@safe-global/safe-apps-sdk@9.1.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))(@wagmi/core@3.6.1(@tanstack/query-core@5.90.20)(@types/react@19.2.14)(react@19.2.6)(typescript@6.0.3)(use-sync-external-store@1.6.0(react@19.2.6))(viem@2.52.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6)))(@walletconnect/ethereum-provider@2.22.4(@types/react@19.2.14)(bufferutil@4.1.0)(encoding@0.1.13)(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))(porto@0.2.35)(typescript@6.0.3)(viem@2.52.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))':
+    dependencies:
+      '@wagmi/core': 3.6.1(@tanstack/query-core@5.90.20)(@types/react@19.2.14)(react@19.2.6)(typescript@6.0.3)(use-sync-external-store@1.6.0(react@19.2.6))(viem@2.52.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))
+      viem: 2.52.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6)
+    optionalDependencies:
+      '@coinbase/wallet-sdk': 4.3.6(@types/react@19.2.14)(bufferutil@4.1.0)(react@19.2.6)(typescript@6.0.3)(use-sync-external-store@1.6.0(react@19.2.6))(utf-8-validate@5.0.10)(zod@4.3.6)
+      '@safe-global/safe-apps-provider': 0.18.6(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6)
+      '@safe-global/safe-apps-sdk': 9.1.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6)
+      '@walletconnect/ethereum-provider': 2.22.4(@types/react@19.2.14)(bufferutil@4.1.0)(encoding@0.1.13)(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6)
+      porto: 0.2.35(@tanstack/react-query@5.90.21(react@19.2.6))(@types/react@19.2.14)(@wagmi/core@3.6.1(@tanstack/query-core@5.90.20)(@types/react@19.2.14)(react@19.2.6)(typescript@6.0.3)(use-sync-external-store@1.6.0(react@19.2.6))(viem@2.52.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6)))(react@19.2.6)(typescript@6.0.3)(use-sync-external-store@1.6.0(react@19.2.6))(viem@2.52.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))(wagmi@3.7.1)
+      typescript: 6.0.3
+
   '@wagmi/core@2.22.1(@tanstack/query-core@5.90.20)(@types/react@19.2.14)(react@19.2.6)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@19.2.6))(viem@2.52.0(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76))':
     dependencies:
       eventemitter3: 5.0.1
@@ -38006,6 +38375,21 @@ snapshots:
       mipd: 0.0.7(typescript@6.0.3)
       viem: 2.52.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6)
       zustand: 5.0.0(@types/react@19.2.14)(react@19.2.6)(use-sync-external-store@1.4.0(react@19.2.6))
+    optionalDependencies:
+      '@tanstack/query-core': 5.90.20
+      typescript: 6.0.3
+    transitivePeerDependencies:
+      - '@types/react'
+      - immer
+      - react
+      - use-sync-external-store
+
+  '@wagmi/core@3.6.1(@tanstack/query-core@5.90.20)(@types/react@19.2.14)(react@19.2.6)(typescript@6.0.3)(use-sync-external-store@1.6.0(react@19.2.6))(viem@2.52.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))':
+    dependencies:
+      eventemitter3: 5.0.1
+      mipd: 0.0.7(typescript@6.0.3)
+      viem: 2.52.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6)
+      zustand: 5.0.0(@types/react@19.2.14)(react@19.2.6)(use-sync-external-store@1.6.0(react@19.2.6))
     optionalDependencies:
       '@tanstack/query-core': 5.90.20
       typescript: 6.0.3
@@ -42725,7 +43109,7 @@ snapshots:
       '@rspack/core': 1.7.11(@swc/helpers@0.5.23)
       webpack: 5.105.2(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)
 
-  css-minimizer-webpack-plugin@5.0.1(clean-css@5.3.3)(esbuild@0.27.3)(webpack@5.105.2(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)):
+  css-minimizer-webpack-plugin@5.0.1(clean-css@5.3.3)(esbuild@0.27.3)(lightningcss@1.32.0)(webpack@5.105.2(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)):
     dependencies:
       '@jridgewell/trace-mapping': 0.3.31
       cssnano: 6.1.2(postcss@8.5.12)
@@ -42737,6 +43121,7 @@ snapshots:
     optionalDependencies:
       clean-css: 5.3.3
       esbuild: 0.27.3
+      lightningcss: 1.32.0
 
   css-prefers-color-scheme@10.0.0(postcss@8.5.12):
     dependencies:
@@ -46268,10 +46653,6 @@ snapshots:
   isexe@2.0.0: {}
 
   isobject@3.0.1: {}
-
-  isomorphic-ws@5.0.0(ws@8.20.1(bufferutil@4.1.0)(utf-8-validate@5.0.10)):
-    dependencies:
-      ws: 8.20.1(bufferutil@4.1.0)(utf-8-validate@5.0.10)
 
   isomorphic-ws@5.0.0(ws@8.21.1(bufferutil@4.1.0)(utf-8-validate@5.0.10)):
     dependencies:
@@ -49816,6 +50197,27 @@ snapshots:
       - use-sync-external-store
     optional: true
 
+  porto@0.2.35(@tanstack/react-query@5.90.21(react@19.2.6))(@types/react@19.2.14)(@wagmi/core@3.6.1(@tanstack/query-core@5.90.20)(@types/react@19.2.14)(react@19.2.6)(typescript@6.0.3)(use-sync-external-store@1.6.0(react@19.2.6))(viem@2.52.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6)))(react@19.2.6)(typescript@6.0.3)(use-sync-external-store@1.6.0(react@19.2.6))(viem@2.52.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))(wagmi@3.7.1):
+    dependencies:
+      '@wagmi/core': 3.6.1(@tanstack/query-core@5.90.20)(@types/react@19.2.14)(react@19.2.6)(typescript@6.0.3)(use-sync-external-store@1.6.0(react@19.2.6))(viem@2.52.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))
+      hono: 4.12.9
+      idb-keyval: 6.3.0
+      mipd: 0.0.7(typescript@6.0.3)
+      ox: 0.9.17(typescript@6.0.3)(zod@4.3.6)
+      viem: 2.52.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6)
+      zod: 4.3.6
+      zustand: 5.0.14(@types/react@19.2.14)(react@19.2.6)(use-sync-external-store@1.6.0(react@19.2.6))
+    optionalDependencies:
+      '@tanstack/react-query': 5.90.21(react@19.2.6)
+      react: 19.2.6
+      typescript: 6.0.3
+      wagmi: 3.7.1(@coinbase/wallet-sdk@4.3.6(@types/react@19.2.14)(bufferutil@4.1.0)(react@19.2.6)(typescript@6.0.3)(use-sync-external-store@1.6.0(react@19.2.6))(utf-8-validate@5.0.10)(zod@4.3.6))(@safe-global/safe-apps-provider@0.18.6(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))(@safe-global/safe-apps-sdk@9.1.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))(@tanstack/query-core@5.90.20)(@tanstack/react-query@5.90.21(react@19.2.6))(@types/react@19.2.14)(@walletconnect/ethereum-provider@2.22.4(@types/react@19.2.14)(bufferutil@4.1.0)(encoding@0.1.13)(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))(porto@0.2.35)(react@19.2.6)(typescript@6.0.3)(viem@2.52.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))
+    transitivePeerDependencies:
+      - '@types/react'
+      - immer
+      - use-sync-external-store
+    optional: true
+
   possible-typed-array-names@1.1.0: {}
 
   postcss-attribute-case-insensitive@7.0.1(postcss@8.5.12):
@@ -50264,13 +50666,13 @@ snapshots:
 
   postcss@8.4.31:
     dependencies:
-      nanoid: 3.3.11
+      nanoid: 3.3.16
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
   postcss@8.5.12:
     dependencies:
-      nanoid: 3.3.11
+      nanoid: 3.3.16
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
@@ -50518,7 +50920,7 @@ snapshots:
       devtools-protocol: 0.0.1566079
       typed-query-selector: 2.12.1
       webdriver-bidi-protocol: 0.4.1
-      ws: 8.20.1(bufferutil@4.1.0)(utf-8-validate@5.0.10)
+      ws: 8.21.1(bufferutil@4.1.0)(utf-8-validate@5.0.10)
     transitivePeerDependencies:
       - bare-abort-controller
       - bare-buffer
@@ -53813,7 +54215,7 @@ snapshots:
       esbuild: 0.27.3
       fdir: 6.5.0(picomatch@4.0.4)
       picomatch: 4.0.4
-      postcss: 8.5.12
+      postcss: 8.5.19
       rollup: 4.62.2
       tinyglobby: 0.2.16
     optionalDependencies:
@@ -54220,6 +54622,29 @@ snapshots:
       - immer
       - porto
 
+  wagmi@3.7.1(@coinbase/wallet-sdk@4.3.6(@types/react@19.2.14)(bufferutil@4.1.0)(react@19.2.6)(typescript@6.0.3)(use-sync-external-store@1.6.0(react@19.2.6))(utf-8-validate@5.0.10)(zod@4.3.6))(@safe-global/safe-apps-provider@0.18.6(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))(@safe-global/safe-apps-sdk@9.1.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))(@tanstack/query-core@5.90.20)(@tanstack/react-query@5.90.21(react@19.2.6))(@types/react@19.2.14)(@walletconnect/ethereum-provider@2.22.4(@types/react@19.2.14)(bufferutil@4.1.0)(encoding@0.1.13)(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))(porto@0.2.35)(react@19.2.6)(typescript@6.0.3)(viem@2.52.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6)):
+    dependencies:
+      '@tanstack/react-query': 5.90.21(react@19.2.6)
+      '@wagmi/connectors': 8.0.22(@coinbase/wallet-sdk@4.3.6(@types/react@19.2.14)(bufferutil@4.1.0)(react@19.2.6)(typescript@6.0.3)(use-sync-external-store@1.6.0(react@19.2.6))(utf-8-validate@5.0.10)(zod@4.3.6))(@safe-global/safe-apps-provider@0.18.6(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))(@safe-global/safe-apps-sdk@9.1.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))(@wagmi/core@3.6.1(@tanstack/query-core@5.90.20)(@types/react@19.2.14)(react@19.2.6)(typescript@6.0.3)(use-sync-external-store@1.6.0(react@19.2.6))(viem@2.52.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6)))(@walletconnect/ethereum-provider@2.22.4(@types/react@19.2.14)(bufferutil@4.1.0)(encoding@0.1.13)(react@19.2.6)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))(porto@0.2.35)(typescript@6.0.3)(viem@2.52.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))
+      '@wagmi/core': 3.6.1(@tanstack/query-core@5.90.20)(@types/react@19.2.14)(react@19.2.6)(typescript@6.0.3)(use-sync-external-store@1.4.0(react@19.2.6))(viem@2.52.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6))
+      react: 19.2.6
+      use-sync-external-store: 1.4.0(react@19.2.6)
+      viem: 2.52.0(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6)
+    optionalDependencies:
+      typescript: 6.0.3
+    transitivePeerDependencies:
+      - '@base-org/account'
+      - '@coinbase/wallet-sdk'
+      - '@metamask/connect-evm'
+      - '@safe-global/safe-apps-provider'
+      - '@safe-global/safe-apps-sdk'
+      - '@tanstack/query-core'
+      - '@types/react'
+      - '@walletconnect/ethereum-provider'
+      - accounts
+      - immer
+      - porto
+
   walk-up-path@4.0.0: {}
 
   walker@1.0.8:
@@ -54313,7 +54738,7 @@ snapshots:
       sockjs: 0.3.24
       spdy: 4.0.2
       webpack-dev-middleware: 7.4.5(tslib@2.8.1)(webpack@5.105.2(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3))
-      ws: 8.20.1(bufferutil@4.1.0)(utf-8-validate@5.0.10)
+      ws: 8.21.1(bufferutil@4.1.0)(utf-8-validate@5.0.10)
     optionalDependencies:
       webpack: 5.105.2(@swc/core@1.11.31(@swc/helpers@0.5.23))(esbuild@0.27.3)
     transitivePeerDependencies:
@@ -54960,6 +55385,10 @@ snapshots:
       randexp: 0.5.3
       zod: 4.3.6
 
+  zod-to-json-schema@3.25.1(zod@3.25.76):
+    dependencies:
+      zod: 3.25.76
+
   zod-to-json-schema@3.25.1(zod@4.3.6):
     dependencies:
       zod: 4.3.6
@@ -54977,6 +55406,12 @@ snapshots:
       '@types/react': 19.2.14
       react: 19.2.6
       use-sync-external-store: 1.4.0(react@19.2.6)
+
+  zustand@5.0.0(@types/react@19.2.14)(react@19.2.6)(use-sync-external-store@1.6.0(react@19.2.6)):
+    optionalDependencies:
+      '@types/react': 19.2.14
+      react: 19.2.6
+      use-sync-external-store: 1.6.0(react@19.2.6)
 
   zustand@5.0.0-rc.2(@types/react@19.2.14)(react@19.2.6)(use-sync-external-store@1.6.0(react@19.2.6)):
     optionalDependencies:

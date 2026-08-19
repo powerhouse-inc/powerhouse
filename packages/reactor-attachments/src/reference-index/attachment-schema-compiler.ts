@@ -15,6 +15,7 @@ import {
   isNonNullType,
   Kind,
   parse,
+  print,
   type DocumentNode,
   type GraphQLInputObjectType,
   type GraphQLInputType,
@@ -173,10 +174,34 @@ function buildEffectiveSchema(
         .filter(Boolean)
         .join("\n\n"),
     );
-    return buildASTSchema(document);
+    return buildASTSchema(dedupeTypeDefinitions(document));
   } catch {
     throw compilationError(context, "the effective GraphQL schema is invalid");
   }
+}
+
+// Collapse identical repeats of a type (state schema vs operation schemas).
+// Conflicting or scalar duplicates stay in so the build still rejects them.
+function dedupeTypeDefinitions(document: DocumentNode): DocumentNode {
+  const seen = new Map<string, string>();
+  const definitions = document.definitions.filter((definition) => {
+    if (
+      !("name" in definition) ||
+      definition.name?.value === undefined ||
+      definition.kind === Kind.SCALAR_TYPE_DEFINITION
+    ) {
+      return true;
+    }
+    const name = definition.name.value;
+    const printed = print(definition);
+    const existing = seen.get(name);
+    if (existing === undefined) {
+      seen.set(name, printed);
+      return true;
+    }
+    return existing !== printed;
+  });
+  return { ...document, definitions };
 }
 
 function attachmentReachableTypes(
