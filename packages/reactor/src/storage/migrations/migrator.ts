@@ -21,6 +21,7 @@ import * as migration015 from "./015_add_operation_denied_reason.js";
 import * as migration016 from "./016_add_dead_letter_error_type.js";
 import * as migration017 from "./017_create_group_references.js";
 import * as migration018 from "./018_add_sync_remote_bound_address.js";
+import * as migration019 from "./019_require_action_id.js";
 
 const migrations = {
   "001_create_operation_table": migration001,
@@ -41,6 +42,7 @@ const migrations = {
   "016_add_dead_letter_error_type": migration016,
   "017_create_group_references": migration017,
   "018_add_sync_remote_bound_address": migration018,
+  "019_require_action_id": migration019,
 };
 
 class ProgrammaticMigrationProvider implements MigrationProvider {
@@ -49,9 +51,16 @@ class ProgrammaticMigrationProvider implements MigrationProvider {
   }
 }
 
+/**
+ * Applies every pending migration, or every one up to and including `upTo`.
+ *
+ * The bound exists so a test can reach the schema a data migration is written
+ * against, populate it, and then migrate across the migration under test.
+ */
 export async function runMigrations(
   db: Kysely<any>,
   schema: string = REACTOR_SCHEMA,
+  upTo?: string,
 ): Promise<MigrationResult> {
   try {
     await sql`CREATE SCHEMA IF NOT EXISTS ${sql.id(schema)}`.execute(db);
@@ -73,7 +82,9 @@ export async function runMigrations(
   let error: unknown;
   let results: Awaited<ReturnType<typeof migrator.migrateToLatest>>["results"];
   try {
-    const result = await migrator.migrateToLatest();
+    const result = upTo
+      ? await migrator.migrateTo(upTo)
+      : await migrator.migrateToLatest();
     error = result.error;
     results = result.results;
   } catch (e) {
