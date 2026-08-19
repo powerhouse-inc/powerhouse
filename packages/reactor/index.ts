@@ -272,6 +272,7 @@ export {
   type IReadGate,
   type ReadGateOptions,
 } from "./src/decision/read-gate.js";
+export { SyncScopeGate } from "./src/decision/sync-scope-gate.js";
 export {
   firstOutOfOrderPair,
   type OutOfOrderPair,
