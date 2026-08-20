@@ -1148,12 +1148,19 @@ export class SyncManager implements ISyncManager {
       hasMore = !!page.next;
 
       if (operations.length > 0) {
+        // Group a document's operations without reordering them. The index
+        // returns global insertion order, which is causally safe: a document's
+        // creation precedes everything about it, and its auth run precedes the
+        // domain operations it decides. Sorting by scope within a document
+        // discarded that -- it served a document's `auth` run before the
+        // `document` run that creates it, and emitBatches turned emission order
+        // into a dependency, so the creation waited on an operation for a
+        // document that did not exist yet. Grouping by document alone keeps the
+        // batching this sort exists for, since batchOperationsByDocument only
+        // groups contiguous runs.
         operations.sort((a, b) => {
           if (a.context.documentId !== b.context.documentId) {
             return a.context.documentId < b.context.documentId ? -1 : 1;
-          }
-          if (a.context.scope !== b.context.scope) {
-            return a.context.scope < b.context.scope ? -1 : 1;
           }
           return a.context.ordinal - b.context.ordinal;
         });

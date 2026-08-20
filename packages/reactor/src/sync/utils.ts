@@ -185,11 +185,13 @@ export function batchOperationsByDocument(
  * deferred tail containing the trailing run that shares the same
  * (documentId, branch, scope, timestampUtcMs) as the last operation.
  *
- * The page is assumed to be sorted by (documentId, scope, ordinal), so a
- * same-(docId, scope, ts) run is contiguous and lives at the end of any
- * page that contains its last member. Holding that tail back lets callers
- * prepend it to the next page so a single producer-side execute() call
- * never gets split across two outbound envelopes.
+ * The page is assumed to be grouped by documentId and ordered by ordinal
+ * within a document. One execute() call writes one document, scope and branch,
+ * so its operations take consecutive ordinals: a same-(docId, scope, ts) run is
+ * therefore contiguous and lives at the end of any page that contains its last
+ * member. Holding that tail back lets callers prepend it to the next page so a
+ * single producer-side execute() call never gets split across two outbound
+ * envelopes.
  */
 export function splitTrailingSameTimestampRun(
   operations: OperationWithContext[],

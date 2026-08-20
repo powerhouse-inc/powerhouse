@@ -158,6 +158,49 @@ describe("updateOutbox scope ordering", () => {
     ]);
   });
 
+  it("keeps a document's scopes interleaved as the index ordered them", async () => {
+    const collectionId = DriveCollectionId.forDrive(DRIVE_ID);
+    const common = {
+      documentId: DOC_ID,
+      documentType: "powerhouse/document-drive",
+      branch: "main",
+      sourceRemote: "",
+    };
+    const history: Array<[string, string]> = [
+      ["document", "CREATE_DOCUMENT"],
+      ["auth", "INITIALIZE_AUTH"],
+      ["global", "SET_NAME"],
+      ["document", "UPGRADE_DOCUMENT"],
+      ["auth", "SET_GRANT"],
+      ["global", "SET_NAME"],
+    ];
+
+    const txn = operationIndex.start();
+    txn.write(
+      history.map(([scope, type], i) => ({
+        ...op(`op-${i}`, 0, scope, type, String((i + 1) * 1000)),
+        ...common,
+        scope,
+      })),
+    );
+    txn.createCollection(collectionId.key);
+    txn.addToCollection(collectionId.key, DOC_ID);
+    await operationIndex.commit(txn);
+
+    const channelConfig: ChannelConfig = { type: "internal", parameters: {} };
+    await syncManager.add("remote1", collectionId, channelConfig);
+
+    await vi.waitFor(() => {
+      expect(emitted).toHaveLength(history.length);
+    });
+
+    // A scope rank would group the two document-scope runs together and deliver
+    // UPGRADE_DOCUMENT ahead of the auth and domain operations it followed.
+    expect(emitted.map((syncOp) => syncOp.scopes[0])).toEqual(
+      history.map(([scope]) => scope),
+    );
+  });
+
   it("does not make a document's creation wait on its auth operation", async () => {
     const collectionId = await seedPoliciedDocument();
 
