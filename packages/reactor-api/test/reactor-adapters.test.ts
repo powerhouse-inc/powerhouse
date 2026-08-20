@@ -91,6 +91,45 @@ describe("Reactor Adapters", () => {
     it("should reject object without type field", () => {
       expect(() =>
         adapters.jsonObjectToAction({
+          id: "action-1",
+          timestampUtcMs: "2024-01-01T00:00:00Z",
+          scope: "global",
+          input: {},
+        }),
+      ).toThrow("Invalid action structure");
+    });
+
+    it("should reject object without id field", () => {
+      // The id is hashed into the operation id and replay dedupes by it, so an
+      // action without one collapses every id-less operation on a document,
+      // scope and branch onto a single derived operation id.
+      expect(() =>
+        adapters.jsonObjectToAction({
+          type: "SET_NAME",
+          timestampUtcMs: "2024-01-01T00:00:00Z",
+          scope: "global",
+          input: {},
+        }),
+      ).toThrow("Invalid action structure");
+    });
+
+    it("should reject object with an empty id", () => {
+      expect(() =>
+        adapters.jsonObjectToAction({
+          id: "",
+          type: "SET_NAME",
+          timestampUtcMs: "2024-01-01T00:00:00Z",
+          scope: "global",
+          input: {},
+        }),
+      ).toThrow("Invalid action structure");
+    });
+
+    it("should reject object without timestampUtcMs field", () => {
+      expect(() =>
+        adapters.jsonObjectToAction({
+          id: "action-1",
+          type: "SET_NAME",
           scope: "global",
           input: {},
         }),
@@ -100,6 +139,8 @@ describe("Reactor Adapters", () => {
     it("should reject object with non-string type", () => {
       expect(() =>
         adapters.jsonObjectToAction({
+          id: "action-1",
+          timestampUtcMs: "2024-01-01T00:00:00Z",
           type: 123,
           scope: "global",
           input: {},
@@ -110,6 +151,8 @@ describe("Reactor Adapters", () => {
     it("should reject object without scope field", () => {
       expect(() =>
         adapters.jsonObjectToAction({
+          id: "action-1",
+          timestampUtcMs: "2024-01-01T00:00:00Z",
           type: "SET_NAME",
           input: {},
         }),
@@ -119,6 +162,8 @@ describe("Reactor Adapters", () => {
     it("should reject object with non-string scope", () => {
       expect(() =>
         adapters.jsonObjectToAction({
+          id: "action-1",
+          timestampUtcMs: "2024-01-01T00:00:00Z",
           type: "SET_NAME",
           scope: 123,
           input: {},
@@ -129,6 +174,8 @@ describe("Reactor Adapters", () => {
     it("should reject object without input field", () => {
       expect(() =>
         adapters.jsonObjectToAction({
+          id: "action-1",
+          timestampUtcMs: "2024-01-01T00:00:00Z",
           type: "SET_NAME",
           scope: "global",
         }),
@@ -147,6 +194,8 @@ describe("Reactor Adapters", () => {
 
       validInputs.forEach((inputObj) => {
         const action = {
+          id: "action-1",
+          timestampUtcMs: "2024-01-01T00:00:00Z",
           type: "TEST",
           scope: "global",
           ...inputObj,

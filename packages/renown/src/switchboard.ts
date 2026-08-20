@@ -112,7 +112,7 @@ const CREATE_EMPTY_DOCUMENT_MUTATION = /* GraphQL */ `
 const MUTATE_DOCUMENT_MUTATION = /* GraphQL */ `
   mutation MutateDocument(
     $documentIdentifier: String!
-    $actions: [JSONObject!]!
+    $actions: [ActionInput!]!
   ) {
     mutateDocument(documentIdentifier: $documentIdentifier, actions: $actions) {
       id

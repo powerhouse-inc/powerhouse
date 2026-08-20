@@ -70,6 +70,7 @@ import {
 } from "./adapters.js";
 import type {
   ActionEvaluations as GqlActionEvaluations,
+  ActionInput,
   DocumentModelResultPage,
   JobInfo as GqlJobInfo,
   PropagationMode as GqlPropagationMode,
@@ -736,7 +737,7 @@ export async function mutateDocument(
   reactorClient: IReactorClient,
   args: {
     documentIdentifier: string;
-    actions: readonly unknown[];
+    actions: readonly ActionInput[];
     view?: {
       branch?: string | null;
       scopes?: readonly string[] | null;
@@ -785,7 +786,7 @@ export async function mutateDocumentAsync(
   reactorClient: IReactorClient,
   args: {
     documentIdentifier: string;
-    actions: readonly unknown[];
+    actions: readonly ActionInput[];
     view?: {
       branch?: string | null;
       scopes?: readonly string[] | null;

@@ -20,6 +20,7 @@ import type {
   DocumentModelDocument,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
+import { toTransportAction } from "@powerhousedao/shared/document-model";
 import {
   DocumentModelController,
   documentModelDocumentModelModule,
@@ -57,7 +58,7 @@ async function createDriveOnSwitchboard(name: string): Promise<string> {
   // Set drive name
   await client.MutateDocument({
     documentIdentifier: driveId,
-    actions: [setDriveName({ name })],
+    actions: [setDriveName({ name })].map(toTransportAction),
   });
 
   return driveId;
@@ -176,7 +177,7 @@ describe("Remote drive sync via CONNECT channel", () => {
       actions: [
         setModelName({ name: "SyncedModel" }),
         setModelDescription({ description: "Synced from switchboard" }),
-      ],
+      ].map(toTransportAction),
     });
 
     // 6. Wait for the document to sync to the local reactor
@@ -264,7 +265,9 @@ describe("Remote drive sync via CONNECT channel", () => {
     for (let i = 1; i <= 3; i++) {
       await client.MutateDocument({
         documentIdentifier: documentId,
-        actions: [setModelName({ name: `Iteration-${i}` })],
+        actions: [setModelName({ name: `Iteration-${i}` })].map(
+          toTransportAction,
+        ),
       });
     }
 

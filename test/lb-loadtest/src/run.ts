@@ -110,7 +110,7 @@ const CREATE_DOCUMENT_MUTATION = `
 `;
 
 const MUTATE_DOCUMENT_MUTATION = `
-  mutation MutateDocument($documentIdentifier: String!, $actions: [JSONObject!]!) {
+  mutation MutateDocument($documentIdentifier: String!, $actions: [ActionInput!]!) {
     mutateDocument(documentIdentifier: $documentIdentifier, actions: $actions) {
       id
       state

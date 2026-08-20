@@ -179,7 +179,13 @@ export function toMutableArray<T>(
 }
 
 /**
- * Validates that a JSONObject represents a valid Action structure
+ * Validates that an incoming value has the structure of an Action.
+ *
+ * Redundant for anything arriving through the schema, which coerces against
+ * `ActionInput` and rejects a missing field before a resolver runs. Kept because
+ * the resolvers are exported and called directly, and because this is the check
+ * that names the id: an action without one is hashed into an operation id
+ * shared by every id-less operation on the same document, scope and branch.
  */
 function validateActionStructure(obj: unknown): obj is Action {
   if (!obj || typeof obj !== "object") {
@@ -189,11 +195,19 @@ function validateActionStructure(obj: unknown): obj is Action {
   const action = obj as Record<string, unknown>;
 
   // Required fields
+  if (typeof action.id !== "string" || !action.id) {
+    return false;
+  }
+
   if (typeof action.type !== "string" || !action.type) {
     return false;
   }
 
   if (typeof action.scope !== "string" || !action.scope) {
+    return false;
+  }
+
+  if (typeof action.timestampUtcMs !== "string" || !action.timestampUtcMs) {
     return false;
   }
 
@@ -242,7 +256,8 @@ function withDeserializedSignatures(action: Action): Action {
 export function jsonObjectToAction(obj: unknown): Action {
   if (!validateActionStructure(obj)) {
     throw new GraphQLError(
-      "Invalid action structure. Actions must have: type (string), scope (string), and input (any)",
+      "Invalid action structure. Actions must have: id (string), type (string), " +
+        "scope (string), timestampUtcMs (string), and input (any)",
     );
   }
 

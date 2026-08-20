@@ -14,6 +14,19 @@ import {
   type IAuthorizationService,
 } from "../src/services/authorization.service.js";
 
+/**
+ * A complete action, as the schema now admits one. The permission gate reads
+ * only `type`, but a fixture missing the rest describes a request that could not
+ * be made.
+ */
+const mutableAction = () => ({
+  id: "action-1",
+  type: "SET_NAME",
+  timestampUtcMs: "2026-01-01T00:00:00.000Z",
+  scope: "global",
+  input: {},
+});
+
 describe("ReactorSubgraph Permission Checks", () => {
   let mockAuthorizationService: Partial<IAuthorizationService>;
   let mockReactorClient: Partial<IReactorClient>;
@@ -512,9 +525,7 @@ describe("ReactorSubgraph Permission Checks", () => {
       vi.mocked(mockAuthorizationService.canMutate!).mockResolvedValue(true);
       const ctx = createContext({ userAddress: "0xpermitted" });
 
-      await expectPermissionPassed(
-        callMutateDocument(ctx, [{ type: "SET_NAME", input: {} }]),
-      );
+      await expectPermissionPassed(callMutateDocument(ctx, [mutableAction()]));
       expect(mockAuthorizationService.canMutate).toHaveBeenCalled();
     });
 
@@ -522,9 +533,9 @@ describe("ReactorSubgraph Permission Checks", () => {
       vi.mocked(mockAuthorizationService.canMutate!).mockResolvedValue(false);
       const ctx = createContext({ userAddress: "0xunpermitted" });
 
-      await expect(
-        callMutateDocument(ctx, [{ type: "SET_NAME", input: {} }]),
-      ).rejects.toThrow("Forbidden");
+      await expect(callMutateDocument(ctx, [mutableAction()])).rejects.toThrow(
+        "Forbidden",
+      );
     });
   });
 
@@ -1666,7 +1677,7 @@ describe("ReactorSubgraph Permission Checks", () => {
       await expect(
         mutation(
           null,
-          { documentIdentifier: "my-slug", actions: [{ type: "SET_NAME" }] },
+          { documentIdentifier: "my-slug", actions: [mutableAction()] },
           ctx,
         ),
       ).rejects.toThrow("Forbidden");
