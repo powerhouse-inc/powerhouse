@@ -128,7 +128,8 @@ async function dumpRegistryState(page: Page, label: string) {
         };
       }
     ).ph;
-    const registry = ph?.reactorClientModule?.reactorModule?.documentModelRegistry;
+    const registry =
+      ph?.reactorClientModule?.reactorModule?.documentModelRegistry;
     const pm = ph?.vetraPackageManager;
     const registryVersions = registry
       ? registry
