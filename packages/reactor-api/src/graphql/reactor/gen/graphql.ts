@@ -215,7 +215,11 @@ export type JobInfo = {
   readonly createdAt: Scalars["DateTime"]["output"];
   readonly error?: Maybe<Scalars["String"]["output"]>;
   readonly id: Scalars["String"]["output"];
-  readonly result: Scalars["JSONObject"]["output"];
+  /**
+   * What the job produced, once it has produced anything. Null until then, which
+   * is the state every job is in when it is handed back from a submission.
+   */
+  readonly result?: Maybe<Scalars["JSONObject"]["output"]>;
   readonly status: Scalars["String"]["output"];
 };
 
@@ -230,8 +234,32 @@ export type Mutation = {
   readonly createEmptyDocument: PhDocument;
   readonly deleteDocument: Scalars["Boolean"]["output"];
   readonly deleteDocuments: Scalars["Boolean"]["output"];
+  /**
+   * Applies actions to a document and waits for the result.
+   *
+   * Each action is coerced against `ActionInput`, so one missing a field the wire
+   * declares is refused before any work starts. The id in particular: it is hashed
+   * into the operation id and replay dedupes by it, so an action without one is
+   * stored under an operation id shared by every id-less operation on the same
+   * document, scope and branch.
+   *
+   * Named for `IReactorClient.execute`, which this is the wire form of. `branch`
+   * defaults to `main`.
+   */
+  readonly execute: PhDocument;
+  /**
+   * Submits actions to a document and returns the job that will apply them.
+   *
+   * Coerced exactly as `execute` is, so a malformed action is refused here rather
+   * than surfacing later as a failed job. Returns the job rather than only its id,
+   * so a caller has the status and the creation time it would otherwise have to
+   * ask for; `result` is null until the job produces one.
+   */
+  readonly executeAsync: JobInfo;
   readonly moveRelationship: MoveRelationshipResult;
+  /** @deprecated Use execute. Actions here are untyped, so a malformed one is refused by a hand-written check rather than by the schema, and `view.scopes` is accepted but ignored. */
   readonly mutateDocument: PhDocument;
+  /** @deprecated Use executeAsync, which is typed and returns the job rather than only its id. */
   readonly mutateDocumentAsync: Scalars["String"]["output"];
   readonly pushSyncEnvelopes: Scalars["Boolean"]["output"];
   readonly removeRelationship: PhDocument;
@@ -265,6 +293,18 @@ export type MutationDeleteDocumentArgs = {
 export type MutationDeleteDocumentsArgs = {
   identifiers: ReadonlyArray<Scalars["String"]["input"]>;
   propagate?: InputMaybe<PropagationMode>;
+};
+
+export type MutationExecuteArgs = {
+  actions: ReadonlyArray<ActionInput>;
+  branch?: InputMaybe<Scalars["String"]["input"]>;
+  documentIdentifier: Scalars["String"]["input"];
+};
+
+export type MutationExecuteAsyncArgs = {
+  actions: ReadonlyArray<ActionInput>;
+  branch?: InputMaybe<Scalars["String"]["input"]>;
+  documentIdentifier: Scalars["String"]["input"];
 };
 
 export type MutationMoveRelationshipArgs = {
@@ -933,7 +973,7 @@ export type GetJobStatusQuery = {
     | {
         readonly id: string;
         readonly status: string;
-        readonly result: NonNullable<unknown>;
+        readonly result?: NonNullable<unknown> | null | undefined;
         readonly error?: string | null | undefined;
         readonly createdAt: string | Date;
         readonly completedAt?: string | Date | null | undefined;
@@ -1005,8 +1045,8 @@ export type CreateEmptyDocumentMutation = {
 
 export type MutateDocumentMutationVariables = Exact<{
   documentIdentifier: Scalars["String"]["input"];
-  actions: ReadonlyArray<Scalars["JSONObject"]["input"]>;
-  view?: InputMaybe<ViewFilterInput>;
+  actions: ReadonlyArray<ActionInput>;
+  branch?: InputMaybe<Scalars["String"]["input"]>;
 }>;
 
 export type MutateDocumentMutation = {
@@ -1027,12 +1067,19 @@ export type MutateDocumentMutation = {
 
 export type MutateDocumentAsyncMutationVariables = Exact<{
   documentIdentifier: Scalars["String"]["input"];
-  actions: ReadonlyArray<Scalars["JSONObject"]["input"]>;
-  view?: InputMaybe<ViewFilterInput>;
+  actions: ReadonlyArray<ActionInput>;
+  branch?: InputMaybe<Scalars["String"]["input"]>;
 }>;
 
 export type MutateDocumentAsyncMutation = {
-  readonly mutateDocumentAsync: string;
+  readonly mutateDocumentAsync: {
+    readonly id: string;
+    readonly status: string;
+    readonly result?: NonNullable<unknown> | null | undefined;
+    readonly error?: string | null | undefined;
+    readonly createdAt: string | Date;
+    readonly completedAt?: string | Date | null | undefined;
+  };
 };
 
 export type RenameDocumentMutationVariables = Exact<{
@@ -1769,7 +1816,11 @@ export type JobInfoResolvers<
   createdAt?: Resolver<ResolversTypes["DateTime"], ParentType, ContextType>;
   error?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
   id?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-  result?: Resolver<ResolversTypes["JSONObject"], ParentType, ContextType>;
+  result?: Resolver<
+    Maybe<ResolversTypes["JSONObject"]>,
+    ParentType,
+    ContextType
+  >;
   status?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
 }>;
 
@@ -1819,6 +1870,18 @@ export type MutationResolvers<
     ParentType,
     ContextType,
     RequireFields<MutationDeleteDocumentsArgs, "identifiers">
+  >;
+  execute?: Resolver<
+    ResolversTypes["PHDocument"],
+    ParentType,
+    ContextType,
+    RequireFields<MutationExecuteArgs, "actions" | "documentIdentifier">
+  >;
+  executeAsync?: Resolver<
+    ResolversTypes["JobInfo"],
+    ParentType,
+    ContextType,
+    RequireFields<MutationExecuteAsyncArgs, "actions" | "documentIdentifier">
   >;
   moveRelationship?: Resolver<
     ResolversTypes["MoveRelationshipResult"],
@@ -2746,13 +2809,13 @@ export const CreateEmptyDocumentDocument = gql`
 export const MutateDocumentDocument = gql`
   mutation MutateDocument(
     $documentIdentifier: String!
-    $actions: [JSONObject!]!
-    $view: ViewFilterInput
+    $actions: [ActionInput!]!
+    $branch: String
   ) {
-    mutateDocument(
+    mutateDocument: execute(
       documentIdentifier: $documentIdentifier
       actions: $actions
-      view: $view
+      branch: $branch
     ) {
       ...PHDocumentFields
     }
@@ -2762,14 +2825,21 @@ export const MutateDocumentDocument = gql`
 export const MutateDocumentAsyncDocument = gql`
   mutation MutateDocumentAsync(
     $documentIdentifier: String!
-    $actions: [JSONObject!]!
-    $view: ViewFilterInput
+    $actions: [ActionInput!]!
+    $branch: String
   ) {
-    mutateDocumentAsync(
+    mutateDocumentAsync: executeAsync(
       documentIdentifier: $documentIdentifier
       actions: $actions
-      view: $view
-    )
+      branch: $branch
+    ) {
+      id
+      status
+      result
+      error
+      createdAt
+      completedAt
+    }
   }
 `;
 export const RenameDocumentDocument = gql`

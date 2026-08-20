@@ -318,7 +318,6 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
       // Projected onto the fields the schema declares, so a stamped or signed
       // action does not carry a field the input rejects the whole request for.
       actions: preparedActions.map(toTransportAction),
-      view: { branch },
       sinceRevision: sinceRevisionForActions(document, actions),
       scopes: scopesForActions(actions),
       branch,

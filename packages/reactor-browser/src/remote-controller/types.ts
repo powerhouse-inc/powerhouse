@@ -6,6 +6,7 @@ import type {
   PHDocument,
   PHDocumentHeader,
 } from "@powerhousedao/shared/document-model";
+import type { ActionInput } from "../graphql/gen/schema.js";
 import type {
   GetDocumentOperationsQuery,
   PhDocumentFieldsFragment,
@@ -151,7 +152,7 @@ export interface IRemoteClient {
 
   pushActions(
     documentIdentifier: string,
-    actions: ReadonlyArray<NonNullable<unknown>>,
+    actions: ReadonlyArray<ActionInput>,
     branch?: string,
   ): Promise<RemoteDocumentData>;
 

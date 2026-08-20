@@ -110,8 +110,11 @@ const CREATE_DOCUMENT_MUTATION = `
 `;
 
 const MUTATE_DOCUMENT_MUTATION = `
-  mutation MutateDocument($documentIdentifier: String!, $actions: [JSONObject!]!) {
-    mutateDocument(documentIdentifier: $documentIdentifier, actions: $actions) {
+  mutation MutateDocument($documentIdentifier: String!, $actions: [ActionInput!]!) {
+    mutateDocument: execute(
+      documentIdentifier: $documentIdentifier
+      actions: $actions
+    ) {
       id
       state
       revisionsList { scope revision }
@@ -262,7 +265,9 @@ async function schemaPreflight(lb: LbClient): Promise<void> {
   const queryNames = new Set(
     schema?.queryType?.fields?.map((f) => f.name) ?? [],
   );
-  const missingMutations = ["createDocument", "mutateDocument"].filter(
+  // `execute`, not `mutateDocument`: the preflight has to name the mutation this
+  // run actually sends, or it passes against an image that cannot serve it.
+  const missingMutations = ["createDocument", "execute"].filter(
     (n) => !mutationNames.has(n),
   );
   const missingQueries = ["document"].filter((n) => !queryNames.has(n));

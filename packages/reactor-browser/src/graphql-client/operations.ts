@@ -1,9 +1,9 @@
 import { gql } from "graphql-tag";
 import {
   PhDocumentFieldsFragmentDoc,
+  type ActionInput,
   type PhDocumentFieldsFragment,
   type Scalars,
-  type ViewFilterInput,
 } from "../graphql/gen/schema.js";
 import type { RemoteOperation } from "../remote-controller/types.js";
 
@@ -59,23 +59,24 @@ export const ReactorOperationFieldsFragmentDoc = gql`
  * - `scopes` limits the response to the scopes the pushed actions target,
  *   without it the server walks every scope of the document
  *   (`packages/reactor/src/core/reactor.ts` `getOperations`);
- * - `branch` must match the branch the mutation writes to, otherwise the
- *   operations come from `main` (the server's default) while the actions were
- *   applied elsewhere.
+ * - `branch` selects the branch the operations are read from, and is the same
+ *   variable the mutation writes to. It used to be two - the write went through
+ *   a `view`, the filter took its own `branch` - and they had to be kept equal
+ *   by hand or the operations came from `main` while the actions were applied
+ *   elsewhere. One variable cannot disagree with itself.
  */
 export const MutateDocumentWithOperationsDocument = gql`
   mutation MutateDocumentWithOperations(
     $documentIdentifier: String!
-    $actions: [JSONObject!]!
-    $view: ViewFilterInput
+    $actions: [ActionInput!]!
     $sinceRevision: Int
     $scopes: [String!]
     $branch: String
   ) {
-    mutateDocument(
+    mutateDocument: execute(
       documentIdentifier: $documentIdentifier
       actions: $actions
-      view: $view
+      branch: $branch
     ) {
       ...PHDocumentFields
       operations(
@@ -97,8 +98,7 @@ export const MutateDocumentWithOperationsDocument = gql`
 
 export type MutateDocumentWithOperationsVariables = {
   documentIdentifier: Scalars["String"]["input"];
-  actions: ReadonlyArray<Scalars["JSONObject"]["input"]>;
-  view?: ViewFilterInput;
+  actions: ReadonlyArray<ActionInput>;
   sinceRevision?: Scalars["Int"]["input"];
   scopes?: ReadonlyArray<Scalars["String"]["input"]>;
   branch?: Scalars["String"]["input"];

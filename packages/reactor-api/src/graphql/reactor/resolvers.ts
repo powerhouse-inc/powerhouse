@@ -61,6 +61,7 @@ import {
   toGqlActionEvaluation,
   toDocumentModelResultPage,
   toGqlJobInfo,
+  toSubmittableActions,
   toGqlPhDocument,
   toMutableArray,
   toOperationResultPage,
@@ -70,6 +71,7 @@ import {
 } from "./adapters.js";
 import type {
   ActionEvaluations as GqlActionEvaluations,
+  ActionInput,
   DocumentModelResultPage,
   JobInfo as GqlJobInfo,
   PropagationMode as GqlPropagationMode,
@@ -730,6 +732,84 @@ export async function createDocumentWithInitialState(
       `Failed to convert created document to GraphQL: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
+}
+
+/** The branch a mutation applies to when the caller names none. */
+const DEFAULT_BRANCH = "main";
+
+/**
+ * Applies actions to a document and waits for the result.
+ *
+ * The wire form of `IReactorClient.execute`, and named for it. Takes the actions
+ * already coerced against `ActionInput`, so the only conversion left is the one
+ * the schema cannot express: a signature travels as one string, and verification
+ * reads it as the tuple it was.
+ */
+export async function execute(
+  reactorClient: IReactorClient,
+  args: {
+    documentIdentifier: string;
+    actions: readonly ActionInput[];
+    branch?: string | null;
+  },
+): Promise<ReturnType<typeof toGqlPhDocument>> {
+  const actions = toSubmittableActions(args.actions);
+  const branch = fromInputMaybe(args.branch) ?? DEFAULT_BRANCH;
+
+  let result: PHDocument;
+  try {
+    result = await reactorClient.execute(
+      args.documentIdentifier,
+      branch,
+      actions,
+    );
+  } catch (error) {
+    throw new GraphQLError(
+      `Failed to execute actions: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+
+  try {
+    return toGqlPhDocument(result);
+  } catch (error) {
+    throw new GraphQLError(
+      `Failed to convert executed document to GraphQL: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+}
+
+/**
+ * Submits actions to a document and returns the job that will apply them.
+ *
+ * Returns the job rather than only its id, matching
+ * `IReactorClient.executeAsync`. A job handed back from a submission has no
+ * result yet, which is why `JobInfo.result` is nullable.
+ */
+export async function executeAsync(
+  reactorClient: IReactorClient,
+  args: {
+    documentIdentifier: string;
+    actions: readonly ActionInput[];
+    branch?: string | null;
+  },
+): Promise<GqlJobInfo> {
+  const actions = toSubmittableActions(args.actions);
+  const branch = fromInputMaybe(args.branch) ?? DEFAULT_BRANCH;
+
+  let job: JobInfo;
+  try {
+    job = await reactorClient.executeAsync(
+      args.documentIdentifier,
+      branch,
+      actions,
+    );
+  } catch (error) {
+    throw new GraphQLError(
+      `Failed to submit actions: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+
+  return toGqlJobInfo(job);
 }
 
 export async function mutateDocument(

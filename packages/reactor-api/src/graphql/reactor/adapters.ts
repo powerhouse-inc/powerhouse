@@ -8,6 +8,8 @@ import {
 import { camelCase } from "change-case";
 import type {
   Action,
+  ActionContext,
+  ActionSigner,
   DocumentModelModule,
   DocumentModelPHState,
   Operation,
@@ -20,6 +22,7 @@ import {
 import { GraphQLError } from "graphql";
 import { MalformedStoredOperationError } from "../errors.js";
 import {
+  type ActionInput,
   type ActionEvaluation as GqlActionEvaluation,
   AuthDecision as GqlAuthDecision,
   type DocumentModelResultPage,
@@ -251,6 +254,74 @@ function withDeserializedSignatures(action: Action): Action {
       },
     },
   };
+}
+
+/**
+ * Converts actions the schema has already coerced into the actions the reactor
+ * applies.
+ *
+ * The one conversion the schema cannot express is the signature: GraphQL
+ * declares `signatures` as a list of strings, not of lists, so each arrives
+ * joined and has to be read back as the tuple verification indexes into.
+ *
+ * Nothing is validated here. `ActionInput` states every field the reactor needs,
+ * so anything that reached this point has them - unlike the untyped path, which
+ * has to check by hand.
+ */
+export function toSubmittableActions(
+  actions: readonly ActionInput[],
+): Action[] {
+  return actions.map((action) => {
+    const context = toSubmittableContext(action.context);
+    const submittable: Action = {
+      id: action.id,
+      type: action.type,
+      timestampUtcMs: action.timestampUtcMs,
+      input: action.input,
+      scope: action.scope,
+    };
+    return context ? { ...submittable, context } : submittable;
+  });
+}
+
+/**
+ * `ReactorSignerInput` leaves `user` and `app` optional where `ActionSigner`
+ * requires them, so an incomplete signer cannot be represented. It is carried
+ * through as it arrived rather than filled in: the signature verifier is what
+ * should refuse it, and inventing either field here would be inventing the part
+ * that says who signed.
+ */
+function toSubmittableContext(
+  context: ActionInput["context"],
+): ActionContext | undefined {
+  if (!context) {
+    return undefined;
+  }
+
+  const submittable: ActionContext = {};
+  const prevOpIndex = fromInputMaybe(context.prevOpIndex);
+  if (prevOpIndex !== undefined) {
+    submittable.prevOpIndex = prevOpIndex;
+  }
+  const prevOpHash = fromInputMaybe(context.prevOpHash);
+  if (prevOpHash !== undefined) {
+    submittable.prevOpHash = prevOpHash;
+  }
+  const nonce = fromInputMaybe(context.nonce);
+  if (nonce !== undefined) {
+    submittable.nonce = nonce;
+  }
+
+  const signer = fromInputMaybe(context.signer);
+  if (signer) {
+    submittable.signer = {
+      user: fromInputMaybe(signer.user),
+      app: fromInputMaybe(signer.app),
+      signatures: signer.signatures.map(deserializeSignature),
+    } as ActionSigner;
+  }
+
+  return Object.keys(submittable).length > 0 ? submittable : undefined;
 }
 
 /**
