@@ -18,6 +18,7 @@ import {
   type InProcessReactorModule,
   type IReactor,
   type ISyncManager,
+  type SyncOperation,
 } from "@powerhousedao/reactor";
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
@@ -25,7 +26,7 @@ import type {
   DocumentModelModule,
   Grant,
 } from "@powerhousedao/shared/document-model";
-import { initializeAuth } from "@powerhousedao/shared/document-model";
+import { initializeAuth, setGrant } from "@powerhousedao/shared/document-model";
 import { ConsoleLogger } from "document-model";
 import { afterEach, describe, expect, it } from "vitest";
 import type { BridgeTarget } from "./utils/gql-resolver-bridge.js";
@@ -45,6 +46,45 @@ const peerReadsGlobal: Grant = {
   effect: "allow",
   principal: { address: PEER },
   capability: { can: "read", scope: "global" },
+};
+
+/**
+ * The fixture writes to the origin anonymously, so a policy that names nobody
+ * for execute stops the test's own writes. An `allow` on execute carries the
+ * read with it (executing an operation means reading the scope it applies to),
+ * which is also what lets the peer apply the runs it receives.
+ */
+const anyoneWrites: Grant = {
+  id: "g-writer",
+  description: "the fixture's origin writes anonymously",
+  effect: "allow",
+  principal: { anyone: true },
+  capability: { can: "execute", scope: "*" },
+};
+
+/**
+ * The withheld scope. Because the writer grant above carries a read across,
+ * withholding one domain scope is a deny sitting after it: last applicable
+ * grant wins, so `local` is refused to the peer while `global` stays served.
+ */
+const peerIsDeniedLocal: Grant = {
+  id: "g-peer-deny-local",
+  description: "the peer does not read the drive's local scope",
+  effect: "deny",
+  principal: { address: PEER },
+  capability: { can: "read", scope: "local" },
+};
+
+/**
+ * The widening grant: the same peer, the scope the deny above withheld. Appended
+ * last so it outranks the deny, which is the whole of the change.
+ */
+const peerReadsLocal: Grant = {
+  id: "g-peer-read-local",
+  description: "the peer replica reads the drive's local scope",
+  effect: "allow",
+  principal: { address: PEER },
+  capability: { can: "read", scope: "local" },
 };
 
 /**
@@ -330,6 +370,24 @@ describe("serving sync through the document's policy", () => {
     );
   }
 
+  /**
+   * The starting policy for the selective case: the peer reads `global`, is
+   * denied `local`, and the fixture's anonymous writer keeps execute.
+   */
+  async function policyGrantingGlobalAndDenyingLocal(
+    fx: Fixture,
+    driveId: string,
+  ): Promise<void> {
+    await executeOn(
+      fx,
+      driveId,
+      initializeAuth({
+        version: 1,
+        grants: [anyoneWrites, peerReadsGlobal, peerIsDeniedLocal],
+      }),
+    );
+  }
+
   async function converged(fx: Fixture, driveId: string): Promise<boolean> {
     const origin = await fx.origin.reactor.get<DocumentDriveDocument>(driveId, {
       branch: "main",
@@ -341,6 +399,61 @@ describe("serving sync through the document's policy", () => {
     return (
       peer.header.revision.global === origin.header.revision.global &&
       JSON.stringify(peer.state.global) === JSON.stringify(origin.state.global)
+    );
+  }
+
+  /**
+   * Convergence on one scope. The revision half is the one a consumed entry
+   * fails: a peer can reach the same state by other means, but not the same
+   * count of applied operations.
+   */
+  async function convergedOn(
+    fx: Fixture,
+    driveId: string,
+    scope: "global" | "local",
+  ): Promise<boolean> {
+    const origin = await fx.origin.reactor.get<DocumentDriveDocument>(driveId, {
+      branch: "main",
+    });
+    const peer = await fx.peer.module.reactor.get<DocumentDriveDocument>(
+      driveId,
+      { branch: "main" },
+    );
+    return (
+      peer.header.revision[scope] === origin.header.revision[scope] &&
+      JSON.stringify(peer.state[scope]) === JSON.stringify(origin.state[scope])
+    );
+  }
+
+  /**
+   * Origin-side outbox entries for one scope that have not been delivered.
+   *
+   * This is what tells withholding apart from a delivery the peer dropped: an
+   * entry still queued at the origin with nothing counted as delivered was
+   * never served. Inferring it from the peer's absence alone would not, since a
+   * receiver can also fail to apply a run silently.
+   */
+  function undeliveredAtOrigin(fx: Fixture, scope: string): SyncOperation[] {
+    return fx.origin
+      .syncModule!.syncManager.list()
+      .flatMap((remote) => [...remote.channel.outbox.items])
+      .filter((entry) => entry.scopes.includes(scope) && !entry.deliveredCount);
+  }
+
+  /** The dead letters the peer has raised against the origin. */
+  function deadLetters(fx: Fixture, driveId: string): readonly unknown[] {
+    return fx.peer.syncManager.getByName(`origin-${driveId}`).channel.deadLetter
+      .items;
+  }
+
+  async function executeOn(
+    fx: Fixture,
+    driveId: string,
+    action: Parameters<typeof fx.origin.reactor.execute>[2][number],
+  ): Promise<void> {
+    await awaitJob(
+      fx.origin.reactor,
+      (await fx.origin.reactor.execute(driveId, "main", [action])).id,
     );
   }
 
@@ -423,4 +536,95 @@ describe("serving sync through the document's policy", () => {
         .items,
     ).toHaveLength(0);
   }, 40000);
+
+  /**
+   * The stage's exit criterion in the shape the spec states it: on one document,
+   * for one subject, a grant names one domain scope and not another. The
+   * closes-by-default cases withhold every domain scope at once, which cannot
+   * tell "filtered per scope" apart from "filtered per document" -- only a
+   * document that converges on `global` while `local` never arrives can.
+   *
+   * The peer follows the drive from before it exists, and each step is awaited
+   * at the peer before the next is written, so runs arrive in the order they
+   * were produced. That keeps this test on this stage rather than on the
+   * separate outbox ordering defect a fresh replica hits when it backfills a
+   * document whose `auth` run sorts ahead of its `document` run.
+   */
+  it("serves the domain scope a grant names and withholds the one it does not", async () => {
+    const fx = await fixture();
+    const drive = driveDocumentModelModule.utils.createDocument({
+      global: { name: "Selective", icon: null, nodes: [] },
+    });
+    const driveId = drive.header.id;
+
+    await pullFrom(fx.peer, driveId, fx.bridge);
+    await awaitJob(
+      fx.origin.reactor,
+      (await fx.origin.reactor.create(drive)).id,
+    );
+    await waitFor(
+      () => holds(fx.peer.module.reactor, driveId, "document"),
+      "the drive itself to reach the peer",
+    );
+
+    // `global` alone is granted, and the policy lands before either domain
+    // operation exists, so neither is ever served under an open one.
+    await policyGrantingGlobalAndDenyingLocal(fx, driveId);
+    await waitFor(
+      () => holds(fx.peer.module.reactor, driveId, "auth"),
+      "the policy to reach the peer",
+    );
+
+    await executeOn(
+      fx,
+      driveId,
+      driveDocumentModelModule.actions.setDriveName({
+        name: "Selective (named)",
+      }),
+    );
+    await executeOn(
+      fx,
+      driveId,
+      driveDocumentModelModule.actions.setSharingType({ type: "PUBLIC" }),
+    );
+
+    await waitFor(
+      () => convergedOn(fx, driveId, "global"),
+      "the granted scope to converge",
+    );
+    await settle();
+
+    // The origin has a local run to withhold, or the assertion below is vacuous.
+    expect(await scopesHeld(fx.origin.reactor, driveId)).toContain("local");
+    // The peer holds the granted scope and both metadata scopes, and nothing
+    // of the withheld one.
+    expect(await scopesHeld(fx.peer.module.reactor, driveId)).toEqual([
+      "auth",
+      "document",
+      "global",
+    ]);
+    expect(deadLetters(fx, driveId)).toHaveLength(0);
+    // The origin is where it stopped: the local run is still queued there with
+    // nothing delivered, rather than sent and lost on the way in.
+    expect(undeliveredAtOrigin(fx, "local")).toHaveLength(1);
+    expect(undeliveredAtOrigin(fx, "global")).toHaveLength(0);
+
+    // Widened with no other change: one grant, naming the scope withheld above.
+    await executeOn(fx, driveId, setGrant({ grant: peerReadsLocal }));
+
+    await waitFor(
+      () => convergedOn(fx, driveId, "local"),
+      "the withheld run to arrive once a grant names it",
+    );
+    // The run was held, not consumed: nothing re-emitted it, so reaching the
+    // origin's local revision is only possible if it was still queued.
+    expect(await convergedOn(fx, driveId, "global")).toBe(true);
+    expect(deadLetters(fx, driveId)).toHaveLength(0);
+    // And the origin only counts it delivered once it has actually been served,
+    // which the peer's ack confirms a poll later.
+    await waitFor(
+      () => Promise.resolve(undeliveredAtOrigin(fx, "local").length === 0),
+      "the origin to count the backfilled run delivered",
+    );
+  }, 60000);
 });
