@@ -1254,6 +1254,30 @@ describe("ReactorSubgraph Permission Checks", () => {
           );
         });
 
+        /**
+         * Adoption is a write, so it must not happen for a caller the coarse
+         * drive check is about to refuse. Otherwise any authenticated address
+         * claims a channel it can never poll, and `bindRemote` refuses to
+         * rebind, so the rightful owner is locked out for good.
+         */
+        it("does not adopt a channel for a caller who cannot read the drive", async () => {
+          vi.mocked(mockAuthorizationService.canRead!).mockResolvedValue(false);
+          const syncManager = makeSyncManager("drive-1", [
+            makeOutboxSyncOp("doc-1", 1),
+          ]);
+          const subgraph = buildSubgraph(
+            mockAuthorizationService,
+            syncManager,
+            gateServing({ "doc-1": ["global"] }),
+          );
+
+          await expect(
+            callPoll(subgraph, createContext({ userAddress: "0xstranger" })),
+          ).rejects.toThrow();
+
+          expect(syncManager.bindRemote).not.toHaveBeenCalled();
+        });
+
         it("serves an unbound channel to an anonymous subject through the gate", async () => {
           vi.mocked(mockAuthorizationService.canRead!).mockResolvedValue(true);
           const syncManager = makeSyncManager("drive-1", [

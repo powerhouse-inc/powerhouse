@@ -384,8 +384,6 @@ export class ReactorSubgraph extends BaseSubgraph {
             );
           }
 
-          await this.#bindOrRefuseChannel(args.channelId, ctx);
-
           // A collection is a drive-level abstraction; its canonical drive id is
           // carried by the collection id (never a slug).
           const driveId = remote.meta.collectionId
@@ -399,6 +397,12 @@ export class ReactorSubgraph extends BaseSubgraph {
           if (!isAdmin) {
             await this.assertCanReadCanonical(driveId, ctx);
           }
+
+          // Adoption is a write, so it comes after the drive check: a caller
+          // this collection refuses must not claim the channel on its way out.
+          // `bindRemote` will not rebind, so a stray claim would lock the
+          // rightful owner out for good. touchChannel orders these the same way.
+          await this.#bindOrRefuseChannel(args.channelId, ctx);
 
           // Tier 2/3: drop operations and dead letters for documents the caller
           // cannot read individually.
