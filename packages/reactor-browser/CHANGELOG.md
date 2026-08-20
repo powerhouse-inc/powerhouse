@@ -1,3 +1,13 @@
+## 6.2.2-dev.53 (2026-08-20)
+
+### 🚀 Features
+
+- **reactor-browser:** sign action batches in the GraphQL light client ([#2916](https://github.com/powerhouse-inc/powerhouse/pull/2916))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.2.2-dev.52 (2026-08-19)
 
 ### 🚀 Features
