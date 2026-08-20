@@ -244,13 +244,13 @@ mutation CreateEmptyDocument(
 
 mutation MutateDocument(
   $documentIdentifier: String!
-  $actions: [JSONObject!]!
-  $view: ViewFilterInput
+  $actions: [ActionInput!]!
+  $branch: String
 ) {
-  mutateDocument(
+  mutateDocument: execute(
     documentIdentifier: $documentIdentifier
     actions: $actions
-    view: $view
+    branch: $branch
   ) {
     ...PHDocumentFields
   }
@@ -258,14 +258,21 @@ mutation MutateDocument(
 
 mutation MutateDocumentAsync(
   $documentIdentifier: String!
-  $actions: [JSONObject!]!
-  $view: ViewFilterInput
+  $actions: [ActionInput!]!
+  $branch: String
 ) {
-  mutateDocumentAsync(
+  mutateDocumentAsync: executeAsync(
     documentIdentifier: $documentIdentifier
     actions: $actions
-    view: $view
-  )
+    branch: $branch
+  ) {
+    id
+    status
+    result
+    error
+    createdAt
+    completedAt
+  }
 }
 
 mutation RenameDocument(

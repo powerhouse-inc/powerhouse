@@ -41,12 +41,69 @@ export type Action = {
   readonly type: Scalars["String"]["output"];
 };
 
+/**
+ * One operation an authorization preflight predicts a verdict for.
+ *
+ * `input` is what a conditional grant reads, so a candidate standing for a
+ * filled-in form carries that form's input. Omitting it predicts the verdict an
+ * empty input earns, not the verdict the filled-in form will get.
+ */
+export type ActionCandidateInput = {
+  readonly input?: InputMaybe<Scalars["JSONObject"]["input"]>;
+  readonly scope: Scalars["String"]["input"];
+  readonly type: Scalars["String"]["input"];
+};
+
 export type ActionContext = {
   readonly signer?: Maybe<ReactorSigner>;
 };
 
+/**
+ * An action's context, as a caller submits it.
+ *
+ * Declares every field `ActionContext` carries, because an input object rejects a
+ * field it does not declare: an action stamped with the head it applies to - which
+ * is what a signing client sends - is refused outright if these are missing, and
+ * that refusal is a whole-request one, not a per-field one.
+ *
+ * `prevOpHash` and `prevOpIndex` are the scope head the action was composed
+ * against. They are recorded rather than enforced; a signature is verified from
+ * the params carried in its own tuple, which do not include them.
+ */
 export type ActionContextInput = {
+  /** Covers replay of an operation that would otherwise be a no-op. */
+  readonly nonce?: InputMaybe<Scalars["String"]["input"]>;
+  /** The hash of the state the action applies to. */
+  readonly prevOpHash?: InputMaybe<Scalars["String"]["input"]>;
+  /** The index of the last operation in the scope the action applies to. */
+  readonly prevOpIndex?: InputMaybe<Scalars["Int"]["input"]>;
   readonly signer?: InputMaybe<ReactorSignerInput>;
+};
+
+/**
+ * One candidate's predicted verdict. `reason` carries the refusal a DENY is
+ * recorded with, and is null on an ALLOW.
+ */
+export type ActionEvaluation = {
+  readonly decision: AuthDecision;
+  readonly reason?: Maybe<Scalars["String"]["output"]>;
+};
+
+/**
+ * The predicted verdicts for a set of candidates, in the order they were given,
+ * with the aggregates a caller branches on.
+ *
+ * The aggregates are redundant -- a verdict is binary -- and all four are returned
+ * so a caller reads the one its question is phrased in rather than negating
+ * another. Over no candidates every aggregate is false: nothing is allowed and
+ * nothing is denied.
+ */
+export type ActionEvaluations = {
+  readonly allAllowed: Scalars["Boolean"]["output"];
+  readonly allDenied: Scalars["Boolean"]["output"];
+  readonly anyAllowed: Scalars["Boolean"]["output"];
+  readonly anyDenied: Scalars["Boolean"]["output"];
+  readonly evaluations: ReadonlyArray<ActionEvaluation>;
 };
 
 export type ActionInput = {
@@ -57,6 +114,11 @@ export type ActionInput = {
   readonly timestampUtcMs: Scalars["String"]["input"];
   readonly type: Scalars["String"]["input"];
 };
+
+export enum AuthDecision {
+  Allow = "ALLOW",
+  Deny = "DENY",
+}
 
 export type ChannelMeta = {
   readonly id: Scalars["String"]["output"];
@@ -144,7 +206,11 @@ export type JobInfo = {
   readonly createdAt: Scalars["DateTime"]["output"];
   readonly error?: Maybe<Scalars["String"]["output"]>;
   readonly id: Scalars["String"]["output"];
-  readonly result: Scalars["JSONObject"]["output"];
+  /**
+   * What the job produced, once it has produced anything. Null until then, which
+   * is the state every job is in when it is handed back from a submission.
+   */
+  readonly result?: Maybe<Scalars["JSONObject"]["output"]>;
   readonly status: Scalars["String"]["output"];
 };
 
@@ -159,8 +225,32 @@ export type Mutation = {
   readonly createEmptyDocument: PhDocument;
   readonly deleteDocument: Scalars["Boolean"]["output"];
   readonly deleteDocuments: Scalars["Boolean"]["output"];
+  /**
+   * Applies actions to a document and waits for the result.
+   *
+   * Each action is coerced against `ActionInput`, so one missing a field the wire
+   * declares is refused before any work starts. The id in particular: it is hashed
+   * into the operation id and replay dedupes by it, so an action without one is
+   * stored under an operation id shared by every id-less operation on the same
+   * document, scope and branch.
+   *
+   * Named for `IReactorClient.execute`, which this is the wire form of. `branch`
+   * defaults to `main`.
+   */
+  readonly execute: PhDocument;
+  /**
+   * Submits actions to a document and returns the job that will apply them.
+   *
+   * Coerced exactly as `execute` is, so a malformed action is refused here rather
+   * than surfacing later as a failed job. Returns the job rather than only its id,
+   * so a caller has the status and the creation time it would otherwise have to
+   * ask for; `result` is null until the job produces one.
+   */
+  readonly executeAsync: JobInfo;
   readonly moveRelationship: MoveRelationshipResult;
+  /** @deprecated Use execute. Actions here are untyped, so a malformed one is refused by a hand-written check rather than by the schema, and `view.scopes` is accepted but ignored. */
   readonly mutateDocument: PhDocument;
+  /** @deprecated Use executeAsync, which is typed and returns the job rather than only its id. */
   readonly mutateDocumentAsync: Scalars["String"]["output"];
   readonly pushSyncEnvelopes: Scalars["Boolean"]["output"];
   readonly removeRelationship: PhDocument;
@@ -194,6 +284,18 @@ export type MutationDeleteDocumentArgs = {
 export type MutationDeleteDocumentsArgs = {
   identifiers: ReadonlyArray<Scalars["String"]["input"]>;
   propagate?: InputMaybe<PropagationMode>;
+};
+
+export type MutationExecuteArgs = {
+  actions: ReadonlyArray<ActionInput>;
+  branch?: InputMaybe<Scalars["String"]["input"]>;
+  documentIdentifier: Scalars["String"]["input"];
+};
+
+export type MutationExecuteAsyncArgs = {
+  actions: ReadonlyArray<ActionInput>;
+  branch?: InputMaybe<Scalars["String"]["input"]>;
+  documentIdentifier: Scalars["String"]["input"];
 };
 
 export type MutationMoveRelationshipArgs = {
@@ -340,8 +442,47 @@ export type Query = {
   readonly documentModels: DocumentModelResultPage;
   readonly documentOperations: ReactorOperationResultPage;
   readonly documentOutgoingRelationships: PhDocumentResultPage;
+  /**
+   * Predicts whether the calling subject would be admitted to execute each of a
+   * set of candidate operations, without submitting any of them. A UI asks this to
+   * disable a control rather than offer an action that fails on submit.
+   *
+   * The answer is a prediction, not a promise:
+   *
+   * - Real admission compiles an append condition over everything it read and the
+   *   store enforces it at write time. A preflight reads no future, so a policy
+   *   change landing between this answer and the submit changes the verdict. The
+   *   submit path stays the only authority.
+   * - The verdict is evaluated at the stream heads, so it is correct for a
+   *   candidate about to be submitted. A backdated submission is out of contract;
+   *   the reactor decides that one by position.
+   * - A candidate whose verdict depends on its input has to carry that input, since
+   *   a conditional grant reads it.
+   *
+   * The subject is the authenticated caller and cannot be named in the request:
+   * answering for an arbitrary subject would disclose what a policy grants
+   * somebody else. It carries both the caller's address and the did:key of the app
+   * instance whose token authenticated the request, so a policy naming either
+   * matches the same principal the write path presents.
+   *
+   * Requires the reactor's authEnforcement feature flag. Without it the reactor
+   * holds no decision model, so this fails with extensions.code
+   * AUTH_EVALUATION_UNSUPPORTED rather than guessing.
+   */
+  readonly evaluateActions: ActionEvaluations;
   readonly findDocuments: PhDocumentResultPage;
   readonly jobStatus?: Maybe<JobInfo>;
+  /**
+   * Polls for sync envelopes from a channel.
+   *
+   * An operation stored before the API required an action id cannot be
+   * represented by this schema, and rather than serving a partial response beside
+   * a bare non-null violation, this fails with extensions.code
+   * MALFORMED_STORED_OPERATION naming the operation. That code means the failure
+   * is worth polling through: the document holding the operation needs repairing,
+   * but the channel serves every other document, and a peer that stopped polling
+   * would stop receiving those too.
+   */
   readonly pollSyncEnvelopes: PollSyncEnvelopesResult;
 };
 
@@ -372,6 +513,12 @@ export type QueryDocumentOutgoingRelationshipsArgs = {
   relationshipType: Scalars["String"]["input"];
   sourceIdentifier: Scalars["String"]["input"];
   view?: InputMaybe<ViewFilterInput>;
+};
+
+export type QueryEvaluateActionsArgs = {
+  branch?: InputMaybe<Scalars["String"]["input"]>;
+  candidates: ReadonlyArray<ActionCandidateInput>;
+  documentIdentifier: Scalars["String"]["input"];
 };
 
 export type QueryFindDocumentsArgs = {
@@ -817,13 +964,32 @@ export type GetJobStatusQuery = {
     | {
         readonly id: string;
         readonly status: string;
-        readonly result: NonNullable<unknown>;
+        readonly result?: NonNullable<unknown> | null | undefined;
         readonly error?: string | null | undefined;
         readonly createdAt: string | Date;
         readonly completedAt?: string | Date | null | undefined;
       }
     | null
     | undefined;
+};
+
+export type EvaluateActionsQueryVariables = Exact<{
+  documentIdentifier: Scalars["String"]["input"];
+  branch?: InputMaybe<Scalars["String"]["input"]>;
+  candidates: ReadonlyArray<ActionCandidateInput>;
+}>;
+
+export type EvaluateActionsQuery = {
+  readonly evaluateActions: {
+    readonly allAllowed: boolean;
+    readonly anyAllowed: boolean;
+    readonly allDenied: boolean;
+    readonly anyDenied: boolean;
+    readonly evaluations: ReadonlyArray<{
+      readonly decision: AuthDecision;
+      readonly reason?: string | null | undefined;
+    }>;
+  };
 };
 
 export type CreateDocumentMutationVariables = Exact<{
@@ -870,8 +1036,8 @@ export type CreateEmptyDocumentMutation = {
 
 export type MutateDocumentMutationVariables = Exact<{
   documentIdentifier: Scalars["String"]["input"];
-  actions: ReadonlyArray<Scalars["JSONObject"]["input"]>;
-  view?: InputMaybe<ViewFilterInput>;
+  actions: ReadonlyArray<ActionInput>;
+  branch?: InputMaybe<Scalars["String"]["input"]>;
 }>;
 
 export type MutateDocumentMutation = {
@@ -892,12 +1058,19 @@ export type MutateDocumentMutation = {
 
 export type MutateDocumentAsyncMutationVariables = Exact<{
   documentIdentifier: Scalars["String"]["input"];
-  actions: ReadonlyArray<Scalars["JSONObject"]["input"]>;
-  view?: InputMaybe<ViewFilterInput>;
+  actions: ReadonlyArray<ActionInput>;
+  branch?: InputMaybe<Scalars["String"]["input"]>;
 }>;
 
 export type MutateDocumentAsyncMutation = {
-  readonly mutateDocumentAsync: string;
+  readonly mutateDocumentAsync: {
+    readonly id: string;
+    readonly status: string;
+    readonly result?: NonNullable<unknown> | null | undefined;
+    readonly error?: string | null | undefined;
+    readonly createdAt: string | Date;
+    readonly completedAt?: string | Date | null | undefined;
+  };
 };
 
 export type RenameDocumentMutationVariables = Exact<{
@@ -1402,6 +1575,28 @@ export const GetJobStatusDocument = gql`
     }
   }
 `;
+export const EvaluateActionsDocument = gql`
+  query EvaluateActions(
+    $documentIdentifier: String!
+    $branch: String
+    $candidates: [ActionCandidateInput!]!
+  ) {
+    evaluateActions(
+      documentIdentifier: $documentIdentifier
+      branch: $branch
+      candidates: $candidates
+    ) {
+      evaluations {
+        decision
+        reason
+      }
+      allAllowed
+      anyAllowed
+      allDenied
+      anyDenied
+    }
+  }
+`;
 export const CreateDocumentDocument = gql`
   mutation CreateDocument($document: JSONObject!, $parentIdentifier: String) {
     createDocument(document: $document, parentIdentifier: $parentIdentifier) {
@@ -1427,13 +1622,13 @@ export const CreateEmptyDocumentDocument = gql`
 export const MutateDocumentDocument = gql`
   mutation MutateDocument(
     $documentIdentifier: String!
-    $actions: [JSONObject!]!
-    $view: ViewFilterInput
+    $actions: [ActionInput!]!
+    $branch: String
   ) {
-    mutateDocument(
+    mutateDocument: execute(
       documentIdentifier: $documentIdentifier
       actions: $actions
-      view: $view
+      branch: $branch
     ) {
       ...PHDocumentFields
     }
@@ -1443,14 +1638,21 @@ export const MutateDocumentDocument = gql`
 export const MutateDocumentAsyncDocument = gql`
   mutation MutateDocumentAsync(
     $documentIdentifier: String!
-    $actions: [JSONObject!]!
-    $view: ViewFilterInput
+    $actions: [ActionInput!]!
+    $branch: String
   ) {
-    mutateDocumentAsync(
+    mutateDocumentAsync: executeAsync(
       documentIdentifier: $documentIdentifier
       actions: $actions
-      view: $view
-    )
+      branch: $branch
+    ) {
+      id
+      status
+      result
+      error
+      createdAt
+      completedAt
+    }
   }
 `;
 export const RenameDocumentDocument = gql`
@@ -1832,6 +2034,24 @@ export function getSdk(
             signal,
           }),
         "GetJobStatus",
+        "query",
+        variables,
+      );
+    },
+    EvaluateActions(
+      variables: EvaluateActionsQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<EvaluateActionsQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<EvaluateActionsQuery>({
+            document: EvaluateActionsDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "EvaluateActions",
         "query",
         variables,
       );

@@ -331,8 +331,8 @@ test("repro: v1 doc upgrade after v2 release errors", async ({ page }) => {
   // the raw action through the generic reactor mutation instead.
   await gql(
     "r",
-    `mutation ($id: String!, $actions: [JSONObject!]!) {
-       mutateDocument(documentIdentifier: $id, actions: $actions) { id }
+    `mutation ($id: String!, $actions: [ActionInput!]!) {
+       execute(documentIdentifier: $id, actions: $actions) { id }
      }`,
     {
       id: editorDocId,
@@ -398,8 +398,8 @@ test("repro: v1 doc upgrade after v2 release errors", async ({ page }) => {
   note("STEP 4: releasing v2 (RELEASE_NEW_VERSION + new schema)");
   await gql(
     "r",
-    `mutation ($id: String!, $actions: [JSONObject!]!) {
-       mutateDocument(documentIdentifier: $id, actions: $actions) { id }
+    `mutation ($id: String!, $actions: [ActionInput!]!) {
+       execute(documentIdentifier: $id, actions: $actions) { id }
      }`,
     {
       id: modelDocId,

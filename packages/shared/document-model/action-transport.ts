@@ -24,7 +24,13 @@ export type TransportAction = {
   id: string;
   type: string;
   timestampUtcMs: string;
-  input: unknown;
+  /**
+   * Non-nullable, because the wire declares it so. An action's own type says
+   * `unknown`, which admits the absent input an action creator called without
+   * one produces - {@link toTransportAction} refuses that rather than passing
+   * it on.
+   */
+  input: NonNullable<unknown>;
   scope: string;
   context?: TransportActionContext;
 };
@@ -43,6 +49,15 @@ export type TransportAction = {
  * sends no context at all rather than a context full of nulls.
  */
 export function toTransportAction(action: Action): TransportAction {
+  if (action.input === undefined || action.input === null) {
+    // The wire declares an input, so this would be refused on arrival as a
+    // missing required field, naming the field but not the action. Refused here
+    // instead, where the action is still in hand.
+    throw new Error(
+      `Action ${action.id} (${action.type}) has no input, which the wire requires`,
+    );
+  }
+
   const projected: TransportAction = {
     id: action.id,
     type: action.type,

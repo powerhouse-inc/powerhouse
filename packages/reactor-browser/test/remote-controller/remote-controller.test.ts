@@ -329,10 +329,10 @@ describe("RemoteDocumentController", () => {
       controller.setName({ name: "Test" });
       await controller.push();
 
+      // Read off the declared input type rather than a hand-written shape: the
+      // mutation takes ActionInput now, so the context fields are typed.
       const mutateCall = vi.mocked(client.MutateDocument).mock.calls[0][0];
-      const actions = mutateCall.actions as Array<{
-        context?: { prevOpHash?: string; prevOpIndex?: number };
-      }>;
+      const actions = mutateCall.actions;
 
       expect(actions).toHaveLength(1);
       expect(actions[0].context).toBeDefined();
@@ -434,18 +434,10 @@ describe("RemoteDocumentController", () => {
 
       // Action should include signer context
       const mutateCall = vi.mocked(client.MutateDocument).mock.calls[0][0];
-      const actions = mutateCall.actions as Array<{
-        context?: {
-          signer?: {
-            user: { address: string };
-            app: { name: string };
-            signatures: unknown[];
-          };
-        };
-      }>;
+      const actions = mutateCall.actions;
       expect(actions[0].context!.signer).toBeDefined();
-      expect(actions[0].context!.signer!.user.address).toBe("0x123");
-      expect(actions[0].context!.signer!.app.name).toBe("test-app");
+      expect(actions[0].context!.signer!.user!.address).toBe("0x123");
+      expect(actions[0].context!.signer!.app!.name).toBe("test-app");
       expect(actions[0].context!.signer!.signatures).toHaveLength(1);
     });
   });

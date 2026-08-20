@@ -247,10 +247,11 @@ describe("GraphQLReactorClient.execute", () => {
       undefined,
       undefined,
     );
+    // One `branch`, carrying both the branch written to and the branch the
+    // operations filter reads from; there is no separate `view` to keep in step.
     expect(runDocumentVariables(sdk)).toEqual({
       documentIdentifier: "doc-1",
       actions: [action],
-      view: { branch: "main" },
       sinceRevision: 7,
       scopes: ["global"],
       branch: "main",
@@ -278,9 +279,10 @@ describe("GraphQLReactorClient.execute", () => {
     ]);
 
     // An unbranched operations filter is answered from main, so per-action
-    // reducer errors on any other branch would be invisible.
+    // reducer errors on any other branch would be invisible. One variable now
+    // carries the branch for both the write and the filter, so they cannot
+    // disagree.
     expect(runDocumentVariables(sdk).branch).toBe("feature-x");
-    expect(runDocumentVariables(sdk).view).toEqual({ branch: "feature-x" });
     expect(result.header.branch).toBe("feature-x");
   });
 

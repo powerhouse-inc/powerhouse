@@ -1045,8 +1045,8 @@ export type CreateEmptyDocumentMutation = {
 
 export type MutateDocumentMutationVariables = Exact<{
   documentIdentifier: Scalars["String"]["input"];
-  actions: ReadonlyArray<Scalars["JSONObject"]["input"]>;
-  view?: InputMaybe<ViewFilterInput>;
+  actions: ReadonlyArray<ActionInput>;
+  branch?: InputMaybe<Scalars["String"]["input"]>;
 }>;
 
 export type MutateDocumentMutation = {
@@ -1067,12 +1067,19 @@ export type MutateDocumentMutation = {
 
 export type MutateDocumentAsyncMutationVariables = Exact<{
   documentIdentifier: Scalars["String"]["input"];
-  actions: ReadonlyArray<Scalars["JSONObject"]["input"]>;
-  view?: InputMaybe<ViewFilterInput>;
+  actions: ReadonlyArray<ActionInput>;
+  branch?: InputMaybe<Scalars["String"]["input"]>;
 }>;
 
 export type MutateDocumentAsyncMutation = {
-  readonly mutateDocumentAsync: string;
+  readonly mutateDocumentAsync: {
+    readonly id: string;
+    readonly status: string;
+    readonly result?: NonNullable<unknown> | null | undefined;
+    readonly error?: string | null | undefined;
+    readonly createdAt: string | Date;
+    readonly completedAt?: string | Date | null | undefined;
+  };
 };
 
 export type RenameDocumentMutationVariables = Exact<{
@@ -2802,13 +2809,13 @@ export const CreateEmptyDocumentDocument = gql`
 export const MutateDocumentDocument = gql`
   mutation MutateDocument(
     $documentIdentifier: String!
-    $actions: [JSONObject!]!
-    $view: ViewFilterInput
+    $actions: [ActionInput!]!
+    $branch: String
   ) {
-    mutateDocument(
+    mutateDocument: execute(
       documentIdentifier: $documentIdentifier
       actions: $actions
-      view: $view
+      branch: $branch
     ) {
       ...PHDocumentFields
     }
@@ -2818,14 +2825,21 @@ export const MutateDocumentDocument = gql`
 export const MutateDocumentAsyncDocument = gql`
   mutation MutateDocumentAsync(
     $documentIdentifier: String!
-    $actions: [JSONObject!]!
-    $view: ViewFilterInput
+    $actions: [ActionInput!]!
+    $branch: String
   ) {
-    mutateDocumentAsync(
+    mutateDocumentAsync: executeAsync(
       documentIdentifier: $documentIdentifier
       actions: $actions
-      view: $view
-    )
+      branch: $branch
+    ) {
+      id
+      status
+      result
+      error
+      createdAt
+      completedAt
+    }
   }
 `;
 export const RenameDocumentDocument = gql`

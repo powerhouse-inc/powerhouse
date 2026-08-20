@@ -1,6 +1,6 @@
 import type { PHDocument } from "document-model";
 import { DEFAULT_DRIVE_ID } from "./constants.js";
-import type { Scalars } from "./gen/schema.js";
+import type { ActionInput } from "./gen/schema.js";
 
 export async function reactorGraphqlCreateDocument<
   TDocument extends PHDocument,
@@ -55,7 +55,7 @@ export async function reactorGraphqlDeleteDocuments(identifiers: string[]) {
 
 export async function reactorGraphqlMutateDocument(
   documentIdentifier: string,
-  ...actions: ReadonlyArray<Scalars["JSONObject"]["input"]>
+  ...actions: ReadonlyArray<ActionInput>
 ) {
   const client = window.ph?.reactorGraphQLClient;
 
