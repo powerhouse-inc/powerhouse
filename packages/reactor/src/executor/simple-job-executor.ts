@@ -56,6 +56,7 @@ import type { ExecutionStores, IExecutionScope } from "./execution-scope.js";
 import { DefaultExecutionScope } from "./execution-scope.js";
 import type { IJobExecutor } from "./interfaces.js";
 import { SignatureVerifier } from "./signature-verifier.js";
+import { DEFAULT_DEFERRED_JOB_TTL_MS } from "./types.js";
 import type {
   ExecutingJob,
   JobExecutorConfig,
@@ -131,6 +132,9 @@ export class SimpleJobExecutor implements IJobExecutor {
       maxSkipThreshold: config.maxSkipThreshold ?? MAX_SKIP_THRESHOLD,
       maxConcurrency: config.maxConcurrency ?? 1,
       jobTimeoutMs: config.jobTimeoutMs ?? 30000,
+      // Held by the executor manager, not the executor; carried so a pooled
+      // worker's config round-trips unchanged.
+      deferredJobTtlMs: config.deferredJobTtlMs ?? DEFAULT_DEFERRED_JOB_TTL_MS,
       retryBaseDelayMs: config.retryBaseDelayMs ?? 100,
       retryMaxDelayMs: config.retryMaxDelayMs ?? 5000,
       yieldDeadlineMs: config.yieldDeadlineMs ?? 50,

@@ -350,6 +350,8 @@ export {
   IntervalPollTimer,
   DRIVE_AUTH_ERROR_MESSAGES,
   isDriveAuthError,
+  isRecoverableGraphQLError,
+  RECOVERABLE_GRAPHQL_ERROR_CODES,
   Mailbox,
   PollBehavior,
   PollingChannelError,

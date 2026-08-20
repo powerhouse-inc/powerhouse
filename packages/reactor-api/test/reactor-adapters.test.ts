@@ -91,6 +91,45 @@ describe("Reactor Adapters", () => {
     it("should reject object without type field", () => {
       expect(() =>
         adapters.jsonObjectToAction({
+          id: "action-1",
+          timestampUtcMs: "2024-01-01T00:00:00Z",
+          scope: "global",
+          input: {},
+        }),
+      ).toThrow("Invalid action structure");
+    });
+
+    it("should reject object without id field", () => {
+      // The id is hashed into the operation id and replay dedupes by it, so an
+      // action without one collapses every id-less operation on a document,
+      // scope and branch onto a single derived operation id.
+      expect(() =>
+        adapters.jsonObjectToAction({
+          type: "SET_NAME",
+          timestampUtcMs: "2024-01-01T00:00:00Z",
+          scope: "global",
+          input: {},
+        }),
+      ).toThrow("Invalid action structure");
+    });
+
+    it("should reject object with an empty id", () => {
+      expect(() =>
+        adapters.jsonObjectToAction({
+          id: "",
+          type: "SET_NAME",
+          timestampUtcMs: "2024-01-01T00:00:00Z",
+          scope: "global",
+          input: {},
+        }),
+      ).toThrow("Invalid action structure");
+    });
+
+    it("should reject object without timestampUtcMs field", () => {
+      expect(() =>
+        adapters.jsonObjectToAction({
+          id: "action-1",
+          type: "SET_NAME",
           scope: "global",
           input: {},
         }),
@@ -100,6 +139,8 @@ describe("Reactor Adapters", () => {
     it("should reject object with non-string type", () => {
       expect(() =>
         adapters.jsonObjectToAction({
+          id: "action-1",
+          timestampUtcMs: "2024-01-01T00:00:00Z",
           type: 123,
           scope: "global",
           input: {},
@@ -110,6 +151,8 @@ describe("Reactor Adapters", () => {
     it("should reject object without scope field", () => {
       expect(() =>
         adapters.jsonObjectToAction({
+          id: "action-1",
+          timestampUtcMs: "2024-01-01T00:00:00Z",
           type: "SET_NAME",
           input: {},
         }),
@@ -119,6 +162,8 @@ describe("Reactor Adapters", () => {
     it("should reject object with non-string scope", () => {
       expect(() =>
         adapters.jsonObjectToAction({
+          id: "action-1",
+          timestampUtcMs: "2024-01-01T00:00:00Z",
           type: "SET_NAME",
           scope: 123,
           input: {},
@@ -129,6 +174,8 @@ describe("Reactor Adapters", () => {
     it("should reject object without input field", () => {
       expect(() =>
         adapters.jsonObjectToAction({
+          id: "action-1",
+          timestampUtcMs: "2024-01-01T00:00:00Z",
           type: "SET_NAME",
           scope: "global",
         }),
@@ -147,6 +194,8 @@ describe("Reactor Adapters", () => {
 
       validInputs.forEach((inputObj) => {
         const action = {
+          id: "action-1",
+          timestampUtcMs: "2024-01-01T00:00:00Z",
           type: "TEST",
           scope: "global",
           ...inputObj,
@@ -421,6 +470,61 @@ describe("Reactor Adapters", () => {
 
       expect(result.isValid).toBe(false);
       expect(result.errors).toContainEqual(expect.stringContaining("scope"));
+    });
+  });
+
+  describe("signatures arriving over the wire", () => {
+    const signed = (signatures: unknown[]) => ({
+      id: "act-1",
+      type: "SET_NAME",
+      scope: "global",
+      input: { name: "x" },
+      timestampUtcMs: "2026-01-01T00:00:00.000Z",
+      context: {
+        signer: {
+          user: { address: "0x1", networkId: "eip155", chainId: 1 },
+          app: { name: "Connect", key: "did:key:z6Mk" },
+          signatures,
+        },
+      },
+    });
+
+    it("restores a joined signature to the tuple verification reads", () => {
+      // GraphQL declares signatures as strings, so a client joins each tuple.
+      // Verification reads the params by position and would see one long param.
+      const [action] = adapters.validateActions([
+        signed(["1700000000, did:key:z6Mk, 0xhash, 0xprev, 0xsig"]),
+      ]);
+
+      expect(action.context?.signer?.signatures).toEqual([
+        ["1700000000", "did:key:z6Mk", "0xhash", "0xprev", "0xsig"],
+      ]);
+    });
+
+    it("leaves a signature that already arrived as a tuple alone", () => {
+      const tuple = ["a", "b", "c", "d", "e"];
+      const [action] = adapters.validateActions([signed([tuple])]);
+
+      expect(action.context?.signer?.signatures).toEqual([tuple]);
+    });
+
+    it("does not mutate the action it was handed", () => {
+      const incoming = signed(["a, b, c, d, e"]);
+      adapters.validateActions([incoming]);
+
+      expect(incoming.context.signer.signatures).toEqual(["a, b, c, d, e"]);
+    });
+
+    it("leaves an unsigned action untouched", () => {
+      const action = {
+        id: "act-1",
+        type: "SET_NAME",
+        scope: "global",
+        input: { name: "x" },
+        timestampUtcMs: "2026-01-01T00:00:00.000Z",
+      };
+
+      expect(adapters.validateActions([action])[0]).toBe(action);
     });
   });
 

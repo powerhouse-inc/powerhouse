@@ -6,6 +6,7 @@ import type {
   PHDocument,
   PHDocumentHeader,
 } from "@powerhousedao/shared/document-model";
+import { toTransportAction } from "@powerhousedao/shared/document-model";
 import type { PHDocumentController } from "document-model";
 import { ActionTracker } from "./action-tracker.js";
 import { RemoteClient } from "./remote-client.js";
@@ -165,7 +166,7 @@ export class RemoteDocumentController<
 
         await this.remoteClient.pushActions(
           this.documentId,
-          actions,
+          actions.map(toTransportAction),
           this.options.branch,
         );
       }

@@ -13,7 +13,12 @@ import type {
   Operation,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
+import {
+  deserializeSignature,
+  serializeSignature,
+} from "@powerhousedao/shared/document-model";
 import { GraphQLError } from "graphql";
+import { MalformedStoredOperationError } from "../errors.js";
 import {
   type ActionEvaluation as GqlActionEvaluation,
   AuthDecision as GqlAuthDecision,
@@ -174,7 +179,16 @@ export function toMutableArray<T>(
 }
 
 /**
- * Validates that a JSONObject represents a valid Action structure
+ * Validates that an incoming value has the structure of an Action.
+ *
+ * This is the whole guard on the way in. `mutateDocument` takes untyped JSON, so
+ * nothing has checked these fields before a resolver runs, and the id in
+ * particular has to be checked here: it is hashed into the operation id and
+ * replay dedupes by it, so an action without one is stored under an operation id
+ * shared by every id-less operation on the same document, scope and branch.
+ *
+ * The storage constraint would refuse such a row anyway, but only after a job
+ * has been enqueued and failed. Refusing here answers the caller instead.
  */
 function validateActionStructure(obj: unknown): obj is Action {
   if (!obj || typeof obj !== "object") {
@@ -184,11 +198,19 @@ function validateActionStructure(obj: unknown): obj is Action {
   const action = obj as Record<string, unknown>;
 
   // Required fields
+  if (typeof action.id !== "string" || !action.id) {
+    return false;
+  }
+
   if (typeof action.type !== "string" || !action.type) {
     return false;
   }
 
   if (typeof action.scope !== "string" || !action.scope) {
+    return false;
+  }
+
+  if (typeof action.timestampUtcMs !== "string" || !action.timestampUtcMs) {
     return false;
   }
 
@@ -201,16 +223,48 @@ function validateActionStructure(obj: unknown): obj is Action {
 }
 
 /**
+ * Restores an action's signatures to the tuples verification reads.
+ *
+ * A signature is a five-param tuple, and GraphQL declares `signatures` as a
+ * list of strings, so a client joins each one for transport. The sync path
+ * already splits them on arrival; this is the same step for the mutation path,
+ * which had none - an action submitted there kept whatever shape it arrived in,
+ * so the same signature was persisted as a tuple or as one joined string
+ * depending on which door it came through.
+ *
+ * A tuple passes through untouched, so an in-process caller handing over real
+ * signatures is unaffected.
+ */
+function withDeserializedSignatures(action: Action): Action {
+  const signer = action.context?.signer;
+  if (!signer?.signatures || signer.signatures.length === 0) {
+    return action;
+  }
+
+  return {
+    ...action,
+    context: {
+      ...action.context,
+      signer: {
+        ...signer,
+        signatures: signer.signatures.map(deserializeSignature),
+      },
+    },
+  };
+}
+
+/**
  * Converts a JSONObject to an Action, validating basic structure
  */
 export function jsonObjectToAction(obj: unknown): Action {
   if (!validateActionStructure(obj)) {
     throw new GraphQLError(
-      "Invalid action structure. Actions must have: type (string), scope (string), and input (any)",
+      "Invalid action structure. Actions must have: id (string), type (string), " +
+        "scope (string), timestampUtcMs (string), and input (any)",
     );
   }
 
-  return obj as Action;
+  return withDeserializedSignatures(obj as Action);
 }
 
 /**
@@ -309,12 +363,103 @@ export function validateActions(actions: readonly unknown[]): Action[] {
   return convertedActions;
 }
 
+/** The operation fields the schema declares non-null. */
+const REQUIRED_OPERATION_FIELDS = [
+  "index",
+  "timestampUtcMs",
+  "hash",
+  "skip",
+] as const;
+
+/** The action fields the schema declares non-null. */
+const REQUIRED_ACTION_FIELDS = [
+  "id",
+  "type",
+  "timestampUtcMs",
+  "input",
+  "scope",
+] as const;
+
+/**
+ * An operation as storage actually hands it over.
+ *
+ * `rowToOperation` casts a jsonb column straight to `Operation`, so every field
+ * the declared type promises is present may be absent at runtime - that cast is
+ * why TypeScript never caught this. Read through this view instead, or the
+ * checks below look impossible to the compiler.
+ */
+type StoredOperation = Record<string, unknown> & {
+  action?: Record<string, unknown> | null;
+};
+
+/**
+ * Names an operation well enough to find the row it came from, without assuming
+ * the fields that might be the missing ones.
+ */
+function describeOperation(stored: StoredOperation): string {
+  const parts = [
+    typeof stored.id === "string" && stored.id
+      ? `operation ${stored.id}`
+      : "operation with no id",
+  ];
+  if (typeof stored.index === "number") {
+    parts.push(`index ${stored.index}`);
+  }
+  const scope = stored.action?.scope;
+  if (typeof scope === "string" && scope) {
+    parts.push(`scope ${scope}`);
+  }
+  return parts.join(", ");
+}
+
+/**
+ * Refuses an operation the schema cannot represent, naming the field.
+ *
+ * The alternative is what execution does unaided: nullify the field, bubble that
+ * up the non-null chain until it takes out the envelope's whole operation list,
+ * and report a bare "Cannot return null for non-nullable field" with no way to
+ * tell which of a hundred operations was at fault. Checked before the response
+ * is built so the failure is typed and attributable.
+ *
+ * Presence is all that is checked. The schema's own serialization still rejects
+ * a value of the wrong type, and inventing further rules here would put a second
+ * contract beside the one the schema already states.
+ */
+function assertServable(operation: Operation): void {
+  const stored = operation as unknown as StoredOperation;
+
+  for (const field of REQUIRED_OPERATION_FIELDS) {
+    if (stored[field] === undefined || stored[field] === null) {
+      throw new MalformedStoredOperationError(
+        `${describeOperation(stored)} has no ${field}`,
+      );
+    }
+  }
+
+  const action = stored.action;
+  if (action === undefined || action === null) {
+    throw new MalformedStoredOperationError(
+      `${describeOperation(stored)} has no action`,
+    );
+  }
+
+  for (const field of REQUIRED_ACTION_FIELDS) {
+    if (action[field] === undefined || action[field] === null) {
+      throw new MalformedStoredOperationError(
+        `${describeOperation(stored)} has an action with no ${field}`,
+      );
+    }
+  }
+}
+
 /**
  * Transforms an operation to serialize signatures from tuples to strings for GraphQL compatibility.
  */
 export function serializeOperationForGraphQL(
   operation: Operation,
 ): ReactorOperation {
+  assertServable(operation);
+
   const signer = operation.action.context?.signer;
   if (!signer?.signatures) {
     return operation as unknown as ReactorOperation;
@@ -328,9 +473,7 @@ export function serializeOperationForGraphQL(
         ...operation.action.context,
         signer: {
           ...signer,
-          signatures: signer.signatures.map((sig) =>
-            Array.isArray(sig) ? sig.join(", ") : sig,
-          ),
+          signatures: signer.signatures.map(serializeSignature),
         },
       },
     },

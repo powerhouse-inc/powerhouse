@@ -570,6 +570,7 @@ export class ReactorBuilder {
           resolver,
           collectionMembershipCache,
           this.executorConfig.jobTimeoutMs,
+          this.executorConfig.deferredJobTtlMs,
         );
         executorManager = poolManager;
         executorStartCount = pool.numWorkers;
@@ -599,6 +600,7 @@ export class ReactorBuilder {
           this.logger,
           resolver,
           this.executorConfig.jobTimeoutMs,
+          this.executorConfig.deferredJobTtlMs,
         );
       }
     }

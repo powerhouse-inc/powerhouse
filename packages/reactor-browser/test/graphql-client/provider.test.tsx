@@ -4,7 +4,10 @@ import type {
   PHBaseState,
   Signature,
 } from "@powerhousedao/shared/document-model";
-import { createReducer } from "@powerhousedao/shared/document-model";
+import {
+  createReducer,
+  serializeSignature,
+} from "@powerhousedao/shared/document-model";
 import type { DocumentModelModule } from "document-model";
 import { StrictMode } from "react";
 import {
@@ -759,9 +762,11 @@ describe("GraphQLReactorProvider signed batches", () => {
     expect(signAction).toHaveBeenCalledTimes(2);
     const pushed = (mutations[0] as { actions: Action[] }).actions;
     expect(pushed.map((a) => a.id)).toEqual(["action-1", "action-2"]);
+    // Joined for transport: GraphQL declares signatures as a list of strings,
+    // not of lists, and the server splits them again on arrival.
     expect(pushed.map((a) => a.context?.signer?.signatures)).toEqual([
-      [signature],
-      [signature],
+      [serializeSignature(signature)],
+      [serializeSignature(signature)],
     ]);
     // The document is at global revision 7, so the batch continues from 6.
     expect(pushed.map((a) => a.context?.prevOpIndex)).toEqual([6, 7]);

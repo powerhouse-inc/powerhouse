@@ -243,7 +243,28 @@ type ActionEvaluations {
 }
 
 # Input types for sync operations
+"""
+An action's context, as a caller submits it.
+
+Declares every field `ActionContext` carries, because an input object rejects a
+field it does not declare: an action stamped with the head it applies to - which
+is what a signing client sends - is refused outright if these are missing, and
+that refusal is a whole-request one, not a per-field one.
+
+`prevOpHash` and `prevOpIndex` are the scope head the action was composed
+against. They are recorded rather than enforced; a signature is verified from
+the params carried in its own tuple, which do not include them.
+"""
 input ActionContextInput {
+  """The index of the last operation in the scope the action applies to."""
+  prevOpIndex: Int
+
+  """The hash of the state the action applies to."""
+  prevOpHash: String
+
+  """Covers replay of an operation that would otherwise be a no-op."""
+  nonce: String
+
   signer: ReactorSignerInput
 }
 
@@ -459,7 +480,17 @@ type Query {
     candidates: [ActionCandidateInput!]!
   ): ActionEvaluations!
 
-  # Poll for sync envelopes from a channel
+  """
+  Polls for sync envelopes from a channel.
+
+  An operation stored before the API required an action id cannot be
+  represented by this schema, and rather than serving a partial response beside
+  a bare non-null violation, this fails with extensions.code
+  MALFORMED_STORED_OPERATION naming the operation. That code means the failure
+  is worth polling through: the document holding the operation needs repairing,
+  but the channel serves every other document, and a peer that stopped polling
+  would stop receiving those too.
+  """
   pollSyncEnvelopes(
     channelId: String!
     outboxAck: Int!

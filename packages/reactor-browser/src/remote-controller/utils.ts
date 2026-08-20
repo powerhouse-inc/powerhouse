@@ -4,6 +4,7 @@ import type {
   PHBaseState,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
+import { deserializeSignature } from "@powerhousedao/shared/document-model";
 import type {
   ConflictInfo,
   RemoteDocumentData,
@@ -64,21 +65,10 @@ export function remoteOperationToLocal(remote: RemoteOperation): Operation {
 }
 
 /**
- * Deserialize a signature string back to a 5-element tuple.
- * The server serializes tuples via `tuple.join(", ")`.
+ * Re-exported from shared, where it sits beside the serializer it has to agree
+ * with. Kept exported here because this module's consumers import it from here.
  */
-export function deserializeSignature(
-  s: string,
-): [string, string, string, string, string] {
-  const parts = s.split(", ");
-  return [
-    parts[0] ?? "",
-    parts[1] ?? "",
-    parts[2] ?? "",
-    parts[3] ?? "",
-    parts[4] ?? "",
-  ];
-}
+export { deserializeSignature };
 
 /** Convert remote operations to local DocumentOperations format. */
 export function convertRemoteOperations(

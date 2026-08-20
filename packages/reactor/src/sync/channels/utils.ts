@@ -1,8 +1,8 @@
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
-import type {
-  Action,
-  Operation,
-  Signature,
+import type { Action, Operation } from "@powerhousedao/shared/document-model";
+import {
+  deserializeSignature,
+  toTransportAction,
 } from "@powerhousedao/shared/document-model";
 import { SyncOperation } from "../sync-operation.js";
 import { SyncOperationStatus, type SyncEnvelope } from "../types.js";
@@ -11,39 +11,15 @@ import { batchOperationsByDocument } from "../utils.js";
 let syncOpCounter = 0;
 
 /**
- * Serializes an action for GraphQL transport, converting signature tuples to strings.
+ * Serializes an action for GraphQL transport.
  *
- * Only the fields declared by the GraphQL `ActionInput` type are forwarded. This
- * guards against stale runtime-only fields (e.g. a legacy `attachments` array on
- * operations persisted before the attachment-system removal) leaking into the
- * mutation variables, where the tightened schema would reject them.
+ * Projects onto exactly the fields `ActionInput` declares, which is what keeps a
+ * stale runtime-only field - a legacy `attachments` array, say - from riding
+ * along into the mutation variables, where the schema would reject the whole
+ * request rather than the field.
  */
 export function serializeAction(action: Action): unknown {
-  const base = {
-    id: action.id,
-    type: action.type,
-    timestampUtcMs: action.timestampUtcMs,
-    input: action.input,
-    scope: action.scope,
-  };
-
-  const signer = action.context?.signer;
-  if (!signer?.signatures) {
-    return action.context ? { ...base, context: action.context } : base;
-  }
-
-  return {
-    ...base,
-    context: {
-      ...action.context,
-      signer: {
-        ...signer,
-        signatures: signer.signatures.map((sig: Signature | string) =>
-          Array.isArray(sig) ? sig.join(", ") : sig,
-        ),
-      },
-    },
-  };
+  return toTransportAction(action);
 }
 
 /**
@@ -84,19 +60,6 @@ export function serializeEnvelope(envelope: SyncEnvelope): unknown {
     key: envelope.key,
     dependsOn: envelope.dependsOn,
   };
-}
-
-/**
- * Deserializes a signature from a comma-separated string back to a tuple.
- *
- * GraphQL serializes Signature tuples as comma-separated strings for transport.
- * This function converts them back to the expected [string, string, string, string, string] format.
- */
-function deserializeSignature(sig: Signature | string): Signature {
-  if (Array.isArray(sig)) {
-    return sig;
-  }
-  return sig.split(", ") as Signature;
 }
 
 /**

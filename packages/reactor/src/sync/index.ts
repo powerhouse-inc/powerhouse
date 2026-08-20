@@ -53,7 +53,9 @@ export {
   ChannelError,
   PollingChannelError,
   isDriveAuthError,
+  isRecoverableGraphQLError,
   DRIVE_AUTH_ERROR_MESSAGES,
+  RECOVERABLE_GRAPHQL_ERROR_CODES,
 } from "./errors.js";
 
 export {

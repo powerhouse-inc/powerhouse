@@ -10,17 +10,65 @@ export type GraphQLRequestErrorCategory =
 export class GraphQLRequestError extends Error {
   readonly statusCode: number | undefined;
   readonly category: GraphQLRequestErrorCategory;
+  /**
+   * One entry per error the response carried, in order, holding its
+   * `extensions.code` - undefined where it declared none. Kept per error rather
+   * than as a set, because a response that mixes a classified error with an
+   * unclassified one must not be read as if only the classified one arrived.
+   */
+  readonly codes: readonly (string | undefined)[];
 
   constructor(
     message: string,
     category: GraphQLRequestErrorCategory,
     statusCode?: number,
+    codes: readonly (string | undefined)[] = [],
   ) {
     super(message);
     this.name = "GraphQLRequestError";
     this.category = category;
     this.statusCode = statusCode;
+    this.codes = codes;
   }
+}
+
+/**
+ * Extension codes a remote uses to say a failure is worth polling through.
+ *
+ * Shared with reactor-api so the server throws what this check reads and the two
+ * cannot drift. A `graphql` category error is otherwise permanent: it stops the
+ * poll timer, and nothing restarts it, so a code that lands here is the
+ * difference between a channel that recovers and one that is dead for the
+ * process lifetime.
+ */
+export const RECOVERABLE_GRAPHQL_ERROR_CODES = {
+  /**
+   * A stored operation cannot be represented in the schema - an action with no
+   * id, say. The document holding it needs repairing, but the channel serves
+   * every other document, and a peer that stopped polling would stop receiving
+   * those too.
+   */
+  malformedStoredOperation: "MALFORMED_STORED_OPERATION",
+} as const;
+
+const RECOVERABLE_CODES: ReadonlySet<string> = new Set(
+  Object.values(RECOVERABLE_GRAPHQL_ERROR_CODES),
+);
+
+/**
+ * True when every error the response carried named a recoverable code.
+ *
+ * Unanimity is the requirement: one unclassified error alongside a recoverable
+ * one means something else also went wrong, and polling through that would be
+ * guessing.
+ */
+export function isRecoverableGraphQLError(error: GraphQLRequestError): boolean {
+  return (
+    error.codes.length > 0 &&
+    error.codes.every(
+      (code) => code !== undefined && RECOVERABLE_CODES.has(code),
+    )
+  );
 }
 
 /** Auth-rejection message fragments the switchboard emits. Shared with

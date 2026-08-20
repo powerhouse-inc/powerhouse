@@ -9,6 +9,7 @@ import {
   ChannelError,
   GraphQLRequestError,
   isDriveAuthError,
+  isRecoverableGraphQLError,
 } from "../errors.js";
 import type { ConnectionStateChangeCallback, IChannel } from "../interfaces.js";
 import { type IMailbox, Mailbox } from "../mailbox.js";
@@ -891,7 +892,12 @@ export class GqlRequestChannel implements IChannel {
       case "parse":
         return "recoverable";
       case "graphql":
-        return "unrecoverable";
+        // A remote that classified the failure as worth polling through is
+        // taken at its word. Everything else stays permanent: it stops the poll
+        // timer, and nothing restarts it.
+        return isRecoverableGraphQLError(error)
+          ? "recoverable"
+          : "unrecoverable";
       case "missing-data":
         return "unrecoverable";
     }
@@ -1038,7 +1044,7 @@ export class GqlRequestChannel implements IChannel {
     try {
       result = (await response.json()) as {
         data?: T;
-        errors?: Array<{ message: string }>;
+        errors?: Array<{ message: string; extensions?: { code?: string } }>;
       };
     } catch (error) {
       throw new GraphQLRequestError(
@@ -1060,6 +1066,8 @@ export class GqlRequestChannel implements IChannel {
       throw new GraphQLRequestError(
         `GraphQL errors: ${JSON.stringify(result.errors, null, 2)}`,
         "graphql",
+        undefined,
+        result.errors.map((error) => error.extensions?.code),
       );
     }
 

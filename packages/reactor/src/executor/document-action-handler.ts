@@ -52,6 +52,7 @@ import type { Job } from "../queue/types.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import {
   DocumentDeletedError,
+  DocumentNotFoundError,
   UpgradePreconditionFailedError,
 } from "../shared/errors.js";
 import { AppendConditionFailedError } from "../storage/interfaces.js";
@@ -973,6 +974,21 @@ export class DocumentActionHandler {
         signal,
       );
     } catch (error) {
+      // Retyped rather than rewrapped in a bare Error, which would strip the
+      // name JobResultHandler classifies by and leave a missing source document
+      // burning the retry limit on a load that fails the same way every time.
+      // The message still names the source, since a relationship tolerates a
+      // missing target but not a missing source.
+      if (DocumentNotFoundError.isError(error)) {
+        return buildErrorResult(
+          job,
+          new DocumentNotFoundError(
+            input.sourceId,
+            `${actionTypeName}: source document ${input.sourceId} not found`,
+          ),
+          startTime,
+        );
+      }
       return buildErrorResult(
         job,
         new Error(

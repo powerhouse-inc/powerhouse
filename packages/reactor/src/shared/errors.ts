@@ -254,8 +254,14 @@ export class UpgradeManifestNotFoundError extends Error {
 export class DocumentNotFoundError extends Error {
   public readonly documentId: string;
 
-  constructor(documentId: string) {
-    super(`Document ${documentId} not found`);
+  /**
+   * @param message Overrides the default text. A handler that knows which of
+   * several documents an action reads - a relationship's source, say - says so
+   * here rather than rewrapping in a bare Error, which would strip the name the
+   * executor classifies by.
+   */
+  constructor(documentId: string, message?: string) {
+    super(message ?? `Document ${documentId} not found`);
     this.name = "DocumentNotFoundError";
     this.documentId = documentId;
 

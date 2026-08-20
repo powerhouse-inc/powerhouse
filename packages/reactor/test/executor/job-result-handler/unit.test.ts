@@ -234,7 +234,11 @@ describe("JobResultHandler", () => {
   describe("DocumentNotFoundError", () => {
     it("calls handle.defer() and deferJob callback without consuming a retry", async () => {
       const error = new DocumentNotFoundError("missing-doc");
-      const job = createTestJob({ documentId: "missing-doc", maxRetries: 3 });
+      const job = createTestJob({
+        kind: "load",
+        documentId: "missing-doc",
+        maxRetries: 3,
+      });
       const handle = createTestHandle(job);
       const result: JobResult = { success: false, job, error };
 
@@ -248,13 +252,55 @@ describe("JobResultHandler", () => {
 
     it("does not emit JOB_FAILED on defer", async () => {
       const error = new DocumentNotFoundError("missing-doc");
-      const job = createTestJob({ documentId: "missing-doc" });
+      const job = createTestJob({ kind: "load", documentId: "missing-doc" });
       const handle = createTestHandle(job);
       const result: JobResult = { success: false, job, error };
 
       await handler.handleResult(handle, result, callbacks());
 
       expect(eventBus.emit).not.toHaveBeenCalled();
+    });
+
+    it("holds the job against the document the error names", async () => {
+      // A relationship reads its source, so the document a flush has to create
+      // is not always the one the job is keyed by.
+      const error = new DocumentNotFoundError("missing-source");
+      const job = createTestJob({ kind: "load", documentId: "other-doc" });
+      const handle = createTestHandle(job);
+      const result: JobResult = { success: false, job, error };
+
+      await handler.handleResult(handle, result, callbacks());
+
+      expect(deferJobMock).toHaveBeenCalledWith("missing-source", job);
+    });
+
+    it("fails a mutation at once rather than holding it", async () => {
+      // Nothing in flight creates a document the caller named wrong, so holding
+      // it would only delay the refusal until the deferral deadline.
+      const error = new DocumentNotFoundError("missing-doc");
+      const job = createTestJob({
+        kind: "mutation",
+        documentId: "missing-doc",
+        maxRetries: 3,
+      });
+      const handle = createTestHandle(job);
+      const result: JobResult = { success: false, job, error };
+
+      await handler.handleResult(handle, result, callbacks());
+
+      expect(handle.defer).not.toHaveBeenCalled();
+      expect(deferJobMock).not.toHaveBeenCalled();
+      expect(queue.retryJob).not.toHaveBeenCalled();
+      expect(jobTracker.markFailed).toHaveBeenCalledWith(
+        job.id,
+        expect.any(Object),
+        job,
+      );
+      expect(eventBus.emit).toHaveBeenCalledWith(
+        ReactorEventTypes.JOB_FAILED,
+        expect.objectContaining({ jobId: job.id, error }),
+      );
+      expect(handle.fail).toHaveBeenCalledTimes(1);
     });
   });
 

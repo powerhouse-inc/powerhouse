@@ -12,7 +12,10 @@ import type {
   ISigner,
   PHDocumentState,
 } from "@powerhousedao/shared/document-model";
-import { normalizeDocumentModelVersion } from "@powerhousedao/shared/document-model";
+import {
+  normalizeDocumentModelVersion,
+  toTransportAction,
+} from "@powerhousedao/shared/document-model";
 import type {
   Action,
   DocumentModelModule,
@@ -312,7 +315,9 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
 
     const variables: MutateDocumentWithOperationsVariables = {
       documentIdentifier,
-      actions: preparedActions,
+      // Projected onto the fields the schema declares, so a stamped or signed
+      // action does not carry a field the input rejects the whole request for.
+      actions: preparedActions.map(toTransportAction),
       view: { branch },
       sinceRevision: sinceRevisionForActions(document, actions),
       scopes: scopesForActions(actions),

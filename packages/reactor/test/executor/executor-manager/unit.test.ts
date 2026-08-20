@@ -572,8 +572,12 @@ describe("SimpleJobExecutorManager", () => {
 
       await noRetryManager.start(1);
 
+      // A load job: deferral is the load path's affordance for operations that
+      // arrive ahead of the ones creating their document. A mutation naming a
+      // document that is not there is refused on the spot instead.
       const job = createTestJob({
         id: "no-retry-job",
+        kind: "load",
         documentId: "missing-doc",
         scope: "global",
         retryCount: 0,
@@ -655,6 +659,7 @@ describe("SimpleJobExecutorManager", () => {
       // Job 1: global-scope action arrives BEFORE CREATE_DOCUMENT
       const setNameJob = createTestJob({
         id: "set-name-job",
+        kind: "load",
         documentId: "doc-1",
         scope: "global",
         retryCount: 0,
@@ -668,6 +673,7 @@ describe("SimpleJobExecutorManager", () => {
       // Job 2: CREATE_DOCUMENT arrives after the global action
       const createJob = createTestJob({
         id: "create-job",
+        kind: "load",
         documentId: "doc-1",
         scope: "document",
         actions: [
@@ -783,6 +789,7 @@ describe("SimpleJobExecutorManager", () => {
 
       const job = createTestJob({
         id: "doc-not-found-job",
+        kind: "load",
         retryCount: 0,
         maxRetries: 0,
       });
