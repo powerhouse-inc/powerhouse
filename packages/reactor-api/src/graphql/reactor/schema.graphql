@@ -144,7 +144,13 @@ type MoveRelationshipResult {
 type JobInfo {
   id: String!
   status: String!
-  result: JSONObject!
+
+  """
+  What the job produced, once it has produced anything. Null until then, which
+  is the state every job is in when it is handed back from a submission.
+  """
+  result: JSONObject
+
   error: String
   createdAt: DateTime!
   completedAt: DateTime

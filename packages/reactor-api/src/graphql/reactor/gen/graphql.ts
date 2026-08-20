@@ -215,7 +215,11 @@ export type JobInfo = {
   readonly createdAt: Scalars["DateTime"]["output"];
   readonly error?: Maybe<Scalars["String"]["output"]>;
   readonly id: Scalars["String"]["output"];
-  readonly result: Scalars["JSONObject"]["output"];
+  /**
+   * What the job produced, once it has produced anything. Null until then, which
+   * is the state every job is in when it is handed back from a submission.
+   */
+  readonly result?: Maybe<Scalars["JSONObject"]["output"]>;
   readonly status: Scalars["String"]["output"];
 };
 
@@ -933,7 +937,7 @@ export type GetJobStatusQuery = {
     | {
         readonly id: string;
         readonly status: string;
-        readonly result: NonNullable<unknown>;
+        readonly result?: NonNullable<unknown> | null | undefined;
         readonly error?: string | null | undefined;
         readonly createdAt: string | Date;
         readonly completedAt?: string | Date | null | undefined;
@@ -1769,7 +1773,11 @@ export type JobInfoResolvers<
   createdAt?: Resolver<ResolversTypes["DateTime"], ParentType, ContextType>;
   error?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
   id?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-  result?: Resolver<ResolversTypes["JSONObject"], ParentType, ContextType>;
+  result?: Resolver<
+    Maybe<ResolversTypes["JSONObject"]>,
+    ParentType,
+    ContextType
+  >;
   status?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
 }>;
 
