@@ -15,6 +15,17 @@ const eslintConfig = defineConfig([
       // ESLint 10, which made every commit touching this package fail.
       react: { version: "19.2" },
     },
+    languageOptions: {
+      parserOptions: {
+        // Pinned to this package, as test/vetra-e2e's config already does for
+        // itself. eslint-config-next sets up a project service but leaves the
+        // root unstated, so a run spanning this package and one that does state
+        // its own leaves typescript-eslint with two candidates, and it refuses
+        // to pick. lint-staged batches by commit, so that run is any commit
+        // touching both.
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
     rules: {
       // This app is app-router only, so the rule has no pages directory to
       // check against. It looks for one relative to the working directory, so
