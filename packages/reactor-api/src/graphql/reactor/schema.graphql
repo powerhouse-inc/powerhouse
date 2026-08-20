@@ -514,12 +514,47 @@ type Mutation {
     parentIdentifier: String
   ): PHDocument!
 
+  """
+  Applies actions to a document and waits for the result.
+
+  Each action is coerced against `ActionInput`, so one missing a field the wire
+  declares is refused before any work starts. The id in particular: it is hashed
+  into the operation id and replay dedupes by it, so an action without one is
+  stored under an operation id shared by every id-less operation on the same
+  document, scope and branch.
+
+  Named for `IReactorClient.execute`, which this is the wire form of. `branch`
+  defaults to `main`.
+  """
+  execute(
+    documentIdentifier: String!
+    actions: [ActionInput!]!
+    branch: String
+  ): PHDocument!
+
+  """
+  Submits actions to a document and returns the job that will apply them.
+
+  Coerced exactly as `execute` is, so a malformed action is refused here rather
+  than surfacing later as a failed job. Returns the job rather than only its id,
+  so a caller has the status and the creation time it would otherwise have to
+  ask for; `result` is null until the job produces one.
+  """
+  executeAsync(
+    documentIdentifier: String!
+    actions: [ActionInput!]!
+    branch: String
+  ): JobInfo!
+
   # Apply actions to a document (synchronous)
   mutateDocument(
     documentIdentifier: String!
     actions: [JSONObject!]!
     view: ViewFilterInput
   ): PHDocument!
+    @deprecated(
+      reason: "Use execute. Actions here are untyped, so a malformed one is refused by a hand-written check rather than by the schema, and `view.scopes` is accepted but ignored."
+    )
 
   # Submit actions to a document (asynchronous)
   mutateDocumentAsync(
@@ -527,6 +562,9 @@ type Mutation {
     actions: [JSONObject!]!
     view: ViewFilterInput
   ): String!
+    @deprecated(
+      reason: "Use executeAsync, which is typed and returns the job rather than only its id."
+    )
 
   # Rename a document
   renameDocument(

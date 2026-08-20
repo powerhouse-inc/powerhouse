@@ -566,6 +566,49 @@ export class ReactorSubgraph extends BaseSubgraph {
         }
       },
 
+      execute: async (_parent, args, ctx: Context) => {
+        this.logger.debug("execute(@args)", args);
+        try {
+          // canMutate combines the write + operation checks per action.
+          const handle = await this.assertCanExecuteOperations(
+            args.documentIdentifier,
+            args.actions,
+            ctx,
+          );
+
+          return await resolvers.execute(this.reactorClient, {
+            ...args,
+            documentIdentifier: handle.fetchIdentifier,
+          });
+        } catch (error) {
+          this.logger.error("Error in execute(@args): @Error", args, error);
+          throw error;
+        }
+      },
+
+      executeAsync: async (_parent, args, ctx: Context) => {
+        this.logger.debug("executeAsync(@args)", args);
+        try {
+          const handle = await this.assertCanExecuteOperations(
+            args.documentIdentifier,
+            args.actions,
+            ctx,
+          );
+
+          return await resolvers.executeAsync(this.reactorClient, {
+            ...args,
+            documentIdentifier: handle.fetchIdentifier,
+          });
+        } catch (error) {
+          this.logger.error(
+            "Error in executeAsync(@args): @Error",
+            args,
+            error,
+          );
+          throw error;
+        }
+      },
+
       mutateDocument: async (_parent, args, ctx: Context) => {
         this.logger.debug("mutateDocument(@args)", args);
         try {
