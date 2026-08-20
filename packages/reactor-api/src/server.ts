@@ -7,10 +7,16 @@ import type {
   IDriveClient,
   IReadModel,
   IReactorClient,
+  InProcessReactorModule,
   IProcessorManager as IReactorProcessorManager,
   ISyncManager,
   InProcessReactorClientModule,
   ProcessorRecord as ReactorProcessorRecord,
+} from "@powerhousedao/reactor";
+import {
+  ModelReadGate,
+  readDecisionModel,
+  SyncScopeGate,
 } from "@powerhousedao/reactor";
 import {
   AttachmentBuilder,
@@ -283,6 +289,52 @@ function makeDbClosers(
 }
 
 /**
+ * The gate sync serving evaluates a document's own policy through, or undefined
+ * when there is none to evaluate.
+ *
+ * It is built here rather than taken off the reactor client because it is not
+ * the same gate reads use: it carries the host's closes-by-default setting,
+ * which withholds the domain scopes of a document nobody has policied yet. That
+ * answer belongs to serving alone -- replay must keep reading an uninitialized
+ * document in full -- so the two gates are deliberately separate objects over
+ * the same model.
+ *
+ * Undefined below `authEnforcement`, where the registered model ignores the auth
+ * scope: gating through it would serve every domain scope of a policied document
+ * to anyone, which is worse than not gating at all.
+ */
+function buildSyncServingGate(
+  reactorModule: InProcessReactorModule | undefined,
+  authorizationConfig: AuthorizationConfig,
+  logger: ILogger,
+): SyncScopeGate | undefined {
+  if (!reactorModule) {
+    return undefined;
+  }
+
+  const model = readDecisionModel(
+    reactorModule.featureFlags,
+    reactorModule.documentModelRegistry,
+  );
+  if (!model) {
+    return undefined;
+  }
+
+  return new SyncScopeGate(
+    new ModelReadGate(
+      model,
+      reactorModule.documentView,
+      reactorModule.featureFlags.authGroups,
+      reactorModule.operationIndex,
+      logger,
+      { withholdUninitialized: authorizationConfig.defaultProtection },
+    ),
+    reactorModule.documentView,
+    logger,
+  );
+}
+
+/**
  * Sets up the subgraph manager and registers subgraphs
  */
 async function setupGraphQLManager(
@@ -305,6 +357,7 @@ async function setupGraphQLManager(
   enableDocumentModelSubgraphs?: boolean,
   port?: number,
   reactorDriveClient?: IDriveClient,
+  syncServingGate?: SyncScopeGate,
 ): Promise<GraphQLManager> {
   const graphqlManager = new GraphQLManager(
     config.basePath,
@@ -325,6 +378,7 @@ async function setupGraphQLManager(
     port,
     authorizationService,
     reactorDriveClient,
+    syncServingGate,
   );
 
   await graphqlManager.init(subgraphs.core, authFetchMiddleware);
@@ -766,6 +820,7 @@ async function _setupAPI(
   documentModelRegistry?: IDocumentModelRegistry,
   dbClosers: Array<() => Promise<void>> = [],
   reactorDriveClient?: IDriveClient,
+  syncServingGate?: SyncScopeGate,
 ): Promise<API> {
   const hostModule: IReactorProcessorHostModule = {
     relationalDb,
@@ -921,6 +976,7 @@ async function _setupAPI(
     options.enableDocumentModelSubgraphs,
     port,
     reactorDriveClient,
+    syncServingGate,
   );
 
   // Set up event listeners
@@ -1157,6 +1213,11 @@ export async function initializeAndStartAPI(
     documentModelRegistry,
     dbClosers,
     reactorDriveClient,
+    buildSyncServingGate(
+      reactorClientModule.reactorModule,
+      authorizationConfig,
+      options.logger ?? defaultLogger,
+    ),
   );
 
   return {

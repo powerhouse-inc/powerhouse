@@ -4,6 +4,7 @@ import type {
   IReactorClient,
   IRelationalDb,
   ISyncManager,
+  SyncScopeGate,
 } from "@powerhousedao/reactor";
 import type {
   Context,
@@ -152,6 +153,7 @@ export class GraphQLManager {
     private readonly port: number = 4001,
     authorizationService?: IAuthorizationService,
     reactorDriveClient?: IDriveClient,
+    private readonly syncServingGate?: SyncScopeGate,
   ) {
     if (!authorizationService) {
       throw new Error("GraphQLManager requires an authorizationService");
@@ -344,6 +346,7 @@ export class GraphQLManager {
           path: this.path,
           documentPermissionService: this.documentPermissionService,
           authorizationService: this.authorizationService,
+          syncServingGate: this.syncServingGate,
         });
 
         await this.#addSubgraphInstance(subgraphInstance, supergraph, false);
@@ -439,6 +442,7 @@ export class GraphQLManager {
       path: this.path,
       documentPermissionService: this.documentPermissionService,
       authorizationService: this.authorizationService,
+      syncServingGate: this.syncServingGate,
     });
 
     return this.#addSubgraphInstance(subgraphInstance, supergraph, core);

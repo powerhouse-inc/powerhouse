@@ -3,6 +3,7 @@ import {
   type IReactorClient,
   type ISyncManager,
   type PagedResults,
+  type SyncScopeGate,
 } from "@powerhousedao/reactor";
 import type { PHDocument } from "@powerhousedao/shared/document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -69,8 +70,10 @@ describe("ReactorSubgraph Permission Checks", () => {
   const buildSubgraph = (
     authSvc: Partial<IAuthorizationService>,
     syncManager: Partial<ISyncManager> = {},
+    syncServingGate?: SyncScopeGate,
   ): ReactorSubgraph =>
     new ReactorSubgraph({
+      syncServingGate,
       reactorClient: mockReactorClient as IReactorClient,
       authorizationService: authSvc as IAuthorizationService,
       relationalDb: {} as any,
@@ -688,6 +691,132 @@ describe("ReactorSubgraph Permission Checks", () => {
       expect(mockAuthorizationService.canRead).not.toHaveBeenCalled();
       expect(syncManager.add).toHaveBeenCalledOnce();
     });
+
+    /**
+     * Which subject a channel answers to. It is settled at creation when the
+     * creator is authenticated, and left open otherwise for the first
+     * authenticated subject to settle.
+     */
+    describe("binding the channel it registers", () => {
+      const gate = {} as unknown as SyncScopeGate;
+
+      const registered = (boundAddress?: string) => ({
+        bindRemote: vi.fn().mockResolvedValue(undefined),
+        add: vi.fn().mockResolvedValue(undefined),
+        getById: vi.fn().mockReturnValue({
+          meta: {
+            id: "channel-1",
+            name: "remote-1",
+            collectionId: DriveCollectionId.forDrive("drive-1"),
+            options: { sinceTimestampUtcMs: "0", boundAddress },
+          },
+          channel: {
+            inbox: { ackOrdinal: 3 },
+            outbox: { items: [] },
+            deadLetter: { items: [] },
+          },
+        }),
+      });
+
+      beforeEach(() => {
+        vi.mocked(mockAuthorizationService.canRead!).mockResolvedValue(true);
+      });
+
+      it("binds a channel to the authenticated subject that creates it", async () => {
+        const syncManager = makeSyncManager();
+        const subgraph = buildSubgraph(
+          mockAuthorizationService,
+          syncManager,
+          gate,
+        );
+
+        await callTouchChannel(
+          subgraph,
+          createContext({ userAddress: "0xcreator" }),
+        );
+
+        expect(syncManager.add).toHaveBeenCalledWith(
+          "remote-1",
+          expect.anything(),
+          expect.anything(),
+          expect.anything(),
+          expect.objectContaining({ boundAddress: "0xcreator" }),
+          "channel-1",
+        );
+      });
+
+      it("leaves a channel created anonymously unbound", async () => {
+        vi.mocked(mockAuthorizationService.canRead!).mockResolvedValue(true);
+        const syncManager = makeSyncManager();
+        const subgraph = buildSubgraph(
+          mockAuthorizationService,
+          syncManager,
+          gate,
+        );
+
+        await callTouchChannel(subgraph, createContext({}));
+
+        expect(syncManager.add).toHaveBeenCalledWith(
+          "remote-1",
+          expect.anything(),
+          expect.anything(),
+          expect.anything(),
+          expect.objectContaining({ boundAddress: undefined }),
+          "channel-1",
+        );
+      });
+
+      it("adopts an unbound channel for the first authenticated subject", async () => {
+        const syncManager = registered(undefined);
+        const subgraph = buildSubgraph(
+          mockAuthorizationService,
+          syncManager,
+          gate,
+        );
+
+        await callTouchChannel(
+          subgraph,
+          createContext({ userAddress: "0xadopter" }),
+        );
+
+        expect(syncManager.bindRemote).toHaveBeenCalledWith(
+          "channel-1",
+          "0xadopter",
+        );
+      });
+
+      it("refuses a bound channel touched under another address", async () => {
+        const syncManager = registered("0xowner");
+        const subgraph = buildSubgraph(
+          mockAuthorizationService,
+          syncManager,
+          gate,
+        );
+
+        await expect(
+          callTouchChannel(subgraph, createContext({ userAddress: "0xother" })),
+        ).rejects.toThrow("Forbidden");
+      });
+
+      it("binds nothing below the flag, where there is no gate", async () => {
+        const syncManager = makeSyncManager();
+        const subgraph = buildSubgraph(mockAuthorizationService, syncManager);
+
+        await callTouchChannel(
+          subgraph,
+          createContext({ userAddress: "0xcreator" }),
+        );
+
+        expect(syncManager.add).toHaveBeenCalledWith(
+          "remote-1",
+          expect.anything(),
+          expect.anything(),
+          expect.anything(),
+          expect.objectContaining({ boundAddress: undefined }),
+          "channel-1",
+        );
+      });
+    });
   });
 
   // ============================================================
@@ -695,6 +824,7 @@ describe("ReactorSubgraph Permission Checks", () => {
   // ============================================================
   describe("Query: pollSyncEnvelopes", () => {
     const makeOutboxSyncOp = (documentId: string, ordinal: number) => ({
+      id: `sync-${documentId}-${ordinal}`,
       documentId,
       jobId: `job-${documentId}-${ordinal}`,
       jobDependencies: [] as string[],
@@ -731,6 +861,7 @@ describe("ReactorSubgraph Permission Checks", () => {
     });
 
     const makeDeadLetter = (documentId: string) => ({
+      id: `dl-${documentId}`,
       documentId,
       error: new Error("boom"),
       jobId: `dl-${documentId}`,
@@ -743,11 +874,15 @@ describe("ReactorSubgraph Permission Checks", () => {
       driveId: string,
       outbox: ReturnType<typeof makeOutboxSyncOp>[] = [],
       deadLetter: ReturnType<typeof makeDeadLetter>[] = [],
+      boundAddress?: string,
     ) => ({
+      bindRemote: vi.fn().mockResolvedValue(undefined),
       getById: vi.fn().mockReturnValue({
         meta: {
+          id: "channel-1",
           name: "remote-1",
           collectionId: DriveCollectionId.forDrive(driveId),
+          options: { sinceTimestampUtcMs: "0", boundAddress },
         },
         channel: {
           inbox: { ackOrdinal: 0 },
@@ -885,6 +1020,313 @@ describe("ReactorSubgraph Permission Checks", () => {
       const dlDocs = result.deadLetters.map((d: any) => d.documentId);
       expect(dlDocs).toContain("doc-1");
       expect(dlDocs).not.toContain("doc-secret");
+    });
+
+    /**
+     * The document's own policy, consulted alongside the host's tables rather
+     * than instead of them. What the policy adds is that a refusal withholds:
+     * the entry keeps its place in the outbox, so widening a grant serves it.
+     */
+    describe("with a serving gate", () => {
+      const gateServing = (served: Record<string, string[]>): SyncScopeGate =>
+        ({
+          scopePredicateById: vi
+            .fn()
+            .mockImplementation((documentId: string) =>
+              Promise.resolve((scope: string) =>
+                (served[documentId] ?? []).includes(scope),
+              ),
+            ),
+        }) as unknown as SyncScopeGate;
+
+      beforeEach(() => {
+        vi.mocked(mockAuthorizationService.canRead!).mockResolvedValue(true);
+      });
+
+      it("withholds an entry the document's policy does not serve", async () => {
+        const syncManager = makeSyncManager("drive-1", [
+          makeOutboxSyncOp("doc-open", 1),
+          makeOutboxSyncOp("doc-closed", 2),
+        ]);
+        const subgraph = buildSubgraph(
+          mockAuthorizationService,
+          syncManager,
+          gateServing({ "doc-open": ["global"], "doc-closed": ["auth"] }),
+        );
+
+        const result = await callPoll(
+          subgraph,
+          createContext({ userAddress: "0xreader" }),
+        );
+
+        expect(deliveredDocIds(result)).toEqual(["doc-open"]);
+      });
+
+      it("leaves the withheld entry's delivery counters untouched", async () => {
+        const withheld = makeOutboxSyncOp("doc-closed", 1);
+        const syncManager = makeSyncManager("drive-1", [withheld]);
+        const subgraph = buildSubgraph(
+          mockAuthorizationService,
+          syncManager,
+          gateServing({ "doc-closed": ["auth", "document"] }),
+        );
+
+        await callPoll(subgraph, createContext({ userAddress: "0xreader" }));
+
+        expect(withheld.deliveredCount).toBe(0);
+        expect(withheld.emittedCount).toBe(0);
+        expect(withheld.executed).not.toHaveBeenCalled();
+      });
+
+      it("serves the entry once the policy widens", async () => {
+        const entry = makeOutboxSyncOp("doc-later", 1);
+        const syncManager = makeSyncManager("drive-1", [entry]);
+        const closed = buildSubgraph(
+          mockAuthorizationService,
+          syncManager,
+          gateServing({ "doc-later": ["auth"] }),
+        );
+        const opened = buildSubgraph(
+          mockAuthorizationService,
+          syncManager,
+          gateServing({ "doc-later": ["auth", "global"] }),
+        );
+
+        const first = await callPoll(
+          closed,
+          createContext({ userAddress: "0xreader" }),
+        );
+        const second = await callPoll(
+          opened,
+          createContext({ userAddress: "0xreader" }),
+        );
+
+        expect(deliveredDocIds(first)).toEqual([]);
+        expect(deliveredDocIds(second)).toEqual(["doc-later"]);
+      });
+
+      it("decides for the polling subject, not for a requested one", async () => {
+        const gate = gateServing({ "doc-1": ["global"] });
+        const syncManager = makeSyncManager("drive-1", [
+          makeOutboxSyncOp("doc-1", 1),
+        ]);
+        const subgraph = buildSubgraph(
+          mockAuthorizationService,
+          syncManager,
+          gate,
+        );
+
+        await callPoll(
+          subgraph,
+          createContext({ userAddress: "0xreader", appKey: "did:key:zApp" }),
+        );
+
+        expect(gate.scopePredicateById).toHaveBeenCalledWith(
+          "doc-1",
+          { address: "0xreader", key: "did:key:zApp" },
+          "main",
+          undefined,
+        );
+      });
+
+      it("withholds a dead letter no scope of which is served", async () => {
+        const syncManager = makeSyncManager(
+          "drive-1",
+          [],
+          [makeDeadLetter("doc-1"), makeDeadLetter("doc-closed")],
+        );
+        const subgraph = buildSubgraph(
+          mockAuthorizationService,
+          syncManager,
+          gateServing({ "doc-1": ["global"], "doc-closed": [] }),
+        );
+
+        const result = await callPoll(
+          subgraph,
+          createContext({ userAddress: "0xreader" }),
+        );
+
+        expect(result.deadLetters.map((d: any) => d.documentId)).toEqual([
+          "doc-1",
+        ]);
+      });
+
+      it("intersects with the host's tables rather than replacing them", async () => {
+        vi.mocked(mockAuthorizationService.canRead!).mockImplementation(
+          (documentId: string) => Promise.resolve(documentId !== "doc-table"),
+        );
+        const syncManager = makeSyncManager("drive-1", [
+          makeOutboxSyncOp("doc-table", 1),
+          makeOutboxSyncOp("doc-open", 2),
+        ]);
+        const subgraph = buildSubgraph(
+          mockAuthorizationService,
+          syncManager,
+          gateServing({ "doc-table": ["global"], "doc-open": ["global"] }),
+        );
+
+        const result = await callPoll(
+          subgraph,
+          createContext({ userAddress: "0xreader" }),
+        );
+
+        expect(deliveredDocIds(result)).toEqual(["doc-open"]);
+      });
+
+      /**
+       * A channel accumulates what one subject is owed and carries that
+       * subject's cursor, so serving it to a second subject would hand over
+       * both.
+       */
+      describe("and a channel bound to an address", () => {
+        it("serves the address the channel belongs to", async () => {
+          const syncManager = makeSyncManager(
+            "drive-1",
+            [makeOutboxSyncOp("doc-1", 1)],
+            [],
+            "0xowner",
+          );
+          const subgraph = buildSubgraph(
+            mockAuthorizationService,
+            syncManager,
+            gateServing({ "doc-1": ["global"] }),
+          );
+
+          const result = await callPoll(
+            subgraph,
+            createContext({ userAddress: "0xowner" }),
+          );
+
+          expect(deliveredDocIds(result)).toEqual(["doc-1"]);
+        });
+
+        it("refuses a poll under a different address", async () => {
+          const syncManager = makeSyncManager(
+            "drive-1",
+            [makeOutboxSyncOp("doc-1", 1)],
+            [],
+            "0xowner",
+          );
+          const subgraph = buildSubgraph(
+            mockAuthorizationService,
+            syncManager,
+            gateServing({ "doc-1": ["global"] }),
+          );
+
+          await expect(
+            callPoll(subgraph, createContext({ userAddress: "0xthief" })),
+          ).rejects.toThrow("Forbidden");
+        });
+
+        it("refuses an anonymous poll once the channel is claimed", async () => {
+          const syncManager = makeSyncManager(
+            "drive-1",
+            [makeOutboxSyncOp("doc-1", 1)],
+            [],
+            "0xowner",
+          );
+          const subgraph = buildSubgraph(
+            mockAuthorizationService,
+            syncManager,
+            gateServing({ "doc-1": ["global"] }),
+          );
+
+          await expect(callPoll(subgraph, createContext({}))).rejects.toThrow(
+            "Forbidden",
+          );
+        });
+
+        it("adopts an unbound channel for the first authenticated poll", async () => {
+          const syncManager = makeSyncManager("drive-1", [
+            makeOutboxSyncOp("doc-1", 1),
+          ]);
+          const subgraph = buildSubgraph(
+            mockAuthorizationService,
+            syncManager,
+            gateServing({ "doc-1": ["global"] }),
+          );
+
+          await callPoll(subgraph, createContext({ userAddress: "0xadopter" }));
+
+          expect(syncManager.bindRemote).toHaveBeenCalledWith(
+            "channel-1",
+            "0xadopter",
+          );
+        });
+
+        /**
+         * Adoption is a write, so it must not happen for a caller the coarse
+         * drive check is about to refuse. Otherwise any authenticated address
+         * claims a channel it can never poll, and `bindRemote` refuses to
+         * rebind, so the rightful owner is locked out for good.
+         */
+        it("does not adopt a channel for a caller who cannot read the drive", async () => {
+          vi.mocked(mockAuthorizationService.canRead!).mockResolvedValue(false);
+          const syncManager = makeSyncManager("drive-1", [
+            makeOutboxSyncOp("doc-1", 1),
+          ]);
+          const subgraph = buildSubgraph(
+            mockAuthorizationService,
+            syncManager,
+            gateServing({ "doc-1": ["global"] }),
+          );
+
+          await expect(
+            callPoll(subgraph, createContext({ userAddress: "0xstranger" })),
+          ).rejects.toThrow();
+
+          expect(syncManager.bindRemote).not.toHaveBeenCalled();
+        });
+
+        it("serves an unbound channel to an anonymous subject through the gate", async () => {
+          vi.mocked(mockAuthorizationService.canRead!).mockResolvedValue(true);
+          const syncManager = makeSyncManager("drive-1", [
+            makeOutboxSyncOp("doc-public", 1),
+            makeOutboxSyncOp("doc-private", 2),
+          ]);
+          const subgraph = buildSubgraph(
+            mockAuthorizationService,
+            syncManager,
+            gateServing({ "doc-public": ["global"], "doc-private": ["auth"] }),
+          );
+
+          const result = await callPoll(subgraph, createContext({}));
+
+          expect(deliveredDocIds(result)).toEqual(["doc-public"]);
+          expect(syncManager.bindRemote).not.toHaveBeenCalled();
+        });
+
+        it("refuses nothing below the flag, where there is no gate", async () => {
+          const syncManager = makeSyncManager(
+            "drive-1",
+            [makeOutboxSyncOp("doc-1", 1)],
+            [],
+            "0xowner",
+          );
+          const subgraph = buildSubgraph(mockAuthorizationService, syncManager);
+
+          const result = await callPoll(
+            subgraph,
+            createContext({ userAddress: "0xthief" }),
+          );
+
+          expect(deliveredDocIds(result)).toEqual(["doc-1"]);
+        });
+      });
+
+      it("serves everything the tables allow when there is no gate", async () => {
+        const syncManager = makeSyncManager("drive-1", [
+          makeOutboxSyncOp("doc-1", 1),
+        ]);
+        const subgraph = buildSubgraph(mockAuthorizationService, syncManager);
+
+        const result = await callPoll(
+          subgraph,
+          createContext({ userAddress: "0xreader" }),
+        );
+
+        expect(deliveredDocIds(result)).toEqual(["doc-1"]);
+      });
     });
   });
 

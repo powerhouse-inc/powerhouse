@@ -1,6 +1,7 @@
 import { ConsoleLogger } from "document-model";
 import { DriveCollectionId } from "@powerhousedao/reactor";
 import { GraphQLError } from "graphql";
+import { ForbiddenError } from "../errors.js";
 import { withFilter } from "graphql-subscriptions";
 import { gql } from "graphql-tag";
 import schemaSource from "./schema.graphql";
@@ -104,6 +105,58 @@ export class ReactorSubgraph extends BaseSubgraph {
       );
       if (!canRead) forbidden.add(documentId);
     }
+  }
+
+  /**
+   * Enforces which subject a sync channel answers to, adopting an unclaimed one.
+   *
+   * A channel is a private queue: it names a collection, and it accumulates
+   * exactly the operations one subject is owed, so serving it to a second
+   * subject would hand over that subject's cursor as well as its contents. An
+   * unbound channel -- created anonymously, or created before binding existed --
+   * is claimed by the first authenticated subject to use it, and answers to that
+   * address alone thereafter. Adoption is safe precisely because serving
+   * withholds rather than consumes: before it was claimed the channel served
+   * only what an anonymous subject may read, and everything withheld is still
+   * queued for the adopter.
+   *
+   * The refusal is the shape a read denial takes, so a puller treats it as a
+   * signal to authenticate again rather than as a transport failure.
+   *
+   * Nothing is enforced or adopted without a serving gate. Below
+   * `authEnforcement` there is no policy being enforced for the channel to
+   * belong to, and refusing a poll there would break sync for no gain.
+   */
+  async #bindOrRefuseChannel(channelId: string, ctx: Context): Promise<void> {
+    if (!this.syncServingGate) return;
+
+    let remote;
+    try {
+      remote = this.syncManager.getById(channelId);
+    } catch {
+      // Not registered yet: touchChannel is about to create it, bound to its
+      // creator.
+      return;
+    }
+
+    const bound = remote.meta.options.boundAddress;
+    const address = ctx.user?.address;
+
+    if (bound === undefined) {
+      if (address !== undefined) {
+        await this.syncManager.bindRemote(channelId, address);
+      }
+      return;
+    }
+
+    if (bound !== address) {
+      throw new ForbiddenError("to poll this sync channel");
+    }
+  }
+
+  /** The address a channel created by this request belongs to, if any. */
+  #creatorBinding(ctx: Context): string | undefined {
+    return this.syncServingGate ? ctx.user?.address : undefined;
   }
 
   typeDefs = gql(schemaSource);
@@ -345,6 +398,12 @@ export class ReactorSubgraph extends BaseSubgraph {
             await this.assertCanReadCanonical(driveId, ctx);
           }
 
+          // Adoption is a write, so it comes after the drive check: a caller
+          // this collection refuses must not claim the channel on its way out.
+          // `bindRemote` will not rebind, so a stray claim would lock the
+          // rightful owner out for good. touchChannel orders these the same way.
+          await this.#bindOrRefuseChannel(args.channelId, ctx);
+
           // Tier 2/3: drop operations and dead letters for documents the caller
           // cannot read individually.
           const forbiddenIds = new Set<string>();
@@ -373,8 +432,30 @@ export class ReactorSubgraph extends BaseSubgraph {
             );
           }
 
+          // Tier 2/3 again, from the document's own policy this time. The two
+          // verdicts are intersected rather than swapped: every document
+          // predating the policy migration reads as uninitialized, so trusting
+          // the policy alone would open whatever the host's tables still
+          // protect. Held entries are withheld, not consumed, so a grant that
+          // widens later serves them whole on the next poll.
+          const heldOpIds = this.syncServingGate
+            ? await resolvers.collectHeldSyncOperations(
+                [
+                  ...remote.channel.outbox.items,
+                  ...remote.channel.deadLetter.items,
+                ],
+                this.syncServingGate,
+                this.viewSubject(ctx),
+              )
+            : new Set<string>();
+
           const { envelopes, ackOrdinal, deadLetters, hasMore } =
-            resolvers.pollSyncEnvelopes(this.syncManager, args, forbiddenIds);
+            resolvers.pollSyncEnvelopes(
+              this.syncManager,
+              args,
+              forbiddenIds,
+              heldOpIds,
+            );
           return {
             envelopes,
             ackOrdinal,
@@ -727,7 +808,13 @@ export class ReactorSubgraph extends BaseSubgraph {
             await this.assertCanReadCanonical(driveId, ctx);
           }
 
-          return await resolvers.touchChannel(this.syncManager, args);
+          await this.#bindOrRefuseChannel(args.input.id, ctx);
+
+          return await resolvers.touchChannel(
+            this.syncManager,
+            args,
+            this.#creatorBinding(ctx),
+          );
         } catch (error) {
           this.logger.error(
             "Error in touchChannel(@args): @Error",

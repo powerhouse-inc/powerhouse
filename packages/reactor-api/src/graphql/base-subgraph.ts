@@ -2,6 +2,7 @@ import type {
   IReactorClient,
   IRelationalDb,
   ISyncManager,
+  SyncScopeGate,
 } from "@powerhousedao/reactor";
 import type { AuthSubject } from "@powerhousedao/shared/document-model";
 import type {
@@ -44,6 +45,7 @@ export class BaseSubgraph implements ISubgraph {
   syncManager: ISyncManager;
   documentPermissionService?: DocumentPermissionService;
   authorizationService: IAuthorizationService;
+  syncServingGate?: SyncScopeGate;
 
   /**
    * Per-request memo of raw identifier to canonical document id, keyed on the
@@ -67,6 +69,7 @@ export class BaseSubgraph implements ISubgraph {
     this.syncManager = args.syncManager;
     this.documentPermissionService = args.documentPermissionService;
     this.authorizationService = args.authorizationService;
+    this.syncServingGate = args.syncServingGate;
     this.path = args.path ?? "";
   }
 

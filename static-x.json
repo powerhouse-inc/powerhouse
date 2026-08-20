@@ -3,7 +3,7 @@
     "claude-comments": {
       "novelty": "changed-lines",
       "tools": {
-        "ts/comments/long": { "level": "block", "input": { "maxLines": 2 } },
+        "ts/comments/long": { "level": "block", "input": { "maxLines": 1, "maxChars": 83 } },
         "ts/comments/llm-tells": "block"
       }
     }

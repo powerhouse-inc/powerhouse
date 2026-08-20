@@ -72,6 +72,7 @@ export interface SyncRemoteTable {
   pull_last_success_utc_ms: string | null;
   pull_last_failure_utc_ms: string | null;
   pull_failure_count: number;
+  bound_address: string | null;
   created_at: Generated<Date>;
   updated_at: Generated<Date>;
 }

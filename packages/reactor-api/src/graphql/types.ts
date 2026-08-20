@@ -3,6 +3,7 @@ import type {
   IReactorClient,
   IRelationalDb,
   ISyncManager,
+  SyncScopeGate,
 } from "@powerhousedao/reactor";
 import type { GraphQLManager } from "@powerhousedao/reactor-api";
 import type { DocumentDriveGlobalState } from "@powerhousedao/shared/document-drive";
@@ -49,6 +50,12 @@ export type SubgraphArgs = {
   syncManager: ISyncManager;
   documentPermissionService?: DocumentPermissionService;
   authorizationService: IAuthorizationService;
+  /**
+   * Evaluates a document's own policy when serving sync. Absent below
+   * `authEnforcement`, where there is no model to enforce and serving falls back
+   * to the host's permission tables alone.
+   */
+  syncServingGate?: SyncScopeGate;
   path?: string;
 };
 

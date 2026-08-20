@@ -203,6 +203,20 @@ export interface ISyncManager {
   ): Promise<Remote>;
 
   /**
+   * Binds a remote to an address, so only that address may poll it.
+   *
+   * This is adoption, not configuration: a channel created anonymously is
+   * unbound and serves whatever an anonymous subject may read, and the first
+   * authenticated subject to poll it claims it. Binding an already-bound remote
+   * to a different address is refused rather than allowed to steal it.
+   *
+   * @param id - The id of the remote to bind
+   * @param boundAddress - The address that henceforth owns the channel
+   * @throws Error if the remote does not exist, or is bound to another address
+   */
+  bindRemote(id: string, boundAddress: string): Promise<void>;
+
+  /**
    * Triggers a one-shot pull for the named remote. Useful for Manual poll-behavior
    * remotes, where the channel is registered but does not poll on a schedule.
    *

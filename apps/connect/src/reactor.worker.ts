@@ -432,6 +432,9 @@ const host = new ReactorHost({
         );
         return toWireRemote(remote);
       }
+      case "bindRemote":
+        await syncManager.bindRemote(args[0] as string, args[1] as string);
+        return undefined;
       case "remove":
         await syncManager.remove(args[0] as string);
         return undefined;

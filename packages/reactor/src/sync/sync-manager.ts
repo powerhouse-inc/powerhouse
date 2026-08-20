@@ -47,7 +47,11 @@ import type {
   RemoteStatus,
   SyncResult,
 } from "./types.js";
-import { ChannelErrorSource, SyncEventTypes } from "./types.js";
+import {
+  ChannelErrorSource,
+  SyncEventTypes,
+  SyncOperationStatus,
+} from "./types.js";
 import {
   batchOperationsByDocument,
   chunkSyncOperations,
@@ -65,6 +69,17 @@ import type { OperationWithContext } from "@powerhousedao/shared/document-model"
 export type SyncManagerConfig = {
   maxDeadLettersPerRemote: number;
   maxInboxBatchSize: number;
+  /**
+   * How many operations may sit in one remote's outbox waiting to be taken.
+   *
+   * Serving can withhold an entry indefinitely -- a subject whose policy never
+   * widens is served that entry never -- so without a bound the outbox is a leak
+   * with a policy behind it. Past the cap the newest entries are evicted rather
+   * than the oldest, which keeps what remains a contiguous run from the cursor,
+   * and evicting is not dropping: the cursor is held below the evicted floor, so
+   * the next refill derives them again from the operation index.
+   */
+  maxHeldOperationsPerRemote: number;
 };
 
 enum OutboxMode {
@@ -75,9 +90,17 @@ enum OutboxMode {
 const defaultSyncManagerConfig: SyncManagerConfig = {
   maxDeadLettersPerRemote: 100,
   maxInboxBatchSize: 32,
+  maxHeldOperationsPerRemote: 10000,
 };
 
 const PLAN_KEY_TO_JOB_UUID_CAP = 10000;
+
+/** Where a sync operation's run of ordinals begins. */
+function firstOrdinalOf(syncOp: SyncOperation): number {
+  return syncOp.operations.length > 0
+    ? syncOp.operations[0].context.ordinal
+    : 0;
+}
 
 export class SyncManager implements ISyncManager {
   private readonly logger: ILogger;
@@ -106,6 +129,7 @@ export class SyncManager implements ISyncManager {
     AbortController
   >();
   private readonly planKeyToJobUuid = new Map<string, string>();
+  private readonly evictedOutboxFloors = new Map<string, number>();
   private readonly lastEnqueuedJobIdByKey = new Map<string, string>();
   private inboxChunkChain: Promise<void> = Promise.resolve();
 
@@ -298,6 +322,36 @@ export class SyncManager implements ISyncManager {
       }
     }
     throw new Error(`Remote with id '${id}' does not exist`);
+  }
+
+  async bindRemote(id: string, boundAddress: string): Promise<void> {
+    const remote = this.getById(id);
+    const bound = remote.meta.options.boundAddress;
+
+    if (bound === boundAddress) {
+      return;
+    }
+
+    if (bound !== undefined) {
+      throw new Error(
+        `Remote with id '${id}' is already bound to another address`,
+      );
+    }
+
+    remote.meta.options = { ...remote.meta.options, boundAddress };
+
+    await this.remoteStorage.upsert({
+      id: remote.meta.id,
+      name: remote.meta.name,
+      collectionId: remote.meta.collectionId,
+      channelConfig: remote.meta.channelConfig,
+      filter: remote.meta.filter,
+      options: remote.meta.options,
+      status: {
+        push: createIdleHealth(),
+        pull: createIdleHealth(),
+      },
+    });
   }
 
   async add(
@@ -914,6 +968,87 @@ export class SyncManager implements ISyncManager {
     );
   }
 
+  /**
+   * Where the next outbox derivation starts: at the evicted floor when there is
+   * room to take those entries back, and at the caller's cursor otherwise.
+   *
+   * The floor is forgotten as it is folded in. If the refill overflows again the
+   * eviction records a new one, and if it does not, the entries are queued and
+   * the outbox itself holds the cursor down.
+   */
+  private refillOrdinal(remote: Remote, ackOrdinal: number): number {
+    const floor = this.evictedOutboxFloors.get(remote.meta.name);
+    if (floor === undefined) {
+      return ackOrdinal;
+    }
+
+    if (
+      this.outboxOperationCount(remote) >=
+      this.config.maxHeldOperationsPerRemote
+    ) {
+      return ackOrdinal;
+    }
+
+    this.evictedOutboxFloors.delete(remote.meta.name);
+    return Math.min(ackOrdinal, floor - 1);
+  }
+
+  /**
+   * Evicts the newest entries of an outbox that has grown past its bound.
+   *
+   * Only entries that have never been taken up for transport are eligible, which
+   * is what makes this a bound on withheld work rather than a way to drop
+   * something already in flight. One entry is always kept, so an outbox whose
+   * first entry is larger than the whole cap still makes progress.
+   */
+  private evictPastOutboxBound(remote: Remote): void {
+    const cap = this.config.maxHeldOperationsPerRemote;
+    const queued = remote.channel.outbox.items
+      .filter((syncOp) => syncOp.status === SyncOperationStatus.Unknown)
+      .sort((a, b) => firstOrdinalOf(a) - firstOrdinalOf(b));
+
+    let kept = 0;
+    let cut = queued.length;
+    for (let i = 0; i < queued.length; i++) {
+      const size = queued[i].operations.length;
+      if (i > 0 && kept + size > cap) {
+        cut = i;
+        break;
+      }
+      kept += size;
+    }
+
+    const evicted = queued.slice(cut);
+    if (evicted.length === 0) {
+      return;
+    }
+
+    const floor = firstOrdinalOf(evicted[0]);
+    const known = this.evictedOutboxFloors.get(remote.meta.name);
+    this.evictedOutboxFloors.set(
+      remote.meta.name,
+      known === undefined ? floor : Math.min(known, floor),
+    );
+
+    this.logger.warn(
+      "Outbox for @RemoteName is past its bound of @Cap operations; evicting @Count entries from ordinal @Floor, to be derived again once it drains",
+      remote.meta.name,
+      cap,
+      evicted.length,
+      floor,
+    );
+
+    remote.channel.outbox.remove(...evicted);
+  }
+
+  private outboxOperationCount(remote: Remote): number {
+    let count = 0;
+    for (const syncOp of remote.channel.outbox.items) {
+      count += syncOp.operations.length;
+    }
+    return count;
+  }
+
   private async updateOutbox(
     remote: Remote,
     ackOrdinal: number,
@@ -924,7 +1059,8 @@ export class SyncManager implements ISyncManager {
       ? AbortSignal.any([signal, this.abortController.signal])
       : this.abortController.signal;
 
-    let maxOrdinal = ackOrdinal;
+    const startOrdinal = this.refillOrdinal(remote, ackOrdinal);
+    let maxOrdinal = startOrdinal;
     const lastJobByDoc = new Map<string, string>();
     let prevChainJobId: string | undefined;
     const sinceTimestamp = remote.meta.options.sinceTimestampUtcMs;
@@ -968,11 +1104,12 @@ export class SyncManager implements ISyncManager {
       }
 
       remote.channel.outbox.add(...syncOps);
+      this.evictPastOutboxBound(remote);
     };
 
     let page = await this.operationIndex.find(
       remote.meta.collectionId.key,
-      ackOrdinal,
+      startOrdinal,
       { excludeSourceRemote: remote.meta.name },
       undefined,
       composedSignal,

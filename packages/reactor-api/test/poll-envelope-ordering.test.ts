@@ -170,3 +170,76 @@ describe("pollSyncEnvelopes ordering invariants", () => {
     });
   });
 });
+
+/**
+ * A hold in the middle of a dependency chain. The receiver honours a dependsOn
+ * only when it can resolve the key, and drops it otherwise, so a withheld link
+ * costs the served envelopes nothing: they keep their order and their declared
+ * dependencies, and the withheld one is served whole on a later poll.
+ */
+describe("holding an entry mid-chain", () => {
+  function chain(): {
+    syncManager: ISyncManager;
+    ops: Record<string, SyncOperation>;
+  } {
+    const j1 = makeSyncOp("j1", "doc-1", [101], "2026-01-01T11:00:00.000Z");
+    const j2 = makeSyncOp("j2", "doc-2", [102], "2026-01-01T11:00:01.000Z", [
+      "j1",
+    ]);
+    const j3 = makeSyncOp("j3", "doc-3", [103], "2026-01-01T11:00:02.000Z", [
+      "j2",
+    ]);
+    return {
+      syncManager: makeSyncManager([j1, j2, j3]),
+      ops: { j1, j2, j3 },
+    };
+  }
+
+  it("keeps the served envelopes in ordinal order", () => {
+    const result = pollSyncEnvelopes(
+      chain().syncManager,
+      { channelId: CHANNEL_ID, outboxAck: 0, outboxLatest: 100 },
+      new Set(),
+      new Set(["j2"]),
+    );
+
+    expect(
+      result.envelopes.map(
+        (env) => env.operations[0].context.ordinal as number,
+      ),
+    ).toEqual([101, 103]);
+  });
+
+  it("leaves the surviving dependsOn pointing at the withheld key", () => {
+    const result = pollSyncEnvelopes(
+      chain().syncManager,
+      { channelId: CHANNEL_ID, outboxAck: 0, outboxLatest: 100 },
+      new Set(),
+      new Set(["j2"]),
+    );
+
+    const last = result.envelopes[result.envelopes.length - 1];
+    expect(last.key).toBe("j3");
+    expect(last.dependsOn).toEqual(["j2"]);
+  });
+
+  it("serves the withheld entry whole once the hold lifts", () => {
+    const { syncManager, ops } = chain();
+
+    pollSyncEnvelopes(
+      syncManager,
+      { channelId: CHANNEL_ID, outboxAck: 0, outboxLatest: 100 },
+      new Set(),
+      new Set(["j2"]),
+    );
+    const after = pollSyncEnvelopes(syncManager, {
+      channelId: CHANNEL_ID,
+      outboxAck: 0,
+      outboxLatest: 100,
+    });
+
+    expect(ops.j2.deliveredCount).toBe(0);
+    const keys = after.envelopes.map((env) => env.key);
+    expect(keys).toContain("j2");
+  });
+});

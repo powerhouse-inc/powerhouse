@@ -32,6 +32,23 @@ export const ALWAYS_READABLE_SCOPES: ReadonlySet<string> = new Set([
 ]);
 
 /**
+ * How a gate treats a document nobody has written a policy onto.
+ *
+ * A host that closes by default owes an uninitialized document the same silence
+ * it owes a denied one, because "no policy yet" and "a policy that allows this"
+ * are indistinguishable to a replica that never receives the scope. The option
+ * exists because that answer belongs to the host serving the read, not to the
+ * document: replay must keep reading an uninitialized document in full, or a
+ * replica would refuse to rebuild state it already holds.
+ */
+export type ReadGateOptions = {
+  withholdUninitialized: boolean;
+};
+
+/** What a gate does with an uninitialized policy when told nothing. */
+const OPEN_BY_DEFAULT: ReadGateOptions = { withholdUninitialized: false };
+
+/**
  * The branch a group is read on. A group's member list lives on its main
  * branch whatever branch the document naming it is on, and the reference
  * relation records no branch of its own.
@@ -238,6 +255,7 @@ export class ModelReadGate implements IReadGate {
     private readonly servesGroups: boolean,
     private readonly operationIndex?: IOperationIndex,
     private readonly logger?: ILogger,
+    private readonly options: ReadGateOptions = OPEN_BY_DEFAULT,
   ) {}
 
   /**
@@ -415,11 +433,15 @@ export class ModelReadGate implements IReadGate {
   /**
    * What this document's own policy says, with no group serving applied.
    *
-   * An unpoliced document is readable in full, which is the common case and the
-   * one worth answering without building anything. The test is the one
-   * `evaluate` makes: a legacy `{}` auth scope and version 0 both mean
-   * uninitialized, and "no grants" does not, because a policy with a version and
-   * an empty grant list denies everything.
+   * An unpoliced document is readable in full unless the host closes by default,
+   * and either way it is the common case and the one worth answering without
+   * building anything. The test is the one `evaluate` makes: a legacy `{}` auth
+   * scope and version 0 both mean uninitialized, and "no grants" does not,
+   * because a policy with a version and an empty grant list denies everything.
+   *
+   * Closing here rather than around the gate is what keeps a policy able to
+   * publish an unpoliced group it names: the referencer walk asks this question
+   * of the referencing document, whose real policy answers it.
    */
   private async ownPolicyPredicate(
     document: PHDocument,
@@ -430,7 +452,9 @@ export class ModelReadGate implements IReadGate {
     const auth = authOf(document);
 
     if (!auth || !auth.version) {
-      return () => true;
+      return this.options.withholdUninitialized
+        ? (scope: string) => ALWAYS_READABLE_SCOPES.has(scope)
+        : () => true;
     }
 
     const target = { documentId: document.header.id, branch };

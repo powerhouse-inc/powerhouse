@@ -16,6 +16,7 @@ import {
   type SearchFilter,
   syncOperationErrorType,
   type SyncOperation,
+  type SyncScopeGate,
   type ViewFilter,
 } from "@powerhousedao/reactor";
 import type {
@@ -1058,6 +1059,13 @@ export async function deleteDocuments(
   }
 }
 
+/**
+ * Registers a sync channel, or reports the state of one already registered.
+ *
+ * `boundAddress` claims a channel at creation for the subject that created it.
+ * An anonymously created channel is left unbound, which is not a permission but
+ * an unanswered question: the first authenticated subject to use it adopts it.
+ */
 export async function touchChannel(
   syncManager: ISyncManager,
   args: {
@@ -1073,6 +1081,7 @@ export async function touchChannel(
       sinceTimestampUtcMs: string;
     };
   },
+  boundAddress?: string,
 ): Promise<{ success: boolean; ackOrdinal: number }> {
   try {
     const remote = syncManager.getById(args.input.id);
@@ -1093,6 +1102,7 @@ export async function touchChannel(
 
   const options = {
     sinceTimestampUtcMs: args.input.sinceTimestampUtcMs,
+    boundAddress,
   };
 
   try {
@@ -1117,8 +1127,65 @@ export async function touchChannel(
 }
 
 /**
+ * The sync operations in `syncOps` this subject may not be served.
+ *
+ * A sync operation is one document, one branch and (from the outbox) one scope,
+ * so the answer is per entry rather than per operation: an entry is withheld
+ * whole or served whole, which is what keeps a scope's operation sequence
+ * unbroken for whoever does receive it. A dead letter can name several scopes,
+ * and is withheld only when the policy serves none of them -- the metadata
+ * scopes are readable by every holder, so in practice a dead letter naming one
+ * is always served.
+ *
+ * The policy is read once per document and branch, and the memo lives no longer
+ * than this call: a poll must not answer from a policy that changed between
+ * polls, since the widening case is exactly the one holding exists to serve.
+ *
+ * A read that fails for any reason other than the document being absent is
+ * allowed to propagate. The poll then fails, the puller retries, and nothing is
+ * served in the meantime -- which is the safe direction, and a visible one.
+ */
+export async function collectHeldSyncOperations(
+  syncOps: ReadonlyArray<SyncOperation>,
+  gate: SyncScopeGate,
+  subject: AuthSubject,
+  signal?: AbortSignal,
+): Promise<Set<string>> {
+  const held = new Set<string>();
+  const predicates = new Map<string, Promise<(scope: string) => boolean>>();
+
+  for (const syncOp of syncOps) {
+    const key = `${syncOp.documentId}\u0000${syncOp.branch}`;
+    let predicate = predicates.get(key);
+    if (!predicate) {
+      predicate = gate.scopePredicateById(
+        syncOp.documentId,
+        subject,
+        syncOp.branch,
+        signal,
+      );
+      predicates.set(key, predicate);
+    }
+
+    const readable = await predicate;
+    if (!syncOp.scopes.some((scope) => readable(scope))) {
+      held.add(syncOp.id);
+    }
+  }
+
+  return held;
+}
+
+/**
  * Polls the switchboard for new sync envelopes and acknowledges previously
  * received operations.
+ *
+ * `forbiddenIds` and `heldOpIds` are two different refusals. A forbidden
+ * document is consumed: its delivery counters are advanced as though it had
+ * been sent, so it is never reconsidered. A held sync operation is withheld:
+ * nothing about it is touched, so a policy that later widens serves it whole on
+ * a subsequent poll. Which one applies is the caller's decision, and the two
+ * are intersected, so a document refused either way is not served.
  *
  * Ordinal frames of reference:
  * - `outboxAck` / `outboxLatest`: switchboard's ordinals (used to trim/filter
@@ -1135,6 +1202,7 @@ export function pollSyncEnvelopes(
     outboxLatest: number;
   },
   forbiddenIds: ReadonlySet<string> = new Set(),
+  heldOpIds: ReadonlySet<string> = new Set(),
 ): {
   envelopes: any[];
   ackOrdinal: number;
@@ -1162,7 +1230,10 @@ export function pollSyncEnvelopes(
   // outside this channel's collection, so they are filtered by the caller's read
   // access independently of the outbox (see the poll resolver in subgraph.ts).
   const deadLetters = remote.channel.deadLetter.items
-    .filter((syncOp) => !forbiddenIds.has(syncOp.documentId))
+    .filter(
+      (syncOp) =>
+        !forbiddenIds.has(syncOp.documentId) && !heldOpIds.has(syncOp.id),
+    )
     .map((syncOp) => ({
       documentId: syncOp.documentId,
       error: syncOp.error?.message ?? "Unknown error",
@@ -1247,6 +1318,13 @@ export function pollSyncEnvelopes(
       hasMore = true;
       break;
     }
+
+    // Before the delivery cursor is read or written, because holding must leave
+    // no trace: the counters are what a later ack sweep consults to decide the
+    // entry was delivered and may be evicted. A hold sets no hasMore either --
+    // there is no later page that would serve it, so claiming one would spin the
+    // puller.
+    if (heldOpIds.has(syncOp.id)) continue;
 
     // Advance the per-syncOp delivery cursor past leading ops the client has
     // both received (outboxLatest) and we have previously emitted
