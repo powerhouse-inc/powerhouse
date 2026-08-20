@@ -49,7 +49,7 @@ const CREATE_DOCUMENT_MUTATION = `
 `;
 
 const MUTATE_DOCUMENT_MUTATION = `
-  mutation MutateDocument($documentIdentifier: String!, $actions: [ActionInput!]!) {
+  mutation MutateDocument($documentIdentifier: String!, $actions: [JSONObject!]!) {
     mutateDocument(documentIdentifier: $documentIdentifier, actions: $actions) {
       id
       revisionsList { scope revision }

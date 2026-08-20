@@ -1,7 +1,6 @@
 import { gql } from "graphql-tag";
 import {
   PhDocumentFieldsFragmentDoc,
-  type ActionInput,
   type PhDocumentFieldsFragment,
   type Scalars,
   type ViewFilterInput,
@@ -67,7 +66,7 @@ export const ReactorOperationFieldsFragmentDoc = gql`
 export const MutateDocumentWithOperationsDocument = gql`
   mutation MutateDocumentWithOperations(
     $documentIdentifier: String!
-    $actions: [ActionInput!]!
+    $actions: [JSONObject!]!
     $view: ViewFilterInput
     $sinceRevision: Int
     $scopes: [String!]
@@ -98,7 +97,7 @@ export const MutateDocumentWithOperationsDocument = gql`
 
 export type MutateDocumentWithOperationsVariables = {
   documentIdentifier: Scalars["String"]["input"];
-  actions: ReadonlyArray<ActionInput>;
+  actions: ReadonlyArray<Scalars["JSONObject"]["input"]>;
   view?: ViewFilterInput;
   sinceRevision?: Scalars["Int"]["input"];
   scopes?: ReadonlyArray<Scalars["String"]["input"]>;

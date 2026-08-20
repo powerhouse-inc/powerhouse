@@ -9,7 +9,6 @@ import type {
   RemoteOperation,
   RemoteOperationResultPage,
 } from "./types.js";
-import type { ActionInput } from "../graphql/gen/schema.js";
 
 /**
  * Thin facade over the GraphQL SDK for remote document operations.
@@ -319,16 +318,10 @@ export class RemoteClient implements IRemoteClient {
     return { operationsByScope };
   }
 
-  /**
-   * Push actions to an existing document via MutateDocument.
-   *
-   * Takes the wire shape rather than an in-process `Action`: a signature is a
-   * tuple in one and a string in the other, so the caller projects before it
-   * gets here.
-   */
+  /** Push actions to an existing document via MutateDocument. */
   async pushActions(
     documentIdentifier: string,
-    actions: ReadonlyArray<ActionInput>,
+    actions: ReadonlyArray<NonNullable<unknown>>,
     branch?: string,
   ): Promise<RemoteDocumentData> {
     const result = await this.client.MutateDocument({

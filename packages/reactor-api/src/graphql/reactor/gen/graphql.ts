@@ -231,22 +231,7 @@ export type Mutation = {
   readonly deleteDocument: Scalars["Boolean"]["output"];
   readonly deleteDocuments: Scalars["Boolean"]["output"];
   readonly moveRelationship: MoveRelationshipResult;
-  /**
-   * Applies actions to a document and waits for the result.
-   *
-   * Each action is coerced against `ActionInput`, so one with no id is refused
-   * before any work starts. The id is not decoration: it is hashed into the
-   * operation id and replay dedupes by it, so an action without one collapses
-   * every id-less operation on a document, scope and branch onto a single derived
-   * operation id.
-   */
   readonly mutateDocument: PhDocument;
-  /**
-   * Submits actions to a document and returns the id of the job applying them.
-   *
-   * Coerced exactly as `mutateDocument` is, so a malformed action is refused here
-   * rather than surfacing later as a failed job.
-   */
   readonly mutateDocumentAsync: Scalars["String"]["output"];
   readonly pushSyncEnvelopes: Scalars["Boolean"]["output"];
   readonly removeRelationship: PhDocument;
@@ -291,13 +276,13 @@ export type MutationMoveRelationshipArgs = {
 };
 
 export type MutationMutateDocumentArgs = {
-  actions: ReadonlyArray<ActionInput>;
+  actions: ReadonlyArray<Scalars["JSONObject"]["input"]>;
   documentIdentifier: Scalars["String"]["input"];
   view?: InputMaybe<ViewFilterInput>;
 };
 
 export type MutationMutateDocumentAsyncArgs = {
-  actions: ReadonlyArray<ActionInput>;
+  actions: ReadonlyArray<Scalars["JSONObject"]["input"]>;
   documentIdentifier: Scalars["String"]["input"];
   view?: InputMaybe<ViewFilterInput>;
 };
@@ -1020,7 +1005,7 @@ export type CreateEmptyDocumentMutation = {
 
 export type MutateDocumentMutationVariables = Exact<{
   documentIdentifier: Scalars["String"]["input"];
-  actions: ReadonlyArray<ActionInput>;
+  actions: ReadonlyArray<Scalars["JSONObject"]["input"]>;
   view?: InputMaybe<ViewFilterInput>;
 }>;
 
@@ -1042,7 +1027,7 @@ export type MutateDocumentMutation = {
 
 export type MutateDocumentAsyncMutationVariables = Exact<{
   documentIdentifier: Scalars["String"]["input"];
-  actions: ReadonlyArray<ActionInput>;
+  actions: ReadonlyArray<Scalars["JSONObject"]["input"]>;
   view?: InputMaybe<ViewFilterInput>;
 }>;
 
@@ -2761,7 +2746,7 @@ export const CreateEmptyDocumentDocument = gql`
 export const MutateDocumentDocument = gql`
   mutation MutateDocument(
     $documentIdentifier: String!
-    $actions: [ActionInput!]!
+    $actions: [JSONObject!]!
     $view: ViewFilterInput
   ) {
     mutateDocument(
@@ -2777,7 +2762,7 @@ export const MutateDocumentDocument = gql`
 export const MutateDocumentAsyncDocument = gql`
   mutation MutateDocumentAsync(
     $documentIdentifier: String!
-    $actions: [ActionInput!]!
+    $actions: [JSONObject!]!
     $view: ViewFilterInput
   ) {
     mutateDocumentAsync(

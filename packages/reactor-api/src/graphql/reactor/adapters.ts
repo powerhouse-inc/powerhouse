@@ -181,11 +181,14 @@ export function toMutableArray<T>(
 /**
  * Validates that an incoming value has the structure of an Action.
  *
- * Redundant for anything arriving through the schema, which coerces against
- * `ActionInput` and rejects a missing field before a resolver runs. Kept because
- * the resolvers are exported and called directly, and because this is the check
- * that names the id: an action without one is hashed into an operation id
+ * This is the whole guard on the way in. `mutateDocument` takes untyped JSON, so
+ * nothing has checked these fields before a resolver runs, and the id in
+ * particular has to be checked here: it is hashed into the operation id and
+ * replay dedupes by it, so an action without one is stored under an operation id
  * shared by every id-less operation on the same document, scope and branch.
+ *
+ * The storage constraint would refuse such a row anyway, but only after a job
+ * has been enqueued and failed. Refusing here answers the caller instead.
  */
 function validateActionStructure(obj: unknown): obj is Action {
   if (!obj || typeof obj !== "object") {

@@ -5,7 +5,6 @@ import {
 } from "@powerhousedao/reactor";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import {
-  toTransportAction,
   type DocumentModelModule,
   type PHDocument,
 } from "@powerhousedao/shared/document-model";
@@ -349,14 +348,11 @@ describe("ReactorSubgraph Mutation Resolvers", () => {
       const testDoc = createTestDocument();
       await module.client.create(testDoc);
 
-      // Projected as a client sends them: the resolver takes the wire shape,
-      // which is not the in-process Action - a signature is a tuple there and a
-      // string here.
       const actions = [
         documentModelDocumentModelModule.actions.setModelName({
           name: "New Model Name",
         }),
-      ].map(toTransportAction);
+      ];
 
       const result = await resolvers.mutateDocument(module.client, {
         documentIdentifier: testDoc.header.id,

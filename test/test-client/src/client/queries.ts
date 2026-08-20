@@ -34,7 +34,7 @@ export const CREATE_EMPTY_DOCUMENT_MUTATION = `
 `;
 
 export const MUTATE_DOCUMENT_MUTATION = `
-  mutation MutateDocument($documentIdentifier: String!, $actions: [ActionInput!]!) {
+  mutation MutateDocument($documentIdentifier: String!, $actions: [JSONObject!]!) {
     mutateDocument(documentIdentifier: $documentIdentifier, actions: $actions) {
       id
       name

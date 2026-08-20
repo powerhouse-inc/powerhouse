@@ -244,7 +244,7 @@ mutation CreateEmptyDocument(
 
 mutation MutateDocument(
   $documentIdentifier: String!
-  $actions: [ActionInput!]!
+  $actions: [JSONObject!]!
   $view: ViewFilterInput
 ) {
   mutateDocument(
@@ -258,7 +258,7 @@ mutation MutateDocument(
 
 mutation MutateDocumentAsync(
   $documentIdentifier: String!
-  $actions: [ActionInput!]!
+  $actions: [JSONObject!]!
   $view: ViewFilterInput
 ) {
   mutateDocumentAsync(

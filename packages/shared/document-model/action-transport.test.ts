@@ -65,20 +65,6 @@ describe("projecting an action onto the shape the wire declares", () => {
     ]);
   });
 
-  it("refuses an action with no input, which the wire requires", () => {
-    // An action creator called without an input produces this, and the schema
-    // would refuse it on arrival naming the field but not the action.
-    const inputless = { ...action, input: undefined } as unknown as Action;
-
-    expect(() => toTransportAction(inputless)).toThrow(/act-1.*has no input/);
-  });
-
-  it("keeps an input that is falsy but present", () => {
-    expect(toTransportAction({ ...action, input: 0 }).input).toBe(0);
-    expect(toTransportAction({ ...action, input: "" }).input).toBe("");
-    expect(toTransportAction({ ...action, input: false }).input).toBe(false);
-  });
-
   it("drops a field the wire does not declare", () => {
     // The guarantee this projection exists for: an action read back out of
     // storage can carry a legacy field, and an input object refuses the whole

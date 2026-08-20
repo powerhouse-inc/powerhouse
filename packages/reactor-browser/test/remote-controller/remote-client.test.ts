@@ -182,16 +182,8 @@ describe("RemoteClient", () => {
       const mock = createMockClient();
       const client = new RemoteClient(mock);
 
-      // Carries an id and a timestamp because the mutation's input requires
-      // them; the fixture used to omit both, which is the hole this closes.
       const actions = [
-        {
-          id: "act-1",
-          type: "SET_NAME",
-          input: { name: "test" },
-          scope: "global",
-          timestampUtcMs: "2026-01-01T00:00:00.000Z",
-        },
+        { type: "SET_NAME", input: { name: "test" }, scope: "global" },
       ];
       await client.pushActions("doc-1", actions);
 

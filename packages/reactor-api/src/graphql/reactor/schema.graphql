@@ -508,30 +508,17 @@ type Mutation {
     parentIdentifier: String
   ): PHDocument!
 
-  """
-  Applies actions to a document and waits for the result.
-
-  Each action is coerced against `ActionInput`, so one with no id is refused
-  before any work starts. The id is not decoration: it is hashed into the
-  operation id and replay dedupes by it, so an action without one collapses
-  every id-less operation on a document, scope and branch onto a single derived
-  operation id.
-  """
+  # Apply actions to a document (synchronous)
   mutateDocument(
     documentIdentifier: String!
-    actions: [ActionInput!]!
+    actions: [JSONObject!]!
     view: ViewFilterInput
   ): PHDocument!
 
-  """
-  Submits actions to a document and returns the id of the job applying them.
-
-  Coerced exactly as `mutateDocument` is, so a malformed action is refused here
-  rather than surfacing later as a failed job.
-  """
+  # Submit actions to a document (asynchronous)
   mutateDocumentAsync(
     documentIdentifier: String!
-    actions: [ActionInput!]!
+    actions: [JSONObject!]!
     view: ViewFilterInput
   ): String!
 

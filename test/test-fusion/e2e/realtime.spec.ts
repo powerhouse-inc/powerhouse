@@ -12,7 +12,7 @@ import { SWITCHBOARD_URL } from "../playwright.config";
 // re-renders `useDocument`.
 
 const MUTATE_DOCUMENT = `
-  mutation MutateDocument($identifier: String!, $actions: [ActionInput!]!) {
+  mutation MutateDocument($identifier: String!, $actions: [JSONObject!]!) {
     mutateDocument(documentIdentifier: $identifier, actions: $actions) {
       id
       revisionsList {
