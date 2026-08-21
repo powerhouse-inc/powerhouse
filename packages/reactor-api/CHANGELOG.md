@@ -1,3 +1,34 @@
+## 6.2.2-dev.54 (2026-08-21)
+
+### 🚀 Features
+
+- **reactor-api:** add execute and executeAsync, deprecating the untyped pair ([7af2c4477](https://github.com/powerhouse-inc/powerhouse/commit/7af2c4477))
+- ⚠️  **reactor-api:** type the actions mutateDocument accepts ([1b9adbe2a](https://github.com/powerhouse-inc/powerhouse/commit/1b9adbe2a))
+- **reactor-api:** adopt a channel on first authenticated poll, refuse the rest ([d8dab37f5](https://github.com/powerhouse-inc/powerhouse/commit/d8dab37f5))
+- **reactor-api:** wire the serving gate from host config into the poll resolver ([646d51e51](https://github.com/powerhouse-inc/powerhouse/commit/646d51e51))
+- **reactor-api:** collect the outbox entries a poll's subject may not read ([ac994ac4e](https://github.com/powerhouse-inc/powerhouse/commit/ac994ac4e))
+- **reactor-api:** hold the outbox entries pollSyncEnvelopes is handed ([188b75f63](https://github.com/powerhouse-inc/powerhouse/commit/188b75f63))
+
+### 🩹 Fixes
+
+- **reactor-api:** let a job that has not finished be reported ([692d486a1](https://github.com/powerhouse-inc/powerhouse/commit/692d486a1))
+- **reactor-api:** restore a submitted action's signatures to tuples ([e53a489b9](https://github.com/powerhouse-inc/powerhouse/commit/e53a489b9))
+- **reactor-api:** declare the whole action context a caller submits ([70a7cc7b6](https://github.com/powerhouse-inc/powerhouse/commit/70a7cc7b6))
+- **reactor,reactor-api:** report an unservable operation instead of killing the channel ([e0d838251](https://github.com/powerhouse-inc/powerhouse/commit/e0d838251))
+- **reactor-api:** adopt a channel only after the drive check passes ([50a94b75e](https://github.com/powerhouse-inc/powerhouse/commit/50a94b75e))
+- **reactor-api:** migrate the restored fixture in the hub-spoke test ([09bcfc39b](https://github.com/powerhouse-inc/powerhouse/commit/09bcfc39b))
+- **reactor-api:** type the drive reads in the stage 8 exit test ([82b0f8b6c](https://github.com/powerhouse-inc/powerhouse/commit/82b0f8b6c))
+
+### ⚠️  Breaking Changes
+
+- **reactor-api:** type the actions mutateDocument accepts  ([1b9adbe2a](https://github.com/powerhouse-inc/powerhouse/commit/1b9adbe2a))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5
+- Claude Opus 5
+
 ## 6.2.2-dev.53 (2026-08-20)
 
 This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.

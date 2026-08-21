@@ -1,3 +1,31 @@
+## 6.2.2-dev.54 (2026-08-21)
+
+### 🚀 Features
+
+- ⚠️  **reactor-api:** type the actions mutateDocument accepts ([1b9adbe2a](https://github.com/powerhouse-inc/powerhouse/commit/1b9adbe2a))
+- **reactor:** make an action with no id unstorable ([3ea262861](https://github.com/powerhouse-inc/powerhouse/commit/3ea262861))
+- **reactor:** record the address a sync channel is bound to ([907b19197](https://github.com/powerhouse-inc/powerhouse/commit/907b19197))
+- **reactor:** bound the entries one remote's outbox holds ([6d83e09d6](https://github.com/powerhouse-inc/powerhouse/commit/6d83e09d6))
+- **reactor:** resolve a read predicate from a document id ([050fd266a](https://github.com/powerhouse-inc/powerhouse/commit/050fd266a))
+- **reactor:** withhold uninitialized policies when the gate is told to ([6273ec76a](https://github.com/powerhouse-inc/powerhouse/commit/6273ec76a))
+
+### 🩹 Fixes
+
+- **reactor-browser:** send an action in the shape the wire declares ([a09419fc6](https://github.com/powerhouse-inc/powerhouse/commit/a09419fc6))
+- **reactor,reactor-api:** report an unservable operation instead of killing the channel ([e0d838251](https://github.com/powerhouse-inc/powerhouse/commit/e0d838251))
+- **reactor:** stop a deferred job from hanging its caller forever ([df5bc377d](https://github.com/powerhouse-inc/powerhouse/commit/df5bc377d))
+- **reactor:** keep the outbox cursor behind every unserved entry ([e89846dc2](https://github.com/powerhouse-inc/powerhouse/commit/e89846dc2))
+
+### ⚠️  Breaking Changes
+
+- **reactor-api:** type the actions mutateDocument accepts  ([1b9adbe2a](https://github.com/powerhouse-inc/powerhouse/commit/1b9adbe2a))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5
+- Claude Opus 5
+
 ## 6.2.2-dev.53 (2026-08-20)
 
 This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.

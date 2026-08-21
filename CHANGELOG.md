@@ -1,3 +1,47 @@
+## 6.2.2-dev.54 (2026-08-21)
+
+### 🚀 Features
+
+- sync serving evaluates the document's auth policy (auth-scope stage 8) ([#2915](https://github.com/powerhouse-inc/powerhouse/pull/2915))
+- **reactor:** withhold uninitialized policies when the gate is told to ([6273ec76a](https://github.com/powerhouse-inc/powerhouse/commit/6273ec76a))
+- **reactor:** resolve a read predicate from a document id ([050fd266a](https://github.com/powerhouse-inc/powerhouse/commit/050fd266a))
+- **reactor:** bound the entries one remote's outbox holds ([6d83e09d6](https://github.com/powerhouse-inc/powerhouse/commit/6d83e09d6))
+- **reactor:** record the address a sync channel is bound to ([907b19197](https://github.com/powerhouse-inc/powerhouse/commit/907b19197))
+- **reactor:** make an action with no id unstorable ([3ea262861](https://github.com/powerhouse-inc/powerhouse/commit/3ea262861))
+- **reactor-api:** hold the outbox entries pollSyncEnvelopes is handed ([188b75f63](https://github.com/powerhouse-inc/powerhouse/commit/188b75f63))
+- **reactor-api:** collect the outbox entries a poll's subject may not read ([ac994ac4e](https://github.com/powerhouse-inc/powerhouse/commit/ac994ac4e))
+- **reactor-api:** wire the serving gate from host config into the poll resolver ([646d51e51](https://github.com/powerhouse-inc/powerhouse/commit/646d51e51))
+- **reactor-api:** adopt a channel on first authenticated poll, refuse the rest ([d8dab37f5](https://github.com/powerhouse-inc/powerhouse/commit/d8dab37f5))
+- ⚠️  **reactor-api:** type the actions mutateDocument accepts ([1b9adbe2a](https://github.com/powerhouse-inc/powerhouse/commit/1b9adbe2a))
+- **reactor-api:** add execute and executeAsync, deprecating the untyped pair ([7af2c4477](https://github.com/powerhouse-inc/powerhouse/commit/7af2c4477))
+- **reactor-api:** add execute and executeAsync, deprecating the untyped pair ([#2919](https://github.com/powerhouse-inc/powerhouse/pull/2919))
+
+### 🩹 Fixes
+
+- refuse an action with no id at every layer it can reach ([#2918](https://github.com/powerhouse-inc/powerhouse/pull/2918))
+- **reactor:** keep the outbox cursor behind every unserved entry ([e89846dc2](https://github.com/powerhouse-inc/powerhouse/commit/e89846dc2))
+- **reactor:** stop a deferred job from hanging its caller forever ([df5bc377d](https://github.com/powerhouse-inc/powerhouse/commit/df5bc377d))
+- **reactor,reactor-api:** report an unservable operation instead of killing the channel ([e0d838251](https://github.com/powerhouse-inc/powerhouse/commit/e0d838251))
+- **reactor-api:** type the drive reads in the stage 8 exit test ([82b0f8b6c](https://github.com/powerhouse-inc/powerhouse/commit/82b0f8b6c))
+- **reactor-api:** migrate the restored fixture in the hub-spoke test ([09bcfc39b](https://github.com/powerhouse-inc/powerhouse/commit/09bcfc39b))
+- **reactor-api:** adopt a channel only after the drive check passes ([50a94b75e](https://github.com/powerhouse-inc/powerhouse/commit/50a94b75e))
+- **reactor-api:** declare the whole action context a caller submits ([70a7cc7b6](https://github.com/powerhouse-inc/powerhouse/commit/70a7cc7b6))
+- **reactor-api:** restore a submitted action's signatures to tuples ([e53a489b9](https://github.com/powerhouse-inc/powerhouse/commit/e53a489b9))
+- **reactor-api:** let a job that has not finished be reported ([692d486a1](https://github.com/powerhouse-inc/powerhouse/commit/692d486a1))
+- **reactor-browser:** send an action in the shape the wire declares ([a09419fc6](https://github.com/powerhouse-inc/powerhouse/commit/a09419fc6))
+- **test-fusion:** let the repo-root lint evaluate this package ([b9420b812](https://github.com/powerhouse-inc/powerhouse/commit/b9420b812))
+- **test-fusion:** pin the tsconfig root this package is linted against ([ce060e7f5](https://github.com/powerhouse-inc/powerhouse/commit/ce060e7f5))
+
+### ⚠️  Breaking Changes
+
+- **reactor-api:** type the actions mutateDocument accepts  ([1b9adbe2a](https://github.com/powerhouse-inc/powerhouse/commit/1b9adbe2a))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5
+- Claude Opus 5
+
 ## 6.2.2-dev.53 (2026-08-20)
 
 ### 🚀 Features

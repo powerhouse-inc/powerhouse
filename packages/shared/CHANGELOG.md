@@ -1,3 +1,22 @@
+## 6.2.2-dev.54 (2026-08-21)
+
+### 🚀 Features
+
+- ⚠️  **reactor-api:** type the actions mutateDocument accepts ([1b9adbe2a](https://github.com/powerhouse-inc/powerhouse/commit/1b9adbe2a))
+
+### 🩹 Fixes
+
+- **reactor-browser:** send an action in the shape the wire declares ([a09419fc6](https://github.com/powerhouse-inc/powerhouse/commit/a09419fc6))
+
+### ⚠️  Breaking Changes
+
+- **reactor-api:** type the actions mutateDocument accepts  ([1b9adbe2a](https://github.com/powerhouse-inc/powerhouse/commit/1b9adbe2a))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5
+
 ## 6.2.2-dev.53 (2026-08-20)
 
 This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.
