@@ -1,3 +1,7 @@
+## 6.2.2-dev.55 (2026-08-22)
+
+This was a version bump only for @powerhousedao/reactor-attachments to align it with other projects, there were no code changes.
+
 ## 6.2.2-dev.54 (2026-08-21)
 
 ### 🚀 Features
