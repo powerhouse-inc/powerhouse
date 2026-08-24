@@ -66,7 +66,9 @@ ENV PH_CONNECT_BASE_PATH="/"
 EXPOSE ${PORT}
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
-    CMD wget -q --spider http://localhost:${PORT}/health || exit 1
+    # 127.0.0.1, not localhost: busybox wget resolves localhost to ::1 first
+    # and does not fall back to IPv4 when nginx only listens on 0.0.0.0.
+    CMD wget -q --spider http://127.0.0.1:${PORT}/health || exit 1
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
 
