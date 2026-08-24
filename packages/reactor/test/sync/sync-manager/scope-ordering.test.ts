@@ -142,11 +142,7 @@ describe("updateOutbox scope ordering", () => {
     expect(page.results.map((r) => r.scope)).toEqual(["document", "auth"]);
   });
 
-  // Skipped, not deleted: these two assert the causally correct behaviour rather
-  // than the current one, so they fail until updateOutbox stops reordering a
-  // page's scopes. The fix un-skips them (#2921). The case above stays live,
-  // pinning the index order the sort discards.
-  it.skip("backfills a policied document creation-first", async () => {
+  it("backfills a policied document creation-first", async () => {
     const collectionId = await seedPoliciedDocument();
 
     const channelConfig: ChannelConfig = { type: "internal", parameters: {} };
@@ -162,8 +158,7 @@ describe("updateOutbox scope ordering", () => {
     ]);
   });
 
-  // Skipped for the same reason as above; un-skipped by #2921.
-  it.skip("does not make a document's creation wait on its auth operation", async () => {
+  it("does not make a document's creation wait on its auth operation", async () => {
     const collectionId = await seedPoliciedDocument();
 
     const channelConfig: ChannelConfig = { type: "internal", parameters: {} };
