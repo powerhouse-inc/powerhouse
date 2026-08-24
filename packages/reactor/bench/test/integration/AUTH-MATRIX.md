@@ -118,7 +118,7 @@ matters and depth does not (2.12 us wide against 2.01 us deep). The worst legal
 policy - 100 grants each carrying a 100-node `where` - costs **206 us per
 decision**, against **0.13 us for the identical policy evaluated below
 `authConditions`**, where every conditional grant is skipped without being
-evaluated. That is a **1588x** step for turning the flag on at this shape. At
+evaluated. That is a **1622x** step for turning the flag on at this shape. At
 1000 actions/sec it is 21% of a core.
 
 **Next probe:** 206 us is a worst case at both caps simultaneously. Sweep grants
@@ -146,7 +146,7 @@ therefore decides the cost, and it decides it by three orders of magnitude.
 
 Administered from the top the check is linear and free: 0.49 us at the grant
 cap. Administered from the bottom it is quadratic - 10 to 100 grants is 110x -
-and reaches **445 us**, a **908x spread against the top-administered policy of
+and reaches **445 us**, a **905x spread against the top-administered policy of
 the same size**.
 
 Both stacks are installable. The bottom-administered fixture keeps
