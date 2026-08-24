@@ -1,22 +1,18 @@
-# Powerhouse stack — production images (`latest`).
+# Powerhouse stack — release-candidate images (`rc`).
 #
-# Channel variants (same shape, different image tag):
-#   docker-compose.dev.yml      → `dev`       (main)
-#   docker-compose.test.yml     → `rc`        (release candidates)
-#   docker-compose.staging.yml  → `staging`   (release/staging/*)
-# PGlite variant (no postgres service):
-#   docker-compose.pglite.yml
+# Same shape as docker-compose.yml (production, latest); only the image
+# tag differs. PGlite variant (no postgres service): docker-compose.pglite.yml
 #
 # Usage:
-#   docker compose up -d
+#   docker compose -f docker-compose.test.yml up -d
 #
 # Host ports: connect 3000, switchboard 4000, postgres 5444 (127.0.0.1 only).
 
-name: powerhouse
+name: powerhouse-test
 
 services:
   connect:
-    image: cr.vetra.io/powerhouse-inc-powerhouse/connect:latest
+    image: cr.vetra.io/powerhouse-inc-powerhouse/connect:rc
     # Auto-connect the SPA to the local switchboard. The entrypoint deep-merges
     # this JSON into the dist powerhouse.config.json (operator-wins). The first
     # default drive's origin also configures the attachment service.
@@ -35,7 +31,7 @@ services:
       retries: 3
 
   switchboard:
-    image: cr.vetra.io/powerhouse-inc-powerhouse/switchboard:latest
+    image: cr.vetra.io/powerhouse-inc-powerhouse/switchboard:rc
     environment:
       # Reactor storage + entrypoint migration gate.
       - PH_REACTOR_DATABASE_URL=postgres://postgres:postgres@postgres:5432/postgres
