@@ -144,68 +144,70 @@ build:
 
 ## Using Docker
 
-This project can be run using Docker and Docker Compose. The `docker-compose.yml` file in the root directory defines the services and their configurations.
+This project can be run with Docker Compose. The Compose files in the root
+directory pull the pre-built images from the Vetra Harbor registry
+(`cr.vetra.io`) — nothing is built locally. Each file is self-contained and
+targets one release channel (image tag).
 
-### Prerequisites
+### Which file to use
 
-- Docker Engine (version 20.10.0 or later)
-- Docker Compose (version 2.0.0 or later)
+| File | Image tag | Channel |
+| --- | --- | --- |
+| `docker-compose.yml` | `latest` | production (default) |
+| `docker-compose.dev.yml` | `dev` | development (`main`) |
+| `docker-compose.test.yml` | `rc` | release candidates |
+| `docker-compose.staging.yml` | `staging` | staging |
+| `docker-compose.pglite.yml` | `latest` | no postgres — switchboard uses embedded PGlite |
+
+Every stack exposes the same services on the same loopback ports:
+
+| Service | URL |
+| --- | --- |
+| Connect (web UI) | http://localhost:3000 |
+| Switchboard (API) | http://localhost:4000 |
+| Postgres | 127.0.0.1:5444 (postgres/postgres) |
+
+The Connect UI is pre-wired to the local Switchboard, so the stack works
+out of the box.
 
 ### Basic Usage
 
-1. Build and start all services:
-
-   ```bash
-   docker compose up
-   ```
-
-2. Run in detached mode (background):
-
-   ```bash
-   docker compose up -d
-   ```
-
-3. View running containers:
-
-   ```bash
-   docker compose ps
-   ```
-
-4. View logs:
-
-   ```bash
-   docker compose logs -f
-   ```
-
-5. Stop all services:
-   ```bash
-   docker compose down
-   ```
-
-### Working with Individual Services
-
-The `docker-compose.yml` file defines multiple services. You can work with individual services by specifying the service name:
+Start the default (production) stack in the background:
 
 ```bash
-# Start a specific service
-docker compose up switchboard    # Start the Switchboard service
-docker compose up connect       # Start the Connect service
-
-# View logs for a specific service
-docker compose logs -f switchboard    # View Switchboard logs
-docker compose logs -f connect       # View Connect logs
-
-# Rebuild a specific service
-docker compose up -d --build switchboard    # Rebuild and start Switchboard
-docker compose up -d --build connect       # Rebuild and start Connect
+docker compose up -d
 ```
 
-### Development Tips
+Start a specific channel instead:
 
-- Use `docker compose up --build` to ensure you're running with the latest changes
-- The `docker-compose.yml` file includes development-specific configurations
-- Environment variables can be configured in the `.env` file
-- For production deployments, use the `docker-compose.prod.yml` configuration
+```bash
+docker compose -f docker-compose.dev.yml up -d
+```
+
+Run a postgres-free stack (embedded PGlite):
+
+```bash
+docker compose -f docker-compose.pglite.yml up -d
+```
+
+Other common commands (substitute the same `-f` flag when using a channel file):
+
+```bash
+docker compose ps            # view running containers
+docker compose logs -f       # follow all logs
+docker compose logs -f switchboard
+docker compose down          # stop the stack (data is kept in named volumes)
+```
+
+> The five stacks share the same host ports, so run only one at a time.
+
+### Tips
+
+- `docker compose down -v` also deletes the named volumes (postgres data /
+  PGlite data). Plain `docker compose down` keeps them.
+- To point the Connect UI at a different Switchboard, override
+  `PH_CONNECT_CONFIG_JSON` on the `connect` service — it is deep-merged into
+  the runtime config at container start (operator wins).
 
 ## How to contribute to this project <a id="how-to-contribute"></a>
 
