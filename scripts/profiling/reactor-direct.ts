@@ -40,6 +40,8 @@ import {
   type IReactor,
 } from "@powerhousedao/reactor";
 import Pyroscope from "@pyroscope/nodejs";
+import { initializeAuth } from "@powerhousedao/shared/document-model";
+import type { Action } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { Kysely, PostgresDialect } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
@@ -47,6 +49,15 @@ import { execFileSync } from "node:child_process";
 import { createWriteStream, mkdirSync, type WriteStream } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { Pool } from "pg";
+import {
+  AUTH_LEVELS,
+  BENCH_WRITER_ADDRESS,
+  buildGrants,
+  flagsFor,
+  policiedAt,
+  type AuthLevel,
+  type PolicyShape,
+} from "../../packages/reactor/bench/fixtures/auth-policies.js";
 
 interface MemoryStats {
   heapUsed: number;
@@ -158,7 +169,29 @@ function createAction(docIndex: number, opIndex: number) {
   ];
 
   const creator = actionCreators[opIndex % actionCreators.length];
-  return { action: creator.create(), actionType: creator.name };
+  return { action: signedBy(creator.create()), actionType: creator.name };
+}
+
+/**
+ * Stamps the signer context an auth decision reads a subject from.
+ *
+ * No crypto is involved and none is needed: this driver registers no signature
+ * verifier, so verification returns on its first line. What matters is that
+ * `subject.address` is defined, because an anonymous subject matches only an
+ * `{ anyone }` principal and every address- and group-scoped grant in the
+ * policy would be dead.
+ */
+function signedBy<A extends Action>(action: A): A {
+  return {
+    ...action,
+    context: {
+      signer: {
+        user: { address: BENCH_WRITER_ADDRESS, networkId: "1", chainId: 1 },
+        app: { name: "reactor-direct", key: "reactor-direct" },
+        signatures: [],
+      },
+    },
+  } as A;
 }
 
 async function waitForJob(
@@ -197,6 +230,57 @@ async function createDocument(
   await waitForJob(reactor, jobInfo.id);
 
   return document.header.id;
+}
+
+/**
+ * Installs a policy on a document so enforcement has something to enforce.
+ *
+ * An uninitialized policy leaves the document open and `evaluate` returns allow
+ * before reading a single grant, so without this every auth level measures the
+ * same fast path and the sweep reports enforcement as free.
+ *
+ * The document is created unsigned and therefore has no creator, so the grant
+ * list must keep auth administration reachable on its own; `buildGrants` always
+ * emits that grant.
+ */
+async function seedPolicy(
+  reactor: IReactor,
+  documentId: string,
+  policyShape: PolicyShape,
+): Promise<void> {
+  const action = signedBy(
+    initializeAuth({ version: 1, grants: buildGrants(policyShape) }),
+  );
+  const jobInfo = await reactor.execute(documentId, "main", [action]);
+  await waitForJob(reactor, jobInfo.id);
+}
+
+/**
+ * Reads back the installed policy and refuses to continue if it is not there.
+ *
+ * A silent seeding failure is the one outcome this driver must not report a
+ * number for, because the run still completes and every measurement is of the
+ * open-document fast path.
+ */
+async function assertPolicyInstalled(
+  reactor: IReactor,
+  documentId: string,
+  expectedGrants: number,
+): Promise<void> {
+  const document = await reactor.get(documentId);
+  const auth = (
+    document.state as { auth?: { version?: number; grants?: unknown[] } }
+  ).auth;
+  if (auth?.version !== 1) {
+    throw new Error(
+      `policy not installed on ${documentId}: auth version is ${String(auth?.version)}`,
+    );
+  }
+  if (auth.grants?.length !== expectedGrants) {
+    throw new Error(
+      `policy on ${documentId} holds ${String(auth.grants?.length)} grants, expected ${expectedGrants}`,
+    );
+  }
 }
 
 async function performOperations(
@@ -279,6 +363,9 @@ function parseArgs(args: string[]): {
   otel: string | undefined;
   output: string | undefined;
   outputTimestamp: boolean;
+  authLevel: AuthLevel;
+  authGrants: number;
+  authGroups: number;
 } {
   let count = 10;
   let operations = 0;
@@ -293,6 +380,9 @@ function parseArgs(args: string[]): {
   let otel: string | undefined = undefined;
   let output: string | undefined = undefined;
   let outputTimestamp = false;
+  let authLevel: AuthLevel = "L0_CLEAN";
+  let authGrants = 10;
+  let authGroups = 0;
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -341,6 +431,21 @@ function parseArgs(args: string[]): {
         output = "reactor-direct.txt";
       }
       outputTimestamp = true;
+    } else if (arg === "--auth-level" && args[i + 1]) {
+      const requested = args[++i];
+      const matched = AUTH_LEVELS.find(
+        (level) => level === requested || level.startsWith(`${requested}_`),
+      );
+      if (matched === undefined) {
+        throw new Error(
+          `Unknown --auth-level "${requested}". Known: ${AUTH_LEVELS.join(", ")}`,
+        );
+      }
+      authLevel = matched;
+    } else if (arg === "--auth-grants" && args[i + 1]) {
+      authGrants = Number(args[++i]);
+    } else if (arg === "--auth-groups" && args[i + 1]) {
+      authGroups = Number(args[++i]);
     } else if (arg === "--help" || arg === "-h") {
       console.log(`
 Usage: tsx reactor-direct.ts [N] [options]
@@ -362,6 +467,12 @@ Options:
   --show-action-types, -a   Show action type names in min/max timings
   --file [name]             Write output to a timestamped file (default: reactor-direct.txt)
   --output, -O <file>       Write output to a specific file (no timestamp prefix)
+  --auth-level <L>          Auth ladder rung: L0_CLEAN | L0_POLICIED |
+                            L1_DOCUMENT_DECISIONS | L2_AUTH_ENFORCEMENT |
+                            L3_AUTH_GROUPS | L4_AUTH_CONDITIONS
+                            (a prefix such as L2 also matches; default L0_CLEAN)
+  --auth-grants <N>         Grants in the seeded policy (default: 10, cap 100)
+  --auth-groups <N>         Distinct group principals in the policy (default: 0)
   --pyroscope [address]     Enable Pyroscope profiling (default: http://localhost:4040)
   --otel [endpoint]         Enable OpenTelemetry metrics export (default: http://localhost:4318)
                             Exports to OTLP HTTP collector at {endpoint}/v1/metrics
@@ -435,6 +546,18 @@ Examples:
     );
   }
 
+  if (authGroups > 0) {
+    // Group principals only match against a folded roster, and folding needs
+    // the powerhouse/reactor-group module in the registry. This driver
+    // registers only the document model, so a group grant here would fail
+    // closed and the run would price the cheapest group outcome while
+    // appearing to measure the most expensive one. Refusing is the honest
+    // answer until the module is wired in.
+    throw new Error(
+      "--auth-groups is not supported yet: this driver registers no group model, so every group principal would fail closed and the measurement would be of the fail-closed path. Use the micro tier (bench/auth-scope.bench.ts) for the group axis.",
+    );
+  }
+
   if (docId && operations === 0) {
     console.warn(
       `Warning: --doc-id specified but no operations to perform (use --operations).`,
@@ -455,6 +578,9 @@ Examples:
     otel,
     output,
     outputTimestamp,
+    authLevel,
+    authGrants,
+    authGroups,
   };
 }
 
@@ -500,6 +626,9 @@ async function main() {
     otel: otelEndpoint,
     output: outputFile,
     outputTimestamp,
+    authLevel,
+    authGrants,
+    authGroups,
   } = parseArgs(process.argv.slice(2));
 
   // Set up output file tee if requested
@@ -619,10 +748,21 @@ async function main() {
       throw new Error(`Migration failed: ${migrationResult.error.message}`);
     }
 
+    const featureFlags = flagsFor(authLevel);
+    console.log(
+      `  Auth level: ${authLevel} (${
+        Object.entries(featureFlags)
+          .filter(([, on]) => on)
+          .map(([flag]) => flag)
+          .join(", ") || "no flags"
+      })`,
+    );
+
     const reactorModule = await new ReactorBuilder()
       .withDocumentModelSources([documentModelDocumentModelModule])
       .withKysely(db as Kysely<Database>)
       .withMigrationStrategy("none")
+      .withExecutorConfig({ featureFlags })
       .buildModule();
     const reactor = reactorModule.reactor;
 
@@ -677,10 +817,36 @@ async function main() {
       const createStartTime = Date.now();
       documentIds = [];
 
+      const groupIds: string[] = [];
+      for (let g = 0; g < authGroups; g++) {
+        groupIds.push(`bench-group-${g}`);
+      }
+      const policyShape: PolicyShape = {
+        grantCount: authGrants,
+        groupIds,
+        matchPosition: "last",
+        writerAddress: BENCH_WRITER_ADDRESS,
+      };
+      const seedPolicies = policiedAt(authLevel);
+      const expectedGrants = buildGrants(policyShape).length;
+
       for (let i = 0; i < count; i++) {
         const id = await createDocument(reactor, `doc-${i + 1}`);
+        if (seedPolicies) {
+          await seedPolicy(reactor, id, policyShape);
+        }
         documentIds.push(id);
         process.stdout.write(`\r  Progress: ${i + 1}/${count}`);
+      }
+
+      // Read one policy back rather than trusting the seeding dispatch. A
+      // policy that failed to install leaves every later measurement on the
+      // open-document fast path, and the run would still look successful.
+      if (seedPolicies) {
+        await assertPolicyInstalled(reactor, documentIds[0], expectedGrants);
+        console.log(
+          `\n  Policy installed: ${expectedGrants} grants, ${groupIds.length} group(s)`,
+        );
       }
 
       const createDurationMs = Date.now() - createStartTime;
