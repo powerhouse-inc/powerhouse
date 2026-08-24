@@ -278,6 +278,13 @@ export function toOperationWithContext(
  * a single SyncOperation per group. Within each group, operations are sorted
  * by context.ordinal. The merged SyncOperation keeps the first group member's
  * jobId; all other jobIds are remapped so external dependencies still resolve.
+ *
+ * Only CONTIGUOUS runs merge. A document whose scopes interleave arrives as an
+ * alternating chain (document -> auth -> document -> auth) where each entry
+ * depends on the one before it. Merging every occurrence of a
+ * (documentId, scope, branch) collapses that chain into two nodes that each
+ * depend on the other, which validateBatchStructure rejects as a dependency
+ * cycle. Merging only adjacent entries keeps the chain linear.
  */
 export function consolidateSyncOperations(
   syncOps: SyncOperation[],
@@ -286,33 +293,28 @@ export function consolidateSyncOperations(
     return syncOps;
   }
 
-  type GroupKey = string;
-  const groups = new Map<
-    GroupKey,
-    { ops: SyncOperation[]; canonicalJobId: string }
-  >();
+  const groups: Array<{ ops: SyncOperation[]; canonicalJobId: string }> = [];
   const jobIdRemap = new Map<string, string>();
-  const insertionOrder: GroupKey[] = [];
+  let prevKey: string | null = null;
 
   for (const syncOp of syncOps) {
-    const key: GroupKey = `${syncOp.documentId}|${syncOp.scopes.slice().sort().join(",")}|${syncOp.branch}`;
+    const key = `${syncOp.documentId}|${syncOp.scopes.slice().sort().join(",")}|${syncOp.branch}`;
 
-    const existing = groups.get(key);
-    if (existing) {
-      existing.ops.push(syncOp);
-      if (syncOp.jobId && syncOp.jobId !== existing.canonicalJobId) {
-        jobIdRemap.set(syncOp.jobId, existing.canonicalJobId);
+    const current = key === prevKey ? groups[groups.length - 1] : undefined;
+    if (current) {
+      current.ops.push(syncOp);
+      if (syncOp.jobId && syncOp.jobId !== current.canonicalJobId) {
+        jobIdRemap.set(syncOp.jobId, current.canonicalJobId);
       }
     } else {
-      groups.set(key, { ops: [syncOp], canonicalJobId: syncOp.jobId });
-      insertionOrder.push(key);
+      groups.push({ ops: [syncOp], canonicalJobId: syncOp.jobId });
+      prevKey = key;
     }
   }
 
   const result: SyncOperation[] = [];
 
-  for (const key of insertionOrder) {
-    const group = groups.get(key)!;
+  for (const group of groups) {
     const allOperations = group.ops
       .flatMap((op) => op.operations)
       .sort((a, b) => a.context.ordinal - b.context.ordinal);
