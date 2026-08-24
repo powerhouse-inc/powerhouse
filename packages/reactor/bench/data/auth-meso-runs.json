@@ -1,0 +1,74 @@
+{
+  "description": "Wall time in seconds for 5000 operations through reactor-direct.ts, per auth ladder rung. Each set was run interleaved (one repetition of every level, then the next) so host drift is common-mode within a repetition rather than aliased onto whichever level ran while the machine was busy.",
+  "command": "tsx scripts/profiling/reactor-direct.ts 10 -o 500 -b 100 --auth-level <L> --auth-grants 100",
+  "workload": {
+    "documents": 10,
+    "operationsPerDocument": 500,
+    "batchSize": 100,
+    "grantsInPolicy": 100,
+    "groupPrincipals": 0,
+    "backdatedActions": 0
+  },
+  "environment": {
+    "host": "Benjamins-MacBook-Pro-2.local",
+    "os": "Darwin 25.6.0 arm64",
+    "cpu": "Apple M4 Max",
+    "cores": 14,
+    "node": "v24.13.0",
+    "reactorSha": "bfbe07dd6",
+    "date": "2026-08-24",
+    "storage": "in-memory PGlite",
+    "workerPool": "none",
+    "signatureVerifier": "none"
+  },
+  "caveats": [
+    "PGlite is single-threaded WASM on the host loop, so the pg_advisory_xact_lock over the read set does not behave as it does on Postgres.",
+    "Nothing is backdated, so foldEvaluatedScope never runs and L4 is understated.",
+    "No group principals are in the policy, so the groups projection reads no streams and L3 is understated.",
+    "Batch size 100 amortises one waitForJob poll across 100 actions. At batch size 1 the 10ms poll quantum swamps every effect."
+  ],
+  "sets": [
+    {
+      "name": "full ladder",
+      "repetitions": 3,
+      "interleaved": true,
+      "seconds": {
+        "L0_CLEAN": [6.39, 6.71, 6.59],
+        "L0_POLICIED": [6.41, 6.54, 6.53],
+        "L1_DOCUMENT_DECISIONS": [7.97, 8.03, 8.07],
+        "L2_AUTH_ENFORCEMENT": [8.65, 8.68, 8.54],
+        "L4_AUTH_CONDITIONS": [8.78, 8.54, 8.65]
+      }
+    },
+    {
+      "name": "top of ladder",
+      "repetitions": 4,
+      "interleaved": true,
+      "seconds": {
+        "L2_AUTH_ENFORCEMENT": [8.48, 8.82, 7.96, 7.93],
+        "L3_AUTH_GROUPS": [8.61, 8.21, 8.06, 8.08],
+        "L4_AUTH_CONDITIONS": [8.70, 8.22, 8.14, 7.83]
+      }
+    },
+    {
+      "name": "paired admission step",
+      "repetitions": 5,
+      "interleaved": true,
+      "primary": true,
+      "seconds": {
+        "L0_POLICIED": [6.07, 6.01, 6.10, 6.04, 6.03],
+        "L1_DOCUMENT_DECISIONS": [7.81, 7.39, 7.44, 7.52, 7.42],
+        "L2_AUTH_ENFORCEMENT": [7.99, 7.89, 7.86, 7.85, 8.05]
+      }
+    },
+    {
+      "name": "L3 measured in its own batch, retained as the blocked-ordering artifact",
+      "repetitions": 3,
+      "interleaved": false,
+      "artifact": true,
+      "seconds": {
+        "L3_AUTH_GROUPS": [9.18, 9.09, 8.85]
+      }
+    }
+  ]
+}
