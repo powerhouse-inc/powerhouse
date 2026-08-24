@@ -493,7 +493,6 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
 
       await waitForJobAndDocumentUpdate(addJobInfo.id);
 
-      // Update the file
       const updateAction = updateFile({
         id: fileId,
         name: "renamed.txt",
@@ -539,7 +538,6 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
 
       await waitForJobAndDocumentUpdate(addJobInfo.id);
 
-      // Update the folder
       const updateAction = updateNode({
         id: folderId,
         name: "Renamed Folder",
@@ -1235,7 +1233,6 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
           id: folderId,
           name: "Updated Name",
         }),
-        // Update file
         updateFile({
           id: fileId,
           documentType: "text/markdown",

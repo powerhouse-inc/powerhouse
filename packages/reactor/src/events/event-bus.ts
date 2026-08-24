@@ -47,7 +47,6 @@ export class EventBus implements IEventBus {
     // Snapshot ensures subscribers added/removed during emit don't affect this cycle.
     const snapshot = list.slice();
 
-    // Call each subscriber sequentially and collect any errors
     const errors: any[] = [];
     for (const fn of snapshot) {
       try {
@@ -57,7 +56,6 @@ export class EventBus implements IEventBus {
       }
     }
 
-    // If any errors occurred, throw an aggregate error containing all of them
     if (errors.length > 0) {
       throw new EventBusAggregateError(errors);
     }

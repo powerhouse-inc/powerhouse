@@ -95,7 +95,6 @@ export class Mailbox implements IMailbox {
     for (const item of items) {
       this.itemsMap.set(item.id, item);
 
-      // update latest ordinal
       for (const op of item.operations) {
         this._latestOrdinal = Math.max(this._latestOrdinal, op.context.ordinal);
       }

@@ -26,11 +26,9 @@ describe("ShutdownStatus Factory Methods", () => {
       const [status, setShutdown] = createMutableShutdownStatus();
       expect(status.isShutdown).toBe(false);
 
-      // Update to true
       setShutdown(true);
       expect(status.isShutdown).toBe(true);
 
-      // Update back to false
       setShutdown(false);
       expect(status.isShutdown).toBe(false);
     });
@@ -39,7 +37,6 @@ describe("ShutdownStatus Factory Methods", () => {
       const [status, setShutdown] = createMutableShutdownStatus(true);
       expect(status.isShutdown).toBe(true);
 
-      // Update to false
       setShutdown(false);
       expect(status.isShutdown).toBe(false);
     });

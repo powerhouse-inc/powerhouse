@@ -201,7 +201,7 @@ describe("Document Scope Cross-Scope Dependency Issue", () => {
         },
       );
 
-      // Step 6: Clear in-memory cache
+      // Step 6
       cache.clear();
 
       // Step 7: Call getState(docId, "global", branch) - will load from keyframe

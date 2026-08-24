@@ -204,7 +204,6 @@ describe("ReactorClient Subscription Integration Tests", () => {
       const createCallCount = eventReceived.mock.calls.length;
       expect(createCallCount).toBeGreaterThan(0);
 
-      // Update document (rename it)
       await module.client.rename(document.header.id, "New Name");
 
       // Wait a bit for the update notification
@@ -239,7 +238,6 @@ describe("ReactorClient Subscription Integration Tests", () => {
       // Clear to track update
       updatedDocument = undefined;
 
-      // Update document (rename it)
       const newName = "Updated Document Name";
       await module.client.rename(document.header.id, newName);
 

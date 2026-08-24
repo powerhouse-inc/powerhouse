@@ -217,10 +217,8 @@ describe("InMemoryJobTracker", () => {
       tracker.registerJob(job1);
       tracker.registerJob(job2);
 
-      // Update job1
       tracker.markRunning("job-1");
 
-      // Update job2
       tracker.markRunning("job-2");
       tracker.markFailed("job-2", {
         name: "Error",

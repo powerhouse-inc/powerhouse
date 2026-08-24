@@ -150,7 +150,6 @@ export class InMemoryQueue implements IQueue {
   }
 
   async enqueue(job: Job): Promise<void> {
-    // Throw error if queue is blocked
     if (this.isBlocked) {
       throw new Error("Queue is blocked");
     }
@@ -158,7 +157,6 @@ export class InMemoryQueue implements IQueue {
     const queueKey = this.createQueueKey(job.documentId, job.scope, job.branch);
     const queue = this.getQueue(queueKey);
 
-    // Add job to the end of the queue (FIFO)
     queue.push(job);
 
     // Track job location for removal and dependency resolution
@@ -221,7 +219,6 @@ export class InMemoryQueue implements IQueue {
     // Remove from queue tracking but keep in job index for retry
     this.jobIdToQueueKey.delete(job.id);
 
-    // Mark this job as executing for its document
     this.markJobExecuting(job);
 
     // Clean up empty queue
@@ -276,7 +273,6 @@ export class InMemoryQueue implements IQueue {
           this.jobIdToQueueKey.delete(job.id);
           // Keep job in jobIndex so we can retry it if needed
 
-          // Mark this job as executing for its document
           this.markJobExecuting(job);
 
           // Clean up empty queue
@@ -449,7 +445,6 @@ export class InMemoryQueue implements IQueue {
     this.jobIndex.clear();
     this.completedJobs.clear();
 
-    // Clear all queues
     this.queues.clear();
 
     return Promise.resolve();
@@ -492,7 +487,6 @@ export class InMemoryQueue implements IQueue {
       this.markJobComplete(jobId, documentId);
     }
 
-    // update the job lastError and errorHistory
     const job = this.jobIndex.get(jobId);
     if (job) {
       job.lastError = error;
@@ -548,7 +542,6 @@ export class InMemoryQueue implements IQueue {
       return;
     }
 
-    // update the job lastError
     job.lastError = error;
 
     // Mark it as no longer executing if it was
@@ -566,7 +559,6 @@ export class InMemoryQueue implements IQueue {
       job.errorHistory.push(error);
     }
 
-    // Update retry count
     const retryCount = job.retryCount || 0;
     const updatedJob: Job = {
       ...job,

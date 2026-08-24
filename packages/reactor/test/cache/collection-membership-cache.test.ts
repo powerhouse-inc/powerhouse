@@ -125,7 +125,6 @@ describe("CollectionMembershipCache", () => {
     // Populate cache for both documents
     await cache.getCollectionsForDocuments(["doc-1", "doc-2"]);
 
-    // Invalidate only doc-1
     cache.invalidate("doc-1");
 
     vi.mocked(mockOperationIndex.getCollectionsForDocuments).mockClear();

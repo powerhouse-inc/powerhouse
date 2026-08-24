@@ -236,7 +236,6 @@ describe("SimpleJobExecutorManager", () => {
       vi.spyOn(queue, "dequeueNext").mockImplementation(async (signal) => {
         // First call the original to remove the job from the queue
         await originalDequeueNext(signal);
-        // Then return our mock handle instead
         return mockHandle;
       });
 

@@ -105,7 +105,6 @@ export function createDocumentFromAction(
   header.id = input.documentId;
   header.documentType = input.model;
 
-  // If signing info is present, populate the header signature fields
   if (input.signing) {
     header.createdAtUtcIso = input.signing.createdAtUtcIso;
     header.lastModifiedAtUtcIso = input.signing.createdAtUtcIso;
@@ -136,7 +135,7 @@ export function createDocumentFromAction(
     header.protocolVersions = input.protocolVersions;
   }
 
-  // Construct the document with default base state (UPGRADE_DOCUMENT will set the full state)
+  // A placeholder: UPGRADE_DOCUMENT writes the model's real initial values.
   const baseState = defaultBaseState();
   const document: PHDocument = {
     header,

@@ -120,7 +120,6 @@ export class InMemoryJobTracker implements IJobTracker {
       return;
     }
 
-    // Update existing job
     this.jobs.set(jobId, {
       ...job,
       status: JobStatus.RUNNING,
