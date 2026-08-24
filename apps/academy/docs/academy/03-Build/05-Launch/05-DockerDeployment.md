@@ -20,44 +20,46 @@ This guide covers **Docker-based deployment**. If you prefer **traditional VM/se
 
 ## Available Docker Images
 
-Powerhouse publishes three official Docker images to the GitHub Container Registry (ghcr.io):
+Powerhouse publishes three official Docker images to the Vetra Harbor registry (`cr.vetra.io`):
 
 ### 1. Connect
 
 The Connect image provides the Powerhouse web application frontend with an embedded Nginx server.
 
 ```
-ghcr.io/powerhouse-inc/powerhouse/connect
+cr.vetra.io/powerhouse-inc-powerhouse/connect
 ```
 
 **Available tags:**
 
 - `latest` - Latest stable release
-- `dev` - Development builds
+- `dev` - Development builds (from `main`)
 - `staging` - Staging builds
-- `vX.Y.Z` - Specific version tags (e.g., `v1.0.0`)
+- `rc` - Release candidates
+- `vX.Y.Z` - Specific version tags (e.g., `v6.2.1`)
 
 ### 2. Switchboard
 
 The Switchboard image provides the backend API server that handles document synchronization and GraphQL endpoints.
 
 ```
-ghcr.io/powerhouse-inc/powerhouse/switchboard
+cr.vetra.io/powerhouse-inc-powerhouse/switchboard
 ```
 
 **Available tags:**
 
 - `latest` - Latest stable release
-- `dev` - Development builds
+- `dev` - Development builds (from `main`)
 - `staging` - Staging builds
-- `vX.Y.Z` - Specific version tags (e.g., `v1.0.0`)
+- `rc` - Release candidates
+- `vX.Y.Z` - Specific version tags (e.g., `v6.2.1`)
 
 ### 3. Academy
 
 The Academy image provides the documentation website.
 
 ```
-ghcr.io/powerhouse-inc/powerhouse/academy
+cr.vetra.io/powerhouse-inc-powerhouse/academy
 ```
 
 **Available tags:**
@@ -69,36 +71,50 @@ ghcr.io/powerhouse-inc/powerhouse/academy
 
 ## Quick Start with Docker Compose
 
-The easiest way to run Powerhouse locally is using Docker Compose. Create a `docker-compose.yml` file or use the one provided in the repository:
+The easiest way to run Powerhouse locally is using Docker Compose. The repository ships ready-made compose files — `docker-compose.yml` (production, `latest`), plus per-channel variants `docker-compose.dev.yml` / `docker-compose.test.yml` (`rc`) / `docker-compose.staging.yml`, and a postgres-free `docker-compose.pglite.yml`. The default file:
 
 ```yaml
 name: powerhouse
 
 services:
   connect:
-    image: ghcr.io/powerhouse-inc/powerhouse/connect:dev
+    image: cr.vetra.io/powerhouse-inc-powerhouse/connect:latest
+    # Auto-connect the SPA to the local switchboard.
     environment:
-      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/postgres
-      - BASE_PATH=/
+      - 'PH_CONNECT_CONFIG_JSON={"connect":{"drives":{"defaultDrives":[{"url":"http://localhost:4000","name":null,"icon":null}]}}}'
     ports:
-      - "127.0.0.1:3000:4000"
+      - "127.0.0.1:3000:3001"
     networks:
       - powerhouse_network
-    depends_on:
-      postgres:
-        condition: service_healthy
+    hostname: connect.powerhouse
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3001/health"]
+      interval: 30s
+      timeout: 3s
+      start_period: 10s
+      retries: 3
 
   switchboard:
-    image: ghcr.io/powerhouse-inc/powerhouse/switchboard:dev
+    image: cr.vetra.io/powerhouse-inc-powerhouse/switchboard:latest
     environment:
-      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/postgres
+      # Reactor storage + entrypoint migration gate.
+      - PH_REACTOR_DATABASE_URL=postgres://postgres:postgres@postgres:5432/postgres
+      # Read-model storage. Both point at the same database.
+      - PH_SWITCHBOARD_DATABASE_URL=postgres://postgres:postgres@postgres:5432/postgres
     ports:
-      - "127.0.0.1:4000:4001"
+      - "127.0.0.1:4000:3000"
     networks:
       - powerhouse_network
+    hostname: switchboard.powerhouse
     depends_on:
       postgres:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:3000/health"]
+      interval: 30s
+      timeout: 3s
+      start_period: 30s
+      retries: 3
 
   postgres:
     image: postgres:16.1
@@ -108,6 +124,8 @@ services:
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=postgres
       - POSTGRES_USER=postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
     networks:
       - powerhouse_network
     healthcheck:
@@ -118,7 +136,9 @@ services:
 
 networks:
   powerhouse_network:
-    name: powerhouse_network
+
+volumes:
+  postgres_data:
 ```
 
 ### Running the Stack
