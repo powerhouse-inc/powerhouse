@@ -1,0 +1,58 @@
+# Powerhouse stack — embedded PGlite (no postgres service).
+#
+# Same as docker-compose.yml (production, latest) but switchboard runs on its
+# built-in PGlite storage instead of a postgres container:
+#   - no DATABASE_URL-style env vars → reactor + read model use PGlite
+#     directories under /app/.ph (migrations run automatically on startup)
+#   - a named volume keeps that data across `docker compose down`
+#
+# Usage:
+#   docker compose -f docker-compose.pglite.yml up -d
+#
+# Host ports: connect 3000, switchboard 4000 (127.0.0.1 only).
+
+name: powerhouse-pglite
+
+services:
+  connect:
+    image: cr.vetra.io/powerhouse-inc-powerhouse/connect:latest
+    # Auto-connect the SPA to the local switchboard. The entrypoint deep-merges
+    # this JSON into the dist powerhouse.config.json (operator-wins). The first
+    # default drive's origin also configures the attachment service.
+    environment:
+      - 'PH_CONNECT_CONFIG_JSON={"connect":{"drives":{"defaultDrives":[{"url":"http://localhost:4000","name":null,"icon":null}]}}}'
+    ports:
+      - "127.0.0.1:3000:3001"
+    networks:
+      - powerhouse_network
+    hostname: connect.powerhouse
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 3s
+      start_period: 10s
+      retries: 3
+
+  switchboard:
+    image: cr.vetra.io/powerhouse-inc-powerhouse/switchboard:latest
+    ports:
+      - "127.0.0.1:4000:3000"
+    networks:
+      - powerhouse_network
+    hostname: switchboard.powerhouse
+    # Persists the PGlite data directories (./.ph/reactor-storage,
+    # .ph/read-storage, relative to WORKDIR /app).
+    volumes:
+      - switchboard_pglite:/app/.ph
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 3s
+      start_period: 30s
+      retries: 3
+
+networks:
+  powerhouse_network:
+
+volumes:
+  switchboard_pglite:
