@@ -113,20 +113,26 @@ def meso_set(meso, name):
 
 
 def figure_ladder(meso):
-    primary = next(s for s in meso["sets"] if s.get("primary"))
+    primary = next(
+        s for s in meso["sets"] if s.get("primary") and s.get("storage") == "postgres"
+    )
+    pglite = next(
+        s for s in meso["sets"] if s.get("primary") and s.get("storage") == "pglite"
+    )
     med = {k: st.median(v) for k, v in primary["seconds"].items()}
+    pmed = {k: st.median(v) for k, v in pglite["seconds"].items()}
 
     base = med["L0_POLICIED"]
     d_admission = med["L1_DOCUMENT_DECISIONS"] - base
     d_auth = med["L2_AUTH_ENFORCEMENT"] - med["L1_DOCUMENT_DECISIONS"]
 
-    top = meso_set(meso, "top of ladder")
+    top = meso_set(meso, "postgres top of ladder")
     tmed = {k: st.median(v) for k, v in top["seconds"].items()}
     ratio_l3 = tmed["L3_AUTH_GROUPS"] / tmed["L2_AUTH_ENFORCEMENT"]
     ratio_l4 = tmed["L4_AUTH_CONDITIONS"] / tmed["L2_AUTH_ENFORCEMENT"]
 
-    fig, (ax, ax2) = plt.subplots(
-        1, 2, figsize=(13.2, 6.0), gridspec_kw={"width_ratios": [1.45, 1]}
+    fig, (ax, ax2, ax3) = plt.subplots(
+        1, 3, figsize=(17.4, 6.0), gridspec_kw={"width_ratios": [1.5, 1.0, 0.95]}
     )
 
     labels = [
@@ -192,14 +198,14 @@ def figure_ladder(meso):
     ax.set_ylim(0, (base + d_admission + d_auth) * 1.16)
     style(
         ax,
-        f"Turning auth on costs +{(total - 1) * 100:.0f}% end to end.\n"
+        f"Turning auth on costs +{(total - 1) * 100:.0f}% end to end on Postgres.\n"
         f"Three quarters of it is the prerequisite, not authorization.",
         ylabel="wall time for 5000 operations (s)",
     )
     caption(
         ax,
-        "n=5 interleaved, median, per-cell spread 1.5-5.6%. Each step is shown as a\n"
-        "share of the baseline, so the two add to the total.",
+        "Postgres 16, n=5 interleaved, schema dropped per cell, median. Each step is\n"
+        "shown as a share of the baseline, so the two add to the total.",
         dy=-0.22,
     )
 
@@ -243,13 +249,51 @@ def figure_ladder(meso):
     caption(
         ax2,
         f"Above authEnforcement the ladder flattens: authGroups {ratio_l3:.3f}x,\n"
-        f"authConditions {ratio_l4:.3f}x against L2 (n=4). Both tie because this harness\n"
-        "cannot yet see them - no group principals in the policy, nothing backdated\n"
-        "so foldEvaluatedScope never runs, and PGlite rather than Postgres.",
+        f"authConditions {ratio_l4:.3f}x against L2 (n=4), paired ratios straddling 1.\n"
+        "Both tie because this workload cannot reach them: no group principals in\n"
+        "the policy, nothing backdated so foldEvaluatedScope never runs, and one\n"
+        "write in flight so no lock is ever contended.",
         dy=-0.22,
     )
 
-    fig.subplots_adjust(left=0.07, right=0.985, top=0.80, bottom=0.32, wspace=0.16)
+    ratios = [
+        (
+            "documentDecisions",
+            pmed["L1_DOCUMENT_DECISIONS"] / pmed["L0_POLICIED"],
+            med["L1_DOCUMENT_DECISIONS"] / med["L0_POLICIED"],
+        ),
+        (
+            "authEnforcement",
+            pmed["L2_AUTH_ENFORCEMENT"] / pmed["L1_DOCUMENT_DECISIONS"],
+            med["L2_AUTH_ENFORCEMENT"] / med["L1_DOCUMENT_DECISIONS"],
+        ),
+    ]
+    x = np.arange(len(ratios))
+    ax3.bar(x - 0.18, [r[1] for r in ratios], width=0.34, color=BASE,
+            label="in-memory PGlite", edgecolor="none")
+    ax3.bar(x + 0.18, [r[2] for r in ratios], width=0.34, color=STEP,
+            label="Postgres 16", edgecolor="none")
+    for i, (_, a, b) in enumerate(ratios):
+        ax3.annotate(f"{a:.3f}x", (i - 0.18, a), textcoords="offset points",
+                     xytext=(0, 4), ha="center", fontsize=8.5, color=INK)
+        ax3.annotate(f"{b:.3f}x", (i + 0.18, b), textcoords="offset points",
+                     xytext=(0, 4), ha="center", fontsize=8.5, color=INK)
+    ax3.axhline(1.0, color=MUTED, lw=1, ls=(0, (2, 2)))
+    ax3.set_xticks(x)
+    ax3.set_xticklabels([r[0] for r in ratios], fontsize=8.5)
+    ax3.set_ylim(0.95, 1.32)
+    style(ax3, "The same ratios on real storage", ylabel="cost multiplier vs the rung below")
+    ax3.legend(fontsize=8, frameon=False, loc="upper right")
+    caption(
+        ax3,
+        "Postgres reproduces both steps to within a thousandth. It does not\n"
+        "settle the advisory-lock question though: this workload keeps exactly\n"
+        "one write in flight, so the lock is never contended. That needs\n"
+        "concurrent writers sharing a group, which is still unbuilt.",
+        dy=-0.22,
+    )
+
+    fig.subplots_adjust(left=0.055, right=0.99, top=0.80, bottom=0.32, wspace=0.24)
     fig.savefig(OUT / "auth-ladder.png", dpi=160)
     plt.close(fig)
 

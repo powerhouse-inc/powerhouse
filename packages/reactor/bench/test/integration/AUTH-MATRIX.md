@@ -35,7 +35,7 @@ the flag axis to each rather than introducing a new runner or report format.
 | Tier | Harness | A/B mechanism | Status |
 | --- | --- | --- | --- |
 | micro | `bench/auth-scope.bench.ts` | `vitest bench --outputJson` / `--compare` | landed |
-| meso | `scripts/profiling/reactor-direct.ts` | `pyroscope-analyse.ts --baseline` | flag axis landed, PGlite only |
+| meso | `scripts/profiling/reactor-direct.ts` | `pyroscope-analyse.ts --baseline` | flag axis landed, PGlite and Postgres |
 | macro | `bench/docker-compose.yml` + k6 + Prometheus | `runNN.sh` appending to `BASELINE.md` | not yet wired |
 
 Micro prices CPU with storage stubbed. It cannot price a read, a lock, or a
@@ -341,6 +341,83 @@ Neither needs new tooling: `--db postgresql://...` already exists, and the
 `--pyroscope` plus `pyroscope-analyse.ts --baseline` pair already produces a
 per-module CPU delta table against a saved `L0_CLEAN` profile.
 
+## Run 6 - the ladder on real Postgres
+
+Same workload as Run 5, against Postgres 16.15 rather than in-memory PGlite.
+The `reactor` schema is dropped before every cell, so no cell inherits another's
+data and accumulation cannot drift the sweep.
+
+```sh
+docker exec reactor-postgres psql -U postgres -d reactor \
+  -c "drop schema if exists reactor cascade;"
+tsx scripts/profiling/reactor-direct.ts 10 -o 500 -b 100 \
+  --auth-level L2 --auth-grants 100 \
+  --db "postgresql://postgres:postgres@localhost:5433/reactor"
+```
+
+Interleaved `L0_POLICIED, L1, L2` five times:
+
+| level | runs (s) | median | spread | vs prev |
+| --- | --- | --- | --- | --- |
+| `L0_POLICIED` | 7.16 7.14 7.24 6.71 6.67 | 7.14 | 8.0% | - |
+| `L1_DOCUMENT_DECISIONS` | 8.91 8.94 8.80 8.57 8.59 | 8.80 | 4.2% | **1.232x** |
+| `L2_AUTH_ENFORCEMENT` | 9.32 9.41 9.37 8.68 8.74 | 9.32 | 7.8% | **1.059x** |
+
+Paired ratios, one per interleaved repetition:
+
+| step | paired ratios | median | all positive |
+| --- | --- | --- | --- |
+| L1 / L0_POLICIED | 1.244 1.252 1.215 1.277 1.288 | 1.252 | yes |
+| L2 / L1 | 1.046 1.053 1.065 1.013 1.017 | 1.046 | yes |
+
+Interleaved `L0_CLEAN, L2, L3, L4` four times:
+
+| level | median | vs L2 | paired ratios |
+| --- | --- | --- | --- |
+| `L0_CLEAN` | 6.42 | - | - |
+| `L2_AUTH_ENFORCEMENT` | 8.29 | 1.000x | - |
+| `L3_AUTH_GROUPS` | 8.50 | 1.025x | 0.988 1.049 1.021 0.995 |
+| `L4_AUTH_CONDITIONS` | 8.19 | 0.988x | 0.989 1.031 1.066 0.918 |
+
+### Notes on Run 6
+
+**The ladder ratios are the same on real storage, to within a thousandth.**
+PGlite gave 1.232x and 1.060x for the two steps; Postgres gives 1.232x and
+1.059x. Absolute times are 15-18% higher across the board, as expected for a
+real socket and a real fsync, but the shape of the ladder is unchanged and the
+headline stands: +31% total, +23 points of it `documentDecisions`.
+
+Both steps survive pairing. Every one of the five `L1/L0` pairs and every one of
+the five `L2/L1` pairs is positive, which is what makes these two real rather
+than an artifact of when the machine happened to be busy.
+
+**This does not settle the advisory-lock question, and the agreement above is
+the reason why.** `store.ts` takes a `pg_advisory_xact_lock` over every stream in
+the read set, which is the mechanism by which `authGroups` would make documents
+sharing a group serialise against each other. This workload never contends it:
+`performOperations` executes one batch, awaits it to `READ_READY`, and only then
+issues the next, so exactly one write is in flight for the whole run. A lock
+nobody else is holding is nearly free, on any storage engine.
+
+So Postgres reproducing PGlite is not evidence that the lock is cheap. It is
+evidence that this workload does not exercise it. The two engines agree here
+precisely because the contended path is unreached on both.
+
+**`L3` and `L4` still tie with `L2`, now for a reason that has nothing to do
+with the storage engine.** Their paired ratios straddle 1 in both directions
+(0.988 to 1.049, and 0.918 to 1.066). Three things keep them unreachable: the
+policy names no groups, nothing is backdated so `foldEvaluatedScope` never runs,
+and there is no concurrency for a lock or an append-condition retry to bite on.
+
+**Next probe:** concurrency, not storage. The smallest experiment that would
+settle the lock hypothesis is N concurrent writers against M documents that all
+name one group, against the same documents naming disjoint groups. The signal is
+the throughput ratio between those two shapes, plus append-condition conflict
+count - and conflicts are retried up to twenty times exempt from the retry
+limit, each retry re-running the whole gate against an invalidated write cache,
+so the cost multiplies rather than adds. That needs the group model registered
+in the driver and a concurrent driver, neither of which exists yet.
+
 ## Coverage and what is not yet measured
 
 Landed: the pure evaluator, the head admission gate, the read gate, and a
@@ -348,11 +425,10 @@ fixture guard that fails when a policy stops reaching the code under test.
 
 Not yet built, in the order they should be:
 
-1. **Meso tier against Postgres.** The flag axis, policy seeding, a signer
-   context and a seeded-policy read-back assertion have landed, but every number
-   in Run 5 is from in-memory PGlite. The advisory lock and the guarded-insert
-   retry only behave realistically on Postgres, and `--db postgresql://...`
-   already exists.
+1. **Concurrency.** Run 6 covers Postgres but not contention: the driver keeps
+   one write in flight, so the advisory lock over the read set and the
+   append-condition retry are both unreached. This is now the largest gap, and it
+   is a driver limitation rather than a storage one.
 2. **The positional path.** `foldEvaluatedScope` folds the entire effective
    stream of the evaluated scope, and it is the most expensive construct in the
    feature. It is also unreachable from a normal write: `simple-job-executor.ts`

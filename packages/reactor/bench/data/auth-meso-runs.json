@@ -17,12 +17,12 @@
     "node": "v24.13.0",
     "reactorSha": "bfbe07dd6",
     "date": "2026-08-24",
-    "storage": "in-memory PGlite",
     "workerPool": "none",
-    "signatureVerifier": "none"
+    "signatureVerifier": "none",
+    "postgres": "16.15 (docker, 127.0.0.1:5433)"
   },
   "caveats": [
-    "PGlite is single-threaded WASM on the host loop, so the pg_advisory_xact_lock over the read set does not behave as it does on Postgres.",
+    "The workload is strictly sequential: one batch is executed and awaited to READ_READY before the next. Exactly one write is ever in flight, so there is no lock contention at all and the pg_advisory_xact_lock over the read set is never contended. Postgres therefore confirms the ladder ratios but does not test the group-lock hypothesis, which is about concurrency.",
     "Nothing is backdated, so foldEvaluatedScope never runs and L4 is understated.",
     "No group principals are in the policy, so the groups projection reads no streams and L3 is understated.",
     "Batch size 100 amortises one waitForJob poll across 100 actions. At batch size 1 the 10ms poll quantum swamps every effect."
@@ -33,22 +33,59 @@
       "repetitions": 3,
       "interleaved": true,
       "seconds": {
-        "L0_CLEAN": [6.39, 6.71, 6.59],
-        "L0_POLICIED": [6.41, 6.54, 6.53],
-        "L1_DOCUMENT_DECISIONS": [7.97, 8.03, 8.07],
-        "L2_AUTH_ENFORCEMENT": [8.65, 8.68, 8.54],
-        "L4_AUTH_CONDITIONS": [8.78, 8.54, 8.65]
-      }
+        "L0_CLEAN": [
+          6.39,
+          6.71,
+          6.59
+        ],
+        "L0_POLICIED": [
+          6.41,
+          6.54,
+          6.53
+        ],
+        "L1_DOCUMENT_DECISIONS": [
+          7.97,
+          8.03,
+          8.07
+        ],
+        "L2_AUTH_ENFORCEMENT": [
+          8.65,
+          8.68,
+          8.54
+        ],
+        "L4_AUTH_CONDITIONS": [
+          8.78,
+          8.54,
+          8.65
+        ]
+      },
+      "storage": "pglite"
     },
     {
       "name": "top of ladder",
       "repetitions": 4,
       "interleaved": true,
       "seconds": {
-        "L2_AUTH_ENFORCEMENT": [8.48, 8.82, 7.96, 7.93],
-        "L3_AUTH_GROUPS": [8.61, 8.21, 8.06, 8.08],
-        "L4_AUTH_CONDITIONS": [8.70, 8.22, 8.14, 7.83]
-      }
+        "L2_AUTH_ENFORCEMENT": [
+          8.48,
+          8.82,
+          7.96,
+          7.93
+        ],
+        "L3_AUTH_GROUPS": [
+          8.61,
+          8.21,
+          8.06,
+          8.08
+        ],
+        "L4_AUTH_CONDITIONS": [
+          8.7,
+          8.22,
+          8.14,
+          7.83
+        ]
+      },
+      "storage": "pglite"
     },
     {
       "name": "paired admission step",
@@ -56,10 +93,29 @@
       "interleaved": true,
       "primary": true,
       "seconds": {
-        "L0_POLICIED": [6.07, 6.01, 6.10, 6.04, 6.03],
-        "L1_DOCUMENT_DECISIONS": [7.81, 7.39, 7.44, 7.52, 7.42],
-        "L2_AUTH_ENFORCEMENT": [7.99, 7.89, 7.86, 7.85, 8.05]
-      }
+        "L0_POLICIED": [
+          6.07,
+          6.01,
+          6.1,
+          6.04,
+          6.03
+        ],
+        "L1_DOCUMENT_DECISIONS": [
+          7.81,
+          7.39,
+          7.44,
+          7.52,
+          7.42
+        ],
+        "L2_AUTH_ENFORCEMENT": [
+          7.99,
+          7.89,
+          7.86,
+          7.85,
+          8.05
+        ]
+      },
+      "storage": "pglite"
     },
     {
       "name": "L3 measured in its own batch, retained as the blocked-ordering artifact",
@@ -67,8 +123,79 @@
       "interleaved": false,
       "artifact": true,
       "seconds": {
-        "L3_AUTH_GROUPS": [9.18, 9.09, 8.85]
+        "L3_AUTH_GROUPS": [
+          9.18,
+          9.09,
+          8.85
+        ]
+      },
+      "storage": "pglite"
+    },
+    {
+      "name": "postgres admission step",
+      "storage": "postgres",
+      "repetitions": 5,
+      "interleaved": true,
+      "primary": true,
+      "seconds": {
+        "L0_POLICIED": [
+          7.16,
+          7.14,
+          7.24,
+          6.71,
+          6.67
+        ],
+        "L1_DOCUMENT_DECISIONS": [
+          8.91,
+          8.94,
+          8.8,
+          8.57,
+          8.59
+        ],
+        "L2_AUTH_ENFORCEMENT": [
+          9.32,
+          9.41,
+          9.37,
+          8.68,
+          8.74
+        ]
+      }
+    },
+    {
+      "name": "postgres top of ladder",
+      "storage": "postgres",
+      "repetitions": 4,
+      "interleaved": true,
+      "seconds": {
+        "L0_CLEAN": [
+          6.57,
+          6.2,
+          6.26,
+          7.28
+        ],
+        "L2_AUTH_ENFORCEMENT": [
+          8.14,
+          7.99,
+          8.43,
+          8.86
+        ],
+        "L3_AUTH_GROUPS": [
+          8.04,
+          8.38,
+          8.61,
+          8.82
+        ],
+        "L4_AUTH_CONDITIONS": [
+          8.05,
+          8.24,
+          8.99,
+          8.13
+        ]
       }
     }
-  ]
+  ],
+  "storages": {
+    "pglite": "In-memory PGlite, single-threaded WASM on the host loop. Sets 1-4.",
+    "postgres": "Postgres 16.15 in Docker on port 5433, reactor schema dropped before every cell so no run inherits another's data. Sets 5-6."
+  }
 }

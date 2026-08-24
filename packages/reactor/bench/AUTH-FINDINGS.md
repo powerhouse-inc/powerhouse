@@ -18,11 +18,16 @@ it: `documentDecisions` -> `authEnforcement` -> `authGroups` -> `authConditions`
 A reactor refuses to start on a set that skips one, so the axis is a ladder and
 not a set of independent switches.
 
-End to end the full ladder costs **+31%** on the meso workload. **+23 of those
-points are `documentDecisions`** - the prerequisite, which replaces the
+End to end the full ladder costs **+31%**, measured on Postgres 16. **+23 of
+those points are `documentDecisions`** - the prerequisite, which replaces the
 meta-cache gate with a Postgres advisory lock, a guarded insert and a
 document-scope read. `authEnforcement`, the flag that actually evaluates the
-policy, adds **6%**.
+policy, adds **6%**. Both steps survive pairing: every one of five interleaved
+repetitions is positive for both.
+
+The same sweep on in-memory PGlite gives 1.232x and 1.060x against Postgres's
+1.232x and 1.059x. Absolute times are 15-18% lower on PGlite, but the ladder's
+shape does not depend on the storage engine.
 
 This is the number most likely to be misread. An auth-off-versus-auth-on
 comparison produces one figure, 31%, and hands all of it to authorization. Three
@@ -30,10 +35,11 @@ quarters of it belongs to the admission mechanism underneath, which is a
 different piece of work with a different owner and a different fix.
 
 **Two rungs are not yet measurable and their ties should not be read as free.**
-`authGroups` and `authConditions` come out level with `authEnforcement`
-(0.991x and 0.995x, n=4), and that is a statement about the harness: the policy
-carries no group principals, nothing is backdated so `foldEvaluatedScope` never
-runs, and PGlite does not take the advisory lock the way Postgres does.
+`authGroups` and `authConditions` come out level with `authEnforcement` on
+Postgres too (1.025x and 0.988x, n=4, paired ratios straddling 1 in both
+directions). That is a statement about the workload, not the flags: the policy
+names no groups, nothing is backdated so `foldEvaluatedScope` never runs, and
+the driver keeps exactly one write in flight, so no lock is ever contended.
 
 ---
 
@@ -116,20 +122,27 @@ read gate is free.
 3. **Watch reads, not writes, on the host.** Write-path auth lands in the worker
    pool. Read-path and sync-serving auth land on the one loop that is already
    saturated, and the roster walk has no cache of any kind.
-4. **Do not quote the +31% as the production number yet.** It comes from
-   in-memory PGlite with no worker pool, no signature verification, nothing
-   backdated and no group principals. Each of those makes it an underestimate in
-   a different direction.
+4. **Do not quote the +31% as the production number yet.** It now comes from
+   real Postgres, which removes the storage caveat, but the run still has no
+   concurrency, no worker pool, no signature verification, nothing backdated and
+   no group principals. Each of those makes it an underestimate in a different
+   direction, and the first is the one most likely to matter.
 
 ## What is still unmeasured
 
 In priority order, with the reason each one matters:
 
-1. **The ladder against real Postgres.** The advisory lock over the read set is
-   the mechanism by which `authGroups` makes every document sharing a group
-   serialise, and append-condition conflicts retry up to 20 times *exempt from
-   the retry limit*, re-running the whole gate against an invalidated cache. On
-   PGlite neither behaves realistically. This is the largest single gap.
+1. **Concurrency.** The advisory lock over the read set is the mechanism by
+   which `authGroups` would make every document sharing a group serialise, and
+   append-condition conflicts retry up to 20 times *exempt from the retry limit*,
+   re-running the whole gate against an invalidated cache each time - so the cost
+   multiplies rather than adds. Running on Postgres did not touch this: the
+   driver keeps one write in flight, so the lock is never contended and the
+   retry never fires. That the two storage engines agree so closely is evidence
+   the contended path is unreached on both, not that it is cheap. The smallest
+   experiment that would settle it is N concurrent writers over documents that
+   all name one group, against the same documents naming disjoint groups. This is
+   now the largest single gap.
 2. **A backdated arm.** `foldEvaluatedScope` folds the entire effective stream
    of the evaluated scope and is the most expensive construct in the feature. It
    is also unreachable from an ordinary write, so `authConditions` will keep
@@ -159,6 +172,12 @@ pnpm --filter @powerhousedao/reactor exec vitest run test/bench/auth-policies.te
 
 # meso tier: end to end, one rung at a time
 tsx scripts/profiling/reactor-direct.ts 10 -o 500 -b 100 --auth-level L2 --auth-grants 100
+
+# against real Postgres, dropping the schema first so no run inherits another's data
+docker compose -f packages/reactor/docker-compose.yml up -d postgres
+docker exec reactor-postgres psql -U postgres -d reactor -c "drop schema if exists reactor cascade;"
+tsx scripts/profiling/reactor-direct.ts 10 -o 500 -b 100 --auth-level L2 --auth-grants 100 \
+  --db "postgresql://postgres:postgres@localhost:5433/reactor"
 
 # figures
 cd packages/reactor/bench
