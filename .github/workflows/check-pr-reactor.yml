@@ -93,7 +93,10 @@ jobs:
 
   integration-test:
     name: Sync Integration Tests
-    needs: test-reactor
+    # Deliberately not gated on test-reactor: this job shares no artifact with
+    # it (own checkout, install and build), so the dependency only served to
+    # fail fast. Running both at once takes the workflow from the sum of the
+    # two to the longer of them.
     runs-on: ubuntu-24.04
     container: node:24
     # The last green main run took 14m22s against the previous 15m budget:
