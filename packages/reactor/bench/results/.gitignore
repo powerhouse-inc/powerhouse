@@ -1,0 +1,4 @@
+# Recorded benchmark runs are machine-specific and are the input to
+# `vitest bench --compare`, not a reference anyone else can use. Keep the
+# directory, ignore its contents.
+*.json
