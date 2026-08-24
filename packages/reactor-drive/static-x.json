@@ -1,0 +1,25 @@
+{
+  "checks": {
+    "push": {
+      "novelty": "baseline",
+      "tools": {
+        "ts/graph/cycles": "block",
+        "ts/graph/dead-exports": "warn",
+        "ts/comments/stale-refs": {
+          "level": "warn",
+          "minConfidence": "medium"
+        },
+        "ts/dupes/functions": {
+          "level": "block",
+          "minSeverity": "warning"
+        },
+        "ts/comments/llm-tells": "block"
+      }
+    }
+  },
+  "todo": {
+    "codes": [
+      "comment.llm-tell"
+    ]
+  }
+}

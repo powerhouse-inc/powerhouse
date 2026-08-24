@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "findings": {
+    "src/client/reactor-drive-client.ts|graph.dead-export|setAvailableOfflineAction": 1,
+    "src/client/reactor-drive-client.ts|graph.dead-export|setDriveIconAction": 1,
+    "src/client/reactor-drive-client.ts|graph.dead-export|setDriveNameAction": 1,
+    "src/client/reactor-drive-client.ts|graph.dead-export|setSharingTypeAction": 1,
+    "src/read-model/interfaces.ts|comment.stale-ref|IReactorClient.waitForConsistency": 1,
+    "src/subgraph/resolvers.ts|comment.stale-ref|ISubgraph": 1,
+    "test/bench/projection-scale.bench.ts|graph.dead-file|test/bench/projection-scale.bench.ts": 1
+  }
+}

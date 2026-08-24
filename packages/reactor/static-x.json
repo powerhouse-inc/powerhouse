@@ -1,0 +1,43 @@
+{
+  "checks": {
+    "push": {
+      "novelty": "baseline",
+      "tools": {
+        "ts/graph/cycles": "block",
+        "ts/graph/dead-exports": "warn",
+        "ts/comments/stale-refs": {
+          "level": "warn",
+          "minConfidence": "medium"
+        },
+        "ts/dupes/functions": {
+          "level": "warn",
+          "minSeverity": "warning"
+        },
+        "ts/comments/llm-tells": "block"
+      }
+    }
+  },
+  "todo": {
+    "codes": [
+      "comment.llm-tell"
+    ]
+  },
+  "ts": {
+    "comments": {
+      "llm-tells": {
+        "ignore": [
+          "we rebuild the document scope all the time, so if that is th",
+          "Default slug to document ID if empty (matching legacy behavi",
+          "Apply limit if specified (fetch one extra to determine hasMo",
+          "Instead of listening to syncops directly for cursor updates,",
+          "Records come in ordinal DESC order (newest first). Reverse s",
+          "The strict pre-flight and the load path apply the same rule:",
+          "The auth scope, not every scope: an execute grant confers re",
+          "sorted lock order is first, written, last; the blocker holds",
+          "The reason this is a real maximum rather than the last-index",
+          "Update a job's status to RUNNING. @param jobId - The job ID "
+        ]
+      }
+    }
+  }
+}

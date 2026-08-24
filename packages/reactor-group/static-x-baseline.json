@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "findings": {
+    "document-models/reactor-group/index.ts|graph.dead-file|document-models/reactor-group/index.ts": 1,
+    "document-models/reactor-group/reactor-group.json|graph.dead-file|document-models/reactor-group/reactor-group.json": 1,
+    "document-models/reactor-group/v1/gen/actions.ts|graph.cycle|document-models/reactor-group/v1/gen/actions.ts": 1,
+    "document-models/reactor-group/v1/gen/controller.ts|graph.cycle|document-models/reactor-group/v1/gen/controller.ts": 1,
+    "document-models/reactor-group/v1/gen/group/error.ts|graph.dead-export|ErrorCode": 1,
+    "document-models/reactor-group/v1/gen/group/error.ts|graph.dead-export|ReducerError": 1,
+    "document-models/reactor-group/v1/gen/group/error.ts|graph.dead-export|errors": 1,
+    "document-models/reactor-group/v1/gen/ph-factories.ts|graph.dead-export|createGlobalState": 1,
+    "document-models/reactor-group/v1/gen/ph-factories.ts|graph.dead-export|createLocalState": 1
+  }
+}
