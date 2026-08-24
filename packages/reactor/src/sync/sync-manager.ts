@@ -1148,11 +1148,39 @@ export class SyncManager implements ISyncManager {
       hasMore = !!page.next;
 
       if (operations.length > 0) {
+        // Which documents this page creates. A creation is always in the
+        // `document` scope (document-action-handler.ts:346), and every other
+        // scope's run for that document needs it to exist first.
+        const created = new Set<string>();
+        for (const entry of operations) {
+          if (entry.operation.action.type === "CREATE_DOCUMENT") {
+            created.add(entry.context.documentId);
+          }
+        }
+
         operations.sort((a, b) => {
           if (a.context.documentId !== b.context.documentId) {
             return a.context.documentId < b.context.documentId ? -1 : 1;
           }
           if (a.context.scope !== b.context.scope) {
+            // Scope is otherwise compared as a raw string, so `auth` sorted
+            // ahead of the `document` run that creates it -- and emitBatches
+            // turns emission order into a dependency through lastJobByDoc, so
+            // the creation was emitted depending on an operation for a
+            // document that did not exist yet. The receiver defers that
+            // operation until a CREATE_DOCUMENT for the id lands, which is the
+            // job queued behind it, and neither side moves.
+            //
+            // Only the creating run is hoisted. Ordering the scopes against
+            // each other generally is a separate question with its own
+            // answers elsewhere (comparePositions gives `auth` a timestamp
+            // tie), and grouping by scope at all is what keeps a page's
+            // batches few -- serving a document's operations in index order
+            // splits it into a batch per scope change.
+            if (created.has(a.context.documentId)) {
+              if (a.context.scope === "document") return -1;
+              if (b.context.scope === "document") return 1;
+            }
             return a.context.scope < b.context.scope ? -1 : 1;
           }
           return a.context.ordinal - b.context.ordinal;

@@ -1,5 +1,6 @@
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import { describe, expect, it } from "vitest";
+import { validateBatchStructure } from "../../src/core/utils.js";
 import { SyncOperation } from "../../src/sync/sync-operation.js";
 import type { RemoteFilter } from "../../src/sync/types.js";
 import {
@@ -593,5 +594,60 @@ describe("consolidateSyncOperations", () => {
     expect(result).toHaveLength(2);
     expect(result[0].branch).toBe("main");
     expect(result[1].branch).toBe("draft");
+  });
+
+  it("does not merge a scope's runs across an intervening run of another scope", () => {
+    // One document whose scopes interleave, as the operation index orders them.
+    // Merging both `document` runs into one node and both `auth` runs into
+    // another makes each depend on the other.
+    const polled = [
+      makeSyncOp("j1", "doc-a", "document", "main", [1]),
+      makeSyncOp("j2", "doc-a", "auth", "main", [2], ["j1"]),
+      makeSyncOp("j3", "doc-a", "document", "main", [3], ["j2"]),
+      makeSyncOp("j4", "doc-a", "auth", "main", [4], ["j3"]),
+    ];
+
+    const result = consolidateSyncOperations(polled);
+
+    expect(result.map((syncOp) => syncOp.jobId)).toEqual([
+      "j1",
+      "j2",
+      "j3",
+      "j4",
+    ]);
+    expect(result.map((syncOp) => syncOp.jobDependencies)).toEqual([
+      [],
+      ["j1"],
+      ["j2"],
+      ["j3"],
+    ]);
+
+    // The receiver rejects a batch whose dependencies form a cycle, which is
+    // what the merged shape produced.
+    expect(() =>
+      validateBatchStructure(
+        result.map((syncOp) => ({
+          key: syncOp.jobId,
+          dependsOn: syncOp.jobDependencies,
+        })),
+      ),
+    ).not.toThrow();
+  });
+
+  it("still merges a scope's adjacent runs", () => {
+    const polled = [
+      makeSyncOp("j1", "doc-a", "document", "main", [1]),
+      makeSyncOp("j2", "doc-a", "document", "main", [2], ["j1"]),
+      makeSyncOp("j3", "doc-a", "auth", "main", [3], ["j2"]),
+      makeSyncOp("j4", "doc-a", "auth", "main", [4], ["j3"]),
+    ];
+
+    const result = consolidateSyncOperations(polled);
+
+    expect(result).toHaveLength(2);
+    expect(result[0].jobId).toBe("j1");
+    expect(result[0].operations.map((o) => o.context.ordinal)).toEqual([1, 2]);
+    expect(result[1].jobId).toBe("j3");
+    expect(result[1].jobDependencies).toEqual(["j1"]);
   });
 });
