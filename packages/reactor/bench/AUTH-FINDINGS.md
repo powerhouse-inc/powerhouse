@@ -112,6 +112,8 @@ read gate is free.
 
 ## 4. Inside the prerequisite, the cost is the append condition - not the decision
 
+![Attribution](./images/auth-attribution.png)
+
 Section 1 says `documentDecisions` is three quarters of the bill. That is a
 flag, not a mechanism, and the flag bundles four changes. Separating them moves
 the target.

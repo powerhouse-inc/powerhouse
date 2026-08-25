@@ -504,6 +504,103 @@ def figure_gates(cells):
     plt.close(fig)
 
 
+# --- figure 4: where the prerequisite's cost actually goes -------------------
+
+
+def figure_attribution():
+    """Decomposes the documentDecisions delta from the recorded attribution run."""
+    path = HERE / "data" / "auth-attribution-runs.json"
+    if not path.exists():
+        raise SystemExit(f"{path} is missing")
+    d = json.loads(path.read_text())
+    a = d["attribution"]
+    rtt = d["measuredRoundTripMs"]["parameterised"]
+
+    fig, (ax, ax2) = plt.subplots(
+        1, 2, figsize=(13.6, 5.6), gridspec_kw={"width_ratios": [1.25, 1]}
+    )
+
+    parts = [
+        ("Postgres\nexecuting SQL", a["postgresExecutingSqlMs"], a["postgresSharePct"], STEP),
+        ("round trips\n(+1 stmt/operation)", a["roundTripEstimateMs"], a["roundTripSharePct"], WARN),
+        ("building + serialising\nthe larger statement", a["remainderMs"], a["remainderSharePct"], ALERT),
+    ]
+    left = 0.0
+    for label, ms, pct, colour in parts:
+        ax.barh(0, ms, left=left, height=0.5, color=colour, edgecolor="none")
+        ax.annotate(
+            f"{pct:.0f}%",
+            (left + ms / 2, 0),
+            ha="center",
+            va="center",
+            fontsize=13,
+            color="white",
+            weight="bold",
+        )
+        ax.annotate(
+            f"{label}\n{ms:.0f} ms",
+            (left + ms / 2, 0.33),
+            ha="center",
+            va="bottom",
+            fontsize=8.6,
+            color=INK,
+            linespacing=1.4,
+        )
+        left += ms
+
+    ax.set_ylim(-0.45, 1.05)
+    ax.set_xlim(0, a["wallDeltaMs"] * 1.02)
+    ax.set_yticks([])
+    style(
+        ax,
+        f"The +{a['wallDeltaMs']} ms that documentDecisions adds is not the decision,\n"
+        "and it is mostly not the database either",
+        xlabel="ms added over 5000 operations",
+    )
+    ax.grid(axis="y", visible=False)
+    ax.grid(axis="x", color=GRID, linewidth=0.7)
+    caption(
+        ax,
+        f"Postgres executing SQL is {a['postgresSharePct']}% of it. The evaluator itself is 0.15%.\n"
+        f"The advisory lock costs 2 us to run and a whole round trip to issue, and\n"
+        f"L1 issues {a['extraStatements']} more statements for 5000 operations - "
+        f"{a['extraStatementsPerOperation']} per operation.\n"
+        f"A sequential statement against this Postgres measures {rtt:.3f} ms.",
+        dy=-0.30,
+    )
+
+    shapes = [
+        ("guarded insert", 5005, 124.4, ALERT),
+        ("extra document-scope read", 272, 114.7, WARN),
+        ("advisory lock", 5006, 11.4, GOOD),
+    ]
+    y = np.arange(len(shapes))
+    ax2.barh(y, [s[2] for s in shapes], height=0.5,
+             color=[s[3] for s in shapes], edgecolor="none")
+    for i, (label, calls, ms, _) in enumerate(shapes):
+        ax2.annotate(f"{ms:.1f} ms over {calls:,} calls", (ms + 3, i),
+                     va="center", fontsize=8.6, color=INK)
+    ax2.set_yticks(y)
+    ax2.set_yticklabels([s[0] for s in shapes], fontsize=9)
+    ax2.invert_yaxis()
+    ax2.set_xlim(0, 210)
+    style(ax2, "Server-side, per statement shape", xlabel="ms added")
+    ax2.grid(axis="y", visible=False)
+    ax2.grid(axis="x", color=GRID, linewidth=0.7)
+    caption(
+        ax2,
+        "The lock is the cheapest row to execute and the most expensive to issue:\n"
+        "one per operation, because it must be held before the insert takes its\n"
+        "snapshot. Batching applies removes a round trip, a lock and a statement\n"
+        "construction per operation at once, which is why it outranks preparing.",
+        dy=-0.30,
+    )
+
+    fig.subplots_adjust(left=0.055, right=0.985, top=0.80, bottom=0.34, wspace=0.30)
+    fig.savefig(OUT / "auth-attribution.png", dpi=160)
+    plt.close(fig)
+
+
 def main():
     OUT.mkdir(exist_ok=True)
     cells = load_micro()
@@ -511,7 +608,9 @@ def main():
     figure_ladder(meso)
     figure_drivers(cells)
     figure_gates(cells)
-    for name in ("auth-ladder.png", "auth-cost-drivers.png", "auth-gates.png"):
+    figure_attribution()
+    for name in ("auth-ladder.png", "auth-cost-drivers.png", "auth-gates.png",
+                 "auth-attribution.png"):
         size = (OUT / name).stat().st_size / 1024
         print(f"  images/{name}  {size:.0f} KB")
 
