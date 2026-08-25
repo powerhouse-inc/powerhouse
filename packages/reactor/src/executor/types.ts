@@ -173,12 +173,17 @@ export type JobExecutorConfig = {
   /**
    * Persist a job's writes in one store transaction rather than one each.
    *
-   * Off by default. A job's operations are reduced sequentially either way;
-   * this only changes how many apply calls carry them, which is one advisory
-   * lock and one guarded insert per batch instead of per operation. Only runs
-   * that qualify are batched, and the executor falls back per write for the
-   * rest, so turning it on never changes which operations are produced -- only
-   * how many transactions they arrive in.
+   * On by default. A job's operations are reduced sequentially either way; this
+   * only changes how many apply calls carry them, which is one advisory lock
+   * and one guarded insert per batch instead of per operation. Only runs that
+   * qualify are batched, and the executor falls back per write for the rest, so
+   * this never changes which operations are produced -- only how many
+   * transactions they arrive in.
+   *
+   * It does change one thing beyond performance: a batched job's writes are
+   * atomic, so a job that fails partway through leaves nothing behind where it
+   * used to leave the operations it had already applied. Set it false to get
+   * the per-operation behaviour back.
    */
   batchApplies?: boolean;
 };

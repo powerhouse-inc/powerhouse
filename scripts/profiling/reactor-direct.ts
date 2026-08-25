@@ -366,7 +366,7 @@ function parseArgs(args: string[]): {
   authLevel: AuthLevel;
   authGrants: number;
   authGroups: number;
-  batchApplies: boolean;
+  batchApplies: boolean | undefined;
 } {
   let count = 10;
   let operations = 0;
@@ -384,7 +384,7 @@ function parseArgs(args: string[]): {
   let authLevel: AuthLevel = "L0_CLEAN";
   let authGrants = 10;
   let authGroups = 0;
-  let batchApplies = false;
+  let batchApplies: boolean | undefined = undefined;
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -450,6 +450,8 @@ function parseArgs(args: string[]): {
       authGroups = Number(args[++i]);
     } else if (arg === "--batch-applies") {
       batchApplies = true;
+    } else if (arg === "--no-batch-applies") {
+      batchApplies = false;
     } else if (arg === "--help" || arg === "-h") {
       console.log(`
 Usage: tsx reactor-direct.ts [N] [options]
@@ -477,7 +479,8 @@ Options:
                             (a prefix such as L2 also matches; default L0_CLEAN)
   --auth-grants <N>         Grants in the seeded policy (default: 10, cap 100)
   --auth-groups <N>         Distinct group principals in the policy (default: 0)
-  --batch-applies           Persist a job's operations in one store transaction
+  --batch-applies           Force one store transaction per job (reactor default: on)
+  --no-batch-applies        Force one store transaction per operation
   --pyroscope [address]     Enable Pyroscope profiling (default: http://localhost:4040)
   --otel [endpoint]         Enable OpenTelemetry metrics export (default: http://localhost:4318)
                             Exports to OTLP HTTP collector at {endpoint}/v1/metrics
@@ -764,7 +767,15 @@ async function main() {
           .join(", ") || "no flags"
       })`,
     );
-    console.log(`  Batched applies: ${batchApplies ? "on" : "off"}`);
+    console.log(
+      `  Batched applies: ${
+        batchApplies === undefined
+          ? "reactor default"
+          : batchApplies
+            ? "on (forced)"
+            : "off (forced)"
+      }`,
+    );
 
     const reactorModule = await new ReactorBuilder()
       .withDocumentModelSources([documentModelDocumentModelModule])

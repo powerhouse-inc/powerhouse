@@ -154,7 +154,7 @@
   },
   "caveats": [
     "Still strictly sequential: one write in flight, so the advisory lock is never contended.",
-    "batchApplies is off by default and only engages for a run that canBatch accepts; the excluded cases still write one operation per transaction.",
+    "batchApplies defaults on and engages only for a run that canBatch accepts; the excluded cases still write one operation per transaction. The cells here force the flag either way so the comparison is explicit.",
     "Batching makes a job's writes atomic where they were previously committed one at a time, which is a semantic change beyond performance and is called out in the writeup."
   ]
 }

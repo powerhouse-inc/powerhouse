@@ -646,9 +646,11 @@ wall delta falling alongside it. If the count fell and the delta did not, the
 ranking of the two candidate fixes was wrong.
 
 `SimpleJobExecutor` now splits deciding a write from persisting it, so a run of
-writes can share one apply. `batchApplies` is off by default and only engages
-for a run that qualifies; everything else still writes one operation per
-transaction.
+writes can share one apply. `batchApplies` is on by default and engages only for
+a run that qualifies; everything else still writes one operation per
+transaction. The whole reactor suite - 2718 tests - passes with it on, which is
+what the default rests on: every multi-action job in it now takes the batched
+path.
 
 ```sh
 tsx scripts/profiling/reactor-direct.ts 5 -o 1000 -b 100 \
@@ -699,8 +701,9 @@ fixes rather than the tied one.
 **One thing to weigh that is not performance.** Batching makes a job's writes
 atomic where they were previously committed one at a time. A job that failed
 halfway used to leave its earlier operations persisted; batched, it leaves
-nothing. That is arguably the better semantic, and it is a change in behaviour
-either way, which is part of why the flag defaults off.
+nothing. That is the better semantic - a half-applied job is not a state anyone
+asked for - and it is still a change in behaviour, so `batchApplies: false`
+restores the old one for a deployment that depends on it.
 
 **Next probe:** the excluded cases. `canBatch` refuses positional runs, the auth
 and document scopes, skips, denials and the history-rebuilding action types, and

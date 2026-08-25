@@ -158,7 +158,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       retryBaseDelayMs: config.retryBaseDelayMs ?? 100,
       retryMaxDelayMs: config.retryMaxDelayMs ?? 5000,
       yieldDeadlineMs: config.yieldDeadlineMs ?? 50,
-      batchApplies: config.batchApplies ?? false,
+      batchApplies: config.batchApplies ?? true,
     };
 
     // Resolved separately so reads are plain booleans; the config keeps what
