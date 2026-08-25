@@ -84,7 +84,7 @@ const unsafeIgnoredFiles = [
   "packages/document-drive/src/utils/migrations.ts",
   // TODO: remove this once we have a better way to handle release scripts
   "tools/scripts/release.ts",
-  "releases/release.ts",
+  "releases/*.ts",
   // TODO: remove this once we have a better way to handle external packages
   "**/external-packages.js",
   // Excluded from reactor's tsconfig.json, so ESLint's project service cannot parse it
