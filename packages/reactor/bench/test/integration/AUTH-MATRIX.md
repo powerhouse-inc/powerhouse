@@ -491,12 +491,13 @@ endpoint alone would be a choice about which story to tell.
 Part of that inflation was the measuring tool rather than Postgres. The first
 version of `pg-statement-diff` read the container log after the run, which
 rescans it from the beginning and costs more on every use; it now follows from
-the tail, and at a 900-operation workload the logged and unlogged wall times
-moved from roughly 2x apart to 1.4x apart. A re-measurement with the fixed tool
-should tighten these bounds and is owed. It is not in this run because the host
-had been driven hard enough by then to produce a 19.9 s outlier in a 2 s
-workload, and a quiet machine is a precondition for the answer being worth
-anything.
+the tail.
+
+**Run 8 supersedes this range.** Measured with `pg_stat_statements`, which costs
+a percent or two rather than tens of percent, the answer is 8.8% - below the
+lower bound here, because logging inflated the numerator as well as the
+denominator. Treat the range in this section as the artifact of an instrument
+rather than a property of the system.
 
 ### The client side
 
@@ -543,6 +544,97 @@ call count and leaves the statement shape alone; preparing the statement changes
 the build cost and leaves the count alone. Measure them independently before
 building either, and use `pg-statement-diff` for the first (call counts move)
 and the wall profile for the second (kysely self-time moves).
+
+## Run 8 - the in-database share, pinned
+
+Run 7 left the database's share of the `documentDecisions` cost as a range,
+20% to 54%, because statement logging taxes the arm issuing more statements
+harder than the baseline. `pg_stat_statements` costs a percent or two instead of
+tens of percent, so it can answer what logging could only bound.
+
+```sh
+docker exec reactor-postgres psql -U postgres -d reactor \
+  -c "alter system set shared_preload_libraries = 'pg_stat_statements';"
+docker restart reactor-postgres
+docker exec reactor-postgres psql -U postgres -d reactor \
+  -c "create extension if not exists pg_stat_statements;"
+
+# --method auto now prefers it
+tsx scripts/profiling/pg-statement-diff.ts capture --label L1 --out /tmp/l1.json -- \
+  tsx scripts/profiling/reactor-direct.ts 5 -o 1000 -b 100 --auth-level L1 --auth-grants 100 --db "$DB"
+```
+
+Median of three interleaved repetitions, schema dropped per cell, 5000
+operations:
+
+| | L0_POLICIED | L1 | delta |
+| --- | ---: | ---: | ---: |
+| wall clock | 8263 ms | 10198 ms | **+1935 ms** |
+| Postgres executing SQL | 898.8 ms | 1069.5 ms | **+170.6 ms** |
+| statements issued | 31915 | 37050 | **+5135** |
+
+**Postgres executing SQL is 8.8% of the added time.** That is below the 20%
+lower bound Run 7 reported, which means logging inflated its numerator as well
+as its denominator: a statement whose duration is measured while the server is
+writing a log line for every other statement is not measuring the statement.
+Run 7's range is superseded, not narrowed.
+
+Server-side, per shape:
+
+| statement shape | L0_POLICIED | L1 | delta |
+| --- | ---: | ---: | ---: |
+| guarded insert into Operation | 0 calls, 0.0 ms | 5005 calls, 124.4 ms | +124.4 |
+| read: Operation aggregate | 142 calls, 203.4 ms | 272 calls, 318.1 ms | +114.7 |
+| advisory lock over the read set | 1 call, 0.0 ms | 5006 calls, 11.4 ms | **+11.4** |
+| plain insert into Operation | 5015 calls, 93.2 ms | 10 calls, 0.5 ms | -92.7 |
+
+The advisory lock costs **11.4 ms across 5006 acquisitions** - 2 microseconds
+each. Uncontended, it is free to execute. It is not free to issue.
+
+### The dominant cost is a round trip, not a query
+
+The statement count is the finding. L1 issues **5135 more statements for 5000
+operations - 1.03 per operation** - because `acquireStreamLocks` has to be a
+separate statement from the guarded insert. The reason is in its own comment:
+the locks must be held before the insert takes its snapshot, so folding them
+into one statement would read a snapshot from before the lock. Correctness
+requires two round trips where there was one.
+
+Measured against this Postgres, a sequential parameterised statement costs
+**0.120 ms** end to end (0.113 ms for `select 1`; 5000 sequential statements
+through the same driver and connection). So:
+
+| component | ms | share of +1935 ms |
+| --- | ---: | ---: |
+| Postgres executing SQL | 171 | **8.8%** |
+| round trips for one extra statement per operation | ~600 | **~31%** |
+| remainder: building and serialising a much larger statement | ~1160 | **~60%** |
+
+The remainder is where the wall profile puts kysely (+213.5 ms self time in its
+sampling window, the largest single mover). The round-trip figure is a floor:
+`select 1` is the cheapest possible statement, and the guarded insert carries a
+`selectNoFrom` with fifteen `sql` fragments and a `NOT EXISTS` subquery, so it
+costs more to serialise and parse than the trivial case measured here.
+
+### What this changes about the fix
+
+Run 7 named two candidates - batch the applies, or give the guarded statement a
+preparable shape - and could not rank them. Now it can.
+
+Batching applies attacks all three rows: fewer statements means fewer round
+trips, one lock per batch instead of one per operation, and one statement
+construction amortised across a hundred operations. Preparing the statement
+attacks only the third row, and only the part of it that is parse rather than
+build. **Batching is the higher-leverage change by a wide margin**, and it is
+also the one that shrinks the 8.8% server-side cost, since a guarded insert
+covering a hundred rows replaces a hundred of them.
+
+**Next probe:** prototype batched applies and re-run this exact diff. The
+prediction is specific enough to falsify: statements issued should fall towards
+one per batch rather than one per operation, the advisory-lock call count should
+fall by the batch factor, and the wall delta against `L0_POLICIED` should
+collapse. If the wall delta does not move while the statement count does, the
+cost is construction rather than round trips and the ranking above is wrong.
 
 ## Coverage and what is not yet measured
 

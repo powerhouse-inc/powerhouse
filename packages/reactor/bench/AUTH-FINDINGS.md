@@ -140,16 +140,36 @@ and a `NOT EXISTS` subquery where the unguarded path is one
 operation. Batching a hundred actions into one `execute` does not batch the
 storage writes underneath: 909 inserts for 900 operations, in both arms.
 
-**How much of the total is the database?** Between 20% and 54%, not yet pinned.
-Statement logging costs the measured arm 1.84x more than the baseline, so the
-logged wall delta is inflated, and the unlogged one belongs to a different
-condition. Both endpoints are in `AUTH-MATRIX.md`; neither alone is the answer,
-and a re-measurement on a quiet host with the now-fixed capture tool is owed.
+**How much of the total is the database? 8.8%.** Measured with
+`pg_stat_statements`, which costs a percent or two where statement logging costs
+tens. Postgres executing SQL accounts for 171 ms of a 1935 ms delta.
 
-So the fix is not a faster evaluator. It is fewer and cheaper guarded appends -
-batch applies so one guarded insert covers a batch, and give the statement a
-stable shape the driver can prepare once. Those two are independently
-measurable, and should be measured before either is built.
+**The dominant cost is a round trip.** L1 issues 5135 more statements for 5000
+operations - one extra per operation - because the advisory lock must be a
+separate statement from the guarded insert, so the locks are held before the
+insert takes its snapshot. The lock costs 2 microseconds to execute and a full
+round trip to issue, and a sequential statement against this Postgres costs
+0.120 ms measured. That is roughly 600 ms, or 31% of the delta; the remaining
+60% is building and serialising a much larger statement, which is where the
+profile puts kysely.
+
+| component | ms | share |
+| --- | ---: | ---: |
+| Postgres executing SQL | 171 | 8.8% |
+| round trips, one extra statement per operation | ~600 | ~31% |
+| building and serialising the larger statement | ~1160 | ~60% |
+
+So the fix is not a faster evaluator. It is **fewer** guarded appends, and the
+decomposition ranks the two candidates that were previously tied. Batching
+applies attacks all three rows at once: fewer round trips, one lock per batch
+instead of one per operation, and one statement construction amortised across a
+hundred operations. Preparing the statement attacks only the third row, and only
+the parse half of it. Batch first.
+
+The prediction is falsifiable, which is the point of having measured it: with
+batched applies the statement count should fall towards one per batch and the
+wall delta should collapse with it. If the count falls and the delta does not,
+construction dominates round trips and this ranking is wrong.
 
 ---
 
