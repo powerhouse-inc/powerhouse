@@ -9,6 +9,7 @@ Scripts for benchmarking and profiling the Powerhouse reactor and switchboard.
 - [Scripts](#scripts)
   - [`reactor-direct.ts`](#reactor-directts--direct-reactor-profiling)
   - [`pyroscope-analyse.ts`](#pyroscope-analysetts--pyroscope-profile-analysis)
+  - [`pg-statement-diff.ts`](#pg-statement-diffts--attribute-a-delta-to-sql)
   - [`docs-create.ts`](#docs-createts--create-documents-via-graphql)
   - [`docs-count.ts`](#docs-countts--count-documents-fast)
   - [`docs-list.ts`](#docs-listts--listcount-documents-paginated)
@@ -180,6 +181,42 @@ tsx pyroscope-analyse.ts 'http://localhost:4040/...' --top 50 --profiles wall
 - **Module Breakdown** — self time aggregated by module (derived from file paths)
 - **Wall vs CPU Comparison** — per-function wall vs CPU time with ratio (1.0 = compute-bound, >>1.0 = I/O-bound)
 - **Baseline Comparison** — delta table per module when `--baseline` is provided
+
+### `pg-statement-diff.ts` — Attribute a delta to SQL
+
+Answers whether a wall-clock difference between two runs was spent in the
+database or in the code that talks to it. A profiler names the module that spent
+the time; it cannot tell you whether that module was waiting on Postgres or
+building the query it sends. This asks Postgres to log every statement with its
+duration and diffs the two runs by statement shape.
+
+```bash
+DB="postgresql://postgres:postgres@localhost:5433/reactor"
+
+tsx pg-statement-diff.ts capture --label baseline --out /tmp/base.json -- \
+  tsx reactor-direct.ts 5 -o 1000 -b 100 --auth-level L0_POLICIED --db "$DB"
+
+tsx pg-statement-diff.ts capture --label current --out /tmp/cur.json -- \
+  tsx reactor-direct.ts 5 -o 1000 -b 100 --auth-level L1 --db "$DB"
+
+tsx pg-statement-diff.ts diff /tmp/base.json /tmp/cur.json --output-md report.md
+```
+
+`capture` turns statement logging on, runs the command, reads back only the log
+lines that command produced, and turns logging off again — including when the
+command fails, since leaving a database logging every statement is worse than a
+missing measurement. Logs are streamed rather than buffered, because a database
+that has been logging for a while holds more text than one JavaScript string can.
+
+Two things to keep in mind when reading the output. Call counts are exact and
+tell you the shape of the workload — one statement per operation versus one per
+batch is visible here and nowhere else. Durations are not neutral: logging costs
+the busier arm more, so the reported in-database share is a lower bound when
+divided by the logged wall delta. Run the same pair without logging to get the
+other bound.
+
+Options: `--container` (default `reactor-postgres`), `--db` (default `reactor`),
+`--label`, `--out`, and `--output-md` on `diff`.
 
 ### `docs-create.ts` — Create documents via GraphQL
 

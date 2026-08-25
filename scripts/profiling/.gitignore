@@ -1,0 +1,5 @@
+
+# Per-run profiling artifacts written next to the scripts that produce them.
+*-pyroscope-*.json
+*-pyroscope.md
+*-reactor-direct.txt
