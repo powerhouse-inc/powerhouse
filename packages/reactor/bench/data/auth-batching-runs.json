@@ -1,0 +1,160 @@
+{
+  "description": "Does batching a job's operations into one store transaction collapse the documentDecisions penalty? Run 8 predicted the statement count would fall towards one per batch and the wall delta would fall with it. This is the 2x2 that tests it: the flag off and on, batching off and on.",
+  "command": "pg-statement-diff.ts capture --method stat -- reactor-direct.ts 5 -o 1000 -b 100 --auth-level <L> --auth-grants 100 [--batch-applies] --db <postgres>",
+  "workload": {
+    "documents": 5,
+    "operationsPerDocument": 1000,
+    "batchSize": 100,
+    "grantsInPolicy": 100,
+    "operations": 5000
+  },
+  "environment": {
+    "host": "Benjamins-MacBook-Pro-2.local",
+    "cpu": "Apple M4 Max",
+    "node": "v24.13.0",
+    "postgres": "16.15 (docker, 127.0.0.1:5433)",
+    "instrument": "pg_stat_statements",
+    "schemaDroppedPerCell": true,
+    "interleaved": true,
+    "repetitions": 3
+  },
+  "cells": {
+    "L0_POLICIED": [
+      {
+        "wallMs": 9224,
+        "postgresMs": 1062.7,
+        "statements": 31915,
+        "operationInserts": 5015,
+        "advisoryLocks": 1
+      },
+      {
+        "wallMs": 8937,
+        "postgresMs": 1027.2,
+        "statements": 31915,
+        "operationInserts": 5015,
+        "advisoryLocks": 1
+      },
+      {
+        "wallMs": 9022,
+        "postgresMs": 1062.1,
+        "statements": 31915,
+        "operationInserts": 5015,
+        "advisoryLocks": 1
+      }
+    ],
+    "L0P_batched": [
+      {
+        "wallMs": 6381,
+        "postgresMs": 881.5,
+        "statements": 21520,
+        "operationInserts": 65,
+        "advisoryLocks": 1
+      },
+      {
+        "wallMs": 6384,
+        "postgresMs": 867.5,
+        "statements": 21520,
+        "operationInserts": 65,
+        "advisoryLocks": 1
+      },
+      {
+        "wallMs": 6413,
+        "postgresMs": 870.0,
+        "statements": 21520,
+        "operationInserts": 65,
+        "advisoryLocks": 1
+      }
+    ],
+    "L1": [
+      {
+        "wallMs": 11143,
+        "postgresMs": 1136.7,
+        "statements": 37050,
+        "operationInserts": 5015,
+        "advisoryLocks": 5006
+      },
+      {
+        "wallMs": 10926,
+        "postgresMs": 1246.1,
+        "statements": 37050,
+        "operationInserts": 5015,
+        "advisoryLocks": 5006
+      },
+      {
+        "wallMs": 10997,
+        "postgresMs": 1209.9,
+        "statements": 37050,
+        "operationInserts": 5015,
+        "advisoryLocks": 5006
+      }
+    ],
+    "L1_batched": [
+      {
+        "wallMs": 7191,
+        "postgresMs": 1024.3,
+        "statements": 21705,
+        "operationInserts": 65,
+        "advisoryLocks": 56
+      },
+      {
+        "wallMs": 7248,
+        "postgresMs": 1069.2,
+        "statements": 21705,
+        "operationInserts": 65,
+        "advisoryLocks": 56
+      },
+      {
+        "wallMs": 7350,
+        "postgresMs": 1082.3,
+        "statements": 21705,
+        "operationInserts": 65,
+        "advisoryLocks": 56
+      }
+    ]
+  },
+  "medians": {
+    "L0_POLICIED": {
+      "wallMs": 9022,
+      "postgresMs": 1062.1,
+      "statements": 31915,
+      "operationInserts": 5015,
+      "advisoryLocks": 1
+    },
+    "L0P_batched": {
+      "wallMs": 6384,
+      "postgresMs": 870.0,
+      "statements": 21520,
+      "operationInserts": 65,
+      "advisoryLocks": 1
+    },
+    "L1": {
+      "wallMs": 10997,
+      "postgresMs": 1209.9,
+      "statements": 37050,
+      "operationInserts": 5015,
+      "advisoryLocks": 5006
+    },
+    "L1_batched": {
+      "wallMs": 7248,
+      "postgresMs": 1069.2,
+      "statements": 21705,
+      "operationInserts": 65,
+      "advisoryLocks": 56
+    }
+  },
+  "findings": {
+    "batchingAloneRatio": 0.708,
+    "documentDecisionsUnbatchedRatio": 1.219,
+    "documentDecisionsBatchedRatio": 1.135,
+    "operationInsertsPerRun": {
+      "unbatched": 5015,
+      "batched": 65
+    },
+    "note": "Batching is a general write-path win rather than an auth-specific fix: it is worth 29% with the flag off. It nearly halves the flag's relative cost, from +22% to +13.5%, but does not remove it -- the residue is the extra read and the larger statement, which batching amortises rather than eliminates."
+  },
+  "caveats": [
+    "Still strictly sequential: one write in flight, so the advisory lock is never contended.",
+    "batchApplies is off by default and only engages for a run that canBatch accepts; the excluded cases still write one operation per transaction.",
+    "Batching makes a job's writes atomic where they were previously committed one at a time, which is a semantic change beyond performance and is called out in the writeup."
+  ]
+}

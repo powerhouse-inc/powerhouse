@@ -636,6 +636,78 @@ fall by the batch factor, and the wall delta against `L0_POLICIED` should
 collapse. If the wall delta does not move while the statement count does, the
 cost is construction rather than round trips and the ranking above is wrong.
 
+## Run 9 - batching the applies, which Run 8 predicted
+
+Run 8 named a falsifiable prediction: batch a job's operations into one store
+transaction and the statement count should fall towards one per batch, with the
+wall delta falling alongside it. If the count fell and the delta did not, the
+ranking of the two candidate fixes was wrong.
+
+`SimpleJobExecutor` now splits deciding a write from persisting it, so a run of
+writes can share one apply. `batchApplies` is off by default and only engages
+for a run that qualifies; everything else still writes one operation per
+transaction.
+
+```sh
+tsx scripts/profiling/reactor-direct.ts 5 -o 1000 -b 100 \
+  --auth-level L1 --auth-grants 100 --batch-applies --db "$DB"
+```
+
+Median of three interleaved repetitions, schema dropped per cell, 5000
+operations. The 2x2 is the point: the flag off and on, batching off and on.
+
+| cell | wall | statements | Operation inserts |
+| --- | ---: | ---: | ---: |
+| no flag, unbatched | 9022 ms | 31915 | 5015 |
+| no flag, **batched** | **6384 ms** | 21520 | **65** |
+| `documentDecisions`, unbatched | 10997 ms | 37050 | 5015 |
+| `documentDecisions`, **batched** | **7248 ms** | 21705 | **65** |
+
+| comparison | ratio |
+| --- | ---: |
+| batching alone, flag off | **0.708x** |
+| the flag, unbatched | 1.219x |
+| the flag, on top of batching | **1.135x** |
+
+Paired `batched / unbatched` at L1 across the three repetitions: 0.645, 0.663,
+0.668. Every pair is below 1.
+
+### Notes on Run 9
+
+**The prediction holds.** Operation inserts fell from 5015 to 65 - fifty batches
+plus the per-document seeding - and advisory locks with them, from 5006 to 56.
+That is one guarded insert and one lock per batch of a hundred, which is what
+the change was supposed to produce. The wall time fell with the count rather
+than staying put, so round trips and per-statement construction were the cost,
+not anything the server was computing.
+
+**But batching is not an auth fix, and calling it one would be the wrong
+lesson.** It is worth **29% with the flag off**. The write path was issuing one
+transaction per operation regardless of any of this; `documentDecisions` made
+that pre-existing shape expensive enough to notice. The honest framing is that
+Run 8 found an auth cost and, following it down, found a general write-path
+cost underneath.
+
+**It nearly halves the flag's relative cost but does not remove it.** From +22%
+to +13.5%. The residue is the extra document-scope read and the larger statement,
+which batching amortises across a hundred operations rather than eliminating. A
+prepared statement would attack what is left, and is now the smaller of the two
+fixes rather than the tied one.
+
+**One thing to weigh that is not performance.** Batching makes a job's writes
+atomic where they were previously committed one at a time. A job that failed
+halfway used to leave its earlier operations persisted; batched, it leaves
+nothing. That is arguably the better semantic, and it is a change in behaviour
+either way, which is part of why the flag defaults off.
+
+**Next probe:** the excluded cases. `canBatch` refuses positional runs, the auth
+and document scopes, skips, denials and the history-rebuilding action types, and
+each refusal is a case still paying one transaction per operation. The auth
+scope is the interesting one, because a policy write is exactly where a batch
+would decide later writes against a policy earlier ones in the same batch
+installed. Whether that can be batched safely is a correctness question, not a
+performance one, and it should be answered before the exclusion is relaxed.
+
 ## Coverage and what is not yet measured
 
 Landed: the pure evaluator, the head admission gate, the read gate, and a

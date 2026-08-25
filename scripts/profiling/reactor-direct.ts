@@ -366,6 +366,7 @@ function parseArgs(args: string[]): {
   authLevel: AuthLevel;
   authGrants: number;
   authGroups: number;
+  batchApplies: boolean;
 } {
   let count = 10;
   let operations = 0;
@@ -383,6 +384,7 @@ function parseArgs(args: string[]): {
   let authLevel: AuthLevel = "L0_CLEAN";
   let authGrants = 10;
   let authGroups = 0;
+  let batchApplies = false;
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -446,6 +448,8 @@ function parseArgs(args: string[]): {
       authGrants = Number(args[++i]);
     } else if (arg === "--auth-groups" && args[i + 1]) {
       authGroups = Number(args[++i]);
+    } else if (arg === "--batch-applies") {
+      batchApplies = true;
     } else if (arg === "--help" || arg === "-h") {
       console.log(`
 Usage: tsx reactor-direct.ts [N] [options]
@@ -473,6 +477,7 @@ Options:
                             (a prefix such as L2 also matches; default L0_CLEAN)
   --auth-grants <N>         Grants in the seeded policy (default: 10, cap 100)
   --auth-groups <N>         Distinct group principals in the policy (default: 0)
+  --batch-applies           Persist a job's operations in one store transaction
   --pyroscope [address]     Enable Pyroscope profiling (default: http://localhost:4040)
   --otel [endpoint]         Enable OpenTelemetry metrics export (default: http://localhost:4318)
                             Exports to OTLP HTTP collector at {endpoint}/v1/metrics
@@ -581,6 +586,7 @@ Examples:
     authLevel,
     authGrants,
     authGroups,
+    batchApplies,
   };
 }
 
@@ -629,6 +635,7 @@ async function main() {
     authLevel,
     authGrants,
     authGroups,
+    batchApplies,
   } = parseArgs(process.argv.slice(2));
 
   // Set up output file tee if requested
@@ -757,12 +764,13 @@ async function main() {
           .join(", ") || "no flags"
       })`,
     );
+    console.log(`  Batched applies: ${batchApplies ? "on" : "off"}`);
 
     const reactorModule = await new ReactorBuilder()
       .withDocumentModelSources([documentModelDocumentModelModule])
       .withKysely(db as Kysely<Database>)
       .withMigrationStrategy("none")
-      .withExecutorConfig({ featureFlags })
+      .withExecutorConfig({ featureFlags, batchApplies })
       .buildModule();
     const reactor = reactorModule.reactor;
 
