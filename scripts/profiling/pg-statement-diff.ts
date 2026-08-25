@@ -130,6 +130,112 @@ class LogFollower {
   }
 }
 
+async function psql(
+  container: string,
+  database: string,
+  sql: string,
+): Promise<string> {
+  const { stdout } = await exec(
+    "docker",
+    ["exec", container, "psql", "-U", "postgres", "-d", database, "-tAc", sql],
+    { maxBuffer: 1024 * 1024 * 64 },
+  );
+  return stdout;
+}
+
+/** Whether pg_stat_statements is loaded and usable in this database. */
+async function statStatementsReady(
+  container: string,
+  database: string,
+): Promise<boolean> {
+  try {
+    await psql(
+      container,
+      database,
+      "select 1 from pg_stat_statements limit 1;",
+    );
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Totals per statement shape from pg_stat_statements.
+ *
+ * Preferred over statement logging because it costs a percent or two rather
+ * than tens of percent. That difference decides whether the in-database share
+ * can be quoted as a number: logging inflates the arm that issues more
+ * statements, so it can only bound the answer, never pin it.
+ */
+async function captureFromStatStatements(
+  container: string,
+  database: string,
+  label: string,
+  out: string,
+  argv: string[],
+): Promise<number> {
+  await psql(container, database, "select pg_stat_statements_reset();");
+
+  const started = Date.now();
+  const code = await runCommand(argv);
+  const wallMs = Date.now() - started;
+
+  const rows = await psql(
+    container,
+    database,
+    "select calls || '\t' || (total_exec_time + total_plan_time) || '\t' || " +
+      "replace(replace(query, chr(10), ' '), chr(9), ' ') from pg_stat_statements",
+  );
+
+  const groups = new Map<string, StatementGroup>();
+  let statements = 0;
+  for (const line of rows.split("\n")) {
+    const parts = line.split("\t");
+    if (parts.length < 3) {
+      continue;
+    }
+    statements += 1;
+    const calls = Number(parts[0]);
+    const ms = Number(parts[1]);
+    const key = classify(parts.slice(2).join(" "));
+    const existing = groups.get(key);
+    if (existing === undefined) {
+      groups.set(key, { label: key, calls, totalMs: ms });
+    } else {
+      existing.calls += calls;
+      existing.totalMs += ms;
+    }
+  }
+
+  if (statements === 0) {
+    throw new Error(
+      `[${label}] pg_stat_statements reported nothing. The command ran for ` +
+        `${wallMs} ms, so either it does not talk to this database or the ` +
+        "extension is not tracking it.",
+    );
+  }
+
+  let total = 0;
+  for (const group of groups.values()) {
+    total += group.totalMs;
+  }
+
+  await writeFile(
+    out,
+    JSON.stringify(
+      { label, wallMs, groups: Object.fromEntries(groups) },
+      null,
+      2,
+    ),
+  );
+  process.stdout.write(
+    `\n[${label}] wall ${wallMs} ms, ${statements} tracked statements, ` +
+      `${total.toFixed(1)} ms in Postgres across ${groups.size} shapes -> ${out}\n`,
+  );
+  return code;
+}
+
 async function readSetting(
   container: string,
   database: string,
@@ -354,13 +460,20 @@ function renderDiff(base: Capture, current: Capture): string {
     `- explained inside Postgres: **${dbDelta.toFixed(1)} ms** (${share.toFixed(1)}%)`,
   );
   lines.push(
-    `- unexplained, therefore client-side: **${(wallDelta - dbDelta).toFixed(1)} ms** ` +
+    `- not Postgres executing SQL: **${(wallDelta - dbDelta).toFixed(1)} ms** ` +
       `(${(100 - share).toFixed(1)}%)`,
   );
+  const extraCalls = rows.reduce((s, r) => s + (r.curCalls - r.baseCalls), 0);
+  lines.push(`- statements issued: ${extraCalls >= 0 ? "+" : ""}${extraCalls}`);
   lines.push("");
   lines.push(
-    "The unexplained remainder is where a wall profiler takes over. Run both " +
-      "arms under `--pyroscope` and diff them with `pyroscope-analyse.ts --baseline`.",
+    "The remainder is not automatically client CPU. Statements cost a round " +
+      "trip each whether or not the server does much with them, so read the " +
+      "statement-count line first: an arm issuing more statements pays for them " +
+      "even when their execution time is negligible. Measure the round trip for " +
+      "this database (sequential statements through one connection) and subtract " +
+      "it before attributing what is left to the client, which is what " +
+      "`pyroscope-analyse.ts --baseline` will localise.",
   );
   return lines.join("\n");
 }
@@ -369,10 +482,21 @@ function usage(): void {
   process.stdout.write(`
 pg-statement-diff - attribute a wall-clock delta to SQL, or rule SQL out
 
-  capture --label <name> --out <file.json> [--container <name>] [--db <name>] -- <command...>
+  capture --label <name> --out <file.json> [--method auto|stat|log]
+          [--container <name>] [--db <name>] -- <command...>
   diff <baseline.json> <current.json> [--output-md <file>]
 
-Defaults: --container reactor-postgres, --db reactor
+Defaults: --container reactor-postgres, --db reactor, --method auto
+
+Methods:
+  stat  pg_stat_statements. Costs a percent or two, so the in-database share it
+        reports can be quoted as a number. Needs the extension preloaded:
+          alter system set shared_preload_libraries = 'pg_stat_statements';
+          -- restart, then: create extension pg_stat_statements;
+  log   log_min_duration_statement. Needs nothing installed, but costs tens of
+        percent and costs the arm issuing more statements more, so it bounds the
+        share rather than pinning it.
+  auto  stat when available, otherwise log.
 
 Example:
   tsx pg-statement-diff.ts capture --label L0 --out /tmp/l0.json -- \\
@@ -430,17 +554,38 @@ async function main(): Promise<void> {
       const i = flags.indexOf(name);
       return i >= 0 && flags[i + 1] ? flags[i + 1] : fallback;
     };
-    restoreOnExit(
-      read("--container", "reactor-postgres"),
-      read("--db", "reactor"),
-    );
-    const code = await capture(
-      read("--container", "reactor-postgres"),
-      read("--db", "reactor"),
-      read("--label", "run"),
-      read("--out", "/tmp/pg-capture.json"),
-      argv.slice(sep + 1),
-    );
+    const container = read("--container", "reactor-postgres");
+    const database = read("--db", "reactor");
+    const label = read("--label", "run");
+    const out = read("--out", "/tmp/pg-capture.json");
+    const command = argv.slice(sep + 1);
+
+    let method = read("--method", "auto");
+    if (method === "auto") {
+      const ready = await statStatementsReady(container, database);
+      method = ready ? "stat" : "log";
+      process.stdout.write(
+        ready
+          ? "Using pg_stat_statements (low overhead).\n"
+          : "pg_stat_statements unavailable, falling back to statement logging. " +
+              "Logging taxes the arm issuing more statements harder, so the " +
+              "in-database share it reports is a bound, not a number.\n",
+      );
+    }
+
+    if (method === "stat") {
+      const statCode = await captureFromStatStatements(
+        container,
+        database,
+        label,
+        out,
+        command,
+      );
+      process.exit(statCode);
+    }
+
+    restoreOnExit(container, database);
+    const code = await capture(container, database, label, out, command);
     process.exit(code);
   }
 

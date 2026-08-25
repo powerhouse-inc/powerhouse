@@ -202,7 +202,24 @@ tsx pg-statement-diff.ts capture --label current --out /tmp/cur.json -- \
 tsx pg-statement-diff.ts diff /tmp/base.json /tmp/cur.json --output-md report.md
 ```
 
-`capture` turns statement logging on, runs the command, reads back only the log
+Two capture methods. `--method auto` (the default) prefers `pg_stat_statements`,
+which costs a percent or two and can therefore report the in-database share as a
+number; it needs the extension preloaded:
+
+```bash
+docker exec reactor-postgres psql -U postgres -d reactor \
+  -c "alter system set shared_preload_libraries = 'pg_stat_statements';"
+docker restart reactor-postgres
+docker exec reactor-postgres psql -U postgres -d reactor \
+  -c "create extension if not exists pg_stat_statements;"
+```
+
+Without it, capture falls back to `log`, which needs nothing installed but costs
+tens of percent and costs the arm issuing more statements more — so it bounds the
+share rather than pinning it. That distinction is not academic: on the reactor's
+write path the two methods disagreed by a factor of two, and logging was wrong.
+
+In `log` mode, `capture` turns statement logging on, runs the command, reads back only the log
 lines that command produced, and turns logging off again — including when the
 command fails, since leaving a database logging every statement is worse than a
 missing measurement. Logs are streamed rather than buffered, because a database
