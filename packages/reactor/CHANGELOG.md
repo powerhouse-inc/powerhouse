@@ -1,3 +1,22 @@
+## 6.2.2-dev.58 (2026-08-25)
+
+### 🚀 Features
+
+- **docker:** per-channel compose files on cr.vetra.io with fixed ports ([7d8f51b57](https://github.com/powerhouse-inc/powerhouse/commit/7d8f51b57))
+
+### 🩹 Fixes
+
+- **reactor:** merge only a scope's adjacent runs when consolidating sync ops ([c2e3e1650](https://github.com/powerhouse-inc/powerhouse/commit/c2e3e1650))
+- **reactor:** serve a document's creating run before its other scopes ([6181322c8](https://github.com/powerhouse-inc/powerhouse/commit/6181322c8))
+- **docker:** connect image HEALTHCHECK uses 127.0.0.1 ([4c80c5759](https://github.com/powerhouse-inc/powerhouse/commit/4c80c5759))
+- **docker:** healthcheck 127.0.0.1 instead of localhost in compose files ([e15bb8c9d](https://github.com/powerhouse-inc/powerhouse/commit/e15bb8c9d))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5
+- froid1911
+
 ## 6.2.2-dev.57 (2026-08-24)
 
 This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
