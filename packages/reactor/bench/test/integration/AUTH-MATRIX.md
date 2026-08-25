@@ -638,6 +638,8 @@ cost is construction rather than round trips and the ranking above is wrong.
 
 ## Run 9 - batching the applies, which Run 8 predicted
 
+![Batching](../../images/auth-batching.png)
+
 Run 8 named a falsifiable prediction: batch a job's operations into one store
 transaction and the statement count should fall towards one per batch, with the
 wall delta falling alongside it. If the count fell and the delta did not, the
