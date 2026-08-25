@@ -158,6 +158,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       retryBaseDelayMs: config.retryBaseDelayMs ?? 100,
       retryMaxDelayMs: config.retryMaxDelayMs ?? 5000,
       yieldDeadlineMs: config.yieldDeadlineMs ?? 50,
+      batchApplies: config.batchApplies ?? false,
     };
 
     // Resolved separately so reads are plain booleans; the config keeps what
@@ -475,6 +476,27 @@ export class SimpleJobExecutor implements IJobExecutor {
     }
 
     let lastYield = performance.now();
+
+    if (this.config.batchApplies && this.canBatch(writes, executing)) {
+      const batched = await this.executeRegularActionsBatched(
+        writes,
+        executing,
+      );
+      const error = this.accumulateResultOrReturnError(
+        batched,
+        generatedOperations,
+        operationsWithContext,
+      );
+      if (error !== null) {
+        return {
+          success: false,
+          generatedOperations,
+          operationsWithContext,
+          error: error.error,
+        };
+      }
+      return { success: true, generatedOperations, operationsWithContext };
+    }
 
     for (const write of writes) {
       const isDocumentAction = DOCUMENT_SCOPE_ACTIONS.has(write.action.type);
@@ -946,6 +968,169 @@ export class SimpleJobExecutor implements IJobExecutor {
         },
       })),
       duration: Date.now() - startTime,
+    };
+  }
+
+  /**
+   * Whether a job's writes may share one store transaction.
+   *
+   * Deliberately narrow. Batching changes only how many transactions the
+   * operations arrive in, and every condition below is a case where that would
+   * change something else as well:
+   *
+   * - A document-scope action goes through its own handler, which has its own
+   *   apply and its own reasons for it.
+   * - A positional or replayed run carries skips and re-appended operations,
+   *   whose indices are not a simple ascending run from the head.
+   * - UNDO, REDO, PRUNE and NOOP-with-skip each invalidate the write cache to
+   *   force a full-history rebuild, so they cannot be reduced against state
+   *   threaded from the write before them.
+   * - The auth scope decides later writes against the policy earlier ones
+   *   install, so a batch would decide them all against the policy as it stood
+   *   before the batch.
+   * - The document scope is read by every decision model, so writing it is
+   *   writing part of the read set; the per-write conditions would not agree.
+   *
+   * A run that fails any of these is executed one write at a time, unchanged.
+   */
+  private canBatch(writes: PendingWrite[], executing: ExecutingJob): boolean {
+    if (writes.length < 2) {
+      return false;
+    }
+    if (executing.evaluatedByPosition || executing.replayingAcceptedHistory) {
+      return false;
+    }
+    const scope = executing.job.scope;
+    if (scope === "auth" || scope === "document") {
+      return false;
+    }
+    return writes.every((write) => {
+      const type = write.action.type;
+      return (
+        write.skip === 0 &&
+        write.deniedReason === undefined &&
+        write.sourceOperation === undefined &&
+        !DOCUMENT_SCOPE_ACTIONS.has(type) &&
+        !isUndoRedo(write.action) &&
+        type !== "PRUNE" &&
+        type !== "NOOP"
+      );
+    });
+  }
+
+  /**
+   * Decides and reduces a run of writes, then persists them together.
+   *
+   * The reduce stays sequential - each action needs the state the one before it
+   * produced - but the result is threaded in memory rather than read back from
+   * the cache, and the whole run reaches the store in a single apply.
+   *
+   * A write that cannot be prepared, or that turns out to be denied, abandons
+   * the batch and the caller replays the whole job one write at a time. That is
+   * simpler than committing a partial run, and these are the paths where the
+   * per-write behaviour is load-bearing.
+   */
+  private async executeRegularActionsBatched(
+    writes: PendingWrite[],
+    executing: ExecutingJob,
+  ): Promise<
+    JobResult & {
+      operationsWithContext?: Array<{
+        operation: Operation;
+        context: {
+          documentId: string;
+          scope: string;
+          branch: string;
+          documentType: string;
+        };
+      }>;
+    }
+  > {
+    const prepared: PreparedWrite[] = [];
+    let carried: PHDocument | undefined;
+
+    for (const write of writes) {
+      const outcome = await this.prepareRegularWrite(write, executing, carried);
+      if ("success" in outcome) {
+        return outcome;
+      }
+      if (outcome.denied) {
+        return this.executeRegularActionsSequentially(writes, executing);
+      }
+      prepared.push(outcome);
+      carried = outcome.updatedDocument;
+    }
+
+    // Every write in the run must have read the same streams at the same
+    // revisions for one condition to stand for all of them. canBatch excludes
+    // the scopes where that can fail, and this is the assertion of it: a
+    // mismatch falls back rather than writing under a condition that only
+    // describes part of the batch.
+    if (!this.conditionsAgree(prepared)) {
+      return this.executeRegularActionsSequentially(writes, executing);
+    }
+
+    return this.commitPreparedWrites(prepared, executing);
+  }
+
+  /** Whether every prepared write carries the same read-set condition. */
+  private conditionsAgree(prepared: PreparedWrite[]): boolean {
+    const shape = (write: PreparedWrite): string =>
+      write.appendCondition === undefined
+        ? "none"
+        : JSON.stringify(
+            [...write.appendCondition.streams]
+              .map((stream) => [
+                stream.documentId,
+                stream.scope,
+                stream.branch,
+                stream.revision,
+              ])
+              .sort(),
+          );
+    const first = shape(prepared[0]);
+    return prepared.every((write) => shape(write) === first);
+  }
+
+  /**
+   * The unbatched path, for a run that turned out not to qualify after its
+   * writes were prepared. Nothing has been persisted at that point, so
+   * replaying the whole run per write is safe.
+   */
+  private async executeRegularActionsSequentially(
+    writes: PendingWrite[],
+    executing: ExecutingJob,
+  ): Promise<
+    JobResult & {
+      operationsWithContext?: Array<{
+        operation: Operation;
+        context: {
+          documentId: string;
+          scope: string;
+          branch: string;
+          documentType: string;
+        };
+      }>;
+    }
+  > {
+    const operations: Operation[] = [];
+    const contexts: OperationWithContext[] = [];
+
+    for (const write of writes) {
+      const result = await this.executeRegularAction(write, executing);
+      if (!result.success) {
+        return result;
+      }
+      operations.push(...(result.operations ?? []));
+      contexts.push(...(result.operationsWithContext ?? []));
+    }
+
+    return {
+      job: executing.job,
+      success: true,
+      operations,
+      operationsWithContext: contexts,
+      duration: Date.now() - executing.startTime,
     };
   }
 

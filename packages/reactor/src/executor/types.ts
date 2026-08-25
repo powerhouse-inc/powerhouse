@@ -169,6 +169,18 @@ export type JobExecutorConfig = {
   /** Maximum elapsed milliseconds before yielding to the main thread between actions.
    *  Keeps the UI responsive when processing large batches. */
   yieldDeadlineMs?: number;
+
+  /**
+   * Persist a job's writes in one store transaction rather than one each.
+   *
+   * Off by default. A job's operations are reduced sequentially either way;
+   * this only changes how many apply calls carry them, which is one advisory
+   * lock and one guarded insert per batch instead of per operation. Only runs
+   * that qualify are batched, and the executor falls back per write for the
+   * rest, so turning it on never changes which operations are produced -- only
+   * how many transactions they arrive in.
+   */
+  batchApplies?: boolean;
 };
 
 /**
