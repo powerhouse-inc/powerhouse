@@ -181,7 +181,10 @@ export class ReactorBuilder {
   private logger?: ILogger;
   private documentModelSources: DocumentModelSource[] = [];
   private upgradeManifests: UpgradeManifest<readonly number[]>[] = [];
-  private features: ReactorFeatures = { legacyStorageEnabled: false };
+  private features: ReactorFeatures = {
+    legacyStorageEnabled: false,
+    legacyProcessorIds: true,
+  };
   private readModels: IReadModel[] = [];
   private readModelFactories: ReadModelFactory[] = [];
   private executorManager: IJobExecutorManager | undefined;
@@ -662,6 +665,7 @@ export class ReactorBuilder {
       processorManagerConsistencyTracker,
       this.logger!,
       this.driveContainerTypes,
+      { legacyProcessorIds: this.features.legacyProcessorIds !== false },
     );
 
     try {

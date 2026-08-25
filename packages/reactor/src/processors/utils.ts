@@ -1,5 +1,8 @@
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
-import type { ProcessorFilter } from "@powerhousedao/shared/processors";
+import type {
+  ProcessorFilter,
+  ProcessorRecord,
+} from "@powerhousedao/shared/processors";
 import type { PHDocumentHeader } from "@powerhousedao/shared/document-model";
 
 export function isDriveDeletion(op: OperationWithContext): boolean {
@@ -75,4 +78,38 @@ export function matchesFilter(
   }
 
   return true;
+}
+
+function nonEmpty(value: unknown): string | undefined {
+  return typeof value === "string" && value.length > 0 ? value : undefined;
+}
+
+function namespaceOf(processor: object): string | undefined {
+  return nonEmpty((processor as { namespace?: unknown }).namespace);
+}
+
+function classNameOf(processor: object): string | undefined {
+  const name = processor.constructor.name;
+  return name && name !== "Object" ? name : undefined;
+}
+
+// Cursor key of each record within its factory and drive. Legacy mode keeps
+// the array index; otherwise id, then namespace, then class name, then index.
+export function resolveProcessorSlots(
+  records: ProcessorRecord[],
+  legacy: boolean,
+): string[] {
+  if (legacy) return records.map((_, i) => String(i));
+
+  const seen = new Map<string, number>();
+  return records.map((record, i) => {
+    const base =
+      nonEmpty(record.id) ??
+      namespaceOf(record.processor) ??
+      classNameOf(record.processor) ??
+      String(i);
+    const count = seen.get(base) ?? 0;
+    seen.set(base, count + 1);
+    return count === 0 ? base : `${base}#${count}`;
+  });
 }
