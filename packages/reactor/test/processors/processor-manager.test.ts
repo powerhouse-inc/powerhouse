@@ -1,5 +1,8 @@
 import { PGlite } from "@electric-sql/pglite";
-import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
+import {
+  driveDocumentModelModule,
+  setDriveName,
+} from "@powerhousedao/shared/document-drive";
 import {
   generateId,
   type DocumentModelModule,
@@ -296,6 +299,50 @@ describe("ProcessorManager Integration Tests", () => {
         expect(processor.receivedOperations.length).toBeGreaterThan(0);
       });
     });
+
+    // Fails today: the edit is projected before the creation registers the
+    // drive's processors, so it is routed to nobody.
+    it.fails(
+      "should deliver a drive's first edit submitted right after its creation",
+      async () => {
+        const { factory, processor } = createMockProcessorFactory();
+        await reactorModule.processorManager.registerFactory(
+          "test-factory",
+          factory,
+        );
+
+        // Creation and edit land on different coordinator queue keys
+        // (document vs global scope), so they are projected concurrently.
+        const driveDoc = driveDocumentModelModule.utils.createDocument();
+        const created = await reactorModule.reactor.create(driveDoc);
+        const renamed = await reactorModule.reactor.execute(
+          driveDoc.header.id,
+          "main",
+          [setDriveName({ name: "renamed" })],
+        );
+
+        await vi.waitFor(
+          async () => {
+            for (const job of [created, renamed]) {
+              const status = await reactorModule.reactor.getJobStatus(job.id);
+              expect(status.status).toBe(JobStatus.READ_READY);
+            }
+          },
+          { timeout: 5000 },
+        );
+
+        await vi.waitFor(
+          () => {
+            expect(
+              processor.receivedOperations.map(
+                (op) => op.operation.action.type,
+              ),
+            ).toContain("SET_DRIVE_NAME");
+          },
+          { timeout: 5000 },
+        );
+      },
+    );
   });
 
   describe("Filter Variations", () => {
@@ -888,6 +935,50 @@ describe("ProcessorManager Standalone Tests", () => {
 
       expect(viewState?.lastOrdinal).toBe(42);
     });
+  });
+
+  describe("Concurrent batches", () => {
+    // The coordinator runs different documentId:scope:branch keys in parallel,
+    // so a drive's first edit can be indexed while its creation is still in flight.
+    // Fails today: cursors are overwritten with the batch's max ordinal.
+    it.fails(
+      "should deliver every operation when batches overlap",
+      async () => {
+        const driveId = generateId();
+        const ops = [
+          makeDriveCreateOp(driveId, 1),
+          makeOp(driveId, 2, {
+            scope: "document",
+            actionType: "UPGRADE_DOCUMENT",
+          }),
+          makeOp(driveId, 3),
+        ];
+        await writeToOperationIndex(operationIndex, ops);
+
+        const { factory, processor } = createMockProcessorFactory();
+        await processorManager.registerFactory("pkg", factory);
+
+        await Promise.all([
+          processorManager.indexOperations([ops[0]!, ops[1]!]),
+          processorManager.indexOperations([ops[2]!]),
+        ]);
+
+        const delivered = processor.receivedOperations
+          .map((op) => op.context.ordinal)
+          .sort((a, b) => a - b);
+        expect(delivered).toEqual([1, 2, 3]);
+
+        const tracked = processorManager.get(`pkg:${driveId}:0`);
+        expect(tracked!.lastOrdinal).toBe(3);
+
+        const viewState = await db
+          .selectFrom("ViewState")
+          .select("lastOrdinal")
+          .where("readModelId", "=", "processor-manager")
+          .executeTakeFirst();
+        expect(viewState!.lastOrdinal).toBe(3);
+      },
+    );
   });
 
   describe("Per-Processor Consistency", () => {
