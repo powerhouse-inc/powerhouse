@@ -418,6 +418,132 @@ limit, each retry re-running the whole gate against an invalidated write cache,
 so the cost multiplies rather than adds. That needs the group model registered
 in the driver and a concurrent driver, neither of which exists yet.
 
+## Run 7 - what inside documentDecisions costs the +23%
+
+Runs 5 and 6 localise the cost to a flag. A flag is not a mechanism:
+`documentDecisions` bundles four changes, and knowing which one to attack means
+separating them. This run does that with two instruments, and the answer is not
+the one the flag's name suggests.
+
+```sh
+# server side: what SQL each arm issued, and what it cost
+tsx scripts/profiling/pg-statement-diff.ts capture --label L0_POLICIED --out /tmp/l0.json -- \
+  tsx scripts/profiling/reactor-direct.ts 5 -o 1000 -b 100 --auth-level L0_POLICIED --auth-grants 100 --db "$DB"
+tsx scripts/profiling/pg-statement-diff.ts capture --label L1 --out /tmp/l1.json -- \
+  tsx scripts/profiling/reactor-direct.ts 5 -o 1000 -b 100 --auth-level L1 --auth-grants 100 --db "$DB"
+tsx scripts/profiling/pg-statement-diff.ts diff /tmp/l0.json /tmp/l1.json
+
+# client side: which module absorbed the rest
+tsx scripts/profiling/reactor-direct.ts ... --pyroscope http://localhost:4040
+tsx scripts/profiling/pyroscope-analyse.ts --query 'wall{service_name="reactor-direct-profiler"}' \
+  --from <start> --until <end> --output-json /tmp/prof-l1 --baseline /tmp/prof-l0 --profiles wall
+```
+
+### It is not the decision logic
+
+The micro tier puts the whole L1 gate at 0.49 us per action. Over 5000 actions
+that is 2.5 ms, against 1660 ms of observed added time - **0.15%**. Whatever
+`documentDecisions` costs, building the model and deciding against it is three
+orders of magnitude too small to be it. That disposes of the reading its name
+invites.
+
+### What the database actually does differently
+
+Median of three interleaved repetitions, schema dropped per cell:
+
+| statement shape | L0_POLICIED | L1 | delta |
+| --- | ---: | ---: | ---: |
+| guarded insert into Operation | 0.0 ms | 696.7 ms | **+696.7** |
+| advisory lock over the read set | 0.1 ms | 220.1 ms | **+220.0** |
+| read: Operation aggregate | 236.8 ms | 385.7 ms | **+148.9** |
+| read: Operation rows | 336.9 ms | 349.3 ms | +12.4 |
+| plain insert into Operation | 320.5 ms | 1.1 ms | **-319.5** |
+| **total in Postgres** | **2673.7 ms** | **3464.0 ms** | **+790.4** |
+
+Three named costs, all consequences of carrying a read-set: the plain bulk
+insert is replaced by a guarded one at a net **+375 ms**, an advisory lock is
+taken over every read-set stream at **+220 ms**, and the extra document-scope
+read adds **+149 ms**.
+
+The call counts are the unperturbed part of this table and they carry their own
+finding. There are 15015 guarded-insert phases and 15016 advisory-lock phases
+for 5000 operations - three log phases per statement, so **one guarded insert
+and one advisory lock per operation**. `apply` is not batched: 909 inserts for
+900 operations in an earlier smaller run, in both arms. Batching a hundred
+actions into one `execute` does not batch the storage writes underneath, so
+every per-apply cost is paid a hundred times per batch.
+
+### How much of the total is that, honestly
+
+Between a fifth and a half, and this measurement does not pin it further.
+
+| denominator | wall delta | in-database share |
+| --- | ---: | ---: |
+| measured with statement logging on | 3863 ms | 20% |
+| measured with statement logging off | 1460 ms | 54% |
+
+Statement logging is neither free nor neutral. L1 emits 287k log lines to L0's
+156k, so the arm under test is taxed 1.84x harder and the logged wall delta is
+inflated; dividing by it understates the database. Dividing the same numerator
+by the unlogged delta mixes two conditions and overstates it. Reporting either
+endpoint alone would be a choice about which story to tell.
+
+Part of that inflation was the measuring tool rather than Postgres. The first
+version of `pg-statement-diff` read the container log after the run, which
+rescans it from the beginning and costs more on every use; it now follows from
+the tail, and at a 900-operation workload the logged and unlogged wall times
+moved from roughly 2x apart to 1.4x apart. A re-measurement with the fixed tool
+should tighten these bounds and is owed. It is not in this run because the host
+had been driven hard enough by then to produce a 19.9 s outlier in a 2 s
+workload, and a quiet machine is a precondition for the answer being worth
+anything.
+
+### The client side
+
+A wall-profile diff, taken with logging off so it does not share that problem,
+attributes the added time by module:
+
+| module | L0_POLICIED | L1 | delta | change |
+| --- | ---: | ---: | ---: | ---: |
+| kysely | 889.5 ms | 1.10 s | **+213.5 ms** | +24.0% |
+| runMicrotasks | 74.1 ms | 169.7 ms | +95.6 ms | +128.9% |
+| zod | 148.2 ms | 169.7 ms | +21.4 ms | +14.5% |
+| pg | 413.0 ms | 381.8 ms | -31.2 ms | -7.5% |
+
+kysely is the single largest mover, and at L1 the database *client* stack
+(kysely, pg, pg-protocol) is 48% of all wall time. The guarded insert is not
+only more expensive for Postgres to run, it is markedly more expensive to
+*build*: `insertGuarded` assembles a `selectNoFrom` carrying fifteen `sql`
+template fragments plus a `NOT EXISTS` subquery, where the unguarded path is one
+`insertInto().values()`.
+
+Caveat on magnitudes: the wall sampler covered roughly 3.4 s of a 7 s run, so
+these are a sample of the run rather than its total. The composition within the
+window is the signal; the absolute numbers are not comparable to the statement
+table above.
+
+### What this means
+
+The cost is the **append-condition mechanism**, not the decision that produces
+it, and it is paid on both sides of the wire: Postgres runs a heavier statement
+and takes a lock, while the client spends more time assembling that statement
+than it saves anywhere. Both are multiplied by `apply` running per operation.
+
+That reframes the fix. Nothing here argues for making the decision cheaper,
+because the decision is already free at this scale. It argues for issuing fewer
+and cheaper guarded appends: batching applies so one guarded insert covers a
+batch, and giving the guarded statement a stable shape the driver can prepare
+once instead of rebuilding per operation.
+
+**Next probe, first:** re-run the statement diff on a quiet host with the
+fixed follower, which should collapse the 20-54% range to a single number.
+
+**Then:** the two fix candidates are separable. Batching applies changes the
+call count and leaves the statement shape alone; preparing the statement changes
+the build cost and leaves the count alone. Measure them independently before
+building either, and use `pg-statement-diff` for the first (call counts move)
+and the wall profile for the second (kysely self-time moves).
+
 ## Coverage and what is not yet measured
 
 Landed: the pure evaluator, the head admission gate, the read gate, and a

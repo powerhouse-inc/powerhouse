@@ -110,11 +110,57 @@ read gate is free.
 
 ---
 
+## 4. Inside the prerequisite, the cost is the append condition - not the decision
+
+Section 1 says `documentDecisions` is three quarters of the bill. That is a
+flag, not a mechanism, and the flag bundles four changes. Separating them moves
+the target.
+
+**It is not the decision logic.** The evaluator runs at 0.49 us per action; over
+the meso workload that is 2.5 ms against 1660 ms added - **0.15%**. Making
+deciding faster would buy nothing.
+
+**It is the read-set the decision produces, and it is paid on both sides of the
+wire.** Postgres does three new things per operation:
+
+| what changed | cost |
+| --- | ---: |
+| plain bulk insert becomes a guarded one | **+375 ms** net |
+| advisory lock over every read-set stream | **+220 ms** |
+| extra document-scope read | **+149 ms** |
+
+and the client spends more time *building* that statement than Postgres spends
+running it - kysely is the largest single mover in a wall-profile diff (+213.5
+ms, +24%), and the database client stack is 48% of all wall time once the flag
+is on. `insertGuarded` assembles a `selectNoFrom` with fifteen `sql` fragments
+and a `NOT EXISTS` subquery where the unguarded path is one
+`insertInto().values()`.
+
+**Everything above is multiplied by a hundred**, because `apply` runs per
+operation. Batching a hundred actions into one `execute` does not batch the
+storage writes underneath: 909 inserts for 900 operations, in both arms.
+
+**How much of the total is the database?** Between 20% and 54%, not yet pinned.
+Statement logging costs the measured arm 1.84x more than the baseline, so the
+logged wall delta is inflated, and the unlogged one belongs to a different
+condition. Both endpoints are in `AUTH-MATRIX.md`; neither alone is the answer,
+and a re-measurement on a quiet host with the now-fixed capture tool is owed.
+
+So the fix is not a faster evaluator. It is fewer and cheaper guarded appends -
+batch applies so one guarded insert covers a batch, and give the statement a
+stable shape the driver can prepare once. Those two are independently
+measurable, and should be measured before either is built.
+
+---
+
 ## What this means if you are about to flip the flags
 
 1. **Budget the prerequisite separately from auth.** `documentDecisions` is
-   three quarters of the cost and is a lock-and-insert change, not a policy
-   change. It should be evaluated, rolled out and monitored on its own.
+   three quarters of the cost, and section 4 shows it is an append-condition
+   change rather than an authorization one: a guarded insert, an advisory lock
+   and an extra read, all paid per operation. It should be evaluated, rolled out
+   and monitored on its own, and the work that would make it cheaper has nothing
+   to do with policy evaluation.
 2. **Treat policy authoring as a performance surface.** Put the administration
    grant first. Keep grant lists short. Prefer a few wide grants to many narrow
    conditional ones. The spread between a careless and a careful policy at the
@@ -178,6 +224,15 @@ docker compose -f packages/reactor/docker-compose.yml up -d postgres
 docker exec reactor-postgres psql -U postgres -d reactor -c "drop schema if exists reactor cascade;"
 tsx scripts/profiling/reactor-direct.ts 10 -o 500 -b 100 --auth-level L2 --auth-grants 100 \
   --db "postgresql://postgres:postgres@localhost:5433/reactor"
+
+# attributing a delta to SQL, or ruling SQL out
+tsx scripts/profiling/pg-statement-diff.ts capture --label L0 --out /tmp/l0.json -- <command>
+tsx scripts/profiling/pg-statement-diff.ts capture --label L1 --out /tmp/l1.json -- <command>
+tsx scripts/profiling/pg-statement-diff.ts diff /tmp/l0.json /tmp/l1.json
+
+# attributing the remainder to a module
+tsx scripts/profiling/pyroscope-analyse.ts --query 'wall{service_name="reactor-direct-profiler"}' \
+  --from <start> --until <end> --output-json /tmp/prof-l1 --baseline /tmp/prof-l0 --profiles wall
 
 # figures
 cd packages/reactor/bench
