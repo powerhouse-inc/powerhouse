@@ -1,0 +1,79 @@
+{
+  "description": "Attribution of the documentDecisions cost, measured with pg_stat_statements rather than statement logging. Logging taxes the arm issuing more statements harder and inflates its own numerator too, so it can only bound the in-database share; this pins it.",
+  "command": "pg-statement-diff.ts capture --method stat -- reactor-direct.ts 5 -o 1000 -b 100 --auth-level <L> --auth-grants 100 --db <postgres>",
+  "workload": {
+    "documents": 5,
+    "operationsPerDocument": 1000,
+    "batchSize": 100,
+    "grantsInPolicy": 100,
+    "operations": 5000
+  },
+  "environment": {
+    "host": "Benjamins-MacBook-Pro-2.local",
+    "cpu": "Apple M4 Max",
+    "node": "v24.13.0",
+    "postgres": "16.15 (docker, 127.0.0.1:5433)",
+    "instrument": "pg_stat_statements, track=all",
+    "schemaDroppedPerCell": true,
+    "interleaved": true,
+    "repetitions": 3
+  },
+  "measuredRoundTripMs": {
+    "selectOne": 0.1127,
+    "parameterised": 0.1201,
+    "note": "5000 sequential statements through one pooled connection of the same pg driver. A floor: the guarded insert is far larger than these."
+  },
+  "runs": {
+    "L0_POLICIED": [
+      {
+        "wallMs": 8263,
+        "postgresMs": 950.1,
+        "statements": 31915
+      },
+      {
+        "wallMs": 8306,
+        "postgresMs": 898.8,
+        "statements": 31915
+      },
+      {
+        "wallMs": 8161,
+        "postgresMs": 880.6,
+        "statements": 31915
+      }
+    ],
+    "L1": [
+      {
+        "wallMs": 10150,
+        "postgresMs": 1044.9,
+        "statements": 37050
+      },
+      {
+        "wallMs": 10198,
+        "postgresMs": 1069.5,
+        "statements": 37054
+      },
+      {
+        "wallMs": 10242,
+        "postgresMs": 1102.2,
+        "statements": 37050
+      }
+    ]
+  },
+  "attribution": {
+    "wallDeltaMs": 1935,
+    "postgresExecutingSqlMs": 170.6,
+    "postgresSharePct": 8.8,
+    "extraStatements": 5135,
+    "extraStatementsPerOperation": 1.03,
+    "roundTripEstimateMs": 600,
+    "roundTripSharePct": 31,
+    "remainderMs": 1160,
+    "remainderSharePct": 60,
+    "remainderNote": "Building and serialising a much larger statement; the wall profile puts kysely as the largest single mover here."
+  },
+  "caveats": [
+    "The wall figures include reactor boot and migrations, which both arms pay, so the delta is valid while the absolute values are not comparable to the op-phase timings in Runs 5 and 6.",
+    "The round-trip component is an estimate from a measured floor, not a direct measurement of the guarded insert's own round trip.",
+    "Still strictly sequential: one write in flight, so the advisory lock is never contended."
+  ]
+}
