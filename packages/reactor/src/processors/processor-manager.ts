@@ -25,7 +25,14 @@ import {
   extractDriveHeader,
   isDriveDeletion,
   matchesFilter,
+  resolveProcessorSlots,
 } from "./utils.js";
+
+export type ProcessorManagerOptions = {
+  // Key cursors by array position (default). Off derives stable keys from
+  // record id, namespace or class name, so reordering factories is safe.
+  legacyProcessorIds?: boolean;
+};
 
 /**
  * Manages processor lifecycle based on operations.
@@ -50,6 +57,7 @@ export class ProcessorManager
   private cursorCache: Map<string, ProcessorCursorRow> = new Map();
   private logger: ILogger;
   private driveContainerTypes: ReadonlySet<string>;
+  private legacyProcessorIds: boolean;
 
   constructor(
     db: Kysely<DocumentViewDatabase>,
@@ -58,6 +66,7 @@ export class ProcessorManager
     consistencyTracker: IConsistencyTracker,
     logger: ILogger,
     driveContainerTypes: ReadonlySet<string>,
+    options: ProcessorManagerOptions = {},
   ) {
     super(db, operationIndex, writeCache, consistencyTracker, {
       readModelId: "processor-manager",
@@ -65,6 +74,7 @@ export class ProcessorManager
     });
     this.logger = logger;
     this.driveContainerTypes = driveContainerTypes;
+    this.legacyProcessorIds = options.legacyProcessorIds ?? true;
   }
 
   override async init(): Promise<void> {
@@ -233,10 +243,11 @@ export class ProcessorManager
     if (records.length === 0) return;
 
     const trackedList: TrackedProcessor[] = [];
+    const slots = resolveProcessorSlots(records, this.legacyProcessorIds);
 
     for (let i = 0; i < records.length; i++) {
       const record = records[i]!;
-      const processorId = `${identifier}:${driveId}:${i}`;
+      const processorId = `${identifier}:${driveId}:${slots[i]}`;
 
       const cached = this.cursorCache.get(processorId);
       let lastOrdinal: number;
@@ -275,19 +286,20 @@ export class ProcessorManager
       await this.saveProcessorCursor(tracked);
     }
 
-    // Clean up orphaned cursor rows from previous runs with more processors
+    // Cursors this factory no longer produces for the drive are orphans.
+    const liveIds = new Set(trackedList.map((t) => t.processorId));
     await this.db
       .deleteFrom("ProcessorCursor")
       .where("factoryId", "=", identifier)
       .where("driveId", "=", driveId)
-      .where("processorIndex", ">=", records.length)
+      .where("processorId", "not in", [...liveIds])
       .execute();
 
     for (const [id, row] of this.cursorCache) {
       if (
         row.factoryId === identifier &&
         row.driveId === driveId &&
-        row.processorIndex >= records.length
+        !liveIds.has(id)
       ) {
         this.cursorCache.delete(id);
       }

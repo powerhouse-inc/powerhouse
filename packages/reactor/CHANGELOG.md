@@ -1,3 +1,13 @@
+## 6.2.2-dev.59 (2026-08-25)
+
+### 🩹 Fixes
+
+- **reactor:** stable processor cursor ids behind legacyProcessorIds flag ([ee82e90b4](https://github.com/powerhouse-inc/powerhouse/commit/ee82e90b4))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.2-dev.58 (2026-08-25)
 
 ### 🚀 Features

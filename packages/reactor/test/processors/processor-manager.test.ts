@@ -1,5 +1,8 @@
 import { PGlite } from "@electric-sql/pglite";
-import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
+import {
+  driveDocumentModelModule,
+  setDriveName,
+} from "@powerhousedao/shared/document-drive";
 import {
   generateId,
   type DocumentModelModule,
@@ -39,11 +42,13 @@ const DRIVE_DOCUMENT_TYPE = "powerhouse/document-drive";
 
 type CombinedDatabase = StorageDatabase & DocumentViewDatabase;
 
-function createMockProcessor(): IProcessor & {
+function createMockProcessor(namespace?: string): IProcessor & {
   receivedOperations: OperationWithContext[];
   disconnected: boolean;
 } {
   const processor = {
+    // Mirrors RelationalDbProcessor, whose namespace keys derived cursor ids.
+    ...(namespace ? { namespace } : {}),
     receivedOperations: [] as OperationWithContext[],
     disconnected: false,
     onOperations: vi.fn().mockImplementation((ops: OperationWithContext[]) => {
@@ -890,6 +895,52 @@ describe("ProcessorManager Standalone Tests", () => {
     });
   });
 
+  describe("Cursor ids", () => {
+    it("should key cursors by array position by default", async () => {
+      const driveId = generateId();
+      const factory: ProcessorFactory = () => [
+        { processor: createMockProcessor("company_list_v1"), filter: {} },
+      ];
+      await processorManager.registerFactory("pkg", factory);
+      await processorManager.indexOperations([makeDriveCreateOp(driveId, 1)]);
+
+      expect(processorManager.get(`pkg:${driveId}:0`)).toBeDefined();
+    });
+
+    it("should key cursors by derived slot when legacy ids are off", async () => {
+      const manager = new ProcessorManager(
+        db as unknown as Kysely<DocumentViewDatabase>,
+        operationIndex,
+        mockWriteCache,
+        new ConsistencyTracker(),
+        new ConsoleLogger(["test"]),
+        DEFAULT_DRIVE_CONTAINER_TYPES,
+        { legacyProcessorIds: false },
+      );
+      await manager.init();
+
+      const driveId = generateId();
+      const factory: ProcessorFactory = () => [
+        { processor: createMockProcessor("company_list_v1"), filter: {} },
+        { processor: createMockProcessor(), filter: {}, id: "explicit" },
+        { processor: createMockProcessor(), filter: {} },
+      ];
+      await manager.registerFactory("pkg", factory);
+      await manager.indexOperations([makeDriveCreateOp(driveId, 1)]);
+
+      expect(
+        manager
+          .getAll()
+          .map((t) => t.processorId)
+          .sort(),
+      ).toEqual([
+        `pkg:${driveId}:2`,
+        `pkg:${driveId}:company_list_v1`,
+        `pkg:${driveId}:explicit`,
+      ]);
+    });
+  });
+
   describe("Per-Processor Consistency", () => {
     it("should persist cursor per processor", async () => {
       const driveId = generateId();
@@ -1482,5 +1533,174 @@ describe("ProcessorManager Backfill Paging Regression", () => {
     expect(lastReceivedOrdinal).toBe(HUGE_PAGE_SIZE);
 
     await db.destroy();
+  });
+});
+
+describe("ProcessorManager Cursor Identity Across Restarts", () => {
+  let database: Kysely<Database>;
+  let started: InProcessReactorModule[] = [];
+
+  beforeEach(() => {
+    database = new Kysely<Database>({
+      dialect: new PGliteDialect(new PGlite()),
+    });
+  });
+
+  afterEach(async () => {
+    for (const module of started) {
+      await module.reactor.kill().completed;
+    }
+    started = [];
+    await database.destroy();
+  });
+
+  // Each call is one deployment; they share the database like a redeploy does.
+  async function deploy(): Promise<InProcessReactorModule> {
+    const module = await new ReactorBuilder()
+      .withKysely(database)
+      .withFeatures({ legacyProcessorIds: false })
+      .withDocumentModelSources([
+        documentModelDocumentModelModule as unknown as DocumentModelModule,
+        driveDocumentModelModule as unknown as DocumentModelModule,
+      ])
+      .buildModule();
+    started.push(module);
+    return module;
+  }
+
+  async function waitForJob(
+    module: InProcessReactorModule,
+    jobId: string,
+  ): Promise<void> {
+    await vi.waitUntil(
+      async () => {
+        const status = await module.reactor.getJobStatus(jobId);
+        if (status.status === JobStatus.FAILED) {
+          throw new Error(`Job failed: ${status.error?.message}`);
+        }
+        return status.status === JobStatus.READ_READY;
+      },
+      { timeout: 5000 },
+    );
+  }
+
+  // Creation and edit are serialized: concurrent batches can starve delivery.
+  async function createDriveWithOps(
+    module: InProcessReactorModule,
+  ): Promise<string> {
+    const driveDoc = driveDocumentModelModule.utils.createDocument();
+    const created = await module.reactor.create(driveDoc);
+    await waitForJob(module, created.id);
+    const renamed = await module.reactor.execute(driveDoc.header.id, "main", [
+      setDriveName({ name: "renamed" }),
+    ]);
+    await waitForJob(module, renamed.id);
+    return driveDoc.header.id;
+  }
+
+  function ordinalsOf(processor: ReturnType<typeof createMockProcessor>) {
+    return processor.receivedOperations
+      .map((op) => op.context.ordinal)
+      .sort((a, b) => a - b);
+  }
+
+  // Ids are what is under test, so processors are located by identity instead.
+  function trackedFor(module: InProcessReactorModule, processor: IProcessor) {
+    return module.processorManager
+      .getAll()
+      .find((t) => t.record.processor === processor);
+  }
+
+  async function waitForCursor(
+    module: InProcessReactorModule,
+    processor: IProcessor,
+    ordinal: number,
+  ): Promise<void> {
+    await vi.waitFor(
+      () => expect(trackedFor(module, processor)?.lastOrdinal).toBe(ordinal),
+      { timeout: 5000 },
+    );
+  }
+
+  it("should backfill a processor inserted before existing ones in the factory array", async () => {
+    const first = await deploy();
+    const existing = createMockProcessor("existing_v1");
+    await first.processorManager.registerFactory("pkg", () => [
+      { processor: existing, filter: {} },
+    ]);
+
+    await createDriveWithOps(first);
+    const seen = ordinalsOf(existing);
+    expect(seen.length).toBeGreaterThanOrEqual(3);
+    await waitForCursor(first, existing, seen[seen.length - 1]!);
+    await first.reactor.kill().completed;
+
+    // Redeploy with a new processor inserted at index 0.
+    const second = await deploy();
+    const added = createMockProcessor("added_v1");
+    const existing2 = createMockProcessor("existing_v1");
+    await second.processorManager.registerFactory("pkg", () => [
+      { processor: added, filter: {} },
+      { processor: existing2, filter: {} },
+    ]);
+
+    // Never seen anything: full history expected.
+    expect(ordinalsOf(added)).toEqual(seen);
+    // Already caught up: nothing expected.
+    expect(existing2.receivedOperations).toHaveLength(0);
+  });
+
+  it("should keep a processor's cursor and status when one before it is removed", async () => {
+    const first = await deploy();
+    const a = createMockProcessor("a_v1");
+    const b = createMockProcessor("b_v1");
+    const c = createMockProcessor("c_v1");
+    // `c` fails on every delivery, so it stays errored with its cursor frozen.
+    c.onOperations = vi.fn().mockRejectedValue(new Error("boom"));
+    await first.processorManager.registerFactory("pkg", () => [
+      { processor: a, filter: {} },
+      { processor: b, filter: {} },
+      { processor: c, filter: {} },
+    ]);
+
+    const driveId = await createDriveWithOps(first);
+    const seen = ordinalsOf(b);
+    expect(seen.length).toBeGreaterThanOrEqual(3);
+    await waitForCursor(first, b, seen[seen.length - 1]!);
+    await vi.waitFor(
+      () => expect(trackedFor(first, c)?.status).toBe("errored"),
+      { timeout: 5000 },
+    );
+    await first.reactor.kill().completed;
+
+    // Redeploy without `b`: `c` moves from index 2 to index 1.
+    const second = await deploy();
+    const a2 = createMockProcessor("a_v1");
+    const c2 = createMockProcessor("c_v1");
+    await second.processorManager.registerFactory("pkg", () => [
+      { processor: a2, filter: {} },
+      { processor: c2, filter: {} },
+    ]);
+
+    expect(a2.receivedOperations).toHaveLength(0);
+
+    // `c` must come back as itself: still errored, and a retry delivers
+    // everything it missed rather than resuming from `b`'s cursor.
+    const restored = trackedFor(second, c2)!;
+    expect(restored.status).toBe("errored");
+    await restored.retry();
+    expect(ordinalsOf(c2)).toEqual(seen);
+
+    // `b`'s cursor is an orphan now.
+    const cursors = await database
+      .withSchema(REACTOR_SCHEMA)
+      .selectFrom("ProcessorCursor")
+      .select("processorId")
+      .where("factoryId", "=", "pkg")
+      .execute();
+    expect(cursors.map((row) => row.processorId).sort()).toEqual([
+      `pkg:${driveId}:a_v1`,
+      `pkg:${driveId}:c_v1`,
+    ]);
   });
 });

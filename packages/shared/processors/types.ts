@@ -65,6 +65,9 @@ export type ProcessorRecord = {
   processor: IProcessor;
   filter: ProcessorFilter;
   startFrom?: "beginning" | "current";
+  // Stable cursor key within its factory and drive. Derived from the
+  // processor's namespace or class name when omitted.
+  id?: string;
 };
 
 /**

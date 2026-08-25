@@ -1,7 +1,14 @@
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
-import type { ProcessorFilter } from "@powerhousedao/shared/processors";
+import type {
+  IProcessor,
+  ProcessorFilter,
+  ProcessorRecord,
+} from "@powerhousedao/shared/processors";
 import { describe, expect, it } from "vitest";
-import { matchesFilter } from "../../src/processors/utils.js";
+import {
+  matchesFilter,
+  resolveProcessorSlots,
+} from "../../src/processors/utils.js";
 
 function createOperation(context: {
   documentId: string;
@@ -297,5 +304,66 @@ describe("matchesFilter", () => {
 
       expect(matchesFilter(op, filter)).toBe(true);
     });
+  });
+});
+
+describe("resolveProcessorSlots", () => {
+  const stub: IProcessor = {
+    onOperations: () => Promise.resolve(),
+    onDisconnect: () => Promise.resolve(),
+  };
+  class Named implements IProcessor {
+    onOperations = () => Promise.resolve();
+    onDisconnect = () => Promise.resolve();
+  }
+  const record = (
+    processor: IProcessor & { namespace?: string },
+    id?: string,
+  ): ProcessorRecord => ({
+    processor,
+    filter: {},
+    ...(id ? { id } : {}),
+  });
+
+  it("should use array positions in legacy mode", () => {
+    const records = [record(new Named()), record({ ...stub, namespace: "ns" })];
+    expect(resolveProcessorSlots(records, true)).toEqual(["0", "1"]);
+  });
+
+  it("should prefer id, then namespace, then class name, then position", () => {
+    const records = [
+      record(new Named(), "explicit"),
+      record({ ...stub, namespace: "company_list_v1" }),
+      record(new Named()),
+      record(stub),
+    ];
+    expect(resolveProcessorSlots(records, false)).toEqual([
+      "explicit",
+      "company_list_v1",
+      "Named",
+      "3",
+    ]);
+  });
+
+  it("should suffix repeated keys by occurrence", () => {
+    const records = [
+      record(new Named()),
+      record(new Named()),
+      record(new Named()),
+    ];
+    expect(resolveProcessorSlots(records, false)).toEqual([
+      "Named",
+      "Named#1",
+      "Named#2",
+    ]);
+  });
+
+  it("should ignore empty ids and namespaces", () => {
+    expect(
+      resolveProcessorSlots(
+        [record({ ...stub, namespace: "" }, ""), record(stub, "")],
+        false,
+      ),
+    ).toEqual(["0", "1"]);
   });
 });

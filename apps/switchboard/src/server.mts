@@ -459,7 +459,11 @@ async function initServer(
 
     const reactorBuilder = new ReactorBuilder()
       .withEventBus(new EventBus())
-      .withKysely(baseKysely);
+      .withKysely(baseKysely)
+      .withFeatures({
+        legacyProcessorIds:
+          process.env.REACTOR_LEGACY_PROCESSOR_IDS !== "false",
+      });
 
     const clientBuilder = new ReactorClientBuilder().withReactorBuilder(
       reactorBuilder,

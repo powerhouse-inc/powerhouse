@@ -2,6 +2,10 @@ import { boolean, command, flag, oneOf, option, run } from "cmd-ts";
 import { appendFileSync, existsSync } from "node:fs";
 import { ReleaseClient } from "nx/release";
 import type { ReleaseType } from "semver";
+import {
+  listPublishablePackages,
+  waitForNpmPropagation,
+} from "./npm-propagation";
 
 const SENTRY_INJECT_DIRS = [
   "apps/connect/dist",
@@ -95,6 +99,13 @@ function getReleaseChannelFromBranchName(branchName: string): Channel {
  * For staging the tag is staging.
  * For dev the tag is dev.
  */
+const RELEASE_PROJECT_GLOBS = [
+  "packages/*",
+  "packages/analytics-engine/*",
+  "clis/*",
+  "apps/*",
+];
+
 function getPreid(channel: Channel): string | undefined {
   if (channel === "production") return undefined;
   return channel;
@@ -190,12 +201,7 @@ const app = command({
 
     const releaseClient = new ReleaseClient(
       {
-        projects: [
-          "packages/*",
-          "packages/analytics-engine/*",
-          "clis/*",
-          "apps/*",
-        ],
+        projects: RELEASE_PROJECT_GLOBS,
         projectsRelationship: "fixed",
         releaseTag: { pattern: "v{version}" },
         changelog: {
@@ -414,6 +420,12 @@ const app = command({
       // from reusing the version. Rebase the chore commit on top of the
       // latest remote tip and try again.
       pushWithRebaseRetry({ workspaceVersion, gitTag });
+    }
+    // Downstream jobs install from npm the moment this job ends; the registry
+    // can lag the publish ack by minutes. Runs after the git side is durable.
+    if (!dryRun && !skipPublish && workspaceVersion) {
+      const names = await listPublishablePackages(RELEASE_PROJECT_GLOBS);
+      await waitForNpmPropagation(names, workspaceVersion, preid ?? "latest");
     }
     // When this script is invoked from a GitHub Actions step, expose the
     // tag we just published so downstream jobs (e.g. publish-ph-binaries)
