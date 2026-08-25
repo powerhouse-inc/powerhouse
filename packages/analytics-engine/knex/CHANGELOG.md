@@ -1,3 +1,18 @@
+## 6.2.2-dev.58 (2026-08-25)
+
+### 🚀 Features
+
+- **docker:** per-channel compose files on cr.vetra.io with fixed ports ([7d8f51b57](https://github.com/powerhouse-inc/powerhouse/commit/7d8f51b57))
+
+### 🩹 Fixes
+
+- **docker:** connect image HEALTHCHECK uses 127.0.0.1 ([4c80c5759](https://github.com/powerhouse-inc/powerhouse/commit/4c80c5759))
+- **docker:** healthcheck 127.0.0.1 instead of localhost in compose files ([e15bb8c9d](https://github.com/powerhouse-inc/powerhouse/commit/e15bb8c9d))
+
+### ❤️ Thank You
+
+- froid1911
+
 ## 6.2.2-dev.57 (2026-08-24)
 
 This was a version bump only for @powerhousedao/analytics-engine-knex to align it with other projects, there were no code changes.
