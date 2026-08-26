@@ -59,6 +59,7 @@ describe("batched applies: transaction count", () => {
     const writeCache: any = {
       getState: vi.fn().mockImplementation(() => Promise.resolve(document())),
       putState: vi.fn(),
+      putRun: vi.fn(),
       invalidate: vi.fn(),
       clear: vi.fn(),
       startup: vi.fn(),

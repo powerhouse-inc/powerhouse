@@ -47,6 +47,7 @@ function createMockCache(
         },
       ),
     putState: vi.fn(),
+    putRun: vi.fn(),
     invalidate: vi.fn().mockReturnValue(0),
     clear: vi.fn(),
     startup: vi.fn().mockResolvedValue(undefined),

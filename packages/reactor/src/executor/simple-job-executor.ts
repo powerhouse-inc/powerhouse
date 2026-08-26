@@ -73,7 +73,6 @@ import {
   isGenesisOperation,
   refusalError,
 } from "./util.js";
-import { SnapshotPosition } from "../cache/write-cache-types.js";
 
 const MAX_SKIP_THRESHOLD = 1000;
 
@@ -918,16 +917,17 @@ export class SimpleJobExecutor implements IJobExecutor {
       [scope]: head.index + 1,
     };
 
-    // Only the run's final state is cached. The intermediate ones are not the
-    // head and caching them as such would answer a later head read with state
-    // from the middle of this batch.
-    stores.writeCache.putState(
+    // The whole run, not just its head: the cache keeps only the head as
+    // state, but a run that writes past a keyframe boundary crossed it, and
+    // handing over the head alone would skip every boundary between.
+    stores.writeCache.putRun(
       job.documentId,
       scope,
       job.branch,
-      head.index,
-      last.updatedDocument,
-      SnapshotPosition.Head,
+      storedOperations.map((operation, position) => ({
+        revision: operation.index,
+        document: prepared[position].updatedDocument,
+      })),
     );
 
     indexTxn.write(

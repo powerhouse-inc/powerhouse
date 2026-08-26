@@ -30,6 +30,7 @@ describe("DefaultExecutionScope", () => {
     const writeCache = {
       getState: vi.fn(),
       putState: vi.fn(),
+      putRun: vi.fn(),
       invalidate: vi.fn(),
       clear: vi.fn(),
       startup: vi.fn(),
@@ -70,6 +71,7 @@ describe("DefaultExecutionScope", () => {
     const writeCache = {
       getState: vi.fn(),
       putState: vi.fn(),
+      putRun: vi.fn(),
       invalidate: vi.fn(),
       clear: vi.fn(),
       startup: vi.fn(),
@@ -112,6 +114,7 @@ describe("DefaultExecutionScope", () => {
     const writeCache = {
       getState: vi.fn(),
       putState: vi.fn(),
+      putRun: vi.fn(),
       invalidate: vi.fn(),
       clear: vi.fn(),
       startup: vi.fn(),

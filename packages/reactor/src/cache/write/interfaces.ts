@@ -70,6 +70,35 @@ export interface IWriteCache {
   ): void;
 
   /**
+   * Records a run of revisions written together, the last of which is the
+   * stream's head. Only the head is cached as state: an earlier revision in
+   * the run is not the head, and caching it as one would answer a later head
+   * read with state from the middle of the run. The earlier ones are still
+   * offered to whatever the implementation persists at intervals, because a
+   * run that writes past a boundary passed through it just the same.
+   *
+   * @param documentId - The document identifier
+   * @param scope - Operation scope
+   * @param branch - Branch name
+   * @param run - Each revision the run produced, in order, with the document
+   *   as it stood at that revision. The last entry is the head.
+   *
+   * @example
+   * ```typescript
+   * cache.putRun(docId, 'global', 'main', [
+   *   { revision: 9, document: at9 },
+   *   { revision: 10, document: at10 },
+   * ]);
+   * ```
+   */
+  putRun(
+    documentId: string,
+    scope: string,
+    branch: string,
+    run: readonly { revision: number; document: PHDocument }[],
+  ): void;
+
+  /**
    * Invalidates (removes) cached entries for a document stream.
    *
    * - If only documentId is provided: invalidates all scopes and branches for that document

@@ -50,6 +50,7 @@ describe("KyselyDocumentView Unit Tests", () => {
     mockWriteCache = {
       getState: vi.fn().mockResolvedValue({}),
       putState: vi.fn(),
+      putRun: vi.fn(),
       invalidate: vi.fn().mockReturnValue(0),
       clear: vi.fn(),
       startup: vi.fn().mockResolvedValue(undefined),

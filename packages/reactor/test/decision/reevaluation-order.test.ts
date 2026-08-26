@@ -55,6 +55,7 @@ describe("re-evaluation scope order", () => {
     const writeCache: any = {
       getState: vi.fn().mockResolvedValue(document()),
       putState: vi.fn(),
+      putRun: vi.fn(),
       invalidate: vi.fn(),
       clear: vi.fn(),
       startup: vi.fn(),

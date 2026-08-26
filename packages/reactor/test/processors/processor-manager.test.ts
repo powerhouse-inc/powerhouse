@@ -617,6 +617,7 @@ describe("ProcessorManager Standalone Tests", () => {
     mockWriteCache = {
       getState: vi.fn().mockResolvedValue({}),
       putState: vi.fn(),
+      putRun: vi.fn(),
       invalidate: vi.fn().mockReturnValue(0),
       clear: vi.fn(),
       startup: vi.fn().mockResolvedValue(undefined),
@@ -1488,6 +1489,7 @@ describe("ProcessorManager Backfill Paging Regression", () => {
     const mockWriteCache: IWriteCache = {
       getState: vi.fn().mockResolvedValue({}),
       putState: vi.fn(),
+      putRun: vi.fn(),
       invalidate: vi.fn().mockReturnValue(0),
       clear: vi.fn(),
       startup: vi.fn().mockResolvedValue(undefined),
