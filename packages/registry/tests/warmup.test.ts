@@ -1,6 +1,12 @@
 import { execSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
