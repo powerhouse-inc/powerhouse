@@ -2400,7 +2400,9 @@ describe("SimpleJobExecutor", () => {
 
       await executor.executeJob(job);
 
-      // Reshuffle produces: [localNoopOp(NOOP, skip=1), incomingOp(SET_NAME, skip=0)].
+      // Reshuffle produces: [localNoopOp(NOOP), incomingOp(SET_NAME, skip=0)].
+      // The NOOP sorts first, so it carries the batch skip rather than the
+      // marker's own 1 - what matters here is only that the skip is positive.
       // The NOOP+skip guard must invalidate before calling getState so the reducer
       // receives full operation history rather than the sliced cache snapshot.
       // Expected callOrder: ["invalidate" (NOOP guard), "getState" (NOOP), ...]
