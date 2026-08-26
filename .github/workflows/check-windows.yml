@@ -1,0 +1,72 @@
+name: Check Windows
+
+# Windows is not covered by any other workflow: every job in this repo runs on
+# ubuntu, yet release-branch.yml ships a `ph-windows-x64.exe` built there. This
+# job exists so Windows-only breakage (POSIX-only scripts, `path.join` used to
+# build URL paths or module specifiers, permission bits that do not exist on
+# NTFS) is caught rather than discovered by users.
+#
+# Deliberately narrower than Check Commit: install, build, unit tests, and a
+# smoke test that the CLI runs. Storybook, eslint and the e2e suites stay on
+# ubuntu -- this is about platform portability, not duplicating the whole matrix.
+
+concurrency:
+  group: check-windows-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main", "release/**"]
+  pull_request:
+    branches: ["main", "release/**"]
+    types: [opened, reopened, synchronize]
+
+permissions:
+  contents: read
+
+jobs:
+  check-windows:
+    runs-on: windows-latest
+    env:
+      CI: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: "pnpm"
+
+      # bun is a hard prerequisite: the `postbuild` steps of ph-cli, ph-cmd and
+      # registry all shell out to it, so `pnpm build` cannot finish without it.
+      - name: Setup bun global install
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.8
+
+      - name: Install deps (frozen lockfile)
+        run: pnpm install-ci
+
+      - name: Build
+        run: pnpm build
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Re-link workspace bins now that dist files exist
+        run: pnpm rebuild --recursive
+
+      - name: Run tests
+        run: pnpm test:ci
+
+      - name: Smoke test the built CLI
+        run: node clis/ph-cli/dist/cli.mjs --version
