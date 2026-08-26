@@ -280,6 +280,12 @@ export class DocumentActionHandler {
       [job.scope]: [...(standing.operations[job.scope] ?? []), operation],
     };
 
+    executing.touchedStreams.push({
+      documentId: job.documentId,
+      scope: job.scope,
+      branch: job.branch,
+    });
+
     stores.writeCache.putState(
       job.documentId,
       job.scope,
@@ -384,6 +390,12 @@ export class DocumentActionHandler {
       ...document.operations,
       [job.scope]: [...(document.operations[job.scope] ?? []), operation],
     };
+
+    executing.touchedStreams.push({
+      documentId: document.header.id,
+      scope: job.scope,
+      branch: job.branch,
+    });
 
     stores.writeCache.putState(
       document.header.id,
@@ -528,6 +540,12 @@ export class DocumentActionHandler {
       ...document.operations,
       [job.scope]: [...(document.operations[job.scope] ?? []), operation],
     };
+
+    executing.touchedStreams.push({
+      documentId,
+      scope: job.scope,
+      branch: job.branch,
+    });
 
     stores.writeCache.putState(
       documentId,
@@ -816,6 +834,12 @@ export class DocumentActionHandler {
       [job.scope]: [...(document.operations[job.scope] ?? []), operation],
     };
 
+    executing.touchedStreams.push({
+      documentId,
+      scope: job.scope,
+      branch: job.branch,
+    });
+
     stores.writeCache.putState(
       documentId,
       job.scope,
@@ -1035,6 +1059,20 @@ export class DocumentActionHandler {
     };
     const resultingState = JSON.stringify(resultingStateObj);
 
+    executing.touchedStreams.push({
+      documentId: input.sourceId,
+      scope: job.scope,
+      branch: job.branch,
+    });
+
+    // The target's collection membership is derived from the rows just
+    // written, and a read can refill it before the transaction commits.
+    executing.touchedStreams.push({
+      documentId: input.targetId,
+      scope: job.scope,
+      branch: job.branch,
+    });
+
     stores.writeCache.putState(
       input.sourceId,
       job.scope,
@@ -1082,6 +1120,10 @@ export class DocumentActionHandler {
   ): Promise<Operation[] | JobResult> {
     const { documentId, documentType, scope, branch } = target;
     const { job, startTime, stores, signal } = executing;
+
+    // Recorded before the apply, not after: the rows an apply that throws left
+    // behind are the ones a rollback has to take the cached state of with it.
+    executing.touchedStreams.push({ documentId, scope, branch });
 
     let storedOperations: Operation[];
 

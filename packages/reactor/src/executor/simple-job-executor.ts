@@ -64,6 +64,7 @@ import type {
   PendingWrite,
   PositionedWrites,
   ReactorFeatureFlags,
+  TouchedStream,
 } from "./types.js";
 import {
   buildErrorResult,
@@ -123,6 +124,27 @@ type PreparedWrite = {
   appendCondition?: AppendCondition;
   denied: boolean;
 };
+
+/** What a job produced inside the execution scope, before anything is durable. */
+type ScopeOutcome = {
+  result: JobResult;
+  pendingEvent?: JobWriteReadyEvent;
+};
+
+/**
+ * Carries a failed job out of the execution scope so its transaction rolls
+ * back. A scope callback that returns commits, whatever result it returns, so
+ * a returned failure would leave the writes the job made before it failed
+ * standing. Never escapes executeJob: the failure goes back to being a
+ * returned JobResult there, which is what the queue, the worker protocol and
+ * every test expect a failed job to look like.
+ */
+class JobRollbackSignal extends Error {
+  constructor(readonly result: JobResult) {
+    super("job rolled back");
+    this.name = "JobRollbackSignal";
+  }
+}
 
 export class SimpleJobExecutor implements IJobExecutor {
   private config: Required<JobExecutorConfig>;
@@ -188,221 +210,62 @@ export class SimpleJobExecutor implements IJobExecutor {
   /**
    * Execute a single job by applying all its actions through the appropriate reducers.
    * Actions are processed sequentially in order.
+   *
+   * The whole job runs inside one execution scope, and a scope callback that
+   * returns commits. A failed job must therefore leave the scope by throwing,
+   * or the writes it made before it failed would be durable: JobRollbackSignal
+   * carries the failure out through the transaction and this method turns it
+   * back into the returned JobResult every caller expects. A job either fully
+   * applies or leaves nothing behind.
    */
   async executeJob(job: Job, signal?: AbortSignal): Promise<JobResult> {
     const startTime = Date.now();
 
-    // Track document IDs touched during execution for cache invalidation on rollback
-    const touchedCacheEntries: Array<{
-      documentId: string;
-      scope: string;
-      branch: string;
-    }> = [];
+    // Streams the job wrote, to evict when its transaction does not commit
+    const touchedStreams: TouchedStream[] = [];
 
     // Entries handlers request invalidated only after the transaction commits
-    const postCommitInvalidations: Array<{
-      documentId: string;
-      scope: string;
-      branch: string;
-    }> = [];
+    const postCommitInvalidations: TouchedStream[] = [];
 
-    let pendingEvent: JobWriteReadyEvent | undefined;
-    let result: JobResult;
+    let outcome: ScopeOutcome;
     try {
-      result = await this.executionScope.run(async (stores) => {
-        const indexTxn = stores.operationIndex.start();
-
-        if (job.kind === "load") {
-          const loadResult = await this.executeLoadJob({
-            job,
-            startTime,
-            indexTxn,
-            stores,
-            signal,
-            replayingAcceptedHistory: true,
-            evaluatedByPosition: false,
-            postCommitInvalidations,
-          });
-          if (loadResult.success && loadResult.operationsWithContext) {
-            for (const owc of loadResult.operationsWithContext) {
-              touchedCacheEntries.push({
-                documentId: owc.context.documentId,
-                scope: owc.context.scope,
-                branch: owc.context.branch,
-              });
-            }
-
-            const ordinals = await stores.operationIndex.commit(
-              indexTxn,
-              signal,
-            );
-
-            for (let i = 0; i < loadResult.operationsWithContext.length; i++) {
-              loadResult.operationsWithContext[i].context.ordinal = ordinals[i];
-            }
-            const collectionMemberships =
-              loadResult.operationsWithContext.length > 0
-                ? await this.getCollectionMembershipsForOperations(
-                    loadResult.operationsWithContext,
-                    stores,
-                  )
-                : {};
-            pendingEvent = {
-              jobId: job.id,
-              operations: loadResult.operationsWithContext,
-              jobMeta: job.meta,
-              collectionMemberships,
-            };
-          }
-          return loadResult;
-        }
-
-        if (job.kind === "reevaluation") {
-          const reevalResult = await this.executeReevaluationJob({
-            job,
-            startTime,
-            indexTxn,
-            stores,
-            signal,
-            replayingAcceptedHistory: false,
-            evaluatedByPosition: false,
-            postCommitInvalidations,
-          });
-          if (reevalResult.success && reevalResult.operationsWithContext) {
-            for (const owc of reevalResult.operationsWithContext) {
-              touchedCacheEntries.push({
-                documentId: owc.context.documentId,
-                scope: owc.context.scope,
-                branch: owc.context.branch,
-              });
-            }
-
-            const ordinals = await stores.operationIndex.commit(
-              indexTxn,
-              signal,
-            );
-
-            for (
-              let i = 0;
-              i < reevalResult.operationsWithContext.length;
-              i++
-            ) {
-              reevalResult.operationsWithContext[i].context.ordinal =
-                ordinals[i];
-            }
-            if (reevalResult.operationsWithContext.length > 0) {
-              const collectionMemberships =
-                await this.getCollectionMembershipsForOperations(
-                  reevalResult.operationsWithContext,
-                  stores,
-                );
-              pendingEvent = {
-                jobId: job.id,
-                operations: reevalResult.operationsWithContext,
-                jobMeta: job.meta,
-                collectionMemberships,
-              };
-            }
-          }
-          return reevalResult;
-        }
-
-        const positioned = await this.positionByTimestamp(job, stores, signal);
-        if (positioned.error) {
-          return buildErrorResult(job, positioned.error, startTime);
-        }
-
-        const executing: ExecutingJob = {
+      outcome = await this.executionScope.run(async (stores) => {
+        const scoped = await this.executeInScope({
           job,
           startTime,
-          indexTxn,
           stores,
           signal,
-          replayingAcceptedHistory: false,
-          evaluatedByPosition: positioned.evaluatedByPosition,
+          touchedStreams,
           postCommitInvalidations,
-        };
+        });
 
-        const actionResult = await this.processActions(
-          positioned.writes,
-          executing,
-        );
-
-        if (!actionResult.success) {
-          return {
-            job,
-            success: false as const,
-            error: actionResult.error,
-            duration: Date.now() - startTime,
-          };
+        if (!scoped.result.success) {
+          throw new JobRollbackSignal(scoped.result);
         }
 
-        if (actionResult.operationsWithContext.length > 0) {
-          for (const owc of actionResult.operationsWithContext) {
-            touchedCacheEntries.push({
-              documentId: owc.context.documentId,
-              scope: owc.context.scope,
-              branch: owc.context.branch,
-            });
-          }
-        }
-
-        // Put here because a re-eval pass writes through the same db db
-        // transaction.
-        const reevaluationError = await this.reevaluateIfCriteriaMet(
-          { scope: job.scope, operations: actionResult.generatedOperations },
-          executing,
-        );
-        if (reevaluationError) {
-          return {
-            job,
-            success: false as const,
-            error: reevaluationError,
-            duration: Date.now() - startTime,
-          };
-        }
-
-        const ordinals = await stores.operationIndex.commit(indexTxn, signal);
-
-        if (actionResult.operationsWithContext.length > 0) {
-          for (let i = 0; i < actionResult.operationsWithContext.length; i++) {
-            actionResult.operationsWithContext[i].context.ordinal = ordinals[i];
-          }
-          const collectionMemberships =
-            await this.getCollectionMembershipsForOperations(
-              actionResult.operationsWithContext,
-              stores,
-            );
-          pendingEvent = {
-            jobId: job.id,
-            operations: actionResult.operationsWithContext,
-            jobMeta: job.meta,
-            collectionMemberships,
-          };
-        }
-
-        return {
-          job,
-          success: true as const,
-          operations: actionResult.generatedOperations,
-          operationsWithContext: actionResult.operationsWithContext,
-          duration: Date.now() - startTime,
-        };
+        return scoped;
       }, signal);
     } catch (error) {
-      for (const entry of touchedCacheEntries) {
+      // The caches are shared with the copies the scope hands the job, so the
+      // rollback that just happened undid none of what the job put in them.
+      for (const entry of touchedStreams) {
         this.writeCache.invalidate(entry.documentId, entry.scope, entry.branch);
         this.documentMetaCache.invalidate(entry.documentId, entry.branch);
+        this.collectionMembershipCache.invalidate(entry.documentId);
       }
+
+      if (error instanceof JobRollbackSignal) {
+        return error.result;
+      }
+
       throw error;
     }
 
-    if (result.success) {
-      for (const entry of postCommitInvalidations) {
-        this.writeCache.invalidate(entry.documentId, entry.scope, entry.branch);
-      }
+    for (const entry of postCommitInvalidations) {
+      this.writeCache.invalidate(entry.documentId, entry.scope, entry.branch);
     }
 
+    const { pendingEvent } = outcome;
     if (pendingEvent) {
       this.eventBus
         .emit(ReactorEventTypes.JOB_WRITE_READY, pendingEvent)
@@ -415,7 +278,191 @@ export class SimpleJobExecutor implements IJobExecutor {
         });
     }
 
-    return result;
+    return outcome.result;
+  }
+
+  /**
+   * The body of a job, run inside the execution scope's transaction.
+   *
+   * The stores and caches it works through are the copies scoped to that
+   * transaction, so nothing it does is durable until the scope commits. The
+   * write-ready event is handed back rather than emitted, because a job that
+   * has not committed yet has nothing to announce.
+   */
+  private async executeInScope(params: {
+    job: Job;
+    startTime: number;
+    stores: ExecutionStores;
+    signal?: AbortSignal;
+    touchedStreams: TouchedStream[];
+    postCommitInvalidations: TouchedStream[];
+  }): Promise<ScopeOutcome> {
+    const {
+      job,
+      startTime,
+      stores,
+      signal,
+      touchedStreams,
+      postCommitInvalidations,
+    } = params;
+
+    let pendingEvent: JobWriteReadyEvent | undefined;
+    const indexTxn = stores.operationIndex.start();
+
+    if (job.kind === "load") {
+      const loadResult = await this.executeLoadJob({
+        job,
+        startTime,
+        indexTxn,
+        stores,
+        signal,
+        replayingAcceptedHistory: true,
+        evaluatedByPosition: false,
+        postCommitInvalidations,
+        touchedStreams,
+      });
+      if (loadResult.success && loadResult.operationsWithContext) {
+        const ordinals = await stores.operationIndex.commit(indexTxn, signal);
+
+        for (let i = 0; i < loadResult.operationsWithContext.length; i++) {
+          loadResult.operationsWithContext[i].context.ordinal = ordinals[i];
+        }
+        const collectionMemberships =
+          loadResult.operationsWithContext.length > 0
+            ? await this.getCollectionMembershipsForOperations(
+                loadResult.operationsWithContext,
+                stores,
+              )
+            : {};
+        pendingEvent = {
+          jobId: job.id,
+          operations: loadResult.operationsWithContext,
+          jobMeta: job.meta,
+          collectionMemberships,
+        };
+      }
+      return { result: loadResult, pendingEvent };
+    }
+
+    if (job.kind === "reevaluation") {
+      const reevalResult = await this.executeReevaluationJob({
+        job,
+        startTime,
+        indexTxn,
+        stores,
+        signal,
+        replayingAcceptedHistory: false,
+        evaluatedByPosition: false,
+        postCommitInvalidations,
+        touchedStreams,
+      });
+      if (reevalResult.success && reevalResult.operationsWithContext) {
+        const ordinals = await stores.operationIndex.commit(indexTxn, signal);
+
+        for (let i = 0; i < reevalResult.operationsWithContext.length; i++) {
+          reevalResult.operationsWithContext[i].context.ordinal = ordinals[i];
+        }
+        if (reevalResult.operationsWithContext.length > 0) {
+          const collectionMemberships =
+            await this.getCollectionMembershipsForOperations(
+              reevalResult.operationsWithContext,
+              stores,
+            );
+          pendingEvent = {
+            jobId: job.id,
+            operations: reevalResult.operationsWithContext,
+            jobMeta: job.meta,
+            collectionMemberships,
+          };
+        }
+      }
+      return { result: reevalResult, pendingEvent };
+    }
+
+    const positioned = await this.positionByTimestamp(job, stores, signal);
+    if (positioned.error) {
+      return {
+        result: buildErrorResult(job, positioned.error, startTime),
+        pendingEvent,
+      };
+    }
+
+    const executing: ExecutingJob = {
+      job,
+      startTime,
+      indexTxn,
+      stores,
+      signal,
+      replayingAcceptedHistory: false,
+      evaluatedByPosition: positioned.evaluatedByPosition,
+      postCommitInvalidations,
+      touchedStreams,
+    };
+
+    const actionResult = await this.processActions(
+      positioned.writes,
+      executing,
+    );
+
+    if (!actionResult.success) {
+      return {
+        result: {
+          job,
+          success: false as const,
+          error: actionResult.error,
+          duration: Date.now() - startTime,
+        },
+        pendingEvent,
+      };
+    }
+
+    // Put here because a re-eval pass writes through the same db db
+    // transaction.
+    const reevaluationError = await this.reevaluateIfCriteriaMet(
+      { scope: job.scope, operations: actionResult.generatedOperations },
+      executing,
+    );
+    if (reevaluationError) {
+      return {
+        result: {
+          job,
+          success: false as const,
+          error: reevaluationError,
+          duration: Date.now() - startTime,
+        },
+        pendingEvent,
+      };
+    }
+
+    const ordinals = await stores.operationIndex.commit(indexTxn, signal);
+
+    if (actionResult.operationsWithContext.length > 0) {
+      for (let i = 0; i < actionResult.operationsWithContext.length; i++) {
+        actionResult.operationsWithContext[i].context.ordinal = ordinals[i];
+      }
+      const collectionMemberships =
+        await this.getCollectionMembershipsForOperations(
+          actionResult.operationsWithContext,
+          stores,
+        );
+      pendingEvent = {
+        jobId: job.id,
+        operations: actionResult.operationsWithContext,
+        jobMeta: job.meta,
+        collectionMemberships,
+      };
+    }
+
+    return {
+      result: {
+        job,
+        success: true as const,
+        operations: actionResult.generatedOperations,
+        operationsWithContext: actionResult.operationsWithContext,
+        duration: Date.now() - startTime,
+      },
+      pendingEvent,
+    };
   }
 
   private async getCollectionMembershipsForOperations(
@@ -852,6 +899,14 @@ export class SimpleJobExecutor implements IJobExecutor {
     const scope = first.scope;
     const documentType = first.document.header.documentType;
     const operations = prepared.map((write) => write.operation);
+
+    // Recorded before the apply, not after: the rows an apply that throws left
+    // behind are the ones a rollback has to take the cached state of with it.
+    executing.touchedStreams.push({
+      documentId: job.documentId,
+      scope,
+      branch: job.branch,
+    });
 
     let storedOperations: Operation[];
     try {

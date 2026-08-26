@@ -162,6 +162,7 @@ function execute(
       replayingAcceptedHistory: false,
       evaluatedByPosition: false,
       postCommitInvalidations: [],
+      touchedStreams: [],
     },
   );
 }

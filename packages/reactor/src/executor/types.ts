@@ -27,6 +27,16 @@ export type PendingWrite = {
 };
 
 /**
+ * A stream a job wrote to, or whose cached state a job's uncommitted writes
+ * could have filled.
+ */
+export type TouchedStream = {
+  documentId: string;
+  scope: string;
+  branch: string;
+};
+
+/**
  * The job in flight, and what a write is committed through.
  */
 export type ExecutingJob = {
@@ -56,11 +66,16 @@ export type ExecutingJob = {
    * invalidating them mid-transaction lets a concurrent read repopulate the
    * cache with pre-upgrade state that then survives the commit.
    */
-  postCommitInvalidations: Array<{
-    documentId: string;
-    scope: string;
-    branch: string;
-  }>;
+  postCommitInvalidations: TouchedStream[];
+
+  /**
+   * Streams this job wrote, to the store or to a cache. The caches are shared
+   * by reference with the copies scoped to the execution transaction, so a job
+   * whose transaction rolls back has to evict them itself: the writes it made
+   * survive the rollback, and so does anything a read filled from the store
+   * while the job's own writes were still uncommitted.
+   */
+  touchedStreams: TouchedStream[];
 };
 
 export type PositionedWrites = {
