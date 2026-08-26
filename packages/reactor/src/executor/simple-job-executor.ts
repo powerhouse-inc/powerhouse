@@ -1028,6 +1028,7 @@ export class SimpleJobExecutor implements IJobExecutor {
   ): Promise<JobResult> {
     const prepared: PreparedWrite[] = [];
     let carried: PHDocument | undefined;
+    let lastYield = performance.now();
 
     for (const write of writes) {
       const outcome = await this.prepareRegularWrite(write, executing, carried);
@@ -1046,6 +1047,19 @@ export class SimpleJobExecutor implements IJobExecutor {
       }
       prepared.push(outcome);
       carried = outcome.updatedDocument;
+
+      if (performance.now() - lastYield > this.config.yieldDeadlineMs) {
+        await yieldToMain();
+        lastYield = performance.now();
+
+        if (executing.signal?.aborted) {
+          return buildErrorResult(
+            executing.job,
+            new Error("Aborted"),
+            executing.startTime,
+          );
+        }
+      }
     }
 
     // Every write in the run must have read the same streams at the same
@@ -1090,6 +1104,7 @@ export class SimpleJobExecutor implements IJobExecutor {
   ): Promise<JobResult> {
     const operations: Operation[] = [];
     const contexts: OperationWithContext[] = [];
+    let lastYield = performance.now();
 
     for (const write of writes) {
       const result = await this.executeRegularAction(write, executing);
@@ -1098,6 +1113,19 @@ export class SimpleJobExecutor implements IJobExecutor {
       }
       operations.push(...(result.operations ?? []));
       contexts.push(...(result.operationsWithContext ?? []));
+
+      if (performance.now() - lastYield > this.config.yieldDeadlineMs) {
+        await yieldToMain();
+        lastYield = performance.now();
+
+        if (executing.signal?.aborted) {
+          return buildErrorResult(
+            executing.job,
+            new Error("Aborted"),
+            executing.startTime,
+          );
+        }
+      }
     }
 
     return {
