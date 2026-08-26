@@ -73,7 +73,6 @@ import {
   isGenesisOperation,
   refusalError,
 } from "./util.js";
-import { SnapshotPosition } from "../cache/write-cache-types.js";
 
 const MAX_SKIP_THRESHOLD = 1000;
 
@@ -105,6 +104,26 @@ type EvaluationCriteria = {
 /**
  * Simple job executor that processes a job by applying actions through document model reducers.
  */
+/**
+ * A write that has been decided and reduced but not yet persisted.
+ *
+ * Exists so a single write and a batch of them can share one copy of the
+ * decide-and-reduce logic while differing only in how many operations reach
+ * the store per transaction.
+ */
+type PreparedWrite = {
+  action: Action;
+  sourceRemote: string;
+  scope: string;
+  /** State the action was reduced against, for its document type. */
+  document: PHDocument;
+  updatedDocument: PHDocument;
+  operation: Operation;
+  resultingState: string;
+  appendCondition?: AppendCondition;
+  denied: boolean;
+};
+
 export class SimpleJobExecutor implements IJobExecutor {
   private config: Required<JobExecutorConfig>;
   private featureFlags: ReactorFeatureFlags;
@@ -138,6 +157,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       retryBaseDelayMs: config.retryBaseDelayMs ?? 100,
       retryMaxDelayMs: config.retryMaxDelayMs ?? 5000,
       yieldDeadlineMs: config.yieldDeadlineMs ?? 50,
+      batchApplies: config.batchApplies ?? true,
     };
 
     // Resolved separately so reads are plain booleans; the config keeps what
@@ -456,6 +476,27 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     let lastYield = performance.now();
 
+    if (this.config.batchApplies && this.canBatch(writes, executing)) {
+      const batched = await this.executeRegularActionsBatched(
+        writes,
+        executing,
+      );
+      const error = this.accumulateResultOrReturnError(
+        batched,
+        generatedOperations,
+        operationsWithContext,
+      );
+      if (error !== null) {
+        return {
+          success: false,
+          generatedOperations,
+          operationsWithContext,
+          error: error.error,
+        };
+      }
+      return { success: true, generatedOperations, operationsWithContext };
+    }
+
     for (const write of writes) {
       const isDocumentAction = DOCUMENT_SCOPE_ACTIONS.has(write.action.type);
       const result = isDocumentAction
@@ -498,22 +539,19 @@ export class SimpleJobExecutor implements IJobExecutor {
     };
   }
 
-  private async executeRegularAction(
+  /**
+   * Decides a write and reduces it, without persisting anything.
+   *
+   * Split from the commit so one write and a batch of them share this logic
+   * rather than keeping two copies of it. `baseDocument` lets a batch thread
+   * the previous action's result forward instead of reading its own write back
+   * out of the cache, which is the only reason the reduce has to be sequential.
+   */
+  private async prepareRegularWrite(
     write: PendingWrite,
     executing: ExecutingJob,
-  ): Promise<
-    JobResult & {
-      operationsWithContext?: Array<{
-        operation: Operation;
-        context: {
-          documentId: string;
-          scope: string;
-          branch: string;
-          documentType: string;
-        };
-      }>;
-    }
-  > {
+    baseDocument?: PHDocument,
+  ): Promise<PreparedWrite | JobResult> {
     const { action, skip, sourceOperation, sourceRemote, deniedReason } = write;
     const { job, startTime, indexTxn, stores, signal } = executing;
 
@@ -541,7 +579,7 @@ export class SimpleJobExecutor implements IJobExecutor {
           { verb: "execute", scope: action.scope, operation: action.type },
           signal,
           this.featureFlags.authConditions
-            ? { actionInput: action.input }
+            ? { actionInput: action.input, carriedDocument: baseDocument }
             : undefined,
         );
       } catch (error) {
@@ -606,34 +644,42 @@ export class SimpleJobExecutor implements IJobExecutor {
       documentVersion = docMeta.state.version;
     }
 
-    // UNDO, REDO, PRUNE, and NOOP+skip need the full operation history to
-    // replay state correctly. The write cache stores sliced documents (last
+    // UNDO, REDO, PRUNE, and any operation carrying a skip need the full
+    // operation history to replay state correctly: a skip rewinds the stream
+    // past the operations it supersedes, so the base state is the one standing
+    // before them, not the head. The write cache stores sliced documents (last
     // op per scope only), so invalidate before loading to force a cold-miss
-    // rebuild. NOOP+skip arises in executeLoadJob when sync reshuffling
-    // converts conflicting local ops to NOOPs.
-    if (
-      isUndoRedo(action) ||
-      action.type === "PRUNE" ||
-      (action.type === "NOOP" && skip > 0)
-    ) {
+    // rebuild.
+    //
+    // The skip is not always a NOOP's. A reshuffle hands its first re-appended
+    // operation the whole skip, and that operation is whatever sorted first --
+    // an ADD_FOLDER as readily as a NOOP. Reducing it against the sliced head
+    // left the resulting state derived from the superseded lineage, which is
+    // what the document view stores and serves; the write cache recovered on
+    // its next cold read and the read model never did.
+    if (isUndoRedo(action) || action.type === "PRUNE" || skip > 0) {
       stores.writeCache.invalidate(job.documentId, job.scope, job.branch);
     }
 
     let document: PHDocument;
-    try {
-      document = await stores.writeCache.getState(
-        job.documentId,
-        job.scope,
-        job.branch,
-        undefined,
-        signal,
-      );
-    } catch (error) {
-      return buildErrorResult(
-        job,
-        error instanceof Error ? error : new Error(String(error)),
-        startTime,
-      );
+    if (baseDocument !== undefined) {
+      document = baseDocument;
+    } else {
+      try {
+        document = await stores.writeCache.getState(
+          job.documentId,
+          job.scope,
+          job.branch,
+          undefined,
+          signal,
+        );
+      } catch (error) {
+        return buildErrorResult(
+          job,
+          error instanceof Error ? error : new Error(String(error)),
+          startTime,
+        );
+      }
     }
 
     // The interim gate, superseded by the auth projection. Re-evaluating already
@@ -770,26 +816,63 @@ export class SimpleJobExecutor implements IJobExecutor {
       header: updatedDocument.header,
     });
 
+    return {
+      action,
+      sourceRemote,
+      scope,
+      document,
+      updatedDocument,
+      operation: newOperation,
+      resultingState,
+      appendCondition,
+      denied: deniedReason !== undefined,
+    };
+  }
+
+  /**
+   * Persists a run of prepared writes in one store transaction.
+   *
+   * The store has always accepted many operations per apply; the executor only
+   * ever handed it one. Passing the whole run means one advisory lock over the
+   * read set and one guarded insert for the batch, instead of one of each per
+   * operation.
+   *
+   * The append condition is taken from the first write. Every write in a run
+   * reads the same streams at the same revisions, because nothing outside the
+   * run can change them mid-batch, and the caller has already refused to batch
+   * the scopes where that does not hold.
+   */
+  private async commitPreparedWrites(
+    prepared: PreparedWrite[],
+    executing: ExecutingJob,
+  ): Promise<JobResult> {
+    const { job, startTime, indexTxn, stores, signal } = executing;
+    const first = prepared[0];
+    const last = prepared[prepared.length - 1];
+    const scope = first.scope;
+    const documentType = first.document.header.documentType;
+    const operations = prepared.map((write) => write.operation);
+
     let storedOperations: Operation[];
     try {
       storedOperations = await stores.operationStore.apply(
         job.documentId,
-        document.header.documentType,
+        documentType,
         scope,
         job.branch,
-        newOperation.index,
+        first.operation.index,
         (txn) => {
-          txn.addOperations(newOperation);
+          txn.addOperations(...operations);
         },
         signal,
         // Undefined unless a decision was made, so the store's guard is only
         // enforced for a write a decision stands behind.
-        appendCondition,
+        first.appendCondition,
       );
     } catch (error) {
       this.logger.error(
         "Error writing @Operation to IOperationStore: @Error",
-        newOperation,
+        operations,
         error,
       );
 
@@ -819,58 +902,251 @@ export class SimpleJobExecutor implements IJobExecutor {
       };
     }
 
-    const storedOperation = storedOperations[0];
+    const head = storedOperations[storedOperations.length - 1];
 
-    updatedDocument.header.revision = {
-      ...updatedDocument.header.revision,
-      [scope]: storedOperation.index + 1,
+    last.updatedDocument.header.revision = {
+      ...last.updatedDocument.header.revision,
+      [scope]: head.index + 1,
     };
 
-    stores.writeCache.putState(
+    // The whole run, not just its head: the cache keeps only the head as
+    // state, but a run that writes past a keyframe boundary crossed it, and
+    // handing over the head alone would skip every boundary between.
+    stores.writeCache.putRun(
       job.documentId,
       scope,
       job.branch,
-      storedOperation.index,
-      updatedDocument,
-      SnapshotPosition.Head,
+      storedOperations.map((operation, position) => ({
+        revision: operation.index,
+        document: prepared[position].updatedDocument,
+      })),
     );
 
-    indexTxn.write([
-      {
-        ...storedOperation,
+    indexTxn.write(
+      storedOperations.map((operation, position) => ({
+        ...operation,
         documentId: job.documentId,
-        documentType: document.header.documentType,
+        documentType,
         branch: job.branch,
         scope,
-        sourceRemote,
-      },
-    ]);
+        sourceRemote: prepared[position].sourceRemote,
+      })),
+    );
 
     // References come from the input as it arrived, including operations
     // stored denied or errored, so sync topology never depends on evaluation.
     if (scope === "auth") {
-      indexTxn.recordGroupReferences(job.documentId, mentionedGroupIds(action));
+      for (const write of prepared) {
+        indexTxn.recordGroupReferences(
+          job.documentId,
+          mentionedGroupIds(write.action),
+        );
+      }
     }
 
     return {
       job,
       success: true,
-      operations: [storedOperation],
-      operationsWithContext: [
-        {
-          operation: storedOperation,
-          context: {
-            documentId: job.documentId,
-            scope,
-            branch: job.branch,
-            documentType: document.header.documentType,
-            resultingState,
-            ordinal: 0,
-          },
+      operations: storedOperations,
+      operationsWithContext: storedOperations.map((operation, position) => ({
+        operation,
+        context: {
+          documentId: job.documentId,
+          scope,
+          branch: job.branch,
+          documentType,
+          resultingState: prepared[position].resultingState,
+          ordinal: 0,
         },
-      ],
+      })),
       duration: Date.now() - startTime,
     };
+  }
+
+  /**
+   * Whether a job's writes may share one store transaction.
+   *
+   * Deliberately narrow. Batching changes only how many transactions the
+   * operations arrive in, and every condition below is a case where that would
+   * change something else as well:
+   *
+   * - A document-scope action goes through its own handler, which has its own
+   *   apply and its own reasons for it.
+   * - A positional or replayed run carries skips and re-appended operations,
+   *   whose indices are not a simple ascending run from the head.
+   * - UNDO, REDO, PRUNE and NOOP-with-skip each invalidate the write cache to
+   *   force a full-history rebuild, so they cannot be reduced against state
+   *   threaded from the write before them.
+   * - The auth scope decides later writes against the policy earlier ones
+   *   install, so a batch would decide them all against the policy as it stood
+   *   before the batch.
+   * - The document scope is read by every decision model, so writing it is
+   *   writing part of the read set; the per-write conditions would not agree.
+   *
+   * A run that fails any of these is executed one write at a time, unchanged.
+   */
+  private canBatch(writes: PendingWrite[], executing: ExecutingJob): boolean {
+    if (writes.length < 2) {
+      return false;
+    }
+    if (executing.evaluatedByPosition || executing.replayingAcceptedHistory) {
+      return false;
+    }
+    const scope = executing.job.scope;
+    if (scope === "auth" || scope === "document") {
+      return false;
+    }
+    return writes.every((write) => {
+      const type = write.action.type;
+      return (
+        write.skip === 0 &&
+        write.deniedReason === undefined &&
+        write.sourceOperation === undefined &&
+        !DOCUMENT_SCOPE_ACTIONS.has(type) &&
+        !isUndoRedo(write.action) &&
+        type !== "PRUNE" &&
+        type !== "NOOP"
+      );
+    });
+  }
+
+  /**
+   * Decides and reduces a run of writes, then persists them together.
+   *
+   * The reduce stays sequential - each action needs the state the one before it
+   * produced - but the result is threaded in memory rather than read back from
+   * the cache, and the whole run reaches the store in a single apply.
+   *
+   * A write that cannot be prepared, or that turns out to be denied, abandons
+   * the batch and the caller replays the whole job one write at a time. That is
+   * simpler than committing a partial run, and these are the paths where the
+   * per-write behaviour is load-bearing.
+   */
+  private async executeRegularActionsBatched(
+    writes: PendingWrite[],
+    executing: ExecutingJob,
+  ): Promise<JobResult> {
+    const prepared: PreparedWrite[] = [];
+    let carried: PHDocument | undefined;
+    let lastYield = performance.now();
+
+    for (const write of writes) {
+      const outcome = await this.prepareRegularWrite(write, executing, carried);
+      if ("success" in outcome) {
+        // A write that refuses or fails part-way through leaves the writes
+        // before it standing when they go one at a time, and preparing is a
+        // read, so replaying the run per write reaches the same failure with
+        // the same operations behind it. Only the first write has nothing to
+        // replay.
+        return prepared.length === 0
+          ? outcome
+          : this.executeRegularActionsSequentially(writes, executing);
+      }
+      if (outcome.denied) {
+        return this.executeRegularActionsSequentially(writes, executing);
+      }
+      prepared.push(outcome);
+      carried = outcome.updatedDocument;
+
+      if (performance.now() - lastYield > this.config.yieldDeadlineMs) {
+        await yieldToMain();
+        lastYield = performance.now();
+
+        if (executing.signal?.aborted) {
+          return buildErrorResult(
+            executing.job,
+            new Error("Aborted"),
+            executing.startTime,
+          );
+        }
+      }
+    }
+
+    // Every write in the run must have read the same streams at the same
+    // revisions for one condition to stand for all of them. canBatch excludes
+    // the scopes where that can fail, and this is the assertion of it: a
+    // mismatch falls back rather than writing under a condition that only
+    // describes part of the batch.
+    if (!this.conditionsAgree(prepared)) {
+      return this.executeRegularActionsSequentially(writes, executing);
+    }
+
+    return this.commitPreparedWrites(prepared, executing);
+  }
+
+  /** Whether every prepared write carries the same read-set condition. */
+  private conditionsAgree(prepared: PreparedWrite[]): boolean {
+    const shape = (write: PreparedWrite): string =>
+      write.appendCondition === undefined
+        ? "none"
+        : JSON.stringify(
+            [...write.appendCondition.streams]
+              .map((stream) => [
+                stream.documentId,
+                stream.scope,
+                stream.branch,
+                stream.revision,
+              ])
+              .sort(),
+          );
+    const first = shape(prepared[0]);
+    return prepared.every((write) => shape(write) === first);
+  }
+
+  /**
+   * The unbatched path, for a run that turned out not to qualify after its
+   * writes were prepared. Nothing has been persisted at that point, so
+   * replaying the whole run per write is safe.
+   */
+  private async executeRegularActionsSequentially(
+    writes: PendingWrite[],
+    executing: ExecutingJob,
+  ): Promise<JobResult> {
+    const operations: Operation[] = [];
+    const contexts: OperationWithContext[] = [];
+    let lastYield = performance.now();
+
+    for (const write of writes) {
+      const result = await this.executeRegularAction(write, executing);
+      if (!result.success) {
+        return result;
+      }
+      operations.push(...(result.operations ?? []));
+      contexts.push(...(result.operationsWithContext ?? []));
+
+      if (performance.now() - lastYield > this.config.yieldDeadlineMs) {
+        await yieldToMain();
+        lastYield = performance.now();
+
+        if (executing.signal?.aborted) {
+          return buildErrorResult(
+            executing.job,
+            new Error("Aborted"),
+            executing.startTime,
+          );
+        }
+      }
+    }
+
+    return {
+      job: executing.job,
+      success: true,
+      operations,
+      operationsWithContext: contexts,
+      duration: Date.now() - executing.startTime,
+    };
+  }
+
+  /** Decides, reduces and persists one write. */
+  private async executeRegularAction(
+    write: PendingWrite,
+    executing: ExecutingJob,
+  ): Promise<JobResult> {
+    const prepared = await this.prepareRegularWrite(write, executing);
+    if ("success" in prepared) {
+      return prepared;
+    }
+    return this.commitPreparedWrites([prepared], executing);
   }
 
   /**

@@ -59,6 +59,7 @@ function createHarness(
   const writeCache: WriteCacheMock = {
     getState: vi.fn().mockResolvedValue(sourceDoc),
     putState: vi.fn(),
+    putRun: vi.fn(),
     invalidate: vi.fn(),
     clear: vi.fn(),
     startup: vi.fn(),

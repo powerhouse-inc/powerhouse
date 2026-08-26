@@ -375,6 +375,42 @@ export class KyselyWriteCache implements IWriteCache {
     this.store(documentId, scope, branch, revision, document, position);
   }
 
+  /**
+   * Stores the run's head and mints a keyframe for every interval the run
+   * crossed on its way there. Only the head enters the ring buffer; the
+   * earlier revisions are keyframe candidates and nothing more.
+   */
+  putRun(
+    documentId: string,
+    scope: string,
+    branch: string,
+    run: readonly { revision: number; document: PHDocument }[],
+  ): void {
+    if (run.length === 0) {
+      return;
+    }
+
+    for (const entry of run.slice(0, -1)) {
+      this.persistKeyframe(
+        documentId,
+        scope,
+        branch,
+        entry.revision,
+        entry.document,
+      );
+    }
+
+    const head = run[run.length - 1];
+    this.store(
+      documentId,
+      scope,
+      branch,
+      head.revision,
+      head.document,
+      SnapshotPosition.Head,
+    );
+  }
+
   private store(
     documentId: string,
     scope: string,
@@ -411,20 +447,33 @@ export class KyselyWriteCache implements IWriteCache {
 
     stream.ringBuffer.push(snapshot);
 
-    if (this.isKeyframeRevision(revision)) {
-      this.keyframeStore
-        .putKeyframe(documentId, scope, branch, revision, {
-          ...document,
-          operations: {},
-          clipboard: [],
-        })
-        .catch((err) => {
-          console.error(
-            `Failed to persist keyframe ${documentId}@${revision}:`,
-            err,
-          );
-        });
+    this.persistKeyframe(documentId, scope, branch, revision, document);
+  }
+
+  /** Persists the snapshot if this revision is one the interval falls on. */
+  private persistKeyframe(
+    documentId: string,
+    scope: string,
+    branch: string,
+    revision: number,
+    document: PHDocument,
+  ): void {
+    if (!this.isKeyframeRevision(revision)) {
+      return;
     }
+
+    this.keyframeStore
+      .putKeyframe(documentId, scope, branch, revision, {
+        ...document,
+        operations: {},
+        clipboard: [],
+      })
+      .catch((err) => {
+        console.error(
+          `Failed to persist keyframe ${documentId}@${revision}:`,
+          err,
+        );
+      });
   }
 
   /**

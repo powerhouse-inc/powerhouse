@@ -66,12 +66,24 @@ export function reshuffleByTimestamp<TOp extends OperationIndex>(
         return timestampDiff;
       }
 
-      const shouldPrioritizeLogicalIndex =
-        STRICT_ORDER_ACTION_TYPES.has(a.action?.type ?? "") ||
-        STRICT_ORDER_ACTION_TYPES.has(b.action?.type ?? "");
-      const logicalIndexDiff = a.index - a.skip - (b.index - b.skip);
+      // Structure actions sort ahead of the rest. This is a per-operation
+      // rank, not a property of the pair: deciding a criterion from
+      // `a.type || b.type` made the comparator non-transitive, so sorting the
+      // same set could yield different orders from different input orders.
+      const rank = (op: TOp) =>
+        STRICT_ORDER_ACTION_TYPES.has(op.action?.type ?? "") ? 0 : 1;
+      const rankDiff = rank(a) - rank(b);
+      if (rankDiff !== 0) {
+        return rankDiff;
+      }
 
-      if (shouldPrioritizeLogicalIndex) {
+      // Logical index is a replica-local coordinate, so it can only be used
+      // where both sides are certain to agree on the sign: structure actions,
+      // whose causal order (create before upgrade, parent before child) has to
+      // survive the merge. Everything else orders by keys both replicas
+      // compute identically, or the two logs never converge.
+      if (rank(a) === 0) {
+        const logicalIndexDiff = a.index - a.skip - (b.index - b.skip);
         if (logicalIndexDiff !== 0) {
           return logicalIndexDiff;
         }
@@ -82,10 +94,6 @@ export function reshuffleByTimestamp<TOp extends OperationIndex>(
       );
       if (actionIdDiff !== 0) {
         return actionIdDiff;
-      }
-
-      if (!shouldPrioritizeLogicalIndex && logicalIndexDiff !== 0) {
-        return logicalIndexDiff;
       }
 
       return a.id.localeCompare(b.id);

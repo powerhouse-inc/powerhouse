@@ -97,6 +97,7 @@ describe("SimpleJobExecutor mutation signature verification", () => {
         },
       }),
       putState: vi.fn(),
+      putRun: vi.fn(),
       invalidate: vi.fn(),
       clear: vi.fn(),
       startup: vi.fn(),

@@ -76,6 +76,7 @@ describe("SimpleJobExecutor load jobs", () => {
         },
       }),
       putState: vi.fn(),
+      putRun: vi.fn(),
       invalidate: vi.fn(),
       clear: vi.fn(),
       startup: vi.fn(),

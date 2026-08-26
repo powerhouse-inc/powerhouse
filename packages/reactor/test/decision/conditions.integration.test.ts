@@ -55,13 +55,17 @@ const whileUnnamed: Grant = {
 describe("conditions end to end", () => {
   let reactor: IReactor;
 
-  async function build(authConditions: boolean): Promise<IReactor> {
+  async function build(
+    authConditions: boolean,
+    batchApplies?: boolean,
+  ): Promise<IReactor> {
     return new ReactorBuilder()
       .withDocumentModelSources([
         documentModelDocumentModelModule as never,
         driveDocumentModelModule as never,
       ])
       .withExecutorConfig({
+        batchApplies,
         featureFlags: {
           documentDecisions: true,
           authEnforcement: true,
@@ -222,6 +226,36 @@ describe("conditions end to end", () => {
       { type: "ADD_MODULE", denied: true },
     ]);
   });
+
+  /**
+   * A condition reads the executing scope, so a write can close the grant the
+   * write after it needs. Persisting a job's operations together must not
+   * decide the later ones against the state as it stood before the job: the
+   * run is judged the same whether or not it shares a transaction.
+   */
+  for (const batchApplies of [true, false]) {
+    it(`a run's own write closes the grant for the ones after it (batchApplies: ${batchApplies})`, async () => {
+      reactor = await build(true, batchApplies);
+      const docId = await createGatedDocument(`conditions-run-${batchApplies}`);
+
+      // One job: naming the model is admitted while the name is unset, and
+      // closes the conditional grant for the module that follows it.
+      vi.setSystemTime(new Date("2026-01-01T00:00:02.000Z"));
+      const refusal = await settle(
+        (
+          await reactor.execute(docId, "main", [
+            signedBy(setModelName({ name: "locked" }), WRITER),
+            signedBy(addModule({ id: "m1", name: "m1" }), WRITER),
+          ])
+        ).id,
+      );
+
+      expect(refusal).toMatch(/denied|Authorization/i);
+      expect(await appliedGlobal(docId)).toEqual([
+        { type: "SET_MODEL_NAME", denied: false },
+      ]);
+    });
+  }
 
   it("conditional grants never apply while the flag is off", async () => {
     reactor = await build(false);

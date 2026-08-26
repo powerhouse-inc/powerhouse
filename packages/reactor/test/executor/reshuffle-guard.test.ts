@@ -74,6 +74,7 @@ describe("the excessive reshuffle guard", () => {
     const writeCache: any = {
       getState: vi.fn().mockResolvedValue(document()),
       putState: vi.fn(),
+      putRun: vi.fn(),
       invalidate: vi.fn(),
       clear: vi.fn(),
       startup: vi.fn(),

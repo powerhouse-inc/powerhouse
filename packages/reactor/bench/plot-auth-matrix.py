@@ -601,6 +601,102 @@ def figure_attribution():
     plt.close(fig)
 
 
+# --- figure 5: batching the applies ----------------------------------------
+
+
+def figure_batching():
+    """The 2x2 from Run 9: the flag off and on, batching off and on."""
+    path = HERE / "data" / "auth-batching-runs.json"
+    if not path.exists():
+        raise SystemExit(f"{path} is missing")
+    d = json.loads(path.read_text())
+    med = d["medians"]
+
+    order = [
+        ("no flag", "L0_POLICIED", "L0P_batched"),
+        ("documentDecisions", "L1", "L1_batched"),
+    ]
+
+    fig, (ax, ax2) = plt.subplots(
+        1, 2, figsize=(13.4, 6.4), gridspec_kw={"width_ratios": [1.15, 1]}
+    )
+
+    x = np.arange(len(order))
+    unb = [med[a[1]]["wallMs"] for a in order]
+    bat = [med[a[2]]["wallMs"] for a in order]
+    ax.bar(x - 0.19, unb, width=0.36, color=ALERT,
+           label="one transaction per operation", edgecolor="none")
+    ax.bar(x + 0.19, bat, width=0.36, color=GOOD,
+           label="one transaction per batch", edgecolor="none")
+    for i, (u, b) in enumerate(zip(unb, bat)):
+        ax.annotate(f"{u:.0f} ms", (i - 0.19, u), textcoords="offset points",
+                    xytext=(0, 4), ha="center", fontsize=9, color=INK)
+        ax.annotate(f"{b:.0f} ms", (i + 0.19, b), textcoords="offset points",
+                    xytext=(0, 4), ha="center", fontsize=9, color=INK)
+        ax.annotate(f"{b / u:.2f}x", (i + 0.19, b / 2), ha="center",
+                    va="center", fontsize=12, color="white", weight="bold")
+    ax.set_xticks(x)
+    ax.set_xticklabels([a[0] for a in order], fontsize=9.5)
+    ax.set_ylim(0, max(unb) * 1.18)
+    style(ax, "Batching is worth 29% with the flag off,\nso it is not an auth fix",
+          ylabel="wall time for 5000 operations (ms)")
+    ax.legend(fontsize=8.5, frameon=False, loc="upper center",
+              bbox_to_anchor=(0.5, -0.10), ncol=2)
+    caption(
+        ax,
+        f"The flag costs +{(med['L1']['wallMs'] / med['L0_POLICIED']['wallMs'] - 1) * 100:.0f}% "
+        f"unbatched and +{(med['L1_batched']['wallMs'] / med['L0P_batched']['wallMs'] - 1) * 100:.0f}% batched, "
+        "so batching nearly halves its relative cost\nrather than removing it: the extra read and the larger "
+        "statement are amortised\nacross the batch, not eliminated. The write path was issuing a transaction "
+        "per\noperation regardless of any of this.",
+        dy=-0.34,
+    )
+
+    shapes = ["Operation inserts", "advisory locks", "statements (all)"]
+    before = [
+        med["L1"]["operationInserts"],
+        med["L1"]["advisoryLocks"],
+        med["L1"]["statements"],
+    ]
+    after = [
+        med["L1_batched"]["operationInserts"],
+        med["L1_batched"]["advisoryLocks"],
+        med["L1_batched"]["statements"],
+    ]
+    y = np.arange(len(shapes))
+    ax2.barh(y - 0.18, before, height=0.34, color=ALERT, label="unbatched",
+             edgecolor="none")
+    ax2.barh(y + 0.18, after, height=0.34, color=GOOD, label="batched",
+             edgecolor="none")
+    for i, (b, a) in enumerate(zip(before, after)):
+        ax2.annotate(f"{b:,.0f}", (b * 1.12, i - 0.18), va="center",
+                     fontsize=8.6, color=INK)
+        ax2.annotate(f"{a:,.0f}", (a * 1.12, i + 0.18), va="center",
+                     fontsize=8.6, color=INK)
+    ax2.set_xscale("log")
+    ax2.set_yticks(y)
+    ax2.set_yticklabels(shapes, fontsize=9)
+    ax2.invert_yaxis()
+    ax2.set_xlim(10, 200000)
+    style(ax2, "What the batch removes", xlabel="calls per 5000 operations (log)")
+    ax2.grid(axis="y", visible=False)
+    ax2.grid(axis="x", color=GRID, linewidth=0.7)
+    ax2.legend(fontsize=8.5, frameon=False, loc="upper center",
+               bbox_to_anchor=(0.5, -0.10), ncol=2)
+    caption(
+        ax2,
+        "One guarded insert and one advisory lock per batch of a hundred, in place\n"
+        "of one of each per operation. Run 8 predicted this count would fall and the\n"
+        "wall time would fall with it; it did, so the cost was round trips and\n"
+        "statement construction rather than anything the server was computing.",
+        dy=-0.34,
+    )
+
+    fig.subplots_adjust(left=0.075, right=0.985, top=0.82, bottom=0.36, wspace=0.30)
+    fig.savefig(OUT / "auth-batching.png", dpi=160)
+    plt.close(fig)
+
+
 def main():
     OUT.mkdir(exist_ok=True)
     cells = load_micro()
@@ -609,8 +705,9 @@ def main():
     figure_drivers(cells)
     figure_gates(cells)
     figure_attribution()
+    figure_batching()
     for name in ("auth-ladder.png", "auth-cost-drivers.png", "auth-gates.png",
-                 "auth-attribution.png"):
+                 "auth-attribution.png", "auth-batching.png"):
         size = (OUT / name).stat().st_size / 1024
         print(f"  images/{name}  {size:.0f} KB")
 
