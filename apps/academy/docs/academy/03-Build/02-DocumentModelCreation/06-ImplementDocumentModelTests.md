@@ -29,7 +29,7 @@ This suite tests each operation, verifying not only that the `items` array is co
 
 ```typescript
 import { describe, it, expect } from "vitest";
-import { generateMock } from "document-model";
+import { generateMock } from "document-model/mock";
 import type {
   AddTodoItemInput,
   DeleteTodoItemInput,

@@ -31,7 +31,7 @@ import {
   prop,
 } from "remeda";
 import type { Project } from "ts-morph";
-import { buildTsMorphProject } from "utils";
+import { buildTsMorphProject, fixGenerateMockImports } from "utils";
 import { writePackage } from "write-package";
 import { detectFeatures } from "./features.js";
 import { generateAll } from "./generate.js";
@@ -81,10 +81,6 @@ export function fixLegacyImportPaths(
   for (const sourceFile of sourceFiles) {
     const importStatements = sourceFile.getImportDeclarations();
     for (const importStatement of importStatements) {
-      const namedImports = map(
-        importStatement.getNamedImports(),
-        (importSpecifier) => importSpecifier.getText(),
-      );
       const moduleSpecifier = importStatement.getModuleSpecifier();
       const moduleSpecifierText = moduleSpecifier.getLiteralText();
       // remove usage of the old `package-name/` style paths
@@ -92,10 +88,6 @@ export function fixLegacyImportPaths(
         moduleSpecifier.setLiteralValue(
           moduleSpecifierText.replace(`${packageName}/`, ""),
         );
-      }
-      // I saw this invalid import enough that it seemed worthwhile to fix it here
-      if (namedImports.includes("generateMock")) {
-        moduleSpecifier.setLiteralValue("document-model");
       }
       // attempt to fix absolute import paths for document models like `../../../document-models/model/something/something.js`
       // these don't work anymore with the versioned document models, since the absolute file paths are different
@@ -107,6 +99,7 @@ export function fixLegacyImportPaths(
         moduleSpecifier.setLiteralValue(`document-models/${match[2]}`);
       }
     }
+    fixGenerateMockImports(sourceFile);
   }
 }
 

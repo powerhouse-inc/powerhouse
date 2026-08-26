@@ -2,6 +2,7 @@ export * from "./cli.js";
 export * from "./constants.js";
 export * from "./document-type-metadata.js";
 export * from "./format-with-prettier.js";
+export * from "./generate-mock-import.js";
 export * from "./get-editor-metadata.js";
 export * from "./get-processor-metadata.js";
 export * from "./get-subgraph-metadata.js";

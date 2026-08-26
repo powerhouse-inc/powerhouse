@@ -1,4 +1,4 @@
-import { generateMock } from "document-model";
+import { generateMock } from "document-model/mock";
 import {
   addMember,
   AddMemberInputSchema,
