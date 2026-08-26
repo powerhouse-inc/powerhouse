@@ -65,6 +65,27 @@ jobs:
       - name: Re-link workspace bins now that dist files exist
         run: pnpm rebuild --recursive
 
+      # reactor-browser runs half its suite in a real chromium (vitest browser
+      # mode), so test:ci needs a browser present. Resolved and installed from
+      # the package that owns the playwright devDependency; the root has no
+      # such bin to exec.
+      - name: Resolve Playwright version
+        id: playwright-version
+        shell: bash
+        run: echo "version=$(node -p "require('playwright/package.json').version")" >> "$GITHUB_OUTPUT"
+        working-directory: ./packages/reactor-browser
+
+      # Windows keeps the browsers under LOCALAPPDATA, not ~/.cache.
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~\AppData\Local\ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+
+      - name: Install playwright chromium
+        run: pnpm exec playwright install chromium
+        working-directory: ./packages/reactor-browser
+
       - name: Run tests
         run: pnpm test:ci
 
