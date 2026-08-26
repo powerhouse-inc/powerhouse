@@ -579,7 +579,7 @@ export class SimpleJobExecutor implements IJobExecutor {
           { verb: "execute", scope: action.scope, operation: action.type },
           signal,
           this.featureFlags.authConditions
-            ? { actionInput: action.input }
+            ? { actionInput: action.input, carriedDocument: baseDocument }
             : undefined,
         );
       } catch (error) {
@@ -1052,7 +1052,14 @@ export class SimpleJobExecutor implements IJobExecutor {
     for (const write of writes) {
       const outcome = await this.prepareRegularWrite(write, executing, carried);
       if ("success" in outcome) {
-        return outcome;
+        // A write that refuses or fails part-way through leaves the writes
+        // before it standing when they go one at a time, and preparing is a
+        // read, so replaying the run per write reaches the same failure with
+        // the same operations behind it. Only the first write has nothing to
+        // replay.
+        return prepared.length === 0
+          ? outcome
+          : this.executeRegularActionsSequentially(writes, executing);
       }
       if (outcome.denied) {
         return this.executeRegularActionsSequentially(writes, executing);
