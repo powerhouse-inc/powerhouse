@@ -644,16 +644,20 @@ export class SimpleJobExecutor implements IJobExecutor {
       documentVersion = docMeta.state.version;
     }
 
-    // UNDO, REDO, PRUNE, and NOOP+skip need the full operation history to
-    // replay state correctly. The write cache stores sliced documents (last
+    // UNDO, REDO, PRUNE, and any operation carrying a skip need the full
+    // operation history to replay state correctly: a skip rewinds the stream
+    // past the operations it supersedes, so the base state is the one standing
+    // before them, not the head. The write cache stores sliced documents (last
     // op per scope only), so invalidate before loading to force a cold-miss
-    // rebuild. NOOP+skip arises in executeLoadJob when sync reshuffling
-    // converts conflicting local ops to NOOPs.
-    if (
-      isUndoRedo(action) ||
-      action.type === "PRUNE" ||
-      (action.type === "NOOP" && skip > 0)
-    ) {
+    // rebuild.
+    //
+    // The skip is not always a NOOP's. A reshuffle hands its first re-appended
+    // operation the whole skip, and that operation is whatever sorted first --
+    // an ADD_FOLDER as readily as a NOOP. Reducing it against the sliced head
+    // left the resulting state a fold of the superseded lineage, which is what
+    // the document view stores and serves; the write cache recovered on its
+    // next cold read and the read model never did.
+    if (isUndoRedo(action) || action.type === "PRUNE" || skip > 0) {
       stores.writeCache.invalidate(job.documentId, job.scope, job.branch);
     }
 
