@@ -142,6 +142,27 @@ const MUTATE_DOCUMENT_MUTATION = /* GraphQL */ `
   }
 `;
 
+/* Switchboards older than 6.2.2-dev.54 have no `execute`; their `mutateDocument`
+   takes the same envelopes as untyped JSON. Same selection, so one result shape. */
+const LEGACY_MUTATE_DOCUMENT_MUTATION = /* GraphQL */ `
+  mutation MutateDocument(
+    $documentIdentifier: String!
+    $actions: [JSONObject!]!
+  ) {
+    mutateDocument(documentIdentifier: $documentIdentifier, actions: $actions) {
+      id
+    }
+  }
+`;
+
+// graphql-js validation failure for a field the server's schema lacks.
+function isUnknownExecuteField(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    /Cannot query field "execute" on type "Mutation"/.test(error.message)
+  );
+}
+
 const RENOWN_CREDENTIAL_DOC_TYPE = "powerhouse/renown-credential";
 const RENOWN_USER_DOC_TYPE = "powerhouse/renown-user";
 
@@ -240,6 +261,8 @@ export type SwitchboardSource = string | SwitchboardRequestFn;
 export class SwitchboardClient {
   #endpoint: string | undefined;
   #transport: SwitchboardRequestFn;
+  // Set once the switchboard has rejected `execute`, so later writes skip the probe.
+  #legacyMutate = false;
 
   constructor(source: SwitchboardSource) {
     if (typeof source === "string") {
@@ -266,15 +289,17 @@ export class SwitchboardClient {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ query, variables }),
     });
-    if (!response.ok) {
-      throw new Error(`Switchboard request failed: ${response.status}`);
-    }
-    const body = (await response.json()) as {
-      data?: unknown;
-      errors?: { message: string }[];
-    };
-    if (body.errors?.length) {
+    /* A validation failure comes back as 400 WITH a GraphQL error body, so read
+       it before judging the status: the messages say what was wrong, the code
+       only that something was. */
+    const body = (await response.json().catch(() => undefined)) as
+      | { data?: unknown; errors?: { message: string }[] }
+      | undefined;
+    if (body?.errors?.length) {
       throw new Error(body.errors.map((e) => e.message).join("; "));
+    }
+    if (!response.ok || !body) {
+      throw new Error(`Switchboard request failed: ${response.status}`);
     }
     // `#request` rejects an empty `data` for every transport, HTTP or local.
     return body.data;
@@ -365,9 +390,21 @@ export class SwitchboardClient {
     documentIdentifier: string,
     actions: Action[],
   ): Promise<string> {
+    const variables = { documentIdentifier, actions };
+    if (!this.#legacyMutate) {
+      try {
+        const { mutateDocument } = await this.#request<{
+          mutateDocument: { id: string };
+        }>(MUTATE_DOCUMENT_MUTATION, variables);
+        return mutateDocument.id;
+      } catch (error) {
+        if (!isUnknownExecuteField(error)) throw error;
+        this.#legacyMutate = true;
+      }
+    }
     const { mutateDocument } = await this.#request<{
       mutateDocument: { id: string };
-    }>(MUTATE_DOCUMENT_MUTATION, { documentIdentifier, actions });
+    }>(LEGACY_MUTATE_DOCUMENT_MUTATION, variables);
     return mutateDocument.id;
   }
 
