@@ -35,6 +35,7 @@ export default defineConfig({
       "document-model/action-transport.test.ts",
       "document-model/mock.test.ts",
       "document-model/signature-transport.test.ts",
+      "document-model/utils.test.ts",
       "registry/manifest-slim.test.ts",
     ],
     exclude: ["**/node_modules/**", "**/dist/**"],

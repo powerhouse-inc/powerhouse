@@ -17,9 +17,13 @@ import {
   getMockOverrideFieldNames,
 } from "../../codegen/graphql.js";
 import {
+  fixGenerateMockImports,
   formatSourceFileWithPrettier,
+  GENERATE_MOCK_MODULE_SPECIFIER,
+  GENERATE_MOCK_NAME,
   getOrCreateSourceFile,
   getPreviousVersionSourceFile,
+  hasGenerateMockImport,
   updateVersionedImports,
 } from "utils";
 
@@ -70,7 +74,7 @@ export async function makeOperationModuleTestFile(
     } else {
       sourceFile.replaceWithText(
         ts`
-        import { generateMock } from "document-model";
+        import { generateMock } from "document-model/mock";
         import { describe, expect, it } from "vitest";
 
         describe("${moduleOperationsTypeName}", () => {
@@ -184,22 +188,14 @@ export async function makeOperationModuleTestFile(
 
   describeCallBody.addStatements(testCasesToAdd);
 
-  const GENERATE_MOCK_NAME = "generateMock";
-  const GENERATE_MOCK_MODULE_SPECIFIER = "document-model";
-
-  const generateMockImport = sourceFile.getImportDeclaration((i) =>
-    i.getNamedImports().some((v) => v.getText().includes(GENERATE_MOCK_NAME)),
-  );
-
-  const hasGenerateMockInSourceFile = sourceFile
-    .getText()
-    .includes(GENERATE_MOCK_NAME);
-
-  if (hasGenerateMockInSourceFile && !generateMockImport) {
-    sourceFile.addImportDeclaration({
-      namedImports: [GENERATE_MOCK_NAME],
-      moduleSpecifier: GENERATE_MOCK_MODULE_SPECIFIER,
-    });
+  if (sourceFile.getText().includes(GENERATE_MOCK_NAME)) {
+    fixGenerateMockImports(sourceFile);
+    if (!hasGenerateMockImport(sourceFile)) {
+      sourceFile.addImportDeclaration({
+        namedImports: [GENERATE_MOCK_NAME],
+        moduleSpecifier: GENERATE_MOCK_MODULE_SPECIFIER,
+      });
+    }
   }
 
   sourceFile.fixUnusedIdentifiers();

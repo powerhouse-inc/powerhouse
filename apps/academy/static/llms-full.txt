@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-08-19T15:22:42.159Z
+> Generated: 2026-08-26T14:56:31.426Z
 > Total Documents: 110
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -29706,44 +29706,46 @@ This guide covers **Docker-based deployment**. If you prefer **traditional VM/se
 
 ## Available Docker Images
 
-Powerhouse publishes three official Docker images to the GitHub Container Registry (ghcr.io):
+Powerhouse publishes three official Docker images to the Vetra Harbor registry (`cr.vetra.io`):
 
 ### 1. Connect
 
 The Connect image provides the Powerhouse web application frontend with an embedded Nginx server.
 
 ```
-ghcr.io/powerhouse-inc/powerhouse/connect
+cr.vetra.io/powerhouse-inc-powerhouse/connect
 ```
 
 **Available tags:**
 
 - `latest` - Latest stable release
-- `dev` - Development builds
+- `dev` - Development builds (from `main`)
 - `staging` - Staging builds
-- `vX.Y.Z` - Specific version tags (e.g., `v1.0.0`)
+- `rc` - Release candidates
+- `vX.Y.Z` - Specific version tags (e.g., `v6.2.1`)
 
 ### 2. Switchboard
 
 The Switchboard image provides the backend API server that handles document synchronization and GraphQL endpoints.
 
 ```
-ghcr.io/powerhouse-inc/powerhouse/switchboard
+cr.vetra.io/powerhouse-inc-powerhouse/switchboard
 ```
 
 **Available tags:**
 
 - `latest` - Latest stable release
-- `dev` - Development builds
+- `dev` - Development builds (from `main`)
 - `staging` - Staging builds
-- `vX.Y.Z` - Specific version tags (e.g., `v1.0.0`)
+- `rc` - Release candidates
+- `vX.Y.Z` - Specific version tags (e.g., `v6.2.1`)
 
 ### 3. Academy
 
 The Academy image provides the documentation website.
 
 ```
-ghcr.io/powerhouse-inc/powerhouse/academy
+cr.vetra.io/powerhouse-inc-powerhouse/academy
 ```
 
 **Available tags:**
@@ -29755,36 +29757,50 @@ ghcr.io/powerhouse-inc/powerhouse/academy
 
 ## Quick Start with Docker Compose
 
-The easiest way to run Powerhouse locally is using Docker Compose. Create a `docker-compose.yml` file or use the one provided in the repository:
+The easiest way to run Powerhouse locally is using Docker Compose. The repository ships ready-made compose files — `docker-compose.yml` (production, `latest`), plus per-channel variants `docker-compose.dev.yml` / `docker-compose.test.yml` (`rc`) / `docker-compose.staging.yml`, and a postgres-free `docker-compose.pglite.yml`. The default file:
 
 ```yaml
 name: powerhouse
 
 services:
   connect:
-    image: ghcr.io/powerhouse-inc/powerhouse/connect:dev
+    image: cr.vetra.io/powerhouse-inc-powerhouse/connect:latest
+    # Auto-connect the SPA to the local switchboard.
     environment:
-      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/postgres
-      - BASE_PATH=/
+      - 'PH_CONNECT_CONFIG_JSON={"connect":{"drives":{"defaultDrives":[{"url":"http://localhost:4000","name":null,"icon":null}]}}}'
     ports:
-      - "127.0.0.1:3000:4000"
+      - "127.0.0.1:3000:3001"
     networks:
       - powerhouse_network
-    depends_on:
-      postgres:
-        condition: service_healthy
+    hostname: connect.powerhouse
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3001/health"]
+      interval: 30s
+      timeout: 3s
+      start_period: 10s
+      retries: 3
 
   switchboard:
-    image: ghcr.io/powerhouse-inc/powerhouse/switchboard:dev
+    image: cr.vetra.io/powerhouse-inc-powerhouse/switchboard:latest
     environment:
-      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/postgres
+      # Reactor storage + entrypoint migration gate.
+      - PH_REACTOR_DATABASE_URL=postgres://postgres:postgres@postgres:5432/postgres
+      # Read-model storage. Both point at the same database.
+      - PH_SWITCHBOARD_DATABASE_URL=postgres://postgres:postgres@postgres:5432/postgres
     ports:
-      - "127.0.0.1:4000:4001"
+      - "127.0.0.1:4000:3000"
     networks:
       - powerhouse_network
+    hostname: switchboard.powerhouse
     depends_on:
       postgres:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:3000/health"]
+      interval: 30s
+      timeout: 3s
+      start_period: 30s
+      retries: 3
 
   postgres:
     image: postgres:16.1
@@ -29794,6 +29810,8 @@ services:
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=postgres
       - POSTGRES_USER=postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
     networks:
       - powerhouse_network
     healthcheck:
@@ -29804,7 +29822,9 @@ services:
 
 networks:
   powerhouse_network:
-    name: powerhouse_network
+
+volumes:
+  postgres_data:
 ```
 
 ### Running the Stack
@@ -29853,7 +29873,8 @@ Connect's SPA reads runtime configuration from `/powerhouse.config.json`, never 
 | `PORT`                   | Port the nginx server listens on                            | `3001`   |
 | `PH_CONNECT_BASE_PATH`   | nginx base URL path                                         | `/`      |
 | `PH_CONNECT_CONFIG_JSON` | Runtime config JSON to merge into the dist file (see below) | _unset_  |
-| `DATABASE_URL`           | PostgreSQL connection string (for Switchboard, not Connect) | Required |
+
+Connect does **not** read any database variables — it is a static frontend. Database connection strings belong on the Switchboard service (see below).
 
 Sentry (DSN, environment label, tracing flag) is no longer set via per-field env vars — those live in `connect.sentry.*` of `powerhouse.config.json` and ride through `PH_CONNECT_CONFIG_JSON` like every other runtime field. See the example below.
 
@@ -29893,92 +29914,107 @@ The schema for the JSON object lives at `packages/builder-tools/connect-utils/ru
 
 ### Switchboard Environment Variables
 
+#### Storage (Postgres or embedded PGlite)
+
+Switchboard stores the reactor and the read models in one of two backends. When a Postgres URL is set it uses Postgres; otherwise it falls back to its embedded **PGlite** storage (local directories `./.ph/reactor-storage` and `.ph/read-storage` relative to the working directory — persist that directory with a volume, as the repo's `docker-compose.pglite.yml` does).
+
+| Variable                      | Description                                                                    | Default           |
+| ----------------------------- | ------------------------------------------------------------------------------ | ----------------- |
+| `PH_REACTOR_DATABASE_URL`     | Postgres URL for reactor storage; also triggers the entrypoint's migrations    | _unset_ (PGlite)  |
+| `PH_SWITCHBOARD_DATABASE_URL` | Postgres URL for the read model and (as fallback) the reactor                  | _unset_ (PGlite)  |
+| `DATABASE_URL`                | Postgres URL for the read model (checked before `PH_SWITCHBOARD_DATABASE_URL`) | _unset_ (PGlite)  |
+
+For a single-database deployment (the normal case, and what the repo's compose files do), set `PH_REACTOR_DATABASE_URL` and `PH_SWITCHBOARD_DATABASE_URL` to the same URL.
+
+| Variable              | Description                                                                    | Default  |
+| --------------------- | ------------------------------------------------------------------------------ | -------- |
+| `PH_PGLITE_IN_MEMORY` | `1` = run PGlite in memory (no persistence)                                    | _unset_  |
+| `PH_MIGRATE_PGLITE`   | `true` = migrate local PGlite data to the PG version this image ships          | _unset_  |
+| `PH_FORCE_PG_VERSION` | `16` or `17` = wipe the local PGlite data dirs and re-initialize at that major | _unset_  |
+| `SKIP_DB_MIGRATIONS`  | `true` = skip the entrypoint's Postgres migration run                          | _unset_  |
+
 #### Core Configuration
 
-| Variable                      | Description                                            | Default    |
-| ----------------------------- | ------------------------------------------------------ | ---------- |
-| `PORT`                        | Port the server listens on                             | `3000`     |
-| `PH_SWITCHBOARD_PORT`         | Alias for PORT                                         | `$PORT`    |
-| `DATABASE_URL`                | PostgreSQL or SQLite connection string                 | `"dev.db"` |
-| `PH_SWITCHBOARD_DATABASE_URL` | Alias for DATABASE_URL                                 | `"dev.db"` |
-| `BASE_PATH`                   | Base URL path for the API                              | `"/"`      |
-| `PH_PACKAGES`                 | Comma-separated list of packages to install at startup | `""`       |
-
-#### Authentication
-
-| Variable                       | Description                                                  | Default   |
-| ------------------------------ | ------------------------------------------------------------ | --------- |
-| `AUTH_ENABLED`                 | Enable authentication                                        | `"false"` |
-| `ADMINS`                       | Comma-separated list of admin wallet addresses (full access) | `""`      |
-| `DEFAULT_PROTECTION`           | Make all new documents protected by default                  | `"false"` |
-| `DOCUMENT_PERMISSIONS_ENABLED` | Enable per-document permission management                    | `"false"` |
+| Variable                    | Description                                                          | Default                     |
+| --------------------------- | ------------------------------------------------------------------   | -------------------------   |
+| `PORT`                      | Port the server listens on (exported as `PH_SWITCHBOARD_PORT`)       | `3000`                      |
+| `PH_SWITCHBOARD_PORT`       | Explicit port override                                               | `$PORT`                     |
+| `PH_DEFAULT_DRIVE_TYPE`     | `powerhouse/document-drive` or `powerhouse/reactor-drive`            | _unset_                     |
+| `PH_PACKAGES`               | Comma-separated packages installed via pnpm at startup               | `""`                        |
+| `PH_REGISTRY_PACKAGES`      | Comma-separated packages loaded over HTTP from the registry at start | `""`                        |
+| `PH_REGISTRY_URL`           | Package registry base URL for HTTP package loading                   | `https://registry.vetra.io` |
+| `PH_SWITCHBOARD_PUBLIC_URL` | Public origin used for the remote attachment service                 | `http://localhost:$PORT`    |
+| `LOG_LEVEL`                 | Log level                                                            | `info`                      |
 
 #### Error Tracking & Monitoring
 
-| Variable                   | Description                                             | Default |
-| -------------------------- | ------------------------------------------------------- | ------- |
-| `SENTRY_DSN`               | Sentry DSN for error tracking                           | `""`    |
-| `SENTRY_ENV`               | Sentry environment name (e.g., "production", "staging") | `""`    |
-| `PYROSCOPE_SERVER_ADDRESS` | Pyroscope server address for performance profiling      | `""`    |
+| Variable                   | Description                                            | Default |
+| -------------------------- | ------------------------------------------------------ | ------- |
+| `SENTRY_DSN`               | Sentry DSN for error tracking                          | `""`    |
+| `SENTRY_ENV`               | Sentry environment name (e.g. "production", "staging") | `""`    |
+| `SENTRY_TRACING_ENABLED`   | `false` = errors-only Sentry mode (no tracing)         | _unset_ |
+| `TEMPO_ENDPOINT`           | OTLP HTTP endpoint for trace export (Grafana Tempo)    | `""`    |
+| `PYROSCOPE_SERVER_ADDRESS` | Pyroscope server address for performance profiling     | `""`    |
 
 ## Installing Custom Packages
 
-Connect loads custom packages via the `PH_REGISTRY_PACKAGES` environment variable (written to a registry config at startup). Switchboard installs packages via `PH_PACKAGES`.
+The two images load custom packages differently, matching where they run:
 
-```yaml
-services:
-  connect:
-    image: ghcr.io/powerhouse-inc/powerhouse/connect:dev
-    environment:
-      - PH_REGISTRY_PACKAGES=@powerhousedao/todo-demo-package,@powerhousedao/another-package
-```
+- **Connect** loads packages **in the browser at runtime** from the package registry. The registry base URL is the top-level `packageRegistryUrl` field of `powerhouse.config.json` (baked in at image build time). To use different packages or a different registry in a deployment, override those top-level fields with `PH_CONNECT_CONFIG_JSON`, e.g.:
 
-Packages are installed using the `ph install` command before the service starts.
+  ```bash
+  PH_CONNECT_CONFIG_JSON='{"packageRegistryUrl":"https://registry.example","packages":[{"name":"@powerhousedao/todo-demo-package","version":"1.0.0"}]}'
+  ```
+
+- **Switchboard** loads packages **server-side at startup**, in one of two ways:
+  - `PH_PACKAGES` — comma-separated packages installed from the npm registry via pnpm before start.
+  - `PH_REGISTRY_PACKAGES` — comma-separated packages loaded over HTTP from `PH_REGISTRY_URL` at start.
+
+  ```yaml
+  services:
+    switchboard:
+      image: cr.vetra.io/powerhouse-inc-powerhouse/switchboard:dev
+      environment:
+        - PH_PACKAGES=@powerhousedao/todo-demo-package,@powerhousedao/another-package
+  ```
 
 ## Image Architecture
 
+The images are built from a single multi-stage `docker/Dockerfile` (build args: `TAG` — the release tag, and `GIT_SHA`). A shared base stage installs `ph-cmd` for the matching release channel and initializes a project; each target then builds what it needs.
+
 ### Connect Image
 
-The Connect image is based on Alpine Linux and includes:
-
-- Node.js and pnpm
-- Nginx with Brotli compression
-- The `ph-cmd` CLI tool
-- A pre-initialized Powerhouse project
+The Connect target is **nginx:alpine** serving the static SPA — the frontend is built at **image build time** (`ph connect build`), not at container start. It runs as the non-root `nginx` user (UID 101), so pods can set `runAsNonRoot: true`.
 
 At startup, the entrypoint script:
 
-1. Loads any packages specified in `PH_REGISTRY_PACKAGES`
-2. Builds the Connect frontend with `ph connect build`
-3. Configures and starts Nginx to serve the built files
+1. Renders the nginx config from `nginx.conf.template` via envsubst (`PORT`, `PH_CONNECT_BASE_PATH`)
+2. Deep-merges `PH_CONNECT_CONFIG_JSON` into the dist `powerhouse.config.json` (operator-wins)
+3. Re-syncs the Content-Security-Policy registry origin in `index.html` to the effective `packageRegistryUrl`
+4. Validates the config (`nginx -t`) and starts nginx
 
 ### Switchboard Image
 
-The Switchboard image is based on Node.js 24 and includes:
-
-- pnpm package manager
-- The `ph-cmd` CLI tool
-- Prisma CLI for database migrations
-- A pre-initialized Powerhouse project
+The Switchboard target is **Node.js 24 (Alpine)** with pnpm and the `@powerhousedao/switchboard` package installed at image build time from the npm registry at the requested release tag.
 
 At startup, the entrypoint script:
 
-1. Installs any packages specified in `PH_PACKAGES`
-2. Runs Prisma database migrations (if `PH_REACTOR_DATABASE_URL` is set)
+1. Installs any packages listed in `PH_PACKAGES` (pnpm)
+2. Runs the reactor Postgres migrations (Kysely) if `PH_REACTOR_DATABASE_URL` points at a Postgres URL — PGlite migrations run automatically inside the server
 3. Starts the Switchboard server via Node.js
 
 ## Production Considerations
 
 ### Using Specific Version Tags
 
-For production deployments, always use specific version tags instead of `latest` or `dev`:
+For production deployments, always use specific version tags instead of the floating `latest` / `dev` / `rc` / `staging` tags:
 
 ```yaml
 services:
   connect:
-    image: ghcr.io/powerhouse-inc/powerhouse/connect:v1.0.0
+    image: cr.vetra.io/powerhouse-inc-powerhouse/connect:v6.2.1
   switchboard:
-    image: ghcr.io/powerhouse-inc/powerhouse/switchboard:v1.0.0
+    image: cr.vetra.io/powerhouse-inc-powerhouse/switchboard:v6.2.1
 ```
 
 ### Database Persistence
@@ -30002,7 +30038,7 @@ volumes:
 
 ### Health Checks
 
-The provided docker-compose.yml includes health checks for PostgreSQL. Services wait for the database to be healthy before starting, preventing connection errors during startup.
+The provided compose files include health checks for all services: PostgreSQL (`pg_isready`), Connect (`/health` on nginx), and Switchboard (`/health` on the API). Switchboard only starts after the database is healthy, preventing connection errors during startup.
 
 ### Network Security
 
@@ -30010,7 +30046,7 @@ The example configuration binds ports to `127.0.0.1` only:
 
 ```yaml
 ports:
-  - "127.0.0.1:3000:4000"
+  - "127.0.0.1:3000:3001"
 ```
 
 This prevents direct external access. In production, use a reverse proxy (like Nginx or Traefik) to:
@@ -30026,13 +30062,14 @@ For better security, use a `.env` file instead of hardcoding credentials:
 ```bash
 # .env
 POSTGRES_PASSWORD=your-secure-password
-DATABASE_URL=postgres://powerhouse:your-secure-password@postgres:5432/powerhouse
+PH_REACTOR_DATABASE_URL=postgres://powerhouse:your-secure-password@postgres:5432/powerhouse
+PH_SWITCHBOARD_DATABASE_URL=postgres://powerhouse:your-secure-password@postgres:5432/powerhouse
 ```
 
 ```yaml
 services:
   switchboard:
-    image: ghcr.io/powerhouse-inc/powerhouse/switchboard:latest
+    image: cr.vetra.io/powerhouse-inc-powerhouse/switchboard:latest
     env_file:
       - .env
 ```
@@ -30056,7 +30093,7 @@ Ensure the database is ready before services start:
 docker compose logs postgres
 ```
 
-Verify the `DATABASE_URL` format:
+Verify the `PH_REACTOR_DATABASE_URL` / `PH_SWITCHBOARD_DATABASE_URL` format:
 
 ```
 postgres://user:password@host:port/database
@@ -30072,32 +30109,38 @@ If custom packages fail to install, check:
 
 ### Permission Issues
 
-If you encounter permission issues with volumes:
+The Connect container runs as the non-root `nginx` user (UID 101). If you bind-mount files or volumes into it, make sure they are readable by UID 101:
 
 ```bash
-# Fix ownership
-sudo chown -R 1000:1000 ./data
+# Fix ownership for a bind-mounted Connect config
+sudo chown -R 101:101 ./my-config
 ```
+
+Switchboard runs as root, so host-side volume permissions are less restrictive there.
 
 ## Building Custom Images
 
 You can extend the official images for custom deployments:
 
 ```dockerfile
-FROM ghcr.io/powerhouse-inc/powerhouse/connect:latest
+# Switchboard: add server-side packages at build time
+FROM cr.vetra.io/powerhouse-inc-powerhouse/switchboard:latest
+RUN pnpm add --shamefully-hoist @powerhousedao/my-custom-package
+```
 
-# Install additional packages at build time
-RUN ph install @powerhousedao/my-custom-package
-
-# Add custom configuration
-COPY my-nginx.conf /etc/nginx/nginx.conf.template
+```dockerfile
+# Connect: the image is plain nginx serving the pre-built SPA (no Node.js,
+# no ph CLI). Customization means overriding the runtime config via
+# PH_CONNECT_CONFIG_JSON at deploy time, or swapping the served files/config:
+FROM cr.vetra.io/powerhouse-inc-powerhouse/connect:latest
+COPY my-nginx.conf.template /etc/nginx/nginx.conf.template
 ```
 
 Build and push your custom image:
 
 ```bash
-docker build -t my-registry/my-connect:latest .
-docker push my-registry/my-connect:latest
+docker build -t my-registry/my-switchboard:latest .
+docker push my-registry/my-switchboard:latest
 ```
 
 ## Next Steps

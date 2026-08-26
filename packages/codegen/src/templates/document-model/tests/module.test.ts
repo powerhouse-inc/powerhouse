@@ -123,7 +123,7 @@ export const documentModelOperationsModuleTestFileTemplate = (
  */
 
 import { describe, it, expect } from 'vitest';
-import { generateMock } from 'document-model';
+import { generateMock } from 'document-model/mock';
 import {
   reducer,
   utils,
