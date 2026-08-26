@@ -9,6 +9,25 @@ import type {
   RenownProfile,
 } from "./types.js";
 
+/** Thrown by `signIn` when the instance has no switchboard to write the
+ * credential to, so a host can fall back to the Renown redirect flow. */
+export class MissingSwitchboardError extends Error {
+  constructor() {
+    super(
+      "signIn requires a switchboard endpoint. Set switchboardUrl or a discoverable baseUrl.",
+    );
+    this.name = "MissingSwitchboardError";
+  }
+
+  /** `instanceof` fails across duplicate SDK copies, so match by name too. */
+  static is(error: unknown): error is MissingSwitchboardError {
+    return (
+      error instanceof MissingSwitchboardError ||
+      (error instanceof Error && error.name === "MissingSwitchboardError")
+    );
+  }
+}
+
 // Per-user drive convention shared with the Renown app: `renown-<address>`.
 // The read-model ignores driveId, but we pass it for parity.
 function userDriveId(address: string): string {
