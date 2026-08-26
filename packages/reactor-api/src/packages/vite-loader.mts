@@ -45,15 +45,15 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
   }
 
   private getDocumentModelsPath(identifier: string): string {
-    return path.join(identifier, "./document-models");
+    return path.posix.join(identifier, "./document-models");
   }
 
   private getSubgraphsPath(identifier: string): string {
-    return path.join(identifier, "./subgraphs");
+    return path.posix.join(identifier, "./subgraphs");
   }
 
   private getProcessorsPath(identifier: string): string {
-    return path.join(identifier, "./processors");
+    return path.posix.join(identifier, "./processors");
   }
 
   public loadDocumentModels(identifier: string, immediate = false) {
@@ -107,7 +107,7 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
     // try both without requiring a regeneration.
     const candidatePaths = [
       this.getDocumentModelsPath(identifier),
-      path.join(this.getDocumentModelsPath(identifier), "upgrade-manifests"),
+      path.posix.join(this.getDocumentModelsPath(identifier), "upgrade-manifests"),
     ];
     for (const fullPath of candidatePaths) {
       try {

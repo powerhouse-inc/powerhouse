@@ -60,7 +60,8 @@ async function publishPackage(
   const { readFileSync } = await import("node:fs");
 
   const tmpDir = path.join(import.meta.dirname, ".tmp-publish");
-  execSync(`rm -rf ${tmpDir} && mkdir -p ${tmpDir}`);
+  rmSync(tmpDir, { recursive: true, force: true });
+  mkdirSync(tmpDir, { recursive: true });
   writeFileSync(
     path.join(tmpDir, "package.json"),
     JSON.stringify({ name, version, description: "test" }),
@@ -71,7 +72,7 @@ async function publishPackage(
     encoding: "utf-8",
   }).trim();
   const tarball = readFileSync(path.join(tmpDir, tarballName));
-  execSync(`rm -rf ${tmpDir}`);
+  rmSync(tmpDir, { recursive: true, force: true });
 
   const shasum = createHash("sha1").update(tarball).digest("hex");
   const tarballBase64 = tarball.toString("base64");

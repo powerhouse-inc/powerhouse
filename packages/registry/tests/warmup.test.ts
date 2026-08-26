@@ -1,6 +1,6 @@
 import { execSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
@@ -38,7 +38,8 @@ async function ensureTestUser(): Promise<void> {
 /** Publish a real npm-pack tarball to the running registry. */
 async function publishPackage(name: string, version: string): Promise<void> {
   const tmpDir = path.join(import.meta.dirname, ".tmp-warmup-publish");
-  execSync(`rm -rf "${tmpDir}" && mkdir -p "${tmpDir}"`);
+  rmSync(tmpDir, { recursive: true, force: true });
+  mkdirSync(tmpDir, { recursive: true });
   writeFileSync(
     path.join(tmpDir, "package.json"),
     JSON.stringify({ name, version, description: "warmup test" }),
@@ -52,7 +53,7 @@ async function publishPackage(name: string, version: string): Promise<void> {
     encoding: "utf-8",
   }).trim();
   const tarball = readFileSync(path.join(tmpDir, tarballName));
-  execSync(`rm -rf "${tmpDir}"`);
+  rmSync(tmpDir, { recursive: true, force: true });
 
   const shasum = createHash("sha1").update(tarball).digest("hex");
   const shortName = name.startsWith("@") ? name.split("/")[1] : name;
