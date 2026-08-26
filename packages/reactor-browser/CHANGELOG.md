@@ -1,3 +1,17 @@
+## 6.2.2-dev.61 (2026-08-26)
+
+### 🩹 Fixes
+
+- **renown:** stop redirecting to renown.id when the switchboard rejects a sign-in ([1f1145c7d](https://github.com/powerhouse-inc/powerhouse/commit/1f1145c7d))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.2-dev.60 (2026-08-26)
+
+This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.
+
 ## 6.2.2-dev.59 (2026-08-25)
 
 This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.

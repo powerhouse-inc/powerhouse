@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { createAction } from "@powerhousedao/shared/document-model";
 import { CREDENTIAL_TYPES } from "../src/constants.js";
 import { SwitchboardClient } from "../src/switchboard.js";
 import type { PowerhouseVerifiableCredential } from "../src/types.js";
@@ -299,6 +300,95 @@ describe("SwitchboardClient", () => {
       mockGraphql({ renownUsers: [] });
       const profile = await client.getProfileByAddress(ADDRESS);
       expect(profile).toBeUndefined();
+    });
+  });
+
+  describe("mutateDocument", () => {
+    const UNKNOWN_EXECUTE = {
+      errors: [
+        {
+          message: 'Cannot query field "execute" on type "Mutation".',
+          extensions: { code: "GRAPHQL_VALIDATION_FAILED" },
+        },
+      ],
+    };
+
+    // Own instance per test: the fallback is remembered on the client.
+    const fresh = () => new SwitchboardClient("http://sb.test/graphql");
+
+    // A pre-dev.54 switchboard: `execute` fails validation, `mutateDocument` works.
+    function mockLegacyReactor() {
+      const calls: ReactorCall[] = [];
+      vi.spyOn(globalThis, "fetch").mockImplementation((_input, init) => {
+        const body = JSON.parse(init?.body as string) as ReactorCall;
+        calls.push(body);
+        if (body.query.includes("execute(")) {
+          return Promise.resolve(
+            new Response(JSON.stringify(UNKNOWN_EXECUTE), { status: 400 }),
+          );
+        }
+        const data = {
+          mutateDocument: { id: body.variables.documentIdentifier },
+        };
+        return Promise.resolve(
+          new Response(JSON.stringify({ data }), { status: 200 }),
+        );
+      });
+      return calls;
+    }
+
+    it("falls back to the legacy mutateDocument when the switchboard has no execute", async () => {
+      const calls = mockLegacyReactor();
+      const action = createAction("INIT", { id: "cred" });
+
+      const id = await fresh().mutateDocument("doc-1", [action]);
+
+      expect(id).toBe("doc-1");
+      expect(calls).toHaveLength(2);
+      expect(calls[0].query).toContain("execute(");
+      expect(calls[1].query).toContain("mutateDocument(");
+      expect(calls[1].query).not.toContain("execute");
+      expect(calls[1].variables).toEqual({
+        documentIdentifier: "doc-1",
+        actions: [action],
+      });
+    });
+
+    it("remembers the fallback instead of probing on every write", async () => {
+      const calls = mockLegacyReactor();
+      const action = createAction("INIT", { id: "cred" });
+
+      const sb = fresh();
+      await sb.mutateDocument("doc-1", [action]);
+      await sb.mutateDocument("doc-2", [action]);
+
+      const probes = calls.filter((c) => c.query.includes("execute("));
+      expect(probes).toHaveLength(1);
+      expect(calls).toHaveLength(3);
+    });
+
+    it("surfaces any other rejection instead of retrying", async () => {
+      vi.spyOn(globalThis, "fetch").mockResolvedValue(
+        new Response(
+          JSON.stringify({ errors: [{ message: "Document not found" }] }),
+          { status: 400 },
+        ),
+      );
+
+      await expect(
+        fresh().mutateDocument("doc-1", [createAction("INIT", {})]),
+      ).rejects.toThrow("Document not found");
+      expect(fetch).toHaveBeenCalledTimes(1);
+    });
+
+    it("reports the status when a failed response carries no GraphQL errors", async () => {
+      vi.spyOn(globalThis, "fetch").mockResolvedValue(
+        new Response("Bad Gateway", { status: 502 }),
+      );
+
+      await expect(
+        fresh().mutateDocument("doc-1", [createAction("INIT", {})]),
+      ).rejects.toThrow("Switchboard request failed: 502");
     });
   });
 
