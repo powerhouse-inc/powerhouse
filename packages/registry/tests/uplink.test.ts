@@ -1,6 +1,12 @@
 import { execSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { mkdir, rm } from "node:fs/promises";
 import http from "node:http";
 import path from "node:path";
@@ -32,12 +38,13 @@ function buildTarball(
   files: Record<string, string>,
 ): UpstreamPackage {
   const tmpDir = path.join(import.meta.dirname, ".tmp-upstream-pack");
-  execSync(`rm -rf "${tmpDir}" && mkdir -p "${tmpDir}"`);
+  rmSync(tmpDir, { recursive: true, force: true });
+  mkdirSync(tmpDir, { recursive: true });
   const pkgJson = { name, version, description: "upstream test package" };
   writeFileSync(path.join(tmpDir, "package.json"), JSON.stringify(pkgJson));
   for (const [relPath, content] of Object.entries(files)) {
     const target = path.join(tmpDir, relPath);
-    execSync(`mkdir -p "${path.dirname(target)}"`);
+    mkdirSync(path.dirname(target), { recursive: true });
     writeFileSync(target, content);
   }
   const tarballName = execSync("npm pack --pack-destination .", {
@@ -45,7 +52,7 @@ function buildTarball(
     encoding: "utf-8",
   }).trim();
   const tarball = readFileSync(path.join(tmpDir, tarballName));
-  execSync(`rm -rf "${tmpDir}"`);
+  rmSync(tmpDir, { recursive: true, force: true });
   return {
     version,
     tarball,

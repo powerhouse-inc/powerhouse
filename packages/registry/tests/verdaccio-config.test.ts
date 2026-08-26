@@ -1,3 +1,4 @@
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import type { RegistryConfig } from "../src/types.js";
 import { buildVerdaccioConfig } from "../src/verdaccio-config.js";
@@ -77,6 +78,8 @@ describe("buildVerdaccioConfig", () => {
       databaseUrl: "postgres://u:p@host:5432/registry",
     });
     expect(cfg.auth.htpasswd).toBeUndefined();
-    expect(cfg.plugins?.endsWith("/plugins")).toBe(true);
+    // `plugins` is a real filesystem path that Verdaccio require()s from, so it
+    // is separator-dependent -- basename, not a hardcoded "/plugins" suffix.
+    expect(path.basename(cfg.plugins!)).toBe("plugins");
   });
 });

@@ -21,12 +21,29 @@ The Powerhouse monorepo has the following branching strategy: - Ongoing developm
 
 ## How to Run this Repo <a id="clone-repo"></a>
 
+### Prerequisites
+
+| Tool | Version | Why |
+|---|---|---|
+| Node.js | `>=24` (see `engines.node`) | |
+| pnpm | 11.x | CI installs `latest` via `pnpm/action-setup` |
+| bun | 1.3.x | **Required to build.** The `postbuild` steps of `ph-cli`, `ph-cmd` and `registry` shell out to it, so `pnpm build` cannot finish without it. |
+
+`playwright install chromium` is additionally needed before
+`pnpm --filter=@powerhousedao/reactor-browser run test`; without it most of that
+package's test files cannot launch a browser and are skipped.
+
+### Steps
+
 1. Clone the repo
    ```bash
    git clone <repo-url>
    cd <repo-directory>
    ```
 2. Install the dependencies: `pnpm install`
+   > Bin warnings (`Failed to create bin … dist/cli.mjs`) on a first install are
+   > expected -- the targets do not exist until the packages are built. They
+   > clear after `pnpm build` + `pnpm rebuild --recursive`.
 3. Build with: `pnpm build`
 4. Run a project or app: `npx nx <run_command_for_the_package_or_app> <package_or_app_name>`;
 
@@ -56,7 +73,7 @@ To link a dependency into a project, add it to your package.json and point the d
 
 Next, add a path reference to the `tsconfig.json` file.
 
-````json
+```json
 {
   "references": [
     {
@@ -64,6 +81,7 @@ Next, add a path reference to the `tsconfig.json` file.
     }
   ]
 }
+```
 
 ## Adding a New Package or App <a id="add-new-package"></a>
 

@@ -22,7 +22,7 @@
     "dist"
   ],
   "scripts": {
-    "test": "PG_CONNECTION_STRING=postgresql://postgres:password@localhost:5555/analytics vitest --run ./**/*.test.ts",
+    "test": "cross-env PG_CONNECTION_STRING=postgresql://postgres:password@localhost:5555/analytics vitest --run",
     "build": "tsdown"
   },
   "dependencies": {
@@ -32,6 +32,7 @@
     "@powerhousedao/analytics-engine-knex": "workspace:*"
   },
   "devDependencies": {
+    "cross-env": "catalog:",
     "luxon": "catalog:",
     "tsdown": "catalog:",
     "@types/luxon": "catalog:",

@@ -109,6 +109,7 @@
     }
   },
   "dependencies": {
+    "cross-spawn": "catalog:",
     "@sindresorhus/fnv1a": "catalog:",
     "chalk": "catalog:",
     "change-case": "catalog:",
@@ -129,6 +130,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@types/cross-spawn": "catalog:",
     "@sentry/node-core": "^10.52.0",
     "@types/bun": "catalog:",
     "@types/luxon": "catalog:",

@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/reactor-api",
   "version": "6.2.2-dev.61",
-  "description": "GraphQL API layer for the Powerhouse reactor — auto-generated subgraphs per document model plus the core reactor subgraph for drive and document management.",
+  "description": "GraphQL API layer for the Powerhouse reactor Ã¢â‚¬â€ auto-generated subgraphs per document model plus the core reactor subgraph for drive and document management.",
   "type": "module",
   "repository": {
     "type": "git",
@@ -38,7 +38,7 @@
     "build": "tsdown",
     "lint": "eslint",
     "test": "vitest --run",
-    "test:integration": "RUN_HUB_SPOKE_INTEGRATION=1 vitest --run test/hub-spoke-catchup.integration.test.ts",
+    "test:integration": "cross-env RUN_HUB_SPOKE_INTEGRATION=1 vitest --run test/hub-spoke-catchup.integration.test.ts",
     "bench": "vitest bench",
     "codegen": "graphql-codegen --config codegen.ts && prettier --write src/graphql/reactor/gen/*.ts && eslint --fix src/graphql/reactor/gen/*.ts --no-warn-ignored",
     "codegen:watch": "graphql-codegen --config codegen.ts --watch",
@@ -104,6 +104,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "cross-env": "catalog:",
     "@fastify/cors": "^11.0.1",
     "@fastify/formbody": "^8.0.1",
     "@fastify/middie": "^9.3.2",

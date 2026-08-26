@@ -1,6 +1,12 @@
 import { execSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 import type { Pool } from "pg";
@@ -94,7 +100,8 @@ async function publish(
     import.meta.dirname,
     `.tmp-pgpub-${name}-${version}`,
   );
-  execSync(`rm -rf "${tmpDir}" && mkdir -p "${tmpDir}"`);
+  rmSync(tmpDir, { recursive: true, force: true });
+  mkdirSync(tmpDir, { recursive: true });
   writeFileSync(
     path.join(tmpDir, "package.json"),
     JSON.stringify({ name, version, description: "t" }),
@@ -113,7 +120,7 @@ async function publish(
     encoding: "utf-8",
   }).trim();
   const tarball = readFileSync(path.join(tmpDir, tgz));
-  execSync(`rm -rf "${tmpDir}"`);
+  rmSync(tmpDir, { recursive: true, force: true });
   const shasum = createHash("sha1").update(tarball).digest("hex");
   const shortName = name.startsWith("@") ? name.split("/")[1] : name;
   const res = await fetch(`${url}/${encodeURIComponent(name)}`, {

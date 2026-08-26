@@ -13,7 +13,7 @@
   ],
   "scripts": {
     "build": "tsdown",
-    "test:pg": "PG_CONNECTION_STRING=postgresql://postgres:password@localhost:5555/analytics vitest --run ./**/*.test.ts"
+    "test:pg": "cross-env PG_CONNECTION_STRING=postgresql://postgres:password@localhost:5555/analytics vitest --run"
   },
   "dependencies": {
     "@powerhousedao/analytics-engine-browser": "workspace:*",
@@ -25,6 +25,7 @@
     "pg": "catalog:"
   },
   "devDependencies": {
+    "cross-env": "catalog:",
     "@tsconfig/node-lts": "catalog:",
     "@types/luxon": "catalog:",
     "@types/node": "catalog:",

@@ -163,7 +163,9 @@ import { pathToFileURL } from 'node:url';
 const [dirname, outDir, entriesJSON, nodeEnv] = process.argv.slice(2);
 const entries = JSON.parse(entriesJSON);
 const reqProj = createRequire(join(dirname, 'noop.js'));
-const { build } = await import(reqProj.resolve('vite'));
+// pathToFileURL: require.resolve returns an absolute path, and on Windows
+// import('D:\\...') parses "D:" as a URL scheme (ERR_UNSUPPORTED_ESM_URL_SCHEME).
+const { build } = await import(pathToFileURL(reqProj.resolve('vite')).href);
 const srcDir = join(outDir, '.entries');
 mkdirSync(srcDir, { recursive: true });
 const entryName = (spec) => spec.replace(/[^\\w]+/g, '_');

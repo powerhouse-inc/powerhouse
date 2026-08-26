@@ -1,6 +1,12 @@
 import { execSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
@@ -44,14 +50,15 @@ async function publishPackage(
   files: Record<string, string>,
 ): Promise<void> {
   const tmpDir = path.join(import.meta.dirname, ".tmp-serve-publish");
-  execSync(`rm -rf "${tmpDir}" && mkdir -p "${tmpDir}"`);
+  rmSync(tmpDir, { recursive: true, force: true });
+  mkdirSync(tmpDir, { recursive: true });
   writeFileSync(
     path.join(tmpDir, "package.json"),
     JSON.stringify({ name, version, description: "test" }),
   );
   for (const [relPath, content] of Object.entries(files)) {
     const target = path.join(tmpDir, relPath);
-    execSync(`mkdir -p "${path.dirname(target)}"`);
+    mkdirSync(path.dirname(target), { recursive: true });
     writeFileSync(target, content);
   }
 
@@ -60,7 +67,7 @@ async function publishPackage(
     encoding: "utf-8",
   }).trim();
   const tarball = readFileSync(path.join(tmpDir, tarballName));
-  execSync(`rm -rf "${tmpDir}"`);
+  rmSync(tmpDir, { recursive: true, force: true });
 
   const shasum = createHash("sha1").update(tarball).digest("hex");
   const tarballBase64 = tarball.toString("base64");
