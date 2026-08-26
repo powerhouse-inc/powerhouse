@@ -1017,4 +1017,87 @@ describe("Reshuffle Functions", () => {
       expect(sorted[2].action.type).toBe("OP_3");
     });
   });
+
+  describe("merge order is replica-independent", () => {
+    const TS = "2021-01-01T00:00:00.000Z";
+
+    const layout = (
+      rows: Array<{ actionId: string; type: string; index: number }>,
+    ): Operation[] =>
+      buildOperations(
+        rows.map(({ actionId, type, index }) => ({
+          index,
+          skip: 0,
+          timestampUtcMs: TS,
+          action: {
+            id: actionId,
+            type,
+            input: {},
+            scope: "global",
+            timestampUtcMs: TS,
+          },
+        })),
+      );
+
+    const order = (ops: Operation[]): string =>
+      reshuffleByTimestamp({ index: 10, skip: 0 }, ops, [])
+        .map((op) => op.action.id)
+        .join(",");
+
+    it("orders one set the same way whatever local indices it carries", () => {
+      // Two replicas hold the same three concurrent operations, stamped in the
+      // same millisecond, at different local indices because each applied its
+      // own work first. Ordering on a local coordinate makes them disagree,
+      // and two logs that disagree never converge.
+      const onReplicaA = layout([
+        { actionId: "aaa", type: "ADD_FOLDER", index: 0 },
+        { actionId: "bbb", type: "ADD_FILE", index: 1 },
+        { actionId: "ccc", type: "ADD_FILE", index: 2 },
+      ]);
+      const onReplicaB = layout([
+        { actionId: "bbb", type: "ADD_FILE", index: 0 },
+        { actionId: "ccc", type: "ADD_FILE", index: 1 },
+        { actionId: "aaa", type: "ADD_FOLDER", index: 2 },
+      ]);
+
+      expect(order(onReplicaA)).toEqual(order(onReplicaB));
+    });
+
+    it("yields one order however the same set is permuted", () => {
+      // A comparator that picks its criterion from the pair rather than from
+      // each operation is not transitive, and sort() is then free to return
+      // different orders for different input orders.
+      const ops = layout([
+        { actionId: "aaa", type: "ADD_FOLDER", index: 2 },
+        { actionId: "bbb", type: "ADD_FILE", index: 2 },
+        { actionId: "ccc", type: "ADD_FILE", index: 0 },
+      ]);
+
+      const permutations = <T>(xs: T[]): T[][] =>
+        xs.length <= 1
+          ? [xs]
+          : xs.flatMap((x, i) =>
+              permutations([...xs.slice(0, i), ...xs.slice(i + 1)]).map((p) => [
+                x,
+                ...p,
+              ]),
+            );
+
+      const orders = new Set(permutations(ops).map(order));
+      expect([...orders]).toHaveLength(1);
+    });
+
+    it("keeps document creation ahead of the upgrade that follows it", () => {
+      const ops = layout([
+        { actionId: "upgrade", type: "UPGRADE_DOCUMENT", index: 1 },
+        { actionId: "create", type: "CREATE_DOCUMENT", index: 0 },
+      ]);
+
+      expect(
+        reshuffleByTimestamp({ index: 10, skip: 0 }, ops, []).map(
+          (op) => op.action.type,
+        ),
+      ).toEqual(["CREATE_DOCUMENT", "UPGRADE_DOCUMENT"]);
+    });
+  });
 });
