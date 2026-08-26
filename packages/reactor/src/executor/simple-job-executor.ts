@@ -1072,10 +1072,12 @@ export class SimpleJobExecutor implements IJobExecutor {
    * produced - but the result is threaded in memory rather than read back from
    * the cache, and the whole run reaches the store in a single apply.
    *
-   * A write that cannot be prepared, or that turns out to be denied, abandons
-   * the batch and the caller replays the whole job one write at a time. That is
-   * simpler than committing a partial run, and these are the paths where the
-   * per-write behaviour is load-bearing.
+   * A write that turns out to be denied abandons the batch and replays the run
+   * one write at a time, because a denied write holds a position of its own and
+   * that is the path where the per-write behaviour is load-bearing. A write
+   * that cannot be prepared fails the job outright: preparing is a read, so the
+   * replay would only reach the same failure, and the job leaves nothing behind
+   * either way.
    */
   private async executeRegularActionsBatched(
     writes: PendingWrite[],
@@ -1088,14 +1090,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     for (const write of writes) {
       const outcome = await this.prepareRegularWrite(write, executing, carried);
       if ("success" in outcome) {
-        // A write that refuses or fails part-way through leaves the writes
-        // before it standing when they go one at a time, and preparing is a
-        // read, so replaying the run per write reaches the same failure with
-        // the same operations behind it. Only the first write has nothing to
-        // replay.
-        return prepared.length === 0
-          ? outcome
-          : this.executeRegularActionsSequentially(writes, executing);
+        return outcome;
       }
       if (outcome.denied) {
         return this.executeRegularActionsSequentially(writes, executing);

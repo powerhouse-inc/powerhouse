@@ -195,10 +195,12 @@ export type JobExecutorConfig = {
    * this never changes which operations are produced -- only how many
    * transactions they arrive in.
    *
-   * It does change one thing beyond performance: a batched job's writes are
-   * atomic, so a job that fails partway through leaves nothing behind where it
-   * used to leave the operations it had already applied. Set it false to get
-   * the per-operation behaviour back.
+   * Atomicity is not one of the things it changes. A job either fully applies
+   * or leaves nothing behind regardless of this setting, because the whole job
+   * runs inside the execution scope's transaction and a failure rolls it back.
+   * That guarantee belongs to KyselyExecutionScope, which backs both Postgres
+   * and PGlite; DefaultExecutionScope opens no transaction and is used only by
+   * unit-test harnesses, which therefore see writes survive a failed job.
    */
   batchApplies?: boolean;
 };
