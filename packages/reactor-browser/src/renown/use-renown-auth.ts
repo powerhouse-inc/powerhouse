@@ -1,4 +1,8 @@
-import type { LoginStatus, User } from "@renown/sdk";
+import {
+  MissingSwitchboardError,
+  type LoginStatus,
+  type User,
+} from "@renown/sdk";
 import type { LoginMethod, WalletSession } from "@renown/sdk/wallet";
 import { useCallback, useState, useSyncExternalStore } from "react";
 import { useLoginStatus, useUser } from "../hooks/renown.js";
@@ -103,15 +107,17 @@ export function useRenownAuth(): RenownAuth {
           openRenown();
           return;
         }
-        // completeSignIn throws when no switchboard is configured; fall back to
-        // the redirect flow only in that case so login still succeeds.
+        // completeSignIn throws MissingSwitchboardError when none is configured;
+        // fall back to the redirect flow only in that case so login still succeeds.
         await completeSignIn(resolved);
       } catch (e) {
         const err = e instanceof Error ? e : new Error(String(e));
         // A cancel clears pending (finally) without showing a red error.
         if (isUserCancellation(err)) return;
         setError(err);
-        if (/switchboard/i.test(err.message)) openRenown();
+        // Only when there is nowhere to post the credential. A switchboard that
+        // REJECTED it is a failure to show, not a reason to leave the page.
+        if (MissingSwitchboardError.is(err)) openRenown();
       } finally {
         setPending(false);
       }

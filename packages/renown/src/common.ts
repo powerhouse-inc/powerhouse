@@ -10,7 +10,10 @@ import {
 } from "./credential.js";
 import { RenownCryptoSigner, type IRenownCrypto } from "./crypto/index.js";
 import { MemoryStorage } from "./storage/common.js";
-import type { SwitchboardClient } from "./switchboard.js";
+import {
+  MissingSwitchboardError,
+  type SwitchboardClient,
+} from "./switchboard.js";
 import type {
   CreateBearerTokenOptions,
   IProof,
@@ -149,11 +152,7 @@ export class Renown implements IRenown {
   // Sign in without the Renown redirect: build + sign a delegation credential
   // with the caller's wallet signer, write it to the switchboard, then log in.
   async signIn(params: SignInParams): Promise<User> {
-    if (!this.#switchboard) {
-      throw new Error(
-        "signIn requires a switchboard endpoint. Set switchboardUrl or a discoverable baseUrl.",
-      );
-    }
+    if (!this.#switchboard) throw new MissingSwitchboardError();
     const {
       address,
       chainId,
