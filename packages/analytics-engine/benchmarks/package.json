@@ -16,8 +16,8 @@
     "ci": "node ./dist/src/wasm.js && node ./dist/src/hash-keys.js && PG_DISABLED=true node ./dist/src/query-list.js && PG_DISABLED=true node ./dist/src/series.js",
     "benchmark": "pnpm test-wasm && pnpm test-query-list && pnpm test-series && pnpm test-hash-keys",
     "test-wasm": "node ./dist/src/wasm.js",
-    "test-query-list": "PG_CONNECTION_STRING=postgresql://postgres:password@localhost:5555/analytics node ./dist/src/query-list.js",
-    "test-series": "PG_CONNECTION_STRING=postgresql://postgres:password@localhost:5555/analytics node ./dist/src/series.js",
+    "test-query-list": "cross-env PG_CONNECTION_STRING=postgresql://postgres:password@localhost:5555/analytics node ./dist/src/query-list.js",
+    "test-series": "cross-env PG_CONNECTION_STRING=postgresql://postgres:password@localhost:5555/analytics node ./dist/src/series.js",
     "test-hash-keys": "node ./dist/src/hash-keys.js"
   },
   "dependencies": {
@@ -33,6 +33,7 @@
     "tinybench": "catalog:"
   },
   "devDependencies": {
+    "cross-env": "catalog:",
     "@tsconfig/node-lts": "catalog:",
     "@types/luxon": "catalog:",
     "@types/node": "catalog:",
