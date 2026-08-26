@@ -1,12 +1,5 @@
-import { execSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync } from "node:fs";
 import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
@@ -18,6 +11,7 @@ import {
 import { runRegistry } from "../src/run.js";
 import type { RegistryConfig } from "../src/types.js";
 import { createWarmer } from "../src/warmup.js";
+import { packTarball } from "./pack.js";
 
 const REGISTRY_PORT = 8282;
 const REGISTRY_URL = `http://localhost:${REGISTRY_PORT}`;
@@ -41,26 +35,12 @@ async function ensureTestUser(): Promise<void> {
   authToken = body.token;
 }
 
-/** Publish a real npm-pack tarball to the running registry. */
+/** Publish a real tarball to the running registry. */
 async function publishPackage(name: string, version: string): Promise<void> {
-  const tmpDir = path.join(import.meta.dirname, ".tmp-warmup-publish");
-  rmSync(tmpDir, { recursive: true, force: true });
-  mkdirSync(tmpDir, { recursive: true });
-  writeFileSync(
-    path.join(tmpDir, "package.json"),
-    JSON.stringify({ name, version, description: "warmup test" }),
+  const tarball = packTarball(
+    { name, version, description: "warmup test" },
+    { "index.js": `export const v = "${version}";` },
   );
-  writeFileSync(
-    path.join(tmpDir, "index.js"),
-    `export const v = "${version}";`,
-  );
-  const tarballName = execSync("npm pack --pack-destination .", {
-    cwd: tmpDir,
-    encoding: "utf-8",
-  }).trim();
-  const tarball = readFileSync(path.join(tmpDir, tarballName));
-  rmSync(tmpDir, { recursive: true, force: true });
-
   const shasum = createHash("sha1").update(tarball).digest("hex");
   const shortName = name.startsWith("@") ? name.split("/")[1] : name;
   const res = await fetch(`${REGISTRY_URL}/${encodeURIComponent(name)}`, {

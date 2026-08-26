@@ -1,5 +1,4 @@
 import type { Manifest } from "@powerhousedao/shared";
-import { execSync } from "node:child_process";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { access, cp, mkdir, rm } from "node:fs/promises";
 import http from "node:http";
@@ -21,6 +20,7 @@ import {
 import type { PublishEvent } from "../src/notifications/types.js";
 import { runRegistry } from "../src/run.js";
 import type { WebhookConfig } from "../src/types.js";
+import { packTarball } from "./pack.js";
 
 const REGISTRY_URL = `http://localhost:${DEFAULT_PORT}`;
 const TEST_PKG_NAME = "test-pkg";
@@ -49,31 +49,16 @@ async function ensureTestUser(): Promise<void> {
 
 /**
  * Publishes a minimal package to the registry using the npm HTTP API.
- * Creates a tarball via `npm pack`, computes the real shasum, then PUTs
- * the publish payload directly to verdaccio.
+ * Builds the tarball, computes the real shasum, then PUTs the publish
+ * payload directly to verdaccio.
  */
 async function publishPackage(
   name = TEST_PKG_NAME,
   version = TEST_PKG_VERSION,
 ): Promise<void> {
   const { createHash } = await import("node:crypto");
-  const { readFileSync } = await import("node:fs");
 
-  const tmpDir = path.join(import.meta.dirname, ".tmp-publish");
-  rmSync(tmpDir, { recursive: true, force: true });
-  mkdirSync(tmpDir, { recursive: true });
-  writeFileSync(
-    path.join(tmpDir, "package.json"),
-    JSON.stringify({ name, version, description: "test" }),
-  );
-
-  const tarballName = execSync("npm pack --pack-destination .", {
-    cwd: tmpDir,
-    encoding: "utf-8",
-  }).trim();
-  const tarball = readFileSync(path.join(tmpDir, tarballName));
-  rmSync(tmpDir, { recursive: true, force: true });
-
+  const tarball = packTarball({ name, version, description: "test" });
   const shasum = createHash("sha1").update(tarball).digest("hex");
   const tarballBase64 = tarball.toString("base64");
   const shortName = name.startsWith("@") ? name.split("/")[1] : name;
