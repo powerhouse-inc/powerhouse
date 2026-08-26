@@ -106,69 +106,10 @@ A token capturing operation coordinates, used for read-after-write consistency. 
 - `IOperationStore.getSince` always returns operations sorted by index ascending (`ORDER BY index ASC`). Code that calls `.at(-1)` on an operations array to find the latest index relies on this invariant — do not break it.
 - `IWriteCache` stores only the last operation per scope (the write-cache slicing contract). UNDO, REDO, PRUNE, and NOOP+skip all need the full history, so the executor invalidates the cache for those action types before loading the document. NOOP+skip arises during sync reshuffling in `executeLoadJob`.
 
-## Key Components
-
-| Component | Interface | Location | Purpose |
-|-----------|-----------|----------|---------|
-| Reactor | IReactor | `src/core/reactor.ts` | Main entry point, orchestrates all operations |
-| ReactorBuilder | ReactorBuilder | `src/core/reactor-builder.ts` | Default wiring for storage, caches, read models, executors |
-| Queue | IQueue | `src/queue/` | Job queue with per-document ordering |
-| JobExecutor | IJobExecutor | `src/executor/` | Executes individual jobs |
-| OperationStore | IOperationStore | `src/storage/` | Persists operations, handles revisions |
-| DocumentView | IDocumentView | `src/read-models/document-view.ts` | Maintains document snapshots for reads |
-| DocumentIndexer | IDocumentIndexer | `src/storage/kysely/document-indexer.ts` | Tracks document relationships |
-| EventBus | IEventBus | `src/events/` | Pub/sub for internal events |
-| SyncManager | ISyncManager | `src/sync/` | Orchestrates remote synchronization |
-| Registry | IDocumentModelRegistry | `src/registry/` | Stores document model modules |
-
-## Where to Start
-
-- `src/core/reactor.ts`
-- `src/core/reactor-builder.ts`
-- `src/executor/simple-job-executor.ts`
-- `src/read-models/coordinator.ts`
-- `src/storage/interfaces.ts`
-- `src/sync/sync-manager.ts`
-
-## Common Tasks
-
-### Adding a new document model
-1. Create the model using document-model tools
-2. Register via `ReactorBuilder.withDocumentModelSources([module])`
-
-### Adding a new storage backend
-1. Implement IOperationStore interface
-2. Implement IKeyframeStore if snapshots needed
-3. Wire via ReactorBuilder
-
-### Modifying sync behavior
-1. Create new IChannelFactory for transport (see `src/sync/channels/`)
-2. Register with ISyncManager via `syncManager.add()`
-
-### Adding a new read model
-1. Implement IReadModel interface
-2. Register with IReadModelCoordinator
-
 ## Search Filters
 
 - `IReactor.find` uses `SearchFilter` from `src/shared/types.ts` (type, parentId, ids, slugs).
 - Storage read models use `SearchFilter` from `src/storage/interfaces.ts` (documentType, identifiers, includeDeleted).
-
-## Event Types
-
-| Event | Payload | When |
-|-------|---------|------|
-| JOB_PENDING | { jobId, jobMeta } | Job enqueued |
-| JOB_RUNNING | { jobId, jobMeta } | Job execution started |
-| JOB_AVAILABLE | { documentId, scope, branch, jobId } | Queue has work (queue event) |
-| JOB_WRITE_READY | { jobId, operations, jobMeta } | Write phase complete |
-| JOB_READ_READY | { jobId, operations } | Read models indexed |
-| JOB_FAILED | { jobId, error, job } | Job failed |
-| SYNC_PENDING | { jobId, syncOperationCount, remoteNames } | Sync operations queued |
-| SYNC_SUCCEEDED | { jobId, syncOperationCount } | All sync operations succeeded |
-| SYNC_FAILED | { jobId, successCount, failureCount, errors } | One or more sync operations failed |
-
----
 
 ## Module Conventions
 
