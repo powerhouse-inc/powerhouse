@@ -43,8 +43,8 @@ function storedOp(actionId: string, index: number, seconds: number): Operation {
  * past what it supersedes, so the state it reduces against is the one standing
  * before those operations -- which the write cache cannot serve, because it
  * stores documents sliced to the last operation per scope. Reducing against
- * the sliced head instead folds the superseded lineage into the resulting
- * state, and that is the state the document view stores and serves.
+ * the sliced head instead derives the resulting state from the superseded
+ * lineage, and that is the state the document view stores and serves.
  */
 describe("a write carrying a skip rebuilds from full history", () => {
   let mockOperationStore: ReturnType<typeof createMockOperationStore>;

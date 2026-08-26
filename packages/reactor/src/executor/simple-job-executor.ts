@@ -654,9 +654,9 @@ export class SimpleJobExecutor implements IJobExecutor {
     // The skip is not always a NOOP's. A reshuffle hands its first re-appended
     // operation the whole skip, and that operation is whatever sorted first --
     // an ADD_FOLDER as readily as a NOOP. Reducing it against the sliced head
-    // left the resulting state a fold of the superseded lineage, which is what
-    // the document view stores and serves; the write cache recovered on its
-    // next cold read and the read model never did.
+    // left the resulting state derived from the superseded lineage, which is
+    // what the document view stores and serves; the write cache recovered on
+    // its next cold read and the read model never did.
     if (isUndoRedo(action) || action.type === "PRUNE" || skip > 0) {
       stores.writeCache.invalidate(job.documentId, job.scope, job.branch);
     }
@@ -845,19 +845,7 @@ export class SimpleJobExecutor implements IJobExecutor {
   private async commitPreparedWrites(
     prepared: PreparedWrite[],
     executing: ExecutingJob,
-  ): Promise<
-    JobResult & {
-      operationsWithContext?: Array<{
-        operation: Operation;
-        context: {
-          documentId: string;
-          scope: string;
-          branch: string;
-          documentType: string;
-        };
-      }>;
-    }
-  > {
+  ): Promise<JobResult> {
     const { job, startTime, indexTxn, stores, signal } = executing;
     const first = prepared[0];
     const last = prepared[prepared.length - 1];
@@ -1037,19 +1025,7 @@ export class SimpleJobExecutor implements IJobExecutor {
   private async executeRegularActionsBatched(
     writes: PendingWrite[],
     executing: ExecutingJob,
-  ): Promise<
-    JobResult & {
-      operationsWithContext?: Array<{
-        operation: Operation;
-        context: {
-          documentId: string;
-          scope: string;
-          branch: string;
-          documentType: string;
-        };
-      }>;
-    }
-  > {
+  ): Promise<JobResult> {
     const prepared: PreparedWrite[] = [];
     let carried: PHDocument | undefined;
 
@@ -1111,19 +1087,7 @@ export class SimpleJobExecutor implements IJobExecutor {
   private async executeRegularActionsSequentially(
     writes: PendingWrite[],
     executing: ExecutingJob,
-  ): Promise<
-    JobResult & {
-      operationsWithContext?: Array<{
-        operation: Operation;
-        context: {
-          documentId: string;
-          scope: string;
-          branch: string;
-          documentType: string;
-        };
-      }>;
-    }
-  > {
+  ): Promise<JobResult> {
     const operations: Operation[] = [];
     const contexts: OperationWithContext[] = [];
 
@@ -1149,19 +1113,7 @@ export class SimpleJobExecutor implements IJobExecutor {
   private async executeRegularAction(
     write: PendingWrite,
     executing: ExecutingJob,
-  ): Promise<
-    JobResult & {
-      operationsWithContext?: Array<{
-        operation: Operation;
-        context: {
-          documentId: string;
-          scope: string;
-          branch: string;
-          documentType: string;
-        };
-      }>;
-    }
-  > {
+  ): Promise<JobResult> {
     const prepared = await this.prepareRegularWrite(write, executing);
     if ("success" in prepared) {
       return prepared;
