@@ -57,7 +57,7 @@ const scopeVariants: ScopeVariant[] = [
 
 describe.each(scopeVariants)(
   "SimpleJobExecutor Integration ($name)",
-  ({ createScope }) => {
+  ({ name, createScope }) => {
     let executor: SimpleJobExecutor;
     let registry: IDocumentModelRegistry;
     let db: Kysely<DatabaseSchema>;
@@ -1432,6 +1432,134 @@ describe.each(scopeVariants)(
 
         invalidateSpy.mockRestore();
       });
+    });
+
+    /**
+     * A job either fully applies or leaves nothing behind. The guarantee comes
+     * from the execution scope's transaction, so it is a property of which
+     * scope the executor was built with, not of anything the job does.
+     */
+    describe("Job Atomicity on Failure", () => {
+      /**
+       * Two writes, the second refused: a relationship whose source and target
+       * are the same document is rejected before it reaches the store, after
+       * the one before it has already been applied.
+       */
+      async function runPartiallyFailingJob(): Promise<{
+        driveId: string;
+        success: boolean;
+      }> {
+        const driveDoc = driveDocumentModelModule.utils.createDocument();
+        const driveId = driveDoc.header.id;
+        await createDocumentWithCreateOperation(
+          driveId,
+          driveDoc.header.documentType,
+          driveDoc.state,
+        );
+
+        const childDoc = driveDocumentModelModule.utils.createDocument();
+        childDoc.header.id = "atomicity-child";
+        await createDocumentWithCreateOperation(
+          childDoc.header.id,
+          childDoc.header.documentType,
+          childDoc.state,
+        );
+
+        const job: Job = {
+          id: "job-partial-failure",
+          kind: "mutation",
+          documentId: driveId,
+          scope: "document",
+          branch: "main",
+          actions: [
+            {
+              id: "atomicity-action-1",
+              type: "ADD_RELATIONSHIP",
+              scope: "document",
+              timestampUtcMs: new Date().toISOString(),
+              input: {
+                sourceId: driveId,
+                targetId: childDoc.header.id,
+                relationshipType: "child",
+              },
+            },
+            {
+              id: "atomicity-action-2",
+              type: "ADD_RELATIONSHIP",
+              scope: "document",
+              timestampUtcMs: new Date().toISOString(),
+              input: {
+                sourceId: driveId,
+                targetId: driveId,
+                relationshipType: "child",
+              },
+            },
+          ],
+          operations: [],
+          createdAt: new Date().toISOString(),
+          queueHint: [],
+          errorHistory: [],
+          meta: { batchId: "test", batchJobIds: ["job-partial-failure"] },
+        };
+
+        const result = await executor.executeJob(job);
+        return { driveId, success: result.success };
+      }
+
+      async function relationshipsOn(driveId: string): Promise<number> {
+        const operations = await operationStore.getSince(
+          driveId,
+          "document",
+          "main",
+          -1,
+        );
+        return operations.results.filter(
+          (operation) => operation.action.type === "ADD_RELATIONSHIP",
+        ).length;
+      }
+
+      it("returns the failure rather than throwing it", async () => {
+        // The rollback leaves through a throw, but no caller ever sees one: a
+        // failed job is a returned result, the same as it has always been.
+        const { success } = await runPartiallyFailingJob();
+        expect(success).toBe(false);
+      });
+
+      if (name === "KyselyExecutionScope") {
+        it("persists nothing when a job fails part-way through", async () => {
+          const { driveId } = await runPartiallyFailingJob();
+
+          expect(await relationshipsOn(driveId)).toBe(0);
+        });
+
+        it("leaves no cached state behind for the writes it rolled back", async () => {
+          const { driveId } = await runPartiallyFailingJob();
+
+          // A rollback undoes nothing in the caches, which are shared with the
+          // copies the scope hands the job, so the executor evicts them itself.
+          // The document was set up with two operations and the job's own write
+          // is gone, so a cache still holding it would read one revision ahead
+          // of the store.
+          const cached = await writeCache.getState(driveId, "document", "main");
+          const stored = await operationStore.getSince(
+            driveId,
+            "document",
+            "main",
+            -1,
+          );
+          expect(stored.results).toHaveLength(2);
+          expect(cached.header.revision.document).toBe(2);
+        });
+      } else {
+        it("keeps the writes before the failure, having no transaction to roll back", async () => {
+          // DefaultExecutionScope runs the job against the stores directly, so
+          // each write is durable as it is made. It backs unit-test harnesses
+          // only; nothing the reactor builds runs this way.
+          const { driveId } = await runPartiallyFailingJob();
+
+          expect(await relationshipsOn(driveId)).toBe(1);
+        });
+      }
     });
   },
 );

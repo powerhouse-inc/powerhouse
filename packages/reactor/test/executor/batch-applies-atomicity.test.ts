@@ -20,7 +20,13 @@ import {
 const DOC_ID = "doc-1";
 const DOC_TYPE = "powerhouse/document-model";
 
-/** A batched run shares one transaction, so a store failure must lose all of it. */
+/**
+ * A batched run shares one store transaction, so a store failure must lose all
+ * of it. This harness builds the executor without an execution scope, so what
+ * it sees is what the batching alone gives; the job-level guarantee that a
+ * failed job leaves nothing behind belongs to the execution scope and is pinned
+ * in test/executor/integration.test.ts.
+ */
 describe("batched applies: a store failure loses the whole run", () => {
   let store: ReturnType<typeof createMockOperationStore>;
   let applied: unknown[][];
@@ -173,8 +179,12 @@ describe("batched applies: a store failure loses the whole run", () => {
     );
   });
 
-  it("keeps the writes before the failure when batching is off", async () => {
-    // the pre-batching behaviour the `!` commit replaced
+  it("keeps the writes before the failure, having no transaction to roll back", async () => {
+    // Not the reactor's behaviour: this harness builds the executor without an
+    // execution scope, so it runs DefaultExecutionScope, which opens no
+    // transaction and applies each write as it is made. Atomicity is the
+    // scope's guarantee, and every reactor is built with the Kysely one - see
+    // test/executor/integration.test.ts, which pins both scopes side by side.
     failStoreAt(4);
     const result = await run(false, 10);
 
