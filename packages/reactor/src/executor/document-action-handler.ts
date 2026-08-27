@@ -280,11 +280,7 @@ export class DocumentActionHandler {
       [job.scope]: [...(standing.operations[job.scope] ?? []), operation],
     };
 
-    executing.touchedStreams.push({
-      documentId: job.documentId,
-      scope: job.scope,
-      branch: job.branch,
-    });
+    executing.touchedStreams.add(job.documentId, job.scope, job.branch);
 
     stores.writeCache.putState(
       job.documentId,
@@ -391,11 +387,7 @@ export class DocumentActionHandler {
       [job.scope]: [...(document.operations[job.scope] ?? []), operation],
     };
 
-    executing.touchedStreams.push({
-      documentId: document.header.id,
-      scope: job.scope,
-      branch: job.branch,
-    });
+    executing.touchedStreams.add(document.header.id, job.scope, job.branch);
 
     stores.writeCache.putState(
       document.header.id,
@@ -541,11 +533,7 @@ export class DocumentActionHandler {
       [job.scope]: [...(document.operations[job.scope] ?? []), operation],
     };
 
-    executing.touchedStreams.push({
-      documentId,
-      scope: job.scope,
-      branch: job.branch,
-    });
+    executing.touchedStreams.add(documentId, job.scope, job.branch);
 
     stores.writeCache.putState(
       documentId,
@@ -834,11 +822,7 @@ export class DocumentActionHandler {
       [job.scope]: [...(document.operations[job.scope] ?? []), operation],
     };
 
-    executing.touchedStreams.push({
-      documentId,
-      scope: job.scope,
-      branch: job.branch,
-    });
+    executing.touchedStreams.add(documentId, job.scope, job.branch);
 
     stores.writeCache.putState(
       documentId,
@@ -1059,19 +1043,11 @@ export class DocumentActionHandler {
     };
     const resultingState = JSON.stringify(resultingStateObj);
 
-    executing.touchedStreams.push({
-      documentId: input.sourceId,
-      scope: job.scope,
-      branch: job.branch,
-    });
+    executing.touchedStreams.add(input.sourceId, job.scope, job.branch);
 
     // The target's collection membership is derived from the rows just
     // written, and a read can refill it before the transaction commits.
-    executing.touchedStreams.push({
-      documentId: input.targetId,
-      scope: job.scope,
-      branch: job.branch,
-    });
+    executing.touchedStreams.add(input.targetId, job.scope, job.branch);
 
     stores.writeCache.putState(
       input.sourceId,
@@ -1123,7 +1099,7 @@ export class DocumentActionHandler {
 
     // Recorded before the apply, not after: the rows an apply that throws left
     // behind are the ones a rollback has to take the cached state of with it.
-    executing.touchedStreams.push({ documentId, scope, branch });
+    executing.touchedStreams.add(documentId, scope, branch);
 
     let storedOperations: Operation[];
 

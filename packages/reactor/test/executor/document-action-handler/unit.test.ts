@@ -7,7 +7,10 @@ import { DEFAULT_DRIVE_CONTAINER_TYPES } from "../../../src/core/drive-container
 import { DocumentActionHandler } from "../../../src/executor/document-action-handler.js";
 import { selectDecisionModel } from "../../../src/decision/registered-model.js";
 import type { ExecutionStores } from "../../../src/executor/execution-scope.js";
-import { targetDocumentId } from "../../../src/executor/util.js";
+import {
+  targetDocumentId,
+  TouchedStreams,
+} from "../../../src/executor/util.js";
 import type { Job } from "../../../src/queue/types.js";
 import {
   createMockCollectionMembershipCache,
@@ -162,7 +165,7 @@ function execute(
       replayingAcceptedHistory: false,
       evaluatedByPosition: false,
       postCommitInvalidations: [],
-      touchedStreams: [],
+      touchedStreams: new TouchedStreams(),
     },
   );
 }

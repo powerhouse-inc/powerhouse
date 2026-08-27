@@ -73,6 +73,7 @@ import {
   getNextIndexForScope,
   isGenesisOperation,
   refusalError,
+  TouchedStreams,
 } from "./util.js";
 
 const MAX_SKIP_THRESHOLD = 1000;
@@ -222,7 +223,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     const startTime = Date.now();
 
     // Streams the job wrote, to evict when its transaction does not commit
-    const touchedStreams: TouchedStream[] = [];
+    const touchedStreams = new TouchedStreams();
 
     // Entries handlers request invalidated only after the transaction commits
     const postCommitInvalidations: TouchedStream[] = [];
@@ -294,7 +295,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     startTime: number;
     stores: ExecutionStores;
     signal?: AbortSignal;
-    touchedStreams: TouchedStream[];
+    touchedStreams: TouchedStreams;
     postCommitInvalidations: TouchedStream[];
   }): Promise<ScopeOutcome> {
     const {
@@ -902,11 +903,7 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     // Recorded before the apply, not after: the rows an apply that throws left
     // behind are the ones a rollback has to take the cached state of with it.
-    executing.touchedStreams.push({
-      documentId: job.documentId,
-      scope,
-      branch: job.branch,
-    });
+    executing.touchedStreams.add(job.documentId, scope, job.branch);
 
     let storedOperations: Operation[];
     try {

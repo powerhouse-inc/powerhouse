@@ -6,6 +6,7 @@ import type { Operation } from "@powerhousedao/shared/document-model";
 import type { Job } from "../queue/types.js";
 import type { IOperationIndexTxn } from "../cache/operation-index-types.js";
 import type { ExecutionStores } from "./execution-scope.js";
+import type { TouchedStreams } from "./util.js";
 
 /**
  * One action to write, and everything known about it before it is written.
@@ -75,7 +76,7 @@ export type ExecutingJob = {
    * survive the rollback, and so does anything a read filled from the store
    * while the job's own writes were still uncommitted.
    */
-  touchedStreams: TouchedStream[];
+  touchedStreams: TouchedStreams;
 };
 
 export type PositionedWrites = {
