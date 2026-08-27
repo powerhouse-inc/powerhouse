@@ -1,3 +1,35 @@
+## 6.2.2-dev.62 (2026-08-27)
+
+### 🚀 Features
+
+- ⚠️  **reactor:** batch a job's operations by default ([5ffe606c5](https://github.com/powerhouse-inc/powerhouse/commit/5ffe606c5))
+- **reactor:** persist a job's operations in one transaction, behind a flag ([dcb6620de](https://github.com/powerhouse-inc/powerhouse/commit/dcb6620de))
+
+### 🩹 Fixes
+
+- **reactor:** stop a reshuffled NOOP from clobbering the batch skip ([89fcad159](https://github.com/powerhouse-inc/powerhouse/commit/89fcad159))
+- **reactor:** keep the yield and abort check on the batched paths ([ea97e0fed](https://github.com/powerhouse-inc/powerhouse/commit/ea97e0fed))
+- **ci:** build before typecheck in simulate-ci-workflow ([2ecd03e81](https://github.com/powerhouse-inc/powerhouse/commit/2ecd03e81))
+- **windows:** spawn package managers through cross-spawn ([ff4140072](https://github.com/powerhouse-inc/powerhouse/commit/ff4140072))
+- **windows:** make package scripts runnable under cmd.exe ([987022ed9](https://github.com/powerhouse-inc/powerhouse/commit/987022ed9))
+- **reactor:** rebuild from full history for any write carrying a skip ([61e094f23](https://github.com/powerhouse-inc/powerhouse/commit/61e094f23))
+- **reactor:** judge a batched write against the state it follows ([93dfee954](https://github.com/powerhouse-inc/powerhouse/commit/93dfee954))
+- **reactor:** keep the keyframes a batched run crosses ([569335349](https://github.com/powerhouse-inc/powerhouse/commit/569335349))
+- **reactor:** order a reshuffle by keys every replica agrees on ([1b73ba9af](https://github.com/powerhouse-inc/powerhouse/commit/1b73ba9af))
+- **reactor:** repair the two-reactor sync bench and give it a smoke check ([81896373e](https://github.com/powerhouse-inc/powerhouse/commit/81896373e))
+
+### ⚠️  Breaking Changes
+
+- **reactor:** batch a job's operations by default  ([5ffe606c5](https://github.com/powerhouse-inc/powerhouse/commit/5ffe606c5))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5
+- Claude Opus 5
+- Claude Opus 5 (1M context)
+- Wouter Kampmann
+
 ## 6.2.2-dev.61 (2026-08-26)
 
 This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.

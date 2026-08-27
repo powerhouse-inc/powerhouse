@@ -1,3 +1,16 @@
+## 6.2.2-dev.62 (2026-08-27)
+
+### 🩹 Fixes
+
+- **ci:** build before typecheck in simulate-ci-workflow ([2ecd03e81](https://github.com/powerhouse-inc/powerhouse/commit/2ecd03e81))
+- **windows:** spawn package managers through cross-spawn ([ff4140072](https://github.com/powerhouse-inc/powerhouse/commit/ff4140072))
+- **windows:** make package scripts runnable under cmd.exe ([987022ed9](https://github.com/powerhouse-inc/powerhouse/commit/987022ed9))
+
+### ❤️ Thank You
+
+- Claude Opus 5 (1M context)
+- Wouter Kampmann
+
 ## 6.2.2-dev.61 (2026-08-26)
 
 This was a version bump only for benchmarks to align it with other projects, there were no code changes.

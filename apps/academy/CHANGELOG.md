@@ -1,3 +1,23 @@
+## 6.2.2-dev.62 (2026-08-27)
+
+### 🚀 Features
+
+- **renown:** headless Privy email login and chain pinning for whitelabel hosts ([f190b9f87](https://github.com/powerhouse-inc/powerhouse/commit/f190b9f87))
+
+### 🩹 Fixes
+
+- **renown:** reject a second Privy login while one is pending ([7c9590a42](https://github.com/powerhouse-inc/powerhouse/commit/7c9590a42))
+- **shared:** move generateMock to a dedicated subpath so runtime bundles drop zocker/faker ([223e1682a](https://github.com/powerhouse-inc/powerhouse/commit/223e1682a))
+- **ci:** build before typecheck in simulate-ci-workflow ([2ecd03e81](https://github.com/powerhouse-inc/powerhouse/commit/2ecd03e81))
+- **windows:** spawn package managers through cross-spawn ([ff4140072](https://github.com/powerhouse-inc/powerhouse/commit/ff4140072))
+- **windows:** make package scripts runnable under cmd.exe ([987022ed9](https://github.com/powerhouse-inc/powerhouse/commit/987022ed9))
+
+### ❤️ Thank You
+
+- acaldas
+- Claude Opus 5 (1M context)
+- Wouter Kampmann
+
 ## 6.2.2-dev.61 (2026-08-26)
 
 This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.
