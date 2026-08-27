@@ -18,14 +18,36 @@ import {
 const ADDRESS = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266" as const;
 const DID = `did:pkh:eip155:1:${ADDRESS}`;
 
+const CREDENTIAL = {
+  type: ["VerifiableCredential"],
+  credentialSubject: { id: DID, address: ADDRESS, chainId: 1 },
+  proof: { type: "JwtProof2020", jwt: "eyJ.test.sig" },
+};
+
 function user(): User {
   return {
     did: DID,
     address: ADDRESS,
     networkId: "eip155",
     chainId: 1,
-    credential: undefined,
-  } as User;
+    credential: CREDENTIAL,
+  } as unknown as User;
+}
+
+// The same user as the cookie-session path builds it: different key order at
+// every level, so an order-sensitive comparison would call it a new user.
+function reorderedUser(): User {
+  return {
+    credential: {
+      proof: { jwt: "eyJ.test.sig", type: "JwtProof2020" },
+      credentialSubject: { chainId: 1, address: ADDRESS, id: DID },
+      type: ["VerifiableCredential"],
+    },
+    chainId: 1,
+    networkId: "eip155",
+    address: ADDRESS,
+    did: DID,
+  } as unknown as User;
 }
 
 // Minimal SDK stand-in: a synchronous `user`, a `status`, and a "user" emitter.
@@ -87,8 +109,8 @@ describe("useUser", () => {
 
     setRenown(null); // SDK building
     await tick();
-    // A fresh parse of the same credential: equal, different object.
-    setRenown(fakeInstance(user(), "authorized"));
+    // The same credential, re-parsed with different key order.
+    setRenown(fakeInstance(reorderedUser(), "authorized"));
     await tick();
 
     await expect.element(screen.getByTestId("did")).toHaveTextContent(DID);
@@ -113,6 +135,22 @@ describe("useUser", () => {
 
     expect(seen).not.toContain(undefined);
     expect(seen.at(-1)).toBe(refreshed);
+  });
+
+  it("takes a changed user even when only a nested field differs", async () => {
+    const seed = user();
+    const seen: (User | undefined)[] = [];
+    const screen = renderProbe(authenticated(seed), (u) => seen.push(u));
+    await expect.element(screen.getByTestId("did")).toHaveTextContent(DID);
+
+    const resigned = reorderedUser();
+    (resigned.credential as unknown as { proof: { jwt: string } }).proof.jwt =
+      "eyJ.new.sig";
+    setRenown(fakeInstance(resigned, "authorized"));
+    await tick();
+
+    expect(seen).not.toContain(undefined);
+    expect(seen.at(-1)).toBe(resigned);
   });
 
   it("drops a stale seed when the SDK restored nothing", async () => {
@@ -156,10 +194,11 @@ describe("useUser", () => {
 
     setRenown(null);
     await tick();
-    setRenown(fakeInstance(user(), "authorized"));
+    setRenown(fakeInstance(reorderedUser(), "authorized"));
     await tick();
 
     await expect.element(screen.getByTestId("did")).toHaveTextContent(DID);
     expect(seen.slice(seededAt)).not.toContain(undefined);
+    expect(seen.slice(seededAt).every((u) => u === seed)).toBe(true);
   });
 });
