@@ -66,6 +66,7 @@ describe.each(scopeVariants)(
     let writeCache: KyselyWriteCache;
     let operationIndex: KyselyOperationIndex;
     let documentMetaCache: DocumentMetaCache;
+    let collectionMembershipCache: CollectionMembershipCache;
     let eventBus: IEventBus;
 
     async function createDocumentWithCreateOperation(
@@ -193,9 +194,7 @@ describe.each(scopeVariants)(
       });
       await documentMetaCache.startup();
 
-      const collectionMembershipCache = new CollectionMembershipCache(
-        operationIndex,
-      );
+      collectionMembershipCache = new CollectionMembershipCache(operationIndex);
 
       const executionScope = createScope(
         db,
@@ -1637,6 +1636,77 @@ describe.each(scopeVariants)(
           );
           expect(stored.results).toHaveLength(2);
           expect(cached.header.revision.document).toBe(2);
+        });
+
+        it("evicts what it cached when the transaction itself fails to commit", async () => {
+          // The failure classes above all abandon the job mid-body. This one
+          // lets the body run to completion -- so every cache holds the job's
+          // writes and the write cache holds the new revision -- and then fails
+          // the commit, which is the only point at which a job that did
+          // everything right still leaves nothing behind.
+          const driveDoc = driveDocumentModelModule.utils.createDocument();
+          const driveId = driveDoc.header.id;
+          await createDocumentWithCreateOperation(
+            driveId,
+            driveDoc.header.documentType,
+            driveDoc.state,
+          );
+
+          const realTransaction = db.transaction.bind(db);
+          const transactionSpy = vi
+            .spyOn(db, "transaction")
+            .mockImplementation(() => {
+              const builder = realTransaction();
+              const execute = builder.execute.bind(builder);
+              return {
+                execute: (fn: (trx: unknown) => Promise<unknown>) =>
+                  execute(async (trx) => {
+                    await fn(trx);
+                    throw new Error("commit-fail");
+                  }),
+              } as unknown as ReturnType<typeof db.transaction>;
+            });
+
+          const job: Job = {
+            id: "job-commit-failure",
+            kind: "mutation",
+            documentId: driveId,
+            scope: "global",
+            branch: "main",
+            actions: [
+              {
+                id: "commit-failure-action",
+                type: "ADD_FOLDER",
+                scope: "global",
+                timestampUtcMs: new Date().toISOString(),
+                input: {
+                  id: "folder-commit-failure",
+                  name: "Commit Failure Folder",
+                  parentFolder: null,
+                },
+              },
+            ],
+            operations: [],
+            createdAt: new Date().toISOString(),
+            queueHint: [],
+            errorHistory: [],
+            meta: { batchId: "test", batchJobIds: ["job-commit-failure"] },
+          };
+
+          await expect(executor.executeJob(job)).rejects.toThrow("commit-fail");
+
+          transactionSpy.mockRestore();
+
+          expect(
+            writeCache.getStream(driveId, "global", "main"),
+          ).toBeUndefined();
+          const stored = await operationStore.getSince(
+            driveId,
+            "global",
+            "main",
+            -1,
+          );
+          expect(stored.results).toHaveLength(0);
         });
 
         it("persists nothing when a load job fails part-way through", async () => {

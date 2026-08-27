@@ -1046,7 +1046,10 @@ export class DocumentActionHandler {
     executing.touchedStreams.add(input.sourceId, job.scope, job.branch);
 
     // The target's collection membership is derived from the rows just
-    // written, and a read can refill it before the transaction commits.
+    // written. No read inside a job refills it today -- the only one asks for
+    // the operation's own document -- so evicting it on rollback is insurance,
+    // kept because the eviction is keyed to what the job touched rather than
+    // to what one read path currently happens to ask for.
     executing.touchedStreams.add(input.targetId, job.scope, job.branch);
 
     stores.writeCache.putState(
