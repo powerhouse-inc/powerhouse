@@ -24,7 +24,11 @@ export {
   privyAdapterMeta,
   resolvePrivyMethods,
 } from "./meta.js";
-export type { PHRenownPrivyAdapterConfig, PrivyLoginMethod } from "./meta.js";
+export type {
+  PHRenownPrivyAdapterConfig,
+  PrivyChain,
+  PrivyLoginMethod,
+} from "./meta.js";
 // Type-only: lets a host type `useRenownWalletAdapter<PrivyWalletController>("privy")`
 // without pulling the factory (or @privy-io) into its bundle.
 export type {

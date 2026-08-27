@@ -706,9 +706,13 @@ every real operation.
 ### `RenownWalletProvider`
 
 Registers the login activator, lazy-mounts the given adapters, and merges them
-into one controller for `useRenownAuth`. The wallet Provider tree wraps only the
-adapter bridges (each library's modal portals to `<body>`), never your
-`children`, so activating login never remounts your app. Props: `adapters`
+into one controller for `useRenownAuth`. Adapters mount on first demand — a
+`login()` click, `logout()`, `useRenownWalletAdapter`, or an OAuth redirect
+return — not because a stored session was restored, so a signed-in visitor on a
+page that never signs in or out downloads no wallet code. Once mounted they stay
+mounted for the page's life. The wallet Provider tree wraps only the adapter
+bridges (each library's modal portals to `<body>`), never your `children`, so
+activating login never remounts your app. Props: `adapters`
 (`WalletAdapterDescriptor[]`), `theme?`, `children`.
 
 ### `useRenownLoginMethods(labels?)`

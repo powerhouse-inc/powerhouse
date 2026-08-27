@@ -2,7 +2,10 @@ import type { IRenown, User } from "@renown/sdk";
 import type { WalletSession } from "@renown/sdk/wallet";
 import { logger } from "document-model";
 import { RENOWN_CHAIN_ID, RENOWN_NETWORK_ID, RENOWN_URL } from "./constants.js";
-import { getActiveWalletController } from "./wallet-registry.js";
+import {
+  getActiveWalletController,
+  getWalletActivator,
+} from "./wallet-registry.js";
 
 export function openRenown(documentId?: string) {
   const renown = window.ph?.renown;
@@ -134,10 +137,13 @@ export async function login(
 }
 
 export async function logout() {
-  // Disconnect the wallet first — while still authenticated the adapters are
-  // mounted, so each adapter's own logout (Privy clears its session) runs first.
+  // Run the adapter's own logout first (Privy clears its session) so the next
+  // login can't silently resume it. Adapters mount on demand, so activate when
+  // none is mounted yet; with no activator (redirect-only) there is nothing to end.
   try {
-    await getActiveWalletController()?.disconnect();
+    const controller =
+      getActiveWalletController() ?? (await getWalletActivator()?.());
+    await controller?.disconnect();
   } catch (error) {
     logger.error(error instanceof Error ? error.message : String(error));
   }

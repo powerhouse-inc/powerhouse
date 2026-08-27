@@ -93,6 +93,42 @@ describe("PrivyCore email OTP", () => {
   });
 });
 
+describe("PrivyCore disconnect", () => {
+  it("waits for Privy to be ready before logging out", async () => {
+    const core = new PrivyCore([LoginMethod.EMAIL]);
+    const b = bindings();
+    core.bind(b);
+    const pending = core.disconnect();
+    await Promise.resolve();
+    expect(b.logout).not.toHaveBeenCalled();
+    core.syncState({
+      ready: true,
+      authenticated: true,
+      emailStatus: "initial",
+    });
+    await pending;
+    expect(b.logout).toHaveBeenCalledTimes(1);
+  });
+
+  it("logs out immediately when Privy is already ready", async () => {
+    const core = new PrivyCore([LoginMethod.EMAIL]);
+    const b = bindings();
+    core.bind(b);
+    core.syncState({
+      ready: true,
+      authenticated: true,
+      emailStatus: "initial",
+    });
+    await core.disconnect();
+    expect(b.logout).toHaveBeenCalledTimes(1);
+  });
+
+  it("is a no-op for the wallet when the bridge is not mounted", async () => {
+    const core = new PrivyCore([LoginMethod.EMAIL]);
+    await expect(core.disconnect()).resolves.toBeUndefined();
+  });
+});
+
 describe("PrivyCore state", () => {
   it("starts unready and notifies subscribers on change only", () => {
     const core = new PrivyCore([LoginMethod.EMAIL]);

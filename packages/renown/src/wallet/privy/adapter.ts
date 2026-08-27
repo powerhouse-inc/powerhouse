@@ -259,7 +259,32 @@ export class PrivyCore {
   async disconnect(): Promise<void> {
     this.clearSession();
     if (!this.bindings) return;
-    await this.bindings.logout();
+    // When mounted on demand for this logout, Privy may still be restoring its
+    // session; its logout needs that to finish.
+    await this.whenReady();
+    // Re-read: the bridge may have unmounted during the wait.
+    const bindings = this.currentBindings();
+    if (!bindings) return;
+    await bindings.logout();
+  }
+
+  private currentBindings(): PrivyBindings | null {
+    return this.bindings;
+  }
+
+  private whenReady(timeoutMs = 10_000): Promise<void> {
+    if (this.state.ready) return Promise.resolve();
+    return new Promise((resolve) => {
+      const done = () => {
+        unsubscribe();
+        clearTimeout(timer);
+        resolve();
+      };
+      const unsubscribe = this.subscribeState((state) => {
+        if (state.ready) done();
+      });
+      const timer = setTimeout(done, timeoutMs);
+    });
   }
 }
 
