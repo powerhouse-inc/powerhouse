@@ -22,6 +22,7 @@ export function createPrivyAdapter(
     appId: config.appId,
     clientId: config.clientId,
     chain: config.chain,
+    walletList: config.walletList,
   });
 
   // Stable identity: the host publishes this to a registry on change.
