@@ -3,8 +3,9 @@ import type {
   OperationContext,
   OperationWithContext,
 } from "@powerhousedao/shared/document-model";
+import type { ILogger } from "document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { ICollectionMembershipCache } from "../../../src/cache/collection-membership-cache.js";
+import type { IOperationIndex } from "../../../src/cache/operation-index-types.js";
 import { EventBus } from "../../../src/events/event-bus.js";
 import {
   ReactorEventTypes,
@@ -158,31 +159,32 @@ function makeWriteReady(
   return { operations: ops, jobMeta: job.meta };
 }
 
-function makeMembershipCache(
+type FakeOperationIndex = IOperationIndex & { lookups: string[][] };
+
+/**
+ * The manager only ever calls `getCollectionsForDocuments`, so the rest of
+ * the index is left off. Absent documents are omitted rather than defaulted
+ * to `[]`, matching what the real index returns.
+ */
+function makeOperationIndex(
   initial: Record<string, string[]> = {},
-): ICollectionMembershipCache & {
-  invalidatedIds: string[];
-  lookups: string[][];
-} {
-  const invalidatedIds: string[] = [];
+): FakeOperationIndex {
   const lookups: string[][] = [];
   const data = new Map(Object.entries(initial));
   return {
-    invalidatedIds,
     lookups,
-    invalidate(documentId: string) {
-      invalidatedIds.push(documentId);
-      data.delete(documentId);
-    },
     getCollectionsForDocuments(documentIds: string[]) {
       lookups.push([...documentIds]);
       const out: Record<string, string[]> = {};
       for (const id of documentIds) {
-        out[id] = data.get(id) ?? [];
+        const collections = data.get(id);
+        if (collections !== undefined) {
+          out[id] = collections;
+        }
       }
       return Promise.resolve(out);
     },
-  };
+  } as unknown as FakeOperationIndex;
 }
 
 function findJobForBucket(bucket: number, numWorkers: number): string {
@@ -201,20 +203,21 @@ describe("WorkerPoolJobExecutorManager", () => {
   let eventBus: EventBus;
   let queue: InMemoryQueue;
   let jobTracker: InMemoryJobTracker;
-  let cache: ReturnType<typeof makeMembershipCache>;
+  let operationIndex: FakeOperationIndex;
   let createdWorkers: FakeWorker[];
 
   beforeEach(() => {
     eventBus = new EventBus();
     queue = new InMemoryQueue(eventBus, new NullDocumentModelResolver());
     jobTracker = new InMemoryJobTracker(eventBus);
-    cache = makeMembershipCache();
+    operationIndex = makeOperationIndex();
     createdWorkers = [];
   });
 
   function buildManager(
     factory: (index: number) => FakeWorker,
     jobTimeoutMs = 30_000,
+    logger: ILogger = createMockLogger(),
   ): WorkerPoolJobExecutorManager {
     return new WorkerPoolJobExecutorManager(
       (i: number) => {
@@ -225,9 +228,9 @@ describe("WorkerPoolJobExecutorManager", () => {
       eventBus,
       queue,
       jobTracker,
-      createMockLogger(),
+      logger,
       new NullDocumentModelResolver(),
-      cache,
+      operationIndex,
       jobTimeoutMs,
     );
   }
@@ -329,7 +332,9 @@ describe("WorkerPoolJobExecutorManager", () => {
 
   describe("success + writeReady", () => {
     it("emits JOB_WRITE_READY with collectionMemberships populated", async () => {
-      cache = makeMembershipCache({ "doc-1": ["coll-A", "coll-B"] });
+      operationIndex = makeOperationIndex({
+        "doc-1": ["coll-A", "coll-B"],
+      });
       const setNameOp = makeOpWithAction("doc-1", "SET_NAME", { name: "x" });
       const manager = buildManager(
         (i) =>
@@ -357,7 +362,7 @@ describe("WorkerPoolJobExecutorManager", () => {
       expect(event.collectionMemberships).toEqual({
         "doc-1": ["coll-A", "coll-B"],
       });
-      expect(cache.lookups).toEqual([["doc-1"]]);
+      expect(operationIndex.lookups).toEqual([["doc-1"]]);
       await manager.stop(true);
     });
 
@@ -387,51 +392,63 @@ describe("WorkerPoolJobExecutorManager", () => {
       await manager.stop(true);
     });
 
-    it("invalidates membership cache for ADD_RELATIONSHIP targetId", async () => {
-      cache = makeMembershipCache({
-        "doc-target": ["coll-old"],
-        "doc-parent": [],
-      });
-      const addRel = makeOpWithAction("doc-parent", "ADD_RELATIONSHIP", {
-        targetId: "doc-target",
-      });
+    it("queries memberships once per job, and not at all without operations", async () => {
+      operationIndex = makeOperationIndex({ "doc-1": ["coll-A"] });
+      const firstOp = makeOpWithAction("doc-1", "SET_NAME", { name: "x" });
+      const secondOp = makeOpWithAction("doc-1", "SET_NAME", { name: "y" });
       const manager = buildManager(
         (i) =>
           new FakeWorker({
             index: i,
             outcome: (job) => ({
               result: { job, success: true, duration: 1 },
-              writeReady: makeWriteReady(job, [addRel]),
+              writeReady:
+                job.id === "job-with-ops"
+                  ? makeWriteReady(job, [firstOp, secondOp])
+                  : makeWriteReady(job, []),
             }),
           }),
       );
       await manager.start(1);
 
-      const writeReadyPromise = new Promise<JobWriteReadyEvent>((resolve) => {
+      const seen = new Set<string>();
+      const bothEmitted = new Promise<void>((resolve) => {
         eventBus.subscribe(
           ReactorEventTypes.JOB_WRITE_READY,
-          (_t: number, data: JobWriteReadyEvent) => resolve(data),
+          (_t: number, data: JobWriteReadyEvent) => {
+            seen.add(data.jobId);
+            if (seen.has("job-with-ops") && seen.has("job-no-ops")) {
+              resolve();
+            }
+          },
         );
       });
 
       await queue.enqueue(
-        createTestJob({ id: "job-rel", documentId: "doc-parent" }),
+        createTestJob({ id: "job-with-ops", documentId: "doc-1" }),
       );
-      await writeReadyPromise;
-      expect(cache.invalidatedIds).toContain("doc-target");
+      await queue.enqueue(
+        createTestJob({ id: "job-no-ops", documentId: "doc-1" }),
+      );
+      await bothEmitted;
+
+      expect(operationIndex.lookups).toEqual([["doc-1"]]);
       await manager.stop(true);
     });
 
-    it("invalidates membership cache for DELETE_DOCUMENT", async () => {
-      cache = makeMembershipCache({ "doc-del": ["coll-old"] });
-      const delOp = makeOpWithAction("doc-del", "DELETE_DOCUMENT", {});
+    it("fills documents the index omits with an empty collection list", async () => {
+      operationIndex = makeOperationIndex({ "doc-known": ["coll-A"] });
+      const knownOp = makeOpWithAction("doc-known", "SET_NAME", { name: "x" });
+      const unknownOp = makeOpWithAction("doc-unknown", "SET_NAME", {
+        name: "y",
+      });
       const manager = buildManager(
         (i) =>
           new FakeWorker({
             index: i,
             outcome: (job) => ({
               result: { job, success: true, duration: 1 },
-              writeReady: makeWriteReady(job, [delOp]),
+              writeReady: makeWriteReady(job, [knownOp, unknownOp]),
             }),
           }),
       );
@@ -445,10 +462,59 @@ describe("WorkerPoolJobExecutorManager", () => {
       });
 
       await queue.enqueue(
-        createTestJob({ id: "job-del", documentId: "doc-del" }),
+        createTestJob({ id: "job-fill", documentId: "doc-known" }),
       );
-      await writeReadyPromise;
-      expect(cache.invalidatedIds).toContain("doc-del");
+      const event = await writeReadyPromise;
+      expect(event.collectionMemberships).toEqual({
+        "doc-known": ["coll-A"],
+        "doc-unknown": [],
+      });
+      await manager.stop(true);
+    });
+
+    it("still emits JOB_WRITE_READY when the membership read fails", async () => {
+      const readError = new Error("index unavailable");
+      operationIndex = {
+        lookups: [],
+        getCollectionsForDocuments: () => Promise.reject(readError),
+      } as unknown as FakeOperationIndex;
+      const logger = createMockLogger();
+      const errorSpy = vi.spyOn(logger, "error");
+      const op = makeOpWithAction("doc-1", "SET_NAME", { name: "x" });
+      const manager = buildManager(
+        (i) =>
+          new FakeWorker({
+            index: i,
+            outcome: (job) => ({
+              result: { job, success: true, duration: 1 },
+              writeReady: makeWriteReady(job, [op]),
+            }),
+          }),
+        30_000,
+        logger,
+      );
+      await manager.start(1);
+
+      const writeReadyPromise = new Promise<JobWriteReadyEvent>((resolve) => {
+        eventBus.subscribe(
+          ReactorEventTypes.JOB_WRITE_READY,
+          (_t: number, data: JobWriteReadyEvent) => resolve(data),
+        );
+      });
+
+      await queue.enqueue(
+        createTestJob({ id: "job-read-fails", documentId: "doc-1" }),
+      );
+      const event = await writeReadyPromise;
+
+      // An empty map makes the sync filter drop every operation in this job,
+      // so this pins a deliberate choice, not an incidental one.
+      expect(event.collectionMemberships).toEqual({});
+      expect(event.operations).toHaveLength(1);
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Failed to load collection memberships"),
+        readError,
+      );
       await manager.stop(true);
     });
 

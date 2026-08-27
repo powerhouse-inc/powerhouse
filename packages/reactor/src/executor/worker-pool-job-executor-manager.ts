@@ -1,6 +1,5 @@
-import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
-import type { ICollectionMembershipCache } from "../cache/collection-membership-cache.js";
+import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { IEventBus } from "../events/interfaces.js";
 import {
   ReactorEventTypes,
@@ -55,19 +54,6 @@ import type {
 export type WorkerFactory = (index: number) => IExecutorWorker;
 
 /**
- * Action types whose application invalidates the parent's collection
- * membership cache. Mirrors the in-process invalidation pattern in
- * `document-action-handler.ts` (the worker pool relocates that work to
- * the parent because the cache lives there).
- */
-const MEMBERSHIP_INVALIDATING_ACTIONS = new Set([
-  "ADD_RELATIONSHIP",
-  "REMOVE_RELATIONSHIP",
-  "UPDATE_RELATIONSHIP",
-  "DELETE_DOCUMENT",
-]);
-
-/**
  * Manages a pool of executor workers and dispatches jobs across them with
  * sticky-by-documentId routing. Replaces `SimpleJobExecutorManager` when
  * the worker pool is enabled.
@@ -77,10 +63,19 @@ const MEMBERSHIP_INVALIDATING_ACTIONS = new Set([
  *  - Emitting `JOB_RUNNING` and `JOB_WRITE_READY` events; the worker's
  *    local event bus is a no-op stub.
  *  - Maintaining the deferred-jobs map for `DocumentNotFoundError`.
- *  - Owning the authoritative `ICollectionMembershipCache` — workers do
- *    not query it. Each result enriches the outgoing `JOB_WRITE_READY`
- *    with `collectionMemberships` and invalidates targets named by
- *    relationship/delete operations before the lookup.
+ *  - Enriching the outgoing `JOB_WRITE_READY` with
+ *    `collectionMemberships`, read from the operation index after the
+ *    worker has committed. It takes the whole index rather than a
+ *    narrower read interface so that handing it a cache does not
+ *    compile: which documents a commit moves between collections is not
+ *    derivable from action shape, because joining a collection also
+ *    joins every group the joining document has referenced and that set
+ *    comes from selects run inside the commit. A parent-side cache
+ *    cannot learn it went stale, and a stale entry silently drops the
+ *    document's operations from the outbox of every remote subscribed to
+ *    the omitted collection. Costs one primary-key-prefix lookup on
+ *    `document_collections` per job that produced operations, on a
+ *    fire-and-forget path.
  *
  * @see Executor Worker Pool Design wiki page
  *   (Powerhouse board wiki id: d400d711-f07e-4389-a226-4e9fdd4fa8ba)
@@ -102,7 +97,7 @@ export class WorkerPoolJobExecutorManager implements IJobExecutorManager {
     private jobTracker: IJobTracker,
     private logger: ILogger,
     private resolver: IDocumentModelResolver,
-    private collectionMembershipCache: ICollectionMembershipCache,
+    private operationIndex: IOperationIndex,
     jobTimeoutMs: number = 30_000,
     deferredJobTtlMs: number = DEFAULT_DEFERRED_JOB_TTL_MS,
   ) {
@@ -367,22 +362,21 @@ export class WorkerPoolJobExecutorManager implements IJobExecutorManager {
     job: Job,
     payload: JobWriteReadyPayload,
   ): Promise<void> {
-    this.invalidateMembershipsFor(payload.operations);
-
     const documentIds = [
       ...new Set(payload.operations.map((op) => op.context.documentId)),
     ];
     let collectionMemberships: Record<string, string[]> = {};
-    try {
-      collectionMemberships =
-        await this.collectionMembershipCache.getCollectionsForDocuments(
-          documentIds,
+    if (documentIds.length > 0) {
+      try {
+        const found =
+          await this.operationIndex.getCollectionsForDocuments(documentIds);
+        collectionMemberships = fillMissingMemberships(documentIds, found);
+      } catch (error) {
+        this.logger.error(
+          "Failed to load collection memberships for JOB_WRITE_READY: @Error",
+          error,
         );
-    } catch (error) {
-      this.logger.error(
-        "Failed to load collection memberships for JOB_WRITE_READY: @Error",
-        error,
-      );
+      }
     }
 
     const event: JobWriteReadyEvent = {
@@ -395,19 +389,6 @@ export class WorkerPoolJobExecutorManager implements IJobExecutorManager {
       await this.eventBus.emit(ReactorEventTypes.JOB_WRITE_READY, event);
     } catch (error) {
       this.logger.error("Failed to emit JOB_WRITE_READY event: @Error", error);
-    }
-  }
-
-  private invalidateMembershipsFor(operations: OperationWithContext[]): void {
-    for (const op of operations) {
-      const actionType = op.operation.action.type;
-      if (!MEMBERSHIP_INVALIDATING_ACTIONS.has(actionType)) {
-        continue;
-      }
-      const target = extractMembershipTarget(op);
-      if (target) {
-        this.collectionMembershipCache.invalidate(target);
-      }
     }
   }
 
@@ -511,20 +492,19 @@ function isDuplicateModuleFailure(reason: unknown): boolean {
   );
 }
 
-function extractMembershipTarget(op: OperationWithContext): string | undefined {
-  const actionType = op.operation.action.type;
-  const input = op.operation.action.input as
-    | { targetId?: string; documentId?: string }
-    | undefined;
-  if (
-    actionType === "ADD_RELATIONSHIP" ||
-    actionType === "REMOVE_RELATIONSHIP" ||
-    actionType === "UPDATE_RELATIONSHIP"
-  ) {
-    return input?.targetId;
+/**
+ * Gives every requested document a key, empty when it belongs to no
+ * collection. The operation index omits documents with no rows while the
+ * membership cache defaulted them to `[]`, so this keeps the emitted
+ * `JobWriteReadyEvent.collectionMemberships` shape unchanged.
+ */
+function fillMissingMemberships(
+  documentIds: string[],
+  found: Record<string, string[]>,
+): Record<string, string[]> {
+  const result: Record<string, string[]> = {};
+  for (const documentId of documentIds) {
+    result[documentId] = found[documentId] ?? [];
   }
-  if (actionType === "DELETE_DOCUMENT") {
-    return input?.documentId ?? op.context.documentId;
-  }
-  return undefined;
+  return result;
 }
