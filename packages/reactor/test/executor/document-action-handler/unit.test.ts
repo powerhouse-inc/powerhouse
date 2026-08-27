@@ -74,6 +74,7 @@ function createHarness(
     removeFromCollection: vi.fn(),
     recordGroupReferences: vi.fn(),
     write: vi.fn(),
+    getMembershipInvalidations: vi.fn(() => []),
   };
   const documentMetaCache = createMockDocumentMetaCache();
   const collectionMembershipCache = createMockCollectionMembershipCache();
@@ -165,6 +166,7 @@ function execute(
       replayingAcceptedHistory: false,
       evaluatedByPosition: false,
       postCommitInvalidations: [],
+      postCommitMembershipInvalidations: [],
       touchedStreams: new TouchedStreams(),
     },
   );

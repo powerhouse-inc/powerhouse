@@ -38,6 +38,16 @@ class KyselyOperationIndexTxn implements IOperationIndexTxn {
   private collectionRemovals: CollectionMembershipRecord[] = [];
   private groupReferences: GroupReferenceRecord[] = [];
   private operations: OperationIndexEntry[] = [];
+  private membershipInvalidations = new Set<string>();
+
+  /** Called by the commit as it writes each document_collections row. */
+  recordMembershipInvalidation(documentId: string): void {
+    this.membershipInvalidations.add(documentId);
+  }
+
+  getMembershipInvalidations(): string[] {
+    return [...this.membershipInvalidations];
+  }
 
   createCollection(collectionId: string): void {
     this.collections.push(collectionId);
@@ -160,10 +170,12 @@ export class KyselyOperationIndex implements IOperationIndex {
    */
   private async joinKeepingEarliest(
     trx: Transaction<Database>,
+    kyselyTxn: KyselyOperationIndexTxn,
     documentId: string,
     collectionId: string,
     ordinal: bigint,
   ): Promise<void> {
+    kyselyTxn.recordMembershipInvalidation(documentId);
     await trx
       .insertInto("document_collections")
       .values({
@@ -200,6 +212,10 @@ export class KyselyOperationIndex implements IOperationIndex {
           leftOrdinal: null,
         }),
       );
+
+      for (const collectionId of collections) {
+        kyselyTxn.recordMembershipInvalidation(collectionId);
+      }
 
       await trx
         .insertInto("document_collections")
@@ -239,6 +255,7 @@ export class KyselyOperationIndex implements IOperationIndex {
     if (memberships.length > 0) {
       for (const m of memberships) {
         const ordinal = operationOrdinals[m.operationIndex];
+        kyselyTxn.recordMembershipInvalidation(m.documentId);
 
         await trx
           .insertInto("document_collections")
@@ -266,6 +283,7 @@ export class KyselyOperationIndex implements IOperationIndex {
         for (const { groupId } of references) {
           await this.joinKeepingEarliest(
             trx,
+            kyselyTxn,
             groupId,
             m.collectionId,
             BigInt(ordinal),
@@ -277,6 +295,7 @@ export class KyselyOperationIndex implements IOperationIndex {
     if (removals.length > 0) {
       for (const r of removals) {
         const ordinal = operationOrdinals[r.operationIndex];
+        kyselyTxn.recordMembershipInvalidation(r.documentId);
 
         await trx
           .updateTable("document_collections")
@@ -319,6 +338,7 @@ export class KyselyOperationIndex implements IOperationIndex {
           for (const { collectionId } of rows) {
             await this.joinKeepingEarliest(
               trx,
+              kyselyTxn,
               groupId,
               collectionId,
               BigInt(ordinal),

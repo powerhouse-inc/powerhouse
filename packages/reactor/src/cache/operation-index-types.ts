@@ -29,6 +29,18 @@ export interface IOperationIndexTxn {
    */
   recordGroupReferences(documentId: string, groupIds: string[]): void;
   write(operations: OperationIndexEntry[]): void;
+
+  /**
+   * The documents whose collection membership the commit actually changed,
+   * available once it has run.
+   *
+   * A caller cannot work this out from what it recorded: joining a collection
+   * also joins every group the joining document has ever referenced, and that
+   * set is discovered by the commit itself. Anything caching membership has to
+   * be told about those documents too, or it keeps serving what it read before
+   * the commit.
+   */
+  getMembershipInvalidations(): string[];
 }
 
 /**

@@ -69,6 +69,9 @@ export type ExecutingJob = {
    */
   postCommitInvalidations: TouchedStream[];
 
+  /** Documents whose membership a concurrent reader may have refilled stale. */
+  postCommitMembershipInvalidations: string[];
+
   /**
    * Streams this job wrote, to the store or to a cache. The caches are shared
    * by reference with the copies scoped to the execution transaction, so a job

@@ -66,6 +66,7 @@ describe("batched applies: disagreeing conditions abandon the batch", () => {
         addToCollection: vi.fn(),
         removeFromCollection: vi.fn(),
         recordGroupReferences: vi.fn(),
+        getMembershipInvalidations: vi.fn(() => []),
         write: vi.fn(),
       }),
       commit: vi.fn().mockResolvedValue([]),

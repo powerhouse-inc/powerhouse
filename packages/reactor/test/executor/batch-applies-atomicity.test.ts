@@ -68,6 +68,7 @@ describe("batched applies: a store failure loses the whole run", () => {
         addToCollection: vi.fn(),
         removeFromCollection: vi.fn(),
         recordGroupReferences: vi.fn(),
+        getMembershipInvalidations: vi.fn(() => []),
         write: vi.fn().mockImplementation((rows: unknown[]) => {
           indexWrites.push(rows);
         }),

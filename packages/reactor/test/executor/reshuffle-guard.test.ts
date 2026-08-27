@@ -86,6 +86,7 @@ describe("the excessive reshuffle guard", () => {
         addToCollection: vi.fn(),
         removeFromCollection: vi.fn(),
         recordGroupReferences: vi.fn(),
+        getMembershipInvalidations: vi.fn(() => []),
         write: vi.fn(),
       }),
       commit: vi.fn().mockResolvedValue([]),

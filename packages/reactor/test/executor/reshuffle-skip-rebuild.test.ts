@@ -90,6 +90,7 @@ describe("a write carrying a skip rebuilds from full history", () => {
         addToCollection: vi.fn(),
         removeFromCollection: vi.fn(),
         recordGroupReferences: vi.fn(),
+        getMembershipInvalidations: vi.fn(() => []),
         write: vi.fn(),
       }),
       commit: vi.fn().mockResolvedValue([]),

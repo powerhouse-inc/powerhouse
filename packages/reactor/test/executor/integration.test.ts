@@ -1434,6 +1434,114 @@ describe.each(scopeVariants)(
     });
 
     /**
+     * Committing a job can change which collections a document belongs to.
+     * When it does, the membership cache has to hear about it, or it keeps
+     * serving the answer it had before the commit.
+     */
+    describe("Collection Membership Coherence", () => {
+      it("does not leave a referenced group's membership stale after commit", async () => {
+        const driveDoc = driveDocumentModelModule.utils.createDocument();
+        const driveId = driveDoc.header.id;
+        await createDocumentWithCreateOperation(
+          driveId,
+          driveDoc.header.documentType,
+          driveDoc.state,
+        );
+
+        const childDoc = driveDocumentModelModule.utils.createDocument();
+        const childId = childDoc.header.id;
+        await createDocumentWithCreateOperation(
+          childId,
+          childDoc.header.documentType,
+          childDoc.state,
+        );
+
+        const relationshipJob: Job = {
+          id: "membership-relationship-job",
+          kind: "mutation",
+          documentId: driveId,
+          scope: "document",
+          branch: "main",
+          actions: [
+            {
+              id: "membership-relationship-action",
+              type: "ADD_RELATIONSHIP",
+              scope: "document",
+              timestampUtcMs: new Date().toISOString(),
+              input: {
+                sourceId: driveId,
+                targetId: childId,
+                relationshipType: "child",
+              },
+            },
+          ],
+          operations: [],
+          createdAt: new Date().toISOString(),
+          queueHint: [],
+          errorHistory: [],
+          meta: {
+            batchId: "test",
+            batchJobIds: ["membership-relationship-job"],
+          },
+        };
+        expect((await executor.executeJob(relationshipJob)).success).toBe(true);
+
+        const groupId = "membership-coherence-group";
+
+        // A reader warms the group's entry before the auth write lands. No
+        // concurrency needed: the entry is simply never invalidated after.
+        await collectionMembershipCache.getCollectionsForDocuments([groupId]);
+
+        // Naming the group in the child's policy makes the group join every
+        // collection the child belongs to, at commit.
+        const authJob: Job = {
+          id: "membership-auth-job",
+          kind: "mutation",
+          documentId: childId,
+          scope: "auth",
+          branch: "main",
+          actions: [
+            {
+              id: "membership-auth-action",
+              type: "INITIALIZE_AUTH",
+              scope: "auth",
+              timestampUtcMs: new Date().toISOString(),
+              input: {
+                version: 1,
+                grants: [
+                  {
+                    id: "g-membership",
+                    description: "the group executes",
+                    effect: "allow",
+                    principal: { group: groupId },
+                    capability: { can: "execute", scope: "*" },
+                  },
+                ],
+              },
+            },
+          ],
+          operations: [],
+          createdAt: new Date().toISOString(),
+          queueHint: [],
+          errorHistory: [],
+          meta: { batchId: "test", batchJobIds: ["membership-auth-job"] },
+        };
+        expect((await executor.executeJob(authJob)).success).toBe(true);
+
+        const collectionId = DriveCollectionId.forDrive(driveId).key;
+
+        const fromIndex = await operationIndex.getCollectionsForDocuments([
+          groupId,
+        ]);
+        expect(fromIndex[groupId]).toContain(collectionId);
+
+        const fromCache =
+          await collectionMembershipCache.getCollectionsForDocuments([groupId]);
+        expect(fromCache[groupId]).toContain(collectionId);
+      });
+    });
+
+    /**
      * A job either fully applies or leaves nothing behind. The guarantee comes
      * from the execution scope's transaction, so it is a property of which
      * scope the executor was built with, not of anything the job does.

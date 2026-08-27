@@ -235,6 +235,7 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     // Entries handlers request invalidated only after the transaction commits
     const postCommitInvalidations: TouchedStream[] = [];
+    const postCommitMembershipInvalidations: string[] = [];
 
     let outcome: ScopeOutcome;
     try {
@@ -246,6 +247,7 @@ export class SimpleJobExecutor implements IJobExecutor {
           signal,
           touchedStreams,
           postCommitInvalidations,
+          postCommitMembershipInvalidations,
         });
 
         if (!scoped.result.success) {
@@ -266,6 +268,10 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     for (const entry of postCommitInvalidations) {
       this.writeCache.invalidate(entry.documentId, entry.scope, entry.branch);
+    }
+
+    for (const documentId of postCommitMembershipInvalidations) {
+      this.collectionMembershipCache.invalidate(documentId);
     }
 
     const { pendingEvent } = outcome;
@@ -299,6 +305,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     signal?: AbortSignal;
     touchedStreams: TouchedStreams;
     postCommitInvalidations: TouchedStream[];
+    postCommitMembershipInvalidations: string[];
   }): Promise<ScopeOutcome> {
     const {
       job,
@@ -307,6 +314,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       signal,
       touchedStreams,
       postCommitInvalidations,
+      postCommitMembershipInvalidations,
     } = params;
 
     let pendingEvent: JobWriteReadyEvent | undefined;
@@ -322,10 +330,14 @@ export class SimpleJobExecutor implements IJobExecutor {
         replayingAcceptedHistory: true,
         evaluatedByPosition: false,
         postCommitInvalidations,
+        postCommitMembershipInvalidations,
         touchedStreams,
       });
       if (loadResult.success && loadResult.operationsWithContext) {
         const ordinals = await stores.operationIndex.commit(indexTxn, signal);
+        postCommitMembershipInvalidations.push(
+          ...indexTxn.getMembershipInvalidations(),
+        );
 
         for (let i = 0; i < loadResult.operationsWithContext.length; i++) {
           loadResult.operationsWithContext[i].context.ordinal = ordinals[i];
@@ -357,10 +369,14 @@ export class SimpleJobExecutor implements IJobExecutor {
         replayingAcceptedHistory: false,
         evaluatedByPosition: false,
         postCommitInvalidations,
+        postCommitMembershipInvalidations,
         touchedStreams,
       });
       if (reevalResult.success && reevalResult.operationsWithContext) {
         const ordinals = await stores.operationIndex.commit(indexTxn, signal);
+        postCommitMembershipInvalidations.push(
+          ...indexTxn.getMembershipInvalidations(),
+        );
 
         for (let i = 0; i < reevalResult.operationsWithContext.length; i++) {
           reevalResult.operationsWithContext[i].context.ordinal = ordinals[i];
@@ -396,6 +412,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       replayingAcceptedHistory: false,
       evaluatedByPosition: positioned.evaluatedByPosition,
       postCommitInvalidations,
+      postCommitMembershipInvalidations,
       touchedStreams,
     };
 
@@ -432,6 +449,9 @@ export class SimpleJobExecutor implements IJobExecutor {
     }
 
     const ordinals = await stores.operationIndex.commit(indexTxn, signal);
+    postCommitMembershipInvalidations.push(
+      ...indexTxn.getMembershipInvalidations(),
+    );
 
     if (actionResult.operationsWithContext.length > 0) {
       for (let i = 0; i < actionResult.operationsWithContext.length; i++) {
