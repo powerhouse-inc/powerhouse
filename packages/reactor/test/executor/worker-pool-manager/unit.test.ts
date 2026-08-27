@@ -3,6 +3,7 @@ import type {
   OperationContext,
   OperationWithContext,
 } from "@powerhousedao/shared/document-model";
+import type { ILogger } from "document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ICollectionMembershipReader } from "../../../src/cache/collection-membership-cache.js";
 import { EventBus } from "../../../src/events/event-bus.js";
@@ -211,6 +212,7 @@ describe("WorkerPoolJobExecutorManager", () => {
   function buildManager(
     factory: (index: number) => FakeWorker,
     jobTimeoutMs = 30_000,
+    logger: ILogger = createMockLogger(),
   ): WorkerPoolJobExecutorManager {
     return new WorkerPoolJobExecutorManager(
       (i: number) => {
@@ -221,7 +223,7 @@ describe("WorkerPoolJobExecutorManager", () => {
       eventBus,
       queue,
       jobTracker,
-      createMockLogger(),
+      logger,
       new NullDocumentModelResolver(),
       membershipReader,
       jobTimeoutMs,
@@ -462,6 +464,52 @@ describe("WorkerPoolJobExecutorManager", () => {
         "doc-known": ["coll-A"],
         "doc-unknown": [],
       });
+      await manager.stop(true);
+    });
+
+    it("still emits JOB_WRITE_READY when the membership read fails", async () => {
+      const readError = new Error("index unavailable");
+      membershipReader = {
+        lookups: [],
+        getCollectionsForDocuments: () => Promise.reject(readError),
+      };
+      const logger = createMockLogger();
+      const errorSpy = vi.spyOn(logger, "error");
+      const op = makeOpWithAction("doc-1", "SET_NAME", { name: "x" });
+      const manager = buildManager(
+        (i) =>
+          new FakeWorker({
+            index: i,
+            outcome: (job) => ({
+              result: { job, success: true, duration: 1 },
+              writeReady: makeWriteReady(job, [op]),
+            }),
+          }),
+        30_000,
+        logger,
+      );
+      await manager.start(1);
+
+      const writeReadyPromise = new Promise<JobWriteReadyEvent>((resolve) => {
+        eventBus.subscribe(
+          ReactorEventTypes.JOB_WRITE_READY,
+          (_t: number, data: JobWriteReadyEvent) => resolve(data),
+        );
+      });
+
+      await queue.enqueue(
+        createTestJob({ id: "job-read-fails", documentId: "doc-1" }),
+      );
+      const event = await writeReadyPromise;
+
+      // An empty map makes the sync filter drop every operation in this job,
+      // so this pins a deliberate choice, not an incidental one.
+      expect(event.collectionMemberships).toEqual({});
+      expect(event.operations).toHaveLength(1);
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Failed to load collection memberships"),
+        readError,
+      );
       await manager.stop(true);
     });
 
