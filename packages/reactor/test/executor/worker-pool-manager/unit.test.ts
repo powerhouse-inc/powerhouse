@@ -4,7 +4,7 @@ import type {
   OperationWithContext,
 } from "@powerhousedao/shared/document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { ICollectionMembershipCache } from "../../../src/cache/collection-membership-cache.js";
+import type { ICollectionMembershipReader } from "../../../src/cache/collection-membership-cache.js";
 import { EventBus } from "../../../src/events/event-bus.js";
 import {
   ReactorEventTypes,
@@ -158,27 +158,23 @@ function makeWriteReady(
   return { operations: ops, jobMeta: job.meta };
 }
 
-function makeMembershipCache(
+function makeMembershipReader(
   initial: Record<string, string[]> = {},
-): ICollectionMembershipCache & {
-  invalidatedIds: string[];
+): ICollectionMembershipReader & {
   lookups: string[][];
 } {
-  const invalidatedIds: string[] = [];
   const lookups: string[][] = [];
   const data = new Map(Object.entries(initial));
   return {
-    invalidatedIds,
     lookups,
-    invalidate(documentId: string) {
-      invalidatedIds.push(documentId);
-      data.delete(documentId);
-    },
     getCollectionsForDocuments(documentIds: string[]) {
       lookups.push([...documentIds]);
       const out: Record<string, string[]> = {};
       for (const id of documentIds) {
-        out[id] = data.get(id) ?? [];
+        const collections = data.get(id);
+        if (collections !== undefined) {
+          out[id] = collections;
+        }
       }
       return Promise.resolve(out);
     },
@@ -201,14 +197,14 @@ describe("WorkerPoolJobExecutorManager", () => {
   let eventBus: EventBus;
   let queue: InMemoryQueue;
   let jobTracker: InMemoryJobTracker;
-  let cache: ReturnType<typeof makeMembershipCache>;
+  let membershipReader: ReturnType<typeof makeMembershipReader>;
   let createdWorkers: FakeWorker[];
 
   beforeEach(() => {
     eventBus = new EventBus();
     queue = new InMemoryQueue(eventBus, new NullDocumentModelResolver());
     jobTracker = new InMemoryJobTracker(eventBus);
-    cache = makeMembershipCache();
+    membershipReader = makeMembershipReader();
     createdWorkers = [];
   });
 
@@ -227,7 +223,7 @@ describe("WorkerPoolJobExecutorManager", () => {
       jobTracker,
       createMockLogger(),
       new NullDocumentModelResolver(),
-      cache,
+      membershipReader,
       jobTimeoutMs,
     );
   }
@@ -329,7 +325,9 @@ describe("WorkerPoolJobExecutorManager", () => {
 
   describe("success + writeReady", () => {
     it("emits JOB_WRITE_READY with collectionMemberships populated", async () => {
-      cache = makeMembershipCache({ "doc-1": ["coll-A", "coll-B"] });
+      membershipReader = makeMembershipReader({
+        "doc-1": ["coll-A", "coll-B"],
+      });
       const setNameOp = makeOpWithAction("doc-1", "SET_NAME", { name: "x" });
       const manager = buildManager(
         (i) =>
@@ -357,7 +355,7 @@ describe("WorkerPoolJobExecutorManager", () => {
       expect(event.collectionMemberships).toEqual({
         "doc-1": ["coll-A", "coll-B"],
       });
-      expect(cache.lookups).toEqual([["doc-1"]]);
+      expect(membershipReader.lookups).toEqual([["doc-1"]]);
       await manager.stop(true);
     });
 
@@ -387,51 +385,63 @@ describe("WorkerPoolJobExecutorManager", () => {
       await manager.stop(true);
     });
 
-    it("invalidates membership cache for ADD_RELATIONSHIP targetId", async () => {
-      cache = makeMembershipCache({
-        "doc-target": ["coll-old"],
-        "doc-parent": [],
-      });
-      const addRel = makeOpWithAction("doc-parent", "ADD_RELATIONSHIP", {
-        targetId: "doc-target",
-      });
+    it("queries memberships once per job, and not at all without operations", async () => {
+      membershipReader = makeMembershipReader({ "doc-1": ["coll-A"] });
+      const firstOp = makeOpWithAction("doc-1", "SET_NAME", { name: "x" });
+      const secondOp = makeOpWithAction("doc-1", "SET_NAME", { name: "y" });
       const manager = buildManager(
         (i) =>
           new FakeWorker({
             index: i,
             outcome: (job) => ({
               result: { job, success: true, duration: 1 },
-              writeReady: makeWriteReady(job, [addRel]),
+              writeReady:
+                job.id === "job-with-ops"
+                  ? makeWriteReady(job, [firstOp, secondOp])
+                  : makeWriteReady(job, []),
             }),
           }),
       );
       await manager.start(1);
 
-      const writeReadyPromise = new Promise<JobWriteReadyEvent>((resolve) => {
+      const seen = new Set<string>();
+      const bothEmitted = new Promise<void>((resolve) => {
         eventBus.subscribe(
           ReactorEventTypes.JOB_WRITE_READY,
-          (_t: number, data: JobWriteReadyEvent) => resolve(data),
+          (_t: number, data: JobWriteReadyEvent) => {
+            seen.add(data.jobId);
+            if (seen.has("job-with-ops") && seen.has("job-no-ops")) {
+              resolve();
+            }
+          },
         );
       });
 
       await queue.enqueue(
-        createTestJob({ id: "job-rel", documentId: "doc-parent" }),
+        createTestJob({ id: "job-with-ops", documentId: "doc-1" }),
       );
-      await writeReadyPromise;
-      expect(cache.invalidatedIds).toContain("doc-target");
+      await queue.enqueue(
+        createTestJob({ id: "job-no-ops", documentId: "doc-1" }),
+      );
+      await bothEmitted;
+
+      expect(membershipReader.lookups).toEqual([["doc-1"]]);
       await manager.stop(true);
     });
 
-    it("invalidates membership cache for DELETE_DOCUMENT", async () => {
-      cache = makeMembershipCache({ "doc-del": ["coll-old"] });
-      const delOp = makeOpWithAction("doc-del", "DELETE_DOCUMENT", {});
+    it("fills documents the reader omits with an empty collection list", async () => {
+      membershipReader = makeMembershipReader({ "doc-known": ["coll-A"] });
+      const knownOp = makeOpWithAction("doc-known", "SET_NAME", { name: "x" });
+      const unknownOp = makeOpWithAction("doc-unknown", "SET_NAME", {
+        name: "y",
+      });
       const manager = buildManager(
         (i) =>
           new FakeWorker({
             index: i,
             outcome: (job) => ({
               result: { job, success: true, duration: 1 },
-              writeReady: makeWriteReady(job, [delOp]),
+              writeReady: makeWriteReady(job, [knownOp, unknownOp]),
             }),
           }),
       );
@@ -445,10 +455,13 @@ describe("WorkerPoolJobExecutorManager", () => {
       });
 
       await queue.enqueue(
-        createTestJob({ id: "job-del", documentId: "doc-del" }),
+        createTestJob({ id: "job-fill", documentId: "doc-known" }),
       );
-      await writeReadyPromise;
-      expect(cache.invalidatedIds).toContain("doc-del");
+      const event = await writeReadyPromise;
+      expect(event.collectionMemberships).toEqual({
+        "doc-known": ["coll-A"],
+        "doc-unknown": [],
+      });
       await manager.stop(true);
     });
 

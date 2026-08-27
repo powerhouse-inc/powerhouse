@@ -4,6 +4,7 @@ import type {
   OperationWithContext,
 } from "@powerhousedao/shared/document-model";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { OperationIndexEntry } from "../../../src/cache/operation-index-types.js";
 import { ReactorBuilder } from "../../../src/core/reactor-builder.js";
 import type { DocumentModelSource } from "../../../src/core/reactor-builder.js";
 import { fileURLToPath } from "node:url";
@@ -163,6 +164,29 @@ function makeOpWithAction(
   };
 }
 
+function makeIndexEntry(documentId: string): OperationIndexEntry {
+  const action: Action = {
+    id: `action-index-${documentId}`,
+    type: "SET_NAME",
+    scope: "global",
+    timestampUtcMs: "2024-01-01T00:00:00.000Z",
+    input: {},
+  } as Action;
+  return {
+    id: `op-index-${documentId}`,
+    index: 0,
+    timestampUtcMs: action.timestampUtcMs,
+    hash: "h",
+    skip: 0,
+    action,
+    documentId,
+    documentType: "test/type",
+    branch: "main",
+    scope: "global",
+    sourceRemote: "",
+  };
+}
+
 describe("Worker pool integration through ReactorBuilder", () => {
   let modules: InProcessReactorModule[] = [];
 
@@ -253,6 +277,56 @@ describe("Worker pool integration through ReactorBuilder", () => {
     expect(event.operations).toHaveLength(1);
     expect(event.collectionMemberships).toBeDefined();
     expect(event.collectionMemberships!["doc-mem"]).toEqual([]);
+  });
+
+  it("reads memberships the worker's commit created, not a cached answer", async () => {
+    const op = makeOpWithAction("doc-cascade", "SET_NAME");
+    const factory: WorkerFactory = (index) =>
+      new FakeWorker({
+        index,
+        executeImpl: (job) =>
+          Promise.resolve({
+            result: { job, success: true, duration: 1 },
+            writeReady: {
+              operations: [op],
+              jobMeta: job.meta,
+            } as JobWriteReadyPayload,
+          }),
+      });
+    const module = await buildReactor(1, factory);
+
+    const writeReadyFor = (jobId: string): Promise<JobWriteReadyEvent> =>
+      new Promise<JobWriteReadyEvent>((resolve) => {
+        module.eventBus.subscribe(
+          ReactorEventTypes.JOB_WRITE_READY,
+          (_t: number, data: JobWriteReadyEvent) => {
+            if (data.jobId === jobId) {
+              resolve(data);
+            }
+          },
+        );
+      });
+
+    const first = writeReadyFor("job-before-cascade");
+    await module.queue.enqueue(
+      makeJob({ id: "job-before-cascade", documentId: "doc-cascade" }),
+    );
+    const beforeEvent = await first;
+    expect(beforeEvent.collectionMemberships!["doc-cascade"]).toEqual([]);
+
+    const txn = module.operationIndex.start();
+    txn.write([makeIndexEntry("doc-cascade")]);
+    txn.addToCollection("coll-cascade", "doc-cascade");
+    await module.operationIndex.commit(txn);
+
+    const second = writeReadyFor("job-after-cascade");
+    await module.queue.enqueue(
+      makeJob({ id: "job-after-cascade", documentId: "doc-cascade" }),
+    );
+    const afterEvent = await second;
+    expect(afterEvent.collectionMemberships!["doc-cascade"]).toContain(
+      "coll-cascade",
+    );
   });
 
   it("reports numExecutors === numWorkers on the manager", async () => {

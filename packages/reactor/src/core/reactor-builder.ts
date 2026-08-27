@@ -571,7 +571,7 @@ export class ReactorBuilder {
           jobTracker,
           this.logger,
           resolver,
-          collectionMembershipCache,
+          operationIndex,
           this.executorConfig.jobTimeoutMs,
           this.executorConfig.deferredJobTtlMs,
         );
