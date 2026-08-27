@@ -158,7 +158,7 @@ Under SSR the cookie seeds the server render and hydration (it is the only thing
 
 ### Custom sign-in screens (headless Privy)
 
-If you want your own email sign-in screens instead of Privy's modal, keep the same `RenownProvider` setup and drive the Privy adapter directly with `useRenownWalletAdapter`. It returns the mounted adapter's controller — for Privy that adds `sendCode(email)` / `loginWithCode(code)` plus its auth state — and rendering it is what loads Privy, so a visitor on a page that never renders it downloads no `@privy-io` code. The session `loginWithCode` resolves with goes straight to `login(session)`; the embedded wallet signs the credential silently.
+If you want your own email sign-in screens instead of Privy's modal, keep the same `RenownProvider` setup and drive the Privy adapter directly with `useRenownWalletAdapter`. It returns the mounted adapter's controller — for Privy that adds `sendCode(email)` / `loginWithCode(code)` plus its auth state — and rendering it is what loads Privy, so a visitor on a page that never renders it downloads no `@privy-io` code. Pass the session that `loginWithCode` resolves to straight into `login(session)`; the embedded wallet signs the credential silently.
 
 ```tsx
 import { useRenownAuth, useRenownWalletAdapter } from "@powerhousedao/reactor-browser/renown";

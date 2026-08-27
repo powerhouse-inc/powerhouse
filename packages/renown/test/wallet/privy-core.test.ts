@@ -82,6 +82,23 @@ describe("PrivyCore email OTP", () => {
     await expect(pending).rejects.toThrow("boom");
   });
 
+  it("rejects a second login while one is still pending", async () => {
+    const core = new PrivyCore([LoginMethod.EMAIL]);
+    const b = bindings();
+    core.bind(b);
+    const first = core.loginWithCode("111111");
+    await expect(core.loginWithCode("222222")).rejects.toThrow(
+      /already in progress/,
+    );
+    await expect(core.connect(LoginMethod.EMAIL)).rejects.toThrow(
+      /already in progress/,
+    );
+    // The first attempt is untouched and still completes.
+    core.syncFromEmbeddedWallet(WALLET);
+    await expect(first).resolves.toMatchObject({ address: WALLET.address });
+    expect(b.loginWithCode).toHaveBeenCalledTimes(1);
+  });
+
   it("returns the existing session without calling Privy", async () => {
     const core = new PrivyCore([LoginMethod.EMAIL]);
     const b = bindings();

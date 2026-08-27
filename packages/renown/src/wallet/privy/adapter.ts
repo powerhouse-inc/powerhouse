@@ -198,6 +198,12 @@ export class PrivyCore {
   private awaitSession(
     start: (fail: (error: unknown) => void) => void,
   ): Promise<WalletSession> {
+    // One login at a time: replacing `pending` would orphan the earlier promise.
+    if (this.pending) {
+      return Promise.reject(
+        new Error("PrivyAdapter: a login is already in progress"),
+      );
+    }
     return new Promise<WalletSession>((resolve, reject) => {
       this.pending = { resolve, reject };
       const fail = (error: unknown) => {
