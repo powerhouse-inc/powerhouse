@@ -738,8 +738,8 @@ app shell; a signed-out visitor on a route that never renders it downloads no
 wallet code. `undefined` until the adapter is mounted.
 
 Privy's controller adds email OTP (`sendCode` / `loginWithCode`) plus its auth
-state. Pair it with `login(session)` — the session `loginWithCode` resolves with
-is a Privy embedded wallet, which signs the Renown credential silently:
+state. Pass the session that `loginWithCode` resolves to into `login(session)`;
+it is a Privy embedded wallet, so it signs the Renown credential silently:
 
 ```tsx
 "use client";
