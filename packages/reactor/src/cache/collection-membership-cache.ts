@@ -1,18 +1,11 @@
 import type { IOperationIndex } from "./operation-index-types.js";
 
-/**
- * The read half of membership lookup. `IOperationIndex` satisfies it
- * directly, so a caller that must not serve a stale answer can depend on
- * this and be handed the index instead of a cache.
- */
-export interface ICollectionMembershipReader {
+export interface ICollectionMembershipCache {
   // Get collections for documents (lazy load from index if not cached)
   getCollectionsForDocuments(
     documentIds: string[],
   ): Promise<Record<string, string[]>>;
-}
 
-export interface ICollectionMembershipCache extends ICollectionMembershipReader {
   // Invalidate a document's cache entry (when membership changes)
   invalidate(documentId: string): void;
 }

@@ -1,5 +1,5 @@
 import type { ILogger } from "document-model";
-import type { ICollectionMembershipReader } from "../cache/collection-membership-cache.js";
+import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { IEventBus } from "../events/interfaces.js";
 import {
   ReactorEventTypes,
@@ -65,11 +65,12 @@ export type WorkerFactory = (index: number) => IExecutorWorker;
  *  - Maintaining the deferred-jobs map for `DocumentNotFoundError`.
  *  - Enriching the outgoing `JOB_WRITE_READY` with
  *    `collectionMemberships`, read from the operation index after the
- *    worker has committed. Must be handed the index itself, never a
- *    caching reader: which documents a commit moves between collections
- *    is not derivable from action shape, because joining a collection
- *    also joins every group the joining document has referenced and that
- *    set comes from selects run inside the commit. A parent-side cache
+ *    worker has committed. It takes the whole index rather than a
+ *    narrower read interface so that handing it a cache does not
+ *    compile: which documents a commit moves between collections is not
+ *    derivable from action shape, because joining a collection also
+ *    joins every group the joining document has referenced and that set
+ *    comes from selects run inside the commit. A parent-side cache
  *    cannot learn it went stale, and a stale entry silently drops the
  *    document's operations from the outbox of every remote subscribed to
  *    the omitted collection. Costs one primary-key-prefix lookup on
@@ -96,7 +97,7 @@ export class WorkerPoolJobExecutorManager implements IJobExecutorManager {
     private jobTracker: IJobTracker,
     private logger: ILogger,
     private resolver: IDocumentModelResolver,
-    private membershipReader: ICollectionMembershipReader,
+    private operationIndex: IOperationIndex,
     jobTimeoutMs: number = 30_000,
     deferredJobTtlMs: number = DEFAULT_DEFERRED_JOB_TTL_MS,
   ) {
@@ -368,7 +369,7 @@ export class WorkerPoolJobExecutorManager implements IJobExecutorManager {
     if (documentIds.length > 0) {
       try {
         const found =
-          await this.membershipReader.getCollectionsForDocuments(documentIds);
+          await this.operationIndex.getCollectionsForDocuments(documentIds);
         collectionMemberships = fillMissingMemberships(documentIds, found);
       } catch (error) {
         this.logger.error(

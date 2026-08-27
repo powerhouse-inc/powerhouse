@@ -5,7 +5,7 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { ICollectionMembershipReader } from "../../../src/cache/collection-membership-cache.js";
+import type { IOperationIndex } from "../../../src/cache/operation-index-types.js";
 import { EventBus } from "../../../src/events/event-bus.js";
 import {
   ReactorEventTypes,
@@ -159,11 +159,16 @@ function makeWriteReady(
   return { operations: ops, jobMeta: job.meta };
 }
 
-function makeMembershipReader(
+type FakeOperationIndex = IOperationIndex & { lookups: string[][] };
+
+/**
+ * The manager only ever calls `getCollectionsForDocuments`, so the rest of
+ * the index is left off. Absent documents are omitted rather than defaulted
+ * to `[]`, matching what the real index returns.
+ */
+function makeOperationIndex(
   initial: Record<string, string[]> = {},
-): ICollectionMembershipReader & {
-  lookups: string[][];
-} {
+): FakeOperationIndex {
   const lookups: string[][] = [];
   const data = new Map(Object.entries(initial));
   return {
@@ -179,7 +184,7 @@ function makeMembershipReader(
       }
       return Promise.resolve(out);
     },
-  };
+  } as unknown as FakeOperationIndex;
 }
 
 function findJobForBucket(bucket: number, numWorkers: number): string {
@@ -198,14 +203,14 @@ describe("WorkerPoolJobExecutorManager", () => {
   let eventBus: EventBus;
   let queue: InMemoryQueue;
   let jobTracker: InMemoryJobTracker;
-  let membershipReader: ReturnType<typeof makeMembershipReader>;
+  let operationIndex: FakeOperationIndex;
   let createdWorkers: FakeWorker[];
 
   beforeEach(() => {
     eventBus = new EventBus();
     queue = new InMemoryQueue(eventBus, new NullDocumentModelResolver());
     jobTracker = new InMemoryJobTracker(eventBus);
-    membershipReader = makeMembershipReader();
+    operationIndex = makeOperationIndex();
     createdWorkers = [];
   });
 
@@ -225,7 +230,7 @@ describe("WorkerPoolJobExecutorManager", () => {
       jobTracker,
       logger,
       new NullDocumentModelResolver(),
-      membershipReader,
+      operationIndex,
       jobTimeoutMs,
     );
   }
@@ -327,7 +332,7 @@ describe("WorkerPoolJobExecutorManager", () => {
 
   describe("success + writeReady", () => {
     it("emits JOB_WRITE_READY with collectionMemberships populated", async () => {
-      membershipReader = makeMembershipReader({
+      operationIndex = makeOperationIndex({
         "doc-1": ["coll-A", "coll-B"],
       });
       const setNameOp = makeOpWithAction("doc-1", "SET_NAME", { name: "x" });
@@ -357,7 +362,7 @@ describe("WorkerPoolJobExecutorManager", () => {
       expect(event.collectionMemberships).toEqual({
         "doc-1": ["coll-A", "coll-B"],
       });
-      expect(membershipReader.lookups).toEqual([["doc-1"]]);
+      expect(operationIndex.lookups).toEqual([["doc-1"]]);
       await manager.stop(true);
     });
 
@@ -388,7 +393,7 @@ describe("WorkerPoolJobExecutorManager", () => {
     });
 
     it("queries memberships once per job, and not at all without operations", async () => {
-      membershipReader = makeMembershipReader({ "doc-1": ["coll-A"] });
+      operationIndex = makeOperationIndex({ "doc-1": ["coll-A"] });
       const firstOp = makeOpWithAction("doc-1", "SET_NAME", { name: "x" });
       const secondOp = makeOpWithAction("doc-1", "SET_NAME", { name: "y" });
       const manager = buildManager(
@@ -427,12 +432,12 @@ describe("WorkerPoolJobExecutorManager", () => {
       );
       await bothEmitted;
 
-      expect(membershipReader.lookups).toEqual([["doc-1"]]);
+      expect(operationIndex.lookups).toEqual([["doc-1"]]);
       await manager.stop(true);
     });
 
-    it("fills documents the reader omits with an empty collection list", async () => {
-      membershipReader = makeMembershipReader({ "doc-known": ["coll-A"] });
+    it("fills documents the index omits with an empty collection list", async () => {
+      operationIndex = makeOperationIndex({ "doc-known": ["coll-A"] });
       const knownOp = makeOpWithAction("doc-known", "SET_NAME", { name: "x" });
       const unknownOp = makeOpWithAction("doc-unknown", "SET_NAME", {
         name: "y",
@@ -469,10 +474,10 @@ describe("WorkerPoolJobExecutorManager", () => {
 
     it("still emits JOB_WRITE_READY when the membership read fails", async () => {
       const readError = new Error("index unavailable");
-      membershipReader = {
+      operationIndex = {
         lookups: [],
         getCollectionsForDocuments: () => Promise.reject(readError),
-      };
+      } as unknown as FakeOperationIndex;
       const logger = createMockLogger();
       const errorSpy = vi.spyOn(logger, "error");
       const op = makeOpWithAction("doc-1", "SET_NAME", { name: "x" });
