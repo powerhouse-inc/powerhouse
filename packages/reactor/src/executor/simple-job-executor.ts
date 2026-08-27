@@ -384,10 +384,7 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     const positioned = await this.positionByTimestamp(job, stores, signal);
     if (positioned.error) {
-      return {
-        result: buildErrorResult(job, positioned.error, startTime),
-        pendingEvent,
-      };
+      return { result: buildErrorResult(job, positioned.error, startTime) };
     }
 
     const executing: ExecutingJob = {
@@ -415,12 +412,10 @@ export class SimpleJobExecutor implements IJobExecutor {
           error: actionResult.error,
           duration: Date.now() - startTime,
         },
-        pendingEvent,
       };
     }
 
-    // Put here because a re-eval pass writes through the same db db
-    // transaction.
+    // Put here because a re-eval pass writes through the same db transaction.
     const reevaluationError = await this.reevaluateIfCriteriaMet(
       { scope: job.scope, operations: actionResult.generatedOperations },
       executing,
@@ -433,7 +428,6 @@ export class SimpleJobExecutor implements IJobExecutor {
           error: reevaluationError,
           duration: Date.now() - startTime,
         },
-        pendingEvent,
       };
     }
 

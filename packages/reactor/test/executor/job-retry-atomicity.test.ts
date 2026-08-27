@@ -66,8 +66,9 @@ describe("a retry after a mid-run failure", () => {
         this: KyselyOperationStore,
         ...args: Parameters<KyselyOperationStore["apply"]>
       ) {
-        const [, , scope, , index] = args;
-        if (!failed && scope === "global" && index === 1) {
+        const scope = args[2];
+        const revision = args[4];
+        if (!failed && scope === "global" && revision === 1) {
           failed = true;
           return Promise.reject(new Error("transient store failure"));
         }
