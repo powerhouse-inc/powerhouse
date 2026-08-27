@@ -102,7 +102,9 @@ describe("getDbClient sharing", () => {
     expect(bRows.rows).toEqual([{ v: "attachments-row" }]);
 
     await fresh.knex.destroy();
-  });
+    // Three PGLite cold boots plus two full-tree snapshot writes. On the
+    // Windows CI runner that measured 52s, past the 30s file default.
+  }, 120_000);
 
   it("evicts the cache entry on knex.destroy() so a re-init gets a fresh client", async () => {
     const dir = await mktemp();

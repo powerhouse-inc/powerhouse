@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { getPowerhouseProjectInfo } from "@powerhousedao/shared/clis";
-import { spawnSync } from "node:child_process";
+import spawn from "cross-spawn";
 import { resolveCommand } from "package-manager-detector";
 import { getVersion } from "./get-version.js";
 
@@ -54,11 +54,13 @@ export async function executePhCliCommand(phCliCommand: string) {
 
   const { command, args } = resolved;
   // spawn (not a shell-joined string) so args with shell metacharacters — e.g.
-  // `connect build --json '{"a":"b"}'` — survive intact.
-  const result = spawnSync(command, args, {
+  // `connect build --json '{"a":"b"}'` — survive intact. cross-spawn keeps that
+  // guarantee on Windows too: `command` here is an npx/pnpm/yarn `.cmd` shim,
+  // which node:child_process refuses to run without `shell: true` (spawn
+  // EINVAL), and `shell: true` is exactly what would break those arguments.
+  const result = spawn.sync(command, args, {
     stdio: "inherit",
     cwd: projectPath ?? process.cwd(),
-    shell: false,
   });
   if (result.error) throw result.error;
   if (result.signal) {

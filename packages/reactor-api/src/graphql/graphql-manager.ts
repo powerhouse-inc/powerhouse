@@ -204,7 +204,10 @@ export class GraphQLManager {
     this.httpAdapter.setupMiddleware({ bodyLimit: "50mb" });
 
     // Register REST endpoint for drive info as a framework-agnostic FetchHandler.
-    const driveRoutePath = path.join(this.path, "d/:drive");
+    // posix.join, not join: these are URL routes, and on Windows path.join
+    // would emit backslashes, mounting the route at "\d\:drive" so every
+    // request 404s.
+    const driveRoutePath = path.posix.join(this.path, "d/:drive");
     const driveMatcher = match<{ drive: string }>(driveRoutePath);
     this.httpAdapter.mount(driveRoutePath, async (request: Request) => {
       const url = new URL(request.url);
@@ -540,7 +543,7 @@ export class GraphQLManager {
 
     // Refresh the supergraph-level SSE handler so it picks up
     // any newly registered subscription-enabled subgraphs.
-    const superGraphPath = path.join(this.path, "graphql");
+    const superGraphPath = path.posix.join(this.path, "graphql");
     this.#setupSupergraphSSE(superGraphPath);
   }
 
@@ -633,7 +636,7 @@ export class GraphQLManager {
   }
 
   #getSubgraphPath(subgraph: ISubgraph, supergraph: string) {
-    return path.join(subgraph.path ?? "", supergraph, subgraph.name);
+    return path.posix.join(subgraph.path ?? "", supergraph, subgraph.name);
   }
 
   /** The in-process handler map is keyed by bare name, so two distinct
@@ -788,7 +791,7 @@ export class GraphQLManager {
   }
 
   async #createSupergraphGateway() {
-    const superGraphPath = path.join(this.path, "graphql");
+    const superGraphPath = path.posix.join(this.path, "graphql");
     const rawHandler: FetchHandler =
       await this.gatewayAdapter.createSupergraphHandler(
         () => this.#getSubgraphDefinitions(),

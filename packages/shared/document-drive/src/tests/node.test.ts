@@ -27,7 +27,7 @@ import {
 } from "../../gen/schema/zod.js";
 import { driveCreateDocument } from "../../gen/utils.js";
 import { beforeEach, describe, expect, it } from "vitest";
-import { generateMock } from "./generate-mock.js";
+import { generateMock } from "../../../document-model/mock.js";
 import { createDocumentWithNodes } from "./test-factories.js";
 
 describe("Node Operations", () => {

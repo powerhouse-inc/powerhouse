@@ -333,8 +333,10 @@ function restoreMemfs(FS: MemFs, root: string, bytes: Uint8Array): void {
     const full = root + "/" + relPath;
 
     if (type === 0) {
-      if (!FS.analyzePath(full).exists) FS.mkdir(full, mode);
-      else FS.chmod(full, mode);
+      // dirMode: a snapshot written right after a Windows migration can carry
+      // execute-less directory modes, which would make it unopenable.
+      if (!FS.analyzePath(full).exists) FS.mkdir(full, dirMode(mode));
+      else FS.chmod(full, dirMode(mode));
     } else {
       const data = bytes.subarray(off, off + dataLen);
       FS.writeFile(full, data);
@@ -342,6 +344,20 @@ function restoreMemfs(FS: MemFs, root: string, bytes: Uint8Array): void {
     }
     off += dataLen;
   }
+}
+
+/**
+ * Permission bits for a directory created in MEMFS.
+ *
+ * Windows has no execute bit, so `fs.stat` reports every directory as 0o40666.
+ * Copying that mode verbatim produces a MEMFS directory that cannot be
+ * traversed, and every lookup beneath it fails with ENOENT -- which surfaces
+ * as PGLite throwing a bare `ErrnoError { errno: 2 }` on the first query after
+ * a legacy migration. Force the traverse bit on. MEMFS is process-local and
+ * rebuilt from disk on every open, so host permissions carry no meaning here.
+ */
+function dirMode(mode: number): number {
+  return (mode & 0o7777) | 0o111;
 }
 
 async function loadLegacyIntoMemfs(
@@ -362,7 +378,7 @@ async function loadLegacyIntoMemfs(
       const stat = await fs.stat(diskFull);
       if (ent.isDirectory()) {
         if (!FS.analyzePath(memFull).exists) {
-          FS.mkdir(memFull, stat.mode & 0o7777);
+          FS.mkdir(memFull, dirMode(stat.mode));
         }
         await walk(diskFull, memFull);
       } else if (ent.isFile()) {

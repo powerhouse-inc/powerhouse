@@ -39,7 +39,7 @@ Navigate to `/document-models/todo-list/src/tests/todos.test.ts`. You will see t
 
 ```typescript
 import { describe, it, expect } from "vitest";
-import { generateMock } from "@powerhousedao/codegen";
+import { generateMock } from "document-model/mock";
 import {
   reducer,
   utils,
@@ -293,7 +293,7 @@ Here's the complete test file with all updates. Don't forget to add the missing 
 
 ```typescript
 import { describe, it, expect } from "vitest";
-import { generateMock } from "@powerhousedao/codegen";
+import { generateMock } from "document-model/mock";
 import type {
   AddTodoItemInput,
   DeleteTodoItemInput,

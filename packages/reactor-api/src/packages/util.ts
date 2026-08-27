@@ -9,6 +9,7 @@ import type {
 import { childLogger } from "document-model";
 import { execSync } from "node:child_process";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { resolveLinkedPackage } from "./import-resolver.js";
 
 // Define the expected module export structures
@@ -68,7 +69,12 @@ async function loadDependency<T = unknown>(
   packageName: string,
   subPath: string,
 ): Promise<T> {
-  const fullPath = `${packageName}/${subPath}`;
+  // A local package is identified by an absolute path, which has to become a
+  // file:// URL: the ESM loader reads the drive letter in a Windows path as a
+  // URL scheme.
+  const fullPath = path.isAbsolute(packageName)
+    ? pathToFileURL(path.join(packageName, subPath)).href
+    : `${packageName}/${subPath}`;
 
   // Try the standard import first
   try {
@@ -78,12 +84,16 @@ async function loadDependency<T = unknown>(
     const module = (await import(/* @vite-ignore */ fullPath)) as T;
     return module;
   } catch (e) {
-    // Handle module not found errors with fallback resolution
+    // Handle module not found errors with fallback resolution.
+    // ERR_UNSUPPORTED_ESM_URL_SCHEME joins the list because a directory
+    // specifier that is a plain path fails with it on Windows where POSIX
+    // reports ERR_UNSUPPORTED_DIR_IMPORT.
     if (
       e instanceof Error &&
       "code" in e &&
       (e.code === "ERR_MODULE_NOT_FOUND" ||
-        e.code === "ERR_UNSUPPORTED_DIR_IMPORT")
+        e.code === "ERR_UNSUPPORTED_DIR_IMPORT" ||
+        e.code === "ERR_UNSUPPORTED_ESM_URL_SCHEME")
     ) {
       const result = await resolveLinkedPackage<T>(packageName, subPath);
       if (result) return result;

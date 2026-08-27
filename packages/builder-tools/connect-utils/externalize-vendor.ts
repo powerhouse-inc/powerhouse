@@ -522,7 +522,9 @@ const include = JSON.parse(includeJSON);
 const external = JSON.parse(externalJSON ?? '[]');
 const externalSet = new Set(external);
 const reqProj = createRequire(join(dirname, 'noop.js'));
-const { build, esmExternalRequirePlugin } = await import(reqProj.resolve('vite'));
+// pathToFileURL: require.resolve returns an absolute path, and on Windows
+// import('D:\\...') parses "D:" as a URL scheme (ERR_UNSUPPORTED_ESM_URL_SCHEME).
+const { build, esmExternalRequirePlugin } = await import(pathToFileURL(reqProj.resolve('vite')).href);
 // Load the dynamic-base plugin from builder-tools' own built bundle (passed as
 // an absolute path) — it isn't resolvable as a bare specifier from the worker.
 const { connectDynamicBasePlugin, DYNAMIC_BASE_PLACEHOLDER } = await import(pathToFileURL(selfModulePath));

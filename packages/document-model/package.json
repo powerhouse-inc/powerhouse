@@ -1,6 +1,6 @@
 {
   "name": "document-model",
-  "version": "6.2.2-dev.61",
+  "version": "6.2.2-dev.63",
   "license": "AGPL-3.0-only",
   "private": false,
   "files": [
@@ -17,6 +17,11 @@
       "source": "./index.ts",
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
+    },
+    "./mock": {
+      "source": "./mock.ts",
+      "import": "./dist/mock.js",
+      "types": "./dist/mock.d.ts"
     },
     "./test": {
       "source": "./test/index.ts",

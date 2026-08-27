@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/connect",
   "productName": "Powerhouse-Connect",
-  "version": "6.2.2-dev.61",
+  "version": "6.2.2-dev.63",
   "description": "Powerhouse Connect",
   "main": "dist/index.html",
   "type": "module",
@@ -57,7 +57,7 @@
     "build": "pnpm run build:bundle && pnpm run build:css",
     "build:bundle": "tsdown",
     "build:css": "pnpm exec tailwindcss -i style.css -o dist/style.css",
-    "build:debug": "PH_DEBUG_BUILD=true vite build",
+    "build:debug": "cross-env PH_DEBUG_BUILD=true vite build",
     "preview": "vite preview",
     "cy:open": "cypress open",
     "docker:build": "docker build -f ./Dockerfile --tag connect-test-dev --build-arg TAG=dev .",
@@ -100,6 +100,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "cross-env": "catalog:",
     "@tailwindcss/cli": "catalog:",
     "@tailwindcss/vite": "catalog:",
     "@testing-library/dom": "^10.4.0",

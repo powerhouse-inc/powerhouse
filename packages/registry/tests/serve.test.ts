@@ -1,6 +1,5 @@
-import { execSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync } from "node:fs";
 import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
@@ -10,6 +9,7 @@ import {
   DEFAULT_STORAGE_DIR_NAME,
 } from "../src/constants.js";
 import { runRegistry } from "../src/run.js";
+import { packTarball } from "./pack.js";
 
 const REGISTRY_PORT = 8281;
 const REGISTRY_URL = `http://localhost:${REGISTRY_PORT}`;
@@ -43,25 +43,7 @@ async function publishPackage(
   version: string,
   files: Record<string, string>,
 ): Promise<void> {
-  const tmpDir = path.join(import.meta.dirname, ".tmp-serve-publish");
-  execSync(`rm -rf "${tmpDir}" && mkdir -p "${tmpDir}"`);
-  writeFileSync(
-    path.join(tmpDir, "package.json"),
-    JSON.stringify({ name, version, description: "test" }),
-  );
-  for (const [relPath, content] of Object.entries(files)) {
-    const target = path.join(tmpDir, relPath);
-    execSync(`mkdir -p "${path.dirname(target)}"`);
-    writeFileSync(target, content);
-  }
-
-  const tarballName = execSync("npm pack --pack-destination .", {
-    cwd: tmpDir,
-    encoding: "utf-8",
-  }).trim();
-  const tarball = readFileSync(path.join(tmpDir, tarballName));
-  execSync(`rm -rf "${tmpDir}"`);
-
+  const tarball = packTarball({ name, version, description: "test" }, files);
   const shasum = createHash("sha1").update(tarball).digest("hex");
   const tarballBase64 = tarball.toString("base64");
   const shortName = name.startsWith("@") ? name.split("/")[1] : name;

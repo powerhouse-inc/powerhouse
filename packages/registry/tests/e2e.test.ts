@@ -1,5 +1,4 @@
 import type { Manifest } from "@powerhousedao/shared";
-import { execSync } from "node:child_process";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { access, cp, mkdir, rm } from "node:fs/promises";
 import http from "node:http";
@@ -21,6 +20,7 @@ import {
 import type { PublishEvent } from "../src/notifications/types.js";
 import { runRegistry } from "../src/run.js";
 import type { WebhookConfig } from "../src/types.js";
+import { packTarball } from "./pack.js";
 
 const REGISTRY_URL = `http://localhost:${DEFAULT_PORT}`;
 const TEST_PKG_NAME = "test-pkg";
@@ -49,30 +49,16 @@ async function ensureTestUser(): Promise<void> {
 
 /**
  * Publishes a minimal package to the registry using the npm HTTP API.
- * Creates a tarball via `npm pack`, computes the real shasum, then PUTs
- * the publish payload directly to verdaccio.
+ * Builds the tarball, computes the real shasum, then PUTs the publish
+ * payload directly to verdaccio.
  */
 async function publishPackage(
   name = TEST_PKG_NAME,
   version = TEST_PKG_VERSION,
 ): Promise<void> {
   const { createHash } = await import("node:crypto");
-  const { readFileSync } = await import("node:fs");
 
-  const tmpDir = path.join(import.meta.dirname, ".tmp-publish");
-  execSync(`rm -rf ${tmpDir} && mkdir -p ${tmpDir}`);
-  writeFileSync(
-    path.join(tmpDir, "package.json"),
-    JSON.stringify({ name, version, description: "test" }),
-  );
-
-  const tarballName = execSync("npm pack --pack-destination .", {
-    cwd: tmpDir,
-    encoding: "utf-8",
-  }).trim();
-  const tarball = readFileSync(path.join(tmpDir, tarballName));
-  execSync(`rm -rf ${tmpDir}`);
-
+  const tarball = packTarball({ name, version, description: "test" });
   const shasum = createHash("sha1").update(tarball).digest("hex");
   const tarballBase64 = tarball.toString("base64");
   const shortName = name.startsWith("@") ? name.split("/")[1] : name;
@@ -617,15 +603,31 @@ describe("registry e2e", () => {
     });
 
     it("SSE receives publish event", async () => {
+      // The server emits `connected` as it registers the subscriber, so waiting
+      // for it is what guarantees the publish below is observed. A fixed delay
+      // is not enough on a slow runner: the publish lands before the client is
+      // in the set and the event goes nowhere.
+      let markConnected: () => void = () => {};
+      const connected = new Promise<void>((r) => {
+        markConnected = r;
+      });
+
       // Start collecting SSE events (connected + publish)
       const eventsPromise = collectSSEEvents(
         `${REGISTRY_URL}/-/events`,
         2,
         POLL_TIMEOUT,
+        (event) => {
+          if (event.event === "connected") markConnected();
+        },
       );
 
-      // Give SSE connection time to establish
-      await new Promise((r) => setTimeout(r, 500));
+      // Bounded so a connection that never establishes fails on the assertion
+      // below rather than hanging.
+      await Promise.race([
+        connected,
+        new Promise((r) => setTimeout(r, POLL_TIMEOUT)),
+      ]);
 
       // Publish triggers a notification
       await publishPackage("sse-test-pkg", "1.0.0");
@@ -647,11 +649,15 @@ interface SSEEvent {
 /**
  * Opens an SSE connection, collects up to `count` events, and resolves.
  * Aborts after `timeoutMs` with whatever events were collected.
+ *
+ * `onEvent` fires as each event arrives, so a caller can wait for the server's
+ * `connected` event instead of guessing at a delay.
  */
 function collectSSEEvents(
   url: string,
   count: number,
   timeoutMs: number,
+  onEvent?: (event: SSEEvent) => void,
 ): Promise<SSEEvent[]> {
   return new Promise((resolve) => {
     const events: SSEEvent[] = [];
@@ -679,10 +685,12 @@ function collectSSEEvents(
               if (line.startsWith("event: ")) event = line.slice(7);
               if (line.startsWith("data: ")) data = line.slice(6);
             }
-            events.push({
+            const parsed: SSEEvent = {
               event,
               data: JSON.parse(data) as PublishEvent,
-            });
+            };
+            events.push(parsed);
+            onEvent?.(parsed);
             if (events.length >= count) {
               clearTimeout(timeout);
               controller.abort();

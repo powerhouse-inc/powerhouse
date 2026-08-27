@@ -31,7 +31,7 @@ This page covers the low-level `IReactor` interface and the internal components 
 - You need fire-and-forget job submission without waiting for completion
 - You want explicit control over consistency tokens
 - You are building infrastructure that manages its own signing
-- You need access to `executeBatch()` for multi-document atomic operations with dependency ordering
+- You need access to `executeBatch()` for multi-document operations with dependency ordering
 
 ## Building a reactor with ReactorBuilder
 
@@ -149,6 +149,14 @@ const job = await reactor.removeRelationship(parentId, childId1, "child");
 ### Batch operations
 
 `executeBatch` lets you submit multiple mutation jobs with dependency ordering. Jobs are executed in the order dictated by their `dependsOn` keys.
+
+What it guarantees is ordering, and only ordering. A batch is not atomic and not transactional: each job commits on its own, and there is no batch-level rollback, status, or consistency token.
+
+In particular, a `dependsOn` edge waits for the job before it to *finish*, not to *succeed*. A job that fails leaves the queue exactly as a successful one does, so its dependents still run — against whatever state the failure left behind. Jobs that committed stay committed.
+
+The returned value is a submission receipt rather than a result: every `JobInfo` comes back `PENDING`, with a placeholder consistency token. To find out what actually happened, poll `getJobStatus` for each job id, or subscribe to `JOB_FAILED` and correlate through `job.meta.batchId` and `job.meta.batchJobIds`.
+
+There is no idempotency key on a job plan, so re-submitting a batch after a partial failure re-applies the entries that already succeeded. Any compensation is the caller's to write.
 
 ```typescript
 const result = await reactor.executeBatch({

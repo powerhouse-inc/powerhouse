@@ -1,6 +1,5 @@
-import { execSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { mkdir, rm } from "node:fs/promises";
 import http from "node:http";
 import path from "node:path";
@@ -10,6 +9,7 @@ import {
   DEFAULT_STORAGE_DIR_NAME,
 } from "../src/constants.js";
 import { runRegistry } from "../src/run.js";
+import { packTarball } from "./pack.js";
 
 const REGISTRY_PORT = 8181;
 const UPSTREAM_PORT = 8182;
@@ -23,29 +23,18 @@ interface UpstreamPackage {
 }
 
 /**
- * Build a tarball for a package with a given set of files, mirroring the
- * layout `npm pack` would produce (files nested under `package/`).
+ * Build a tarball for a package with a given set of files, in the npm layout
+ * (files nested under `package/`).
  */
 function buildTarball(
   name: string,
   version: string,
   files: Record<string, string>,
 ): UpstreamPackage {
-  const tmpDir = path.join(import.meta.dirname, ".tmp-upstream-pack");
-  execSync(`rm -rf "${tmpDir}" && mkdir -p "${tmpDir}"`);
-  const pkgJson = { name, version, description: "upstream test package" };
-  writeFileSync(path.join(tmpDir, "package.json"), JSON.stringify(pkgJson));
-  for (const [relPath, content] of Object.entries(files)) {
-    const target = path.join(tmpDir, relPath);
-    execSync(`mkdir -p "${path.dirname(target)}"`);
-    writeFileSync(target, content);
-  }
-  const tarballName = execSync("npm pack --pack-destination .", {
-    cwd: tmpDir,
-    encoding: "utf-8",
-  }).trim();
-  const tarball = readFileSync(path.join(tmpDir, tarballName));
-  execSync(`rm -rf "${tmpDir}"`);
+  const tarball = packTarball(
+    { name, version, description: "upstream test package" },
+    files,
+  );
   return {
     version,
     tarball,

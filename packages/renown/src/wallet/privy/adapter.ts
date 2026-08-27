@@ -6,6 +6,7 @@ import type {
 import type { SignCredentialTypedData } from "../../credential.js";
 import { LoginMethod, type WalletSession } from "../types.js";
 import type { PrivyLoginMethod } from "./meta.js";
+import type { PrivyAuthState, SendCodeOptions } from "./types.js";
 
 type Hex = `0x${string}`;
 type PrivyLoginMethodId = NonNullable<
@@ -14,7 +15,7 @@ type PrivyLoginMethodId = NonNullable<
 
 // Exhaustive over PrivyLoginMethod, so widening that union without adding the
 // Privy id here is a compile error.
-const PRIVY_METHOD_MAP: Record<PrivyLoginMethod, PrivyLoginMethodId> = {
+export const PRIVY_METHOD_MAP: Record<PrivyLoginMethod, PrivyLoginMethodId> = {
   [LoginMethod.WALLET]: "wallet",
   [LoginMethod.GOOGLE]: "google",
   [LoginMethod.APPLE]: "apple",
@@ -37,12 +38,23 @@ const PRIVY_OAUTH_PROVIDERS: Partial<
 export interface PrivyBindings {
   openLoginModal: (options?: LoginModalOptions) => void;
   initOAuth: (options: { provider: PrivyOAuthProviderId }) => Promise<void>;
+  sendCode: (options: {
+    email: string;
+    disableSignup?: boolean;
+  }) => Promise<void>;
+  loginWithCode: (options: { code: string }) => Promise<void>;
   logout: () => Promise<void>;
   signTypedData: (
     args: Parameters<SignCredentialTypedData>[0],
     address: Hex,
   ) => Promise<Hex>;
 }
+
+const INITIAL_STATE: PrivyAuthState = {
+  ready: false,
+  authenticated: false,
+  emailStatus: "initial",
+};
 
 interface PendingLogin {
   resolve(session: WalletSession): void;
@@ -58,6 +70,8 @@ export class PrivyCore {
   private pending: PendingLogin | null = null;
   private session: WalletSession | undefined = undefined;
   private listeners = new Set<(session: WalletSession | undefined) => void>();
+  private state: PrivyAuthState = INITIAL_STATE;
+  private stateListeners = new Set<(state: PrivyAuthState) => void>();
 
   constructor(supportedMethods: LoginMethod[]) {
     this.supportedMethods = supportedMethods;
@@ -88,6 +102,34 @@ export class PrivyCore {
 
   private emit(session: WalletSession | undefined): void {
     for (const listener of this.listeners) listener(session);
+  }
+
+  getState(): PrivyAuthState {
+    return this.state;
+  }
+
+  subscribeState(listener: (state: PrivyAuthState) => void): () => void {
+    this.stateListeners.add(listener);
+    return () => {
+      this.stateListeners.delete(listener);
+    };
+  }
+
+  // Called by the bridge whenever Privy's auth/OTP state changes. Identity-stable
+  // while unchanged so useSyncExternalStore consumers don't re-render.
+  syncState(next: PrivyAuthState): void {
+    const prev = this.state;
+    if (
+      prev.ready === next.ready &&
+      prev.authenticated === next.authenticated &&
+      prev.email === next.email &&
+      prev.emailStatus === next.emailStatus &&
+      prev.emailError === next.emailError
+    ) {
+      return;
+    }
+    this.state = next;
+    for (const listener of this.stateListeners) listener(next);
   }
 
   // Called by the bridge when the embedded wallet is available. Builds the
@@ -136,27 +178,32 @@ export class PrivyCore {
     this.pending = null;
   }
 
-  async connect(method?: LoginMethod): Promise<WalletSession> {
-    if (this.session) return this.session;
+  private requireBindings(): PrivyBindings {
     if (!this.bindings) {
       throw new Error(
         "PrivyAdapter not bound. Ensure the adapter Provider wraps the app.",
       );
     }
+    return this.bindings;
+  }
 
-    const chosen = method ?? this.supportedMethods.at(0);
-    if (!chosen) {
-      throw new Error("PrivyAdapter has no supported login methods configured");
+  private requireMethod(method: LoginMethod): void {
+    if (!this.supportedMethods.includes(method)) {
+      throw new Error(`PrivyAdapter does not support login method "${method}"`);
     }
-    // PRIVY_METHOD_MAP is total over the methods Privy can drive, so only the
-    // configured subset needs checking here.
-    if (!this.supportedMethods.includes(chosen)) {
-      throw new Error(`PrivyAdapter does not support login method "${chosen}"`);
-    }
-    const privyMethod = PRIVY_METHOD_MAP[chosen];
+  }
 
-    const bindings = this.bindings;
-    const oauthProvider = PRIVY_OAUTH_PROVIDERS[chosen];
+  // Resolves via syncFromEmbeddedWallet once the embedded wallet arrives, or
+  // rejects through handleLoginError / the start() failure.
+  private awaitSession(
+    start: (fail: (error: unknown) => void) => void,
+  ): Promise<WalletSession> {
+    // One login at a time: replacing `pending` would orphan the earlier promise.
+    if (this.pending) {
+      return Promise.reject(
+        new Error("PrivyAdapter: a login is already in progress"),
+      );
+    }
     return new Promise<WalletSession>((resolve, reject) => {
       this.pending = { resolve, reject };
       const fail = (error: unknown) => {
@@ -164,23 +211,86 @@ export class PrivyCore {
         reject(error instanceof Error ? error : new Error(String(error)));
       };
       try {
-        // initOAuth navigates away, so this promise stays pending until the page
-        // unloads; syncFromEmbeddedWallet emits the session on the redirect back.
-        if (oauthProvider) {
-          bindings.initOAuth({ provider: oauthProvider }).catch(fail);
-        } else {
-          bindings.openLoginModal({ loginMethods: [privyMethod] });
-        }
+        start(fail);
       } catch (error) {
         fail(error);
       }
     });
   }
 
+  async connect(method?: LoginMethod): Promise<WalletSession> {
+    if (this.session) return this.session;
+    const bindings = this.requireBindings();
+
+    const chosen = method ?? this.supportedMethods.at(0);
+    if (!chosen) {
+      throw new Error("PrivyAdapter has no supported login methods configured");
+    }
+    // PRIVY_METHOD_MAP is total over the methods Privy can drive, so only the
+    // configured subset needs checking here.
+    this.requireMethod(chosen);
+    const privyMethod = PRIVY_METHOD_MAP[chosen];
+    const oauthProvider = PRIVY_OAUTH_PROVIDERS[chosen];
+
+    return this.awaitSession((fail) => {
+      // initOAuth navigates away, so this promise stays pending until the page
+      // unloads; syncFromEmbeddedWallet emits the session on the redirect back.
+      if (oauthProvider) {
+        bindings.initOAuth({ provider: oauthProvider }).catch(fail);
+      } else {
+        bindings.openLoginModal({ loginMethods: [privyMethod] });
+      }
+    });
+  }
+
+  async sendCode(email: string, options?: SendCodeOptions): Promise<void> {
+    this.requireMethod(LoginMethod.EMAIL);
+    await this.requireBindings().sendCode({
+      email,
+      disableSignup: options?.disableSignup,
+    });
+  }
+
+  async loginWithCode(code: string): Promise<WalletSession> {
+    if (this.session) return this.session;
+    this.requireMethod(LoginMethod.EMAIL);
+    const bindings = this.requireBindings();
+    // loginWithCode resolves on authentication; the wallet follows through the
+    // bridge (useWallets, or createWallet for a first login).
+    return this.awaitSession((fail) => {
+      bindings.loginWithCode({ code }).catch(fail);
+    });
+  }
+
   async disconnect(): Promise<void> {
     this.clearSession();
     if (!this.bindings) return;
-    await this.bindings.logout();
+    // When mounted on demand for this logout, Privy may still be restoring its
+    // session; its logout needs that to finish.
+    await this.whenReady();
+    // Re-read: the bridge may have unmounted during the wait.
+    const bindings = this.currentBindings();
+    if (!bindings) return;
+    await bindings.logout();
+  }
+
+  private currentBindings(): PrivyBindings | null {
+    return this.bindings;
+  }
+
+  private whenReady(timeoutMs = 10_000): Promise<void> {
+    if (this.state.ready) return Promise.resolve();
+    return new Promise((resolve) => {
+      const done = () => {
+        unsubscribe();
+        clearTimeout(timer);
+        resolve();
+      };
+      const unsubscribe = this.subscribeState((state) => {
+        if (state.ready) done();
+      });
+      const timer = setTimeout(done, timeoutMs);
+    });
   }
 }
 

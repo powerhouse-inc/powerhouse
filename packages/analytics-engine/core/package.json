@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/analytics-engine-core",
-  "version": "6.2.2-dev.61",
+  "version": "6.2.2-dev.63",
   "license": "AGPL-3.0-only",
   "repository": {
     "type": "git",
@@ -24,7 +24,7 @@
   ],
   "scripts": {
     "build": "tsdown",
-    "test": "vitest --run ./**/*.test.ts"
+    "test": "vitest --run"
   },
   "dependencies": {
     "luxon": "catalog:",
@@ -35,7 +35,7 @@
     "vitest": "catalog:",
     "tsdown": "catalog:"
   },
-  "description": "Powerhouse analytics engine — time-series query engine for document drive metrics and usage data.",
+  "description": "Powerhouse analytics engine â€” time-series query engine for document drive metrics and usage data.",
   "keywords": [
     "powerhouse",
     "vetra",

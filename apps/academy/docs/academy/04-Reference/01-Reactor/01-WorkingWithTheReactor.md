@@ -160,7 +160,7 @@ All list methods support pagination via `PagingOptions` (`{ cursor, limit }`) an
 | `createEmpty(documentModelType, options?)`                                                  | Create an empty document of a given type                           |
 | `execute(documentIdentifier, branch, actions)`                                              | Apply actions and wait for completion                              |
 | `executeAsync(documentIdentifier, branch, actions)`                                         | Submit actions and return immediately with a `JobInfo`             |
-| `executeBatch(request)`                                                                     | Apply multiple jobs in dependency order and wait for all          |
+| `executeBatch(request)`                                                                     | Submit multiple jobs in dependency order and wait for all to settle |
 | `loadBatch(request)`                                                                        | Load batches of pre-existing operations across documents          |
 | `rename(documentIdentifier, name, branch?)`                                                 | Rename a document                                                  |
 | `setPreferredEditor(documentIdentifier, preferredEditor, branch?)`                          | Set the document's preferred editor (`null` clears it)            |

@@ -5,7 +5,7 @@
   "scripts": {
     "tsc": "tsc --build",
     "test": "pnpm test:ci",
-    "test:ci": "CI=true pnpm --filter=document-model --filter=@powerhousedao/shared --filter=@powerhousedao/pglite-fs --filter=@powerhousedao/registry --filter=@powerhousedao/reactor-api --filter=@powerhousedao/reactor-browser --filter=@powerhousedao/reactor-hypercore --filter=@powerhousedao/reactor-group --filter=@powerhousedao/reactor-mcp --filter=@powerhousedao/vetra --filter=@powerhousedao/versioned-documents --filter=@powerhousedao/switchboard --filter=@powerhousedao/connect --filter=@powerhousedao/design-system --filter=@powerhousedao/analytics-engine-core --filter=@powerhousedao/analytics-engine-graphql --filter=@powerhousedao/analytics-engine-knex --filter=@powerhousedao/load-test-connect --filter=ph-cmd --filter=@renown/sdk --filter=@powerhousedao/powerhouse-vetra-packages --no-bail run test",
+    "test:ci": "cross-env CI=true pnpm --filter=document-model --filter=@powerhousedao/shared --filter=@powerhousedao/pglite-fs --filter=@powerhousedao/registry --filter=@powerhousedao/reactor-api --filter=@powerhousedao/reactor-browser --filter=@powerhousedao/reactor-hypercore --filter=@powerhousedao/reactor-group --filter=@powerhousedao/reactor-mcp --filter=@powerhousedao/vetra --filter=@powerhousedao/versioned-documents --filter=@powerhousedao/switchboard --filter=@powerhousedao/connect --filter=@powerhousedao/design-system --filter=@powerhousedao/analytics-engine-core --filter=@powerhousedao/analytics-engine-graphql --filter=@powerhousedao/analytics-engine-knex --filter=@powerhousedao/load-test-connect --filter=ph-cmd --filter=@renown/sdk --filter=@powerhousedao/powerhouse-vetra-packages --no-bail run test",
     "test:codegen": "pnpm --filter=test-codegen run test",
     "test:e2e:vetra": "pnpm --filter=test-package-vetra run test",
     "test:e2e:vetra:worker": "pnpm --filter=test-package-vetra run test:worker",
@@ -18,7 +18,7 @@
     "test:browser": "pnpm --filter=@powerhousedao/reactor-browser run test",
     "test:pg": "pnpm --filter=@powerhousedao/analytics-engine-pg run test",
     "test:coverage": "pnpm vitest run --coverage",
-    "simulate-ci-workflow": "pnpm clean && pnpm install-ci && pnpm check-ts-references && pnpm typecheck && pnpm build && pnpm typecheck:consumers && pnpm rebuild --recursive && pnpm --filter=@powerhousedao/versioned-documents --no-bail run build && pnpm -r --workspace-concurrency=1 lint && pnpm test:ci && pnpm test:codegen && pnpm test:e2e:vetra && pnpm test:e2e:package && pnpm build:storybook && pnpm check-circular-imports",
+    "simulate-ci-workflow": "pnpm clean && pnpm install-ci && pnpm check-ts-references && pnpm build && pnpm typecheck && pnpm typecheck:consumers && pnpm rebuild --recursive && pnpm --filter=@powerhousedao/versioned-documents --no-bail run build && pnpm -r --workspace-concurrency=1 lint && pnpm test:ci && pnpm test:codegen && pnpm test:e2e:vetra && pnpm test:e2e:package && pnpm build:storybook && pnpm check-circular-imports",
     "simulate-ci-workflow-reactor": "pnpm simulate-ci-workflow && pnpm test:reactor && pnpm test:integration",
     "lint": "pnpm -r --workspace-concurrency=1 lint",
     "install-ci": "pnpm i --frozen-lockfile",
@@ -46,6 +46,7 @@
     "*.{js,jsx,mjs,cjs,ts,tsx,mts,cts}": "eslint --fix --no-warn-ignored"
   },
   "devDependencies": {
+    "cross-env": "catalog:",
     "@commitlint/cli": "^19.8.1",
     "@commitlint/config-conventional": "^19.8.1",
     "@eslint/js": "^10.0.1",

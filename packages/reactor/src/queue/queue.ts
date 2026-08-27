@@ -498,7 +498,11 @@ export class InMemoryQueue implements IQueue {
     // Remove from job index
     this.jobIndex.delete(jobId);
 
-    // Track as completed so dependent jobs are unblocked
+    // Completed here means finished, not succeeded: this is the same set
+    // areDependenciesMet reads, and it cannot tell the two apart. A failed job
+    // therefore releases its dependents, which go on to run against whatever
+    // state the failure left behind. That is what a batch's dependsOn edges
+    // mean today - ordering, with no guarantee the job before them worked.
     this.completedJobs.add(jobId);
 
     // For in-memory queue, failing just removes the job

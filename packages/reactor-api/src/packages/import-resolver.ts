@@ -1,4 +1,18 @@
 import path from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+
+/**
+ * Imports a specifier that may be either a bare package specifier or a
+ * filesystem path. Absolute paths are converted to file:// URLs, because the
+ * ESM loader reads the drive letter in a Windows path as a URL scheme
+ * (`import('D:\\...')` fails with ERR_UNSUPPORTED_ESM_URL_SCHEME).
+ */
+async function importSpecifier<T>(target: string): Promise<T> {
+  const specifier = path.isAbsolute(target)
+    ? pathToFileURL(target).href
+    : target;
+  return (await import(/* @vite-ignore */ specifier)) as T;
+}
 
 /**
  * Attempts to import from suggested Node.js paths
@@ -16,7 +30,7 @@ async function tryNodeSuggestedPaths<T>(
 
   for (const suggestedPath of suggestedPaths) {
     try {
-      return (await import(/* @vite-ignore */ suggestedPath)) as T;
+      return await importSpecifier<T>(suggestedPath);
     } catch {
       // Continue to next attempt
     }
@@ -36,7 +50,8 @@ async function tryImportMetaResolve<T>(
     const resolvedUrl = import.meta.resolve?.(`${packageName}/package.json`);
     if (!resolvedUrl) return null;
 
-    const packageRoot = path.dirname(new URL(resolvedUrl).pathname);
+    // fileURLToPath, not URL.pathname: the latter yields "/D:/..." on Windows.
+    const packageRoot = path.dirname(fileURLToPath(resolvedUrl));
     const pathsToTry = [
       path.join(packageRoot, "dist", "node", subPath, "index.mjs"),
       path.join(packageRoot, "dist", "node", `${subPath}.mjs`),
@@ -48,7 +63,7 @@ async function tryImportMetaResolve<T>(
 
     for (const attemptPath of pathsToTry) {
       try {
-        return (await import(/* @vite-ignore */ attemptPath)) as T;
+        return await importSpecifier<T>(attemptPath);
       } catch {
         // Continue to next attempt
       }
@@ -159,7 +174,7 @@ function getCommonWorkspacePaths(
 async function tryWorkspacePatterns<T>(patterns: string[]): Promise<T | null> {
   for (const workspacePath of patterns) {
     try {
-      return (await import(/* @vite-ignore */ workspacePath)) as T;
+      return await importSpecifier<T>(workspacePath);
     } catch {
       // Continue to next attempt
     }

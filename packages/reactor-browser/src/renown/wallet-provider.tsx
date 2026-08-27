@@ -17,11 +17,11 @@ import {
   type ComponentType,
   type ReactNode,
 } from "react";
-import { useUser } from "../hooks/renown.js";
 import {
   failWalletActivation,
   setActiveWalletController,
   setWalletActivator,
+  setWalletAdapterController,
   setWalletDescriptors,
   whenWalletControllerReady,
 } from "./wallet-registry.js";
@@ -103,14 +103,13 @@ export interface RenownWalletProviderProps {
   children: ReactNode;
 }
 
-/** Drop-in provider for Renown in-page wallet sign-in: registers the login activator, lazy-mounts the configured adapters on first click, and merges their controllers for {@link useRenownAuth}. Full walkthrough + examples: the `@powerhousedao/reactor-browser` README ("Renown in-page sign-in") and the Academy Renown authentication guide. Pair with {@link useRenownLoginMethods} to build the login UI. */
+/** Drop-in provider for Renown in-page wallet sign-in: registers the login activator, lazy-mounts the configured adapters on first demand (login, logout, {@link useRenownWalletAdapter}, or an OAuth redirect return — not on a restored session), and merges their controllers for {@link useRenownAuth}. Full walkthrough + examples: the `@powerhousedao/reactor-browser` README ("Renown in-page sign-in") and the Academy Renown authentication guide. Pair with {@link useRenownLoginMethods} to build the login UI. */
 export function RenownWalletProvider({
   adapters: adaptersConfig,
   theme,
   children,
 }: RenownWalletProviderProps) {
   const [descriptors] = useState(() => adaptersConfig);
-  const user = useUser();
   // The snapshot above drops every array after the first; say so in dev.
   useEffect(() => {
     // `process` need not exist in a browser bundle.
@@ -135,15 +134,15 @@ export function RenownWalletProvider({
     () => descriptors?.map((descriptor) => descriptor.meta) ?? [],
     [descriptors],
   );
-  // Mount on a login click / OAuth redirect return, and latch on authentication so
-  // we stay mounted for the page's life — a logout->login remount breaks Privy's modal.
-  const [activated, setActivated] = useState(
+  // Mount on demand (login, logout, useRenownWalletAdapter) or on an OAuth
+  // redirect return — never merely because a user is signed in, so a returning
+  // visitor downloads no wallet code. Once mounted, stay mounted for the page's
+  // life: a logout->login remount breaks Privy's modal.
+  const [active, setActive] = useState(
     () =>
       typeof window !== "undefined" &&
       isWalletRedirectReturn(window.location.search, metas),
   );
-  if (user && !activated) setActivated(true);
-  const active = activated;
   const [adapters, setAdapters] = useState<WalletAdapter[] | null>(null);
   const mountedRef = useRef(new Map<string, MountedAdapter>());
   // Auto-completes sign-in from the session an adapter pushes on an OAuth return.
@@ -153,7 +152,7 @@ export function RenownWalletProvider({
   useEffect(() => {
     if (!descriptors) return;
     setWalletActivator(() => {
-      setActivated(true);
+      setActive(true);
       return whenWalletControllerReady();
     });
     return () => setWalletActivator(undefined);
@@ -193,6 +192,7 @@ export function RenownWalletProvider({
     (meta: WalletAdapterMeta, controller: WalletController | undefined) => {
       if (controller) mountedRef.current.set(meta.id, { meta, controller });
       else mountedRef.current.delete(meta.id);
+      setWalletAdapterController(meta.id, controller);
       setActiveWalletController(
         mergeControllers(Array.from(mountedRef.current.values())),
       );

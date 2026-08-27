@@ -706,9 +706,13 @@ every real operation.
 ### `RenownWalletProvider`
 
 Registers the login activator, lazy-mounts the given adapters, and merges them
-into one controller for `useRenownAuth`. The wallet Provider tree wraps only the
-adapter bridges (each library's modal portals to `<body>`), never your
-`children`, so activating login never remounts your app. Props: `adapters`
+into one controller for `useRenownAuth`. Adapters mount on first demand — a
+`login()` click, `logout()`, `useRenownWalletAdapter`, or an OAuth redirect
+return — not because a stored session was restored, so a signed-in visitor on a
+page that never signs in or out downloads no wallet code. Once mounted they stay
+mounted for the page's life. The wallet Provider tree wraps only the adapter
+bridges (each library's modal portals to `<body>`), never your `children`, so
+activating login never remounts your app. Props: `adapters`
 (`WalletAdapterDescriptor[]`), `theme?`, `children`.
 
 ### `useRenownLoginMethods(labels?)`
@@ -723,6 +727,60 @@ The descriptors come from the provider, not from a prop or context, so a login U
 mounted **outside** the provider's subtree still gets the full list — Connect
 renders its login modal as a sibling of the app. Empty when no provider is
 mounted, which is the redirect-only case.
+
+### `useRenownWalletAdapter<T>(id)` — headless sign-in (custom screens)
+
+Returns the controller of one mounted adapter by its `meta.id`, typed as that
+adapter's own surface, so a host can draw its own sign-in screens without
+importing the wallet library. Rendering the hook activates the wallet tree (that
+is when the adapter's library loads), so call it from the sign-in route, not the
+app shell; a signed-out visitor on a route that never renders it downloads no
+wallet code. `undefined` until the adapter is mounted.
+
+Privy's controller adds email OTP (`sendCode` / `loginWithCode`) plus its auth
+state. Pass the session that `loginWithCode` resolves to into `login(session)`;
+it is a Privy embedded wallet, so it signs the Renown credential silently:
+
+```tsx
+"use client";
+import { useRenownAuth, useRenownWalletAdapter } from "@powerhousedao/reactor-browser/renown";
+// Type-only import: erased at runtime, so @privy-io stays out of the bundle.
+import type { PrivyWalletController } from "@renown/sdk/wallet/privy";
+import { useSyncExternalStore } from "react";
+
+function EmailLogin() {
+  const privy = useRenownWalletAdapter<PrivyWalletController>("privy");
+  const { login } = useRenownAuth();
+  const state = useSyncExternalStore(
+    privy?.subscribeState ?? (() => () => {}),
+    () => privy?.getState(),
+    () => undefined,
+  );
+
+  if (!privy) return <Spinner />; // Privy is loading
+  return (
+    <>
+      <EmailForm
+        busy={state?.emailStatus === "sending-code"}
+        onSubmit={(email) => privy.sendCode(email, { disableSignup: true })}
+      />
+      <CodeForm
+        busy={state?.emailStatus === "submitting-code"}
+        error={state?.emailError}
+        onSubmit={async (code) => login(await privy.loginWithCode(code))}
+      />
+    </>
+  );
+}
+```
+
+`privyAdapter({ …, methods: ["email"], chain })` keeps Privy's own modal
+restricted to email (so it skips the wallet connectors) and pins the embedded
+wallet to the chain Renown issues on — pass the same chain you set as
+`chainId`. The adapter also sets Privy's `appearance.walletList` to
+`["detected_ethereum_wallets"]`: any other value makes Privy fetch the
+WalletConnect explorer listings (~163 KB) on mount, even with external wallets
+disabled. Pass `walletList` to override if you do want those listings.
 
 ### Next.js
 

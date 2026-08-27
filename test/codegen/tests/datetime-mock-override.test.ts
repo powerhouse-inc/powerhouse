@@ -4,7 +4,7 @@ import {
 } from "@powerhousedao/codegen";
 import type { OperationSpecification } from "@powerhousedao/shared/document-model";
 import { makeTestCaseForOperation } from "@powerhousedao/codegen/templates";
-import { generateMock } from "document-model";
+import { generateMock } from "document-model/mock";
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
 

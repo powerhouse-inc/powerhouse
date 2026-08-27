@@ -1954,8 +1954,21 @@ export class SimpleJobExecutor implements IJobExecutor {
             })),
           );
 
+    // A NOOP is the v2 undo marker, and it is only a marker while its skip is
+    // positive: the state rebuild reads the flag, not the count. A reshuffle
+    // hands its whole skip to whichever operation sorts first and zeroes every
+    // other one, so the zeroed NOOPs have to be given theirs back or they stop
+    // undoing anything.
+    //
+    // Not the first one. Its skip spans the operations the reshuffle retired,
+    // and a NOOP sorts first as readily as anything else does - it has no rank
+    // of its own, so the earliest timestamp wins. Overwriting it with 1 leaves
+    // the operations it was meant to supersede standing, which reads them back
+    // into the next reshuffle and drives the cost toward the excessive-
+    // reshuffle limit. Peers get the shortened skip too, and compute a
+    // different superseded set than the reactor that sent it.
     for (const operation of reshuffledOperations) {
-      if (operation.action.type === "NOOP") {
+      if (operation.action.type === "NOOP" && operation.skip === 0) {
         operation.skip = 1;
       }
     }

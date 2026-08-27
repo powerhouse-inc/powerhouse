@@ -156,6 +156,30 @@ Gate any component on auth with a plain `if (!user)` from `useRenownAuth()`; for
 
 Under SSR the cookie seeds the server render and hydration (it is the only thing readable server-side), then `localStorage` takes over once mounted, since that is the credential the SDK actually restores. Include the `documentId`/`username`/`userImage` fields in the cookie's profile hint so both sources agree on name, avatar and profile links — type the route handler with `RenownSessionCookie` rather than redeclaring the payload shape.
 
+### Custom sign-in screens (headless Privy)
+
+If you want your own email sign-in screens instead of Privy's modal, keep the same `RenownProvider` setup and drive the Privy adapter directly with `useRenownWalletAdapter`. It returns the mounted adapter's controller — for Privy that adds `sendCode(email)` / `loginWithCode(code)` plus its auth state — and rendering it is what loads Privy, so a visitor on a page that never renders it downloads no `@privy-io` code. Pass the session that `loginWithCode` resolves to straight into `login(session)`; the embedded wallet signs the credential silently.
+
+```tsx
+import { useRenownAuth, useRenownWalletAdapter } from "@powerhousedao/reactor-browser/renown";
+// Type-only import: erased at runtime, so @privy-io stays out of your bundle.
+import type { PrivyWalletController } from "@renown/sdk/wallet/privy";
+
+function EmailLogin() {
+  const privy = useRenownWalletAdapter<PrivyWalletController>("privy");
+  const { login } = useRenownAuth();
+  if (!privy) return <Spinner />;
+  return (
+    <>
+      <EmailForm onSubmit={(email) => privy.sendCode(email)} />
+      <CodeForm onSubmit={async (code) => login(await privy.loginWithCode(code))} />
+    </>
+  );
+}
+```
+
+Configure the adapter with `methods: ["email"]` and the `chain` Renown issues on (`privyAdapter({ appId, methods: ["email"], chain: mainnet })`). The `@powerhousedao/reactor-browser` README has the full example, including the OTP status and error state.
+
 ### Testing sign-in (mock adapter)
 
 Real wallets and Google OAuth can't run in headless CI, so `@renown/sdk` ships a **mock wallet adapter** (`@renown/sdk/wallet/mock`) for e2e/dev. It is a headless signer backed by a local key (real EIP-712 signatures, no wallet extension or OAuth), so sign-in runs deterministically:

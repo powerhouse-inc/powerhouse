@@ -1,3 +1,53 @@
+## 6.2.2-dev.63 (2026-08-27)
+
+This was a version bump only, there were no code changes.
+
+## 6.2.2-dev.62 (2026-08-27)
+
+### 🚀 Features
+
+- **reactor:** persist a job's operations in one transaction, behind a flag ([dcb6620de](https://github.com/powerhouse-inc/powerhouse/commit/dcb6620de))
+- ⚠️  **reactor:** batch a job's operations by default ([5ffe606c5](https://github.com/powerhouse-inc/powerhouse/commit/5ffe606c5))
+- **renown:** headless Privy email login and chain pinning for whitelabel hosts ([f190b9f87](https://github.com/powerhouse-inc/powerhouse/commit/f190b9f87))
+
+### 🩹 Fixes
+
+- **builder-tools:** import vite by file URL in the build workers ([c85da4935](https://github.com/powerhouse-inc/powerhouse/commit/c85da4935))
+- **ci:** build before typecheck in simulate-ci-workflow ([2ecd03e81](https://github.com/powerhouse-inc/powerhouse/commit/2ecd03e81))
+- **codegen:** let a freshly generated project pass its own test script ([f1c8599d7](https://github.com/powerhouse-inc/powerhouse/commit/f1c8599d7))
+- **pglite-fs:** force the traverse bit on MEMFS directories ([59b1aa27a](https://github.com/powerhouse-inc/powerhouse/commit/59b1aa27a))
+- **reactor:** repair the two-reactor sync bench and give it a smoke check ([81896373e](https://github.com/powerhouse-inc/powerhouse/commit/81896373e))
+- **reactor:** order a reshuffle by keys every replica agrees on ([1b73ba9af](https://github.com/powerhouse-inc/powerhouse/commit/1b73ba9af))
+- **reactor:** keep the keyframes a batched run crosses ([569335349](https://github.com/powerhouse-inc/powerhouse/commit/569335349))
+- **reactor:** judge a batched write against the state it follows ([93dfee954](https://github.com/powerhouse-inc/powerhouse/commit/93dfee954))
+- **reactor:** rebuild from full history for any write carrying a skip ([61e094f23](https://github.com/powerhouse-inc/powerhouse/commit/61e094f23))
+- **reactor:** keep the yield and abort check on the batched paths ([ea97e0fed](https://github.com/powerhouse-inc/powerhouse/commit/ea97e0fed))
+- **reactor:** updating claude file in reactor ([135420e24](https://github.com/powerhouse-inc/powerhouse/commit/135420e24))
+- **reactor:** stop a reshuffled NOOP from clobbering the batch skip ([89fcad159](https://github.com/powerhouse-inc/powerhouse/commit/89fcad159))
+- **reactor-api:** import local packages by file URL, not raw path ([ad986c1e6](https://github.com/powerhouse-inc/powerhouse/commit/ad986c1e6))
+- **reactor-browser:** keep the seeded Renown user when the SDK instance appears ([6574a74eb](https://github.com/powerhouse-inc/powerhouse/commit/6574a74eb))
+- **reactor-browser:** compare Renown users order-insensitively and persist derived state after commit ([e45fe98bc](https://github.com/powerhouse-inc/powerhouse/commit/e45fe98bc))
+- **renown:** mount wallet adapters on demand, not on a restored session ([7f40b4854](https://github.com/powerhouse-inc/powerhouse/commit/7f40b4854))
+- **renown:** default Privy walletList to detected wallets to skip the WalletConnect listings fetch ([b6ce4dc2f](https://github.com/powerhouse-inc/powerhouse/commit/b6ce4dc2f))
+- **renown:** reject a second Privy login while one is pending ([7c9590a42](https://github.com/powerhouse-inc/powerhouse/commit/7c9590a42))
+- **shared:** move generateMock to a dedicated subpath so runtime bundles drop zocker/faker ([223e1682a](https://github.com/powerhouse-inc/powerhouse/commit/223e1682a))
+- **windows:** make package scripts runnable under cmd.exe ([987022ed9](https://github.com/powerhouse-inc/powerhouse/commit/987022ed9))
+- **windows:** build URL paths with posix.join, not path.join ([b42b5c4fc](https://github.com/powerhouse-inc/powerhouse/commit/b42b5c4fc))
+- **windows:** spawn package managers through cross-spawn ([ff4140072](https://github.com/powerhouse-inc/powerhouse/commit/ff4140072))
+
+### ⚠️  Breaking Changes
+
+- **reactor:** batch a job's operations by default  ([5ffe606c5](https://github.com/powerhouse-inc/powerhouse/commit/5ffe606c5))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Fable 5
+- Claude Opus 5
+- Claude Opus 5 (1M context)
+- Wouter Kampmann
+
 ## 6.2.2-dev.61 (2026-08-26)
 
 ### 🩹 Fixes

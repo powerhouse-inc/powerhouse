@@ -1,3 +1,30 @@
+## 6.2.2-dev.63 (2026-08-27)
+
+This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.
+
+## 6.2.2-dev.62 (2026-08-27)
+
+### 🚀 Features
+
+- **renown:** headless Privy email login and chain pinning for whitelabel hosts ([f190b9f87](https://github.com/powerhouse-inc/powerhouse/commit/f190b9f87))
+
+### 🩹 Fixes
+
+- **reactor-browser:** compare Renown users order-insensitively and persist derived state after commit ([e45fe98bc](https://github.com/powerhouse-inc/powerhouse/commit/e45fe98bc))
+- **reactor-browser:** keep the seeded Renown user when the SDK instance appears ([6574a74eb](https://github.com/powerhouse-inc/powerhouse/commit/6574a74eb))
+- **renown:** reject a second Privy login while one is pending ([7c9590a42](https://github.com/powerhouse-inc/powerhouse/commit/7c9590a42))
+- **renown:** default Privy walletList to detected wallets to skip the WalletConnect listings fetch ([b6ce4dc2f](https://github.com/powerhouse-inc/powerhouse/commit/b6ce4dc2f))
+- **renown:** mount wallet adapters on demand, not on a restored session ([7f40b4854](https://github.com/powerhouse-inc/powerhouse/commit/7f40b4854))
+- **ci:** build before typecheck in simulate-ci-workflow ([2ecd03e81](https://github.com/powerhouse-inc/powerhouse/commit/2ecd03e81))
+- **windows:** spawn package managers through cross-spawn ([ff4140072](https://github.com/powerhouse-inc/powerhouse/commit/ff4140072))
+- **windows:** make package scripts runnable under cmd.exe ([987022ed9](https://github.com/powerhouse-inc/powerhouse/commit/987022ed9))
+
+### ❤️ Thank You
+
+- acaldas
+- Claude Opus 5 (1M context)
+- Wouter Kampmann
+
 ## 6.2.2-dev.61 (2026-08-26)
 
 ### 🩹 Fixes
