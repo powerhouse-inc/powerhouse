@@ -4,12 +4,13 @@ import type { Chain } from "viem";
 import { normalizeWalletTheme, type WalletTheme } from "../types.js";
 import { PRIVY_METHOD_MAP, type PrivyCore } from "./adapter.js";
 import { PrivyAdapterBridge } from "./bridge.js";
+import type { PrivyChain } from "./meta.js";
 import { toPrivyAccentColor } from "./theme.js";
 
 interface PrivyProviderConfig {
   appId: string;
   clientId?: string;
-  chain?: Chain;
+  chain?: PrivyChain;
 }
 
 // Build the adapter Provider bound to a specific core + config. Mounts
@@ -27,7 +28,8 @@ export function createPrivyProvider(
   }) {
     const { mode, accentColor } = normalizeWalletTheme(theme);
     const accent = toPrivyAccentColor(accentColor);
-    const { chain } = config;
+    // PrivyChain is the structural subset every viem Chain satisfies.
+    const chain = config.chain as Chain | undefined;
     // Memoize so a new config object per render doesn't rebuild PrivyProvider's
     // context and cascade re-renders into descendants.
     const privyConfig = useMemo<PrivyClientConfig>(
