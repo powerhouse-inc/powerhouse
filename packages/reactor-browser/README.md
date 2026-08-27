@@ -777,7 +777,10 @@ function EmailLogin() {
 `privyAdapter({ …, methods: ["email"], chain })` keeps Privy's own modal
 restricted to email (so it skips the wallet connectors) and pins the embedded
 wallet to the chain Renown issues on — pass the same chain you set as
-`chainId`.
+`chainId`. The adapter also sets Privy's `appearance.walletList` to
+`["detected_ethereum_wallets"]`: any other value makes Privy fetch the
+WalletConnect explorer listings (~163 KB) on mount, even with external wallets
+disabled. Pass `walletList` to override if you do want those listings.
 
 ### Next.js
 

@@ -33,6 +33,8 @@ export interface PHRenownPrivyAdapterConfig {
   methods?: PrivyLoginMethod[];
   /** Chain Renown issues credentials on (e.g. `mainnet` from `viem/chains`). Pins the embedded wallet to it: a wallet on another chain is a different DID and is rejected. */
   chain?: PrivyChain;
+  /** Privy `appearance.walletList`. Defaults to `["detected_ethereum_wallets"]`: with external wallets disabled here (they go through the rainbow adapter), anything else makes Privy fetch the WalletConnect explorer listings (~163 KB) on mount. Set it only if you want those listings. */
+  walletList?: string[];
 }
 
 // Resolve config `methods` to the supported set, falling back to the default.
