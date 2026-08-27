@@ -335,10 +335,25 @@ export interface IReactor {
   /**
    * Applies multiple mutations across documents with dependency management.
    *
+   * Ordering, and only ordering. A batch is neither atomic nor transactional:
+   * it is submitted as one job per plan entry, each commits on its own, and
+   * there is no batch-level rollback, status or consistency token.
+   *
+   * A dependency waits for the job before it to finish, not to succeed. A
+   * failed job leaves the queue the same way a successful one does, so its
+   * dependents still run, against whatever state the failure left behind.
+   * Jobs that committed stay committed.
+   *
+   * Re-submitting after a partial failure re-applies the entries that already
+   * succeeded, because a job plan carries no idempotency key. Compensation
+   * belongs to the caller.
+   *
    * @param request - Batch mutation request containing jobs with dependencies
    * @param signal - Optional abort signal to cancel the request
-   * @param meta - Optional metadata that flows through the job lifecycle
-   * @returns Map of job keys to job information
+   * @returns A receipt, not a result: every JobInfo is a PENDING snapshot
+   * carrying a placeholder consistency token. Poll getJobStatus per job id, or
+   * subscribe to JOB_FAILED and correlate on meta.batchId, to find out what
+   * each one did.
    */
   executeBatch(
     request: BatchExecutionRequest,

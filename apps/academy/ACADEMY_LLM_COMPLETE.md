@@ -20617,7 +20617,7 @@ This page covers the low-level `IReactor` interface and the internal components 
 - You need fire-and-forget job submission without waiting for completion
 - You want explicit control over consistency tokens
 - You are building infrastructure that manages its own signing
-- You need access to `executeBatch()` for multi-document atomic operations with dependency ordering
+- You need access to `executeBatch()` for multi-document operations with dependency ordering
 
 ## Building a reactor with ReactorBuilder
 
