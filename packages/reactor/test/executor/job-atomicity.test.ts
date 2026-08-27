@@ -50,8 +50,14 @@ const whileUnnamed: Grant = {
   where: { eq: [{ attr: "doc.global.name" }, { lit: "" }] },
 };
 
-/** batchApplies documents that a failed job leaves nothing behind. */
-describe("batched applies: what a partial failure leaves behind", () => {
+/**
+ * A failed job leaves nothing behind, end to end through a built reactor.
+ *
+ * Nothing here varies batchApplies, because atomicity does not depend on it:
+ * the whole job runs inside the execution scope's transaction and a failure
+ * rolls it back whether its writes reached the store in one apply or many.
+ */
+describe("a job that fails part-way through", () => {
   let reactor: IReactor;
 
   beforeEach(() => {
