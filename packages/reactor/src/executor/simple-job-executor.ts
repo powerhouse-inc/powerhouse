@@ -217,7 +217,15 @@ export class SimpleJobExecutor implements IJobExecutor {
    * or the writes it made before it failed would be durable: JobRollbackSignal
    * carries the failure out through the transaction and this method turns it
    * back into the returned JobResult every caller expects. A job either fully
-   * applies or leaves nothing behind.
+   * applies or leaves nothing durable behind.
+   *
+   * Durable is the whole of the guarantee. The caches are shared with the
+   * copies the scope hands the job, so a failed job's writes sit in them from
+   * the moment it makes them until the eviction below, and a concurrent read
+   * in that window sees a write that is never going to commit. The window is
+   * not new -- it has always been there for a job that failed by throwing --
+   * but nothing here closes it, and a caller that needs to know a write is
+   * real has the job status to ask.
    */
   async executeJob(job: Job, signal?: AbortSignal): Promise<JobResult> {
     const startTime = Date.now();
@@ -247,13 +255,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         return scoped;
       }, signal);
     } catch (error) {
-      // The caches are shared with the copies the scope hands the job, so the
-      // rollback that just happened undid none of what the job put in them.
-      for (const entry of touchedStreams) {
-        this.writeCache.invalidate(entry.documentId, entry.scope, entry.branch);
-        this.documentMetaCache.invalidate(entry.documentId, entry.branch);
-        this.collectionMembershipCache.invalidate(entry.documentId);
-      }
+      this.evictTouchedStreams(touchedStreams);
 
       if (error instanceof JobRollbackSignal) {
         return error.result;
@@ -464,6 +466,33 @@ export class SimpleJobExecutor implements IJobExecutor {
       },
       pendingEvent,
     };
+  }
+
+  /**
+   * Drops the cached state of every stream a job wrote, after its transaction
+   * did not commit.
+   *
+   * The caches are shared by reference with the copies the scope hands the job,
+   * so a rollback undoes nothing in them: what the job put there survives, as
+   * does anything a read filled from the store while the job's own writes were
+   * still uncommitted. An eviction that throws is swallowed rather than allowed
+   * to replace the failure the caller is owed, and the remaining streams are
+   * still evicted.
+   */
+  private evictTouchedStreams(touchedStreams: TouchedStreams): void {
+    for (const entry of touchedStreams) {
+      try {
+        this.writeCache.invalidate(entry.documentId, entry.scope, entry.branch);
+        this.documentMetaCache.invalidate(entry.documentId, entry.branch);
+        this.collectionMembershipCache.invalidate(entry.documentId);
+      } catch (error) {
+        this.logger.error(
+          "Failed to evict cached state for rolled back @Stream : @Error",
+          entry,
+          error,
+        );
+      }
+    }
   }
 
   private async getCollectionMembershipsForOperations(

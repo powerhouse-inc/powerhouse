@@ -197,8 +197,9 @@ export type JobExecutorConfig = {
    * transactions they arrive in.
    *
    * Atomicity is not one of the things it changes. A job either fully applies
-   * or leaves nothing behind regardless of this setting, because the whole job
-   * runs inside the execution scope's transaction and a failure rolls it back.
+   * or leaves nothing durable behind regardless of this setting, because the
+   * whole job runs inside the execution scope's transaction and a failure
+   * rolls it back.
    * That guarantee belongs to KyselyExecutionScope, which backs both Postgres
    * and PGlite; DefaultExecutionScope opens no transaction and is used only by
    * unit-test harnesses, which therefore see writes survive a failed job.
