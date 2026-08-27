@@ -1,3 +1,4 @@
+import type { Chain } from "viem";
 import { LoginMethod, type WalletAdapterMeta } from "../types.js";
 
 // Login methods the Privy adapter can drive. adapter.ts maps each to a Privy
@@ -23,6 +24,8 @@ export interface PHRenownPrivyAdapterConfig {
   clientId?: string;
   /** Login methods to offer; defaults to [google, email]. */
   methods?: PrivyLoginMethod[];
+  /** Chain Renown issues credentials on (e.g. `mainnet` from `viem/chains`). Pins the embedded wallet to it: a wallet on another chain is a different DID and is rejected. */
+  chain?: Chain;
 }
 
 // Resolve config `methods` to the supported set, falling back to the default.

@@ -6,10 +6,11 @@ import {
   type PHRenownMockAdapterConfig,
 } from "@renown/sdk/wallet/mock";
 import { privyAdapter, type PrivyLoginMethod } from "@renown/sdk/wallet/privy";
-import { rainbowAdapter, type PHRenownChain } from "@renown/sdk/wallet/rainbow";
+import { rainbowAdapter } from "@renown/sdk/wallet/rainbow";
 import {
   arbitrum,
   base,
+  type Chain,
   mainnet,
   optimism,
   polygon,
@@ -41,7 +42,7 @@ function describe(
 
 // `connect.renown.chainId` is an id, but the adapter needs the chain object, so
 // only a listed chain can be offered.
-const CHAINS_BY_ID = new Map<number, PHRenownChain>(
+const CHAINS_BY_ID = new Map<number, Chain>(
   [mainnet, sepolia, polygon, optimism, arbitrum, base].map((chain) => [
     chain.id,
     chain,
@@ -52,7 +53,7 @@ const CHAINS_BY_ID = new Map<number, PHRenownChain>(
 // UI has to offer that chain and no other.
 function chainsFor(
   chainId: number | undefined,
-): readonly [PHRenownChain, ...PHRenownChain[]] | undefined {
+): readonly [Chain, ...Chain[]] | undefined {
   if (chainId === undefined) return undefined;
   const chain = CHAINS_BY_ID.get(chainId);
   if (!chain) {
@@ -94,6 +95,7 @@ export function configToDescriptors(
             // Methods come from JSON, so unvalidated here; the adapter's
             // resolver rejects anything it can't drive.
             methods: methods as PrivyLoginMethod[] | undefined,
+            chain: chains?.[0],
           })),
       );
     }

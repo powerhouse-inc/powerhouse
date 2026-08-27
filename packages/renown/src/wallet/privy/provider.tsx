@@ -1,13 +1,15 @@
 import { useMemo, type ComponentType, type ReactNode } from "react";
 import { PrivyProvider, type PrivyClientConfig } from "@privy-io/react-auth";
+import type { Chain } from "viem";
 import { normalizeWalletTheme, type WalletTheme } from "../types.js";
-import type { PrivyCore } from "./adapter.js";
+import { PRIVY_METHOD_MAP, type PrivyCore } from "./adapter.js";
 import { PrivyAdapterBridge } from "./bridge.js";
 import { toPrivyAccentColor } from "./theme.js";
 
 interface PrivyProviderConfig {
   appId: string;
   clientId?: string;
+  chain?: Chain;
 }
 
 // Build the adapter Provider bound to a specific core + config. Mounts
@@ -25,12 +27,20 @@ export function createPrivyProvider(
   }) {
     const { mode, accentColor } = normalizeWalletTheme(theme);
     const accent = toPrivyAccentColor(accentColor);
+    const { chain } = config;
     // Memoize so a new config object per render doesn't rebuild PrivyProvider's
     // context and cascade re-renders into descendants.
     const privyConfig = useMemo<PrivyClientConfig>(
       () => ({
+        // Only the configured methods, so Privy skips the connectors (e.g.
+        // WalletConnect) that the unlisted ones would initialize.
+        loginMethods: core.supportedMethods.map(
+          (method) => PRIVY_METHOD_MAP[method],
+        ),
         // Privy generates its own light/dark variants from the accent.
         appearance: { theme: mode, ...(accent ? { accentColor: accent } : {}) },
+        // Renown rejects a wallet on any chain but the one it issues on.
+        ...(chain ? { defaultChain: chain, supportedChains: [chain] } : {}),
         embeddedWallets: {
           ethereum: { createOnLogin: "users-without-wallets" as const },
           showWalletUIs: false,
@@ -42,7 +52,7 @@ export function createPrivyProvider(
           walletConnect: { enabled: false },
         },
       }),
-      [mode, accent],
+      [mode, accent, chain],
     );
 
     return (

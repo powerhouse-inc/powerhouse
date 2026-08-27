@@ -2,8 +2,10 @@
 // client module even though the descriptor entry reaches it lazily.
 "use client";
 
-import type { WalletAdapterImpl, WalletController } from "../types.js";
+import { useMemo } from "react";
+import type { WalletAdapterImpl } from "../types.js";
 import { PrivyCore } from "./adapter.js";
+import type { PrivyWalletController } from "./types.js";
 import {
   resolvePrivyMethods,
   type PHRenownPrivyAdapterConfig,
@@ -19,15 +21,24 @@ export function createPrivyAdapter(
   const Provider = createPrivyProvider(core, {
     appId: config.appId,
     clientId: config.clientId,
+    chain: config.chain,
   });
 
-  function useController(): WalletController {
-    return {
-      connect: (method) => core.connect(method),
-      disconnect: () => core.disconnect(),
-      getSession: () => core.getSession(),
-      subscribe: (listener) => core.subscribe(listener),
-    };
+  // Stable identity: the host publishes this to a registry on change.
+  function useController(): PrivyWalletController {
+    return useMemo<PrivyWalletController>(
+      () => ({
+        connect: (method) => core.connect(method),
+        disconnect: () => core.disconnect(),
+        getSession: () => core.getSession(),
+        subscribe: (listener) => core.subscribe(listener),
+        sendCode: (email, options) => core.sendCode(email, options),
+        loginWithCode: (code) => core.loginWithCode(code),
+        getState: () => core.getState(),
+        subscribeState: (listener) => core.subscribeState(listener),
+      }),
+      [],
+    );
   }
 
   return { Provider, useController };
@@ -35,5 +46,11 @@ export function createPrivyAdapter(
 
 export { PrivyCore } from "./adapter.js";
 export type { PrivyBindings } from "./adapter.js";
+export type {
+  PrivyAuthState,
+  PrivyEmailStatus,
+  PrivyWalletController,
+  SendCodeOptions,
+} from "./types.js";
 export { PrivyAdapterBridge } from "./bridge.js";
 export { createPrivyProvider } from "./provider.js";
