@@ -25,7 +25,7 @@ import { DocumentModelRegistry } from "../../src/registry/implementation.js";
 import type { IDocumentModelRegistry } from "../../src/registry/interfaces.js";
 import { DocumentDeletedError } from "../../src/shared/errors.js";
 import type { KyselyKeyframeStore } from "../../src/storage/kysely/keyframe-store.js";
-import type { KyselyOperationStore } from "../../src/storage/kysely/store.js";
+import { KyselyOperationStore } from "../../src/storage/kysely/store.js";
 import type { Database as DatabaseSchema } from "../../src/storage/kysely/types.js";
 import {
   createMockLogger,
@@ -57,7 +57,7 @@ const scopeVariants: ScopeVariant[] = [
 
 describe.each(scopeVariants)(
   "SimpleJobExecutor Integration ($name)",
-  ({ createScope }) => {
+  ({ name, createScope }) => {
     let executor: SimpleJobExecutor;
     let registry: IDocumentModelRegistry;
     let db: Kysely<DatabaseSchema>;
@@ -66,6 +66,7 @@ describe.each(scopeVariants)(
     let writeCache: KyselyWriteCache;
     let operationIndex: KyselyOperationIndex;
     let documentMetaCache: DocumentMetaCache;
+    let collectionMembershipCache: CollectionMembershipCache;
     let eventBus: IEventBus;
 
     async function createDocumentWithCreateOperation(
@@ -193,9 +194,7 @@ describe.each(scopeVariants)(
       });
       await documentMetaCache.startup();
 
-      const collectionMembershipCache = new CollectionMembershipCache(
-        operationIndex,
-      );
+      collectionMembershipCache = new CollectionMembershipCache(operationIndex);
 
       const executionScope = createScope(
         db,
@@ -1432,6 +1431,309 @@ describe.each(scopeVariants)(
 
         invalidateSpy.mockRestore();
       });
+    });
+
+    /**
+     * A job either fully applies or leaves nothing behind. The guarantee comes
+     * from the execution scope's transaction, so it is a property of which
+     * scope the executor was built with, not of anything the job does.
+     */
+    describe("Job Atomicity on Failure", () => {
+      /**
+       * Two writes, the second refused: a relationship whose source and target
+       * are the same document is rejected before it reaches the store, after
+       * the one before it has already been applied.
+       */
+      async function runPartiallyFailingJob(): Promise<{
+        driveId: string;
+        success: boolean;
+      }> {
+        const driveDoc = driveDocumentModelModule.utils.createDocument();
+        const driveId = driveDoc.header.id;
+        await createDocumentWithCreateOperation(
+          driveId,
+          driveDoc.header.documentType,
+          driveDoc.state,
+        );
+
+        const childDoc = driveDocumentModelModule.utils.createDocument();
+        childDoc.header.id = "atomicity-child";
+        await createDocumentWithCreateOperation(
+          childDoc.header.id,
+          childDoc.header.documentType,
+          childDoc.state,
+        );
+
+        const job: Job = {
+          id: "job-partial-failure",
+          kind: "mutation",
+          documentId: driveId,
+          scope: "document",
+          branch: "main",
+          actions: [
+            {
+              id: "atomicity-action-1",
+              type: "ADD_RELATIONSHIP",
+              scope: "document",
+              timestampUtcMs: new Date().toISOString(),
+              input: {
+                sourceId: driveId,
+                targetId: childDoc.header.id,
+                relationshipType: "child",
+              },
+            },
+            {
+              id: "atomicity-action-2",
+              type: "ADD_RELATIONSHIP",
+              scope: "document",
+              timestampUtcMs: new Date().toISOString(),
+              input: {
+                sourceId: driveId,
+                targetId: driveId,
+                relationshipType: "child",
+              },
+            },
+          ],
+          operations: [],
+          createdAt: new Date().toISOString(),
+          queueHint: [],
+          errorHistory: [],
+          meta: { batchId: "test", batchJobIds: ["job-partial-failure"] },
+        };
+
+        const result = await executor.executeJob(job);
+        return { driveId, success: result.success };
+      }
+
+      async function relationshipsOn(driveId: string): Promise<number> {
+        const operations = await operationStore.getSince(
+          driveId,
+          "document",
+          "main",
+          -1,
+        );
+        return operations.results.filter(
+          (operation) => operation.action.type === "ADD_RELATIONSHIP",
+        ).length;
+      }
+
+      /**
+       * A load job of three operations, the store rejecting the second. Load
+       * replays accepted history, which never batches, so every operation
+       * reaches the store through an apply of its own and the failure lands
+       * with the one before it already written.
+       */
+      async function runPartiallyFailingLoadJob(): Promise<{
+        driveId: string;
+        success: boolean;
+      }> {
+        const driveDoc = driveDocumentModelModule.utils.createDocument();
+        const driveId = driveDoc.header.id;
+        await createDocumentWithCreateOperation(
+          driveId,
+          driveDoc.header.documentType,
+          driveDoc.state,
+        );
+
+        const operations = [0, 1, 2].map((index) => {
+          const actionId = `load-atomicity-action-${index}`;
+          const timestampUtcMs = new Date(
+            Date.UTC(2026, 0, 1, 0, 0, index),
+          ).toISOString();
+          return {
+            id: deriveOperationId(driveId, "global", "main", actionId),
+            index,
+            timestampUtcMs,
+            hash: "",
+            skip: 0,
+            action: {
+              id: actionId,
+              type: "ADD_FOLDER",
+              scope: "global",
+              timestampUtcMs,
+              input: {
+                id: `load-folder-${index}`,
+                name: `Load Folder ${index}`,
+                parentFolder: null,
+              },
+            },
+          };
+        });
+
+        const job: Job = {
+          id: "job-load-partial-failure",
+          kind: "load",
+          documentId: driveId,
+          scope: "global",
+          branch: "main",
+          actions: [],
+          operations,
+          createdAt: new Date().toISOString(),
+          queueHint: [],
+          errorHistory: [],
+          meta: { batchId: "test", batchJobIds: ["job-load-partial-failure"] },
+        };
+
+        const realApply = KyselyOperationStore.prototype.apply;
+        const applySpy = vi
+          .spyOn(KyselyOperationStore.prototype, "apply")
+          .mockImplementation(function (
+            this: KyselyOperationStore,
+            ...args: Parameters<KyselyOperationStore["apply"]>
+          ) {
+            const scope = args[2];
+            const revision = args[4];
+            if (scope === "global" && revision === 1) {
+              return Promise.reject(new Error("load store failure"));
+            }
+            return realApply.apply(this, args);
+          });
+
+        const result = await executor.executeJob(job);
+        applySpy.mockRestore();
+
+        return { driveId, success: result.success };
+      }
+
+      async function foldersOn(driveId: string): Promise<number> {
+        const operations = await operationStore.getSince(
+          driveId,
+          "global",
+          "main",
+          -1,
+        );
+        return operations.results.length;
+      }
+
+      it("returns the failure rather than throwing it", async () => {
+        // The rollback leaves through a throw, but no caller ever sees one: a
+        // failed job is a returned result, the same as it has always been.
+        const { success } = await runPartiallyFailingJob();
+        expect(success).toBe(false);
+      });
+
+      if (name === "KyselyExecutionScope") {
+        it("persists nothing when a job fails part-way through", async () => {
+          const { driveId } = await runPartiallyFailingJob();
+
+          expect(await relationshipsOn(driveId)).toBe(0);
+        });
+
+        it("leaves no cached state behind for the writes it rolled back", async () => {
+          const { driveId } = await runPartiallyFailingJob();
+
+          // A rollback undoes nothing in the caches, which are shared with the
+          // copies the scope hands the job, so the executor evicts them itself.
+          // The document was set up with two operations and the job's own write
+          // is gone, so a cache still holding it would read one revision ahead
+          // of the store.
+          const cached = await writeCache.getState(driveId, "document", "main");
+          const stored = await operationStore.getSince(
+            driveId,
+            "document",
+            "main",
+            -1,
+          );
+          expect(stored.results).toHaveLength(2);
+          expect(cached.header.revision.document).toBe(2);
+        });
+
+        it("evicts what it cached when the transaction itself fails to commit", async () => {
+          // The failure classes above all abandon the job mid-body. This one
+          // lets the body run to completion -- so every cache holds the job's
+          // writes and the write cache holds the new revision -- and then fails
+          // the commit, which is the only point at which a job that did
+          // everything right still leaves nothing behind.
+          const driveDoc = driveDocumentModelModule.utils.createDocument();
+          const driveId = driveDoc.header.id;
+          await createDocumentWithCreateOperation(
+            driveId,
+            driveDoc.header.documentType,
+            driveDoc.state,
+          );
+
+          const realTransaction = db.transaction.bind(db);
+          const transactionSpy = vi
+            .spyOn(db, "transaction")
+            .mockImplementation(() => {
+              const builder = realTransaction();
+              const execute = builder.execute.bind(builder);
+              return {
+                execute: (fn: (trx: unknown) => Promise<unknown>) =>
+                  execute(async (trx) => {
+                    await fn(trx);
+                    throw new Error("commit-fail");
+                  }),
+              } as unknown as ReturnType<typeof db.transaction>;
+            });
+
+          const job: Job = {
+            id: "job-commit-failure",
+            kind: "mutation",
+            documentId: driveId,
+            scope: "global",
+            branch: "main",
+            actions: [
+              {
+                id: "commit-failure-action",
+                type: "ADD_FOLDER",
+                scope: "global",
+                timestampUtcMs: new Date().toISOString(),
+                input: {
+                  id: "folder-commit-failure",
+                  name: "Commit Failure Folder",
+                  parentFolder: null,
+                },
+              },
+            ],
+            operations: [],
+            createdAt: new Date().toISOString(),
+            queueHint: [],
+            errorHistory: [],
+            meta: { batchId: "test", batchJobIds: ["job-commit-failure"] },
+          };
+
+          await expect(executor.executeJob(job)).rejects.toThrow("commit-fail");
+
+          transactionSpy.mockRestore();
+
+          expect(
+            writeCache.getStream(driveId, "global", "main"),
+          ).toBeUndefined();
+          const stored = await operationStore.getSince(
+            driveId,
+            "global",
+            "main",
+            -1,
+          );
+          expect(stored.results).toHaveLength(0);
+        });
+
+        it("persists nothing when a load job fails part-way through", async () => {
+          // The load path never batches, so the store held the first operation
+          // when the second was refused. Only the rollback takes it back.
+          const { driveId, success } = await runPartiallyFailingLoadJob();
+
+          expect(success).toBe(false);
+          expect(await foldersOn(driveId)).toBe(0);
+        });
+      } else {
+        it("keeps the writes before the failure, having no transaction to roll back", async () => {
+          // DefaultExecutionScope runs the job against the stores directly, so
+          // each write is durable as it is made. It backs unit-test harnesses
+          // only; nothing the reactor builds runs this way.
+          const { driveId } = await runPartiallyFailingJob();
+
+          expect(await relationshipsOn(driveId)).toBe(1);
+        });
+
+        it("keeps a load job's earlier operations for the same reason", async () => {
+          const { driveId, success } = await runPartiallyFailingLoadJob();
+
+          expect(success).toBe(false);
+          expect(await foldersOn(driveId)).toBe(1);
+        });
+      }
     });
   },
 );

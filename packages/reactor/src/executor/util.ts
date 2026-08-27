@@ -23,7 +23,7 @@ import type {
   ConsistencyCoordinate,
   ConsistencyToken,
 } from "../shared/types.js";
-import type { JobResult } from "./types.js";
+import type { JobResult, TouchedStream } from "./types.js";
 
 export { applyDeleteDocumentAction, applyUpgradeDocumentAction };
 
@@ -329,4 +329,29 @@ export function isGenesisOperation(operation: Operation): boolean {
     return false;
   }
   return (operation.action.input as { fromVersion?: number }).fromVersion === 0;
+}
+
+/**
+ * The distinct streams a job wrote, collected so a rollback knows what to evict.
+ *
+ * A write records its stream on every apply, and a long run applies the same
+ * stream hundreds of times, so this keeps one entry per stream rather than one
+ * per write: the eviction only cares which streams were touched, and the
+ * successful jobs that never read this back pay for a lookup instead of an
+ * allocation.
+ */
+export class TouchedStreams {
+  private readonly streams = new Map<string, TouchedStream>();
+
+  add(documentId: string, scope: string, branch: string): void {
+    const key = `${documentId}\u0000${scope}\u0000${branch}`;
+    if (this.streams.has(key)) {
+      return;
+    }
+    this.streams.set(key, { documentId, scope, branch });
+  }
+
+  [Symbol.iterator](): IterableIterator<TouchedStream> {
+    return this.streams.values();
+  }
 }

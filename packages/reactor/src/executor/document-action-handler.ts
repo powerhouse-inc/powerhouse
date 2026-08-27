@@ -280,6 +280,8 @@ export class DocumentActionHandler {
       [job.scope]: [...(standing.operations[job.scope] ?? []), operation],
     };
 
+    executing.touchedStreams.add(job.documentId, job.scope, job.branch);
+
     stores.writeCache.putState(
       job.documentId,
       job.scope,
@@ -384,6 +386,8 @@ export class DocumentActionHandler {
       ...document.operations,
       [job.scope]: [...(document.operations[job.scope] ?? []), operation],
     };
+
+    executing.touchedStreams.add(document.header.id, job.scope, job.branch);
 
     stores.writeCache.putState(
       document.header.id,
@@ -528,6 +532,8 @@ export class DocumentActionHandler {
       ...document.operations,
       [job.scope]: [...(document.operations[job.scope] ?? []), operation],
     };
+
+    executing.touchedStreams.add(documentId, job.scope, job.branch);
 
     stores.writeCache.putState(
       documentId,
@@ -816,6 +822,8 @@ export class DocumentActionHandler {
       [job.scope]: [...(document.operations[job.scope] ?? []), operation],
     };
 
+    executing.touchedStreams.add(documentId, job.scope, job.branch);
+
     stores.writeCache.putState(
       documentId,
       job.scope,
@@ -1035,6 +1043,15 @@ export class DocumentActionHandler {
     };
     const resultingState = JSON.stringify(resultingStateObj);
 
+    executing.touchedStreams.add(input.sourceId, job.scope, job.branch);
+
+    // The target's collection membership is derived from the rows just
+    // written. No read inside a job refills it today -- the only one asks for
+    // the operation's own document -- so evicting it on rollback is insurance,
+    // kept because the eviction is keyed to what the job touched rather than
+    // to what one read path currently happens to ask for.
+    executing.touchedStreams.add(input.targetId, job.scope, job.branch);
+
     stores.writeCache.putState(
       input.sourceId,
       job.scope,
@@ -1082,6 +1099,10 @@ export class DocumentActionHandler {
   ): Promise<Operation[] | JobResult> {
     const { documentId, documentType, scope, branch } = target;
     const { job, startTime, stores, signal } = executing;
+
+    // Recorded before the apply, not after: the rows an apply that throws left
+    // behind are the ones a rollback has to take the cached state of with it.
+    executing.touchedStreams.add(documentId, scope, branch);
 
     let storedOperations: Operation[];
 

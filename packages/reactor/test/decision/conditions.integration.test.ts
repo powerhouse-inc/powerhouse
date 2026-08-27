@@ -107,8 +107,10 @@ describe("conditions end to end", () => {
       branch: "main",
       scopes: ["global"],
     });
-    const stored = (result as Record<string, { results: Operation[] }>).global
-      .results;
+    // A scope no operation ever reached is absent from the result, not empty.
+    const stored =
+      (result as Record<string, { results: Operation[] } | undefined>).global
+        ?.results ?? [];
     return garbageCollect(sortOperations([...stored])).map((operation) => ({
       type: operation.action.type,
       denied: operation.deniedReason !== undefined,
@@ -232,6 +234,11 @@ describe("conditions end to end", () => {
    * write after it needs. Persisting a job's operations together must not
    * decide the later ones against the state as it stood before the job: the
    * run is judged the same whether or not it shares a transaction.
+   *
+   * The refusal takes the whole job with it either way. The job runs inside one
+   * transaction and a failure rolls it back, so the write that closed the grant
+   * is not left standing on its own - which is also what keeps the refusal from
+   * being permanent, since the grant it closed is still open on a retry.
    */
   for (const batchApplies of [true, false]) {
     it(`a run's own write closes the grant for the ones after it (batchApplies: ${batchApplies})`, async () => {
@@ -251,9 +258,7 @@ describe("conditions end to end", () => {
       );
 
       expect(refusal).toMatch(/denied|Authorization/i);
-      expect(await appliedGlobal(docId)).toEqual([
-        { type: "SET_MODEL_NAME", denied: false },
-      ]);
+      expect(await appliedGlobal(docId)).toEqual([]);
     });
   }
 

@@ -6,6 +6,7 @@ import type { Operation } from "@powerhousedao/shared/document-model";
 import type { Job } from "../queue/types.js";
 import type { IOperationIndexTxn } from "../cache/operation-index-types.js";
 import type { ExecutionStores } from "./execution-scope.js";
+import type { TouchedStreams } from "./util.js";
 
 /**
  * One action to write, and everything known about it before it is written.
@@ -24,6 +25,16 @@ export type PendingWrite = {
 
   /** Why the write was refused, when the evaluation is already decided. */
   deniedReason?: string;
+};
+
+/**
+ * A stream a job wrote to, or whose cached state a job's uncommitted writes
+ * could have filled.
+ */
+export type TouchedStream = {
+  documentId: string;
+  scope: string;
+  branch: string;
 };
 
 /**
@@ -56,11 +67,16 @@ export type ExecutingJob = {
    * invalidating them mid-transaction lets a concurrent read repopulate the
    * cache with pre-upgrade state that then survives the commit.
    */
-  postCommitInvalidations: Array<{
-    documentId: string;
-    scope: string;
-    branch: string;
-  }>;
+  postCommitInvalidations: TouchedStream[];
+
+  /**
+   * Streams this job wrote, to the store or to a cache. The caches are shared
+   * by reference with the copies scoped to the execution transaction, so a job
+   * whose transaction rolls back has to evict them itself: the writes it made
+   * survive the rollback, and so does anything a read filled from the store
+   * while the job's own writes were still uncommitted.
+   */
+  touchedStreams: TouchedStreams;
 };
 
 export type PositionedWrites = {
@@ -180,10 +196,13 @@ export type JobExecutorConfig = {
    * this never changes which operations are produced -- only how many
    * transactions they arrive in.
    *
-   * It does change one thing beyond performance: a batched job's writes are
-   * atomic, so a job that fails partway through leaves nothing behind where it
-   * used to leave the operations it had already applied. Set it false to get
-   * the per-operation behaviour back.
+   * Atomicity is not one of the things it changes. A job either fully applies
+   * or leaves nothing durable behind regardless of this setting, because the
+   * whole job runs inside the execution scope's transaction and a failure
+   * rolls it back.
+   * That guarantee belongs to KyselyExecutionScope, which backs both Postgres
+   * and PGlite; DefaultExecutionScope opens no transaction and is used only by
+   * unit-test harnesses, which therefore see writes survive a failed job.
    */
   batchApplies?: boolean;
 };
