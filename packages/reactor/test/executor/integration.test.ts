@@ -25,7 +25,7 @@ import { DocumentModelRegistry } from "../../src/registry/implementation.js";
 import type { IDocumentModelRegistry } from "../../src/registry/interfaces.js";
 import { DocumentDeletedError } from "../../src/shared/errors.js";
 import type { KyselyKeyframeStore } from "../../src/storage/kysely/keyframe-store.js";
-import type { KyselyOperationStore } from "../../src/storage/kysely/store.js";
+import { KyselyOperationStore } from "../../src/storage/kysely/store.js";
 import type { Database as DatabaseSchema } from "../../src/storage/kysely/types.js";
 import {
   createMockLogger,
@@ -1518,6 +1518,94 @@ describe.each(scopeVariants)(
         ).length;
       }
 
+      /**
+       * A load job of three operations, the store rejecting the second. Load
+       * replays accepted history, which never batches, so every operation
+       * reaches the store through an apply of its own and the failure lands
+       * with the one before it already written.
+       */
+      async function runPartiallyFailingLoadJob(): Promise<{
+        driveId: string;
+        success: boolean;
+      }> {
+        const driveDoc = driveDocumentModelModule.utils.createDocument();
+        const driveId = driveDoc.header.id;
+        await createDocumentWithCreateOperation(
+          driveId,
+          driveDoc.header.documentType,
+          driveDoc.state,
+        );
+
+        const operations = [0, 1, 2].map((index) => {
+          const actionId = `load-atomicity-action-${index}`;
+          const timestampUtcMs = new Date(
+            Date.UTC(2026, 0, 1, 0, 0, index),
+          ).toISOString();
+          return {
+            id: deriveOperationId(driveId, "global", "main", actionId),
+            index,
+            timestampUtcMs,
+            hash: "",
+            skip: 0,
+            action: {
+              id: actionId,
+              type: "ADD_FOLDER",
+              scope: "global",
+              timestampUtcMs,
+              input: {
+                id: `load-folder-${index}`,
+                name: `Load Folder ${index}`,
+                parentFolder: null,
+              },
+            },
+          };
+        });
+
+        const job: Job = {
+          id: "job-load-partial-failure",
+          kind: "load",
+          documentId: driveId,
+          scope: "global",
+          branch: "main",
+          actions: [],
+          operations,
+          createdAt: new Date().toISOString(),
+          queueHint: [],
+          errorHistory: [],
+          meta: { batchId: "test", batchJobIds: ["job-load-partial-failure"] },
+        };
+
+        const realApply = KyselyOperationStore.prototype.apply;
+        const applySpy = vi
+          .spyOn(KyselyOperationStore.prototype, "apply")
+          .mockImplementation(function (
+            this: KyselyOperationStore,
+            ...args: Parameters<KyselyOperationStore["apply"]>
+          ) {
+            const scope = args[2];
+            const revision = args[4];
+            if (scope === "global" && revision === 1) {
+              return Promise.reject(new Error("load store failure"));
+            }
+            return realApply.apply(this, args);
+          });
+
+        const result = await executor.executeJob(job);
+        applySpy.mockRestore();
+
+        return { driveId, success: result.success };
+      }
+
+      async function foldersOn(driveId: string): Promise<number> {
+        const operations = await operationStore.getSince(
+          driveId,
+          "global",
+          "main",
+          -1,
+        );
+        return operations.results.length;
+      }
+
       it("returns the failure rather than throwing it", async () => {
         // The rollback leaves through a throw, but no caller ever sees one: a
         // failed job is a returned result, the same as it has always been.
@@ -1550,6 +1638,15 @@ describe.each(scopeVariants)(
           expect(stored.results).toHaveLength(2);
           expect(cached.header.revision.document).toBe(2);
         });
+
+        it("persists nothing when a load job fails part-way through", async () => {
+          // The load path never batches, so the store held the first operation
+          // when the second was refused. Only the rollback takes it back.
+          const { driveId, success } = await runPartiallyFailingLoadJob();
+
+          expect(success).toBe(false);
+          expect(await foldersOn(driveId)).toBe(0);
+        });
       } else {
         it("keeps the writes before the failure, having no transaction to roll back", async () => {
           // DefaultExecutionScope runs the job against the stores directly, so
@@ -1558,6 +1655,13 @@ describe.each(scopeVariants)(
           const { driveId } = await runPartiallyFailingJob();
 
           expect(await relationshipsOn(driveId)).toBe(1);
+        });
+
+        it("keeps a load job's earlier operations for the same reason", async () => {
+          const { driveId, success } = await runPartiallyFailingLoadJob();
+
+          expect(success).toBe(false);
+          expect(await foldersOn(driveId)).toBe(1);
         });
       }
     });
