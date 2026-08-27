@@ -724,6 +724,57 @@ mounted **outside** the provider's subtree still gets the full list — Connect
 renders its login modal as a sibling of the app. Empty when no provider is
 mounted, which is the redirect-only case.
 
+### `useRenownWalletAdapter<T>(id)` — headless sign-in (custom screens)
+
+Returns the controller of one mounted adapter by its `meta.id`, typed as that
+adapter's own surface, so a host can draw its own sign-in screens without
+importing the wallet library. Rendering the hook activates the wallet tree (that
+is when the adapter's library loads), so call it from the sign-in route, not the
+app shell; a signed-out visitor on a route that never renders it downloads no
+wallet code. `undefined` until the adapter is mounted.
+
+Privy's controller adds email OTP (`sendCode` / `loginWithCode`) plus its auth
+state. Pair it with `login(session)` — the session `loginWithCode` resolves with
+is a Privy embedded wallet, which signs the Renown credential silently:
+
+```tsx
+"use client";
+import { useRenownAuth, useRenownWalletAdapter } from "@powerhousedao/reactor-browser/renown";
+// Type-only import: erased at runtime, so @privy-io stays out of the bundle.
+import type { PrivyWalletController } from "@renown/sdk/wallet/privy";
+import { useSyncExternalStore } from "react";
+
+function EmailLogin() {
+  const privy = useRenownWalletAdapter<PrivyWalletController>("privy");
+  const { login } = useRenownAuth();
+  const state = useSyncExternalStore(
+    privy?.subscribeState ?? (() => () => {}),
+    () => privy?.getState(),
+    () => undefined,
+  );
+
+  if (!privy) return <Spinner />; // Privy is loading
+  return (
+    <>
+      <EmailForm
+        busy={state?.emailStatus === "sending-code"}
+        onSubmit={(email) => privy.sendCode(email, { disableSignup: true })}
+      />
+      <CodeForm
+        busy={state?.emailStatus === "submitting-code"}
+        error={state?.emailError}
+        onSubmit={async (code) => login(await privy.loginWithCode(code))}
+      />
+    </>
+  );
+}
+```
+
+`privyAdapter({ …, methods: ["email"], chain })` keeps Privy's own modal
+restricted to email (so it skips the wallet connectors) and pins the embedded
+wallet to the chain Renown issues on — pass the same chain you set as
+`chainId`.
+
 ### Next.js
 
 The integration is the same, with four things worth knowing:

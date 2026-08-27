@@ -36,6 +36,7 @@ export {
   useRenownLoginMethods,
   type RenownLoginMethod,
 } from "./login-methods.js";
+export { useRenownWalletAdapter } from "./use-renown-wallet-adapter.js";
 // Only the session action is public. Wallet-controller registry (mutators and
 // the ready waiter) stays internal wiring between the provider and useRenownAuth.
 export { openRenown } from "./session.js";

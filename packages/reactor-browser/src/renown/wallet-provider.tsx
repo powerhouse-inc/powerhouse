@@ -22,6 +22,7 @@ import {
   failWalletActivation,
   setActiveWalletController,
   setWalletActivator,
+  setWalletAdapterController,
   setWalletDescriptors,
   whenWalletControllerReady,
 } from "./wallet-registry.js";
@@ -193,6 +194,7 @@ export function RenownWalletProvider({
     (meta: WalletAdapterMeta, controller: WalletController | undefined) => {
       if (controller) mountedRef.current.set(meta.id, { meta, controller });
       else mountedRef.current.delete(meta.id);
+      setWalletAdapterController(meta.id, controller);
       setActiveWalletController(
         mergeControllers(Array.from(mountedRef.current.values())),
       );

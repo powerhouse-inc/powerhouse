@@ -11,6 +11,7 @@ let controllerWaiters: Array<{
   reject: (error: Error) => void;
 }> = [];
 let walletActivator: (() => Promise<WalletController>) | undefined;
+const activatorListeners = new Set<() => void>();
 
 export function setActiveWalletController(
   controller: WalletController | undefined,
@@ -40,7 +41,16 @@ export function getActiveWalletController(): WalletController | undefined {
 export function setWalletActivator(
   activator: (() => Promise<WalletController>) | undefined,
 ): void {
+  if (activator === walletActivator) return;
   walletActivator = activator;
+  activatorListeners.forEach((listener) => listener());
+}
+
+// The provider registers the activator in an effect, after a child hook's first
+// effect has run, so a hook that activates on mount must wait for it.
+export function subscribeWalletActivator(listener: () => void): () => void {
+  activatorListeners.add(listener);
+  return () => activatorListeners.delete(listener);
 }
 
 export function getWalletActivator():
@@ -111,6 +121,62 @@ export function getServerWalletDescriptors(): readonly WalletAdapterDescriptor[]
 
 export function subscribeWalletDescriptors(listener: () => void): () => void {
   const { listeners } = descriptorStore();
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
+// Per-adapter controllers, keyed by meta.id, for hosts that drive one adapter's
+// own surface (e.g. Privy's email OTP) rather than the merged controller.
+type AdapterControllers = Readonly<Record<string, WalletController>>;
+
+const NO_CONTROLLERS: AdapterControllers = Object.freeze({});
+
+interface ControllerStore {
+  controllers: AdapterControllers;
+  listeners: Set<() => void>;
+}
+
+const CONTROLLER_STORE = Symbol.for(
+  "@powerhousedao/reactor-browser:renown-wallet-adapter-controllers",
+);
+
+function controllerStore(): ControllerStore {
+  const host = globalThis as unknown as Record<
+    symbol,
+    ControllerStore | undefined
+  >;
+  return (host[CONTROLLER_STORE] ??= {
+    controllers: NO_CONTROLLERS,
+    listeners: new Set(),
+  });
+}
+
+export function setWalletAdapterController(
+  id: string,
+  controller: WalletController | undefined,
+): void {
+  const store = controllerStore();
+  if (store.controllers[id] === controller) return;
+  const next: Record<string, WalletController> = { ...store.controllers };
+  if (controller) next[id] = controller;
+  else delete next[id];
+  store.controllers = Object.freeze(next);
+  store.listeners.forEach((listener) => listener());
+}
+
+// Identity-stable while unchanged, so useSyncExternalStore does not loop.
+export function getWalletAdapterControllers(): AdapterControllers {
+  return controllerStore().controllers;
+}
+
+export function getServerWalletAdapterControllers(): AdapterControllers {
+  return NO_CONTROLLERS;
+}
+
+export function subscribeWalletAdapterControllers(
+  listener: () => void,
+): () => void {
+  const { listeners } = controllerStore();
   listeners.add(listener);
   return () => listeners.delete(listener);
 }
