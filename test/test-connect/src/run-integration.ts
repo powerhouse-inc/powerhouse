@@ -525,8 +525,11 @@ function dumpLogs(runDir: string, tailLines = 80): void {
 
     const lines = contents.split("\n");
     const tail = lines.slice(-tailLines).join("\n");
-    console.log(bold(`\n━━━ ${name} (last ${tailLines} lines) ━━━`));
-    console.log(tail);
+    // Written synchronously: process.exit() below drops whatever console.log
+    // has queued on a pipe, which is every CI run. The first dump lost all but
+    // one file that way.
+    fs.writeSync(1, `\n━━━ ${name} (last ${tailLines} lines) ━━━\n`);
+    fs.writeSync(1, `${tail}\n`);
   }
 }
 
