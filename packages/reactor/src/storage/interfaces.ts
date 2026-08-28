@@ -49,6 +49,26 @@ export class RevisionMismatchError extends Error {
 }
 
 /**
+ * A create based on an empty stream that already has operations: the id is
+ * taken, and no retry can resolve it. Matched by `name`, all the RPC boundary keeps.
+ */
+export class DocumentAlreadyExistsError extends Error {
+  public readonly documentId: string;
+
+  constructor(documentId: string, scope: string, headRevision: number) {
+    super(
+      `Document ${documentId} already exists: create requested revision 0 but the "${scope}" stream is at revision ${headRevision}`,
+    );
+    this.name = "DocumentAlreadyExistsError";
+    this.documentId = documentId;
+  }
+
+  static isError(error: unknown): error is DocumentAlreadyExistsError {
+    return Error.isError(error) && error.name === "DocumentAlreadyExistsError";
+  }
+}
+
+/**
  * One read-set stream and the highest operation index observed on it, or -1
  * if it was observed empty.
  */

@@ -8,6 +8,7 @@ import { throwIfAborted } from "../../shared/utils.js";
 import { paginateRows } from "./pagination.js";
 import {
   AppendConditionFailedError,
+  DocumentAlreadyExistsError,
   DuplicateOperationError,
   RevisionMismatchError,
   type AppendCondition,
@@ -212,6 +213,14 @@ export class KyselyOperationStore implements IOperationStore {
         return replayOps;
       }
 
+      if (revision === 0 && this.isCreate(operations)) {
+        throw new DocumentAlreadyExistsError(
+          documentId,
+          scope,
+          currentRevision,
+        );
+      }
+
       throw new RevisionMismatchError(currentRevision + 1, revision);
     }
 
@@ -414,6 +423,31 @@ export class KyselyOperationStore implements IOperationStore {
     }
 
     return storedRows.map((row) => this.rowToOperation(row));
+  }
+
+  /** True when the staged write creates a document rather than appending to one. */
+  private isCreate(operations: InsertableOperation[]): boolean {
+    for (const operation of operations) {
+      let action: unknown = operation.action;
+      if (typeof action === "string") {
+        try {
+          action = JSON.parse(action);
+        } catch {
+          continue;
+        }
+      }
+
+      if (
+        typeof action === "object" &&
+        action !== null &&
+        "type" in action &&
+        typeof action.type === "string" &&
+        action.type === "CREATE_DOCUMENT"
+      ) {
+        return true;
+      }
+    }
+    return false;
   }
 
   async getSince(

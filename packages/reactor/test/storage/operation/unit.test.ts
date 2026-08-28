@@ -11,7 +11,9 @@ import {
 } from "@powerhousedao/shared/document-model";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { createDocumentAction } from "../../../src/actions/index.js";
 import {
+  DocumentAlreadyExistsError,
   DuplicateOperationError,
   RevisionMismatchError,
 } from "../../../src/storage/interfaces.js";
@@ -369,6 +371,155 @@ describe.each(testFsBackends)("KyselyOperationStore [$name]", ({ backend }) => {
           });
         }),
       ).rejects.toThrow(RevisionMismatchError);
+    });
+
+    it("(c2) create against an existing stream surfaces DocumentAlreadyExistsError", async () => {
+      const documentId = generateId();
+      const scope = "document";
+      const branch = "main";
+      const documentType = "powerhouse/document-drive";
+
+      const firstAction = createDocumentAction({
+        model: documentType,
+        version: 0,
+        documentId,
+      });
+      await store.apply(documentId, documentType, scope, branch, 0, (txn) => {
+        txn.addOperations({
+          index: 0,
+          timestampUtcMs: new Date().toISOString(),
+          hash: "hash-create-1",
+          skip: 0,
+          id: deriveOperationId(documentId, scope, branch, firstAction.id),
+          action: firstAction,
+        });
+      });
+
+      const reusedIdAction = createDocumentAction({
+        model: documentType,
+        version: 0,
+        documentId,
+      });
+
+      await expect(
+        store.apply(documentId, documentType, scope, branch, 0, (txn) => {
+          txn.addOperations({
+            index: 0,
+            timestampUtcMs: new Date().toISOString(),
+            hash: "hash-create-2",
+            skip: 0,
+            id: deriveOperationId(documentId, scope, branch, reusedIdAction.id),
+            action: reusedIdAction,
+          });
+        }),
+      ).rejects.toThrow(DocumentAlreadyExistsError);
+    });
+
+    it("(c3) a stale read past revision 0 still surfaces RevisionMismatchError", async () => {
+      const documentId = generateId();
+      const scope = "global";
+      const branch = "main";
+      const documentType = "powerhouse/document-drive";
+
+      const firstAction = addFolder({
+        id: generateId(),
+        name: "Folder C3",
+        parentFolder: null,
+      });
+      await store.apply(documentId, documentType, scope, branch, 0, (txn) => {
+        txn.addOperations({
+          index: 0,
+          timestampUtcMs: new Date().toISOString(),
+          hash: "hash-c3-1",
+          skip: 0,
+          id: deriveOperationId(documentId, scope, branch, firstAction.id),
+          action: firstAction,
+        });
+      });
+
+      const secondAction = addFolder({
+        id: generateId(),
+        name: "Folder C3b",
+        parentFolder: null,
+      });
+      await store.apply(documentId, documentType, scope, branch, 1, (txn) => {
+        txn.addOperations({
+          index: 1,
+          timestampUtcMs: new Date().toISOString(),
+          hash: "hash-c3-2",
+          skip: 0,
+          id: deriveOperationId(documentId, scope, branch, secondAction.id),
+          action: secondAction,
+        });
+      });
+
+      const staleAction = addFolder({
+        id: generateId(),
+        name: "Folder C3c",
+        parentFolder: null,
+      });
+
+      await expect(
+        store.apply(documentId, documentType, scope, branch, 1, (txn) => {
+          txn.addOperations({
+            index: 1,
+            timestampUtcMs: new Date().toISOString(),
+            hash: "hash-c3-3",
+            skip: 0,
+            id: deriveOperationId(documentId, scope, branch, staleAction.id),
+            action: staleAction,
+          });
+        }),
+      ).rejects.toThrow(RevisionMismatchError);
+    });
+
+    it("(c4) an idempotent replay of a create still returns the stored row", async () => {
+      const documentId = generateId();
+      const scope = "document";
+      const branch = "main";
+      const documentType = "powerhouse/document-drive";
+
+      const action = createDocumentAction({
+        model: documentType,
+        version: 0,
+        documentId,
+      });
+      const op = {
+        index: 0,
+        timestampUtcMs: new Date().toISOString(),
+        hash: "hash-create-replay",
+        skip: 0,
+        id: deriveOperationId(documentId, scope, branch, action.id),
+        action,
+      };
+
+      const first = await store.apply(
+        documentId,
+        documentType,
+        scope,
+        branch,
+        0,
+        (txn) => {
+          txn.addOperations(op);
+        },
+      );
+      expect(first).toHaveLength(1);
+
+      const replay = await store.apply(
+        documentId,
+        documentType,
+        scope,
+        branch,
+        0,
+        (txn) => {
+          txn.addOperations(op);
+        },
+      );
+      expect(replay).toHaveLength(1);
+      expect(replay[0].id).toBe(op.id);
+
+      const stored = await store.getSince(documentId, scope, branch, -1);
+      expect(stored.results).toHaveLength(1);
     });
 
     it("(d) DuplicateOperationError with mismatched opId for the target document propagates unchanged", async () => {
