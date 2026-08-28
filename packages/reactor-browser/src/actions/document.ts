@@ -526,7 +526,14 @@ export async function addFileWithProgress(
   // importing a file into a drive is a full reactor client feature
   const reactor = window.ph?.reactorClientModule?.client;
   if (!reactor) {
-    return;
+    // Reported before it is thrown: a caller watching progress settles on a
+    // terminal stage, and returning quietly here left it waiting forever.
+    onProgress?.({
+      stage: "failed",
+      progress: 100,
+      error: "ReactorClient not initialized",
+    });
+    throw new Error("ReactorClient not initialized");
   }
 
   const { isAllowedToCreateDocuments } = getUserPermissions();
@@ -571,7 +578,22 @@ export async function addFileWithProgress(
           onProgress,
           documentTypes,
           resolveConflict,
-        );
+        ).catch((retryError: unknown) => {
+          // Nothing awaits this call, so an unreported throw here is an
+          // unhandled rejection and a caller that never settles.
+          logger.error(
+            "Import retry after discovery failed: @error",
+            retryError,
+          );
+          onProgress?.({
+            stage: "failed",
+            progress: 100,
+            error:
+              retryError instanceof Error
+                ? retryError.message
+                : String(retryError),
+          });
+        });
         return;
       }
       throw loadError;
