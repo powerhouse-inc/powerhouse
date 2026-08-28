@@ -45,6 +45,13 @@ function makeFakeClient() {
       calls.push(`resolve:${identifier}`);
       return Promise.resolve(`resolved:${identifier}`);
     },
+    isDocumentIdTaken(documentId: string) {
+      calls.push(`taken:${documentId}`);
+      if (documentId === "boom") {
+        return Promise.reject(new Error("transport down"));
+      }
+      return Promise.resolve(documentId === "taken-id");
+    },
     find() {
       calls.push("find");
       const page2 = {
@@ -117,6 +124,22 @@ describe("reactor RPC proxy <-> host", () => {
     cleanup = close;
     const resolved = await proxy.resolveIdOrSlug("slug-a");
     expect(resolved).toBe("resolved:slug-a");
+  });
+
+  it("forwards isDocumentIdTaken in both directions", async () => {
+    const { proxy, fake, close } = setup();
+    cleanup = close;
+    await expect(proxy.isDocumentIdTaken("taken-id")).resolves.toBe(true);
+    await expect(proxy.isDocumentIdTaken("free-id")).resolves.toBe(false);
+    expect(fake.calls).toContain("taken:taken-id");
+  });
+
+  it("rejects isDocumentIdTaken rather than answering false on failure", async () => {
+    const { proxy, close } = setup();
+    cleanup = close;
+    await expect(proxy.isDocumentIdTaken("boom")).rejects.toThrow(
+      "transport down",
+    );
   });
 
   it("dispatches nested drives.* methods", async () => {

@@ -11,12 +11,6 @@ export class UnsupportedDocumentTypeError extends Error {
   }
 }
 
-export class DocumentNotFoundError extends Error {
-  constructor(documentId: string) {
-    super(`Document with id ${documentId} not found`);
-  }
-}
-
 export class DocumentModelNotFoundError extends Error {
   readonly documentType: string;
   readonly name = "DocumentModelNotFoundError";

@@ -57,7 +57,9 @@ import { queueActions, queueOperations, uploadOperations } from "./queue.js";
 
 const NON_DOMAIN_SCOPES = new Set(["auth", "document"]);
 
+/** An unreadable drive cannot be shown to hold no duplicate, so reads throw. */
 async function isDocumentInLocation(
+  reactorClient: IReactorClient,
   document: PHDocument,
   driveId: string,
   parentFolder?: string,
@@ -66,18 +68,7 @@ async function isDocumentInLocation(
   duplicateType?: "id" | "name";
   nodeId?: string;
 }> {
-  const reactorClient = window.ph?.reactorClient;
-  if (!reactorClient) {
-    return { isDuplicate: false };
-  }
-
-  // Get the drive and check its nodes
-  let drive;
-  try {
-    drive = await reactorClient.get<DocumentDriveDocument>(driveId);
-  } catch {
-    return { isDuplicate: false };
-  }
+  const drive = await reactorClient.get<DocumentDriveDocument>(driveId);
 
   // Case 1: Check for duplicate by ID
   const nodeById = drive.state.global.nodes.find(
@@ -520,77 +511,6 @@ export async function addDocument(
   };
 }
 
-export async function addFile(
-  file: string | File,
-  driveId: string,
-  name?: string,
-  parentFolder?: string,
-) {
-  logger.verbose(
-    `addFile(drive: ${driveId}, name: ${name}, folder: ${parentFolder})`,
-  );
-
-  const { isAllowedToCreateDocuments } = getUserPermissions();
-  if (!isAllowedToCreateDocuments) {
-    throw new Error("User is not allowed to create files");
-  }
-
-  const document = await loadFile(file);
-
-  let duplicateId = false;
-
-  const reactorClient = window.ph?.reactorClient;
-  if (!reactorClient) {
-    throw new Error("ReactorClient not initialized");
-  }
-
-  try {
-    await reactorClient.get(document.header.id);
-    duplicateId = true;
-  } catch {
-    // document id not found
-  }
-
-  const documentId = duplicateId ? generateId() : document.header.id;
-  const header = createPresignedHeader(
-    documentId,
-    document.header.documentType,
-  );
-  header.lastModifiedAtUtcIso = document.header.createdAtUtcIso;
-  header.meta = document.header.meta;
-  header.name = name || document.header.name;
-
-  // copy the document at it's initial state
-  const initialDocument = {
-    ...document,
-    header,
-    state: document.initialState,
-    operations: Object.keys(document.operations).reduce((acc, key) => {
-      acc[key] = [];
-      return acc;
-    }, {} as DocumentOperations),
-  };
-
-  await addDocument(
-    driveId,
-    name || document.header.name,
-    document.header.documentType,
-    parentFolder,
-    initialDocument,
-    documentId,
-    document.header.meta?.preferredEditor,
-  );
-
-  // then add all the operations in chunks, re-dispatching each mid-history
-  // upgrade at its boundary
-  for (const segment of splitAtUpgradeBoundaries(document.operations)) {
-    await uploadOperations(documentId, segment.operations, queueOperations);
-    if (segment.upgradeTo !== undefined) {
-      await upgradeDocument(documentId, segment.upgradeTo);
-    }
-  }
-}
-
 export async function addFileWithProgress(
   file: string | File,
   driveId: string,
@@ -659,6 +579,7 @@ export async function addFileWithProgress(
 
     // Check for duplicate in same location
     const duplicateCheck = await isDocumentInLocation(
+      reactor,
       document,
       driveId,
       parentFolder,
@@ -700,15 +621,9 @@ export async function addFileWithProgress(
     // Initializing stage (10-20%)
     onProgress?.({ stage: "initializing", progress: 10 });
 
-    let duplicateId = false;
-    try {
-      await reactor.get(document.header.id);
-      duplicateId = true;
-    } catch {
-      // document id not found
-    }
-
-    const documentId = duplicateId ? generateId() : document.header.id;
+    const documentId = (await reactor.isDocumentIdTaken(document.header.id))
+      ? generateId()
+      : document.header.id;
     const header = createPresignedHeader(
       documentId,
       document.header.documentType,
