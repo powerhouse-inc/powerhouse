@@ -193,7 +193,7 @@ interface IProcessorHostModuleBase {
 - **`client`** — the `IReactorClient` for reading documents and drives. See [IReactorClient](/academy/Reference/Reactor/ReactorClient).
 - **`attachments`** — the `IAttachmentClient` for uploading and downloading attachments. See the [Attachment service](/academy/Reference/Reactor/AttachmentService).
 
-These six core fields are `IProcessorHostModuleBase` in `@powerhousedao/shared`; `client` and `attachments` are added by `IProcessorHostModule` in `@powerhousedao/reactor-browser` and `@powerhousedao/reactor-api`, since shared cannot depend on those packages. Connect sets `processorApp: "connect"`.
+These six core fields are `IProcessorHostModuleBase` in `@powerhousedao/shared`. `@powerhousedao/reactor` adds `client` and the typed `getReadModel` as `IReactorProcessorHostModuleBase`; `@powerhousedao/reactor-browser` and `@powerhousedao/reactor-api` add `attachments` as `IProcessorHostModule`, since neither shared nor reactor can depend on reactor-attachments. Connect sets `processorApp: "connect"`.
 
 `IProcessorDispatch` and `ProcessorDispatchResult` are defined in shared but are not part of the public reactor export surface; treat the `dispatch` handle on the module as the supported entry point.
 

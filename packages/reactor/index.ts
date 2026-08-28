@@ -422,6 +422,11 @@ export type {
   ProcessorStatus,
   TrackedProcessor,
 } from "@powerhousedao/shared/processors";
+export {
+  createReactorHostModuleBase,
+  type IReactorProcessorHostModuleBase,
+  type ReactorHostModuleBaseOptions,
+} from "./src/processors/host-module.js";
 export { DocumentIntegrityService } from "./src/admin/document-integrity-service.js";
 export type {
   IDocumentIntegrityService,

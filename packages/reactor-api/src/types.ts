@@ -1,16 +1,17 @@
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
-import type { IReactorClient, ReactorReadModels } from "@powerhousedao/reactor";
+import type {
+  IReactorProcessorHostModuleBase,
+  ProcessorFactoryBuilder as BaseProcessorFactoryBuilder,
+} from "@powerhousedao/reactor";
 import type { GraphQLManager } from "@powerhousedao/reactor-api";
 import type {
   AttachmentBuildResult,
   AttachmentReferenceIndexBuildResult,
 } from "@powerhousedao/reactor-attachments";
 import type { IAttachmentClient } from "@powerhousedao/reactor-attachments/client";
-import type { PHDocumentHeader } from "@powerhousedao/shared/document-model";
 import type {
-  IProcessorHostModuleBase,
   IRelationalDb,
-  ProcessorRecord,
+  ProcessorFactory,
 } from "@powerhousedao/shared/processors";
 import type { IHttpAdapter } from "./graphql/gateway/types.js";
 import type { IPackageManager } from "./packages/types.js";
@@ -22,28 +23,11 @@ export type {
 } from "./packages/types.js";
 
 /**
- * Module hosts pass to processor factories. Declared here (not in shared)
- * because shared cannot depend on reactor or reactor-attachments.
- * Keep in sync with `IProcessorHostModule` in @powerhousedao/reactor-browser.
+ * Module hosts pass to processor factories: the reactor-level module plus the
+ * attachment client, which shared and reactor cannot name.
  */
-export interface IProcessorHostModule extends IProcessorHostModuleBase {
-  client: IReactorClient;
+export interface IProcessorHostModule extends IReactorProcessorHostModuleBase {
   attachments: IAttachmentClient;
-  /**
-   * Retrieves a registered read model by name.
-   *
-   * Reactor-registered names are typed via `ReactorReadModels` — hover a key
-   * there for what each model holds:
-   * - `"document-view"` (materialized document state, `IDocumentView`)
-   * - `"document-indexer"` (document relationship graph, `IDocumentIndexer`).
-   *
-   * Other names return the caller-supplied type.
-   * Throws if no read model with that name is registered.
-   */
-  getReadModel<K extends keyof ReactorReadModels>(
-    name: K,
-  ): ReactorReadModels[K];
-  getReadModel<T>(name: string): T;
 }
 
 /** @deprecated Use `IProcessorHostModule`. */
@@ -78,18 +62,12 @@ export type ReactorModule = {
   relationalDb: IRelationalDb;
 };
 
-/** Per-drive factory after the host `module` has been applied once. */
-export type ProcessorDriveFactory = (
-  driveHeader: PHDocumentHeader,
-) => ProcessorRecord[] | Promise<ProcessorRecord[]>;
+/** @deprecated Use `ProcessorFactory`. */
+export type ProcessorDriveFactory = ProcessorFactory;
 
-/**
- * Builds a per-drive factory from the host module (e.g. vetra `processorFactory`).
- * Shape: `(module) => (driveHeader) => ...`
- */
-export type ProcessorFactoryBuilder = (
-  module: IProcessorHostModule,
-) => ProcessorDriveFactory | Promise<ProcessorDriveFactory>;
+/** Builds a per-drive factory from the host module (e.g. vetra `processorFactory`). */
+export type ProcessorFactoryBuilder =
+  BaseProcessorFactoryBuilder<IProcessorHostModule>;
 
 /** Multiple initializers per package name (e.g. Switchboard `processors` option). */
 export type Processor = ProcessorFactoryBuilder[];

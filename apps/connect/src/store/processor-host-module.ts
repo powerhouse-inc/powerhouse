@@ -1,4 +1,8 @@
 import {
+  createReactorHostModuleBase,
+  type IReadModel,
+} from "@powerhousedao/reactor";
+import {
   createAttachmentClient,
   type AttachmentDownloadTarget,
   type AttachmentHeader,
@@ -7,8 +11,8 @@ import {
 } from "@powerhousedao/reactor-attachments/client";
 import {
   createAnalyticsStore,
-  type IReactorClient,
   type IProcessorHostModule,
+  type IReactorClient,
 } from "@powerhousedao/reactor-browser";
 import { getDb } from "../pglite.db.js";
 
@@ -38,13 +42,9 @@ class NullAttachmentService implements IAttachmentService {
   }
 }
 
-interface INamedReadModel {
-  readonly name: string;
-}
-
 export async function createProcessorHostModule(
   reactorClient: IReactorClient,
-  readModels: INamedReadModel[],
+  readModels: ReadonlyArray<Pick<IReadModel, "name">>,
   attachmentService?: IAttachmentService,
 ): Promise<IProcessorHostModule | undefined> {
   try {
@@ -52,33 +52,17 @@ export async function createProcessorHostModule(
     const { store: analyticsStore } = await createAnalyticsStore({
       pgLite,
     });
-    const processorApp = "connect" as const;
     return {
-      relationalDb,
-      analyticsStore,
-      processorApp,
-      client: reactorClient,
+      ...createReactorHostModuleBase({
+        client: reactorClient,
+        readModels,
+        relationalDb,
+        analyticsStore,
+        processorApp: "connect",
+      }),
       attachments: createAttachmentClient(
         attachmentService ?? new NullAttachmentService(),
       ),
-      dispatch: {
-        async execute(docId, branch, actions, signal) {
-          const jobInfo = await reactorClient.executeAsync(
-            docId,
-            branch,
-            actions,
-            signal,
-          );
-          return { id: jobInfo.id, status: jobInfo.status };
-        },
-      },
-      getReadModel<T>(name: string): T {
-        const model = readModels.find((m) => m.name === name);
-        if (!model) {
-          throw new Error(`Read model "${name}" not found`);
-        }
-        return model as unknown as T;
-      },
     };
   } catch (error) {
     console.error(`Failed to initialize processor host module:`);
