@@ -18,11 +18,12 @@ import type {
   PagedResults,
   PagingOptions,
 } from "../shared/types.js";
-import type {
-  DocumentRevisions,
-  IDocumentView,
-  IOperationStore,
-  ViewFilter,
+import {
+  DocumentExistence,
+  type DocumentRevisions,
+  type IDocumentView,
+  type IOperationStore,
+  type ViewFilter,
 } from "../storage/interfaces.js";
 import type { Database as StorageDatabase } from "../storage/kysely/types.js";
 import { BaseReadModel } from "./base-read-model.js";
@@ -299,6 +300,7 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
 
   async exists(
     documentIds: string[],
+    existence: DocumentExistence,
     consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<boolean[]> {
@@ -314,15 +316,10 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
       return [];
     }
 
-    const snapshots = await this._db
-      .selectFrom("DocumentSnapshot")
-      .select(["documentId"])
-      .where("documentId", "in", documentIds)
-      .where("isDeleted", "=", false)
-      .distinct()
-      .execute();
-
-    const existingIds = new Set(snapshots.map((s) => s.documentId));
+    const existingIds =
+      existence === DocumentExistence.IncludingDeleted
+        ? await this.idsWithOperations(documentIds)
+        : await this.liveIds(documentIds);
 
     return documentIds.map((id) => existingIds.has(id));
   }
@@ -763,5 +760,33 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
     }
 
     return resolvedDocumentId;
+  }
+
+  /**
+   * Ids that have at least one operation on any scope or branch. A deleted
+   * document keeps its stream, so this is the id-is-taken answer, and it does
+   * not drift when a snapshot row is missing.
+   */
+  private async idsWithOperations(documentIds: string[]): Promise<Set<string>> {
+    const rows = await this._db
+      .selectFrom("Operation")
+      .select(["documentId"])
+      .where("documentId", "in", documentIds)
+      .distinct()
+      .execute();
+
+    return new Set(rows.map((row) => row.documentId));
+  }
+
+  private async liveIds(documentIds: string[]): Promise<Set<string>> {
+    const rows = await this._db
+      .selectFrom("DocumentSnapshot")
+      .select(["documentId"])
+      .where("documentId", "in", documentIds)
+      .where("isDeleted", "=", false)
+      .distinct()
+      .execute();
+
+    return new Set(rows.map((row) => row.documentId));
   }
 }

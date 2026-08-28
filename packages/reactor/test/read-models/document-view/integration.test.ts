@@ -14,7 +14,10 @@ import type { IWriteCache } from "../../../src/cache/write/interfaces.js";
 import { KyselyDocumentView } from "../../../src/read-models/document-view.js";
 import type { DocumentViewDatabase } from "../../../src/read-models/types.js";
 import { ConsistencyTracker } from "../../../src/shared/consistency-tracker.js";
-import type { IOperationStore } from "../../../src/storage/interfaces.js";
+import {
+  DocumentExistence,
+  type IOperationStore,
+} from "../../../src/storage/interfaces.js";
 import { KyselyOperationStore } from "../../../src/storage/kysely/store.js";
 import type { Database as StorageDatabase } from "../../../src/storage/kysely/types.js";
 import {
@@ -350,17 +353,20 @@ describe("KyselyDocumentView", () => {
       await view.indexOperations([operation]);
 
       // Check existence
-      const results = await view.exists([
-        existingDocId,
-        nonExistingDocId,
-        existingDocId, // Test duplicate
-      ]);
+      const results = await view.exists(
+        [
+          existingDocId,
+          nonExistingDocId,
+          existingDocId, // Test duplicate
+        ],
+        DocumentExistence.LiveOnly,
+      );
 
       expect(results).toEqual([true, false, true]);
     });
 
     it("should return empty array for empty input", async () => {
-      const results = await view.exists([]);
+      const results = await view.exists([], DocumentExistence.LiveOnly);
       expect(results).toEqual([]);
     });
 
@@ -408,7 +414,10 @@ describe("KyselyDocumentView", () => {
         .execute();
 
       // Check existence
-      const results = await view.exists([documentId]);
+      const results = await view.exists(
+        [documentId],
+        DocumentExistence.LiveOnly,
+      );
       expect(results).toEqual([false]);
     });
 
@@ -417,8 +426,141 @@ describe("KyselyDocumentView", () => {
       controller.abort();
 
       await expect(
-        view.exists([generateId()], undefined, controller.signal),
+        view.exists(
+          [generateId()],
+          DocumentExistence.LiveOnly,
+          undefined,
+          controller.signal,
+        ),
       ).rejects.toThrow("Operation aborted");
+    });
+  });
+
+  describe("exists() existence modes", () => {
+    const scope = "global";
+    const branch = "main";
+    const documentType = "powerhouse/document-drive";
+
+    beforeEach(async () => {
+      await view.init();
+    });
+
+    async function appendOperation(documentId: string): Promise<void> {
+      const action = setDriveName({ name: "existence" });
+
+      await operationStore.apply(
+        documentId,
+        documentType,
+        scope,
+        branch,
+        0,
+        (txn) => {
+          txn.addOperations({
+            index: 0,
+            timestampUtcMs: new Date().toISOString(),
+            hash: "hash-0",
+            skip: 0,
+            id: generateId(),
+            action,
+          });
+        },
+      );
+    }
+
+    async function snapshotDocument(documentId: string): Promise<void> {
+      await view.indexOperations([
+        {
+          operation: createTestOperation(documentId, {
+            index: 0,
+            hash: "hash-0",
+            action: setDriveName({ name: "existence" }),
+          }),
+          context: {
+            documentId,
+            documentType,
+            scope,
+            branch,
+            resultingState: JSON.stringify({ global: {} }),
+            ordinal: 1,
+          },
+        },
+      ]);
+    }
+
+    async function softDelete(documentId: string): Promise<void> {
+      await db
+        .updateTable("DocumentSnapshot")
+        .set({ isDeleted: true, deletedAt: new Date() })
+        .where("documentId", "=", documentId)
+        .execute();
+    }
+
+    it("counts a live document under both modes", async () => {
+      const documentId = generateId();
+      await appendOperation(documentId);
+      await snapshotDocument(documentId);
+
+      expect(
+        await view.exists([documentId], DocumentExistence.LiveOnly),
+      ).toEqual([true]);
+      expect(
+        await view.exists([documentId], DocumentExistence.IncludingDeleted),
+      ).toEqual([true]);
+    });
+
+    it("counts a soft-deleted document only when including deleted", async () => {
+      const documentId = generateId();
+      await appendOperation(documentId);
+      await snapshotDocument(documentId);
+      await softDelete(documentId);
+
+      expect(
+        await view.exists([documentId], DocumentExistence.LiveOnly),
+      ).toEqual([false]);
+      expect(
+        await view.exists([documentId], DocumentExistence.IncludingDeleted),
+      ).toEqual([true]);
+    });
+
+    it("counts an absent document under neither mode", async () => {
+      const documentId = generateId();
+
+      expect(
+        await view.exists([documentId], DocumentExistence.LiveOnly),
+      ).toEqual([false]);
+      expect(
+        await view.exists([documentId], DocumentExistence.IncludingDeleted),
+      ).toEqual([false]);
+    });
+
+    /**
+     * The drift this parameter exists for: the snapshot row is gone but the
+     * stream is intact, so the id is still taken and a write reusing it is
+     * rejected for a revision mismatch. A snapshot-only answer says "free".
+     */
+    it("counts a document whose snapshot is missing but whose stream is intact", async () => {
+      const documentId = generateId();
+      await appendOperation(documentId);
+      await snapshotDocument(documentId);
+
+      await db
+        .deleteFrom("DocumentSnapshot")
+        .where("documentId", "=", documentId)
+        .execute();
+
+      expect(
+        await view.exists([documentId], DocumentExistence.LiveOnly),
+      ).toEqual([false]);
+      expect(
+        await view.exists([documentId], DocumentExistence.IncludingDeleted),
+      ).toEqual([true]);
+    });
+
+    it("returns an empty array for empty input under both modes", async () => {
+      expect(await view.exists([], DocumentExistence.LiveOnly)).toEqual([]);
+      expect(await view.exists([], DocumentExistence.IncludingDeleted)).toEqual(
+        [],
+      );
     });
   });
 
@@ -2339,7 +2481,9 @@ describe("KyselyDocumentView", () => {
       }
 
       expect(await view.resolveSlug(slug, { branch })).toBe(documentId);
-      expect(await view.exists([documentId])).toEqual([true]);
+      expect(
+        await view.exists([documentId], DocumentExistence.LiveOnly),
+      ).toEqual([true]);
       await expect(view.get(documentId)).resolves.toMatchObject({
         header: { id: documentId },
       });
@@ -2360,7 +2504,10 @@ describe("KyselyDocumentView", () => {
       await createDocumentInView(documentId);
       await deleteDocumentInView(documentId);
 
-      const result = await view.exists([documentId]);
+      const result = await view.exists(
+        [documentId],
+        DocumentExistence.LiveOnly,
+      );
       expect(result).toEqual([false]);
     });
 

@@ -13,7 +13,10 @@ import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { ReactorFeatureFlags } from "../executor/types.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import { DocumentNotFoundError } from "../shared/errors.js";
-import type { IDocumentView } from "../storage/interfaces.js";
+import {
+  DocumentExistence,
+  type IDocumentView,
+} from "../storage/interfaces.js";
 import { buildDecisionModel } from "./build-decision-model.js";
 import type { RegisteredDecisionModel } from "./registered-model.js";
 import { selectDecisionModel } from "./registered-model.js";
@@ -218,7 +221,12 @@ export class SeededStateReader implements IStreamStateReader {
 
     let exists: boolean[];
     try {
-      exists = await this.documentView.exists([documentId], undefined, signal);
+      exists = await this.documentView.exists(
+        [documentId],
+        DocumentExistence.LiveOnly,
+        undefined,
+        signal,
+      );
     } catch {
       throw error;
     }
