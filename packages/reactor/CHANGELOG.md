@@ -1,3 +1,21 @@
+## 6.2.2-dev.64 (2026-08-28)
+
+### 🩹 Fixes
+
+- **reactor:** read pool memberships from the index, not from action shape ([8c5dbaa16](https://github.com/powerhouse-inc/powerhouse/commit/8c5dbaa16))
+- **reactor:** invalidate membership for what the commit actually changed ([f5786b3a4](https://github.com/powerhouse-inc/powerhouse/commit/f5786b3a4))
+- **reactor:** roll a failed job back instead of committing its prefix ([4fd2653c9](https://github.com/powerhouse-inc/powerhouse/commit/4fd2653c9))
+
+### 🔥 Performance
+
+- **reactor:** keep one entry per touched stream, not one per write ([0079ff16c](https://github.com/powerhouse-inc/powerhouse/commit/0079ff16c))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5
+- Claude Opus 5
+
 ## 6.2.2-dev.63 (2026-08-27)
 
 This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
