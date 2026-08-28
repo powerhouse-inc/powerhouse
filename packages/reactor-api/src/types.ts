@@ -8,7 +8,7 @@ import type {
 import type { IAttachmentClient } from "@powerhousedao/reactor-attachments/client";
 import type { PHDocumentHeader } from "@powerhousedao/shared/document-model";
 import type {
-  IProcessorHostModule,
+  IProcessorHostModuleBase,
   IRelationalDb,
   ProcessorRecord,
 } from "@powerhousedao/shared/processors";
@@ -21,10 +21,18 @@ export type {
   IPackageLoaderOptions,
 } from "./packages/types.js";
 
-export interface IReactorProcessorHostModule extends IProcessorHostModule {
+/**
+ * Module hosts pass to processor factories. Declared here (not in shared)
+ * because shared cannot depend on reactor or reactor-attachments.
+ * Keep in sync with `IProcessorHostModule` in @powerhousedao/reactor-browser.
+ */
+export interface IProcessorHostModule extends IProcessorHostModuleBase {
   client: IReactorClient;
   attachments: IAttachmentClient;
 }
+
+/** @deprecated Use `IProcessorHostModule`. */
+export type IReactorProcessorHostModule = IProcessorHostModule;
 
 export type ReadinessGate = {
   isReady: () => boolean;
