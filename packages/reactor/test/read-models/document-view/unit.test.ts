@@ -193,21 +193,42 @@ describe("KyselyDocumentView Unit Tests", () => {
       ).rejects.toThrow("Operation aborted");
     });
 
-    it("should query the operation store when including deleted", async () => {
-      mockDb.execute.mockResolvedValue([{ documentId: "doc-1" }]);
+    it("should ask the operation store, not the snapshot table, when including deleted", async () => {
+      vi.mocked(mockOperationStore.getRevisions).mockImplementation(
+        (documentId: string) =>
+          Promise.resolve({
+            revision: documentId === "doc-1" ? { global: 1 } : {},
+            latestTimestamp: new Date(0).toISOString(),
+          }),
+      );
 
       const result = await view.exists(
         ["doc-1", "doc-2"],
         DocumentExistence.IncludingDeleted,
       );
 
-      expect(mockDb.selectFrom).toHaveBeenCalledWith("Operation");
-      expect(mockDb.where).toHaveBeenCalledWith("documentId", "in", [
+      expect(mockDb.selectFrom).not.toHaveBeenCalledWith("DocumentSnapshot");
+      expect(mockOperationStore.getRevisions).toHaveBeenCalledWith(
         "doc-1",
-        "doc-2",
-      ]);
-      expect(mockDb.where).not.toHaveBeenCalledWith("isDeleted", "=", false);
+        "main",
+        undefined,
+      );
       expect(result).toEqual([true, false]);
+    });
+
+    it("should ask the store once per distinct id", async () => {
+      vi.mocked(mockOperationStore.getRevisions).mockResolvedValue({
+        revision: { global: 1 },
+        latestTimestamp: new Date(0).toISOString(),
+      });
+
+      const result = await view.exists(
+        ["doc-1", "doc-1"],
+        DocumentExistence.IncludingDeleted,
+      );
+
+      expect(mockOperationStore.getRevisions).toHaveBeenCalledTimes(1);
+      expect(result).toEqual([true, true]);
     });
   });
 

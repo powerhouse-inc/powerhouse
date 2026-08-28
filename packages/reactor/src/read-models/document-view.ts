@@ -318,7 +318,7 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
 
     const existingIds =
       existence === DocumentExistence.IncludingDeleted
-        ? await this.idsWithOperations(documentIds)
+        ? await this.idsWithStreams(documentIds, signal)
         : await this.liveIds(documentIds);
 
     return documentIds.map((id) => existingIds.has(id));
@@ -763,19 +763,32 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
   }
 
   /**
-   * Ids that have at least one operation on any scope or branch. A deleted
+   * Ids that have at least one stream, asked of the operation store rather than
+   * of a table, so the answer holds for any store implementation. A deleted
    * document keeps its stream, so this is the id-is-taken answer, and it does
    * not drift when a snapshot row is missing.
+   *
+   * Asked on main because that is the branch a create writes: the store this
+   * question exists to agree with validates the create against main's head.
    */
-  private async idsWithOperations(documentIds: string[]): Promise<Set<string>> {
-    const rows = await this._db
-      .selectFrom("Operation")
-      .select(["documentId"])
-      .where("documentId", "in", documentIds)
-      .distinct()
-      .execute();
+  private async idsWithStreams(
+    documentIds: string[],
+    signal?: AbortSignal,
+  ): Promise<Set<string>> {
+    const unique = [...new Set(documentIds)];
+    const revisions = await Promise.all(
+      unique.map((documentId) =>
+        this.operationStore.getRevisions(documentId, "main", signal),
+      ),
+    );
 
-    return new Set(rows.map((row) => row.documentId));
+    const taken = new Set<string>();
+    for (let i = 0; i < unique.length; i++) {
+      if (Object.keys(revisions[i].revision).length > 0) {
+        taken.add(unique[i]);
+      }
+    }
+    return taken;
   }
 
   private async liveIds(documentIds: string[]): Promise<Set<string>> {
