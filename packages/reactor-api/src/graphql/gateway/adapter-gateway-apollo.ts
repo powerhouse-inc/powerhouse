@@ -46,7 +46,7 @@ export function filterComposableSubgraphs(
 ): ServiceDefinition[] {
   return serviceList.filter((service) => {
     try {
-      buildSubgraphSchema({ typeDefs: service.typeDefs });
+      buildSubgraphSchema([{ typeDefs: service.typeDefs }]);
       return true;
     } catch (error) {
       logger?.error(

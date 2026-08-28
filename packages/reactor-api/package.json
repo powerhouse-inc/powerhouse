@@ -63,9 +63,9 @@
   "author": "",
   "license": "AGPL-3.0-only",
   "dependencies": {
-    "@apollo/gateway": "^2.13.2",
+    "@apollo/gateway": ">=2.13.2 <2.15.0",
     "@apollo/server": "^5.5.1",
-    "@apollo/subgraph": "^2.13.2",
+    "@apollo/subgraph": ">=2.13.2 <2.15.0",
     "@as-integrations/express4": "^1.1.2",
     "@electric-sql/pglite": "catalog:",
     "@originjs/vite-plugin-commonjs": "^1.0.3",

@@ -103,9 +103,10 @@ export const createSchema = (
   resolvers: GraphQLResolverMap<Context>,
   typeDefs: DocumentNode,
 ) => {
-  return buildSubgraphSchema(
+  // Array form: @apollo/subgraph 2.15 dropped the single-module overload.
+  return buildSubgraphSchema([
     buildSubgraphSchemaModule(documentModels, resolvers, typeDefs),
-  );
+  ]);
 };
 
 /**
