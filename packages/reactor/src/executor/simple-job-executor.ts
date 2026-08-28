@@ -965,8 +965,13 @@ export class SimpleJobExecutor implements IJobExecutor {
         first.appendCondition,
       );
     } catch (error) {
+      // The wrap that used to carry this phrase is gone, so the phrase lives
+      // here: the error keeps its identity, the log keeps the context.
       this.logger.error(
-        "Error writing @Operation to IOperationStore: @Error",
+        "Failed to write operation to IOperationStore (@documentId @scope @branch): @Operation @Error",
+        job.documentId,
+        scope,
+        job.branch,
         operations,
         error,
       );
