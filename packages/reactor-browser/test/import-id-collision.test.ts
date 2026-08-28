@@ -49,8 +49,22 @@ function driveDocument(): PHDocument {
   } as unknown as PHDocument;
 }
 
-/** Records the id the import claims, which is the decision under test. */
-function stubReactorClient(isDocumentIdTaken: () => Promise<boolean>) {
+function takenIdError(documentId: string): Error {
+  const error = new Error(`Document ${documentId} already exists`);
+  error.name = "DocumentAlreadyExistsError";
+  return error;
+}
+
+/**
+ * Records the id the import claims, which is the decision under test.
+ *
+ * `rejectClaims` decides which claims the write rejects as a taken id, standing
+ * in for an id claimed between the check and the create.
+ */
+function stubReactorClient(
+  isDocumentIdTaken: () => Promise<boolean>,
+  rejectClaims: (documentId: string, attempt: number) => boolean = () => false,
+) {
   const claimed: string[] = [];
   const modules = [documentModelModule()];
   const client = {
@@ -70,6 +84,9 @@ function stubReactorClient(isDocumentIdTaken: () => Promise<boolean>) {
     drives: {
       addFile: (_driveId: string, document: PHDocument) => {
         claimed.push(document.header.id);
+        if (rejectClaims(document.header.id, claimed.length)) {
+          return Promise.reject(takenIdError(document.header.id));
+        }
         return Promise.resolve(document);
       },
     },
@@ -132,6 +149,48 @@ describe("importing a .phd whose id may be taken", () => {
       "transport down",
     );
     expect(claimed).toEqual([]);
+  });
+
+  it("retries under a new id when the id is claimed between the check and the create", async () => {
+    // The check says free, the write disagrees: the id was claimed in between.
+    const { client, claimed } = stubReactorClient(
+      () => Promise.resolve(false),
+      (_documentId, attempt) => attempt === 1,
+    );
+    installClient(client);
+
+    await addFileWithProgress(file, DRIVE_ID);
+
+    expect(claimed).toHaveLength(2);
+    expect(claimed[0]).toBe(SOURCE_ID);
+    expect(claimed[1]).not.toBe(SOURCE_ID);
+    expect(claimed[1]).toBeTruthy();
+  });
+
+  it("gives up after a bounded number of ids rather than retrying forever", async () => {
+    const { client, claimed } = stubReactorClient(
+      () => Promise.resolve(false),
+      () => true,
+    );
+    installClient(client);
+
+    await expect(addFileWithProgress(file, DRIVE_ID)).rejects.toThrow();
+
+    expect(claimed).toHaveLength(3);
+    expect(new Set(claimed).size).toBe(3);
+  });
+
+  it("does not retry a failure that a new id cannot fix", async () => {
+    const { client, claimed } = stubReactorClient(() => Promise.resolve(false));
+    client.drives.addFile = (_driveId: string, document: PHDocument) => {
+      claimed.push(document.header.id);
+      return Promise.reject(new Error("transport down"));
+    };
+    installClient(client);
+
+    await expect(addFileWithProgress(file, DRIVE_ID)).rejects.toThrow();
+
+    expect(claimed).toHaveLength(1);
   });
 
   it("fails the import when the drive cannot be read", async () => {

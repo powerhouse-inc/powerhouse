@@ -511,6 +511,104 @@ export async function addDocument(
   };
 }
 
+/** The file node shape {@link addDocument} reports for a created document. */
+export type AddedFileNode = {
+  id: string;
+  name: string;
+  documentType: string;
+  parentFolder: string | null;
+  kind: "file";
+};
+
+/**
+ * How many ids an import will try before giving up. The check before the create
+ * catches an id that is already taken; this bound covers the window between the
+ * two, where a create can still lose to a claim made in the meantime.
+ */
+const IMPORT_ID_ATTEMPTS = 3;
+
+/** True when this error, or anything it wraps, is a taken document id. */
+function isDocumentAlreadyExists(error: unknown): boolean {
+  let current: unknown = error;
+  while (current instanceof Error) {
+    if (current.name === "DocumentAlreadyExistsError") {
+      return true;
+    }
+    current = current.cause;
+  }
+  return false;
+}
+
+/**
+ * Creates the imported document under an id that is free, retrying on a
+ * collision.
+ *
+ * The check cannot stand on its own: it answers for the moment it ran, and the
+ * create that follows can still land on an id claimed in between. The store
+ * rejects that create as DocumentAlreadyExistsError, which is not retryable
+ * under the same id and is resolved by minting another one. A create that
+ * fails leaves the drive untouched, so a retry has nothing to clean up.
+ */
+async function createImportedDocument(
+  reactor: IReactorClient,
+  document: PHDocument,
+  driveId: string,
+  name?: string,
+  parentFolder?: string,
+): Promise<{ documentId: string; fileNode: AddedFileNode }> {
+  let documentId = (await reactor.isDocumentIdTaken(document.header.id))
+    ? generateId()
+    : document.header.id;
+
+  for (let attempt = 1; ; attempt++) {
+    const header = createPresignedHeader(
+      documentId,
+      document.header.documentType,
+    );
+    header.lastModifiedAtUtcIso = document.header.createdAtUtcIso;
+    header.meta = document.header.meta;
+    header.name = name || document.header.name;
+
+    // copy the document at it's initial state
+    const initialDocument = {
+      ...document,
+      header,
+      state: document.initialState,
+      operations: Object.keys(document.operations).reduce((acc, key) => {
+        acc[key] = [];
+        return acc;
+      }, {} as DocumentOperations),
+    };
+
+    try {
+      const fileNode = await addDocument(
+        driveId,
+        name || document.header.name,
+        document.header.documentType,
+        parentFolder,
+        initialDocument,
+        documentId,
+        document.header.meta?.preferredEditor,
+      );
+
+      if (!fileNode) {
+        throw new Error("There was an error adding file");
+      }
+
+      return { documentId, fileNode };
+    } catch (error) {
+      if (!isDocumentAlreadyExists(error) || attempt === IMPORT_ID_ATTEMPTS) {
+        throw error;
+      }
+
+      logger.warn(
+        `Document id ${documentId} was taken between the check and the create; importing under a new id`,
+      );
+      documentId = generateId();
+    }
+  }
+}
+
 export async function addFileWithProgress(
   file: string | File,
   driveId: string,
@@ -643,41 +741,15 @@ export async function addFileWithProgress(
     // Initializing stage (10-20%)
     onProgress?.({ stage: "initializing", progress: 10 });
 
-    const documentId = (await reactor.isDocumentIdTaken(document.header.id))
-      ? generateId()
-      : document.header.id;
-    const header = createPresignedHeader(
-      documentId,
-      document.header.documentType,
-    );
-    header.lastModifiedAtUtcIso = document.header.createdAtUtcIso;
-    header.meta = document.header.meta;
-    header.name = name || document.header.name;
-
-    // copy the document at it's initial state
-    const initialDocument = {
-      ...document,
-      header,
-      state: document.initialState,
-      operations: Object.keys(document.operations).reduce((acc, key) => {
-        acc[key] = [];
-        return acc;
-      }, {} as DocumentOperations),
-    };
-
-    const fileNode = await addDocument(
+    const created = await createImportedDocument(
+      reactor,
+      document,
       driveId,
-      name || document.header.name,
-      document.header.documentType,
+      name,
       parentFolder,
-      initialDocument,
-      documentId,
-      document.header.meta?.preferredEditor,
     );
-
-    if (!fileNode) {
-      throw new Error("There was an error adding file");
-    }
+    const documentId = created.documentId;
+    const fileNode = created.fileNode;
 
     onProgress?.({ stage: "initializing", progress: 20 });
 

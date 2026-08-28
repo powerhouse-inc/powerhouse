@@ -1,3 +1,4 @@
+import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type {
   DocumentModelModule,
@@ -63,7 +64,7 @@ describe("drives.addFile with a taken document id", () => {
       .buildModule();
 
     const drive = await module.client.drives.create({
-      global: { name: "Drive", icon: null, nodes: [] },
+      global: { name: "Drive", icon: null },
     });
     driveId = drive.header.id;
   });
@@ -104,10 +105,8 @@ describe("drives.addFile with a taken document id", () => {
 
     // The drive never learned about the attempt: no file node, and no child
     // relationship pointing at a document it does not own.
-    const drive = await module.client.get(driveId);
-    expect(
-      (drive.state as { global: { nodes: unknown[] } }).global.nodes,
-    ).toEqual([]);
+    const drive = await module.client.get<DocumentDriveDocument>(driveId);
+    expect(drive.state.global.nodes).toEqual([]);
     expect(await relationshipRows(existing.header.id)).toHaveLength(
       relationshipsBefore.length,
     );
@@ -138,9 +137,8 @@ describe("drives.addFile with a taken document id", () => {
     expect(imported.header.id).toBe(retried.header.id);
     expect(imported.header.id).not.toBe(existing.header.id);
 
-    const drive = await module.client.get(driveId);
-    const nodes = (drive.state as { global: { nodes: { id: string }[] } })
-      .global.nodes;
+    const drive = await module.client.get<DocumentDriveDocument>(driveId);
+    const nodes = drive.state.global.nodes;
     expect(nodes).toHaveLength(1);
     expect(nodes[0].id).toBe(retried.header.id);
   });
