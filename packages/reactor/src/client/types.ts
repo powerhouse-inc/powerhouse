@@ -298,6 +298,9 @@ export interface IReactorClient {
     signal?: AbortSignal,
   ): Promise<string>;
 
+  /** True when the id is taken; a soft-deleted document's id is still taken. */
+  isDocumentIdTaken(documentId: string, signal?: AbortSignal): Promise<boolean>;
+
   /**
    * Retrieves operations for a document.
    *

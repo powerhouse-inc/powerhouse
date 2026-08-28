@@ -40,6 +40,7 @@ import {
   type SearchFilter,
   type ViewFilter,
 } from "../shared/types.js";
+import { DocumentExistence } from "../storage/interfaces.js";
 import type {
   IDocumentIndexer,
   IDocumentView,
@@ -350,6 +351,21 @@ export class ReactorClient implements IReactorClient {
       undefined,
       signal,
     );
+  }
+
+  /** True when the id is taken; a soft-deleted document's id is still taken. */
+  async isDocumentIdTaken(
+    documentId: string,
+    signal?: AbortSignal,
+  ): Promise<boolean> {
+    this.logger.verbose("isDocumentIdTaken(@documentId)", documentId);
+    const taken = await this.documentView.exists(
+      [documentId],
+      DocumentExistence.IncludingDeleted,
+      undefined,
+      signal,
+    );
+    return taken[0];
   }
 
   /**

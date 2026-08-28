@@ -29,6 +29,7 @@ import {
   type JobInfo,
   type PagedResults,
 } from "../../src/shared/types.js";
+import { DocumentExistence } from "../../src/storage/interfaces.js";
 import type {
   IDocumentIndexer,
   IDocumentView,
@@ -265,6 +266,60 @@ describe("ReactorClient Unit Tests", () => {
         paging,
         undefined,
         signal,
+      );
+    });
+  });
+
+  describe("isDocumentIdTaken", () => {
+    it("should ask the document view including deleted documents", async () => {
+      vi.mocked(mockDocumentView.exists).mockResolvedValue([true]);
+
+      const taken = await client.isDocumentIdTaken("doc-1");
+
+      expect(taken).toBe(true);
+      expect(mockDocumentView.exists).toHaveBeenCalledWith(
+        ["doc-1"],
+        DocumentExistence.IncludingDeleted,
+        undefined,
+        undefined,
+      );
+    });
+
+    it("should report a free id as not taken", async () => {
+      vi.mocked(mockDocumentView.exists).mockResolvedValue([false]);
+
+      await expect(client.isDocumentIdTaken("doc-1")).resolves.toBe(false);
+    });
+
+    it("should not resolve the argument as a slug", async () => {
+      vi.mocked(mockDocumentView.exists).mockResolvedValue([false]);
+
+      await client.isDocumentIdTaken("my-slug");
+
+      expect(mockDocumentView.resolveIdOrSlug).not.toHaveBeenCalled();
+    });
+
+    it("should forward the abort signal", async () => {
+      const signal = new AbortController().signal;
+      vi.mocked(mockDocumentView.exists).mockResolvedValue([false]);
+
+      await client.isDocumentIdTaken("doc-1", signal);
+
+      expect(mockDocumentView.exists).toHaveBeenCalledWith(
+        ["doc-1"],
+        DocumentExistence.IncludingDeleted,
+        undefined,
+        signal,
+      );
+    });
+
+    it("should propagate a failed read rather than reporting the id free", async () => {
+      vi.mocked(mockDocumentView.exists).mockRejectedValue(
+        new Error("transport down"),
+      );
+
+      await expect(client.isDocumentIdTaken("doc-1")).rejects.toThrow(
+        "transport down",
       );
     });
   });
