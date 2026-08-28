@@ -61,6 +61,17 @@ export function filterComposableSubgraphs(
 
 // Forwards the incoming authorization header to federated subgraph requests.
 class AuthenticatedDataSource extends RemoteGraphQLDataSource {
+  constructor(
+    config?: ConstructorParameters<typeof RemoteGraphQLDataSource>[0],
+  ) {
+    // Node's fetch retires a pooled connection before the subgraph server's advertised keep-alive
+    // timeout; Apollo's default make-fetch-happen agent holds it until the server closes it under us.
+    super({
+      fetcher: fetch as RemoteGraphQLDataSource["fetcher"],
+      ...config,
+    });
+  }
+
   willSendRequest(options: GraphQLDataSourceProcessOptions) {
     const { authorization } = options.context.headers as {
       authorization: string;
