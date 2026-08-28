@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-08-27T15:27:52.763Z
+> Generated: 2026-08-28T14:13:12.648Z
 > Total Documents: 110
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -2634,18 +2634,14 @@ export const getResolvers = (subgraph: BaseSubgraph) => {
 };
 ```
 
-**In a generated processor (server-side).** The processor factory builder receives the host module; the client is `module.client`. The parameter is typed as the base `IProcessorHostModule`, which exposes `relationalDb`, `analyticsStore`, `dispatch`, and `getReadModel` but not `client`. Widen it to `IReactorProcessorHostModule` to reach `client` (and `attachments`). See [Processors](/academy/Reference/Reactor/Processors) for the full registration flow.
+**In a generated processor (server-side).** The processor factory builder receives the host module; the client is `module.client`. `IProcessorHostModule` from `@powerhousedao/reactor-browser` (or `@powerhousedao/reactor-api`) exposes `relationalDb`, `analyticsStore`, `dispatch`, `getReadModel`, `client`, and `attachments`. See [Processors](/academy/Reference/Reactor/Processors) for the full registration flow.
 
 ```typescript
 
-  IReactorProcessorHostModule,
-  ProcessorFactoryBuilder,
-} from "@powerhousedao/reactor-browser";
 
 // factory.ts (generated scaffold)
 export const factoryBuilder: ProcessorFactoryBuilder = (module) => {
-  // `module` is typed as the base IProcessorHostModule; widen it to reach `client`.
-  const { client } = module as IReactorProcessorHostModule; // client: IReactorClient
+  const { client } = module; // client: IReactorClient
   return async () => {
     // use client.get(...), client.drives, client.execute(...)
     return [];
@@ -4979,10 +4975,10 @@ The codegen analytics template emits `scope: ["*"]`. Under the matcher this matc
 
 ## The processor host
 
-The host module is the context a processor gets through its factory builder. The base interface is `IProcessorHostModule`:
+The host module is the context a processor gets through its factory builder. The host-agnostic core is `IProcessorHostModuleBase`:
 
 ```typescript
-interface IProcessorHostModule {
+interface IProcessorHostModuleBase {
   analyticsStore: IAnalyticsStore;
   relationalDb: IRelationalDb;
   processorApp: ProcessorApp;
@@ -4998,8 +4994,10 @@ interface IProcessorHostModule {
 - **`dispatch`** — writes back to the reactor via `dispatch.execute(docId, branch, actions, signal?, meta?)`, returning `{ id, status }`. In Connect this is wired to the reactor client's async execute.
 - **`getReadModel<T>(name)`** — looks up a registered read model by its `name`. Connect's implementation throws `Read model "<name>" not found` when there is no match.
 - **`config?`** — optional `Map<string, unknown>` of host config.
+- **`client`** — the `IReactorClient` for reading documents and drives. See [IReactorClient](/academy/Reference/Reactor/ReactorClient).
+- **`attachments`** — the `IAttachmentClient` for uploading and downloading attachments. See the [Attachment service](/academy/Reference/Reactor/AttachmentService).
 
-Connect builds an extended module, `IReactorProcessorHostModule`, which adds `client: IReactorClient` and `attachments: IAttachmentClient`. It is defined in reactor-browser to avoid a circular package dependency, and sets `processorApp: "connect"`. See [IReactorClient](/academy/Reference/Reactor/ReactorClient) and the [Attachment service](/academy/Reference/Reactor/AttachmentService).
+These six core fields are `IProcessorHostModuleBase` in `@powerhousedao/shared`; `client` and `attachments` are added by `IProcessorHostModule` in `@powerhousedao/reactor-browser` and `@powerhousedao/reactor-api`, since shared cannot depend on those packages. Connect sets `processorApp: "connect"`.
 
 `IProcessorDispatch` and `ProcessorDispatchResult` are defined in shared but are not part of the public reactor export surface; treat the `dispatch` handle on the module as the supported entry point.
 

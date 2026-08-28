@@ -43,7 +43,6 @@ import type { Pool } from "pg";
 import { WebSocketServer } from "ws";
 import {
   createRelationalDb,
-  type IProcessorHostModule,
   type IRelationalDb,
   type ProcessorApp,
 } from "@powerhousedao/shared/processors";
@@ -101,7 +100,7 @@ import {
 import type {
   API,
   IPackageLoader,
-  IReactorProcessorHostModule,
+  IProcessorHostModule,
   Processor,
   ProcessorDriveFactory,
   ProcessorFactoryBuilder,
@@ -822,7 +821,7 @@ async function _setupAPI(
   reactorDriveClient?: IDriveClient,
   syncServingGate?: SyncScopeGate,
 ): Promise<API> {
-  const hostModule: IReactorProcessorHostModule = {
+  const hostModule: IProcessorHostModule = {
     relationalDb,
     analyticsStore,
     processorApp,

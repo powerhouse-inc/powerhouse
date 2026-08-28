@@ -406,7 +406,7 @@ export {
 } from "@powerhousedao/shared/processors";
 export type {
   IProcessor,
-  IProcessorHostModule,
+  IProcessorHostModuleBase,
   IProcessorManager,
   IRelationalDb,
   ProcessorApp,

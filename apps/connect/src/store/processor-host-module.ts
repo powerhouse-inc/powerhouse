@@ -8,7 +8,7 @@ import {
 import {
   createAnalyticsStore,
   type IReactorClient,
-  type IReactorProcessorHostModule,
+  type IProcessorHostModule,
 } from "@powerhousedao/reactor-browser";
 import { getDb } from "../pglite.db.js";
 
@@ -46,7 +46,7 @@ export async function createProcessorHostModule(
   reactorClient: IReactorClient,
   readModels: INamedReadModel[],
   attachmentService?: IAttachmentService,
-): Promise<IReactorProcessorHostModule | undefined> {
+): Promise<IProcessorHostModule | undefined> {
   try {
     const { pgLite, relationalDb } = await getDb();
     const { store: analyticsStore } = await createAnalyticsStore({
