@@ -1212,8 +1212,12 @@ describe("ReactorClient Integration Tests", () => {
     });
 
     it("should emit JOB_WRITE_READY events with batch metadata that allows detecting batch completion", async () => {
-      const drive = driveDocumentModelModule.utils.createDocument();
-      await client.create(drive);
+      // Created before the subscription: their creates are batches too, and a
+      // subscriber that sees them resolves on the wrong one.
+      const first = documentModelDocumentModelModule.utils.createDocument();
+      const second = documentModelDocumentModelModule.utils.createDocument();
+      await client.create(first);
+      await client.create(second);
 
       let completedBatchId = "";
       let batchJobIds: string[] = [];
@@ -1243,25 +1247,37 @@ describe("ReactorClient Integration Tests", () => {
         );
       });
 
-      const doc = documentModelDocumentModelModule.utils.createDocument();
-      doc.header.name = "Batch Test Document";
-      await client.createDocumentInDrive(drive.header.id, doc);
+      // Two jobs submitted as one batch. This used to ride on
+      // createDocumentInDrive, which no longer batches its two writes: a batch
+      // edge only orders jobs, so the file node it added could land on a create
+      // that had failed. The metadata contract under test is unchanged.
+      await reactor.executeBatch({
+        jobs: [
+          {
+            key: "first",
+            documentId: first.header.id,
+            scope: "global",
+            branch: "main",
+            actions: [actions.setName("Batch Test Document")],
+            dependsOn: [],
+          },
+          {
+            key: "second",
+            documentId: second.header.id,
+            scope: "global",
+            branch: "main",
+            actions: [actions.setName("Batch Test Sibling")],
+            dependsOn: [],
+          },
+        ],
+      });
       await batchCompletedPromise;
 
       expect(completedBatchId).toMatch(
         /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
       );
       expect(batchJobIds.length).toBe(2);
-
-      const createdDoc = await client.get(doc.header.id);
-      expect(createdDoc).toBeDefined();
-      expect(createdDoc.header.name).toBe("Batch Test Document");
-
-      const driveResult = await client.get(drive.header.id);
-      const driveState = driveResult.state as any;
-      const files = driveState.global.nodes || [];
-      const addedFile = files.find((n: any) => n.id === doc.header.id);
-      expect(addedFile).toBeDefined();
+      expect(seenJobIds.size).toBe(2);
     });
   });
 });
