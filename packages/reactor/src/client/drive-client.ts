@@ -33,9 +33,9 @@ import {
   removeRelationshipAction,
   upgradeDocumentAction,
 } from "../actions/index.js";
-import type { IReactor } from "../core/types.js";
+import type { ExecutionJobPlan, IReactor } from "../core/types.js";
 import { getSharedActionScope, signActions } from "../core/utils.js";
-import type { PagedResults, PagingOptions } from "../shared/types.js";
+import type { JobInfo, PagedResults, PagingOptions } from "../shared/types.js";
 import { JobStatus } from "../shared/types.js";
 import { parsePagingOptions } from "../shared/utils.js";
 import type { IDriveClient, IReactorClient } from "./types.js";
@@ -149,41 +149,38 @@ export class DriveClient implements IDriveClient {
       signal,
     );
 
-    const batchResult = await this.reactor.executeBatch(
-      {
-        jobs: [
-          {
-            key: "document",
-            documentId,
-            scope: getSharedActionScope(documentActions),
-            branch: "main",
-            actions: documentActions,
-            dependsOn: [],
-          },
-          {
-            key: "drive",
-            documentId: driveIdentifier,
-            scope: getSharedActionScope(driveActions),
-            branch: "main",
-            actions: driveActions,
-            dependsOn: ["document"],
-          },
-        ],
-      },
+    // Two batches, not one with a dependsOn edge. A batch's edges are ordering
+    // only: a failed job still releases its dependents (see IQueue.failJob), so
+    // batching these would add the file node on top of a create that never
+    // landed, pointing the drive at whoever already owns that id. Waiting for
+    // the document to exist costs a round trip and makes that unrepresentable.
+    await this.runJobs(
+      [
+        {
+          key: "document",
+          documentId,
+          scope: getSharedActionScope(documentActions),
+          branch: "main",
+          actions: documentActions,
+          dependsOn: [],
+        },
+      ],
       signal,
     );
 
-    const completedJobs = await Promise.all(
-      Object.values(batchResult.jobs).map((job) =>
-        this.client.waitForJob(job, signal),
-      ),
+    await this.runJobs(
+      [
+        {
+          key: "drive",
+          documentId: driveIdentifier,
+          scope: getSharedActionScope(driveActions),
+          branch: "main",
+          actions: driveActions,
+          dependsOn: [],
+        },
+      ],
+      signal,
     );
-
-    for (const job of completedJobs) {
-      if (job.status === JobStatus.FAILED) {
-        throw new Error(job.error?.message);
-      }
-    }
 
     // Through the client, not the reactor: this one holds the read gate, and a
     // document handed back from a write is a read like any other.
@@ -494,6 +491,40 @@ export class DriveClient implements IDriveClient {
       ...(hasMore ? { nextCursor: String(endIndex) } : {}),
       totalCount: filtered.length,
     };
+  }
+
+  /**
+   * Runs one batch to completion, throwing the first failure. The thrown error
+   * carries the job error's name, which is what callers classify on: an id
+   * collision has to be told apart from a transient failure.
+   */
+  private async runJobs(
+    jobs: ExecutionJobPlan[],
+    signal?: AbortSignal,
+  ): Promise<JobInfo[]> {
+    const batchResult = await this.reactor.executeBatch({ jobs }, signal);
+
+    const completedJobs = await Promise.all(
+      Object.values(batchResult.jobs).map((job) =>
+        this.client.waitForJob(job, signal),
+      ),
+    );
+
+    for (const job of completedJobs) {
+      if (job.status === JobStatus.FAILED) {
+        throw this.toError(job);
+      }
+    }
+
+    return completedJobs;
+  }
+
+  private toError(job: JobInfo): Error {
+    const error = new Error(job.error?.message ?? "Job failed");
+    if (job.error?.name) {
+      error.name = job.error.name;
+    }
+    return error;
   }
 
   private async documentExists(

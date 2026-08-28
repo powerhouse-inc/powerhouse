@@ -195,11 +195,14 @@ describe("KyselyDocumentView Unit Tests", () => {
 
     it("should ask the operation store, not the snapshot table, when including deleted", async () => {
       vi.mocked(mockOperationStore.getRevisions).mockImplementation(
-        (documentId: string) =>
-          Promise.resolve({
-            revision: documentId === "doc-1" ? { global: 1 } : {},
+        (documentId: string) => {
+          const revision: Record<string, number> =
+            documentId === "doc-1" ? { global: 1 } : {};
+          return Promise.resolve({
+            revision,
             latestTimestamp: new Date(0).toISOString(),
-          }),
+          });
+        },
       );
 
       const result = await view.exists(
