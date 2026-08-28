@@ -2,6 +2,7 @@ import type {
   IProcessorHostModuleBase,
   IReactorClient,
   ProcessorFactory,
+  ReactorReadModels,
 } from "@powerhousedao/reactor";
 import type { IAttachmentClient } from "@powerhousedao/reactor-attachments/client";
 
@@ -13,6 +14,21 @@ import type { IAttachmentClient } from "@powerhousedao/reactor-attachments/clien
 export interface IProcessorHostModule extends IProcessorHostModuleBase {
   client: IReactorClient;
   attachments: IAttachmentClient;
+  /**
+   * Retrieves a registered read model by name.
+   *
+   * Reactor-registered names are typed via `ReactorReadModels` — hover a key
+   * there for what each model holds:
+   * - `"document-view"` (materialized document state, `IDocumentView`)
+   * - `"document-indexer"` (document relationship graph, `IDocumentIndexer`).
+   *
+   * Other names return the caller-supplied type.
+   * Throws if no read model with that name is registered.
+   */
+  getReadModel<K extends keyof ReactorReadModels>(
+    name: K,
+  ): ReactorReadModels[K];
+  getReadModel<T>(name: string): T;
 }
 
 /** @deprecated Use `IProcessorHostModule`. */

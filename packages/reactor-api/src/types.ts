@@ -1,5 +1,5 @@
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
-import type { IReactorClient } from "@powerhousedao/reactor";
+import type { IReactorClient, ReactorReadModels } from "@powerhousedao/reactor";
 import type { GraphQLManager } from "@powerhousedao/reactor-api";
 import type {
   AttachmentBuildResult,
@@ -29,6 +29,21 @@ export type {
 export interface IProcessorHostModule extends IProcessorHostModuleBase {
   client: IReactorClient;
   attachments: IAttachmentClient;
+  /**
+   * Retrieves a registered read model by name.
+   *
+   * Reactor-registered names are typed via `ReactorReadModels` — hover a key
+   * there for what each model holds:
+   * - `"document-view"` (materialized document state, `IDocumentView`)
+   * - `"document-indexer"` (document relationship graph, `IDocumentIndexer`).
+   *
+   * Other names return the caller-supplied type.
+   * Throws if no read model with that name is registered.
+   */
+  getReadModel<K extends keyof ReactorReadModels>(
+    name: K,
+  ): ReactorReadModels[K];
+  getReadModel<T>(name: string): T;
 }
 
 /** @deprecated Use `IProcessorHostModule`. */

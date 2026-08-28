@@ -7,6 +7,7 @@ import { v4 as uuidv4 } from "uuid";
 import type { IOperationIndex } from "../../cache/operation-index-types.js";
 import type { IWriteCache } from "../../cache/write/interfaces.js";
 import { BaseReadModel } from "../../read-models/base-read-model.js";
+import { DOCUMENT_INDEXER_READ_MODEL } from "../../read-models/names.js";
 import type { DocumentViewDatabase } from "../../read-models/types.js";
 import { collectAllPages } from "../../shared/collect-all-pages.js";
 import type { IConsistencyTracker } from "../../shared/consistency-tracker.js";
@@ -48,7 +49,7 @@ export class KyselyDocumentIndexer
       operationIndex,
       writeCache,
       consistencyTracker,
-      { readModelId: "document-indexer", rebuildStateOnInit: false },
+      { readModelId: DOCUMENT_INDEXER_READ_MODEL, rebuildStateOnInit: false },
     );
     this._db = db;
   }

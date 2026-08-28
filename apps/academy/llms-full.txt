@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-08-28T14:13:12.648Z
+> Generated: 2026-08-28T14:19:55.131Z
 > Total Documents: 110
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -4992,7 +4992,7 @@ interface IProcessorHostModuleBase {
 - **`relationalDb`** — an `IRelationalDb` (a Kysely instance plus `createNamespace` / `queryNamespace`) for relational indexing. See [Storage and scaling](/academy/Reference/Reactor/StorageAndScaling).
 - **`processorApp`** — `"connect" | "switchboard"`. How a processor learns which app hosts it. Read this rather than the factory's `processorApp?` argument.
 - **`dispatch`** — writes back to the reactor via `dispatch.execute(docId, branch, actions, signal?, meta?)`, returning `{ id, status }`. In Connect this is wired to the reactor client's async execute.
-- **`getReadModel<T>(name)`** — looks up a registered read model by its `name`. Connect's implementation throws `Read model "<name>" not found` when there is no match.
+- **`getReadModel(name)`** — looks up a registered read model by its `name`. Reactor-registered names are typed: `getReadModel("document-view")` returns `IDocumentView` and `"document-indexer"` returns `IDocumentIndexer`; other names take an explicit type argument. Connect's implementation throws `Read model "<name>" not found` when there is no match.
 - **`config?`** — optional `Map<string, unknown>` of host config.
 - **`client`** — the `IReactorClient` for reading documents and drives. See [IReactorClient](/academy/Reference/Reactor/ReactorClient).
 - **`attachments`** — the `IAttachmentClient` for uploading and downloading attachments. See the [Attachment service](/academy/Reference/Reactor/AttachmentService).
