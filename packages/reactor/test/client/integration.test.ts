@@ -1212,46 +1212,62 @@ describe("ReactorClient Integration Tests", () => {
     });
 
     it("should emit JOB_WRITE_READY events with batch metadata that allows detecting batch completion", async () => {
-      // Created before the subscription: their creates are batches too, and a
-      // subscriber that sees them resolves on the wrong one.
       const first = documentModelDocumentModelModule.utils.createDocument();
       const second = documentModelDocumentModelModule.utils.createDocument();
       await client.create(first);
       await client.create(second);
 
+      // Kept per batch, not in one flat set. Every write is part of some batch,
+      // including the two creates above -- JOB_WRITE_READY is emitted
+      // fire-and-forget, so one of those can still arrive after the subscribe
+      // below. A flat set lets a stray single-job batch satisfy the completion
+      // check, which is a pass that says nothing.
+      const seenByBatch = new Map<string, Set<string>>();
+      const metaByBatch = new Map<string, string[]>();
+      let targetJobIds: string[] = [];
       let completedBatchId = "";
-      let batchJobIds: string[] = [];
-      const seenJobIds = new Set<string>();
+      let resolveCompleted = (): void => {};
 
       const batchCompletedPromise = new Promise<void>((resolve) => {
-        const unsubscribe = eventBus.subscribe<JobWriteReadyEvent>(
-          ReactorEventTypes.JOB_WRITE_READY,
-          (_type, event) => {
-            const meta = event.jobMeta as
-              | { batchId?: string; batchJobIds?: string[] }
-              | undefined;
-            if (!meta?.batchId || !meta.batchJobIds) {
-              return;
-            }
-
-            seenJobIds.add(event.jobId);
-
-            const allSeen = meta.batchJobIds.every((id) => seenJobIds.has(id));
-            if (allSeen) {
-              completedBatchId = meta.batchId;
-              batchJobIds = meta.batchJobIds;
-              unsubscribe();
-              resolve();
-            }
-          },
-        );
+        resolveCompleted = resolve;
       });
+
+      function resolveIfTargetComplete(): void {
+        if (targetJobIds.length === 0) {
+          return;
+        }
+        for (const [batchId, seen] of seenByBatch) {
+          if (targetJobIds.every((id) => seen.has(id))) {
+            completedBatchId = batchId;
+            resolveCompleted();
+            return;
+          }
+        }
+      }
+
+      const unsubscribe = eventBus.subscribe<JobWriteReadyEvent>(
+        ReactorEventTypes.JOB_WRITE_READY,
+        (_type, event) => {
+          const meta = event.jobMeta as
+            | { batchId?: string; batchJobIds?: string[] }
+            | undefined;
+          if (!meta?.batchId || !meta.batchJobIds) {
+            return;
+          }
+
+          const seen = seenByBatch.get(meta.batchId) ?? new Set<string>();
+          seen.add(event.jobId);
+          seenByBatch.set(meta.batchId, seen);
+          metaByBatch.set(meta.batchId, meta.batchJobIds);
+          resolveIfTargetComplete();
+        },
+      );
 
       // Two jobs submitted as one batch. This used to ride on
       // createDocumentInDrive, which no longer batches its two writes: a batch
       // edge only orders jobs, so the file node it added could land on a create
       // that had failed. The metadata contract under test is unchanged.
-      await reactor.executeBatch({
+      const batch = await reactor.executeBatch({
         jobs: [
           {
             key: "first",
@@ -1271,13 +1287,22 @@ describe("ReactorClient Integration Tests", () => {
           },
         ],
       });
+
+      // Set after submitting, so events that arrived first are re-checked here
+      // rather than missed.
+      targetJobIds = [batch.jobs.first.id, batch.jobs.second.id];
+      resolveIfTargetComplete();
       await batchCompletedPromise;
+      unsubscribe();
 
       expect(completedBatchId).toMatch(
         /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
       );
-      expect(batchJobIds.length).toBe(2);
-      expect(seenJobIds.size).toBe(2);
+      expect(metaByBatch.get(completedBatchId)).toEqual(
+        expect.arrayContaining(targetJobIds),
+      );
+      expect(metaByBatch.get(completedBatchId)).toHaveLength(2);
+      expect(seenByBatch.get(completedBatchId)?.size).toBe(2);
     });
   });
 });
