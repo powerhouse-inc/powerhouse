@@ -83,11 +83,11 @@ export type ProcessorFactory = (
 
 /** Takes a processor host module and builds processor factories using its context. */
 // Method syntax keeps the param bivariant so builders typed against a host's
-// extended module stay assignable to this base type.
-export type ProcessorFactoryBuilder = {
-  bivarianceHack(
-    module: IProcessorHostModuleBase,
-  ): Promise<ProcessorFactory> | ProcessorFactory;
+// extended module stay assignable to the base instantiation.
+export type ProcessorFactoryBuilder<
+  TModule extends IProcessorHostModuleBase = IProcessorHostModuleBase,
+> = {
+  bivarianceHack(module: TModule): Promise<ProcessorFactory> | ProcessorFactory;
 }["bivarianceHack"];
 
 export type ProcessorStatus = "active" | "errored";

@@ -41,10 +41,12 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import type { Pool } from "pg";
 import { WebSocketServer } from "ws";
+import { createReactorHostModuleBase } from "@powerhousedao/reactor";
 import {
   createRelationalDb,
   type IRelationalDb,
   type ProcessorApp,
+  type ProcessorFactory,
 } from "@powerhousedao/shared/processors";
 import { childLogger, type ILogger } from "document-model";
 import { config, DefaultCoreSubgraphs } from "./config.js";
@@ -102,7 +104,6 @@ import type {
   IPackageLoader,
   IProcessorHostModule,
   Processor,
-  ProcessorDriveFactory,
   ProcessorFactoryBuilder,
   ReadinessGate,
 } from "./types.js";
@@ -473,7 +474,7 @@ function setupEventListeners(
         const factories = fns.map((fn) => fn(module));
 
         const validBuilders = factories.filter(
-          (factory): factory is ProcessorDriveFactory =>
+          (factory): factory is ProcessorFactory =>
             typeof factory === "function",
         );
 
@@ -822,30 +823,15 @@ async function _setupAPI(
   syncServingGate?: SyncScopeGate,
 ): Promise<API> {
   const hostModule: IProcessorHostModule = {
-    relationalDb,
-    analyticsStore,
-    processorApp,
-    config: options.processorConfig,
-    client: reactorClient,
+    ...createReactorHostModuleBase({
+      client: reactorClient,
+      readModels,
+      relationalDb,
+      analyticsStore,
+      processorApp,
+      config: options.processorConfig,
+    }),
     attachments: createAttachmentClient(attachments.service),
-    dispatch: {
-      async execute(docId, branch, actions, signal) {
-        const jobInfo = await reactorClient.executeAsync(
-          docId,
-          branch,
-          actions,
-          signal,
-        );
-        return { id: jobInfo.id, status: jobInfo.status };
-      },
-    },
-    getReadModel<T>(name: string): T {
-      const model = readModels.find((m) => m.name === name);
-      if (!model) {
-        throw new Error(`Read model "${name}" not found`);
-      }
-      return model as unknown as T;
-    },
   };
   const mcpServerEnabled = options.mcp ?? true;
 
@@ -878,7 +864,7 @@ async function _setupAPI(
     );
 
     const validFactories = factories.filter(
-      (factory): factory is PromiseFulfilledResult<ProcessorDriveFactory> =>
+      (factory): factory is PromiseFulfilledResult<ProcessorFactory> =>
         factory.status === "fulfilled" &&
         factory.value !== null &&
         typeof factory.value === "function",
