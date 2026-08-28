@@ -306,6 +306,11 @@ export type {
   DocumentViewDatabase,
   InsertableDocumentSnapshot,
 } from "./src/read-models/types.js";
+export {
+  DOCUMENT_INDEXER_READ_MODEL,
+  DOCUMENT_VIEW_READ_MODEL,
+  type ReactorReadModels,
+} from "./src/read-models/names.js";
 
 // Cache
 export { KyselyWriteCache } from "./src/cache/kysely-write-cache.js";
