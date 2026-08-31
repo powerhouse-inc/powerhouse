@@ -1,3 +1,13 @@
+## 6.2.2-dev.68 (2026-08-31)
+
+### 🩹 Fixes
+
+- **codegen:** import ProcessorFactoryBuilder from reactor-browser in generated factory builders ([377cb6e6a](https://github.com/powerhouse-inc/powerhouse/commit/377cb6e6a))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.2-dev.67 (2026-08-31)
 
 This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.

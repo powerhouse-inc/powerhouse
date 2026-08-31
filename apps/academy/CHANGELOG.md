@@ -1,3 +1,17 @@
+## 6.2.2-dev.68 (2026-08-31)
+
+### 🚀 Features
+
+- **processors:** type getReadModel for reactor-registered read models ([2190bb7e7](https://github.com/powerhouse-inc/powerhouse/commit/2190bb7e7))
+
+### 🩹 Fixes
+
+- **processors:** type IProcessorHostModule as the module hosts pass ([ea75d5ddf](https://github.com/powerhouse-inc/powerhouse/commit/ea75d5ddf))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.2-dev.67 (2026-08-31)
 
 This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.

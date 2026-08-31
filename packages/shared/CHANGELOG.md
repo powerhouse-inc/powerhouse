@@ -1,3 +1,13 @@
+## 6.2.2-dev.68 (2026-08-31)
+
+### 🩹 Fixes
+
+- **processors:** type IProcessorHostModule as the module hosts pass ([ea75d5ddf](https://github.com/powerhouse-inc/powerhouse/commit/ea75d5ddf))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.2-dev.67 (2026-08-31)
 
 This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.
