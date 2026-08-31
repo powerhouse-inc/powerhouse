@@ -46,7 +46,8 @@ export function filterComposableSubgraphs(
 ): ServiceDefinition[] {
   return serviceList.filter((service) => {
     try {
-      buildSubgraphSchema({ typeDefs: service.typeDefs });
+      // Array form: @apollo/subgraph 2.15 dropped the bare-module overload.
+      buildSubgraphSchema([{ typeDefs: service.typeDefs }]);
       return true;
     } catch (error) {
       logger?.error(
