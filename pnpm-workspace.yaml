@@ -10,6 +10,9 @@ packages:
   - "!releases"
 
 minimumReleaseAge: 10080
+# Exact-pinned dep; the cooldown adds nothing once resolution is manual.
+minimumReleaseAgeExclude:
+  - "@apollo/subgraph"
 dedupePeerDependents: false
 
 catalog:
