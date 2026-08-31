@@ -91,10 +91,9 @@ describe("supergraph gateway – subgraph keep-alive", () => {
         hello: String
       }
     `;
-    const schema = buildSubgraphSchema({
-      typeDefs,
-      resolvers: { Query: { hello: () => "world" } },
-    });
+    const schema = buildSubgraphSchema([
+      { typeDefs, resolvers: { Query: { hello: () => "world" } } },
+    ]);
     const subgraph = await serveCountingConnections(
       await adapter.createHandler(schema, noopCtx),
     );
