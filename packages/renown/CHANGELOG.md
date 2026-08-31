@@ -1,3 +1,13 @@
+## 6.2.2-dev.69 (2026-08-31)
+
+### 🩹 Fixes
+
+- **renown:** give the signer the acting identity, not the session record ([#2944](https://github.com/powerhouse-inc/powerhouse/pull/2944))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.2.2-dev.68 (2026-08-31)
 
 This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
