@@ -96,4 +96,74 @@ describe("projecting an action onto the shape the wire declares", () => {
       prevOpHash: "deadbeef",
     });
   });
+
+  it("drops the session fields an identity may arrive with", () => {
+    /* A signer is handed in by the app, so the identity is only as narrow as
+       whoever built it. A session record — DID, credential, profile, ENS —
+       assigned to `UserActionSigner` passes the compiler untouched, because
+       excess-property checks apply to fresh object literals and never to a
+       variable of a wider type. The wire refuses each of these by name, and
+       takes the whole submission with it. */
+    const sessionIdentity = {
+      ...action,
+      context: {
+        signer: {
+          user: {
+            address: "0x1",
+            networkId: "eip155",
+            chainId: 1,
+            did: "did:pkh:eip155:1:0x1",
+            credential: { proof: {} },
+            profile: { documentId: "renown-user-1" },
+            ens: { name: "test.eth" },
+          },
+          app: { name: "Connect", key: "did:key:z6Mk" },
+          signatures: [signature],
+        },
+      },
+    } as unknown as Action;
+
+    expect(toTransportAction(sessionIdentity).context?.signer?.user).toEqual({
+      address: "0x1",
+      networkId: "eip155",
+      chainId: 1,
+    });
+  });
+
+  it("drops a field the signing app arrives with", () => {
+    const wideApp = {
+      ...action,
+      context: {
+        signer: {
+          user: { address: "0x1", networkId: "eip155", chainId: 1 },
+          app: { name: "Connect", key: "did:key:z6Mk", version: "6.2.2" },
+          signatures: [signature],
+        },
+      },
+    } as unknown as Action;
+
+    expect(toTransportAction(wideApp).context?.signer?.app).toEqual({
+      name: "Connect",
+      key: "did:key:z6Mk",
+    });
+  });
+
+  it("leaves an already-narrow signer exactly as it was", () => {
+    const signed: Action = {
+      ...action,
+      context: {
+        signer: {
+          user: { address: "0x1", networkId: "eip155", chainId: 1 },
+          app: { name: "Connect", key: "did:key:z6Mk" },
+          signatures: [signature],
+        },
+      },
+    };
+
+    expect(toTransportAction(signed).context?.signer).toEqual({
+      user: { address: "0x1", networkId: "eip155", chainId: 1 },
+      app: { name: "Connect", key: "did:key:z6Mk" },
+      signatures: ["ts, key, hash, prev, 0xsig"],
+    });
+  });
 });
