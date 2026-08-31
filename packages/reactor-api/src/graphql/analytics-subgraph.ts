@@ -1,4 +1,4 @@
-import type { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper/resolverMap.js";
+import type { GraphQLResolverMap } from "@apollo/subgraph";
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import { AnalyticsQueryEngine } from "@powerhousedao/analytics-engine-core";
 import {

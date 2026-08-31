@@ -21,7 +21,7 @@
     "test:nogenerate": "bun test --timeout 1000000 ./tests/*.test.ts"
   },
   "dependencies": {
-    "@apollo/subgraph": "^2.13.2",
+    "@apollo/subgraph": "2.15.0",
     "@electric-sql/pglite": "catalog:",
     "@graphql-codegen/add": "catalog:",
     "@graphql-codegen/cli": "catalog:",
