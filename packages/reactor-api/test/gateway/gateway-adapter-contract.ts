@@ -58,18 +58,20 @@ const noopCtx: GatewayContextFactory<Context> = () =>
  * are compatible with Apollo Server's graphql module instance.
  */
 function makeSchema(fieldName = "hello", returnValue = "world"): GraphQLSchema {
-  return buildSubgraphSchema({
-    typeDefs: gql`
-      type Query {
-        ${fieldName}: String
-      }
-    `,
-    resolvers: {
-      Query: {
-        [fieldName]: () => returnValue,
+  return buildSubgraphSchema([
+    {
+      typeDefs: gql`
+        type Query {
+          ${fieldName}: String
+        }
+      `,
+      resolvers: {
+        Query: {
+          [fieldName]: () => returnValue,
+        },
       },
     },
-  });
+  ]);
 }
 
 /** A minimal http.Server used to satisfy the start() signature. */
@@ -309,10 +311,12 @@ export function runGatewayAdapterContractTests(
           ${fieldName}: String
         }
       `;
-      const schema: GraphQLSchema = buildSubgraphSchema({
-        typeDefs,
-        resolvers: { Query: { [fieldName]: () => returnValue } },
-      });
+      const schema: GraphQLSchema = buildSubgraphSchema([
+        {
+          typeDefs,
+          resolvers: { Query: { [fieldName]: () => returnValue } },
+        },
+      ]);
       const handler = await h.adapter.createHandler(schema, noopCtx);
       const sub = await serveHandler(handler);
       subServers.push(sub);
@@ -435,10 +439,12 @@ export function runGatewayAdapterContractTests(
           hello: String
         }
       `;
-      const schema: GraphQLSchema = buildSubgraphSchema({
-        typeDefs,
-        resolvers: { Query: { hello: () => "world" } },
-      });
+      const schema: GraphQLSchema = buildSubgraphSchema([
+        {
+          typeDefs,
+          resolvers: { Query: { hello: () => "world" } },
+        },
+      ]);
       const handler = await h.adapter.createHandler(schema, noopCtx);
       const sub = await serveHandler(handler);
       subServers.push(sub);
