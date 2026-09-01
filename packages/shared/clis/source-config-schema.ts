@@ -221,11 +221,15 @@ export const sourceConfigSchema = {
     vetra: {
       type: "object",
       additionalProperties: false,
-      required: ["driveId", "driveUrl"],
       description: "Vetra integration coordinates.",
       properties: {
         driveId: { type: "string" },
         driveUrl: { type: "string" },
+        connectPort: {
+          type: "integer",
+          description:
+            "Port `ph vetra`'s Connect dev server listens on. Assigned per project by `ph init`. Overridden by PH_VETRA_CONNECT_PORT or --connect-port.",
+        },
       },
     },
     packageRegistryUrl: {

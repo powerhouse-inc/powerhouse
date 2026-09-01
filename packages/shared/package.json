@@ -118,6 +118,7 @@
   },
   "dependencies": {
     "cross-spawn": "catalog:",
+    "dotenv": "catalog:",
     "@sindresorhus/fnv1a": "catalog:",
     "chalk": "catalog:",
     "change-case": "catalog:",
