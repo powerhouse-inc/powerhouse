@@ -187,14 +187,18 @@ async function main(): Promise<void> {
       WORKSPACE_CACHEBUST: workspaceCachebust,
     };
     runWithEnv("docker", ["compose", ...COMPOSE, "build"], ROOT, env);
-    // Marked before the bring-up, not after: a failed `up -d` still leaves the
-    // containers it did create, and those have to come down too.
+    // Before `up`, so a dependency-failed start still gets composed down.
     bringDownDocker = true;
-    runWithEnv("docker", ["compose", ...COMPOSE, "up", "-d"], ROOT, env);
+    try {
+      runWithEnv("docker", ["compose", ...COMPOSE, "up", "-d"], ROOT, env);
 
-    step("5/6 Wait for services to be healthy");
-    await waitForHealthy("pkg-e2e-switchboard", 120_000);
-    await waitForHealthy("pkg-e2e-connect", 120_000);
+      step("5/6 Wait for services to be healthy");
+      await waitForHealthy("pkg-e2e-switchboard", 120_000);
+      await waitForHealthy("pkg-e2e-connect", 120_000);
+    } catch (err) {
+      dumpContainerLogs(["pkg-e2e-switchboard", "pkg-e2e-connect"]);
+      throw err;
+    }
 
     step("6/6 Run Playwright spec");
     run(path.join(ROOT, "node_modules/.bin/playwright"), [
@@ -203,33 +207,8 @@ async function main(): Promise<void> {
     ]);
 
     console.log("\n✅ test-package-e2e: all green\n");
-  } catch (error) {
-    // Before the teardown below removes them. A container that exits during
-    // `up -d` never reaches waitForHealthy, so its stdout is written nowhere
-    // else, and the CI log shows only "dependency failed to start".
-    dumpComposeLogs();
-    throw error;
   } finally {
     teardown(bringDownDocker, registry);
-  }
-}
-
-/** Whatever the containers managed to say, on the way to failing. */
-function dumpComposeLogs(): void {
-  console.error("\n━━━ docker compose logs ━━━");
-  const res = spawnSync(
-    "docker",
-    ["compose", ...COMPOSE, "logs", "--no-color", "--tail", "300"],
-    { cwd: ROOT, encoding: "utf8" },
-  );
-
-  if (res.error) {
-    console.error(`[diagnostics] could not read logs: ${res.error.message}`);
-    return;
-  }
-  console.error(res.stdout || "[diagnostics] no container output");
-  if (res.stderr) {
-    console.error(res.stderr);
   }
 }
 
@@ -251,6 +230,17 @@ function teardown(
   if (registry) {
     console.log("[cleanup] stop registry");
     stopRegistry(registry);
+  }
+}
+
+// Container logs are the only place a startup crash is visible; compose
+// itself just reports "dependency failed to start".
+function dumpContainerLogs(containers: string[]): void {
+  for (const container of containers) {
+    console.error(`\n[logs] ${container} (last 100 lines):`);
+    const res = spawnSync("docker", ["logs", "--tail", "100", container]);
+    process.stderr.write(res.stdout ?? "");
+    process.stderr.write(res.stderr ?? "");
   }
 }
 

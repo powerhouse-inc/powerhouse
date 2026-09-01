@@ -20,7 +20,9 @@ export interface IProcessorDispatch {
   ): Promise<ProcessorDispatchResult>;
 }
 
-export interface IProcessorHostModule {
+// Host-agnostic core. reactor-browser and reactor-api extend it with
+// `client` and `attachments` as `IProcessorHostModule`.
+export interface IProcessorHostModuleBase {
   analyticsStore: IAnalyticsStore;
   relationalDb: IRelationalDb;
   processorApp: ProcessorApp;
@@ -79,10 +81,14 @@ export type ProcessorFactory = (
   processorApp?: ProcessorApp,
 ) => Promise<ProcessorRecord[]> | ProcessorRecord[];
 
-/** Takes a processor host module and builds processor factories using its context */
-export type ProcessorFactoryBuilder = (
-  module: IProcessorHostModule,
-) => Promise<ProcessorFactory> | ProcessorFactory;
+/** Takes a processor host module and builds processor factories using its context. */
+// Method syntax keeps the param bivariant so builders typed against a host's
+// extended module stay assignable to the base instantiation.
+export type ProcessorFactoryBuilder<
+  TModule extends IProcessorHostModuleBase = IProcessorHostModuleBase,
+> = {
+  bivarianceHack(module: TModule): Promise<ProcessorFactory> | ProcessorFactory;
+}["bivarianceHack"];
 
 export type ProcessorStatus = "active" | "errored";
 

@@ -1,8 +1,8 @@
-import { buildSubgraphSchema } from "@apollo/subgraph";
-import type {
-  GraphQLResolverMap,
-  GraphQLSchemaModule,
-} from "@apollo/subgraph/dist/schema-helper/resolverMap.js";
+import {
+  buildSubgraphSchema,
+  type GraphQLResolverMap,
+  type GraphQLSchemaModule,
+} from "@apollo/subgraph";
 import { typeDefs as scalarsTypeDefs } from "@powerhousedao/document-engineering/graphql";
 import type { Context } from "@powerhousedao/reactor-api";
 import type {
@@ -103,7 +103,7 @@ export const createSchema = (
   resolvers: GraphQLResolverMap<Context>,
   typeDefs: DocumentNode,
 ) => {
-  // Array form: @apollo/subgraph 2.15 dropped the single-module overload.
+  // Array form: @apollo/subgraph 2.15 dropped the bare-module overload.
   return buildSubgraphSchema([
     buildSubgraphSchemaModule(documentModels, resolvers, typeDefs),
   ]);

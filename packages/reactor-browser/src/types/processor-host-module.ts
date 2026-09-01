@@ -1,15 +1,20 @@
 import type {
-  IProcessorHostModule,
-  IReactorClient,
+  IReactorProcessorHostModuleBase,
+  ProcessorFactoryBuilder as BaseProcessorFactoryBuilder,
 } from "@powerhousedao/reactor";
 import type { IAttachmentClient } from "@powerhousedao/reactor-attachments/client";
 
 /**
- * Processor host module enriched with the reactor client and attachment client.
- * Defined here rather than in shared because shared cannot depend on reactor or
- * reactor-attachments without creating a circular package reference.
+ * Module hosts pass to processor factories: the reactor-level module plus the
+ * attachment client, which shared and reactor cannot name.
  */
-export interface IReactorProcessorHostModule extends IProcessorHostModule {
-  client: IReactorClient;
+export interface IProcessorHostModule extends IReactorProcessorHostModuleBase {
   attachments: IAttachmentClient;
 }
+
+/** @deprecated Use `IProcessorHostModule`. */
+export type IReactorProcessorHostModule = IProcessorHostModule;
+
+/** Takes the host module and builds processor factories using its context. */
+export type ProcessorFactoryBuilder =
+  BaseProcessorFactoryBuilder<IProcessorHostModule>;

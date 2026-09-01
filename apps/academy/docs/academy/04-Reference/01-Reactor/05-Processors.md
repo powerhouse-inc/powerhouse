@@ -171,10 +171,10 @@ The codegen analytics template emits `scope: ["*"]`. Under the matcher this matc
 
 ## The processor host
 
-The host module is the context a processor gets through its factory builder. The base interface is `IProcessorHostModule`:
+The host module is the context a processor gets through its factory builder. The host-agnostic core is `IProcessorHostModuleBase`:
 
 ```typescript
-interface IProcessorHostModule {
+interface IProcessorHostModuleBase {
   analyticsStore: IAnalyticsStore;
   relationalDb: IRelationalDb;
   processorApp: ProcessorApp;
@@ -188,10 +188,12 @@ interface IProcessorHostModule {
 - **`relationalDb`** — an `IRelationalDb` (a Kysely instance plus `createNamespace` / `queryNamespace`) for relational indexing. See [Storage and scaling](/academy/Reference/Reactor/StorageAndScaling).
 - **`processorApp`** — `"connect" | "switchboard"`. How a processor learns which app hosts it. Read this rather than the factory's `processorApp?` argument.
 - **`dispatch`** — writes back to the reactor via `dispatch.execute(docId, branch, actions, signal?, meta?)`, returning `{ id, status }`. In Connect this is wired to the reactor client's async execute.
-- **`getReadModel<T>(name)`** — looks up a registered read model by its `name`. Connect's implementation throws `Read model "<name>" not found` when there is no match.
+- **`getReadModel(name)`** — looks up a registered read model by its `name`. Reactor-registered names are typed: `getReadModel("document-view")` returns `IDocumentView` and `"document-indexer"` returns `IDocumentIndexer`; other names take an explicit type argument. Connect's implementation throws `Read model "<name>" not found` when there is no match.
 - **`config?`** — optional `Map<string, unknown>` of host config.
+- **`client`** — the `IReactorClient` for reading documents and drives. See [IReactorClient](/academy/Reference/Reactor/ReactorClient).
+- **`attachments`** — the `IAttachmentClient` for uploading and downloading attachments. See the [Attachment service](/academy/Reference/Reactor/AttachmentService).
 
-Connect builds an extended module, `IReactorProcessorHostModule`, which adds `client: IReactorClient` and `attachments: IAttachmentClient`. It is defined in reactor-browser to avoid a circular package dependency, and sets `processorApp: "connect"`. See [IReactorClient](/academy/Reference/Reactor/ReactorClient) and the [Attachment service](/academy/Reference/Reactor/AttachmentService).
+These six core fields are `IProcessorHostModuleBase` in `@powerhousedao/shared`. `@powerhousedao/reactor` adds `client` and the typed `getReadModel` as `IReactorProcessorHostModuleBase`; `@powerhousedao/reactor-browser` and `@powerhousedao/reactor-api` add `attachments` as `IProcessorHostModule`, since neither shared nor reactor can depend on reactor-attachments. Connect sets `processorApp: "connect"`.
 
 `IProcessorDispatch` and `ProcessorDispatchResult` are defined in shared but are not part of the public reactor export surface; treat the `dispatch` handle on the module as the supported entry point.
 

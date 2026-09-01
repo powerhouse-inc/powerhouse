@@ -12,7 +12,7 @@ import {
 } from "@powerhousedao/shared/document-model";
 import type {
   IProcessor,
-  IProcessorHostModule,
+  IProcessorHostModuleBase,
   IRelationalDbProcessor,
   ProcessorApps,
   ProcessorFactoryBuilder,
@@ -444,7 +444,7 @@ describe("generate processor", () => {
 
     const { pgLite, relationalDb } = await getDb();
     const { store } = await createAnalyticsStore({ pgLite });
-    const hostModule: IProcessorHostModule = {
+    const hostModule: IProcessorHostModuleBase = {
       processorApp: "switchboard",
       analyticsStore: store,
       relationalDb,
@@ -732,14 +732,14 @@ describe("processor e2e integration", () => {
     const mockGetReadModel = <T>(): T => {
       throw new Error("No read models in test");
     };
-    const mockConnectHostModule: IProcessorHostModule = {
+    const mockConnectHostModule: IProcessorHostModuleBase = {
       processorApp: "connect",
       analyticsStore: store,
       relationalDb,
       dispatch: mockDispatch,
       getReadModel: mockGetReadModel,
     };
-    const mockSwitchboardHostModule: IProcessorHostModule = {
+    const mockSwitchboardHostModule: IProcessorHostModuleBase = {
       processorApp: "switchboard",
       analyticsStore: store,
       relationalDb,
@@ -752,7 +752,7 @@ describe("processor e2e integration", () => {
     } as PHDocumentHeader;
     const { processorFactory } = (await import(processorsIndexPath)) as {
       processorFactory: (
-        module: IProcessorHostModule,
+        module: IProcessorHostModuleBase,
       ) => Promise<
         (driveHeader: PHDocumentHeader) => Promise<ProcessorRecord[]>
       >;

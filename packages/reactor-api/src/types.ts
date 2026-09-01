@@ -1,16 +1,17 @@
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
-import type { IReactorClient } from "@powerhousedao/reactor";
+import type {
+  IReactorProcessorHostModuleBase,
+  ProcessorFactoryBuilder as BaseProcessorFactoryBuilder,
+} from "@powerhousedao/reactor";
 import type { GraphQLManager } from "@powerhousedao/reactor-api";
 import type {
   AttachmentBuildResult,
   AttachmentReferenceIndexBuildResult,
 } from "@powerhousedao/reactor-attachments";
 import type { IAttachmentClient } from "@powerhousedao/reactor-attachments/client";
-import type { PHDocumentHeader } from "@powerhousedao/shared/document-model";
 import type {
-  IProcessorHostModule,
   IRelationalDb,
-  ProcessorRecord,
+  ProcessorFactory,
 } from "@powerhousedao/shared/processors";
 import type { IHttpAdapter } from "./graphql/gateway/types.js";
 import type { IPackageManager } from "./packages/types.js";
@@ -21,10 +22,16 @@ export type {
   IPackageLoaderOptions,
 } from "./packages/types.js";
 
-export interface IReactorProcessorHostModule extends IProcessorHostModule {
-  client: IReactorClient;
+/**
+ * Module hosts pass to processor factories: the reactor-level module plus the
+ * attachment client, which shared and reactor cannot name.
+ */
+export interface IProcessorHostModule extends IReactorProcessorHostModuleBase {
   attachments: IAttachmentClient;
 }
+
+/** @deprecated Use `IProcessorHostModule`. */
+export type IReactorProcessorHostModule = IProcessorHostModule;
 
 export type ReadinessGate = {
   isReady: () => boolean;
@@ -55,18 +62,12 @@ export type ReactorModule = {
   relationalDb: IRelationalDb;
 };
 
-/** Per-drive factory after the host `module` has been applied once. */
-export type ProcessorDriveFactory = (
-  driveHeader: PHDocumentHeader,
-) => ProcessorRecord[] | Promise<ProcessorRecord[]>;
+/** @deprecated Use `ProcessorFactory`. */
+export type ProcessorDriveFactory = ProcessorFactory;
 
-/**
- * Builds a per-drive factory from the host module (e.g. vetra `processorFactory`).
- * Shape: `(module) => (driveHeader) => ...`
- */
-export type ProcessorFactoryBuilder = (
-  module: IProcessorHostModule,
-) => ProcessorDriveFactory | Promise<ProcessorDriveFactory>;
+/** Builds a per-drive factory from the host module (e.g. vetra `processorFactory`). */
+export type ProcessorFactoryBuilder =
+  BaseProcessorFactoryBuilder<IProcessorHostModule>;
 
 /** Multiple initializers per package name (e.g. Switchboard `processors` option). */
 export type Processor = ProcessorFactoryBuilder[];

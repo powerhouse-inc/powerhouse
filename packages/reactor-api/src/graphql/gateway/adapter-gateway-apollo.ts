@@ -46,6 +46,7 @@ export function filterComposableSubgraphs(
 ): ServiceDefinition[] {
   return serviceList.filter((service) => {
     try {
+      // Array form: @apollo/subgraph 2.15 dropped the bare-module overload.
       buildSubgraphSchema([{ typeDefs: service.typeDefs }]);
       return true;
     } catch (error) {
@@ -61,6 +62,17 @@ export function filterComposableSubgraphs(
 
 // Forwards the incoming authorization header to federated subgraph requests.
 class AuthenticatedDataSource extends RemoteGraphQLDataSource {
+  constructor(
+    config?: ConstructorParameters<typeof RemoteGraphQLDataSource>[0],
+  ) {
+    // Node's fetch retires a pooled connection before the subgraph server's advertised keep-alive
+    // timeout; Apollo's default make-fetch-happen agent holds it until the server closes it under us.
+    super({
+      fetcher: fetch as RemoteGraphQLDataSource["fetcher"],
+      ...config,
+    });
+  }
+
   willSendRequest(options: GraphQLDataSourceProcessOptions) {
     const { authorization } = options.context.headers as {
       authorization: string;

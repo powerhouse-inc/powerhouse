@@ -85,18 +85,14 @@ export const getResolvers = (subgraph: BaseSubgraph) => {
 };
 ```
 
-**In a generated processor (server-side).** The processor factory builder receives the host module; the client is `module.client`. The parameter is typed as the base `IProcessorHostModule`, which exposes `relationalDb`, `analyticsStore`, `dispatch`, and `getReadModel` but not `client`. Widen it to `IReactorProcessorHostModule` to reach `client` (and `attachments`). See [Processors](/academy/Reference/Reactor/Processors) for the full registration flow.
+**In a generated processor (server-side).** The processor factory builder receives the host module; the client is `module.client`. `IProcessorHostModule` from `@powerhousedao/reactor-browser` (or `@powerhousedao/reactor-api`) exposes `relationalDb`, `analyticsStore`, `dispatch`, `getReadModel`, `client`, and `attachments`. See [Processors](/academy/Reference/Reactor/Processors) for the full registration flow.
 
 ```typescript
-import type {
-  IReactorProcessorHostModule,
-  ProcessorFactoryBuilder,
-} from "@powerhousedao/reactor-browser";
+import type { ProcessorFactoryBuilder } from "@powerhousedao/reactor-browser";
 
 // factory.ts (generated scaffold)
 export const factoryBuilder: ProcessorFactoryBuilder = (module) => {
-  // `module` is typed as the base IProcessorHostModule; widen it to reach `client`.
-  const { client } = module as IReactorProcessorHostModule; // client: IReactorClient
+  const { client } = module; // client: IReactorClient
   return async () => {
     // use client.get(...), client.drives, client.execute(...)
     return [];

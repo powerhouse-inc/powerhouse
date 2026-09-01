@@ -1,3 +1,33 @@
+## 6.2.2-dev.70 (2026-09-01)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
+## 6.2.2-dev.69 (2026-08-31)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
+## 6.2.2-dev.68 (2026-08-31)
+
+### 🩹 Fixes
+
+- **processors:** type IProcessorHostModule as the module hosts pass ([ea75d5ddf](https://github.com/powerhouse-inc/powerhouse/commit/ea75d5ddf))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.2-dev.67 (2026-08-31)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
+## 6.2.2-dev.66 (2026-08-30)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
+## 6.2.2-dev.65 (2026-08-29)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
 ## 6.2.2-dev.64 (2026-08-28)
 
 This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.

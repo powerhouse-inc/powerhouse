@@ -1,5 +1,9 @@
 import type { Action, ActionContext } from "./actions.js";
-import { serializeSignature } from "./signatures.js";
+import {
+  serializeSignature,
+  type AppActionSigner,
+  type UserActionSigner,
+} from "./signatures.js";
 
 /**
  * An action's signer, as the wire declares it: signatures joined into strings,
@@ -91,11 +95,41 @@ function toTransportContext(
   const signer = context.signer;
   if (signer) {
     projected.signer = {
-      ...(signer.user ? { user: signer.user } : {}),
-      ...(signer.app ? { app: signer.app } : {}),
+      ...(signer.user ? { user: toTransportSignerUser(signer.user) } : {}),
+      ...(signer.app ? { app: toTransportSignerApp(signer.app) } : {}),
       signatures: (signer.signatures ?? []).map(serializeSignature),
     };
   }
 
   return Object.keys(projected).length > 0 ? projected : undefined;
+}
+
+/**
+ * The identity, projected for the same reason the context around it is.
+ *
+ * A signer is handed in by the app, so what reaches here is only as narrow as
+ * whoever built it: an identity carrying a session's DID, credential or profile
+ * alongside the address is refused by `ReactorSignerUserInput`, and that
+ * refusal takes the whole submission with it.
+ *
+ * The compiler cannot stand in for this. `UserActionSigner` already declares
+ * exactly these three fields, but excess-property checks apply to fresh object
+ * literals and never to a variable of a wider type, so a wide identity assigned
+ * to the narrow type passes untouched.
+ */
+function toTransportSignerUser(
+  user: UserActionSigner,
+): NonNullable<TransportSigner["user"]> {
+  return {
+    address: user.address,
+    networkId: user.networkId,
+    chainId: user.chainId,
+  };
+}
+
+/** The signing app, projected on the same rule as the identity above. */
+function toTransportSignerApp(
+  app: AppActionSigner,
+): NonNullable<TransportSigner["app"]> {
+  return { name: app.name, key: app.key };
 }

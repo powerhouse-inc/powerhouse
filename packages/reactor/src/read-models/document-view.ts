@@ -13,6 +13,7 @@ import { v4 as uuidv4 } from "uuid";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
 import type { IConsistencyTracker } from "../shared/consistency-tracker.js";
+import { DOCUMENT_VIEW_READ_MODEL } from "./names.js";
 import type {
   ConsistencyToken,
   PagedResults,
@@ -55,7 +56,7 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
       operationIndex,
       writeCache,
       consistencyTracker,
-      { readModelId: "document-view", rebuildStateOnInit: true },
+      { readModelId: DOCUMENT_VIEW_READ_MODEL, rebuildStateOnInit: true },
     );
     this._db = db;
   }

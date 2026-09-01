@@ -308,6 +308,11 @@ export type {
   DocumentViewDatabase,
   InsertableDocumentSnapshot,
 } from "./src/read-models/types.js";
+export {
+  DOCUMENT_INDEXER_READ_MODEL,
+  DOCUMENT_VIEW_READ_MODEL,
+  type ReactorReadModels,
+} from "./src/read-models/names.js";
 
 // Cache
 export { KyselyWriteCache } from "./src/cache/kysely-write-cache.js";
@@ -408,7 +413,7 @@ export {
 } from "@powerhousedao/shared/processors";
 export type {
   IProcessor,
-  IProcessorHostModule,
+  IProcessorHostModuleBase,
   IProcessorManager,
   IRelationalDb,
   ProcessorApp,
@@ -419,6 +424,11 @@ export type {
   ProcessorStatus,
   TrackedProcessor,
 } from "@powerhousedao/shared/processors";
+export {
+  createReactorHostModuleBase,
+  type IReactorProcessorHostModuleBase,
+  type ReactorHostModuleBaseOptions,
+} from "./src/processors/host-module.js";
 export { DocumentIntegrityService } from "./src/admin/document-integrity-service.js";
 export type {
   IDocumentIntegrityService,
