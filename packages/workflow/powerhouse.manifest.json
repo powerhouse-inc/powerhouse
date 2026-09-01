@@ -17,11 +17,19 @@
     }
   ],
   "apps": [],
-  "editors": [],
+  "editors": [
+    {
+      "name": "Workflow Editor",
+      "id": "workflow-editor",
+      "documentTypes": [
+        "powerhouse/workflow"
+      ]
+    }
+  ],
   "processors": [
     {
-      "name": "document-event-trigger",
-      "id": "document-event-trigger"
+      "id": "document-event-trigger",
+      "name": "document-event-trigger"
     }
   ],
   "subgraphs": [

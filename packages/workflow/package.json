@@ -71,17 +71,18 @@
     "service-unstartup": "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-unstartup.sh"
   },
   "dependencies": {
-    "@powerhousedao/reactor-connectors": "workspace:*"
+    "@powerhousedao/reactor-connectors": "workspace:*",
+    "@xyflow/react": "^12.11.3"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.3.15",
-    "@powerhousedao/reactor-api": "workspace:*",
     "@electric-sql/pglite-tools": "0.2.20",
     "@powerhousedao/connect": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",
     "@powerhousedao/document-engineering": "catalog:",
     "@powerhousedao/ph-cli": "workspace:*",
     "@powerhousedao/reactor": "workspace:*",
+    "@powerhousedao/reactor-api": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
     "@tailwindcss/cli": "^4.1.18",
