@@ -33,10 +33,34 @@ export class CoreBlockExecutor implements BlockExecutor {
 export interface ActivepiecesBlockExecutorOptions {
   cacheDir: string;
   // Piece package name -> pinned version; the connector registry for this run.
-  packages: Record<string, string>;
+  // A blockType may instead pin inline: "@scope/pkg@1.2.3#action".
+  packages?: Record<string, string>;
   connections?: EngineConnectionResolver;
   worker?: PieceWorker;
   defaultTimeoutMs?: number;
+}
+
+// "<pkg>[@<version>]#<action>" — the version after the scope-less "@" wins
+// over the registry.
+export function parseBlockType(
+  blockType: string,
+  packages: Record<string, string> = {},
+): { packageName: string; version: string; actionName: string } | undefined {
+  const separator = blockType.lastIndexOf("#");
+  if (separator <= 0) return undefined;
+  const packageSpec = blockType.slice(0, separator);
+  const actionName = blockType.slice(separator + 1);
+  const versionAt = packageSpec.indexOf("@", 1);
+  if (versionAt > 0) {
+    return {
+      packageName: packageSpec.slice(0, versionAt),
+      version: packageSpec.slice(versionAt + 1),
+      actionName,
+    };
+  }
+  const version = packages[packageSpec] as string | undefined;
+  if (!version) return undefined;
+  return { packageName: packageSpec, version, actionName };
 }
 
 // Executes "<packageName>#<actionName>" block types through the piece worker.
@@ -50,20 +74,14 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
   }
 
   async execute(execution: BlockExecution): Promise<BlockResult> {
-    const separator = execution.blockType.lastIndexOf("#");
-    if (separator <= 0) {
-      throw new UnknownBlockTypeError(execution.blockType);
-    }
-    const packageName = execution.blockType.slice(0, separator);
-    const actionName = execution.blockType.slice(separator + 1);
-    const version = this.options.packages[packageName];
-    if (!version) {
+    const parsed = parseBlockType(execution.blockType, this.options.packages);
+    if (!parsed) {
       throw new UnknownBlockTypeError(execution.blockType);
     }
 
     const bundle = await ensurePieceBundle({
-      name: packageName,
-      version,
+      name: parsed.packageName,
+      version: parsed.version,
       cacheDir: this.options.cacheDir,
     });
     const auth = execution.connectionId
@@ -76,7 +94,7 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
     const result = await this.worker.runAction(
       {
         bundleDir: bundle.dir,
-        actionName,
+        actionName: parsed.actionName,
         propsValue: execution.config as Record<string, unknown>,
         auth,
       },

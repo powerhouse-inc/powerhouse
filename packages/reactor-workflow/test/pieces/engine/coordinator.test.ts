@@ -240,3 +240,29 @@ describe("runWorkflow", () => {
     expect(orphanRun.steps[0].status).toBe("SKIPPED");
   });
 });
+
+describe("parseBlockType", () => {
+  it("resolves versions inline or from the registry", async () => {
+    const { parseBlockType } = await import("../../src/engine/blocks.js");
+    expect(
+      parseBlockType("@activepieces/piece-http@0.11.19#send_request"),
+    ).toEqual({
+      packageName: "@activepieces/piece-http",
+      version: "0.11.19",
+      actionName: "send_request",
+    });
+    expect(
+      parseBlockType("@activepieces/piece-http#send_request", {
+        "@activepieces/piece-http": "0.11.19",
+      }),
+    ).toEqual({
+      packageName: "@activepieces/piece-http",
+      version: "0.11.19",
+      actionName: "send_request",
+    });
+    expect(
+      parseBlockType("@activepieces/piece-http#send_request"),
+    ).toBeUndefined();
+    expect(parseBlockType("no-action")).toBeUndefined();
+  });
+});
