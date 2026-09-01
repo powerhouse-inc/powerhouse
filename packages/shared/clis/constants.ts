@@ -44,6 +44,30 @@ export const DEFAULT_REGISTRY_URL = "https://registry.vetra.io" as const;
 
 export const DEFAULT_SWITCHBOARD_PORT = 4001 as const;
 
+// Per-project dev-server port bands. `ph init` assigns each project a port
+// triple derived from its name, so two projects never collide and an agent's
+// MCP URL can be baked into .mcp.json before a session starts.
+//
+// Two hard constraints picked these bands, both below 10000:
+//
+//   1. Below the OS ephemeral range. Linux allocates outbound source ports
+//      from 32768-60999 (`/proc/sys/net/ipv4/ip_local_port_range`); macOS and
+//      Windows start at 49152. A listener parked in that window can lose a
+//      race to a transient outbound socket, which would surface as a
+//      `--strictPort` failure blaming a project conflict that does not exist.
+//   2. Below 10000, which is where ph-clint starts. ph-clint derives its own
+//      per-CLI ports by hashing into 10000-59900, so staying under 10000
+//      keeps the two schemes from ever contending.
+//
+// Within those limits the blocks were chosen by measuring which ports the
+// Powerhouse repos actually reference: 2000-2999 has none, 7000-7999 has one,
+// 6000-6999 has five. See PROJECT_PORT_DENYLIST in project-ports.ts for the
+// individual ports skipped inside them.
+export const PROJECT_PORT_BAND_SIZE = 1000 as const;
+export const PROJECT_PORT_BAND_SWITCHBOARD = 7000 as const;
+export const PROJECT_PORT_BAND_STUDIO = 6000 as const;
+export const PROJECT_PORT_BAND_VETRA_CONNECT = 2000 as const;
+
 export const DEFAULT_VETRA_DRIVE_ID = "vetra" as const;
 
 export const MINIMUM_NODE_VERSION = "24.0.0" as const;

@@ -1,7 +1,10 @@
+import { deriveProjectPorts } from "@powerhousedao/shared/clis/project-ports";
 import { DEFAULT_CONNECT_CONFIG } from "@powerhousedao/shared/connect";
 import { DEFAULT_REGISTRY_URL } from "@powerhousedao/shared/registry";
 
 type BuildPowerhouseConfigTemplateArgs = {
+  /** Project name, hashed to assign this project's dev-server ports. */
+  name: string;
   tag?: string;
   version?: string;
   remoteDrive?: string;
@@ -22,6 +25,12 @@ type BuildPowerhouseConfigTemplateArgs = {
 export async function buildPowerhouseConfigTemplate(
   args: BuildPowerhouseConfigTemplateArgs,
 ): Promise<string> {
+  // Ports are assigned per project rather than fixed at 3000/4001, so two
+  // projects can run at once and an agent's MCP URL can be baked into
+  // .mcp.json before its session starts. Overridable via PH_SWITCHBOARD_PORT /
+  // PH_VETRA_CONNECT_PORT in .env.local, or the CLI flags.
+  const ports = deriveProjectPorts(args.name);
+
   const config: Record<string, unknown> = {
     $schema:
       "https://raw.githubusercontent.com/powerhouse-inc/powerhouse/main/packages/shared/clis/source-config.schema.json",
@@ -29,17 +38,21 @@ export async function buildPowerhouseConfigTemplate(
     editorsDir: "./editors",
     processorsDir: "./processors",
     subgraphsDir: "./subgraphs",
-    studio: { port: 3000 },
-    reactor: { port: 4001 },
+    studio: { port: ports.studioPort },
+    reactor: { port: ports.switchboardPort },
     packages: [],
     packageRegistryUrl: DEFAULT_REGISTRY_URL,
     connect: DEFAULT_CONNECT_CONFIG,
   };
 
+  const vetra: Record<string, unknown> = {
+    connectPort: ports.vetraConnectPort,
+  };
   if (args.remoteDrive) {
-    const driveId = args.remoteDrive.split("/").pop() ?? "";
-    config.vetra = { driveId, driveUrl: args.remoteDrive };
+    vetra.driveId = args.remoteDrive.split("/").pop() ?? "";
+    vetra.driveUrl = args.remoteDrive;
   }
+  config.vetra = vetra;
 
   return `${JSON.stringify(config, null, 2)}\n`;
 }

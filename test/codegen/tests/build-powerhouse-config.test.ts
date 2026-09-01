@@ -1,4 +1,5 @@
 import { buildPowerhouseConfigTemplate } from "@powerhousedao/codegen/templates";
+import { deriveProjectPorts } from "@powerhousedao/shared/clis/project-ports";
 import { DEFAULT_CONNECT_CONFIG } from "@powerhousedao/shared/connect";
 import { DEFAULT_REGISTRY_URL } from "@powerhousedao/shared/registry";
 import { describe, expect, test } from "bun:test";
@@ -40,9 +41,15 @@ function assertContainsLeaves(
   expect(actual).toEqual(expected);
 }
 
+// `name` is required: the scaffolded ports are derived from it, and there is
+// no safe fallback — defaulting to the standard 4001 would put every project
+// back on one port, which is the collision the per-project assignment exists
+// to prevent.
+const NAME = "test-project";
+
 describe("buildPowerhouseConfigTemplate", () => {
   test("emits valid JSON", async () => {
-    const out = await buildPowerhouseConfigTemplate({});
+    const out = await buildPowerhouseConfigTemplate({ name: NAME });
     expect(typeof out).toBe("string");
     expect(() => {
       JSON.parse(out);
@@ -50,7 +57,7 @@ describe("buildPowerhouseConfigTemplate", () => {
   });
 
   test("scaffolded source carries every leaf from DEFAULT_CONNECT_CONFIG", async () => {
-    const out = await buildPowerhouseConfigTemplate({});
+    const out = await buildPowerhouseConfigTemplate({ name: NAME });
     const parsed = JSON.parse(out) as Plain;
     expect(parsed.connect).toBeDefined();
     // Every leaf in DEFAULT_CONNECT_CONFIG must be present at the same path
@@ -61,36 +68,54 @@ describe("buildPowerhouseConfigTemplate", () => {
   });
 
   test("preserves existing top-level fields", async () => {
-    const out = await buildPowerhouseConfigTemplate({});
+    const out = await buildPowerhouseConfigTemplate({ name: NAME });
     const parsed = JSON.parse(out) as Plain;
     expect(parsed.$schema).toContain("source-config.schema.json");
     expect(parsed.documentModelsDir).toBe("./document-models");
     expect(parsed.editorsDir).toBe("./editors");
     expect(parsed.processorsDir).toBe("./processors");
     expect(parsed.subgraphsDir).toBe("./subgraphs");
-    expect(parsed.studio).toEqual({ port: 3000 });
-    expect(parsed.reactor).toEqual({ port: 4001 });
     expect(parsed.packages).toEqual([]);
     expect(parsed.packageRegistryUrl).toBe(DEFAULT_REGISTRY_URL);
   });
 
-  test("connect block equals DEFAULT_CONNECT_CONFIG exactly (no extras, no drift)", async () => {
-    const out = await buildPowerhouseConfigTemplate({});
+  test("assigns the ports derived from the project name", async () => {
+    const out = await buildPowerhouseConfigTemplate({ name: NAME });
     const parsed = JSON.parse(out) as Plain;
-    expect(parsed.connect).toEqual(DEFAULT_CONNECT_CONFIG as Plain);
+    const ports = deriveProjectPorts(NAME);
+    expect(parsed.studio).toEqual({ port: ports.studioPort });
+    expect(parsed.reactor).toEqual({ port: ports.switchboardPort });
   });
 
-  test("omits `vetra` when no remoteDrive provided", async () => {
-    const out = await buildPowerhouseConfigTemplate({});
-    const parsed = JSON.parse(out) as Plain;
-    expect(parsed.vetra).toBeUndefined();
+  test("gives two differently named projects different ports", async () => {
+    const a = JSON.parse(
+      await buildPowerhouseConfigTemplate({ name: "project-a" }),
+    ) as { reactor: { port: number } };
+    const b = JSON.parse(
+      await buildPowerhouseConfigTemplate({ name: "project-b" }),
+    ) as { reactor: { port: number } };
+    expect(a.reactor.port).not.toBe(b.reactor.port);
   });
 
-  test("emits `vetra` block when remoteDrive is provided", async () => {
+  test("always emits `vetra` carrying the assigned connect port", async () => {
+    const out = await buildPowerhouseConfigTemplate({ name: NAME });
+    const parsed = JSON.parse(out) as Plain;
+    // The block is no longer remote-drive-only: it is where `ph vetra`'s
+    // Connect port lives, so every scaffolded project has one.
+    expect(parsed.vetra).toEqual({
+      connectPort: deriveProjectPorts(NAME).vetraConnectPort,
+    });
+  });
+
+  test("emits drive coordinates alongside the port when remoteDrive is provided", async () => {
     const remoteDrive = "https://reactor.example.com/d/vetra-abc123";
-    const out = await buildPowerhouseConfigTemplate({ remoteDrive });
+    const out = await buildPowerhouseConfigTemplate({
+      name: NAME,
+      remoteDrive,
+    });
     const parsed = JSON.parse(out) as Plain;
     expect(parsed.vetra).toEqual({
+      connectPort: deriveProjectPorts(NAME).vetraConnectPort,
       driveId: "vetra-abc123",
       driveUrl: remoteDrive,
     });

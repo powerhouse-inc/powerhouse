@@ -20,6 +20,7 @@ catalog:
   "@aws-sdk/s3-request-presigner": 3.1087.0
   "typescript": 6.0.3
   "execa": 9.6.1
+  "dotenv": 16.4.7
   # Windows: scripts cannot use the POSIX `VAR=value cmd` prefix (cmd.exe has no
   # such syntax), and `spawn` refuses to run the .cmd shims that npm/pnpm/yarn
   # install as unless it goes through a shell.

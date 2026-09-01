@@ -4,6 +4,7 @@ import {
   DEFAULT_VETRA_CONNECT_PORT,
 } from "../constants.js";
 import { getConfig } from "../file-system/get-config.js";
+import { loadProjectEnv, readPortEnv } from "../project-env.js";
 import {
   commonArgs,
   commonServerArgs,
@@ -11,22 +12,48 @@ import {
   vetraSwitchboardArgs,
 } from "./common.js";
 
+/**
+ * Resolve the Vetra Switchboard port.
+ *
+ * Precedence: CLI flag (cmd-ts applies that above this function) →
+ * `process.env` → `.env.local` → `.env` → `powerhouse.config.json` →
+ * constant. `loadProjectEnv` folds the two files into `process.env` without
+ * clobbering anything already set, so a single lookup covers the middle three.
+ */
+export function resolveSwitchboardPortDefault(): number {
+  loadProjectEnv();
+  return (
+    readPortEnv("PH_SWITCHBOARD_PORT") ??
+    getConfig().reactor?.port ??
+    DEFAULT_SWITCHBOARD_PORT
+  );
+}
+
+/** Resolve the Vetra Connect port through the same chain. */
+export function resolveConnectPortDefault(): number {
+  loadProjectEnv();
+  return (
+    readPortEnv("PH_VETRA_CONNECT_PORT") ??
+    getConfig().vetra?.connectPort ??
+    DEFAULT_VETRA_CONNECT_PORT
+  );
+}
+
 export const vetraArgs = {
   switchboardPort: option({
     type: number,
     long: "switchboard-port",
     description: "port to use for the Vetra Switchboard",
-    defaultValue: () => {
-      const baseConfig = getConfig();
-      return baseConfig.reactor?.port ?? DEFAULT_SWITCHBOARD_PORT;
-    },
+    defaultValue: resolveSwitchboardPortDefault,
   }),
   connectPort: option({
     type: number,
     long: "connect-port",
+    // Deliberately not `defaultValueIsSerializable`: the value is now
+    // per-project, and cmd-ts prints serializable defaults into `--help`,
+    // which would bake one project's port into the help text.
     description: "port to use for the Vetra Connect",
-    defaultValue: () => DEFAULT_VETRA_CONNECT_PORT,
-    defaultValueIsSerializable: true,
+    defaultValue: resolveConnectPortDefault,
   }),
   remoteDrive: option({
     type: optional(string),

@@ -55,6 +55,8 @@ await build({
 await build({
   entry: [
     "clis/constants.ts",
+    "clis/project-ports.ts",
+    "clis/project-env.ts",
     "clis/utils.ts",
     "clis/command-names.ts",
     "clis/services/telemetry.ts",
