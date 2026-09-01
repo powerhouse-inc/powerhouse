@@ -36,6 +36,8 @@
     "migrate": "tsx src/storage/migrations/run-migrations.ts",
     "migrate:status": "tsx src/storage/migrations/run-migrations.ts status",
     "preflight:auth": "tsx src/admin/run-stream-order-check.ts",
+    "bench:records": "tsx bench/records/run-records.ts",
+    "bench:records:verify": "tsx bench/records/run-records.ts verify",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down"
   },
@@ -74,7 +76,8 @@
     "tsx": "catalog:",
     "vitest": "catalog:",
     "@types/bun": "catalog:",
-    "tsdown": "catalog:"
+    "tsdown": "catalog:",
+    "zod": "catalog:"
   },
   "homepage": "https://academy.vetra.io/academy/Reference/Reactor/WorkingWithTheReactor"
 }
