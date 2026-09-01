@@ -1,6 +1,7 @@
 import type {
   User as EditorUser,
   ISigner,
+  UserActionSigner,
 } from "@powerhousedao/shared/document-model";
 import type { CREDENTIAL_TYPES } from "./constants.js";
 import type { SignCredentialTypedData } from "./credential.js";
@@ -8,7 +9,7 @@ import type { IRenownCrypto } from "./crypto/types.js";
 import type { IEventEmitter } from "./event/types.js";
 import type { IStorage } from "./storage/common.js";
 
-export type { ISigner };
+export type { ISigner, UserActionSigner };
 
 // Local mirrors of the did-jwt-vc / did-jwt / did-resolver shapes that would
 // otherwise leak across renown's public .d.ts surface. Re-declaring them keeps

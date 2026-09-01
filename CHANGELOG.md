@@ -1,3 +1,20 @@
+## 6.2.2-dev.70 (2026-09-01)
+
+This was a version bump only, there were no code changes.
+
+## 6.2.2-dev.69 (2026-08-31)
+
+### 🩹 Fixes
+
+- **reactor-api:** pass modules array to buildSubgraphSchema ([cb39c20c5](https://github.com/powerhouse-inc/powerhouse/commit/cb39c20c5))
+- **renown:** give the signer the acting identity, not the session record ([#2944](https://github.com/powerhouse-inc/powerhouse/pull/2944))
+- **shared:** project the signer onto the fields the wire declares ([#2945](https://github.com/powerhouse-inc/powerhouse/pull/2945))
+
+### ❤️ Thank You
+
+- acaldas
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.2.2-dev.68 (2026-08-31)
 
 ### 🚀 Features

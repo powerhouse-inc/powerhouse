@@ -1,3 +1,17 @@
+## 6.2.2-dev.70 (2026-09-01)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
+## 6.2.2-dev.69 (2026-08-31)
+
+### 🩹 Fixes
+
+- **reactor-api:** pass modules array to buildSubgraphSchema ([cb39c20c5](https://github.com/powerhouse-inc/powerhouse/commit/cb39c20c5))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.2-dev.68 (2026-08-31)
 
 ### 🚀 Features

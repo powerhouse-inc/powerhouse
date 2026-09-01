@@ -29,11 +29,40 @@ import type {
   RenownStorageMap,
   SignInParams,
   User,
+  UserActionSigner,
 } from "./types.js";
 import { parsePkhDid, verifyAuthBearerToken } from "./utils.js";
 export * from "./constants.js";
 
 export class RenownMemoryStorage extends MemoryStorage<RenownStorageMap> {}
+
+/**
+ * The acting identity an action's signature carries.
+ *
+ * `User` here is the whole session record — it also holds the DID, the
+ * credential, the fetched profile and ENS info — while `UserActionSigner` is
+ * what travels on a signed action, and it is deliberately just an address on a
+ * chain. The reactor's `ReactorSignerUserInput` declares exactly these three
+ * fields, and a GraphQL input object refuses a field it does not declare by
+ * rejecting the WHOLE request, so handing the session record to the signer
+ * makes every signed push fail before it reaches the reactor.
+ *
+ * Narrowed here rather than at the transport, because the session record has no
+ * business being on an operation in the first place: it is stored on every
+ * operation a local reactor writes, not only on the ones that go over a wire.
+ *
+ * The compiler cannot catch the difference — excess-property checks apply to
+ * fresh object literals, never to a variable of a wider type — which is why
+ * this is a function rather than a type annotation.
+ */
+function toActionSigner(user: User | undefined): UserActionSigner | undefined {
+  if (!user) return undefined;
+  return {
+    address: user.address,
+    networkId: user.networkId,
+    chainId: user.chainId,
+  };
+}
 
 export class Renown implements IRenown {
   #baseUrl: string;
@@ -66,7 +95,11 @@ export class Renown implements IRenown {
     this.#switchboard = switchboard;
     this.#chainId = chainId;
     const restoredUser = this.user;
-    this.#signer = new RenownCryptoSigner(crypto, this.#appName, restoredUser);
+    this.#signer = new RenownCryptoSigner(
+      crypto,
+      this.#appName,
+      toActionSigner(restoredUser),
+    );
 
     // A restored, previously-verified user is an authorized session; otherwise
     // status stays "initial" after a reload while the user is present.
@@ -75,7 +108,7 @@ export class Renown implements IRenown {
     }
 
     this.on("user", (user) => {
-      this.#signer.user = user;
+      this.#signer.user = toActionSigner(user);
     });
   }
 
