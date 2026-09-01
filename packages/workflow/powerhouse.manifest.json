@@ -18,7 +18,12 @@
   ],
   "apps": [],
   "editors": [],
-  "processors": [],
+  "processors": [
+    {
+      "name": "document-event-trigger",
+      "id": "document-event-trigger"
+    }
+  ],
   "subgraphs": [
     {
       "id": "workflow-runtime",
