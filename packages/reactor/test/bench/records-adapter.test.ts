@@ -295,9 +295,25 @@ describe("BENCH_TARGETS", () => {
     expect(() => findTarget("nope")).toThrow("Unknown benchmark: nope");
   });
 
-  it("keeps the measurement defects visible as caveats rather than notes", () => {
-    expect(findTarget("queue").caveats[0]).toContain("expect()");
-    expect(findTarget("queue-only").caveats[0]).toContain("never drains");
+  it("keeps a known harness limit visible as a caveat rather than a note", () => {
+    // Structural rather than textual. Pinning the wording made this test fail
+    // twice for a good reason - the defect it described got fixed - which is
+    // noise standing between a repair and a green suite.
+    const withKnownLimits = ["queue", "queue-only", "cache", "sync"];
+
+    for (const name of withKnownLimits) {
+      expect(findTarget(name).caveats.length, name).toBeGreaterThan(0);
+      for (const caveat of findTarget(name).caveats) {
+        expect(caveat.length, name).toBeGreaterThan(40);
+      }
+    }
+  });
+
+  it("claims no limit for a benchmark that has none", () => {
+    // A caveat nobody can point at a mechanism for is noise in every record
+    // that carries it.
+    expect(findTarget("auth").caveats).toEqual([]);
+    expect(findTarget("events").caveats).toEqual([]);
   });
 });
 

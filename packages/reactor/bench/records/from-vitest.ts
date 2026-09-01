@@ -80,7 +80,7 @@ export const BENCH_TARGETS: BenchTarget[] = [
     title: "queue microbenchmarks without an executor",
     question: "What does enqueue and dequeue cost with nothing draining?",
     caveats: [
-      "The suites share a module-level EventBus and InMemoryQueue and the first never drains, so later iterations measure a fuller queue than earlier ones",
+      "The two DAG cases enqueue dependents ahead of their dependencies across distinct sub-queues, which is valid queue contract but not a shape any reactor producer emits, since executeBatch and loadBatch topologically sort first",
     ],
   },
   {
