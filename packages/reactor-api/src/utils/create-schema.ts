@@ -13,7 +13,7 @@ import { camelCase, pascalCase } from "change-case";
 import { childLogger } from "document-model";
 import { type DocumentNode, Kind, parse, print } from "graphql";
 import { gql } from "graphql-tag";
-import { GraphQLJSONObject } from "graphql-type-json";
+import { GraphQLJSON, GraphQLJSONObject } from "graphql-type-json";
 
 const logger = childLogger(["reactor-api", "create-schema"]);
 
@@ -91,6 +91,7 @@ export const buildSubgraphSchemaModule = (
   const newResolvers = {
     ...resolvers,
     JSONObject: GraphQLJSONObject,
+    Unknown: GraphQLJSON,
   };
 
   return {
@@ -225,6 +226,9 @@ export const getDocumentModelTypeDefs = (
   const schema = gql`
     scalar JSONObject
     scalar AttachmentRef
+    # Codegen scalars not in the document-engineering set.
+    scalar Unknown
+    scalar Address
     ${scalarsTypeDefs.join("\n").replaceAll(";", "")}
 
     type PHOperationContext {
