@@ -6,7 +6,12 @@ import { RecordsError } from "../../bench/records/jsonl-store.js";
 import type { CommandResult } from "../../bench/records/records-commands.js";
 import { runRecordsCommand } from "../../bench/records/records-commands.js";
 import { parseRecordsOptions } from "../../bench/records/records-options.js";
-import { concurrencyEntry, defectTask, gapTask } from "./records-fixtures.js";
+import {
+  concurrencyEntry,
+  defectTask,
+  gapTask,
+  microEntry,
+} from "./records-fixtures.js";
 
 const NOW = "2026-09-05T09:00:00.000Z";
 
@@ -135,6 +140,22 @@ describe("add-benchmark", () => {
     const stored = JSON.parse(line) as Record<string, unknown>;
 
     expect(stored).toMatchObject({ supersedes: [], tags: [] });
+  });
+
+  it("summarises a micro entry in the units it was measured in", () => {
+    const result = run(["add-benchmark", "-"], withoutId(microEntry()));
+
+    expect(result.lines[0]).toContain(
+      "(micro, micro tier, 1 suites, 2 cases, vitest-bench)",
+    );
+  });
+
+  it("keeps the two kinds in one file and one id sequence", () => {
+    run(["add-benchmark", "-"], withoutId(concurrencyEntry()));
+    const second = run(["add-benchmark", "-"], withoutId(microEntry()));
+
+    expect(second.data.id).toBe("B-002");
+    expect(run(["verify"]).exit).toBe(0);
   });
 
   it("reports a dry run without writing anything", () => {

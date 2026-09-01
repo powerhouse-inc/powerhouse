@@ -1,16 +1,32 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { BenchmarkEntry } from "../../bench/records/benchmark-schema.js";
+import type { ConcurrencyBenchmark } from "../../bench/records/benchmark-schema.js";
 import { TaskEntry } from "../../bench/records/task-schema.js";
-import { concurrencyEntry, defectTask, gapTask } from "./records-fixtures.js";
+import {
+  concurrencyEntry,
+  defectTask,
+  gapTask,
+  microEntry,
+} from "./records-fixtures.js";
 
 function issuePaths(error: z.ZodError): string[] {
   return error.issues.map((issue) => issue.path.join("."));
 }
 
+/** The union does not narrow on its own, and a test reaching for `cells`
+ * wants to fail loudly if it was handed the wrong variant. */
+function parseConcurrency(value: unknown): ConcurrencyBenchmark {
+  const parsed = BenchmarkEntry.parse(value);
+  if (parsed.kind !== "concurrency") {
+    throw new Error(`Expected a concurrency entry, got ${parsed.kind}`);
+  }
+  return parsed;
+}
+
 describe("BenchmarkEntry", () => {
   it("accepts a full concurrency entry", () => {
-    const parsed = BenchmarkEntry.parse(concurrencyEntry());
+    const parsed = parseConcurrency(concurrencyEntry());
 
     expect(parsed.kind).toBe("concurrency");
     expect(parsed.results.cells).toHaveLength(2);
@@ -23,7 +39,7 @@ describe("BenchmarkEntry", () => {
     delete protocol.lockInstrument;
     delete results.derived;
 
-    const parsed = BenchmarkEntry.parse(entry);
+    const parsed = parseConcurrency(entry);
 
     expect(parsed.results.protocol.lockInstrument).toBe("none");
     expect(parsed.results.protocol.notes).toEqual([]);
@@ -113,6 +129,78 @@ describe("BenchmarkEntry", () => {
 
     expect(result.success).toBe(false);
     expect(z.prettifyError(result.error!)).toContain("Ids look like B-001");
+  });
+});
+
+describe("MicroPayload", () => {
+  it("accepts a vitest bench run", () => {
+    const parsed = BenchmarkEntry.parse(microEntry());
+
+    expect(parsed.kind).toBe("micro");
+    if (parsed.kind !== "micro") {
+      throw new Error("narrowing failed");
+    }
+    expect(parsed.results.suites[0].cases).toHaveLength(2);
+    expect(parsed.results.runner).toBe("vitest-bench");
+  });
+
+  it("keeps a floor of zero, which a fast case genuinely hits", () => {
+    const parsed = BenchmarkEntry.parse(microEntry());
+
+    if (parsed.kind !== "micro") {
+      throw new Error("narrowing failed");
+    }
+    expect(parsed.results.suites[0].cases[0].minMs).toBe(0);
+  });
+
+  it("rejects ranks that tie or skip inside one suite", () => {
+    const entry = microEntry();
+    const results = entry.results as {
+      suites: { cases: { rank: number }[] }[];
+    };
+    results.suites[0].cases[1].rank = 1;
+
+    const result = BenchmarkEntry.safeParse(entry);
+
+    expect(result.success).toBe(false);
+    expect(issuePaths(result.error!)).toContain("results.suites.0.cases");
+  });
+
+  it("ranks within a suite rather than across the file", () => {
+    const entry = microEntry();
+    const results = entry.results as { suites: Record<string, unknown>[] };
+    results.suites.push({
+      fullName: "bench/auth-scope.bench.ts > policy compilation",
+      cases: [
+        {
+          ...(results.suites[0] as { cases: Record<string, unknown>[] })
+            .cases[0],
+          name: "compilePolicy: 8 grants",
+          rank: 1,
+        },
+      ],
+    });
+
+    expect(BenchmarkEntry.safeParse(entry).success).toBe(true);
+  });
+
+  it("rejects a raw vitest key that skipped the adapter", () => {
+    const entry = microEntry();
+    const results = entry.results as {
+      suites: { cases: Record<string, unknown>[] }[];
+    };
+    results.suites[0].cases[0].mean = 0.0004;
+
+    const result = BenchmarkEntry.safeParse(entry);
+
+    expect(result.success).toBe(false);
+  });
+
+  it("requires at least one suite and one case in it", () => {
+    const empty = microEntry();
+    (empty.results as Record<string, unknown>).suites = [];
+
+    expect(BenchmarkEntry.safeParse(empty).success).toBe(false);
   });
 });
 

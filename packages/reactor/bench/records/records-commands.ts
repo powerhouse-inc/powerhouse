@@ -73,12 +73,10 @@ function addBenchmark(options: AddOptions, io: CommandIo): CommandResult {
       writeEntries(path, [...existing, entry]);
     }
 
-    const cells = entry.results.cells.length;
-    const reps = entry.results.protocol.repetitions;
     return {
       exit: RECORDS_EXIT.ok,
       lines: [
-        `${id} ${verb(options)} ${path} (${entry.kind}, ${entry.tier} tier, ${cells} cells, ${reps} reps)`,
+        `${id} ${verb(options)} ${path} (${entry.kind}, ${entry.tier} tier, ${shapeSummary(entry)})`,
       ],
       data: { id, file: path, dryRun: options.dryRun },
     };
@@ -428,6 +426,20 @@ function parseOrReject<T>(schema: z.ZodType<T>, value: unknown): T {
     );
   }
   return parsed.data;
+}
+
+/** What the caller should recognise as their own run. Each kind counts the
+ * thing it is measured in: a suite total tells you nothing about cells. */
+function shapeSummary(entry: Benchmark): string {
+  if (entry.kind === "concurrency") {
+    return `${entry.results.cells.length} cells, ${entry.results.protocol.repetitions} reps`;
+  }
+
+  const cases = entry.results.suites.reduce(
+    (total, suite) => total + suite.cases.length,
+    0,
+  );
+  return `${entry.results.suites.length} suites, ${cases} cases, ${entry.results.runner}`;
 }
 
 function verb(options: AddOptions): string {

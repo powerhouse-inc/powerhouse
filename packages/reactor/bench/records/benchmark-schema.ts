@@ -148,9 +148,79 @@ export const ConcurrencyPayload = z
   });
 export type ConcurrencyPayload = z.infer<typeof ConcurrencyPayload>;
 
+/**
+ * One case, with every unit in the name. The raw runner keys do not carry
+ * theirs - `mean` in milliseconds sits next to `hz` in ops/sec - which is the
+ * seam hand-written records drifted through. Renaming is the adapter's job.
+ *
+ * `samples` is deliberately absent: vitest hardcodes it to an empty array
+ * regardless of config, so a field for it would be empty in every record.
+ */
+export const MicroCase = z.strictObject({
+  name: z.string().min(1),
+  /** Within its suite, not across the file. */
+  rank: z.int().positive(),
+  hz: z.number().positive(),
+  meanMs: z.number().nonnegative(),
+  medianMs: z.number().nonnegative(),
+  /** A fast case genuinely floors at 0 on a millisecond clock. */
+  minMs: z.number().nonnegative(),
+  maxMs: z.number().nonnegative(),
+  p75Ms: z.number().nonnegative().optional(),
+  p99Ms: z.number().nonnegative().optional(),
+  p999Ms: z.number().nonnegative().optional(),
+  /** Kept because a run with a large one measured noise, not the system. */
+  rmePct: z.number().nonnegative(),
+  sampleCount: z.int().nonnegative(),
+  totalTimeMs: z.number().positive(),
+  /** vitest's --compare join key, hash-derived from file plus name: worth
+   * recording, not worth trusting across a rename. */
+  vitestId: z.string().min(1).optional(),
+});
+export type MicroCase = z.infer<typeof MicroCase>;
+
+export const MicroSuite = z.strictObject({
+  fullName: z.string().min(1),
+  cases: z.array(MicroCase).min(1),
+});
+export type MicroSuite = z.infer<typeof MicroSuite>;
+
+/**
+ * An in-process microbenchmark: many iterations of one function, timed by
+ * vitest bench or tinybench directly. The two runners agree on shape and on
+ * units - vitest's result is tinybench's plus name, rank, sampleCount and
+ * median - so one payload covers both.
+ */
+export const MicroPayload = z
+  .strictObject({
+    runner: z.enum(["vitest-bench", "tinybench"]),
+    runnerVersion: z.string().min(1),
+    sourceFiles: z.array(z.string().min(1)).min(1),
+    suites: z.array(MicroSuite).min(1),
+    protocol: RunProtocol,
+    derived: z.array(DerivedRatio).default([]),
+  })
+  .superRefine((payload, ctx) => {
+    payload.suites.forEach((suite, index) => {
+      const ranks = suite.cases
+        .map((entry) => entry.rank)
+        .sort((a, b) => a - b);
+      const contiguous = ranks.every((rank, position) => rank === position + 1);
+      if (!contiguous) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["suites", index, "cases"],
+          message: `Ranks must be 1..${ranks.length} within ${suite.fullName} with no gaps or ties, got ${ranks.join(", ")}`,
+        });
+      }
+    });
+  });
+export type MicroPayload = z.infer<typeof MicroPayload>;
+
 /** Adding a benchmark shape means one payload here and one line in the union. */
 export const BENCHMARK_PAYLOADS = {
   concurrency: ConcurrencyPayload,
+  micro: MicroPayload,
 } as const;
 
 export type BenchmarkKind = keyof typeof BENCHMARK_PAYLOADS;
@@ -184,11 +254,15 @@ const benchmarkVariant = <K extends BenchmarkKind>(kind: K) =>
     results: BENCHMARK_PAYLOADS[kind],
   });
 
-/**
- * One variant today. `discriminatedUnion` accepts a single-element list, so the
- * mechanism is in place and the next shape is one payload plus one line here.
- */
+/** Named so a caller that has already narrowed can say which one it holds. */
+export const ConcurrencyBenchmark = benchmarkVariant("concurrency");
+export type ConcurrencyBenchmark = z.infer<typeof ConcurrencyBenchmark>;
+
+export const MicroBenchmark = benchmarkVariant("micro");
+export type MicroBenchmark = z.infer<typeof MicroBenchmark>;
+
 export const BenchmarkEntry = z.discriminatedUnion("kind", [
-  benchmarkVariant("concurrency"),
+  ConcurrencyBenchmark,
+  MicroBenchmark,
 ]);
 export type BenchmarkEntry = z.infer<typeof BenchmarkEntry>;
