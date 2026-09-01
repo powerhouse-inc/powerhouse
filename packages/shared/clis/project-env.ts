@@ -18,8 +18,10 @@ let loadedFor: string | undefined;
 export function loadProjectEnv(cwd: string = process.cwd()): void {
   if (loadedFor === cwd) return;
   loadedFor = cwd;
-  dotenv.config({ path: join(cwd, ".env.local"), quiet: true });
-  dotenv.config({ path: join(cwd, ".env"), quiet: true });
+  // dotenv 16 logs nothing for a missing file, so no suppression option is
+  // needed here (and none exists before dotenv 17).
+  dotenv.config({ path: join(cwd, ".env.local") });
+  dotenv.config({ path: join(cwd, ".env") });
 }
 
 /** Test seam: forget which directory has already been loaded. */

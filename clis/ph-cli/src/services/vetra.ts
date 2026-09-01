@@ -14,6 +14,12 @@ import {
 } from "../utils/configure-vetra-github-url.js";
 import { parseDefaultDrivesUrl } from "../utils/parse-default-drives.js";
 import { resolveSwitchboardPort } from "../utils/resolve-switchboard-port.js";
+import {
+  clearVetraRuntime,
+  probeVetraRuntime,
+  syncMcpPort,
+  writeVetraRuntime,
+} from "../utils/vetra-runtime.js";
 import { runConnectStudio } from "./connect-studio.js";
 import { startSwitchboard } from "./switchboard.js";
 
@@ -237,6 +243,42 @@ export async function startVetra(args: VetraArgs) {
 
   const switchboardLogger = childLogger(["vetra", "switchboard"]);
 
+  // One Vetra per project. Two instances over one working tree would contend
+  // for the same `.ph/read-model.db` and `.ph/reactor-storage`, and leave the
+  // project with two drives that diverge.
+  const projectDir = process.cwd();
+  const { readPackageSync } = await import("read-pkg");
+  const projectName = readPackageSync({ cwd: projectDir }).name;
+  const probe = await probeVetraRuntime(projectDir, projectName);
+
+  if (probe.status === "live") {
+    console.log();
+    console.log(green("Vetra is already running for this project."));
+    console.log(
+      green(`   ➜ Connect:     http://localhost:${probe.record.connectPort}`),
+    );
+    console.log(
+      green(
+        `   ➜ Switchboard: http://localhost:${probe.record.switchboardPort}/graphql`,
+      ),
+    );
+    console.log(
+      `Stop that instance (pid ${probe.record.pid}) if you need to restart it.`,
+    );
+    return;
+  }
+
+  if (probe.status === "foreign") {
+    console.error(
+      red(
+        `.ph/vetra-runtime.json describes a live Vetra for "${probe.record.projectName}", ` +
+          `but this project is "${projectName}". Refusing to start a second instance. ` +
+          `Delete .ph/vetra-runtime.json if that record is wrong.`,
+      ),
+    );
+    process.exit(1);
+  }
+
   try {
     // Set default log level to info if not already specified
     if (!process.env.LOG_LEVEL) {
@@ -266,6 +308,42 @@ export async function startVetra(args: VetraArgs) {
     const driveUrl: string = switchboardResult.driveUrl || remoteDrive || "";
     const previewDriveUrl = switchboardResult.previewDriveUrl;
     const actualSwitchboardPort = switchboardResult.switchboardPort;
+
+    // Record what we actually bound, so a second `ph vetra` can tell a live
+    // instance from a stale file, and so an agent can see the real ports.
+    writeVetraRuntime(projectDir, {
+      pid: process.pid,
+      projectName,
+      switchboardPort: actualSwitchboardPort,
+      connectPort,
+      mcpUrl: `http://localhost:${actualSwitchboardPort}/mcp`,
+      startedAt: new Date().toISOString(),
+    });
+    const releaseRuntimeRecord = () => clearVetraRuntime(projectDir);
+    process.on("exit", releaseRuntimeRecord);
+    process.on("SIGINT", () => {
+      releaseRuntimeRecord();
+      process.exit(130);
+    });
+    process.on("SIGTERM", () => {
+      releaseRuntimeRecord();
+      process.exit(143);
+    });
+
+    // An MCP client resolved `.mcp.json` before this process started and
+    // cannot re-read it, so a drifted literal means the agent is pointed at
+    // the wrong port — possibly another project's reactor. Correct the file
+    // and say so plainly; we cannot fix the already-open client ourselves.
+    const driftedMcpFiles = syncMcpPort(projectDir, actualSwitchboardPort);
+    if (driftedMcpFiles.length > 0) {
+      console.log(
+        yellow(
+          `Updated ${driftedMcpFiles.join(" and ")} to port ${actualSwitchboardPort}. ` +
+            `Reconnect your MCP client (/mcp) to pick it up. ` +
+            `This edit is local — do not commit it.`,
+        ),
+      );
+    }
 
     // Configure GitHub URL if remote drive is set
     if (remoteDrive) {

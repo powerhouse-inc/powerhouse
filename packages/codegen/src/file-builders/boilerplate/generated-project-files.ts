@@ -1,4 +1,6 @@
 import { writeFileEnsuringDir } from "@powerhousedao/shared/clis";
+import { deriveProjectPorts } from "@powerhousedao/shared/clis/project-ports";
+import { existsSync } from "node:fs";
 import {
   buildBoilerplatePackageJson,
   createOrUpdateManifest,
@@ -8,6 +10,8 @@ import { join } from "path";
 import { writeJsonFile } from "write-json-file";
 import {
   agentsTemplate,
+  buildCursorMcpTemplate,
+  buildMcpTemplate,
   buildPowerhouseConfigTemplate,
   claudeSettingsLocalTemplate,
   claudeTemplate,
@@ -196,13 +200,16 @@ export async function writeProjectRootFiles(
     version,
   });
   const powerhouseConfig = await buildPowerhouseConfigTemplate({
+    name,
     tag,
     version,
     remoteDrive,
   });
   await writeFileEnsuringDir("powerhouse.config.json", powerhouseConfig);
   await writeFileEnsuringDir("package.json", packageJson);
-  await applyProjectCustomizations({ name, projectDir });
+  // `applyProjectCustomizations` is deliberately NOT called here: it rewrites
+  // `.mcp.json` / `.cursor/mcp.json`, which `writeAllGeneratedProjectFiles`
+  // has not written yet. The caller runs it after both.
 }
 
 /**
@@ -226,15 +233,40 @@ export async function applyProjectCustomizations(args: {
   await writeJsonFile(pkgPath, pkg, { indent: 2 });
   // powerhouse.manifest.json: set the project name.
   await createOrUpdateManifest({ name }, projectDir);
-  // powerhouse.config.json: write the vetra remote-drive field. Only applies
-  // to the template path; the fresh-scaffold path already bakes this in via
-  // buildPowerhouseConfigTemplate.
+  // powerhouse.config.json: assign this project's dev-server ports, plus the
+  // vetra remote-drive field. Written here as well as in
+  // buildPowerhouseConfigTemplate because the `--clone` path inherits the
+  // *source* project's config, and its ports would otherwise collide with it.
+  const ports = deriveProjectPorts(name);
+  const configPath = join(projectDir, "powerhouse.config.json");
+  const config = (await loadJsonFile(configPath)) as Record<string, unknown>;
+  config.studio = { ...(config.studio as object), port: ports.studioPort };
+  config.reactor = {
+    ...(config.reactor as object),
+    port: ports.switchboardPort,
+  };
+  const vetra: Record<string, unknown> = {
+    ...(config.vetra as object),
+    connectPort: ports.vetraConnectPort,
+  };
   if (remoteDrive) {
-    const configPath = join(projectDir, "powerhouse.config.json");
-    const config = (await loadJsonFile(configPath)) as Record<string, unknown>;
-    const driveId = remoteDrive.split("/").pop() ?? "";
-    config.vetra = { driveId, driveUrl: remoteDrive };
-    await writeJsonFile(configPath, config, { indent: 2 });
+    vetra.driveId = remoteDrive.split("/").pop() ?? "";
+    vetra.driveUrl = remoteDrive;
+  }
+  config.vetra = vetra;
+  await writeJsonFile(configPath, config, { indent: 2 });
+
+  // The MCP configs carry the switchboard port as a literal, because an MCP
+  // client resolves them at session start and cannot read the project config.
+  // Keep them in step with the port just assigned.
+  const mcpFiles: [string, string][] = [
+    [".mcp.json", buildMcpTemplate(ports.switchboardPort)],
+    [join(".cursor", "mcp.json"), buildCursorMcpTemplate(ports.switchboardPort)],
+  ];
+  for (const [rel, contents] of mcpFiles) {
+    const target = join(projectDir, rel);
+    if (!existsSync(target)) continue;
+    await writeFileEnsuringDir(target, contents.trimStart());
   }
 }
 
