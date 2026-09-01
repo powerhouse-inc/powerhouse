@@ -93,7 +93,8 @@ export const BENCH_TARGETS: BenchTarget[] = [
     title: "write-cache microbenchmarks",
     question: "What does a write-cache hit and miss cost against PGlite?",
     caveats: [
-      "PGlite boots and the full migration set runs inside the measured function, so every case prices WASM cold boot plus migrations rather than the cache",
+      "The no-cache baseline compares a cold cache rebuild against a manual replay, and a cold rebuild is a replay, so that pair reads about 1x by construction rather than measuring what the cache is worth",
+      "The two keyframe cases are floored by a 100ms drain sleep that lets fire-and-forget keyframe writes land, so their difference is not a measure of persistence overhead",
     ],
   },
   {
