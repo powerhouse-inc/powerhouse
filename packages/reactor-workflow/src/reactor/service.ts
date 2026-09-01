@@ -12,6 +12,9 @@ import type {
   WorkflowState,
 } from "document-models/workflow/v1";
 import { createBlockExecutor, toWorkflowDefinition } from "./lib.js";
+import { WorkflowRunStore } from "./store.js";
+
+export type PersistedRunResult = WorkflowRunResult & { runId: string | null };
 
 const DOCUMENT_EVENT_BLOCK = "core#document-event";
 
@@ -67,15 +70,31 @@ function matchesFilter(
 export class WorkflowRuntimeService {
   private subgraph?: BaseSubgraph;
   private executor?: BlockExecutor;
+  private storePromise?: Promise<WorkflowRunStore>;
   private readonly registry = new Map<string, DocumentEventRegistration>();
 
-  // Called by the subgraph on construction; seeds the trigger registry.
+  // Called by the subgraph on construction; seeds the trigger registry and
+  // opens the run journal.
   configure(subgraph: BaseSubgraph): void {
     if (this.subgraph) return;
     this.subgraph = subgraph;
+    this.storePromise = WorkflowRunStore.create(subgraph.relationalDb);
+    this.storePromise.catch((error: unknown) => {
+      logger.error("Failed to open the workflow run store", error);
+    });
     this.seedRegistry().catch((error: unknown) => {
       logger.error("Failed to seed document-event registry", error);
     });
+  }
+
+  // The journal is best-effort: a broken store never blocks runs.
+  async store(): Promise<WorkflowRunStore | undefined> {
+    if (!this.storePromise) return undefined;
+    try {
+      return await this.storePromise;
+    } catch {
+      return undefined;
+    }
   }
 
   private async seedRegistry(): Promise<void> {
@@ -161,7 +180,7 @@ export class WorkflowRuntimeService {
             timestampUtcMs: operation.timestampUtcMs,
           },
         };
-        this.fire(registration.workflowId, payload).then(
+        this.fire(registration.workflowId, payload, "document-event").then(
           (run) => {
             logger.info(
               `document-event fired workflow ${registration.workflowId}: ${run.status}`,
@@ -181,7 +200,8 @@ export class WorkflowRuntimeService {
   async fire(
     workflowId: string,
     triggerPayload?: unknown,
-  ): Promise<WorkflowRunResult> {
+    triggerKind = "manual",
+  ): Promise<PersistedRunResult> {
     if (!this.subgraph) {
       throw new Error("Workflow runtime is not configured yet");
     }
@@ -198,7 +218,33 @@ export class WorkflowRuntimeService {
     }
     const definition = toWorkflowDefinition(state);
     this.executor ??= createBlockExecutor(this.subgraph);
-    return runWorkflow({ definition, executor: this.executor, triggerPayload });
+
+    const store = await this.store();
+    const runId =
+      (await store?.startRun({
+        workflowId,
+        workflowName: state.name,
+        workflowVersion: state.version,
+        triggerKind,
+        triggerPayload,
+      })) ?? null;
+    try {
+      const result = await runWorkflow({
+        definition,
+        executor: this.executor,
+        triggerPayload,
+      });
+      if (store && runId) await store.finishRun(runId, result);
+      return { ...result, runId };
+    } catch (error) {
+      if (store && runId) {
+        await store.failRun(
+          runId,
+          error instanceof Error ? error.message : String(error),
+        );
+      }
+      throw error;
+    }
   }
 }
 

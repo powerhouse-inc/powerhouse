@@ -7,10 +7,40 @@ export const schema: DocumentNode = gql`
   """
   type WorkflowRuntimeQueries {
     health: String!
+    """
+    Persisted runs, newest first, optionally filtered by workflow.
+    """
+    runs(workflowId: String, limit: Int): [WorkflowRunRecord!]!
+    run(id: String!): WorkflowRunRecord
   }
 
   type Query {
     workflowRuntime: WorkflowRuntimeQueries!
+  }
+
+  type WorkflowStepRunRecord {
+    stepId: String!
+    stepKey: String!
+    blockType: String!
+    status: String!
+    input: Unknown
+    output: Unknown
+    port: String
+    error: String
+  }
+
+  type WorkflowRunRecord {
+    id: String!
+    workflowId: String!
+    workflowName: String!
+    workflowVersion: Int!
+    triggerKind: String!
+    triggerPayload: Unknown
+    status: String!
+    error: String
+    startedAt: String!
+    endedAt: String
+    steps: [WorkflowStepRunRecord!]!
   }
 
   type WorkflowStepRun {
@@ -25,6 +55,7 @@ export const schema: DocumentNode = gql`
   }
 
   type WorkflowRunPayload {
+    runId: String
     status: String!
     error: String
     steps: [WorkflowStepRun!]!
