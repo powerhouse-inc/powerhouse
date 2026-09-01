@@ -1,8 +1,15 @@
 // Spike S6b as a test: the design-time options channel, via the real adapter
 // modules and published bundle. Fetched at runtime (CDN→npm, cached); skipped offline.
 import { buildDescriptor } from "../../src/activepieces/descriptor.js";
+import {
+  buildPropertyContext,
+  NotDynamicPropertyError,
+  resolveByResolverId,
+  resolveDynamicProperty,
+} from "../../src/activepieces/context/props.js";
+import { UnsupportedContextMemberError } from "../../src/activepieces/context/stubs.js";
 import { loadPieceFromDir } from "../../src/activepieces/loader.js";
-import { getActions, getTriggers } from "../../src/activepieces/types.js";
+import { getTriggers } from "../../src/activepieces/types.js";
 import { fetchBundleForTest } from "./bundle-cache.js";
 
 const bundleDir = await fetchBundleForTest(
@@ -42,29 +49,17 @@ function flowFixture(
   };
 }
 
-type Resolver = (...args: unknown[]) => unknown;
-
-function asResolver(fn: unknown): Resolver {
-  expect(typeof fn).toBe("function");
-  return fn as Resolver;
-}
-
-// Minimal PropertyContext (spike S6b finding: `flows` is required, and list()
-// must honor an `externalIds` filter param).
-function propertyContext(flows: FlowFixture[]) {
+// FlowsProvider over fixtures (spike S6b: list() must honor externalIds).
+function flowsProvider(flows: FlowFixture[]) {
   const listCalls: unknown[] = [];
   return {
     listCalls,
-    searchValue: undefined,
-    connections: { get: () => Promise.resolve(null) },
-    flows: {
-      list: (params?: { externalIds?: string[] }) => {
-        listCalls.push(params);
-        const data = params?.externalIds
-          ? flows.filter((f) => params.externalIds?.includes(f.externalId))
-          : flows;
-        return Promise.resolve({ data });
-      },
+    list: (params?: { externalIds?: string[] }) => {
+      listCalls.push(params);
+      const data = params?.externalIds
+        ? flows.filter((f) => params.externalIds?.includes(f.externalId))
+        : flows;
+      return Promise.resolve({ data });
     },
   };
 }
@@ -105,42 +100,81 @@ describe.skipIf(!bundleDir)("piece-subflows (spike S6b)", () => {
     });
   });
 
-  it("resolves flowId.options() out-of-band, filtering to callable flows", async () => {
+  it("resolves flowId.options() by resolver id, filtering to callable flows", async () => {
     const { piece } = await loadPieceFromDir(bundleDir);
-    const flowId = getActions(piece).callFlow.props?.flowId;
-    const ctx = propertyContext([
-      flowFixture("ext-1", "Callable Flow", "@activepieces/piece-subflows"),
-      flowFixture("ext-2", "Webhook Flow", "@activepieces/piece-webhook"),
-    ]);
+    const { context, touched } = buildPropertyContext({
+      flows: flowsProvider([
+        flowFixture("ext-1", "Callable Flow", "@activepieces/piece-subflows"),
+        flowFixture("ext-2", "Webhook Flow", "@activepieces/piece-webhook"),
+      ]),
+    });
 
-    const out = (await asResolver(flowId?.options)({}, ctx)) as {
-      options: { value: string; label: string }[];
-    };
+    const out = (await resolveByResolverId(
+      piece,
+      "activepieces:@activepieces/piece-subflows#callFlow.flowId",
+      {},
+      context,
+    )) as { options: { value: string; label: string }[] };
     expect(out.options).toEqual([{ value: "ext-1", label: "Callable Flow" }]);
+    expect([...touched]).toEqual(["flows"]);
   });
 
   it("returns a well-formed empty state when no flows match", async () => {
     const { piece } = await loadPieceFromDir(bundleDir);
-    const flowId = getActions(piece).callFlow.props?.flowId;
-    const out = (await asResolver(flowId?.options)(
-      {},
-      propertyContext([]),
-    )) as { options: unknown[] };
+    const { context } = buildPropertyContext({ flows: flowsProvider([]) });
+    const out = (await resolveDynamicProperty({
+      piece,
+      actionName: "callFlow",
+      propName: "flowId",
+      context,
+    })) as { options: unknown[] };
     expect(out.options).toEqual([]);
   });
 
   it("resolves flowProps.props() via a flows.list externalIds lookup", async () => {
     const { piece } = await loadPieceFromDir(bundleDir);
-    const flowProps = getActions(piece).callFlow.props?.flowProps;
-    const ctx = propertyContext([
+    const flows = flowsProvider([
       flowFixture("ext-1", "Callable Flow", "@activepieces/piece-subflows"),
     ]);
+    const { context } = buildPropertyContext({ flows });
 
-    const out = (await asResolver(flowProps?.props)(
-      { flowId: "ext-1", mode: "simple" },
-      ctx,
-    )) as Record<string, { type?: string; required?: boolean }>;
+    const out = (await resolveDynamicProperty({
+      piece,
+      actionName: "callFlow",
+      propName: "flowProps",
+      refresherValues: { flowId: "ext-1", mode: "simple" },
+      context,
+    })) as Record<string, { type?: string; required?: boolean }>;
     expect(out.payload).toMatchObject({ type: "OBJECT", required: true });
-    expect(ctx.listCalls).toContainEqual({ externalIds: ["ext-1"] });
+    expect(flows.listCalls).toContainEqual({ externalIds: ["ext-1"] });
+  });
+
+  it("fails loudly when the resolver needs an uninjected capability", async () => {
+    const { piece } = await loadPieceFromDir(bundleDir);
+    const { context } = buildPropertyContext();
+    const error: unknown = await resolveDynamicProperty({
+      piece,
+      actionName: "callFlow",
+      propName: "flowId",
+      context,
+    }).then(
+      () => undefined,
+      (e: unknown) => e,
+    );
+    expect(error).toBeInstanceOf(UnsupportedContextMemberError);
+    expect((error as UnsupportedContextMemberError).member).toBe("flows.list");
+  });
+
+  it("rejects a non-dynamic prop", async () => {
+    const { piece } = await loadPieceFromDir(bundleDir);
+    const { context } = buildPropertyContext();
+    await expect(
+      resolveDynamicProperty({
+        piece,
+        actionName: "callFlow",
+        propName: "mode",
+        context,
+      }),
+    ).rejects.toBeInstanceOf(NotDynamicPropertyError);
   });
 });

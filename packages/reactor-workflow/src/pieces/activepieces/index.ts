@@ -3,5 +3,6 @@ export * from "./fetch.js";
 export * from "./loader.js";
 export * from "./descriptor.js";
 export * from "./context/action.js";
+export * from "./context/props.js";
 export * from "./worker/protocol.js";
 export * from "./worker/host.js";

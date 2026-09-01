@@ -4,6 +4,10 @@ import http from "node:http";
 import type { AddressInfo } from "node:net";
 import { buildDescriptor } from "../../src/activepieces/descriptor.js";
 import { buildActionContext } from "../../src/activepieces/context/action.js";
+import {
+  buildPropertyContext,
+  resolveDynamicProperty,
+} from "../../src/activepieces/context/props.js";
 import { loadPieceFromDir } from "../../src/activepieces/loader.js";
 import { getActions } from "../../src/activepieces/types.js";
 import { fetchBundleForTest } from "./bundle-cache.js";
@@ -145,15 +149,15 @@ describe.skipIf(!bundleDir)("piece-http (spike S6a)", () => {
 
   it("resolves DYNAMIC prop schemas out-of-band (S6b-lite)", async () => {
     const { piece } = await loadPieceFromDir(bundleDir);
-    const authFields = getActions(piece).send_request.props?.authFields;
-    const propertyContext = {
-      searchValue: undefined,
-      connections: { get: () => Promise.resolve(null) },
-    };
+    const { context } = buildPropertyContext();
     const resolve = (authType: string) =>
-      authFields?.props?.({ authType }, propertyContext) as Promise<
-        Record<string, unknown>
-      >;
+      resolveDynamicProperty({
+        piece,
+        actionName: "send_request",
+        propName: "authFields",
+        refresherValues: { authType },
+        context,
+      }) as Promise<Record<string, unknown>>;
 
     await expect(resolve("NONE")).resolves.toEqual({});
     expect(Object.keys(await resolve("BASIC")).sort()).toEqual([

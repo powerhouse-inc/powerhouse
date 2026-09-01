@@ -1,5 +1,8 @@
 // Our ActionContext → their ActionContext (doc 06 §2.8). Implements the top usage
 // tier (propsValue, auth, store); every other capability throws loudly, named.
+import { throwingStub, withTouchTracking } from "./stubs.js";
+
+export { UnsupportedContextMemberError } from "./stubs.js";
 
 export interface KeyValueStore {
   put(key: string, value: unknown): Promise<unknown>;
@@ -23,34 +26,6 @@ export class InMemoryKeyValueStore implements KeyValueStore {
     this.entries.delete(key);
     return Promise.resolve();
   }
-}
-
-export class UnsupportedContextMemberError extends Error {
-  readonly member: string;
-
-  constructor(member: string) {
-    super(
-      `Piece used unimplemented context member "${member}". ` +
-        `Implement it in the adapter or reject the piece at conformance time.`,
-    );
-    this.name = "UnsupportedContextMemberError";
-    this.member = member;
-  }
-}
-
-// Traps calls and member reads so both `ctx.files.write(...)` and
-// `ctx.server.apiUrl` throw with the full member path.
-function throwingStub(memberPath: string): unknown {
-  return new Proxy(function stub() {}, {
-    get(_target, prop) {
-      // `then` and symbols stay inert so `await`/inspection don't false-trip.
-      if (typeof prop !== "string" || prop === "then") return undefined;
-      throw new UnsupportedContextMemberError(`${memberPath}.${prop}`);
-    },
-    apply() {
-      throw new UnsupportedContextMemberError(memberPath);
-    },
-  });
 }
 
 export interface ActionContextIdentity {
@@ -147,16 +122,6 @@ export function buildActionContext(
     generateResumeUrl: throwingStub("generateResumeUrl"),
   };
 
-  const context = new Proxy(base, {
-    get(target, prop, receiver) {
-      if (typeof prop === "string" && prop !== "then") {
-        const member = prop in target ? prop : `UNDOCUMENTED:${prop}`;
-        touched.add(member);
-        options.onTouch?.(member);
-      }
-      return Reflect.get(target, prop, receiver) as unknown;
-    },
-  });
-
+  const context = withTouchTracking(base, touched, options.onTouch);
   return { context: context as unknown as BuiltApActionContext, touched };
 }
