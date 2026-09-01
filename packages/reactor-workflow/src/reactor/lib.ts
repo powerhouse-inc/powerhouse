@@ -15,6 +15,11 @@ import type {
   ConnectionDocument,
   ConnectionState,
 } from "document-models/connection/v1";
+import {
+  DOCUMENT_CREATE_BLOCK,
+  DOCUMENT_DISPATCH_BLOCK,
+  DocumentBlockExecutor,
+} from "./document-blocks.js";
 import type { WorkflowState } from "document-models/workflow/v1";
 import { join } from "node:path";
 
@@ -50,11 +55,16 @@ export class DocumentConnectionResolver implements EngineConnectionResolver {
 }
 
 export function createBlockExecutor(subgraph: BaseSubgraph): BlockExecutor {
+  const documents = new DocumentBlockExecutor(subgraph);
   return new CompositeBlockExecutor(
     new ActivepiecesBlockExecutor({
       cacheDir: join(process.cwd(), ".ph", "ap-bundles"),
       connections: new DocumentConnectionResolver(subgraph),
     }),
+    {
+      [DOCUMENT_CREATE_BLOCK]: documents,
+      [DOCUMENT_DISPATCH_BLOCK]: documents,
+    },
   );
 }
 
