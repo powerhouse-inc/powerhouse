@@ -33,6 +33,7 @@
     "bench:queue-only:record": "vitest bench --run bench/queue-only --outputJson bench/results/queue-only.json",
     "bench:cache:record": "vitest bench --run bench/write-cache --outputJson bench/results/write-cache.json",
     "bench:sync": "node --import tsx bench/two-reactor-sync.ts",
+    "bench:sync:record": "node --import tsx bench/two-reactor-sync.ts --record",
     "bench:sync:smoke": "node --import tsx bench/two-reactor-sync.ts --smoke",
     "clean": "rimraf dist",
     "clean:node_modules": "rimraf node_modules",

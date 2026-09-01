@@ -29,8 +29,19 @@
  * scenario here has both sides writing live.
  */
 
+import { readFileSync } from "node:fs";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import { Bench } from "tinybench";
+import {
+  buildMicroEntry,
+  findTarget,
+  suitesFromTinybench,
+} from "./records/from-vitest.js";
+import type { TinybenchTask } from "./records/from-vitest.js";
+import {
+  dirtyPaths,
+  readMachineEnvironment,
+} from "./records/machine-environment.js";
 import { DriveCollectionId } from "../src/cache/operation-index-types.js";
 import { ReactorBuilder } from "../src/core/reactor-builder.js";
 import type { IReactor, ReactorModule } from "../src/core/types.js";
@@ -438,14 +449,77 @@ if (process.argv.includes("--smoke")) {
   await smoke();
 }
 
+/**
+ * `bench.table()` is unfit for a record: ops/sec is locale-formatted, the
+ * margin is a string with a percent sign, and the average changes unit to
+ * nanoseconds. `result` is the same TaskResult in the same milliseconds, so
+ * --record reads that and leaves the table to the human path.
+ */
+const tinybenchVersion = (
+  JSON.parse(readFileSync("node_modules/tinybench/package.json", "utf8")) as {
+    version: string;
+  }
+).version;
+
+const record = process.argv.includes("--record");
+const say = (message: string): void => {
+  if (record) {
+    process.stderr.write(`${message}\n`);
+    return;
+  }
+  process.stdout.write(`${message}\n`);
+};
+
 const bench = new Bench({ time: 10000 });
 for (const scenario of scenarios) {
   bench.add(scenario.name, scenario.run, lifecycle);
 }
 
-console.log("Running Two-Reactor Sync Benchmarks...\n");
+say("Running Two-Reactor Sync Benchmarks...\n");
 
 await bench.run();
+
+if (record) {
+  const target = findTarget("sync");
+  const tasks: TinybenchTask[] = bench.tasks.map((task) => {
+    if (task.result === undefined) {
+      throw new Error(`${task.name} produced no result`);
+    }
+    if (task.result.error !== undefined) {
+      const reason = task.result.error;
+      throw new Error(
+        `${task.name} failed: ${reason instanceof Error ? reason.message : JSON.stringify(reason)}`,
+      );
+    }
+    return { name: task.name, ...task.result };
+  });
+
+  const dirty = dirtyPaths(".");
+  if (dirty.length > 0 && !process.argv.includes("--allow-dirty")) {
+    process.stderr.write(
+      `The package has uncommitted changes, so the sha this record would carry describes code that did not run:\n${dirty.join("\n")}\nCommit, stash, or pass --allow-dirty and say so in a caveat.\n`,
+    );
+    process.exit(68);
+  }
+
+  const entry = buildMicroEntry({
+    target,
+    runner: "tinybench",
+    runnerVersion: tinybenchVersion,
+    suites: suitesFromTinybench("two-reactor sync", tasks),
+    environment: readMachineEnvironment(target.storage),
+    recordedAt: new Date().toISOString(),
+    conclusions: [],
+    caveats: [],
+    title: "",
+    question: "",
+    tags: [],
+    tasks: [],
+  });
+
+  process.stdout.write(`${JSON.stringify(entry)}\n`);
+  process.exit(0);
+}
 
 console.log("\nResults:");
 console.table(bench.table());
