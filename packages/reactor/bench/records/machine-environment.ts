@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { cpus, hostname, platform, release } from "node:os";
 import type { MachineEnvironment, StorageEngine } from "./benchmark-schema.js";
 
@@ -78,4 +79,24 @@ export function dirtyPaths(directory: string, excluded: string[]): string[] {
     .split("\n")
     .map((line) => line.trim())
     .filter((line) => line !== "");
+}
+
+/** The runner's own version, read from the installed package rather than named
+ * by a caller: a version a caller asserts is a version a caller can get wrong. */
+export function readPackageVersion(name: string): string {
+  let raw: string;
+  try {
+    raw = readFileSync(`node_modules/${name}/package.json`, "utf8");
+  } catch (error) {
+    throw new Error(
+      `Could not read the ${name} version: ${error instanceof Error ? error.message : String(error)}`,
+      { cause: error },
+    );
+  }
+
+  const parsed = JSON.parse(raw) as { version?: string };
+  if (typeof parsed.version !== "string") {
+    throw new Error(`${name}'s package.json has no version`);
+  }
+  return parsed.version;
 }

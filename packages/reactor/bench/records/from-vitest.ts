@@ -17,6 +17,8 @@ import type {
 export type BenchTarget = {
   /** What a caller names it: `pnpm bench:records:from-vitest <this>`. */
   name: string;
+  /** The package.json script that runs it. Recording is wired here, not by hand. */
+  recordScript: string;
   resultsFile: string;
   sourceFiles: string[];
   command: string;
@@ -33,6 +35,7 @@ export type BenchTarget = {
 export const BENCH_TARGETS: BenchTarget[] = [
   {
     name: "auth",
+    recordScript: "bench:auth:record",
     resultsFile: "auth-scope.json",
     sourceFiles: ["bench/auth-scope.bench.ts"],
     command: "pnpm --filter @powerhousedao/reactor bench:auth:record",
@@ -44,6 +47,7 @@ export const BENCH_TARGETS: BenchTarget[] = [
   },
   {
     name: "events",
+    recordScript: "bench:events:record",
     resultsFile: "event-bus.json",
     sourceFiles: ["bench/event-bus.bench.ts"],
     command: "pnpm --filter @powerhousedao/reactor bench:events:record",
@@ -55,6 +59,7 @@ export const BENCH_TARGETS: BenchTarget[] = [
   },
   {
     name: "queue",
+    recordScript: "bench:queue:record",
     resultsFile: "queue-perf.json",
     sourceFiles: ["bench/queue-perf.bench.ts"],
     command: "pnpm --filter @powerhousedao/reactor bench:queue:record",
@@ -67,6 +72,7 @@ export const BENCH_TARGETS: BenchTarget[] = [
   },
   {
     name: "queue-only",
+    recordScript: "bench:queue-only:record",
     resultsFile: "queue-only.json",
     sourceFiles: ["bench/queue-only.bench.ts"],
     command: "pnpm --filter @powerhousedao/reactor bench:queue-only:record",
@@ -79,6 +85,7 @@ export const BENCH_TARGETS: BenchTarget[] = [
   },
   {
     name: "cache",
+    recordScript: "bench:cache:record",
     resultsFile: "write-cache.json",
     sourceFiles: ["bench/write-cache.bench.ts"],
     command: "pnpm --filter @powerhousedao/reactor bench:cache:record",
@@ -91,9 +98,10 @@ export const BENCH_TARGETS: BenchTarget[] = [
   },
   {
     name: "sync",
+    recordScript: "bench:sync:record",
     resultsFile: "",
     sourceFiles: ["bench/two-reactor-sync.ts"],
-    command: "pnpm --filter @powerhousedao/reactor bench:sync --record",
+    command: "pnpm --filter @powerhousedao/reactor bench:sync:record",
     storage: "pglite",
     title: "two-reactor sync workloads",
     question: "How long does convergence take between two reactors?",

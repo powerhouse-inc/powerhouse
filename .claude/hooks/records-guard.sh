@@ -80,6 +80,11 @@ HAS_SET_STATUS=0
 printf '%s' "$CMD" | grep -Eq 'bench:records[[:space:]]+add-benchmark' && HAS_ADD_BENCHMARK=1
 printf '%s' "$CMD" | grep -Eq 'bench:records[[:space:]]+add-task' && HAS_ADD_TASK=1
 printf '%s' "$CMD" | grep -Eq 'bench:records[[:space:]]+set-status' && HAS_SET_STATUS=1
+# bench:record is the wrapper that runs a benchmark and appends it. It carries
+# no add-benchmark verb, so it needs its own detection or it would let the two
+# reading roles record.
+HAS_RECORD_ALL=0
+printf '%s' "$CMD" | grep -Eq 'bench:record([[:space:]]|$)' && HAS_RECORD_ALL=1
 
 case "$ROLE" in
 runner)
@@ -101,6 +106,8 @@ runner)
   fi
   ;;
 analyst)
+  [ "$HAS_RECORD_ALL" = 1 ] &&
+    deny "Recording runs is the runner's. You read what it recorded and file findings."
   [ "$HAS_ADD_BENCHMARK" = 1 ] &&
     deny "Recording runs is the runner's. You read what it recorded and file findings."
   [ "$HAS_SET_STATUS" = 1 ] &&
@@ -115,6 +122,8 @@ analyst)
   fi
   ;;
 verifier)
+  [ "$HAS_RECORD_ALL" = 1 ] &&
+    deny "Recording runs is the runner's. Fresh numbers go in --note, against a B-id that already exists."
   [ "$HAS_ADD_BENCHMARK" = 1 ] &&
     deny "Recording runs is the runner's. Fresh numbers go in --note, against a B-id that already exists."
   [ "$HAS_ADD_TASK" = 1 ] &&

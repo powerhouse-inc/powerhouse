@@ -25,6 +25,7 @@
     "test:watch": "vitest --coverage",
     "lint": "eslint",
     "bench": "vitest bench --run",
+    "bench:record": "tsx bench/records/run-record-all.ts",
     "bench:auth": "vitest bench --run bench/auth-scope",
     "bench:auth:record": "vitest bench --run bench/auth-scope --outputJson bench/results/auth-scope.json",
     "bench:auth:compare": "vitest bench --run bench/auth-scope --compare bench/results/auth-scope.json",

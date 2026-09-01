@@ -13,7 +13,11 @@ import {
   parseFromVitestOptions,
 } from "./from-vitest-options.js";
 import type { FromVitestOptions } from "./from-vitest-options.js";
-import { dirtyPaths, readMachineEnvironment } from "./machine-environment.js";
+import {
+  dirtyPaths,
+  readMachineEnvironment,
+  readPackageVersion,
+} from "./machine-environment.js";
 
 const RESULTS_DIRECTORY = "bench/results";
 /** Resolved against the working directory, which pnpm sets to the package. */
@@ -64,23 +68,6 @@ function readReport(path: string): VitestBenchReport {
   return parsed.data;
 }
 
-function readRunnerVersion(): string {
-  let raw: string;
-  try {
-    raw = readFileSync("node_modules/vitest/package.json", "utf8");
-  } catch (error) {
-    throw new Error(
-      `Could not read the vitest version: ${error instanceof Error ? error.message : String(error)}`,
-      { cause: error },
-    );
-  }
-  const parsed = JSON.parse(raw) as { version?: string };
-  if (typeof parsed.version !== "string") {
-    throw new Error("vitest's package.json has no version");
-  }
-  return parsed.version;
-}
-
 function main(): void {
   let options: FromVitestOptions;
   try {
@@ -108,7 +95,7 @@ function main(): void {
     const entry = buildMicroEntry({
       target,
       runner: "vitest-bench",
-      runnerVersion: readRunnerVersion(),
+      runnerVersion: readPackageVersion("vitest"),
       suites: suitesFromVitest(report),
       environment: readMachineEnvironment(target.storage),
       recordedAt: new Date().toISOString(),

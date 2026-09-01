@@ -23,9 +23,12 @@ your own into the record.
 
 - **Never write a record by hand.** No `echo`, no heredoc, no editing the
   vitest JSON between the run and the conversion. A record you assembled is a
-  record nobody measured.
-- **Never pass `--conclusion`, `--caveat`, `--title` or `--question`.** The
-  record's claims are derived from its numbers. What you noticed goes in your
+  record nobody measured, and `bench:record` exists so you never have to.
+- **Never hand-assemble the pipeline out of its pieces.** `bench:record` wires
+  the run, the conversion and the append together. Reaching for the parts is
+  how a step gets skipped or a report gets edited between them.
+- **Never add your own conclusions or caveats.** The record's claims are
+  derived from its numbers. What you noticed goes in your
   report to the main thread, where a human reads it.
 - **Never run a benchmark twice and keep the better one.** A benchmark re-run
   until it looked good is not a measurement. One `:record` run per record.
@@ -45,63 +48,45 @@ Anything but the two record files means stop. Report exactly what is dirty and
 do not run. The adapter enforces this too, but finding out first costs a second
 and finding out last costs the whole run.
 
-## Step 1 — run the benchmark
+## Step 1 — record it
 
-One of these, matching the name you were given:
+One command per benchmark. It runs the benchmark, converts the report and
+appends the record, in that order, in one process:
 
 ```bash
-pnpm --filter @powerhousedao/reactor bench:auth:record
-pnpm --filter @powerhousedao/reactor bench:events:record
-pnpm --filter @powerhousedao/reactor bench:queue:record
-pnpm --filter @powerhousedao/reactor bench:queue-only:record
-pnpm --filter @powerhousedao/reactor bench:cache:record
+pnpm --filter @powerhousedao/reactor bench:record auth
 ```
 
-`sync` has no separate run step: its `--record` mode both runs and converts.
+Named benchmarks are `auth`, `events`, `queue`, `queue-only`, `cache`, `sync`.
+With none named it runs all six, serially - never in parallel, because these
+benchmarks share a machine and two of them competing for it measure each other.
 
 **Two long poles.** `cache` boots PGlite inside every measured iteration and
 `queue` does 40,000 awaited enqueues per iteration, both against tinybench's
-10-iteration floor. Minutes, not seconds. Wait for them; do not kill them and
-do not shorten them.
+10-iteration floor. `sync` takes about nine minutes on its own. Wait for them;
+do not kill them and do not shorten them.
 
-## Step 2 — check the shape before writing
+A partial run is reported rather than hidden: the summary table names what
+failed, the exit code is non-zero, and nothing is retried. If a benchmark
+failed, report which one and stop - do not run it again hoping for green.
 
-```bash
-set -o pipefail; pnpm --filter @powerhousedao/reactor bench:records:from-vitest auth | pnpm --filter @powerhousedao/reactor bench:records add-benchmark - --dry-run --dir bench
-```
-
-`set -o pipefail` is not optional and not decoration. Without it `(exit 3) | cat`
-exits 0, so a crashed adapter becomes "nothing recorded, exit 0" and you would
-report a success that never happened. Write it on one line, exactly as above.
-
-## Step 3 — write it
-
-```bash
-set -o pipefail; pnpm --filter @powerhousedao/reactor bench:records:from-vitest auth | pnpm --filter @powerhousedao/reactor bench:records add-benchmark - --dir bench --json
-```
-
-For `sync`, the first half of the pipe changes and nothing else:
-
-```bash
-set -o pipefail; pnpm --filter @powerhousedao/reactor bench:sync:record | pnpm --filter @powerhousedao/reactor bench:records add-benchmark - --dir bench --json
-```
-
-## Step 4 — read back what you wrote
+## Step 2 — read back what you wrote
 
 ```bash
 pnpm --filter @powerhousedao/reactor bench:records verify --dir bench
-pnpm --filter @powerhousedao/reactor bench:records show B-003 --dir bench
+pnpm --filter @powerhousedao/reactor bench:records show B-004 --dir bench
 ```
 
 Report the conclusions and caveats **from `show`**, not from what you remember
-of the pipeline's output. The point of reading back is that it can disagree
-with you.
+of the run's output. The point of reading back is that it can disagree with
+you.
 
 ## Traps
 
 | Trap | What you see | What to do |
 |---|---|---|
-| pnpm writes `[ELIFECYCLE]` to stdout on failure | `add-benchmark` reports "Input is not JSON" and exits 1 | The adapter failed. Its real error is above, on stderr. Report that, not the JSON complaint. |
+| Exit 2 before anything ran | the tree is dirty | Report what is dirty. Never pass `--allow-dirty`. |
+| Exit 1 with a summary table | some benchmarks recorded, some did not | That is a partial run, not a failure of the whole. Report both halves. |
 | Exit 68 naming `.records.lock` | a lock file exists | Stop. A writer died holding it. Never remove it - that can lose their work. Tell the human. |
 | Exit 2 from any subcommand | a file on disk does not parse | Stop the line. Print the whole `verify` output and do not attempt repair. |
 | Exit 3 | the id is taken | Someone edited by hand or wrote concurrently. Stop and report. |

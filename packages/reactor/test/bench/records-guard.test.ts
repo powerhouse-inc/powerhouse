@@ -157,6 +157,25 @@ describe("every agent role", () => {
     ).toBe(2);
   });
 
+  it("keeps bench:record to the runner, since it appends without add-benchmark", () => {
+    // The wrapper carries no add-benchmark verb, so the verb-ownership rules
+    // do not see it. Without its own check it would let either reading role
+    // record a run.
+    const command = `${PNPM} bench:record auth`;
+
+    expect(guard("runner", command).exit).toBe(0);
+    expect(guard("analyst", command).exit).toBe(2);
+    expect(guard("verifier", command).exit).toBe(2);
+  });
+
+  it("still lets a reading role run a benchmark without recording it", () => {
+    // The verifier reproduces findings by re-running benchmarks; only the
+    // appending is the runner's.
+    for (const role of ["analyst", "verifier"]) {
+      expect(guard(role, `${PNPM} bench:auth:record`).exit, role).toBe(0);
+    }
+  });
+
   it("leaves committing to the human", () => {
     for (const role of ["runner", "analyst", "verifier"]) {
       expect(guard(role, "git commit -m x").exit, role).toBe(2);
