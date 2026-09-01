@@ -44,6 +44,16 @@ export const DEFAULT_REGISTRY_URL = "https://registry.vetra.io" as const;
 
 export const DEFAULT_SWITCHBOARD_PORT = 4001 as const;
 
+// Per-project dev-server port bands. `ph init` assigns each project a port
+// triple derived from its name, so two projects never collide and an agent's
+// MCP URL can be baked into .mcp.json before a session starts. Chosen clear
+// of the standard Powerhouse ports (3000, 3001, 4001, 4173) and of common
+// dev-server ports (5173, 8080, 9229).
+export const AGENT_PORT_BAND_SIZE = 1000 as const;
+export const AGENT_PORT_BAND_SWITCHBOARD = 41000 as const;
+export const AGENT_PORT_BAND_STUDIO = 31000 as const;
+export const AGENT_PORT_BAND_VETRA_CONNECT = 32000 as const;
+
 export const DEFAULT_VETRA_DRIVE_ID = "vetra" as const;
 
 export const MINIMUM_NODE_VERSION = "24.0.0" as const;

@@ -26,6 +26,9 @@ export default defineConfig({
     // separate effort.
     include: [
       "clis/source-config-schema.test.ts",
+      "clis/project-ports.test.ts",
+      "clis/project-env.test.ts",
+      "clis/args/vetra-ports.test.ts",
       "connect/config-loader.test.ts",
       "connect/env-config.test.ts",
       "connect/entrypoint-seed.test.ts",
