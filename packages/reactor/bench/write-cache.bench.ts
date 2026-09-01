@@ -57,6 +57,7 @@ async function createDocumentInStore(
             documentId,
             model: DOCUMENT_TYPE,
             version: 0,
+            protocolVersions: { "base-reducer": 2 },
           },
         },
       });
@@ -117,7 +118,7 @@ async function setupCacheWithData(
       (txn: any) => {
         txn.addOperations({
           id: `op-${i}`,
-          index: i,
+          index: i - 1,
           skip: 0,
           hash: `hash-${i}`,
           timestampUtcMs: new Date().toISOString(),
@@ -411,7 +412,7 @@ describe("Write Cache vs No-Cache Baseline", () => {
           (txn: any) => {
             txn.addOperations({
               id: `op-${i}`,
-              index: i,
+              index: i - 1,
               skip: 0,
               hash: `hash-${i}`,
               timestampUtcMs: new Date().toISOString(),
@@ -492,7 +493,7 @@ describe("Write Cache vs No-Cache Baseline", () => {
           (txn: any) => {
             txn.addOperations({
               id: `op-${i}`,
-              index: i,
+              index: i - 1,
               skip: 0,
               hash: `hash-${i}`,
               timestampUtcMs: new Date().toISOString(),
