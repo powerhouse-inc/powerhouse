@@ -1,0 +1,24 @@
+{
+  "name": "workflow",
+  "description": "",
+  "category": "",
+  "publisher": {
+    "name": "",
+    "url": ""
+  },
+  "documentModels": [
+    {
+      "id": "powerhouse/workflow",
+      "name": "Workflow"
+    },
+    {
+      "name": "Connection",
+      "id": "powerhouse/connection"
+    }
+  ],
+  "apps": [],
+  "editors": [],
+  "processors": [],
+  "subgraphs": [],
+  "config": []
+}

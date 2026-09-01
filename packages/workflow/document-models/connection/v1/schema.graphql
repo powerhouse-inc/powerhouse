@@ -1,0 +1,100 @@
+scalar Unknown
+scalar DateTime
+scalar Address
+scalar AttachmentRef
+scalar Amount_Tokens
+scalar EthereumAddress
+scalar EmailAddress
+scalar Amount_Percentage
+scalar Date
+scalar URL
+scalar Amount_Money
+scalar OLabel
+scalar Currency
+scalar PHID
+scalar OID
+scalar Amount_Fiat
+scalar Amount_Currency
+scalar Amount_Crypto
+scalar Amount
+scalar Upload
+
+enum ConnectionAuthType {
+  SECRET_TEXT
+  BASIC_AUTH
+  CUSTOM_AUTH
+  OAUTH2
+  OIDC
+  NONE
+}
+
+enum ConnectionStatus {
+  UNCONFIGURED
+  OK
+  ERROR
+  REVOKED
+}
+
+type SecretRef {
+  id: OID!
+  "Matches an auth property name in the connector's config schema."
+  name: String!
+  "Opaque handle into the host secret provider. Not the secret."
+  ref: String!
+}
+
+type ConnectionState {
+  name: String!
+  "Fully-qualified connector id: '@acme/connector-imap#imap'."
+  connectorId: String!
+  "Activepieces auth kind, so a piece's PieceAuth maps directly."
+  authType: ConnectionAuthType!
+  "Non-secret configuration, validated against the connector's auth schema."
+  config: Unknown!
+  "Secret handles; values never appear in state, operations, or the run journal."
+  secretRefs: [SecretRef!]!
+  status: ConnectionStatus!
+  lastCheckedAt: DateTime
+  lastError: String
+  "Populated by the connector's own metadata call. Display only."
+  accountLabel: String
+}
+
+# connection
+
+input SetConnectionNameInput {
+    name: String!
+}
+
+input SetConnectorInput {
+    connectorId: String!
+    authType: ConnectionAuthType!
+}
+
+input SetAccountLabelInput {
+    accountLabel: String
+}
+
+# config
+
+input SetConfigInput {
+    config: Unknown!
+}
+
+input SetSecretRefInput {
+    id: OID!
+    name: String!
+    ref: String!
+}
+
+input RemoveSecretRefInput {
+    id: OID!
+}
+
+# health
+
+input RecordCheckResultInput {
+    status: ConnectionStatus!
+    checkedAt: DateTime!
+    error: String
+}

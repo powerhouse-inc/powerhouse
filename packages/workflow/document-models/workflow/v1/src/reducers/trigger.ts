@@ -1,0 +1,22 @@
+import type { WorkflowTriggerOperations } from "document-models/workflow/v1";
+import { TriggerNotSetError } from "../../gen/trigger/error.js";
+
+export const workflowTriggerOperations: WorkflowTriggerOperations = {
+  setTriggerOperation(state, action) {
+    state.trigger = {
+      id: action.input.id,
+      blockType: action.input.blockType,
+      connectionId: action.input.connectionId || null,
+      config: action.input.config,
+      filter: action.input.filter ?? null,
+    };
+    state.version += 1;
+  },
+  clearTriggerOperation(state, _action) {
+    if (!state.trigger) {
+      throw new TriggerNotSetError("Workflow has no trigger to clear");
+    }
+    state.trigger = null;
+    state.version += 1;
+  },
+};
