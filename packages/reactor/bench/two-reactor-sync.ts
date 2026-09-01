@@ -462,6 +462,24 @@ const tinybenchVersion = (
 ).version;
 
 const record = process.argv.includes("--record");
+
+/**
+ * Checked before the run rather than after it. These scenarios take minutes,
+ * and a refusal is worth having in the first second rather than the six
+ * hundredth.
+ */
+if (record && !process.argv.includes("--allow-dirty")) {
+  const dirty = dirtyPaths(".", [
+    "bench/BENCHMARKS.jsonl",
+    "bench/TASKS.jsonl",
+  ]);
+  if (dirty.length > 0) {
+    process.stderr.write(
+      `The package has uncommitted changes, so the sha this record would carry describes code that did not run:\n${dirty.join("\n")}\nCommit, stash, or pass --allow-dirty and say so in a caveat.\n`,
+    );
+    process.exit(68);
+  }
+}
 const say = (message: string): void => {
   if (record) {
     process.stderr.write(`${message}\n`);
@@ -493,17 +511,6 @@ if (record) {
     }
     return { name: task.name, ...task.result };
   });
-
-  const dirty = dirtyPaths(".", [
-    "bench/BENCHMARKS.jsonl",
-    "bench/TASKS.jsonl",
-  ]);
-  if (dirty.length > 0 && !process.argv.includes("--allow-dirty")) {
-    process.stderr.write(
-      `The package has uncommitted changes, so the sha this record would carry describes code that did not run:\n${dirty.join("\n")}\nCommit, stash, or pass --allow-dirty and say so in a caveat.\n`,
-    );
-    process.exit(68);
-  }
 
   const entry = buildMicroEntry({
     target,

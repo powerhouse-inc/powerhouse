@@ -94,9 +94,12 @@ describe("every role", () => {
     expect(guard("none", `${PNPM} bench:records show B-001`).exit).toBe(0);
   });
 
-  it("leaves committing to the human", () => {
-    expect(guard("none", "git commit -m x").exit).toBe(2);
-    expect(guard("none", "git push").exit).toBe(2);
+  it("leaves the main thread's own git alone", () => {
+    // ROLE=none is the project-wide layer, so it also runs against the human's
+    // session. Blocking git there would break the workflow it is meant to
+    // protect, so the git rule belongs to the agent roles.
+    expect(guard("none", "git commit -m x").exit).toBe(0);
+    expect(guard("none", "git push").exit).toBe(0);
   });
 
   it("blocks a Bash call whose command it cannot read", () => {
@@ -111,6 +114,16 @@ describe("every role", () => {
 
   it("refuses a role it does not know rather than allowing the call", () => {
     expect(guard("bogus", "echo hi").exit).toBe(2);
+  });
+});
+
+describe("every agent role", () => {
+  it("leaves committing to the human", () => {
+    for (const role of ["runner", "analyst", "verifier"]) {
+      expect(guard(role, "git commit -m x").exit, role).toBe(2);
+      expect(guard(role, "git push").exit, role).toBe(2);
+      expect(guard(role, "git checkout -- .").exit, role).toBe(2);
+    }
   });
 });
 
@@ -150,6 +163,16 @@ describe("bench-runner", () => {
 
     expect(result.exit).toBe(2);
     expect(result.message).toContain("come from the numbers");
+  });
+
+  it("refuses to record against a tree whose sha would be a lie", () => {
+    const result = guard(
+      "runner",
+      PIPELINE.replace("auth |", "auth --allow-dirty |"),
+    );
+
+    expect(result.exit).toBe(2);
+    expect(result.message).toContain("code that did not run");
   });
 
   it("files nothing and judges nothing", () => {
@@ -253,10 +276,26 @@ describe("bench-verifier", () => {
   });
 
   it("refuses a verdict with no note and a VERIFIED with no evidence", () => {
-    expect(guard("verifier", status("VERIFIED", "--evidence B-001")).exit).toBe(
-      2,
+    expect(
+      guard(
+        "verifier",
+        status("VERIFIED", "--evidence B-001 --by bench-verifier"),
+      ).exit,
+    ).toBe(2);
+    expect(
+      guard("verifier", status("VERIFIED", "--note x --by bench-verifier"))
+        .exit,
+    ).toBe(2);
+  });
+
+  it("signs the verdict, so the loop can tell who reached it", () => {
+    const result = guard(
+      "verifier",
+      status("VERIFIED", "--note x --evidence B-001"),
     );
-    expect(guard("verifier", status("VERIFIED", "--note x")).exit).toBe(2);
+
+    expect(result.exit).toBe(2);
+    expect(result.message).toContain("--by bench-verifier");
   });
 
   it("records nothing and files nothing", () => {

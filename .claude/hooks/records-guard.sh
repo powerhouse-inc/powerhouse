@@ -59,13 +59,17 @@ if printf '%s' "$CMD" | grep -Eq '\bbench:records\b'; then
   fi
 fi
 
+# The every-role rules end here. ROLE=none is the project-wide layer, which
+# also covers the main thread: it protects the files and stops there, because
+# a human's own session is not one of the roles.
+[ "$ROLE" = "none" ] && exit 0
+
+# ---- every agent role ----------------------------------------------------
+
 if printf '%s' "$CMD" | grep -Eq '\bgit[[:space:]]+(commit|push|add|checkout|switch|reset|rebase|stash|restore)\b'; then
   deny "Committing is the human's. Report what you wrote and let them land it."
 fi
 
-[ "$ROLE" = "none" ] && exit 0
-
-# ---- per role ------------------------------------------------------------
 
 HAS_ADD_BENCHMARK=0
 HAS_ADD_TASK=0
@@ -89,6 +93,8 @@ runner)
       deny "The only accepted shape is '<adapter> | pnpm ... bench:records add-benchmark - --dir bench'."
     printf '%s' "$CMD" | grep -Eq '(^|[[:space:]])--(conclusion|caveat|title|question)([[:space:]]|=)' &&
       deny "The conclusions and caveats come from the numbers. Put what you noticed in your report, not in the record."
+    printf '%s' "$CMD" | grep -Eq '(^|[[:space:]])--allow-dirty([[:space:]]|$)' &&
+      deny "--allow-dirty is not yours to pass. The record carries the current sha, and on a dirty tree that sha names code that did not run. Report the dirty tree and stop."
   fi
   ;;
 analyst)
@@ -115,6 +121,8 @@ verifier)
       deny "FIXED belongs to whoever changes the code and COMMITTED to whoever lands it. You may set UNVERIFIED, VERIFIED or REFUTED."
     printf '%s' "$CMD" | grep -Eq '(^|[[:space:]])--note[[:space:]]' ||
       deny "Every status change carries --note saying what you ran and what it showed."
+    printf '%s' "$CMD" | grep -Eq '(^|[[:space:]])--by[[:space:]]+bench-verifier([[:space:]]|$)' ||
+      deny "Pass --by bench-verifier, so the history says who reached the verdict."
     if printf '%s' "$CMD" | grep -Eq '[[:space:]](VERIFIED|REFUTED)([[:space:]]|$)'; then
       printf '%s' "$CMD" | grep -Eq '(^|[[:space:]])--evidence[[:space:]]+B-[0-9]{3,}' ||
         deny "VERIFIED and REFUTED both need --evidence B-nnn. A verdict with nothing behind it is the rubber stamp this loop exists to prevent."
