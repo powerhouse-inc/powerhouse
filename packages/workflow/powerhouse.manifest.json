@@ -12,13 +12,18 @@
       "name": "Workflow"
     },
     {
-      "name": "Connection",
-      "id": "powerhouse/connection"
+      "id": "powerhouse/connection",
+      "name": "Connection"
     }
   ],
   "apps": [],
   "editors": [],
   "processors": [],
-  "subgraphs": [],
+  "subgraphs": [
+    {
+      "id": "workflow-runtime",
+      "name": "workflow-runtime"
+    }
+  ],
   "config": []
 }

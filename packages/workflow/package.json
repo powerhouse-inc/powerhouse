@@ -70,8 +70,12 @@
     "service-startup": "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-startup.sh",
     "service-unstartup": "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-unstartup.sh"
   },
+  "dependencies": {
+    "@powerhousedao/reactor-connectors": "workspace:*"
+  },
   "devDependencies": {
     "@electric-sql/pglite": "0.3.15",
+    "@powerhousedao/reactor-api": "workspace:*",
     "@electric-sql/pglite-tools": "0.2.20",
     "@powerhousedao/connect": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",

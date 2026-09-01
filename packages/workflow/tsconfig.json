@@ -77,7 +77,13 @@
       "path": "../reactor"
     },
     {
+      "path": "../reactor-api"
+    },
+    {
       "path": "../reactor-browser"
+    },
+    {
+      "path": "../reactor-connectors"
     },
     {
       "path": "../shared"
