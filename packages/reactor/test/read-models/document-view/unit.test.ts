@@ -4,7 +4,10 @@ import type { IOperationIndex } from "../../../src/cache/operation-index-types.j
 import type { IWriteCache } from "../../../src/cache/write/interfaces.js";
 import { KyselyDocumentView } from "../../../src/read-models/document-view.js";
 import type { IConsistencyTracker } from "../../../src/shared/consistency-tracker.js";
-import type { IOperationStore } from "../../../src/storage/interfaces.js";
+import {
+  DocumentExistence,
+  type IOperationStore,
+} from "../../../src/storage/interfaces.js";
 
 describe("KyselyDocumentView Unit Tests", () => {
   let view: KyselyDocumentView;
@@ -115,7 +118,7 @@ describe("KyselyDocumentView Unit Tests", () => {
 
   describe("exists", () => {
     it("should return empty array for empty input", async () => {
-      const result = await view.exists([]);
+      const result = await view.exists([], DocumentExistence.LiveOnly);
       expect(result).toEqual([]);
     });
 
@@ -125,7 +128,10 @@ describe("KyselyDocumentView Unit Tests", () => {
         { documentId: "doc-3" },
       ]);
 
-      const result = await view.exists(["doc-1", "doc-2", "doc-3"]);
+      const result = await view.exists(
+        ["doc-1", "doc-2", "doc-3"],
+        DocumentExistence.LiveOnly,
+      );
 
       expect(mockDb.selectFrom).toHaveBeenCalledWith("DocumentSnapshot");
       expect(mockDb.where).toHaveBeenCalledWith("documentId", "in", [
@@ -143,7 +149,10 @@ describe("KyselyDocumentView Unit Tests", () => {
         { documentId: "doc-2" },
       ]);
 
-      const result = await view.exists(["doc-1", "doc-2"]);
+      const result = await view.exists(
+        ["doc-1", "doc-2"],
+        DocumentExistence.LiveOnly,
+      );
 
       expect(result).toEqual([true, true]);
     });
@@ -151,7 +160,10 @@ describe("KyselyDocumentView Unit Tests", () => {
     it("should handle no documents existing", async () => {
       mockDb.execute.mockResolvedValue([]);
 
-      const result = await view.exists(["doc-1", "doc-2"]);
+      const result = await view.exists(
+        ["doc-1", "doc-2"],
+        DocumentExistence.LiveOnly,
+      );
 
       expect(result).toEqual([false, false]);
     });
@@ -159,7 +171,10 @@ describe("KyselyDocumentView Unit Tests", () => {
     it("should handle duplicate IDs in input", async () => {
       mockDb.execute.mockResolvedValue([{ documentId: "doc-1" }]);
 
-      const result = await view.exists(["doc-1", "doc-1", "doc-2"]);
+      const result = await view.exists(
+        ["doc-1", "doc-1", "doc-2"],
+        DocumentExistence.LiveOnly,
+      );
 
       expect(result).toEqual([true, true, false]);
     });
@@ -169,8 +184,54 @@ describe("KyselyDocumentView Unit Tests", () => {
       controller.abort();
 
       await expect(
-        view.exists(["doc-1"], undefined, controller.signal),
+        view.exists(
+          ["doc-1"],
+          DocumentExistence.LiveOnly,
+          undefined,
+          controller.signal,
+        ),
       ).rejects.toThrow("Operation aborted");
+    });
+
+    it("should ask the operation store, not the snapshot table, when including deleted", async () => {
+      vi.mocked(mockOperationStore.getRevisions).mockImplementation(
+        (documentId: string) => {
+          const revision: Record<string, number> =
+            documentId === "doc-1" ? { global: 1 } : {};
+          return Promise.resolve({
+            revision,
+            latestTimestamp: new Date(0).toISOString(),
+          });
+        },
+      );
+
+      const result = await view.exists(
+        ["doc-1", "doc-2"],
+        DocumentExistence.IncludingDeleted,
+      );
+
+      expect(mockDb.selectFrom).not.toHaveBeenCalledWith("DocumentSnapshot");
+      expect(mockOperationStore.getRevisions).toHaveBeenCalledWith(
+        "doc-1",
+        "main",
+        undefined,
+      );
+      expect(result).toEqual([true, false]);
+    });
+
+    it("should ask the store once per distinct id", async () => {
+      vi.mocked(mockOperationStore.getRevisions).mockResolvedValue({
+        revision: { global: 1 },
+        latestTimestamp: new Date(0).toISOString(),
+      });
+
+      const result = await view.exists(
+        ["doc-1", "doc-1"],
+        DocumentExistence.IncludingDeleted,
+      );
+
+      expect(mockOperationStore.getRevisions).toHaveBeenCalledTimes(1);
+      expect(result).toEqual([true, true]);
     });
   });
 
@@ -835,7 +896,9 @@ describe("KyselyDocumentView Unit Tests", () => {
       const error = new Error("Database error");
       mockDb.execute.mockRejectedValue(error);
 
-      await expect(view.exists(["doc-1"])).rejects.toThrow("Database error");
+      await expect(
+        view.exists(["doc-1"], DocumentExistence.LiveOnly),
+      ).rejects.toThrow("Database error");
     });
 
     it("should handle database query errors in get", async () => {

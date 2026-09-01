@@ -8,6 +8,7 @@ import type { IDocumentModelRegistry } from "../../../src/registry/interfaces.js
 import { DocumentNotFoundError } from "../../../src/shared/errors.js";
 import {
   AppendConditionFailedError,
+  DocumentAlreadyExistsError,
   type IOperationStore,
 } from "../../../src/storage/interfaces.js";
 import {
@@ -771,7 +772,7 @@ describe("SimpleJobExecutor", () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toBeDefined();
-      expect(result.error?.message).toContain("Failed to write operation");
+      expect(result.error?.message).toContain("Write failed");
     });
 
     it("should preserve AppendConditionFailedError from a document-scope write", async () => {
@@ -1933,9 +1934,43 @@ describe("SimpleJobExecutor", () => {
       const result = await executor.executeJob(job);
 
       expect(result.success).toBe(false);
-      expect(result.error?.message).toContain(
-        "Failed to write operation to IOperationStore",
-      );
+      expect(result.error?.message).toContain("Store write error");
+    });
+
+    it("should preserve the store error's name so callers can classify it", async () => {
+      mockOperationStore.apply = vi
+        .fn()
+        .mockRejectedValue(
+          new DocumentAlreadyExistsError("doc-1", "global", 1),
+        );
+
+      const job: Job = {
+        kind: "mutation",
+        id: "store-name-job",
+        documentId: "doc-1",
+        scope: "global",
+        branch: "main",
+        actions: [
+          {
+            id: "store-name-action",
+            type: "SET_NAME",
+            scope: "global",
+            timestampUtcMs: "2024-01-01T00:00:00Z",
+            input: { name: "Test" },
+          },
+        ],
+        operations: [],
+        createdAt: "2024-01-01T00:00:00Z",
+        queueHint: [],
+        errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["store-name-job"] },
+      };
+
+      const result = await executor.executeJob(job);
+
+      expect(result.success).toBe(false);
+      expect(result.error?.name).toBe("DocumentAlreadyExistsError");
+      expect(DocumentAlreadyExistsError.isError(result.error)).toBe(true);
     });
   });
 

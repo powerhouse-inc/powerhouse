@@ -16,7 +16,10 @@ import {
   InvalidOperationTimestampError,
   UpgradePreconditionFailedError,
 } from "../shared/errors.js";
-import { AppendConditionFailedError } from "../storage/interfaces.js";
+import {
+  AppendConditionFailedError,
+  DocumentAlreadyExistsError,
+} from "../storage/interfaces.js";
 import type { ErrorInfo } from "../shared/types.js";
 import type { JobResult } from "./types.js";
 
@@ -139,6 +142,9 @@ export class JobResultHandler implements IJobResultHandler {
     if (
       result.error &&
       (DocumentDeletedError.isError(result.error) ||
+        // The id is taken. A retry re-writes against the same stream and loses
+        // the same way; only a new id resolves it.
+        DocumentAlreadyExistsError.isError(result.error) ||
         // A document that is not there will not appear because a load ran again.
         DocumentNotFoundError.isError(result.error) ||
         AuthorizationDeniedError.isError(result.error) ||

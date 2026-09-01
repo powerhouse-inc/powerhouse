@@ -57,7 +57,9 @@ import { queueActions, queueOperations, uploadOperations } from "./queue.js";
 
 const NON_DOMAIN_SCOPES = new Set(["auth", "document"]);
 
+/** An unreadable drive cannot be shown to hold no duplicate, so reads throw. */
 async function isDocumentInLocation(
+  reactorClient: IReactorClient,
   document: PHDocument,
   driveId: string,
   parentFolder?: string,
@@ -66,18 +68,7 @@ async function isDocumentInLocation(
   duplicateType?: "id" | "name";
   nodeId?: string;
 }> {
-  const reactorClient = window.ph?.reactorClient;
-  if (!reactorClient) {
-    return { isDuplicate: false };
-  }
-
-  // Get the drive and check its nodes
-  let drive;
-  try {
-    drive = await reactorClient.get<DocumentDriveDocument>(driveId);
-  } catch {
-    return { isDuplicate: false };
-  }
+  const drive = await reactorClient.get<DocumentDriveDocument>(driveId);
 
   // Case 1: Check for duplicate by ID
   const nodeById = drive.state.global.nodes.find(
@@ -520,73 +511,100 @@ export async function addDocument(
   };
 }
 
-export async function addFile(
-  file: string | File,
+/** The file node shape {@link addDocument} reports for a created document. */
+export type AddedFileNode = {
+  id: string;
+  name: string;
+  documentType: string;
+  parentFolder: string | null;
+  kind: "file";
+};
+
+/**
+ * How many ids an import will try before giving up. The check before the create
+ * catches an id that is already taken; this bound covers the window between the
+ * two, where a create can still lose to a claim made in the meantime.
+ */
+const IMPORT_ID_ATTEMPTS = 3;
+
+/** True when this error, or anything it wraps, is a taken document id. */
+function isDocumentAlreadyExists(error: unknown): boolean {
+  let current: unknown = error;
+  while (current instanceof Error) {
+    if (current.name === "DocumentAlreadyExistsError") {
+      return true;
+    }
+    current = current.cause;
+  }
+  return false;
+}
+
+/**
+ * Creates the imported document under an id that is free, retrying on a
+ * collision.
+ *
+ * The check cannot stand on its own: it answers for the moment it ran, and the
+ * create that follows can still land on an id claimed in between. The store
+ * rejects that create as DocumentAlreadyExistsError, which is not retryable
+ * under the same id and is resolved by minting another one. A create that
+ * fails leaves the drive untouched, so a retry has nothing to clean up.
+ */
+async function createImportedDocument(
+  reactor: IReactorClient,
+  document: PHDocument,
   driveId: string,
   name?: string,
   parentFolder?: string,
-) {
-  logger.verbose(
-    `addFile(drive: ${driveId}, name: ${name}, folder: ${parentFolder})`,
-  );
+): Promise<{ documentId: string; fileNode: AddedFileNode }> {
+  let documentId = (await reactor.isDocumentIdTaken(document.header.id))
+    ? generateId()
+    : document.header.id;
 
-  const { isAllowedToCreateDocuments } = getUserPermissions();
-  if (!isAllowedToCreateDocuments) {
-    throw new Error("User is not allowed to create files");
-  }
+  for (let attempt = 1; ; attempt++) {
+    const header = createPresignedHeader(
+      documentId,
+      document.header.documentType,
+    );
+    header.lastModifiedAtUtcIso = document.header.createdAtUtcIso;
+    header.meta = document.header.meta;
+    header.name = name || document.header.name;
 
-  const document = await loadFile(file);
+    // copy the document at it's initial state
+    const initialDocument = {
+      ...document,
+      header,
+      state: document.initialState,
+      operations: Object.keys(document.operations).reduce((acc, key) => {
+        acc[key] = [];
+        return acc;
+      }, {} as DocumentOperations),
+    };
 
-  let duplicateId = false;
+    try {
+      const fileNode = await addDocument(
+        driveId,
+        name || document.header.name,
+        document.header.documentType,
+        parentFolder,
+        initialDocument,
+        documentId,
+        document.header.meta?.preferredEditor,
+      );
 
-  const reactorClient = window.ph?.reactorClient;
-  if (!reactorClient) {
-    throw new Error("ReactorClient not initialized");
-  }
+      if (!fileNode) {
+        throw new Error("There was an error adding file");
+      }
 
-  try {
-    await reactorClient.get(document.header.id);
-    duplicateId = true;
-  } catch {
-    // document id not found
-  }
+      return { documentId, fileNode };
+    } catch (error) {
+      if (!isDocumentAlreadyExists(error) || attempt === IMPORT_ID_ATTEMPTS) {
+        throw error;
+      }
 
-  const documentId = duplicateId ? generateId() : document.header.id;
-  const header = createPresignedHeader(
-    documentId,
-    document.header.documentType,
-  );
-  header.lastModifiedAtUtcIso = document.header.createdAtUtcIso;
-  header.meta = document.header.meta;
-  header.name = name || document.header.name;
-
-  // copy the document at it's initial state
-  const initialDocument = {
-    ...document,
-    header,
-    state: document.initialState,
-    operations: Object.keys(document.operations).reduce((acc, key) => {
-      acc[key] = [];
-      return acc;
-    }, {} as DocumentOperations),
-  };
-
-  await addDocument(
-    driveId,
-    name || document.header.name,
-    document.header.documentType,
-    parentFolder,
-    initialDocument,
-    documentId,
-    document.header.meta?.preferredEditor,
-  );
-
-  // then add all the operations in chunks, re-dispatching each mid-history
-  // upgrade at its boundary
-  for (const segment of splitAtUpgradeBoundaries(document.operations)) {
-    await uploadOperations(documentId, segment.operations, queueOperations);
-    if (segment.upgradeTo !== undefined) {
-      await upgradeDocument(documentId, segment.upgradeTo);
+      logger.warn(
+        `Document id ${documentId} was taken between the check and the create; importing under a new id`,
+      );
+      documentId = generateId();
     }
   }
 }
@@ -606,7 +624,14 @@ export async function addFileWithProgress(
   // importing a file into a drive is a full reactor client feature
   const reactor = window.ph?.reactorClientModule?.client;
   if (!reactor) {
-    return;
+    // Reported before it is thrown: a caller watching progress settles on a
+    // terminal stage, and returning quietly here left it waiting forever.
+    onProgress?.({
+      stage: "failed",
+      progress: 100,
+      error: "ReactorClient not initialized",
+    });
+    throw new Error("ReactorClient not initialized");
   }
 
   const { isAllowedToCreateDocuments } = getUserPermissions();
@@ -651,7 +676,22 @@ export async function addFileWithProgress(
           onProgress,
           documentTypes,
           resolveConflict,
-        );
+        ).catch((retryError: unknown) => {
+          // Nothing awaits this call, so an unreported throw here is an
+          // unhandled rejection and a caller that never settles.
+          logger.error(
+            "Import retry after discovery failed: @error",
+            retryError,
+          );
+          onProgress?.({
+            stage: "failed",
+            progress: 100,
+            error:
+              retryError instanceof Error
+                ? retryError.message
+                : String(retryError),
+          });
+        });
         return;
       }
       throw loadError;
@@ -659,6 +699,7 @@ export async function addFileWithProgress(
 
     // Check for duplicate in same location
     const duplicateCheck = await isDocumentInLocation(
+      reactor,
       document,
       driveId,
       parentFolder,
@@ -700,47 +741,15 @@ export async function addFileWithProgress(
     // Initializing stage (10-20%)
     onProgress?.({ stage: "initializing", progress: 10 });
 
-    let duplicateId = false;
-    try {
-      await reactor.get(document.header.id);
-      duplicateId = true;
-    } catch {
-      // document id not found
-    }
-
-    const documentId = duplicateId ? generateId() : document.header.id;
-    const header = createPresignedHeader(
-      documentId,
-      document.header.documentType,
-    );
-    header.lastModifiedAtUtcIso = document.header.createdAtUtcIso;
-    header.meta = document.header.meta;
-    header.name = name || document.header.name;
-
-    // copy the document at it's initial state
-    const initialDocument = {
-      ...document,
-      header,
-      state: document.initialState,
-      operations: Object.keys(document.operations).reduce((acc, key) => {
-        acc[key] = [];
-        return acc;
-      }, {} as DocumentOperations),
-    };
-
-    const fileNode = await addDocument(
+    const created = await createImportedDocument(
+      reactor,
+      document,
       driveId,
-      name || document.header.name,
-      document.header.documentType,
+      name,
       parentFolder,
-      initialDocument,
-      documentId,
-      document.header.meta?.preferredEditor,
     );
-
-    if (!fileNode) {
-      throw new Error("There was an error adding file");
-    }
+    const documentId = created.documentId;
+    const fileNode = created.fileNode;
 
     onProgress?.({ stage: "initializing", progress: 20 });
 

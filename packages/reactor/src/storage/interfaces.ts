@@ -49,6 +49,26 @@ export class RevisionMismatchError extends Error {
 }
 
 /**
+ * A create based on an empty stream that already has operations: the id is
+ * taken, and no retry can resolve it. Matched by `name`, all the RPC boundary keeps.
+ */
+export class DocumentAlreadyExistsError extends Error {
+  public readonly documentId: string;
+
+  constructor(documentId: string, scope: string, headRevision: number) {
+    super(
+      `Document ${documentId} already exists: create requested revision 0 but the "${scope}" stream is at revision ${headRevision}`,
+    );
+    this.name = "DocumentAlreadyExistsError";
+    this.documentId = documentId;
+  }
+
+  static isError(error: unknown): error is DocumentAlreadyExistsError {
+    return Error.isError(error) && error.name === "DocumentAlreadyExistsError";
+  }
+}
+
+/**
  * One read-set stream and the highest operation index observed on it, or -1
  * if it was observed empty.
  */
@@ -376,6 +396,24 @@ export interface OperationFilter {
 }
 
 /**
+ * Which sense of "exists" a caller of {@link IDocumentView.exists} means.
+ */
+export enum DocumentExistence {
+  /**
+   * A document that is present and not deleted. This is the question a read
+   * asks: a deleted document is not readable, so it does not exist.
+   */
+  LiveOnly = "LiveOnly",
+  /**
+   * Whether the id is taken, deleted or not. This is the question a write
+   * asks: a deleted document keeps its operation stream, so its id can never
+   * be reused, and answering from snapshots alone would say otherwise whenever
+   * a snapshot row is missing while the stream is intact.
+   */
+  IncludingDeleted = "IncludingDeleted",
+}
+
+/**
  * Materialised read model that maintains document snapshots. Snapshots are
  * updated by indexing operations (which must include `resultingState`) and
  * queried with optional consistency tokens for read-after-write guarantees.
@@ -410,14 +448,21 @@ export interface IDocumentView extends IReadModel {
   ): Promise<void>;
 
   /**
-   * Returns true if and only if the documents exist.
+   * Returns true if and only if the documents exist, in the sense the caller
+   * asks for.
+   *
+   * {@link DocumentExistence.IncludingDeleted} is answered from the operation
+   * streams rather than from snapshots, so it stays correct when a snapshot
+   * row is missing for a document whose stream is intact.
    *
    * @param documentIds - The list of document ids to check.
+   * @param existence - Whether a deleted document counts as existing.
    * @param consistencyToken - Optional token for read-after-write consistency
    * @param signal - Optional abort signal to cancel the request
    */
   exists(
     documentIds: string[],
+    existence: DocumentExistence,
     consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<boolean[]>;

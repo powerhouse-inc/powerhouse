@@ -13,6 +13,7 @@ import type {
 } from "@powerhousedao/reactor";
 import {
   AppendConditionFailedError,
+  DocumentAlreadyExistsError,
   DuplicateOperationError,
   RevisionMismatchError,
 } from "@powerhousedao/reactor";
@@ -116,10 +117,6 @@ export class HypercoreOperationStore implements IOperationStore {
       ? (headEntry.value as HeadEntryValue).index
       : -1;
 
-    if (currentRevision !== revision - 1) {
-      throw new RevisionMismatchError(currentRevision + 1, revision);
-    }
-
     const atomicTxn = new HypercoreAtomicTransaction(
       documentId,
       documentType,
@@ -129,6 +126,19 @@ export class HypercoreOperationStore implements IOperationStore {
     await fn(atomicTxn);
 
     const operations = atomicTxn.getOperations();
+
+    if (currentRevision !== revision - 1) {
+      if (revision === 0 && this.isCreate(operations)) {
+        throw new DocumentAlreadyExistsError(
+          documentId,
+          scope,
+          currentRevision,
+        );
+      }
+
+      throw new RevisionMismatchError(currentRevision + 1, revision);
+    }
+
     if (operations.length === 0) {
       return [];
     }
@@ -179,6 +189,10 @@ export class HypercoreOperationStore implements IOperationStore {
     await batch.flush();
 
     return operations.map((op) => this.toOperation(op));
+  }
+
+  private isCreate(operations: StoredOperation[]): boolean {
+    return operations.some((op) => op.action.type === "CREATE_DOCUMENT");
   }
 
   async getSince(

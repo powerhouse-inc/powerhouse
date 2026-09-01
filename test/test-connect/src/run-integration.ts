@@ -492,9 +492,45 @@ async function main(): Promise<void> {
   } else {
     console.log(bold(red("RESULT: FAIL")));
     console.log(gray(`  Logs: ${runDir}`));
+    // Printed, not just pointed at. On CI the runner is torn down with the
+    // directory still on it, so a path is the one thing nobody can follow --
+    // and a client that dies of ECONNRESET only says so from the other side.
+    dumpLogs(runDir);
   }
 
   process.exit(passed ? 0 : 1);
+}
+
+/** Tails every log the run produced, so a failure explains itself in CI output. */
+function dumpLogs(runDir: string, tailLines = 80): void {
+  let files: string[];
+  try {
+    files = fs
+      .readdirSync(runDir)
+      .filter((name) => name.endsWith(".log"))
+      .sort();
+  } catch (error) {
+    console.log(gray(`  (could not read ${runDir}: ${String(error)})`));
+    return;
+  }
+
+  for (const name of files) {
+    let contents: string;
+    try {
+      contents = fs.readFileSync(path.join(runDir, name), "utf8");
+    } catch (error) {
+      console.log(gray(`  (could not read ${name}: ${String(error)})`));
+      continue;
+    }
+
+    const lines = contents.split("\n");
+    const tail = lines.slice(-tailLines).join("\n");
+    // Written synchronously: process.exit() below drops whatever console.log
+    // has queued on a pipe, which is every CI run. The first dump lost all but
+    // one file that way.
+    fs.writeSync(1, `\n━━━ ${name} (last ${tailLines} lines) ━━━\n`);
+    fs.writeSync(1, `${tail}\n`);
+  }
 }
 
 main().catch((error) => {

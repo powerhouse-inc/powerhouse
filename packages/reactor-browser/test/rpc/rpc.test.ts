@@ -45,6 +45,13 @@ function makeFakeClient() {
       calls.push(`resolve:${identifier}`);
       return Promise.resolve(`resolved:${identifier}`);
     },
+    isDocumentIdTaken(documentId: string) {
+      calls.push(`taken:${documentId}`);
+      if (documentId === "boom") {
+        return Promise.reject(new Error("transport down"));
+      }
+      return Promise.resolve(documentId === "taken-id");
+    },
     find() {
       calls.push("find");
       const page2 = {
@@ -63,6 +70,16 @@ function makeFakeClient() {
       addFolder(driveId: string, name: string) {
         calls.push(`addFolder:${driveId}/${name}`);
         return Promise.resolve({ id: "node-1", name });
+      },
+      addFile(driveId: string, document: { header: { id: string } }) {
+        calls.push(`addFile:${driveId}/${document.header.id}`);
+        const taken = new Error(
+          `Document ${document.header.id} already exists`,
+        );
+        taken.name = "DocumentAlreadyExistsError";
+        return Promise.reject(
+          new Error("There was an error adding document", { cause: taken }),
+        );
       },
     },
     subscribe(
@@ -117,6 +134,43 @@ describe("reactor RPC proxy <-> host", () => {
     cleanup = close;
     const resolved = await proxy.resolveIdOrSlug("slug-a");
     expect(resolved).toBe("resolved:slug-a");
+  });
+
+  it("forwards isDocumentIdTaken in both directions", async () => {
+    const { proxy, fake, close } = setup();
+    cleanup = close;
+    await expect(proxy.isDocumentIdTaken("taken-id")).resolves.toBe(true);
+    await expect(proxy.isDocumentIdTaken("free-id")).resolves.toBe(false);
+    expect(fake.calls).toContain("taken:taken-id");
+  });
+
+  it("keeps an error name through the boundary, including one it wraps", async () => {
+    // The import retries on a taken id, and it matches that error by name
+    // through the cause chain. If either is dropped here, the retry never
+    // fires in worker mode -- the mode the collision was reported from.
+    const { proxy, close } = setup();
+    cleanup = close;
+
+    const thrown = await proxy.drives
+      .addFile("drive-1", { header: { id: "taken-id" } } as never)
+      .catch((error: unknown) => error);
+
+    expect(thrown).toBeInstanceOf(Error);
+    expect((thrown as Error).message).toBe(
+      "There was an error adding document",
+    );
+    expect((thrown as Error).cause).toBeInstanceOf(Error);
+    expect(((thrown as Error).cause as Error).name).toBe(
+      "DocumentAlreadyExistsError",
+    );
+  });
+
+  it("rejects isDocumentIdTaken rather than answering false on failure", async () => {
+    const { proxy, close } = setup();
+    cleanup = close;
+    await expect(proxy.isDocumentIdTaken("boom")).rejects.toThrow(
+      "transport down",
+    );
   });
 
   it("dispatches nested drives.* methods", async () => {

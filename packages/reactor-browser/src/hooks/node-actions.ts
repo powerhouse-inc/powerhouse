@@ -1,6 +1,6 @@
 import type { Node } from "@powerhousedao/shared/document-drive";
 import {
-  addFile,
+  addFileWithProgress,
   addFolder,
   copyNode,
   moveNode,
@@ -30,11 +30,15 @@ export function useNodeActions() {
 
     const fileName = file.name.replace(/\..+/gim, "");
 
-    return addFile(
+    // no progress UI here to report a conflict to, so always import a copy
+    return addFileWithProgress(
       file,
       selectedDriveId,
       fileName,
       resolveNode(selectedDriveId, parent)?.id,
+      undefined,
+      undefined,
+      "duplicate",
     );
   }
 

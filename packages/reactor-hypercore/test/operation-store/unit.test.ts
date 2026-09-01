@@ -3,8 +3,10 @@ import { generateId } from "@powerhousedao/shared/document-model";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   AppendConditionFailedError,
+  DocumentAlreadyExistsError,
   DuplicateOperationError,
   RevisionMismatchError,
+  createDocumentAction,
 } from "@powerhousedao/reactor";
 import type { HypercoreOperationStore } from "../../src/hypercore-operation-store.js";
 import {
@@ -164,6 +166,78 @@ describe("HypercoreOperationStore", () => {
       await expect(
         store.apply(documentId, documentType, "global", "main", 5, (txn) => {
           txn.addOperations(makeOp(5));
+        }),
+      ).rejects.toThrow(RevisionMismatchError);
+    });
+
+    it("(c1) a non-create at revision 0 against an existing stream surfaces RevisionMismatchError", async () => {
+      const documentId = generateId();
+      const scope = "global";
+      const branch = "main";
+      const documentType = "powerhouse/test-doc";
+
+      await store.apply(documentId, documentType, scope, branch, 0, (txn) => {
+        txn.addOperations(makeOp(0, { action: makeAction("ADD_FOLDER") }));
+      });
+
+      await expect(
+        store.apply(documentId, documentType, scope, branch, 0, (txn) => {
+          txn.addOperations(makeOp(0, { action: makeAction("ADD_FOLDER") }));
+        }),
+      ).rejects.toThrow(RevisionMismatchError);
+    });
+
+    it("(c2) create against an existing stream surfaces DocumentAlreadyExistsError", async () => {
+      const documentId = generateId();
+      const scope = "document";
+      const branch = "main";
+      const documentType = "powerhouse/test-doc";
+
+      await store.apply(documentId, documentType, scope, branch, 0, (txn) => {
+        txn.addOperations(
+          makeOp(0, {
+            action: createDocumentAction({
+              model: documentType,
+              version: 0,
+              documentId,
+            }),
+          }),
+        );
+      });
+
+      const error = await store
+        .apply(documentId, documentType, scope, branch, 0, (txn) => {
+          txn.addOperations(
+            makeOp(0, {
+              action: createDocumentAction({
+                model: documentType,
+                version: 0,
+                documentId,
+              }),
+            }),
+          );
+        })
+        .catch((thrown: unknown) => thrown);
+
+      expect(DocumentAlreadyExistsError.isError(error)).toBe(true);
+    });
+
+    it("(c3) a stale read past revision 0 still surfaces RevisionMismatchError", async () => {
+      const documentId = generateId();
+      const scope = "global";
+      const branch = "main";
+      const documentType = "powerhouse/test-doc";
+
+      await store.apply(documentId, documentType, scope, branch, 0, (txn) => {
+        txn.addOperations(makeOp(0));
+      });
+      await store.apply(documentId, documentType, scope, branch, 1, (txn) => {
+        txn.addOperations(makeOp(1));
+      });
+
+      await expect(
+        store.apply(documentId, documentType, scope, branch, 1, (txn) => {
+          txn.addOperations(makeOp(1));
         }),
       ).rejects.toThrow(RevisionMismatchError);
     });

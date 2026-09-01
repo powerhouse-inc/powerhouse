@@ -220,6 +220,8 @@ export type { Database } from "./src/core/types.js";
 export {
   APPEND_CONDITION_FAILED_PREFIX,
   AppendConditionFailedError,
+  DocumentAlreadyExistsError,
+  DocumentExistence,
   DuplicateOperationError,
   OptimisticLockError,
   RevisionMismatchError,

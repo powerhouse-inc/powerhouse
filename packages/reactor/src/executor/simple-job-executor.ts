@@ -965,8 +965,13 @@ export class SimpleJobExecutor implements IJobExecutor {
         first.appendCondition,
       );
     } catch (error) {
+      // The wrap that used to carry this phrase is gone, so the phrase lives
+      // here: the error keeps its identity, the log keeps the context.
       this.logger.error(
-        "Error writing @Operation to IOperationStore: @Error",
+        "Failed to write operation to IOperationStore (@documentId @scope @branch): @Operation @Error",
+        job.documentId,
+        scope,
+        job.branch,
         operations,
         error,
       );
@@ -988,11 +993,14 @@ export class SimpleJobExecutor implements IJobExecutor {
       return {
         job,
         success: false,
-        error: AppendConditionFailedError.isError(error)
-          ? error
-          : new Error(
-              `Failed to write operation to IOperationStore: ${error instanceof Error ? error.message : String(error)}`,
-            ),
+        // The original error, not a restringified one: the executor and the
+        // job result handler classify by `name`, and a rewrap erases it.
+        error:
+          error instanceof Error
+            ? error
+            : new Error(
+                `Failed to write operation to IOperationStore: ${String(error)}`,
+              ),
         duration: Date.now() - startTime,
       };
     }
