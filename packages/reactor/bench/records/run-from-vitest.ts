@@ -18,6 +18,8 @@ import { dirtyPaths, readMachineEnvironment } from "./machine-environment.js";
 const RESULTS_DIRECTORY = "bench/results";
 /** Resolved against the working directory, which pnpm sets to the package. */
 const PACKAGE_DIRECTORY = ".";
+/** Outputs of a recording, so they do not make the tree dirty for the next one. */
+const RECORD_FILES = ["bench/BENCHMARKS.jsonl", "bench/TASKS.jsonl"];
 const USAGE_EXIT = 64;
 const ERROR_EXIT = 68;
 
@@ -92,7 +94,7 @@ function main(): void {
   try {
     const { target, path } = resolveReport(options);
     if (!options.allowDirty) {
-      const dirty = dirtyPaths(PACKAGE_DIRECTORY);
+      const dirty = dirtyPaths(PACKAGE_DIRECTORY, RECORD_FILES);
       if (dirty.length > 0) {
         throw new Error(
           `The package has uncommitted changes, so the sha this record would carry describes code that did not run:\n${dirty.join("\n")}\nCommit, stash, or pass --allow-dirty and say so in a caveat.`,

@@ -494,7 +494,10 @@ if (record) {
     return { name: task.name, ...task.result };
   });
 
-  const dirty = dirtyPaths(".");
+  const dirty = dirtyPaths(".", [
+    "bench/BENCHMARKS.jsonl",
+    "bench/TASKS.jsonl",
+  ]);
   if (dirty.length > 0 && !process.argv.includes("--allow-dirty")) {
     process.stderr.write(
       `The package has uncommitted changes, so the sha this record would carry describes code that did not run:\n${dirty.join("\n")}\nCommit, stash, or pass --allow-dirty and say so in a caveat.\n`,

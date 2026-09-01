@@ -45,16 +45,29 @@ function readSha(): string {
 }
 
 /**
- * Empty when the given directory is clean. The pathspec is resolved against
- * the working directory, not the repository root, so a caller running inside
- * the package passes ".".
+ * Empty when the given directory is clean, ignoring the record files
+ * themselves. The pathspec is resolved against the working directory, not the
+ * repository root, so a caller running inside the package passes ".".
+ *
+ * The exclusions matter: recording one benchmark appends to BENCHMARKS.jsonl,
+ * which would leave the tree dirty and refuse the next recording in the same
+ * session. The sha describes the code that ran, and the record files are its
+ * output rather than its input.
  */
-export function dirtyPaths(directory: string): string[] {
+export function dirtyPaths(directory: string, excluded: string[]): string[] {
   let output: string;
   try {
-    output = execFileSync("git", ["status", "--porcelain", "--", directory], {
-      encoding: "utf8",
-    });
+    output = execFileSync(
+      "git",
+      [
+        "status",
+        "--porcelain",
+        "--",
+        directory,
+        ...excluded.map((path) => `:(exclude)${path}`),
+      ],
+      { encoding: "utf8" },
+    );
   } catch (error) {
     throw new Error(
       `Could not check the working tree: ${error instanceof Error ? error.message : String(error)}`,
