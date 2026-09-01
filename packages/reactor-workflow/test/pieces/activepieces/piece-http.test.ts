@@ -83,7 +83,7 @@ describe.skipIf(!bundleDir)("piece-http (spike S6a)", () => {
     });
 
     expect(descriptor.id).toBe("activepieces:@activepieces/piece-http");
-    expect(descriptor.triggerNames).toEqual([]);
+    expect(descriptor.triggers).toEqual([]);
     expect(descriptor.actions.map((a) => a.name).sort()).toEqual([
       "parse_url",
       "send_request",

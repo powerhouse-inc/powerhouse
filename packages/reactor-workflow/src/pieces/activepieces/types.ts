@@ -37,6 +37,31 @@ export interface ApAction {
   run: (ctx: unknown) => Promise<unknown>;
 }
 
+// Emitted trigger payloads may carry their own dedup key under this property.
+export const DEDUPE_KEY_PROPERTY = "_dedupe_key";
+
+// WEBHOOK | POLLING | MANUAL | APP_WEBHOOK
+export type ApTriggerStrategy = string;
+
+export interface ApTrigger {
+  name?: string;
+  displayName?: string;
+  description?: string;
+  requireAuth?: boolean;
+  type?: ApTriggerStrategy;
+  // SIMULATION | TEST_FUNCTION
+  testStrategy?: string;
+  props?: Record<string, ApProperty>;
+  sampleData?: unknown;
+  onEnable?: (ctx: unknown) => Promise<void>;
+  onDisable?: (ctx: unknown) => Promise<void>;
+  onStart?: (ctx: unknown) => Promise<unknown>;
+  run?: (ctx: unknown) => Promise<unknown[]>;
+  test?: (ctx: unknown) => Promise<unknown[]>;
+  onHandshake?: (ctx: unknown) => Promise<unknown>;
+  onRenew?: (ctx: unknown) => Promise<void>;
+}
+
 export interface ApPiece {
   displayName: string;
   description?: string;
@@ -47,8 +72,9 @@ export interface ApPiece {
   minimumSupportedRelease?: string;
   maximumSupportedRelease?: string;
   actions?: Record<string, ApAction> | (() => Record<string, ApAction>);
-  triggers?: Record<string, unknown> | (() => Record<string, unknown>);
+  triggers?: Record<string, ApTrigger> | (() => Record<string, ApTrigger>);
   getAction?: (name: string) => ApAction | undefined;
+  getTrigger?: (name: string) => ApTrigger | undefined;
   metadata?: () => Record<string, unknown>;
 }
 
@@ -60,7 +86,7 @@ export function getActions(piece: ApPiece): Record<string, ApAction> {
 }
 
 // Normalizes the record-vs-method variants of `piece.triggers`.
-export function getTriggers(piece: ApPiece): Record<string, unknown> {
+export function getTriggers(piece: ApPiece): Record<string, ApTrigger> {
   const triggers =
     typeof piece.triggers === "function" ? piece.triggers() : piece.triggers;
   return triggers ?? {};

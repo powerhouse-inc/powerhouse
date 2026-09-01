@@ -5,6 +5,7 @@ import {
   type ApProperty,
   type ApPropertyType,
   type ApDropdownOption,
+  type ApTriggerStrategy,
 } from "./types.js";
 
 export interface ConnectorPropDescriptor {
@@ -28,6 +29,17 @@ export interface ConnectorActionDescriptor {
   // UI metadata only — not a credential contract (spike finding).
   requireAuth: boolean;
   props: ConnectorPropDescriptor[];
+}
+
+export interface ConnectorTriggerDescriptor {
+  name: string;
+  displayName: string;
+  description?: string;
+  strategy: ApTriggerStrategy;
+  testStrategy?: string;
+  requireAuth: boolean;
+  props: ConnectorPropDescriptor[];
+  hasSampleData: boolean;
 }
 
 export interface ConnectorAuthDescriptor {
@@ -54,8 +66,7 @@ export interface ConnectorDescriptor {
   minimumSupportedRelease?: string;
   maximumSupportedRelease?: string;
   actions: ConnectorActionDescriptor[];
-  // Names only — trigger adaptation is a follow-up (spike S6a scope).
-  triggerNames: string[];
+  triggers: ConnectorTriggerDescriptor[];
 }
 
 function hasResolver(prop: ApProperty): boolean {
@@ -112,6 +123,26 @@ export function buildDescriptor(
     }),
   );
 
+  const triggers = Object.entries(getTriggers(piece)).map(
+    ([triggerName, trigger]): ConnectorTriggerDescriptor => ({
+      name: trigger.name ?? triggerName,
+      displayName: trigger.displayName ?? triggerName,
+      description: trigger.description,
+      strategy: trigger.type ?? "UNKNOWN",
+      testStrategy: trigger.testStrategy,
+      requireAuth: trigger.requireAuth ?? false,
+      props: Object.entries(trigger.props ?? {}).map(([propName, prop]) =>
+        toPropDescriptor(
+          propName,
+          prop,
+          `activepieces:${source.packageName}#${triggerName}.${propName}`,
+        ),
+      ),
+      hasSampleData:
+        trigger.sampleData !== undefined && trigger.sampleData !== null,
+    }),
+  );
+
   const descriptor: ConnectorDescriptor = {
     id: `activepieces:${source.packageName}`,
     source,
@@ -122,7 +153,7 @@ export function buildDescriptor(
     minimumSupportedRelease: piece.minimumSupportedRelease,
     maximumSupportedRelease: piece.maximumSupportedRelease,
     actions,
-    triggerNames: Object.keys(getTriggers(piece)),
+    triggers,
   };
   if (piece.auth && typeof piece.auth === "object") {
     descriptor.auth = {
