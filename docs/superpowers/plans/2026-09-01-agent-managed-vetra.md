@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- Port bands, exact: `reactor.port` = `41000 + offset`, `studio.port` = `31000 + offset`, `vetra.connectPort` = `32000 + offset`, where `offset = fnv1a32(utf8(projectName)) % 1000`.
+- Port bands, exact: `reactor.port` = `7000 + offset`, `studio.port` = `6000 + offset`, `vetra.connectPort` = `2000 + offset`, where `offset = fnv1a32(utf8(projectName)) % 1000` advanced deterministically past `PROJECT_PORT_DENYLIST`. (Superseded the original 41000/31000/32000 bands: those sat inside the OS ephemeral range 32768-60999 and inside ph-clint's 10000-59900 hash range. Task 1's code block below shows the original; the spec is authoritative.)
 - Hash input is the **project name from `package.json`**, never a filesystem path.
 - Precedence chain, exact: CLI flag → `process.env` → `.env.local` → `.env` → `powerhouse.config.json` → constant default.
 - Env var names: `PH_SWITCHBOARD_PORT` (already exists, do not rename), `PH_VETRA_CONNECT_PORT` (new; deliberately NOT `PH_CONNECT_PORT`, which would imply membership in the validated SPA runtime-config family).

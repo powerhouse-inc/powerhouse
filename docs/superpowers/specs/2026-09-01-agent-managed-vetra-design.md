@@ -124,19 +124,42 @@ reproducible across machines, unlike an absolute path:
 taken unsigned.
 
 ```
-offset       = fnv1a32(utf8(projectName)) % 1000
-reactor.port        = 41000 + offset   # switchboard / MCP
-studio.port         = 31000 + offset   # `ph connect studio`
-vetra.connectPort   = 32000 + offset   # `ph vetra`'s Connect
+offset       = fnv1a32(utf8(projectName)) % 1000   # advanced past the denylist
+reactor.port        = 7000 + offset   # switchboard / MCP
+studio.port         = 6000 + offset   # `ph connect studio`
+vetra.connectPort   = 2000 + offset   # `ph vetra`'s Connect
 ```
 
 Three slots because `ph connect studio` (3000) and `ph vetra`'s Connect (3001)
-are distinct servers today and must stay distinct. Bands sit clear of the
-standard Powerhouse ports (3000, 3001, 4001, 4173) and of common dev-server
-ports (5173, 8080, 9229).
+are distinct servers today and must stay distinct. One shared offset, so a
+project's three ports end in the same three digits — `my-package` gets
+7834 / 6834 / 2834.
 
-Two distinct projects collide only on a 1-in-1000 hash collision, and that
-surfaces as a loud `--strictPort` failure rather than as misrouting.
+Two hard constraints put every band below 10000:
+
+1. **Below the OS ephemeral range.** Linux allocates outbound source ports from
+   32768-60999 (`/proc/sys/net/ipv4/ip_local_port_range`); macOS and Windows
+   start at 49152. A listener parked in that window can lose a race to a
+   transient outbound socket, which would surface as a `--strictPort` failure
+   blaming a project conflict that does not exist — the exact misleading
+   failure `--strictPort` exists to remove.
+2. **Below 10000, where ph-clint starts.** ph-clint
+   (`packages/ph-clint/src/integrations/powerhouse/ports.ts`) derives its own
+   per-CLI ports by hashing into 10000-59900 and, like this design, fails
+   rather than shifting when a port is busy. Staying under 10000 keeps the two
+   schemes from ever contending.
+
+Within those limits the blocks were chosen by measuring which ports the
+Powerhouse repos actually reference: 2000-2999 has none, 7000-7999 has one,
+6000-6999 has five. Individual ports inside the bands that the repos use, or
+that a developer machine plausibly holds (X11 6000-6063, Redis 6379, Docker
+2375/2376, Kubernetes 6443, Neo4j, Cassandra, ZooKeeper, Storybook 6006), are
+listed in `PROJECT_PORT_DENYLIST`; when any of a project's three ports would
+land on one, the shared offset advances deterministically until all three are
+clear. The whole denylist costs 83 of 1000 offsets.
+
+Two distinct projects therefore collide only on a ~1-in-917 offset collision,
+and that surfaces as a loud `--strictPort` failure rather than as misrouting.
 
 ### Override precedence
 
@@ -362,7 +385,7 @@ Manual:
 
 ## Risks
 
-- **Hash collision between two projects (1-in-1000).** Surfaces as a
+- **Offset collision between two projects (~1-in-917).** Surfaces as a
   `--strictPort` failure, so it is visible rather than silent. Remedy is a
   `.env.local` override.
 - **Runtime record left by a hard kill.** Handled by pid + `/ready` +
