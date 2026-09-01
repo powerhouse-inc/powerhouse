@@ -2,11 +2,17 @@ import { z } from "zod";
 import type { BenchmarkKind } from "./benchmark-schema.js";
 import { BENCHMARK_KINDS, BenchmarkId } from "./benchmark-schema.js";
 
+/**
+ * REFUTED is terminal in the same way COMMITTED is: a verifier that disproved
+ * a finding has somewhere to put it, and reopening as UNVERIFIED would erase
+ * the fact that someone looked.
+ */
 export const TASK_STATUSES = [
   "UNVERIFIED",
   "VERIFIED",
   "FIXED",
   "COMMITTED",
+  "REFUTED",
 ] as const;
 export const TaskStatus = z.enum(TASK_STATUSES);
 export type TaskStatus = z.infer<typeof TaskStatus>;

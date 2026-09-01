@@ -184,6 +184,29 @@ describe("TaskEntry", () => {
     expect(parsed.history).toHaveLength(3);
   });
 
+  it("accepts a task whose history head is REFUTED", () => {
+    const parsed = TaskEntry.parse(
+      gapTask({
+        status: "REFUTED",
+        history: [
+          {
+            status: "UNVERIFIED",
+            at: "2026-09-01T12:00:00.000Z",
+            evidence: [],
+          },
+          {
+            status: "REFUTED",
+            at: "2026-09-02T12:00:00.000Z",
+            evidence: ["B-001"],
+            note: "an existing bench already answers the question",
+          },
+        ],
+      }),
+    );
+
+    expect(parsed.status).toBe("REFUTED");
+  });
+
   it("requires at least one history event", () => {
     expect(TaskEntry.safeParse(gapTask({ history: [] })).success).toBe(false);
   });

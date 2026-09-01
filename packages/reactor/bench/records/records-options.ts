@@ -47,7 +47,9 @@ when they are absent.
 
 Statuses: ${TASK_STATUSES.join(", ")}. For a GAP, VERIFIED means the gap is
 real and reproduced, FIXED means the measurement now exists and has been run,
-and COMMITTED means it landed on main.
+and COMMITTED means it landed on main. REFUTED means someone tried to
+reproduce the item and showed it does not hold; unlike reopening it as
+UNVERIFIED, it records that the attempt was made.
 
 Exit codes:
   0   the command succeeded

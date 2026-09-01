@@ -223,6 +223,29 @@ describe("set-status", () => {
     expect(readTask(0)).toMatchObject({ status: "UNVERIFIED" });
   });
 
+  it("refutes a finding without erasing that someone looked", () => {
+    run(["add-benchmark", "-"], withoutId(concurrencyEntry()));
+
+    const result = run([
+      "set-status",
+      "T-001",
+      "REFUTED",
+      "--note",
+      "the repro shows the expected number, not the observed one",
+      "--by",
+      "bench-verifier",
+      "--evidence",
+      "B-001",
+    ]);
+
+    expect(result.lines[0]).toContain("UNVERIFIED -> REFUTED");
+    expect(readTask(0)).toMatchObject({
+      status: "REFUTED",
+      history: [{}, { status: "REFUTED", by: "bench-verifier" }],
+    });
+    expect(run(["verify"]).exit).toBe(0);
+  });
+
   it("reports an unknown task", () => {
     const error = failure(["set-status", "T-404", "FIXED"]);
 

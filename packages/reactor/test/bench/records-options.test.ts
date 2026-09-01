@@ -146,6 +146,12 @@ describe("parseRecordsOptions", () => {
     expect(parseRecordsOptions(["verify"])).toMatchObject({ target: "all" });
   });
 
+  it("accepts REFUTED, the terminal status for a disproved finding", () => {
+    expect(
+      parseRecordsOptions(["set-status", "T-001", "REFUTED"]),
+    ).toMatchObject({ status: "REFUTED" });
+  });
+
   it("keeps the exit codes mutually exclusive ordinals", () => {
     expect(RECORDS_EXIT).toEqual({
       ok: 0,
