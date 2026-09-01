@@ -46,6 +46,15 @@ if printf '%s' "$CMD" | grep -Eq "(>|>>|\btee\b|\bsed\b -i|\bmv\b|\brm\b|\bcp\b|
   deny "Neither record file is written by anything but 'pnpm bench:records'. Reading is fine, but pipe it - a redirect that lands on the file is what append-only exists to prevent."
 fi
 
+# The file-integrity rules end here. ROLE=none is the project-wide layer, and
+# it also runs against the human own session, so it protects the two files
+# and stops. Everything below is agent discipline: rules about how a record
+# should be arrived at, which a human working in a scratch directory or
+# choosing an id has no reason to obey.
+[ "$ROLE" = "none" ] && exit 0
+
+# ---- every agent role ----------------------------------------------------
+
 if printf '%s' "$CMD" | grep -Eq '\bbench:records\b'; then
   if printf '%s' "$CMD" | grep -Eq '\$\(|`|<\('; then
     deny "No command substitution inside a bench:records call. The record has to be literal in the transcript, or nobody can tell afterwards what was written."
@@ -58,13 +67,6 @@ if printf '%s' "$CMD" | grep -Eq '\bbench:records\b'; then
     deny "Every mutating bench:records call passes --dir bench, so it is obvious from the command which files it touched."
   fi
 fi
-
-# The every-role rules end here. ROLE=none is the project-wide layer, which
-# also covers the main thread: it protects the files and stops there, because
-# a human's own session is not one of the roles.
-[ "$ROLE" = "none" ] && exit 0
-
-# ---- every agent role ----------------------------------------------------
 
 if printf '%s' "$CMD" | grep -Eq '\bgit[[:space:]]+(commit|push|add|checkout|switch|reset|rebase|stash|restore)\b'; then
   deny "Committing is the human's. Report what you wrote and let them land it."

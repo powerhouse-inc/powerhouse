@@ -72,26 +72,20 @@ describe("every role", () => {
     );
   });
 
-  it("keeps the record literal in the transcript", () => {
-    expect(
-      guard("none", `${PNPM} bench:records add-task - --dir bench < $(mktemp)`)
-        .exit,
-    ).toBe(2);
-  });
+  it("leaves a human free to write wherever they are testing", () => {
+    // ROLE=none also runs against the main thread. Scratch directories, chosen
+    // ids and shell plumbing are agent discipline, not file integrity, so they
+    // belong to the roles - the plan verification step itself needs a scratch
+    // directory, and blocking it here would make the tool untestable by hand.
+    const human = [
+      `${PNPM} bench:records add-benchmark - --dir /tmp/scratch`,
+      `${PNPM} bench:records add-task - --dir bench --id T-009`,
+      `${PNPM} bench:records show B-001`,
+    ];
 
-  it("allocates ids rather than accepting one", () => {
-    expect(
-      guard("none", `${PNPM} bench:records add-task - --dir bench --id T-009`)
-        .exit,
-    ).toBe(2);
-  });
-
-  it("makes every mutating call name the directory it wrote to", () => {
-    expect(
-      guard("none", `${PNPM} bench:records add-benchmark - --dir /tmp/scratch`)
-        .exit,
-    ).toBe(2);
-    expect(guard("none", `${PNPM} bench:records show B-001`).exit).toBe(0);
+    for (const command of human) {
+      expect(guard("none", command).exit, command).toBe(0);
+    }
   });
 
   it("leaves the main thread's own git alone", () => {
@@ -118,6 +112,35 @@ describe("every role", () => {
 });
 
 describe("every agent role", () => {
+  it("keeps the record literal in the transcript", () => {
+    for (const role of ["runner", "analyst", "verifier"]) {
+      expect(
+        guard(
+          role,
+          `${PNPM} bench:records show B-001 --dir bench $(cat /tmp/x)`,
+        ).exit,
+        role,
+      ).toBe(2);
+    }
+  });
+
+  it("allocates ids rather than accepting one", () => {
+    for (const role of ["runner", "analyst", "verifier"]) {
+      expect(
+        guard(role, `${PNPM} bench:records add-task - --dir bench --id T-009`)
+          .exit,
+        role,
+      ).toBe(2);
+    }
+  });
+
+  it("makes every mutating call name the directory it wrote to", () => {
+    expect(
+      guard("analyst", `${PNPM} bench:records add-task - --dir /tmp/scratch`)
+        .exit,
+    ).toBe(2);
+  });
+
   it("leaves committing to the human", () => {
     for (const role of ["runner", "analyst", "verifier"]) {
       expect(guard(role, "git commit -m x").exit, role).toBe(2);
