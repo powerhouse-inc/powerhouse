@@ -5,6 +5,10 @@ export interface RunActionRequest {
   actionName: string;
   propsValue: Record<string, unknown>;
   auth?: unknown;
+  // Resolved connection values served to ctx.connections.get(key).
+  connections?: Record<string, unknown>;
+  // Store partition; runs sharing a scope share state for the worker's lifetime.
+  storeScope?: string;
   executionType?: "BEGIN" | "RESUME";
   identity?: ActionContextIdentity;
 }

@@ -1,6 +1,7 @@
 // Our ActionContext → their ActionContext (doc 06 §2.8). Implements the top usage
-// tier (propsValue, auth, store); every other capability throws loudly, named.
+// tier (propsValue, auth, store, connections); the rest throws loudly, named.
 import { throwingStub, withTouchTracking } from "./stubs.js";
+import type { ConnectionsProvider } from "./props.js";
 
 export { UnsupportedContextMemberError } from "./stubs.js";
 
@@ -8,6 +9,23 @@ export interface KeyValueStore {
   put(key: string, value: unknown): Promise<unknown>;
   get(key: string): Promise<unknown>;
   delete(key: string): Promise<void>;
+}
+
+// In-memory connection registry: key → resolved connection value.
+export class InMemoryConnectionsProvider implements ConnectionsProvider {
+  private readonly values: Map<string, unknown>;
+
+  constructor(values: Record<string, unknown> = {}) {
+    this.values = new Map(Object.entries(values));
+  }
+
+  set(key: string, value: unknown): void {
+    this.values.set(key, value);
+  }
+
+  get(key: string): Promise<unknown> {
+    return Promise.resolve(this.values.get(key) ?? null);
+  }
 }
 
 export class InMemoryKeyValueStore implements KeyValueStore {
@@ -40,6 +58,7 @@ export interface ActionContextOptions {
   propsValue: Record<string, unknown>;
   auth?: unknown;
   store?: KeyValueStore;
+  connections?: ConnectionsProvider;
   executionType?: "BEGIN" | "RESUME";
   identity?: ActionContextIdentity;
   onTouch?: (member: string) => void;
@@ -86,16 +105,22 @@ export function buildActionContext(
   const store = options.store ?? new InMemoryKeyValueStore();
   const touched = new Set<string>();
 
+  // Their Store takes an optional StoreScope (COLLECTION/PROJECT/FLOW) per call.
+  const scoped = (key: string, scope?: unknown) =>
+    typeof scope === "string" ? `${scope}:${key}` : key;
+
   const base: Record<string, unknown> = {
     executionType: options.executionType ?? "BEGIN",
     auth: options.auth,
     propsValue: options.propsValue,
     store: {
-      put: (key: string, value: unknown) => store.put(key, value),
-      get: (key: string) => store.get(key),
-      delete: (key: string) => store.delete(key),
+      put: (key: string, value: unknown, scope?: unknown) =>
+        store.put(scoped(key, scope), value),
+      get: (key: string, scope?: unknown) => store.get(scoped(key, scope)),
+      delete: (key: string, scope?: unknown) =>
+        store.delete(scoped(key, scope)),
     },
-    connections: throwingStub("connections"),
+    connections: options.connections ?? throwingStub("connections"),
     tags: throwingStub("tags"),
     server: throwingStub("server"),
     files: throwingStub("files"),

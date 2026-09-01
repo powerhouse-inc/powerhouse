@@ -2,6 +2,8 @@
 // process, so piece side-effects (TLS env poisoning, crashes) never reach the host.
 import {
   buildActionContext,
+  InMemoryConnectionsProvider,
+  InMemoryKeyValueStore,
   UnsupportedContextMemberError,
 } from "../context/action.js";
 import { loadPieceFromDir, type LoadedPiece } from "../loader.js";
@@ -13,6 +15,18 @@ import type {
 } from "./protocol.js";
 
 const loadedPieces = new Map<string, Promise<LoadedPiece>>();
+// One store per scope, alive for the worker's lifetime (in-memory phase:
+// state survives runs but not worker replacement).
+const stores = new Map<string, InMemoryKeyValueStore>();
+
+function storeForScope(scope: string): InMemoryKeyValueStore {
+  let store = stores.get(scope);
+  if (!store) {
+    store = new InMemoryKeyValueStore();
+    stores.set(scope, store);
+  }
+  return store;
+}
 
 function loadCached(bundleDir: string): Promise<LoadedPiece> {
   let loading = loadedPieces.get(bundleDir);
@@ -74,6 +88,10 @@ async function handleRun(message: RunMessage): Promise<WorkerResponse> {
   const { context, touched } = buildActionContext({
     propsValue: request.propsValue,
     auth: request.auth,
+    store: request.storeScope ? storeForScope(request.storeScope) : undefined,
+    connections: request.connections
+      ? new InMemoryConnectionsProvider(request.connections)
+      : undefined,
     executionType: request.executionType,
     identity: request.identity,
   });
