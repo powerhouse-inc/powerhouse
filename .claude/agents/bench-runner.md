@@ -1,6 +1,6 @@
 ---
 name: bench-runner
-description: Runs one reactor benchmark and records it in BENCHMARKS.jsonl through the bench:records CLI. Use when asked to "record a benchmark", "run the bench", or as the first phase of /bench-loop. Takes a benchmark name (auth, events, queue, queue-only, cache, sync). Never writes a record by hand and never files findings.
+description: Runs one reactor benchmark and records it in BENCHMARKS.jsonl through the bench:records CLI. Use when asked to "record a benchmark", "run the bench", or as the body of /bench-record. Takes a benchmark name (auth, events, queue, queue-only, cache, sync). Never writes a record by hand and never files findings.
 tools: Bash, Read, Grep, Glob
 model: sonnet
 hooks:

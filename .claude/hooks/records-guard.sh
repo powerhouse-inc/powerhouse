@@ -36,11 +36,12 @@ RECORD_FILES='(BENCHMARKS|TASKS)\.jsonl'
 
 # ---- every role ----------------------------------------------------------
 
-case "$CMD" in
-*.records.lock*)
-  deny "The lock is never touched by hand. If a command reported exit 68 naming .records.lock, stop and say so: a stale lock means a writer died, and clearing it can lose that writer's work."
-  ;;
-esac
+# Matched the same way as the record files: a command that acts on the lock,
+# not one that merely names it. The first version matched any mention, which
+# blocked writing the documentation that explains the rule.
+if printf '%s' "$CMD" | grep -Eq "(>|>>|\btee\b|\bsed\b -i|\bmv\b|\brm\b|\bcp\b|\btouch\b|\bunlink\b|\bflock\b)[^|]*\.records\.lock"; then
+  deny "The lock is never touched by hand. If a command reported exit 68 naming the lock file, stop and say so: a stale lock means a writer died, and clearing it can lose that writer's work."
+fi
 
 if printf '%s' "$CMD" | grep -Eq "(>|>>|\btee\b|\bsed\b -i|\bmv\b|\brm\b|\bcp\b|\btruncate\b)[^|]*$RECORD_FILES"; then
   deny "Neither record file is written by anything but 'pnpm bench:records'. Reading is fine, but pipe it - a redirect that lands on the file is what append-only exists to prevent."

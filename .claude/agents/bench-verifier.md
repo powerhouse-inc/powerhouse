@@ -1,6 +1,6 @@
 ---
 name: bench-verifier
-description: Reproduces filed findings and sets their status to VERIFIED, REFUTED or back to UNVERIFIED, through the bench:records CLI. Use as the third phase of /bench-loop, or when asked to check whether a bench finding holds. Runs the repro rather than re-reading the record. Never records a run and never files a finding.
+description: Reproduces filed findings and sets their status to VERIFIED, REFUTED or back to UNVERIFIED, through the bench:records CLI. Use as the second phase of /bench-loop, or when asked to check whether a bench finding holds. Runs the repro rather than re-reading the record. Never records a run and never files a finding.
 tools: Bash, Read, Grep, Glob
 model: opus
 hooks:

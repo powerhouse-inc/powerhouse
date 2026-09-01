@@ -67,9 +67,25 @@ describe("every role", () => {
   });
 
   it("refuses to touch the lock, because a stale one means a writer died", () => {
-    expect(guard("none", "rm packages/reactor/bench/.records.lock").exit).toBe(
-      2,
-    );
+    const lock = "packages/reactor/bench/.records.lock";
+
+    for (const command of [
+      `rm ${lock}`,
+      `mv ${lock} /tmp/x`,
+      `touch ${lock}`,
+    ]) {
+      expect(guard("none", command).exit, command).toBe(2);
+    }
+  });
+
+  it("lets the lock be named by a command that does not act on it", () => {
+    // The first version matched any mention, which blocked writing the
+    // documentation that explains the rule - found by it blocking exactly that.
+    const lock = "packages/reactor/bench/.records.lock";
+
+    for (const command of [`ls -la ${lock}`, `echo "never remove ${lock}"`]) {
+      expect(guard("none", command).exit, command).toBe(0);
+    }
   });
 
   it("leaves a human free to write wherever they are testing", () => {

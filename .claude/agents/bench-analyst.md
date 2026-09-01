@@ -1,6 +1,6 @@
 ---
 name: bench-analyst
-description: Reads recorded benchmarks and files findings in TASKS.jsonl through the bench:records CLI. Use after a benchmark is recorded, or as the second phase of /bench-loop. Files DEFECT, GAP and HARNESS tasks at UNVERIFIED, each anchored on both a record and a line of code. Never records a run and never decides whether a finding holds.
+description: Reads recorded benchmarks and files findings in TASKS.jsonl through the bench:records CLI. Use as the first phase of /bench-loop, which needs no argument and processes every record no task cites yet. Files DEFECT, GAP and HARNESS tasks at UNVERIFIED, each anchored on both a record and a line of code. Never records a run and never decides whether a finding holds.
 tools: Bash, Read, Grep, Glob
 model: sonnet
 hooks:
