@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { DesignTimeService } from "./forms.js";
 import type {
   WorkflowEditorCallbacks,
   WorkflowModel,
@@ -17,6 +18,7 @@ const STATUSES: WorkflowStatusValue[] = [
 export function WorkflowEditorApp(props: {
   model: WorkflowModel;
   callbacks: WorkflowEditorCallbacks;
+  designTime?: DesignTimeService;
 }) {
   const { model, callbacks } = props;
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -67,6 +69,7 @@ export function WorkflowEditorApp(props: {
                 step={selectedStep}
                 callbacks={callbacks}
                 onClose={() => setSelectedId(null)}
+                designTime={props.designTime}
               />
             ) : null}
             {selectedTrigger ? (
@@ -75,6 +78,7 @@ export function WorkflowEditorApp(props: {
                 trigger={selectedTrigger}
                 callbacks={callbacks}
                 onClose={() => setSelectedId(null)}
+                designTime={props.designTime}
               />
             ) : null}
           </aside>

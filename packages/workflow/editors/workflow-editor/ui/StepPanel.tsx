@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import type { BlockForm, DesignTimeService } from "./forms.js";
 import type {
   StepModel,
   TriggerModel,
   WorkflowEditorCallbacks,
 } from "./model.js";
+import { PropertyForm } from "./PropertyForm.js";
 
 function stringify(value: unknown): string {
   try {
@@ -27,16 +29,21 @@ function Field(props: { label: string; children: React.ReactNode }) {
 const inputClass =
   "w-full rounded border border-slate-300 px-2 py-1.5 text-sm text-slate-800";
 
-function ConfigEditor(props: {
+function RawConfigEditor(props: {
   value: unknown;
   onApply: (config: unknown) => void;
 }) {
   const [text, setText] = useState(() => stringify(props.value));
   const [error, setError] = useState<string | null>(null);
+  const [prevValue, setPrevValue] = useState(props.value);
+  if (props.value !== prevValue) {
+    setPrevValue(props.value);
+    setText(stringify(props.value));
+  }
   return (
-    <Field label="Config (JSON)">
+    <div>
       <textarea
-        className={`${inputClass} min-h-36 font-mono text-xs`}
+        className={`${inputClass} min-h-32 font-mono text-xs`}
         value={text}
         onChange={(event) => setText(event.target.value)}
         spellCheck={false}
@@ -56,9 +63,87 @@ function ConfigEditor(props: {
           }
         }}
       >
-        Apply config
+        Apply JSON
       </button>
-    </Field>
+    </div>
+  );
+}
+
+// Loads the block's form descriptor; null means "no form, fall back to JSON".
+function useBlockForm(
+  blockType: string,
+  designTime?: DesignTimeService,
+): BlockForm | null | "loading" {
+  const [state, setState] = useState<{
+    blockType: string;
+    form: BlockForm | null | "loading";
+  }>({ blockType, form: designTime ? "loading" : null });
+  if (state.blockType !== blockType) {
+    setState({ blockType, form: designTime ? "loading" : null });
+  }
+  useEffect(() => {
+    if (!designTime) return;
+    let alive = true;
+    designTime.getBlockForm(blockType).then(
+      (result) => {
+        if (alive) setState({ blockType, form: result });
+      },
+      () => {
+        if (alive) setState({ blockType, form: null });
+      },
+    );
+    return () => {
+      alive = false;
+    };
+  }, [blockType, designTime]);
+  return state.form;
+}
+
+function ConfigSection(props: {
+  blockType: string;
+  config: unknown;
+  onChange: (config: unknown) => void;
+  designTime?: DesignTimeService;
+}) {
+  const form = useBlockForm(props.blockType, props.designTime);
+  const configRecord = (props.config ?? {}) as Record<string, unknown>;
+
+  return (
+    <div className="flex flex-col gap-3">
+      {form === "loading" ? (
+        <p className="text-xs text-slate-400">Loading block properties…</p>
+      ) : null}
+      {form && form !== "loading" && form.props.length > 0 ? (
+        <PropertyForm
+          props={form.props}
+          value={configRecord}
+          onChange={props.onChange}
+          loadOptions={
+            props.designTime
+              ? (propName, current) =>
+                  props.designTime!.loadOptions(
+                    props.blockType,
+                    propName,
+                    current,
+                  )
+              : undefined
+          }
+        />
+      ) : null}
+      {form && form !== "loading" && form.props.length === 0 ? (
+        <p className="text-xs text-slate-400">
+          This block has no configuration.
+        </p>
+      ) : null}
+      <details className="mt-1">
+        <summary className="cursor-pointer text-[11px] text-slate-400">
+          Advanced: edit raw JSON
+        </summary>
+        <div className="mt-2">
+          <RawConfigEditor value={props.config} onApply={props.onChange} />
+        </div>
+      </details>
+    </div>
   );
 }
 
@@ -66,6 +151,7 @@ export function StepPanel(props: {
   step: StepModel;
   callbacks: WorkflowEditorCallbacks;
   onClose: () => void;
+  designTime?: DesignTimeService;
 }) {
   const { step, callbacks } = props;
   return (
@@ -104,18 +190,6 @@ export function StepPanel(props: {
           }}
         />
       </Field>
-      <Field label="Block type">
-        <input
-          key={`${step.id}-block`}
-          className={`${inputClass} font-mono text-xs`}
-          defaultValue={step.blockType}
-          onBlur={(event) => {
-            const blockType = event.target.value.trim();
-            if (blockType && blockType !== step.blockType)
-              callbacks.updateStep({ id: step.id, blockType });
-          }}
-        />
-      </Field>
       <Field label="Connection id (optional)">
         <input
           key={`${step.id}-conn`}
@@ -129,10 +203,12 @@ export function StepPanel(props: {
           }}
         />
       </Field>
-      <ConfigEditor
+      <ConfigSection
         key={`${step.id}-config`}
-        value={step.config}
-        onApply={(config) => callbacks.updateStep({ id: step.id, config })}
+        blockType={step.blockType}
+        config={step.config}
+        onChange={(config) => callbacks.updateStep({ id: step.id, config })}
+        designTime={props.designTime}
       />
       <button
         type="button"
@@ -152,6 +228,7 @@ export function TriggerPanel(props: {
   trigger: TriggerModel;
   callbacks: WorkflowEditorCallbacks;
   onClose: () => void;
+  designTime?: DesignTimeService;
 }) {
   const { trigger, callbacks } = props;
   return (
@@ -173,12 +250,14 @@ export function TriggerPanel(props: {
           readOnly
         />
       </Field>
-      <ConfigEditor
+      <ConfigSection
         key={trigger.id}
-        value={trigger.config}
-        onApply={(config) =>
+        blockType={trigger.blockType}
+        config={trigger.config}
+        onChange={(config) =>
           callbacks.setTrigger({ blockType: trigger.blockType, config })
         }
+        designTime={props.designTime}
       />
       <button
         type="button"
