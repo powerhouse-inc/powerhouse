@@ -429,7 +429,6 @@ and real-time processing with a "Vetra" drive or connection to remote drives.
 
 **Connect Port** - port to use for the Vetra Connect - Usage: `--connect-port <number>`
 
-**Default:** `3001`
 **Remote Drive** - URL of remote drive to connect to (skips switchboard initialization) - Usage: `--remote-drive <str>`
 
 **Drives Public Base** - public base URL for the drive URLs advertised to Connect; each drive is exposed as &lt;base&gt;/d/&lt;slug&gt; instead of `http://localhost:<switchboard-port>/d/<slug>`. Use when the switchboard is reachable through a reverse proxy. - Usage: `--drives-public-base <str>`

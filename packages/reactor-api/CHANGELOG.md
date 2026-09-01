@@ -1,3 +1,22 @@
+## 6.2.2-dev.71 (2026-09-01)
+
+### 🚀 Features
+
+- agent-managed Vetra with per-project ports ([#2946](https://github.com/powerhouse-inc/powerhouse/pull/2946))
+
+### 🩹 Fixes
+
+- **reactor-api:** declare codegen scalars in document-model subgraph SDL ([396d95079](https://github.com/powerhouse-inc/powerhouse/commit/396d95079))
+- **reactor-api:** stop the gateway reusing subgraph connections the server has closed ([#2942](https://github.com/powerhouse-inc/powerhouse/pull/2942))
+- **reactor-api:** hold @apollo/subgraph below 2.15 and use its array form ([ec6d19da0](https://github.com/powerhouse-inc/powerhouse/commit/ec6d19da0))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5
+- Frank @froid1911
+
 ## 6.2.2-dev.70 (2026-09-01)
 
 This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.

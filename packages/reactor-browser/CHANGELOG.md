@@ -1,3 +1,22 @@
+## 6.2.2-dev.71 (2026-09-01)
+
+### 🚀 Features
+
+- agent-managed Vetra with per-project ports ([#2946](https://github.com/powerhouse-inc/powerhouse/pull/2946))
+
+### 🩹 Fixes
+
+- **reactor-api:** hold @apollo/subgraph below 2.15 and use its array form ([ec6d19da0](https://github.com/powerhouse-inc/powerhouse/commit/ec6d19da0))
+- **reactor-browser:** retry the import under a new id when the create collides ([f324f42ad](https://github.com/powerhouse-inc/powerhouse/commit/f324f42ad))
+- **reactor-browser:** fail the import when there is no reactor client ([207cf9aa6](https://github.com/powerhouse-inc/powerhouse/commit/207cf9aa6))
+- **reactor-browser:** stop reusing a document id on import ([f23680862](https://github.com/powerhouse-inc/powerhouse/commit/f23680862))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5
+- Frank @froid1911
+
 ## 6.2.2-dev.70 (2026-09-01)
 
 This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.
