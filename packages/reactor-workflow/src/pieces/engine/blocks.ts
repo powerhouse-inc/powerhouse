@@ -108,13 +108,21 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
   }
 }
 
-// Routes core#* to the core executor and everything else to the piece executor.
+// Routes explicit handlers first, then core#*, then the piece executor.
+// Handlers let the host add blocks needing host services (e.g. core#document-*).
 export class CompositeBlockExecutor implements BlockExecutor {
   private readonly core = new CoreBlockExecutor();
 
-  constructor(private readonly pieces: BlockExecutor) {}
+  constructor(
+    private readonly pieces: BlockExecutor,
+    private readonly handlers: Record<string, BlockExecutor> = {},
+  ) {}
 
   execute(execution: BlockExecution): Promise<BlockResult> {
+    const handler = this.handlers[execution.blockType] as
+      | BlockExecutor
+      | undefined;
+    if (handler) return handler.execute(execution);
     if (CoreBlockExecutor.handles(execution.blockType)) {
       return this.core.execute(execution);
     }

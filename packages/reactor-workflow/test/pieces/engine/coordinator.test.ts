@@ -266,3 +266,38 @@ describe("parseBlockType", () => {
     expect(parseBlockType("no-action")).toBeUndefined();
   });
 });
+
+describe("CompositeBlockExecutor handlers", () => {
+  it("routes registered block types to their handler first", async () => {
+    const handled: string[] = [];
+    const handler = {
+      execute: (execution: BlockExecution) => {
+        handled.push(execution.blockType);
+        return Promise.resolve({ output: "handled" });
+      },
+    };
+    const executor = new CompositeBlockExecutor(new FakeExecutor(), {
+      "core#document-create": handler,
+    });
+
+    const result = await executor.execute({
+      blockType: "core#document-create",
+      config: {},
+      step: {
+        id: "s",
+        key: "s",
+        blockType: "core#document-create",
+        config: {},
+      },
+    });
+    expect(result.output).toBe("handled");
+    expect(handled).toEqual(["core#document-create"]);
+
+    const branch = await executor.execute({
+      blockType: "core#branch",
+      config: { condition: true },
+      step: { id: "b", key: "b", blockType: "core#branch", config: {} },
+    });
+    expect(branch.port).toBe("true");
+  });
+});
