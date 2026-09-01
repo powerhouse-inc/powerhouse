@@ -54,11 +54,13 @@ export class DocumentConnectionResolver implements EngineConnectionResolver {
   }
 }
 
+export const BUNDLE_CACHE_DIR = join(process.cwd(), ".ph", "ap-bundles");
+
 export function createBlockExecutor(subgraph: BaseSubgraph): BlockExecutor {
   const documents = new DocumentBlockExecutor(subgraph);
   return new CompositeBlockExecutor(
     new ActivepiecesBlockExecutor({
-      cacheDir: join(process.cwd(), ".ph", "ap-bundles"),
+      cacheDir: BUNDLE_CACHE_DIR,
       connections: new DocumentConnectionResolver(subgraph),
     }),
     {

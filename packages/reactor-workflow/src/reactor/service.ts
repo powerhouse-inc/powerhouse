@@ -2,8 +2,14 @@
 // document-event processor; moves to a dedicated runtime package later.
 import type { BaseSubgraph } from "@powerhousedao/reactor-api";
 import {
+  buildDescriptor,
+  ensurePieceBundle,
+  loadPieceFromDir,
+  parseBlockType,
+  PieceWorker,
   runWorkflow,
   type BlockExecutor,
+  type ConnectorDescriptor,
   type WorkflowRunResult,
 } from "@powerhousedao/reactor-connectors";
 import { childLogger, type OperationWithContext } from "document-model";
@@ -11,7 +17,11 @@ import type {
   WorkflowDocument,
   WorkflowState,
 } from "document-models/workflow/v1";
-import { createBlockExecutor, toWorkflowDefinition } from "./lib.js";
+import {
+  BUNDLE_CACHE_DIR,
+  createBlockExecutor,
+  toWorkflowDefinition,
+} from "./lib.js";
 import { WorkflowRunStore } from "./store.js";
 
 export type PersistedRunResult = WorkflowRunResult & { runId: string | null };
@@ -195,6 +205,73 @@ export class WorkflowRuntimeService {
         );
       }
     }
+  }
+
+  private readonly descriptors = new Map<string, ConnectorDescriptor>();
+  private designWorker?: PieceWorker;
+
+  private async pieceDescriptor(
+    packageName: string,
+    version: string,
+  ): Promise<ConnectorDescriptor> {
+    const cacheKey = `${packageName}@${version}`;
+    let descriptor = this.descriptors.get(cacheKey);
+    if (!descriptor) {
+      const bundle = await ensurePieceBundle({
+        name: packageName,
+        version,
+        cacheDir: BUNDLE_CACHE_DIR,
+      });
+      const { piece } = await loadPieceFromDir(bundle.dir);
+      descriptor = buildDescriptor(piece, { packageName, version });
+      this.descriptors.set(cacheKey, descriptor);
+    }
+    return descriptor;
+  }
+
+  // Design-time: the action descriptor (props, auth) driving the editor form.
+  async blockDescriptor(blockType: string): Promise<unknown> {
+    const parsed = parseBlockType(blockType);
+    if (!parsed) return null;
+    const descriptor = await this.pieceDescriptor(
+      parsed.packageName,
+      parsed.version,
+    );
+    const action = descriptor.actions.find(
+      (entry) => entry.name === parsed.actionName,
+    );
+    if (!action) return null;
+    return {
+      displayName: descriptor.displayName,
+      logoUrl: descriptor.logoUrl,
+      auth: descriptor.auth ?? null,
+      action,
+    };
+  }
+
+  // Design-time DROPDOWN options() / DYNAMIC props(), run in the piece worker.
+  async blockOptions(
+    blockType: string,
+    propName: string,
+    input?: unknown,
+  ): Promise<unknown> {
+    const parsed = parseBlockType(blockType);
+    if (!parsed) {
+      throw new Error(`Not a piece block type: "${blockType}"`);
+    }
+    const bundle = await ensurePieceBundle({
+      name: parsed.packageName,
+      version: parsed.version,
+      cacheDir: BUNDLE_CACHE_DIR,
+    });
+    this.designWorker ??= new PieceWorker();
+    const result = await this.designWorker.resolveOptions({
+      bundleDir: bundle.dir,
+      actionName: parsed.actionName,
+      propName,
+      refresherValues: (input ?? {}) as Record<string, unknown>,
+    });
+    return result.output;
   }
 
   async fire(

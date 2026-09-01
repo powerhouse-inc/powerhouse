@@ -12,6 +12,14 @@ export const schema: DocumentNode = gql`
     """
     runs(workflowId: String, limit: Int): [WorkflowRunRecord!]!
     run(id: String!): WorkflowRunRecord
+    """
+    Action descriptor (props, auth) for a piece block type; null for core blocks.
+    """
+    blockDescriptor(blockType: String!): Unknown
+    """
+    Resolves a dynamic prop's options against the current config values.
+    """
+    blockOptions(blockType: String!, propName: String!, input: Unknown): Unknown
   }
 
   type Query {

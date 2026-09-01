@@ -61,6 +61,13 @@ export const getResolvers = (
     },
     WorkflowRuntimeQueries: {
       health: () => "ok",
+      blockDescriptor: (_parent: unknown, args: { blockType: string }) =>
+        workflowRuntime.blockDescriptor(args.blockType),
+      blockOptions: (
+        _parent: unknown,
+        args: { blockType: string; propName: string; input?: unknown },
+      ) =>
+        workflowRuntime.blockOptions(args.blockType, args.propName, args.input),
       runs: async (_parent: unknown, args: RunsArgs) => {
         const store = await workflowRuntime.store();
         if (!store) return [];
