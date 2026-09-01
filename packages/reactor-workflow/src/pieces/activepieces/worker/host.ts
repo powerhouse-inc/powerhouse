@@ -3,6 +3,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type {
+  ResolveOptionsRequest,
   RunActionRequest,
   SerializedPieceError,
   WorkerResponse,
@@ -77,8 +78,24 @@ export class PieceWorker {
     request: RunActionRequest,
     options: { timeoutMs?: number } = {},
   ): Promise<PieceWorkerResult> {
+    return this.enqueue("run", request, options.timeoutMs);
+  }
+
+  // Design-time DROPDOWN options() / DYNAMIC props() resolution.
+  resolveOptions(
+    request: ResolveOptionsRequest,
+    options: { timeoutMs?: number } = {},
+  ): Promise<PieceWorkerResult> {
+    return this.enqueue("resolve-options", request, options.timeoutMs);
+  }
+
+  private enqueue(
+    type: "run" | "resolve-options",
+    request: RunActionRequest | ResolveOptionsRequest,
+    timeoutMs?: number,
+  ): Promise<PieceWorkerResult> {
     const run = this.queue.then(() =>
-      this.execute(request, options.timeoutMs ?? this.defaultTimeoutMs),
+      this.execute(type, request, timeoutMs ?? this.defaultTimeoutMs),
     );
     this.queue = run.catch(() => undefined);
     return run;
@@ -106,7 +123,8 @@ export class PieceWorker {
   }
 
   private execute(
-    request: RunActionRequest,
+    type: "run" | "resolve-options",
+    request: RunActionRequest | ResolveOptionsRequest,
     timeoutMs: number,
   ): Promise<PieceWorkerResult> {
     const child = this.spawn();
@@ -147,7 +165,7 @@ export class PieceWorker {
 
       child.on("message", onMessage);
       child.on("exit", onExit);
-      child.send({ id, type: "run", request });
+      child.send({ id, type, request });
     });
   }
 }

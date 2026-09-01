@@ -152,3 +152,25 @@ describe.skipIf(!httpBundle || !subflowsBundle)("PieceWorker", () => {
     expect(result.output).toMatchObject({ status: 200 });
   }, 15_000);
 });
+
+describe.skipIf(!subflowsBundle)("PieceWorker.resolveOptions", () => {
+  it("resolves a DROPDOWN options() through the worker", async () => {
+    const worker = new PieceWorker();
+    try {
+      const result = await worker.resolveOptions({
+        bundleDir: subflowsBundle,
+        actionName: "callFlow",
+        propName: "flowId",
+        refresherValues: {},
+      });
+      const output = result.output as {
+        options: unknown[];
+        disabled?: boolean;
+      };
+      expect(Array.isArray(output.options)).toBe(true);
+      expect(output.options).toHaveLength(0);
+    } finally {
+      worker.dispose();
+    }
+  });
+});

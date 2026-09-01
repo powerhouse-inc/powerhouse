@@ -6,11 +6,17 @@ import {
   InMemoryKeyValueStore,
   UnsupportedContextMemberError,
 } from "../context/action.js";
+import {
+  buildPropertyContext,
+  resolveDynamicProperty,
+} from "../context/props.js";
 import { loadPieceFromDir, type LoadedPiece } from "../loader.js";
 import { getActions } from "../types.js";
 import type {
+  ResolveOptionsMessage,
   RunMessage,
   SerializedPieceError,
+  WorkerRequestMessage,
   WorkerResponse,
 } from "./protocol.js";
 
@@ -74,6 +80,36 @@ function consumeTlsFlag(): boolean {
   return poisoned;
 }
 
+async function handleResolveOptions(
+  message: ResolveOptionsMessage,
+): Promise<WorkerResponse> {
+  const { request } = message;
+  const { piece } = await loadCached(request.bundleDir);
+  const { context, touched } = buildPropertyContext({
+    searchValue: request.searchValue,
+    // Design-time default: an empty flows listing instead of a throwing stub.
+    flows: { list: () => Promise.resolve({ data: [] }) },
+  });
+  const refresherValues = {
+    ...(request.auth !== undefined ? { auth: request.auth } : {}),
+    ...request.refresherValues,
+  };
+  const output = await resolveDynamicProperty({
+    piece,
+    actionName: request.actionName,
+    propName: request.propName,
+    refresherValues,
+    context,
+  });
+  return {
+    id: message.id,
+    type: "result",
+    output: jsonSafe(output),
+    touched: [...touched],
+    tlsPoisoned: consumeTlsFlag(),
+  };
+}
+
 async function handleRun(message: RunMessage): Promise<WorkerResponse> {
   const { request } = message;
   const { piece } = await loadCached(request.bundleDir);
@@ -105,17 +141,17 @@ async function handleRun(message: RunMessage): Promise<WorkerResponse> {
   };
 }
 
-function isRunMessage(value: unknown): value is RunMessage {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    (value as { type?: unknown }).type === "run"
-  );
+function isWorkerMessage(value: unknown): value is WorkerRequestMessage {
+  if (typeof value !== "object" || value === null) return false;
+  const type = (value as { type?: unknown }).type;
+  return type === "run" || type === "resolve-options";
 }
 
 process.on("message", (message: unknown) => {
-  if (!isRunMessage(message)) return;
-  handleRun(message)
+  if (!isWorkerMessage(message)) return;
+  const handler =
+    message.type === "run" ? handleRun(message) : handleResolveOptions(message);
+  handler
     .catch(
       (error: unknown): WorkerResponse => ({
         id: message.id,

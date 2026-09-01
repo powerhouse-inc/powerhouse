@@ -19,6 +19,24 @@ export interface RunMessage {
   request: RunActionRequest;
 }
 
+// Design-time resolution of a DROPDOWN options() / DYNAMIC props() resolver.
+export interface ResolveOptionsRequest {
+  bundleDir: string;
+  actionName: string;
+  propName: string;
+  refresherValues?: Record<string, unknown>;
+  auth?: unknown;
+  searchValue?: string;
+}
+
+export interface ResolveOptionsMessage {
+  id: number;
+  type: "resolve-options";
+  request: ResolveOptionsRequest;
+}
+
+export type WorkerRequestMessage = RunMessage | ResolveOptionsMessage;
+
 // Piece errors cross the IPC boundary as data; classify on these fields.
 export interface SerializedPieceError {
   name: string;
