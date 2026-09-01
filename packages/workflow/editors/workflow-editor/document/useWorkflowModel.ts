@@ -88,8 +88,60 @@ export function useWorkflowModel(): {
           }),
         ),
       removeEdge: (id) => dispatch(actions.removeEdge({ id })),
+      insertStepOnEdge: (edgeId, input) => {
+        const edge = state.edges.find((entry) => entry.id === edgeId);
+        if (!edge) return;
+        const stepId = generateId();
+        dispatch(
+          actions.addStep({
+            id: stepId,
+            key: input.key,
+            name: input.name,
+            blockType: input.blockType,
+            config: input.config,
+          }),
+        );
+        dispatch(actions.removeEdge({ id: edgeId }));
+        dispatch(
+          actions.addEdge({
+            id: generateId(),
+            from: edge.from,
+            to: stepId,
+            port: edge.port,
+            condition: edge.condition,
+          }),
+        );
+        dispatch(
+          actions.addEdge({
+            id: generateId(),
+            from: stepId,
+            to: edge.to,
+            port: "next",
+          }),
+        );
+      },
+      appendStep: (fromId, port, input) => {
+        const stepId = generateId();
+        dispatch(
+          actions.addStep({
+            id: stepId,
+            key: input.key,
+            name: input.name,
+            blockType: input.blockType,
+            config: input.config,
+          }),
+        );
+        dispatch(
+          actions.addEdge({
+            id: generateId(),
+            from: fromId,
+            to: stepId,
+            port,
+          }),
+        );
+      },
     }),
-    [dispatch],
+    [dispatch, state],
   );
 
   return { model, callbacks };

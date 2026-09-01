@@ -1,16 +1,14 @@
-import {
-  Background,
-  Controls,
-  ReactFlow,
-  useEdgesState,
-  useNodesState,
-  type Connection,
-  type Edge,
-  type Node,
-} from "@xyflow/react";
-import { useCallback, useEffect, useMemo } from "react";
-import type { WorkflowEditorCallbacks, WorkflowModel } from "./model.js";
-import { nodeTypes } from "./nodes.js";
+import { Background, Controls, ReactFlow } from "@xyflow/react";
+import { useEffect, useMemo } from "react";
+import { apEdgeTypes } from "./ap-edge.js";
+import { layoutWorkflow } from "./ap-layout.js";
+import { apNodeTypes, registerCanvasHandlers } from "./ap-nodes.js";
+import type { BlockPreset } from "./blocks.js";
+import type {
+  AddStepInputModel,
+  WorkflowEditorCallbacks,
+  WorkflowModel,
+} from "./model.js";
 
 interface WorkflowCanvasProps {
   model: WorkflowModel;
@@ -18,41 +16,25 @@ interface WorkflowCanvasProps {
   onSelect: (id: string | null) => void;
 }
 
-function toNodes(model: WorkflowModel): Node[] {
-  const nodes: Node[] = [];
-  if (model.trigger) {
-    nodes.push({
-      id: model.trigger.id,
-      type: "trigger",
-      position: { x: 40, y: 20 },
-      data: { trigger: model.trigger },
-      deletable: false,
-    });
-  }
-  model.steps.forEach((step, index) => {
-    nodes.push({
-      id: step.id,
-      type: "step",
-      position: step.position ?? {
-        x: 60 + (index % 3) * 240,
-        y: 140 + Math.floor(index / 3) * 130,
-      },
-      data: { step },
-    });
-  });
-  return nodes;
-}
-
-function toEdges(model: WorkflowModel): Edge[] {
-  return model.edges.map((edge) => ({
-    id: edge.id,
-    source: edge.from,
-    target: edge.to,
-    sourceHandle: edge.port,
-    targetHandle: "in",
-    label: edge.condition ? `${edge.port} ?` : edge.port,
-    animated: edge.port === "next",
-  }));
+function presetToInput(
+  preset: BlockPreset,
+  model: WorkflowModel,
+): AddStepInputModel {
+  const base =
+    preset.label
+      .toLowerCase()
+      .replaceAll(/[^a-z0-9]+/g, "_")
+      .replaceAll(/^_+|_+$/g, "") || "step";
+  const keys = new Set(model.steps.map((step) => step.key));
+  let key = base;
+  let suffix = 2;
+  while (keys.has(key)) key = `${base}_${suffix++}`;
+  return {
+    key,
+    name: preset.label,
+    blockType: preset.blockType,
+    config: preset.defaultConfig,
+  };
 }
 
 export function WorkflowCanvas({
@@ -60,76 +42,39 @@ export function WorkflowCanvas({
   callbacks,
   onSelect,
 }: WorkflowCanvasProps) {
-  const [nodes, setNodes, onNodesChange] = useNodesState(toNodes(model));
-  const [edges, setEdges, onEdgesChange] = useEdgesState(toEdges(model));
+  const { nodes, edges } = useMemo(() => layoutWorkflow(model), [model]);
 
-  // The document is the source of truth; rebuild whenever it changes.
   useEffect(() => {
-    setNodes(toNodes(model));
-    setEdges(toEdges(model));
-  }, [model, setNodes, setEdges]);
-
-  const triggerId = model.trigger?.id;
-
-  const onConnect = useCallback(
-    (connection: Connection) => {
-      if (!connection.source || !connection.target) return;
-      if (connection.target === triggerId) return;
-      callbacks.addEdge({
-        from: connection.source,
-        to: connection.target,
-        port: connection.sourceHandle ?? "next",
-      });
-    },
-    [callbacks, triggerId],
-  );
-
-  const onNodeDragStop = useCallback(
-    (_event: unknown, node: Node) => {
-      if (node.id === triggerId) return;
-      callbacks.updateStep({
-        id: node.id,
-        position: { x: node.position.x, y: node.position.y },
-      });
-    },
-    [callbacks, triggerId],
-  );
-
-  const onNodesDelete = useCallback(
-    (deleted: Node[]) => {
-      for (const node of deleted) {
-        if (node.id !== triggerId) callbacks.removeStep(node.id);
-      }
-    },
-    [callbacks, triggerId],
-  );
-
-  const onEdgesDelete = useCallback(
-    (deleted: Edge[]) => {
-      for (const edge of deleted) callbacks.removeEdge(edge.id);
-    },
-    [callbacks],
-  );
-
-  const fitViewOptions = useMemo(() => ({ padding: 0.2, maxZoom: 1 }), []);
+    registerCanvasHandlers({
+      appendStep: (fromId, port, preset) =>
+        callbacks.appendStep(fromId, port, presetToInput(preset, model)),
+      insertOnEdge: (edgeId, preset) =>
+        callbacks.insertStepOnEdge(edgeId, presetToInput(preset, model)),
+      pickTrigger: (preset) =>
+        callbacks.setTrigger({
+          blockType: preset.blockType,
+          config: preset.defaultConfig,
+        }),
+    });
+  }, [callbacks, model]);
 
   return (
     <ReactFlow
       nodes={nodes}
       edges={edges}
-      nodeTypes={nodeTypes}
-      onNodesChange={onNodesChange}
-      onEdgesChange={onEdgesChange}
-      onConnect={onConnect}
-      onNodeDragStop={onNodeDragStop}
-      onNodesDelete={onNodesDelete}
-      onEdgesDelete={onEdgesDelete}
-      onNodeClick={(_event, node) => onSelect(node.id)}
+      nodeTypes={apNodeTypes}
+      edgeTypes={apEdgeTypes}
+      onNodeClick={(_event, node) => {
+        if (node.type === "apStep") onSelect(node.id);
+      }}
       onPaneClick={() => onSelect(null)}
+      nodesDraggable={false}
+      nodesConnectable={false}
+      deleteKeyCode={null}
+      zoomOnDoubleClick={false}
       fitView
-      fitViewOptions={fitViewOptions}
+      fitViewOptions={{ padding: 0.25, maxZoom: 1 }}
       proOptions={{ hideAttribution: true }}
-      deleteKeyCode={["Backspace", "Delete"]}
     >
       <Background gap={16} />
       <Controls showInteractive={false} />

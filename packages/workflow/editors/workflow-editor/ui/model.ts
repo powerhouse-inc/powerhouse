@@ -75,6 +75,9 @@ export interface WorkflowEditorCallbacks {
     condition?: string;
   }) => void;
   removeEdge: (id: string) => void;
+  // Composite operations backing the canvas add buttons.
+  insertStepOnEdge: (edgeId: string, input: AddStepInputModel) => void;
+  appendStep: (fromId: string, port: string, input: AddStepInputModel) => void;
 }
 
 // Output ports a step exposes, mirroring the engine's routing semantics.
