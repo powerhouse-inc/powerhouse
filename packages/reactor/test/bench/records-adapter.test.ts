@@ -235,10 +235,25 @@ describe("buildMicroEntry", () => {
     );
   });
 
-  it("attaches the harness caveat a target always carries", () => {
-    const caveats = entryFor(findTarget("cache")).caveats as string[];
+  it("attaches the harness caveats a target always carries", () => {
+    // Pinned against the target table rather than a literal, because a caveat
+    // that outlives the defect it describes discredits sound numbers - which
+    // is exactly what happened when the cache bench was fixed and this test
+    // went on asserting the old text.
+    const target = findTarget("cache");
+    const caveats = entryFor(target).caveats as string[];
 
-    expect(caveats[0]).toContain("PGlite boots");
+    expect(target.caveats.length).toBeGreaterThan(0);
+    expect(caveats.slice(0, target.caveats.length)).toEqual(target.caveats);
+  });
+
+  it("puts the target's own caveats before the ones the numbers earned", () => {
+    const target = findTarget("auth");
+    const caveats = entryFor(target, {
+      caveats: ["something the caller added"],
+    }).caveats as string[];
+
+    expect(caveats.at(-1)).toBe("something the caller added");
   });
 
   it("records one invocation, because that is what a run is", () => {
