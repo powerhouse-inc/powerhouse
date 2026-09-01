@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { buildPowerhouseConfigTemplate } from "templates";
 import { applyProjectCustomizations } from "./generated-project-files.js";
 
 const MCP_BODY = {
@@ -19,7 +20,11 @@ function scaffold(): string {
   );
   writeFileSync(
     join(dir, "powerhouse.config.json"),
-    JSON.stringify({ studio: { port: 3000 }, reactor: { port: 4001 } }, null, 2),
+    JSON.stringify(
+      { studio: { port: 3000 }, reactor: { port: 4001 } },
+      null,
+      2,
+    ),
   );
   writeFileSync(join(dir, ".mcp.json"), JSON.stringify(MCP_BODY, null, 2));
   mkdirSync(join(dir, ".cursor"), { recursive: true });
@@ -92,5 +97,34 @@ describe("applyProjectCustomizations port assignment", () => {
       ).reactor.port;
 
     expect(portOf(a)).not.toBe(portOf(b));
+  });
+});
+
+describe("buildPowerhouseConfigTemplate", () => {
+  it("emits the project's derived ports on the fresh-scaffold path", async () => {
+    const raw = await buildPowerhouseConfigTemplate({ name: "my-package" });
+    const config = JSON.parse(raw) as {
+      studio: { port: number };
+      reactor: { port: number };
+      vetra: { connectPort: number };
+    };
+    const expected = deriveProjectPorts("my-package");
+    expect(config.reactor.port).toBe(expected.switchboardPort);
+    expect(config.studio.port).toBe(expected.studioPort);
+    expect(config.vetra.connectPort).toBe(expected.vetraConnectPort);
+  });
+
+  it("keeps the remote drive alongside connectPort", async () => {
+    const raw = await buildPowerhouseConfigTemplate({
+      name: "my-package",
+      remoteDrive: "http://example.test/d/vetra-abc",
+    });
+    const config = JSON.parse(raw) as {
+      vetra: { connectPort: number; driveId: string; driveUrl: string };
+    };
+    expect(config.vetra.driveId).toBe("vetra-abc");
+    expect(config.vetra.connectPort).toBe(
+      deriveProjectPorts("my-package").vetraConnectPort,
+    );
   });
 });

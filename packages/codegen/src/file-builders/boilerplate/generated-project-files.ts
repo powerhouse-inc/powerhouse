@@ -185,7 +185,12 @@ export async function writeProjectRootFiles(
     remoteDrive?: string;
     packageManager?: string;
   },
-  projectDir = process.cwd(),
+  // Unused. Every write below is a relative path, so this function has always
+  // written to `process.cwd()`; the parameter was only ever read by the
+  // `applyProjectCustomizations` call that now runs in the caller. Kept in
+  // position because this is exported API — dropping a positional parameter
+  // would silently change the published signature.
+  _projectDir = process.cwd(),
 ) {
   const { name, tag, version, remoteDrive, packageManager } = args;
   await writeFileEnsuringDir("LICENSE", licenseTemplate);
@@ -261,7 +266,10 @@ export async function applyProjectCustomizations(args: {
   // Keep them in step with the port just assigned.
   const mcpFiles: [string, string][] = [
     [".mcp.json", buildMcpTemplate(ports.switchboardPort)],
-    [join(".cursor", "mcp.json"), buildCursorMcpTemplate(ports.switchboardPort)],
+    [
+      join(".cursor", "mcp.json"),
+      buildCursorMcpTemplate(ports.switchboardPort),
+    ],
   ];
   for (const [rel, contents] of mcpFiles) {
     const target = join(projectDir, rel);

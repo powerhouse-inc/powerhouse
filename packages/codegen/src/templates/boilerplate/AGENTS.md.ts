@@ -19,12 +19,22 @@ This project creates document models, editors, processors and subgraphs for the 
 - **Reactor Package**: A deployable bundle that extends the Reactor. It contains one or more document models, editors, processors, and subgraphs. A Vetra project generates a Reactor Package.
 - **Connect**: The Powerhouse web application for document management. End users open Connect to browse drives, create documents, and interact with editors.
 - **Switchboard**: The Powerhouse API service. It exposes GraphQL and MCP endpoints so external tools can read/write documents programmatically.
-- **Vetra**: The local development environment for building Reactor Packages. It includes Vetra Studio (a local Connect instance) and Vetra Switchboard (a local Switchboard with reactor-mcp). Start it with \`ph vetra\`.
+- **Vetra**: The local development environment for building Reactor Packages. It includes Vetra Studio (a local Connect instance) and Vetra Switchboard (a local Switchboard with reactor-mcp). **You start it yourself** with \`ph vetra --strictPort --watch\` as a background process — see the MCP rules below. Its ports are assigned per project in \`powerhouse.config.json\`, so they never collide with another project's.
 
 ## CRITICAL: MCP Tool Usage Rules
 
 **MANDATORY**: The \`reactor-mcp\` MUST BE USED when handling documents or document-models for the Powerhouse/Vetra ecosystem.
-If the \`reactor-mcp\` server is unavailable, ask the user to run \`ph vetra\` on a separate terminal to start the server and try to reconnect to the MCP server, DO NOT run it yourself.
+If the \`reactor-mcp\` server is unavailable, **start Vetra yourself** — do not ask the user to do it:
+
+1. **Check for a running instance.** If \`.ph/vetra-runtime.json\` exists and describes a live instance, Vetra is already up: report its Connect URL and stop. Never start a second one — a project must have exactly one reactor, because two would contend for the same \`.ph/\` storage and leave you with two drives that diverge.
+2. **Start it in the background:** \`ph vetra --strictPort --watch\`. Pass no port flags. The project's ports live in \`powerhouse.config.json\` and are already what \`.mcp.json\` points at; choosing your own port is how you end up talking to a different project's reactor. \`--strictPort\` makes a genuine conflict fail loudly instead of silently binding a neighbouring port.
+3. **Wait for readiness.** Poll \`GET http://localhost:<port>/ready\` until it returns 200, for at most 60 seconds, where \`<port>\` is the one in \`.mcp.json\`. Poll that port specifically: it is the only one your MCP client will ever use, so a timeout there is the correct signal even if Vetra came up somewhere else.
+4. **Tell the user the Connect URL** so they can watch their editors render.
+5. **Reconnect to the MCP server** and continue the task.
+
+Escalate to the user only when startup actually fails — \`--strictPort\` rejected the port, \`/ready\` never returned 200, or the process crashed — and include the real error output.
+
+**Never edit \`.mcp.json\` to chase a port.** A mismatch between it and the running switchboard is a bug worth reporting, not routing around; \`ph vetra\` owns that reconciliation and will rewrite the file itself when a local override moves the port.
 
 ### Key Requirements:
 

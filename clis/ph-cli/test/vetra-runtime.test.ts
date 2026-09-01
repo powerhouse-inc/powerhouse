@@ -68,7 +68,10 @@ describe("vetra runtime record", () => {
   it("treats a live pid whose /ready never answers as stale", async () => {
     const dir = tmp();
     writeVetraRuntime(dir, record);
-    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("ECONNREFUSED")));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockRejectedValue(new Error("ECONNREFUSED")),
+    );
     await expect(probeVetraRuntime(dir, "my-package")).resolves.toEqual({
       status: "stale",
     });

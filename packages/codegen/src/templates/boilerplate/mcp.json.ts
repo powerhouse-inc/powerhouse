@@ -9,7 +9,8 @@ import { json } from "@tmpl/core";
  * `powerhouse.config.json`. `ph vetra` reconciles the literal if an override
  * moves the port.
  */
-export const buildMcpTemplate = (port: number) => json`
+export const buildMcpTemplate = (port: number) =>
+  json`
 {
   "mcpServers": {
     "reactor-mcp": {
