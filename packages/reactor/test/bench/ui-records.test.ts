@@ -249,6 +249,14 @@ describe("taskEvents and referenceProblems", () => {
     expect(events[2].kind).toBe("DEFECT");
   });
 
+  it("reports an id that appears twice", () => {
+    const twin = bench({ id: "B-001", recordedAt: "2026-09-01T15:00:00.000Z" });
+    const index = indexRecords([runOne, twin], []);
+    expect(referenceProblems(index, [runOne, twin], [])).toEqual([
+      "B-001 appears more than once; the last one wins",
+    ]);
+  });
+
   it("reports references to ids that are not in the files", () => {
     const dangling = task(defectTask, {
       id: "T-010",

@@ -233,6 +233,13 @@ export function siteSha(task, index) {
 
 export function referenceProblems(index, benchmarks, tasks) {
   const problems = [];
+  const seen = new Set();
+  for (const entry of [...benchmarks, ...tasks]) {
+    if (seen.has(entry.id)) {
+      problems.push(`${entry.id} appears more than once; the last one wins`);
+    }
+    seen.add(entry.id);
+  }
   const check = (owner, field, id) => {
     if (!index.byId.has(id)) {
       problems.push(`${owner}.${field} references unknown ${id}`);
