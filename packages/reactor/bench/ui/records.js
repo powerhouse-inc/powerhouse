@@ -168,7 +168,7 @@ export function chartRows(records, metric, { log = false } = {}) {
           caseKey: caseKey(suite, benchCase),
           caseName: benchCase.name,
           value,
-          lo: Math.max(log ? Number.MIN_VALUE : 0, value - spread),
+          lo: Math.max(log ? value / 100 : 0, value - spread),
           hi: value + spread,
           rmePct: benchCase.rmePct,
           sampleCount: benchCase.sampleCount,

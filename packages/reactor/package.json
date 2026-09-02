@@ -45,6 +45,7 @@
     "bench:records": "tsx bench/records/run-records.ts",
     "bench:records:verify": "tsx bench/records/run-records.ts verify",
     "bench:records:from-vitest": "tsx bench/records/run-from-vitest.ts",
+    "bench:ui": "node bench/ui/serve.mjs",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down"
   },
