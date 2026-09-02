@@ -1,0 +1,45 @@
+import { Permission } from '../../core-utils/index.js';
+
+import { authenticationSession } from '../../../shims/authentication-session.js';
+
+export const routesThatRequireProjectId = {
+  runs: '/runs',
+  singleRun: '/runs/:runId',
+  flows: '/flows',
+  singleFlow: '/flows/:flowId',
+  automations: '/automations',
+  connections: '/connections',
+  singleConnection: '/connections/:connectionId',
+  variables: '/variables',
+  singleAgent: '/agents/:agentId',
+  tables: '/tables',
+  singleTable: '/tables/:tableId',
+  settings: '/settings',
+  releases: '/releases',
+  singleRelease: '/releases/:releaseId',
+};
+
+export const CHAT_ROUTE = '/chat';
+
+export const determineDefaultRoute = ({
+  checkAccess,
+  chatEnabled,
+}: {
+  checkAccess: (permission: Permission) => boolean;
+  chatEnabled?: boolean;
+}) => {
+  if (chatEnabled) {
+    return CHAT_ROUTE;
+  }
+  if (checkAccess(Permission.READ_FLOW) || checkAccess(Permission.READ_TABLE)) {
+    return authenticationSession.appendProjectRoutePrefix('/automations');
+  }
+  if (checkAccess(Permission.READ_RUN)) {
+    return authenticationSession.appendProjectRoutePrefix('/runs');
+  }
+  return authenticationSession.appendProjectRoutePrefix('/settings');
+};
+
+export const TRIAL_KEY_QUERY_PARAM = 'licenseKey';
+export const NEW_FLOW_QUERY_PARAM = 'newFlow';
+export const NEW_TABLE_QUERY_PARAM = 'newTable';

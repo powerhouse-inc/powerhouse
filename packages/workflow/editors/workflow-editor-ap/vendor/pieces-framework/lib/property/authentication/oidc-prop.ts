@@ -1,0 +1,51 @@
+import * as z from "zod/mini";
+import { TPropertyValue } from '../input/common.js';
+import { PropertyType } from '../input/property-type.js';
+import { LongTextProperty, ShortTextProperty } from '../input/text-property.js';
+import { NumberProperty } from '../input/number-property.js';
+import { CheckboxProperty } from '../input/checkbox-property.js';
+import { StaticDropdownProperty, StaticMultiSelectDropdownProperty } from '../input/dropdown/static-dropdown.js';
+import { type StaticPropsValue } from '../index.js';
+import { SecretTextProperty } from './secret-text-property.js';
+import { BasePieceAuthSchema } from './common.js';
+import { MarkDownProperty } from '../input/markdown-property.js';
+
+const OIDCAuthProps = z.record(z.string(), z.union([
+  ShortTextProperty,
+  LongTextProperty,
+  SecretTextProperty,
+  NumberProperty,
+  CheckboxProperty,
+  StaticDropdownProperty,
+  StaticMultiSelectDropdownProperty,
+  MarkDownProperty,
+]));
+
+export type OIDCAuthProps = Record<
+  string,
+  | ShortTextProperty<boolean>
+  | LongTextProperty<boolean>
+  | SecretTextProperty<boolean>
+  | NumberProperty<boolean>
+  | StaticDropdownProperty<unknown, boolean>
+  | CheckboxProperty<boolean>
+  | MarkDownProperty
+  | StaticMultiSelectDropdownProperty<unknown, boolean>
+>;
+
+export const OIDCProperty = z.object({
+  ...BasePieceAuthSchema.shape,
+  props: OIDCAuthProps,
+  ...TPropertyValue(z.unknown(), PropertyType.OIDC).shape,
+})
+
+export type OIDCProperty<
+  T extends OIDCAuthProps
+> = BasePieceAuthSchema<StaticPropsValue<T>> & {
+  props: T;
+} &
+  TPropertyValue<
+    StaticPropsValue<T>,
+    PropertyType.OIDC,
+    true
+  >;

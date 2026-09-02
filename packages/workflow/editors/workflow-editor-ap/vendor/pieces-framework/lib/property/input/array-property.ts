@@ -1,0 +1,50 @@
+import * as z from "zod/mini";
+import { BasePropertySchema, TPropertyValue } from "./common.js";
+import { PropertyType } from "./property-type.js";
+import { LongTextProperty, ShortTextProperty } from "./text-property.js";
+import { StaticDropdownProperty, StaticMultiSelectDropdownProperty } from "./dropdown/static-dropdown.js";
+import { MultiSelectDropdownProperty } from "./dropdown/dropdown-prop.js";
+import { CheckboxProperty } from "./checkbox-property.js";
+import { NumberProperty } from "./number-property.js";
+import { FileProperty } from "./file-property.js";
+import { JsonProperty } from './json-property.js';
+import { ColorProperty } from "./color-property.js";
+import { DateTimeProperty } from './date-time-property.js';
+
+export const ArraySubProps = z.record(z.string(), z.union([
+    ShortTextProperty,
+    LongTextProperty,
+    StaticDropdownProperty,
+    MultiSelectDropdownProperty,
+    StaticMultiSelectDropdownProperty,
+    CheckboxProperty,
+    NumberProperty,
+    FileProperty,
+    DateTimeProperty,
+]))
+
+export const ArrayProperty = z.object({
+    ...BasePropertySchema.shape,
+    properties: ArraySubProps,
+    ...TPropertyValue(z.array(z.unknown()), PropertyType.ARRAY).shape,
+})
+
+export type ArraySubProps<R extends boolean> = Record<
+    string,
+    | ShortTextProperty<R>
+    | LongTextProperty<R>
+    | StaticDropdownProperty<unknown, R>
+    | MultiSelectDropdownProperty<unknown, R>
+    | StaticMultiSelectDropdownProperty<unknown, R>
+    | CheckboxProperty<R>
+    | NumberProperty<R>
+    | FileProperty<R>
+    | JsonProperty<R>
+    | ColorProperty<R>
+    | DateTimeProperty<R>
+>;
+
+export type ArrayProperty<R extends boolean> = BasePropertySchema &
+{
+    properties?: ArraySubProps<R>;
+} & TPropertyValue<unknown[], PropertyType.ARRAY, R>;

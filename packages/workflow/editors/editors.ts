@@ -4,11 +4,13 @@
  */
 import type { EditorModule } from "document-model";
 import { ConnectionEditor } from "./connection-editor/module.js";
+import { WorkflowEditorAp } from "./workflow-editor-ap/module.js";
 import { WorkflowEditor } from "./workflow-editor/module.js";
 import { WorkflowStudio } from "./workflow-studio/module.js";
 
 export const editors: EditorModule[] = [
   ConnectionEditor,
   WorkflowEditor,
+  WorkflowEditorAp,
   WorkflowStudio,
 ];
