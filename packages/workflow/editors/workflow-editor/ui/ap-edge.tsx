@@ -60,6 +60,7 @@ export function ApEdge(props: EdgeProps) {
           <AddButton
             title="Insert step"
             presets={STEP_PRESETS}
+            showPieces
             onPick={(preset) =>
               getCanvasHandlers()?.insertOnEdge(data.edgeId, preset)
             }

@@ -1,6 +1,8 @@
 // Property-driven config form, modeled on the Activepieces piece-properties
 // panel: one control per prop, typed by the descriptor.
 import { useState } from "react";
+import { ActionListEditor } from "./ActionListEditor.js";
+import { AutocompleteInput } from "./Autocomplete.js";
 import type { BlockFormProp } from "./forms.js";
 
 const inputClass =
@@ -62,6 +64,38 @@ function PropField(props: {
   ) : null;
 
   switch (prop.type) {
+    case "PH_AUTOCOMPLETE":
+      return (
+        <label className="block">
+          {label}
+          <AutocompleteInput
+            value={typeof value === "string" ? value : stringifyValue(value)}
+            onCommit={(next) => onCommit(next === "" ? undefined : next)}
+            loadOptions={
+              props.loadOptions
+                ? () => props.loadOptions!(prop.name)
+                : undefined
+            }
+          />
+          {hint}
+        </label>
+      );
+    case "PH_ACTIONS":
+      return (
+        <div>
+          {label}
+          <ActionListEditor
+            value={value}
+            onCommit={onCommit}
+            loadActionTypes={
+              props.loadOptions
+                ? () => props.loadOptions!("actionType")
+                : undefined
+            }
+          />
+          {hint}
+        </div>
+      );
     case "MARKDOWN":
       return (
         <p className="rounded bg-slate-100 px-2 py-1.5 text-xs text-slate-500">

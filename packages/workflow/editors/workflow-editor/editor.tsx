@@ -1,8 +1,15 @@
 import "@xyflow/react/dist/style.css";
 import { DocumentToolbar } from "@powerhousedao/design-system/connect";
 import { useWorkflowModel } from "./document/useWorkflowModel.js";
-import { getBlockForm, loadBlockOptions } from "./runtime-api.js";
+import {
+  fetchPieceActions,
+  fetchPieceCatalog,
+  getBlockForm,
+  loadBlockOptions,
+} from "./runtime-api.js";
 import type { DesignTimeService } from "./ui/forms.js";
+import { registerPieceSource } from "./ui/piece-source.js";
+import { useSyncWorkflowRuntimeUrl } from "./use-runtime-url.js";
 import { WorkflowEditorApp } from "./ui/WorkflowEditorApp.js";
 
 const designTime: DesignTimeService = {
@@ -10,7 +17,13 @@ const designTime: DesignTimeService = {
   loadOptions: loadBlockOptions,
 };
 
+registerPieceSource({
+  loadCatalog: fetchPieceCatalog,
+  loadActions: fetchPieceActions,
+});
+
 export default function Editor() {
+  useSyncWorkflowRuntimeUrl();
   const { model, callbacks } = useWorkflowModel();
 
   return (

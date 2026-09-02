@@ -41,24 +41,4 @@ export const STEP_PRESETS: BlockPreset[] = [
     description: "Sends actions to a document.",
     defaultConfig: { documentId: "", actions: [] },
   },
-  {
-    label: "HTTP request",
-    blockType: "@activepieces/piece-http@0.11.19#send_request",
-    description: "Calls an HTTP endpoint.",
-    defaultConfig: {
-      method: "GET",
-      url: "",
-      headers: {},
-      queryParams: {},
-      authType: "NONE",
-      timeout: 30,
-      failureMode: "continue_none",
-    },
-  },
-  {
-    label: "Gotify notification",
-    blockType: "@activepieces/piece-gotify@0.4.6#send_notification",
-    description: "Sends a Gotify notification (needs a connection).",
-    defaultConfig: { title: "", message: "" },
-  },
 ];

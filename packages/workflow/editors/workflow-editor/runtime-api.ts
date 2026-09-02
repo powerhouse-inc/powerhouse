@@ -4,10 +4,19 @@ import { CORE_FORMS, type BlockForm, type BlockFormProp } from "./ui/forms.js";
 
 const DEFAULT_RUNTIME_URL = "http://localhost:4001/graphql/workflow-runtime";
 
+let currentRuntimeUrl: string | undefined;
+
+// Set by useSyncWorkflowRuntimeUrl from the drive's resolved switchboard URL.
+export function setRuntimeUrl(url: string): void {
+  if (url === currentRuntimeUrl) return;
+  currentRuntimeUrl = url;
+  // Cached design-time results belong to the previous switchboard.
+  formCache.clear();
+  catalogCache = undefined;
+}
+
 function runtimeUrl(): string {
-  const override = (globalThis as { WORKFLOW_RUNTIME_URL?: string })
-    .WORKFLOW_RUNTIME_URL;
-  return override ?? DEFAULT_RUNTIME_URL;
+  return currentRuntimeUrl ?? DEFAULT_RUNTIME_URL;
 }
 
 async function gql<T>(
@@ -66,6 +75,110 @@ export function getBlockForm(blockType: string): Promise<BlockForm | null> {
     cached.catch(() => formCache.delete(blockType));
   }
   return cached;
+}
+
+export interface PieceSummary {
+  name: string;
+  displayName: string;
+  description: string;
+  logoUrl: string;
+  version: string;
+  actionCount: number;
+  // PieceAuth descriptor, verbatim from the piece; null when authless.
+  auth?: unknown;
+}
+
+export interface PieceActionEntry {
+  name: string;
+  displayName: string;
+  description: string;
+  blockType: string;
+}
+
+let catalogCache: Promise<PieceSummary[]> | undefined;
+
+export function fetchPieceCatalog(): Promise<PieceSummary[]> {
+  catalogCache ??= gql<{ workflowRuntime: { pieceCatalog: PieceSummary[] } }>(
+    `query Catalog { workflowRuntime { pieceCatalog } }`,
+    {},
+  ).then((data) => data.workflowRuntime.pieceCatalog);
+  catalogCache.catch(() => (catalogCache = undefined));
+  return catalogCache;
+}
+
+export async function fetchPieceActions(
+  packageName: string,
+): Promise<PieceActionEntry[]> {
+  const data = await gql<{
+    workflowRuntime: { pieceActions: { actions: PieceActionEntry[] } };
+  }>(
+    `query Actions($packageName: String!) {
+      workflowRuntime { pieceActions(packageName: $packageName) }
+    }`,
+    { packageName },
+  );
+  return data.workflowRuntime.pieceActions.actions;
+}
+
+export interface RunStepRecord {
+  stepId: string;
+  stepKey: string;
+  blockType: string;
+  status: string;
+  input: unknown;
+  output: unknown;
+  port: string | null;
+  error: string | null;
+}
+
+export interface RunRecord {
+  id: string;
+  workflowId: string;
+  workflowName: string;
+  workflowVersion: number;
+  triggerKind: string;
+  triggerPayload: unknown;
+  status: string;
+  error: string | null;
+  startedAt: string;
+  endedAt: string | null;
+  steps: RunStepRecord[];
+}
+
+const RUN_FIELDS = `id workflowId workflowName workflowVersion triggerKind
+  triggerPayload status error startedAt endedAt
+  steps { stepId stepKey blockType status input output port error }`;
+
+export async function fetchRuns(
+  workflowId?: string,
+  limit = 30,
+): Promise<RunRecord[]> {
+  const data = await gql<{ workflowRuntime: { runs: RunRecord[] } }>(
+    `query Runs($workflowId: String, $limit: Int) {
+      workflowRuntime { runs(workflowId: $workflowId, limit: $limit) { ${RUN_FIELDS} } }
+    }`,
+    { workflowId: workflowId ?? null, limit },
+  );
+  return data.workflowRuntime.runs;
+}
+
+export interface FireResult {
+  runId: string | null;
+  status: string;
+  error: string | null;
+}
+
+export async function fireWorkflow(
+  workflowId: string,
+  payload?: unknown,
+): Promise<FireResult> {
+  const data = await gql<{ workflowRuntime: { fire: FireResult } }>(
+    `mutation Fire($workflowId: String!, $payload: Unknown) {
+      workflowRuntime { fire(workflowId: $workflowId, payload: $payload) { runId status error } }
+    }`,
+    { workflowId, payload: payload ?? {} },
+  );
+  return data.workflowRuntime.fire;
 }
 
 interface BlockOptionsResult {

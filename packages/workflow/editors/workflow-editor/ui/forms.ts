@@ -40,7 +40,8 @@ const text = (
   description,
 });
 
-const json = (
+// Reactor-backed autocomplete: options load from the runtime subgraph.
+const autocomplete = (
   name: string,
   displayName: string,
   required = false,
@@ -48,9 +49,24 @@ const json = (
 ): BlockFormProp => ({
   name,
   displayName,
-  type: "JSON",
+  type: "PH_AUTOCOMPLETE",
   required,
   description,
+  hasDynamicResolver: true,
+});
+
+// Action list whose action types adapt to the target document type.
+const documentActions = (
+  displayName: string,
+  required = false,
+  description?: string,
+): BlockFormProp => ({
+  name: "actions",
+  displayName,
+  type: "PH_ACTIONS",
+  required,
+  description,
+  hasDynamicResolver: true,
 });
 
 // Hand-written forms for core blocks and triggers.
@@ -60,14 +76,24 @@ export const CORE_FORMS: Record<string, BlockForm> = {
     title: "Document event",
     requireAuth: false,
     props: [
-      text(
+      autocomplete(
         "documentType",
         "Document type",
         false,
         "e.g. powerhouse/connection",
       ),
-      text("documentId", "Document id", false, "Omit to match any document"),
-      text("actionType", "Action type", false, "e.g. SET_ACCOUNT_LABEL"),
+      autocomplete(
+        "documentId",
+        "Document id",
+        false,
+        "Omit to match any document",
+      ),
+      autocomplete(
+        "actionType",
+        "Action type",
+        false,
+        "Omit to match any action",
+      ),
     ],
   },
   "core#branch": {
@@ -86,28 +112,29 @@ export const CORE_FORMS: Record<string, BlockForm> = {
     title: "Create document",
     requireAuth: false,
     props: [
-      text("documentType", "Document type", true),
+      autocomplete("documentType", "Document type", true),
       text("name", "Document name"),
       text("parentId", "Parent drive/folder id"),
-      json(
-        "actions",
-        "Initial actions",
-        false,
-        '[{"type": "...", "input": {}}]',
-      ),
+      documentActions("Initial actions"),
     ],
   },
   "core#document-dispatch": {
     title: "Dispatch actions",
     requireAuth: false,
     props: [
-      text(
+      autocomplete(
         "documentId",
         "Document id",
         true,
         "e.g. {{steps.create.output.documentId}}",
       ),
-      json("actions", "Actions", true, '[{"type": "...", "input": {}}]'),
+      autocomplete(
+        "documentType",
+        "Document type",
+        false,
+        "Design-time hint when the document id is an expression",
+      ),
+      documentActions("Actions", true),
     ],
   },
 };

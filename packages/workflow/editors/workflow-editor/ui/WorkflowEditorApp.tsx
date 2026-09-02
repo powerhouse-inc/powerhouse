@@ -54,7 +54,7 @@ export function WorkflowEditorApp(props: {
         </span>
       </div>
       <div className="flex min-h-0 flex-1">
-        <div className="h-[640px] min-w-0 flex-1">
+        <div className="min-h-[480px] min-w-0 flex-1">
           <WorkflowCanvas
             model={model}
             callbacks={callbacks}
@@ -62,7 +62,7 @@ export function WorkflowEditorApp(props: {
           />
         </div>
         {selectedStep || selectedTrigger ? (
-          <aside className="h-[640px] w-96 overflow-y-auto border-l border-slate-200 bg-slate-50">
+          <aside className="min-h-0 w-96 overflow-y-auto border-l border-slate-200 bg-slate-50">
             {selectedStep ? (
               <StepPanel
                 key={selectedStep.id}

@@ -58,6 +58,7 @@ function AddButton(props: {
   title: string;
   presets: BlockPreset[];
   onPick: (preset: BlockPreset) => void;
+  showPieces?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const size = props.size ?? ADD_BUTTON_SIZE;
@@ -91,6 +92,7 @@ function AddButton(props: {
           <BlockSelector
             title={props.title}
             presets={props.presets}
+            showPieces={props.showPieces}
             onPick={(preset) => {
               setOpen(false);
               props.onPick(preset);
@@ -127,6 +129,7 @@ export function ApAppendNode(props: NodeProps) {
     <AddButton
       title={data.port === "next" ? "Add step" : `Add step (${data.port})`}
       presets={STEP_PRESETS}
+      showPieces
       onPick={(preset) =>
         getCanvasHandlers()?.appendStep(data.parentId, data.port, preset)
       }
