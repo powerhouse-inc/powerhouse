@@ -17,12 +17,45 @@ deny() {
   exit 2
 }
 
-command -v jq >/dev/null 2>&1 ||
-  deny "records-guard needs jq to read the tool payload, and refuses to pass commands through without it."
-
 PAYLOAD="$(cat)"
-TOOL="$(printf '%s' "$PAYLOAD" | jq -r '.tool_name // ""')"
-CMD="$(printf '%s' "$PAYLOAD" | jq -r '.tool_input.command // ""')"
+
+command -v node >/dev/null 2>&1 ||
+  deny "records-guard needs node to read the tool payload, and refuses to pass commands through without it."
+
+# node rather than jq. This script is also the project-wide hook, so anything
+# it needs, it needs on every machine that opens the repo - and jq is not that.
+# CI's node:24 image has no jq either. node is present wherever this repo is.
+#
+# One newline separates the two fields, and tool_name cannot contain one, so a
+# command that does - a heredoc - still survives the split intact.
+FIELDS="$(printf '%s' "$PAYLOAD" | node -e '
+let raw = "";
+process.stdin
+  .on("data", (chunk) => (raw += chunk))
+  .on("end", () => {
+    let payload = {};
+    try {
+      payload = JSON.parse(raw);
+    } catch {
+      payload = {};
+    }
+    const tool = typeof payload.tool_name === "string" ? payload.tool_name : "";
+    const input = payload.tool_input;
+    const command =
+      input && typeof input.command === "string" ? input.command : "";
+    process.stdout.write(tool + "\n" + command);
+  });
+')"
+TOOL="${FIELDS%%$'\n'*}"
+# Command substitution strips trailing newlines, so an empty command leaves no
+# separator at all. Without this the command would inherit the tool name, and
+# the empty-command check below - the one that refuses a call it cannot read -
+# would never fire.
+if [ "$TOOL" = "$FIELDS" ]; then
+  CMD=""
+else
+  CMD="${FIELDS#*$'\n'}"
+fi
 
 # A Bash call whose command the guard cannot see is a call it cannot check.
 if [ "$TOOL" = "Bash" ] && [ -z "$CMD" ]; then
