@@ -18,6 +18,10 @@ import type {
   WorkflowState,
 } from "document-models/workflow/v1";
 import {
+  DOCUMENT_OPTION_PROPS,
+  resolveDocumentOptions,
+} from "./document-options.js";
+import {
   BUNDLE_CACHE_DIR,
   createBlockExecutor,
   toWorkflowDefinition,
@@ -257,6 +261,14 @@ export class WorkflowRuntimeService {
   ): Promise<unknown> {
     const parsed = parseBlockType(blockType);
     if (!parsed) {
+      // Core blocks: document-aware props resolve against the reactor.
+      if (this.subgraph && DOCUMENT_OPTION_PROPS.has(propName)) {
+        return resolveDocumentOptions(
+          this.subgraph.reactorClient,
+          propName,
+          (input ?? {}) as Record<string, unknown>,
+        );
+      }
       throw new Error(`Not a piece block type: "${blockType}"`);
     }
     const bundle = await ensurePieceBundle({
