@@ -602,6 +602,17 @@ const javascriptConfig = {
   extends: [tseslint.configs.disableTypeChecked],
 };
 
+/** The bench records viewer runs unbundled in the browser and its server on node */
+const benchUiConfig = {
+  files: ["packages/reactor/bench/ui/**/*.{js,mjs}"],
+  languageOptions: {
+    globals: {
+      ...globals.browser,
+      ...globals.node,
+    },
+  },
+};
+
 /** Recommended config from eslint */
 const eslintRecommendedConfig = eslint.configs.recommended;
 
@@ -701,6 +712,7 @@ export default defineConfig(
   typescriptConfig,
   reactConfig,
   javascriptConfig,
+  benchUiConfig,
   unsafeConfig,
   generatedFilesConfig,
   cliColdPathConfig,
