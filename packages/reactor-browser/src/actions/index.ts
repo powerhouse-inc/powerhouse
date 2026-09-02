@@ -7,6 +7,7 @@ export {
   exportFile,
   loadFile,
   renameDriveNode,
+  setPreferredEditorOnNode,
   upgradeDocument,
 } from "./document.js";
 export {
