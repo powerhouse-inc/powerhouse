@@ -24,13 +24,31 @@
  *    the create above was awaited: the failure it produces is exactly the one
  *    the fire-and-forget call was swallowing.
  *
- * What it does not cover: backfill. TestChannel pushes on write and its
- * triggerPull is a stub, so a reactor cannot pull history it never saw. Every
- * scenario here has both sides writing live.
+ * What it does not cover: a reactor joining late. Every scenario registers its
+ * remotes before any write and has both sides writing live throughout, so
+ * nothing here exercises catching up on history.
+ *
+ * That is a coverage gap rather than a transport limit. TestChannel's
+ * triggerPull is a stub, so a reactor cannot pull, but SyncManager.add pushes
+ * a backfill from the operation index (src/sync/sync-manager.ts:437), so a
+ * remote added after the writes would in fact receive them. An earlier version
+ * of this comment claimed the opposite, and that claim was load-bearing in a
+ * wrong diagnosis of the convergence stall.
  */
 
+import { readFileSync } from "node:fs";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import { Bench } from "tinybench";
+import {
+  buildMicroEntry,
+  findTarget,
+  suitesFromTinybench,
+} from "./records/from-vitest.js";
+import type { TinybenchTask } from "./records/from-vitest.js";
+import {
+  dirtyPaths,
+  readMachineEnvironment,
+} from "./records/machine-environment.js";
 import { DriveCollectionId } from "../src/cache/operation-index-types.js";
 import { ReactorBuilder } from "../src/core/reactor-builder.js";
 import type { IReactor, ReactorModule } from "../src/core/types.js";
@@ -155,6 +173,26 @@ async function settle(
   throw new Error(`job ${jobId} did not settle within ${timeoutMs}ms`);
 }
 
+type WriteHandle = { reactor: IReactor; jobId: string };
+
+/** Submits one write; execute() resolves at enqueue, so the job settles later. */
+async function submitWrite(
+  reactor: IReactor,
+  docId: string,
+  actions: Parameters<IReactor["execute"]>[2],
+): Promise<WriteHandle> {
+  const info = await reactor.execute(docId, "main", actions);
+  return { reactor, jobId: info.id };
+}
+
+/** A FAILED write silently shrinks the workload, so every job must settle. */
+async function settleWrites(writes: Promise<WriteHandle>[]): Promise<void> {
+  const handles = await Promise.all(writes);
+  for (const handle of handles) {
+    await settle(handle.reactor, handle.jobId);
+  }
+}
+
 /** Creates documents on the chosen side, awaiting each one. */
 async function createDocuments(
   setup: TwoReactorSetup,
@@ -197,6 +235,55 @@ async function connectDocuments(
   }
 }
 
+type ScopeSummary = { actionIds: Set<string>; headHash: string };
+
+/** Action-id set and head hash per scope, from the full unpaged log. */
+async function summarizeScopes(
+  reactor: IReactor,
+  docId: string,
+): Promise<Map<string, ScopeSummary>> {
+  const result = await reactor.getOperations(docId, { branch: "main" });
+  const summaries = new Map<string, ScopeSummary>();
+  for (const [scope, page] of Object.entries(result)) {
+    summaries.set(scope, {
+      actionIds: new Set(page.results.map((op) => op.action.id)),
+      headHash: page.results.at(-1)?.hash ?? "",
+    });
+  }
+  return summaries;
+}
+
+/** Same action set and head (state) hash per scope; never compare op counts. */
+function summariesConverged(
+  a: Map<string, ScopeSummary>,
+  b: Map<string, ScopeSummary>,
+): boolean {
+  if (a.size === 0 || a.size !== b.size) {
+    return false;
+  }
+  for (const [scope, sideA] of a) {
+    const sideB = b.get(scope);
+    if (!sideB) {
+      return false;
+    }
+    if (
+      sideA.actionIds.size === 0 ||
+      sideA.actionIds.size !== sideB.actionIds.size
+    ) {
+      return false;
+    }
+    for (const id of sideA.actionIds) {
+      if (!sideB.actionIds.has(id)) {
+        return false;
+      }
+    }
+    if (sideA.headHash !== sideB.headHash) {
+      return false;
+    }
+  }
+  return true;
+}
+
 async function waitForSync(
   reactorA: IReactor,
   reactorB: IReactor,
@@ -209,13 +296,10 @@ async function waitForSync(
     let allSynced = true;
 
     for (const docId of documentIds) {
-      const resultA = await reactorA.getOperations(docId, { branch: "main" });
-      const opsA = Object.values(resultA).flatMap((scope) => scope.results);
+      const summariesA = await summarizeScopes(reactorA, docId);
+      const summariesB = await summarizeScopes(reactorB, docId);
 
-      const resultB = await reactorB.getOperations(docId, { branch: "main" });
-      const opsB = Object.values(resultB).flatMap((scope) => scope.results);
-
-      if (opsA.length !== opsB.length || opsA.length === 0) {
+      if (!summariesConverged(summariesA, summariesB)) {
         allSynced = false;
         break;
       }
@@ -231,7 +315,7 @@ async function waitForSync(
   throw new Error(`Sync did not complete within ${timeoutMs}ms`);
 }
 
-/** Both sides must agree on every document, or the workload proved nothing. */
+/** Both sides must agree on every document's state; header revisions may not. */
 async function assertConverged(
   reactorA: IReactor,
   reactorB: IReactor,
@@ -240,7 +324,7 @@ async function assertConverged(
   for (const docId of documentIds) {
     const docA = await reactorA.get(docId, { branch: "main" });
     const docB = await reactorB.get(docId, { branch: "main" });
-    if (JSON.stringify(docA) !== JSON.stringify(docB)) {
+    if (JSON.stringify(docA.state) !== JSON.stringify(docB.state)) {
       throw new Error(`Documents ${docId} not synced`);
     }
   }
@@ -273,11 +357,11 @@ const scenarios: Scenario[] = [
       await connectDocuments(setup!, ids);
       await createDocuments(setup!, ids, sideFor);
 
-      const writes: Promise<unknown>[] = [];
+      const writes: Promise<WriteHandle>[] = [];
       for (const [i, docId] of ids.entries()) {
         for (let j = 0; j < 10; j++) {
           writes.push(
-            sideFor(i).execute(docId, "main", [
+            submitWrite(sideFor(i), docId, [
               driveDocumentModelModule.actions.setDriveName({
                 name: `Doc ${i} Update ${j}`,
               }),
@@ -285,7 +369,7 @@ const scenarios: Scenario[] = [
           );
         }
       }
-      await Promise.all(writes);
+      await settleWrites(writes);
 
       await waitForSync(reactorA, reactorB, ids);
       await assertConverged(reactorA, reactorB, ids);
@@ -302,12 +386,12 @@ const scenarios: Scenario[] = [
       await connectDocuments(setup!, ids);
       await createDocuments(setup!, ids, () => reactorA);
 
-      const writes: Promise<unknown>[] = [];
+      const writes: Promise<WriteHandle>[] = [];
       for (const [i, docId] of ids.entries()) {
         for (let j = 0; j < 20; j++) {
           const reactor = j % 2 === 0 ? reactorA : reactorB;
           writes.push(
-            reactor.execute(docId, "main", [
+            submitWrite(reactor, docId, [
               driveDocumentModelModule.actions.setDriveName({
                 name: `Conflict ${i} Write ${j}`,
               }),
@@ -315,7 +399,7 @@ const scenarios: Scenario[] = [
           );
         }
       }
-      await Promise.all(writes);
+      await settleWrites(writes);
 
       await waitForSync(reactorA, reactorB, ids);
       await assertConverged(reactorA, reactorB, ids);
@@ -333,11 +417,11 @@ const scenarios: Scenario[] = [
       await connectDocuments(setup!, ids);
       await createDocuments(setup!, ids, sideFor);
 
-      const writes: Promise<unknown>[] = [];
+      const writes: Promise<WriteHandle>[] = [];
       for (const [i, docId] of ids.entries()) {
         for (let j = 0; j < 100; j++) {
           writes.push(
-            sideFor(i).execute(docId, "main", [
+            submitWrite(sideFor(i), docId, [
               driveDocumentModelModule.actions.setDriveName({
                 name: `Heavy ${i} Update ${j}`,
               }),
@@ -345,7 +429,7 @@ const scenarios: Scenario[] = [
           );
         }
       }
-      await Promise.all(writes);
+      await settleWrites(writes);
 
       await waitForSync(reactorA, reactorB, ids);
       await assertConverged(reactorA, reactorB, ids);
@@ -362,13 +446,13 @@ const scenarios: Scenario[] = [
       await connectDocuments(setup!, ids);
       await createDocuments(setup!, ids, () => reactorA);
 
-      const writes: Promise<unknown>[] = [];
+      const writes: Promise<WriteHandle>[] = [];
       for (const [i, docId] of ids.entries()) {
         let parentFolder: string | null = null;
         for (let level = 0; level < 5; level++) {
           const folderId = deterministicId("folder", i * 100 + level);
           writes.push(
-            reactorA.execute(docId, "main", [
+            submitWrite(reactorA, docId, [
               driveDocumentModelModule.actions.addFolder({
                 id: folderId,
                 name: `Level ${level} Folder`,
@@ -377,7 +461,7 @@ const scenarios: Scenario[] = [
             ]),
           );
           writes.push(
-            reactorB.execute(docId, "main", [
+            submitWrite(reactorB, docId, [
               driveDocumentModelModule.actions.addFile({
                 id: deterministicId("file", i * 100 + level),
                 name: `File at Level ${level}`,
@@ -389,7 +473,7 @@ const scenarios: Scenario[] = [
           parentFolder = folderId;
         }
       }
-      await Promise.all(writes);
+      await settleWrites(writes);
 
       await waitForSync(reactorA, reactorB, ids);
       await assertConverged(reactorA, reactorB, ids);
@@ -438,14 +522,90 @@ if (process.argv.includes("--smoke")) {
   await smoke();
 }
 
-const bench = new Bench({ time: 10000 });
+/**
+ * `bench.table()` is unfit for a record: ops/sec is locale-formatted, the
+ * margin is a string with a percent sign, and the average changes unit to
+ * nanoseconds. `result` is the same TaskResult in the same milliseconds, so
+ * --record reads that and leaves the table to the human path.
+ */
+const tinybenchVersion = (
+  JSON.parse(readFileSync("node_modules/tinybench/package.json", "utf8")) as {
+    version: string;
+  }
+).version;
+
+const record = process.argv.includes("--record");
+
+/**
+ * Checked before the run rather than after it. These scenarios take minutes,
+ * and a refusal is worth having in the first second rather than the six
+ * hundredth.
+ */
+if (record && !process.argv.includes("--allow-dirty")) {
+  const dirty = dirtyPaths(".", [
+    "bench/BENCHMARKS.jsonl",
+    "bench/TASKS.jsonl",
+  ]);
+  if (dirty.length > 0) {
+    process.stderr.write(
+      `The package has uncommitted changes, so the sha this record would carry describes code that did not run:\n${dirty.join("\n")}\nCommit, stash, or pass --allow-dirty and say so in a caveat.\n`,
+    );
+    process.exit(68);
+  }
+}
+const say = (message: string): void => {
+  if (record) {
+    process.stderr.write(`${message}\n`);
+    return;
+  }
+  process.stdout.write(`${message}\n`);
+};
+
+// throws: true so a scenario that fails during warmup fails the run. Without
+// it tinybench parks the error on result.error, dispatches no event, and the
+// bench reports a table with a missing row.
+const bench = new Bench({ time: 10000, throws: true });
 for (const scenario of scenarios) {
   bench.add(scenario.name, scenario.run, lifecycle);
 }
 
-console.log("Running Two-Reactor Sync Benchmarks...\n");
+say("Running Two-Reactor Sync Benchmarks...\n");
 
 await bench.run();
+
+if (record) {
+  const target = findTarget("sync");
+  const tasks: TinybenchTask[] = bench.tasks.map((task) => {
+    if (task.result === undefined) {
+      throw new Error(`${task.name} produced no result`);
+    }
+    if (task.result.error !== undefined) {
+      const reason = task.result.error;
+      throw new Error(
+        `${task.name} failed: ${reason instanceof Error ? reason.message : JSON.stringify(reason)}`,
+      );
+    }
+    return { name: task.name, ...task.result };
+  });
+
+  const entry = buildMicroEntry({
+    target,
+    runner: "tinybench",
+    runnerVersion: tinybenchVersion,
+    suites: suitesFromTinybench("two-reactor sync", tasks),
+    environment: readMachineEnvironment(target.storage),
+    recordedAt: new Date().toISOString(),
+    conclusions: [],
+    caveats: [],
+    title: "",
+    question: "",
+    tags: [],
+    tasks: [],
+  });
+
+  process.stdout.write(`${JSON.stringify(entry)}\n`);
+  process.exit(0);
+}
 
 console.log("\nResults:");
 console.table(bench.table());

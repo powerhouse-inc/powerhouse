@@ -15,7 +15,8 @@ import {
 } from "@powerhousedao/shared/document-model";
 import { groupDocumentType } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
-import { bench, describe } from "vitest";
+import { describe } from "vitest";
+import { bench } from "./loud-bench.js";
 import type { IWriteCache } from "../src/cache/write/interfaces.js";
 import {
   BareReadGate,

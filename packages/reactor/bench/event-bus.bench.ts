@@ -1,4 +1,5 @@
-import { bench, describe } from "vitest";
+import { describe } from "vitest";
+import { bench } from "./loud-bench.js";
 import { EventBus } from "../src/events/event-bus.js";
 
 // Event types for testing
