@@ -45,6 +45,10 @@
   details.raw pre { background: #f9fafb; border: 1px solid #e5e7eb; padding: 10px; overflow: auto; max-height: 60vh; font-size: 12px; }
   #charts h3 { margin-top: 20px; }
   figure { margin: 0; }
+  /* Tips render inside the SVG; a strip a few rows tall would clip them. */
+  #tasks-strip, #timeline { position: relative; z-index: 1; }
+  #tasks-strip svg, #timeline svg, #charts svg { overflow: visible; }
+  p.howto { color: #6b7280; font-size: 12.5px; margin: 0 0 6px; }
 </style>
 </head>
 <body>

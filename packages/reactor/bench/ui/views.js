@@ -274,6 +274,7 @@ export function renderOverview(root, state) {
     <section>
       <h2>Timeline</h2>
       ${chartsUnavailable(state)}
+      <p class="howto">${TIMELINE_GUIDE}</p>
       <div id="timeline"></div>
     </section>
     <section>
@@ -298,6 +299,25 @@ export function renderOverview(root, state) {
   }
 }
 
+// Every chart says how to read it; a chart that needs the source to be read
+// is one the reader guesses at.
+const STRIP_GUIDE =
+  "Findings against this series: \u25b2 the run a task was filed from, \u25c6 the first run after its fix landed. Colour is the task's status: grey unverified, amber verified, blue fixed, green committed, red refuted. Hover for the task, click to open it.";
+
+function chartGuide(metric) {
+  return `One line per case, one point per run, oldest on the left. ${metric.label}: ${metric.lower ? "lower" : "higher"} is better. Whiskers are that run's \u00b1rme; a red band marks a run a task invalidated; a grey dashed line marks a machine or environment change between runs; a labelled dashed line marks where a fix landed. Hover for the number, click a point to open the run.`;
+}
+
+const TIMELINE_GUIDE =
+  "Every recorded run by time, one row per series. Triangles on the bottom row are task status changes, coloured by status: grey unverified, amber verified, blue fixed, green committed, red refuted. Hover for the run or task, click to open it.";
+
+function guide(text) {
+  const p = document.createElement("p");
+  p.className = "howto";
+  p.textContent = text;
+  return p;
+}
+
 function mountSeriesCharts(root, state, records, options) {
   const metric = METRICS.find((m) => m.key === state.metric) ?? METRICS[0];
   const { tasksPlot, perSuite } = seriesCharts({
@@ -312,7 +332,7 @@ function mountSeriesCharts(root, state, records, options) {
   });
   const strip = root.querySelector("#tasks-strip");
   if (tasksPlot && strip) {
-    strip.append(tasksPlot);
+    strip.append(guide(STRIP_GUIDE), tasksPlot);
   }
   const charts = root.querySelector("#charts");
   if (perSuite.length === 0) {
@@ -321,7 +341,7 @@ function mountSeriesCharts(root, state, records, options) {
   for (const { suite, plot } of perSuite) {
     const h3 = document.createElement("h3");
     h3.textContent = suite;
-    charts.append(h3, plot);
+    charts.append(h3, guide(chartGuide(metric)), plot);
   }
 }
 
