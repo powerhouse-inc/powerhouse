@@ -31,7 +31,7 @@ describe("connection resolution", () => {
     });
   });
 
-  it("shapes SECRET_TEXT as the bare secret value", async () => {
+  it("shapes SECRET_TEXT as an AppConnectionValue", async () => {
     const resolver = new StaticConnectionResolver(
       {
         api: {
@@ -41,7 +41,10 @@ describe("connection resolution", () => {
       },
       secrets,
     );
-    await expect(resolver.resolve("api")).resolves.toBe("key-456");
+    await expect(resolver.resolve("api")).resolves.toEqual({
+      type: "SECRET_TEXT",
+      secret_text: "key-456",
+    });
   });
 
   it("shapes BASIC_AUTH from config plus secrets", async () => {
@@ -56,6 +59,7 @@ describe("connection resolution", () => {
       secrets,
     );
     await expect(resolver.resolve("basic")).resolves.toEqual({
+      type: "BASIC_AUTH",
       username: "ada",
       password: "hunter2",
     });

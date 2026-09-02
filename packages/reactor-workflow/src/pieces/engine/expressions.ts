@@ -19,6 +19,23 @@ export function lookupPath(scope: ExpressionScope, path: string): unknown {
   return current;
 }
 
+const STRING_LITERAL = /^(['"])(.*)\1$/;
+
+// "a.b || c.d || 'default'": first term that isn't undefined/null/"" wins.
+export function resolveExpression(
+  scope: ExpressionScope,
+  expression: string,
+): unknown {
+  for (const term of expression.split("||")) {
+    const trimmed = term.trim();
+    if (!trimmed) continue;
+    const literal = STRING_LITERAL.exec(trimmed);
+    const value = literal ? literal[2] : lookupPath(scope, trimmed);
+    if (value !== undefined && value !== null && value !== "") return value;
+  }
+  return undefined;
+}
+
 function interpolate(value: unknown): string {
   if (value === undefined || value === null) return "";
   if (typeof value === "object") return JSON.stringify(value);
@@ -31,9 +48,9 @@ export function resolveExpressions(
 ): unknown {
   if (typeof value === "string") {
     const whole = WHOLE_EXPRESSION.exec(value);
-    if (whole) return lookupPath(scope, whole[1]);
+    if (whole) return resolveExpression(scope, whole[1]);
     return value.replaceAll(EMBEDDED_EXPRESSION, (_, path: string) =>
-      interpolate(lookupPath(scope, path)),
+      interpolate(resolveExpression(scope, path)),
     );
   }
   if (Array.isArray(value)) {

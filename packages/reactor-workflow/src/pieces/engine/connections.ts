@@ -81,7 +81,8 @@ async function resolveSecrets(
   return Object.fromEntries(entries);
 }
 
-// CUSTOM_AUTH values are AppConnectionValue-shaped: pieces read auth.props.*.
+// Values are AppConnectionValue-shaped: pieces read auth.secret_text,
+// auth.username/password or auth.props.* depending on their auth kind.
 export async function shapeAuthValue(
   source: ConnectionSource,
   secrets: SecretProvider,
@@ -97,14 +98,18 @@ export async function shapeAuthValue(
           `SECRET_TEXT connection must have exactly one secret ref, got ${values.length}`,
         );
       }
-      return values[0];
+      return { type: "SECRET_TEXT", secret_text: values[0] };
     }
     case "BASIC_AUTH": {
       const props = {
         ...source.config,
         ...(await resolveSecrets(source, secrets)),
       };
-      return { username: props.username, password: props.password };
+      return {
+        type: "BASIC_AUTH",
+        username: props.username,
+        password: props.password,
+      };
     }
     case "CUSTOM_AUTH": {
       const props = {
