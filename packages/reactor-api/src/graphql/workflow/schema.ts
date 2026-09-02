@@ -19,7 +19,12 @@ export const schema: DocumentNode = gql`
     """
     Resolves a dynamic prop's options against the current config values.
     """
-    blockOptions(blockType: String!, propName: String!, input: Unknown): Unknown
+    blockOptions(
+      blockType: String!
+      propName: String!
+      input: Unknown
+      connectionId: String
+    ): Unknown
     """
     All published Activepieces pieces with at least one action.
     """
@@ -28,6 +33,10 @@ export const schema: DocumentNode = gql`
     A piece's actions, each with a ready-to-use blockType.
     """
     pieceActions(packageName: String!): Unknown
+    """
+    Full piece detail (PieceMetadataModel-shaped), verbatim from the cloud API.
+    """
+    pieceDetail(packageName: String!): Unknown
   }
 
   type Query {

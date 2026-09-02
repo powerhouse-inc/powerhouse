@@ -1,5 +1,9 @@
 import { type BaseSubgraph } from "@powerhousedao/reactor-api";
-import { fetchPieceActions, fetchPieceCatalog } from "./piece-catalog.js";
+import {
+  fetchPieceActions,
+  fetchPieceCatalog,
+  fetchPieceDetail,
+} from "./piece-catalog.js";
 import { workflowRuntime } from "./service.js";
 import type { RunRow, StepExecutionRow } from "./store.js";
 
@@ -66,12 +70,24 @@ export const getResolvers = (
         workflowRuntime.blockDescriptor(args.blockType),
       blockOptions: (
         _parent: unknown,
-        args: { blockType: string; propName: string; input?: unknown },
+        args: {
+          blockType: string;
+          propName: string;
+          input?: unknown;
+          connectionId?: string | null;
+        },
       ) =>
-        workflowRuntime.blockOptions(args.blockType, args.propName, args.input),
+        workflowRuntime.blockOptions(
+          args.blockType,
+          args.propName,
+          args.input,
+          args.connectionId ?? undefined,
+        ),
       pieceCatalog: () => fetchPieceCatalog(),
       pieceActions: (_parent: unknown, args: { packageName: string }) =>
         fetchPieceActions(args.packageName),
+      pieceDetail: (_parent: unknown, args: { packageName: string }) =>
+        fetchPieceDetail(args.packageName),
       runs: async (_parent: unknown, args: RunsArgs) => {
         const store = await workflowRuntime.store();
         if (!store) return [];

@@ -94,6 +94,17 @@ export async function fetchPieceCatalog(): Promise<PieceSummary[]> {
   return value;
 }
 
+const detailCache = new Map<string, Cached<unknown>>();
+
+// Full piece detail, verbatim from the cloud API (PieceMetadataModel-shaped).
+export async function fetchPieceDetail(packageName: string): Promise<unknown> {
+  const cached = detailCache.get(packageName);
+  if (cached && cached.expiresAt > Date.now()) return cached.value;
+  const value = await fetchJson(`${CATALOG_URL}/${packageName}`);
+  detailCache.set(packageName, { value, expiresAt: Date.now() + CACHE_TTL_MS });
+  return value;
+}
+
 const actionsCache = new Map<string, Cached<PieceActionsResult>>();
 
 export async function fetchPieceActions(

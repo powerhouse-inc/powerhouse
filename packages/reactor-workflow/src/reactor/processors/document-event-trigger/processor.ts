@@ -7,11 +7,15 @@ import type { DB } from "./schema.js";
 // Feeds every matched operation to the workflow runtime, which fires the
 // ENABLED workflows whose core#document-event trigger matches (doc 08 §7.2).
 export class DocumentEventTrigger extends RelationalDbProcessor<DB> {
+  // Set by the factory to release its singleton guard.
+  onDisconnectCallback?: () => void;
+
   onOperations(operations: OperationWithContext[]): Promise<void> {
     return workflowRuntime.onOperations(operations);
   }
 
   onDisconnect(): Promise<void> {
+    this.onDisconnectCallback?.();
     return Promise.resolve();
   }
 

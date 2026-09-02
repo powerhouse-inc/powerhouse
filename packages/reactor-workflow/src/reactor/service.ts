@@ -24,68 +24,39 @@ import {
 import {
   BUNDLE_CACHE_DIR,
   createBlockExecutor,
+  DocumentConnectionResolver,
   toWorkflowDefinition,
 } from "./lib.js";
 import { WorkflowRunStore } from "./store.js";
+import {
+  matchesEventFilter,
+  matchesLifecycleFilter,
+  parseEventFilter,
+  parseLifecycleFilter,
+  TRIGGER_KIND_BY_BLOCK,
+  type DocumentEventFilter,
+  type LifecycleFilter,
+  type TriggerKind,
+} from "./trigger-filters.js";
 
 export type PersistedRunResult = WorkflowRunResult & { runId: string | null };
 
-const DOCUMENT_EVENT_BLOCK = "core#document-event";
-
 const logger = childLogger(["workflow", "runtime"]);
 
-// core#document-event trigger config: each field a string or list; omitted
-// fields match everything. Scope/branch are fixed by the processor filter.
-interface DocumentEventFilter {
-  documentType?: string[];
-  documentId?: string[];
-  actionType?: string[];
-}
+const DRIVE_DOCUMENT_TYPE = "powerhouse/document-drive";
 
-interface DocumentEventRegistration {
+type TriggerRegistration = {
   workflowId: string;
-  filter: DocumentEventFilter;
-}
-
-function toList(value: unknown): string[] | undefined {
-  if (typeof value === "string") return [value];
-  if (Array.isArray(value)) {
-    const strings = value.filter((item) => typeof item === "string");
-    return strings.length > 0 ? strings : undefined;
-  }
-  return undefined;
-}
-
-function parseEventFilter(config: unknown): DocumentEventFilter {
-  if (config === null || typeof config !== "object") return {};
-  const record = config as Record<string, unknown>;
-  return {
-    documentType: toList(record.documentType),
-    documentId: toList(record.documentId),
-    actionType: toList(record.actionType),
-  };
-}
-
-function matchesFilter(
-  filter: DocumentEventFilter,
-  documentType: string,
-  documentId: string,
-  actionType: string,
-): boolean {
-  const ok = (list: string[] | undefined, value: string) =>
-    !list || list.includes(value);
-  return (
-    ok(filter.documentType, documentType) &&
-    ok(filter.documentId, documentId) &&
-    ok(filter.actionType, actionType)
-  );
-}
+} & (
+  | { kind: "document-event"; filter: DocumentEventFilter }
+  | { kind: "document-created" | "document-deleted"; filter: LifecycleFilter }
+);
 
 export class WorkflowRuntimeService {
   private subgraph?: BaseSubgraph;
   private executor?: BlockExecutor;
   private storePromise?: Promise<WorkflowRunStore>;
-  private readonly registry = new Map<string, DocumentEventRegistration>();
+  private readonly registry = new Map<string, TriggerRegistration>();
 
   // Called by the subgraph on construction; seeds the trigger registry and
   // opens the run journal.
@@ -119,23 +90,24 @@ export class WorkflowRuntimeService {
     for (const document of page.results as WorkflowDocument[]) {
       this.updateRegistration(document.header.id, document.state.global);
     }
-    logger.info(
-      `Document-event registry seeded: ${this.registry.size} workflow(s)`,
-    );
+    logger.info(`Trigger registry seeded: ${this.registry.size} workflow(s)`);
   }
 
   private updateRegistration(workflowId: string, state: WorkflowState): void {
-    const eligible =
-      state.status === "ENABLED" &&
-      state.trigger?.blockType === DOCUMENT_EVENT_BLOCK;
-    if (!eligible) {
+    const kind: TriggerKind | undefined = state.trigger
+      ? TRIGGER_KIND_BY_BLOCK[state.trigger.blockType]
+      : undefined;
+    if (state.status !== "ENABLED" || !kind) {
       this.registry.delete(workflowId);
       return;
     }
-    this.registry.set(workflowId, {
+    const config = state.trigger?.config;
+    this.registry.set(
       workflowId,
-      filter: parseEventFilter(state.trigger?.config),
-    });
+      kind === "document-event"
+        ? { workflowId, kind, filter: parseEventFilter(config) }
+        : { workflowId, kind, filter: parseLifecycleFilter(config) },
+    );
   }
 
   private async refreshRegistration(
@@ -159,11 +131,32 @@ export class WorkflowRuntimeService {
     this.updateRegistration(workflowId, document.state.global);
   }
 
+  // The manager routes by filter only, so every per-drive processor instance
+  // delivers every matching operation; dedup keeps fires once-per-operation.
+  private readonly seenOps = new Set<string>();
+  private readonly seenOpsQueue: string[] = [];
+
+  private alreadySeen(op: OperationWithContext): boolean {
+    const key =
+      op.context.ordinal > 0
+        ? `o:${op.context.ordinal}`
+        : `${op.context.documentId}:${op.context.scope}:${op.context.branch}:${op.operation.index}`;
+    if (this.seenOps.has(key)) return true;
+    this.seenOps.add(key);
+    this.seenOpsQueue.push(key);
+    if (this.seenOpsQueue.length > 8192) {
+      const evicted = this.seenOpsQueue.shift();
+      if (evicted) this.seenOps.delete(evicted);
+    }
+    return false;
+  }
+
   // Called by the document-event processor. Registry updates are awaited;
   // fires are not, so runs never block operation ingestion.
   async onOperations(operations: OperationWithContext[]): Promise<void> {
     for (const { operation, context } of operations) {
       if (context.scope !== "global") continue;
+      if (this.alreadySeen({ operation, context })) continue;
       if (context.documentType === "powerhouse/workflow") {
         await this.refreshRegistration(
           context.documentId,
@@ -173,7 +166,8 @@ export class WorkflowRuntimeService {
       }
       if (operation.error !== undefined) continue;
       for (const registration of this.registry.values()) {
-        const matched = matchesFilter(
+        if (registration.kind !== "document-event") continue;
+        const matched = matchesEventFilter(
           registration.filter,
           context.documentType,
           context.documentId,
@@ -194,20 +188,89 @@ export class WorkflowRuntimeService {
             timestampUtcMs: operation.timestampUtcMs,
           },
         };
-        this.fire(registration.workflowId, payload, "document-event").then(
-          (run) => {
-            logger.info(
-              `document-event fired workflow ${registration.workflowId}: ${run.status}`,
-            );
-          },
-          (error: unknown) => {
-            logger.error(
-              `document-event run failed for workflow ${registration.workflowId}`,
-              error,
-            );
-          },
+        this.fireFromTrigger(
+          registration.workflowId,
+          payload,
+          registration.kind,
         );
       }
+      if (context.documentType === DRIVE_DOCUMENT_TYPE) {
+        await this.matchLifecycle(
+          context.documentId,
+          operation.action.type,
+          operation.action.input,
+          { index: operation.index, timestampUtcMs: operation.timestampUtcMs },
+        );
+      }
+    }
+  }
+
+  private fireFromTrigger(
+    workflowId: string,
+    payload: unknown,
+    kind: TriggerKind,
+  ): void {
+    this.fire(workflowId, payload, kind).then(
+      (run) => {
+        logger.info(`${kind} fired workflow ${workflowId}: ${run.status}`);
+      },
+      (error: unknown) => {
+        logger.error(`${kind} run failed for workflow ${workflowId}`, error);
+      },
+    );
+  }
+
+  // ADD_FILE / DELETE_NODE on a drive back the document lifecycle triggers.
+  private async matchLifecycle(
+    driveId: string,
+    actionType: string,
+    input: unknown,
+    operation: { index: number; timestampUtcMs: string },
+  ): Promise<void> {
+    const kind: TriggerKind | undefined =
+      actionType === "ADD_FILE"
+        ? "document-created"
+        : actionType === "DELETE_NODE"
+          ? "document-deleted"
+          : undefined;
+    if (!kind) return;
+    const targets = [...this.registry.values()].filter(
+      (registration) => registration.kind === kind,
+    );
+    if (targets.length === 0) return;
+
+    const record = (input ?? {}) as Record<string, unknown>;
+    const documentId = typeof record.id === "string" ? record.id : undefined;
+    if (!documentId) return;
+    let documentType =
+      typeof record.documentType === "string" ? record.documentType : undefined;
+    let name = typeof record.name === "string" ? record.name : null;
+    if (kind === "document-deleted") {
+      // Best-effort: the document usually outlives its drive node. Folder
+      // nodes never resolve, so a type filter also skips them.
+      try {
+        const document = await this.subgraph?.reactorClient.get(documentId);
+        documentType = document?.header.documentType;
+        name ??= document?.header.name ?? null;
+      } catch {
+        documentType = undefined;
+      }
+    }
+
+    const payload = {
+      documentId,
+      documentType: documentType ?? null,
+      name,
+      driveId,
+      parentId:
+        typeof record.parentFolder === "string" ? record.parentFolder : null,
+      operation,
+    };
+    for (const registration of targets) {
+      if (registration.kind !== kind) continue;
+      if (!matchesLifecycleFilter(registration.filter, documentType, driveId))
+        continue;
+      this.fireFromTrigger(registration.workflowId, payload, kind);
     }
   }
 
@@ -258,6 +321,7 @@ export class WorkflowRuntimeService {
     blockType: string,
     propName: string,
     input?: unknown,
+    connectionId?: string,
   ): Promise<unknown> {
     const parsed = parseBlockType(blockType);
     if (!parsed) {
@@ -271,6 +335,13 @@ export class WorkflowRuntimeService {
       }
       throw new Error(`Not a piece block type: "${blockType}"`);
     }
+    // Auth-dependent options() resolvers need the step's connection.
+    let auth: unknown;
+    if (connectionId && this.subgraph) {
+      auth = await new DocumentConnectionResolver(this.subgraph).resolve(
+        connectionId,
+      );
+    }
     const bundle = await ensurePieceBundle({
       name: parsed.packageName,
       version: parsed.version,
@@ -282,6 +353,7 @@ export class WorkflowRuntimeService {
       actionName: parsed.actionName,
       propName,
       refresherValues: (input ?? {}) as Record<string, unknown>,
+      auth,
     });
     return result.output;
   }

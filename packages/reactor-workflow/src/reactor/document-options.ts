@@ -20,6 +20,7 @@ export const DOCUMENT_OPTION_PROPS = new Set([
   "documentType",
   "documentId",
   "actionType",
+  "driveId",
 ]);
 
 // Expression values ({{...}}) can't be resolved at design time.
@@ -79,6 +80,15 @@ async function documentIdOptions(
   };
 }
 
+// Base actions every document type accepts, listed after the model's own.
+const BASE_ACTION_OPTIONS: DocumentOptionEntry[] = [
+  {
+    label: "SET_NAME (base)",
+    value: "SET_NAME",
+    inputSchema: "input SetNameInput {\n  name: String!\n}",
+  },
+];
+
 async function actionTypeOptions(
   client: ReactorClient,
   input: Record<string, unknown>,
@@ -93,9 +103,9 @@ async function actionTypeOptions(
   }
   if (!documentType) {
     return {
-      options: [],
+      options: [...BASE_ACTION_OPTIONS],
       placeholder:
-        "Set a document type (or a resolvable document id) to list actions",
+        "Set a document type (or a resolvable document id) to list its actions",
     };
   }
   const module = await client.getDocumentModelModule(documentType);
@@ -109,7 +119,10 @@ async function actionTypeOptions(
         inputSchema: operation.schema ?? undefined,
       })),
   );
-  return { options, placeholder: `Actions of ${documentType}` };
+  return {
+    options: [...options, ...BASE_ACTION_OPTIONS],
+    placeholder: `Actions of ${documentType}`,
+  };
 }
 
 export async function resolveDocumentOptions(
@@ -122,6 +135,10 @@ export async function resolveDocumentOptions(
       return documentTypeOptions(client);
     case "documentId":
       return documentIdOptions(client, input);
+    case "driveId":
+      return documentIdOptions(client, {
+        documentType: "powerhouse/document-drive",
+      });
     case "actionType":
       return actionTypeOptions(client, input);
     default:
