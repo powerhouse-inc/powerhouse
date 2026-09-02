@@ -14,7 +14,28 @@ export type CredentialVerifier = (params: {
 }) => Promise<boolean>;
 
 export interface AuthConfig {
+  /**
+   * Whether the authorization policy enforces anything: it selects `ADMIN_ONLY`
+   * over `OPEN`, and it is what `AuthContext.auth_enabled` reports to callers
+   * that gate on "is authentication being enforced" (the attachment routes do).
+   *
+   * It does NOT decide whether the bearer is read — see {@link resolveIdentity}.
+   */
   enabled: boolean;
+  /**
+   * Whether the bearer is verified and `AuthContext.user` populated at all.
+   *
+   * Defaults to {@link enabled}, which is the behaviour every deployment had
+   * before this option existed. Setting it independently is what lets a server
+   * know who is calling while leaving the policy `OPEN` — resolving an identity
+   * and enforcing one are different concerns, and welding them together left
+   * consumers choosing between an unauthenticated caller and locking every
+   * non-admin out.
+   *
+   * It resolves an identity and enforces nothing: a request with no token is
+   * still admitted, with no user.
+   */
+  resolveIdentity?: boolean;
   admins: string[];
   skipCredentialVerification?: boolean; // DANGER: removes identity verification; boot-gated to test/dev
   credentialVerificationCacheTtlMs?: number; // How long successful Renown credential checks are cached; 0 disables caching
@@ -63,11 +84,24 @@ export class AuthService {
     this.config = config;
   }
 
+  /**
+   * Whether this service reads the bearer at all. Defaults to `enabled`, so a
+   * config written before `resolveIdentity` existed behaves exactly as it did.
+   */
+  private get resolvesIdentity(): boolean {
+    return this.config.resolveIdentity ?? this.config.enabled;
+  }
+
+  /** The context an unresolved request gets: no user, and no admin list to match against. */
+  private anonymousContext(): AuthContext {
+    return { user: undefined, admins: [], auth_enabled: this.config.enabled };
+  }
+
   async authenticateRequest(
     request: globalThis.Request,
   ): Promise<AuthContext | globalThis.Response> {
-    if (!this.config.enabled) {
-      return { user: undefined, admins: [], auth_enabled: false };
+    if (!this.resolvesIdentity) {
+      return this.anonymousContext();
     }
     // OPTIONS is a CORS preflight: it never carries application auth. Every
     // other method verifies whatever token it carries -- a GET query's payload
@@ -78,7 +112,7 @@ export class AuthService {
       return {
         user: undefined,
         admins: this.config.admins,
-        auth_enabled: true,
+        auth_enabled: this.config.enabled,
       };
     }
     return this.verifyBearer(request.headers.get("authorization") ?? undefined);
@@ -91,15 +125,15 @@ export class AuthService {
   async verifyBearer(
     authorization: string | undefined,
   ): Promise<AuthContext | globalThis.Response> {
-    if (!this.config.enabled) {
-      return { user: undefined, admins: [], auth_enabled: false };
+    if (!this.resolvesIdentity) {
+      return this.anonymousContext();
     }
     const token = authorization?.split(" ")[1];
     if (!token) {
       return {
         user: undefined,
         admins: this.config.admins,
-        auth_enabled: true,
+        auth_enabled: this.config.enabled,
       };
     }
     try {
@@ -128,7 +162,11 @@ export class AuthService {
           );
         }
       }
-      return { user, admins: this.config.admins, auth_enabled: true };
+      return {
+        user,
+        admins: this.config.admins,
+        auth_enabled: this.config.enabled,
+      };
     } catch {
       return new Response(JSON.stringify({ error: "Authentication failed" }), {
         status: 401,
@@ -139,7 +177,7 @@ export class AuthService {
   async authenticateWebSocketConnection(
     connectionParams: Record<string, unknown>,
   ): Promise<User | null> {
-    if (!this.config.enabled) {
+    if (!this.resolvesIdentity) {
       return null;
     }
 

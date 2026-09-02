@@ -132,6 +132,9 @@ type Options = {
   auth?: {
     enabled: boolean;
     admins: string[];
+    /** Read the bearer and populate `ctx.user` independently of `enabled`.
+     *  Defaults to `enabled`; `RESOLVE_CALLER_IDENTITY` overrides either. */
+    resolveIdentity?: boolean;
   };
   /** Renown coordinates the host already resolved, used verbatim instead of
    * resolving `auth.renown` and the env again (which would warn twice). */
@@ -197,11 +200,11 @@ export function assertAuthRequiredForDocumentPermissions(
  * signing key. Fail-closed — unset NODE_ENV counts as production.
  */
 export function assertSkipCredentialVerificationAllowed(
-  authEnabled: boolean,
+  resolvesCallerIdentity: boolean,
   skipCredentialVerification: boolean,
   env: NodeJS.ProcessEnv,
 ): void {
-  if (!authEnabled || !skipCredentialVerification) {
+  if (!resolvesCallerIdentity || !skipCredentialVerification) {
     return;
   }
   const inAutomatedTest = env.VITEST === "true" || env.NODE_ENV === "test";
@@ -562,6 +565,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   // Setup auth configuration
   let admins: string[] = [];
   let authEnabled = false;
+  let configuredResolveIdentity: boolean | undefined;
   let configuredRenown: RenownConfig | undefined;
   if (options.configFile) {
     const config = getConfig(options.configFile);
@@ -571,9 +575,11 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   } else if (options.auth) {
     admins = options.auth.admins.map((a) => a.toLowerCase());
     authEnabled = options.auth.enabled;
+    configuredResolveIdentity = options.auth.resolveIdentity;
   }
   const {
     AUTH_ENABLED,
+    RESOLVE_CALLER_IDENTITY,
     ADMINS,
     DEFAULT_PROTECTION,
     DOCUMENT_PERMISSIONS_ENABLED,
@@ -582,6 +588,22 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   } = process.env;
   if (AUTH_ENABLED !== undefined) {
     authEnabled = AUTH_ENABLED === "true";
+  }
+
+  /**
+   * Whether the auth middleware reads the bearer and populates `ctx.user`,
+   * independently of the authorization policy.
+   *
+   * Defaults to `authEnabled`, so a deployment that never sets it behaves
+   * exactly as it did: auth on means the token is read AND the policy is
+   * `ADMIN_ONLY`; auth off means neither. Setting it explicitly is what
+   * separates the two — a server can then know who is calling while the policy
+   * stays `OPEN`, which is the combination custom subgraphs need and the one
+   * `AUTH_ENABLED` alone cannot express.
+   */
+  let resolveCallerIdentity = configuredResolveIdentity ?? authEnabled;
+  if (RESOLVE_CALLER_IDENTITY !== undefined) {
+    resolveCallerIdentity = RESOLVE_CALLER_IDENTITY === "true";
   }
   if (ADMINS !== undefined) {
     admins = ADMINS.split(",").map((a) => a.toLowerCase());
@@ -621,7 +643,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     documentPermissionsRequested,
   );
   assertSkipCredentialVerificationAllowed(
-    authEnabled,
+    resolveCallerIdentity,
     skipCredentialVerification,
     process.env,
   );
@@ -657,11 +679,17 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     });
   });
 
-  // Create auth fetch middleware if auth is enabled
+  /* Built whenever the bearer is read — which is not the same as the policy
+     enforcing anything. `resolveCallerIdentity` defaults to `authEnabled`, so
+     this is the same condition it always was unless a deployment opts in. */
   let authFetchMiddleware: AuthFetchMiddleware | undefined;
   let authService: AuthService | undefined;
-  if (authEnabled) {
-    logger.info("Setting up Auth middleware");
+  if (resolveCallerIdentity || authEnabled) {
+    logger.info(
+      "Setting up Auth middleware (policy enforcement: @enabled, caller identity: @resolve)",
+      authEnabled,
+      resolveCallerIdentity,
+    );
     const renown =
       options.renown ??
       resolveRenownConfig(configuredRenown, process.env, logger);
@@ -679,6 +707,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     }
     authService = new AuthService({
       enabled: authEnabled,
+      resolveIdentity: resolveCallerIdentity,
       admins,
       skipCredentialVerification,
       credentialVerificationCacheTtlMs,
