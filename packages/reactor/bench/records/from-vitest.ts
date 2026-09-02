@@ -185,6 +185,8 @@ export type MicroEntryInput = {
   /** Appended to what the numbers earn; never a substitute for it. */
   conclusions: string[];
   caveats: string[];
+  /** Measured by the harness itself; appended after the suite spreads. */
+  derived: DerivedRatio[];
   /** Empty means the target's own. */
   title: string;
   question: string;
@@ -284,7 +286,7 @@ export function suitesFromTinybench(
 export function buildMicroEntry(
   input: MicroEntryInput,
 ): Record<string, unknown> {
-  const derived = input.suites.map(suiteSpread);
+  const derived = [...input.suites.map(suiteSpread), ...input.derived];
   const conclusions = [
     ...input.suites.map(suiteConclusion),
     ...input.conclusions,

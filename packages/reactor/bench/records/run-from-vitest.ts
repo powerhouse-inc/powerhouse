@@ -99,6 +99,7 @@ function main(): void {
       suites: suitesFromVitest(report),
       environment: readMachineEnvironment(target.storage),
       recordedAt: new Date().toISOString(),
+      derived: [],
       conclusions: options.conclusions,
       caveats: options.caveats,
       title: options.title,

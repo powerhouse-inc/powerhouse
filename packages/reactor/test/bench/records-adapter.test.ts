@@ -52,6 +52,7 @@ function entryFor(
     suites: suitesFromVitest(report()),
     environment: ENVIRONMENT,
     recordedAt: "2026-09-01T12:00:00.000Z",
+    derived: [],
     conclusions: [],
     caveats: [],
     title: "",

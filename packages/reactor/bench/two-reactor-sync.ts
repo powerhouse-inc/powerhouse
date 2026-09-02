@@ -45,11 +45,22 @@
  * summary per document per side once the events say every write has landed on
  * both sides. An earlier version connected, created, polled every 25ms and
  * verified inside the window, which was half to two thirds of every case.
+ *
+ * Alongside the timing, each case attributes its jobs from the lifecycle
+ * events alone: queue wait (JOB_PENDING to JOB_RUNNING), apply (to
+ * JOB_WRITE_READY) and index (to JOB_READ_READY), split into the writes this
+ * harness submitted, loads from the peer, and loads that re-appended
+ * operations the side had already written, which is what a reshuffle does.
+ * Those land in the record's derived list. The Contention case exists for
+ * this: it is Baseline with the writer alternating per operation and nothing
+ * else changed, so the cost of two reactors writing one document can be read
+ * against Baseline without the document count or action type moving too.
  */
 
 import { readFileSync } from "node:fs";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import { Bench } from "tinybench";
+import type { DerivedRatio } from "./records/benchmark-schema.js";
 import {
   buildMicroEntry,
   findTarget,
@@ -68,7 +79,10 @@ import type { IEventBus } from "../src/events/interfaces.js";
 import { ReactorEventTypes } from "../src/events/types.js";
 import type {
   JobFailedEvent,
+  JobPendingEvent,
   JobReadReadyEvent,
+  JobRunningEvent,
+  JobWriteReadyEvent,
   Unsubscribe,
 } from "../src/events/types.js";
 import type { ISyncCursorStorage } from "../src/storage/interfaces.js";
@@ -90,14 +104,96 @@ type TwoReactorSetup = {
   tracker: SyncTracker;
 };
 
+type JobStamp = {
+  pending: number;
+  running: number;
+  writeReady: number;
+  readReady: number;
+  operations: number;
+  reAppended: number;
+};
+
 type SideRecord = {
   /** Jobs this side submitted itself; every one must reach READ_READY. */
   tracked: Set<string>;
   /** Action ids indexed per job, local and loaded alike. */
   ready: Map<string, string[]>;
   seen: Set<string>;
+  /** Action ids written on this side, for spotting a reshuffle's re-appends. */
+  written: Set<string>;
+  stamps: Map<string, JobStamp>;
   failure: Error | null;
 };
+
+/** Sums over one class of job; divide by jobs for the per-job mean. */
+type JobBucket = {
+  jobs: number;
+  queueWaitMs: number;
+  applyMs: number;
+  indexMs: number;
+  reAppendedOps: number;
+};
+
+/**
+ * Where a case's jobs spent their time. A job this harness submitted is local;
+ * any other is a load from the peer, split by whether it re-appended operations
+ * this side had already written. Loads that wrote nothing, every incoming
+ * operation already held, are counted apart. Per-job means, not wall time:
+ * jobs on different documents overlap.
+ */
+type Attribution = {
+  iterations: number;
+  local: JobBucket;
+  load: JobBucket;
+  reshuffle: JobBucket;
+  emptyLoads: number;
+};
+
+function emptyBucket(): JobBucket {
+  return { jobs: 0, queueWaitMs: 0, applyMs: 0, indexMs: 0, reAppendedOps: 0 };
+}
+
+function emptyAttribution(): Attribution {
+  return {
+    iterations: 0,
+    local: emptyBucket(),
+    load: emptyBucket(),
+    reshuffle: emptyBucket(),
+    emptyLoads: 0,
+  };
+}
+
+function addBucket(into: JobBucket, from: JobBucket): void {
+  into.jobs += from.jobs;
+  into.queueWaitMs += from.queueWaitMs;
+  into.applyMs += from.applyMs;
+  into.indexMs += from.indexMs;
+  into.reAppendedOps += from.reAppendedOps;
+}
+
+function addAttribution(into: Attribution, from: Attribution): void {
+  into.iterations += from.iterations;
+  addBucket(into.local, from.local);
+  addBucket(into.load, from.load);
+  addBucket(into.reshuffle, from.reshuffle);
+  into.emptyLoads += from.emptyLoads;
+}
+
+function stampFor(record: SideRecord, jobId: string): JobStamp {
+  let stamp = record.stamps.get(jobId);
+  if (stamp === undefined) {
+    stamp = {
+      pending: 0,
+      running: 0,
+      writeReady: 0,
+      readReady: 0,
+      operations: 0,
+      reAppended: 0,
+    };
+    record.stamps.set(jobId, stamp);
+  }
+  return stamp;
+}
 
 /**
  * What each side has indexed, fed by JOB_READ_READY and JOB_FAILED. Waiting on
@@ -119,13 +215,44 @@ class SyncTracker {
         tracked: new Set(),
         ready: new Map(),
         seen: new Set(),
+        written: new Set(),
+        stamps: new Map(),
         failure: null,
       };
       this.sides.set(reactor, record);
       this.unsubscribes.push(
+        eventBus.subscribe<JobPendingEvent>(
+          ReactorEventTypes.JOB_PENDING,
+          (_type, event) => {
+            stampFor(record, event.jobId).pending = performance.now();
+          },
+        ),
+        eventBus.subscribe<JobRunningEvent>(
+          ReactorEventTypes.JOB_RUNNING,
+          (_type, event) => {
+            stampFor(record, event.jobId).running = performance.now();
+          },
+        ),
+        eventBus.subscribe<JobWriteReadyEvent>(
+          ReactorEventTypes.JOB_WRITE_READY,
+          (_type, event) => {
+            const stamp = stampFor(record, event.jobId);
+            stamp.writeReady = performance.now();
+            stamp.operations = event.operations.length;
+            for (const entry of event.operations) {
+              const id = entry.operation.action.id;
+              if (record.written.has(id)) {
+                stamp.reAppended += 1;
+              } else {
+                record.written.add(id);
+              }
+            }
+          },
+        ),
         eventBus.subscribe<JobReadReadyEvent>(
           ReactorEventTypes.JOB_READ_READY,
           (_type, event) => {
+            stampFor(record, event.jobId).readReady = performance.now();
             const actionIds = event.operations.map(
               (entry) => entry.operation.action.id,
             );
@@ -153,6 +280,47 @@ class SyncTracker {
       throw new Error("Reactor is not one of the tracked sides");
     }
     record.tracked.add(jobId);
+  }
+
+  /** Forgets the stamps so far, so setup's jobs stay out of the attribution. */
+  resetStamps(): void {
+    for (const record of this.sides.values()) {
+      record.stamps.clear();
+    }
+  }
+
+  /** One iteration's attribution, from every job with all four stamps. */
+  attribution(): Attribution {
+    const result = emptyAttribution();
+    result.iterations = 1;
+    for (const record of this.sides.values()) {
+      for (const [jobId, stamp] of record.stamps) {
+        if (
+          stamp.pending === 0 ||
+          stamp.running === 0 ||
+          stamp.writeReady === 0 ||
+          stamp.readReady === 0
+        ) {
+          continue;
+        }
+        const local = record.tracked.has(jobId);
+        if (!local && stamp.operations === 0) {
+          result.emptyLoads += 1;
+          continue;
+        }
+        const bucket = local
+          ? result.local
+          : stamp.reAppended > 0
+            ? result.reshuffle
+            : result.load;
+        bucket.jobs += 1;
+        bucket.queueWaitMs += stamp.running - stamp.pending;
+        bucket.applyMs += stamp.writeReady - stamp.running;
+        bucket.indexMs += stamp.readReady - stamp.writeReady;
+        bucket.reAppendedOps += stamp.reAppended;
+      }
+    }
+    return result;
   }
 
   /** Resolves once both sides hold every tracked write and agree on state. */
@@ -460,6 +628,93 @@ async function assertConverged(
   }
 }
 
+const attributions = new Map<string, Attribution>();
+
+function attributionFor(name: string): Attribution {
+  let attribution = attributions.get(name);
+  if (attribution === undefined) {
+    attribution = emptyAttribution();
+    attributions.set(name, attribution);
+  }
+  return attribution;
+}
+
+function round(value: number): number {
+  return Math.round(value * 10000) / 10000;
+}
+
+/** The label before the colon; the case name carries the rest. */
+function caseLabel(name: string): string {
+  return name.split(":")[0];
+}
+
+function bucketRatios(
+  label: string,
+  kind: string,
+  bucket: JobBucket,
+  iterations: number,
+): DerivedRatio[] {
+  if (bucket.jobs === 0) {
+    return [];
+  }
+  const note = `mean per job over ${bucket.jobs} ${kind} jobs in ${iterations} iterations`;
+  return [
+    {
+      name: `${label}: ${kind} queue wait`,
+      value: round(bucket.queueWaitMs / bucket.jobs),
+      unit: "ms",
+      note,
+    },
+    {
+      name: `${label}: ${kind} apply`,
+      value: round(bucket.applyMs / bucket.jobs),
+      unit: "ms",
+      note,
+    },
+    {
+      name: `${label}: ${kind} index`,
+      value: round(bucket.indexMs / bucket.jobs),
+      unit: "ms",
+      note,
+    },
+  ];
+}
+
+function derivedFrom(name: string, attribution: Attribution): DerivedRatio[] {
+  const label = caseLabel(name);
+  const iterations = attribution.iterations;
+  return [
+    ...bucketRatios(label, "local", attribution.local, iterations),
+    ...bucketRatios(label, "load", attribution.load, iterations),
+    ...bucketRatios(label, "reshuffle", attribution.reshuffle, iterations),
+    {
+      name: `${label}: reshuffles`,
+      value: round(attribution.reshuffle.jobs / iterations),
+      unit: "count",
+      note: `load jobs per iteration that re-appended operations already written on that side; ${round(attribution.reshuffle.reAppendedOps / iterations)} operations re-appended per iteration`,
+    },
+    {
+      name: `${label}: empty loads`,
+      value: round(attribution.emptyLoads / iterations),
+      unit: "count",
+      note: "load jobs per iteration that wrote nothing, every incoming operation already held",
+    },
+  ];
+}
+
+function describeAttribution(attribution: Attribution): string {
+  const per = (bucket: JobBucket) =>
+    bucket.jobs === 0
+      ? "none"
+      : `${bucket.jobs} jobs, wait ${round(bucket.queueWaitMs / bucket.jobs)}ms, apply ${round(bucket.applyMs / bucket.jobs)}ms, index ${round(bucket.indexMs / bucket.jobs)}ms`;
+  return [
+    `local: ${per(attribution.local)}`,
+    `load: ${per(attribution.load)}`,
+    `reshuffle: ${per(attribution.reshuffle)}, ${attribution.reshuffle.reAppendedOps} ops re-appended`,
+    `empty loads: ${attribution.emptyLoads}`,
+  ].join("; ");
+}
+
 let setup: TwoReactorSetup | null = null;
 
 type Scenario = {
@@ -496,6 +751,10 @@ function lifecycleFor(scenario: Scenario): Lifecycle {
       const current = setup!;
       try {
         await assertConverged(current.reactorA, current.reactorB, scenario.ids);
+        addAttribution(
+          attributionFor(scenario.name),
+          current.tracker.attribution(),
+        );
       } finally {
         current.tracker.dispose();
         current.reactorA.kill();
@@ -508,6 +767,7 @@ function lifecycleFor(scenario: Scenario): Lifecycle {
 /** The timed window: submit the writes, then wait until both sides agree. */
 async function run(scenario: Scenario): Promise<void> {
   const current = setup!;
+  current.tracker.resetStamps();
   await Promise.all(scenario.write(current, scenario.ids));
   await current.tracker.whenConverged(
     current.reactorA,
@@ -534,6 +794,27 @@ const scenarios: Scenario[] = [
             submitWrite(setup, reactor, docId, [
               driveDocumentModelModule.actions.setDriveName({
                 name: `Doc ${i} Update ${j}`,
+              }),
+            ]),
+          );
+        }
+      }
+      return writes;
+    },
+  },
+  {
+    name: "Contention: 10 documents, 10 operations each, writer alternates per operation (writes to convergence)",
+    ids: Array.from({ length: 10 }, (_, i) => deterministicId("doc", i + 400)),
+    creatorFor: (setup, i) => (i < 5 ? setup.reactorA : setup.reactorB),
+    write: (setup, ids) => {
+      const writes: Promise<void>[] = [];
+      for (const [i, docId] of ids.entries()) {
+        for (let j = 0; j < 10; j++) {
+          const reactor = j % 2 === 0 ? setup.reactorA : setup.reactorB;
+          writes.push(
+            submitWrite(setup, reactor, docId, [
+              driveDocumentModelModule.actions.setDriveName({
+                name: `Contention ${i} Write ${j}`,
               }),
             ]),
           );
@@ -642,7 +923,7 @@ async function smoke(): Promise<void> {
       const timed = Date.now() - timedFrom;
       await lifecycle.afterEach();
       process.stdout.write(
-        `PASS  ${scenario.name} (${(timed / 1000).toFixed(2)}s timed, ${((Date.now() - started) / 1000).toFixed(1)}s total)\n`,
+        `PASS  ${scenario.name} (${(timed / 1000).toFixed(2)}s timed, ${((Date.now() - started) / 1000).toFixed(1)}s total)\n      ${describeAttribution(attributionFor(scenario.name))}\n`,
       );
     } catch (error) {
       failures += 1;
@@ -740,6 +1021,9 @@ if (record) {
     recordedAt: new Date().toISOString(),
     conclusions: [],
     caveats: [],
+    derived: scenarios.flatMap((scenario) =>
+      derivedFrom(scenario.name, attributionFor(scenario.name)),
+    ),
     title: "",
     question: "",
     tags: [],
