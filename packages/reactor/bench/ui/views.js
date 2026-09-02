@@ -208,19 +208,19 @@ function commitLine(commit) {
 
 function gapSection(gap) {
   const n = gap.commits.length;
-  const tied = gap.commits.filter((c) => c.fixes.length > 0).length;
-  const touching = gap.commits.filter((c) => c.touches.length > 0).length;
+  const fixes = [...new Set(gap.commits.flatMap((c) => c.fixes))];
+  const touches = [...new Set(gap.commits.flatMap((c) => c.touches))];
   let verdict;
   if (gap.warning) {
     verdict = `<span class="badge lint">${esc(gap.warning)}</span>`;
   } else if (n === 0) {
     verdict = '<span class="muted">same commit</span>';
-  } else if (tied === 0 && touching === 0) {
+  } else if (fixes.length === 0 && touches.length === 0) {
     verdict = `<span class="muted">${n} commit${n === 1 ? "" : "s"}, none tied to a task or touching a task's sites</span>`;
   } else {
-    verdict = `<span>${n} commit${n === 1 ? "" : "s"} · <b>${tied}</b> fix a task · <b>${touching}</b> touch a task's sites</span>`;
+    verdict = `<span>${n} commit${n === 1 ? "" : "s"} · fixes ${fixes.length ? idList(fixes) : "none"} · touches sites of ${touches.length ? idList(touches) : "none"}</span>`;
   }
-  return `<details class="gap" ${tied || touching ? "open" : ""}>
+  return `<details class="gap" ${fixes.length || touches.length ? "open" : ""}>
     <summary>${idLink(gap.from.id)} ${shaLink(gap.from.environment.reactorSha)} → ${idLink(gap.to.id)} ${shaLink(gap.to.environment.reactorSha)} — ${verdict}</summary>
     ${gap.endpoints ? `<p class="muted">${esc(gap.endpoints.from ?? "?")} → ${esc(gap.endpoints.to ?? "?")}</p>` : ""}
     ${n ? `<ol class="commits">${gap.commits.map(commitLine).join("")}</ol>` : ""}
@@ -471,7 +471,7 @@ function taskSeriesBlock(state, task, summaryEntry, gaps, records) {
   );
   return `
     <h3>In ${seriesLink(records[0].title)}</h3>
-    <p>found in ${idList(summaryEntry.foundIn)} · fixed: ${fixes.length ? fixes.map(fixesLine).join("; ") : '<span class="muted">none recorded — <code>bench:records set-status ' + esc(task.id) + " FIXED --commit &lt;sha&gt;</code> when a fix lands</span>"}</p>
+    <p>found in ${idList(summaryEntry.foundIn)} · fixed: ${fixes.length ? fixes.map(fixesLine).join("; ") : `<span class="muted">none recorded — when a fix lands: <code>pnpm --filter @powerhousedao/reactor bench:records set-status ${esc(task.id)} FIXED --dir bench --commit &lt;sha&gt; --by &lt;you&gt; --note "&lt;what changed&gt;"</code></span>`}</p>
     <p class="muted">${cases.length ? `showing tagged case${cases.length === 1 ? "" : "s"}: ${cases.map((c) => `<code>${esc(c)}</code>`).join(", ")}` : "showing every case; add a <code>case:</code> tag to narrow to the line this task is about"}</p>
     ${touching.length ? `<p>Commits between runs that name this task or touch its sites:</p><ol class="commits">${touching.map(commitLine).join("")}</ol>` : `<p class="muted">No commit between these runs names this task or touches its sites.</p>`}
     <div id="tasks-strip"></div>
