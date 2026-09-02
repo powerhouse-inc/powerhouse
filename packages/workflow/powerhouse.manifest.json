@@ -16,13 +16,28 @@
       "name": "Connection"
     }
   ],
-  "apps": [],
+  "apps": [
+    {
+      "name": "Workflow Studio",
+      "id": "workflow-studio",
+      "documentTypes": [
+        "powerhouse/document-drive"
+      ]
+    }
+  ],
   "editors": [
     {
-      "name": "Workflow Editor",
       "id": "workflow-editor",
+      "name": "Workflow Editor",
       "documentTypes": [
         "powerhouse/workflow"
+      ]
+    },
+    {
+      "id": "connection-editor",
+      "name": "Connection Editor",
+      "documentTypes": [
+        "powerhouse/connection"
       ]
     }
   ],
