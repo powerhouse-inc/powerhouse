@@ -85,9 +85,9 @@ function invalidBanner(state, id) {
 }
 
 function chartsUnavailable(state) {
-  return state.Plot
-    ? ""
-    : `<p class="banner warn">Charts unavailable: ${esc(state.plotError?.message ?? "Observable Plot did not load")}. Tables still work.</p>`;
+  return state.plotError
+    ? `<p class="banner warn">Charts unavailable: ${esc(state.plotError.message)}. Tables still work.</p>`
+    : "";
 }
 
 function header(state) {
@@ -232,6 +232,9 @@ export function renderSeries(root, state, title) {
       root.querySelector("#tasks-strip").append(tasksPlot);
     }
     const charts = root.querySelector("#charts");
+    if (perSuite.length === 0) {
+      charts.innerHTML = `<p class="muted">No case in this series reports ${esc(metric.label)}.</p>`;
+    }
     for (const { suite, plot } of perSuite) {
       const h3 = document.createElement("h3");
       h3.textContent = suite;

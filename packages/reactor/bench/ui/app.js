@@ -99,6 +99,19 @@ async function refresh(force) {
   }
 }
 
+// Records and Plot load together, then one render: routing as soon as the
+// local files land would paint the no-charts fallback before the CDN answers.
+async function start() {
+  try {
+    await Promise.all([loadPlot(), loadRecords()]);
+  } catch (error) {
+    renderError(root, error);
+    return;
+  }
+  route();
+  setInterval(() => void refresh(false), POLL_MS);
+}
+
 root.addEventListener("click", (event) => {
   if (event.target.id === "refresh") {
     void refresh(true);
@@ -124,6 +137,4 @@ root.addEventListener(
 );
 window.addEventListener("hashchange", route);
 
-await Promise.all([loadPlot(), refresh(true)]);
-route();
-setInterval(() => void refresh(false), POLL_MS);
+await start();
