@@ -1,3 +1,7 @@
+## 6.2.2-dev.72 (2026-09-02)
+
+This was a version bump only for @powerhousedao/analytics-engine-core to align it with other projects, there were no code changes.
+
 ## 6.2.2-dev.71 (2026-09-01)
 
 ### 🚀 Features
