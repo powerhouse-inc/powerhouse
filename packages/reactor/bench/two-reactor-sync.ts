@@ -166,6 +166,26 @@ async function settle(
   throw new Error(`job ${jobId} did not settle within ${timeoutMs}ms`);
 }
 
+type WriteHandle = { reactor: IReactor; jobId: string };
+
+/** Submits one write; execute() resolves at enqueue, so the job settles later. */
+async function submitWrite(
+  reactor: IReactor,
+  docId: string,
+  actions: Parameters<IReactor["execute"]>[2],
+): Promise<WriteHandle> {
+  const info = await reactor.execute(docId, "main", actions);
+  return { reactor, jobId: info.id };
+}
+
+/** A FAILED write silently shrinks the workload, so every job must settle. */
+async function settleWrites(writes: Promise<WriteHandle>[]): Promise<void> {
+  const handles = await Promise.all(writes);
+  for (const handle of handles) {
+    await settle(handle.reactor, handle.jobId);
+  }
+}
+
 /** Creates documents on the chosen side, awaiting each one. */
 async function createDocuments(
   setup: TwoReactorSetup,
@@ -208,6 +228,55 @@ async function connectDocuments(
   }
 }
 
+type ScopeSummary = { actionIds: Set<string>; headHash: string };
+
+/** Action-id set and head hash per scope, from the full unpaged log. */
+async function summarizeScopes(
+  reactor: IReactor,
+  docId: string,
+): Promise<Map<string, ScopeSummary>> {
+  const result = await reactor.getOperations(docId, { branch: "main" });
+  const summaries = new Map<string, ScopeSummary>();
+  for (const [scope, page] of Object.entries(result)) {
+    summaries.set(scope, {
+      actionIds: new Set(page.results.map((op) => op.action.id)),
+      headHash: page.results.at(-1)?.hash ?? "",
+    });
+  }
+  return summaries;
+}
+
+/** Same action set and head (state) hash per scope; never compare op counts. */
+function summariesConverged(
+  a: Map<string, ScopeSummary>,
+  b: Map<string, ScopeSummary>,
+): boolean {
+  if (a.size === 0 || a.size !== b.size) {
+    return false;
+  }
+  for (const [scope, sideA] of a) {
+    const sideB = b.get(scope);
+    if (!sideB) {
+      return false;
+    }
+    if (
+      sideA.actionIds.size === 0 ||
+      sideA.actionIds.size !== sideB.actionIds.size
+    ) {
+      return false;
+    }
+    for (const id of sideA.actionIds) {
+      if (!sideB.actionIds.has(id)) {
+        return false;
+      }
+    }
+    if (sideA.headHash !== sideB.headHash) {
+      return false;
+    }
+  }
+  return true;
+}
+
 async function waitForSync(
   reactorA: IReactor,
   reactorB: IReactor,
@@ -220,13 +289,10 @@ async function waitForSync(
     let allSynced = true;
 
     for (const docId of documentIds) {
-      const resultA = await reactorA.getOperations(docId, { branch: "main" });
-      const opsA = Object.values(resultA).flatMap((scope) => scope.results);
+      const summariesA = await summarizeScopes(reactorA, docId);
+      const summariesB = await summarizeScopes(reactorB, docId);
 
-      const resultB = await reactorB.getOperations(docId, { branch: "main" });
-      const opsB = Object.values(resultB).flatMap((scope) => scope.results);
-
-      if (opsA.length !== opsB.length || opsA.length === 0) {
+      if (!summariesConverged(summariesA, summariesB)) {
         allSynced = false;
         break;
       }
@@ -242,7 +308,7 @@ async function waitForSync(
   throw new Error(`Sync did not complete within ${timeoutMs}ms`);
 }
 
-/** Both sides must agree on every document, or the workload proved nothing. */
+/** Both sides must agree on every document's state; header revisions may not. */
 async function assertConverged(
   reactorA: IReactor,
   reactorB: IReactor,
@@ -251,7 +317,7 @@ async function assertConverged(
   for (const docId of documentIds) {
     const docA = await reactorA.get(docId, { branch: "main" });
     const docB = await reactorB.get(docId, { branch: "main" });
-    if (JSON.stringify(docA) !== JSON.stringify(docB)) {
+    if (JSON.stringify(docA.state) !== JSON.stringify(docB.state)) {
       throw new Error(`Documents ${docId} not synced`);
     }
   }
@@ -284,11 +350,11 @@ const scenarios: Scenario[] = [
       await connectDocuments(setup!, ids);
       await createDocuments(setup!, ids, sideFor);
 
-      const writes: Promise<unknown>[] = [];
+      const writes: Promise<WriteHandle>[] = [];
       for (const [i, docId] of ids.entries()) {
         for (let j = 0; j < 10; j++) {
           writes.push(
-            sideFor(i).execute(docId, "main", [
+            submitWrite(sideFor(i), docId, [
               driveDocumentModelModule.actions.setDriveName({
                 name: `Doc ${i} Update ${j}`,
               }),
@@ -296,7 +362,7 @@ const scenarios: Scenario[] = [
           );
         }
       }
-      await Promise.all(writes);
+      await settleWrites(writes);
 
       await waitForSync(reactorA, reactorB, ids);
       await assertConverged(reactorA, reactorB, ids);
@@ -313,12 +379,12 @@ const scenarios: Scenario[] = [
       await connectDocuments(setup!, ids);
       await createDocuments(setup!, ids, () => reactorA);
 
-      const writes: Promise<unknown>[] = [];
+      const writes: Promise<WriteHandle>[] = [];
       for (const [i, docId] of ids.entries()) {
         for (let j = 0; j < 20; j++) {
           const reactor = j % 2 === 0 ? reactorA : reactorB;
           writes.push(
-            reactor.execute(docId, "main", [
+            submitWrite(reactor, docId, [
               driveDocumentModelModule.actions.setDriveName({
                 name: `Conflict ${i} Write ${j}`,
               }),
@@ -326,7 +392,7 @@ const scenarios: Scenario[] = [
           );
         }
       }
-      await Promise.all(writes);
+      await settleWrites(writes);
 
       await waitForSync(reactorA, reactorB, ids);
       await assertConverged(reactorA, reactorB, ids);
@@ -344,11 +410,11 @@ const scenarios: Scenario[] = [
       await connectDocuments(setup!, ids);
       await createDocuments(setup!, ids, sideFor);
 
-      const writes: Promise<unknown>[] = [];
+      const writes: Promise<WriteHandle>[] = [];
       for (const [i, docId] of ids.entries()) {
         for (let j = 0; j < 100; j++) {
           writes.push(
-            sideFor(i).execute(docId, "main", [
+            submitWrite(sideFor(i), docId, [
               driveDocumentModelModule.actions.setDriveName({
                 name: `Heavy ${i} Update ${j}`,
               }),
@@ -356,7 +422,7 @@ const scenarios: Scenario[] = [
           );
         }
       }
-      await Promise.all(writes);
+      await settleWrites(writes);
 
       await waitForSync(reactorA, reactorB, ids);
       await assertConverged(reactorA, reactorB, ids);
@@ -373,13 +439,13 @@ const scenarios: Scenario[] = [
       await connectDocuments(setup!, ids);
       await createDocuments(setup!, ids, () => reactorA);
 
-      const writes: Promise<unknown>[] = [];
+      const writes: Promise<WriteHandle>[] = [];
       for (const [i, docId] of ids.entries()) {
         let parentFolder: string | null = null;
         for (let level = 0; level < 5; level++) {
           const folderId = deterministicId("folder", i * 100 + level);
           writes.push(
-            reactorA.execute(docId, "main", [
+            submitWrite(reactorA, docId, [
               driveDocumentModelModule.actions.addFolder({
                 id: folderId,
                 name: `Level ${level} Folder`,
@@ -388,7 +454,7 @@ const scenarios: Scenario[] = [
             ]),
           );
           writes.push(
-            reactorB.execute(docId, "main", [
+            submitWrite(reactorB, docId, [
               driveDocumentModelModule.actions.addFile({
                 id: deterministicId("file", i * 100 + level),
                 name: `File at Level ${level}`,
@@ -400,7 +466,7 @@ const scenarios: Scenario[] = [
           parentFolder = folderId;
         }
       }
-      await Promise.all(writes);
+      await settleWrites(writes);
 
       await waitForSync(reactorA, reactorB, ids);
       await assertConverged(reactorA, reactorB, ids);
