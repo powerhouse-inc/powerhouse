@@ -1,3 +1,7 @@
+## 6.2.2-dev.74 (2026-09-02)
+
+This was a version bump only for benchmarks to align it with other projects, there were no code changes.
+
 ## 6.2.2-dev.73 (2026-09-02)
 
 ### 🚀 Features

@@ -1,3 +1,13 @@
+## 6.2.2-dev.74 (2026-09-02)
+
+### 🩹 Fixes
+
+- **reactor-api:** admit a tokenless subscription when only resolving identity ([#2954](https://github.com/powerhouse-inc/powerhouse/pull/2954))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.2.2-dev.73 (2026-09-02)
 
 ### 🚀 Features
