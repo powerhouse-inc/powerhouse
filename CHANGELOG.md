@@ -1,3 +1,38 @@
+## 6.2.2-dev.72 (2026-09-02)
+
+This was a version bump only, there were no code changes.
+
+## 6.2.2-dev.71 (2026-09-01)
+
+### 🚀 Features
+
+- agent-managed Vetra with per-project ports ([#2946](https://github.com/powerhouse-inc/powerhouse/pull/2946))
+- **reactor:** let exists() answer whether an id is taken ([d8d5fa2ae](https://github.com/powerhouse-inc/powerhouse/commit/d8d5fa2ae))
+- **reactor:** distinguish an id collision from a stale-read race ([be6db7b11](https://github.com/powerhouse-inc/powerhouse/commit/be6db7b11))
+- **reactor:** add isDocumentIdTaken to the client surface ([2b92450ca](https://github.com/powerhouse-inc/powerhouse/commit/2b92450ca))
+
+### 🩹 Fixes
+
+- stop reusing a document id when importing a .phd ([#2940](https://github.com/powerhouse-inc/powerhouse/pull/2940))
+- **reactor:** stop flattening typed errors on the write path ([a57461f81](https://github.com/powerhouse-inc/powerhouse/commit/a57461f81))
+- **reactor:** fail a taken id on the first attempt ([b64079a42](https://github.com/powerhouse-inc/powerhouse/commit/b64079a42))
+- **reactor:** keep the write-failure context in the log line ([a7c2ed729](https://github.com/powerhouse-inc/powerhouse/commit/a7c2ed729))
+- **reactor:** do not add a file node for a create that failed ([a454fe21d](https://github.com/powerhouse-inc/powerhouse/commit/a454fe21d))
+- **reactor-api:** hold @apollo/subgraph below 2.15 and use its array form ([ec6d19da0](https://github.com/powerhouse-inc/powerhouse/commit/ec6d19da0))
+- **reactor-api:** stop the gateway reusing subgraph connections the server has closed ([#2942](https://github.com/powerhouse-inc/powerhouse/pull/2942))
+- **reactor-api:** declare codegen scalars in document-model subgraph SDL ([396d95079](https://github.com/powerhouse-inc/powerhouse/commit/396d95079))
+- **reactor-browser:** stop reusing a document id on import ([f23680862](https://github.com/powerhouse-inc/powerhouse/commit/f23680862))
+- **reactor-browser:** fail the import when there is no reactor client ([207cf9aa6](https://github.com/powerhouse-inc/powerhouse/commit/207cf9aa6))
+- **reactor-browser:** retry the import under a new id when the create collides ([f324f42ad](https://github.com/powerhouse-inc/powerhouse/commit/f324f42ad))
+- **reactor-hypercore:** match the kysely store on a taken id ([d00a46fab](https://github.com/powerhouse-inc/powerhouse/commit/d00a46fab))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5
+- Frank @froid1911
+
 ## 6.2.2-dev.70 (2026-09-01)
 
 This was a version bump only, there were no code changes.

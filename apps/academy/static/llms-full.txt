@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-08-28T15:06:46.681Z
+> Generated: 2026-09-02T13:27:15.054Z
 > Total Documents: 110
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -13783,7 +13783,6 @@ and real-time processing with a "Vetra" drive or connection to remote drives.
 
 **Connect Port** - port to use for the Vetra Connect - Usage: `--connect-port <number>`
 
-**Default:** `3001`
 **Remote Drive** - URL of remote drive to connect to (skips switchboard initialization) - Usage: `--remote-drive <str>`
 
 **Drives Public Base** - public base URL for the drive URLs advertised to Connect; each drive is exposed as &lt;base&gt;/d/&lt;slug&gt; instead of `http://localhost:<switchboard-port>/d/<slug>`. Use when the switchboard is reachable through a reverse proxy. - Usage: `--drives-public-base <str>`

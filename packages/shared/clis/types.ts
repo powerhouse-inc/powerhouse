@@ -316,8 +316,9 @@ export type PowerhouseConfig = {
   };
   packages?: PowerhousePackage[];
   vetra?: {
-    driveId: string;
-    driveUrl: string;
+    driveId?: string;
+    driveUrl?: string;
+    connectPort?: number;
   };
   packageRegistryUrl?: string;
   connect?: PHConnectRuntimeConfig;

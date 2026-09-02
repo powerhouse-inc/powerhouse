@@ -165,4 +165,20 @@ describe("source-config schema", () => {
       "browser",
     ]);
   });
+
+  it("vetra recognises connectPort and requires no field", () => {
+    const props = sourceConfigSchema.properties as unknown as Record<
+      string,
+      {
+        required?: readonly string[];
+        properties?: Record<string, { type?: string }>;
+      }
+    >;
+    // A project with no remote drive still needs somewhere to carry its
+    // assigned Connect port, so driveId/driveUrl cannot be required.
+    expect(props.vetra.required).toBeUndefined();
+    expect(props.vetra.properties?.connectPort.type).toBe("integer");
+    expect(props.vetra.properties?.driveId.type).toBe("string");
+    expect(props.vetra.properties?.driveUrl.type).toBe("string");
+  });
 });

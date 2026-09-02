@@ -1,4 +1,4 @@
-# Powerhouse CLI Commands (6.2.2-dev.70)<br>
+# Powerhouse CLI Commands (6.2.2-dev.72)<br>
 This document provides detailed information about the available commands in the Powerhouse CLI.<br><br>
 The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essential commands for managing Powerhouse projects. The tool and it's commands are fundamental for creating, building, and running Document Models as a builder in studio mode.<br>
 ## Table of Contents
@@ -269,7 +269,7 @@ port to use for the Vetra Switchboard<br><br>
 #### Connect Port <br>
 port to use for the Vetra Connect<br><br>
 **usage:** `--connect-port <number>`<br>
-**default**: `3001`
+
 #### Remote Drive <br>
 URL of remote drive to connect to (skips switchboard initialization)<br><br>
 **usage:** `--remote-drive <str>`<br>
