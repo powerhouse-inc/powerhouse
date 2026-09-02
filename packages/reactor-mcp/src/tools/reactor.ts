@@ -1,6 +1,11 @@
 import type { IReactorClient, ISyncManager } from "@powerhousedao/reactor";
 import { DriveCollectionId } from "@powerhousedao/reactor";
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
+import {
+  setAvailableOffline,
+  setDriveIcon,
+  setSharingType,
+} from "@powerhousedao/shared/document-drive";
 import type {
   Action,
   DocumentModelModule,
@@ -182,12 +187,12 @@ export const addDriveTool = {
               .describe("Optional icon for the drive"),
           })
           .describe("Global drive properties"),
-        id: z.string().optional().describe("Optional drive ID"),
-        slug: z.string().optional().describe("Optional drive slug"),
         preferredEditor: z
           .string()
           .optional()
-          .describe("Optional preferred editor"),
+          .describe(
+            "Optional app/editor module id recorded as the drive's preferred editor",
+          ),
         local: z
           .object({
             availableOffline: z
@@ -465,18 +470,39 @@ export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
     }),
 
     addDrive: toolWithCallback(addDriveTool, async (params) => {
-      // Create an empty drive document
+      const { driveInput } = params;
       const drive = await client.createEmpty<DocumentDriveDocument>(
         DRIVE_DOCUMENT_TYPE,
         {},
       );
+      const driveId = drive.header.id;
 
-      // If name is provided, set it using an action
-      if (params.driveInput.global?.name) {
-        await client.rename(drive.header.id, params.driveInput.global.name);
+      if (driveInput.global.name) {
+        await client.rename(driveId, driveInput.global.name);
+      }
+      if (driveInput.preferredEditor) {
+        await client.setPreferredEditor(driveId, driveInput.preferredEditor);
       }
 
-      return { driveId: drive.header.id };
+      const actions: Action[] = [];
+      if (driveInput.global.icon) {
+        actions.push(setDriveIcon({ icon: driveInput.global.icon }));
+      }
+      if (driveInput.local?.sharingType) {
+        actions.push(setSharingType({ type: driveInput.local.sharingType }));
+      }
+      if (driveInput.local?.availableOffline !== undefined) {
+        actions.push(
+          setAvailableOffline({
+            availableOffline: driveInput.local.availableOffline,
+          }),
+        );
+      }
+      if (actions.length > 0) {
+        await client.execute(driveId, "main", actions);
+      }
+
+      return { driveId };
     }),
 
     getDrive: toolWithCallback(getDriveTool, async (params) => {
