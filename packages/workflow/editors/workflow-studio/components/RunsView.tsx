@@ -153,6 +153,7 @@ function RunRow(props: { run: RunRecord; showWorkflow: boolean }) {
 export function RunsView(props: {
   workflowId?: string;
   title: string;
+  // Present only for manual-trigger workflows.
   onFire?: () => Promise<string | null>;
 }) {
   const [runs, setRuns] = useState<RunRecord[] | null>(null);

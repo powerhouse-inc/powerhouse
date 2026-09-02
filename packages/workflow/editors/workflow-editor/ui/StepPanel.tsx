@@ -104,6 +104,7 @@ function ConfigSection(props: {
   config: unknown;
   onChange: (config: unknown) => void;
   designTime?: DesignTimeService;
+  connectionId?: string;
 }) {
   const form = useBlockForm(props.blockType, props.designTime);
   const configRecord = (props.config ?? {}) as Record<string, unknown>;
@@ -125,6 +126,7 @@ function ConfigSection(props: {
                     props.blockType,
                     propName,
                     current,
+                    props.connectionId,
                   )
               : undefined
           }
@@ -209,6 +211,7 @@ export function StepPanel(props: {
         config={step.config}
         onChange={(config) => callbacks.updateStep({ id: step.id, config })}
         designTime={props.designTime}
+        connectionId={step.connectionId ?? undefined}
       />
       <button
         type="button"

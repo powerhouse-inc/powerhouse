@@ -15,6 +15,16 @@ const CORE_META: Record<string, BlockMeta> = {
     subtitle: "Trigger",
     glyph: "▤",
   },
+  "core#document-created": {
+    displayName: "Document created",
+    subtitle: "Trigger",
+    glyph: "✚",
+  },
+  "core#document-deleted": {
+    displayName: "Document deleted",
+    subtitle: "Trigger",
+    glyph: "✖",
+  },
   "core#branch": { displayName: "Branch", subtitle: "Core", glyph: "⑂" },
   "core#document-create": {
     displayName: "Create document",

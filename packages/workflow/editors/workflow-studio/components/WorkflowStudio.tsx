@@ -160,6 +160,13 @@ export function WorkflowStudio(props: { children?: ReactNode }) {
     ? (workflows.find((node) => node.id === runsTarget.id) ?? null)
     : null;
 
+  // Manual fire only makes sense for core#manual triggers.
+  const [targetDocument] = useDocumentById(liveTarget?.id ?? null);
+  const manualTrigger =
+    targetDocument?.header.documentType === WORKFLOW_TYPE &&
+    (targetDocument as WorkflowDocument).state.global.trigger?.blockType ===
+      "core#manual";
+
   return (
     <div className="flex h-full min-h-0">
       <aside className="w-56 shrink-0 overflow-y-auto border-r border-solid border-slate-200">
@@ -223,7 +230,7 @@ export function WorkflowStudio(props: { children?: ReactNode }) {
               workflowId={liveTarget?.id}
               title={liveTarget ? liveTarget.name || "Workflow" : "All runs"}
               onFire={
-                liveTarget
+                liveTarget && manualTrigger
                   ? () =>
                       fireWorkflow(liveTarget.id).then((result) => result.error)
                   : undefined

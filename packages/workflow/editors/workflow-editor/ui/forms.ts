@@ -24,6 +24,7 @@ export interface DesignTimeService {
     blockType: string,
     propName: string,
     input: Record<string, unknown>,
+    connectionId?: string,
   ) => Promise<unknown>;
 }
 
@@ -94,6 +95,32 @@ export const CORE_FORMS: Record<string, BlockForm> = {
         false,
         "Omit to match any action",
       ),
+    ],
+  },
+  "core#document-created": {
+    title: "Document created",
+    requireAuth: false,
+    props: [
+      autocomplete(
+        "documentType",
+        "Document type",
+        false,
+        "Type of the created document; omit to match any",
+      ),
+      autocomplete("driveId", "Drive", false, "Omit to match every drive"),
+    ],
+  },
+  "core#document-deleted": {
+    title: "Document deleted",
+    requireAuth: false,
+    props: [
+      autocomplete(
+        "documentType",
+        "Document type",
+        false,
+        "Resolved best-effort after deletion; omit to match any",
+      ),
+      autocomplete("driveId", "Drive", false, "Omit to match every drive"),
     ],
   },
   "core#branch": {

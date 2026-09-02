@@ -1,6 +1,7 @@
 import "@xyflow/react/dist/style.css";
 import { DocumentToolbar } from "@powerhousedao/design-system/connect";
 import { useWorkflowModel } from "./document/useWorkflowModel.js";
+import { EditorSwitch } from "./EditorSwitch.js";
 import {
   fetchPieceActions,
   fetchPieceCatalog,
@@ -33,6 +34,7 @@ export default function Editor() {
         model={model}
         callbacks={callbacks}
         designTime={designTime}
+        headerExtra={<EditorSwitch active="workflow-editor" />}
       />
     </div>
   );

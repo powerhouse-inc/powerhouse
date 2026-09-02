@@ -189,12 +189,13 @@ export async function loadBlockOptions(
   blockType: string,
   propName: string,
   input: Record<string, unknown>,
+  connectionId?: string,
 ): Promise<unknown> {
   const data = await gql<BlockOptionsResult>(
-    `query Options($blockType: String!, $propName: String!, $input: Unknown) {
-      workflowRuntime { blockOptions(blockType: $blockType, propName: $propName, input: $input) }
+    `query Options($blockType: String!, $propName: String!, $input: Unknown, $connectionId: String) {
+      workflowRuntime { blockOptions(blockType: $blockType, propName: $propName, input: $input, connectionId: $connectionId) }
     }`,
-    { blockType, propName, input },
+    { blockType, propName, input, connectionId: connectionId ?? null },
   );
   return data.workflowRuntime.blockOptions;
 }

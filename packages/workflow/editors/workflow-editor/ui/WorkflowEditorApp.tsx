@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import type { DesignTimeService } from "./forms.js";
 import type {
   WorkflowEditorCallbacks,
@@ -19,6 +19,7 @@ export function WorkflowEditorApp(props: {
   model: WorkflowModel;
   callbacks: WorkflowEditorCallbacks;
   designTime?: DesignTimeService;
+  headerExtra?: ReactNode;
 }) {
   const { model, callbacks } = props;
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -52,6 +53,7 @@ export function WorkflowEditorApp(props: {
         <span className="ml-auto text-[11px] text-slate-400">
           Use the + buttons on the canvas to add steps
         </span>
+        {props.headerExtra}
       </div>
       <div className="flex min-h-0 flex-1">
         <div className="min-h-[480px] min-w-0 flex-1">

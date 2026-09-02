@@ -120,6 +120,12 @@ function ConfigField(props: {
   );
 }
 
+// Heuristic: env var names are short SCREAMING_SNAKE; anything else is
+// probably the secret value itself, which must never enter the document.
+function looksLikeSecretValue(ref: string): boolean {
+  return ref.length > 0 && !/^[A-Z][A-Z0-9_]{0,63}$/.test(ref);
+}
+
 function SecretField(props: {
   field: AuthField;
   refValue: string;
@@ -151,6 +157,13 @@ function SecretField(props: {
           </button>
         ) : null}
       </div>
+      {looksLikeSecretValue(props.refValue) ? (
+        <p className="mt-0.5 text-[11px] font-medium text-red-600">
+          This looks like a secret value, not an environment variable name. The
+          document only stores the variable name (e.g. DISCORD_BOT_TOKEN); set
+          the value in the switchboard&apos;s environment.
+        </p>
+      ) : null}
       <Hint>
         {props.field.description ??
           "Name of the environment variable on the switchboard host that holds this secret. The value never enters the document."}
@@ -199,6 +212,23 @@ export function ConnectionForm(props: {
 
   const config = (state.config ?? {}) as Record<string, unknown>;
   const refByName = new Map(state.secretRefs.map((ref) => [ref.name, ref.ref]));
+
+  // Flip UNCONFIGURED to OK once every required field of the plan is filled.
+  const maybeMarkConfigured = (
+    nextConfig: Record<string, unknown>,
+    nextRefs: Map<string, string>,
+  ) => {
+    if (state.status !== "UNCONFIGURED" || !plan.supported) return;
+    const configOk = plan.configFields.every(
+      (field) =>
+        !field.required ||
+        (nextConfig[field.name] !== undefined && nextConfig[field.name] !== ""),
+    );
+    const secretsOk = plan.secretFields.every(
+      (field) => !field.required || Boolean(nextRefs.get(field.name)),
+    );
+    if (configOk && secretsOk) callbacks.setStatus("OK");
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -276,7 +306,13 @@ export function ConnectionForm(props: {
               key={field.name}
               field={field}
               value={config[field.name]}
-              onCommit={(value) => callbacks.setConfigValue(field.name, value)}
+              onCommit={(value) => {
+                callbacks.setConfigValue(field.name, value);
+                maybeMarkConfigured(
+                  { ...config, [field.name]: value },
+                  refByName,
+                );
+              }}
             />
           ))}
         </div>
@@ -290,7 +326,12 @@ export function ConnectionForm(props: {
               key={field.name}
               field={field}
               refValue={refByName.get(field.name) ?? ""}
-              onCommit={(ref) => callbacks.setSecretRef(field.name, ref)}
+              onCommit={(ref) => {
+                callbacks.setSecretRef(field.name, ref);
+                const nextRefs = new Map(refByName);
+                nextRefs.set(field.name, ref);
+                maybeMarkConfigured(config, nextRefs);
+              }}
               onRemove={() => callbacks.removeSecretRef(field.name)}
             />
           ))}

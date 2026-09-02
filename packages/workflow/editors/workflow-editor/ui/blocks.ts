@@ -18,7 +18,19 @@ export const TRIGGER_PRESETS: BlockPreset[] = [
     label: "Document event",
     blockType: "core#document-event",
     description: "Fires when a matching document operation lands.",
-    defaultConfig: { documentType: "", actionType: "" },
+    defaultConfig: {},
+  },
+  {
+    label: "Document created",
+    blockType: "core#document-created",
+    description: "Fires when a document is added to a drive.",
+    defaultConfig: {},
+  },
+  {
+    label: "Document deleted",
+    blockType: "core#document-deleted",
+    description: "Fires when a document is removed from a drive.",
+    defaultConfig: {},
   },
 ];
 
