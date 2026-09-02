@@ -1,3 +1,20 @@
+## 6.2.2-dev.73 (2026-09-02)
+
+### 🚀 Features
+
+- **reactor:** one script runs the benchmarks and records them ([89f958f97](https://github.com/powerhouse-inc/powerhouse/commit/89f958f97))
+- three bench agents and the loop that runs them back to back ([af0e7467f](https://github.com/powerhouse-inc/powerhouse/commit/af0e7467f))
+- **reactor:** add zod schemas for benchmark and task records ([9869572ba](https://github.com/powerhouse-inc/powerhouse/commit/9869572ba))
+
+### 🩹 Fixes
+
+- **ci:** emit an empty changed-files list without a trailing space ([366ad4d96](https://github.com/powerhouse-inc/powerhouse/commit/366ad4d96))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5
+
 ## 6.2.2-dev.72 (2026-09-02)
 
 This was a version bump only for @powerhousedao/reactor-hypercore to align it with other projects, there were no code changes.
