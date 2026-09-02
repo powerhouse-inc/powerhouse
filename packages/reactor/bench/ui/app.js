@@ -1,6 +1,5 @@
 import { indexRecords, parseJsonl, referenceProblems } from "./records.js";
 import {
-  fillGap,
   renderError,
   renderOverview,
   renderRecord,
@@ -77,11 +76,11 @@ function route() {
   const [view, ...rest] = hash.split("/");
   const arg = rest.join("/");
   if (view === "series" && arg) {
-    renderSeries(root, state, arg);
+    void renderSeries(root, state, arg);
   } else if (view === "record" && arg) {
     renderRecord(root, state, arg);
   } else if (view === "task" && arg) {
-    renderTask(root, state, arg);
+    void renderTask(root, state, arg);
   } else {
     renderOverview(root, state);
   }
@@ -126,15 +125,6 @@ root.addEventListener("change", (event) => {
     route();
   }
 });
-root.addEventListener(
-  "toggle",
-  (event) => {
-    if (event.target.matches("details.gap") && event.target.open) {
-      void fillGap(event.target);
-    }
-  },
-  true,
-);
 window.addEventListener("hashchange", route);
 
 await start();

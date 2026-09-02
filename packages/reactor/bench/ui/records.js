@@ -263,3 +263,140 @@ export function referenceProblems(index, benchmarks, tasks) {
   }
   return problems;
 }
+
+// ---- tasks against a series ----------------------------------------------
+
+// `case:<case name>` or `case:<suite label> > <case name>` names the line a
+// finding is about; the schema records only a B-id and code sites.
+export function caseTags(task) {
+  return (task.tags ?? [])
+    .filter((tag) => tag.startsWith("case:"))
+    .map((tag) => tag.slice("case:".length).trim())
+    .filter((tag) => tag !== "");
+}
+
+export function rowMatchesCase(row, tag) {
+  return row.caseName === tag || `${row.suite} > ${row.caseName}` === tag;
+}
+
+export function fixEvents(task) {
+  return (task.history ?? []).filter(
+    (event) => event.status === "FIXED" || event.status === "COMMITTED",
+  );
+}
+
+// Short and full shas both appear; either may be a prefix of the other.
+export function sameCommit(a, b) {
+  if (!a || !b) {
+    return false;
+  }
+  const x = a.toLowerCase();
+  const y = b.toLowerCase();
+  return x.startsWith(y) || y.startsWith(x);
+}
+
+export function taskSites(task) {
+  return [...new Set((task.details?.sites ?? []).map((site) => site.file))];
+}
+
+function commitIs(commit, event) {
+  return (
+    sameCommit(event.commit, commit.fullSha) ||
+    sameCommit(event.commit, commit.sha)
+  );
+}
+
+// `fixes`: the task's history names this commit. `touches`: the commit
+// changed a file the task's sites point at — an inference, not a claim.
+export function annotateCommits(commits, tasks) {
+  return commits.map((commit) => {
+    const fixes = [];
+    const touches = [];
+    for (const task of tasks) {
+      if (fixEvents(task).some((event) => commitIs(commit, event))) {
+        fixes.push(task.id);
+      } else if (
+        (commit.files ?? []).length > 0 &&
+        taskSites(task).some((file) => commit.files.includes(file))
+      ) {
+        touches.push(task.id);
+      }
+    }
+    return { ...commit, fixes, touches };
+  });
+}
+
+// Which run first carries a fix. `gapCommits` maps a record id to the
+// commits that landed between the previous run and it.
+function landedBefore(records, gapCommits, event) {
+  if (event.commit) {
+    for (const bench of records) {
+      if (sameCommit(event.commit, bench.environment.reactorSha)) {
+        return { recordId: bench.id, by: "commit" };
+      }
+      const commits = gapCommits.get(bench.id);
+      if (commits?.some((commit) => commitIs(commit, event))) {
+        return { recordId: bench.id, by: "commit" };
+      }
+    }
+    if (gapCommits.size >= records.length - 1) {
+      return undefined; // every gap is known and none holds it: no run yet
+    }
+  }
+  const at = Date.parse(event.at);
+  const after = records.find((bench) => Date.parse(bench.recordedAt) > at);
+  return after ? { recordId: after.id, by: "time" } : undefined;
+}
+
+export function seriesTasks(records, index, gapCommits = new Map()) {
+  const entries = new Map();
+  for (const bench of records) {
+    for (const task of index.tasksForBenchmark.get(bench.id) ?? []) {
+      let entry = entries.get(task.id);
+      if (entry === undefined) {
+        entry = { task, foundIn: [], fixes: [], cases: caseTags(task) };
+        entries.set(task.id, entry);
+      }
+      entry.foundIn.push(bench.id);
+    }
+  }
+  for (const entry of entries.values()) {
+    entry.fixes = fixEvents(entry.task).map((event) => ({
+      status: event.status,
+      at: event.at,
+      commit: event.commit,
+      landedBefore: landedBefore(records, gapCommits, event),
+    }));
+  }
+  return [...entries.values()];
+}
+
+export function taskMarkers(summary, records) {
+  const xOf = new Map(records.map((bench) => [bench.id, xLabel(bench)]));
+  const rows = [];
+  for (const { task, foundIn, fixes } of summary) {
+    for (const id of foundIn) {
+      rows.push({
+        x: xOf.get(id),
+        taskId: task.id,
+        kind: task.kind,
+        status: task.status,
+        role: "found",
+        title: `${task.status} · found in ${id}\n${task.title}`,
+      });
+    }
+    for (const fix of fixes) {
+      if (fix.landedBefore) {
+        rows.push({
+          x: xOf.get(fix.landedBefore.recordId),
+          taskId: task.id,
+          kind: task.kind,
+          status: fix.status,
+          role: "fixed",
+          title: `${fix.status}${fix.commit ? ` in ${fix.commit}` : ""} · first run after: ${fix.landedBefore.recordId}${fix.landedBefore.by === "time" ? " (by time; no commit recorded)" : ""}`,
+        });
+      }
+    }
+  }
+  return rows;
+}

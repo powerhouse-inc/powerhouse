@@ -4,14 +4,20 @@ import { describe, expect, it } from "vitest";
 import { BenchmarkEntry } from "../../bench/records/benchmark-schema.js";
 import { TaskEntry } from "../../bench/records/task-schema.js";
 import {
+  annotateCommits,
+  caseTags,
   chartRows,
   indexRecords,
   parseJsonl,
   referenceProblems,
+  rowMatchesCase,
+  sameCommit,
   seriesTable,
+  seriesTasks,
   siteSha,
   taskEvents,
   taskLint,
+  taskMarkers,
   xLabel,
   type Benchmark,
   type Task,
@@ -270,5 +276,120 @@ describe("taskEvents and referenceProblems", () => {
     expect(
       referenceProblems(indexRecords([runOne], [harness]), [runOne], [harness]),
     ).toEqual([]);
+  });
+});
+
+describe("tasks against a series", () => {
+  const fixed = task(defectTask, {
+    id: "T-020",
+    evidence: ["B-001"],
+    tags: ["topic:x", "case:evaluateGrantStack: 64 grants"],
+    status: "FIXED",
+    history: [
+      { status: "UNVERIFIED", at: "2026-09-01T12:10:00.000Z" },
+      {
+        status: "FIXED",
+        at: "2026-09-01T12:30:00.000Z",
+        by: "benjamin",
+        commit: "abc1234abc12",
+      },
+    ],
+  });
+  const records = [runOne, runTwo, otherMachine];
+  const index = indexRecords(records, [fixed, defect]);
+
+  it("reads case tags and matches rows by name or suite > name", () => {
+    expect(caseTags(fixed)).toEqual(["evaluateGrantStack: 64 grants"]);
+    expect(caseTags(defect)).toEqual([]);
+    const row = {
+      suite: "auth policy",
+      caseName: "evaluateGrantStack: 64 grants",
+    };
+    expect(rowMatchesCase(row, "evaluateGrantStack: 64 grants")).toBe(true);
+    expect(
+      rowMatchesCase(row, "auth policy > evaluateGrantStack: 64 grants"),
+    ).toBe(true);
+    expect(rowMatchesCase(row, "other")).toBe(false);
+  });
+
+  it("matches short and full shas either way round", () => {
+    expect(sameCommit("abc1234", "abc1234abc12")).toBe(true);
+    expect(sameCommit("abc1234abc12", "abc1234")).toBe(true);
+    expect(sameCommit("abc1234", "abd1234")).toBe(false);
+    expect(sameCommit(undefined, "abc")).toBe(false);
+  });
+
+  it("annotates commits with explicit fixes and site-overlap inferences", () => {
+    const commits = [
+      {
+        sha: "abc1234ab",
+        fullSha: "abc1234abc12abc1234abc12abc1234abc12abc1",
+        subject: "fix",
+        files: ["packages/reactor/src/storage/kysely/store.ts"],
+      },
+      {
+        sha: "def5678de",
+        subject: "touch",
+        files: ["packages/reactor/src/storage/kysely/store.ts"],
+      },
+      { sha: "111111111", subject: "unrelated", files: ["README.md"] },
+    ];
+    const annotated = annotateCommits(commits, [fixed, defect]);
+    expect(annotated.map((c) => [c.fixes, c.touches])).toEqual([
+      [["T-020"], ["T-001"]],
+      [[], ["T-020", "T-001"]],
+      [[], []],
+    ]);
+  });
+
+  it("places a fix on the first run whose gap holds the commit", () => {
+    const gaps = new Map([
+      ["B-002", [{ sha: "0000000", subject: "noise" }]],
+      ["B-003", [{ sha: "abc1234ab", subject: "fix" }]],
+    ]);
+    const [entry] = seriesTasks(records, index, gaps).filter(
+      (e) => e.task.id === "T-020",
+    );
+    expect(entry.foundIn).toEqual(["B-001"]);
+    expect(entry.cases).toEqual(["evaluateGrantStack: 64 grants"]);
+    expect(entry.fixes).toEqual([
+      expect.objectContaining({
+        status: "FIXED",
+        commit: "abc1234abc12",
+        landedBefore: { recordId: "B-003", by: "commit" },
+      }),
+    ]);
+  });
+
+  it("reports no run yet when every gap is known and none holds the commit", () => {
+    const gaps = new Map([
+      ["B-002", [{ sha: "0000000", subject: "noise" }]],
+      ["B-003", []],
+    ]);
+    const [entry] = seriesTasks(records, index, gaps).filter(
+      (e) => e.task.id === "T-020",
+    );
+    expect(entry.fixes[0].landedBefore).toBeUndefined();
+  });
+
+  it("falls back to time order when gaps are unknown", () => {
+    const [entry] = seriesTasks(records, index).filter(
+      (e) => e.task.id === "T-020",
+    );
+    expect(entry.fixes[0].landedBefore).toEqual({
+      recordId: "B-002",
+      by: "time",
+    });
+  });
+
+  it("emits found and fixed markers at the right runs", () => {
+    const gaps = new Map([["B-003", [{ sha: "abc1234ab", subject: "fix" }]]]);
+    const markers = taskMarkers(seriesTasks(records, index, gaps), records);
+    expect(markers.map((m) => [m.taskId, m.role, m.x.split(" ")[0]])).toEqual([
+      ["T-020", "found", "B-001"],
+      ["T-020", "fixed", "B-003"],
+      ["T-001", "found", "B-001"],
+      ["T-001", "found", "B-002"],
+    ]);
   });
 });

@@ -72,18 +72,26 @@ async function commitsBetween(from, to) {
   }
   const out = await git([
     "log",
-    "--format=%h%x09%s",
+    "--format=%x01%h%x09%H%x09%s",
+    "--name-only",
     "--no-decorate",
     `${from}..${to}`,
   ]);
-  const commits = out
-    .split("\n")
-    .filter((line) => line !== "")
-    .map((line) => {
-      const [sha, ...rest] = line.split("\t");
-      return { sha, subject: rest.join("\t") };
-    });
-  return { commits, endpoints };
+  return { commits: parseLog(out), endpoints };
+}
+
+// Each commit is a \x01-prefixed header line, then the files it touched.
+function parseLog(out) {
+  const commits = [];
+  for (const line of out.split("\n")) {
+    if (line.startsWith("\x01")) {
+      const [sha, fullSha, ...rest] = line.slice(1).split("\t");
+      commits.push({ sha, fullSha, subject: rest.join("\t"), files: [] });
+    } else if (line !== "" && commits.length > 0) {
+      commits.at(-1).files.push(line);
+    }
+  }
+  return commits;
 }
 
 function send(response, status, body, type) {

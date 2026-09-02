@@ -85,3 +85,63 @@ export function referenceProblems(
   benchmarks: Benchmark[],
   tasks: Task[],
 ): string[];
+
+export interface GitCommit {
+  sha: string;
+  fullSha?: string;
+  subject: string;
+  files?: string[];
+}
+
+export interface AnnotatedCommit extends GitCommit {
+  fixes: string[];
+  touches: string[];
+}
+
+export interface FixEvent {
+  status: Task["status"];
+  at: string;
+  commit?: string;
+  landedBefore?: { recordId: string; by: "commit" | "time" };
+}
+
+export interface SeriesTask {
+  task: Task;
+  foundIn: string[];
+  fixes: FixEvent[];
+  cases: string[];
+}
+
+export interface TaskMarker {
+  x: string;
+  taskId: string;
+  kind: Task["kind"];
+  status: Task["status"];
+  role: "found" | "fixed";
+  title: string;
+}
+
+export function caseTags(task: Task): string[];
+export function rowMatchesCase(
+  row: Pick<ChartRow, "suite" | "caseName">,
+  tag: string,
+): boolean;
+export function fixEvents(task: Task): Task["history"];
+export function sameCommit(
+  a: string | undefined,
+  b: string | undefined,
+): boolean;
+export function taskSites(task: Task): string[];
+export function annotateCommits(
+  commits: GitCommit[],
+  tasks: Task[],
+): AnnotatedCommit[];
+export function seriesTasks(
+  records: Benchmark[],
+  index: RecordIndex,
+  gapCommits?: Map<string, GitCommit[]>,
+): SeriesTask[];
+export function taskMarkers(
+  summary: SeriesTask[],
+  records: Benchmark[],
+): TaskMarker[];

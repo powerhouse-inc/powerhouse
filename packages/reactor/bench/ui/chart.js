@@ -10,8 +10,9 @@ export const STATUS_COLOR = {
   REFUTED: "#dc2626",
 };
 
-const KINDS = ["DEFECT", "HARNESS", "GAP"];
-const KIND_SYMBOLS = ["triangle", "square", "circle"];
+// ▲ the run a finding was made from; ◆ the first run that carries its fix.
+const ROLES = ["found", "fixed"];
+const ROLE_SYMBOLS = ["triangle", "diamond"];
 
 export function formatValue(value) {
   if (value >= 100) {
@@ -36,9 +37,13 @@ export function seriesCharts({
   log,
   index,
   width,
+  taskRows = [],
+  rules = [],
+  caseFilter,
 }) {
   const domain = records.map(xLabel);
-  const rows = chartRows(records, metric, { log });
+  const allRows = chartRows(records, metric, { log });
+  const rows = caseFilter ? allRows.filter(caseFilter) : allRows;
   const suites = [...new Set(rows.map((row) => row.suite))];
   const marginLeft = 80;
   const x = {
@@ -49,18 +54,6 @@ export function seriesCharts({
     padding: 0.5,
   };
 
-  const taskRows = [];
-  for (const bench of records) {
-    for (const task of index.tasksForBenchmark.get(bench.id) ?? []) {
-      taskRows.push({
-        x: xLabel(bench),
-        taskId: task.id,
-        kind: task.kind,
-        status: task.status,
-        title: task.title,
-      });
-    }
-  }
   const invalid = records
     .filter((bench) => index.invalidatedBy.has(bench.id))
     .map((bench) => ({
@@ -87,17 +80,17 @@ export function seriesCharts({
           marginBottom: 10,
           x: { ...x, axis: null },
           y: { type: "point", domain: taskIds, label: null },
-          symbol: { domain: KINDS, range: KIND_SYMBOLS },
+          symbol: { domain: ROLES, range: ROLE_SYMBOLS },
           marks: [
             Plot.dot(taskRows, {
               x: "x",
               y: "taskId",
-              symbol: "kind",
+              symbol: "role",
               fill: (d) => STATUS_COLOR[d.status],
               r: 6,
               href: (d) => `#/task/${d.taskId}`,
               tip: true,
-              title: (d) => `${d.taskId} ${d.kind} ${d.status}\n${d.title}`,
+              title: (d) => `${d.taskId} ${d.kind}\n${d.title}`,
             }),
           ],
         });
@@ -131,6 +124,20 @@ export function seriesCharts({
             x: "x",
             stroke: "#444",
             strokeDasharray: "4 3",
+          }),
+          Plot.ruleX(rules, {
+            x: "x",
+            stroke: "stroke",
+            strokeWidth: 2,
+            strokeDasharray: "6 3",
+          }),
+          Plot.text(rules, {
+            x: "x",
+            text: "label",
+            fill: "stroke",
+            frameAnchor: "top",
+            dy: -6,
+            fontWeight: 600,
           }),
           Plot.ruleX(suiteRows, {
             x: "x",
