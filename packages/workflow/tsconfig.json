@@ -1,7 +1,6 @@
 {
   "compilerOptions": {
     "rootDir": ".",
-    // paths for easy access to project modules
     "paths": {
       "document-models": [
         "./document-models/index.ts"
@@ -62,31 +61,7 @@
   ],
   "references": [
     {
-      "path": "../../apps/connect"
-    },
-    {
-      "path": "../../clis/ph-cli"
-    },
-    {
-      "path": "../design-system"
-    },
-    {
-      "path": "../document-model"
-    },
-    {
-      "path": "../reactor"
-    },
-    {
-      "path": "../reactor-api"
-    },
-    {
-      "path": "../reactor-browser"
-    },
-    {
       "path": "../reactor-connectors"
-    },
-    {
-      "path": "../shared"
     }
   ]
 }
