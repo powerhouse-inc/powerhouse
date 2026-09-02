@@ -488,7 +488,10 @@ const say = (message: string): void => {
   process.stdout.write(`${message}\n`);
 };
 
-const bench = new Bench({ time: 10000 });
+// throws: true so a scenario that fails during warmup fails the run. Without
+// it tinybench parks the error on result.error, dispatches no event, and the
+// bench reports a table with a missing row.
+const bench = new Bench({ time: 10000, throws: true });
 for (const scenario of scenarios) {
   bench.add(scenario.name, scenario.run, lifecycle);
 }

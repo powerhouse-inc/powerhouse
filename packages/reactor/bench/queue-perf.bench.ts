@@ -1,5 +1,6 @@
 import process from "node:process";
-import { bench, describe, expect } from "vitest";
+import { describe, expect } from "vitest";
+import { bench } from "./loud-bench.js";
 import { EventBus } from "../src/events/event-bus.js";
 import { InMemoryQueue } from "../src/queue/queue.js";
 import type { Job } from "../src/queue/types.js";
