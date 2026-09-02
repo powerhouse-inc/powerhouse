@@ -24,9 +24,16 @@
  *    the create above was awaited: the failure it produces is exactly the one
  *    the fire-and-forget call was swallowing.
  *
- * What it does not cover: backfill. TestChannel pushes on write and its
- * triggerPull is a stub, so a reactor cannot pull history it never saw. Every
- * scenario here has both sides writing live.
+ * What it does not cover: a reactor joining late. Every scenario registers its
+ * remotes before any write and has both sides writing live throughout, so
+ * nothing here exercises catching up on history.
+ *
+ * That is a coverage gap rather than a transport limit. TestChannel's
+ * triggerPull is a stub, so a reactor cannot pull, but SyncManager.add pushes
+ * a backfill from the operation index (src/sync/sync-manager.ts:437), so a
+ * remote added after the writes would in fact receive them. An earlier version
+ * of this comment claimed the opposite, and that claim was load-bearing in a
+ * wrong diagnosis of the convergence stall.
  */
 
 import { readFileSync } from "node:fs";

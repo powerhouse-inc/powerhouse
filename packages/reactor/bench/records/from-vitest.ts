@@ -107,7 +107,7 @@ export const BENCH_TARGETS: BenchTarget[] = [
     title: "two-reactor sync workloads",
     question: "How long does convergence take between two reactors?",
     caveats: [
-      "TestChannel pushes on write and cannot backfill, so every scenario has both sides writing live",
+      "Every scenario registers its remotes before any write and has both sides writing live, so nothing here measures a reactor joining late and catching up",
     ],
   },
 ];
