@@ -183,6 +183,14 @@ export class AuthService {
 
     const authHeader = connectionParams.authorization as string | undefined;
     if (!authHeader) {
+      /* Refusing a tokenless connection is enforcement, not resolution. When
+         only `resolveIdentity` is on the policy is still `OPEN`, so admit it
+         with no user — the same answer `authenticateRequest` gives an HTTP
+         request that carries no bearer. Without this, turning on identity
+         resolution silently breaks every unauthenticated subscription. */
+      if (!this.config.enabled) {
+        return null;
+      }
       throw new Error("Missing authorization in connection parameters");
     }
 

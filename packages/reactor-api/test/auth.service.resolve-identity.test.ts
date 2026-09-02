@@ -139,6 +139,25 @@ describe("resolveIdentity: true, enabled: false (identity without enforcement)",
     expect(user?.address).toBe("0xuser");
   });
 
+  /* The HTTP path admits a tokenless request as anonymous, and a subscription
+     must answer the same way: refusing one is enforcement, which this mode does
+     not do. Without this, switching identity resolution on takes down every
+     unauthenticated subscription — which is how the gap was found. */
+  it("admits a websocket connection with no token, as anonymous", async () => {
+    const user = await service.authenticateWebSocketConnection({});
+
+    expect(user).toBeNull();
+    expect(mockVerifyAuthBearerToken).not.toHaveBeenCalled();
+  });
+
+  it("still refuses a websocket connection whose token is invalid", async () => {
+    mockVerifyAuthBearerToken.mockRejectedValue(new Error("bad token"));
+
+    await expect(
+      service.authenticateWebSocketConnection(BEARER),
+    ).rejects.toThrow();
+  });
+
   it("verifies the Renown credential unless explicitly skipped", async () => {
     const verifyCredential = vi.fn().mockResolvedValue(true);
     const checking = new AuthService({
@@ -200,6 +219,20 @@ describe("resolveIdentity omitted (backwards compatibility)", () => {
 
     expect(result.user).toBeUndefined();
     expect(mockVerifyAuthBearerToken).not.toHaveBeenCalled();
+  });
+
+  /* Enforcement still refuses a tokenless subscription. Admitting one is a
+     concession to `resolveIdentity` alone, and must not leak into auth-on. */
+  it("enabled=true still refuses a websocket connection with no token", async () => {
+    const service = new AuthService({
+      enabled: true,
+      admins: ADMINS,
+      skipCredentialVerification: true,
+    });
+
+    await expect(service.authenticateWebSocketConnection({})).rejects.toThrow(
+      /Missing authorization/,
+    );
   });
 });
 
