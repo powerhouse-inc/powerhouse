@@ -91,6 +91,10 @@ describe("getDbClient sharing", () => {
 
     // Fresh client reads from the snapshot on disk.
     const fresh = getDbClient(dir, factory);
+    // Let the cold boot finish up front: on a loaded Windows CI runner it
+    // can exceed Knex's 30s pool-acquire timeout, which would surface as
+    // "Timeout acquiring a connection" on the first query below.
+    await fresh.pglite?.ready;
     const aRows = await fresh.knex.raw(
       `select v from "analytics"."t" order by v`,
     );
