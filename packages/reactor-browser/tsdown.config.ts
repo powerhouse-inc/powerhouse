@@ -3,6 +3,7 @@ import { defineConfig } from "tsdown";
 export default defineConfig({
   entry: [
     "./index.ts",
+    "./src/ai/index.ts",
     "./src/graphql-client/entry.ts",
     "./src/analytics/index.ts",
     "./src/document-model.ts",

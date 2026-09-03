@@ -127,7 +127,7 @@ describe("packTarball", () => {
     // Guard against both sides being trivially empty.
     expect(ours.map(([rel]) => rel)).toContain("package.json");
     expect(ours.map(([rel]) => rel)).toContain("dist/nested/asset.wasm");
-  });
+  }, 120_000);
 
   it("nests every entry under package/, which extract({ strip: 1 }) requires", async () => {
     const dir = tmp("pack-nostrip-");

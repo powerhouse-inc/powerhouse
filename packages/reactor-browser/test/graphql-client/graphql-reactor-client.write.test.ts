@@ -185,6 +185,7 @@ function createTestModule(
       if (reduced.type === "SET_TEST_NAME") {
         draft.global.name = transform((reduced.input as { name: string }).name);
       }
+      return draft;
     }),
     actions: {},
     utils: {},

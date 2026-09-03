@@ -11,7 +11,7 @@ import {
   useNavigationType,
 } from "react-router-dom";
 import { setSentryModule } from "../services/sentry.js";
-import { useAcceptedCookies } from "./useAcceptedCookies.js";
+import { useAcceptedCookies } from "./preferences-store.js";
 
 const logger = childLogger(["sentry"]);
 

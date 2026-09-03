@@ -4,7 +4,7 @@ export * from "./renown-login/renown-login-methods.js";
 export * from "./animated-loader/animated-loader.js";
 export * from "./breadcrumbs/breadcrumbs.js";
 export * from "./combobox/combobox.js";
-export * from "./cookie-banner/cookie-banner.js";
+export * from "./consent-banner/consent-banner.js";
 export * from "./db-explorer/index.js";
 export * from "./debug-inspector/index.js";
 export * from "./default-editor-loader/default-editor-loader.js";

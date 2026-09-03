@@ -173,6 +173,32 @@ export AUTH_ENABLED=true
 export ADMINS="0x111,0x222,0x333"
 ```
 
+`AUTH_ENABLED` does two things: it selects the authorization policy
+(`ADMIN_ONLY` instead of `OPEN`) **and** it makes the middleware verify the
+bearer so `ctx.user` is populated. `RESOLVE_CALLER_IDENTITY` separates the
+second from the first:
+
+```bash
+# Read the bearer and populate ctx.user, whatever the policy is
+export RESOLVE_CALLER_IDENTITY=true
+```
+
+|                                  | `AUTH_ENABLED` unset       | `AUTH_ENABLED=true`             |
+| -------------------------------- | -------------------------- | ------------------------------- |
+| `RESOLVE_CALLER_IDENTITY` unset  | no user, `OPEN`            | user resolved, `ADMIN_ONLY`     |
+| `RESOLVE_CALLER_IDENTITY=true`   | **user resolved, `OPEN`**  | user resolved, `ADMIN_ONLY`     |
+
+It defaults to whatever `AUTH_ENABLED` is, so a deployment that never sets it
+behaves exactly as before. The bold cell is the combination `AUTH_ENABLED`
+alone cannot express, and the one a custom subgraph needs when it does its own
+authorization: its resolvers learn who is calling without every non-admin
+being locked out of switchboard.
+
+It **resolves** an identity and enforces nothing — a request with no token is
+still admitted, with no user. Verification is otherwise identical to
+`AUTH_ENABLED=true`, Renown credential check included, so an invalid token is
+still a 401.
+
 #### Configuration File Method
 
 ```json

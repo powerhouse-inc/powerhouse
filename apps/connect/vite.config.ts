@@ -80,4 +80,19 @@ export default defineConfig(({ command }) => ({
   worker: {
     format: "es",
   },
+  // Demo: single-origin setup behind `tailscale serve` - the SPA, the
+  // switchboard GraphQL API and the vLLM chat endpoint share one origin,
+  // so no CORS is involved for remote browsers.
+  server: {
+    allowedHosts: ["flank.tail45cd22.ts.net"],
+    proxy: {
+      "/graphql": {
+        target: "http://127.0.0.1:4001",
+        ws: true,
+        changeOrigin: true,
+      },
+      "/d": { target: "http://127.0.0.1:4001", changeOrigin: true },
+      "/v1": { target: "http://127.0.0.1:8002", changeOrigin: true },
+    },
+  },
 }));

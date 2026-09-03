@@ -1,3 +1,67 @@
+## 6.2.2-dev.76 (2026-09-03)
+
+### 🩹 Fixes
+
+- **reactor-browser:** export setPreferredEditorOnNode from the actions barrel ([1370e2f46](https://github.com/powerhouse-inc/powerhouse/commit/1370e2f46))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.2-dev.75 (2026-09-03)
+
+This was a version bump only, there were no code changes.
+
+## 6.2.2-dev.74 (2026-09-02)
+
+### 🩹 Fixes
+
+- **reactor-api:** admit a tokenless subscription when only resolving identity ([#2954](https://github.com/powerhouse-inc/powerhouse/pull/2954))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
+## 6.2.2-dev.73 (2026-09-02)
+
+### 🚀 Features
+
+- guard the bench records against every route but the CLI ([794dd02bd](https://github.com/powerhouse-inc/powerhouse/commit/794dd02bd))
+- three bench agents and the loop that runs them back to back ([af0e7467f](https://github.com/powerhouse-inc/powerhouse/commit/af0e7467f))
+- **reactor:** add zod schemas for benchmark and task records ([9869572ba](https://github.com/powerhouse-inc/powerhouse/commit/9869572ba))
+- **reactor:** add the bench:records CLI that writes the record files ([d468e83ab](https://github.com/powerhouse-inc/powerhouse/commit/d468e83ab))
+- **reactor:** start BENCHMARKS.jsonl and TASKS.jsonl empty ([1f5542970](https://github.com/powerhouse-inc/powerhouse/commit/1f5542970))
+- **reactor:** add REFUTED, the terminal status for a disproved finding ([d49651c00](https://github.com/powerhouse-inc/powerhouse/commit/d49651c00))
+- **reactor:** add the micro payload, so the benches that exist can be recorded ([7f9d82fad](https://github.com/powerhouse-inc/powerhouse/commit/7f9d82fad))
+- **reactor:** convert a vitest bench report into a micro record ([2a37825de](https://github.com/powerhouse-inc/powerhouse/commit/2a37825de))
+- **reactor:** record the four benches that had no :record script, and the sync one ([d71e4675b](https://github.com/powerhouse-inc/powerhouse/commit/d71e4675b))
+- **reactor:** one script runs the benchmarks and records them ([89f958f97](https://github.com/powerhouse-inc/powerhouse/commit/89f958f97))
+- **reactor:** an append-only benchmark record, and the four benchmarks it caught lying ([#2949](https://github.com/powerhouse-inc/powerhouse/pull/2949))
+- **reactor-api:** resolve the caller's identity without enforcing a policy ([#2953](https://github.com/powerhouse-inc/powerhouse/pull/2953))
+
+### 🩹 Fixes
+
+- keep the records guard off the human's own git ([02bcc57ff](https://github.com/powerhouse-inc/powerhouse/commit/02bcc57ff))
+- keep the project-wide guard to file integrity, not agent discipline ([a458435fa](https://github.com/powerhouse-inc/powerhouse/commit/a458435fa))
+- read the guard's payload with node, not jq ([2b9dc294a](https://github.com/powerhouse-inc/powerhouse/commit/2b9dc294a))
+- **ci:** emit an empty changed-files list without a trailing space ([366ad4d96](https://github.com/powerhouse-inc/powerhouse/commit/366ad4d96))
+- **reactor:** make the write-cache bench actually measure something ([a16481d71](https://github.com/powerhouse-inc/powerhouse/commit/a16481d71))
+- **reactor:** measure the write cache instead of PGlite's boot time ([4fb2d8704](https://github.com/powerhouse-inc/powerhouse/commit/4fb2d8704))
+- **reactor:** stop stamping a caveat the cache bench no longer earns ([8f0882e99](https://github.com/powerhouse-inc/powerhouse/commit/8f0882e99))
+- **reactor:** pin the caveat test to the target table, not to its wording ([951410ace](https://github.com/powerhouse-inc/powerhouse/commit/951410ace))
+- **reactor:** rewrite the queue-only bench, which had three defects ([65264e3df](https://github.com/powerhouse-inc/powerhouse/commit/65264e3df))
+- **reactor:** retire the queue-only caveat its rewrite just disproved ([440aa28db](https://github.com/powerhouse-inc/powerhouse/commit/440aa28db))
+- **reactor:** make a failing benchmark fail, in all six ([7da8f732d](https://github.com/powerhouse-inc/powerhouse/commit/7da8f732d))
+- **reactor:** the sync bench was waiting for a convergence that cannot happen ([6b44fece6](https://github.com/powerhouse-inc/powerhouse/commit/6b44fece6))
+- **reactor-mcp:** honor preferredEditor, icon and local props in addDrive ([4872345d2](https://github.com/powerhouse-inc/powerhouse/commit/4872345d2))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.2.2-dev.72 (2026-09-02)
 
 This was a version bump only, there were no code changes.

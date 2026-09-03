@@ -709,6 +709,7 @@ const signableModule = {
     if (reduced.type === "SET_TEST_NAME") {
       draft.global.name = (reduced.input as { name: string }).name;
     }
+    return draft;
   }),
   actions: {},
   utils: {},

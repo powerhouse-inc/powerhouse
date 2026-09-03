@@ -56,7 +56,7 @@ vi.mock("@powerhousedao/connect/config", () => ({
   connectConfig: mockConnectConfig,
 }));
 
-vi.mock("@powerhousedao/connect/hooks", () => ({
+vi.mock("../hooks/preferences-store.js", () => ({
   useAcceptedCookies: mockUseAcceptedCookies,
 }));
 

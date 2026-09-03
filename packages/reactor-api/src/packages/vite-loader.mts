@@ -219,12 +219,12 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
     options?: ISubscriptionOptions,
   ): () => void {
     const subgraphsPath = this.getSubgraphsPath(identifier);
-    const listener = debounce(async (changedPath: string) => {
+    const listener = async (changedPath: string) => {
       if (isSubpath(subgraphsPath, changedPath)) {
         const subgraphs = await this.loadSubgraphs(identifier);
         handler(subgraphs);
       }
-    }, options?.debounce ?? 100);
+    };
     this.vite.watcher.on("change", listener);
 
     return () => {

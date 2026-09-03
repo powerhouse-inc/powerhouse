@@ -15,7 +15,7 @@ export {
   useRenownSessionSynced,
   type RenownSessionCookieOptions,
   type RenownSessionCookieState,
-} from "./use-renown-session-cookie.js";
+} from "./use-renown-session.js";
 export { useRenown } from "../hooks/renown.js";
 export { Renown, type RenownProps } from "./renown-init.js";
 export { RenownProvider, type RenownProviderProps } from "./provider.js";

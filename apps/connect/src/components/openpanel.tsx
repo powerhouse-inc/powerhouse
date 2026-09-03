@@ -1,6 +1,6 @@
 import type { OpenPanel as OpenPanelClient } from "@openpanel/web";
 import { connectConfig } from "@powerhousedao/connect/config";
-import { useAcceptedCookies } from "@powerhousedao/connect/hooks";
+import { useAcceptedCookies } from "../hooks/preferences-store.js";
 import {
   createOpenPanelProcessorFactory,
   eventLookupMap,

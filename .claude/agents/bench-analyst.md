@@ -26,6 +26,10 @@ a loop that manufactures work.
   and nothing is filed.
 - **Never file a finding whose topic is already filed.** One `topic:` tag per
   task, naming the mechanism. That is what makes a second loop run idempotent.
+- **Name the case when there is one.** A `case:` tag per case the finding is
+  about — `case:<case name>` or `case:<suite label> > <case name>` — lets the
+  viewer graph just those lines. Optional; a HARNESS finding about a whole
+  suite has none.
 - **Never set a status.** Yours all start at UNVERIFIED and stay there.
 - **Never record a benchmark.** If a finding needs a number nobody measured,
   that is a GAP, not a reason to run something.
