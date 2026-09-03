@@ -333,7 +333,6 @@ export class PackageManager implements IPackageManager {
 
       processorsMap.set(pkg, allProcessors);
     }
-    this.updateProcessorsMap(processorsMap);
 
     return processorsMap;
   }
@@ -380,24 +379,63 @@ export class PackageManager implements IPackageManager {
     this.updatePackagesMap(documentModelsMap);
   }
 
+  private async updateSubgraphsForPackage(pkg: string): Promise<void> {
+    this.logger.debug(`Updating subgraphs for package: ${pkg}`);
+    const subgraphs = await this.loadSubgraphs([pkg]);
+    const subgraphsMap = new Map(this.subgraphsMap);
+    subgraphsMap.set(pkg, subgraphs.get(pkg) ?? []);
+    this.updateSubgraphsMap(subgraphsMap);
+  }
+
+  private async updateProcessorsForPackage(pkg: string): Promise<void> {
+    this.logger.debug(`Updating processors for package: ${pkg}`);
+    const processors = await this.loadProcessors([pkg]);
+    const processorsMap = new Map(this.processorMap);
+    processorsMap.set(pkg, processors.get(pkg) ?? []);
+    this.updateProcessorsMap(processorsMap);
+  }
+
+  /** Debounced per key so repeated subscribePackages calls reuse one timer. */
+  private getDebouncedUpdateCallback(
+    key: string,
+    update: () => Promise<void>,
+  ): () => void {
+    if (!this.debouncedUpdateCallbacks.has(key)) {
+      const debouncedFn = debounce(update, 1000);
+      this.debouncedUpdateCallbacks.set(key, () => {
+        debouncedFn().catch((error: unknown) => {
+          this.logger.error("Failed to update package: @error", error);
+        });
+      });
+    }
+    return this.debouncedUpdateCallbacks.get(key)!;
+  }
+
   private subscribePackages(packages: string[]) {
     const unsubs: (() => void)[] = [];
     for (const pkg of packages) {
-      if (!this.debouncedUpdateCallbacks.has(pkg)) {
-        const debouncedFn = debounce(
-          () => this.updateDocumentModelsForPackage(pkg),
-          1000,
-        );
-        this.debouncedUpdateCallbacks.set(pkg, () => {
-          void debouncedFn();
-        });
-      }
-      const debouncedCallback = this.debouncedUpdateCallbacks.get(pkg)!;
+      const onDocumentModels = this.getDebouncedUpdateCallback(
+        `${pkg}:document-models`,
+        () => this.updateDocumentModelsForPackage(pkg),
+      );
+      const onSubgraphs = this.getDebouncedUpdateCallback(
+        `${pkg}:subgraphs`,
+        () => this.updateSubgraphsForPackage(pkg),
+      );
+      const onProcessors = this.getDebouncedUpdateCallback(
+        `${pkg}:processors`,
+        () => this.updateProcessorsForPackage(pkg),
+      );
 
       for (const loader of this.loaders) {
         if (loader.onDocumentModelsChange) {
-          const unsub = loader.onDocumentModelsChange(pkg, debouncedCallback);
-          unsubs.push(unsub);
+          unsubs.push(loader.onDocumentModelsChange(pkg, onDocumentModels));
+        }
+        if (loader.onSubgraphsChange) {
+          unsubs.push(loader.onSubgraphsChange(pkg, onSubgraphs));
+        }
+        if (loader.onProcessorsChange) {
+          unsubs.push(loader.onProcessorsChange(pkg, onProcessors));
         }
       }
     }

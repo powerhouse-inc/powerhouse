@@ -77,6 +77,10 @@ export class BaseSubgraph implements ISubgraph {
     // noop
   }
 
+  async onDisconnect(): Promise<void> {
+    // noop
+  }
+
   // ============================================
   // Shared permission helpers
   // ============================================
