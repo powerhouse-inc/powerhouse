@@ -440,8 +440,16 @@ export class GraphQLManager {
 
       const wsDisposer = this.subgraphWsDisposers.get(subgraphPath);
       if (wsDisposer) {
-        await wsDisposer.dispose();
         this.subgraphWsDisposers.delete(subgraphPath);
+        try {
+          await wsDisposer.dispose();
+        } catch (error) {
+          this.logger.error(
+            "Error disposing subgraph websocket @name: @error",
+            instance.name,
+            error,
+          );
+        }
       }
     }
 
