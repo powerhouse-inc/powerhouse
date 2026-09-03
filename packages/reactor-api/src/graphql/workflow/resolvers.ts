@@ -3,6 +3,7 @@ import {
   fetchPieceActions,
   fetchPieceCatalog,
   fetchPieceDetail,
+  fetchPieceTriggers,
 } from "./piece-catalog.js";
 import { workflowRuntime } from "./service.js";
 import type { RunRow, StepExecutionRow } from "./store.js";
@@ -86,6 +87,8 @@ export const getResolvers = (
       pieceCatalog: () => fetchPieceCatalog(),
       pieceActions: (_parent: unknown, args: { packageName: string }) =>
         fetchPieceActions(args.packageName),
+      pieceTriggers: (_parent: unknown, args: { packageName: string }) =>
+        fetchPieceTriggers(args.packageName),
       pieceDetail: (_parent: unknown, args: { packageName: string }) =>
         fetchPieceDetail(args.packageName),
       runs: async (_parent: unknown, args: RunsArgs) => {

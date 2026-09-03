@@ -296,7 +296,8 @@ export class WorkflowRuntimeService {
     return descriptor;
   }
 
-  // Design-time: the action descriptor (props, auth) driving the editor form.
+  // Design-time: the action/trigger descriptor (props, auth) driving the
+  // editor form; triggers come back under a "trigger" key.
   async blockDescriptor(blockType: string): Promise<unknown> {
     const parsed = parseBlockType(blockType);
     if (!parsed) return null;
@@ -304,16 +305,21 @@ export class WorkflowRuntimeService {
       parsed.packageName,
       parsed.version,
     );
-    const action = descriptor.actions.find(
-      (entry) => entry.name === parsed.actionName,
-    );
-    if (!action) return null;
-    return {
+    const common = {
       displayName: descriptor.displayName,
       logoUrl: descriptor.logoUrl,
       auth: descriptor.auth ?? null,
-      action,
     };
+    if (parsed.kind === "trigger") {
+      const trigger = descriptor.triggers.find(
+        (entry) => entry.name === parsed.name,
+      );
+      return trigger ? { ...common, trigger } : null;
+    }
+    const action = descriptor.actions.find(
+      (entry) => entry.name === parsed.name,
+    );
+    return action ? { ...common, action } : null;
   }
 
   // Design-time DROPDOWN options() / DYNAMIC props(), run in the piece worker.
@@ -335,6 +341,12 @@ export class WorkflowRuntimeService {
       }
       throw new Error(`Not a piece block type: "${blockType}"`);
     }
+    if (parsed.kind === "trigger") {
+      // Trigger prop options resolve through the trigger worker hook (pending).
+      throw new Error(
+        `Options for trigger block types are not supported yet: "${blockType}"`,
+      );
+    }
     // Auth-dependent options() resolvers need the step's connection.
     let auth: unknown;
     if (connectionId && this.subgraph) {
@@ -350,7 +362,7 @@ export class WorkflowRuntimeService {
     this.designWorker ??= new PieceWorker();
     const result = await this.designWorker.resolveOptions({
       bundleDir: bundle.dir,
-      actionName: parsed.actionName,
+      actionName: parsed.name,
       propName,
       refresherValues: (input ?? {}) as Record<string, unknown>,
       auth,

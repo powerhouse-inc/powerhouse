@@ -10,6 +10,13 @@ export class UnknownBlockTypeError extends Error {
   }
 }
 
+export class TriggerBlockAsStepError extends Error {
+  constructor(blockType: string) {
+    super(`Trigger block type "${blockType}" cannot run as a workflow step`);
+    this.name = "TriggerBlockAsStepError";
+  }
+}
+
 // core#branch routes on the truthiness of its (already resolved) condition.
 export class CoreBlockExecutor implements BlockExecutor {
   static handles(blockType: string): boolean {
@@ -40,27 +47,44 @@ export interface ActivepiecesBlockExecutorOptions {
   defaultTimeoutMs?: number;
 }
 
-// "<pkg>[@<version>]#<action>" — the version after the scope-less "@" wins
-// over the registry.
+export type BlockKind = "action" | "trigger";
+
+export interface ParsedBlockType {
+  packageName: string;
+  version: string;
+  kind: BlockKind;
+  // Action or trigger name within the piece.
+  name: string;
+}
+
+const TRIGGER_FRAGMENT = "trigger:";
+
+// "<pkg>[@<version>]#<action>" or "<pkg>[@<version>]#trigger:<trigger>" —
+// the version after the scope-less "@" wins over the registry.
 export function parseBlockType(
   blockType: string,
   packages: Record<string, string> = {},
-): { packageName: string; version: string; actionName: string } | undefined {
+): ParsedBlockType | undefined {
   const separator = blockType.lastIndexOf("#");
   if (separator <= 0) return undefined;
   const packageSpec = blockType.slice(0, separator);
-  const actionName = blockType.slice(separator + 1);
+  const fragment = blockType.slice(separator + 1);
+  const isTrigger = fragment.startsWith(TRIGGER_FRAGMENT);
+  const name = isTrigger ? fragment.slice(TRIGGER_FRAGMENT.length) : fragment;
+  if (!name) return undefined;
+  const kind: BlockKind = isTrigger ? "trigger" : "action";
   const versionAt = packageSpec.indexOf("@", 1);
   if (versionAt > 0) {
     return {
       packageName: packageSpec.slice(0, versionAt),
       version: packageSpec.slice(versionAt + 1),
-      actionName,
+      kind,
+      name,
     };
   }
   const version = packages[packageSpec] as string | undefined;
   if (!version) return undefined;
-  return { packageName: packageSpec, version, actionName };
+  return { packageName: packageSpec, version, kind, name };
 }
 
 // Executes "<packageName>#<actionName>" block types through the piece worker.
@@ -78,6 +102,9 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
     if (!parsed) {
       throw new UnknownBlockTypeError(execution.blockType);
     }
+    if (parsed.kind !== "action") {
+      throw new TriggerBlockAsStepError(execution.blockType);
+    }
 
     const bundle = await ensurePieceBundle({
       name: parsed.packageName,
@@ -94,7 +121,7 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
     const result = await this.worker.runAction(
       {
         bundleDir: bundle.dir,
-        actionName: parsed.actionName,
+        actionName: parsed.name,
         propsValue: execution.config as Record<string, unknown>,
         auth,
       },

@@ -32,6 +32,22 @@ export interface PieceActionsResult {
   auth: unknown;
 }
 
+export interface PieceTriggerEntry {
+  name: string;
+  displayName: string;
+  description: string;
+  strategy: string;
+  blockType: string;
+}
+
+export interface PieceTriggersResult {
+  name: string;
+  displayName: string;
+  version: string;
+  triggers: PieceTriggerEntry[];
+  auth: unknown;
+}
+
 interface CatalogEntry {
   name?: string;
   displayName?: string;
@@ -39,7 +55,7 @@ interface CatalogEntry {
   logoUrl?: string;
   version?: string;
   actions?: number | Record<string, PieceDetailAction>;
-  triggers?: number | Record<string, unknown>;
+  triggers?: number | Record<string, PieceDetailTrigger>;
   categories?: string[];
   auth?: unknown;
 }
@@ -48,6 +64,14 @@ interface PieceDetailAction {
   name?: string;
   displayName?: string;
   description?: string;
+}
+
+interface PieceDetailTrigger {
+  name?: string;
+  displayName?: string;
+  description?: string;
+  // POLLING | WEBHOOK | APP_WEBHOOK; runtime support varies by strategy.
+  type?: string;
 }
 
 interface Cached<T> {
@@ -102,6 +126,42 @@ export async function fetchPieceDetail(packageName: string): Promise<unknown> {
   if (cached && cached.expiresAt > Date.now()) return cached.value;
   const value = await fetchJson(`${CATALOG_URL}/${packageName}`);
   detailCache.set(packageName, { value, expiresAt: Date.now() + CACHE_TTL_MS });
+  return value;
+}
+
+const triggersCache = new Map<string, Cached<PieceTriggersResult>>();
+
+export async function fetchPieceTriggers(
+  packageName: string,
+): Promise<PieceTriggersResult> {
+  const cached = triggersCache.get(packageName);
+  if (cached && cached.expiresAt > Date.now()) return cached.value;
+  const detail = (await fetchJson(
+    `${CATALOG_URL}/${packageName}`,
+  )) as CatalogEntry;
+  const version = detail.version ?? "";
+  const triggersRecord =
+    detail.triggers && typeof detail.triggers === "object"
+      ? detail.triggers
+      : {};
+  const triggers = Object.entries(triggersRecord).map(([name, trigger]) => ({
+    name,
+    displayName: trigger.displayName ?? name,
+    description: trigger.description ?? "",
+    strategy: trigger.type ?? "",
+    blockType: `${packageName}@${version}#trigger:${name}`,
+  }));
+  const value: PieceTriggersResult = {
+    name: packageName,
+    displayName: detail.displayName ?? packageName,
+    version,
+    triggers,
+    auth: detail.auth ?? null,
+  };
+  triggersCache.set(packageName, {
+    value,
+    expiresAt: Date.now() + CACHE_TTL_MS,
+  });
   return value;
 }
 

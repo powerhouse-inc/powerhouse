@@ -249,7 +249,8 @@ describe("parseBlockType", () => {
     ).toEqual({
       packageName: "@activepieces/piece-http",
       version: "0.11.19",
-      actionName: "send_request",
+      kind: "action",
+      name: "send_request",
     });
     expect(
       parseBlockType("@activepieces/piece-http#send_request", {
@@ -258,12 +259,54 @@ describe("parseBlockType", () => {
     ).toEqual({
       packageName: "@activepieces/piece-http",
       version: "0.11.19",
-      actionName: "send_request",
+      kind: "action",
+      name: "send_request",
     });
     expect(
       parseBlockType("@activepieces/piece-http#send_request"),
     ).toBeUndefined();
     expect(parseBlockType("no-action")).toBeUndefined();
+  });
+
+  it("classifies trigger block types", async () => {
+    const { parseBlockType } = await import("../../src/engine/blocks.js");
+    expect(
+      parseBlockType("@activepieces/piece-rss@0.5.0#trigger:new_item"),
+    ).toEqual({
+      packageName: "@activepieces/piece-rss",
+      version: "0.5.0",
+      kind: "trigger",
+      name: "new_item",
+    });
+    expect(
+      parseBlockType("@activepieces/piece-rss#trigger:new_item", {
+        "@activepieces/piece-rss": "0.5.0",
+      }),
+    ).toEqual({
+      packageName: "@activepieces/piece-rss",
+      version: "0.5.0",
+      kind: "trigger",
+      name: "new_item",
+    });
+    expect(
+      parseBlockType("@activepieces/piece-rss@0.5.0#trigger:"),
+    ).toBeUndefined();
+  });
+
+  it("refuses to execute a trigger block type as a step", async () => {
+    const { ActivepiecesBlockExecutor, TriggerBlockAsStepError } = await import(
+      "../../src/engine/blocks.js"
+    );
+    const executor = new ActivepiecesBlockExecutor({ cacheDir: "/tmp/na" });
+    const blockType = "@activepieces/piece-rss@0.5.0#trigger:new_item";
+    await expect(
+      executor.execute({
+        blockType,
+        config: {},
+        step: { id: "s1", key: "s1", blockType, config: {} },
+      }),
+    ).rejects.toBeInstanceOf(TriggerBlockAsStepError);
+    executor.dispose();
   });
 });
 

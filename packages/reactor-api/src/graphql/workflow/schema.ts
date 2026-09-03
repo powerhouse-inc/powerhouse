@@ -34,6 +34,10 @@ export const schema: DocumentNode = gql`
     """
     pieceActions(packageName: String!): Unknown
     """
+    A piece's triggers, each with a ready-to-use "#trigger:" blockType.
+    """
+    pieceTriggers(packageName: String!): Unknown
+    """
     Full piece detail (PieceMetadataModel-shaped), verbatim from the cloud API.
     """
     pieceDetail(packageName: String!): Unknown
