@@ -1,4 +1,5 @@
 import "@xyflow/react/dist/style.css";
+import "./ui/canvas.css";
 import { DocumentToolbar } from "@powerhousedao/design-system/connect";
 import { useSelectedWorkflowDocument } from "document-models/workflow";
 import { useEffect, useMemo } from "react";

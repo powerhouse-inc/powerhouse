@@ -91,7 +91,10 @@ function AddButton(props: {
         </svg>
       </button>
       {open ? (
-        <div className="absolute left-1/2 top-full z-50 mt-1 -translate-x-1/2">
+        <div
+          data-selector-open="true"
+          className="absolute left-1/2 top-full z-50 mt-1 -translate-x-1/2"
+        >
           <BlockSelector
             title={props.title}
             presets={props.presets}
