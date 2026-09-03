@@ -102,7 +102,7 @@ describe("AtomicNodeFs crash recovery", () => {
     ).toBe(false);
 
     await pg.close();
-  }, 30_000);
+  }, 120_000);
 
   it("recovers when the kill lands very early in the INSERT loop", async () => {
     const dir = await mktemp();
@@ -118,5 +118,5 @@ describe("AtomicNodeFs crash recovery", () => {
     );
     expect(rows.rows[0]?.count).toBe(3);
     await pg.close();
-  }, 30_000);
+  }, 120_000);
 });

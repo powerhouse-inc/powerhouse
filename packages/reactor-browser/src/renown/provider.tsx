@@ -13,7 +13,7 @@ import { Renown } from "./renown-init.js";
 import {
   RenownSessionSyncedContext,
   useRenownSessionCookie,
-} from "./use-renown-session-cookie.js";
+} from "./use-renown-session.js";
 import { RenownWalletProvider } from "./wallet-provider.js";
 
 export interface RenownProviderProps {

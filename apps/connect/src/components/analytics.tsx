@@ -1,5 +1,5 @@
 import { connectConfig } from "@powerhousedao/connect/config";
-import { useAcceptedCookies } from "@powerhousedao/connect/hooks";
+import { useAcceptedCookies } from "../hooks/preferences-store.js";
 import { useEffect } from "react";
 
 declare global {
