@@ -5,6 +5,7 @@ import type {
   ProcessorFilter,
 } from "@powerhousedao/reactor-browser";
 import type { PHDocumentHeader } from "document-model";
+import { workflowRuntime } from "../../subgraphs/workflow-runtime/service.js";
 import { DocumentEventTrigger } from "./processor.js";
 
 // One live instance serves every drive: the manager routes operations by
@@ -30,15 +31,20 @@ export const documentEventTriggerFactoryBuilder: ProcessorFactoryBuilder =
     };
 
     const processor = new DocumentEventTrigger(namespace, filter, store);
-    // Allow a replacement instance when the owning drive is deleted.
+    // The supervisor stops with the processor: onDisconnect is the only
+    // teardown that fires on hot reloads, so timers never leak.
     processor.onDisconnectCallback = () => {
-      if (live === processor) live = undefined;
+      if (live === processor) {
+        live = undefined;
+        workflowRuntime.stopTriggerSupervisor();
+      }
     };
 
     // Run the processor's migrations. Nothing in the runtime calls this, so
     // without it the first write hits a database with no tables.
     await processor.initAndUpgrade();
     live = processor;
+    workflowRuntime.startTriggerSupervisor();
 
     return [
       {

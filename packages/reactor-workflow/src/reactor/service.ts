@@ -27,7 +27,11 @@ import {
   DocumentConnectionResolver,
   toWorkflowDefinition,
 } from "./lib.js";
-import { WorkflowRunStore } from "./store.js";
+import { WorkflowRunStore, type TriggerStateRow } from "./store.js";
+import {
+  TriggerSupervisor,
+  type PieceTriggerBinding,
+} from "./trigger-supervisor.js";
 import {
   matchesEventFilter,
   matchesLifecycleFilter,
@@ -50,7 +54,25 @@ type TriggerRegistration = {
 } & (
   | { kind: "document-event"; filter: DocumentEventFilter }
   | { kind: "document-created" | "document-deleted"; filter: LifecycleFilter }
+  | { kind: "piece" }
 );
+
+function configRecord(config: unknown): Record<string, unknown> {
+  if (config && typeof config === "object" && !Array.isArray(config)) {
+    return config as Record<string, unknown>;
+  }
+  if (typeof config === "string") {
+    try {
+      const parsed = JSON.parse(config) as unknown;
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        return parsed as Record<string, unknown>;
+      }
+    } catch {
+      // fall through
+    }
+  }
+  return {};
+}
 
 export class WorkflowRuntimeService {
   private subgraph?: BaseSubgraph;
@@ -94,20 +116,62 @@ export class WorkflowRuntimeService {
   }
 
   private updateRegistration(workflowId: string, state: WorkflowState): void {
-    const kind: TriggerKind | undefined = state.trigger
-      ? TRIGGER_KIND_BY_BLOCK[state.trigger.blockType]
+    const trigger = state.status === "ENABLED" ? state.trigger : undefined;
+    const kind: TriggerKind | undefined = trigger
+      ? TRIGGER_KIND_BY_BLOCK[trigger.blockType]
       : undefined;
-    if (state.status !== "ENABLED" || !kind) {
+    const pieceBinding =
+      trigger && !kind ? this.pieceBinding(workflowId, trigger) : undefined;
+
+    if (!kind && !pieceBinding) {
+      const had = this.registry.get(workflowId);
       this.registry.delete(workflowId);
+      if (had?.kind === "piece") this.dropPieceTrigger(workflowId);
       return;
     }
-    const config = state.trigger?.config;
+    if (pieceBinding) {
+      this.registry.set(workflowId, { workflowId, kind: "piece" });
+      this.supervisor()
+        .upsert(pieceBinding)
+        .catch((error: unknown) => {
+          logger.error(`Piece trigger enable failed for ${workflowId}`, error);
+        });
+      return;
+    }
+    const had = this.registry.get(workflowId);
+    if (had?.kind === "piece") this.dropPieceTrigger(workflowId);
+    const config = trigger?.config;
     this.registry.set(
       workflowId,
       kind === "document-event"
         ? { workflowId, kind, filter: parseEventFilter(config) }
-        : { workflowId, kind, filter: parseLifecycleFilter(config) },
+        : { workflowId, kind: kind!, filter: parseLifecycleFilter(config) },
     );
+  }
+
+  private pieceBinding(
+    workflowId: string,
+    trigger: NonNullable<WorkflowState["trigger"]>,
+  ): PieceTriggerBinding | undefined {
+    const parsed = parseBlockType(trigger.blockType);
+    if (!parsed || parsed.kind !== "trigger") return undefined;
+    return {
+      workflowId,
+      blockType: trigger.blockType,
+      packageName: parsed.packageName,
+      version: parsed.version,
+      triggerName: parsed.name,
+      config: configRecord(trigger.config),
+      connectionId: trigger.connectionId,
+    };
+  }
+
+  private dropPieceTrigger(workflowId: string): void {
+    this.supervisor()
+      .remove(workflowId)
+      .catch((error: unknown) => {
+        logger.error(`Piece trigger disable failed for ${workflowId}`, error);
+      });
   }
 
   private async refreshRegistration(
@@ -208,7 +272,7 @@ export class WorkflowRuntimeService {
   private fireFromTrigger(
     workflowId: string,
     payload: unknown,
-    kind: TriggerKind,
+    kind: string,
   ): void {
     this.fire(workflowId, payload, kind).then(
       (run) => {
@@ -272,6 +336,43 @@ export class WorkflowRuntimeService {
         continue;
       this.fireFromTrigger(registration.workflowId, payload, kind);
     }
+  }
+
+  private triggerSupervisor?: TriggerSupervisor;
+
+  // Lazily built; started/stopped by the trigger processor's lifecycle.
+  supervisor(): TriggerSupervisor {
+    this.triggerSupervisor ??= new TriggerSupervisor({
+      store: () => this.store(),
+      resolveAuth: async (connectionId) => {
+        if (!connectionId || !this.subgraph) return undefined;
+        return new DocumentConnectionResolver(this.subgraph).resolve(
+          connectionId,
+        );
+      },
+      fire: (workflowId, payload, kind) => {
+        this.fireFromTrigger(workflowId, payload, kind);
+      },
+      cacheDir: BUNDLE_CACHE_DIR,
+    });
+    return this.triggerSupervisor;
+  }
+
+  startTriggerSupervisor(): void {
+    this.supervisor().start();
+    if (!sigtermHooked) {
+      sigtermHooked = true;
+      process.once("SIGTERM", () => this.stopTriggerSupervisor());
+    }
+  }
+
+  stopTriggerSupervisor(): void {
+    this.triggerSupervisor?.stop();
+  }
+
+  async triggerStates(): Promise<TriggerStateRow[]> {
+    const store = await this.store();
+    return store ? store.listTriggerStates() : [];
   }
 
   private readonly descriptors = new Map<string, ConnectorDescriptor>();
@@ -420,5 +521,7 @@ export class WorkflowRuntimeService {
     }
   }
 }
+
+let sigtermHooked = false;
 
 export const workflowRuntime = new WorkflowRuntimeService();

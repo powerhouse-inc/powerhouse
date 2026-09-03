@@ -91,6 +91,17 @@ export const getResolvers = (
         fetchPieceTriggers(args.packageName),
       pieceDetail: (_parent: unknown, args: { packageName: string }) =>
         fetchPieceDetail(args.packageName),
+      triggerStates: async () =>
+        (await workflowRuntime.triggerStates()).map((row) => ({
+          workflowId: row.workflow_id,
+          blockType: row.block_type,
+          status: row.status,
+          intervalMs: row.interval_ms,
+          nextPollAt: row.next_poll_at,
+          lastPollAt: row.last_poll_at,
+          lastError: row.last_error,
+          consecutiveFailures: row.consecutive_failures,
+        })),
       runs: async (_parent: unknown, args: RunsArgs) => {
         const store = await workflowRuntime.store();
         if (!store) return [];

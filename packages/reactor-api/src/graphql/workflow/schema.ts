@@ -41,6 +41,21 @@ export const schema: DocumentNode = gql`
     Full piece detail (PieceMetadataModel-shaped), verbatim from the cloud API.
     """
     pieceDetail(packageName: String!): Unknown
+    """
+    Health of every registered piece trigger (poll schedule, errors).
+    """
+    triggerStates: [TriggerStateRecord!]!
+  }
+
+  type TriggerStateRecord {
+    workflowId: String!
+    blockType: String!
+    status: String!
+    intervalMs: Int!
+    nextPollAt: String
+    lastPollAt: String
+    lastError: String
+    consecutiveFailures: Int!
   }
 
   type Query {
