@@ -633,16 +633,13 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
     return newDocument;
   }
 
-  // if reuseHash is true, checks if the action has
-  // an hash and uses it instead of generating it
+  // if the replayed operation carries a hash then it is reused instead of
+  // generating one, which also skips hashing the whole scope state
   const scope = _action.scope || "global";
-  let hash = hashDocumentStateForScope(newDocument, scope);
-  if (
-    options.replayOptions?.operation.hash &&
-    options.replayOptions.operation.hash !== ""
-  ) {
-    hash = options.replayOptions.operation.hash;
-  }
+  const replayHash = options.replayOptions?.operation.hash;
+  const hash = replayHash
+    ? replayHash
+    : hashDocumentStateForScope(newDocument, scope);
 
   // updates the last operation with the hash of the resulting state
   const scopeOperations = newDocument.operations[scope];
