@@ -12,6 +12,7 @@ export function setRuntimeUrl(url: string): void {
   currentRuntimeUrl = url;
   // Cached design-time results belong to the previous switchboard.
   formCache.clear();
+  outputTreeCache.clear();
   catalogCache = undefined;
 }
 
@@ -145,6 +146,39 @@ export async function fetchPieceTriggers(
     { packageName },
   );
   return data.workflowRuntime.pieceTriggers.triggers;
+}
+
+export interface OutputTreeNode {
+  name: string;
+  type: string;
+  description?: string;
+  children?: OutputTreeNode[];
+}
+
+export interface OutputTree {
+  source: "schema" | "sample" | "static" | "none";
+  nodes: OutputTreeNode[];
+}
+
+const outputTreeCache = new Map<string, Promise<OutputTree>>();
+
+export function fetchBlockOutputTree(
+  blockType: string,
+  config: unknown,
+): Promise<OutputTree> {
+  const key = `${blockType}:${JSON.stringify(config ?? {})}`;
+  let cached = outputTreeCache.get(key);
+  if (!cached) {
+    cached = gql<{ workflowRuntime: { blockOutputTree: OutputTree } }>(
+      `query OutputTree($blockType: String!, $config: Unknown) {
+        workflowRuntime { blockOutputTree(blockType: $blockType, config: $config) }
+      }`,
+      { blockType, config: config ?? {} },
+    ).then((data) => data.workflowRuntime.blockOutputTree);
+    outputTreeCache.set(key, cached);
+    cached.catch(() => outputTreeCache.delete(key));
+  }
+  return cached;
 }
 
 export async function testTrigger(workflowId: string): Promise<unknown> {

@@ -5,13 +5,14 @@ import { useEffect, useMemo } from "react";
 import { useWorkflowModel } from "./document/useWorkflowModel.js";
 import { EditorSwitch } from "./EditorSwitch.js";
 import {
+  fetchBlockOutputTree,
   fetchPieceActions,
   fetchPieceCatalog,
   fetchPieceTriggers,
-  fetchRuns,
   getBlockForm,
   loadBlockOptions,
   testTrigger,
+  type OutputTreeNode,
 } from "./runtime-api.js";
 import { registerExpressionScopeSource } from "./ui/ExpressionPicker.js";
 import type { DesignTimeService } from "./ui/forms.js";
@@ -40,32 +41,40 @@ export default function Editor() {
     [workflowId],
   );
 
-  // Sample scope for the {} picker: real values from the latest run,
-  // placeholder outputs for steps that haven't run yet.
-  const stepKeys = model.steps.map((step) => step.key).join(",");
+  // Scope for the {} picker, built purely from authored shapes: leaves carry
+  // the declared type instead of any run's values.
   useEffect(() => {
+    const treeValue = (nodes: OutputTreeNode[]): Record<string, unknown> =>
+      Object.fromEntries(
+        nodes.map((node) => [
+          node.name,
+          node.children ? treeValue(node.children) : node.type,
+        ]),
+      );
+    const outputOf = async (blockType: string, config: unknown) => {
+      try {
+        const tree = await fetchBlockOutputTree(blockType, config);
+        if (tree.nodes.length > 0) return treeValue(tree.nodes);
+        return tree.source === "none" ? "no declared schema" : {};
+      } catch {
+        return {};
+      }
+    };
     registerExpressionScopeSource({
       load: async () => {
         const steps: Record<string, unknown> = {};
-        for (const key of stepKeys.split(",").filter(Boolean)) {
-          steps[key] = { output: {} };
-        }
-        let triggerPayload: unknown = {};
-        try {
-          const latest = (await fetchRuns(workflowId, 1)).at(0);
-          if (latest) {
-            triggerPayload = latest.triggerPayload ?? {};
-            for (const step of latest.steps) {
-              steps[step.stepKey] = { output: step.output };
-            }
-          }
-        } catch {
-          // No runtime reachable: offer the static skeleton.
-        }
-        return { trigger: { payload: triggerPayload }, steps };
+        await Promise.all(
+          model.steps.map(async (step) => {
+            steps[step.key] = { output: await outputOf(step.blockType, step.config) };
+          }),
+        );
+        const payload = model.trigger
+          ? await outputOf(model.trigger.blockType, model.trigger.config)
+          : {};
+        return { trigger: { payload }, steps };
       },
     });
-  }, [workflowId, stepKeys]);
+  }, [model]);
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-background">

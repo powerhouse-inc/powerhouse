@@ -117,16 +117,24 @@ export function ExpressionPickerButton(props: {
   }, [open]);
 
   useEffect(() => {
-    if (!open || scope !== undefined) return;
+    if (!open) return;
+    let alive = true;
     scopeSource
       ?.load()
-      .then(setScope)
+      .then((next) => {
+        if (alive) setScope(next);
+      })
       .catch((loadError: unknown) => {
-        setError(
-          loadError instanceof Error ? loadError.message : String(loadError),
-        );
+        if (alive) {
+          setError(
+            loadError instanceof Error ? loadError.message : String(loadError),
+          );
+        }
       });
-  }, [open, scope]);
+    return () => {
+      alive = false;
+    };
+  }, [open]);
 
   if (!scopeSource) return null;
   return (
