@@ -203,27 +203,6 @@ function commitLine(commit) {
   return `<li class="${commit.fixes.length ? "fixes" : commit.touches.length ? "touches" : ""}"><a class="sha" href="${REPO}/commit/${esc(commit.fullSha ?? commit.sha)}" target="_blank" rel="noreferrer">${esc(commit.sha)}</a> ${esc(commit.subject)} ${badges}${files}</li>`;
 }
 
-function gapSection(gap) {
-  const n = gap.commits.length;
-  const fixes = [...new Set(gap.commits.flatMap((c) => c.fixes))];
-  const touches = [...new Set(gap.commits.flatMap((c) => c.touches))];
-  let verdict;
-  if (gap.warning) {
-    verdict = `<span class="badge lint">${esc(gap.warning)}</span>`;
-  } else if (n === 0) {
-    verdict = '<span class="muted">same commit</span>';
-  } else if (fixes.length === 0 && touches.length === 0) {
-    verdict = `<span class="muted">${n} commit${n === 1 ? "" : "s"}, none tied to a task or touching a task's sites</span>`;
-  } else {
-    verdict = `<span>${n} commit${n === 1 ? "" : "s"} · fixes ${fixes.length ? idList(fixes) : "none"} · touches sites of ${touches.length ? idList(touches) : "none"}</span>`;
-  }
-  return `<details class="gap" ${fixes.length || touches.length ? "open" : ""}>
-    <summary>${idLink(gap.from.id)} ${shaLink(gap.from.environment.reactorSha)} → ${idLink(gap.to.id)} ${shaLink(gap.to.environment.reactorSha)} — ${verdict}</summary>
-    ${gap.endpoints ? `<p class="muted">${esc(gap.endpoints.from ?? "?")} → ${esc(gap.endpoints.to ?? "?")}</p>` : ""}
-    ${n ? `<ol class="commits">${gap.commits.map(commitLine).join("")}</ol>` : ""}
-  </details>`;
-}
-
 // ---- views ------------------------------------------------------------------
 
 export function renderOverview(root, state) {
@@ -409,10 +388,6 @@ export async function renderSeries(root, state, title) {
     <section>
       <h2>Tasks against this series</h2>
       ${seriesTasksSection(summary, gaps)}
-    </section>
-    <section>
-      <h2>Commits between runs</h2>
-      ${gaps.length === 0 ? "<p class=muted>Only one run so far.</p>" : gaps.map(gapSection).join("")}
     </section>
     <section><h2>Runs</h2>${recordCards.join("")}</section>`;
 
