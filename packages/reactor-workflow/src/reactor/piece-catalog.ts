@@ -1,6 +1,8 @@
 // Piece catalog proxied from the Activepieces public metadata API — the same
 // source their piece selector uses. Bundles themselves load lazily on use.
 
+import { SERVER_ONLY_PIECES } from "./unsupported-pieces.js";
+
 const CATALOG_URL = "https://cloud.activepieces.com/api/v1/pieces";
 const CACHE_TTL_MS = 60 * 60 * 1000;
 
@@ -99,6 +101,7 @@ export async function fetchPieceCatalog(): Promise<PieceSummary[]> {
       (entry) =>
         typeof entry.name === "string" &&
         typeof entry.version === "string" &&
+        !SERVER_ONLY_PIECES.has(entry.name) &&
         ((typeof entry.actions === "number" && entry.actions > 0) ||
           (typeof entry.triggers === "number" && entry.triggers > 0)),
     )
