@@ -24,7 +24,7 @@ export const DOCUMENT_OPTION_PROPS = new Set([
 ]);
 
 // Expression values ({{...}}) can't be resolved at design time.
-function staticString(value: unknown): string | undefined {
+export function staticString(value: unknown): string | undefined {
   if (typeof value !== "string") return undefined;
   const trimmed = value.trim();
   if (!trimmed || trimmed.includes("{{")) return undefined;

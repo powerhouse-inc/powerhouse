@@ -1,0 +1,201 @@
+// Authored output shapes for the {} expression picker: document-model SDL,
+// piece outputSchema/sampleData, and static shapes for core blocks.
+import {
+  Kind,
+  parse,
+  type FieldDefinitionNode,
+  type InputValueDefinitionNode,
+  type TypeNode,
+} from "graphql";
+
+export interface OutputTreeNode {
+  name: string;
+  // Display type, e.g. "String!", "OID", "array", "string (sample)".
+  type: string;
+  description?: string;
+  children?: OutputTreeNode[];
+}
+
+export interface OutputTree {
+  source: "schema" | "sample" | "static" | "none";
+  nodes: OutputTreeNode[];
+}
+
+const MAX_DEPTH = 6;
+
+function typeName(node: TypeNode): { name: string; display: string } {
+  switch (node.kind) {
+    case Kind.NON_NULL_TYPE: {
+      const inner = typeName(node.type);
+      return { name: inner.name, display: `${inner.display}!` };
+    }
+    case Kind.LIST_TYPE: {
+      const inner = typeName(node.type);
+      return { name: inner.name, display: `[${inner.display}]` };
+    }
+    default:
+      return { name: node.name.value, display: node.name.value };
+  }
+}
+
+type FieldNode = FieldDefinitionNode | InputValueDefinitionNode;
+
+// Field tree of `rootType` (object or input), recursing into types defined in
+// the same SDL; unknown/scalar types are leaves labeled by their display name.
+export function fieldsFromSdl(
+  sdl: string,
+  rootType?: string,
+): OutputTreeNode[] {
+  let definitions;
+  try {
+    definitions = parse(sdl).definitions;
+  } catch {
+    return [];
+  }
+  const types = new Map<string, readonly FieldNode[]>();
+  let firstType: string | undefined;
+  let stateType: string | undefined;
+  for (const def of definitions) {
+    if (
+      def.kind !== Kind.OBJECT_TYPE_DEFINITION &&
+      def.kind !== Kind.INPUT_OBJECT_TYPE_DEFINITION
+    ) {
+      continue;
+    }
+    const name = def.name.value;
+    types.set(name, def.fields ?? []);
+    firstType ??= name;
+    if (name.endsWith("State") && !name.endsWith("LocalState")) {
+      stateType ??= name;
+    }
+  }
+  const root = rootType ?? stateType ?? firstType;
+  if (!root) return [];
+
+  const build = (name: string, depth: number): OutputTreeNode[] => {
+    const fields = types.get(name);
+    if (!fields || depth > MAX_DEPTH) return [];
+    return fields.map((field) => {
+      const { name: inner, display } = typeName(field.type);
+      const children = build(inner, depth + 1);
+      return {
+        name: field.name.value,
+        type: display,
+        description: field.description?.value,
+        ...(children.length > 0 ? { children } : {}),
+      };
+    });
+  };
+  return build(root, 0);
+}
+
+interface ApOutputSchemaField {
+  key?: string;
+  label?: string;
+  format?: string;
+  description?: string;
+  properties?: ApOutputSchemaField[];
+  listItems?: ApOutputSchemaField[];
+}
+
+// Activepieces action/trigger outputSchema → tree.
+export function fromOutputSchema(schema: unknown): OutputTreeNode[] {
+  const fields = (schema as { fields?: ApOutputSchemaField[] } | null)?.fields;
+  if (!Array.isArray(fields)) return [];
+  const convert = (field: ApOutputSchemaField): OutputTreeNode => {
+    const children = field.properties?.map(convert);
+    const items = field.listItems?.map(convert);
+    return {
+      name: field.key ?? field.label ?? "",
+      type: items ? "array" : (field.format ?? (children ? "object" : "value")),
+      description: field.description,
+      ...(children ? { children } : items ? { children: items } : {}),
+    };
+  };
+  return fields.map(convert).filter((node) => node.name);
+}
+
+// Piece-authored sampleData → tree; types inferred from the sample's values.
+export function fromSample(value: unknown, depth = 0): OutputTreeNode[] {
+  if (value === null || typeof value !== "object" || depth > MAX_DEPTH) {
+    return [];
+  }
+  const entries = Array.isArray(value)
+    ? value.slice(0, 1).map((item) => ["0", item] as const)
+    : Object.entries(value as Record<string, unknown>);
+  return entries.map(([name, child]) => {
+    const kind = Array.isArray(child) ? "array" : child === null ? "null" : typeof child;
+    const children = fromSample(child, depth + 1);
+    return {
+      name,
+      type: kind,
+      ...(children.length > 0 ? { children } : {}),
+    };
+  });
+}
+
+const leaf = (name: string, type: string, description?: string) => ({
+  name,
+  type,
+  ...(description ? { description } : {}),
+});
+
+export const OPERATION_NODE: OutputTreeNode = {
+  name: "operation",
+  type: "object",
+  children: [leaf("index", "Int!"), leaf("timestampUtcMs", "String!")],
+};
+
+// Envelope both document blocks return; state children come from the model.
+export function documentBlockTree(
+  stateChildren: OutputTreeNode[],
+): OutputTreeNode[] {
+  return [
+    leaf("documentId", "PHID!"),
+    leaf("documentType", "String!"),
+    leaf("name", "String"),
+    {
+      name: "state",
+      type: "object",
+      description: "Document global state after the actions applied",
+      ...(stateChildren.length > 0 ? { children: stateChildren } : {}),
+    },
+  ];
+}
+
+export function lifecycleTriggerTree(): OutputTreeNode[] {
+  return [
+    leaf("documentId", "PHID!"),
+    leaf("documentType", "String"),
+    leaf("name", "String"),
+    leaf("driveId", "PHID!"),
+    leaf("parentId", "PHID"),
+    OPERATION_NODE,
+  ];
+}
+
+export function documentEventTree(
+  actionInputChildren: OutputTreeNode[],
+): OutputTreeNode[] {
+  return [
+    leaf("documentId", "PHID!"),
+    leaf("documentType", "String!"),
+    leaf("branch", "String!"),
+    leaf("scope", "String!"),
+    {
+      name: "action",
+      type: "object",
+      children: [
+        leaf("type", "String!"),
+        {
+          name: "input",
+          type: "object",
+          ...(actionInputChildren.length > 0
+            ? { children: actionInputChildren }
+            : {}),
+        },
+      ],
+    },
+    OPERATION_NODE,
+  ];
+}

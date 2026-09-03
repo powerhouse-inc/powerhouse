@@ -45,6 +45,10 @@ export const schema: DocumentNode = gql`
     Health of every registered piece trigger (poll schedule, errors).
     """
     triggerStates: [TriggerStateRecord!]!
+    """
+    Authored output shape of a block (SDL / outputSchema / sampleData).
+    """
+    blockOutputTree(blockType: String!, config: Unknown): Unknown
   }
 
   type TriggerStateRecord {

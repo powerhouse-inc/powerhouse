@@ -89,6 +89,10 @@ export const getResolvers = (
         fetchPieceActions(args.packageName),
       pieceTriggers: (_parent: unknown, args: { packageName: string }) =>
         fetchPieceTriggers(args.packageName),
+      blockOutputTree: (
+        _parent: unknown,
+        args: { blockType: string; config?: unknown },
+      ) => workflowRuntime.blockOutputTree(args.blockType, args.config),
       pieceDetail: (_parent: unknown, args: { packageName: string }) =>
         fetchPieceDetail(args.packageName),
       triggerStates: async () =>

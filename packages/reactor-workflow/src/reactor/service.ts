@@ -20,7 +20,18 @@ import type {
 import {
   DOCUMENT_OPTION_PROPS,
   resolveDocumentOptions,
+  staticString,
 } from "./document-options.js";
+import {
+  documentBlockTree,
+  documentEventTree,
+  fieldsFromSdl,
+  fromOutputSchema,
+  fromSample,
+  lifecycleTriggerTree,
+  type OutputTree,
+} from "./output-tree.js";
+import { fetchPieceDetail } from "./piece-catalog.js";
 import {
   BUNDLE_CACHE_DIR,
   createBlockExecutor,
@@ -467,6 +478,100 @@ export class WorkflowRuntimeService {
       auth,
     });
     return result.output;
+  }
+
+  // Authored output shape of a block, for the editor's expression picker.
+  async blockOutputTree(blockType: string, config?: unknown): Promise<OutputTree> {
+    const record = (config ?? {}) as Record<string, unknown>;
+    switch (blockType) {
+      case "core#manual":
+        return { source: "none", nodes: [] };
+      case "core#branch":
+        return {
+          source: "static",
+          nodes: [{ name: "condition", type: "value" }],
+        };
+      case "core#document-created":
+      case "core#document-deleted":
+        return { source: "static", nodes: lifecycleTriggerTree() };
+      case "core#document-event": {
+        const inputChildren = await this.operationInputFields(
+          staticString(record.documentType),
+          staticString(record.actionType),
+        );
+        return {
+          source: inputChildren.length > 0 ? "schema" : "static",
+          nodes: documentEventTree(inputChildren),
+        };
+      }
+      case "core#document-create":
+      case "core#document-dispatch": {
+        const stateChildren = await this.stateFields(
+          staticString(record.documentType),
+        );
+        return {
+          source: stateChildren.length > 0 ? "schema" : "static",
+          nodes: documentBlockTree(stateChildren),
+        };
+      }
+      default: {
+        const parsed = parseBlockType(blockType);
+        if (!parsed) return { source: "none", nodes: [] };
+        const detail = (await fetchPieceDetail(parsed.packageName)) as {
+          actions?: Record<string, unknown>;
+          triggers?: Record<string, unknown>;
+        };
+        const entry = (
+          parsed.kind === "trigger" ? detail.triggers : detail.actions
+        )?.[parsed.name] as
+          | { outputSchema?: unknown; sampleData?: unknown }
+          | undefined;
+        if (entry?.outputSchema) {
+          const nodes = fromOutputSchema(entry.outputSchema);
+          if (nodes.length > 0) return { source: "schema", nodes };
+        }
+        if (entry?.sampleData !== undefined && entry.sampleData !== null) {
+          const nodes = fromSample(entry.sampleData);
+          if (nodes.length > 0) return { source: "sample", nodes };
+        }
+        return { source: "none", nodes: [] };
+      }
+    }
+  }
+
+  private async stateFields(documentType?: string) {
+    if (!documentType || !this.subgraph) return [];
+    try {
+      const module =
+        await this.subgraph.reactorClient.getDocumentModelModule(documentType);
+      const sdl =
+        module.documentModel.global.specifications.at(-1)?.state.global.schema;
+      return sdl ? fieldsFromSdl(sdl) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  private async operationInputFields(
+    documentType?: string,
+    actionType?: string,
+  ) {
+    if (!documentType || !actionType || !this.subgraph) return [];
+    try {
+      const module =
+        await this.subgraph.reactorClient.getDocumentModelModule(documentType);
+      const latest = module.documentModel.global.specifications.at(-1);
+      for (const specModule of latest?.modules ?? []) {
+        for (const operation of specModule.operations) {
+          if (operation.name === actionType && operation.schema) {
+            return fieldsFromSdl(operation.schema);
+          }
+        }
+      }
+      return [];
+    } catch {
+      return [];
+    }
   }
 
   // Runs the trigger's test hook; the test store prefix keeps cursors intact.
