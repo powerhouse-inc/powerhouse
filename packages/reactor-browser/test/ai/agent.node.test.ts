@@ -58,6 +58,7 @@ function finishParts(
 }
 
 const SETTINGS: AiSettings = {
+  enabled: true,
   baseUrl: "http://localhost:9/v1",
   apiKey: "test-key",
   model: "test-model",
@@ -291,9 +292,8 @@ describe("ReactorChatAgent", () => {
   });
 
   it("surfaces tool errors to the event stream", async () => {
-    const failing = makeTool(
-      "getDocument",
-      () => Promise.reject(new Error("document not found")),
+    const failing = makeTool("getDocument", () =>
+      Promise.reject(new Error("document not found")),
     );
     const model = streamModel([
       [
