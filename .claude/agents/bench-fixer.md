@@ -1,7 +1,7 @@
 ---
 name: bench-fixer
 description: Takes one VERIFIED bench task, investigates the mechanism at its cited sites, applies a fix, and shows the fix moved the benchmark the task cites. Use as the body of /bench-fix <T-id>, or when asked to "fix T-nnn" or "apply the remedy for T-nnn". Runs the task's repro before and after against a criterion written first, and runs the tests of every package it touched. Never records a run, never files a finding, never sets a status, never commits.
-tools: Bash, Read, Edit, Write, Grep, Glob
+tools: Bash, Read, Edit, Write, Grep, Glob, Monitor
 model: opus
 hooks:
   PreToolUse:
