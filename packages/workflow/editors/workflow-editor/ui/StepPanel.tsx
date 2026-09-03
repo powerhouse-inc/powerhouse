@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ConnectionField } from "./ConnectionField.js";
 import type { BlockForm, DesignTimeService } from "./forms.js";
 import type {
   StepModel,
@@ -192,19 +193,15 @@ export function StepPanel(props: {
           }}
         />
       </Field>
-      <Field label="Connection id (optional)">
-        <input
-          key={`${step.id}-conn`}
-          className={`${inputClass} font-mono text-xs`}
-          defaultValue={step.connectionId ?? ""}
-          placeholder="powerhouse/connection document id"
-          onBlur={(event) => {
-            const connectionId = event.target.value.trim();
-            if (connectionId && connectionId !== step.connectionId)
-              callbacks.updateStep({ id: step.id, connectionId });
-          }}
-        />
-      </Field>
+      <ConnectionField
+        key={`${step.id}-conn`}
+        blockType={step.blockType}
+        value={step.connectionId ?? ""}
+        onChange={(connectionId) =>
+          callbacks.updateStep({ id: step.id, connectionId })
+        }
+        designTime={props.designTime}
+      />
       <ConfigSection
         key={`${step.id}-config`}
         blockType={step.blockType}
@@ -304,19 +301,13 @@ export function TriggerPanel(props: {
         />
       </Field>
       {isPieceTrigger ? (
-        <Field label="Connection id (optional)">
-          <input
-            key={`${trigger.id}-conn`}
-            className={`${inputClass} font-mono text-xs`}
-            defaultValue={trigger.connectionId ?? ""}
-            placeholder="powerhouse/connection document id"
-            onBlur={(event) => {
-              const connectionId = event.target.value.trim();
-              if (connectionId !== (trigger.connectionId ?? ""))
-                setTrigger({ connectionId: connectionId || null });
-            }}
-          />
-        </Field>
+        <ConnectionField
+          key={`${trigger.id}-conn`}
+          blockType={trigger.blockType}
+          value={trigger.connectionId ?? ""}
+          onChange={(connectionId) => setTrigger({ connectionId })}
+          designTime={props.designTime}
+        />
       ) : null}
       <ConfigSection
         key={trigger.id}

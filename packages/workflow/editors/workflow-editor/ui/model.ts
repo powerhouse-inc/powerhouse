@@ -56,7 +56,8 @@ export interface UpdateStepInputModel {
   key?: string;
   name?: string;
   blockType?: string;
-  connectionId?: string;
+  // null clears the step's connection.
+  connectionId?: string | null;
   config?: unknown;
   timeoutSeconds?: number;
   position?: PointModel;

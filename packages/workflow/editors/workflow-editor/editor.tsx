@@ -6,6 +6,7 @@ import { useWorkflowModel } from "./document/useWorkflowModel.js";
 import { EditorSwitch } from "./EditorSwitch.js";
 import {
   fetchBlockOutputTree,
+  fetchConnections,
   fetchPieceActions,
   fetchPieceCatalog,
   fetchPieceTriggers,
@@ -37,6 +38,7 @@ export default function Editor() {
       getBlockForm,
       loadOptions: loadBlockOptions,
       testTrigger: () => testTrigger(workflowId),
+      listConnections: fetchConnections,
     }),
     [workflowId],
   );

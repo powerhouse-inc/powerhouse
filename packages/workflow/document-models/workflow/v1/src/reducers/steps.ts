@@ -47,8 +47,9 @@ export const workflowStepsOperations: WorkflowStepsOperations = {
     }
     if (action.input.name) step.name = action.input.name;
     if (action.input.blockType) step.blockType = action.input.blockType;
-    if (action.input.connectionId)
-      step.connectionId = action.input.connectionId;
+    // null clears the connection; undefined leaves it unchanged.
+    if (action.input.connectionId !== undefined)
+      step.connectionId = action.input.connectionId || null;
     if (action.input.config !== undefined && action.input.config !== null) {
       step.config = action.input.config;
     }

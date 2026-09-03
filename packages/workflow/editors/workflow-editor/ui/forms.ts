@@ -15,7 +15,18 @@ export interface BlockFormProp {
 export interface BlockForm {
   title: string;
   requireAuth: boolean;
+  // Whether the block takes a connection: none hides the field entirely.
+  auth?: "none" | "optional" | "required";
   props: BlockFormProp[];
+}
+
+export interface ConnectionSummary {
+  id: string;
+  name: string;
+  connectorId: string;
+  authType: string;
+  status: string;
+  accountLabel: string | null;
 }
 
 export interface DesignTimeService {
@@ -28,6 +39,8 @@ export interface DesignTimeService {
   ) => Promise<unknown>;
   // Runs the current workflow's piece trigger test hook; sample items back.
   testTrigger?: () => Promise<unknown>;
+  // powerhouse/connection documents for the connection picker.
+  listConnections?: () => Promise<ConnectionSummary[]>;
 }
 
 const text = (
@@ -74,10 +87,16 @@ const documentActions = (
 
 // Hand-written forms for core blocks and triggers.
 export const CORE_FORMS: Record<string, BlockForm> = {
-  "core#manual": { title: "Manual trigger", requireAuth: false, props: [] },
+  "core#manual": {
+    title: "Manual trigger",
+    requireAuth: false,
+    auth: "none",
+    props: [],
+  },
   "core#document-event": {
     title: "Document event",
     requireAuth: false,
+    auth: "none",
     props: [
       autocomplete(
         "documentType",
@@ -102,6 +121,7 @@ export const CORE_FORMS: Record<string, BlockForm> = {
   "core#document-created": {
     title: "Document created",
     requireAuth: false,
+    auth: "none",
     props: [
       autocomplete(
         "documentType",
@@ -115,6 +135,7 @@ export const CORE_FORMS: Record<string, BlockForm> = {
   "core#document-deleted": {
     title: "Document deleted",
     requireAuth: false,
+    auth: "none",
     props: [
       autocomplete(
         "documentType",
@@ -128,6 +149,7 @@ export const CORE_FORMS: Record<string, BlockForm> = {
   "core#branch": {
     title: "Branch",
     requireAuth: false,
+    auth: "none",
     props: [
       text(
         "condition",
@@ -140,6 +162,7 @@ export const CORE_FORMS: Record<string, BlockForm> = {
   "core#document-create": {
     title: "Create document",
     requireAuth: false,
+    auth: "none",
     props: [
       autocomplete("documentType", "Document type", true),
       text("name", "Document name"),
@@ -150,6 +173,7 @@ export const CORE_FORMS: Record<string, BlockForm> = {
   "core#document-dispatch": {
     title: "Dispatch actions",
     requireAuth: false,
+    auth: "none",
     props: [
       autocomplete(
         "documentId",

@@ -14,6 +14,7 @@ export function setRuntimeUrl(url: string): void {
   formCache.clear();
   outputTreeCache.clear();
   catalogCache = undefined;
+  connectionsCache = undefined;
 }
 
 function runtimeUrl(): string {
@@ -48,6 +49,7 @@ interface BlockDescriptorResult {
   workflowRuntime: {
     blockDescriptor: {
       displayName: string;
+      auth?: unknown;
       action?: BlockEntryDescriptor;
       trigger?: BlockEntryDescriptor;
     } | null;
@@ -73,6 +75,11 @@ export function getBlockForm(blockType: string): Promise<BlockForm | null> {
       return {
         title: `${descriptor.displayName} · ${entry.displayName}`,
         requireAuth: entry.requireAuth,
+        auth: !descriptor.auth
+          ? ("none" as const)
+          : entry.requireAuth
+            ? ("required" as const)
+            : ("optional" as const),
         props: entry.props,
       };
     });
@@ -179,6 +186,34 @@ export function fetchBlockOutputTree(
     cached.catch(() => outputTreeCache.delete(key));
   }
   return cached;
+}
+
+export interface ConnectionSummary {
+  id: string;
+  name: string;
+  connectorId: string;
+  authType: string;
+  status: string;
+  accountLabel: string | null;
+}
+
+// Short-lived: connections change as the user edits them in Connect.
+let connectionsCache:
+  | { at: number; promise: Promise<ConnectionSummary[]> }
+  | undefined;
+const CONNECTIONS_TTL_MS = 10_000;
+
+export function fetchConnections(): Promise<ConnectionSummary[]> {
+  if (!connectionsCache || Date.now() - connectionsCache.at > CONNECTIONS_TTL_MS) {
+    const promise = gql<{
+      workflowRuntime: { connections: ConnectionSummary[] };
+    }>(`query Connections { workflowRuntime { connections { id name connectorId authType status accountLabel } } }`, {}).then(
+      (data) => data.workflowRuntime.connections,
+    );
+    connectionsCache = { at: Date.now(), promise };
+    promise.catch(() => (connectionsCache = undefined));
+  }
+  return connectionsCache.promise;
 }
 
 export async function testTrigger(workflowId: string): Promise<unknown> {
