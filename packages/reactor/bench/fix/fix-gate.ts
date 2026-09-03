@@ -1,8 +1,9 @@
 import { BenchmarkEntry } from "../records/benchmark-schema.js";
 import type { BenchmarkEntry as Benchmark } from "../records/benchmark-schema.js";
 import { suiteLabel } from "../records/from-vitest.js";
-import { RecordsError } from "../records/jsonl-store.js";
-import { runRecordsCommand } from "../records/records-commands.js";
+import { join } from "node:path";
+import { readEntries, RecordsError } from "../records/jsonl-store.js";
+import { runRecordsCommand, TASKS_FILE } from "../records/records-commands.js";
 import type { CommandIo, CommandResult } from "../records/records-commands.js";
 import { TaskEntry } from "../records/task-schema.js";
 import type { CodeRef, TaskEntry as Task } from "../records/task-schema.js";
@@ -18,6 +19,9 @@ import {
 
 export type GateReport = {
   taskId: string;
+  /** True when no id was given and the gate chose one. */
+  selected: boolean;
+  candidates: Task[];
   expect: string;
   verifyExit: number;
   verifyLines: string[];
@@ -35,6 +39,23 @@ const RECORDS_IO: CommandIo = {
   now: () => new Date().toISOString(),
 };
 
+/**
+ * Priority 1 is the most urgent, so the lowest number goes first; among equals
+ * the oldest finding has waited longest. Ids break the last tie so two callers
+ * agree.
+ */
+export function nextTask(tasks: Task[], expect: string): Task | undefined {
+  return tasks
+    .filter((task) => task.status === expect)
+    .sort(
+      (a, b) =>
+        a.priority - b.priority ||
+        Date.parse(a.createdAt) - Date.parse(b.createdAt) ||
+        a.id.localeCompare(b.id),
+    )
+    .at(0);
+}
+
 /** Every check runs and reports; the first refusal in this order decides the exit. */
 export function gateExit(report: GateReport): {
   exit: number;
@@ -47,7 +68,13 @@ export function gateExit(report: GateReport): {
     };
   }
   if (report.task === undefined) {
-    return { exit: FIX_EXIT.notFound, refusal: report.taskProblem };
+    return {
+      exit: FIX_EXIT.notFound,
+      refusal:
+        report.taskProblem === ""
+          ? `no task is ${report.expect}; /bench-loop is what makes them`
+          : report.taskProblem,
+    };
   }
   if (report.dirty.length > 0) {
     return {
@@ -158,8 +185,20 @@ export function formatGate(report: GateReport): string[] {
     lines.push("tree: DIRTY");
     lines.push(...report.dirty.map((path) => `  ${path}`));
   }
+  if (report.selected) {
+    const others = report.candidates.filter(
+      (task) => task.id !== report.task?.id,
+    );
+    lines.push(
+      report.task === undefined
+        ? `next: none of ${String(report.candidates.length)} tasks is ${report.expect}`
+        : `next: ${report.task.id} chosen from ${String(report.candidates.length)} ${report.expect} (then ${others.map((task) => `${task.id} P${String(task.priority)}`).join(", ") || "nothing"})`,
+    );
+  }
   if (report.task === undefined) {
-    lines.push(`task: ${report.taskProblem}`);
+    if (report.taskProblem !== "") {
+      lines.push(`task: ${report.taskProblem}`);
+    }
   } else {
     lines.push(...formatTask(report.task));
   }
@@ -203,6 +242,8 @@ export async function runGate(options: GateOptions): Promise<CommandResult> {
 
   const report: GateReport = {
     taskId: options.taskId,
+    selected: options.taskId === "",
+    candidates: [],
     expect: options.expect,
     verifyExit: verify.exit,
     verifyLines: verify.lines,
@@ -213,7 +254,16 @@ export async function runGate(options: GateOptions): Promise<CommandResult> {
     postgres: reachable ? "reachable" : "unreachable",
   };
 
-  if (verify.exit === 0) {
+  if (verify.exit === 0 && report.selected) {
+    const tasks = readEntries(join(options.dir, TASKS_FILE), TaskEntry);
+    report.candidates = tasks.entries
+      .filter((task) => task.status === options.expect)
+      .sort((a, b) => a.priority - b.priority || a.id.localeCompare(b.id));
+    report.task = nextTask(tasks.entries, options.expect);
+    if (report.task !== undefined) {
+      report.taskId = report.task.id;
+    }
+  } else if (verify.exit === 0) {
     try {
       report.task = TaskEntry.parse(showEntry(options.taskId, options.dir));
     } catch (error) {
@@ -236,6 +286,8 @@ export async function runGate(options: GateOptions): Promise<CommandResult> {
     lines: formatGate(report),
     data: {
       taskId: report.taskId,
+      selected: report.selected,
+      candidates: report.candidates.map((task) => task.id),
       expect: report.expect,
       verifyExit: report.verifyExit,
       dirty: report.dirty,

@@ -24,9 +24,11 @@ reading, polling or re-parsing an agent would otherwise do a line at a time.
 Usage:
   pnpm bench:fix <subcommand> [args]
 
-  gate <T-id>                  records verify, tree cleanliness, the task with its
+  gate [T-id]                  records verify, tree cleanliness, the task with its
                                sites, repro, fixes and last note, the cases of every
-                               cited benchmark, and whether Postgres answers on 5433
+                               cited benchmark, and whether Postgres answers on 5433;
+                               with no id, the next task in the expected status:
+                               lowest priority number first, then oldest
   sites <T-id>                 every details.sites[] entry with surrounding source,
                                whether the named symbol is still there, and its callers
   cases <results.json>         every case in a vitest bench results file
@@ -85,6 +87,7 @@ export type FixSubcommand = (typeof FIX_SUBCOMMANDS)[number];
 
 export type GateOptions = {
   subcommand: "gate";
+  /** Empty means pick the next task in the expected status. */
   taskId: string;
   dir: string;
   expect: TaskStatus;
@@ -218,9 +221,16 @@ function splitArgv(argv: string[]): ParsedArgv {
   return parsed;
 }
 
-function taskIdFrom(parsed: ParsedArgv, subcommand: string): string {
+function taskIdFrom(
+  parsed: ParsedArgv,
+  subcommand: string,
+  optional = false,
+): string {
   const id = parsed.positionals.at(1);
   if (id === undefined) {
+    if (optional) {
+      return "";
+    }
     throw new Error(`${subcommand} needs a task id, like T-007`);
   }
   if (!/^T-\d{3,}$/.test(id)) {
@@ -295,7 +305,7 @@ export function parseFixOptions(argv: string[]): FixOptions {
       }
       return {
         subcommand,
-        taskId: taskIdFrom(parsed, subcommand),
+        taskId: taskIdFrom(parsed, subcommand, true),
         dir: parsed.values.get("--dir") ?? "bench",
         expect: expect as TaskStatus,
         json: parsed.json,

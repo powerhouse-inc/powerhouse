@@ -13,6 +13,7 @@ describe("parseFixOptions", () => {
     expect(
       parseFixOptions(["gate", "T-007", "--expect", "FIXED", "--json"]),
     ).toMatchObject({ expect: "FIXED", json: true });
+    expect(parseFixOptions(["gate"])).toMatchObject({ taskId: "" });
   });
 
   it("refuses a status it does not know and an id that is not a task", () => {
@@ -22,7 +23,7 @@ describe("parseFixOptions", () => {
     expect(() => parseFixOptions(["gate", "B-007"])).toThrow(
       "Ids look like T-007",
     );
-    expect(() => parseFixOptions(["gate"])).toThrow("gate needs a task id");
+    expect(() => parseFixOptions(["sites"])).toThrow("sites needs a task id");
   });
 
   it("reads sites with its two sizes", () => {

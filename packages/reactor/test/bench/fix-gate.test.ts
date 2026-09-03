@@ -5,6 +5,7 @@ import {
   formatGate,
   formatTask,
   gateExit,
+  nextTask,
 } from "../../bench/fix/fix-gate.js";
 import type { GateReport } from "../../bench/fix/fix-gate.js";
 import { FIX_EXIT } from "../../bench/fix/fix-options.js";
@@ -30,6 +31,8 @@ const verified = TaskEntry.parse(
 
 const ready: GateReport = {
   taskId: "T-002",
+  selected: false,
+  candidates: [],
   expect: "VERIFIED",
   verifyExit: 0,
   verifyLines: ["BENCHMARKS.jsonl 1 entries, TASKS.jsonl 1 entries"],
@@ -66,6 +69,65 @@ describe("gateExit", () => {
       exit: FIX_EXIT.wrongStatus,
       refusal: "T-002 is FIXED, not VERIFIED",
     });
+  });
+});
+
+describe("nextTask", () => {
+  const at = (
+    id: string,
+    status: string,
+    priority: number,
+    createdAt: string,
+  ) =>
+    TaskEntry.parse(
+      defectTask({
+        id,
+        priority,
+        createdAt,
+        status: status as "VERIFIED",
+        history: [
+          { status: status as "VERIFIED", at: createdAt, evidence: [] },
+        ],
+      }),
+    );
+  const tasks = [
+    at("T-001", "VERIFIED", 3, "2026-09-01T18:00:00.000Z"),
+    at("T-003", "FIXED", 1, "2026-09-01T18:10:00.000Z"),
+    at("T-006", "VERIFIED", 3, "2026-09-02T17:00:00.000Z"),
+    at("T-008", "VERIFIED", 2, "2026-09-02T17:46:00.000Z"),
+    at("T-009", "UNVERIFIED", 1, "2026-09-02T18:00:00.000Z"),
+  ];
+
+  it("takes the lowest priority number, then the oldest, in the expected status only", () => {
+    expect(nextTask(tasks, "VERIFIED")?.id).toBe("T-008");
+    expect(
+      nextTask(
+        tasks.filter((t) => t.id !== "T-008"),
+        "VERIFIED",
+      )?.id,
+    ).toBe("T-001");
+    expect(nextTask(tasks, "UNVERIFIED")?.id).toBe("T-009");
+    expect(nextTask(tasks, "REFUTED")).toBeUndefined();
+  });
+
+  it("names the choice and the queue behind it, or the empty queue", () => {
+    const chosen = nextTask(tasks, "VERIFIED");
+    const lines = formatGate({
+      ...ready,
+      selected: true,
+      candidates: tasks.filter((t) => t.status === "VERIFIED"),
+      task: chosen,
+      taskId: chosen?.id ?? "",
+    });
+    expect(lines).toContain(
+      "next: T-008 chosen from 3 VERIFIED (then T-001 P3, T-006 P3)",
+    );
+    const empty = { ...ready, selected: true, task: undefined, taskId: "" };
+    expect(gateExit(empty)).toEqual({
+      exit: FIX_EXIT.notFound,
+      refusal: "no task is VERIFIED; /bench-loop is what makes them",
+    });
+    expect(formatGate(empty)).toContain("next: none of 0 tasks is VERIFIED");
   });
 });
 

@@ -1,8 +1,10 @@
 Fix one verified bench finding: apply the remedy, show the benchmark moved,
 gate the tests independently, commit, and mark the task FIXED at that commit.
 
-Task: $ARGUMENTS - one `T-nnn`. **Exactly one.** Two fixes in one diff cannot
-be reverted apart, and two tasks cannot share a FIXED sha.
+Task: $ARGUMENTS - one `T-nnn`, or nothing. **Never more than one.** Two fixes
+in one diff cannot be reverted apart, and two tasks cannot share a FIXED sha.
+With no argument the gate picks the next VERIFIED task: lowest priority number
+first, then the oldest. Use the id it prints everywhere below.
 
 Unlike `/bench-record` and `/bench-loop`, **this command commits.** FIXED
 carries the sha of the fix (`set-status --commit`), and that sha does not exist
@@ -12,10 +14,13 @@ does the two commits below and nothing else.
 ## Step 0 — gate
 
 ```bash
-pnpm --filter @powerhousedao/reactor bench:fix gate T-007
+pnpm --filter @powerhousedao/reactor bench:fix gate            # next VERIFIED task
+pnpm --filter @powerhousedao/reactor bench:fix gate T-007      # this one
 ```
 
-One command, one read. It runs `bench:records verify`, checks the tree, prints
+One command, one read. With no id the `next:` line names the task it chose and
+the queue behind it; exit 4 with no `next:` task means nothing is VERIFIED -
+point at `/bench-loop` and stop. It runs `bench:records verify`, checks the tree, prints
 the task with its sites, repro, ranked fixes and every history event including
 the verifier's note, lists the cases of every cited benchmark, and probes
 Postgres on 5433. The last line is the verdict.
