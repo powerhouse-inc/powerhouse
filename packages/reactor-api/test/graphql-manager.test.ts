@@ -738,6 +738,24 @@ describe("GraphQLManager", () => {
       expect(manager.getSubgraphByName("my-sub")).toBe(newSub);
     });
 
+    it("a throwing WebSocket disposer does not abort the replacement", async () => {
+      const { manager, gatewayAdapter } = makeHarness();
+      const dispose = vi.fn().mockRejectedValue(new Error("ws boom"));
+      gatewayAdapter.attachWebSocket.mockReturnValue({ dispose });
+
+      const oldSub = await makeSub("ws-sub", { hasSubscriptions: true });
+      await manager.registerSubgraphInstance(oldSub, "graphql");
+      await initAndFlush(manager);
+      expect(gatewayAdapter.attachWebSocket).toHaveBeenCalledTimes(1);
+
+      const newSub = await makeSub("ws-sub", { hasSubscriptions: true });
+      const result = await manager.registerSubgraphInstance(newSub, "graphql");
+
+      expect(dispose).toHaveBeenCalledTimes(1);
+      expect(result).toBe(newSub);
+      expect(manager.getSubgraphByName("ws-sub")).toBe(newSub);
+    });
+
     it("replacement invalidates the handler cache so the handler is rebuilt", async () => {
       const { manager, gatewayAdapter } = makeHarness();
 
