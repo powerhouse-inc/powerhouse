@@ -53,6 +53,20 @@ export const schema: DocumentNode = gql`
     Every powerhouse/connection document, for connection pickers.
     """
     connections: [ConnectionRecord!]!
+    """
+    Secret metadata (label, version, status). Never the value.
+    """
+    secret(ref: String!): SecretRecord
+    secrets: [SecretRecord!]!
+  }
+
+  type SecretRecord {
+    ref: String!
+    label: String
+    version: Int!
+    status: String!
+    createdAt: String!
+    updatedAt: String!
   }
 
   type ConnectionRecord {
@@ -140,6 +154,19 @@ export const schema: DocumentNode = gql`
     execution restarts at the failure. Produces a new run.
     """
     rerun(runId: String!): WorkflowRunPayload!
+    """
+    Mints a managed secret and returns its ref; the value is stored
+    encrypted and is never readable back over any API.
+    """
+    createSecret(value: String!, label: String): SecretRecord!
+    """
+    Replaces the value behind an existing ref; documents stay untouched.
+    """
+    rotateSecret(ref: String!, value: String!): SecretRecord!
+    """
+    Tombstones a secret; its value becomes unrecoverable.
+    """
+    deleteSecret(ref: String!): Boolean!
   }
 
   type Mutation {

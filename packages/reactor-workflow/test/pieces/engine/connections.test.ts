@@ -1,10 +1,12 @@
 import {
   ConnectionNotFoundError,
-  InMemorySecretProvider,
-  SecretNotFoundError,
   StaticConnectionResolver,
   UnsupportedAuthTypeError,
 } from "../../src/engine/connections.js";
+import {
+  InMemorySecretProvider,
+  SecretNotFoundError,
+} from "../../src/engine/secrets.js";
 
 describe("connection resolution", () => {
   const secrets = new InMemorySecretProvider({

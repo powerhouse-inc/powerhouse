@@ -3,7 +3,6 @@ import type { BaseSubgraph } from "@powerhousedao/reactor-api";
 import {
   ActivepiecesBlockExecutor,
   CompositeBlockExecutor,
-  EnvSecretProvider,
   shapeAuthValue,
   type BlockExecutor,
   type ConnectionAuthType,
@@ -24,11 +23,11 @@ import type { WorkflowState } from "document-models/workflow/v1";
 import { join } from "node:path";
 
 // Resolves a step's connectionId to a powerhouse/connection document and
-// shapes its auth value; secret refs resolve through the host environment.
+// shapes its auth value; secret refs resolve through the managed store.
 export class DocumentConnectionResolver implements EngineConnectionResolver {
   constructor(
     private readonly subgraph: BaseSubgraph,
-    private readonly secrets: SecretProvider = new EnvSecretProvider(),
+    private readonly secrets: SecretProvider,
   ) {}
 
   async resolve(connectionId: string): Promise<unknown> {
@@ -56,12 +55,15 @@ export class DocumentConnectionResolver implements EngineConnectionResolver {
 
 export const BUNDLE_CACHE_DIR = join(process.cwd(), ".ph", "ap-bundles");
 
-export function createBlockExecutor(subgraph: BaseSubgraph): BlockExecutor {
+export function createBlockExecutor(
+  subgraph: BaseSubgraph,
+  secrets: SecretProvider,
+): BlockExecutor {
   const documents = new DocumentBlockExecutor(subgraph);
   return new CompositeBlockExecutor(
     new ActivepiecesBlockExecutor({
       cacheDir: BUNDLE_CACHE_DIR,
-      connections: new DocumentConnectionResolver(subgraph),
+      connections: new DocumentConnectionResolver(subgraph, secrets),
     }),
     {
       [DOCUMENT_CREATE_BLOCK]: documents,

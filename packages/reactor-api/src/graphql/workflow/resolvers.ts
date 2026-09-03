@@ -18,6 +18,15 @@ interface RunsArgs {
   limit?: number;
 }
 
+// Dev gate until runtime auth lands: writes are refused unless opted in.
+function assertSecretWritesAllowed(): void {
+  if (process.env.PH_SECRETS_ALLOW_WRITE !== "true") {
+    throw new Error(
+      "Secret writes are disabled; set PH_SECRETS_ALLOW_WRITE=true on the switchboard",
+    );
+  }
+}
+
 function parseJson(value: string | null): unknown {
   if (value === null) return null;
   try {
@@ -97,6 +106,15 @@ export const getResolvers = (
       pieceDetail: (_parent: unknown, args: { packageName: string }) =>
         fetchPieceDetail(args.packageName),
       connections: () => workflowRuntime.connections(),
+      secret: async (_parent: unknown, args: { ref: string }) => {
+        try {
+          return await (await workflowRuntime.secrets()).stat(args.ref);
+        } catch {
+          // Unknown or malformed ref reads as "no such secret".
+          return null;
+        }
+      },
+      secrets: async () => (await workflowRuntime.secrets()).list(),
       triggerStates: async () =>
         (await workflowRuntime.triggerStates()).map((row) => ({
           workflowId: row.workflow_id,
@@ -136,6 +154,28 @@ export const getResolvers = (
         workflowRuntime.testTrigger(args.workflowId),
       rerun: (_parent: unknown, args: { runId: string }) =>
         workflowRuntime.rerun(args.runId),
+      createSecret: async (
+        _parent: unknown,
+        args: { value: string; label?: string | null },
+      ) => {
+        assertSecretWritesAllowed();
+        return (await workflowRuntime.secrets()).create({
+          value: args.value,
+          label: args.label ?? undefined,
+        });
+      },
+      rotateSecret: async (
+        _parent: unknown,
+        args: { ref: string; value: string },
+      ) => {
+        assertSecretWritesAllowed();
+        return (await workflowRuntime.secrets()).rotate(args.ref, args.value);
+      },
+      deleteSecret: async (_parent: unknown, args: { ref: string }) => {
+        assertSecretWritesAllowed();
+        await (await workflowRuntime.secrets()).delete(args.ref);
+        return true;
+      },
     },
   };
 };

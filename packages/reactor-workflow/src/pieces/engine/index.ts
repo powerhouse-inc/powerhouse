@@ -1,4 +1,5 @@
 export * from "./types.js";
+export * from "./secrets.js";
 export * from "./expressions.js";
 export * from "./connections.js";
 export * from "./blocks.js";

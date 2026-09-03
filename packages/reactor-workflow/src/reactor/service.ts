@@ -10,6 +10,8 @@ import {
   runWorkflow,
   type BlockExecutor,
   type ConnectorDescriptor,
+  type SecretProvider,
+  type SecretStore,
   type WorkflowRunResult,
 } from "@powerhousedao/reactor-connectors";
 import { childLogger, type OperationWithContext } from "document-model";
@@ -39,6 +41,7 @@ import {
   DocumentConnectionResolver,
   toWorkflowDefinition,
 } from "./lib.js";
+import { LocalEncryptedSecretStore } from "./secret-store.js";
 import { WorkflowRunStore, type TriggerStateRow } from "./store.js";
 import {
   TriggerSupervisor,
@@ -99,6 +102,7 @@ export class WorkflowRuntimeService {
   private subgraph?: BaseSubgraph;
   private executor?: BlockExecutor;
   private storePromise?: Promise<WorkflowRunStore>;
+  private secretsPromise?: Promise<LocalEncryptedSecretStore>;
   private readonly registry = new Map<string, TriggerRegistration>();
 
   // Called by the subgraph on construction; seeds the trigger registry and
@@ -123,6 +127,21 @@ export class WorkflowRuntimeService {
     } catch {
       return undefined;
     }
+  }
+
+  // Unlike the journal, a broken secret store must fail resolution loudly.
+  secrets(): Promise<SecretStore> {
+    if (!this.subgraph) {
+      return Promise.reject(new Error("Workflow runtime is not configured yet"));
+    }
+    this.secretsPromise ??= LocalEncryptedSecretStore.create(
+      this.subgraph.relationalDb,
+    );
+    return this.secretsPromise;
+  }
+
+  private secretProvider(): SecretProvider {
+    return { get: (ref) => this.secrets().then((store) => store.get(ref)) };
   }
 
   private async seedRegistry(): Promise<void> {
@@ -367,9 +386,10 @@ export class WorkflowRuntimeService {
       store: () => this.store(),
       resolveAuth: async (connectionId) => {
         if (!connectionId || !this.subgraph) return undefined;
-        return new DocumentConnectionResolver(this.subgraph).resolve(
-          connectionId,
-        );
+        return new DocumentConnectionResolver(
+          this.subgraph,
+          this.secretProvider(),
+        ).resolve(connectionId);
       },
       fire: (workflowId, payload, kind) => {
         this.fireFromTrigger(workflowId, payload, kind);
@@ -488,9 +508,10 @@ export class WorkflowRuntimeService {
     // Auth-dependent options() resolvers need the step's connection.
     let auth: unknown;
     if (connectionId && this.subgraph) {
-      auth = await new DocumentConnectionResolver(this.subgraph).resolve(
-        connectionId,
-      );
+      auth = await new DocumentConnectionResolver(
+        this.subgraph,
+        this.secretProvider(),
+      ).resolve(connectionId);
     }
     const bundle = await ensurePieceBundle({
       name: parsed.packageName,
@@ -643,7 +664,7 @@ export class WorkflowRuntimeService {
       );
     }
     const definition = toWorkflowDefinition(state);
-    this.executor ??= createBlockExecutor(this.subgraph);
+    this.executor ??= createBlockExecutor(this.subgraph, this.secretProvider());
 
     const store = await this.store();
     const runId =

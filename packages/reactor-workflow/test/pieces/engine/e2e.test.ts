@@ -6,10 +6,8 @@ import {
   ActivepiecesBlockExecutor,
   CompositeBlockExecutor,
 } from "../../src/engine/blocks.js";
-import {
-  InMemorySecretProvider,
-  StaticConnectionResolver,
-} from "../../src/engine/connections.js";
+import { StaticConnectionResolver } from "../../src/engine/connections.js";
+import { InMemorySecretProvider } from "../../src/engine/secrets.js";
 import { runWorkflow } from "../../src/engine/coordinator.js";
 import type { WorkflowDefinition } from "../../src/engine/types.js";
 import {

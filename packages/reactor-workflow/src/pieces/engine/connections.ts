@@ -1,6 +1,8 @@
 // Resolves connection references into the auth value a piece reads from
 // ctx.auth, shaped per Activepieces auth kind (powerhouse/connection state).
 
+import type { SecretProvider } from "./secrets.js";
+
 export type ConnectionAuthType =
   | "SECRET_TEXT"
   | "BASIC_AUTH"
@@ -8,41 +10,6 @@ export type ConnectionAuthType =
   | "OAUTH2"
   | "OIDC"
   | "NONE";
-
-export interface SecretProvider {
-  get(ref: string): Promise<string>;
-}
-
-export class SecretNotFoundError extends Error {
-  constructor(ref: string) {
-    super(`No secret found for ref "${ref}"`);
-    this.name = "SecretNotFoundError";
-  }
-}
-
-export class EnvSecretProvider implements SecretProvider {
-  get(ref: string): Promise<string> {
-    const value = process.env[ref];
-    if (value === undefined)
-      return Promise.reject(new SecretNotFoundError(ref));
-    return Promise.resolve(value);
-  }
-}
-
-export class InMemorySecretProvider implements SecretProvider {
-  private readonly secrets: Map<string, string>;
-
-  constructor(secrets: Record<string, string>) {
-    this.secrets = new Map(Object.entries(secrets));
-  }
-
-  get(ref: string): Promise<string> {
-    const value = this.secrets.get(ref);
-    if (value === undefined)
-      return Promise.reject(new SecretNotFoundError(ref));
-    return Promise.resolve(value);
-  }
-}
 
 // Mirrors the powerhouse/connection document state the resolver consumes.
 export interface ConnectionSource {
@@ -128,7 +95,7 @@ export class StaticConnectionResolver implements EngineConnectionResolver {
 
   constructor(
     connections: Record<string, ConnectionSource>,
-    private readonly secrets: SecretProvider = new EnvSecretProvider(),
+    private readonly secrets: SecretProvider,
   ) {
     this.connections = new Map(Object.entries(connections));
   }
