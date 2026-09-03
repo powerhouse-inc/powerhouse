@@ -157,6 +157,45 @@ describe.skipIf(!rssBundle || !webhookBundle)(
       expect(out).toEqual([payload]);
     });
 
+    it("delivers isRepublish and scopes store keys per the AP layout", async () => {
+      interface ProbeContext {
+        isRepublish: boolean;
+        store: {
+          put(key: string, value: unknown, scope?: string): Promise<unknown>;
+          get(key: string): Promise<unknown>;
+        };
+      }
+      const seen: Record<string, unknown> = {};
+      const trigger = {
+        name: "probe",
+        onEnable: async (raw: unknown) => {
+          const ctx = raw as ProbeContext;
+          seen.isRepublish = ctx.isRepublish;
+          await ctx.store.put("lastPoll", 42);
+          await ctx.store.put("shared", "p", "COLLECTION");
+          seen.read = await ctx.store.get("lastPoll");
+        },
+      };
+      const store = new InMemoryKeyValueStore();
+      await runTriggerHook(
+        trigger,
+        "onEnable",
+        buildTriggerContext({
+          propsValue: {},
+          store,
+          identity: { flowId: "f1" },
+          isRepublish: true,
+          storePrefix: "test",
+        }),
+      );
+      expect(seen.isRepublish).toBe(true);
+      expect(seen.read).toBe(42);
+      expect(store.snapshot()).toEqual({
+        "testflow_f1/lastPoll": 42,
+        testshared: "p",
+      });
+    });
+
     it("throws a named error for a missing hook", async () => {
       const { piece } = await loadPieceFromDir(rssBundle);
       const trigger = {

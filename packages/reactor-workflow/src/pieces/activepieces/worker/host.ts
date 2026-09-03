@@ -3,9 +3,14 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type {
+  RecordedListener,
+  RecordedSchedule,
+} from "../context/trigger.js";
+import type {
   ResolveOptionsRequest,
   RunActionRequest,
   SerializedPieceError,
+  TriggerHookRequest,
   WorkerResponse,
 } from "./protocol.js";
 
@@ -37,6 +42,10 @@ export interface PieceWorkerResult {
   output: unknown;
   touched: string[];
   tlsPoisoned: boolean;
+  // trigger-hook only: final store contents plus captured context calls.
+  storeState?: Record<string, unknown>;
+  schedules?: RecordedSchedule[];
+  listeners?: RecordedListener[];
 }
 
 export interface PieceWorkerOptions {
@@ -89,9 +98,17 @@ export class PieceWorker {
     return this.enqueue("resolve-options", request, options.timeoutMs);
   }
 
+  // One trigger lifecycle hook; the caller owns storeState persistence.
+  runTriggerHook(
+    request: TriggerHookRequest,
+    options: { timeoutMs?: number } = {},
+  ): Promise<PieceWorkerResult> {
+    return this.enqueue("trigger-hook", request, options.timeoutMs);
+  }
+
   private enqueue(
-    type: "run" | "resolve-options",
-    request: RunActionRequest | ResolveOptionsRequest,
+    type: "run" | "resolve-options" | "trigger-hook",
+    request: RunActionRequest | ResolveOptionsRequest | TriggerHookRequest,
     timeoutMs?: number,
   ): Promise<PieceWorkerResult> {
     const run = this.queue.then(() =>
@@ -123,8 +140,8 @@ export class PieceWorker {
   }
 
   private execute(
-    type: "run" | "resolve-options",
-    request: RunActionRequest | ResolveOptionsRequest,
+    type: "run" | "resolve-options" | "trigger-hook",
+    request: RunActionRequest | ResolveOptionsRequest | TriggerHookRequest,
     timeoutMs: number,
   ): Promise<PieceWorkerResult> {
     const child = this.spawn();
@@ -146,6 +163,9 @@ export class PieceWorker {
             output: response.output,
             touched: response.touched,
             tlsPoisoned: response.tlsPoisoned,
+            storeState: response.storeState,
+            schedules: response.schedules,
+            listeners: response.listeners,
           });
         } else {
           reject(new PieceWorkerError(response.error));

@@ -29,7 +29,15 @@ export class InMemoryConnectionsProvider implements ConnectionsProvider {
 }
 
 export class InMemoryKeyValueStore implements KeyValueStore {
-  private readonly entries = new Map<string, unknown>();
+  private readonly entries: Map<string, unknown>;
+
+  constructor(seed: Record<string, unknown> = {}) {
+    this.entries = new Map(Object.entries(seed));
+  }
+
+  snapshot(): Record<string, unknown> {
+    return Object.fromEntries(this.entries);
+  }
 
   put(key: string, value: unknown): Promise<unknown> {
     this.entries.set(key, value);

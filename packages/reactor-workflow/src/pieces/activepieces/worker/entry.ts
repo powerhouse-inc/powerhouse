@@ -6,16 +6,19 @@ import {
   InMemoryKeyValueStore,
   UnsupportedContextMemberError,
 } from "../context/action.js";
+import { DataUriFilesService } from "../context/files.js";
 import {
   buildPropertyContext,
   resolveDynamicProperty,
 } from "../context/props.js";
+import { buildTriggerContext, runTriggerHook } from "../context/trigger.js";
 import { loadPieceFromDir, type LoadedPiece } from "../loader.js";
-import { getActions } from "../types.js";
+import { getActions, getTriggers } from "../types.js";
 import type {
   ResolveOptionsMessage,
   RunMessage,
   SerializedPieceError,
+  TriggerHookMessage,
   WorkerRequestMessage,
   WorkerResponse,
 } from "./protocol.js";
@@ -141,16 +144,67 @@ async function handleRun(message: RunMessage): Promise<WorkerResponse> {
   };
 }
 
+async function handleTriggerHook(
+  message: TriggerHookMessage,
+): Promise<WorkerResponse> {
+  const { request } = message;
+  const { piece } = await loadCached(request.bundleDir);
+  const trigger = getTriggers(piece)[request.triggerName] as
+    | ReturnType<typeof getTriggers>[string]
+    | undefined;
+  if (!trigger) {
+    throw new Error(
+      `No trigger "${request.triggerName}" in bundle ${request.bundleDir}`,
+    );
+  }
+  const store = new InMemoryKeyValueStore(request.storeState);
+  const runsPiece = request.hook === "run" || request.hook === "test";
+  const handle = buildTriggerContext({
+    propsValue: request.propsValue,
+    auth: request.auth,
+    store,
+    // Test hooks write under a separate prefix, never the live cursor.
+    storePrefix: request.hook === "test" ? "test" : "",
+    identity: request.identity,
+    isRepublish: request.isRepublish,
+    payload: request.payload,
+    webhookUrl: request.webhookUrl,
+    server: request.server,
+    files: runsPiece ? new DataUriFilesService() : undefined,
+  });
+  const output = await runTriggerHook(trigger, request.hook, handle);
+  return {
+    id: message.id,
+    type: "result",
+    output: jsonSafe(output),
+    touched: [...handle.touched],
+    tlsPoisoned: consumeTlsFlag(),
+    storeState: jsonSafe(store.snapshot()) as Record<string, unknown>,
+    schedules: handle.schedules,
+    listeners: handle.listeners,
+  };
+}
+
 function isWorkerMessage(value: unknown): value is WorkerRequestMessage {
   if (typeof value !== "object" || value === null) return false;
   const type = (value as { type?: unknown }).type;
-  return type === "run" || type === "resolve-options";
+  return type === "run" || type === "resolve-options" || type === "trigger-hook";
+}
+
+function dispatch(message: WorkerRequestMessage): Promise<WorkerResponse> {
+  switch (message.type) {
+    case "run":
+      return handleRun(message);
+    case "resolve-options":
+      return handleResolveOptions(message);
+    case "trigger-hook":
+      return handleTriggerHook(message);
+  }
 }
 
 process.on("message", (message: unknown) => {
   if (!isWorkerMessage(message)) return;
-  const handler =
-    message.type === "run" ? handleRun(message) : handleResolveOptions(message);
+  const handler = dispatch(message);
   handler
     .catch(
       (error: unknown): WorkerResponse => ({

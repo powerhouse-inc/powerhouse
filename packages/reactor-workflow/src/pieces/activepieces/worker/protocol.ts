@@ -1,4 +1,9 @@
 import type { ActionContextIdentity } from "../context/action.js";
+import type { ServerInfo } from "../context/props.js";
+import type {
+  RecordedListener,
+  RecordedSchedule,
+} from "../context/trigger.js";
 
 export interface RunActionRequest {
   bundleDir: string;
@@ -35,7 +40,34 @@ export interface ResolveOptionsMessage {
   request: ResolveOptionsRequest;
 }
 
-export type WorkerRequestMessage = RunMessage | ResolveOptionsMessage;
+// One trigger lifecycle hook, executed statelessly: the persisted piece-store
+// contents are seeded in and the updated contents come back in the response.
+export interface TriggerHookRequest {
+  bundleDir: string;
+  triggerName: string;
+  hook: "onEnable" | "onDisable" | "run" | "test";
+  propsValue: Record<string, unknown>;
+  auth?: unknown;
+  storeState?: Record<string, unknown>;
+  identity?: ActionContextIdentity;
+  // onEnable of an unchanged trigger; pollingHelper keeps its cursor.
+  isRepublish?: boolean;
+  // WEBHOOK payloads; also handed to test runs.
+  payload?: unknown;
+  webhookUrl?: string;
+  server?: ServerInfo;
+}
+
+export interface TriggerHookMessage {
+  id: number;
+  type: "trigger-hook";
+  request: TriggerHookRequest;
+}
+
+export type WorkerRequestMessage =
+  | RunMessage
+  | ResolveOptionsMessage
+  | TriggerHookMessage;
 
 // Piece errors cross the IPC boundary as data; classify on these fields.
 export interface SerializedPieceError {
@@ -53,6 +85,10 @@ export interface ResultResponse {
   touched: string[];
   // True when the piece set NODE_TLS_REJECT_UNAUTHORIZED=0 (contained to the worker).
   tlsPoisoned: boolean;
+  // trigger-hook only: final store contents plus captured context calls.
+  storeState?: Record<string, unknown>;
+  schedules?: RecordedSchedule[];
+  listeners?: RecordedListener[];
 }
 
 export interface ErrorResponse {

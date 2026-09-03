@@ -23,17 +23,27 @@ export interface RecordedListener {
   identifierValue: string;
 }
 
+export interface TriggerFilesService {
+  write(file: { fileName?: string; data: Buffer }): Promise<string>;
+}
+
 export interface TriggerContextOptions {
   propsValue: Record<string, unknown>;
   auth?: unknown;
   store?: KeyValueStore;
+  // "test" for test hooks so they never touch the live cursor; "" otherwise.
+  storePrefix?: string;
   identity?: ActionContextIdentity;
+  // onEnable: an unchanged trigger re-enabling; pollingHelper keeps its cursor.
+  isRepublish?: boolean;
   // WEBHOOK / APP_WEBHOOK: the incoming request; also handed to test runs.
   payload?: unknown;
   webhookUrl?: string;
   flows?: FlowsProvider;
   connections?: ConnectionsProvider;
   server?: ServerInfo;
+  // run/test hooks only per the AP contract; omitted members throw, named.
+  files?: TriggerFilesService;
   onTouch?: (member: string) => void;
 }
 
@@ -41,6 +51,7 @@ export interface BuiltApTriggerContext {
   auth: unknown;
   propsValue: Record<string, unknown>;
   store: KeyValueStore;
+  isRepublish: boolean;
   flows: FlowsProvider & { current: { id: string; version: { id: string } } };
   step: { name: string };
   project: { id: string; externalId(): Promise<string> };
@@ -70,13 +81,25 @@ export function buildTriggerContext(
   const schedules: RecordedSchedule[] = [];
   const listeners: RecordedListener[] = [];
 
+  // AP's engine store layout: FLOW scope (the default) nests under the flow
+  // id; PROJECT scope (enum value "COLLECTION") uses the bare key.
+  const prefix = options.storePrefix ?? "";
+  const flowId = identity.flowId ?? "flow";
+  const scopedKey = (key: string, scope?: unknown) =>
+    scope === "COLLECTION"
+      ? `${prefix}${key}`
+      : `${prefix}flow_${flowId}/${key}`;
+
   const base: Record<string, unknown> = {
     auth: options.auth,
     propsValue: options.propsValue,
+    isRepublish: options.isRepublish ?? false,
     store: {
-      put: (key: string, value: unknown) => store.put(key, value),
-      get: (key: string) => store.get(key),
-      delete: (key: string) => store.delete(key),
+      put: (key: string, value: unknown, scope?: unknown) =>
+        store.put(scopedKey(key, scope), value),
+      get: (key: string, scope?: unknown) => store.get(scopedKey(key, scope)),
+      delete: (key: string, scope?: unknown) =>
+        store.delete(scopedKey(key, scope)),
     },
     flows: {
       list:
@@ -105,7 +128,7 @@ export function buildTriggerContext(
         listeners.push(listener);
       },
     },
-    files: throwingStub("files"),
+    files: options.files ?? throwingStub("files"),
   };
 
   const context = withTouchTracking(base, touched, options.onTouch);
