@@ -93,8 +93,8 @@ export function seriesCharts({
         width,
         height: 290 + 14 * stackDepth,
         marginLeft,
-        marginTop: 24 + 14 * stackDepth,
-        marginBottom: 52,
+        marginTop: 24,
+        marginBottom: 52 + 14 * stackDepth,
         x,
         y: {
           type: log ? "log" : "linear",
@@ -117,15 +117,21 @@ export function seriesCharts({
             tip: true,
             title: "machine or environment changed before this run",
           }),
-          Plot.text(annotations, {
-            x: "x",
-            text: "label",
-            fill: "color",
-            href: "href",
-            frameAnchor: "top",
-            dy: (d) => -14 - 14 * d.stack,
-            fontWeight: 600,
-          }),
+          // dy is a constant, not a channel, so each stack level is its own mark.
+          ...Array.from({ length: stackDepth }, (_, level) =>
+            Plot.text(
+              annotations.filter((a) => a.stack === level),
+              {
+                x: "x",
+                text: "label",
+                fill: "color",
+                href: "href",
+                frameAnchor: "bottom",
+                dy: 56 + 14 * level,
+                fontWeight: 600,
+              },
+            ),
+          ),
           Plot.text(runs, {
             x: "x",
             text: (d) => shortSha(d.x),

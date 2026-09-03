@@ -299,7 +299,7 @@ export function renderOverview(root, state) {
 // Every chart says how to read it; a chart that needs the source to be read
 // is one the reader guesses at.
 function chartGuide(metric) {
-  return `One line per case, one point per run; ${metric.label}, ${metric.lower ? "lower" : "higher"} is better. Whiskers are noise. Shas open the commit. A red band is a run a task was found in, a green band the first run after its fix; the label opens the task.`;
+  return `One line per case, one point per run; ${metric.label}, ${metric.lower ? "lower" : "higher"} is better. Whiskers are noise. Under each run: the commit, then any task found in that run (red) or fixed by it (green); both are links.`;
 }
 
 const TIMELINE_GUIDE =
