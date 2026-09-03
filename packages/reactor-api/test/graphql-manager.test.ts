@@ -677,48 +677,90 @@ describe("GraphQLManager", () => {
     });
   });
 
-  // ── subgraph deduplication ─────────────────────────────────────────────────
+  // ── subgraph deduplication / replacement ───────────────────────────────────
 
-  describe("subgraph deduplication", () => {
-    it("skips a subgraph instance registered twice with the same name", async () => {
-      const { manager } = makeHarness();
-
-      const sub = {
-        name: "my-subgraph",
+  describe("subgraph deduplication and replacement", () => {
+    async function makeSub(name: string, overrides: object = {}) {
+      return {
+        name,
         typeDefs: (await import("graphql-tag")).gql`type Query { hi: String }`,
         resolvers: {},
         relationalDb: {} as IRelationalDb,
         reactorClient: {} as IReactorClient,
+        ...overrides,
       };
+    }
 
-      await manager.registerSubgraphInstance(sub, "graphql");
-      await manager.registerSubgraphInstance(sub, "graphql");
-
-      // After init(), _updateRouter creates handlers - only one per unique path.
-      await initAndFlush(manager);
-
-      // createHandler should be called once for the subgraph (not twice).
-      const { gatewayAdapter } = makeHarness(); // just to confirm the pattern
-      void gatewayAdapter; // second harness unused - we check the first
-    });
-
-    it("onSetup is called once per unique subgraph", async () => {
+    it("re-registering the identical instance is a no-op (no onDisconnect, one onSetup)", async () => {
       const { manager } = makeHarness();
       const onSetup = vi.fn().mockResolvedValue(undefined);
+      const onDisconnect = vi.fn().mockResolvedValue(undefined);
 
-      const sub = {
-        name: "unique-sub",
-        typeDefs: (await import("graphql-tag")).gql`type Query { hi: String }`,
-        resolvers: {},
-        relationalDb: {} as IRelationalDb,
-        reactorClient: {} as IReactorClient,
-        onSetup,
-      };
+      const sub = await makeSub("unique-sub", { onSetup, onDisconnect });
 
-      await manager.registerSubgraphInstance(sub, "graphql");
-      await manager.registerSubgraphInstance(sub, "graphql");
+      const first = await manager.registerSubgraphInstance(sub, "graphql");
+      const second = await manager.registerSubgraphInstance(sub, "graphql");
 
+      expect(first).toBe(sub);
+      expect(second).toBe(sub);
       expect(onSetup).toHaveBeenCalledTimes(1);
+      expect(onDisconnect).not.toHaveBeenCalled();
+    });
+
+    it("a same-name different instance replaces the old one, disconnecting it", async () => {
+      const { manager } = makeHarness();
+      const oldOnDisconnect = vi.fn().mockResolvedValue(undefined);
+      const newOnSetup = vi.fn().mockResolvedValue(undefined);
+
+      const oldSub = await makeSub("my-sub", { onDisconnect: oldOnDisconnect });
+      const newSub = await makeSub("my-sub", { onSetup: newOnSetup });
+
+      await manager.registerSubgraphInstance(oldSub, "graphql");
+      const result = await manager.registerSubgraphInstance(newSub, "graphql");
+
+      expect(result).toBe(newSub);
+      expect(oldOnDisconnect).toHaveBeenCalledTimes(1);
+      expect(newOnSetup).toHaveBeenCalledTimes(1);
+      expect(manager.getSubgraphByName("my-sub")).toBe(newSub);
+    });
+
+    it("a throwing onDisconnect does not abort the replacement", async () => {
+      const { manager } = makeHarness();
+      const oldSub = await makeSub("my-sub", {
+        onDisconnect: vi.fn().mockRejectedValue(new Error("boom")),
+      });
+      const newSub = await makeSub("my-sub");
+
+      await manager.registerSubgraphInstance(oldSub, "graphql");
+      const result = await manager.registerSubgraphInstance(newSub, "graphql");
+
+      expect(result).toBe(newSub);
+      expect(manager.getSubgraphByName("my-sub")).toBe(newSub);
+    });
+
+    it("replacement invalidates the handler cache so the handler is rebuilt", async () => {
+      const { manager, gatewayAdapter } = makeHarness();
+
+      const oldSub = await makeSub("my-sub");
+      await manager.registerSubgraphInstance(oldSub, "graphql");
+      await initAndFlush(manager);
+
+      // One handler built for the subgraph's path on first setup.
+      expect(gatewayAdapter.createHandler).toHaveBeenCalledTimes(1);
+
+      // Re-running the router without a replacement reuses the cached handler.
+      const noopUpdate = manager.updateRouter();
+      await vi.runAllTimersAsync();
+      await noopUpdate;
+      expect(gatewayAdapter.createHandler).toHaveBeenCalledTimes(1);
+
+      const newSub = await makeSub("my-sub");
+      await manager.registerSubgraphInstance(newSub, "graphql");
+      const update = manager.updateRouter();
+      await vi.runAllTimersAsync();
+      await update;
+
+      expect(gatewayAdapter.createHandler).toHaveBeenCalledTimes(2);
     });
   });
 

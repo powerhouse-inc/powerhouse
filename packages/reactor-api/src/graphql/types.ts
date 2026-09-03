@@ -40,6 +40,7 @@ export type ISubgraph = {
   relationalDb: IRelationalDb;
   hasSubscriptions?: boolean;
   onSetup?: () => Promise<void>;
+  onDisconnect?: () => Promise<void>;
 };
 
 export type SubgraphArgs = {

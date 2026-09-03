@@ -376,20 +376,27 @@ export class GraphQLManager {
     core = false,
   ) {
     const subgraphsMap = core ? this.coreSubgraphsMap : this.subgraphs;
-    const subgraphs = subgraphsMap.get(supergraph) ?? [];
 
-    const existingSubgraph = subgraphs.find(
-      (it) => it.name === subgraphInstance.name,
-    );
+    const existingSubgraph = subgraphsMap
+      .get(supergraph)
+      ?.find((it) => it.name === subgraphInstance.name);
 
-    if (existingSubgraph) {
+    // Re-registering the same instance is a no-op.
+    if (existingSubgraph === subgraphInstance) {
       this.logger.debug(
         `Skipping duplicate subgraph: ${subgraphInstance.name}`,
       );
       return existingSubgraph;
     }
 
+    // Same name, different instance: replace (e.g. package hot-reload).
+    if (existingSubgraph) {
+      await this.#removeSubgraphInstance(existingSubgraph, subgraphsMap);
+    }
+
     await subgraphInstance.onSetup?.();
+
+    const subgraphs = subgraphsMap.get(supergraph) ?? [];
     subgraphs.push(subgraphInstance);
     subgraphsMap.set(supergraph, subgraphs);
 
@@ -398,9 +405,50 @@ export class GraphQLManager {
     }
 
     this.logger.info(
-      `Registered ${this.path.endsWith("/") ? this.path : this.path + "/"}${supergraph ? supergraph + "/" : ""}${subgraphInstance.name} subgraph.`,
+      `${existingSubgraph ? "Replaced" : "Registered"} ${this.path.endsWith("/") ? this.path : this.path + "/"}${supergraph ? supergraph + "/" : ""}${subgraphInstance.name} subgraph.`,
     );
     return subgraphInstance;
+  }
+
+  /** Tear down a replaced subgraph: onDisconnect, drop it from every bucket,
+   * and invalidate its cached handlers so #setupSubgraphs rebuilds them. */
+  async #removeSubgraphInstance(
+    instance: ISubgraph,
+    subgraphsMap: Map<string, ISubgraph[]>,
+  ) {
+    try {
+      await instance.onDisconnect?.();
+    } catch (error) {
+      this.logger.error(
+        "Error disconnecting subgraph @name: @error",
+        instance.name,
+        error,
+      );
+    }
+
+    for (const [bucket, subgraphs] of subgraphsMap.entries()) {
+      if (!subgraphs.includes(instance)) {
+        continue;
+      }
+      subgraphsMap.set(
+        bucket,
+        subgraphs.filter((it) => it !== instance),
+      );
+
+      const subgraphPath = this.#getSubgraphPath(instance, bucket);
+      this.subgraphHandlerCache.delete(subgraphPath);
+
+      const wsDisposer = this.subgraphWsDisposers.get(subgraphPath);
+      if (wsDisposer) {
+        await wsDisposer.dispose();
+        this.subgraphWsDisposers.delete(subgraphPath);
+      }
+    }
+
+    const internalHandler = this.#internalSubgraphHandlers.get(instance.name);
+    if (internalHandler?.subgraph === instance) {
+      this.#internalSubgraphHandlers.delete(instance.name);
+    }
   }
 
   /**
@@ -669,11 +717,8 @@ export class GraphQLManager {
         this.logger.debug(`Setting up subgraph ${subgraph.name}`);
         const subgraphPath = this.#getSubgraphPath(subgraph, supergraph);
         try {
-          // Skip if handler already cached - subgraphs are deduplicated by name
-          // in #addSubgraphInstance, so a cached path means the schema is unchanged.
-          // This prevents unbounded schema/server creation across repeated
-          // _updateRouter() calls. The handler was already mounted on first setup,
-          // so no re-mount is needed.
+          // Skip if handler already cached and mounted — a replaced subgraph
+          // invalidates its entries, so a cached path is current.
           if (this.subgraphHandlerCache.has(subgraphPath)) {
             continue;
           }
