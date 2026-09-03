@@ -46,63 +46,95 @@ the numbers - happen after you and not instead of you.
 - **Never widen the task.** One task, one mechanism. A neighbouring problem is
   a report line, not a second fix in the same diff.
 
-## Step 0 — gate
+## Step 0 — gate, task, verifier note, before-numbers: one command
 
 ```bash
-pnpm --filter @powerhousedao/reactor bench:records verify --dir bench
-git status --porcelain
+pnpm --filter @powerhousedao/reactor bench:fix gate T-007
 ```
 
-Exit 2 stops everything; print the output and do not repair. A dirty tree
-also stops you: your diff has to be the fix and nothing else, so someone
-reviewing it can tell what changed.
+It runs `bench:records verify`, checks the tree, and prints the task: kind,
+sites, repro, observed and expected, the ranked fixes, every history event, the
+last note in full, then every case of every cited benchmark with `meanMs`,
+`hz`, `rmePct` and `sampleCount`, and whether Postgres answers on 5433.
 
-## Step 1 — read the task, then its verifier note
+Exit 2 stops everything; print the output and do not repair. Exit 5 is a dirty
+tree: your diff has to be the fix and nothing else, so stop. Exit 6 means the
+task is not VERIFIED: stop and say which status it has.
 
-```bash
-pnpm --filter @powerhousedao/reactor bench:records show T-007 --dir bench
-```
-
-The task must be VERIFIED. Anything else, stop and say which status it has.
-
-Read `history[]` to the end. The verifier ran the repro and looked at the
+Read the last note to the end. The verifier ran the repro and looked at the
 sites, and its note often corrects the filed finding - a fix ranked first that
 is inert, a window that has a different third term, an `invalidates` that
-overreaches. The verifier's note is the most recent primary source you have
-and it outranks the analyst's `details`.
+overreaches. It is the most recent primary source you have and it outranks the
+analyst's `details`. The cited cases' numbers are your before-numbers,
+alongside whatever fresh figures the verifier put in its note.
 
-Then `show` every B-id in `evidence`. The cited case's `meanMs`, `hz`,
-`rmePct` and `sampleCount` are your before-numbers, alongside whatever fresh
-figures the verifier put in its note.
+## Step 1 — anchor in the code
 
-## Step 2 — anchor in the code
+```bash
+pnpm --filter @powerhousedao/reactor bench:fix sites T-007 --context 40
+```
 
-Open every `details.sites[]` entry at the named line. Confirm each says what
-the task says. If a site has moved, find where it went with `rg` and say so in
-the report; if it no longer says what the task claims, stop - the task may need
-the verifier again, not a fix.
+For every `details.sites[]` entry this prints the source around the cited line,
+says whether the named symbol is on that line, nearby, or somewhere else in the
+file (`DRIFT:` means the cited line is inside a different function than the
+task says - read the excerpt as what the code does, not as what the task
+claims), and lists the symbol's callers. `MOVED` or `MISSING` exits 4: stop,
+the task may need the verifier again, not a fix.
 
 Then read enough surrounding code to state the mechanism in one sentence of
-your own. If you cannot, you are not ready to change it.
+your own. If you cannot, you are not ready to change it. Use `Read` with a
+line range for that; do not `sed -n` the file one window at a time.
 
-## Step 3 — choose the fix
+## Step 2 — before-run, then the criterion on paper
+
+Rebuild first, so the before-run measures HEAD and not a stale dist:
+
+```bash
+pnpm --filter @powerhousedao/shared run build     # if the sites are in shared
+pnpm --filter @powerhousedao/reactor run build
+```
+
+Run `details.repro` **verbatim**, in the foreground, with a timeout long
+enough for it (`cache` and `queue` are slow by construction; `bench:sync` is
+about nine minutes). Then keep the numbers, because the after-run overwrites
+the same file:
+
+```bash
+cp packages/reactor/bench/results/write-cache.json <scratch>/before.json
+pnpm --filter @powerhousedao/reactor bench:fix cases <scratch>/before.json
+```
+
+Now the criterion, before any edit. It is a file with a timestamp, and
+`compare` will refuse to judge an after-run that predates it:
+
+```bash
+pnpm --filter @powerhousedao/reactor bench:fix criterion \
+  --before <scratch>/before.json \
+  --case "Cold miss rebuild (1000 operations)" \
+  --max-ratio 0.65 --fail-ratio 0.9 \
+  --control "No-cache baseline: manual rebuild (1000 operations)" \
+  --out <scratch>/criterion.json
+```
+
+- `--max-ratio`: the after mean divided by the before mean must be at or under
+  this for the fix to hold. A number, calibrated to the verifier's
+  decomposition rather than to `details.expected`.
+- `--fail-ratio`: at or above this the fix missed; between the two is partial.
+- `--control`: a case the fix must not move. If it moves more than the
+  tolerance the comparison is inconclusive: the machine was not the same
+  between runs, and you say so instead of massaging the ratio.
 
 | Kind | The fix is | Done when |
 |---|---|---|
-| DEFECT | a change to the system under test at `sites[]`, following `fixes[]` by rank unless the verifier's note disqualified one | the repro shows `expected`, or moves from `observed` toward it by the margin you wrote down |
+| DEFECT | a change to the system under test at `sites[]`, following `fixes[]` by rank unless the verifier's note disqualified one | `compare` says MET against the criterion you wrote |
 | HARNESS | a change to the bench so it measures what its label says, following `remedy` | the bias named in `defect` is gone from the numbers - the spread collapses, or the per-unit ratio the task computed lands near 1.0 - and the case still runs |
 | GAP | a new scenario or measurement that answers `question`, following `experiment` | the scenario exists, runs under the named benchmark, and produces the number the question asks for |
-
-Write the criterion now, in the report, before running anything:
-
-- **Holds if:** the after-run must show this. A number and a threshold.
-- **Fails if:** the after-run must show this for the fix to have missed.
 
 A HARNESS remedy that renames a case has to set `continues` to the old name so
 the series stays joined; see `bench/records/from-vitest.ts` for how a case
 declares it.
 
-## Step 4 — make the change
+## Step 3 — the criterion is written; now you may edit
 
 Follow `packages/reactor/CLAUDE.md`. Named types, no `any`, one `await` per
 try/catch, no new inline comments, `.js` import extensions. A bench file is
@@ -113,7 +145,7 @@ Keep the diff to the mechanism. If the right fix is in another package
 `sites[]` already told you where the code lives - and note it, because it
 changes what has to be rebuilt and tested.
 
-## Step 5 — build, then measure
+## Step 4 — build, prove the dist has the edit, then measure
 
 Packages here import each other's built `dist`, not source. A repro against a
 stale dist measures the old code and reports the old number.
@@ -121,10 +153,17 @@ stale dist measures the old code and reports the old number.
 ```bash
 pnpm --filter @powerhousedao/shared run build     # if you touched shared: tsc --build is NOT enough
 pnpm --filter @powerhousedao/reactor run build    # if you touched reactor src
+pnpm --filter @powerhousedao/reactor bench:fix dist-check --package shared --marker "<an identifier your edit introduced>"
 ```
 
-Then run `details.repro` **verbatim**. For a HARNESS or GAP task with no
-repro, run the bench that owns the file you changed:
+`dist-check` compares the newest source file against the newest runtime JS in
+`dist/` (declarations do not count - `tsc --build` refreshes those without
+touching the JS) and greps the marker. Exit 7 means the dist does not contain
+your edit: rebuild, do not measure.
+
+Then run `details.repro` **verbatim**, foreground, same timeout as before. For
+a HARNESS or GAP task with no repro, run the bench that owns the file you
+changed:
 
 | Bench file | Command |
 |---|---|
@@ -137,10 +176,18 @@ repro, run the bench that owns the file you changed:
 
 `cache` and `queue` are slow by construction. Wait; do not shorten them.
 
-Compare against the criterion. If it fails, you may change the fix and
-measure again - that is iterating. Say how many iterations it took.
+```bash
+pnpm --filter @powerhousedao/reactor bench:fix compare \
+  --criterion <scratch>/criterion.json \
+  --after packages/reactor/bench/results/write-cache.json
+```
 
-## Step 6 — tests for every package you touched
+Exit 0 is MET, 1 is PARTIAL or INCONCLUSIVE (the reasons say which), 8 is
+MISSED. Quote its output in the report. If it missed, you may change the fix
+and measure again against the same criterion file - that is iterating. Say how
+many iterations it took. Never write a second criterion to fit the number.
+
+## Step 5 — tests for every package you touched
 
 ```bash
 pnpm --filter @powerhousedao/shared run test      # if touched
@@ -148,9 +195,14 @@ pnpm --filter @powerhousedao/reactor run test
 pnpm --filter @powerhousedao/reactor run lint
 ```
 
-Reactor's suite has Postgres variants that need a live PG on 5433. Check
-first; if it is not reachable, run anyway and report the PG half as **not
-run**, not as passed.
+Run each suite in the foreground with a timeout that covers it (the reactor
+suite is about four minutes), or in the background and wait on its output file
+with Monitor. Never poll a process with `ps` or `tail` in a loop: every poll
+is a full-context model turn, and the suite finishes no sooner for it.
+
+Reactor's suite has Postgres variants that need a live PG on 5433. `gate`
+already told you whether it answers; if not, run anyway and report the PG half
+as **not run**, not as passed.
 
 A red test is part of your result. Fix it if it is your fix's fault; report it
 if it was red before you started (`git stash` is blocked - check by reading
@@ -166,7 +218,8 @@ lives in.
 |---|---|---|
 | Fix rank 1 does nothing | the repro number does not move | Read the verifier's note again; it may already say why. Move to rank 2 and record that rank 1 was inert. |
 | Number moved, criterion not met | 52x became 40x, you wrote "under 15x" | Not done. Say what the residual is and whether the task's `expected` was wrong or your fix is partial. Do not rewrite the threshold. |
-| Stale dist | shared edited, reactor repro unchanged | `pnpm --filter @powerhousedao/shared run build`, then rerun. |
+| Stale dist | shared edited, reactor repro unchanged, or `dist-check` exits 7 | `pnpm --filter @powerhousedao/shared run build`, `dist-check` again, then rerun. |
+| Compare says INCONCLUSIVE | the control moved, or the criterion postdates the after-run | Not a verdict on the fix. Re-run the repro on a quieter machine, or accept that you rewrote the criterion and say so. |
 | Renamed case | a HARNESS remedy changes a label | Set `continues` to the old name, or the viewer starts a new series. |
 | Exit 68 naming `.records.lock` | a writer died holding it | Stop. Never remove it. Tell the human. |
 | Exit 2 from `verify` | a record file does not parse | Stop the line. Do not repair. |
@@ -181,9 +234,9 @@ lives in.
 | Sites confirmed | reducer.ts:639 _baseReducer; kysely-write-cache.ts:966 coldMissRebuild |
 | Fix applied | rank 2: <one sentence> |
 | Files changed | packages/shared/document-model/reducer.ts, ... |
-| Criterion (written before) | holds if cold-miss 1000/100 < 15x; fails if it stays near 52x |
-| Before | 52.5x (B-007; verifier note) |
-| After | <number> (repro, exit <n>) |
+| Criterion (file, written before the edit) | <scratch>/criterion.json @ <writtenAt>: cold-miss 1000-op mean <= 0.65x before, missed at >= 0.9x; control no-cache 1000-op within 10% |
+| Before | 856.8634 ms (before.json; B-007 had 877.13) |
+| After | 463.82 ms, 0.541x - compare: MET (exit 0), control held at 0.971x |
 | Iterations | 1 |
 | Tests | shared: pass (exit 0); reactor: pass, PG variants not run (no PG on 5433) |
 ```

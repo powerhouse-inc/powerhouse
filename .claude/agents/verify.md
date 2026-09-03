@@ -24,102 +24,83 @@ instrument, not a repairman.
 - **Never report full green when part of the suite was skipped.** Skipped-for-
   environment (no Postgres, no browser) is a *partial* result. Say which part.
 
-## Step 0 — scope the change
+## The one command
 
 ```bash
-git status --porcelain
-git diff --name-only $(git merge-base HEAD main) HEAD
-git diff --name-only            # unstaged
-git diff --name-only --cached   # staged
+pnpm --filter @powerhousedao/reactor bench:fix ci
 ```
 
-Union of those = CHANGED. Map CHANGED to owning packages (the nearest ancestor
-dir with a `package.json`). That set drives everything below.
+Run it with `run_in_background`. Its first stdout line is `summary: <path>`;
+the second is `logs: <dir>`. **Monitor the summary path until the file
+exists**, then `Read` `<dir>/report.md`. That is the whole wait. Never poll
+the process with `ps`, never `tail` a log in a loop, never `sleep`: each poll
+is a full-context model turn and the run finishes no sooner for it. The
+summary is written by rename as the command's last act, so its existence means
+the command is over and its `exit` field is the command's exit code - a task
+notification saying "exited 0" while vitest is still running cannot mislead
+you here.
 
-## Step 1 — rebuild stale dists BEFORE testing (the biggest false-green source)
-
-Packages in this monorepo import each other's **built `dist`**, not source.
-Tests against a stale dist pass while never exercising the change. Before
-running any dependent's tests, rebuild every package you touched:
-
-```bash
-pnpm --filter=<pkg> run build
-```
-
-Specific traps, in order of how often they bite:
-
-- **`packages/shared`** — its runtime JS comes from `pnpm build` (`tsx ./bundle.ts`,
-  rolldown). `pnpm tsc --build` only type-checks and emits declarations; it does
-  **not** regenerate `dist/document-model/index.js`. Downstream packages
-  (`document-model` and anything importing `@powerhousedao/shared/*`) resolve the
-  dist and will silently run old code. Always `pnpm --filter=@powerhousedao/shared run build`
-  after editing shared, before running downstream tests.
-- **`packages/reactor`** — `apps/switchboard` and others import reactor's dist.
-  `tsc --build` is not enough; run the package's `build` (tsdown).
-- **Generated files** — if the change touches GraphQL schemas or other codegen
-  inputs, check whether `gen/` output is in sync (e.g. `pnpm --filter=@powerhousedao/reactor-api run codegen`
-  then `git diff --stat` on the gen dir). Report drift; do not hand-edit generated files.
-- **`declaration` ownership** — `reactor-api` and `switchboard` use `dts: false,
-  clean: false` in tsdown because tsc owns their declarations. If you see nominal
-  type conflicts from bundled `.d.mts`, that's the cause, not the diff.
-
-## Step 2 — run the checks CI runs
-
-Always via `pnpm` so the project-local toolchain version is used. **Never bare
-`tsc`** — a global tsc is often a different version and reports false errors on
-newer APIs.
-
-Default (mirrors `.github/workflows/check-commit.yml`, in order):
+What `ci` does, in order, mirroring `.github/workflows/check-commit.yml`:
 
 | # | Check | Command |
 |---|-------|---------|
 | 1 | tsconfig refs | `pnpm check-ts-references` |
-| 2 | Build | `pnpm build` (or `pnpm --filter=<pkg>... run build` when scoping) |
-| 3 | Typecheck | `pnpm typecheck` (= `tsc --build`) |
+| 2 | Build | `pnpm --filter=<owning + every stale package> run build` |
+| 3 | Typecheck | `pnpm typecheck` |
 | 3a | Re-link workspace bins | `pnpm rebuild --recursive` |
 | 3b | Generated-binary consumers | `pnpm --filter=@powerhousedao/versioned-documents --no-bail run build` |
-| 4 | Lint | `NODE_OPTIONS=--max-old-space-size=8192 pnpm eslint --config eslint.config.js --quiet --no-error-on-unmatched-pattern <CHANGED>` |
+| 4 | Lint | `pnpm eslint --config eslint.config.js --quiet --no-error-on-unmatched-pattern <CHANGED>` |
 | 5 | Tests | `pnpm test:ci -- --silent passed-only related <CHANGED>` |
 | 6 | Circular imports | `pnpm check-circular-imports` |
+| 7 | reactor paths only | `pnpm --filter=@powerhousedao/reactor run lint`, then `pnpm test:reactor` with `REACTOR_TEST_PG_URL` set when 5433 answers |
+| 8 | `--integration` only | `pnpm test:integration` |
 
-Steps 3a/3b are not optional: `versioned-documents` is in the `test:ci` filter
-list and depends on generated binaries, so skipping them produces **false reds**
-in `test:ci` that are easy to misattribute to the diff.
+CHANGED is the union of untracked, unstaged, staged and committed-since-`main`
+paths; `--changed <path>` (repeatable) overrides it. A build or typecheck red
+skips the later steps, since they would only fail for the same reason. Every
+step logs to its own file; the report carries the exit code and, for a red, the
+last 40 lines of that log.
 
-If CHANGED is empty, report "no changes to verify" and stop — CI skips lint and
-tests entirely in that case, and passing an empty arg list to `vitest related`
-is meaningless.
+Before step 2 it checks every workspace package's newest source file against
+the newest runtime JS in its `dist/` - declarations do not count, because
+`tsc --build` refreshes them without regenerating the JS - and adds every
+stale package to the build. This is the biggest false-green source in the
+repo, and it is not limited to the packages you touched: a stale dist in a
+package the diff never mentions still fails a downstream test.
 
-Path-conditional additions:
+Pass `--integration` when the diff touches sync or storage code
+(`packages/reactor/src/sync/**`, `packages/reactor/src/storage/**`,
+`packages/reactor-api/**`, `test/test-connect/**`); it is slow (~15 min in CI)
+and needs Postgres on 5433. Say when you skip it.
 
-- `packages/reactor/**`, `packages/reactor-api/**`, `test/test-connect/**`,
-  `test/test-client/**` changed (per `check-pr-reactor.yml`) →
-  `pnpm lint` in `packages/reactor`, then `pnpm test:reactor`, and if the change
-  is in sync/storage territory `pnpm test:integration`.
-- Codegen templates/inputs changed → `pnpm test:codegen`.
-- `packages/design-system/**` changed → `pnpm build:storybook`. (CI runs this
-  *unconditionally* on every commit, so a storybook-only red upstream is not a
-  mystery — it just wasn't in your scoped run.)
-- Academy docs or `clis/*/COMMANDS.md` staged → the `.husky/pre-commit` hook
-  regenerates docs and will abort the commit if the generator fails; run the
-  generator (`pnpm generate:cli-docs` / `pnpm generate:llm-docs` in `apps/academy`)
-  to confirm it succeeds and report whether outputs would change.
-- Commit message being checked → `pnpm exec commitlint --options commitlint.config.cjs --edit <file>`.
+If CHANGED is empty, `ci` says "no changes to verify" and exits 0 - CI skips
+lint and tests entirely in that case.
 
-Pre-commit hook parity: `lint-staged` runs `eslint --fix --no-warn-ignored` on
-staged JS/TS. Since your edits bypass the editor's format-on-save, run
-`pnpm exec eslint --fix` mentally as "would this change files?" — i.e. run
-`pnpm exec eslint --config eslint.config.js <CHANGED>` and report any
-`prettier/prettier` errors, which are always auto-fixable.
+## What you add on top
 
-## Step 3 — package-level tests, run the way the user runs them
-
-For each touched package, also run its own suite from the package dir:
-
-```bash
-pnpm --filter=<pkg> run test    # or: run from packages/<pkg> with `pnpm test`
-pnpm --filter=<pkg> run lint
-```
+- **Read `report.md` and relay its table and coverage statement verbatim.**
+  They are the report. Add nothing that the logs do not show.
+- **A red is a finding, not a retry.** Read the log the table names, quote the
+  smallest excerpt that shows the failure (file:line + message), and say
+  whether it is plausibly caused by the diff. Never re-run `ci` hoping for
+  green; if you believe the red is environmental, say so and report it as
+  unverified.
+- **Pre-commit parity.** `lint-staged` runs `eslint --fix --no-warn-ignored`
+  on staged JS/TS. If the diff would be rewritten, say so: run
+  `pnpm exec eslint --config eslint.config.js <CHANGED>` and report any
+  `prettier/prettier` errors, which are always auto-fixable.
+- **Codegen.** If the change touches GraphQL schemas or other codegen inputs,
+  run the generator (e.g. `pnpm --filter=@powerhousedao/reactor-api run codegen`)
+  and `git diff --stat` the gen dir. Report drift; never hand-edit generated
+  files.
+- **Docs hooks.** Academy docs or `clis/*/COMMANDS.md` staged: the
+  `.husky/pre-commit` hook regenerates docs and aborts the commit if the
+  generator fails; run `pnpm generate:cli-docs` / `pnpm generate:llm-docs` in
+  `apps/academy` and report whether outputs would change.
+- **Commit message** being checked: `pnpm exec commitlint --options commitlint.config.cjs --edit <file>`.
+- `packages/design-system/**` changed: `pnpm build:storybook` (CI runs it
+  unconditionally, so a storybook-only red upstream is not a mystery).
+- Codegen templates changed: `pnpm test:codegen`.
 
 ### The reactor-browser vitest trap (mandatory)
 
@@ -147,20 +128,15 @@ the repo or simply report the suspicion.
 
 ### Postgres-dependent suites
 
-`pnpm test:reactor` includes ~57 Postgres variants. They need a live PG:
+`pnpm test:reactor` includes ~57 Postgres variants. `ci` probes 5433 before
+running it and says in its coverage statement whether the PG variants executed
+or were not run. If they were not run, the result is **partial**: carry that
+line into your report verbatim. To bring Postgres up:
 
 ```bash
 docker compose -f packages/reactor/docker-compose.yml up -d postgres
 # postgres:postgres@localhost:5433/reactor
-export REACTOR_TEST_PG_URL=postgres://postgres:postgres@localhost:5433/reactor
 ```
-
-Check whether PG is reachable first. If it isn't, **report "PG variants skipped —
-result is partial"**. Never call `test:reactor` green without them.
-
-`pnpm test:integration` (`load-test-connect` + `reactor-api` hub-spoke) needs
-`REACTOR_TEST_PG_HOST/PORT/USER/PASSWORD` and is slow (~15 min in CI). Only run
-it when sync/storage code changed, and say when you skip it.
 
 ## Full CI mirror (escalation only — ask first)
 
@@ -184,13 +160,14 @@ without the user explicitly asking; propose it and wait.
 
 ## Report format
 
-Output a table, then details. Nothing else.
+`ci`'s table from `report.md`, verbatim, then details. Nothing else.
 
 ```
-| Check | Command | Exit | Result |
-|-------|---------|------|--------|
-| Build | pnpm --filter=@powerhousedao/shared run build | 0 | pass |
-| Typecheck | pnpm typecheck | 1 | FAIL |
+| # | Check | Command | Exit | Seconds | Result |
+|---|-------|---------|------|---------|--------|
+| 1 | tsconfig refs | `pnpm check-ts-references` | 0 | 2 | pass |
+| 2 | Build (owning + stale) | `pnpm --filter=@powerhousedao/shared run build` | 0 | 9 | pass |
+| 3 | Typecheck | `pnpm typecheck` | 1 | 33 | FAIL |
 ...
 ```
 
@@ -198,6 +175,7 @@ Then, for each failure: the command, the exit code, and the smallest excerpt
 that shows the actual error (file:line + message). No speculation about fixes
 unless asked — name the failing thing precisely so the main thread can act.
 
-End with an explicit **coverage statement**: what you ran, and what you did NOT
-run and why (no PG, no browser, integration skipped, scoped to changed files).
-A verification that hides its own gaps is worse than no verification.
+End with `ci`'s **coverage statement** verbatim - changed paths, owning
+packages, what was rebuilt, whether the PG variants executed, whether
+integration ran, what was not run - plus anything you ran on top. A
+verification that hides its own gaps is worse than no verification.

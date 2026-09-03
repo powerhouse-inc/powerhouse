@@ -12,17 +12,21 @@ does the two commits below and nothing else.
 ## Step 0 — gate
 
 ```bash
-pnpm --filter @powerhousedao/reactor bench:records verify --dir bench
-git status --porcelain
-pnpm --filter @powerhousedao/reactor bench:records show T-007 --dir bench
+pnpm --filter @powerhousedao/reactor bench:fix gate T-007
 ```
 
-Stop if: `verify` exits 2 (print it, do not repair); the tree is dirty (the
-fix diff has to stand alone); or the task is not **VERIFIED**. UNVERIFIED means
-nobody has checked the finding yet - point at `/bench-loop`. REFUTED, FIXED and
+One command, one read. It runs `bench:records verify`, checks the tree, prints
+the task with its sites, repro, ranked fixes and every history event including
+the verifier's note, lists the cases of every cited benchmark, and probes
+Postgres on 5433. The last line is the verdict.
+
+Stop on any non-zero exit: 2 means a record file does not verify (print it, do
+not repair); 4 means no such task; 5 means the tree is dirty (the fix diff has
+to stand alone); 6 means the task is not **VERIFIED**. UNVERIFIED means nobody
+has checked the finding yet - point at `/bench-loop`. REFUTED, FIXED and
 COMMITTED are not work.
 
-Read the task's `history[]` yourself before spawning anything. The verifier's
+Read the printed history to the end before spawning anything. The verifier's
 note is what the fixer should follow when it disagrees with `details`, and you
 need to know what it said to judge the fixer's report.
 
@@ -40,8 +44,9 @@ git diff --stat
 
 - the record files are untouched (the guard enforces this; this is the belt
   for its braces)
-- the report states the criterion **before** the after-run, and says whether
-  it was met
+- the report names the criterion file `bench:fix criterion` wrote and quotes
+  `bench:fix compare`'s verdict line; compare itself refuses a criterion that
+  postdates the after-run
 - the report's Tests row names every package in `git diff --stat`
 
 If the criterion was **missed**, stop here. Leave the diff in the tree for the
@@ -51,8 +56,10 @@ report it and ask before committing.
 
 ## Step 2 — verify
 
-Spawn `verify`. It scopes itself from the uncommitted diff, rebuilds stale
-dists, and runs what CI runs, read-only. Wait.
+Spawn `verify`. It runs `bench:fix ci` in the background and waits on the
+summary file with Monitor - one process, one table, no polling. `ci` scopes
+itself from the uncommitted diff, rebuilds every stale dist in the workspace
+plus the owning packages, and runs what check-commit runs. Wait.
 
 | verify says | Do |
 |---|---|
@@ -106,9 +113,12 @@ Never set COMMITTED. That is for whoever lands the branch.
 
 | Code | Meaning | What to do |
 |---|---|---|
-| 2 | a record file does not parse | **Stop.** Print the whole `verify` output. Do not repair. |
+| 2 | a record file does not parse | **Stop.** Print the whole `gate` output. Do not repair. |
 | 4 | no such task | Re-read the id list once, then stop. |
-| 64 | bad arguments to `set-status` | Report the command verbatim. |
+| 5 | `gate`: the working tree is dirty | **Stop.** The fix diff has to stand alone; say what is dirty. |
+| 6 | `gate`: the task is not VERIFIED | **Stop.** Say which status it has and point at `/bench-loop`. |
+| 8 | `ci`: a check went red | Follow the verify table above. |
+| 64 | bad arguments to `set-status` or `bench:fix` | Report the command verbatim. |
 | 68 naming the lock file | a writer died holding it | **Stop.** Never remove it. |
 
 ## Report
