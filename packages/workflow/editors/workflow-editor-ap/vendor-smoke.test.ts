@@ -18,7 +18,9 @@ describe("vendored builder modules", () => {
 
     const shell = await import("./components/builder-shell.js");
     expect(shell.BuilderShell).toBeTypeOf("function");
-  });
+    // Evaluating the vendored bundle takes ~3s alone and can exceed the
+    // default 5s timeout when other test files compete for CPU.
+  }, 30_000);
 
   it("applies flow operations through the vendored reducer", async () => {
     const { flowOperations, FlowOperationType } =
