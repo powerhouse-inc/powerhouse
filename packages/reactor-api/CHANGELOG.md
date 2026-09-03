@@ -1,3 +1,23 @@
+## 6.2.2-dev.77 (2026-09-03)
+
+### 🚀 Features
+
+- **connect:** AI chat assistant with settings, feature flag, and markdown ([#2956](https://github.com/powerhouse-inc/powerhouse/pull/2956))
+- **reactor:** pure data layer for a bench records viewer ([d7abdde8e](https://github.com/powerhouse-inc/powerhouse/commit/d7abdde8e))
+
+### 🩹 Fixes
+
+- **connect:** make cookie banner resilient to ad-blocker filters ([#2957](https://github.com/powerhouse-inc/powerhouse/pull/2957))
+- **reactor-api:** pass the changed path to the subgraph watcher and make ws disposal log-only ([aa0f1e93a](https://github.com/powerhouse-inc/powerhouse/commit/aa0f1e93a))
+- **reactor-api:** replace subgraphs on re-register and wire package reload events ([53904600f](https://github.com/powerhouse-inc/powerhouse/commit/53904600f))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Fable 5.1
+- Frank @froid1911
+
 ## 6.2.2-dev.76 (2026-09-03)
 
 This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.

@@ -1,3 +1,16 @@
+## 6.2.2-dev.77 (2026-09-03)
+
+### 🚀 Features
+
+- **connect:** AI chat assistant with settings, feature flag, and markdown ([#2956](https://github.com/powerhouse-inc/powerhouse/pull/2956))
+- **reactor:** pure data layer for a bench records viewer ([d7abdde8e](https://github.com/powerhouse-inc/powerhouse/commit/d7abdde8e))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5.1
+- Frank @froid1911
+
 ## 6.2.2-dev.76 (2026-09-03)
 
 This was a version bump only for @powerhousedao/ph-cli to align it with other projects, there were no code changes.

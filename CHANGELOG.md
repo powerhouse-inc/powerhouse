@@ -1,3 +1,39 @@
+## 6.2.2-dev.77 (2026-09-03)
+
+### 🚀 Features
+
+- **connect:** AI chat assistant with settings, feature flag, and markdown ([#2956](https://github.com/powerhouse-inc/powerhouse/pull/2956))
+- **reactor:** pure data layer for a bench records viewer ([d7abdde8e](https://github.com/powerhouse-inc/powerhouse/commit/d7abdde8e))
+- **reactor:** read-only dev server for the bench records viewer ([e335db381](https://github.com/powerhouse-inc/powerhouse/commit/e335db381))
+- **reactor:** bench records viewer — overview, series charts, record and task views ([0b3858fdb](https://github.com/powerhouse-inc/powerhouse/commit/0b3858fdb))
+- **reactor:** bench viewer ties tasks to the runs and commits that found and fixed them ([7ff93e0d1](https://github.com/powerhouse-inc/powerhouse/commit/7ff93e0d1))
+- **reactor:** bench viewer plots runs over time with the commit and the tasks on the chart ([66b8bf51f](https://github.com/powerhouse-inc/powerhouse/commit/66b8bf51f))
+- **reactor:** bench viewer picks metric and scale per chart, and is called reactor bench ([ce87c1402](https://github.com/powerhouse-inc/powerhouse/commit/ce87c1402))
+- **reactor:** bench records viewer ([#2958](https://github.com/powerhouse-inc/powerhouse/pull/2958))
+
+### 🩹 Fixes
+
+- **connect:** make cookie banner resilient to ad-blocker filters ([#2957](https://github.com/powerhouse-inc/powerhouse/pull/2957))
+- **reactor:** bench viewer flags an id that appears twice ([c33cf0dcb](https://github.com/powerhouse-inc/powerhouse/commit/c33cf0dcb))
+- **reactor:** bench viewer waits for Plot before its first render ([e2316e8f4](https://github.com/powerhouse-inc/powerhouse/commit/e2316e8f4))
+- **reactor:** bench viewer names the tasks a gap's commits touch, and prints the full set-status call ([79f5324dc](https://github.com/powerhouse-inc/powerhouse/commit/79f5324dc))
+- **reactor:** bench viewer tips escape the task strip, and every chart says how to read it ([65e37a9a9](https://github.com/powerhouse-inc/powerhouse/commit/65e37a9a9))
+- **reactor:** bench viewer bands a run red where a task was found and green where it was fixed ([817184294](https://github.com/powerhouse-inc/powerhouse/commit/817184294))
+- **reactor:** bench viewer bands carry no tooltip or link; the label is the link ([cb584302e](https://github.com/powerhouse-inc/powerhouse/commit/cb584302e))
+- **reactor:** bench viewer puts task labels under the commit, out of the tooltips' way ([ff83b93eb](https://github.com/powerhouse-inc/powerhouse/commit/ff83b93eb))
+- **reactor:** bench viewer prose says only what the chart cannot ([e40dc32f9](https://github.com/powerhouse-inc/powerhouse/commit/e40dc32f9))
+- **reactor:** bench viewer drops the commits-between-runs section from the series page ([02b6f3bf4](https://github.com/powerhouse-inc/powerhouse/commit/02b6f3bf4))
+- **reactor:** bench viewer drops the symbol legend the task strip left behind ([b02ea000a](https://github.com/powerhouse-inc/powerhouse/commit/b02ea000a))
+- **reactor-api:** replace subgraphs on re-register and wire package reload events ([53904600f](https://github.com/powerhouse-inc/powerhouse/commit/53904600f))
+- **reactor-api:** pass the changed path to the subgraph watcher and make ws disposal log-only ([aa0f1e93a](https://github.com/powerhouse-inc/powerhouse/commit/aa0f1e93a))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Fable 5.1
+- Frank @froid1911
+
 ## 6.2.2-dev.76 (2026-09-03)
 
 ### 🩹 Fixes
