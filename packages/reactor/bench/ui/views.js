@@ -20,12 +20,9 @@ import {
   taskEvents,
   taskLint,
   taskMarkers,
-  xLabel,
 } from "./records.js";
 
 const REPO = "https://github.com/powerhouse-inc/powerhouse";
-const FOUND_COLOR = "#d97706";
-const FIXED_COLOR = "#16a34a";
 
 // Async views bump this; a stale render that finishes late is dropped.
 let epoch = 0;
@@ -301,11 +298,8 @@ export function renderOverview(root, state) {
 
 // Every chart says how to read it; a chart that needs the source to be read
 // is one the reader guesses at.
-const STRIP_GUIDE =
-  "Findings against this series: \u25b2 the run a task was filed from, \u25c6 the first run after its fix landed. Colour is the task's status: grey unverified, amber verified, blue fixed, green committed, red refuted. Hover for the task, click to open it.";
-
 function chartGuide(metric) {
-  return `One line per case, one point per run, oldest on the left. ${metric.label}: ${metric.lower ? "lower" : "higher"} is better. Whiskers are that run's \u00b1rme; a red band marks a run a task invalidated; a grey dashed line marks a machine or environment change between runs; a labelled dashed line marks where a fix landed. Hover for the number, click a point to open the run.`;
+  return `One line per case, one point per run; ${metric.label}, ${metric.lower ? "lower" : "higher"} is better. Whiskers are noise. Shas open the commit; labels above are tasks filed from or fixed before that run; a red band is a run a task found misleading.`;
 }
 
 const TIMELINE_GUIDE =
@@ -320,7 +314,7 @@ function guide(text) {
 
 function mountSeriesCharts(root, state, records, options) {
   const metric = METRICS.find((m) => m.key === state.metric) ?? METRICS[0];
-  const { tasksPlot, perSuite } = seriesCharts({
+  const { perSuite } = seriesCharts({
     Plot: state.Plot,
     records,
     metric: metric.key,
@@ -330,10 +324,6 @@ function mountSeriesCharts(root, state, records, options) {
     width: root.clientWidth - 32,
     ...options,
   });
-  const strip = root.querySelector("#tasks-strip");
-  if (tasksPlot && strip) {
-    strip.append(guide(STRIP_GUIDE), tasksPlot);
-  }
   const charts = root.querySelector("#charts");
   if (perSuite.length === 0) {
     charts.innerHTML = `<p class="muted">No case in this series reports ${esc(metric.label)}${options.caseFilter ? " for the tagged cases" : ""}.</p>`;
@@ -376,7 +366,6 @@ export async function renderSeries(root, state, title) {
       <span class="muted">${table.keys.length} cases · ${records.length} runs</span>
     </div>
     ${chartsUnavailable(state)}
-    <div id="tasks-strip"></div>
     <div id="charts"></div>
     <section>
       <h2>Tasks against this series</h2>
@@ -494,7 +483,6 @@ function taskSeriesBlock(state, task, summaryEntry, gaps, records) {
     <p>found in ${idList(summaryEntry.foundIn)} · fixed: ${fixes.length ? fixes.map(fixesLine).join("; ") : `<span class="muted">none recorded — when a fix lands: <code>pnpm --filter @powerhousedao/reactor bench:records set-status ${esc(task.id)} FIXED --dir bench --commit &lt;sha&gt; --by &lt;you&gt; --note "&lt;what changed&gt;"</code></span>`}</p>
     <p class="muted">${cases.length ? `showing tagged case${cases.length === 1 ? "" : "s"}: ${cases.map((c) => `<code>${esc(c)}</code>`).join(", ")}` : "showing every case; add a <code>case:</code> tag to narrow to the line this task is about"}</p>
     ${touching.length ? `<p>Commits between runs that name this task or touch its sites:</p><ol class="commits">${touching.map(commitLine).join("")}</ol>` : `<p class="muted">No commit between these runs names this task or touches its sites.</p>`}
-    <div id="tasks-strip"></div>
     <div id="charts"></div>`;
 }
 
@@ -574,25 +562,10 @@ export async function renderTask(root, state, id) {
     if (entry) {
       seriesBlock = taskSeriesBlock(state, task, entry, gaps, records);
       const cases = entry.cases;
-      const rules = [
-        ...entry.foundIn.map((rid) => ({
-          x: xLabel(state.index.byId.get(rid)),
-          stroke: FOUND_COLOR,
-          label: "found",
-        })),
-        ...entry.fixes
-          .filter((fix) => fix.landedBefore)
-          .map((fix) => ({
-            x: xLabel(state.index.byId.get(fix.landedBefore.recordId)),
-            stroke: FIXED_COLOR,
-            label: fix.status.toLowerCase(),
-          })),
-      ];
       mount = {
         records,
         options: {
           taskRows: taskMarkers([entry], records),
-          rules,
           caseFilter: cases.length
             ? (row) => cases.some((tag) => rowMatchesCase(row, tag))
             : undefined,

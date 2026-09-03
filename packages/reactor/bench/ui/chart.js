@@ -10,10 +10,6 @@ export const STATUS_COLOR = {
   REFUTED: "#dc2626",
 };
 
-// ▲ the run a finding was made from; ◆ the first run that carries its fix.
-const ROLES = ["found", "fixed"];
-const ROLE_SYMBOLS = ["triangle", "diamond"];
-
 export function formatValue(value) {
   if (value >= 100) {
     return value.toFixed(1);
@@ -24,9 +20,34 @@ export function formatValue(value) {
   return value.toPrecision(3);
 }
 
-// Tick text: "B-004 89f958f" — the id and short sha, not the timestamp.
+const REPO = "https://github.com/powerhouse-inc/powerhouse";
+const FOUND_COLOR = "#d97706";
+const FIXED_COLOR = "#16a34a";
+
+// Tick text: the recording time. The id and sha live elsewhere on the chart.
 function tick(label) {
-  return label.split(" ").slice(0, 2).join(" ");
+  return label.split(" ").slice(2).join(" ");
+}
+
+function shortSha(label) {
+  return label.split(" ")[1];
+}
+
+// One row per (run, task event), stacked when a run carries several.
+function annotationRows(taskRows) {
+  const perX = new Map();
+  return taskRows.map((row) => {
+    const stack = perX.get(row.x) ?? 0;
+    perX.set(row.x, stack + 1);
+    return {
+      x: row.x,
+      stack,
+      label: `${row.taskId} ${row.role}`,
+      href: `#/task/${row.taskId}`,
+      color: row.role === "fixed" ? FIXED_COLOR : FOUND_COLOR,
+      title: row.title,
+    };
+  });
 }
 
 export function seriesCharts({
@@ -38,7 +59,6 @@ export function seriesCharts({
   index,
   width,
   taskRows = [],
-  rules = [],
   caseFilter,
 }) {
   const domain = records.map(xLabel);
@@ -54,46 +74,22 @@ export function seriesCharts({
     padding: 0.5,
   };
 
+  const runs = records.map((bench) => ({
+    x: xLabel(bench),
+    id: bench.id,
+    sha: bench.environment.reactorSha,
+  }));
   const invalid = records
     .filter((bench) => index.invalidatedBy.has(bench.id))
     .map((bench) => ({
       x: xLabel(bench),
-      by: index.invalidatedBy
-        .get(bench.id)
-        .map((task) => task.id)
-        .join(", "),
+      tasks: index.invalidatedBy.get(bench.id),
     }));
   const breaks = records
     .filter((bench) => index.envBreaks.has(bench.id))
     .map((bench) => ({ x: xLabel(bench) }));
-
-  // One row per task, so two findings on the same run never overlap.
-  const taskIds = [...new Set(taskRows.map((row) => row.taskId))];
-  const tasksPlot =
-    taskRows.length === 0
-      ? null
-      : Plot.plot({
-          width,
-          height: 30 + 22 * taskIds.length,
-          marginLeft,
-          marginTop: 10,
-          marginBottom: 10,
-          x: { ...x, axis: null },
-          y: { type: "point", domain: taskIds, label: null },
-          symbol: { domain: ROLES, range: ROLE_SYMBOLS },
-          marks: [
-            Plot.dot(taskRows, {
-              x: "x",
-              y: "taskId",
-              symbol: "role",
-              fill: (d) => STATUS_COLOR[d.status],
-              r: 6,
-              href: (d) => `#/task/${d.taskId}`,
-              tip: true,
-              title: (d) => `${d.taskId} ${d.kind}\n${d.title}`,
-            }),
-          ],
-        });
+  const annotations = annotationRows(taskRows);
+  const stackDepth = Math.max(0, ...annotations.map((a) => a.stack + 1));
 
   const perSuite = suites.map((suite) => {
     const suiteRows = rows.filter((row) => row.suite === suite);
@@ -101,14 +97,16 @@ export function seriesCharts({
       suite,
       plot: Plot.plot({
         width,
-        height: 280,
+        height: 290 + 14 * stackDepth,
         marginLeft,
-        marginBottom: 40,
+        marginTop: 24 + 14 * stackDepth,
+        marginBottom: 52,
         x,
         y: {
           type: log ? "log" : "linear",
           label: metricLabel,
           grid: true,
+          insetTop: 10,
         },
         color: { legend: true },
         marks: [
@@ -117,27 +115,43 @@ export function seriesCharts({
             stroke: "#dc2626",
             strokeWidth: 18,
             strokeOpacity: 0.12,
+            href: (d) => `#/task/${d.tasks[0].id}`,
             tip: true,
-            title: (d) => `invalidated by ${d.by}`,
+            title: (d) =>
+              d.tasks
+                .map(
+                  (task) =>
+                    `${task.id} found this run misleading: ${task.title}`,
+                )
+                .join("\n"),
           }),
           Plot.ruleX(breaks, {
             x: "x",
             stroke: "#444",
             strokeDasharray: "4 3",
+            tip: true,
+            title: "machine or environment changed before this run",
           }),
-          Plot.ruleX(rules, {
-            x: "x",
-            stroke: "stroke",
-            strokeWidth: 2,
-            strokeDasharray: "6 3",
-          }),
-          Plot.text(rules, {
+          Plot.text(annotations, {
             x: "x",
             text: "label",
-            fill: "stroke",
+            fill: "color",
+            href: "href",
+            title: "title",
             frameAnchor: "top",
-            dy: -6,
+            dy: (d) => -14 - 14 * d.stack,
             fontWeight: 600,
+          }),
+          Plot.text(runs, {
+            x: "x",
+            text: (d) => shortSha(d.x),
+            href: (d) => `${REPO}/commit/${d.sha}`,
+            target: "_blank",
+            title: (d) => `${d.id}: open commit ${d.sha} on GitHub`,
+            fill: "#1d4ed8",
+            frameAnchor: "bottom",
+            dy: 40,
+            fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
           }),
           Plot.ruleX(suiteRows, {
             x: "x",
@@ -155,15 +169,14 @@ export function seriesCharts({
             r: 4,
             href: (d) => `#/record/${d.recordId}`,
             tip: true,
-            title: (d) =>
-              `${d.caseName}\n${d.recordId}: ${formatValue(d.value)} ±${d.rmePct.toFixed(1)}% (n=${d.sampleCount})`,
+            title: (d) => `${d.caseName}: ${formatValue(d.value)}`,
           }),
         ],
       }),
     };
   });
 
-  return { tasksPlot, perSuite };
+  return { perSuite };
 }
 
 export function timelineChart({ Plot, benchmarks, events, width }) {
