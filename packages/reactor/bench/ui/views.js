@@ -184,8 +184,7 @@ function seriesTasksSection(summary, gaps) {
       <td class=num>${touchedBy.get(task.id) ?? 0}</td>
     </tr>`,
   );
-  return `<table><thead><tr><th>task</th><th>title</th><th>found in</th><th>fixed in</th><th>cases</th><th title="commits between runs that changed a file this task's sites point at">commits touching sites</th></tr></thead><tbody>${rows.join("")}</tbody></table>
-  <p class="muted">▲ found in that run · ◆ first run carrying the fix.</p>`;
+  return `<table><thead><tr><th>task</th><th>title</th><th>found in</th><th>fixed in</th><th>cases</th><th title="commits between runs that changed a file this task's sites point at">commits touching sites</th></tr></thead><tbody>${rows.join("")}</tbody></table>`;
 }
 
 function commitLine(commit) {
