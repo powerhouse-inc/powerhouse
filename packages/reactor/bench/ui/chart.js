@@ -109,9 +109,6 @@ export function seriesCharts({
             stroke: "color",
             strokeWidth: 18,
             strokeOpacity: 0.12,
-            href: "href",
-            tip: true,
-            title: (d) => `${d.label}\n${d.title}`,
           }),
           Plot.ruleX(breaks, {
             x: "x",
@@ -125,7 +122,6 @@ export function seriesCharts({
             text: "label",
             fill: "color",
             href: "href",
-            title: "title",
             frameAnchor: "top",
             dy: (d) => -14 - 14 * d.stack,
             fontWeight: 600,
