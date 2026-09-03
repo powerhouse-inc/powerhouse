@@ -221,6 +221,7 @@ export const CORE_FORMS: Record<string, BlockForm> = {
     auth: "none",
     props: [
       autocomplete("documentType", "Document type", false, "Omit for any type"),
+      autocomplete("parentId", "In drive/folder", false, "Omit for the whole reactor"),
       text("name", "Name contains", false, "Case-insensitive match"),
       text("limit", "Max results", false, "Defaults to 25"),
     ],
