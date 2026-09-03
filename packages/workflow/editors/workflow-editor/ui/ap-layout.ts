@@ -1,7 +1,43 @@
 // Vertical tree layout, a port of the Activepieces builder flow-canvas
 // layout behavior (MIT, activepieces packages/web) onto our flat graph.
 import type { Edge, Node } from "@xyflow/react";
-import type { EdgeModel, WorkflowModel } from "./model.js";
+import type { EdgeModel, StepModel, WorkflowModel } from "./model.js";
+
+function reachableFrom(start: string, edges: EdgeModel[]): Set<string> {
+  const outgoing = new Map<string, string[]>();
+  for (const edge of edges) {
+    const list = outgoing.get(edge.from) ?? [];
+    list.push(edge.to);
+    outgoing.set(edge.from, list);
+  }
+  const seen = new Set<string>([start]);
+  const queue = [start];
+  while (queue.length > 0) {
+    for (const next of outgoing.get(queue.pop()!) ?? []) {
+      if (!seen.has(next)) {
+        seen.add(next);
+        queue.push(next);
+      }
+    }
+  }
+  return seen;
+}
+
+// Steps a new edge from `fromId` may target: unreachable from the trigger,
+// not `fromId` itself, and not an ancestor of it (no cycles).
+export function attachableSteps(
+  model: WorkflowModel,
+  fromId: string,
+): StepModel[] {
+  if (!model.trigger) return [];
+  const attached = reachableFrom(model.trigger.id, model.edges);
+  return model.steps.filter(
+    (step) =>
+      !attached.has(step.id) &&
+      step.id !== fromId &&
+      !reachableFrom(step.id, model.edges).has(fromId),
+  );
+}
 
 export const STEP_WIDTH = 232;
 export const STEP_HEIGHT = 60;

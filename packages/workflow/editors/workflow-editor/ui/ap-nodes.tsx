@@ -60,6 +60,8 @@ function AddButton(props: {
   onPick: (preset: BlockPreset) => void;
   showPieces?: boolean;
   pieceMode?: "actions" | "triggers";
+  attachSteps?: StepModel[];
+  onAttach?: (stepId: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const size = props.size ?? ADD_BUTTON_SIZE;
@@ -95,6 +97,15 @@ function AddButton(props: {
             presets={props.presets}
             showPieces={props.showPieces}
             pieceMode={props.pieceMode}
+            attachSteps={props.attachSteps}
+            onAttach={
+              props.onAttach
+                ? (stepId) => {
+                    setOpen(false);
+                    props.onAttach?.(stepId);
+                  }
+                : undefined
+            }
             onPick={(preset) => {
               setOpen(false);
               props.onPick(preset);
@@ -111,6 +122,9 @@ export interface ApCanvasHandlers {
   appendStep: (fromId: string, port: string, preset: BlockPreset) => void;
   insertOnEdge: (edgeId: string, preset: BlockPreset) => void;
   pickTrigger: (preset: BlockPreset) => void;
+  // Re-attaching steps that are unreachable from the trigger.
+  attachableSteps: (fromId: string) => StepModel[];
+  attachStep: (fromId: string, port: string, stepId: string) => void;
 }
 
 let canvasHandlers: ApCanvasHandlers | undefined;
@@ -127,11 +141,16 @@ export function getCanvasHandlers(): ApCanvasHandlers | undefined {
 
 export function ApAppendNode(props: NodeProps) {
   const data = props.data as { parentId: string; port: string };
+  const attachSteps = getCanvasHandlers()?.attachableSteps(data.parentId);
   return (
     <AddButton
       title={data.port === "next" ? "Add step" : `Add step (${data.port})`}
       presets={STEP_PRESETS}
       showPieces
+      attachSteps={attachSteps}
+      onAttach={(stepId) =>
+        getCanvasHandlers()?.attachStep(data.parentId, data.port, stepId)
+      }
       onPick={(preset) =>
         getCanvasHandlers()?.appendStep(data.parentId, data.port, preset)
       }

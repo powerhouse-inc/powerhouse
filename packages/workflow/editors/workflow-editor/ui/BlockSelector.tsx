@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { blockMeta } from "./block-meta.js";
 import type { BlockPreset } from "./blocks.js";
+import type { StepModel } from "./model.js";
 import {
   getPieceSource,
   type PieceActionUi,
@@ -186,6 +187,9 @@ export function BlockSelector(props: {
   showPieces?: boolean;
   // Which piece entries the drill-in offers; defaults to actions.
   pieceMode?: PieceMode;
+  // Detached steps offered for re-attachment at this insertion point.
+  attachSteps?: StepModel[];
+  onAttach?: (stepId: string) => void;
 }) {
   const [query, setQuery] = useState("");
   const [catalog, setCatalog] = useState<CatalogState | null>(null);
@@ -229,6 +233,12 @@ export function BlockSelector(props: {
   const filteredPresets = props.presets.filter((preset) =>
     `${preset.label} ${preset.blockType}`.toLowerCase().includes(lowered),
   );
+  const filteredAttach = (props.onAttach ? (props.attachSteps ?? []) : []).filter(
+    (step) =>
+      `${step.name} ${step.key} ${step.blockType}`
+        .toLowerCase()
+        .includes(lowered),
+  );
   const filteredPieces = (catalog?.pieces ?? []).filter(
     (entry) =>
       (mode === "triggers" ? entry.triggerCount : entry.actionCount) > 0 &&
@@ -266,6 +276,20 @@ export function BlockSelector(props: {
         />
       ) : (
         <div className="max-h-80 overflow-y-auto py-1">
+          {filteredAttach.length > 0 ? (
+            <>
+              <SectionLabel>Attach existing step</SectionLabel>
+              {filteredAttach.map((step) => (
+                <Row
+                  key={step.id}
+                  logo={<BlockLogo blockType={step.blockType} size={28} />}
+                  label={step.name}
+                  description={`{{steps.${step.key}}} · detached`}
+                  onClick={() => props.onAttach?.(step.id)}
+                />
+              ))}
+            </>
+          ) : null}
           {filteredPresets.map((preset) => (
             <Row
               key={preset.blockType + preset.label}
@@ -309,7 +333,9 @@ export function BlockSelector(props: {
               )}
             </>
           ) : null}
-          {filteredPresets.length === 0 && filteredPieces.length === 0 ? (
+          {filteredPresets.length === 0 &&
+          filteredPieces.length === 0 &&
+          filteredAttach.length === 0 ? (
             <div className="px-3 py-2 text-xs text-slate-400">No matches</div>
           ) : null}
         </div>

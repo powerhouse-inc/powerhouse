@@ -1,9 +1,22 @@
 // Property-driven config form, modeled on the Activepieces piece-properties
 // panel: one control per prop, typed by the descriptor.
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ActionListEditor } from "./ActionListEditor.js";
 import { AutocompleteInput } from "./Autocomplete.js";
+import { ExpressionPickerButton } from "./ExpressionPicker.js";
 import type { BlockFormProp } from "./forms.js";
+
+// Splices text at the field's cursor and returns the updated value.
+function insertAtCursor(
+  element: HTMLInputElement | HTMLTextAreaElement,
+  text: string,
+): string {
+  const start = element.selectionStart ?? element.value.length;
+  const end = element.selectionEnd ?? start;
+  element.value =
+    element.value.slice(0, start) + text + element.value.slice(end);
+  return element.value;
+}
 
 const inputClass =
   "w-full rounded border border-slate-300 px-2 py-1.5 text-sm text-slate-800";
@@ -52,6 +65,18 @@ function PropField(props: {
   const { prop, value, onCommit } = props;
   const [dropdown, setDropdown] = useState<DropdownState | null>(null);
   const [jsonError, setJsonError] = useState<string | null>(null);
+  const fieldRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
+
+  // JSON-ish fields only splice the text; their blur handler parses/commits.
+  const pickerFor = (commitAfter: boolean) => (
+    <ExpressionPickerButton
+      onPick={(expression) => {
+        if (!fieldRef.current) return;
+        const next = insertAtCursor(fieldRef.current, expression);
+        if (commitAfter) onCommit(next);
+      }}
+    />
+  );
 
   const label = (
     <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -223,8 +248,12 @@ function PropField(props: {
       const isText = prop.type === "LONG_TEXT";
       return (
         <label className="block">
-          {label}
+          <span className="flex items-end justify-between gap-1">
+            {label}
+            {pickerFor(isText)}
+          </span>
           <textarea
+            ref={fieldRef as React.RefObject<HTMLTextAreaElement>}
             className={`${inputClass} min-h-20 ${isText ? "" : "font-mono text-xs"}`}
             defaultValue={
               isText ? stringifyValue(value) : stringifyValue(value)
@@ -260,13 +289,17 @@ function PropField(props: {
       return (
         <label className="block">
           {label}
-          <input
-            className={inputClass}
-            defaultValue={
-              typeof value === "string" ? value : stringifyValue(value)
-            }
-            onBlur={(event) => onCommit(event.target.value)}
-          />
+          <div className="flex items-center gap-1">
+            <input
+              ref={fieldRef as React.RefObject<HTMLInputElement>}
+              className={inputClass}
+              defaultValue={
+                typeof value === "string" ? value : stringifyValue(value)
+              }
+              onBlur={(event) => onCommit(event.target.value)}
+            />
+            {pickerFor(true)}
+          </div>
           {hint}
         </label>
       );

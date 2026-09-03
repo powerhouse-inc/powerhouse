@@ -1,7 +1,7 @@
 import { Background, Controls, ReactFlow } from "@xyflow/react";
 import { useEffect, useMemo } from "react";
 import { apEdgeTypes } from "./ap-edge.js";
-import { layoutWorkflow } from "./ap-layout.js";
+import { attachableSteps, layoutWorkflow } from "./ap-layout.js";
 import { apNodeTypes, registerCanvasHandlers } from "./ap-nodes.js";
 import type { BlockPreset } from "./blocks.js";
 import type {
@@ -55,6 +55,9 @@ export function WorkflowCanvas({
           blockType: preset.blockType,
           config: preset.defaultConfig,
         }),
+      attachableSteps: (fromId) => attachableSteps(model, fromId),
+      attachStep: (fromId, port, stepId) =>
+        callbacks.addEdge({ from: fromId, to: stepId, port }),
     });
   }, [callbacks, model]);
 
