@@ -623,6 +623,10 @@ export class WorkflowRuntimeService {
     workflowId: string,
     triggerPayload?: unknown,
     triggerKind = "manual",
+    resume?: {
+      completedSteps: Map<string, { output?: unknown; port?: string | null }>;
+      rerunOf: string;
+    },
   ): Promise<PersistedRunResult> {
     if (!this.subgraph) {
       throw new Error("Workflow runtime is not configured yet");
@@ -649,12 +653,14 @@ export class WorkflowRuntimeService {
         workflowVersion: state.version,
         triggerKind,
         triggerPayload,
+        rerunOf: resume?.rerunOf,
       })) ?? null;
     try {
       const result = await runWorkflow({
         definition,
         executor: this.executor,
         triggerPayload,
+        completedSteps: resume?.completedSteps,
       });
       if (store && runId) await store.finishRun(runId, result);
       return { ...result, runId };
@@ -667,6 +673,56 @@ export class WorkflowRuntimeService {
       }
       throw error;
     }
+  }
+
+  // Resume a FAILED run: journaled step outputs replay, execution restarts
+  // at the first step that didn't succeed. Runs the current definition.
+  async rerun(runId: string): Promise<PersistedRunResult> {
+    if (!this.subgraph) {
+      throw new Error("Workflow runtime is not configured yet");
+    }
+    const store = await this.store();
+    if (!store) throw new Error("Run journal is unavailable");
+    const run = await store.getRun(runId);
+    if (!run) throw new Error(`Run "${runId}" not found`);
+    if (run.status !== "FAILED") {
+      throw new Error(`Only FAILED runs can be rerun; run is ${run.status}`);
+    }
+    const document = await this.subgraph.reactorClient.get<WorkflowDocument>(
+      run.workflow_id,
+    );
+    const currentSteps = new Map(
+      document.state.global.steps.map((step) => [step.id, step]),
+    );
+    // Reuse an output only while the step is still the same step: outputs
+    // from renamed/retyped steps would poison downstream expressions.
+    const completedSteps = new Map<
+      string,
+      { output?: unknown; port?: string | null }
+    >();
+    for (const row of await store.getSteps(runId)) {
+      if (row.status !== "SUCCEEDED" && row.status !== "REPLAYED") continue;
+      const current = currentSteps.get(row.step_id);
+      if (
+        !current ||
+        current.blockType !== row.block_type ||
+        current.key !== row.step_key
+      ) {
+        continue;
+      }
+      completedSteps.set(row.step_id, {
+        output: row.output === null ? undefined : (JSON.parse(row.output) as unknown),
+        port: row.port,
+      });
+    }
+    const triggerPayload =
+      run.trigger_payload === null
+        ? undefined
+        : (JSON.parse(run.trigger_payload) as unknown);
+    return this.fire(run.workflow_id, triggerPayload, "rerun", {
+      completedSteps,
+      rerunOf: runId,
+    });
   }
 }
 

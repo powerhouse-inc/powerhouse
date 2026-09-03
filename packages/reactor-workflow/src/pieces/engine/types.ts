@@ -58,7 +58,12 @@ export interface BlockExecutor {
   execute(execution: BlockExecution): Promise<BlockResult>;
 }
 
-export type StepExecutionStatus = "SUCCEEDED" | "FAILED" | "SKIPPED";
+// REPLAYED: output reused from a prior run's journal instead of executing.
+export type StepExecutionStatus =
+  | "SUCCEEDED"
+  | "FAILED"
+  | "SKIPPED"
+  | "REPLAYED";
 
 export interface StepExecutionRecord {
   stepId: string;

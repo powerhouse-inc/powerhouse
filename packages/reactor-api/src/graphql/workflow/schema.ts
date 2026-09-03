@@ -101,6 +101,7 @@ export const schema: DocumentNode = gql`
     error: String
     startedAt: String!
     endedAt: String
+    rerunOf: String
     steps: [WorkflowStepRunRecord!]!
   }
 
@@ -134,6 +135,11 @@ export const schema: DocumentNode = gql`
     Runs a piece trigger's test hook; sample items, no cursor changes.
     """
     testTrigger(workflowId: String!): Unknown
+    """
+    Resumes a FAILED run: succeeded steps replay from the journal,
+    execution restarts at the failure. Produces a new run.
+    """
+    rerun(runId: String!): WorkflowRunPayload!
   }
 
   type Mutation {

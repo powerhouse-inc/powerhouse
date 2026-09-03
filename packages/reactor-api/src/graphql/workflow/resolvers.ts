@@ -52,6 +52,7 @@ function toRunRecord(row: RunRow, steps: StepExecutionRow[]) {
     error: row.error,
     startedAt: row.started_at,
     endedAt: row.ended_at,
+    rerunOf: row.rerun_of,
     steps: steps.map(toStepRecord),
   };
 }
@@ -133,6 +134,8 @@ export const getResolvers = (
         workflowRuntime.fire(args.workflowId, args.payload),
       testTrigger: (_parent: unknown, args: { workflowId: string }) =>
         workflowRuntime.testTrigger(args.workflowId),
+      rerun: (_parent: unknown, args: { runId: string }) =>
+        workflowRuntime.rerun(args.runId),
     },
   };
 };

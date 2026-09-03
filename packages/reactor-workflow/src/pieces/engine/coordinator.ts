@@ -16,6 +16,9 @@ export interface RunWorkflowOptions {
   executor: BlockExecutor;
   // Exposed to expressions as {{trigger.payload...}}.
   triggerPayload?: unknown;
+  // Journaled outputs from a prior run, keyed by step id; matching steps
+  // replay (output injected, port re-taken) instead of executing.
+  completedSteps?: Map<string, { output?: unknown; port?: string | null }>;
 }
 
 function errorMessage(error: unknown): string {
@@ -75,6 +78,21 @@ export async function runWorkflow(
   };
 
   const executeStep = async (step: WorkflowStepDef) => {
+    const replay = options.completedSteps?.get(step.id);
+    if (replay) {
+      const port = replay.port ?? "next";
+      records.set(step.id, {
+        stepId: step.id,
+        key: step.key,
+        blockType: step.blockType,
+        status: "REPLAYED",
+        output: replay.output,
+        port,
+      });
+      scope.steps[step.key] = { output: replay.output };
+      decideOutgoing(step.id, port);
+      return;
+    }
     const input = resolveExpressions(step.config, scope);
     try {
       const result = await executor.execute({

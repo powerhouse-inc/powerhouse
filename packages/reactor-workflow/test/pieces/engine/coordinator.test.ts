@@ -106,6 +106,53 @@ describe("runWorkflow", () => {
     expect(run.steps[1].output).toEqual({ got: "hello" });
   });
 
+  it("replays completedSteps without executing them, resuming at the failure", async () => {
+    const failing = new FakeExecutor();
+    const definition: WorkflowDefinition = {
+      trigger: TRIGGER,
+      steps: [
+        {
+          id: "a",
+          key: "first",
+          blockType: "fake#ok",
+          config: { v: "{{trigger.payload.msg}}" },
+        },
+        { id: "b", key: "second", blockType: "fake#fail", config: {} },
+      ],
+      edges: [edge("e1", "t", "a"), edge("e2", "a", "b")],
+    };
+
+    const failed = await runWorkflow({
+      definition,
+      executor: failing,
+      triggerPayload: { msg: "hello" },
+    });
+    expect(failed.status).toBe("FAILED");
+    expect(failed.steps.map((s) => s.status)).toEqual(["SUCCEEDED", "FAILED"]);
+
+    // "Fix" the workflow and resume with step a's journaled output.
+    definition.steps[1].blockType = "fake#ok";
+    definition.steps[1].config = { got: "{{steps.first.output.v}}" };
+    const executor = new FakeExecutor();
+    const resumed = await runWorkflow({
+      definition,
+      executor,
+      triggerPayload: { msg: "hello" },
+      completedSteps: new Map([
+        ["a", { output: failed.steps[0].output, port: failed.steps[0].port }],
+      ]),
+    });
+
+    expect(resumed.status).toBe("SUCCEEDED");
+    expect(resumed.steps.map((s) => s.status)).toEqual([
+      "REPLAYED",
+      "SUCCEEDED",
+    ]);
+    // Step a never re-executed; its journaled output still fed step b.
+    expect(executor.calls.map((call) => call.step?.id ?? "")).toEqual(["b"]);
+    expect(resumed.steps[1].output).toEqual({ got: "hello" });
+  });
+
   it("routes core#branch ports and skips the untaken side", async () => {
     const executor = new CompositeBlockExecutor(new FakeExecutor());
     const definition: WorkflowDefinition = {

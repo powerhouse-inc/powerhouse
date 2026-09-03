@@ -21,6 +21,8 @@ export interface RunRow {
   error: string | null;
   started_at: string;
   ended_at: string | null;
+  // Failed run this one resumes; null for first-hand runs.
+  rerun_of: string | null;
 }
 
 export interface StepExecutionRow {
@@ -81,8 +83,16 @@ async function up(db: IRelationalDb<WorkflowRuntimeDB>): Promise<void> {
     .addColumn("error", "text")
     .addColumn("started_at", "text", (col) => col.notNull())
     .addColumn("ended_at", "text")
+    .addColumn("rerun_of", "text")
     .ifNotExists()
     .execute();
+
+  // Additive migration for journals created before rerun support.
+  try {
+    await db.schema.alterTable("run").addColumn("rerun_of", "text").execute();
+  } catch {
+    // column already exists
+  }
 
   await db.schema
     .createTable("trigger_state")
@@ -146,6 +156,7 @@ export interface StartRunOptions {
   workflowVersion: number;
   triggerKind: string;
   triggerPayload?: unknown;
+  rerunOf?: string;
 }
 
 export class WorkflowRunStore {
@@ -176,6 +187,7 @@ export class WorkflowRunStore {
         error: null,
         started_at: new Date().toISOString(),
         ended_at: null,
+        rerun_of: options.rerunOf ?? null,
       })
       .execute();
     return id;
