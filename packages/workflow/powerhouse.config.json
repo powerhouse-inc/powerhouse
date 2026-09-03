@@ -51,6 +51,9 @@
       "dsn": null,
       "env": "dev",
       "tracing": false
+    },
+    "ai": {
+      "assistantEnabled": true
     }
   }
 }
