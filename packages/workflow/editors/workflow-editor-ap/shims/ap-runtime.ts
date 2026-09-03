@@ -103,6 +103,16 @@ const POWERHOUSE_TRIGGERS: Record<string, TriggerBase> = {
     "Document event",
     "Fires when a matching document operation lands.",
   ),
+  "document-created": coreTrigger(
+    "document-created",
+    "Document created",
+    "Fires when a document is added to a drive.",
+  ),
+  "document-deleted": coreTrigger(
+    "document-deleted",
+    "Document deleted",
+    "Fires when a document is removed from a drive.",
+  ),
 };
 
 export const POWERHOUSE_PIECE: PieceMetadataModel = {

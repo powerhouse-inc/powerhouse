@@ -16,7 +16,11 @@ import {
   type PieceAction,
   type RouterAction,
 } from "../vendor/shared/index.js";
-import { blockTypeFromPiece, pieceFromBlockType } from "./block-type.js";
+import {
+  blockTypeFromPiece,
+  pieceFromBlockType,
+  triggerBlockTypeFromPiece,
+} from "./block-type.js";
 import { deriveFlowVersion } from "./derive-flow-version.js";
 import { flowVersionsEquivalent } from "./flow-compare.js";
 import {
@@ -70,15 +74,35 @@ describe("block-type mapping", () => {
     expect(coordinates).toEqual({
       pieceName: "@activepieces/piece-http",
       pieceVersion: "0.11.19",
-      actionName: "send_request",
+      kind: "action",
+      name: "send_request",
     });
     expect(
       blockTypeFromPiece(
         coordinates!.pieceName,
         coordinates!.pieceVersion,
-        coordinates!.actionName,
+        coordinates!.name,
       ),
     ).toBe("@activepieces/piece-http@0.11.19#send_request");
+  });
+
+  it("round-trips piece trigger block types", () => {
+    const coordinates = pieceFromBlockType(
+      "@activepieces/piece-rss@0.5.0#trigger:new_item",
+    );
+    expect(coordinates).toEqual({
+      pieceName: "@activepieces/piece-rss",
+      pieceVersion: "0.5.0",
+      kind: "trigger",
+      name: "new_item",
+    });
+    expect(
+      triggerBlockTypeFromPiece(
+        coordinates!.pieceName,
+        coordinates!.pieceVersion,
+        coordinates!.name,
+      ),
+    ).toBe("@activepieces/piece-rss@0.5.0#trigger:new_item");
   });
 
   it("maps core blocks onto the synthetic Powerhouse piece and back", () => {
@@ -86,7 +110,8 @@ describe("block-type mapping", () => {
     expect(coordinates).toEqual({
       pieceName: POWERHOUSE_PIECE_NAME,
       pieceVersion: POWERHOUSE_PIECE_VERSION,
-      actionName: "document-create",
+      kind: "action",
+      name: "document-create",
     });
     expect(
       blockTypeFromPiece(
@@ -95,6 +120,23 @@ describe("block-type mapping", () => {
         "document-create",
       ),
     ).toBe("core#document-create");
+  });
+
+  it("maps core triggers with plain core# names in both directions", () => {
+    const coordinates = pieceFromBlockType("core#document-created");
+    expect(coordinates).toEqual({
+      pieceName: POWERHOUSE_PIECE_NAME,
+      pieceVersion: POWERHOUSE_PIECE_VERSION,
+      kind: "trigger",
+      name: "document-created",
+    });
+    expect(
+      triggerBlockTypeFromPiece(
+        POWERHOUSE_PIECE_NAME,
+        POWERHOUSE_PIECE_VERSION,
+        "document-created",
+      ),
+    ).toBe("core#document-created");
   });
 });
 

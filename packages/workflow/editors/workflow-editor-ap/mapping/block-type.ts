@@ -5,27 +5,37 @@ import {
 } from "../shims/ap-runtime.js";
 
 export const CORE_PREFIX = "core#";
+const TRIGGER_FRAGMENT = "trigger:";
+
+export type BlockKind = "action" | "trigger";
 
 export interface PieceCoordinates {
   pieceName: string;
   pieceVersion: string;
-  actionName: string;
+  kind: BlockKind;
+  // Action or trigger name within the piece.
+  name: string;
 }
 
-// "@scope/piece-x@1.2.3#send" -> coordinates; null for core/unknown formats.
+// "@scope/piece-x@1.2.3#send" / "...#trigger:new_item" -> coordinates;
+// null for core/unknown formats.
 export function parsePieceBlockType(
   blockType: string,
 ): PieceCoordinates | null {
   const separator = blockType.lastIndexOf("#");
   if (separator <= 0 || blockType.startsWith(CORE_PREFIX)) return null;
   const packageSpec = blockType.slice(0, separator);
-  const actionName = blockType.slice(separator + 1);
+  const fragment = blockType.slice(separator + 1);
+  const isTrigger = fragment.startsWith(TRIGGER_FRAGMENT);
+  const name = isTrigger ? fragment.slice(TRIGGER_FRAGMENT.length) : fragment;
+  if (!name) return null;
   const versionAt = packageSpec.indexOf("@", 1);
   if (versionAt <= 0) return null;
   return {
     pieceName: packageSpec.slice(0, versionAt),
     pieceVersion: packageSpec.slice(versionAt + 1),
-    actionName,
+    kind: isTrigger ? "trigger" : "action",
+    name,
   };
 }
 
@@ -45,11 +55,26 @@ export function blockTypeFromPiece(
   return `${pieceName}@${pieceVersion}#${actionName}`;
 }
 
+// Trigger variant: real pieces get the "#trigger:" fragment; core triggers
+// keep their plain core# names.
+export function triggerBlockTypeFromPiece(
+  pieceName: string,
+  pieceVersion: string,
+  triggerName: string,
+): string {
+  if (pieceName === POWERHOUSE_PIECE_NAME) return `${CORE_PREFIX}${triggerName}`;
+  return `${pieceName}@${pieceVersion}#${TRIGGER_FRAGMENT}${triggerName}`;
+}
+
 // Core blocks the synthetic Powerhouse piece exposes; other core#* blocks
 // render as CODE stand-ins.
-const POWERHOUSE_BLOCKS = new Set([
+const POWERHOUSE_TRIGGER_BLOCKS = new Set([
   "manual",
   "document-event",
+  "document-created",
+  "document-deleted",
+]);
+const POWERHOUSE_ACTION_BLOCKS = new Set([
   "document-create",
   "document-dispatch",
 ]);
@@ -58,11 +83,13 @@ const POWERHOUSE_BLOCKS = new Set([
 export function pieceFromBlockType(blockType: string): PieceCoordinates | null {
   const core = coreBlockName(blockType);
   if (core !== null) {
-    if (!POWERHOUSE_BLOCKS.has(core)) return null;
+    const isTrigger = POWERHOUSE_TRIGGER_BLOCKS.has(core);
+    if (!isTrigger && !POWERHOUSE_ACTION_BLOCKS.has(core)) return null;
     return {
       pieceName: POWERHOUSE_PIECE_NAME,
       pieceVersion: POWERHOUSE_PIECE_VERSION,
-      actionName: core,
+      kind: isTrigger ? "trigger" : "action",
+      name: core,
     };
   }
   return parsePieceBlockType(blockType);

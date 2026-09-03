@@ -136,7 +136,9 @@ function toAction(
   const nextAction = nextStep ? toAction(nextStep, index, visited) : undefined;
 
   const piece = pieceFromBlockType(step.blockType);
-  if (!piece) return { ...codeStandIn(step), nextAction };
+  if (!piece || piece.kind !== "action") {
+    return { ...codeStandIn(step), nextAction };
+  }
 
   return {
     name: step.key,
@@ -148,7 +150,7 @@ function toAction(
     settings: {
       pieceName: piece.pieceName,
       pieceVersion: piece.pieceVersion,
-      actionName: piece.actionName,
+      actionName: piece.name,
       input: configRecord(step.config),
       propertySettings: {},
       errorHandlingOptions: {},
@@ -208,7 +210,7 @@ function toTrigger(
     settings: {
       pieceName: piece?.pieceName ?? trigger.blockType,
       pieceVersion: piece?.pieceVersion ?? "0.0.1",
-      triggerName: piece?.actionName,
+      triggerName: piece?.name,
       input: configRecord(trigger.config),
       propertySettings: {},
     },

@@ -38,12 +38,15 @@ const CORE_META: Record<string, BlockMeta> = {
   },
 };
 
-// "@activepieces/piece-http@0.11.19#send_request" -> http / send_request
+// "@activepieces/piece-http@0.11.19#send_request" -> http / send_request;
+// "#trigger:new_item" fragments label as triggers.
 function parsePieceBlockType(blockType: string) {
   const separator = blockType.lastIndexOf("#");
   if (separator <= 0) return undefined;
   const packageSpec = blockType.slice(0, separator);
-  const actionName = blockType.slice(separator + 1);
+  const fragment = blockType.slice(separator + 1);
+  const isTrigger = fragment.startsWith("trigger:");
+  const actionName = isTrigger ? fragment.slice("trigger:".length) : fragment;
   const versionAt = packageSpec.indexOf("@", 1);
   const packageName =
     versionAt > 0 ? packageSpec.slice(0, versionAt) : packageSpec;
@@ -52,7 +55,7 @@ function parsePieceBlockType(blockType: string) {
       .split("/")
       .pop()
       ?.replace(/^piece-/, "") ?? "";
-  return { pieceName, actionName };
+  return { pieceName, actionName, isTrigger };
 }
 
 function titleCase(value: string): string {
@@ -68,7 +71,9 @@ export function blockMeta(blockType: string): BlockMeta {
   if (piece) {
     return {
       displayName: titleCase(piece.actionName),
-      subtitle: titleCase(piece.pieceName),
+      subtitle: piece.isTrigger
+        ? `${titleCase(piece.pieceName)} · Trigger`
+        : titleCase(piece.pieceName),
       logoUrl: `https://cdn.activepieces.com/pieces/${piece.pieceName}.png`,
     };
   }

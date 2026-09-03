@@ -14,7 +14,10 @@ import {
   type FlowOperationRequest,
   type UpdateActionRequest,
 } from "../vendor/shared/index.js";
-import { blockTypeFromPiece } from "./block-type.js";
+import {
+  blockTypeFromPiece,
+  triggerBlockTypeFromPiece,
+} from "./block-type.js";
 import { AP_TRIGGER_NAME } from "./derive-flow-version.js";
 
 export type TranslateResult = "applied" | "ignored" | "unsupported";
@@ -217,7 +220,7 @@ export function translateOperation(
       }
       const { pieceName, pieceVersion, triggerName, input } = request.settings;
       bridge.replaceTrigger({
-        blockType: blockTypeFromPiece(
+        blockType: triggerBlockTypeFromPiece(
           pieceName,
           pieceVersion,
           triggerName ?? "",
