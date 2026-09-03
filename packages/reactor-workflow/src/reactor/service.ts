@@ -354,6 +354,9 @@ export class WorkflowRuntimeService {
         this.fireFromTrigger(workflowId, payload, kind);
       },
       cacheDir: BUNDLE_CACHE_DIR,
+      // Dev override; the 60s floor still applies.
+      defaultIntervalMs:
+        Number(process.env.WORKFLOW_POLL_INTERVAL_MS) || undefined,
     });
     return this.triggerSupervisor;
   }

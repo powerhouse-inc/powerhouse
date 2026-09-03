@@ -114,7 +114,18 @@ export class TriggerSupervisor {
     return run;
   }
 
+  // Successfully enabled workflows; identical re-registrations are no-ops.
+  private readonly enabledOk = new Set<string>();
+
   upsert(binding: PieceTriggerBinding): Promise<void> {
+    const previous = this.bindings.get(binding.workflowId);
+    if (
+      previous &&
+      this.enabledOk.has(binding.workflowId) &&
+      JSON.stringify(previous) === JSON.stringify(binding)
+    ) {
+      return Promise.resolve();
+    }
     this.bindings.set(binding.workflowId, binding);
     return this.enqueue(() => this.enable(binding));
   }
@@ -122,6 +133,7 @@ export class TriggerSupervisor {
   remove(workflowId: string): Promise<void> {
     const binding = this.bindings.get(workflowId);
     this.bindings.delete(workflowId);
+    this.enabledOk.delete(workflowId);
     return this.enqueue(() => this.disable(workflowId, binding));
   }
 
@@ -198,10 +210,12 @@ export class TriggerSupervisor {
         lease_expires_at: null,
         updated_at: now.toISOString(),
       });
+      this.enabledOk.add(binding.workflowId);
       logger.info(
         `Enabled ${binding.blockType} for workflow ${binding.workflowId} (every ${intervalMs}ms)`,
       );
     } catch (error) {
+      this.enabledOk.delete(binding.workflowId);
       const message = error instanceof Error ? error.message : String(error);
       // onEnable failed: record the error and do not schedule polls.
       await store.upsertTriggerState({

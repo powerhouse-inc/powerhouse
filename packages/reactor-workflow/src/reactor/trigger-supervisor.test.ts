@@ -126,6 +126,14 @@ describe.skipIf(!rssBundle)("TriggerSupervisor", () => {
     expect(Date.parse(row!.next_poll_at!)).toBeGreaterThan(Date.now());
   }, 60_000);
 
+  it("skips identical re-registrations without re-running onEnable", async () => {
+    const before = await store.getTriggerState(WF);
+    await supervisor.upsert(binding());
+    const after = await store.getTriggerState(WF);
+    expect(after?.next_poll_at).toBe(before?.next_poll_at);
+    expect(after?.updated_at).toBe(before?.updated_at);
+  });
+
   it("polls due rows and fires one run per new item", async () => {
     await forceDue();
     await supervisor.tick();
