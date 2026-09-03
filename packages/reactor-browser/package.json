@@ -20,6 +20,11 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
+    "./ai": {
+      "source": "./src/ai/index.ts",
+      "types": "./dist/src/ai/index.d.ts",
+      "import": "./dist/src/ai/index.js"
+    },
     "./graphql-client": {
       "source": "./src/graphql-client/entry.ts",
       "types": "./dist/src/graphql-client/entry.d.ts",
@@ -66,6 +71,7 @@
     "codegen": "graphql-codegen --config codegen.ts && prettier --write src/graphql/gen/*.ts && eslint --fix src/graphql/gen/*.ts --no-warn-ignored"
   },
   "dependencies": {
+    "@ai-sdk/openai-compatible": "catalog:",
     "@powerhousedao/analytics-engine-browser": "workspace:*",
     "@powerhousedao/analytics-engine-core": "workspace:*",
     "@powerhousedao/reactor": "workspace:*",
@@ -74,6 +80,7 @@
     "@powerhousedao/shared": "workspace:*",
     "@renown/sdk": "workspace:*",
     "@tanstack/react-query": "^5.49.2",
+    "ai": "catalog:",
     "change-case": "catalog:",
     "document-model": "workspace:*",
     "graphql-request": "catalog:",
@@ -81,6 +88,7 @@
     "kysely": "catalog:",
     "kysely-pglite-dialect": "catalog:",
     "lodash.isequal": "^4.5.0",
+    "lucide-react": "^1.16.0",
     "luxon": "^3.6.1",
     "lz-string": "^1.5.0",
     "normalize-exception": "^4.0.1",

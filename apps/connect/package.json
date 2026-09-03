@@ -76,6 +76,7 @@
     "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/reactor-attachments": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
+    "@powerhousedao/reactor-mcp": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
     "@powerhousedao/vetra": "workspace:*",
     "@privy-io/react-auth": "3.35.0",

@@ -14,6 +14,7 @@ import {
 import { useEditorPreloader, useTheme } from "@powerhousedao/reactor-browser";
 import { useEffect } from "react";
 import { ToastContainer } from "../services/toast.js";
+import { ConnectReactorChatFab } from "./reactor-chat.js";
 import { MissingModelBanner } from "./missing-model-banner.js";
 import { OpenFileUploadList } from "./open-file-upload-list.js";
 import { PackageInstallPrompt } from "./package-install-prompt.js";
@@ -79,6 +80,7 @@ export const App = () => {
     <SentryProvider>
       <RenownWalletProviders>
         <ToastContainer position="bottom-right" />
+        <ConnectReactorChatFab />
         <MissingModelBanner />
         <Router />
         <OpenFileUploadList />

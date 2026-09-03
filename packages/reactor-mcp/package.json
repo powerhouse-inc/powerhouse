@@ -13,6 +13,11 @@
       "source": "./src/index.ts",
       "types": "./dist/index.d.mts",
       "import": "./dist/index.mjs"
+    },
+    "./tools": {
+      "source": "./src/tools/index.ts",
+      "types": "./dist/tools/index.d.mts",
+      "import": "./dist/tools/index.mjs"
     }
   },
   "types": "./dist/index.d.mts",
