@@ -8,7 +8,6 @@
     "save": "Save",
     "download": "Download",
     "reload": "Reload",
-    "reloadConnect": "Click here to reload Connect",
     "updateDocument": "Update document"
   },
   "searchbar": {
@@ -111,7 +110,6 @@
     "driveSyncSuccess": "Drive synced successfully",
     "driveSyncError": "Error synchronizing drive {{drive}}",
     "driveSyncConflict": "Conflict error detected in {{drive}}",
-    "reloadApp": "It seems like you're running an outdated version of the app. Please reload Connect to get the latest version.",
     "documentUpgradeAvailable": "A newer version of this document type is installed."
   },
   "footer": {

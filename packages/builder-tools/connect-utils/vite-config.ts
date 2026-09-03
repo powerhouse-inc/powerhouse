@@ -22,6 +22,10 @@ import {
 } from "vite";
 import { createHtmlPlugin } from "vite-plugin-html";
 import type { IConnectOptions } from "./types.js";
+import {
+  buildHashFromBuildOptions,
+  connectBuildHashPlugin,
+} from "./vite-plugins/build-hash.js";
 import { devReactImportmapPlugin } from "./vite-plugins/dev-external-react.js";
 import {
   DYNAMIC_BASE_PLACEHOLDER,
@@ -247,6 +251,21 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     env.PH_CONNECT_VERSION;
   const uploadSentrySourcemaps = authToken && org && project;
 
+  // Build identity: baked into the bundle (define PH_CONNECT_BUILD_HASH) and
+  // emitted as build-hash.json (which the server must serve no-cache). The
+  // SPA compares the two; a mismatch means the server is serving a different
+  // build than the one this bundle was built from — a same-origin "new
+  // deploy" signal that works on localhost, where the old GitHub-branch
+  // version check was meaningless.
+  const buildHash = buildHashFromBuildOptions({
+    dirname: options.dirname,
+    phConfig,
+    packages: phPackages,
+    connectBasePath,
+    offlineEnabled,
+    packageRegistryUrl: phPackageRegistryUrl,
+  });
+
   const connectHtmlTags = getConnectHtmlTags({
     registryUrl: phPackageRegistryUrl,
   });
@@ -414,6 +433,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     },
     define: {
       PH_CONNECT_SENTRY_RELEASE: JSON.stringify(release || "unknown"),
+      PH_CONNECT_BUILD_HASH: JSON.stringify(buildHash),
     },
     customLogger,
     envPrefix: ["PH_CONNECT_"],
@@ -459,6 +479,9 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       // Pre-paint theme boot in every emitted index.html (marker-idempotent
       // with the serve-time injection in the ph-clint connect proxy).
       connectThemeBootPlugin(),
+      // Emits build-hash.json (the SPA's same-origin "is my build current?"
+      // probe; must be served no-cache — see docker/nginx.conf.template).
+      connectBuildHashPlugin(buildHash),
       // enforce: "post" — rewrites the placeholder base after all other
       // transforms have emitted their asset/chunk URLs.
       ...(options.dynamicBase ? [connectDynamicBasePlugin()] : []),

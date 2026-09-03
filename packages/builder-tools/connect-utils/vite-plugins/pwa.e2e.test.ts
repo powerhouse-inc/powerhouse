@@ -123,6 +123,14 @@ describe("connectPwaPlugins e2e build", () => {
     // resolved.
     expect(sw).toContain("manifest.webmanifest");
     expect(sw).toContain("ph-runtime-config");
+    // The SPA shell is intentionally NOT precached: it is served NetworkFirst
+    // by the navigation route so a reload after a deploy fetches the fresh
+    // index.html from the network (a precached shell would pin every page
+    // load to the build the controlling worker installed). The precache
+    // manifest (self.__WB_MANIFEST) must therefore carry no index.html entry.
+    expect(sw).not.toContain('"url":"index.html"');
+    // The navigation route's NetworkFirst shell cache is wired in.
+    expect(sw).toContain("ph-shell");
   }, 60000);
 
   it("appends a contributed file handler after the built-in one", async () => {

@@ -75,6 +75,16 @@ http {
             add_header Cache-Control "no-cache" always;
         }
 
+        # Build identity emitted at build time (build-hash.json): the SPA
+        # compares it to its baked-in hash to detect a new deploy on the
+        # server. MUST revalidate on every load or the check goes blind.
+        location = ${PH_CONNECT_BASE_PREFIX}/build-hash.json {
+            alias /var/www/html/project/build-hash.json;
+            access_log off;
+            log_not_found off;
+            add_header Cache-Control "no-cache" always;
+        }
+
         # Root-level static files (icon.ico, manifest, ...). Must be anchored
         # with `^`: at the default `/` base path PH_CONNECT_BASE_PREFIX is
         # empty, and an unanchored `/<file>.<ext>$` matches the tail of ANY
