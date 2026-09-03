@@ -1,12 +1,6 @@
 // DOM rendering. Each view fills `root` from state; charts are Plot nodes
 // appended into placeholders after the HTML lands.
-import {
-  STATUS_COLOR,
-  formatValue,
-  suiteChart,
-  suiteNames,
-  timelineChart,
-} from "./chart.js";
+import { STATUS_COLOR, formatValue, suiteChart, suiteNames } from "./chart.js";
 import {
   METRICS,
   annotateCommits,
@@ -18,7 +12,6 @@ import {
   shortSha,
   siteSha,
   suiteLabel,
-  taskEvents,
   taskLint,
   taskMarkers,
 } from "./records.js";
@@ -207,7 +200,6 @@ function commitLine(commit) {
 export function renderOverview(root, state) {
   epoch += 1;
   const { index } = state;
-  const events = taskEvents(state.tasks);
   const rows = [...index.series.entries()].map(([title, records]) => {
     const latest = records.at(-1);
     const tasks = new Set();
@@ -247,13 +239,7 @@ export function renderOverview(root, state) {
   });
   root.innerHTML = `${header(state)}
     <section>
-      <h2>Timeline</h2>
-      ${chartsUnavailable(state)}
-      <p class="howto">${TIMELINE_GUIDE}</p>
-      <div id="timeline"></div>
-    </section>
-    <section>
-      <h2>Series</h2>
+      <h2>Benchmarks</h2>
       <table><thead><tr><th>title</th><th>runs</th><th>runner / storage</th><th>latest</th><th>records</th><th>tasks</th></tr></thead>
       <tbody>${rows.join("")}</tbody></table>
     </section>
@@ -262,25 +248,12 @@ export function renderOverview(root, state) {
       <table><thead><tr><th>id</th><th>kind</th><th>status</th><th>pri</th><th>area</th><th>title</th><th>found in</th><th>fixed in</th><th>cases</th><th>lint</th></tr></thead>
       <tbody>${taskRows.join("")}</tbody></table>
     </section>`;
-  if (state.Plot && state.benchmarks.length > 0) {
-    root.querySelector("#timeline").append(
-      timelineChart({
-        Plot: state.Plot,
-        benchmarks: state.benchmarks,
-        events,
-        width: root.clientWidth - 32,
-      }),
-    );
-  }
 }
 
 // The one fact a chart can't show about itself.
 function chartGuide(metric) {
   return metric.lower ? "lower is better" : "higher is better";
 }
-
-const TIMELINE_GUIDE =
-  "One row per series; triangles are task status changes (grey unverified, amber verified, blue fixed, green committed, red refuted).";
 
 function guide(text) {
   const p = document.createElement("p");
