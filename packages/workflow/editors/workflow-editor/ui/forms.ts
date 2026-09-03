@@ -188,6 +188,66 @@ export const CORE_FORMS: Record<string, BlockForm> = {
         "Design-time hint when the document id is an expression",
       ),
       documentActions("Actions", true),
+      text(
+        "allowedActions",
+        "Allowed action types",
+        false,
+        "Comma-separated whitelist; enforced when set",
+      ),
+    ],
+  },
+  "core#document-get": {
+    title: "Get document",
+    requireAuth: false,
+    auth: "none",
+    props: [
+      autocomplete(
+        "documentId",
+        "Document id",
+        true,
+        "e.g. {{steps.find.output.documents.0.documentId}}",
+      ),
+      autocomplete(
+        "documentType",
+        "Document type",
+        false,
+        "Design-time hint when the document id is an expression",
+      ),
+    ],
+  },
+  "core#document-find": {
+    title: "Find documents",
+    requireAuth: false,
+    auth: "none",
+    props: [
+      autocomplete("documentType", "Document type", false, "Omit for any type"),
+      text("name", "Name contains", false, "Case-insensitive match"),
+      text("limit", "Max results", false, "Defaults to 25"),
+    ],
+  },
+  "core#document-schema": {
+    title: "Get document schema",
+    requireAuth: false,
+    auth: "none",
+    props: [
+      autocomplete(
+        "documentType",
+        "Document type",
+        false,
+        "Required unless a document id is given",
+      ),
+      autocomplete(
+        "documentId",
+        "Document id",
+        false,
+        "Resolves the type from this document instead",
+      ),
+      autocomplete(
+        "actionType",
+        "Only this action",
+        false,
+        "Omit to list every action",
+      ),
     ],
   },
 };

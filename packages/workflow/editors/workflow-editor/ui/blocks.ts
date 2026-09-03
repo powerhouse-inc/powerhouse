@@ -53,4 +53,22 @@ export const STEP_PRESETS: BlockPreset[] = [
     description: "Sends actions to a document.",
     defaultConfig: { documentId: "", actions: [] },
   },
+  {
+    label: "Get document",
+    blockType: "core#document-get",
+    description: "Reads a document's current state.",
+    defaultConfig: { documentId: "" },
+  },
+  {
+    label: "Find documents",
+    blockType: "core#document-find",
+    description: "Lists documents by type and name.",
+    defaultConfig: { documentType: "" },
+  },
+  {
+    label: "Get document schema",
+    blockType: "core#document-schema",
+    description: "Action and state schemas of a document type.",
+    defaultConfig: { documentType: "" },
+  },
 ];
