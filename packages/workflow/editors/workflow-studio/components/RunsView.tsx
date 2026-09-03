@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   fetchRuns,
+  rerunRun,
   type RunRecord,
   type RunStepRecord,
 } from "../../workflow-editor/runtime-api.js";
@@ -20,6 +21,7 @@ const STEP_TEXT: Record<string, string> = {
   SUCCEEDED: "text-green-600",
   FAILED: "text-red-600",
   SKIPPED: "text-slate-400",
+  REPLAYED: "text-sky-600",
 };
 
 function formatDuration(startedAt: string, endedAt: string | null): string {
@@ -104,9 +106,15 @@ function StepRow(props: { step: RunStepRecord }) {
   );
 }
 
-function RunRow(props: { run: RunRecord; showWorkflow: boolean }) {
+function RunRow(props: {
+  run: RunRecord;
+  showWorkflow: boolean;
+  onChanged: () => void;
+}) {
   const { run } = props;
   const [open, setOpen] = useState(false);
+  const [rerunning, setRerunning] = useState(false);
+  const [rerunError, setRerunError] = useState<string | null>(null);
   return (
     <div className="rounded-md border border-solid border-slate-200 bg-white">
       <button
@@ -125,6 +133,7 @@ function RunRow(props: { run: RunRecord; showWorkflow: boolean }) {
           <span className="block text-xs text-slate-400">
             {run.triggerKind} · v{run.workflowVersion} ·{" "}
             {formatWhen(run.startedAt)}
+            {run.rerunOf ? ` · resumes ${run.rerunOf.slice(0, 8)}` : ""}
           </span>
         </span>
         <span className="shrink-0 text-xs text-slate-400">
@@ -137,6 +146,35 @@ function RunRow(props: { run: RunRecord; showWorkflow: boolean }) {
             <p className="mx-3 mb-1 rounded bg-red-50 px-2 py-1 text-xs text-red-600">
               {run.error}
             </p>
+          ) : null}
+          {run.status === "FAILED" ? (
+            <div className="mx-3 mb-1 flex items-center gap-2">
+              <button
+                type="button"
+                disabled={rerunning}
+                className="rounded border border-slate-300 px-2 py-1 text-[11px] font-medium text-slate-600 hover:border-slate-400 disabled:opacity-50"
+                onClick={() => {
+                  setRerunning(true);
+                  setRerunError(null);
+                  rerunRun(run.id)
+                    .then((result) => setRerunError(result.error))
+                    .catch((error: unknown) =>
+                      setRerunError(
+                        error instanceof Error ? error.message : String(error),
+                      ),
+                    )
+                    .finally(() => {
+                      setRerunning(false);
+                      props.onChanged();
+                    });
+                }}
+              >
+                {rerunning ? "Rerunning…" : "↻ Rerun from failure"}
+              </button>
+              {rerunError ? (
+                <span className="text-[11px] text-red-600">{rerunError}</span>
+              ) : null}
+            </div>
           ) : null}
           {run.steps.map((step) => (
             <StepRow key={step.stepId + step.stepKey} step={step} />
@@ -248,6 +286,9 @@ export function RunsView(props: {
               key={run.id}
               run={run}
               showWorkflow={props.workflowId === undefined}
+              onChanged={() =>
+                fetchRuns(workflowId).then(setRuns, () => undefined)
+              }
             />
           ))}
         </div>

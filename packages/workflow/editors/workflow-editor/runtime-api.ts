@@ -248,11 +248,12 @@ export interface RunRecord {
   error: string | null;
   startedAt: string;
   endedAt: string | null;
+  rerunOf: string | null;
   steps: RunStepRecord[];
 }
 
 const RUN_FIELDS = `id workflowId workflowName workflowVersion triggerKind
-  triggerPayload status error startedAt endedAt
+  triggerPayload status error startedAt endedAt rerunOf
   steps { stepId stepKey blockType status input output port error }`;
 
 export async function fetchRuns(
@@ -285,6 +286,18 @@ export async function fireWorkflow(
     { workflowId, payload: payload ?? {} },
   );
   return data.workflowRuntime.fire;
+}
+
+// Resume a FAILED run: succeeded steps replay, execution restarts at the
+// failure. Returns the new run.
+export async function rerunRun(runId: string): Promise<FireResult> {
+  const data = await gql<{ workflowRuntime: { rerun: FireResult } }>(
+    `mutation Rerun($runId: String!) {
+      workflowRuntime { rerun(runId: $runId) { runId status error } }
+    }`,
+    { runId },
+  );
+  return data.workflowRuntime.rerun;
 }
 
 interface BlockOptionsResult {
