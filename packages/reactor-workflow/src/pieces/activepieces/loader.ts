@@ -26,7 +26,8 @@ export function resolveEntry(pieceDir: string): string {
   if (dotExport && typeof dotExport === "object") {
     const cond = dotExport as Record<string, unknown>;
     for (const key of ["import", "require", "default"]) {
-      if (typeof cond[key] === "string") candidates.push(cond[key] as string);
+      const value = cond[key];
+      if (typeof value === "string") candidates.push(value);
     }
   }
   candidates.push(pkg.main, pkg.module, "src/index.js", "index.js", "main.js");
