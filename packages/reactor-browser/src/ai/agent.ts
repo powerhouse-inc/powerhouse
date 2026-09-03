@@ -25,10 +25,23 @@ export const MAX_AGENT_STEPS = 10;
  * endpoint. Requests go directly from the browser to the endpoint; the API
  * key is never sent to any Powerhouse server.
  */
+
+/**
+ * Resolves the configured base URL. Relative paths (e.g. `/v1`) resolve
+ * against the page origin, so single-origin deployments can serve the
+ * endpoint behind the same reverse proxy without CORS.
+ */
+function resolveBaseUrl(raw: string): string {
+  const base = raw.trim().replace(/\/+$/, "");
+  if (/^https?:\/\//i.test(base)) return base;
+  if (typeof window === "undefined") return base;
+  return `${window.location.origin}${base.startsWith("/") ? "" : "/"}${base}`;
+}
+
 export function createReactorChatModel(settings: AiSettings): LanguageModel {
   const provider = createOpenAICompatible({
     name: "reactor-chat",
-    baseURL: settings.baseUrl.trim().replace(/\/+$/, ""),
+    baseURL: resolveBaseUrl(settings.baseUrl),
     apiKey: settings.apiKey,
   });
   return provider.chatModel(settings.model.trim());
