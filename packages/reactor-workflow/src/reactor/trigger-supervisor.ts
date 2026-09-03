@@ -125,6 +125,18 @@ export class TriggerSupervisor {
     return this.enqueue(() => this.disable(workflowId, binding));
   }
 
+  // Design-time sample: the worker's "test" store prefix keeps cursors intact,
+  // and no store state is persisted back.
+  test(binding: PieceTriggerBinding): Promise<unknown> {
+    return this.enqueue(async () => {
+      const store = await this.options.store();
+      const row = await store?.getTriggerState(binding.workflowId);
+      const seed = row ? parseStoreState(row) : {};
+      const result = await this.hook(binding, "test", seed);
+      return result.output;
+    });
+  }
+
   private async hook(
     binding: PieceTriggerBinding,
     hook: TriggerHookRequest["hook"],

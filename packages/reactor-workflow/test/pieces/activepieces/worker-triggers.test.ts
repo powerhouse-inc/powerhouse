@@ -121,6 +121,26 @@ describe.skipIf(!rssBundle)("PieceWorker trigger hooks", () => {
     expect(reenabled.storeState?.[CURSOR_KEY]).toBe("g3");
   }, 60_000);
 
+  it("resolve-options reaches trigger props via kind", async () => {
+    // rss_feed_url is static: the trigger lookup succeeds, the resolver check
+    // fails — proving kind routes to triggers, not actions.
+    await expect(
+      worker.resolveOptions({
+        bundleDir: rssBundle,
+        actionName: "new-item",
+        kind: "trigger",
+        propName: "rss_feed_url",
+      }),
+    ).rejects.toThrow(/no dynamic resolver/);
+    await expect(
+      worker.resolveOptions({
+        bundleDir: rssBundle,
+        actionName: "new-item",
+        propName: "rss_feed_url",
+      }),
+    ).rejects.toThrow(/No action "new-item"/);
+  }, 60_000);
+
   it("test hooks never touch the live cursor", async () => {
     const persisted = { [CURSOR_KEY]: "g2" };
     const result = await hook("test", persisted);

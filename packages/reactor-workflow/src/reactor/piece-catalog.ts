@@ -99,8 +99,8 @@ export async function fetchPieceCatalog(): Promise<PieceSummary[]> {
       (entry) =>
         typeof entry.name === "string" &&
         typeof entry.version === "string" &&
-        typeof entry.actions === "number" &&
-        entry.actions > 0,
+        ((typeof entry.actions === "number" && entry.actions > 0) ||
+          (typeof entry.triggers === "number" && entry.triggers > 0)),
     )
     .map((entry) => ({
       name: entry.name!,
@@ -108,7 +108,7 @@ export async function fetchPieceCatalog(): Promise<PieceSummary[]> {
       description: entry.description ?? "",
       logoUrl: entry.logoUrl ?? "",
       version: entry.version!,
-      actionCount: entry.actions as number,
+      actionCount: typeof entry.actions === "number" ? entry.actions : 0,
       triggerCount: typeof entry.triggers === "number" ? entry.triggers : 0,
       categories: entry.categories ?? [],
       auth: entry.auth ?? null,

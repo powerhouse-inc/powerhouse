@@ -100,6 +100,7 @@ async function handleResolveOptions(
   const output = await resolveDynamicProperty({
     piece,
     actionName: request.actionName,
+    kind: request.kind,
     propName: request.propName,
     refresherValues,
     context,

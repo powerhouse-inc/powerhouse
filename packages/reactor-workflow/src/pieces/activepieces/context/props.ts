@@ -1,6 +1,11 @@
 // Design-time channel (doc 06 §2.5): builds the PropertyContext handed to
 // DROPDOWN options() / DYNAMIC props() resolvers, and invokes them out-of-band.
-import { getActions, type ApPiece, type ApProperty } from "../types.js";
+import {
+  getActions,
+  getTriggers,
+  type ApPiece,
+  type ApProperty,
+} from "../types.js";
 import { throwingStub, withTouchTracking } from "./stubs.js";
 
 // PropertyContext surface per pieces-framework (identical in npm 0.32.0 and
@@ -80,7 +85,9 @@ function pickResolver(
 
 export interface ResolveDynamicPropertyParams {
   piece: ApPiece;
+  // Action or trigger name, per kind (default "action").
   actionName: string;
+  kind?: "action" | "trigger";
   propName: string;
   // Resolved values of the prop's refresher inputs (auth and sibling props).
   refresherValues?: Record<string, unknown>;
@@ -92,13 +99,18 @@ export interface ResolveDynamicPropertyParams {
 export async function resolveDynamicProperty(
   params: ResolveDynamicPropertyParams,
 ): Promise<unknown> {
-  const { piece, actionName, propName } = params;
-  const action = getActions(piece)[actionName] as
-    | ReturnType<typeof getActions>[string]
-    | undefined;
-  if (!action) throw new Error(`No action "${actionName}" on piece`);
-  const prop = action.props?.[propName];
-  if (!prop) throw new Error(`No prop "${propName}" on action "${actionName}"`);
+  const { piece, actionName, propName, kind = "action" } = params;
+  const owner =
+    kind === "trigger"
+      ? (getTriggers(piece)[actionName] as
+          | { props?: Record<string, ApProperty> }
+          | undefined)
+      : (getActions(piece)[actionName] as
+          | { props?: Record<string, ApProperty> }
+          | undefined);
+  if (!owner) throw new Error(`No ${kind} "${actionName}" on piece`);
+  const prop = owner.props?.[propName];
+  if (!prop) throw new Error(`No prop "${propName}" on ${kind} "${actionName}"`);
   const resolver = pickResolver(prop);
   if (!resolver) throw new NotDynamicPropertyError(actionName, propName);
   return await resolver(params.refresherValues ?? {}, params.context);

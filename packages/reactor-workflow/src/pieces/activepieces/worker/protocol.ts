@@ -27,7 +27,9 @@ export interface RunMessage {
 // Design-time resolution of a DROPDOWN options() / DYNAMIC props() resolver.
 export interface ResolveOptionsRequest {
   bundleDir: string;
+  // Action or trigger name, per kind (default "action").
   actionName: string;
+  kind?: "action" | "trigger";
   propName: string;
   refresherValues?: Record<string, unknown>;
   auth?: unknown;

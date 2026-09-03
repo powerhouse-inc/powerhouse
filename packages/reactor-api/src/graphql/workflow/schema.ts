@@ -113,6 +113,10 @@ export const schema: DocumentNode = gql`
     Fires a workflow's core#manual trigger and runs it to completion.
     """
     fire(workflowId: String!, payload: Unknown): WorkflowRunPayload!
+    """
+    Runs a piece trigger's test hook; sample items, no cursor changes.
+    """
+    testTrigger(workflowId: String!): Unknown
   }
 
   type Mutation {

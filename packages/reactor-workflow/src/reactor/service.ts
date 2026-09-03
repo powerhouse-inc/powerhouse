@@ -442,12 +442,6 @@ export class WorkflowRuntimeService {
       }
       throw new Error(`Not a piece block type: "${blockType}"`);
     }
-    if (parsed.kind === "trigger") {
-      // Trigger prop options resolve through the trigger worker hook (pending).
-      throw new Error(
-        `Options for trigger block types are not supported yet: "${blockType}"`,
-      );
-    }
     // Auth-dependent options() resolvers need the step's connection.
     let auth: unknown;
     if (connectionId && this.subgraph) {
@@ -464,11 +458,28 @@ export class WorkflowRuntimeService {
     const result = await this.designWorker.resolveOptions({
       bundleDir: bundle.dir,
       actionName: parsed.name,
+      kind: parsed.kind,
       propName,
       refresherValues: (input ?? {}) as Record<string, unknown>,
       auth,
     });
     return result.output;
+  }
+
+  // Runs the trigger's test hook; the test store prefix keeps cursors intact.
+  async testTrigger(workflowId: string): Promise<unknown> {
+    if (!this.subgraph) {
+      throw new Error("Workflow runtime is not configured yet");
+    }
+    const document =
+      await this.subgraph.reactorClient.get<WorkflowDocument>(workflowId);
+    const trigger = document.state.global.trigger;
+    if (!trigger) throw new Error("Workflow has no trigger");
+    const binding = this.pieceBinding(workflowId, trigger);
+    if (!binding) {
+      throw new Error(`"${trigger.blockType}" is not a piece trigger`);
+    }
+    return this.supervisor().test(binding);
   }
 
   async fire(
