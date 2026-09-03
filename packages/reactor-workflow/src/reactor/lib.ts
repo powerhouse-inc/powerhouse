@@ -17,6 +17,9 @@ import type {
 import {
   DOCUMENT_CREATE_BLOCK,
   DOCUMENT_DISPATCH_BLOCK,
+  DOCUMENT_FIND_BLOCK,
+  DOCUMENT_GET_BLOCK,
+  DOCUMENT_SCHEMA_BLOCK,
   DocumentBlockExecutor,
 } from "./document-blocks.js";
 import type { WorkflowState } from "document-models/workflow/v1";
@@ -68,6 +71,9 @@ export function createBlockExecutor(
     {
       [DOCUMENT_CREATE_BLOCK]: documents,
       [DOCUMENT_DISPATCH_BLOCK]: documents,
+      [DOCUMENT_GET_BLOCK]: documents,
+      [DOCUMENT_FIND_BLOCK]: documents,
+      [DOCUMENT_SCHEMA_BLOCK]: documents,
     },
   );
 }
