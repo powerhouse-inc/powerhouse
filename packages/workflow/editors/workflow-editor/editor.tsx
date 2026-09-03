@@ -63,12 +63,33 @@ export default function Editor() {
       }
     };
     registerExpressionScopeSource({
-      load: async () => {
+      load: async ({ stepId }) => {
+        // Trigger config fields run before any step; nothing to reference.
+        if (!stepId) return {};
+        // Only steps upstream of the edited one are in scope at run time.
+        const incoming = new Map<string, string[]>();
+        for (const edge of model.edges) {
+          incoming.set(edge.to, [...(incoming.get(edge.to) ?? []), edge.from]);
+        }
+        const upstream = new Set<string>();
+        const queue = [stepId];
+        while (queue.length > 0) {
+          for (const from of incoming.get(queue.pop()!) ?? []) {
+            if (!upstream.has(from)) {
+              upstream.add(from);
+              queue.push(from);
+            }
+          }
+        }
         const steps: Record<string, unknown> = {};
         await Promise.all(
-          model.steps.map(async (step) => {
-            steps[step.key] = { output: await outputOf(step.blockType, step.config) };
-          }),
+          model.steps
+            .filter((step) => upstream.has(step.id))
+            .map(async (step) => {
+              steps[step.key] = {
+                output: await outputOf(step.blockType, step.config),
+              };
+            }),
         );
         const payload = model.trigger
           ? await outputOf(model.trigger.blockType, model.trigger.config)

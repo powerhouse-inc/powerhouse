@@ -59,7 +59,8 @@ export function useWorkflowModel(): {
       setTrigger: (input) =>
         dispatch(
           actions.setTrigger({
-            id: generateId(),
+            // Keep the trigger id stable so edges from it survive edits.
+            id: state.trigger?.id ?? generateId(),
             blockType: input.blockType,
             config: input.config,
             connectionId: input.connectionId,

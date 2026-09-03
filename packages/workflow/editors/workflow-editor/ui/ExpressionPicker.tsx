@@ -3,8 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 
 export interface ExpressionScopeSource {
-  // Sample scope object: { trigger: { payload }, steps: { key: { output } } }.
-  load: () => Promise<unknown>;
+  // Scope object { trigger: { payload }, steps: { key: { output } } } for the
+  // field being edited; stepId limits steps to that step's ancestors.
+  load: (context: { stepId?: string }) => Promise<unknown>;
 }
 
 let scopeSource: ExpressionScopeSource | undefined;
@@ -99,6 +100,8 @@ function ValueNode(props: {
 
 export function ExpressionPickerButton(props: {
   onPick: (expression: string) => void;
+  // Step whose config field is being edited; omitted for trigger fields.
+  stepId?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [scope, setScope] = useState<unknown>(undefined);
@@ -120,7 +123,7 @@ export function ExpressionPickerButton(props: {
     if (!open) return;
     let alive = true;
     scopeSource
-      ?.load()
+      ?.load({ stepId: props.stepId })
       .then((next) => {
         if (alive) setScope(next);
       })
@@ -134,7 +137,7 @@ export function ExpressionPickerButton(props: {
     return () => {
       alive = false;
     };
-  }, [open]);
+  }, [open, props.stepId]);
 
   if (!scopeSource) return null;
   return (

@@ -106,6 +106,8 @@ function ConfigSection(props: {
   onChange: (config: unknown) => void;
   designTime?: DesignTimeService;
   connectionId?: string;
+  // Step whose config this is; scopes the expression picker to its ancestors.
+  scopeStepId?: string;
 }) {
   const form = useBlockForm(props.blockType, props.designTime);
   const configRecord = (props.config ?? {}) as Record<string, unknown>;
@@ -120,6 +122,7 @@ function ConfigSection(props: {
           props={form.props}
           value={configRecord}
           onChange={props.onChange}
+          scopeStepId={props.scopeStepId}
           loadOptions={
             props.designTime
               ? (propName, current) =>
@@ -209,6 +212,7 @@ export function StepPanel(props: {
         onChange={(config) => callbacks.updateStep({ id: step.id, config })}
         designTime={props.designTime}
         connectionId={step.connectionId ?? undefined}
+        scopeStepId={step.id}
       />
       <button
         type="button"

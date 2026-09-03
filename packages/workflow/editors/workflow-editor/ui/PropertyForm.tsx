@@ -61,6 +61,7 @@ function PropField(props: {
   value: unknown;
   onCommit: (value: unknown) => void;
   loadOptions?: (propName: string) => Promise<unknown>;
+  scopeStepId?: string;
 }) {
   const { prop, value, onCommit } = props;
   const [dropdown, setDropdown] = useState<DropdownState | null>(null);
@@ -70,6 +71,7 @@ function PropField(props: {
   // JSON-ish fields only splice the text; their blur handler parses/commits.
   const pickerFor = (commitAfter: boolean) => (
     <ExpressionPickerButton
+      stepId={props.scopeStepId}
       onPick={(expression) => {
         if (!fieldRef.current) return;
         const next = insertAtCursor(fieldRef.current, expression);
@@ -314,6 +316,8 @@ export function PropertyForm(props: {
     propName: string,
     current: Record<string, unknown>,
   ) => Promise<unknown>;
+  // Step whose config is being edited; scopes the expression picker.
+  scopeStepId?: string;
 }) {
   // Track the latest committed config so sequential field edits accumulate;
   // derive-during-render resets it when the document value changes.
@@ -345,6 +349,7 @@ export function PropertyForm(props: {
               ? (propName) => props.loadOptions!(propName, current)
               : undefined
           }
+          scopeStepId={props.scopeStepId}
         />
       ))}
     </div>
