@@ -1,7 +1,5 @@
-export * from "./useAcceptedCookies.js";
 export * from "./useCheckLatestVersion.js";
 export * from "./useClientErrorHandler.js";
-export * from "./useCookieBanner.js";
 export * from "./useFailedInstallations.js";
 export * from "./useInitSentry.js";
 export * from "./useIsEmbedded.js";

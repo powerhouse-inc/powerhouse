@@ -1,4 +1,4 @@
-import { useCookieBanner } from "@powerhousedao/connect/hooks";
+import { setBannerShown } from "../hooks/preferences-store.js";
 import { openUrl } from "@powerhousedao/connect/utils";
 import { Icon } from "@powerhousedao/design-system";
 import {
@@ -9,15 +9,9 @@ import { showPHModal } from "@powerhousedao/reactor-browser";
 import { Trans } from "react-i18next";
 
 export const Footer = () => {
-  const [, setShowCookieBanner] = useCookieBanner();
-
   return (
     <DesignSystemFooter>
-      <FooterLink
-        onClick={() => {
-          setShowCookieBanner(true);
-        }}
-      >
+      <FooterLink onClick={() => setBannerShown(true)}>
         <Trans i18nKey="footer.cookiePolicy" />
       </FooterLink>
       <FooterLink onClick={() => showPHModal({ type: "disclaimer" })}>

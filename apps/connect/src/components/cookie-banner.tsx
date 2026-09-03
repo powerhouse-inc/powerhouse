@@ -1,7 +1,7 @@
 import {
   useAcceptedCookies,
   useCookieBanner,
-} from "@powerhousedao/connect/hooks";
+} from "../hooks/preferences-store.js";
 import type { CookieInput } from "@powerhousedao/design-system/connect";
 import { CookieBanner as PHCookieBanner } from "@powerhousedao/design-system/connect";
 import { showPHModal } from "@powerhousedao/reactor-browser";
