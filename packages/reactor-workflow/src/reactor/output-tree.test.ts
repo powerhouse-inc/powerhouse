@@ -86,6 +86,90 @@ describe("fromOutputSchema", () => {
     expect(fromOutputSchema(null)).toEqual([]);
     expect(fromOutputSchema({})).toEqual([]);
   });
+
+  // google-docs style: key is a display name, value is the real path.
+  it("follows value paths and merges shared prefixes", () => {
+    expect(
+      fromOutputSchema({
+        fields: [
+          { key: "documentId", label: "Document ID", value: "data.documentId" },
+          {
+            key: "requiredRevisionId",
+            value: "data.writeControl.requiredRevisionId",
+          },
+          { key: "status", label: "Status Code", value: "status" },
+        ],
+      }),
+    ).toEqual([
+      {
+        name: "data",
+        type: "object",
+        children: [
+          {
+            name: "documentId",
+            type: "value",
+            description: undefined,
+          },
+          {
+            name: "writeControl",
+            type: "object",
+            children: [
+              {
+                name: "requiredRevisionId",
+                type: "value",
+                description: undefined,
+              },
+            ],
+          },
+        ],
+      },
+      { name: "status", type: "value", description: undefined },
+    ]);
+  });
+
+  it("maps children with relative value paths", () => {
+    expect(
+      fromOutputSchema({
+        fields: [
+          {
+            key: "file",
+            value: "file",
+            children: [{ key: "id", value: "id" }],
+          },
+        ],
+      }),
+    ).toEqual([
+      {
+        name: "file",
+        type: "object",
+        description: undefined,
+        children: [{ name: "id", type: "value", description: undefined }],
+      },
+    ]);
+  });
+
+  // ask-lmm style: run() returns a bare value; value:"" means whole output.
+  it("treats value:'' scalars as the output itself (no sub-paths)", () => {
+    expect(
+      fromOutputSchema({
+        fields: [{ key: "response", label: "Response", value: "" }],
+      }),
+    ).toEqual([]);
+  });
+
+  it("hoists children of a whole-output wrapper field", () => {
+    expect(
+      fromOutputSchema({
+        fields: [
+          {
+            key: "rows",
+            value: "",
+            listItems: [{ key: "cell", format: "text" }],
+          },
+        ],
+      }),
+    ).toEqual([{ name: "cell", type: "text", description: undefined }]);
+  });
 });
 
 describe("fromSample", () => {

@@ -28,8 +28,12 @@ import {
 import {
   documentBlockTree,
   documentEventTree,
+  documentFindTree,
+  documentGetTree,
+  documentSchemaTree,
   fieldsFromSdl,
   fromOutputSchema,
+  hasOutputSchemaFields,
   fromSample,
   lifecycleTriggerTree,
   type OutputTree,
@@ -554,6 +558,20 @@ export class WorkflowRuntimeService {
           nodes: documentEventTree(inputChildren),
         };
       }
+      case "core#document-find":
+        return { source: "static", nodes: documentFindTree() };
+      case "core#document-schema":
+        return { source: "static", nodes: documentSchemaTree() };
+      case "core#document-get": {
+        // The type may come from a sibling hint when the id is an expression.
+        const stateChildren = await this.stateFields(
+          staticString(record.documentType),
+        );
+        return {
+          source: stateChildren.length > 0 ? "schema" : "static",
+          nodes: documentGetTree(stateChildren),
+        };
+      }
       case "core#document-create":
       case "core#document-dispatch": {
         const stateChildren = await this.stateFields(
@@ -579,6 +597,10 @@ export class WorkflowRuntimeService {
         if (entry?.outputSchema) {
           const nodes = fromOutputSchema(entry.outputSchema);
           if (nodes.length > 0) return { source: "schema", nodes };
+          // Fields that all map to the whole output: the output is a scalar.
+          if (hasOutputSchemaFields(entry.outputSchema)) {
+            return { source: "schema", nodes: [] };
+          }
         }
         if (entry?.sampleData !== undefined && entry.sampleData !== null) {
           const nodes = fromSample(entry.sampleData);

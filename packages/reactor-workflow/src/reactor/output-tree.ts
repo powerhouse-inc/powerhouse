@@ -92,27 +92,62 @@ export function fieldsFromSdl(
 interface ApOutputSchemaField {
   key?: string;
   label?: string;
+  // Path into run()'s return value; defaults to key, "" means the whole output.
+  value?: string;
   format?: string;
   description?: string;
+  children?: ApOutputSchemaField[];
   properties?: ApOutputSchemaField[];
   listItems?: ApOutputSchemaField[];
 }
 
-// Activepieces action/trigger outputSchema → tree.
+// Nodes from separate fields can share a path prefix (a.b + a.c): merge them.
+function mergeNodes(nodes: OutputTreeNode[]): OutputTreeNode[] {
+  const byName = new Map<string, OutputTreeNode>();
+  for (const node of nodes) {
+    const existing = byName.get(node.name);
+    if (existing?.children && node.children) {
+      existing.children = mergeNodes([...existing.children, ...node.children]);
+    } else if (!byName.has(node.name)) {
+      byName.set(node.name, node);
+    }
+  }
+  return [...byName.values()];
+}
+
+// Activepieces action/trigger outputSchema → tree. Expression paths follow
+// each field's `value` (the real path into run()'s return), not its key.
 export function fromOutputSchema(schema: unknown): OutputTreeNode[] {
   const fields = (schema as { fields?: ApOutputSchemaField[] } | null)?.fields;
   if (!Array.isArray(fields)) return [];
-  const convert = (field: ApOutputSchemaField): OutputTreeNode => {
-    const children = field.properties?.map(convert);
-    const items = field.listItems?.map(convert);
-    return {
-      name: field.key ?? field.label ?? "",
-      type: items ? "array" : (field.format ?? (children ? "object" : "value")),
+  const convert = (field: ApOutputSchemaField): OutputTreeNode[] => {
+    const inner = field.children ?? field.properties;
+    const items = field.listItems;
+    const childNodes = mergeNodes((inner ?? items ?? []).flatMap(convert));
+    const path =
+      typeof field.value === "string" ? field.value : (field.key ?? "");
+    // Whole-output field: hoist children; a scalar contributes no sub-path.
+    if (path === "") return childNodes;
+    const segments = path.split(".");
+    let node: OutputTreeNode = {
+      name: segments[segments.length - 1],
+      type: items
+        ? "array"
+        : (field.format ?? (childNodes.length > 0 ? "object" : "value")),
       description: field.description,
-      ...(children ? { children } : items ? { children: items } : {}),
+      ...(childNodes.length > 0 ? { children: childNodes } : {}),
     };
+    for (let i = segments.length - 2; i >= 0; i--) {
+      node = { name: segments[i], type: "object", children: [node] };
+    }
+    return [node];
   };
-  return fields.map(convert).filter((node) => node.name);
+  return mergeNodes(fields.flatMap(convert)).filter((node) => node.name);
+}
+
+export function hasOutputSchemaFields(schema: unknown): boolean {
+  const fields = (schema as { fields?: unknown[] } | null)?.fields;
+  return Array.isArray(fields) && fields.length > 0;
 }
 
 // Piece-authored sampleData → tree; types inferred from the sample's values.
@@ -159,6 +194,55 @@ export function documentBlockTree(
       type: "object",
       description: "Document global state after the actions applied",
       ...(stateChildren.length > 0 ? { children: stateChildren } : {}),
+    },
+  ];
+}
+
+export function documentGetTree(
+  stateChildren: OutputTreeNode[],
+): OutputTreeNode[] {
+  return [
+    ...documentBlockTree(stateChildren).filter((node) => node.name !== "state"),
+    leaf("slug", "String"),
+    {
+      name: "state",
+      type: "object",
+      description: "Document global state as read",
+      ...(stateChildren.length > 0 ? { children: stateChildren } : {}),
+    },
+  ];
+}
+
+export function documentFindTree(): OutputTreeNode[] {
+  return [
+    leaf("count", "Int!"),
+    {
+      name: "documents",
+      type: "array",
+      children: [
+        leaf("documentId", "PHID!"),
+        leaf("documentType", "String!"),
+        leaf("name", "String"),
+        leaf("slug", "String"),
+      ],
+    },
+  ];
+}
+
+export function documentSchemaTree(): OutputTreeNode[] {
+  return [
+    leaf("documentType", "String!"),
+    leaf("name", "String"),
+    leaf("stateSchema", "String", "SDL of the global state type"),
+    {
+      name: "actions",
+      type: "array",
+      description: "Dispatchable actions with their input SDL",
+      children: [
+        leaf("type", "String!"),
+        leaf("module", "String"),
+        leaf("inputSchema", "String"),
+      ],
     },
   ];
 }
