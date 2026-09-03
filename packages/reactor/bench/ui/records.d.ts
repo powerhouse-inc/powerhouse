@@ -24,6 +24,8 @@ export function parseJsonl(text: string): {
 export function shortSha(sha: string): string;
 export function envFingerprint(environment: Benchmark["environment"]): string;
 export function caseKey(suite: MicroSuite, benchCase: MicroCase): string;
+/** Resolves a case name to the one the series' newest record uses. */
+export function caseNames(records: Benchmark[]): (name: string) => string;
 export function suiteLabel(fullName: string): string;
 export function xLabel(bench: Benchmark): string;
 

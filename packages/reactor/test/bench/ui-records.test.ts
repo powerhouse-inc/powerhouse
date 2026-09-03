@@ -6,6 +6,7 @@ import { TaskEntry } from "../../bench/records/task-schema.js";
 import {
   annotateCommits,
   caseTags,
+  caseNames,
   chartRows,
   indexRecords,
   parseJsonl,
@@ -157,6 +158,75 @@ describe("indexRecords", () => {
   it("resolves a task's site sha from its first cited record", () => {
     expect(siteSha(defect, index)).toBe("aaaaaaa");
     expect(siteSha(gap, index)).toBeUndefined();
+  });
+});
+
+describe("caseNames", () => {
+  const aCase = (name: string, continues?: string, rank = 1) => ({
+    name,
+    rank,
+    hz: 100,
+    meanMs: 10,
+    medianMs: 10,
+    minMs: 9,
+    maxMs: 11,
+    rmePct: 1,
+    sampleCount: 20,
+    totalTimeMs: 200,
+    ...(continues === undefined ? {} : { continues }),
+  });
+  const withCases = (id: string, recordedAt: string, cases: object[]) =>
+    bench({
+      id,
+      recordedAt,
+      results: {
+        ...(microEntry().results as object),
+        suites: [{ fullName: "bench/x.bench.ts > s", cases }],
+      },
+    });
+  const before = withCases("B-010", "2026-09-01T10:00:00.000Z", [
+    aCase("Baseline"),
+    aCase("Deep", undefined, 2),
+  ]);
+  const renamedSilently = withCases("B-011", "2026-09-01T11:00:00.000Z", [
+    aCase("Baseline (writes to convergence)"),
+    aCase("Deep (writes to convergence)", undefined, 2),
+  ]);
+  const declared = withCases("B-012", "2026-09-01T12:00:00.000Z", [
+    aCase("Baseline (writes to convergence)", "Baseline"),
+    aCase("Deep (writes to convergence)", undefined, 2),
+  ]);
+
+  it("joins a rename one record declares, across records that did not", () => {
+    const rows = chartRows([before, renamedSilently, declared], "meanMs");
+    const baseline = rows.filter(
+      (r) => r.caseName === "Baseline (writes to convergence)",
+    );
+    expect(baseline.map((r) => r.recordId)).toEqual([
+      "B-010",
+      "B-011",
+      "B-012",
+    ]);
+    expect(seriesTable([before, renamedSilently, declared]).keys).toEqual([
+      "bench/x.bench.ts > s > Baseline (writes to convergence)",
+      "bench/x.bench.ts > s > Deep",
+      "bench/x.bench.ts > s > Deep (writes to convergence)",
+    ]);
+  });
+
+  it("leaves an undeclared rename as two lines", () => {
+    const rows = chartRows([before, renamedSilently], "meanMs");
+    expect(new Set(rows.map((r) => r.caseName)).size).toBe(4);
+  });
+
+  it("follows a chain of renames to the newest name", () => {
+    const again = withCases("B-013", "2026-09-01T13:00:00.000Z", [
+      aCase("Baseline v3", "Baseline (writes to convergence)"),
+    ]);
+    const resolve = caseNames([before, declared, again]);
+    expect(resolve("Baseline")).toBe("Baseline v3");
+    expect(resolve("Baseline (writes to convergence)")).toBe("Baseline v3");
+    expect(resolve("Deep")).toBe("Deep");
   });
 });
 

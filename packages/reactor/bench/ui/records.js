@@ -45,6 +45,49 @@ export function caseKey(suite, benchCase) {
   return `${suite.fullName} > ${benchCase.name}`;
 }
 
+// A case's `continues` names what it was called in earlier records. This
+// resolves every name in a series to the one its newest record uses, so a
+// rename is one line rather than two. Undeclared renames stay two lines.
+export function caseNames(records) {
+  const earlier = new Map();
+  const newest = new Map();
+  for (const bench of records) {
+    if (bench.kind !== "micro") {
+      continue;
+    }
+    const at = Date.parse(bench.recordedAt);
+    for (const suite of bench.results.suites) {
+      for (const benchCase of suite.cases) {
+        if (benchCase.continues) {
+          earlier.set(benchCase.name, benchCase.continues);
+        }
+        newest.set(
+          benchCase.name,
+          Math.max(newest.get(benchCase.name) ?? 0, at),
+        );
+      }
+    }
+  }
+  const root = (name) => {
+    let current = name;
+    const seen = new Set();
+    while (earlier.has(current) && !seen.has(current)) {
+      seen.add(current);
+      current = earlier.get(current);
+    }
+    return current;
+  };
+  const display = new Map();
+  for (const name of newest.keys()) {
+    const key = root(name);
+    const current = display.get(key);
+    if (current === undefined || newest.get(name) > newest.get(current)) {
+      display.set(key, name);
+    }
+  }
+  return (name) => display.get(root(name)) ?? name;
+}
+
 // "bench/x.bench.ts > Suite name" -> "Suite name"; the file is already known.
 export function suiteLabel(fullName) {
   const parts = fullName.split(" > ");
@@ -120,6 +163,7 @@ export function indexRecords(benchmarks, tasks) {
 export function seriesTable(records) {
   const keys = [];
   const rows = [];
+  const canonical = caseNames(records);
   for (const bench of records) {
     if (bench.kind !== "micro") {
       continue;
@@ -127,7 +171,10 @@ export function seriesTable(records) {
     const values = new Map();
     for (const suite of bench.results.suites) {
       for (const benchCase of suite.cases) {
-        const key = caseKey(suite, benchCase);
+        const key = caseKey(suite, {
+          ...benchCase,
+          name: canonical(benchCase.name),
+        });
         if (!keys.includes(key)) {
           keys.push(key);
         }
@@ -149,6 +196,7 @@ export function xLabel(bench) {
 // dropped, since a mean of 0 measured a clock floor, not the system.
 export function chartRows(records, metric, { log = false } = {}) {
   const rows = [];
+  const canonical = caseNames(records);
   for (const bench of records) {
     if (bench.kind !== "micro") {
       continue;
@@ -161,12 +209,13 @@ export function chartRows(records, metric, { log = false } = {}) {
           continue;
         }
         const spread = (value * benchCase.rmePct) / 100;
+        const name = canonical(benchCase.name);
         rows.push({
           x,
           recordId: bench.id,
           suite: suiteLabel(suite.fullName),
-          caseKey: caseKey(suite, benchCase),
-          caseName: benchCase.name,
+          caseKey: caseKey(suite, { ...benchCase, name }),
+          caseName: name,
           value,
           lo: Math.max(log ? value / 100 : 0, value - spread),
           hi: value + spread,
