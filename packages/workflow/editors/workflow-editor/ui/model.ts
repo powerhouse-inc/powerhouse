@@ -64,6 +64,7 @@ export interface UpdateStepInputModel {
 }
 
 export interface WorkflowEditorCallbacks {
+  setName: (name: string) => void;
   setStatus: (status: WorkflowStatusValue) => void;
   setTrigger: (input: {
     blockType: string;

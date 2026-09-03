@@ -261,6 +261,7 @@ describe("deriveFlowVersion", () => {
 
 function mockBridge(model: WorkflowModel) {
   const callbacks: WorkflowEditorCallbacks = {
+    setName: vi.fn(),
     setStatus: vi.fn(),
     setTrigger: vi.fn(),
     clearTrigger: vi.fn(),

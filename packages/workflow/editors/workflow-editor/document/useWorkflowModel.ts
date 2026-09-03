@@ -55,6 +55,11 @@ export function useWorkflowModel(): {
 
   const callbacks = useMemo<WorkflowEditorCallbacks>(
     () => ({
+      setName: (name) => {
+        dispatch(actions.setWorkflowName({ name }));
+        // Base action keeps the document header name in sync for drive views.
+        dispatch(actions.setName(name));
+      },
       setStatus: (status) => dispatch(actions.setWorkflowStatus({ status })),
       setTrigger: (input) =>
         dispatch(

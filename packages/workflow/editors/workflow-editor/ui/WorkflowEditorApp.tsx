@@ -31,9 +31,20 @@ export function WorkflowEditorApp(props: {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex items-center gap-3 border-b border-slate-200 px-4 py-2">
-        <span className="text-sm font-semibold text-slate-800">
-          {model.name || "Untitled workflow"}
-        </span>
+        <input
+          key={model.name}
+          className="min-w-0 max-w-72 rounded border border-transparent px-1 py-0.5 text-sm font-semibold text-slate-800 hover:border-slate-200 focus:border-slate-300 focus:outline-none"
+          defaultValue={model.name}
+          placeholder="Untitled workflow"
+          spellCheck={false}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") event.currentTarget.blur();
+          }}
+          onBlur={(event) => {
+            const name = event.target.value.trim();
+            if (name && name !== model.name) callbacks.setName(name);
+          }}
+        />
         <span className="rounded bg-slate-100 px-2 py-0.5 text-[11px] text-slate-500">
           v{model.version}
         </span>

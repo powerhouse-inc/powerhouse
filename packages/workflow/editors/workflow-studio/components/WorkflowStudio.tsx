@@ -21,6 +21,19 @@ import { RunsView } from "./RunsView.js";
 const WORKFLOW_TYPE = "powerhouse/workflow";
 const CONNECTION_TYPE = "powerhouse/connection";
 
+// The drive node name goes stale after renames; the document state is the
+// source of truth for both workflow and connection names.
+function documentName(document: unknown, fallback: string): string {
+  const state = (document as { state?: { global?: { name?: string } } } | null)
+    ?.state?.global;
+  return state?.name || fallback || "(unnamed)";
+}
+
+function NodeLabel(props: { node: FileNode }) {
+  const [document] = useDocumentById(props.node.id);
+  return <>{documentName(document, props.node.name)}</>;
+}
+
 function SidebarSection(props: {
   title: string;
   nodes: FileNode[];
@@ -61,7 +74,7 @@ function SidebarSection(props: {
               className="min-w-0 grow truncate px-3 py-1.5 text-left text-sm text-slate-700"
               onClick={() => props.onOpen(node)}
             >
-              {node.name || "(unnamed)"}
+              <NodeLabel node={node} />
             </button>
             {props.onEdit ? (
               <button
@@ -228,7 +241,11 @@ export function WorkflowStudio(props: { children?: ReactNode }) {
             <RunsView
               key={liveTarget?.id ?? "__all__"}
               workflowId={liveTarget?.id}
-              title={liveTarget ? liveTarget.name || "Workflow" : "All runs"}
+              title={
+                liveTarget
+                  ? documentName(targetDocument, liveTarget.name || "Workflow")
+                  : "All runs"
+              }
               onFire={
                 liveTarget && manualTrigger
                   ? () =>
