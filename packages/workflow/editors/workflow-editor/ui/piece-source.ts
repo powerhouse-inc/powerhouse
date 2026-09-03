@@ -7,6 +7,7 @@ export interface PieceSummaryUi {
   description: string;
   logoUrl: string;
   actionCount: number;
+  triggerCount: number;
 }
 
 export interface PieceActionUi {
@@ -16,9 +17,19 @@ export interface PieceActionUi {
   blockType: string;
 }
 
+export interface PieceTriggerUi {
+  name: string;
+  displayName: string;
+  description: string;
+  // POLLING | WEBHOOK | APP_WEBHOOK; only POLLING runs today.
+  strategy: string;
+  blockType: string;
+}
+
 export interface PieceCatalogSource {
   loadCatalog: () => Promise<PieceSummaryUi[]>;
   loadActions: (packageName: string) => Promise<PieceActionUi[]>;
+  loadTriggers: (packageName: string) => Promise<PieceTriggerUi[]>;
 }
 
 let source: PieceCatalogSource | undefined;

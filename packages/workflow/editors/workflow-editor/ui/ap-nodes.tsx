@@ -59,6 +59,7 @@ function AddButton(props: {
   presets: BlockPreset[];
   onPick: (preset: BlockPreset) => void;
   showPieces?: boolean;
+  pieceMode?: "actions" | "triggers";
 }) {
   const [open, setOpen] = useState(false);
   const size = props.size ?? ADD_BUTTON_SIZE;
@@ -93,6 +94,7 @@ function AddButton(props: {
             title={props.title}
             presets={props.presets}
             showPieces={props.showPieces}
+            pieceMode={props.pieceMode}
             onPick={(preset) => {
               setOpen(false);
               props.onPick(preset);
@@ -144,6 +146,8 @@ export function ApBigButtonNode(_props: NodeProps) {
         size={BIG_ADD_BUTTON_SIZE}
         title="Choose a trigger"
         presets={TRIGGER_PRESETS}
+        showPieces
+        pieceMode="triggers"
         onPick={(preset) => getCanvasHandlers()?.pickTrigger(preset)}
       />
       <span className="text-xs text-slate-400">Select a trigger</span>

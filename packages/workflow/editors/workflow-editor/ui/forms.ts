@@ -26,6 +26,8 @@ export interface DesignTimeService {
     input: Record<string, unknown>,
     connectionId?: string,
   ) => Promise<unknown>;
+  // Runs the current workflow's piece trigger test hook; sample items back.
+  testTrigger?: () => Promise<unknown>;
 }
 
 const text = (

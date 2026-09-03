@@ -7,7 +7,10 @@ import {
   getPieceSource,
   type PieceActionUi,
   type PieceSummaryUi,
+  type PieceTriggerUi,
 } from "./piece-source.js";
+
+export type PieceMode = "actions" | "triggers";
 
 export function BlockLogo(props: { blockType: string; size?: number }) {
   const meta = blockMeta(props.blockType);
@@ -49,11 +52,15 @@ function Row(props: {
   label: string;
   description: string;
   onClick: () => void;
+  disabled?: boolean;
 }) {
   return (
     <button
       type="button"
-      className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-slate-50"
+      className={`flex w-full items-center gap-2 px-3 py-1.5 text-left ${
+        props.disabled ? "cursor-not-allowed opacity-50" : "hover:bg-slate-50"
+      }`}
+      disabled={props.disabled}
       onClick={props.onClick}
     >
       {props.logo}
@@ -83,21 +90,28 @@ interface CatalogState {
   error?: string;
 }
 
-// Drill-in view: one piece's actions.
-function PieceActions(props: {
+// Drill-in view: one piece's actions or triggers, per mode.
+function PieceEntries(props: {
   piece: PieceSummaryUi;
+  mode: PieceMode;
   onPick: (preset: BlockPreset) => void;
   onBack: () => void;
 }) {
-  const [actions, setActions] = useState<PieceActionUi[] | null>(null);
+  const [entries, setEntries] = useState<
+    (PieceActionUi & Partial<PieceTriggerUi>)[] | null
+  >(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    getPieceSource()
-      ?.loadActions(props.piece.name)
-      .then((result) => {
-        if (!cancelled) setActions(result);
+    const pieceSource = getPieceSource();
+    const load =
+      props.mode === "triggers"
+        ? pieceSource?.loadTriggers(props.piece.name)
+        : pieceSource?.loadActions(props.piece.name);
+    load
+      ?.then((result) => {
+        if (!cancelled) setEntries(result);
       })
       .catch((loadError: unknown) => {
         if (!cancelled) {
@@ -109,7 +123,7 @@ function PieceActions(props: {
     return () => {
       cancelled = true;
     };
-  }, [props.piece.name]);
+  }, [props.piece.name, props.mode]);
 
   return (
     <div className="max-h-80 overflow-y-auto py-1">
@@ -122,31 +136,42 @@ function PieceActions(props: {
       </button>
       {error ? (
         <div className="px-3 py-2 text-xs text-red-500">{error}</div>
-      ) : actions === null ? (
+      ) : entries === null ? (
         <div className="px-3 py-2 text-xs text-slate-400">Loading…</div>
       ) : (
-        actions.map((action) => (
-          <Row
-            key={action.name}
-            logo={
-              <LogoFrame
-                src={props.piece.logoUrl}
-                alt={props.piece.displayName}
-                size={28}
-              />
-            }
-            label={action.displayName}
-            description={action.description}
-            onClick={() =>
-              props.onPick({
-                label: action.displayName,
-                blockType: action.blockType,
-                description: action.description,
-                defaultConfig: {},
-              })
-            }
-          />
-        ))
+        entries.map((entry) => {
+          // Only POLLING triggers run today; the rest are visible but inert.
+          const strategy = entry.strategy ?? "POLLING";
+          const unsupported =
+            props.mode === "triggers" && strategy !== "POLLING";
+          return (
+            <Row
+              key={entry.name}
+              logo={
+                <LogoFrame
+                  src={props.piece.logoUrl}
+                  alt={props.piece.displayName}
+                  size={28}
+                />
+              }
+              label={entry.displayName}
+              description={
+                unsupported
+                  ? `${strategy.toLowerCase()} — not supported yet`
+                  : entry.description
+              }
+              disabled={unsupported}
+              onClick={() =>
+                props.onPick({
+                  label: entry.displayName,
+                  blockType: entry.blockType,
+                  description: entry.description,
+                  defaultConfig: {},
+                })
+              }
+            />
+          );
+        })
       )}
     </div>
   );
@@ -157,8 +182,10 @@ export function BlockSelector(props: {
   presets: BlockPreset[];
   onPick: (preset: BlockPreset) => void;
   onClose: () => void;
-  // Show the Activepieces catalog below the presets (steps only).
+  // Show the Activepieces catalog below the presets.
   showPieces?: boolean;
+  // Which piece entries the drill-in offers; defaults to actions.
+  pieceMode?: PieceMode;
 }) {
   const [query, setQuery] = useState("");
   const [catalog, setCatalog] = useState<CatalogState | null>(null);
@@ -197,14 +224,17 @@ export function BlockSelector(props: {
     };
   }, [pieceSource]);
 
+  const mode: PieceMode = props.pieceMode ?? "actions";
   const lowered = query.toLowerCase();
   const filteredPresets = props.presets.filter((preset) =>
     `${preset.label} ${preset.blockType}`.toLowerCase().includes(lowered),
   );
-  const filteredPieces = (catalog?.pieces ?? []).filter((entry) =>
-    `${entry.displayName} ${entry.name} ${entry.description}`
-      .toLowerCase()
-      .includes(lowered),
+  const filteredPieces = (catalog?.pieces ?? []).filter(
+    (entry) =>
+      (mode === "triggers" ? entry.triggerCount : entry.actionCount) > 0 &&
+      `${entry.displayName} ${entry.name} ${entry.description}`
+        .toLowerCase()
+        .includes(lowered),
   );
 
   return (
@@ -228,8 +258,9 @@ export function BlockSelector(props: {
         )}
       </div>
       {piece ? (
-        <PieceActions
+        <PieceEntries
           piece={piece}
+          mode={mode}
           onPick={props.onPick}
           onBack={() => setPiece(null)}
         />
@@ -267,7 +298,11 @@ export function BlockSelector(props: {
                       />
                     }
                     label={entry.displayName}
-                    description={`${entry.actionCount} action${entry.actionCount === 1 ? "" : "s"} · ${entry.description}`}
+                    description={
+                      mode === "triggers"
+                        ? `${entry.triggerCount} trigger${entry.triggerCount === 1 ? "" : "s"} · ${entry.description}`
+                        : `${entry.actionCount} action${entry.actionCount === 1 ? "" : "s"} · ${entry.description}`
+                    }
                     onClick={() => setPiece(entry)}
                   />
                 ))

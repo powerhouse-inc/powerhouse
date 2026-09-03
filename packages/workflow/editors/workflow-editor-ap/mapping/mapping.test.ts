@@ -37,6 +37,7 @@ function baseModel(partial: Partial<WorkflowModel> = {}): WorkflowModel {
       id: "t1",
       blockType: "core#manual",
       config: { note: "go" },
+      connectionId: null,
     },
     steps: [],
     edges: [],

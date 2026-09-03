@@ -227,6 +227,43 @@ export function StepPanel(props: {
   );
 }
 
+function TestTriggerSection(props: { onTest: () => Promise<unknown> }) {
+  const [state, setState] = useState<
+    { kind: "idle" } | { kind: "loading" } | { kind: "done"; result: string }
+  >({ kind: "idle" });
+  return (
+    <div>
+      <button
+        type="button"
+        className="rounded bg-slate-800 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+        disabled={state.kind === "loading"}
+        onClick={() => {
+          setState({ kind: "loading" });
+          props.onTest().then(
+            (result) =>
+              setState({
+                kind: "done",
+                result: JSON.stringify(result, null, 2),
+              }),
+            (error: unknown) =>
+              setState({
+                kind: "done",
+                result: error instanceof Error ? error.message : String(error),
+              }),
+          );
+        }}
+      >
+        {state.kind === "loading" ? "Testing…" : "Test trigger"}
+      </button>
+      {state.kind === "done" ? (
+        <pre className="mt-2 max-h-48 overflow-auto rounded border border-slate-200 bg-slate-50 p-2 text-[11px] text-slate-700">
+          {state.result}
+        </pre>
+      ) : null}
+    </div>
+  );
+}
+
 export function TriggerPanel(props: {
   trigger: TriggerModel;
   callbacks: WorkflowEditorCallbacks;
@@ -234,6 +271,19 @@ export function TriggerPanel(props: {
   designTime?: DesignTimeService;
 }) {
   const { trigger, callbacks } = props;
+  const isPieceTrigger = trigger.blockType.includes("#trigger:");
+  const setTrigger = (patch: {
+    config?: unknown;
+    connectionId?: string | null;
+  }) =>
+    callbacks.setTrigger({
+      blockType: trigger.blockType,
+      config: patch.config === undefined ? trigger.config : patch.config,
+      connectionId:
+        patch.connectionId === undefined
+          ? trigger.connectionId
+          : patch.connectionId,
+    });
   return (
     <div className="flex flex-col gap-3 p-4">
       <div className="flex items-center justify-between">
@@ -253,15 +303,32 @@ export function TriggerPanel(props: {
           readOnly
         />
       </Field>
+      {isPieceTrigger ? (
+        <Field label="Connection id (optional)">
+          <input
+            key={`${trigger.id}-conn`}
+            className={`${inputClass} font-mono text-xs`}
+            defaultValue={trigger.connectionId ?? ""}
+            placeholder="powerhouse/connection document id"
+            onBlur={(event) => {
+              const connectionId = event.target.value.trim();
+              if (connectionId !== (trigger.connectionId ?? ""))
+                setTrigger({ connectionId: connectionId || null });
+            }}
+          />
+        </Field>
+      ) : null}
       <ConfigSection
         key={trigger.id}
         blockType={trigger.blockType}
         config={trigger.config}
-        onChange={(config) =>
-          callbacks.setTrigger({ blockType: trigger.blockType, config })
-        }
+        onChange={(config) => setTrigger({ config })}
         designTime={props.designTime}
+        connectionId={trigger.connectionId ?? undefined}
       />
+      {isPieceTrigger && props.designTime?.testTrigger ? (
+        <TestTriggerSection onTest={props.designTime.testTrigger} />
+      ) : null}
       <button
         type="button"
         className="mt-2 rounded border border-red-300 px-3 py-1.5 text-xs font-medium text-red-600"

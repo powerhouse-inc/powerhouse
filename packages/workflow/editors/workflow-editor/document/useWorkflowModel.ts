@@ -19,6 +19,7 @@ function toModel(state: WorkflowState): WorkflowModel {
           id: state.trigger.id,
           blockType: state.trigger.blockType,
           config: state.trigger.config,
+          connectionId: state.trigger.connectionId ?? null,
         }
       : null,
     steps: state.steps.map((step) => ({
@@ -61,6 +62,7 @@ export function useWorkflowModel(): {
             id: generateId(),
             blockType: input.blockType,
             config: input.config,
+            connectionId: input.connectionId,
           }),
         ),
       clearTrigger: () => dispatch(actions.clearTrigger({})),

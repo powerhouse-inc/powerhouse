@@ -37,15 +37,18 @@ async function gql<T>(
   return body.data;
 }
 
+interface BlockEntryDescriptor {
+  displayName: string;
+  requireAuth: boolean;
+  props: BlockFormProp[];
+}
+
 interface BlockDescriptorResult {
   workflowRuntime: {
     blockDescriptor: {
       displayName: string;
-      action: {
-        displayName: string;
-        requireAuth: boolean;
-        props: BlockFormProp[];
-      };
+      action?: BlockEntryDescriptor;
+      trigger?: BlockEntryDescriptor;
     } | null;
   };
 }
@@ -64,11 +67,12 @@ export function getBlockForm(blockType: string): Promise<BlockForm | null> {
       { blockType },
     ).then((data) => {
       const descriptor = data.workflowRuntime.blockDescriptor;
-      if (!descriptor) return null;
+      const entry = descriptor?.action ?? descriptor?.trigger;
+      if (!descriptor || !entry) return null;
       return {
-        title: `${descriptor.displayName} · ${descriptor.action.displayName}`,
-        requireAuth: descriptor.action.requireAuth,
-        props: descriptor.action.props,
+        title: `${descriptor.displayName} · ${entry.displayName}`,
+        requireAuth: entry.requireAuth,
+        props: entry.props,
       };
     });
     formCache.set(blockType, cached);
@@ -84,6 +88,7 @@ export interface PieceSummary {
   logoUrl: string;
   version: string;
   actionCount: number;
+  triggerCount: number;
   // PieceAuth descriptor, verbatim from the piece; null when authless.
   auth?: unknown;
 }
@@ -118,6 +123,38 @@ export async function fetchPieceActions(
     { packageName },
   );
   return data.workflowRuntime.pieceActions.actions;
+}
+
+export interface PieceTriggerEntry {
+  name: string;
+  displayName: string;
+  description: string;
+  strategy: string;
+  blockType: string;
+}
+
+export async function fetchPieceTriggers(
+  packageName: string,
+): Promise<PieceTriggerEntry[]> {
+  const data = await gql<{
+    workflowRuntime: { pieceTriggers: { triggers: PieceTriggerEntry[] } };
+  }>(
+    `query Triggers($packageName: String!) {
+      workflowRuntime { pieceTriggers(packageName: $packageName) }
+    }`,
+    { packageName },
+  );
+  return data.workflowRuntime.pieceTriggers.triggers;
+}
+
+export async function testTrigger(workflowId: string): Promise<unknown> {
+  const data = await gql<{ workflowRuntime: { testTrigger: unknown } }>(
+    `mutation TestTrigger($workflowId: String!) {
+      workflowRuntime { testTrigger(workflowId: $workflowId) }
+    }`,
+    { workflowId },
+  );
+  return data.workflowRuntime.testTrigger;
 }
 
 export interface RunStepRecord {

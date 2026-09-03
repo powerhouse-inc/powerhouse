@@ -12,6 +12,7 @@ export interface TriggerModel {
   id: string;
   blockType: string;
   config: unknown;
+  connectionId: string | null;
 }
 
 export interface StepModel {
@@ -63,7 +64,11 @@ export interface UpdateStepInputModel {
 
 export interface WorkflowEditorCallbacks {
   setStatus: (status: WorkflowStatusValue) => void;
-  setTrigger: (input: { blockType: string; config: unknown }) => void;
+  setTrigger: (input: {
+    blockType: string;
+    config: unknown;
+    connectionId?: string | null;
+  }) => void;
   clearTrigger: () => void;
   addStep: (input: AddStepInputModel) => void;
   updateStep: (input: UpdateStepInputModel) => void;

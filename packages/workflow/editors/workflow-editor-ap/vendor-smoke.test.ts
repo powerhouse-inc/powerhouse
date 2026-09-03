@@ -29,7 +29,12 @@ describe("vendored builder modules", () => {
       name: "smoke",
       status: "DRAFT",
       version: 1,
-      trigger: { id: "t1", blockType: "core#manual", config: {} },
+      trigger: {
+        id: "t1",
+        blockType: "core#manual",
+        config: {},
+        connectionId: null,
+      },
       steps: [],
       edges: [],
     });

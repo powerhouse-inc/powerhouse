@@ -171,7 +171,7 @@ export function fetchCatalogSummaries(): Promise<PieceMetadataModelSummary[]> {
         authors: [],
         version: entry.version,
         actions: entry.actionCount,
-        triggers: 0,
+        triggers: entry.triggerCount ?? 0,
         auth: entry.auth as PieceMetadataModelSummary["auth"],
         contextInfo: undefined,
         ...packageMeta,
