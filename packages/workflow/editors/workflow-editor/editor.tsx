@@ -57,7 +57,8 @@ export default function Editor() {
       try {
         const tree = await fetchBlockOutputTree(blockType, config);
         if (tree.nodes.length > 0) return treeValue(tree.nodes);
-        return tree.source === "none" ? "no declared schema" : {};
+        // Schema with no sub-paths = the output itself is the value.
+        return tree.source === "none" ? "no declared schema" : "value";
       } catch {
         return {};
       }
