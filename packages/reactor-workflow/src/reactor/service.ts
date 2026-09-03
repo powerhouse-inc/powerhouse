@@ -13,6 +13,7 @@ import {
   type WorkflowRunResult,
 } from "@powerhousedao/reactor-connectors";
 import { childLogger, type OperationWithContext } from "document-model";
+import type { ConnectionDocument } from "document-models/connection/v1";
 import type {
   WorkflowDocument,
   WorkflowState,
@@ -55,6 +56,15 @@ import {
 } from "./trigger-filters.js";
 
 export type PersistedRunResult = WorkflowRunResult & { runId: string | null };
+
+export interface ConnectionSummary {
+  id: string;
+  name: string;
+  connectorId: string;
+  authType: string;
+  status: string;
+  accountLabel: string | null;
+}
 
 const logger = childLogger(["workflow", "runtime"]);
 
@@ -409,6 +419,25 @@ export class WorkflowRuntimeService {
       this.descriptors.set(cacheKey, descriptor);
     }
     return descriptor;
+  }
+
+  // Design-time: every powerhouse/connection document, for connection pickers.
+  async connections(): Promise<ConnectionSummary[]> {
+    if (!this.subgraph) return [];
+    const page = await this.subgraph.reactorClient.find({
+      type: "powerhouse/connection",
+    });
+    return (page.results as ConnectionDocument[]).map((document) => {
+      const state = document.state.global;
+      return {
+        id: document.header.id,
+        name: state.name,
+        connectorId: state.connectorId,
+        authType: state.authType,
+        status: state.status,
+        accountLabel: state.accountLabel ?? null,
+      };
+    });
   }
 
   // Design-time: the action/trigger descriptor (props, auth) driving the

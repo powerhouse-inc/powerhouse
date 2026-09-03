@@ -95,6 +95,7 @@ export const getResolvers = (
       ) => workflowRuntime.blockOutputTree(args.blockType, args.config),
       pieceDetail: (_parent: unknown, args: { packageName: string }) =>
         fetchPieceDetail(args.packageName),
+      connections: () => workflowRuntime.connections(),
       triggerStates: async () =>
         (await workflowRuntime.triggerStates()).map((row) => ({
           workflowId: row.workflow_id,

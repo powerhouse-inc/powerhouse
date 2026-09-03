@@ -49,6 +49,19 @@ export const schema: DocumentNode = gql`
     Authored output shape of a block (SDL / outputSchema / sampleData).
     """
     blockOutputTree(blockType: String!, config: Unknown): Unknown
+    """
+    Every powerhouse/connection document, for connection pickers.
+    """
+    connections: [ConnectionRecord!]!
+  }
+
+  type ConnectionRecord {
+    id: String!
+    name: String!
+    connectorId: String!
+    authType: String!
+    status: String!
+    accountLabel: String
   }
 
   type TriggerStateRecord {
