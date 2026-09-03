@@ -20,8 +20,7 @@ const state = {
   loadedAt: null,
   Plot: null,
   plotError: null,
-  metric: "meanMs",
-  log: false,
+  suiteSettings: new Map(),
   raw: ["", ""],
 };
 
@@ -114,15 +113,6 @@ async function start() {
 root.addEventListener("click", (event) => {
   if (event.target.id === "refresh") {
     void refresh(true);
-  }
-});
-root.addEventListener("change", (event) => {
-  if (event.target.id === "metric") {
-    state.metric = event.target.value;
-    route();
-  } else if (event.target.id === "log") {
-    state.log = event.target.checked;
-    route();
   }
 });
 window.addEventListener("hashchange", route);

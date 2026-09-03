@@ -3,7 +3,8 @@
 import {
   STATUS_COLOR,
   formatValue,
-  seriesCharts,
+  suiteChart,
+  suiteNames,
   timelineChart,
 } from "./chart.js";
 import {
@@ -106,8 +107,7 @@ function header(state) {
   ];
   return `
     <header>
-      <a class="brand" href="#/">bench records</a>
-      <span class="muted">${state.benchmarks.length} benchmarks · ${state.tasks.length} tasks · loaded ${state.loadedAt ? when(state.loadedAt) : "…"}</span>
+      <a class="brand" href="#/">reactor bench</a>
       <button id="refresh" type="button">refresh</button>
     </header>
     ${problems.length ? `<div class="banner warn"><b>${problems.length} problem(s) in the record files</b>${list(problems)}</div>` : ""}
@@ -312,26 +312,72 @@ function guide(text) {
   return p;
 }
 
-function mountSeriesCharts(root, state, records, options) {
-  const metric = METRICS.find((m) => m.key === state.metric) ?? METRICS[0];
-  const { perSuite } = seriesCharts({
+// Metric and scale are chosen per chart and remembered across renders.
+function suiteSettings(state, suite) {
+  let settings = state.suiteSettings.get(suite);
+  if (settings === undefined) {
+    settings = { metric: METRICS[0].key, log: false };
+    state.suiteSettings.set(suite, settings);
+  }
+  return settings;
+}
+
+function suiteControls(suite, settings) {
+  const options = METRICS.map(
+    (m) =>
+      `<option value="${m.key}" ${m.key === settings.metric ? "selected" : ""}>${esc(m.label)}</option>`,
+  ).join("");
+  return `<div class="controls">
+    <label>metric <select data-suite="${esc(suite)}" data-setting="metric">${options}</select></label>
+    <label><input type="checkbox" data-suite="${esc(suite)}" data-setting="log" ${settings.log ? "checked" : ""}> log scale</label>
+  </div>`;
+}
+
+function mountSuite(section, state, records, suite, options) {
+  const settings = suiteSettings(state, suite);
+  const metric = METRICS.find((m) => m.key === settings.metric) ?? METRICS[0];
+  const plot = suiteChart({
     Plot: state.Plot,
     records,
+    suite,
     metric: metric.key,
     metricLabel: metric.label,
-    log: state.log,
+    log: settings.log,
     index: state.index,
-    width: root.clientWidth - 32,
+    width: section.parentElement.clientWidth - 32,
     ...options,
   });
+  section.querySelector(".howto")?.remove();
+  section.querySelector("figure, svg")?.remove();
+  section.append(guide(chartGuide(metric)), plot);
+}
+
+function mountSeriesCharts(root, state, records, options) {
   const charts = root.querySelector("#charts");
-  if (perSuite.length === 0) {
-    charts.innerHTML = `<p class="muted">No case in this series reports ${esc(metric.label)}${options.caseFilter ? " for the tagged cases" : ""}.</p>`;
+  const suites = suiteNames(records, options.caseFilter);
+  if (suites.length === 0) {
+    charts.innerHTML = `<p class="muted">No case to chart${options.caseFilter ? " for the tagged cases" : ""}.</p>`;
+    return;
   }
-  for (const { suite, plot } of perSuite) {
-    const h3 = document.createElement("h3");
-    h3.textContent = suite;
-    charts.append(h3, guide(chartGuide(metric)), plot);
+  for (const suite of suites) {
+    const section = document.createElement("section");
+    section.className = "suite";
+    section.innerHTML = `<h3>${esc(suite)}</h3>${suiteControls(suite, suiteSettings(state, suite))}`;
+    charts.append(section);
+    mountSuite(section, state, records, suite, options);
+    section.addEventListener("change", (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement) || target.dataset.suite !== suite) {
+        return;
+      }
+      const settings = suiteSettings(state, suite);
+      if (target.dataset.setting === "metric") {
+        settings.metric = target.value;
+      } else if (target.dataset.setting === "log") {
+        settings.log = target.checked;
+      }
+      mountSuite(section, state, records, suite, options);
+    });
   }
 }
 
@@ -342,7 +388,6 @@ export async function renderSeries(root, state, title) {
     renderMissing(root, state, `No series titled “${title}”`);
     return;
   }
-  const metric = METRICS.find((m) => m.key === state.metric) ?? METRICS[0];
   const table = seriesTable(records);
   const { gaps, gapCommits } = await loadGaps(records, state.tasks);
   if (mine !== epoch) {
@@ -360,11 +405,6 @@ export async function renderSeries(root, state, title) {
   root.innerHTML = `${header(state)}
     <h2>${esc(title)}</h2>
     <p class="muted">${esc(records[0].question)}</p>
-    <div class="controls">
-      <label>metric <select id="metric">${METRICS.map((m) => `<option value="${m.key}" ${m.key === metric.key ? "selected" : ""}>${esc(m.label)}</option>`).join("")}</select></label>
-      <label><input id="log" type="checkbox" ${state.log ? "checked" : ""}> log scale</label>
-      <span class="muted">${table.keys.length} cases · ${records.length} runs</span>
-    </div>
     ${chartsUnavailable(state)}
     <div id="charts"></div>
     <section>
@@ -382,7 +422,7 @@ export async function renderSeries(root, state, title) {
       taskRows: taskMarkers(summary, records),
     });
   } else {
-    root.querySelector("#charts").innerHTML = seriesMatrix(table, metric.key);
+    root.querySelector("#charts").innerHTML = seriesMatrix(table, "meanMs");
   }
 }
 
