@@ -28,6 +28,10 @@
     // export condition. This bypasses dist/*.d.ts so `tsc --build` can typecheck
     // cross-package without anything being built first.
     "customConditions": ["source"],
+    // The "source" condition above can resolve third-party packages that ship
+    // TypeScript source (e.g. eventsource-parser) to .ts files whose internal
+    // imports use .ts extensions; this is required to accept those specifiers.
+    "allowImportingTsExtensions": true,
 
     // Recommended Options
     "strict": true,

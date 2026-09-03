@@ -66,6 +66,11 @@ export type PHConnectApp = {
   studioMode?: boolean;
 };
 
+export type PHConnectAi = {
+  /** Enables the in-browser AI assistant (chat FAB + window). Off by default. */
+  assistantEnabled?: boolean;
+};
+
 export type PHConnectPackages = {
   externalEnabled?: boolean;
   /** Subscribe to the static-mode `/__packages` SSE channel for live reload. */
@@ -249,6 +254,7 @@ export type PHConnectPwa = {
 export type PHConnectRuntimeConfig = {
   branding?: PHConnectBranding;
   app?: PHConnectApp;
+  ai?: PHConnectAi;
   packages?: PHConnectPackages;
   drives?: PHConnectDrives;
   renown?: PHConnectRenown;

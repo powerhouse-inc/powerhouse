@@ -16,6 +16,8 @@ minimumReleaseAgeExclude:
 dedupePeerDependents: false
 
 catalog:
+  "ai": 7.0.83
+  "@ai-sdk/openai-compatible": 3.0.37
   "@aws-sdk/client-s3": 3.1087.0
   "@aws-sdk/s3-request-presigner": 3.1087.0
   "typescript": 6.0.3

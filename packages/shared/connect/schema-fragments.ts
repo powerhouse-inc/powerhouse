@@ -150,6 +150,19 @@ export const phConnectRuntimeConfigSchema = {
         },
       },
     },
+    ai: {
+      type: "object",
+      additionalProperties: false,
+      description: "AI assistant (chat) behaviour.",
+      properties: {
+        assistantEnabled: {
+          type: "boolean",
+          description:
+            "When true, Connect mounts the in-browser AI assistant (bottom-right chat FAB that talks to a user-configured OpenAI-compatible endpoint and acts on the reactor). Disabled by default.",
+          default: false,
+        },
+      },
+    },
     packages: {
       type: "object",
       additionalProperties: false,
