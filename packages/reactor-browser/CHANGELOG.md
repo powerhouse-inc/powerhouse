@@ -1,3 +1,13 @@
+## 6.2.2-dev.76 (2026-09-03)
+
+### 🩹 Fixes
+
+- **reactor-browser:** export setPreferredEditorOnNode from the actions barrel ([1370e2f46](https://github.com/powerhouse-inc/powerhouse/commit/1370e2f46))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.2-dev.75 (2026-09-03)
 
 This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.
