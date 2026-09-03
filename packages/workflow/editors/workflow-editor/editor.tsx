@@ -91,10 +91,18 @@ export default function Editor() {
               };
             }),
         );
-        const payload = model.trigger
-          ? await outputOf(model.trigger.blockType, model.trigger.config)
-          : {};
-        return { trigger: { payload }, steps };
+        // Omit empty groups so the picker never offers a bare {{steps}}.
+        const scope: Record<string, unknown> = {};
+        if (model.trigger) {
+          scope.trigger = {
+            payload: await outputOf(
+              model.trigger.blockType,
+              model.trigger.config,
+            ),
+          };
+        }
+        if (Object.keys(steps).length > 0) scope.steps = steps;
+        return scope;
       },
     });
   }, [model]);

@@ -163,6 +163,10 @@ export function ExpressionPickerButton(props: {
             <div className="px-2 py-1 text-xs text-red-500">{error}</div>
           ) : scope === undefined ? (
             <div className="px-2 py-1 text-xs text-slate-400">Loading…</div>
+          ) : entriesOf(scope).length === 0 ? (
+            <div className="px-2 py-1 text-xs text-slate-400">
+              No values available for this field yet.
+            </div>
           ) : (
             entriesOf(scope).map(([key, value]) => (
               <ValueNode
