@@ -25,6 +25,9 @@ export const DEFAULT_CONNECT_CONFIG: PHConnectRuntimeConfig = {
     offline: true,
     studioMode: false,
   },
+  ai: {
+    assistantEnabled: false,
+  },
   packages: {
     externalEnabled: true,
     liveReload: false,

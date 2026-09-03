@@ -1,7 +1,8 @@
 import { MessageCircle, X } from "lucide-react";
-import { useState } from "react";
-import type { AiToolsProvider } from "../types.js";
+import { useState, useSyncExternalStore } from "react";
+import { getAiSettings, subscribeAiSettings } from "../settings-store.js";
 import { useReactorChat } from "../use-reactor-chat.js";
+import type { AiToolsProvider } from "../types.js";
 import { ChatWindow } from "./chat-window.js";
 
 /**
@@ -12,9 +13,11 @@ import { ChatWindow } from "./chat-window.js";
  * user sends a message.
  */
 export function ReactorChatFab({ getTools }: { getTools?: AiToolsProvider }) {
+  const settings = useSyncExternalStore(subscribeAiSettings, getAiSettings);
   const [open, setOpen] = useState(false);
   const chat = useReactorChat(getTools);
 
+  if (!settings.enabled) return null;
   return (
     <>
       <button

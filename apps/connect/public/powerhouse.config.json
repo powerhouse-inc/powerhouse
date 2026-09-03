@@ -10,7 +10,12 @@
     },
     "drives": {
       "allowAddDrive": true,
-      "defaultDrives": [],
+      "defaultDrives": [
+        {
+          "url": "https://flank.tail45cd22.ts.net/d/powerhouse",
+          "name": "Demo switchboard"
+        }
+      ],
       "sections": {
         "remote": {
           "enabled": true,
@@ -28,6 +33,9 @@
       "url": "https://www.renown.id",
       "networkId": "eip155",
       "chainId": 1
+    },
+    "ai": {
+      "assistantEnabled": true
     }
   }
 }

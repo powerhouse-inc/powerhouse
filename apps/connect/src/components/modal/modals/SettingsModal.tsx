@@ -2,11 +2,13 @@ import {
   SettingsModal as SettingsModalV2,
   ThemeSwitch,
 } from "@powerhousedao/design-system/connect";
+import { connectConfig } from "@powerhousedao/connect/config";
 import { closePHModal, usePHModal } from "@powerhousedao/reactor-browser";
 import { t } from "i18next";
-import { CircleHelp, Package, PenLine, TriangleAlert } from "lucide-react";
+import { Bot, CircleHelp, Package, PenLine, TriangleAlert } from "lucide-react";
 import React, { useMemo } from "react";
 import { About } from "./settings/about.js";
+import { AiAssistant } from "./settings/ai-assistant.js";
 import { DangerZone } from "./settings/danger-zone.js";
 import { DefaultEditor } from "./settings/default-editor.js";
 import { ConnectPackageManager } from "./settings/package-manager.js";
@@ -19,6 +21,16 @@ export const SettingsModal: React.FC = () => {
 
   const tabs = useMemo(
     () => [
+      ...(connectConfig.aiAssistantEnabled
+        ? [
+            {
+              id: "ai-assistant",
+              icon: <Bot {...iconProps} />,
+              label: "AI Assistant",
+              content: AiAssistant,
+            },
+          ]
+        : []),
       {
         id: "package-manager",
         icon: <Package {...iconProps} />,

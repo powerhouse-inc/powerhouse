@@ -80,7 +80,7 @@ export const App = () => {
     <SentryProvider>
       <RenownWalletProviders>
         <ToastContainer position="bottom-right" />
-        <ConnectReactorChatFab />
+        {connectConfig.aiAssistantEnabled && <ConnectReactorChatFab />}
         <MissingModelBanner />
         <Router />
         <OpenFileUploadList />

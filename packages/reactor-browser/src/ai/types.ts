@@ -11,6 +11,8 @@ import type { ZodRawShape } from "zod";
 
 /** User-configured LLM connection settings, persisted in localStorage. */
 export interface AiSettings {
+  /** Master on/off for the in-browser assistant. Off by default. */
+  enabled: boolean;
   /** OpenAI-compatible base URL, e.g. `https://api.openai.com/v1` */
   baseUrl: string;
   /** API key. Sent only to the configured endpoint, never to Powerhouse. */

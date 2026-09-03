@@ -1,9 +1,17 @@
-import { ArrowUp, Check, Settings2, Square, Trash2, X } from "lucide-react";
+import {
+  ArrowUp,
+  Check,
+  Maximize2,
+  Minimize2,
+  Square,
+  Trash2,
+  X,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { UseReactorChatResult } from "../use-reactor-chat.js";
 import type { ChatMessage, ChatPart } from "../types.js";
 import { ApprovalCard } from "./approval-card.js";
-import { AiSettingsPanel } from "./settings-panel.js";
+import { Markdown } from "./markdown.js";
 
 function formatArgs(args: unknown): string {
   let json: string;
@@ -81,11 +89,8 @@ function MessageView({
     <div className="space-y-2">
       {message.parts.map((part, index) =>
         part.type === "text" ? (
-          <div
-            key={index}
-            className="whitespace-pre-wrap text-sm text-foreground"
-          >
-            {part.text}
+          <div key={index} className="text-sm text-foreground">
+            <Markdown text={part.text} />
           </div>
         ) : (
           <div key={part.toolCallId} className="space-y-2">
@@ -119,7 +124,7 @@ export function ChatWindow({
   chat: UseReactorChatResult;
   onClose: () => void;
 }) {
-  const [settingsOpen, setSettingsOpen] = useState(!chat.configured);
+  const [fullscreen, setFullscreen] = useState(false);
   const [draft, setDraft] = useState("");
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -130,6 +135,15 @@ export function ChatWindow({
     }
   }, [chat.messages]);
 
+  useEffect(() => {
+    if (!fullscreen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setFullscreen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [fullscreen]);
+
   const submit = () => {
     const text = draft;
     setDraft("");
@@ -137,7 +151,13 @@ export function ChatWindow({
   };
 
   return (
-    <div className="fixed bottom-24 right-6 z-40 flex max-h-[min(28rem,calc(100vh-8rem))] w-[min(24rem,calc(100vw-3rem))] flex-col overflow-hidden rounded-xl border border-border bg-background shadow-2xl">
+    <div
+      className={
+        fullscreen
+          ? "fixed inset-0 z-50 flex flex-col overflow-hidden bg-background"
+          : "fixed bottom-24 right-6 z-40 flex max-h-[min(28rem,calc(100vh-8rem))] w-[min(24rem,calc(100vw-3rem))] flex-col overflow-hidden rounded-xl border border-border bg-background shadow-2xl"
+      }
+    >
       <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
         <span className="text-sm font-semibold text-foreground">
           AI Assistant
@@ -145,12 +165,12 @@ export function ChatWindow({
         <div className="flex items-center gap-1 text-muted-foreground">
           <button
             type="button"
-            aria-label="Toggle AI settings"
-            title="Settings"
-            onClick={() => setSettingsOpen((o) => !o)}
+            aria-label={fullscreen ? "Exit fullscreen" : "Fullscreen"}
+            title={fullscreen ? "Exit fullscreen (Esc)" : "Fullscreen"}
+            onClick={() => setFullscreen((f) => !f)}
             className="rounded p-1 hover:bg-muted hover:text-foreground"
           >
-            {settingsOpen ? <X size={15} /> : <Settings2 size={15} />}
+            {fullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
           </button>
           <button
             type="button"
@@ -173,8 +193,6 @@ export function ChatWindow({
         </div>
       </div>
 
-      {settingsOpen && <AiSettingsPanel settings={chat.settings} />}
-
       <div ref={listRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-3">
         {chat.messages.length === 0 && (
           <div className="pt-8 text-center text-sm text-muted-foreground">
@@ -185,8 +203,8 @@ export function ChatWindow({
               </p>
             ) : (
               <p>
-                Configure your OpenAI-compatible endpoint above, then start a
-                conversation.
+                Add your OpenAI-compatible endpoint under Settings → AI
+                Assistant, then start a conversation.
               </p>
             )}
           </div>

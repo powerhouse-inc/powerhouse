@@ -203,6 +203,7 @@ export const connectConfig = {
   appVersionCheckInterval: 60 * 60 * 1000,
   routerBasename: PH_CONNECT_BASE_PATH,
   offline: runtime.app?.offline ?? true,
+  aiAssistantEnabled: runtime.ai?.assistantEnabled ?? false,
   externalPackagesEnabled: runtime.packages?.externalEnabled,
   processors: {
     enabled: true,

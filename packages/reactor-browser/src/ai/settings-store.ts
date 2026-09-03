@@ -3,6 +3,7 @@ import type { AiSettings } from "./types.js";
 const STORAGE_KEY = "ph-ai-chat-settings";
 
 export const DEFAULT_AI_SETTINGS: AiSettings = {
+  enabled: false,
   baseUrl: "",
   apiKey: "",
   model: "",
@@ -25,6 +26,7 @@ function load(): AiSettings {
     }
     const parsed = JSON.parse(raw) as Partial<AiSettings>;
     return {
+      enabled: typeof parsed.enabled === "boolean" ? parsed.enabled : false,
       baseUrl: typeof parsed.baseUrl === "string" ? parsed.baseUrl : "",
       apiKey: typeof parsed.apiKey === "string" ? parsed.apiKey : "",
       model: typeof parsed.model === "string" ? parsed.model : "",
