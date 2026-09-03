@@ -3,6 +3,7 @@ import {
   documentSummary,
   parseActions,
   parseDispatchPayload,
+  resolveDocumentId,
 } from "./document-blocks.js";
 
 describe("parseActions", () => {
@@ -96,5 +97,28 @@ describe("parseDispatchPayload", () => {
 
   it("returns an empty action list when the model declines", () => {
     expect(parseDispatchPayload('{"actions": []}', "b").actions).toEqual([]);
+  });
+});
+
+describe("resolveDocumentId", () => {
+  const id = "f7b141f3-3504-47b4-912c-08a132656a7c";
+
+  it("pulls a uuid out of model prose, quotes or fences", () => {
+    for (const text of [
+      id,
+      `  ${id}\n`,
+      `"${id}"`,
+      "```\n" + id + "\n```",
+      `The document you want is ${id}, I think.`,
+      `{"documentId": "${id}"}`,
+    ]) {
+      expect(resolveDocumentId(text), text).toBe(id);
+    }
+  });
+
+  it("keeps a bare slug and rejects empties", () => {
+    expect(resolveDocumentId(" my-drive ")).toBe("my-drive");
+    expect(resolveDocumentId("")).toBeUndefined();
+    expect(resolveDocumentId(undefined)).toBeUndefined();
   });
 });

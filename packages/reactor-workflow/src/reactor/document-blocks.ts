@@ -81,14 +81,34 @@ export function parseDispatchPayload(
   return { documentId, actions };
 }
 
-// Whitelist for the dispatch block: a list or comma-separated string.
+// Whitelist for the dispatch block: a comma-separated string, a list of
+// names, or a core#document-schema actions array.
 function allowedActionTypes(value: unknown): string[] {
   const raw = typeof value === "string" ? value.split(",") : value;
   if (!Array.isArray(raw)) return [];
   return raw
-    .filter((entry): entry is string => typeof entry === "string")
+    .map((entry) => {
+      if (typeof entry === "string") return entry;
+      const record = entry as { type?: unknown } | null;
+      return typeof record?.type === "string" ? record.type : "";
+    })
     .map((entry) => entry.trim())
     .filter(Boolean);
+}
+
+const UUID =
+  /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+
+// Ids fed by an AI step arrive quoted, fenced or wrapped in prose; documents
+// are addressed by uuid, so prefer one when the text contains it.
+export function resolveDocumentId(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const text = value.trim();
+  if (!text) return undefined;
+  const uuid = UUID.exec(text);
+  if (uuid) return uuid[0];
+  // Slugs are valid identifiers too, so fall back to the bare text.
+  return text.replace(/^["'`]+|["'`]+$/g, "").trim() || undefined;
 }
 
 // Reducer failures don't reject execute(); they land on the operations. Fail
@@ -189,8 +209,8 @@ export class DocumentBlockExecutor implements BlockExecutor {
       DOCUMENT_DISPATCH_BLOCK,
     );
     const documentId =
-      (typeof config.documentId === "string" && config.documentId) ||
-      payload.documentId;
+      resolveDocumentId(config.documentId) ??
+      resolveDocumentId(payload.documentId);
     if (!documentId) {
       throw new Error(
         `${DOCUMENT_DISPATCH_BLOCK}: "documentId" is required, in the config or the actions payload`,
@@ -236,8 +256,8 @@ export class DocumentBlockExecutor implements BlockExecutor {
   private async getDocument(
     config: Record<string, unknown>,
   ): Promise<BlockResult> {
-    const documentId = config.documentId;
-    if (typeof documentId !== "string" || !documentId) {
+    const documentId = resolveDocumentId(config.documentId);
+    if (!documentId) {
       throw new Error(`${DOCUMENT_GET_BLOCK}: "documentId" is required`);
     }
     const document =
@@ -245,7 +265,20 @@ export class DocumentBlockExecutor implements BlockExecutor {
     return { output: documentSummary(document, true) };
   }
 
-  // config: { documentType?, name?, limit? }
+  private async findByType(type: string): Promise<PHDocument[]> {
+    try {
+      const page = await this.subgraph.reactorClient.find({ type }, undefined, {
+        cursor: "",
+        limit: 100,
+      });
+      return page.results;
+    } catch {
+      // One unreadable model must not sink a whole-reactor sweep.
+      return [];
+    }
+  }
+
+  // config: { documentType?, parentId?, name?, limit? }
   private async findDocuments(
     config: Record<string, unknown>,
   ): Promise<BlockResult> {
@@ -253,19 +286,49 @@ export class DocumentBlockExecutor implements BlockExecutor {
       typeof config.documentType === "string" && config.documentType
         ? config.documentType
         : undefined;
+    const parentId =
+      typeof config.parentId === "string" && config.parentId
+        ? config.parentId
+        : undefined;
     const limit = Math.min(
       Math.max(typeof config.limit === "number" ? config.limit : 25, 1),
       100,
     );
-    const page = await this.subgraph.reactorClient.find(
-      documentType ? { type: documentType } : {},
-      undefined,
-      { cursor: "", limit: 100 },
-    );
+    const client = this.subgraph.reactorClient;
+    let results: PHDocument[];
+    if (documentType) {
+      results = await this.findByType(documentType);
+    } else if (parentId) {
+      const page = await client.find({ parentId }, undefined, {
+        cursor: "",
+        limit: 100,
+      });
+      results = page.results;
+    } else {
+      // The index rejects an empty filter, so sweep every installed type.
+      const modules = await client.getDocumentModelModules();
+      const types = [
+        ...new Set(
+          modules.results
+            .map((module) => module.documentModel.global.id)
+            .filter(Boolean),
+        ),
+      ];
+      const pages = await Promise.all(
+        types.map((type) => this.findByType(type)),
+      );
+      results = pages.flat();
+    }
     // The index filters by type only; names are matched here.
     const needle =
       typeof config.name === "string" ? config.name.trim().toLowerCase() : "";
-    const documents = page.results
+    const seen = new Set<string>();
+    const documents = results
+      .filter((document) => {
+        if (seen.has(document.header.id)) return false;
+        seen.add(document.header.id);
+        return true;
+      })
       .map((document) => documentSummary(document, false))
       .filter(
         (summary) =>
@@ -282,10 +345,10 @@ export class DocumentBlockExecutor implements BlockExecutor {
     let documentType =
       typeof config.documentType === "string" ? config.documentType : "";
     // A document id is accepted in place of a type, for expression-fed steps.
-    if (!documentType && typeof config.documentId === "string") {
-      const document = await this.subgraph.reactorClient.get<PHDocument>(
-        config.documentId,
-      );
+    const fromId = resolveDocumentId(config.documentId);
+    if (!documentType && fromId) {
+      const document =
+        await this.subgraph.reactorClient.get<PHDocument>(fromId);
       documentType = document.header.documentType;
     }
     if (!documentType) {

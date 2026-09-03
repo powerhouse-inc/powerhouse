@@ -21,6 +21,7 @@ export const DOCUMENT_OPTION_PROPS = new Set([
   "documentId",
   "actionType",
   "driveId",
+  "parentId",
 ]);
 
 // Expression values ({{...}}) can't be resolved at design time.
@@ -136,6 +137,7 @@ export async function resolveDocumentOptions(
     case "documentId":
       return documentIdOptions(client, input);
     case "driveId":
+    case "parentId":
       return documentIdOptions(client, {
         documentType: "powerhouse/document-drive",
       });
