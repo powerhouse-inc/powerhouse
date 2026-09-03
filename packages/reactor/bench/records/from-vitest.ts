@@ -41,8 +41,7 @@ export const BENCH_TARGETS: BenchTarget[] = [
     command: "pnpm --filter @powerhousedao/reactor bench:auth:record",
     storage: "stubbed",
     title: "auth-scope microbenchmarks",
-    question:
-      "What does each step of auth evaluation cost, in isolation from storage?",
+    question: "auth evaluation cost per step, isolated from storage",
     caveats: [],
   },
   {
@@ -53,8 +52,7 @@ export const BENCH_TARGETS: BenchTarget[] = [
     command: "pnpm --filter @powerhousedao/reactor bench:events:record",
     storage: "stubbed",
     title: "event-bus microbenchmarks",
-    question:
-      "What does emit cost as subscriber count, filter shape and payload size vary?",
+    question: "emit cost by subscriber count, filter shape, and payload size",
     caveats: [],
   },
   {
@@ -65,9 +63,9 @@ export const BENCH_TARGETS: BenchTarget[] = [
     command: "pnpm --filter @powerhousedao/reactor bench:queue:record",
     storage: "stubbed",
     title: "queue throughput microbenchmarks",
-    question: "What does the queue cost per job at realistic batch sizes?",
+    question: "queue cost per job at realistic batch sizes",
     caveats: [
-      "The measured function runs expect() assertions, so every case prices assertion machinery alongside queue work",
+      "Every case includes expect() assertion overhead alongside queue work",
     ],
   },
   {
@@ -78,9 +76,9 @@ export const BENCH_TARGETS: BenchTarget[] = [
     command: "pnpm --filter @powerhousedao/reactor bench:queue-only:record",
     storage: "stubbed",
     title: "queue microbenchmarks without an executor",
-    question: "What does enqueue and dequeue cost with nothing draining?",
+    question: "enqueue and dequeue cost with nothing draining",
     caveats: [
-      "The two DAG cases enqueue dependents ahead of their dependencies across distinct sub-queues, which is valid queue contract but not a shape any reactor producer emits, since executeBatch and loadBatch topologically sort first",
+      "The two DAG cases enqueue dependents before their dependencies across sub-queues — valid per the queue contract, but not a shape any reactor producer emits, since executeBatch and loadBatch topologically sort first",
     ],
   },
   {
@@ -91,10 +89,10 @@ export const BENCH_TARGETS: BenchTarget[] = [
     command: "pnpm --filter @powerhousedao/reactor bench:cache:record",
     storage: "pglite",
     title: "write-cache microbenchmarks",
-    question: "What does a write-cache hit and miss cost against PGlite?",
+    question: "write-cache hit and miss cost against PGlite",
     caveats: [
-      "The no-cache baseline compares a cold cache rebuild against a manual replay, and a cold rebuild is a replay, so that pair reads about 1x by construction rather than measuring what the cache is worth",
-      "The two keyframe cases are floored by a 100ms drain sleep that lets fire-and-forget keyframe writes land, so their difference is not a measure of persistence overhead",
+      "The no-cache baseline compares a cold rebuild against a manual replay — both are a replay, so that pair reads about 1x by construction rather than what the cache is worth",
+      "The two keyframe cases are floored by a 100ms drain sleep for fire-and-forget keyframe writes to land, so their difference isn't persistence overhead",
     ],
   },
   {
@@ -105,9 +103,9 @@ export const BENCH_TARGETS: BenchTarget[] = [
     command: "pnpm --filter @powerhousedao/reactor bench:sync:record",
     storage: "pglite",
     title: "two-reactor sync workloads",
-    question: "How long does convergence take between two reactors?",
+    question: "convergence time between two reactors",
     caveats: [
-      "Every scenario registers its remotes before any write and has both sides writing live, so nothing here measures a reactor joining late and catching up",
+      "Every scenario registers remotes before any write, with both sides writing live — none measures a reactor joining late and catching up",
     ],
   },
 ];

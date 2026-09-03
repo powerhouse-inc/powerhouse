@@ -185,7 +185,7 @@ function seriesTasksSection(summary, gaps) {
     </tr>`,
   );
   return `<table><thead><tr><th>task</th><th>title</th><th>found in</th><th>fixed in</th><th>cases</th><th title="commits between runs that changed a file this task's sites point at">commits touching sites</th></tr></thead><tbody>${rows.join("")}</tbody></table>
-  <p class="muted">▲ found in that run · ◆ first run carrying the fix. "Fixed in" comes from a FIXED/COMMITTED history event with <code>--commit</code>; "touching sites" is inferred from changed files.</p>`;
+  <p class="muted">▲ found in that run · ◆ first run carrying the fix.</p>`;
 }
 
 function commitLine(commit) {
@@ -296,14 +296,13 @@ export function renderOverview(root, state) {
   }
 }
 
-// Every chart says how to read it; a chart that needs the source to be read
-// is one the reader guesses at.
+// The one fact a chart can't show about itself.
 function chartGuide(metric) {
-  return `One line per case, one point per run; ${metric.label}, ${metric.lower ? "lower" : "higher"} is better. Whiskers are noise. Under each run: the commit, then any task found in that run (red) or fixed by it (green); both are links.`;
+  return metric.lower ? "lower is better" : "higher is better";
 }
 
 const TIMELINE_GUIDE =
-  "Every recorded run by time, one row per series. Triangles on the bottom row are task status changes, coloured by status: grey unverified, amber verified, blue fixed, green committed, red refuted. Hover for the run or task, click to open it.";
+  "One row per series; triangles are task status changes (grey unverified, amber verified, blue fixed, green committed, red refuted).";
 
 function guide(text) {
   const p = document.createElement("p");
@@ -494,7 +493,7 @@ export function renderRecord(root, state, id) {
   root.innerHTML = `${header(state)}
     <h2>${esc(bench.id)} · ${seriesLink(bench.title)}</h2>
     ${invalidBanner(state, id)}
-    <p><b>Question</b> ${esc(bench.question)}</p>
+    <p><b>Measures</b> ${esc(bench.question)}</p>
     <p class="muted"><code>${esc(bench.command)}</code> · ${when(bench.recordedAt)} · tier ${esc(bench.tier)}${bench.tags.length ? ` · ${bench.tags.map(esc).join(", ")}` : ""}</p>
     <div class="cols">
       <div><h3>Conclusions</h3>${list(bench.conclusions)}<h3>Caveats</h3>${list(bench.caveats)}</div>
@@ -520,9 +519,9 @@ function taskSeriesBlock(state, task, summaryEntry, gaps, records) {
   );
   return `
     <h3>In ${seriesLink(records[0].title)}</h3>
-    <p>found in ${idList(summaryEntry.foundIn)} · fixed: ${fixes.length ? fixes.map(fixesLine).join("; ") : `<span class="muted">none recorded — when a fix lands: <code>pnpm --filter @powerhousedao/reactor bench:records set-status ${esc(task.id)} FIXED --dir bench --commit &lt;sha&gt; --by &lt;you&gt; --note "&lt;what changed&gt;"</code></span>`}</p>
-    <p class="muted">${cases.length ? `showing tagged case${cases.length === 1 ? "" : "s"}: ${cases.map((c) => `<code>${esc(c)}</code>`).join(", ")}` : "showing every case; add a <code>case:</code> tag to narrow to the line this task is about"}</p>
-    ${touching.length ? `<p>Commits between runs that name this task or touch its sites:</p><ol class="commits">${touching.map(commitLine).join("")}</ol>` : `<p class="muted">No commit between these runs names this task or touches its sites.</p>`}
+    <p>found in ${idList(summaryEntry.foundIn)} · fixed: ${fixes.length ? fixes.map(fixesLine).join("; ") : `<span class="muted">none recorded — run <code>pnpm --filter @powerhousedao/reactor bench:records set-status ${esc(task.id)} FIXED --dir bench --commit &lt;sha&gt; --by &lt;you&gt; --note "&lt;what changed&gt;"</code></span>`}</p>
+    <p class="muted">${cases.length ? `case${cases.length === 1 ? "" : "s"} tagged: ${cases.map((c) => `<code>${esc(c)}</code>`).join(", ")}` : "showing every case — add a <code>case:</code> tag to narrow"}</p>
+    ${touching.length ? `<p>Related commits:</p><ol class="commits">${touching.map(commitLine).join("")}</ol>` : `<p class="muted">No related commits.</p>`}
     <div id="charts"></div>`;
 }
 
