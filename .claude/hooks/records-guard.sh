@@ -2,7 +2,7 @@
 # Blocks a bench agent from reaching the record files by any route but the CLI.
 #
 # Reads a PreToolUse payload on stdin and exits 2 to block, with stderr going
-# back to the agent as feedback. Roles: runner, analyst, verifier, none.
+# back to the agent as feedback. Roles: runner, analyst, verifier, fixer, none.
 #
 # A fabricated record with plausible numbers passes every schema check and
 # every reference test, so the only defence is keeping a model off the number
@@ -26,8 +26,9 @@ command -v node >/dev/null 2>&1 ||
 # it needs, it needs on every machine that opens the repo - and jq is not that.
 # CI's node:24 image has no jq either. node is present wherever this repo is.
 #
-# One newline separates the two fields, and tool_name cannot contain one, so a
-# command that does - a heredoc - still survives the split intact.
+# Newlines separate the three fields, and neither tool_name nor file_path can
+# contain one, so a command that does - a heredoc - still survives the split
+# intact because it comes last.
 FIELDS="$(printf '%s' "$PAYLOAD" | node -e '
 let raw = "";
 process.stdin
@@ -43,18 +44,26 @@ process.stdin
     const input = payload.tool_input;
     const command =
       input && typeof input.command === "string" ? input.command : "";
-    process.stdout.write(tool + "\n" + command);
+    const filePath =
+      input && typeof input.file_path === "string" ? input.file_path : "";
+    process.stdout.write(tool + "\n" + filePath + "\n" + command);
   });
 ')"
 TOOL="${FIELDS%%$'\n'*}"
+REST="${FIELDS#*$'\n'}"
 # Command substitution strips trailing newlines, so an empty command leaves no
-# separator at all. Without this the command would inherit the tool name, and
-# the empty-command check below - the one that refuses a call it cannot read -
-# would never fire.
-if [ "$TOOL" = "$FIELDS" ]; then
+# separator after the path. Without this the command would inherit the path,
+# and the empty-command check below - the one that refuses a call it cannot
+# read - would never fire.
+if [ "$REST" = "$FIELDS" ]; then
+  FILE_PATH=""
+  CMD=""
+elif [ "${REST%%$'\n'*}" = "$REST" ]; then
+  FILE_PATH="$REST"
   CMD=""
 else
-  CMD="${FIELDS#*$'\n'}"
+  FILE_PATH="${REST%%$'\n'*}"
+  CMD="${REST#*$'\n'}"
 fi
 
 # A Bash call whose command the guard cannot see is a call it cannot check.
@@ -62,12 +71,25 @@ if [ "$TOOL" = "Bash" ] && [ -z "$CMD" ]; then
   deny "records-guard could not read the command out of the payload, so it is blocked. Report this rather than working around it."
 fi
 
-# Nothing to check on a non-Bash tool: the agents have no Write or Edit.
-[ -n "$CMD" ] || exit 0
-
 RECORD_FILES='(BENCHMARKS|TASKS)\.jsonl'
 
 # ---- every role ----------------------------------------------------------
+
+# The fixer has Edit and Write, which never pass through a shell. The record
+# files and the lock are off limits by that route too, for every role.
+case "$TOOL" in
+Edit | Write | MultiEdit | NotebookEdit)
+  if printf '%s' "$FILE_PATH" | grep -Eq "$RECORD_FILES\$"; then
+    deny "Neither record file is written by anything but 'pnpm bench:records'. An editor on the file is the same thing as a redirect onto it."
+  fi
+  if printf '%s' "$FILE_PATH" | grep -Eq '\.records\.lock$'; then
+    deny "The lock is never touched by hand. If a command reported exit 68 naming the lock file, stop and say so: a stale lock means a writer died, and clearing it can lose that writer's work."
+  fi
+  ;;
+esac
+
+# Nothing else to check on a non-Bash tool.
+[ -n "$CMD" ] || exit 0
 
 # Matched the same way as the record files: a command that acts on the lock,
 # not one that merely names it. The first version matched any mention, which
@@ -153,6 +175,16 @@ analyst)
         deny "A DEFECT or a GAP cites the run that showed it: \"evidence\": [\"B-nnn\"]. Only a HARNESS finding, which is about the apparatus, may stand without one."
     fi
   fi
+  ;;
+fixer)
+  [ "$HAS_RECORD_ALL" = 1 ] &&
+    deny "Recording runs is the runner's. Run the task's repro and put the numbers in your report; /bench-record makes the record after the commit, on a clean tree."
+  [ "$HAS_ADD_BENCHMARK" = 1 ] &&
+    deny "Recording runs is the runner's. Run the task's repro and put the numbers in your report; /bench-record makes the record after the commit, on a clean tree."
+  [ "$HAS_ADD_TASK" = 1 ] &&
+    deny "Filing findings is the analyst's. If the fix uncovered something new, put it in your report and let the analyst file it."
+  [ "$HAS_SET_STATUS" = 1 ] &&
+    deny "FIXED is set by /bench-fix after the commit, with --commit naming the sha. Report what you changed and what it measured."
   ;;
 verifier)
   [ "$HAS_RECORD_ALL" = 1 ] &&

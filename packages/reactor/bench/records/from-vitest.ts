@@ -30,6 +30,11 @@ export type BenchTarget = {
    * apparatus, so a run cannot claim more than the harness supports.
    */
   caveats: string[];
+  /**
+   * Case renames, old name to new. The converter stamps each renamed case
+   * with `continues`, so the record itself says which line it belongs to.
+   */
+  renames: Record<string, string>;
 };
 
 export const BENCH_TARGETS: BenchTarget[] = [
@@ -43,6 +48,7 @@ export const BENCH_TARGETS: BenchTarget[] = [
     title: "auth-scope microbenchmarks",
     question: "auth evaluation cost per step, isolated from storage",
     caveats: [],
+    renames: {},
   },
   {
     name: "events",
@@ -54,6 +60,7 @@ export const BENCH_TARGETS: BenchTarget[] = [
     title: "event-bus microbenchmarks",
     question: "emit cost by subscriber count, filter shape, and payload size",
     caveats: [],
+    renames: {},
   },
   {
     name: "queue",
@@ -67,6 +74,7 @@ export const BENCH_TARGETS: BenchTarget[] = [
     caveats: [
       "Every case includes expect() assertion overhead alongside queue work",
     ],
+    renames: {},
   },
   {
     name: "queue-only",
@@ -80,6 +88,7 @@ export const BENCH_TARGETS: BenchTarget[] = [
     caveats: [
       "The two DAG cases enqueue dependents before their dependencies across sub-queues — valid per the queue contract, but not a shape any reactor producer emits, since executeBatch and loadBatch topologically sort first",
     ],
+    renames: {},
   },
   {
     name: "cache",
@@ -94,6 +103,7 @@ export const BENCH_TARGETS: BenchTarget[] = [
       "The no-cache baseline compares a cold rebuild against a manual replay — both are a replay, so that pair reads about 1x by construction rather than what the cache is worth",
       "The two keyframe cases are floored by a 100ms drain sleep for fire-and-forget keyframe writes to land, so their difference isn't persistence overhead",
     ],
+    renames: {},
   },
   {
     name: "sync",
@@ -107,6 +117,7 @@ export const BENCH_TARGETS: BenchTarget[] = [
     caveats: [
       "Every scenario registers remotes before any write, with both sides writing live — none measures a reactor joining late and catching up",
     ],
+    renames: {},
   },
 ];
 
@@ -161,6 +172,8 @@ export type VitestBenchReport = z.infer<typeof VitestBenchReport>;
 /** One tinybench task, which carries no rank, name or median of its own. */
 export type TinybenchTask = {
   name: string;
+  /** The case's earlier name, or empty when it never changed. */
+  continues: string;
   samples: number[];
   rme: number;
   totalTime: number;
@@ -183,6 +196,8 @@ export type MicroEntryInput = {
   /** Appended to what the numbers earn; never a substitute for it. */
   conclusions: string[];
   caveats: string[];
+  /** Measured by the harness itself; appended after the suite spreads. */
+  derived: DerivedRatio[];
   /** Empty means the target's own. */
   title: string;
   question: string;
@@ -196,7 +211,13 @@ export type MicroEntryInput = {
  * moment it starts computing a duration it becomes a place numbers can be
  * invented.
  */
-export function suitesFromVitest(report: VitestBenchReport): MicroSuite[] {
+export function suitesFromVitest(
+  report: VitestBenchReport,
+  renames: Record<string, string> = {},
+): MicroSuite[] {
+  const formerly = new Map(
+    Object.entries(renames).map(([from, to]) => [to, from]),
+  );
   const suites: MicroSuite[] = [];
   for (const file of report.files) {
     for (const group of file.groups) {
@@ -227,6 +248,10 @@ export function suitesFromVitest(report: VitestBenchReport): MicroSuite[] {
           }
           if (benchmark.p999 !== undefined) {
             converted.p999Ms = benchmark.p999;
+          }
+          const previous = formerly.get(benchmark.name);
+          if (previous !== undefined) {
+            converted.continues = previous;
           }
           return converted;
         }),
@@ -270,6 +295,7 @@ export function suitesFromTinybench(
         rmePct: task.rme,
         sampleCount: task.samples.length,
         totalTimeMs: task.totalTime,
+        ...(task.continues === "" ? {} : { continues: task.continues }),
       })),
     },
   ];
@@ -282,7 +308,7 @@ export function suitesFromTinybench(
 export function buildMicroEntry(
   input: MicroEntryInput,
 ): Record<string, unknown> {
-  const derived = input.suites.map(suiteSpread);
+  const derived = [...input.suites.map(suiteSpread), ...input.derived];
   const conclusions = [
     ...input.suites.map(suiteConclusion),
     ...input.conclusions,

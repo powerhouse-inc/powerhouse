@@ -176,6 +176,12 @@ export const MicroCase = z.strictObject({
   /** vitest's --compare join key, hash-derived from file plus name: worth
    * recording, not worth trusting across a rename. */
   vitestId: z.string().min(1).optional(),
+  /**
+   * The name this case had in earlier records of the same series. A viewer
+   * draws the two names as one line. Name-scoped: one record declaring it
+   * joins every record on either side of the rename.
+   */
+  continues: z.string().min(1).optional(),
 });
 export type MicroCase = z.infer<typeof MicroCase>;
 

@@ -970,6 +970,8 @@ export class KyselyWriteCache implements IWriteCache {
               {
                 skip: operation.skip,
                 protocolVersion,
+                replayOptions: { operation },
+                skipIndexValidation: true,
               },
             );
           }
@@ -1277,6 +1279,8 @@ export class KyselyWriteCache implements IWriteCache {
           document = module.reducer(document, operation.action, undefined, {
             skip: operation.skip,
             protocolVersion,
+            replayOptions: { operation },
+            skipIndexValidation: true,
           });
         }
 

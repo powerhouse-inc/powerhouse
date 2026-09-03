@@ -363,3 +363,25 @@ describe("bench-verifier", () => {
     ).toBe(2);
   });
 });
+
+describe("bench:fix verbs", () => {
+  const FIX = "pnpm --filter @powerhousedao/reactor bench:fix";
+  const verbs = [
+    `${FIX} gate T-007`,
+    `${FIX} sites T-007 --context 40`,
+    `${FIX} cases bench/results/write-cache.json`,
+    `${FIX} criterion --before /tmp/before.json --case "Cold miss rebuild (1000 operations)" --max-ratio 0.65 --fail-ratio 0.9 --control "No-cache baseline: manual rebuild (1000 operations)"`,
+    `${FIX} compare --criterion bench/results/criterion.json --after bench/results/write-cache.json`,
+    `${FIX} dist-check --marker replayHash --package shared`,
+    `${FIX} ci --integration`,
+    "cp packages/reactor/bench/results/write-cache.json /tmp/before.json",
+  ];
+
+  it("are read-only for every agent role, so none is blocked", () => {
+    for (const role of ["fixer", "verifier", "analyst", "runner", "none"]) {
+      for (const command of verbs) {
+        expect(guard(role, command).exit, `${role}: ${command}`).toBe(0);
+      }
+    }
+  });
+});

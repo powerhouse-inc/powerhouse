@@ -32,12 +32,28 @@ function createAsyncSubscriber(delayMs = 0) {
 }
 
 /**
- * Creates a subscriber that randomly decides to be sync or async
+ * Creates a subscriber that randomly decides to be sync or async. The async
+ * path resolves on a microtask, the same as createAsyncSubscriber at 0ms, so
+ * the Mixed suite prices the sync/async ratio and not the scheduler. An earlier
+ * version awaited setImmediate here, and every Mixed case then measured only
+ * its count of macrotask hops, at roughly 300x the cost of a microtask (T-003).
  */
 function createMixedSubscriber(asyncProbability = 0.5) {
   return async () => {
     if (Math.random() < asyncProbability) {
-      // Async path with minimal delay
+      await Promise.resolve();
+    }
+  };
+}
+
+/**
+ * Creates a subscriber that randomly yields to the macrotask queue. This is the
+ * old Mixed behaviour kept as one labelled case, for the cost of a setImmediate
+ * hop against the microtask cases above.
+ */
+function createYieldingSubscriber(yieldProbability = 0.5) {
+  return async () => {
+    if (Math.random() < yieldProbability) {
       await new Promise((resolve) => setImmediate(resolve));
     }
   };
@@ -228,6 +244,13 @@ describe("EventBus Mixed Sync/Async Emission Throughput", () => {
   const mixedEventBus10_90 = setupMixedEventBus(10, 0.9);
   const mixedEventBus25_50 = setupMixedEventBus(25, 0.5);
   const mixedEventBus50_50 = setupMixedEventBus(50, 0.5);
+  const yieldingEventBus50_50 = new EventBus();
+  for (let i = 0; i < 50; i++) {
+    yieldingEventBus50_50.subscribe(
+      EVENT_TYPE_MIXED,
+      createYieldingSubscriber(0.5),
+    );
+  }
 
   bench(
     "10 subscribers (90% sync, 10% async)",
@@ -281,6 +304,14 @@ describe("EventBus Mixed Sync/Async Emission Throughput", () => {
     "50 subscribers (50% sync, 50% async)",
     async () => {
       await mixedEventBus50_50.emit(EVENT_TYPE_MIXED, TEST_DATA);
+    },
+    { time: 500 },
+  );
+
+  bench(
+    "50 subscribers (50% sync, 50% yield to macrotask via setImmediate)",
+    async () => {
+      await yieldingEventBus50_50.emit(EVENT_TYPE_MIXED, TEST_DATA);
     },
     { time: 500 },
   );
@@ -348,9 +379,14 @@ describe("EventBus Error Handling Performance", () => {
     };
   }
 
+  /**
+   * Resolves on a microtask before deciding, so the async case prices the
+   * error path. An unconditional 1ms sleep here once made "Error aggregation
+   * (async)" 99.8 percent timer (T-003).
+   */
   function createAsyncErrorSubscriber(shouldError: boolean) {
     return async () => {
-      await new Promise((resolve) => setTimeout(resolve, 1));
+      await Promise.resolve();
       if (shouldError) {
         throw new Error("Test async error");
       }
