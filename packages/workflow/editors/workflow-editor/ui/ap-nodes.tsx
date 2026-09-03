@@ -143,18 +143,21 @@ export function ApAppendNode(props: NodeProps) {
   const data = props.data as { parentId: string; port: string };
   const attachSteps = getCanvasHandlers()?.attachableSteps(data.parentId);
   return (
-    <AddButton
-      title={data.port === "next" ? "Add step" : `Add step (${data.port})`}
-      presets={STEP_PRESETS}
-      showPieces
-      attachSteps={attachSteps}
-      onAttach={(stepId) =>
-        getCanvasHandlers()?.attachStep(data.parentId, data.port, stepId)
-      }
-      onPick={(preset) =>
-        getCanvasHandlers()?.appendStep(data.parentId, data.port, preset)
-      }
-    />
+    <>
+      <Handle type="target" position={Position.Top} style={hiddenHandle} />
+      <AddButton
+        title={data.port === "next" ? "Add step" : `Add step (${data.port})`}
+        presets={STEP_PRESETS}
+        showPieces
+        attachSteps={attachSteps}
+        onAttach={(stepId) =>
+          getCanvasHandlers()?.attachStep(data.parentId, data.port, stepId)
+        }
+        onPick={(preset) =>
+          getCanvasHandlers()?.appendStep(data.parentId, data.port, preset)
+        }
+      />
+    </>
   );
 }
 
