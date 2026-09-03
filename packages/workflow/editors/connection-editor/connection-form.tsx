@@ -6,8 +6,12 @@ import type {
   ConnectionStatus,
 } from "document-models/connection";
 import {
+  createSecret,
   fetchPieceCatalog,
+  fetchSecretStat,
+  rotateSecret,
   type PieceSummary,
+  type SecretStat,
 } from "../workflow-editor/runtime-api.js";
 import { AutocompleteInput } from "../workflow-editor/ui/Autocomplete.js";
 import {
@@ -120,33 +124,121 @@ function ConfigField(props: {
   );
 }
 
-// Heuristic: env var names are short SCREAMING_SNAKE; anything else is
-// probably the secret value itself, which must never enter the document.
-function looksLikeSecretValue(ref: string): boolean {
-  return ref.length > 0 && !/^[A-Z][A-Z0-9_]{0,63}$/.test(ref);
+const SECRET_REF_PREFIX = "secret://v1:";
+
+function isManagedRef(ref: string): boolean {
+  return ref.startsWith(SECRET_REF_PREFIX);
 }
 
+// The input takes the VALUE; only the minted ref ever enters the document.
+// No ref: paste creates a secret. Managed ref: paste rotates in place.
 function SecretField(props: {
   field: AuthField;
   refValue: string;
+  connectionName: string;
   onCommit: (ref: string) => void;
   onRemove: () => void;
 }) {
+  const { field, refValue } = props;
+  const managed = isManagedRef(refValue);
+  const [value, setValue] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [stat, setStat] = useState<SecretStat | null>(null);
+  // "Replace" mints a new ref instead of rotating the existing one.
+  const [replace, setReplace] = useState(false);
+  const [manualRef, setManualRef] = useState(false);
+
+  useEffect(() => {
+    setStat(null);
+    if (!isManagedRef(refValue)) return;
+    let cancelled = false;
+    fetchSecretStat(refValue).then(
+      (result) => {
+        if (!cancelled) setStat(result);
+      },
+      () => undefined,
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [refValue]);
+
+  const commitValue = () => {
+    const secretValue = value;
+    if (!secretValue || busy) return;
+    setBusy(true);
+    setError(null);
+    const label = `${props.connectionName || "connection"} · ${field.displayName}`;
+    const request =
+      managed && !replace
+        ? rotateSecret(refValue, secretValue)
+        : createSecret(secretValue, label);
+    request
+      .then((result) => {
+        setValue("");
+        setReplace(false);
+        if (result.ref !== refValue) props.onCommit(result.ref);
+        else setStat(result);
+      })
+      .catch((requestError: unknown) => {
+        setError(
+          requestError instanceof Error
+            ? requestError.message
+            : String(requestError),
+        );
+      })
+      .finally(() => setBusy(false));
+  };
+
   return (
     <label className="block">
-      <FieldLabel field={props.field} />
+      <FieldLabel field={field} />
+      {managed ? (
+        <p className="mb-1 text-[11px] text-slate-500">
+          <span className="font-medium text-slate-600">
+            {stat?.label ?? refValue}
+          </span>
+          {stat ? (
+            <span>
+              {" "}
+              · v{stat.version} · rotated{" "}
+              {new Date(stat.updatedAt).toLocaleString()}
+            </span>
+          ) : null}
+          {stat?.status === "DELETED" ? (
+            <span className="font-medium text-red-600"> · deleted</span>
+          ) : null}
+        </p>
+      ) : null}
+      {refValue && !managed ? (
+        <p className="mb-1 rounded bg-amber-50 px-2 py-1 text-[11px] text-amber-700">
+          Legacy ref <span className="font-mono">{refValue}</span> no longer
+          resolves. Paste the secret value to replace it with a managed secret.
+        </p>
+      ) : null}
       <div className="flex gap-1">
         <input
-          className={`${inputClass} font-mono text-xs`}
-          defaultValue={props.refValue}
-          placeholder="ENV_VAR_NAME"
+          className={inputClass}
+          type="password"
+          value={value}
+          disabled={busy}
+          placeholder={
+            managed
+              ? replace
+                ? "Paste a value for the replacement secret"
+                : "•••••••• — paste a new value to rotate"
+              : "Paste the secret value"
+          }
+          autoComplete="off"
           spellCheck={false}
-          onBlur={(event) => {
-            const ref = event.target.value.trim();
-            if (ref && ref !== props.refValue) props.onCommit(ref);
+          onChange={(event) => setValue(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") commitValue();
           }}
+          onBlur={commitValue}
         />
-        {props.refValue ? (
+        {refValue ? (
           <button
             type="button"
             className="shrink-0 rounded border border-solid border-slate-200 px-2 text-xs text-slate-400 hover:text-red-500"
@@ -157,16 +249,50 @@ function SecretField(props: {
           </button>
         ) : null}
       </div>
-      {looksLikeSecretValue(props.refValue) ? (
-        <p className="mt-0.5 text-[11px] font-medium text-red-600">
-          This looks like a secret value, not an environment variable name. The
-          document only stores the variable name (e.g. DISCORD_BOT_TOKEN); set
-          the value in the switchboard&apos;s environment.
-        </p>
+      {error ? (
+        <p className="mt-0.5 text-[11px] font-medium text-red-600">{error}</p>
+      ) : null}
+      <div className="mt-0.5 flex gap-3">
+        {managed ? (
+          <button
+            type="button"
+            className="text-[11px] text-slate-400 underline hover:text-slate-600"
+            onClick={() => setReplace((mode) => !mode)}
+          >
+            {replace ? "Rotate the existing secret instead" : "Replace with a different secret"}
+          </button>
+        ) : null}
+        <button
+          type="button"
+          className="text-[11px] text-slate-400 underline hover:text-slate-600"
+          onClick={() => setManualRef((mode) => !mode)}
+        >
+          {manualRef ? "Hide ref" : "Enter a ref manually"}
+        </button>
+      </div>
+      {manualRef ? (
+        <input
+          className={`${inputClass} mt-1 font-mono text-xs`}
+          defaultValue={refValue}
+          placeholder="secret://v1:…"
+          spellCheck={false}
+          onBlur={(event) => {
+            const ref = event.target.value.trim();
+            if (ref && ref !== refValue) {
+              if (!isManagedRef(ref)) {
+                setError(
+                  "Only secret://v1: refs resolve. If this is a secret value, paste it in the field above instead.",
+                );
+                return;
+              }
+              props.onCommit(ref);
+            }
+          }}
+        />
       ) : null}
       <Hint>
-        {props.field.description ??
-          "Name of the environment variable on the switchboard host that holds this secret. The value never enters the document."}
+        {field.description ??
+          "The value is stored encrypted on the switchboard; the document only carries a reference to it."}
       </Hint>
     </label>
   );
@@ -325,6 +451,7 @@ export function ConnectionForm(props: {
             <SecretField
               key={field.name}
               field={field}
+              connectionName={state.name}
               refValue={refByName.get(field.name) ?? ""}
               onCommit={(ref) => {
                 callbacks.setSecretRef(field.name, ref);

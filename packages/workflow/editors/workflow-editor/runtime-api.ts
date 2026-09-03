@@ -216,6 +216,56 @@ export function fetchConnections(): Promise<ConnectionSummary[]> {
   return connectionsCache.promise;
 }
 
+export interface SecretStat {
+  ref: string;
+  label: string | null;
+  version: number;
+  status: "ACTIVE" | "DELETED";
+  createdAt: string;
+  updatedAt: string;
+}
+
+const SECRET_FIELDS = "ref label version status createdAt updatedAt";
+
+// Mints a managed secret; only the returned ref ever enters a document.
+export async function createSecret(
+  value: string,
+  label?: string,
+): Promise<SecretStat> {
+  const data = await gql<{ workflowRuntime: { createSecret: SecretStat } }>(
+    `mutation CreateSecret($value: String!, $label: String) {
+      workflowRuntime { createSecret(value: $value, label: $label) { ${SECRET_FIELDS} } }
+    }`,
+    { value, label: label ?? null },
+  );
+  return data.workflowRuntime.createSecret;
+}
+
+// Same ref, version+1; referencing documents stay untouched.
+export async function rotateSecret(
+  ref: string,
+  value: string,
+): Promise<SecretStat> {
+  const data = await gql<{ workflowRuntime: { rotateSecret: SecretStat } }>(
+    `mutation RotateSecret($ref: String!, $value: String!) {
+      workflowRuntime { rotateSecret(ref: $ref, value: $value) { ${SECRET_FIELDS} } }
+    }`,
+    { ref, value },
+  );
+  return data.workflowRuntime.rotateSecret;
+}
+
+// Metadata only; null for unknown or legacy refs.
+export async function fetchSecretStat(ref: string): Promise<SecretStat | null> {
+  const data = await gql<{ workflowRuntime: { secret: SecretStat | null } }>(
+    `query Secret($ref: String!) {
+      workflowRuntime { secret(ref: $ref) { ${SECRET_FIELDS} } }
+    }`,
+    { ref },
+  );
+  return data.workflowRuntime.secret;
+}
+
 export async function testTrigger(workflowId: string): Promise<unknown> {
   const data = await gql<{ workflowRuntime: { testTrigger: unknown } }>(
     `mutation TestTrigger($workflowId: String!) {
