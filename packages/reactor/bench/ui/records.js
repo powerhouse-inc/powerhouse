@@ -348,10 +348,28 @@ function landedBefore(records, gapCommits, event) {
   return after ? { recordId: after.id, by: "time" } : undefined;
 }
 
+// The runs a finding came from: the task's own evidence plus what the filing
+// and verifying events cite. A FIXED or REFUTED event cites runs too, but
+// those are where the claim was tested, not where it was found.
+function foundEvidence(task) {
+  const ids = new Set(task.evidence ?? []);
+  for (const event of task.history ?? []) {
+    if (event.status === "UNVERIFIED" || event.status === "VERIFIED") {
+      for (const id of event.evidence ?? []) {
+        ids.add(id);
+      }
+    }
+  }
+  return ids;
+}
+
 export function seriesTasks(records, index, gapCommits = new Map()) {
   const entries = new Map();
   for (const bench of records) {
     for (const task of index.tasksForBenchmark.get(bench.id) ?? []) {
+      if (!foundEvidence(task).has(bench.id)) {
+        continue;
+      }
       let entry = entries.get(task.id);
       if (entry === undefined) {
         entry = { task, foundIn: [], fixes: [], cases: caseTags(task) };

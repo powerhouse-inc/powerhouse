@@ -21,7 +21,7 @@ export function formatValue(value) {
 }
 
 const REPO = "https://github.com/powerhouse-inc/powerhouse";
-const FOUND_COLOR = "#d97706";
+const FOUND_COLOR = "#dc2626";
 const FIXED_COLOR = "#16a34a";
 
 // Tick text: the recording time. The id and sha live elsewhere on the chart.
@@ -79,12 +79,6 @@ export function seriesCharts({
     id: bench.id,
     sha: bench.environment.reactorSha,
   }));
-  const invalid = records
-    .filter((bench) => index.invalidatedBy.has(bench.id))
-    .map((bench) => ({
-      x: xLabel(bench),
-      tasks: index.invalidatedBy.get(bench.id),
-    }));
   const breaks = records
     .filter((bench) => index.envBreaks.has(bench.id))
     .map((bench) => ({ x: xLabel(bench) }));
@@ -110,20 +104,14 @@ export function seriesCharts({
         },
         color: { legend: true },
         marks: [
-          Plot.ruleX(invalid, {
+          Plot.ruleX(annotations, {
             x: "x",
-            stroke: "#dc2626",
+            stroke: "color",
             strokeWidth: 18,
             strokeOpacity: 0.12,
-            href: (d) => `#/task/${d.tasks[0].id}`,
+            href: "href",
             tip: true,
-            title: (d) =>
-              d.tasks
-                .map(
-                  (task) =>
-                    `${task.id} found this run misleading: ${task.title}`,
-                )
-                .join("\n"),
+            title: (d) => `${d.label}\n${d.title}`,
           }),
           Plot.ruleX(breaks, {
             x: "x",
