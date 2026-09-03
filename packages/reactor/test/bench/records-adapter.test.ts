@@ -1,7 +1,10 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { BenchmarkEntry } from "../../bench/records/benchmark-schema.js";
+import {
+  BenchmarkEntry,
+  MicroSuite,
+} from "../../bench/records/benchmark-schema.js";
 import type { MachineEnvironment } from "../../bench/records/benchmark-schema.js";
 import { parseFromVitestOptions } from "../../bench/records/from-vitest-options.js";
 import {
@@ -86,6 +89,13 @@ describe("suitesFromVitest", () => {
     });
   });
 
+  it("stamps a renamed case with the name it continues", () => {
+    const current = report().files[0].groups[0].benchmarks[0].name;
+    const suites = suitesFromVitest(report(), { "the old name": current });
+    expect(suites[0].cases[0].continues).toBe("the old name");
+    expect(suites[0].cases[1]?.continues).toBeUndefined();
+  });
+
   it("keeps one suite per group, nested groups included", () => {
     const suites = suitesFromVitest(report());
 
@@ -134,6 +144,7 @@ describe("suitesFromTinybench", () => {
     samples: number[],
   ): TinybenchTask => ({
     name,
+    continues: "",
     samples,
     rme: 1.5,
     totalTime: 10000,
@@ -159,6 +170,20 @@ describe("suitesFromTinybench", () => {
     expect(suites[0].cases[0].medianMs).toBe(105);
     expect(suites[0].cases[0].sampleCount).toBe(4);
     expect(suites[0].cases[1].medianMs).toBe(500);
+  });
+
+  it("carries a renamed case's earlier name, and nothing for one never renamed", () => {
+    const renamed = {
+      ...task("slow (writes to convergence)", 2, [500, 400, 600]),
+      continues: "slow",
+    };
+    const suites = suitesFromTinybench("two-reactor sync", [
+      renamed,
+      task("fast", 10, [100, 90, 110, 130]),
+    ]);
+    expect(suites[0].cases[1].continues).toBe("slow");
+    expect("continues" in suites[0].cases[0]).toBe(false);
+    expect(() => MicroSuite.parse(suites[0])).not.toThrow();
   });
 
   it("produces something the payload accepts", () => {

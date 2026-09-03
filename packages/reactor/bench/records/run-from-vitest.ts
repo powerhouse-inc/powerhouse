@@ -96,7 +96,7 @@ function main(): void {
       target,
       runner: "vitest-bench",
       runnerVersion: readPackageVersion("vitest"),
-      suites: suitesFromVitest(report),
+      suites: suitesFromVitest(report, target.renames),
       environment: readMachineEnvironment(target.storage),
       recordedAt: new Date().toISOString(),
       derived: [],

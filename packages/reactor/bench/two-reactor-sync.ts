@@ -719,6 +719,8 @@ let setup: TwoReactorSetup | null = null;
 
 type Scenario = {
   name: string;
+  /** The case's name in records before the timed window changed; "" if never renamed. */
+  continues: string;
   ids: string[];
   /** Which side creates each document. */
   creatorFor: (setup: TwoReactorSetup, index: number) => IReactor;
@@ -783,6 +785,7 @@ const sideA = (setup: TwoReactorSetup) => setup.reactorA;
 const scenarios: Scenario[] = [
   {
     name: "Baseline: 10 documents, 10 operations each (writes to convergence)",
+    continues: "Baseline: 10 documents, 10 operations each",
     ids: Array.from({ length: 10 }, (_, i) => deterministicId("doc", i)),
     creatorFor: (setup, i) => (i < 5 ? setup.reactorA : setup.reactorB),
     write: (setup, ids) => {
@@ -804,6 +807,7 @@ const scenarios: Scenario[] = [
   },
   {
     name: "Contention: 10 documents, 10 operations each, writer alternates per operation (writes to convergence)",
+    continues: "",
     ids: Array.from({ length: 10 }, (_, i) => deterministicId("doc", i + 400)),
     creatorFor: (setup, i) => (i < 5 ? setup.reactorA : setup.reactorB),
     write: (setup, ids) => {
@@ -825,6 +829,7 @@ const scenarios: Scenario[] = [
   },
   {
     name: "Conflicts: 5 documents, 20 conflicting operations each (writes to convergence)",
+    continues: "Conflicts: 5 documents, 20 conflicting operations each",
     ids: Array.from({ length: 5 }, (_, i) => deterministicId("doc", i + 100)),
     creatorFor: sideA,
     write: (setup, ids) => {
@@ -846,6 +851,7 @@ const scenarios: Scenario[] = [
   },
   {
     name: "Heavy Load: 50 documents, 100 operations each (writes to convergence)",
+    continues: "Heavy Load: 50 documents, 100 operations each",
     ids: Array.from({ length: 50 }, (_, i) => deterministicId("doc", i + 200)),
     creatorFor: alternating,
     write: (setup, ids) => {
@@ -867,6 +873,7 @@ const scenarios: Scenario[] = [
   },
   {
     name: "Deep Hierarchy: 10 documents with nested structures (writes to convergence)",
+    continues: "Deep Hierarchy: 10 documents with nested structures",
     ids: Array.from({ length: 10 }, (_, i) => deterministicId("doc", i + 300)),
     creatorFor: sideA,
     write: (setup, ids) => {
@@ -1009,7 +1016,12 @@ if (record) {
         `${task.name} failed: ${reason instanceof Error ? reason.message : JSON.stringify(reason)}`,
       );
     }
-    return { name: task.name, ...task.result };
+    const scenario = scenarios.find((entry) => entry.name === task.name);
+    return {
+      name: task.name,
+      continues: scenario?.continues ?? "",
+      ...task.result,
+    };
   });
 
   const entry = buildMicroEntry({
