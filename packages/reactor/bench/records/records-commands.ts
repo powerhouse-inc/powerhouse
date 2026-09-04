@@ -124,6 +124,97 @@ function addTask(options: AddOptions, io: CommandIo): CommandResult {
   });
 }
 
+/**
+ * Two shas name the same commit when one is a prefix of the other. Records are
+ * stamped with `rev-parse --short=12` while callers pass whatever length they
+ * read back from `rev-parse`, so neither side can be assumed longer.
+ */
+function samePrefix(left: string, right: string): boolean {
+  return left.startsWith(right) || right.startsWith(left);
+}
+
+/**
+ * FIXED means a benchmark moved, so it has to cite the run that shows it did.
+ * Without this the status is testimony: the fixer reports its own numbers, the
+ * artifacts behind them are temporary, and nothing in the records measures the
+ * fixed state. Requiring a record stamped with the fix's own sha also forces
+ * the ordering that makes such a record possible - commit, then measure the
+ * clean tree, then set the status - because a run against a dirty tree would
+ * carry the sha of the parent and describe code that is not there.
+ */
+function requireMeasuredFix(
+  options: SetStatusOptions,
+  task: Task,
+  benchmarks: Benchmark[],
+): void {
+  if (options.commit === "") {
+    throw new RecordsError(
+      [
+        `${options.taskId} cannot be FIXED without --commit: the status is a claim about a specific commit.`,
+        "Commit the fix first, then pass the sha it landed at.",
+      ].join("\n"),
+      RECORDS_EXIT.unmeasuredFix,
+    );
+  }
+
+  const cited = benchmarks.filter((entry) =>
+    options.evidence.includes(entry.id),
+  );
+  const measured = cited.filter((entry) =>
+    samePrefix(entry.environment.reactorSha, options.commit),
+  );
+
+  if (measured.length === 0) {
+    const detail =
+      cited.length === 0
+        ? "it cites no records at all"
+        : cited
+            .map(
+              (entry) => `${entry.id} measured ${entry.environment.reactorSha}`,
+            )
+            .join(", ");
+    throw new RecordsError(
+      [
+        `${options.taskId} cannot be FIXED at ${options.commit}: no cited benchmark was measured at that commit (${detail}).`,
+        `Record the benchmark on the clean tree at ${options.commit}, then cite it:`,
+        "  pnpm bench:record <bench> --task <T-id> --supersedes <old B-id>",
+        "The old record stays as the before; the new one is the proof the number moved.",
+      ].join("\n"),
+      RECORDS_EXIT.unmeasuredFix,
+    );
+  }
+
+  // A sha match alone only proves that something was measured at the fix. The
+  // run has to be the same benchmark the finding rests on, or a task about the
+  // queue could close on a fresh auth record that never touched it.
+  const beforeCommands = new Set(
+    benchmarks
+      .filter((entry) => priorEvidence(task).includes(entry.id))
+      .map((entry) => entry.command),
+  );
+  if (beforeCommands.size === 0) {
+    return;
+  }
+  if (measured.some((entry) => beforeCommands.has(entry.command))) {
+    return;
+  }
+
+  throw new RecordsError(
+    [
+      `${options.taskId} cannot be FIXED at ${options.commit}: the records measured at that commit are not the benchmark the finding rests on.`,
+      `Measured there: ${measured.map((entry) => `${entry.id} (${entry.command})`).join(", ")}`,
+      `The finding rests on: ${[...beforeCommands].join(", ")}`,
+      "Re-run that benchmark on the clean tree and cite the record it writes.",
+    ].join("\n"),
+    RECORDS_EXIT.unmeasuredFix,
+  );
+}
+
+/** Everything the task cited before this event, envelope and history alike. */
+function priorEvidence(task: Task): string[] {
+  return [...task.evidence, ...task.history.flatMap((event) => event.evidence)];
+}
+
 function setStatus(options: SetStatusOptions, io: CommandIo): CommandResult {
   const path = join(options.dir, TASKS_FILE);
 
@@ -138,6 +229,19 @@ function setStatus(options: SetStatusOptions, io: CommandIo): CommandResult {
     }
 
     const previous = existing[index];
+
+    if (options.status === "FIXED") {
+      requireMeasuredFix(
+        options,
+        previous,
+        readValidated(
+          join(options.dir, BENCHMARKS_FILE),
+          BenchmarkEntry,
+          BENCHMARKS_FILE,
+        ),
+      );
+    }
+
     const event: StatusEvent = {
       status: options.status,
       at: options.at === "" ? io.now() : options.at,

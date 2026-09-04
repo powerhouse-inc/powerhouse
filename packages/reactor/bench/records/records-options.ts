@@ -12,6 +12,7 @@ export const RECORDS_EXIT = {
   corruptFile: 2,
   duplicateId: 3,
   notFound: 4,
+  unmeasuredFix: 5,
   usage: 64,
   error: 68,
 } as const;

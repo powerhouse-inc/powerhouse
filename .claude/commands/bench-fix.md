@@ -95,20 +95,49 @@ lands with the rewritten content.
 git rev-parse --short=9 HEAD
 ```
 
-## Step 4 — mark it FIXED at that sha
+## Step 4 — record the fixed state
+
+The tree is clean and the fix has a sha, so this is the first moment a record
+can measure the fix and name the commit it measured. Do it here, not later:
+the fixer's before and after live in a scratchpad and a gitignored results
+file, so without this step FIXED is testimony and the proof is thrown away.
+
+Which benchmark: the `command` field of the record the task cites. B-006's
+`bench:queue:record` means `queue`; B-007's `bench:cache:record` means `cache`.
+
+Spawn `bench-runner` with that one name, and tell it to pass:
+
+- `--task <T-id>` so the record names the task it bears on
+- `--supersedes <the cited B-id>` when the fix was **HARNESS**. A harness fix
+  changes what the numbers mean, so the old entry is not a comparable
+  baseline and has to say so - otherwise the next reader diffs the two and
+  reads a speedup that is only the apparatus changing.
+
+**This is slow, a second time.** `sync` is about nine minutes, so a T-009 pays
+it twice in one command; say so before starting rather than after. Do not run
+it alongside anything else - `withLock` is `O_EXCL` with no retry.
+
+If the runner refuses because the tree is dirty, something in Step 3 was left
+unstaged. Fix that rather than passing `--allow-dirty`: the whole point of this
+step is a sha that names the code that ran.
+
+## Step 5 — mark it FIXED at that sha
 
 ```bash
-pnpm --filter @powerhousedao/reactor bench:records set-status T-007 FIXED --dir bench --by claude --commit <sha> --evidence B-007 --note "<the fixer's 'For the FIXED note' paragraph, plus verify's coverage gap if any>"
+pnpm --filter @powerhousedao/reactor bench:records set-status T-007 FIXED --dir bench --by claude --commit <sha> --evidence B-007 --evidence B-014 --note "<the fixer's 'For the FIXED note' paragraph, plus verify's coverage gap if any>"
 ```
 
-`--evidence` is every B-id the task already cites; `--by claude` matches the
-three FIXED events on record. The note carries the criterion, before and after,
-and the test result, so the next reader does not need the transcript.
+`--evidence` is repeatable, one flag per B-id: every id the task already cited
+**plus the record from Step 4**. `set-status` enforces that: FIXED needs `--commit`, and it needs one
+cited record whose `environment.reactorSha` matches it, or it exits 5 and
+writes nothing. `--by claude` matches the FIXED events on record. The note
+carries the criterion, before and after, and the test result, so the next
+reader does not need the transcript.
 
-Then the second commit, record file only:
+Then the second commit, carrying both record files:
 
 ```bash
-git add packages/reactor/bench/TASKS.jsonl
+git add packages/reactor/bench/BENCHMARKS.jsonl packages/reactor/bench/TASKS.jsonl
 git commit -m "chore(reactor): mark T-007 fixed at <sha>"
 ```
 
@@ -121,6 +150,7 @@ Never set COMMITTED. That is for whoever lands the branch.
 | 2 | a record file does not parse | **Stop.** Print the whole `gate` output. Do not repair. |
 | 4 | no such task | Re-read the id list once, then stop. |
 | 5 | `gate`: the working tree is dirty | **Stop.** The fix diff has to stand alone; say what is dirty. |
+| 5 | `set-status`: FIXED with no run measured at that sha | Step 4 did not happen, or its record was not cited. Record the bench on the clean tree and cite it; do not reach for a different sha. |
 | 6 | `gate`: the task is not VERIFIED | **Stop.** Say which status it has and point at `/bench-loop`. |
 | 8 | `ci`: a check went red | Follow the verify table above. |
 | 64 | bad arguments to `set-status` or `bench:fix` | Report the command verbatim. |
@@ -128,10 +158,11 @@ Never set COMMITTED. That is for whoever lands the branch.
 
 ## Report
 
-The fixer's table; `verify`'s table with its coverage statement quoted; the
-two shas. Then the fixer's "For the analyst" section verbatim, so a new finding
-is not lost between commands.
+The fixer's table; `verify`'s table with its coverage statement quoted; the new
+`B-nnn` with the cases it recorded; the two shas. Then the fixer's "For the
+analyst" section verbatim, so a new finding is not lost between commands.
 
-Close with the next step, which is always the same: `/bench-record <name>` on
-the clean tree makes the after-fix record, and `/bench-loop` then reads it. The
-fixer's numbers are evidence that the fix worked; the record is the measurement.
+The fixer's numbers are evidence that the fix worked; the record from Step 4 is
+the measurement, and it is now part of this command rather than a handoff.
+Close by pointing at `/bench-loop`, which reads that record and files what it
+shows - including anything in the fixer's "For the analyst" section.

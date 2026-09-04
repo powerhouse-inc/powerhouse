@@ -58,6 +58,19 @@ pnpm --filter @powerhousedao/reactor bench:record auth
 ```
 
 Named benchmarks are `auth`, `events`, `queue`, `queue-only`, `cache`, `sync`.
+
+When the main thread asks for references, pass them through - they attach to
+the record, and both need exactly one benchmark named:
+
+```bash
+pnpm --filter @powerhousedao/reactor bench:record queue --task T-006 --supersedes B-006
+```
+
+`--task` names the task the run bears on. `--supersedes` names a record this
+one replaces, which is what a harness fix needs: the apparatus changed, so the
+older entry is no longer a comparable baseline and the record has to say so.
+Pass neither unless you were asked to; inventing a reference is filing a
+finding, which is not yours.
 With none named it runs all six, serially - never in parallel, because these
 benchmarks share a machine and two of them competing for it measure each other.
 

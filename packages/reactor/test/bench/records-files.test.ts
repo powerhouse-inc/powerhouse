@@ -215,7 +215,15 @@ describe("set-status", () => {
   it("records the run that justified the change", () => {
     run(["add-benchmark", "-"], withoutId(concurrencyEntry()));
 
-    run(["set-status", "T-001", "FIXED", "--evidence", "B-001"]);
+    run([
+      "set-status",
+      "T-001",
+      "FIXED",
+      "--commit",
+      "c9d01b3",
+      "--evidence",
+      "B-001",
+    ]);
 
     expect(readTask(0)).toMatchObject({
       history: [{}, { status: "FIXED", evidence: ["B-001"] }],
@@ -223,8 +231,174 @@ describe("set-status", () => {
     expect(run(["verify"]).exit).toBe(0);
   });
 
+  it("refuses FIXED with no commit, because the status is a claim about one", () => {
+    run(["add-benchmark", "-"], withoutId(concurrencyEntry()));
+
+    const error = failure([
+      "set-status",
+      "T-001",
+      "FIXED",
+      "--evidence",
+      "B-001",
+    ]);
+
+    expect(error.exitCode).toBe(5);
+    expect(error.message).toContain("cannot be FIXED without --commit");
+    expect(readTask(0)).toMatchObject({ status: "UNVERIFIED" });
+  });
+
+  it("refuses FIXED when nothing it cites measured that commit", () => {
+    run(["add-benchmark", "-"], withoutId(concurrencyEntry()));
+
+    const error = failure([
+      "set-status",
+      "T-001",
+      "FIXED",
+      "--commit",
+      "deadbee",
+      "--evidence",
+      "B-001",
+    ]);
+
+    expect(error.exitCode).toBe(5);
+    expect(error.message).toContain("no cited benchmark was measured");
+    expect(error.message).toContain("B-001 measured c9d01b3");
+    expect(readTask(0)).toMatchObject({ status: "UNVERIFIED" });
+  });
+
+  it("refuses FIXED that cites nothing at all", () => {
+    const error = failure([
+      "set-status",
+      "T-001",
+      "FIXED",
+      "--commit",
+      "c9d01b3",
+    ]);
+
+    expect(error.exitCode).toBe(5);
+    expect(error.message).toContain("it cites no records at all");
+  });
+
+  it("refuses a record that measured the fix but not the benchmark at issue", () => {
+    run(["add-benchmark", "-"], withoutId(concurrencyEntry()));
+    run(
+      ["add-benchmark", "-"],
+      withoutId(
+        concurrencyEntry({
+          command: "pnpm --filter @powerhousedao/reactor bench:auth",
+          environment: {
+            host: "mac-studio-m2",
+            os: "darwin 24.6.0",
+            cpu: "Apple M2 Max",
+            cores: 12,
+            node: "v22.14.0",
+            reactorSha: "f00dcafe",
+            storage: "postgres",
+            postgres: "17.2",
+          },
+        }),
+      ),
+    );
+    run(["set-status", "T-001", "VERIFIED", "--evidence", "B-001"]);
+
+    const error = failure([
+      "set-status",
+      "T-001",
+      "FIXED",
+      "--commit",
+      "f00dcafe",
+      "--evidence",
+      "B-001",
+      "--evidence",
+      "B-002",
+    ]);
+
+    expect(error.exitCode).toBe(5);
+    expect(error.message).toContain("not the benchmark the finding rests on");
+    expect(error.message).toContain("B-002 (pnpm --filter");
+  });
+
+  it("accepts a re-run of the benchmark the finding rests on", () => {
+    run(["add-benchmark", "-"], withoutId(concurrencyEntry()));
+    run(
+      ["add-benchmark", "-"],
+      withoutId(
+        concurrencyEntry({
+          supersedes: ["B-001"],
+          environment: {
+            host: "mac-studio-m2",
+            os: "darwin 24.6.0",
+            cpu: "Apple M2 Max",
+            cores: 12,
+            node: "v22.14.0",
+            reactorSha: "f00dcafe",
+            storage: "postgres",
+            postgres: "17.2",
+          },
+        }),
+      ),
+    );
+    run(["set-status", "T-001", "VERIFIED", "--evidence", "B-001"]);
+
+    const result = run([
+      "set-status",
+      "T-001",
+      "FIXED",
+      "--commit",
+      "f00dcafe",
+      "--evidence",
+      "B-001",
+      "--evidence",
+      "B-002",
+    ]);
+
+    expect(result.lines[0]).toContain("VERIFIED -> FIXED");
+    expect(run(["verify"]).exit).toBe(0);
+  });
+
+  it("matches the sha whichever side was abbreviated shorter", () => {
+    run(
+      ["add-benchmark", "-"],
+      withoutId(
+        concurrencyEntry({
+          environment: {
+            host: "mac-studio-m2",
+            os: "darwin 24.6.0",
+            cpu: "Apple M2 Max",
+            cores: 12,
+            node: "v22.14.0",
+            reactorSha: "c9d01b3f0a12",
+            storage: "postgres",
+            postgres: "17.2",
+          },
+        }),
+      ),
+    );
+
+    const result = run([
+      "set-status",
+      "T-001",
+      "FIXED",
+      "--commit",
+      "c9d01b3",
+      "--evidence",
+      "B-001",
+    ]);
+
+    expect(result.lines[0]).toContain("UNVERIFIED -> FIXED");
+  });
+
   it("allows a status to reopen", () => {
-    run(["set-status", "T-001", "FIXED"]);
+    run(["add-benchmark", "-"], withoutId(concurrencyEntry()));
+    run([
+      "set-status",
+      "T-001",
+      "FIXED",
+      "--commit",
+      "c9d01b3",
+      "--evidence",
+      "B-001",
+    ]);
     const result = run(["set-status", "T-001", "UNVERIFIED"]);
 
     expect(result.lines[0]).toContain("FIXED -> UNVERIFIED");
@@ -299,7 +473,7 @@ describe("verify", () => {
 
   it("catches a reference that does not resolve", () => {
     run(["add-task", "-"], withoutId(gapTask()));
-    run(["set-status", "T-001", "FIXED", "--evidence", "B-404"]);
+    run(["set-status", "T-001", "VERIFIED", "--evidence", "B-404"]);
 
     const result = run(["verify"]);
 
