@@ -238,13 +238,19 @@ describe.skipIf(!rssBundle)("TriggerSupervisor", () => {
 });
 
 describe("interval parsing", () => {
-  it("honours */N minute crons with a 60s floor and falls back otherwise", () => {
+  it("derives the cadence from any cron with a 60s floor, falling back when unparseable", () => {
     expect(intervalFromSchedules(undefined, 300_000)).toBe(300_000);
     expect(
       intervalFromSchedules([{ cronExpression: "*/2 * * * *" }], 300_000),
     ).toBe(120_000);
     expect(
+      intervalFromSchedules([{ cronExpression: "0 * * * *" }], 300_000),
+    ).toBe(3_600_000);
+    expect(
       intervalFromSchedules([{ cronExpression: "0 3 * * 1" }], 300_000),
+    ).toBe(7 * 86_400_000);
+    expect(
+      intervalFromSchedules([{ cronExpression: "not a cron" }], 300_000),
     ).toBe(300_000);
     expect(intervalFromSchedules(undefined, 10_000)).toBe(60_000);
   });

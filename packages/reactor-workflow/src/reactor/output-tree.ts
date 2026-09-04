@@ -258,6 +258,17 @@ export function lifecycleTriggerTree(): OutputTreeNode[] {
   ];
 }
 
+// core#schedule payload; exactly one of cron / everyMs is present.
+export function scheduleTriggerTree(): OutputTreeNode[] {
+  return [
+    leaf("scheduledFor", "DateTime!", "The slot that came due (ISO 8601)"),
+    leaf("firedAt", "DateTime!", "When the run actually started"),
+    leaf("timezone", "String!"),
+    leaf("cron", "String", "Cron mode only"),
+    leaf("everyMs", "Int", "Interval mode only"),
+  ];
+}
+
 export function documentEventTree(
   actionInputChildren: OutputTreeNode[],
 ): OutputTreeNode[] {

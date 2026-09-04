@@ -36,6 +36,7 @@ import {
   hasOutputSchemaFields,
   fromSample,
   lifecycleTriggerTree,
+  scheduleTriggerTree,
   type OutputTree,
 } from "./output-tree.js";
 import { fetchPieceDetail } from "./piece-catalog.js";
@@ -45,11 +46,13 @@ import {
   DocumentConnectionResolver,
   toWorkflowDefinition,
 } from "./lib.js";
+import { SCHEDULE_BLOCK } from "./schedule.js";
 import { LocalEncryptedSecretStore } from "./secret-store.js";
 import { WorkflowRunStore, type TriggerStateRow } from "./store.js";
 import {
   TriggerSupervisor,
   type PieceTriggerBinding,
+  type TriggerBinding,
 } from "./trigger-supervisor.js";
 import {
   matchesEventFilter,
@@ -82,8 +85,11 @@ type TriggerRegistration = {
 } & (
   | { kind: "document-event"; filter: DocumentEventFilter }
   | { kind: "document-created" | "document-deleted"; filter: LifecycleFilter }
-  | { kind: "piece" }
+  // Timer-driven kinds live in the TriggerSupervisor.
+  | { kind: "piece" | "schedule" }
 );
+
+const SUPERVISED_KINDS = new Set(["piece", "schedule"]);
 
 function configRecord(config: unknown): Record<string, unknown> {
   if (config && typeof config === "object" && !Array.isArray(config)) {
@@ -164,26 +170,31 @@ export class WorkflowRuntimeService {
     const kind: TriggerKind | undefined = trigger
       ? TRIGGER_KIND_BY_BLOCK[trigger.blockType]
       : undefined;
-    const pieceBinding =
-      trigger && !kind ? this.pieceBinding(workflowId, trigger) : undefined;
+    const supervised =
+      trigger && !kind
+        ? this.supervisedBinding(workflowId, trigger)
+        : undefined;
 
-    if (!kind && !pieceBinding) {
+    if (!kind && !supervised) {
       const had = this.registry.get(workflowId);
       this.registry.delete(workflowId);
-      if (had?.kind === "piece") this.dropPieceTrigger(workflowId);
+      if (had && SUPERVISED_KINDS.has(had.kind))
+        this.dropSupervised(workflowId);
       return;
     }
-    if (pieceBinding) {
-      this.registry.set(workflowId, { workflowId, kind: "piece" });
+    if (supervised) {
+      const supervisedKind =
+        supervised.kind === "schedule" ? "schedule" : "piece";
+      this.registry.set(workflowId, { workflowId, kind: supervisedKind });
       this.supervisor()
-        .upsert(pieceBinding)
+        .upsert(supervised)
         .catch((error: unknown) => {
-          logger.error(`Piece trigger enable failed for ${workflowId}`, error);
+          logger.error(`Trigger enable failed for ${workflowId}`, error);
         });
       return;
     }
     const had = this.registry.get(workflowId);
-    if (had?.kind === "piece") this.dropPieceTrigger(workflowId);
+    if (had && SUPERVISED_KINDS.has(had.kind)) this.dropSupervised(workflowId);
     const config = trigger?.config;
     this.registry.set(
       workflowId,
@@ -191,6 +202,22 @@ export class WorkflowRuntimeService {
         ? { workflowId, kind, filter: parseEventFilter(config) }
         : { workflowId, kind: kind!, filter: parseLifecycleFilter(config) },
     );
+  }
+
+  // Triggers the supervisor drives on its tick: piece polls and schedules.
+  private supervisedBinding(
+    workflowId: string,
+    trigger: NonNullable<WorkflowState["trigger"]>,
+  ): TriggerBinding | undefined {
+    if (trigger.blockType === SCHEDULE_BLOCK) {
+      return {
+        kind: "schedule",
+        workflowId,
+        blockType: SCHEDULE_BLOCK,
+        config: configRecord(trigger.config),
+      };
+    }
+    return this.pieceBinding(workflowId, trigger);
   }
 
   private pieceBinding(
@@ -210,11 +237,11 @@ export class WorkflowRuntimeService {
     };
   }
 
-  private dropPieceTrigger(workflowId: string): void {
+  private dropSupervised(workflowId: string): void {
     this.supervisor()
       .remove(workflowId)
       .catch((error: unknown) => {
-        logger.error(`Piece trigger disable failed for ${workflowId}`, error);
+        logger.error(`Trigger disable failed for ${workflowId}`, error);
       });
   }
 
@@ -540,6 +567,8 @@ export class WorkflowRuntimeService {
     switch (blockType) {
       case "core#manual":
         return { source: "none", nodes: [] };
+      case SCHEDULE_BLOCK:
+        return { source: "static", nodes: scheduleTriggerTree() };
       case "core#branch":
         return {
           source: "static",

@@ -1,5 +1,5 @@
-// Polling-trigger supervisor: owns piece-trigger lifecycle (enable/disable)
-// and the poll tick; cursors persist in trigger_state via the stage-1 protocol.
+// Timer-driven trigger supervisor: owns piece-trigger lifecycle (enable/
+// disable, poll cursors) and core#schedule fires; state lives in trigger_state.
 import {
   ensurePieceBundle,
   extractDedupeKey,
@@ -10,11 +10,21 @@ import {
 } from "@powerhousedao/reactor-connectors";
 import { childLogger } from "document-model";
 import { createHash } from "node:crypto";
+import {
+  cronIntervalMs,
+  MIN_SCHEDULE_INTERVAL_MS,
+  nextFireAt,
+  parseScheduleConfig,
+  rescheduleAfterFire,
+  schedulePayload,
+  SCHEDULE_BLOCK,
+} from "./schedule.js";
 import type { TriggerStateRow, WorkflowRunStore } from "./store.js";
 
 const logger = childLogger(["workflow", "trigger-supervisor"]);
 
 export interface PieceTriggerBinding {
+  kind?: "piece";
   workflowId: string;
   blockType: string;
   packageName: string;
@@ -23,6 +33,18 @@ export interface PieceTriggerBinding {
   config: Record<string, unknown>;
   connectionId?: string | null;
 }
+
+// core#schedule: no piece hooks; next_poll_at is the next fire time.
+export interface ScheduleTriggerBinding {
+  kind: "schedule";
+  workflowId: string;
+  blockType: typeof SCHEDULE_BLOCK;
+  config: Record<string, unknown>;
+}
+
+export type TriggerBinding = PieceTriggerBinding | ScheduleTriggerBinding;
+
+export const SCHEDULE_TRIGGER_KIND = "schedule";
 
 export interface TriggerSupervisorOptions {
   store: () => Promise<WorkflowRunStore | undefined>;
@@ -33,11 +55,19 @@ export interface TriggerSupervisorOptions {
   tickMs?: number;
   defaultIntervalMs?: number;
   hookTimeoutMs?: number;
+  // Clock override for tests; defaults to the wall clock.
+  now?: () => Date;
 }
 
-const MIN_INTERVAL_MS = 60_000;
+const MIN_INTERVAL_MS = MIN_SCHEDULE_INTERVAL_MS;
 const MAX_BACKOFF_MS = 30 * 60_000;
 const DEDUPE_TTL_MS = 30_000;
+
+function isSchedule(
+  binding: TriggerBinding,
+): binding is ScheduleTriggerBinding {
+  return binding.kind === "schedule";
+}
 
 export function configHash(blockType: string, config: unknown): string {
   return createHash("sha256")
@@ -47,20 +77,20 @@ export function configHash(blockType: string, config: unknown): string {
     .slice(0, 16);
 }
 
-// "*/N * * * *" is the only cron shape honoured; anything else logs and
-// falls back to the default interval (no cron engine in the tree).
+// The poll cadence a piece asked for via setSchedule: the gap between the
+// cron's next two runs (60s floor); unparseable crons fall back to the default.
 export function intervalFromSchedules(
   schedules: RecordedSchedule[] | undefined,
   defaultMs: number,
 ): number {
   const cron = schedules?.at(-1)?.cronExpression;
   if (!cron) return Math.max(defaultMs, MIN_INTERVAL_MS);
-  const match = /^\*\/(\d+) \* \* \* \*$/.exec(cron.trim());
-  if (!match) {
+  const intervalMs = cronIntervalMs(cron);
+  if (intervalMs === undefined) {
     logger.warn(`Unsupported setSchedule cron "${cron}"; using the default`);
     return Math.max(defaultMs, MIN_INTERVAL_MS);
   }
-  return Math.max(Number(match[1]) * 60_000, MIN_INTERVAL_MS);
+  return intervalMs;
 }
 
 function parseStoreState(row: TriggerStateRow): Record<string, unknown> {
@@ -72,11 +102,12 @@ function parseStoreState(row: TriggerStateRow): Record<string, unknown> {
 }
 
 export class TriggerSupervisor {
-  private readonly bindings = new Map<string, PieceTriggerBinding>();
+  private readonly bindings = new Map<string, TriggerBinding>();
   private readonly worker: PieceWorker;
   private readonly tickMs: number;
   private readonly defaultIntervalMs: number;
   private readonly hookTimeoutMs: number;
+  private readonly now: () => Date;
   private timer?: NodeJS.Timeout;
   // Lifecycle ops serialize so enable/disable/poll never interleave per store.
   private ops: Promise<unknown> = Promise.resolve();
@@ -87,6 +118,7 @@ export class TriggerSupervisor {
     this.tickMs = options.tickMs ?? 15_000;
     this.defaultIntervalMs = options.defaultIntervalMs ?? 300_000;
     this.hookTimeoutMs = options.hookTimeoutMs ?? 60_000;
+    this.now = options.now ?? (() => new Date());
   }
 
   start(): void {
@@ -117,7 +149,7 @@ export class TriggerSupervisor {
   // Successfully enabled workflows; identical re-registrations are no-ops.
   private readonly enabledOk = new Set<string>();
 
-  upsert(binding: PieceTriggerBinding): Promise<void> {
+  upsert(binding: TriggerBinding): Promise<void> {
     const previous = this.bindings.get(binding.workflowId);
     if (
       previous &&
@@ -177,7 +209,7 @@ export class TriggerSupervisor {
     );
   }
 
-  private async enable(binding: PieceTriggerBinding): Promise<void> {
+  private async enable(binding: TriggerBinding): Promise<void> {
     const store = await this.options.store();
     if (!store) return;
     const hash = configHash(binding.blockType, binding.config);
@@ -187,8 +219,12 @@ export class TriggerSupervisor {
       // The trigger changed: release the old registration first.
       await this.disableRow(binding.workflowId, existing);
     }
+    if (isSchedule(binding)) {
+      await this.enableSchedule(store, binding, hash, existing);
+      return;
+    }
     const seed = existing && isRepublish ? parseStoreState(existing) : {};
-    const now = new Date();
+    const now = this.now();
     try {
       const result = await this.hook(binding, "onEnable", seed, isRepublish);
       const intervalMs = intervalFromSchedules(
@@ -239,9 +275,68 @@ export class TriggerSupervisor {
     }
   }
 
+  // An unchanged, still-ENABLED row keeps its next fire time: that is what
+  // carries a schedule across a restart. Anything else rebases on now.
+  private async enableSchedule(
+    store: WorkflowRunStore,
+    binding: ScheduleTriggerBinding,
+    hash: string,
+    existing: TriggerStateRow | undefined,
+  ): Promise<void> {
+    const now = this.now();
+    const base = {
+      workflow_id: binding.workflowId,
+      block_type: binding.blockType,
+      config_hash: hash,
+      store_state: "{}",
+      last_poll_at: existing?.last_poll_at ?? null,
+      lease_owner: null,
+      lease_expires_at: null,
+      updated_at: now.toISOString(),
+    };
+    try {
+      const schedule = parseScheduleConfig(binding.config);
+      const carried =
+        existing?.status === "ENABLED" && existing.config_hash === hash
+          ? existing.next_poll_at
+          : null;
+      const nextAt = carried ? new Date(carried) : nextFireAt(schedule, now);
+      await store.upsertTriggerState({
+        ...base,
+        status: "ENABLED",
+        interval_ms:
+          schedule.mode === "interval"
+            ? schedule.everyMs
+            : MIN_SCHEDULE_INTERVAL_MS,
+        next_poll_at: nextAt.toISOString(),
+        last_error: null,
+        consecutive_failures: 0,
+      });
+      this.enabledOk.add(binding.workflowId);
+      logger.info(
+        `Scheduled workflow ${binding.workflowId}: next fire ${nextAt.toISOString()}` +
+          (carried ? " (carried over)" : ""),
+      );
+    } catch (error) {
+      this.enabledOk.delete(binding.workflowId);
+      const message = error instanceof Error ? error.message : String(error);
+      await store.upsertTriggerState({
+        ...base,
+        status: "ERROR",
+        interval_ms: MIN_SCHEDULE_INTERVAL_MS,
+        next_poll_at: null,
+        last_error: message,
+        consecutive_failures: (existing?.consecutive_failures ?? 0) + 1,
+      });
+      logger.error(
+        `Invalid schedule for workflow ${binding.workflowId}: ${message}`,
+      );
+    }
+  }
+
   private async disable(
     workflowId: string,
-    binding?: PieceTriggerBinding,
+    binding?: TriggerBinding,
   ): Promise<void> {
     const store = await this.options.store();
     if (!store) return;
@@ -254,12 +349,12 @@ export class TriggerSupervisor {
   private async disableRow(
     workflowId: string,
     row: TriggerStateRow,
-    binding?: PieceTriggerBinding,
+    binding?: TriggerBinding,
   ): Promise<void> {
     const store = await this.options.store();
     if (!store) return;
     const target = binding ?? this.bindingFromRow(row);
-    if (target) {
+    if (target && !isSchedule(target) && row.block_type !== SCHEDULE_BLOCK) {
       try {
         await this.hook(target, "onDisable", parseStoreState(row));
       } catch (error) {
@@ -269,7 +364,7 @@ export class TriggerSupervisor {
     await store.setTriggerStatus(workflowId, "DISABLED");
   }
 
-  private bindingFromRow(row: TriggerStateRow): PieceTriggerBinding | undefined {
+  private bindingFromRow(row: TriggerStateRow): TriggerBinding | undefined {
     return this.bindings.get(row.workflow_id);
   }
 
@@ -286,7 +381,7 @@ export class TriggerSupervisor {
   private async pollDue(): Promise<void> {
     const store = await this.options.store();
     if (!store) return;
-    const due = await store.listDueTriggerStates(new Date().toISOString());
+    const due = await store.listDueTriggerStates(this.now().toISOString());
     for (const row of due) {
       const binding = this.bindings.get(row.workflow_id);
       if (!binding) {
@@ -294,7 +389,45 @@ export class TriggerSupervisor {
         await store.setTriggerStatus(row.workflow_id, "DISABLED");
         continue;
       }
-      await this.poll(store, row, binding);
+      if (isSchedule(binding)) {
+        await this.fireSchedule(store, row, binding);
+      } else {
+        await this.poll(store, row, binding);
+      }
+    }
+  }
+
+  // One fire per due row, however overdue; the next slot is computed from
+  // now, so a restart never replays the slots it slept through.
+  private async fireSchedule(
+    store: WorkflowRunStore,
+    row: TriggerStateRow,
+    binding: ScheduleTriggerBinding,
+  ): Promise<void> {
+    const now = this.now();
+    try {
+      const schedule = parseScheduleConfig(binding.config);
+      const scheduledFor = row.next_poll_at ? new Date(row.next_poll_at) : now;
+      const nextAt = rescheduleAfterFire(schedule, scheduledFor, now);
+      await store.recordPollSuccess(
+        row.workflow_id,
+        "{}",
+        now.toISOString(),
+        nextAt.toISOString(),
+      );
+      this.options.fire(
+        binding.workflowId,
+        schedulePayload(schedule, scheduledFor, now),
+        SCHEDULE_TRIGGER_KIND,
+      );
+    } catch (error) {
+      // Only a config that stopped parsing gets here; stop until it is edited.
+      const message = error instanceof Error ? error.message : String(error);
+      this.enabledOk.delete(binding.workflowId);
+      await store.setTriggerStatus(row.workflow_id, "ERROR", message);
+      logger.error(
+        `Schedule fire failed for workflow ${row.workflow_id}: ${message}`,
+      );
     }
   }
 
@@ -303,7 +436,7 @@ export class TriggerSupervisor {
     row: TriggerStateRow,
     binding: PieceTriggerBinding,
   ): Promise<void> {
-    const now = new Date();
+    const now = this.now();
     try {
       const result = await this.hook(binding, "run", parseStoreState(row));
       if (!Array.isArray(result.output)) {
