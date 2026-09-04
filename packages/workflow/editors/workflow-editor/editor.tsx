@@ -73,7 +73,7 @@ function WorkflowEditor() {
       load: async ({ stepId }) => {
         // Trigger config fields run before any step; nothing to reference.
         if (!stepId) return EMPTY_SCOPE;
-        const latestRun = await fetchRuns(workflowId, 1).then(
+        const latestRun = await fetchRuns({ workflowId, limit: 1 }).then(
           (runs) => runs[0],
           () => undefined,
         );

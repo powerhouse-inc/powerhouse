@@ -3,7 +3,6 @@
 import {
   addDocument,
   setSelectedNode,
-  useDispatch,
   useDocumentSafe,
   useFileNodesInSelectedDrive,
   usePHToast,
@@ -12,157 +11,19 @@ import {
 } from "@powerhousedao/reactor-browser";
 import type { FileNode } from "@powerhousedao/shared/document-drive";
 import { useEffect, useState, type ReactNode } from "react";
-import {
-  actions as workflowActions,
-  type WorkflowDocument,
-} from "document-models/workflow";
+import { type WorkflowDocument } from "document-models/workflow";
 import { fireWorkflow } from "../../workflow-editor/runtime-api.js";
-import {
-  DocumentErrorBoundary,
-  DocumentLoadError,
-  errorMessage,
-} from "../../shared/DocumentErrorBoundary.js";
+import { DocumentErrorBoundary } from "../../shared/DocumentErrorBoundary.js";
+import { EditorToolbar } from "./EditorToolbar.js";
+import { ConnectionView } from "./ConnectionView.js";
 import { RunsView } from "./RunsView.js";
+import { Sidebar } from "./Sidebar.js";
+import { useHashSelection } from "./use-hash-selection.js";
+import { useRuns } from "./useRuns.js";
+import { WorkflowHeader } from "./WorkflowHeader.js";
 
 const WORKFLOW_TYPE = "powerhouse/workflow";
 const CONNECTION_TYPE = "powerhouse/connection";
-
-// The drive node name goes stale after renames; the document state is the
-// source of truth for both workflow and connection names.
-function documentName(document: unknown, fallback: string): string {
-  const state = (document as { state?: { global?: { name?: string } } } | null)
-    ?.state?.global;
-  return state?.name || fallback || "(unnamed)";
-}
-
-// A node can outlive its document (deleted, or unreadable history). The safe
-// hook reports that as an error instead of throwing, so one broken node degrades
-// to its drive name plus a warning marker rather than blanking the studio.
-function NodeLabel(props: { node: FileNode }) {
-  const { data: document, error } = useDocumentSafe(props.node.id);
-  useEffect(() => {
-    if (error !== undefined) {
-      console.error(`Failed to load document ${props.node.id}:`, error);
-    }
-  }, [error, props.node.id]);
-  if (error !== undefined) {
-    return (
-      <span
-        className="text-red-600"
-        title={`Could not load ${props.node.id}: ${errorMessage(error)}`}
-      >
-        ⚠ {props.node.name || "(unnamed)"}
-      </span>
-    );
-  }
-  return <>{documentName(document, props.node.name)}</>;
-}
-
-function SidebarSection(props: {
-  title: string;
-  nodes: FileNode[];
-  activeId?: string | null;
-  onOpen: (node: FileNode) => void;
-  onEdit?: (node: FileNode) => void;
-  onCreate: () => void;
-  creating: boolean;
-}) {
-  return (
-    <div>
-      <div className="flex items-center justify-between px-3 pb-1 pt-4">
-        <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-          {props.title}
-        </span>
-        <button
-          type="button"
-          disabled={props.creating}
-          className="rounded px-1.5 text-sm leading-none text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
-          title={`New ${props.title.toLowerCase().replace(/s$/, "")}`}
-          onClick={props.onCreate}
-        >
-          +
-        </button>
-      </div>
-      {props.nodes.length === 0 ? (
-        <p className="px-3 py-1 text-xs text-slate-300">None yet</p>
-      ) : (
-        props.nodes.map((node) => (
-          <div
-            key={node.id}
-            className={`group flex items-center ${
-              props.activeId === node.id ? "bg-blue-50" : "hover:bg-slate-50"
-            }`}
-          >
-            <button
-              type="button"
-              className="min-w-0 grow truncate px-3 py-1.5 text-left text-sm text-slate-700"
-              onClick={() => props.onOpen(node)}
-            >
-              <NodeLabel node={node} />
-            </button>
-            {props.onEdit ? (
-              <button
-                type="button"
-                className="mr-2 hidden shrink-0 rounded px-1 text-xs text-slate-400 hover:text-slate-700 group-hover:block"
-                title="Open editor"
-                onClick={() => props.onEdit!(node)}
-              >
-                ✎
-              </button>
-            ) : null}
-          </div>
-        ))
-      )}
-    </div>
-  );
-}
-
-const WORKFLOW_STATUS_STYLES: Record<string, string> = {
-  ENABLED: "bg-green-100 text-green-700",
-  DRAFT: "bg-slate-100 text-slate-500",
-  DISABLED: "bg-amber-100 text-amber-700",
-  ARCHIVED: "bg-slate-200 text-slate-400",
-};
-
-// Status chip + enable/disable toggle for the workflow whose runs are shown.
-function WorkflowStatusBar(props: { workflowId: string }) {
-  const { data: document, error, reload } = useDocumentSafe(props.workflowId);
-  const [, dispatch] = useDispatch(document);
-  if (error !== undefined) {
-    return (
-      <DocumentLoadError
-        title="This workflow could not be loaded"
-        documentId={props.workflowId}
-        error={error}
-        onRetry={() => {
-          void reload();
-        }}
-      />
-    );
-  }
-  if (document?.header.documentType !== WORKFLOW_TYPE) return null;
-  const workflow = document as WorkflowDocument;
-  const status = workflow.state.global.status;
-  const next = status === "ENABLED" ? "DISABLED" : "ENABLED";
-  return (
-    <div className="mb-3 flex items-center gap-2">
-      <span
-        className={`rounded px-2 py-0.5 text-xs font-semibold ${WORKFLOW_STATUS_STYLES[status] ?? "bg-slate-100 text-slate-500"}`}
-      >
-        {status}
-      </span>
-      <button
-        type="button"
-        className="rounded border border-solid border-slate-300 px-2 py-0.5 text-xs text-slate-600"
-        onClick={() =>
-          dispatch(workflowActions.setWorkflowStatus({ status: next }))
-        }
-      >
-        {next === "ENABLED" ? "Enable" : "Disable"}
-      </button>
-    </div>
-  );
-}
 
 export function WorkflowStudio(props: { children?: ReactNode }) {
   const [drive] = useSelectedDrive();
@@ -170,8 +31,8 @@ export function WorkflowStudio(props: { children?: ReactNode }) {
   const selectedNode = useSelectedNode();
   const selectedNodeId = selectedNode?.id;
   const toast = usePHToast();
-  // Which workflow's runs are shown; null = all runs in the drive.
-  const [runsTarget, setRunsTarget] = useState<FileNode | null>(null);
+  // The sidebar selection, kept in the URL hash; undefined = all runs.
+  const [selectedId, select] = useHashSelection();
   const [creating, setCreating] = useState(false);
 
   const driveId = drive.header.id;
@@ -188,6 +49,7 @@ export function WorkflowStudio(props: { children?: ReactNode }) {
     setCreating(true);
     addDocument(driveId, `${baseName} ${count + 1}`, documentType)
       .then((node) => {
+        select(node.id);
         setSelectedNode(node.id);
       })
       .catch((error: unknown) => {
@@ -203,13 +65,34 @@ export function WorkflowStudio(props: { children?: ReactNode }) {
 
   const showRuns = (node: FileNode | null) => {
     setSelectedNode(undefined);
-    setRunsTarget(node);
+    select(node?.id);
   };
 
-  // Keep the runs target in sync when its node was renamed/deleted.
-  const liveTarget = runsTarget
-    ? (workflows.find((node) => node.id === runsTarget.id) ?? null)
+  // Resolved from the drive each render, so a deleted node drops out on its own.
+  const liveTarget = workflows.find((node) => node.id === selectedId) ?? null;
+  const liveConnection =
+    connections.find((node) => node.id === selectedId) ?? null;
+  const openNode = fileNodes.find((node) => node.id === selectedNodeId);
+  // A deleted node must not keep the hash pointing at nothing.
+  const selectionExists = fileNodes.some((node) => node.id === selectedId);
+  useEffect(() => {
+    if (selectedId && fileNodes.length > 0 && !selectionExists)
+      select(undefined);
+  }, [fileNodes.length, select, selectedId, selectionExists]);
+  const editedWorkflow = editorOpen
+    ? (workflows.find((node) => node.id === selectedNodeId) ?? null)
     : null;
+  // One feed per pane, shared by the header, the table and the toolbar: the
+  // focused workflow's runs, or every run in this drive.
+  const focusedWorkflow = editedWorkflow ?? liveTarget;
+  const {
+    runs,
+    error: runsError,
+    reload: reloadRuns,
+  } = useRuns({
+    workflowId: focusedWorkflow?.id,
+    driveId: focusedWorkflow ? undefined : driveId,
+  });
 
   // Manual fire only makes sense for core#manual triggers.
   const { data: targetDocument } = useDocumentSafe(liveTarget?.id ?? null);
@@ -220,53 +103,38 @@ export function WorkflowStudio(props: { children?: ReactNode }) {
 
   return (
     <div className="flex h-full min-h-0">
-      <aside className="w-56 shrink-0 overflow-y-auto border-r border-solid border-slate-200">
-        <button
-          type="button"
-          className={`mt-2 w-full px-3 py-1.5 text-left text-sm font-medium ${
-            !editorOpen && !liveTarget
-              ? "bg-blue-50 text-blue-700"
-              : "text-slate-700 hover:bg-slate-50"
-          }`}
-          onClick={() => showRuns(null)}
-        >
-          All runs
-        </button>
-        <SidebarSection
-          title="Workflows"
-          nodes={workflows}
-          activeId={editorOpen ? selectedNodeId : liveTarget?.id}
-          onOpen={(node) => showRuns(node)}
-          onEdit={(node) => {
-            setRunsTarget(node);
-            setSelectedNode(node.id);
-          }}
-          onCreate={() => create(WORKFLOW_TYPE, "Workflow", workflows.length)}
-          creating={creating}
-        />
-        <SidebarSection
-          title="Connections"
-          nodes={connections}
-          activeId={editorOpen ? selectedNodeId : undefined}
-          onOpen={(node) => setSelectedNode(node.id)}
-          onCreate={() =>
-            create(CONNECTION_TYPE, "Connection", connections.length)
-          }
-          creating={creating}
-        />
-      </aside>
+      <Sidebar
+        workflows={workflows}
+        connections={connections}
+        activeId={selectedId}
+        allRunsActive={!selectedId}
+        creating={creating}
+        onShowAllRuns={() => showRuns(null)}
+        onOpenWorkflow={(node) => showRuns(node)}
+        onEditWorkflow={(node) => {
+          select(node.id);
+          setSelectedNode(node.id);
+        }}
+        onOpenConnection={(node) => showRuns(node)}
+        onEditConnection={(node) => {
+          select(node.id);
+          setSelectedNode(node.id);
+        }}
+        onCreateWorkflow={() =>
+          create(WORKFLOW_TYPE, "Workflow", workflows.length)
+        }
+        onCreateConnection={() =>
+          create(CONNECTION_TYPE, "Connection", connections.length)
+        }
+      />
       <main className="min-w-0 flex-1 overflow-y-auto">
         {editorOpen ? (
           <div className="flex h-full min-h-0 flex-col">
-            <div className="flex items-center border-b border-solid border-slate-100 px-3 py-1.5">
-              <button
-                type="button"
-                className="text-xs text-slate-500 hover:text-slate-800"
-                onClick={() => setSelectedNode(undefined)}
-              >
-                ← Back to runs
-              </button>
-            </div>
+            <EditorToolbar
+              node={openNode}
+              runs={editedWorkflow ? runs : null}
+              onBack={() => setSelectedNode(undefined)}
+            />
             <div className="flex min-h-0 flex-1 flex-col [&>#document-editor-container]:min-h-0">
               <DocumentErrorBoundary
                 key={selectedNodeId}
@@ -278,19 +146,33 @@ export function WorkflowStudio(props: { children?: ReactNode }) {
               </DocumentErrorBoundary>
             </div>
           </div>
+        ) : liveConnection ? (
+          <ConnectionView
+            key={liveConnection.id}
+            node={liveConnection}
+            onEdit={() => {
+              select(liveConnection.id);
+              setSelectedNode(liveConnection.id);
+            }}
+            onOpenWorkflow={(workflowId) => select(workflowId)}
+          />
         ) : (
-          <div className="p-6">
+          <div className="mx-auto w-full max-w-5xl p-6">
             {liveTarget ? (
-              <WorkflowStatusBar workflowId={liveTarget.id} />
+              <WorkflowHeader
+                key={liveTarget.id}
+                node={liveTarget}
+                runs={runs}
+                onEdit={() => setSelectedNode(liveTarget.id)}
+              />
             ) : null}
             <RunsView
-              key={liveTarget?.id ?? "__all__"}
-              workflowId={liveTarget?.id}
-              title={
-                liveTarget
-                  ? documentName(targetDocument, liveTarget.name || "Workflow")
-                  : "All runs"
-              }
+              // The header already names the workflow; don't say it twice.
+              title={liveTarget ? "Runs" : "All runs in this drive"}
+              runs={runs}
+              error={runsError}
+              reload={reloadRuns}
+              showWorkflow={liveTarget === null}
               onFire={
                 liveTarget && manualTrigger
                   ? () =>

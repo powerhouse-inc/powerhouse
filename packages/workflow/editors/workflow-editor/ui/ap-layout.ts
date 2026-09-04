@@ -59,7 +59,7 @@ export const BIG_ADD_BUTTON_SIZE = 50;
 
 const PORT_ORDER = ["next", "true", "false", "error"];
 
-function portRank(port: string): number {
+export function portRank(port: string): number {
   const index = PORT_ORDER.indexOf(port);
   return index === -1 ? PORT_ORDER.length : index;
 }

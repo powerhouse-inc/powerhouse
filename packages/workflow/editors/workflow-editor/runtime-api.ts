@@ -377,15 +377,23 @@ const RUN_FIELDS = `id workflowId workflowName workflowVersion triggerKind
   triggerPayload status error startedAt endedAt rerunOf
   steps { stepId stepKey blockType status input output port error }`;
 
-export async function fetchRuns(
-  workflowId?: string,
-  limit = 30,
-): Promise<RunRecord[]> {
+export interface RunsScope {
+  workflowId?: string;
+  // Scopes runs to the workflows the drive holds; ignored alongside workflowId.
+  driveId?: string;
+  limit?: number;
+}
+
+export async function fetchRuns(scope: RunsScope = {}): Promise<RunRecord[]> {
   const data = await gql<{ workflowRuntime: { runs: RunRecord[] } }>(
-    `query Runs($workflowId: String, $limit: Int) {
-      workflowRuntime { runs(workflowId: $workflowId, limit: $limit) { ${RUN_FIELDS} } }
+    `query Runs($workflowId: String, $driveId: String, $limit: Int) {
+      workflowRuntime { runs(workflowId: $workflowId, driveId: $driveId, limit: $limit) { ${RUN_FIELDS} } }
     }`,
-    { workflowId: workflowId ?? null, limit },
+    {
+      workflowId: scope.workflowId ?? null,
+      driveId: scope.driveId ?? null,
+      limit: scope.limit ?? 30,
+    },
   );
   return data.workflowRuntime.runs;
 }
