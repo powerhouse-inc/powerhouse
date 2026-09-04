@@ -23,13 +23,30 @@ function getReactorTools(): Promise<AiToolDescriptor[]> {
   }
   const syncManager =
     ph?.reactorClientModule?.reactorModule?.syncModule?.syncManager;
-  return createReactorMcpProvider({ client, syncManager }).then((provider) => [
-    ...Object.values(provider.tools).map((tool) => ({
+  return createReactorMcpProvider({ client, syncManager }).then((provider) => {
+    const builtInTools = Object.values(provider.tools).map((tool) => ({
       ...tool,
       inputSchema: tool.inputSchema ?? {},
-    })),
-    createSwitchboardSchemaTool(),
-  ]);
+    }));
+    // Packages may contribute their own tools via the `aiTools` export
+    // (see DocumentModelLib.aiTools). Built-in tools win on name
+    // collisions; duplicates across packages keep the first.
+    const taken: Set<string> = new Set(builtInTools.map((tool) => tool.name));
+    const packageTools = (ph?.vetraPackageManager?.packages ?? []).flatMap(
+      (pkg) =>
+        (pkg.aiTools ?? []).filter((tool) => {
+          if (taken.has(tool.name)) {
+            console.warn(
+              `[Connect][AI] Package tool "${tool.name}" shadows an existing tool and was ignored.`,
+            );
+            return false;
+          }
+          taken.add(tool.name);
+          return true;
+        }),
+    );
+    return [...builtInTools, createSwitchboardSchemaTool(), ...packageTools];
+  });
 }
 
 /** Connect's bottom-right AI chat FAB, bound to the browser reactor. */
