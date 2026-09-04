@@ -1,5 +1,11 @@
-/* React Flow gives every node its own z-index, so a popup inside one cannot
-   paint over the nodes below it. Lift the whole node while its picker is open. */
-.react-flow__node *:has([data-selector-open="true"]) {
-  z-index: 1000 !important;
+/* React Flow paints the node layer above the edge-label layer, and gives every
+   node an inline z-index, so a picker in either layer loses to the nodes. */
+.react-flow__node:has([data-selector-open="true"]) {
+  z-index: 1002 !important;
+}
+
+/* The edge "Insert step" picker lives in the edge-label layer, which sits
+   below every node. Lift the label wrapper while its picker is open. */
+.react-flow__edgelabel-renderer > div:has([data-selector-open="true"]) {
+  z-index: 1002;
 }
