@@ -84,3 +84,37 @@ describe("core#assert", () => {
     ).rejects.toThrow(/rejected value/);
   });
 });
+
+describe("core#assert allowValues", () => {
+  const allowValues = ["ENABLED", "DISABLED"];
+
+  it("passes a value on the allow-list, trimmed and case-insensitively", async () => {
+    expect((await assert({ value: "DISABLED", allowValues })).port).toBe("next");
+    expect((await assert({ value: " disabled\n", allowValues })).port).toBe(
+      "next",
+    );
+  });
+
+  it("fails anything else, naming the allowed values", async () => {
+    // The motivating case: a classifier answering a different question.
+    await expect(assert({ value: "Safety:", allowValues })).rejects.toThrow(
+      /not one of the allowed values \(enabled, disabled\)/,
+    );
+  });
+
+  it("treats a string as a single allowed value", async () => {
+    expect((await assert({ value: "ok", allowValues: "ok" })).port).toBe("next");
+    await expect(assert({ value: "no", allowValues: "ok" })).rejects.toThrow(
+      /allowed values/,
+    );
+  });
+
+  it("still applies the reject-list and the blank check first", async () => {
+    await expect(assert({ value: "", allowValues })).rejects.toThrow(
+      "value is empty",
+    );
+    await expect(
+      assert({ value: "ENABLED", allowValues, rejectValues: ["ENABLED"] }),
+    ).rejects.toThrow(/rejected value/);
+  });
+});

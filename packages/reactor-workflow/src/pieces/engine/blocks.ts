@@ -61,10 +61,11 @@ export class CoreBlockExecutor implements BlockExecutor {
   // completion, or a classifier answering the wrong question, must not flow
   // on to a step with a side effect.
   private assert(execution: BlockExecution): Promise<BlockResult> {
-    const { value, rejectValues, allowEmpty, message } =
+    const { value, rejectValues, allowValues, allowEmpty, message } =
       execution.config as {
         value?: unknown;
         rejectValues?: unknown;
+        allowValues?: unknown;
         allowEmpty?: unknown;
         message?: unknown;
       };
@@ -87,17 +88,26 @@ export class CoreBlockExecutor implements BlockExecutor {
     if (!trimmed && allowEmpty !== true) {
       return fail("value is empty");
     }
-    const rejected = (
-      typeof rejectValues === "string"
-        ? [rejectValues]
-        : Array.isArray(rejectValues)
-          ? rejectValues
+    const normalizeList = (entries: unknown) =>
+      (typeof entries === "string"
+        ? [entries]
+        : Array.isArray(entries)
+          ? entries
           : []
-    )
-      .map((entry) => String(entry).trim().toLowerCase())
-      .filter(Boolean);
-    if (rejected.includes(trimmed.toLowerCase())) {
+      )
+        .map((entry) => String(entry).trim().toLowerCase())
+        .filter(Boolean);
+
+    if (normalizeList(rejectValues).includes(trimmed.toLowerCase())) {
       return fail(`value is a rejected value ("${trimmed}")`);
+    }
+    // An allow-list is the safer gate for model output: anything unforeseen
+    // fails here rather than reaching a step that writes.
+    const allowed = normalizeList(allowValues);
+    if (allowed.length > 0 && !allowed.includes(trimmed.toLowerCase())) {
+      return fail(
+        `value "${trimmed}" is not one of the allowed values (${allowed.join(", ")})`,
+      );
     }
     return Promise.resolve({ output: { value }, port: "next" });
   }
