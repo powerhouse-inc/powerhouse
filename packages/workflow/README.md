@@ -1,3 +1,8 @@
+> This package is part of the [reactor-workflow](../../README.md) repository.
+> The root README covers prerequisites, running Vetra, configuration, the AI
+> assistant and Docker. What follows is the generic document-model boilerplate
+> tutorial.
+
 # Document Model Boilerplate
 
 This Document Model Boilerplate provides code generation for scaffolding editors and models.
