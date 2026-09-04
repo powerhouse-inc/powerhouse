@@ -19,12 +19,17 @@ export interface ApStaticDropdownState {
 export interface ApProperty {
   displayName?: string;
   description?: string;
+  placeholder?: string;
   type?: ApPropertyType;
   required?: boolean;
   defaultValue?: unknown;
   options?: ApStaticDropdownState | ((...args: unknown[]) => unknown);
   // Resolver function on DYNAMIC properties.
   props?: (...args: unknown[]) => unknown;
+  // DROPDOWN / DYNAMIC: sibling prop names whose values feed the resolver.
+  refreshers?: string[];
+  // ARRAY: schema of each item's fields; absent for plain value arrays.
+  properties?: Record<string, ApProperty>;
 }
 
 export interface ApAction {

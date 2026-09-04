@@ -11,6 +11,8 @@ import {
 export interface ConnectorPropDescriptor {
   name: string;
   displayName: string;
+  description?: string;
+  placeholder?: string;
   type: ApPropertyType;
   required: boolean;
   defaultValue?: unknown;
@@ -19,7 +21,14 @@ export interface ConnectorPropDescriptor {
   // True when the prop carries a design-time resolver (DROPDOWN options() / DYNAMIC props()).
   hasDynamicResolver: boolean;
   // Synthesised domain-provider id: activepieces:<pkg>#<action>.<prop> (doc 08 §6.3).
+  // Only top-level props get one; nested resolvers are not addressable yet.
   dynamicResolverId?: string;
+  // Sibling prop names whose values feed the resolver; the editor re-runs
+  // it when any of them changes.
+  refreshers?: string[];
+  // Nested shape: an ARRAY item's fields, or the props a DYNAMIC resolver
+  // produced (see describeProperties). OBJECT props are free-form and carry none.
+  properties?: ConnectorPropDescriptor[];
 }
 
 export interface ConnectorActionDescriptor {
@@ -76,7 +85,7 @@ function hasResolver(prop: ApProperty): boolean {
 function toPropDescriptor(
   name: string,
   prop: ApProperty,
-  resolverId: string,
+  resolverId?: string,
 ): ConnectorPropDescriptor {
   const dynamic = hasResolver(prop);
   const descriptor: ConnectorPropDescriptor = {
@@ -86,11 +95,22 @@ function toPropDescriptor(
     required: prop.required ?? false,
     hasDynamicResolver: dynamic,
   };
+  if (typeof prop.description === "string" && prop.description !== "") {
+    descriptor.description = prop.description;
+  }
+  if (typeof prop.placeholder === "string" && prop.placeholder !== "") {
+    descriptor.placeholder = prop.placeholder;
+  }
   if (prop.defaultValue !== undefined) {
     descriptor.defaultValue = prop.defaultValue;
   }
-  if (dynamic) {
+  if (dynamic && resolverId) {
     descriptor.dynamicResolverId = resolverId;
+  }
+  if (dynamic && Array.isArray(prop.refreshers)) {
+    descriptor.refreshers = prop.refreshers.filter(
+      (entry): entry is string => typeof entry === "string",
+    );
   }
   if (typeof prop.options === "object" && Array.isArray(prop.options.options)) {
     descriptor.staticOptions = prop.options.options.map((o) => ({
@@ -98,7 +118,31 @@ function toPropDescriptor(
       value: o.value,
     }));
   }
+  if (prop.properties && typeof prop.properties === "object") {
+    const nested = describeProperties(prop.properties);
+    if (nested.length > 0) descriptor.properties = nested;
+  }
   return descriptor;
+}
+
+// Descriptor list for a props map. Used for nested shapes (ARRAY items) and
+// for the map a DYNAMIC props() resolver returns at design time, so the
+// editor only ever sees descriptors, never raw piece properties.
+export function describeProperties(
+  props: Record<string, ApProperty> | null | undefined,
+  resolverIdFor?: (propName: string) => string,
+): ConnectorPropDescriptor[] {
+  if (!props || typeof props !== "object") return [];
+  return Object.entries(props)
+    .filter((entry): entry is [string, ApProperty] => isPropertyObject(entry[1]))
+    .map(([propName, prop]) =>
+      toPropDescriptor(propName, prop, resolverIdFor?.(propName)),
+    );
+}
+
+// Bundles are duck-typed; a props map may carry non-object junk.
+function isPropertyObject(value: unknown): value is ApProperty {
+  return value !== null && typeof value === "object";
 }
 
 // Pure translation over a loaded piece; performs no I/O and never executes
@@ -113,12 +157,10 @@ export function buildDescriptor(
       displayName: action.displayName ?? actionName,
       description: action.description,
       requireAuth: action.requireAuth ?? false,
-      props: Object.entries(action.props ?? {}).map(([propName, prop]) =>
-        toPropDescriptor(
-          propName,
-          prop,
+      props: describeProperties(
+        action.props,
+        (propName) =>
           `activepieces:${source.packageName}#${actionName}.${propName}`,
-        ),
       ),
     }),
   );
@@ -131,12 +173,10 @@ export function buildDescriptor(
       strategy: trigger.type ?? "UNKNOWN",
       testStrategy: trigger.testStrategy,
       requireAuth: trigger.requireAuth ?? false,
-      props: Object.entries(trigger.props ?? {}).map(([propName, prop]) =>
-        toPropDescriptor(
-          propName,
-          prop,
+      props: describeProperties(
+        trigger.props,
+        (propName) =>
           `activepieces:${source.packageName}#${triggerName}.${propName}`,
-        ),
       ),
       hasSampleData:
         trigger.sampleData !== undefined && trigger.sampleData !== null,

@@ -76,17 +76,40 @@ interface PieceDetailTrigger {
   type?: string;
 }
 
+// List entry with suggestionType=ACTION_AND_TRIGGER: the same list endpoint
+// their selector searches, carrying every action/trigger name inline.
+export interface CatalogSuggestionEntry {
+  name?: string;
+  displayName?: string;
+  version?: string;
+  logoUrl?: string;
+  suggestedActions?: PieceDetailAction[];
+  suggestedTriggers?: PieceDetailTrigger[];
+}
+
 interface Cached<T> {
   value: T;
   expiresAt: number;
 }
 
-async function fetchJson(url: string): Promise<unknown> {
-  const response = await fetch(url, { signal: AbortSignal.timeout(30_000) });
+async function fetchJson(url: string, timeoutMs = 30_000): Promise<unknown> {
+  const response = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
   if (!response.ok) {
     throw new Error(`${url} responded ${response.status}`);
   }
   return response.json();
+}
+
+// ~17 MB for the whole catalog; fetched once per index build, never cached
+// here (block-search keeps the compact index instead).
+export async function fetchCatalogWithSuggestions(): Promise<
+  CatalogSuggestionEntry[]
+> {
+  const raw = await fetchJson(
+    `${CATALOG_URL}?suggestionType=ACTION_AND_TRIGGER`,
+    120_000,
+  );
+  return Array.isArray(raw) ? (raw as CatalogSuggestionEntry[]) : [];
 }
 
 let catalogCache: Cached<PieceSummary[]> | undefined;

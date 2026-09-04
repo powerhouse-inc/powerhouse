@@ -7,13 +7,16 @@ import {
   UnsupportedContextMemberError,
 } from "../context/action.js";
 import { DataUriFilesService } from "../context/files.js";
+import { normalizePropsValue } from "../context/normalize.js";
 import {
   buildPropertyContext,
+  findProperty,
   resolveDynamicProperty,
 } from "../context/props.js";
 import { buildTriggerContext, runTriggerHook } from "../context/trigger.js";
+import { describeProperties } from "../descriptor.js";
 import { loadPieceFromDir, type LoadedPiece } from "../loader.js";
-import { getActions, getTriggers } from "../types.js";
+import { getActions, getTriggers, type ApProperty } from "../types.js";
 import type {
   ResolveOptionsMessage,
   RunMessage,
@@ -97,6 +100,12 @@ async function handleResolveOptions(
     ...(request.auth !== undefined ? { auth: request.auth } : {}),
     ...request.refresherValues,
   };
+  const prop = findProperty(
+    piece,
+    request.actionName,
+    request.propName,
+    request.kind,
+  );
   const output = await resolveDynamicProperty({
     piece,
     actionName: request.actionName,
@@ -105,10 +114,16 @@ async function handleResolveOptions(
     refresherValues,
     context,
   });
+  // DYNAMIC props() yields raw piece properties (with resolver functions);
+  // the editor only ever sees descriptors, so translate before crossing IPC.
+  const isDynamic =
+    typeof prop.props === "function" && typeof prop.options !== "function";
   return {
     id: message.id,
     type: "result",
-    output: jsonSafe(output),
+    output: isDynamic
+      ? describeProperties(output as Record<string, ApProperty> | undefined)
+      : jsonSafe(output),
     touched: [...touched],
     tlsPoisoned: consumeTlsFlag(),
   };
@@ -126,7 +141,7 @@ async function handleRun(message: RunMessage): Promise<WorkerResponse> {
     );
   }
   const { context, touched } = buildActionContext({
-    propsValue: request.propsValue,
+    propsValue: await normalizePropsValue(action.props, request.propsValue),
     auth: request.auth,
     store: request.storeScope ? storeForScope(request.storeScope) : undefined,
     connections: request.connections
@@ -161,7 +176,7 @@ async function handleTriggerHook(
   const store = new InMemoryKeyValueStore(request.storeState);
   const runsPiece = request.hook === "run" || request.hook === "test";
   const handle = buildTriggerContext({
-    propsValue: request.propsValue,
+    propsValue: await normalizePropsValue(trigger.props, request.propsValue),
     auth: request.auth,
     store,
     // Test hooks write under a separate prefix, never the live cursor.

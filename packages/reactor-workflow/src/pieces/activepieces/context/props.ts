@@ -94,12 +94,12 @@ export interface ResolveDynamicPropertyParams {
   context: BuiltApPropertyContext;
 }
 
-// Invokes a DROPDOWN options() or DYNAMIC props() resolver. The result is
-// returned untouched: pieces may soft-fail with a disabled DropdownState.
-export async function resolveDynamicProperty(
-  params: ResolveDynamicPropertyParams,
-): Promise<unknown> {
-  const { piece, actionName, propName, kind = "action" } = params;
+// Props map of an action or trigger; throws when the owner is unknown.
+export function ownerProps(
+  piece: ApPiece,
+  actionName: string,
+  kind: "action" | "trigger" = "action",
+): Record<string, ApProperty> {
   const owner =
     kind === "trigger"
       ? (getTriggers(piece)[actionName] as
@@ -109,8 +109,29 @@ export async function resolveDynamicProperty(
           | { props?: Record<string, ApProperty> }
           | undefined);
   if (!owner) throw new Error(`No ${kind} "${actionName}" on piece`);
-  const prop = owner.props?.[propName];
+  return owner.props ?? {};
+}
+
+export function findProperty(
+  piece: ApPiece,
+  actionName: string,
+  propName: string,
+  kind: "action" | "trigger" = "action",
+): ApProperty {
+  const prop = ownerProps(piece, actionName, kind)[propName] as
+    | ApProperty
+    | undefined;
   if (!prop) throw new Error(`No prop "${propName}" on ${kind} "${actionName}"`);
+  return prop;
+}
+
+// Invokes a DROPDOWN options() or DYNAMIC props() resolver. The result is
+// returned untouched: pieces may soft-fail with a disabled DropdownState.
+export async function resolveDynamicProperty(
+  params: ResolveDynamicPropertyParams,
+): Promise<unknown> {
+  const { piece, actionName, propName, kind = "action" } = params;
+  const prop = findProperty(piece, actionName, propName, kind);
   const resolver = pickResolver(prop);
   if (!resolver) throw new NotDynamicPropertyError(actionName, propName);
   return await resolver(params.refresherValues ?? {}, params.context);

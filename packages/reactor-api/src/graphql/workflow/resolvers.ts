@@ -1,4 +1,5 @@
 import { type BaseSubgraph } from "@powerhousedao/reactor-api";
+import { searchBlocks } from "./block-search.js";
 import {
   fetchPieceActions,
   fetchPieceCatalog,
@@ -20,7 +21,10 @@ interface RunsArgs {
 
 // Prod gate until runtime auth lands: writes are refused unless opted in.
 function assertSecretWritesAllowed(): void {
-  if (process.env.NODE_ENV !== "development" && process.env.PH_SECRETS_ALLOW_WRITE !== "true") {
+  if (
+    process.env.NODE_ENV !== "development" &&
+    process.env.PH_SECRETS_ALLOW_WRITE !== "true"
+  ) {
     throw new Error(
       "Secret writes are disabled; set PH_SECRETS_ALLOW_WRITE=true on the switchboard",
     );
@@ -105,6 +109,10 @@ export const getResolvers = (
       ) => workflowRuntime.blockOutputTree(args.blockType, args.config),
       pieceDetail: (_parent: unknown, args: { packageName: string }) =>
         fetchPieceDetail(args.packageName),
+      searchBlocks: (
+        _parent: unknown,
+        args: { query: string; limit?: number | null },
+      ) => searchBlocks(args.query, args.limit ?? undefined),
       connections: () => workflowRuntime.connections(),
       secret: async (_parent: unknown, args: { ref: string }) => {
         try {

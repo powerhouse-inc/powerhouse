@@ -17,7 +17,9 @@ export const schema: DocumentNode = gql`
     """
     blockDescriptor(blockType: String!): Unknown
     """
-    Resolves a dynamic prop's options against the current config values.
+    Resolves a dynamic prop against the current config values: a DROPDOWN
+    yields { options, placeholder, disabled }, a DYNAMIC prop yields the
+    resolved sub-property descriptor list.
     """
     blockOptions(
       blockType: String!
@@ -42,6 +44,11 @@ export const schema: DocumentNode = gql`
     """
     pieceDetail(packageName: String!): Unknown
     """
+    Action/trigger name search across the catalog. The index builds lazily on
+    first use; poll while status is "indexing".
+    """
+    searchBlocks(query: String!, limit: Int): BlockSearchResult!
+    """
     Health of every registered piece trigger (poll schedule, errors).
     """
     triggerStates: [TriggerStateRecord!]!
@@ -58,6 +65,27 @@ export const schema: DocumentNode = gql`
     """
     secret(ref: String!): SecretRecord
     secrets: [SecretRecord!]!
+  }
+
+  type BlockSearchHit {
+    blockType: String!
+    pieceName: String!
+    pieceDisplayName: String!
+    logoUrl: String!
+    displayName: String!
+    description: String!
+    "action | trigger"
+    kind: String!
+    "Triggers only: POLLING | WEBHOOK | APP_WEBHOOK"
+    strategy: String
+  }
+
+  type BlockSearchResult {
+    "ready | indexing | error"
+    status: String!
+    hits: [BlockSearchHit!]!
+    indexedPieces: Int!
+    error: String
   }
 
   type SecretRecord {
