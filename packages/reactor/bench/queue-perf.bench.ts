@@ -46,6 +46,17 @@ function createJob({
   };
 }
 
+/**
+ * Queue operations every case's timed callback performs, so per-case hz is
+ * cost-per-job and comparable across cases. An operation is one `enqueue`
+ * call or one `dequeue`/`dequeueNext` call together with the `complete` or
+ * `retryJob` that settles the handle it returned. Each case derives its loop
+ * bounds from this budget: 3,600 enqueues; 1,800 enqueue + 1,800 dequeue;
+ * 1,800 chained enqueue + 1,800 chained dequeue; 1,200 enqueue + 1,200
+ * dequeue/retry + 1,200 dequeue/complete.
+ */
+const OPS_PER_CASE = 3600;
+
 function createQueue() {
   const eventBus = new EventBus();
   const queue = new InMemoryQueue(eventBus, new NullDocumentModelResolver());
@@ -58,7 +69,7 @@ describe("InMemoryQueue hot-path performance", () => {
     jobCounter = 0;
     const { queue } = createQueue();
     const documents = 200;
-    const jobsPerDoc = 200;
+    const jobsPerDoc = OPS_PER_CASE / documents;
     const t0 = process.hrtime.bigint();
 
     for (let d = 0; d < documents; d++) {
@@ -87,8 +98,8 @@ describe("InMemoryQueue hot-path performance", () => {
     // Drains mixed branches/documents to exercise round-robin and dependency checks.
     jobCounter = 0;
     const { queue } = createQueue();
-    const documents = 80;
     const jobsPerDoc = 25;
+    const documents = OPS_PER_CASE / 2 / jobsPerDoc;
     const seen: string[] = [];
 
     for (let d = 0; d < documents; d++) {
@@ -143,34 +154,42 @@ describe("InMemoryQueue hot-path performance", () => {
   });
 
   bench("dependency scan with long chains", async () => {
-    // Forces linear dependency scans by enqueuing a long reverse-ordered chain.
+    // Forces dependency checks by enqueuing long reverse-ordered chains.
     jobCounter = 0;
     const { queue } = createQueue();
     const chainLength = 600;
-    let parentJobId: string | undefined;
+    const chains = OPS_PER_CASE / 2 / chainLength;
+    const chainDocs: string[] = [];
 
-    // Enqueue in reverse order so dependency checks scan the queue.
-    for (let i = chainLength - 1; i >= 0; i--) {
-      const job = createJob({
-        documentId: "chain-doc",
-        queueHint: parentJobId ? [parentJobId] : [],
-        payloadSize: 12,
-      });
-      parentJobId = job.id;
-      await queue.enqueue(job);
+    // Enqueue in reverse order so dependency checks gate the sub-queue head.
+    for (let c = 0; c < chains; c++) {
+      const documentId = `chain-doc-${c}`;
+      chainDocs.push(documentId);
+      let parentJobId: string | undefined;
+      for (let i = chainLength - 1; i >= 0; i--) {
+        const job = createJob({
+          documentId,
+          queueHint: parentJobId ? [parentJobId] : [],
+          payloadSize: 12,
+        });
+        parentJobId = job.id;
+        await queue.enqueue(job);
+      }
     }
 
     const t0 = process.hrtime.bigint();
     const seen: Array<{ id: string; deps: string[] }> = [];
     let steps = 0;
-    const cap = 2000;
-    while (await queue.hasJobs()) {
-      if (++steps > cap) throw new Error("Starvation: drain cap exceeded");
-      const handle = await queue.dequeue("chain-doc", "default", "main");
-      if (!handle) break;
-      seen.push({ id: handle.job.id, deps: handle.job.queueHint ?? [] });
-      handle.start();
-      handle.complete();
+    const cap = chains * 2000;
+    for (const documentId of chainDocs) {
+      while (await queue.hasJobs()) {
+        if (++steps > cap) throw new Error("Starvation: drain cap exceeded");
+        const handle = await queue.dequeue(documentId, "default", "main");
+        if (!handle) break;
+        seen.push({ id: handle.job.id, deps: handle.job.queueHint ?? [] });
+        handle.start();
+        handle.complete();
+      }
     }
     const t1 = process.hrtime.bigint();
 
@@ -193,7 +212,7 @@ describe("InMemoryQueue hot-path performance", () => {
     // Hammers retryJob bookkeeping by retrying then completing a large batch.
     jobCounter = 0;
     const { queue } = createQueue();
-    const totalJobs = 1200;
+    const totalJobs = OPS_PER_CASE / 3;
 
     for (let i = 0; i < totalJobs; i++) {
       const job = createJob({
