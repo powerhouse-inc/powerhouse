@@ -444,13 +444,16 @@ describe("checkConnection", () => {
 });
 
 describe("tool descriptors", () => {
-  it("exposes three read-only tools", () => {
-    expect(tools.aiTools.map((tool) => tool.name)).toEqual([
+  it("exposes the three read-only connection tools ahead of the workflow tools", () => {
+    const connectionTools = [
       "getConnectors",
       "getConnections",
       "checkConnection",
-    ]);
-    for (const tool of tools.aiTools) {
+    ];
+    const names = tools.aiTools.map((tool) => tool.name);
+    expect(names.slice(0, 3)).toEqual(connectionTools);
+    expect(new Set(names).size).toBe(names.length);
+    for (const tool of tools.aiTools.slice(0, 3)) {
       expect(tool.annotations?.readOnlyHint).toBe(true);
       expect(tool.annotations?.destructiveHint).toBe(false);
     }

@@ -2,7 +2,6 @@
 // piece catalog, connection documents, and connection health. The `aiTools`
 // export is how the host app discovers this package's tools (the line in the
 // project index is synced by `ph generate`).
-import { resolveDriveSwitchboard } from "@powerhousedao/reactor-browser/ai";
 import type { PhAiToolDescriptor } from "@powerhousedao/shared/document-model";
 import { z } from "zod";
 import {
@@ -17,25 +16,12 @@ import {
   fetchPieceActions,
   fetchPieceCatalog,
   fetchPieceTriggers,
-  setRuntimeUrl,
   type PieceSummary,
 } from "../editors/workflow-editor/runtime-api.js";
+import { syncRuntimeUrl } from "./runtime-url.js";
+import { workflowTools } from "./workflow-tools.js";
 
 const MAX_CONNECTORS = 20;
-
-/**
- * Points the module-level runtime client at the selected drive's
- * workflow-runtime subgraph. When no switchboard can be resolved (no
- * selection, local drive with no default URL) the runtime client keeps its
- * existing URL, which falls back to the local development default.
- */
-function syncRuntimeUrl(): void {
-  if (typeof window === "undefined") return;
-  const switchboard = resolveDriveSwitchboard(window.ph?.selectedDriveId);
-  if (switchboard) {
-    setRuntimeUrl(`${switchboard.graphqlUrl}/workflow-runtime`);
-  }
-}
 
 export interface ConnectorField {
   name: string;
@@ -237,4 +223,5 @@ export const aiTools: PhAiToolDescriptor[] = [
   getConnectorsTool,
   getConnectionsTool,
   checkConnectionTool,
+  ...workflowTools,
 ];
