@@ -21,10 +21,10 @@ function graphqlFetch(routes: Record<string, Handler>) {
     const operation =
       /^\s*(?:query|mutation)\s+(\w+)/.exec(body.query)?.[1] ?? "";
     calls.push({ operation, variables: body.variables });
-    const handler = routes[operation];
-    const payload = handler
-      ? { data: handler(body.variables) }
-      : { errors: [{ message: `unrouted operation ${operation}` }] };
+    const payload =
+      operation in routes
+        ? { data: routes[operation](body.variables) }
+        : { errors: [{ message: `unrouted operation ${operation}` }] };
     return Promise.resolve(
       new Response(JSON.stringify(payload), { status: 200 }),
     );
