@@ -1,3 +1,13 @@
+## 6.2.2-dev.79 (2026-09-04)
+
+### 🚀 Features
+
+- **codegen:** sync optional aiTools export into the project index ([fda185991](https://github.com/powerhouse-inc/powerhouse/commit/fda185991))
+
+### ❤️ Thank You
+
+- froid1911
+
 ## 6.2.2-dev.78 (2026-09-04)
 
 ### 🚀 Features

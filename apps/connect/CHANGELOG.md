@@ -1,3 +1,14 @@
+## 6.2.2-dev.79 (2026-09-04)
+
+### 🚀 Features
+
+- **connect:** merge package aiTools into the chat tool set ([a0da7d7a3](https://github.com/powerhouse-inc/powerhouse/commit/a0da7d7a3))
+- **connect:** register the switchboard schema tool in the chat ([43ab43d62](https://github.com/powerhouse-inc/powerhouse/commit/43ab43d62))
+
+### ❤️ Thank You
+
+- froid1911
+
 ## 6.2.2-dev.78 (2026-09-04)
 
 ### 🚀 Features

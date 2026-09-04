@@ -1,3 +1,16 @@
+## 6.2.2-dev.79 (2026-09-04)
+
+### 🚀 Features
+
+- **reactor-browser:** destructiveHint gates approval; secret policy in system prompt ([573d469eb](https://github.com/powerhouse-inc/powerhouse/commit/573d469eb))
+- **shared:** add PhAiToolDescriptor and DocumentModelLib.aiTools ([551d8ee2a](https://github.com/powerhouse-inc/powerhouse/commit/551d8ee2a))
+- **reactor-browser:** ground chat context in document id and switchboard endpoint ([296d4b9fc](https://github.com/powerhouse-inc/powerhouse/commit/296d4b9fc))
+- **reactor-browser:** add switchboard resolver and schema introspection tool ([ce7a10918](https://github.com/powerhouse-inc/powerhouse/commit/ce7a10918))
+
+### ❤️ Thank You
+
+- froid1911
+
 ## 6.2.2-dev.78 (2026-09-04)
 
 ### 🚀 Features

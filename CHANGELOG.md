@@ -1,3 +1,19 @@
+## 6.2.2-dev.79 (2026-09-04)
+
+### 🚀 Features
+
+- **codegen:** sync optional aiTools export into the project index ([fda185991](https://github.com/powerhouse-inc/powerhouse/commit/fda185991))
+- **connect:** register the switchboard schema tool in the chat ([43ab43d62](https://github.com/powerhouse-inc/powerhouse/commit/43ab43d62))
+- **connect:** merge package aiTools into the chat tool set ([a0da7d7a3](https://github.com/powerhouse-inc/powerhouse/commit/a0da7d7a3))
+- **reactor-browser:** add switchboard resolver and schema introspection tool ([ce7a10918](https://github.com/powerhouse-inc/powerhouse/commit/ce7a10918))
+- **reactor-browser:** ground chat context in document id and switchboard endpoint ([296d4b9fc](https://github.com/powerhouse-inc/powerhouse/commit/296d4b9fc))
+- **reactor-browser:** destructiveHint gates approval; secret policy in system prompt ([573d469eb](https://github.com/powerhouse-inc/powerhouse/commit/573d469eb))
+- **shared:** add PhAiToolDescriptor and DocumentModelLib.aiTools ([551d8ee2a](https://github.com/powerhouse-inc/powerhouse/commit/551d8ee2a))
+
+### ❤️ Thank You
+
+- froid1911
+
 ## 6.2.2-dev.78 (2026-09-04)
 
 ### 🚀 Features

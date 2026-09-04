@@ -1,3 +1,13 @@
+## 6.2.2-dev.79 (2026-09-04)
+
+### 🚀 Features
+
+- **shared:** add PhAiToolDescriptor and DocumentModelLib.aiTools ([551d8ee2a](https://github.com/powerhouse-inc/powerhouse/commit/551d8ee2a))
+
+### ❤️ Thank You
+
+- froid1911
+
 ## 6.2.2-dev.78 (2026-09-04)
 
 ### 🚀 Features
