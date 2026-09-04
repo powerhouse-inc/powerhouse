@@ -201,7 +201,12 @@ export const CORE_FORMS: Record<string, BlockForm> = {
         false,
         "Type of the created document; omit to match any",
       ),
-      autocomplete("driveId", "Drive", false, "Omit to match every drive"),
+      autocomplete(
+        "driveId",
+        "Drive",
+        false,
+        "Omit to match documents outside every drive too",
+      ),
     ],
   },
   "core#document-deleted": {
@@ -213,9 +218,14 @@ export const CORE_FORMS: Record<string, BlockForm> = {
         "documentType",
         "Document type",
         false,
-        "Resolved best-effort after deletion; omit to match any",
+        "Type of the deleted document; omit to match any",
       ),
-      autocomplete("driveId", "Drive", false, "Omit to match every drive"),
+      autocomplete(
+        "driveId",
+        "Drive",
+        false,
+        "Omit to match documents outside every drive too",
+      ),
     ],
   },
   "core#branch": {
