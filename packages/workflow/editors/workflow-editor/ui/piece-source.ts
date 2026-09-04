@@ -8,6 +8,25 @@ export interface PieceSummaryUi {
   logoUrl: string;
   actionCount: number;
   triggerCount: number;
+  // Activepieces category ids; empty for uncategorised pieces.
+  categories: string[];
+}
+
+export interface BlockSearchHitUi {
+  blockType: string;
+  pieceName: string;
+  pieceDisplayName: string;
+  logoUrl: string;
+  displayName: string;
+  description: string;
+  kind: "action" | "trigger";
+  strategy: string | null;
+}
+
+export interface BlockSearchResultUi {
+  status: "ready" | "indexing" | "error";
+  hits: BlockSearchHitUi[];
+  error: string | null;
 }
 
 export interface PieceActionUi {
@@ -30,6 +49,11 @@ export interface PieceCatalogSource {
   loadCatalog: () => Promise<PieceSummaryUi[]>;
   loadActions: (packageName: string) => Promise<PieceActionUi[]>;
   loadTriggers: (packageName: string) => Promise<PieceTriggerUi[]>;
+  // Catalog-wide action/trigger name search; optional for offline sources.
+  searchBlocks?: (
+    query: string,
+    limit?: number,
+  ) => Promise<BlockSearchResultUi>;
 }
 
 let source: PieceCatalogSource | undefined;

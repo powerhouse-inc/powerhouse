@@ -53,15 +53,16 @@ export const workflowStepsOperations: WorkflowStepsOperations = {
     if (action.input.config !== undefined && action.input.config !== null) {
       step.config = action.input.config;
     }
-    if (action.input.retry) step.retry = action.input.retry;
-    if (
-      action.input.timeoutSeconds !== undefined &&
-      action.input.timeoutSeconds !== null
-    ) {
-      step.timeoutSeconds = action.input.timeoutSeconds;
+    // For the optional runtime fields null clears; undefined leaves as is.
+    if (action.input.retry !== undefined) {
+      step.retry = action.input.retry ?? null;
     }
-    if (action.input.idempotencyKeyExpression) {
-      step.idempotencyKeyExpression = action.input.idempotencyKeyExpression;
+    if (action.input.timeoutSeconds !== undefined) {
+      step.timeoutSeconds = action.input.timeoutSeconds ?? null;
+    }
+    if (action.input.idempotencyKeyExpression !== undefined) {
+      step.idempotencyKeyExpression =
+        action.input.idempotencyKeyExpression || null;
     }
     if (action.input.position) step.position = action.input.position;
     state.version += 1;

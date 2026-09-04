@@ -1,7 +1,7 @@
 // Step card + add buttons, ported from the Activepieces builder step-node
 // and add-button components (MIT, activepieces packages/web).
 import { Handle, Position, type NodeProps } from "@xyflow/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ADD_BUTTON_SIZE,
   BIG_ADD_BUTTON_SIZE,
@@ -11,9 +11,41 @@ import {
 import { blockMeta } from "./block-meta.js";
 import { BlockLogo, BlockSelector } from "./BlockSelector.js";
 import { STEP_PRESETS, TRIGGER_PRESETS, type BlockPreset } from "./blocks.js";
+import type { BlockForm } from "./forms.js";
 import type { StepModel, TriggerModel } from "./model.js";
+import { missingForBlock } from "./validation.js";
 
 const hiddenHandle = { opacity: 0, pointerEvents: "none" as const };
+
+// Required fields still empty on this block; a loading form counts as none.
+function useMissingRequired(
+  blockType: string,
+  config: unknown,
+  connectionId: string | null,
+): string[] {
+  const [form, setForm] = useState<BlockForm | null | "loading">("loading");
+  useEffect(() => {
+    const getBlockForm = getCanvasHandlers()?.getBlockForm;
+    if (!getBlockForm) {
+      setForm(null);
+      return;
+    }
+    let alive = true;
+    setForm("loading");
+    getBlockForm(blockType).then(
+      (result) => {
+        if (alive) setForm(result);
+      },
+      () => {
+        if (alive) setForm(null);
+      },
+    );
+    return () => {
+      alive = false;
+    };
+  }, [blockType]);
+  return missingForBlock(form, config, connectionId);
+}
 
 export function ApStepNode(props: NodeProps) {
   const data = props.data as
@@ -26,6 +58,13 @@ export function ApStepNode(props: NodeProps) {
     data.kind === "trigger"
       ? meta.displayName
       : data.step.name || data.step.key;
+  const missing = useMissingRequired(
+    blockType,
+    data.kind === "trigger" ? data.trigger.config : data.step.config,
+    data.kind === "trigger"
+      ? data.trigger.connectionId
+      : data.step.connectionId,
+  );
 
   return (
     <div
@@ -48,6 +87,12 @@ export function ApStepNode(props: NodeProps) {
           </div>
         </div>
       </div>
+      {missing.length > 0 ? (
+        <span
+          className="absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-solid border-white bg-amber-400"
+          title={`Missing: ${missing.join(", ")}`}
+        />
+      ) : null}
       <Handle type="source" position={Position.Bottom} style={hiddenHandle} />
     </div>
   );
@@ -128,6 +173,8 @@ export interface ApCanvasHandlers {
   // Re-attaching steps that are unreachable from the trigger.
   attachableSteps: (fromId: string) => StepModel[];
   attachStep: (fromId: string, port: string, stepId: string) => void;
+  // Form descriptor lookup for the required-fields badge.
+  getBlockForm?: (blockType: string) => Promise<BlockForm | null>;
 }
 
 let canvasHandlers: ApCanvasHandlers | undefined;

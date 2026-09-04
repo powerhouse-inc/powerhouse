@@ -20,32 +20,19 @@
     {
       "id": "workflow-studio",
       "name": "Workflow Studio",
-      "documentTypes": [
-        "powerhouse/document-drive"
-      ]
+      "documentTypes": ["powerhouse/document-drive"]
     }
   ],
   "editors": [
     {
       "id": "workflow-editor",
       "name": "Workflow Editor",
-      "documentTypes": [
-        "powerhouse/workflow"
-      ]
+      "documentTypes": ["powerhouse/workflow"]
     },
     {
       "id": "connection-editor",
       "name": "Connection Editor",
-      "documentTypes": [
-        "powerhouse/connection"
-      ]
-    },
-    {
-      "name": "Workflow Editor AP",
-      "id": "workflow-editor-ap",
-      "documentTypes": [
-        "powerhouse/workflow"
-      ]
+      "documentTypes": ["powerhouse/connection"]
     }
   ],
   "processors": [

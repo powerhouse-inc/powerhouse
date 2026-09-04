@@ -10,7 +10,9 @@ function step(id: string): StepModel {
     blockType: "core#document-dispatch",
     connectionId: null,
     config: {},
+    retry: null,
     timeoutSeconds: null,
+    idempotencyKeyExpression: null,
     position: null,
   };
 }
@@ -34,6 +36,7 @@ function model(edges: [string, string][]): WorkflowModel {
       port: "next",
       condition: null,
     })),
+    variables: [],
   };
 }
 

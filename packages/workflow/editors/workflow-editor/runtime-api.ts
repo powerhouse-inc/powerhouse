@@ -97,6 +97,8 @@ export interface PieceSummary {
   version: string;
   actionCount: number;
   triggerCount: number;
+  // Activepieces category ids, e.g. ARTIFICIAL_INTELLIGENCE, SALES_AND_CRM.
+  categories: string[];
   // PieceAuth descriptor, verbatim from the piece; null when authless.
   auth?: unknown;
 }
@@ -153,6 +155,43 @@ export async function fetchPieceTriggers(
     { packageName },
   );
   return data.workflowRuntime.pieceTriggers.triggers;
+}
+
+export interface BlockSearchHit {
+  blockType: string;
+  pieceName: string;
+  pieceDisplayName: string;
+  logoUrl: string;
+  displayName: string;
+  description: string;
+  kind: "action" | "trigger";
+  strategy: string | null;
+}
+
+export interface BlockSearchResult {
+  status: "ready" | "indexing" | "error";
+  hits: BlockSearchHit[];
+  indexedPieces: number;
+  error: string | null;
+}
+
+// Catalog-wide action/trigger search; "indexing" on the very first calls.
+export async function searchBlocks(
+  query: string,
+  limit = 30,
+): Promise<BlockSearchResult> {
+  const data = await gql<{
+    workflowRuntime: { searchBlocks: BlockSearchResult };
+  }>(
+    `query SearchBlocks($query: String!, $limit: Int) {
+      workflowRuntime { searchBlocks(query: $query, limit: $limit) {
+        status indexedPieces error
+        hits { blockType pieceName pieceDisplayName logoUrl displayName description kind strategy }
+      } }
+    }`,
+    { query, limit },
+  );
+  return data.workflowRuntime.searchBlocks;
 }
 
 export interface OutputTreeNode {

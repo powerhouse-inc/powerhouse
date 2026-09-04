@@ -15,6 +15,16 @@ export interface TriggerModel {
   connectionId: string | null;
 }
 
+export type BackoffKindValue = "FIXED" | "EXPONENTIAL";
+
+export interface RetryPolicyModel {
+  maxAttempts: number;
+  backoff: BackoffKindValue;
+  initialDelaySeconds: number;
+  maxDelaySeconds: number;
+  retryOn: string[];
+}
+
 export interface StepModel {
   id: string;
   key: string;
@@ -22,7 +32,9 @@ export interface StepModel {
   blockType: string;
   connectionId: string | null;
   config: unknown;
+  retry: RetryPolicyModel | null;
   timeoutSeconds: number | null;
+  idempotencyKeyExpression: string | null;
   position: PointModel | null;
 }
 
@@ -34,6 +46,13 @@ export interface EdgeModel {
   condition: string | null;
 }
 
+export interface VariableModel {
+  id: string;
+  key: string;
+  value: unknown;
+  description: string | null;
+}
+
 export interface WorkflowModel {
   name: string;
   status: WorkflowStatusValue;
@@ -41,6 +60,7 @@ export interface WorkflowModel {
   trigger: TriggerModel | null;
   steps: StepModel[];
   edges: EdgeModel[];
+  variables: VariableModel[];
 }
 
 export interface AddStepInputModel {
@@ -59,7 +79,10 @@ export interface UpdateStepInputModel {
   // null clears the step's connection.
   connectionId?: string | null;
   config?: unknown;
-  timeoutSeconds?: number;
+  // null clears each of these; undefined leaves them unchanged.
+  retry?: RetryPolicyModel | null;
+  timeoutSeconds?: number | null;
+  idempotencyKeyExpression?: string | null;
   position?: PointModel;
 }
 
@@ -82,6 +105,14 @@ export interface WorkflowEditorCallbacks {
     condition?: string;
   }) => void;
   removeEdge: (id: string) => void;
+  // Upserts by key (the reducer matches existing variables on key).
+  setVariable: (input: {
+    id?: string;
+    key: string;
+    value: unknown;
+    description?: string;
+  }) => void;
+  removeVariable: (id: string) => void;
   // Composite operations backing the canvas add buttons.
   insertStepOnEdge: (edgeId: string, input: AddStepInputModel) => void;
   appendStep: (fromId: string, port: string, input: AddStepInputModel) => void;

@@ -1,11 +1,13 @@
 // Piece-selector-style popover, adapted from the Activepieces builder
 // pieces-selector (MIT, activepieces packages/web).
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { blockMeta } from "./block-meta.js";
 import type { BlockPreset } from "./blocks.js";
 import type { StepModel } from "./model.js";
 import {
   getPieceSource,
+  type BlockSearchHitUi,
+  type BlockSearchResultUi,
   type PieceActionUi,
   type PieceSummaryUi,
   type PieceTriggerUi,
@@ -89,6 +91,60 @@ function SectionLabel(props: { children: string }) {
 interface CatalogState {
   pieces: PieceSummaryUi[];
   error?: string;
+}
+
+// Activepieces category ids → chip labels; AI variants share one chip and
+// their CORE/FLOW_CONTROL utilities are renamed so "Core" stays ours.
+const CATEGORY_LABELS: Record<string, string> = {
+  ARTIFICIAL_INTELLIGENCE: "AI",
+  UNIVERSAL_AI: "AI",
+  PRODUCTIVITY: "Productivity",
+  MARKETING: "Marketing",
+  COMMUNICATION: "Communication",
+  SALES_AND_CRM: "Sales & CRM",
+  DEVELOPER_TOOLS: "Developer tools",
+  CONTENT_AND_FILES: "Content & files",
+  BUSINESS_INTELLIGENCE: "Business intelligence",
+  CORE: "Utilities",
+  FLOW_CONTROL: "Utilities",
+  COMMERCE: "Commerce",
+  FORMS_AND_SURVEYS: "Forms & surveys",
+  ACCOUNTING: "Accounting",
+  CUSTOMER_SUPPORT: "Customer support",
+  PAYMENT_PROCESSING: "Payments",
+  HUMAN_RESOURCES: "HR",
+};
+
+export const CORE_CHIP = "Core";
+const AI_CHIP = "AI";
+
+function categoryLabel(id: string): string {
+  return (
+    CATEGORY_LABELS[id] ??
+    id
+      .toLowerCase()
+      .replaceAll("_", " ")
+      .replace(/^\w/, (char) => char.toUpperCase())
+  );
+}
+
+export function chipsOf(piece: { categories: string[] }): Set<string> {
+  return new Set(piece.categories.map(categoryLabel));
+}
+
+// Chip order: Core pinned, AI next, then by piece count.
+export function orderChips(pieces: { categories: string[] }[]): string[] {
+  const counts = new Map<string, number>();
+  for (const piece of pieces) {
+    for (const chip of chipsOf(piece)) {
+      counts.set(chip, (counts.get(chip) ?? 0) + 1);
+    }
+  }
+  const rest = [...counts.entries()]
+    .filter(([chip]) => chip !== AI_CHIP)
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .map(([chip]) => chip);
+  return [CORE_CHIP, ...(counts.has(AI_CHIP) ? [AI_CHIP] : []), ...rest];
 }
 
 // Drill-in view: one piece's actions or triggers, per mode.
@@ -178,6 +234,82 @@ function PieceEntries(props: {
   );
 }
 
+const SEARCH_MIN_CHARS = 2;
+const SEARCH_DEBOUNCE_MS = 250;
+const INDEXING_RETRY_MS = 2000;
+
+type SearchState =
+  | { kind: "idle" }
+  | { kind: "loading" }
+  | { kind: "done"; result: BlockSearchResultUi }
+  | { kind: "error"; message: string };
+
+// Debounced catalog-wide search; keeps polling while the runtime indexes.
+function useBlockSearch(query: string, enabled: boolean): SearchState {
+  const [state, setState] = useState<SearchState>({ kind: "idle" });
+  const [attempt, setAttempt] = useState(0);
+  const trimmed = query.trim();
+  const active = enabled && trimmed.length >= SEARCH_MIN_CHARS;
+
+  useEffect(() => {
+    const search = getPieceSource()?.searchBlocks;
+    if (!active || !search) {
+      setState({ kind: "idle" });
+      return;
+    }
+    let alive = true;
+    let retry: ReturnType<typeof setTimeout> | undefined;
+    const timer = setTimeout(() => {
+      setState((previous) =>
+        previous.kind === "done" ? previous : { kind: "loading" },
+      );
+      search(trimmed).then(
+        (result) => {
+          if (!alive) return;
+          setState({ kind: "done", result });
+          if (result.status === "indexing") {
+            retry = setTimeout(
+              () => setAttempt((value) => value + 1),
+              INDEXING_RETRY_MS,
+            );
+          }
+        },
+        (error: unknown) => {
+          if (alive) {
+            setState({
+              kind: "error",
+              message: error instanceof Error ? error.message : String(error),
+            });
+          }
+        },
+      );
+    }, SEARCH_DEBOUNCE_MS);
+    return () => {
+      alive = false;
+      clearTimeout(timer);
+      if (retry) clearTimeout(retry);
+    };
+  }, [active, trimmed, attempt]);
+
+  return active ? state : { kind: "idle" };
+}
+
+function Chip(props: { label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${
+        props.active
+          ? "border-slate-800 bg-slate-800 text-white"
+          : "border-slate-200 text-slate-500 hover:border-slate-400"
+      }`}
+      onClick={props.onClick}
+    >
+      {props.label}
+    </button>
+  );
+}
+
 export function BlockSelector(props: {
   title: string;
   presets: BlockPreset[];
@@ -192,6 +324,7 @@ export function BlockSelector(props: {
   onAttach?: (stepId: string) => void;
 }) {
   const [query, setQuery] = useState("");
+  const [chip, setChip] = useState<string | null>(null);
   const [catalog, setCatalog] = useState<CatalogState | null>(null);
   const [piece, setPiece] = useState<PieceSummaryUi | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -230,27 +363,62 @@ export function BlockSelector(props: {
 
   const mode: PieceMode = props.pieceMode ?? "actions";
   const lowered = query.toLowerCase();
-  const filteredPresets = props.presets.filter((preset) =>
-    `${preset.label} ${preset.blockType}`.toLowerCase().includes(lowered),
+  const modePieces = useMemo(
+    () =>
+      (catalog?.pieces ?? []).filter(
+        (entry) =>
+          (mode === "triggers" ? entry.triggerCount : entry.actionCount) > 0,
+      ),
+    [catalog, mode],
   );
-  const filteredAttach = (props.onAttach ? (props.attachSteps ?? []) : []).filter(
-    (step) =>
-      `${step.name} ${step.key} ${step.blockType}`
-        .toLowerCase()
-        .includes(lowered),
+  const chips = useMemo(() => orderChips(modePieces), [modePieces]);
+  const chipsByPiece = useMemo(
+    () => new Map(modePieces.map((entry) => [entry.name, chipsOf(entry)])),
+    [modePieces],
   );
-  const filteredPieces = (catalog?.pieces ?? []).filter(
-    (entry) =>
-      (mode === "triggers" ? entry.triggerCount : entry.actionCount) > 0 &&
-      `${entry.displayName} ${entry.name} ${entry.description}`
-        .toLowerCase()
-        .includes(lowered),
+  const inChip = (pieceName: string) =>
+    chip === null || chip === CORE_CHIP
+      ? true
+      : (chipsByPiece.get(pieceName)?.has(chip) ?? false);
+
+  const showPresets = chip === null || chip === CORE_CHIP;
+  const showCatalog = pieceSource !== undefined && chip !== CORE_CHIP;
+  const filteredPresets = showPresets
+    ? props.presets.filter((preset) =>
+        `${preset.label} ${preset.blockType}`.toLowerCase().includes(lowered),
+      )
+    : [];
+  const filteredAttach = (
+    props.onAttach ? (props.attachSteps ?? []) : []
+  ).filter((step) =>
+    `${step.name} ${step.key} ${step.blockType}`
+      .toLowerCase()
+      .includes(lowered),
   );
+  const filteredPieces = showCatalog
+    ? modePieces.filter(
+        (entry) =>
+          inChip(entry.name) &&
+          `${entry.displayName} ${entry.name} ${entry.description}`
+            .toLowerCase()
+            .includes(lowered),
+      )
+    : [];
+
+  const search = useBlockSearch(query, showCatalog && !piece);
+  const wantedKind = mode === "triggers" ? "trigger" : "action";
+  const hits: BlockSearchHitUi[] =
+    search.kind === "done"
+      ? search.result.hits.filter(
+          (hit) => hit.kind === wantedKind && inChip(hit.pieceName),
+        )
+      : [];
+  const searchActive = search.kind !== "idle";
 
   return (
     <div
       ref={containerRef}
-      className="nodrag nopan nowheel w-72 rounded-md border border-solid border-slate-200 bg-white shadow-lg"
+      className="nodrag nopan nowheel w-80 rounded-md border border-solid border-slate-200 bg-white shadow-lg"
       onClick={(event) => event.stopPropagation()}
     >
       <div className="border-b border-slate-100 p-2">
@@ -258,13 +426,29 @@ export function BlockSelector(props: {
           {props.title}
         </div>
         {piece ? null : (
-          <input
-            autoFocus
-            className="w-full rounded border border-slate-200 px-2 py-1 text-xs"
-            placeholder="Search…"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-          />
+          <>
+            <input
+              autoFocus
+              className="w-full rounded border border-slate-200 px-2 py-1 text-xs"
+              placeholder={
+                pieceSource ? "Search pieces, actions, triggers…" : "Search…"
+              }
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+            {pieceSource && catalog && !catalog.error ? (
+              <div className="mt-1.5 flex flex-wrap gap-1 px-0.5">
+                {chips.map((label) => (
+                  <Chip
+                    key={label}
+                    label={label}
+                    active={chip === label}
+                    onClick={() => setChip(chip === label ? null : label)}
+                  />
+                ))}
+              </div>
+            ) : null}
+          </>
         )}
       </div>
       {piece ? (
@@ -290,6 +474,10 @@ export function BlockSelector(props: {
               ))}
             </>
           ) : null}
+          {filteredPresets.length > 0 &&
+          (showCatalog || filteredAttach.length > 0) ? (
+            <SectionLabel>Core</SectionLabel>
+          ) : null}
           {filteredPresets.map((preset) => (
             <Row
               key={preset.blockType + preset.label}
@@ -299,7 +487,68 @@ export function BlockSelector(props: {
               onClick={() => props.onPick(preset)}
             />
           ))}
-          {pieceSource ? (
+          {searchActive ? (
+            <>
+              <SectionLabel>
+                {mode === "triggers" ? "Triggers" : "Actions & triggers"}
+              </SectionLabel>
+              {search.kind === "loading" ? (
+                <div className="px-3 py-1 text-xs text-slate-400">
+                  Searching…
+                </div>
+              ) : search.kind === "error" ? (
+                <div className="px-3 py-1 text-xs text-red-500">
+                  {search.message}
+                </div>
+              ) : search.result.status === "indexing" ? (
+                <div className="px-3 py-1 text-xs text-slate-400">
+                  Indexing the catalog… results appear shortly.
+                </div>
+              ) : search.result.status === "error" ? (
+                <div className="px-3 py-1 text-xs text-red-500">
+                  {search.result.error ?? "Search failed"}
+                </div>
+              ) : hits.length === 0 ? (
+                <div className="px-3 py-1 text-xs text-slate-400">
+                  No matching {wantedKind}s
+                </div>
+              ) : (
+                hits.map((hit) => {
+                  const strategy = hit.strategy ?? "POLLING";
+                  const unsupported =
+                    hit.kind === "trigger" && strategy !== "POLLING";
+                  return (
+                    <Row
+                      key={hit.blockType}
+                      logo={
+                        <LogoFrame
+                          src={hit.logoUrl}
+                          alt={hit.pieceDisplayName}
+                          size={28}
+                        />
+                      }
+                      label={`${hit.displayName} · ${hit.pieceDisplayName}`}
+                      description={
+                        unsupported
+                          ? `${strategy.toLowerCase()} — not supported yet`
+                          : hit.description || hit.pieceDisplayName
+                      }
+                      disabled={unsupported}
+                      onClick={() =>
+                        props.onPick({
+                          label: hit.displayName,
+                          blockType: hit.blockType,
+                          description: hit.description,
+                          defaultConfig: {},
+                        })
+                      }
+                    />
+                  );
+                })
+              )}
+            </>
+          ) : null}
+          {showCatalog ? (
             <>
               <SectionLabel>Pieces</SectionLabel>
               {catalog === null ? (
@@ -335,7 +584,8 @@ export function BlockSelector(props: {
           ) : null}
           {filteredPresets.length === 0 &&
           filteredPieces.length === 0 &&
-          filteredAttach.length === 0 ? (
+          filteredAttach.length === 0 &&
+          !searchActive ? (
             <div className="px-3 py-2 text-xs text-slate-400">No matches</div>
           ) : null}
         </div>

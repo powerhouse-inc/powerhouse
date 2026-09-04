@@ -1,4 +1,8 @@
-import { useState, type ReactNode } from "react";
+import { useMemo, useState } from "react";
+import {
+  ExpressionPanel,
+  ExpressionTargetProvider,
+} from "./ExpressionPicker.js";
 import type { DesignTimeService } from "./forms.js";
 import type {
   WorkflowEditorCallbacks,
@@ -6,7 +10,10 @@ import type {
   WorkflowStatusValue,
 } from "./model.js";
 import { StepPanel, TriggerPanel } from "./StepPanel.js";
+import { VariablesEditor } from "./VariablesEditor.js";
 import { WorkflowCanvas } from "./WorkflowCanvas.js";
+
+const VARIABLES_VIEW = "__variables";
 
 const STATUSES: WorkflowStatusValue[] = [
   "DRAFT",
@@ -19,7 +26,6 @@ export function WorkflowEditorApp(props: {
   model: WorkflowModel;
   callbacks: WorkflowEditorCallbacks;
   designTime?: DesignTimeService;
-  headerExtra?: ReactNode;
 }) {
   const { model, callbacks } = props;
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -27,6 +33,12 @@ export function WorkflowEditorApp(props: {
   const selectedStep = model.steps.find((step) => step.id === selectedId);
   const selectedTrigger =
     model.trigger && model.trigger.id === selectedId ? model.trigger : null;
+  const showVariables = selectedId === VARIABLES_VIEW;
+  const stepBlockTypes = useMemo(
+    () =>
+      Object.fromEntries(model.steps.map((step) => [step.key, step.blockType])),
+    [model.steps],
+  );
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -64,7 +76,18 @@ export function WorkflowEditorApp(props: {
         <span className="ml-auto text-[11px] text-slate-400">
           Use the + buttons on the canvas to add steps
         </span>
-        {props.headerExtra}
+        <button
+          type="button"
+          className={`rounded border px-2 py-0.5 text-[11px] font-medium ${
+            showVariables
+              ? "border-slate-800 bg-slate-800 text-white"
+              : "border-slate-200 text-slate-500 hover:bg-slate-100"
+          }`}
+          onClick={() => setSelectedId(showVariables ? null : VARIABLES_VIEW)}
+        >
+          Variables
+          {model.variables.length > 0 ? ` (${model.variables.length})` : ""}
+        </button>
       </div>
       <div className="flex min-h-0 flex-1">
         <div className="min-h-[480px] min-w-0 flex-1">
@@ -72,29 +95,48 @@ export function WorkflowEditorApp(props: {
             model={model}
             callbacks={callbacks}
             onSelect={setSelectedId}
+            designTime={props.designTime}
           />
         </div>
-        {selectedStep || selectedTrigger ? (
+        {showVariables ? (
           <aside className="min-h-0 w-96 overflow-y-auto border-l border-slate-200 bg-slate-50">
-            {selectedStep ? (
-              <StepPanel
-                key={selectedStep.id}
-                step={selectedStep}
-                callbacks={callbacks}
-                onClose={() => setSelectedId(null)}
-                designTime={props.designTime}
-              />
-            ) : null}
-            {selectedTrigger ? (
-              <TriggerPanel
-                key={selectedTrigger.id}
-                trigger={selectedTrigger}
-                callbacks={callbacks}
-                onClose={() => setSelectedId(null)}
-                designTime={props.designTime}
-              />
-            ) : null}
+            <VariablesEditor
+              variables={model.variables}
+              callbacks={callbacks}
+              onClose={() => setSelectedId(null)}
+            />
           </aside>
+        ) : null}
+        {selectedStep || selectedTrigger ? (
+          <ExpressionTargetProvider
+            key={selectedId}
+            stepBlockTypes={stepBlockTypes}
+          >
+            <aside className="flex min-h-0 w-96 flex-col border-l border-slate-200 bg-slate-50">
+              <div className="min-h-0 flex-1 overflow-y-auto">
+                {selectedStep ? (
+                  <StepPanel
+                    key={selectedStep.id}
+                    step={selectedStep}
+                    model={model}
+                    callbacks={callbacks}
+                    onClose={() => setSelectedId(null)}
+                    designTime={props.designTime}
+                  />
+                ) : null}
+                {selectedTrigger ? (
+                  <TriggerPanel
+                    key={selectedTrigger.id}
+                    trigger={selectedTrigger}
+                    callbacks={callbacks}
+                    onClose={() => setSelectedId(null)}
+                    designTime={props.designTime}
+                  />
+                ) : null}
+              </div>
+              <ExpressionPanel />
+            </aside>
+          </ExpressionTargetProvider>
         ) : null}
       </div>
     </div>

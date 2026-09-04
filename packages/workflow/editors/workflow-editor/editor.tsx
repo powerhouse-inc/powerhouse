@@ -4,18 +4,20 @@ import { DocumentToolbar } from "@powerhousedao/design-system/connect";
 import { useSelectedWorkflowDocument } from "document-models/workflow";
 import { useEffect, useMemo } from "react";
 import { useWorkflowModel } from "./document/useWorkflowModel.js";
-import { EditorSwitch } from "./EditorSwitch.js";
 import {
   fetchBlockOutputTree,
   fetchConnections,
   fetchPieceActions,
   fetchPieceCatalog,
   fetchPieceTriggers,
+  fetchRuns,
   getBlockForm,
   loadBlockOptions,
+  searchBlocks,
   testTrigger,
   type OutputTreeNode,
 } from "./runtime-api.js";
+import { buildExpressionScope, EMPTY_SCOPE } from "./ui/expression-scope.js";
 import { registerExpressionScopeSource } from "./ui/ExpressionPicker.js";
 import type { DesignTimeService } from "./ui/forms.js";
 import { registerPieceSource } from "./ui/piece-source.js";
@@ -26,6 +28,7 @@ registerPieceSource({
   loadCatalog: fetchPieceCatalog,
   loadActions: fetchPieceActions,
   loadTriggers: fetchPieceTriggers,
+  searchBlocks,
 });
 
 export default function Editor() {
@@ -44,8 +47,8 @@ export default function Editor() {
     [workflowId],
   );
 
-  // Scope for the {} picker, built purely from authored shapes: leaves carry
-  // the declared type instead of any run's values.
+  // Scope for the {} picker: journaled outputs from the latest run where
+  // available, authored shapes (declared types as leaves) otherwise.
   useEffect(() => {
     const treeValue = (nodes: OutputTreeNode[]): Record<string, unknown> =>
       Object.fromEntries(
@@ -54,7 +57,7 @@ export default function Editor() {
           node.children ? treeValue(node.children) : node.type,
         ]),
       );
-    const outputOf = async (blockType: string, config: unknown) => {
+    const authoredOutput = async (blockType: string, config: unknown) => {
       try {
         const tree = await fetchBlockOutputTree(blockType, config);
         if (tree.nodes.length > 0) return treeValue(tree.nodes);
@@ -67,47 +70,20 @@ export default function Editor() {
     registerExpressionScopeSource({
       load: async ({ stepId }) => {
         // Trigger config fields run before any step; nothing to reference.
-        if (!stepId) return {};
-        // Only steps upstream of the edited one are in scope at run time.
-        const incoming = new Map<string, string[]>();
-        for (const edge of model.edges) {
-          incoming.set(edge.to, [...(incoming.get(edge.to) ?? []), edge.from]);
-        }
-        const upstream = new Set<string>();
-        const queue = [stepId];
-        while (queue.length > 0) {
-          for (const from of incoming.get(queue.pop()!) ?? []) {
-            if (!upstream.has(from)) {
-              upstream.add(from);
-              queue.push(from);
-            }
-          }
-        }
-        const steps: Record<string, unknown> = {};
-        await Promise.all(
-          model.steps
-            .filter((step) => upstream.has(step.id))
-            .map(async (step) => {
-              steps[step.key] = {
-                output: await outputOf(step.blockType, step.config),
-              };
-            }),
+        if (!stepId) return EMPTY_SCOPE;
+        const latestRun = await fetchRuns(workflowId, 1).then(
+          (runs) => runs[0],
+          () => undefined,
         );
-        // Omit empty groups so the picker never offers a bare {{steps}}.
-        const scope: Record<string, unknown> = {};
-        if (model.trigger) {
-          scope.trigger = {
-            payload: await outputOf(
-              model.trigger.blockType,
-              model.trigger.config,
-            ),
-          };
-        }
-        if (Object.keys(steps).length > 0) scope.steps = steps;
-        return scope;
+        return buildExpressionScope({
+          model,
+          stepId,
+          latestRun,
+          authoredOutput,
+        });
       },
     });
-  }, [model]);
+  }, [model, workflowId]);
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-background">
@@ -116,7 +92,6 @@ export default function Editor() {
         model={model}
         callbacks={callbacks}
         designTime={designTime}
-        headerExtra={<EditorSwitch active="workflow-editor" />}
       />
     </div>
   );

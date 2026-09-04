@@ -7,8 +7,7 @@
     "**/dist/**",
     "**/.ph/**",
     "**/storybook-static/**",
-    "**/.vite/**",
-    "editors/workflow-editor-ap/vendor/**"
+    "**/.vite/**"
   ],
   "rules": {
     "typescript/await-thenable": "error",

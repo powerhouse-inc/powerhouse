@@ -10,6 +10,11 @@ export interface BlockFormProp {
   staticOptions?: { label: string; value: unknown }[];
   hasDynamicResolver?: boolean;
   description?: string;
+  placeholder?: string;
+  // Sibling prop names whose values feed the resolver; a change re-runs it.
+  refreshers?: string[];
+  // Nested shape: ARRAY item fields, or what a DYNAMIC resolver produced.
+  properties?: BlockFormProp[];
 }
 
 export interface BlockForm {

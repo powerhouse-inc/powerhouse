@@ -29,7 +29,17 @@ function toModel(state: WorkflowState): WorkflowModel {
       blockType: step.blockType,
       connectionId: step.connectionId ?? null,
       config: step.config,
+      retry: step.retry
+        ? {
+            maxAttempts: step.retry.maxAttempts,
+            backoff: step.retry.backoff,
+            initialDelaySeconds: step.retry.initialDelaySeconds,
+            maxDelaySeconds: step.retry.maxDelaySeconds,
+            retryOn: [...step.retry.retryOn],
+          }
+        : null,
       timeoutSeconds: step.timeoutSeconds ?? null,
+      idempotencyKeyExpression: step.idempotencyKeyExpression ?? null,
       position: step.position
         ? { x: step.position.x, y: step.position.y }
         : null,
@@ -40,6 +50,12 @@ function toModel(state: WorkflowState): WorkflowModel {
       to: edge.to,
       port: edge.port,
       condition: edge.condition ?? null,
+    })),
+    variables: state.variables.map((variable) => ({
+      id: variable.id,
+      key: variable.key,
+      value: variable.value ?? null,
+      description: variable.description ?? null,
     })),
   };
 }
@@ -96,6 +112,16 @@ export function useWorkflowModel(): {
           }),
         ),
       removeEdge: (id) => dispatch(actions.removeEdge({ id })),
+      setVariable: (input) =>
+        dispatch(
+          actions.setVariable({
+            id: input.id ?? generateId(),
+            key: input.key,
+            value: input.value,
+            description: input.description,
+          }),
+        ),
+      removeVariable: (id) => dispatch(actions.removeVariable({ id })),
       insertStepOnEdge: (edgeId, input) => {
         const edge = state.edges.find((entry) => entry.id === edgeId);
         if (!edge) return;

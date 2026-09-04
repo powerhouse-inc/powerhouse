@@ -3,7 +3,7 @@
 import type { Edge, Node } from "@xyflow/react";
 import type { EdgeModel, StepModel, WorkflowModel } from "./model.js";
 
-function reachableFrom(start: string, edges: EdgeModel[]): Set<string> {
+export function reachableFrom(start: string, edges: EdgeModel[]): Set<string> {
   const outgoing = new Map<string, string[]>();
   for (const edge of edges) {
     const list = outgoing.get(edge.from) ?? [];
@@ -21,6 +21,17 @@ function reachableFrom(start: string, edges: EdgeModel[]): Set<string> {
     }
   }
   return seen;
+}
+
+// Steps an edge from `fromId` may target without creating a cycle.
+export function acyclicTargets(
+  model: WorkflowModel,
+  fromId: string,
+): StepModel[] {
+  return model.steps.filter(
+    (step) =>
+      step.id !== fromId && !reachableFrom(step.id, model.edges).has(fromId),
+  );
 }
 
 // Steps a new edge from `fromId` may target: unreachable from the trigger,
