@@ -18,9 +18,9 @@ interface RunsArgs {
   limit?: number;
 }
 
-// Dev gate until runtime auth lands: writes are refused unless opted in.
+// Prod gate until runtime auth lands: writes are refused unless opted in.
 function assertSecretWritesAllowed(): void {
-  if (process.env.PH_SECRETS_ALLOW_WRITE !== "true") {
+  if (process.env.NODE_ENV !== "development" && process.env.PH_SECRETS_ALLOW_WRITE !== "true") {
     throw new Error(
       "Secret writes are disabled; set PH_SECRETS_ALLOW_WRITE=true on the switchboard",
     );
