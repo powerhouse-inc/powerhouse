@@ -278,6 +278,14 @@ export const CORE_FORMS: Record<string, BlockForm> = {
           "One per line; the run fails when the value matches any of them",
       },
       {
+        name: "allowValues",
+        displayName: "Allowed values",
+        type: "ARRAY",
+        required: false,
+        description:
+          "One per line; when set, anything else fails. Safer than a reject list for model output",
+      },
+      {
         name: "allowEmpty",
         displayName: "Allow empty",
         type: "CHECKBOX",

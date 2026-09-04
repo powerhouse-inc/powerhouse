@@ -50,8 +50,8 @@ export const STEP_PRESETS: BlockPreset[] = [
   {
     label: "Assert",
     blockType: "core#assert",
-    description: "Fails the run when a value is blank or rejected.",
-    defaultConfig: { value: "", rejectValues: [] },
+    description: "Fails the run when a value is blank, rejected or not allowed.",
+    defaultConfig: { value: "", allowValues: [] },
   },
   {
     label: "Create document",
