@@ -21,6 +21,34 @@ import type {
 export const MAX_AGENT_STEPS = 10;
 
 /**
+ * Hard cap on the characters of one tool result fed back to the model.
+ *
+ * Large results (whole document states, catalog listings, schema
+ * summaries) accumulate across steps because every step resends the whole
+ * conversation; without a budget a few broad queries exhaust the model's
+ * context and stall the turn. Over-budget results are truncated with a
+ * marker so the model re-queries more narrowly.
+ */
+export const MAX_TOOL_RESULT_CHARS = 12_000;
+
+const TRUNCATION_NOTE =
+  "\n...[truncated: this tool result exceeded the context budget; re-query with a more specific filter or fewer items]";
+
+function boundedToolResult(value: unknown): unknown {
+  const text = resultText(value);
+  if (text.length <= MAX_TOOL_RESULT_CHARS) return value;
+  return text.slice(0, MAX_TOOL_RESULT_CHARS) + TRUNCATION_NOTE;
+}
+
+function resultText(value: unknown): string {
+  if (typeof value === "string") return value;
+  const json = JSON.stringify(value);
+  // JSON.stringify yields undefined at runtime for undefined inputs
+  // even though its type signature says otherwise.
+  return typeof json === "string" ? json : "undefined";
+}
+
+/**
  * Creates the chat language model for a user-supplied OpenAI-compatible
  * endpoint. Requests go directly from the browser to the endpoint; the API
  * key is never sent to any Powerhouse server.
@@ -96,6 +124,7 @@ export function buildSystemPrompt(context: ChatContext): string {
     "Never invent document ids, drive ids, folder ids or document model types — discover them with the read tools first.",
     "Never accept secret values (passwords, tokens, API keys) in chat. When a connection or configuration requires a secret, tell the user to enter it in the relevant editor (e.g. the connection editor) and point them to the document. Never ask the user to paste a secret into the chat.",
     "When the user refers to 'this', 'here' or 'it' without naming a target, they mean the current selection below; prefer it for create/modify targets.",
+    "Tool results may be truncated when they are large: if you see a truncation marker, narrow the query (more specific filter, fewer items) instead of retrying the same call.",
   ];
   const selection: string[] = [];
   if (context.driveName) {
@@ -209,7 +238,9 @@ export class ReactorChatAgent {
         description: descriptor.description,
         inputSchema: z.object(descriptor.inputSchema),
         execute: async (args: unknown) =>
-          unwrapToolResult(await descriptor.callback(args as never)),
+          boundedToolResult(
+            unwrapToolResult(await descriptor.callback(args as never)),
+          ),
       });
     }
 

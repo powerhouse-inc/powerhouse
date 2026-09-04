@@ -4,6 +4,7 @@ type LanguageModelV4StreamPart = Record<string, unknown>;
 import { MockLanguageModelV4, simulateReadableStream } from "ai/test";
 import { describe, expect, it, vi } from "vitest";
 import {
+  MAX_TOOL_RESULT_CHARS,
   ReactorChatAgent,
   buildSystemPrompt,
   unwrapToolResult,
@@ -566,5 +567,71 @@ describe("buildSystemPrompt", () => {
     expect(prompt).toContain(
       "Never ask the user to paste a secret into the chat.",
     );
+  });
+});
+
+describe("tool result budget", () => {
+  const HUGENESS = "x".repeat(40);
+  const hugeItems = Array.from(
+    { length: 1500 },
+    (_, index) => `item-${index}-${HUGENESS}`,
+  );
+
+  function agentWithTool(result: unknown) {
+    const bigTool = makeTool("getHuge", () =>
+      Promise.resolve({
+        content: [{ type: "text", text: JSON.stringify(result) }],
+        structuredContent: result,
+      }),
+    );
+    const model = streamModel([
+      [...toolCallParts("call-1", "getHuge", {}), ...finishParts("tool-calls")],
+      [...textParts("text-1", "done"), ...finishParts("stop")],
+    ]);
+    const agent = new ReactorChatAgent({
+      settings: SETTINGS,
+      tools: [bigTool],
+      context: {},
+      onEvent: () => {},
+      model,
+    });
+    return { model, agent };
+  }
+
+  it("truncates oversized tool results before they reach the model", async () => {
+    const { model, agent } = agentWithTool({ items: hugeItems });
+    await agent.send("give me everything");
+
+    expect(model.doStreamCalls.length).toBe(2);
+    const prompt = model.doStreamCalls[1].prompt as unknown as Array<{
+      role: string;
+      content: Array<Record<string, unknown>>;
+    }>;
+    const toolPart = prompt
+      .find((m) => m.role === "tool")
+      ?.content.find((p) => p.type === "tool-result");
+    const output = toolPart?.output as { type: string; value: unknown };
+    expect(output.type).toBe("text");
+    const value = output.value as string;
+    expect(value).toContain(
+      "truncated: this tool result exceeded the context budget",
+    );
+    expect(value.length).toBeLessThanOrEqual(MAX_TOOL_RESULT_CHARS + 120);
+  });
+
+  it("passes small tool results through unmodified", async () => {
+    const { model, agent } = agentWithTool({ driveIds: ["d1"] });
+    await agent.send("list my drives");
+
+    const prompt = model.doStreamCalls[1].prompt as unknown as Array<{
+      role: string;
+      content: Array<Record<string, unknown>>;
+    }>;
+    const toolPart = prompt
+      .find((m) => m.role === "tool")
+      ?.content.find((p) => p.type === "tool-result");
+    const output = toolPart?.output as { type: string; value: unknown };
+    expect(output.type).toBe("json");
+    expect(output.value).toEqual({ driveIds: ["d1"] });
   });
 });
