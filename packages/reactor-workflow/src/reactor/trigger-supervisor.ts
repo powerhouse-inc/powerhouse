@@ -32,6 +32,9 @@ export interface PieceTriggerBinding {
   triggerName: string;
   config: Record<string, unknown>;
   connectionId?: string | null;
+  // Author's poll cadence, from the trigger's pollEverySeconds. Overrides both
+  // the piece's own setSchedule and the runtime default; the 60s floor holds.
+  pollIntervalMs?: number;
 }
 
 // core#schedule: no piece hooks; next_poll_at is the next fire time.
@@ -91,6 +94,19 @@ export function intervalFromSchedules(
     return Math.max(defaultMs, MIN_INTERVAL_MS);
   }
   return intervalMs;
+}
+
+// The cadence to poll a piece trigger at: the author's override when set,
+// else what the piece asked for, else the runtime default. Never below the floor.
+export function pollIntervalFor(
+  binding: PieceTriggerBinding,
+  schedules: RecordedSchedule[] | undefined,
+  defaultMs: number,
+): number {
+  if (binding.pollIntervalMs !== undefined) {
+    return Math.max(binding.pollIntervalMs, MIN_INTERVAL_MS);
+  }
+  return intervalFromSchedules(schedules, defaultMs);
 }
 
 function parseStoreState(row: TriggerStateRow): Record<string, unknown> {
@@ -227,7 +243,8 @@ export class TriggerSupervisor {
     const now = this.now();
     try {
       const result = await this.hook(binding, "onEnable", seed, isRepublish);
-      const intervalMs = intervalFromSchedules(
+      const intervalMs = pollIntervalFor(
+        binding,
         result.schedules,
         this.defaultIntervalMs,
       );
@@ -260,7 +277,7 @@ export class TriggerSupervisor {
         config_hash: hash,
         status: "ERROR",
         store_state: existing?.store_state ?? "{}",
-        interval_ms: this.defaultIntervalMs,
+        interval_ms: pollIntervalFor(binding, undefined, this.defaultIntervalMs),
         next_poll_at: null,
         last_poll_at: null,
         last_error: message,

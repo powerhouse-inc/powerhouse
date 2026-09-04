@@ -227,6 +227,27 @@ type TriggerRegistration = {
 
 const SUPERVISED_KINDS = new Set(["piece", "schedule"]);
 
+export const POLL_INTERVAL_CONFIG_KEY = "pollEverySeconds";
+
+// pollEverySeconds is ours, not the piece's: lift it out of the trigger config
+// so it never reaches the piece as a prop, and so a change to it alone still
+// rewrites the trigger's config hash.
+export function splitPollInterval(config: Record<string, unknown>): {
+  config: Record<string, unknown>;
+  pollIntervalMs?: number;
+} {
+  if (!(POLL_INTERVAL_CONFIG_KEY in config)) return { config };
+  const { [POLL_INTERVAL_CONFIG_KEY]: raw, ...rest } = config;
+  const seconds = typeof raw === "string" ? Number(raw) : raw;
+  if (typeof seconds !== "number" || !Number.isFinite(seconds) || seconds <= 0) {
+    logger.warn(
+      `Ignoring ${POLL_INTERVAL_CONFIG_KEY}=${JSON.stringify(raw)}: expected a positive number of seconds`,
+    );
+    return { config: rest };
+  }
+  return { config: rest, pollIntervalMs: Math.round(seconds * 1000) };
+}
+
 function configRecord(config: unknown): Record<string, unknown> {
   if (config && typeof config === "object" && !Array.isArray(config)) {
     return config as Record<string, unknown>;
@@ -364,14 +385,18 @@ export class WorkflowRuntimeService {
   ): PieceTriggerBinding | undefined {
     const parsed = parseBlockType(trigger.blockType);
     if (!parsed || parsed.kind !== "trigger") return undefined;
+    const { config, pollIntervalMs } = splitPollInterval(
+      configRecord(trigger.config),
+    );
     return {
       workflowId,
       blockType: trigger.blockType,
       packageName: parsed.packageName,
       version: parsed.version,
       triggerName: parsed.name,
-      config: configRecord(trigger.config),
+      config,
       connectionId: trigger.connectionId,
+      pollIntervalMs,
     };
   }
 
