@@ -27,6 +27,7 @@ const CORE_META: Record<string, BlockMeta> = {
     glyph: "✖",
   },
   "core#branch": { displayName: "Branch", subtitle: "Core", glyph: "⑂" },
+  "core#assert": { displayName: "Assert", subtitle: "Core", glyph: "!" },
   "core#document-create": {
     displayName: "Create document",
     subtitle: "Core",

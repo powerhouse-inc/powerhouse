@@ -48,6 +48,12 @@ export const STEP_PRESETS: BlockPreset[] = [
     defaultConfig: { condition: "{{trigger.payload.ok}}" },
   },
   {
+    label: "Assert",
+    blockType: "core#assert",
+    description: "Fails the run when a value is blank or rejected.",
+    defaultConfig: { value: "", rejectValues: [] },
+  },
+  {
     label: "Create document",
     blockType: "core#document-create",
     description: "Creates a Powerhouse document.",

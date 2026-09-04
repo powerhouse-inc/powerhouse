@@ -247,6 +247,35 @@ export const CORE_FORMS: Record<string, BlockForm> = {
       ),
     ],
   },
+  "core#assert": {
+    title: "Assert",
+    requireAuth: false,
+    auth: "none",
+    props: [
+      text(
+        "value",
+        "Value",
+        true,
+        "e.g. {{steps.describe.output}} - the run fails when it is blank",
+      ),
+      {
+        name: "rejectValues",
+        displayName: "Rejected values",
+        type: "ARRAY",
+        required: false,
+        description:
+          "One per line; the run fails when the value matches any of them",
+      },
+      {
+        name: "allowEmpty",
+        displayName: "Allow empty",
+        type: "CHECKBOX",
+        required: false,
+        description: "Accept a blank value instead of failing",
+      },
+      text("message", "Failure message", false, "Replaces the default error"),
+    ],
+  },
   "core#document-create": {
     title: "Create document",
     requireAuth: false,
