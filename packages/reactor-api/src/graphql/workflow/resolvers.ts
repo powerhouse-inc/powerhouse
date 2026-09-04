@@ -176,6 +176,8 @@ export const getResolvers = (
         await (await workflowRuntime.secrets()).delete(args.ref);
         return true;
       },
+      checkConnection: (_parent: unknown, args: { connectionId: string }) =>
+        workflowRuntime.checkConnection(args.connectionId),
     },
   };
 };

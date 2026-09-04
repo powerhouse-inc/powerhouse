@@ -8,14 +8,21 @@ import {
   parseBlockType,
   PieceWorker,
   runWorkflow,
+  shapeAuthValue,
+  throwingStub,
+  type ApPiece,
   type BlockExecutor,
+  type ConnectionAuthType,
   type ConnectorDescriptor,
   type SecretProvider,
   type SecretStore,
   type WorkflowRunResult,
 } from "@powerhousedao/reactor-connectors";
 import { childLogger, type OperationWithContext } from "document-model";
-import type { ConnectionDocument } from "document-models/connection/v1";
+import {
+  actions as connectionActions,
+  type ConnectionDocument,
+} from "document-models/connection/v1";
 import type {
   WorkflowDocument,
   WorkflowState,
@@ -39,7 +46,7 @@ import {
   scheduleTriggerTree,
   type OutputTree,
 } from "./output-tree.js";
-import { fetchPieceDetail } from "./piece-catalog.js";
+import { fetchPieceCatalog, fetchPieceDetail } from "./piece-catalog.js";
 import {
   BUNDLE_CACHE_DIR,
   createBlockExecutor,
@@ -76,9 +83,56 @@ export interface ConnectionSummary {
   accountLabel: string | null;
 }
 
+export interface ConnectionCheckResult {
+  ok: boolean;
+  detail: string | null;
+  accountLabel: string | null;
+}
+
+const CHECK_TIMEOUT_MS = 30_000;
+
 const logger = childLogger(["workflow", "runtime"]);
 
 const DRIVE_DOCUMENT_TYPE = "powerhouse/document-drive";
+
+// "@acme/connector-imap#imap" -> "@acme/connector-imap"; mirrors the
+// connector id scheme the connection editor writes.
+function packageNameFromConnectorId(connectorId: string): string {
+  const separator = connectorId.lastIndexOf("#");
+  return separator > 0 ? connectorId.slice(0, separator) : connectorId;
+}
+
+// A piece's checkConnection returns void | boolean |
+// { name | username | email | sub }; anything string-valued labels the account.
+function accountLabelFromCheckResult(result: unknown): string | undefined {
+  if (!result || typeof result !== "object") return undefined;
+  const record = result as Record<string, unknown>;
+  for (const key of ["name", "username", "email", "sub"]) {
+    const value = record[key];
+    if (typeof value === "string" && value !== "") return value;
+  }
+  return undefined;
+}
+
+async function withTimeout<T>(
+  operation: () => Promise<T>,
+  timeoutMs: number,
+): Promise<T> {
+  const signal = AbortSignal.timeout(timeoutMs);
+  const timedOut = new Promise<never>((_resolve, reject) => {
+    signal.addEventListener(
+      "abort",
+      () =>
+        reject(
+          new Error(
+            `Connection check timed out after ${Math.round(timeoutMs / 1000)}s`,
+          ),
+        ),
+      { once: true },
+    );
+  });
+  return Promise.race([operation(), timedOut]);
+}
 
 type TriggerRegistration = {
   workflowId: string;
@@ -142,7 +196,9 @@ export class WorkflowRuntimeService {
   // Unlike the journal, a broken secret store must fail resolution loudly.
   secrets(): Promise<SecretStore> {
     if (!this.subgraph) {
-      return Promise.reject(new Error("Workflow runtime is not configured yet"));
+      return Promise.reject(
+        new Error("Workflow runtime is not configured yet"),
+      );
     }
     this.secretsPromise ??= LocalEncryptedSecretStore.create(
       this.subgraph.relationalDb,
@@ -491,6 +547,159 @@ export class WorkflowRuntimeService {
     });
   }
 
+  // Runs the piece's app.checkConnection (when declared) against the
+  // connection's credentials and records the outcome on the document.
+  async checkConnection(connectionId: string): Promise<ConnectionCheckResult> {
+    if (!this.subgraph) {
+      throw new Error("Workflow runtime is not configured yet");
+    }
+    const document =
+      await this.subgraph.reactorClient.get<ConnectionDocument>(connectionId);
+    if (document.header.documentType !== "powerhouse/connection") {
+      throw new Error(
+        `Document "${connectionId}" is not a powerhouse/connection`,
+      );
+    }
+    const state = document.state.global;
+    const accountLabel = state.accountLabel ?? null;
+
+    if (state.status === "UNCONFIGURED") {
+      return this.recordCheckResult(document, {
+        ok: false,
+        detail: "Connection is not configured",
+        accountLabel,
+      });
+    }
+    // No bundle work for auth kinds the runtime cannot execute yet.
+    if (state.authType === "OAUTH2" || state.authType === "OIDC") {
+      return this.recordCheckResult(document, {
+        ok: false,
+        detail: `${state.authType} connections are not supported by the runtime yet`,
+        accountLabel,
+      });
+    }
+
+    const packageName = packageNameFromConnectorId(state.connectorId);
+    let piece: ApPiece;
+    try {
+      const version = await this.pieceVersion(packageName);
+      const bundle = await ensurePieceBundle({
+        name: packageName,
+        version,
+        cacheDir: BUNDLE_CACHE_DIR,
+      });
+      piece = (await loadPieceFromDir(bundle.dir)).piece;
+    } catch (error) {
+      return this.recordCheckResult(document, {
+        ok: false,
+        detail: error instanceof Error ? error.message : String(error),
+        accountLabel,
+      });
+    }
+
+    let shapedAuth: unknown;
+    try {
+      shapedAuth = await shapeAuthValue(
+        {
+          authType: state.authType as ConnectionAuthType,
+          config: (state.config ?? {}) as Record<string, unknown>,
+          secretRefs: state.secretRefs,
+        },
+        this.secretProvider(),
+      );
+    } catch (error) {
+      // A missing or deleted secret names its ref in the message.
+      return this.recordCheckResult(document, {
+        ok: false,
+        detail: error instanceof Error ? error.message : String(error),
+        accountLabel,
+      });
+    }
+
+    const app = piece as ApPiece & {
+      checkConnection?: (ctx: unknown) => Promise<unknown>;
+    };
+    if (typeof app.checkConnection !== "function") {
+      return this.recordCheckResult(document, {
+        ok: true,
+        detail: "piece declares no connection check; credentials resolved",
+        accountLabel,
+      });
+    }
+
+    // Minimal check context: shaped auth and empty props; documented members
+    // the runtime does not provide throw with their member path.
+    const checkContext: Record<string, unknown> = {
+      auth: shapedAuth,
+      propsValue: {},
+      logger,
+      store: throwingStub("store"),
+      files: throwingStub("files"),
+      server: throwingStub("server"),
+      events: throwingStub("events"),
+      flow: throwingStub("flow"),
+    };
+
+    let ok = true;
+    let detail: string | null = null;
+    let label = accountLabel;
+    try {
+      const checkResult = await withTimeout(
+        () => app.checkConnection!(checkContext),
+        CHECK_TIMEOUT_MS,
+      );
+      if (checkResult === false) {
+        ok = false;
+        detail = "Connection check failed";
+      } else {
+        label = accountLabelFromCheckResult(checkResult) ?? accountLabel;
+      }
+    } catch (error) {
+      ok = false;
+      detail = error instanceof Error ? error.message : String(error);
+    }
+    return this.recordCheckResult(document, {
+      ok,
+      detail,
+      accountLabel: label,
+    });
+  }
+
+  // Catalog first, piece detail as fallback; the cache keeps this cheap.
+  private async pieceVersion(packageName: string): Promise<string> {
+    try {
+      const catalog = await fetchPieceCatalog();
+      const version = catalog.find(
+        (entry) => entry.name === packageName,
+      )?.version;
+      if (version) return version;
+    } catch {
+      // Catalog unreachable; fall through to the piece detail.
+    }
+    const detail = (await fetchPieceDetail(packageName)) as {
+      version?: unknown;
+    };
+    if (typeof detail.version === "string" && detail.version !== "") {
+      return detail.version;
+    }
+    throw new Error(`Could not resolve a version for piece "${packageName}"`);
+  }
+
+  private async recordCheckResult(
+    document: ConnectionDocument,
+    result: ConnectionCheckResult,
+  ): Promise<ConnectionCheckResult> {
+    const action = connectionActions.recordCheckResult({
+      status: result.ok ? "OK" : "ERROR",
+      checkedAt: new Date().toISOString(),
+      error: result.ok ? undefined : (result.detail ?? undefined),
+    });
+    await this.subgraph!.reactorClient.execute(document.header.id, "main", [
+      action,
+    ]);
+    return result;
+  }
+
   // Design-time: the action/trigger descriptor (props, auth) driving the
   // editor form; triggers come back under a "trigger" key.
   async blockDescriptor(blockType: string): Promise<unknown> {
@@ -562,7 +771,10 @@ export class WorkflowRuntimeService {
   }
 
   // Authored output shape of a block, for the editor's expression picker.
-  async blockOutputTree(blockType: string, config?: unknown): Promise<OutputTree> {
+  async blockOutputTree(
+    blockType: string,
+    config?: unknown,
+  ): Promise<OutputTree> {
     const record = (config ?? {}) as Record<string, unknown>;
     switch (blockType) {
       case "core#manual":
@@ -783,7 +995,8 @@ export class WorkflowRuntimeService {
         continue;
       }
       completedSteps.set(row.step_id, {
-        output: row.output === null ? undefined : (JSON.parse(row.output) as unknown),
+        output:
+          row.output === null ? undefined : (JSON.parse(row.output) as unknown),
         port: row.port,
       });
     }

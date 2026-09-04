@@ -78,6 +78,12 @@ export const schema: DocumentNode = gql`
     accountLabel: String
   }
 
+  type ConnectionCheckResult {
+    ok: Boolean!
+    detail: String
+    accountLabel: String
+  }
+
   type TriggerStateRecord {
     workflowId: String!
     blockType: String!
@@ -167,6 +173,11 @@ export const schema: DocumentNode = gql`
     Tombstones a secret; its value becomes unrecoverable.
     """
     deleteSecret(ref: String!): Boolean!
+    """
+    Runs the piece's app.checkConnection against the connection's
+    credentials and records the outcome on the connection document.
+    """
+    checkConnection(connectionId: String!): ConnectionCheckResult!
   }
 
   type Mutation {
