@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/design-system",
-  "version": "6.2.2-dev.79",
+  "version": "6.2.2-dev.80",
   "description": "Powerhouse document-engineering design system — GraphQL scalar UI components for building consistent Powerhouse editors.",
   "files": [
     "dist",

@@ -1,3 +1,13 @@
+## 6.2.2-dev.80 (2026-09-04)
+
+### 🚀 Features
+
+- **reactor-browser:** AI chat context management (result budget + history compaction + usage) ([#2963](https://github.com/powerhouse-inc/powerhouse/pull/2963))
+
+### ❤️ Thank You
+
+- Frank @froid1911
+
 ## 6.2.2-dev.79 (2026-09-04)
 
 ### 🚀 Features
