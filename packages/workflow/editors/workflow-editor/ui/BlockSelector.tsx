@@ -1,7 +1,7 @@
 // Piece-selector-style popover, adapted from the Activepieces builder
 // pieces-selector (MIT, activepieces packages/web).
 import { useEffect, useMemo, useRef, useState } from "react";
-import { blockMeta } from "./block-meta.js";
+import { useBlockMeta } from "./block-meta.js";
 import type { BlockPreset } from "./blocks.js";
 import type { StepModel } from "./model.js";
 import {
@@ -16,22 +16,47 @@ import {
 export type PieceMode = "actions" | "triggers";
 
 export function BlockLogo(props: { blockType: string; size?: number }) {
-  const meta = blockMeta(props.blockType);
-  const size = props.size ?? 36;
-  if (meta.logoUrl) {
-    return <LogoFrame src={meta.logoUrl} alt={meta.displayName} size={size} />;
-  }
+  const meta = useBlockMeta(props.blockType);
+  return (
+    <LogoFrame
+      src={meta.logoUrl}
+      alt={meta.displayName}
+      size={props.size ?? 36}
+      glyph={meta.glyph}
+    />
+  );
+}
+
+function GlyphBadge(props: { glyph?: string; size: number }) {
   return (
     <div
       className="flex shrink-0 items-center justify-center rounded-sm border border-solid border-slate-200 bg-slate-50 text-slate-600"
-      style={{ width: size, height: size, fontSize: size / 2 }}
+      style={{
+        width: props.size,
+        height: props.size,
+        fontSize: props.size / 2,
+      }}
     >
-      {meta.glyph ?? "?"}
+      {props.glyph ?? "?"}
     </div>
   );
 }
 
-function LogoFrame(props: { src: string; alt: string; size: number }) {
+// Falls back to the glyph badge when the piece metadata carries no logo, or
+// when the CDN image fails to load (Activepieces retires logo files).
+function LogoFrame(props: {
+  src?: string;
+  alt: string;
+  size: number;
+  glyph?: string;
+}) {
+  const [broken, setBroken] = useState(false);
+  useEffect(() => {
+    setBroken(false);
+  }, [props.src]);
+  if (!props.src || broken) {
+    return <GlyphBadge glyph={props.glyph} size={props.size} />;
+  }
   return (
     <div
       className="flex shrink-0 items-center justify-center rounded-sm border border-solid border-slate-200 bg-white"
@@ -45,6 +70,7 @@ function LogoFrame(props: { src: string; alt: string; size: number }) {
         src={props.src}
         alt={props.alt}
         className="h-full w-full object-contain"
+        onError={() => setBroken(true)}
       />
     </div>
   );

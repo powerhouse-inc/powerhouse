@@ -2,7 +2,11 @@
 // run walks it, annotated with how that step fared in the latest run.
 import type { WorkflowState } from "document-models/workflow";
 import type { RunRecord } from "../../workflow-editor/runtime-api.js";
-import { blockMeta } from "../../workflow-editor/ui/block-meta.js";
+import { useState } from "react";
+import {
+  blockMeta,
+  usePieceLogos,
+} from "../../workflow-editor/ui/block-meta.js";
 import { RUN_DOT } from "./run-format.js";
 import { stepOutline, type OutlineStep } from "./step-outline.js";
 
@@ -11,6 +15,26 @@ const STEP_DOT: Record<string, string> = {
   SKIPPED: "bg-slate-300",
   REPLAYED: "bg-sky-400",
 };
+
+// The piece logo, degrading to the block glyph when absent or unloadable.
+function ChipLogo(props: { logoUrl?: string; glyph?: string }) {
+  const [broken, setBroken] = useState(false);
+  if (props.logoUrl && !broken) {
+    return (
+      <img
+        src={props.logoUrl}
+        alt=""
+        className="h-4 w-4 shrink-0"
+        onError={() => setBroken(true)}
+      />
+    );
+  }
+  return (
+    <span className="w-4 shrink-0 text-center text-xs text-slate-400">
+      {props.glyph ?? "▪"}
+    </span>
+  );
+}
 
 function Chip(props: {
   title: string;
@@ -34,13 +58,7 @@ function Chip(props: {
       }`}
       onClick={props.onClick}
     >
-      {props.logoUrl ? (
-        <img src={props.logoUrl} alt="" className="h-4 w-4 shrink-0" />
-      ) : (
-        <span className="w-4 shrink-0 text-center text-xs text-slate-400">
-          {props.glyph ?? "▪"}
-        </span>
-      )}
+      <ChipLogo logoUrl={props.logoUrl} glyph={props.glyph} />
       <span className="min-w-0">
         <span className="block truncate text-xs font-medium text-slate-700">
           {props.title}
@@ -77,6 +95,8 @@ export function WorkflowSteps(props: {
   onOpenEditor: () => void;
 }) {
   const { state } = props;
+  // Piece logos arrive with the catalog; re-renders this pipeline once known.
+  usePieceLogos();
   const outline = stepOutline({
     triggerId: state.trigger?.id,
     steps: state.steps,

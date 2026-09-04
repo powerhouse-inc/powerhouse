@@ -5,33 +5,22 @@ import { useSelectedDocumentId } from "@powerhousedao/reactor-browser";
 import { useSelectedWorkflowDocument } from "document-models/workflow";
 import { useEffect, useMemo } from "react";
 import { useWorkflowModel } from "./document/useWorkflowModel.js";
+import "./runtime-piece-source.js";
 import {
   fetchBlockOutputTree,
   fetchConnections,
-  fetchPieceActions,
-  fetchPieceCatalog,
-  fetchPieceTriggers,
   fetchRuns,
   getBlockForm,
   loadBlockOptions,
-  searchBlocks,
   testTrigger,
   type OutputTreeNode,
 } from "./runtime-api.js";
 import { buildExpressionScope, EMPTY_SCOPE } from "./ui/expression-scope.js";
 import { registerExpressionScopeSource } from "./ui/ExpressionPicker.js";
 import type { DesignTimeService } from "./ui/forms.js";
-import { registerPieceSource } from "./ui/piece-source.js";
 import { DocumentErrorBoundary } from "../shared/DocumentErrorBoundary.js";
 import { useSyncWorkflowRuntimeUrl } from "./use-runtime-url.js";
 import { WorkflowEditorApp } from "./ui/WorkflowEditorApp.js";
-
-registerPieceSource({
-  loadCatalog: fetchPieceCatalog,
-  loadActions: fetchPieceActions,
-  loadTriggers: fetchPieceTriggers,
-  searchBlocks,
-});
 
 function WorkflowEditor() {
   useSyncWorkflowRuntimeUrl();

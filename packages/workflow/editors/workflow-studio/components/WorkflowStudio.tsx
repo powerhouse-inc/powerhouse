@@ -13,6 +13,7 @@ import type { FileNode } from "@powerhousedao/shared/document-drive";
 import { useEffect, useState, type ReactNode } from "react";
 import { type WorkflowDocument } from "document-models/workflow";
 import { fireWorkflow } from "../../workflow-editor/runtime-api.js";
+import "../../workflow-editor/runtime-piece-source.js";
 import { DocumentErrorBoundary } from "../../shared/DocumentErrorBoundary.js";
 import { EditorToolbar } from "./EditorToolbar.js";
 import { ConnectionView } from "./ConnectionView.js";
