@@ -1,4 +1,7 @@
-import type { ZodRawShape } from "zod";
+import type {
+  PhAiToolAnnotations,
+  PhAiToolDescriptor,
+} from "@powerhousedao/shared/document-model";
 
 /**
  * Browser-side AI chat over the reactor.
@@ -27,13 +30,7 @@ export interface AiSettings {
 }
 
 /** MCP-compatible annotation hints; structural, no MCP SDK dependency. */
-export type AiToolAnnotations = {
-  title?: string;
-  readOnlyHint?: boolean;
-  destructiveHint?: boolean;
-  idempotentHint?: boolean;
-  openWorldHint?: boolean;
-};
+export type AiToolAnnotations = PhAiToolAnnotations;
 
 /**
  * Provider-agnostic tool descriptor accepted by the chat agent.
@@ -44,13 +41,7 @@ export type AiToolAnnotations = {
  * because the envelope shape (MCP `CallToolResult`) is unwrapped at the
  * adapter boundary.
  */
-export type AiToolDescriptor = {
-  name: string;
-  description?: string;
-  inputSchema: ZodRawShape;
-  annotations?: AiToolAnnotations;
-  callback: (args: never) => Promise<unknown>;
-};
+export type AiToolDescriptor = PhAiToolDescriptor;
 
 /** Tool descriptors the app resolves when the user sends a message. */
 export type AiToolsProvider = () => Promise<AiToolDescriptor[]>;
