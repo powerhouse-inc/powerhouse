@@ -111,6 +111,9 @@ export interface ChatContext {
   nodeKind?: "file" | "folder";
   documentType?: string;
   documentName?: string;
+  documentId?: string;
+  switchboardUrl?: string;
+  switchboardGraphqlUrl?: string;
 }
 
 /** Events the agent emits while running a turn. */

@@ -3,11 +3,16 @@
 type LanguageModelV4StreamPart = Record<string, unknown>;
 import { MockLanguageModelV4, simulateReadableStream } from "ai/test";
 import { describe, expect, it, vi } from "vitest";
-import { ReactorChatAgent, unwrapToolResult } from "../../src/ai/agent.js";
+import {
+  ReactorChatAgent,
+  buildSystemPrompt,
+  unwrapToolResult,
+} from "../../src/ai/agent.js";
 import type {
   AgentEvent,
   AiSettings,
   AiToolDescriptor,
+  ChatContext,
 } from "../../src/ai/types.js";
 
 const USAGE = {
@@ -427,5 +432,55 @@ describe("ReactorChatAgent", () => {
     ]);
     expect(request[2].content.some((p) => p.type === "tool-call")).toBe(true);
     expect(request[3].content.some((p) => p.type === "tool-result")).toBe(true);
+  });
+});
+
+describe("buildSystemPrompt", () => {
+  it("includes the document id in the selection", () => {
+    const prompt = buildSystemPrompt({
+      driveId: "drive-1",
+      driveName: "My Drive",
+      documentName: "My Doc",
+      documentType: "document.parquet",
+      documentId: "doc-123",
+    });
+    expect(prompt).toContain(
+      'The current document is "My Doc" of type "document.parquet" (id: doc-123).',
+    );
+  });
+
+  it("omits the id suffix when no document id is present", () => {
+    const prompt = buildSystemPrompt({
+      driveId: "drive-1",
+      driveName: "My Drive",
+      documentName: "My Doc",
+      documentType: "document.parquet",
+    });
+    expect(prompt).toContain(
+      'The current document is "My Doc" of type "document.parquet".',
+    );
+  });
+
+  it("names the switchboard endpoints and the introspection tool", () => {
+    const context: ChatContext = {
+      driveId: "drive-1",
+      driveName: "My Drive",
+      switchboardUrl: "http://localhost:4001",
+      switchboardGraphqlUrl: "http://localhost:4001/graphql",
+    };
+    const prompt = buildSystemPrompt(context);
+    expect(prompt).toContain(
+      "The switchboard for this drive is at http://localhost:4001; its GraphQL endpoint is http://localhost:4001/graphql. Use the getSwitchboardSchema tool to list the queries and mutations it exposes.",
+    );
+  });
+
+  it("notes when the selected drive is not synced to a switchboard", () => {
+    const prompt = buildSystemPrompt({
+      driveId: "drive-1",
+      driveName: "My Drive",
+    });
+    expect(prompt).toContain(
+      "This drive is not synced to a switchboard, so no switchboard endpoints are available for it.",
+    );
   });
 });

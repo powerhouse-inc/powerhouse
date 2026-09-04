@@ -109,7 +109,18 @@ export function buildSystemPrompt(context: ChatContext): string {
   }
   if (context.documentType) {
     selection.push(
-      `The current document is "${context.documentName ?? "unnamed"}" of type "${context.documentType}".`,
+      `The current document is "${context.documentName ?? "unnamed"}" of type "${context.documentType}"` +
+        (context.documentId ? ` (id: ${context.documentId})` : "") +
+        ".",
+    );
+  }
+  if (context.switchboardUrl) {
+    selection.push(
+      `The switchboard for this drive is at ${context.switchboardUrl}; its GraphQL endpoint is ${context.switchboardGraphqlUrl ?? ""}. Use the getSwitchboardSchema tool to list the queries and mutations it exposes.`,
+    );
+  } else if (context.driveId) {
+    selection.push(
+      "This drive is not synced to a switchboard, so no switchboard endpoints are available for it.",
     );
   }
   if (selection.length > 0) {
