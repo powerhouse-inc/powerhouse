@@ -432,46 +432,45 @@ const AUTH_ADMINISTRATION_REQUEST: AuthRequest = {
 };
 
 /**
- * Whether some subject can still administer the auth scope under this grant list.
+ * Whether some subject can still administer the auth scope under this grant
+ * list.
  *
- * Asks the evaluator rather than pattern-matching a single grant: evaluation is
- * last-applicable-grant-wins, so an allow that some later deny shadows keeps
- * nothing reachable even though it is still present in the list. Only anyone and
- * address principals are candidates, because those are the ones v1 can match at
- * all; a `where` condition or a group or match principal never applies.
+ * Answers exactly what asking {@link evaluateGrantStack} per candidate grant
+ * answered, in one reverse pass instead of one full stack scan per candidate.
+ * Evaluation is last-applicable-grant-wins, so scanning from the end meets each
+ * subject's deciding grant first: an anyone grant decides every subject not
+ * already decided, and an allow reached that way is itself a grant that carries
+ * administration. Only anyone and address principals are candidates, because
+ * those are the ones v1 can match with no groups and no condition context; a
+ * `where` condition or a group or match principal never applies.
  */
 function administrationReachable(grants: Grant[]): boolean {
-  return grants.some((grant) => {
-    const subject = administrationCandidate(grant);
-    if (subject === undefined) {
-      return false;
+  const shadowedAddresses = new Set<string>();
+  for (let index = grants.length - 1; index >= 0; index -= 1) {
+    const grant = grants[index];
+    if (
+      grant.where !== undefined ||
+      !grantAnswers(grant, AUTH_ADMINISTRATION_REQUEST)
+    ) {
+      continue;
     }
-    return (
-      evaluateGrantStack(grants, subject, AUTH_ADMINISTRATION_REQUEST)
-        .decision === "allow"
-    );
-  });
-}
-
-/**
- * The subject to test this grant with, or undefined when the grant could never
- * carry administration for anyone.
- */
-function administrationCandidate(grant: Grant): AuthSubject | undefined {
-  if (
-    grant.effect !== "allow" ||
-    grant.where !== undefined ||
-    !capabilityCovers(grant.capability, AUTH_ADMINISTRATION_REQUEST)
-  ) {
-    return undefined;
+    const allows = grant.effect === "allow";
+    if ("anyone" in grant.principal) {
+      return allows;
+    }
+    if (!("address" in grant.principal)) {
+      continue;
+    }
+    const address = grant.principal.address.toLowerCase();
+    if (shadowedAddresses.has(address)) {
+      continue;
+    }
+    if (allows) {
+      return true;
+    }
+    shadowedAddresses.add(address);
   }
-  if ("address" in grant.principal) {
-    return { address: grant.principal.address, key: undefined };
-  }
-  if ("anyone" in grant.principal) {
-    return { address: undefined, key: undefined };
-  }
-  return undefined;
+  return false;
 }
 
 /**
