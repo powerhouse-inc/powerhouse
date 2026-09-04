@@ -2,6 +2,7 @@ import type { Draft } from "mutative";
 import type { ProcessorFactoryBuilder } from "processors";
 import type { FC, ReactNode } from "react";
 import type { z } from "zod";
+import type { ZodRawShape } from "zod";
 import type { Action } from "./actions.js";
 import type { PHDocument } from "./documents.js";
 import type { Operation } from "./operations.js";
@@ -1690,6 +1691,32 @@ export type DocumentModelUtils<TState extends PHBaseState = PHBaseState> = {
 };
 
 export type Actions = Record<string, (...args: any[]) => Action>;
+/** MCP-compatible annotation hints; structural, no MCP SDK dependency. */
+export type PhAiToolAnnotations = {
+  title?: string;
+  readOnlyHint?: boolean;
+  destructiveHint?: boolean;
+  idempotentHint?: boolean;
+  openWorldHint?: boolean;
+};
+
+/**
+ * Provider-agnostic tool descriptor a package can offer to the in-browser
+ * AI assistant (see `DocumentModelLib.aiTools`).
+ *
+ * Structurally compatible with the MCP tool records produced by
+ * `createReactorMcpProvider`: the callback parameter is `never` so any
+ * per-tool-args function type is assignable, and the result is `unknown`
+ * because the envelope shape (MCP `CallToolResult`) is unwrapped at the
+ * adapter boundary.
+ */
+export type PhAiToolDescriptor = {
+  name: string;
+  description?: string;
+  inputSchema: ZodRawShape;
+  annotations?: PhAiToolAnnotations;
+  callback: (args: never) => Promise<unknown>;
+};
 
 export type DocumentModelModule<TState extends PHBaseState = PHBaseState> = {
   /** optional version field, should be made required */
@@ -1707,6 +1734,11 @@ export type DocumentModelLib<TState extends PHBaseState = PHBaseState> = {
   subgraphs?: readonly SubgraphModule[];
   upgradeManifests?: readonly UpgradeManifest<readonly number[]>[] | undefined;
   processorFactory?: ProcessorFactoryBuilder;
+  /**
+   * Optional: tool descriptors this package offers to the in-browser AI
+   * assistant (merged into the chat agent's tool set by the host app).
+   */
+  aiTools?: readonly PhAiToolDescriptor[];
 };
 
 export type DocumentModelDocumentModelModule =
