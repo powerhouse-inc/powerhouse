@@ -3,6 +3,7 @@ import type { ProcessorApps } from "@powerhousedao/shared/processors";
 import { kebabCase } from "change-case";
 import {
   pruneManifestSection,
+  syncProjectAiToolsExport,
   tsMorphGenerateApp,
   tsMorphGenerateDocumentEditor,
   tsMorphGenerateDocumentModel,
@@ -295,4 +296,5 @@ export async function generateAll(project: Project) {
   await generateAllApps(project);
   await generateAllSubgraphs(project);
   await generateAllProcessors(project);
+  syncProjectAiToolsExport(project);
 }
