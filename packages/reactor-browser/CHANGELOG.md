@@ -1,3 +1,20 @@
+## 6.2.2-dev.78 (2026-09-04)
+
+### 🚀 Features
+
+- **bench:** bench:fix gate picks the next VERIFIED task when no id is given ([7c0560964](https://github.com/powerhouse-inc/powerhouse/commit/7c0560964))
+- **bench:** bench-fixer agent and /bench-fix command close a verified finding ([9a2cbfdfe](https://github.com/powerhouse-inc/powerhouse/commit/9a2cbfdfe))
+
+### 🩹 Fixes
+
+- **connect:** stop serving stale builds after a deploy ([#2960](https://github.com/powerhouse-inc/powerhouse/pull/2960))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5.1
+- Frank @froid1911
+
 ## 6.2.2-dev.77 (2026-09-03)
 
 ### 🚀 Features

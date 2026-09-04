@@ -1,3 +1,32 @@
+## 6.2.2-dev.78 (2026-09-04)
+
+### 🚀 Features
+
+- **agents:** track the verify agent and let it wait on long runs with Monitor ([1613f3f24](https://github.com/powerhouse-inc/powerhouse/commit/1613f3f24))
+- **bench:** bench-fixer agent and /bench-fix command close a verified finding ([9a2cbfdfe](https://github.com/powerhouse-inc/powerhouse/commit/9a2cbfdfe))
+- **bench:** bench-fixer agent definition ([badbdec47](https://github.com/powerhouse-inc/powerhouse/commit/badbdec47))
+- **bench:** bench-fixer can wait on long runs with Monitor instead of polling ([87e8d259a](https://github.com/powerhouse-inc/powerhouse/commit/87e8d259a))
+- **bench:** bench:fix runs the fix line's fixed steps as one command each ([eb5f799b5](https://github.com/powerhouse-inc/powerhouse/commit/eb5f799b5))
+- **bench:** bench:fix gate picks the next VERIFIED task when no id is given ([7c0560964](https://github.com/powerhouse-inc/powerhouse/commit/7c0560964))
+- **bench:** close verified findings with /bench-fix, and make the fix line deterministic ([#2959](https://github.com/powerhouse-inc/powerhouse/pull/2959))
+- **reactor:** the sync bench attributes each job's time and isolates cross-reactor contention ([8b61fa328](https://github.com/powerhouse-inc/powerhouse/commit/8b61fa328))
+- **reactor:** a renamed bench case records the name it continues ([45da610a2](https://github.com/powerhouse-inc/powerhouse/commit/45da610a2))
+
+### 🩹 Fixes
+
+- **bench:** records-guard denies Edit and Write on the record files, not just shell redirects ([857cd9f6a](https://github.com/powerhouse-inc/powerhouse/commit/857cd9f6a))
+- **connect:** stop serving stale builds after a deploy ([#2960](https://github.com/powerhouse-inc/powerhouse/pull/2960))
+- **reactor:** the sync bench times writes to convergence and nothing else ([924341262](https://github.com/powerhouse-inc/powerhouse/commit/924341262))
+- **reactor:** the event-bus bench prices the sync/async ratio, not the scheduler ([bee726021](https://github.com/powerhouse-inc/powerhouse/commit/bee726021))
+- **shared:** the write-cache rebuild reuses the stored hash instead of recomputing it ([e87ba2c82](https://github.com/powerhouse-inc/powerhouse/commit/e87ba2c82))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5.1
+- Claude Opus 5
+- Frank @froid1911
+
 ## 6.2.2-dev.77 (2026-09-03)
 
 ### 🚀 Features

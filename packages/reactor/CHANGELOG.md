@@ -1,3 +1,27 @@
+## 6.2.2-dev.78 (2026-09-04)
+
+### 🚀 Features
+
+- **bench:** bench:fix gate picks the next VERIFIED task when no id is given ([7c0560964](https://github.com/powerhouse-inc/powerhouse/commit/7c0560964))
+- **bench:** bench:fix runs the fix line's fixed steps as one command each ([eb5f799b5](https://github.com/powerhouse-inc/powerhouse/commit/eb5f799b5))
+- **bench:** bench-fixer agent and /bench-fix command close a verified finding ([9a2cbfdfe](https://github.com/powerhouse-inc/powerhouse/commit/9a2cbfdfe))
+- **reactor:** a renamed bench case records the name it continues ([45da610a2](https://github.com/powerhouse-inc/powerhouse/commit/45da610a2))
+- **reactor:** the sync bench attributes each job's time and isolates cross-reactor contention ([8b61fa328](https://github.com/powerhouse-inc/powerhouse/commit/8b61fa328))
+
+### 🩹 Fixes
+
+- **connect:** stop serving stale builds after a deploy ([#2960](https://github.com/powerhouse-inc/powerhouse/pull/2960))
+- **shared:** the write-cache rebuild reuses the stored hash instead of recomputing it ([e87ba2c82](https://github.com/powerhouse-inc/powerhouse/commit/e87ba2c82))
+- **reactor:** the event-bus bench prices the sync/async ratio, not the scheduler ([bee726021](https://github.com/powerhouse-inc/powerhouse/commit/bee726021))
+- **reactor:** the sync bench times writes to convergence and nothing else ([924341262](https://github.com/powerhouse-inc/powerhouse/commit/924341262))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5.1
+- Claude Opus 5
+- Frank @froid1911
+
 ## 6.2.2-dev.77 (2026-09-03)
 
 ### 🚀 Features
