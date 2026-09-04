@@ -10,5 +10,6 @@ export * from "./editor-common.js";
 export * from "./index-files.js";
 export * from "./manifest.js";
 export * from "./processors/processor.js";
+export * from "./project-index.js";
 export * from "./subgraphs.js";
 export type * from "./types.js";
