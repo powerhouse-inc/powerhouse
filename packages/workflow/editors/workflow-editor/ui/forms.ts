@@ -48,6 +48,17 @@ export interface DesignTimeService {
   listConnections?: () => Promise<ConnectionSummary[]>;
 }
 
+// Ours, not the piece's: the reactor's poll cadence for a piece trigger.
+// Appended to every piece trigger's form; see splitPollInterval in the runtime.
+export const POLL_INTERVAL_PROP: BlockFormProp = {
+  name: "pollEverySeconds",
+  displayName: "Poll every (seconds)",
+  type: "NUMBER",
+  required: false,
+  description:
+    "How often the reactor checks this trigger; 60 at the least. Omit to follow the piece's own cadence.",
+};
+
 const text = (
   name: string,
   displayName: string,

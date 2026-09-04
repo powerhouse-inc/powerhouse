@@ -1,6 +1,11 @@
 // Design-time channel to the workflow-runtime subgraph: piece descriptors
 // and dynamic option resolution. Not document-model coupled.
-import { CORE_FORMS, type BlockForm, type BlockFormProp } from "./ui/forms.js";
+import {
+  CORE_FORMS,
+  POLL_INTERVAL_PROP,
+  type BlockForm,
+  type BlockFormProp,
+} from "./ui/forms.js";
 
 const DEFAULT_RUNTIME_URL = "http://localhost:4001/graphql/workflow-runtime";
 
@@ -72,6 +77,7 @@ export function getBlockForm(blockType: string): Promise<BlockForm | null> {
       const descriptor = data.workflowRuntime.blockDescriptor;
       const entry = descriptor?.action ?? descriptor?.trigger;
       if (!descriptor || !entry) return null;
+      const isTrigger = !descriptor.action && Boolean(descriptor.trigger);
       return {
         title: `${descriptor.displayName} · ${entry.displayName}`,
         requireAuth: entry.requireAuth,
@@ -80,7 +86,7 @@ export function getBlockForm(blockType: string): Promise<BlockForm | null> {
           : entry.requireAuth
             ? ("required" as const)
             : ("optional" as const),
-        props: entry.props,
+        props: isTrigger ? [...entry.props, POLL_INTERVAL_PROP] : entry.props,
       };
     });
     formCache.set(blockType, cached);
