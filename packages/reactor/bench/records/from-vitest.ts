@@ -203,6 +203,11 @@ export type MicroEntryInput = {
   question: string;
   tags: string[];
   tasks: string[];
+  /**
+   * Records this run replaces. A harness fix changes what the numbers mean, so
+   * the entry it invalidates stops being a comparable baseline and says so.
+   */
+  supersedes: string[];
 };
 
 /**
@@ -330,6 +335,7 @@ export function buildMicroEntry(
     conclusions,
     caveats,
     tasks: input.tasks,
+    supersedes: input.supersedes,
     tags: input.tags,
     results: {
       runner: input.runner,

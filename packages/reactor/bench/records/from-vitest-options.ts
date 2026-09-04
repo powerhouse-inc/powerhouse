@@ -15,6 +15,9 @@ Usage:
   --question <text>    override the question it answers
   --tag <text>         repeatable
   --task <T-nnn>       the task this run bears on, repeatable
+  --supersedes <B-nnn> a record this run replaces, repeatable. Use it when a
+                       harness fix changed what the numbers mean, so the older
+                       entry is not a comparable baseline
   --allow-dirty        record against a working tree with uncommitted changes
 
 The conclusions and caveats an entry starts with are derived from the numbers:
@@ -33,10 +36,17 @@ export type FromVitestOptions = {
   question: string;
   tags: string[];
   tasks: string[];
+  supersedes: string[];
   allowDirty: boolean;
 };
 
-const REPEATABLE = new Set(["--conclusion", "--caveat", "--tag", "--task"]);
+const REPEATABLE = new Set([
+  "--conclusion",
+  "--caveat",
+  "--tag",
+  "--task",
+  "--supersedes",
+]);
 const SINGLE = new Set(["--title", "--question"]);
 
 /** Parses the caller's arguments, or throws with what is wrong. */
@@ -49,6 +59,7 @@ export function parseFromVitestOptions(argv: string[]): FromVitestOptions {
     question: "",
     tags: [],
     tasks: [],
+    supersedes: [],
     allowDirty: false,
   };
 
@@ -90,6 +101,9 @@ export function parseFromVitestOptions(argv: string[]): FromVitestOptions {
         break;
       case "--task":
         options.tasks.push(value);
+        break;
+      case "--supersedes":
+        options.supersedes.push(value);
         break;
       case "--title":
         options.title = value;

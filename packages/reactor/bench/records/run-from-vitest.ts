@@ -106,6 +106,7 @@ function main(): void {
       question: options.question,
       tags: options.tags,
       tasks: options.tasks,
+      supersedes: options.supersedes,
     });
 
     process.stdout.write(`${JSON.stringify(entry)}\n`);

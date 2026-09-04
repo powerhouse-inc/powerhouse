@@ -1040,6 +1040,7 @@ if (record) {
     question: "",
     tags: [],
     tasks: [],
+    supersedes: [],
   });
 
   process.stdout.write(`${JSON.stringify(entry)}\n`);

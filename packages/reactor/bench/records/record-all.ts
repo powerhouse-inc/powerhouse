@@ -20,6 +20,14 @@ Usage:
   --allow-dirty  record against a working tree with uncommitted changes
   --list         print the plan and exit without running anything
 
+  --task <T-nnn>       the task this run bears on, repeatable
+  --supersedes <B-nnn> a record this run replaces, repeatable. A harness fix
+                       changes what the numbers mean, so the entry it
+                       invalidates stops being a comparable baseline
+
+Both attach to the record, so both need exactly one benchmark named: attaching
+one task to six unrelated runs would make the reference meaningless.
+
 They run serially and never in parallel: these benchmarks share a machine, and
 two of them competing for it measure each other. Recording is a separate step
 from running - the runner writes its own JSON, and this converts and appends
@@ -42,21 +50,37 @@ export type RecordAllOptions = {
   targets: BenchTarget[];
   allowDirty: boolean;
   listOnly: boolean;
+  /** Attached to the one record this run produces. */
+  tasks: string[];
+  supersedes: string[];
 };
 
 /** Parses the caller's arguments, or throws with what is wrong. */
 export function parseRecordAllOptions(argv: string[]): RecordAllOptions {
   const named: string[] = [];
+  const tasks: string[] = [];
+  const supersedes: string[] = [];
   let allowDirty = false;
   let listOnly = false;
 
-  for (const argument of argv) {
+  for (let i = 0; i < argv.length; i += 1) {
+    const argument = argv[i];
+
     if (argument === "--allow-dirty") {
       allowDirty = true;
       continue;
     }
     if (argument === "--list") {
       listOnly = true;
+      continue;
+    }
+    if (argument === "--task" || argument === "--supersedes") {
+      const value = argv.at(i + 1);
+      if (value === undefined || value === "" || value.startsWith("--")) {
+        throw new Error(`Missing value for ${argument}`);
+      }
+      i += 1;
+      (argument === "--task" ? tasks : supersedes).push(value);
       continue;
     }
     if (argument.startsWith("--")) {
@@ -83,7 +107,13 @@ export function parseRecordAllOptions(argv: string[]): RecordAllOptions {
       ? [...BENCH_TARGETS]
       : BENCH_TARGETS.filter((target) => named.includes(target.name));
 
-  return { targets, allowDirty, listOnly };
+  if ((tasks.length > 0 || supersedes.length > 0) && targets.length !== 1) {
+    throw new Error(
+      "--task and --supersedes attach to one record, so name exactly one benchmark",
+    );
+  }
+
+  return { targets, allowDirty, listOnly, tasks, supersedes };
 }
 
 export type TargetOutcome = {

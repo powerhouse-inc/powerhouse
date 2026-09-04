@@ -9,6 +9,10 @@ starting it rather than asking which one.
 This command only records. Reading the record and filing what it shows is
 `/bench-loop`, which needs no argument and can run long after this one.
 
+Recording the state of a fix is not this command's job either - `/bench-fix`
+does it as a step of its own, so the record naming the fix commit is made
+while that sha is still what the tree holds.
+
 ## Before you start
 
 ```bash

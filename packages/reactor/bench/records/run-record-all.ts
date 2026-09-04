@@ -108,6 +108,7 @@ function convertVitestReport(target: BenchTarget): Record<string, unknown> {
     question: "",
     tags: [],
     tasks: [],
+    supersedes: [],
   });
 }
 
@@ -133,16 +134,44 @@ function append(entry: Record<string, unknown>): string {
   return String(result.data.id);
 }
 
-function recordOne(target: BenchTarget): string {
+/**
+ * Attached after the entry is built rather than threaded through both builders,
+ * because the sync bench emits its own entry and would otherwise need the same
+ * argument for the same reason. Both arrays start empty by construction, so a
+ * union is only defensive.
+ */
+function withReferences(
+  entry: Record<string, unknown>,
+  options: RecordAllOptions,
+): Record<string, unknown> {
+  if (options.tasks.length === 0 && options.supersedes.length === 0) {
+    return entry;
+  }
+
+  const existing = (key: string): string[] => {
+    const value = entry[key];
+    return Array.isArray(value) ? (value as string[]) : [];
+  };
+
+  return {
+    ...entry,
+    tasks: [...new Set([...existing("tasks"), ...options.tasks])],
+    supersedes: [
+      ...new Set([...existing("supersedes"), ...options.supersedes]),
+    ],
+  };
+}
+
+function recordOne(target: BenchTarget, options: RecordAllOptions): string {
   // The sync bench drives tinybench directly and emits its own entry; the
   // vitest ones write a report this converts.
   if (target.resultsFile === "") {
     const stdout = runBenchmark(target, true);
-    return append(parseEmittedEntry(stdout));
+    return append(withReferences(parseEmittedEntry(stdout), options));
   }
 
   runBenchmark(target, false);
-  return append(convertVitestReport(target));
+  return append(withReferences(convertVitestReport(target), options));
 }
 
 function main(): void {
@@ -181,7 +210,7 @@ function main(): void {
     process.stdout.write(`\n=== ${target.name} (${target.recordScript}) ===\n`);
 
     try {
-      const id = recordOne(target);
+      const id = recordOne(target, options);
       outcomes.push({
         target: target.name,
         status: "recorded",
