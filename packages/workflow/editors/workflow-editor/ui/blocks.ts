@@ -72,6 +72,12 @@ export const STEP_PRESETS: BlockPreset[] = [
     defaultConfig: { documentType: "" },
   },
   {
+    label: "List document types",
+    blockType: "core#document-types",
+    description: "Document models installed on this reactor.",
+    defaultConfig: {},
+  },
+  {
     label: "Get document schema",
     blockType: "core#document-schema",
     description: "Action and state schemas of a document type.",

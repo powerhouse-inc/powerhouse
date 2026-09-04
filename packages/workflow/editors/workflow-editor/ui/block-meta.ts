@@ -47,6 +47,11 @@ const CORE_META: Record<string, BlockMeta> = {
     subtitle: "Core",
     glyph: "⌕",
   },
+  "core#document-types": {
+    displayName: "List document types",
+    subtitle: "Core",
+    glyph: "☰",
+  },
   "core#document-schema": {
     displayName: "Get document schema",
     subtitle: "Core",

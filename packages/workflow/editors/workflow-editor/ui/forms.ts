@@ -229,6 +229,12 @@ export const CORE_FORMS: Record<string, BlockForm> = {
         true,
         "e.g. {{steps.fetch.output.body.ok}}",
       ),
+      text(
+        "equals",
+        "Equals",
+        false,
+        "Take the true port only when the condition matches this; omit for truthiness",
+      ),
     ],
   },
   "core#document-create": {
@@ -236,10 +242,16 @@ export const CORE_FORMS: Record<string, BlockForm> = {
     requireAuth: false,
     auth: "none",
     props: [
-      autocomplete("documentType", "Document type", true),
+      autocomplete("documentType", "Document type", false),
       text("name", "Document name"),
       text("parentId", "Parent drive/folder id"),
       documentActions("Initial actions"),
+      text(
+        "payload",
+        "Payload",
+        false,
+        "JSON {documentType, name, actions?}, e.g. {{steps.draft.output}}",
+      ),
     ],
   },
   "core#document-dispatch": {
@@ -293,10 +305,21 @@ export const CORE_FORMS: Record<string, BlockForm> = {
     auth: "none",
     props: [
       autocomplete("documentType", "Document type", false, "Omit for any type"),
-      autocomplete("parentId", "In drive/folder", false, "Omit for the whole reactor"),
+      autocomplete(
+        "parentId",
+        "In drive/folder",
+        false,
+        "Omit for the whole reactor",
+      ),
       text("name", "Name contains", false, "Case-insensitive match"),
       text("limit", "Max results", false, "Defaults to 25"),
     ],
+  },
+  "core#document-types": {
+    title: "List document types",
+    requireAuth: false,
+    auth: "none",
+    props: [],
   },
   "core#document-schema": {
     title: "Get document schema",

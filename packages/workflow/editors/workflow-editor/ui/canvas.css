@@ -1,5 +1,5 @@
 /* React Flow gives every node its own z-index, so a popup inside one cannot
    paint over the nodes below it. Lift the whole node while its picker is open. */
-.react-flow__node:has([data-selector-open="true"]) {
+.react-flow__node *:has([data-selector-open="true"]) {
   z-index: 1000 !important;
 }
