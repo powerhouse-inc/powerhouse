@@ -1,6 +1,7 @@
 import "@xyflow/react/dist/style.css";
 import "./ui/canvas.css";
 import { DocumentToolbar } from "@powerhousedao/design-system/connect";
+import { useSelectedDocumentId } from "@powerhousedao/reactor-browser";
 import { useSelectedWorkflowDocument } from "document-models/workflow";
 import { useEffect, useMemo } from "react";
 import { useWorkflowModel } from "./document/useWorkflowModel.js";
@@ -21,6 +22,7 @@ import { buildExpressionScope, EMPTY_SCOPE } from "./ui/expression-scope.js";
 import { registerExpressionScopeSource } from "./ui/ExpressionPicker.js";
 import type { DesignTimeService } from "./ui/forms.js";
 import { registerPieceSource } from "./ui/piece-source.js";
+import { DocumentErrorBoundary } from "../shared/DocumentErrorBoundary.js";
 import { useSyncWorkflowRuntimeUrl } from "./use-runtime-url.js";
 import { WorkflowEditorApp } from "./ui/WorkflowEditorApp.js";
 
@@ -31,7 +33,7 @@ registerPieceSource({
   searchBlocks,
 });
 
-export default function Editor() {
+function WorkflowEditor() {
   useSyncWorkflowRuntimeUrl();
   const { model, callbacks } = useWorkflowModel();
   const [document] = useSelectedWorkflowDocument();
@@ -94,5 +96,16 @@ export default function Editor() {
         designTime={designTime}
       />
     </div>
+  );
+}
+
+// A drive node can point at a document the reactor cannot serve; the document
+// hooks throw for it. The boundary keeps that failure inside the editor pane.
+export default function Editor() {
+  const documentId = useSelectedDocumentId();
+  return (
+    <DocumentErrorBoundary documentId={documentId}>
+      <WorkflowEditor />
+    </DocumentErrorBoundary>
   );
 }

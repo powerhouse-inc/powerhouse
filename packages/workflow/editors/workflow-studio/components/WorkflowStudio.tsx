@@ -3,19 +3,25 @@
 import {
   addDocument,
   setSelectedNode,
-  useDocumentById,
+  useDispatch,
+  useDocumentSafe,
   useFileNodesInSelectedDrive,
   usePHToast,
   useSelectedDrive,
   useSelectedNode,
 } from "@powerhousedao/reactor-browser";
 import type { FileNode } from "@powerhousedao/shared/document-drive";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   actions as workflowActions,
   type WorkflowDocument,
 } from "document-models/workflow";
 import { fireWorkflow } from "../../workflow-editor/runtime-api.js";
+import {
+  DocumentErrorBoundary,
+  DocumentLoadError,
+  errorMessage,
+} from "../../shared/DocumentErrorBoundary.js";
 import { RunsView } from "./RunsView.js";
 
 const WORKFLOW_TYPE = "powerhouse/workflow";
@@ -29,8 +35,26 @@ function documentName(document: unknown, fallback: string): string {
   return state?.name || fallback || "(unnamed)";
 }
 
+// A node can outlive its document (deleted, or unreadable history). The safe
+// hook reports that as an error instead of throwing, so one broken node degrades
+// to its drive name plus a warning marker rather than blanking the studio.
 function NodeLabel(props: { node: FileNode }) {
-  const [document] = useDocumentById(props.node.id);
+  const { data: document, error } = useDocumentSafe(props.node.id);
+  useEffect(() => {
+    if (error !== undefined) {
+      console.error(`Failed to load document ${props.node.id}:`, error);
+    }
+  }, [error, props.node.id]);
+  if (error !== undefined) {
+    return (
+      <span
+        className="text-red-600"
+        title={`Could not load ${props.node.id}: ${errorMessage(error)}`}
+      >
+        ⚠ {props.node.name || "(unnamed)"}
+      </span>
+    );
+  }
   return <>{documentName(document, props.node.name)}</>;
 }
 
@@ -102,7 +126,20 @@ const WORKFLOW_STATUS_STYLES: Record<string, string> = {
 
 // Status chip + enable/disable toggle for the workflow whose runs are shown.
 function WorkflowStatusBar(props: { workflowId: string }) {
-  const [document, dispatch] = useDocumentById(props.workflowId);
+  const { data: document, error, reload } = useDocumentSafe(props.workflowId);
+  const [, dispatch] = useDispatch(document);
+  if (error !== undefined) {
+    return (
+      <DocumentLoadError
+        title="This workflow could not be loaded"
+        documentId={props.workflowId}
+        error={error}
+        onRetry={() => {
+          void reload();
+        }}
+      />
+    );
+  }
   if (document?.header.documentType !== WORKFLOW_TYPE) return null;
   const workflow = document as WorkflowDocument;
   const status = workflow.state.global.status;
@@ -130,7 +167,8 @@ function WorkflowStatusBar(props: { workflowId: string }) {
 export function WorkflowStudio(props: { children?: ReactNode }) {
   const [drive] = useSelectedDrive();
   const fileNodes = useFileNodesInSelectedDrive() ?? [];
-  const selectedNodeId = useSelectedNode()?.id;
+  const selectedNode = useSelectedNode();
+  const selectedNodeId = selectedNode?.id;
   const toast = usePHToast();
   // Which workflow's runs are shown; null = all runs in the drive.
   const [runsTarget, setRunsTarget] = useState<FileNode | null>(null);
@@ -174,7 +212,7 @@ export function WorkflowStudio(props: { children?: ReactNode }) {
     : null;
 
   // Manual fire only makes sense for core#manual triggers.
-  const [targetDocument] = useDocumentById(liveTarget?.id ?? null);
+  const { data: targetDocument } = useDocumentSafe(liveTarget?.id ?? null);
   const manualTrigger =
     targetDocument?.header.documentType === WORKFLOW_TYPE &&
     (targetDocument as WorkflowDocument).state.global.trigger?.blockType ===
@@ -230,7 +268,14 @@ export function WorkflowStudio(props: { children?: ReactNode }) {
               </button>
             </div>
             <div className="flex min-h-0 flex-1 flex-col [&>#document-editor-container]:min-h-0">
-              {props.children}
+              <DocumentErrorBoundary
+                key={selectedNodeId}
+                documentId={selectedNodeId}
+                label={selectedNode?.name}
+                onDismiss={() => setSelectedNode(undefined)}
+              >
+                {props.children}
+              </DocumentErrorBoundary>
             </div>
           </div>
         ) : (
