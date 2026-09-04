@@ -2,6 +2,7 @@ import { createReactorMcpProvider } from "@powerhousedao/reactor-mcp/tools";
 import type { IReactorClient } from "@powerhousedao/reactor";
 import {
   ReactorChatFab,
+  createSwitchboardSchemaTool,
   type AiToolDescriptor,
 } from "@powerhousedao/reactor-browser/ai";
 
@@ -22,12 +23,13 @@ function getReactorTools(): Promise<AiToolDescriptor[]> {
   }
   const syncManager =
     ph?.reactorClientModule?.reactorModule?.syncModule?.syncManager;
-  return createReactorMcpProvider({ client, syncManager }).then((provider) =>
-    Object.values(provider.tools).map((tool) => ({
+  return createReactorMcpProvider({ client, syncManager }).then((provider) => [
+    ...Object.values(provider.tools).map((tool) => ({
       ...tool,
       inputSchema: tool.inputSchema ?? {},
     })),
-  );
+    createSwitchboardSchemaTool(),
+  ]);
 }
 
 /** Connect's bottom-right AI chat FAB, bound to the browser reactor. */
