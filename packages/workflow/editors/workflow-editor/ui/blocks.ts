@@ -15,6 +15,12 @@ export const TRIGGER_PRESETS: BlockPreset[] = [
     defaultConfig: {},
   },
   {
+    label: "Schedule",
+    blockType: "core#schedule",
+    description: "Fires on a cron expression or fixed interval.",
+    defaultConfig: { mode: "cron", cron: "0 9 * * 1-5", timezone: "UTC" },
+  },
+  {
     label: "Document event",
     blockType: "core#document-event",
     description: "Fires when a matching document operation lands.",

@@ -85,6 +85,34 @@ const documentActions = (
   hasDynamicResolver: true,
 });
 
+const number = (
+  name: string,
+  displayName: string,
+  required = false,
+  description?: string,
+): BlockFormProp => ({
+  name,
+  displayName,
+  type: "NUMBER",
+  required,
+  description,
+});
+
+const dropdown = (
+  name: string,
+  displayName: string,
+  options: { label: string; value: unknown }[],
+  required = false,
+  description?: string,
+): BlockFormProp => ({
+  name,
+  displayName,
+  type: "STATIC_DROPDOWN",
+  required,
+  description,
+  staticOptions: options,
+});
+
 // Hand-written forms for core blocks and triggers.
 export const CORE_FORMS: Record<string, BlockForm> = {
   "core#manual": {
@@ -92,6 +120,45 @@ export const CORE_FORMS: Record<string, BlockForm> = {
     requireAuth: false,
     auth: "none",
     props: [],
+  },
+  "core#schedule": {
+    title: "Schedule",
+    requireAuth: false,
+    auth: "none",
+    props: [
+      dropdown(
+        "mode",
+        "Mode",
+        [
+          { label: "Cron expression", value: "cron" },
+          { label: "Fixed interval", value: "interval" },
+        ],
+        true,
+      ),
+      text(
+        "cron",
+        "Cron expression",
+        false,
+        "Five fields, e.g. 0 9 * * 1-5 (09:00 on weekdays); cron mode only",
+      ),
+      number(
+        "every",
+        "Every",
+        false,
+        "Interval mode only; at least one minute",
+      ),
+      dropdown("unit", "Unit", [
+        { label: "Minutes", value: "minutes" },
+        { label: "Hours", value: "hours" },
+        { label: "Days", value: "days" },
+      ]),
+      text(
+        "timezone",
+        "Timezone",
+        false,
+        "IANA name, e.g. Europe/Lisbon; defaults to UTC",
+      ),
+    ],
   },
   "core#document-event": {
     title: "Document event",

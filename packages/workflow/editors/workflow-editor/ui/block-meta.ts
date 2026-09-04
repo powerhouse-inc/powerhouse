@@ -10,6 +10,7 @@ export interface BlockMeta {
 
 const CORE_META: Record<string, BlockMeta> = {
   "core#manual": { displayName: "Manual", subtitle: "Trigger", glyph: "▶" },
+  "core#schedule": { displayName: "Schedule", subtitle: "Trigger", glyph: "◷" },
   "core#document-event": {
     displayName: "Document event",
     subtitle: "Trigger",
