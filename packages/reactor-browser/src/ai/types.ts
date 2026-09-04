@@ -56,8 +56,16 @@ export const WRITE_TOOLS: ReadonlySet<string> = new Set([
   "addRemoteDrive",
 ]);
 
-export function isWriteTool(name: string): boolean {
-  return WRITE_TOOLS.has(name);
+/**
+ * Whether executing the tool mutates state and requires user approval:
+ * the built-in write tools, or any tool flagged destructive in its
+ * annotations (covers package-provided tools outside the built-in set).
+ */
+export function isWriteTool(
+  name: string,
+  annotations?: AiToolAnnotations,
+): boolean {
+  return WRITE_TOOLS.has(name) || annotations?.destructiveHint === true;
 }
 
 export type ToolCallState =

@@ -11,9 +11,11 @@ import {
 import type {
   AgentEvent,
   AiSettings,
+  AiToolAnnotations,
   AiToolDescriptor,
   ChatContext,
 } from "../../src/ai/types.js";
+import { isWriteTool } from "../../src/ai/types.js";
 
 const USAGE = {
   inputTokens: { total: 10, noCache: 10, cacheRead: 0, cacheWrite: 0 },
@@ -73,11 +75,13 @@ const SETTINGS: AiSettings = {
 function makeTool(
   name: string,
   callback?: AiToolDescriptor["callback"],
+  annotations?: AiToolAnnotations,
 ): AiToolDescriptor {
   return {
     name,
     description: `test tool ${name}`,
     inputSchema: {},
+    annotations,
     callback:
       callback ??
       (() =>
@@ -123,6 +127,28 @@ describe("unwrapToolResult", () => {
   it("passes non-envelope values through", () => {
     expect(unwrapToolResult({ plain: true })).toEqual({ plain: true });
     expect(unwrapToolResult(null)).toBeNull();
+  });
+});
+
+describe("isWriteTool", () => {
+  it("flags the built-in write tools", () => {
+    expect(isWriteTool("createDocument")).toBe(true);
+    expect(isWriteTool("deleteDrive")).toBe(true);
+  });
+
+  it("does not flag read tools or unknown tools", () => {
+    expect(isWriteTool("getDrives")).toBe(false);
+    expect(isWriteTool("getSwitchboardSchema")).toBe(false);
+    expect(isWriteTool("packageTool")).toBe(false);
+  });
+
+  it("flags tools annotated destructive", () => {
+    expect(isWriteTool("packageTool", { destructiveHint: true })).toBe(true);
+  });
+
+  it("ignores non-destructive annotations", () => {
+    expect(isWriteTool("packageTool", { readOnlyHint: true })).toBe(false);
+    expect(isWriteTool("packageTool", { destructiveHint: false })).toBe(false);
   });
 });
 
@@ -294,6 +320,51 @@ describe("ReactorChatAgent", () => {
 
     expect(executed).toHaveBeenCalledTimes(1);
     expect(events.some((e) => e.type === "approval-request")).toBe(false);
+  });
+
+  it("pauses destructive package tools for approval even when not in the built-in write set", async () => {
+    const executed = vi.fn(() =>
+      Promise.resolve({
+        content: [{ type: "text", text: "{}" }],
+        structuredContent: {},
+      }),
+    );
+    const purgeCache = makeTool(
+      "purgeCache",
+      executed as AiToolDescriptor["callback"],
+      { destructiveHint: true },
+    );
+    const model = streamModel([
+      [
+        ...toolCallParts("call-1", "purgeCache", {}),
+        ...finishParts("tool-calls"),
+      ],
+      [...textParts("text-1", "Done."), ...finishParts("stop")],
+    ]);
+    const events: AgentEvent[] = [];
+    const agent = new ReactorChatAgent({
+      settings: SETTINGS,
+      tools: [purgeCache],
+      context: {},
+      onEvent: (event) => events.push(event),
+      model,
+    });
+
+    const sendPromise = agent.send("purge the cache");
+    await waitFor(
+      () => events.some((e) => e.type === "approval-request"),
+      "approval request",
+    );
+    expect(executed).not.toHaveBeenCalled();
+    agent.approve("call-1");
+    await sendPromise;
+
+    expect(executed).toHaveBeenCalledTimes(1);
+    expect(
+      events.some(
+        (e) => e.type === "approval-request" && e.name === "purgeCache",
+      ),
+    ).toBe(true);
   });
 
   it("surfaces tool errors to the event stream", async () => {
@@ -481,6 +552,19 @@ describe("buildSystemPrompt", () => {
     });
     expect(prompt).toContain(
       "This drive is not synced to a switchboard, so no switchboard endpoints are available for it.",
+    );
+  });
+
+  it("states the secret policy: secrets are entered in editors, never in chat", () => {
+    const prompt = buildSystemPrompt({
+      driveId: "drive-1",
+      driveName: "My Drive",
+    });
+    expect(prompt).toContain(
+      "Never accept secret values (passwords, tokens, API keys) in chat.",
+    );
+    expect(prompt).toContain(
+      "Never ask the user to paste a secret into the chat.",
     );
   });
 });

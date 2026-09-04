@@ -94,6 +94,7 @@ export function buildSystemPrompt(context: ChatContext): string {
     "Documents are instances of typed document models; drives are collections that group documents and folders.",
     "Prefer read-only tools to discover state (document models, drives, documents, relationships) before making changes.",
     "Never invent document ids, drive ids, folder ids or document model types — discover them with the read tools first.",
+    "Never accept secret values (passwords, tokens, API keys) in chat. When a connection or configuration requires a secret, tell the user to enter it in the relevant editor (e.g. the connection editor) and point them to the document. Never ask the user to paste a secret into the chat.",
     "When the user refers to 'this', 'here' or 'it' without naming a target, they mean the current selection below; prefer it for create/modify targets.",
   ];
   const selection: string[] = [];
@@ -232,7 +233,13 @@ export class ReactorChatAgent {
         );
       },
       toolApproval: async ({ toolCall }) => {
-        if (settings.autoApproveWrites || !isWriteTool(toolCall.toolName)) {
+        const descriptor = this.options.tools.find(
+          (t) => t.name === toolCall.toolName,
+        );
+        if (
+          settings.autoApproveWrites ||
+          !isWriteTool(toolCall.toolName, descriptor?.annotations)
+        ) {
           return "not-applicable";
         }
         const toolCallId = toolCall.toolCallId;
