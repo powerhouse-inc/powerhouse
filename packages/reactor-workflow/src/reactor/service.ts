@@ -95,6 +95,7 @@ const CHECK_TIMEOUT_MS = 30_000;
 const logger = childLogger(["workflow", "runtime"]);
 
 const DRIVE_DOCUMENT_TYPE = "powerhouse/document-drive";
+const WORKFLOW_DOCUMENT_TYPE = "powerhouse/workflow";
 
 // "@acme/connector-imap#imap" -> "@acme/connector-imap"; mirrors the
 // connector id scheme the connection editor writes.
@@ -527,6 +528,20 @@ export class WorkflowRuntimeService {
       this.descriptors.set(cacheKey, descriptor);
     }
     return descriptor;
+  }
+
+  // The workflows a drive holds, so a drive app can scope runs to its own.
+  async driveWorkflowIds(driveId: string): Promise<string[]> {
+    if (!this.subgraph) return [];
+    const page = await this.subgraph.reactorClient.drives.listNodes(driveId);
+    // Only file nodes carry a documentType, so `in` also rules out folders.
+    return page.results
+      .filter(
+        (node) =>
+          "documentType" in node &&
+          node.documentType === WORKFLOW_DOCUMENT_TYPE,
+      )
+      .map((node) => node.id);
   }
 
   // Design-time: every powerhouse/connection document, for connection pickers.

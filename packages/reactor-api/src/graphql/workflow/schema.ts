@@ -8,9 +8,10 @@ export const schema: DocumentNode = gql`
   type WorkflowRuntimeQueries {
     health: String!
     """
-    Persisted runs, newest first, optionally filtered by workflow.
+    Persisted runs, newest first. Scope them to one workflow, or to every
+    workflow a drive holds; workflowId wins when both are given.
     """
-    runs(workflowId: String, limit: Int): [WorkflowRunRecord!]!
+    runs(workflowId: String, driveId: String, limit: Int): [WorkflowRunRecord!]!
     run(id: String!): WorkflowRunRecord
     """
     Action descriptor (props, auth) for a piece block type; null for core blocks.

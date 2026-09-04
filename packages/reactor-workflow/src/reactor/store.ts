@@ -233,13 +233,23 @@ export class WorkflowRunStore {
       .execute();
   }
 
-  async listRuns(workflowId?: string, limit = 25): Promise<RunRow[]> {
+  // Scope is one workflow id, or a set of them (a drive's workflows). An
+  // empty set matches nothing, which is not the same as an unscoped listing.
+  async listRuns(
+    workflowId?: string | string[],
+    limit = 25,
+  ): Promise<RunRow[]> {
+    if (Array.isArray(workflowId) && workflowId.length === 0) return [];
     let query = this.db
       .selectFrom("run")
       .selectAll()
       .orderBy("started_at", "desc")
       .limit(Math.min(Math.max(limit, 1), 100));
-    if (workflowId) query = query.where("workflow_id", "=", workflowId);
+    if (Array.isArray(workflowId)) {
+      query = query.where("workflow_id", "in", workflowId);
+    } else if (workflowId) {
+      query = query.where("workflow_id", "=", workflowId);
+    }
     return query.execute();
   }
 

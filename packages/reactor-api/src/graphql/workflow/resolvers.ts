@@ -16,6 +16,7 @@ interface FireArgs {
 
 interface RunsArgs {
   workflowId?: string;
+  driveId?: string;
   limit?: number;
 }
 
@@ -137,7 +138,14 @@ export const getResolvers = (
       runs: async (_parent: unknown, args: RunsArgs) => {
         const store = await workflowRuntime.store();
         if (!store) return [];
-        const rows = await store.listRuns(args.workflowId, args.limit ?? 25);
+        // A drive scopes runs to the workflows it holds; an explicit
+        // workflowId is narrower still, so it wins.
+        const scope =
+          args.workflowId ??
+          (args.driveId
+            ? await workflowRuntime.driveWorkflowIds(args.driveId)
+            : undefined);
+        const rows = await store.listRuns(scope, args.limit ?? 25);
         return Promise.all(
           rows.map(async (row) =>
             toRunRecord(row, await store.getSteps(row.id)),
