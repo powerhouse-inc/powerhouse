@@ -63,6 +63,8 @@ import {
   type TriggerBinding,
 } from "./trigger-supervisor.js";
 import {
+  lifecycleKindForDocumentAction,
+  lifecycleKindForDriveAction,
   matchesEventFilter,
   matchesLifecycleFilter,
   parseEventFilter,
@@ -96,6 +98,84 @@ const logger = childLogger(["workflow", "runtime"]);
 
 const DRIVE_DOCUMENT_TYPE = "powerhouse/document-drive";
 const WORKFLOW_DOCUMENT_TYPE = "powerhouse/workflow";
+// Document creation, deletion and parent linking are appended to the document
+// itself in this scope, not to any drive.
+const DOCUMENT_SCOPE = "document";
+// The relationship type the reactor uses for containment: a drive (or any
+// parent document) -> child document edge.
+const CHILD_RELATIONSHIP = "child";
+
+function stringField(
+  record: Record<string, unknown>,
+  key: string,
+): string | undefined {
+  const value = record[key];
+  return typeof value === "string" && value !== "" ? value : undefined;
+}
+
+function inputRecord(input: unknown): Record<string, unknown> {
+  if (input === null || typeof input !== "object") return {};
+  return input as Record<string, unknown>;
+}
+
+// Where a lifecycle payload's driveId / parentId come from. CREATE_DOCUMENT
+// knows nothing about containment, so the parent is read off the sibling
+// operations the reactor writes in the same job.
+export interface LifecycleParentHint {
+  // Set only by a drive operation, which is the only place the drive is named
+  // outright.
+  driveId?: string;
+  // A drive node's parentFolder, or the parent document of a "child" edge.
+  parentId?: string;
+  // The document id a relationship names as its parent, whose type decides
+  // whether it is a drive.
+  parentCandidate?: string;
+}
+
+// Indexes one batch of operations by the document a lifecycle event is about.
+// The reactor's own addFile writes CREATE_DOCUMENT and ADD_RELATIONSHIP in a
+// single job, so the drive is known without a read; the drive's ADD_FILE lands
+// in a later job and only enriches a fallback fire.
+export function collectLifecycleParentHints(
+  operations: OperationWithContext[],
+): Map<string, LifecycleParentHint> {
+  const hints = new Map<string, LifecycleParentHint>();
+  const merge = (documentId: string, hint: LifecycleParentHint) => {
+    const existing = hints.get(documentId);
+    hints.set(documentId, existing ? { ...existing, ...hint } : hint);
+  };
+  for (const { operation, context } of operations) {
+    const actionType = operation.action.type;
+    const input = inputRecord(operation.action.input);
+    if (context.scope === DOCUMENT_SCOPE) {
+      if (
+        actionType !== "ADD_RELATIONSHIP" &&
+        actionType !== "REMOVE_RELATIONSHIP"
+      ) {
+        continue;
+      }
+      if (stringField(input, "relationshipType") !== CHILD_RELATIONSHIP) {
+        continue;
+      }
+      const target = stringField(input, "targetId");
+      const source = stringField(input, "sourceId");
+      if (!target || !source) continue;
+      merge(target, { parentId: source, parentCandidate: source });
+      continue;
+    }
+    if (context.documentType !== DRIVE_DOCUMENT_TYPE) continue;
+    if (actionType !== "ADD_FILE" && actionType !== "DELETE_NODE") continue;
+    const nodeId = stringField(input, "id");
+    if (!nodeId) continue;
+    // parentFolder is absent at a drive's root, where the document has no
+    // folder parent; the drive itself is reported as driveId, not as parentId.
+    merge(nodeId, {
+      driveId: context.documentId,
+      parentId: stringField(input, "parentFolder"),
+    });
+  }
+  return hints;
+}
 
 // "@acme/connector-imap#imap" -> "@acme/connector-imap"; mirrors the
 // connector id scheme the connection editor writes.
@@ -347,15 +427,23 @@ export class WorkflowRuntimeService {
   // Called by the document-event processor. Registry updates are awaited;
   // fires are not, so runs never block operation ingestion.
   async onOperations(operations: OperationWithContext[]): Promise<void> {
+    const hints = collectLifecycleParentHints(operations);
     for (const { operation, context } of operations) {
+      if (context.scope === DOCUMENT_SCOPE) {
+        if (this.alreadySeen({ operation, context })) continue;
+        await this.matchDocumentLifecycle(operation, context, hints);
+        continue;
+      }
       if (context.scope !== "global") continue;
       if (this.alreadySeen({ operation, context })) continue;
+      // A workflow edit updates the registry, then falls through: workflow
+      // documents are also a document-event source, so a workflow can watch
+      // its own document type (e.g. SET_WORKFLOW_STATUS).
       if (context.documentType === "powerhouse/workflow") {
         await this.refreshRegistration(
           context.documentId,
           operation.resultingState,
         );
-        continue;
       }
       if (operation.error !== undefined) continue;
       for (const registration of this.registry.values()) {
@@ -388,7 +476,7 @@ export class WorkflowRuntimeService {
         );
       }
       if (context.documentType === DRIVE_DOCUMENT_TYPE) {
-        await this.matchLifecycle(
+        await this.matchDriveLifecycle(
           context.documentId,
           operation.action.type,
           operation.action.input,
@@ -413,33 +501,163 @@ export class WorkflowRuntimeService {
     );
   }
 
-  // ADD_FILE / DELETE_NODE on a drive back the document lifecycle triggers.
-  private async matchLifecycle(
+  // A document lifecycle event fires once per document, from whichever source
+  // reports it first. Only a fire that actually matched a workflow is
+  // recorded: a creation whose drive was still unknown matches no driveId
+  // filter, and the drive's own ADD_FILE then still gets its turn.
+  private readonly firedLifecycle = new Set<string>();
+  private readonly firedLifecycleQueue: string[] = [];
+
+  private lifecycleAlreadyFired(
+    kind: TriggerKind,
+    documentId: string,
+  ): boolean {
+    return this.firedLifecycle.has(`${kind}:${documentId}`);
+  }
+
+  private recordLifecycleFired(kind: TriggerKind, documentId: string): void {
+    const key = `${kind}:${documentId}`;
+    if (this.firedLifecycle.has(key)) return;
+    this.firedLifecycle.add(key);
+    this.firedLifecycleQueue.push(key);
+    if (this.firedLifecycleQueue.length > 4096) {
+      const evicted = this.firedLifecycleQueue.shift();
+      if (evicted) this.firedLifecycle.delete(evicted);
+    }
+  }
+
+  private lifecycleTargets(
+    kind: TriggerKind,
+  ): { workflowId: string; filter: LifecycleFilter }[] {
+    const targets: { workflowId: string; filter: LifecycleFilter }[] = [];
+    for (const registration of this.registry.values()) {
+      if (registration.kind !== kind) continue;
+      // Redundant at runtime, but it is what tells the compiler the surviving
+      // registrations carry a LifecycleFilter rather than an event filter.
+      if (registration.kind === "document-event") continue;
+      targets.push({
+        workflowId: registration.workflowId,
+        filter: registration.filter,
+      });
+    }
+    return targets;
+  }
+
+  private fireLifecycle(
+    kind: TriggerKind,
+    payload: {
+      documentId: string;
+      documentType: string | null;
+      name: string | null;
+      driveId: string | null;
+      parentId: string | null;
+      operation: { index: number; timestampUtcMs: string };
+    },
+  ): void {
+    let matched = false;
+    for (const target of this.lifecycleTargets(kind)) {
+      if (
+        !matchesLifecycleFilter(
+          target.filter,
+          payload.documentType,
+          payload.driveId,
+        )
+      ) {
+        continue;
+      }
+      matched = true;
+      this.fireFromTrigger(target.workflowId, payload, kind);
+    }
+    if (matched) this.recordLifecycleFired(kind, payload.documentId);
+  }
+
+  // A "child" edge names the parent document but not its type, and only a
+  // drive parent is what a driveId filter is about. The lookup is cached: a
+  // drive gathers many documents.
+  private readonly driveParentCache = new Map<string, boolean>();
+
+  private async driveIdFromParent(
+    parentId: string | undefined,
+  ): Promise<string | undefined> {
+    if (!parentId) return undefined;
+    const cached = this.driveParentCache.get(parentId);
+    if (cached !== undefined) return cached ? parentId : undefined;
+    if (!this.subgraph) return undefined;
+    try {
+      const parent = await this.subgraph.reactorClient.get(parentId);
+      const isDrive = parent.header.documentType === DRIVE_DOCUMENT_TYPE;
+      if (this.driveParentCache.size > 1024) this.driveParentCache.clear();
+      this.driveParentCache.set(parentId, isDrive);
+      return isDrive ? parentId : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
+  // The document's own CREATE_DOCUMENT / DELETE_DOCUMENT. This is the source
+  // of truth: it also covers a document created outside every drive, it
+  // carries the real document type and name rather than a drive node's copy,
+  // and it is the only signal that a document is actually gone.
+  private async matchDocumentLifecycle(
+    operation: OperationWithContext["operation"],
+    context: OperationWithContext["context"],
+    hints: Map<string, LifecycleParentHint>,
+  ): Promise<void> {
+    const kind = lifecycleKindForDocumentAction(operation.action.type);
+    if (!kind) return;
+    if (operation.error !== undefined) return;
+    const input = inputRecord(operation.action.input);
+    // DELETE_DOCUMENT names its target in the input; CREATE_DOCUMENT's input
+    // and context agree.
+    const documentId = stringField(input, "documentId") ?? context.documentId;
+    if (this.lifecycleAlreadyFired(kind, documentId)) return;
+    if (this.lifecycleTargets(kind).length === 0) return;
+
+    const hint = hints.get(documentId);
+    const driveId =
+      hint?.driveId ?? (await this.driveIdFromParent(hint?.parentCandidate));
+    const created = kind === "document-created";
+    this.fireLifecycle(kind, {
+      documentId,
+      // CREATE_DOCUMENT names the model it creates; the stored context type
+      // answers for a deletion, where the document can no longer be read.
+      documentType:
+        (created ? stringField(input, "model") : undefined) ??
+        (context.documentType || null),
+      // Only a creation carries a name; a deleted document's name is gone.
+      name: stringField(input, "name") ?? null,
+      driveId: driveId ?? null,
+      parentId: hint?.parentId ?? null,
+      operation: {
+        index: operation.index,
+        timestampUtcMs: operation.timestampUtcMs,
+      },
+    });
+  }
+
+  // The drive's own view of the same events, kept as a fallback. ADD_FILE
+  // always accompanies a CREATE_DOCUMENT, so it only fires when that never
+  // reached the processor. DELETE_NODE stands on its own: removing a file from
+  // a drive leaves the document alive, and a drive-scoped workflow still wants
+  // to hear about it.
+  private async matchDriveLifecycle(
     driveId: string,
     actionType: string,
     input: unknown,
     operation: { index: number; timestampUtcMs: string },
   ): Promise<void> {
-    const kind: TriggerKind | undefined =
-      actionType === "ADD_FILE"
-        ? "document-created"
-        : actionType === "DELETE_NODE"
-          ? "document-deleted"
-          : undefined;
+    const kind = lifecycleKindForDriveAction(actionType);
     if (!kind) return;
-    const targets = [...this.registry.values()].filter(
-      (registration) => registration.kind === kind,
-    );
-    if (targets.length === 0) return;
+    if (this.lifecycleTargets(kind).length === 0) return;
 
-    const record = (input ?? {}) as Record<string, unknown>;
-    const documentId = typeof record.id === "string" ? record.id : undefined;
+    const record = inputRecord(input);
+    const documentId = stringField(record, "id");
     if (!documentId) return;
-    let documentType =
-      typeof record.documentType === "string" ? record.documentType : undefined;
-    let name = typeof record.name === "string" ? record.name : null;
+    if (this.lifecycleAlreadyFired(kind, documentId)) return;
+    let documentType = stringField(record, "documentType");
+    let name = stringField(record, "name") ?? null;
     if (kind === "document-deleted") {
-      // Best-effort: the document usually outlives its drive node. Folder
+      // Best-effort: unlinking a node leaves the document in place. Folder
       // nodes never resolve, so a type filter also skips them.
       try {
         const document = await this.subgraph?.reactorClient.get(documentId);
@@ -450,21 +668,14 @@ export class WorkflowRuntimeService {
       }
     }
 
-    const payload = {
+    this.fireLifecycle(kind, {
       documentId,
       documentType: documentType ?? null,
       name,
       driveId,
-      parentId:
-        typeof record.parentFolder === "string" ? record.parentFolder : null,
+      parentId: stringField(record, "parentFolder") ?? null,
       operation,
-    };
-    for (const registration of targets) {
-      if (registration.kind !== kind) continue;
-      if (!matchesLifecycleFilter(registration.filter, documentType, driveId))
-        continue;
-      this.fireFromTrigger(registration.workflowId, payload, kind);
-    }
+    });
   }
 
   private triggerSupervisor?: TriggerSupervisor;

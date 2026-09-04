@@ -22,10 +22,36 @@ export interface DocumentEventFilter {
   actionType?: string[];
 }
 
-// Lifecycle triggers match drive ADD_FILE / DELETE_NODE operations.
+// Lifecycle triggers match the document-scope CREATE_DOCUMENT /
+// DELETE_DOCUMENT operations, and fall back to the drive's ADD_FILE /
+// DELETE_NODE when no document-scope operation reaches the processor.
 export interface LifecycleFilter {
   documentType?: string[];
+  // A document that lives outside every drive has no drive id, so a set
+  // driveId narrows the trigger to drive members.
   driveId?: string[];
+}
+
+// A created/deleted document is announced by a document-scope operation on
+// the document itself: CREATE_DOCUMENT carries the type and name, and
+// DELETE_DOCUMENT is the only signal that a document is really gone.
+export function lifecycleKindForDocumentAction(
+  actionType: string,
+): TriggerKind | undefined {
+  if (actionType === "CREATE_DOCUMENT") return "document-created";
+  if (actionType === "DELETE_DOCUMENT") return "document-deleted";
+  return undefined;
+}
+
+// The drive's own view of the same events. ADD_FILE always accompanies a
+// CREATE_DOCUMENT, so this is a fallback; DELETE_NODE is on its own only
+// unlinking the document from the drive, which the trigger still reports.
+export function lifecycleKindForDriveAction(
+  actionType: string,
+): TriggerKind | undefined {
+  if (actionType === "ADD_FILE") return "document-created";
+  if (actionType === "DELETE_NODE") return "document-deleted";
+  return undefined;
 }
 
 function toList(value: unknown): string[] | undefined {
@@ -75,12 +101,17 @@ export function matchesEventFilter(
   );
 }
 
-// documentType is undefined when it can't be resolved (e.g. after deletion);
-// a set type filter then rejects rather than firing on an unconfirmed match.
+// documentType is undefined when it can't be resolved (e.g. a drive node
+// deletion for a document that is already gone); a set type filter then
+// rejects rather than firing on an unconfirmed match. driveId is null for a
+// document that belongs to no drive, which a set driveId also rejects.
 export function matchesLifecycleFilter(
   filter: LifecycleFilter,
-  documentType: string | undefined,
-  driveId: string,
+  documentType: string | undefined | null,
+  driveId: string | undefined | null,
 ): boolean {
-  return ok(filter.documentType, documentType) && ok(filter.driveId, driveId);
+  return (
+    ok(filter.documentType, documentType ?? undefined) &&
+    ok(filter.driveId, driveId ?? undefined)
+  );
 }

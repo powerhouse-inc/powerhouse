@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  lifecycleKindForDocumentAction,
+  lifecycleKindForDriveAction,
   matchesEventFilter,
   matchesLifecycleFilter,
   parseEventFilter,
@@ -77,5 +79,46 @@ describe("matchesLifecycleFilter", () => {
 
   it("no type filter matches unresolvable types", () => {
     expect(matchesLifecycleFilter({}, undefined, "drive-1")).toBe(true);
+  });
+
+  it("a set drive filter rejects a document that belongs to no drive", () => {
+    const filter = parseLifecycleFilter({ driveId: "drive-1" });
+    expect(matchesLifecycleFilter(filter, "a/b", null)).toBe(false);
+    expect(matchesLifecycleFilter(filter, "a/b", undefined)).toBe(false);
+  });
+
+  it("no drive filter matches a document that belongs to no drive", () => {
+    expect(matchesLifecycleFilter({}, "a/b", null)).toBe(true);
+  });
+});
+
+describe("lifecycleKindForDocumentAction", () => {
+  it("maps the document's own lifecycle operations", () => {
+    expect(lifecycleKindForDocumentAction("CREATE_DOCUMENT")).toBe(
+      "document-created",
+    );
+    expect(lifecycleKindForDocumentAction("DELETE_DOCUMENT")).toBe(
+      "document-deleted",
+    );
+  });
+
+  it("ignores every other document-scope operation", () => {
+    for (const actionType of [
+      "UPGRADE_DOCUMENT",
+      "ADD_RELATIONSHIP",
+      "REMOVE_RELATIONSHIP",
+      "ADD_FILE",
+    ]) {
+      expect(lifecycleKindForDocumentAction(actionType)).toBeUndefined();
+    }
+  });
+});
+
+describe("lifecycleKindForDriveAction", () => {
+  it("maps the drive's node operations", () => {
+    expect(lifecycleKindForDriveAction("ADD_FILE")).toBe("document-created");
+    expect(lifecycleKindForDriveAction("DELETE_NODE")).toBe("document-deleted");
+    expect(lifecycleKindForDriveAction("ADD_FOLDER")).toBeUndefined();
+    expect(lifecycleKindForDriveAction("CREATE_DOCUMENT")).toBeUndefined();
   });
 });

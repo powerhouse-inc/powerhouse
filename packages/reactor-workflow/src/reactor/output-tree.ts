@@ -266,8 +266,8 @@ export function lifecycleTriggerTree(): OutputTreeNode[] {
   return [
     leaf("documentId", "PHID!"),
     leaf("documentType", "String"),
-    leaf("name", "String"),
-    leaf("driveId", "PHID!"),
+    leaf("name", "String", "Set on creation only"),
+    leaf("driveId", "PHID", "Null for a document that belongs to no drive"),
     leaf("parentId", "PHID"),
     OPERATION_NODE,
   ];

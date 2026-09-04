@@ -24,10 +24,13 @@ export const documentEventTriggerFactoryBuilder: ProcessorFactoryBuilder =
       );
 
     // An omitted field matches every value; only documentId honours "*".
+    // The "document" scope carries CREATE_DOCUMENT / DELETE_DOCUMENT and the
+    // parent "child" relationships, which back the lifecycle triggers; a
+    // global-only filter would drop every one of them.
     const filter: ProcessorFilter = {
       branch: ["main"],
       documentId: ["*"],
-      scope: ["global"],
+      scope: ["global", "document"],
     };
 
     const processor = new DocumentEventTrigger(namespace, filter, store);
