@@ -1,5 +1,8 @@
 import { DocumentToolbar } from "@powerhousedao/design-system/connect";
-import { useSelectedDocumentId } from "@powerhousedao/reactor-browser";
+import {
+  showDeleteNodeModal,
+  useSelectedDocumentId,
+} from "@powerhousedao/reactor-browser";
 import { generateId } from "document-model";
 import {
   actions,
@@ -8,6 +11,7 @@ import {
 import { DocumentErrorBoundary } from "../shared/DocumentErrorBoundary.js";
 import { useSyncWorkflowRuntimeUrl } from "../workflow-editor/use-runtime-url.js";
 import { ConnectionForm, type ConnectionCallbacks } from "./connection-form.js";
+import { ConnectionToolbar } from "./ConnectionToolbar.js";
 import { connectorIdForPiece, planFromAuth } from "./piece-auth.js";
 
 function ConnectionEditor() {
@@ -60,6 +64,12 @@ function ConnectionEditor() {
   return (
     <div className="flex h-full min-h-0 flex-col bg-background">
       <DocumentToolbar />
+      <ConnectionToolbar
+        state={state}
+        onRename={callbacks.setName}
+        onSetStatus={callbacks.setStatus}
+        onDelete={() => showDeleteNodeModal(document.header.id)}
+      />
       <div className="mx-auto w-full max-w-2xl p-6">
         <ConnectionForm state={state} callbacks={callbacks} />
       </div>

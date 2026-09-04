@@ -47,23 +47,6 @@ function Hint(props: { children?: string }) {
   return <p className="mt-0.5 text-[11px] text-slate-400">{props.children}</p>;
 }
 
-const STATUS_STYLES: Record<ConnectionStatus, string> = {
-  OK: "bg-green-100 text-green-700",
-  ERROR: "bg-red-100 text-red-700",
-  REVOKED: "bg-slate-200 text-slate-500",
-  UNCONFIGURED: "bg-amber-100 text-amber-700",
-};
-
-function StatusChip(props: { status: ConnectionStatus }) {
-  return (
-    <span
-      className={`rounded px-2 py-0.5 text-xs font-semibold ${STATUS_STYLES[props.status]}`}
-    >
-      {props.status}
-    </span>
-  );
-}
-
 function ConfigField(props: {
   field: AuthField;
   value: unknown;
@@ -259,7 +242,9 @@ function SecretField(props: {
             className="text-[11px] text-slate-400 underline hover:text-slate-600"
             onClick={() => setReplace((mode) => !mode)}
           >
-            {replace ? "Rotate the existing secret instead" : "Replace with a different secret"}
+            {replace
+              ? "Rotate the existing secret instead"
+              : "Replace with a different secret"}
           </button>
         ) : null}
         <button
@@ -358,21 +343,6 @@ export function ConnectionForm(props: {
 
   return (
     <div className="flex flex-col gap-6">
-      <label className="block">
-        <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-          Connection name
-        </span>
-        <input
-          className={inputClass}
-          defaultValue={state.name}
-          placeholder="e.g. Team Slack workspace"
-          onBlur={(event) => {
-            const name = event.target.value.trim();
-            if (name && name !== state.name) callbacks.setName(name);
-          }}
-        />
-      </label>
-
       <div>
         <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
           Connector
@@ -465,32 +435,6 @@ export function ConnectionForm(props: {
         </div>
       ) : null}
 
-      <div className="flex items-center gap-3 border-t border-solid border-slate-100 pt-4">
-        <StatusChip status={state.status} />
-        {state.lastCheckedAt ? (
-          <span className="text-xs text-slate-400">
-            checked {new Date(state.lastCheckedAt).toLocaleString()}
-          </span>
-        ) : null}
-        <span className="grow" />
-        {state.status === "REVOKED" ? (
-          <button
-            type="button"
-            className="rounded border border-solid border-slate-300 px-2 py-1 text-xs text-slate-600"
-            onClick={() => callbacks.setStatus("OK")}
-          >
-            Reactivate
-          </button>
-        ) : (
-          <button
-            type="button"
-            className="rounded border border-solid border-slate-300 px-2 py-1 text-xs text-red-600"
-            onClick={() => callbacks.setStatus("REVOKED")}
-          >
-            Revoke
-          </button>
-        )}
-      </div>
       {state.lastError ? (
         <p className="rounded bg-red-50 px-3 py-2 text-xs text-red-600">
           {state.lastError}
