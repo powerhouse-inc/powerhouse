@@ -28,3 +28,59 @@ describe("core#branch", () => {
     expect((await branch({ condition: "", equals })).port).toBe("false");
   });
 });
+
+const assert = (config: Record<string, unknown>) =>
+  core.execute({
+    blockType: "core#assert",
+    stepId: "s",
+    stepKey: "s",
+    config,
+  } as never);
+
+describe("core#assert", () => {
+  it("passes a usable value through", async () => {
+    const result = await assert({ value: "It posts to Discord." });
+    expect(result).toEqual({
+      output: { value: "It posts to Discord." },
+      port: "next",
+    });
+  });
+
+  it("fails on a blank value unless allowEmpty is set", async () => {
+    await expect(assert({ value: "" })).rejects.toThrow("value is empty");
+    await expect(assert({ value: "  \n" })).rejects.toThrow("value is empty");
+    await expect(assert({})).rejects.toThrow("value is empty");
+    expect((await assert({ value: "", allowEmpty: true })).port).toBe("next");
+  });
+
+  it("fails on a rejected value, trimmed and case-insensitively", async () => {
+    const rejectValues = ["User Safety: safe"];
+    await expect(assert({ value: "User Safety: safe", rejectValues })).rejects
+      .toThrow(/rejected value/);
+    await expect(assert({ value: " user safety: SAFE ", rejectValues })).rejects
+      .toThrow(/rejected value/);
+    // A string is one rejected value, not a list.
+    await expect(assert({ value: "nope", rejectValues: "nope" })).rejects
+      .toThrow(/rejected value/);
+    expect((await assert({ value: "A real answer.", rejectValues })).port).toBe(
+      "next",
+    );
+  });
+
+  it("uses the configured message when the assertion fails", async () => {
+    await expect(
+      assert({ value: "", message: "The model returned nothing" }),
+    ).rejects.toThrow("The model returned nothing");
+  });
+
+  it("treats null and undefined as empty", async () => {
+    await expect(assert({ value: null })).rejects.toThrow("value is empty");
+  });
+
+  it("stringifies a non-string value before comparing", async () => {
+    expect((await assert({ value: { ok: true } })).port).toBe("next");
+    await expect(
+      assert({ value: { ok: true }, rejectValues: ['{"ok":true}'] }),
+    ).rejects.toThrow(/rejected value/);
+  });
+});

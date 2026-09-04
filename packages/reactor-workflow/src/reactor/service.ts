@@ -1013,6 +1013,8 @@ export class WorkflowRuntimeService {
           source: "static",
           nodes: [{ name: "condition", type: "value" }],
         };
+      case "core#assert":
+        return { source: "static", nodes: [{ name: "value", type: "value" }] };
       case "core#document-created":
       case "core#document-deleted":
         return { source: "static", nodes: lifecycleTriggerTree() };

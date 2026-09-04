@@ -17,8 +17,9 @@ export class TriggerBlockAsStepError extends Error {
   }
 }
 
-// core#branch routes on its (already resolved) condition: equal to `equals`
-// when that is set, otherwise truthiness.
+// Core blocks. core#branch routes on its (already resolved) condition: equal
+// to `equals` when that is set, otherwise truthiness. core#assert fails the
+// run on blank or rejected values.
 export class CoreBlockExecutor implements BlockExecutor {
   static handles(blockType: string): boolean {
     return blockType.startsWith("core#");
@@ -49,7 +50,56 @@ export class CoreBlockExecutor implements BlockExecutor {
         port: taken ? "true" : "false",
       });
     }
+    if (execution.blockType === "core#assert") {
+      return this.assert(execution);
+    }
     return Promise.reject(new UnknownBlockTypeError(execution.blockType));
+  }
+
+  // core#assert fails the step when its value is blank or is one of the
+  // rejected values. Model output is the motivating case: an empty
+  // completion, or a classifier answering the wrong question, must not flow
+  // on to a step with a side effect.
+  private assert(execution: BlockExecution): Promise<BlockResult> {
+    const { value, rejectValues, allowEmpty, message } =
+      execution.config as {
+        value?: unknown;
+        rejectValues?: unknown;
+        allowEmpty?: unknown;
+        message?: unknown;
+      };
+    const text =
+      typeof value === "string"
+        ? value
+        : value === undefined || value === null
+          ? ""
+          : JSON.stringify(value);
+    const trimmed = text.trim();
+    const fail = (reason: string) =>
+      Promise.reject(
+        new Error(
+          typeof message === "string" && message
+            ? message
+            : `core#assert: ${reason}`,
+        ),
+      );
+
+    if (!trimmed && allowEmpty !== true) {
+      return fail("value is empty");
+    }
+    const rejected = (
+      typeof rejectValues === "string"
+        ? [rejectValues]
+        : Array.isArray(rejectValues)
+          ? rejectValues
+          : []
+    )
+      .map((entry) => String(entry).trim().toLowerCase())
+      .filter(Boolean);
+    if (rejected.includes(trimmed.toLowerCase())) {
+      return fail(`value is a rejected value ("${trimmed}")`);
+    }
+    return Promise.resolve({ output: { value }, port: "next" });
   }
 }
 
