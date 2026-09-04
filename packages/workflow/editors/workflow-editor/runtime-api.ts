@@ -204,16 +204,48 @@ let connectionsCache:
 const CONNECTIONS_TTL_MS = 10_000;
 
 export function fetchConnections(): Promise<ConnectionSummary[]> {
-  if (!connectionsCache || Date.now() - connectionsCache.at > CONNECTIONS_TTL_MS) {
+  if (
+    !connectionsCache ||
+    Date.now() - connectionsCache.at > CONNECTIONS_TTL_MS
+  ) {
     const promise = gql<{
       workflowRuntime: { connections: ConnectionSummary[] };
-    }>(`query Connections { workflowRuntime { connections { id name connectorId authType status accountLabel } } }`, {}).then(
-      (data) => data.workflowRuntime.connections,
-    );
+    }>(
+      `query Connections { workflowRuntime { connections { id name connectorId authType status accountLabel } } }`,
+      {},
+    ).then((data) => data.workflowRuntime.connections);
     connectionsCache = { at: Date.now(), promise };
     promise.catch(() => (connectionsCache = undefined));
   }
   return connectionsCache.promise;
+}
+
+export interface ConnectionCheckResult {
+  ok: boolean;
+  detail: string;
+  accountLabel: string | null;
+}
+
+// Runs the piece's own connection check against a document's stored
+// credentials. No secret values cross this boundary: the subgraph
+// resolves refs server-side.
+export function checkConnection(
+  connectionId: string,
+): Promise<ConnectionCheckResult> {
+  return gql<{
+    workflowRuntime: { checkConnection: ConnectionCheckResult };
+  }>(
+    `mutation CheckConnection($connectionId: String!) {
+      workflowRuntime {
+        checkConnection(connectionId: $connectionId) {
+          ok
+          detail
+          accountLabel
+        }
+      }
+    }`,
+    { connectionId },
+  ).then((data) => data.workflowRuntime.checkConnection);
 }
 
 export interface SecretStat {
