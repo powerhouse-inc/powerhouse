@@ -49,6 +49,96 @@ function resultText(value: unknown): string {
 }
 
 /**
+ * Number of the most recent turns whose tool results are kept in full in
+ * the committed history. Tool results are re-derivable (the store is the
+ * source of truth), so results older than that window are replaced with
+ * one-line stubs: this is what keeps a long conversation from exhausting
+ * the model's context.
+ */
+export const FULL_RESULT_TURNS = 2;
+
+/** Tool results smaller than this are cheap to keep and are never stubbed. */
+export const STUB_MIN_CHARS = 500;
+
+function toolResultChars(output: unknown): number {
+  const part = output as { type?: string; value?: unknown };
+  if (part.type === "text" && typeof part.value === "string") {
+    return part.value.length;
+  }
+  const target = part.value !== undefined ? part.value : output;
+  const json = JSON.stringify(target);
+  return typeof json === "string" ? json.length : 0;
+}
+
+function argDigest(input: unknown): string {
+  if (input === undefined) return "";
+  let text: string;
+  try {
+    text = JSON.stringify(input);
+  } catch {
+    // Circular structures (impossible for parsed tool args) get an
+    // empty digest rather than "[object Object]".
+    text = "";
+  }
+  if (text.length <= 80) return text;
+  return `${text.slice(0, 77)}…`;
+}
+
+/**
+ * Replaces tool results older than the last {@link FULL_RESULT_TURNS}
+ * turns with one-line stubs naming the tool and its arguments. User and
+ * assistant messages are never touched, and tool calls keep their input,
+ * so the model can re-query any stubbed result with the same arguments.
+ * Idempotent: stubs are below {@link STUB_MIN_CHARS} and pass through.
+ */
+export function stubStaleToolResults(history: ModelMessage[]): ModelMessage[] {
+  // Window start: position of the Nth-from-last user message.
+  let users = 0;
+  let windowStart = 0;
+  for (let i = history.length - 1; i >= 0; i--) {
+    if (history[i].role === "user") {
+      users += 1;
+      if (users === FULL_RESULT_TURNS) {
+        windowStart = i;
+        break;
+      }
+    }
+  }
+  if (users < FULL_RESULT_TURNS) return history;
+
+  // Argument digests for the stubs, looked up by tool call id.
+  const callInputs = new Map<string, unknown>();
+  for (const m of history) {
+    if (m.role === "assistant" && Array.isArray(m.content)) {
+      for (const part of m.content) {
+        if (part.type === "tool-call") {
+          callInputs.set(part.toolCallId, part.input);
+        }
+      }
+    }
+  }
+
+  return history.map((m, i) => {
+    if (i >= windowStart || m.role !== "tool") return m;
+    const content = m.content.map((part) => {
+      if (part.type !== "tool-result") return part;
+      const chars = toolResultChars(part.output);
+      if (chars < STUB_MIN_CHARS) return part;
+      const stub: { type: "text"; value: string } = {
+        type: "text",
+        value: `[result omitted: ${part.toolName} ${argDigest(
+          callInputs.get(part.toolCallId),
+        )} — ${chars} chars; re-query the tool to refetch]`,
+      };
+      return { ...part, output: stub };
+    });
+    const changed = content.some((part, index) => part !== m.content[index]);
+    if (!changed) return m;
+    return { ...m, content };
+  });
+}
+
+/**
  * Creates the chat language model for a user-supplied OpenAI-compatible
  * endpoint. Requests go directly from the browser to the endpoint; the API
  * key is never sent to any Powerhouse server.
@@ -125,6 +215,7 @@ export function buildSystemPrompt(context: ChatContext): string {
     "Never accept secret values (passwords, tokens, API keys) in chat. When a connection or configuration requires a secret, tell the user to enter it in the relevant editor (e.g. the connection editor) and point them to the document. Never ask the user to paste a secret into the chat.",
     "When the user refers to 'this', 'here' or 'it' without naming a target, they mean the current selection below; prefer it for create/modify targets.",
     "Tool results may be truncated when they are large: if you see a truncation marker, narrow the query (more specific filter, fewer items) instead of retrying the same call.",
+    "Older tool results in this conversation may be replaced by a short '[result omitted: ...]' stub as the context grows; that is normal housekeeping, not an error. If you still need the data, call the same tool again with the same arguments.",
   ];
   const selection: string[] = [];
   if (context.driveName) {
@@ -250,6 +341,7 @@ export class ReactorChatAgent {
     // with the SDK's own toResponseMessages, so the committed history
     // is exactly the shape the model already saw mid-turn.
     const turnMessages: ModelMessage[] = [];
+    let lastInputTokens: number | undefined;
 
     const result = streamText({
       model,
@@ -262,6 +354,9 @@ export class ReactorChatAgent {
         turnMessages.push(
           ...(await toResponseMessages({ content: step.content, tools })),
         );
+        if (typeof step.usage.inputTokens === "number") {
+          lastInputTokens = step.usage.inputTokens;
+        }
       },
       toolApproval: async ({ toolCall }) => {
         const descriptor = this.options.tools.find(
@@ -298,13 +393,18 @@ export class ReactorChatAgent {
       this.handleStreamPart(part, onEvent);
     }
 
+    if (lastInputTokens !== undefined) {
+      onEvent({ type: "usage", inputTokens: lastInputTokens });
+    }
+
     // Commit the turn: the user message plus every completed step,
-    // with orphaned tool calls dropped (step cap / abort).
-    this.history = [
+    // with orphaned tool calls dropped (step cap / abort), and stale
+    // tool results stubbed so the context stays bounded across turns.
+    this.history = stubStaleToolResults([
       ...this.history,
       userMessage,
       ...this.dropUnresolvedToolCalls(turnMessages),
-    ];
+    ]);
     onEvent({ type: "finish" });
   }
 

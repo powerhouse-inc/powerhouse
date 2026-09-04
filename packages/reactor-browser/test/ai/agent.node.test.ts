@@ -635,3 +635,143 @@ describe("tool result budget", () => {
     expect(output.value).toEqual({ driveIds: ["d1"] });
   });
 });
+
+describe("history compaction", () => {
+  const MARKER = "UNIQUE-BIG-PAYLOAD";
+
+  function fourTurnModel() {
+    const getHuge = makeTool("getHuge", () =>
+      Promise.resolve({
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({ payload: `${MARKER}-${"x".repeat(3000)}` }),
+          },
+          { type: "text", text: "" },
+        ],
+        structuredContent: { payload: `${MARKER}-${"x".repeat(3000)}` },
+      }),
+    );
+    const model = streamModel([
+      // Turn 1: tool call + reply.
+      [...toolCallParts("call-1", "getHuge", {}), ...finishParts("tool-calls")],
+      [...textParts("text-1", "Got the data."), ...finishParts("stop")],
+      // Turns 2-4: plain replies.
+      [...textParts("text-2", "Turn two."), ...finishParts("stop")],
+      [...textParts("text-3", "Turn three."), ...finishParts("stop")],
+      [...textParts("text-4", "Turn four."), ...finishParts("stop")],
+    ]);
+    const agent = new ReactorChatAgent({
+      settings: SETTINGS,
+      tools: [getHuge],
+      context: {},
+      onEvent: () => {},
+      model,
+    });
+    return { model, agent };
+  }
+
+  it("keeps the last two turns full and stubs older tool results", async () => {
+    const { model, agent } = fourTurnModel();
+
+    await agent.send("first");
+    await agent.send("second");
+    // After two turns, turn 1 is still inside the full-result window.
+    expect(JSON.stringify(agent.getHistory())).toContain(MARKER);
+
+    await agent.send("third");
+    // Turn 1 now predates the window: its result is stubbed in history.
+    const history = agent.getHistory();
+    expect(JSON.stringify(history)).not.toContain(MARKER);
+    const toolMsg = history.find((m) => m.role === "tool") as {
+      content: Array<{
+        type: string;
+        toolCallId: string;
+        toolName: string;
+        output: { type: string; value: string };
+      }>;
+    };
+    const stub = toolMsg.content[0].output;
+    expect(stub.type).toBe("text");
+    expect(stub.value).toContain("[result omitted: getHuge");
+    expect(stub.value).toContain("re-query the tool to refetch");
+
+    // The model's next request sees the stub, and the tool call keeps its
+    // input so the result can be refetched with the same arguments.
+    await agent.send("fourth");
+    const prompt = model.doStreamCalls[4].prompt as unknown as Array<{
+      role: string;
+      content: Array<Record<string, unknown>>;
+    }>;
+    const toolPart = prompt
+      .find((m) => m.role === "tool")
+      ?.content.find((p) => p.type === "tool-result");
+    const output = toolPart?.output as { type: string; value: string };
+    expect(output.type).toBe("text");
+    expect(output.value).toContain("[result omitted: getHuge");
+    const assistant = prompt.find((m) => m.role === "assistant");
+    const callPart = (
+      (assistant?.content ?? []) as Array<{
+        type: string;
+        toolCallId: string;
+        input: unknown;
+      }>
+    ).find((p) => p.type === "tool-call");
+    expect(callPart?.toolCallId).toBe("call-1");
+
+    // User messages and assistant text are never touched.
+    const userMessages = history.filter((m) => m.role === "user");
+    expect(userMessages).toHaveLength(3);
+    expect(JSON.stringify(history)).toContain("Turn three.");
+  });
+
+  it("never stubs small tool results", async () => {
+    const getSmall = makeTool("getSmall", () =>
+      Promise.resolve({
+        content: [{ type: "text", text: '{"ok":true}' }],
+        structuredContent: { ok: true },
+      }),
+    );
+    const model = streamModel([
+      [
+        ...toolCallParts("call-1", "getSmall", {}),
+        ...finishParts("tool-calls"),
+      ],
+      [...textParts("text-1", "ok"), ...finishParts("stop")],
+      [...textParts("text-2", "two"), ...finishParts("stop")],
+      [...textParts("text-3", "three"), ...finishParts("stop")],
+    ]);
+    const agent = new ReactorChatAgent({
+      settings: SETTINGS,
+      tools: [getSmall],
+      context: {},
+      onEvent: () => {},
+      model,
+    });
+    await agent.send("a");
+    await agent.send("b");
+    await agent.send("c");
+    const toolMsg = agent.getHistory().find((m) => m.role === "tool") as {
+      content: Array<{ output: { type: string; value: unknown } }>;
+    };
+    expect(toolMsg.content[0].output.type).toBe("json");
+    expect(toolMsg.content[0].output.value).toEqual({ ok: true });
+  });
+
+  it("emits a usage event with the last step's input tokens", async () => {
+    const model = streamModel([
+      [...textParts("text-1", "hi"), ...finishParts("stop")],
+    ]);
+    const events: AgentEvent[] = [];
+    const agent = new ReactorChatAgent({
+      settings: SETTINGS,
+      tools: [],
+      context: {},
+      onEvent: (e) => events.push(e),
+      model,
+    });
+    await agent.send("hello");
+    expect(events).toContainEqual({ type: "usage", inputTokens: 10 });
+    expect(events[events.length - 1]).toEqual({ type: "finish" });
+  });
+});
