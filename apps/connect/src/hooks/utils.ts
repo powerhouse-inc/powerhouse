@@ -1,52 +1,47 @@
-import { packageJson } from "../utils/package-json.js";
+import { getBuildHash } from "../utils/build-info.js";
 
 export const isMac = window.navigator.appVersion.includes("Mac");
 
-const urlBranchMap: Record<string, string> = {
-  "staging/makerdao": "deployments/staging/makerdao",
-  "staging/arbitrum": "arb-ltip",
-  "staging/powerhouse": "staging",
-  makerdao: "deployments/makerdao",
-  arbitrum: "deployments/arbitrum",
-  arbgrants: "deployments/arbitrum",
-  localhost: "develop",
-};
+export interface BuildHashStatus {
+  /** Hash baked into the running build. */
+  currentHash: string;
+  /** Hash the server is currently serving. */
+  deployedHash: string;
+  /** true when the running build matches what the server serves. */
+  isCurrent: boolean;
+}
 
-const getGithubLinkFromUrl = () => {
-  const githubLink = "https://raw.githubusercontent.com/powerhouse-inc/connect";
-  const url = window.location.href;
-
-  const env = Object.keys(urlBranchMap).find((env) => url.includes(env));
-  const value = env ? urlBranchMap[env] : undefined;
-  if (!value) {
-    return undefined;
-  } else {
-    return `${githubLink}/${value}/package.json`;
-  }
-};
-
-const fetchLatestVersion = async () => {
-  const link = getGithubLinkFromUrl();
-  if (!link) {
-    return undefined;
-  }
-  const result = await fetch(link);
-  const data = (await result.json()) as { version: string };
-  const { version } = data;
-  return version;
-};
-
-export const isLatestVersion = async () => {
-  const currentVersion = packageJson.version;
-  const deployed = await fetchLatestVersion();
-
-  if (deployed) {
+/**
+ * Same-origin build-identity probe. The build bakes a hash of the inputs that
+ * determine the deployed content into the bundle (define
+ * `PH_CONNECT_BUILD_HASH`, see builder-tools' connectBuildHashPlugin) and
+ * emits `build-hash.json` next to the app (served no-cache). Comparing the
+ * two tells us whether the server is serving a different build than the one
+ * this page was loaded from — the reliable "a new deploy went out" signal.
+ * Unlike the old GitHub-raw version check it works on localhost (it compares
+ * against what the origin actually serves, not a remote branch head) and
+ * needs no network beyond the app's own origin.
+ *
+ * Returns null when there is nothing to compare: dev/studio builds (no hash
+ * baked), a server predating `build-hash.json`, an offline fetch, or a
+ * malformed body.
+ */
+export const getBuildHashStatus = async (): Promise<BuildHashStatus | null> => {
+  const currentHash = getBuildHash();
+  if (!currentHash || currentHash === "unknown") return null;
+  try {
+    const result = await fetch(`${import.meta.env.BASE_URL}build-hash.json`, {
+      cache: "no-cache",
+    });
+    if (!result.ok) return null;
+    const data = (await result.json()) as { hash?: unknown };
+    if (typeof data.hash !== "string" || !data.hash) return null;
     return {
-      isLatest: deployed === currentVersion,
-      currentVersion,
-      latestVersion: deployed,
+      currentHash,
+      deployedHash: data.hash,
+      isCurrent: data.hash === currentHash,
     };
+  } catch {
+    return null;
   }
-
-  return null;
 };

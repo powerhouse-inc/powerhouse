@@ -18,13 +18,9 @@
 // Route registration order matters — Workbox is first-match-wins.
 
 import { CacheableResponsePlugin } from "workbox-cacheable-response";
-import { clientsClaim } from "workbox-core";
+import { clientsClaim, type WorkboxPlugin } from "workbox-core";
 import { ExpirationPlugin } from "workbox-expiration";
-import {
-  cleanupOutdatedCaches,
-  createHandlerBoundToURL,
-  precacheAndRoute,
-} from "workbox-precaching";
+import { cleanupOutdatedCaches, precacheAndRoute } from "workbox-precaching";
 import { registerRoute, Route } from "workbox-routing";
 import {
   CacheFirst,
@@ -287,8 +283,19 @@ function registerRuntimeCachingRule(rule: RuntimeCachingRule) {
 for (const rule of EXTRA_RUNTIME_CACHING) registerRuntimeCachingRule(rule);
 
 // ── navigation fallback ──────────────────────────────────────────────────────
-// SPA fallback to index.html (resolved against the SW's own location, so it
-// tracks the deploy base). The `denylist` is MUTABLE and read live on every
+// SPA fallback to index.html, served NetworkFirst (the shell is excluded
+// from the precache — see pwa.ts). The precache strategy is cache-first with
+// no network revalidation, so serving the shell from the precache would pin
+// every page load — including manual and hard reloads — to the build that
+// was active when the controlling worker installed: a deploy (or, on
+// localhost, a different project on the same port) stayed invisible until
+// the user accepted the worker update. NetworkFirst fetches the CURRENT
+// shell from the server and only falls back to the last good cached copy
+// when the network fails, so a reload after a deploy loads the fresh shell
+// (and its new content-hashed chunks, which a still-old worker answers from
+// the network on precache miss) without waiting on a worker update. The
+// shell is a few KB, so the network-first cost is negligible; the heavy
+// assets stay precached. The `denylist` is MUTABLE and read live on every
 // request: it is seeded synchronously with the built-ins plus the BUILD-TIME
 // contributed patterns (NAVIGATE_FALLBACK_DENYLIST_EXTRA), and the async read
 // below pushes any RUNTIME-installed package's patterns into it. Registering
@@ -312,12 +319,36 @@ const denylist: RegExp[] = [
 // A plain Route (not NavigationRoute, which snapshots its denylist at
 // construction) so the match reads the mutable `denylist` live — same
 // navigation-request + denylist semantics, minus the frozen list.
+//
+// The shell's content is identical for every query string of a path (the
+// server's SPA fallback ignores the query), so strip search params on read
+// AND write: the cache keeps one entry per path instead of one per URL
+// (OAuth callbacks and ?utm_ links would otherwise fragment it).
+const stripQueryCacheKey: WorkboxPlugin = {
+  cacheKeyWillBeUsed({ request, mode }) {
+    if (mode === "read" || mode === "write") {
+      const copy = new URL(request.url);
+      copy.search = "";
+      copy.hash = "";
+      return copy.href;
+    }
+    return request.url;
+  },
+};
 registerRoute(
   new Route(
     ({ request, url }) =>
       request.mode === "navigate" &&
       !denylist.some((re) => re.test(url.pathname + url.search)),
-    createHandlerBoundToURL("index.html"),
+    new NetworkFirst({
+      cacheName: "ph-shell",
+      networkTimeoutSeconds: 5,
+      plugins: [
+        stripQueryCacheKey,
+        // One entry per path (query stripped above); bound the cache anyway.
+        new ExpirationPlugin({ maxEntries: 20, maxAgeSeconds: 7 * 24 * 3600 }),
+      ],
+    }),
   ),
 );
 

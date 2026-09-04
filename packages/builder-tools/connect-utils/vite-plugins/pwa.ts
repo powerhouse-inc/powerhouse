@@ -102,11 +102,18 @@ const BASE_PRECACHE: ConnectPrecacheOptions = {
   // and its `.data` filesystem bundles, or the in-browser DB fails to
   // initialise offline ("Failed to fetch").
   globPatterns: ["**/*.{js,css,html,wasm,data,ico,png,svg,webp,woff,woff2}"],
+  // index.html stays OUT of the precache on purpose: the SPA navigation
+  // route serves it NetworkFirst (see service-worker.ts). The precache
+  // strategy is cache-first with no network revalidation, so a precached
+  // shell would pin every page load — reloads included — to the build that
+  // was active when the controlling worker installed. Excluding the shell
+  // lets a reload after a deploy (or a different project on the same
+  // localhost port) fetch the fresh index.html from the network.
   // powerhouse.config.json is operator-editable and served no-cache, so
   // precaching it would freeze runtime config; source maps don't belong
   // in the precache either. manifest.webmanifest is added at wiring time so
   // the SW's dynamic manifest route is the sole producer at that URL.
-  globIgnores: ["**/powerhouse.config.json", "**/*.map"],
+  globIgnores: ["**/powerhouse.config.json", "**/*.map", "index.html"],
 };
 
 const SW_FILENAME = "service-worker.ts";

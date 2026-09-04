@@ -80,7 +80,7 @@ function getBuiltInDefaults(): Omit<
     version: env.PH_CONNECT_VERSION,
     logLevel: runtime.app?.logLevel,
     requiresHardRefresh: true,
-    warnOutdatedApp: false,
+    warnOutdatedApp: true,
     studioMode,
     versionCheckInterval: 60 * 60 * 1000,
     cliVersion: env.PH_CONNECT_CLI_VERSION,
@@ -199,7 +199,7 @@ const PH_CONNECT_ANALYTICS_DATABASE_NAME = `${PH_CONNECT_BASE_PATH.replace(
 export const connectConfig = {
   appVersion: env.PH_CONNECT_VERSION,
   studioMode: runtime.app?.studioMode ?? false,
-  warnOutdatedApp: false,
+  warnOutdatedApp: phGlobalConfig.warnOutdatedApp,
   appVersionCheckInterval: 60 * 60 * 1000,
   routerBasename: PH_CONNECT_BASE_PATH,
   offline: runtime.app?.offline ?? true,
