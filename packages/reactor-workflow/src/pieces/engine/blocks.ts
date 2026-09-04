@@ -17,7 +17,8 @@ export class TriggerBlockAsStepError extends Error {
   }
 }
 
-// core#branch routes on the truthiness of its (already resolved) condition.
+// core#branch routes on its (already resolved) condition: equal to `equals`
+// when that is set, otherwise truthiness.
 export class CoreBlockExecutor implements BlockExecutor {
   static handles(blockType: string): boolean {
     return blockType.startsWith("core#");
@@ -25,9 +26,24 @@ export class CoreBlockExecutor implements BlockExecutor {
 
   execute(execution: BlockExecution): Promise<BlockResult> {
     if (execution.blockType === "core#branch") {
-      const { condition } = execution.config as { condition?: unknown };
+      const { condition, equals } = execution.config as {
+        condition?: unknown;
+        equals?: unknown;
+      };
+      // Trimmed and case-insensitive: the condition is often model output.
+      const normalize = (value: unknown) =>
+        (typeof value === "string"
+          ? value
+          : value === undefined || value === null
+            ? ""
+            : JSON.stringify(value)
+        )
+          .trim()
+          .toLowerCase();
       const taken =
-        Boolean(condition) && condition !== "false" && condition !== "0";
+        typeof equals === "string"
+          ? normalize(condition) === normalize(equals)
+          : Boolean(condition) && condition !== "false" && condition !== "0";
       return Promise.resolve({
         output: { condition: condition ?? null },
         port: taken ? "true" : "false",

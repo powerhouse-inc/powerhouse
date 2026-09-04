@@ -159,7 +159,11 @@ export function fromSample(value: unknown, depth = 0): OutputTreeNode[] {
     ? value.slice(0, 1).map((item) => ["0", item] as const)
     : Object.entries(value as Record<string, unknown>);
   return entries.map(([name, child]) => {
-    const kind = Array.isArray(child) ? "array" : child === null ? "null" : typeof child;
+    const kind = Array.isArray(child)
+      ? "array"
+      : child === null
+        ? "null"
+        : typeof child;
     const children = fromSample(child, depth + 1);
     return {
       name,
@@ -225,6 +229,17 @@ export function documentFindTree(): OutputTreeNode[] {
         leaf("name", "String"),
         leaf("slug", "String"),
       ],
+    },
+  ];
+}
+
+export function documentTypesTree(): OutputTreeNode[] {
+  return [
+    leaf("count", "Int!"),
+    {
+      name: "types",
+      type: "array",
+      children: [leaf("documentType", "String!"), leaf("name", "String")],
     },
   ];
 }

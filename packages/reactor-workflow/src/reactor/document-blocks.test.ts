@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   documentSummary,
   parseActions,
+  parseCreatePayload,
   parseDispatchPayload,
   resolveDocumentId,
 } from "./document-blocks.js";
@@ -51,7 +52,15 @@ describe("documentSummary", () => {
   it("prefers the state name over a lagging header name", () => {
     expect(
       documentSummary(
-        doc({ id: "d1", documentType: "powerhouse/workflow", name: "Workflow 5", slug: "" }, { name: "Renamed" }),
+        doc(
+          {
+            id: "d1",
+            documentType: "powerhouse/workflow",
+            name: "Workflow 5",
+            slug: "",
+          },
+          { name: "Renamed" },
+        ),
         false,
       ),
     ).toEqual({
@@ -65,7 +74,10 @@ describe("documentSummary", () => {
   it("falls back to the header name and includes state on demand", () => {
     expect(
       documentSummary(
-        doc({ id: "d2", documentType: "t", name: "Header", slug: "s" }, { count: 1 }),
+        doc(
+          { id: "d2", documentType: "t", name: "Header", slug: "s" },
+          { count: 1 },
+        ),
         true,
       ),
     ).toEqual({
@@ -120,5 +132,35 @@ describe("resolveDocumentId", () => {
     expect(resolveDocumentId(" my-drive ")).toBe("my-drive");
     expect(resolveDocumentId("")).toBeUndefined();
     expect(resolveDocumentId(undefined)).toBeUndefined();
+  });
+});
+
+describe("parseCreatePayload", () => {
+  it("reads type and name out of fenced model output", () => {
+    const text =
+      '```json\n{"documentType": "powerhouse/workflow", "name": "Sprint plan"}\n```';
+    expect(parseCreatePayload(text)).toEqual({
+      documentType: "powerhouse/workflow",
+      name: "Sprint plan",
+      actions: undefined,
+    });
+  });
+
+  it("accepts an object and carries initial actions", () => {
+    expect(
+      parseCreatePayload({
+        documentType: "t",
+        name: "n",
+        actions: [{ type: "X" }],
+      }),
+    ).toEqual({ documentType: "t", name: "n", actions: [{ type: "X" }] });
+  });
+
+  it("is empty for nothing and throws on non-JSON text", () => {
+    expect(parseCreatePayload(undefined)).toEqual({});
+    expect(parseCreatePayload("")).toEqual({});
+    expect(() => parseCreatePayload("make me a workflow")).toThrow(
+      "not valid JSON",
+    );
   });
 });

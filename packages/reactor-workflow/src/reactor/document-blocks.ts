@@ -13,6 +13,7 @@ export const DOCUMENT_DISPATCH_BLOCK = "core#document-dispatch";
 export const DOCUMENT_GET_BLOCK = "core#document-get";
 export const DOCUMENT_FIND_BLOCK = "core#document-find";
 export const DOCUMENT_SCHEMA_BLOCK = "core#document-schema";
+export const DOCUMENT_TYPES_BLOCK = "core#document-types";
 
 // Base actions every document type accepts, beyond its model's own.
 const BASE_ACTIONS = [
@@ -81,6 +82,40 @@ export function parseDispatchPayload(
   return { documentId, actions };
 }
 
+export interface CreatePayload {
+  documentType?: string;
+  name?: string;
+  actions?: unknown;
+}
+
+// {documentType, name, actions?} as an object or as JSON text, possibly fenced.
+export function parseCreatePayload(value: unknown): CreatePayload {
+  let record = value;
+  if (typeof record === "string") {
+    const text = record
+      .trim()
+      .replace(/^```(?:json)?\s*/i, "")
+      .replace(/```$/, "")
+      .trim();
+    if (!text) return {};
+    try {
+      record = JSON.parse(text);
+    } catch {
+      throw new Error(
+        `${DOCUMENT_CREATE_BLOCK}: "payload" is a string but not valid JSON`,
+      );
+    }
+  }
+  if (!record || typeof record !== "object" || Array.isArray(record)) return {};
+  const entry = record as Record<string, unknown>;
+  return {
+    documentType:
+      typeof entry.documentType === "string" ? entry.documentType : undefined,
+    name: typeof entry.name === "string" ? entry.name : undefined,
+    actions: entry.actions,
+  };
+}
+
 // Whitelist for the dispatch block: a comma-separated string, a list of
 // names, or a core#document-schema actions array.
 function allowedActionTypes(value: unknown): string[] {
@@ -96,8 +131,7 @@ function allowedActionTypes(value: unknown): string[] {
     .filter(Boolean);
 }
 
-const UUID =
-  /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
 
 // Ids fed by an AI step arrive quoted, fenced or wrapped in prose; documents
 // are addressed by uuid, so prefer one when the text contains it.
@@ -146,6 +180,9 @@ export class DocumentBlockExecutor implements BlockExecutor {
     if (execution.blockType === DOCUMENT_SCHEMA_BLOCK) {
       return this.documentSchema(config);
     }
+    if (execution.blockType === DOCUMENT_TYPES_BLOCK) {
+      return this.documentTypes();
+    }
     throw new Error(`Unsupported document block "${execution.blockType}"`);
   }
 
@@ -161,14 +198,33 @@ export class DocumentBlockExecutor implements BlockExecutor {
     );
   }
 
-  // config: { documentType!, name?, parentId?, actions? }
+  // The installed document models, so a step can offer what is creatable.
+  private async documentTypes(): Promise<BlockResult> {
+    const page = await this.subgraph.reactorClient.getDocumentModelModules();
+    const types = page.results
+      .map((module) => module.documentModel.global)
+      .map((model) => ({ documentType: model.id, name: model.name }))
+      .filter((entry) => entry.documentType)
+      .sort((a, b) => a.documentType.localeCompare(b.documentType));
+    return { output: { count: types.length, types } };
+  }
+
+  // config: { documentType?, name?, parentId?, actions?, payload? }
   private async createDocument(
     config: Record<string, unknown>,
   ): Promise<BlockResult> {
-    const documentType = config.documentType;
-    if (typeof documentType !== "string" || !documentType) {
-      throw new Error(`${DOCUMENT_CREATE_BLOCK}: "documentType" is required`);
+    // A payload (typically model output) can name the type and the document.
+    const payload = parseCreatePayload(config.payload);
+    const documentType =
+      (typeof config.documentType === "string" && config.documentType) ||
+      payload.documentType;
+    if (!documentType) {
+      throw new Error(
+        `${DOCUMENT_CREATE_BLOCK}: "documentType" is required, in the config or the payload`,
+      );
     }
+    const name =
+      (typeof config.name === "string" && config.name) || payload.name;
     const client = this.subgraph.reactorClient;
     let document = await client.createEmpty<PHDocument>(documentType, {
       parentIdentifier:
@@ -176,10 +232,10 @@ export class DocumentBlockExecutor implements BlockExecutor {
     });
 
     const followUps = this.buildActions(
-      parseActions(config.actions, DOCUMENT_CREATE_BLOCK),
+      parseActions(config.actions ?? payload.actions, DOCUMENT_CREATE_BLOCK),
     );
-    if (typeof config.name === "string" && config.name) {
-      followUps.unshift(createAction("SET_NAME", { name: config.name }));
+    if (name) {
+      followUps.unshift(createAction("SET_NAME", { name }));
     }
     if (followUps.length > 0) {
       document = await client.execute<PHDocument>(
@@ -331,8 +387,7 @@ export class DocumentBlockExecutor implements BlockExecutor {
       })
       .map((document) => documentSummary(document, false))
       .filter(
-        (summary) =>
-          !needle || summary.name.toLowerCase().includes(needle),
+        (summary) => !needle || summary.name.toLowerCase().includes(needle),
       )
       .slice(0, limit);
     return { output: { count: documents.length, documents } };
@@ -398,7 +453,9 @@ export function documentSummary(document: PHDocument, withState: boolean) {
     documentType: document.header.documentType,
     // Models usually keep the display name in state; header name can lag.
     name:
-      (typeof stateName === "string" && stateName) || document.header.name || "",
+      (typeof stateName === "string" && stateName) ||
+      document.header.name ||
+      "",
     slug: document.header.slug,
     ...(withState ? { state: globalState } : {}),
   };

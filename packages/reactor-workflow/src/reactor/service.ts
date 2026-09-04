@@ -38,6 +38,7 @@ import {
   documentFindTree,
   documentGetTree,
   documentSchemaTree,
+  documentTypesTree,
   fieldsFromSdl,
   fromOutputSchema,
   hasOutputSchemaFields,
@@ -803,6 +804,8 @@ export class WorkflowRuntimeService {
         return { source: "static", nodes: documentFindTree() };
       case "core#document-schema":
         return { source: "static", nodes: documentSchemaTree() };
+      case "core#document-types":
+        return { source: "static", nodes: documentTypesTree() };
       case "core#document-get": {
         // The type may come from a sibling hint when the id is an expression.
         const stateChildren = await this.stateFields(
