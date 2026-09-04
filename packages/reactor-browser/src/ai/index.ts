@@ -10,5 +10,6 @@ export * from "./agent.js";
 export * from "./components/index.js";
 export * from "./context.js";
 export * from "./settings-store.js";
+export * from "./switchboard.js";
 export * from "./types.js";
 export * from "./use-reactor-chat.js";
