@@ -15,6 +15,17 @@ export const DOCUMENT_FIND_BLOCK = "core#document-find";
 export const DOCUMENT_SCHEMA_BLOCK = "core#document-schema";
 export const DOCUMENT_TYPES_BLOCK = "core#document-types";
 
+const DRIVE_DOCUMENT_TYPE = "powerhouse/document-drive";
+const DRIVE_DOCUMENT_TYPES = new Set([
+  DRIVE_DOCUMENT_TYPE,
+  "powerhouse/reactor-drive",
+]);
+
+interface DriveTarget {
+  driveId: string;
+  parentFolder?: string;
+}
+
 // Base actions every document type accepts, beyond its model's own.
 const BASE_ACTIONS = [
   {
@@ -209,6 +220,39 @@ export class DocumentBlockExecutor implements BlockExecutor {
     return { output: { count: types.length, types } };
   }
 
+  // Where a new document's drive node belongs, when the parent implies one.
+  private async resolveDriveTarget(
+    parentId: string,
+  ): Promise<DriveTarget | null> {
+    const client = this.subgraph.reactorClient;
+    try {
+      const parent = await client.get<PHDocument>(parentId);
+      // A plain document parent gets a relationship only, as before.
+      return DRIVE_DOCUMENT_TYPES.has(parent.header.documentType)
+        ? { driveId: parent.header.id }
+        : null;
+    } catch {
+      // Not a document at all: it may be a folder node inside a drive.
+      return this.findFolderDrive(parentId);
+    }
+  }
+
+  private async findFolderDrive(nodeId: string): Promise<DriveTarget | null> {
+    const client = this.subgraph.reactorClient;
+    const drives = await this.findByType(DRIVE_DOCUMENT_TYPE);
+    for (const drive of drives) {
+      try {
+        const node = await client.drives.getNode(drive.header.id, nodeId);
+        if (node.kind === "folder") {
+          return { driveId: drive.header.id, parentFolder: nodeId };
+        }
+      } catch {
+        // Not in this drive.
+      }
+    }
+    return null;
+  }
+
   // config: { documentType?, name?, parentId?, actions?, payload? }
   private async createDocument(
     config: Record<string, unknown>,
@@ -226,10 +270,30 @@ export class DocumentBlockExecutor implements BlockExecutor {
     const name =
       (typeof config.name === "string" && config.name) || payload.name;
     const client = this.subgraph.reactorClient;
-    let document = await client.createEmpty<PHDocument>(documentType, {
-      parentIdentifier:
-        typeof config.parentId === "string" ? config.parentId : undefined,
-    });
+    const parentId =
+      typeof config.parentId === "string" && config.parentId
+        ? config.parentId
+        : undefined;
+    const target = parentId ? await this.resolveDriveTarget(parentId) : null;
+
+    let document: PHDocument;
+    if (target) {
+      // createEmpty only records the parent relationship; a drive also needs an
+      // ADD_FILE node, or the document is created but invisible in the drive.
+      const module = await client.getDocumentModelModule(documentType);
+      const empty = module.utils.createDocument() as PHDocument;
+      // The node name comes from the header, so set it before the file lands.
+      if (name) empty.header.name = name;
+      document = await client.drives.addFile<PHDocument>(
+        target.driveId,
+        empty,
+        target.parentFolder,
+      );
+    } else {
+      document = await client.createEmpty<PHDocument>(documentType, {
+        parentIdentifier: parentId,
+      });
+    }
 
     const followUps = this.buildActions(
       parseActions(config.actions ?? payload.actions, DOCUMENT_CREATE_BLOCK),

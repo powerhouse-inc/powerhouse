@@ -85,7 +85,7 @@ function findPiece(
 export async function loadPiece(entryPath: string): Promise<LoadedPiece> {
   let mod: Record<string, unknown>;
   try {
-    mod = (await import(pathToFileURL(entryPath).href)) as Record<
+    mod = (await import(/* @vite-ignore */pathToFileURL(entryPath).href)) as Record<
       string,
       unknown
     >;
