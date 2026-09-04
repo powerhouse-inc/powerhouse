@@ -139,5 +139,10 @@ export type AgentEvent =
       result?: unknown;
       error?: string;
     }
+  /**
+   * Token accounting for the turn: the input tokens of the model's last
+   * step (i.e. the size of the context it was reasoning over).
+   */
+  | { type: "usage"; inputTokens: number }
   | { type: "finish" }
   | { type: "error"; error: string };
