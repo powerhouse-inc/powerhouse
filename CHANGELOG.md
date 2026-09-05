@@ -1,3 +1,21 @@
+## 6.2.2-dev.81 (2026-09-05)
+
+### 🚀 Features
+
+- **reactor:** a FIXED task must cite a benchmark measured at the fix commit ([c091953ad](https://github.com/powerhouse-inc/powerhouse/commit/c091953ad))
+
+### 🩹 Fixes
+
+- **reactor:** the queue bench runs every case on the same 3,600-op budget so hz is cost-per-job ([6442184a3](https://github.com/powerhouse-inc/powerhouse/commit/6442184a3))
+- **reactor:** the queue bench measures cost-per-job, and FIXED requires a record that proves it ([#2965](https://github.com/powerhouse-inc/powerhouse/pull/2965))
+- **shared:** the administration-retention check scans the grant stack once instead of once per candidate ([4db42f341](https://github.com/powerhouse-inc/powerhouse/commit/4db42f341))
+- **shared:** the administration-retention check scans the grant stack once instead of once per candidate ([#2964](https://github.com/powerhouse-inc/powerhouse/pull/2964))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5
+
 ## 6.2.2-dev.80 (2026-09-04)
 
 ### 🚀 Features

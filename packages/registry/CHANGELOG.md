@@ -1,3 +1,14 @@
+## 6.2.2-dev.81 (2026-09-05)
+
+### 🚀 Features
+
+- **reactor:** a FIXED task must cite a benchmark measured at the fix commit ([c091953ad](https://github.com/powerhouse-inc/powerhouse/commit/c091953ad))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5
+
 ## 6.2.2-dev.80 (2026-09-04)
 
 This was a version bump only for @powerhousedao/registry to align it with other projects, there were no code changes.
