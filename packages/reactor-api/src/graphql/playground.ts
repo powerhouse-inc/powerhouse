@@ -1,3 +1,52 @@
+import * as lzString from "lz-string";
+
+/**
+ * The lz-compressed `explorerURLState` parameter carried by switchboard
+ * explorer URLs: the JSON payload produced by
+ * `buildDocumentSubgraphQuery` in `@powerhousedao/reactor-browser`,
+ * `{ document, variables, headers? }` with `variables` and `headers`
+ * already JSON-stringified.
+ */
+export interface ExplorerUrlState {
+  /** The GraphQL query to prefill in GraphiQL. */
+  query: string;
+  /** JSON-stringified variables, as stored in the payload. */
+  variables?: string;
+  /** Request headers for the GraphiQL fetcher (e.g. Authorization). */
+  headers?: Record<string, string>;
+}
+
+/**
+ * Decodes an `explorerURLState` URL parameter. Returns `null` for anything
+ * that is not a valid lz-compressed payload with a non-empty `document`.
+ */
+export function decodeExplorerUrlState(
+  encoded: string,
+): ExplorerUrlState | null {
+  try {
+    const decompressed = lzString.decompressFromEncodedURIComponent(encoded);
+    if (!decompressed) {
+      return null;
+    }
+    const payload = JSON.parse(decompressed) as Record<string, unknown>;
+    if (typeof payload.document !== "string" || payload.document.length === 0) {
+      return null;
+    }
+    const variables =
+      typeof payload.variables === "string" ? payload.variables : undefined;
+    let headers: Record<string, string> | undefined;
+    if (typeof payload.headers === "string") {
+      const parsed: unknown = JSON.parse(payload.headers);
+      if (parsed && typeof parsed === "object") {
+        headers = parsed as Record<string, string>;
+      }
+    }
+    return { query: payload.document, variables, headers };
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Pinned CDN versions for GraphiQL playground dependencies.
  * Using pinned versions avoids unpkg.com redirect issues that can
@@ -14,6 +63,7 @@ export function renderGraphqlPlayground(
   url: string,
   query?: string,
   headers: Record<string, string> = {},
+  variables?: string,
 ): string {
   return `<!doctype html>
     <html lang="en">
@@ -57,7 +107,13 @@ export function renderGraphqlPlayground(
                 url: '${url}',
                 headers: ${JSON.stringify(headers)}
             });
-            var defaultQuery = ${query ? `\`${query}\`` : undefined};
+            var defaultQuery = ${
+              query
+                ? variables
+                  ? `{ query: \`${query}\`, variables: \`${variables}\` }`
+                  : `\`${query}\``
+                : "undefined"
+            };
 
             if (defaultQuery) {
                 var sessionQuery = localStorage.getItem("graphiql:query");

@@ -68,7 +68,10 @@ import {
 } from "./graphql/gateway/factory.js";
 import type { IHttpAdapter, TlsOptions } from "./graphql/gateway/types.js";
 import { GraphQLManager } from "./graphql/graphql-manager.js";
-import { renderGraphqlPlayground } from "./graphql/playground.js";
+import {
+  decodeExplorerUrlState,
+  renderGraphqlPlayground,
+} from "./graphql/playground.js";
 import { ReactorSubgraph } from "./graphql/reactor/subgraph.js";
 import type { SubgraphClass } from "./graphql/types.js";
 import { runMigrations } from "./migrations/index.js";
@@ -683,10 +686,24 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     // Strip the prefix to find the optional :endpoint segment
     const suffix = url.pathname.slice(explorerPrefix.length).replace(/^\//, "");
     const endpoint = suffix ? `/${suffix}` : "/graphql";
-    const query = url.searchParams.get("query") ?? undefined;
-    return new Response(renderGraphqlPlayground(endpoint, query), {
-      headers: { "Content-Type": "text/html" },
-    });
+    // Prefer the document-scoped `explorerURLState` payload (produced by the
+    // Connect DocumentToolbar) over the plain `?query=` parameter.
+    const explorerState = decodeExplorerUrlState(
+      url.searchParams.get("explorerURLState") ?? "",
+    );
+    const query =
+      explorerState?.query ?? url.searchParams.get("query") ?? undefined;
+    return new Response(
+      renderGraphqlPlayground(
+        endpoint,
+        query,
+        explorerState?.headers ?? {},
+        explorerState?.variables,
+      ),
+      {
+        headers: { "Content-Type": "text/html" },
+      },
+    );
   });
 
   /* Built whenever the bearer is read — which is not the same as the policy
