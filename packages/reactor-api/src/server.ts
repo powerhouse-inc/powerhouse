@@ -233,6 +233,16 @@ function createReadinessGate(): ReadinessGate {
   };
 }
 
+/**
+ * The GraphiQL explorer page's mount prefix. `path.posix.join` normalizes the
+ * join with `basePath` — a naive template literal would produce `//explorer`
+ * for the default `/` basePath, which express compiles into a route that only
+ * matches `//explorer`, leaving `GET /explorer` a 404.
+ */
+export function getExplorerPrefix(basePath: string): string {
+  return path.posix.join(basePath, "explorer");
+}
+
 function resolveAttachmentStoragePath(options: Options): string {
   if (options.attachmentStoragePath) return options.attachmentStoragePath;
   if (options.dbPath && !options.dbPath.startsWith("postgres")) {
@@ -667,7 +677,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   );
 
   // Explorer route
-  const explorerPrefix = `${config.basePath}/explorer`;
+  const explorerPrefix = getExplorerPrefix(config.basePath);
   httpAdapter.getRoute(`${explorerPrefix}/:endpoint?`, (request) => {
     const url = new URL(request.url);
     // Strip the prefix to find the optional :endpoint segment
