@@ -83,7 +83,6 @@
     "ai": "catalog:",
     "change-case": "catalog:",
     "document-model": "workspace:*",
-    "graphql": "catalog:",
     "graphql-request": "catalog:",
     "graphql-ws": "catalog:",
     "kysely": "catalog:",
