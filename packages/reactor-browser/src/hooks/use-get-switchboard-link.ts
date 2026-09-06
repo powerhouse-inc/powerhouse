@@ -7,6 +7,7 @@ import { useMemo } from "react";
 import { isDefined } from "remeda";
 import { buildDocumentSubgraphUrl } from "../utils/index.js";
 import { useRenown, useSyncList, useUser } from "./connect.js";
+import { useDocumentModelModuleById } from "./document-model-modules.js";
 import { useSelectedDriveSafe } from "./selected-drive.js";
 
 /**
@@ -25,7 +26,9 @@ export function useGetSwitchboardLink(
 ): (() => Promise<string>) | null {
   const [drive] = useSelectedDriveSafe();
   const remotes = useSyncList();
-
+  const documentModelModule = useDocumentModelModuleById(
+    document?.header.documentType,
+  );
   const isRemoteDrive = useMemo(() => {
     if (!isDefined(drive)) return false;
 
@@ -75,7 +78,13 @@ export function useGetSwitchboardLink(
         : undefined;
 
       // Build and return the switchboard URL with the document subgraph query
-      return buildDocumentSubgraphUrl(remoteUrl, document.header.id, token);
+      return buildDocumentSubgraphUrl(
+        remoteUrl,
+        document.header.documentType,
+        document.header.id,
+        documentModelModule,
+        token,
+      );
     };
-  }, [isRemoteDrive, remoteUrl, document, user, renown]);
+  }, [isRemoteDrive, remoteUrl, document, documentModelModule, user, renown]);
 }
