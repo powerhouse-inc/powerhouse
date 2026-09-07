@@ -23,7 +23,7 @@ import { EventBus } from "../../src/events/event-bus.js";
 import type { IEventBus } from "../../src/events/interfaces.js";
 import type { SignatureVerificationHandler } from "../../src/signer/types.js";
 import { ConsistencyTracker } from "../../src/shared/consistency-tracker.js";
-import type { Database } from "../../src/storage/kysely/types.js";
+import type { Database } from "../../src/core/types.js";
 import type { KyselyOperationStore } from "../../src/storage/kysely/store.js";
 import {
   createTestDocumentIndexer,
