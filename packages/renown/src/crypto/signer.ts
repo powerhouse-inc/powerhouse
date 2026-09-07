@@ -4,8 +4,13 @@ import type {
   ISigner,
   Operation,
   Signature,
+  SignatureVerificationContext,
   SignatureVerificationHandler,
   UserActionSigner,
+} from "@powerhousedao/shared/document-model";
+import {
+  computeActionHashCandidates,
+  hashActionContentSha256,
 } from "@powerhousedao/shared/document-model";
 import type { IRenownCrypto } from "./index.js";
 
@@ -114,15 +119,7 @@ export class RenownCryptoSigner implements ISigner {
   }
 
   private async hashAction(action: Action): Promise<string> {
-    const payload = [
-      action.scope,
-      action.type,
-      JSON.stringify(action.input),
-    ].join("");
-    const encoder = new TextEncoder();
-    const data = encoder.encode(payload);
-    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-    return this.arrayBufferToBase64(hashBuffer);
+    return hashActionContentSha256(action);
   }
 
   private buildSignatureMessage(
@@ -141,15 +138,6 @@ export class RenownCryptoSigner implements ISigner {
       .map((byte) => byte.toString(16).padStart(2, "0"))
       .join("");
   }
-
-  private arrayBufferToBase64(buffer: ArrayBuffer): string {
-    const bytes = new Uint8Array(buffer);
-    let binary = "";
-    for (let i = 0; i < bytes.length; i++) {
-      binary += String.fromCharCode(bytes[i]);
-    }
-    return btoa(binary);
-  }
 }
 
 /**
@@ -159,7 +147,11 @@ export class RenownCryptoSigner implements ISigner {
 export function createSignatureVerifier(
   requireSignature = false,
 ): SignatureVerificationHandler {
-  return async (operation: Operation, publicKey: string): Promise<boolean> => {
+  return async (
+    operation: Operation,
+    publicKey: string,
+    context?: SignatureVerificationContext,
+  ): Promise<boolean> => {
     const signer = operation.action.context?.signer;
     if (!signer || !publicKey) {
       return !requireSignature;
@@ -174,6 +166,19 @@ export function createSignatureVerifier(
     const [timestamp, signerKey, hash, prevStateHash, signatureHex] = signature;
 
     if (signerKey !== publicKey) {
+      return false;
+    }
+
+    // Bind the signature to the action: recompute the action hash from the
+    // operation being verified and refuse it if the hash the signature claims
+    // matches none of the preimages the action actually carries. A signature
+    // must describe the action and document it is attached to, not merely be
+    // a valid signature over itself (#2894).
+    const candidates = await computeActionHashCandidates(
+      context?.documentId ?? "",
+      operation.action,
+    );
+    if (!candidates.includes(hash)) {
       return false;
     }
 

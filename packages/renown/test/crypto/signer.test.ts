@@ -237,6 +237,93 @@ describe("RenownCryptoSigner", () => {
       expect(signature[4].length).toBeGreaterThan(2);
     });
   });
+
+  describe("createSignatureVerifier binding", () => {
+    it("verifies a genuinely signed action", async () => {
+      const action = createTestAction();
+      const signature = await signer.signAction(action);
+      const operation = createOperationWithSignature(
+        action,
+        signature,
+        signer.app.key,
+      );
+
+      await expect(verifier(operation, signer.app.key)).resolves.toBe(true);
+    });
+
+    it("rejects a signature reattached to a different input", async () => {
+      const action = createTestAction();
+      const signature = await signer.signAction(action);
+      const replayed: Action = { ...action, input: { foo: "tampered" } };
+      const operation = createOperationWithSignature(
+        replayed,
+        signature,
+        signer.app.key,
+      );
+
+      await expect(verifier(operation, signer.app.key)).resolves.toBe(false);
+    });
+
+    it("rejects a signature reattached to a different type and scope", async () => {
+      const action = createTestAction();
+      const signature = await signer.signAction(action);
+      const replayed: Action = {
+        ...action,
+        type: "OTHER_ACTION",
+        scope: "document",
+      };
+      const operation = createOperationWithSignature(
+        replayed,
+        signature,
+        signer.app.key,
+      );
+
+      await expect(verifier(operation, signer.app.key)).resolves.toBe(false);
+    });
+
+    it("rejects a signature made by a different key than the claimed signer", async () => {
+      const otherCrypto = await new RenownCryptoBuilder()
+        .withKeyPairStorage(new MemoryKeyStorage())
+        .build();
+      const otherSigner = new RenownCryptoSigner(otherCrypto, "test-app");
+      const action = createTestAction();
+      const signature = await otherSigner.signAction(action);
+      const operation = createOperationWithSignature(
+        action,
+        signature,
+        signer.app.key,
+      );
+
+      await expect(verifier(operation, signer.app.key)).resolves.toBe(false);
+    });
+
+    it("binds when the executor invokes the verifier with the document context", async () => {
+      const action = createTestAction();
+      const signature = await signer.signAction(action);
+      const operation = createOperationWithSignature(
+        action,
+        signature,
+        signer.app.key,
+      );
+      const context = { documentId: TEST_DOC_ID, branch: TEST_BRANCH };
+
+      // The executor passes the document scope as the verifier's third
+      // argument (#2894).
+      await expect(verifier(operation, signer.app.key, context)).resolves.toBe(
+        true,
+      );
+
+      const replayed: Action = { ...action, input: { foo: "nope" } };
+      const replayedOp = createOperationWithSignature(
+        replayed,
+        signature,
+        signer.app.key,
+      );
+      await expect(verifier(replayedOp, signer.app.key, context)).resolves.toBe(
+        false,
+      );
+    });
+  });
 });
 
 describe("parseSignatureHashField", () => {
