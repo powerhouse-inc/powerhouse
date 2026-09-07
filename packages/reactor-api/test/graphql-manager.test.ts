@@ -20,13 +20,20 @@ import type { ILogger } from "document-model";
 import type http from "node:http";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { WebSocketServer } from "ws";
-import { createAuthFetchMiddleware } from "../src/graphql/gateway/auth-middleware.js";
+import {
+  createAuthFetchMiddleware,
+  type AuthFetchMiddleware,
+} from "../src/graphql/gateway/auth-middleware.js";
 import type {
   FetchHandler,
   IGatewayAdapter,
   IHttpAdapter,
   WsDisposer,
 } from "../src/graphql/gateway/types.js";
+import {
+  createRequireAuthFetchMiddleware,
+  type RequireAuthFetchMiddleware,
+} from "../src/graphql/gateway/require-auth-middleware.js";
 import { GraphQLManager } from "../src/graphql/graphql-manager.js";
 import {
   AuthorizationPolicy,
@@ -189,8 +196,14 @@ function makeHarness(options: HarnessOptions = {}) {
 async function initAndFlush(
   manager: GraphQLManager,
   coreSubgraphs: never[] = [],
+  authMiddleware?: AuthFetchMiddleware,
+  requireAuthMiddleware?: RequireAuthFetchMiddleware,
 ) {
-  const initPromise = manager.init(coreSubgraphs);
+  const initPromise = manager.init(
+    coreSubgraphs,
+    authMiddleware,
+    requireAuthMiddleware,
+  );
   await vi.runAllTimersAsync();
   await initPromise;
 }
@@ -637,6 +650,137 @@ describe("GraphQLManager", () => {
       const handler = mounts.get("/graphql");
       expect(handler).toBeDefined();
       const res = await handler!(new Request("http://localhost/graphql"));
+      expect(res.status).toBe(200);
+    });
+  });
+
+  // ── requireAuthMiddleware wrapping ────────────────────────────────────────
+
+  describe("init() with requireAuthMiddleware", () => {
+    function makeAuthServiceWith(user: AuthContext["user"]): AuthService {
+      return {
+        authenticateRequest: vi.fn().mockResolvedValue({
+          user,
+          admins: [],
+          auth_enabled: false,
+        }),
+      } as unknown as AuthService;
+    }
+
+    function graphqlRequest(
+      init?: RequestInit,
+      url = "http://localhost/graphql",
+    ): Request {
+      return new Request(url, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ query: "{ r { version } }" }),
+        ...init,
+      });
+    }
+
+    it("rejects an anonymous caller on the mounted supergraph handler with a 401", async () => {
+      const { manager, mounts } = makeHarness();
+      await initAndFlush(
+        manager,
+        [],
+        createAuthFetchMiddleware(makeAuthServiceWith(undefined)),
+        createRequireAuthFetchMiddleware(),
+      );
+      const handler = mounts.get("/graphql");
+      expect(handler).toBeDefined();
+
+      const res = await handler!(graphqlRequest());
+
+      expect(res.status).toBe(401);
+      await expect(res.json()).resolves.toEqual({
+        error: "Authentication required",
+      });
+    });
+
+    it("admits an authenticated caller to the mounted supergraph handler", async () => {
+      const { manager, mounts } = makeHarness();
+      await initAndFlush(
+        manager,
+        [],
+        createAuthFetchMiddleware(
+          makeAuthServiceWith({
+            address: "0xuser",
+            chainId: 1,
+            networkId: "mainnet",
+            appKey: "did:key:zuser",
+          }),
+        ),
+        createRequireAuthFetchMiddleware(),
+      );
+      const handler = mounts.get("/graphql");
+      expect(handler).toBeDefined();
+
+      const res = await handler!(graphqlRequest());
+
+      expect(res.status).toBe(200);
+    });
+
+    it("rejects an anonymous caller with a 401 before shard validation (not a 421)", async () => {
+      const { manager, mounts } = makeHarness();
+      await initAndFlush(
+        manager,
+        [],
+        createAuthFetchMiddleware(makeAuthServiceWith(undefined)),
+        createRequireAuthFetchMiddleware(),
+      );
+      const handler = mounts.get("/graphql");
+      expect(handler).toBeDefined();
+
+      // The drive is not in the ownership cache, so without the
+      // require-authenticated-caller middleware the drive middleware would
+      // answer 421. It must not get that far.
+      const res = await handler!(
+        graphqlRequest({
+          headers: {
+            "content-type": "application/json",
+            "drive-id": "drive-not-here",
+          },
+          body: JSON.stringify({ operationName: "someOperation" }),
+        }),
+      );
+
+      expect(res.status).toBe(401);
+      await expect(res.json()).resolves.toEqual({
+        error: "Authentication required",
+      });
+    });
+
+    it("lets OPTIONS preflights through to the handler", async () => {
+      const { manager, mounts } = makeHarness();
+      await initAndFlush(
+        manager,
+        [],
+        createAuthFetchMiddleware(makeAuthServiceWith(undefined)),
+        createRequireAuthFetchMiddleware(),
+      );
+      const handler = mounts.get("/graphql");
+      expect(handler).toBeDefined();
+
+      const res = await handler!(
+        new Request("http://localhost/graphql", { method: "OPTIONS" }),
+      );
+
+      expect(res.status).toBe(200);
+    });
+
+    it("leaves anonymous callers admitted when the middleware is not passed", async () => {
+      const { manager, mounts } = makeHarness();
+      await initAndFlush(
+        manager,
+        [],
+        createAuthFetchMiddleware(makeAuthServiceWith(undefined)),
+      );
+      const handler = mounts.get("/graphql");
+      expect(handler).toBeDefined();
+
+      const res = await handler!(graphqlRequest());
+
       expect(res.status).toBe(200);
     });
   });
