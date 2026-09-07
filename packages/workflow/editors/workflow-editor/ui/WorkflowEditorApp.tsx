@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import {
-  ExpressionPanel,
+  ExpressionPickerPopup,
   ExpressionTargetProvider,
 } from "./ExpressionPicker.js";
 import type { DesignTimeService } from "./forms.js";
@@ -111,6 +111,7 @@ export function WorkflowEditorApp(props: {
           <ExpressionTargetProvider
             key={selectedId}
             stepBlockTypes={stepBlockTypes}
+            triggerBlockType={model.trigger?.blockType}
           >
             <aside className="flex min-h-0 w-96 flex-col border-l border-slate-200 bg-slate-50">
               <div className="min-h-0 flex-1 overflow-y-auto">
@@ -134,7 +135,7 @@ export function WorkflowEditorApp(props: {
                   />
                 ) : null}
               </div>
-              <ExpressionPanel />
+              <ExpressionPickerPopup />
             </aside>
           </ExpressionTargetProvider>
         ) : null}

@@ -15,3 +15,10 @@
 .workflow-context-menu {
   z-index: 1003;
 }
+
+/* The expression picker is portalled to <body> to escape the side panel's
+   scroll container, so it only has to clear the canvas layers: one above the
+   right-click menu. */
+.workflow-expression-popup {
+  z-index: 1004;
+}

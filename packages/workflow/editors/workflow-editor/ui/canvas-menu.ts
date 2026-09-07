@@ -93,6 +93,17 @@ export interface MenuSize {
   height: number;
 }
 
+function clampToViewport(
+  at: number,
+  extent: number,
+  available: number,
+): number {
+  return Math.max(
+    VIEWPORT_MARGIN,
+    Math.min(at, available - extent - VIEWPORT_MARGIN),
+  );
+}
+
 // Anchors the menu at the pointer, flipping it back over the pointer near the
 // right/bottom edges and clamping so it always stays inside the viewport.
 export function menuPosition(
@@ -100,16 +111,42 @@ export function menuPosition(
   size: MenuSize,
   viewport: MenuSize,
 ): PointModel {
-  const place = (at: number, extent: number, available: number): number => {
-    const flipped =
-      at + extent > available - VIEWPORT_MARGIN ? at - extent : at;
-    return Math.max(
-      VIEWPORT_MARGIN,
-      Math.min(flipped, available - extent - VIEWPORT_MARGIN),
+  const place = (at: number, extent: number, available: number): number =>
+    clampToViewport(
+      at + extent > available - VIEWPORT_MARGIN ? at - extent : at,
+      extent,
+      available,
     );
-  };
   return {
     x: place(point.x, size.width, viewport.width),
     y: place(point.y, size.height, viewport.height),
+  };
+}
+
+// The box a side-panel popup hangs off: only the edges placement reads.
+export interface MenuAnchor {
+  left: number;
+  right: number;
+  top: number;
+}
+
+const ANCHOR_GAP = 8;
+
+// Places a popup beside its anchor: right edge at the anchor's left edge,
+// flipped to the anchor's right side when the left has no room, top aligned
+// with the anchor, and clamped into the viewport on both axes.
+export function anchorLeftPosition(
+  anchor: MenuAnchor,
+  size: MenuSize,
+  viewport: MenuSize,
+): PointModel {
+  const left = anchor.left - ANCHOR_GAP - size.width;
+  return {
+    x: clampToViewport(
+      left >= VIEWPORT_MARGIN ? left : anchor.right + ANCHOR_GAP,
+      size.width,
+      viewport.width,
+    ),
+    y: clampToViewport(anchor.top, size.height, viewport.height),
   };
 }

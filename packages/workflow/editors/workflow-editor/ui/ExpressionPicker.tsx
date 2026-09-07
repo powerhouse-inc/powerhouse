@@ -1,4 +1,4 @@
-// Docked expression picker: follows the focused config field and inserts
+// Expression picker popup: opens beside the focused config field and inserts
 // {{path}} expressions from the run scope (trigger.payload / steps.* / variables.*).
 import {
   createContext,
@@ -10,7 +10,10 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
+import { blockMeta } from "./block-meta.js";
 import { BlockLogo } from "./BlockSelector.js";
+import { anchorLeftPosition, type MenuAnchor } from "./canvas-menu.js";
 import { EMPTY_SCOPE, type ExpressionScope } from "./expression-scope.js";
 import {
   describeExpression,
@@ -30,11 +33,12 @@ export function registerExpressionScopeSource(next: ExpressionScopeSource) {
   for (const listener of scopeListeners) listener();
 }
 
-// The field the docked panel inserts into.
+// The field the popup inserts into, plus the box it hangs off.
 export interface ExpressionTarget {
   id: string;
   stepId?: string;
   label: string;
+  anchor: MenuAnchor;
   insert: (expression: string) => void;
 }
 
@@ -43,18 +47,26 @@ interface TargetContextValue {
   setTarget: (target: ExpressionTarget | null) => void;
   // Step key → block type, so chips can show the referenced step's logo.
   stepBlockTypes: Record<string, string>;
+  // The trigger's block type, for the same reason on the trigger's own node.
+  triggerBlockType?: string;
 }
 
 const TargetContext = createContext<TargetContextValue | null>(null);
 
 export function ExpressionTargetProvider(props: {
   stepBlockTypes: Record<string, string>;
+  triggerBlockType?: string;
   children: ReactNode;
 }) {
   const [target, setTarget] = useState<ExpressionTarget | null>(null);
   const value = useMemo(
-    () => ({ target, setTarget, stepBlockTypes: props.stepBlockTypes }),
-    [target, props.stepBlockTypes],
+    () => ({
+      target,
+      setTarget,
+      stepBlockTypes: props.stepBlockTypes,
+      triggerBlockType: props.triggerBlockType,
+    }),
+    [target, props.stepBlockTypes, props.triggerBlockType],
   );
   return (
     <TargetContext.Provider value={value}>
@@ -67,13 +79,28 @@ export function useExpressionTarget(): TargetContextValue | null {
   return useContext(TargetContext);
 }
 
+// The "{}" button sits at the field's right edge, so the popup anchors on the
+// field row instead: its left edge clears the whole side panel.
+function fieldAnchor(element: Element | undefined): MenuAnchor {
+  const row = element?.closest("label,div") ?? element;
+  const rect = row?.getBoundingClientRect();
+  if (!rect) {
+    return { left: window.innerWidth, right: window.innerWidth, top: 0 };
+  }
+  return { left: rect.left, right: rect.right, top: rect.top };
+}
+
 // Registers a config field as an insertion target; call focus() when the
-// user focuses it. `insert` is read through a ref so it never goes stale.
+// user focuses it — the focus/click event supplies the popup's anchor.
+// `insert` is read through a ref so it never goes stale.
 export function useExpressionField(options: {
   stepId?: string;
   label: string;
   insert: (expression: string) => void;
-}): { active: boolean; focus: () => void } {
+}): {
+  active: boolean;
+  focus: (event?: { currentTarget: Element }) => void;
+} {
   const id = useId();
   const context = useExpressionTarget();
   const insertRef = useRef(options.insert);
@@ -81,11 +108,12 @@ export function useExpressionField(options: {
   const { stepId, label } = options;
   return {
     active: context?.target?.id === id,
-    focus: () => {
+    focus: (event) => {
       context?.setTarget({
         id,
         stepId,
         label,
+        anchor: fieldAnchor(event?.currentTarget),
         insert: (expression) => insertRef.current(expression),
       });
     },
@@ -135,13 +163,22 @@ function ValueNode(props: {
   captions: Record<string, string>;
   onPick: (path: string) => void;
 }) {
+  const context = useExpressionTarget();
   const [open, setOpen] = useState(props.depth < 2);
   const expandable = isExpandable(props.value);
+  // A step's own node reads as the block it runs; the key stays in the tooltip
+  // alongside the expression it inserts.
+  const stepKey = /^steps\.([^.]+)$/.exec(props.path)?.[1];
+  const nodeBlockType = stepKey
+    ? context?.stepBlockTypes[stepKey]
+    : props.path === "trigger"
+      ? context?.triggerBlockType
+      : undefined;
   return (
     <div>
       <div
         className="flex items-center gap-1 rounded px-1 py-0.5 hover:bg-slate-50"
-        style={{ paddingLeft: props.depth * 12 + 4 }}
+        style={{ paddingLeft: props.depth * 14 + 4 }}
       >
         {expandable ? (
           <button
@@ -160,10 +197,19 @@ function ValueNode(props: {
           title={`{{${props.path}}}`}
           onClick={() => props.onPick(props.path)}
         >
-          <span className="shrink-0 font-mono text-[11px] text-slate-700">
-            {props.name}
-          </span>
-          <span className="truncate text-[10px] text-slate-400">
+          {nodeBlockType ? (
+            <>
+              <BlockLogo blockType={nodeBlockType} size={16} />
+              <span className="shrink-0 text-xs font-medium text-slate-700">
+                {blockMeta(nodeBlockType).displayName}
+              </span>
+            </>
+          ) : (
+            <span className="shrink-0 font-mono text-xs text-slate-700">
+              {props.name}
+            </span>
+          )}
+          <span className="truncate text-[11px] text-slate-400">
             {preview(props.value)}
           </span>
         </button>
@@ -247,11 +293,13 @@ function SearchResults(props: {
   );
 }
 
-// Docked at the bottom of the side panel; renders whatever field is focused.
-export function ExpressionPanel() {
+const POPUP_SIZE = { width: 420, height: 520 };
+
+// Anchored beside the focused field; portalled to <body> so the side panel's
+// scroll container cannot clip it.
+export function ExpressionPickerPopup() {
   const context = useExpressionTarget();
   const target = context?.target ?? null;
-  const [collapsed, setCollapsed] = useState(false);
   const [query, setQuery] = useState("");
   const [state, setState] = useState<
     | { kind: "idle" }
@@ -260,6 +308,7 @@ export function ExpressionPanel() {
     | { kind: "error"; message: string }
   >({ kind: "idle" });
   const [sourceVersion, setSourceVersion] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const listener = () => setSourceVersion((value) => value + 1);
@@ -293,83 +342,117 @@ export function ExpressionPanel() {
     };
   }, [hasTarget, stepId, sourceVersion]);
 
-  if (!context || !scopeSource) return null;
+  // A fresh field starts from an unfiltered tree.
+  const targetId = target?.id;
+  useEffect(() => setQuery(""), [targetId]);
 
-  const pick = (path: string) => target?.insert(`{{${path}}}`);
+  const close = context?.setTarget;
+  useEffect(() => {
+    if (!hasTarget || !close) return;
+    const dismiss = () => close(null);
+    const outside = (event: Event) =>
+      !containerRef.current?.contains(event.target as globalThis.Node);
+    const onMouseDown = (event: MouseEvent) => {
+      if (outside(event)) dismiss();
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") dismiss();
+    };
+    // Scrolling the popup's own tree must not dismiss it.
+    const onScroll = (event: Event) => {
+      if (outside(event)) dismiss();
+    };
+    window.addEventListener("mousedown", onMouseDown);
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("scroll", onScroll, true);
+    return () => {
+      window.removeEventListener("mousedown", onMouseDown);
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("scroll", onScroll, true);
+    };
+  }, [hasTarget, close]);
+
+  if (!context || !scopeSource || !target) return null;
+
+  const pick = (path: string) => {
+    target.insert(`{{${path}}}`);
+    context.setTarget(null);
+  };
   const scope = state.kind === "ready" ? state.scope : EMPTY_SCOPE;
   const empty = entriesOf(scope.value).length === 0;
+  const position = anchorLeftPosition(target.anchor, POPUP_SIZE, {
+    width: window.innerWidth,
+    height: window.innerHeight,
+  });
 
-  return (
-    <div className="flex max-h-[45%] shrink-0 flex-col border-t border-solid border-slate-200 bg-white">
+  return createPortal(
+    <div
+      ref={containerRef}
+      className="workflow-expression-popup fixed flex flex-col rounded-md border border-solid border-slate-200 bg-white shadow-lg"
+      style={{
+        left: position.x,
+        top: position.y,
+        width: POPUP_SIZE.width,
+        maxHeight: POPUP_SIZE.height,
+      }}
+    >
       <div className="flex items-center gap-2 px-3 py-1.5">
         <span className="font-mono text-[11px] text-slate-500">{"{}"}</span>
-        <span className="min-w-0 truncate text-[11px] text-slate-500">
-          {target ? (
-            <>
-              Insert into{" "}
-              <span className="font-semibold text-slate-700">
-                {target.label}
-              </span>
-            </>
-          ) : (
-            "Focus a field to insert a value"
-          )}
+        <span className="min-w-0 truncate text-xs text-slate-500">
+          Insert into{" "}
+          <span className="font-semibold text-slate-700">{target.label}</span>
         </span>
         <button
           type="button"
           className="ml-auto text-[11px] text-slate-400 hover:text-slate-600"
-          onClick={() => setCollapsed((value) => !value)}
+          title="Close"
+          onClick={() => context.setTarget(null)}
         >
-          {collapsed ? "Show" : "Hide"}
+          ✕
         </button>
       </div>
-      {collapsed || !target ? null : (
-        <>
-          <div className="px-3 pb-1.5">
-            <input
-              className="w-full rounded border border-slate-200 px-2 py-1 text-xs"
-              placeholder="Search paths…"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
+      <div className="px-3 pb-1.5">
+        <input
+          className="w-full rounded border border-slate-200 px-2 py-1.5 text-sm"
+          placeholder="Search paths…"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+        />
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto px-1 pb-1">
+        {state.kind === "error" ? (
+          <div className="px-2 py-1 text-xs text-red-500">{state.message}</div>
+        ) : state.kind === "loading" ? (
+          <div className="px-2 py-1 text-xs text-slate-400">Loading…</div>
+        ) : empty ? (
+          <div className="px-2 py-1 text-xs text-slate-400">
+            No values available for this field yet.
+          </div>
+        ) : query.trim() ? (
+          <SearchResults scope={scope} query={query.trim()} onPick={pick} />
+        ) : (
+          entriesOf(scope.value).map(([key, value]) => (
+            <ValueNode
+              key={key}
+              name={key}
+              path={key}
+              value={value}
+              depth={0}
+              captions={scope.captions}
+              onPick={pick}
             />
-          </div>
-          <div className="min-h-0 flex-1 overflow-y-auto px-1 pb-1">
-            {state.kind === "error" ? (
-              <div className="px-2 py-1 text-xs text-red-500">
-                {state.message}
-              </div>
-            ) : state.kind === "loading" ? (
-              <div className="px-2 py-1 text-xs text-slate-400">Loading…</div>
-            ) : empty ? (
-              <div className="px-2 py-1 text-xs text-slate-400">
-                No values available for this field yet.
-              </div>
-            ) : query.trim() ? (
-              <SearchResults scope={scope} query={query.trim()} onPick={pick} />
-            ) : (
-              entriesOf(scope.value).map(([key, value]) => (
-                <ValueNode
-                  key={key}
-                  name={key}
-                  path={key}
-                  value={value}
-                  depth={0}
-                  captions={scope.captions}
-                  onPick={pick}
-                />
-              ))
-            )}
-          </div>
-        </>
-      )}
-    </div>
+          ))
+        )}
+      </div>
+    </div>,
+    document.body,
   );
 }
 
 // Per-field "{}" affordance: focuses the docked panel on this field.
 export function ExpressionPickerButton(props: {
   active: boolean;
-  onFocusField: () => void;
+  onFocusField: (event: { currentTarget: Element }) => void;
 }) {
   if (!scopeSource) return null;
   return (

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  anchorLeftPosition,
   contextMenuItems,
   menuHeight,
   menuPosition,
@@ -148,5 +149,46 @@ describe("menuPosition", () => {
         },
       ),
     ).toEqual({ x: 8, y: 8 });
+  });
+});
+
+describe("anchorLeftPosition", () => {
+  const size = { width: 320, height: 360 };
+  const viewport = { width: 1200, height: 800 };
+  // A field row in the 384px side panel, level with the middle of the screen.
+  const field = { left: 828, right: 1188, top: 300 };
+
+  it("puts the popup's right edge beside the field's left edge", () => {
+    expect(anchorLeftPosition(field, size, viewport)).toEqual({
+      x: 828 - 8 - 320,
+      y: 300,
+    });
+  });
+
+  it("flips to the field's right side when the left has no room", () => {
+    // Panel docked left: nothing fits to the left of the field.
+    expect(
+      anchorLeftPosition({ left: 24, right: 384, top: 100 }, size, {
+        width: 900,
+        height: 800,
+      }),
+    ).toEqual({ x: 384 + 8, y: 100 });
+  });
+
+  it("clamps a flip that overshoots back inside the viewport", () => {
+    expect(
+      anchorLeftPosition({ left: 20, right: 380, top: 100 }, size, {
+        width: 400,
+        height: 800,
+      }),
+    ).toEqual({ x: 400 - 320 - 8, y: 100 });
+  });
+
+  it("clamps vertically so a tall popup stays on screen", () => {
+    expect(anchorLeftPosition(field, size, viewport).y).toBe(300);
+    expect(anchorLeftPosition({ ...field, top: 700 }, size, viewport).y).toBe(
+      800 - 360 - 8,
+    );
+    expect(anchorLeftPosition({ ...field, top: 2 }, size, viewport).y).toBe(8);
   });
 });
