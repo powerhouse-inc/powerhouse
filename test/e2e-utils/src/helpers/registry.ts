@@ -124,7 +124,37 @@ export function writeNpmrc(projectDir: string, token: string): void {
 }
 
 export function stopRegistry(child: ChildProcess): void {
-  if (child && !child.killed) child.kill("SIGTERM");
+  if (child.killed) return;
+  child.kill("SIGTERM");
+  // The registry runs as a grandchild of `pnpm exec`. The pnpm wrapper can
+  // die on SIGTERM while ph-registry survives, still holding this process's
+  // stdio pipes — the caller's event loop (and the CI job) never finishes.
+  // Give the process a grace period, then SIGKILL the wrapper and anything
+  // still holding the registry port.
+  const escalate = setTimeout(() => {
+    if (child.exitCode === null) {
+      try {
+        child.kill("SIGKILL");
+      } catch {
+        // already gone
+      }
+    }
+    try {
+      const holders = execSync(`lsof -ti tcp:${REGISTRY_PORT}`, {
+        encoding: "utf8",
+        stdio: "pipe",
+      })
+        .trim()
+        .split("\n")
+        .filter(Boolean);
+      if (holders.length > 0) {
+        execSync(`kill -9 ${holders.join(" ")}`, { stdio: "pipe" });
+      }
+    } catch {
+      // port already free (or lsof unavailable)
+    }
+  }, 5_000);
+  escalate.unref();
 }
 
 export async function verifyPublish(packageName: string): Promise<void> {
