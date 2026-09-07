@@ -27,11 +27,13 @@ export interface ContextMenuItem {
   disabled?: boolean;
 }
 
-// Branches route through true/false, so their "next" port is never free.
-function nextPortFree(model: WorkflowModel, id: string): boolean {
+// Branches route through true/false, so they have no "next" port to add to.
+// A port that already has an edge is fine: the engine fans out to every
+// successor on a taken port.
+function hasNextPort(model: WorkflowModel, id: string): boolean {
+  if (model.trigger?.id === id) return true;
   const step = model.steps.find((entry) => entry.id === id);
-  if (step?.blockType === "core#branch") return false;
-  return !model.edges.some((edge) => edge.from === id && edge.port === "next");
+  return step ? step.blockType !== "core#branch" : false;
 }
 
 export function contextMenuItems(
@@ -45,7 +47,7 @@ export function contextMenuItems(
         {
           id: "addBelow",
           label: "Add step below",
-          disabled: !nextPortFree(model, target.id),
+          disabled: !hasNextPort(model, target.id),
         },
         { id: "duplicate", label: "Duplicate step" },
         { id: "removeStep", label: "Remove step" },
@@ -56,7 +58,7 @@ export function contextMenuItems(
         {
           id: "addBelow",
           label: "Add step below",
-          disabled: !model.trigger || !nextPortFree(model, model.trigger.id),
+          disabled: !model.trigger,
         },
         { id: "changeTrigger", label: "Change trigger" },
         { id: "removeTrigger", label: "Remove trigger" },

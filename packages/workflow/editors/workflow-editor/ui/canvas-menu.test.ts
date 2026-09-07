@@ -63,7 +63,7 @@ describe("contextMenuItems", () => {
     ]);
   });
 
-  it("disables add-below on a taken next port and on branches", () => {
+  it("keeps add-below on a wired next port, since ports fan out", () => {
     const taken = model(
       [step("a"), step("b")],
       [
@@ -72,16 +72,18 @@ describe("contextMenuItems", () => {
       ],
     );
     expect(contextMenuItems({ kind: "step", id: "a" }, taken)[1]).toMatchObject(
-      { id: "addBelow", disabled: true },
+      { id: "addBelow", disabled: false },
     );
+  });
 
+  it("disables add-below on a branch, which has no next port", () => {
     const branch = model([step("a", "core#branch")], [["t", "a", "next"]]);
     expect(
       contextMenuItems({ kind: "step", id: "a" }, branch)[1],
     ).toMatchObject({ id: "addBelow", disabled: true });
   });
 
-  it("offers trigger actions, disabling add-below once the trigger is wired", () => {
+  it("offers trigger actions whether or not it is already wired", () => {
     const empty = model([]);
     expect(contextMenuItems({ kind: "trigger" }, empty)).toEqual([
       { id: "open", label: "Open settings" },
@@ -92,7 +94,7 @@ describe("contextMenuItems", () => {
     const wired = model([step("a")], [["t", "a", "next"]]);
     expect(contextMenuItems({ kind: "trigger" }, wired)[1]).toMatchObject({
       id: "addBelow",
-      disabled: true,
+      disabled: false,
     });
   });
 

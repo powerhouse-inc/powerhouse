@@ -322,8 +322,8 @@ const PORT_LABEL: Record<string, string> = {
   false: "When false",
 };
 
-// One target per port, since the coordinator follows a single successor per
-// outcome. acyclicTargets allows any step that is not an ancestor.
+// A port may hold several edges: the engine runs every successor on a taken
+// port. acyclicTargets offers any step that is not an ancestor.
 function FlowPortEditor(props: {
   step: StepModel;
   model: WorkflowModel;
@@ -338,27 +338,33 @@ function FlowPortEditor(props: {
   const attached = model.trigger
     ? reachableFrom(model.trigger.id, model.edges)
     : new Set<string>();
-  const targets = acyclicTargets(model, step.id);
+  const candidates = acyclicTargets(model, step.id);
   return (
     <Field
       label={ports.length > 1 ? "Branches" : "Connects to"}
       hint="Any step that is not upstream of this one, connected or not"
     >
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-2">
         {ports.map((port) => {
-          const edge = model.edges.find(
+          const edges = model.edges.filter(
             (candidate) =>
               candidate.from === step.id && candidate.port === port,
           );
+          const targets = candidates.filter(
+            (candidate) => !edges.some((edge) => edge.to === candidate.id),
+          );
           return (
-            <div key={port} className="flex items-center gap-2">
+            <div key={port} className="flex flex-col gap-1">
               {ports.length > 1 ? (
-                <span className="w-20 shrink-0 text-[11px] font-medium text-slate-500">
+                <span className="text-[11px] font-medium text-slate-500">
                   {PORT_LABEL[port] ?? port}
                 </span>
               ) : null}
-              {edge ? (
-                <div className="flex min-w-0 flex-1 items-center justify-between rounded border border-solid border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-700">
+              {edges.map((edge) => (
+                <div
+                  key={edge.id}
+                  className="flex min-w-0 items-center justify-between rounded border border-solid border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-700"
+                >
                   <span className="truncate">→ {stepName(edge.to)}</span>
                   <button
                     type="button"
@@ -368,31 +374,34 @@ function FlowPortEditor(props: {
                     Disconnect
                   </button>
                 </div>
-              ) : (
-                <select
-                  className={`${inputClass} flex-1`}
-                  value=""
-                  disabled={targets.length === 0}
-                  onChange={(event) => {
-                    if (event.target.value === "") return;
-                    callbacks.addEdge({
-                      from: step.id,
-                      to: event.target.value,
-                      port,
-                    });
-                  }}
-                >
-                  <option value="">
-                    {targets.length === 0 ? "No step available" : "Connect to…"}
+              ))}
+              <select
+                className={inputClass}
+                value=""
+                disabled={targets.length === 0}
+                onChange={(event) => {
+                  if (event.target.value === "") return;
+                  callbacks.addEdge({
+                    from: step.id,
+                    to: event.target.value,
+                    port,
+                  });
+                }}
+              >
+                <option value="">
+                  {targets.length === 0
+                    ? "No other step to connect to"
+                    : edges.length > 0
+                      ? "Also connect to…"
+                      : "Connect to…"}
+                </option>
+                {targets.map((target) => (
+                  <option key={target.id} value={target.id}>
+                    {target.name || target.key}
+                    {attached.has(target.id) ? "" : " · detached"}
                   </option>
-                  {targets.map((target) => (
-                    <option key={target.id} value={target.id}>
-                      {target.name || target.key}
-                      {attached.has(target.id) ? "" : " · detached"}
-                    </option>
-                  ))}
-                </select>
-              )}
+                ))}
+              </select>
             </div>
           );
         })}
