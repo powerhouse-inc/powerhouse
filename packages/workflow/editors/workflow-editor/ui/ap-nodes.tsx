@@ -82,7 +82,11 @@ export function ApStepNode(props: NodeProps) {
       className={`border-box group relative overflow-visible rounded-md border border-solid bg-white shadow-sm transition-all ${
         props.selected ? "border-blue-500" : "border-slate-200"
       } ${isDragged ? "opacity-40" : ""} ${
-        data.kind === "step" ? "cursor-grab active:cursor-grabbing" : ""
+        data.kind === "step"
+          ? // nodrag/nopan hand the gesture over: without them React Flow's
+            // pane claims the mousedown and the canvas pans instead.
+            "nodrag nopan cursor-grab active:cursor-grabbing"
+          : ""
       }`}
       draggable={data.kind === "step"}
       onDragStart={(event) => {
@@ -265,7 +269,7 @@ export function ApAppendNode(props: NodeProps) {
         <Handle type="target" position={Position.Top} style={hiddenHandle} />
         <div
           style={{ width: STEP_WIDTH, height: STEP_HEIGHT }}
-          className={`absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-md border-2 border-dashed text-xs font-medium transition-colors ${
+          className={`nodrag nopan absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-md border-2 border-dashed text-xs font-medium transition-colors ${
             rejection
               ? "border-slate-200 bg-slate-50 text-slate-400"
               : "border-blue-400 bg-blue-50 text-blue-600"
