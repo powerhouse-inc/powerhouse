@@ -2,7 +2,10 @@ import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { gunzipSync } from "node:zlib";
+import { promisify } from "node:util";
+import { gunzip as gunzipCb } from "node:zlib";
+
+const gunzip = promisify(gunzipCb);
 
 // Mirrors their pieceBundle.resolve(): CDN bundle when served, else the npm
 // tarball. Tarballs are immutable per (name, version), so the cache never expires.
@@ -24,9 +27,19 @@ function readString(header: Buffer, offset: number, length: number): string {
   return slice.subarray(0, nul === -1 ? length : nul).toString("utf8");
 }
 
+// Published piece bundles run a few hundred KB extracted; the cap is well clear
+// of that and bounds what a hostile or corrupt tarball can inflate to.
+const MAX_EXTRACTED_BYTES = 64 * 1024 * 1024;
+
 // Minimal ustar extraction: regular files only, "package/" root stripped.
 async function extractTarball(tgz: Buffer, dest: string): Promise<void> {
-  const tar = gunzipSync(tgz);
+  // Async gunzip: the sync one blocks the reactor's event loop for every
+  // request, not just this one, and inflation is unbounded without maxOutputLength.
+  const tar = await gunzip(tgz, { maxOutputLength: MAX_EXTRACTED_BYTES }).catch(
+    (error: unknown) => {
+      throw new Error(`Failed to decompress piece bundle: ${String(error)}`);
+    },
+  );
   let offset = 0;
   while (offset + 512 <= tar.length) {
     const header = tar.subarray(offset, offset + 512);
@@ -180,9 +193,24 @@ export async function installPieceBundle(
   };
 }
 
+// Concurrent callers for the same bundle share one download+extract (or
+// install) rather than racing each other through it.
+const inFlight = new Map<string, Promise<FetchedBundle>>();
+
 // Fetches a bundle; when it declares dependencies (not self-contained),
 // installs it instead so import() can resolve them.
 export async function ensurePieceBundle(
+  options: FetchPieceBundleOptions,
+): Promise<FetchedBundle> {
+  const key = `${options.cacheDir}\u0000${options.name}@${options.version}`;
+  const pending = inFlight.get(key);
+  if (pending) return pending;
+  const started = resolveBundle(options).finally(() => inFlight.delete(key));
+  inFlight.set(key, started);
+  return started;
+}
+
+async function resolveBundle(
   options: FetchPieceBundleOptions,
 ): Promise<FetchedBundle> {
   const fetched = await fetchPieceBundle(options);
