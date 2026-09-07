@@ -13,6 +13,13 @@ import { BlockLogo, BlockSelector } from "./BlockSelector.js";
 import { STEP_PRESETS, TRIGGER_PRESETS, type BlockPreset } from "./blocks.js";
 import type { BlockForm } from "./forms.js";
 import type { StepModel, TriggerModel } from "./model.js";
+import {
+  MOVE_REJECTION_TEXT,
+  setDraggingStep,
+  useDraggingStep,
+  type MoveRejection,
+  type StepMove,
+} from "./step-drag.js";
 import { missingForBlock } from "./validation.js";
 
 const hiddenHandle = { opacity: 0, pointerEvents: "none" as const };
@@ -66,12 +73,26 @@ export function ApStepNode(props: NodeProps) {
       : data.step.connectionId,
   );
 
+  const dragging = useDraggingStep();
+  const isDragged = data.kind === "step" && dragging === data.step.id;
+
   return (
     <div
       style={{ width: STEP_WIDTH, height: STEP_HEIGHT }}
       className={`border-box group relative overflow-visible rounded-md border border-solid bg-white shadow-sm transition-all ${
         props.selected ? "border-blue-500" : "border-slate-200"
+      } ${isDragged ? "opacity-40" : ""} ${
+        data.kind === "step" ? "cursor-grab active:cursor-grabbing" : ""
       }`}
+      draggable={data.kind === "step"}
+      onDragStart={(event) => {
+        if (data.kind !== "step") return;
+        event.dataTransfer.effectAllowed = "move";
+        // Firefox ignores a drag with no payload.
+        event.dataTransfer.setData("text/plain", data.step.id);
+        setDraggingStep(data.step.id);
+      }}
+      onDragEnd={() => setDraggingStep(undefined)}
     >
       <Handle type="target" position={Position.Top} style={hiddenHandle} />
       <div className="flex h-full items-center gap-3 px-3">
@@ -195,6 +216,9 @@ export interface ApCanvasHandlers {
   // Re-attaching steps that are unreachable from the trigger.
   attachableSteps: (fromId: string) => StepModel[];
   attachStep: (fromId: string, port: string, stepId: string) => void;
+  // Dragging a step card onto a slot.
+  moveStep: (move: StepMove) => void;
+  moveRejection: (move: StepMove) => MoveRejection | null;
   // Form descriptor lookup for the required-fields badge.
   getBlockForm?: (blockType: string) => Promise<BlockForm | null>;
 }
@@ -213,7 +237,54 @@ export function getCanvasHandlers(): ApCanvasHandlers | undefined {
 
 export function ApAppendNode(props: NodeProps) {
   const data = props.data as { parentId: string; port: string };
-  const attachSteps = getCanvasHandlers()?.attachableSteps(data.parentId);
+  const handlers = getCanvasHandlers();
+  const attachSteps = handlers?.attachableSteps(data.parentId);
+  const dragging = useDraggingStep();
+  const move = dragging
+    ? { stepId: dragging, toParentId: data.parentId, port: data.port }
+    : undefined;
+  const rejection = move ? handlers?.moveRejection(move) : undefined;
+
+  if (move) {
+    // While a card is in flight the slot becomes the drop target, sized like
+    // the step it would hold. The node keeps its button-sized footprint so the
+    // layout still anchors it by the same point.
+    return (
+      <div
+        className="relative"
+        style={{ width: ADD_BUTTON_SIZE, height: ADD_BUTTON_SIZE }}
+      >
+        <Handle type="target" position={Position.Top} style={hiddenHandle} />
+        <div
+          style={{ width: STEP_WIDTH, height: STEP_HEIGHT }}
+          className={`absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-md border-2 border-dashed text-xs font-medium transition-colors ${
+            rejection
+              ? "border-slate-200 bg-slate-50 text-slate-400"
+              : "border-blue-400 bg-blue-50 text-blue-600"
+          }`}
+          title={rejection ? MOVE_REJECTION_TEXT[rejection] : undefined}
+          onDragOver={(event) => {
+            if (rejection) return;
+            event.preventDefault();
+            event.dataTransfer.dropEffect = "move";
+          }}
+          onDrop={(event) => {
+            event.preventDefault();
+            if (rejection) return;
+            handlers?.moveStep(move);
+            setDraggingStep(undefined);
+          }}
+        >
+          {rejection
+            ? MOVE_REJECTION_TEXT[rejection]
+            : data.port === "next"
+              ? "Move here"
+              : `Move to ${data.port}`}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       <Handle type="target" position={Position.Top} style={hiddenHandle} />

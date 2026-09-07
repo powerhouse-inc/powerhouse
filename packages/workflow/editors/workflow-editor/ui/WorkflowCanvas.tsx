@@ -10,6 +10,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { apEdgeTypes } from "./ap-edge.js";
 import { attachableSteps, layoutWorkflow } from "./ap-layout.js";
+import { moveRejection } from "./step-drag.js";
 import { apNodeTypes, registerCanvasHandlers } from "./ap-nodes.js";
 import type { BlockPreset } from "./blocks.js";
 import {
@@ -72,6 +73,8 @@ export function WorkflowCanvas({
           config: preset.defaultConfig,
         }),
       attachableSteps: (fromId) => attachableSteps(model, fromId),
+      moveStep: (move) => callbacks.moveStep(move),
+      moveRejection: (move) => moveRejection(model, move),
       attachStep: (fromId, port, stepId) =>
         callbacks.addEdge({ from: fromId, to: stepId, port }),
       getBlockForm: designTime

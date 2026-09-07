@@ -119,6 +119,12 @@ export interface WorkflowEditorCallbacks {
   // Copies a step with its config and advanced settings, detached from the
   // graph so no port ends up with two edges.
   duplicateStep: (id: string) => void;
+  // Re-parents a step onto a port, keeping whatever follows it.
+  moveStep: (move: {
+    stepId: string;
+    toParentId: string;
+    port: string;
+  }) => void;
 }
 
 // Slugified step key derived from a label, suffixed until it is free.

@@ -116,6 +116,23 @@ export function useWorkflowModel(): {
           }),
         ),
       removeEdge: (id) => dispatch(actions.removeEdge({ id })),
+      moveStep: (move) => {
+        // Re-parent only: the step keeps its own outgoing edges, and the port
+        // it used to hang off simply becomes free again.
+        for (const edge of state.edges.filter(
+          (entry) => entry.to === move.stepId,
+        )) {
+          dispatch(actions.removeEdge({ id: edge.id }));
+        }
+        dispatch(
+          actions.addEdge({
+            id: generateId(),
+            from: move.toParentId,
+            to: move.stepId,
+            port: move.port,
+          }),
+        );
+      },
       setVariable: (input) =>
         dispatch(
           actions.setVariable({
