@@ -6,6 +6,7 @@ import {
   InMemoryKeyValueStore,
   UnsupportedContextMemberError,
 } from "../context/action.js";
+import { buildCheckConnectionContext } from "../context/check.js";
 import { DataUriFilesService } from "../context/files.js";
 import { normalizePropsValue } from "../context/normalize.js";
 import {
@@ -18,6 +19,8 @@ import { describeProperties } from "../descriptor.js";
 import { loadPieceFromDir, type LoadedPiece } from "../loader.js";
 import { getActions, getTriggers, type ApProperty } from "../types.js";
 import type {
+  CheckConnectionMessage,
+  CheckConnectionOutcome,
   ResolveOptionsMessage,
   RunMessage,
   SerializedPieceError,
@@ -201,10 +204,50 @@ async function handleTriggerHook(
   };
 }
 
+async function handleCheckConnection(
+  message: CheckConnectionMessage,
+): Promise<WorkerResponse> {
+  const { request } = message;
+  const { piece } = await loadCached(request.bundleDir);
+  const app = piece as {
+    checkConnection?: (context: unknown) => unknown;
+  };
+  if (typeof app.checkConnection !== "function") {
+    const outcome: CheckConnectionOutcome = { declared: false };
+    return {
+      id: message.id,
+      type: "result",
+      output: outcome,
+      touched: [],
+      tlsPoisoned: consumeTlsFlag(),
+    };
+  }
+  const { context, touched } = buildCheckConnectionContext({
+    auth: request.auth,
+  });
+  const result = await app.checkConnection(context);
+  const outcome: CheckConnectionOutcome = {
+    declared: true,
+    result: jsonSafe(result),
+  };
+  return {
+    id: message.id,
+    type: "result",
+    output: outcome,
+    touched: [...touched],
+    tlsPoisoned: consumeTlsFlag(),
+  };
+}
+
 function isWorkerMessage(value: unknown): value is WorkerRequestMessage {
   if (typeof value !== "object" || value === null) return false;
   const type = (value as { type?: unknown }).type;
-  return type === "run" || type === "resolve-options" || type === "trigger-hook";
+  return (
+    type === "run" ||
+    type === "resolve-options" ||
+    type === "trigger-hook" ||
+    type === "check-connection"
+  );
 }
 
 function dispatch(message: WorkerRequestMessage): Promise<WorkerResponse> {
@@ -215,6 +258,8 @@ function dispatch(message: WorkerRequestMessage): Promise<WorkerResponse> {
       return handleResolveOptions(message);
     case "trigger-hook":
       return handleTriggerHook(message);
+    case "check-connection":
+      return handleCheckConnection(message);
   }
 }
 

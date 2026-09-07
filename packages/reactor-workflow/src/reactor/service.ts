@@ -7,11 +7,12 @@ import {
   loadPieceFromDir,
   parseBlockType,
   PieceWorker,
+  PieceWorkerError,
+  PieceWorkerTimeoutError,
   runWorkflow,
   shapeAuthValue,
-  throwingStub,
-  type ApPiece,
   type BlockExecutor,
+  type CheckConnectionOutcome,
   type ConnectionAuthType,
   type ConnectorDescriptor,
   type SecretProvider,
@@ -92,6 +93,8 @@ export interface ConnectionCheckResult {
   accountLabel: string | null;
 }
 
+// Matches the piece worker's default action timeout; a hung check kills the
+// worker instead of hanging the mutation.
 const CHECK_TIMEOUT_MS = 30_000;
 
 const logger = childLogger(["workflow", "runtime"]);
@@ -196,24 +199,14 @@ function accountLabelFromCheckResult(result: unknown): string | undefined {
   return undefined;
 }
 
-async function withTimeout<T>(
-  operation: () => Promise<T>,
-  timeoutMs: number,
-): Promise<T> {
-  const signal = AbortSignal.timeout(timeoutMs);
-  const timedOut = new Promise<never>((_resolve, reject) => {
-    signal.addEventListener(
-      "abort",
-      () =>
-        reject(
-          new Error(
-            `Connection check timed out after ${Math.round(timeoutMs / 1000)}s`,
-          ),
-        ),
-      { once: true },
-    );
-  });
-  return Promise.race([operation(), timedOut]);
+// The user-visible detail of a failed check. A piece error contributes only
+// its message; its serialized properties may hold echoed credentials.
+function checkFailureDetail(error: unknown): string {
+  if (error instanceof PieceWorkerTimeoutError) {
+    return `Connection check timed out after ${Math.round(CHECK_TIMEOUT_MS / 1000)}s`;
+  }
+  if (error instanceof PieceWorkerError) return error.serialized.message;
+  return error instanceof Error ? error.message : String(error);
 }
 
 type TriggerRegistration = {
@@ -832,7 +825,7 @@ export class WorkflowRuntimeService {
     }
 
     const packageName = packageNameFromConnectorId(state.connectorId);
-    let piece: ApPiece;
+    let bundleDir: string;
     try {
       const version = await this.pieceVersion(packageName);
       const bundle = await ensurePieceBundle({
@@ -840,7 +833,7 @@ export class WorkflowRuntimeService {
         version,
         cacheDir: BUNDLE_CACHE_DIR,
       });
-      piece = (await loadPieceFromDir(bundle.dir)).piece;
+      bundleDir = bundle.dir;
     } catch (error) {
       return this.recordCheckResult(document, {
         ok: false,
@@ -868,52 +861,42 @@ export class WorkflowRuntimeService {
       });
     }
 
-    const app = piece as ApPiece & {
-      checkConnection?: (ctx: unknown) => Promise<unknown>;
-    };
-    if (typeof app.checkConnection !== "function") {
+    // Plaintext auth crosses only into the piece worker: checkConnection is
+    // untrusted piece code and must not run in the reactor process.
+    let outcome: CheckConnectionOutcome;
+    try {
+      this.designWorker ??= new PieceWorker();
+      const result = await this.designWorker.checkConnection(
+        { bundleDir, auth: shapedAuth },
+        { timeoutMs: CHECK_TIMEOUT_MS },
+      );
+      outcome = result.output as CheckConnectionOutcome;
+    } catch (error) {
+      return this.recordCheckResult(document, {
+        ok: false,
+        detail: checkFailureDetail(error),
+        accountLabel,
+      });
+    }
+
+    if (!outcome.declared) {
       return this.recordCheckResult(document, {
         ok: true,
         detail: "piece declares no connection check; credentials resolved",
         accountLabel,
       });
     }
-
-    // Minimal check context: shaped auth and empty props; documented members
-    // the runtime does not provide throw with their member path.
-    const checkContext: Record<string, unknown> = {
-      auth: shapedAuth,
-      propsValue: {},
-      logger,
-      store: throwingStub("store"),
-      files: throwingStub("files"),
-      server: throwingStub("server"),
-      events: throwingStub("events"),
-      flow: throwingStub("flow"),
-    };
-
-    let ok = true;
-    let detail: string | null = null;
-    let label = accountLabel;
-    try {
-      const checkResult = await withTimeout(
-        () => app.checkConnection!(checkContext),
-        CHECK_TIMEOUT_MS,
-      );
-      if (checkResult === false) {
-        ok = false;
-        detail = "Connection check failed";
-      } else {
-        label = accountLabelFromCheckResult(checkResult) ?? accountLabel;
-      }
-    } catch (error) {
-      ok = false;
-      detail = error instanceof Error ? error.message : String(error);
+    if (outcome.result === false) {
+      return this.recordCheckResult(document, {
+        ok: false,
+        detail: "Connection check failed",
+        accountLabel,
+      });
     }
     return this.recordCheckResult(document, {
-      ok,
-      detail,
-      accountLabel: label,
+      ok: true,
+      detail: null,
+      accountLabel: accountLabelFromCheckResult(outcome.result) ?? accountLabel,
     });
   }
 

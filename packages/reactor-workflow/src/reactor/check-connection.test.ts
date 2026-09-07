@@ -1,7 +1,11 @@
 // checkConnection over offline fixture pieces: local bundle cache in the
 // production layout, real PGlite-backed secret store, stubbed piece catalog.
 import { getDbClient, type BaseSubgraph } from "@powerhousedao/reactor-api";
-import { ensurePieceBundle } from "@powerhousedao/reactor-connectors";
+import {
+  ensurePieceBundle,
+  PieceWorkerTimeoutError,
+  type PieceWorker,
+} from "@powerhousedao/reactor-connectors";
 import { createRelationalDb } from "@powerhousedao/shared/processors";
 import type * as ReactorConnectors from "@powerhousedao/reactor-connectors";
 import type { Action, PHDocument } from "document-model";
@@ -52,6 +56,8 @@ const PIECES = {
   pass: { name: "@activepieces/piece-pass", version: "1.0.0" },
   fail: { name: "@activepieces/piece-fail", version: "1.0.0" },
   nocheck: { name: "@activepieces/piece-nocheck", version: "1.0.0" },
+  denied: { name: "@activepieces/piece-denied", version: "1.0.0" },
+  env: { name: "@activepieces/piece-env", version: "1.0.0" },
 } as const;
 
 const FIXTURE_BUNDLES: Record<keyof typeof PIECES, string> = {
@@ -88,6 +94,24 @@ module.exports = { app };
 const app = {
   displayName: "NoCheck Fixture",
   actions: {},
+};
+module.exports = { app };
+`,
+  denied: `
+const app = {
+  displayName: "Denied Fixture",
+  actions: {},
+  checkConnection: async () => false,
+};
+module.exports = { app };
+`,
+  env: `
+const app = {
+  displayName: "Env Fixture",
+  actions: {},
+  checkConnection: async () => ({
+    name: process.env.PH_SECRETS_MASTER_KEY ? "leaked" : "isolated",
+  }),
 };
 module.exports = { app };
 `,
@@ -283,6 +307,75 @@ describe("WorkflowRuntimeService.checkConnection", () => {
     expect(input.status).toBe("ERROR");
     expect(typeof input.checkedAt).toBe("string");
     expect(input.error).toBe("auth failed: bad credentials");
+  });
+
+  // The check must not see the reactor's own environment; a fixture that reads
+  // the master key would report "leaked" if it ran in this process.
+  it("runs the check outside the reactor process", async () => {
+    const document = makeDocument({
+      connectorId: `${PIECES.env.name}#env`,
+    });
+    get.mockResolvedValueOnce(document);
+    execute.mockClear();
+
+    const result = await workflowRuntime.checkConnection(document.header.id);
+
+    expect(result).toEqual({
+      ok: true,
+      detail: null,
+      accountLabel: "isolated",
+    });
+    expect(lastRecordInput().status).toBe("OK");
+  });
+
+  it("records ERROR when the check returns false", async () => {
+    const document = makeDocument({
+      connectorId: `${PIECES.denied.name}#denied`,
+    });
+    get.mockResolvedValueOnce(document);
+    execute.mockClear();
+
+    const result = await workflowRuntime.checkConnection(document.header.id);
+
+    expect(result).toEqual({
+      ok: false,
+      detail: "Connection check failed",
+      accountLabel: null,
+    });
+    expect(lastRecordInput()).toMatchObject({
+      status: "ERROR",
+      error: "Connection check failed",
+    });
+  });
+
+  // The worker's own timeout handling is covered in reactor-connectors; here
+  // only the mapping onto the mutation's wording, without waiting it out.
+  it("records ERROR when the worker times the check out", async () => {
+    const runtime = workflowRuntime as unknown as {
+      designWorker?: Pick<PieceWorker, "checkConnection">;
+    };
+    const previous = runtime.designWorker;
+    runtime.designWorker = {
+      checkConnection: () => Promise.reject(new PieceWorkerTimeoutError(30_000)),
+    };
+    const document = makeDocument();
+    get.mockResolvedValueOnce(document);
+    execute.mockClear();
+    try {
+      const result = await workflowRuntime.checkConnection(document.header.id);
+
+      expect(result).toEqual({
+        ok: false,
+        detail: "Connection check timed out after 30s",
+        accountLabel: null,
+      });
+      expect(lastRecordInput()).toMatchObject({
+        status: "ERROR",
+        error: "Connection check timed out after 30s",
+      });
+    } finally {
+      runtime.designWorker = previous;
+    }
   });
 
   it("reports resolved credentials when the piece declares no check", async () => {

@@ -7,12 +7,25 @@ import type {
   RecordedSchedule,
 } from "../context/trigger.js";
 import type {
+  CheckConnectionRequest,
   ResolveOptionsRequest,
   RunActionRequest,
   SerializedPieceError,
   TriggerHookRequest,
   WorkerResponse,
 } from "./protocol.js";
+
+type WorkerRequestType =
+  | "run"
+  | "resolve-options"
+  | "trigger-hook"
+  | "check-connection";
+
+type WorkerRequest =
+  | RunActionRequest
+  | ResolveOptionsRequest
+  | TriggerHookRequest
+  | CheckConnectionRequest;
 
 export class PieceWorkerError extends Error {
   readonly serialized: SerializedPieceError;
@@ -98,6 +111,15 @@ export class PieceWorker {
     return this.enqueue("resolve-options", request, options.timeoutMs);
   }
 
+  // A piece's app.checkConnection over resolved credentials; the output is a
+  // CheckConnectionOutcome.
+  checkConnection(
+    request: CheckConnectionRequest,
+    options: { timeoutMs?: number } = {},
+  ): Promise<PieceWorkerResult> {
+    return this.enqueue("check-connection", request, options.timeoutMs);
+  }
+
   // One trigger lifecycle hook; the caller owns storeState persistence.
   runTriggerHook(
     request: TriggerHookRequest,
@@ -107,8 +129,8 @@ export class PieceWorker {
   }
 
   private enqueue(
-    type: "run" | "resolve-options" | "trigger-hook",
-    request: RunActionRequest | ResolveOptionsRequest | TriggerHookRequest,
+    type: WorkerRequestType,
+    request: WorkerRequest,
     timeoutMs?: number,
   ): Promise<PieceWorkerResult> {
     const run = this.queue.then(() =>
@@ -140,8 +162,8 @@ export class PieceWorker {
   }
 
   private execute(
-    type: "run" | "resolve-options" | "trigger-hook",
-    request: RunActionRequest | ResolveOptionsRequest | TriggerHookRequest,
+    type: WorkerRequestType,
+    request: WorkerRequest,
     timeoutMs: number,
   ): Promise<PieceWorkerResult> {
     const child = this.spawn();

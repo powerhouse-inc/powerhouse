@@ -66,10 +66,32 @@ export interface TriggerHookMessage {
   request: TriggerHookRequest;
 }
 
+// A connection credential check. Auth crosses into the worker and stays
+// there: the piece code that reads it never runs in the host process.
+export interface CheckConnectionRequest {
+  bundleDir: string;
+  auth?: unknown;
+}
+
+export interface CheckConnectionMessage {
+  id: number;
+  type: "check-connection";
+  request: CheckConnectionRequest;
+}
+
+// `output` of a check-connection result.
+export interface CheckConnectionOutcome {
+  // False when the piece declares no app.checkConnection.
+  declared: boolean;
+  // Its return value: void | boolean | { name | username | email | sub }.
+  result?: unknown;
+}
+
 export type WorkerRequestMessage =
   | RunMessage
   | ResolveOptionsMessage
-  | TriggerHookMessage;
+  | TriggerHookMessage
+  | CheckConnectionMessage;
 
 // Piece errors cross the IPC boundary as data; classify on these fields.
 export interface SerializedPieceError {

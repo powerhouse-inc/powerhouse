@@ -4,6 +4,7 @@ export * from "./loader.js";
 export { throwingStub } from "./context/stubs.js";
 export * from "./descriptor.js";
 export * from "./context/action.js";
+export * from "./context/check.js";
 export * from "./context/files.js";
 export * from "./context/normalize.js";
 export * from "./context/props.js";
