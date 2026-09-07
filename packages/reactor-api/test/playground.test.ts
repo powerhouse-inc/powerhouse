@@ -1,3 +1,4 @@
+import vm from "node:vm";
 import { compressToEncodedURIComponent } from "lz-string";
 import { describe, expect, it } from "vitest";
 import {
@@ -71,8 +72,10 @@ describe("renderGraphqlPlayground", () => {
       variables,
     );
 
+    // The rendered script embeds the values as single-quoted literals (the
+    // query/variables content is transport-escaped, not template-quoted).
     expect(html).toContain(
-      `var defaultQuery = { query: \`${sampleQuery}\`, variables: \`${variables}\` };`,
+      `var defaultQuery = { query: '${sampleQuery}', variables: ${JSON.stringify(variables)} };`,
     );
     expect(html).toContain(
       `headers: ${JSON.stringify({ Authorization: "Bearer t" })}`,
@@ -82,7 +85,7 @@ describe("renderGraphqlPlayground", () => {
   it("keeps the string-form defaultQuery when no variables are given", () => {
     const html = renderGraphqlPlayground("/graphql", sampleQuery);
 
-    expect(html).toContain(`var defaultQuery = \`${sampleQuery}\`;`);
+    expect(html).toContain(`var defaultQuery = '${sampleQuery}';`);
     expect(html).not.toContain("var defaultQuery = {");
     expect(html).toContain("headers: {}");
   });
@@ -91,5 +94,94 @@ describe("renderGraphqlPlayground", () => {
     const html = renderGraphqlPlayground("/graphql");
 
     expect(html).toContain("var defaultQuery = undefined;");
+  });
+});
+
+/**
+ * Executes the page's inline <script> blocks the way a browser would: each
+ * block terminates at the FIRST `</script>` it contains, and blocks run in
+ * order. The host page's globals (GraphiQL, React, ReactDOM, localStorage,
+ * document) are stubbed on a fresh vm sandbox, so the script's top-level
+ * `var`s land on the sandbox's global and can be read back. A payload that
+ * breaks out of a string literal lands in its own script block and runs for
+ * real — assigning `globalThis.__pwned` is the tripwire.
+ */
+function executeInlineScripts(html: string) {
+  const sandbox: Record<string, unknown> = {
+    GraphiQL: { createFetcher: (cfg: unknown) => cfg },
+    GraphiQLPluginExplorer: { explorerPlugin: () => ({}) },
+    React: { createElement: (...a: unknown[]) => a },
+    ReactDOM: { createRoot: () => ({ render: () => {} }) },
+    localStorage: { getItem: () => null, setItem: () => {} },
+    document: { getElementById: () => ({}) },
+  };
+  vm.createContext(sandbox);
+  const blocks = [
+    ...html.matchAll(/<script(?![^>]*src=)[^>]*>([\s\S]*?)<\/script>/gi),
+  ];
+  for (const [, body] of blocks) {
+    try {
+      new vm.Script(body).runInContext(sandbox);
+    } catch {
+      // A browser reports a parse error for one <script> element and keeps
+      // running the next; mirror that so a breakout that also mangles its
+      // host block still reaches the injected block.
+    }
+  }
+  return sandbox;
+}
+
+describe("renderGraphqlPlayground script-injection safety", () => {
+  it("a query containing </script> cannot break into a new executable script block", () => {
+    const evil =
+      "query { a } </script><script>globalThis.__pwned = true</script>";
+    const html = renderGraphqlPlayground("/graphql", evil);
+
+    // The four CDN script tags plus the one inline block — the payload must
+    // not contribute any script element of its own.
+    expect((html.match(/<script/gi) ?? []).length).toBe(5);
+    const sandbox = executeInlineScripts(html);
+    expect(sandbox.__pwned).toBeUndefined();
+  });
+
+  it("keeps hostile content inert in the variables and headers channels", () => {
+    const variables =
+      '{"x":"</script><script>globalThis.__pwned = true</script>"}';
+    const headers = {
+      Authorization:
+        "Bearer </script><script>globalThis.__pwned = true</script>",
+    };
+    const html = renderGraphqlPlayground(
+      "/graphql",
+      "query { a }",
+      headers,
+      variables,
+    );
+
+    const sandbox = executeInlineScripts(html);
+    expect(sandbox.__pwned).toBeUndefined();
+  });
+
+  it("round-trips hostile bytes exactly and runs no injected code", () => {
+    // Backticks, template expressions, quotes, backslashes, newlines and a
+    // script terminator: everything a payload can carry through the
+    // lz-string/JSON pipeline.
+    const query =
+      "query { a } ` \n ' \\\\ ${globalThis.__pwned = true} </script>";
+    const variables = '{"v":"</script>`${1}"}';
+    const html = renderGraphqlPlayground(
+      "/graphql",
+      query,
+      { Authorization: "Bearer t" },
+      variables,
+    );
+
+    const sandbox = executeInlineScripts(html);
+    expect(sandbox.__pwned).toBeUndefined();
+    expect(sandbox.defaultQuery).toEqual({ query, variables });
+    expect(sandbox.fetcher).toEqual({
+      url: "/graphql",
+      headers: { Authorization: "Bearer t" },
+    });
   });
 });

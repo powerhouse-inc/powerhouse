@@ -59,6 +59,35 @@ const CDN_VERSIONS = {
   pluginExplorer: "4.0.0",
 };
 
+/**
+ * Escape a string for embedding as a single-quoted JS string literal inside
+ * an HTML `<script>` block. The payload reaches the browser through an
+ * attacker-controllable URL parameter, so the embedding must survive two
+ * parsers: HTML (a `</script>` inside the string would end the script
+ * element and start a new, attacker-authored one) and JS (backticks,
+ * `${...}` and quotes in the content would otherwise break out of the
+ * literal). Backslash, quote, CR and LF escapes keep the literal valid;
+ * every `<` becomes `\u003c`, which no HTML parser reads as a tag opener.
+ * The escapes resolve when the script parses, so the in-memory value is
+ * byte-identical to the input.
+ */
+function jsStringEscape(value: string): string {
+  return value
+    .replace(/\\/g, "\\\\")
+    .replace(/'/g, "\\'")
+    .replace(/\r/g, "\\r")
+    .replace(/\n/g, "\\n")
+    .replace(/</g, "\\u003c");
+}
+
+/**
+ * JSON is already a valid JS object/string literal; the only HTML-hostile
+ * byte left is `<` (e.g. `</script>` inside a string value).
+ */
+function jsJsonEscape(json: string): string {
+  return json.replace(/</g, "\\u003c");
+}
+
 export function renderGraphqlPlayground(
   url: string,
   query?: string,
@@ -104,14 +133,14 @@ export function renderGraphqlPlayground(
         <div id="graphiql">Loading...</div>
         <script>
             var fetcher = GraphiQL.createFetcher({
-                url: '${url}',
-                headers: ${JSON.stringify(headers)}
+                url: '${jsStringEscape(url)}',
+                headers: ${jsJsonEscape(JSON.stringify(headers))}
             });
             var defaultQuery = ${
               query
                 ? variables
-                  ? `{ query: \`${query}\`, variables: \`${variables}\` }`
-                  : `\`${query}\``
+                  ? `{ query: '${jsStringEscape(query)}', variables: ${jsJsonEscape(JSON.stringify(variables))} }`
+                  : `'${jsStringEscape(query)}'`
                 : "undefined"
             };
 
