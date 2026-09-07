@@ -236,7 +236,11 @@ export function getCanvasHandlers(): ApCanvasHandlers | undefined {
 }
 
 export function ApAppendNode(props: NodeProps) {
-  const data = props.data as { parentId: string; port: string };
+  const data = props.data as {
+    parentId: string;
+    port: string;
+    card?: boolean;
+  };
   const handlers = getCanvasHandlers();
   const attachSteps = handlers?.attachableSteps(data.parentId);
   const dragging = useDraggingStep();
@@ -252,7 +256,11 @@ export function ApAppendNode(props: NodeProps) {
     return (
       <div
         className="relative"
-        style={{ width: ADD_BUTTON_SIZE, height: ADD_BUTTON_SIZE }}
+        style={
+          data.card
+            ? { width: STEP_WIDTH, height: STEP_HEIGHT }
+            : { width: ADD_BUTTON_SIZE, height: ADD_BUTTON_SIZE }
+        }
       >
         <Handle type="target" position={Position.Top} style={hiddenHandle} />
         <div
@@ -281,6 +289,36 @@ export function ApAppendNode(props: NodeProps) {
               ? "Move here"
               : `Move to ${data.port}`}
         </div>
+      </div>
+    );
+  }
+
+  if (data.card) {
+    return (
+      <div
+        style={{ width: STEP_WIDTH, height: STEP_HEIGHT }}
+        className="relative flex items-center justify-center rounded-md border border-dashed border-slate-300 bg-slate-50/60"
+      >
+        <Handle type="target" position={Position.Top} style={hiddenHandle} />
+        <span
+          className={`absolute left-3 top-3 rounded px-1.5 text-[10px] font-semibold ${
+            PORT_LABEL_CLASSES[data.port] ?? "bg-slate-100 text-slate-500"
+          }`}
+        >
+          {data.port}
+        </span>
+        <AddButton
+          title={`Add step (${data.port})`}
+          presets={STEP_PRESETS}
+          showPieces
+          attachSteps={attachSteps}
+          onAttach={(stepId) =>
+            getCanvasHandlers()?.attachStep(data.parentId, data.port, stepId)
+          }
+          onPick={(preset) =>
+            getCanvasHandlers()?.appendStep(data.parentId, data.port, preset)
+          }
+        />
       </div>
     );
   }

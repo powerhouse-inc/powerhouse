@@ -3,7 +3,9 @@ import {
   ADD_BUTTON_SIZE,
   attachableSteps,
   layoutWorkflow,
+  STEP_HEIGHT,
   STEP_WIDTH,
+  VSPACE,
 } from "./ap-layout.js";
 import type { StepModel, WorkflowModel } from "./model.js";
 
@@ -116,57 +118,49 @@ describe("layoutWorkflow append buttons", () => {
     // label and insert button, so the free port must not land there.
     const centre = branch.position.x + STEP_WIDTH / 2;
     expect(free).toBeDefined();
-    expect(Math.abs(free!.position.x - centre)).toBeGreaterThan(STEP_WIDTH / 4);
-  });
-
-  it("spreads both free branch ports either side of centre", () => {
-    const model = branchWith([]);
-    const branch = layoutWorkflow(model).nodes.find((n) => n.id === "br")!;
-    const centre = branch.position.x + STEP_WIDTH / 2;
-    const left = appendFor(model, "true")!.position.x;
-    const right = appendFor(model, "false")!.position.x;
-    expect(left).toBeLessThan(centre);
-    expect(right).toBeGreaterThan(centre);
-  });
-
-  it("puts a plain step's button under its centre", () => {
-    const plain = model([["t", "a"]]);
-    const node = layoutWorkflow(plain).nodes.find((n) => n.id === "a")!;
-    const button = layoutWorkflow(plain).nodes.find(
-      (n) => n.id === "__append:a:next",
-    )!;
-    expect(button.position.x + ADD_BUTTON_SIZE / 2).toBeCloseTo(
-      node.position.x + STEP_WIDTH / 2,
-    );
+    expect(
+      Math.abs(free!.position.x + STEP_WIDTH / 2 - centre),
+    ).toBeGreaterThan(STEP_WIDTH / 4);
   });
 });
 
-describe("layoutWorkflow branch columns", () => {
-  it("keeps a wired port in its own column, not under the card", () => {
+describe("layoutWorkflow branch placeholders", () => {
+  const node = (
+    nodes: { id: string; position: { x: number; y: number } }[],
+    id: string,
+  ) => nodes.find((n) => n.id === id)!;
+
+  it("puts an unwired port's placeholder where its step would go", () => {
     const model = branchWith(["true"]);
     const nodes = layoutWorkflow(model).nodes;
-    const branch = nodes.find((n) => n.id === "br")!;
-    const child = nodes.find((n) => n.id === "a")!;
-    const centre = branch.position.x + STEP_WIDTH / 2;
-    // The child sits left of centre, leaving the false column to its right.
-    expect(child.position.x + STEP_WIDTH / 2).toBeLessThan(centre);
-    expect(
-      nodes.find((n) => n.id === "__append:br:false")!.position.x,
-    ).toBeGreaterThan(centre);
+    const child = node(nodes, "a");
+    const free = node(nodes, "__append:br:false");
+    // Same row as the wired branch's step, in its own column beside it.
+    expect(free.position.y).toBe(child.position.y);
+    expect(free.position.x).toBeGreaterThan(child.position.x + STEP_WIDTH);
   });
 
-  it("gives an unwired branch a column each side", () => {
+  it("gives an unwired branch a column each side of the card", () => {
     const nodes = layoutWorkflow(branchWith([])).nodes;
-    const branch = nodes.find((n) => n.id === "br")!;
-    const centre = branch.position.x + STEP_WIDTH / 2;
-    const buttonCentre = (port: string) =>
-      nodes.find((n) => n.id === `__append:br:${port}`)!.position.x +
-      ADD_BUTTON_SIZE / 2;
-    const left = buttonCentre("true");
-    const right = buttonCentre("false");
+    const centre = node(nodes, "br").position.x + STEP_WIDTH / 2;
+    const left = node(nodes, "__append:br:true").position.x + STEP_WIDTH / 2;
+    const right = node(nodes, "__append:br:false").position.x + STEP_WIDTH / 2;
     expect(left).toBeLessThan(centre);
     expect(right).toBeGreaterThan(centre);
-    // Even spread either side of the card.
     expect(centre - left).toBeCloseTo(right - centre, 5);
+  });
+
+  it("keeps a plain step's button on the mid-line, not in a column", () => {
+    const plain = model([["t", "a"]]);
+    const nodes = layoutWorkflow(plain).nodes;
+    const step = node(nodes, "a");
+    const button = node(nodes, "__append:a:next");
+    expect(button.position.x + ADD_BUTTON_SIZE / 2).toBeCloseTo(
+      step.position.x + STEP_WIDTH / 2,
+    );
+    // Halfway to the next row, where the insert affordance lives.
+    expect(button.position.y).toBeLessThan(
+      step.position.y + STEP_HEIGHT + VSPACE,
+    );
   });
 });

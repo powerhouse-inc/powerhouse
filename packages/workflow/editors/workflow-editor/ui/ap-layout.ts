@@ -55,8 +55,6 @@ export const STEP_HEIGHT = 60;
 export const VSPACE = 60;
 export const HSPACE = 80;
 export const ADD_BUTTON_SIZE = 20;
-// Width a branch reserves for a port that has no step yet.
-const EMPTY_SLOT_WIDTH = STEP_WIDTH / 2;
 export const BIG_ADD_BUTTON_SIZE = 50;
 
 const PORT_ORDER = ["next", "true", "false", "error"];
@@ -107,23 +105,22 @@ export function layoutWorkflow(model: WorkflowModel): ApLayout {
   const branchPorts = (id: string): string[] =>
     stepById.get(id)?.blockType === "core#branch" ? ["true", "false"] : [];
 
-  // A branch keeps a column per port whether or not it is wired, so a lone
-  // wired port does not sit centred under the card with its sibling adrift.
+  // An unwired branch port still occupies a column: it gets a placeholder card
+  // where its step would go, so both branches read as branches.
   const outletsOf = (
     id: string,
-    taken: (target: string) => boolean,
+    used: (target: string) => boolean,
   ): { port: string; edge?: EdgeModel }[] => {
-    const edges = (outgoing.get(id) ?? []).filter((edge) => !taken(edge.to));
+    const edges = (outgoing.get(id) ?? []).filter((edge) => !used(edge.to));
     const ports = branchPorts(id);
-    if (ports.length === 0) return edges.map((edge) => ({ port: edge.port, edge }));
-    const seen = new Set(edges.map((edge) => edge.port));
-    const outlets = [
+    if (ports.length === 0) {
+      return edges.map((edge) => ({ port: edge.port, edge }));
+    }
+    const wired = new Set(edges.map((edge) => edge.port));
+    return [
       ...edges.map((edge) => ({ port: edge.port, edge })),
-      ...ports
-        .filter((port) => !seen.has(port))
-        .map((port) => ({ port, edge: undefined })),
-    ];
-    return outlets.sort((a, b) => portRank(a.port) - portRank(b.port));
+      ...ports.filter((port) => !wired.has(port)).map((port) => ({ port })),
+    ].sort((a, b) => portRank(a.port) - portRank(b.port));
   };
 
   const subtreeWidth = (id: string, visited: Set<string>): number => {
@@ -133,14 +130,14 @@ export function layoutWorkflow(model: WorkflowModel): ApLayout {
     if (outlets.length === 0) return STEP_WIDTH;
     const total = outlets
       .map((outlet) =>
-        outlet.edge ? subtreeWidth(outlet.edge.to, visited) : EMPTY_SLOT_WIDTH,
+        outlet.edge ? subtreeWidth(outlet.edge.to, visited) : STEP_WIDTH,
       )
       .reduce((sum, width) => sum + width, 0);
     return Math.max(STEP_WIDTH, total + (outlets.length - 1) * HSPACE);
   };
 
-  // Where an unwired port's append button goes, keyed "stepId:port".
-  const appendSlots = new Map<string, number>();
+  // Centre of the column reserved for an unwired port, keyed "stepId:port".
+  const placeholders = new Map<string, { x: number; y: number }>();
 
   const place = (id: string, centerX: number, y: number) => {
     if (placed.has(id)) return;
@@ -159,23 +156,21 @@ export function layoutWorkflow(model: WorkflowModel): ApLayout {
 
     const outlets = outletsOf(id, (target) => placed.has(target));
     const widths = outlets.map((outlet) =>
-      outlet.edge
-        ? subtreeWidth(outlet.edge.to, new Set(placed))
-        : EMPTY_SLOT_WIDTH,
+      outlet.edge ? subtreeWidth(outlet.edge.to, new Set(placed)) : STEP_WIDTH,
     );
     const total =
       widths.reduce((sum, width) => sum + width, 0) +
       Math.max(outlets.length - 1, 0) * HSPACE;
+    const childY = y + STEP_HEIGHT + VSPACE;
     let cursor = centerX - total / 2;
     outlets.forEach((outlet, index) => {
-      const width = widths[index];
-      const slotCenter = cursor + width / 2;
+      const slotCenter = cursor + widths[index] / 2;
       if (outlet.edge) {
-        place(outlet.edge.to, slotCenter, y + STEP_HEIGHT + VSPACE);
+        place(outlet.edge.to, slotCenter, childY);
       } else {
-        appendSlots.set(`${id}:${outlet.port}`, slotCenter);
+        placeholders.set(`${id}:${outlet.port}`, { x: slotCenter, y: childY });
       }
-      cursor += width + HSPACE;
+      cursor += widths[index] + HSPACE;
     });
   };
 
@@ -220,27 +215,23 @@ export function layoutWorkflow(model: WorkflowModel): ApLayout {
 
   for (const node of [...nodes]) {
     if (node.type !== "apStep") continue;
-    const candidates = candidatePorts(node.id);
     appendPorts(node.id).forEach((port) => {
-      // Slot by the port's place among all of them, not among the free ones:
-      // a lone free port would otherwise sit on the taken port's edge, where
-      // the edge already draws its label and insert button.
-      const slot = appendSlots.get(`${node.id}:${port}`);
-      const index = candidates.indexOf(port);
-      const total = candidates.length;
-      const offset =
-        (index - (total - 1) / 2) * (STEP_WIDTH / 2 + HSPACE / 2) * 1.2;
-      const centerX =
-        slot ?? node.position.x + STEP_WIDTH / 2 + offset;
+      const slot = placeholders.get(`${node.id}:${port}`);
       const buttonId = `__append:${node.id}:${port}`;
       nodes.push({
         id: buttonId,
         type: "apAppend",
-        position: {
-          x: centerX - ADD_BUTTON_SIZE / 2,
-          y: node.position.y + STEP_HEIGHT + VSPACE / 2 - ADD_BUTTON_SIZE / 2,
-        },
-        data: { parentId: node.id, port },
+        position: slot
+          ? { x: slot.x - STEP_WIDTH / 2, y: slot.y }
+          : {
+              x: node.position.x + STEP_WIDTH / 2 - ADD_BUTTON_SIZE / 2,
+              y:
+                node.position.y +
+                STEP_HEIGHT +
+                VSPACE / 2 -
+                ADD_BUTTON_SIZE / 2,
+            },
+        data: { parentId: node.id, port, card: Boolean(slot) },
         draggable: false,
         selectable: false,
       });
