@@ -393,7 +393,7 @@ export async function buildOperationSignature(
   context: ActionSignatureContext,
   signMethod: ActionSigningHandler,
 ): Promise<Signature> {
-  const params = buildOperationSignatureParams(context);
+  const params = await buildOperationSignatureParams(context);
   const message = buildOperationSignatureMessage(params);
   const signature = await signMethod(message);
   return [...params, `0x${ab2hex(signature)}`];
@@ -977,6 +977,15 @@ export type ActionContext = {
 
   /** A nonce, to cover specific signing attacks and to prevent replay attacks from no-ops. */
   nonce?: string;
+
+  /**
+   * The id of the document the action was signed for. A signer that knows it
+   * folds it into the action hash, binding the signature to that document so
+   * it cannot be replayed onto another (#2894). Signing-side metadata only:
+   * the action's wire projection does not carry it, and the verifier uses the
+   * document it is checking against rather than this value.
+   */
+  documentId?: string;
 
   /** The signer of the action. */
   signer?: ActionSigner;

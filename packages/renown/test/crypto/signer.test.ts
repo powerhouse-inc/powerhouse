@@ -435,6 +435,93 @@ describe("RenownCryptoSigner", () => {
         ),
       ).resolves.toBe(false);
     });
+
+    it("binds a signature to the document it was signed for", async () => {
+      const action = {
+        ...createTestAction(),
+        context: { documentId: TEST_DOC_ID },
+      };
+      const signature = await signer.signAction(action);
+      const operation = createOperationWithSignature(
+        action,
+        signature,
+        signer.app.key,
+      );
+
+      await expect(
+        verifier(operation, signer.app.key, { documentId: TEST_DOC_ID }),
+      ).resolves.toBe(true);
+    });
+
+    it("rejects a document-bound signature replayed onto a different document", async () => {
+      const action = {
+        ...createTestAction(),
+        context: { documentId: TEST_DOC_ID },
+      };
+      const signature = await signer.signAction(action);
+      const operation = createOperationWithSignature(
+        action,
+        signature,
+        signer.app.key,
+      );
+
+      // The signature's hash embeds the document it was signed for, so it
+      // must not verify in another document, even with the same action
+      // content (#2894).
+      await expect(
+        verifier(operation, signer.app.key, { documentId: "other-doc" }),
+      ).resolves.toBe(false);
+    });
+
+    it("rejects a document-bound signature when the verifier has no document", async () => {
+      const action = {
+        ...createTestAction(),
+        context: { documentId: TEST_DOC_ID },
+      };
+      const signature = await signer.signAction(action);
+      const operation = createOperationWithSignature(
+        action,
+        signature,
+        signer.app.key,
+      );
+
+      await expect(verifier(operation, signer.app.key)).resolves.toBe(false);
+    });
+
+    it("still verifies a legacy, document-agnostic signature in a document context", async () => {
+      // Migration: signatures made before the preimage included the document
+      // id - or by a signer that does not know it - keep verifying (#2894).
+      const action = createTestAction();
+      const signature = await signer.signAction(action);
+      const operation = createOperationWithSignature(
+        action,
+        signature,
+        signer.app.key,
+      );
+
+      await expect(
+        verifier(operation, signer.app.key, { documentId: TEST_DOC_ID }),
+      ).resolves.toBe(true);
+    });
+
+    it("treats an operation without an action as unsigned instead of throwing", async () => {
+      // A runtime payload can be missing its action even though the type
+      // says otherwise; the handler must fail closed, not throw (#2894).
+      const signature = await signer.signAction(createTestAction());
+      const broken = {
+        ...createOperationWithSignature(
+          createTestAction(),
+          signature,
+          signer.app.key,
+        ),
+        action: undefined,
+      } as unknown as Operation;
+
+      await expect(verifier(broken, signer.app.key)).resolves.toBe(true);
+      await expect(
+        createSignatureVerifier(true)(broken, signer.app.key),
+      ).resolves.toBe(false);
+    });
   });
 });
 

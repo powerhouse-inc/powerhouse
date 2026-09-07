@@ -63,16 +63,25 @@ export function getUnixTimestamp(date: Date | string): string {
   return (new Date(date).getTime() / 1000).toFixed(0);
 }
 
-export function buildOperationSignatureParams({
+/**
+ * The parameters a shared action signature covers.
+ *
+ * The hash field is the standard action hash: SHA-256 over the document id,
+ * the action's scope, type and input, so a signature is bound to the
+ * document it was made for (#2894). SHA-1 was the historical hash here; it is
+ * no longer produced, but remains verifiable through
+ * {@link computeActionHashCandidates}.
+ */
+export async function buildOperationSignatureParams({
   documentId,
   signer,
   action,
   previousStateHash,
-}: ActionSignatureContext): [string, string, string, string] {
+}: ActionSignatureContext): Promise<[string, string, string, string]> {
   return [
     /*getUnixTimestamp(timestamp)*/ getUnixTimestamp(new Date()),
     signer.app.key,
-    hashActionContentSha1(documentId, action),
+    await hashActionContentSha256(documentId, action),
     previousStateHash,
   ];
 }
@@ -102,9 +111,16 @@ async function sha256Base64(data: string): Promise<string> {
 }
 
 /**
- * The preimage an ECDSA-P-256 action signature covers: the action's scope, type
- * and input, SHA-256 hashed. Shared by the signer and the verifier so the two
- * can never silently diverge again (#2894).
+ * The preimage an ECDSA-P-256 action signature covers: the document id, the
+ * action's scope, type and input, SHA-256 hashed. Shared by the signer and
+ * the verifier so the two can never silently diverge again (#2894).
+ *
+ * The document id leads the preimage, matching the shared scheme, and binds
+ * the signature to the document it was made for: replaying it onto another
+ * document changes the preimage and the signature stops verifying. When no
+ * document id is known at signing time it is empty, which leaves the
+ * preimage in the form earlier code signed, so those signatures still verify
+ * through the candidates (#2894).
  *
  * The input serializes canonically (sorted keys) rather than with
  * `JSON.stringify`: operations pass through storage round-trips that
@@ -115,10 +131,13 @@ async function sha256Base64(data: string): Promise<string> {
  * stable across those round-trips.
  */
 export async function hashActionContentSha256(
+  documentId: string,
   action: ActionHashPreimage,
 ): Promise<string> {
   return sha256Base64(
-    [action.scope, action.type, stringifyJson(action.input)].join(""),
+    [documentId, action.scope, action.type, stringifyJson(action.input)].join(
+      "",
+    ),
   );
 }
 
@@ -144,25 +163,26 @@ export function hashActionContentSha1(
  * matches none of them, rather than trusting the value echoed back from the
  * signature tuple itself (#2894).
  *
- * The insertion-order JSON form is the last-resort candidate: it matches
- * signatures made before the preimage was canonicalized only while the
- * input's text has never been re-serialized, which is all a historical
- * signature can still verify with.
+ * The candidates, newest first: the standard hash, the document id included
+ * when the verifier knows it; the same hash without a document id, the form
+ * produced before document binding and still produced when a signer does not
+ * know the document; the insertion-order JSON form, matching signatures made
+ * before the preimage was canonicalized; and the legacy shared scheme, SHA-1
+ * over document id, scope, type and input.
  */
 export async function computeActionHashCandidates(
   documentId: string,
   action: ActionHashPreimage,
 ): Promise<string[]> {
   const candidates = [
-    await hashActionContentSha256(action),
+    await hashActionContentSha256(documentId, action),
+    await hashActionContentSha256("", action),
     await sha256Base64(
       [action.scope, action.type, JSON.stringify(action.input)].join(""),
     ),
+    ...(documentId ? [hashActionContentSha1(documentId, action)] : []),
   ];
-  if (documentId) {
-    candidates.push(hashActionContentSha1(documentId, action));
-  }
-  return candidates;
+  return [...new Set(candidates)];
 }
 
 export function ab2hex(ab: ArrayBuffer | ArrayBufferView): string {

@@ -110,7 +110,7 @@ describe.each(testFsBackends)(
 
     it("a signing-time action hash still matches after the jsonb round-trip", async () => {
       const action = createRoundTripAction();
-      const signingHash = await hashActionContentSha256(action);
+      const signingHash = await hashActionContentSha256(DOCUMENT_ID, action);
 
       const stored = await storeAndReadBack(store, action);
 
@@ -131,7 +131,7 @@ describe.each(testFsBackends)(
           name: "tampered",
         },
       };
-      const tamperedHash = await hashActionContentSha256(tampered);
+      const tamperedHash = await hashActionContentSha256(DOCUMENT_ID, tampered);
 
       const candidates = await computeActionHashCandidates(DOCUMENT_ID, stored);
       expect(candidates).not.toContain(tamperedHash);

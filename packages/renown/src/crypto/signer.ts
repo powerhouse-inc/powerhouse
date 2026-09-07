@@ -119,7 +119,10 @@ export class RenownCryptoSigner implements ISigner {
   }
 
   private async hashAction(action: Action): Promise<string> {
-    return hashActionContentSha256(action);
+    // The signer binds the signature to the document the action was stamped
+    // for, when it knows it (#2894); a signer without a document id signs the
+    // document-agnostic form, which the verifier still accepts.
+    return hashActionContentSha256(action.context?.documentId ?? "", action);
   }
 
   private buildSignatureMessage(
@@ -152,11 +155,15 @@ export function createSignatureVerifier(
     publicKey: string,
     context?: SignatureVerificationContext,
   ): Promise<boolean> => {
-    const signer = operation.action.context?.signer;
-    if (!signer || !publicKey) {
+    // A runtime payload can be missing its action even though the type says
+    // otherwise. Such an operation carries no signer, so it is treated as
+    // unsigned rather than throwing (#2894).
+    const action: Action | undefined = operation.action;
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- `action` is required by the type but can be absent at runtime
+    if (!action?.context?.signer || !publicKey) {
       return !requireSignature;
     }
-
+    const signer = action.context.signer;
     const signatures = signer.signatures;
     if (signatures.length === 0) {
       return false;
@@ -170,13 +177,14 @@ export function createSignatureVerifier(
     }
 
     // Bind the signature to the action: recompute the action hash from the
-    // operation being verified and refuse it if the hash the signature claims
+    // action being verified and refuse it if the hash the signature claims
     // matches none of the preimages the action actually carries. A signature
-    // must describe the action and document it is attached to, not merely be
-    // a valid signature over itself (#2894).
+    // must describe the action - and, where the verifier knows it, the
+    // document - it is attached to, not merely be a valid signature over
+    // itself (#2894).
     const candidates = await computeActionHashCandidates(
       context?.documentId ?? "",
-      operation.action,
+      action,
     );
     if (!candidates.includes(hash)) {
       return false;
