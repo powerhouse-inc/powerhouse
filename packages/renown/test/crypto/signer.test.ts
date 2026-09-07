@@ -1,5 +1,6 @@
 import type { Action, Signature } from "@powerhousedao/shared/document-model";
 import {
+  ab2hex,
   deriveOperationId,
   type Operation,
 } from "@powerhousedao/shared/document-model";
@@ -19,17 +20,50 @@ const TEST_DOC_ID = "test-doc-id";
 const TEST_BRANCH = "main";
 const TEST_SCOPE = "global";
 
-function createTestAction(options?: { prevOpHash?: string }): Action {
+function createTestAction(options?: {
+  prevOpHash?: string;
+  input?: unknown;
+}): Action {
   return {
     id: "action-1",
     type: "TEST_ACTION",
     timestampUtcMs: new Date().toISOString(),
-    input: { foo: "bar" },
+    input: options?.input ?? { foo: "bar" },
     scope: "global",
     context: options?.prevOpHash
       ? { prevOpHash: options.prevOpHash }
       : undefined,
   };
+}
+
+/**
+ * Rebuilds a value with object keys in reverse order, recursively. Stands in
+ * for a storage round-trip that re-serializes the action without preserving
+ * key order (PGlite's JSONB reorders keys): key order is not part of the
+ * action's content, so a binding must not depend on it.
+ */
+function reverseKeyOrder(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(reverseKeyOrder);
+  }
+  if (value !== null && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    const reversed: Record<string, unknown> = {};
+    for (const key of Object.keys(record).reverse()) {
+      reversed[key] = reverseKeyOrder(record[key]);
+    }
+    return reversed;
+  }
+  return value;
+}
+
+/** SHA-256 of a preimage string, base64-encoded (Web Crypto, test-only). */
+async function hashPreimageBase64(preimage: string): Promise<string> {
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(preimage),
+  );
+  return btoa(String.fromCharCode(...new Uint8Array(digest)));
 }
 
 function createOperationWithSignature(
@@ -322,6 +356,84 @@ describe("RenownCryptoSigner", () => {
       await expect(verifier(replayedOp, signer.app.key, context)).resolves.toBe(
         false,
       );
+    });
+
+    it("verifies a signature whose action came back from a key-reordering store", async () => {
+      const input = { z: 1, a: 2, m: { q: 1, b: 2 } };
+      const action = createTestAction({ input });
+      const signature = await signer.signAction(action);
+
+      // The action round-tripped through storage and its keys came back in
+      // a different order. The binding must follow the content, not the key
+      // order (#2894).
+      const stored: Action = {
+        ...action,
+        input: reverseKeyOrder(input),
+      };
+
+      await expect(
+        verifier(
+          createOperationWithSignature(stored, signature, signer.app.key),
+          signer.app.key,
+        ),
+      ).resolves.toBe(true);
+    });
+
+    it("verifies a pre-canonicalization signature unchanged, and rejects it after a reordering round-trip", async () => {
+      const action = createTestAction({ input: { z: 1, a: 2 } });
+
+      // A signature made before the preimage was canonicalized hashed the
+      // input's insertion-order JSON. Rebuild that message and sign it the
+      // way the old signer did.
+      const legacyHash = await hashPreimageBase64(
+        [action.scope, action.type, JSON.stringify(action.input)].join(""),
+      );
+      const timestamp = "1700000000";
+      const message = [timestamp, signer.app.key, legacyHash, ""].join("");
+      const signed = await signer.sign(
+        new TextEncoder().encode(
+          "\x19Signed Operation:\n" + message.length + message,
+        ),
+      );
+      const signature: Signature = [
+        timestamp,
+        signer.app.key,
+        legacyHash,
+        "",
+        `0x${ab2hex(signed)}`,
+      ];
+
+      // Unchanged text: the insertion-order candidate matches.
+      await expect(
+        verifier(
+          createOperationWithSignature(action, signature, signer.app.key),
+          signer.app.key,
+        ),
+      ).resolves.toBe(true);
+
+      // Reordered storage: the text the signature was made over is gone, so
+      // a pre-canonicalization signature cannot be recovered after a
+      // key-reordering round-trip. The verifier says no deterministically
+      // rather than trusting the hash the signature claims (#2894).
+      const stored: Action = {
+        ...action,
+        input: reverseKeyOrder(action.input),
+      };
+      await expect(
+        verifier(
+          createOperationWithSignature(stored, signature, signer.app.key),
+          signer.app.key,
+        ),
+      ).resolves.toBe(false);
+
+      // Different content: no candidate matches.
+      const tampered: Action = { ...action, input: { z: 99, a: 2 } };
+      await expect(
+        verifier(
+          createOperationWithSignature(tampered, signature, signer.app.key),
+          signer.app.key,
+        ),
+      ).resolves.toBe(false);
     });
   });
 });
