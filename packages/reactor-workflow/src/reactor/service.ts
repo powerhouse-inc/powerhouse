@@ -2,9 +2,7 @@
 // document-event processor; moves to a dedicated runtime package later.
 import type { BaseSubgraph } from "@powerhousedao/reactor-api";
 import {
-  buildDescriptor,
   ensurePieceBundle,
-  loadPieceFromDir,
   parseBlockType,
   PieceWorker,
   PieceWorkerError,
@@ -96,6 +94,9 @@ export interface ConnectionCheckResult {
 // Matches the piece worker's default action timeout; a hung check kills the
 // worker instead of hanging the mutation.
 const CHECK_TIMEOUT_MS = 30_000;
+// Same convention for the design-time descriptor build; a bundle that hangs
+// on import kills the worker instead of the request.
+const DESCRIBE_TIMEOUT_MS = 30_000;
 
 const logger = childLogger(["workflow", "runtime"]);
 
@@ -199,14 +200,20 @@ function accountLabelFromCheckResult(result: unknown): string | undefined {
   return undefined;
 }
 
-// The user-visible detail of a failed check. A piece error contributes only
-// its message; its serialized properties may hold echoed credentials.
-function checkFailureDetail(error: unknown): string {
-  if (error instanceof PieceWorkerTimeoutError) {
-    return `Connection check timed out after ${Math.round(CHECK_TIMEOUT_MS / 1000)}s`;
-  }
+// The user-visible detail of a failed worker request. A piece error
+// contributes only its message; its serialized properties may hold echoed
+// credentials.
+function pieceFailureDetail(error: unknown, timeoutDetail: string): string {
+  if (error instanceof PieceWorkerTimeoutError) return timeoutDetail;
   if (error instanceof PieceWorkerError) return error.serialized.message;
   return error instanceof Error ? error.message : String(error);
+}
+
+function checkFailureDetail(error: unknown): string {
+  return pieceFailureDetail(
+    error,
+    `Connection check timed out after ${Math.round(CHECK_TIMEOUT_MS / 1000)}s`,
+  );
 }
 
 type TriggerRegistration = {
@@ -752,8 +759,25 @@ export class WorkflowRuntimeService {
         version,
         cacheDir: BUNDLE_CACHE_DIR,
       });
-      const { piece } = await loadPieceFromDir(bundle.dir);
-      descriptor = buildDescriptor(piece, { packageName, version });
+      // Loading the bundle runs the piece module's top-level code, so the
+      // descriptor is built in the worker, never in the reactor process.
+      this.designWorker ??= new PieceWorker();
+      let output: unknown;
+      try {
+        const result = await this.designWorker.describePiece(
+          { bundleDir: bundle.dir, packageName, version },
+          { timeoutMs: DESCRIBE_TIMEOUT_MS },
+        );
+        output = result.output;
+      } catch (error) {
+        throw new Error(
+          pieceFailureDetail(
+            error,
+            `Loading piece "${packageName}" timed out after ${Math.round(DESCRIBE_TIMEOUT_MS / 1000)}s`,
+          ),
+        );
+      }
+      descriptor = output as ConnectorDescriptor;
       this.descriptors.set(cacheKey, descriptor);
     }
     return descriptor;

@@ -87,11 +87,28 @@ export interface CheckConnectionOutcome {
   result?: unknown;
 }
 
+// Design-time descriptor of a piece: its actions, triggers and auth shape.
+// Building one requires the piece module, whose top-level code runs on load,
+// so it is built in the worker and only the plain descriptor crosses back.
+export interface DescribePieceRequest {
+  bundleDir: string;
+  // Carried through into the descriptor's `source` and its resolver ids.
+  packageName: string;
+  version: string;
+}
+
+export interface DescribePieceMessage {
+  id: number;
+  type: "describe";
+  request: DescribePieceRequest;
+}
+
 export type WorkerRequestMessage =
   | RunMessage
   | ResolveOptionsMessage
   | TriggerHookMessage
-  | CheckConnectionMessage;
+  | CheckConnectionMessage
+  | DescribePieceMessage;
 
 // Piece errors cross the IPC boundary as data; classify on these fields.
 export interface SerializedPieceError {

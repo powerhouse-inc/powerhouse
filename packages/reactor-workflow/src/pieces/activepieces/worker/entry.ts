@@ -15,12 +15,13 @@ import {
   resolveDynamicProperty,
 } from "../context/props.js";
 import { buildTriggerContext, runTriggerHook } from "../context/trigger.js";
-import { describeProperties } from "../descriptor.js";
+import { buildDescriptor, describeProperties } from "../descriptor.js";
 import { loadPieceFromDir, type LoadedPiece } from "../loader.js";
 import { getActions, getTriggers, type ApProperty } from "../types.js";
 import type {
   CheckConnectionMessage,
   CheckConnectionOutcome,
+  DescribePieceMessage,
   ResolveOptionsMessage,
   RunMessage,
   SerializedPieceError,
@@ -239,6 +240,26 @@ async function handleCheckConnection(
   };
 }
 
+async function handleDescribe(
+  message: DescribePieceMessage,
+): Promise<WorkerResponse> {
+  const { request } = message;
+  const { piece } = await loadCached(request.bundleDir);
+  const descriptor = buildDescriptor(piece, {
+    packageName: request.packageName,
+    version: request.version,
+  });
+  return {
+    id: message.id,
+    type: "result",
+    // A prop's defaultValue is piece-authored; jsonSafe keeps a non-cloneable
+    // one from failing the IPC send.
+    output: jsonSafe(descriptor),
+    touched: [],
+    tlsPoisoned: consumeTlsFlag(),
+  };
+}
+
 function isWorkerMessage(value: unknown): value is WorkerRequestMessage {
   if (typeof value !== "object" || value === null) return false;
   const type = (value as { type?: unknown }).type;
@@ -246,7 +267,8 @@ function isWorkerMessage(value: unknown): value is WorkerRequestMessage {
     type === "run" ||
     type === "resolve-options" ||
     type === "trigger-hook" ||
-    type === "check-connection"
+    type === "check-connection" ||
+    type === "describe"
   );
 }
 
@@ -260,6 +282,8 @@ function dispatch(message: WorkerRequestMessage): Promise<WorkerResponse> {
       return handleTriggerHook(message);
     case "check-connection":
       return handleCheckConnection(message);
+    case "describe":
+      return handleDescribe(message);
   }
 }
 

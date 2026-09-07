@@ -8,6 +8,7 @@ import type {
 } from "../context/trigger.js";
 import type {
   CheckConnectionRequest,
+  DescribePieceRequest,
   ResolveOptionsRequest,
   RunActionRequest,
   SerializedPieceError,
@@ -19,13 +20,15 @@ type WorkerRequestType =
   | "run"
   | "resolve-options"
   | "trigger-hook"
-  | "check-connection";
+  | "check-connection"
+  | "describe";
 
 type WorkerRequest =
   | RunActionRequest
   | ResolveOptionsRequest
   | TriggerHookRequest
-  | CheckConnectionRequest;
+  | CheckConnectionRequest
+  | DescribePieceRequest;
 
 export class PieceWorkerError extends Error {
   readonly serialized: SerializedPieceError;
@@ -118,6 +121,14 @@ export class PieceWorker {
     options: { timeoutMs?: number } = {},
   ): Promise<PieceWorkerResult> {
     return this.enqueue("check-connection", request, options.timeoutMs);
+  }
+
+  // The piece's design-time descriptor; the output is a ConnectorDescriptor.
+  describePiece(
+    request: DescribePieceRequest,
+    options: { timeoutMs?: number } = {},
+  ): Promise<PieceWorkerResult> {
+    return this.enqueue("describe", request, options.timeoutMs);
   }
 
   // One trigger lifecycle hook; the caller owns storeState persistence.
