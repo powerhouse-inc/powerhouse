@@ -7,7 +7,11 @@ import {
   type WorkflowState,
 } from "document-models/workflow";
 import { useMemo } from "react";
-import type { WorkflowEditorCallbacks, WorkflowModel } from "../ui/model.js";
+import {
+  uniqueStepKey,
+  type WorkflowEditorCallbacks,
+  type WorkflowModel,
+} from "../ui/model.js";
 
 function toModel(state: WorkflowState): WorkflowModel {
   return {
@@ -151,6 +155,27 @@ export function useWorkflowModel(): {
             from: stepId,
             to: edge.to,
             port: "next",
+          }),
+        );
+      },
+      duplicateStep: (id) => {
+        const step = state.steps.find((entry) => entry.id === id);
+        if (!step) return;
+        dispatch(
+          actions.addStep({
+            id: generateId(),
+            key: uniqueStepKey(
+              state.steps.map((entry) => entry.key),
+              step.key,
+            ),
+            name: step.name,
+            blockType: step.blockType,
+            connectionId: step.connectionId,
+            config: step.config,
+            retry: step.retry,
+            timeoutSeconds: step.timeoutSeconds,
+            idempotencyKeyExpression: step.idempotencyKeyExpression,
+            position: step.position,
           }),
         );
       },

@@ -116,6 +116,23 @@ export interface WorkflowEditorCallbacks {
   // Composite operations backing the canvas add buttons.
   insertStepOnEdge: (edgeId: string, input: AddStepInputModel) => void;
   appendStep: (fromId: string, port: string, input: AddStepInputModel) => void;
+  // Copies a step with its config and advanced settings, detached from the
+  // graph so no port ends up with two edges.
+  duplicateStep: (id: string) => void;
+}
+
+// Slugified step key derived from a label, suffixed until it is free.
+export function uniqueStepKey(taken: string[], label: string): string {
+  const base =
+    label
+      .toLowerCase()
+      .replaceAll(/[^a-z0-9]+/g, "_")
+      .replaceAll(/^_+|_+$/g, "") || "step";
+  const keys = new Set(taken);
+  let key = base;
+  let suffix = 2;
+  while (keys.has(key)) key = `${base}_${suffix++}`;
+  return key;
 }
 
 // Output ports a step exposes, mirroring the engine's routing semantics.

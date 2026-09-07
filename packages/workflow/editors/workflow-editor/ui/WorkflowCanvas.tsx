@@ -5,17 +5,24 @@ import {
   ReactFlow,
   type Edge,
   type Node,
+  type ReactFlowInstance,
 } from "@xyflow/react";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { apEdgeTypes } from "./ap-edge.js";
 import { attachableSteps, layoutWorkflow } from "./ap-layout.js";
 import { apNodeTypes, registerCanvasHandlers } from "./ap-nodes.js";
 import type { BlockPreset } from "./blocks.js";
+import {
+  CanvasContextMenu,
+  type CanvasMenuState,
+} from "./CanvasContextMenu.js";
+import type { ContextMenuActionId, ContextMenuTarget } from "./canvas-menu.js";
 import type { DesignTimeService } from "./forms.js";
-import type {
-  AddStepInputModel,
-  WorkflowEditorCallbacks,
-  WorkflowModel,
+import {
+  uniqueStepKey,
+  type AddStepInputModel,
+  type WorkflowEditorCallbacks,
+  type WorkflowModel,
 } from "./model.js";
 
 interface WorkflowCanvasProps {
@@ -29,17 +36,11 @@ function presetToInput(
   preset: BlockPreset,
   model: WorkflowModel,
 ): AddStepInputModel {
-  const base =
-    preset.label
-      .toLowerCase()
-      .replaceAll(/[^a-z0-9]+/g, "_")
-      .replaceAll(/^_+|_+$/g, "") || "step";
-  const keys = new Set(model.steps.map((step) => step.key));
-  let key = base;
-  let suffix = 2;
-  while (keys.has(key)) key = `${base}_${suffix++}`;
   return {
-    key,
+    key: uniqueStepKey(
+      model.steps.map((step) => step.key),
+      preset.label,
+    ),
     name: preset.label,
     blockType: preset.blockType,
     config: preset.defaultConfig,
@@ -56,6 +57,8 @@ export function WorkflowCanvas({
   designTime,
 }: WorkflowCanvasProps) {
   const { nodes, edges } = useMemo(() => layoutWorkflow(model), [model]);
+  const [menu, setMenu] = useState<CanvasMenuState | null>(null);
+  const [flow, setFlow] = useState<ReactFlowInstance | null>(null);
 
   useEffect(() => {
     registerCanvasHandlers({
@@ -105,34 +108,148 @@ export function WorkflowCanvas({
     if (removedSteps.size > 0) onSelect(null);
   };
 
+  const openMenu = (
+    event: { clientX: number; clientY: number; preventDefault: () => void },
+    target: ContextMenuTarget,
+  ) => {
+    event.preventDefault();
+    setMenu({ target, point: { x: event.clientX, y: event.clientY } });
+  };
+
+  const onMenuAction = (action: ContextMenuActionId, preset?: BlockPreset) => {
+    if (!menu) return;
+    const target = menu.target;
+    const point = menu.point;
+    setMenu(null);
+    switch (action) {
+      case "open":
+        onSelect(
+          target.kind === "step" ? target.id : (model.trigger?.id ?? null),
+        );
+        break;
+      case "addBelow": {
+        const fromId = target.kind === "step" ? target.id : model.trigger?.id;
+        if (preset && fromId) {
+          callbacks.appendStep(fromId, "next", presetToInput(preset, model));
+        }
+        break;
+      }
+      case "duplicate":
+        if (target.kind === "step") callbacks.duplicateStep(target.id);
+        break;
+      case "removeStep":
+        if (target.kind === "step") {
+          callbacks.removeStep(target.id);
+          onSelect(null);
+        }
+        break;
+      case "changeTrigger":
+        if (preset) {
+          callbacks.setTrigger({
+            blockType: preset.blockType,
+            config: preset.defaultConfig,
+          });
+        }
+        break;
+      case "removeTrigger":
+        callbacks.clearTrigger();
+        onSelect(null);
+        break;
+      case "insertStep":
+        if (preset && target.kind === "edge") {
+          callbacks.insertStepOnEdge(target.id, presetToInput(preset, model));
+        }
+        break;
+      case "removeEdge":
+        if (target.kind === "edge") callbacks.removeEdge(target.id);
+        break;
+      case "addStep":
+        if (preset) {
+          callbacks.addStep({
+            ...presetToInput(preset, model),
+            position: flow?.screenToFlowPosition(point),
+          });
+        }
+        break;
+      case "selectAll":
+        flow?.setNodes((current) =>
+          current.map((node) =>
+            node.type === "apStep" ? { ...node, selected: true } : node,
+          ),
+        );
+        break;
+      case "fitView":
+        void flow?.fitView({ padding: 0.25, maxZoom: 1 });
+        break;
+    }
+  };
+
   return (
-    <ReactFlow
-      nodes={nodes}
-      edges={edges}
-      nodeTypes={apNodeTypes}
-      edgeTypes={apEdgeTypes}
-      onNodeClick={(_event, node) => {
-        if (node.type === "apStep") onSelect(node.id);
-      }}
-      onPaneClick={() => onSelect(null)}
-      onDelete={onDelete}
-      nodesDraggable={false}
-      nodesConnectable={false}
-      deleteKeyCode={["Backspace", "Delete"]}
-      zoomOnDoubleClick={false}
-      fitView
-      fitViewOptions={{ padding: 0.25, maxZoom: 1 }}
-      proOptions={{ hideAttribution: true }}
+    <div
+      className="relative h-full w-full"
+      onContextMenu={(event) => event.preventDefault()}
     >
-      <Background gap={16} />
-      <Controls showInteractive={false} />
-      <MiniMap
-        pannable
-        zoomable
-        nodeColor={MINIMAP_NODE_COLOR}
-        nodeStrokeWidth={0}
-        style={{ width: 140, height: 90 }}
-      />
-    </ReactFlow>
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        nodeTypes={apNodeTypes}
+        edgeTypes={apEdgeTypes}
+        onInit={setFlow}
+        onNodeClick={(_event, node) => {
+          setMenu(null);
+          if (node.type === "apStep") onSelect(node.id);
+        }}
+        onPaneClick={() => {
+          setMenu(null);
+          onSelect(null);
+        }}
+        onNodeContextMenu={(event, node) =>
+          openMenu(
+            event,
+            node.type !== "apStep"
+              ? { kind: "pane" }
+              : node.id === model.trigger?.id
+                ? { kind: "trigger" }
+                : { kind: "step", id: node.id },
+          )
+        }
+        onEdgeContextMenu={(event, edge) =>
+          openMenu(
+            event,
+            edge.type === "apEdge"
+              ? { kind: "edge", id: edge.id }
+              : { kind: "pane" },
+          )
+        }
+        onPaneContextMenu={(event) => openMenu(event, { kind: "pane" })}
+        onMove={() => setMenu(null)}
+        onDelete={onDelete}
+        nodesDraggable={false}
+        nodesConnectable={false}
+        deleteKeyCode={["Backspace", "Delete"]}
+        zoomOnDoubleClick={false}
+        fitView
+        fitViewOptions={{ padding: 0.25, maxZoom: 1 }}
+        proOptions={{ hideAttribution: true }}
+      >
+        <Background gap={16} />
+        <Controls showInteractive={false} />
+        <MiniMap
+          pannable
+          zoomable
+          nodeColor={MINIMAP_NODE_COLOR}
+          nodeStrokeWidth={0}
+          style={{ width: 140, height: 90 }}
+        />
+      </ReactFlow>
+      {menu ? (
+        <CanvasContextMenu
+          state={menu}
+          model={model}
+          onAction={onMenuAction}
+          onClose={() => setMenu(null)}
+        />
+      ) : null}
+    </div>
   );
 }
