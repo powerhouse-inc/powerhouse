@@ -1,13 +1,16 @@
-// Connection picker: autocomplete over powerhouse/connection documents,
-// grouping ones whose connectorId matches the block's piece package.
+// Connection picker: autocomplete over the powerhouse/connection documents
+// that configure this block's own piece.
 import {
   addDocument,
   useSelectedDriveId,
 } from "@powerhousedao/reactor-browser";
 import { useEffect, useRef, useState } from "react";
+import { pieceLogo, usePieceLogos } from "./block-meta.js";
 import {
   CONNECTION_TYPE,
+  compatibleConnections,
   connectionDraftFor,
+  looksLikeDocumentId,
   packageOf,
   type ConnectionDraft,
 } from "./connection-create.js";
@@ -25,6 +28,34 @@ const STATUS_DOT: Record<string, string> = {
   REVOKED: "bg-red-500",
 };
 
+// The piece's own logo, falling back to its initial until the catalog lands.
+function ConnectorIcon(props: { connectorId: string }) {
+  usePieceLogos();
+  const [broken, setBroken] = useState(false);
+  const piecePackage = packageOf(props.connectorId);
+  const src = broken ? undefined : pieceLogo(piecePackage);
+  if (!src) {
+    const short =
+      piecePackage
+        .split("/")
+        .pop()
+        ?.replace(/^piece-/, "") ?? "";
+    return (
+      <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border border-solid border-slate-200 bg-slate-50 text-[9px] text-slate-500">
+        {short.slice(0, 1).toUpperCase() || "?"}
+      </span>
+    );
+  }
+  return (
+    <img
+      src={src}
+      alt=""
+      className="h-4 w-4 shrink-0 object-contain"
+      onError={() => setBroken(true)}
+    />
+  );
+}
+
 function ConnectionRow(props: {
   connection: ConnectionSummary;
   onPick: (connection: ConnectionSummary) => void;
@@ -40,24 +71,20 @@ function ConnectionRow(props: {
         props.onPick(connection);
       }}
     >
+      <ConnectorIcon connectorId={connection.connectorId} />
+      <span className="min-w-0 flex-1 truncate text-xs font-medium text-slate-700">
+        {connection.name}
+        {connection.accountLabel ? (
+          <span className="font-normal text-slate-400">
+            {" "}
+            · {connection.accountLabel}
+          </span>
+        ) : null}
+      </span>
       <span
         className={`h-2 w-2 shrink-0 rounded-full ${STATUS_DOT[connection.status] ?? "bg-slate-300"}`}
         title={connection.status}
       />
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-xs font-medium text-slate-700">
-          {connection.name}
-          {connection.accountLabel ? (
-            <span className="font-normal text-slate-400">
-              {" "}
-              · {connection.accountLabel}
-            </span>
-          ) : null}
-        </span>
-        <span className="block truncate font-mono text-[10px] text-slate-400">
-          {connection.connectorId}
-        </span>
-      </span>
     </button>
   );
 }
@@ -78,29 +105,13 @@ function CreateRow(props: {
         props.onCreate();
       }}
     >
-      <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-solid border-slate-300 text-[10px] text-slate-500">
+      <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border border-solid border-slate-300 text-[10px] text-slate-500">
         +
       </span>
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-xs font-medium text-slate-700">
-          {props.busy ? "Creating connection…" : "Create connection"}
-        </span>
-        <span className="block truncate font-mono text-[10px] text-slate-400">
-          {props.draft.connectorId}
-        </span>
+      <span className="min-w-0 flex-1 truncate text-xs font-medium text-slate-700">
+        {props.busy ? "Creating connection…" : "Create connection"}
       </span>
     </button>
-  );
-}
-
-function Group(props: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <div className="px-2 pb-0.5 pt-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-300">
-        {props.label}
-      </div>
-      {props.children}
-    </div>
   );
 }
 
@@ -115,17 +126,12 @@ export function ConnectionField(props: {
   );
   const [connections, setConnections] = useState<ConnectionSummary[]>([]);
   const [open, setOpen] = useState(false);
-  const [text, setText] = useState(props.value);
+  const [query, setQuery] = useState("");
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [draftId, setDraftId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const driveId = useSelectedDriveId();
-
-  const commit = (next: string) => {
-    const trimmed = next.trim();
-    if (trimmed !== props.value) props.onChange(trimmed || null);
-  };
 
   useEffect(() => {
     let alive = true;
@@ -163,39 +169,32 @@ export function ConnectionField(props: {
     };
   }, [open, props.designTime]);
 
-  const authMode =
-    form === "loading" ? "loading" : (form?.auth ?? "optional");
-  // Blocks that take no connection only show the field to clear a stale one.
-  if (authMode === "none" && !props.value) return null;
-
-  const piecePackage = packageOf(props.blockType);
-  const query = text.trim().toLowerCase();
-  const visible =
-    query && text !== props.value
-      ? connections.filter((connection) =>
-          [connection.name, connection.connectorId, connection.id].some(
-            (candidate) => candidate.toLowerCase().includes(query),
-          ),
-        )
-      : connections;
-  const matching = visible.filter(
-    (connection) => packageOf(connection.connectorId) === piecePackage,
-  );
-  const others = visible.filter(
-    (connection) => packageOf(connection.connectorId) !== piecePackage,
-  );
+  // The selected connection may configure another piece (a stale value, or one
+  // pasted by hand), so it is resolved against the whole listing.
   const selected = connections.find(
     (connection) => connection.id === props.value,
   );
+
+  const authMode = form === "loading" ? "loading" : (form?.auth ?? "optional");
+  // Blocks that take no connection only show the field to clear a stale one.
+  if (authMode === "none" && !props.value) return null;
+
+  const compatible = compatibleConnections(connections, props.blockType);
+  const needle = query.trim().toLowerCase();
+  const visible = needle
+    ? compatible.filter((connection) =>
+        [connection.name, connection.accountLabel ?? ""].some((candidate) =>
+          candidate.toLowerCase().includes(needle),
+        ),
+      )
+    : compatible;
   const draft = driveId
     ? connectionDraftFor({
         blockType: props.blockType,
         authMode,
-        // The whole listing, not the filtered one: typing must not summon the
-        // create entry for a piece that already has a connection.
-        matchingCount: connections.filter(
-          (connection) => packageOf(connection.connectorId) === piecePackage,
-        ).length,
+        // The unfiltered set, so typing cannot summon the create entry for a
+        // piece that already has a connection.
+        matchingCount: compatible.length,
       })
     : null;
 
@@ -212,16 +211,22 @@ export function ConnectionField(props: {
   };
 
   const pick = (connectionId: string) => {
-    setText(connectionId);
-    commit(connectionId);
+    setQuery("");
     setOpen(false);
+    if (connectionId !== props.value) props.onChange(connectionId);
+  };
+
+  const clear = () => {
+    setQuery("");
+    setOpen(false);
+    if (props.value) props.onChange(null);
   };
 
   const finishCreate = (connectionId: string) => {
     setDraftId(null);
     pick(connectionId);
     // The listing is cached, so the new document has to be pulled in for the
-    // summary line below the input to resolve it.
+    // name and icon below the input to resolve it.
     props.designTime?.refreshConnections?.();
     props.designTime?.listConnections?.().then(
       (result) => setConnections(result),
@@ -238,41 +243,75 @@ export function ConnectionField(props: {
 
   return (
     <div ref={containerRef} className="relative">
-      <label className="block">
-        <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-          {label}
-        </span>
+      <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+        {label}
+      </span>
+      {open ? (
         <input
-          className="w-full rounded border border-slate-300 px-2 py-1.5 font-mono text-xs text-slate-800"
-          value={text}
+          autoFocus
+          className="w-full rounded border border-slate-300 px-2 py-1.5 text-xs text-slate-800"
+          value={query}
           placeholder="Search connections or paste a document id"
-          onFocus={() => setOpen(true)}
-          onChange={(event) => {
-            setText(event.target.value);
-            setOpen(true);
-          }}
-          onBlur={(event) => commit(event.target.value)}
+          onChange={(event) => setQuery(event.target.value)}
           onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              commit(event.currentTarget.value);
+            if (event.key === "Escape") {
+              setQuery("");
               setOpen(false);
             }
-            if (event.key === "Escape") setOpen(false);
           }}
         />
-      </label>
-      {selected ? (
-        <p className="mt-1 flex items-center gap-1.5 text-[11px] text-slate-500">
-          <span
-            className={`h-2 w-2 rounded-full ${STATUS_DOT[selected.status] ?? "bg-slate-300"}`}
-          />
-          {selected.name} · {selected.connectorId} · {selected.status}
-        </p>
-      ) : props.value ? (
+      ) : (
+        // Closed, the field reads as the chosen connection rather than its id.
+        <button
+          type="button"
+          className="flex w-full items-center gap-2 rounded border border-solid border-slate-300 px-2 py-1.5 text-left text-xs hover:bg-slate-50"
+          onClick={() => setOpen(true)}
+        >
+          {selected ? (
+            <>
+              <ConnectorIcon connectorId={selected.connectorId} />
+              <span className="min-w-0 flex-1 truncate text-slate-800">
+                {selected.name}
+                {selected.accountLabel ? (
+                  <span className="text-slate-400">
+                    {" "}
+                    · {selected.accountLabel}
+                  </span>
+                ) : null}
+              </span>
+              <span
+                className={`h-2 w-2 shrink-0 rounded-full ${STATUS_DOT[selected.status] ?? "bg-slate-300"}`}
+                title={selected.status}
+              />
+            </>
+          ) : (
+            <span className="flex-1 truncate text-slate-400">
+              {props.value ? props.value : "Select a connection"}
+            </span>
+          )}
+        </button>
+      )}
+      {props.value && !open ? (
+        <button
+          type="button"
+          className="mt-1 text-[11px] text-slate-400 hover:text-slate-600"
+          onClick={clear}
+        >
+          Clear
+        </button>
+      ) : null}
+      {props.value && !selected ? (
         <p className="mt-1 text-[11px] text-slate-400">
           Not a known connection document.
         </p>
-      ) : authMode === "required" ? (
+      ) : null}
+      {selected &&
+      packageOf(selected.connectorId) !== packageOf(props.blockType) ? (
+        <p className="mt-1 text-[11px] text-amber-600">
+          Configures {selected.connectorId}, not this block&apos;s piece.
+        </p>
+      ) : null}
+      {!props.value && authMode === "required" ? (
         <p className="mt-1 text-[11px] text-amber-600">
           This block requires a connection.
         </p>
@@ -284,39 +323,40 @@ export function ConnectionField(props: {
       ) : null}
       {open ? (
         <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-64 overflow-y-auto rounded-md border border-solid border-slate-200 bg-white py-1 shadow-lg">
-          {matching.length > 0 ? (
-            <Group label="For this piece">
-              {matching.map((connection) => (
-                <ConnectionRow
-                  key={connection.id}
-                  connection={connection}
-                  onPick={(picked) => pick(picked.id)}
-                />
-              ))}
-            </Group>
-          ) : draft ? (
-            <Group label="For this piece">
-              <CreateRow
-                draft={draft}
-                busy={creating}
-                onCreate={() => create(draft)}
-              />
-            </Group>
+          {visible.map((connection) => (
+            <ConnectionRow
+              key={connection.id}
+              connection={connection}
+              onPick={(picked) => pick(picked.id)}
+            />
+          ))}
+          {draft && !needle ? (
+            <CreateRow
+              draft={draft}
+              busy={creating}
+              onCreate={() => create(draft)}
+            />
           ) : null}
-          {others.length > 0 ? (
-            <Group label={matching.length > 0 ? "Other connections" : "Connections"}>
-              {others.map((connection) => (
-                <ConnectionRow
-                  key={connection.id}
-                  connection={connection}
-                  onPick={(picked) => pick(picked.id)}
-                />
-              ))}
-            </Group>
+          {visible.length === 0 && looksLikeDocumentId(query) ? (
+            <button
+              type="button"
+              className="flex w-full items-center gap-2 px-2 py-1.5 text-left hover:bg-slate-50"
+              onMouseDown={(event) => {
+                event.preventDefault();
+                pick(query.trim());
+              }}
+            >
+              <span className="min-w-0 flex-1 truncate text-xs text-slate-700">
+                Use document id{" "}
+                <span className="font-mono text-slate-500">{query.trim()}</span>
+              </span>
+            </button>
           ) : null}
-          {matching.length === 0 && others.length === 0 && !draft ? (
+          {visible.length === 0 && !draft && !looksLikeDocumentId(query) ? (
             <p className="px-2 py-1.5 text-xs text-slate-400">
-              No connection documents found.
+              {needle
+                ? "No matching connection."
+                : "No connection for this piece yet."}
             </p>
           ) : null}
         </div>

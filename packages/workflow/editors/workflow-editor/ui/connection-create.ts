@@ -11,6 +11,25 @@ export function packageOf(id: string): string {
   return at > 0 ? head.slice(0, at) : head;
 }
 
+// A connection is usable by a block when it configures the block's own piece.
+// Everything else is noise: picking it would just fail at run time.
+export function compatibleConnections<T extends { connectorId: string }>(
+  connections: T[],
+  blockType: string,
+): T[] {
+  const piecePackage = packageOf(blockType);
+  return connections.filter(
+    (connection) => packageOf(connection.connectorId) === piecePackage,
+  );
+}
+
+// The picker lists only compatible connections, so pasting a document id stays
+// the escape hatch for anything it does not offer.
+export function looksLikeDocumentId(value: string): boolean {
+  const trimmed = value.trim();
+  return trimmed.length >= 8 && !/\s/.test(trimmed);
+}
+
 export interface ConnectionDraft {
   piecePackage: string;
   connectorId: string;

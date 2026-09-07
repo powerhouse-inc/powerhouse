@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  compatibleConnections,
   connectionDraftFor,
   connectionNameFor,
+  looksLikeDocumentId,
   packageOf,
 } from "./connection-create.js";
 
@@ -76,5 +78,49 @@ describe("connectionDraftFor", () => {
 
   it("stands down once the piece already has a connection", () => {
     expect(draft({ matchingCount: 1 })).toBeNull();
+  });
+});
+
+describe("compatibleConnections", () => {
+  const listing = [
+    { id: "a", connectorId: "@activepieces/piece-discord" },
+    { id: "b", connectorId: "@activepieces/piece-slack" },
+    { id: "c", connectorId: "@activepieces/piece-discord@0.5.7" },
+  ];
+
+  it("keeps only connections for the block's own piece", () => {
+    const kept = compatibleConnections(
+      listing,
+      "@activepieces/piece-discord@0.5.7#send_message",
+    );
+    expect(kept.map((entry) => entry.id)).toEqual(["a", "c"]);
+  });
+
+  it("ignores the connector's version when comparing", () => {
+    const kept = compatibleConnections(
+      [{ id: "c", connectorId: "@activepieces/piece-discord@0.4.0" }],
+      "@activepieces/piece-discord@0.5.7#send_message",
+    );
+    expect(kept).toHaveLength(1);
+  });
+
+  it("returns nothing for a piece with no connections", () => {
+    expect(
+      compatibleConnections(listing, "@activepieces/piece-gotify@0.4.6#send"),
+    ).toEqual([]);
+  });
+});
+
+describe("looksLikeDocumentId", () => {
+  it("accepts a pasted document id", () => {
+    expect(looksLikeDocumentId("e0174617-7b1e-4f2a-9d33-2f9c1a4b5c6d")).toBe(
+      true,
+    );
+  });
+
+  it("rejects a short or spaced search query", () => {
+    expect(looksLikeDocumentId("discord")).toBe(false);
+    expect(looksLikeDocumentId("my discord connection")).toBe(false);
+    expect(looksLikeDocumentId("  ")).toBe(false);
   });
 });
