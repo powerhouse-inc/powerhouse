@@ -7,14 +7,12 @@ import {
   Position,
   type EdgeProps,
 } from "@xyflow/react";
-import { AddButton, getCanvasHandlers } from "./ap-nodes.js";
+import {
+  AddButton,
+  getCanvasHandlers,
+  PORT_LABEL_CLASSES,
+} from "./ap-nodes.js";
 import { STEP_PRESETS } from "./blocks.js";
-
-const PORT_LABEL_CLASSES: Record<string, string> = {
-  true: "bg-green-100 text-green-700",
-  false: "bg-red-100 text-red-600",
-  error: "bg-amber-100 text-amber-700",
-};
 
 export function ApEdge(props: EdgeProps) {
   const data = props.data as {

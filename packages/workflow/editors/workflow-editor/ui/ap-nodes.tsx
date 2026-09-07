@@ -98,6 +98,13 @@ export function ApStepNode(props: NodeProps) {
   );
 }
 
+// Shared with the edges, which label a taken port the same way.
+export const PORT_LABEL_CLASSES: Record<string, string> = {
+  true: "bg-green-100 text-green-700 hover:bg-green-200",
+  false: "bg-red-100 text-red-600 hover:bg-red-200",
+  error: "bg-amber-100 text-amber-700 hover:bg-amber-200",
+};
+
 function AddButton(props: {
   size?: number;
   title: string;
@@ -107,33 +114,48 @@ function AddButton(props: {
   pieceMode?: "actions" | "triggers";
   attachSteps?: StepModel[];
   onAttach?: (stepId: string) => void;
+  // Named ports read as their name; an unnamed one is just a plus.
+  label?: string;
 }) {
   const [open, setOpen] = useState(false);
   const size = props.size ?? ADD_BUTTON_SIZE;
+  const label = props.label;
   return (
     <div className="relative" style={{ width: size, height: size }}>
       <button
         type="button"
-        style={{ width: size, height: size }}
+        style={label ? { height: size } : { width: size, height: size }}
+        // Labelled buttons keep the node's own footprint and overflow it
+        // evenly, so the layout still positions them by their centre.
         className={`flex cursor-pointer items-center justify-center rounded-md border border-solid transition-all ${
+          label
+            ? "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 px-1.5 text-[10px] font-semibold"
+            : ""
+        } ${
           open
             ? "border-blue-500 bg-blue-500 text-white"
-            : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
+            : label
+              ? `border-transparent ${PORT_LABEL_CLASSES[label] ?? "bg-slate-100 text-slate-500 hover:bg-slate-200"}`
+              : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
         }`}
         onClick={(event) => {
           event.stopPropagation();
           setOpen((value) => !value);
         }}
       >
-        <svg width={size * 0.55} height={size * 0.55} viewBox="0 0 24 24">
-          <path
-            d="M12 5v14M5 12h14"
-            stroke="currentColor"
-            strokeWidth={3}
-            strokeLinecap="round"
-            fill="none"
-          />
-        </svg>
+        {label ? (
+          label
+        ) : (
+          <svg width={size * 0.55} height={size * 0.55} viewBox="0 0 24 24">
+            <path
+              d="M12 5v14M5 12h14"
+              stroke="currentColor"
+              strokeWidth={3}
+              strokeLinecap="round"
+              fill="none"
+            />
+          </svg>
+        )}
       </button>
       {open ? (
         <div
@@ -197,6 +219,7 @@ export function ApAppendNode(props: NodeProps) {
       <Handle type="target" position={Position.Top} style={hiddenHandle} />
       <AddButton
         title={data.port === "next" ? "Add step" : `Add step (${data.port})`}
+        label={data.port === "next" ? undefined : data.port}
         presets={STEP_PRESETS}
         showPieces
         attachSteps={attachSteps}

@@ -55,6 +55,8 @@ export const STEP_HEIGHT = 60;
 export const VSPACE = 60;
 export const HSPACE = 80;
 export const ADD_BUTTON_SIZE = 20;
+// Width a branch reserves for a port that has no step yet.
+const EMPTY_SLOT_WIDTH = STEP_WIDTH / 2;
 export const BIG_ADD_BUTTON_SIZE = 50;
 
 const PORT_ORDER = ["next", "true", "false", "error"];
@@ -100,21 +102,45 @@ export function layoutWorkflow(model: WorkflowModel): ApLayout {
   }
 
   const placed = new Set<string>();
+  const stepById = new Map(model.steps.map((step) => [step.id, step]));
+
+  const branchPorts = (id: string): string[] =>
+    stepById.get(id)?.blockType === "core#branch" ? ["true", "false"] : [];
+
+  // A branch keeps a column per port whether or not it is wired, so a lone
+  // wired port does not sit centred under the card with its sibling adrift.
+  const outletsOf = (
+    id: string,
+    taken: (target: string) => boolean,
+  ): { port: string; edge?: EdgeModel }[] => {
+    const edges = (outgoing.get(id) ?? []).filter((edge) => !taken(edge.to));
+    const ports = branchPorts(id);
+    if (ports.length === 0) return edges.map((edge) => ({ port: edge.port, edge }));
+    const seen = new Set(edges.map((edge) => edge.port));
+    const outlets = [
+      ...edges.map((edge) => ({ port: edge.port, edge })),
+      ...ports
+        .filter((port) => !seen.has(port))
+        .map((port) => ({ port, edge: undefined })),
+    ];
+    return outlets.sort((a, b) => portRank(a.port) - portRank(b.port));
+  };
 
   const subtreeWidth = (id: string, visited: Set<string>): number => {
     if (visited.has(id)) return STEP_WIDTH;
     visited.add(id);
-    const children = (outgoing.get(id) ?? []).filter(
-      (edge) => !visited.has(edge.to),
-    );
-    if (children.length === 0) return STEP_WIDTH;
-    const total = children
-      .map((edge) => subtreeWidth(edge.to, visited))
+    const outlets = outletsOf(id, (target) => visited.has(target));
+    if (outlets.length === 0) return STEP_WIDTH;
+    const total = outlets
+      .map((outlet) =>
+        outlet.edge ? subtreeWidth(outlet.edge.to, visited) : EMPTY_SLOT_WIDTH,
+      )
       .reduce((sum, width) => sum + width, 0);
-    return Math.max(STEP_WIDTH, total + (children.length - 1) * HSPACE);
+    return Math.max(STEP_WIDTH, total + (outlets.length - 1) * HSPACE);
   };
 
-  const stepById = new Map(model.steps.map((step) => [step.id, step]));
+  // Where an unwired port's append button goes, keyed "stepId:port".
+  const appendSlots = new Map<string, number>();
 
   const place = (id: string, centerX: number, y: number) => {
     if (placed.has(id)) return;
@@ -131,19 +157,24 @@ export function layoutWorkflow(model: WorkflowModel): ApLayout {
       draggable: false,
     });
 
-    const children = (outgoing.get(id) ?? []).filter(
-      (edge) => !placed.has(edge.to),
-    );
-    const widths = children.map((edge) =>
-      subtreeWidth(edge.to, new Set(placed)),
+    const outlets = outletsOf(id, (target) => placed.has(target));
+    const widths = outlets.map((outlet) =>
+      outlet.edge
+        ? subtreeWidth(outlet.edge.to, new Set(placed))
+        : EMPTY_SLOT_WIDTH,
     );
     const total =
       widths.reduce((sum, width) => sum + width, 0) +
-      Math.max(children.length - 1, 0) * HSPACE;
+      Math.max(outlets.length - 1, 0) * HSPACE;
     let cursor = centerX - total / 2;
-    children.forEach((edge, index) => {
+    outlets.forEach((outlet, index) => {
       const width = widths[index];
-      place(edge.to, cursor + width / 2, y + STEP_HEIGHT + VSPACE);
+      const slotCenter = cursor + width / 2;
+      if (outlet.edge) {
+        place(outlet.edge.to, slotCenter, y + STEP_HEIGHT + VSPACE);
+      } else {
+        appendSlots.set(`${id}:${outlet.port}`, slotCenter);
+      }
       cursor += width + HSPACE;
     });
   };
@@ -194,16 +225,19 @@ export function layoutWorkflow(model: WorkflowModel): ApLayout {
       // Slot by the port's place among all of them, not among the free ones:
       // a lone free port would otherwise sit on the taken port's edge, where
       // the edge already draws its label and insert button.
+      const slot = appendSlots.get(`${node.id}:${port}`);
       const index = candidates.indexOf(port);
       const total = candidates.length;
       const offset =
         (index - (total - 1) / 2) * (STEP_WIDTH / 2 + HSPACE / 2) * 1.2;
+      const centerX =
+        slot ?? node.position.x + STEP_WIDTH / 2 + offset;
       const buttonId = `__append:${node.id}:${port}`;
       nodes.push({
         id: buttonId,
         type: "apAppend",
         position: {
-          x: node.position.x + STEP_WIDTH / 2 - ADD_BUTTON_SIZE / 2 + offset,
+          x: centerX - ADD_BUTTON_SIZE / 2,
           y: node.position.y + STEP_HEIGHT + VSPACE / 2 - ADD_BUTTON_SIZE / 2,
         },
         data: { parentId: node.id, port },
