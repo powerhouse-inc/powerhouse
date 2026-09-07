@@ -828,10 +828,13 @@ export class ReactorClient implements IReactorClient {
     ];
 
     if (parentIdentifier) {
+      // The relationship lands on the parent document, and this job targets
+      // it, so it can be bound to the parent (#2894).
       const parentActions: Action[] = await signActions(
         [addRelationshipAction(parentIdentifier, documentId, "child")],
         this.signer,
         signal,
+        parentIdentifier,
       );
 
       jobs.push({
