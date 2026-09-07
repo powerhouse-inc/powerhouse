@@ -43,7 +43,10 @@ export class SignatureVerifier {
           action: action,
         };
 
-        isValid = await this.verifier(tempOperation, publicKey);
+        isValid = await this.verifier(tempOperation, publicKey, {
+          documentId,
+          branch,
+        });
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : String(error);
@@ -90,7 +93,7 @@ export class SignatureVerifier {
       let isValid: boolean;
 
       try {
-        isValid = await this.verifier(operation, publicKey);
+        isValid = await this.verifier(operation, publicKey, { documentId });
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : String(error);
