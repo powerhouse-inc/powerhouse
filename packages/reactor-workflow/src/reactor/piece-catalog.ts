@@ -6,6 +6,14 @@ import { SERVER_ONLY_PIECES } from "./unsupported-pieces.js";
 const CATALOG_URL = "https://cloud.activepieces.com/api/v1/pieces";
 const CACHE_TTL_MS = 60 * 60 * 1000;
 
+// Their piece endpoints default to audience=human, which hides actions tagged
+// audience: "ai" -- atomics added for agents that would clutter their flow
+// builder (activepieces/activepieces#13960). We want the whole surface, the
+// way their own non-builder callers ask for it.
+function pieceUrl(packageName: string): string {
+  return `${CATALOG_URL}/${packageName}?audience=all`;
+}
+
 export interface PieceSummary {
   name: string;
   displayName: string;
@@ -150,7 +158,7 @@ const detailCache = new Map<string, Cached<unknown>>();
 export async function fetchPieceDetail(packageName: string): Promise<unknown> {
   const cached = detailCache.get(packageName);
   if (cached && cached.expiresAt > Date.now()) return cached.value;
-  const value = await fetchJson(`${CATALOG_URL}/${packageName}`);
+  const value = await fetchJson(pieceUrl(packageName));
   detailCache.set(packageName, { value, expiresAt: Date.now() + CACHE_TTL_MS });
   return value;
 }
@@ -162,9 +170,7 @@ export async function fetchPieceTriggers(
 ): Promise<PieceTriggersResult> {
   const cached = triggersCache.get(packageName);
   if (cached && cached.expiresAt > Date.now()) return cached.value;
-  const detail = (await fetchJson(
-    `${CATALOG_URL}/${packageName}`,
-  )) as CatalogEntry;
+  const detail = (await fetchJson(pieceUrl(packageName))) as CatalogEntry;
   const version = detail.version ?? "";
   const triggersRecord =
     detail.triggers && typeof detail.triggers === "object"
@@ -198,9 +204,7 @@ export async function fetchPieceActions(
 ): Promise<PieceActionsResult> {
   const cached = actionsCache.get(packageName);
   if (cached && cached.expiresAt > Date.now()) return cached.value;
-  const detail = (await fetchJson(
-    `${CATALOG_URL}/${packageName}`,
-  )) as CatalogEntry;
+  const detail = (await fetchJson(pieceUrl(packageName))) as CatalogEntry;
   const version = detail.version ?? "";
   const actionsRecord =
     detail.actions && typeof detail.actions === "object" ? detail.actions : {};
