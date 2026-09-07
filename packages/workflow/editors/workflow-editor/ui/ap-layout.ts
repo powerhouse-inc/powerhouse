@@ -175,23 +175,27 @@ export function layoutWorkflow(model: WorkflowModel): ApLayout {
 
   // Append buttons under every step with no outgoing edges (branches get
   // one per untaken port).
-  const appendPorts = (id: string): string[] => {
-    if (id === model.trigger?.id) {
-      return (outgoing.get(id) ?? []).length === 0 ? ["next"] : [];
-    }
+  const candidatePorts = (id: string): string[] => {
+    if (id === model.trigger?.id) return ["next"];
     const step = stepById.get(id);
     if (!step) return [];
+    return step.blockType === "core#branch" ? ["true", "false"] : ["next"];
+  };
+
+  const appendPorts = (id: string): string[] => {
     const used = new Set((outgoing.get(id) ?? []).map((edge) => edge.port));
-    const candidates =
-      step.blockType === "core#branch" ? ["true", "false"] : ["next"];
-    return candidates.filter((port) => !used.has(port));
+    return candidatePorts(id).filter((port) => !used.has(port));
   };
 
   for (const node of [...nodes]) {
     if (node.type !== "apStep") continue;
-    const ports = appendPorts(node.id);
-    ports.forEach((port, index) => {
-      const total = ports.length;
+    const candidates = candidatePorts(node.id);
+    appendPorts(node.id).forEach((port) => {
+      // Slot by the port's place among all of them, not among the free ones:
+      // a lone free port would otherwise sit on the taken port's edge, where
+      // the edge already draws its label and insert button.
+      const index = candidates.indexOf(port);
+      const total = candidates.length;
       const offset =
         (index - (total - 1) / 2) * (STEP_WIDTH / 2 + HSPACE / 2) * 1.2;
       const buttonId = `__append:${node.id}:${port}`;
