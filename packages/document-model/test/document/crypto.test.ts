@@ -457,6 +457,123 @@ describe("Crypto utils", () => {
     ).resolves.toBe(false);
   });
 
+  it("should verify a valid signature with the three-argument form (no action to bind)", async () => {
+    const algorithm = { name: "ECDSA", namedCurve: "P-256", hash: "SHA-256" };
+    const keyPair = await crypto.subtle.generateKey(algorithm, true, [
+      "sign",
+      "verify",
+    ]);
+    const publicKey = `0x${ab2hex(
+      await crypto.subtle.exportKey("raw", keyPair.publicKey),
+    )}`;
+
+    const document = baseCreateDocument<CountPHState>(
+      createCountDocumentState,
+      createCountState(),
+    );
+    const operation = await buildSignedAction(
+      { ...increment() },
+      countReducer as Reducer<CountPHState>,
+      document,
+      actionSigner(
+        { address: "0x123", chainId: 1, networkId: "1" },
+        { name: "test", key: publicKey },
+      ),
+      async (data) =>
+        new Uint8Array(
+          await crypto.subtle.sign(
+            algorithm,
+            keyPair.privateKey,
+            data.buffer as ArrayBuffer,
+          ),
+        ),
+    );
+    const signer = operation.action.context!.signer!;
+
+    // The historical call shape carries no action, so there is nothing to
+    // bind against; the signature verifies as it did before the binding
+    // existed.
+    const verified = await verifyOperationSignature(
+      signer.signatures.at(0)!,
+      signer,
+      async (pk, signature, data) => {
+        const importedKey = await crypto.subtle.importKey(
+          "raw",
+          hex2ab(pk),
+          algorithm,
+          true,
+          ["verify"],
+        );
+        return crypto.subtle.verify(
+          algorithm,
+          importedKey,
+          new Uint8Array(signature),
+          new Uint8Array(data),
+        );
+      },
+    );
+
+    expect(verified).toBe(true);
+  });
+
+  it("should reject a tampered signature with the three-argument form", async () => {
+    const algorithm = { name: "ECDSA", namedCurve: "P-256", hash: "SHA-256" };
+    const keyPair = await crypto.subtle.generateKey(algorithm, true, [
+      "sign",
+      "verify",
+    ]);
+    const publicKey = `0x${ab2hex(
+      await crypto.subtle.exportKey("raw", keyPair.publicKey),
+    )}`;
+
+    const document = baseCreateDocument<CountPHState>(
+      createCountDocumentState,
+      createCountState(),
+    );
+    const operation = await buildSignedAction(
+      { ...increment() },
+      countReducer as Reducer<CountPHState>,
+      document,
+      actionSigner(
+        { address: "0x123", chainId: 1, networkId: "1" },
+        { name: "test", key: publicKey },
+      ),
+      async (data) =>
+        new Uint8Array(
+          await crypto.subtle.sign(
+            algorithm,
+            keyPair.privateKey,
+            data.buffer as ArrayBuffer,
+          ),
+        ),
+    );
+    const signer = operation.action.context!.signer!;
+    const signature = signer.signatures.at(0)!;
+    signature[4] = "FAKE SIGNATURE";
+
+    const verified = await verifyOperationSignature(
+      signature,
+      signer,
+      async (pk, signature, data) => {
+        const importedKey = await crypto.subtle.importKey(
+          "raw",
+          hex2ab(pk),
+          algorithm,
+          true,
+          ["verify"],
+        );
+        return crypto.subtle.verify(
+          algorithm,
+          importedKey,
+          new Uint8Array(signature),
+          new Uint8Array(data),
+        );
+      },
+    );
+
+    expect(verified).toBe(false);
+  });
+
   it("should sign and verify id", async () => {
     const parameters: SigningParameters = {
       documentType: "powerhouse/counter",

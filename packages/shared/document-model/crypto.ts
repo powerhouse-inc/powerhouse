@@ -105,12 +105,20 @@ async function sha256Base64(data: string): Promise<string> {
  * The preimage an ECDSA-P-256 action signature covers: the action's scope, type
  * and input, SHA-256 hashed. Shared by the signer and the verifier so the two
  * can never silently diverge again (#2894).
+ *
+ * The input serializes canonically (sorted keys) rather than with
+ * `JSON.stringify`: operations pass through storage round-trips that
+ * re-serialize the action, and key order is not part of the action's content -
+ * PGlite's JSONB reorders keys, and any order-dependent serialization would
+ * leave a genuine signature unable to bind to the action it came from. The
+ * canonical form is a function of the input's content only, so the hash is
+ * stable across those round-trips.
  */
 export async function hashActionContentSha256(
   action: ActionHashPreimage,
 ): Promise<string> {
   return sha256Base64(
-    [action.scope, action.type, JSON.stringify(action.input)].join(""),
+    [action.scope, action.type, stringifyJson(action.input)].join(""),
   );
 }
 
@@ -131,16 +139,26 @@ export function hashActionContentSha1(
 
 /**
  * Every action-hash value a signature's hash field may legitimately carry for
- * the given action, across both signing schemes currently in use. A binding
- * verifier recomputes these and refuses a signature whose stored hash matches
- * none of them, rather than trusting the value echoed back from the signature
- * tuple itself (#2894).
+ * the given action, across the signing schemes this codebase has produced. A
+ * binding verifier recomputes these and refuses a signature whose stored hash
+ * matches none of them, rather than trusting the value echoed back from the
+ * signature tuple itself (#2894).
+ *
+ * The insertion-order JSON form is the last-resort candidate: it matches
+ * signatures made before the preimage was canonicalized only while the
+ * input's text has never been re-serialized, which is all a historical
+ * signature can still verify with.
  */
 export async function computeActionHashCandidates(
   documentId: string,
   action: ActionHashPreimage,
 ): Promise<string[]> {
-  const candidates = [await hashActionContentSha256(action)];
+  const candidates = [
+    await hashActionContentSha256(action),
+    await sha256Base64(
+      [action.scope, action.type, JSON.stringify(action.input)].join(""),
+    ),
+  ];
   if (documentId) {
     candidates.push(hashActionContentSha1(documentId, action));
   }
