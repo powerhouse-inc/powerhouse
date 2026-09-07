@@ -278,7 +278,13 @@ async function installProjectDependencies(projectDir: string) {
       "Failed to detect your package manager. Run install manually.",
     );
   }
-  const installCommand = await getPowerhouseProjectInstallCommand(agent);
+  // The generated project pins exact versions this flow just resolved from a
+  // release channel, so a supply-chain policy inherited via process env (a
+  // wrapping pnpm in CI exports its own workspace's `minimumReleaseAge`)
+  // must not veto the install — that policy belongs to the calling project,
+  // not this fresh one. pnpm-only flag; other managers have no equivalent.
+  const args = agent === "pnpm" ? ["--config.minimumReleaseAge=0"] : [];
+  const installCommand = await getPowerhouseProjectInstallCommand(agent, args);
   console.log(`Installing dependencies with \`${agent}\``);
   runCmd(installCommand, { cwd: projectDir });
 }
