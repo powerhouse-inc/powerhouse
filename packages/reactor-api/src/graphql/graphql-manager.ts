@@ -40,6 +40,7 @@ import {
   type DriveFetchMiddleware,
 } from "./gateway/drive-middleware.js";
 import { DriveOwnershipCache } from "./gateway/drive-ownership-cache.js";
+import type { RequireAuthFetchMiddleware } from "./gateway/require-auth-middleware.js";
 import type {
   FetchHandler,
   GatewayContextFactory,
@@ -113,6 +114,7 @@ export class GraphQLManager {
 
   private readonly subgraphWsDisposers = new Map<string, WsDisposer>();
   #authMiddleware: AuthFetchMiddleware | undefined;
+  #requireAuthMiddleware: RequireAuthFetchMiddleware | undefined;
   #driveMiddleware: DriveFetchMiddleware | undefined;
   readonly driveOwnershipCache: DriveOwnershipCache;
 
@@ -172,8 +174,10 @@ export class GraphQLManager {
   async init(
     coreSubgraphs: SubgraphClass[],
     authMiddleware?: AuthFetchMiddleware,
+    requireAuthMiddleware?: RequireAuthFetchMiddleware,
   ) {
     this.#authMiddleware = authMiddleware;
+    this.#requireAuthMiddleware = requireAuthMiddleware;
     this.logger.debug(`Initializing Subgraph Manager...`);
 
     await this.driveOwnershipCache.init();
@@ -914,12 +918,17 @@ export class GraphQLManager {
   /**
    * Compose the request-level fetch middleware chain. Auth runs first
    * (so we don't validate shard before knowing the request is even
-   * authorized), drive-ownership validation runs after.
+   * authorized); the require-authenticated-caller middleware runs next,
+   * before shard validation, so an anonymous caller is rejected with a
+   * 401 rather than a 421; drive-ownership validation runs last.
    */
   #composeFetchMiddleware(rawHandler: FetchHandler): FetchHandler {
     let handler = rawHandler;
     if (this.#driveMiddleware) {
       handler = this.#driveMiddleware(handler);
+    }
+    if (this.#requireAuthMiddleware) {
+      handler = this.#requireAuthMiddleware(handler);
     }
     if (this.#authMiddleware) {
       handler = this.#authMiddleware(handler);
