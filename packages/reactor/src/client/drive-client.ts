@@ -134,6 +134,7 @@ export class DriveClient implements IDriveClient {
       ],
       this.signer,
       signal,
+      documentId,
     );
 
     const driveActions: Action[] = await signActions(

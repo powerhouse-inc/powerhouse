@@ -813,6 +813,7 @@ export class ReactorClient implements IReactorClient {
       ],
       this.signer,
       signal,
+      documentId,
     );
 
     const jobs: ExecutionJobPlan[] = [
@@ -989,7 +990,12 @@ export class ReactorClient implements IReactorClient {
         revision: { ...document.header.revision },
       });
 
-      const signedActions = await signActions([action], this.signer, signal);
+      const signedActions = await signActions(
+        [action],
+        this.signer,
+        signal,
+        documentId,
+      );
       const jobInfo = await this.reactor.execute(
         documentId,
         branch,

@@ -15,12 +15,17 @@ export class SignatureVerifier {
       return;
     }
 
-    for (const action of actions) {
-      const signer = action.context?.signer;
-
-      if (!signer) {
+    for (const entry of actions) {
+      // A malformed submission can arrive with a missing action even though
+      // the type says otherwise. Without an action there is nothing signed to
+      // check, so it is treated as unsigned, like any signer-less action
+      // (#2894).
+      const action: Action | undefined = entry;
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- `action` is required by the type but can be absent at runtime
+      if (!action?.context?.signer) {
         continue;
       }
+      const signer = action.context.signer;
 
       if (signer.signatures.length === 0) {
         throw new InvalidSignatureError(
@@ -75,11 +80,12 @@ export class SignatureVerifier {
 
     for (let i = 0; i < operations.length; i++) {
       const operation = operations[i];
-      const signer = operation.action.context?.signer;
-
-      if (!signer) {
+      const action: Action | undefined = operation.action;
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- `action` is required by the type but can be absent at runtime
+      if (!action?.context?.signer) {
         continue;
       }
+      const signer = action.context.signer;
 
       if (signer.signatures.length === 0) {
         throw new InvalidSignatureError(
