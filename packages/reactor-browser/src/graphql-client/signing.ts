@@ -33,6 +33,8 @@ export function stampAction(
       ...action.context,
       prevOpHash: hashDocumentStateForScope(document, action.scope),
       prevOpIndex: revision - 1,
+      // Binds the resulting signature to this document (#2894).
+      ...(document.header.id ? { documentId: document.header.id } : {}),
     },
   };
 }
