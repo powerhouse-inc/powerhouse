@@ -10,12 +10,7 @@
     },
     "drives": {
       "allowAddDrive": true,
-      "defaultDrives": [
-        {
-          "url": "https://flank.tail45cd22.ts.net/d/powerhouse",
-          "name": "Demo switchboard"
-        }
-      ],
+      "defaultDrives": [],
       "sections": {
         "remote": {
           "enabled": true,
