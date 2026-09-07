@@ -199,6 +199,28 @@ still admitted, with no user. Verification is otherwise identical to
 `AUTH_ENABLED=true`, Renown credential check included, so an invalid token is
 still a 401.
 
+That last property is the hole `REQUIRE_AUTHENTICATED_CALLER` closes: it
+turns the same resolved identity into enforcement.
+
+```bash
+# Admit authenticated callers, reject anonymous ones with a 401
+export REQUIRE_AUTHENTICATED_CALLER=true
+```
+
+It defaults to off, so nothing changes for existing deployments. When on,
+every GraphQL request without a resolved caller — subgraphs, the supergraph,
+and the SSE subscription endpoint alike — is answered with a `401`
+(`{"error": "Authentication required"}`) before any resolver runs. It is the
+one switch that expresses "authenticated callers allowed, anonymous not":
+under `OPEN` the policy itself answers `true` to everything, and
+`ADMIN_ONLY` locks out every non-admin, so neither can do this on its own.
+CORS preflights (`OPTIONS`) are still admitted, as they never carry a token.
+
+It requires a caller to be resolvable at all, so it refuses to boot without
+`RESOLVE_CALLER_IDENTITY=true` or `AUTH_ENABLED=true` — with identity
+resolution off, no bearer is ever read and it would reject every caller,
+including authenticated ones.
+
 #### Configuration File Method
 
 ```json
