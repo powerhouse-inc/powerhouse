@@ -10,6 +10,10 @@ const CACHE_TTL_MS = 60 * 60 * 1000;
 // audience: "ai" -- atomics added for agents that would clutter their flow
 // builder (activepieces/activepieces#13960). We want the whole surface, the
 // way their own non-builder callers ask for it.
+function aiLast(audience: string | null): number {
+  return audience === "ai" ? 1 : 0;
+}
+
 function pieceUrl(packageName: string): string {
   return `${CATALOG_URL}/${packageName}?audience=all`;
 }
@@ -32,6 +36,8 @@ export interface PieceActionEntry {
   displayName: string;
   description: string;
   blockType: string;
+  // "human" | "ai" | "both"; absent on most pieces, which means "both".
+  audience: string | null;
 }
 
 export interface PieceActionsResult {
@@ -74,6 +80,8 @@ interface PieceDetailAction {
   name?: string;
   displayName?: string;
   description?: string;
+  // Their discovery filter: "ai" marks agent-targeted atomics.
+  audience?: string;
 }
 
 interface PieceDetailTrigger {
@@ -208,12 +216,18 @@ export async function fetchPieceActions(
   const version = detail.version ?? "";
   const actionsRecord =
     detail.actions && typeof detail.actions === "object" ? detail.actions : {};
-  const actions = Object.entries(actionsRecord).map(([name, action]) => ({
-    name,
-    displayName: action.displayName ?? name,
-    description: action.description ?? "",
-    blockType: `${packageName}@${version}#${name}`,
-  }));
+  const actions = Object.entries(actionsRecord)
+    .map(([name, action]) => ({
+      name,
+      displayName: action.displayName ?? name,
+      description: action.description ?? "",
+      blockType: `${packageName}@${version}#${name}`,
+      audience: action.audience ?? null,
+    }))
+    // Agent-targeted atomics last, so the actions a person would pick stay at
+    // the top. Same predicate their own human view filters on, and an absent
+    // audience counts as human-visible.
+    .sort((a, b) => aiLast(a.audience) - aiLast(b.audience));
   const value: PieceActionsResult = {
     name: packageName,
     displayName: detail.displayName ?? packageName,
