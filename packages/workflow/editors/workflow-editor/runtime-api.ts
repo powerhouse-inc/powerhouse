@@ -265,6 +265,11 @@ export function fetchConnections(): Promise<ConnectionSummary[]> {
   return connectionsCache.promise;
 }
 
+// The picker creates connections itself; the cache must not hide them.
+export function invalidateConnections(): void {
+  connectionsCache = undefined;
+}
+
 export interface ConnectionCheckResult {
   ok: boolean;
   detail: string;

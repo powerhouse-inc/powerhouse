@@ -11,6 +11,7 @@ import {
   fetchConnections,
   fetchRuns,
   getBlockForm,
+  invalidateConnections,
   loadBlockOptions,
   testTrigger,
   type OutputTreeNode,
@@ -34,6 +35,7 @@ function WorkflowEditor() {
       loadOptions: loadBlockOptions,
       testTrigger: () => testTrigger(workflowId),
       listConnections: fetchConnections,
+      refreshConnections: invalidateConnections,
     }),
     [workflowId],
   );

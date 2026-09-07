@@ -46,6 +46,8 @@ export interface DesignTimeService {
   testTrigger?: () => Promise<unknown>;
   // powerhouse/connection documents for the connection picker.
   listConnections?: () => Promise<ConnectionSummary[]>;
+  // Drops the cached listing after the picker creates a connection.
+  refreshConnections?: () => void;
 }
 
 // Ours, not the piece's: the reactor's poll cadence for a piece trigger.
