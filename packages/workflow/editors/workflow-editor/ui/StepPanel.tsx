@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { acyclicTargets } from "./ap-layout.js";
+import { acyclicTargets, reachableFrom } from "./ap-layout.js";
 import { ConnectionField } from "./ConnectionField.js";
 import {
   ExpressionPickerButton,
@@ -7,12 +7,13 @@ import {
   useExpressionField,
 } from "./ExpressionPicker.js";
 import type { BlockForm, DesignTimeService } from "./forms.js";
-import type {
-  RetryPolicyModel,
-  StepModel,
-  TriggerModel,
-  WorkflowEditorCallbacks,
-  WorkflowModel,
+import {
+  flowPorts,
+  type RetryPolicyModel,
+  type StepModel,
+  type TriggerModel,
+  type WorkflowEditorCallbacks,
+  type WorkflowModel,
 } from "./model.js";
 import { AvailableSoon, PropertyForm } from "./PropertyForm.js";
 import { missingForBlock } from "./validation.js";
@@ -315,6 +316,91 @@ function RetryEditor(props: {
   );
 }
 
+const PORT_LABEL: Record<string, string> = {
+  next: "Next step",
+  true: "When true",
+  false: "When false",
+};
+
+// One target per port, since the coordinator follows a single successor per
+// outcome. acyclicTargets allows any step that is not an ancestor.
+function FlowPortEditor(props: {
+  step: StepModel;
+  model: WorkflowModel;
+  callbacks: WorkflowEditorCallbacks;
+}) {
+  const { step, model, callbacks } = props;
+  const ports = flowPorts(step.blockType);
+  const stepName = (id: string) => {
+    const target = model.steps.find((entry) => entry.id === id);
+    return target ? target.name || target.key : id;
+  };
+  const attached = model.trigger
+    ? reachableFrom(model.trigger.id, model.edges)
+    : new Set<string>();
+  const targets = acyclicTargets(model, step.id);
+  return (
+    <Field
+      label={ports.length > 1 ? "Branches" : "Connects to"}
+      hint="Any step that is not upstream of this one, connected or not"
+    >
+      <div className="flex flex-col gap-1">
+        {ports.map((port) => {
+          const edge = model.edges.find(
+            (candidate) =>
+              candidate.from === step.id && candidate.port === port,
+          );
+          return (
+            <div key={port} className="flex items-center gap-2">
+              {ports.length > 1 ? (
+                <span className="w-20 shrink-0 text-[11px] font-medium text-slate-500">
+                  {PORT_LABEL[port] ?? port}
+                </span>
+              ) : null}
+              {edge ? (
+                <div className="flex min-w-0 flex-1 items-center justify-between rounded border border-solid border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-700">
+                  <span className="truncate">→ {stepName(edge.to)}</span>
+                  <button
+                    type="button"
+                    className="ml-2 shrink-0 text-[11px] text-red-500"
+                    onClick={() => callbacks.removeEdge(edge.id)}
+                  >
+                    Disconnect
+                  </button>
+                </div>
+              ) : (
+                <select
+                  className={`${inputClass} flex-1`}
+                  value=""
+                  disabled={targets.length === 0}
+                  onChange={(event) => {
+                    if (event.target.value === "") return;
+                    callbacks.addEdge({
+                      from: step.id,
+                      to: event.target.value,
+                      port,
+                    });
+                  }}
+                >
+                  <option value="">
+                    {targets.length === 0 ? "No step available" : "Connect to…"}
+                  </option>
+                  {targets.map((target) => (
+                    <option key={target.id} value={target.id}>
+                      {target.name || target.key}
+                      {attached.has(target.id) ? "" : " · detached"}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </Field>
+  );
+}
+
 function ErrorPortEditor(props: {
   step: StepModel;
   model: WorkflowModel;
@@ -569,6 +655,12 @@ export function StepPanel(props: {
         connectionId={step.connectionId ?? undefined}
         scopeStepId={step.id}
       />
+      <FlowPortEditor
+        key={`${step.id}-flow`}
+        step={step}
+        model={props.model}
+        callbacks={callbacks}
+      />
       <AdvancedSection step={step} model={props.model} callbacks={callbacks} />
       <button
         type="button"
@@ -646,13 +738,6 @@ export function TriggerPanel(props: {
   return (
     <div className="flex flex-col gap-3 p-4">
       <PanelHeader title="Trigger" missing={missing} onClose={props.onClose} />
-      <Field label="Block type">
-        <input
-          className={`${inputClass} font-mono text-xs`}
-          value={trigger.blockType}
-          readOnly
-        />
-      </Field>
       {isPieceTrigger ? (
         <ConnectionField
           key={`${trigger.id}-conn`}

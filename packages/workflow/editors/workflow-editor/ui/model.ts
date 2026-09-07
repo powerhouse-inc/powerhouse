@@ -140,3 +140,9 @@ export function stepPorts(blockType: string): string[] {
   if (blockType === "core#branch") return ["true", "false", "error"];
   return ["next", "error"];
 }
+
+// The ports that carry the flow onwards. `error` is left out: it is a failure
+// route, edited separately.
+export function flowPorts(blockType: string): string[] {
+  return stepPorts(blockType).filter((port) => port !== "error");
+}

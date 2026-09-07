@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { flowPorts } from "./model.js";
 import type { BlockForm } from "./forms.js";
 import {
   isEmptyValue,
@@ -68,5 +69,22 @@ describe("missingForBlock", () => {
     expect(missingForBlock("loading", {}, null)).toEqual([]);
     expect(missingForBlock(null, {}, null)).toEqual([]);
     expect(missingForBlock(undefined, {}, null)).toEqual([]);
+  });
+});
+
+describe("flowPorts", () => {
+  it("gives a plain step one onward port", () => {
+    expect(flowPorts("@activepieces/piece-discord@0.5.7#send_message")).toEqual(
+      ["next"],
+    );
+  });
+
+  it("gives a branch both outcomes", () => {
+    expect(flowPorts("core#branch")).toEqual(["true", "false"]);
+  });
+
+  it("leaves the error route out", () => {
+    expect(flowPorts("core#branch")).not.toContain("error");
+    expect(flowPorts("core#assert")).not.toContain("error");
   });
 });
