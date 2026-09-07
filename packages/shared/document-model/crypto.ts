@@ -69,13 +69,10 @@ export function buildOperationSignatureParams({
   action,
   previousStateHash,
 }: ActionSignatureContext): [string, string, string, string] {
-  const { /*id, timestamp,*/ scope, type } = action;
   return [
     /*getUnixTimestamp(timestamp)*/ getUnixTimestamp(new Date()),
     signer.app.key,
-    hashBrowser(
-      [documentId, scope, /*id,*/ type, stringifyJson(action.input)].join(""),
-    ),
+    hashActionContentSha1(documentId, action),
     previousStateHash,
   ];
 }
@@ -88,6 +85,66 @@ export function buildOperationSignatureMessage(
   const message = params.join("");
   const prefix = "\x19Signed Operation:\n" + message.length.toString();
   return textEncode.encode(prefix + message);
+}
+
+/** The structural slice of an action that an action-hash preimage is built from. */
+export type ActionHashPreimage = {
+  scope: string;
+  type: string;
+  input: unknown;
+};
+
+/** SHA-256 over a string, base64-encoded. */
+async function sha256Base64(data: string): Promise<string> {
+  const bytes = new TextEncoder().encode(data);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return uint8ArrayToBase64(new Uint8Array(digest));
+}
+
+/**
+ * The preimage an ECDSA-P-256 action signature covers: the action's scope, type
+ * and input, SHA-256 hashed. Shared by the signer and the verifier so the two
+ * can never silently diverge again (#2894).
+ */
+export async function hashActionContentSha256(
+  action: ActionHashPreimage,
+): Promise<string> {
+  return sha256Base64(
+    [action.scope, action.type, JSON.stringify(action.input)].join(""),
+  );
+}
+
+/**
+ * The preimage a shared/legacy action signature covers: the document id, scope,
+ * type and input, SHA-1 hashed.
+ */
+export function hashActionContentSha1(
+  documentId: string,
+  action: ActionHashPreimage,
+): string {
+  return hashBrowser(
+    [documentId, action.scope, action.type, stringifyJson(action.input)].join(
+      "",
+    ),
+  );
+}
+
+/**
+ * Every action-hash value a signature's hash field may legitimately carry for
+ * the given action, across both signing schemes currently in use. A binding
+ * verifier recomputes these and refuses a signature whose stored hash matches
+ * none of them, rather than trusting the value echoed back from the signature
+ * tuple itself (#2894).
+ */
+export async function computeActionHashCandidates(
+  documentId: string,
+  action: ActionHashPreimage,
+): Promise<string[]> {
+  const candidates = [await hashActionContentSha256(action)];
+  if (documentId) {
+    candidates.push(hashActionContentSha1(documentId, action));
+  }
+  return candidates;
 }
 
 export function ab2hex(ab: ArrayBuffer | ArrayBufferView): string {

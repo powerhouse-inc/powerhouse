@@ -3,6 +3,7 @@ import {
   ab2hex,
   buildOperationSignatureMessage,
   buildOperationSignatureParams,
+  computeActionHashCandidates,
   hex2ab,
 } from "./crypto.js";
 import type { PHDocument } from "./documents.js";
@@ -445,9 +446,23 @@ export async function verifyOperationSignature(
   signature: Signature,
   signer: Omit<ActionSigner, "signatures">,
   verifyHandler: ActionVerificationHandler,
+  action: Action,
+  documentId?: string,
 ) {
   const publicKey = signer.app.key;
   const params = signature.slice(0, 4) as [string, string, string, string];
+
+  // Bind the signature to the action it claims to cover: its hash field must
+  // match the action being verified, not merely be a valid signature over
+  // itself (#2894).
+  const candidates = await computeActionHashCandidates(
+    documentId ?? "",
+    action,
+  );
+  if (!candidates.includes(params[2])) {
+    return false;
+  }
+
   const signatureBytes = hex2ab(signature[4]);
   const expectedMessage = buildOperationSignatureMessage(params);
   return verifyHandler(publicKey, signatureBytes, expectedMessage);

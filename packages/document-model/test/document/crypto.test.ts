@@ -301,6 +301,8 @@ describe("Crypto utils", () => {
           new Uint8Array(data),
         );
       },
+      operation.action,
+      document.header.id,
     );
 
     expect(verified).toBe(true);
@@ -368,8 +370,91 @@ describe("Crypto utils", () => {
           new Uint8Array(data),
         );
       },
+      operation.action,
+      document.header.id,
     );
     expect(verified).toBe(false);
+  });
+
+  it("should reject a signature replayed onto a different document", async () => {
+    const algorithm = { name: "ECDSA", namedCurve: "P-256", hash: "SHA-256" };
+    const keyPair = await crypto.subtle.generateKey(algorithm, true, [
+      "sign",
+      "verify",
+    ]);
+    const publicKey = `0x${ab2hex(
+      await crypto.subtle.exportKey("raw", keyPair.publicKey),
+    )}`;
+
+    const signHandler = async (data: Uint8Array) =>
+      new Uint8Array(
+        await crypto.subtle.sign(
+          algorithm,
+          keyPair.privateKey,
+          data.buffer as ArrayBuffer,
+        ),
+      );
+    const verifyHandler = async (
+      pk: string,
+      signature: Uint8Array,
+      data: Uint8Array,
+    ) => {
+      const importedKey = await crypto.subtle.importKey(
+        "raw",
+        hex2ab(pk),
+        algorithm,
+        true,
+        ["verify"],
+      );
+      return crypto.subtle.verify(
+        algorithm,
+        importedKey,
+        new Uint8Array(signature),
+        new Uint8Array(data),
+      );
+    };
+
+    const document = baseCreateDocument<CountPHState>(
+      createCountDocumentState,
+      createCountState(),
+    );
+    document.header.id = "doc-A";
+
+    const operation = await buildSignedAction(
+      { ...increment() },
+      countReducer as Reducer<CountPHState>,
+      document,
+      actionSigner(
+        { address: "0x123", chainId: 1, networkId: "1" },
+        { name: "test", key: publicKey },
+      ),
+      signHandler,
+    );
+
+    const signerInfo = operation.action.context!.signer!;
+
+    // Verifies against the document the signature was made for.
+    await expect(
+      verifyOperationSignature(
+        signerInfo.signatures.at(0)!,
+        signerInfo,
+        verifyHandler,
+        operation.action,
+        "doc-A",
+      ),
+    ).resolves.toBe(true);
+
+    // The same signature replayed against a different document: its hash
+    // embeds the original document id, so it must not verify (#2894).
+    await expect(
+      verifyOperationSignature(
+        signerInfo.signatures.at(0)!,
+        signerInfo,
+        verifyHandler,
+        operation.action,
+        "doc-B",
+      ),
+    ).resolves.toBe(false);
   });
 
   it("should sign and verify id", async () => {
