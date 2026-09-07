@@ -251,6 +251,34 @@ describe("runWorkflow", () => {
     expect(run.steps[0].error).toBe("boom");
   });
 
+  it("runs every successor on a port, not just the first", async () => {
+    const executor = new FakeExecutor();
+    const definition: WorkflowDefinition = {
+      trigger: TRIGGER,
+      steps: [
+        { id: "a", key: "risky", blockType: "fake#fail", config: {} },
+        { id: "b", key: "notify", blockType: "fake#ok", config: {} },
+        { id: "c", key: "cleanup", blockType: "fake#ok", config: {} },
+      ],
+      edges: [
+        edge("e1", "t", "a"),
+        edge("e2", "a", "b", "error"),
+        edge("e3", "a", "c", "error"),
+      ],
+    };
+
+    const run = await runWorkflow({ definition, executor });
+
+    expect(run.status).toBe("SUCCEEDED");
+    expect(Object.fromEntries(run.steps.map((s) => [s.key, s.status]))).toEqual(
+      {
+        risky: "FAILED",
+        notify: "SUCCEEDED",
+        cleanup: "SUCCEEDED",
+      },
+    );
+  });
+
   it("fails the run on an unhandled step failure", async () => {
     const executor = new FakeExecutor();
     const definition: WorkflowDefinition = {
@@ -341,9 +369,8 @@ describe("parseBlockType", () => {
   });
 
   it("refuses to execute a trigger block type as a step", async () => {
-    const { ActivepiecesBlockExecutor, TriggerBlockAsStepError } = await import(
-      "../../src/engine/blocks.js"
-    );
+    const { ActivepiecesBlockExecutor, TriggerBlockAsStepError } =
+      await import("../../src/engine/blocks.js");
     const executor = new ActivepiecesBlockExecutor({ cacheDir: "/tmp/na" });
     const blockType = "@activepieces/piece-rss@0.5.0#trigger:new_item";
     await expect(
