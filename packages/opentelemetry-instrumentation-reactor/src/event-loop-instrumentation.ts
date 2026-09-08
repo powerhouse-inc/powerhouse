@@ -1,7 +1,8 @@
-// Bench-host event-loop and CPU instrumentation. Registers OTel observable
+// Host event-loop and CPU instrumentation. Registers OTel observable
 // gauges on the global meter provider for monitorEventLoopDelay percentiles,
 // performance.eventLoopUtilization, and process.cpuUsage. Pure observation;
-// does not touch the reactor package. Imported and started from main.ts.
+// does not touch the reactor package. Started by the host process once its
+// meter provider is registered (switchboard: observability.mts; bench: main.ts).
 import {
   metrics,
   type BatchObservableCallback,
@@ -14,7 +15,7 @@ import {
   type EventLoopUtilization,
 } from "node:perf_hooks";
 
-const METER_NAME = "@powerhousedao/reactor-bench-host";
+const METER_NAME = "@powerhousedao/reactor-host";
 const DELAY_RESOLUTION_MS = 10;
 const NS_PER_MS = 1_000_000;
 const NS_PER_US = 1_000;
@@ -29,7 +30,7 @@ export type EventLoopInstrumentation = {
 };
 
 /**
- * Registers six observable gauges on the bench-host meter:
+ * Registers six observable gauges on the host meter:
  *
  *   reactor.host.eventloop.delay.{p50,p95,p99,max}  (ms)
  *   reactor.host.eventloop.utilization              (ratio 0..1)

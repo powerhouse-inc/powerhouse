@@ -10,6 +10,7 @@ export {
   type ProjectionTransportEventMap,
   type ProjectionTransportListener,
 } from "./transport.js";
+export { BUILT_IN_READ_MODEL_KINDS } from "./read-model-kinds.js";
 export type {
   BuiltInReadModelKind,
   ChainDepthReport,

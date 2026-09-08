@@ -37,6 +37,10 @@ import type {
   BuiltInReadModelKind,
   ProjectionWorkerFactory,
 } from "../projection/index.js";
+// Imported from the leaf module, not the projection barrel: the barrel pulls
+// in worker_threads transports that this file otherwise only reaches through
+// a dynamic import.
+import { BUILT_IN_READ_MODEL_KINDS } from "../projection/read-model-kinds.js";
 import { ReadModelCoordinator } from "../read-models/coordinator.js";
 import { KyselyDocumentView } from "../read-models/document-view.js";
 import type {
@@ -158,7 +162,17 @@ export type WorkerPoolOptions =
  */
 export type ProjectionShardBuilderConfig = {
   shardCount: number;
+  /**
+   * Kinds each shard indexes before its job reaches READ_READY.
+   *
+   * Together with {@link postReadyKinds} these must name every
+   * {@link BuiltInReadModelKind} exactly once — the host's own copies of
+   * those models never index under sharding, so a kind named in neither
+   * list is indexed by nobody, and one named in both is indexed twice.
+   * `buildModule` rejects any other combination.
+   */
   preReadyKinds: BuiltInReadModelKind[];
+  /** Kinds each shard indexes after READ_READY. See {@link preReadyKinds}. */
   postReadyKinds: BuiltInReadModelKind[];
   /**
    * Connection info for the projection workers' own pools. Falls back to
@@ -418,6 +432,64 @@ export class ReactorBuilder {
       throw new Error(
         "withProjectionShards does not support read models registered through withReadModelFactory; projection workers cannot receive host-only factory dependencies",
       );
+    }
+
+    // Same class of bug, quieter: `readModelInstances` is handed to the
+    // in-process ReadModelCoordinator only, so anything registered through
+    // withReadModel is dropped on the floor under sharding rather than
+    // rejected. Fail here instead.
+    //
+    // KNOWN LIMITATION, not covered by any guard: the coordinator branch
+    // also owns subscriptionNotificationReadModel and processorManager, both
+    // of which buildModule constructs unconditionally — there is no caller
+    // registration to check for. Under withProjectionShards they are built,
+    // initialized, and never fed an operation, which silently disables
+    // GraphQL subscriptions and every package-installed processor. Do not
+    // enable projection sharding in a host that relies on either until that
+    // is resolved.
+    if (
+      this.projectionShardConfig !== undefined &&
+      this.readModels.length > 0
+    ) {
+      throw new Error(
+        "withProjectionShards does not support read models registered through withReadModel; projection workers build their own read models from the shard config and would silently omit these",
+      );
+    }
+
+    // Third instance of the same bug, and the quietest: a built-in kind
+    // absent from both lists is indexed by nobody. The host's own
+    // documentView/documentIndexer are handed to the ReadModelCoordinator
+    // only, so under sharding they never index an operation — and no shard
+    // instantiates a kind it wasn't named. Reads then serve indefinitely
+    // stale data, and any read carrying a consistency token for that model
+    // calls waitFor() against a tracker nothing ever advances, which arms
+    // no timer and so waits for the life of the process. A kind named twice
+    // is the mirror image: two instances indexing the same operations and
+    // double-reporting to one tracker. Require exactly one mention each.
+    if (this.projectionShardConfig !== undefined) {
+      const named = [
+        ...this.projectionShardConfig.preReadyKinds,
+        ...this.projectionShardConfig.postReadyKinds,
+      ];
+      const missing = BUILT_IN_READ_MODEL_KINDS.filter(
+        (kind) => !named.includes(kind),
+      );
+      const duplicated = BUILT_IN_READ_MODEL_KINDS.filter(
+        (kind) => named.filter((entry) => entry === kind).length > 1,
+      );
+      if (missing.length > 0 || duplicated.length > 0) {
+        const problems = [
+          missing.length > 0
+            ? `never named: ${missing.join(", ")} (would be indexed by no shard, leaving those reads permanently stale and their consistency-token waits unresolvable)`
+            : undefined,
+          duplicated.length > 0
+            ? `named more than once: ${duplicated.join(", ")} (would be indexed twice per operation)`
+            : undefined,
+        ].filter((problem) => problem !== undefined);
+        throw new Error(
+          `withProjectionShards requires preReadyKinds and postReadyKinds to name each built-in read model (${BUILT_IN_READ_MODEL_KINDS.join(", ")}) exactly once between them; ${problems.join("; ")}`,
+        );
+      }
     }
 
     // One resolution pass feeds both sides: the host registry gets every
@@ -690,6 +762,10 @@ export class ReactorBuilder {
         ? await this.createProjectionShardManager(
             this.projectionShardConfig,
             eventBus,
+            {
+              "document-view": documentViewConsistencyTracker,
+              "document-indexer": documentIndexerConsistencyTracker,
+            },
           )
         : new ReadModelCoordinator(eventBus, readModelInstances, [
             subscriptionNotificationReadModel,
@@ -811,10 +887,19 @@ export class ReactorBuilder {
    * injected via {@link withProjectionWorkerFactory}. Calls
    * `manager.startup()` so all N workers reach READY before the reactor
    * is returned to the caller.
+   *
+   * @param consistencyTrackers The host's trackers for the built-in read
+   *   models, keyed by kind. Under sharding the host's own copies of those
+   *   models never index an operation, so the manager advances these from the
+   *   shards' relayed indexing reports; without them every read carrying a
+   *   consistency token waits forever.
    */
   private async createProjectionShardManager(
     config: ProjectionShardBuilderConfig,
     eventBus: IEventBus,
+    consistencyTrackers: Partial<
+      Record<BuiltInReadModelKind, IConsistencyTracker>
+    >,
   ): Promise<IReadModelCoordinator> {
     const baseDb = this.resolveReactorDbConfig();
     if (!baseDb) {
@@ -855,6 +940,7 @@ export class ReactorBuilder {
       drainTimeoutMs: config.drainTimeoutMs,
       chainDepthReportIntervalMs: config.chainDepthReportIntervalMs,
       poolInstrumentations,
+      consistencyTrackers,
     });
     await manager.startup();
     this.shutdownHooks.push(() => manager.shutdown());
