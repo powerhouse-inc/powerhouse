@@ -130,6 +130,13 @@ describe("runtime-config schema", () => {
           defaultDrives: [
             { url: "https://drive.example", name: "Drive", icon: "/icon.png" },
             { url: "https://drive2.example", name: null, icon: null },
+            {
+              local: true,
+              id: "local-drive-1",
+              name: "Local Drive",
+              icon: "/local-icon.png",
+              app: "powerhouse/generic-drive-explorer",
+            },
           ],
           preserveStrategy: "preserve-all",
           sections: {

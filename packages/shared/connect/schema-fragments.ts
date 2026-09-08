@@ -197,17 +197,45 @@ export const phConnectRuntimeConfigSchema = {
         defaultDrives: {
           type: "array",
           description:
-            "Drives the SPA auto-connects to on first load. Each must specify a URL; name and icon are optional overrides.",
+            "Drives the SPA auto-connects to on first load. Each entry is either a remote drive (a URL, with optional name/icon overrides) or a local drive (created locally on first boot, with a stable id and optional name/icon/app).",
           default: [],
           items: {
-            type: "object",
-            additionalProperties: false,
-            required: ["url"],
-            properties: {
-              url: { type: "string" },
-              name: { type: ["string", "null"] },
-              icon: { type: ["string", "null"] },
-            },
+            oneOf: [
+              {
+                type: "object",
+                additionalProperties: false,
+                required: ["url"],
+                properties: {
+                  url: { type: "string" },
+                  name: { type: ["string", "null"] },
+                  icon: { type: ["string", "null"] },
+                },
+              },
+              {
+                type: "object",
+                additionalProperties: false,
+                required: ["local", "id"],
+                properties: {
+                  local: {
+                    const: true,
+                    description:
+                      "Discriminator: this entry is a local drive created on first boot.",
+                  },
+                  id: {
+                    type: "string",
+                    description:
+                      "Stable drive id. The drive is created with this id on first boot and is not re-created on later boots.",
+                  },
+                  name: { type: ["string", "null"] },
+                  icon: { type: ["string", "null"] },
+                  app: {
+                    type: "string",
+                    description:
+                      "Drive app (preferred editor) to open on the drive.",
+                  },
+                },
+              },
+            ],
           },
         },
         preserveStrategy: {
