@@ -43,8 +43,18 @@ if (process.env.PYROSCOPE_SERVER_ADDRESS) {
 
 const cliMigratePglite = process.argv.slice(2).includes("--migrate-pglite");
 
-startSwitchboard({
-  ...config,
-  migratePglite: cliMigratePglite || config.migratePglite,
-  forcePgVersion: config.forcePgVersion ?? undefined,
-}).catch(console.error);
+// A boot failure leaves no serving process behind, so it must exit non-zero:
+// logging and continuing hides a dead switchboard from the supervisor, which
+// would otherwise never restart it.
+try {
+  await startSwitchboard({
+    ...config,
+    migratePglite: cliMigratePglite || config.migratePglite,
+    forcePgVersion: config.forcePgVersion ?? undefined,
+  });
+} catch (e) {
+  Sentry.captureException(e);
+  logger.error("Switchboard failed to start: @error", e);
+  await Sentry.flush(2000).catch(() => undefined);
+  process.exit(1);
+}

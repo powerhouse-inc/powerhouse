@@ -1,6 +1,7 @@
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import { childLogger, type ILogger } from "document-model";
 import { randomUUID } from "node:crypto";
+import { fromErrorInfo } from "../executor/worker/error-info.js";
 import type { IEventBus } from "../events/interfaces.js";
 import {
   ReactorEventTypes,
@@ -153,6 +154,13 @@ type ShardState = {
    * `readmodel-batch-completed`, and are dropped when the shard exits.
    */
   pendingCoordinates: Map<string, ConsistencyCoordinate[]>;
+  /**
+   * Correlation id of this shard's `init` while it is unsettled; cleared once
+   * the shard reports ready, fails, or dies. Lets a transport error or a
+   * premature exit settle the shard's own pending init instead of leaving
+   * `startup()` to time out on a worker that will never answer.
+   */
+  initCorrelationId?: string;
   onMessage: (msg: ProjectionWorkerMessage) => void;
   onError: (err: Error) => void;
   onExit: (code: number) => void;
@@ -252,6 +260,7 @@ export class ProjectionShardManager implements IReadModelCoordinator {
       this.shards.push(state);
 
       const correlationId = randomUUID();
+      state.initCorrelationId = correlationId;
       const initPromise = new Promise<void>((resolve, reject) => {
         const timer = setTimeout(() => {
           this.initPromises.delete(correlationId);
@@ -371,6 +380,16 @@ export class ProjectionShardManager implements IReadModelCoordinator {
     // expected from here on and must not be reported as fatal.
     this.isShuttingDown = true;
     this.stop();
+    // An init timer left armed by a shard that never reported keeps the
+    // process alive for the whole init timeout after shutdown returns.
+    for (const shard of this.shards) {
+      this.failPendingInit(
+        shard,
+        new Error(
+          `projection shard ${shard.shardId} was shut down before becoming ready`,
+        ),
+      );
+    }
     const graceMs = this.config.shutdownGraceMs ?? DEFAULT_SHUTDOWN_GRACE_MS;
     const correlationId = randomUUID();
     for (const shard of this.shards) {
@@ -493,6 +512,14 @@ export class ProjectionShardManager implements IReadModelCoordinator {
       case "ready":
         this.handleReady(shard, msg.correlationId);
         return;
+      case "init-failed":
+        this.logger.error(
+          "projection shard @shardId failed to initialize: @error",
+          shard.shardId,
+          msg.error.message,
+        );
+        this.failPendingInit(shard, fromErrorInfo(msg.error));
+        return;
       case "read-ready":
         this.relayReadReady({
           jobId: msg.jobId,
@@ -585,8 +612,31 @@ export class ProjectionShardManager implements IReadModelCoordinator {
     shard.poolInstrumentation.pushSamples(msg.durations);
   }
 
+  /**
+   * Settles a shard's unresolved `init` with `error`, clearing its timer.
+   * Returns false when the shard has no init outstanding, which is every
+   * failure after startup. `startup()` awaits all init promises together, so
+   * the rejection is always attached.
+   */
+  private failPendingInit(shard: ShardState, error: Error): boolean {
+    const correlationId = shard.initCorrelationId;
+    if (correlationId === undefined) {
+      return false;
+    }
+    shard.initCorrelationId = undefined;
+    const pending = this.initPromises.get(correlationId);
+    if (!pending) {
+      return false;
+    }
+    this.initPromises.delete(correlationId);
+    clearTimeout(pending.timer);
+    pending.reject(error);
+    return true;
+  }
+
   private handleReady(shard: ShardState, correlationId: string): void {
     shard.ready = true;
+    shard.initCorrelationId = undefined;
     const pending = this.initPromises.get(correlationId);
     if (!pending) {
       return;
@@ -650,6 +700,12 @@ export class ProjectionShardManager implements IReadModelCoordinator {
       shard.shardId,
       err,
     );
+    // A shard that dies during startup is reported through `startup()`, not
+    // through the fatal hook: the host is still building and its shutdown
+    // path (which the hook usually triggers) does not exist yet.
+    if (this.failPendingInit(shard, err)) {
+      return;
+    }
     if (!this.isShuttingDown) {
       this.config.onShardFatal?.(shard.shardId, err);
     }
@@ -665,6 +721,16 @@ export class ProjectionShardManager implements IReadModelCoordinator {
     shard.pendingCoordinates.clear();
     for (const [correlationId, pending] of this.pendingDrains) {
       this.releaseDrain(correlationId, pending, shard.shardId);
+    }
+    if (
+      this.failPendingInit(
+        shard,
+        new Error(
+          `projection shard ${shard.shardId} exited with code ${code} before becoming ready`,
+        ),
+      )
+    ) {
+      return;
     }
     if (!wasReady || this.isShuttingDown) {
       return;

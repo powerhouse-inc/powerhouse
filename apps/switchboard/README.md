@@ -179,7 +179,10 @@ a `postgres://` reactor database with explicit credentials, built packages
 (no `dev` mode), and it adds `REACTOR_DB_POOL_SIZE_PROJECTION` connections
 to the budget above. It can be enabled with or without `REACTOR_WORKERS`. If
 the worker thread dies, switchboard logs the failure and sends itself
-`SIGTERM` so the supervisor restarts a healthy process.
+`SIGTERM` so the supervisor restarts a healthy process. If the worker cannot
+initialize at all — an unreachable database, an exhausted pooler, an
+unmigrated schema — boot fails immediately with the worker's own error and
+exits non-zero instead of waiting out the init timeout.
 
 Programmatically: `startSwitchboard({ projectionWorker: { enabled, dbPoolSize } })`.
 

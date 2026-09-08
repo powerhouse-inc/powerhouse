@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-09-08T20:51:13.010Z
+> Generated: 2026-09-08T20:55:13.260Z
 > Total Documents: 110
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -5603,6 +5603,8 @@ type ProjectionShardBuilderConfig = {
 `preReadyKinds` run before a job reaches `READ_READY`; `postReadyKinds` run after. Between them they must name each `BuiltInReadModelKind` exactly once: under sharding the host's own copies of the built-in read models never index an operation, so a kind named in neither list is indexed by nobody — its reads stay stale and any read carrying a consistency token for it waits forever — while a kind named in both is indexed twice per operation. `poolSize` overrides the reused worker DB pool size for the shard pools only; their `application_name` is `db.applicationName` when set, otherwise `"reactor-projection-shard"`.
 
 Defaults applied when the optional fields are omitted: `initTimeoutMs` 30000, `shutdownGraceMs` 5000, `drainTimeoutMs` 30000, `chainDepthReportIntervalMs` 250.
+
+`initTimeoutMs` bounds only a worker that never answers. A worker whose `init` throws reports the failure instead: `build()` rejects with that error — name, message, and stack intact — and the worker thread is terminated, rather than the build waiting out the timeout and reporting it as the cause.
 
 ### Build-time constraints that throw
 

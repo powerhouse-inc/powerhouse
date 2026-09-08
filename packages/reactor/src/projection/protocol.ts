@@ -13,6 +13,7 @@
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import type {
   DbConfig,
+  ErrorInfo,
   ModelManifestEntry,
   SanitizedArg,
 } from "../executor/worker/protocol.js";
@@ -113,6 +114,23 @@ export type ProjectionReadyMessage = {
 };
 
 /**
+ * Reports that the worker's `init` threw. Terminal: the worker never becomes
+ * ready and never accepts a relay, so the parent rejects that shard's pending
+ * init with this cause and terminates the thread.
+ *
+ * The worker reports and stays alive rather than exiting itself: an exit can
+ * race the message on the port, and if the exit landed first the parent would
+ * settle the init with a bare "exited with code 1" and the real cause would
+ * arrive after the correlation id was already gone.
+ */
+export type ProjectionInitFailedMessage = {
+  type: "init-failed";
+  correlationId: string;
+  shardId: string;
+  error: ErrorInfo;
+};
+
+/**
  * Forwarded JOB_READ_READY event from the worker's local bus. The host
  * re-emits this on the host bus so observers (sync manager, awaiters,
  * tests) see it exactly once per job.
@@ -208,6 +226,7 @@ export type ProjectionLogMessage = {
 
 export type ProjectionWorkerMessage =
   | ProjectionReadyMessage
+  | ProjectionInitFailedMessage
   | ProjectionReadReadyMessage
   | ProjectionReadModelIndexedMessage
   | ProjectionBatchCompletedMessage

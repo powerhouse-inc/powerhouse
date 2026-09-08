@@ -258,6 +258,131 @@ describe("ProjectionShardManager", () => {
     });
   });
 
+  describe("startup failures", () => {
+    // Long enough that only a real settle — never the init timer — can
+    // resolve these tests.
+    const LONG_INIT_TIMEOUT_MS = 600_000;
+
+    function createUnstartedManager(overrides: {
+      shardCount?: number;
+      onShardFatal?: (shardId: string, reason: Error) => void;
+    }): {
+      created: ProjectionShardManager;
+      transports: FakeProjectionTransport[];
+    } {
+      const { transports, factory } = createFakeProjectionTransports({
+        autoReady: false,
+      });
+      const created = new ProjectionShardManager({
+        shardCount: overrides.shardCount ?? 1,
+        db: DB,
+        models: [],
+        preReadyKinds: ["document-view", "document-indexer"],
+        postReadyKinds: [],
+        factory,
+        logger: new ConsoleLogger(["test"]),
+        hostBus: new EventBus(),
+        initTimeoutMs: LONG_INIT_TIMEOUT_MS,
+        shutdownGraceMs: 10,
+        onShardFatal: overrides.onShardFatal,
+      });
+      manager = created;
+      return { created, transports };
+    }
+
+    it("rejects with the worker's own error when init fails", async () => {
+      const fatals: { shardId: string; reason: Error }[] = [];
+      const { created, transports } = createUnstartedManager({
+        onShardFatal: (shardId, reason) => fatals.push({ shardId, reason }),
+      });
+
+      const startup = created.startup();
+      const init = transports[0]!.sentOfType("init")[0]!;
+      transports[0]!.send({
+        type: "init-failed",
+        correlationId: init.correlationId,
+        shardId: init.shardId,
+        error: {
+          name: "PoolTimeoutError",
+          message: "timeout exceeded when trying to connect",
+          stack: "PoolTimeoutError: timeout exceeded\n    at pool",
+        },
+      });
+
+      const error = await startup.then(
+        () => undefined,
+        (err: unknown) => err as Error,
+      );
+      expect(error?.name).toBe("PoolTimeoutError");
+      expect(error?.message).toBe("timeout exceeded when trying to connect");
+      // Startup owns the report; the fatal hook drives a running host's
+      // restart, and there is no host yet.
+      expect(fatals).toHaveLength(0);
+    });
+
+    it("terminates a shard that failed init when the manager shuts down", async () => {
+      const { created, transports } = createUnstartedManager({});
+
+      const startup = created.startup();
+      const init = transports[0]!.sentOfType("init")[0]!;
+      transports[0]!.send({
+        type: "init-failed",
+        correlationId: init.correlationId,
+        shardId: init.shardId,
+        error: { name: "Error", message: "no schema" },
+      });
+      await expect(startup).rejects.toThrow("no schema");
+
+      await created.shutdown();
+      manager = undefined;
+      expect(transports[0]!.terminateCalls).toBe(1);
+    });
+
+    it("rejects when a shard exits before becoming ready", async () => {
+      const fatals: { shardId: string; reason: Error }[] = [];
+      const { created, transports } = createUnstartedManager({
+        onShardFatal: (shardId, reason) => fatals.push({ shardId, reason }),
+      });
+
+      const startup = created.startup();
+      transports[0]!.emit("exit", 1);
+
+      await expect(startup).rejects.toThrow(
+        /projection-shard-0 exited with code 1 before becoming ready/,
+      );
+      expect(fatals).toHaveLength(0);
+    });
+
+    it("rejects when a shard's transport errors before it is ready", async () => {
+      const { created, transports } = createUnstartedManager({});
+
+      const startup = created.startup();
+      transports[0]!.emit("error", new Error("worker module not found"));
+
+      await expect(startup).rejects.toThrow("worker module not found");
+    });
+
+    it("settles every pending init on shutdown so no init timer is left armed", async () => {
+      const { created, transports } = createUnstartedManager({ shardCount: 2 });
+
+      const startup = created.startup();
+      const init = transports[0]!.sentOfType("init")[0]!;
+      transports[0]!.send({
+        type: "ready",
+        correlationId: init.correlationId,
+        shardId: init.shardId,
+      });
+
+      // Attached before shutdown: the rejection lands during it.
+      const rejects = expect(startup).rejects.toThrow(
+        /projection-shard-1 was shut down before becoming ready/,
+      );
+      await created.shutdown();
+      manager = undefined;
+      await rejects;
+    });
+  });
+
   describe("onReadReady hook", () => {
     it("routes a relayed read-ready to the hook instead of the host bus, until emitReadReady", async () => {
       const received: JobReadReadyEvent[] = [];

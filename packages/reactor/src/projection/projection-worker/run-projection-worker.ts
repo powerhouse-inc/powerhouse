@@ -324,14 +324,15 @@ export function runProjectionWorker(
   function handleParentMessage(msg: ProjectionParentMessage): void {
     switch (msg.type) {
       case "init": {
+        // Terminal: the worker has no stack, so it can project nothing. The
+        // parent rejects startup on this message and terminates the thread;
+        // exiting here would race the message and lose the cause.
         handleInit(msg).catch((err: unknown) => {
           post({
-            type: "log",
+            type: "init-failed",
+            correlationId: msg.correlationId,
             shardId,
-            level: "error",
-            message: "projection worker init failed",
-            args: [errorToInfo(err)],
-            timestamp: Date.now(),
+            error: errorToInfo(err),
           });
         });
         break;

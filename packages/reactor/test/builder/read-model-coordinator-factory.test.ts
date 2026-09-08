@@ -433,6 +433,55 @@ describe("ReactorBuilder.withReadModelCoordinatorFactory", () => {
     expect(transports).toHaveLength(0);
   });
 
+  it("bound creator fails the build with the worker's init error and terminates it", async () => {
+    db = await createDefaultDatabase();
+    const { transports, factory } = createFakeProjectionTransports({
+      autoReady: false,
+    });
+    // The init promise is registered before `postMessage(init)` returns, so a
+    // synchronous reply settles it.
+    const failingFactory = (shardIndex: number, shardId: string) => {
+      const transport = factory(shardIndex, shardId) as FakeProjectionTransport;
+      const post = transport.postMessage.bind(transport);
+      transport.postMessage = (message) => {
+        post(message);
+        if (message.type === "init") {
+          transport.send({
+            type: "init-failed",
+            correlationId: message.correlationId,
+            shardId: message.shardId,
+            error: {
+              name: "PoolTimeoutError",
+              message: "timeout exceeded when trying to connect",
+            },
+          });
+        }
+      };
+      return transport;
+    };
+
+    await expect(
+      new ReactorBuilder()
+        .withKysely(db)
+        .withDocumentModelSources(FIXTURE_SOURCES)
+        .withProjectionWorkerFactory(failingFactory)
+        .withReadModelCoordinatorFactory(async (deps) => {
+          const created = await deps.createProjectionShardManager({
+            shardCount: 1,
+            preReadyKinds: ["document-view", "document-indexer"],
+            postReadyKinds: [],
+            db: SHARD_DB,
+            shutdownGraceMs: 10,
+          });
+          return new StubCoordinator(created);
+        })
+        .buildModule(),
+    ).rejects.toThrow("timeout exceeded when trying to connect");
+
+    expect(transports).toHaveLength(1);
+    expect(transports[0]!.terminateCalls).toBe(1);
+  });
+
   it("bound creator rejects models registered only as live modules", async () => {
     db = await createDefaultDatabase();
     const { transports, factory } = createFakeProjectionTransports();

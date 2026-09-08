@@ -1100,7 +1100,21 @@ export class ReactorBuilder {
       onReadReady: config.onReadReady,
       onShardFatal: config.onShardFatal,
     });
-    await manager.startup();
+    try {
+      await manager.startup();
+    } catch (error) {
+      // A shard that never reached READY leaves a live worker thread behind,
+      // which keeps the process alive after the boot error propagates.
+      try {
+        await manager.shutdown();
+      } catch (shutdownError) {
+        this.logger!.warn(
+          "projection shard manager shutdown after a failed startup also failed: @error",
+          shutdownError,
+        );
+      }
+      throw error;
+    }
     if (registerShutdownHook) {
       this.shutdownHooks.push(() => manager.shutdown());
     }

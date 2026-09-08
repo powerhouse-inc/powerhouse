@@ -235,6 +235,8 @@ type ProjectionShardBuilderConfig = {
 
 Defaults applied when the optional fields are omitted: `initTimeoutMs` 30000, `shutdownGraceMs` 5000, `drainTimeoutMs` 30000, `chainDepthReportIntervalMs` 250.
 
+`initTimeoutMs` bounds only a worker that never answers. A worker whose `init` throws reports the failure instead: `build()` rejects with that error — name, message, and stack intact — and the worker thread is terminated, rather than the build waiting out the timeout and reporting it as the cause.
+
 ### Build-time constraints that throw
 
 - `withProjectionShards` without a `db` anywhere: `"withProjectionShards requires a db (or an executor worker pool configured with one); projection workers need connection info to open their own pools."`
