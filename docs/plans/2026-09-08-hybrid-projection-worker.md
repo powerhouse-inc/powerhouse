@@ -1132,6 +1132,64 @@ latest write inside 5 s; `subscriptionManager.onDocumentStateUpdated` fires on
 
 ---
 
+## Status — 2026-09-08, end of implementation pass
+
+Implementation and unit/integration verification are complete on
+`feat/hybrid-projection-worker` (not pushed). Measurement and rollout
+verification remain.
+
+**Verified:**
+- reactor `pnpm test`: 191 files / 3067 tests; switchboard `pnpm test`: 13 /
+  209; `tsc --build` for reactor, switchboard and
+  `opentelemetry-instrumentation-reactor`; reactor `pnpm build`; eslint 0
+  errors across every touched file (one "file ignored" warning from the
+  deliberate `unsafeIgnoredFiles` entry for the worker bootstrap `.mjs`).
+- `dist/index.js` still has no eager `node:worker_threads` import (the two
+  matches are JSDoc text present on `main`).
+- Production switchboard smoke (`node dist/index.mjs`, Postgres on 5433,
+  `REACTOR_PROJECTION_WORKER=1`): with `REACTOR_WORKERS=0` and with
+  `REACTOR_WORKERS=2` — `Projection worker enabled`, `projection worker
+  initialized: projection-shard-0`, GraphQL `createEmptyDocument` +
+  `execute` + `findDocuments` (served by the worker-side indexer) returns the
+  written name, `pg_stat_activity` shows a `switchboard-projection` pool,
+  SIGTERM exits 0 in well under a second with the graceful sequence and no
+  lingering thread. The no-Postgres guard produces the exact expected message.
+
+**Found and fixed on the way (pre-existing on `main`):**
+- `7b25d06eb` — `BASE_MODEL_SPECIFIERS` in `worker-pool.mts` lacked
+  `@powerhousedao/reactor-group`, which `builder-defaults.mts` registers as a
+  live module, so every `REACTOR_WORKERS>0` or `REACTOR_PROJECTION_WORKER=1`
+  boot crashed with `registered only as live modules:
+  powerhouse/reactor-group@1` unless `PH_REGISTRY_PACKAGES` happened to list
+  it. This blocked the executor worker pool too, not just this feature.
+- `5c9da1a45` — the live-module-only check now also runs when only the
+  projection worker is configured (Step 6 notes).
+
+**Found, not fixed (pre-existing, outside this plan's scope):**
+- `apps/switchboard/src/index.mts` `startSwitchboard(...).catch(console.error)`
+  swallows a boot failure: the process logs `App crashed` and then either
+  stays alive with the host pool holding the loop, or exits 0. A supervisor
+  cannot tell a failed boot from a healthy one. Same behaviour for the
+  executor-pool guards on `main`.
+- `buildWorkerDbConfig` error messages say "Worker pool requires..." even
+  when only the projection worker is on; `REACTOR_DB_ACQUIRE_TIMEOUT_MS`
+  reaches the projection pool only through `workerPool?.acquireTimeoutMs`.
+- Switchboard boot warns `no importable document-models entry for
+  <switchboard cwd>` — pre-existing, harmless.
+
+**Remaining, in order:**
+1. Verification 2 — bench sweep against Run 11 with host-side stub read
+   models through the hybrid factory. Not run. The plan's rule stands:
+   measure before any staging rollout, and do not quote 10x for switchboard.
+2. Verification 3–4 — staging metrics (`reactor.host.eventloop.utilization`
+   is the go/no-go) and functional parity (subscription fires, processor sees
+   operations, consistency-token read returns).
+3. `powerhouse-k8s-hosting`: set `REACTOR_PROJECTION_WORKER=1` and raise
+   `limits.cpu` for the extra thread (separate repo, per the scope boundary).
+4. Reviewer-visible: one new `unsafeIgnoredFiles` line in `eslint.config.js`;
+   `validateBuiltInKindCoverage` error text still names `withProjectionShards`
+   on the factory path (academy docs quote it).
+
 ## Verification
 
 1. **Unit + integration.**
