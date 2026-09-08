@@ -130,12 +130,49 @@ export async function fetchCatalogWithSuggestions(): Promise<
 
 let catalogCache: Cached<PieceSummary[]> | undefined;
 
+// First-party pieces not (yet) listed by the cloud catalog. After upstream
+// publication the cloud entry wins (short-name dedupe below), so remove the
+// entry from here at that point.
+const FIRST_PARTY_PIECES: PieceSummary[] = [
+  {
+    name: "@powerhousedao/piece-docling",
+    displayName: "Docling",
+    description:
+      "Convert documents (PDF, DOCX, PPTX, images, HTML, …) to Markdown, docling-document JSON, HTML, DocTags and plain text via a docling-serve v1 API (self-hosted or Docling for IBM watsonx).",
+    logoUrl:
+      "data:image/svg+xml," +
+      encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" rx="10" fill="#1e3a8a"/><path d="M14 10h14l8 8v20a2 2 0 0 1-2 2H14a2 2 0 0 1-2-2V12a2 2 0 0 1 2-2z" fill="#fff"/><path d="M28 10v8h8" fill="none" stroke="#1e3a8a" stroke-width="2"/><path d="M18 24h12M18 29h12M18 34h8" stroke="#1e3a8a" stroke-width="2"/></svg>',
+      ),
+    version: "1.0.0",
+    actionCount: 6,
+    triggerCount: 0,
+    categories: ["CONTENT_AND_FILES"],
+    // Mirrors the piece's PieceAuth descriptor (the shape the connection
+    // editor's planFromAuth consumes).
+    auth: {
+      type: "CUSTOM_AUTH",
+      displayName: "Docling Serve",
+      required: true,
+      props: {
+        base_url: { type: "SHORT_TEXT", displayName: "Service URL", required: true },
+        api_key: { type: "SECRET_TEXT", displayName: "API Key", required: false },
+      },
+    },
+  },
+];
+
+// Test-only: the module caches the catalog for CACHE_TTL_MS.
+export function __resetCatalogCacheForTests(): void {
+  catalogCache = undefined;
+}
+
 export async function fetchPieceCatalog(): Promise<PieceSummary[]> {
   if (catalogCache && catalogCache.expiresAt > Date.now()) {
     return catalogCache.value;
   }
   const raw = (await fetchJson(CATALOG_URL)) as CatalogEntry[];
-  const value = raw
+  const cloud = raw
     .filter(
       (entry) =>
         typeof entry.name === "string" &&
@@ -154,8 +191,15 @@ export async function fetchPieceCatalog(): Promise<PieceSummary[]> {
       triggerCount: typeof entry.triggers === "number" ? entry.triggers : 0,
       categories: entry.categories ?? [],
       auth: entry.auth ?? null,
-    }))
-    .sort((a, b) => a.displayName.localeCompare(b.displayName));
+    }));
+  // First-party pieces the cloud catalog doesn't carry yet; the cloud wins on
+  // short-name collisions (once upstream publishes the same piece).
+  const shortName = (n: string) => n.slice(n.lastIndexOf("/") + 1);
+  const cloudShorts = new Set(cloud.map((e) => shortName(e.name)));
+  const value = [
+    ...cloud,
+    ...FIRST_PARTY_PIECES.filter((p) => !cloudShorts.has(shortName(p.name))),
+  ].sort((a, b) => a.displayName.localeCompare(b.displayName));
   catalogCache = { value, expiresAt: Date.now() + CACHE_TTL_MS };
   return value;
 }
