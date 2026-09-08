@@ -27,7 +27,7 @@
     "typecheck:consumers": "tsc --build test/test-consumer-project",
     "build:storybook": "pnpm --filter=@powerhousedao/design-system run build:storybook",
     "clean": "bun x git clean -fdX",
-    "run-release": "bun run releases/release.ts",
+    "run-release": "bun run releases/patch-nx-publish.ts && bun run releases/release.ts",
     "run-release-safe": "pnpm run-release --verbose --skip-publish --skip-changelog --skip-push",
     "release-wizard": "tsx scripts/release/index.ts",
     "prepare": "husky",
