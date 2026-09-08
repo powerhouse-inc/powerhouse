@@ -1165,17 +1165,48 @@ verification remain.
 - `5c9da1a45` — the live-module-only check now also runs when only the
   projection worker is configured (Step 6 notes).
 
+**Code-review findings, fixed (PR #2988 review, three commits):**
+- Config mismatch was invisible: the factory path's `db` does not exist when
+  `resolveReactorDbConfig()` picks the parent database, so a host that
+  configured Postgres only through `createHybridProjectionCoordinatorFactory`
+  got a PGlite parent and a Postgres worker in silence — every built-in read
+  model empty, nothing raised. The worker `db` must now name the parent's
+  database unless `withKysely` owns the parent connection.
+- A worker whose `init` threw posted a log line and stayed put: `startup()`
+  waited out `initTimeoutMs` and then reported the timeout rather than the
+  cause, the thread was never terminated, and sibling init timers stayed
+  armed. The worker now reports `init-failed` with the marshalled error (it
+  reports rather than exits, so the cause cannot lose a race with `exit`), a
+  transport error or premature exit settles the pending init, `shutdown()`
+  settles whatever is left, and the builder tears the manager down before
+  rethrowing.
+- `runHostChain` emitted no `READMODEL_BATCH_COMPLETED`, so the pre/post-ready
+  stage histograms excluded every read model this feature keeps on the host —
+  the numbers Verification 2 below depends on. The host now reports its own
+  batch alongside the worker's relayed one.
+- `apps/switchboard/src/index.mts` now exits non-zero on a boot failure. It
+  previously logged and continued, so a supervisor could not tell a failed
+  boot from a healthy one (same behaviour for the executor-pool guards on
+  `main`) — which would have made the init-failure fix above stop short of
+  actually killing the process.
+
 **Found, not fixed (pre-existing, outside this plan's scope):**
-- `apps/switchboard/src/index.mts` `startSwitchboard(...).catch(console.error)`
-  swallows a boot failure: the process logs `App crashed` and then either
-  stays alive with the host pool holding the loop, or exits 0. A supervisor
-  cannot tell a failed boot from a healthy one. Same behaviour for the
-  executor-pool guards on `main`.
 - `buildWorkerDbConfig` error messages say "Worker pool requires..." even
   when only the projection worker is on; `REACTOR_DB_ACQUIRE_TIMEOUT_MS`
   reaches the projection pool only through `workerPool?.acquireTimeoutMs`.
 - Switchboard boot warns `no importable document-models entry for
   <switchboard cwd>` — pre-existing, harmless.
+
+**Post-review verification (serial, nothing else on the machine):**
+- reactor `pnpm tsc --build` 0, `pnpm test` 191 files / 3075 tests green in
+  253s (the Postgres integration case runs for real against the compose
+  database on 5433 — it has no skip guard); switchboard `pnpm tsc --build` 0,
+  `pnpm test` 13 / 209 green; eslint 0 on every touched file.
+- Running both suites concurrently produced 28 reactor and 5 switchboard
+  failures, every one a PGlite `beforeEach` hook timeout (120000ms and
+  10000ms) in files untouched by this branch, and both suites took an order
+  of magnitude longer (3233s / 2709s). Run them serially: concurrent runs on
+  one machine cannot distinguish a defect from CPU starvation.
 
 **Remaining, in order:**
 1. Verification 2 — bench sweep against Run 11 with host-side stub read
