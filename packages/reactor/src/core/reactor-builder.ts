@@ -1032,7 +1032,7 @@ export class ReactorBuilder {
     const db: DbConfig = {
       ...baseDb,
       poolSize: config.poolSize ?? baseDb.poolSize,
-      applicationName: "reactor-projection-shard",
+      applicationName: config.db?.applicationName ?? "reactor-projection-shard",
     };
     const factory =
       this.projectionWorkerFactory ??

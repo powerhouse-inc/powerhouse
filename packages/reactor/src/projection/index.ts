@@ -1,4 +1,8 @@
 export {
+  createHybridProjectionCoordinatorFactory,
+  type HybridProjectionOptions,
+} from "./create-hybrid-projection-coordinator.js";
+export {
   HybridProjectionCoordinator,
   type HybridProjectionCoordinatorOptions,
 } from "./hybrid-projection-coordinator.js";
