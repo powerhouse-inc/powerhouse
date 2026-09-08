@@ -682,7 +682,10 @@ export class ReactorBuilder {
 
     await executorManager.start(executorStartCount);
 
-    const readModelInstances: IReadModel[] = Array.from(
+    // withReadModel + withReadModelFactory models only. Excludes
+    // documentView/documentIndexer so a caller-supplied coordinator cannot
+    // double-index them alongside a projection worker.
+    const callerReadModels: IReadModel[] = Array.from(
       new Set([...this.readModels]),
     );
 
@@ -703,8 +706,6 @@ export class ReactorBuilder {
       console.error("Error initializing document view", error);
     }
 
-    readModelInstances.push(documentView);
-
     const documentIndexerConsistencyTracker = new ConsistencyTracker();
     const documentIndexer = new KyselyDocumentIndexer(
       database as unknown as Kysely<IndexerDatabase>,
@@ -718,8 +719,6 @@ export class ReactorBuilder {
     } catch (error) {
       console.error("Error initializing document indexer", error);
     }
-
-    readModelInstances.push(documentIndexer);
 
     const subscriptionManager = new ReactorSubscriptionManager(
       new DefaultSubscriptionErrorHandler(),
@@ -753,8 +752,14 @@ export class ReactorBuilder {
         writeCache,
         processorManagerConsistencyTracker,
       });
-      readModelInstances.push(readModel);
+      callerReadModels.push(readModel);
     }
+
+    const readModelInstances: IReadModel[] = [
+      ...callerReadModels,
+      documentView,
+      documentIndexer,
+    ];
 
     const readModelCoordinator = this.readModelCoordinator
       ? this.readModelCoordinator
