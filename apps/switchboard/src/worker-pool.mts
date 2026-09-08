@@ -353,7 +353,7 @@ function parseWorkerCount(
   return value;
 }
 
-function parseNonNegativeInt(
+export function parseNonNegativeInt(
   raw: string | undefined,
   name: string,
 ): number | undefined {
