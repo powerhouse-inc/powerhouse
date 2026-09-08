@@ -3,6 +3,7 @@ import type { IEventBus } from "../events/interfaces.js";
 import {
   ReactorEventTypes,
   type JobReadReadyEvent,
+  type ReadModelBatchCompletedEvent,
   type ReadModelIndexedEvent,
   type ReadModelIndexingStage,
 } from "../events/types.js";
@@ -73,9 +74,10 @@ export class HybridProjectionCoordinator implements ILiveReadModelCoordinator {
       return;
     }
 
+    const enqueuedAt = performance.now();
     const key = this.queueKeyFor(event);
     const previous = this.chains.get(key) ?? Promise.resolve();
-    const current = previous.then(() => this.runHostChain(event));
+    const current = previous.then(() => this.runHostChain(event, enqueuedAt));
 
     this.chains.set(key, current);
     void current.finally(() => {
@@ -124,7 +126,12 @@ export class HybridProjectionCoordinator implements ILiveReadModelCoordinator {
     await this.manager.shutdown();
   }
 
-  private async runHostChain(event: JobReadReadyEvent): Promise<void> {
+  private async runHostChain(
+    event: JobReadReadyEvent,
+    enqueuedAt: number,
+  ): Promise<void> {
+    const chainWaitDurationMs = performance.now() - enqueuedAt;
+    const preReadyStart = performance.now();
     // A failing host read model must not withhold JOB_READ_READY from awaiters.
     try {
       await Promise.all(
@@ -140,7 +147,10 @@ export class HybridProjectionCoordinator implements ILiveReadModelCoordinator {
       );
     }
 
+    const preReadyDurationMs = performance.now() - preReadyStart;
+
     // Awaited: the subscription read model must run after READ_READY is emitted.
+    const emitStart = performance.now();
     try {
       await this.manager.emitReadReady(event);
     } catch (error) {
@@ -150,7 +160,9 @@ export class HybridProjectionCoordinator implements ILiveReadModelCoordinator {
         error,
       );
     }
+    const emitDurationMs = performance.now() - emitStart;
 
+    const postReadyStart = performance.now();
     try {
       await Promise.all(
         this.postReady.map((readModel) =>
@@ -164,6 +176,20 @@ export class HybridProjectionCoordinator implements ILiveReadModelCoordinator {
         error,
       );
     }
+    const postReadyDurationMs = performance.now() - postReadyStart;
+
+    // The worker reports its own batch for this job, covering the built-in
+    // read models only. Without this second report the host's stages — every
+    // read model the hybrid coordinator exists to keep on the host — are
+    // absent from the batch metrics, which is exactly what a rollout measures.
+    this.emitBatchCompleted({
+      jobId: event.jobId,
+      batchSize: event.operations.length,
+      chainWaitDurationMs,
+      preReadyDurationMs,
+      emitDurationMs,
+      postReadyDurationMs,
+    });
   }
 
   private async indexWithTiming(
@@ -186,6 +212,18 @@ export class HybridProjectionCoordinator implements ILiveReadModelCoordinator {
         success,
       });
     }
+  }
+
+  private emitBatchCompleted(payload: ReadModelBatchCompletedEvent): void {
+    void this.eventBus
+      .emit(ReactorEventTypes.READMODEL_BATCH_COMPLETED, payload)
+      .catch((err: unknown) =>
+        this.logger.error(
+          "READMODEL_BATCH_COMPLETED emit failed for job @jobId: @Error",
+          { jobId: payload.jobId },
+          err,
+        ),
+      );
   }
 
   private emitReadModelIndexed(payload: ReadModelIndexedEvent): void {

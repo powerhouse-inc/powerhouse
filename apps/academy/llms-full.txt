@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-09-08T20:55:13.260Z
+> Generated: 2026-09-08T20:56:57.400Z
 > Total Documents: 110
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -5668,6 +5668,8 @@ type HybridProjectionOptions = {
 ```
 
 The parent database must be the same Postgres the worker reads, and this is enforced: the builder cannot derive the parent from a `db` that reaches it through the factory, because the parent database is already open by the time the factory runs. Pass the parent connection with `withKysely`, or configure `withWorkerPool` with the same `db`; a `db` with no parent configured at all throws rather than leaving the parent on the default embedded database while the worker projects into Postgres. `onFatal` fires when the worker errors or exits after it was ready, and for every write it then has to drop; nothing respawns the worker, so a host that cares should restart the process. The hook may fire repeatedly, so latch it. `withReadModelCoordinatorFactory` is mutually exclusive with `withReadModelCoordinator` and with `withProjectionShards`.
+
+Each job produces two `READMODEL_BATCH_COMPLETED` events under this coordinator, because two chains ran: the worker relays its own, covering the built-in read models, and the host reports the chain it ran afterwards. Stage durations therefore stay attributable to the side that spent them — a merged event could not tell you whether the flag moved work off the host loop — while `READMODEL_INDEXED` continues to name one read model per event on both sides.
 
 Switchboard exposes this as `REACTOR_PROJECTION_WORKER=1` with `REACTOR_DB_POOL_SIZE_PROJECTION` (default 8) for the worker's pool. It requires a Postgres reactor database and is rejected in dev mode, like the executor worker pool.
 

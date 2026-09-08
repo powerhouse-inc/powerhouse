@@ -639,20 +639,13 @@ describe("HybridProjectionCoordinator", () => {
   });
 
   describe("metrics", () => {
-    it("emits one READMODEL_INDEXED per host model and relies on the worker's batch-completed", async () => {
+    it("emits one READMODEL_INDEXED per host model", async () => {
       const { bus, transports, post } = await setup();
       const indexed: ReadModelIndexedEvent[] = [];
-      const completed: ReadModelBatchCompletedEvent[] = [];
       bus.subscribe(
         ReactorEventTypes.READMODEL_INDEXED,
         (_t: number, event: ReadModelIndexedEvent) => {
           indexed.push(event);
-        },
-      );
-      bus.subscribe(
-        ReactorEventTypes.READMODEL_BATCH_COMPLETED,
-        (_t: number, event: ReadModelBatchCompletedEvent) => {
-          completed.push(event);
         },
       );
       const ops = [operation("doc-1", 0)];
@@ -671,7 +664,51 @@ describe("HybridProjectionCoordinator", () => {
       await within(post.whenDone(0), "job-1 post-ready");
       await flush();
 
-      expect(completed).toHaveLength(0);
+      const host = indexed.filter((e) => e.readModelName.startsWith("host-"));
+      expect(host).toHaveLength(2);
+      expect(host.map((e) => [e.readModelName, e.stage, e.success])).toEqual([
+        ["host-pre", "pre_ready", true],
+        ["host-post", "post_ready", true],
+      ]);
+      expect(host.every((e) => e.jobId === "job-1")).toBe(true);
+      expect(host.every((e) => e.operationCount === 1)).toBe(true);
+      expect(
+        indexed.filter((e) => e.readModelName === "document-view"),
+      ).toHaveLength(1);
+    });
+
+    it("reports the host chain's own batch-completed, on top of the worker's", async () => {
+      const HOST_PRE_MS = 20;
+      const slowPre = new RecordingReadModel("host-pre", sequence, {
+        onIndex: () =>
+          new Promise<void>((resolve) => setTimeout(resolve, HOST_PRE_MS)),
+      });
+      const { bus, transports, post } = await setup({ preReady: [slowPre] });
+      const completed: ReadModelBatchCompletedEvent[] = [];
+      bus.subscribe(
+        ReactorEventTypes.READMODEL_BATCH_COMPLETED,
+        (_t: number, event: ReadModelBatchCompletedEvent) => {
+          completed.push(event);
+        },
+      );
+
+      readReady(transports[0]!, "job-1", [operation("doc-1", 0)]);
+      await within(post.whenDone(0), "job-1 post-ready", 500);
+      await flush();
+
+      // The host's report exists on its own: the worker's has not arrived and
+      // covers only the built-in read models when it does.
+      expect(completed).toHaveLength(1);
+      expect(completed[0]!.jobId).toBe("job-1");
+      expect(completed[0]!.batchSize).toBe(1);
+      // Time spent in a host read model is in the host's pre-ready stage,
+      // which is the whole point of reporting it.
+      expect(completed[0]!.preReadyDurationMs).toBeGreaterThanOrEqual(
+        HOST_PRE_MS / 2,
+      );
+      expect(completed[0]!.emitDurationMs).toBeGreaterThanOrEqual(0);
+      expect(completed[0]!.postReadyDurationMs).toBeGreaterThanOrEqual(0);
+      expect(completed[0]!.chainWaitDurationMs).toBeGreaterThanOrEqual(0);
 
       transports[0]!.send({
         type: "readmodel-batch-completed",
@@ -685,19 +722,8 @@ describe("HybridProjectionCoordinator", () => {
       });
       await flush();
 
-      expect(completed.filter((e) => e.jobId === "job-1")).toHaveLength(1);
-
-      const host = indexed.filter((e) => e.readModelName.startsWith("host-"));
-      expect(host).toHaveLength(2);
-      expect(host.map((e) => [e.readModelName, e.stage, e.success])).toEqual([
-        ["host-pre", "pre_ready", true],
-        ["host-post", "post_ready", true],
-      ]);
-      expect(host.every((e) => e.jobId === "job-1")).toBe(true);
-      expect(host.every((e) => e.operationCount === 1)).toBe(true);
-      expect(
-        indexed.filter((e) => e.readModelName === "document-view"),
-      ).toHaveLength(1);
+      expect(completed).toHaveLength(2);
+      expect(completed[1]!.preReadyDurationMs).toBe(1);
     });
   });
 });
