@@ -431,7 +431,7 @@ describe("ReactorBuilder", () => {
           .withProjectionShards({
             db: TEST_DB_CONFIG,
             shardCount: 1,
-            preReadyKinds: [],
+            preReadyKinds: ["document-view", "document-indexer"],
             postReadyKinds: [],
           });
 
@@ -455,7 +455,7 @@ describe("ReactorBuilder", () => {
         .withProjectionShards({
           db: { ...TEST_DB_CONFIG, host: "other-host" },
           shardCount: 1,
-          preReadyKinds: [],
+          preReadyKinds: ["document-view", "document-indexer"],
           postReadyKinds: [],
         });
 
@@ -483,7 +483,7 @@ describe("ReactorBuilder", () => {
           .withProjectionShards({
             db: { ...TEST_DB_CONFIG, poolSize: 9 },
             shardCount: 1,
-            preReadyKinds: [],
+            preReadyKinds: ["document-view", "document-indexer"],
             postReadyKinds: [],
           });
 
@@ -491,6 +491,105 @@ describe("ReactorBuilder", () => {
           /postgres-was-called/,
         );
         expect(spy).toHaveBeenCalledWith(TEST_DB_CONFIG);
+      } finally {
+        spy.mockRestore();
+      }
+    });
+  });
+
+  describe("projection-shard read-model coverage", () => {
+    /**
+     * Every case here asserts the guard fires before createPostgresDatabase:
+     * a config that names no owner for a built-in read model must not get
+     * far enough to open a pool, spawn a worker, or reach startup().
+     */
+    function spyOnPostgres() {
+      const proto = ReactorBuilder.prototype as unknown as {
+        createPostgresDatabase: (config: DbConfig) => Promise<unknown>;
+      };
+      return vi
+        .spyOn(proto, "createPostgresDatabase")
+        .mockRejectedValue(new Error("postgres-was-called"));
+    }
+
+    it("rejects a config that leaves a built-in read model to no shard", async () => {
+      const spy = spyOnPostgres();
+      try {
+        const builder = new ReactorBuilder()
+          .withDocumentModelSources(FIXTURE_SOURCES)
+          .withProjectionShards({
+            db: TEST_DB_CONFIG,
+            shardCount: 1,
+            preReadyKinds: ["document-view"],
+            postReadyKinds: [],
+          });
+
+        await expect(builder.buildModule()).rejects.toThrow(
+          /never named: document-indexer/,
+        );
+        expect(spy).not.toHaveBeenCalled();
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
+    it("rejects a config that names no read models at all", async () => {
+      const spy = spyOnPostgres();
+      try {
+        const builder = new ReactorBuilder()
+          .withDocumentModelSources(FIXTURE_SOURCES)
+          .withProjectionShards({
+            db: TEST_DB_CONFIG,
+            shardCount: 1,
+            preReadyKinds: [],
+            postReadyKinds: [],
+          });
+
+        await expect(builder.buildModule()).rejects.toThrow(
+          /never named: document-view, document-indexer/,
+        );
+        expect(spy).not.toHaveBeenCalled();
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
+    it("rejects a read model named on both sides of READ_READY", async () => {
+      const spy = spyOnPostgres();
+      try {
+        const builder = new ReactorBuilder()
+          .withDocumentModelSources(FIXTURE_SOURCES)
+          .withProjectionShards({
+            db: TEST_DB_CONFIG,
+            shardCount: 1,
+            preReadyKinds: ["document-view", "document-indexer"],
+            postReadyKinds: ["document-view"],
+          });
+
+        await expect(builder.buildModule()).rejects.toThrow(
+          /named more than once: document-view/,
+        );
+        expect(spy).not.toHaveBeenCalled();
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
+    it("accepts full coverage split across pre- and post-READ_READY", async () => {
+      const spy = spyOnPostgres();
+      try {
+        const builder = new ReactorBuilder()
+          .withDocumentModelSources(FIXTURE_SOURCES)
+          .withProjectionShards({
+            db: TEST_DB_CONFIG,
+            shardCount: 1,
+            preReadyKinds: ["document-view"],
+            postReadyKinds: ["document-indexer"],
+          });
+
+        await expect(builder.buildModule()).rejects.toThrow(
+          /postgres-was-called/,
+        );
       } finally {
         spy.mockRestore();
       }

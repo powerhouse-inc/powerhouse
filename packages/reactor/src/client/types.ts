@@ -507,10 +507,20 @@ export interface IReactorClient {
   /**
    * Applies a list of actions to a document and waits for completion
    *
+   * The document handed back is a read like any other, so it goes through the
+   * read gate. `subject` names who that read is for, the same way
+   * {@link ViewFilter.subject} does on `get` and `find`; a host that shares one
+   * client across many callers has no meaningful signer to fall back to, and
+   * without it the gate would strip the domain scopes of a policied document
+   * and resolve with a husk whose `state.global` is absent — reading as a
+   * rejected write when the write in fact succeeded.
+   *
    * @param documentIdentifier - Target document id or slug
    * @param branch - Branch to apply actions to
    * @param actions - List of actions to apply
    * @param signal - Optional abort signal to cancel the request
+   * @param subject - Optional read subject for the returned document; defaults
+   *   to the client's signer
    * @returns The updated document
    */
   execute<TDocument extends PHDocument>(
@@ -518,6 +528,7 @@ export interface IReactorClient {
     branch: string,
     actions: Action[],
     signal?: AbortSignal,
+    subject?: AuthSubject,
   ): Promise<TDocument>;
 
   /**
