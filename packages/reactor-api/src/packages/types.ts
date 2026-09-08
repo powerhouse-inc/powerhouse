@@ -57,6 +57,11 @@ export interface IPackageManager {
   onDocumentModelsChange(
     handler: (documentModels: Record<string, DocumentModelModule[]>) => void,
   ): void;
+  /**
+   * Remove a package from all package maps and emit the change events.
+   * Used when a dynamically installed package is uninstalled.
+   */
+  removePackage(packageName: string): void;
 }
 
 export type IPackageLoaderOptions = {

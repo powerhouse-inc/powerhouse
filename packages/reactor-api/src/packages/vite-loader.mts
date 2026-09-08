@@ -206,10 +206,17 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
       }
     };
 
+    // "change" alone misses files that are created or deleted: a removed
+    // document-models/ entry would never report an empty result, and the
+    // package's registered models would leak.
     this.vite.watcher.on("change", listener);
+    this.vite.watcher.on("add", listener);
+    this.vite.watcher.on("unlink", listener);
 
     return () => {
       this.vite.watcher.off("change", listener);
+      this.vite.watcher.off("add", listener);
+      this.vite.watcher.off("unlink", listener);
     };
   }
 
@@ -225,10 +232,17 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
         handler(subgraphs);
       }
     };
+    // "change" alone misses files that are created or deleted: a removed
+    // subgraphs/ entry would never report an empty result, and the
+    // package's registered subgraphs would leak.
     this.vite.watcher.on("change", listener);
+    this.vite.watcher.on("add", listener);
+    this.vite.watcher.on("unlink", listener);
 
     return () => {
       this.vite.watcher.off("change", listener);
+      this.vite.watcher.off("add", listener);
+      this.vite.watcher.off("unlink", listener);
     };
   }
 
@@ -244,10 +258,17 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
         handler(processors);
       }
     };
+    // "change" alone misses files that are created or deleted: a removed
+    // processors/ entry would never report an empty result, and the
+    // package's registered processor factories would leak.
     this.vite.watcher.on("change", listener);
+    this.vite.watcher.on("add", listener);
+    this.vite.watcher.on("unlink", listener);
 
     return () => {
       this.vite.watcher.off("change", listener);
+      this.vite.watcher.off("add", listener);
+      this.vite.watcher.off("unlink", listener);
     };
   }
 }
