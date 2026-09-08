@@ -1041,13 +1041,17 @@ export class ReactorClient implements IReactorClient {
   }
 
   /**
-   * Applies a list of actions to a document and waits for completion
+   * Applies a list of actions to a document and waits for completion.
+   *
+   * `subject` names who the returned document is read as; see
+   * {@link IReactorClient.execute}.
    */
   async execute<TDocument extends PHDocument>(
     documentIdentifier: string,
     branch: string,
     actions: Action[],
     signal?: AbortSignal,
+    subject?: AuthSubject,
   ): Promise<TDocument> {
     this.logger.verbose(
       "execute(@documentIdentifier, @branch, @count actions)",
@@ -1070,7 +1074,7 @@ export class ReactorClient implements IReactorClient {
       throw new Error(completedJob.error?.message);
     }
 
-    const view: ViewFilter = { branch };
+    const view: ViewFilter = { branch, subject };
     const result = await this.reactor.getByIdOrSlug<TDocument>(
       documentIdentifier,
       view,

@@ -450,4 +450,86 @@ export function runHttpAdapterContractTests(
       });
     });
   });
+
+  // ── streaming ─────────────────────────────────────────────────────────────
+
+  describe(`IHttpAdapter contract (${adapterName}) – streaming`, () => {
+    let h: HttpAdapterHarness;
+
+    beforeEach(async () => {
+      h = await createHarness();
+    });
+    afterEach(async () => {
+      await h.close();
+    });
+
+    it("delivers the first streamed chunk before the stream closes", async () => {
+      // Mirrors a live subscription (e.g. graphql-sse): a body that only
+      // completes ~200ms after the first chunk is enqueued. An adapter
+      // that buffers the whole body (await response.text()) can only
+      // deliver the first byte once the stream has closed, so the first
+      // chunk must arrive well before that.
+      const delay = (ms: number) => {
+        const { promise, resolve } = Promise.withResolvers<void>();
+        setTimeout(resolve, ms);
+        return promise;
+      };
+
+      const encoder = new TextEncoder();
+      const chunks = ["chunk-0|", "chunk-1|", "chunk-2|"];
+      const stream = new ReadableStream<Uint8Array>({
+        async start(controller) {
+          for (let i = 0; i < chunks.length; i++) {
+            controller.enqueue(encoder.encode(chunks[i]));
+            if (i < chunks.length - 1) {
+              await delay(100);
+            }
+          }
+          controller.close();
+        },
+      });
+
+      h.adapter.mount("/streamed", () =>
+        Promise.resolve(
+          new Response(stream, {
+            status: 200,
+            headers: { "content-type": "text/plain" },
+          }),
+        ),
+      );
+
+      const startAt = Date.now();
+      const res = await fetch(`${h.url}/streamed`);
+      expect(res.status).toBe(200);
+
+      const reader = res.body!.getReader();
+      const decoder = new TextDecoder();
+      const parts: string[] = [];
+      let firstChunkAt = 0;
+      let closeAt: number;
+
+      try {
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          if (firstChunkAt === 0) {
+            firstChunkAt = Date.now();
+          }
+          parts.push(decoder.decode(value, { stream: true }));
+        }
+        // The done-read just resolved, so the close time is now.
+        closeAt = Date.now();
+      } finally {
+        reader.releaseLock();
+      }
+
+      // The stream closes at least 200ms after the first enqueue (timers
+      // never fire early), so a buffering implementation cannot deliver
+      // the first chunk before startAt + 200; a streaming one delivers it
+      // within a few ms of the handshake.
+      expect(firstChunkAt).toBeLessThan(startAt + 100);
+      expect(closeAt).toBeGreaterThan(firstChunkAt);
+      expect(parts.join("")).toBe("chunk-0|chunk-1|chunk-2|");
+    });
+  });
 }

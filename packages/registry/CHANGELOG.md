@@ -1,3 +1,13 @@
+## 6.2.2-dev.83 (2026-09-08)
+
+### 🩹 Fixes
+
+- **release:** create the GitHub release after the push, not during changelog ([df3d2c88c](https://github.com/powerhouse-inc/powerhouse/commit/df3d2c88c))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.2-dev.82 (2026-09-08)
 
 ### 🩹 Fixes

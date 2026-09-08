@@ -15,7 +15,11 @@ import {
   type Database,
   type InProcessReactorModule,
 } from "@powerhousedao/reactor";
-import { ReactorInstrumentation } from "@powerhousedao/opentelemetry-instrumentation-reactor";
+import {
+  ReactorInstrumentation,
+  registerEventLoopInstrumentation,
+  type EventLoopInstrumentation,
+} from "@powerhousedao/opentelemetry-instrumentation-reactor";
 import type {
   Action,
   ISigner,
@@ -30,10 +34,6 @@ import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import pg from "pg";
-import {
-  registerEventLoopInstrumentation,
-  type EventLoopInstrumentation,
-} from "./eventLoopInstrumentation.js";
 import { makeBenchSigner } from "./keypair.js";
 
 const PORT = parseInt(process.env.PORT ?? "8080", 10);
