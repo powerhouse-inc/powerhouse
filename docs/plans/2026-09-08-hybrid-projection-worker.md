@@ -349,14 +349,19 @@ the end, which is behaviour-identical because `runChain` uses `Promise.all`.
 ### Step 2 — Extend `ProjectionShardManager` with the relay hook and a dead-shard-safe drain
 
 **File:** `packages/reactor/src/projection/projection-shard-manager.ts`
+**Status: landed** on `feat/hybrid-projection-worker` (`af41b2cc1`). Both hooks
+live in the exported `ProjectionShardHooks` type, which
+`ProjectionShardManagerConfig` composes (the Step 4 shape; the first draft's
+"add `onReadReady` next to `onShardFatal` on the config" wording is
+superseded).
 
 Steps 2b (zero-op relay) and 2c (`onShardFatal`) from the first draft are
 already on `main` (#2987). Two additive changes remain; both are no-ops when
 the new config field is absent and no shard has died, so the pure-shard path
 is unchanged.
 
-**2a. A relay hook.** Add to `ProjectionShardManagerConfig`, next to
-`onShardFatal`:
+**2a. A relay hook.** In `ProjectionShardHooks` (composed into
+`ProjectionShardManagerConfig`), next to `onShardFatal`:
 
 ```ts
   /**
@@ -418,6 +423,10 @@ worker death (Q3).
 ### Step 3 — New `HybridProjectionCoordinator`
 
 **New file:** `packages/reactor/src/projection/hybrid-projection-coordinator.ts`
+**Status: landed** (`b69928976`), 14 unit cases in
+`test/projection/hybrid-projection-coordinator.test.ts`. Uses the passed
+`logger` (not a child logger) so tests can isolate coordinator errors from
+the manager's.
 
 Implements `ILiveReadModelCoordinator`
 (`packages/reactor/src/read-models/interfaces.ts`) by composing a
@@ -596,6 +605,14 @@ Five details that are load-bearing:
 ### Step 4 — The coordinator **factory** on the builder
 
 **File:** `packages/reactor/src/core/reactor-builder.ts`
+**Status: landed** together with Step 5 (`4ce813dad`). Two implementation
+notes worth keeping: a coordinator returned by the factory MUST forward
+`start()`/`stop()` to its manager — `Reactor` calls `start()` on whatever the
+factory returned, and without it the manager never subscribes to
+`JOB_WRITE_READY`, so `pendingCoordinates` stays empty and consistency-token
+waits hang; and the `withProjectionShards requires ...` error strings are kept
+verbatim (academy docs quote them), so a factory-path caller with a bad kind
+list sees a message naming `withProjectionShards`.
 
 `subscriptionNotificationReadModel` and `processorManager` are constructed
 *inside* `buildModule()`, so the existing `withReadModelCoordinator(instance)`
@@ -763,6 +780,8 @@ Add an early guard in `buildModule()`: setting both
 
 ### Step 5 — Guard the two coordinator-ownership options against each other; rewrite the KNOWN LIMITATION comment
 
+**Status: landed** with Step 4 (`4ce813dad`).
+
 **File:** `packages/reactor/src/core/reactor-builder.ts`, the guards at the
 top of `buildModule()`
 
@@ -799,6 +818,20 @@ Second, replace the KNOWN LIMITATION comment with the current truth:
 
 **New file:** `packages/reactor/src/projection/create-hybrid-projection-coordinator.ts`
 **Export from:** `packages/reactor/src/projection/index.ts` and `packages/reactor/index.ts`
+**Status: landed** (`61a2ed26f`). Deviations from the sketch below: the root
+`index.ts` re-exports from the leaf modules, not the projection barrel (the
+barrel pulls `node:worker_threads` in through `transport.ts`); the
+`let coordinator` + `!` shape is a small `CoordinatorRef` object because
+`prefer-const` rejects assign-once `let`; `HybridProjectionOptions` also passes
+through `initTimeoutMs` / `shutdownGraceMs` / `drainTimeoutMs` /
+`chainDepthReportIntervalMs`; and `createProjectionShardManager` now honours
+`config.db.applicationName` (it hardcoded `reactor-projection-shard`).
+
+Follow-up landed with it (`5c9da1a45`): the "registered only as live modules"
+boot failure was gated on `this.workerPool`, but the projection worker builds
+its registry from the manifest too, so with `REACTOR_PROJECTION_WORKER=1` and
+`REACTOR_WORKERS=0` a live-module-only model would silently be missing from
+the worker. `createProjectionShardManager` now runs the same check.
 
 So switchboard's wiring is one call rather than an architecture:
 
@@ -848,6 +881,20 @@ routed, which requires `manager.start()` — and `start()` is called by
 this factory has returned and assigned `coordinator`.
 
 ### Step 7 — Switchboard wiring
+
+**Status: landed.** Env resolution (`6d38308828`): `resolveProjectionWorkerOptions`,
+`assertProjectionWorkerSupported({ dev, reactorDbUrl })` (imports
+`isPostgresUrl` from `./utils.mjs` rather than taking it as a parameter), the
+`projectionWorker` option in `types.ts`, and 38 tests. `server.mts` wiring
+(`265526877`): resolution next to `workerPool`, nulled with a warning when a
+caller-provided reactor is used, model sources registered when the executor
+pool is off, `applicationName: "switchboard-projection"`, and a once-latched
+`onFatal` that sends SIGTERM. The `options.signalHandlers === false` branch
+sketched below was dropped: `StartServerOptions` has no such field and
+switchboard always installs the handlers. Flagged, not fixed:
+`buildWorkerDbConfig` errors still say "Worker pool requires...", and
+`REACTOR_DB_ACQUIRE_TIMEOUT_MS` reaches the projection pool only through
+`workerPool?.acquireTimeoutMs`.
 
 **New file:** `apps/switchboard/src/projection-worker.mts` — mirror the shape of
 `apps/switchboard/src/worker-pool.mts` (`resolveWorkerPoolOptions`,
