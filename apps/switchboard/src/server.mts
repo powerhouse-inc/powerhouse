@@ -184,7 +184,13 @@ async function createReactorKysely(opts: {
   reactorPgliteMajor: SupportedPgMajor | null;
   inMemory: boolean;
   flushIntervalMs: number;
-  hostPoolSize: number;
+  /**
+   * Resolved lazily: only the Postgres branch has a host pool, and
+   * {@link resolveHostPoolSize} throws on a bad REACTOR_DB_POOL_SIZE_HOST.
+   * Called eagerly it would fail a PGlite-backed server over a value that
+   * path never reads.
+   */
+  hostPoolSize: () => number;
   logger: ILogger;
 }): Promise<ReactorStorage> {
   const {
@@ -201,12 +207,13 @@ async function createReactorKysely(opts: {
     const connectionString = reactorDbUrl.includes("?")
       ? reactorDbUrl
       : `${reactorDbUrl}?sslmode=disable`;
-    const pool = new Pool({ connectionString, max: hostPoolSize });
+    const poolSize = hostPoolSize();
+    const pool = new Pool({ connectionString, max: poolSize });
     // Named to match the reactor's own convention for the pools it opens
     // itself (`reactor-worker-N`, `projection-shard-N`).
     const poolInstrumentation = instrumentPgPool(pool, "reactor-host");
     logger.info(
-      `Using PostgreSQL for reactor storage (host pool max ${hostPoolSize})`,
+      `Using PostgreSQL for reactor storage (host pool max ${poolSize})`,
     );
     return {
       kysely: new Kysely<Database>({ dialect: new PostgresDialect({ pool }) }),
@@ -467,7 +474,7 @@ async function initServer(
         reactorPgliteMajor,
         inMemory: PGLITE_IN_MEMORY,
         flushIntervalMs: PGLITE_FLUSH_INTERVAL_MS,
-        hostPoolSize: resolveHostPoolSize(process.env),
+        hostPoolSize: () => resolveHostPoolSize(process.env),
         logger,
       });
 
