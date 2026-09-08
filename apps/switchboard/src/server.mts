@@ -812,6 +812,7 @@ async function initServer(
       defaultRegistryUrl: registryUrl,
       httpLoader,
       documentModelRegistry,
+      packageManager: api.packageManager,
     });
 
     packageManagementService.setOnModelsChanged(() => {

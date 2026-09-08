@@ -17,10 +17,12 @@ import type {
 } from "@powerhousedao/reactor";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
+import { gql } from "graphql-tag";
 import type http from "node:http";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { gql } from "graphql-tag";
 import type { WebSocketServer } from "ws";
+import { BaseSubgraph } from "../src/graphql/base-subgraph.js";
+
 import {
   createAuthFetchMiddleware,
   type AuthFetchMiddleware,
@@ -35,7 +37,6 @@ import {
   createRequireAuthFetchMiddleware,
   type RequireAuthFetchMiddleware,
 } from "../src/graphql/gateway/require-auth-middleware.js";
-import { BaseSubgraph } from "../src/graphql/base-subgraph.js";
 import { GraphQLManager } from "../src/graphql/graphql-manager.js";
 import {
   AuthorizationPolicy,
@@ -181,19 +182,24 @@ function makeMockGatewayAdapter(): IGatewayAdapter<Context> & {
 
 function makeMockHttpAdapter() {
   const mounts = new Map<string, FetchHandler>();
+  const handles = new Map<string, number>();
+  let nextHandle = 0;
   const adapter: IHttpAdapter = {
     setupMiddleware: vi.fn(),
     mount: vi.fn((p: string, h: FetchHandler) => {
       mounts.set(p, h);
+      handles.set(p, nextHandle);
+      return nextHandle++;
     }),
-    getRoute: vi.fn(),
+    getRoute: vi.fn(() => nextHandle++),
     mountRawMiddleware: vi.fn(),
-    mountNodeRoute: vi.fn(),
+    mountNodeRoute: vi.fn(() => nextHandle++),
+    unmount: vi.fn(),
     listen: vi.fn().mockResolvedValue({}),
     setupSentryErrorHandler: vi.fn(),
     handle: {},
   };
-  return { adapter, mounts };
+  return { adapter, mounts, handles };
 }
 
 type HarnessOptions = {
@@ -204,7 +210,7 @@ type HarnessOptions = {
 };
 
 function makeHarness(options: HarnessOptions = {}) {
-  const { adapter: httpAdapter, mounts } = makeMockHttpAdapter();
+  const { adapter: httpAdapter, mounts, handles } = makeMockHttpAdapter();
   const gatewayAdapter = makeMockGatewayAdapter();
   const reactorClient = options.reactorClient ?? makeMockReactorClient();
   const httpServer = {} as http.Server;
@@ -242,6 +248,7 @@ function makeHarness(options: HarnessOptions = {}) {
     manager,
     httpAdapter,
     mounts,
+    handles,
     gatewayAdapter,
     reactorClient,
     httpServer,
@@ -1221,6 +1228,257 @@ describe("GraphQLManager", () => {
       expect(wsServer.close).toHaveBeenCalledOnce();
     });
   });
+
+  // ── package teardown (issue #2973) ────────────────────────────────────────
+
+  describe("package teardown (issue #2973)", () => {
+    /**
+     * Build a minimal subgraph class with a spied `onDisconnect` that
+     * records the names of instances it was called on.
+     */
+    function makeSubgraphClass(
+      name: string,
+      opts: { subscriptions?: boolean } = {},
+    ): [typeof BaseSubgraph, string[]] {
+      const disconnected: string[] = [];
+      const SubgraphClass = class extends BaseSubgraph {
+        name = name;
+        hasSubscriptions = opts.subscriptions ?? false;
+        typeDefs = gql`
+          type Query {
+            ping: Boolean
+          }
+        `;
+        resolvers = { Query: { ping: () => true } };
+        onDisconnect = (): Promise<void> => {
+          disconnected.push(name);
+          return Promise.resolve();
+        };
+      };
+      return [SubgraphClass, disconnected];
+    }
+
+    async function flushRouter(manager: GraphQLManager): Promise<void> {
+      const p = manager.updateRouter();
+      await vi.runAllTimersAsync();
+      await p;
+    }
+
+    it("unregisterPackage unmounts routes and removes all subgraph state", async () => {
+      const { manager, httpAdapter, mounts, handles, gatewayAdapter } =
+        makeHarness();
+      await initAndFlush(manager);
+
+      const [Sub, disconnected] = makeSubgraphClass("alpha");
+      await manager.registerSubgraph(Sub, "graphql", false, "test-pkg");
+      await flushRouter(manager);
+
+      const routePath = "/graphql/alpha";
+      expect(mounts.has(routePath)).toBe(true);
+      const originalHandle = handles.get(routePath);
+      expect(originalHandle).toBeDefined();
+      expect(manager.hasSubgraphHandler("alpha")).toBe(true);
+      expect(manager.getSubgraphByName("alpha")).toBeDefined();
+
+      const teardown = manager.unregisterPackage("test-pkg");
+      await vi.runAllTimersAsync();
+      await teardown;
+
+      expect(httpAdapter.unmount).toHaveBeenCalledWith(originalHandle);
+      expect(manager.hasSubgraphHandler("alpha")).toBe(false);
+      expect(manager.getSubgraphByName("alpha")).toBeUndefined();
+      expect(disconnected).toContain("alpha");
+      expect(gatewayAdapter.updateSupergraph).toHaveBeenCalled();
+    });
+
+    it("unregisterPackage is a no-op for a package with no subgraphs", async () => {
+      const { manager, httpAdapter, gatewayAdapter } = makeHarness();
+      await initAndFlush(manager);
+
+      const supergraphCalls = gatewayAdapter.updateSupergraph.mock.calls.length;
+      await manager.unregisterPackage("ghost-pkg");
+
+      expect(httpAdapter.unmount).not.toHaveBeenCalled();
+      expect(gatewayAdapter.updateSupergraph.mock.calls.length).toBe(
+        supergraphCalls,
+      );
+    });
+
+    it("prunePackageSubgraphs removes only the dropped subgraphs", async () => {
+      const { manager, httpAdapter, mounts, handles } = makeHarness();
+      await initAndFlush(manager);
+
+      const [Alpha] = makeSubgraphClass("alpha");
+      const [Beta, betaDisconnected] = makeSubgraphClass("beta");
+      await manager.registerSubgraph(Alpha, "graphql", false, "test-pkg");
+      await manager.registerSubgraph(Beta, "graphql", false, "test-pkg");
+      await flushRouter(manager);
+
+      const keepPromise = manager.prunePackageSubgraphs(
+        "test-pkg",
+        new Set(["alpha"]),
+      );
+      await vi.runAllTimersAsync();
+      await keepPromise;
+
+      expect(httpAdapter.unmount).toHaveBeenCalledWith(
+        handles.get("/graphql/beta"),
+      );
+      expect(manager.hasSubgraphHandler("alpha")).toBe(true);
+      expect(manager.hasSubgraphHandler("beta")).toBe(false);
+      expect(manager.getSubgraphByName("beta")).toBeUndefined();
+      expect(betaDisconnected).toContain("beta");
+      // The kept subgraph's route stays mounted.
+      expect(mounts.has("/graphql/alpha")).toBe(true);
+    });
+
+    it("unmounts the previous route when a subgraph is replaced", async () => {
+      const { manager, httpAdapter, handles } = makeHarness();
+      await initAndFlush(manager);
+
+      const [V1] = makeSubgraphClass("alpha");
+      await manager.registerSubgraph(V1, "graphql", false, "test-pkg");
+      await flushRouter(manager);
+      const firstHandle = handles.get("/graphql/alpha");
+      expect(firstHandle).toBeDefined();
+
+      // Same name, different class: replacement path.
+      const [V2] = makeSubgraphClass("alpha");
+      await manager.registerSubgraph(V2, "graphql", false, "test-pkg");
+      await flushRouter(manager);
+
+      const secondHandle = handles.get("/graphql/alpha");
+      expect(secondHandle).toBeDefined();
+      expect(secondHandle).not.toBe(firstHandle);
+      expect(httpAdapter.unmount).toHaveBeenCalledWith(firstHandle);
+      expect(manager.hasSubgraphHandler("alpha")).toBe(true);
+    });
+
+    it("replaces the SSE route on each update and removes it when no subgraph subscribes", async () => {
+      const { manager, httpAdapter, mounts, handles } = makeHarness();
+      await initAndFlush(manager);
+
+      // No subscription-capable subgraphs: no SSE route after init.
+      expect(mounts.has("/graphql/stream")).toBe(false);
+
+      const [Sub] = makeSubgraphClass("alpha", { subscriptions: true });
+      await manager.registerSubgraph(Sub, "graphql", false, "test-pkg");
+      await flushRouter(manager);
+      expect(mounts.has("/graphql/stream")).toBe(true);
+      const firstHandle = handles.get("/graphql/stream");
+      expect(firstHandle).toBeDefined();
+
+      // A second router update re-creates the SSE handler and must replace
+      // the existing route instead of piling another one on top.
+      await flushRouter(manager);
+      const secondHandle = handles.get("/graphql/stream");
+      expect(secondHandle).toBeDefined();
+      expect(secondHandle).not.toBe(firstHandle);
+      expect(httpAdapter.unmount).toHaveBeenCalledWith(firstHandle);
+
+      // Tearing the package down removes the last subscription-capable
+      // subgraph: the SSE route must be unmounted as well.
+      const teardown = manager.unregisterPackage("test-pkg");
+      await vi.runAllTimersAsync();
+      await teardown;
+      expect(httpAdapter.unmount).toHaveBeenCalledWith(secondHandle);
+    });
+  });
+
+  // ── document model subgraph pruning (issue #2973) ───────────────────────
+
+  describe("document model subgraph pruning (issue #2973)", () => {
+    /**
+     * A model that passes hasOperationSchemas so a subgraph is generated.
+     * The global state schema must be named `<PascalModelName>State` to
+     * match what generateDocumentModelSchema references (see createSchema).
+     */
+    function makeSubgraphableModel(
+      id: string,
+      name: string,
+      stateType: string,
+    ): DocumentModelModule {
+      return {
+        documentModel: {
+          global: {
+            id,
+            name,
+            specifications: [
+              {
+                version: 1,
+                changeLog: [],
+                modules: [
+                  {
+                    name: "Base",
+                    operations: [
+                      {
+                        name: "SET_NAME",
+                        schema: "input SetNameInput { name: String }",
+                      },
+                    ],
+                  },
+                ],
+                state: {
+                  global: {
+                    schema: `type ${stateType} { name: String }`,
+                  },
+                  local: { schema: "" },
+                },
+              },
+            ],
+          },
+        },
+        actions: { setName: vi.fn() },
+        reducer: vi.fn(),
+      } as unknown as DocumentModelModule;
+    }
+
+    it("removes the subgraph of a model that disappeared since the last regeneration", async () => {
+      const drive = makeDriveModule();
+      const alpha = makeSubgraphableModel(
+        "powerhouse/alpha",
+        "Alpha Model",
+        "AlphaModelState",
+      );
+      const beta = makeSubgraphableModel(
+        "powerhouse/beta",
+        "Beta Model",
+        "BetaModelState",
+      );
+      const reactorClient = makeMockReactorClient({
+        getDocumentModelModules: vi
+          .fn()
+          .mockResolvedValue({ results: [drive, alpha, beta] }),
+      });
+      const { manager, httpAdapter, mounts, handles } = makeHarness({
+        reactorClient,
+        enableDocumentModelSubgraphs: true,
+      });
+      await initAndFlush(manager);
+
+      // Both model subgraphs are registered and mounted.
+      expect(mounts.has("/graphql/alpha-model")).toBe(true);
+      expect(mounts.has("/graphql/beta-model")).toBe(true);
+
+      // Beta's package was uninstalled: its model is gone from the source
+      // of truth. Regeneration must remove the old subgraph, not just
+      // replace the current ones.
+      vi.mocked(reactorClient.getDocumentModelModules).mockResolvedValue({
+        results: [drive, alpha],
+        options: { cursor: "", limit: 100 },
+      });
+      const regenerate = manager.regenerateDocumentModelSubgraphs();
+      await vi.runAllTimersAsync();
+      await regenerate;
+
+      expect(httpAdapter.unmount).toHaveBeenCalledWith(
+        handles.get("/graphql/beta-model"),
+      );
+      expect(manager.getSubgraphByName("beta-model")).toBeUndefined();
+      expect(manager.hasSubgraphHandler("alpha-model")).toBe(true);
+    });
+  });
+
   // ── mount path & name ownership (issue #2972) ─────────────────────────────
 
   describe("mount path & name ownership (issue #2972)", () => {

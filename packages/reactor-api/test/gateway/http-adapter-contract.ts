@@ -203,6 +203,98 @@ export function runHttpAdapterContractTests(
     });
   });
 
+  // ── unmount() ─────────────────────────────────────────────────────────────
+
+  describe(`IHttpAdapter contract (${adapterName}) – unmount()`, () => {
+    let h: HttpAdapterHarness;
+
+    beforeEach(async () => {
+      h = await createHarness();
+    });
+    afterEach(async () => {
+      await h.close();
+    });
+
+    const post = (path: string) =>
+      fetch(`${h.url}${path}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      });
+
+    it("removes a route registered with mount()", async () => {
+      const handle = h.adapter.mount("/temp", echoHandler("temp"));
+      expect((await fetch(`${h.url}/temp`)).status).toBe(200);
+
+      h.adapter.unmount(handle);
+
+      expect((await post("/temp")).status).toBe(404);
+    });
+
+    it("removes a route registered with getRoute()", async () => {
+      const handle = h.adapter.getRoute("/health", () => new Response("OK"));
+      expect((await fetch(`${h.url}/health`)).status).toBe(200);
+
+      h.adapter.unmount(handle);
+
+      expect((await fetch(`${h.url}/health`)).status).toBe(404);
+    });
+
+    it("removes a route registered with mountNodeRoute()", async () => {
+      const handle = h.adapter.mountNodeRoute("POST", "/node", (req, res) => {
+        req.resume();
+        res.writeHead(200, { "Content-Type": "text/plain" });
+        res.end("node-ok");
+      });
+      const before = await post("/node");
+      expect(before.status).toBe(200);
+
+      h.adapter.unmount(handle);
+
+      expect((await post("/node")).status).toBe(404);
+    });
+
+    it("removes a prefix mount together with its sub-paths", async () => {
+      const handle = h.adapter.mount("/sse", echoHandler("sse"), {
+        exact: true,
+      });
+
+      // exact: true is a prefix route: sub-paths are served too.
+      expect((await fetch(`${h.url}/sse/child`)).status).toBe(200);
+
+      h.adapter.unmount(handle);
+
+      expect((await post("/sse")).status).toBe(404);
+      expect((await fetch(`${h.url}/sse/child`)).status).toBe(404);
+    });
+
+    it("unmounting a replaced route's stale handle is a no-op", async () => {
+      const first = h.adapter.mount("/temp", echoHandler("first"));
+      const second = h.adapter.mount("/temp", echoHandler("second"));
+
+      // Re-mounting replaces the entry; the old handle is dead.
+      h.adapter.unmount(first);
+      h.adapter.unmount(first); // idempotent
+
+      const res = await post("/temp");
+      expect(res.status).toBe(200);
+      expect(((await res.json()) as { handler: string }).handler).toBe(
+        "second",
+      );
+
+      h.adapter.unmount(second);
+      expect((await post("/temp")).status).toBe(404);
+    });
+
+    it("is a no-op for an unknown handle", async () => {
+      h.adapter.mount("/keep", echoHandler("keep"));
+
+      expect(() => h.adapter.unmount(99999)).not.toThrow();
+
+      expect((await post("/keep")).status).toBe(200);
+    });
+  });
+
   // ── request / response conversion ─────────────────────────────────────────
 
   describe(`IHttpAdapter contract (${adapterName}) – request/response conversion`, () => {

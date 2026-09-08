@@ -87,8 +87,11 @@ const NEEDS_JQ = (() => {
   }
 })();
 
+// Every case spawns `sh` via spawnSync; a cold process spawn on a loaded
+// Windows CI runner has been measured at >7s, so the 5s default is too tight.
 describe.skipIf(NEEDS_JQ)(
   "docker/connect-entrypoint.sh PH_CONNECT_CONFIG_JSON seeding",
+  { timeout: 30000 },
   () => {
     let workDir: string;
     let distDir: string;
@@ -388,6 +391,7 @@ describe.skipIf(NEEDS_JQ)(
 // HTML-escaped as `&#39;` in the built artifact — the real serialization.
 describe.skipIf(NEEDS_JQ)(
   "docker/connect-entrypoint.sh CSP registry sync",
+  { timeout: 30000 },
   () => {
     let workDir: string;
     let distDir: string;
