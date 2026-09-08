@@ -1017,10 +1017,17 @@ export class ReactorBuilder {
     >,
     registerShutdownHook: boolean,
   ): Promise<ProjectionShardManager> {
-    const baseDb = config.db ?? this.resolveReactorDbConfig();
+    const parentDb = this.resolveReactorDbConfig();
+    const baseDb = config.db ?? parentDb;
+    // withProjectionShards and withReadModelCoordinatorFactory are mutually
+    // exclusive, so the configured one names the caller in every message here.
+    const caller =
+      this.projectionShardConfig !== undefined
+        ? "withProjectionShards"
+        : "withReadModelCoordinatorFactory";
     if (!baseDb) {
       throw new Error(
-        "withProjectionShards requires a db (or an executor worker pool configured with one); projection workers need connection info to open their own pools.",
+        `${caller} requires a db (or an executor worker pool configured with one); projection workers need connection info to open their own pools.`,
       );
     }
     const workerDb = this.workerPool?.db;
@@ -1028,6 +1035,26 @@ export class ReactorBuilder {
       throw new Error(
         "withWorkerPool({ db }) and the projection worker db must address the same Postgres database (same host, port, and database); the parent writes operations there and the projection shards read them.",
       );
+    }
+    // The parent serves reads from the tables the worker writes, so the
+    // worker's db must name the parent's database too. A `db` that reached
+    // this method through the coordinator factory contributed nothing to
+    // `resolveReactorDbConfig`: the factory does not run until long after the
+    // parent database is built, so without this guard the parent silently
+    // falls back to the default embedded database while the worker projects
+    // into Postgres, and the parent's read models never see a projected row.
+    // `withKysely` owns the parent connection outright and is not validated.
+    if (config.db && this.kyselyInstance === undefined) {
+      if (!parentDb) {
+        throw new Error(
+          `The projection worker db passed to ${caller} must also be the parent reactor's database, but nothing configures the parent: it would fall back to the default embedded database while the worker projects into Postgres. Pass the same { db } to withWorkerPool, or give the parent its connection with withKysely.`,
+        );
+      }
+      if (!sameDatabaseTarget(config.db, parentDb)) {
+        throw new Error(
+          `The projection worker db passed to ${caller} and the parent reactor database must address the same Postgres database (same host, port, and database); the parent writes operations there and the projection shards read them.`,
+        );
+      }
     }
     validateBuiltInKindCoverage(config.preReadyKinds, config.postReadyKinds);
     // The executor pool guard in buildModule only runs with a worker pool.

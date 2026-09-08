@@ -412,6 +412,27 @@ describe("ReactorBuilder.withReadModelCoordinatorFactory", () => {
     expect(transports).toHaveLength(0);
   });
 
+  it("bound creator rejects a db when nothing configures the parent database", async () => {
+    const { transports, factory } = createFakeProjectionTransports();
+
+    await expect(
+      new ReactorBuilder()
+        .withDocumentModelSources(FIXTURE_SOURCES)
+        .withProjectionWorkerFactory(factory)
+        .withReadModelCoordinatorFactory(async (deps) => {
+          const created = await deps.createProjectionShardManager({
+            shardCount: 1,
+            preReadyKinds: ["document-view", "document-indexer"],
+            postReadyKinds: [],
+            db: SHARD_DB,
+          });
+          return new StubCoordinator(created);
+        })
+        .buildModule(),
+    ).rejects.toThrow(/nothing configures the parent/);
+    expect(transports).toHaveLength(0);
+  });
+
   it("bound creator rejects models registered only as live modules", async () => {
     db = await createDefaultDatabase();
     const { transports, factory } = createFakeProjectionTransports();
