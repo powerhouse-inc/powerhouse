@@ -163,6 +163,21 @@ describe("expandBulkArchive", () => {
     });
   });
 
+  it("creates no folders when no leaf is an importable document", async () => {
+    const { calls } = stubClient([]);
+    const junk = await zipEntries({
+      "Junk/": new Uint8Array(0),
+      "Junk/nested/": new Uint8Array(0),
+      "Junk/nested/readme.txt": new TextEncoder().encode("not a document"),
+    });
+    const file = new File([new Uint8Array(junk)], "Junk.zip");
+
+    await expect(
+      expandBulkArchive(file, DRIVE_ID, undefined),
+    ).rejects.toThrow();
+    expect(calls).toEqual([]);
+  });
+
   it("passes a single-document zip through untouched", async () => {
     const { calls } = stubClient([]);
     const single = new File(

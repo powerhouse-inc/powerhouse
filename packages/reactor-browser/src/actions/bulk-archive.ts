@@ -16,7 +16,8 @@ export type BulkImportJob = { file: File; parent: Node | undefined };
  * through unchanged. A bulk archive (a zip whose tree of files are
  * single-document zips) has its top-level folder — and subfolders —
  * recreated under `targetParent` (existing same-named folders are reused),
- * and each leaf becomes one job targeting its recreated folder.
+ * and each leaf becomes one job targeting its recreated folder. Throws
+ * without touching the drive when no leaf is a document zip.
  */
 export async function expandBulkArchive(
   file: File,
@@ -29,6 +30,16 @@ export async function expandBulkArchive(
   }
 
   const entries = await parseBulkArchive(data);
+
+  // Validate before any mutation: recreating the folder tree first would
+  // leave the archive's folders orphaned in the drive when nothing in it
+  // is importable. Throwing here keeps a junk zip a single failed upload.
+  const isDocument = await Promise.all(
+    entries.map((entry) => isDocumentZip(entry.data)),
+  );
+  if (!isDocument.some(Boolean)) {
+    throw new Error("Archive contains no Powerhouse documents");
+  }
 
   const reactorClient = window.ph?.reactorClient;
   if (!reactorClient) {
