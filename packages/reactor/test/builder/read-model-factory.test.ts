@@ -94,4 +94,26 @@ describe("ReactorBuilder.withReadModelFactory", () => {
       /withProjectionShards does not support read models registered through withReadModelFactory/,
     );
   });
+
+  it("rejects projection shards that would silently omit withReadModel instances", async () => {
+    await expect(
+      new ReactorBuilder()
+        .withReadModel(new StubReadModel())
+        .withProjectionShards({
+          shardCount: 1,
+          preReadyKinds: [],
+          postReadyKinds: [],
+          db: {
+            host: "localhost",
+            port: 5433,
+            database: "powerhouse",
+            user: "powerhouse",
+            password: "powerhouse",
+          },
+        })
+        .buildModule(),
+    ).rejects.toThrow(
+      /withProjectionShards does not support read models registered through withReadModel;/,
+    );
+  });
 });

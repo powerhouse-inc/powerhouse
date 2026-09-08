@@ -420,6 +420,28 @@ export class ReactorBuilder {
       );
     }
 
+    // Same class of bug, quieter: `readModelInstances` is handed to the
+    // in-process ReadModelCoordinator only, so anything registered through
+    // withReadModel is dropped on the floor under sharding rather than
+    // rejected. Fail here instead.
+    //
+    // KNOWN LIMITATION, not covered by either guard: the coordinator branch
+    // also owns subscriptionNotificationReadModel and processorManager, both
+    // of which buildModule constructs unconditionally — there is no caller
+    // registration to check for. Under withProjectionShards they are built,
+    // initialized, and never fed an operation, which silently disables
+    // GraphQL subscriptions and every package-installed processor. Do not
+    // enable projection sharding in a host that relies on either until that
+    // is resolved.
+    if (
+      this.projectionShardConfig !== undefined &&
+      this.readModels.length > 0
+    ) {
+      throw new Error(
+        "withProjectionShards does not support read models registered through withReadModel; projection workers build their own read models from the shard config and would silently omit these",
+      );
+    }
+
     // One resolution pass feeds both sides: the host registry gets every
     // resolved module (in both executor modes), and importable sources form
     // the worker manifest.
