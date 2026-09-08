@@ -9,10 +9,12 @@ import {
   REACTOR_SCHEMA,
   ReactorBuilder,
   ReactorClientBuilder,
+  instrumentPgPool,
   parseDriveUrl,
   type Database,
   type InProcessReactorClientModule,
   type JwtHandler,
+  type PoolInstrumentation,
 } from "@powerhousedao/reactor";
 import {
   HttpPackageLoader,
@@ -63,6 +65,7 @@ import {
 import { applySwitchboardReactorDefaults } from "./builder-defaults.mjs";
 import {
   buildWorkerDbConfig,
+  resolveHostPoolSize,
   resolveWorkerModelSources,
   resolveWorkerPoolOptions,
 } from "./worker-pool.mjs";
@@ -165,20 +168,32 @@ async function resolveServerPort(
   return requested;
 }
 
+/**
+ * The reactor's storage handle, plus the pool instrumentation when that
+ * storage is Postgres. The PGlite branch has no `pg.Pool` at all, so the
+ * instrumentation is absent rather than optional-by-convention.
+ */
+type ReactorStorage = {
+  kysely: Kysely<Database>;
+  poolInstrumentation: PoolInstrumentation | undefined;
+};
+
 async function createReactorKysely(opts: {
   reactorDbUrl: string | undefined;
   reactorPgliteDir: string | null;
   reactorPgliteMajor: SupportedPgMajor | null;
   inMemory: boolean;
   flushIntervalMs: number;
+  hostPoolSize: number;
   logger: ILogger;
-}): Promise<Kysely<Database>> {
+}): Promise<ReactorStorage> {
   const {
     reactorDbUrl,
     reactorPgliteDir,
     reactorPgliteMajor,
     inMemory,
     flushIntervalMs,
+    hostPoolSize,
     logger,
   } = opts;
 
@@ -186,9 +201,17 @@ async function createReactorKysely(opts: {
     const connectionString = reactorDbUrl.includes("?")
       ? reactorDbUrl
       : `${reactorDbUrl}?sslmode=disable`;
-    const pool = new Pool({ connectionString });
-    logger.info("Using PostgreSQL for reactor storage");
-    return new Kysely<Database>({ dialect: new PostgresDialect({ pool }) });
+    const pool = new Pool({ connectionString, max: hostPoolSize });
+    // Named to match the reactor's own convention for the pools it opens
+    // itself (`reactor-worker-N`, `projection-shard-N`).
+    const poolInstrumentation = instrumentPgPool(pool, "reactor-host");
+    logger.info(
+      `Using PostgreSQL for reactor storage (host pool max ${hostPoolSize})`,
+    );
+    return {
+      kysely: new Kysely<Database>({ dialect: new PostgresDialect({ pool }) }),
+      poolInstrumentation,
+    };
   }
 
   if (!reactorPgliteDir || reactorPgliteMajor === null) {
@@ -205,7 +228,12 @@ async function createReactorKysely(opts: {
       ? `Using in-memory PGlite (PG${reactorPgliteMajor}) for reactor storage [PH_PGLITE_IN_MEMORY=1]`
       : `Using PGlite (PG${reactorPgliteMajor}) for reactor storage at ${reactorPgliteDir}`,
   );
-  return new Kysely<Database>({ dialect: new ClosablePGliteDialect(pglite) });
+  return {
+    kysely: new Kysely<Database>({
+      dialect: new ClosablePGliteDialect(pglite),
+    }),
+    poolInstrumentation: undefined,
+  };
 }
 
 /** Derive the remote attachment service config for switchboard's own `/attachments/*` API. */
@@ -432,14 +460,16 @@ async function initServer(
       };
     }
 
-    const baseKysely = await createReactorKysely({
-      reactorDbUrl,
-      reactorPgliteDir,
-      reactorPgliteMajor,
-      inMemory: PGLITE_IN_MEMORY,
-      flushIntervalMs: PGLITE_FLUSH_INTERVAL_MS,
-      logger,
-    });
+    const { kysely: baseKysely, poolInstrumentation } =
+      await createReactorKysely({
+        reactorDbUrl,
+        reactorPgliteDir,
+        reactorPgliteMajor,
+        inMemory: PGLITE_IN_MEMORY,
+        flushIntervalMs: PGLITE_FLUSH_INTERVAL_MS,
+        hostPoolSize: resolveHostPoolSize(process.env),
+        logger,
+      });
 
     const maxSkipThreshold = parseInt(process.env.MAX_SKIP_THRESHOLD ?? "", 10);
     const hasSkipThreshold = !isNaN(maxSkipThreshold) && maxSkipThreshold > 0;
@@ -464,6 +494,15 @@ async function initServer(
         legacyProcessorIds:
           process.env.REACTOR_LEGACY_PROCESSOR_IDS !== "false",
       });
+
+    // Feeds `module.pools`, which ReactorInstrumentation reads to emit
+    // reactor.db.pool.{acquire.wait_duration,size,idle,waiting}. Without this
+    // the host pool is the one pool the reactor opens that nobody can see.
+    // Note the gauges observe pg-pool only: behind a transaction-mode
+    // pgbouncer, `waiting` can read 0 while requests queue in the pooler.
+    if (poolInstrumentation) {
+      reactorBuilder.withInstrumentedPool(poolInstrumentation);
+    }
 
     const clientBuilder = new ReactorClientBuilder().withReactorBuilder(
       reactorBuilder,
