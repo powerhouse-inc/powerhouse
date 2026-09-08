@@ -1,4 +1,4 @@
-import * as lzString from "lz-string";
+import lzString from "lz-string";
 
 /**
  * The lz-compressed `explorerURLState` parameter carried by switchboard
