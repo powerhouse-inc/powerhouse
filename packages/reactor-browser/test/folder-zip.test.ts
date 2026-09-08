@@ -193,6 +193,39 @@ describe("buildFolderZip", () => {
     ]);
   });
 
+  it("dedups leaf names per folder, not across the whole export", async () => {
+    // Same document name in two different folders: a drive collision is
+    // same-parent-folder, so neither leaf may be renamed.
+    const nodes: Node[] = [
+      node("Y1", "2024", null),
+      node("Y2", "2025", null),
+      node("r1", "report", "Y1", DOC_TYPE),
+      node("r2", "report", "Y2", DOC_TYPE),
+    ];
+    const drive = {
+      header: {
+        ...createPresignedHeader(DRIVE_ID, "powerhouse/document-drive"),
+        name: "Arb Drive",
+      },
+      state: { global: { nodes }, local: {} },
+    } as unknown as DocumentDriveDocument;
+    const client = stubClient({
+      r1: sourceDocument("r1", "report"),
+      r2: sourceDocument("r2", "report"),
+    });
+
+    const { zip } = await buildFolderZip(drive, undefined, fakeFetch(client));
+
+    const entries = await unzipAsync(zip);
+    expect(Object.keys(entries).sort()).toEqual([
+      "Arb Drive/",
+      "Arb Drive/2024/",
+      "Arb Drive/2024/report.phdm.phd",
+      "Arb Drive/2025/",
+      "Arb Drive/2025/report.phdm.phd",
+    ]);
+  });
+
   it("exports the whole drive when no folder is given (top dir = drive name)", async () => {
     const client = stubClient(allDocs());
     const { zip, archiveName } = await buildFolderZip(

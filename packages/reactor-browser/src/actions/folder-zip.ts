@@ -51,7 +51,7 @@ function segmentsBelow(
  * `folderNode` is undefined). Every folder in the subtree becomes a
  * directory entry (empty folders survive); every file becomes a standard
  * single-document zip named after the node (drive naming convention:
- * `${name}.${extension}.phd`, ` (copy) N` on collision).
+ * `${name}.${extension}.phd`, ` (copy) N` on a same-folder collision).
  *
  * `fetchDocument` must return the document WITH its full operations and
  * initialState (see downloadFolderZip).
@@ -84,13 +84,32 @@ export async function buildFolderZip(
 
   const files = subtree.filter(isFileNode);
   const failed: string[] = [];
-  const usedNames = new Set<string>();
+  // keyed by directory path: a drive collision is same-parent-folder, so two
+  // folders may each hold a `report` and neither leaf may be renamed
+  const usedNamesByDir = new Map<string, Set<string>>();
   let done = 0;
 
   for (const node of files) {
     try {
       const doc = await fetchDocument(node.id);
       const extension = await getDocumentExtension(doc);
+
+      // the file's own name goes into the leaf, so the path walk starts
+      // at its parent folder
+      const parent = node.parentFolder
+        ? allNodes.find((n) => n.id === node.parentFolder)
+        : undefined;
+      const segments = parent
+        ? segmentsBelow(folderNode, parent, allNodes)
+        : [];
+      const dir = [topName, ...segments].join("/");
+
+      let usedNames = usedNamesByDir.get(dir);
+      if (!usedNames) {
+        usedNames = new Set<string>();
+        usedNamesByDir.set(dir, usedNames);
+      }
+
       const base = sanitize(node.name);
       let candidate = base;
       let count = getNextCopyNumber([...usedNames], base);
@@ -103,15 +122,7 @@ export async function buildFolderZip(
       const leaf = extension
         ? `${candidate}.${extension}.phd`
         : `${candidate}.phd`;
-      // the file's own name goes into the leaf, so the path walk starts
-      // at its parent folder
-      const parent = node.parentFolder
-        ? allNodes.find((n) => n.id === node.parentFolder)
-        : undefined;
-      const segments = parent
-        ? segmentsBelow(folderNode, parent, allNodes)
-        : [];
-      entries[[topName, ...segments, leaf].join("/")] = await createZip(doc);
+      entries[`${dir}/${leaf}`] = await createZip(doc);
     } catch {
       failed.push(node.name);
     } finally {
