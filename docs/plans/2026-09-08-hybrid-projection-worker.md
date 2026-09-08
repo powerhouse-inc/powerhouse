@@ -315,30 +315,36 @@ Ordered. Each step names its files.
 ### Step 1 — Separate "caller read models" from "built-in read models" in the builder
 
 **File:** `packages/reactor/src/core/reactor-builder.ts`
+**Status: landed** on `feat/hybrid-projection-worker` (`6341d8a63`).
 
-Today `readModelInstances` (`:635-637`) accumulates caller models, then
-`documentView` (`:656`), then `documentIndexer` (`:672`), then factory-built
-models (`:699-707`). Keep that array exactly as-is (the default coordinator
-branch depends on it and stage order is irrelevant — `runChain` uses
-`Promise.all`), and additionally track the caller-only subset:
+`buildModule()` now accumulates two distinct lists:
 
 ```ts
-const readModelInstances: IReadModel[] = Array.from(new Set([...this.readModels]));
-// NEW: the subset a caller-supplied coordinator may index host-side. Excludes
-// documentView/documentIndexer, which a projection worker owns under the
-// hybrid; indexing them here too would double-write the same tables.
-const callerReadModels: IReadModel[] = [...readModelInstances];
+    // withReadModel + withReadModelFactory models only. Excludes
+    // documentView/documentIndexer so a caller-supplied coordinator cannot
+    // double-index them alongside a projection worker.
+    const callerReadModels: IReadModel[] = Array.from(
+      new Set([...this.readModels]),
+    );
+    // ... documentView / documentIndexer constructed and init()ed as before,
+    //     but no longer pushed anywhere here ...
+    for (const factory of this.readModelFactories) {
+      const readModel = await factory({ ... });
+      callerReadModels.push(readModel);
+    }
+
+    const readModelInstances: IReadModel[] = [
+      ...callerReadModels,
+      documentView,
+      documentIndexer,
+    ];
 ```
 
-and in the factory loop at `:699-707`, push into both:
-
-```ts
-for (const factory of this.readModelFactories) {
-  const readModel = await factory({ ... });
-  readModelInstances.push(readModel);
-  callerReadModels.push(readModel);
-}
-```
+`readModelInstances` still feeds the default `new ReadModelCoordinator(...)`
+branch unchanged; the built-ins moved from the middle of the pre-ready list to
+the end, which is behaviour-identical because `runChain` uses `Promise.all`.
+`callerReadModels` is what Step 4 hands to a coordinator factory as
+`deps.readModels`.
 
 ### Step 2 — Extend `ProjectionShardManager` with the relay hook and a dead-shard-safe drain
 
