@@ -286,8 +286,12 @@ raising any of these defaults.
 Both are also pushed into `readModelInstances` (`:656`, `:672`) — but that
 array is only consumed by the `new ReadModelCoordinator(...)` branch
 (`:716-719`). Under `withProjectionShards` the array is handed to nothing, so
-**there is no double-indexing today**: the host copies are pure read-only
-facades over tables the worker writes.
+**there is no double-indexing today**: the host copies never index an
+operation after boot. (Not quite "read-only": both are `BaseReadModel`
+subclasses, and `buildModule` awaits their `init()`, which catches up from
+`ViewState.lastOrdinal` — a write. It runs before the worker's `startup()`,
+so the two never race; but it means a projection-worker deployment still
+replays any backlog on the host at boot.)
 
 The hybrid can easily reintroduce double-indexing. **The factory must receive
 caller-registered and factory-registered read models only, never the two
@@ -388,12 +392,22 @@ Split `relayReadReady` so the emit is reusable:
 `READMODEL_INDEXED` and `READMODEL_BATCH_COMPLETED` keep flowing straight to
 the host bus (see Step 3, "Do not emit a second `READMODEL_BATCH_COMPLETED`").
 
-**2d. `drain()` skips shards that are not ready.** Build `remaining` from
-`this.shards.filter((s) => s.ready)`, post `drain` only to those, and resolve
-immediately when the set is empty. A not-ready shard is dead — nothing
-respawns it — and `handleTransportExit` has already abandoned its in-flight
-jobs, so waiting on it can only time out. Without this the hybrid's shutdown
-hook stalls for `drainTimeoutMs` after a worker death (Q3).
+**2d. `drain()` never waits on a dead shard.** Two halves:
+
+- At drain start, build `remaining` from `this.shards.filter((s) => s.ready)`,
+  post `drain` only to those, and resolve immediately when the set is empty.
+  A not-ready shard is dead — nothing respawns it — and `handleTransportExit`
+  has already abandoned its in-flight jobs, so waiting on it can only time
+  out.
+- In `handleTransportExit`, delete `shard.shardId` from every entry in
+  `pendingDrains` and resolve (clear timer, delete) any whose `remaining`
+  empties. Filtering at start alone leaves the exact race this is for
+  unfixed: a worker that dies *while* a drain is pending — SIGTERM arrives,
+  the hook calls `drain()`, then the worker exits — still pins the drain to
+  the 30 s timer.
+
+Without both, the hybrid's shutdown hook stalls for `drainTimeoutMs` after a
+worker death (Q3).
 
 ### Step 3 — New `HybridProjectionCoordinator`
 
@@ -621,8 +635,7 @@ export interface ReadModelCoordinatorFactoryDeps {
    * via `registerShutdownHook` below.
    */
   createProjectionShardManager: (
-    config: ProjectionShardBuilderConfig &
-      Pick<ProjectionShardManagerConfig, "onReadReady" | "onShardFatal">,
+    config: ProjectionShardBuilderConfig & ProjectionShardHooks,
   ) => Promise<ProjectionShardManager>;
 
   /** Same list `withShutdownHook` appends to; hooks run in registration
@@ -635,6 +648,12 @@ export type ReadModelCoordinatorFactory = (
   deps: ReadModelCoordinatorFactoryDeps,
 ) => IReadModelCoordinator | Promise<IReadModelCoordinator>;
 ```
+
+`ProjectionShardHooks` is a named type in `projection-shard-manager.ts` —
+`{ onReadReady?: ...; onShardFatal?: ... }` — and `ProjectionShardManagerConfig`
+composes it (`type ProjectionShardManagerConfig = ProjectionShardHooks & { ... }`)
+so the two cannot drift. The reactor package's conventions prefer named types
+over `Pick`/`Omit`.
 
 Each member justified: `eventBus` and `logger` are what any coordinator needs;
 `readModels` / `subscriptionNotificationReadModel` / `processorManager` are the
@@ -686,11 +705,15 @@ consistencyTrackers) => Promise<IReadModelCoordinator>`, called only from the
   `sameDatabaseTarget` check against `this.workerPool?.db` when both exist,
   so a projection worker still cannot address a different database than the
   parent;
-- **move the kinds-exactly-once validation here.** Today it runs in
-  `buildModule()` keyed on `this.projectionShardConfig`, so a coordinator
-  factory calling the bound creator with a bad kind list would bypass it.
-  Validating inside `createProjectionShardManager` covers both callers with
-  one copy of the check;
+- **validate kinds-exactly-once here too, without moving the early guard.**
+  Today the check runs at the top of `buildModule()` keyed on
+  `this.projectionShardConfig` — before Postgres, migrations,
+  `writeCache.startup()` and `executorManager.start()` — so a config typo
+  fails fast with nothing leaked. Keep that. A coordinator factory calling
+  the bound creator with a bad kind list bypasses it, though, and the creator
+  is the only place that path can be checked. Extract one
+  `validateBuiltInKindCoverage(preReadyKinds, postReadyKinds)` helper and
+  call it from both the early guard and `createProjectionShardManager`;
 - keep the forwarding pool instrumentations and the `consistencyTrackers`
   argument as they are.
 
@@ -854,23 +877,39 @@ after the two `withReadModelFactory` registrations (`NodeProcessor`,
             dbPoolSizePerWorker: projectionWorker.dbPoolSize,
             acquireTimeoutMs: workerPool?.acquireTimeoutMs ?? 5000,
           }),
-          onFatal: (shardId, reason) => {
-            reactorLogger.error(
-              `Projection worker ${shardId} died; sending SIGTERM so the ` +
-                `supervisor restarts a healthy process`, reason,
-            );
-            // Reuses the builder's withSignalHandlers() path
-            // (builder-defaults.mts): reactor.kill(), then the shutdown
-            // hooks (api.dispose, hybrid coordinator shutdown), then
-            // database.destroy(). server.mts has no shutdown() of its own —
-            // the returned handle's shutdown() only disposes the api — and
-            // the signal handler's shutdownInProgress guard makes the
-            // repeated onShardFatal calls the manager documents harmless.
-            process.kill(process.pid, "SIGTERM");
-          },
+          onFatal: onProjectionWorkerFatal,
         }),
       );
     }
+```
+
+with the handler defined once, latched:
+
+```ts
+    // dropWriteReady fires onShardFatal once per dropped job — at Run 11
+    // rates that is ~1k calls/s during the shutdown window — so latch, or
+    // the builder's "Received SIGTERM again" line floods the one trace an
+    // operator wants clean.
+    let projectionWorkerFatalFired = false;
+    const onProjectionWorkerFatal = (shardId: string, reason: Error) => {
+      if (projectionWorkerFatalFired) return;
+      projectionWorkerFatalFired = true;
+      reactorLogger.error(
+        `Projection worker ${shardId} died; shutting down so the ` +
+          `supervisor restarts a healthy process`, reason,
+      );
+      // Reuses the builder's withSignalHandlers() path: reactor.kill(), then
+      // the shutdown hooks (api.dispose, hybrid coordinator shutdown), then
+      // database.destroy(). server.mts has no shutdown() of its own — the
+      // returned handle's shutdown() only disposes the api.
+      // applySwitchboardReactorDefaults installs the handlers unless
+      // options.signalHandlers === false (builder-defaults.mts); with them
+      // off, nothing would catch the signal, so exit directly.
+      if (options.signalHandlers === false) {
+        process.exit(1);
+      }
+      process.kill(process.pid, "SIGTERM");
+    };
 ```
 
 Preconditions, validated at boot with the same messages `workerPool` uses —
@@ -921,7 +960,9 @@ write-ready, and *not* during shutdown; trackers advance per model and not on
   (pure-shard path unchanged);
 - the zero-op relay also goes through `onReadReady` when set;
 - `drain()` resolves immediately when the only shard has exited (2d); with
-  two shards, one dead, it resolves on the live shard's `drained` alone.
+  two shards, one dead, it resolves on the live shard's `drained` alone;
+- a shard exiting while a drain is pending releases that drain (2d, second
+  half) instead of leaving it to the timeout.
 
 ### `packages/reactor/test/builder/read-model-coordinator-factory.test.ts` (new)
 
@@ -936,8 +977,13 @@ write-ready, and *not* during shutdown; trackers advance per model and not on
   `withProjectionWorkerFactory`) wires the module's two trackers: a fake
   `readmodel-indexed` advances `module.documentViewConsistencyTracker`;
 - the bound creator does not register a shutdown hook of its own, and
-  `registerShutdownHook` appends to the list `withShutdownHook` uses (observe
-  via `attachSignalHandlers` or by exposing hook count for tests);
+  `registerShutdownHook` appends to the list `withShutdownHook` uses.
+  `shutdownHooks` is private with no accessor, so assert indirectly: spy on
+  the returned coordinator's `shutdown()` and on the transport's
+  `terminate()`, drive the signal handler (`withSignalHandlers()` + emit
+  `SIGTERM` on `process` with `process.exit` stubbed), and assert each ran
+  exactly once — a second `manager.shutdown()` would call `terminate()`
+  again;
 - the bound creator honours `config.db` with no worker pool configured, and
   rejects a `db` on a different target than the worker pool's;
 - the bound creator rejects a kind list that does not name each built-in
@@ -975,9 +1021,10 @@ Failure:
 5. Host pre-ready throws → `JOB_READ_READY` is still emitted, host post-ready
    still runs, the error is logged, later jobs on the same key still process.
 6. Host post-ready throws → chain still completes; next job on the key runs.
-7. **Shutdown after a worker death (Q3).** Emit transport `exit` after ready,
-   then `shutdown()`: it resolves well under `drainTimeoutMs` and the
-   transport's `terminate` was called.
+7. **Shutdown around a worker death (Q3).** Two variants: (a) transport
+   `exit` after ready, then `shutdown()`; (b) `shutdown()` first, then
+   `exit` while its drain is pending. Both resolve well under
+   `drainTimeoutMs` and call the transport's `terminate`.
 8. Zero-operation `JOB_WRITE_READY` → `JOB_READ_READY` emitted host-side via
    the hook, no chain entry, no `write-ready` posted to the worker.
 
