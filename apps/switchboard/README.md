@@ -105,6 +105,7 @@ pnpm add -g @powerhousedao/switchboard
 | `PORT`                      | Server port                        | `4001`                |
 | `DATABASE_URL`              | Database connection string         | `./.ph/drive-storage` |
 | `PH_REACTOR_DATABASE_URL`   | PostgreSQL URL (takes precedence)  | -                     |
+| `REACTOR_DB_POOL_SIZE_HOST` | Reactor host Postgres pool size     | `16`                  |
 | `REDIS_URL`                 | Redis connection URL               | -                     |
 | `REDIS_TLS_URL`             | Redis TLS connection URL           | -                     |
 | `PYROSCOPE_SERVER_ADDRESS`  | Pyroscope server address           | -                     |
@@ -141,8 +142,12 @@ Requirements when `REACTOR_WORKERS > 0`:
   so every configured package needs a built `document-models` entry. `dev`
   mode (Vite-loaded models, e.g. `ph vetra`) is rejected.
 - **Connection budget.** Total Postgres connections are roughly
-  `host pool + REACTOR_WORKERS x REACTOR_DB_POOL_SIZE_WORKER`; keep this
-  under the server's `max_connections`.
+  `REACTOR_DB_POOL_SIZE_HOST + REACTOR_WORKERS x REACTOR_DB_POOL_SIZE_WORKER`;
+  keep this under the server's `max_connections`. Behind a connection pooler,
+  check it against the pooler's client limit as well — and note that in
+  transaction pooling mode the pooler multiplexes those clients onto a smaller
+  set of server connections, so `reactor.db.pool.waiting` can read 0 while
+  requests queue one layer down.
 
 Example:
 

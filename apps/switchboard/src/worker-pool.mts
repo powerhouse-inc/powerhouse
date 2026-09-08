@@ -25,6 +25,13 @@ export type SwitchboardWorkerPoolInput = {
 const DEFAULT_DB_POOL_SIZE_PER_WORKER = 2;
 const DEFAULT_ACQUIRE_TIMEOUT_MS = 5000;
 
+// Host reactor pool. pg-pool's own default is 10, below the bench harness's
+// floor of 16 (bench/host/src/main.ts, REACTOR_DB_POOL_SIZE_HOST). Run 8 of
+// the sweep found throughput flat from 16 to 96 but per-op index p50
+// collapsing 262ms -> 43ms, so this buys latency, not throughput — and only
+// up to whatever the connection budget in front of Postgres allows.
+const DEFAULT_DB_POOL_SIZE_HOST = 16;
+
 // Auto-sizing: reserve cores for the host event loop (queue, read models,
 // HTTP) and cap at the top of the bench sweep envelope, which also bounds
 // the worker Postgres-connection budget.
@@ -80,6 +87,32 @@ export function resolveWorkerPoolOptions(
       ) ??
       DEFAULT_ACQUIRE_TIMEOUT_MS,
   };
+}
+
+/**
+ * Size of the reactor's own (host) Postgres pool. Unlike the worker pool there
+ * is no "disabled" state — the host pool is the only Postgres pool in the
+ * server path, backing both reactor storage and the read models that reach it
+ * via `withSchema` — so 0 is rejected rather than read as "off".
+ *
+ * The acquire timeout is deliberately not configurable here: the host pool
+ * waits indefinitely today, and making it finite converts saturation from a
+ * latency problem into a thrown error on the read-model path. That is a
+ * behavior change worth making separately, once the retry semantics of a
+ * rejected `pool.connect()` inside the read-model coordinator are settled.
+ */
+export function resolveHostPoolSize(env: NodeJS.ProcessEnv): number {
+  const poolSize =
+    parseNonNegativeInt(
+      env.REACTOR_DB_POOL_SIZE_HOST,
+      "REACTOR_DB_POOL_SIZE_HOST",
+    ) ?? DEFAULT_DB_POOL_SIZE_HOST;
+  if (poolSize < 1) {
+    throw new Error(
+      "REACTOR_DB_POOL_SIZE_HOST must be at least 1; the host pool cannot be disabled",
+    );
+  }
+  return poolSize;
 }
 
 /**

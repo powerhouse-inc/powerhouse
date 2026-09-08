@@ -47,14 +47,24 @@
  * verified inside the window, which was half to two thirds of every case.
  *
  * Alongside the timing, each case attributes its jobs from the lifecycle
- * events alone: queue wait (JOB_PENDING to JOB_RUNNING), apply (to
- * JOB_WRITE_READY) and index (to JOB_READ_READY), split into the writes this
- * harness submitted, loads from the peer, and loads that re-appended
- * operations the side had already written, which is what a reshuffle does.
+ * events and from the read-model coordinator's own stage split: queue wait
+ * (JOB_PENDING to JOB_RUNNING), apply (to JOB_WRITE_READY), index and index
+ * chain wait, split into the writes this harness submitted, loads from the
+ * peer, and loads that re-appended operations the side had already written,
+ * which is what a reshuffle does.
  * Those land in the record's derived list. The Contention case exists for
  * this: it is Baseline with the writer alternating per operation and nothing
  * else changed, so the cost of two reactors writing one document can be read
  * against Baseline without the document count or action type moving too.
+ *
+ * Index is not the JOB_WRITE_READY-to-JOB_READ_READY gap, which is what it
+ * used to be. The coordinator runs one batch at a time per
+ * documentId:scope:branch, so that gap is chain wait plus pre-ready plus the
+ * JOB_READ_READY emit, and the wait dominates it: 92% of it in Baseline and
+ * 99% in Heavy Load, growing with operations per document rather than with
+ * the cost of indexing. READMODEL_BATCH_COMPLETED already carries the stages
+ * apart, so index is pre-ready plus emit and the wait is its own bucket. The
+ * post-ready stage runs after JOB_READ_READY is emitted and is in neither.
  */
 
 import { readFileSync } from "node:fs";
@@ -83,6 +93,7 @@ import type {
   JobReadReadyEvent,
   JobRunningEvent,
   JobWriteReadyEvent,
+  ReadModelBatchCompletedEvent,
   Unsubscribe,
 } from "../src/events/types.js";
 import type { ISyncCursorStorage } from "../src/storage/interfaces.js";
@@ -111,6 +122,10 @@ type JobStamp = {
   readReady: number;
   operations: number;
   reAppended: number;
+  /** READMODEL_BATCH_COMPLETED events seen; 0 means no split arrived. */
+  batches: number;
+  chainWaitMs: number;
+  indexMs: number;
 };
 
 type SideRecord = {
@@ -130,7 +145,10 @@ type JobBucket = {
   jobs: number;
   queueWaitMs: number;
   applyMs: number;
+  /** Divisor for the two below: the jobs whose coordinator split arrived. */
+  indexedJobs: number;
   indexMs: number;
+  chainWaitMs: number;
   reAppendedOps: number;
 };
 
@@ -150,7 +168,15 @@ type Attribution = {
 };
 
 function emptyBucket(): JobBucket {
-  return { jobs: 0, queueWaitMs: 0, applyMs: 0, indexMs: 0, reAppendedOps: 0 };
+  return {
+    jobs: 0,
+    queueWaitMs: 0,
+    applyMs: 0,
+    indexedJobs: 0,
+    indexMs: 0,
+    chainWaitMs: 0,
+    reAppendedOps: 0,
+  };
 }
 
 function emptyAttribution(): Attribution {
@@ -167,7 +193,9 @@ function addBucket(into: JobBucket, from: JobBucket): void {
   into.jobs += from.jobs;
   into.queueWaitMs += from.queueWaitMs;
   into.applyMs += from.applyMs;
+  into.indexedJobs += from.indexedJobs;
   into.indexMs += from.indexMs;
+  into.chainWaitMs += from.chainWaitMs;
   into.reAppendedOps += from.reAppendedOps;
 }
 
@@ -189,6 +217,9 @@ function stampFor(record: SideRecord, jobId: string): JobStamp {
       readReady: 0,
       operations: 0,
       reAppended: 0,
+      batches: 0,
+      chainWaitMs: 0,
+      indexMs: 0,
     };
     record.stamps.set(jobId, stamp);
   }
@@ -263,6 +294,15 @@ class SyncTracker {
             this.bump();
           },
         ),
+        eventBus.subscribe<ReadModelBatchCompletedEvent>(
+          ReactorEventTypes.READMODEL_BATCH_COMPLETED,
+          (_type, event) => {
+            const stamp = stampFor(record, event.jobId);
+            stamp.batches += 1;
+            stamp.chainWaitMs += event.chainWaitDurationMs;
+            stamp.indexMs += event.preReadyDurationMs + event.emitDurationMs;
+          },
+        ),
         eventBus.subscribe<JobFailedEvent>(
           ReactorEventTypes.JOB_FAILED,
           (_type, event) => {
@@ -316,7 +356,11 @@ class SyncTracker {
         bucket.jobs += 1;
         bucket.queueWaitMs += stamp.running - stamp.pending;
         bucket.applyMs += stamp.writeReady - stamp.running;
-        bucket.indexMs += stamp.readReady - stamp.writeReady;
+        if (stamp.batches > 0) {
+          bucket.indexedJobs += 1;
+          bucket.indexMs += stamp.indexMs;
+          bucket.chainWaitMs += stamp.chainWaitMs;
+        }
         bucket.reAppendedOps += stamp.reAppended;
       }
     }
@@ -658,7 +702,7 @@ function bucketRatios(
     return [];
   }
   const note = `mean per job over ${bucket.jobs} ${kind} jobs in ${iterations} iterations`;
-  return [
+  const ratios: DerivedRatio[] = [
     {
       name: `${label}: ${kind} queue wait`,
       value: round(bucket.queueWaitMs / bucket.jobs),
@@ -671,13 +715,26 @@ function bucketRatios(
       unit: "ms",
       note,
     },
+  ];
+  if (bucket.indexedJobs === 0) {
+    return ratios;
+  }
+  const indexNote = `mean per job over the ${bucket.indexedJobs} of ${bucket.jobs} ${kind} jobs in ${iterations} iterations whose READMODEL_BATCH_COMPLETED arrived before the iteration ended`;
+  ratios.push(
     {
       name: `${label}: ${kind} index`,
-      value: round(bucket.indexMs / bucket.jobs),
+      value: round(bucket.indexMs / bucket.indexedJobs),
       unit: "ms",
-      note,
+      note: `${indexNote}; the coordinator's pre-ready and JOB_READ_READY emit stages, without the chain wait ahead of them`,
     },
-  ];
+    {
+      name: `${label}: ${kind} index chain wait`,
+      value: round(bucket.chainWaitMs / bucket.indexedJobs),
+      unit: "ms",
+      note: `${indexNote}; time the batch sat behind earlier batches for the same documentId:scope:branch before indexing started`,
+    },
+  );
+  return ratios;
 }
 
 function derivedFrom(name: string, attribution: Attribution): DerivedRatio[] {
@@ -703,10 +760,12 @@ function derivedFrom(name: string, attribution: Attribution): DerivedRatio[] {
 }
 
 function describeAttribution(attribution: Attribution): string {
+  const perIndexed = (total: number, bucket: JobBucket) =>
+    bucket.indexedJobs === 0 ? "n/a" : `${round(total / bucket.indexedJobs)}ms`;
   const per = (bucket: JobBucket) =>
     bucket.jobs === 0
       ? "none"
-      : `${bucket.jobs} jobs, wait ${round(bucket.queueWaitMs / bucket.jobs)}ms, apply ${round(bucket.applyMs / bucket.jobs)}ms, index ${round(bucket.indexMs / bucket.jobs)}ms`;
+      : `${bucket.jobs} jobs, wait ${round(bucket.queueWaitMs / bucket.jobs)}ms, apply ${round(bucket.applyMs / bucket.jobs)}ms, index ${perIndexed(bucket.indexMs, bucket)} and chain wait ${perIndexed(bucket.chainWaitMs, bucket)} over ${bucket.indexedJobs} indexed`;
   return [
     `local: ${per(attribution.local)}`,
     `load: ${per(attribution.load)}`,
