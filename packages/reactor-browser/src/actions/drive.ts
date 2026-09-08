@@ -133,6 +133,12 @@ export async function addDrive(input: DriveInput, preferredEditor?: string) {
     },
   });
 
+  // A configured id (e.g. a local default drive) overrides the generated one.
+  // Empty strings are the "not provided" signal used by the Add Drive modal.
+  if (input.id) {
+    driveDoc.header.id = input.id;
+  }
+
   if (preferredEditor) {
     driveDoc.header.meta = { preferredEditor };
   }
@@ -319,10 +325,13 @@ export async function setDriveMetadata(
     | ReturnType<typeof createSetDriveNameAction>
     | ReturnType<typeof createSetDriveIconAction>
   > = [];
+  // name is non-nullable in the drive model, so only a non-empty string is
+  // forwarded; icon is nullable, so !== undefined is the "update requested"
+  // signal and null is forwarded as the clear-the-icon request (#2659).
   if (metadata.name) {
     actions.push(createSetDriveNameAction({ name: metadata.name }));
   }
-  if (metadata.icon !== undefined && metadata.icon !== null) {
+  if (metadata.icon !== undefined) {
     actions.push(createSetDriveIconAction({ icon: metadata.icon }));
   }
   if (actions.length === 0) {

@@ -1,3 +1,4 @@
+import type { Node } from "@powerhousedao/shared/document-drive";
 import { addFileWithProgress } from "../actions/document.js";
 import type {
   ConflictResolution,
@@ -17,6 +18,7 @@ export const useOnDropFile: UseOnDropFile = (
 
   const onDropFile = async (
     file: File,
+    targetFolder?: Node,
     onProgress?: FileUploadProgressCallback,
     resolveConflict?: ConflictResolution,
   ) => {
@@ -26,7 +28,7 @@ export const useOnDropFile: UseOnDropFile = (
     }
 
     const fileName = file.name.replace(/\..+/gim, "");
-    const targetNodeId = selectedFolder?.id;
+    const targetNodeId = targetFolder?.id ?? selectedFolder?.id;
 
     // Return the FileNode directly from addFileWithProgress
     return await addFileWithProgress(

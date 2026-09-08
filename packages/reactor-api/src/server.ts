@@ -511,6 +511,13 @@ function setupEventListeners(
             false,
             packageName,
           );
+          // Registration returns undefined when the subgraph is rejected
+          // (e.g. its name is reserved by a core subgraph, issue #2972).
+          // Nothing was mounted, so the name is not provided and must not
+          // shield a stale same-named subgraph from being pruned below.
+          if (!instance) {
+            continue;
+          }
           incomingNames.add(instance.name);
         }
         // The package is still loaded but dropped some (or all) of its
