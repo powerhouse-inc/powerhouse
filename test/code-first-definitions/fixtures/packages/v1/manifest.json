@@ -1,0 +1,153 @@
+{
+  "kind": "powerhouse.gate-fixture-manifest",
+  "formatVersion": 1,
+  "gate": "B8",
+  "fixtureVersion": "package-loaders-v1",
+  "caseCount": 11,
+  "requiredTools": {
+    "node": "v24.14.0",
+    "vite": "locked-workspace",
+    "tsdown": "locked-workspace"
+  },
+  "schemaDigest": "sha256:9a320fb708d0c5bba916dba4cd268cdd7283d21ce1128b5905b2bc247d8cc868",
+  "directDependencies": [
+    {
+      "gate": "B1",
+      "contractRevision": "sha256:a7ccf254a06e9542fe8e21c59c385e7504a998982ee23444f4491143ef830e4a",
+      "fixtureManifestDigest": "sha256:3b1ecf4f491d0459ddf129ff1a2ee33b8e05171cdbe857a2c0da7273667080ce"
+    },
+    {
+      "gate": "B9",
+      "contractRevision": "sha256:a7ccf254a06e9542fe8e21c59c385e7504a998982ee23444f4491143ef830e4a",
+      "fixtureManifestDigest": "sha256:597d6f2a4716a4633765c558f36eb8fe288529c0940ea56d72cf73956b38b43c"
+    }
+  ],
+  "cases": [
+    {
+      "caseId": "definition-source",
+      "hostKind": "definition-source",
+      "baselineFixture": "./fixtures/packages/v1/powerhouse.config.json",
+      "codeFirstFixture": "./fixtures/packages/v1/powerhouse.config.json",
+      "coveredVariants": [
+        "vite-import-adapter",
+        "node-build-import-adapter",
+        "rfc-6901",
+        "one-import-per-revision",
+        "fixed-code-unit-order"
+      ]
+    },
+    {
+      "caseId": "node-server",
+      "hostKind": "node-server",
+      "baselineFixture": "./fixtures/packages/v1/legacy-models.ts",
+      "codeFirstFixture": "./fixtures/packages/v1/source-models.ts",
+      "coveredVariants": [
+        "direct-named-models",
+        "aggregate-ignored",
+        "nested-subgraph-flatten",
+        "non-callable-retained"
+      ]
+    },
+    {
+      "caseId": "http-cdn",
+      "hostKind": "http-cdn",
+      "baselineFixture": "./fixtures/packages/v1/subgraphs.ts",
+      "codeFirstFixture": "./fixtures/packages/v1/subgraphs.ts",
+      "coveredVariants": [
+        "nested-subgraph-flatten",
+        "generic-export",
+        "default-export",
+        "non-callable-filtered"
+      ]
+    },
+    {
+      "caseId": "vite-local",
+      "hostKind": "vite-local",
+      "baselineFixture": "./fixtures/packages/v1/subgraphs.ts",
+      "codeFirstFixture": "./fixtures/packages/v1/subgraphs.ts",
+      "coveredVariants": [
+        "direct-named-models",
+        "outer-inner-name-equality",
+        "base-subgraph-predicate"
+      ]
+    },
+    {
+      "caseId": "browser-static",
+      "hostKind": "browser-static",
+      "baselineFixture": "./fixtures/packages/v1/legacy-models.ts",
+      "codeFirstFixture": "./fixtures/packages/v1/source-models.ts",
+      "coveredVariants": [
+        "document-model-lib",
+        "latest-version"
+      ]
+    },
+    {
+      "caseId": "browser-worker",
+      "hostKind": "browser-worker",
+      "baselineFixture": "./fixtures/packages/v1/legacy-models.ts",
+      "codeFirstFixture": "./fixtures/packages/v1/source-models.ts",
+      "coveredVariants": [
+        "cdn-namespace",
+        "aggregate-models",
+        "aggregate-ignored",
+        "latest-version"
+      ]
+    },
+    {
+      "caseId": "graphql",
+      "hostKind": "graphql",
+      "baselineFixture": "./fixtures/packages/v1/subgraphs.ts",
+      "codeFirstFixture": "./fixtures/packages/v1/subgraphs.ts",
+      "coveredVariants": [
+        "package-manager",
+        "document-models",
+        "upgrade-manifests",
+        "subgraphs"
+      ]
+    },
+    {
+      "caseId": "mcp",
+      "hostKind": "mcp",
+      "baselineFixture": "./fixtures/packages/v1/legacy-models.ts",
+      "codeFirstFixture": "./fixtures/packages/v1/source-models.ts",
+      "coveredVariants": [
+        "vite-source",
+        "direct-named-models",
+        "aggregate-ignored"
+      ]
+    },
+    {
+      "caseId": "connect",
+      "hostKind": "connect",
+      "baselineFixture": "./fixtures/packages/v1/legacy-models.ts",
+      "codeFirstFixture": "./fixtures/packages/v1/source-models.ts",
+      "coveredVariants": [
+        "document-model-lib",
+        "local-package-registration",
+        "first-version-resolution"
+      ]
+    },
+    {
+      "caseId": "reactor-worker",
+      "hostKind": "reactor-worker",
+      "baselineFixture": "./fixtures/packages/v1/legacy-models.ts",
+      "codeFirstFixture": "./fixtures/packages/v1/source-models.ts",
+      "coveredVariants": [
+        "named-export-reference",
+        "host-worker-manifest",
+        "versioned-modules"
+      ]
+    },
+    {
+      "caseId": "registry",
+      "hostKind": "registry",
+      "baselineFixture": "./fixtures/packages/v1/legacy-models.ts",
+      "codeFirstFixture": "./fixtures/packages/v1/source-models.ts",
+      "coveredVariants": [
+        "global-id-version-key",
+        "unversioned-default-v1",
+        "duplicate-diagnostic"
+      ]
+    }
+  ]
+}

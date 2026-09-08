@@ -1,5 +1,11 @@
 #!/usr/bin/env node
 import {
+  isPhCliJsonReportInvocation,
+  phCliCommandsWithSubcommands,
+  phCliDefinitionReportCommands,
+} from "@powerhousedao/shared/clis/command-names";
+import {
+  detectPackageManager,
   initCliTelemetry,
   type TelemetryClient,
 } from "@powerhousedao/shared/clis/telemetry";
@@ -15,30 +21,35 @@ import {
 
 let sentryClient: TelemetryClient | undefined = undefined;
 
-// Commands whose second positional is itself a subcommand (vs. a project
-// name / file path). Keeping this explicit avoids high-cardinality tag
-// values like `subcommand:my-package` polluting Sentry.
-const COMMANDS_WITH_SUBCOMMANDS = new Set(["connect", "vetra"]);
+const COMMANDS_WITH_SUBCOMMANDS = new Set<string>(phCliCommandsWithSubcommands);
+const DEFINITION_REPORT_COMMANDS = new Set<string>(
+  phCliDefinitionReportCommands,
+);
 
-function detectPackageManager(): string | undefined {
-  // npm, pnpm, yarn and bun all set npm_config_user_agent like
-  // "pnpm/8.5.0 npm/? node/v20.11.1 darwin arm64". When the user invokes
-  // `ph` directly (not via dlx/exec) it's typically unset — skip the tag
-  // in that case rather than mislabel.
-  const ua = process.env.npm_config_user_agent;
-  if (!ua) return undefined;
-  return ua.split(" ")[0]?.split("/")[0] || undefined;
+function normalizeDefinitionCommandArgs(args: readonly string[]): string[] {
+  if (!DEFINITION_REPORT_COMMANDS.has(args[0] ?? "")) {
+    return [...args];
+  }
+  // cmd-ts registers option names across the complete subcommand tree. The
+  // existing Connect JSON payload option therefore makes a bare --json look
+  // value-taking even for these report commands. Supplying `true` preserves
+  // the documented `--json` syntax in any position.
+  return args.map((argument) =>
+    argument === "--json" ? "--json=true" : argument,
+  );
 }
 
 async function main() {
   assertNodeVersion();
+  const rawArgs = process.argv.slice(2);
   // Initializes Sentry only if user consented (opt-out by default, asked
   // once on first interactive run). Respects PH_NO_TELEMETRY/DO_NOT_TRACK.
   sentryClient = await initCliTelemetry({
     cliName: "ph-cli",
     release: getVersion(),
+    promptForConsent: !isPhCliJsonReportInvocation(rawArgs),
   });
-  const args = process.argv.slice(2);
+  const args = normalizeDefinitionCommandArgs(rawArgs);
   const command = args[0];
   const subcommand =
     command &&
@@ -51,7 +62,7 @@ async function main() {
     command,
     subcommand,
     pm: detectPackageManager(),
-    argv: args,
+    argv: rawArgs,
     cwd: process.cwd(),
   });
   const hasNoArgs = args.length === 0;

@@ -46,6 +46,7 @@ ARG TAG=dev
 ARG REGISTRY_URL=http://host.docker.internal:8080
 
 # Route every install through the local registry (which uplinks to npmjs).
+ENV npm_config_registry=${REGISTRY_URL}/
 RUN echo "registry=${REGISTRY_URL}/" > /root/.npmrc
 
 # Digest of the locally published workspace tarballs (set by run.ts).

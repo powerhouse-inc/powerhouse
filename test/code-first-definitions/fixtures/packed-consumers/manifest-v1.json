@@ -1,0 +1,160 @@
+{
+  "kind": "powerhouse.gate-fixture-manifest",
+  "formatVersion": 1,
+  "gate": "B5",
+  "fixtureVersion": "packed-consumers-v1",
+  "caseCount": 2,
+  "requiredTools": {
+    "node": "v24.14.0",
+    "npm": "locked-system",
+    "typescript": "locked-workspace",
+    "tsdown": "locked-workspace"
+  },
+  "schemaDigest": "sha256:9a320fb708d0c5bba916dba4cd268cdd7283d21ce1128b5905b2bc247d8cc868",
+  "directDependencies": [
+    {
+      "gate": "B8",
+      "contractRevision": "sha256:a7ccf254a06e9542fe8e21c59c385e7504a998982ee23444f4491143ef830e4a",
+      "fixtureManifestDigest": "sha256:1c29708a0853206b2e41c4bd9d31d946ef6d7ba778767d143017e7b8d47d0100"
+    },
+    {
+      "gate": "B9",
+      "contractRevision": "sha256:a7ccf254a06e9542fe8e21c59c385e7504a998982ee23444f4491143ef830e4a",
+      "fixtureManifestDigest": "sha256:597d6f2a4716a4633765c558f36eb8fe288529c0940ea56d72cf73956b38b43c"
+    }
+  ],
+  "cases": [
+    {
+      "caseId": "node",
+      "consumerSource": "./fixtures/packed-consumers/node/consumer.ts",
+      "runtimeEntry": "./fixtures/packed-consumers/node/runtime.mjs",
+      "tarball": {
+        "path": "./artifacts/code-first-packed-fixture-0.0.0.tgz",
+        "digest": "sha256:43ff9ef4b475bf25f3c683dae35809ebcc58832f1637b021a8c3414181b73016"
+      },
+      "lockfileDigest": "sha256:a198f47c27c8d0024b1129542eb9f158c8f2868eb09f6bd05bbede9d2872feb6",
+      "exportPaths": {
+        "root": "./dist/node.js",
+        "documentModels": "./dist/node.js",
+        "declaration": "./dist/node.d.ts"
+      },
+      "runtimeConditions": [],
+      "expectedLogicalDefinitions": [
+        {
+          "key": "test/todo@1",
+          "version": 1,
+          "specificationDigest": "sha256:cbb5e6c4e77e0c9524f433f0feff1065be3e59fb09b25160455b0f85c6bf1811",
+          "sdlDigest": "sha256:aa512c713822ad02c6068c69c01e843fb9eeadeb73951ac3c0e42d4a5a0a351f",
+          "actionNames": [
+            "addTodo",
+            "loadState",
+            "noop",
+            "prune",
+            "redo",
+            "removeTodo",
+            "setName",
+            "setPreferredEditor",
+            "undo",
+            "updateTodo"
+          ],
+          "definitionDigest": "sha256:749e78e16853221817531d2bf133dca02341fc7ee61517c49d6186e2d4df453b"
+        },
+        {
+          "key": "test/todo@2",
+          "version": 2,
+          "specificationDigest": "sha256:cbb5e6c4e77e0c9524f433f0feff1065be3e59fb09b25160455b0f85c6bf1811",
+          "sdlDigest": "sha256:aa512c713822ad02c6068c69c01e843fb9eeadeb73951ac3c0e42d4a5a0a351f",
+          "actionNames": [
+            "addTodo",
+            "editTitle",
+            "loadState",
+            "noop",
+            "prune",
+            "redo",
+            "removeTodo",
+            "setName",
+            "setPreferredEditor",
+            "undo",
+            "updateTodo"
+          ],
+          "definitionDigest": "sha256:749e78e16853221817531d2bf133dca02341fc7ee61517c49d6186e2d4df453b"
+        }
+      ],
+      "expectedActionType": "ADD_TODO",
+      "coveredVariants": [
+        "fresh-directory",
+        "offline-install",
+        "node-conditions",
+        "root-and-subpath-imports",
+        "code-first-family-v1-v2"
+      ]
+    },
+    {
+      "caseId": "browser-worker",
+      "consumerSource": "./fixtures/packed-consumers/browser-worker/consumer.ts",
+      "runtimeEntry": "./fixtures/packed-consumers/browser-worker/launcher.mjs",
+      "tarball": {
+        "path": "./artifacts/code-first-packed-fixture-0.0.0.tgz",
+        "digest": "sha256:43ff9ef4b475bf25f3c683dae35809ebcc58832f1637b021a8c3414181b73016"
+      },
+      "lockfileDigest": "sha256:e3102a08db8fb22f7014ac83f8bdfe484e5e67f98cbb594969d2a74828c95ecb",
+      "exportPaths": {
+        "root": "./dist/browser.js",
+        "documentModels": "./dist/browser.js",
+        "declaration": "./dist/node.d.ts"
+      },
+      "runtimeConditions": [
+        "browser"
+      ],
+      "expectedLogicalDefinitions": [
+        {
+          "key": "test/todo@1",
+          "version": 1,
+          "specificationDigest": "sha256:cbb5e6c4e77e0c9524f433f0feff1065be3e59fb09b25160455b0f85c6bf1811",
+          "sdlDigest": "sha256:aa512c713822ad02c6068c69c01e843fb9eeadeb73951ac3c0e42d4a5a0a351f",
+          "actionNames": [
+            "addTodo",
+            "loadState",
+            "noop",
+            "prune",
+            "redo",
+            "removeTodo",
+            "setName",
+            "setPreferredEditor",
+            "undo",
+            "updateTodo"
+          ],
+          "definitionDigest": "sha256:749e78e16853221817531d2bf133dca02341fc7ee61517c49d6186e2d4df453b"
+        },
+        {
+          "key": "test/todo@2",
+          "version": 2,
+          "specificationDigest": "sha256:cbb5e6c4e77e0c9524f433f0feff1065be3e59fb09b25160455b0f85c6bf1811",
+          "sdlDigest": "sha256:aa512c713822ad02c6068c69c01e843fb9eeadeb73951ac3c0e42d4a5a0a351f",
+          "actionNames": [
+            "addTodo",
+            "editTitle",
+            "loadState",
+            "noop",
+            "prune",
+            "redo",
+            "removeTodo",
+            "setName",
+            "setPreferredEditor",
+            "undo",
+            "updateTodo"
+          ],
+          "definitionDigest": "sha256:749e78e16853221817531d2bf133dca02341fc7ee61517c49d6186e2d4df453b"
+        }
+      ],
+      "expectedActionType": "EDIT_TITLE",
+      "coveredVariants": [
+        "fresh-directory",
+        "offline-install",
+        "browser-condition",
+        "worker-thread-handshake",
+        "root-and-subpath-imports"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,205 @@
+{
+  "definition-source": {
+    "importedNamespace": [
+      "./source-models.ts#/LoaderModelV2",
+      "./source-models.ts#/nested/model~1v1"
+    ],
+    "acceptedExports": [
+      "powerhouse/loader-fixture@1",
+      "powerhouse/loader-fixture@2"
+    ],
+    "selectedNamedWorkerReference": null,
+    "diagnostics": [],
+    "registrationOutcome": "ready:values=2:imports=1"
+  },
+  "node-server": {
+    "importedNamespace": [
+      "document-models.LoaderModelV1:object",
+      "document-models.LoaderModelV2:object",
+      "document-models.documentModels:array",
+      "document-models.ignored:string",
+      "document-models.upgradeManifests:array",
+      "subgraphs.GenericAlias.Subgraph:function",
+      "subgraphs.GenericAlias.default:function",
+      "subgraphs.GenericAlias.helper:string",
+      "subgraphs.LoaderSubgraph.LoaderSubgraph:function",
+      "subgraphs.LoaderSubgraph.helper:string"
+    ],
+    "acceptedExports": [
+      "powerhouse/loader-fixture@1",
+      "powerhouse/loader-fixture@2",
+      "subgraph:function",
+      "subgraph:function",
+      "subgraph:string",
+      "subgraph:function",
+      "subgraph:string",
+      "manifest:powerhouse/loader-fixture"
+    ],
+    "selectedNamedWorkerReference": null,
+    "diagnostics": [],
+    "registrationOutcome": "models=2;subgraphs=5;manifests=1"
+  },
+  "http-cdn": {
+    "importedNamespace": [
+      "GenericAlias.Subgraph:function",
+      "GenericAlias.default:function",
+      "GenericAlias.helper:string",
+      "LoaderSubgraph.LoaderSubgraph:function",
+      "LoaderSubgraph.helper:string"
+    ],
+    "acceptedExports": [
+      "subgraph:function",
+      "subgraph:function",
+      "subgraph:function"
+    ],
+    "selectedNamedWorkerReference": null,
+    "diagnostics": [],
+    "registrationOutcome": "flattened=3;non-callables=filtered"
+  },
+  "vite-local": {
+    "importedNamespace": [
+      "document-models.LoaderModelV1:object",
+      "document-models.LoaderModelV2:object",
+      "document-models.documentModels:array",
+      "document-models.ignored:string",
+      "document-models.upgradeManifests:array",
+      "subgraphs.GenericAlias.Subgraph:function",
+      "subgraphs.GenericAlias.default:function",
+      "subgraphs.GenericAlias.helper:string",
+      "subgraphs.LoaderSubgraph.LoaderSubgraph:function",
+      "subgraphs.LoaderSubgraph.helper:string"
+    ],
+    "acceptedExports": [
+      "powerhouse/loader-fixture@1",
+      "powerhouse/loader-fixture@2",
+      "subgraph:outer-name-match"
+    ],
+    "selectedNamedWorkerReference": null,
+    "diagnostics": [],
+    "registrationOutcome": "models=2;subgraphs=1"
+  },
+  "browser-static": {
+    "importedNamespace": [
+      "documentModels:array",
+      "editors:array",
+      "manifest:object",
+      "subgraphs:array",
+      "upgradeManifests:array"
+    ],
+    "acceptedExports": [
+      "powerhouse/loader-fixture@1",
+      "powerhouse/loader-fixture@2"
+    ],
+    "selectedNamedWorkerReference": null,
+    "diagnostics": [],
+    "registrationOutcome": "packages=1;selected=powerhouse/loader-fixture@2"
+  },
+  "browser-worker": {
+    "importedNamespace": [
+      "LoaderModelV1:object",
+      "LoaderModelV2:object",
+      "documentModels:array",
+      "ignored:string",
+      "upgradeManifests:array"
+    ],
+    "acceptedExports": [
+      "powerhouse/loader-fixture@1",
+      "powerhouse/loader-fixture@2"
+    ],
+    "selectedNamedWorkerReference": null,
+    "diagnostics": [],
+    "registrationOutcome": "imports=1;selected=powerhouse/loader-fixture@2"
+  },
+  "graphql": {
+    "importedNamespace": [
+      "document-models.LoaderModelV1:object",
+      "document-models.LoaderModelV2:object",
+      "document-models.documentModels:array",
+      "document-models.ignored:string",
+      "document-models.upgradeManifests:array",
+      "subgraphs.GenericAlias.Subgraph:function",
+      "subgraphs.GenericAlias.default:function",
+      "subgraphs.GenericAlias.helper:string",
+      "subgraphs.LoaderSubgraph.LoaderSubgraph:function",
+      "subgraphs.LoaderSubgraph.helper:string"
+    ],
+    "acceptedExports": [
+      "powerhouse/loader-fixture@1",
+      "powerhouse/loader-fixture@2",
+      "subgraph:class"
+    ],
+    "selectedNamedWorkerReference": null,
+    "diagnostics": [],
+    "registrationOutcome": "models=2;subgraphs=1;manifests=1"
+  },
+  "mcp": {
+    "importedNamespace": [
+      "LoaderFamily:object",
+      "LoaderModelV1:object",
+      "LoaderModelV2:object",
+      "documentModels:array",
+      "nested:object",
+      "upgradeManifests:array"
+    ],
+    "acceptedExports": [
+      "powerhouse/loader-fixture@1",
+      "powerhouse/loader-fixture@2"
+    ],
+    "selectedNamedWorkerReference": null,
+    "diagnostics": [],
+    "registrationOutcome": "models=2"
+  },
+  "connect": {
+    "importedNamespace": [
+      "documentModels:array",
+      "editors:array",
+      "manifest:object",
+      "subgraphs:array",
+      "upgradeManifests:array"
+    ],
+    "acceptedExports": [
+      "powerhouse/loader-fixture@1",
+      "powerhouse/loader-fixture@2"
+    ],
+    "selectedNamedWorkerReference": null,
+    "diagnostics": [],
+    "registrationOutcome": "packages=1;selected=powerhouse/loader-fixture@1"
+  },
+  "reactor-worker": {
+    "importedNamespace": [
+      "LoaderFamily:object",
+      "LoaderModelV1:object",
+      "LoaderModelV2:object",
+      "documentModels:array",
+      "nested:object",
+      "upgradeManifests:array"
+    ],
+    "acceptedExports": [
+      "powerhouse/loader-fixture@1",
+      "powerhouse/loader-fixture@2"
+    ],
+    "selectedNamedWorkerReference": {
+      "specifier": "./models.ts",
+      "exportName": "LoaderModelV2"
+    },
+    "diagnostics": [],
+    "registrationOutcome": "modules=2;manifest=2;module-only=0;selected=powerhouse/loader-fixture@2"
+  },
+  "registry": {
+    "importedNamespace": [
+      "LoaderModelV1:object",
+      "LoaderModelV2:object",
+      "documentModels:array",
+      "ignored:string",
+      "upgradeManifests:array"
+    ],
+    "acceptedExports": [
+      "powerhouse/loader-fixture@1"
+    ],
+    "selectedNamedWorkerReference": null,
+    "diagnostics": [
+      "DuplicateModuleError"
+    ],
+    "registrationOutcome": "success,error"
+  }
+}

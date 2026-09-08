@@ -1,0 +1,20 @@
+{
+  "formatVersion": 1,
+  "files": [
+    {
+      "path": "browser/prior.js",
+      "bytes": 47,
+      "digest": "sha256:bb93737af42c64dc7decc98a131644fae64b2eacc65367f58dd53009d47996ad"
+    },
+    {
+      "path": "node/prior.mjs",
+      "bytes": 44,
+      "digest": "sha256:40368d485971cbfc7abd26e0f4b5b3dbcc48271e29ce7d74aacffaa8a52bd7c2"
+    },
+    {
+      "path": "style.css",
+      "bytes": 56,
+      "digest": "sha256:7258f38fd92ea9d7fa9224e9e54c3311938383393207d18f8c920580b036ab3b"
+    }
+  ]
+}

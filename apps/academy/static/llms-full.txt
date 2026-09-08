@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-08-28T15:06:46.681Z
+> Generated: 2026-09-08T14:00:56.489Z
 > Total Documents: 110
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -13595,7 +13595,7 @@ Use your local `powerhouse` monorepo dependencies the current project.
 - [Editor](#editor)
 - [App](#app)
 - [Processor](#processor)
-- [Subgraph](#subgraph)
+- [Generate Subgraph](#generate-subgraph)
 - [Migration File](#migration-file)
 - [Vetra](#vetra)
 - [Connect](#connect)
@@ -13606,6 +13606,15 @@ Use your local `powerhouse` monorepo dependencies the current project.
 - [Inspect](#inspect)
 - [List](#list)
 - [Migrate](#migrate)
+- [Model](#model)
+- [Model Check](#model-check)
+- [Model Inspect](#model-inspect)
+- [Model Migrate](#model-migrate)
+- [Subgraph](#subgraph)
+- [Subgraph Inspect](#subgraph-inspect)
+- [Subgraph Migrate](#subgraph-migrate)
+- [Scalar](#scalar)
+- [Scalar Inspect](#scalar-inspect)
 - [Switchboard](#switchboard)
 - [Login](#login)
 - [Install](#install)
@@ -13629,13 +13638,9 @@ Re-generate all modules in the current project
 Generate a document model
 
 
-### Options
-**Document** - Path to a document model spec (.phd or .json) to generate from - Usage: `--document, -d <file>`
-
-**Dir** - Name of the directory of an existing document model to re-generate - Usage: `--dir <dir>`
-
-
 ### Flags
+**Code First** - Create an authored TypeScript document-model scaffold - Usage: `--code-first`
+
 **All** - Re-generate all existing document models in the current project - Usage: `--all, -a`
 
 **Extract** - Write a powerhouse/document-model spec for each existing document model into specs/document-models/ - Usage: `--extract, -x`
@@ -13643,6 +13648,20 @@ Generate a document model
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`
+
+
+### Options
+**Name** - Human-readable name for a code-first document model - Usage: `--name, -n <str>`
+
+**Id** - Document type ID for a code-first model, for example acme/invoice - Usage: `--id <str>`
+
+**Extension** - File extension recorded by the code-first model - Usage: `--extension <str>`
+
+**Version** - Version to scaffold; versions after v1 copy the previous authored tree - Usage: `--version, -v <number>`
+
+**Document** - Path to a document model spec (.phd or .json) to generate from - Usage: `--document, -d <file>`
+
+**Dir** - Name of the directory of an existing document model to re-generate - Usage: `--dir <dir>`
 
 
 ## Editor
@@ -13727,8 +13746,20 @@ Generate a processor
 **Help** - show help - Usage: `--help, -h`
 
 
-## Subgraph
+## Generate Subgraph
 Generate a subgraph
+
+
+### Flags
+**Code First** - Create an authored TypeScript subgraph scaffold - Usage: `--code-first`
+
+**All** - Re-generate all existing subgraphs in the current project - Usage: `--all, -a`
+
+**Extract** - Write a powerhouse/subgraph spec for each existing subgraph into specs/subgraphs/ - Usage: `--extract, -x`
+
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
+**Help** - show help - Usage: `--help, -h`
 
 
 ### Options
@@ -13737,16 +13768,6 @@ Generate a subgraph
 **Document** - Path to a powerhouse/subgraph spec file (.phd or .json) to drive codegen - Usage: `--document, -d <file>`
 
 **Dir** - Name of the directory of an existing subgraph to re-generate - Usage: `--dir <dir>`
-
-
-### Flags
-**All** - Re-generate all existing subgraphs in the current project - Usage: `--all, -a`
-
-**Extract** - Write a powerhouse/subgraph spec for each existing subgraph into specs/subgraphs/ - Usage: `--extract, -x`
-
-**Debug** - Log arguments passed to this command - Usage: `--debug`
-
-**Help** - show help - Usage: `--help, -h`
 
 
 ## Migration File
@@ -13985,6 +14006,12 @@ Build has no read mode; passing only &lt;key&gt; without &lt;value&gt; errors ou
 
 **Favicon** - Path to a favicon file (e.g. .ico) to bundle in place of the default Connect icon. Emitted as icon.ico; resolved relative to the build cwd. - Usage: `--favicon <str>`
 
+**Config File** - Powerhouse source config file - Usage: `--config-file <str>`
+
+**Default:** `./powerhouse.config.json`
+**Source** - Definition source as ./module.ts with an optional RFC 6901 export pointer - Usage: `--source <str>`
+
+**Default:** ``
 **Base** - Base path for the app - Usage: `--base <str>`
 
 **Log Level** - Log level for the application - Usage: `--log-level <value>`
@@ -14214,6 +14241,183 @@ Run migrations
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
+**Help** - show help - Usage: `--help, -h`
+
+
+## Model
+Check, inspect, and migrate document-model definitions.
+
+## Model Check
+Import and validate the configured definition sources.
+
+
+### Options
+**Config File** - Powerhouse source config file - Usage: `--config-file <str>`
+
+**Default:** `./powerhouse.config.json`
+**Source** - Definition source as ./module.ts with an optional RFC 6901 export pointer - Usage: `--source <str>`
+
+**Default:** ``
+**Out Dir** - Directory containing the retained release report; requires --retained - Usage: `--out-dir <str>`
+
+
+### Flags
+**Json** - Write one versioned JSON report to stdout - Usage: `--json`
+
+**Default:** `false`
+**Warnings As Errors** - Make warnings invalidate the definition check - Usage: `--warnings-as-errors`
+
+**Default:** `false`
+**Release** - Use the release check profile; required with --retained - Usage: `--release`
+
+**Default:** `false`
+**Retained** - Validate the release report retained by the last ph build; requires --release - Usage: `--retained`
+
+**Default:** `false`
+**Help** - show help - Usage: `--help, -h`
+
+
+## Model Inspect
+Inspect one configured document-model definition.
+
+
+---
+
+## Parameters
+
+### Arguments
+**Document Type Version *[required]*** - Document type and positive integer module version - Usage: `<documentType@version>`
+
+
+### Options
+**Config File** - Powerhouse source config file - Usage: `--config-file <str>`
+
+**Default:** `./powerhouse.config.json`
+**Source** - Definition source as ./module.ts with an optional RFC 6901 export pointer - Usage: `--source <str>`
+
+**Default:** ``
+
+
+### Flags
+**Json** - Write one versioned JSON report to stdout - Usage: `--json`
+
+**Default:** `false`
+**Warnings As Errors** - Make warnings invalidate the definition inspection - Usage: `--warnings-as-errors`
+
+**Default:** `false`
+**Help** - show help - Usage: `--help, -h`
+
+
+## Model Migrate
+Report or apply a reversible per-family code-first migration.
+
+
+---
+
+## Parameters
+
+### Arguments
+**Family *[required]*** - Legacy family directory under document-models/ - Usage: `<family>`
+
+
+### Flags
+**To Code** - Render a verification-only code-first family beside legacy source - Usage: `--to-code`
+
+**Default:** `false`
+**Retire Legacy** - Create or consume a hash-bound legacy retirement plan - Usage: `--retire-legacy`
+
+**Default:** `false`
+**Apply** - Apply the selected write or approved retirement plan - Usage: `--apply`
+
+**Default:** `false`
+**Json** - Write one versioned JSON report to stdout - Usage: `--json`
+
+**Default:** `false`
+**Help** - show help - Usage: `--help, -h`
+
+
+### Options
+**Plan** - Approved retirement-plan JSON path (required for retirement apply) - Usage: `--plan <str>`
+
+
+## Subgraph
+Inspect and migrate subgraph definitions.
+
+## Subgraph Inspect
+Inspect one configured subgraph definition.
+
+
+---
+
+## Parameters
+
+### Arguments
+**Name *[required]*** - Stable subgraph name - Usage: `<name>`
+
+
+### Options
+**Config File** - Powerhouse source config file - Usage: `--config-file <str>`
+
+**Default:** `./powerhouse.config.json`
+**Source** - Definition source as ./module.ts with an optional RFC 6901 export pointer - Usage: `--source <str>`
+
+**Default:** ``
+
+
+### Flags
+**Json** - Write one versioned JSON report to stdout - Usage: `--json`
+
+**Default:** `false`
+**Warnings As Errors** - Make warnings invalidate the definition inspection - Usage: `--warnings-as-errors`
+
+**Default:** `false`
+**Help** - show help - Usage: `--help, -h`
+
+
+## Subgraph Migrate
+Report or apply a reversible code-first subgraph migration.
+
+
+---
+
+## Parameters
+
+### Arguments
+**Name *[required]*** - Legacy subgraph directory under subgraphs/ - Usage: `<name>`
+
+
+### Flags
+**To Code** - Render a verification-only code-first subgraph beside legacy source - Usage: `--to-code`
+
+**Default:** `false`
+**Apply** - Write the candidate instead of only reporting it - Usage: `--apply`
+
+**Default:** `false`
+**Json** - Write one versioned JSON report to stdout - Usage: `--json`
+
+**Default:** `false`
+**Help** - show help - Usage: `--help, -h`
+
+
+## Scalar
+Inspect the compiler-owned scalar catalog.
+
+## Scalar Inspect
+Inspect one compiler-owned scalar declaration.
+
+
+---
+
+## Parameters
+
+### Arguments
+**Name *[required]*** - GraphQL scalar name - Usage: `<name>`
+
+
+### Flags
+**Json** - Write one versioned JSON report to stdout - Usage: `--json`
+
+**Default:** `false`
 **Help** - show help - Usage: `--help, -h`
 
 

@@ -1,0 +1,238 @@
+{
+  "kind": "powerhouse.gate-evidence",
+  "formatVersion": 1,
+  "gate": "B2",
+  "contract": {
+    "status": "spec-complete",
+    "revision": "sha256:a7ccf254a06e9542fe8e21c59c385e7504a998982ee23444f4491143ef830e4a"
+  },
+  "evidence": {
+    "outcome": "pass"
+  },
+  "repository": {
+    "commit": "da05f917d6912bc30c5c944823c216ec47e19fa8",
+    "baseTreeDigest": "sha256:6d05bb4c4139466f81c0dbaae56f75d3d85af6486827e5a0b67dbf4814848eb0",
+    "baseDirty": false,
+    "appliedPatchDigest": "sha256:3cc2f2bc8e80aee821dfce01607ca32f0bca3964ba773a8c89045511004699a4"
+  },
+  "toolchain": {
+    "lockfileDigest": "sha256:b0b56565f0bf62f674db82eee2cfaa9c4a01a538ea593e0c8f3a42abf43ef6c0",
+    "runnerVersion": "0.1.0",
+    "node": "v24.14.0",
+    "packageManager": "pnpm@10.33.4",
+    "platform": "darwin",
+    "tools": {}
+  },
+  "fixture": {
+    "manifest": "test/code-first-definitions/fixtures/histories/v1/manifest.json",
+    "fixtureVersion": "synthetic-1.0.0",
+    "manifestDigest": "sha256:3259237efcb61cd06e218ca27be863188c51db9dbaf1d0bef31c4e157b7db967",
+    "schemaDigest": "sha256:9a320fb708d0c5bba916dba4cd268cdd7283d21ce1128b5905b2bc247d8cc868",
+    "caseCount": 3
+  },
+  "dependencies": [
+    {
+      "gate": "B1",
+      "outcome": "pass",
+      "contractRevision": "sha256:a7ccf254a06e9542fe8e21c59c385e7504a998982ee23444f4491143ef830e4a",
+      "fixtureManifestDigest": "sha256:3b1ecf4f491d0459ddf129ff1a2ee33b8e05171cdbe857a2c0da7273667080ce",
+      "reportDigest": "sha256:8c0662bfdefb1ed89c9a715135a9d4c050c088ca335ec648f63bc84ca63a2b6f"
+    },
+    {
+      "gate": "B3",
+      "outcome": "pass",
+      "contractRevision": "sha256:a7ccf254a06e9542fe8e21c59c385e7504a998982ee23444f4491143ef830e4a",
+      "fixtureManifestDigest": "sha256:59af108a7abfa6065dba92645b55527b5c5b03ed0e67aa323d98caea329f0ad1",
+      "reportDigest": "sha256:55024b1172783072deb443a2d64dcd9b49ec97acff873aaa85c28ff0b179caba"
+    },
+    {
+      "gate": "B9",
+      "outcome": "pass",
+      "contractRevision": "sha256:a7ccf254a06e9542fe8e21c59c385e7504a998982ee23444f4491143ef830e4a",
+      "fixtureManifestDigest": "sha256:597d6f2a4716a4633765c558f36eb8fe288529c0940ea56d72cf73956b38b43c",
+      "reportDigest": "sha256:90804ebad634118d2148239141b23f74a920f34f0cfb6003bef7c0a41658f39d"
+    }
+  ],
+  "command": {
+    "name": "gate-evidence",
+    "args": [
+      "--gate",
+      "B2",
+      "--manifest",
+      "fixtures/histories/v1/manifest.json",
+      "--out",
+      ".evidence/B2"
+    ],
+    "cwd": "<repository>"
+  },
+  "assertions": [
+    {
+      "id": "B2.state",
+      "outcome": "pass",
+      "expected": "legacy, code-first, and committed synthetic state match at every prefix",
+      "received": "all 17 synthetic prefixes matched",
+      "artifactRefs": [
+        "synthetic-histories",
+        "synthetic-prefixes"
+      ]
+    },
+    {
+      "id": "B2.initial",
+      "outcome": "pass",
+      "expected": "the initial state remains identical and immutable at every prefix",
+      "received": "all 17 synthetic prefixes matched",
+      "artifactRefs": [
+        "synthetic-histories"
+      ]
+    },
+    {
+      "id": "B2.scope-hash",
+      "outcome": "pass",
+      "expected": "all shared-runtime scope hashes match at every prefix",
+      "received": "all 17 synthetic prefixes matched",
+      "artifactRefs": [
+        "synthetic-histories",
+        "synthetic-prefixes"
+      ]
+    },
+    {
+      "id": "B2.error",
+      "outcome": "pass",
+      "expected": "reducer errors are recomputed identically from cleared archive errors",
+      "received": "all 17 synthetic prefixes matched",
+      "artifactRefs": [
+        "synthetic-histories",
+        "synthetic-prefixes"
+      ]
+    },
+    {
+      "id": "B2.denial",
+      "outcome": "pass",
+      "expected": "denied operations retain position without changing state",
+      "received": "all 17 synthetic prefixes matched",
+      "artifactRefs": [
+        "synthetic-histories",
+        "synthetic-prefixes"
+      ]
+    },
+    {
+      "id": "B2.index",
+      "outcome": "pass",
+      "expected": "operation indices match at every prefix",
+      "received": "all 17 synthetic prefixes matched",
+      "artifactRefs": [
+        "synthetic-histories",
+        "synthetic-prefixes"
+      ]
+    },
+    {
+      "id": "B2.skip",
+      "outcome": "pass",
+      "expected": "recorded skip values match at every prefix",
+      "received": "all 17 synthetic prefixes matched",
+      "artifactRefs": [
+        "synthetic-histories",
+        "synthetic-prefixes"
+      ]
+    },
+    {
+      "id": "B2.revision",
+      "outcome": "pass",
+      "expected": "scope revisions match at every prefix",
+      "received": "all 17 synthetic prefixes matched",
+      "artifactRefs": [
+        "synthetic-histories",
+        "synthetic-prefixes"
+      ]
+    },
+    {
+      "id": "B2.dispatches",
+      "outcome": "pass",
+      "expected": "replayed signal sequences match at every prefix",
+      "received": "all 17 synthetic prefixes matched",
+      "artifactRefs": [
+        "synthetic-histories",
+        "synthetic-prefixes"
+      ]
+    }
+  ],
+  "measurements": [],
+  "artifacts": [
+    {
+      "name": "synthetic-histories",
+      "path": "test/code-first-definitions/fixtures/histories/v1/histories.json",
+      "mediaType": "application/vnd.powerhouse.synthetic-histories+json",
+      "bytes": 14023,
+      "digest": "sha256:668619804e032b9c8215b5f196117277c092410a4489effdb99c010f8c5aa6b2",
+      "retention": "committed"
+    },
+    {
+      "name": "synthetic-prefixes",
+      "path": "test/code-first-definitions/fixtures/histories/v1/synthetic-prefixes.json",
+      "mediaType": "application/vnd.powerhouse.synthetic-prefixes+json",
+      "bytes": 27291,
+      "digest": "sha256:cb81b6cedbd6101e7e51bb1d7fccb0f0f46ac2584c16fa2564467956b4c3c878",
+      "retention": "committed"
+    },
+    {
+      "name": "scope-declaration",
+      "path": "test/code-first-definitions/fixtures/histories/v1/scope-declaration.json",
+      "mediaType": "application/vnd.powerhouse.evidence-scope+json",
+      "bytes": 422,
+      "digest": "sha256:6459121119130b8016cc908c83cee3073648e955cd2c8919703c561f8992448b",
+      "retention": "committed"
+    }
+  ],
+  "results": {
+    "profile": "synthetic-only-v1",
+    "corpusDigest": "sha256:d900cb426cce4a4efa73fd8757251099573e607aeb7f6390b181fedeaa62641d",
+    "familyDigests": [
+      {
+        "documentType": "powerhouse/protocol-matrix",
+        "version": 1,
+        "legacy": "sha256:fa97b5859054ebdc835e9096617fda9e09aed5a510b9dac22ce2d88020b8fcfc",
+        "codeFirst": "sha256:5f90edbd1c31eeaabb27480f2780054b2de575db0869ab201a26e576d698ca9d"
+      },
+      {
+        "documentType": "powerhouse/protocol-matrix",
+        "version": 2,
+        "legacy": "sha256:fa97b5859054ebdc835e9096617fda9e09aed5a510b9dac22ce2d88020b8fcfc",
+        "codeFirst": "sha256:5f90edbd1c31eeaabb27480f2780054b2de575db0869ab201a26e576d698ca9d"
+      }
+    ],
+    "strata": [
+      {
+        "id": "synthetic",
+        "status": "pass",
+        "caseCount": 3
+      },
+      {
+        "id": "production",
+        "status": "not-established",
+        "caseCount": 0
+      }
+    ],
+    "operationCount": 14,
+    "prefixCount": 17,
+    "assertionCounts": {
+      "B2.state": 17,
+      "B2.initial": 17,
+      "B2.scope-hash": 17,
+      "B2.error": 17,
+      "B2.denial": 17,
+      "B2.index": 17,
+      "B2.skip": 17,
+      "B2.revision": 17,
+      "B2.dispatches": 17
+    },
+    "hashAlgorithmVersion": "shared/hashDocumentStateForScope@1",
+    "productionCorpusStatus": "not-established",
+    "divergences": []
+  },
+  "summary": {
+    "passed": 9,
+    "failed": 0,
+    "blocked": 0,
+    "cancelled": 0
+  }
+}

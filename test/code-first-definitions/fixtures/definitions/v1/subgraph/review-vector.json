@@ -1,0 +1,395 @@
+{
+  "kind": "powerhouse.subgraph",
+  "formatVersion": 1,
+  "name": "reactor-drive",
+  "compositionPolicy": "host-current",
+  "federationProfile": "host-current",
+  "schemaKind": "typed",
+  "hasSubscriptions": false,
+  "types": [
+    {
+      "kind": "enum",
+      "name": "ReactorDriveNodeKind",
+      "description": null,
+      "values": [
+        {
+          "name": "FILE",
+          "description": null,
+          "deprecated": null
+        },
+        {
+          "name": "FOLDER",
+          "description": null,
+          "deprecated": null
+        }
+      ]
+    },
+    {
+      "kind": "input",
+      "name": "ReactorDrivePagingInput",
+      "description": null,
+      "unknownKeys": "reject",
+      "fields": [
+        {
+          "key": "cursor",
+          "name": "cursor",
+          "description": null,
+          "deprecated": null,
+          "type": { "kind": "scalar", "name": "String", "required": false }
+        },
+        {
+          "key": "limit",
+          "name": "limit",
+          "description": null,
+          "deprecated": null,
+          "type": { "kind": "scalar", "name": "Int", "required": false }
+        }
+      ]
+    },
+    {
+      "kind": "object",
+      "name": "ReactorDriveFileNode",
+      "description": null,
+      "fields": [
+        {
+          "key": "id",
+          "name": "id",
+          "description": null,
+          "deprecated": null,
+          "type": { "kind": "scalar", "name": "ID", "required": true }
+        },
+        {
+          "key": "driveId",
+          "name": "driveId",
+          "description": null,
+          "deprecated": null,
+          "type": { "kind": "scalar", "name": "ID", "required": true }
+        },
+        {
+          "key": "name",
+          "name": "name",
+          "description": null,
+          "deprecated": null,
+          "type": { "kind": "scalar", "name": "String", "required": true }
+        },
+        {
+          "key": "parentFolder",
+          "name": "parentFolder",
+          "description": null,
+          "deprecated": null,
+          "type": { "kind": "scalar", "name": "ID", "required": false }
+        },
+        {
+          "key": "documentType",
+          "name": "documentType",
+          "description": null,
+          "deprecated": null,
+          "type": { "kind": "scalar", "name": "String", "required": true }
+        }
+      ]
+    },
+    {
+      "kind": "object",
+      "name": "ReactorDriveFolderNode",
+      "description": null,
+      "fields": [
+        {
+          "key": "id",
+          "name": "id",
+          "description": null,
+          "deprecated": null,
+          "type": { "kind": "scalar", "name": "ID", "required": true }
+        },
+        {
+          "key": "driveId",
+          "name": "driveId",
+          "description": null,
+          "deprecated": null,
+          "type": { "kind": "scalar", "name": "ID", "required": true }
+        },
+        {
+          "key": "name",
+          "name": "name",
+          "description": null,
+          "deprecated": null,
+          "type": { "kind": "scalar", "name": "String", "required": true }
+        },
+        {
+          "key": "parentFolder",
+          "name": "parentFolder",
+          "description": null,
+          "deprecated": null,
+          "type": { "kind": "scalar", "name": "ID", "required": false }
+        },
+        {
+          "key": "children",
+          "name": "children",
+          "description": null,
+          "deprecated": null,
+          "args": [
+            {
+              "key": "paging",
+              "name": "paging",
+              "description": null,
+              "deprecated": null,
+              "type": {
+                "kind": "named",
+                "name": "ReactorDrivePagingInput",
+                "required": false
+              }
+            },
+            {
+              "key": "kind",
+              "name": "kind",
+              "description": null,
+              "deprecated": null,
+              "type": {
+                "kind": "named",
+                "name": "ReactorDriveNodeKind",
+                "required": false
+              }
+            }
+          ],
+          "type": {
+            "kind": "named",
+            "name": "ReactorDriveNodePage",
+            "required": true
+          }
+        }
+      ]
+    },
+    {
+      "kind": "union",
+      "name": "ReactorDriveNode",
+      "description": null,
+      "members": ["ReactorDriveFileNode", "ReactorDriveFolderNode"]
+    },
+    {
+      "kind": "object",
+      "name": "ReactorDriveNodePage",
+      "description": null,
+      "fields": [
+        {
+          "key": "results",
+          "name": "results",
+          "description": null,
+          "deprecated": null,
+          "type": {
+            "kind": "list",
+            "required": true,
+            "item": {
+              "kind": "named",
+              "name": "ReactorDriveNode",
+              "required": true
+            }
+          }
+        },
+        {
+          "key": "nextCursor",
+          "name": "nextCursor",
+          "description": null,
+          "deprecated": null,
+          "type": { "kind": "scalar", "name": "String", "required": false }
+        },
+        {
+          "key": "hasMore",
+          "name": "hasMore",
+          "description": null,
+          "deprecated": null,
+          "type": { "kind": "scalar", "name": "Boolean", "required": true }
+        },
+        {
+          "key": "totalCount",
+          "name": "totalCount",
+          "description": null,
+          "deprecated": null,
+          "type": { "kind": "scalar", "name": "Int", "required": false }
+        }
+      ]
+    },
+    {
+      "kind": "object",
+      "name": "ReactorDrive",
+      "description": null,
+      "fields": [
+        {
+          "key": "id",
+          "name": "id",
+          "description": null,
+          "deprecated": null,
+          "type": { "kind": "scalar", "name": "ID", "required": true }
+        },
+        {
+          "key": "name",
+          "name": "name",
+          "description": null,
+          "deprecated": null,
+          "type": { "kind": "scalar", "name": "String", "required": true }
+        },
+        {
+          "key": "icon",
+          "name": "icon",
+          "description": null,
+          "deprecated": null,
+          "type": { "kind": "scalar", "name": "String", "required": false }
+        },
+        {
+          "key": "sharingType",
+          "name": "sharingType",
+          "description": null,
+          "deprecated": null,
+          "type": { "kind": "scalar", "name": "String", "required": true }
+        },
+        {
+          "key": "availableOffline",
+          "name": "availableOffline",
+          "description": null,
+          "deprecated": null,
+          "type": { "kind": "scalar", "name": "Boolean", "required": true }
+        },
+        {
+          "key": "rootNodes",
+          "name": "rootNodes",
+          "description": null,
+          "deprecated": null,
+          "args": [
+            {
+              "key": "paging",
+              "name": "paging",
+              "description": null,
+              "deprecated": null,
+              "type": {
+                "kind": "named",
+                "name": "ReactorDrivePagingInput",
+                "required": false
+              }
+            },
+            {
+              "key": "kind",
+              "name": "kind",
+              "description": null,
+              "deprecated": null,
+              "type": {
+                "kind": "named",
+                "name": "ReactorDriveNodeKind",
+                "required": false
+              }
+            }
+          ],
+          "type": {
+            "kind": "named",
+            "name": "ReactorDriveNodePage",
+            "required": true
+          }
+        }
+      ]
+    }
+  ],
+  "entries": [
+    {
+      "kind": "query",
+      "key": "reactorDrive",
+      "fieldName": "reactorDrive",
+      "description": null,
+      "args": [
+        {
+          "key": "id",
+          "name": "id",
+          "description": null,
+          "deprecated": null,
+          "type": { "kind": "scalar", "name": "ID", "required": true }
+        }
+      ],
+      "returns": {
+        "kind": "named",
+        "name": "ReactorDrive",
+        "required": false
+      },
+      "access": { "kind": "manual" },
+      "compatibilityName": null
+    },
+    {
+      "kind": "query",
+      "key": "reactorDriveNode",
+      "fieldName": "reactorDriveNode",
+      "description": null,
+      "args": [
+        {
+          "key": "driveId",
+          "name": "driveId",
+          "description": null,
+          "deprecated": null,
+          "type": { "kind": "scalar", "name": "ID", "required": true }
+        },
+        {
+          "key": "id",
+          "name": "id",
+          "description": null,
+          "deprecated": null,
+          "type": { "kind": "scalar", "name": "ID", "required": true }
+        }
+      ],
+      "returns": {
+        "kind": "named",
+        "name": "ReactorDriveNode",
+        "required": false
+      },
+      "access": { "kind": "manual" },
+      "compatibilityName": null
+    },
+    {
+      "kind": "query",
+      "key": "reactorDriveDescendants",
+      "fieldName": "reactorDriveDescendants",
+      "description": null,
+      "args": [
+        {
+          "key": "driveId",
+          "name": "driveId",
+          "description": null,
+          "deprecated": null,
+          "type": { "kind": "scalar", "name": "ID", "required": true }
+        },
+        {
+          "key": "root",
+          "name": "root",
+          "description": null,
+          "deprecated": null,
+          "type": { "kind": "scalar", "name": "ID", "required": true }
+        }
+      ],
+      "returns": {
+        "kind": "list",
+        "required": true,
+        "item": {
+          "kind": "named",
+          "name": "ReactorDriveNode",
+          "required": true
+        }
+      },
+      "access": { "kind": "manual" },
+      "compatibilityName": null
+    },
+    {
+      "kind": "field",
+      "target": {
+        "typeName": "ReactorDrive",
+        "fieldName": "rootNodes"
+      },
+      "access": { "kind": "manual" }
+    },
+    {
+      "kind": "field",
+      "target": {
+        "typeName": "ReactorDriveFolderNode",
+        "fieldName": "children"
+      },
+      "access": { "kind": "manual" }
+    },
+    {
+      "kind": "resolveType",
+      "typeName": "ReactorDriveNode"
+    }
+  ],
+  "scalars": []
+}

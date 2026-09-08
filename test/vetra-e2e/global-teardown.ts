@@ -8,7 +8,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const EMPTY_MANIFEST = {
-  name: "",
+  name: "test-package-vetra",
   description: "",
   category: "",
   publisher: {
@@ -79,7 +79,7 @@ function removeDirectory(dirPath: string): void {
 function resetManifest(manifestPath: string): void {
   fs.writeFileSync(
     manifestPath,
-    JSON.stringify(EMPTY_MANIFEST, null, 4) + "\n",
+    JSON.stringify(EMPTY_MANIFEST, null, 2) + "\n",
     "utf8",
   );
 }

@@ -35,6 +35,9 @@ export async function runConnectBuild(args: ConnectBuildArgs) {
   const { connectOverride, packageRegistryUrl } = buildCliConnectOverride(args);
 
   await runBuild({
+    allowTsErrors: false,
+    configFile: args.configFile,
+    sources: args.sources,
     outDir: "dist",
     debug,
   });

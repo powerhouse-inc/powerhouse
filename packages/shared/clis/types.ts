@@ -269,6 +269,24 @@ export type PHReactorRenown = {
   switchboardUrl?: string;
 };
 
+export type DefinitionSource = {
+  specifier: `./${string}`;
+  exportPath?: readonly string[];
+};
+
+export type DefinitionSourcesConfig = {
+  formatVersion: 1;
+} & (
+  | {
+      mode: "code-first";
+      entries: readonly [DefinitionSource, ...DefinitionSource[]];
+    }
+  | {
+      mode: "legacy";
+      entries?: never;
+    }
+);
+
 export type PowerhouseConfig = {
   // required
   logLevel: LogLevel;
@@ -321,4 +339,5 @@ export type PowerhouseConfig = {
   };
   packageRegistryUrl?: string;
   connect?: PHConnectRuntimeConfig;
+  definitionSources?: DefinitionSourcesConfig;
 };

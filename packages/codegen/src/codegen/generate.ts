@@ -4,10 +4,13 @@ import { kebabCase } from "change-case";
 import {
   pruneManifestSection,
   tsMorphGenerateApp,
+  tsMorphGenerateCodeFirstDocumentModel,
+  tsMorphGenerateCodeFirstSubgraph,
   tsMorphGenerateDocumentEditor,
   tsMorphGenerateDocumentModel,
   tsMorphGenerateProcessor,
   tsMorphGenerateSubgraph,
+  usesCodeFirstDefinitionSources,
 } from "file-builders";
 import { readdirSync } from "node:fs";
 import {
@@ -38,6 +41,18 @@ export async function generateDocumentModel(
   await tsMorphGenerateDocumentModel(documentModelState, project);
 }
 
+export async function generateCodeFirstDocumentModel(
+  args: {
+    id: string;
+    name: string;
+    extension?: string;
+    version?: number;
+  },
+  project: Project,
+) {
+  await tsMorphGenerateCodeFirstDocumentModel({ ...args, project });
+}
+
 /* Runs generate for each document model json file found in the project's `document-models` directory  */
 export async function generateAllDocumentModels(project: Project) {
   const { directory: documentModelsDir } = getOrCreateDirectory(
@@ -56,11 +71,13 @@ export async function generateAllDocumentModels(project: Project) {
     await generateDocumentModel(documentModelState, project);
   }
 
-  await pruneManifestSection(
-    projectDir,
-    "documentModels",
-    documentModelStateFiles.map((s) => s.id),
-  );
+  if (!(await usesCodeFirstDefinitionSources(projectDir))) {
+    await pruneManifestSection(
+      projectDir,
+      "documentModels",
+      documentModelStateFiles.map((s) => s.id),
+    );
+  }
 }
 export async function generateFromFile(filePath: string, project: Project) {
   // load document model spec from file
@@ -222,6 +239,13 @@ export async function generateSubgraph(subgraphName: string, project: Project) {
   await tsMorphGenerateSubgraph({ subgraphName, project });
 }
 
+export async function generateCodeFirstSubgraph(
+  subgraphName: string,
+  project: Project,
+) {
+  await tsMorphGenerateCodeFirstSubgraph({ subgraphName, project });
+}
+
 /* Runs generate for each directory found in the project's `subgraphs` directory  */
 export async function generateAllSubgraphs(project: Project) {
   const { directory: subgraphsDir } = getOrCreateDirectory(
@@ -242,11 +266,13 @@ export async function generateAllSubgraphs(project: Project) {
     await generateSubgraph(subgraphName, project);
   }
 
-  await pruneManifestSection(
-    projectDir,
-    "subgraphs",
-    subgraphNames.map((name) => kebabCase(name)),
-  );
+  if (!(await usesCodeFirstDefinitionSources(projectDir))) {
+    await pruneManifestSection(
+      projectDir,
+      "subgraphs",
+      subgraphNames.map((name) => kebabCase(name)),
+    );
+  }
 }
 
 export async function generateProcessor(

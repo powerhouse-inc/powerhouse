@@ -1,0 +1,12 @@
+{
+  "definitionSources": {
+    "formatVersion": 1,
+    "mode": "code-first",
+    "entries": [
+      {
+        "specifier": "./fixtures/author-loop/v1/counter.ts",
+        "exportPath": ["CounterV1"]
+      }
+    ]
+  }
+}

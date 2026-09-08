@@ -1,0 +1,807 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://powerhouse.inc/schemas/gate-fixture-manifest-v1.json",
+  "title": "Powerhouse gate fixture manifest V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "formatVersion",
+    "gate",
+    "fixtureVersion",
+    "requiredTools",
+    "schemaDigest",
+    "directDependencies",
+    "cases"
+  ],
+  "properties": {
+    "kind": { "const": "powerhouse.gate-fixture-manifest" },
+    "formatVersion": { "const": 1 },
+    "gate": { "$ref": "#/definitions/gate" },
+    "fixtureVersion": { "type": "string", "minLength": 1 },
+    "caseCount": { "type": "integer", "minimum": 0 },
+    "seed": { "type": "string" },
+    "requiredTools": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "schemaDigest": { "$ref": "#/definitions/sha256" },
+    "directDependencies": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["gate", "contractRevision", "fixtureManifestDigest"],
+        "properties": {
+          "gate": { "$ref": "#/definitions/gate" },
+          "contractRevision": { "$ref": "#/definitions/sha256" },
+          "fixtureManifestDigest": { "$ref": "#/definitions/sha256" }
+        }
+      }
+    },
+    "cases": { "type": "array" },
+    "profile": { "type": "string" },
+    "productionCorpusStatus": { "type": "string" },
+    "historySet": { "$ref": "#/definitions/packagePath" },
+    "expectedPrefixes": { "$ref": "#/definitions/packagePath" },
+    "scopeDeclaration": { "$ref": "#/definitions/packagePath" },
+    "retirementManifest": { "$ref": "#/definitions/packagePath" },
+    "scalarInventory": { "$ref": "#/definitions/packagePath" },
+    "negativeCases": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fieldOptions", "stateRoots"],
+      "properties": {
+        "fieldOptions": {
+          "type": "array",
+          "minItems": 7,
+          "maxItems": 7,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "minLength",
+              "maxLength",
+              "min",
+              "max",
+              "regex",
+              "minItems",
+              "maxItems"
+            ]
+          }
+        },
+        "stateRoots": {
+          "type": "array",
+          "minItems": 7,
+          "maxItems": 7,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "missing-global",
+              "input-global",
+              "enum-global",
+              "union-global",
+              "field-global",
+              "wrong-global-name",
+              "wrong-local-name"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "oneOf": [
+    { "$ref": "#/definitions/B1" },
+    { "$ref": "#/definitions/B2" },
+    { "$ref": "#/definitions/B3" },
+    { "$ref": "#/definitions/empty-B4" },
+    { "$ref": "#/definitions/B5" },
+    { "$ref": "#/definitions/B6" },
+    { "$ref": "#/definitions/B7" },
+    { "$ref": "#/definitions/B8" },
+    { "$ref": "#/definitions/B9" },
+    { "$ref": "#/definitions/B10" },
+    { "$ref": "#/definitions/empty-B11" },
+    { "$ref": "#/definitions/empty-B12" },
+    { "$ref": "#/definitions/empty-B13" },
+    { "$ref": "#/definitions/B14" }
+  ],
+  "definitions": {
+    "sha256": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "gate": {
+      "enum": [
+        "B1",
+        "B2",
+        "B3",
+        "B4",
+        "B5",
+        "B6",
+        "B7",
+        "B8",
+        "B9",
+        "B10",
+        "B11",
+        "B12",
+        "B13",
+        "B14"
+      ]
+    },
+    "emptyCases": { "type": "array", "maxItems": 0 },
+    "B1": {
+      "required": ["caseCount", "negativeCases"],
+      "properties": {
+        "gate": { "const": "B1" },
+        "caseCount": { "const": 10 },
+        "cases": {
+          "type": "array",
+          "minItems": 10,
+          "maxItems": 10,
+          "items": { "$ref": "#/definitions/B1Case" }
+        }
+      }
+    },
+    "B1Case": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "caseId",
+        "rootId",
+        "documentType",
+        "version",
+        "legacySource",
+        "codeFirstSource",
+        "codeFirstExport",
+        "structuredGolden",
+        "storedStateGolden",
+        "identityVector",
+        "definitionSchema"
+      ],
+      "properties": {
+        "caseId": { "type": "string", "pattern": "^[a-z0-9-]+-v[1-9][0-9]*$" },
+        "rootId": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+        "documentType": { "type": "string", "minLength": 1 },
+        "version": { "type": "integer", "minimum": 1 },
+        "legacySource": { "$ref": "#/definitions/repositoryPath" },
+        "codeFirstSource": { "$ref": "#/definitions/packagePath" },
+        "codeFirstExport": {
+          "type": "string",
+          "pattern": "^[_A-Za-z][_0-9A-Za-z]*$"
+        },
+        "structuredGolden": { "$ref": "#/definitions/packagePath" },
+        "storedStateGolden": { "$ref": "#/definitions/packagePath" },
+        "identityVector": { "$ref": "#/definitions/packagePath" },
+        "definitionSchema": { "$ref": "#/definitions/packagePath" }
+      }
+    },
+    "repositoryPath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?!.*\\\\)(?!.*(?:^|/)\\.\\.(?:/|$))"
+    },
+    "packagePath": {
+      "type": "string",
+      "pattern": "^\\./(?!.*\\\\)(?!.*(?:^|/)\\.\\.(?:/|$)).+"
+    },
+    "B2": {
+      "required": [
+        "caseCount",
+        "profile",
+        "productionCorpusStatus",
+        "historySet",
+        "expectedPrefixes",
+        "scopeDeclaration"
+      ],
+      "properties": {
+        "gate": { "const": "B2" },
+        "caseCount": { "const": 3 },
+        "profile": { "const": "synthetic-only-v1" },
+        "productionCorpusStatus": { "const": "not-established" },
+        "cases": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": { "$ref": "#/definitions/B2Case" }
+        }
+      }
+    },
+    "B2Case": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "caseId",
+        "documentType",
+        "version",
+        "mode",
+        "operationCount",
+        "prefixCount",
+        "coveredActionTypes",
+        "scopes",
+        "outcomes",
+        "upgradeEdges"
+      ],
+      "properties": {
+        "caseId": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+        "documentType": { "const": "powerhouse/protocol-matrix" },
+        "version": { "type": "integer", "minimum": 1, "maximum": 2 },
+        "mode": { "enum": ["single-version", "versioned"] },
+        "operationCount": { "type": "integer", "minimum": 1 },
+        "prefixCount": { "type": "integer", "minimum": 2 },
+        "coveredActionTypes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" }
+        },
+        "scopes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "outcomes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "enum": ["applied", "reducer-error", "denied"] }
+        },
+        "upgradeEdges": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[1-9][0-9]*->[1-9][0-9]*$" }
+        }
+      }
+    },
+    "B3": {
+      "required": ["caseCount"],
+      "properties": {
+        "gate": { "const": "B3" },
+        "caseCount": { "const": 23 },
+        "cases": {
+          "type": "array",
+          "minItems": 23,
+          "maxItems": 23,
+          "items": { "$ref": "#/definitions/B3Case" }
+        }
+      }
+    },
+    "B3Case": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rowId",
+        "route",
+        "version",
+        "scope",
+        "rawInput",
+        "compatibilityMode",
+        "expected"
+      ],
+      "properties": {
+        "rowId": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+        "route": {
+          "enum": [
+            "creator",
+            "raw-action",
+            "archived-replay",
+            "base-action",
+            "family-resolution",
+            "upgrade",
+            "definition",
+            "operation-context"
+          ]
+        },
+        "version": { "type": "integer", "minimum": 0 },
+        "scope": { "type": "string", "minLength": 1 },
+        "rawInput": { "$ref": "#/definitions/jsonValue" },
+        "compatibilityMode": { "enum": ["core-v1", "family-v1-v2"] },
+        "expected": { "$ref": "#/definitions/B3Expected" }
+      }
+    },
+    "B3Expected": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "outcomeCode",
+        "state",
+        "hashDelta",
+        "errors",
+        "dispatches",
+        "errorCode",
+        "storedErrorCode",
+        "selectedModuleVersion",
+        "upgradePath"
+      ],
+      "properties": {
+        "outcomeCode": { "type": "string", "minLength": 1 },
+        "state": { "$ref": "#/definitions/jsonValue" },
+        "hashDelta": { "$ref": "#/definitions/jsonValue" },
+        "errors": { "type": "array", "items": { "type": "string" } },
+        "dispatches": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/jsonValue" }
+        },
+        "errorCode": { "type": ["string", "null"] },
+        "storedErrorCode": { "type": ["string", "null"] },
+        "selectedModuleVersion": { "type": "integer", "minimum": 1 },
+        "upgradePath": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 1 }
+        }
+      }
+    },
+    "jsonValue": {
+      "anyOf": [
+        { "type": ["string", "number", "boolean", "null"] },
+        {
+          "type": "array",
+          "items": { "$ref": "#/definitions/jsonValue" }
+        },
+        {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/definitions/jsonValue" }
+        }
+      ]
+    },
+    "empty-B4": {
+      "properties": {
+        "gate": { "const": "B4" },
+        "cases": { "$ref": "#/definitions/emptyCases" }
+      }
+    },
+    "B5": {
+      "required": ["caseCount"],
+      "properties": {
+        "gate": { "const": "B5" },
+        "caseCount": { "const": 2 },
+        "cases": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": { "$ref": "#/definitions/B5Case" },
+          "allOf": [
+            {
+              "contains": {
+                "properties": { "caseId": { "const": "node" } }
+              }
+            },
+            {
+              "contains": {
+                "properties": { "caseId": { "const": "browser-worker" } }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "B5Case": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "caseId",
+        "consumerSource",
+        "runtimeEntry",
+        "tarball",
+        "lockfileDigest",
+        "exportPaths",
+        "runtimeConditions",
+        "expectedLogicalDefinitions",
+        "expectedActionType",
+        "coveredVariants"
+      ],
+      "properties": {
+        "caseId": { "enum": ["node", "browser-worker"] },
+        "consumerSource": { "$ref": "#/definitions/packagePath" },
+        "runtimeEntry": { "$ref": "#/definitions/packagePath" },
+        "tarball": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["path", "digest"],
+          "properties": {
+            "path": { "$ref": "#/definitions/packagePath" },
+            "digest": { "$ref": "#/definitions/sha256" }
+          }
+        },
+        "lockfileDigest": { "$ref": "#/definitions/sha256" },
+        "exportPaths": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["root", "documentModels", "declaration"],
+          "properties": {
+            "root": { "$ref": "#/definitions/packagePath" },
+            "documentModels": { "$ref": "#/definitions/packagePath" },
+            "declaration": { "$ref": "#/definitions/packagePath" }
+          }
+        },
+        "runtimeConditions": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "enum": ["browser"] }
+        },
+        "expectedLogicalDefinitions": {
+          "type": "array",
+          "minItems": 2,
+          "items": { "$ref": "#/definitions/B5LogicalDefinition" }
+        },
+        "expectedActionType": { "type": "string", "minLength": 1 },
+        "coveredVariants": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "B5LogicalDefinition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "version",
+        "specificationDigest",
+        "sdlDigest",
+        "actionNames",
+        "definitionDigest"
+      ],
+      "properties": {
+        "key": { "type": "string", "minLength": 1 },
+        "version": { "type": "integer", "minimum": 1 },
+        "specificationDigest": { "$ref": "#/definitions/sha256" },
+        "sdlDigest": { "$ref": "#/definitions/sha256" },
+        "actionNames": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "definitionDigest": {
+          "anyOf": [
+            { "$ref": "#/definitions/sha256" },
+            { "type": "null" }
+          ]
+        }
+      }
+    },
+    "B6": {
+      "required": ["caseCount", "scalarInventory"],
+      "properties": {
+        "gate": { "const": "B6" },
+        "caseCount": { "const": 4 },
+        "cases": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "caseId",
+              "definition",
+              "expectedSdl",
+              "expectedAst",
+              "legacyComparison",
+              "coveredVariants"
+            ],
+            "properties": {
+              "caseId": { "type": "string", "minLength": 1 },
+              "definition": { "$ref": "#/definitions/packagePath" },
+              "expectedSdl": { "$ref": "#/definitions/packagePath" },
+              "expectedAst": { "$ref": "#/definitions/packagePath" },
+              "legacyComparison": {
+                "type": ["object", "null"],
+                "additionalProperties": false,
+                "required": ["sdlDigest", "astDigest"],
+                "properties": {
+                  "sdlDigest": { "$ref": "#/definitions/sha256" },
+                  "astDigest": { "$ref": "#/definitions/sha256" }
+                }
+              },
+              "coveredVariants": {
+                "type": "array",
+                "minItems": 1,
+                "uniqueItems": true,
+                "items": { "type": "string", "minLength": 1 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "B7": {
+      "required": ["caseCount"],
+      "properties": {
+        "gate": { "const": "B7" },
+        "caseCount": { "const": 7 },
+        "cases": {
+          "type": "array",
+          "minItems": 7,
+          "maxItems": 7,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["caseId", "scenario", "coveredVariants"],
+            "properties": {
+              "caseId": {
+                "enum": [
+                  "typed-query-field",
+                  "compat-manual-query",
+                  "typed-subscription-true",
+                  "compat-subscription-undefined",
+                  "compat-subscription-false",
+                  "duplicate-first-wins",
+                  "composition-conflict-routes-kept"
+                ]
+              },
+              "scenario": {
+                "enum": [
+                  "typed-query-field",
+                  "compat-manual-query",
+                  "typed-subscription-true",
+                  "compat-subscription-undefined",
+                  "compat-subscription-false",
+                  "duplicate-first-wins",
+                  "composition-conflict-routes-kept"
+                ]
+              },
+              "coveredVariants": {
+                "type": "array",
+                "minItems": 1,
+                "uniqueItems": true,
+                "items": { "type": "string", "minLength": 1 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "B8": {
+      "required": ["caseCount"],
+      "properties": {
+        "gate": { "const": "B8" },
+        "caseCount": { "const": 11 },
+        "cases": {
+          "type": "array",
+          "minItems": 11,
+          "maxItems": 11,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "caseId",
+              "hostKind",
+              "baselineFixture",
+              "codeFirstFixture",
+              "coveredVariants"
+            ],
+            "properties": {
+              "caseId": { "$ref": "#/definitions/B8Host" },
+              "hostKind": { "$ref": "#/definitions/B8Host" },
+              "baselineFixture": { "$ref": "#/definitions/packagePath" },
+              "codeFirstFixture": { "$ref": "#/definitions/packagePath" },
+              "coveredVariants": {
+                "type": "array",
+                "minItems": 1,
+                "uniqueItems": true,
+                "items": { "type": "string", "minLength": 1 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "B8Host": {
+      "enum": [
+        "definition-source",
+        "node-server",
+        "http-cdn",
+        "vite-local",
+        "browser-static",
+        "browser-worker",
+        "graphql",
+        "mcp",
+        "connect",
+        "reactor-worker",
+        "registry"
+      ]
+    },
+    "B9": {
+      "properties": {
+        "gate": { "const": "B9" },
+        "cases": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "caseId",
+              "category",
+              "command",
+              "config",
+              "cliSources",
+              "expected"
+            ],
+            "properties": {
+              "caseId": { "type": "string", "minLength": 1 },
+              "category": {
+                "enum": [
+                  "typecheck",
+                  "configuration",
+                  "source-selection",
+                  "import",
+                  "definition",
+                  "warning",
+                  "build",
+                  "prepack",
+                  "publication"
+                ]
+              },
+              "command": { "type": "string" },
+              "config": { "type": ["object", "null"] },
+              "cliSources": { "type": "array", "items": { "type": "string" } },
+              "expected": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "status",
+                  "diagnosticCodes",
+                  "sourceOrigin",
+                  "exitCode",
+                  "hookOrder",
+                  "typecheckCompleted",
+                  "definitionCheckCompleted",
+                  "bundleWriteCount",
+                  "tarballWriteCount",
+                  "registryRequestCount",
+                  "decoyImportCount",
+                  "skipReason",
+                  "contributesReleaseEvidence",
+                  "outputUnchanged"
+                ],
+                "properties": {
+                  "status": {
+                    "enum": [
+                      "ready",
+                      "ok",
+                      "invalid",
+                      "failed",
+                      "skipped",
+                      "process-failed"
+                    ]
+                  },
+                  "diagnosticCodes": {
+                    "type": "array",
+                    "items": { "type": "string" }
+                  },
+                  "sourceOrigin": { "type": ["string", "null"] },
+                  "exitCode": { "type": "integer", "minimum": 0 },
+                  "hookOrder": {
+                    "type": "array",
+                    "items": { "type": "string" }
+                  },
+                  "typecheckCompleted": { "type": "boolean" },
+                  "definitionCheckCompleted": { "type": "boolean" },
+                  "bundleWriteCount": { "type": "integer", "minimum": 0 },
+                  "tarballWriteCount": { "type": "integer", "minimum": 0 },
+                  "registryRequestCount": { "type": "integer", "minimum": 0 },
+                  "decoyImportCount": { "type": "integer", "minimum": 0 },
+                  "skipReason": { "type": ["string", "null"] },
+                  "contributesReleaseEvidence": { "type": "boolean" },
+                  "outputUnchanged": { "type": "boolean" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "B10": {
+      "required": ["caseCount", "profile", "retirementManifest"],
+      "properties": {
+        "gate": { "const": "B10" },
+        "caseCount": { "const": 9 },
+        "profile": { "const": "fixture-family-only-v1" },
+        "cases": {
+          "type": "array",
+          "minItems": 9,
+          "maxItems": 9,
+          "items": { "$ref": "#/definitions/B10Case" }
+        }
+      }
+    },
+    "B10Case": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "caseId",
+        "phase",
+        "fixture",
+        "expectedOutcome",
+        "coveredVariants"
+      ],
+      "properties": {
+        "caseId": { "type": "string", "pattern": "^migration-[a-z-]+$" },
+        "phase": {
+          "enum": [
+            "report",
+            "beside-write",
+            "verify",
+            "artifact",
+            "canary",
+            "deploy",
+            "rollback",
+            "retire",
+            "negative"
+          ]
+        },
+        "fixture": { "$ref": "#/definitions/packagePath" },
+        "expectedOutcome": { "const": "pass" },
+        "coveredVariants": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[a-z0-9-]+$" }
+        }
+      }
+    },
+    "empty-B11": {
+      "properties": {
+        "gate": { "const": "B11" },
+        "cases": { "$ref": "#/definitions/emptyCases" }
+      }
+    },
+    "empty-B12": {
+      "properties": {
+        "gate": { "const": "B12" },
+        "cases": { "$ref": "#/definitions/emptyCases" }
+      }
+    },
+    "empty-B13": {
+      "properties": {
+        "gate": { "const": "B13" },
+        "cases": { "$ref": "#/definitions/emptyCases" }
+      }
+    },
+    "B14": {
+      "required": ["caseCount", "scalarInventory"],
+      "properties": {
+        "gate": { "const": "B14" },
+        "caseCount": { "const": 42 },
+        "cases": {
+          "type": "array",
+          "minItems": 42,
+          "maxItems": 42,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "caseId",
+              "scalarName",
+              "definitionIndex",
+              "outcomeIndex",
+              "profile"
+            ],
+            "properties": {
+              "caseId": { "type": "string", "minLength": 1 },
+              "scalarName": { "type": "string", "minLength": 1 },
+              "definitionIndex": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 20
+              },
+              "outcomeIndex": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 20
+              },
+              "profile": {
+                "enum": [
+                  "document-engineering-1.40",
+                  "legacy-graphql-default-v1"
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -7,10 +7,14 @@ import type {
   UpgradeManifest,
 } from "@powerhousedao/shared/document-model";
 import { childLogger } from "document-model";
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import path from "node:path";
+
 import { pathToFileURL } from "node:url";
-import { resolveLinkedPackage } from "./import-resolver.js";
+import {
+  isMissingImportForSpecifier,
+  resolveLinkedPackage,
+} from "./import-resolver.js";
 
 // Define the expected module export structures
 type DocumentModelsExport = Record<string, DocumentModelModule>;
@@ -24,37 +28,31 @@ const _logger = childLogger(["reactor-api", "packages/util"]);
 
 export const installPackages = (packages: string[]): Promise<void> => {
   for (const packageName of packages) {
-    execSync(`ph install ${packageName}`);
+    execFileSync("ph", ["install", packageName]);
   }
   return Promise.resolve();
 };
 
 export const readManifest = () => {
-  const manifest = execSync(`ph manifest`).toString();
+  const manifest = execFileSync("ph", ["manifest"]).toString();
   return manifest;
 };
 
-/**
- * Tries to import document models from a package. This function cannot throw.
- */
+/** Import document models, falling back to linked-package resolution. */
 export async function loadDocumentModels(
   packageName: string,
 ): Promise<DocumentModelsExport | null> {
   return loadDependency(packageName, "document-models");
 }
 
-/**
- * Tries to import subgraphs from a package. This function cannot throw.
- */
+/** Import subgraphs, falling back to linked-package resolution. */
 export async function loadSubgraphs(
   packageName: string,
 ): Promise<SubgraphsExport | null> {
   return loadDependency(packageName, "subgraphs");
 }
 
-/**
- * Tries to import processors from a package. This function cannot throw.
- */
+/** Import processors, falling back to linked-package resolution. */
 export async function loadProcessors(
   packageName: string,
 ): Promise<ProcessorsExport | null> {
@@ -62,8 +60,8 @@ export async function loadProcessors(
 }
 
 /**
- * Generic dependency loader - tries to import a dependency from a package. This function cannot throw.
- * Returns null if the dependency cannot be loaded.
+ * Import a package subpath, retrying through linked-package resolution for
+ * module-resolution failures. Evaluation and unresolved-import errors propagate.
  */
 async function loadDependency<T = unknown>(
   packageName: string,
@@ -72,9 +70,7 @@ async function loadDependency<T = unknown>(
   // A local package is identified by an absolute path, which has to become a
   // file:// URL: the ESM loader reads the drive letter in a Windows path as a
   // URL scheme.
-  const fullPath = path.isAbsolute(packageName)
-    ? pathToFileURL(path.join(packageName, subPath)).href
-    : `${packageName}/${subPath}`;
+  const fullPath = packageSubpathSpecifier(packageName, subPath);
 
   // Try the standard import first
   try {
@@ -85,21 +81,31 @@ async function loadDependency<T = unknown>(
     return module;
   } catch (e) {
     // Handle module not found errors with fallback resolution.
-    // ERR_UNSUPPORTED_ESM_URL_SCHEME joins the list because a directory
-    // specifier that is a plain path fails with it on Windows where POSIX
-    // reports ERR_UNSUPPORTED_DIR_IMPORT.
-    if (
-      e instanceof Error &&
-      "code" in e &&
-      (e.code === "ERR_MODULE_NOT_FOUND" ||
-        e.code === "ERR_UNSUPPORTED_DIR_IMPORT" ||
-        e.code === "ERR_UNSUPPORTED_ESM_URL_SCHEME")
-    ) {
+    // A package may omit a legacy subpath from exports, and a directory
+    // specifier that is a plain path fails with ERR_UNSUPPORTED_ESM_URL_SCHEME
+    // on Windows where POSIX reports ERR_UNSUPPORTED_DIR_IMPORT.
+    if (isModuleResolutionError(e, fullPath)) {
       const result = await resolveLinkedPackage<T>(packageName, subPath);
       if (result) return result;
     }
     throw e;
   }
+}
+
+export function isModuleResolutionError(
+  error: unknown,
+  requestedSpecifier: string,
+): error is Error & { code: string } {
+  return isMissingImportForSpecifier(error, requestedSpecifier);
+}
+
+export function packageSubpathSpecifier(
+  packageName: string,
+  subPath: string,
+): string {
+  return path.isAbsolute(packageName)
+    ? pathToFileURL(path.join(packageName, subPath)).href
+    : `${packageName}/${subPath}`;
 }
 
 function isUpgradeManifest(
@@ -115,25 +121,20 @@ function isUpgradeManifest(
 }
 
 /**
- * Collects upgrade manifests from a package's document-models namespace.
- * Handles both the aggregate `upgradeManifests` array export and individual
- * manifest exports; dedupes by documentType.
+ * Collect manifests using this loader's existing shallow namespace rules.
+ * Aggregate arrays and individual exports are accepted; the last manifest for
+ * a document type wins.
  */
 export function extractUpgradeManifests(
   namespace: Record<string, unknown>,
 ): UpgradeManifest<readonly number[]>[] {
   const manifests = new Map<string, UpgradeManifest<readonly number[]>>();
   const add = (value: unknown) => {
-    if (isUpgradeManifest(value)) {
-      manifests.set(value.documentType, value);
-    }
+    if (isUpgradeManifest(value)) manifests.set(value.documentType, value);
   };
   for (const value of Object.values(namespace)) {
-    if (Array.isArray(value)) {
-      value.forEach(add);
-    } else {
-      add(value);
-    }
+    if (Array.isArray(value)) value.forEach(add);
+    else add(value);
   }
   return Array.from(manifests.values());
 }
@@ -142,22 +143,35 @@ export function debounce<T extends unknown[], R>(
   func: (...args: T) => Promise<R>,
   delay = 250,
 ) {
-  let timer: number;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let pending: {
+    resolve: (value: R | PromiseLike<R>) => void;
+    reject: (reason?: unknown) => void;
+  }[] = [];
+
   return (immediate = false, ...args: T) => {
-    if (timer) {
+    if (timer !== undefined) {
       clearTimeout(timer);
+      timer = undefined;
     }
     return new Promise<R>((resolve, reject) => {
+      pending.push({ resolve, reject });
+      const run = () => {
+        timer = undefined;
+        const waiters = pending;
+        pending = [];
+        Promise.resolve()
+          .then(() => func(...args))
+          .then(
+            (value) => waiters.forEach((waiter) => waiter.resolve(value)),
+            (error: unknown) =>
+              waiters.forEach((waiter) => waiter.reject(error)),
+          );
+      };
       if (immediate) {
-        func(...args)
-          .then(resolve)
-          .catch(reject);
+        run();
       } else {
-        timer = setTimeout(() => {
-          func(...args)
-            .then(resolve)
-            .catch(reject);
-        }, delay) as unknown as number;
+        timer = setTimeout(run, delay);
       }
     });
   };

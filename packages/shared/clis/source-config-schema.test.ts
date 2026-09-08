@@ -1,16 +1,17 @@
-import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { describe, expect, expectTypeOf, it } from "vitest";
 import { LOG_LEVELS } from "./constants.js";
 import { sourceConfigSchema } from "./source-config-schema.js";
+import type { PowerhouseConfig } from "./types.js";
 
 // Drift guard: ensures the JSON Schema in source-config-schema.ts stays in
 // sync with the PowerhouseConfig TS type in types.ts. Whenever someone adds,
 // renames, or removes a field on PowerhouseConfig, this test forces a
 // matching schema update — otherwise editor tooltips lie.
 //
-// Strategy: hardcode the expected top-level field set + their required-vs-
-// optional split + the enums/structures we care about, and assert against
-// the schema. The expected lists are derived by reading types.ts; updating
-// types.ts forces updating both this test and the schema, surfacing drift.
+// Strategy: hardcode the expected top-level field set, bind that set to the
+// TypeScript keys with an exact compile-time assertion, and assert the same
+// set plus selected structures against both schema representations.
 
 // No field is strictly required on disk — the CLI merges DEFAULT_CONFIG
 // (constants.ts) into whatever the file contains. Schema describes what
@@ -34,6 +35,7 @@ const EXPECTED_PROPERTIES = [
   "vetra",
   "packageRegistryUrl",
   "connect",
+  "definitionSources",
 ] as const;
 
 describe("source-config schema", () => {
@@ -44,8 +46,22 @@ describe("source-config schema", () => {
   });
 
   it("declares the full set of properties PowerhouseConfig recognises", () => {
+    expectTypeOf<(typeof EXPECTED_PROPERTIES)[number]>().toEqualTypeOf<
+      keyof PowerhouseConfig | "$schema"
+    >();
     const schemaProps = Object.keys(sourceConfigSchema.properties).sort();
     expect(schemaProps).toEqual([...EXPECTED_PROPERTIES].sort());
+  });
+
+  it("matches the committed JSON Schema artifact", () => {
+    const artifact = JSON.parse(
+      readFileSync(
+        new URL("./source-config.schema.json", import.meta.url),
+        "utf8",
+      ),
+    ) as unknown;
+
+    expect(artifact).toEqual(sourceConfigSchema);
   });
 
   it("rejects unknown top-level fields (additionalProperties: false)", () => {
@@ -164,5 +180,31 @@ describe("source-config schema", () => {
       "postgres",
       "browser",
     ]);
+  });
+
+  it("definitionSources is a closed code-first or legacy union", () => {
+    const props = sourceConfigSchema.properties as unknown as Record<
+      string,
+      {
+        oneOf?: Array<{
+          additionalProperties?: boolean;
+          required?: readonly string[];
+          properties?: Record<string, { const?: string | number }>;
+        }>;
+      }
+    >;
+    const variants = props.definitionSources.oneOf ?? [];
+    const codeFirst = variants.find(
+      (variant) => variant.properties?.mode.const === "code-first",
+    );
+    const legacy = variants.find(
+      (variant) => variant.properties?.mode.const === "legacy",
+    );
+
+    expect(codeFirst?.additionalProperties).toBe(false);
+    expect(codeFirst?.required).toEqual(["formatVersion", "mode", "entries"]);
+    expect(legacy?.additionalProperties).toBe(false);
+    expect(legacy?.required).toEqual(["formatVersion", "mode"]);
+    expect(legacy?.properties).not.toHaveProperty("entries");
   });
 });

@@ -1,12 +1,9 @@
 import { publishArgs } from "@powerhousedao/shared/clis/args";
+import { isInteractiveTerminal } from "@powerhousedao/shared/clis/telemetry";
 import { command } from "cmd-ts";
 
 function hasTagFlag(args: string[]): boolean {
   return args.some((a) => a === "--tag" || a.startsWith("--tag="));
-}
-
-function isInteractive(): boolean {
-  return Boolean(process.stdin.isTTY) && !process.env.CI;
 }
 
 async function readPrereleaseTag(projectPath: string): Promise<{
@@ -57,6 +54,27 @@ This command:
       throw new Error("Could not find project path.");
     }
 
+    const [{ consumeRetainedDefinitionCheck }, definitionOutput] =
+      await Promise.all([
+        import("../services/definition-release.js"),
+        import("../services/definition-output.js"),
+      ]);
+    const definitionReport = await consumeRetainedDefinitionCheck({
+      configFile: args.configFile,
+      sources: args.sources,
+      allowMissingSources: true,
+    });
+    if (
+      definitionReport &&
+      definitionReport.status !== "ok" &&
+      definitionReport.status !== "skipped"
+    ) {
+      definitionOutput.renderDefinitionReport(definitionReport, false);
+      throw new Error(
+        "Publication stopped because the retained release definition report is missing, invalid, or stale.",
+      );
+    }
+
     const { checkNpmAuth, npmPublish, resolveRegistryUrl } =
       await import("@powerhousedao/shared/registry");
     const { mintRegistryAuthToken } =
@@ -104,7 +122,7 @@ This command:
       const prereleaseInfo = await readPrereleaseTag(projectPath);
       if (prereleaseInfo) {
         const { version, tag } = prereleaseInfo;
-        if (!isInteractive()) {
+        if (!isInteractiveTerminal()) {
           console.error(
             `Detected prerelease version ${version}. npm requires an explicit dist-tag for prerelease publishes.`,
           );

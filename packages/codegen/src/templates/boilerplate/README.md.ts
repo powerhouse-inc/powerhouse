@@ -23,6 +23,28 @@ This tutorial will guide you through the process of creating a new document mode
 
 </details>
 
+## Code-first document models and subgraphs
+
+Create a code-first document model with:
+
+~~~bash
+ph generate document-model --code-first --name "Invoice" --id acme/invoice --extension invoice
+~~~
+
+Add another version by running the same command with \`--version 2\`. Each
+version contains \`model.ts\`, \`reducers.ts\`, and \`tests/model.test.ts\`.
+The model root assembles the family, while \`upgrades/\` contains version
+transitions and their tests.
+
+Create a code-first subgraph with:
+
+~~~bash
+ph generate subgraph --code-first --name invoice-status
+~~~
+
+Each subgraph has its own folder containing \`index.ts\` and
+\`index.test.ts\`.
+
 ### 1. Defining Your Document Model GraphQL Schema
 
 Start by creating your own 'Powerhouse Project' (Document model + editor).

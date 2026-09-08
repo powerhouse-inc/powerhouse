@@ -1,5 +1,6 @@
-import type { IDocumentModelLoader } from "@powerhousedao/reactor";
+import { type IDocumentModelLoader } from "@powerhousedao/reactor";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+import { parsePackageSpec } from "@powerhousedao/shared/registry/package-spec";
 import { RegistryClient } from "../registry/client.js";
 
 export type PackageImporter = (url: string) => Promise<Record<string, unknown>>;
@@ -15,11 +16,6 @@ export type PackageLoadFailure = {
   url: string;
   error: unknown;
 };
-
-function packageName(spec: string): string {
-  const at = spec.lastIndexOf("@");
-  return at > 0 ? spec.slice(0, at) : spec;
-}
 
 function moduleKey(module: DocumentModelModule): string {
   return `${module.documentModel.global.id}@${module.version ?? 1}`;
@@ -60,9 +56,10 @@ export class WorkerPackageLoader implements IDocumentModelLoader {
   }
 
   async loadPackages(specs: string[]): Promise<DocumentModelModule[]> {
-    await Promise.all(
-      [...new Set(specs)].map((spec) => this.loadPackage(spec)),
-    );
+    const uniqueSpecs = [...new Set(specs)];
+    // Reject an unsafe registry response before starting any imports.
+    uniqueSpecs.forEach((spec) => parsePackageSpec(spec));
+    await Promise.all(uniqueSpecs.map((spec) => this.loadPackage(spec)));
     return this.models;
   }
 
@@ -73,6 +70,7 @@ export class WorkerPackageLoader implements IDocumentModelLoader {
       return existing;
     }
     const packageNames = await this.resolvePackages(documentType);
+    packageNames.forEach((spec) => parsePackageSpec(spec));
     const failuresBefore = this.failures.length;
     await Promise.all(
       [...new Set(packageNames)].map((name) => this.loadPackage(name)),
@@ -137,7 +135,7 @@ export class WorkerPackageLoader implements IDocumentModelLoader {
     if (this.loadedSpecs.has(spec)) {
       return;
     }
-    const name = packageName(spec);
+    const name = parsePackageSpec(spec).name;
     const url = `${this.cdnUrl}/${name}/browser/document-models/index.js`;
     try {
       const namespace = await this.importPackage(url);

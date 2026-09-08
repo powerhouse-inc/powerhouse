@@ -1,4 +1,5 @@
 import { esmExternalRequirePlugin } from "rolldown/plugins";
+import { dirname } from "node:path";
 import type { InlineConfig } from "tsdown";
 
 const entry = [
@@ -67,7 +68,12 @@ const nodeNeverBundle = [
 
 const browserNeverBundle = nodeNeverBundle;
 
-const copy = [{ from: "powerhouse.manifest.json", to: "dist" }];
+// The browser bundle is emitted below the package output root. Deriving the
+// destination keeps the manifest beside `browser/`, including for custom
+// output directories and staged builds.
+const copy = ({ outDir }: { readonly outDir: string }) => [
+  { from: "powerhouse.manifest.json", to: dirname(outDir) },
+];
 
 const config = false;
 const clean = true;

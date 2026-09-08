@@ -1,0 +1,46 @@
+{
+  "packageName": "@powerhousedao/code-first-packed-fixture",
+  "packageVersion": "0.0.0",
+  "files": [
+    {
+      "path": "package/dist/browser.d.ts",
+      "bytes": 252,
+      "digest": "sha256:b94de08401c3513137e25ed6f5a2df81d587ebb660ee47a6aa8426ab53fb478b"
+    },
+    {
+      "path": "package/dist/browser.js",
+      "bytes": 251,
+      "digest": "sha256:576c6f63b31662b6eee3d7116e14708a6401b529f2ae02631d9908ff04295f6a"
+    },
+    {
+      "path": "package/dist/index-kQT1arI_.d.ts",
+      "bytes": 119851,
+      "digest": "sha256:34277500c4a688735af28a42756b318a6162bd1b18da6de2589b1c5fc3267e7b"
+    },
+    {
+      "path": "package/dist/node.d.ts",
+      "bytes": 252,
+      "digest": "sha256:b94de08401c3513137e25ed6f5a2df81d587ebb660ee47a6aa8426ab53fb478b"
+    },
+    {
+      "path": "package/dist/node.js",
+      "bytes": 251,
+      "digest": "sha256:576c6f63b31662b6eee3d7116e14708a6401b529f2ae02631d9908ff04295f6a"
+    },
+    {
+      "path": "package/dist/src-D3Ek1zIJ.js",
+      "bytes": 558941,
+      "digest": "sha256:f23936b53f24ac3df023f08d0cf2dee89e94fe68d949f29ba08346bcb5a00137"
+    },
+    {
+      "path": "package/package.json",
+      "bytes": 511,
+      "digest": "sha256:9215e3d0400f02e56bbc3d6e258095cd9a77d4eab57a2dbacd6a9d438e15017f"
+    },
+    {
+      "path": "package/style.css",
+      "bytes": 67,
+      "digest": "sha256:b0c55eca5fbecb2648c47495219cb052e5f18da7c7b2c29d166a49f3a3e14758"
+    }
+  ]
+}

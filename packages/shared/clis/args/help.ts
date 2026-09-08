@@ -100,6 +100,24 @@ export const phCliHelpCommands = {
     description: "Run migrations",
     handler: () => {},
   }),
+  model: helpCommand({
+    name: "model",
+    args: debugArgs,
+    description: "Check, inspect, and migrate document-model definitions",
+    handler: () => {},
+  }),
+  subgraph: helpCommand({
+    name: "subgraph",
+    args: debugArgs,
+    description: "Inspect and migrate subgraph definitions",
+    handler: () => {},
+  }),
+  scalar: helpCommand({
+    name: "scalar",
+    args: debugArgs,
+    description: "Inspect compiler-owned scalar definitions",
+    handler: () => {},
+  }),
   switchboard: helpCommand({
     name: "switchboard",
     aliases: ["reactor"],
@@ -154,7 +172,6 @@ type _Equal<A, B> =
     ? true
     : false;
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const _phCliCommandNamesInSync: _Equal<_DerivedNames, _Names> extends true
   ? true
   : never = true;

@@ -9,7 +9,10 @@ export default defineConfig({
     globals: true,
     coverage: {
       provider: "v8",
-      include: ["document-models/**/src/reducers/**"],
+      include: [
+        "document-models/**/src/reducers/**",
+        "document-models/**/v*/reducers.ts",
+      ],
       thresholds: {
         lines: 95,
         branches: 95,

@@ -1,0 +1,12 @@
+{
+  "kind": "powerhouse.migration-canary-summary",
+  "formatVersion": 1,
+  "status": "pass",
+  "readOnly": true,
+  "historyCount": 2,
+  "prefixCount": 10,
+  "checkCount": 5,
+  "mutationCount": 0,
+  "artifactDigest": "sha256:71dca63c43fad9296769bf24c39651d533b1586b905b217a464f75038d706783",
+  "familyDigest": "sha256:961f8d6b9b36f21c6e451d1b13226188b5a08cea3a15e5b2aab19dbce05dd98c"
+}

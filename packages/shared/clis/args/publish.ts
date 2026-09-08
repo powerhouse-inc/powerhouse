@@ -1,5 +1,5 @@
 import { option, optional, rest, string } from "cmd-ts";
-import { debugArgs } from "./common.js";
+import { debugArgs, definitionSourceArgs } from "./common.js";
 
 export const publishArgs = {
   registry: option({
@@ -8,6 +8,7 @@ export const publishArgs = {
     description:
       "Registry URL to publish to (overrides config and environment)",
   }),
+  ...definitionSourceArgs,
   ...debugArgs,
   forwardedArgs: rest({
     displayName: "npm-args",

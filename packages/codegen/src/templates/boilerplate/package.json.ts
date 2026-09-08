@@ -46,6 +46,7 @@ export const packageJsonTemplate = (
     "generate": "ph-cli generate",
     "connect": "ph-cli connect",
     "build": "ph-cli build",
+    "prepack": "ph-cli model check --release --retained --json",
     "reactor": "ph-cli reactor",
     "service": "ph-cli service",
     "vetra": "ph-cli vetra",

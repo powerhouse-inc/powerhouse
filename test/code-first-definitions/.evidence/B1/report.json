@@ -1,0 +1,335 @@
+{
+  "kind": "powerhouse.gate-evidence",
+  "formatVersion": 1,
+  "gate": "B1",
+  "contract": {
+    "status": "spec-complete",
+    "revision": "sha256:a7ccf254a06e9542fe8e21c59c385e7504a998982ee23444f4491143ef830e4a"
+  },
+  "evidence": {
+    "outcome": "pass"
+  },
+  "repository": {
+    "commit": "da05f917d6912bc30c5c944823c216ec47e19fa8",
+    "baseTreeDigest": "sha256:6d05bb4c4139466f81c0dbaae56f75d3d85af6486827e5a0b67dbf4814848eb0",
+    "baseDirty": false,
+    "appliedPatchDigest": "sha256:3cc2f2bc8e80aee821dfce01607ca32f0bca3964ba773a8c89045511004699a4"
+  },
+  "toolchain": {
+    "lockfileDigest": "sha256:b0b56565f0bf62f674db82eee2cfaa9c4a01a538ea593e0c8f3a42abf43ef6c0",
+    "runnerVersion": "0.1.0",
+    "node": "v24.14.0",
+    "packageManager": "pnpm@10.33.4",
+    "platform": "darwin",
+    "tools": {}
+  },
+  "fixture": {
+    "manifest": "test/code-first-definitions/fixtures/definitions/v1/manifest.json",
+    "fixtureVersion": "1.0.0",
+    "manifestDigest": "sha256:3b1ecf4f491d0459ddf129ff1a2ee33b8e05171cdbe857a2c0da7273667080ce",
+    "schemaDigest": "sha256:9a320fb708d0c5bba916dba4cd268cdd7283d21ce1128b5905b2bc247d8cc868",
+    "caseCount": 10
+  },
+  "dependencies": [
+    {
+      "gate": "B9",
+      "outcome": "pass",
+      "contractRevision": "sha256:a7ccf254a06e9542fe8e21c59c385e7504a998982ee23444f4491143ef830e4a",
+      "fixtureManifestDigest": "sha256:597d6f2a4716a4633765c558f36eb8fe288529c0940ea56d72cf73956b38b43c",
+      "reportDigest": "sha256:90804ebad634118d2148239141b23f74a920f34f0cfb6003bef7c0a41658f39d"
+    }
+  ],
+  "command": {
+    "name": "gate-evidence",
+    "args": [
+      "--gate",
+      "B1",
+      "--manifest",
+      "fixtures/definitions/v1/manifest.json",
+      "--out",
+      ".evidence/B1"
+    ],
+    "cwd": "<repository>"
+  },
+  "assertions": [
+    {
+      "id": "B1.schema",
+      "outcome": "pass",
+      "expected": "all definitions validate and unknown properties are rejected",
+      "received": "all declared cases matched",
+      "artifactRefs": [
+        "fixture-manifest",
+        "definition-schemas",
+        "definition-goldens"
+      ]
+    },
+    {
+      "id": "B1.structured",
+      "outcome": "pass",
+      "expected": "legacy and code-first definitions equal their golden",
+      "received": "all declared cases matched",
+      "artifactRefs": [
+        "definition-goldens"
+      ]
+    },
+    {
+      "id": "B1.stored-state",
+      "outcome": "pass",
+      "expected": "both modules equal the stored PH state golden",
+      "received": "all declared cases matched",
+      "artifactRefs": [
+        "definition-goldens"
+      ]
+    },
+    {
+      "id": "B1.identity",
+      "outcome": "pass",
+      "expected": "every stored identity matches its committed vector",
+      "received": "all declared cases matched",
+      "artifactRefs": [
+        "identity-vectors"
+      ]
+    },
+    {
+      "id": "B1.order",
+      "outcome": "pass",
+      "expected": "all definition and compatibility-AST arrays retain source order",
+      "received": "all declared cases matched",
+      "artifactRefs": [
+        "definition-goldens"
+      ]
+    },
+    {
+      "id": "B1.field-options",
+      "outcome": "pass",
+      "expected": "all seven unsupported field options are rejected",
+      "received": "all declared cases matched",
+      "artifactRefs": [
+        "fixture-manifest"
+      ]
+    },
+    {
+      "id": "B1.state-root",
+      "outcome": "pass",
+      "expected": "all invalid roots fail and empty local state is canonical",
+      "received": "all declared cases matched",
+      "artifactRefs": [
+        "fixture-manifest"
+      ]
+    },
+    {
+      "id": "B1.repeat-import",
+      "outcome": "pass",
+      "expected": "two cold imports produce one digest for every case",
+      "received": "all declared cases matched",
+      "artifactRefs": [
+        "fixture-manifest"
+      ]
+    }
+  ],
+  "measurements": [],
+  "artifacts": [
+    {
+      "name": "fixture-manifest",
+      "path": "test/code-first-definitions/fixtures/definitions/v1/manifest.json",
+      "mediaType": "application/json",
+      "bytes": 8173,
+      "digest": "sha256:aac64fd6447d3355aded6a6810a564bfef1a3c3f90403161baab3b1e7fbcab1b",
+      "retention": "committed"
+    },
+    {
+      "name": "definition-schemas",
+      "path": "test/code-first-definitions/schemas/document-model-definition-v1.schema.json",
+      "mediaType": "application/schema+json",
+      "bytes": 30140,
+      "digest": "sha256:82551c72f67bac75533d3ac44499068ea386f8cae349d251c86cd4a1cc655482",
+      "retention": "committed"
+    },
+    {
+      "name": "definition-goldens",
+      "path": "test/code-first-definitions/fixtures/definitions/v1/goldens",
+      "mediaType": "application/vnd.powerhouse.definition-goldens+json",
+      "bytes": 404362,
+      "digest": "sha256:822242f48b9823579e3219769ede442c427cd487104d7630e7c01ee75305e7ff",
+      "retention": "committed"
+    },
+    {
+      "name": "identity-vectors",
+      "path": "test/code-first-definitions/fixtures/definitions/v1/goldens",
+      "mediaType": "application/vnd.powerhouse.identity-vectors+json",
+      "bytes": 11502,
+      "digest": "sha256:f740dc0697ff28db66d0e5488b30c88b30ff50727923cfbe21fda08eed075c87",
+      "retention": "committed"
+    }
+  ],
+  "results": {
+    "cases": [
+      {
+        "caseId": "document-drive-v1",
+        "documentType": "powerhouse/document-drive",
+        "version": 1,
+        "legacySource": "packages/shared/document-drive/document-drive.json",
+        "codeFirstSource": "test/code-first-definitions/fixtures/definitions/v1/code-first/document-drive.ts",
+        "structuredDigest": "sha256:da3f709a88f2440afd7c2720b25b0cea658cd2638a7df9e4a349067e51a3b301",
+        "storedStateDigest": "sha256:b732d0a801b25e72a5af86381df0c77ad1da7e47f8445d896ad5bb74ea4a110e",
+        "identityVectorDigest": "sha256:5c7d01889ff8f366a16ce58fe7958acf6d7ad731534b16ee6f337e1f70959448",
+        "coldImportDigests": [
+          "sha256:558d07b264f8e4d147ba80883f911e250436a7feab4b4a1e5731c92e16d617d6",
+          "sha256:558d07b264f8e4d147ba80883f911e250436a7feab4b4a1e5731c92e16d617d6"
+        ],
+        "schemaOutcome": "pass",
+        "firstDifference": null
+      },
+      {
+        "caseId": "reactor-group-v1",
+        "documentType": "powerhouse/reactor-group",
+        "version": 1,
+        "legacySource": "packages/reactor-group/document-models/reactor-group/reactor-group.json",
+        "codeFirstSource": "test/code-first-definitions/fixtures/definitions/v1/code-first/reactor-group.ts",
+        "structuredDigest": "sha256:c1b21019b853fc410ea774fd6bccd9fde9c9316b047600a1d3a34603f13c2015",
+        "storedStateDigest": "sha256:a2389001f9b7ccb56c4feb60ad3a65071c29350a511c5412c7dbd3b54ca0643b",
+        "identityVectorDigest": "sha256:453e93d293eb0fb08feaa3e5d84ace3b2280311cdf0a99c5d75efc497a3c6da2",
+        "coldImportDigests": [
+          "sha256:62488688b12063358875dca8c3cefd93ca5255fd03375b71ecd9bf7233db12b6",
+          "sha256:62488688b12063358875dca8c3cefd93ca5255fd03375b71ecd9bf7233db12b6"
+        ],
+        "schemaOutcome": "pass",
+        "firstDifference": null
+      },
+      {
+        "caseId": "app-module-v1",
+        "documentType": "powerhouse/app",
+        "version": 1,
+        "legacySource": "packages/vetra/document-models/app-module/app-module.json",
+        "codeFirstSource": "test/code-first-definitions/fixtures/definitions/v1/code-first/app-module.ts",
+        "structuredDigest": "sha256:c06089afdb8fb2f23d27f2a073700bba494fb5e00f5532afe4f53dd4535c09dd",
+        "storedStateDigest": "sha256:f4647e4096739b985a33be521f55263444aee572588192d0141f6fb006350825",
+        "identityVectorDigest": "sha256:c2e22762ce68e836e9a0872d5610122ebb9e7e8673a7dfff291c594aa140eb70",
+        "coldImportDigests": [
+          "sha256:7ce7dd321fc3434a03d3b48a904c89addaa3d8143ba994a7bcc063e6ec840188",
+          "sha256:7ce7dd321fc3434a03d3b48a904c89addaa3d8143ba994a7bcc063e6ec840188"
+        ],
+        "schemaOutcome": "pass",
+        "firstDifference": null
+      },
+      {
+        "caseId": "document-editor-v1",
+        "documentType": "powerhouse/document-editor",
+        "version": 1,
+        "legacySource": "packages/vetra/document-models/document-editor/document-editor.json",
+        "codeFirstSource": "test/code-first-definitions/fixtures/definitions/v1/code-first/document-editor.ts",
+        "structuredDigest": "sha256:b50239081adfcb9bdc2efea383caa282db9e1b00482cc393f078832b10366808",
+        "storedStateDigest": "sha256:6b4a762bb1a771df132db3e1e4d05f6f1e8b37c0a5b236fc1db5736538daed0f",
+        "identityVectorDigest": "sha256:a74816bf0596b9e4e1eb6ef0b04bd638e7bed9b643675bc8afa1a65d3d7bc53a",
+        "coldImportDigests": [
+          "sha256:ecc1011e810e3f678c0c98d4e0f3c1ecd3312b9b1e2ec26df215d091dc14bca1",
+          "sha256:ecc1011e810e3f678c0c98d4e0f3c1ecd3312b9b1e2ec26df215d091dc14bca1"
+        ],
+        "schemaOutcome": "pass",
+        "firstDifference": null
+      },
+      {
+        "caseId": "processor-module-v1",
+        "documentType": "powerhouse/processor",
+        "version": 1,
+        "legacySource": "packages/vetra/document-models/processor-module/processor-module.json",
+        "codeFirstSource": "test/code-first-definitions/fixtures/definitions/v1/code-first/processor-module.ts",
+        "structuredDigest": "sha256:954adba2365425dfc3555c109f894984901e438959e111cd8fbde5c067ee06f1",
+        "storedStateDigest": "sha256:9cbca4c5bf9750b4a056071b427f6e4ab75a8bccb72d09c0cc403ccefbb3ccf9",
+        "identityVectorDigest": "sha256:702c77df759f19102a77ea5f85ae445da502d288283b442aee459df1b9b65bd5",
+        "coldImportDigests": [
+          "sha256:f5650cc7f62006dc4594b9cc3736cd48c44b3c59bc355d0cfc34f1b42573b400",
+          "sha256:f5650cc7f62006dc4594b9cc3736cd48c44b3c59bc355d0cfc34f1b42573b400"
+        ],
+        "schemaOutcome": "pass",
+        "firstDifference": null
+      },
+      {
+        "caseId": "subgraph-module-v1",
+        "documentType": "powerhouse/subgraph",
+        "version": 1,
+        "legacySource": "packages/vetra/document-models/subgraph-module/subgraph-module.json",
+        "codeFirstSource": "test/code-first-definitions/fixtures/definitions/v1/code-first/subgraph-module.ts",
+        "structuredDigest": "sha256:14249c5994b733940ecf353aec9cb07da9bd27630ab0665f58533ecc0c5a373b",
+        "storedStateDigest": "sha256:9b724437cfeaa46f0babb9f2bb293d8726603379fa933c64475695f1c842530a",
+        "identityVectorDigest": "sha256:f7dc824729fa46f28219908742a4b7e47fa4b5b6b400ef1af72d5b0bdda05fbc",
+        "coldImportDigests": [
+          "sha256:3ae00c78d1c69043b7aed9aa24f320a7bc89541576766d9860e106da8e3e2dcb",
+          "sha256:3ae00c78d1c69043b7aed9aa24f320a7bc89541576766d9860e106da8e3e2dcb"
+        ],
+        "schemaOutcome": "pass",
+        "firstDifference": null
+      },
+      {
+        "caseId": "vetra-package-v1",
+        "documentType": "powerhouse/package",
+        "version": 1,
+        "legacySource": "packages/vetra/document-models/vetra-package/vetra-package.json",
+        "codeFirstSource": "test/code-first-definitions/fixtures/definitions/v1/code-first/vetra-package.ts",
+        "structuredDigest": "sha256:4ed97bc6b28c6ce164fd3c2e7bce5c4cd313e70554c312c6ce45da862b0a9c29",
+        "storedStateDigest": "sha256:a290ad19e10e317e99074370d409b05d403faa359b2e1e1d386dbca04f7c9569",
+        "identityVectorDigest": "sha256:0b5ce13c8a37d1d503585d279b70b41a4146f17d22ed356a99d88ce3286363a0",
+        "coldImportDigests": [
+          "sha256:75afc0ae0ad076f8d93e04642630fcbd05f333a1b6e398532eca9601a601c4e2",
+          "sha256:75afc0ae0ad076f8d93e04642630fcbd05f333a1b6e398532eca9601a601c4e2"
+        ],
+        "schemaOutcome": "pass",
+        "firstDifference": null
+      },
+      {
+        "caseId": "package-e2e-todo-v1",
+        "documentType": "test/todo",
+        "version": 1,
+        "legacySource": "test/package-e2e/fixtures/todo.json",
+        "codeFirstSource": "test/code-first-definitions/fixtures/definitions/v1/code-first/package-e2e-todo.ts",
+        "structuredDigest": "sha256:b1b48fbe543b40128ebdf545cbdaacca00474761b6fb54e26387c8d562b8958d",
+        "storedStateDigest": "sha256:bd1a51b0b6eea721dfab3632aa45a0ab4169c7d0e7fba8bd0fa34fffd96a5825",
+        "identityVectorDigest": "sha256:feb0c68f75ab466b3ea4b36aef841111876d7c42aa73fd04a7708058ecf9707b",
+        "coldImportDigests": [
+          "sha256:fbe534c849001abd92b649a144180c6355437804a21abe371abdf89e2ce3941c",
+          "sha256:fbe534c849001abd92b649a144180c6355437804a21abe371abdf89e2ce3941c"
+        ],
+        "schemaOutcome": "pass",
+        "firstDifference": null
+      },
+      {
+        "caseId": "versioned-todo-v1",
+        "documentType": "test/todo",
+        "version": 1,
+        "legacySource": "test/versioned-documents/document-models/todo/todo.json",
+        "codeFirstSource": "test/code-first-definitions/fixtures/definitions/v1/code-first/versioned-todo.ts",
+        "structuredDigest": "sha256:961f8d6b9b36f21c6e451d1b13226188b5a08cea3a15e5b2aab19dbce05dd98c",
+        "storedStateDigest": "sha256:c891b837da48a9e8912390d0271d601e910fa83e2b5b527d62905327a4233549",
+        "identityVectorDigest": "sha256:feb0c68f75ab466b3ea4b36aef841111876d7c42aa73fd04a7708058ecf9707b",
+        "coldImportDigests": [
+          "sha256:cfd4217d8418acc34ee7e586d9e48fb3d46d69b67335467b13f706b14e09b1ec",
+          "sha256:cfd4217d8418acc34ee7e586d9e48fb3d46d69b67335467b13f706b14e09b1ec"
+        ],
+        "schemaOutcome": "pass",
+        "firstDifference": null
+      },
+      {
+        "caseId": "versioned-todo-v2",
+        "documentType": "test/todo",
+        "version": 2,
+        "legacySource": "test/versioned-documents/document-models/todo/todo.json",
+        "codeFirstSource": "test/code-first-definitions/fixtures/definitions/v1/code-first/versioned-todo.ts",
+        "structuredDigest": "sha256:961f8d6b9b36f21c6e451d1b13226188b5a08cea3a15e5b2aab19dbce05dd98c",
+        "storedStateDigest": "sha256:c891b837da48a9e8912390d0271d601e910fa83e2b5b527d62905327a4233549",
+        "identityVectorDigest": "sha256:06f7b4dbbb7a1c00dc9a5fda6977433e0bf3e00745d843214e8ec011146b40f9",
+        "coldImportDigests": [
+          "sha256:ab97384edcb0d1e9403fea737612c48c00cfd459bad9ab86def8998dfe053ef2",
+          "sha256:ab97384edcb0d1e9403fea737612c48c00cfd459bad9ab86def8998dfe053ef2"
+        ],
+        "schemaOutcome": "pass",
+        "firstDifference": null
+      }
+    ]
+  },
+  "summary": {
+    "passed": 8,
+    "failed": 0,
+    "blocked": 0,
+    "cancelled": 0
+  }
+}

@@ -25,6 +25,7 @@ export async function buildPowerhouseConfigTemplate(
   const config: Record<string, unknown> = {
     $schema:
       "https://raw.githubusercontent.com/powerhouse-inc/powerhouse/main/packages/shared/clis/source-config.schema.json",
+    definitionSources: { formatVersion: 1, mode: "legacy" },
     documentModelsDir: "./document-models",
     editorsDir: "./editors",
     processorsDir: "./processors",

@@ -6,6 +6,10 @@ export const generateSubgraphCmd = command({
   name: "subgraph",
   description: "Generate a subgraph",
   args: {
+    codeFirst: flag({
+      long: "code-first",
+      description: "Create an authored TypeScript subgraph scaffold",
+    }),
     name: option({
       type: optional(string),
       long: "name",

@@ -5,7 +5,7 @@ import { kebabCase } from "change-case";
 import { createOrUpdateManifest } from "file-builders";
 import { getDocumentModelVariableNames } from "name-builders";
 import { copyFile, mkdir, readdir, writeFile } from "node:fs/promises";
-import { join, relative } from "node:path";
+import { join, posix, relative } from "node:path";
 import {
   capitalize,
   filter,
@@ -21,7 +21,7 @@ import {
   uniqueBy,
 } from "remeda";
 import { documentModelsTemplate, upgradeManifestsTemplate } from "templates";
-import { SyntaxKind, type Project } from "ts-morph";
+import { SyntaxKind, type Project, type SourceFile } from "ts-morph";
 import {
   ensureDirectoriesExist,
   formatSourceFileWithPrettier,
@@ -89,7 +89,10 @@ export async function tsMorphGenerateDocumentModel(
     documentModelsDirPath,
     documentModelDirName,
   );
-  const documentModelImportPath = join("document-models", documentModelDirName);
+  const documentModelImportPath = posix.join(
+    "document-models",
+    documentModelDirName,
+  );
   const upgradesDirPath = join(documentModelDirPath, "upgrades");
   const documentModelVariableNames = getDocumentModelVariableNames(name);
   await ensureDirectoriesExist(
@@ -228,18 +231,10 @@ export async function tsMorphGenerateDocumentModel(
     documentModelDirPath,
     latestVersion,
   });
-  // skipAddingFilesFromTsConfig leaves other models out of the project; add
-  // the files the aggregates scan so every model is included, not just the new one.
-  project.addSourceFilesAtPaths([
-    join(documentModelsDirPath, "**", "module.ts"),
-    join(documentModelsDirPath, "**", "upgrade-manifest.ts"),
-  ]);
-  // /document-models/document-models.ts
-  await makeDocumentModelsFile({ project, documentModelsDirPath });
-  // /document-models/index.ts
-  await makeDocumentModelsIndexFile({ project, documentModelsDirPath });
-  // /document-models/upgrade-manifests.ts
-  await makeUpgradeManifestsFile({ project, documentModelsDirPath });
+  await refreshDocumentModelAggregateFiles({
+    project,
+    documentModelsDirPath,
+  });
   await createOrUpdateManifest(
     {
       documentModels: [
@@ -251,6 +246,55 @@ export async function tsMorphGenerateDocumentModel(
     },
     projectDir,
   );
+}
+
+export async function refreshDocumentModelAggregateFiles(args: {
+  project: Project;
+  documentModelsDirPath: string;
+}): Promise<void> {
+  const { project, documentModelsDirPath } = args;
+  // skipAddingFilesFromTsConfig leaves other models out of the project. Load
+  // the conventional module and upgrade files so legacy and code-first models
+  // share one aggregate path. Resolve concrete paths first: ts-morph's glob
+  // walker can retain a directory that legacy generation has just replaced,
+  // then fail while traversing that now-stale path.
+  const aggregateSourceFilePaths = await findAggregateSourceFilePaths(
+    documentModelsDirPath,
+  );
+  for (const sourceFilePath of aggregateSourceFilePaths) {
+    project.addSourceFileAtPathIfExists(sourceFilePath);
+  }
+  await makeDocumentModelsFile({ project, documentModelsDirPath });
+  await makeDocumentModelsIndexFile({ project, documentModelsDirPath });
+  await makeUpgradeManifestsFile({ project, documentModelsDirPath });
+}
+
+async function findAggregateSourceFilePaths(
+  documentModelsDirPath: string,
+): Promise<string[]> {
+  const sourceFilePaths: string[] = [];
+
+  async function visit(directoryPath: string, depth: number): Promise<void> {
+    const entries = await readdir(directoryPath, { withFileTypes: true });
+    for (const entry of entries) {
+      const entryPath = join(directoryPath, entry.name);
+      if (entry.isDirectory()) {
+        await visit(entryPath, depth + 1);
+        continue;
+      }
+
+      if (
+        entry.name === "module.ts" ||
+        entry.name === "upgrade-manifest.ts" ||
+        (depth === 1 && entry.name === "index.ts")
+      ) {
+        sourceFilePaths.push(entryPath);
+      }
+    }
+  }
+
+  await visit(documentModelsDirPath, 0);
+  return sourceFilePaths.sort();
 }
 
 async function makeUpgradeManifestsFile(args: {
@@ -267,6 +311,30 @@ async function makeUpgradeManifestsFile(args: {
   const upgradeManifestsArray = sourceFile
     .getVariableDeclarationOrThrow("upgradeManifests")
     .getFirstDescendantByKindOrThrow(SyntaxKind.ArrayLiteralExpression);
+
+  pipe(
+    project.getSourceFiles(),
+    filter(isCompactCodeFirstModelIndex),
+    map((sourceFile) =>
+      getVariableDeclarationByTypeName(sourceFile, "UpgradeManifest"),
+    ),
+    filter(isTruthy),
+    map((variableDeclaration) => ({
+      name: variableDeclaration.getName(),
+      documentModelDir: variableDeclaration
+        .getSourceFile()
+        .getDirectory()
+        .getBaseName(),
+    })),
+    uniqueBy(prop("name")),
+    forEach(({ name, documentModelDir }) => {
+      sourceFile.addImportDeclaration({
+        namedImports: [name],
+        moduleSpecifier: posix.join("document-models", documentModelDir),
+      });
+      upgradeManifestsArray.addElement(name);
+    }),
+  );
 
   pipe(
     project.getSourceFiles(),
@@ -292,7 +360,11 @@ async function makeUpgradeManifestsFile(args: {
     map(({ name, documentModelDir }) => ({
       name,
       namedImports: [name],
-      moduleSpecifier: join("document-models", documentModelDir, "upgrades"),
+      moduleSpecifier: posix.join(
+        "document-models",
+        documentModelDir,
+        "upgrades",
+      ),
     })),
     // add import of each upgrade manifest and add it to the upgradeManifests array
     forEach(({ name, namedImports, moduleSpecifier }) => {
@@ -319,15 +391,27 @@ async function makeDocumentModelsFile(args: {
     .getVariableDeclarationOrThrow("documentModels")
     .getFirstDescendantByKindOrThrow(SyntaxKind.ArrayLiteralExpression);
 
+  for (const reference of getCompactCodeFirstModelReferences(
+    project,
+    documentModelsDirPath,
+  )) {
+    sourceFile.addImportDeclaration({
+      namedImports: [reference.name],
+      moduleSpecifier: posix.join(
+        "document-models",
+        reference.documentModelDir,
+      ),
+    });
+    documentModelsArray.addElement(reference.name);
+  }
+
   pipe(
     project
       .getDirectoryOrThrow(documentModelsDirPath)
       .getDescendantSourceFiles(),
     filter((sourceFile) => sourceFile.getBaseName() === "module.ts"),
     uniqueBy((sourceFile) => sourceFile.getFilePath()),
-    map((sourceFile) =>
-      getVariableDeclarationByTypeName(sourceFile, "DocumentModel"),
-    ),
+    map(getDocumentModelModuleDeclaration),
     filter(isTruthy),
     map((variableDeclaration) => ({
       name: variableDeclaration.getName(),
@@ -343,7 +427,7 @@ async function makeDocumentModelsFile(args: {
       name: `${name}${capitalize(version)}`,
       // imports the document model with the version appended to the name
       namedImports: [`${name} as ${name}${capitalize(version)}`],
-      moduleSpecifier: join("document-models", documentModelDir, version),
+      moduleSpecifier: posix.join("document-models", documentModelDir, version),
     })),
     forEach(({ name, namedImports, moduleSpecifier }) => {
       sourceFile.addImportDeclaration({
@@ -353,6 +437,7 @@ async function makeDocumentModelsFile(args: {
       documentModelsArray.addElement(name);
     }),
   );
+
   await formatSourceFileWithPrettier(sourceFile);
 }
 
@@ -366,15 +451,22 @@ async function makeDocumentModelsIndexFile(args: {
     "",
     { overwrite: true },
   );
+  for (const reference of getCompactCodeFirstModelReferences(
+    project,
+    documentModelsDirPath,
+  )) {
+    sourceFile.addExportDeclaration({
+      namedExports: [reference.name],
+      moduleSpecifier: `./${reference.documentModelDir}/index.js`,
+    });
+  }
   pipe(
     project
       .getDirectoryOrThrow(documentModelsDirPath)
       .getDescendantSourceFiles(),
     filter((sourceFile) => sourceFile.getBaseName() === "module.ts"),
     uniqueBy((sourceFile) => sourceFile.getFilePath()),
-    map((sourceFile) =>
-      getVariableDeclarationByTypeName(sourceFile, "DocumentModel"),
-    ),
+    map(getDocumentModelModuleDeclaration),
     filter(isTruthy),
     map((variableDeclaration) => ({
       name: variableDeclaration.getName(),
@@ -406,6 +498,69 @@ async function makeDocumentModelsIndexFile(args: {
     moduleSpecifier: "./upgrade-manifests.js",
   });
   await formatSourceFileWithPrettier(sourceFile);
+}
+
+function getDocumentModelModuleDeclaration(sourceFile: SourceFile) {
+  const typedDeclaration = getVariableDeclarationByTypeName(
+    sourceFile,
+    "DocumentModel",
+  );
+  if (typedDeclaration) return typedDeclaration;
+
+  // Code-first version modules retain their inferred actions and state. Their
+  // conventional exported value is the result of DocumentModelFamily.at().
+  return sourceFile.getVariableDeclaration((declaration) => {
+    if (!declaration.getVariableStatement()?.isExported()) return false;
+    const initializer = declaration.getInitializerIfKind(
+      SyntaxKind.CallExpression,
+    );
+    const expression = initializer?.getExpressionIfKind(
+      SyntaxKind.PropertyAccessExpression,
+    );
+    return expression?.getName() === "at";
+  });
+}
+
+function isCompactCodeFirstModelIndex(sourceFile: SourceFile): boolean {
+  return (
+    sourceFile.getBaseName() === "index.ts" &&
+    sourceFile.getDirectory().getParent()?.getBaseName() === "document-models"
+  );
+}
+
+function getCompactCodeFirstModelReferences(
+  project: Project,
+  documentModelsDirPath: string,
+): Array<{ name: string; documentModelDir: string }> {
+  const references: Array<{ name: string; documentModelDir: string }> = [];
+  const seen = new Set<string>();
+  const sourceFiles = project
+    .getDirectoryOrThrow(documentModelsDirPath)
+    .getDescendantSourceFiles()
+    .filter(isCompactCodeFirstModelIndex);
+
+  for (const sourceFile of sourceFiles) {
+    for (const statement of sourceFile.getVariableStatements()) {
+      if (!statement.isExported()) continue;
+      for (const declaration of statement.getDeclarations()) {
+        const initializer = declaration.getInitializerIfKind(
+          SyntaxKind.CallExpression,
+        );
+        const expression = initializer?.getExpressionIfKind(
+          SyntaxKind.PropertyAccessExpression,
+        );
+        if (expression?.getName() !== "at") continue;
+
+        const name = declaration.getName();
+        const documentModelDir = sourceFile.getDirectory().getBaseName();
+        const key = `${documentModelDir}:${name}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        references.push({ name, documentModelDir });
+      }
+    }
+  }
+  return references;
 }
 
 /** Writes a json file derived from a `documentModelState` */

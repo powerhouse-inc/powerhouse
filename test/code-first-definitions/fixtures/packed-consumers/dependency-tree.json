@@ -1,0 +1,22 @@
+{
+  "node": {
+    "name": "b5-node-consumer",
+    "version": "0.0.0",
+    "dependencies": {
+      "@powerhousedao/code-first-packed-fixture": {
+        "version": "0.0.0",
+        "dependencies": {}
+      }
+    }
+  },
+  "browser-worker": {
+    "name": "b5-browser-worker-consumer",
+    "version": "0.0.0",
+    "dependencies": {
+      "@powerhousedao/code-first-packed-fixture": {
+        "version": "0.0.0",
+        "dependencies": {}
+      }
+    }
+  }
+}

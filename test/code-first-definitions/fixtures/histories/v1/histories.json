@@ -1,0 +1,539 @@
+{
+  "kind": "powerhouse.synthetic-replay-histories",
+  "formatVersion": 1,
+  "profile": "synthetic-only-v1",
+  "histories": [
+    {
+      "caseId": "protocol-v1-mixed-outcomes",
+      "documentType": "powerhouse/protocol-matrix",
+      "mode": "single-version",
+      "version": 1,
+      "initialState": {
+        "auth": {
+          "version": 0,
+          "grants": []
+        },
+        "document": {
+          "version": 1,
+          "hash": {
+            "algorithm": "sha1",
+            "encoding": "base64"
+          }
+        },
+        "global": {
+          "counter": 0,
+          "events": []
+        },
+        "local": {
+          "counter": 0,
+          "draft": "",
+          "events": []
+        }
+      },
+      "header": {
+        "id": "synthetic-replay-document",
+        "sig": {
+          "publicKey": {},
+          "nonce": ""
+        },
+        "documentType": "powerhouse/protocol-matrix",
+        "createdAtUtcIso": "2025-01-01T00:00:00.000Z",
+        "slug": "synthetic-replay-document",
+        "name": "Synthetic Replay Document",
+        "branch": "main",
+        "revision": {
+          "global": 0,
+          "local": 0,
+          "document": 0
+        },
+        "lastModifiedAtUtcIso": "2025-01-01T00:00:00.000Z",
+        "meta": {},
+        "protocolVersions": {
+          "base-reducer": 1
+        }
+      },
+      "operations": [
+        {
+          "id": "1cd63d0c5dcbcb28b203f4aad462c563",
+          "timestampUtcMs": "2025-01-01T00:00:01.000Z",
+          "type": "INCREMENT",
+          "input": {
+            "amount": 2,
+            "tag": "first"
+          },
+          "scope": "global",
+          "action": {
+            "id": "synthetic-action-1",
+            "timestampUtcMs": "2025-01-01T00:00:01.000Z",
+            "type": "INCREMENT",
+            "input": {
+              "amount": 2,
+              "tag": "first"
+            },
+            "scope": "global"
+          },
+          "hash": "",
+          "index": 0,
+          "skip": 0
+        },
+        {
+          "id": "4bbc95a9d16d13c0a4d74dba58010384",
+          "timestampUtcMs": "2025-01-01T00:00:02.000Z",
+          "type": "SET_DRAFT",
+          "input": {
+            "draft": "local-draft"
+          },
+          "scope": "local",
+          "action": {
+            "id": "synthetic-action-2",
+            "timestampUtcMs": "2025-01-01T00:00:02.000Z",
+            "type": "SET_DRAFT",
+            "input": {
+              "draft": "local-draft"
+            },
+            "scope": "local"
+          },
+          "hash": "",
+          "index": 0,
+          "skip": 0
+        },
+        {
+          "id": "fbe5e7f0eabd00426c2f9964dacdc360",
+          "timestampUtcMs": "2025-01-01T00:00:03.000Z",
+          "type": "FAIL",
+          "input": {
+            "explicit": false
+          },
+          "scope": "global",
+          "action": {
+            "id": "synthetic-action-3",
+            "timestampUtcMs": "2025-01-01T00:00:03.000Z",
+            "type": "FAIL",
+            "input": {
+              "explicit": false
+            },
+            "scope": "global"
+          },
+          "hash": "",
+          "index": 1,
+          "skip": 0
+        },
+        {
+          "id": "30a2d580675c0f0947631f45e3a5b662",
+          "timestampUtcMs": "2025-01-01T00:00:04.000Z",
+          "type": "EMIT",
+          "input": {
+            "id": "child-synthetic"
+          },
+          "scope": "global",
+          "action": {
+            "id": "synthetic-action-4",
+            "timestampUtcMs": "2025-01-01T00:00:04.000Z",
+            "type": "EMIT",
+            "input": {
+              "id": "child-synthetic"
+            },
+            "scope": "global"
+          },
+          "hash": "",
+          "index": 2,
+          "skip": 0
+        },
+        {
+          "id": "7ad7a3fed2bbc6979c390279f632e63d",
+          "timestampUtcMs": "2025-01-01T00:00:05.000Z",
+          "type": "INCREMENT",
+          "input": {
+            "amount": 100,
+            "tag": "denied"
+          },
+          "scope": "global",
+          "action": {
+            "id": "synthetic-action-5",
+            "timestampUtcMs": "2025-01-01T00:00:05.000Z",
+            "type": "INCREMENT",
+            "input": {
+              "amount": 100,
+              "tag": "denied"
+            },
+            "scope": "global"
+          },
+          "hash": "",
+          "index": 3,
+          "skip": 0,
+          "deniedReason": "fixture-policy-denied"
+        },
+        {
+          "id": "999ae65a6e4f33af78d0d57e56613db3",
+          "timestampUtcMs": "2025-01-01T00:00:06.000Z",
+          "type": "INCREMENT",
+          "input": {
+            "amount": 3,
+            "tag": "skip-preserved"
+          },
+          "scope": "global",
+          "action": {
+            "id": "synthetic-action-6",
+            "timestampUtcMs": "2025-01-01T00:00:06.000Z",
+            "type": "INCREMENT",
+            "input": {
+              "amount": 3,
+              "tag": "skip-preserved"
+            },
+            "scope": "global"
+          },
+          "hash": "",
+          "index": 4,
+          "skip": 1
+        }
+      ],
+      "coveredActionTypes": [
+        "EMIT",
+        "FAIL",
+        "INCREMENT",
+        "SET_DRAFT"
+      ],
+      "scopes": [
+        "global",
+        "local"
+      ],
+      "outcomes": [
+        "applied",
+        "reducer-error",
+        "denied"
+      ],
+      "upgradeEdges": []
+    },
+    {
+      "caseId": "protocol-v2-global-local",
+      "documentType": "powerhouse/protocol-matrix",
+      "mode": "single-version",
+      "version": 2,
+      "initialState": {
+        "auth": {
+          "version": 0,
+          "grants": []
+        },
+        "document": {
+          "version": 2,
+          "hash": {
+            "algorithm": "sha1",
+            "encoding": "base64"
+          }
+        },
+        "global": {
+          "counter": 0,
+          "events": [],
+          "title": null
+        },
+        "local": {
+          "counter": 0,
+          "draft": "",
+          "events": []
+        }
+      },
+      "header": {
+        "id": "synthetic-replay-document",
+        "sig": {
+          "publicKey": {},
+          "nonce": ""
+        },
+        "documentType": "powerhouse/protocol-matrix",
+        "createdAtUtcIso": "2025-01-01T00:00:00.000Z",
+        "slug": "synthetic-replay-document",
+        "name": "Synthetic Replay Document",
+        "branch": "main",
+        "revision": {
+          "global": 0,
+          "local": 0,
+          "document": 0
+        },
+        "lastModifiedAtUtcIso": "2025-01-01T00:00:00.000Z",
+        "meta": {},
+        "protocolVersions": {
+          "base-reducer": 1
+        }
+      },
+      "operations": [
+        {
+          "id": "1cd63d0c5dcbcb28b203f4aad462c563",
+          "timestampUtcMs": "2025-01-01T00:00:01.000Z",
+          "type": "SET_TITLE",
+          "input": {
+            "title": "Version two"
+          },
+          "scope": "global",
+          "action": {
+            "id": "synthetic-action-1",
+            "timestampUtcMs": "2025-01-01T00:00:01.000Z",
+            "type": "SET_TITLE",
+            "input": {
+              "title": "Version two"
+            },
+            "scope": "global"
+          },
+          "hash": "",
+          "index": 0,
+          "skip": 0
+        },
+        {
+          "id": "ec1c070221d0310e32dc608aa17bf4c7",
+          "timestampUtcMs": "2025-01-01T00:00:02.000Z",
+          "type": "INCREMENT",
+          "input": {
+            "amount": 7,
+            "tag": "v2"
+          },
+          "scope": "global",
+          "action": {
+            "id": "synthetic-action-2",
+            "timestampUtcMs": "2025-01-01T00:00:02.000Z",
+            "type": "INCREMENT",
+            "input": {
+              "amount": 7,
+              "tag": "v2"
+            },
+            "scope": "global"
+          },
+          "hash": "",
+          "index": 1,
+          "skip": 0
+        },
+        {
+          "id": "cb7de1c95a3a6ff16db306972ce8e1fb",
+          "timestampUtcMs": "2025-01-01T00:00:03.000Z",
+          "type": "SET_DRAFT",
+          "input": {
+            "draft": "v2-local"
+          },
+          "scope": "local",
+          "action": {
+            "id": "synthetic-action-3",
+            "timestampUtcMs": "2025-01-01T00:00:03.000Z",
+            "type": "SET_DRAFT",
+            "input": {
+              "draft": "v2-local"
+            },
+            "scope": "local"
+          },
+          "hash": "",
+          "index": 0,
+          "skip": 0
+        },
+        {
+          "id": "30a2d580675c0f0947631f45e3a5b662",
+          "timestampUtcMs": "2025-01-01T00:00:04.000Z",
+          "type": "EMIT",
+          "input": {
+            "id": "v2-child"
+          },
+          "scope": "global",
+          "action": {
+            "id": "synthetic-action-4",
+            "timestampUtcMs": "2025-01-01T00:00:04.000Z",
+            "type": "EMIT",
+            "input": {
+              "id": "v2-child"
+            },
+            "scope": "global"
+          },
+          "hash": "",
+          "index": 2,
+          "skip": 0
+        }
+      ],
+      "coveredActionTypes": [
+        "EMIT",
+        "INCREMENT",
+        "SET_DRAFT",
+        "SET_TITLE"
+      ],
+      "scopes": [
+        "global",
+        "local"
+      ],
+      "outcomes": [
+        "applied",
+        "reducer-error",
+        "denied"
+      ],
+      "upgradeEdges": []
+    },
+    {
+      "caseId": "protocol-upgrade-v1-v2",
+      "documentType": "powerhouse/protocol-matrix",
+      "mode": "versioned",
+      "version": 1,
+      "initialState": {
+        "auth": {
+          "version": 0,
+          "grants": []
+        },
+        "document": {
+          "version": 1,
+          "hash": {
+            "algorithm": "sha1",
+            "encoding": "base64"
+          }
+        },
+        "global": {
+          "counter": 0,
+          "events": []
+        },
+        "local": {
+          "counter": 0,
+          "draft": "",
+          "events": []
+        }
+      },
+      "header": {
+        "id": "synthetic-replay-document",
+        "sig": {
+          "publicKey": {},
+          "nonce": ""
+        },
+        "documentType": "powerhouse/protocol-matrix",
+        "createdAtUtcIso": "2025-01-01T00:00:00.000Z",
+        "slug": "synthetic-replay-document",
+        "name": "Synthetic Replay Document",
+        "branch": "main",
+        "revision": {
+          "global": 0,
+          "local": 0,
+          "document": 0
+        },
+        "lastModifiedAtUtcIso": "2025-01-01T00:00:00.000Z",
+        "meta": {},
+        "protocolVersions": {
+          "base-reducer": 1
+        }
+      },
+      "operations": [
+        {
+          "id": "synthetic-seed-v1",
+          "index": 0,
+          "skip": 0,
+          "hash": "",
+          "timestampUtcMs": "2025-01-01T00:00:00.000Z",
+          "action": {
+            "id": "synthetic-action-0",
+            "type": "UPGRADE_DOCUMENT",
+            "scope": "document",
+            "input": {
+              "documentId": "synthetic-replay-document",
+              "model": "powerhouse/protocol-matrix",
+              "fromVersion": 0,
+              "toVersion": 1,
+              "initialState": {
+                "auth": {
+                  "version": 0,
+                  "grants": []
+                },
+                "document": {
+                  "version": 1,
+                  "hash": {
+                    "algorithm": "sha1",
+                    "encoding": "base64"
+                  }
+                },
+                "global": {
+                  "counter": 0,
+                  "events": []
+                },
+                "local": {
+                  "counter": 0,
+                  "draft": "",
+                  "events": []
+                }
+              }
+            },
+            "timestampUtcMs": "2025-01-01T00:00:00.000Z"
+          }
+        },
+        {
+          "id": "1cd63d0c5dcbcb28b203f4aad462c563",
+          "timestampUtcMs": "2025-01-01T00:00:01.000Z",
+          "type": "INCREMENT",
+          "input": {
+            "amount": 4,
+            "tag": "before-upgrade"
+          },
+          "scope": "global",
+          "action": {
+            "id": "synthetic-action-1",
+            "timestampUtcMs": "2025-01-01T00:00:01.000Z",
+            "type": "INCREMENT",
+            "input": {
+              "amount": 4,
+              "tag": "before-upgrade"
+            },
+            "scope": "global"
+          },
+          "hash": "",
+          "index": 0,
+          "skip": 0
+        },
+        {
+          "id": "synthetic-upgrade-v2",
+          "index": 1,
+          "skip": 0,
+          "hash": "",
+          "timestampUtcMs": "2025-01-01T00:00:02.000Z",
+          "action": {
+            "id": "synthetic-action-2",
+            "type": "UPGRADE_DOCUMENT",
+            "scope": "document",
+            "input": {
+              "documentId": "synthetic-replay-document",
+              "model": "powerhouse/protocol-matrix",
+              "fromVersion": 1,
+              "toVersion": 2,
+              "revision": {
+                "global": 1,
+                "local": 0,
+                "document": 1
+              }
+            },
+            "timestampUtcMs": "2025-01-01T00:00:02.000Z"
+          }
+        },
+        {
+          "id": "fbe5e7f0eabd00426c2f9964dacdc360",
+          "timestampUtcMs": "2025-01-01T00:00:03.000Z",
+          "type": "SET_TITLE",
+          "input": {
+            "title": "After upgrade"
+          },
+          "scope": "global",
+          "action": {
+            "id": "synthetic-action-3",
+            "timestampUtcMs": "2025-01-01T00:00:03.000Z",
+            "type": "SET_TITLE",
+            "input": {
+              "title": "After upgrade"
+            },
+            "scope": "global"
+          },
+          "hash": "",
+          "index": 1,
+          "skip": 0
+        }
+      ],
+      "coveredActionTypes": [
+        "INCREMENT",
+        "SET_TITLE",
+        "UPGRADE_DOCUMENT"
+      ],
+      "scopes": [
+        "document",
+        "global"
+      ],
+      "outcomes": [
+        "applied"
+      ],
+      "upgradeEdges": [
+        "1->2"
+      ]
+    }
+  ]
+}

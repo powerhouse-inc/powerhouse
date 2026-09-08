@@ -1,5 +1,4 @@
 import { camelCase, kebabCase, pascalCase } from "change-case";
-import { createOrUpdateManifest } from "file-builders";
 import path from "path";
 import { filter, isTruthy, map, pipe, uniqueBy } from "remeda";
 import {
@@ -15,6 +14,7 @@ import {
   getOrCreateDirectory,
   getOrCreateSourceFile,
 } from "utils";
+import { createOrUpdateManifest } from "./manifest.js";
 
 export async function tsMorphGenerateSubgraph(args: {
   subgraphName: string;
@@ -134,7 +134,18 @@ export async function makeSubgraphsIndexFile(args: {
     map((sourceFile) =>
       sourceFile
         .getClasses()
-        .find((c) => c.getBaseClass()?.getText().includes("BaseSubgraph")),
+        .find(
+          (classDeclaration) =>
+            classDeclaration
+              .getBaseClass()
+              ?.getText()
+              .includes("BaseSubgraph") === true ||
+            classDeclaration
+              .getExtends()
+              ?.getExpression()
+              .getText()
+              .includes("BaseSubgraph") === true,
+        ),
     ),
     filter(isTruthy),
     map((classDeclaration) => ({

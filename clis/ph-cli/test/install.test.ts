@@ -1,8 +1,10 @@
 import { DEFAULT_REGISTRY_URL } from "@powerhousedao/config";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("child_process");
-vi.mock("@powerhousedao/config/node");
 vi.mock("@powerhousedao/shared/clis", async (importOriginal) => {
   const actual: Record<string, unknown> = await importOriginal();
   return {
@@ -24,39 +26,30 @@ import {
   getPowerhouseProjectInfo,
   makeDependenciesWithVersions,
 } from "@powerhousedao/shared/clis";
-import { getConfig } from "@powerhousedao/config/node";
 import { execSync } from "child_process";
 import type { InstallArgs } from "../src/types.js";
 
-const mockGetConfig = vi.mocked(getConfig);
 const mockExecSync = vi.mocked(execSync);
 const mockGetProjectInfo = vi.mocked(getPowerhouseProjectInfo);
 const mockMakeDeps = vi.mocked(makeDependenciesWithVersions);
 
 describe("install", () => {
   const originalEnv = { ...process.env };
+  let projectPath: string;
 
   beforeEach(() => {
     vi.clearAllMocks();
     process.env = { ...originalEnv };
     delete process.env.PH_REGISTRY_URL;
 
+    projectPath = mkdtempSync(join(tmpdir(), "ph-install-test-"));
+    writeFileSync(join(projectPath, "powerhouse.config.json"), "{}");
     mockGetProjectInfo.mockResolvedValue({
-      projectPath: "/test/project",
-      localProjectPath: "/test/project",
+      projectPath,
+      localProjectPath: projectPath,
       globalProjectPath: undefined,
       packageManager: "npm",
       isGlobal: false,
-    });
-
-    mockGetConfig.mockReturnValue({
-      logLevel: "info",
-      documentModelsDir: "./document-models",
-      editorsDir: "./editors",
-      processorsDir: "./processors",
-      subgraphsDir: "./subgraphs",
-      importScriptsDir: "./scripts",
-      skipFormat: false,
     });
 
     mockMakeDeps.mockResolvedValue([
@@ -68,10 +61,13 @@ describe("install", () => {
 
   afterEach(() => {
     process.env = originalEnv;
+    rmSync(projectPath, { recursive: true, force: true });
   });
 
   async function runInstallHandler(args: {
+    allowBuild?: string[];
     dependencies: string[];
+    local?: boolean;
     registry?: string;
     debug?: boolean;
   }) {
@@ -92,47 +88,35 @@ describe("install", () => {
   describe("registry resolution", () => {
     it("should use --registry flag over config and env", async () => {
       process.env.PH_REGISTRY_URL = "https://env-registry.io";
-      mockGetConfig.mockReturnValue({
-        logLevel: "info",
-        documentModelsDir: "./document-models",
-        editorsDir: "./editors",
-        processorsDir: "./processors",
-        subgraphsDir: "./subgraphs",
-        importScriptsDir: "./scripts",
-        skipFormat: false,
-        packageRegistryUrl: "https://config-registry.io",
-      });
+      writeFileSync(
+        join(projectPath, "powerhouse.config.json"),
+        JSON.stringify({ packageRegistryUrl: "https://config-registry.io" }),
+      );
 
       await runInstallHandler({
         dependencies: ["@powerhousedao/test-pkg"],
         registry: "https://flag-registry.io",
       });
 
-      expect(mockExecSync).toHaveBeenCalledWith(
-        expect.stringContaining("--registry https://flag-registry.io"),
-        expect.anything(),
+      expect(mockMakeDeps).toHaveBeenCalledWith(
+        ["@powerhousedao/test-pkg"],
+        "https://flag-registry.io",
       );
     });
 
     it("should use config packageRegistryUrl when no flag provided", async () => {
-      mockGetConfig.mockReturnValue({
-        logLevel: "info",
-        documentModelsDir: "./document-models",
-        editorsDir: "./editors",
-        processorsDir: "./processors",
-        subgraphsDir: "./subgraphs",
-        importScriptsDir: "./scripts",
-        skipFormat: false,
-        packageRegistryUrl: "https://config-registry.io",
-      });
+      writeFileSync(
+        join(projectPath, "powerhouse.config.json"),
+        JSON.stringify({ packageRegistryUrl: "https://config-registry.io" }),
+      );
 
       await runInstallHandler({
         dependencies: ["@powerhousedao/test-pkg"],
       });
 
-      expect(mockExecSync).toHaveBeenCalledWith(
-        expect.stringContaining("--registry https://config-registry.io"),
-        expect.anything(),
+      expect(mockMakeDeps).toHaveBeenCalledWith(
+        ["@powerhousedao/test-pkg"],
+        "https://config-registry.io",
       );
     });
 
@@ -143,9 +127,9 @@ describe("install", () => {
         dependencies: ["@powerhousedao/test-pkg"],
       });
 
-      expect(mockExecSync).toHaveBeenCalledWith(
-        expect.stringContaining("--registry https://env-registry.io"),
-        expect.anything(),
+      expect(mockMakeDeps).toHaveBeenCalledWith(
+        ["@powerhousedao/test-pkg"],
+        "https://env-registry.io",
       );
     });
 
@@ -154,9 +138,9 @@ describe("install", () => {
         dependencies: ["@powerhousedao/test-pkg"],
       });
 
-      expect(mockExecSync).toHaveBeenCalledWith(
-        expect.stringContaining(`--registry ${DEFAULT_REGISTRY_URL}`),
-        expect.anything(),
+      expect(mockMakeDeps).toHaveBeenCalledWith(
+        ["@powerhousedao/test-pkg"],
+        DEFAULT_REGISTRY_URL,
       );
     });
   });
@@ -174,15 +158,19 @@ describe("install", () => {
       );
     });
 
-    it("should pass --registry to the package manager install command", async () => {
+    it("should route the package scope to the selected registry for local installs", async () => {
       await runInstallHandler({
+        allowBuild: [],
         dependencies: ["@powerhousedao/test-pkg"],
+        local: true,
         registry: "https://custom-registry.io",
       });
 
       expect(mockExecSync).toHaveBeenCalledWith(
-        expect.stringContaining("--registry https://custom-registry.io"),
-        expect.objectContaining({ cwd: "/test/project" }),
+        expect.stringContaining(
+          "--@powerhousedao:registry=https://custom-registry.io",
+        ),
+        expect.objectContaining({ cwd: projectPath }),
       );
     });
   });

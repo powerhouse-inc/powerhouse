@@ -28,4 +28,17 @@ describe("Build boilerplate package.json file", () => {
       expect(validationResult.valid).toBe(true);
     }
   });
+
+  test("runs the retained release check once for pack and publish", async () => {
+    const packageJson = JSON.parse(
+      await buildBoilerplatePackageJson({
+        name: "test-project",
+        version: "5.0.1",
+      }),
+    ) as { scripts: Record<string, string> };
+    expect(packageJson.scripts.prepack).toBe(
+      "ph-cli model check --release --retained --json",
+    );
+    expect(packageJson.scripts.prepublishOnly).toBeUndefined();
+  });
 });

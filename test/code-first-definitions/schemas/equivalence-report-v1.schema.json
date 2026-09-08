@@ -1,0 +1,121 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://powerhouse.inc/schemas/equivalence-report-v1.json",
+  "title": "Powerhouse migration equivalence report V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "formatVersion",
+    "status",
+    "family",
+    "checks",
+    "histories",
+    "diagnostics",
+    "digest"
+  ],
+  "properties": {
+    "kind": { "const": "powerhouse.migration-equivalence" },
+    "formatVersion": { "const": 1 },
+    "status": { "enum": ["equivalent", "diverged"] },
+    "family": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["documentType", "versions", "digest"],
+      "properties": {
+        "documentType": { "type": "string", "minLength": 1 },
+        "versions": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "integer", "minimum": 1 }
+        },
+        "digest": { "$ref": "#/definitions/sha256" }
+      }
+    },
+    "checks": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "outcome",
+          "legacyDigest",
+          "candidateDigest",
+          "firstDifference"
+        ],
+        "properties": {
+          "id": {
+            "enum": [
+              "definition",
+              "stored-specification",
+              "creators",
+              "initial-state",
+              "replay"
+            ]
+          },
+          "outcome": { "enum": ["pass", "fail"] },
+          "legacyDigest": { "$ref": "#/definitions/sha256" },
+          "candidateDigest": { "$ref": "#/definitions/sha256" },
+          "firstDifference": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "histories": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "historyId",
+          "prefix",
+          "legacyDigest",
+          "candidateDigest",
+          "legacyScopeHashes",
+          "candidateScopeHashes",
+          "dispatchDigest",
+          "firstDifference"
+        ],
+        "properties": {
+          "historyId": { "type": "string", "minLength": 1 },
+          "prefix": { "type": "integer", "minimum": 0 },
+          "legacyDigest": { "$ref": "#/definitions/sha256" },
+          "candidateDigest": { "$ref": "#/definitions/sha256" },
+          "legacyScopeHashes": {
+            "type": "object",
+            "additionalProperties": { "type": "string", "minLength": 1 }
+          },
+          "candidateScopeHashes": {
+            "type": "object",
+            "additionalProperties": { "type": "string", "minLength": 1 }
+          },
+          "dispatchDigest": { "$ref": "#/definitions/sha256" },
+          "firstDifference": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "diagnostics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "path", "message"],
+        "properties": {
+          "code": { "type": "string", "pattern": "^PH-MIGRATE-" },
+          "path": {
+            "type": "array",
+            "items": { "type": ["string", "integer"] }
+          },
+          "message": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "digest": { "$ref": "#/definitions/sha256" }
+  },
+  "definitions": {
+    "sha256": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+  }
+}

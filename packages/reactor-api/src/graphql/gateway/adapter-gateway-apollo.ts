@@ -60,6 +60,67 @@ export function filterComposableSubgraphs(
   });
 }
 
+type LocalCompositionOptions = {
+  update: SupergraphSdlUpdateFunction;
+  healthCheck: SubgraphHealthCheckFunction;
+  getDataSource: GetDataSourceFunction;
+};
+
+async function composeServiceList(
+  serviceList: ServiceDefinition[],
+  options: LocalCompositionOptions,
+  logger?: Pick<ILogger, "error">,
+) {
+  const composableServiceList = filterComposableSubgraphs(serviceList, logger);
+  return composeServiceListStrict(composableServiceList, options);
+}
+
+async function composeServiceListStrict(
+  serviceList: ServiceDefinition[],
+  options: LocalCompositionOptions,
+) {
+  const localCompose = new LocalCompose({
+    localServiceList: serviceList,
+  });
+  return localCompose.initialize(options);
+}
+
+function localCompositionOptions(): LocalCompositionOptions {
+  return {
+    update: () => undefined,
+    healthCheck: () => Promise.resolve(),
+    getDataSource: (service) => new RemoteGraphQLDataSource(service),
+  };
+}
+
+/**
+ * Compose subgraphs through the same filtering and Apollo LocalCompose path as
+ * the live gateway, without starting an HTTP server.
+ */
+export async function composeSubgraphDefinitions(
+  subgraphs: readonly SubgraphDefinition[],
+  logger?: Pick<ILogger, "error">,
+) {
+  const serviceList: ServiceDefinition[] = subgraphs.map((subgraph) => ({
+    name: subgraph.name,
+    typeDefs: subgraph.typeDefs,
+    url: subgraph.url,
+  }));
+  return composeServiceList(serviceList, localCompositionOptions(), logger);
+}
+
+/** Compose a prevalidated set without the live host's optional filtering. */
+export async function composeSubgraphDefinitionsStrict(
+  subgraphs: readonly SubgraphDefinition[],
+) {
+  const serviceList: ServiceDefinition[] = subgraphs.map((subgraph) => ({
+    name: subgraph.name,
+    typeDefs: subgraph.typeDefs,
+    url: subgraph.url,
+  }));
+  return composeServiceListStrict(serviceList, localCompositionOptions());
+}
+
 // Forwards the incoming authorization header to federated subgraph requests.
 class AuthenticatedDataSource extends RemoteGraphQLDataSource {
   willSendRequest(options: GraphQLDataSourceProcessOptions) {
@@ -172,14 +233,7 @@ export class ApolloGatewayAdapter implements IGatewayAdapter<Context> {
       typeDefs: s.typeDefs,
       url: s.url,
     }));
-    const composableServiceList = filterComposableSubgraphs(
-      serviceList,
-      this.#logger,
-    );
-    const localCompose = new LocalCompose({
-      localServiceList: composableServiceList,
-    });
-    return localCompose.initialize(this.#gatewayOptions);
+    return composeServiceList(serviceList, this.#gatewayOptions, this.#logger);
   }
 
   attachWebSocket(

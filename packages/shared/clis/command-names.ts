@@ -13,6 +13,9 @@ export const phCliCommandNames = [
   "inspect",
   "is",
   "migrate",
+  "model",
+  "subgraph",
+  "scalar",
   "switchboard",
   "reactor",
   "login",
@@ -23,3 +26,28 @@ export const phCliCommandNames = [
   "uninstall",
   "remove",
 ] as const;
+
+export const phCliCommandsWithSubcommands = [
+  "generate",
+  "connect",
+  "model",
+  "scalar",
+  "subgraph",
+] as const;
+
+export const phCliDefinitionReportCommands = [
+  "model",
+  "scalar",
+  "subgraph",
+] as const;
+
+export function isPhCliJsonReportInvocation(args: readonly string[]): boolean {
+  return (
+    phCliDefinitionReportCommands.includes(
+      args[0] as (typeof phCliDefinitionReportCommands)[number],
+    ) &&
+    args.some(
+      (argument) => argument === "--json" || argument.startsWith("--json="),
+    )
+  );
+}

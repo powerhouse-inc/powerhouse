@@ -32,6 +32,28 @@ describe("WorkerPackageLoader", () => {
     );
   });
 
+  it.each([
+    "../../escape",
+    "test-package@../../escape",
+    "test-package@tag?query",
+    "test-package@tag#fragment",
+    "test-package@bad%2Fsegment",
+    "test-package@bad\u0000tag",
+  ])("rejects an unsafe package spec before importing: %j", async (spec) => {
+    let imports = 0;
+    const loader = new WorkerPackageLoader({
+      cdnUrl: "https://cdn.example",
+      importPackage: () => {
+        imports += 1;
+        return Promise.resolve({});
+      },
+    });
+
+    await expect(loader.loadPackages([spec])).rejects.toThrow("Invalid");
+    expect(imports).toBe(0);
+    expect(loader.models).toEqual([]);
+  });
+
   it("resolves loaded models by document type and rejects unknown ones", async () => {
     const loader = new WorkerPackageLoader({
       cdnUrl: "https://cdn.example",

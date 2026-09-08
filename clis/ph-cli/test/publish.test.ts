@@ -1,6 +1,11 @@
 import { DEFAULT_REGISTRY_URL } from "@powerhousedao/shared/clis";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+const definitionMocks = vi.hoisted(() => ({
+  consume: vi.fn(),
+  render: vi.fn(),
+}));
+
 vi.mock("@powerhousedao/shared/clis", async (importOriginal) => {
   const actual: Record<string, unknown> = await importOriginal();
   return {
@@ -12,6 +17,12 @@ vi.mock("@powerhousedao/shared/registry", () => ({
   resolveRegistryUrl: vi.fn(),
   checkNpmAuth: vi.fn(),
   npmPublish: vi.fn(),
+}));
+vi.mock("../src/services/definition-release.js", () => ({
+  consumeRetainedDefinitionCheck: definitionMocks.consume,
+}));
+vi.mock("../src/services/definition-output.js", () => ({
+  renderDefinitionReport: definitionMocks.render,
 }));
 
 import { getPowerhouseProjectInfo } from "@powerhousedao/shared/clis";
@@ -43,6 +54,7 @@ describe("publish", () => {
     mockResolveRegistryUrl.mockReturnValue(DEFAULT_REGISTRY_URL);
     mockCheckNpmAuth.mockResolvedValue("testuser");
     mockNpmPublish.mockResolvedValue({ stdout: "published" });
+    definitionMocks.consume.mockReturnValue(undefined);
   });
 
   afterEach(() => {
@@ -157,5 +169,21 @@ describe("publish", () => {
     });
 
     exitSpy.mockRestore();
+  });
+
+  it("stops before registry access when retained release evidence is invalid", async () => {
+    definitionMocks.consume.mockReturnValue({ status: "invalid" });
+
+    await expect(runPublishHandler({})).rejects.toThrow(
+      "retained release definition report is missing, invalid, or stale",
+    );
+
+    expect(definitionMocks.render).toHaveBeenCalledWith(
+      { status: "invalid" },
+      false,
+    );
+    expect(mockResolveRegistryUrl).not.toHaveBeenCalled();
+    expect(mockCheckNpmAuth).not.toHaveBeenCalled();
+    expect(mockNpmPublish).not.toHaveBeenCalled();
   });
 });

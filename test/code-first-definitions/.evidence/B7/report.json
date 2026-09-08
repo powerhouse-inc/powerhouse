@@ -1,0 +1,350 @@
+{
+  "kind": "powerhouse.gate-evidence",
+  "formatVersion": 1,
+  "gate": "B7",
+  "contract": {
+    "status": "spec-complete",
+    "revision": "sha256:a7ccf254a06e9542fe8e21c59c385e7504a998982ee23444f4491143ef830e4a"
+  },
+  "evidence": {
+    "outcome": "pass"
+  },
+  "repository": {
+    "commit": "da05f917d6912bc30c5c944823c216ec47e19fa8",
+    "baseTreeDigest": "sha256:6d05bb4c4139466f81c0dbaae56f75d3d85af6486827e5a0b67dbf4814848eb0",
+    "baseDirty": false,
+    "appliedPatchDigest": "sha256:3cc2f2bc8e80aee821dfce01607ca32f0bca3964ba773a8c89045511004699a4"
+  },
+  "toolchain": {
+    "lockfileDigest": "sha256:b0b56565f0bf62f674db82eee2cfaa9c4a01a538ea593e0c8f3a42abf43ef6c0",
+    "runnerVersion": "0.1.0",
+    "node": "v24.14.0",
+    "packageManager": "pnpm@10.33.4",
+    "platform": "darwin",
+    "tools": {}
+  },
+  "fixture": {
+    "manifest": "test/code-first-definitions/fixtures/subgraphs/v1/manifest.json",
+    "fixtureVersion": "subgraphs-v1",
+    "manifestDigest": "sha256:13ac80b0b4815ad77904cf7134518671db1a65187adbba13330bf346cd555045",
+    "schemaDigest": "sha256:9a320fb708d0c5bba916dba4cd268cdd7283d21ce1128b5905b2bc247d8cc868",
+    "caseCount": 7
+  },
+  "dependencies": [
+    {
+      "gate": "B6",
+      "outcome": "pass",
+      "contractRevision": "sha256:a7ccf254a06e9542fe8e21c59c385e7504a998982ee23444f4491143ef830e4a",
+      "fixtureManifestDigest": "sha256:9833a7a867145affbca6a7373c2b6d76277109b306314821a78670387338d124",
+      "reportDigest": "sha256:87edf3ea3d92511fa1b2ef6987c5de00470d0afc90aceea3e082703b19554bed"
+    },
+    {
+      "gate": "B9",
+      "outcome": "pass",
+      "contractRevision": "sha256:a7ccf254a06e9542fe8e21c59c385e7504a998982ee23444f4491143ef830e4a",
+      "fixtureManifestDigest": "sha256:597d6f2a4716a4633765c558f36eb8fe288529c0940ea56d72cf73956b38b43c",
+      "reportDigest": "sha256:90804ebad634118d2148239141b23f74a920f34f0cfb6003bef7c0a41658f39d"
+    }
+  ],
+  "command": {
+    "name": "gate-evidence",
+    "args": [
+      "--gate",
+      "B7",
+      "--manifest",
+      "fixtures/subgraphs/v1/manifest.json",
+      "--out",
+      ".evidence/B7"
+    ],
+    "cwd": "<repository>"
+  },
+  "assertions": [
+    {
+      "id": "B7.definition-schema",
+      "outcome": "pass",
+      "expected": "typed and compatibility definitions match the closed V1 schema",
+      "received": "all declared subgraph cases matched",
+      "artifactRefs": [
+        "subgraph-manifest",
+        "composition-goldens"
+      ]
+    },
+    {
+      "id": "B7.author-ast",
+      "outcome": "pass",
+      "expected": "legacy and code-first author AST order and bytes match",
+      "received": "all declared subgraph cases matched",
+      "artifactRefs": [
+        "subgraph-manifest",
+        "composition-goldens"
+      ]
+    },
+    {
+      "id": "B7.augmented-schema",
+      "outcome": "pass",
+      "expected": "the current host produces the same augmented schema",
+      "received": "all declared subgraph cases matched",
+      "artifactRefs": [
+        "subgraph-manifest",
+        "composition-goldens"
+      ]
+    },
+    {
+      "id": "B7.resolver-call",
+      "outcome": "pass",
+      "expected": "parent, args, subgraph, request, info, and outcomes match",
+      "received": "all declared subgraph cases matched",
+      "artifactRefs": [
+        "subscription-manifest",
+        "event-goldens"
+      ]
+    },
+    {
+      "id": "B7.composition",
+      "outcome": "pass",
+      "expected": "the installed Apollo LocalCompose result and diagnostics match",
+      "received": "all declared subgraph cases matched",
+      "artifactRefs": [
+        "subgraph-manifest",
+        "composition-goldens"
+      ]
+    },
+    {
+      "id": "B7.route",
+      "outcome": "pass",
+      "expected": "registration publishes the same route and composition name",
+      "received": "all declared subgraph cases matched",
+      "artifactRefs": [
+        "subgraph-manifest",
+        "composition-goldens"
+      ]
+    },
+    {
+      "id": "B7.transport",
+      "outcome": "pass",
+      "expected": "transport flags, allocation, delivery, and cleanup behavior match",
+      "received": "all declared subgraph cases matched",
+      "artifactRefs": [
+        "subscription-manifest",
+        "event-goldens"
+      ]
+    },
+    {
+      "id": "B7.hot-reload",
+      "outcome": "pass",
+      "expected": "duplicate registration and composition-failure outcomes remain current-host identical",
+      "received": "all declared subgraph cases matched",
+      "artifactRefs": [
+        "subgraph-manifest",
+        "composition-goldens"
+      ]
+    }
+  ],
+  "measurements": [],
+  "artifacts": [
+    {
+      "name": "subgraph-manifest",
+      "path": "test/code-first-definitions/fixtures/subgraphs/v1/manifest.json",
+      "mediaType": "application/json",
+      "bytes": 2665,
+      "digest": "sha256:fbdf63f56ac1d0c1ab4a6fbf8fa970c1eb63f3bdf03ff2087ee1d7c35927d975",
+      "retention": "committed"
+    },
+    {
+      "name": "subscription-manifest",
+      "path": "test/code-first-definitions/fixtures/subscriptions/v1/manifest.json",
+      "mediaType": "application/json",
+      "bytes": 811,
+      "digest": "sha256:399cc87aadc39c21baacac70e605d8e30d1a01aa9ce323e0b8a900b0464a2768",
+      "retention": "committed"
+    },
+    {
+      "name": "composition-goldens",
+      "path": "test/code-first-definitions/fixtures/subgraphs/v1/composition-goldens.json",
+      "mediaType": "application/vnd.powerhouse.composition-goldens+json",
+      "bytes": 3943,
+      "digest": "sha256:fcca7c4111a7e20e3d96e71e5766fc850bf410d3636b75e24021adc8b977936b",
+      "retention": "committed"
+    },
+    {
+      "name": "event-goldens",
+      "path": "test/code-first-definitions/fixtures/subgraphs/v1/event-goldens.json",
+      "mediaType": "application/vnd.powerhouse.event-goldens+json",
+      "bytes": 3124,
+      "digest": "sha256:cb214c08fc395f1a7011d2ac5bd09f8c9c66349b49905ea5e3cd35ed89993edd",
+      "retention": "committed"
+    }
+  ],
+  "results": {
+    "cases": [
+      {
+        "caseId": "typed-query-field",
+        "authorAstDigest": "sha256:f175c41fd26e06c9d0504b681c71390b20e733dfc7d38face199f7e9805063ee",
+        "augmentedAstDigest": "sha256:ae467bba9ff59ee16b56cbd2fa37ac79d7c643a574f87ff434e355408fbd3f50",
+        "resolverCallDigest": "sha256:3a4949ae4ecd59d450e7cad647318cf980034320ee7c3b7bcfadce8feb57511b",
+        "supergraphDigest": "sha256:2a58b64147f93798252094ff3ae25079622b78b27e84ecbcba04a1e5237ad00d",
+        "apolloDiagnostics": [],
+        "route": "/api/graphql/typed-query",
+        "compositionName": ":api/graphql/typed-query",
+        "transportFlags": {
+          "hasSubscriptions": [
+            false
+          ],
+          "webSocketAllocations": 0,
+          "sseRoutes": []
+        },
+        "allocationCount": 0,
+        "cleanupObservations": [],
+        "deliveryDigest": "sha256:99590b72613e0923455033ad9acd1d8d03eb8d86b9195252f443854733bd4514",
+        "replacementOutcome": "not-applicable",
+        "firstMismatch": null
+      },
+      {
+        "caseId": "compat-manual-query",
+        "authorAstDigest": "sha256:fce735cb56e7a4e2708b738dc96f39d686a44cb0954b7017b57ca69d939ae770",
+        "augmentedAstDigest": "sha256:19856cf041c7d8dcfc400a1742bf12bcbeaf9b3c82c9de61a7ac3296186cc8d3",
+        "resolverCallDigest": "sha256:88f86d1c13ac06ca94577d468983afd9d7313b315229c8989f79791a47ee2888",
+        "supergraphDigest": "sha256:463df3e87d28b37f2ab0ca302e7a8214ef2353d1f2947794c88cf986feaf48ca",
+        "apolloDiagnostics": [],
+        "route": "/api/graphql/manual-query",
+        "compositionName": ":api/graphql/manual-query",
+        "transportFlags": {
+          "hasSubscriptions": [
+            false
+          ],
+          "webSocketAllocations": 0,
+          "sseRoutes": []
+        },
+        "allocationCount": 0,
+        "cleanupObservations": [],
+        "deliveryDigest": "sha256:d487e962c5b7d11c0e2f7b3373230ac26eda6c83959c79a64e0d429bf7e0db7e",
+        "replacementOutcome": "not-applicable",
+        "firstMismatch": null
+      },
+      {
+        "caseId": "typed-subscription-true",
+        "authorAstDigest": "sha256:f746fc49e27cedd2bfd94a10d660198d027f5ed9b5ca7195afa28294dad6371d",
+        "augmentedAstDigest": "sha256:f0cd30ba06ee187d2cb4c04c1c3eec7c9e425a4a07045dc9197b20c2aa16cd80",
+        "resolverCallDigest": "sha256:204d97812c661db98865356c80209baab3016d0d64b0ede4b3ad31a5bcf80051",
+        "supergraphDigest": "sha256:4c3bb227751c2f796ff02f845bea157c57066c67fa3be1bc79f88f14e34606d5",
+        "apolloDiagnostics": [],
+        "route": "/api/graphql/typed-subscription",
+        "compositionName": ":api/graphql/typed-subscription",
+        "transportFlags": {
+          "hasSubscriptions": [
+            true
+          ],
+          "webSocketAllocations": 1,
+          "sseRoutes": [
+            "/api/graphql/stream",
+            "/api/graphql/typed-subscription/stream"
+          ]
+        },
+        "allocationCount": 1,
+        "cleanupObservations": [
+          "cleanup"
+        ],
+        "deliveryDigest": "sha256:83c08236d751be234d775ce9044b78a184bd4b239746170eff8abf35f452c22d",
+        "replacementOutcome": "not-applicable",
+        "firstMismatch": null
+      },
+      {
+        "caseId": "compat-subscription-undefined",
+        "authorAstDigest": "sha256:f746fc49e27cedd2bfd94a10d660198d027f5ed9b5ca7195afa28294dad6371d",
+        "augmentedAstDigest": "sha256:f0cd30ba06ee187d2cb4c04c1c3eec7c9e425a4a07045dc9197b20c2aa16cd80",
+        "resolverCallDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "supergraphDigest": "sha256:b49d174aba79cd9d6ebea7de3201d21d29fa4a91782b8152d1b53a209d4a3122",
+        "apolloDiagnostics": [],
+        "route": "/api/graphql/compat-subscription-undefined",
+        "compositionName": ":api/graphql/compat-subscription-undefined",
+        "transportFlags": {
+          "hasSubscriptions": [
+            "undefined"
+          ],
+          "webSocketAllocations": 0,
+          "sseRoutes": []
+        },
+        "allocationCount": 0,
+        "cleanupObservations": [],
+        "deliveryDigest": "sha256:5ddf2ebf4f5acd4039544382ee5507c1bb16f2826a40975d702ee8feecc9c762",
+        "replacementOutcome": "not-applicable",
+        "firstMismatch": null
+      },
+      {
+        "caseId": "compat-subscription-false",
+        "authorAstDigest": "sha256:f746fc49e27cedd2bfd94a10d660198d027f5ed9b5ca7195afa28294dad6371d",
+        "augmentedAstDigest": "sha256:f0cd30ba06ee187d2cb4c04c1c3eec7c9e425a4a07045dc9197b20c2aa16cd80",
+        "resolverCallDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "supergraphDigest": "sha256:2c10d4ff38ced25ce0d00e716f3b1dd69a63656f1ba4fbc44ac84ae4e5551815",
+        "apolloDiagnostics": [],
+        "route": "/api/graphql/compat-subscription-false",
+        "compositionName": ":api/graphql/compat-subscription-false",
+        "transportFlags": {
+          "hasSubscriptions": [
+            false
+          ],
+          "webSocketAllocations": 0,
+          "sseRoutes": []
+        },
+        "allocationCount": 0,
+        "cleanupObservations": [],
+        "deliveryDigest": "sha256:5ddf2ebf4f5acd4039544382ee5507c1bb16f2826a40975d702ee8feecc9c762",
+        "replacementOutcome": "not-applicable",
+        "firstMismatch": null
+      },
+      {
+        "caseId": "duplicate-first-wins",
+        "authorAstDigest": "sha256:39f24ecbd5ea169d8cf6c38084055362553ccd05b8f5d9a7320c9d498c2fb5fa",
+        "augmentedAstDigest": "sha256:4fb9a3df482e64b1b04be50fff9115390ceea121549955cf7b0723e7f37ccdf2",
+        "resolverCallDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "supergraphDigest": "sha256:fe2a519fefae5e76f2afb9d4e19f9de7643b09c0cffc464e8ccdf3d0a9eb724b",
+        "apolloDiagnostics": [],
+        "route": "/api/graphql/duplicate-generation",
+        "compositionName": ":api/graphql/duplicate-generation",
+        "transportFlags": {
+          "hasSubscriptions": [
+            false
+          ],
+          "webSocketAllocations": 0,
+          "sseRoutes": []
+        },
+        "allocationCount": 0,
+        "cleanupObservations": [],
+        "deliveryDigest": "sha256:4736f81fb4326309671ef2612bb29d0f7c71a00c978264c61ba43883fce062f0",
+        "replacementOutcome": "kept-first",
+        "firstMismatch": null
+      },
+      {
+        "caseId": "composition-conflict-routes-kept",
+        "authorAstDigest": "sha256:3a2841222cb0f512d76d51e1268cc83e189ce9959a5cc256392d9b437d94b07b",
+        "augmentedAstDigest": "sha256:471240e0e696fc0c0531f7da1ad8e2437fecabe3aaedc359de2365beeec600e1",
+        "resolverCallDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "supergraphDigest": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "apolloDiagnostics": [
+          "composition:A valid schema couldn't be composed. The following composition errors were found: Type of field \"Query.shared\" is incompatible across subgraphs: it has type \"String!\" in subgraph \":api/graphql/conflict-a\" but type \"Int!\" in subgraph \":api/graphql/conflict-b\""
+        ],
+        "route": "/api/graphql/conflict-a,/api/graphql/conflict-b",
+        "compositionName": ":api/graphql/conflict-a,:api/graphql/conflict-b",
+        "transportFlags": {
+          "hasSubscriptions": [
+            false,
+            false
+          ],
+          "webSocketAllocations": 0,
+          "sseRoutes": []
+        },
+        "allocationCount": 0,
+        "cleanupObservations": [],
+        "deliveryDigest": "sha256:5ddf2ebf4f5acd4039544382ee5507c1bb16f2826a40975d702ee8feecc9c762",
+        "replacementOutcome": "composition-failed-routes-kept",
+        "firstMismatch": null
+      }
+    ]
+  },
+  "summary": {
+    "passed": 8,
+    "failed": 0,
+    "blocked": 0,
+    "cancelled": 0
+  }
+}

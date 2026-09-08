@@ -2,7 +2,7 @@ import { generateEditor } from "@powerhousedao/codegen";
 import { buildTsMorphProject } from "@powerhousedao/codegen/utils";
 import { directoryExists, fileExists } from "@powerhousedao/shared/clis";
 import { describe, expect, it } from "bun:test";
-import { readFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
   TEST_OUTPUT,
@@ -88,6 +88,46 @@ describe("generateEditor", () => {
     expect(editorsContent).toContain(`ExistingDocumentEditor`);
     expect(editorsContent).toContain(`ExistingApp`);
     expect(editorsContent).toContain(`TestDocEditor`);
+    await runTsc(outDir);
+  });
+
+  it("should scaffold an editor for a code-first model in the manifest", async () => {
+    const outDir = join(parentOutDir, "generate-code-first-editor");
+    await cpForce(WITH_DOCUMENT_MODELS_SPEC_1, outDir);
+
+    const manifestPath = join(outDir, "powerhouse.manifest.json");
+    const manifest = JSON.parse(await readFile(manifestPath, "utf8")) as {
+      documentModels: { id: string; name: string }[];
+    };
+    manifest.documentModels.push({
+      id: "test/code-first-todo",
+      name: "Code First Todo",
+    });
+    await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+
+    const project = buildTsMorphProject(outDir);
+    await generateEditor(
+      {
+        editorName: "Code First Todo Editor",
+        editorId: "code-first-todo-editor",
+        documentTypes: ["test/code-first-todo"],
+      },
+      project,
+    );
+    await project.save();
+
+    const editorPath = join(
+      outDir,
+      "editors",
+      "code-first-todo-editor",
+      "editor.tsx",
+    );
+    const editorContent = await readFile(editorPath, "utf8");
+    expect(editorContent).toContain("useSelectedDocumentOfType");
+    expect(editorContent).toContain('"test/code-first-todo"');
+    expect(editorContent).toContain("dispatch(baseActions.setName(name));");
+    expect(editorContent).not.toContain("document-models/code-first-todo");
+
     await runTsc(outDir);
   });
 });

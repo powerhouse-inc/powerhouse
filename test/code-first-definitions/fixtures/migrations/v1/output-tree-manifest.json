@@ -1,0 +1,17 @@
+{
+  "kind": "powerhouse.byte-manifest",
+  "formatVersion": 1,
+  "root": "test/versioned-documents/document-models/.verification/todo",
+  "files": [
+    {
+      "path": "code-first.ts",
+      "bytes": 44474,
+      "digest": "sha256:71dca63c43fad9296769bf24c39651d533b1586b905b217a464f75038d706783"
+    },
+    {
+      "path": "migration-report.json",
+      "bytes": 4674,
+      "digest": "sha256:d2b763723a5ea044ead86d6ba9e28f4d4924763a2bcc1381c3576880e234e7ba"
+    }
+  ]
+}

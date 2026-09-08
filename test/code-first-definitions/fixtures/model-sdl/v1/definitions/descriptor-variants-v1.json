@@ -1,0 +1,568 @@
+{
+  "kind": "powerhouse.document-model",
+  "formatVersion": 1,
+  "compatibility": {
+    "identity": "derived-v1",
+    "scalarCoercion": "document-engineering-1.40",
+    "serialization": "canonical-v1"
+  },
+  "model": {
+    "documentType": "powerhouse/invoice",
+    "graphQLName": "Invoice",
+    "name": "Invoice",
+    "description": "An invoice issued to a counterparty.",
+    "extension": ".phinv",
+    "author": {
+      "name": "Powerhouse",
+      "website": "https://powerhouse.inc"
+    }
+  },
+  "specifications": [
+    {
+      "version": 1,
+      "scalars": [
+        {
+          "name": "PHID",
+          "implementation": "powerhouse.catalog#PHID",
+          "coercionProfile": "document-engineering-1.40"
+        },
+        {
+          "name": "OID",
+          "implementation": "powerhouse.catalog#OID",
+          "coercionProfile": "document-engineering-1.40"
+        },
+        {
+          "name": "Currency",
+          "implementation": "powerhouse.catalog#Currency",
+          "coercionProfile": "document-engineering-1.40"
+        },
+        {
+          "name": "DateTime",
+          "implementation": "powerhouse.catalog#DateTime",
+          "coercionProfile": "document-engineering-1.40"
+        },
+        {
+          "name": "Amount_Money",
+          "implementation": "powerhouse.catalog#Amount_Money",
+          "coercionProfile": "document-engineering-1.40"
+        }
+      ],
+      "graphQLCompatibility": null,
+      "types": [
+        {
+          "kind": "object",
+          "name": "InvoiceState",
+          "description": null,
+          "fields": [
+            {
+              "key": "issuer",
+              "name": "issuer",
+              "description": null,
+              "deprecated": null,
+              "type": {
+                "kind": "scalar",
+                "name": "PHID",
+                "required": true
+              }
+            },
+            {
+              "key": "number",
+              "name": "number",
+              "description": null,
+              "deprecated": null,
+              "type": {
+                "kind": "scalar",
+                "name": "String",
+                "required": true
+              }
+            },
+            {
+              "key": "status",
+              "name": "status",
+              "description": null,
+              "deprecated": null,
+              "type": {
+                "kind": "named",
+                "name": "InvoiceStatus",
+                "required": true
+              }
+            },
+            {
+              "key": "currency",
+              "name": "currency",
+              "description": null,
+              "deprecated": null,
+              "type": {
+                "kind": "scalar",
+                "name": "Currency",
+                "required": true
+              }
+            },
+            {
+              "key": "lineItems",
+              "name": "lineItems",
+              "description": null,
+              "deprecated": null,
+              "type": {
+                "kind": "list",
+                "required": true,
+                "item": {
+                  "kind": "named",
+                  "name": "InvoiceLineItem",
+                  "required": true
+                }
+              }
+            },
+            {
+              "key": "issuedAt",
+              "name": "issuedAt",
+              "description": null,
+              "deprecated": null,
+              "type": {
+                "kind": "scalar",
+                "name": "DateTime",
+                "required": false
+              }
+            },
+            {
+              "key": "total",
+              "name": "total",
+              "description": null,
+              "deprecated": null,
+              "type": {
+                "kind": "scalar",
+                "name": "Amount_Money",
+                "required": true
+              }
+            },
+            {
+              "key": "auditTrail",
+              "name": "auditTrail",
+              "description": "Nested list nullability probe.",
+              "deprecated": null,
+              "type": {
+                "kind": "list",
+                "required": true,
+                "item": {
+                  "kind": "list",
+                  "required": false,
+                  "item": {
+                    "kind": "scalar",
+                    "name": "String",
+                    "required": true
+                  }
+                }
+              }
+            },
+            {
+              "key": "payment",
+              "name": "payment",
+              "description": null,
+              "deprecated": null,
+              "type": {
+                "kind": "named",
+                "name": "PaymentMethod",
+                "required": false
+              }
+            },
+            {
+              "key": "summary",
+              "name": "summary",
+              "description": "Computed-field argument projection probe.",
+              "deprecated": "Use the state fields directly.",
+              "args": [
+                {
+                  "key": "locale",
+                  "name": "locale",
+                  "description": null,
+                  "deprecated": null,
+                  "type": {
+                    "kind": "scalar",
+                    "name": "String",
+                    "required": false
+                  },
+                  "defaultValue": "en"
+                }
+              ],
+              "type": {
+                "kind": "scalar",
+                "name": "String",
+                "required": true
+              }
+            }
+          ]
+        },
+        {
+          "kind": "enum",
+          "name": "InvoiceStatus",
+          "description": null,
+          "values": [
+            {
+              "name": "DRAFT",
+              "description": null,
+              "deprecated": null
+            },
+            {
+              "name": "ISSUED",
+              "description": null,
+              "deprecated": null
+            },
+            {
+              "name": "PAID",
+              "description": null,
+              "deprecated": null
+            },
+            {
+              "name": "VOID",
+              "description": null,
+              "deprecated": null
+            }
+          ]
+        },
+        {
+          "kind": "object",
+          "name": "InvoiceLineItem",
+          "description": null,
+          "fields": [
+            {
+              "key": "id",
+              "name": "id",
+              "description": null,
+              "deprecated": null,
+              "type": {
+                "kind": "scalar",
+                "name": "OID",
+                "required": true
+              }
+            },
+            {
+              "key": "description",
+              "name": "description",
+              "description": null,
+              "deprecated": null,
+              "type": {
+                "kind": "scalar",
+                "name": "String",
+                "required": true
+              }
+            },
+            {
+              "key": "quantity",
+              "name": "quantity",
+              "description": null,
+              "deprecated": null,
+              "type": {
+                "kind": "scalar",
+                "name": "Int",
+                "required": true
+              }
+            },
+            {
+              "key": "unitPrice",
+              "name": "unitPrice",
+              "description": null,
+              "deprecated": null,
+              "type": {
+                "kind": "scalar",
+                "name": "Amount_Money",
+                "required": true
+              }
+            }
+          ]
+        },
+        {
+          "kind": "object",
+          "name": "InvoiceLocalState",
+          "description": null,
+          "fields": [
+            {
+              "key": "draftNote",
+              "name": "draftNote",
+              "description": null,
+              "deprecated": null,
+              "type": {
+                "kind": "scalar",
+                "name": "String",
+                "required": false
+              }
+            }
+          ]
+        },
+        {
+          "kind": "interface",
+          "name": "Payable",
+          "description": "A payment discriminator interface.",
+          "fields": [
+            {
+              "key": "reference",
+              "name": "reference",
+              "description": null,
+              "deprecated": null,
+              "type": {
+                "kind": "scalar",
+                "name": "String",
+                "required": true
+              }
+            }
+          ]
+        },
+        {
+          "kind": "object",
+          "name": "WirePayment",
+          "description": null,
+          "implements": [
+            "Payable"
+          ],
+          "fields": [
+            {
+              "key": "reference",
+              "name": "reference",
+              "description": null,
+              "deprecated": null,
+              "type": {
+                "kind": "scalar",
+                "name": "String",
+                "required": true
+              }
+            },
+            {
+              "key": "bank",
+              "name": "bank",
+              "description": null,
+              "deprecated": null,
+              "type": {
+                "kind": "scalar",
+                "name": "String",
+                "required": true
+              }
+            }
+          ]
+        },
+        {
+          "kind": "object",
+          "name": "CardPayment",
+          "description": null,
+          "implements": [
+            "Payable"
+          ],
+          "fields": [
+            {
+              "key": "reference",
+              "name": "reference",
+              "description": null,
+              "deprecated": null,
+              "type": {
+                "kind": "scalar",
+                "name": "String",
+                "required": true
+              }
+            },
+            {
+              "key": "lastFour",
+              "name": "lastFour",
+              "description": null,
+              "deprecated": null,
+              "type": {
+                "kind": "scalar",
+                "name": "String",
+                "required": true
+              }
+            }
+          ]
+        },
+        {
+          "kind": "union",
+          "name": "PaymentMethod",
+          "description": null,
+          "members": [
+            "WirePayment",
+            "CardPayment"
+          ]
+        },
+        {
+          "kind": "input",
+          "name": "InvoiceSearchInput",
+          "description": "Unreachable input retained by descriptor projection.",
+          "unknownKeys": "preserve",
+          "fields": [
+            {
+              "key": "query",
+              "name": "query",
+              "description": null,
+              "deprecated": null,
+              "type": {
+                "kind": "scalar",
+                "name": "String",
+                "required": false
+              }
+            }
+          ]
+        },
+        {
+          "kind": "object",
+          "name": "UnreachableAuditRecord",
+          "description": "An intentionally unreachable auxiliary type.",
+          "fields": [
+            {
+              "key": "id",
+              "name": "id",
+              "description": null,
+              "deprecated": null,
+              "type": {
+                "kind": "scalar",
+                "name": "ID",
+                "required": true
+              }
+            }
+          ]
+        }
+      ],
+      "state": {
+        "global": {
+          "root": {
+            "kind": "named",
+            "name": "InvoiceState",
+            "required": true
+          },
+          "initialValue": {
+            "issuer": "",
+            "number": "",
+            "status": "DRAFT",
+            "currency": "USD",
+            "lineItems": [],
+            "issuedAt": null,
+            "total": 0,
+            "auditTrail": [],
+            "payment": null
+          },
+          "examples": [
+            {
+              "id": "d165bf74-2083-508b-a927-8f45a153fdc7",
+              "key": "empty",
+              "value": "{\"issuer\":\"\",\"number\":\"\",\"status\":\"DRAFT\",\"currency\":\"USD\",\"lineItems\":[],\"issuedAt\":null,\"total\":0}"
+            }
+          ],
+          "unknownKeys": "preserve",
+          "materialized": {
+            "schema": "type InvoiceState {\n  issuer: PHID!\n  number: String!\n  status: InvoiceStatus!\n  currency: Currency!\n  lineItems: [InvoiceLineItem!]!\n  issuedAt: DateTime\n  total: Amount_Money!\n}\n\nenum InvoiceStatus {\n  DRAFT\n  ISSUED\n  PAID\n  VOID\n}\n\ntype InvoiceLineItem {\n  id: OID!\n  description: String!\n  quantity: Int!\n  unitPrice: Amount_Money!\n}\n",
+            "initialValue": "{\"issuer\":\"\",\"number\":\"\",\"status\":\"DRAFT\",\"currency\":\"USD\",\"lineItems\":[],\"issuedAt\":null,\"total\":0}",
+            "examples": [
+              {
+                "id": "d165bf74-2083-508b-a927-8f45a153fdc7",
+                "value": "{\"issuer\":\"\",\"number\":\"\",\"status\":\"DRAFT\",\"currency\":\"USD\",\"lineItems\":[],\"issuedAt\":null,\"total\":0}"
+              }
+            ]
+          }
+        },
+        "local": {
+          "root": {
+            "kind": "named",
+            "name": "InvoiceLocalState",
+            "required": true
+          },
+          "initialValue": {
+            "draftNote": null
+          },
+          "examples": [],
+          "unknownKeys": "preserve",
+          "materialized": {
+            "schema": "type InvoiceLocalState {\n  draftNote: String\n}\n",
+            "initialValue": "{\"draftNote\":null}",
+            "examples": []
+          }
+        }
+      },
+      "modules": [
+        {
+          "id": "4c323bb9-fd39-5600-9af2-bc0c28489e37",
+          "key": "lineItems",
+          "name": "LineItems",
+          "description": "Add and remove invoice line items.",
+          "operations": [
+            {
+              "id": "f9ba524d-2a61-53f3-bbd9-452ed03b7523",
+              "key": "addLineItem",
+              "name": "AddLineItem",
+              "description": null,
+              "actionType": "ADD_LINE_ITEM",
+              "creatorKey": "addLineItem",
+              "scope": "global",
+              "input": {
+                "kind": "input",
+                "name": "AddLineItemInput",
+                "description": null,
+                "unknownKeys": "preserve",
+                "fields": [
+                  {
+                    "key": "id",
+                    "name": "id",
+                    "description": null,
+                    "deprecated": null,
+                    "type": {
+                      "kind": "scalar",
+                      "name": "OID",
+                      "required": true
+                    }
+                  },
+                  {
+                    "key": "description",
+                    "name": "description",
+                    "description": null,
+                    "deprecated": null,
+                    "type": {
+                      "kind": "scalar",
+                      "name": "String",
+                      "required": true
+                    }
+                  },
+                  {
+                    "key": "quantity",
+                    "name": "quantity",
+                    "description": null,
+                    "deprecated": null,
+                    "type": {
+                      "kind": "scalar",
+                      "name": "Int",
+                      "required": true
+                    }
+                  },
+                  {
+                    "key": "unitPrice",
+                    "name": "unitPrice",
+                    "description": null,
+                    "deprecated": null,
+                    "type": {
+                      "kind": "scalar",
+                      "name": "Amount_Money",
+                      "required": true
+                    }
+                  }
+                ]
+              },
+              "errors": [
+                {
+                  "id": "580a9129-daff-5fd7-a92b-25a90031595d",
+                  "key": "InvoiceAlreadyIssued",
+                  "code": "INVOICE_ALREADY_ISSUED",
+                  "name": "InvoiceAlreadyIssued",
+                  "description": "The invoice has left DRAFT and cannot be edited.",
+                  "template": ""
+                }
+              ],
+              "examples": [
+                {
+                  "id": "7081d8a7-0cef-55ad-8d2f-99a978fdfde0",
+                  "key": "item",
+                  "value": "{\"id\":\"item-1\",\"description\":\"Consulting\",\"quantity\":1,\"unitPrice\":100}"
+                }
+              ],
+              "template": null,
+              "reducer": null
+            }
+          ]
+        }
+      ],
+      "changeLog": []
+    }
+  ]
+}

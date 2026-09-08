@@ -20,11 +20,12 @@ export default defineConfig({
   test: {
     globals: true,
     environment: "node",
-    // Scoped include: the schema/connect suites plus the document-drive tests.
-    // Other shared test suites (clis/tests/* hit the npm registry, etc.) have
-    // their own runners / environment requirements; folding them in is a
-    // separate effort.
+    // Keep the default run to suites that need no registry or special runtime.
+    // The remaining shared tests have their own runners and environment setup.
     include: [
+      "clis/command-names.test.ts",
+      "clis/file-system/get-config-strict.test.ts",
+      "clis/file-system/spawn-async.test.ts",
       "clis/source-config-schema.test.ts",
       "connect/config-loader.test.ts",
       "connect/env-config.test.ts",

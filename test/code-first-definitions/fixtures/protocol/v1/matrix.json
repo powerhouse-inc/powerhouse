@@ -1,0 +1,1783 @@
+{
+  "kind": "powerhouse.gate-fixture-manifest",
+  "formatVersion": 1,
+  "gate": "B3",
+  "fixtureVersion": "1.0.0",
+  "requiredTools": {
+    "node": ">=24",
+    "zod": "catalog",
+    "graphql": "catalog"
+  },
+  "schemaDigest": "sha256:9a320fb708d0c5bba916dba4cd268cdd7283d21ce1128b5905b2bc247d8cc868",
+  "directDependencies": [
+    {
+      "gate": "B1",
+      "contractRevision": "sha256:a7ccf254a06e9542fe8e21c59c385e7504a998982ee23444f4491143ef830e4a",
+      "fixtureManifestDigest": "sha256:3b1ecf4f491d0459ddf129ff1a2ee33b8e05171cdbe857a2c0da7273667080ce"
+    },
+    {
+      "gate": "B9",
+      "contractRevision": "sha256:a7ccf254a06e9542fe8e21c59c385e7504a998982ee23444f4491143ef830e4a",
+      "fixtureManifestDigest": "sha256:597d6f2a4716a4633765c558f36eb8fe288529c0940ea56d72cf73956b38b43c"
+    }
+  ],
+  "caseCount": 23,
+  "cases": [
+    {
+      "rowId": "creator-valid",
+      "route": "creator",
+      "version": 1,
+      "scope": "global",
+      "rawInput": {
+        "operation": "increment",
+        "input": {
+          "amount": 2,
+          "tag": "creator"
+        }
+      },
+      "compatibilityMode": "core-v1",
+      "expected": {
+        "outcomeCode": "applied",
+        "state": {
+          "document": {
+            "clipboard": [],
+            "operations": {
+              "document": [],
+              "global": [
+                {
+                  "context": null,
+                  "deniedReason": null,
+                  "error": null,
+                  "hash": "8lROXczlpVH8vhglYwXujsDA3q4=",
+                  "index": 0,
+                  "input": {
+                    "amount": 2,
+                    "tag": "creator"
+                  },
+                  "scope": "global",
+                  "skip": 0,
+                  "type": "INCREMENT"
+                }
+              ],
+              "local": []
+            },
+            "revision": {
+              "document": 0,
+              "global": 1,
+              "local": 0
+            },
+            "state": {
+              "document": {
+                "isDeleted": null,
+                "version": 1
+              },
+              "scopes": {
+                "global": {
+                  "counter": 2,
+                  "events": [
+                    "creator:no-extra"
+                  ]
+                },
+                "local": {
+                  "counter": 0,
+                  "draft": "",
+                  "events": []
+                }
+              }
+            }
+          },
+          "protocol": {
+            "creatorScope": "global"
+          }
+        },
+        "hashDelta": {
+          "before": {
+            "document": "xY7c9LTQetDEgrquYl+LpCjZufE=",
+            "global": "vj8hwNwjfKEumOWjt34LUcyfiVU=",
+            "local": "yb47HTShekNgy6H4bpQsAxwwX5U="
+          },
+          "after": {
+            "document": "xY7c9LTQetDEgrquYl+LpCjZufE=",
+            "global": "8lROXczlpVH8vhglYwXujsDA3q4=",
+            "local": "yb47HTShekNgy6H4bpQsAxwwX5U="
+          }
+        },
+        "errors": [],
+        "dispatches": [],
+        "errorCode": null,
+        "storedErrorCode": null,
+        "selectedModuleVersion": 1,
+        "upgradePath": []
+      }
+    },
+    {
+      "rowId": "creator-invalid",
+      "route": "creator",
+      "version": 1,
+      "scope": "global",
+      "rawInput": {
+        "operation": "increment",
+        "input": {
+          "amount": "not-an-integer",
+          "tag": "invalid"
+        }
+      },
+      "compatibilityMode": "core-v1",
+      "expected": {
+        "outcomeCode": "creator-rejected",
+        "state": {
+          "clipboard": [],
+          "operations": {
+            "document": [],
+            "global": [],
+            "local": []
+          },
+          "revision": {
+            "document": 0,
+            "global": 0,
+            "local": 0
+          },
+          "state": {
+            "document": {
+              "isDeleted": null,
+              "version": 1
+            },
+            "scopes": {
+              "global": {
+                "counter": 0,
+                "events": []
+              },
+              "local": {
+                "counter": 0,
+                "draft": "",
+                "events": []
+              }
+            }
+          }
+        },
+        "hashDelta": {
+          "before": {
+            "document": "xY7c9LTQetDEgrquYl+LpCjZufE=",
+            "global": "vj8hwNwjfKEumOWjt34LUcyfiVU=",
+            "local": "yb47HTShekNgy6H4bpQsAxwwX5U="
+          },
+          "after": {
+            "document": "xY7c9LTQetDEgrquYl+LpCjZufE=",
+            "global": "vj8hwNwjfKEumOWjt34LUcyfiVU=",
+            "local": "yb47HTShekNgy6H4bpQsAxwwX5U="
+          }
+        },
+        "errors": [
+          "InvalidActionInputZodError:invalid_type@amount:Invalid input: expected number, received string"
+        ],
+        "dispatches": [],
+        "errorCode": null,
+        "storedErrorCode": null,
+        "selectedModuleVersion": 1,
+        "upgradePath": []
+      }
+    },
+    {
+      "rowId": "raw-invalid",
+      "route": "raw-action",
+      "version": 1,
+      "scope": "global",
+      "rawInput": {
+        "type": "INCREMENT",
+        "input": {
+          "amount": "invalid"
+        }
+      },
+      "compatibilityMode": "core-v1",
+      "expected": {
+        "outcomeCode": "reducer-error",
+        "state": {
+          "clipboard": [],
+          "operations": {
+            "document": [],
+            "global": [
+              {
+                "context": null,
+                "deniedReason": null,
+                "error": "[\n  {\n    \"expected\": \"number\",\n    \"code\": \"invalid_type\",\n    \"path\": [\n      \"amount\"\n    ],\n    \"message\": \"Invalid input: expected number, received string\"\n  }\n]",
+                "hash": "vj8hwNwjfKEumOWjt34LUcyfiVU=",
+                "index": 0,
+                "input": {
+                  "amount": "invalid"
+                },
+                "scope": "global",
+                "skip": 0,
+                "type": "INCREMENT"
+              }
+            ],
+            "local": []
+          },
+          "revision": {
+            "document": 0,
+            "global": 1,
+            "local": 0
+          },
+          "state": {
+            "document": {
+              "isDeleted": null,
+              "version": 1
+            },
+            "scopes": {
+              "global": {
+                "counter": 0,
+                "events": []
+              },
+              "local": {
+                "counter": 0,
+                "draft": "",
+                "events": []
+              }
+            }
+          }
+        },
+        "hashDelta": {
+          "before": {
+            "document": "xY7c9LTQetDEgrquYl+LpCjZufE=",
+            "global": "vj8hwNwjfKEumOWjt34LUcyfiVU=",
+            "local": "yb47HTShekNgy6H4bpQsAxwwX5U="
+          },
+          "after": {
+            "document": "xY7c9LTQetDEgrquYl+LpCjZufE=",
+            "global": "vj8hwNwjfKEumOWjt34LUcyfiVU=",
+            "local": "yb47HTShekNgy6H4bpQsAxwwX5U="
+          }
+        },
+        "errors": [
+          "error:global:0:[\n  {\n    \"expected\": \"number\",\n    \"code\": \"invalid_type\",\n    \"path\": [\n      \"amount\"\n    ],\n    \"message\": \"Invalid input: expected number, received string\"\n  }\n]"
+        ],
+        "dispatches": [],
+        "errorCode": null,
+        "storedErrorCode": null,
+        "selectedModuleVersion": 1,
+        "upgradePath": []
+      }
+    },
+    {
+      "rowId": "extra-keys-preserved",
+      "route": "raw-action",
+      "version": 1,
+      "scope": "global",
+      "rawInput": {
+        "type": "INCREMENT",
+        "input": {
+          "amount": 1,
+          "tag": "extra",
+          "extra": "preserved"
+        }
+      },
+      "compatibilityMode": "core-v1",
+      "expected": {
+        "outcomeCode": "applied",
+        "state": {
+          "clipboard": [],
+          "operations": {
+            "document": [],
+            "global": [
+              {
+                "context": null,
+                "deniedReason": null,
+                "error": null,
+                "hash": "PCoFVablyDH2F1wqjo7Api4DECA=",
+                "index": 0,
+                "input": {
+                  "amount": 1,
+                  "extra": "preserved",
+                  "tag": "extra"
+                },
+                "scope": "global",
+                "skip": 0,
+                "type": "INCREMENT"
+              }
+            ],
+            "local": []
+          },
+          "revision": {
+            "document": 0,
+            "global": 1,
+            "local": 0
+          },
+          "state": {
+            "document": {
+              "isDeleted": null,
+              "version": 1
+            },
+            "scopes": {
+              "global": {
+                "counter": 1,
+                "events": [
+                  "extra:preserved"
+                ]
+              },
+              "local": {
+                "counter": 0,
+                "draft": "",
+                "events": []
+              }
+            }
+          }
+        },
+        "hashDelta": {
+          "before": {
+            "document": "xY7c9LTQetDEgrquYl+LpCjZufE=",
+            "global": "vj8hwNwjfKEumOWjt34LUcyfiVU=",
+            "local": "yb47HTShekNgy6H4bpQsAxwwX5U="
+          },
+          "after": {
+            "document": "xY7c9LTQetDEgrquYl+LpCjZufE=",
+            "global": "PCoFVablyDH2F1wqjo7Api4DECA=",
+            "local": "yb47HTShekNgy6H4bpQsAxwwX5U="
+          }
+        },
+        "errors": [],
+        "dispatches": [],
+        "errorCode": null,
+        "storedErrorCode": null,
+        "selectedModuleVersion": 1,
+        "upgradePath": []
+      }
+    },
+    {
+      "rowId": "wrong-scope-core-v1",
+      "route": "raw-action",
+      "version": 1,
+      "scope": "local",
+      "rawInput": {
+        "type": "INCREMENT",
+        "input": {
+          "amount": 3,
+          "tag": "wrong-scope"
+        }
+      },
+      "compatibilityMode": "core-v1",
+      "expected": {
+        "outcomeCode": "applied",
+        "state": {
+          "clipboard": [],
+          "operations": {
+            "document": [],
+            "global": [],
+            "local": [
+              {
+                "context": null,
+                "deniedReason": null,
+                "error": null,
+                "hash": "TurzTN7DWODFeSOI5C+IDEDNnZA=",
+                "index": 0,
+                "input": {
+                  "amount": 3,
+                  "tag": "wrong-scope"
+                },
+                "scope": "local",
+                "skip": 0,
+                "type": "INCREMENT"
+              }
+            ]
+          },
+          "revision": {
+            "document": 0,
+            "global": 0,
+            "local": 1
+          },
+          "state": {
+            "document": {
+              "isDeleted": null,
+              "version": 1
+            },
+            "scopes": {
+              "global": {
+                "counter": 0,
+                "events": []
+              },
+              "local": {
+                "counter": 3,
+                "draft": "",
+                "events": [
+                  "wrong-scope:no-extra"
+                ]
+              }
+            }
+          }
+        },
+        "hashDelta": {
+          "before": {
+            "document": "xY7c9LTQetDEgrquYl+LpCjZufE=",
+            "global": "vj8hwNwjfKEumOWjt34LUcyfiVU=",
+            "local": "yb47HTShekNgy6H4bpQsAxwwX5U="
+          },
+          "after": {
+            "document": "xY7c9LTQetDEgrquYl+LpCjZufE=",
+            "global": "vj8hwNwjfKEumOWjt34LUcyfiVU=",
+            "local": "TurzTN7DWODFeSOI5C+IDEDNnZA="
+          }
+        },
+        "errors": [],
+        "dispatches": [],
+        "errorCode": null,
+        "storedErrorCode": null,
+        "selectedModuleVersion": 1,
+        "upgradePath": []
+      }
+    },
+    {
+      "rowId": "unknown-runtime-scope",
+      "route": "raw-action",
+      "version": 1,
+      "scope": "experimental",
+      "rawInput": {
+        "type": "INCREMENT",
+        "input": {
+          "amount": 1,
+          "tag": "unknown"
+        }
+      },
+      "compatibilityMode": "core-v1",
+      "expected": {
+        "outcomeCode": "reducer-error",
+        "state": {
+          "clipboard": [],
+          "operations": {
+            "document": [],
+            "experimental": [
+              {
+                "context": null,
+                "deniedReason": null,
+                "error": "missing protocol scope",
+                "hash": "3Sns9SSwMKZSYeMFnEirnh7LJYU=",
+                "index": 0,
+                "input": {
+                  "amount": 1,
+                  "tag": "unknown"
+                },
+                "scope": "experimental",
+                "skip": 0,
+                "type": "INCREMENT"
+              }
+            ],
+            "global": [],
+            "local": []
+          },
+          "revision": {
+            "document": 0,
+            "experimental": 1,
+            "global": 0,
+            "local": 0
+          },
+          "state": {
+            "document": {
+              "isDeleted": null,
+              "version": 1
+            },
+            "scopes": {
+              "global": {
+                "counter": 0,
+                "events": []
+              },
+              "local": {
+                "counter": 0,
+                "draft": "",
+                "events": []
+              }
+            }
+          }
+        },
+        "hashDelta": {
+          "before": {
+            "document": "xY7c9LTQetDEgrquYl+LpCjZufE=",
+            "global": "vj8hwNwjfKEumOWjt34LUcyfiVU=",
+            "local": "yb47HTShekNgy6H4bpQsAxwwX5U="
+          },
+          "after": {
+            "document": "xY7c9LTQetDEgrquYl+LpCjZufE=",
+            "experimental": "3Sns9SSwMKZSYeMFnEirnh7LJYU=",
+            "global": "vj8hwNwjfKEumOWjt34LUcyfiVU=",
+            "local": "yb47HTShekNgy6H4bpQsAxwwX5U="
+          }
+        },
+        "errors": [
+          "error:experimental:0:missing protocol scope"
+        ],
+        "dispatches": [],
+        "errorCode": null,
+        "storedErrorCode": null,
+        "selectedModuleVersion": 1,
+        "upgradePath": []
+      }
+    },
+    {
+      "rowId": "no-input-creator-absent",
+      "route": "definition",
+      "version": 1,
+      "scope": "global",
+      "rawInput": {
+        "creator": "noInput"
+      },
+      "compatibilityMode": "core-v1",
+      "expected": {
+        "outcomeCode": "absent",
+        "state": {
+          "creator": "noInput",
+          "present": false
+        },
+        "hashDelta": {
+          "before": {},
+          "after": {}
+        },
+        "errors": [],
+        "dispatches": [],
+        "errorCode": null,
+        "storedErrorCode": null,
+        "selectedModuleVersion": 1,
+        "upgradePath": []
+      }
+    },
+    {
+      "rowId": "no-input-declaration-rejected",
+      "route": "definition",
+      "version": 1,
+      "scope": "global",
+      "rawInput": {
+        "input": null
+      },
+      "compatibilityMode": "core-v1",
+      "expected": {
+        "outcomeCode": "definition-rejected",
+        "state": {
+          "codeFirst": "PH-DM-OPERATION-INPUT-INVALID"
+        },
+        "hashDelta": {
+          "before": {},
+          "after": {}
+        },
+        "errors": [
+          "PH-DM-OPERATION-INPUT-INVALID"
+        ],
+        "dispatches": [],
+        "errorCode": null,
+        "storedErrorCode": null,
+        "selectedModuleVersion": 1,
+        "upgradePath": []
+      }
+    },
+    {
+      "rowId": "unknown-action",
+      "route": "raw-action",
+      "version": 1,
+      "scope": "global",
+      "rawInput": {
+        "type": "UNKNOWN_ACTION",
+        "input": {
+          "untouched": true
+        }
+      },
+      "compatibilityMode": "core-v1",
+      "expected": {
+        "outcomeCode": "applied",
+        "state": {
+          "clipboard": [],
+          "operations": {
+            "document": [],
+            "global": [
+              {
+                "context": null,
+                "deniedReason": null,
+                "error": null,
+                "hash": "vj8hwNwjfKEumOWjt34LUcyfiVU=",
+                "index": 0,
+                "input": {
+                  "untouched": true
+                },
+                "scope": "global",
+                "skip": 0,
+                "type": "UNKNOWN_ACTION"
+              }
+            ],
+            "local": []
+          },
+          "revision": {
+            "document": 0,
+            "global": 1,
+            "local": 0
+          },
+          "state": {
+            "document": {
+              "isDeleted": null,
+              "version": 1
+            },
+            "scopes": {
+              "global": {
+                "counter": 0,
+                "events": []
+              },
+              "local": {
+                "counter": 0,
+                "draft": "",
+                "events": []
+              }
+            }
+          }
+        },
+        "hashDelta": {
+          "before": {
+            "document": "xY7c9LTQetDEgrquYl+LpCjZufE=",
+            "global": "vj8hwNwjfKEumOWjt34LUcyfiVU=",
+            "local": "yb47HTShekNgy6H4bpQsAxwwX5U="
+          },
+          "after": {
+            "document": "xY7c9LTQetDEgrquYl+LpCjZufE=",
+            "global": "vj8hwNwjfKEumOWjt34LUcyfiVU=",
+            "local": "yb47HTShekNgy6H4bpQsAxwwX5U="
+          }
+        },
+        "errors": [],
+        "dispatches": [],
+        "errorCode": null,
+        "storedErrorCode": null,
+        "selectedModuleVersion": 1,
+        "upgradePath": []
+      }
+    },
+    {
+      "rowId": "domain-error-default",
+      "route": "raw-action",
+      "version": 1,
+      "scope": "global",
+      "rawInput": {
+        "type": "FAIL",
+        "input": {
+          "explicit": false
+        }
+      },
+      "compatibilityMode": "core-v1",
+      "expected": {
+        "outcomeCode": "reducer-error",
+        "state": {
+          "clipboard": [],
+          "operations": {
+            "document": [],
+            "global": [
+              {
+                "context": null,
+                "deniedReason": null,
+                "error": "Rejected",
+                "hash": "vj8hwNwjfKEumOWjt34LUcyfiVU=",
+                "index": 0,
+                "input": {
+                  "explicit": false
+                },
+                "scope": "global",
+                "skip": 0,
+                "type": "FAIL"
+              }
+            ],
+            "local": []
+          },
+          "revision": {
+            "document": 0,
+            "global": 1,
+            "local": 0
+          },
+          "state": {
+            "document": {
+              "isDeleted": null,
+              "version": 1
+            },
+            "scopes": {
+              "global": {
+                "counter": 0,
+                "events": []
+              },
+              "local": {
+                "counter": 0,
+                "draft": "",
+                "events": []
+              }
+            }
+          }
+        },
+        "hashDelta": {
+          "before": {
+            "document": "xY7c9LTQetDEgrquYl+LpCjZufE=",
+            "global": "vj8hwNwjfKEumOWjt34LUcyfiVU=",
+            "local": "yb47HTShekNgy6H4bpQsAxwwX5U="
+          },
+          "after": {
+            "document": "xY7c9LTQetDEgrquYl+LpCjZufE=",
+            "global": "vj8hwNwjfKEumOWjt34LUcyfiVU=",
+            "local": "yb47HTShekNgy6H4bpQsAxwwX5U="
+          }
+        },
+        "errors": [
+          "error:global:0:Rejected",
+          "runtime-code:Rejected",
+          "stored-code:STORED_REJECTION"
+        ],
+        "dispatches": [],
+        "errorCode": "Rejected",
+        "storedErrorCode": "STORED_REJECTION",
+        "selectedModuleVersion": 1,
+        "upgradePath": []
+      }
+    },
+    {
+      "rowId": "domain-error-explicit",
+      "route": "raw-action",
+      "version": 1,
+      "scope": "global",
+      "rawInput": {
+        "type": "FAIL",
+        "input": {
+          "explicit": true
+        }
+      },
+      "compatibilityMode": "core-v1",
+      "expected": {
+        "outcomeCode": "reducer-error",
+        "state": {
+          "clipboard": [],
+          "operations": {
+            "document": [],
+            "global": [
+              {
+                "context": null,
+                "deniedReason": null,
+                "error": "explicit rejection",
+                "hash": "vj8hwNwjfKEumOWjt34LUcyfiVU=",
+                "index": 0,
+                "input": {
+                  "explicit": true
+                },
+                "scope": "global",
+                "skip": 0,
+                "type": "FAIL"
+              }
+            ],
+            "local": []
+          },
+          "revision": {
+            "document": 0,
+            "global": 1,
+            "local": 0
+          },
+          "state": {
+            "document": {
+              "isDeleted": null,
+              "version": 1
+            },
+            "scopes": {
+              "global": {
+                "counter": 0,
+                "events": []
+              },
+              "local": {
+                "counter": 0,
+                "draft": "",
+                "events": []
+              }
+            }
+          }
+        },
+        "hashDelta": {
+          "before": {
+            "document": "xY7c9LTQetDEgrquYl+LpCjZufE=",
+            "global": "vj8hwNwjfKEumOWjt34LUcyfiVU=",
+            "local": "yb47HTShekNgy6H4bpQsAxwwX5U="
+          },
+          "after": {
+            "document": "xY7c9LTQetDEgrquYl+LpCjZufE=",
+            "global": "vj8hwNwjfKEumOWjt34LUcyfiVU=",
+            "local": "yb47HTShekNgy6H4bpQsAxwwX5U="
+          }
+        },
+        "errors": [
+          "error:global:0:explicit rejection",
+          "runtime-code:Rejected",
+          "stored-code:STORED_REJECTION"
+        ],
+        "dispatches": [],
+        "errorCode": "Rejected",
+        "storedErrorCode": "STORED_REJECTION",
+        "selectedModuleVersion": 1,
+        "upgradePath": []
+      }
+    },
+    {
+      "rowId": "dispatch-signal",
+      "route": "raw-action",
+      "version": 1,
+      "scope": "global",
+      "rawInput": {
+        "type": "EMIT",
+        "input": {
+          "id": "child-1"
+        }
+      },
+      "compatibilityMode": "core-v1",
+      "expected": {
+        "outcomeCode": "applied",
+        "state": {
+          "clipboard": [],
+          "operations": {
+            "document": [],
+            "global": [
+              {
+                "context": null,
+                "deniedReason": null,
+                "error": null,
+                "hash": "RluDXOJfv2XgGlw9N0mvdcKPxNE=",
+                "index": 0,
+                "input": {
+                  "id": "child-1"
+                },
+                "scope": "global",
+                "skip": 0,
+                "type": "EMIT"
+              }
+            ],
+            "local": []
+          },
+          "revision": {
+            "document": 0,
+            "global": 1,
+            "local": 0
+          },
+          "state": {
+            "document": {
+              "isDeleted": null,
+              "version": 1
+            },
+            "scopes": {
+              "global": {
+                "counter": 0,
+                "events": [
+                  "dispatch:child-1"
+                ]
+              },
+              "local": {
+                "counter": 0,
+                "draft": "",
+                "events": []
+              }
+            }
+          }
+        },
+        "hashDelta": {
+          "before": {
+            "document": "xY7c9LTQetDEgrquYl+LpCjZufE=",
+            "global": "vj8hwNwjfKEumOWjt34LUcyfiVU=",
+            "local": "yb47HTShekNgy6H4bpQsAxwwX5U="
+          },
+          "after": {
+            "document": "xY7c9LTQetDEgrquYl+LpCjZufE=",
+            "global": "RluDXOJfv2XgGlw9N0mvdcKPxNE=",
+            "local": "yb47HTShekNgy6H4bpQsAxwwX5U="
+          }
+        },
+        "errors": [],
+        "dispatches": [
+          {
+            "input": {
+              "id": "child-1"
+            },
+            "type": "DELETE_CHILD_DOCUMENT"
+          }
+        ],
+        "errorCode": null,
+        "storedErrorCode": null,
+        "selectedModuleVersion": 1,
+        "upgradePath": []
+      }
+    },
+    {
+      "rowId": "denied-operation-replay",
+      "route": "archived-replay",
+      "version": 1,
+      "scope": "global",
+      "rawInput": {
+        "amount": 5,
+        "deniedReason": "fixture-policy-denied"
+      },
+      "compatibilityMode": "core-v1",
+      "expected": {
+        "outcomeCode": "denied",
+        "state": {
+          "clipboard": [],
+          "operations": {
+            "document": [],
+            "global": [
+              {
+                "context": null,
+                "deniedReason": "fixture-policy-denied",
+                "error": null,
+                "hash": "",
+                "index": 0,
+                "input": {
+                  "amount": 5,
+                  "tag": "denied"
+                },
+                "scope": "global",
+                "skip": 0,
+                "type": "INCREMENT"
+              }
+            ],
+            "local": []
+          },
+          "revision": {
+            "document": 0,
+            "global": 1,
+            "local": 0
+          },
+          "state": {
+            "document": {
+              "isDeleted": null,
+              "version": 1
+            },
+            "scopes": {
+              "global": {
+                "counter": 0,
+                "events": []
+              },
+              "local": {
+                "counter": 0,
+                "draft": "",
+                "events": []
+              }
+            }
+          }
+        },
+        "hashDelta": {
+          "before": {
+            "document": "xY7c9LTQetDEgrquYl+LpCjZufE=",
+            "global": "vj8hwNwjfKEumOWjt34LUcyfiVU=",
+            "local": "yb47HTShekNgy6H4bpQsAxwwX5U="
+          },
+          "after": {
+            "document": "xY7c9LTQetDEgrquYl+LpCjZufE=",
+            "global": "vj8hwNwjfKEumOWjt34LUcyfiVU=",
+            "local": "yb47HTShekNgy6H4bpQsAxwwX5U="
+          }
+        },
+        "errors": [
+          "denied:global:0:fixture-policy-denied"
+        ],
+        "dispatches": [],
+        "errorCode": null,
+        "storedErrorCode": null,
+        "selectedModuleVersion": 1,
+        "upgradePath": []
+      }
+    },
+    {
+      "rowId": "load-state",
+      "route": "base-action",
+      "version": 1,
+      "scope": "global",
+      "rawInput": {
+        "counter": 7,
+        "draft": "loaded",
+        "name": "Loaded Protocol"
+      },
+      "compatibilityMode": "core-v1",
+      "expected": {
+        "outcomeCode": "applied",
+        "state": {
+          "clipboard": [],
+          "operations": {
+            "document": [],
+            "global": [
+              {
+                "context": null,
+                "deniedReason": null,
+                "error": null,
+                "hash": "3iiFUHxqxCDDZnepASL3h7Cghr8=",
+                "index": 0,
+                "input": {
+                  "operations": 0,
+                  "state": {
+                    "data": {
+                      "auth": {
+                        "grants": [],
+                        "version": 0
+                      },
+                      "document": {
+                        "hash": {
+                          "algorithm": "sha1",
+                          "encoding": "base64"
+                        },
+                        "version": 1
+                      },
+                      "global": {
+                        "counter": 7,
+                        "events": [
+                          "loaded"
+                        ]
+                      },
+                      "local": {
+                        "counter": 0,
+                        "draft": "loaded",
+                        "events": [
+                          "loaded-local"
+                        ]
+                      }
+                    },
+                    "name": "Loaded Protocol"
+                  }
+                },
+                "scope": "global",
+                "skip": 0,
+                "type": "LOAD_STATE"
+              }
+            ],
+            "local": []
+          },
+          "revision": {
+            "document": 0,
+            "global": 1,
+            "local": 0
+          },
+          "state": {
+            "document": {
+              "isDeleted": null,
+              "version": 1
+            },
+            "scopes": {
+              "global": {
+                "counter": 7,
+                "events": [
+                  "loaded"
+                ]
+              },
+              "local": {
+                "counter": 0,
+                "draft": "loaded",
+                "events": [
+                  "loaded-local"
+                ]
+              }
+            }
+          }
+        },
+        "hashDelta": {
+          "before": {
+            "document": "xY7c9LTQetDEgrquYl+LpCjZufE=",
+            "global": "vj8hwNwjfKEumOWjt34LUcyfiVU=",
+            "local": "yb47HTShekNgy6H4bpQsAxwwX5U="
+          },
+          "after": {
+            "document": "xY7c9LTQetDEgrquYl+LpCjZufE=",
+            "global": "3iiFUHxqxCDDZnepASL3h7Cghr8=",
+            "local": "cfAcSGfdTBmCYMCh2nXJfkYF9+g="
+          }
+        },
+        "errors": [],
+        "dispatches": [],
+        "errorCode": null,
+        "storedErrorCode": null,
+        "selectedModuleVersion": 1,
+        "upgradePath": []
+      }
+    },
+    {
+      "rowId": "duplicate-index-undo",
+      "route": "base-action",
+      "version": 1,
+      "scope": "global",
+      "rawInput": {
+        "amounts": [
+          1,
+          2
+        ],
+        "undoCount": 2
+      },
+      "compatibilityMode": "core-v1",
+      "expected": {
+        "outcomeCode": "applied",
+        "state": {
+          "clipboard": [
+            {
+              "context": null,
+              "deniedReason": null,
+              "error": null,
+              "hash": "N887spNY/Ywx4EhS8pkSrnuyPXU=",
+              "index": 1,
+              "input": {
+                "amount": 2,
+                "tag": "setup-2"
+              },
+              "scope": "global",
+              "skip": 0,
+              "type": "INCREMENT"
+            },
+            {
+              "context": null,
+              "deniedReason": null,
+              "error": null,
+              "hash": "6ABnPXiadwzRqo0ObnV1T0yOx4U=",
+              "index": 0,
+              "input": {
+                "amount": 1,
+                "tag": "setup-1"
+              },
+              "scope": "global",
+              "skip": 0,
+              "type": "INCREMENT"
+            }
+          ],
+          "operations": {
+            "document": [],
+            "global": [
+              {
+                "context": null,
+                "deniedReason": null,
+                "error": null,
+                "hash": "vj8hwNwjfKEumOWjt34LUcyfiVU=",
+                "index": 2,
+                "input": {},
+                "scope": "global",
+                "skip": 2,
+                "type": "NOOP"
+              }
+            ],
+            "local": []
+          },
+          "revision": {
+            "document": 0,
+            "global": 3,
+            "local": 0
+          },
+          "state": {
+            "document": {
+              "isDeleted": null,
+              "version": 1
+            },
+            "scopes": {
+              "global": {
+                "counter": 0,
+                "events": []
+              },
+              "local": {
+                "counter": 0,
+                "draft": "",
+                "events": []
+              }
+            }
+          }
+        },
+        "hashDelta": {
+          "before": {
+            "document": "xY7c9LTQetDEgrquYl+LpCjZufE=",
+            "global": "vj8hwNwjfKEumOWjt34LUcyfiVU=",
+            "local": "yb47HTShekNgy6H4bpQsAxwwX5U="
+          },
+          "after": {
+            "document": "xY7c9LTQetDEgrquYl+LpCjZufE=",
+            "global": "vj8hwNwjfKEumOWjt34LUcyfiVU=",
+            "local": "yb47HTShekNgy6H4bpQsAxwwX5U="
+          }
+        },
+        "errors": [],
+        "dispatches": [],
+        "errorCode": null,
+        "storedErrorCode": null,
+        "selectedModuleVersion": 1,
+        "upgradePath": []
+      }
+    },
+    {
+      "rowId": "redo",
+      "route": "base-action",
+      "version": 1,
+      "scope": "global",
+      "rawInput": {
+        "amounts": [
+          1,
+          2
+        ],
+        "undoCount": 1,
+        "redoCount": 1
+      },
+      "compatibilityMode": "core-v1",
+      "expected": {
+        "outcomeCode": "applied",
+        "state": {
+          "clipboard": [],
+          "operations": {
+            "document": [],
+            "global": [
+              {
+                "context": null,
+                "deniedReason": null,
+                "error": null,
+                "hash": "6ABnPXiadwzRqo0ObnV1T0yOx4U=",
+                "index": 0,
+                "input": {
+                  "amount": 1,
+                  "tag": "setup-1"
+                },
+                "scope": "global",
+                "skip": 0,
+                "type": "INCREMENT"
+              },
+              {
+                "context": null,
+                "deniedReason": null,
+                "error": null,
+                "hash": "6ABnPXiadwzRqo0ObnV1T0yOx4U=",
+                "index": 2,
+                "input": {},
+                "scope": "global",
+                "skip": 1,
+                "type": "NOOP"
+              },
+              {
+                "context": null,
+                "deniedReason": null,
+                "error": null,
+                "hash": "N887spNY/Ywx4EhS8pkSrnuyPXU=",
+                "index": 3,
+                "input": {
+                  "amount": 2,
+                  "tag": "setup-2"
+                },
+                "scope": "global",
+                "skip": 0,
+                "type": "INCREMENT"
+              }
+            ],
+            "local": []
+          },
+          "revision": {
+            "document": 0,
+            "global": 4,
+            "local": 0
+          },
+          "state": {
+            "document": {
+              "isDeleted": null,
+              "version": 1
+            },
+            "scopes": {
+              "global": {
+                "counter": 3,
+                "events": [
+                  "setup-1:no-extra",
+                  "setup-2:no-extra"
+                ]
+              },
+              "local": {
+                "counter": 0,
+                "draft": "",
+                "events": []
+              }
+            }
+          }
+        },
+        "hashDelta": {
+          "before": {
+            "document": "xY7c9LTQetDEgrquYl+LpCjZufE=",
+            "global": "vj8hwNwjfKEumOWjt34LUcyfiVU=",
+            "local": "yb47HTShekNgy6H4bpQsAxwwX5U="
+          },
+          "after": {
+            "document": "xY7c9LTQetDEgrquYl+LpCjZufE=",
+            "global": "N887spNY/Ywx4EhS8pkSrnuyPXU=",
+            "local": "yb47HTShekNgy6H4bpQsAxwwX5U="
+          }
+        },
+        "errors": [],
+        "dispatches": [],
+        "errorCode": null,
+        "storedErrorCode": null,
+        "selectedModuleVersion": 1,
+        "upgradePath": []
+      }
+    },
+    {
+      "rowId": "prune-local",
+      "route": "base-action",
+      "version": 1,
+      "scope": "local",
+      "rawInput": {
+        "start": 0,
+        "end": 1
+      },
+      "compatibilityMode": "core-v1",
+      "expected": {
+        "outcomeCode": "base-action-rejected",
+        "state": {
+          "clipboard": [],
+          "operations": {
+            "document": [],
+            "global": [
+              {
+                "context": null,
+                "deniedReason": null,
+                "error": null,
+                "hash": "6ABnPXiadwzRqo0ObnV1T0yOx4U=",
+                "index": 0,
+                "input": {
+                  "amount": 1,
+                  "tag": "setup-1"
+                },
+                "scope": "global",
+                "skip": 0,
+                "type": "INCREMENT"
+              },
+              {
+                "context": null,
+                "deniedReason": null,
+                "error": null,
+                "hash": "N887spNY/Ywx4EhS8pkSrnuyPXU=",
+                "index": 1,
+                "input": {
+                  "amount": 2,
+                  "tag": "setup-2"
+                },
+                "scope": "global",
+                "skip": 0,
+                "type": "INCREMENT"
+              }
+            ],
+            "local": [
+              {
+                "context": null,
+                "deniedReason": null,
+                "error": null,
+                "hash": "v9mkLKnt/rafWDlpHPvlKvUQKz8=",
+                "index": 0,
+                "input": {
+                  "draft": "before-prune"
+                },
+                "scope": "local",
+                "skip": 0,
+                "type": "SET_DRAFT"
+              }
+            ]
+          },
+          "revision": {
+            "document": 0,
+            "global": 2,
+            "local": 1
+          },
+          "state": {
+            "document": {
+              "isDeleted": null,
+              "version": 1
+            },
+            "scopes": {
+              "global": {
+                "counter": 3,
+                "events": [
+                  "setup-1:no-extra",
+                  "setup-2:no-extra"
+                ]
+              },
+              "local": {
+                "counter": 0,
+                "draft": "before-prune",
+                "events": [
+                  "draft:before-prune"
+                ]
+              }
+            }
+          }
+        },
+        "hashDelta": {
+          "before": {
+            "document": "xY7c9LTQetDEgrquYl+LpCjZufE=",
+            "global": "vj8hwNwjfKEumOWjt34LUcyfiVU=",
+            "local": "yb47HTShekNgy6H4bpQsAxwwX5U="
+          },
+          "after": {
+            "document": "xY7c9LTQetDEgrquYl+LpCjZufE=",
+            "global": "N887spNY/Ywx4EhS8pkSrnuyPXU=",
+            "local": "v9mkLKnt/rafWDlpHPvlKvUQKz8="
+          }
+        },
+        "errors": [
+          "TypeError:Cannot read properties of undefined (reading 'auth')"
+        ],
+        "dispatches": [],
+        "errorCode": null,
+        "storedErrorCode": null,
+        "selectedModuleVersion": 1,
+        "upgradePath": []
+      }
+    },
+    {
+      "rowId": "prune-global",
+      "route": "base-action",
+      "version": 1,
+      "scope": "global",
+      "rawInput": {
+        "start": 0,
+        "end": 1
+      },
+      "compatibilityMode": "core-v1",
+      "expected": {
+        "outcomeCode": "base-action-rejected",
+        "state": {
+          "clipboard": [],
+          "operations": {
+            "document": [],
+            "global": [
+              {
+                "context": null,
+                "deniedReason": null,
+                "error": null,
+                "hash": "6ABnPXiadwzRqo0ObnV1T0yOx4U=",
+                "index": 0,
+                "input": {
+                  "amount": 1,
+                  "tag": "setup-1"
+                },
+                "scope": "global",
+                "skip": 0,
+                "type": "INCREMENT"
+              },
+              {
+                "context": null,
+                "deniedReason": null,
+                "error": null,
+                "hash": "N887spNY/Ywx4EhS8pkSrnuyPXU=",
+                "index": 1,
+                "input": {
+                  "amount": 2,
+                  "tag": "setup-2"
+                },
+                "scope": "global",
+                "skip": 0,
+                "type": "INCREMENT"
+              }
+            ],
+            "local": [
+              {
+                "context": null,
+                "deniedReason": null,
+                "error": null,
+                "hash": "v9mkLKnt/rafWDlpHPvlKvUQKz8=",
+                "index": 0,
+                "input": {
+                  "draft": "before-prune"
+                },
+                "scope": "local",
+                "skip": 0,
+                "type": "SET_DRAFT"
+              }
+            ]
+          },
+          "revision": {
+            "document": 0,
+            "global": 2,
+            "local": 1
+          },
+          "state": {
+            "document": {
+              "isDeleted": null,
+              "version": 1
+            },
+            "scopes": {
+              "global": {
+                "counter": 3,
+                "events": [
+                  "setup-1:no-extra",
+                  "setup-2:no-extra"
+                ]
+              },
+              "local": {
+                "counter": 0,
+                "draft": "before-prune",
+                "events": [
+                  "draft:before-prune"
+                ]
+              }
+            }
+          }
+        },
+        "hashDelta": {
+          "before": {
+            "document": "xY7c9LTQetDEgrquYl+LpCjZufE=",
+            "global": "vj8hwNwjfKEumOWjt34LUcyfiVU=",
+            "local": "yb47HTShekNgy6H4bpQsAxwwX5U="
+          },
+          "after": {
+            "document": "xY7c9LTQetDEgrquYl+LpCjZufE=",
+            "global": "N887spNY/Ywx4EhS8pkSrnuyPXU=",
+            "local": "v9mkLKnt/rafWDlpHPvlKvUQKz8="
+          }
+        },
+        "errors": [
+          "TypeError:Cannot read properties of undefined (reading 'auth')"
+        ],
+        "dispatches": [],
+        "errorCode": null,
+        "storedErrorCode": null,
+        "selectedModuleVersion": 1,
+        "upgradePath": []
+      }
+    },
+    {
+      "rowId": "stored-version-zero",
+      "route": "family-resolution",
+      "version": 0,
+      "scope": "document",
+      "rawInput": {
+        "storedVersion": 0
+      },
+      "compatibilityMode": "family-v1-v2",
+      "expected": {
+        "outcomeCode": "selected",
+        "state": {
+          "storedVersion": 0,
+          "normalizedVersion": 1
+        },
+        "hashDelta": {
+          "before": {},
+          "after": {}
+        },
+        "errors": [],
+        "dispatches": [],
+        "errorCode": null,
+        "storedErrorCode": null,
+        "selectedModuleVersion": 1,
+        "upgradePath": []
+      }
+    },
+    {
+      "rowId": "context-ordinal-timing",
+      "route": "operation-context",
+      "version": 1,
+      "scope": "global",
+      "rawInput": {
+        "evaluationOrdinal": 0,
+        "committedOrdinal": 17,
+        "marker": "context",
+        "prevOpIndex": 0
+      },
+      "compatibilityMode": "core-v1",
+      "expected": {
+        "outcomeCode": "applied",
+        "state": {
+          "document": {
+            "clipboard": [],
+            "operations": {
+              "document": [],
+              "global": [
+                {
+                  "context": {
+                    "prevOpIndex": 0
+                  },
+                  "deniedReason": null,
+                  "error": null,
+                  "hash": "6KTN15jketLJaq1p+5z/b6En9Pw=",
+                  "index": 0,
+                  "input": {
+                    "evaluationOrdinal": 0,
+                    "marker": "context"
+                  },
+                  "scope": "global",
+                  "skip": 0,
+                  "type": "OBSERVE_CONTEXT"
+                }
+              ],
+              "local": []
+            },
+            "revision": {
+              "document": 0,
+              "global": 1,
+              "local": 0
+            },
+            "state": {
+              "document": {
+                "isDeleted": null,
+                "version": 1
+              },
+              "scopes": {
+                "global": {
+                  "counter": 0,
+                  "events": [
+                    "context:ordinal-0:prev-0"
+                  ]
+                },
+                "local": {
+                  "counter": 0,
+                  "draft": "",
+                  "events": []
+                }
+              }
+            }
+          },
+          "protocol": {
+            "actionContext": {
+              "prevOpIndex": 0
+            },
+            "committedOrdinal": 17,
+            "evaluationOrdinal": 0
+          }
+        },
+        "hashDelta": {
+          "before": {
+            "document": "xY7c9LTQetDEgrquYl+LpCjZufE=",
+            "global": "vj8hwNwjfKEumOWjt34LUcyfiVU=",
+            "local": "yb47HTShekNgy6H4bpQsAxwwX5U="
+          },
+          "after": {
+            "document": "xY7c9LTQetDEgrquYl+LpCjZufE=",
+            "global": "6KTN15jketLJaq1p+5z/b6En9Pw=",
+            "local": "yb47HTShekNgy6H4bpQsAxwwX5U="
+          }
+        },
+        "errors": [],
+        "dispatches": [],
+        "errorCode": null,
+        "storedErrorCode": null,
+        "selectedModuleVersion": 1,
+        "upgradePath": []
+      }
+    },
+    {
+      "rowId": "version-selection-v2",
+      "route": "family-resolution",
+      "version": 2,
+      "scope": "document",
+      "rawInput": {
+        "storedVersion": 2
+      },
+      "compatibilityMode": "family-v1-v2",
+      "expected": {
+        "outcomeCode": "selected",
+        "state": {
+          "storedVersion": 2,
+          "normalizedVersion": 2
+        },
+        "hashDelta": {
+          "before": {},
+          "after": {}
+        },
+        "errors": [],
+        "dispatches": [],
+        "errorCode": null,
+        "storedErrorCode": null,
+        "selectedModuleVersion": 2,
+        "upgradePath": []
+      }
+    },
+    {
+      "rowId": "upgrade-v1-v2",
+      "route": "upgrade",
+      "version": 1,
+      "scope": "document",
+      "rawInput": {
+        "fromVersion": 1,
+        "toVersion": 2,
+        "amountBeforeUpgrade": 4
+      },
+      "compatibilityMode": "family-v1-v2",
+      "expected": {
+        "outcomeCode": "upgraded",
+        "state": {
+          "clipboard": [],
+          "operations": {
+            "document": [],
+            "global": [
+              {
+                "context": null,
+                "deniedReason": null,
+                "error": null,
+                "hash": "FJkNacDoW4ZtwQ+RqoirQxdmu4U=",
+                "index": 0,
+                "input": {
+                  "amount": 4,
+                  "tag": "before-upgrade"
+                },
+                "scope": "global",
+                "skip": 0,
+                "type": "INCREMENT"
+              }
+            ],
+            "local": []
+          },
+          "revision": {
+            "document": 0,
+            "global": 1,
+            "local": 0
+          },
+          "state": {
+            "document": {
+              "isDeleted": null,
+              "version": 2
+            },
+            "scopes": {
+              "global": {
+                "counter": 4,
+                "events": [
+                  "before-upgrade:no-extra"
+                ],
+                "title": null
+              },
+              "local": {
+                "counter": 0,
+                "draft": "",
+                "events": []
+              }
+            }
+          }
+        },
+        "hashDelta": {
+          "before": {
+            "document": "xY7c9LTQetDEgrquYl+LpCjZufE=",
+            "global": "vj8hwNwjfKEumOWjt34LUcyfiVU=",
+            "local": "yb47HTShekNgy6H4bpQsAxwwX5U="
+          },
+          "after": {
+            "document": "ogaUiJM1VfnPQy/NRTvrUBIW2X4=",
+            "global": "oeUbqLSOz9rNRyaVPtcvmr4h3NY=",
+            "local": "yb47HTShekNgy6H4bpQsAxwwX5U="
+          }
+        },
+        "errors": [],
+        "dispatches": [],
+        "errorCode": null,
+        "storedErrorCode": null,
+        "selectedModuleVersion": 2,
+        "upgradePath": [
+          2
+        ]
+      }
+    },
+    {
+      "rowId": "duplicate-action-type-rejects-complete-model",
+      "route": "definition",
+      "version": 1,
+      "scope": "global",
+      "rawInput": {
+        "derivedActionType": "SAME_ACTION"
+      },
+      "compatibilityMode": "core-v1",
+      "expected": {
+        "outcomeCode": "definition-rejected",
+        "state": {
+          "legacy": "PH-DM-DUPLICATE-ACTION",
+          "codeFirst": "PH-DM-DUPLICATE-ACTION"
+        },
+        "hashDelta": {
+          "before": {},
+          "after": {}
+        },
+        "errors": [
+          "legacy:PH-DM-DUPLICATE-ACTION",
+          "code-first:PH-DM-DUPLICATE-ACTION"
+        ],
+        "dispatches": [],
+        "errorCode": null,
+        "storedErrorCode": null,
+        "selectedModuleVersion": 1,
+        "upgradePath": []
+      }
+    }
+  ]
+}

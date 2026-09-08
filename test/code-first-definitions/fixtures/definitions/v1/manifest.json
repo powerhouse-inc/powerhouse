@@ -1,0 +1,172 @@
+{
+  "kind": "powerhouse.gate-fixture-manifest",
+  "formatVersion": 1,
+  "gate": "B1",
+  "fixtureVersion": "1.0.0",
+  "requiredTools": {
+    "node": ">=24",
+    "graphql": "catalog",
+    "tsx": "catalog"
+  },
+  "schemaDigest": "sha256:9a320fb708d0c5bba916dba4cd268cdd7283d21ce1128b5905b2bc247d8cc868",
+  "directDependencies": [
+    {
+      "gate": "B9",
+      "contractRevision": "sha256:a7ccf254a06e9542fe8e21c59c385e7504a998982ee23444f4491143ef830e4a",
+      "fixtureManifestDigest": "sha256:597d6f2a4716a4633765c558f36eb8fe288529c0940ea56d72cf73956b38b43c"
+    }
+  ],
+  "caseCount": 10,
+  "cases": [
+    {
+      "caseId": "document-drive-v1",
+      "rootId": "document-drive",
+      "documentType": "powerhouse/document-drive",
+      "version": 1,
+      "legacySource": "packages/shared/document-drive/document-drive.json",
+      "codeFirstSource": "./fixtures/definitions/v1/code-first/document-drive.ts",
+      "codeFirstExport": "DocumentDriveV1",
+      "structuredGolden": "./fixtures/definitions/v1/goldens/document-drive-v1.definition.json",
+      "storedStateGolden": "./fixtures/definitions/v1/goldens/document-drive-v1.state.json",
+      "identityVector": "./fixtures/definitions/v1/goldens/document-drive-v1.identity.json",
+      "definitionSchema": "./schemas/document-model-definition-v1.schema.json"
+    },
+    {
+      "caseId": "reactor-group-v1",
+      "rootId": "reactor-group",
+      "documentType": "powerhouse/reactor-group",
+      "version": 1,
+      "legacySource": "packages/reactor-group/document-models/reactor-group/reactor-group.json",
+      "codeFirstSource": "./fixtures/definitions/v1/code-first/reactor-group.ts",
+      "codeFirstExport": "ReactorGroupV1",
+      "structuredGolden": "./fixtures/definitions/v1/goldens/reactor-group-v1.definition.json",
+      "storedStateGolden": "./fixtures/definitions/v1/goldens/reactor-group-v1.state.json",
+      "identityVector": "./fixtures/definitions/v1/goldens/reactor-group-v1.identity.json",
+      "definitionSchema": "./schemas/document-model-definition-v1.schema.json"
+    },
+    {
+      "caseId": "app-module-v1",
+      "rootId": "app-module",
+      "documentType": "powerhouse/app",
+      "version": 1,
+      "legacySource": "packages/vetra/document-models/app-module/app-module.json",
+      "codeFirstSource": "./fixtures/definitions/v1/code-first/app-module.ts",
+      "codeFirstExport": "AppModuleV1",
+      "structuredGolden": "./fixtures/definitions/v1/goldens/app-module-v1.definition.json",
+      "storedStateGolden": "./fixtures/definitions/v1/goldens/app-module-v1.state.json",
+      "identityVector": "./fixtures/definitions/v1/goldens/app-module-v1.identity.json",
+      "definitionSchema": "./schemas/document-model-definition-v1.schema.json"
+    },
+    {
+      "caseId": "document-editor-v1",
+      "rootId": "document-editor",
+      "documentType": "powerhouse/document-editor",
+      "version": 1,
+      "legacySource": "packages/vetra/document-models/document-editor/document-editor.json",
+      "codeFirstSource": "./fixtures/definitions/v1/code-first/document-editor.ts",
+      "codeFirstExport": "DocumentEditorV1",
+      "structuredGolden": "./fixtures/definitions/v1/goldens/document-editor-v1.definition.json",
+      "storedStateGolden": "./fixtures/definitions/v1/goldens/document-editor-v1.state.json",
+      "identityVector": "./fixtures/definitions/v1/goldens/document-editor-v1.identity.json",
+      "definitionSchema": "./schemas/document-model-definition-v1.schema.json"
+    },
+    {
+      "caseId": "processor-module-v1",
+      "rootId": "processor-module",
+      "documentType": "powerhouse/processor",
+      "version": 1,
+      "legacySource": "packages/vetra/document-models/processor-module/processor-module.json",
+      "codeFirstSource": "./fixtures/definitions/v1/code-first/processor-module.ts",
+      "codeFirstExport": "ProcessorModuleV1",
+      "structuredGolden": "./fixtures/definitions/v1/goldens/processor-module-v1.definition.json",
+      "storedStateGolden": "./fixtures/definitions/v1/goldens/processor-module-v1.state.json",
+      "identityVector": "./fixtures/definitions/v1/goldens/processor-module-v1.identity.json",
+      "definitionSchema": "./schemas/document-model-definition-v1.schema.json"
+    },
+    {
+      "caseId": "subgraph-module-v1",
+      "rootId": "subgraph-module",
+      "documentType": "powerhouse/subgraph",
+      "version": 1,
+      "legacySource": "packages/vetra/document-models/subgraph-module/subgraph-module.json",
+      "codeFirstSource": "./fixtures/definitions/v1/code-first/subgraph-module.ts",
+      "codeFirstExport": "SubgraphModuleV1",
+      "structuredGolden": "./fixtures/definitions/v1/goldens/subgraph-module-v1.definition.json",
+      "storedStateGolden": "./fixtures/definitions/v1/goldens/subgraph-module-v1.state.json",
+      "identityVector": "./fixtures/definitions/v1/goldens/subgraph-module-v1.identity.json",
+      "definitionSchema": "./schemas/document-model-definition-v1.schema.json"
+    },
+    {
+      "caseId": "vetra-package-v1",
+      "rootId": "vetra-package",
+      "documentType": "powerhouse/package",
+      "version": 1,
+      "legacySource": "packages/vetra/document-models/vetra-package/vetra-package.json",
+      "codeFirstSource": "./fixtures/definitions/v1/code-first/vetra-package.ts",
+      "codeFirstExport": "VetraPackageV1",
+      "structuredGolden": "./fixtures/definitions/v1/goldens/vetra-package-v1.definition.json",
+      "storedStateGolden": "./fixtures/definitions/v1/goldens/vetra-package-v1.state.json",
+      "identityVector": "./fixtures/definitions/v1/goldens/vetra-package-v1.identity.json",
+      "definitionSchema": "./schemas/document-model-definition-v1.schema.json"
+    },
+    {
+      "caseId": "package-e2e-todo-v1",
+      "rootId": "package-e2e-todo",
+      "documentType": "test/todo",
+      "version": 1,
+      "legacySource": "test/package-e2e/fixtures/todo.json",
+      "codeFirstSource": "./fixtures/definitions/v1/code-first/package-e2e-todo.ts",
+      "codeFirstExport": "PackageTodoV1",
+      "structuredGolden": "./fixtures/definitions/v1/goldens/package-e2e-todo-v1.definition.json",
+      "storedStateGolden": "./fixtures/definitions/v1/goldens/package-e2e-todo-v1.state.json",
+      "identityVector": "./fixtures/definitions/v1/goldens/package-e2e-todo-v1.identity.json",
+      "definitionSchema": "./schemas/document-model-definition-v1.schema.json"
+    },
+    {
+      "caseId": "versioned-todo-v1",
+      "rootId": "versioned-todo",
+      "documentType": "test/todo",
+      "version": 1,
+      "legacySource": "test/versioned-documents/document-models/todo/todo.json",
+      "codeFirstSource": "./fixtures/definitions/v1/code-first/versioned-todo.ts",
+      "codeFirstExport": "VersionedTodoV1",
+      "structuredGolden": "./fixtures/definitions/v1/goldens/versioned-todo-v1.definition.json",
+      "storedStateGolden": "./fixtures/definitions/v1/goldens/versioned-todo-v1.state.json",
+      "identityVector": "./fixtures/definitions/v1/goldens/versioned-todo-v1.identity.json",
+      "definitionSchema": "./schemas/document-model-definition-v1.schema.json"
+    },
+    {
+      "caseId": "versioned-todo-v2",
+      "rootId": "versioned-todo",
+      "documentType": "test/todo",
+      "version": 2,
+      "legacySource": "test/versioned-documents/document-models/todo/todo.json",
+      "codeFirstSource": "./fixtures/definitions/v1/code-first/versioned-todo.ts",
+      "codeFirstExport": "VersionedTodoV2",
+      "structuredGolden": "./fixtures/definitions/v1/goldens/versioned-todo-v2.definition.json",
+      "storedStateGolden": "./fixtures/definitions/v1/goldens/versioned-todo-v2.state.json",
+      "identityVector": "./fixtures/definitions/v1/goldens/versioned-todo-v2.identity.json",
+      "definitionSchema": "./schemas/document-model-definition-v1.schema.json"
+    }
+  ],
+  "negativeCases": {
+    "fieldOptions": [
+      "minLength",
+      "maxLength",
+      "min",
+      "max",
+      "regex",
+      "minItems",
+      "maxItems"
+    ],
+    "stateRoots": [
+      "missing-global",
+      "input-global",
+      "enum-global",
+      "union-global",
+      "field-global",
+      "wrong-global-name",
+      "wrong-local-name"
+    ]
+  }
+}

@@ -1,0 +1,534 @@
+{
+  "kind": "powerhouse.document-model",
+  "formatVersion": 1,
+  "compatibility": {
+    "identity": "explicit-legacy",
+    "scalarCoercion": "document-engineering-1.40",
+    "serialization": "explicit-legacy"
+  },
+  "model": {
+    "documentType": "test/todo",
+    "graphQLName": "Todo",
+    "name": "Todo",
+    "description": "A versioned todo document model for testing codegen",
+    "extension": "todo",
+    "author": {
+      "name": "Powerhouse",
+      "website": "https://powerhouse.inc"
+    }
+  },
+  "specifications": [
+    {
+      "version": 1,
+      "scalars": [],
+      "graphQLCompatibility": {
+        "kind": "graphql-ast-v1",
+        "document": {
+          "kind": "Document",
+          "definitions": [
+            {
+              "kind": "ObjectTypeDefinition",
+              "name": {
+                "kind": "Name",
+                "value": "TodoState"
+              },
+              "interfaces": [],
+              "directives": [],
+              "fields": [
+                {
+                  "kind": "FieldDefinition",
+                  "name": {
+                    "kind": "Name",
+                    "value": "todos"
+                  },
+                  "arguments": [],
+                  "type": {
+                    "kind": "NonNullType",
+                    "type": {
+                      "kind": "ListType",
+                      "type": {
+                        "kind": "NonNullType",
+                        "type": {
+                          "kind": "NamedType",
+                          "name": {
+                            "kind": "Name",
+                            "value": "TodoItem"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "directives": []
+                }
+              ]
+            },
+            {
+              "kind": "ObjectTypeDefinition",
+              "name": {
+                "kind": "Name",
+                "value": "TodoItem"
+              },
+              "interfaces": [],
+              "directives": [],
+              "fields": [
+                {
+                  "kind": "FieldDefinition",
+                  "name": {
+                    "kind": "Name",
+                    "value": "id"
+                  },
+                  "arguments": [],
+                  "type": {
+                    "kind": "NonNullType",
+                    "type": {
+                      "kind": "NamedType",
+                      "name": {
+                        "kind": "Name",
+                        "value": "String"
+                      }
+                    }
+                  },
+                  "directives": []
+                },
+                {
+                  "kind": "FieldDefinition",
+                  "name": {
+                    "kind": "Name",
+                    "value": "title"
+                  },
+                  "arguments": [],
+                  "type": {
+                    "kind": "NonNullType",
+                    "type": {
+                      "kind": "NamedType",
+                      "name": {
+                        "kind": "Name",
+                        "value": "String"
+                      }
+                    }
+                  },
+                  "directives": []
+                },
+                {
+                  "kind": "FieldDefinition",
+                  "name": {
+                    "kind": "Name",
+                    "value": "completed"
+                  },
+                  "arguments": [],
+                  "type": {
+                    "kind": "NonNullType",
+                    "type": {
+                      "kind": "NamedType",
+                      "name": {
+                        "kind": "Name",
+                        "value": "Boolean"
+                      }
+                    }
+                  },
+                  "directives": []
+                }
+              ]
+            },
+            {
+              "kind": "InputObjectTypeDefinition",
+              "name": {
+                "kind": "Name",
+                "value": "AddTodoInput"
+              },
+              "directives": [],
+              "fields": [
+                {
+                  "kind": "InputValueDefinition",
+                  "name": {
+                    "kind": "Name",
+                    "value": "id"
+                  },
+                  "type": {
+                    "kind": "NonNullType",
+                    "type": {
+                      "kind": "NamedType",
+                      "name": {
+                        "kind": "Name",
+                        "value": "String"
+                      }
+                    }
+                  },
+                  "directives": []
+                },
+                {
+                  "kind": "InputValueDefinition",
+                  "name": {
+                    "kind": "Name",
+                    "value": "title"
+                  },
+                  "type": {
+                    "kind": "NonNullType",
+                    "type": {
+                      "kind": "NamedType",
+                      "name": {
+                        "kind": "Name",
+                        "value": "String"
+                      }
+                    }
+                  },
+                  "directives": []
+                },
+                {
+                  "kind": "InputValueDefinition",
+                  "name": {
+                    "kind": "Name",
+                    "value": "completed"
+                  },
+                  "type": {
+                    "kind": "NonNullType",
+                    "type": {
+                      "kind": "NamedType",
+                      "name": {
+                        "kind": "Name",
+                        "value": "Boolean"
+                      }
+                    }
+                  },
+                  "directives": []
+                }
+              ]
+            },
+            {
+              "kind": "InputObjectTypeDefinition",
+              "name": {
+                "kind": "Name",
+                "value": "RemoveTodoInput"
+              },
+              "directives": [],
+              "fields": [
+                {
+                  "kind": "InputValueDefinition",
+                  "name": {
+                    "kind": "Name",
+                    "value": "id"
+                  },
+                  "type": {
+                    "kind": "NonNullType",
+                    "type": {
+                      "kind": "NamedType",
+                      "name": {
+                        "kind": "Name",
+                        "value": "String"
+                      }
+                    }
+                  },
+                  "directives": []
+                }
+              ]
+            },
+            {
+              "kind": "InputObjectTypeDefinition",
+              "name": {
+                "kind": "Name",
+                "value": "UpdateTodoInput"
+              },
+              "directives": [],
+              "fields": [
+                {
+                  "kind": "InputValueDefinition",
+                  "name": {
+                    "kind": "Name",
+                    "value": "id"
+                  },
+                  "type": {
+                    "kind": "NonNullType",
+                    "type": {
+                      "kind": "NamedType",
+                      "name": {
+                        "kind": "Name",
+                        "value": "String"
+                      }
+                    }
+                  },
+                  "directives": []
+                },
+                {
+                  "kind": "InputValueDefinition",
+                  "name": {
+                    "kind": "Name",
+                    "value": "title"
+                  },
+                  "type": {
+                    "kind": "NamedType",
+                    "name": {
+                      "kind": "Name",
+                      "value": "String"
+                    }
+                  },
+                  "directives": []
+                },
+                {
+                  "kind": "InputValueDefinition",
+                  "name": {
+                    "kind": "Name",
+                    "value": "completed"
+                  },
+                  "type": {
+                    "kind": "NamedType",
+                    "name": {
+                      "kind": "Name",
+                      "value": "Boolean"
+                    }
+                  },
+                  "directives": []
+                }
+              ]
+            }
+          ]
+        },
+        "preserveDefinitionOrder": true
+      },
+      "types": [
+        {
+          "kind": "object",
+          "name": "TodoState",
+          "description": null,
+          "fields": [
+            {
+              "key": "todos",
+              "name": "todos",
+              "description": null,
+              "deprecated": null,
+              "type": {
+                "kind": "list",
+                "required": true,
+                "item": {
+                  "kind": "named",
+                  "name": "TodoItem",
+                  "required": true
+                }
+              }
+            }
+          ]
+        },
+        {
+          "kind": "object",
+          "name": "TodoItem",
+          "description": null,
+          "fields": [
+            {
+              "key": "id",
+              "name": "id",
+              "description": null,
+              "deprecated": null,
+              "type": {
+                "kind": "scalar",
+                "name": "String",
+                "required": true
+              }
+            },
+            {
+              "key": "title",
+              "name": "title",
+              "description": null,
+              "deprecated": null,
+              "type": {
+                "kind": "scalar",
+                "name": "String",
+                "required": true
+              }
+            },
+            {
+              "key": "completed",
+              "name": "completed",
+              "description": null,
+              "deprecated": null,
+              "type": {
+                "kind": "scalar",
+                "name": "Boolean",
+                "required": true
+              }
+            }
+          ]
+        }
+      ],
+      "state": {
+        "global": {
+          "root": {
+            "kind": "named",
+            "name": "TodoState",
+            "required": true
+          },
+          "initialValue": {
+            "todos": []
+          },
+          "examples": [],
+          "unknownKeys": "preserve",
+          "materialized": {
+            "schema": "type TodoState {\n  todos: [TodoItem!]!\n}\n\ntype TodoItem {\n  id: String!\n  title: String!\n  completed: Boolean!\n}",
+            "initialValue": "{\"todos\":[]}",
+            "examples": []
+          }
+        },
+        "local": {
+          "root": null,
+          "initialValue": {},
+          "examples": [],
+          "unknownKeys": "preserve",
+          "materialized": {
+            "schema": "",
+            "initialValue": "",
+            "examples": []
+          }
+        }
+      },
+      "modules": [
+        {
+          "id": "42454fe7-a04b-4e25-8d2b-428df928dcd6",
+          "key": "todo_operations",
+          "name": "todo_operations",
+          "description": "",
+          "operations": [
+            {
+              "id": "c0285a3b-6641-4899-8d40-73327a4fd4c5",
+              "key": "ADD_TODO",
+              "name": "ADD_TODO",
+              "description": "",
+              "actionType": "ADD_TODO",
+              "creatorKey": "addTodo",
+              "scope": "global",
+              "input": {
+                "kind": "input",
+                "name": "AddTodoInput",
+                "description": null,
+                "unknownKeys": "preserve",
+                "fields": [
+                  {
+                    "key": "id",
+                    "name": "id",
+                    "description": null,
+                    "deprecated": null,
+                    "type": {
+                      "kind": "scalar",
+                      "name": "String",
+                      "required": true
+                    }
+                  },
+                  {
+                    "key": "title",
+                    "name": "title",
+                    "description": null,
+                    "deprecated": null,
+                    "type": {
+                      "kind": "scalar",
+                      "name": "String",
+                      "required": true
+                    }
+                  },
+                  {
+                    "key": "completed",
+                    "name": "completed",
+                    "description": null,
+                    "deprecated": null,
+                    "type": {
+                      "kind": "scalar",
+                      "name": "Boolean",
+                      "required": true
+                    }
+                  }
+                ]
+              },
+              "errors": [],
+              "examples": [],
+              "template": "",
+              "reducer": "state.todos.push({\n  id: action.input.id,\n  title: action.input.title,\n  completed: action.input.completed,\n});"
+            },
+            {
+              "id": "890bddb3-aaff-49be-b981-57a5c79302e1",
+              "key": "REMOVE_TODO",
+              "name": "REMOVE_TODO",
+              "description": "",
+              "actionType": "REMOVE_TODO",
+              "creatorKey": "removeTodo",
+              "scope": "global",
+              "input": {
+                "kind": "input",
+                "name": "RemoveTodoInput",
+                "description": null,
+                "unknownKeys": "preserve",
+                "fields": [
+                  {
+                    "key": "id",
+                    "name": "id",
+                    "description": null,
+                    "deprecated": null,
+                    "type": {
+                      "kind": "scalar",
+                      "name": "String",
+                      "required": true
+                    }
+                  }
+                ]
+              },
+              "errors": [],
+              "examples": [],
+              "template": "",
+              "reducer": "const index = state.todos.findIndex(t => t.id === action.input.id);\nif (index !== -1) {\n  state.todos.splice(index, 1);\n}"
+            },
+            {
+              "id": "22b59393-17c6-4afa-8f4d-0138e34f2832",
+              "key": "UPDATE_TODO",
+              "name": "UPDATE_TODO",
+              "description": "",
+              "actionType": "UPDATE_TODO",
+              "creatorKey": "updateTodo",
+              "scope": "global",
+              "input": {
+                "kind": "input",
+                "name": "UpdateTodoInput",
+                "description": null,
+                "unknownKeys": "preserve",
+                "fields": [
+                  {
+                    "key": "id",
+                    "name": "id",
+                    "description": null,
+                    "deprecated": null,
+                    "type": {
+                      "kind": "scalar",
+                      "name": "String",
+                      "required": true
+                    }
+                  },
+                  {
+                    "key": "title",
+                    "name": "title",
+                    "description": null,
+                    "deprecated": null,
+                    "type": {
+                      "kind": "scalar",
+                      "name": "String",
+                      "required": false
+                    }
+                  },
+                  {
+                    "key": "completed",
+                    "name": "completed",
+                    "description": null,
+                    "deprecated": null,
+                    "type": {
+                      "kind": "scalar",
+                      "name": "Boolean",
+                      "required": false
+                    }
+                  }
+                ]
+              },
+              "errors": [],
+              "examples": [],
+              "template": "",
+              "reducer": "const todo = state.todos.find(t => t.id === action.input.id);\nif (todo) {\n  if (action.input.title != null) todo.title = action.input.title;\n  if (action.input.completed != null) todo.completed = action.input.completed;\n}"
+            }
+          ]
+        }
+      ],
+      "changeLog": []
+    }
+  ]
+}

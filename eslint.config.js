@@ -92,9 +92,20 @@ const unsafeIgnoredFiles = [
   "packages/reactor-api/src/packages/vite-loader.mts",
   // Bootstrap .mjs for worker entry test; not part of TypeScript project service
   "packages/reactor/test/executor/worker/entry/worker-bootstrap.mjs",
-  // Plain .mjs model-source fixture imported by both the host and worker
+  // Plain .mjs model-source fixtures imported by both the host and worker
   // threads; deliberately outside the TypeScript project service.
-  "packages/reactor/test/core/fixtures/model-barrel.mjs",
+  "packages/reactor/test/core/fixtures/*model-barrel.mjs",
+  // Emitted verbatim by the fixture generators (`pnpm fixtures:*`), and the
+  // gate manifests pin digests of the artifacts built from them — reformatting
+  // them would invalidate the recorded digests on every generator run.
+  "test/code-first-definitions/fixtures/definitions/v1/code-first/",
+  // Scaffolding sources for generated projects: copied into throwaway
+  // repos by the fixture generators, so they resolve against the generated
+  // project's dependencies and are excluded from this package's tsconfig.
+  "test/code-first-definitions/fixtures/packed-consumers/",
+  "test/code-first-definitions/fixtures/reproductions/",
+  "test/code-first-definitions/fixtures/retirement/",
+  "test/code-first-definitions/fixtures/standalone-mixed/",
 ];
 
 /** All of the files that are ignored by eslint */
@@ -282,6 +293,7 @@ const typescriptLanguageOptions = {
         "tools/scripts/merge-coverage.js",
         "test/scripts/analyze-ops.ts",
         "test/versioned-documents/vitest.config.ts",
+        "test/code-first-definitions/vitest.config.ts",
         "test/ph-lora/scripts/check-pr-drift.ts",
         "test/ph-lora/scripts/validate-mapping.ts",
       ],
@@ -600,6 +612,18 @@ const javascriptConfig = {
   // disable type aware linting for js files
   files: javascriptFiles,
   extends: [tseslint.configs.disableTypeChecked],
+  // The parser resolves `tsconfigRootDir` even with type-aware linting off,
+  // and inference fails once a run loads more than one eslint config (this
+  // repo has nested configs under `test/`). Pin it.
+  languageOptions: {
+    globals: {
+      ...globals.browser,
+      ...globals.node,
+    },
+    parserOptions: {
+      tsconfigRootDir: import.meta.dirname,
+    },
+  },
 };
 
 /** Recommended config from eslint */

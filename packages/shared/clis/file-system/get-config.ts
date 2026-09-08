@@ -1,16 +1,11 @@
-import { readFileSync } from "node:fs";
 import { DEFAULT_CONFIG } from "../constants.js";
 import type { PowerhouseConfig } from "../types.js";
+import { getConfigStrict } from "./get-config-strict.js";
 
-export function getConfig(path = "./powerhouse.config.json") {
-  let config: PowerhouseConfig = { ...DEFAULT_CONFIG };
+export function getConfig(path = "./powerhouse.config.json"): PowerhouseConfig {
   try {
-    const configStr = readFileSync(path, "utf-8");
-    const userConfig = JSON.parse(configStr) as PowerhouseConfig;
-    config = { ...config, ...userConfig };
+    return getConfigStrict(path);
   } catch {
-    // console.warn("No powerhouse.config.json found, using defaults");
+    return { ...DEFAULT_CONFIG };
   }
-
-  return config;
 }

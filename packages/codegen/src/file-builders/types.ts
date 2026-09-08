@@ -27,6 +27,7 @@ export type DocumentModelDocumentTypeMetadata = {
   documentModelDocumentTypeName: string;
   documentModelDirName: string;
   documentModelImportPath: string;
+  authoringMode: "schema-first" | "code-first";
 };
 
 export type EditorVariableNames = ReturnType<typeof getEditorVariableNames>;

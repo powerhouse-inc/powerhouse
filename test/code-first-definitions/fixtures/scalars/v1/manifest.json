@@ -1,0 +1,327 @@
+{
+  "kind": "powerhouse.gate-fixture-manifest",
+  "formatVersion": 1,
+  "gate": "B14",
+  "fixtureVersion": "scalar-conformance-v1",
+  "caseCount": 42,
+  "requiredTools": {
+    "node": "v24.14.0",
+    "documentEngineering": "1.40.5",
+    "graphql": "16.12.0"
+  },
+  "schemaDigest": "sha256:9a320fb708d0c5bba916dba4cd268cdd7283d21ce1128b5905b2bc247d8cc868",
+  "directDependencies": [
+    {
+      "gate": "B1",
+      "contractRevision": "sha256:a7ccf254a06e9542fe8e21c59c385e7504a998982ee23444f4491143ef830e4a",
+      "fixtureManifestDigest": "sha256:3b1ecf4f491d0459ddf129ff1a2ee33b8e05171cdbe857a2c0da7273667080ce"
+    },
+    {
+      "gate": "B6",
+      "contractRevision": "sha256:a7ccf254a06e9542fe8e21c59c385e7504a998982ee23444f4491143ef830e4a",
+      "fixtureManifestDigest": "sha256:9833a7a867145affbca6a7373c2b6d76277109b306314821a78670387338d124"
+    },
+    {
+      "gate": "B9",
+      "contractRevision": "sha256:a7ccf254a06e9542fe8e21c59c385e7504a998982ee23444f4491143ef830e4a",
+      "fixtureManifestDigest": "sha256:597d6f2a4716a4633765c558f36eb8fe288529c0940ea56d72cf73956b38b43c"
+    }
+  ],
+  "scalarInventory": "./scalar-inventory-digest.json",
+  "cases": [
+    {
+      "caseId": "Amount_Tokens--validation",
+      "profile": "document-engineering-1.40",
+      "scalarName": "Amount_Tokens",
+      "definitionIndex": 0,
+      "outcomeIndex": 0
+    },
+    {
+      "caseId": "Amount_Tokens--graphql",
+      "profile": "legacy-graphql-default-v1",
+      "scalarName": "Amount_Tokens",
+      "definitionIndex": 0,
+      "outcomeIndex": 0
+    },
+    {
+      "caseId": "EthereumAddress--validation",
+      "profile": "document-engineering-1.40",
+      "scalarName": "EthereumAddress",
+      "definitionIndex": 1,
+      "outcomeIndex": 1
+    },
+    {
+      "caseId": "EthereumAddress--graphql",
+      "profile": "legacy-graphql-default-v1",
+      "scalarName": "EthereumAddress",
+      "definitionIndex": 1,
+      "outcomeIndex": 1
+    },
+    {
+      "caseId": "Amount_Percentage--validation",
+      "profile": "document-engineering-1.40",
+      "scalarName": "Amount_Percentage",
+      "definitionIndex": 2,
+      "outcomeIndex": 2
+    },
+    {
+      "caseId": "Amount_Percentage--graphql",
+      "profile": "legacy-graphql-default-v1",
+      "scalarName": "Amount_Percentage",
+      "definitionIndex": 2,
+      "outcomeIndex": 2
+    },
+    {
+      "caseId": "EmailAddress--validation",
+      "profile": "document-engineering-1.40",
+      "scalarName": "EmailAddress",
+      "definitionIndex": 3,
+      "outcomeIndex": 3
+    },
+    {
+      "caseId": "EmailAddress--graphql",
+      "profile": "legacy-graphql-default-v1",
+      "scalarName": "EmailAddress",
+      "definitionIndex": 3,
+      "outcomeIndex": 3
+    },
+    {
+      "caseId": "Date--validation",
+      "profile": "document-engineering-1.40",
+      "scalarName": "Date",
+      "definitionIndex": 4,
+      "outcomeIndex": 4
+    },
+    {
+      "caseId": "Date--graphql",
+      "profile": "legacy-graphql-default-v1",
+      "scalarName": "Date",
+      "definitionIndex": 4,
+      "outcomeIndex": 4
+    },
+    {
+      "caseId": "DateTime--validation",
+      "profile": "document-engineering-1.40",
+      "scalarName": "DateTime",
+      "definitionIndex": 5,
+      "outcomeIndex": 5
+    },
+    {
+      "caseId": "DateTime--graphql",
+      "profile": "legacy-graphql-default-v1",
+      "scalarName": "DateTime",
+      "definitionIndex": 5,
+      "outcomeIndex": 5
+    },
+    {
+      "caseId": "URL--validation",
+      "profile": "document-engineering-1.40",
+      "scalarName": "URL",
+      "definitionIndex": 6,
+      "outcomeIndex": 6
+    },
+    {
+      "caseId": "URL--graphql",
+      "profile": "legacy-graphql-default-v1",
+      "scalarName": "URL",
+      "definitionIndex": 6,
+      "outcomeIndex": 6
+    },
+    {
+      "caseId": "Amount_Money--validation",
+      "profile": "document-engineering-1.40",
+      "scalarName": "Amount_Money",
+      "definitionIndex": 7,
+      "outcomeIndex": 7
+    },
+    {
+      "caseId": "Amount_Money--graphql",
+      "profile": "legacy-graphql-default-v1",
+      "scalarName": "Amount_Money",
+      "definitionIndex": 7,
+      "outcomeIndex": 7
+    },
+    {
+      "caseId": "OLabel--validation",
+      "profile": "document-engineering-1.40",
+      "scalarName": "OLabel",
+      "definitionIndex": 8,
+      "outcomeIndex": 8
+    },
+    {
+      "caseId": "OLabel--graphql",
+      "profile": "legacy-graphql-default-v1",
+      "scalarName": "OLabel",
+      "definitionIndex": 8,
+      "outcomeIndex": 8
+    },
+    {
+      "caseId": "Currency--validation",
+      "profile": "document-engineering-1.40",
+      "scalarName": "Currency",
+      "definitionIndex": 9,
+      "outcomeIndex": 9
+    },
+    {
+      "caseId": "Currency--graphql",
+      "profile": "legacy-graphql-default-v1",
+      "scalarName": "Currency",
+      "definitionIndex": 9,
+      "outcomeIndex": 9
+    },
+    {
+      "caseId": "PHID--validation",
+      "profile": "document-engineering-1.40",
+      "scalarName": "PHID",
+      "definitionIndex": 10,
+      "outcomeIndex": 10
+    },
+    {
+      "caseId": "PHID--graphql",
+      "profile": "legacy-graphql-default-v1",
+      "scalarName": "PHID",
+      "definitionIndex": 10,
+      "outcomeIndex": 10
+    },
+    {
+      "caseId": "OID--validation",
+      "profile": "document-engineering-1.40",
+      "scalarName": "OID",
+      "definitionIndex": 11,
+      "outcomeIndex": 11
+    },
+    {
+      "caseId": "OID--graphql",
+      "profile": "legacy-graphql-default-v1",
+      "scalarName": "OID",
+      "definitionIndex": 11,
+      "outcomeIndex": 11
+    },
+    {
+      "caseId": "Amount_Fiat--validation",
+      "profile": "document-engineering-1.40",
+      "scalarName": "Amount_Fiat",
+      "definitionIndex": 12,
+      "outcomeIndex": 12
+    },
+    {
+      "caseId": "Amount_Fiat--graphql",
+      "profile": "legacy-graphql-default-v1",
+      "scalarName": "Amount_Fiat",
+      "definitionIndex": 12,
+      "outcomeIndex": 12
+    },
+    {
+      "caseId": "Amount_Currency--validation",
+      "profile": "document-engineering-1.40",
+      "scalarName": "Amount_Currency",
+      "definitionIndex": 13,
+      "outcomeIndex": 13
+    },
+    {
+      "caseId": "Amount_Currency--graphql",
+      "profile": "legacy-graphql-default-v1",
+      "scalarName": "Amount_Currency",
+      "definitionIndex": 13,
+      "outcomeIndex": 13
+    },
+    {
+      "caseId": "Amount_Crypto--validation",
+      "profile": "document-engineering-1.40",
+      "scalarName": "Amount_Crypto",
+      "definitionIndex": 14,
+      "outcomeIndex": 14
+    },
+    {
+      "caseId": "Amount_Crypto--graphql",
+      "profile": "legacy-graphql-default-v1",
+      "scalarName": "Amount_Crypto",
+      "definitionIndex": 14,
+      "outcomeIndex": 14
+    },
+    {
+      "caseId": "Amount--validation",
+      "profile": "document-engineering-1.40",
+      "scalarName": "Amount",
+      "definitionIndex": 15,
+      "outcomeIndex": 15
+    },
+    {
+      "caseId": "Amount--graphql",
+      "profile": "legacy-graphql-default-v1",
+      "scalarName": "Amount",
+      "definitionIndex": 15,
+      "outcomeIndex": 15
+    },
+    {
+      "caseId": "Upload--validation",
+      "profile": "document-engineering-1.40",
+      "scalarName": "Upload",
+      "definitionIndex": 16,
+      "outcomeIndex": 16
+    },
+    {
+      "caseId": "Upload--graphql",
+      "profile": "legacy-graphql-default-v1",
+      "scalarName": "Upload",
+      "definitionIndex": 16,
+      "outcomeIndex": 16
+    },
+    {
+      "caseId": "Unknown--validation",
+      "profile": "document-engineering-1.40",
+      "scalarName": "Unknown",
+      "definitionIndex": 17,
+      "outcomeIndex": 17
+    },
+    {
+      "caseId": "Unknown--graphql",
+      "profile": "legacy-graphql-default-v1",
+      "scalarName": "Unknown",
+      "definitionIndex": 17,
+      "outcomeIndex": 17
+    },
+    {
+      "caseId": "Address--validation",
+      "profile": "document-engineering-1.40",
+      "scalarName": "Address",
+      "definitionIndex": 18,
+      "outcomeIndex": 18
+    },
+    {
+      "caseId": "Address--graphql",
+      "profile": "legacy-graphql-default-v1",
+      "scalarName": "Address",
+      "definitionIndex": 18,
+      "outcomeIndex": 18
+    },
+    {
+      "caseId": "AttachmentRef--validation",
+      "profile": "document-engineering-1.40",
+      "scalarName": "AttachmentRef",
+      "definitionIndex": 19,
+      "outcomeIndex": 19
+    },
+    {
+      "caseId": "AttachmentRef--graphql",
+      "profile": "legacy-graphql-default-v1",
+      "scalarName": "AttachmentRef",
+      "definitionIndex": 19,
+      "outcomeIndex": 19
+    },
+    {
+      "caseId": "JSONObject--validation",
+      "profile": "document-engineering-1.40",
+      "scalarName": "JSONObject",
+      "definitionIndex": 20,
+      "outcomeIndex": 20
+    },
+    {
+      "caseId": "JSONObject--graphql",
+      "profile": "legacy-graphql-default-v1",
+      "scalarName": "JSONObject",
+      "definitionIndex": 20,
+      "outcomeIndex": 20
+    }
+  ]
+}

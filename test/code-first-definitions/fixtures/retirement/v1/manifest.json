@@ -1,0 +1,50 @@
+{
+  "kind": "powerhouse.retirement-fixture-manifest",
+  "formatVersion": 1,
+  "family": {
+    "documentType": "test/todo",
+    "digest": "sha256:961f8d6b9b36f21c6e451d1b13226188b5a08cea3a15e5b2aab19dbce05dd98c"
+  },
+  "templateRoot": "./fixtures/retirement/v1/template/document-models/retired-todo",
+  "report": "./fixtures/retirement/v1/retirement-report.json",
+  "planSchema": "./schemas/retirement-plan-v1.schema.json",
+  "recoverableLegacyRoot": "git:fixture-commit-v1:document-models/retired-todo",
+  "negativeCases": [
+    {
+      "caseId": "changed-commit",
+      "expectedCode": "PH-MIGRATE-RETIRE-COMMIT-MISMATCH"
+    },
+    {
+      "caseId": "changed-artifact-digest",
+      "expectedCode": "PH-MIGRATE-RETIRE-EVIDENCE-MISMATCH"
+    },
+    {
+      "caseId": "path-traversal",
+      "expectedCode": "PH-MIGRATE-RETIRE-PATH-OUTSIDE-ROOT"
+    },
+    {
+      "caseId": "symlink-target",
+      "expectedCode": "PH-MIGRATE-RETIRE-SYMLINK"
+    },
+    {
+      "caseId": "content-drift",
+      "expectedCode": "PH-MIGRATE-RETIRE-SOURCE-DRIFT"
+    },
+    {
+      "caseId": "live-import",
+      "expectedCode": "PH-MIGRATE-RETIRE-LIVE-IMPORT"
+    },
+    {
+      "caseId": "masked-verification",
+      "expectedCode": "PH-MIGRATE-RETIRE-MASKED-VERIFY-FAILED"
+    },
+    {
+      "caseId": "post-stage-failure",
+      "expectedCode": "PH-MIGRATE-POST-STAGE-FAILED"
+    },
+    {
+      "caseId": "rollback-failure",
+      "expectedCode": "PH-MIGRATE-ROLLBACK-FAILED"
+    }
+  ]
+}

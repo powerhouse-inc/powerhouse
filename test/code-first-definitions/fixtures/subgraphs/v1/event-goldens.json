@@ -1,0 +1,99 @@
+{
+  "typed-query-field": {
+    "resolverCallDigest": "sha256:3a4949ae4ecd59d450e7cad647318cf980034320ee7c3b7bcfadce8feb57511b",
+    "transportFlags": {
+      "hasSubscriptions": [
+        false
+      ],
+      "webSocketAllocations": 0,
+      "sseRoutes": []
+    },
+    "allocationCount": 0,
+    "cleanupObservations": [],
+    "deliveryDigest": "sha256:99590b72613e0923455033ad9acd1d8d03eb8d86b9195252f443854733bd4514"
+  },
+  "compat-manual-query": {
+    "resolverCallDigest": "sha256:88f86d1c13ac06ca94577d468983afd9d7313b315229c8989f79791a47ee2888",
+    "transportFlags": {
+      "hasSubscriptions": [
+        false
+      ],
+      "webSocketAllocations": 0,
+      "sseRoutes": []
+    },
+    "allocationCount": 0,
+    "cleanupObservations": [],
+    "deliveryDigest": "sha256:d487e962c5b7d11c0e2f7b3373230ac26eda6c83959c79a64e0d429bf7e0db7e"
+  },
+  "typed-subscription-true": {
+    "resolverCallDigest": "sha256:204d97812c661db98865356c80209baab3016d0d64b0ede4b3ad31a5bcf80051",
+    "transportFlags": {
+      "hasSubscriptions": [
+        true
+      ],
+      "webSocketAllocations": 1,
+      "sseRoutes": [
+        "/api/graphql/stream",
+        "/api/graphql/typed-subscription/stream"
+      ]
+    },
+    "allocationCount": 1,
+    "cleanupObservations": [
+      "cleanup"
+    ],
+    "deliveryDigest": "sha256:83c08236d751be234d775ce9044b78a184bd4b239746170eff8abf35f452c22d"
+  },
+  "compat-subscription-undefined": {
+    "resolverCallDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "transportFlags": {
+      "hasSubscriptions": [
+        "undefined"
+      ],
+      "webSocketAllocations": 0,
+      "sseRoutes": []
+    },
+    "allocationCount": 0,
+    "cleanupObservations": [],
+    "deliveryDigest": "sha256:5ddf2ebf4f5acd4039544382ee5507c1bb16f2826a40975d702ee8feecc9c762"
+  },
+  "compat-subscription-false": {
+    "resolverCallDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "transportFlags": {
+      "hasSubscriptions": [
+        false
+      ],
+      "webSocketAllocations": 0,
+      "sseRoutes": []
+    },
+    "allocationCount": 0,
+    "cleanupObservations": [],
+    "deliveryDigest": "sha256:5ddf2ebf4f5acd4039544382ee5507c1bb16f2826a40975d702ee8feecc9c762"
+  },
+  "duplicate-first-wins": {
+    "resolverCallDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "transportFlags": {
+      "hasSubscriptions": [
+        false
+      ],
+      "webSocketAllocations": 0,
+      "sseRoutes": []
+    },
+    "allocationCount": 0,
+    "cleanupObservations": [],
+    "deliveryDigest": "sha256:4736f81fb4326309671ef2612bb29d0f7c71a00c978264c61ba43883fce062f0"
+  },
+  "composition-conflict-routes-kept": {
+    "resolverCallDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "transportFlags": {
+      "hasSubscriptions": [
+        false,
+        false
+      ],
+      "webSocketAllocations": 0,
+      "sseRoutes": []
+    },
+    "allocationCount": 0,
+    "cleanupObservations": [],
+    "deliveryDigest": "sha256:5ddf2ebf4f5acd4039544382ee5507c1bb16f2826a40975d702ee8feecc9c762"
+  }
+}

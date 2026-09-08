@@ -26,8 +26,8 @@ export class ImportPackageLoader implements IPackageLoader {
     const pkgModule = await loadDocumentModelsUtil(identifier);
 
     if (pkgModule) {
-      // duck type: the namespace also carries non-module exports such as the
-      // upgradeManifests aggregate
+      // Keep the Node loader's existing one-level namespace predicate. Other
+      // runtime loaders deliberately accept different package shapes.
       const models = Object.values(pkgModule).filter(
         (m: unknown): m is DocumentModelModule =>
           m !== null && typeof m === "object" && "documentModel" in m,

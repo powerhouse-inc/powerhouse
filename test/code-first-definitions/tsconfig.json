@@ -1,0 +1,40 @@
+{
+  "extends": "../../tsconfig.options.json",
+  "compilerOptions": {
+    "outDir": "./.tsbuild",
+    "types": ["node", "vitest/globals"]
+  },
+  "include": [
+    "fixtures/author-loop/v1/**/*.ts",
+    "fixtures/definitions/v1/code-first/**/*.ts",
+    "fixtures/packages/v1/**/*.ts",
+    "fixtures/protocol/v1/**/*.ts",
+    "fixtures/subgraph-migrations/v1/**/*.ts",
+    "scripts/**/*.mts",
+    "src/**/*.ts",
+    "tests/**/*.ts"
+  ],
+  "references": [
+    {
+      "path": "../../clis/ph-cli"
+    },
+    {
+      "path": "../../clis/ph-cmd"
+    },
+    {
+      "path": "../../packages/document-model"
+    },
+    {
+      "path": "../../packages/reactor-api"
+    },
+    {
+      "path": "../../packages/reactor-group"
+    },
+    {
+      "path": "../../packages/shared"
+    },
+    {
+      "path": "../versioned-documents"
+    }
+  ]
+}

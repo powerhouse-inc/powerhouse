@@ -6,7 +6,8 @@ import {
 import { GraphQLError, Kind, parse } from "graphql";
 import {
   generateDocumentModelSchema,
-  getDocumentModelSchemaName,
+  generateDocumentModelSchemaFromDefinition,
+  getDocumentModelModuleSchemaName,
 } from "../utils/create-schema.js";
 import type { CanonicalDocumentId } from "../services/authorization.service.js";
 import { BaseSubgraph } from "./base-subgraph.js";
@@ -130,30 +131,112 @@ export interface DocumentModelSubgraphResolvers<
     | DocumentModelMutationResolvers<TDocument>;
 }
 
+type AbstractTypeDefinition = {
+  readonly name: string;
+  readonly members: readonly string[];
+};
+
+type RuntimeOperation = {
+  readonly actionKey: string;
+  readonly fieldName: string;
+  readonly operationType: string;
+};
+
+function createAbstractTypeResolvers(
+  prefix: string,
+  definitions: readonly AbstractTypeDefinition[],
+  objectFields: ReadonlyMap<string, readonly string[]>,
+): Record<string, DocumentModelResolverMap> {
+  const resolvers = Object.create(null) as Record<
+    string,
+    DocumentModelResolverMap
+  >;
+
+  for (const definition of definitions) {
+    if (definition.members.length === 0) continue;
+    const uniqueFields = new Map(
+      definition.members.map((member) => {
+        const otherFields = new Set(
+          definition.members
+            .filter((candidate) => candidate !== member)
+            .flatMap((candidate) => objectFields.get(candidate) ?? []),
+        );
+        return [
+          member,
+          (objectFields.get(member) ?? []).filter(
+            (field) => !otherFields.has(field),
+          ),
+        ] as const;
+      }),
+    );
+
+    resolvers[`${prefix}_${definition.name}`] = {
+      __resolveType: (value: unknown) => {
+        if (typeof value !== "object" || value === null) return null;
+        const object = value as Record<string, unknown>;
+        try {
+          const typeDescriptor = Object.getOwnPropertyDescriptor(
+            object,
+            "__typename",
+          );
+          const explicitType =
+            typeDescriptor && "value" in typeDescriptor
+              ? (typeDescriptor.value as unknown)
+              : undefined;
+          if (typeof explicitType === "string") {
+            const member = explicitType.startsWith(`${prefix}_`)
+              ? explicitType.slice(prefix.length + 1)
+              : explicitType;
+            if (definition.members.includes(member)) {
+              return `${prefix}_${member}`;
+            }
+          }
+
+          const matches = definition.members.filter((member) =>
+            (uniqueFields.get(member) ?? []).some((field) =>
+              Object.hasOwn(object, field),
+            ),
+          );
+          if (matches.length === 1) {
+            return `${prefix}_${matches[0]}`;
+          }
+        } catch {
+          // Accessor-backed tags and hostile proxies are not valid type hints.
+        }
+        return null;
+      },
+    };
+  }
+
+  return resolvers;
+}
+
 /**
  * New document model subgraph that uses reactorClient instead of legacy reactor.
  * This class auto-generates GraphQL queries and mutations for a document model.
  */
 export class DocumentModelSubgraph extends BaseSubgraph {
   declare resolvers: DocumentModelSubgraphResolvers;
-  private documentModel: DocumentModelModule;
+  readonly documentModel: DocumentModelModule;
 
   constructor(documentModel: DocumentModelModule, args: SubgraphArgs) {
     super(args);
     this.documentModel = documentModel;
     this.name = kebabCase(documentModel.documentModel.global.name);
-    this.typeDefs = generateDocumentModelSchema(
-      this.documentModel.documentModel.global,
-      { useNewApi: true },
-    );
+    this.typeDefs = this.documentModel.definition
+      ? generateDocumentModelSchemaFromDefinition(
+          this.documentModel.definition,
+          { useNewApi: true },
+        )
+      : generateDocumentModelSchema(this.documentModel.documentModel.global, {
+          useNewApi: true,
+        });
     this.resolvers = this.generateResolvers();
   }
 
   /** Returns the typed query resolvers for this document model. */
   get queryResolvers(): DocumentModelQueryResolvers {
-    const documentName = getDocumentModelSchemaName(
-      this.documentModel.documentModel.global,
-    );
+    const documentName = getDocumentModelModuleSchemaName(this.documentModel);
     return this.resolvers[
       `${documentName}Queries`
     ] as DocumentModelQueryResolvers;
@@ -161,26 +244,60 @@ export class DocumentModelSubgraph extends BaseSubgraph {
 
   /** Returns the typed mutation resolvers for this document model. */
   get mutationResolvers(): DocumentModelMutationResolvers {
-    const documentName = getDocumentModelSchemaName(
-      this.documentModel.documentModel.global,
-    );
+    const documentName = getDocumentModelModuleSchemaName(this.documentModel);
     return this.resolvers[
       `${documentName}Mutations`
     ] as DocumentModelMutationResolvers;
   }
 
-  /**
-   * Generate __resolveType functions for union types found in the document model schema.
-   * Parses the state schema to find union definitions and their member types,
-   * then uses unique field presence to discriminate between member types at runtime.
-   */
-  private generateUnionResolvers(): Record<string, DocumentModelResolverMap> {
-    const documentName = getDocumentModelSchemaName(
-      this.documentModel.documentModel.global,
-    );
+  /** Create resolvers for union and interface values in document state. */
+  private generateAbstractTypeResolvers(): Record<
+    string,
+    DocumentModelResolverMap
+  > {
+    const documentName = getDocumentModelModuleSchemaName(this.documentModel);
     const specification =
       this.documentModel.documentModel.global.specifications.at(-1);
     if (!specification) return {};
+
+    const structuredSpecification =
+      this.documentModel.definition?.specifications.at(-1);
+    if (structuredSpecification) {
+      const objectDefinitions = structuredSpecification.types.filter(
+        (definition) => definition.kind === "object",
+      );
+      const objectFields = new Map(
+        objectDefinitions.map(
+          (definition) =>
+            [
+              definition.name,
+              definition.fields.map((field) => field.name),
+            ] as const,
+        ),
+      );
+      const definitions: AbstractTypeDefinition[] =
+        structuredSpecification.types
+          .filter(
+            (definition) =>
+              definition.kind === "union" || definition.kind === "interface",
+          )
+          .map((definition) => ({
+            name: definition.name,
+            members:
+              definition.kind === "union"
+                ? definition.members
+                : objectDefinitions
+                    .filter((candidate) =>
+                      candidate.implements?.includes(definition.name),
+                    )
+                    .map((candidate) => candidate.name),
+          }));
+      return createAbstractTypeResolvers(
+        documentName,
+        definitions,
+        objectFields,
+      );
+    }
 
     const globalSchema = specification.state.global.schema ?? "";
     const localSchema = specification.state.local.schema ?? "";
@@ -195,54 +312,48 @@ export class DocumentModelSubgraph extends BaseSubgraph {
       return {};
     }
 
-    // Build map: object type name -> field names
-    const objectFieldsMap = new Map<string, string[]>();
-    for (const def of ast.definitions) {
-      if (def.kind === Kind.OBJECT_TYPE_DEFINITION) {
-        objectFieldsMap.set(
-          def.name.value,
-          def.fields?.map((f) => f.name.value) ?? [],
-        );
-      }
-    }
-
-    const resolvers: Record<string, DocumentModelResolverMap> = {};
-
-    for (const def of ast.definitions) {
-      if (def.kind !== Kind.UNION_TYPE_DEFINITION) continue;
-
-      const unionName = def.name.value;
-      const memberTypes = def.types?.map((t) => t.name.value) ?? [];
-      if (memberTypes.length === 0) continue;
-
-      // Compute unique fields per member type
-      const uniqueFields: Record<string, string[]> = {};
-      for (const memberType of memberTypes) {
-        const ownFields = objectFieldsMap.get(memberType) ?? [];
-        const otherFields = new Set(
-          memberTypes
-            .filter((t) => t !== memberType)
-            .flatMap((t) => objectFieldsMap.get(t) ?? []),
-        );
-        uniqueFields[memberType] = ownFields.filter((f) => !otherFields.has(f));
-      }
-
-      const prefixedUnionName = `${documentName}_${unionName}`;
-
-      resolvers[prefixedUnionName] = {
-        __resolveType: (obj: Record<string, unknown>) => {
-          for (const memberType of memberTypes) {
-            const fields = uniqueFields[memberType] ?? [];
-            if (fields.length > 0 && fields.some((f) => f in obj)) {
-              return `${documentName}_${memberType}`;
-            }
-          }
-          return `${documentName}_${memberTypes[0]}`;
-        },
-      };
-    }
-
-    return resolvers;
+    const objectDefinitions = ast.definitions.filter(
+      (definition) => definition.kind === Kind.OBJECT_TYPE_DEFINITION,
+    );
+    const objectFields = new Map(
+      objectDefinitions.map(
+        (definition) =>
+          [
+            definition.name.value,
+            definition.fields?.map((field) => field.name.value) ?? [],
+          ] as const,
+      ),
+    );
+    const definitions: AbstractTypeDefinition[] = ast.definitions.flatMap(
+      (definition) => {
+        if (definition.kind === Kind.UNION_TYPE_DEFINITION) {
+          return [
+            {
+              name: definition.name.value,
+              members: definition.types?.map((type) => type.name.value) ?? [],
+            },
+          ];
+        }
+        if (definition.kind === Kind.INTERFACE_TYPE_DEFINITION) {
+          return [
+            {
+              name: definition.name.value,
+              members: objectDefinitions
+                .filter(
+                  (candidate) =>
+                    candidate.interfaces?.some(
+                      (implemented) =>
+                        implemented.name.value === definition.name.value,
+                    ) ?? false,
+                )
+                .map((candidate) => candidate.name.value),
+            },
+          ];
+        }
+        return [];
+      },
+    );
+    return createAbstractTypeResolvers(documentName, definitions, objectFields);
   }
 
   /**
@@ -251,18 +362,37 @@ export class DocumentModelSubgraph extends BaseSubgraph {
    */
   private generateResolvers(): DocumentModelSubgraphResolvers {
     const documentType = this.documentModel.documentModel.global.id;
-    const documentName = getDocumentModelSchemaName(
-      this.documentModel.documentModel.global,
-    );
-    const operations =
-      this.documentModel.documentModel.global.specifications
-        .at(-1)
-        ?.modules.flatMap((module) =>
-          module.operations.filter((op) => op.name),
-        ) ?? [];
+    const documentName = getDocumentModelModuleSchemaName(this.documentModel);
+    const structuredSpecification =
+      this.documentModel.definition?.specifications.at(-1);
+    const operations: RuntimeOperation[] = structuredSpecification
+      ? structuredSpecification.modules.flatMap((module) =>
+          module.operations
+            .filter((operation) => operation.name && operation.input)
+            .map((operation) => ({
+              actionKey: operation.creatorKey,
+              fieldName: operation.creatorKey,
+              operationType: operation.actionType,
+            })),
+        )
+      : (this.documentModel.documentModel.global.specifications
+          .at(-1)
+          ?.modules.flatMap((module) =>
+            module.operations.flatMap((operation) => {
+              if (!operation.name) return [];
+              const fieldName = camelCase(operation.name);
+              return [
+                {
+                  actionKey: fieldName,
+                  fieldName,
+                  operationType: operation.name,
+                },
+              ];
+            }),
+          ) ?? []);
 
     return {
-      ...this.generateUnionResolvers(),
+      ...this.generateAbstractTypeResolvers(),
       Query: {
         // Namespace resolver: returns empty object so nested field resolvers can run
         [documentName]: () => ({}),
@@ -550,9 +680,9 @@ export class DocumentModelSubgraph extends BaseSubgraph {
           return result;
         },
         // Generate sync and async mutations for each operation
-        ...operations.reduce((mutations, op) => {
+        ...operations.reduce((mutations, operation) => {
           // Sync mutation
-          mutations[camelCase(op.name!)] = async (
+          mutations[operation.fieldName] = async (
             _: unknown,
             args: { docId: string; input: unknown },
             ctx: Context,
@@ -561,7 +691,7 @@ export class DocumentModelSubgraph extends BaseSubgraph {
 
             const handle = await this.assertCanExecuteOperation(
               docId,
-              op.name!,
+              operation.operationType,
               ctx,
             );
             const effectiveDocId = handle.fetchIdentifier;
@@ -573,9 +703,9 @@ export class DocumentModelSubgraph extends BaseSubgraph {
               );
             }
 
-            const action = this.documentModel.actions[camelCase(op.name!)];
+            const action = this.documentModel.actions[operation.actionKey];
             if (!action) {
-              throw new GraphQLError(`Action ${op.name} not found`);
+              throw new GraphQLError(`Action ${operation.actionKey} not found`);
             }
 
             try {
@@ -587,13 +717,15 @@ export class DocumentModelSubgraph extends BaseSubgraph {
               return toGqlPhDocument(updatedDoc);
             } catch (error) {
               throw new GraphQLError(
-                error instanceof Error ? error.message : `Failed to ${op.name}`,
+                error instanceof Error
+                  ? error.message
+                  : `Failed to execute ${operation.operationType}`,
               );
             }
           };
 
           // Async mutation - returns job ID
-          mutations[`${camelCase(op.name!)}Async`] = async (
+          mutations[`${operation.fieldName}Async`] = async (
             _: unknown,
             args: { docId: string; input: unknown },
             ctx: Context,
@@ -602,7 +734,7 @@ export class DocumentModelSubgraph extends BaseSubgraph {
 
             const handle = await this.assertCanExecuteOperation(
               docId,
-              op.name!,
+              operation.operationType,
               ctx,
             );
             const effectiveDocId = handle.fetchIdentifier;
@@ -614,9 +746,9 @@ export class DocumentModelSubgraph extends BaseSubgraph {
               );
             }
 
-            const action = this.documentModel.actions[camelCase(op.name!)];
+            const action = this.documentModel.actions[operation.actionKey];
             if (!action) {
-              throw new GraphQLError(`Action ${op.name} not found`);
+              throw new GraphQLError(`Action ${operation.actionKey} not found`);
             }
 
             try {
@@ -628,7 +760,9 @@ export class DocumentModelSubgraph extends BaseSubgraph {
               return jobInfo.id;
             } catch (error) {
               throw new GraphQLError(
-                error instanceof Error ? error.message : `Failed to ${op.name}`,
+                error instanceof Error
+                  ? error.message
+                  : `Failed to execute ${operation.operationType}`,
               );
             }
           };

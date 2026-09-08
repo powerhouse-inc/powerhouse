@@ -1,0 +1,481 @@
+{
+  "kind": "powerhouse.gate-evidence",
+  "formatVersion": 1,
+  "gate": "B3",
+  "contract": {
+    "status": "spec-complete",
+    "revision": "sha256:a7ccf254a06e9542fe8e21c59c385e7504a998982ee23444f4491143ef830e4a"
+  },
+  "evidence": {
+    "outcome": "pass"
+  },
+  "repository": {
+    "commit": "da05f917d6912bc30c5c944823c216ec47e19fa8",
+    "baseTreeDigest": "sha256:6d05bb4c4139466f81c0dbaae56f75d3d85af6486827e5a0b67dbf4814848eb0",
+    "baseDirty": false,
+    "appliedPatchDigest": "sha256:3cc2f2bc8e80aee821dfce01607ca32f0bca3964ba773a8c89045511004699a4"
+  },
+  "toolchain": {
+    "lockfileDigest": "sha256:b0b56565f0bf62f674db82eee2cfaa9c4a01a538ea593e0c8f3a42abf43ef6c0",
+    "runnerVersion": "0.1.0",
+    "node": "v24.14.0",
+    "packageManager": "pnpm@10.33.4",
+    "platform": "darwin",
+    "tools": {}
+  },
+  "fixture": {
+    "manifest": "test/code-first-definitions/fixtures/protocol/v1/matrix.json",
+    "fixtureVersion": "1.0.0",
+    "manifestDigest": "sha256:59af108a7abfa6065dba92645b55527b5c5b03ed0e67aa323d98caea329f0ad1",
+    "schemaDigest": "sha256:9a320fb708d0c5bba916dba4cd268cdd7283d21ce1128b5905b2bc247d8cc868",
+    "caseCount": 23
+  },
+  "dependencies": [
+    {
+      "gate": "B1",
+      "outcome": "pass",
+      "contractRevision": "sha256:a7ccf254a06e9542fe8e21c59c385e7504a998982ee23444f4491143ef830e4a",
+      "fixtureManifestDigest": "sha256:3b1ecf4f491d0459ddf129ff1a2ee33b8e05171cdbe857a2c0da7273667080ce",
+      "reportDigest": "sha256:8c0662bfdefb1ed89c9a715135a9d4c050c088ca335ec648f63bc84ca63a2b6f"
+    },
+    {
+      "gate": "B9",
+      "outcome": "pass",
+      "contractRevision": "sha256:a7ccf254a06e9542fe8e21c59c385e7504a998982ee23444f4491143ef830e4a",
+      "fixtureManifestDigest": "sha256:597d6f2a4716a4633765c558f36eb8fe288529c0940ea56d72cf73956b38b43c",
+      "reportDigest": "sha256:90804ebad634118d2148239141b23f74a920f34f0cfb6003bef7c0a41658f39d"
+    }
+  ],
+  "command": {
+    "name": "gate-evidence",
+    "args": [
+      "--gate",
+      "B3",
+      "--manifest",
+      "fixtures/protocol/v1/matrix.json",
+      "--out",
+      ".evidence/B3"
+    ],
+    "cwd": "<repository>"
+  },
+  "assertions": [
+    {
+      "id": "B3.validation",
+      "outcome": "pass",
+      "expected": "creator, reducer, no-input, extra-key, and duplicate-action behavior matches",
+      "received": "all declared protocol rows matched",
+      "artifactRefs": [
+        "protocol-matrix"
+      ]
+    },
+    {
+      "id": "B3.scope",
+      "outcome": "pass",
+      "expected": "creator, incoming wrong-scope, and open unknown-scope routing matches",
+      "received": "all declared protocol rows matched",
+      "artifactRefs": [
+        "protocol-matrix"
+      ]
+    },
+    {
+      "id": "B3.state",
+      "outcome": "pass",
+      "expected": "every legacy and code-first row reaches the committed state",
+      "received": "all declared protocol rows matched",
+      "artifactRefs": [
+        "protocol-matrix"
+      ]
+    },
+    {
+      "id": "B3.hash",
+      "outcome": "pass",
+      "expected": "every scope hash delta matches the committed row",
+      "received": "all declared protocol rows matched",
+      "artifactRefs": [
+        "protocol-matrix"
+      ]
+    },
+    {
+      "id": "B3.error",
+      "outcome": "pass",
+      "expected": "validation, domain, denial, stored-code, and reducer error outcomes match",
+      "received": "all declared protocol rows matched",
+      "artifactRefs": [
+        "protocol-matrix"
+      ]
+    },
+    {
+      "id": "B3.dispatch",
+      "outcome": "pass",
+      "expected": "every emitted signal sequence matches",
+      "received": "all declared protocol rows matched",
+      "artifactRefs": [
+        "protocol-matrix"
+      ]
+    },
+    {
+      "id": "B3.version",
+      "outcome": "pass",
+      "expected": "stored versions normalize and select the same module",
+      "received": "all declared protocol rows matched",
+      "artifactRefs": [
+        "protocol-matrix"
+      ]
+    },
+    {
+      "id": "B3.upgrade",
+      "outcome": "pass",
+      "expected": "every declared family upgrade edge reaches the same state",
+      "received": "all declared protocol rows matched",
+      "artifactRefs": [
+        "protocol-matrix"
+      ]
+    }
+  ],
+  "measurements": [],
+  "artifacts": [
+    {
+      "name": "protocol-matrix",
+      "path": "test/code-first-definitions/fixtures/protocol/v1/matrix.json",
+      "mediaType": "application/vnd.powerhouse.protocol-matrix+json",
+      "bytes": 48013,
+      "digest": "sha256:983e9309e2aaff95c559b884e23efe6fd464c51867fffc4f3fb7bd46f620dc37",
+      "retention": "committed"
+    }
+  ],
+  "results": {
+    "matrixDigest": "sha256:59af108a7abfa6065dba92645b55527b5c5b03ed0e67aa323d98caea329f0ad1",
+    "rows": [
+      {
+        "rowId": "creator-valid",
+        "route": "creator",
+        "version": 1,
+        "scope": "global",
+        "outcomeCode": "applied",
+        "stateDigest": "sha256:c5660a6e86b448c868ae197b2a8845389ab7575152b9e3449f271c326359913b",
+        "hashDigest": "sha256:86609f26182165a33288f635343ac8304b33c03607d62006f723e83733c195e6",
+        "errorCode": null,
+        "dispatchDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "selectedModuleVersion": 1,
+        "upgradePath": [],
+        "firstMismatch": null
+      },
+      {
+        "rowId": "creator-invalid",
+        "route": "creator",
+        "version": 1,
+        "scope": "global",
+        "outcomeCode": "creator-rejected",
+        "stateDigest": "sha256:df9dbaafc8bcc71b7e6c0ec6a98607a6bb7fc5d62bb4350b3df89b2a1cfc1bb0",
+        "hashDigest": "sha256:147169c02710599200da805bd5c431f7a8530a110359b64507a4a4728ffdd38f",
+        "errorCode": null,
+        "dispatchDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "selectedModuleVersion": 1,
+        "upgradePath": [],
+        "firstMismatch": null
+      },
+      {
+        "rowId": "raw-invalid",
+        "route": "raw-action",
+        "version": 1,
+        "scope": "global",
+        "outcomeCode": "reducer-error",
+        "stateDigest": "sha256:e9c6f8be7422d21120284d2c568a0b3bb21a2460d8ddd1b94d35c415e14f7936",
+        "hashDigest": "sha256:147169c02710599200da805bd5c431f7a8530a110359b64507a4a4728ffdd38f",
+        "errorCode": null,
+        "dispatchDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "selectedModuleVersion": 1,
+        "upgradePath": [],
+        "firstMismatch": null
+      },
+      {
+        "rowId": "extra-keys-preserved",
+        "route": "raw-action",
+        "version": 1,
+        "scope": "global",
+        "outcomeCode": "applied",
+        "stateDigest": "sha256:dc66efa8761a05a3101969aae351d7e25cc9a659d2232b97a40e41cd0ecd0253",
+        "hashDigest": "sha256:5a23ffd45c6f90bdeb197f44d5b6ca679897f0d0413e7a7b6af6bc3b78f8a753",
+        "errorCode": null,
+        "dispatchDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "selectedModuleVersion": 1,
+        "upgradePath": [],
+        "firstMismatch": null
+      },
+      {
+        "rowId": "wrong-scope-core-v1",
+        "route": "raw-action",
+        "version": 1,
+        "scope": "local",
+        "outcomeCode": "applied",
+        "stateDigest": "sha256:d021282a6bcb03c2b6ede2b64382940de750f0480ce1c4bd2cfc5e1ee2395b9c",
+        "hashDigest": "sha256:adb85932017c0b706039080d1e86d9f9aac3ad19e2167ac89e18efd1548c2948",
+        "errorCode": null,
+        "dispatchDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "selectedModuleVersion": 1,
+        "upgradePath": [],
+        "firstMismatch": null
+      },
+      {
+        "rowId": "unknown-runtime-scope",
+        "route": "raw-action",
+        "version": 1,
+        "scope": "experimental",
+        "outcomeCode": "reducer-error",
+        "stateDigest": "sha256:9db3aba18c212770923eafd736d3bf19b2d588cd50e75c7e6b937079092fd08f",
+        "hashDigest": "sha256:6297b2b90170df15e37b8d6093f7021917898a8bcaa91fc9559e27be7982805e",
+        "errorCode": null,
+        "dispatchDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "selectedModuleVersion": 1,
+        "upgradePath": [],
+        "firstMismatch": null
+      },
+      {
+        "rowId": "no-input-creator-absent",
+        "route": "definition",
+        "version": 1,
+        "scope": "global",
+        "outcomeCode": "absent",
+        "stateDigest": "sha256:c428352d0fc46ebe7e635b19de29bcd36a64e17daf1ba9153d9b01a3320e6af8",
+        "hashDigest": "sha256:aa629f79cc95dfb7983c248cf359a95aa1e1506efef58b90935b20e986c0517b",
+        "errorCode": null,
+        "dispatchDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "selectedModuleVersion": 1,
+        "upgradePath": [],
+        "firstMismatch": null
+      },
+      {
+        "rowId": "no-input-declaration-rejected",
+        "route": "definition",
+        "version": 1,
+        "scope": "global",
+        "outcomeCode": "definition-rejected",
+        "stateDigest": "sha256:183a61bf07659a7744a40a4d983be1fbea0fd46e0fd413ccf26c7d04d4821b7b",
+        "hashDigest": "sha256:aa629f79cc95dfb7983c248cf359a95aa1e1506efef58b90935b20e986c0517b",
+        "errorCode": null,
+        "dispatchDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "selectedModuleVersion": 1,
+        "upgradePath": [],
+        "firstMismatch": null
+      },
+      {
+        "rowId": "unknown-action",
+        "route": "raw-action",
+        "version": 1,
+        "scope": "global",
+        "outcomeCode": "applied",
+        "stateDigest": "sha256:6e555dc88c52a149edcbea0d90fbd515389d5d0a199d549ea8d1b5dddb8a7e4c",
+        "hashDigest": "sha256:147169c02710599200da805bd5c431f7a8530a110359b64507a4a4728ffdd38f",
+        "errorCode": null,
+        "dispatchDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "selectedModuleVersion": 1,
+        "upgradePath": [],
+        "firstMismatch": null
+      },
+      {
+        "rowId": "domain-error-default",
+        "route": "raw-action",
+        "version": 1,
+        "scope": "global",
+        "outcomeCode": "reducer-error",
+        "stateDigest": "sha256:d29092a94c27f6a18841f4e94315f1005b82189c13b046dcee61fbbe13ac0f58",
+        "hashDigest": "sha256:147169c02710599200da805bd5c431f7a8530a110359b64507a4a4728ffdd38f",
+        "errorCode": "Rejected",
+        "dispatchDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "selectedModuleVersion": 1,
+        "upgradePath": [],
+        "firstMismatch": null
+      },
+      {
+        "rowId": "domain-error-explicit",
+        "route": "raw-action",
+        "version": 1,
+        "scope": "global",
+        "outcomeCode": "reducer-error",
+        "stateDigest": "sha256:b22e95e4ccab5ce47eb452c39d10027f929c7b5e1a0ba6736419cbef0fe0f709",
+        "hashDigest": "sha256:147169c02710599200da805bd5c431f7a8530a110359b64507a4a4728ffdd38f",
+        "errorCode": "Rejected",
+        "dispatchDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "selectedModuleVersion": 1,
+        "upgradePath": [],
+        "firstMismatch": null
+      },
+      {
+        "rowId": "dispatch-signal",
+        "route": "raw-action",
+        "version": 1,
+        "scope": "global",
+        "outcomeCode": "applied",
+        "stateDigest": "sha256:0572ccaf73f7a091392f9fae38140dca2bc835300c8f75f8b79a42d23b1dd0d6",
+        "hashDigest": "sha256:0e113cc0944e305b4782c3c569be35358270b09c8131dc1073b1260a876ababd",
+        "errorCode": null,
+        "dispatchDigest": "sha256:8238eff4584e8d30ed67c2d94771478925a1ec92f36be0db4690817ad9668af6",
+        "selectedModuleVersion": 1,
+        "upgradePath": [],
+        "firstMismatch": null
+      },
+      {
+        "rowId": "denied-operation-replay",
+        "route": "archived-replay",
+        "version": 1,
+        "scope": "global",
+        "outcomeCode": "denied",
+        "stateDigest": "sha256:10be1a996da5a060a429c12f8df2c1351a97e06b08d1c3c7b6682fad9f66775a",
+        "hashDigest": "sha256:147169c02710599200da805bd5c431f7a8530a110359b64507a4a4728ffdd38f",
+        "errorCode": null,
+        "dispatchDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "selectedModuleVersion": 1,
+        "upgradePath": [],
+        "firstMismatch": null
+      },
+      {
+        "rowId": "load-state",
+        "route": "base-action",
+        "version": 1,
+        "scope": "global",
+        "outcomeCode": "applied",
+        "stateDigest": "sha256:a50986b29174e3f42ffaf257a3cd5b685156eb57f0c2c58b582dc7d0a6623c4a",
+        "hashDigest": "sha256:45f71d41ec8791377c2d261ad86bce62bb00cd6c7e04021def43e5b50c4386ae",
+        "errorCode": null,
+        "dispatchDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "selectedModuleVersion": 1,
+        "upgradePath": [],
+        "firstMismatch": null
+      },
+      {
+        "rowId": "duplicate-index-undo",
+        "route": "base-action",
+        "version": 1,
+        "scope": "global",
+        "outcomeCode": "applied",
+        "stateDigest": "sha256:7aa2f1ce2149fdaf793fe29a10cd6c35262da316585c1b6b3f313fe90a5c8a79",
+        "hashDigest": "sha256:147169c02710599200da805bd5c431f7a8530a110359b64507a4a4728ffdd38f",
+        "errorCode": null,
+        "dispatchDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "selectedModuleVersion": 1,
+        "upgradePath": [],
+        "firstMismatch": null
+      },
+      {
+        "rowId": "redo",
+        "route": "base-action",
+        "version": 1,
+        "scope": "global",
+        "outcomeCode": "applied",
+        "stateDigest": "sha256:eea2eac1334d7f8455598e08b8ae9f585793833452a2786f691bd252ac5403fe",
+        "hashDigest": "sha256:ca64b8827e58bce56dd96197bfa666d4b6552192bab31dca307735de41f63e55",
+        "errorCode": null,
+        "dispatchDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "selectedModuleVersion": 1,
+        "upgradePath": [],
+        "firstMismatch": null
+      },
+      {
+        "rowId": "prune-local",
+        "route": "base-action",
+        "version": 1,
+        "scope": "local",
+        "outcomeCode": "base-action-rejected",
+        "stateDigest": "sha256:ad2311ce6dc4469c75dbf6295ab68502cb47e704c6f8b3b6f97cb34e4acc5491",
+        "hashDigest": "sha256:8be2b1dac22a2b65c6a2d236abb272a04fc22d1996f3befa618992be957806f7",
+        "errorCode": null,
+        "dispatchDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "selectedModuleVersion": 1,
+        "upgradePath": [],
+        "firstMismatch": null
+      },
+      {
+        "rowId": "prune-global",
+        "route": "base-action",
+        "version": 1,
+        "scope": "global",
+        "outcomeCode": "base-action-rejected",
+        "stateDigest": "sha256:ad2311ce6dc4469c75dbf6295ab68502cb47e704c6f8b3b6f97cb34e4acc5491",
+        "hashDigest": "sha256:8be2b1dac22a2b65c6a2d236abb272a04fc22d1996f3befa618992be957806f7",
+        "errorCode": null,
+        "dispatchDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "selectedModuleVersion": 1,
+        "upgradePath": [],
+        "firstMismatch": null
+      },
+      {
+        "rowId": "stored-version-zero",
+        "route": "family-resolution",
+        "version": 0,
+        "scope": "document",
+        "outcomeCode": "selected",
+        "stateDigest": "sha256:bb7bcb04c039e97ec15e05867c8ffbfc656f8dceb1c1ba02e88f0bcbacb1c930",
+        "hashDigest": "sha256:aa629f79cc95dfb7983c248cf359a95aa1e1506efef58b90935b20e986c0517b",
+        "errorCode": null,
+        "dispatchDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "selectedModuleVersion": 1,
+        "upgradePath": [],
+        "firstMismatch": null
+      },
+      {
+        "rowId": "context-ordinal-timing",
+        "route": "operation-context",
+        "version": 1,
+        "scope": "global",
+        "outcomeCode": "applied",
+        "stateDigest": "sha256:b4cee352a96ea59223758ec8e89a1dbc1069b4cb55ac964c7f96fed3b299ec76",
+        "hashDigest": "sha256:c570b7675a5db71af1f7578ff2fe2376aa4b425a04d52a433c089a9657ab7cf2",
+        "errorCode": null,
+        "dispatchDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "selectedModuleVersion": 1,
+        "upgradePath": [],
+        "firstMismatch": null
+      },
+      {
+        "rowId": "version-selection-v2",
+        "route": "family-resolution",
+        "version": 2,
+        "scope": "document",
+        "outcomeCode": "selected",
+        "stateDigest": "sha256:2f9ba8d07b9a8beb8c902d4b46e3c83290f1b7529e72c3672afb5138f93dde51",
+        "hashDigest": "sha256:aa629f79cc95dfb7983c248cf359a95aa1e1506efef58b90935b20e986c0517b",
+        "errorCode": null,
+        "dispatchDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "selectedModuleVersion": 2,
+        "upgradePath": [],
+        "firstMismatch": null
+      },
+      {
+        "rowId": "upgrade-v1-v2",
+        "route": "upgrade",
+        "version": 1,
+        "scope": "document",
+        "outcomeCode": "upgraded",
+        "stateDigest": "sha256:32f1667836ad5a0ebf15dcd57adcf66828dbc47e1c4b9a2c1d63b093bc603d00",
+        "hashDigest": "sha256:3e95046237029825cc11a6ca4793607f5805742ca992c0c8aef63b14d50f16ef",
+        "errorCode": null,
+        "dispatchDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "selectedModuleVersion": 2,
+        "upgradePath": [
+          2
+        ],
+        "firstMismatch": null
+      },
+      {
+        "rowId": "duplicate-action-type-rejects-complete-model",
+        "route": "definition",
+        "version": 1,
+        "scope": "global",
+        "outcomeCode": "definition-rejected",
+        "stateDigest": "sha256:7847fbc8c4d62fea401f058c264bc1f9d4264d69951ec70f55052a510cc2fc0f",
+        "hashDigest": "sha256:aa629f79cc95dfb7983c248cf359a95aa1e1506efef58b90935b20e986c0517b",
+        "errorCode": null,
+        "dispatchDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "selectedModuleVersion": 1,
+        "upgradePath": [],
+        "firstMismatch": null
+      }
+    ]
+  },
+  "summary": {
+    "passed": 8,
+    "failed": 0,
+    "blocked": 0,
+    "cancelled": 0
+  }
+}

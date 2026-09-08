@@ -238,5 +238,52 @@ export const sourceConfigSchema = {
       description:
         "Connect-specific UI customisations. Copied verbatim into the runtime config at build time.",
     },
+    definitionSources: {
+      description:
+        "Explicit TypeScript definition roots, or an explicit declaration that this package uses legacy generated models.",
+      oneOf: [
+        {
+          type: "object",
+          additionalProperties: false,
+          required: ["formatVersion", "mode", "entries"],
+          properties: {
+            formatVersion: { const: 1 },
+            mode: { const: "code-first" },
+            entries: {
+              type: "array",
+              minItems: 1,
+              items: {
+                type: "object",
+                additionalProperties: false,
+                required: ["specifier"],
+                properties: {
+                  specifier: {
+                    type: "string",
+                    pattern: "^\\./",
+                    description:
+                      "POSIX package-relative TypeScript module specifier.",
+                  },
+                  exportPath: {
+                    type: "array",
+                    items: { type: "string" },
+                    description:
+                      "Exact property keys traversed from the imported module namespace.",
+                  },
+                },
+              },
+            },
+          },
+        },
+        {
+          type: "object",
+          additionalProperties: false,
+          required: ["formatVersion", "mode"],
+          properties: {
+            formatVersion: { const: 1 },
+            mode: { const: "legacy" },
+          },
+        },
+      ],
+    },
   },
 } as const;

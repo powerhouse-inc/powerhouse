@@ -1,0 +1,229 @@
+{
+  "kind": "powerhouse.gate-evidence",
+  "formatVersion": 1,
+  "gate": "B5",
+  "contract": {
+    "status": "spec-complete",
+    "revision": "sha256:a7ccf254a06e9542fe8e21c59c385e7504a998982ee23444f4491143ef830e4a"
+  },
+  "evidence": {
+    "outcome": "pass"
+  },
+  "repository": {
+    "commit": "da05f917d6912bc30c5c944823c216ec47e19fa8",
+    "baseTreeDigest": "sha256:6d05bb4c4139466f81c0dbaae56f75d3d85af6486827e5a0b67dbf4814848eb0",
+    "baseDirty": false,
+    "appliedPatchDigest": "sha256:3cc2f2bc8e80aee821dfce01607ca32f0bca3964ba773a8c89045511004699a4"
+  },
+  "toolchain": {
+    "lockfileDigest": "sha256:b0b56565f0bf62f674db82eee2cfaa9c4a01a538ea593e0c8f3a42abf43ef6c0",
+    "runnerVersion": "0.1.0",
+    "node": "v24.14.0",
+    "packageManager": "pnpm@10.33.4",
+    "platform": "darwin",
+    "tools": {}
+  },
+  "fixture": {
+    "manifest": "test/code-first-definitions/fixtures/packed-consumers/manifest-v1.json",
+    "fixtureVersion": "packed-consumers-v1",
+    "manifestDigest": "sha256:9a0215377c29684edb0285ad85675d3d61986c2611ab6efd8021299959f43dab",
+    "schemaDigest": "sha256:9a320fb708d0c5bba916dba4cd268cdd7283d21ce1128b5905b2bc247d8cc868",
+    "caseCount": 2
+  },
+  "dependencies": [
+    {
+      "gate": "B8",
+      "outcome": "pass",
+      "contractRevision": "sha256:a7ccf254a06e9542fe8e21c59c385e7504a998982ee23444f4491143ef830e4a",
+      "fixtureManifestDigest": "sha256:1c29708a0853206b2e41c4bd9d31d946ef6d7ba778767d143017e7b8d47d0100",
+      "reportDigest": "sha256:ca2d451ea28de8863295391b8505b54f5264d2e33fc673d124ce4bc1426d7273"
+    },
+    {
+      "gate": "B9",
+      "outcome": "pass",
+      "contractRevision": "sha256:a7ccf254a06e9542fe8e21c59c385e7504a998982ee23444f4491143ef830e4a",
+      "fixtureManifestDigest": "sha256:597d6f2a4716a4633765c558f36eb8fe288529c0940ea56d72cf73956b38b43c",
+      "reportDigest": "sha256:90804ebad634118d2148239141b23f74a920f34f0cfb6003bef7c0a41658f39d"
+    }
+  ],
+  "command": {
+    "name": "gate-evidence",
+    "args": [
+      "--gate",
+      "B5",
+      "--manifest",
+      "fixtures/packed-consumers/manifest-v1.json",
+      "--out",
+      ".evidence/B5"
+    ],
+    "cwd": "<repository>"
+  },
+  "assertions": [
+    {
+      "id": "B5.pack",
+      "outcome": "pass",
+      "expected": "the rebuilt tarball and every packed file match the committed artifact",
+      "received": "both fresh packed consumers matched",
+      "artifactRefs": [
+        "packed-tarball",
+        "packed-file-manifest"
+      ]
+    },
+    {
+      "id": "B5.node-types",
+      "outcome": "pass",
+      "expected": "the isolated Node consumer typechecks both public declaration entries",
+      "received": "both fresh packed consumers matched",
+      "artifactRefs": [
+        "packed-tarball",
+        "resolver-trace"
+      ]
+    },
+    {
+      "id": "B5.browser-types",
+      "outcome": "pass",
+      "expected": "the isolated browser-worker consumer typechecks both public declaration entries",
+      "received": "both fresh packed consumers matched",
+      "artifactRefs": [
+        "packed-tarball",
+        "resolver-trace"
+      ]
+    },
+    {
+      "id": "B5.node-import",
+      "outcome": "pass",
+      "expected": "Node imports every public entry with B1-equivalent models, actions, specifications, and SDL",
+      "received": "both fresh packed consumers matched",
+      "artifactRefs": [
+        "packed-tarball",
+        "resolver-trace"
+      ]
+    },
+    {
+      "id": "B5.worker-import",
+      "outcome": "pass",
+      "expected": "a browser-condition worker imports every public entry and completes its handshake",
+      "received": "both fresh packed consumers matched",
+      "artifactRefs": [
+        "packed-tarball",
+        "resolver-trace"
+      ]
+    },
+    {
+      "id": "B5.portability",
+      "outcome": "pass",
+      "expected": "both offline installs use only packed files with no workspace link or escaped resolution",
+      "received": "both fresh packed consumers matched",
+      "artifactRefs": [
+        "packed-tarball",
+        "dependency-tree",
+        "resolver-trace"
+      ]
+    }
+  ],
+  "measurements": [],
+  "artifacts": [
+    {
+      "name": "packed-tarball",
+      "path": "test/code-first-definitions/fixtures/packed-consumers/artifacts/code-first-packed-fixture-0.0.0.tgz",
+      "mediaType": "application/gzip",
+      "bytes": 139008,
+      "digest": "sha256:12b6b9fa1e387d8d8d5bf2b350dfa849956ced4e20af2785455c00b42aa60804",
+      "retention": "committed"
+    },
+    {
+      "name": "packed-file-manifest",
+      "path": "test/code-first-definitions/fixtures/packed-consumers/packed-file-manifest.json",
+      "mediaType": "application/vnd.powerhouse.byte-manifest+json",
+      "bytes": 1430,
+      "digest": "sha256:ada9f61c65b0a2bfadcd67bd193618b0156b544318f796371e03850e70f20071",
+      "retention": "committed"
+    },
+    {
+      "name": "dependency-tree",
+      "path": "test/code-first-definitions/fixtures/packed-consumers/dependency-tree.json",
+      "mediaType": "application/vnd.powerhouse.dependency-tree+json",
+      "bytes": 455,
+      "digest": "sha256:6d19352ea1694cf2fbb389f0e498fc06ce46deadd0d234e10f716e839527fde4",
+      "retention": "committed"
+    },
+    {
+      "name": "resolver-trace",
+      "path": "test/code-first-definitions/fixtures/packed-consumers/resolver-trace.json",
+      "mediaType": "application/vnd.powerhouse.resolver-trace+json",
+      "bytes": 1235,
+      "digest": "sha256:23f4ebaa145c56a99423dee82cb4bc1b56b6ef4703a444cdc0a529a294fd33f3",
+      "retention": "committed"
+    }
+  ],
+  "results": {
+    "consumers": [
+      {
+        "caseId": "node",
+        "tarballDigest": "sha256:43ff9ef4b475bf25f3c683dae35809ebcc58832f1637b021a8c3414181b73016",
+        "lockfileDigest": "sha256:a198f47c27c8d0024b1129542eb9f158c8f2868eb09f6bd05bbede9d2872feb6",
+        "packedFileManifestDigest": "sha256:40b7799a0c75391d2a872eeb0996f9973748008439baccdf2a498bc12ea02381",
+        "dependencyTreeDigest": "sha256:e01a1a95248ad3e029193def1a4418e0e3d9fc8f0bf61863fe85709ef35e1ab6",
+        "resolverTraceDigest": "sha256:df447e0dea37713cee39bfa230af3ee288696d05d8d5171dcf856cd2e4b4963d",
+        "declarationEntry": "node_modules/@powerhousedao/code-first-packed-fixture/dist/node.d.ts",
+        "declarationBytes": 120355,
+        "checkMetrics": {
+          "files": 60,
+          "libraryLines": 10601,
+          "definitionLines": 2866,
+          "typescriptLines": 22,
+          "identifiers": 14573,
+          "symbols": 9656,
+          "types": 1336,
+          "instantiations": 3910
+        },
+        "importedLogicalKeys": [
+          "test/todo@1",
+          "test/todo@2"
+        ],
+        "workerHandshake": null,
+        "escapedPaths": []
+      },
+      {
+        "caseId": "browser-worker",
+        "tarballDigest": "sha256:43ff9ef4b475bf25f3c683dae35809ebcc58832f1637b021a8c3414181b73016",
+        "lockfileDigest": "sha256:e3102a08db8fb22f7014ac83f8bdfe484e5e67f98cbb594969d2a74828c95ecb",
+        "packedFileManifestDigest": "sha256:40b7799a0c75391d2a872eeb0996f9973748008439baccdf2a498bc12ea02381",
+        "dependencyTreeDigest": "sha256:3b2bbbde8dc026ef988a585ac9439f5c307c7fdd87d4be2f1c63292e52800f85",
+        "resolverTraceDigest": "sha256:3c1608320f88e8bd964eb1539b21bcc676dc2735180bf278d1d4664e563eda93",
+        "declarationEntry": "node_modules/@powerhousedao/code-first-packed-fixture/dist/node.d.ts",
+        "declarationBytes": 120355,
+        "checkMetrics": {
+          "files": 61,
+          "libraryLines": 26208,
+          "definitionLines": 2866,
+          "typescriptLines": 20,
+          "identifiers": 30058,
+          "symbols": 19322,
+          "types": 1327,
+          "instantiations": 3861
+        },
+        "importedLogicalKeys": [
+          "test/todo@1",
+          "test/todo@2"
+        ],
+        "workerHandshake": {
+          "status": "ok",
+          "actionType": "EDIT_TITLE",
+          "splitEntryMatches": true,
+          "resolvedEntries": {
+            "root": "node_modules/@powerhousedao/code-first-packed-fixture/dist/browser.js",
+            "documentModels": "node_modules/@powerhousedao/code-first-packed-fixture/dist/browser.js"
+          }
+        },
+        "escapedPaths": []
+      }
+    ]
+  },
+  "summary": {
+    "passed": 6,
+    "failed": 0,
+    "blocked": 0,
+    "cancelled": 0
+  }
+}

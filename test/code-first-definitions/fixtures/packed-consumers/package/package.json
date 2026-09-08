@@ -1,0 +1,22 @@
+{
+  "name": "@powerhousedao/code-first-packed-fixture",
+  "version": "0.0.0",
+  "type": "module",
+  "files": ["dist", "style.css"],
+  "exports": {
+    ".": {
+      "types": "./dist/node.d.ts",
+      "browser": "./dist/browser.js",
+      "import": "./dist/node.js",
+      "default": "./dist/node.js"
+    },
+    "./document-models": {
+      "types": "./dist/node.d.ts",
+      "browser": "./dist/browser.js",
+      "import": "./dist/node.js",
+      "default": "./dist/node.js"
+    }
+  },
+  "sideEffects": false
+}
+

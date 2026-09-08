@@ -7,11 +7,76 @@ import { fileURLToPath, pathToFileURL } from "node:url";
  * ESM loader reads the drive letter in a Windows path as a URL scheme
  * (`import('D:\\...')` fails with ERR_UNSUPPORTED_ESM_URL_SCHEME).
  */
+function importSpecifierUrl(target: string): string {
+  return path.isAbsolute(target) ? pathToFileURL(target).href : target;
+}
+
 async function importSpecifier<T>(target: string): Promise<T> {
-  const specifier = path.isAbsolute(target)
-    ? pathToFileURL(target).href
-    : target;
+  const specifier = importSpecifierUrl(target);
   return (await import(/* @vite-ignore */ specifier)) as T;
+}
+
+function barePackageName(specifier: string): string | null {
+  if (
+    specifier.startsWith(".") ||
+    specifier.startsWith("/") ||
+    specifier.includes(":")
+  ) {
+    return null;
+  }
+  const segments = specifier.split("/");
+  return specifier.startsWith("@")
+    ? segments.length >= 2
+      ? `${segments[0]}/${segments[1]}`
+      : null
+    : (segments[0] ?? null);
+}
+
+/** True only when Node says the exact attempted import target is absent. */
+export function isMissingImportForSpecifier(
+  error: unknown,
+  target: string,
+): error is Error & { code: string } {
+  if (!(error instanceof Error) || !("code" in error)) return false;
+  const code = String(error.code);
+  const specifier = importSpecifierUrl(target);
+  const errorUrl =
+    "url" in error && typeof error.url === "string" ? error.url : undefined;
+  if (
+    code === "ERR_UNSUPPORTED_DIR_IMPORT" ||
+    code === "ERR_UNSUPPORTED_ESM_URL_SCHEME"
+  ) {
+    return errorUrl === specifier;
+  }
+  if (code === "ERR_MODULE_NOT_FOUND") {
+    if (errorUrl === specifier) return true;
+    if (errorUrl?.endsWith(`/node_modules/${specifier.replace(/^\/+/, "")}`)) {
+      return true;
+    }
+    const packageName = barePackageName(specifier);
+    return packageName
+      ? error.message.startsWith(`Cannot find package '${packageName}' `) ||
+          error.message.startsWith(`Cannot find package "${packageName}" `)
+      : false;
+  }
+  if (code !== "ERR_PACKAGE_PATH_NOT_EXPORTED") return false;
+
+  const packageName = barePackageName(specifier);
+  if (!packageName || specifier === packageName) return false;
+  const subpath = `.${specifier.slice(packageName.length)}`;
+  return (
+    error.message.startsWith(`Package subpath '${subpath}' `) ||
+    error.message.startsWith(`Package subpath "${subpath}" `)
+  );
+}
+
+async function importIfPresent<T>(target: string): Promise<T | null> {
+  try {
+    return await importSpecifier<T>(target);
+  } catch (error) {
+    if (isMissingImportForSpecifier(error, target)) return null;
+    throw error;
+  }
 }
 
 /**
@@ -29,11 +94,8 @@ async function tryNodeSuggestedPaths<T>(
   ];
 
   for (const suggestedPath of suggestedPaths) {
-    try {
-      return await importSpecifier<T>(suggestedPath);
-    } catch {
-      // Continue to next attempt
-    }
+    const result = await importIfPresent<T>(suggestedPath);
+    if (result) return result;
   }
 
   return null;
@@ -46,8 +108,9 @@ async function tryImportMetaResolve<T>(
   packageName: string,
   subPath: string,
 ): Promise<T | null> {
+  const packageJsonSpecifier = `${packageName}/package.json`;
   try {
-    const resolvedUrl = import.meta.resolve?.(`${packageName}/package.json`);
+    const resolvedUrl = import.meta.resolve?.(packageJsonSpecifier);
     if (!resolvedUrl) return null;
 
     // fileURLToPath, not URL.pathname: the latter yields "/D:/..." on Windows.
@@ -62,14 +125,11 @@ async function tryImportMetaResolve<T>(
     ];
 
     for (const attemptPath of pathsToTry) {
-      try {
-        return await importSpecifier<T>(attemptPath);
-      } catch {
-        // Continue to next attempt
-      }
+      const result = await importIfPresent<T>(attemptPath);
+      if (result) return result;
     }
-  } catch {
-    // import.meta.resolve failed
+  } catch (error) {
+    if (!isMissingImportForSpecifier(error, packageJsonSpecifier)) throw error;
   }
 
   return null;
@@ -173,11 +233,8 @@ function getCommonWorkspacePaths(
  */
 async function tryWorkspacePatterns<T>(patterns: string[]): Promise<T | null> {
   for (const workspacePath of patterns) {
-    try {
-      return await importSpecifier<T>(workspacePath);
-    } catch {
-      // Continue to next attempt
-    }
+    const result = await importIfPresent<T>(workspacePath);
+    if (result) return result;
   }
 
   return null;

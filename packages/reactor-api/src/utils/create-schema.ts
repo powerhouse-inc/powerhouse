@@ -6,16 +6,55 @@ import {
 import { typeDefs as scalarsTypeDefs } from "@powerhousedao/document-engineering/graphql";
 import type { Context } from "@powerhousedao/reactor-api";
 import type {
+  DocumentModelDefinitionV1,
   DocumentModelGlobalState,
   DocumentModelModule,
+  DocumentModelSpecificationDefinitionV1,
+  LocationFreeGraphQLDocumentNodeV1,
+  NamedGraphQLTypeDefinitionV1,
+  TypeReferenceDefinitionV1,
 } from "@powerhousedao/shared/document-model";
 import { camelCase, pascalCase } from "change-case";
 import { childLogger } from "document-model";
-import { type DocumentNode, Kind, parse, print } from "graphql";
+import {
+  buildSpecificationTypeDocument,
+  emptyTypePlaceholderName,
+} from "document-model/internal/subgraph";
+import {
+  type DefinitionNode,
+  type DocumentNode,
+  type InputObjectTypeDefinitionNode,
+  type InputValueDefinitionNode,
+  Kind,
+  OperationTypeNode,
+  type OperationTypeDefinitionNode,
+  parse,
+  print,
+  type SchemaDefinitionNode,
+  type TypeNode,
+  visit,
+} from "graphql";
 import { gql } from "graphql-tag";
 import { GraphQLJSONObject } from "graphql-type-json";
 
 const logger = childLogger(["reactor-api", "create-schema"]);
+
+export type LegacySchemaPipelineEvent = "document-types" | "document-api";
+
+let legacySchemaPipelineObserver:
+  | ((event: LegacySchemaPipelineEvent) => void)
+  | undefined;
+
+/** Observe legacy schema conversion in tests; omit the observer to disable it. */
+export function setLegacySchemaPipelineObserverForTests(
+  observer?: (event: LegacySchemaPipelineEvent) => void,
+): void {
+  legacySchemaPipelineObserver = observer;
+}
+
+function observeLegacySchemaPipeline(event: LegacySchemaPipelineEvent): void {
+  legacySchemaPipelineObserver?.(event);
+}
 
 /**
  * Revision type - matches the definition in reactor/schema.graphql.
@@ -53,17 +92,17 @@ const TYPE_DEFINITION_KINDS = new Set<Kind>([
   Kind.INTERFACE_TYPE_DEFINITION,
   Kind.UNION_TYPE_DEFINITION,
   Kind.SCALAR_TYPE_DEFINITION,
+  Kind.DIRECTIVE_DEFINITION,
 ]);
 
 /**
  * Drop duplicate type-system definitions by name, keeping the first occurrence.
- * Deduping is by name across ALL kinds (a `type` and an `enum` sharing a name
- * collide in GraphQL too), so the first definition of a given name wins
- * regardless of kind. State types are emitted before operation types, so
- * keep-first preserves the authoritative state definition. This heals a document
- * model that defines the same name twice (global+local, state+operation, or
- * twice in one scope) so the assembled subgraph SDL composes instead of crashing
- * the gateway (Sentry #917).
+ * Type names share one GraphQL namespace, while directive names occupy a
+ * separate namespace. Keep-first follows the caller's explicit composition
+ * order; in the current assemblers, host/API definitions precede injected
+ * state definitions. This heals a document model that defines the same name
+ * twice (global+local, state+operation, or twice in one scope) so the assembled
+ * subgraph SDL composes instead of crashing the gateway (Sentry #917).
  */
 const dedupeTypeDefinitions = (doc: DocumentNode): DocumentNode => {
   const seen = new Set<string>();
@@ -71,17 +110,234 @@ const dedupeTypeDefinitions = (doc: DocumentNode): DocumentNode => {
     if (!TYPE_DEFINITION_KINDS.has(def.kind)) return true;
     const name = (def as { name?: { value: string } }).name?.value;
     if (!name) return true;
-    if (seen.has(name)) {
+    const namespace =
+      def.kind === Kind.DIRECTIVE_DEFINITION ? "directive" : "type";
+    const key = `${namespace}:${name}`;
+    if (seen.has(key)) {
       // A duplicate here would otherwise crash supergraph composition; log it so
       // production has a breadcrumb of which model shipped a duplicate name.
       logger.debug(`Dropping duplicate type definition: ${name}`);
       return false;
     }
-    seen.add(name);
+    seen.add(key);
     return true;
   });
   return { kind: Kind.DOCUMENT, definitions };
 };
+
+const PREFIXED_DEFINITION_KINDS = new Set<Kind>([
+  Kind.OBJECT_TYPE_DEFINITION,
+  Kind.OBJECT_TYPE_EXTENSION,
+  Kind.ENUM_TYPE_DEFINITION,
+  Kind.ENUM_TYPE_EXTENSION,
+  Kind.INPUT_OBJECT_TYPE_DEFINITION,
+  Kind.INPUT_OBJECT_TYPE_EXTENSION,
+  Kind.INTERFACE_TYPE_DEFINITION,
+  Kind.INTERFACE_TYPE_EXTENSION,
+  Kind.UNION_TYPE_DEFINITION,
+  Kind.UNION_TYPE_EXTENSION,
+]);
+
+function asDocumentNode(
+  document: LocationFreeGraphQLDocumentNodeV1,
+): DocumentNode {
+  // The location-free shared representation has the same structure as DocumentNode.
+  return document as unknown as DocumentNode;
+}
+
+function namedDefinitionNames(
+  document: DocumentNode,
+  includeInputs: boolean,
+): Set<string> {
+  const names = new Set<string>();
+  for (const definition of document.definitions) {
+    if (!PREFIXED_DEFINITION_KINDS.has(definition.kind)) continue;
+    if (
+      !includeInputs &&
+      (definition.kind === Kind.INPUT_OBJECT_TYPE_DEFINITION ||
+        definition.kind === Kind.INPUT_OBJECT_TYPE_EXTENSION)
+    ) {
+      continue;
+    }
+    const name = (definition as { name?: { value: string } }).name?.value;
+    if (name) names.add(name);
+  }
+  return names;
+}
+
+function prefixStructuredDocument(
+  document: DocumentNode,
+  prefix: string,
+  options: {
+    readonly includeInputs: boolean;
+    readonly omitInputs: boolean;
+    readonly omitScalars: boolean;
+  },
+): DocumentNode {
+  const names = namedDefinitionNames(document, options.includeInputs);
+  const definitions = document.definitions.filter((definition) => {
+    if (
+      options.omitInputs &&
+      (definition.kind === Kind.INPUT_OBJECT_TYPE_DEFINITION ||
+        definition.kind === Kind.INPUT_OBJECT_TYPE_EXTENSION)
+    ) {
+      return false;
+    }
+    if (
+      options.omitScalars &&
+      (definition.kind === Kind.SCALAR_TYPE_DEFINITION ||
+        definition.kind === Kind.SCALAR_TYPE_EXTENSION)
+    ) {
+      return false;
+    }
+    return !(
+      definition.kind === Kind.SCALAR_TYPE_DEFINITION &&
+      definition.name.value === "DateTime"
+    );
+  });
+
+  const prefixed = visit(
+    { kind: Kind.DOCUMENT, definitions },
+    {
+      NamedType(node) {
+        return names.has(node.name.value)
+          ? {
+              ...node,
+              name: { ...node.name, value: `${prefix}_${node.name.value}` },
+            }
+          : undefined;
+      },
+      enter(node) {
+        if (!PREFIXED_DEFINITION_KINDS.has(node.kind)) return undefined;
+        const named = node as typeof node & { name?: { value: string } };
+        if (!named.name || !names.has(named.name.value)) return undefined;
+        return {
+          ...node,
+          name: { ...named.name, value: `${prefix}_${named.name.value}` },
+        };
+      },
+    },
+  );
+  return prefixed;
+}
+
+function emptyInputField(): InputValueDefinitionNode {
+  return {
+    kind: Kind.INPUT_VALUE_DEFINITION,
+    name: nameNode(emptyTypePlaceholderName(null)),
+    type: { kind: Kind.NAMED_TYPE, name: nameNode("Boolean") },
+    directives: [],
+  };
+}
+
+function definitionCompatibilityDocument(
+  definition: DocumentModelDefinitionV1,
+): DocumentNode | null {
+  const compatibility = definition.specifications.at(-1)?.graphQLCompatibility;
+  return compatibility ? asDocumentNode(compatibility.document) : null;
+}
+
+function structuredStateDefinitions(
+  definition: DocumentModelDefinitionV1,
+  prefix: string,
+): readonly DefinitionNode[] {
+  const document = definitionCompatibilityDocument(definition);
+  const prefixed = prefixStructuredDocument(
+    document ??
+      asDocumentNode(
+        buildSpecificationTypeDocument(definition.specifications.at(-1)),
+      ),
+    prefix,
+    {
+      // Computed output fields can reference authored input types. Keep those
+      // definitions in the state projection so the field arguments and their
+      // definitions are namespaced together. The API projection emits the same
+      // inputs; the final document deduplication keeps a single definition.
+      includeInputs: true,
+      omitInputs: false,
+      omitScalars: false,
+    },
+  );
+  return prefixed.definitions.filter(
+    (definition) =>
+      definition.kind !== Kind.SCHEMA_DEFINITION &&
+      definition.kind !== Kind.SCHEMA_EXTENSION,
+  );
+}
+
+/** Merge explicit schema declarations and retain generated root operation types. */
+function normalizeSchemaDefinition(document: DocumentNode): DocumentNode {
+  const schemaNodes = document.definitions.filter(
+    (definition) =>
+      definition.kind === Kind.SCHEMA_DEFINITION ||
+      definition.kind === Kind.SCHEMA_EXTENSION,
+  );
+  if (schemaNodes.length === 0) return document;
+
+  const objectNames = new Set(
+    document.definitions
+      .filter((definition) => definition.kind === Kind.OBJECT_TYPE_DEFINITION)
+      .map((definition) => definition.name.value),
+  );
+  const operationTypes = new Map<
+    OperationTypeNode,
+    OperationTypeDefinitionNode
+  >();
+  for (const definition of schemaNodes) {
+    for (const operationType of definition.operationTypes ?? []) {
+      if (!operationTypes.has(operationType.operation)) {
+        operationTypes.set(operationType.operation, operationType);
+      }
+    }
+  }
+  for (const [operation, typeName] of [
+    [OperationTypeNode.QUERY, "Query"],
+    [OperationTypeNode.MUTATION, "Mutation"],
+    [OperationTypeNode.SUBSCRIPTION, "Subscription"],
+  ] as const) {
+    // This schema belongs to the generated Reactor API. If a conventional host
+    // root exists, it must remain the root even when an injected compatibility
+    // schema declaration points the operation at a model-owned custom type.
+    if (objectNames.has(typeName)) {
+      operationTypes.set(operation, {
+        kind: Kind.OPERATION_TYPE_DEFINITION,
+        operation,
+        type: { kind: Kind.NAMED_TYPE, name: nameNode(typeName) },
+      });
+    }
+  }
+
+  const base = schemaNodes.find(
+    (definition) => definition.kind === Kind.SCHEMA_DEFINITION,
+  );
+  const normalized: SchemaDefinitionNode = {
+    kind: Kind.SCHEMA_DEFINITION,
+    ...(base?.description ? { description: base.description } : {}),
+    directives: schemaNodes.flatMap(
+      (definition) => definition.directives ?? [],
+    ),
+    operationTypes: Array.from(operationTypes.values()),
+  };
+  let inserted = false;
+  const definitions: DefinitionNode[] = [];
+  for (const definition of document.definitions) {
+    if (
+      definition.kind !== Kind.SCHEMA_DEFINITION &&
+      definition.kind !== Kind.SCHEMA_EXTENSION
+    ) {
+      definitions.push(definition);
+      continue;
+    }
+    if (!inserted) {
+      definitions.push(normalized);
+      inserted = true;
+    }
+  }
+  return {
+    ...document,
+    definitions,
+  };
+}
 
 export const buildSubgraphSchemaModule = (
   documentModels: DocumentModelModule[],
@@ -94,7 +350,9 @@ export const buildSubgraphSchemaModule = (
   };
 
   return {
-    typeDefs: getDocumentModelTypeDefs(documentModels, typeDefs),
+    typeDefs: normalizeSchemaDefinition(
+      getDocumentModelTypeDefs(documentModels, typeDefs),
+    ),
     resolvers: newResolvers,
   };
 };
@@ -124,15 +382,26 @@ export function getDocumentModelSchemaName(
   return pascalCase(documentModel.name.replaceAll("/", " "));
 }
 
+export function getDocumentModelModuleSchemaName(
+  module: DocumentModelModule,
+): string {
+  return (
+    module.definition?.model.graphQLName ??
+    getDocumentModelSchemaName(module.documentModel.global)
+  );
+}
+
 export const getDocumentModelTypeDefs = (
   documentModels: DocumentModelModule[],
   typeDefs: DocumentNode,
 ) => {
   let dmSchema = "";
+  const structuredDefinitions: DefinitionNode[] = [];
 
   const addedDocumentModels = new Set<string>();
-  documentModels.forEach(({ documentModel }) => {
-    const dmSchemaName = getDocumentModelSchemaName(documentModel.global);
+  documentModels.forEach((module) => {
+    const { documentModel } = module;
+    const dmSchemaName = getDocumentModelModuleSchemaName(module);
     if (addedDocumentModels.has(dmSchemaName)) {
       logger.debug(
         `Skipping document model with duplicate name: ${dmSchemaName}`,
@@ -140,6 +409,18 @@ export const getDocumentModelTypeDefs = (
       return;
     }
     addedDocumentModels.add(dmSchemaName);
+    if (module.definition) {
+      structuredDefinitions.push(
+        ...structuredStateDefinitions(module.definition, dmSchemaName),
+      );
+      dmSchema += documentInterfaceType(
+        dmSchemaName,
+        module.definition.specifications.at(-1)?.state.global.root.name,
+      );
+      return;
+    }
+
+    observeLegacySchemaPipeline("document-types");
     // Use only the latest specification to avoid duplicate type definitions
     // when a document model has multiple versions (e.g. v1, v2).
     const latestSpec = documentModel.global.specifications.at(-1);
@@ -206,19 +487,7 @@ export const getDocumentModelTypeDefs = (
       );
     });
     dmSchema += tmpDmSchema;
-    dmSchema += `
-    type ${dmSchemaName} implements IDocument {
-              id: String!
-              name: String!
-              documentType: String!
-              operations(skip: Int, first: Int): [Operation!]!
-              revision: Int!
-              createdAtUtcIso: DateTime!
-              lastModifiedAtUtcIso: DateTime!
-              ${dmSchemaName !== "DocumentModel" ? `initialState: ${dmSchemaName}_${dmSchemaName}State!` : ""}
-              ${dmSchemaName !== "DocumentModel" ? `state: ${dmSchemaName}_${dmSchemaName}State!` : ""}
-              stateJSON: JSONObject
-          }\n`;
+    dmSchema += documentInterfaceType(dmSchemaName);
   });
 
   // add the mutation and query types
@@ -297,8 +566,30 @@ export const getDocumentModelTypeDefs = (
     ${stripScalarDefinitions(typeDefs)}
   `;
 
-  return dedupeTypeDefinitions(schema);
+  return dedupeTypeDefinitions({
+    kind: Kind.DOCUMENT,
+    definitions: [...schema.definitions, ...structuredDefinitions],
+  });
 };
+
+function documentInterfaceType(
+  documentName: string,
+  globalStateName = `${documentName}State`,
+): string {
+  return `
+    type ${documentName} implements IDocument {
+              id: String!
+              name: String!
+              documentType: String!
+              operations(skip: Int, first: Int): [Operation!]!
+              revision: Int!
+              createdAtUtcIso: DateTime!
+              lastModifiedAtUtcIso: DateTime!
+              ${documentName !== "DocumentModel" ? `initialState: ${documentName}_${globalStateName}!` : ""}
+              ${documentName !== "DocumentModel" ? `state: ${documentName}_${globalStateName}!` : ""}
+              stateJSON: JSONObject
+          }\n`;
+}
 
 /**
  * Extract type names from a GraphQL schema.
@@ -580,6 +871,362 @@ export interface DocumentModelSchemaOptions {
   useNewApi?: boolean;
 }
 
+function nameNode(value: string) {
+  return { kind: Kind.NAME as const, value };
+}
+
+function optionalStateInputType(
+  type: TypeReferenceDefinitionV1,
+  prefix: string,
+  stateInputNames: ReadonlyMap<string, string>,
+  abstractTypes: ReadonlySet<string>,
+  customTypes: ReadonlySet<string>,
+): TypeNode {
+  if (type.kind === "list") {
+    return {
+      kind: Kind.LIST_TYPE,
+      type: optionalStateInputType(
+        type.item,
+        prefix,
+        stateInputNames,
+        abstractTypes,
+        customTypes,
+      ),
+    };
+  }
+  let name = type.name;
+  if (stateInputNames.has(name)) name = stateInputNames.get(name)!;
+  else if (abstractTypes.has(name)) name = "JSONObject";
+  if (customTypes.has(type.name) && !abstractTypes.has(type.name)) {
+    name = `${prefix}_${name}`;
+  }
+  return { kind: Kind.NAMED_TYPE, name: nameNode(name) };
+}
+
+function stateInputDefinitions(
+  specification: DocumentModelSpecificationDefinitionV1,
+  prefix: string,
+  reservedNames: ReadonlySet<string>,
+): readonly DefinitionNode[] {
+  const objectDefinitions = specification.types.filter(
+    (
+      definition,
+    ): definition is Extract<
+      NamedGraphQLTypeDefinitionV1,
+      { readonly kind: "object" }
+    > => definition.kind === "object",
+  );
+  const abstractTypes = new Set(
+    specification.types
+      .filter(({ kind }) => kind === "union" || kind === "interface")
+      .map(({ name }) => name),
+  );
+  const customTypes = new Set(specification.types.map(({ name }) => name));
+  const claimedNames = new Set([
+    ...reservedNames,
+    ...specification.types.map(({ name }) => name),
+  ]);
+  for (const operation of specification.modules.flatMap(
+    ({ operations }) => operations,
+  )) {
+    if (operation.input) claimedNames.add(operation.input.name);
+  }
+
+  const stateInputNames = new Map<string, string>();
+  for (const { name } of objectDefinitions) {
+    let candidate = `${name}Input`;
+    if (claimedNames.has(candidate)) {
+      const base = `${name}InitialStateInput`;
+      candidate = base;
+      let suffix = 2;
+      while (claimedNames.has(candidate)) {
+        candidate = `${base}${suffix}`;
+        suffix += 1;
+      }
+    }
+    claimedNames.add(candidate);
+    stateInputNames.set(name, candidate);
+  }
+
+  const generated = objectDefinitions.map<InputObjectTypeDefinitionNode>(
+    (definition) => {
+      // Fields with an `args` member are computed by resolvers and are not part
+      // of persisted state, even when their argument list is empty.
+      const storedFields = definition.fields.filter(
+        (field) => field.args === undefined,
+      );
+      return {
+        kind: Kind.INPUT_OBJECT_TYPE_DEFINITION,
+        name: nameNode(`${prefix}_${stateInputNames.get(definition.name)!}`),
+        directives: [],
+        fields:
+          storedFields.length > 0
+            ? storedFields.map((field) => ({
+                kind: Kind.INPUT_VALUE_DEFINITION,
+                name: nameNode(field.name),
+                type: optionalStateInputType(
+                  field.type,
+                  prefix,
+                  stateInputNames,
+                  abstractTypes,
+                  customTypes,
+                ),
+                directives: [],
+              }))
+            : [emptyInputField()],
+      };
+    },
+  );
+
+  const scopeFields: InputValueDefinitionNode[] = [
+    ["global", specification.state.global.root],
+    ["local", specification.state.local.root],
+  ].map(([scope, root]) => {
+    const rootName = typeof root === "object" && root ? root.name : null;
+    const generatedName = rootName ? stateInputNames.get(rootName) : undefined;
+    return {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: nameNode(scope as string),
+      type: {
+        kind: Kind.NAMED_TYPE,
+        name: nameNode(
+          generatedName ? `${prefix}_${generatedName}` : "JSONObject",
+        ),
+      },
+      directives: [],
+    };
+  });
+
+  return [
+    ...generated,
+    {
+      kind: Kind.INPUT_OBJECT_TYPE_DEFINITION,
+      name: nameNode(`${prefix}_InitialStateInput`),
+      directives: [],
+      fields: scopeFields,
+    },
+  ];
+}
+
+const LEGACY_HOST_INPUT_NAMES = ["InitialStateInput"] as const;
+const NEW_API_HOST_INPUT_NAMES = [
+  ...LEGACY_HOST_INPUT_NAMES,
+  "ViewFilterInput",
+  "PagingInput",
+  "SearchFilterInput",
+] as const;
+
+function hostInputNames(useNewApi: boolean): ReadonlySet<string> {
+  return new Set(
+    useNewApi ? NEW_API_HOST_INPUT_NAMES : LEGACY_HOST_INPUT_NAMES,
+  );
+}
+
+function assertNoHostInputNameCollisions(
+  specification: DocumentModelSpecificationDefinitionV1,
+  documentName: string,
+  reservedNames: ReadonlySet<string>,
+): void {
+  const authoredInputNames = new Set(
+    specification.types
+      .filter(({ kind }) => kind === "input")
+      .map(({ name }) => name),
+  );
+  for (const operation of specification.modules.flatMap(
+    ({ operations }) => operations,
+  )) {
+    if (operation.input) authoredInputNames.add(operation.input.name);
+  }
+  const collisions = Array.from(authoredInputNames)
+    .filter((name) => reservedNames.has(name))
+    .sort();
+  if (collisions.length > 0) {
+    throw new Error(
+      `Document model "${documentName}" defines Reactor-reserved GraphQL input type${collisions.length === 1 ? "" : "s"}: ${collisions.join(", ")}`,
+    );
+  }
+}
+
+function structuredApiDefinitions(
+  definition: DocumentModelDefinitionV1,
+  prefix: string,
+): readonly DefinitionNode[] {
+  const specification = definition.specifications.at(-1);
+  const source =
+    definitionCompatibilityDocument(definition) ??
+    asDocumentNode(buildSpecificationTypeDocument(specification));
+  return prefixStructuredDocument(source, prefix, {
+    includeInputs: true,
+    omitInputs: false,
+    omitScalars: true,
+  }).definitions.filter(
+    (definition) =>
+      definition.kind === Kind.INPUT_OBJECT_TYPE_DEFINITION ||
+      definition.kind === Kind.INPUT_OBJECT_TYPE_EXTENSION,
+  );
+}
+
+/**
+ * Project a code-first definition directly from its structured representation.
+ * The compatibility AST is transformed as AST; it never enters the legacy
+ * regular-expression adapter.
+ */
+export function generateDocumentModelSchemaFromDefinition(
+  definition: DocumentModelDefinitionV1,
+  options: DocumentModelSchemaOptions = {},
+): DocumentNode {
+  const specification = definition.specifications.at(-1);
+  const documentName = definition.model.graphQLName;
+  const reservedInputNames = hostInputNames(options.useNewApi === true);
+  if (specification) {
+    assertNoHostInputNameCollisions(
+      specification,
+      documentName,
+      reservedInputNames,
+    );
+  }
+  const operations =
+    specification?.modules.flatMap(({ operations }) => operations) ?? [];
+  const operationMutations = operations
+    .filter((operation) => operation.name && operation.input)
+    .flatMap((operation) => {
+      const fieldName = operation.creatorKey;
+      const inputName = `${documentName}_${operation.input!.name}`;
+      return options.useNewApi
+        ? [
+            `${fieldName}(docId: PHID!, input: ${inputName}!): ${documentName}MutationResult!`,
+            `${fieldName}Async(docId: PHID!, input: ${inputName}!): String!`,
+          ]
+        : [
+            `${documentName}_${fieldName}(driveId: String, docId: PHID, input: ${inputName}): Int`,
+          ];
+    })
+    .join("\n");
+
+  const api = options.useNewApi
+    ? structuredNewApiSchema(documentName, specification, operationMutations)
+    : gql`
+        """Queries: ${documentName} Document"""
+        type ${documentName}Queries {
+          getDocument(docId: PHID!, driveId: PHID): ${documentName}
+          getDocuments(driveId: String!): [${documentName}!]
+        }
+        type Query {
+          ${documentName}: ${documentName}Queries
+        }
+        """Mutations: ${documentName}"""
+        type Mutation {
+          ${documentName}_createDocument(name: String!, driveId: String): String
+          ${operationMutations}
+        }
+      `;
+  const extraDefinitions = specification
+    ? stateInputDefinitions(specification, documentName, reservedInputNames)
+    : [];
+  return dedupeTypeDefinitions({
+    kind: Kind.DOCUMENT,
+    definitions: [
+      ...api.definitions,
+      ...extraDefinitions,
+      ...structuredApiDefinitions(definition, documentName),
+    ],
+  });
+}
+
+function structuredNewApiSchema(
+  documentName: string,
+  specification: DocumentModelSpecificationDefinitionV1 | undefined,
+  operationMutations: string,
+): DocumentNode {
+  const globalRoot = specification?.state.global.root.name;
+  const localRoot = specification?.state.local.root?.name;
+  const globalStateType = globalRoot
+    ? `${documentName}_${globalRoot}!`
+    : "JSONObject!";
+  const localStateType = localRoot
+    ? `${documentName}_${localRoot}!`
+    : "JSONObject!";
+  return gql`
+    scalar DateTime
+    scalar JSONObject
+    scalar AttachmentRef
+
+    ${RevisionType}
+
+    type ${documentName}_PHHashConfig {
+      algorithm: String!
+      encoding: String!
+    }
+    type ${documentName}_PHDocumentScopeState {
+      version: Int!
+      hash: ${documentName}_PHHashConfig!
+      isDeleted: Boolean
+      deletedAtUtcIso: String
+      deletedBy: String
+      deletionReason: String
+    }
+    type ${documentName}_FullState {
+      auth: JSONObject!
+      document: ${documentName}_PHDocumentScopeState!
+      global: ${globalStateType}
+      local: ${localStateType}
+    }
+    input ${documentName}_ViewFilterInput {
+      branch: String
+      scopes: [String!]
+    }
+    input ${documentName}_PagingInput {
+      limit: Int
+      offset: Int
+      cursor: String
+    }
+    input ${documentName}_SearchFilterInput {
+      parentId: String
+      identifiers: [String!]
+    }
+    type ${documentName}MutationResult {
+      id: String!
+      slug: String
+      preferredEditor: String
+      name: String!
+      documentType: String!
+      state: ${documentName}_FullState!
+      revisionsList: [Revision!]!
+      createdAtUtcIso: DateTime!
+      lastModifiedAtUtcIso: DateTime!
+    }
+    type ${documentName}_DocumentWithChildren {
+      document: ${documentName}MutationResult!
+      childIds: [String!]!
+    }
+    type ${documentName}_DocumentResultPage {
+      items: [${documentName}MutationResult!]!
+      totalCount: Int!
+      hasNextPage: Boolean!
+      hasPreviousPage: Boolean!
+      cursor: String
+    }
+    type ${documentName}Queries {
+      document(identifier: String!, view: ${documentName}_ViewFilterInput): ${documentName}_DocumentWithChildren
+      documents(paging: ${documentName}_PagingInput): ${documentName}_DocumentResultPage!
+      findDocuments(search: ${documentName}_SearchFilterInput, view: ${documentName}_ViewFilterInput, paging: ${documentName}_PagingInput): ${documentName}_DocumentResultPage!
+      documentOutgoingRelationships(sourceIdentifier: String!, relationshipType: String!, view: ${documentName}_ViewFilterInput, paging: ${documentName}_PagingInput): ${documentName}_DocumentResultPage!
+      documentIncomingRelationships(targetIdentifier: String!, relationshipType: String!, view: ${documentName}_ViewFilterInput, paging: ${documentName}_PagingInput): ${documentName}_DocumentResultPage!
+    }
+    type ${documentName}Mutations {
+      createDocument(name: String!, parentIdentifier: String, slug: String, preferredEditor: String, initialState: ${documentName}_InitialStateInput): ${documentName}MutationResult!
+      createEmptyDocument(parentIdentifier: String): ${documentName}MutationResult!
+      ${operationMutations}
+    }
+    type Query {
+      ${documentName}: ${documentName}Queries!
+    }
+    type Mutation {
+      ${documentName}: ${documentName}Mutations!
+    }
+  `;
+}
+
 /**
  * Generate a GraphQL schema for a document model.
  *
@@ -591,6 +1238,7 @@ export function generateDocumentModelSchema(
   documentModel: DocumentModelGlobalState,
   options: DocumentModelSchemaOptions = {},
 ): DocumentNode {
+  observeLegacySchemaPipeline("document-api");
   const { useNewApi = false } = options;
 
   const specification = documentModel.specifications.at(-1);

@@ -1,0 +1,82 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://powerhouse.inc/schemas/retirement-plan-v1.json",
+  "title": "Powerhouse hash-bound legacy retirement plan V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "formatVersion",
+    "repositoryCommit",
+    "family",
+    "packageRoot",
+    "legacyFamilyRoot",
+    "recoverableLegacyRoot",
+    "approvedReportPath",
+    "activationMarkerPath",
+    "rollbackReportPath",
+    "canaryReportPath",
+    "approvedReportDigest",
+    "activationMarkerDigest",
+    "rollbackReportDigest",
+    "canaryReportDigest",
+    "artifactDigest",
+    "sourceTreeDigest",
+    "targets",
+    "liveImportPaths",
+    "maskedVerificationPassed",
+    "planDigest"
+  ],
+  "properties": {
+    "kind": { "const": "powerhouse.legacy-retirement-plan" },
+    "formatVersion": { "const": 1 },
+    "repositoryCommit": { "type": "string", "minLength": 1 },
+    "family": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["documentType", "digest"],
+      "properties": {
+        "documentType": { "type": "string", "minLength": 1 },
+        "digest": { "$ref": "#/definitions/sha256" }
+      }
+    },
+    "packageRoot": { "const": "." },
+    "legacyFamilyRoot": { "$ref": "#/definitions/relativePath" },
+    "recoverableLegacyRoot": { "type": "string", "minLength": 1 },
+    "approvedReportPath": { "$ref": "#/definitions/relativePath" },
+    "activationMarkerPath": { "$ref": "#/definitions/relativePath" },
+    "rollbackReportPath": { "$ref": "#/definitions/relativePath" },
+    "canaryReportPath": { "$ref": "#/definitions/relativePath" },
+    "approvedReportDigest": { "$ref": "#/definitions/sha256" },
+    "activationMarkerDigest": { "$ref": "#/definitions/sha256" },
+    "rollbackReportDigest": { "$ref": "#/definitions/sha256" },
+    "canaryReportDigest": { "$ref": "#/definitions/sha256" },
+    "artifactDigest": { "$ref": "#/definitions/sha256" },
+    "sourceTreeDigest": { "$ref": "#/definitions/sha256" },
+    "targets": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "bytes", "digest"],
+        "properties": {
+          "path": { "$ref": "#/definitions/relativePath" },
+          "bytes": { "type": "integer", "minimum": 0 },
+          "digest": { "$ref": "#/definitions/sha256" }
+        }
+      }
+    },
+    "liveImportPaths": { "type": "array", "maxItems": 0 },
+    "maskedVerificationPassed": { "const": true },
+    "planDigest": { "$ref": "#/definitions/sha256" }
+  },
+  "definitions": {
+    "sha256": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "relativePath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?!.*\\\\)(?!.*(?:^|/)\\.\\.(?:/|$))"
+    }
+  }
+}

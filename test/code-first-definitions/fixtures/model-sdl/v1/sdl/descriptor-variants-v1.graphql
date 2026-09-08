@@ -1,0 +1,315 @@
+scalar JSONObject
+
+scalar AttachmentRef
+
+scalar Amount_Tokens
+
+scalar EthereumAddress
+
+scalar Amount_Percentage
+
+scalar EmailAddress
+
+scalar Date
+
+scalar DateTime
+
+scalar URL
+
+scalar Amount_Money
+
+scalar OLabel
+
+scalar Currency
+
+scalar PHID
+
+scalar OID
+
+scalar Amount_Fiat
+
+scalar Amount_Currency
+
+scalar Amount_Crypto
+
+scalar Amount
+
+scalar Upload
+
+type PHOperationContext {
+  signer: Signer
+}
+
+type Signer {
+  user: SignerUser
+  app: SignerApp
+  signatures: [String!]!
+}
+
+type SignerUser {
+  address: String!
+  networkId: String!
+  chainId: Int!
+}
+
+type SignerApp {
+  name: String!
+  key: String!
+}
+
+type Operation {
+  id: String!
+  type: String!
+  index: Int!
+  timestampUtcMs: DateTime!
+  hash: String!
+  skip: Int
+  inputText: String
+  error: String
+  context: PHOperationContext
+}
+
+interface IDocument {
+  id: String!
+  name: String!
+  documentType: String!
+  revision: Int!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+  operations(first: Int, skip: Int): [Operation!]!
+  stateJSON: JSONObject
+}
+
+type Invoice implements IDocument {
+  id: String!
+  name: String!
+  documentType: String!
+  operations(skip: Int, first: Int): [Operation!]!
+  revision: Int!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+  initialState: Invoice_InvoiceState!
+  state: Invoice_InvoiceState!
+  stateJSON: JSONObject
+}
+
+type GqlDocument implements IDocument {
+  id: String!
+  name: String!
+  documentType: String!
+  revision: Int!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+  operations(first: Int, skip: Int): [Operation!]!
+  stateJSON: JSONObject
+}
+
+type DriveDocument implements IDocument {
+  id: String!
+  name: String!
+  documentType: String!
+  revision: Int!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+  operations(first: Int, skip: Int): [Operation!]!
+  stateJSON: JSONObject
+}
+
+type Revision {
+  scope: String!
+  revision: Int!
+}
+
+type Invoice_PHHashConfig {
+  algorithm: String!
+  encoding: String!
+}
+
+type Invoice_PHDocumentScopeState {
+  version: Int!
+  hash: Invoice_PHHashConfig!
+  isDeleted: Boolean
+  deletedAtUtcIso: String
+  deletedBy: String
+  deletionReason: String
+}
+
+type Invoice_FullState {
+  auth: JSONObject!
+  document: Invoice_PHDocumentScopeState!
+  global: Invoice_InvoiceState!
+  local: Invoice_InvoiceLocalState!
+}
+
+input Invoice_ViewFilterInput {
+  branch: String
+  scopes: [String!]
+}
+
+input Invoice_PagingInput {
+  limit: Int
+  offset: Int
+  cursor: String
+}
+
+input Invoice_SearchFilterInput {
+  parentId: String
+  identifiers: [String!]
+}
+
+type InvoiceMutationResult {
+  id: String!
+  slug: String
+  preferredEditor: String
+  name: String!
+  documentType: String!
+  state: Invoice_FullState!
+  revisionsList: [Revision!]!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+}
+
+type Invoice_DocumentWithChildren {
+  document: InvoiceMutationResult!
+  childIds: [String!]!
+}
+
+type Invoice_DocumentResultPage {
+  items: [InvoiceMutationResult!]!
+  totalCount: Int!
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  cursor: String
+}
+
+type InvoiceQueries {
+  document(identifier: String!, view: Invoice_ViewFilterInput): Invoice_DocumentWithChildren
+  documents(paging: Invoice_PagingInput): Invoice_DocumentResultPage!
+  findDocuments(search: Invoice_SearchFilterInput, view: Invoice_ViewFilterInput, paging: Invoice_PagingInput): Invoice_DocumentResultPage!
+  documentOutgoingRelationships(sourceIdentifier: String!, relationshipType: String!, view: Invoice_ViewFilterInput, paging: Invoice_PagingInput): Invoice_DocumentResultPage!
+  documentIncomingRelationships(targetIdentifier: String!, relationshipType: String!, view: Invoice_ViewFilterInput, paging: Invoice_PagingInput): Invoice_DocumentResultPage!
+}
+
+type InvoiceMutations {
+  createDocument(name: String!, parentIdentifier: String, slug: String, preferredEditor: String, initialState: Invoice_InitialStateInput): InvoiceMutationResult!
+  createEmptyDocument(parentIdentifier: String): InvoiceMutationResult!
+  addLineItem(docId: PHID!, input: Invoice_AddLineItemInput!): InvoiceMutationResult!
+  addLineItemAsync(docId: PHID!, input: Invoice_AddLineItemInput!): String!
+}
+
+type Query {
+  Invoice: InvoiceQueries!
+}
+
+type Mutation {
+  Invoice: InvoiceMutations!
+}
+
+input Invoice_InvoiceStateInput {
+  issuer: PHID
+  number: String
+  status: Invoice_InvoiceStatus
+  currency: Currency
+  lineItems: [Invoice_InvoiceLineItemInput]
+  issuedAt: DateTime
+  total: Amount_Money
+  auditTrail: [[String]]
+  payment: JSONObject
+}
+
+input Invoice_InvoiceLineItemInput {
+  id: OID
+  description: String
+  quantity: Int
+  unitPrice: Amount_Money
+}
+
+input Invoice_InvoiceLocalStateInput {
+  draftNote: String
+}
+
+input Invoice_WirePaymentInput {
+  reference: String
+  bank: String
+}
+
+input Invoice_CardPaymentInput {
+  reference: String
+  lastFour: String
+}
+
+input Invoice_UnreachableAuditRecordInput {
+  id: ID
+}
+
+input Invoice_InitialStateInput {
+  global: Invoice_InvoiceStateInput
+  local: Invoice_InvoiceLocalStateInput
+}
+
+"Unreachable input retained by descriptor projection."
+input Invoice_InvoiceSearchInput {
+  query: String
+}
+
+input Invoice_AddLineItemInput {
+  id: OID!
+  description: String!
+  quantity: Int!
+  unitPrice: Amount_Money!
+}
+
+type Invoice_InvoiceState {
+  issuer: PHID!
+  number: String!
+  status: Invoice_InvoiceStatus!
+  currency: Currency!
+  lineItems: [Invoice_InvoiceLineItem!]!
+  issuedAt: DateTime
+  total: Amount_Money!
+  "Nested list nullability probe."
+  auditTrail: [[String!]]!
+  payment: Invoice_PaymentMethod
+  "Computed-field argument projection probe."
+  summary(locale: String = "en"): String! @deprecated(reason: "Use the state fields directly.")
+}
+
+enum Invoice_InvoiceStatus {
+  DRAFT
+  ISSUED
+  PAID
+  VOID
+}
+
+type Invoice_InvoiceLineItem {
+  id: OID!
+  description: String!
+  quantity: Int!
+  unitPrice: Amount_Money!
+}
+
+type Invoice_InvoiceLocalState {
+  draftNote: String
+}
+
+"A payment discriminator interface."
+interface Invoice_Payable {
+  reference: String!
+}
+
+type Invoice_WirePayment implements Invoice_Payable {
+  reference: String!
+  bank: String!
+}
+
+type Invoice_CardPayment implements Invoice_Payable {
+  reference: String!
+  lastFour: String!
+}
+
+union Invoice_PaymentMethod = Invoice_WirePayment | Invoice_CardPayment
+
+"An intentionally unreachable auxiliary type."
+type Invoice_UnreachableAuditRecord {
+  id: ID!
+}

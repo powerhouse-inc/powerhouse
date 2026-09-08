@@ -18,7 +18,6 @@ import {
   isString,
   map,
   pipe,
-  when,
 } from "remeda";
 import type {
   ObjectLiteralExpression,
@@ -127,11 +126,14 @@ export function loadDocumentModelInDir(
 ): DocumentModelGlobalState | undefined {
   if (!isDirectory(dirent)) return undefined;
 
-  const parseResult = pipe(
-    dirent,
-    (dir) => path.join(dir.parentPath, `${dir.name}/${dir.name}.json`),
-    when(fileExistsSync, loadJsonFileSync),
-    (stateFile) => DocumentModelGlobalStateSchema().safeParse(stateFile),
+  const stateFile = path.join(
+    dirent.parentPath,
+    `${dirent.name}/${dirent.name}.json`,
+  );
+  if (!fileExistsSync(stateFile)) return undefined;
+
+  const parseResult = DocumentModelGlobalStateSchema().safeParse(
+    loadJsonFileSync(stateFile),
   );
 
   if (!parseResult.success) {

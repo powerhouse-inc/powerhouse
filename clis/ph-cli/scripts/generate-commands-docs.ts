@@ -14,7 +14,19 @@ import { install } from "../src/commands/install.js";
 import { list } from "../src/commands/list.js";
 import { login } from "../src/commands/login.js";
 import { migrate } from "../src/commands/migrate.js";
+import {
+  model,
+  modelCheck,
+  modelInspect,
+  modelMigrate,
+} from "../src/commands/model.js";
 import { phCli } from "../src/commands/ph-cli.js";
+import { scalar, scalarInspect } from "../src/commands/scalar.js";
+import {
+  subgraph,
+  subgraphInspect,
+  subgraphMigrate,
+} from "../src/commands/subgraph.js";
 import { switchboard } from "../src/commands/switchboard.js";
 import { uninstall } from "../src/commands/uninstall.js";
 import { vetra } from "../src/commands/vetra.js";
@@ -26,7 +38,7 @@ const commands = [
   { name: "editor", command: generateEditorCmd },
   { name: "app", command: generateAppCmd },
   { name: "processor", command: generateProcessorCmd },
-  { name: "subgraph", command: generateSubgraphCmd },
+  { name: "generate subgraph", command: generateSubgraphCmd },
   { name: "migration-file", command: generateMigrationFileCmd },
   { name: "vetra", command: vetra },
   { name: "connect", command: connect },
@@ -37,6 +49,15 @@ const commands = [
   { name: "inspect", command: inspect },
   { name: "list", command: list },
   { name: "migrate", command: migrate },
+  { name: "model", command: model },
+  { name: "model check", command: modelCheck },
+  { name: "model inspect", command: modelInspect },
+  { name: "model migrate", command: modelMigrate },
+  { name: "subgraph", command: subgraph },
+  { name: "subgraph inspect", command: subgraphInspect },
+  { name: "subgraph migrate", command: subgraphMigrate },
+  { name: "scalar", command: scalar },
+  { name: "scalar inspect", command: scalarInspect },
   { name: "switchboard", command: switchboard },
   { name: "login", command: login },
   { name: "install", command: install },

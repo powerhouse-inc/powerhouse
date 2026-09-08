@@ -1,26 +1,18 @@
 #!/usr/bin/env node
-import { phCliCommandNames } from "@powerhousedao/shared/clis/command-names";
 import {
+  isPhCliJsonReportInvocation,
+  phCliCommandNames,
+  phCliCommandsWithSubcommands,
+} from "@powerhousedao/shared/clis/command-names";
+import {
+  detectPackageManager,
   initCliTelemetry,
   type TelemetryClient,
 } from "@powerhousedao/shared/clis/telemetry";
 import { assertNodeVersion } from "@powerhousedao/shared/clis/utils";
 import { getVersion } from "./get-version.js";
 
-// Commands whose second positional is itself a subcommand (vs. a project
-// name / file path). Keeping this explicit avoids high-cardinality tag
-// values like `subcommand:my-package` polluting Sentry.
-const COMMANDS_WITH_SUBCOMMANDS = new Set(["connect", "vetra"]);
-
-function detectPackageManager(): string | undefined {
-  // npm, pnpm, yarn and bun all set npm_config_user_agent like
-  // "pnpm/8.5.0 npm/? node/v20.11.1 darwin arm64". When the user invokes
-  // `ph` directly (not via dlx/exec) it's typically unset — skip the tag
-  // in that case rather than mislabel.
-  const ua = process.env.npm_config_user_agent;
-  if (!ua) return undefined;
-  return ua.split(" ")[0]?.split("/")[0] || undefined;
-}
+const COMMANDS_WITH_SUBCOMMANDS = new Set<string>(phCliCommandsWithSubcommands);
 
 /**
  * ph-cli and ph-cmd are loaded lazily so that the node version is checked before
@@ -40,13 +32,14 @@ let sentryClient: TelemetryClient | undefined = undefined;
 
 async function main() {
   assertNodeVersion();
+  const args = process.argv.slice(2);
   // Opt-out telemetry; asked once on first interactive run. No-op under
   // PH_NO_TELEMETRY / DO_NOT_TRACK / CI.
   sentryClient = await initCliTelemetry({
     cliName: "ph-cmd",
     release: getVersion(),
+    promptForConsent: !isPhCliJsonReportInvocation(args),
   });
-  const args = process.argv.slice(2);
   const command = args[0];
   const subcommand =
     command &&

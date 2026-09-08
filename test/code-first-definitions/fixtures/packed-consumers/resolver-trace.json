@@ -1,0 +1,44 @@
+{
+  "node": {
+    "caseId": "node",
+    "requests": [
+      {
+        "specifier": "@powerhousedao/code-first-packed-fixture",
+        "from": "consumer.ts",
+        "resolved": "node_modules/@powerhousedao/code-first-packed-fixture/dist/node.d.ts",
+        "matchedConditions": [
+          "types"
+        ]
+      },
+      {
+        "specifier": "@powerhousedao/code-first-packed-fixture/document-models",
+        "from": "consumer.ts",
+        "resolved": "node_modules/@powerhousedao/code-first-packed-fixture/dist/node.d.ts",
+        "matchedConditions": [
+          "types"
+        ]
+      }
+    ]
+  },
+  "browser-worker": {
+    "caseId": "browser-worker",
+    "requests": [
+      {
+        "specifier": "@powerhousedao/code-first-packed-fixture",
+        "from": "consumer.ts",
+        "resolved": "node_modules/@powerhousedao/code-first-packed-fixture/dist/node.d.ts",
+        "matchedConditions": [
+          "types"
+        ]
+      },
+      {
+        "specifier": "@powerhousedao/code-first-packed-fixture/document-models",
+        "from": "consumer.ts",
+        "resolved": "node_modules/@powerhousedao/code-first-packed-fixture/dist/node.d.ts",
+        "matchedConditions": [
+          "types"
+        ]
+      }
+    ]
+  }
+}

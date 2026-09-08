@@ -1,0 +1,10 @@
+{
+  "formatVersion": 1,
+  "files": [
+    {
+      "path": "report.json",
+      "bytes": 14400,
+      "digest": "sha256:ca2d451ea28de8863295391b8505b54f5264d2e33fc673d124ce4bc1426d7273"
+    }
+  ]
+}

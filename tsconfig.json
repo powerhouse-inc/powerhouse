@@ -1,9 +1,7 @@
 {
   "extends": "./tsconfig.options.json",
   "compilerOptions": {
-    "types": [
-      "node"
-    ]
+    "types": ["node"]
   },
   "references": [
     {
@@ -14,9 +12,6 @@
     },
     {
       "path": "clis/ph-cli"
-    },
-    {
-      "path": "clis/ph-cmd"
     },
     {
       "path": "packages/builder-tools"
@@ -38,6 +33,9 @@
     },
     {
       "path": "packages/reactor/bench/host"
+    },
+    {
+      "path": "test/code-first-definitions"
     },
     {
       "path": "test/codegen"

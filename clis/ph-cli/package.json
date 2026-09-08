@@ -23,6 +23,7 @@
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",
+    "test": "vitest --run",
     "generate-docs": "bun run scripts/generate-commands-docs.ts",
     "build": "tsdown",
     "postbuild": "bun generate-docs && bun copy-scripts",
@@ -38,6 +39,7 @@
     "@powerhousedao/common": "workspace:*",
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/reactor": "workspace:*",
+    "@powerhousedao/reactor-api": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
     "@powerhousedao/switchboard": "workspace:*",
     "@powerhousedao/vetra": "workspace:*",
@@ -51,6 +53,7 @@
     "colorette": "catalog:",
     "document-model": "workspace:*",
     "enquirer": "catalog:",
+    "graphql": "catalog:",
     "kysely": "catalog:",
     "package-manager-detector": "catalog:",
     "pg": "catalog:",
@@ -67,6 +70,7 @@
     "@types/pg": "catalog:",
     "copyfiles": "catalog:",
     "ts-morph": "catalog:",
+    "vitest": "catalog:",
     "write-package": "catalog:",
     "zod": "catalog:"
   }

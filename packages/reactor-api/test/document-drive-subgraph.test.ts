@@ -323,7 +323,7 @@ describe("Document-Drive Subgraph", () => {
       );
     });
 
-    it("should resolve FolderNode when object lacks documentType field", () => {
+    it("returns null when fields do not identify a unique union member", () => {
       const nodeResolver = subgraph.resolvers[
         `${documentName}_Node`
       ] as DocumentModelResolverMap;
@@ -335,9 +335,24 @@ describe("Document-Drive Subgraph", () => {
         parentFolder: null,
       };
 
-      expect(nodeResolver.__resolveType(folderNode)).toBe(
-        `${documentName}_FolderNode`,
-      );
+      expect(nodeResolver.__resolveType(folderNode)).toBeNull();
+    });
+
+    it("uses an own data __typename when the value supplies one", () => {
+      const nodeResolver = subgraph.resolvers[
+        `${documentName}_Node`
+      ] as DocumentModelResolverMap;
+
+      expect(
+        nodeResolver.__resolveType({ __typename: "FolderNode", id: "folder" }),
+      ).toBe(`${documentName}_FolderNode`);
+      expect(
+        nodeResolver.__resolveType(
+          Object.defineProperty({}, "__typename", {
+            get: () => "FolderNode",
+          }),
+        ),
+      ).toBeNull();
     });
 
     it("should generate a __resolveType resolver for DocumentDrive_TriggerData", () => {

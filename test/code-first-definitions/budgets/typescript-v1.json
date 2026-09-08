@@ -1,0 +1,7 @@
+{
+  "kind": "powerhouse.evidence-budget",
+  "formatVersion": 1,
+  "gate": "B4",
+  "status": "not-established",
+  "reopeningCondition": "Approve a reference machine and TypeScript and language-service budgets."
+}

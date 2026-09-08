@@ -20,6 +20,7 @@ import type {
 } from "./signatures.js";
 import type { PHBaseState } from "./state.js";
 import type { UpgradeManifest } from "./upgrades.js";
+import type { DocumentModelDefinitionV1 } from "./definition-types.js";
 export type State = {
   examples: CodeExample[];
   initialValue: string;
@@ -1698,6 +1699,8 @@ export type DocumentModelModule<TState extends PHBaseState = PHBaseState> = {
   actions: Actions;
   utils: DocumentModelUtils<TState>;
   documentModel: DocumentModelPHState;
+  /** Structured compiler output for code-first modules. Legacy modules omit it. */
+  definition?: DocumentModelDefinitionV1;
 };
 
 export type DocumentModelLib<TState extends PHBaseState = PHBaseState> = {

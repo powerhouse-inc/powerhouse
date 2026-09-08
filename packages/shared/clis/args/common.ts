@@ -31,6 +31,24 @@ export const debugArgs = {
   }),
 };
 
+export const definitionSourceArgs = {
+  configFile: option({
+    type: string,
+    long: "config-file",
+    description: "Powerhouse source config file",
+    defaultValue: () => "./powerhouse.config.json" as const,
+    defaultValueIsSerializable: true,
+  }),
+  sources: multioption({
+    type: array(string),
+    long: "source",
+    description:
+      "Definition source as ./module.ts with an optional RFC 6901 export pointer",
+    defaultValue: () => [],
+    defaultValueIsSerializable: true,
+  }),
+};
+
 export const buildArgs = {
   outDir: option({
     type: string,
@@ -39,6 +57,13 @@ export const buildArgs = {
     defaultValue: () => "dist" as const,
     defaultValueIsSerializable: true,
   }),
+  allowTsErrors: flag({
+    long: "allow-ts-errors",
+    description: "Deprecated: continue bundling when TypeScript reports errors",
+    defaultValue: () => false,
+    defaultValueIsSerializable: true,
+  }),
+  ...definitionSourceArgs,
   ...debugArgs,
 };
 

@@ -1,0 +1,114 @@
+{
+  "version": 1,
+  "entries": [
+    {
+      "path": [
+        "modules",
+        0
+      ],
+      "id": "efd6d9bb-869e-4565-b1ca-d9b74385eaf7"
+    },
+    {
+      "path": [
+        "modules",
+        0,
+        "operations",
+        0
+      ],
+      "id": "43da2b3d-bad7-40b8-8a84-4cdf892f1519"
+    },
+    {
+      "path": [
+        "modules",
+        0,
+        "operations",
+        0,
+        "errors",
+        0
+      ],
+      "id": "8be0d16c-1f21-4d95-9536-c5a5867d2ba1"
+    },
+    {
+      "path": [
+        "modules",
+        0,
+        "operations",
+        1
+      ],
+      "id": "aa493898-ce6b-4b28-baf3-1b6fd8425138"
+    },
+    {
+      "path": [
+        "modules",
+        0,
+        "operations",
+        1,
+        "errors",
+        0
+      ],
+      "id": "9f0f77a4-6a86-4f5c-9a3f-13a44be29de3"
+    },
+    {
+      "path": [
+        "modules",
+        0,
+        "operations",
+        2
+      ],
+      "id": "e7990be2-2e40-4624-9f96-df759703ba6b"
+    },
+    {
+      "path": [
+        "modules",
+        0,
+        "operations",
+        2,
+        "errors",
+        0
+      ],
+      "id": "3f2504e0-4f89-41d3-9a0c-0305e82c3301"
+    },
+    {
+      "path": [
+        "modules",
+        0,
+        "operations",
+        2,
+        "errors",
+        1
+      ],
+      "id": "b2c1a9de-58e6-4f3f-9f2a-7f6b1e2d4c5a"
+    },
+    {
+      "path": [
+        "modules",
+        0,
+        "operations",
+        2,
+        "errors",
+        2
+      ],
+      "id": "c4d5e6f7-0a1b-4c2d-8e3f-9a0b1c2d3e4f"
+    },
+    {
+      "path": [
+        "modules",
+        0,
+        "operations",
+        3
+      ],
+      "id": "b1309319-48b7-42b2-a40e-1fecef9a09a4"
+    },
+    {
+      "path": [
+        "modules",
+        0,
+        "operations",
+        3,
+        "errors",
+        0
+      ],
+      "id": "d6e7f8a9-1b2c-4d3e-9f4a-0b1c2d3e4f5a"
+    }
+  ]
+}

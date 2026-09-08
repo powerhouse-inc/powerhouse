@@ -80,13 +80,11 @@ export function getUniqueUpgradeManifests(
   >[])[]
 ): UpgradeManifest<readonly number[]>[] {
   const uniqueManifests = new Map<string, UpgradeManifest<readonly number[]>>();
-
   for (const manifests of upgradeManifests) {
     for (const manifest of manifests) {
       uniqueManifests.set(manifest.documentType, manifest);
     }
   }
-
   return Array.from(uniqueManifests.values());
 }
 

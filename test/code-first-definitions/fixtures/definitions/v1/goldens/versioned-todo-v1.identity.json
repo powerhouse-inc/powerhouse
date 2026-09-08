@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "entries": [
+    {
+      "path": [
+        "modules",
+        0
+      ],
+      "id": "42454fe7-a04b-4e25-8d2b-428df928dcd6"
+    },
+    {
+      "path": [
+        "modules",
+        0,
+        "operations",
+        0
+      ],
+      "id": "c0285a3b-6641-4899-8d40-73327a4fd4c5"
+    },
+    {
+      "path": [
+        "modules",
+        0,
+        "operations",
+        1
+      ],
+      "id": "890bddb3-aaff-49be-b981-57a5c79302e1"
+    },
+    {
+      "path": [
+        "modules",
+        0,
+        "operations",
+        2
+      ],
+      "id": "22b59393-17c6-4afa-8f4d-0138e34f2832"
+    }
+  ]
+}

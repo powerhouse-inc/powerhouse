@@ -1,0 +1,2088 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://powerhouse.inc/schemas/subgraph-definition-v1.json",
+  "title": "Powerhouse subgraph definition V1",
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "formatVersion",
+        "name",
+        "compositionPolicy",
+        "federationProfile",
+        "schemaKind",
+        "hasSubscriptions",
+        "types",
+        "entries",
+        "scalars"
+      ],
+      "properties": {
+        "kind": {
+          "const": "powerhouse.subgraph"
+        },
+        "formatVersion": {
+          "const": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "compositionPolicy": {
+          "const": "host-current"
+        },
+        "federationProfile": {
+          "const": "host-current"
+        },
+        "schemaKind": {
+          "const": "typed"
+        },
+        "hasSubscriptions": {
+          "type": "boolean"
+        },
+        "types": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/namedType"
+          }
+        },
+        "entries": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/subgraphEntry"
+          }
+        },
+        "scalars": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/subgraphScalarReference"
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "formatVersion",
+        "name",
+        "compositionPolicy",
+        "federationProfile",
+        "schemaKind",
+        "hasSubscriptions",
+        "document",
+        "resolverCoordinates",
+        "access"
+      ],
+      "properties": {
+        "kind": {
+          "const": "powerhouse.subgraph"
+        },
+        "formatVersion": {
+          "const": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "compositionPolicy": {
+          "const": "host-current"
+        },
+        "federationProfile": {
+          "const": "host-current"
+        },
+        "schemaKind": {
+          "const": "graphql-ast-compat"
+        },
+        "hasSubscriptions": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "document": {
+          "$ref": "#/definitions/astDocument"
+        },
+        "resolverCoordinates": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/resolverCoordinate"
+          }
+        },
+        "access": {
+          "const": "manual"
+        }
+      }
+    }
+  ],
+  "definitions": {
+    "json": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/json"
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/json"
+          }
+        }
+      ]
+    },
+    "model": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "documentType",
+        "graphQLName",
+        "name",
+        "description",
+        "extension",
+        "author"
+      ],
+      "properties": {
+        "documentType": {
+          "type": "string",
+          "minLength": 1
+        },
+        "graphQLName": {
+          "$ref": "#/definitions/graphqlNameString"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "extension": {
+          "type": "string"
+        },
+        "author": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "website"
+          ],
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "website": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "specification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "scalars",
+        "graphQLCompatibility",
+        "types",
+        "state",
+        "modules",
+        "changeLog"
+      ],
+      "properties": {
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "scalars": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/scalarReference"
+          }
+        },
+        "graphQLCompatibility": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/definitions/graphqlCompatibility"
+            }
+          ]
+        },
+        "types": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/namedType"
+          }
+        },
+        "state": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "global",
+            "local"
+          ],
+          "properties": {
+            "global": {
+              "$ref": "#/definitions/nonEmptyState"
+            },
+            "local": {
+              "oneOf": [
+                {
+                  "$ref": "#/definitions/nonEmptyState"
+                },
+                {
+                  "$ref": "#/definitions/emptyState"
+                }
+              ]
+            }
+          }
+        },
+        "modules": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/module"
+          }
+        },
+        "changeLog": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "scalarReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "implementation",
+        "coercionProfile"
+      ],
+      "properties": {
+        "name": {
+          "$ref": "#/definitions/scalarName"
+        },
+        "implementation": {
+          "type": "string",
+          "pattern": "^powerhouse\\.catalog#[A-Za-z0-9_]+$"
+        },
+        "coercionProfile": {
+          "const": "document-engineering-1.40"
+        }
+      }
+    },
+    "scalarName": {
+      "enum": [
+        "ID",
+        "String",
+        "Boolean",
+        "Int",
+        "Float",
+        "PHID",
+        "OID",
+        "OLabel",
+        "Currency",
+        "EmailAddress",
+        "EthereumAddress",
+        "URL",
+        "Date",
+        "DateTime",
+        "Amount_Money",
+        "Amount_Percentage",
+        "Amount_Tokens",
+        "Amount",
+        "Amount_Fiat",
+        "Amount_Crypto",
+        "Amount_Currency",
+        "Address",
+        "AttachmentRef",
+        "Unknown",
+        "Upload",
+        "JSONObject"
+      ]
+    },
+    "graphqlNameString": {
+      "type": "string",
+      "pattern": "^[_A-Za-z][_0-9A-Za-z]*$"
+    },
+    "typeReference": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "name",
+            "required"
+          ],
+          "properties": {
+            "kind": {
+              "const": "scalar"
+            },
+            "name": {
+              "$ref": "#/definitions/scalarName"
+            },
+            "required": {
+              "type": "boolean"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "name",
+            "required"
+          ],
+          "properties": {
+            "kind": {
+              "const": "named"
+            },
+            "name": {
+              "$ref": "#/definitions/graphqlNameString"
+            },
+            "required": {
+              "type": "boolean"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "required",
+            "item"
+          ],
+          "properties": {
+            "kind": {
+              "const": "list"
+            },
+            "required": {
+              "type": "boolean"
+            },
+            "item": {
+              "$ref": "#/definitions/typeReference"
+            }
+          }
+        }
+      ]
+    },
+    "directiveUse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "arguments"
+      ],
+      "properties": {
+        "name": {
+          "$ref": "#/definitions/graphqlNameString"
+        },
+        "arguments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "value"
+            ],
+            "properties": {
+              "name": {
+                "$ref": "#/definitions/graphqlNameString"
+              },
+              "value": {
+                "$ref": "#/definitions/json"
+              }
+            }
+          }
+        }
+      }
+    },
+    "field": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "name",
+        "description",
+        "deprecated",
+        "type"
+      ],
+      "properties": {
+        "key": {
+          "$ref": "#/definitions/graphqlNameString"
+        },
+        "name": {
+          "$ref": "#/definitions/graphqlNameString"
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "deprecated": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "args": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/inputField"
+          }
+        },
+        "type": {
+          "$ref": "#/definitions/typeReference"
+        },
+        "directives": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/directiveUse"
+          }
+        }
+      }
+    },
+    "inputField": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "name",
+        "description",
+        "deprecated",
+        "type"
+      ],
+      "properties": {
+        "key": {
+          "$ref": "#/definitions/graphqlNameString"
+        },
+        "name": {
+          "$ref": "#/definitions/graphqlNameString"
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "deprecated": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "type": {
+          "$ref": "#/definitions/typeReference"
+        },
+        "defaultValue": {
+          "$ref": "#/definitions/json"
+        },
+        "directives": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/directiveUse"
+          }
+        }
+      }
+    },
+    "namedType": {
+      "oneOf": [
+        {
+          "$ref": "#/definitions/enumType"
+        },
+        {
+          "$ref": "#/definitions/objectType"
+        },
+        {
+          "$ref": "#/definitions/interfaceType"
+        },
+        {
+          "$ref": "#/definitions/inputType"
+        },
+        {
+          "$ref": "#/definitions/unionType"
+        }
+      ]
+    },
+    "enumType": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "name",
+        "description",
+        "values"
+      ],
+      "properties": {
+        "kind": {
+          "const": "enum"
+        },
+        "name": {
+          "$ref": "#/definitions/graphqlNameString"
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "values": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "description",
+              "deprecated"
+            ],
+            "properties": {
+              "name": {
+                "$ref": "#/definitions/graphqlNameString"
+              },
+              "description": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "deprecated": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "directives": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/directiveUse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "objectType": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "name",
+        "description",
+        "fields"
+      ],
+      "properties": {
+        "kind": {
+          "const": "object"
+        },
+        "name": {
+          "$ref": "#/definitions/graphqlNameString"
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "implements": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/graphqlNameString"
+          }
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/field"
+          }
+        }
+      }
+    },
+    "interfaceType": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "name",
+        "description",
+        "fields"
+      ],
+      "properties": {
+        "kind": {
+          "const": "interface"
+        },
+        "name": {
+          "$ref": "#/definitions/graphqlNameString"
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "implements": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/graphqlNameString"
+          }
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/field"
+          }
+        }
+      }
+    },
+    "inputType": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "name",
+        "description",
+        "unknownKeys",
+        "fields"
+      ],
+      "properties": {
+        "kind": {
+          "const": "input"
+        },
+        "name": {
+          "$ref": "#/definitions/graphqlNameString"
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "unknownKeys": {
+          "enum": [
+            "preserve",
+            "reject"
+          ]
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/inputField"
+          }
+        }
+      }
+    },
+    "unionType": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "name",
+        "description",
+        "members"
+      ],
+      "properties": {
+        "kind": {
+          "const": "union"
+        },
+        "name": {
+          "$ref": "#/definitions/graphqlNameString"
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "members": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/graphqlNameString"
+          }
+        }
+      }
+    },
+    "example": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "key",
+        "value"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "key": {
+          "type": "string",
+          "minLength": 1
+        },
+        "value": {
+          "type": "string"
+        }
+      }
+    },
+    "materializedState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "initialValue",
+        "examples"
+      ],
+      "properties": {
+        "schema": {
+          "type": "string"
+        },
+        "initialValue": {
+          "type": "string"
+        },
+        "examples": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "value"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "value": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "nonEmptyState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "root",
+        "initialValue",
+        "examples",
+        "unknownKeys",
+        "materialized"
+      ],
+      "properties": {
+        "root": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "name",
+            "required"
+          ],
+          "properties": {
+            "kind": {
+              "const": "named"
+            },
+            "name": {
+              "$ref": "#/definitions/graphqlNameString"
+            },
+            "required": {
+              "const": true
+            }
+          }
+        },
+        "initialValue": {
+          "$ref": "#/definitions/json"
+        },
+        "examples": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/example"
+          }
+        },
+        "unknownKeys": {
+          "const": "preserve"
+        },
+        "materialized": {
+          "$ref": "#/definitions/materializedState"
+        }
+      }
+    },
+    "emptyState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "root",
+        "initialValue",
+        "examples",
+        "unknownKeys",
+        "materialized"
+      ],
+      "properties": {
+        "root": {
+          "type": "null"
+        },
+        "initialValue": {
+          "type": "object",
+          "additionalProperties": false,
+          "maxProperties": 0
+        },
+        "examples": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/example"
+          }
+        },
+        "unknownKeys": {
+          "const": "preserve"
+        },
+        "materialized": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/materializedState"
+            },
+            {
+              "properties": {
+                "schema": {
+                  "const": ""
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "module": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "key",
+        "name",
+        "description",
+        "operations"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "key": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "operations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/operation"
+          }
+        }
+      }
+    },
+    "operation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "key",
+        "name",
+        "description",
+        "actionType",
+        "creatorKey",
+        "scope",
+        "input",
+        "errors",
+        "examples",
+        "template",
+        "reducer"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "key": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "actionType": {
+          "type": "string",
+          "minLength": 1
+        },
+        "creatorKey": {
+          "type": "string",
+          "minLength": 1
+        },
+        "scope": {
+          "enum": [
+            "global",
+            "local"
+          ]
+        },
+        "input": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/definitions/inputType"
+            }
+          ]
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/error"
+          }
+        },
+        "examples": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/example"
+          }
+        },
+        "template": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "reducer": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "key",
+        "code",
+        "name",
+        "description",
+        "template"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "key": {
+          "type": "string",
+          "minLength": 1
+        },
+        "code": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "template": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "graphqlCompatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "document",
+        "preserveDefinitionOrder"
+      ],
+      "properties": {
+        "kind": {
+          "const": "graphql-ast-v1"
+        },
+        "document": {
+          "$ref": "#/definitions/astDocument"
+        },
+        "preserveDefinitionOrder": {
+          "const": true
+        }
+      }
+    },
+    "astName": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "value"
+      ],
+      "properties": {
+        "kind": {
+          "const": "Name"
+        },
+        "value": {
+          "$ref": "#/definitions/graphqlNameString"
+        }
+      }
+    },
+    "astStringValue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "value"
+      ],
+      "properties": {
+        "kind": {
+          "const": "StringValue"
+        },
+        "value": {
+          "type": "string"
+        },
+        "block": {
+          "type": "boolean"
+        }
+      }
+    },
+    "astConstValue": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "value"
+          ],
+          "properties": {
+            "kind": {
+              "enum": [
+                "IntValue",
+                "FloatValue"
+              ]
+            },
+            "value": {
+              "type": "string"
+            }
+          }
+        },
+        {
+          "$ref": "#/definitions/astStringValue"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "value"
+          ],
+          "properties": {
+            "kind": {
+              "const": "BooleanValue"
+            },
+            "value": {
+              "type": "boolean"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind"
+          ],
+          "properties": {
+            "kind": {
+              "const": "NullValue"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "value"
+          ],
+          "properties": {
+            "kind": {
+              "const": "EnumValue"
+            },
+            "value": {
+              "$ref": "#/definitions/graphqlNameString"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "values"
+          ],
+          "properties": {
+            "kind": {
+              "const": "ListValue"
+            },
+            "values": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/astConstValue"
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "fields"
+          ],
+          "properties": {
+            "kind": {
+              "const": "ObjectValue"
+            },
+            "fields": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/astObjectField"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "astObjectField": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "name",
+        "value"
+      ],
+      "properties": {
+        "kind": {
+          "const": "ObjectField"
+        },
+        "name": {
+          "$ref": "#/definitions/astName"
+        },
+        "value": {
+          "$ref": "#/definitions/astConstValue"
+        }
+      }
+    },
+    "astType": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "name"
+          ],
+          "properties": {
+            "kind": {
+              "const": "NamedType"
+            },
+            "name": {
+              "$ref": "#/definitions/astName"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "type"
+          ],
+          "properties": {
+            "kind": {
+              "const": "ListType"
+            },
+            "type": {
+              "$ref": "#/definitions/astType"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "type"
+          ],
+          "properties": {
+            "kind": {
+              "const": "NonNullType"
+            },
+            "type": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "kind",
+                    "name"
+                  ],
+                  "properties": {
+                    "kind": {
+                      "const": "NamedType"
+                    },
+                    "name": {
+                      "$ref": "#/definitions/astName"
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "kind",
+                    "type"
+                  ],
+                  "properties": {
+                    "kind": {
+                      "const": "ListType"
+                    },
+                    "type": {
+                      "$ref": "#/definitions/astType"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "astArgument": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "name",
+        "value"
+      ],
+      "properties": {
+        "kind": {
+          "const": "Argument"
+        },
+        "name": {
+          "$ref": "#/definitions/astName"
+        },
+        "value": {
+          "$ref": "#/definitions/astConstValue"
+        }
+      }
+    },
+    "astDirective": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "name",
+        "arguments"
+      ],
+      "properties": {
+        "kind": {
+          "const": "Directive"
+        },
+        "name": {
+          "$ref": "#/definitions/astName"
+        },
+        "arguments": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/astArgument"
+          }
+        }
+      }
+    },
+    "astInputValue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "name",
+        "type",
+        "directives"
+      ],
+      "properties": {
+        "kind": {
+          "const": "InputValueDefinition"
+        },
+        "description": {
+          "$ref": "#/definitions/astStringValue"
+        },
+        "name": {
+          "$ref": "#/definitions/astName"
+        },
+        "type": {
+          "$ref": "#/definitions/astType"
+        },
+        "defaultValue": {
+          "$ref": "#/definitions/astConstValue"
+        },
+        "directives": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/astDirective"
+          }
+        }
+      }
+    },
+    "astField": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "name",
+        "arguments",
+        "type",
+        "directives"
+      ],
+      "properties": {
+        "kind": {
+          "const": "FieldDefinition"
+        },
+        "description": {
+          "$ref": "#/definitions/astStringValue"
+        },
+        "name": {
+          "$ref": "#/definitions/astName"
+        },
+        "arguments": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/astInputValue"
+          }
+        },
+        "type": {
+          "$ref": "#/definitions/astType"
+        },
+        "directives": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/astDirective"
+          }
+        }
+      }
+    },
+    "astEnumValue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "name",
+        "directives"
+      ],
+      "properties": {
+        "kind": {
+          "const": "EnumValueDefinition"
+        },
+        "description": {
+          "$ref": "#/definitions/astStringValue"
+        },
+        "name": {
+          "$ref": "#/definitions/astName"
+        },
+        "directives": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/astDirective"
+          }
+        }
+      }
+    },
+    "astNamedType": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "name"
+      ],
+      "properties": {
+        "kind": {
+          "const": "NamedType"
+        },
+        "name": {
+          "$ref": "#/definitions/astName"
+        }
+      }
+    },
+    "astDefinition": {
+      "oneOf": [
+        {
+          "$ref": "#/definitions/astSchemaDefinition"
+        },
+        {
+          "$ref": "#/definitions/astDirectiveDefinition"
+        },
+        {
+          "$ref": "#/definitions/astScalarDefinition"
+        },
+        {
+          "$ref": "#/definitions/astObjectDefinition"
+        },
+        {
+          "$ref": "#/definitions/astInterfaceDefinition"
+        },
+        {
+          "$ref": "#/definitions/astUnionDefinition"
+        },
+        {
+          "$ref": "#/definitions/astEnumDefinition"
+        },
+        {
+          "$ref": "#/definitions/astInputDefinition"
+        }
+      ]
+    },
+    "astNamedDefinitionBase": {
+      "type": "object",
+      "required": [
+        "kind",
+        "name",
+        "directives"
+      ],
+      "properties": {
+        "description": {
+          "$ref": "#/definitions/astStringValue"
+        },
+        "name": {
+          "$ref": "#/definitions/astName"
+        },
+        "directives": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/astDirective"
+          }
+        }
+      }
+    },
+    "astScalarDefinition": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/astNamedDefinitionBase"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "ScalarTypeDefinition",
+                "ScalarTypeExtension"
+              ]
+            },
+            "description": {
+              "$ref": "#/definitions/astStringValue"
+            },
+            "name": {
+              "$ref": "#/definitions/astName"
+            },
+            "directives": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/astDirective"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "astObjectDefinition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "name",
+        "interfaces",
+        "directives",
+        "fields"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "ObjectTypeDefinition",
+            "ObjectTypeExtension"
+          ]
+        },
+        "description": {
+          "$ref": "#/definitions/astStringValue"
+        },
+        "name": {
+          "$ref": "#/definitions/astName"
+        },
+        "interfaces": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/astNamedType"
+          }
+        },
+        "directives": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/astDirective"
+          }
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/astField"
+          }
+        }
+      }
+    },
+    "astInterfaceDefinition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "name",
+        "interfaces",
+        "directives",
+        "fields"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "InterfaceTypeDefinition",
+            "InterfaceTypeExtension"
+          ]
+        },
+        "description": {
+          "$ref": "#/definitions/astStringValue"
+        },
+        "name": {
+          "$ref": "#/definitions/astName"
+        },
+        "interfaces": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/astNamedType"
+          }
+        },
+        "directives": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/astDirective"
+          }
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/astField"
+          }
+        }
+      }
+    },
+    "astUnionDefinition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "name",
+        "directives",
+        "types"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "UnionTypeDefinition",
+            "UnionTypeExtension"
+          ]
+        },
+        "description": {
+          "$ref": "#/definitions/astStringValue"
+        },
+        "name": {
+          "$ref": "#/definitions/astName"
+        },
+        "directives": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/astDirective"
+          }
+        },
+        "types": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/astNamedType"
+          }
+        }
+      }
+    },
+    "astEnumDefinition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "name",
+        "directives",
+        "values"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "EnumTypeDefinition",
+            "EnumTypeExtension"
+          ]
+        },
+        "description": {
+          "$ref": "#/definitions/astStringValue"
+        },
+        "name": {
+          "$ref": "#/definitions/astName"
+        },
+        "directives": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/astDirective"
+          }
+        },
+        "values": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/astEnumValue"
+          }
+        }
+      }
+    },
+    "astInputDefinition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "name",
+        "directives",
+        "fields"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "InputObjectTypeDefinition",
+            "InputObjectTypeExtension"
+          ]
+        },
+        "description": {
+          "$ref": "#/definitions/astStringValue"
+        },
+        "name": {
+          "$ref": "#/definitions/astName"
+        },
+        "directives": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/astDirective"
+          }
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/astInputValue"
+          }
+        }
+      }
+    },
+    "astOperationType": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "operation",
+        "type"
+      ],
+      "properties": {
+        "kind": {
+          "const": "OperationTypeDefinition"
+        },
+        "operation": {
+          "enum": [
+            "query",
+            "mutation",
+            "subscription"
+          ]
+        },
+        "type": {
+          "$ref": "#/definitions/astNamedType"
+        }
+      }
+    },
+    "astSchemaDefinition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "directives",
+        "operationTypes"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "SchemaDefinition",
+            "SchemaExtension"
+          ]
+        },
+        "description": {
+          "$ref": "#/definitions/astStringValue"
+        },
+        "directives": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/astDirective"
+          }
+        },
+        "operationTypes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/astOperationType"
+          }
+        }
+      }
+    },
+    "astDirectiveDefinition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "name",
+        "arguments",
+        "repeatable",
+        "locations"
+      ],
+      "properties": {
+        "kind": {
+          "const": "DirectiveDefinition"
+        },
+        "description": {
+          "$ref": "#/definitions/astStringValue"
+        },
+        "name": {
+          "$ref": "#/definitions/astName"
+        },
+        "arguments": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/astInputValue"
+          }
+        },
+        "repeatable": {
+          "type": "boolean"
+        },
+        "locations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/astName"
+          }
+        }
+      }
+    },
+    "astDocument": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "definitions"
+      ],
+      "properties": {
+        "kind": {
+          "const": "Document"
+        },
+        "definitions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/astDefinition"
+          }
+        }
+      }
+    },
+    "subgraphAccess": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind"
+          ],
+          "properties": {
+            "kind": {
+              "const": "public"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind"
+          ],
+          "properties": {
+            "kind": {
+              "const": "manual"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "argument"
+          ],
+          "properties": {
+            "kind": {
+              "const": "document-read"
+            },
+            "argument": {
+              "$ref": "#/definitions/graphqlNameString"
+            }
+          }
+        }
+      ]
+    },
+    "subgraphEntry": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "key",
+            "fieldName",
+            "description",
+            "args",
+            "returns",
+            "access",
+            "compatibilityName"
+          ],
+          "properties": {
+            "kind": {
+              "enum": [
+                "query",
+                "mutation",
+                "subscription"
+              ]
+            },
+            "key": {
+              "$ref": "#/definitions/graphqlNameString"
+            },
+            "fieldName": {
+              "$ref": "#/definitions/graphqlNameString"
+            },
+            "description": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "args": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/inputField"
+              }
+            },
+            "returns": {
+              "$ref": "#/definitions/typeReference"
+            },
+            "access": {
+              "$ref": "#/definitions/subgraphAccess"
+            },
+            "compatibilityName": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/graphqlNameString"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "target",
+            "access"
+          ],
+          "properties": {
+            "kind": {
+              "const": "field"
+            },
+            "target": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "typeName",
+                "fieldName"
+              ],
+              "properties": {
+                "typeName": {
+                  "$ref": "#/definitions/graphqlNameString"
+                },
+                "fieldName": {
+                  "$ref": "#/definitions/graphqlNameString"
+                }
+              }
+            },
+            "access": {
+              "$ref": "#/definitions/subgraphAccess"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "typeName"
+          ],
+          "properties": {
+            "kind": {
+              "const": "resolveType"
+            },
+            "typeName": {
+              "$ref": "#/definitions/graphqlNameString"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "typeName"
+          ],
+          "properties": {
+            "kind": {
+              "const": "isTypeOf"
+            },
+            "typeName": {
+              "$ref": "#/definitions/graphqlNameString"
+            }
+          }
+        }
+      ]
+    },
+    "subgraphScalarReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "implementation",
+        "graphQLProfile"
+      ],
+      "properties": {
+        "name": {
+          "$ref": "#/definitions/scalarName"
+        },
+        "implementation": {
+          "type": "string",
+          "pattern": "^powerhouse\\.catalog#.+$"
+        },
+        "graphQLProfile": {
+          "const": "legacy-graphql-default-v1"
+        }
+      }
+    },
+    "resolverCoordinate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "typeName",
+        "fieldName",
+        "resolverKind"
+      ],
+      "properties": {
+        "typeName": {
+          "$ref": "#/definitions/graphqlNameString"
+        },
+        "fieldName": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/graphqlNameString"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "resolverKind": {
+          "enum": [
+            "field",
+            "subscribe",
+            "resolve",
+            "resolveType",
+            "isTypeOf",
+            "enum",
+            "scalar"
+          ]
+        }
+      }
+    }
+  }
+}

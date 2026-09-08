@@ -1,4 +1,4 @@
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -31,12 +31,24 @@ const PH_CLI = path.resolve(ROOT, "node_modules/.bin/ph-cli");
 // touching the user's real ~/.npmrc.
 const FAKE_HOME = path.join(ROOT, ".fake-home");
 
-function run(cmd: string, cwd: string): void {
-  console.log(`$ ${cmd}\n  (cwd=${path.relative(ROOT, cwd) || "."})`);
-  execSync(cmd, {
+function run(command: string, args: readonly string[], cwd: string): void {
+  console.log(
+    `$ ${[command, ...args].map((value) => JSON.stringify(value)).join(" ")}\n` +
+      `  (cwd=${path.relative(ROOT, cwd) || "."})`,
+  );
+  execFileSync(command, args, {
     cwd,
     stdio: "inherit",
-    env: { ...process.env, HOME: FAKE_HOME },
+    // The explicit npm config is intentional even though FAKE_HOME also has
+    // an .npmrc. `ph init` resolves channel versions through child `npm view`
+    // processes before it installs anything; an environment override keeps
+    // those reads pinned to this test's registry regardless of npm's config
+    // discovery or cache state.
+    env: {
+      ...process.env,
+      HOME: FAKE_HOME,
+      npm_config_registry: `${REGISTRY_URL}/`,
+    },
   });
 }
 
@@ -104,12 +116,9 @@ async function main(): Promise<void> {
   prepareFakeHome(token);
 
   // 1. ph init <name> --pnpm [--dev|--staging]
-  const tagFlag =
-    TAG === "dev" ? "--dev" : TAG === "staging" ? "--staging" : "";
-  run(
-    `${PH_CLI} init ${PROJECT_NAME} --pnpm ${tagFlag}`.trim(),
-    PROJECT_PARENT,
-  );
+  const tagArgs =
+    TAG === "dev" ? ["--dev"] : TAG === "staging" ? ["--staging"] : [];
+  run(PH_CLI, ["init", PROJECT_NAME, "--pnpm", ...tagArgs], PROJECT_PARENT);
 
   // 2. Also write an .npmrc into the project itself so subsequent `pnpm`
   // invocations (lint / tsc / build / publish) authenticate and route to
@@ -121,13 +130,21 @@ async function main(): Promise<void> {
   // complete reducer implementations — no manual swap needed for the model.
   const zipDest = path.join(PROJECT_DIR, "todo.json");
   fs.copyFileSync(path.join(FIXTURES, "todo.json"), zipDest);
-  run(`${PH_CLI} generate doc --document ./todo.json`, PROJECT_DIR);
+  run(PH_CLI, ["generate", "doc", "--document", "./todo.json"], PROJECT_DIR);
 
   // 4. Generate the editor (boilerplate only) and swap in the fixture UI
   // that actually dispatches addTodo / updateTodo / removeTodo actions —
   // the generated editor only knows about the doc header.
   run(
-    `${PH_CLI} generate editor --name todo-editor --document-type test/todo`,
+    PH_CLI,
+    [
+      "generate",
+      "editor",
+      "--name",
+      "todo-editor",
+      "--document-type",
+      "test/todo",
+    ],
     PROJECT_DIR,
   );
   const editorDest = path.join(PROJECT_DIR, "editors/todo-editor/editor.tsx");
@@ -138,7 +155,7 @@ async function main(): Promise<void> {
   }
   fs.copyFileSync(path.join(FIXTURES, "editor.tsx"), editorDest);
 
-  // 6. Manifest needs the package name (codegen leaves it empty).
+  // 5. Manifest needs the package name (codegen leaves it empty).
   const manifestPath = path.join(PROJECT_DIR, "powerhouse.manifest.json");
   if (fs.existsSync(manifestPath)) {
     const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8")) as {
@@ -148,15 +165,15 @@ async function main(): Promise<void> {
     fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 4));
   }
 
-  // 7. Quality gates per user spec: lint, typecheck, build.
-  run("pnpm lint:fix", PROJECT_DIR);
-  run("pnpm tsc --noEmit", PROJECT_DIR);
-  run("pnpm build", PROJECT_DIR);
+  // 6. Quality gates per user spec: lint, typecheck, build.
+  run("pnpm", ["lint:fix"], PROJECT_DIR);
+  run("pnpm", ["tsc", "--noEmit"], PROJECT_DIR);
+  run("pnpm", ["build"], PROJECT_DIR);
 
-  // 8. Publish to local registry.
-  run(`${PH_CLI} publish --registry ${REGISTRY_URL}`, PROJECT_DIR);
+  // 7. Publish to local registry.
+  run(PH_CLI, ["publish", "--registry", REGISTRY_URL], PROJECT_DIR);
 
-  // 9. Record the published name/registry for downstream services.
+  // 8. Record the published name/registry for downstream services.
   fs.writeFileSync(
     PUBLISHED_FILE,
     JSON.stringify(

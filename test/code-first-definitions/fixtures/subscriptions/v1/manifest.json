@@ -1,0 +1,30 @@
+{
+  "kind": "powerhouse.subscription-fixture-manifest",
+  "formatVersion": 1,
+  "cases": [
+    {
+      "caseId": "typed-subscription-true",
+      "hasSubscriptions": true,
+      "expectedWebSocketAllocations": 1,
+      "expectedSseRouteCount": 2,
+      "expectedSourceAllocations": 1,
+      "expectedCleanupCount": 1
+    },
+    {
+      "caseId": "compat-subscription-undefined",
+      "hasSubscriptions": "undefined",
+      "expectedWebSocketAllocations": 0,
+      "expectedSseRouteCount": 0,
+      "expectedSourceAllocations": 0,
+      "expectedCleanupCount": 0
+    },
+    {
+      "caseId": "compat-subscription-false",
+      "hasSubscriptions": false,
+      "expectedWebSocketAllocations": 0,
+      "expectedSseRouteCount": 0,
+      "expectedSourceAllocations": 0,
+      "expectedCleanupCount": 0
+    }
+  ]
+}

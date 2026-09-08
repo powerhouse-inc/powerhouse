@@ -8,7 +8,7 @@ The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essen
 - [Editor](#editor)
 - [App](#app)
 - [Processor](#processor)
-- [Subgraph](#subgraph)
+- [Generate Subgraph](#generate-subgraph)
 - [Migration File](#migration-file)
 - [Vetra](#vetra)
 - [Connect](#connect)
@@ -19,6 +19,15 @@ The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essen
 - [Inspect](#inspect)
 - [List](#list)
 - [Migrate](#migrate)
+- [Model](#model)
+- [Model Check](#model-check)
+- [Model Inspect](#model-inspect)
+- [Model Migrate](#model-migrate)
+- [Subgraph](#subgraph)
+- [Subgraph Inspect](#subgraph-inspect)
+- [Subgraph Migrate](#subgraph-migrate)
+- [Scalar](#scalar)
+- [Scalar Inspect](#scalar-inspect)
 - [Switchboard](#switchboard)
 - [Login](#login)
 - [Install](#install)
@@ -40,17 +49,11 @@ show help<br><br>
 
 ## Document Model
 Generate a document model
-### options
-#### Document <br>
-Path to a document model spec (.phd or .json) to generate from<br><br>
-**usage:** `--document, -d <file>`<br>
-
-#### Dir <br>
-Name of the directory of an existing document model to re-generate<br><br>
-**usage:** `--dir <dir>`<br>
-
-
 ### flags
+#### Code First <br>
+Create an authored TypeScript document-model scaffold<br><br>
+**usage:** `--code-first`<br>
+
 #### All <br>
 Re-generate all existing document models in the current project<br><br>
 **usage:** `--all, -a`<br>
@@ -66,6 +69,32 @@ Log arguments passed to this command<br><br>
 #### Help <br>
 show help<br><br>
 **usage:** `--help, -h`<br>
+
+
+### options
+#### Name <br>
+Human-readable name for a code-first document model<br><br>
+**usage:** `--name, -n <str>`<br>
+
+#### Id <br>
+Document type ID for a code-first model, for example acme/invoice<br><br>
+**usage:** `--id <str>`<br>
+
+#### Extension <br>
+File extension recorded by the code-first model<br><br>
+**usage:** `--extension <str>`<br>
+
+#### Version <br>
+Version to scaffold; versions after v1 copy the previous authored tree<br><br>
+**usage:** `--version, -v <number>`<br>
+
+#### Document <br>
+Path to a document model spec (.phd or .json) to generate from<br><br>
+**usage:** `--document, -d <file>`<br>
+
+#### Dir <br>
+Name of the directory of an existing document model to re-generate<br><br>
+**usage:** `--dir <dir>`<br>
 
 
 ## Editor
@@ -194,23 +223,13 @@ show help<br><br>
 **usage:** `--help, -h`<br>
 
 
-## Subgraph
+## Generate Subgraph
 Generate a subgraph
-### options
-#### Name <br>
-The name of the subgraph to generate<br><br>
-**usage:** `--name, -n <str>`<br>
-
-#### Document <br>
-Path to a powerhouse/subgraph spec file (.phd or .json) to drive codegen<br><br>
-**usage:** `--document, -d <file>`<br>
-
-#### Dir <br>
-Name of the directory of an existing subgraph to re-generate<br><br>
-**usage:** `--dir <dir>`<br>
-
-
 ### flags
+#### Code First <br>
+Create an authored TypeScript subgraph scaffold<br><br>
+**usage:** `--code-first`<br>
+
 #### All <br>
 Re-generate all existing subgraphs in the current project<br><br>
 **usage:** `--all, -a`<br>
@@ -226,6 +245,20 @@ Log arguments passed to this command<br><br>
 #### Help <br>
 show help<br><br>
 **usage:** `--help, -h`<br>
+
+
+### options
+#### Name <br>
+The name of the subgraph to generate<br><br>
+**usage:** `--name, -n <str>`<br>
+
+#### Document <br>
+Path to a powerhouse/subgraph spec file (.phd or .json) to drive codegen<br><br>
+**usage:** `--document, -d <file>`<br>
+
+#### Dir <br>
+Name of the directory of an existing subgraph to re-generate<br><br>
+**usage:** `--dir <dir>`<br>
 
 
 ## Migration File
@@ -587,6 +620,14 @@ Override connect.sentry.tracing (Sentry performance tracing).<br><br>
 Path to a favicon file (e.g. .ico) to bundle in place of the default Connect icon. Emitted as icon.ico; resolved relative to the build cwd.<br><br>
 **usage:** `--favicon <str>`<br>
 
+#### Config File <br>
+Powerhouse source config file<br><br>
+**usage:** `--config-file <str>`<br>
+**default**: `./powerhouse.config.json`
+#### Source <br>
+Definition source as ./module.ts with an optional RFC 6901 export pointer<br><br>
+**usage:** `--source <str>`<br>
+**default**: ``
 #### Base <br>
 Base path for the app<br><br>
 **usage:** `--base <str>`<br>
@@ -867,6 +908,194 @@ Run migrate from the bundled codegen even if the target version cannot be resolv
 Log arguments passed to this command<br><br>
 **usage:** `--debug`<br>
 
+#### Help <br>
+show help<br><br>
+**usage:** `--help, -h`<br>
+
+
+## Model
+Check, inspect, and migrate document-model definitions.
+## Model Check
+Import and validate the configured definition sources.
+### options
+#### Config File <br>
+Powerhouse source config file<br><br>
+**usage:** `--config-file <str>`<br>
+**default**: `./powerhouse.config.json`
+#### Source <br>
+Definition source as ./module.ts with an optional RFC 6901 export pointer<br><br>
+**usage:** `--source <str>`<br>
+**default**: ``
+#### Out Dir <br>
+Directory containing the retained release report; requires --retained<br><br>
+**usage:** `--out-dir <str>`<br>
+
+
+### flags
+#### Json <br>
+Write one versioned JSON report to stdout<br><br>
+**usage:** `--json`<br>
+**default**: `false`
+#### Warnings As Errors <br>
+Make warnings invalidate the definition check<br><br>
+**usage:** `--warnings-as-errors`<br>
+**default**: `false`
+#### Release <br>
+Use the release check profile; required with --retained<br><br>
+**usage:** `--release`<br>
+**default**: `false`
+#### Retained <br>
+Validate the release report retained by the last ph build; requires --release<br><br>
+**usage:** `--retained`<br>
+**default**: `false`
+#### Help <br>
+show help<br><br>
+**usage:** `--help, -h`<br>
+
+
+## Model Inspect
+Inspect one configured document-model definition.
+### arguments
+#### Document Type Version *[required]*<br>
+Document type and positive integer module version<br><br>
+**usage:** `<documentType@version>`<br>
+
+
+### options
+#### Config File <br>
+Powerhouse source config file<br><br>
+**usage:** `--config-file <str>`<br>
+**default**: `./powerhouse.config.json`
+#### Source <br>
+Definition source as ./module.ts with an optional RFC 6901 export pointer<br><br>
+**usage:** `--source <str>`<br>
+**default**: ``
+
+### flags
+#### Json <br>
+Write one versioned JSON report to stdout<br><br>
+**usage:** `--json`<br>
+**default**: `false`
+#### Warnings As Errors <br>
+Make warnings invalidate the definition inspection<br><br>
+**usage:** `--warnings-as-errors`<br>
+**default**: `false`
+#### Help <br>
+show help<br><br>
+**usage:** `--help, -h`<br>
+
+
+## Model Migrate
+Report or apply a reversible per-family code-first migration.
+### arguments
+#### Family *[required]*<br>
+Legacy family directory under document-models/<br><br>
+**usage:** `<family>`<br>
+
+
+### flags
+#### To Code <br>
+Render a verification-only code-first family beside legacy source<br><br>
+**usage:** `--to-code`<br>
+**default**: `false`
+#### Retire Legacy <br>
+Create or consume a hash-bound legacy retirement plan<br><br>
+**usage:** `--retire-legacy`<br>
+**default**: `false`
+#### Apply <br>
+Apply the selected write or approved retirement plan<br><br>
+**usage:** `--apply`<br>
+**default**: `false`
+#### Json <br>
+Write one versioned JSON report to stdout<br><br>
+**usage:** `--json`<br>
+**default**: `false`
+#### Help <br>
+show help<br><br>
+**usage:** `--help, -h`<br>
+
+
+### options
+#### Plan <br>
+Approved retirement-plan JSON path (required for retirement apply)<br><br>
+**usage:** `--plan <str>`<br>
+
+
+## Subgraph
+Inspect and migrate subgraph definitions.
+## Subgraph Inspect
+Inspect one configured subgraph definition.
+### arguments
+#### Name *[required]*<br>
+Stable subgraph name<br><br>
+**usage:** `<name>`<br>
+
+
+### options
+#### Config File <br>
+Powerhouse source config file<br><br>
+**usage:** `--config-file <str>`<br>
+**default**: `./powerhouse.config.json`
+#### Source <br>
+Definition source as ./module.ts with an optional RFC 6901 export pointer<br><br>
+**usage:** `--source <str>`<br>
+**default**: ``
+
+### flags
+#### Json <br>
+Write one versioned JSON report to stdout<br><br>
+**usage:** `--json`<br>
+**default**: `false`
+#### Warnings As Errors <br>
+Make warnings invalidate the definition inspection<br><br>
+**usage:** `--warnings-as-errors`<br>
+**default**: `false`
+#### Help <br>
+show help<br><br>
+**usage:** `--help, -h`<br>
+
+
+## Subgraph Migrate
+Report or apply a reversible code-first subgraph migration.
+### arguments
+#### Name *[required]*<br>
+Legacy subgraph directory under subgraphs/<br><br>
+**usage:** `<name>`<br>
+
+
+### flags
+#### To Code <br>
+Render a verification-only code-first subgraph beside legacy source<br><br>
+**usage:** `--to-code`<br>
+**default**: `false`
+#### Apply <br>
+Write the candidate instead of only reporting it<br><br>
+**usage:** `--apply`<br>
+**default**: `false`
+#### Json <br>
+Write one versioned JSON report to stdout<br><br>
+**usage:** `--json`<br>
+**default**: `false`
+#### Help <br>
+show help<br><br>
+**usage:** `--help, -h`<br>
+
+
+## Scalar
+Inspect the compiler-owned scalar catalog.
+## Scalar Inspect
+Inspect one compiler-owned scalar declaration.
+### arguments
+#### Name *[required]*<br>
+GraphQL scalar name<br><br>
+**usage:** `<name>`<br>
+
+
+### flags
+#### Json <br>
+Write one versioned JSON report to stdout<br><br>
+**usage:** `--json`<br>
+**default**: `false`
 #### Help <br>
 show help<br><br>
 **usage:** `--help, -h`<br>

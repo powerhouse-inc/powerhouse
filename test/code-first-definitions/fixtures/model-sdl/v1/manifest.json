@@ -1,0 +1,96 @@
+{
+  "kind": "powerhouse.gate-fixture-manifest",
+  "formatVersion": 1,
+  "gate": "B6",
+  "fixtureVersion": "model-sdl-v1",
+  "caseCount": 4,
+  "requiredTools": {
+    "node": "v24.14.0",
+    "graphql": "locked-workspace"
+  },
+  "schemaDigest": "sha256:9a320fb708d0c5bba916dba4cd268cdd7283d21ce1128b5905b2bc247d8cc868",
+  "directDependencies": [
+    {
+      "gate": "B1",
+      "contractRevision": "sha256:a7ccf254a06e9542fe8e21c59c385e7504a998982ee23444f4491143ef830e4a",
+      "fixtureManifestDigest": "sha256:3b1ecf4f491d0459ddf129ff1a2ee33b8e05171cdbe857a2c0da7273667080ce"
+    },
+    {
+      "gate": "B9",
+      "contractRevision": "sha256:a7ccf254a06e9542fe8e21c59c385e7504a998982ee23444f4491143ef830e4a",
+      "fixtureManifestDigest": "sha256:597d6f2a4716a4633765c558f36eb8fe288529c0940ea56d72cf73956b38b43c"
+    }
+  ],
+  "scalarInventory": "./scalar-inventory-digest.json",
+  "cases": [
+    {
+      "caseId": "descriptor-variants-v1",
+      "definition": "./definitions/descriptor-variants-v1.json",
+      "expectedSdl": "./sdl/descriptor-variants-v1.graphql",
+      "expectedAst": "./ast/descriptor-variants-v1.json",
+      "legacyComparison": null,
+      "coveredVariants": [
+        "descriptor",
+        "scalar-field",
+        "named-field",
+        "nested-list",
+        "all-nullability",
+        "enum",
+        "object",
+        "input",
+        "interface",
+        "union",
+        "field-arguments",
+        "deprecation",
+        "operation",
+        "error",
+        "local-state",
+        "unreachable-type"
+      ]
+    },
+    {
+      "caseId": "versioned-todo-v1",
+      "definition": "./definitions/versioned-todo-v1.json",
+      "expectedSdl": "./sdl/versioned-todo-v1.graphql",
+      "expectedAst": "./ast/versioned-todo-v1.json",
+      "legacyComparison": {
+        "sdlDigest": "sha256:46339fb2c92eef0b1e482fd73b9061c7554d0023efe92e43631944c287cb634b",
+        "astDigest": "sha256:117bf23f18314aba34baec7409ef2dbd5debbdb6a1b343a753929c9596fcc582"
+      },
+      "coveredVariants": [
+        "compatibility-ast",
+        "version-1",
+        "operations"
+      ]
+    },
+    {
+      "caseId": "versioned-todo-v2",
+      "definition": "./definitions/versioned-todo-v2.json",
+      "expectedSdl": "./sdl/versioned-todo-v2.graphql",
+      "expectedAst": "./ast/versioned-todo-v2.json",
+      "legacyComparison": {
+        "sdlDigest": "sha256:46339fb2c92eef0b1e482fd73b9061c7554d0023efe92e43631944c287cb634b",
+        "astDigest": "sha256:117bf23f18314aba34baec7409ef2dbd5debbdb6a1b343a753929c9596fcc582"
+      },
+      "coveredVariants": [
+        "compatibility-ast",
+        "version-2",
+        "operations"
+      ]
+    },
+    {
+      "caseId": "complete-compatibility-ast-v1",
+      "definition": "./definitions/complete-compatibility-ast-v1.json",
+      "expectedSdl": "./sdl/complete-compatibility-ast-v1.graphql",
+      "expectedAst": "./ast/complete-compatibility-ast-v1.json",
+      "legacyComparison": null,
+      "coveredVariants": [
+        "schema-definition",
+        "directive-definition",
+        "directive-use",
+        "type-extension",
+        "source-order"
+      ]
+    }
+  ]
+}

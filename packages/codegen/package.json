@@ -26,6 +26,10 @@
       "source": "./src/file-builders/index.mts",
       "import": "./dist/src/file-builders/index.mjs"
     },
+    "./migration": {
+      "source": "./src/migration/index.mts",
+      "import": "./dist/src/migration/index.mjs"
+    },
     "./name-builders": {
       "source": "./src/name-builders/index.mts",
       "import": "./dist/src/name-builders/index.mjs"

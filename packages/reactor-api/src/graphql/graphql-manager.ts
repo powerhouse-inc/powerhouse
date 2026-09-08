@@ -67,9 +67,7 @@ function hasOperationSchemas(documentModel: DocumentModelModule): boolean {
   );
 }
 
-/**
- * Filter document models to keep only the latest version of each unique document model.
- */
+/** Keep the current host selector: display name, last specification version. */
 function filterLatestDocumentModelVersions(
   documentModels: DocumentModelModule[],
 ): DocumentModelModule[] {
@@ -78,7 +76,6 @@ function filterLatestDocumentModelVersions(
   for (const documentModel of documentModels) {
     const name = documentModel.documentModel.global.name;
     const existing = latestByName.get(name);
-
     if (!existing) {
       latestByName.set(name, documentModel);
       continue;
@@ -88,7 +85,6 @@ function filterLatestDocumentModelVersions(
       documentModel.documentModel.global.specifications.at(-1)?.version ?? 0;
     const existingVersion =
       existing.documentModel.global.specifications.at(-1)?.version ?? 0;
-
     if (currentVersion > existingVersion) {
       latestByName.set(name, documentModel);
     }

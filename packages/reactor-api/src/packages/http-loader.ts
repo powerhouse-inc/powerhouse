@@ -4,12 +4,15 @@ import type {
   DocumentModelModule,
   UpgradeManifest,
 } from "@powerhousedao/shared/document-model";
+import { parsePackageSpec } from "@powerhousedao/shared/registry/package-spec";
 import { childLogger } from "document-model";
 import type { IPackageLoader, ProcessorFactoryBuilder } from "../types.js";
 import { extractUpgradeManifests } from "./util.js";
 
 export interface HttpPackageLoaderOptions {
   registryUrl: string;
+  /** Injectable for deterministic tests; defaults to native dynamic import. */
+  importPackage?: (url: string) => Promise<Record<string, unknown>>;
 }
 
 export interface HttpPackageLoaderLogger {
@@ -18,7 +21,7 @@ export interface HttpPackageLoaderLogger {
 }
 
 // Expected shape of the document-models bundle export
-type DocumentModelsExport = Record<string, DocumentModelModule>;
+type DocumentModelsExport = Record<string, unknown>;
 
 // Expected shape of the subgraphs bundle export
 type SubgraphsExport = Record<string, SubgraphClass>;
@@ -56,6 +59,9 @@ type ProcessorsExport = {
  */
 export class HttpPackageLoader implements IPackageLoader {
   private readonly registryUrl: string;
+  private readonly importPackage: (
+    url: string,
+  ) => Promise<Record<string, unknown>>;
   private readonly logger = childLogger(["reactor-api", "http-loader"]);
 
   readonly name = "HttpPackageLoader";
@@ -66,49 +72,40 @@ export class HttpPackageLoader implements IPackageLoader {
     this.registryUrl = options.registryUrl.endsWith("/")
       ? options.registryUrl
       : `${options.registryUrl}/`;
+    this.importPackage =
+      options.importPackage ??
+      ((url) => import(url) as Promise<Record<string, unknown>>);
     this.documentModelLoader = new HttpDocumentModelLoader(this);
   }
 
-  /**
-   * Load document models from a package in the HTTP registry.
-   * Imports directly from HTTP URL using Node.js loader hooks.
-   */
-  /**
-   * Parse a package specifier like "@scope/pkg@tag" into name and optional tag.
-   */
-  private parsePackageSpec(spec: string): {
-    name: string;
-    tag: string | undefined;
-  } {
-    if (spec.startsWith("@")) {
-      const lastAt = spec.lastIndexOf("@");
-      if (lastAt > 0 && lastAt !== spec.indexOf("@")) {
-        return { name: spec.slice(0, lastAt), tag: spec.slice(lastAt + 1) };
-      }
-      return { name: spec, tag: undefined };
-    }
-    const atIndex = spec.indexOf("@");
-    if (atIndex > 0) {
-      return { name: spec.slice(0, atIndex), tag: spec.slice(atIndex + 1) };
-    }
-    return { name: spec, tag: undefined };
+  private getDocumentModelsUrl(
+    packageSpec: string,
+    entry = "index.mjs",
+  ): string {
+    return `${this.registryUrl}-/cdn/${packageSpec}/node/document-models/${entry}`;
   }
 
+  validatePackageSpec(packageSpec: string): {
+    name: string;
+    cdnSpecifier: string;
+  } {
+    return parsePackageSpec(packageSpec);
+  }
+
+  /** Load document models directly through the registered HTTP import hook. */
   async loadDocumentModels(
     packageSpec: string,
   ): Promise<DocumentModelModule[]> {
-    const { name: packageName } = this.parsePackageSpec(packageSpec);
-    if (!this.isValidPackageName(packageName)) {
-      throw new Error(`Invalid package name: ${packageName}`);
-    }
+    const { name: packageName, cdnSpecifier } =
+      this.validatePackageSpec(packageSpec);
 
     // Pass the full spec (with tag) to the CDN — the registry resolves it
-    const url = `${this.registryUrl}-/cdn/${packageSpec}/node/document-models/index.mjs`;
+    const url = this.getDocumentModelsUrl(cdnSpecifier);
 
     this.logger.verbose(`Importing document-models from: ${url}`);
 
     // Direct import from HTTP URL - hooks handle the fetch
-    const module = (await import(url)) as DocumentModelsExport;
+    const module = (await this.importPackage(url)) as DocumentModelsExport;
 
     const models = Object.values(module).filter(
       (m: unknown): m is DocumentModelModule =>
@@ -127,14 +124,11 @@ export class HttpPackageLoader implements IPackageLoader {
   async loadUpgradeManifests(
     packageSpec: string,
   ): Promise<UpgradeManifest<readonly number[]>[]> {
-    const { name: packageName } = this.parsePackageSpec(packageSpec);
-    if (!this.isValidPackageName(packageName)) {
-      throw new Error(`Invalid package name: ${packageName}`);
-    }
+    const { name: packageName, cdnSpecifier } =
+      this.validatePackageSpec(packageSpec);
 
-    const url = `${this.registryUrl}-/cdn/${packageSpec}/node/document-models/index.mjs`;
-    const module = (await import(url)) as Record<string, unknown>;
-
+    const url = this.getDocumentModelsUrl(cdnSpecifier);
+    const module = await this.importPackage(url);
     const manifests = extractUpgradeManifests(module);
     if (manifests.length > 0) {
       this.logger.verbose(
@@ -145,15 +139,16 @@ export class HttpPackageLoader implements IPackageLoader {
   }
 
   async loadSubgraphs(packageSpec: string): Promise<SubgraphClass[]> {
-    const { name: packageName } = this.parsePackageSpec(packageSpec);
-    if (!this.isValidPackageName(packageName)) {
-      throw new Error(`Invalid package name: ${packageName}`);
-    }
+    const { name: packageName, cdnSpecifier } =
+      this.validatePackageSpec(packageSpec);
 
-    const url = `${this.registryUrl}-/cdn/${packageSpec}/node/subgraphs/index.mjs`;
+    const url = `${this.registryUrl}-/cdn/${cdnSpecifier}/node/subgraphs/index.mjs`;
 
     this.logger.verbose(`Importing subgraphs from: ${url}`);
-    const module = (await import(url)) as Record<string, SubgraphsExport>;
+    const module = (await this.importPackage(url)) as Record<
+      string,
+      SubgraphsExport
+    >;
     const subgraphs = extractSubgraphsFromModule(module);
 
     this.logger.verbose(
@@ -165,15 +160,13 @@ export class HttpPackageLoader implements IPackageLoader {
   async loadProcessors(
     packageSpec: string,
   ): Promise<ProcessorFactoryBuilder | null> {
-    const { name: packageName } = this.parsePackageSpec(packageSpec);
-    if (!this.isValidPackageName(packageName)) {
-      throw new Error(`Invalid package name: ${packageName}`);
-    }
+    const { name: packageName, cdnSpecifier } =
+      this.validatePackageSpec(packageSpec);
 
-    const url = `${this.registryUrl}-/cdn/${packageSpec}/node/processors/index.mjs`;
+    const url = `${this.registryUrl}-/cdn/${cdnSpecifier}/node/processors/index.mjs`;
 
     this.logger.verbose(`Importing processors from: ${url}`);
-    const module = (await import(url)) as ProcessorsExport;
+    const module = (await this.importPackage(url)) as ProcessorsExport;
 
     const factory = module.processorFactory;
     if (factory && typeof factory === "function") {
@@ -215,12 +208,6 @@ export class HttpPackageLoader implements IPackageLoader {
 
     return allModels;
   }
-
-  private isValidPackageName(name: string): boolean {
-    // npm package name pattern: optional scope + package name
-    const pattern = /^(@[a-z0-9][-a-z0-9._]*\/)?[a-z0-9][-a-z0-9._]*$/i;
-    return pattern.test(name) && !name.includes("..") && name.length <= 214;
-  }
 }
 
 /**
@@ -244,7 +231,6 @@ export class HttpDocumentModelLoader implements IDocumentModelLoader {
     string,
     DocumentModelModule[]
   >();
-
   private onModelLoaded?: (model: DocumentModelModule) => void;
 
   constructor(loader: HttpPackageLoader) {
@@ -274,7 +260,7 @@ export class HttpDocumentModelLoader implements IDocumentModelLoader {
     }
 
     const model = models.find(
-      (m) => m.documentModel.global.id === documentType,
+      (module) => module.documentModel.global.id === documentType,
     );
 
     if (!model) {
@@ -315,15 +301,45 @@ export class HttpDocumentModelLoader implements IDocumentModelLoader {
       );
     }
 
-    const packageNames = (await response.json()) as string[];
-
-    if (packageNames.length === 0) {
+    const packageNamesValue: unknown = await response.json();
+    if (!Array.isArray(packageNamesValue)) {
+      throw new Error(
+        `Registry returned an invalid package list for document type: ${documentType}`,
+      );
+    }
+    if (packageNamesValue.length === 0) {
       throw new Error(
         `No package found containing document type: ${documentType}`,
       );
     }
 
-    const packageName = packageNames.sort((a, b) => a.localeCompare(b))[0];
+    const packageNames: string[] = [];
+    for (let index = 0; index < packageNamesValue.length; index++) {
+      if (!Object.hasOwn(packageNamesValue, index)) {
+        throw new Error(
+          `Registry returned a sparse package list for document type: ${documentType}`,
+        );
+      }
+      const packageSpec: unknown = packageNamesValue[index];
+      if (typeof packageSpec !== "string") {
+        throw new Error(
+          `Registry returned an invalid package spec for document type: ${documentType}`,
+        );
+      }
+      try {
+        this.loader.validatePackageSpec(packageSpec);
+      } catch (error) {
+        throw new Error(
+          `Registry returned an invalid package spec for document type: ${documentType}`,
+          { cause: error },
+        );
+      }
+      packageNames.push(packageSpec);
+    }
+
+    const packageName = packageNames.sort((a, b) =>
+      a === b ? 0 : a < b ? -1 : 1,
+    )[0];
     this.documentTypeCache.set(documentType, packageName);
 
     return packageName;

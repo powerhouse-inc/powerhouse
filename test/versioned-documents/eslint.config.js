@@ -12,6 +12,7 @@ const ignoredFiles = [
   "**/node_modules/",
   "**/dist/",
   "**/.ph/",
+  "**/.verification/",
   "**/.tsbuild/",
   "**/ts-build/",
   "**/storybook-static/",
@@ -116,6 +117,14 @@ const javascriptConfig = {
   // disable type aware linting for js files
   files: javascriptFiles,
   extends: [tseslint.configs.disableTypeChecked],
+  // The parser resolves `tsconfigRootDir` even with type-aware linting off,
+  // and inference fails once a run loads more than one eslint config (this
+  // repo has nested configs under `test/`). Pin it.
+  languageOptions: {
+    parserOptions: {
+      tsconfigRootDir: import.meta.dirname,
+    },
+  },
 };
 
 /** Recommended config from eslint */

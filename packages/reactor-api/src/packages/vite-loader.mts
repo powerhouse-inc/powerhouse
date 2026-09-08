@@ -19,6 +19,18 @@ import type {
 } from "./types.js";
 import { debounce, extractUpgradeManifests, isSubpath } from "./util.js";
 
+/** True only when Vite could not load the exact top-level module requested. */
+function isMissingViteModule(error: unknown, requestedPath: string): boolean {
+  if (!(error instanceof Error) || !("code" in error)) return false;
+  if (String(error.code) !== "ERR_LOAD_URL") return false;
+
+  const prefix = `Failed to load url ${requestedPath} (resolved id: `;
+  return (
+    error.message.startsWith(prefix) &&
+    error.message.endsWith("). Does the file exist?")
+  );
+}
+
 export function createViteLogger(logger: ILogger, prefix = "") {
   const customLogger = createLogger("info", {
     prefix,
@@ -77,14 +89,9 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
         DocumentModelModule
       >;
 
-      const exports = Object.values(localDMs);
-
-      // duck type
       const documentModels: DocumentModelModule[] = [];
-      for (const dm of exports) {
-        if (dm.documentModel) {
-          documentModels.push(dm);
-        }
+      for (const dm of Object.values(localDMs)) {
+        if (dm.documentModel) documentModels.push(dm);
       }
 
       this.logger.verbose(
@@ -107,7 +114,10 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
     // try both without requiring a regeneration.
     const candidatePaths = [
       this.getDocumentModelsPath(identifier),
-      path.posix.join(this.getDocumentModelsPath(identifier), "upgrade-manifests"),
+      path.posix.join(
+        this.getDocumentModelsPath(identifier),
+        "upgrade-manifests",
+      ),
     ];
     for (const fullPath of candidatePaths) {
       try {
@@ -122,10 +132,11 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
           );
           return manifests;
         }
-      } catch (e) {
+      } catch (error) {
+        if (!isMissingViteModule(error, fullPath)) throw error;
         this.logger.debug(
           `  ➜  No Upgrade Manifests found at ${fullPath} for: ${identifier}`,
-          e,
+          error,
         );
       }
     }
@@ -219,12 +230,15 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
     options?: ISubscriptionOptions,
   ): () => void {
     const subgraphsPath = this.getSubgraphsPath(identifier);
-    const listener = debounce(async (changedPath: string) => {
+    const debouncedListener = debounce(async (changedPath: string) => {
       if (isSubpath(subgraphsPath, changedPath)) {
         const subgraphs = await this.loadSubgraphs(identifier);
         handler(subgraphs);
       }
     }, options?.debounce ?? 100);
+    const listener = (changedPath: string) => {
+      void debouncedListener(false, changedPath);
+    };
     this.vite.watcher.on("change", listener);
 
     return () => {

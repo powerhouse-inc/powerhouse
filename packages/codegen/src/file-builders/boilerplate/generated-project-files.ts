@@ -40,11 +40,16 @@ import {
   syncAndPublishWorkflowTemplate,
   tsConfigTemplate,
   upgradeManifestsTemplate,
+  vscodeSettingsTemplate,
   vitestConfigTemplate,
 } from "templates";
 import { formatSafe } from "utils";
 
 export async function writeGeneratedProjectRootFiles(projectDir: string) {
+  await writeFileEnsuringDir(
+    join(projectDir, ".vscode/settings.json"),
+    await formatSafe(vscodeSettingsTemplate, "json"),
+  );
   await writeFileEnsuringDir(
     join(projectDir, "tsconfig.json"),
     await formatSafe(tsConfigTemplate, "json"),
@@ -184,12 +189,10 @@ export async function writeProjectRootFiles(
   projectDir = process.cwd(),
 ) {
   const { name, tag, version, remoteDrive, packageManager } = args;
-  await writeFileEnsuringDir("LICENSE", licenseTemplate);
-  await writeFileEnsuringDir("README.md", readmeTemplate);
-  await writeFileEnsuringDir(".npmrc", npmrcTemplate);
-  if (packageManager === "pnpm") {
-    await writeFileEnsuringDir("pnpm-workspace.yaml", pnpmWorkspaceTemplate);
-  }
+  // Resolve channel versions before creating the project-level .npmrc. The
+  // generated file only adds the JSR scope, but npm treats it as the project
+  // config boundary and would otherwise hide a registry configured by the
+  // caller in the parent directory.
   const packageJson = await buildBoilerplatePackageJson({
     name,
     tag,
@@ -200,6 +203,12 @@ export async function writeProjectRootFiles(
     version,
     remoteDrive,
   });
+  await writeFileEnsuringDir("LICENSE", licenseTemplate);
+  await writeFileEnsuringDir("README.md", readmeTemplate);
+  await writeFileEnsuringDir(".npmrc", npmrcTemplate);
+  if (packageManager === "pnpm") {
+    await writeFileEnsuringDir("pnpm-workspace.yaml", pnpmWorkspaceTemplate);
+  }
   await writeFileEnsuringDir("powerhouse.config.json", powerhouseConfig);
   await writeFileEnsuringDir("package.json", packageJson);
   await applyProjectCustomizations({ name, projectDir });

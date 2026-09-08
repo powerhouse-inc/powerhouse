@@ -15,28 +15,39 @@
   "exports": {
     ".": {
       "source": "./index.ts",
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
     },
     "./mock": {
       "source": "./mock.ts",
-      "import": "./dist/mock.js",
-      "types": "./dist/mock.d.ts"
+      "types": "./dist/mock.d.ts",
+      "import": "./dist/mock.js"
     },
     "./test": {
       "source": "./test/index.ts",
-      "import": "./dist/test/index.js",
-      "types": "./dist/test/index.d.ts"
+      "types": "./dist/test/index.d.ts",
+      "import": "./dist/test/index.js"
     },
     "./node": {
       "source": "./node.mts",
-      "node": "./dist/node.mjs",
-      "types": "./dist/node.d.mts"
+      "types": "./dist/node.d.mts",
+      "node": "./dist/node.mjs"
     },
     "./core": {
       "source": "./index.ts",
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./tooling": {
+      "source": "./tooling.ts",
+      "types": "./dist/tooling.d.mts",
+      "node": "./dist/tooling.mjs",
+      "import": "./dist/tooling.mjs"
+    },
+    "./internal/subgraph": {
+      "source": "./subgraph.ts",
+      "types": "./dist/subgraph.d.ts",
+      "import": "./dist/subgraph.js"
     }
   },
   "sideEffects": false,
@@ -51,17 +62,17 @@
     "@types/jest": "^29.5.14",
     "@types/mime": "^4.0.0",
     "@types/node": "catalog:",
-    "change-case": "catalog:",
     "jest": "^30.0.5",
     "mutative": "^1.0.5",
     "tsdown": "catalog:",
     "tsx": "catalog:",
-    "vitest": "catalog:",
-    "zod": "catalog:"
+    "vitest": "catalog:"
   },
   "dependencies": {
     "@powerhousedao/shared": "workspace:*",
-    "jszip": "^3.10.1"
+    "change-case": "catalog:",
+    "jszip": "^3.10.1",
+    "zod": "catalog:"
   },
   "description": "Powerhouse document model — foundational data structure for local-first, event-sourced documents with typed operations, reducers, and GraphQL schema validation.",
   "keywords": [

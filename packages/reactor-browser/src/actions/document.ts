@@ -1,4 +1,7 @@
-import type { IReactorClient } from "@powerhousedao/reactor";
+import {
+  type IDocumentModelRegistry,
+  type IReactorClient,
+} from "@powerhousedao/reactor";
 import type {
   ConflictResolution,
   DocumentTypeIcon,
@@ -261,6 +264,39 @@ export function filterDomainOperations(
   );
 }
 
+/** Build one version-aware replay configuration for import and duplication. */
+export function getVersionedReplayConfig(
+  documentType: string,
+  modules: readonly DocumentModelModule[],
+  registry?: Pick<IDocumentModelRegistry, "getUpgradeManifest">,
+): VersionedReplayConfig {
+  // Module versions become dynamic property keys. A null prototype prevents a
+  // malformed runtime value such as "__proto__" from changing the map object.
+  const reducers = Object.create(null) as VersionedReplayConfig["reducers"];
+  for (const module of modules) {
+    if (module.documentModel.global.id !== documentType) continue;
+    const version = module.version ?? 1;
+    // Preserve the existing last-module-wins behavior for duplicate versions.
+    reducers[version] = module.reducer as Reducer<PHBaseState>;
+  }
+  if (Object.keys(reducers).length === 0) {
+    throw new DocumentModelNotFoundError(documentType);
+  }
+
+  let upgradeManifest: VersionedReplayConfig["upgradeManifest"] | undefined;
+  if (registry) {
+    try {
+      upgradeManifest = registry.getUpgradeManifest(documentType);
+    } catch (error) {
+      if (!(error instanceof Error) || error.name !== "ManifestNotFoundError") {
+        throw error;
+      }
+      // Missing manifests are normal for single-version document models.
+    }
+  }
+  return { reducers, upgradeManifest };
+}
+
 /** Domain operations to replay, and the version to upgrade to afterwards. */
 export interface ImportSegment {
   operations: DocumentOperations;
@@ -414,30 +450,13 @@ export async function loadFile(path: string | File) {
   const documentType = baseDocument.header.documentType;
   const { results: documentModelModules } =
     await reactorClient.getDocumentModelModules();
-  const modulesForType = documentModelModules.filter(
-    (module) => module.documentModel.global.id === documentType,
-  );
-  if (modulesForType.length === 0) {
-    throw new DocumentModelNotFoundError(documentType);
-  }
-
-  const reducers: VersionedReplayConfig["reducers"] = {};
-  for (const module of modulesForType) {
-    reducers[module.version ?? 1] = module.reducer as Reducer<PHBaseState>;
-  }
-
   const registry =
     window.ph?.reactorClientModule?.reactorModule?.documentModelRegistry;
-  let upgradeManifest: VersionedReplayConfig["upgradeManifest"] | undefined;
-  if (registry) {
-    try {
-      upgradeManifest = registry.getUpgradeManifest(documentType);
-    } catch {
-      // intentionally empty — missing manifest is normal for single-version documents
-    }
-  }
-
-  const config: VersionedReplayConfig = { reducers, upgradeManifest };
+  const config = getVersionedReplayConfig(
+    documentType,
+    documentModelModules,
+    registry,
+  );
   return baseLoadFromInputVersioned(path, config);
 }
 
@@ -1076,33 +1095,9 @@ async function _duplicateDocument(
 ) {
   const documentType = document.header.documentType;
   const { results: allModules } = await reactor.getDocumentModelModules();
-  const modulesForType = allModules.filter(
-    (m) => m.documentModel.global.id === documentType,
-  );
-
-  const reducers: VersionedReplayConfig["reducers"] = {};
-  for (const m of modulesForType) {
-    reducers[m.version ?? 1] = m.reducer as Reducer<PHBaseState>;
-  }
-
-  if (Object.keys(reducers).length === 0) {
-    throw new Error(
-      `Document model module not found for type: ${documentType}`,
-    );
-  }
-
   const registry =
     window.ph?.reactorClientModule?.reactorModule?.documentModelRegistry;
-  let upgradeManifest: VersionedReplayConfig["upgradeManifest"] | undefined;
-  if (registry) {
-    try {
-      upgradeManifest = registry.getUpgradeManifest(documentType);
-    } catch {
-      // intentionally empty — missing manifest is normal for single-version documents
-    }
-  }
-
-  const config: VersionedReplayConfig = { reducers, upgradeManifest };
+  const config = getVersionedReplayConfig(documentType, allModules, registry);
   const header = createPresignedHeader(newId, documentType);
 
   const duplicated = replayDocumentVersioned(

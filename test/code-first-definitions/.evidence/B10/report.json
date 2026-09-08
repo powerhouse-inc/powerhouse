@@ -1,0 +1,455 @@
+{
+  "kind": "powerhouse.gate-evidence",
+  "formatVersion": 1,
+  "gate": "B10",
+  "contract": {
+    "status": "spec-complete",
+    "revision": "sha256:a7ccf254a06e9542fe8e21c59c385e7504a998982ee23444f4491143ef830e4a"
+  },
+  "evidence": {
+    "outcome": "pass"
+  },
+  "repository": {
+    "commit": "da05f917d6912bc30c5c944823c216ec47e19fa8",
+    "baseTreeDigest": "sha256:6d05bb4c4139466f81c0dbaae56f75d3d85af6486827e5a0b67dbf4814848eb0",
+    "baseDirty": false,
+    "appliedPatchDigest": "sha256:3cc2f2bc8e80aee821dfce01607ca32f0bca3964ba773a8c89045511004699a4"
+  },
+  "toolchain": {
+    "lockfileDigest": "sha256:b0b56565f0bf62f674db82eee2cfaa9c4a01a538ea593e0c8f3a42abf43ef6c0",
+    "runnerVersion": "0.1.0",
+    "node": "v24.14.0",
+    "packageManager": "pnpm@10.33.4",
+    "platform": "darwin",
+    "tools": {}
+  },
+  "fixture": {
+    "manifest": "test/code-first-definitions/fixtures/migrations/v1/manifest.json",
+    "fixtureVersion": "deterministic-1.0.0",
+    "manifestDigest": "sha256:0ee8053c0f6abe2fb539e68842a1ee5853febd3f0ade1ac6e907491463f1024c",
+    "schemaDigest": "sha256:9a320fb708d0c5bba916dba4cd268cdd7283d21ce1128b5905b2bc247d8cc868",
+    "caseCount": 9
+  },
+  "dependencies": [
+    {
+      "gate": "B2",
+      "outcome": "pass",
+      "contractRevision": "sha256:a7ccf254a06e9542fe8e21c59c385e7504a998982ee23444f4491143ef830e4a",
+      "fixtureManifestDigest": "sha256:3259237efcb61cd06e218ca27be863188c51db9dbaf1d0bef31c4e157b7db967",
+      "reportDigest": "sha256:c148d2d27a1c8f111916c30a36a3d17fd3c1672548e7b35eab781ef1ef9d9032"
+    },
+    {
+      "gate": "B3",
+      "outcome": "pass",
+      "contractRevision": "sha256:a7ccf254a06e9542fe8e21c59c385e7504a998982ee23444f4491143ef830e4a",
+      "fixtureManifestDigest": "sha256:59af108a7abfa6065dba92645b55527b5c5b03ed0e67aa323d98caea329f0ad1",
+      "reportDigest": "sha256:55024b1172783072deb443a2d64dcd9b49ec97acff873aaa85c28ff0b179caba"
+    },
+    {
+      "gate": "B5",
+      "outcome": "pass",
+      "contractRevision": "sha256:a7ccf254a06e9542fe8e21c59c385e7504a998982ee23444f4491143ef830e4a",
+      "fixtureManifestDigest": "sha256:9a0215377c29684edb0285ad85675d3d61986c2611ab6efd8021299959f43dab",
+      "reportDigest": "sha256:40bb2348bb21abe6c1d470c96892a4f954813b3f25f8b17c7107592771b5101c"
+    },
+    {
+      "gate": "B8",
+      "outcome": "pass",
+      "contractRevision": "sha256:a7ccf254a06e9542fe8e21c59c385e7504a998982ee23444f4491143ef830e4a",
+      "fixtureManifestDigest": "sha256:1c29708a0853206b2e41c4bd9d31d946ef6d7ba778767d143017e7b8d47d0100",
+      "reportDigest": "sha256:ca2d451ea28de8863295391b8505b54f5264d2e33fc673d124ce4bc1426d7273"
+    },
+    {
+      "gate": "B9",
+      "outcome": "pass",
+      "contractRevision": "sha256:a7ccf254a06e9542fe8e21c59c385e7504a998982ee23444f4491143ef830e4a",
+      "fixtureManifestDigest": "sha256:597d6f2a4716a4633765c558f36eb8fe288529c0940ea56d72cf73956b38b43c",
+      "reportDigest": "sha256:90804ebad634118d2148239141b23f74a920f34f0cfb6003bef7c0a41658f39d"
+    }
+  ],
+  "command": {
+    "name": "gate-evidence",
+    "args": [
+      "--gate",
+      "B10",
+      "--manifest",
+      "fixtures/migrations/v1/manifest.json",
+      "--out",
+      ".evidence/B10"
+    ],
+    "cwd": "<repository>"
+  },
+  "assertions": [
+    {
+      "id": "B10.report",
+      "outcome": "pass",
+      "expected": "report-only is complete, deterministic, and performs zero writes",
+      "received": "the deterministic fixture-family lifecycle matched",
+      "artifactRefs": [
+        "migration-report",
+        "phase-journal"
+      ]
+    },
+    {
+      "id": "B10.beside-write",
+      "outcome": "pass",
+      "expected": "apply writes only the verification candidate beside untouched legacy source",
+      "received": "the deterministic fixture-family lifecycle matched",
+      "artifactRefs": [
+        "source-tree-manifest",
+        "output-tree-manifest"
+      ]
+    },
+    {
+      "id": "B10.verify",
+      "outcome": "pass",
+      "expected": "definitions, stored specifications, creators, initial states, and every replay prefix are equivalent",
+      "received": "the deterministic fixture-family lifecycle matched",
+      "artifactRefs": [
+        "phase-journal",
+        "migration-report"
+      ]
+    },
+    {
+      "id": "B10.artifact",
+      "outcome": "pass",
+      "expected": "the importable two-version candidate matches its hash-bound artifact digest",
+      "received": "the deterministic fixture-family lifecycle matched",
+      "artifactRefs": [
+        "source-tree-manifest",
+        "output-tree-manifest"
+      ]
+    },
+    {
+      "id": "B10.canary",
+      "outcome": "pass",
+      "expected": "the read-only fixture canary passes with zero mutations",
+      "received": "the deterministic fixture-family lifecycle matched",
+      "artifactRefs": [
+        "canary-summary"
+      ]
+    },
+    {
+      "id": "B10.deploy",
+      "outcome": "pass",
+      "expected": "every current host lifecycle passes under a drained zero-cross-revision deployment",
+      "received": "the deterministic fixture-family lifecycle matched",
+      "artifactRefs": [
+        "phase-journal",
+        "migration-report"
+      ]
+    },
+    {
+      "id": "B10.rollback",
+      "outcome": "pass",
+      "expected": "three fresh processes prove candidate parity and exact legacy rollback",
+      "received": "the deterministic fixture-family lifecycle matched",
+      "artifactRefs": [
+        "phase-journal",
+        "migration-report"
+      ]
+    },
+    {
+      "id": "B10.retire",
+      "outcome": "pass",
+      "expected": "only the approved target set is retired after all evidence is revalidated",
+      "received": "the deterministic fixture-family lifecycle matched",
+      "artifactRefs": [
+        "retirement-report"
+      ]
+    },
+    {
+      "id": "B10.negative",
+      "outcome": "pass",
+      "expected": "all nine unsafe retirement variants fail with their exact diagnostic and preserve the attempted tree",
+      "received": "the deterministic fixture-family lifecycle matched",
+      "artifactRefs": [
+        "retirement-report"
+      ]
+    }
+  ],
+  "measurements": [],
+  "artifacts": [
+    {
+      "name": "migration-report",
+      "path": "test/code-first-definitions/fixtures/migrations/v1/migration-report.json",
+      "mediaType": "application/json",
+      "bytes": 4674,
+      "digest": "sha256:6db3decc38cf3eea07b9a8a59026c7927efe8f84e90617b1bd7f3c9b161a2368",
+      "retention": "committed"
+    },
+    {
+      "name": "phase-journal",
+      "path": "test/code-first-definitions/fixtures/migrations/v1/phase-journal.json",
+      "mediaType": "application/json",
+      "bytes": 1457,
+      "digest": "sha256:610a079ebf1118943aa1be66bcda5dc5a958179d7e66eb34ca77040b8126f2ee",
+      "retention": "committed"
+    },
+    {
+      "name": "canary-summary",
+      "path": "test/code-first-definitions/fixtures/migrations/v1/canary-summary.json",
+      "mediaType": "application/json",
+      "bytes": 385,
+      "digest": "sha256:3c21558a5af40a5290a7e7a48f4237aa5c5c6f2c139eb8a971b4536a663eea8a",
+      "retention": "committed"
+    },
+    {
+      "name": "source-tree-manifest",
+      "path": "test/code-first-definitions/fixtures/migrations/v1/source-tree-manifest.json",
+      "mediaType": "application/json",
+      "bytes": 11385,
+      "digest": "sha256:bef72ebf70ff2ef2515f927103dc97f912d64d051cbbdb7eed7a7db806f2f62f",
+      "retention": "committed"
+    },
+    {
+      "name": "output-tree-manifest",
+      "path": "test/code-first-definitions/fixtures/migrations/v1/output-tree-manifest.json",
+      "mediaType": "application/json",
+      "bytes": 472,
+      "digest": "sha256:08682815e1b0b90f985d36c5f0d03e3e2b1598c27f82db6df910baad8d7c408e",
+      "retention": "committed"
+    },
+    {
+      "name": "retirement-report",
+      "path": "test/code-first-definitions/fixtures/retirement/v1/retirement-report.json",
+      "mediaType": "application/json",
+      "bytes": 4435,
+      "digest": "sha256:0f7eaea2cf1caef5aa104f4cd8470675c86eb5639b636785c6337ed3de080ed7",
+      "retention": "committed"
+    }
+  ],
+  "results": {
+    "profile": "fixture-family-only-v1",
+    "phaseJournal": [
+      {
+        "sequence": 1,
+        "phase": "report",
+        "status": "pass",
+        "detail": "report-only returned ready with zero writes"
+      },
+      {
+        "sequence": 2,
+        "phase": "beside-write",
+        "status": "pass",
+        "detail": "verification source was written beside the untouched legacy family"
+      },
+      {
+        "sequence": 3,
+        "phase": "verify",
+        "status": "pass",
+        "detail": "10 replay prefixes were equivalent"
+      },
+      {
+        "sequence": 4,
+        "phase": "artifact",
+        "status": "pass",
+        "detail": "the committed candidate matched its migration digest"
+      },
+      {
+        "sequence": 5,
+        "phase": "canary",
+        "status": "pass",
+        "detail": "read-only canary performed zero mutations"
+      },
+      {
+        "sequence": 6,
+        "phase": "deploy",
+        "status": "pass",
+        "detail": "11 current host lifecycles passed"
+      },
+      {
+        "sequence": 7,
+        "phase": "rollback",
+        "status": "pass",
+        "detail": "fresh-process legacy rollback restored the baseline digest"
+      },
+      {
+        "sequence": 8,
+        "phase": "retire",
+        "status": "pass",
+        "detail": "hash-bound approved targets were retired with a recovery root"
+      },
+      {
+        "sequence": 9,
+        "phase": "negative",
+        "status": "pass",
+        "detail": "9 retirement failures were rejected and restored"
+      }
+    ],
+    "artifactDigest": "sha256:71dca63c43fad9296769bf24c39651d533b1586b905b217a464f75038d706783",
+    "familyDigest": "sha256:961f8d6b9b36f21c6e451d1b13226188b5a08cea3a15e5b2aab19dbce05dd98c",
+    "sourceTreeDigest": "sha256:7212d890c36a551acb4a2f1ee09090677de654e163983148c54285dabb0e6144",
+    "outputTreeDigest": "sha256:71dca63c43fad9296769bf24c39651d533b1586b905b217a464f75038d706783",
+    "sourceTreeManifestDigest": "sha256:0b5a9acc3f651af8976f4b3377b34b6ce71eea746593af7760d0616b31fe4e27",
+    "outputTreeManifestDigest": "sha256:2794e19b8c5c3a85c90bdf75d93d64112bbb3e8e8682da88c4bb9552ec757c24",
+    "verificationReports": [
+      {
+        "kind": "powerhouse.migration-equivalence",
+        "status": "equivalent",
+        "reportDigest": "sha256:bb4f61368f6bc6f6e54aa7124ad3283c8a91dc805507f69b05e1fb3df5704884",
+        "prefixCount": 10,
+        "checkCount": 5
+      }
+    ],
+    "canaryCounts": {
+      "histories": 2,
+      "prefixes": 10,
+      "checks": 5,
+      "mutations": 0
+    },
+    "mixedRevisionOutcomes": {
+      "policy": "drained",
+      "overlapAllowed": false,
+      "oldRevisionDrained": true,
+      "crossRevisionTraffic": 0,
+      "newRevisionActivated": true
+    },
+    "deploymentOutcomes": [
+      {
+        "hostId": "definition-source",
+        "status": "pass",
+        "artifactDigest": "sha256:71dca63c43fad9296769bf24c39651d533b1586b905b217a464f75038d706783",
+        "registrationOutcome": "ready:values=2:imports=1"
+      },
+      {
+        "hostId": "node-server",
+        "status": "pass",
+        "artifactDigest": "sha256:71dca63c43fad9296769bf24c39651d533b1586b905b217a464f75038d706783",
+        "registrationOutcome": "models=2;subgraphs=5;manifests=1"
+      },
+      {
+        "hostId": "http-cdn",
+        "status": "pass",
+        "artifactDigest": "sha256:71dca63c43fad9296769bf24c39651d533b1586b905b217a464f75038d706783",
+        "registrationOutcome": "flattened=3;non-callables=filtered"
+      },
+      {
+        "hostId": "vite-local",
+        "status": "pass",
+        "artifactDigest": "sha256:71dca63c43fad9296769bf24c39651d533b1586b905b217a464f75038d706783",
+        "registrationOutcome": "models=2;subgraphs=1"
+      },
+      {
+        "hostId": "browser-static",
+        "status": "pass",
+        "artifactDigest": "sha256:71dca63c43fad9296769bf24c39651d533b1586b905b217a464f75038d706783",
+        "registrationOutcome": "packages=1;selected=powerhouse/loader-fixture@2"
+      },
+      {
+        "hostId": "browser-worker",
+        "status": "pass",
+        "artifactDigest": "sha256:71dca63c43fad9296769bf24c39651d533b1586b905b217a464f75038d706783",
+        "registrationOutcome": "imports=1;selected=powerhouse/loader-fixture@2"
+      },
+      {
+        "hostId": "graphql",
+        "status": "pass",
+        "artifactDigest": "sha256:71dca63c43fad9296769bf24c39651d533b1586b905b217a464f75038d706783",
+        "registrationOutcome": "models=2;subgraphs=1;manifests=1"
+      },
+      {
+        "hostId": "mcp",
+        "status": "pass",
+        "artifactDigest": "sha256:71dca63c43fad9296769bf24c39651d533b1586b905b217a464f75038d706783",
+        "registrationOutcome": "models=2"
+      },
+      {
+        "hostId": "connect",
+        "status": "pass",
+        "artifactDigest": "sha256:71dca63c43fad9296769bf24c39651d533b1586b905b217a464f75038d706783",
+        "registrationOutcome": "packages=1;selected=powerhouse/loader-fixture@1"
+      },
+      {
+        "hostId": "reactor-worker",
+        "status": "pass",
+        "artifactDigest": "sha256:71dca63c43fad9296769bf24c39651d533b1586b905b217a464f75038d706783",
+        "registrationOutcome": "modules=2;manifest=2;module-only=0;selected=powerhouse/loader-fixture@2"
+      },
+      {
+        "hostId": "registry",
+        "status": "pass",
+        "artifactDigest": "sha256:71dca63c43fad9296769bf24c39651d533b1586b905b217a464f75038d706783",
+        "registrationOutcome": "success,error"
+      }
+    ],
+    "rollbackResult": {
+      "baselineDigest": "sha256:b15961527317174e15aa11fd760830dd3a2edbddcdeb4ef139ecd1d5f7b46868",
+      "candidateDigest": "sha256:b15961527317174e15aa11fd760830dd3a2edbddcdeb4ef139ecd1d5f7b46868",
+      "rollbackDigest": "sha256:b15961527317174e15aa11fd760830dd3a2edbddcdeb4ef139ecd1d5f7b46868",
+      "behaviorEquivalent": true,
+      "restored": true,
+      "freshProcessCount": 3
+    },
+    "retirementDecision": "retired",
+    "recoverableLegacyRoot": "git:fixture-commit-v1:document-models/retired-todo",
+    "negativeOutcomes": [
+      {
+        "caseId": "changed-commit",
+        "expectedCode": "PH-MIGRATE-RETIRE-COMMIT-MISMATCH",
+        "receivedCode": "PH-MIGRATE-RETIRE-COMMIT-MISMATCH",
+        "treeRestored": true
+      },
+      {
+        "caseId": "changed-artifact-digest",
+        "expectedCode": "PH-MIGRATE-RETIRE-EVIDENCE-MISMATCH",
+        "receivedCode": "PH-MIGRATE-RETIRE-EVIDENCE-MISMATCH",
+        "treeRestored": true
+      },
+      {
+        "caseId": "path-traversal",
+        "expectedCode": "PH-MIGRATE-RETIRE-PATH-OUTSIDE-ROOT",
+        "receivedCode": "PH-MIGRATE-RETIRE-PATH-OUTSIDE-ROOT",
+        "treeRestored": true
+      },
+      {
+        "caseId": "symlink-target",
+        "expectedCode": "PH-MIGRATE-RETIRE-SYMLINK",
+        "receivedCode": "PH-MIGRATE-RETIRE-SYMLINK",
+        "treeRestored": true
+      },
+      {
+        "caseId": "content-drift",
+        "expectedCode": "PH-MIGRATE-RETIRE-SOURCE-DRIFT",
+        "receivedCode": "PH-MIGRATE-RETIRE-SOURCE-DRIFT",
+        "treeRestored": true
+      },
+      {
+        "caseId": "live-import",
+        "expectedCode": "PH-MIGRATE-RETIRE-LIVE-IMPORT",
+        "receivedCode": "PH-MIGRATE-RETIRE-LIVE-IMPORT",
+        "treeRestored": true
+      },
+      {
+        "caseId": "masked-verification",
+        "expectedCode": "PH-MIGRATE-RETIRE-MASKED-VERIFY-FAILED",
+        "receivedCode": "PH-MIGRATE-RETIRE-MASKED-VERIFY-FAILED",
+        "treeRestored": true
+      },
+      {
+        "caseId": "post-stage-failure",
+        "expectedCode": "PH-MIGRATE-POST-STAGE-FAILED",
+        "receivedCode": "PH-MIGRATE-POST-STAGE-FAILED",
+        "treeRestored": true
+      },
+      {
+        "caseId": "rollback-failure",
+        "expectedCode": "PH-MIGRATE-ROLLBACK-FAILED",
+        "receivedCode": "PH-MIGRATE-ROLLBACK-FAILED",
+        "treeRestored": true
+      }
+    ],
+    "reportOnly": {
+      "status": "ready",
+      "writeCount": 0,
+      "beforeTreeDigest": "sha256:0e83cb893af36713da73f5f7d0e64f47c21732b0e7ce0dc0a2c8d75f349725bb",
+      "afterTreeDigest": "sha256:0e83cb893af36713da73f5f7d0e64f47c21732b0e7ce0dc0a2c8d75f349725bb"
+    }
+  },
+  "summary": {
+    "passed": 9,
+    "failed": 0,
+    "blocked": 0,
+    "cancelled": 0
+  }
+}

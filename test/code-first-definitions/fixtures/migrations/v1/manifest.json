@@ -1,0 +1,147 @@
+{
+  "kind": "powerhouse.gate-fixture-manifest",
+  "formatVersion": 1,
+  "gate": "B10",
+  "fixtureVersion": "deterministic-1.0.0",
+  "requiredTools": {
+    "node": ">=24",
+    "profile": "fixture-family-only-v1"
+  },
+  "schemaDigest": "sha256:9a320fb708d0c5bba916dba4cd268cdd7283d21ce1128b5905b2bc247d8cc868",
+  "directDependencies": [
+    {
+      "gate": "B2",
+      "contractRevision": "sha256:a7ccf254a06e9542fe8e21c59c385e7504a998982ee23444f4491143ef830e4a",
+      "fixtureManifestDigest": "sha256:3259237efcb61cd06e218ca27be863188c51db9dbaf1d0bef31c4e157b7db967"
+    },
+    {
+      "gate": "B3",
+      "contractRevision": "sha256:a7ccf254a06e9542fe8e21c59c385e7504a998982ee23444f4491143ef830e4a",
+      "fixtureManifestDigest": "sha256:59af108a7abfa6065dba92645b55527b5c5b03ed0e67aa323d98caea329f0ad1"
+    },
+    {
+      "gate": "B5",
+      "contractRevision": "sha256:a7ccf254a06e9542fe8e21c59c385e7504a998982ee23444f4491143ef830e4a",
+      "fixtureManifestDigest": "sha256:9a0215377c29684edb0285ad85675d3d61986c2611ab6efd8021299959f43dab"
+    },
+    {
+      "gate": "B8",
+      "contractRevision": "sha256:a7ccf254a06e9542fe8e21c59c385e7504a998982ee23444f4491143ef830e4a",
+      "fixtureManifestDigest": "sha256:1c29708a0853206b2e41c4bd9d31d946ef6d7ba778767d143017e7b8d47d0100"
+    },
+    {
+      "gate": "B9",
+      "contractRevision": "sha256:a7ccf254a06e9542fe8e21c59c385e7504a998982ee23444f4491143ef830e4a",
+      "fixtureManifestDigest": "sha256:597d6f2a4716a4633765c558f36eb8fe288529c0940ea56d72cf73956b38b43c"
+    }
+  ],
+  "profile": "fixture-family-only-v1",
+  "retirementManifest": "./fixtures/retirement/v1/manifest.json",
+  "caseCount": 9,
+  "cases": [
+    {
+      "caseId": "migration-report",
+      "phase": "report",
+      "fixture": "./fixtures/migrations/v1/migration-report.json",
+      "expectedOutcome": "pass",
+      "coveredVariants": [
+        "report-only",
+        "zero-write",
+        "fixture-family"
+      ]
+    },
+    {
+      "caseId": "migration-beside-write",
+      "phase": "beside-write",
+      "fixture": "./fixtures/migrations/v1/output-tree-manifest.json",
+      "expectedOutcome": "pass",
+      "coveredVariants": [
+        "apply",
+        "verification-subpath",
+        "legacy-untouched"
+      ]
+    },
+    {
+      "caseId": "migration-verify",
+      "phase": "verify",
+      "fixture": "./fixtures/migrations/v1/equivalence-report.json",
+      "expectedOutcome": "pass",
+      "coveredVariants": [
+        "stored-specification",
+        "creators",
+        "every-prefix",
+        "v1-v2"
+      ]
+    },
+    {
+      "caseId": "migration-artifact",
+      "phase": "artifact",
+      "fixture": "./fixtures/migrations/v1/output-tree-manifest.json",
+      "expectedOutcome": "pass",
+      "coveredVariants": [
+        "hash-bound",
+        "candidate-import",
+        "committed-bytes"
+      ]
+    },
+    {
+      "caseId": "migration-canary",
+      "phase": "canary",
+      "fixture": "./fixtures/migrations/v1/canary-summary.json",
+      "expectedOutcome": "pass",
+      "coveredVariants": [
+        "read-only",
+        "zero-mutation"
+      ]
+    },
+    {
+      "caseId": "migration-deploy",
+      "phase": "deploy",
+      "fixture": "./fixtures/migrations/v1/phase-journal.json",
+      "expectedOutcome": "pass",
+      "coveredVariants": [
+        "current-hosts",
+        "drained-deployment",
+        "zero-cross-revision"
+      ]
+    },
+    {
+      "caseId": "migration-rollback",
+      "phase": "rollback",
+      "fixture": "./fixtures/migrations/v1/phase-journal.json",
+      "expectedOutcome": "pass",
+      "coveredVariants": [
+        "fresh-process",
+        "legacy-baseline"
+      ]
+    },
+    {
+      "caseId": "migration-retire",
+      "phase": "retire",
+      "fixture": "./fixtures/retirement/v1/retirement-report.json",
+      "expectedOutcome": "pass",
+      "coveredVariants": [
+        "exact-target-set",
+        "recoverable-root",
+        "post-stage-check"
+      ]
+    },
+    {
+      "caseId": "migration-negative",
+      "phase": "negative",
+      "fixture": "./fixtures/retirement/v1/retirement-report.json",
+      "expectedOutcome": "pass",
+      "coveredVariants": [
+        "changed-commit",
+        "changed-artifact-digest",
+        "path-traversal",
+        "symlink-target",
+        "content-drift",
+        "live-import",
+        "masked-verification",
+        "post-stage-failure",
+        "rollback-failure"
+      ]
+    }
+  ]
+}

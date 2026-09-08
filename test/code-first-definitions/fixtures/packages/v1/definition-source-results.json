@@ -1,0 +1,12 @@
+{
+  "sourceSetDigest": "sha256:f2451f2c85e16fc976a3ce5c01edb532d1995176cbc8fc84d0f65a339a13e2f1",
+  "normalizedSources": [
+    "./source-models.ts#/LoaderModelV2",
+    "./source-models.ts#/nested/model~1v1"
+  ],
+  "acceptedExports": [
+    "powerhouse/loader-fixture@1",
+    "powerhouse/loader-fixture@2"
+  ],
+  "importCount": 1
+}

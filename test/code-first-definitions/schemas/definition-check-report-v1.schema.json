@@ -1,0 +1,186 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://powerhouse.inc/schemas/definition-check-report-v1.json",
+  "title": "Powerhouse definition check report V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "formatVersion",
+    "profile",
+    "status",
+    "sourceSet",
+    "definitions",
+    "diagnostics",
+    "summary"
+  ],
+  "properties": {
+    "kind": { "const": "powerhouse.definition-check" },
+    "formatVersion": { "const": 1 },
+    "profile": { "enum": ["edit", "release"] },
+    "status": { "enum": ["ok", "invalid", "failed", "skipped"] },
+    "skipReason": { "const": "explicit-legacy-mode" },
+    "sourceSet": { "$ref": "#/definitions/sourceSet" },
+    "definitions": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/checkEntry" }
+    },
+    "diagnostics": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/diagnostic" }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["errors", "warnings"],
+      "properties": {
+        "errors": { "type": "integer", "minimum": 0 },
+        "warnings": { "type": "integer", "minimum": 0 }
+      }
+    }
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "status": { "enum": ["ok", "invalid", "failed"] }
+      },
+      "not": { "required": ["skipReason"] }
+    },
+    {
+      "required": ["skipReason"],
+      "properties": {
+        "status": { "const": "skipped" },
+        "skipReason": { "const": "explicit-legacy-mode" },
+        "sourceSet": {
+          "allOf": [
+            { "$ref": "#/definitions/sourceSet" },
+            {
+              "properties": {
+                "mode": { "const": "legacy" },
+                "origin": { "const": "config" },
+                "sources": { "maxItems": 0 }
+              }
+            }
+          ]
+        },
+        "definitions": { "maxItems": 0 },
+        "diagnostics": { "maxItems": 0 },
+        "summary": {
+          "properties": {
+            "errors": { "const": 0 },
+            "warnings": { "const": 0 }
+          }
+        }
+      }
+    }
+  ],
+  "definitions": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "path": {
+      "type": "array",
+      "items": {
+        "anyOf": [{ "type": "string" }, { "type": "integer" }]
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["specifier"],
+      "properties": {
+        "specifier": {
+          "type": "string",
+          "pattern": "^\\./(?!.*\\\\).+"
+        },
+        "exportPath": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "sourceSet": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "origin", "digest", "sources"],
+      "properties": {
+        "mode": { "enum": ["code-first", "legacy"] },
+        "origin": { "enum": ["config", "cli", "request"] },
+        "digest": { "$ref": "#/definitions/sha256" },
+        "sources": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/source" }
+        }
+      }
+    },
+    "definitionIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "key"],
+      "properties": {
+        "kind": {
+          "enum": ["document-model", "subgraph", "scalar", "package"]
+        },
+        "key": { "type": "string", "minLength": 1 },
+        "version": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "checkEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "key", "source"],
+      "properties": {
+        "kind": {
+          "enum": ["document-model", "subgraph", "scalar", "package"]
+        },
+        "key": { "type": "string", "minLength": 1 },
+        "version": { "type": "integer", "minimum": 1 },
+        "digest": { "$ref": "#/definitions/sha256" },
+        "source": { "$ref": "#/definitions/source" }
+      }
+    },
+    "relatedDiagnostic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "path", "message"],
+      "properties": {
+        "source": { "$ref": "#/definitions/source" },
+        "path": { "$ref": "#/definitions/path" },
+        "message": { "type": "string", "maxLength": 512 }
+      }
+    },
+    "diagnostic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "severity", "phase", "path", "message", "repair"],
+      "properties": {
+        "code": { "type": "string", "pattern": "^PH-[A-Z0-9-]+$" },
+        "severity": { "enum": ["error", "warning"] },
+        "phase": {
+          "enum": [
+            "configuration",
+            "import",
+            "definition",
+            "composition",
+            "authorization",
+            "typecheck",
+            "package",
+            "replay"
+          ]
+        },
+        "source": { "$ref": "#/definitions/source" },
+        "definition": { "$ref": "#/definitions/definitionIdentity" },
+        "path": { "$ref": "#/definitions/path" },
+        "message": { "type": "string", "maxLength": 512 },
+        "expected": { "type": "string", "maxLength": 512 },
+        "received": { "type": "string", "maxLength": 512 },
+        "repair": { "type": "string", "maxLength": 512 },
+        "related": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/relatedDiagnostic" }
+        }
+      }
+    }
+  }
+}

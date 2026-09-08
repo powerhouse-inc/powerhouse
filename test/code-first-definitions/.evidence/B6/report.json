@@ -1,0 +1,243 @@
+{
+  "kind": "powerhouse.gate-evidence",
+  "formatVersion": 1,
+  "gate": "B6",
+  "contract": {
+    "status": "spec-complete",
+    "revision": "sha256:a7ccf254a06e9542fe8e21c59c385e7504a998982ee23444f4491143ef830e4a"
+  },
+  "evidence": {
+    "outcome": "pass"
+  },
+  "repository": {
+    "commit": "da05f917d6912bc30c5c944823c216ec47e19fa8",
+    "baseTreeDigest": "sha256:6d05bb4c4139466f81c0dbaae56f75d3d85af6486827e5a0b67dbf4814848eb0",
+    "baseDirty": false,
+    "appliedPatchDigest": "sha256:3cc2f2bc8e80aee821dfce01607ca32f0bca3964ba773a8c89045511004699a4"
+  },
+  "toolchain": {
+    "lockfileDigest": "sha256:b0b56565f0bf62f674db82eee2cfaa9c4a01a538ea593e0c8f3a42abf43ef6c0",
+    "runnerVersion": "0.1.0",
+    "node": "v24.14.0",
+    "packageManager": "pnpm@10.33.4",
+    "platform": "darwin",
+    "tools": {}
+  },
+  "fixture": {
+    "manifest": "test/code-first-definitions/fixtures/model-sdl/v1/manifest.json",
+    "fixtureVersion": "model-sdl-v1",
+    "manifestDigest": "sha256:9833a7a867145affbca6a7373c2b6d76277109b306314821a78670387338d124",
+    "schemaDigest": "sha256:9a320fb708d0c5bba916dba4cd268cdd7283d21ce1128b5905b2bc247d8cc868",
+    "caseCount": 4
+  },
+  "dependencies": [
+    {
+      "gate": "B1",
+      "outcome": "pass",
+      "contractRevision": "sha256:a7ccf254a06e9542fe8e21c59c385e7504a998982ee23444f4491143ef830e4a",
+      "fixtureManifestDigest": "sha256:3b1ecf4f491d0459ddf129ff1a2ee33b8e05171cdbe857a2c0da7273667080ce",
+      "reportDigest": "sha256:8c0662bfdefb1ed89c9a715135a9d4c050c088ca335ec648f63bc84ca63a2b6f"
+    },
+    {
+      "gate": "B9",
+      "outcome": "pass",
+      "contractRevision": "sha256:a7ccf254a06e9542fe8e21c59c385e7504a998982ee23444f4491143ef830e4a",
+      "fixtureManifestDigest": "sha256:597d6f2a4716a4633765c558f36eb8fe288529c0940ea56d72cf73956b38b43c",
+      "reportDigest": "sha256:90804ebad634118d2148239141b23f74a920f34f0cfb6003bef7c0a41658f39d"
+    }
+  ],
+  "command": {
+    "name": "gate-evidence",
+    "args": [
+      "--gate",
+      "B6",
+      "--manifest",
+      "fixtures/model-sdl/v1/manifest.json",
+      "--out",
+      ".evidence/B6"
+    ],
+    "cwd": "<repository>"
+  },
+  "assertions": [
+    {
+      "id": "B6.parse",
+      "outcome": "pass",
+      "expected": "every structured projection parses with the locked GraphQL parser",
+      "received": "all declared cases matched",
+      "artifactRefs": [
+        "model-sdl-manifest",
+        "sdl-goldens"
+      ]
+    },
+    {
+      "id": "B6.ast",
+      "outcome": "pass",
+      "expected": "every location-free parsed AST equals its committed golden",
+      "received": "all declared cases matched",
+      "artifactRefs": [
+        "model-sdl-manifest",
+        "ast-goldens"
+      ]
+    },
+    {
+      "id": "B6.print",
+      "outcome": "pass",
+      "expected": "every canonical SDL byte sequence equals its committed golden",
+      "received": "all declared cases matched",
+      "artifactRefs": [
+        "model-sdl-manifest",
+        "sdl-goldens"
+      ]
+    },
+    {
+      "id": "B6.scalar",
+      "outcome": "pass",
+      "expected": "every projection matches the committed scalar inventory digest",
+      "received": "all declared cases matched",
+      "artifactRefs": [
+        "scalar-inventory-digest"
+      ]
+    },
+    {
+      "id": "B6.no-regex",
+      "outcome": "pass",
+      "expected": "structured projection makes zero legacy regex adapter calls",
+      "received": "all declared cases matched",
+      "artifactRefs": [
+        "model-sdl-manifest"
+      ]
+    }
+  ],
+  "measurements": [],
+  "artifacts": [
+    {
+      "name": "model-sdl-manifest",
+      "path": "test/code-first-definitions/fixtures/model-sdl/v1/manifest.json",
+      "mediaType": "application/json",
+      "bytes": 3125,
+      "digest": "sha256:0f4aa3cc56dbd4d65fa46c72a2222012bcdb3aa6783f94929ae339860714c184",
+      "retention": "committed"
+    },
+    {
+      "name": "sdl-goldens",
+      "path": "test/code-first-definitions/fixtures/model-sdl/v1/sdl",
+      "mediaType": "application/graphql",
+      "bytes": 21912,
+      "digest": "sha256:e6fd7528e4a3ebb350bcc71d48a5c476760a40d7a94a556cb0e489f7a68995b9",
+      "retention": "committed"
+    },
+    {
+      "name": "ast-goldens",
+      "path": "test/code-first-definitions/fixtures/model-sdl/v1/ast",
+      "mediaType": "application/vnd.powerhouse.graphql-ast+json",
+      "bytes": 353083,
+      "digest": "sha256:ae6c83a8376669ac49957e594651992f27722647035e844bddbb9e1c827fc3be",
+      "retention": "committed"
+    },
+    {
+      "name": "scalar-inventory-digest",
+      "path": "test/code-first-definitions/fixtures/model-sdl/v1/scalar-inventory-digest.json",
+      "mediaType": "application/json",
+      "bytes": 468,
+      "digest": "sha256:ae422379b3a9da14efddb4e775a0c18e7a0e1111a1b67eaccf25ad2fe4480989",
+      "retention": "committed"
+    }
+  ],
+  "results": {
+    "cases": [
+      {
+        "caseId": "descriptor-variants-v1",
+        "definitionDigest": "sha256:5dc424b5f6b6d71062c23c1cca64c17553f808ccfdb32584949163bef07b30e8",
+        "sdlDigest": "sha256:93c9e19f19ee4f53958a52131b02111558968626ac2ed8001e5d7a64874f8c79",
+        "astDigest": "sha256:6d99b47dcb0a2ff7755e26b12cb7842f011e475f15676642d1a66f249367761a",
+        "scalarCatalogDigest": "sha256:c8fdc6919165abc85738cd0b8603433f05f27e71191ba9b19908fde23aab14ea",
+        "parserVersionDigest": "sha256:4e2c1857817131ae254c08d62ee0c0ee6fb748c0e648d31c7b70f59c95815651",
+        "parseMs": 0.35029199999996763,
+        "printMs": 0.5331249999999841,
+        "regexAdapterCallCount": 0,
+        "regexAdapterCallSites": [],
+        "coveredVariants": [
+          "descriptor",
+          "scalar-field",
+          "named-field",
+          "nested-list",
+          "all-nullability",
+          "enum",
+          "object",
+          "input",
+          "interface",
+          "union",
+          "field-arguments",
+          "deprecation",
+          "operation",
+          "error",
+          "local-state",
+          "unreachable-type"
+        ],
+        "firstDifference": null
+      },
+      {
+        "caseId": "versioned-todo-v1",
+        "definitionDigest": "sha256:d1731c852ec936e5f1ecb70ca8d6b7e1b1339f82a69b0bc6669faf9570137ad9",
+        "sdlDigest": "sha256:e6e926380c2bb7cc9ef171e1762e10f23d285dc115c0c32c7645570da915a857",
+        "astDigest": "sha256:b4c12183d6dacb1fdada76ea2e4a9768ddabfae38486e5995c02ba7604679e0e",
+        "scalarCatalogDigest": "sha256:c8fdc6919165abc85738cd0b8603433f05f27e71191ba9b19908fde23aab14ea",
+        "parserVersionDigest": "sha256:4e2c1857817131ae254c08d62ee0c0ee6fb748c0e648d31c7b70f59c95815651",
+        "parseMs": 0.07525000000003956,
+        "printMs": 0.37795799999997826,
+        "regexAdapterCallCount": 0,
+        "regexAdapterCallSites": [],
+        "coveredVariants": [
+          "compatibility-ast",
+          "version-1",
+          "operations"
+        ],
+        "firstDifference": null
+      },
+      {
+        "caseId": "versioned-todo-v2",
+        "definitionDigest": "sha256:d1731c852ec936e5f1ecb70ca8d6b7e1b1339f82a69b0bc6669faf9570137ad9",
+        "sdlDigest": "sha256:e6e926380c2bb7cc9ef171e1762e10f23d285dc115c0c32c7645570da915a857",
+        "astDigest": "sha256:b4c12183d6dacb1fdada76ea2e4a9768ddabfae38486e5995c02ba7604679e0e",
+        "scalarCatalogDigest": "sha256:c8fdc6919165abc85738cd0b8603433f05f27e71191ba9b19908fde23aab14ea",
+        "parserVersionDigest": "sha256:4e2c1857817131ae254c08d62ee0c0ee6fb748c0e648d31c7b70f59c95815651",
+        "parseMs": 0.10099999999999909,
+        "printMs": 0.3762500000000273,
+        "regexAdapterCallCount": 0,
+        "regexAdapterCallSites": [],
+        "coveredVariants": [
+          "compatibility-ast",
+          "version-2",
+          "operations"
+        ],
+        "firstDifference": null
+      },
+      {
+        "caseId": "complete-compatibility-ast-v1",
+        "definitionDigest": "sha256:739c4992d2641bba1b3c9571e4b0f8b3df9185b0dc0381f071ff94e1ee325254",
+        "sdlDigest": "sha256:2f7bb1011bdde7d6bdbb2fd6926583cdfd8a31a079212f3c0d86b2b5a19683ed",
+        "astDigest": "sha256:b3a8bf76de0d1dcfd5a419b6b3d8aed6ea0caef3b1d7bd1dd19b0bdc0bc54770",
+        "scalarCatalogDigest": "sha256:c8fdc6919165abc85738cd0b8603433f05f27e71191ba9b19908fde23aab14ea",
+        "parserVersionDigest": "sha256:4e2c1857817131ae254c08d62ee0c0ee6fb748c0e648d31c7b70f59c95815651",
+        "parseMs": 0.17458399999998164,
+        "printMs": 0.4243749999999977,
+        "regexAdapterCallCount": 0,
+        "regexAdapterCallSites": [],
+        "coveredVariants": [
+          "schema-definition",
+          "directive-definition",
+          "directive-use",
+          "type-extension",
+          "source-order"
+        ],
+        "firstDifference": null
+      }
+    ]
+  },
+  "summary": {
+    "passed": 5,
+    "failed": 0,
+    "blocked": 0,
+    "cancelled": 0
+  }
+}

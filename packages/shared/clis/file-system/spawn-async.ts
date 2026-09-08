@@ -6,6 +6,7 @@ export function spawnAsync(
   options: {
     cwd?: string;
     env?: NodeJS.ProcessEnv;
+    stdio?: "inherit" | "pipe";
   } = {},
 ): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -21,7 +22,8 @@ export function spawnAsync(
     const child = spawn(command, args, {
       cwd: options.cwd,
       env: options.env,
-      stdio: ["ignore", "pipe", "pipe"],
+      stdio:
+        options.stdio === "inherit" ? "inherit" : ["ignore", "pipe", "pipe"],
     });
 
     let stdout = "";

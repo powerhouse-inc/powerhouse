@@ -1,0 +1,14 @@
+{
+  "kind": "powerhouse.synthetic-replay-scope",
+  "formatVersion": 1,
+  "profile": "synthetic-only-v1",
+  "productionCorpus": {
+    "status": "not-established",
+    "reason": "The production corpus verifier and restricted operational approvals are deferred by the accepted release scope."
+  },
+  "deferredArtifacts": [
+    "production-privacy-approval",
+    "production-verifier",
+    "production-scrubbed-summary"
+  ]
+}

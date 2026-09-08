@@ -1,0 +1,870 @@
+{
+  "kind": "powerhouse.gate-evidence",
+  "formatVersion": 1,
+  "gate": "B14",
+  "contract": {
+    "status": "spec-complete",
+    "revision": "sha256:a7ccf254a06e9542fe8e21c59c385e7504a998982ee23444f4491143ef830e4a"
+  },
+  "evidence": {
+    "outcome": "pass"
+  },
+  "repository": {
+    "commit": "da05f917d6912bc30c5c944823c216ec47e19fa8",
+    "baseTreeDigest": "sha256:6d05bb4c4139466f81c0dbaae56f75d3d85af6486827e5a0b67dbf4814848eb0",
+    "baseDirty": false,
+    "appliedPatchDigest": "sha256:3cc2f2bc8e80aee821dfce01607ca32f0bca3964ba773a8c89045511004699a4"
+  },
+  "toolchain": {
+    "lockfileDigest": "sha256:b0b56565f0bf62f674db82eee2cfaa9c4a01a538ea593e0c8f3a42abf43ef6c0",
+    "runnerVersion": "0.1.0",
+    "node": "v24.14.0",
+    "packageManager": "pnpm@10.33.4",
+    "platform": "darwin",
+    "tools": {}
+  },
+  "fixture": {
+    "manifest": "test/code-first-definitions/fixtures/scalars/v1/manifest.json",
+    "fixtureVersion": "scalar-conformance-v1",
+    "manifestDigest": "sha256:41deb1e5cc0ae97eb7318713886ac8d416f803fad0ef9c68a3d523d8f1b85a74",
+    "schemaDigest": "sha256:9a320fb708d0c5bba916dba4cd268cdd7283d21ce1128b5905b2bc247d8cc868",
+    "caseCount": 42
+  },
+  "dependencies": [
+    {
+      "gate": "B1",
+      "outcome": "pass",
+      "contractRevision": "sha256:a7ccf254a06e9542fe8e21c59c385e7504a998982ee23444f4491143ef830e4a",
+      "fixtureManifestDigest": "sha256:3b1ecf4f491d0459ddf129ff1a2ee33b8e05171cdbe857a2c0da7273667080ce",
+      "reportDigest": "sha256:8c0662bfdefb1ed89c9a715135a9d4c050c088ca335ec648f63bc84ca63a2b6f"
+    },
+    {
+      "gate": "B6",
+      "outcome": "pass",
+      "contractRevision": "sha256:a7ccf254a06e9542fe8e21c59c385e7504a998982ee23444f4491143ef830e4a",
+      "fixtureManifestDigest": "sha256:9833a7a867145affbca6a7373c2b6d76277109b306314821a78670387338d124",
+      "reportDigest": "sha256:87edf3ea3d92511fa1b2ef6987c5de00470d0afc90aceea3e082703b19554bed"
+    },
+    {
+      "gate": "B9",
+      "outcome": "pass",
+      "contractRevision": "sha256:a7ccf254a06e9542fe8e21c59c385e7504a998982ee23444f4491143ef830e4a",
+      "fixtureManifestDigest": "sha256:597d6f2a4716a4633765c558f36eb8fe288529c0940ea56d72cf73956b38b43c",
+      "reportDigest": "sha256:90804ebad634118d2148239141b23f74a920f34f0cfb6003bef7c0a41658f39d"
+    }
+  ],
+  "command": {
+    "name": "gate-evidence",
+    "args": [
+      "--gate",
+      "B14",
+      "--manifest",
+      "fixtures/scalars/v1/manifest.json",
+      "--out",
+      ".evidence/B14"
+    ],
+    "cwd": "<repository>"
+  },
+  "assertions": [
+    {
+      "id": "B14.schema",
+      "outcome": "pass",
+      "expected": "all 21 scalar definitions match the closed V1 schema",
+      "received": "all declared scalar cases matched",
+      "artifactRefs": [
+        "scalar-manifest",
+        "scalar-definitions"
+      ]
+    },
+    {
+      "id": "B14.inventory",
+      "outcome": "pass",
+      "expected": "catalog and host names reproduce the B6 inventory digest",
+      "received": "all declared scalar cases matched",
+      "artifactRefs": [
+        "scalar-manifest",
+        "scalar-definitions"
+      ]
+    },
+    {
+      "id": "B14.validation",
+      "outcome": "pass",
+      "expected": "catalog validators match document-engineering 1.40.5",
+      "received": "all declared scalar cases matched",
+      "artifactRefs": [
+        "current-coercion-goldens"
+      ]
+    },
+    {
+      "id": "B14.coercion",
+      "outcome": "pass",
+      "expected": "installed coercion outcomes match the committed vectors",
+      "received": "all declared scalar cases matched",
+      "artifactRefs": [
+        "current-coercion-goldens"
+      ]
+    },
+    {
+      "id": "B14.exemptions",
+      "outcome": "pass",
+      "expected": "every compatibility difference is exact and exempted",
+      "received": "all declared scalar cases matched",
+      "artifactRefs": [
+        "difference-list"
+      ]
+    },
+    {
+      "id": "B14.graphql-profile",
+      "outcome": "pass",
+      "expected": "current authored and host-owned resolver behavior is preserved",
+      "received": "all declared scalar cases matched",
+      "artifactRefs": [
+        "current-coercion-goldens"
+      ]
+    },
+    {
+      "id": "B14.fresh-process",
+      "outcome": "pass",
+      "expected": "Node and browser-condition metadata digests are identical",
+      "received": "all declared scalar cases matched",
+      "artifactRefs": [
+        "current-coercion-goldens"
+      ]
+    }
+  ],
+  "measurements": [],
+  "artifacts": [
+    {
+      "name": "scalar-manifest",
+      "path": "test/code-first-definitions/fixtures/scalars/v1/manifest.json",
+      "mediaType": "application/json",
+      "bytes": 8943,
+      "digest": "sha256:fdc589c0231ac9136a40106ba8cf8e508e39caca0d9404beab1527e98f6b20e1",
+      "retention": "committed"
+    },
+    {
+      "name": "scalar-definitions",
+      "path": "test/code-first-definitions/fixtures/scalars/v1/definitions.json",
+      "mediaType": "application/json",
+      "bytes": 34052,
+      "digest": "sha256:d2a04d4bc9fec46cdac48fa01efb355c7d76dd24618824e7d6993aa78e7a3348",
+      "retention": "committed"
+    },
+    {
+      "name": "current-coercion-goldens",
+      "path": "test/code-first-definitions/fixtures/scalars/v1/current-coercion-goldens.json",
+      "mediaType": "application/json",
+      "bytes": 11315,
+      "digest": "sha256:59739627bce5f6dbccc083e644aecbb58f373d8d5346e007b5bcdbf28c18f4b4",
+      "retention": "committed"
+    },
+    {
+      "name": "difference-list",
+      "path": "test/code-first-definitions/fixtures/scalars/v1/difference-list.json",
+      "mediaType": "application/json",
+      "bytes": 3093,
+      "digest": "sha256:27dc129a1c61572e428fae99c92a0e71a39b9bbeca35dbac03e417f7b5b06488",
+      "retention": "committed"
+    }
+  ],
+  "results": {
+    "cases": [
+      {
+        "caseId": "Amount_Tokens:document-engineering-1.40",
+        "profile": "document-engineering-1.40",
+        "scalarName": "Amount_Tokens",
+        "validationOutcomeDigest": "sha256:395c4d409368762b7872bbd79943db3dcd2bb41be8720d965f9928e27860e87f",
+        "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+        "catalogDigest": "sha256:f3c6e2efb45b6712965c22a81e0801ab9d28402d23f82b1ab377e2d93e3f36d6",
+        "knownDifferences": [
+          {
+            "scalarName": "Amount_Tokens",
+            "path": "validator.acceptance/installed.parseLiteral.acceptance",
+            "caseId": "integer"
+          }
+        ],
+        "constructionMs": 16.27479100000005,
+        "firstMismatch": null
+      },
+      {
+        "caseId": "Amount_Tokens:legacy-graphql-default-v1",
+        "profile": "legacy-graphql-default-v1",
+        "scalarName": "Amount_Tokens",
+        "validationOutcomeDigest": "sha256:395c4d409368762b7872bbd79943db3dcd2bb41be8720d965f9928e27860e87f",
+        "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+        "catalogDigest": "sha256:f3c6e2efb45b6712965c22a81e0801ab9d28402d23f82b1ab377e2d93e3f36d6",
+        "knownDifferences": [
+          {
+            "scalarName": "Amount_Tokens",
+            "path": "validator.acceptance/installed.parseLiteral.acceptance",
+            "caseId": "integer"
+          }
+        ],
+        "constructionMs": 16.27479100000005,
+        "firstMismatch": null
+      },
+      {
+        "caseId": "EthereumAddress:document-engineering-1.40",
+        "profile": "document-engineering-1.40",
+        "scalarName": "EthereumAddress",
+        "validationOutcomeDigest": "sha256:7fab7585069a4e1235a1d62c81d869d2afb32a641f1b7008bb4153941b0031a8",
+        "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+        "catalogDigest": "sha256:f3c6e2efb45b6712965c22a81e0801ab9d28402d23f82b1ab377e2d93e3f36d6",
+        "knownDifferences": [],
+        "constructionMs": 16.27479100000005,
+        "firstMismatch": null
+      },
+      {
+        "caseId": "EthereumAddress:legacy-graphql-default-v1",
+        "profile": "legacy-graphql-default-v1",
+        "scalarName": "EthereumAddress",
+        "validationOutcomeDigest": "sha256:7fab7585069a4e1235a1d62c81d869d2afb32a641f1b7008bb4153941b0031a8",
+        "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+        "catalogDigest": "sha256:f3c6e2efb45b6712965c22a81e0801ab9d28402d23f82b1ab377e2d93e3f36d6",
+        "knownDifferences": [],
+        "constructionMs": 16.27479100000005,
+        "firstMismatch": null
+      },
+      {
+        "caseId": "Amount_Percentage:document-engineering-1.40",
+        "profile": "document-engineering-1.40",
+        "scalarName": "Amount_Percentage",
+        "validationOutcomeDigest": "sha256:395c4d409368762b7872bbd79943db3dcd2bb41be8720d965f9928e27860e87f",
+        "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+        "catalogDigest": "sha256:f3c6e2efb45b6712965c22a81e0801ab9d28402d23f82b1ab377e2d93e3f36d6",
+        "knownDifferences": [
+          {
+            "scalarName": "Amount_Percentage",
+            "path": "validator.acceptance/installed.parseLiteral.acceptance",
+            "caseId": "integer"
+          }
+        ],
+        "constructionMs": 16.27479100000005,
+        "firstMismatch": null
+      },
+      {
+        "caseId": "Amount_Percentage:legacy-graphql-default-v1",
+        "profile": "legacy-graphql-default-v1",
+        "scalarName": "Amount_Percentage",
+        "validationOutcomeDigest": "sha256:395c4d409368762b7872bbd79943db3dcd2bb41be8720d965f9928e27860e87f",
+        "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+        "catalogDigest": "sha256:f3c6e2efb45b6712965c22a81e0801ab9d28402d23f82b1ab377e2d93e3f36d6",
+        "knownDifferences": [
+          {
+            "scalarName": "Amount_Percentage",
+            "path": "validator.acceptance/installed.parseLiteral.acceptance",
+            "caseId": "integer"
+          }
+        ],
+        "constructionMs": 16.27479100000005,
+        "firstMismatch": null
+      },
+      {
+        "caseId": "EmailAddress:document-engineering-1.40",
+        "profile": "document-engineering-1.40",
+        "scalarName": "EmailAddress",
+        "validationOutcomeDigest": "sha256:b7ee3cd661f148d018895ff3c54e950ef48519fd865727e874c958ec06417a9c",
+        "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+        "catalogDigest": "sha256:f3c6e2efb45b6712965c22a81e0801ab9d28402d23f82b1ab377e2d93e3f36d6",
+        "knownDifferences": [],
+        "constructionMs": 16.27479100000005,
+        "firstMismatch": null
+      },
+      {
+        "caseId": "EmailAddress:legacy-graphql-default-v1",
+        "profile": "legacy-graphql-default-v1",
+        "scalarName": "EmailAddress",
+        "validationOutcomeDigest": "sha256:b7ee3cd661f148d018895ff3c54e950ef48519fd865727e874c958ec06417a9c",
+        "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+        "catalogDigest": "sha256:f3c6e2efb45b6712965c22a81e0801ab9d28402d23f82b1ab377e2d93e3f36d6",
+        "knownDifferences": [],
+        "constructionMs": 16.27479100000005,
+        "firstMismatch": null
+      },
+      {
+        "caseId": "Date:document-engineering-1.40",
+        "profile": "document-engineering-1.40",
+        "scalarName": "Date",
+        "validationOutcomeDigest": "sha256:58bbc27ebadd812ce94272df32a930fde9be4b6c2e2ecc8cab731cc5f357933e",
+        "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+        "catalogDigest": "sha256:f3c6e2efb45b6712965c22a81e0801ab9d28402d23f82b1ab377e2d93e3f36d6",
+        "knownDifferences": [],
+        "constructionMs": 16.27479100000005,
+        "firstMismatch": null
+      },
+      {
+        "caseId": "Date:legacy-graphql-default-v1",
+        "profile": "legacy-graphql-default-v1",
+        "scalarName": "Date",
+        "validationOutcomeDigest": "sha256:58bbc27ebadd812ce94272df32a930fde9be4b6c2e2ecc8cab731cc5f357933e",
+        "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+        "catalogDigest": "sha256:f3c6e2efb45b6712965c22a81e0801ab9d28402d23f82b1ab377e2d93e3f36d6",
+        "knownDifferences": [],
+        "constructionMs": 16.27479100000005,
+        "firstMismatch": null
+      },
+      {
+        "caseId": "DateTime:document-engineering-1.40",
+        "profile": "document-engineering-1.40",
+        "scalarName": "DateTime",
+        "validationOutcomeDigest": "sha256:58bbc27ebadd812ce94272df32a930fde9be4b6c2e2ecc8cab731cc5f357933e",
+        "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+        "catalogDigest": "sha256:f3c6e2efb45b6712965c22a81e0801ab9d28402d23f82b1ab377e2d93e3f36d6",
+        "knownDifferences": [],
+        "constructionMs": 16.27479100000005,
+        "firstMismatch": null
+      },
+      {
+        "caseId": "DateTime:legacy-graphql-default-v1",
+        "profile": "legacy-graphql-default-v1",
+        "scalarName": "DateTime",
+        "validationOutcomeDigest": "sha256:58bbc27ebadd812ce94272df32a930fde9be4b6c2e2ecc8cab731cc5f357933e",
+        "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+        "catalogDigest": "sha256:f3c6e2efb45b6712965c22a81e0801ab9d28402d23f82b1ab377e2d93e3f36d6",
+        "knownDifferences": [],
+        "constructionMs": 16.27479100000005,
+        "firstMismatch": null
+      },
+      {
+        "caseId": "URL:document-engineering-1.40",
+        "profile": "document-engineering-1.40",
+        "scalarName": "URL",
+        "validationOutcomeDigest": "sha256:63e7afb2f76c34ced8ec4f10a198599ee9cd4858ecbdef82f40c50bd026eb4cb",
+        "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+        "catalogDigest": "sha256:f3c6e2efb45b6712965c22a81e0801ab9d28402d23f82b1ab377e2d93e3f36d6",
+        "knownDifferences": [],
+        "constructionMs": 16.27479100000005,
+        "firstMismatch": null
+      },
+      {
+        "caseId": "URL:legacy-graphql-default-v1",
+        "profile": "legacy-graphql-default-v1",
+        "scalarName": "URL",
+        "validationOutcomeDigest": "sha256:63e7afb2f76c34ced8ec4f10a198599ee9cd4858ecbdef82f40c50bd026eb4cb",
+        "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+        "catalogDigest": "sha256:f3c6e2efb45b6712965c22a81e0801ab9d28402d23f82b1ab377e2d93e3f36d6",
+        "knownDifferences": [],
+        "constructionMs": 16.27479100000005,
+        "firstMismatch": null
+      },
+      {
+        "caseId": "Amount_Money:document-engineering-1.40",
+        "profile": "document-engineering-1.40",
+        "scalarName": "Amount_Money",
+        "validationOutcomeDigest": "sha256:395c4d409368762b7872bbd79943db3dcd2bb41be8720d965f9928e27860e87f",
+        "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+        "catalogDigest": "sha256:f3c6e2efb45b6712965c22a81e0801ab9d28402d23f82b1ab377e2d93e3f36d6",
+        "knownDifferences": [
+          {
+            "scalarName": "Amount_Money",
+            "path": "validator.acceptance/installed.parseLiteral.acceptance",
+            "caseId": "integer"
+          }
+        ],
+        "constructionMs": 16.27479100000005,
+        "firstMismatch": null
+      },
+      {
+        "caseId": "Amount_Money:legacy-graphql-default-v1",
+        "profile": "legacy-graphql-default-v1",
+        "scalarName": "Amount_Money",
+        "validationOutcomeDigest": "sha256:395c4d409368762b7872bbd79943db3dcd2bb41be8720d965f9928e27860e87f",
+        "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+        "catalogDigest": "sha256:f3c6e2efb45b6712965c22a81e0801ab9d28402d23f82b1ab377e2d93e3f36d6",
+        "knownDifferences": [
+          {
+            "scalarName": "Amount_Money",
+            "path": "validator.acceptance/installed.parseLiteral.acceptance",
+            "caseId": "integer"
+          }
+        ],
+        "constructionMs": 16.27479100000005,
+        "firstMismatch": null
+      },
+      {
+        "caseId": "OLabel:document-engineering-1.40",
+        "profile": "document-engineering-1.40",
+        "scalarName": "OLabel",
+        "validationOutcomeDigest": "sha256:9da5ff980b17264008265210ec18719a0817760d25df6bc9b744d54199630c62",
+        "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+        "catalogDigest": "sha256:f3c6e2efb45b6712965c22a81e0801ab9d28402d23f82b1ab377e2d93e3f36d6",
+        "knownDifferences": [],
+        "constructionMs": 16.27479100000005,
+        "firstMismatch": null
+      },
+      {
+        "caseId": "OLabel:legacy-graphql-default-v1",
+        "profile": "legacy-graphql-default-v1",
+        "scalarName": "OLabel",
+        "validationOutcomeDigest": "sha256:9da5ff980b17264008265210ec18719a0817760d25df6bc9b744d54199630c62",
+        "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+        "catalogDigest": "sha256:f3c6e2efb45b6712965c22a81e0801ab9d28402d23f82b1ab377e2d93e3f36d6",
+        "knownDifferences": [],
+        "constructionMs": 16.27479100000005,
+        "firstMismatch": null
+      },
+      {
+        "caseId": "Currency:document-engineering-1.40",
+        "profile": "document-engineering-1.40",
+        "scalarName": "Currency",
+        "validationOutcomeDigest": "sha256:12eab3ec7d02e242659d46cbb64fd563e114f327aa5549c78474f266e328632f",
+        "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+        "catalogDigest": "sha256:f3c6e2efb45b6712965c22a81e0801ab9d28402d23f82b1ab377e2d93e3f36d6",
+        "knownDifferences": [],
+        "constructionMs": 16.27479100000005,
+        "firstMismatch": null
+      },
+      {
+        "caseId": "Currency:legacy-graphql-default-v1",
+        "profile": "legacy-graphql-default-v1",
+        "scalarName": "Currency",
+        "validationOutcomeDigest": "sha256:12eab3ec7d02e242659d46cbb64fd563e114f327aa5549c78474f266e328632f",
+        "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+        "catalogDigest": "sha256:f3c6e2efb45b6712965c22a81e0801ab9d28402d23f82b1ab377e2d93e3f36d6",
+        "knownDifferences": [],
+        "constructionMs": 16.27479100000005,
+        "firstMismatch": null
+      },
+      {
+        "caseId": "PHID:document-engineering-1.40",
+        "profile": "document-engineering-1.40",
+        "scalarName": "PHID",
+        "validationOutcomeDigest": "sha256:1b737412cf64af125d6cf7d03c9e78eaed4a5ec05f875d3774f3a04bd83fb7e2",
+        "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+        "catalogDigest": "sha256:f3c6e2efb45b6712965c22a81e0801ab9d28402d23f82b1ab377e2d93e3f36d6",
+        "knownDifferences": [],
+        "constructionMs": 16.27479100000005,
+        "firstMismatch": null
+      },
+      {
+        "caseId": "PHID:legacy-graphql-default-v1",
+        "profile": "legacy-graphql-default-v1",
+        "scalarName": "PHID",
+        "validationOutcomeDigest": "sha256:1b737412cf64af125d6cf7d03c9e78eaed4a5ec05f875d3774f3a04bd83fb7e2",
+        "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+        "catalogDigest": "sha256:f3c6e2efb45b6712965c22a81e0801ab9d28402d23f82b1ab377e2d93e3f36d6",
+        "knownDifferences": [],
+        "constructionMs": 16.27479100000005,
+        "firstMismatch": null
+      },
+      {
+        "caseId": "OID:document-engineering-1.40",
+        "profile": "document-engineering-1.40",
+        "scalarName": "OID",
+        "validationOutcomeDigest": "sha256:2550b72a4495108d6fd4e48dff3f7fc3e8677dd64e57e241f3fa2208ad5516a4",
+        "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+        "catalogDigest": "sha256:f3c6e2efb45b6712965c22a81e0801ab9d28402d23f82b1ab377e2d93e3f36d6",
+        "knownDifferences": [],
+        "constructionMs": 16.27479100000005,
+        "firstMismatch": null
+      },
+      {
+        "caseId": "OID:legacy-graphql-default-v1",
+        "profile": "legacy-graphql-default-v1",
+        "scalarName": "OID",
+        "validationOutcomeDigest": "sha256:2550b72a4495108d6fd4e48dff3f7fc3e8677dd64e57e241f3fa2208ad5516a4",
+        "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+        "catalogDigest": "sha256:f3c6e2efb45b6712965c22a81e0801ab9d28402d23f82b1ab377e2d93e3f36d6",
+        "knownDifferences": [],
+        "constructionMs": 16.27479100000005,
+        "firstMismatch": null
+      },
+      {
+        "caseId": "Amount_Fiat:document-engineering-1.40",
+        "profile": "document-engineering-1.40",
+        "scalarName": "Amount_Fiat",
+        "validationOutcomeDigest": "sha256:9f7dbab486c4852086699e04f88d8f7d600e0789f68a054ed75e93de36e3dc11",
+        "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+        "catalogDigest": "sha256:f3c6e2efb45b6712965c22a81e0801ab9d28402d23f82b1ab377e2d93e3f36d6",
+        "knownDifferences": [
+          {
+            "scalarName": "Amount_Fiat",
+            "path": "reducer.raw/validator.output",
+            "caseId": "unknown-key-normalization"
+          },
+          {
+            "scalarName": "Amount_Fiat",
+            "path": "validator.acceptance/installed.parseLiteral.acceptance",
+            "caseId": "integer"
+          },
+          {
+            "scalarName": "Amount_Fiat",
+            "path": "validator.acceptance/installed.parseLiteral.acceptance",
+            "caseId": "unknown-key-normalization"
+          }
+        ],
+        "constructionMs": 16.27479100000005,
+        "firstMismatch": null
+      },
+      {
+        "caseId": "Amount_Fiat:legacy-graphql-default-v1",
+        "profile": "legacy-graphql-default-v1",
+        "scalarName": "Amount_Fiat",
+        "validationOutcomeDigest": "sha256:9f7dbab486c4852086699e04f88d8f7d600e0789f68a054ed75e93de36e3dc11",
+        "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+        "catalogDigest": "sha256:f3c6e2efb45b6712965c22a81e0801ab9d28402d23f82b1ab377e2d93e3f36d6",
+        "knownDifferences": [
+          {
+            "scalarName": "Amount_Fiat",
+            "path": "reducer.raw/validator.output",
+            "caseId": "unknown-key-normalization"
+          },
+          {
+            "scalarName": "Amount_Fiat",
+            "path": "validator.acceptance/installed.parseLiteral.acceptance",
+            "caseId": "integer"
+          },
+          {
+            "scalarName": "Amount_Fiat",
+            "path": "validator.acceptance/installed.parseLiteral.acceptance",
+            "caseId": "unknown-key-normalization"
+          }
+        ],
+        "constructionMs": 16.27479100000005,
+        "firstMismatch": null
+      },
+      {
+        "caseId": "Amount_Currency:document-engineering-1.40",
+        "profile": "document-engineering-1.40",
+        "scalarName": "Amount_Currency",
+        "validationOutcomeDigest": "sha256:18a9affe897ebc7cd882e169e283356b6772ee28c1e81ec7a0bc576bd0dce291",
+        "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+        "catalogDigest": "sha256:f3c6e2efb45b6712965c22a81e0801ab9d28402d23f82b1ab377e2d93e3f36d6",
+        "knownDifferences": [
+          {
+            "scalarName": "Amount_Currency",
+            "path": "reducer.raw/validator.output",
+            "caseId": "unknown-key-normalization"
+          },
+          {
+            "scalarName": "Amount_Currency",
+            "path": "validator.acceptance/installed.parseLiteral.acceptance",
+            "caseId": "arbitrary-string-value"
+          }
+        ],
+        "constructionMs": 16.27479100000005,
+        "firstMismatch": null
+      },
+      {
+        "caseId": "Amount_Currency:legacy-graphql-default-v1",
+        "profile": "legacy-graphql-default-v1",
+        "scalarName": "Amount_Currency",
+        "validationOutcomeDigest": "sha256:18a9affe897ebc7cd882e169e283356b6772ee28c1e81ec7a0bc576bd0dce291",
+        "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+        "catalogDigest": "sha256:f3c6e2efb45b6712965c22a81e0801ab9d28402d23f82b1ab377e2d93e3f36d6",
+        "knownDifferences": [
+          {
+            "scalarName": "Amount_Currency",
+            "path": "reducer.raw/validator.output",
+            "caseId": "unknown-key-normalization"
+          },
+          {
+            "scalarName": "Amount_Currency",
+            "path": "validator.acceptance/installed.parseLiteral.acceptance",
+            "caseId": "arbitrary-string-value"
+          }
+        ],
+        "constructionMs": 16.27479100000005,
+        "firstMismatch": null
+      },
+      {
+        "caseId": "Amount_Crypto:document-engineering-1.40",
+        "profile": "document-engineering-1.40",
+        "scalarName": "Amount_Crypto",
+        "validationOutcomeDigest": "sha256:2f82d64fc4ece395bf5ae23c354437b5ba5eaab622936d40704362f927ae0c8c",
+        "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+        "catalogDigest": "sha256:f3c6e2efb45b6712965c22a81e0801ab9d28402d23f82b1ab377e2d93e3f36d6",
+        "knownDifferences": [
+          {
+            "scalarName": "Amount_Crypto",
+            "path": "reducer.raw/validator.output",
+            "caseId": "unknown-key-normalization"
+          },
+          {
+            "scalarName": "Amount_Crypto",
+            "path": "validator.acceptance/installed.parseLiteral.acceptance",
+            "caseId": "arbitrary-string-value"
+          }
+        ],
+        "constructionMs": 16.27479100000005,
+        "firstMismatch": null
+      },
+      {
+        "caseId": "Amount_Crypto:legacy-graphql-default-v1",
+        "profile": "legacy-graphql-default-v1",
+        "scalarName": "Amount_Crypto",
+        "validationOutcomeDigest": "sha256:2f82d64fc4ece395bf5ae23c354437b5ba5eaab622936d40704362f927ae0c8c",
+        "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+        "catalogDigest": "sha256:f3c6e2efb45b6712965c22a81e0801ab9d28402d23f82b1ab377e2d93e3f36d6",
+        "knownDifferences": [
+          {
+            "scalarName": "Amount_Crypto",
+            "path": "reducer.raw/validator.output",
+            "caseId": "unknown-key-normalization"
+          },
+          {
+            "scalarName": "Amount_Crypto",
+            "path": "validator.acceptance/installed.parseLiteral.acceptance",
+            "caseId": "arbitrary-string-value"
+          }
+        ],
+        "constructionMs": 16.27479100000005,
+        "firstMismatch": null
+      },
+      {
+        "caseId": "Amount:document-engineering-1.40",
+        "profile": "document-engineering-1.40",
+        "scalarName": "Amount",
+        "validationOutcomeDigest": "sha256:84bce00aafa9e8e480b2c9c1ecd995a2fa1b2946a817bf847232adb332b47b2b",
+        "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+        "catalogDigest": "sha256:f3c6e2efb45b6712965c22a81e0801ab9d28402d23f82b1ab377e2d93e3f36d6",
+        "knownDifferences": [
+          {
+            "scalarName": "Amount",
+            "path": "reducer.raw/validator.output",
+            "caseId": "unknown-key-normalization"
+          },
+          {
+            "scalarName": "Amount",
+            "path": "typescript.source/validator.acceptance",
+            "caseId": "missing-value"
+          },
+          {
+            "scalarName": "Amount",
+            "path": "validator.acceptance/installed.parseLiteral.acceptance",
+            "caseId": "integer"
+          },
+          {
+            "scalarName": "Amount",
+            "path": "validator.acceptance/installed.parseLiteral.acceptance",
+            "caseId": "unknown-key-normalization"
+          }
+        ],
+        "constructionMs": 16.27479100000005,
+        "firstMismatch": null
+      },
+      {
+        "caseId": "Amount:legacy-graphql-default-v1",
+        "profile": "legacy-graphql-default-v1",
+        "scalarName": "Amount",
+        "validationOutcomeDigest": "sha256:84bce00aafa9e8e480b2c9c1ecd995a2fa1b2946a817bf847232adb332b47b2b",
+        "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+        "catalogDigest": "sha256:f3c6e2efb45b6712965c22a81e0801ab9d28402d23f82b1ab377e2d93e3f36d6",
+        "knownDifferences": [
+          {
+            "scalarName": "Amount",
+            "path": "reducer.raw/validator.output",
+            "caseId": "unknown-key-normalization"
+          },
+          {
+            "scalarName": "Amount",
+            "path": "typescript.source/validator.acceptance",
+            "caseId": "missing-value"
+          },
+          {
+            "scalarName": "Amount",
+            "path": "validator.acceptance/installed.parseLiteral.acceptance",
+            "caseId": "integer"
+          },
+          {
+            "scalarName": "Amount",
+            "path": "validator.acceptance/installed.parseLiteral.acceptance",
+            "caseId": "unknown-key-normalization"
+          }
+        ],
+        "constructionMs": 16.27479100000005,
+        "firstMismatch": null
+      },
+      {
+        "caseId": "Upload:document-engineering-1.40",
+        "profile": "document-engineering-1.40",
+        "scalarName": "Upload",
+        "validationOutcomeDigest": "sha256:a9851470ab59e3b4ff83d853366a196d1dd4aabcd512ee3899f22d9ff73f9ccc",
+        "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+        "catalogDigest": "sha256:f3c6e2efb45b6712965c22a81e0801ab9d28402d23f82b1ab377e2d93e3f36d6",
+        "knownDifferences": [
+          {
+            "scalarName": "Upload",
+            "path": "validator.acceptance/installed.parseLiteral.acceptance",
+            "caseId": "literal-null"
+          },
+          {
+            "scalarName": "Upload",
+            "path": "validator.acceptance/installed.parseLiteral.acceptance",
+            "caseId": "upload"
+          }
+        ],
+        "constructionMs": 16.27479100000005,
+        "firstMismatch": null
+      },
+      {
+        "caseId": "Upload:legacy-graphql-default-v1",
+        "profile": "legacy-graphql-default-v1",
+        "scalarName": "Upload",
+        "validationOutcomeDigest": "sha256:a9851470ab59e3b4ff83d853366a196d1dd4aabcd512ee3899f22d9ff73f9ccc",
+        "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+        "catalogDigest": "sha256:f3c6e2efb45b6712965c22a81e0801ab9d28402d23f82b1ab377e2d93e3f36d6",
+        "knownDifferences": [
+          {
+            "scalarName": "Upload",
+            "path": "validator.acceptance/installed.parseLiteral.acceptance",
+            "caseId": "literal-null"
+          },
+          {
+            "scalarName": "Upload",
+            "path": "validator.acceptance/installed.parseLiteral.acceptance",
+            "caseId": "upload"
+          }
+        ],
+        "constructionMs": 16.27479100000005,
+        "firstMismatch": null
+      },
+      {
+        "caseId": "Unknown:document-engineering-1.40",
+        "profile": "document-engineering-1.40",
+        "scalarName": "Unknown",
+        "validationOutcomeDigest": "sha256:75cba9a65b53fd721b6b4be408c2dbcd3f3115beec2fafd66cc5305557092d43",
+        "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+        "catalogDigest": "sha256:f3c6e2efb45b6712965c22a81e0801ab9d28402d23f82b1ab377e2d93e3f36d6",
+        "knownDifferences": [
+          {
+            "scalarName": "Unknown",
+            "path": "validator.acceptance/parseLiteral.acceptance",
+            "caseId": "graphql-variable-literal"
+          },
+          {
+            "scalarName": "Unknown",
+            "path": "validator.acceptance/persistence.json",
+            "caseId": "bigint"
+          },
+          {
+            "scalarName": "Unknown",
+            "path": "validator.acceptance/persistence.json",
+            "caseId": "date"
+          },
+          {
+            "scalarName": "Unknown",
+            "path": "validator.acceptance/persistence.json",
+            "caseId": "map"
+          },
+          {
+            "scalarName": "Unknown",
+            "path": "validator.acceptance/persistence.json",
+            "caseId": "undefined"
+          }
+        ],
+        "constructionMs": 16.27479100000005,
+        "firstMismatch": null
+      },
+      {
+        "caseId": "Unknown:legacy-graphql-default-v1",
+        "profile": "legacy-graphql-default-v1",
+        "scalarName": "Unknown",
+        "validationOutcomeDigest": "sha256:75cba9a65b53fd721b6b4be408c2dbcd3f3115beec2fafd66cc5305557092d43",
+        "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+        "catalogDigest": "sha256:f3c6e2efb45b6712965c22a81e0801ab9d28402d23f82b1ab377e2d93e3f36d6",
+        "knownDifferences": [
+          {
+            "scalarName": "Unknown",
+            "path": "validator.acceptance/parseLiteral.acceptance",
+            "caseId": "graphql-variable-literal"
+          },
+          {
+            "scalarName": "Unknown",
+            "path": "validator.acceptance/persistence.json",
+            "caseId": "bigint"
+          },
+          {
+            "scalarName": "Unknown",
+            "path": "validator.acceptance/persistence.json",
+            "caseId": "date"
+          },
+          {
+            "scalarName": "Unknown",
+            "path": "validator.acceptance/persistence.json",
+            "caseId": "map"
+          },
+          {
+            "scalarName": "Unknown",
+            "path": "validator.acceptance/persistence.json",
+            "caseId": "undefined"
+          }
+        ],
+        "constructionMs": 16.27479100000005,
+        "firstMismatch": null
+      },
+      {
+        "caseId": "Address:document-engineering-1.40",
+        "profile": "document-engineering-1.40",
+        "scalarName": "Address",
+        "validationOutcomeDigest": "sha256:4a64d4de558b44f90ca9abd7721c87abbba6f0967d8edb920b22d688d17df868",
+        "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+        "catalogDigest": "sha256:f3c6e2efb45b6712965c22a81e0801ab9d28402d23f82b1ab377e2d93e3f36d6",
+        "knownDifferences": [],
+        "constructionMs": 16.27479100000005,
+        "firstMismatch": null
+      },
+      {
+        "caseId": "Address:legacy-graphql-default-v1",
+        "profile": "legacy-graphql-default-v1",
+        "scalarName": "Address",
+        "validationOutcomeDigest": "sha256:4a64d4de558b44f90ca9abd7721c87abbba6f0967d8edb920b22d688d17df868",
+        "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+        "catalogDigest": "sha256:f3c6e2efb45b6712965c22a81e0801ab9d28402d23f82b1ab377e2d93e3f36d6",
+        "knownDifferences": [],
+        "constructionMs": 16.27479100000005,
+        "firstMismatch": null
+      },
+      {
+        "caseId": "AttachmentRef:document-engineering-1.40",
+        "profile": "document-engineering-1.40",
+        "scalarName": "AttachmentRef",
+        "validationOutcomeDigest": "sha256:edb002c52049e5b2243e6e9425be10a85565aa96d23bbfeaf35b8544764205e0",
+        "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+        "catalogDigest": "sha256:f3c6e2efb45b6712965c22a81e0801ab9d28402d23f82b1ab377e2d93e3f36d6",
+        "knownDifferences": [],
+        "constructionMs": 16.27479100000005,
+        "firstMismatch": null
+      },
+      {
+        "caseId": "AttachmentRef:legacy-graphql-default-v1",
+        "profile": "legacy-graphql-default-v1",
+        "scalarName": "AttachmentRef",
+        "validationOutcomeDigest": "sha256:edb002c52049e5b2243e6e9425be10a85565aa96d23bbfeaf35b8544764205e0",
+        "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+        "catalogDigest": "sha256:f3c6e2efb45b6712965c22a81e0801ab9d28402d23f82b1ab377e2d93e3f36d6",
+        "knownDifferences": [],
+        "constructionMs": 16.27479100000005,
+        "firstMismatch": null
+      },
+      {
+        "caseId": "JSONObject:document-engineering-1.40",
+        "profile": "document-engineering-1.40",
+        "scalarName": "JSONObject",
+        "validationOutcomeDigest": "sha256:0f74970e10ac531be798e5a2d6bcd50d477d43031aa1f1a3c40b301abecf9a6a",
+        "graphQLOutcomeDigest": "sha256:3f941f4907215a3413c55414ac13e2b33f3d725ddbfbe53ffb36c5b994cbd217",
+        "catalogDigest": "sha256:f3c6e2efb45b6712965c22a81e0801ab9d28402d23f82b1ab377e2d93e3f36d6",
+        "knownDifferences": [],
+        "constructionMs": 16.27479100000005,
+        "firstMismatch": null
+      },
+      {
+        "caseId": "JSONObject:legacy-graphql-default-v1",
+        "profile": "legacy-graphql-default-v1",
+        "scalarName": "JSONObject",
+        "validationOutcomeDigest": "sha256:0f74970e10ac531be798e5a2d6bcd50d477d43031aa1f1a3c40b301abecf9a6a",
+        "graphQLOutcomeDigest": "sha256:3f941f4907215a3413c55414ac13e2b33f3d725ddbfbe53ffb36c5b994cbd217",
+        "catalogDigest": "sha256:f3c6e2efb45b6712965c22a81e0801ab9d28402d23f82b1ab377e2d93e3f36d6",
+        "knownDifferences": [],
+        "constructionMs": 16.27479100000005,
+        "firstMismatch": null
+      }
+    ]
+  },
+  "summary": {
+    "passed": 7,
+    "failed": 0,
+    "blocked": 0,
+    "cancelled": 0
+  }
+}

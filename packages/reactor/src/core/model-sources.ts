@@ -112,7 +112,7 @@ async function resolveImportableSource(
 ): Promise<ResolvedEntry[]> {
   const isFile = "filePath" in source;
   const specifier = isFile
-    ? new URL(`file://${source.filePath}`).href
+    ? await fileModelSourceSpecifier(source.filePath)
     : source.subpath
       ? `${source.packageName}/${source.subpath}`
       : source.packageName;
@@ -163,6 +163,14 @@ async function resolveImportableSource(
     );
   }
   return entries;
+}
+
+async function fileModelSourceSpecifier(filePath: string): Promise<string> {
+  const [{ resolve }, { pathToFileURL }] = await Promise.all([
+    import("node:path"),
+    import("node:url"),
+  ]);
+  return pathToFileURL(resolve(filePath)).href;
 }
 
 function describeSource(source: FileModelSource | PackageModelSource): string {

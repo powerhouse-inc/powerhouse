@@ -1,5 +1,6 @@
 import {
   generateAllDocumentModels,
+  generateCodeFirstDocumentModel,
   generateDocumentModel,
   loadDocumentModel,
 } from "@powerhousedao/codegen";
@@ -18,9 +19,52 @@ export async function startGenerateDocumentModel(
   args: GenerateDocumentModelArgs,
   projectDir: string,
 ) {
-  const { document, dir, all, extract, debug } = args;
+  const {
+    all,
+    codeFirst,
+    debug,
+    dir,
+    document,
+    extension,
+    extract,
+    id,
+    name,
+    version,
+  } = args;
   if (debug) {
     console.log({ args });
+  }
+  if (codeFirst) {
+    if (document || dir || all || extract) {
+      throw new Error(
+        "--code-first cannot be combined with --document, --dir, --all, or --extract.",
+      );
+    }
+    if (!name || !id) {
+      throw new Error("--code-first requires both --name and --id.");
+    }
+    const project = buildTsMorphProject(projectDir);
+    await generateCodeFirstDocumentModel(
+      {
+        id,
+        name,
+        ...(extension ? { extension } : {}),
+        ...(version === undefined ? {} : { version }),
+      },
+      project,
+    );
+    await project.save();
+    return;
+  }
+  if (
+    name !== undefined ||
+    id !== undefined ||
+    extension !== undefined ||
+    version !== undefined
+  ) {
+    throw new Error(
+      "--name, --id, --extension, and --version require --code-first.",
+    );
   }
   const project = buildTsMorphProject(projectDir);
   if (extract) {
@@ -49,7 +93,7 @@ export async function startGenerateDocumentModel(
     await generateDocumentModel(state, project);
   } else {
     console.log(
-      "Please specify one of `document`, `dir`, `all`, or `extract`.",
+      "Please specify `--code-first` or one of `document`, `dir`, `all`, or `extract`.",
     );
     return;
   }

@@ -1,0 +1,116 @@
+{
+  "kind": "powerhouse.retirement-fixture-report",
+  "formatVersion": 1,
+  "status": "pass",
+  "plan": {
+    "kind": "powerhouse.legacy-retirement-plan",
+    "formatVersion": 1,
+    "repositoryCommit": "fixture-commit-v1",
+    "family": {
+      "documentType": "test/todo",
+      "digest": "sha256:961f8d6b9b36f21c6e451d1b13226188b5a08cea3a15e5b2aab19dbce05dd98c"
+    },
+    "packageRoot": ".",
+    "legacyFamilyRoot": "document-models/retired-todo",
+    "recoverableLegacyRoot": "git:fixture-commit-v1:document-models/retired-todo",
+    "approvedReportPath": ".ph/migrations/retired-todo/equivalence-report.json",
+    "activationMarkerPath": ".ph/migrations/retired-todo/activation.json",
+    "rollbackReportPath": ".ph/migrations/retired-todo/rollback.json",
+    "canaryReportPath": ".ph/migrations/retired-todo/canary.json",
+    "approvedReportDigest": "sha256:b3386364b03f704588d5039700c4abd22fe2a2a8b72b01d8d931db2b65b8def5",
+    "activationMarkerDigest": "sha256:eddcef43834d664437e04756dfdfe578b6b7f269549b1d2642a1cf97a7d112ea",
+    "rollbackReportDigest": "sha256:a488c2ccee835e6eaf4c2075afae0b517c69a93d185d7dcb05cee99735c8aa1c",
+    "canaryReportDigest": "sha256:a488c2ccee835e6eaf4c2075afae0b517c69a93d185d7dcb05cee99735c8aa1c",
+    "artifactDigest": "sha256:71dca63c43fad9296769bf24c39651d533b1586b905b217a464f75038d706783",
+    "sourceTreeDigest": "sha256:3f1b5dc2d4893aaf205e3707f1e3e28fe56953f77caaab1336e77efd33205502",
+    "targets": [
+      {
+        "path": "document-models/retired-todo/model.json",
+        "bytes": 72,
+        "digest": "sha256:10447577e49bd76a460832d49cbd352be8d8fa3c6986c79ec859b6b4cab440e3"
+      },
+      {
+        "path": "document-models/retired-todo/nested/schema.graphql",
+        "bytes": 46,
+        "digest": "sha256:ee0efc3bbd2b6348e8334baf7a4080ec64c7694f23fa9b9c4180a01f0fd98573"
+      },
+      {
+        "path": "document-models/retired-todo/reducer.ts",
+        "bytes": 84,
+        "digest": "sha256:25fc3799bd59e9b25b6b02aa5104e49c64d5fb2608eb5c823cbed385f1629735"
+      }
+    ],
+    "liveImportPaths": [],
+    "maskedVerificationPassed": true,
+    "planDigest": "sha256:dba000680f58b8c4abf21bd7bc5bfbb5ccebe49749b2dc33117369a12bc0ad9d"
+  },
+  "apply": {
+    "kind": "powerhouse.legacy-retirement",
+    "formatVersion": 1,
+    "status": "retired",
+    "planDigest": "sha256:dba000680f58b8c4abf21bd7bc5bfbb5ccebe49749b2dc33117369a12bc0ad9d",
+    "removedPaths": [
+      "document-models/retired-todo/model.json",
+      "document-models/retired-todo/nested/schema.graphql",
+      "document-models/retired-todo/reducer.ts"
+    ],
+    "recoverableLegacyRoot": "git:fixture-commit-v1:document-models/retired-todo"
+  },
+  "allTargetsRemoved": true,
+  "negativeCases": [
+    {
+      "caseId": "changed-commit",
+      "expectedCode": "PH-MIGRATE-RETIRE-COMMIT-MISMATCH",
+      "receivedCode": "PH-MIGRATE-RETIRE-COMMIT-MISMATCH",
+      "treeRestored": true
+    },
+    {
+      "caseId": "changed-artifact-digest",
+      "expectedCode": "PH-MIGRATE-RETIRE-EVIDENCE-MISMATCH",
+      "receivedCode": "PH-MIGRATE-RETIRE-EVIDENCE-MISMATCH",
+      "treeRestored": true
+    },
+    {
+      "caseId": "path-traversal",
+      "expectedCode": "PH-MIGRATE-RETIRE-PATH-OUTSIDE-ROOT",
+      "receivedCode": "PH-MIGRATE-RETIRE-PATH-OUTSIDE-ROOT",
+      "treeRestored": true
+    },
+    {
+      "caseId": "symlink-target",
+      "expectedCode": "PH-MIGRATE-RETIRE-SYMLINK",
+      "receivedCode": "PH-MIGRATE-RETIRE-SYMLINK",
+      "treeRestored": true
+    },
+    {
+      "caseId": "content-drift",
+      "expectedCode": "PH-MIGRATE-RETIRE-SOURCE-DRIFT",
+      "receivedCode": "PH-MIGRATE-RETIRE-SOURCE-DRIFT",
+      "treeRestored": true
+    },
+    {
+      "caseId": "live-import",
+      "expectedCode": "PH-MIGRATE-RETIRE-LIVE-IMPORT",
+      "receivedCode": "PH-MIGRATE-RETIRE-LIVE-IMPORT",
+      "treeRestored": true
+    },
+    {
+      "caseId": "masked-verification",
+      "expectedCode": "PH-MIGRATE-RETIRE-MASKED-VERIFY-FAILED",
+      "receivedCode": "PH-MIGRATE-RETIRE-MASKED-VERIFY-FAILED",
+      "treeRestored": true
+    },
+    {
+      "caseId": "post-stage-failure",
+      "expectedCode": "PH-MIGRATE-POST-STAGE-FAILED",
+      "receivedCode": "PH-MIGRATE-POST-STAGE-FAILED",
+      "treeRestored": true
+    },
+    {
+      "caseId": "rollback-failure",
+      "expectedCode": "PH-MIGRATE-ROLLBACK-FAILED",
+      "receivedCode": "PH-MIGRATE-ROLLBACK-FAILED",
+      "treeRestored": true
+    }
+  ]
+}

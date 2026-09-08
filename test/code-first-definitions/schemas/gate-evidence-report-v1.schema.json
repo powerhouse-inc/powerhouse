@@ -1,0 +1,1964 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://powerhouse.inc/schemas/gate-evidence-report-v1.json",
+  "title": "Powerhouse gate evidence report V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "formatVersion",
+    "gate",
+    "contract",
+    "evidence",
+    "repository",
+    "toolchain",
+    "fixture",
+    "dependencies",
+    "command",
+    "assertions",
+    "measurements",
+    "artifacts",
+    "results",
+    "summary"
+  ],
+  "properties": {
+    "kind": { "const": "powerhouse.gate-evidence" },
+    "formatVersion": { "const": 1 },
+    "gate": { "$ref": "#/definitions/gate" },
+    "contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "revision"],
+      "properties": {
+        "status": { "const": "spec-complete" },
+        "revision": { "$ref": "#/definitions/sha256" }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["outcome"],
+      "properties": {
+        "outcome": {
+          "enum": ["pass", "fail", "blocked", "cancelled"]
+        },
+        "reasonCode": { "type": "string", "pattern": "^PH-" }
+      }
+    },
+    "repository": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["commit", "baseTreeDigest", "baseDirty"],
+      "properties": {
+        "commit": { "type": "string", "pattern": "^[0-9a-f]{40,64}$" },
+        "baseTreeDigest": { "$ref": "#/definitions/sha256" },
+        "baseDirty": { "const": false },
+        "appliedPatchDigest": { "$ref": "#/definitions/sha256" }
+      }
+    },
+    "toolchain": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "lockfileDigest",
+        "runnerVersion",
+        "node",
+        "packageManager",
+        "platform",
+        "tools"
+      ],
+      "properties": {
+        "lockfileDigest": { "$ref": "#/definitions/sha256" },
+        "runnerVersion": { "type": "string" },
+        "node": { "type": "string" },
+        "packageManager": { "type": "string" },
+        "platform": { "type": "string" },
+        "tools": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    },
+    "fixture": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "manifest",
+        "fixtureVersion",
+        "manifestDigest",
+        "schemaDigest",
+        "caseCount"
+      ],
+      "properties": {
+        "manifest": { "type": "string", "pattern": "^(?!/)(?!.*\\\\)" },
+        "fixtureVersion": { "type": "string" },
+        "manifestDigest": { "$ref": "#/definitions/sha256" },
+        "schemaDigest": { "$ref": "#/definitions/sha256" },
+        "caseCount": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "dependencies": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "gate",
+          "outcome",
+          "contractRevision",
+          "fixtureManifestDigest",
+          "reportDigest"
+        ],
+        "properties": {
+          "gate": { "$ref": "#/definitions/gate" },
+          "outcome": { "const": "pass" },
+          "contractRevision": { "$ref": "#/definitions/sha256" },
+          "fixtureManifestDigest": { "$ref": "#/definitions/sha256" },
+          "reportDigest": { "$ref": "#/definitions/sha256" }
+        }
+      }
+    },
+    "command": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "args", "cwd"],
+      "properties": {
+        "name": { "const": "gate-evidence" },
+        "args": { "type": "array", "items": { "type": "string" } },
+        "cwd": { "const": "<repository>" }
+      }
+    },
+    "assertions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "outcome", "expected", "received", "artifactRefs"],
+        "properties": {
+          "id": { "type": "string" },
+          "outcome": {
+            "enum": ["pass", "fail", "blocked", "cancelled"]
+          },
+          "expected": { "type": "string" },
+          "received": { "type": "string" },
+          "artifactRefs": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    },
+    "measurements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "unit",
+          "samples",
+          "warmups",
+          "p50",
+          "p95",
+          "maximum",
+          "limit",
+          "outcome"
+        ],
+        "properties": {
+          "name": { "type": "string" },
+          "unit": { "type": "string" },
+          "samples": { "type": "integer", "minimum": 0 },
+          "warmups": { "type": "integer", "minimum": 0 },
+          "p50": { "type": "number" },
+          "p95": { "type": "number" },
+          "maximum": { "type": "number" },
+          "limit": { "type": "number" },
+          "baselineRatio": { "type": "number" },
+          "outcome": { "enum": ["pass", "fail"] }
+        }
+      }
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "path",
+          "mediaType",
+          "bytes",
+          "digest",
+          "retention"
+        ],
+        "properties": {
+          "name": { "type": "string" },
+          "path": { "type": "string", "pattern": "^(?!/)(?!.*\\\\)" },
+          "mediaType": { "type": "string" },
+          "bytes": { "type": "integer", "minimum": 0 },
+          "digest": { "$ref": "#/definitions/sha256" },
+          "retention": {
+            "enum": ["committed", "ci-immutable", "restricted"]
+          }
+        }
+      }
+    },
+    "results": {},
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["passed", "failed", "blocked", "cancelled"],
+      "properties": {
+        "passed": { "type": "integer", "minimum": 0 },
+        "failed": { "type": "integer", "minimum": 0 },
+        "blocked": { "type": "integer", "minimum": 0 },
+        "cancelled": { "type": "integer", "minimum": 0 }
+      }
+    }
+  },
+  "oneOf": [
+    { "$ref": "#/definitions/B1" },
+    { "$ref": "#/definitions/B2" },
+    { "$ref": "#/definitions/B3" },
+    { "$ref": "#/definitions/empty-B4" },
+    { "$ref": "#/definitions/B5" },
+    { "$ref": "#/definitions/B6" },
+    { "$ref": "#/definitions/B7" },
+    { "$ref": "#/definitions/B8" },
+    { "$ref": "#/definitions/B9" },
+    { "$ref": "#/definitions/B10" },
+    { "$ref": "#/definitions/empty-B11" },
+    { "$ref": "#/definitions/empty-B12" },
+    { "$ref": "#/definitions/empty-B13" },
+    { "$ref": "#/definitions/B14" }
+  ],
+  "definitions": {
+    "sha256": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "gate": {
+      "enum": [
+        "B1",
+        "B2",
+        "B3",
+        "B4",
+        "B5",
+        "B6",
+        "B7",
+        "B8",
+        "B9",
+        "B10",
+        "B11",
+        "B12",
+        "B13",
+        "B14"
+      ]
+    },
+    "B8Host": {
+      "enum": [
+        "definition-source",
+        "node-server",
+        "http-cdn",
+        "vite-local",
+        "browser-static",
+        "browser-worker",
+        "graphql",
+        "mcp",
+        "connect",
+        "reactor-worker",
+        "registry"
+      ]
+    },
+    "emptyResults": {
+      "type": "object",
+      "additionalProperties": false,
+      "maxProperties": 0
+    },
+    "B1": {
+      "properties": {
+        "gate": { "const": "B1" },
+        "assertions": {
+          "type": "array",
+          "minItems": 8,
+          "maxItems": 8,
+          "items": {
+            "properties": {
+              "id": {
+                "enum": [
+                  "B1.schema",
+                  "B1.structured",
+                  "B1.stored-state",
+                  "B1.identity",
+                  "B1.order",
+                  "B1.field-options",
+                  "B1.state-root",
+                  "B1.repeat-import"
+                ]
+              }
+            }
+          },
+          "allOf": [
+            {
+              "contains": { "properties": { "id": { "const": "B1.schema" } } }
+            },
+            {
+              "contains": {
+                "properties": { "id": { "const": "B1.structured" } }
+              }
+            },
+            {
+              "contains": {
+                "properties": { "id": { "const": "B1.stored-state" } }
+              }
+            },
+            {
+              "contains": { "properties": { "id": { "const": "B1.identity" } } }
+            },
+            { "contains": { "properties": { "id": { "const": "B1.order" } } } },
+            {
+              "contains": {
+                "properties": { "id": { "const": "B1.field-options" } }
+              }
+            },
+            {
+              "contains": {
+                "properties": { "id": { "const": "B1.state-root" } }
+              }
+            },
+            {
+              "contains": {
+                "properties": { "id": { "const": "B1.repeat-import" } }
+              }
+            }
+          ]
+        },
+        "artifacts": {
+          "type": "array",
+          "minItems": 4,
+          "items": {},
+          "allOf": [
+            {
+              "contains": {
+                "properties": {
+                  "name": { "const": "fixture-manifest" },
+                  "retention": { "const": "committed" }
+                }
+              }
+            },
+            {
+              "contains": {
+                "properties": {
+                  "name": { "const": "definition-schemas" },
+                  "retention": { "const": "committed" }
+                }
+              }
+            },
+            {
+              "contains": {
+                "properties": {
+                  "name": { "const": "definition-goldens" },
+                  "retention": { "const": "committed" }
+                }
+              }
+            },
+            {
+              "contains": {
+                "properties": {
+                  "name": { "const": "identity-vectors" },
+                  "retention": { "const": "committed" }
+                }
+              }
+            }
+          ]
+        },
+        "results": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["cases"],
+          "properties": {
+            "cases": {
+              "type": "array",
+              "minItems": 10,
+              "maxItems": 10,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "caseId",
+                  "documentType",
+                  "version",
+                  "legacySource",
+                  "codeFirstSource",
+                  "structuredDigest",
+                  "storedStateDigest",
+                  "identityVectorDigest",
+                  "coldImportDigests",
+                  "schemaOutcome",
+                  "firstDifference"
+                ],
+                "properties": {
+                  "caseId": { "type": "string", "minLength": 1 },
+                  "documentType": { "type": "string", "minLength": 1 },
+                  "version": { "type": "integer", "minimum": 1 },
+                  "legacySource": {
+                    "type": "string",
+                    "pattern": "^(?!/)(?!.*\\\\)"
+                  },
+                  "codeFirstSource": {
+                    "type": "string",
+                    "pattern": "^(?!/)(?!.*\\\\)"
+                  },
+                  "structuredDigest": { "$ref": "#/definitions/sha256" },
+                  "storedStateDigest": { "$ref": "#/definitions/sha256" },
+                  "identityVectorDigest": { "$ref": "#/definitions/sha256" },
+                  "coldImportDigests": {
+                    "type": "array",
+                    "minItems": 2,
+                    "maxItems": 2,
+                    "items": { "$ref": "#/definitions/sha256" }
+                  },
+                  "schemaOutcome": { "enum": ["pass", "fail"] },
+                  "firstDifference": { "type": ["string", "null"] }
+                }
+              }
+            }
+          }
+        }
+      },
+      "required": ["gate", "assertions", "artifacts", "results"]
+    },
+    "B2": {
+      "properties": {
+        "gate": { "const": "B2" },
+        "assertions": {
+          "type": "array",
+          "minItems": 9,
+          "maxItems": 9,
+          "items": {
+            "properties": {
+              "id": {
+                "enum": [
+                  "B2.state",
+                  "B2.initial",
+                  "B2.scope-hash",
+                  "B2.error",
+                  "B2.denial",
+                  "B2.index",
+                  "B2.skip",
+                  "B2.revision",
+                  "B2.dispatches"
+                ]
+              }
+            }
+          },
+          "allOf": [
+            { "contains": { "properties": { "id": { "const": "B2.state" } } } },
+            { "contains": { "properties": { "id": { "const": "B2.initial" } } } },
+            { "contains": { "properties": { "id": { "const": "B2.scope-hash" } } } },
+            { "contains": { "properties": { "id": { "const": "B2.error" } } } },
+            { "contains": { "properties": { "id": { "const": "B2.denial" } } } },
+            { "contains": { "properties": { "id": { "const": "B2.index" } } } },
+            { "contains": { "properties": { "id": { "const": "B2.skip" } } } },
+            { "contains": { "properties": { "id": { "const": "B2.revision" } } } },
+            { "contains": { "properties": { "id": { "const": "B2.dispatches" } } } }
+          ]
+        },
+        "artifacts": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "allOf": [
+            {
+              "contains": {
+                "properties": {
+                  "name": { "const": "synthetic-histories" },
+                  "retention": { "const": "committed" }
+                }
+              }
+            },
+            {
+              "contains": {
+                "properties": {
+                  "name": { "const": "synthetic-prefixes" },
+                  "retention": { "const": "committed" }
+                }
+              }
+            },
+            {
+              "contains": {
+                "properties": {
+                  "name": { "const": "scope-declaration" },
+                  "retention": { "const": "committed" }
+                }
+              }
+            }
+          ]
+        },
+        "results": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "profile",
+            "corpusDigest",
+            "familyDigests",
+            "strata",
+            "operationCount",
+            "prefixCount",
+            "assertionCounts",
+            "hashAlgorithmVersion",
+            "productionCorpusStatus",
+            "divergences"
+          ],
+          "properties": {
+            "profile": { "const": "synthetic-only-v1" },
+            "corpusDigest": { "$ref": "#/definitions/sha256" },
+            "familyDigests": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["documentType", "version", "legacy", "codeFirst"],
+                "properties": {
+                  "documentType": { "const": "powerhouse/protocol-matrix" },
+                  "version": { "type": "integer", "minimum": 1, "maximum": 2 },
+                  "legacy": { "$ref": "#/definitions/sha256" },
+                  "codeFirst": { "$ref": "#/definitions/sha256" }
+                }
+              }
+            },
+            "strata": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["id", "status", "caseCount"],
+                "properties": {
+                  "id": { "enum": ["synthetic", "production"] },
+                  "status": { "enum": ["pass", "not-established"] },
+                  "caseCount": { "type": "integer", "minimum": 0 }
+                }
+              }
+            },
+            "operationCount": { "type": "integer", "minimum": 1 },
+            "prefixCount": { "type": "integer", "minimum": 1 },
+            "assertionCounts": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "B2.state",
+                "B2.initial",
+                "B2.scope-hash",
+                "B2.error",
+                "B2.denial",
+                "B2.index",
+                "B2.skip",
+                "B2.revision",
+                "B2.dispatches"
+              ],
+              "properties": {
+                "B2.state": { "type": "integer", "minimum": 1 },
+                "B2.initial": { "type": "integer", "minimum": 1 },
+                "B2.scope-hash": { "type": "integer", "minimum": 1 },
+                "B2.error": { "type": "integer", "minimum": 1 },
+                "B2.denial": { "type": "integer", "minimum": 1 },
+                "B2.index": { "type": "integer", "minimum": 1 },
+                "B2.skip": { "type": "integer", "minimum": 1 },
+                "B2.revision": { "type": "integer", "minimum": 1 },
+                "B2.dispatches": { "type": "integer", "minimum": 1 }
+              }
+            },
+            "hashAlgorithmVersion": { "const": "shared/hashDocumentStateForScope@1" },
+            "productionCorpusStatus": { "const": "not-established" },
+            "divergences": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["caseId", "prefixIndex", "scope", "coordinate"],
+                "properties": {
+                  "caseId": { "type": "string", "minLength": 1 },
+                  "prefixIndex": { "type": "integer", "minimum": 0 },
+                  "scope": { "type": "string", "minLength": 1 },
+                  "coordinate": { "type": "string", "minLength": 1 }
+                }
+              }
+            }
+          }
+        }
+      },
+      "required": ["gate", "assertions", "artifacts", "results"]
+    },
+    "B3": {
+      "properties": {
+        "gate": { "const": "B3" },
+        "assertions": {
+          "type": "array",
+          "minItems": 8,
+          "maxItems": 8,
+          "items": {
+            "properties": {
+              "id": {
+                "enum": [
+                  "B3.validation",
+                  "B3.scope",
+                  "B3.state",
+                  "B3.hash",
+                  "B3.error",
+                  "B3.dispatch",
+                  "B3.version",
+                  "B3.upgrade"
+                ]
+              }
+            }
+          },
+          "allOf": [
+            {
+              "contains": {
+                "properties": { "id": { "const": "B3.validation" } }
+              }
+            },
+            {
+              "contains": {
+                "properties": { "id": { "const": "B3.scope" } }
+              }
+            },
+            {
+              "contains": {
+                "properties": { "id": { "const": "B3.state" } }
+              }
+            },
+            {
+              "contains": {
+                "properties": { "id": { "const": "B3.hash" } }
+              }
+            },
+            {
+              "contains": {
+                "properties": { "id": { "const": "B3.error" } }
+              }
+            },
+            {
+              "contains": {
+                "properties": { "id": { "const": "B3.dispatch" } }
+              }
+            },
+            {
+              "contains": {
+                "properties": { "id": { "const": "B3.version" } }
+              }
+            },
+            {
+              "contains": {
+                "properties": { "id": { "const": "B3.upgrade" } }
+              }
+            }
+          ]
+        },
+        "artifacts": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "contains": {
+            "properties": {
+              "name": { "const": "protocol-matrix" },
+              "retention": { "const": "committed" }
+            }
+          }
+        },
+        "results": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["matrixDigest", "rows"],
+          "properties": {
+            "matrixDigest": { "$ref": "#/definitions/sha256" },
+            "rows": {
+              "type": "array",
+              "minItems": 23,
+              "maxItems": 23,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "rowId",
+                  "route",
+                  "version",
+                  "scope",
+                  "outcomeCode",
+                  "stateDigest",
+                  "hashDigest",
+                  "errorCode",
+                  "dispatchDigest",
+                  "selectedModuleVersion",
+                  "upgradePath",
+                  "firstMismatch"
+                ],
+                "properties": {
+                  "rowId": { "type": "string", "minLength": 1 },
+                  "route": {
+                    "enum": [
+                      "creator",
+                      "raw-action",
+                      "archived-replay",
+                      "base-action",
+                      "family-resolution",
+                      "upgrade",
+                      "definition",
+                      "operation-context"
+                    ]
+                  },
+                  "version": { "type": "integer", "minimum": 0 },
+                  "scope": { "type": "string", "minLength": 1 },
+                  "outcomeCode": { "type": "string", "minLength": 1 },
+                  "stateDigest": { "$ref": "#/definitions/sha256" },
+                  "hashDigest": { "$ref": "#/definitions/sha256" },
+                  "errorCode": { "type": ["string", "null"] },
+                  "dispatchDigest": { "$ref": "#/definitions/sha256" },
+                  "selectedModuleVersion": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "upgradePath": {
+                    "type": "array",
+                    "items": { "type": "integer", "minimum": 1 }
+                  },
+                  "firstMismatch": { "type": ["string", "null"] }
+                }
+              }
+            }
+          }
+        }
+      },
+      "required": ["gate", "assertions", "artifacts", "results"]
+    },
+    "empty-B4": {
+      "properties": {
+        "gate": { "const": "B4" },
+        "results": { "$ref": "#/definitions/emptyResults" }
+      }
+    },
+    "B5": {
+      "properties": {
+        "gate": { "const": "B5" },
+        "assertions": {
+          "type": "array",
+          "minItems": 6,
+          "maxItems": 6,
+          "items": {
+            "properties": {
+              "id": {
+                "enum": [
+                  "B5.pack",
+                  "B5.node-types",
+                  "B5.browser-types",
+                  "B5.node-import",
+                  "B5.worker-import",
+                  "B5.portability"
+                ]
+              }
+            }
+          },
+          "allOf": [
+            { "contains": { "properties": { "id": { "const": "B5.pack" } } } },
+            { "contains": { "properties": { "id": { "const": "B5.node-types" } } } },
+            { "contains": { "properties": { "id": { "const": "B5.browser-types" } } } },
+            { "contains": { "properties": { "id": { "const": "B5.node-import" } } } },
+            { "contains": { "properties": { "id": { "const": "B5.worker-import" } } } },
+            { "contains": { "properties": { "id": { "const": "B5.portability" } } } }
+          ]
+        },
+        "artifacts": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "allOf": [
+            {
+              "contains": {
+                "properties": {
+                  "name": { "const": "packed-tarball" },
+                  "retention": { "const": "committed" }
+                }
+              }
+            },
+            {
+              "contains": {
+                "properties": {
+                  "name": { "const": "packed-file-manifest" },
+                  "retention": { "const": "committed" }
+                }
+              }
+            },
+            {
+              "contains": {
+                "properties": {
+                  "name": { "const": "dependency-tree" },
+                  "retention": { "const": "committed" }
+                }
+              }
+            },
+            {
+              "contains": {
+                "properties": {
+                  "name": { "const": "resolver-trace" },
+                  "retention": { "const": "committed" }
+                }
+              }
+            }
+          ]
+        },
+        "results": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["consumers"],
+          "properties": {
+            "consumers": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": { "$ref": "#/definitions/B5ConsumerResult" }
+            }
+          }
+        }
+      },
+      "required": ["gate", "assertions", "artifacts", "results"]
+    },
+    "B5ConsumerResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "caseId",
+        "tarballDigest",
+        "lockfileDigest",
+        "packedFileManifestDigest",
+        "dependencyTreeDigest",
+        "resolverTraceDigest",
+        "declarationEntry",
+        "declarationBytes",
+        "checkMetrics",
+        "importedLogicalKeys",
+        "workerHandshake",
+        "escapedPaths"
+      ],
+      "properties": {
+        "caseId": { "enum": ["node", "browser-worker"] },
+        "tarballDigest": { "$ref": "#/definitions/sha256" },
+        "lockfileDigest": { "$ref": "#/definitions/sha256" },
+        "packedFileManifestDigest": { "$ref": "#/definitions/sha256" },
+        "dependencyTreeDigest": { "$ref": "#/definitions/sha256" },
+        "resolverTraceDigest": { "$ref": "#/definitions/sha256" },
+        "declarationEntry": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^(?!/)(?!.*\\\\)"
+        },
+        "declarationBytes": { "type": "integer", "minimum": 1 },
+        "checkMetrics": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "files",
+            "libraryLines",
+            "definitionLines",
+            "typescriptLines",
+            "identifiers",
+            "symbols",
+            "types",
+            "instantiations"
+          ],
+          "properties": {
+            "files": { "type": "integer", "minimum": 1 },
+            "libraryLines": { "type": "integer", "minimum": 1 },
+            "definitionLines": { "type": "integer", "minimum": 1 },
+            "typescriptLines": { "type": "integer", "minimum": 1 },
+            "identifiers": { "type": "integer", "minimum": 1 },
+            "symbols": { "type": "integer", "minimum": 1 },
+            "types": { "type": "integer", "minimum": 1 },
+            "instantiations": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "importedLogicalKeys": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "workerHandshake": {
+          "anyOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "status",
+                "actionType",
+                "splitEntryMatches",
+                "resolvedEntries"
+              ],
+              "properties": {
+                "status": { "const": "ok" },
+                "actionType": { "type": "string", "minLength": 1 },
+                "splitEntryMatches": { "type": "boolean" },
+                "resolvedEntries": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["root", "documentModels"],
+                  "properties": {
+                    "root": { "type": "string", "minLength": 1 },
+                    "documentModels": { "type": "string", "minLength": 1 }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "escapedPaths": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "B6": {
+      "properties": {
+        "gate": { "const": "B6" },
+        "assertions": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "items": {
+            "properties": {
+              "id": {
+                "enum": [
+                  "B6.parse",
+                  "B6.ast",
+                  "B6.print",
+                  "B6.scalar",
+                  "B6.no-regex"
+                ]
+              }
+            }
+          },
+          "allOf": [
+            { "contains": { "properties": { "id": { "const": "B6.parse" } } } },
+            { "contains": { "properties": { "id": { "const": "B6.ast" } } } },
+            { "contains": { "properties": { "id": { "const": "B6.print" } } } },
+            {
+              "contains": { "properties": { "id": { "const": "B6.scalar" } } }
+            },
+            {
+              "contains": { "properties": { "id": { "const": "B6.no-regex" } } }
+            }
+          ]
+        },
+        "artifacts": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "allOf": [
+            {
+              "contains": {
+                "properties": {
+                  "name": { "const": "model-sdl-manifest" },
+                  "retention": { "const": "committed" }
+                }
+              }
+            },
+            {
+              "contains": {
+                "properties": {
+                  "name": { "const": "sdl-goldens" },
+                  "retention": { "const": "committed" }
+                }
+              }
+            },
+            {
+              "contains": {
+                "properties": {
+                  "name": { "const": "ast-goldens" },
+                  "retention": { "const": "committed" }
+                }
+              }
+            },
+            {
+              "contains": {
+                "properties": {
+                  "name": { "const": "scalar-inventory-digest" },
+                  "retention": { "const": "committed" }
+                }
+              }
+            }
+          ]
+        },
+        "results": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["cases"],
+          "properties": {
+            "cases": {
+              "type": "array",
+              "minItems": 4,
+              "maxItems": 4,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "caseId",
+                  "definitionDigest",
+                  "sdlDigest",
+                  "astDigest",
+                  "scalarCatalogDigest",
+                  "parserVersionDigest",
+                  "parseMs",
+                  "printMs",
+                  "regexAdapterCallCount",
+                  "regexAdapterCallSites",
+                  "coveredVariants",
+                  "firstDifference"
+                ],
+                "properties": {
+                  "caseId": { "type": "string", "minLength": 1 },
+                  "definitionDigest": { "$ref": "#/definitions/sha256" },
+                  "sdlDigest": { "$ref": "#/definitions/sha256" },
+                  "astDigest": { "$ref": "#/definitions/sha256" },
+                  "scalarCatalogDigest": { "$ref": "#/definitions/sha256" },
+                  "parserVersionDigest": { "$ref": "#/definitions/sha256" },
+                  "parseMs": { "type": "number", "minimum": 0 },
+                  "printMs": { "type": "number", "minimum": 0 },
+                  "regexAdapterCallCount": { "const": 0 },
+                  "regexAdapterCallSites": { "type": "array", "maxItems": 0 },
+                  "coveredVariants": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": { "type": "string", "minLength": 1 }
+                  },
+                  "firstDifference": { "type": ["string", "null"] }
+                }
+              }
+            }
+          }
+        }
+      },
+      "required": ["gate", "assertions", "artifacts", "results"]
+    },
+    "B7": {
+      "properties": {
+        "gate": { "const": "B7" },
+        "assertions": {
+          "type": "array",
+          "minItems": 8,
+          "maxItems": 8,
+          "items": {
+            "properties": {
+              "id": {
+                "enum": [
+                  "B7.definition-schema",
+                  "B7.author-ast",
+                  "B7.augmented-schema",
+                  "B7.resolver-call",
+                  "B7.composition",
+                  "B7.route",
+                  "B7.transport",
+                  "B7.hot-reload"
+                ]
+              }
+            }
+          },
+          "allOf": [
+            { "contains": { "properties": { "id": { "const": "B7.definition-schema" } } } },
+            { "contains": { "properties": { "id": { "const": "B7.author-ast" } } } },
+            { "contains": { "properties": { "id": { "const": "B7.augmented-schema" } } } },
+            { "contains": { "properties": { "id": { "const": "B7.resolver-call" } } } },
+            { "contains": { "properties": { "id": { "const": "B7.composition" } } } },
+            { "contains": { "properties": { "id": { "const": "B7.route" } } } },
+            { "contains": { "properties": { "id": { "const": "B7.transport" } } } },
+            { "contains": { "properties": { "id": { "const": "B7.hot-reload" } } } }
+          ]
+        },
+        "artifacts": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "allOf": [
+            {
+              "contains": {
+                "properties": {
+                  "name": { "const": "subgraph-manifest" },
+                  "retention": { "const": "committed" }
+                }
+              }
+            },
+            {
+              "contains": {
+                "properties": {
+                  "name": { "const": "subscription-manifest" },
+                  "retention": { "const": "committed" }
+                }
+              }
+            },
+            {
+              "contains": {
+                "properties": {
+                  "name": { "const": "composition-goldens" },
+                  "retention": { "const": "committed" }
+                }
+              }
+            },
+            {
+              "contains": {
+                "properties": {
+                  "name": { "const": "event-goldens" },
+                  "retention": { "const": "committed" }
+                }
+              }
+            }
+          ]
+        },
+        "results": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["cases"],
+          "properties": {
+            "cases": {
+              "type": "array",
+              "minItems": 7,
+              "maxItems": 7,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "caseId",
+                  "authorAstDigest",
+                  "augmentedAstDigest",
+                  "resolverCallDigest",
+                  "supergraphDigest",
+                  "apolloDiagnostics",
+                  "route",
+                  "compositionName",
+                  "transportFlags",
+                  "allocationCount",
+                  "cleanupObservations",
+                  "deliveryDigest",
+                  "replacementOutcome",
+                  "firstMismatch"
+                ],
+                "properties": {
+                  "caseId": {
+                    "enum": [
+                      "typed-query-field",
+                      "compat-manual-query",
+                      "typed-subscription-true",
+                      "compat-subscription-undefined",
+                      "compat-subscription-false",
+                      "duplicate-first-wins",
+                      "composition-conflict-routes-kept"
+                    ]
+                  },
+                  "authorAstDigest": { "$ref": "#/definitions/sha256" },
+                  "augmentedAstDigest": { "$ref": "#/definitions/sha256" },
+                  "resolverCallDigest": { "$ref": "#/definitions/sha256" },
+                  "supergraphDigest": { "$ref": "#/definitions/sha256" },
+                  "apolloDiagnostics": {
+                    "type": "array",
+                    "items": { "type": "string" }
+                  },
+                  "route": { "type": "string", "minLength": 1 },
+                  "compositionName": { "type": "string", "minLength": 1 },
+                  "transportFlags": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "hasSubscriptions",
+                      "webSocketAllocations",
+                      "sseRoutes"
+                    ],
+                    "properties": {
+                      "hasSubscriptions": {
+                        "type": "array",
+                        "minItems": 1,
+                        "items": {
+                          "anyOf": [
+                            { "type": "boolean" },
+                            { "const": "undefined" }
+                          ]
+                        }
+                      },
+                      "webSocketAllocations": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "sseRoutes": {
+                        "type": "array",
+                        "items": { "type": "string" }
+                      }
+                    }
+                  },
+                  "allocationCount": { "type": "integer", "minimum": 0 },
+                  "cleanupObservations": {
+                    "type": "array",
+                    "items": { "type": "string" }
+                  },
+                  "deliveryDigest": { "$ref": "#/definitions/sha256" },
+                  "replacementOutcome": {
+                    "enum": [
+                      "not-applicable",
+                      "kept-first",
+                      "composition-failed-routes-kept"
+                    ]
+                  },
+                  "firstMismatch": { "type": ["string", "null"] }
+                }
+              }
+            }
+          }
+        }
+      },
+      "required": ["gate", "assertions", "artifacts", "results"]
+    },
+    "B8": {
+      "properties": {
+        "gate": { "const": "B8" },
+        "assertions": {
+          "type": "array",
+          "minItems": 11,
+          "maxItems": 11,
+          "items": {
+            "properties": {
+              "id": {
+                "enum": [
+                  "B8.definition-source",
+                  "B8.node-server",
+                  "B8.http-cdn",
+                  "B8.vite-local",
+                  "B8.browser-static",
+                  "B8.browser-worker",
+                  "B8.graphql",
+                  "B8.mcp",
+                  "B8.connect",
+                  "B8.reactor-worker",
+                  "B8.registry"
+                ]
+              }
+            }
+          },
+          "allOf": [
+            { "contains": { "properties": { "id": { "const": "B8.definition-source" } } } },
+            { "contains": { "properties": { "id": { "const": "B8.node-server" } } } },
+            { "contains": { "properties": { "id": { "const": "B8.http-cdn" } } } },
+            { "contains": { "properties": { "id": { "const": "B8.vite-local" } } } },
+            { "contains": { "properties": { "id": { "const": "B8.browser-static" } } } },
+            { "contains": { "properties": { "id": { "const": "B8.browser-worker" } } } },
+            { "contains": { "properties": { "id": { "const": "B8.graphql" } } } },
+            { "contains": { "properties": { "id": { "const": "B8.mcp" } } } },
+            { "contains": { "properties": { "id": { "const": "B8.connect" } } } },
+            { "contains": { "properties": { "id": { "const": "B8.reactor-worker" } } } },
+            { "contains": { "properties": { "id": { "const": "B8.registry" } } } }
+          ]
+        },
+        "artifacts": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "allOf": [
+            {
+              "contains": {
+                "properties": {
+                  "name": { "const": "package-manifest" },
+                  "retention": { "const": "committed" }
+                }
+              }
+            },
+            {
+              "contains": {
+                "properties": {
+                  "name": { "const": "definition-source-results" },
+                  "retention": { "const": "committed" }
+                }
+              }
+            },
+            {
+              "contains": {
+                "properties": {
+                  "name": { "const": "host-namespaces" },
+                  "retention": { "const": "committed" }
+                }
+              }
+            }
+          ]
+        },
+        "results": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["hosts"],
+          "properties": {
+            "hosts": {
+              "type": "array",
+              "minItems": 11,
+              "maxItems": 11,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "hostId",
+                  "importedNamespace",
+                  "acceptedExports",
+                  "selectedNamedWorkerReference",
+                  "diagnostics",
+                  "registrationOutcome",
+                  "firstMismatch"
+                ],
+                "properties": {
+                  "hostId": { "$ref": "#/definitions/B8Host" },
+                  "importedNamespace": {
+                    "type": "array",
+                    "items": { "type": "string" }
+                  },
+                  "acceptedExports": {
+                    "type": "array",
+                    "items": { "type": "string" }
+                  },
+                  "selectedNamedWorkerReference": {
+                    "anyOf": [
+                      { "type": "null" },
+                      {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": ["specifier", "exportName"],
+                        "properties": {
+                          "specifier": { "type": "string", "minLength": 1 },
+                          "exportName": { "type": "string", "minLength": 1 }
+                        }
+                      }
+                    ]
+                  },
+                  "diagnostics": {
+                    "type": "array",
+                    "items": { "type": "string" }
+                  },
+                  "registrationOutcome": { "type": "string", "minLength": 1 },
+                  "firstMismatch": { "type": ["string", "null"] }
+                }
+              }
+            }
+          }
+        }
+      },
+      "required": ["gate", "assertions", "artifacts", "results"]
+    },
+    "B9": {
+      "properties": {
+        "gate": { "const": "B9" },
+        "assertions": {
+          "type": "array",
+          "minItems": 9,
+          "maxItems": 9,
+          "items": {
+            "properties": {
+              "id": {
+                "enum": [
+                  "B9.exit",
+                  "B9.report",
+                  "B9.warning-policy",
+                  "B9.build-order",
+                  "B9.prepack",
+                  "B9.publish",
+                  "B9.registry-zero",
+                  "B9.output-unchanged",
+                  "B9.source-selection"
+                ]
+              }
+            }
+          },
+          "allOf": [
+            { "contains": { "properties": { "id": { "const": "B9.exit" } } } },
+            {
+              "contains": { "properties": { "id": { "const": "B9.report" } } }
+            },
+            {
+              "contains": {
+                "properties": { "id": { "const": "B9.warning-policy" } }
+              }
+            },
+            {
+              "contains": {
+                "properties": { "id": { "const": "B9.build-order" } }
+              }
+            },
+            {
+              "contains": { "properties": { "id": { "const": "B9.prepack" } } }
+            },
+            {
+              "contains": { "properties": { "id": { "const": "B9.publish" } } }
+            },
+            {
+              "contains": {
+                "properties": { "id": { "const": "B9.registry-zero" } }
+              }
+            },
+            {
+              "contains": {
+                "properties": { "id": { "const": "B9.output-unchanged" } }
+              }
+            },
+            {
+              "contains": {
+                "properties": { "id": { "const": "B9.source-selection" } }
+              }
+            }
+          ]
+        },
+        "artifacts": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "allOf": [
+            {
+              "contains": {
+                "properties": {
+                  "name": { "const": "failure-manifest" },
+                  "retention": { "const": "committed" }
+                }
+              }
+            },
+            {
+              "contains": {
+                "properties": {
+                  "name": { "const": "recording-registry-journal" },
+                  "retention": { "const": "committed" }
+                }
+              }
+            },
+            {
+              "contains": {
+                "properties": {
+                  "name": { "const": "output-tree-manifests" },
+                  "retention": { "const": "committed" }
+                }
+              }
+            }
+          ]
+        },
+        "results": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["injections"],
+          "properties": {
+            "injections": {
+              "type": "array",
+              "minItems": 29,
+              "maxItems": 29,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "injectionId",
+                  "command",
+                  "warningsAsErrors",
+                  "exitCode",
+                  "reportStatus",
+                  "diagnosticCodes",
+                  "hookOrder",
+                  "typecheckCompleted",
+                  "definitionCheckCompleted",
+                  "bundleWriteCount",
+                  "tarballWriteCount",
+                  "registryRequestCount",
+                  "sourceOrigin",
+                  "normalizedSourceKeys",
+                  "sourceSetDigest",
+                  "duplicateSourcePositions",
+                  "skipReason",
+                  "contributesReleaseEvidence",
+                  "decoyImportCount",
+                  "beforeTreeDigest",
+                  "afterTreeDigest"
+                ],
+                "properties": {
+                  "injectionId": { "type": "string" },
+                  "command": { "type": "string" },
+                  "warningsAsErrors": { "type": "boolean" },
+                  "exitCode": { "type": "integer" },
+                  "reportStatus": { "type": ["string", "null"] },
+                  "diagnosticCodes": {
+                    "type": "array",
+                    "items": { "type": "string" }
+                  },
+                  "hookOrder": {
+                    "type": "array",
+                    "items": { "type": "string" }
+                  },
+                  "typecheckCompleted": { "type": "boolean" },
+                  "definitionCheckCompleted": { "type": "boolean" },
+                  "bundleWriteCount": { "type": "integer", "minimum": 0 },
+                  "tarballWriteCount": { "type": "integer", "minimum": 0 },
+                  "registryRequestCount": { "type": "integer", "minimum": 0 },
+                  "sourceOrigin": { "type": ["string", "null"] },
+                  "normalizedSourceKeys": {
+                    "type": "array",
+                    "items": { "type": "string" }
+                  },
+                  "sourceSetDigest": {
+                    "anyOf": [
+                      { "$ref": "#/definitions/sha256" },
+                      { "type": "null" }
+                    ]
+                  },
+                  "duplicateSourcePositions": {
+                    "type": "array",
+                    "items": {
+                      "type": "array",
+                      "items": { "type": ["string", "integer"] }
+                    }
+                  },
+                  "skipReason": { "type": ["string", "null"] },
+                  "contributesReleaseEvidence": { "type": "boolean" },
+                  "decoyImportCount": { "type": "integer", "minimum": 0 },
+                  "beforeTreeDigest": { "$ref": "#/definitions/sha256" },
+                  "afterTreeDigest": { "$ref": "#/definitions/sha256" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "required": ["gate", "assertions", "artifacts", "results"]
+    },
+    "B10": {
+      "properties": {
+        "gate": { "const": "B10" },
+        "assertions": {
+          "type": "array",
+          "minItems": 9,
+          "maxItems": 9,
+          "items": {
+            "properties": {
+              "id": {
+                "enum": [
+                  "B10.report",
+                  "B10.beside-write",
+                  "B10.verify",
+                  "B10.artifact",
+                  "B10.canary",
+                  "B10.deploy",
+                  "B10.rollback",
+                  "B10.retire",
+                  "B10.negative"
+                ]
+              }
+            }
+          },
+          "allOf": [
+            { "contains": { "properties": { "id": { "const": "B10.report" } } } },
+            { "contains": { "properties": { "id": { "const": "B10.beside-write" } } } },
+            { "contains": { "properties": { "id": { "const": "B10.verify" } } } },
+            { "contains": { "properties": { "id": { "const": "B10.artifact" } } } },
+            { "contains": { "properties": { "id": { "const": "B10.canary" } } } },
+            { "contains": { "properties": { "id": { "const": "B10.deploy" } } } },
+            { "contains": { "properties": { "id": { "const": "B10.rollback" } } } },
+            { "contains": { "properties": { "id": { "const": "B10.retire" } } } },
+            { "contains": { "properties": { "id": { "const": "B10.negative" } } } }
+          ]
+        },
+        "artifacts": {
+          "type": "array",
+          "minItems": 6,
+          "maxItems": 6,
+          "allOf": [
+            {
+              "contains": {
+                "properties": {
+                  "name": { "const": "migration-report" },
+                  "retention": { "const": "committed" }
+                }
+              }
+            },
+            {
+              "contains": {
+                "properties": {
+                  "name": { "const": "phase-journal" },
+                  "retention": { "const": "committed" }
+                }
+              }
+            },
+            {
+              "contains": {
+                "properties": {
+                  "name": { "const": "canary-summary" },
+                  "retention": { "const": "committed" }
+                }
+              }
+            },
+            {
+              "contains": {
+                "properties": {
+                  "name": { "const": "source-tree-manifest" },
+                  "retention": { "const": "committed" }
+                }
+              }
+            },
+            {
+              "contains": {
+                "properties": {
+                  "name": { "const": "output-tree-manifest" },
+                  "retention": { "const": "committed" }
+                }
+              }
+            },
+            {
+              "contains": {
+                "properties": {
+                  "name": { "const": "retirement-report" },
+                  "retention": { "const": "committed" }
+                }
+              }
+            }
+          ]
+        },
+        "results": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "profile",
+            "phaseJournal",
+            "artifactDigest",
+            "familyDigest",
+            "sourceTreeDigest",
+            "outputTreeDigest",
+            "sourceTreeManifestDigest",
+            "outputTreeManifestDigest",
+            "verificationReports",
+            "canaryCounts",
+            "mixedRevisionOutcomes",
+            "deploymentOutcomes",
+            "rollbackResult",
+            "retirementDecision",
+            "recoverableLegacyRoot",
+            "negativeOutcomes",
+            "reportOnly"
+          ],
+          "properties": {
+            "profile": { "const": "fixture-family-only-v1" },
+            "phaseJournal": {
+              "type": "array",
+              "minItems": 9,
+              "maxItems": 9,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["sequence", "phase", "status", "detail"],
+                "properties": {
+                  "sequence": { "type": "integer", "minimum": 1, "maximum": 9 },
+                  "phase": {
+                    "enum": [
+                      "report",
+                      "beside-write",
+                      "verify",
+                      "artifact",
+                      "canary",
+                      "deploy",
+                      "rollback",
+                      "retire",
+                      "negative"
+                    ]
+                  },
+                  "status": { "const": "pass" },
+                  "detail": { "type": "string", "minLength": 1 }
+                }
+              }
+            },
+            "artifactDigest": { "$ref": "#/definitions/sha256" },
+            "familyDigest": { "$ref": "#/definitions/sha256" },
+            "sourceTreeDigest": { "$ref": "#/definitions/sha256" },
+            "outputTreeDigest": { "$ref": "#/definitions/sha256" },
+            "sourceTreeManifestDigest": { "$ref": "#/definitions/sha256" },
+            "outputTreeManifestDigest": { "$ref": "#/definitions/sha256" },
+            "verificationReports": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["kind", "status", "reportDigest", "prefixCount", "checkCount"],
+                "properties": {
+                  "kind": { "const": "powerhouse.migration-equivalence" },
+                  "status": { "const": "equivalent" },
+                  "reportDigest": { "$ref": "#/definitions/sha256" },
+                  "prefixCount": { "type": "integer", "minimum": 1 },
+                  "checkCount": { "const": 5 }
+                }
+              }
+            },
+            "canaryCounts": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["histories", "prefixes", "checks", "mutations"],
+              "properties": {
+                "histories": { "type": "integer", "minimum": 1 },
+                "prefixes": { "type": "integer", "minimum": 1 },
+                "checks": { "const": 5 },
+                "mutations": { "const": 0 }
+              }
+            },
+            "mixedRevisionOutcomes": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "policy",
+                "overlapAllowed",
+                "oldRevisionDrained",
+                "crossRevisionTraffic",
+                "newRevisionActivated"
+              ],
+              "properties": {
+                "policy": { "const": "drained" },
+                "overlapAllowed": { "const": false },
+                "oldRevisionDrained": { "const": true },
+                "crossRevisionTraffic": { "const": 0 },
+                "newRevisionActivated": { "const": true }
+              }
+            },
+            "deploymentOutcomes": {
+              "type": "array",
+              "minItems": 11,
+              "maxItems": 11,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["hostId", "status", "artifactDigest", "registrationOutcome"],
+                "properties": {
+                  "hostId": { "$ref": "#/definitions/B8Host" },
+                  "status": { "const": "pass" },
+                  "artifactDigest": { "$ref": "#/definitions/sha256" },
+                  "registrationOutcome": { "type": "string", "minLength": 1 }
+                }
+              }
+            },
+            "rollbackResult": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "baselineDigest",
+                "candidateDigest",
+                "rollbackDigest",
+                "behaviorEquivalent",
+                "restored",
+                "freshProcessCount"
+              ],
+              "properties": {
+                "baselineDigest": { "$ref": "#/definitions/sha256" },
+                "candidateDigest": { "$ref": "#/definitions/sha256" },
+                "rollbackDigest": { "$ref": "#/definitions/sha256" },
+                "behaviorEquivalent": { "const": true },
+                "restored": { "const": true },
+                "freshProcessCount": { "const": 3 }
+              }
+            },
+            "retirementDecision": { "const": "retired" },
+            "recoverableLegacyRoot": { "type": "string", "pattern": "^git:" },
+            "negativeOutcomes": {
+              "type": "array",
+              "minItems": 9,
+              "maxItems": 9,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["caseId", "expectedCode", "receivedCode", "treeRestored"],
+                "properties": {
+                  "caseId": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+                  "expectedCode": { "type": "string", "pattern": "^PH-MIGRATE-" },
+                  "receivedCode": { "type": "string", "pattern": "^PH-MIGRATE-" },
+                  "treeRestored": { "const": true }
+                }
+              }
+            },
+            "reportOnly": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["status", "writeCount", "beforeTreeDigest", "afterTreeDigest"],
+              "properties": {
+                "status": { "const": "ready" },
+                "writeCount": { "const": 0 },
+                "beforeTreeDigest": { "$ref": "#/definitions/sha256" },
+                "afterTreeDigest": { "$ref": "#/definitions/sha256" }
+              }
+            }
+          }
+        }
+      },
+      "required": ["gate", "assertions", "artifacts", "results"]
+    },
+    "empty-B11": {
+      "properties": {
+        "gate": { "const": "B11" },
+        "results": { "$ref": "#/definitions/emptyResults" }
+      }
+    },
+    "empty-B12": {
+      "properties": {
+        "gate": { "const": "B12" },
+        "results": { "$ref": "#/definitions/emptyResults" }
+      }
+    },
+    "empty-B13": {
+      "properties": {
+        "gate": { "const": "B13" },
+        "results": { "$ref": "#/definitions/emptyResults" }
+      }
+    },
+    "B14": {
+      "properties": {
+        "gate": { "const": "B14" },
+        "assertions": {
+          "type": "array",
+          "minItems": 7,
+          "maxItems": 7,
+          "items": {
+            "properties": {
+              "id": {
+                "enum": [
+                  "B14.schema",
+                  "B14.inventory",
+                  "B14.validation",
+                  "B14.coercion",
+                  "B14.exemptions",
+                  "B14.graphql-profile",
+                  "B14.fresh-process"
+                ]
+              }
+            }
+          },
+          "allOf": [
+            {
+              "contains": { "properties": { "id": { "const": "B14.schema" } } }
+            },
+            {
+              "contains": {
+                "properties": { "id": { "const": "B14.inventory" } }
+              }
+            },
+            {
+              "contains": {
+                "properties": { "id": { "const": "B14.validation" } }
+              }
+            },
+            {
+              "contains": {
+                "properties": { "id": { "const": "B14.coercion" } }
+              }
+            },
+            {
+              "contains": {
+                "properties": { "id": { "const": "B14.exemptions" } }
+              }
+            },
+            {
+              "contains": {
+                "properties": { "id": { "const": "B14.graphql-profile" } }
+              }
+            },
+            {
+              "contains": {
+                "properties": { "id": { "const": "B14.fresh-process" } }
+              }
+            }
+          ]
+        },
+        "artifacts": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "allOf": [
+            {
+              "contains": {
+                "properties": {
+                  "name": { "const": "scalar-manifest" },
+                  "retention": { "const": "committed" }
+                }
+              }
+            },
+            {
+              "contains": {
+                "properties": {
+                  "name": { "const": "scalar-definitions" },
+                  "retention": { "const": "committed" }
+                }
+              }
+            },
+            {
+              "contains": {
+                "properties": {
+                  "name": { "const": "current-coercion-goldens" },
+                  "retention": { "const": "committed" }
+                }
+              }
+            },
+            {
+              "contains": {
+                "properties": {
+                  "name": { "const": "difference-list" },
+                  "retention": { "const": "committed" }
+                }
+              }
+            }
+          ]
+        },
+        "results": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["cases"],
+          "properties": {
+            "cases": {
+              "type": "array",
+              "minItems": 42,
+              "maxItems": 42,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "caseId",
+                  "scalarName",
+                  "profile",
+                  "validationOutcomeDigest",
+                  "graphQLOutcomeDigest",
+                  "catalogDigest",
+                  "knownDifferences",
+                  "constructionMs",
+                  "firstMismatch"
+                ],
+                "properties": {
+                  "caseId": { "type": "string", "minLength": 1 },
+                  "scalarName": { "type": "string", "minLength": 1 },
+                  "profile": {
+                    "enum": [
+                      "document-engineering-1.40",
+                      "legacy-graphql-default-v1"
+                    ]
+                  },
+                  "validationOutcomeDigest": { "$ref": "#/definitions/sha256" },
+                  "graphQLOutcomeDigest": { "$ref": "#/definitions/sha256" },
+                  "catalogDigest": { "$ref": "#/definitions/sha256" },
+                  "knownDifferences": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": ["scalarName", "path", "caseId"],
+                      "properties": {
+                        "scalarName": { "type": "string" },
+                        "path": { "type": "string" },
+                        "caseId": { "type": "string" }
+                      }
+                    }
+                  },
+                  "constructionMs": { "type": "number", "minimum": 0 },
+                  "firstMismatch": { "type": ["string", "null"] }
+                }
+              }
+            }
+          }
+        }
+      },
+      "required": ["gate", "assertions", "artifacts", "results"]
+    }
+  }
+}

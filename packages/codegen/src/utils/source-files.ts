@@ -1,6 +1,24 @@
 import path from "path";
 import type { Project, SourceFile } from "ts-morph";
 import { FileSystemRefreshResult } from "ts-morph";
+import { formatSourceFileWithPrettier } from "./format-with-prettier.js";
+
+/** Creates and formats a scaffold file once, preserving any existing source. */
+export async function writeScaffoldFile(
+  project: Project,
+  filePath: string,
+  text: string,
+): Promise<SourceFile> {
+  const { alreadyExists, sourceFile } = getOrCreateSourceFile(
+    project,
+    filePath,
+  );
+  if (!alreadyExists) {
+    sourceFile.replaceWithText(text);
+    await formatSourceFileWithPrettier(sourceFile);
+  }
+  return sourceFile;
+}
 
 /** Gets a SourceFile by name in a ts-morph Project, or creates a new one
  * if none with that path exists.

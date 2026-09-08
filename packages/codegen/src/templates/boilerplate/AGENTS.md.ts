@@ -21,9 +21,30 @@ This project creates document models, editors, processors and subgraphs for the 
 - **Switchboard**: The Powerhouse API service. It exposes GraphQL and MCP endpoints so external tools can read/write documents programmatically.
 - **Vetra**: The local development environment for building Reactor Packages. It includes Vetra Studio (a local Connect instance) and Vetra Switchboard (a local Switchboard with reactor-mcp). Start it with \`ph vetra\`.
 
+## Code-first source scaffolding
+
+When the user explicitly chooses code-first authoring, initialize the source
+tree with the CLI after the planning phase:
+
+- \`ph generate document-model --code-first --name "Invoice" --id acme/invoice --extension invoice\`
+- Add a version with the same command plus \`--version 2\`.
+- \`ph generate subgraph --code-first --name invoice-status\`
+
+A code-first model keeps \`model.ts\`, \`reducers.ts\`, and \`tests/\` under
+\`document-models/<name>/v<n>/\`. The model root \`index.ts\` assembles the
+family and exports its versions and upgrade manifest. Upgrade transitions and
+their tests live under \`upgrades/\`. A code-first subgraph keeps its runtime
+definition and resolvers together in \`subgraphs/<name>/index.ts\`, with
+\`index.test.ts\` beside it. The generators register definition sources
+and aggregate exports without overwriting authored files.
+
+The MCP workflow below applies to live documents and schema-first document
+model documents. Code-first definitions are authored directly in this
+scaffolded TypeScript tree.
+
 ## CRITICAL: MCP Tool Usage Rules
 
-**MANDATORY**: The \`reactor-mcp\` MUST BE USED when handling documents or document-models for the Powerhouse/Vetra ecosystem.
+**MANDATORY**: The \`reactor-mcp\` MUST BE USED when handling live documents or schema-first document-model documents for the Powerhouse/Vetra ecosystem.
 If the \`reactor-mcp\` server is unavailable, ask the user to run \`ph vetra\` on a separate terminal to start the server and try to reconnect to the MCP server, DO NOT run it yourself.
 
 ### Key Requirements:
@@ -67,8 +88,8 @@ If the \`reactor-mcp\` server is unavailable, ask the user to run \`ph vetra\` o
 - Values like dates/IDs must come from operation input, not generated in reducer
 - Reducer code goes into SET_OPERATION_REDUCER action (no function header needed)
 - Reducers are wrapped with Mutative - you can mutate the state object directly
-- External imports go at the beginning of the actual reducer file in \`src/\`
-- Ensure that the reducer code of each operation in the document model schema is applied in \`document-models/<document-model-name>/src/reducers/<module-name>.ts\`
+- External imports go at the beginning of the reducer file.
+- Schema-first reducers live in \`document-models/<name>/v<n>/src/reducers/<module-name>.ts\`. Code-first reducers live in \`document-models/<name>/v<n>/reducers.ts\`.
 
 ### 4. Quality assurance
 

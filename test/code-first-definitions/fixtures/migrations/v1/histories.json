@@ -1,0 +1,229 @@
+{
+  "kind": "powerhouse.migration-histories",
+  "formatVersion": 1,
+  "histories": [
+    {
+      "historyId": "todo-v1-synthetic",
+      "version": 1,
+      "initialDocument": {
+        "header": {
+          "id": "migration-todo-v1",
+          "sig": {
+            "publicKey": {},
+            "nonce": ""
+          },
+          "documentType": "test/todo",
+          "createdAtUtcIso": "2025-02-01T00:00:00.000Z",
+          "slug": "migration-todo-v1",
+          "name": "migration-todo-v1",
+          "branch": "main",
+          "revision": {
+            "global": 0,
+            "local": 0,
+            "document": 0
+          },
+          "lastModifiedAtUtcIso": "2025-02-01T00:00:00.000Z",
+          "meta": {},
+          "protocolVersions": {
+            "base-reducer": 1
+          }
+        },
+        "state": {
+          "auth": {
+            "version": 0,
+            "grants": []
+          },
+          "document": {
+            "version": 1,
+            "hash": {
+              "algorithm": "sha1",
+              "encoding": "base64"
+            }
+          },
+          "global": {
+            "todos": []
+          },
+          "local": {}
+        },
+        "initialState": {
+          "auth": {
+            "version": 0,
+            "grants": []
+          },
+          "document": {
+            "version": 1,
+            "hash": {
+              "algorithm": "sha1",
+              "encoding": "base64"
+            }
+          },
+          "global": {
+            "todos": []
+          },
+          "local": {}
+        },
+        "operations": {
+          "global": [],
+          "local": [],
+          "document": []
+        },
+        "clipboard": []
+      },
+      "actions": [
+        {
+          "id": "migration-action-1",
+          "type": "ADD_TODO",
+          "scope": "global",
+          "input": {
+            "id": "todo-1",
+            "title": "First",
+            "completed": false
+          },
+          "timestampUtcMs": "2025-02-01T00:00:01.000Z"
+        },
+        {
+          "id": "migration-action-2",
+          "type": "UPDATE_TODO",
+          "scope": "global",
+          "input": {
+            "id": "todo-1",
+            "title": "First updated",
+            "completed": true
+          },
+          "timestampUtcMs": "2025-02-01T00:00:02.000Z"
+        },
+        {
+          "id": "migration-action-3",
+          "type": "ADD_TODO",
+          "scope": "global",
+          "input": {
+            "id": "todo-2",
+            "title": "Second",
+            "completed": false
+          },
+          "timestampUtcMs": "2025-02-01T00:00:03.000Z"
+        },
+        {
+          "id": "migration-action-4",
+          "type": "REMOVE_TODO",
+          "scope": "global",
+          "input": {
+            "id": "todo-2"
+          },
+          "timestampUtcMs": "2025-02-01T00:00:04.000Z"
+        }
+      ]
+    },
+    {
+      "historyId": "todo-v2-synthetic",
+      "version": 2,
+      "initialDocument": {
+        "header": {
+          "id": "migration-todo-v2",
+          "sig": {
+            "publicKey": {},
+            "nonce": ""
+          },
+          "documentType": "test/todo",
+          "createdAtUtcIso": "2025-02-01T00:00:00.000Z",
+          "slug": "migration-todo-v2",
+          "name": "migration-todo-v2",
+          "branch": "main",
+          "revision": {
+            "global": 0,
+            "local": 0,
+            "document": 0
+          },
+          "lastModifiedAtUtcIso": "2025-02-01T00:00:00.000Z",
+          "meta": {},
+          "protocolVersions": {
+            "base-reducer": 1
+          }
+        },
+        "state": {
+          "auth": {
+            "version": 0,
+            "grants": []
+          },
+          "document": {
+            "version": 2,
+            "hash": {
+              "algorithm": "sha1",
+              "encoding": "base64"
+            }
+          },
+          "global": {
+            "todos": [],
+            "title": ""
+          },
+          "local": {}
+        },
+        "initialState": {
+          "auth": {
+            "version": 0,
+            "grants": []
+          },
+          "document": {
+            "version": 2,
+            "hash": {
+              "algorithm": "sha1",
+              "encoding": "base64"
+            }
+          },
+          "global": {
+            "todos": [],
+            "title": ""
+          },
+          "local": {}
+        },
+        "operations": {
+          "global": [],
+          "local": [],
+          "document": []
+        },
+        "clipboard": []
+      },
+      "actions": [
+        {
+          "id": "migration-action-1",
+          "type": "EDIT_TITLE",
+          "scope": "global",
+          "input": {
+            "title": "Version two"
+          },
+          "timestampUtcMs": "2025-02-01T00:00:01.000Z"
+        },
+        {
+          "id": "migration-action-2",
+          "type": "ADD_TODO",
+          "scope": "global",
+          "input": {
+            "id": "todo-v2-1",
+            "title": "V2 item",
+            "completed": false
+          },
+          "timestampUtcMs": "2025-02-01T00:00:02.000Z"
+        },
+        {
+          "id": "migration-action-3",
+          "type": "UPDATE_TODO",
+          "scope": "global",
+          "input": {
+            "id": "todo-v2-1",
+            "completed": true
+          },
+          "timestampUtcMs": "2025-02-01T00:00:03.000Z"
+        },
+        {
+          "id": "migration-action-4",
+          "type": "REMOVE_TODO",
+          "scope": "global",
+          "input": {
+            "id": "todo-v2-1"
+          },
+          "timestampUtcMs": "2025-02-01T00:00:04.000Z"
+        }
+      ]
+    }
+  ]
+}

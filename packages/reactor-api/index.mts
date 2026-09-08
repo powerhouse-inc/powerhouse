@@ -3,6 +3,7 @@ export * from "./src/graphql/types.js";
 export {
   AuthorizationPolicy,
   AuthorizedDocumentHandle,
+  createAuthorizationService,
 } from "./src/services/authorization.service.js";
 export type {
   AuthorizationConfig,

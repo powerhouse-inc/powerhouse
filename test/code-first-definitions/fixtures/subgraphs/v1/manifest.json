@@ -1,0 +1,100 @@
+{
+  "kind": "powerhouse.gate-fixture-manifest",
+  "formatVersion": 1,
+  "gate": "B7",
+  "fixtureVersion": "subgraphs-v1",
+  "caseCount": 7,
+  "requiredTools": {
+    "graphql": "16.12.0",
+    "apollo": "LocalCompose@2.14.4",
+    "host": "GraphQLManager"
+  },
+  "schemaDigest": "sha256:9a320fb708d0c5bba916dba4cd268cdd7283d21ce1128b5905b2bc247d8cc868",
+  "directDependencies": [
+    {
+      "gate": "B6",
+      "contractRevision": "sha256:a7ccf254a06e9542fe8e21c59c385e7504a998982ee23444f4491143ef830e4a",
+      "fixtureManifestDigest": "sha256:9833a7a867145affbca6a7373c2b6d76277109b306314821a78670387338d124"
+    },
+    {
+      "gate": "B9",
+      "contractRevision": "sha256:a7ccf254a06e9542fe8e21c59c385e7504a998982ee23444f4491143ef830e4a",
+      "fixtureManifestDigest": "sha256:597d6f2a4716a4633765c558f36eb8fe288529c0940ea56d72cf73956b38b43c"
+    }
+  ],
+  "cases": [
+    {
+      "caseId": "typed-query-field",
+      "scenario": "typed-query-field",
+      "coveredVariants": [
+        "typed",
+        "parent",
+        "args",
+        "subgraph",
+        "request",
+        "info",
+        "resolver-owned-authorization"
+      ]
+    },
+    {
+      "caseId": "compat-manual-query",
+      "scenario": "compat-manual-query",
+      "coveredVariants": [
+        "graphql-ast-compat",
+        "location-free-ast",
+        "resolver-coordinates",
+        "manual-authorization-order"
+      ]
+    },
+    {
+      "caseId": "typed-subscription-true",
+      "scenario": "typed-subscription-true",
+      "coveredVariants": [
+        "subscription",
+        "hasSubscriptions-true",
+        "websocket",
+        "sse",
+        "allocation",
+        "delivery",
+        "cleanup"
+      ]
+    },
+    {
+      "caseId": "compat-subscription-undefined",
+      "scenario": "compat-subscription-undefined",
+      "coveredVariants": [
+        "graphql-ast-compat",
+        "hasSubscriptions-undefined",
+        "transport-disabled"
+      ]
+    },
+    {
+      "caseId": "compat-subscription-false",
+      "scenario": "compat-subscription-false",
+      "coveredVariants": [
+        "graphql-ast-compat",
+        "hasSubscriptions-false",
+        "transport-disabled"
+      ]
+    },
+    {
+      "caseId": "duplicate-first-wins",
+      "scenario": "duplicate-first-wins",
+      "coveredVariants": [
+        "duplicate-name",
+        "first-wins",
+        "handler-cache",
+        "resolver-closure-retained"
+      ]
+    },
+    {
+      "caseId": "composition-conflict-routes-kept",
+      "scenario": "composition-conflict-routes-kept",
+      "coveredVariants": [
+        "apollo-local-compose",
+        "composition-error",
+        "individual-routes-mounted-first"
+      ]
+    }
+  ]
+}

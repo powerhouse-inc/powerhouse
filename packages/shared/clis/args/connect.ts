@@ -22,6 +22,7 @@ import {
   logLevel,
   renownNamespace,
   renownSwitchboardUrl,
+  definitionSourceArgs,
 } from "./common.js";
 
 // cmd-ts's built-in `boolean` is intended for `flag()` (presence/absence). With
@@ -213,6 +214,7 @@ export const connectBuildArgs = {
     description:
       "Path to a favicon file (e.g. .ico) to bundle in place of the default Connect icon. Emitted as icon.ico; resolved relative to the build cwd.",
   }),
+  ...definitionSourceArgs,
   ...commonArgs,
 };
 

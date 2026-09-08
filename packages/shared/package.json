@@ -33,6 +33,7 @@
     },
     "./document-model": {
       "source": "./document-model/index.ts",
+      "types": "./dist/document-model/index.d.ts",
       "import": "./dist/document-model/index.js"
     },
     "./document-model/*": {
@@ -90,6 +91,10 @@
     "./clis/constants": {
       "source": "./clis/constants.ts",
       "import": "./dist/clis/constants.mjs"
+    },
+    "./clis/config-strict": {
+      "source": "./clis/file-system/get-config-strict.ts",
+      "import": "./dist/clis/file-system/get-config-strict.mjs"
     },
     "./clis/utils": {
       "source": "./clis/utils.ts",

@@ -1,0 +1,16 @@
+{
+  "definitionSources": {
+    "formatVersion": 1,
+    "mode": "code-first",
+    "entries": [
+      {
+        "specifier": "./source-models.ts",
+        "exportPath": ["nested", "model/v1"]
+      },
+      {
+        "specifier": "./source-models.ts",
+        "exportPath": ["LoaderModelV2"]
+      }
+    ]
+  }
+}

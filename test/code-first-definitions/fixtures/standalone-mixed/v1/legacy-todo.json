@@ -1,0 +1,63 @@
+{
+  "state": {
+    "global": {
+      "id": "test/legacy-todo",
+      "name": "Legacy Todo",
+      "extension": "legacy-todo",
+      "description": "A schema-first todo model kept beside a code-first family.",
+      "author": {
+        "name": "Powerhouse",
+        "website": "https://powerhouse.inc"
+      },
+      "specifications": [
+        {
+          "version": 1,
+          "changeLog": [],
+          "state": {
+            "global": {
+              "schema": "type LegacyTodoState {\n  todos: [LegacyTodoItem!]!\n}\n\ntype LegacyTodoItem {\n  id: String!\n  title: String!\n  completed: Boolean!\n}",
+              "initialValue": "{\"todos\":[]}",
+              "examples": []
+            },
+            "local": {
+              "schema": "",
+              "initialValue": "",
+              "examples": []
+            }
+          },
+          "modules": [
+            {
+              "id": "a1a937bd-d7e5-5f74-ac37-f83ea0bbeb6a",
+              "name": "legacy_todo_operations",
+              "description": "Legacy todo operations.",
+              "operations": [
+                {
+                  "id": "943590f3-7ed5-5c62-be58-85229e328696",
+                  "name": "ADD_LEGACY_TODO",
+                  "description": "Add a legacy todo.",
+                  "schema": "input AddLegacyTodoInput {\n  id: String!\n  title: String!\n  completed: Boolean!\n}",
+                  "template": "",
+                  "reducer": "state.todos.push({\n  id: action.input.id,\n  title: action.input.title,\n  completed: action.input.completed,\n});",
+                  "errors": [],
+                  "examples": [],
+                  "scope": "global"
+                },
+                {
+                  "id": "ef537ef8-c643-5ba8-acb3-9904dbb64551",
+                  "name": "TOGGLE_LEGACY_TODO",
+                  "description": "Toggle a legacy todo.",
+                  "schema": "input ToggleLegacyTodoInput {\n  id: String!\n}",
+                  "template": "",
+                  "reducer": "const todo = state.todos.find((item) => item.id === action.input.id);\nif (todo) todo.completed = !todo.completed;",
+                  "errors": [],
+                  "examples": [],
+                  "scope": "global"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

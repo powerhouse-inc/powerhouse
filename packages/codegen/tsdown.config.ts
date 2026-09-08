@@ -13,6 +13,7 @@ export default defineConfig({
     "index.mts",
     "src/templates/index.mts",
     "src/file-builders/index.mts",
+    "src/migration/index.mts",
     "src/name-builders/index.mts",
     "src/utils/index.mts",
   ],

@@ -1,0 +1,435 @@
+{
+  "kind": "powerhouse.gate-evidence",
+  "formatVersion": 1,
+  "gate": "B8",
+  "contract": {
+    "status": "spec-complete",
+    "revision": "sha256:a7ccf254a06e9542fe8e21c59c385e7504a998982ee23444f4491143ef830e4a"
+  },
+  "evidence": {
+    "outcome": "pass"
+  },
+  "repository": {
+    "commit": "da05f917d6912bc30c5c944823c216ec47e19fa8",
+    "baseTreeDigest": "sha256:6d05bb4c4139466f81c0dbaae56f75d3d85af6486827e5a0b67dbf4814848eb0",
+    "baseDirty": false,
+    "appliedPatchDigest": "sha256:3cc2f2bc8e80aee821dfce01607ca32f0bca3964ba773a8c89045511004699a4"
+  },
+  "toolchain": {
+    "lockfileDigest": "sha256:b0b56565f0bf62f674db82eee2cfaa9c4a01a538ea593e0c8f3a42abf43ef6c0",
+    "runnerVersion": "0.1.0",
+    "node": "v24.14.0",
+    "packageManager": "pnpm@10.33.4",
+    "platform": "darwin",
+    "tools": {}
+  },
+  "fixture": {
+    "manifest": "test/code-first-definitions/fixtures/packages/v1/manifest.json",
+    "fixtureVersion": "package-loaders-v1",
+    "manifestDigest": "sha256:1c29708a0853206b2e41c4bd9d31d946ef6d7ba778767d143017e7b8d47d0100",
+    "schemaDigest": "sha256:9a320fb708d0c5bba916dba4cd268cdd7283d21ce1128b5905b2bc247d8cc868",
+    "caseCount": 11
+  },
+  "dependencies": [
+    {
+      "gate": "B1",
+      "outcome": "pass",
+      "contractRevision": "sha256:a7ccf254a06e9542fe8e21c59c385e7504a998982ee23444f4491143ef830e4a",
+      "fixtureManifestDigest": "sha256:3b1ecf4f491d0459ddf129ff1a2ee33b8e05171cdbe857a2c0da7273667080ce",
+      "reportDigest": "sha256:8c0662bfdefb1ed89c9a715135a9d4c050c088ca335ec648f63bc84ca63a2b6f"
+    },
+    {
+      "gate": "B9",
+      "outcome": "pass",
+      "contractRevision": "sha256:a7ccf254a06e9542fe8e21c59c385e7504a998982ee23444f4491143ef830e4a",
+      "fixtureManifestDigest": "sha256:597d6f2a4716a4633765c558f36eb8fe288529c0940ea56d72cf73956b38b43c",
+      "reportDigest": "sha256:90804ebad634118d2148239141b23f74a920f34f0cfb6003bef7c0a41658f39d"
+    }
+  ],
+  "command": {
+    "name": "gate-evidence",
+    "args": [
+      "--gate",
+      "B8",
+      "--manifest",
+      "fixtures/packages/v1/manifest.json",
+      "--out",
+      ".evidence/B8"
+    ],
+    "cwd": "<repository>"
+  },
+  "assertions": [
+    {
+      "id": "B8.definition-source",
+      "outcome": "pass",
+      "expected": "Vite and build adapters normalize the explicit source set identically",
+      "received": "the current host matched its committed legacy fixture",
+      "artifactRefs": [
+        "package-manifest",
+        "definition-source-results"
+      ]
+    },
+    {
+      "id": "B8.node-server",
+      "outcome": "pass",
+      "expected": "the Node import loader preserves direct model and flattened subgraph exports",
+      "received": "the current host matched its committed legacy fixture",
+      "artifactRefs": [
+        "package-manifest",
+        "host-namespaces"
+      ]
+    },
+    {
+      "id": "B8.http-cdn",
+      "outcome": "pass",
+      "expected": "the HTTP loader preserves one-level callable subgraph flattening",
+      "received": "the current host matched its committed legacy fixture",
+      "artifactRefs": [
+        "package-manifest",
+        "host-namespaces"
+      ]
+    },
+    {
+      "id": "B8.vite-local",
+      "outcome": "pass",
+      "expected": "the Vite loader preserves outer/inner export-name selection",
+      "received": "the current host matched its committed legacy fixture",
+      "artifactRefs": [
+        "package-manifest",
+        "host-namespaces"
+      ]
+    },
+    {
+      "id": "B8.browser-static",
+      "outcome": "pass",
+      "expected": "the static browser package manager preserves latest-version selection",
+      "received": "the current host matched its committed legacy fixture",
+      "artifactRefs": [
+        "package-manifest",
+        "host-namespaces"
+      ]
+    },
+    {
+      "id": "B8.browser-worker",
+      "outcome": "pass",
+      "expected": "the browser worker loader preserves named-export discovery and latest-version selection",
+      "received": "the current host matched its committed legacy fixture",
+      "artifactRefs": [
+        "package-manifest",
+        "host-namespaces"
+      ]
+    },
+    {
+      "id": "B8.graphql",
+      "outcome": "pass",
+      "expected": "the GraphQL package manager preserves model, manifest, and subgraph registration",
+      "received": "the current host matched its committed legacy fixture",
+      "artifactRefs": [
+        "package-manifest",
+        "host-namespaces"
+      ]
+    },
+    {
+      "id": "B8.mcp",
+      "outcome": "pass",
+      "expected": "the MCP Vite loader preserves direct model export discovery",
+      "received": "the current host matched its committed legacy fixture",
+      "artifactRefs": [
+        "package-manifest",
+        "host-namespaces"
+      ]
+    },
+    {
+      "id": "B8.connect",
+      "outcome": "pass",
+      "expected": "the Connect package manager preserves DocumentModelLib registration and selects the first matching family version",
+      "received": "the current host matched its committed legacy fixture",
+      "artifactRefs": [
+        "package-manifest",
+        "host-namespaces"
+      ]
+    },
+    {
+      "id": "B8.reactor-worker",
+      "outcome": "pass",
+      "expected": "the reactor worker manifest preserves exact named export references",
+      "received": "the current host matched its committed legacy fixture",
+      "artifactRefs": [
+        "package-manifest",
+        "host-namespaces"
+      ]
+    },
+    {
+      "id": "B8.registry",
+      "outcome": "pass",
+      "expected": "the document-model registry preserves global-id/version duplicate detection",
+      "received": "the current host matched its committed legacy fixture",
+      "artifactRefs": [
+        "package-manifest",
+        "host-namespaces"
+      ]
+    }
+  ],
+  "measurements": [],
+  "artifacts": [
+    {
+      "name": "package-manifest",
+      "path": "test/code-first-definitions/fixtures/packages/v1/manifest.json",
+      "mediaType": "application/json",
+      "bytes": 4737,
+      "digest": "sha256:4a6e203d4a91fa82790f146ffdfaf44be1c06c9e379026ac84bca7fddac13a28",
+      "retention": "committed"
+    },
+    {
+      "name": "definition-source-results",
+      "path": "test/code-first-definitions/fixtures/packages/v1/definition-source-results.json",
+      "mediaType": "application/json",
+      "bytes": 330,
+      "digest": "sha256:a425efcd00c514270619edcea31bf64835b6d68365f5417e7a7f22784cec3fcd",
+      "retention": "committed"
+    },
+    {
+      "name": "host-namespaces",
+      "path": "test/code-first-definitions/fixtures/packages/v1/host-namespaces.json",
+      "mediaType": "application/vnd.powerhouse.host-namespaces+json",
+      "bytes": 6138,
+      "digest": "sha256:6f0c05dd0e2256c5dcac471bac30557f168fd849d793aa6d447f3df9649231f1",
+      "retention": "committed"
+    }
+  ],
+  "results": {
+    "hosts": [
+      {
+        "hostId": "definition-source",
+        "importedNamespace": [
+          "./source-models.ts#/LoaderModelV2",
+          "./source-models.ts#/nested/model~1v1"
+        ],
+        "acceptedExports": [
+          "powerhouse/loader-fixture@1",
+          "powerhouse/loader-fixture@2"
+        ],
+        "selectedNamedWorkerReference": null,
+        "diagnostics": [],
+        "registrationOutcome": "ready:values=2:imports=1",
+        "firstMismatch": null
+      },
+      {
+        "hostId": "node-server",
+        "importedNamespace": [
+          "document-models.LoaderModelV1:object",
+          "document-models.LoaderModelV2:object",
+          "document-models.documentModels:array",
+          "document-models.ignored:string",
+          "document-models.upgradeManifests:array",
+          "subgraphs.GenericAlias.Subgraph:function",
+          "subgraphs.GenericAlias.default:function",
+          "subgraphs.GenericAlias.helper:string",
+          "subgraphs.LoaderSubgraph.LoaderSubgraph:function",
+          "subgraphs.LoaderSubgraph.helper:string"
+        ],
+        "acceptedExports": [
+          "powerhouse/loader-fixture@1",
+          "powerhouse/loader-fixture@2",
+          "subgraph:function",
+          "subgraph:function",
+          "subgraph:string",
+          "subgraph:function",
+          "subgraph:string",
+          "manifest:powerhouse/loader-fixture"
+        ],
+        "selectedNamedWorkerReference": null,
+        "diagnostics": [],
+        "registrationOutcome": "models=2;subgraphs=5;manifests=1",
+        "firstMismatch": null
+      },
+      {
+        "hostId": "http-cdn",
+        "importedNamespace": [
+          "GenericAlias.Subgraph:function",
+          "GenericAlias.default:function",
+          "GenericAlias.helper:string",
+          "LoaderSubgraph.LoaderSubgraph:function",
+          "LoaderSubgraph.helper:string"
+        ],
+        "acceptedExports": [
+          "subgraph:function",
+          "subgraph:function",
+          "subgraph:function"
+        ],
+        "selectedNamedWorkerReference": null,
+        "diagnostics": [],
+        "registrationOutcome": "flattened=3;non-callables=filtered",
+        "firstMismatch": null
+      },
+      {
+        "hostId": "vite-local",
+        "importedNamespace": [
+          "document-models.LoaderModelV1:object",
+          "document-models.LoaderModelV2:object",
+          "document-models.documentModels:array",
+          "document-models.ignored:string",
+          "document-models.upgradeManifests:array",
+          "subgraphs.GenericAlias.Subgraph:function",
+          "subgraphs.GenericAlias.default:function",
+          "subgraphs.GenericAlias.helper:string",
+          "subgraphs.LoaderSubgraph.LoaderSubgraph:function",
+          "subgraphs.LoaderSubgraph.helper:string"
+        ],
+        "acceptedExports": [
+          "powerhouse/loader-fixture@1",
+          "powerhouse/loader-fixture@2",
+          "subgraph:outer-name-match"
+        ],
+        "selectedNamedWorkerReference": null,
+        "diagnostics": [],
+        "registrationOutcome": "models=2;subgraphs=1",
+        "firstMismatch": null
+      },
+      {
+        "hostId": "browser-static",
+        "importedNamespace": [
+          "documentModels:array",
+          "editors:array",
+          "manifest:object",
+          "subgraphs:array",
+          "upgradeManifests:array"
+        ],
+        "acceptedExports": [
+          "powerhouse/loader-fixture@1",
+          "powerhouse/loader-fixture@2"
+        ],
+        "selectedNamedWorkerReference": null,
+        "diagnostics": [],
+        "registrationOutcome": "packages=1;selected=powerhouse/loader-fixture@2",
+        "firstMismatch": null
+      },
+      {
+        "hostId": "browser-worker",
+        "importedNamespace": [
+          "LoaderModelV1:object",
+          "LoaderModelV2:object",
+          "documentModels:array",
+          "ignored:string",
+          "upgradeManifests:array"
+        ],
+        "acceptedExports": [
+          "powerhouse/loader-fixture@1",
+          "powerhouse/loader-fixture@2"
+        ],
+        "selectedNamedWorkerReference": null,
+        "diagnostics": [],
+        "registrationOutcome": "imports=1;selected=powerhouse/loader-fixture@2",
+        "firstMismatch": null
+      },
+      {
+        "hostId": "graphql",
+        "importedNamespace": [
+          "document-models.LoaderModelV1:object",
+          "document-models.LoaderModelV2:object",
+          "document-models.documentModels:array",
+          "document-models.ignored:string",
+          "document-models.upgradeManifests:array",
+          "subgraphs.GenericAlias.Subgraph:function",
+          "subgraphs.GenericAlias.default:function",
+          "subgraphs.GenericAlias.helper:string",
+          "subgraphs.LoaderSubgraph.LoaderSubgraph:function",
+          "subgraphs.LoaderSubgraph.helper:string"
+        ],
+        "acceptedExports": [
+          "powerhouse/loader-fixture@1",
+          "powerhouse/loader-fixture@2",
+          "subgraph:class"
+        ],
+        "selectedNamedWorkerReference": null,
+        "diagnostics": [],
+        "registrationOutcome": "models=2;subgraphs=1;manifests=1",
+        "firstMismatch": null
+      },
+      {
+        "hostId": "mcp",
+        "importedNamespace": [
+          "LoaderFamily:object",
+          "LoaderModelV1:object",
+          "LoaderModelV2:object",
+          "documentModels:array",
+          "nested:object",
+          "upgradeManifests:array"
+        ],
+        "acceptedExports": [
+          "powerhouse/loader-fixture@1",
+          "powerhouse/loader-fixture@2"
+        ],
+        "selectedNamedWorkerReference": null,
+        "diagnostics": [],
+        "registrationOutcome": "models=2",
+        "firstMismatch": null
+      },
+      {
+        "hostId": "connect",
+        "importedNamespace": [
+          "documentModels:array",
+          "editors:array",
+          "manifest:object",
+          "subgraphs:array",
+          "upgradeManifests:array"
+        ],
+        "acceptedExports": [
+          "powerhouse/loader-fixture@1",
+          "powerhouse/loader-fixture@2"
+        ],
+        "selectedNamedWorkerReference": null,
+        "diagnostics": [],
+        "registrationOutcome": "packages=1;selected=powerhouse/loader-fixture@1",
+        "firstMismatch": null
+      },
+      {
+        "hostId": "reactor-worker",
+        "importedNamespace": [
+          "LoaderFamily:object",
+          "LoaderModelV1:object",
+          "LoaderModelV2:object",
+          "documentModels:array",
+          "nested:object",
+          "upgradeManifests:array"
+        ],
+        "acceptedExports": [
+          "powerhouse/loader-fixture@1",
+          "powerhouse/loader-fixture@2"
+        ],
+        "selectedNamedWorkerReference": {
+          "specifier": "./models.ts",
+          "exportName": "LoaderModelV2"
+        },
+        "diagnostics": [],
+        "registrationOutcome": "modules=2;manifest=2;module-only=0;selected=powerhouse/loader-fixture@2",
+        "firstMismatch": null
+      },
+      {
+        "hostId": "registry",
+        "importedNamespace": [
+          "LoaderModelV1:object",
+          "LoaderModelV2:object",
+          "documentModels:array",
+          "ignored:string",
+          "upgradeManifests:array"
+        ],
+        "acceptedExports": [
+          "powerhouse/loader-fixture@1"
+        ],
+        "selectedNamedWorkerReference": null,
+        "diagnostics": [
+          "DuplicateModuleError"
+        ],
+        "registrationOutcome": "success,error",
+        "firstMismatch": null
+      }
+    ]
+  },
+  "summary": {
+    "passed": 11,
+    "failed": 0,
+    "blocked": 0,
+    "cancelled": 0
+  }
+}

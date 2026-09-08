@@ -1,0 +1,60 @@
+{
+  "kind": "powerhouse.migration-phase-journal",
+  "formatVersion": 1,
+  "phases": [
+    {
+      "sequence": 1,
+      "phase": "report",
+      "status": "pass",
+      "detail": "report-only returned ready with zero writes"
+    },
+    {
+      "sequence": 2,
+      "phase": "beside-write",
+      "status": "pass",
+      "detail": "verification source was written beside the untouched legacy family"
+    },
+    {
+      "sequence": 3,
+      "phase": "verify",
+      "status": "pass",
+      "detail": "10 replay prefixes were equivalent"
+    },
+    {
+      "sequence": 4,
+      "phase": "artifact",
+      "status": "pass",
+      "detail": "the committed candidate matched its migration digest"
+    },
+    {
+      "sequence": 5,
+      "phase": "canary",
+      "status": "pass",
+      "detail": "read-only canary performed zero mutations"
+    },
+    {
+      "sequence": 6,
+      "phase": "deploy",
+      "status": "pass",
+      "detail": "11 current host lifecycles passed"
+    },
+    {
+      "sequence": 7,
+      "phase": "rollback",
+      "status": "pass",
+      "detail": "fresh-process legacy rollback restored the baseline digest"
+    },
+    {
+      "sequence": 8,
+      "phase": "retire",
+      "status": "pass",
+      "detail": "hash-bound approved targets were retired with a recovery root"
+    },
+    {
+      "sequence": 9,
+      "phase": "negative",
+      "status": "pass",
+      "detail": "9 retirement failures were rejected and restored"
+    }
+  ]
+}

@@ -1,0 +1,107 @@
+{
+  "kind": "powerhouse.gate-fixture-manifest",
+  "formatVersion": 1,
+  "gate": "B2",
+  "fixtureVersion": "synthetic-1.0.0",
+  "requiredTools": {
+    "node": ">=24",
+    "profile": "synthetic-only-v1"
+  },
+  "schemaDigest": "sha256:9a320fb708d0c5bba916dba4cd268cdd7283d21ce1128b5905b2bc247d8cc868",
+  "directDependencies": [
+    {
+      "gate": "B1",
+      "contractRevision": "sha256:a7ccf254a06e9542fe8e21c59c385e7504a998982ee23444f4491143ef830e4a",
+      "fixtureManifestDigest": "sha256:3b1ecf4f491d0459ddf129ff1a2ee33b8e05171cdbe857a2c0da7273667080ce"
+    },
+    {
+      "gate": "B3",
+      "contractRevision": "sha256:a7ccf254a06e9542fe8e21c59c385e7504a998982ee23444f4491143ef830e4a",
+      "fixtureManifestDigest": "sha256:59af108a7abfa6065dba92645b55527b5c5b03ed0e67aa323d98caea329f0ad1"
+    },
+    {
+      "gate": "B9",
+      "contractRevision": "sha256:a7ccf254a06e9542fe8e21c59c385e7504a998982ee23444f4491143ef830e4a",
+      "fixtureManifestDigest": "sha256:597d6f2a4716a4633765c558f36eb8fe288529c0940ea56d72cf73956b38b43c"
+    }
+  ],
+  "profile": "synthetic-only-v1",
+  "productionCorpusStatus": "not-established",
+  "historySet": "./histories.json",
+  "expectedPrefixes": "./synthetic-prefixes.json",
+  "scopeDeclaration": "./scope-declaration.json",
+  "caseCount": 3,
+  "cases": [
+    {
+      "caseId": "protocol-v1-mixed-outcomes",
+      "documentType": "powerhouse/protocol-matrix",
+      "version": 1,
+      "mode": "single-version",
+      "operationCount": 6,
+      "prefixCount": 7,
+      "coveredActionTypes": [
+        "EMIT",
+        "FAIL",
+        "INCREMENT",
+        "SET_DRAFT"
+      ],
+      "scopes": [
+        "global",
+        "local"
+      ],
+      "outcomes": [
+        "applied",
+        "reducer-error",
+        "denied"
+      ],
+      "upgradeEdges": []
+    },
+    {
+      "caseId": "protocol-v2-global-local",
+      "documentType": "powerhouse/protocol-matrix",
+      "version": 2,
+      "mode": "single-version",
+      "operationCount": 4,
+      "prefixCount": 5,
+      "coveredActionTypes": [
+        "EMIT",
+        "INCREMENT",
+        "SET_DRAFT",
+        "SET_TITLE"
+      ],
+      "scopes": [
+        "global",
+        "local"
+      ],
+      "outcomes": [
+        "applied",
+        "reducer-error",
+        "denied"
+      ],
+      "upgradeEdges": []
+    },
+    {
+      "caseId": "protocol-upgrade-v1-v2",
+      "documentType": "powerhouse/protocol-matrix",
+      "version": 1,
+      "mode": "versioned",
+      "operationCount": 4,
+      "prefixCount": 5,
+      "coveredActionTypes": [
+        "INCREMENT",
+        "SET_TITLE",
+        "UPGRADE_DOCUMENT"
+      ],
+      "scopes": [
+        "document",
+        "global"
+      ],
+      "outcomes": [
+        "applied"
+      ],
+      "upgradeEdges": [
+        "1->2"
+      ]
+    }
+  ]
+}

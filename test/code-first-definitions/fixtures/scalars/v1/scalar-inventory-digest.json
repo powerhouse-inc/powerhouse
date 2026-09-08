@@ -1,0 +1,26 @@
+{
+  "names": [
+    "Address",
+    "Amount",
+    "Amount_Crypto",
+    "Amount_Currency",
+    "Amount_Fiat",
+    "Amount_Money",
+    "Amount_Percentage",
+    "Amount_Tokens",
+    "AttachmentRef",
+    "Currency",
+    "Date",
+    "DateTime",
+    "EmailAddress",
+    "EthereumAddress",
+    "JSONObject",
+    "OID",
+    "OLabel",
+    "PHID",
+    "URL",
+    "Unknown",
+    "Upload"
+  ],
+  "digest": "sha256:c8fdc6919165abc85738cd0b8603433f05f27e71191ba9b19908fde23aab14ea"
+}

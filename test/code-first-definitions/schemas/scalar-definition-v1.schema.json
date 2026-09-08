@@ -1,0 +1,227 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://powerhouse.inc/schemas/scalar-definition-v1.json",
+  "title": "Powerhouse scalar definition V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "formatVersion",
+    "name",
+    "representation",
+    "persistable",
+    "description",
+    "zero",
+    "coercion",
+    "vector",
+    "coercionProfile"
+  ],
+  "properties": {
+    "kind": { "const": "powerhouse.scalar" },
+    "formatVersion": { "const": 1 },
+    "name": { "$ref": "#/definitions/scalarName" },
+    "representation": {
+      "enum": ["string", "number", "boolean", "json-object", "json", "opaque"]
+    },
+    "persistable": { "type": "boolean" },
+    "description": { "type": "string", "minLength": 1 },
+    "zero": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "value"],
+          "properties": {
+            "kind": { "const": "value" },
+            "value": { "$ref": "#/definitions/jsonValue" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "reason"],
+          "properties": {
+            "kind": { "const": "none" },
+            "reason": { "type": "string", "minLength": 1 }
+          }
+        }
+      ]
+    },
+    "coercion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "exemption"],
+      "properties": {
+        "source": { "enum": ["derived", "explicit"] },
+        "exemption": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["profile", "paths", "caseIds", "digest"],
+              "properties": {
+                "profile": { "const": "document-engineering-1.40" },
+                "paths": {
+                  "type": "array",
+                  "minItems": 1,
+                  "uniqueItems": true,
+                  "items": { "type": "string", "minLength": 1 }
+                },
+                "caseIds": {
+                  "type": "array",
+                  "minItems": 1,
+                  "uniqueItems": true,
+                  "items": { "type": "string", "minLength": 1 }
+                },
+                "digest": { "$ref": "#/definitions/sha256" }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "vector": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["accepts", "rejects", "acceptanceDigest"],
+      "properties": {
+        "accepts": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/definitions/vectorCase" }
+        },
+        "rejects": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/definitions/vectorCase" }
+        },
+        "acceptanceDigest": { "$ref": "#/definitions/sha256" }
+      }
+    },
+    "coercionProfile": { "const": "document-engineering-1.40" }
+  },
+  "definitions": {
+    "sha256": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "scalarName": {
+      "enum": [
+        "PHID",
+        "OID",
+        "OLabel",
+        "Currency",
+        "EmailAddress",
+        "EthereumAddress",
+        "URL",
+        "Date",
+        "DateTime",
+        "Amount_Money",
+        "Amount_Percentage",
+        "Amount_Tokens",
+        "Amount",
+        "Amount_Fiat",
+        "Amount_Crypto",
+        "Amount_Currency",
+        "Address",
+        "AttachmentRef",
+        "Unknown",
+        "Upload",
+        "JSONObject"
+      ]
+    },
+    "jsonValue": {
+      "oneOf": [
+        { "type": "null" },
+        { "type": "string" },
+        { "type": "number" },
+        { "type": "boolean" },
+        {
+          "type": "array",
+          "items": { "$ref": "#/definitions/jsonValue" }
+        },
+        {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/definitions/jsonValue" }
+        }
+      ]
+    },
+    "vectorCase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "input"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "input": { "$ref": "#/definitions/vectorValue" }
+      }
+    },
+    "vectorValue": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "value"],
+          "properties": {
+            "kind": { "const": "json" },
+            "value": { "$ref": "#/definitions/jsonValue" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "tag"],
+          "properties": {
+            "kind": { "const": "non-json" },
+            "tag": { "const": "undefined" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "tag", "decimal"],
+          "properties": {
+            "kind": { "const": "non-json" },
+            "tag": { "const": "bigint" },
+            "decimal": { "type": "string", "pattern": "^-?[0-9]+$" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "tag", "iso"],
+          "properties": {
+            "kind": { "const": "non-json" },
+            "tag": { "const": "date" },
+            "iso": { "type": "string", "minLength": 1 }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "tag", "entries"],
+          "properties": {
+            "kind": { "const": "non-json" },
+            "tag": { "const": "map" },
+            "entries": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2,
+                "items": { "$ref": "#/definitions/jsonValue" }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "tag", "fixtureId"],
+          "properties": {
+            "kind": { "const": "non-json" },
+            "tag": { "const": "upload" },
+            "fixtureId": { "type": "string", "minLength": 1 }
+          }
+        }
+      ]
+    }
+  }
+}

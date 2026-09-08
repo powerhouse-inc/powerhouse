@@ -1,0 +1,7 @@
+{
+  "kind": "powerhouse.evidence-budget",
+  "formatVersion": 1,
+  "gate": "B12",
+  "status": "not-established",
+  "reopeningCondition": "Approve a reference machine and runtime size, latency, and memory budgets."
+}

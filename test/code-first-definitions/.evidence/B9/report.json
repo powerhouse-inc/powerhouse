@@ -1,0 +1,1035 @@
+{
+  "kind": "powerhouse.gate-evidence",
+  "formatVersion": 1,
+  "gate": "B9",
+  "contract": {
+    "status": "spec-complete",
+    "revision": "sha256:a7ccf254a06e9542fe8e21c59c385e7504a998982ee23444f4491143ef830e4a"
+  },
+  "evidence": {
+    "outcome": "pass"
+  },
+  "repository": {
+    "commit": "da05f917d6912bc30c5c944823c216ec47e19fa8",
+    "baseTreeDigest": "sha256:6d05bb4c4139466f81c0dbaae56f75d3d85af6486827e5a0b67dbf4814848eb0",
+    "baseDirty": false,
+    "appliedPatchDigest": "sha256:3cc2f2bc8e80aee821dfce01607ca32f0bca3964ba773a8c89045511004699a4"
+  },
+  "toolchain": {
+    "lockfileDigest": "sha256:b0b56565f0bf62f674db82eee2cfaa9c4a01a538ea593e0c8f3a42abf43ef6c0",
+    "runnerVersion": "0.1.0",
+    "node": "v24.14.0",
+    "packageManager": "pnpm@10.33.4",
+    "platform": "darwin",
+    "tools": {}
+  },
+  "fixture": {
+    "manifest": "test/code-first-definitions/fixtures/reproductions/v1/failure-propagation/manifest.json",
+    "fixtureVersion": "failure-propagation-v1",
+    "manifestDigest": "sha256:597d6f2a4716a4633765c558f36eb8fe288529c0940ea56d72cf73956b38b43c",
+    "schemaDigest": "sha256:9a320fb708d0c5bba916dba4cd268cdd7283d21ce1128b5905b2bc247d8cc868",
+    "caseCount": 29
+  },
+  "dependencies": [],
+  "command": {
+    "name": "gate-evidence",
+    "args": [
+      "--gate",
+      "B9",
+      "--manifest",
+      "fixtures/reproductions/v1/failure-propagation/manifest.json",
+      "--out",
+      ".evidence/B9"
+    ],
+    "cwd": "<repository>"
+  },
+  "assertions": [
+    {
+      "id": "B9.exit",
+      "outcome": "pass",
+      "expected": "every command returns its declared 0, 1, or 2 exit status",
+      "received": "all declared injections matched",
+      "artifactRefs": [
+        "failure-manifest"
+      ]
+    },
+    {
+      "id": "B9.report",
+      "outcome": "pass",
+      "expected": "checks emit the declared closed JSON report status",
+      "received": "all declared injections matched",
+      "artifactRefs": [
+        "failure-manifest"
+      ]
+    },
+    {
+      "id": "B9.warning-policy",
+      "outcome": "pass",
+      "expected": "warnings pass by default and fail under --warnings-as-errors",
+      "received": "all declared injections matched",
+      "artifactRefs": [
+        "failure-manifest"
+      ]
+    },
+    {
+      "id": "B9.build-order",
+      "outcome": "pass",
+      "expected": "typecheck and definition checks finish before the first bundle write",
+      "received": "all declared injections matched",
+      "artifactRefs": [
+        "failure-manifest",
+        "output-tree-manifests"
+      ]
+    },
+    {
+      "id": "B9.prepack",
+      "outcome": "pass",
+      "expected": "prepack requires a retained passing release report",
+      "received": "all declared injections matched",
+      "artifactRefs": [
+        "failure-manifest"
+      ]
+    },
+    {
+      "id": "B9.publish",
+      "outcome": "pass",
+      "expected": "publish preflight requires retained evidence before registry access",
+      "received": "all declared injections matched",
+      "artifactRefs": [
+        "failure-manifest",
+        "recording-registry-journal"
+      ]
+    },
+    {
+      "id": "B9.registry-zero",
+      "outcome": "pass",
+      "expected": "failed preflight performs zero registry requests",
+      "received": "all declared injections matched",
+      "artifactRefs": [
+        "failure-manifest",
+        "recording-registry-journal"
+      ]
+    },
+    {
+      "id": "B9.output-unchanged",
+      "outcome": "pass",
+      "expected": "failed pre-write phases preserve bundle output",
+      "received": "all declared injections matched",
+      "artifactRefs": [
+        "failure-manifest",
+        "output-tree-manifests"
+      ]
+    },
+    {
+      "id": "B9.source-selection",
+      "outcome": "pass",
+      "expected": "all lifecycle commands select the same normalized source set",
+      "received": "all declared injections matched",
+      "artifactRefs": [
+        "failure-manifest"
+      ]
+    }
+  ],
+  "measurements": [],
+  "artifacts": [
+    {
+      "name": "failure-manifest",
+      "path": "test/code-first-definitions/fixtures/reproductions/v1/failure-propagation/manifest.json",
+      "mediaType": "application/json",
+      "bytes": 30004,
+      "digest": "sha256:03e13867ef709fefb084f3af83466490b56bb9bc44759130f8c8f7ca364b1bf3",
+      "retention": "committed"
+    },
+    {
+      "name": "recording-registry-journal",
+      "path": "test/code-first-definitions/fixtures/reproductions/v1/failure-propagation/recording-registry-journal.json",
+      "mediaType": "application/json",
+      "bytes": 43,
+      "digest": "sha256:bc3479b260a3e3230f17cbb0e7074f9f0686554149c788d1fea3324eacb04140",
+      "retention": "committed"
+    },
+    {
+      "name": "output-tree-manifests",
+      "path": "test/code-first-definitions/fixtures/reproductions/v1/failure-propagation/prior-output-manifest.json",
+      "mediaType": "application/vnd.powerhouse.byte-manifest+json",
+      "bytes": 501,
+      "digest": "sha256:541e9d105d8954293c7ed0a7b15476ad4bbacdef5cdae9480a5c12d1b24368d9",
+      "retention": "committed"
+    }
+  ],
+  "results": {
+    "injections": [
+      {
+        "injectionId": "tsc-failure-stops-before-bundles",
+        "command": "ph build",
+        "warningsAsErrors": false,
+        "exitCode": 1,
+        "reportStatus": null,
+        "diagnosticCodes": [],
+        "hookOrder": [
+          "tsc:start",
+          "tsc:failed"
+        ],
+        "typecheckCompleted": false,
+        "definitionCheckCompleted": false,
+        "bundleWriteCount": 0,
+        "tarballWriteCount": 0,
+        "registryRequestCount": 0,
+        "sourceOrigin": null,
+        "normalizedSourceKeys": [],
+        "sourceSetDigest": null,
+        "duplicateSourcePositions": [],
+        "skipReason": null,
+        "contributesReleaseEvidence": false,
+        "decoyImportCount": 0,
+        "beforeTreeDigest": "sha256:a2eef59bc77ce6299adc78504ef6f71346554fda77c974dec5acb5686d909d35",
+        "afterTreeDigest": "sha256:a2eef59bc77ce6299adc78504ef6f71346554fda77c974dec5acb5686d909d35"
+      },
+      {
+        "injectionId": "definition-sources-missing",
+        "command": "ph model check --json",
+        "warningsAsErrors": false,
+        "exitCode": 2,
+        "reportStatus": "failed",
+        "diagnosticCodes": [
+          "PH-CONFIG-SOURCES-MISSING"
+        ],
+        "hookOrder": [
+          "config:load",
+          "source:resolve"
+        ],
+        "typecheckCompleted": false,
+        "definitionCheckCompleted": false,
+        "bundleWriteCount": 0,
+        "tarballWriteCount": 0,
+        "registryRequestCount": 0,
+        "sourceOrigin": "config",
+        "normalizedSourceKeys": [],
+        "sourceSetDigest": "sha256:971e714a37c617383b56399ab19ec9d74d704f1a21b28648dd102236878fdcfc",
+        "duplicateSourcePositions": [],
+        "skipReason": null,
+        "contributesReleaseEvidence": false,
+        "decoyImportCount": 0,
+        "beforeTreeDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "afterTreeDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      {
+        "injectionId": "definition-sources-empty",
+        "command": "ph model check --json",
+        "warningsAsErrors": false,
+        "exitCode": 2,
+        "reportStatus": "failed",
+        "diagnosticCodes": [
+          "PH-CONFIG-SOURCES-MISSING"
+        ],
+        "hookOrder": [
+          "config:load",
+          "source:resolve"
+        ],
+        "typecheckCompleted": false,
+        "definitionCheckCompleted": false,
+        "bundleWriteCount": 0,
+        "tarballWriteCount": 0,
+        "registryRequestCount": 0,
+        "sourceOrigin": "config",
+        "normalizedSourceKeys": [],
+        "sourceSetDigest": "sha256:971e714a37c617383b56399ab19ec9d74d704f1a21b28648dd102236878fdcfc",
+        "duplicateSourcePositions": [],
+        "skipReason": null,
+        "contributesReleaseEvidence": false,
+        "decoyImportCount": 0,
+        "beforeTreeDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "afterTreeDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      {
+        "injectionId": "definition-sources-version-unsupported",
+        "command": "ph model check --json",
+        "warningsAsErrors": false,
+        "exitCode": 2,
+        "reportStatus": "failed",
+        "diagnosticCodes": [
+          "PH-CONFIG-VERSION-UNSUPPORTED"
+        ],
+        "hookOrder": [
+          "config:load",
+          "source:resolve"
+        ],
+        "typecheckCompleted": false,
+        "definitionCheckCompleted": false,
+        "bundleWriteCount": 0,
+        "tarballWriteCount": 0,
+        "registryRequestCount": 0,
+        "sourceOrigin": "config",
+        "normalizedSourceKeys": [],
+        "sourceSetDigest": "sha256:971e714a37c617383b56399ab19ec9d74d704f1a21b28648dd102236878fdcfc",
+        "duplicateSourcePositions": [],
+        "skipReason": null,
+        "contributesReleaseEvidence": false,
+        "decoyImportCount": 0,
+        "beforeTreeDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "afterTreeDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      {
+        "injectionId": "duplicate-canonical-source",
+        "command": "ph model check --json",
+        "warningsAsErrors": false,
+        "exitCode": 2,
+        "reportStatus": "failed",
+        "diagnosticCodes": [
+          "PH-CONFIG-DUPLICATE-SOURCE"
+        ],
+        "hookOrder": [
+          "config:load",
+          "source:resolve"
+        ],
+        "typecheckCompleted": false,
+        "definitionCheckCompleted": false,
+        "bundleWriteCount": 0,
+        "tarballWriteCount": 0,
+        "registryRequestCount": 0,
+        "sourceOrigin": "config",
+        "normalizedSourceKeys": [
+          "[\"./definition.ts\",[]]",
+          "[\"./definition.ts\",[]]"
+        ],
+        "sourceSetDigest": "sha256:9eaffad6e1eb3b02dd279c00885653e86338a7be1df63035ece93d06b7cb1d00",
+        "duplicateSourcePositions": [
+          [
+            "definitionSources",
+            "entries",
+            0
+          ],
+          [
+            "definitionSources",
+            "entries",
+            1
+          ]
+        ],
+        "skipReason": null,
+        "contributesReleaseEvidence": false,
+        "decoyImportCount": 0,
+        "beforeTreeDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "afterTreeDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      {
+        "injectionId": "source-root-escape",
+        "command": "ph model check --json",
+        "warningsAsErrors": false,
+        "exitCode": 2,
+        "reportStatus": "failed",
+        "diagnosticCodes": [
+          "PH-CONFIG-SOURCE-OUTSIDE-PACKAGE"
+        ],
+        "hookOrder": [
+          "config:load",
+          "source:resolve"
+        ],
+        "typecheckCompleted": false,
+        "definitionCheckCompleted": false,
+        "bundleWriteCount": 0,
+        "tarballWriteCount": 0,
+        "registryRequestCount": 0,
+        "sourceOrigin": "config",
+        "normalizedSourceKeys": [],
+        "sourceSetDigest": "sha256:971e714a37c617383b56399ab19ec9d74d704f1a21b28648dd102236878fdcfc",
+        "duplicateSourcePositions": [],
+        "skipReason": null,
+        "contributesReleaseEvidence": false,
+        "decoyImportCount": 0,
+        "beforeTreeDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "afterTreeDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      {
+        "injectionId": "source-external-symlink",
+        "command": "ph model check --json",
+        "warningsAsErrors": false,
+        "exitCode": 2,
+        "reportStatus": "failed",
+        "diagnosticCodes": [
+          "PH-CONFIG-SOURCE-OUTSIDE-PACKAGE"
+        ],
+        "hookOrder": [
+          "config:load",
+          "source:resolve"
+        ],
+        "typecheckCompleted": false,
+        "definitionCheckCompleted": false,
+        "bundleWriteCount": 0,
+        "tarballWriteCount": 0,
+        "registryRequestCount": 0,
+        "sourceOrigin": "config",
+        "normalizedSourceKeys": [],
+        "sourceSetDigest": "sha256:971e714a37c617383b56399ab19ec9d74d704f1a21b28648dd102236878fdcfc",
+        "duplicateSourcePositions": [],
+        "skipReason": null,
+        "contributesReleaseEvidence": false,
+        "decoyImportCount": 0,
+        "beforeTreeDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "afterTreeDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      {
+        "injectionId": "config-only-selection",
+        "command": "ph model check --json",
+        "warningsAsErrors": false,
+        "exitCode": 0,
+        "reportStatus": "ready",
+        "diagnosticCodes": [],
+        "hookOrder": [
+          "config:load",
+          "source:resolve"
+        ],
+        "typecheckCompleted": false,
+        "definitionCheckCompleted": false,
+        "bundleWriteCount": 0,
+        "tarballWriteCount": 0,
+        "registryRequestCount": 0,
+        "sourceOrigin": "config",
+        "normalizedSourceKeys": [
+          "[\"./definition.ts\",[\"CounterV1\"]]"
+        ],
+        "sourceSetDigest": "sha256:30a14655fa8a1d5dd4bba67a3338d84aed42a8830b679d2e6a532d64fc221e0b",
+        "duplicateSourcePositions": [],
+        "skipReason": null,
+        "contributesReleaseEvidence": false,
+        "decoyImportCount": 0,
+        "beforeTreeDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "afterTreeDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      {
+        "injectionId": "cli-replaces-missing-selection",
+        "command": "ph model check --source ./definition.ts#/CounterV1 --json",
+        "warningsAsErrors": false,
+        "exitCode": 0,
+        "reportStatus": "ready",
+        "diagnosticCodes": [],
+        "hookOrder": [
+          "config:load",
+          "source:resolve"
+        ],
+        "typecheckCompleted": false,
+        "definitionCheckCompleted": false,
+        "bundleWriteCount": 0,
+        "tarballWriteCount": 0,
+        "registryRequestCount": 0,
+        "sourceOrigin": "cli",
+        "normalizedSourceKeys": [
+          "[\"./definition.ts\",[\"CounterV1\"]]"
+        ],
+        "sourceSetDigest": "sha256:54febbdecb62ad71c465b5791c4bcca343ff663ac395d08556741ea5d310ce54",
+        "duplicateSourcePositions": [],
+        "skipReason": null,
+        "contributesReleaseEvidence": false,
+        "decoyImportCount": 0,
+        "beforeTreeDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "afterTreeDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      {
+        "injectionId": "cli-replaces-unsupported-selection",
+        "command": "ph model check --source ./definition.ts --json",
+        "warningsAsErrors": false,
+        "exitCode": 0,
+        "reportStatus": "ready",
+        "diagnosticCodes": [],
+        "hookOrder": [
+          "config:load",
+          "source:resolve"
+        ],
+        "typecheckCompleted": false,
+        "definitionCheckCompleted": false,
+        "bundleWriteCount": 0,
+        "tarballWriteCount": 0,
+        "registryRequestCount": 0,
+        "sourceOrigin": "cli",
+        "normalizedSourceKeys": [
+          "[\"./definition.ts\",[]]"
+        ],
+        "sourceSetDigest": "sha256:634c17cf1ff94c3d1865f6023c270a420fbafe04bc308d8fcf65fc5d95ddd545",
+        "duplicateSourcePositions": [],
+        "skipReason": null,
+        "contributesReleaseEvidence": false,
+        "decoyImportCount": 0,
+        "beforeTreeDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "afterTreeDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      {
+        "injectionId": "explicit-legacy-mode",
+        "command": "ph model check --json",
+        "warningsAsErrors": false,
+        "exitCode": 0,
+        "reportStatus": "skipped",
+        "diagnosticCodes": [],
+        "hookOrder": [
+          "config:load",
+          "source:resolve",
+          "definition-check:skipped"
+        ],
+        "typecheckCompleted": false,
+        "definitionCheckCompleted": true,
+        "bundleWriteCount": 0,
+        "tarballWriteCount": 0,
+        "registryRequestCount": 0,
+        "sourceOrigin": "config",
+        "normalizedSourceKeys": [],
+        "sourceSetDigest": "sha256:47c1825c51a4012fda4d347d4efd458b9ae40151aac41397451c4db03ecd73c6",
+        "duplicateSourcePositions": [],
+        "skipReason": "explicit-legacy-mode",
+        "contributesReleaseEvidence": false,
+        "decoyImportCount": 0,
+        "beforeTreeDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "afterTreeDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      {
+        "injectionId": "decoy-source-tree-not-scanned",
+        "command": "ph model check --json",
+        "warningsAsErrors": false,
+        "exitCode": 2,
+        "reportStatus": "failed",
+        "diagnosticCodes": [
+          "PH-CONFIG-SOURCES-MISSING"
+        ],
+        "hookOrder": [
+          "config:load",
+          "source:resolve"
+        ],
+        "typecheckCompleted": false,
+        "definitionCheckCompleted": false,
+        "bundleWriteCount": 0,
+        "tarballWriteCount": 0,
+        "registryRequestCount": 0,
+        "sourceOrigin": "config",
+        "normalizedSourceKeys": [],
+        "sourceSetDigest": "sha256:971e714a37c617383b56399ab19ec9d74d704f1a21b28648dd102236878fdcfc",
+        "duplicateSourcePositions": [],
+        "skipReason": null,
+        "contributesReleaseEvidence": false,
+        "decoyImportCount": 0,
+        "beforeTreeDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "afterTreeDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      {
+        "injectionId": "valid-control-edit",
+        "command": "ph model check --json",
+        "warningsAsErrors": false,
+        "exitCode": 0,
+        "reportStatus": "ok",
+        "diagnosticCodes": [],
+        "hookOrder": [
+          "config:load",
+          "source:resolve",
+          "source:import",
+          "definition-check:ok"
+        ],
+        "typecheckCompleted": false,
+        "definitionCheckCompleted": true,
+        "bundleWriteCount": 0,
+        "tarballWriteCount": 0,
+        "registryRequestCount": 0,
+        "sourceOrigin": "config",
+        "normalizedSourceKeys": [
+          "[\"./definition.ts\",[\"CounterV1\"]]"
+        ],
+        "sourceSetDigest": "sha256:30a14655fa8a1d5dd4bba67a3338d84aed42a8830b679d2e6a532d64fc221e0b",
+        "duplicateSourcePositions": [],
+        "skipReason": null,
+        "contributesReleaseEvidence": false,
+        "decoyImportCount": 0,
+        "beforeTreeDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "afterTreeDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      {
+        "injectionId": "valid-control-release",
+        "command": "ph model check --release --json",
+        "warningsAsErrors": false,
+        "exitCode": 0,
+        "reportStatus": "ok",
+        "diagnosticCodes": [],
+        "hookOrder": [
+          "config:load",
+          "source:resolve",
+          "source:import",
+          "definition-check:ok"
+        ],
+        "typecheckCompleted": false,
+        "definitionCheckCompleted": true,
+        "bundleWriteCount": 0,
+        "tarballWriteCount": 0,
+        "registryRequestCount": 0,
+        "sourceOrigin": "config",
+        "normalizedSourceKeys": [
+          "[\"./definition.ts\",[\"CounterV1\"]]"
+        ],
+        "sourceSetDigest": "sha256:30a14655fa8a1d5dd4bba67a3338d84aed42a8830b679d2e6a532d64fc221e0b",
+        "duplicateSourcePositions": [],
+        "skipReason": null,
+        "contributesReleaseEvidence": true,
+        "decoyImportCount": 0,
+        "beforeTreeDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "afterTreeDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      {
+        "injectionId": "source-import-failure",
+        "command": "ph model check --source ./injections/import-failure.ts --json",
+        "warningsAsErrors": false,
+        "exitCode": 2,
+        "reportStatus": "failed",
+        "diagnosticCodes": [
+          "PH-IMPORT-FAILED"
+        ],
+        "hookOrder": [
+          "config:load",
+          "source:resolve",
+          "source:import-failed"
+        ],
+        "typecheckCompleted": false,
+        "definitionCheckCompleted": false,
+        "bundleWriteCount": 0,
+        "tarballWriteCount": 0,
+        "registryRequestCount": 0,
+        "sourceOrigin": "cli",
+        "normalizedSourceKeys": [
+          "[\"./injections/import-failure.ts\",[]]"
+        ],
+        "sourceSetDigest": "sha256:62b39935163015afa407bf2d372e5731c6cb75bdb8db5315f07f9acd6a699d94",
+        "duplicateSourcePositions": [],
+        "skipReason": null,
+        "contributesReleaseEvidence": false,
+        "decoyImportCount": 0,
+        "beforeTreeDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "afterTreeDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      {
+        "injectionId": "definition-finalization-failure",
+        "command": "ph model check --source ./injections/definition-invalid.ts --json",
+        "warningsAsErrors": false,
+        "exitCode": 1,
+        "reportStatus": "invalid",
+        "diagnosticCodes": [
+          "PH-DEF-FIELD-OPTION-UNSUPPORTED"
+        ],
+        "hookOrder": [
+          "config:load",
+          "source:resolve",
+          "source:import",
+          "definition-check:invalid"
+        ],
+        "typecheckCompleted": false,
+        "definitionCheckCompleted": true,
+        "bundleWriteCount": 0,
+        "tarballWriteCount": 0,
+        "registryRequestCount": 0,
+        "sourceOrigin": "cli",
+        "normalizedSourceKeys": [
+          "[\"./injections/definition-invalid.ts\",[]]"
+        ],
+        "sourceSetDigest": "sha256:1d136f81232a4745b2196128ab374219c4da2242fc3cb0cbd13c54437e990698",
+        "duplicateSourcePositions": [],
+        "skipReason": null,
+        "contributesReleaseEvidence": false,
+        "decoyImportCount": 0,
+        "beforeTreeDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "afterTreeDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      {
+        "injectionId": "definition-warning",
+        "command": "ph model check --source ./injections/definition-warning.ts --json",
+        "warningsAsErrors": false,
+        "exitCode": 0,
+        "reportStatus": "ok",
+        "diagnosticCodes": [
+          "PH-DEF-FIXTURE-WARNING"
+        ],
+        "hookOrder": [
+          "config:load",
+          "source:resolve",
+          "source:import",
+          "definition-check:ok"
+        ],
+        "typecheckCompleted": false,
+        "definitionCheckCompleted": true,
+        "bundleWriteCount": 0,
+        "tarballWriteCount": 0,
+        "registryRequestCount": 0,
+        "sourceOrigin": "cli",
+        "normalizedSourceKeys": [
+          "[\"./injections/definition-warning.ts\",[]]"
+        ],
+        "sourceSetDigest": "sha256:58c9a4dd6bb4eabb7a21147048d9a5e144d7d03e09634cedf2c82b562346f925",
+        "duplicateSourcePositions": [],
+        "skipReason": null,
+        "contributesReleaseEvidence": false,
+        "decoyImportCount": 0,
+        "beforeTreeDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "afterTreeDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      {
+        "injectionId": "definition-warning-as-error",
+        "command": "ph model check --source ./injections/definition-warning.ts --warnings-as-errors --json",
+        "warningsAsErrors": true,
+        "exitCode": 1,
+        "reportStatus": "invalid",
+        "diagnosticCodes": [
+          "PH-DEF-FIXTURE-WARNING"
+        ],
+        "hookOrder": [
+          "config:load",
+          "source:resolve",
+          "source:import",
+          "definition-check:invalid"
+        ],
+        "typecheckCompleted": false,
+        "definitionCheckCompleted": true,
+        "bundleWriteCount": 0,
+        "tarballWriteCount": 0,
+        "registryRequestCount": 0,
+        "sourceOrigin": "cli",
+        "normalizedSourceKeys": [
+          "[\"./injections/definition-warning.ts\",[]]"
+        ],
+        "sourceSetDigest": "sha256:58c9a4dd6bb4eabb7a21147048d9a5e144d7d03e09634cedf2c82b562346f925",
+        "duplicateSourcePositions": [],
+        "skipReason": null,
+        "contributesReleaseEvidence": false,
+        "decoyImportCount": 0,
+        "beforeTreeDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "afterTreeDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      {
+        "injectionId": "build-definition-invalid-stops-before-bundles",
+        "command": "ph build --source ./injections/definition-invalid.ts",
+        "warningsAsErrors": false,
+        "exitCode": 1,
+        "reportStatus": "invalid",
+        "diagnosticCodes": [
+          "PH-DEF-FIELD-OPTION-UNSUPPORTED"
+        ],
+        "hookOrder": [
+          "tsc:start",
+          "tsc:ok",
+          "definition-check:invalid"
+        ],
+        "typecheckCompleted": true,
+        "definitionCheckCompleted": true,
+        "bundleWriteCount": 0,
+        "tarballWriteCount": 0,
+        "registryRequestCount": 0,
+        "sourceOrigin": "cli",
+        "normalizedSourceKeys": [
+          "[\"./injections/definition-invalid.ts\",[]]"
+        ],
+        "sourceSetDigest": "sha256:1d136f81232a4745b2196128ab374219c4da2242fc3cb0cbd13c54437e990698",
+        "duplicateSourcePositions": [],
+        "skipReason": null,
+        "contributesReleaseEvidence": false,
+        "decoyImportCount": 0,
+        "beforeTreeDigest": "sha256:a2eef59bc77ce6299adc78504ef6f71346554fda77c974dec5acb5686d909d35",
+        "afterTreeDigest": "sha256:a2eef59bc77ce6299adc78504ef6f71346554fda77c974dec5acb5686d909d35"
+      },
+      {
+        "injectionId": "build-control",
+        "command": "ph build",
+        "warningsAsErrors": false,
+        "exitCode": 0,
+        "reportStatus": "ok",
+        "diagnosticCodes": [],
+        "hookOrder": [
+          "tsc:start",
+          "tsc:ok",
+          "definition-check:ok",
+          "browser:write",
+          "node:write",
+          "tailwind:write",
+          "release-report:retain"
+        ],
+        "typecheckCompleted": true,
+        "definitionCheckCompleted": true,
+        "bundleWriteCount": 5,
+        "tarballWriteCount": 0,
+        "registryRequestCount": 0,
+        "sourceOrigin": "config",
+        "normalizedSourceKeys": [
+          "[\"./definition.ts\",[\"CounterV1\"]]"
+        ],
+        "sourceSetDigest": "sha256:30a14655fa8a1d5dd4bba67a3338d84aed42a8830b679d2e6a532d64fc221e0b",
+        "duplicateSourcePositions": [],
+        "skipReason": null,
+        "contributesReleaseEvidence": true,
+        "decoyImportCount": 0,
+        "beforeTreeDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "afterTreeDigest": "sha256:f850633a37366412372ebe532c7b236fcde915273962ffaf3f381875825acb33"
+      },
+      {
+        "injectionId": "build-explicit-legacy",
+        "command": "ph build",
+        "warningsAsErrors": false,
+        "exitCode": 0,
+        "reportStatus": "skipped",
+        "diagnosticCodes": [],
+        "hookOrder": [
+          "tsc:start",
+          "tsc:ok",
+          "definition-check:skipped",
+          "browser:write",
+          "node:write",
+          "tailwind:write",
+          "release-report:retain"
+        ],
+        "typecheckCompleted": true,
+        "definitionCheckCompleted": true,
+        "bundleWriteCount": 5,
+        "tarballWriteCount": 0,
+        "registryRequestCount": 0,
+        "sourceOrigin": "config",
+        "normalizedSourceKeys": [],
+        "sourceSetDigest": "sha256:47c1825c51a4012fda4d347d4efd458b9ae40151aac41397451c4db03ecd73c6",
+        "duplicateSourcePositions": [],
+        "skipReason": "explicit-legacy-mode",
+        "contributesReleaseEvidence": false,
+        "decoyImportCount": 0,
+        "beforeTreeDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "afterTreeDigest": "sha256:f850633a37366412372ebe532c7b236fcde915273962ffaf3f381875825acb33"
+      },
+      {
+        "injectionId": "npm-prepack-missing-report",
+        "command": "npm pack --dry-run --json",
+        "warningsAsErrors": false,
+        "exitCode": 1,
+        "reportStatus": "failed",
+        "diagnosticCodes": [
+          "PH-PKG-RELEASE-REPORT-MISSING"
+        ],
+        "hookOrder": [
+          "prepack",
+          "retained-report:missing"
+        ],
+        "typecheckCompleted": false,
+        "definitionCheckCompleted": true,
+        "bundleWriteCount": 0,
+        "tarballWriteCount": 0,
+        "registryRequestCount": 0,
+        "sourceOrigin": "config",
+        "normalizedSourceKeys": [
+          "[\"./definition.ts\",[\"CounterV1\"]]"
+        ],
+        "sourceSetDigest": "sha256:30a14655fa8a1d5dd4bba67a3338d84aed42a8830b679d2e6a532d64fc221e0b",
+        "duplicateSourcePositions": [],
+        "skipReason": null,
+        "contributesReleaseEvidence": false,
+        "decoyImportCount": 0,
+        "beforeTreeDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "afterTreeDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      {
+        "injectionId": "pnpm-prepack-missing-report",
+        "command": "pnpm pack",
+        "warningsAsErrors": false,
+        "exitCode": 1,
+        "reportStatus": "failed",
+        "diagnosticCodes": [
+          "PH-PKG-RELEASE-REPORT-MISSING"
+        ],
+        "hookOrder": [
+          "prepack",
+          "retained-report:missing"
+        ],
+        "typecheckCompleted": false,
+        "definitionCheckCompleted": true,
+        "bundleWriteCount": 0,
+        "tarballWriteCount": 0,
+        "registryRequestCount": 0,
+        "sourceOrigin": "config",
+        "normalizedSourceKeys": [
+          "[\"./definition.ts\",[\"CounterV1\"]]"
+        ],
+        "sourceSetDigest": "sha256:30a14655fa8a1d5dd4bba67a3338d84aed42a8830b679d2e6a532d64fc221e0b",
+        "duplicateSourcePositions": [],
+        "skipReason": null,
+        "contributesReleaseEvidence": false,
+        "decoyImportCount": 0,
+        "beforeTreeDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "afterTreeDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      {
+        "injectionId": "npm-prepack-retained",
+        "command": "npm pack --dry-run --json",
+        "warningsAsErrors": false,
+        "exitCode": 0,
+        "reportStatus": "ok",
+        "diagnosticCodes": [],
+        "hookOrder": [
+          "prepack",
+          "retained-report:ok"
+        ],
+        "typecheckCompleted": false,
+        "definitionCheckCompleted": true,
+        "bundleWriteCount": 0,
+        "tarballWriteCount": 0,
+        "registryRequestCount": 0,
+        "sourceOrigin": "config",
+        "normalizedSourceKeys": [
+          "[\"./definition.ts\",[\"CounterV1\"]]"
+        ],
+        "sourceSetDigest": "sha256:30a14655fa8a1d5dd4bba67a3338d84aed42a8830b679d2e6a532d64fc221e0b",
+        "duplicateSourcePositions": [],
+        "skipReason": null,
+        "contributesReleaseEvidence": true,
+        "decoyImportCount": 0,
+        "beforeTreeDigest": "sha256:f850633a37366412372ebe532c7b236fcde915273962ffaf3f381875825acb33",
+        "afterTreeDigest": "sha256:f850633a37366412372ebe532c7b236fcde915273962ffaf3f381875825acb33"
+      },
+      {
+        "injectionId": "pnpm-prepack-retained",
+        "command": "pnpm pack",
+        "warningsAsErrors": false,
+        "exitCode": 0,
+        "reportStatus": "ok",
+        "diagnosticCodes": [],
+        "hookOrder": [
+          "prepack",
+          "retained-report:ok",
+          "tarball:write"
+        ],
+        "typecheckCompleted": false,
+        "definitionCheckCompleted": true,
+        "bundleWriteCount": 0,
+        "tarballWriteCount": 1,
+        "registryRequestCount": 0,
+        "sourceOrigin": "config",
+        "normalizedSourceKeys": [
+          "[\"./definition.ts\",[\"CounterV1\"]]"
+        ],
+        "sourceSetDigest": "sha256:30a14655fa8a1d5dd4bba67a3338d84aed42a8830b679d2e6a532d64fc221e0b",
+        "duplicateSourcePositions": [],
+        "skipReason": null,
+        "contributesReleaseEvidence": true,
+        "decoyImportCount": 0,
+        "beforeTreeDigest": "sha256:f850633a37366412372ebe532c7b236fcde915273962ffaf3f381875825acb33",
+        "afterTreeDigest": "sha256:f850633a37366412372ebe532c7b236fcde915273962ffaf3f381875825acb33"
+      },
+      {
+        "injectionId": "npm-publish-dry-run-retained",
+        "command": "npm publish --dry-run --json",
+        "warningsAsErrors": false,
+        "exitCode": 0,
+        "reportStatus": "ok",
+        "diagnosticCodes": [],
+        "hookOrder": [
+          "prepack",
+          "retained-report:ok",
+          "publish:dry-run"
+        ],
+        "typecheckCompleted": false,
+        "definitionCheckCompleted": true,
+        "bundleWriteCount": 0,
+        "tarballWriteCount": 0,
+        "registryRequestCount": 0,
+        "sourceOrigin": "config",
+        "normalizedSourceKeys": [
+          "[\"./definition.ts\",[\"CounterV1\"]]"
+        ],
+        "sourceSetDigest": "sha256:30a14655fa8a1d5dd4bba67a3338d84aed42a8830b679d2e6a532d64fc221e0b",
+        "duplicateSourcePositions": [],
+        "skipReason": null,
+        "contributesReleaseEvidence": true,
+        "decoyImportCount": 0,
+        "beforeTreeDigest": "sha256:f850633a37366412372ebe532c7b236fcde915273962ffaf3f381875825acb33",
+        "afterTreeDigest": "sha256:f850633a37366412372ebe532c7b236fcde915273962ffaf3f381875825acb33"
+      },
+      {
+        "injectionId": "ph-publish-missing-report",
+        "command": "ph publish",
+        "warningsAsErrors": false,
+        "exitCode": 1,
+        "reportStatus": "failed",
+        "diagnosticCodes": [
+          "PH-PKG-RELEASE-REPORT-MISSING"
+        ],
+        "hookOrder": [
+          "publish:preflight",
+          "retained-report:missing"
+        ],
+        "typecheckCompleted": false,
+        "definitionCheckCompleted": true,
+        "bundleWriteCount": 0,
+        "tarballWriteCount": 0,
+        "registryRequestCount": 0,
+        "sourceOrigin": "config",
+        "normalizedSourceKeys": [
+          "[\"./definition.ts\",[\"CounterV1\"]]"
+        ],
+        "sourceSetDigest": "sha256:30a14655fa8a1d5dd4bba67a3338d84aed42a8830b679d2e6a532d64fc221e0b",
+        "duplicateSourcePositions": [],
+        "skipReason": null,
+        "contributesReleaseEvidence": false,
+        "decoyImportCount": 0,
+        "beforeTreeDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "afterTreeDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      {
+        "injectionId": "registry-suppressed-after-failure",
+        "command": "ph publish",
+        "warningsAsErrors": false,
+        "exitCode": 1,
+        "reportStatus": "failed",
+        "diagnosticCodes": [
+          "PH-PKG-RELEASE-REPORT-MISSING"
+        ],
+        "hookOrder": [
+          "publish:preflight",
+          "retained-report:missing"
+        ],
+        "typecheckCompleted": false,
+        "definitionCheckCompleted": true,
+        "bundleWriteCount": 0,
+        "tarballWriteCount": 0,
+        "registryRequestCount": 0,
+        "sourceOrigin": "config",
+        "normalizedSourceKeys": [
+          "[\"./definition.ts\",[\"CounterV1\"]]"
+        ],
+        "sourceSetDigest": "sha256:30a14655fa8a1d5dd4bba67a3338d84aed42a8830b679d2e6a532d64fc221e0b",
+        "duplicateSourcePositions": [],
+        "skipReason": null,
+        "contributesReleaseEvidence": false,
+        "decoyImportCount": 0,
+        "beforeTreeDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "afterTreeDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      {
+        "injectionId": "inspect-control-source-selection",
+        "command": "ph model inspect powerhouse/cf-build-control@1 --json",
+        "warningsAsErrors": false,
+        "exitCode": 0,
+        "reportStatus": "ok",
+        "diagnosticCodes": [],
+        "hookOrder": [
+          "config:load",
+          "source:resolve",
+          "source:import",
+          "definition-inspect:ok"
+        ],
+        "typecheckCompleted": false,
+        "definitionCheckCompleted": true,
+        "bundleWriteCount": 0,
+        "tarballWriteCount": 0,
+        "registryRequestCount": 0,
+        "sourceOrigin": "config",
+        "normalizedSourceKeys": [
+          "[\"./definition.ts\",[\"CounterV1\"]]"
+        ],
+        "sourceSetDigest": "sha256:30a14655fa8a1d5dd4bba67a3338d84aed42a8830b679d2e6a532d64fc221e0b",
+        "duplicateSourcePositions": [],
+        "skipReason": null,
+        "contributesReleaseEvidence": false,
+        "decoyImportCount": 0,
+        "beforeTreeDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "afterTreeDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      }
+    ]
+  },
+  "summary": {
+    "passed": 9,
+    "failed": 0,
+    "blocked": 0,
+    "cancelled": 0
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "name": "@powerhousedao/code-first-definitions",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "evidence": "node --conditions=source --import tsx scripts/run-gate-evidence.mts",
+    "fixtures:b1": "node --conditions=source --import tsx scripts/generate-model-parity-fixtures.mts",
+    "fixtures:b2": "node --conditions=source --import tsx scripts/generate-synthetic-replay-fixtures.mts",
+    "fixtures:b14": "node --conditions=source --import tsx scripts/generate-scalar-fixtures.mts",
+    "fixtures:b3": "node --conditions=source --import tsx scripts/generate-protocol-fixtures.mts",
+    "fixtures:b5": "node --conditions=source --import tsx scripts/generate-packed-consumer-fixtures.mts",
+    "fixtures:b6": "node --conditions=source --import tsx scripts/generate-model-sdl-fixtures.mts",
+    "fixtures:b7": "pnpm schema:subgraph && node --conditions=source --import tsx scripts/generate-subgraph-fixtures.mts",
+    "fixtures:b8": "node --conditions=source --import tsx scripts/generate-loader-fixtures.mts",
+    "schema:subgraph": "node --conditions=source --import tsx scripts/generate-subgraph-definition-schema.mts",
+    "fixtures:b9": "node --conditions=source --import tsx scripts/generate-b9-fixture.mts",
+    "fixtures:b10": "node --conditions=source --import tsx scripts/generate-migration-fixtures.mts",
+    "scaffold:mixed": "node --conditions=source --import tsx scripts/scaffold-mixed-repo.mts",
+    "test": "vitest --run",
+    "tsc": "tsc"
+  },
+  "devDependencies": {
+    "@powerhousedao/document-engineering": "1.40.5",
+    "@powerhousedao/ph-cli": "workspace:*",
+    "@powerhousedao/reactor-api": "workspace:*",
+    "@powerhousedao/reactor-group": "workspace:*",
+    "@powerhousedao/shared": "workspace:*",
+    "@tailwindcss/cli": "catalog:",
+    "@types/node": "catalog:",
+    "ajv": "^8.18.0",
+    "document-model": "workspace:*",
+    "graphql": "catalog:",
+    "ph-cmd": "workspace:*",
+    "tailwindcss": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "@powerhousedao/versioned-documents": "workspace:*",
+    "vitest": "catalog:",
+    "zod": "catalog:"
+  }
+}

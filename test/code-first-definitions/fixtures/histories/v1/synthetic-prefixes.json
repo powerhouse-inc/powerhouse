@@ -1,0 +1,1383 @@
+{
+  "kind": "powerhouse.synthetic-replay-prefixes",
+  "formatVersion": 1,
+  "hashAlgorithmVersion": "shared/hashDocumentStateForScope@1",
+  "prefixes": [
+    {
+      "caseId": "protocol-v1-mixed-outcomes",
+      "prefixIndex": 0,
+      "state": {
+        "auth": {
+          "grants": [],
+          "version": 0
+        },
+        "document": {
+          "hash": {
+            "algorithm": "sha1",
+            "encoding": "base64"
+          },
+          "version": 1
+        },
+        "global": {
+          "counter": 0,
+          "events": []
+        },
+        "local": {
+          "counter": 0,
+          "draft": "",
+          "events": []
+        }
+      },
+      "initialState": {
+        "auth": {
+          "grants": [],
+          "version": 0
+        },
+        "document": {
+          "hash": {
+            "algorithm": "sha1",
+            "encoding": "base64"
+          },
+          "version": 1
+        },
+        "global": {
+          "counter": 0,
+          "events": []
+        },
+        "local": {
+          "counter": 0,
+          "draft": "",
+          "events": []
+        }
+      },
+      "scopeHashes": {
+        "document": "xY7c9LTQetDEgrquYl+LpCjZufE=",
+        "global": "vj8hwNwjfKEumOWjt34LUcyfiVU=",
+        "local": "yb47HTShekNgy6H4bpQsAxwwX5U="
+      },
+      "errors": [],
+      "denials": [],
+      "indices": [],
+      "skips": [],
+      "revision": {
+        "document": 0,
+        "global": 0,
+        "local": 0
+      },
+      "dispatches": []
+    },
+    {
+      "caseId": "protocol-v1-mixed-outcomes",
+      "prefixIndex": 1,
+      "state": {
+        "auth": {
+          "grants": [],
+          "version": 0
+        },
+        "document": {
+          "hash": {
+            "algorithm": "sha1",
+            "encoding": "base64"
+          },
+          "version": 1
+        },
+        "global": {
+          "counter": 2,
+          "events": [
+            "first:no-extra"
+          ]
+        },
+        "local": {
+          "counter": 0,
+          "draft": "",
+          "events": []
+        }
+      },
+      "initialState": {
+        "auth": {
+          "grants": [],
+          "version": 0
+        },
+        "document": {
+          "hash": {
+            "algorithm": "sha1",
+            "encoding": "base64"
+          },
+          "version": 1
+        },
+        "global": {
+          "counter": 0,
+          "events": []
+        },
+        "local": {
+          "counter": 0,
+          "draft": "",
+          "events": []
+        }
+      },
+      "scopeHashes": {
+        "document": "xY7c9LTQetDEgrquYl+LpCjZufE=",
+        "global": "TJmzuJALuAML0EWK6+4SLMUGT4A=",
+        "local": "yb47HTShekNgy6H4bpQsAxwwX5U="
+      },
+      "errors": [
+        null
+      ],
+      "denials": [
+        null
+      ],
+      "indices": [
+        0
+      ],
+      "skips": [
+        0
+      ],
+      "revision": {
+        "document": 0,
+        "global": 1,
+        "local": 0
+      },
+      "dispatches": []
+    },
+    {
+      "caseId": "protocol-v1-mixed-outcomes",
+      "prefixIndex": 2,
+      "state": {
+        "auth": {
+          "grants": [],
+          "version": 0
+        },
+        "document": {
+          "hash": {
+            "algorithm": "sha1",
+            "encoding": "base64"
+          },
+          "version": 1
+        },
+        "global": {
+          "counter": 2,
+          "events": [
+            "first:no-extra"
+          ]
+        },
+        "local": {
+          "counter": 0,
+          "draft": "local-draft",
+          "events": [
+            "draft:local-draft"
+          ]
+        }
+      },
+      "initialState": {
+        "auth": {
+          "grants": [],
+          "version": 0
+        },
+        "document": {
+          "hash": {
+            "algorithm": "sha1",
+            "encoding": "base64"
+          },
+          "version": 1
+        },
+        "global": {
+          "counter": 0,
+          "events": []
+        },
+        "local": {
+          "counter": 0,
+          "draft": "",
+          "events": []
+        }
+      },
+      "scopeHashes": {
+        "document": "xY7c9LTQetDEgrquYl+LpCjZufE=",
+        "global": "TJmzuJALuAML0EWK6+4SLMUGT4A=",
+        "local": "/n6brp5Ngw8t5QUlxiaqMZdIAuw="
+      },
+      "errors": [
+        null,
+        null
+      ],
+      "denials": [
+        null,
+        null
+      ],
+      "indices": [
+        0,
+        0
+      ],
+      "skips": [
+        0,
+        0
+      ],
+      "revision": {
+        "document": 0,
+        "global": 1,
+        "local": 1
+      },
+      "dispatches": []
+    },
+    {
+      "caseId": "protocol-v1-mixed-outcomes",
+      "prefixIndex": 3,
+      "state": {
+        "auth": {
+          "grants": [],
+          "version": 0
+        },
+        "document": {
+          "hash": {
+            "algorithm": "sha1",
+            "encoding": "base64"
+          },
+          "version": 1
+        },
+        "global": {
+          "counter": 2,
+          "events": [
+            "first:no-extra"
+          ]
+        },
+        "local": {
+          "counter": 0,
+          "draft": "local-draft",
+          "events": [
+            "draft:local-draft"
+          ]
+        }
+      },
+      "initialState": {
+        "auth": {
+          "grants": [],
+          "version": 0
+        },
+        "document": {
+          "hash": {
+            "algorithm": "sha1",
+            "encoding": "base64"
+          },
+          "version": 1
+        },
+        "global": {
+          "counter": 0,
+          "events": []
+        },
+        "local": {
+          "counter": 0,
+          "draft": "",
+          "events": []
+        }
+      },
+      "scopeHashes": {
+        "document": "xY7c9LTQetDEgrquYl+LpCjZufE=",
+        "global": "TJmzuJALuAML0EWK6+4SLMUGT4A=",
+        "local": "/n6brp5Ngw8t5QUlxiaqMZdIAuw="
+      },
+      "errors": [
+        null,
+        null,
+        "Rejected"
+      ],
+      "denials": [
+        null,
+        null,
+        null
+      ],
+      "indices": [
+        0,
+        0,
+        1
+      ],
+      "skips": [
+        0,
+        0,
+        0
+      ],
+      "revision": {
+        "document": 0,
+        "global": 2,
+        "local": 1
+      },
+      "dispatches": []
+    },
+    {
+      "caseId": "protocol-v1-mixed-outcomes",
+      "prefixIndex": 4,
+      "state": {
+        "auth": {
+          "grants": [],
+          "version": 0
+        },
+        "document": {
+          "hash": {
+            "algorithm": "sha1",
+            "encoding": "base64"
+          },
+          "version": 1
+        },
+        "global": {
+          "counter": 2,
+          "events": [
+            "first:no-extra",
+            "dispatch:child-synthetic"
+          ]
+        },
+        "local": {
+          "counter": 0,
+          "draft": "local-draft",
+          "events": [
+            "draft:local-draft"
+          ]
+        }
+      },
+      "initialState": {
+        "auth": {
+          "grants": [],
+          "version": 0
+        },
+        "document": {
+          "hash": {
+            "algorithm": "sha1",
+            "encoding": "base64"
+          },
+          "version": 1
+        },
+        "global": {
+          "counter": 0,
+          "events": []
+        },
+        "local": {
+          "counter": 0,
+          "draft": "",
+          "events": []
+        }
+      },
+      "scopeHashes": {
+        "document": "xY7c9LTQetDEgrquYl+LpCjZufE=",
+        "global": "r5NC6xz0qIXLfEGScatWrsMXduw=",
+        "local": "/n6brp5Ngw8t5QUlxiaqMZdIAuw="
+      },
+      "errors": [
+        null,
+        null,
+        "Rejected",
+        null
+      ],
+      "denials": [
+        null,
+        null,
+        null,
+        null
+      ],
+      "indices": [
+        0,
+        0,
+        1,
+        2
+      ],
+      "skips": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "revision": {
+        "document": 0,
+        "global": 3,
+        "local": 1
+      },
+      "dispatches": [
+        {
+          "input": {
+            "id": "child-synthetic"
+          },
+          "type": "DELETE_CHILD_DOCUMENT"
+        }
+      ]
+    },
+    {
+      "caseId": "protocol-v1-mixed-outcomes",
+      "prefixIndex": 5,
+      "state": {
+        "auth": {
+          "grants": [],
+          "version": 0
+        },
+        "document": {
+          "hash": {
+            "algorithm": "sha1",
+            "encoding": "base64"
+          },
+          "version": 1
+        },
+        "global": {
+          "counter": 2,
+          "events": [
+            "first:no-extra",
+            "dispatch:child-synthetic"
+          ]
+        },
+        "local": {
+          "counter": 0,
+          "draft": "local-draft",
+          "events": [
+            "draft:local-draft"
+          ]
+        }
+      },
+      "initialState": {
+        "auth": {
+          "grants": [],
+          "version": 0
+        },
+        "document": {
+          "hash": {
+            "algorithm": "sha1",
+            "encoding": "base64"
+          },
+          "version": 1
+        },
+        "global": {
+          "counter": 0,
+          "events": []
+        },
+        "local": {
+          "counter": 0,
+          "draft": "",
+          "events": []
+        }
+      },
+      "scopeHashes": {
+        "document": "xY7c9LTQetDEgrquYl+LpCjZufE=",
+        "global": "r5NC6xz0qIXLfEGScatWrsMXduw=",
+        "local": "/n6brp5Ngw8t5QUlxiaqMZdIAuw="
+      },
+      "errors": [
+        null,
+        null,
+        "Rejected",
+        null,
+        null
+      ],
+      "denials": [
+        null,
+        null,
+        null,
+        null,
+        "fixture-policy-denied"
+      ],
+      "indices": [
+        0,
+        0,
+        1,
+        2,
+        3
+      ],
+      "skips": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "revision": {
+        "document": 0,
+        "global": 4,
+        "local": 1
+      },
+      "dispatches": [
+        {
+          "input": {
+            "id": "child-synthetic"
+          },
+          "type": "DELETE_CHILD_DOCUMENT"
+        }
+      ]
+    },
+    {
+      "caseId": "protocol-v1-mixed-outcomes",
+      "prefixIndex": 6,
+      "state": {
+        "auth": {
+          "grants": [],
+          "version": 0
+        },
+        "document": {
+          "hash": {
+            "algorithm": "sha1",
+            "encoding": "base64"
+          },
+          "version": 1
+        },
+        "global": {
+          "counter": 5,
+          "events": [
+            "first:no-extra",
+            "dispatch:child-synthetic",
+            "skip-preserved:no-extra"
+          ]
+        },
+        "local": {
+          "counter": 0,
+          "draft": "local-draft",
+          "events": [
+            "draft:local-draft"
+          ]
+        }
+      },
+      "initialState": {
+        "auth": {
+          "grants": [],
+          "version": 0
+        },
+        "document": {
+          "hash": {
+            "algorithm": "sha1",
+            "encoding": "base64"
+          },
+          "version": 1
+        },
+        "global": {
+          "counter": 0,
+          "events": []
+        },
+        "local": {
+          "counter": 0,
+          "draft": "",
+          "events": []
+        }
+      },
+      "scopeHashes": {
+        "document": "xY7c9LTQetDEgrquYl+LpCjZufE=",
+        "global": "/qmddhbsQHPVn4kUZwswRtEHShY=",
+        "local": "/n6brp5Ngw8t5QUlxiaqMZdIAuw="
+      },
+      "errors": [
+        null,
+        null,
+        "Rejected",
+        null,
+        null,
+        null
+      ],
+      "denials": [
+        null,
+        null,
+        null,
+        null,
+        "fixture-policy-denied",
+        null
+      ],
+      "indices": [
+        0,
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "skips": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        1
+      ],
+      "revision": {
+        "document": 0,
+        "global": 5,
+        "local": 1
+      },
+      "dispatches": [
+        {
+          "input": {
+            "id": "child-synthetic"
+          },
+          "type": "DELETE_CHILD_DOCUMENT"
+        }
+      ]
+    },
+    {
+      "caseId": "protocol-v2-global-local",
+      "prefixIndex": 0,
+      "state": {
+        "auth": {
+          "grants": [],
+          "version": 0
+        },
+        "document": {
+          "hash": {
+            "algorithm": "sha1",
+            "encoding": "base64"
+          },
+          "version": 2
+        },
+        "global": {
+          "counter": 0,
+          "events": [],
+          "title": null
+        },
+        "local": {
+          "counter": 0,
+          "draft": "",
+          "events": []
+        }
+      },
+      "initialState": {
+        "auth": {
+          "grants": [],
+          "version": 0
+        },
+        "document": {
+          "hash": {
+            "algorithm": "sha1",
+            "encoding": "base64"
+          },
+          "version": 2
+        },
+        "global": {
+          "counter": 0,
+          "events": [],
+          "title": null
+        },
+        "local": {
+          "counter": 0,
+          "draft": "",
+          "events": []
+        }
+      },
+      "scopeHashes": {
+        "document": "ogaUiJM1VfnPQy/NRTvrUBIW2X4=",
+        "global": "JqWxSRiedJB9Inkoxc6wuF/JwCE=",
+        "local": "yb47HTShekNgy6H4bpQsAxwwX5U="
+      },
+      "errors": [],
+      "denials": [],
+      "indices": [],
+      "skips": [],
+      "revision": {
+        "document": 0,
+        "global": 0,
+        "local": 0
+      },
+      "dispatches": []
+    },
+    {
+      "caseId": "protocol-v2-global-local",
+      "prefixIndex": 1,
+      "state": {
+        "auth": {
+          "grants": [],
+          "version": 0
+        },
+        "document": {
+          "hash": {
+            "algorithm": "sha1",
+            "encoding": "base64"
+          },
+          "version": 2
+        },
+        "global": {
+          "counter": 0,
+          "events": [],
+          "title": "Version two"
+        },
+        "local": {
+          "counter": 0,
+          "draft": "",
+          "events": []
+        }
+      },
+      "initialState": {
+        "auth": {
+          "grants": [],
+          "version": 0
+        },
+        "document": {
+          "hash": {
+            "algorithm": "sha1",
+            "encoding": "base64"
+          },
+          "version": 2
+        },
+        "global": {
+          "counter": 0,
+          "events": [],
+          "title": null
+        },
+        "local": {
+          "counter": 0,
+          "draft": "",
+          "events": []
+        }
+      },
+      "scopeHashes": {
+        "document": "ogaUiJM1VfnPQy/NRTvrUBIW2X4=",
+        "global": "TdQ5qsub1fS+Lf1uBr/q3uP9zYo=",
+        "local": "yb47HTShekNgy6H4bpQsAxwwX5U="
+      },
+      "errors": [
+        null
+      ],
+      "denials": [
+        null
+      ],
+      "indices": [
+        0
+      ],
+      "skips": [
+        0
+      ],
+      "revision": {
+        "document": 0,
+        "global": 1,
+        "local": 0
+      },
+      "dispatches": []
+    },
+    {
+      "caseId": "protocol-v2-global-local",
+      "prefixIndex": 2,
+      "state": {
+        "auth": {
+          "grants": [],
+          "version": 0
+        },
+        "document": {
+          "hash": {
+            "algorithm": "sha1",
+            "encoding": "base64"
+          },
+          "version": 2
+        },
+        "global": {
+          "counter": 7,
+          "events": [
+            "v2:no-extra"
+          ],
+          "title": "Version two"
+        },
+        "local": {
+          "counter": 0,
+          "draft": "",
+          "events": []
+        }
+      },
+      "initialState": {
+        "auth": {
+          "grants": [],
+          "version": 0
+        },
+        "document": {
+          "hash": {
+            "algorithm": "sha1",
+            "encoding": "base64"
+          },
+          "version": 2
+        },
+        "global": {
+          "counter": 0,
+          "events": [],
+          "title": null
+        },
+        "local": {
+          "counter": 0,
+          "draft": "",
+          "events": []
+        }
+      },
+      "scopeHashes": {
+        "document": "ogaUiJM1VfnPQy/NRTvrUBIW2X4=",
+        "global": "A0HD511QJoI2uoKIXR+j/k8iNqk=",
+        "local": "yb47HTShekNgy6H4bpQsAxwwX5U="
+      },
+      "errors": [
+        null,
+        null
+      ],
+      "denials": [
+        null,
+        null
+      ],
+      "indices": [
+        0,
+        1
+      ],
+      "skips": [
+        0,
+        0
+      ],
+      "revision": {
+        "document": 0,
+        "global": 2,
+        "local": 0
+      },
+      "dispatches": []
+    },
+    {
+      "caseId": "protocol-v2-global-local",
+      "prefixIndex": 3,
+      "state": {
+        "auth": {
+          "grants": [],
+          "version": 0
+        },
+        "document": {
+          "hash": {
+            "algorithm": "sha1",
+            "encoding": "base64"
+          },
+          "version": 2
+        },
+        "global": {
+          "counter": 7,
+          "events": [
+            "v2:no-extra"
+          ],
+          "title": "Version two"
+        },
+        "local": {
+          "counter": 0,
+          "draft": "v2-local",
+          "events": [
+            "draft:v2-local"
+          ]
+        }
+      },
+      "initialState": {
+        "auth": {
+          "grants": [],
+          "version": 0
+        },
+        "document": {
+          "hash": {
+            "algorithm": "sha1",
+            "encoding": "base64"
+          },
+          "version": 2
+        },
+        "global": {
+          "counter": 0,
+          "events": [],
+          "title": null
+        },
+        "local": {
+          "counter": 0,
+          "draft": "",
+          "events": []
+        }
+      },
+      "scopeHashes": {
+        "document": "ogaUiJM1VfnPQy/NRTvrUBIW2X4=",
+        "global": "A0HD511QJoI2uoKIXR+j/k8iNqk=",
+        "local": "CkRoHBPs4YkIMSYyD3/wlodcg44="
+      },
+      "errors": [
+        null,
+        null,
+        null
+      ],
+      "denials": [
+        null,
+        null,
+        null
+      ],
+      "indices": [
+        0,
+        1,
+        0
+      ],
+      "skips": [
+        0,
+        0,
+        0
+      ],
+      "revision": {
+        "document": 0,
+        "global": 2,
+        "local": 1
+      },
+      "dispatches": []
+    },
+    {
+      "caseId": "protocol-v2-global-local",
+      "prefixIndex": 4,
+      "state": {
+        "auth": {
+          "grants": [],
+          "version": 0
+        },
+        "document": {
+          "hash": {
+            "algorithm": "sha1",
+            "encoding": "base64"
+          },
+          "version": 2
+        },
+        "global": {
+          "counter": 7,
+          "events": [
+            "v2:no-extra",
+            "dispatch:v2-child"
+          ],
+          "title": "Version two"
+        },
+        "local": {
+          "counter": 0,
+          "draft": "v2-local",
+          "events": [
+            "draft:v2-local"
+          ]
+        }
+      },
+      "initialState": {
+        "auth": {
+          "grants": [],
+          "version": 0
+        },
+        "document": {
+          "hash": {
+            "algorithm": "sha1",
+            "encoding": "base64"
+          },
+          "version": 2
+        },
+        "global": {
+          "counter": 0,
+          "events": [],
+          "title": null
+        },
+        "local": {
+          "counter": 0,
+          "draft": "",
+          "events": []
+        }
+      },
+      "scopeHashes": {
+        "document": "ogaUiJM1VfnPQy/NRTvrUBIW2X4=",
+        "global": "+Yjp79h65xb/Leq7PDPKYCnYr7U=",
+        "local": "CkRoHBPs4YkIMSYyD3/wlodcg44="
+      },
+      "errors": [
+        null,
+        null,
+        null,
+        null
+      ],
+      "denials": [
+        null,
+        null,
+        null,
+        null
+      ],
+      "indices": [
+        0,
+        1,
+        0,
+        2
+      ],
+      "skips": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "revision": {
+        "document": 0,
+        "global": 3,
+        "local": 1
+      },
+      "dispatches": [
+        {
+          "input": {
+            "id": "v2-child"
+          },
+          "type": "DELETE_CHILD_DOCUMENT"
+        }
+      ]
+    },
+    {
+      "caseId": "protocol-upgrade-v1-v2",
+      "prefixIndex": 0,
+      "state": {
+        "auth": {
+          "grants": [],
+          "version": 0
+        },
+        "document": {
+          "hash": {
+            "algorithm": "sha1",
+            "encoding": "base64"
+          },
+          "version": 1
+        },
+        "global": {
+          "counter": 0,
+          "events": []
+        },
+        "local": {
+          "counter": 0,
+          "draft": "",
+          "events": []
+        }
+      },
+      "initialState": {
+        "auth": {
+          "grants": [],
+          "version": 0
+        },
+        "document": {
+          "hash": {
+            "algorithm": "sha1",
+            "encoding": "base64"
+          },
+          "version": 1
+        },
+        "global": {
+          "counter": 0,
+          "events": []
+        },
+        "local": {
+          "counter": 0,
+          "draft": "",
+          "events": []
+        }
+      },
+      "scopeHashes": {
+        "document": "xY7c9LTQetDEgrquYl+LpCjZufE=",
+        "global": "vj8hwNwjfKEumOWjt34LUcyfiVU=",
+        "local": "yb47HTShekNgy6H4bpQsAxwwX5U="
+      },
+      "errors": [],
+      "denials": [],
+      "indices": [],
+      "skips": [],
+      "revision": {
+        "document": 0,
+        "global": 0,
+        "local": 0
+      },
+      "dispatches": []
+    },
+    {
+      "caseId": "protocol-upgrade-v1-v2",
+      "prefixIndex": 1,
+      "state": {
+        "auth": {
+          "grants": [],
+          "version": 0
+        },
+        "document": {
+          "hash": {
+            "algorithm": "sha1",
+            "encoding": "base64"
+          },
+          "version": 1
+        },
+        "global": {
+          "counter": 0,
+          "events": []
+        },
+        "local": {
+          "counter": 0,
+          "draft": "",
+          "events": []
+        }
+      },
+      "initialState": {
+        "auth": {
+          "grants": [],
+          "version": 0
+        },
+        "document": {
+          "hash": {
+            "algorithm": "sha1",
+            "encoding": "base64"
+          },
+          "version": 1
+        },
+        "global": {
+          "counter": 0,
+          "events": []
+        },
+        "local": {
+          "counter": 0,
+          "draft": "",
+          "events": []
+        }
+      },
+      "scopeHashes": {
+        "document": "xY7c9LTQetDEgrquYl+LpCjZufE=",
+        "global": "vj8hwNwjfKEumOWjt34LUcyfiVU=",
+        "local": "yb47HTShekNgy6H4bpQsAxwwX5U="
+      },
+      "errors": [
+        null
+      ],
+      "denials": [
+        null
+      ],
+      "indices": [
+        0
+      ],
+      "skips": [
+        0
+      ],
+      "revision": {
+        "document": 0,
+        "global": 0,
+        "local": 0
+      },
+      "dispatches": []
+    },
+    {
+      "caseId": "protocol-upgrade-v1-v2",
+      "prefixIndex": 2,
+      "state": {
+        "auth": {
+          "grants": [],
+          "version": 0
+        },
+        "document": {
+          "hash": {
+            "algorithm": "sha1",
+            "encoding": "base64"
+          },
+          "version": 1
+        },
+        "global": {
+          "counter": 4,
+          "events": [
+            "before-upgrade:no-extra"
+          ]
+        },
+        "local": {
+          "counter": 0,
+          "draft": "",
+          "events": []
+        }
+      },
+      "initialState": {
+        "auth": {
+          "grants": [],
+          "version": 0
+        },
+        "document": {
+          "hash": {
+            "algorithm": "sha1",
+            "encoding": "base64"
+          },
+          "version": 1
+        },
+        "global": {
+          "counter": 0,
+          "events": []
+        },
+        "local": {
+          "counter": 0,
+          "draft": "",
+          "events": []
+        }
+      },
+      "scopeHashes": {
+        "document": "xY7c9LTQetDEgrquYl+LpCjZufE=",
+        "global": "FJkNacDoW4ZtwQ+RqoirQxdmu4U=",
+        "local": "yb47HTShekNgy6H4bpQsAxwwX5U="
+      },
+      "errors": [
+        null,
+        null
+      ],
+      "denials": [
+        null,
+        null
+      ],
+      "indices": [
+        0,
+        0
+      ],
+      "skips": [
+        0,
+        0
+      ],
+      "revision": {
+        "document": 0,
+        "global": 1,
+        "local": 0
+      },
+      "dispatches": []
+    },
+    {
+      "caseId": "protocol-upgrade-v1-v2",
+      "prefixIndex": 3,
+      "state": {
+        "auth": {
+          "grants": [],
+          "version": 0
+        },
+        "document": {
+          "hash": {
+            "algorithm": "sha1",
+            "encoding": "base64"
+          },
+          "version": 2
+        },
+        "global": {
+          "counter": 4,
+          "events": [
+            "before-upgrade:no-extra"
+          ],
+          "title": null
+        },
+        "local": {
+          "counter": 0,
+          "draft": "",
+          "events": []
+        }
+      },
+      "initialState": {
+        "auth": {
+          "grants": [],
+          "version": 0
+        },
+        "document": {
+          "hash": {
+            "algorithm": "sha1",
+            "encoding": "base64"
+          },
+          "version": 1
+        },
+        "global": {
+          "counter": 0,
+          "events": [],
+          "title": null
+        },
+        "local": {
+          "counter": 0,
+          "draft": "",
+          "events": []
+        }
+      },
+      "scopeHashes": {
+        "document": "ogaUiJM1VfnPQy/NRTvrUBIW2X4=",
+        "global": "oeUbqLSOz9rNRyaVPtcvmr4h3NY=",
+        "local": "yb47HTShekNgy6H4bpQsAxwwX5U="
+      },
+      "errors": [
+        null,
+        null,
+        null
+      ],
+      "denials": [
+        null,
+        null,
+        null
+      ],
+      "indices": [
+        0,
+        0,
+        1
+      ],
+      "skips": [
+        0,
+        0,
+        0
+      ],
+      "revision": {
+        "document": 2,
+        "global": 1,
+        "local": 0
+      },
+      "dispatches": []
+    },
+    {
+      "caseId": "protocol-upgrade-v1-v2",
+      "prefixIndex": 4,
+      "state": {
+        "auth": {
+          "grants": [],
+          "version": 0
+        },
+        "document": {
+          "hash": {
+            "algorithm": "sha1",
+            "encoding": "base64"
+          },
+          "version": 2
+        },
+        "global": {
+          "counter": 4,
+          "events": [
+            "before-upgrade:no-extra"
+          ],
+          "title": "After upgrade"
+        },
+        "local": {
+          "counter": 0,
+          "draft": "",
+          "events": []
+        }
+      },
+      "initialState": {
+        "auth": {
+          "grants": [],
+          "version": 0
+        },
+        "document": {
+          "hash": {
+            "algorithm": "sha1",
+            "encoding": "base64"
+          },
+          "version": 1
+        },
+        "global": {
+          "counter": 0,
+          "events": [],
+          "title": null
+        },
+        "local": {
+          "counter": 0,
+          "draft": "",
+          "events": []
+        }
+      },
+      "scopeHashes": {
+        "document": "ogaUiJM1VfnPQy/NRTvrUBIW2X4=",
+        "global": "HZR2QEmQbgeH2SHN6tJI095kBaI=",
+        "local": "yb47HTShekNgy6H4bpQsAxwwX5U="
+      },
+      "errors": [
+        null,
+        null,
+        null,
+        null
+      ],
+      "denials": [
+        null,
+        null,
+        null,
+        null
+      ],
+      "indices": [
+        0,
+        0,
+        1,
+        1
+      ],
+      "skips": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "revision": {
+        "document": 2,
+        "global": 2,
+        "local": 0
+      },
+      "dispatches": []
+    }
+  ]
+}

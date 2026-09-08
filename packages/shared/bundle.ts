@@ -20,6 +20,7 @@ await build({
     // Browser-safe deep entries: Connect imports these directly so they don't
     // pull the registry barrel's node:fs helpers into the browser bundle.
     "registry/manifest-slim.ts",
+    "registry/package-spec.ts",
     "registry/urls.ts",
   ],
   outDir: "dist",
@@ -41,6 +42,21 @@ await build({
   sourcemap: true,
 });
 
+// Keep the document-model declaration self-contained. The shared multi-entry
+// declaration build places its public types in a private, content-hashed chunk,
+// which makes inferred exports in downstream packages fail with TS2742.
+await build({
+  entry: ["document-model/index.ts"],
+  outDir: "dist/document-model",
+  platform: "neutral",
+  clean: false,
+  dts: { emitDtsOnly: true },
+  sourcemap: true,
+  deps: {
+    neverBundle: [/^node:.*/],
+  },
+});
+
 // Sub-paths so cli.ts and command files can import only what they need
 // without pulling the full clis bundle on the cold path.
 await build({
@@ -55,6 +71,7 @@ await build({
 await build({
   entry: [
     "clis/constants.ts",
+    "clis/file-system/get-config-strict.ts",
     "clis/utils.ts",
     "clis/command-names.ts",
     "clis/services/telemetry.ts",

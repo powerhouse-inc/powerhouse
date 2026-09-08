@@ -1,0 +1,5 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$comment": "X-auth is separate from core v1. No implementation evidence is established.",
+  "not": {}
+}

@@ -1,0 +1,1131 @@
+{
+  "kind": "powerhouse.gate-fixture-manifest",
+  "formatVersion": 1,
+  "gate": "B9",
+  "fixtureVersion": "failure-propagation-v1",
+  "requiredTools": {
+    "node": ">=24",
+    "typescript": "6.0.3",
+    "npm": "available",
+    "pnpm": "10.33.4",
+    "ph": "workspace"
+  },
+  "schemaDigest": "sha256:9a320fb708d0c5bba916dba4cd268cdd7283d21ce1128b5905b2bc247d8cc868",
+  "directDependencies": [],
+  "cases": [
+    {
+      "caseId": "tsc-failure-stops-before-bundles",
+      "category": "typecheck",
+      "command": "ph build",
+      "config": null,
+      "cliSources": [],
+      "expected": {
+        "status": "process-failed",
+        "diagnosticCodes": [],
+        "sourceOrigin": null,
+        "exitCode": 1,
+        "hookOrder": [
+          "tsc:start",
+          "tsc:failed"
+        ],
+        "typecheckCompleted": false,
+        "definitionCheckCompleted": false,
+        "bundleWriteCount": 0,
+        "tarballWriteCount": 0,
+        "registryRequestCount": 0,
+        "decoyImportCount": 0,
+        "skipReason": null,
+        "contributesReleaseEvidence": false,
+        "outputUnchanged": true
+      }
+    },
+    {
+      "caseId": "definition-sources-missing",
+      "category": "configuration",
+      "command": "ph model check --json",
+      "config": {},
+      "cliSources": [],
+      "expected": {
+        "status": "failed",
+        "diagnosticCodes": [
+          "PH-CONFIG-SOURCES-MISSING"
+        ],
+        "sourceOrigin": "config",
+        "exitCode": 2,
+        "hookOrder": [
+          "config:load",
+          "source:resolve"
+        ],
+        "typecheckCompleted": false,
+        "definitionCheckCompleted": false,
+        "bundleWriteCount": 0,
+        "tarballWriteCount": 0,
+        "registryRequestCount": 0,
+        "decoyImportCount": 0,
+        "skipReason": null,
+        "contributesReleaseEvidence": false,
+        "outputUnchanged": true
+      }
+    },
+    {
+      "caseId": "definition-sources-empty",
+      "category": "configuration",
+      "command": "ph model check --json",
+      "config": {
+        "definitionSources": {
+          "formatVersion": 1,
+          "mode": "code-first",
+          "entries": []
+        }
+      },
+      "cliSources": [],
+      "expected": {
+        "status": "failed",
+        "diagnosticCodes": [
+          "PH-CONFIG-SOURCES-MISSING"
+        ],
+        "sourceOrigin": "config",
+        "exitCode": 2,
+        "hookOrder": [
+          "config:load",
+          "source:resolve"
+        ],
+        "typecheckCompleted": false,
+        "definitionCheckCompleted": false,
+        "bundleWriteCount": 0,
+        "tarballWriteCount": 0,
+        "registryRequestCount": 0,
+        "decoyImportCount": 0,
+        "skipReason": null,
+        "contributesReleaseEvidence": false,
+        "outputUnchanged": true
+      }
+    },
+    {
+      "caseId": "definition-sources-version-unsupported",
+      "category": "configuration",
+      "command": "ph model check --json",
+      "config": {
+        "definitionSources": {
+          "formatVersion": 2,
+          "mode": "code-first",
+          "entries": [
+            {
+              "specifier": "./definition.ts"
+            }
+          ]
+        }
+      },
+      "cliSources": [],
+      "expected": {
+        "status": "failed",
+        "diagnosticCodes": [
+          "PH-CONFIG-VERSION-UNSUPPORTED"
+        ],
+        "sourceOrigin": "config",
+        "exitCode": 2,
+        "hookOrder": [
+          "config:load",
+          "source:resolve"
+        ],
+        "typecheckCompleted": false,
+        "definitionCheckCompleted": false,
+        "bundleWriteCount": 0,
+        "tarballWriteCount": 0,
+        "registryRequestCount": 0,
+        "decoyImportCount": 0,
+        "skipReason": null,
+        "contributesReleaseEvidence": false,
+        "outputUnchanged": true
+      }
+    },
+    {
+      "caseId": "duplicate-canonical-source",
+      "category": "configuration",
+      "command": "ph model check --json",
+      "config": {
+        "definitionSources": {
+          "formatVersion": 1,
+          "mode": "code-first",
+          "entries": [
+            {
+              "specifier": "./definition.ts"
+            },
+            {
+              "specifier": "./src/../definition.ts",
+              "exportPath": []
+            }
+          ]
+        }
+      },
+      "cliSources": [],
+      "expected": {
+        "status": "failed",
+        "diagnosticCodes": [
+          "PH-CONFIG-DUPLICATE-SOURCE"
+        ],
+        "sourceOrigin": "config",
+        "exitCode": 2,
+        "hookOrder": [
+          "config:load",
+          "source:resolve"
+        ],
+        "typecheckCompleted": false,
+        "definitionCheckCompleted": false,
+        "bundleWriteCount": 0,
+        "tarballWriteCount": 0,
+        "registryRequestCount": 0,
+        "decoyImportCount": 0,
+        "skipReason": null,
+        "contributesReleaseEvidence": false,
+        "outputUnchanged": true
+      }
+    },
+    {
+      "caseId": "source-root-escape",
+      "category": "configuration",
+      "command": "ph model check --json",
+      "config": {
+        "definitionSources": {
+          "formatVersion": 1,
+          "mode": "code-first",
+          "entries": [
+            {
+              "specifier": "./../outside.ts"
+            }
+          ]
+        }
+      },
+      "cliSources": [],
+      "expected": {
+        "status": "failed",
+        "diagnosticCodes": [
+          "PH-CONFIG-SOURCE-OUTSIDE-PACKAGE"
+        ],
+        "sourceOrigin": "config",
+        "exitCode": 2,
+        "hookOrder": [
+          "config:load",
+          "source:resolve"
+        ],
+        "typecheckCompleted": false,
+        "definitionCheckCompleted": false,
+        "bundleWriteCount": 0,
+        "tarballWriteCount": 0,
+        "registryRequestCount": 0,
+        "decoyImportCount": 0,
+        "skipReason": null,
+        "contributesReleaseEvidence": false,
+        "outputUnchanged": true
+      }
+    },
+    {
+      "caseId": "source-external-symlink",
+      "category": "configuration",
+      "command": "ph model check --json",
+      "config": {
+        "definitionSources": {
+          "formatVersion": 1,
+          "mode": "code-first",
+          "entries": [
+            {
+              "specifier": "./src/external.ts"
+            }
+          ]
+        }
+      },
+      "cliSources": [],
+      "expected": {
+        "status": "failed",
+        "diagnosticCodes": [
+          "PH-CONFIG-SOURCE-OUTSIDE-PACKAGE"
+        ],
+        "sourceOrigin": "config",
+        "exitCode": 2,
+        "hookOrder": [
+          "config:load",
+          "source:resolve"
+        ],
+        "typecheckCompleted": false,
+        "definitionCheckCompleted": false,
+        "bundleWriteCount": 0,
+        "tarballWriteCount": 0,
+        "registryRequestCount": 0,
+        "decoyImportCount": 0,
+        "skipReason": null,
+        "contributesReleaseEvidence": false,
+        "outputUnchanged": true
+      }
+    },
+    {
+      "caseId": "config-only-selection",
+      "category": "source-selection",
+      "command": "ph model check --json",
+      "config": {
+        "definitionSources": {
+          "formatVersion": 1,
+          "mode": "code-first",
+          "entries": [
+            {
+              "specifier": "./definition.ts",
+              "exportPath": [
+                "CounterV1"
+              ]
+            }
+          ]
+        }
+      },
+      "cliSources": [],
+      "expected": {
+        "status": "ready",
+        "diagnosticCodes": [],
+        "sourceOrigin": "config",
+        "exitCode": 0,
+        "hookOrder": [
+          "config:load",
+          "source:resolve"
+        ],
+        "typecheckCompleted": false,
+        "definitionCheckCompleted": false,
+        "bundleWriteCount": 0,
+        "tarballWriteCount": 0,
+        "registryRequestCount": 0,
+        "decoyImportCount": 0,
+        "skipReason": null,
+        "contributesReleaseEvidence": false,
+        "outputUnchanged": true
+      }
+    },
+    {
+      "caseId": "cli-replaces-missing-selection",
+      "category": "source-selection",
+      "command": "ph model check --source ./definition.ts#/CounterV1 --json",
+      "config": {},
+      "cliSources": [
+        "./definition.ts#/CounterV1"
+      ],
+      "expected": {
+        "status": "ready",
+        "diagnosticCodes": [],
+        "sourceOrigin": "cli",
+        "exitCode": 0,
+        "hookOrder": [
+          "config:load",
+          "source:resolve"
+        ],
+        "typecheckCompleted": false,
+        "definitionCheckCompleted": false,
+        "bundleWriteCount": 0,
+        "tarballWriteCount": 0,
+        "registryRequestCount": 0,
+        "decoyImportCount": 0,
+        "skipReason": null,
+        "contributesReleaseEvidence": false,
+        "outputUnchanged": true
+      }
+    },
+    {
+      "caseId": "cli-replaces-unsupported-selection",
+      "category": "source-selection",
+      "command": "ph model check --source ./definition.ts --json",
+      "config": {
+        "definitionSources": {
+          "formatVersion": 99,
+          "mode": "code-first",
+          "entries": []
+        }
+      },
+      "cliSources": [
+        "./definition.ts"
+      ],
+      "expected": {
+        "status": "ready",
+        "diagnosticCodes": [],
+        "sourceOrigin": "cli",
+        "exitCode": 0,
+        "hookOrder": [
+          "config:load",
+          "source:resolve"
+        ],
+        "typecheckCompleted": false,
+        "definitionCheckCompleted": false,
+        "bundleWriteCount": 0,
+        "tarballWriteCount": 0,
+        "registryRequestCount": 0,
+        "decoyImportCount": 0,
+        "skipReason": null,
+        "contributesReleaseEvidence": false,
+        "outputUnchanged": true
+      }
+    },
+    {
+      "caseId": "explicit-legacy-mode",
+      "category": "source-selection",
+      "command": "ph model check --json",
+      "config": {
+        "definitionSources": {
+          "formatVersion": 1,
+          "mode": "legacy"
+        }
+      },
+      "cliSources": [],
+      "expected": {
+        "status": "skipped",
+        "diagnosticCodes": [],
+        "sourceOrigin": "config",
+        "exitCode": 0,
+        "hookOrder": [
+          "config:load",
+          "source:resolve",
+          "definition-check:skipped"
+        ],
+        "typecheckCompleted": false,
+        "definitionCheckCompleted": true,
+        "bundleWriteCount": 0,
+        "tarballWriteCount": 0,
+        "registryRequestCount": 0,
+        "decoyImportCount": 0,
+        "skipReason": "explicit-legacy-mode",
+        "contributesReleaseEvidence": false,
+        "outputUnchanged": true
+      }
+    },
+    {
+      "caseId": "decoy-source-tree-not-scanned",
+      "category": "source-selection",
+      "command": "ph model check --json",
+      "config": {},
+      "cliSources": [],
+      "expected": {
+        "status": "failed",
+        "diagnosticCodes": [
+          "PH-CONFIG-SOURCES-MISSING"
+        ],
+        "sourceOrigin": "config",
+        "exitCode": 2,
+        "hookOrder": [
+          "config:load",
+          "source:resolve"
+        ],
+        "typecheckCompleted": false,
+        "definitionCheckCompleted": false,
+        "bundleWriteCount": 0,
+        "tarballWriteCount": 0,
+        "registryRequestCount": 0,
+        "decoyImportCount": 0,
+        "skipReason": null,
+        "contributesReleaseEvidence": false,
+        "outputUnchanged": true
+      }
+    },
+    {
+      "caseId": "valid-control-edit",
+      "category": "definition",
+      "command": "ph model check --json",
+      "config": {
+        "definitionSources": {
+          "formatVersion": 1,
+          "mode": "code-first",
+          "entries": [
+            {
+              "specifier": "./definition.ts",
+              "exportPath": [
+                "CounterV1"
+              ]
+            }
+          ]
+        }
+      },
+      "cliSources": [],
+      "expected": {
+        "status": "ok",
+        "diagnosticCodes": [],
+        "sourceOrigin": "config",
+        "exitCode": 0,
+        "hookOrder": [
+          "config:load",
+          "source:resolve",
+          "source:import",
+          "definition-check:ok"
+        ],
+        "typecheckCompleted": false,
+        "definitionCheckCompleted": true,
+        "bundleWriteCount": 0,
+        "tarballWriteCount": 0,
+        "registryRequestCount": 0,
+        "decoyImportCount": 0,
+        "skipReason": null,
+        "contributesReleaseEvidence": false,
+        "outputUnchanged": true
+      }
+    },
+    {
+      "caseId": "valid-control-release",
+      "category": "definition",
+      "command": "ph model check --release --json",
+      "config": {
+        "definitionSources": {
+          "formatVersion": 1,
+          "mode": "code-first",
+          "entries": [
+            {
+              "specifier": "./definition.ts",
+              "exportPath": [
+                "CounterV1"
+              ]
+            }
+          ]
+        }
+      },
+      "cliSources": [],
+      "expected": {
+        "status": "ok",
+        "diagnosticCodes": [],
+        "sourceOrigin": "config",
+        "exitCode": 0,
+        "hookOrder": [
+          "config:load",
+          "source:resolve",
+          "source:import",
+          "definition-check:ok"
+        ],
+        "typecheckCompleted": false,
+        "definitionCheckCompleted": true,
+        "bundleWriteCount": 0,
+        "tarballWriteCount": 0,
+        "registryRequestCount": 0,
+        "decoyImportCount": 0,
+        "skipReason": null,
+        "contributesReleaseEvidence": true,
+        "outputUnchanged": true
+      }
+    },
+    {
+      "caseId": "source-import-failure",
+      "category": "import",
+      "command": "ph model check --source ./injections/import-failure.ts --json",
+      "config": {
+        "definitionSources": {
+          "formatVersion": 1,
+          "mode": "code-first",
+          "entries": [
+            {
+              "specifier": "./definition.ts",
+              "exportPath": [
+                "CounterV1"
+              ]
+            }
+          ]
+        }
+      },
+      "cliSources": [
+        "./injections/import-failure.ts"
+      ],
+      "expected": {
+        "status": "failed",
+        "diagnosticCodes": [
+          "PH-IMPORT-FAILED"
+        ],
+        "sourceOrigin": "cli",
+        "exitCode": 2,
+        "hookOrder": [
+          "config:load",
+          "source:resolve",
+          "source:import-failed"
+        ],
+        "typecheckCompleted": false,
+        "definitionCheckCompleted": false,
+        "bundleWriteCount": 0,
+        "tarballWriteCount": 0,
+        "registryRequestCount": 0,
+        "decoyImportCount": 0,
+        "skipReason": null,
+        "contributesReleaseEvidence": false,
+        "outputUnchanged": true
+      }
+    },
+    {
+      "caseId": "definition-finalization-failure",
+      "category": "definition",
+      "command": "ph model check --source ./injections/definition-invalid.ts --json",
+      "config": {
+        "definitionSources": {
+          "formatVersion": 1,
+          "mode": "code-first",
+          "entries": [
+            {
+              "specifier": "./definition.ts",
+              "exportPath": [
+                "CounterV1"
+              ]
+            }
+          ]
+        }
+      },
+      "cliSources": [
+        "./injections/definition-invalid.ts"
+      ],
+      "expected": {
+        "status": "invalid",
+        "diagnosticCodes": [
+          "PH-DEF-FIELD-OPTION-UNSUPPORTED"
+        ],
+        "sourceOrigin": "cli",
+        "exitCode": 1,
+        "hookOrder": [
+          "config:load",
+          "source:resolve",
+          "source:import",
+          "definition-check:invalid"
+        ],
+        "typecheckCompleted": false,
+        "definitionCheckCompleted": true,
+        "bundleWriteCount": 0,
+        "tarballWriteCount": 0,
+        "registryRequestCount": 0,
+        "decoyImportCount": 0,
+        "skipReason": null,
+        "contributesReleaseEvidence": false,
+        "outputUnchanged": true
+      }
+    },
+    {
+      "caseId": "definition-warning",
+      "category": "warning",
+      "command": "ph model check --source ./injections/definition-warning.ts --json",
+      "config": {
+        "definitionSources": {
+          "formatVersion": 1,
+          "mode": "code-first",
+          "entries": [
+            {
+              "specifier": "./definition.ts",
+              "exportPath": [
+                "CounterV1"
+              ]
+            }
+          ]
+        }
+      },
+      "cliSources": [
+        "./injections/definition-warning.ts"
+      ],
+      "expected": {
+        "status": "ok",
+        "diagnosticCodes": [
+          "PH-DEF-FIXTURE-WARNING"
+        ],
+        "sourceOrigin": "cli",
+        "exitCode": 0,
+        "hookOrder": [
+          "config:load",
+          "source:resolve",
+          "source:import",
+          "definition-check:ok"
+        ],
+        "typecheckCompleted": false,
+        "definitionCheckCompleted": true,
+        "bundleWriteCount": 0,
+        "tarballWriteCount": 0,
+        "registryRequestCount": 0,
+        "decoyImportCount": 0,
+        "skipReason": null,
+        "contributesReleaseEvidence": false,
+        "outputUnchanged": true
+      }
+    },
+    {
+      "caseId": "definition-warning-as-error",
+      "category": "warning",
+      "command": "ph model check --source ./injections/definition-warning.ts --warnings-as-errors --json",
+      "config": {
+        "definitionSources": {
+          "formatVersion": 1,
+          "mode": "code-first",
+          "entries": [
+            {
+              "specifier": "./definition.ts",
+              "exportPath": [
+                "CounterV1"
+              ]
+            }
+          ]
+        }
+      },
+      "cliSources": [
+        "./injections/definition-warning.ts"
+      ],
+      "expected": {
+        "status": "invalid",
+        "diagnosticCodes": [
+          "PH-DEF-FIXTURE-WARNING"
+        ],
+        "sourceOrigin": "cli",
+        "exitCode": 1,
+        "hookOrder": [
+          "config:load",
+          "source:resolve",
+          "source:import",
+          "definition-check:invalid"
+        ],
+        "typecheckCompleted": false,
+        "definitionCheckCompleted": true,
+        "bundleWriteCount": 0,
+        "tarballWriteCount": 0,
+        "registryRequestCount": 0,
+        "decoyImportCount": 0,
+        "skipReason": null,
+        "contributesReleaseEvidence": false,
+        "outputUnchanged": true
+      }
+    },
+    {
+      "caseId": "build-definition-invalid-stops-before-bundles",
+      "category": "build",
+      "command": "ph build --source ./injections/definition-invalid.ts",
+      "config": {
+        "definitionSources": {
+          "formatVersion": 1,
+          "mode": "code-first",
+          "entries": [
+            {
+              "specifier": "./definition.ts",
+              "exportPath": [
+                "CounterV1"
+              ]
+            }
+          ]
+        }
+      },
+      "cliSources": [
+        "./injections/definition-invalid.ts"
+      ],
+      "expected": {
+        "status": "process-failed",
+        "diagnosticCodes": [
+          "PH-DEF-FIELD-OPTION-UNSUPPORTED"
+        ],
+        "sourceOrigin": "cli",
+        "exitCode": 1,
+        "hookOrder": [
+          "tsc:start",
+          "tsc:ok",
+          "definition-check:invalid"
+        ],
+        "typecheckCompleted": true,
+        "definitionCheckCompleted": true,
+        "bundleWriteCount": 0,
+        "tarballWriteCount": 0,
+        "registryRequestCount": 0,
+        "decoyImportCount": 0,
+        "skipReason": null,
+        "contributesReleaseEvidence": false,
+        "outputUnchanged": true
+      }
+    },
+    {
+      "caseId": "build-control",
+      "category": "build",
+      "command": "ph build",
+      "config": {
+        "definitionSources": {
+          "formatVersion": 1,
+          "mode": "code-first",
+          "entries": [
+            {
+              "specifier": "./definition.ts",
+              "exportPath": [
+                "CounterV1"
+              ]
+            }
+          ]
+        }
+      },
+      "cliSources": [],
+      "expected": {
+        "status": "ok",
+        "diagnosticCodes": [],
+        "sourceOrigin": "config",
+        "exitCode": 0,
+        "hookOrder": [
+          "tsc:start",
+          "tsc:ok",
+          "definition-check:ok",
+          "browser:write",
+          "node:write",
+          "tailwind:write",
+          "release-report:retain"
+        ],
+        "typecheckCompleted": true,
+        "definitionCheckCompleted": true,
+        "bundleWriteCount": 5,
+        "tarballWriteCount": 0,
+        "registryRequestCount": 0,
+        "decoyImportCount": 0,
+        "skipReason": null,
+        "contributesReleaseEvidence": true,
+        "outputUnchanged": false
+      }
+    },
+    {
+      "caseId": "build-explicit-legacy",
+      "category": "build",
+      "command": "ph build",
+      "config": {
+        "definitionSources": {
+          "formatVersion": 1,
+          "mode": "legacy"
+        }
+      },
+      "cliSources": [],
+      "expected": {
+        "status": "skipped",
+        "diagnosticCodes": [],
+        "sourceOrigin": "config",
+        "exitCode": 0,
+        "hookOrder": [
+          "tsc:start",
+          "tsc:ok",
+          "definition-check:skipped",
+          "browser:write",
+          "node:write",
+          "tailwind:write",
+          "release-report:retain"
+        ],
+        "typecheckCompleted": true,
+        "definitionCheckCompleted": true,
+        "bundleWriteCount": 5,
+        "tarballWriteCount": 0,
+        "registryRequestCount": 0,
+        "decoyImportCount": 0,
+        "skipReason": "explicit-legacy-mode",
+        "contributesReleaseEvidence": false,
+        "outputUnchanged": false
+      }
+    },
+    {
+      "caseId": "npm-prepack-missing-report",
+      "category": "prepack",
+      "command": "npm pack --dry-run --json",
+      "config": {
+        "definitionSources": {
+          "formatVersion": 1,
+          "mode": "code-first",
+          "entries": [
+            {
+              "specifier": "./definition.ts",
+              "exportPath": [
+                "CounterV1"
+              ]
+            }
+          ]
+        }
+      },
+      "cliSources": [],
+      "expected": {
+        "status": "process-failed",
+        "diagnosticCodes": [
+          "PH-PKG-RELEASE-REPORT-MISSING"
+        ],
+        "sourceOrigin": "config",
+        "exitCode": 1,
+        "hookOrder": [
+          "prepack",
+          "retained-report:missing"
+        ],
+        "typecheckCompleted": false,
+        "definitionCheckCompleted": true,
+        "bundleWriteCount": 0,
+        "tarballWriteCount": 0,
+        "registryRequestCount": 0,
+        "decoyImportCount": 0,
+        "skipReason": null,
+        "contributesReleaseEvidence": false,
+        "outputUnchanged": true
+      }
+    },
+    {
+      "caseId": "pnpm-prepack-missing-report",
+      "category": "prepack",
+      "command": "pnpm pack",
+      "config": {
+        "definitionSources": {
+          "formatVersion": 1,
+          "mode": "code-first",
+          "entries": [
+            {
+              "specifier": "./definition.ts",
+              "exportPath": [
+                "CounterV1"
+              ]
+            }
+          ]
+        }
+      },
+      "cliSources": [],
+      "expected": {
+        "status": "process-failed",
+        "diagnosticCodes": [
+          "PH-PKG-RELEASE-REPORT-MISSING"
+        ],
+        "sourceOrigin": "config",
+        "exitCode": 1,
+        "hookOrder": [
+          "prepack",
+          "retained-report:missing"
+        ],
+        "typecheckCompleted": false,
+        "definitionCheckCompleted": true,
+        "bundleWriteCount": 0,
+        "tarballWriteCount": 0,
+        "registryRequestCount": 0,
+        "decoyImportCount": 0,
+        "skipReason": null,
+        "contributesReleaseEvidence": false,
+        "outputUnchanged": true
+      }
+    },
+    {
+      "caseId": "npm-prepack-retained",
+      "category": "prepack",
+      "command": "npm pack --dry-run --json",
+      "config": {
+        "definitionSources": {
+          "formatVersion": 1,
+          "mode": "code-first",
+          "entries": [
+            {
+              "specifier": "./definition.ts",
+              "exportPath": [
+                "CounterV1"
+              ]
+            }
+          ]
+        }
+      },
+      "cliSources": [],
+      "expected": {
+        "status": "ok",
+        "diagnosticCodes": [],
+        "sourceOrigin": "config",
+        "exitCode": 0,
+        "hookOrder": [
+          "prepack",
+          "retained-report:ok"
+        ],
+        "typecheckCompleted": false,
+        "definitionCheckCompleted": true,
+        "bundleWriteCount": 0,
+        "tarballWriteCount": 0,
+        "registryRequestCount": 0,
+        "decoyImportCount": 0,
+        "skipReason": null,
+        "contributesReleaseEvidence": true,
+        "outputUnchanged": true
+      }
+    },
+    {
+      "caseId": "pnpm-prepack-retained",
+      "category": "prepack",
+      "command": "pnpm pack",
+      "config": {
+        "definitionSources": {
+          "formatVersion": 1,
+          "mode": "code-first",
+          "entries": [
+            {
+              "specifier": "./definition.ts",
+              "exportPath": [
+                "CounterV1"
+              ]
+            }
+          ]
+        }
+      },
+      "cliSources": [],
+      "expected": {
+        "status": "ok",
+        "diagnosticCodes": [],
+        "sourceOrigin": "config",
+        "exitCode": 0,
+        "hookOrder": [
+          "prepack",
+          "retained-report:ok",
+          "tarball:write"
+        ],
+        "typecheckCompleted": false,
+        "definitionCheckCompleted": true,
+        "bundleWriteCount": 0,
+        "tarballWriteCount": 1,
+        "registryRequestCount": 0,
+        "decoyImportCount": 0,
+        "skipReason": null,
+        "contributesReleaseEvidence": true,
+        "outputUnchanged": true
+      }
+    },
+    {
+      "caseId": "npm-publish-dry-run-retained",
+      "category": "publication",
+      "command": "npm publish --dry-run --json",
+      "config": {
+        "definitionSources": {
+          "formatVersion": 1,
+          "mode": "code-first",
+          "entries": [
+            {
+              "specifier": "./definition.ts",
+              "exportPath": [
+                "CounterV1"
+              ]
+            }
+          ]
+        }
+      },
+      "cliSources": [],
+      "expected": {
+        "status": "ok",
+        "diagnosticCodes": [],
+        "sourceOrigin": "config",
+        "exitCode": 0,
+        "hookOrder": [
+          "prepack",
+          "retained-report:ok",
+          "publish:dry-run"
+        ],
+        "typecheckCompleted": false,
+        "definitionCheckCompleted": true,
+        "bundleWriteCount": 0,
+        "tarballWriteCount": 0,
+        "registryRequestCount": 0,
+        "decoyImportCount": 0,
+        "skipReason": null,
+        "contributesReleaseEvidence": true,
+        "outputUnchanged": true
+      }
+    },
+    {
+      "caseId": "ph-publish-missing-report",
+      "category": "publication",
+      "command": "ph publish",
+      "config": {
+        "definitionSources": {
+          "formatVersion": 1,
+          "mode": "code-first",
+          "entries": [
+            {
+              "specifier": "./definition.ts",
+              "exportPath": [
+                "CounterV1"
+              ]
+            }
+          ]
+        }
+      },
+      "cliSources": [],
+      "expected": {
+        "status": "process-failed",
+        "diagnosticCodes": [
+          "PH-PKG-RELEASE-REPORT-MISSING"
+        ],
+        "sourceOrigin": "config",
+        "exitCode": 1,
+        "hookOrder": [
+          "publish:preflight",
+          "retained-report:missing"
+        ],
+        "typecheckCompleted": false,
+        "definitionCheckCompleted": true,
+        "bundleWriteCount": 0,
+        "tarballWriteCount": 0,
+        "registryRequestCount": 0,
+        "decoyImportCount": 0,
+        "skipReason": null,
+        "contributesReleaseEvidence": false,
+        "outputUnchanged": true
+      }
+    },
+    {
+      "caseId": "registry-suppressed-after-failure",
+      "category": "publication",
+      "command": "ph publish",
+      "config": {
+        "definitionSources": {
+          "formatVersion": 1,
+          "mode": "code-first",
+          "entries": [
+            {
+              "specifier": "./definition.ts",
+              "exportPath": [
+                "CounterV1"
+              ]
+            }
+          ]
+        }
+      },
+      "cliSources": [],
+      "expected": {
+        "status": "process-failed",
+        "diagnosticCodes": [
+          "PH-PKG-RELEASE-REPORT-MISSING"
+        ],
+        "sourceOrigin": "config",
+        "exitCode": 1,
+        "hookOrder": [
+          "publish:preflight",
+          "retained-report:missing"
+        ],
+        "typecheckCompleted": false,
+        "definitionCheckCompleted": true,
+        "bundleWriteCount": 0,
+        "tarballWriteCount": 0,
+        "registryRequestCount": 0,
+        "decoyImportCount": 0,
+        "skipReason": null,
+        "contributesReleaseEvidence": false,
+        "outputUnchanged": true
+      }
+    },
+    {
+      "caseId": "inspect-control-source-selection",
+      "category": "source-selection",
+      "command": "ph model inspect powerhouse/cf-build-control@1 --json",
+      "config": {
+        "definitionSources": {
+          "formatVersion": 1,
+          "mode": "code-first",
+          "entries": [
+            {
+              "specifier": "./definition.ts",
+              "exportPath": [
+                "CounterV1"
+              ]
+            }
+          ]
+        }
+      },
+      "cliSources": [],
+      "expected": {
+        "status": "ok",
+        "diagnosticCodes": [],
+        "sourceOrigin": "config",
+        "exitCode": 0,
+        "hookOrder": [
+          "config:load",
+          "source:resolve",
+          "source:import",
+          "definition-inspect:ok"
+        ],
+        "typecheckCompleted": false,
+        "definitionCheckCompleted": true,
+        "bundleWriteCount": 0,
+        "tarballWriteCount": 0,
+        "registryRequestCount": 0,
+        "decoyImportCount": 0,
+        "skipReason": null,
+        "contributesReleaseEvidence": false,
+        "outputUnchanged": true
+      }
+    }
+  ]
+}

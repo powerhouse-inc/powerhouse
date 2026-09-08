@@ -1,0 +1,9 @@
+{
+  "name": "@powerhousedao/cf-build-control-fixture",
+  "version": "0.0.0",
+  "private": false,
+  "type": "module",
+  "scripts": {
+    "prepack": "ph model check --release --retained --json"
+  }
+}

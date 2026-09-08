@@ -1,0 +1,111 @@
+{
+  "kind": "powerhouse.scalar-difference-list",
+  "formatVersion": 1,
+  "differences": [
+    {
+      "scalarName": "Amount_Tokens",
+      "path": "validator.acceptance/installed.parseLiteral.acceptance",
+      "caseId": "integer"
+    },
+    {
+      "scalarName": "Amount_Percentage",
+      "path": "validator.acceptance/installed.parseLiteral.acceptance",
+      "caseId": "integer"
+    },
+    {
+      "scalarName": "Amount_Money",
+      "path": "validator.acceptance/installed.parseLiteral.acceptance",
+      "caseId": "integer"
+    },
+    {
+      "scalarName": "Amount_Fiat",
+      "path": "reducer.raw/validator.output",
+      "caseId": "unknown-key-normalization"
+    },
+    {
+      "scalarName": "Amount_Fiat",
+      "path": "validator.acceptance/installed.parseLiteral.acceptance",
+      "caseId": "integer"
+    },
+    {
+      "scalarName": "Amount_Fiat",
+      "path": "validator.acceptance/installed.parseLiteral.acceptance",
+      "caseId": "unknown-key-normalization"
+    },
+    {
+      "scalarName": "Amount_Currency",
+      "path": "reducer.raw/validator.output",
+      "caseId": "unknown-key-normalization"
+    },
+    {
+      "scalarName": "Amount_Currency",
+      "path": "validator.acceptance/installed.parseLiteral.acceptance",
+      "caseId": "arbitrary-string-value"
+    },
+    {
+      "scalarName": "Amount_Crypto",
+      "path": "reducer.raw/validator.output",
+      "caseId": "unknown-key-normalization"
+    },
+    {
+      "scalarName": "Amount_Crypto",
+      "path": "validator.acceptance/installed.parseLiteral.acceptance",
+      "caseId": "arbitrary-string-value"
+    },
+    {
+      "scalarName": "Amount",
+      "path": "reducer.raw/validator.output",
+      "caseId": "unknown-key-normalization"
+    },
+    {
+      "scalarName": "Amount",
+      "path": "typescript.source/validator.acceptance",
+      "caseId": "missing-value"
+    },
+    {
+      "scalarName": "Amount",
+      "path": "validator.acceptance/installed.parseLiteral.acceptance",
+      "caseId": "integer"
+    },
+    {
+      "scalarName": "Amount",
+      "path": "validator.acceptance/installed.parseLiteral.acceptance",
+      "caseId": "unknown-key-normalization"
+    },
+    {
+      "scalarName": "Upload",
+      "path": "validator.acceptance/installed.parseLiteral.acceptance",
+      "caseId": "literal-null"
+    },
+    {
+      "scalarName": "Upload",
+      "path": "validator.acceptance/installed.parseLiteral.acceptance",
+      "caseId": "upload"
+    },
+    {
+      "scalarName": "Unknown",
+      "path": "validator.acceptance/parseLiteral.acceptance",
+      "caseId": "graphql-variable-literal"
+    },
+    {
+      "scalarName": "Unknown",
+      "path": "validator.acceptance/persistence.json",
+      "caseId": "bigint"
+    },
+    {
+      "scalarName": "Unknown",
+      "path": "validator.acceptance/persistence.json",
+      "caseId": "date"
+    },
+    {
+      "scalarName": "Unknown",
+      "path": "validator.acceptance/persistence.json",
+      "caseId": "map"
+    },
+    {
+      "scalarName": "Unknown",
+      "path": "validator.acceptance/persistence.json",
+      "caseId": "undefined"
+    }
+  ]
+}

@@ -5,7 +5,10 @@ import type {
 import { createOrUpdateManifest } from "file-builders";
 import { getEditorVariableNames } from "name-builders";
 import path from "path";
-import { documentEditorEditorFileTemplate } from "templates";
+import {
+  codeFirstDocumentEditorFileTemplate,
+  documentEditorEditorFileTemplate,
+} from "templates";
 import { type Project } from "ts-morph";
 import {
   ensureDirectoriesExist,
@@ -90,8 +93,10 @@ export async function tsMorphGenerateDocumentEditor({
 type MakeEditorComponentArgs = EditorVariableNames & {
   project: Project;
   editorDirPath: string;
+  documentModelId: string;
   documentModelDocumentTypeName: string;
   documentModelImportPath: string;
+  authoringMode: "schema-first" | "code-first";
 };
 async function makeEditorComponent(args: MakeEditorComponentArgs) {
   const { project, editorDirPath } = args;
@@ -111,7 +116,10 @@ async function makeEditorComponent(args: MakeEditorComponentArgs) {
     }
   }
 
-  const template = documentEditorEditorFileTemplate(args);
+  const template =
+    args.authoringMode === "code-first"
+      ? codeFirstDocumentEditorFileTemplate(args)
+      : documentEditorEditorFileTemplate(args);
   sourceFile.replaceWithText(template);
   await formatSourceFileWithPrettier(sourceFile);
 }

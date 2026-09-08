@@ -1,6 +1,7 @@
 import {
   detectFeatures,
   generateAllSubgraphs,
+  generateCodeFirstSubgraph,
   generateSubgraph,
   syncFeatureDependencies,
 } from "@powerhousedao/codegen";
@@ -22,9 +23,24 @@ export async function startGenerateSubgraph(
   args: GenerateSubgraphArgs,
   projectDir: string,
 ) {
-  const { name, document, dir, all, extract, debug } = args;
+  const { name, document, dir, all, extract, codeFirst, debug } = args;
   if (debug) {
     console.log({ args });
+  }
+  if (codeFirst) {
+    if (document || dir || all || extract) {
+      throw new Error(
+        "--code-first cannot be combined with --document, --dir, --all, or --extract.",
+      );
+    }
+    if (!name) {
+      throw new Error("--code-first requires --name.");
+    }
+    const project = buildTsMorphProject(projectDir);
+    await generateCodeFirstSubgraph(name, project);
+    await project.save();
+    await syncFeatureDependencies(detectFeatures(projectDir), projectDir);
+    return;
   }
   const project = buildTsMorphProject(projectDir);
   if (extract) {
@@ -50,7 +66,7 @@ export async function startGenerateSubgraph(
     await generateSubgraph(subgraphName, project);
   } else {
     console.log(
-      "Please specify one of `name`, `document`, `dir`, `all`, or `extract`.",
+      "Please specify `--code-first` or one of `name`, `document`, `dir`, `all`, or `extract`.",
     );
     return;
   }

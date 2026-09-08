@@ -58,6 +58,16 @@ export type TelemetryClient = {
   ) => Promise<void>;
 };
 
+/** Return the package manager that launched the current CLI, when available. */
+export function detectPackageManager(): string | undefined {
+  // npm, pnpm, Yarn, and Bun expose a user agent such as
+  // "pnpm/8.5.0 npm/? node/v20.11.1 darwin arm64". Direct invocations often
+  // leave it unset, in which case telemetry should omit the tag.
+  const userAgent = process.env.npm_config_user_agent;
+  if (!userAgent) return undefined;
+  return userAgent.split(" ")[0]?.split("/")[0] || undefined;
+}
+
 function isExplicitlyDisabled(): boolean {
   // Standard opt-out signals respected by most OSS CLIs.
   return (
@@ -74,7 +84,7 @@ function isExplicitlyEnabled(): boolean {
   );
 }
 
-function isInteractive(): boolean {
+export function isInteractiveTerminal(): boolean {
   // Only ask if stdin is a TTY and CI env isn't set.
   return Boolean(process.stdin.isTTY) && !process.env.CI;
 }
@@ -101,16 +111,18 @@ function writeConfig(cfg: TelemetryConfig): void {
  * Prompts the user once, caches the answer. Must be called before init.
  * Returns `true` if telemetry should be enabled, `false` otherwise.
  */
-export async function resolveTelemetryConsent(): Promise<boolean> {
+export async function resolveTelemetryConsent(
+  options: { readonly prompt?: boolean } = {},
+): Promise<boolean> {
   if (isExplicitlyDisabled()) return false;
   if (isExplicitlyEnabled()) return true;
 
   const cached = readConfig();
   if (cached) return cached.enabled;
 
-  if (!isInteractive()) {
-    // Non-interactive first run: stay silent, don't ask, don't send. User can
-    // opt in later with `ph telemetry on` or PH_TELEMETRY=1.
+  if (options.prompt === false || !isInteractiveTerminal()) {
+    // Stay silent when the caller reserves its output for a machine report or
+    // when no terminal can answer. Explicit and cached consent still win.
     return false;
   }
 
@@ -216,8 +228,11 @@ function scrubEvent<T>(event: T): T {
 export async function initCliTelemetry(opts: {
   cliName: "ph-cli" | "ph-cmd";
   release?: string;
+  promptForConsent?: boolean;
 }): Promise<TelemetryClient | undefined> {
-  const enabled = await resolveTelemetryConsent();
+  const enabled = await resolveTelemetryConsent({
+    prompt: opts.promptForConsent,
+  });
   if (!enabled) return;
 
   const Sentry = await import("@sentry/node-core/light");

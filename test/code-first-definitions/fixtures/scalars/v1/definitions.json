@@ -1,0 +1,1505 @@
+[
+  {
+    "kind": "powerhouse.scalar",
+    "formatVersion": 1,
+    "name": "Amount_Tokens",
+    "representation": "number",
+    "persistable": true,
+    "description": "A token amount.",
+    "zero": {
+      "kind": "value",
+      "value": 0
+    },
+    "coercion": {
+      "source": "explicit",
+      "exemption": {
+        "profile": "document-engineering-1.40",
+        "paths": [
+          "validator.acceptance/installed.parseLiteral.acceptance"
+        ],
+        "caseIds": [
+          "integer"
+        ],
+        "digest": "sha256:051dc0a18da5c8ce8f68b2ae3969cbbc3a3a1468a08d43e2a7c8286fbcd0d2ac"
+      }
+    },
+    "vector": {
+      "accepts": [
+        {
+          "id": "fractional",
+          "input": {
+            "kind": "json",
+            "value": 1.5
+          }
+        },
+        {
+          "id": "integer",
+          "input": {
+            "kind": "json",
+            "value": 1
+          }
+        }
+      ],
+      "rejects": [
+        {
+          "id": "string",
+          "input": {
+            "kind": "json",
+            "value": "1"
+          }
+        }
+      ],
+      "acceptanceDigest": "sha256:e6245fe6307f7d9915f1425dbbdfb1e507128fef24cdab1a7590ba83033e5cc8"
+    },
+    "coercionProfile": "document-engineering-1.40"
+  },
+  {
+    "kind": "powerhouse.scalar",
+    "formatVersion": 1,
+    "name": "EthereumAddress",
+    "representation": "string",
+    "persistable": true,
+    "description": "A 42-character hexadecimal Ethereum address prefixed with 0x.",
+    "zero": {
+      "kind": "none",
+      "reason": "EthereumAddress has no meaningful empty value"
+    },
+    "coercion": {
+      "source": "derived",
+      "exemption": null
+    },
+    "vector": {
+      "accepts": [
+        {
+          "id": "valid",
+          "input": {
+            "kind": "json",
+            "value": "0x0000000000000000000000000000000000000000"
+          }
+        }
+      ],
+      "rejects": [
+        {
+          "id": "number",
+          "input": {
+            "kind": "json",
+            "value": 12
+          }
+        },
+        {
+          "id": "boolean",
+          "input": {
+            "kind": "json",
+            "value": true
+          }
+        },
+        {
+          "id": "null",
+          "input": {
+            "kind": "json",
+            "value": null
+          }
+        },
+        {
+          "id": "object",
+          "input": {
+            "kind": "json",
+            "value": {}
+          }
+        },
+        {
+          "id": "array",
+          "input": {
+            "kind": "json",
+            "value": []
+          }
+        },
+        {
+          "id": "undefined",
+          "input": {
+            "kind": "non-json",
+            "tag": "undefined"
+          }
+        }
+      ],
+      "acceptanceDigest": "sha256:97596a6fb57d6d0340a40f24203dd20edb4580f6d69fcd8463fa5040fc4684fd"
+    },
+    "coercionProfile": "document-engineering-1.40"
+  },
+  {
+    "kind": "powerhouse.scalar",
+    "formatVersion": 1,
+    "name": "Amount_Percentage",
+    "representation": "number",
+    "persistable": true,
+    "description": "A numeric percentage amount.",
+    "zero": {
+      "kind": "value",
+      "value": 0
+    },
+    "coercion": {
+      "source": "explicit",
+      "exemption": {
+        "profile": "document-engineering-1.40",
+        "paths": [
+          "validator.acceptance/installed.parseLiteral.acceptance"
+        ],
+        "caseIds": [
+          "integer"
+        ],
+        "digest": "sha256:22b04688ca8b4f0ac3dd746bc516592f12070e928dff65bb06d04447b03dc4b7"
+      }
+    },
+    "vector": {
+      "accepts": [
+        {
+          "id": "fractional",
+          "input": {
+            "kind": "json",
+            "value": 1.5
+          }
+        },
+        {
+          "id": "integer",
+          "input": {
+            "kind": "json",
+            "value": 1
+          }
+        }
+      ],
+      "rejects": [
+        {
+          "id": "string",
+          "input": {
+            "kind": "json",
+            "value": "1"
+          }
+        }
+      ],
+      "acceptanceDigest": "sha256:e6245fe6307f7d9915f1425dbbdfb1e507128fef24cdab1a7590ba83033e5cc8"
+    },
+    "coercionProfile": "document-engineering-1.40"
+  },
+  {
+    "kind": "powerhouse.scalar",
+    "formatVersion": 1,
+    "name": "EmailAddress",
+    "representation": "string",
+    "persistable": true,
+    "description": "An RFC 822-compatible email address string.",
+    "zero": {
+      "kind": "none",
+      "reason": "EmailAddress has no meaningful empty value"
+    },
+    "coercion": {
+      "source": "derived",
+      "exemption": null
+    },
+    "vector": {
+      "accepts": [
+        {
+          "id": "valid",
+          "input": {
+            "kind": "json",
+            "value": "author@example.com"
+          }
+        }
+      ],
+      "rejects": [
+        {
+          "id": "number",
+          "input": {
+            "kind": "json",
+            "value": 12
+          }
+        },
+        {
+          "id": "boolean",
+          "input": {
+            "kind": "json",
+            "value": true
+          }
+        },
+        {
+          "id": "null",
+          "input": {
+            "kind": "json",
+            "value": null
+          }
+        },
+        {
+          "id": "object",
+          "input": {
+            "kind": "json",
+            "value": {}
+          }
+        },
+        {
+          "id": "array",
+          "input": {
+            "kind": "json",
+            "value": []
+          }
+        },
+        {
+          "id": "undefined",
+          "input": {
+            "kind": "non-json",
+            "tag": "undefined"
+          }
+        }
+      ],
+      "acceptanceDigest": "sha256:45a4dbf447bc80ba234901e142b2c4d0961aa066d9fd1ff2997fd23fac7c4aea"
+    },
+    "coercionProfile": "document-engineering-1.40"
+  },
+  {
+    "kind": "powerhouse.scalar",
+    "formatVersion": 1,
+    "name": "Date",
+    "representation": "string",
+    "persistable": true,
+    "description": "An ISO 8601 datetime string used by the installed Date scalar.",
+    "zero": {
+      "kind": "none",
+      "reason": "Date has no meaningful empty value"
+    },
+    "coercion": {
+      "source": "derived",
+      "exemption": null
+    },
+    "vector": {
+      "accepts": [
+        {
+          "id": "valid",
+          "input": {
+            "kind": "json",
+            "value": "2024-01-01T00:00:00.000Z"
+          }
+        }
+      ],
+      "rejects": [
+        {
+          "id": "number",
+          "input": {
+            "kind": "json",
+            "value": 12
+          }
+        },
+        {
+          "id": "boolean",
+          "input": {
+            "kind": "json",
+            "value": true
+          }
+        },
+        {
+          "id": "null",
+          "input": {
+            "kind": "json",
+            "value": null
+          }
+        },
+        {
+          "id": "object",
+          "input": {
+            "kind": "json",
+            "value": {}
+          }
+        },
+        {
+          "id": "array",
+          "input": {
+            "kind": "json",
+            "value": []
+          }
+        },
+        {
+          "id": "undefined",
+          "input": {
+            "kind": "non-json",
+            "tag": "undefined"
+          }
+        }
+      ],
+      "acceptanceDigest": "sha256:c58b298ab791221860d14ab7e0e28e69682dd82c96bc2d83e0b433db7bd78c11"
+    },
+    "coercionProfile": "document-engineering-1.40"
+  },
+  {
+    "kind": "powerhouse.scalar",
+    "formatVersion": 1,
+    "name": "DateTime",
+    "representation": "string",
+    "persistable": true,
+    "description": "An ISO 8601 datetime string.",
+    "zero": {
+      "kind": "none",
+      "reason": "DateTime has no meaningful empty value"
+    },
+    "coercion": {
+      "source": "derived",
+      "exemption": null
+    },
+    "vector": {
+      "accepts": [
+        {
+          "id": "valid",
+          "input": {
+            "kind": "json",
+            "value": "2024-01-01T00:00:00.000Z"
+          }
+        }
+      ],
+      "rejects": [
+        {
+          "id": "number",
+          "input": {
+            "kind": "json",
+            "value": 12
+          }
+        },
+        {
+          "id": "boolean",
+          "input": {
+            "kind": "json",
+            "value": true
+          }
+        },
+        {
+          "id": "null",
+          "input": {
+            "kind": "json",
+            "value": null
+          }
+        },
+        {
+          "id": "object",
+          "input": {
+            "kind": "json",
+            "value": {}
+          }
+        },
+        {
+          "id": "array",
+          "input": {
+            "kind": "json",
+            "value": []
+          }
+        },
+        {
+          "id": "undefined",
+          "input": {
+            "kind": "non-json",
+            "tag": "undefined"
+          }
+        }
+      ],
+      "acceptanceDigest": "sha256:c58b298ab791221860d14ab7e0e28e69682dd82c96bc2d83e0b433db7bd78c11"
+    },
+    "coercionProfile": "document-engineering-1.40"
+  },
+  {
+    "kind": "powerhouse.scalar",
+    "formatVersion": 1,
+    "name": "URL",
+    "representation": "string",
+    "persistable": true,
+    "description": "A URL string.",
+    "zero": {
+      "kind": "none",
+      "reason": "URL has no meaningful empty value"
+    },
+    "coercion": {
+      "source": "derived",
+      "exemption": null
+    },
+    "vector": {
+      "accepts": [
+        {
+          "id": "valid",
+          "input": {
+            "kind": "json",
+            "value": "https://example.com"
+          }
+        }
+      ],
+      "rejects": [
+        {
+          "id": "number",
+          "input": {
+            "kind": "json",
+            "value": 12
+          }
+        },
+        {
+          "id": "boolean",
+          "input": {
+            "kind": "json",
+            "value": true
+          }
+        },
+        {
+          "id": "null",
+          "input": {
+            "kind": "json",
+            "value": null
+          }
+        },
+        {
+          "id": "object",
+          "input": {
+            "kind": "json",
+            "value": {}
+          }
+        },
+        {
+          "id": "array",
+          "input": {
+            "kind": "json",
+            "value": []
+          }
+        },
+        {
+          "id": "undefined",
+          "input": {
+            "kind": "non-json",
+            "tag": "undefined"
+          }
+        }
+      ],
+      "acceptanceDigest": "sha256:67e8b1827c020da43d95227ff5b5f98aae4f411d2ac43b08a3a7b9357edcfced"
+    },
+    "coercionProfile": "document-engineering-1.40"
+  },
+  {
+    "kind": "powerhouse.scalar",
+    "formatVersion": 1,
+    "name": "Amount_Money",
+    "representation": "number",
+    "persistable": true,
+    "description": "A monetary amount represented as a number.",
+    "zero": {
+      "kind": "value",
+      "value": 0
+    },
+    "coercion": {
+      "source": "explicit",
+      "exemption": {
+        "profile": "document-engineering-1.40",
+        "paths": [
+          "validator.acceptance/installed.parseLiteral.acceptance"
+        ],
+        "caseIds": [
+          "integer"
+        ],
+        "digest": "sha256:4a8b13b26d65c2812252b974f23e58115fdb9575d8b51ee5f2110a9b9746d327"
+      }
+    },
+    "vector": {
+      "accepts": [
+        {
+          "id": "fractional",
+          "input": {
+            "kind": "json",
+            "value": 1.5
+          }
+        },
+        {
+          "id": "integer",
+          "input": {
+            "kind": "json",
+            "value": 1
+          }
+        }
+      ],
+      "rejects": [
+        {
+          "id": "string",
+          "input": {
+            "kind": "json",
+            "value": "1"
+          }
+        }
+      ],
+      "acceptanceDigest": "sha256:e6245fe6307f7d9915f1425dbbdfb1e507128fef24cdab1a7590ba83033e5cc8"
+    },
+    "coercionProfile": "document-engineering-1.40"
+  },
+  {
+    "kind": "powerhouse.scalar",
+    "formatVersion": 1,
+    "name": "OLabel",
+    "representation": "string",
+    "persistable": true,
+    "description": "An opaque object label.",
+    "zero": {
+      "kind": "value",
+      "value": ""
+    },
+    "coercion": {
+      "source": "derived",
+      "exemption": null
+    },
+    "vector": {
+      "accepts": [
+        {
+          "id": "valid",
+          "input": {
+            "kind": "json",
+            "value": "invoice"
+          }
+        }
+      ],
+      "rejects": [
+        {
+          "id": "number",
+          "input": {
+            "kind": "json",
+            "value": 12
+          }
+        },
+        {
+          "id": "boolean",
+          "input": {
+            "kind": "json",
+            "value": true
+          }
+        },
+        {
+          "id": "null",
+          "input": {
+            "kind": "json",
+            "value": null
+          }
+        },
+        {
+          "id": "object",
+          "input": {
+            "kind": "json",
+            "value": {}
+          }
+        },
+        {
+          "id": "array",
+          "input": {
+            "kind": "json",
+            "value": []
+          }
+        },
+        {
+          "id": "undefined",
+          "input": {
+            "kind": "non-json",
+            "tag": "undefined"
+          }
+        }
+      ],
+      "acceptanceDigest": "sha256:292a12fbb6b5deea36977ac29d8692cc96b90bcfbfd925f13ee754c556ee6ec2"
+    },
+    "coercionProfile": "document-engineering-1.40"
+  },
+  {
+    "kind": "powerhouse.scalar",
+    "formatVersion": 1,
+    "name": "Currency",
+    "representation": "string",
+    "persistable": true,
+    "description": "A currency code string.",
+    "zero": {
+      "kind": "value",
+      "value": ""
+    },
+    "coercion": {
+      "source": "derived",
+      "exemption": null
+    },
+    "vector": {
+      "accepts": [
+        {
+          "id": "valid",
+          "input": {
+            "kind": "json",
+            "value": "USD"
+          }
+        }
+      ],
+      "rejects": [
+        {
+          "id": "number",
+          "input": {
+            "kind": "json",
+            "value": 12
+          }
+        },
+        {
+          "id": "boolean",
+          "input": {
+            "kind": "json",
+            "value": true
+          }
+        },
+        {
+          "id": "null",
+          "input": {
+            "kind": "json",
+            "value": null
+          }
+        },
+        {
+          "id": "object",
+          "input": {
+            "kind": "json",
+            "value": {}
+          }
+        },
+        {
+          "id": "array",
+          "input": {
+            "kind": "json",
+            "value": []
+          }
+        },
+        {
+          "id": "undefined",
+          "input": {
+            "kind": "non-json",
+            "tag": "undefined"
+          }
+        }
+      ],
+      "acceptanceDigest": "sha256:29d57bd153a3f574b444c0cb432f7a5a6b8beafc4e394449f4caf22be6f5984f"
+    },
+    "coercionProfile": "document-engineering-1.40"
+  },
+  {
+    "kind": "powerhouse.scalar",
+    "formatVersion": 1,
+    "name": "PHID",
+    "representation": "string",
+    "persistable": true,
+    "description": "An opaque Powerhouse identifier.",
+    "zero": {
+      "kind": "value",
+      "value": ""
+    },
+    "coercion": {
+      "source": "derived",
+      "exemption": null
+    },
+    "vector": {
+      "accepts": [
+        {
+          "id": "valid",
+          "input": {
+            "kind": "json",
+            "value": "powerhouse/invoice"
+          }
+        }
+      ],
+      "rejects": [
+        {
+          "id": "number",
+          "input": {
+            "kind": "json",
+            "value": 12
+          }
+        },
+        {
+          "id": "boolean",
+          "input": {
+            "kind": "json",
+            "value": true
+          }
+        },
+        {
+          "id": "null",
+          "input": {
+            "kind": "json",
+            "value": null
+          }
+        },
+        {
+          "id": "object",
+          "input": {
+            "kind": "json",
+            "value": {}
+          }
+        },
+        {
+          "id": "array",
+          "input": {
+            "kind": "json",
+            "value": []
+          }
+        },
+        {
+          "id": "undefined",
+          "input": {
+            "kind": "non-json",
+            "tag": "undefined"
+          }
+        }
+      ],
+      "acceptanceDigest": "sha256:3355e817f425973190d91bd79014ef5d0876ce3fb13f21dc9a02109f069e7b9b"
+    },
+    "coercionProfile": "document-engineering-1.40"
+  },
+  {
+    "kind": "powerhouse.scalar",
+    "formatVersion": 1,
+    "name": "OID",
+    "representation": "string",
+    "persistable": true,
+    "description": "An opaque object identifier.",
+    "zero": {
+      "kind": "value",
+      "value": ""
+    },
+    "coercion": {
+      "source": "derived",
+      "exemption": null
+    },
+    "vector": {
+      "accepts": [
+        {
+          "id": "empty-string",
+          "input": {
+            "kind": "json",
+            "value": ""
+          }
+        },
+        {
+          "id": "opaque-string",
+          "input": {
+            "kind": "json",
+            "value": "invoice-1"
+          }
+        },
+        {
+          "id": "ulid-like-string",
+          "input": {
+            "kind": "json",
+            "value": "01J8Z3T7QK9V2N4M6P8R0S1T2U"
+          }
+        }
+      ],
+      "rejects": [
+        {
+          "id": "number",
+          "input": {
+            "kind": "json",
+            "value": 12
+          }
+        },
+        {
+          "id": "boolean",
+          "input": {
+            "kind": "json",
+            "value": true
+          }
+        },
+        {
+          "id": "null",
+          "input": {
+            "kind": "json",
+            "value": null
+          }
+        },
+        {
+          "id": "object",
+          "input": {
+            "kind": "json",
+            "value": {}
+          }
+        },
+        {
+          "id": "array",
+          "input": {
+            "kind": "json",
+            "value": []
+          }
+        },
+        {
+          "id": "undefined",
+          "input": {
+            "kind": "non-json",
+            "tag": "undefined"
+          }
+        }
+      ],
+      "acceptanceDigest": "sha256:65c277520e131cbb6191b065e59530235d75bfaa3acde55d73bc5c8838bb44fe"
+    },
+    "coercionProfile": "document-engineering-1.40"
+  },
+  {
+    "kind": "powerhouse.scalar",
+    "formatVersion": 1,
+    "name": "Amount_Fiat",
+    "representation": "json-object",
+    "persistable": true,
+    "description": "A fiat amount carrying a numeric value and string unit.",
+    "zero": {
+      "kind": "none",
+      "reason": "a fiat amount requires an explicit unit"
+    },
+    "coercion": {
+      "source": "explicit",
+      "exemption": {
+        "profile": "document-engineering-1.40",
+        "paths": [
+          "validator.acceptance/installed.parseLiteral.acceptance",
+          "reducer.raw/validator.output"
+        ],
+        "caseIds": [
+          "integer",
+          "unknown-key-normalization"
+        ],
+        "digest": "sha256:1925b26df7d5db1032ff3da54cdcc51f7db5db586672ab1c9156a5ab83367e41"
+      }
+    },
+    "vector": {
+      "accepts": [
+        {
+          "id": "fractional",
+          "input": {
+            "kind": "json",
+            "value": {
+              "value": 1.5,
+              "unit": "USD"
+            }
+          }
+        },
+        {
+          "id": "integer",
+          "input": {
+            "kind": "json",
+            "value": {
+              "value": 1,
+              "unit": "USD"
+            }
+          }
+        },
+        {
+          "id": "unknown-key-normalization",
+          "input": {
+            "kind": "json",
+            "value": {
+              "value": 2,
+              "unit": "USD",
+              "memo": "legacy"
+            }
+          }
+        }
+      ],
+      "rejects": [
+        {
+          "id": "missing-unit",
+          "input": {
+            "kind": "json",
+            "value": {
+              "value": 1
+            }
+          }
+        }
+      ],
+      "acceptanceDigest": "sha256:1d055c619f88cee156e606f7ef9a0ea76ad9630345870f5c01acaf26edd799c3"
+    },
+    "coercionProfile": "document-engineering-1.40"
+  },
+  {
+    "kind": "powerhouse.scalar",
+    "formatVersion": 1,
+    "name": "Amount_Currency",
+    "representation": "json-object",
+    "persistable": true,
+    "description": "A currency amount carrying a string value and a string unit.",
+    "zero": {
+      "kind": "none",
+      "reason": "a currency amount has no meaningful empty value or unit"
+    },
+    "coercion": {
+      "source": "explicit",
+      "exemption": {
+        "profile": "document-engineering-1.40",
+        "paths": [
+          "validator.acceptance/installed.parseLiteral.acceptance",
+          "reducer.raw/validator.output"
+        ],
+        "caseIds": [
+          "arbitrary-string-value",
+          "unknown-key-normalization"
+        ],
+        "digest": "sha256:db9f1042e9fec144022ab30ceccb911dd899eda2e1c0c3fe6164169b86f9c3ed"
+      }
+    },
+    "vector": {
+      "accepts": [
+        {
+          "id": "fractional-numeric-string",
+          "input": {
+            "kind": "json",
+            "value": {
+              "value": "1.5",
+              "unit": "USD"
+            }
+          }
+        },
+        {
+          "id": "arbitrary-string-value",
+          "input": {
+            "kind": "json",
+            "value": {
+              "value": "not-a-number",
+              "unit": "USD"
+            }
+          }
+        },
+        {
+          "id": "unknown-key-normalization",
+          "input": {
+            "kind": "json",
+            "value": {
+              "value": "2",
+              "unit": "USD",
+              "memo": "legacy"
+            }
+          }
+        }
+      ],
+      "rejects": [
+        {
+          "id": "numeric-value",
+          "input": {
+            "kind": "json",
+            "value": {
+              "value": 1.5,
+              "unit": "USD"
+            }
+          }
+        }
+      ],
+      "acceptanceDigest": "sha256:76c257778bb2b44c2cf6dbe760a39889698a476e343b4d45cbb114690b26054d"
+    },
+    "coercionProfile": "document-engineering-1.40"
+  },
+  {
+    "kind": "powerhouse.scalar",
+    "formatVersion": 1,
+    "name": "Amount_Crypto",
+    "representation": "json-object",
+    "persistable": true,
+    "description": "A crypto amount carrying a string value and a string unit.",
+    "zero": {
+      "kind": "none",
+      "reason": "a crypto amount has no meaningful empty value or unit"
+    },
+    "coercion": {
+      "source": "explicit",
+      "exemption": {
+        "profile": "document-engineering-1.40",
+        "paths": [
+          "validator.acceptance/installed.parseLiteral.acceptance",
+          "reducer.raw/validator.output"
+        ],
+        "caseIds": [
+          "arbitrary-string-value",
+          "unknown-key-normalization"
+        ],
+        "digest": "sha256:03b0d5267653072171d6e21df0752a8beadd038e7cfe3deebf4cc7241e480e5f"
+      }
+    },
+    "vector": {
+      "accepts": [
+        {
+          "id": "fractional-numeric-string",
+          "input": {
+            "kind": "json",
+            "value": {
+              "value": "1.5",
+              "unit": "ETH"
+            }
+          }
+        },
+        {
+          "id": "zero-numeric-string",
+          "input": {
+            "kind": "json",
+            "value": {
+              "value": "0",
+              "unit": "BTC"
+            }
+          }
+        },
+        {
+          "id": "arbitrary-string-value",
+          "input": {
+            "kind": "json",
+            "value": {
+              "value": "not-a-number",
+              "unit": "ETH"
+            }
+          }
+        },
+        {
+          "id": "unknown-key-normalization",
+          "input": {
+            "kind": "json",
+            "value": {
+              "value": "2",
+              "unit": "ETH",
+              "memo": "legacy"
+            }
+          }
+        }
+      ],
+      "rejects": [
+        {
+          "id": "numeric-value",
+          "input": {
+            "kind": "json",
+            "value": {
+              "value": 1.5,
+              "unit": "ETH"
+            }
+          }
+        },
+        {
+          "id": "missing-unit",
+          "input": {
+            "kind": "json",
+            "value": {
+              "value": "1.5"
+            }
+          }
+        },
+        {
+          "id": "plain-string",
+          "input": {
+            "kind": "json",
+            "value": "1.5 ETH"
+          }
+        },
+        {
+          "id": "null",
+          "input": {
+            "kind": "json",
+            "value": null
+          }
+        }
+      ],
+      "acceptanceDigest": "sha256:2e7f7ac353ecbbcbc544a1ee968d460e60acab766fa5527ea490a3b11de58a8d"
+    },
+    "coercionProfile": "document-engineering-1.40"
+  },
+  {
+    "kind": "powerhouse.scalar",
+    "formatVersion": 1,
+    "name": "Amount",
+    "representation": "json-object",
+    "persistable": true,
+    "description": "An amount with a required numeric value and optional string unit.",
+    "zero": {
+      "kind": "none",
+      "reason": "an amount requires an explicit finite value"
+    },
+    "coercion": {
+      "source": "explicit",
+      "exemption": {
+        "profile": "document-engineering-1.40",
+        "paths": [
+          "typescript.source/validator.acceptance",
+          "validator.acceptance/installed.parseLiteral.acceptance",
+          "reducer.raw/validator.output"
+        ],
+        "caseIds": [
+          "integer",
+          "missing-value",
+          "unknown-key-normalization"
+        ],
+        "digest": "sha256:6a3391095518e6c41dccd0621c66f140fd1fdbc61c6837323ed27c07bf7f760a"
+      }
+    },
+    "vector": {
+      "accepts": [
+        {
+          "id": "fractional",
+          "input": {
+            "kind": "json",
+            "value": {
+              "value": 1.5
+            }
+          }
+        },
+        {
+          "id": "integer",
+          "input": {
+            "kind": "json",
+            "value": {
+              "value": 1
+            }
+          }
+        },
+        {
+          "id": "unknown-key-normalization",
+          "input": {
+            "kind": "json",
+            "value": {
+              "value": 2,
+              "memo": "legacy"
+            }
+          }
+        }
+      ],
+      "rejects": [
+        {
+          "id": "missing-value",
+          "input": {
+            "kind": "json",
+            "value": {
+              "unit": "USD"
+            }
+          }
+        }
+      ],
+      "acceptanceDigest": "sha256:534953e08983be8a1cce53be1e4c9740efd7ca10c6a272f06508a27e5965a67c"
+    },
+    "coercionProfile": "document-engineering-1.40"
+  },
+  {
+    "kind": "powerhouse.scalar",
+    "formatVersion": 1,
+    "name": "Upload",
+    "representation": "opaque",
+    "persistable": false,
+    "description": "An opaque file upload value.",
+    "zero": {
+      "kind": "none",
+      "reason": "an upload has no persistent zero value"
+    },
+    "coercion": {
+      "source": "explicit",
+      "exemption": {
+        "profile": "document-engineering-1.40",
+        "paths": [
+          "validator.acceptance/installed.parseLiteral.acceptance"
+        ],
+        "caseIds": [
+          "literal-null",
+          "upload"
+        ],
+        "digest": "sha256:eaa63b1b1550f947d59e7b185edb68a7b0ace515b95ff369e599e46f80910647"
+      }
+    },
+    "vector": {
+      "accepts": [
+        {
+          "id": "upload",
+          "input": {
+            "kind": "non-json",
+            "tag": "upload",
+            "fixtureId": "empty-file"
+          }
+        }
+      ],
+      "rejects": [
+        {
+          "id": "literal-null",
+          "input": {
+            "kind": "json",
+            "value": null
+          }
+        }
+      ],
+      "acceptanceDigest": "sha256:256f6cf95504e880cd30fa156b181bf3602e8a07fc783335045b9bd4d3b8f17b"
+    },
+    "coercionProfile": "document-engineering-1.40"
+  },
+  {
+    "kind": "powerhouse.scalar",
+    "formatVersion": 1,
+    "name": "Unknown",
+    "representation": "opaque",
+    "persistable": true,
+    "description": "An unconstrained value accepted by the current z.unknown validator.",
+    "zero": {
+      "kind": "value",
+      "value": null
+    },
+    "coercion": {
+      "source": "explicit",
+      "exemption": {
+        "profile": "document-engineering-1.40",
+        "paths": [
+          "validator.acceptance/persistence.json",
+          "validator.acceptance/parseLiteral.acceptance"
+        ],
+        "caseIds": [
+          "undefined",
+          "bigint",
+          "date",
+          "map",
+          "graphql-variable-literal"
+        ],
+        "digest": "sha256:4ada60c8eb304d3cd8a9fa6de834b4758fed33cfb90b0234f38d6abd8babc69c"
+      }
+    },
+    "vector": {
+      "accepts": [
+        {
+          "id": "json-object",
+          "input": {
+            "kind": "json",
+            "value": {}
+          }
+        },
+        {
+          "id": "undefined",
+          "input": {
+            "kind": "non-json",
+            "tag": "undefined"
+          }
+        },
+        {
+          "id": "bigint",
+          "input": {
+            "kind": "non-json",
+            "tag": "bigint",
+            "decimal": "1"
+          }
+        },
+        {
+          "id": "date",
+          "input": {
+            "kind": "non-json",
+            "tag": "date",
+            "iso": "2024-01-01T00:00:00.000Z"
+          }
+        },
+        {
+          "id": "map",
+          "input": {
+            "kind": "non-json",
+            "tag": "map",
+            "entries": []
+          }
+        }
+      ],
+      "rejects": [
+        {
+          "id": "graphql-variable-literal",
+          "input": {
+            "kind": "non-json",
+            "tag": "undefined"
+          }
+        }
+      ],
+      "acceptanceDigest": "sha256:9027a911c3fe3793b090a5fbaceb265ab7abd92385ccfacbf88881a0ad9d21dd"
+    },
+    "coercionProfile": "document-engineering-1.40"
+  },
+  {
+    "kind": "powerhouse.scalar",
+    "formatVersion": 1,
+    "name": "Address",
+    "representation": "string",
+    "persistable": true,
+    "description": "A CAIP-style address with a hexadecimal account segment.",
+    "zero": {
+      "kind": "none",
+      "reason": "Address has no meaningful empty value"
+    },
+    "coercion": {
+      "source": "derived",
+      "exemption": null
+    },
+    "vector": {
+      "accepts": [
+        {
+          "id": "valid",
+          "input": {
+            "kind": "json",
+            "value": "eip155:0x0000000000000000000000000000000000000000"
+          }
+        }
+      ],
+      "rejects": [
+        {
+          "id": "number",
+          "input": {
+            "kind": "json",
+            "value": 12
+          }
+        },
+        {
+          "id": "boolean",
+          "input": {
+            "kind": "json",
+            "value": true
+          }
+        },
+        {
+          "id": "null",
+          "input": {
+            "kind": "json",
+            "value": null
+          }
+        },
+        {
+          "id": "object",
+          "input": {
+            "kind": "json",
+            "value": {}
+          }
+        },
+        {
+          "id": "array",
+          "input": {
+            "kind": "json",
+            "value": []
+          }
+        },
+        {
+          "id": "undefined",
+          "input": {
+            "kind": "non-json",
+            "tag": "undefined"
+          }
+        }
+      ],
+      "acceptanceDigest": "sha256:b4ee642b5c6ea931db0cedff97085eb6ab0f6053778300f81e645a17b7f76655"
+    },
+    "coercionProfile": "document-engineering-1.40"
+  },
+  {
+    "kind": "powerhouse.scalar",
+    "formatVersion": 1,
+    "name": "AttachmentRef",
+    "representation": "string",
+    "persistable": true,
+    "description": "A versioned attachment reference.",
+    "zero": {
+      "kind": "none",
+      "reason": "AttachmentRef has no meaningful empty value"
+    },
+    "coercion": {
+      "source": "derived",
+      "exemption": null
+    },
+    "vector": {
+      "accepts": [
+        {
+          "id": "valid",
+          "input": {
+            "kind": "json",
+            "value": "attachment://v1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        }
+      ],
+      "rejects": [
+        {
+          "id": "number",
+          "input": {
+            "kind": "json",
+            "value": 12
+          }
+        },
+        {
+          "id": "boolean",
+          "input": {
+            "kind": "json",
+            "value": true
+          }
+        },
+        {
+          "id": "null",
+          "input": {
+            "kind": "json",
+            "value": null
+          }
+        },
+        {
+          "id": "object",
+          "input": {
+            "kind": "json",
+            "value": {}
+          }
+        },
+        {
+          "id": "array",
+          "input": {
+            "kind": "json",
+            "value": []
+          }
+        },
+        {
+          "id": "undefined",
+          "input": {
+            "kind": "non-json",
+            "tag": "undefined"
+          }
+        }
+      ],
+      "acceptanceDigest": "sha256:2c16a19fb9f21167bce3f89e5b9d5c3598ffc2e615ed5dbea0d107d69ed778c5"
+    },
+    "coercionProfile": "document-engineering-1.40"
+  },
+  {
+    "kind": "powerhouse.scalar",
+    "formatVersion": 1,
+    "name": "JSONObject",
+    "representation": "json-object",
+    "persistable": true,
+    "description": "A JSON object with string keys.",
+    "zero": {
+      "kind": "value",
+      "value": {}
+    },
+    "coercion": {
+      "source": "derived",
+      "exemption": null
+    },
+    "vector": {
+      "accepts": [
+        {
+          "id": "empty-object",
+          "input": {
+            "kind": "json",
+            "value": {}
+          }
+        },
+        {
+          "id": "nested-object",
+          "input": {
+            "kind": "json",
+            "value": {
+              "value": [
+                1,
+                true,
+                null
+              ]
+            }
+          }
+        }
+      ],
+      "rejects": [
+        {
+          "id": "array",
+          "input": {
+            "kind": "json",
+            "value": []
+          }
+        },
+        {
+          "id": "null",
+          "input": {
+            "kind": "json",
+            "value": null
+          }
+        }
+      ],
+      "acceptanceDigest": "sha256:537e47831768e8ee3c654e2eaa06dfa31ec7e483f9bcd81ef9cce50b1099fd53"
+    },
+    "coercionProfile": "document-engineering-1.40"
+  }
+]

@@ -1,0 +1,67 @@
+{
+  "typed-query-field": {
+    "authorAstDigest": "sha256:f175c41fd26e06c9d0504b681c71390b20e733dfc7d38face199f7e9805063ee",
+    "augmentedAstDigest": "sha256:ae467bba9ff59ee16b56cbd2fa37ac79d7c643a574f87ff434e355408fbd3f50",
+    "supergraphDigest": "sha256:2a58b64147f93798252094ff3ae25079622b78b27e84ecbcba04a1e5237ad00d",
+    "apolloDiagnostics": [],
+    "route": "/api/graphql/typed-query",
+    "compositionName": ":api/graphql/typed-query",
+    "replacementOutcome": "not-applicable"
+  },
+  "compat-manual-query": {
+    "authorAstDigest": "sha256:fce735cb56e7a4e2708b738dc96f39d686a44cb0954b7017b57ca69d939ae770",
+    "augmentedAstDigest": "sha256:19856cf041c7d8dcfc400a1742bf12bcbeaf9b3c82c9de61a7ac3296186cc8d3",
+    "supergraphDigest": "sha256:463df3e87d28b37f2ab0ca302e7a8214ef2353d1f2947794c88cf986feaf48ca",
+    "apolloDiagnostics": [],
+    "route": "/api/graphql/manual-query",
+    "compositionName": ":api/graphql/manual-query",
+    "replacementOutcome": "not-applicable"
+  },
+  "typed-subscription-true": {
+    "authorAstDigest": "sha256:f746fc49e27cedd2bfd94a10d660198d027f5ed9b5ca7195afa28294dad6371d",
+    "augmentedAstDigest": "sha256:f0cd30ba06ee187d2cb4c04c1c3eec7c9e425a4a07045dc9197b20c2aa16cd80",
+    "supergraphDigest": "sha256:4c3bb227751c2f796ff02f845bea157c57066c67fa3be1bc79f88f14e34606d5",
+    "apolloDiagnostics": [],
+    "route": "/api/graphql/typed-subscription",
+    "compositionName": ":api/graphql/typed-subscription",
+    "replacementOutcome": "not-applicable"
+  },
+  "compat-subscription-undefined": {
+    "authorAstDigest": "sha256:f746fc49e27cedd2bfd94a10d660198d027f5ed9b5ca7195afa28294dad6371d",
+    "augmentedAstDigest": "sha256:f0cd30ba06ee187d2cb4c04c1c3eec7c9e425a4a07045dc9197b20c2aa16cd80",
+    "supergraphDigest": "sha256:b49d174aba79cd9d6ebea7de3201d21d29fa4a91782b8152d1b53a209d4a3122",
+    "apolloDiagnostics": [],
+    "route": "/api/graphql/compat-subscription-undefined",
+    "compositionName": ":api/graphql/compat-subscription-undefined",
+    "replacementOutcome": "not-applicable"
+  },
+  "compat-subscription-false": {
+    "authorAstDigest": "sha256:f746fc49e27cedd2bfd94a10d660198d027f5ed9b5ca7195afa28294dad6371d",
+    "augmentedAstDigest": "sha256:f0cd30ba06ee187d2cb4c04c1c3eec7c9e425a4a07045dc9197b20c2aa16cd80",
+    "supergraphDigest": "sha256:2c10d4ff38ced25ce0d00e716f3b1dd69a63656f1ba4fbc44ac84ae4e5551815",
+    "apolloDiagnostics": [],
+    "route": "/api/graphql/compat-subscription-false",
+    "compositionName": ":api/graphql/compat-subscription-false",
+    "replacementOutcome": "not-applicable"
+  },
+  "duplicate-first-wins": {
+    "authorAstDigest": "sha256:39f24ecbd5ea169d8cf6c38084055362553ccd05b8f5d9a7320c9d498c2fb5fa",
+    "augmentedAstDigest": "sha256:4fb9a3df482e64b1b04be50fff9115390ceea121549955cf7b0723e7f37ccdf2",
+    "supergraphDigest": "sha256:fe2a519fefae5e76f2afb9d4e19f9de7643b09c0cffc464e8ccdf3d0a9eb724b",
+    "apolloDiagnostics": [],
+    "route": "/api/graphql/duplicate-generation",
+    "compositionName": ":api/graphql/duplicate-generation",
+    "replacementOutcome": "kept-first"
+  },
+  "composition-conflict-routes-kept": {
+    "authorAstDigest": "sha256:3a2841222cb0f512d76d51e1268cc83e189ce9959a5cc256392d9b437d94b07b",
+    "augmentedAstDigest": "sha256:471240e0e696fc0c0531f7da1ad8e2437fecabe3aaedc359de2365beeec600e1",
+    "supergraphDigest": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "apolloDiagnostics": [
+      "composition:A valid schema couldn't be composed. The following composition errors were found: Type of field \"Query.shared\" is incompatible across subgraphs: it has type \"String!\" in subgraph \":api/graphql/conflict-a\" but type \"Int!\" in subgraph \":api/graphql/conflict-b\""
+    ],
+    "route": "/api/graphql/conflict-a,/api/graphql/conflict-b",
+    "compositionName": ":api/graphql/conflict-a,:api/graphql/conflict-b",
+    "replacementOutcome": "composition-failed-routes-kept"
+  }
+}

@@ -1,0 +1,195 @@
+[
+  {
+    "kind": "powerhouse.scalar",
+    "formatVersion": 1,
+    "name": "OID",
+    "representation": "string",
+    "persistable": true,
+    "description": "An opaque object identifier.",
+    "zero": {
+      "kind": "value",
+      "value": ""
+    },
+    "coercion": {
+      "source": "derived",
+      "exemption": null
+    },
+    "vector": {
+      "accepts": [
+        {
+          "id": "empty-string",
+          "input": {
+            "kind": "json",
+            "value": ""
+          }
+        },
+        {
+          "id": "opaque-string",
+          "input": {
+            "kind": "json",
+            "value": "invoice-1"
+          }
+        },
+        {
+          "id": "ulid-like-string",
+          "input": {
+            "kind": "json",
+            "value": "01J8Z3T7QK9V2N4M6P8R0S1T2U"
+          }
+        }
+      ],
+      "rejects": [
+        {
+          "id": "number",
+          "input": {
+            "kind": "json",
+            "value": 12
+          }
+        },
+        {
+          "id": "boolean",
+          "input": {
+            "kind": "json",
+            "value": true
+          }
+        },
+        {
+          "id": "null",
+          "input": {
+            "kind": "json",
+            "value": null
+          }
+        },
+        {
+          "id": "object",
+          "input": {
+            "kind": "json",
+            "value": {}
+          }
+        },
+        {
+          "id": "array",
+          "input": {
+            "kind": "json",
+            "value": []
+          }
+        },
+        {
+          "id": "undefined",
+          "input": {
+            "kind": "non-json",
+            "tag": "undefined"
+          }
+        }
+      ],
+      "acceptanceDigest": "sha256:65c277520e131cbb6191b065e59530235d75bfaa3acde55d73bc5c8838bb44fe"
+    },
+    "coercionProfile": "document-engineering-1.40"
+  },
+  {
+    "kind": "powerhouse.scalar",
+    "formatVersion": 1,
+    "name": "Amount_Crypto",
+    "representation": "json-object",
+    "persistable": true,
+    "description": "A crypto amount carrying a string value and a string unit.",
+    "zero": {
+      "kind": "none",
+      "reason": "a crypto amount has no meaningful empty value or unit"
+    },
+    "coercion": {
+      "source": "explicit",
+      "exemption": {
+        "profile": "document-engineering-1.40",
+        "paths": [
+          "validator.acceptance/installed.parseLiteral.acceptance",
+          "reducer.raw/validator.output"
+        ],
+        "caseIds": ["arbitrary-string-value", "unknown-key-normalization"],
+        "digest": "sha256:03b0d5267653072171d6e21df0752a8beadd038e7cfe3deebf4cc7241e480e5f"
+      }
+    },
+    "vector": {
+      "accepts": [
+        {
+          "id": "fractional-numeric-string",
+          "input": {
+            "kind": "json",
+            "value": {
+              "value": "1.5",
+              "unit": "ETH"
+            }
+          }
+        },
+        {
+          "id": "zero-numeric-string",
+          "input": {
+            "kind": "json",
+            "value": {
+              "value": "0",
+              "unit": "BTC"
+            }
+          }
+        },
+        {
+          "id": "arbitrary-string-value",
+          "input": {
+            "kind": "json",
+            "value": {
+              "value": "not-a-number",
+              "unit": "ETH"
+            }
+          }
+        },
+        {
+          "id": "unknown-key-normalization",
+          "input": {
+            "kind": "json",
+            "value": {
+              "value": "2",
+              "unit": "ETH",
+              "memo": "legacy"
+            }
+          }
+        }
+      ],
+      "rejects": [
+        {
+          "id": "numeric-value",
+          "input": {
+            "kind": "json",
+            "value": {
+              "value": 1.5,
+              "unit": "ETH"
+            }
+          }
+        },
+        {
+          "id": "missing-unit",
+          "input": {
+            "kind": "json",
+            "value": {
+              "value": "1.5"
+            }
+          }
+        },
+        {
+          "id": "plain-string",
+          "input": {
+            "kind": "json",
+            "value": "1.5 ETH"
+          }
+        },
+        {
+          "id": "null",
+          "input": {
+            "kind": "json",
+            "value": null
+          }
+        }
+      ],
+      "acceptanceDigest": "sha256:2e7f7ac353ecbbcbc544a1ee968d460e60acab766fa5527ea490a3b11de58a8d"
+    },
+    "coercionProfile": "document-engineering-1.40"
+  }
+]

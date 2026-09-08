@@ -1,0 +1,263 @@
+[
+  {
+    "scalarName": "Amount_Tokens",
+    "validationOutcomeDigest": "sha256:395c4d409368762b7872bbd79943db3dcd2bb41be8720d965f9928e27860e87f",
+    "installedCoercionOutcomeDigest": "sha256:c843c7d6411c8f419357bc06099f5879c73367a2aea9849f1255ac4d5ad6963c",
+    "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+    "differences": [
+      {
+        "scalarName": "Amount_Tokens",
+        "path": "validator.acceptance/installed.parseLiteral.acceptance",
+        "caseId": "integer"
+      }
+    ]
+  },
+  {
+    "scalarName": "EthereumAddress",
+    "validationOutcomeDigest": "sha256:7fab7585069a4e1235a1d62c81d869d2afb32a641f1b7008bb4153941b0031a8",
+    "installedCoercionOutcomeDigest": "sha256:4e6685b3b17451da772091835206118fbf6e8a76d89e1f60ebf15f0d6c26b597",
+    "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+    "differences": []
+  },
+  {
+    "scalarName": "Amount_Percentage",
+    "validationOutcomeDigest": "sha256:395c4d409368762b7872bbd79943db3dcd2bb41be8720d965f9928e27860e87f",
+    "installedCoercionOutcomeDigest": "sha256:c843c7d6411c8f419357bc06099f5879c73367a2aea9849f1255ac4d5ad6963c",
+    "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+    "differences": [
+      {
+        "scalarName": "Amount_Percentage",
+        "path": "validator.acceptance/installed.parseLiteral.acceptance",
+        "caseId": "integer"
+      }
+    ]
+  },
+  {
+    "scalarName": "EmailAddress",
+    "validationOutcomeDigest": "sha256:b7ee3cd661f148d018895ff3c54e950ef48519fd865727e874c958ec06417a9c",
+    "installedCoercionOutcomeDigest": "sha256:e3eb913546a47f368ebc8e5f88083862f8955cba060905f309b729ac2748c70c",
+    "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+    "differences": []
+  },
+  {
+    "scalarName": "Date",
+    "validationOutcomeDigest": "sha256:58bbc27ebadd812ce94272df32a930fde9be4b6c2e2ecc8cab731cc5f357933e",
+    "installedCoercionOutcomeDigest": "sha256:ff30ef8ef3387a9adf862fd0470753e16976d362edd13c062320880c81799279",
+    "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+    "differences": []
+  },
+  {
+    "scalarName": "DateTime",
+    "validationOutcomeDigest": "sha256:58bbc27ebadd812ce94272df32a930fde9be4b6c2e2ecc8cab731cc5f357933e",
+    "installedCoercionOutcomeDigest": "sha256:ff30ef8ef3387a9adf862fd0470753e16976d362edd13c062320880c81799279",
+    "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+    "differences": []
+  },
+  {
+    "scalarName": "URL",
+    "validationOutcomeDigest": "sha256:63e7afb2f76c34ced8ec4f10a198599ee9cd4858ecbdef82f40c50bd026eb4cb",
+    "installedCoercionOutcomeDigest": "sha256:39e2b6b8f879533d3312011b1f9cd9f2b53a3c375705c52c55383b644258e9e2",
+    "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+    "differences": []
+  },
+  {
+    "scalarName": "Amount_Money",
+    "validationOutcomeDigest": "sha256:395c4d409368762b7872bbd79943db3dcd2bb41be8720d965f9928e27860e87f",
+    "installedCoercionOutcomeDigest": "sha256:c843c7d6411c8f419357bc06099f5879c73367a2aea9849f1255ac4d5ad6963c",
+    "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+    "differences": [
+      {
+        "scalarName": "Amount_Money",
+        "path": "validator.acceptance/installed.parseLiteral.acceptance",
+        "caseId": "integer"
+      }
+    ]
+  },
+  {
+    "scalarName": "OLabel",
+    "validationOutcomeDigest": "sha256:9da5ff980b17264008265210ec18719a0817760d25df6bc9b744d54199630c62",
+    "installedCoercionOutcomeDigest": "sha256:292e337c50a6eff12fa383032ba537d00aaa36976ac203070c7bc21ab874189d",
+    "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+    "differences": []
+  },
+  {
+    "scalarName": "Currency",
+    "validationOutcomeDigest": "sha256:12eab3ec7d02e242659d46cbb64fd563e114f327aa5549c78474f266e328632f",
+    "installedCoercionOutcomeDigest": "sha256:2e195041b16d60923f3f278fa3cd465552e03ea8e82ca704c225fc36b7af7a39",
+    "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+    "differences": []
+  },
+  {
+    "scalarName": "PHID",
+    "validationOutcomeDigest": "sha256:1b737412cf64af125d6cf7d03c9e78eaed4a5ec05f875d3774f3a04bd83fb7e2",
+    "installedCoercionOutcomeDigest": "sha256:1c1ad5685ec73b2b7eb656cb12144a77da8a6ea2d5d410aafdf3e06b492809b8",
+    "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+    "differences": []
+  },
+  {
+    "scalarName": "OID",
+    "validationOutcomeDigest": "sha256:2550b72a4495108d6fd4e48dff3f7fc3e8677dd64e57e241f3fa2208ad5516a4",
+    "installedCoercionOutcomeDigest": "sha256:f2cbe5bc8c90e65352aa8cd686fd5d0683417455cb3bf2d8e46410bc84aaf753",
+    "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+    "differences": []
+  },
+  {
+    "scalarName": "Amount_Fiat",
+    "validationOutcomeDigest": "sha256:9f7dbab486c4852086699e04f88d8f7d600e0789f68a054ed75e93de36e3dc11",
+    "installedCoercionOutcomeDigest": "sha256:f9da888da52f1691c75c56c243137b80161a9a22fea32d6df55799f31d68f48d",
+    "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+    "differences": [
+      {
+        "scalarName": "Amount_Fiat",
+        "path": "reducer.raw/validator.output",
+        "caseId": "unknown-key-normalization"
+      },
+      {
+        "scalarName": "Amount_Fiat",
+        "path": "validator.acceptance/installed.parseLiteral.acceptance",
+        "caseId": "integer"
+      },
+      {
+        "scalarName": "Amount_Fiat",
+        "path": "validator.acceptance/installed.parseLiteral.acceptance",
+        "caseId": "unknown-key-normalization"
+      }
+    ]
+  },
+  {
+    "scalarName": "Amount_Currency",
+    "validationOutcomeDigest": "sha256:18a9affe897ebc7cd882e169e283356b6772ee28c1e81ec7a0bc576bd0dce291",
+    "installedCoercionOutcomeDigest": "sha256:55ee40c8054cb3ccce63836f9359ce3fd0111c12038b2e06451ffe149ad33bb5",
+    "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+    "differences": [
+      {
+        "scalarName": "Amount_Currency",
+        "path": "reducer.raw/validator.output",
+        "caseId": "unknown-key-normalization"
+      },
+      {
+        "scalarName": "Amount_Currency",
+        "path": "validator.acceptance/installed.parseLiteral.acceptance",
+        "caseId": "arbitrary-string-value"
+      }
+    ]
+  },
+  {
+    "scalarName": "Amount_Crypto",
+    "validationOutcomeDigest": "sha256:2f82d64fc4ece395bf5ae23c354437b5ba5eaab622936d40704362f927ae0c8c",
+    "installedCoercionOutcomeDigest": "sha256:809557d1a49c66f290ff33fb219f9c53f16aeb4f88ca59addf229ed07cf7cecb",
+    "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+    "differences": [
+      {
+        "scalarName": "Amount_Crypto",
+        "path": "reducer.raw/validator.output",
+        "caseId": "unknown-key-normalization"
+      },
+      {
+        "scalarName": "Amount_Crypto",
+        "path": "validator.acceptance/installed.parseLiteral.acceptance",
+        "caseId": "arbitrary-string-value"
+      }
+    ]
+  },
+  {
+    "scalarName": "Amount",
+    "validationOutcomeDigest": "sha256:84bce00aafa9e8e480b2c9c1ecd995a2fa1b2946a817bf847232adb332b47b2b",
+    "installedCoercionOutcomeDigest": "sha256:29bae44d04401a6726707fb5fed442cdf0af5de182ed96582c475e7417c96655",
+    "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+    "differences": [
+      {
+        "scalarName": "Amount",
+        "path": "reducer.raw/validator.output",
+        "caseId": "unknown-key-normalization"
+      },
+      {
+        "scalarName": "Amount",
+        "path": "typescript.source/validator.acceptance",
+        "caseId": "missing-value"
+      },
+      {
+        "scalarName": "Amount",
+        "path": "validator.acceptance/installed.parseLiteral.acceptance",
+        "caseId": "integer"
+      },
+      {
+        "scalarName": "Amount",
+        "path": "validator.acceptance/installed.parseLiteral.acceptance",
+        "caseId": "unknown-key-normalization"
+      }
+    ]
+  },
+  {
+    "scalarName": "Upload",
+    "validationOutcomeDigest": "sha256:a9851470ab59e3b4ff83d853366a196d1dd4aabcd512ee3899f22d9ff73f9ccc",
+    "installedCoercionOutcomeDigest": "sha256:5cb997cead7cb1c893b7715fa3b39d41852887a93bcea5fc1d50525ee4dd5817",
+    "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+    "differences": [
+      {
+        "scalarName": "Upload",
+        "path": "validator.acceptance/installed.parseLiteral.acceptance",
+        "caseId": "literal-null"
+      },
+      {
+        "scalarName": "Upload",
+        "path": "validator.acceptance/installed.parseLiteral.acceptance",
+        "caseId": "upload"
+      }
+    ]
+  },
+  {
+    "scalarName": "Unknown",
+    "validationOutcomeDigest": "sha256:75cba9a65b53fd721b6b4be408c2dbcd3f3115beec2fafd66cc5305557092d43",
+    "installedCoercionOutcomeDigest": "sha256:3e940f84ec8d6e0b4a5a6031a0ad930918be10c3b85aeb496b936d21a461eff1",
+    "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+    "differences": [
+      {
+        "scalarName": "Unknown",
+        "path": "validator.acceptance/parseLiteral.acceptance",
+        "caseId": "graphql-variable-literal"
+      },
+      {
+        "scalarName": "Unknown",
+        "path": "validator.acceptance/persistence.json",
+        "caseId": "bigint"
+      },
+      {
+        "scalarName": "Unknown",
+        "path": "validator.acceptance/persistence.json",
+        "caseId": "date"
+      },
+      {
+        "scalarName": "Unknown",
+        "path": "validator.acceptance/persistence.json",
+        "caseId": "map"
+      },
+      {
+        "scalarName": "Unknown",
+        "path": "validator.acceptance/persistence.json",
+        "caseId": "undefined"
+      }
+    ]
+  },
+  {
+    "scalarName": "Address",
+    "validationOutcomeDigest": "sha256:4a64d4de558b44f90ca9abd7721c87abbba6f0967d8edb920b22d688d17df868",
+    "installedCoercionOutcomeDigest": "sha256:6803597d9094a059483809447fc4bc3f83f0cc9d035040d9b032e38e78551002",
+    "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+    "differences": []
+  },
+  {
+    "scalarName": "AttachmentRef",
+    "validationOutcomeDigest": "sha256:edb002c52049e5b2243e6e9425be10a85565aa96d23bbfeaf35b8544764205e0",
+    "installedCoercionOutcomeDigest": "sha256:9e35c58d48b927675a796477555e5791d247419712b0607590b17c388800e995",
+    "graphQLOutcomeDigest": "sha256:c45cb43501de37a58ec9bf4df96665270b003e02f6c1b0f291a7bdfb05fd05e8",
+    "differences": []
+  },
+  {
+    "scalarName": "JSONObject",
+    "validationOutcomeDigest": "sha256:0f74970e10ac531be798e5a2d6bcd50d477d43031aa1f1a3c40b301abecf9a6a",
+    "installedCoercionOutcomeDigest": "sha256:9989d8fbd6071324859e39c14f738d89eba1e62b5a9085164cc4fe61ec5a3f2c",
+    "graphQLOutcomeDigest": "sha256:3f941f4907215a3413c55414ac13e2b33f3d725ddbfbe53ffb36c5b994cbd217",
+    "differences": []
+  }
+]
