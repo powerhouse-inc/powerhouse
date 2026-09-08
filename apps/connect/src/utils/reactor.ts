@@ -188,6 +188,17 @@ async function addRemoteDefaultDrive(
 async function addLocalDefaultDrive(
   drive: PHConnectDefaultDriveLocal,
 ): Promise<void> {
+  // The union is discriminated on `url`, so a hand-edited config entry with
+  // neither `url` nor `id` lands here. Without an id addDrive would mint a
+  // random one, creating another drive on every boot.
+  if (!drive.id) {
+    console.error(
+      "Ignoring local default drive with no id:",
+      JSON.stringify(drive),
+    );
+    return;
+  }
+
   try {
     // isDocumentIdTaken() lives on the full reactor client, not the browser
     // client the interactive addDrive action uses. It asks what the create

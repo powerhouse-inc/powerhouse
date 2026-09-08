@@ -36,6 +36,7 @@ import {
   setDriveMetadata,
   waitForDocumentReady,
 } from "@powerhousedao/reactor-browser";
+import type { PHConnectDefaultDrive } from "@powerhousedao/shared/clis";
 import { addDefaultDrivesForNewReactor } from "../../src/utils/reactor.js";
 
 function setPh(value: Record<string, unknown>): void {
@@ -122,6 +123,22 @@ describe("addDefaultDrivesForNewReactor (issue #2838)", () => {
       { id: "drive-1", global: { name: "", icon: null } },
       undefined,
     );
+  });
+
+  // The remote/local union is discriminated on `url`, and ajv only validates
+  // configs the `ph connect config` CLI writes -- a hand-edited entry with
+  // neither field reaches the local path with no id to create under.
+  it("ignores a local default drive entry that carries no id", async () => {
+    const isDocumentIdTaken = vi.fn();
+    setPh({ reactorClientModule: { client: { isDocumentIdTaken } } });
+
+    await addDefaultDrivesForNewReactor([
+      { name: "Foo" } as unknown as PHConnectDefaultDrive,
+    ]);
+
+    expect(isDocumentIdTaken).not.toHaveBeenCalled();
+    expect(addDrive).not.toHaveBeenCalled();
+    expect(addRemoteDrive).not.toHaveBeenCalled();
   });
 
   it("keeps remote default drives on the existing registration path", async () => {
