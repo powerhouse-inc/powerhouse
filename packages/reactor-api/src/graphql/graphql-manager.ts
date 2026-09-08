@@ -695,8 +695,11 @@ export class GraphQLManager {
     });
   }
 
+  // The mount path is owned by the host: the manager's base path, never the
+  // subgraph's own `path` field, which a package subgraph can overwrite with a
+  // field initializer (it runs after super()).
   #getSubgraphPath(subgraph: ISubgraph, supergraph: string) {
-    return path.posix.join(subgraph.path ?? "", supergraph, subgraph.name);
+    return path.posix.join(this.path, supergraph, subgraph.name);
   }
 
   /** The in-process handler map is keyed by bare name, so two distinct

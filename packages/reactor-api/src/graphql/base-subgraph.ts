@@ -28,6 +28,8 @@ import type { Context } from "./types.js";
 
 export class BaseSubgraph implements ISubgraph {
   name = "example";
+  // The host's base path as injected by the GraphQL manager. Routing
+  // ignores it: the manager mounts every subgraph under its own base path.
   path = "";
   resolvers: Record<string, any> = {
     Query: {

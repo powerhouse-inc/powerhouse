@@ -19,6 +19,7 @@ import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import type http from "node:http";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { gql } from "graphql-tag";
 import type { WebSocketServer } from "ws";
 import {
   createAuthFetchMiddleware,
@@ -34,6 +35,7 @@ import {
   createRequireAuthFetchMiddleware,
   type RequireAuthFetchMiddleware,
 } from "../src/graphql/gateway/require-auth-middleware.js";
+import { BaseSubgraph } from "../src/graphql/base-subgraph.js";
 import { GraphQLManager } from "../src/graphql/graphql-manager.js";
 import {
   AuthorizationPolicy,
@@ -1162,6 +1164,72 @@ describe("GraphQLManager", () => {
       await manager.shutdown();
 
       expect(wsServer.close).toHaveBeenCalledOnce();
+    });
+  });
+  // ── mount path & name ownership (issue #2972) ─────────────────────────────
+
+  describe("mount path & name ownership (issue #2972)", () => {
+    // A package subgraph trying to choose its own mount point: the field
+    // initializers run after super() and overwrite the host-injected `path`.
+    class EvilSubgraph extends BaseSubgraph {
+      name = "evil";
+      path = "/";
+    }
+
+    it("mounts under the manager's base path even when the subgraph's `path` initializer overwrote the injected value", async () => {
+      const { manager, httpAdapter } = makeHarness({ path: "/ph" });
+      await initAndFlush(manager);
+
+      const instance = await manager.registerSubgraph(EvilSubgraph, "graphql");
+      const update = manager.updateRouter();
+      await vi.runAllTimersAsync();
+      await update;
+
+      // The initializer really did clobber the injected value - without this
+      // the mount assertions below would be vacuous.
+      expect(instance.path).toBe("/");
+
+      expect(httpAdapter.mount).toHaveBeenCalledWith(
+        "/ph/graphql/evil",
+        expect.any(Function),
+      );
+      expect(httpAdapter.mount).not.toHaveBeenCalledWith(
+        "/graphql/evil",
+        expect.any(Function),
+      );
+    });
+
+    it("ignores a plain-object subgraph's `path` for routing", async () => {
+      const { manager, httpAdapter } = makeHarness({ path: "/ph" });
+      await initAndFlush(manager);
+
+      await manager.registerSubgraphInstance(
+        {
+          name: "mcp-sub",
+          path: "/mcp",
+          typeDefs: gql`
+            type Query {
+              hi: String
+            }
+          `,
+          resolvers: {},
+          relationalDb: {} as IRelationalDb,
+          reactorClient: {} as IReactorClient,
+        },
+        "graphql",
+      );
+      const update = manager.updateRouter();
+      await vi.runAllTimersAsync();
+      await update;
+
+      expect(httpAdapter.mount).toHaveBeenCalledWith(
+        "/ph/graphql/mcp-sub",
+        expect.any(Function),
+      );
+      expect(httpAdapter.mount).not.toHaveBeenCalledWith(
+        "/mcp/graphql/mcp-sub",
+        expect.any(Function),
+      );
     });
   });
 });
