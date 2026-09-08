@@ -59,7 +59,7 @@ fi
 # a plain checkout cannot run most tests. Keep the base reasonably current.
 git fetch origin --quiet 2>/dev/null || true
 if [[ "$base" == "main" ]] && git rev-parse --verify --quiet origin/main >/dev/null \
-   && git rev-list --quiet main..origin/main | grep -q .; then
+   && [[ -n "$(git rev-list main..origin/main)" ]]; then
   echo "Warning: local 'main' is behind 'origin/main'; branching from origin/main instead." >&2
   base="origin/main"
 fi
@@ -70,7 +70,9 @@ mkdir -p "$(dirname "$worktree_dir")"
 if git show-ref --verify --quiet "refs/heads/$branch"; then
   git worktree add "$worktree_dir" "$branch"
 else
-  git worktree add -b "$branch" "$worktree_dir" "$base"
+  # --no-track: when $base is origin/main the new branch would otherwise
+  # track it, and a push from the worktree could target main directly.
+  git worktree add --no-track -b "$branch" "$worktree_dir" "$base"
 fi
 
 echo "Worktree: $worktree_dir (branch: $branch, base: $base)"
