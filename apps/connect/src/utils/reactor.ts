@@ -1,4 +1,5 @@
 import {
+  addDrive,
   addRemoteDrive,
   ChannelScheme,
   isDriveAuthError,
@@ -13,7 +14,11 @@ import {
   type ReactorFeatureFlags,
   type SignerConfig,
 } from "@powerhousedao/reactor-browser";
-import type { PHConnectDefaultDrive } from "@powerhousedao/shared/clis";
+import type {
+  PHConnectDefaultDrive,
+  PHConnectDefaultDriveLocal,
+  PHConnectDefaultDriveRemote,
+} from "@powerhousedao/shared/clis";
 import type { RuntimePowerhouseConfig } from "@powerhousedao/shared/connect";
 import type {
   DocumentModelModule,
@@ -93,69 +98,116 @@ export function getDefaultDrives(
  * Add default drives for the new reactor via sync manager.
  *
  * Drives register concurrently so a slow or unreachable drive can't delay the
- * others — in particular the one the URL slug resolves to. Retries with linear
- * backoff to handle the common race where Connect's dev server is ready before
- * the switchboard has finished binding its port.
+ * others — in particular the one the URL slug resolves to. Remote drives
+ * retry with linear backoff to handle the common race where Connect's dev
+ * server is ready before the switchboard has finished binding its port.
  *
- * @param drives - Array of drive objects with url, optional name and icon
+ * Each entry is either a remote drive (a URL registered with the sync
+ * manager, waited on for initial backfill) or a local drive (created once in
+ * this browser's local reactor; its fixed id makes later boots skip it).
+ *
+ * @param drives - Array of default-drive entries
  */
 export async function addDefaultDrivesForNewReactor(
   drives: PHConnectDefaultDrive[],
 ): Promise<void> {
+  await Promise.all(
+    drives.map((drive) =>
+      "url" in drive
+        ? addRemoteDefaultDrive(drive)
+        : addLocalDefaultDrive(drive),
+    ),
+  );
+}
+
+async function addRemoteDefaultDrive(
+  drive: PHConnectDefaultDriveRemote,
+): Promise<void> {
   const MAX_ATTEMPTS = 3;
   const BACKOFF_MS = 2000;
 
-  await Promise.all(
-    drives.map(async (drive) => {
-      let driveId: string | undefined;
-      for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-        try {
-          driveId = await addRemoteDrive(drive.url);
-          break;
-        } catch (error) {
-          if (isDriveAuthError(error)) {
-            // addRemoteDrive already surfaces the login modal; auth failures
-            // don't self-heal, so don't burn the remaining retries.
-            break;
-          }
-          if (attempt === MAX_ATTEMPTS) {
-            console.error(
-              `Failed to add default drive ${drive.url} after ${MAX_ATTEMPTS} attempts:`,
-              error,
-            );
-          } else {
-            const delay = BACKOFF_MS * attempt;
-            console.warn(
-              `Default drive ${drive.url} not reachable (attempt ${attempt}/${MAX_ATTEMPTS}), retrying in ${delay}ms...`,
-            );
-            await new Promise((resolve) => setTimeout(resolve, delay));
-          }
-        }
+  let driveId: string | undefined;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      driveId = await addRemoteDrive(drive.url);
+      break;
+    } catch (error) {
+      if (isDriveAuthError(error)) {
+        // addRemoteDrive already surfaces the login modal; auth failures
+        // don't self-heal, so don't burn the remaining retries.
+        break;
       }
+      if (attempt === MAX_ATTEMPTS) {
+        console.error(
+          `Failed to add default drive ${drive.url} after ${MAX_ATTEMPTS} attempts:`,
+          error,
+        );
+      } else {
+        const delay = BACKOFF_MS * attempt;
+        console.warn(
+          `Default drive ${drive.url} not reachable (attempt ${attempt}/${MAX_ATTEMPTS}), retrying in ${delay}ms...`,
+        );
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    }
+  }
 
-      if (driveId && (drive.name || drive.icon)) {
-        try {
-          // setDriveMetadata dispatches against the local drive document, which
-          // only exists once initial backfill delivers it — wait for it first
-          // so the name/icon override isn't lost to a sync race.
-          // waitForDocumentReady needs the full reactor client
-          const reactorClient = window.ph?.reactorClientModule?.client;
-          if (reactorClient) {
-            await waitForDocumentReady(reactorClient, driveId, {
-              timeoutMs: 15_000,
-            });
-          }
-          await setDriveMetadata(driveId, {
-            name: drive.name,
-            icon: drive.icon,
-          });
-        } catch (error) {
-          console.warn(
-            `Default drive ${drive.url} was added but metadata update failed:`,
-            error,
-          );
-        }
+  if (driveId && (drive.name || drive.icon)) {
+    try {
+      // setDriveMetadata dispatches against the local drive document, which
+      // only exists once initial backfill delivers it — wait for it first
+      // so the name/icon override isn't lost to a sync race.
+      // waitForDocumentReady needs the full reactor client
+      const reactorClient = window.ph?.reactorClientModule?.client;
+      if (reactorClient) {
+        await waitForDocumentReady(reactorClient, driveId, {
+          timeoutMs: 15_000,
+        });
       }
-    }),
-  );
+      await setDriveMetadata(driveId, {
+        name: drive.name,
+        icon: drive.icon,
+      });
+    } catch (error) {
+      console.warn(
+        `Default drive ${drive.url} was added but metadata update failed:`,
+        error,
+      );
+    }
+  }
+}
+
+/**
+ * Create a configured local default drive in this browser's local reactor.
+ * The drive is only created when no document with the configured id exists
+ * yet, so repeated boots are idempotent. Name and icon are written straight
+ * into the created document's global state (no setDriveMetadata round-trip),
+ * and `app` maps to the drive's preferred editor.
+ */
+async function addLocalDefaultDrive(
+  drive: PHConnectDefaultDriveLocal,
+): Promise<void> {
+  try {
+    // find() lives on the full reactor client, not the browser client the
+    // interactive addDrive action uses.
+    const reactorClient = window.ph?.reactorClientModule?.client;
+    if (reactorClient) {
+      const existing = await reactorClient.find({ ids: [drive.id] });
+      if (existing.results.length > 0) {
+        return; // already created on an earlier boot
+      }
+    }
+    await addDrive(
+      {
+        id: drive.id,
+        global: {
+          name: drive.name ?? "",
+          icon: drive.icon ?? null,
+        },
+      },
+      drive.app,
+    );
+  } catch (error) {
+    console.error(`Failed to create local default drive ${drive.id}:`, error);
+  }
 }

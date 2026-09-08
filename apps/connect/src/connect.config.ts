@@ -86,7 +86,9 @@ function getBuiltInDefaults(): Omit<
     cliVersion: env.PH_CONNECT_CLI_VERSION,
     fileUploadOperationsChunkSize: 50,
     gaTrackingId: undefined,
-    defaultDrivesUrl: runtime.drives?.defaultDrives?.[0]?.url,
+    defaultDrivesUrl: runtime.drives?.defaultDrives?.find(
+      (drive) => "url" in drive,
+    )?.url,
     drivesPreserveStrategy: runtime.drives?.preserveStrategy,
     enabledEditors: undefined,
     disabledEditors,
