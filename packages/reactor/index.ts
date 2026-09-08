@@ -32,6 +32,8 @@ export {
   type FileModelSource,
   type PackageModelSource,
   type ProjectionShardBuilderConfig,
+  type ReadModelCoordinatorFactory,
+  type ReadModelCoordinatorFactoryDeps,
   type ReadModelFactory,
   type ReadModelFactoryDeps,
   type WorkerPoolOptions,
