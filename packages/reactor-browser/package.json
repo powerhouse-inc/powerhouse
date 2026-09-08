@@ -115,6 +115,7 @@
     "@vitest/browser": "catalog:",
     "@vitest/browser-playwright": "catalog:",
     "fast-deep-equal": "catalog:",
+    "fflate": "^0.8.2",
     "graphql": "catalog:",
     "graphql-tag": "catalog:",
     "playwright": "catalog:",

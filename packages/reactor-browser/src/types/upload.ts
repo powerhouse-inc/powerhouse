@@ -1,4 +1,4 @@
-import type { FileNode } from "@powerhousedao/shared/document-drive";
+import type { FileNode, Node } from "@powerhousedao/shared/document-drive";
 
 export type DocumentTypeIcon =
   | "analytics-processor"
@@ -33,8 +33,11 @@ export interface FileUploadProgress {
 
 export type FileUploadProgressCallback = (progress: FileUploadProgress) => void;
 
-export type UseOnDropFile = () => (
+export type UseOnDropFile = (
+  documentTypesOverride?: string[],
+) => (
   file: File,
+  targetFolder?: Node,
   onProgress?: FileUploadProgressCallback,
   resolveConflict?: ConflictResolution,
 ) => Promise<FileNode | undefined>;
