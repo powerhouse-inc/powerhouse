@@ -179,22 +179,26 @@ async function addRemoteDefaultDrive(
 
 /**
  * Create a configured local default drive in this browser's local reactor.
- * The drive is only created when no document with the configured id exists
- * yet, so repeated boots are idempotent. Name and icon are written straight
- * into the created document's global state (no setDriveMetadata round-trip),
- * and `app` maps to the drive's preferred editor.
+ * The drive is only created when the configured id is not already taken, so
+ * repeated boots are idempotent and a drive the user deleted stays deleted.
+ * Name and icon are written straight into the created document's global state
+ * (no setDriveMetadata round-trip), and `app` maps to the drive's preferred
+ * editor.
  */
 async function addLocalDefaultDrive(
   drive: PHConnectDefaultDriveLocal,
 ): Promise<void> {
   try {
-    // find() lives on the full reactor client, not the browser client the
-    // interactive addDrive action uses.
+    // isDocumentIdTaken() lives on the full reactor client, not the browser
+    // client the interactive addDrive action uses. It asks what the create
+    // path asks — is the id reserved, deleted or not — where find() reports
+    // only live documents, so a deleted drive would look absent and be
+    // re-created (and rejected) on every boot.
     const reactorClient = window.ph?.reactorClientModule?.client;
     if (reactorClient) {
-      const existing = await reactorClient.find({ ids: [drive.id] });
-      if (existing.results.length > 0) {
-        return; // already created on an earlier boot
+      const taken = await reactorClient.isDocumentIdTaken(drive.id);
+      if (taken) {
+        return; // created on an earlier boot, or deleted since
       }
     }
     await addDrive(

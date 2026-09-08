@@ -53,8 +53,8 @@ describe("addDefaultDrivesForNewReactor (issue #2838)", () => {
   });
 
   it("creates a local default drive with its configured id, metadata, and app", async () => {
-    const find = vi.fn().mockResolvedValue({ results: [] });
-    setPh({ reactorClientModule: { client: { find } } });
+    const isDocumentIdTaken = vi.fn().mockResolvedValue(false);
+    setPh({ reactorClientModule: { client: { isDocumentIdTaken } } });
 
     await addDefaultDrivesForNewReactor([
       {
@@ -66,7 +66,7 @@ describe("addDefaultDrivesForNewReactor (issue #2838)", () => {
       },
     ]);
 
-    expect(find).toHaveBeenCalledWith({ ids: ["drive-1"] });
+    expect(isDocumentIdTaken).toHaveBeenCalledWith("drive-1");
     expect(addDrive).toHaveBeenCalledTimes(1);
     expect(addDrive).toHaveBeenCalledWith(
       {
@@ -82,22 +82,38 @@ describe("addDefaultDrivesForNewReactor (issue #2838)", () => {
   });
 
   it("does not re-create a local drive whose id already exists", async () => {
-    const find = vi
-      .fn()
-      .mockResolvedValue({ results: [{ header: { id: "drive-1" } }] });
-    setPh({ reactorClientModule: { client: { find } } });
+    const isDocumentIdTaken = vi.fn().mockResolvedValue(true);
+    setPh({ reactorClientModule: { client: { isDocumentIdTaken } } });
 
     await addDefaultDrivesForNewReactor([
       { local: true, id: "drive-1", name: "My Drive" },
     ]);
 
-    expect(find).toHaveBeenCalledWith({ ids: ["drive-1"] });
+    expect(isDocumentIdTaken).toHaveBeenCalledWith("drive-1");
+    expect(addDrive).not.toHaveBeenCalled();
+  });
+
+  // A soft-deleted document keeps its id reserved on the create path, but
+  // find() reports only live documents. Guarding with find() therefore
+  // re-attempted addDrive on every boot after the user deleted the drive, and
+  // every attempt failed with DocumentAlreadyExistsError.
+  it("does not re-create a local default drive the user deleted", async () => {
+    const find = vi.fn().mockResolvedValue({ results: [] });
+    const isDocumentIdTaken = vi.fn().mockResolvedValue(true);
+    setPh({ reactorClientModule: { client: { find, isDocumentIdTaken } } });
+
+    await addDefaultDrivesForNewReactor([
+      { local: true, id: "drive-1", name: "My Drive" },
+    ]);
+
+    expect(isDocumentIdTaken).toHaveBeenCalledWith("drive-1");
+    expect(find).not.toHaveBeenCalled();
     expect(addDrive).not.toHaveBeenCalled();
   });
 
   it("treats omitted local-drive metadata as empty name, null icon, no app", async () => {
-    const find = vi.fn().mockResolvedValue({ results: [] });
-    setPh({ reactorClientModule: { client: { find } } });
+    const isDocumentIdTaken = vi.fn().mockResolvedValue(false);
+    setPh({ reactorClientModule: { client: { isDocumentIdTaken } } });
 
     await addDefaultDrivesForNewReactor([{ local: true, id: "drive-1" }]);
 
@@ -135,11 +151,11 @@ describe("addDefaultDrivesForNewReactor (issue #2838)", () => {
   });
 
   it("runs local and remote entries concurrently without cross-interference", async () => {
-    const find = vi.fn().mockResolvedValue({ results: [] });
+    const isDocumentIdTaken = vi.fn().mockResolvedValue(false);
     (addRemoteDrive as Mock).mockResolvedValue("remote-drive-1");
     (setDriveMetadata as Mock).mockResolvedValue(undefined);
     (waitForDocumentReady as Mock).mockResolvedValue(undefined);
-    const client = { find };
+    const client = { isDocumentIdTaken };
     setPh({ reactorClient: client, reactorClientModule: { client } });
 
     await addDefaultDrivesForNewReactor([
