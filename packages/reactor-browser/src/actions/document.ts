@@ -153,7 +153,9 @@ export async function downloadFile(document: PHDocument, fileName: string) {
   }
 }
 
-async function getDocumentExtension(document: PHDocument): Promise<string> {
+export async function getDocumentExtension(
+  document: PHDocument,
+): Promise<string> {
   const documentType = document.header.documentType;
 
   let rawExtension: string | undefined;
