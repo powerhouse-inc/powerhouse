@@ -1,3 +1,15 @@
+## 6.2.2-dev.83 (2026-09-08)
+
+### 🩹 Fixes
+
+- **reactor:** let execute name the subject its returned document is read as ([#2985](https://github.com/powerhouse-inc/powerhouse/pull/2985))
+- **release:** create the GitHub release after the push, not during changelog ([df3d2c88c](https://github.com/powerhouse-inc/powerhouse/commit/df3d2c88c))
+
+### ❤️ Thank You
+
+- acaldas
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.2.2-dev.82 (2026-09-08)
 
 ### 🩹 Fixes

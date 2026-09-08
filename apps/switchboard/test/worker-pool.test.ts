@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   autoWorkerCount,
   buildWorkerDbConfig,
+  resolveHostPoolSize,
   resolveWorkerModelSources,
   resolveWorkerPoolOptions,
 } from "../src/worker-pool.mjs";
@@ -139,6 +140,32 @@ describe("resolveWorkerPoolOptions", () => {
     expect(resolved?.mode).toBe("auto");
     expect(resolved?.numWorkers).toBeGreaterThanOrEqual(1);
     expect(resolved?.numWorkers).toBeLessThanOrEqual(8);
+  });
+});
+
+describe("resolveHostPoolSize", () => {
+  it("defaults to 16 when unset", () => {
+    expect(resolveHostPoolSize({})).toBe(16);
+  });
+
+  it("defaults to 16 when set to an empty string", () => {
+    expect(resolveHostPoolSize({ REACTOR_DB_POOL_SIZE_HOST: "" })).toBe(16);
+  });
+
+  it("reads REACTOR_DB_POOL_SIZE_HOST", () => {
+    expect(resolveHostPoolSize({ REACTOR_DB_POOL_SIZE_HOST: "64" })).toBe(64);
+  });
+
+  it.each(["abc", "-1", "2.5", "4x"])("rejects %s", (raw) => {
+    expect(() =>
+      resolveHostPoolSize({ REACTOR_DB_POOL_SIZE_HOST: raw }),
+    ).toThrow(/REACTOR_DB_POOL_SIZE_HOST/);
+  });
+
+  it("rejects 0 — the host pool has no disabled state", () => {
+    expect(() =>
+      resolveHostPoolSize({ REACTOR_DB_POOL_SIZE_HOST: "0" }),
+    ).toThrow(/at least 1/);
   });
 });
 
