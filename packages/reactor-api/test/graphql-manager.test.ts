@@ -41,7 +41,11 @@ import {
   AuthorizationPolicy,
   createAuthorizationService,
 } from "../src/services/authorization.service.js";
-import type { Context } from "../src/graphql/types.js";
+import type {
+  Context,
+  ISubgraph,
+  SubgraphClass,
+} from "../src/graphql/types.js";
 import type { AuthContext, AuthService } from "../src/services/auth.service.js";
 
 // ── shared fixtures ──────────────────────────────────────────────────────────
@@ -56,6 +60,21 @@ const silentLogger: ILogger = {
   errorHandler: vi.fn(),
   child: () => silentLogger,
 };
+
+/** An ILogger whose methods are spies, for asserting on log calls. */
+function makeHarnessLogger(): ILogger {
+  const logger: ILogger = {
+    level: "error" as const,
+    verbose: vi.fn(),
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    errorHandler: vi.fn(),
+    child: () => logger,
+  };
+  return logger;
+}
 
 /** Minimal DocumentModelModule with a DocumentDrive model - required by init(). */
 function makeDriveModule(): DocumentModelModule {
@@ -73,6 +92,41 @@ function makeDriveModule(): DocumentModelModule {
             // referenced by the DocumentDrive type definition.
             state: {
               global: { schema: "type DocumentDriveState { name: String }" },
+              local: { schema: "" },
+            },
+          },
+        ],
+      },
+    },
+  } as unknown as DocumentModelModule;
+}
+
+/** A minimal second document model, shaped like makeDriveModule. */
+function makeModelModule(name: string, id: string): DocumentModelModule {
+  return {
+    documentModel: {
+      global: {
+        name,
+        id,
+        specifications: [
+          {
+            version: 1,
+            modules: [
+              {
+                name: "core",
+                operations: [
+                  {
+                    name: "doThing",
+                    schema:
+                      "input DoThingInput { x: String }\ntype DoThingResult { ok: Boolean }",
+                  },
+                ],
+              },
+            ],
+            state: {
+              global: {
+                schema: `type ${name}State { name: String }`,
+              },
               local: { schema: "" },
             },
           },
@@ -146,6 +200,7 @@ type HarnessOptions = {
   path?: string;
   enableDocumentModelSubgraphs?: boolean;
   reactorClient?: IReactorClient;
+  logger?: ILogger;
 };
 
 function makeHarness(options: HarnessOptions = {}) {
@@ -166,7 +221,7 @@ function makeHarness(options: HarnessOptions = {}) {
     {} as IRelationalDb,
     {} as IAnalyticsStore,
     {} as ISyncManager,
-    silentLogger,
+    options.logger ?? silentLogger,
     httpAdapter,
     gatewayAdapter,
     undefined, // authService
@@ -197,7 +252,7 @@ function makeHarness(options: HarnessOptions = {}) {
 /** Run init() to completion, flushing the debounced updateRouter() call. */
 async function initAndFlush(
   manager: GraphQLManager,
-  coreSubgraphs: never[] = [],
+  coreSubgraphs: SubgraphClass[] = [],
   authMiddleware?: AuthFetchMiddleware,
   requireAuthMiddleware?: RequireAuthFetchMiddleware,
 ) {
@@ -1187,7 +1242,7 @@ describe("GraphQLManager", () => {
 
       // The initializer really did clobber the injected value - without this
       // the mount assertions below would be vacuous.
-      expect(instance.path).toBe("/");
+      expect(instance?.path).toBe("/");
 
       expect(httpAdapter.mount).toHaveBeenCalledWith(
         "/ph/graphql/evil",
@@ -1230,6 +1285,115 @@ describe("GraphQLManager", () => {
         "/mcp/graphql/mcp-sub",
         expect.any(Function),
       );
+    });
+
+    function makePlainSub(name: string, overrides: object = {}) {
+      return {
+        name,
+        typeDefs: gql`
+          type Query {
+            hi: String
+          }
+        `,
+        resolvers: {},
+        relationalDb: {} as IRelationalDb,
+        reactorClient: {} as IReactorClient,
+        ...overrides,
+      };
+    }
+
+    // A core subgraph named "system" - the default BaseSubgraph name is
+    // "example", so a subgraph named "system" is a deliberate collision.
+    class SystemSubgraph extends BaseSubgraph {
+      name = "system";
+    }
+
+    it("rejects a non-core subgraph that takes a registered core subgraph's name", async () => {
+      const logger = makeHarnessLogger();
+      const { manager } = makeHarness({ logger });
+      await initAndFlush(manager, [SystemSubgraph]);
+
+      const core = manager.getSubgraphByName("system");
+      expect(core).toBeDefined();
+
+      const result = await manager.registerSubgraphInstance(
+        makePlainSub("system"),
+        "graphql",
+      );
+
+      expect(result).toBeUndefined();
+      expect(manager.getSubgraphByName("system")).toBe(core);
+      expect(logger.error).toHaveBeenCalledWith(
+        "Rejecting subgraph @name: name is reserved by a registered core subgraph",
+        "system",
+      );
+
+      // The same rejection applies with the default supergraph.
+      const resultWithDefaultSupergraph =
+        await manager.registerSubgraphInstance(makePlainSub("system"));
+      expect(resultWithDefaultSupergraph).toBeUndefined();
+      expect(manager.getSubgraphByName("system")).toBe(core);
+    });
+
+    it("setSupergraph drops subgraphs that take a registered core subgraph's name", async () => {
+      const logger = makeHarnessLogger();
+      const { manager } = makeHarness({ logger });
+      await initAndFlush(manager, [SystemSubgraph]);
+
+      const core = manager.getSubgraphByName("system");
+      expect(core).toBeDefined();
+
+      const good = makePlainSub("good");
+      const evil = makePlainSub("system");
+
+      const update = manager.setSupergraph("graphql", [good, evil]);
+      await vi.runAllTimersAsync();
+      await update;
+
+      expect(logger.error).toHaveBeenCalledWith(
+        "Rejecting subgraph @name: name is reserved by a registered core subgraph",
+        "system",
+      );
+      expect(manager.getSubgraphByName("system")).toBe(core);
+      expect(manager.getSubgraphByName("good")).toBe(good);
+
+      // Whitebox: `subgraphs` is the manager's private bucket map; reach it
+      // to assert the rejected instance was never written into one.
+      const managerWithBuckets = manager as unknown as {
+        subgraphs: Map<string, ISubgraph[]>;
+      };
+      const buckets = managerWithBuckets.subgraphs;
+      for (const subgraphs of buckets.values()) {
+        expect(subgraphs).not.toContain(evil);
+      }
+      expect(buckets.get("graphql")).toContain(good);
+    });
+
+    it("rejects a document model subgraph whose kebab-cased name collides with a core subgraph", async () => {
+      const logger = makeHarnessLogger();
+      const systemModel = makeModelModule(
+        "System",
+        "powerhouse/test-system-model",
+      );
+      const { manager } = makeHarness({
+        logger,
+        enableDocumentModelSubgraphs: true,
+        reactorClient: makeMockReactorClient({
+          getDocumentModelModules: vi.fn().mockResolvedValue({
+            results: [makeDriveModule(), systemModel],
+          }),
+        }),
+      });
+
+      await initAndFlush(manager, [SystemSubgraph]);
+
+      const core = manager.getSubgraphByName("system");
+      expect(core).toBeDefined();
+      expect(logger.error).toHaveBeenCalledWith(
+        "Rejecting subgraph @name: name is reserved by a registered core subgraph",
+        "system",
+      );
+      expect(manager.getSubgraphByName("system")).toBe(core);
     });
   });
 });

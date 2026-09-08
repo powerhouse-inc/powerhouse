@@ -374,11 +374,34 @@ export class GraphQLManager {
     // in the new IGatewayAdapter architecture hangs #waitForServer and blocks init().
   }
 
+  /** Core subgraph names are reserved: they register with core=true during
+   * init() and no package subgraph may take one of their names. */
+  #isCoreNameReserved(name: string): boolean {
+    for (const subgraphs of this.coreSubgraphsMap.values()) {
+      if (subgraphs.some((it) => it.name === name)) return true;
+    }
+    return false;
+  }
+
   async #addSubgraphInstance(
     subgraphInstance: ISubgraph,
     supergraph = "",
     core = false,
   ) {
+    // A package subgraph may not take a name a core subgraph has registered:
+    // the in-process handler map is keyed by bare name, so a same-name
+    // subgraph would shadow the core one (issue #2972). Reject rather than
+    // throw - package registration runs from a detached async closure in
+    // server.ts, where a throw is an unhandled rejection that takes the
+    // host down.
+    if (!core && this.#isCoreNameReserved(subgraphInstance.name)) {
+      this.logger.error(
+        "Rejecting subgraph @name: name is reserved by a registered core subgraph",
+        subgraphInstance.name,
+      );
+      return undefined;
+    }
+
     const subgraphsMap = core ? this.coreSubgraphsMap : this.subgraphs;
 
     const existingSubgraph = subgraphsMap
@@ -665,12 +688,26 @@ export class GraphQLManager {
   }
 
   setSupergraph(supergraph: string, subgraphs: ISubgraph[]) {
-    this.subgraphs.set(supergraph, subgraphs);
+    // setSupergraph bypasses #addSubgraphInstance, so apply the same
+    // reserved-name guard here: drop incoming subgraphs that would shadow a
+    // registered core subgraph, keep the rest.
+    const accepted: ISubgraph[] = [];
+    for (const subgraph of subgraphs) {
+      if (this.#isCoreNameReserved(subgraph.name)) {
+        this.logger.error(
+          "Rejecting subgraph @name: name is reserved by a registered core subgraph",
+          subgraph.name,
+        );
+        continue;
+      }
+      accepted.push(subgraph);
+    }
+    this.subgraphs.set(supergraph, accepted);
     const globalSubgraphs = this.subgraphs.get("graphql");
     if (globalSubgraphs) {
-      this.subgraphs.set("graphql", [...globalSubgraphs, ...subgraphs]);
+      this.subgraphs.set("graphql", [...globalSubgraphs, ...accepted]);
     } else {
-      this.subgraphs.set("graphql", subgraphs);
+      this.subgraphs.set("graphql", accepted);
     }
     return this.updateRouter();
   }
