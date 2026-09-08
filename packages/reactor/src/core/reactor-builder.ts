@@ -300,6 +300,7 @@ export class ReactorBuilder {
     DEFAULT_DRIVE_CONTAINER_TYPES;
   private workerPool?: WorkerPoolOptions;
   private resolvedModelManifest?: ModelManifestEntry[];
+  private moduleOnlyModelKeys: string[] = [];
   private projectionShardConfig?: ProjectionShardBuilderConfig;
   private projectionWorkerFactory?: ProjectionWorkerFactory;
   private instrumentedPools: PoolInstrumentation[] = [];
@@ -599,6 +600,7 @@ export class ReactorBuilder {
       resolvedSources.manifest.length > 0
         ? resolvedSources.manifest
         : undefined;
+    this.moduleOnlyModelKeys = resolvedSources.moduleOnlyKeys;
 
     const documentModelRegistry = new DocumentModelRegistry();
     if (this.upgradeManifests.length > 0) {
@@ -1028,6 +1030,12 @@ export class ReactorBuilder {
       );
     }
     validateBuiltInKindCoverage(config.preReadyKinds, config.postReadyKinds);
+    // The executor pool guard in buildModule only runs with a worker pool.
+    if (this.moduleOnlyModelKeys.length > 0) {
+      throw new Error(
+        `projection workers require worker-importable sources, but these models were registered only as live modules: ${this.moduleOnlyModelKeys.join(", ")}. Provide a { filePath } or { packageName } source for each.`,
+      );
+    }
     const models = this.resolvedModelManifest ?? [];
     const db: DbConfig = {
       ...baseDb,

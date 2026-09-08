@@ -1,4 +1,5 @@
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
+import { documentModelDocumentModelModule } from "document-model";
 import type { Kysely } from "kysely";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -408,6 +409,32 @@ describe("ReactorBuilder.withReadModelCoordinatorFactory", () => {
         })
         .buildModule(),
     ).rejects.toThrow(/must address the same Postgres database/);
+    expect(transports).toHaveLength(0);
+  });
+
+  it("bound creator rejects models registered only as live modules", async () => {
+    db = await createDefaultDatabase();
+    const { transports, factory } = createFakeProjectionTransports();
+
+    await expect(
+      new ReactorBuilder()
+        .withKysely(db)
+        .withDocumentModelSources([
+          ...FIXTURE_SOURCES,
+          documentModelDocumentModelModule,
+        ])
+        .withProjectionWorkerFactory(factory)
+        .withReadModelCoordinatorFactory(async (deps) => {
+          const created = await deps.createProjectionShardManager({
+            shardCount: 1,
+            preReadyKinds: ["document-view", "document-indexer"],
+            postReadyKinds: [],
+            db: SHARD_DB,
+          });
+          return new StubCoordinator(created);
+        })
+        .buildModule(),
+    ).rejects.toThrow(/only as live modules.*powerhouse\/document-model/);
     expect(transports).toHaveLength(0);
   });
 
