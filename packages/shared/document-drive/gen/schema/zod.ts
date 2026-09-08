@@ -278,7 +278,7 @@ export function SetDriveIconInputSchema(): z.ZodObject<
   Properties<SetDriveIconInput>
 > {
   return z.object({
-    icon: z.string(),
+    icon: z.string().nullable(),
   });
 }
 
