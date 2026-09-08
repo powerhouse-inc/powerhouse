@@ -7,7 +7,7 @@ import {
   type ObjectTypeDefinitionNode,
   type TypeNode,
 } from "graphql";
-import * as lzString from "lz-string";
+import lzString from "lz-string";
 import { GQL_CHANNEL_SUFFIX } from "../ai/switchboard.js";
 import { GetDocumentWithOperationsDocument } from "../graphql/gen/schema.js";
 
