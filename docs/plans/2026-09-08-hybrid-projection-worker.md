@@ -1106,12 +1106,29 @@ enabling in dev or without a Postgres URL throws.
 
 ### Integration
 
-Extend `packages/reactor/test/builder/integration.ts` coverage (needs
-`pnpm --filter @powerhousedao/reactor docker:up`; Postgres on **5433**,
-`postgres`/`postgres`, db `reactor`) with one end-to-end case: build a hybrid
-reactor, execute actions, and assert `reactor.get(id, view, token)` with a
-consistency token returns without hanging, and that a host-registered read
-model saw every operation exactly once.
+**Status: landed** (`31846099b`) as
+`packages/reactor/test/integration/hybrid-projection-worker-postgres.test.ts`,
+not in `test/builder/integration.ts` (that file is a SyncBuilder harness and
+is not matched by the vitest include). Follows the existing `-postgres.test.ts`
+precedent: reads `REACTOR_TEST_PG_URL` (default
+`postgres://postgres:postgres@localhost:5433/reactor`, always provided in CI),
+no skip gate, and creates its own `reactor_hybrid_worker_test` database
+because the worker hardcodes `withSchema("reactor")`. The parent database is
+supplied via `withKysely(<pg Kysely>)` — under the factory path neither
+`workerPool` nor `projectionShardConfig` is set, so without it the parent
+would silently fall back to PGlite while the worker read Postgres. The worker
+thread runs through a tsx bootstrap (`projection-worker-bootstrap.mjs`,
+mirroring `test/executor/worker/entry/worker-bootstrap.mjs`) because
+`projectionWorkerEntryPath` resolves to `dist/` which does not exist under
+vitest; the `.mjs` is listed in `eslint.config.js` `unsafeIgnoredFiles` like
+its precedent.
+
+Five cases over a real thread and real pool: coordinator is a
+`HybridProjectionCoordinator`; `reactor.get(id, undefined, token)` returns the
+latest write inside 5 s; `subscriptionManager.onDocumentStateUpdated` fires on
+`execute`; the job reaches `READ_READY`; and the host read model saw every
+`documentId:scope:branch:index` exactly once, each strictly before its
+`JOB_READ_READY`. ~1.3 s wall clock including worker spawn.
 
 ---
 
