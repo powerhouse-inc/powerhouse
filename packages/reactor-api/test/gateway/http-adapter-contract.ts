@@ -489,13 +489,13 @@ export function runHttpAdapterContractTests(
         },
       });
 
-      h.adapter.mount(
-        "/streamed",
-        () =>
+      h.adapter.mount("/streamed", () =>
+        Promise.resolve(
           new Response(stream, {
             status: 200,
             headers: { "content-type": "text/plain" },
           }),
+        ),
       );
 
       const startAt = Date.now();
@@ -506,20 +506,19 @@ export function runHttpAdapterContractTests(
       const decoder = new TextDecoder();
       const parts: string[] = [];
       let firstChunkAt = 0;
-      let closeAt = 0;
+      let closeAt: number;
 
       try {
         for (;;) {
           const { done, value } = await reader.read();
-          if (done) {
-            closeAt = Date.now();
-            break;
-          }
+          if (done) break;
           if (firstChunkAt === 0) {
             firstChunkAt = Date.now();
           }
           parts.push(decoder.decode(value, { stream: true }));
         }
+        // The done-read just resolved, so the close time is now.
+        closeAt = Date.now();
       } finally {
         reader.releaseLock();
       }
