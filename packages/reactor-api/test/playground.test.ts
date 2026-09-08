@@ -63,7 +63,7 @@ describe("decodeExplorerUrlState", () => {
 });
 
 describe("renderGraphqlPlayground", () => {
-  it("renders object-form defaultQuery with query, variables and fetcher headers", () => {
+  it("renders a string defaultQuery plus a variables prop and fetcher headers", () => {
     const variables = '{"identifier":"doc-1"}';
     const html = renderGraphqlPlayground(
       "/graphql",
@@ -74,9 +74,13 @@ describe("renderGraphqlPlayground", () => {
 
     // The rendered script embeds the values as single-quoted literals (the
     // query/variables content is transport-escaped, not template-quoted).
-    expect(html).toContain(
-      `var defaultQuery = { query: '${sampleQuery}', variables: ${JSON.stringify(variables)} };`,
-    );
+    // Variables reach GraphiQL through its dedicated `variables` prop, never
+    // an object-form `defaultQuery` (which GraphiQL 3.x does not accept and
+    // renders as an empty query pane).
+    expect(html).toContain(`var defaultQuery = '${sampleQuery}';`);
+    expect(html).toContain(`var defaultVariables = '${variables}';`);
+    expect(html).not.toContain("var defaultQuery = {");
+    expect(html).toContain("variables: defaultVariables");
     expect(html).toContain(
       `headers: ${JSON.stringify({ Authorization: "Bearer t" })}`,
     );
@@ -178,7 +182,8 @@ describe("renderGraphqlPlayground script-injection safety", () => {
 
     const sandbox = executeInlineScripts(html);
     expect(sandbox.__pwned).toBeUndefined();
-    expect(sandbox.defaultQuery).toEqual({ query, variables });
+    expect(sandbox.defaultQuery).toBe(query);
+    expect(sandbox.defaultVariables).toBe(variables);
     expect(sandbox.fetcher).toEqual({
       url: "/graphql",
       headers: { Authorization: "Bearer t" },

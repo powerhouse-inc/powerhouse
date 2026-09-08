@@ -137,18 +137,21 @@ export function renderGraphqlPlayground(
                 headers: ${jsJsonEscape(JSON.stringify(headers))}
             });
             var defaultQuery = ${
-              query
-                ? variables
-                  ? `{ query: '${jsStringEscape(query)}', variables: ${jsJsonEscape(JSON.stringify(variables))} }`
-                  : `'${jsStringEscape(query)}'`
-                : "undefined"
+              query ? `'${jsStringEscape(query)}'` : "undefined"
+            };
+            var defaultVariables = ${
+              variables ? `'${jsStringEscape(variables)}'` : "undefined"
             };
 
-            if (defaultQuery) {
-                var sessionQuery = localStorage.getItem("graphiql:query");
-                if (sessionQuery) {
-                    localStorage.setItem("graphiql:query", defaultQuery);
-                }
+            // GraphiQL only applies defaultQuery/variables when the editor has
+            // no persisted value. Overwrite any stale persisted state so a
+            // returning user still gets the document-scoped query/variables
+            // instead of their last session's.
+            if (defaultQuery && localStorage.getItem("graphiql:query")) {
+                localStorage.setItem("graphiql:query", defaultQuery);
+            }
+            if (defaultVariables && localStorage.getItem("graphiql:variables")) {
+                localStorage.setItem("graphiql:variables", defaultVariables);
             }
 
             var explorerPlugin = GraphiQLPluginExplorer.explorerPlugin();
@@ -158,7 +161,8 @@ export function renderGraphqlPlayground(
                 fetcher: fetcher,
                 defaultEditorToolsVisibility: true,
                 plugins: [explorerPlugin],
-                defaultQuery
+                defaultQuery: defaultQuery,
+                variables: defaultVariables
                 });
             }
 
