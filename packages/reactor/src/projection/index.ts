@@ -1,4 +1,8 @@
 export {
+  HybridProjectionCoordinator,
+  type HybridProjectionCoordinatorOptions,
+} from "./hybrid-projection-coordinator.js";
+export {
   ProjectionShardManager,
   type ProjectionShardHooks,
   type ProjectionShardManagerConfig,
