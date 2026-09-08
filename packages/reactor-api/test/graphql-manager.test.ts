@@ -1395,5 +1395,29 @@ describe("GraphQLManager", () => {
       );
       expect(manager.getSubgraphByName("system")).toBe(core);
     });
+
+    it("warns when two different subgraphs resolve to the same mount path", async () => {
+      const logger = makeHarnessLogger();
+      const { manager } = makeHarness({ logger });
+
+      // A plain subgraph named "early" registered before init.
+      const plain = makePlainSub("early");
+      await manager.registerSubgraphInstance(plain, "graphql");
+
+      // A core subgraph with the same name: init() mounts the core one
+      // first, so the router pass that reaches the plain subgraph at the
+      // same path must warn instead of skipping silently.
+      class CoreSubgraph extends BaseSubgraph {
+        name = "early";
+      }
+      await initAndFlush(manager, [CoreSubgraph]);
+
+      expect(logger.warn).toHaveBeenCalledWith(
+        "Subgraph path @path already mounted by @kept; @name is shadowed and will not be mounted",
+        "/graphql/early",
+        "early",
+        "early",
+      );
+    });
   });
 });

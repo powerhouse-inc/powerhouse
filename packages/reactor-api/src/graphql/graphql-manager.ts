@@ -121,7 +121,10 @@ export class GraphQLManager {
   /** Cached document models for schema generation - updated on init and regenerate */
   private cachedDocumentModels: DocumentModelModule[] = [];
 
-  private readonly subgraphHandlerCache = new Map<string, FetchHandler>();
+  private readonly subgraphHandlerCache = new Map<
+    string,
+    { handler: FetchHandler; subgraph: ISubgraph }
+  >();
 
   /** Per-subgraph handlers by name, before auth/drive middleware is applied,
    * for in-process queries by trusted internals. */
@@ -770,8 +773,19 @@ export class GraphQLManager {
         const subgraphPath = this.#getSubgraphPath(subgraph, supergraph);
         try {
           // Skip if handler already cached and mounted — a replaced subgraph
-          // invalidates its entries, so a cached path is current.
-          if (this.subgraphHandlerCache.has(subgraphPath)) {
+          // invalidates its entries, so a cached path is current. Two
+          // different subgraphs landing on the same path: first mounted
+          // wins; say so.
+          const cached = this.subgraphHandlerCache.get(subgraphPath);
+          if (cached) {
+            if (cached.subgraph !== subgraph) {
+              this.logger.warn(
+                "Subgraph path @path already mounted by @kept; @name is shadowed and will not be mounted",
+                subgraphPath,
+                cached.subgraph.name,
+                subgraph.name,
+              );
+            }
             continue;
           }
 
@@ -786,7 +800,10 @@ export class GraphQLManager {
             this.#makeContextFactory(),
           );
           const fetchHandler = this.#composeFetchMiddleware(rawHandler);
-          this.subgraphHandlerCache.set(subgraphPath, fetchHandler);
+          this.subgraphHandlerCache.set(subgraphPath, {
+            handler: fetchHandler,
+            subgraph,
+          });
           this.#setInternalSubgraphHandler(subgraph, subgraphPath, rawHandler);
           this.httpAdapter.mount(subgraphPath, fetchHandler);
 
