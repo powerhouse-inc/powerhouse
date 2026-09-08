@@ -79,7 +79,7 @@ describe("ReactorBuilder.withReadModelFactory", () => {
         .withReadModelFactory(() => new StubReadModel())
         .withProjectionShards({
           shardCount: 1,
-          preReadyKinds: [],
+          preReadyKinds: ["document-view", "document-indexer"],
           postReadyKinds: [],
           db: {
             host: "localhost",
@@ -101,7 +101,7 @@ describe("ReactorBuilder.withReadModelFactory", () => {
         .withReadModel(new StubReadModel())
         .withProjectionShards({
           shardCount: 1,
-          preReadyKinds: [],
+          preReadyKinds: ["document-view", "document-indexer"],
           postReadyKinds: [],
           db: {
             host: "localhost",
