@@ -4,12 +4,13 @@ import {
   ensurePieceBundle,
   extractDedupeKey,
   PieceWorker,
+  type ConnectorDescriptor,
   type PieceWorkerResult,
   type RecordedSchedule,
   type TriggerHookRequest,
 } from "@powerhousedao/reactor-connectors";
 import { childLogger } from "document-model";
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import {
   cronIntervalMs,
   MIN_SCHEDULE_INTERVAL_MS,
@@ -58,6 +59,14 @@ export interface TriggerSupervisorOptions {
   tickMs?: number;
   defaultIntervalMs?: number;
   hookTimeoutMs?: number;
+  // The publicly reachable GraphQL endpoint a provider posts deliveries to.
+  // Without it, a WEBHOOK trigger refuses to enable rather than registering a
+  // URL nothing can reach.
+  webhookEndpointUrl?: string;
+  // How often a webhook trigger reconciles by polling anyway. A provider that
+  // drops a delivery — paperless never retries a transport error — would
+  // otherwise lose the event for good.
+  reconcileIntervalMs?: number;
   // Clock override for tests; defaults to the wall clock.
   now?: () => Date;
 }
@@ -65,6 +74,18 @@ export interface TriggerSupervisorOptions {
 const MIN_INTERVAL_MS = MIN_SCHEDULE_INTERVAL_MS;
 const MAX_BACKOFF_MS = 30 * 60_000;
 const DEDUPE_TTL_MS = 30_000;
+const DEFAULT_RECONCILE_INTERVAL_MS = 15 * 60_000;
+
+// 32 bytes of base64url: the delivery credential itself, since providers like
+// paperless do not sign their webhooks. Only its hash is persisted.
+function mintDeliveryToken(): { token: string; hash: string } {
+  const token = randomBytes(32).toString("base64url");
+  return { token, hash: hashToken(token) };
+}
+
+export function hashToken(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
+}
 
 function isSchedule(
   binding: TriggerBinding,
@@ -165,6 +186,9 @@ export class TriggerSupervisor {
   // Successfully enabled workflows; identical re-registrations are no-ops.
   private readonly enabledOk = new Set<string>();
 
+  // Piece descriptors by package@version, for the trigger strategy lookup.
+  private readonly descriptors = new Map<string, ConnectorDescriptor>();
+
   upsert(binding: TriggerBinding): Promise<void> {
     const previous = this.bindings.get(binding.workflowId);
     if (
@@ -197,11 +221,47 @@ export class TriggerSupervisor {
     });
   }
 
+  // Ingress path: a verified delivery runs the trigger's `run` hook with the
+  // payload, then goes through the same dedupe and fire path a poll does. The
+  // resolver never waits for this — providers time out fast (paperless allows
+  // five seconds) and a slow run would look like a failed delivery.
+  deliverWebhook(workflowId: string, payload: unknown): Promise<void> {
+    return this.enqueue(async () => {
+      const binding = this.bindings.get(workflowId);
+      if (!binding || isSchedule(binding)) {
+        logger.warn(`Webhook delivery for unknown workflow ${workflowId}`);
+        return;
+      }
+      const store = await this.options.store();
+      if (!store) return;
+      const row = await store.getTriggerState(workflowId);
+      const now = this.now();
+      const result = await this.hook(
+        binding,
+        "run",
+        row ? parseStoreState(row) : {},
+        { payload },
+      );
+      if (row) {
+        await store.recordPollSuccess(
+          workflowId,
+          JSON.stringify(result.storeState ?? {}),
+          now.toISOString(),
+          new Date(now.getTime() + row.interval_ms).toISOString(),
+        );
+      }
+      const items = Array.isArray(result.output) ? result.output : [];
+      for (const item of items) {
+        await this.fireItem(store, binding, item, now);
+      }
+    });
+  }
+
   private async hook(
     binding: PieceTriggerBinding,
     hook: TriggerHookRequest["hook"],
     storeState: Record<string, unknown>,
-    isRepublish?: boolean,
+    options: { isRepublish?: boolean; payload?: unknown; deliveryToken?: string } = {},
   ): Promise<PieceWorkerResult> {
     const bundle = await ensurePieceBundle({
       name: binding.packageName,
@@ -218,11 +278,51 @@ export class TriggerSupervisor {
         auth,
         storeState,
         identity: { flowId: binding.workflowId },
-        isRepublish,
-        webhookUrl: `http://localhost:0/v1/webhooks/${binding.workflowId}`,
+        isRepublish: options.isRepublish,
+        payload: options.payload,
+        webhookUrl: this.webhookUrlFor(options.deliveryToken),
       },
       { timeoutMs: this.hookTimeoutMs },
     );
+  }
+
+  // The endpoint plus the delivery token in the fragment. A fragment never
+  // travels on the wire, so a piece can lift the token into a header instead
+  // of leaving it in a URL that lands in access logs.
+  private webhookUrlFor(token: string | undefined): string {
+    const endpoint = this.options.webhookEndpointUrl;
+    if (!endpoint) return "http://localhost:0/v1/webhooks/unconfigured";
+    return token ? `${endpoint}#${token}` : endpoint;
+  }
+
+  // A trigger's strategy lives in the piece descriptor, so it takes loading
+  // the bundle. Enables are rare and the descriptor is cached per version.
+  private async strategyFor(
+    binding: PieceTriggerBinding,
+  ): Promise<string> {
+    const key = `${binding.packageName}@${binding.version}`;
+    let descriptor = this.descriptors.get(key);
+    if (!descriptor) {
+      const bundle = await ensurePieceBundle({
+        name: binding.packageName,
+        version: binding.version,
+        cacheDir: this.options.cacheDir,
+      });
+      const result = await this.worker.describePiece(
+        {
+          bundleDir: bundle.dir,
+          packageName: binding.packageName,
+          version: binding.version,
+        },
+        { timeoutMs: this.hookTimeoutMs },
+      );
+      descriptor = result.output as ConnectorDescriptor;
+      this.descriptors.set(key, descriptor);
+    }
+    const trigger = descriptor.triggers?.find(
+      (candidate) => candidate.name === binding.triggerName,
+    );
+    return trigger?.strategy ?? "POLLING";
   }
 
   private async enable(binding: TriggerBinding): Promise<void> {
@@ -242,12 +342,36 @@ export class TriggerSupervisor {
     const seed = existing && isRepublish ? parseStoreState(existing) : {};
     const now = this.now();
     try {
-      const result = await this.hook(binding, "onEnable", seed, isRepublish);
-      const intervalMs = pollIntervalFor(
-        binding,
-        result.schedules,
-        this.defaultIntervalMs,
-      );
+      const strategy = await this.strategyFor(binding);
+      const webhook = strategy === "WEBHOOK" || strategy === "APP_WEBHOOK";
+      // A webhook trigger mints its delivery token here: the piece registers
+      // it with the provider, and only the hash is persisted.
+      const delivery = webhook ? mintDeliveryToken() : undefined;
+      if (webhook && !this.options.webhookEndpointUrl) {
+        throw new Error(
+          "This trigger delivers by webhook, but no public webhook endpoint is configured for the reactor",
+        );
+      }
+      const result = await this.hook(binding, "onEnable", seed, {
+        isRepublish,
+        deliveryToken: delivery?.token,
+      });
+      if (delivery) {
+        await store.deleteWebhookEndpoints(binding.workflowId);
+        await store.upsertWebhookEndpoint({
+          token_hash: delivery.hash,
+          workflow_id: binding.workflowId,
+          block_type: binding.blockType,
+          created_at: now.toISOString(),
+          last_delivery_at: null,
+          delivery_count: 0,
+        });
+      }
+      // A webhook trigger still polls, just slowly: the poll is the
+      // reconciliation sweep that recovers deliveries the provider dropped.
+      const intervalMs = webhook
+        ? (this.options.reconcileIntervalMs ?? DEFAULT_RECONCILE_INTERVAL_MS)
+        : pollIntervalFor(binding, result.schedules, this.defaultIntervalMs);
       await store.upsertTriggerState({
         workflow_id: binding.workflowId,
         block_type: binding.blockType,
@@ -378,6 +502,7 @@ export class TriggerSupervisor {
         logger.warn(`onDisable failed for workflow ${workflowId}`, error);
       }
     }
+    await store.deleteWebhookEndpoints(workflowId);
     await store.setTriggerStatus(workflowId, "DISABLED");
   }
 

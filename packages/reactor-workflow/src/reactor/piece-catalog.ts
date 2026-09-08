@@ -1,6 +1,7 @@
 // Piece catalog proxied from the Activepieces public metadata API — the same
 // source their piece selector uses. Bundles themselves load lazily on use.
 
+import { PAPERLESS_LOGO } from "./first-party-logos.js";
 import { SERVER_ONLY_PIECES } from "./unsupported-pieces.js";
 
 const CATALOG_URL = "https://cloud.activepieces.com/api/v1/pieces";
@@ -130,6 +131,53 @@ export async function fetchCatalogWithSuggestions(): Promise<
 
 let catalogCache: Cached<PieceSummary[]> | undefined;
 
+// Pieces we publish ourselves. The cloud API is the catalog's only source, so
+// a first-party piece is invisible without this merge; once the upstream twin
+// of one lands, the cloud entry wins by name and this row can go.
+export const FIRST_PARTY_PIECES: PieceSummary[] = [
+  {
+    name: "@powerhousedao/piece-paperless-ngx",
+    displayName: "Paperless-ngx",
+    description:
+      "Manage documents in a self-hosted paperless-ngx archive: upload, search, tag, and react to new documents.",
+    // Data URI, since a first-party piece has no logo on their CDN.
+    logoUrl: PAPERLESS_LOGO,
+    version: "0.1.0",
+    actionCount: 9,
+    triggerCount: 2,
+    categories: ["CONTENT_AND_FILES"],
+    auth: {
+      type: "CUSTOM_AUTH",
+      displayName: "paperless-ngx",
+      required: true,
+      props: {
+        base_url: {
+          type: "SHORT_TEXT",
+          displayName: "Base URL",
+          required: true,
+          description:
+            "e.g. https://paperless.example.com — no trailing slash, no /api suffix",
+        },
+        token: {
+          type: "SECRET_TEXT",
+          displayName: "API Token",
+          required: true,
+          description: "paperless web UI -> My Profile -> API Token",
+        },
+      },
+    },
+  },
+];
+
+function mergeFirstParty(cloud: PieceSummary[]): PieceSummary[] {
+  const known = new Set(cloud.map((entry) => entry.name));
+  const merged = [
+    ...cloud,
+    ...FIRST_PARTY_PIECES.filter((entry) => !known.has(entry.name)),
+  ];
+  return merged.sort((a, b) => a.displayName.localeCompare(b.displayName));
+}
+
 export async function fetchPieceCatalog(): Promise<PieceSummary[]> {
   if (catalogCache && catalogCache.expiresAt > Date.now()) {
     return catalogCache.value;
@@ -156,8 +204,9 @@ export async function fetchPieceCatalog(): Promise<PieceSummary[]> {
       auth: entry.auth ?? null,
     }))
     .sort((a, b) => a.displayName.localeCompare(b.displayName));
-  catalogCache = { value, expiresAt: Date.now() + CACHE_TTL_MS };
-  return value;
+  const withFirstParty = mergeFirstParty(value);
+  catalogCache = { value: withFirstParty, expiresAt: Date.now() + CACHE_TTL_MS };
+  return withFirstParty;
 }
 
 const detailCache = new Map<string, Cached<unknown>>();

@@ -54,6 +54,19 @@ import {
   toWorkflowDefinition,
 } from "./lib.js";
 import { SCHEDULE_BLOCK } from "./schedule.js";
+import type { AttachmentPort } from "@powerhousedao/reactor-connectors";
+import {
+  createAttachmentPort,
+  type AttachmentClientLike,
+} from "./attachment-port.js";
+import { currentWorkflowId, withRunScope } from "./run-scope.js";
+import {
+  constantTimeEqual,
+  hashToken,
+  TokenBucket,
+  webhookEndpointUrl,
+  webhookIngressEnabled,
+} from "./webhook-ingress.js";
 import { LocalEncryptedSecretStore } from "./secret-store.js";
 import { WorkflowRunStore, type TriggerStateRow } from "./store.js";
 import {
@@ -705,6 +718,17 @@ export class WorkflowRuntimeService {
 
   private triggerSupervisor?: TriggerSupervisor;
 
+  // Supplied by the processor factory, which is the only host surface that
+  // receives an attachment client (IProcessorHostModule.attachments). The
+  // worker pool runs in this same process, so handing it over here is all the
+  // wiring the AttachmentBridge needs.
+  private attachments?: AttachmentPort;
+
+  // Per-endpoint token bucket. A provider that retries hard (paperless retries
+  // three times with backoff) must not be able to turn one document into a
+  // flood of runs.
+  private readonly webhookRateLimiter = new TokenBucket(30, 30_000);
+
   // Lazily built; started/stopped by the trigger processor's lifecycle.
   supervisor(): TriggerSupervisor {
     this.triggerSupervisor ??= new TriggerSupervisor({
@@ -723,8 +747,19 @@ export class WorkflowRuntimeService {
       // Dev override; the 60s floor still applies.
       defaultIntervalMs:
         Number(process.env.WORKFLOW_POLL_INTERVAL_MS) || undefined,
+      webhookEndpointUrl: webhookEndpointUrl(),
+      reconcileIntervalMs:
+        Number(process.env.WORKFLOW_WEBHOOK_RECONCILE_MS) || undefined,
     });
     return this.triggerSupervisor;
+  }
+
+  // Called from the switchboard processor path before the supervisor starts.
+  setAttachments(client: AttachmentClientLike): void {
+    this.attachments = createAttachmentPort(client, () => currentWorkflowId());
+    // Rebuilt on the next run so an executor made before this point picks the
+    // store up.
+    this.executor = undefined;
   }
 
   startTriggerSupervisor(): void {
@@ -818,6 +853,59 @@ export class WorkflowRuntimeService {
 
   // Runs the piece's app.checkConnection (when declared) against the
   // connection's credentials and records the outcome on the document.
+  // Webhook ingress. Verifies the delivery token, rate-limits per endpoint and
+  // hands the payload to the supervisor, which runs the trigger *after* this
+  // returns: paperless allows five seconds and treats anything slower as a
+  // failed delivery, which it then never retries.
+  //
+  // Dedupe deliberately does not happen here. The only thing a delivery
+  // carries is a document id — paperless has no `modified` placeholder and no
+  // delivery nonce — so this layer cannot tell a retry from a genuine second
+  // edit. The trigger hydrates the document and emits a dedupe key that
+  // includes its modification time, and the supervisor's existing claim
+  // suppresses the retry there.
+  async fireWebhook(
+    payload: unknown,
+    token: string | undefined,
+  ): Promise<{ accepted: boolean; reason?: string }> {
+    if (!webhookIngressEnabled()) {
+      return { accepted: false, reason: "rejected" };
+    }
+    const presented = typeof token === "string" ? token.trim() : "";
+    if (presented === "") return { accepted: false, reason: "rejected" };
+
+    const store = await this.store();
+    if (!store) return { accepted: false, reason: "rejected" };
+
+    const presentedHash = hashToken(presented);
+    const endpoint = await store.findWebhookEndpoint(presentedHash);
+    // Compared rather than trusted from the lookup, and compared in constant
+    // time. An unknown token and a mismatched one answer identically, and
+    // neither journals anything or starts a run.
+    if (!endpoint || !constantTimeEqual(endpoint.token_hash, presentedHash)) {
+      logger.warn("Rejected a webhook delivery with an unknown token");
+      return { accepted: false, reason: "rejected" };
+    }
+    if (!this.webhookRateLimiter.take(presentedHash)) {
+      logger.warn(
+        `Rate limited webhook deliveries for workflow ${endpoint.workflow_id}`,
+      );
+      return { accepted: false, reason: "rate_limited" };
+    }
+
+    await store.recordWebhookDelivery(presentedHash, new Date().toISOString());
+    // Fire and forget: the provider gets its 200 now, the run happens next.
+    void this.supervisor()
+      .deliverWebhook(endpoint.workflow_id, payload)
+      .catch((error: unknown) => {
+        logger.error(
+          `Webhook delivery failed for workflow ${endpoint.workflow_id}`,
+          error,
+        );
+      });
+    return { accepted: true };
+  }
+
   async checkConnection(connectionId: string): Promise<ConnectionCheckResult> {
     if (!this.subgraph) {
       throw new Error("Workflow runtime is not configured yet");
@@ -1190,7 +1278,11 @@ export class WorkflowRuntimeService {
       );
     }
     const definition = toWorkflowDefinition(state);
-    this.executor ??= createBlockExecutor(this.subgraph, this.secretProvider());
+    this.executor ??= createBlockExecutor(
+      this.subgraph,
+      this.secretProvider(),
+      this.attachments,
+    );
 
     const store = await this.store();
     const runId =
@@ -1203,12 +1295,14 @@ export class WorkflowRuntimeService {
         rerunOf: resume?.rerunOf,
       })) ?? null;
     try {
-      const result = await runWorkflow({
-        definition,
-        executor: this.executor,
-        triggerPayload,
-        completedSteps: resume?.completedSteps,
-      });
+      const result = await withRunScope({ workflowId, runId }, () =>
+        runWorkflow({
+          definition,
+          executor: this.executor!,
+          triggerPayload,
+          completedSteps: resume?.completedSteps,
+        }),
+      );
       if (store && runId) await store.finishRun(runId, result);
       return { ...result, runId };
     } catch (error) {

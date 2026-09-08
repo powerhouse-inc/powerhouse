@@ -7,6 +7,7 @@ import {
   type BlockExecutor,
   type ConnectionAuthType,
   type EngineConnectionResolver,
+  type AttachmentPort,
   type SecretProvider,
   type WorkflowDefinition,
 } from "@powerhousedao/reactor-connectors";
@@ -59,15 +60,29 @@ export class DocumentConnectionResolver implements EngineConnectionResolver {
 
 export const BUNDLE_CACHE_DIR = join(process.cwd(), ".ph", "ap-bundles");
 
+// Where a piece's ctx.files output and its staged attachment inputs live for
+// the length of one step. Under .ph so a host can sweep it on startup after a
+// crash; the executor removes each step's directory itself.
+export const ATTACHMENT_STAGING_DIR = join(
+  process.cwd(),
+  ".ph",
+  "ap-attachment-staging",
+);
+
 export function createBlockExecutor(
   subgraph: BaseSubgraph,
   secrets: SecretProvider,
+  attachments?: AttachmentPort,
 ): BlockExecutor {
   const documents = new DocumentBlockExecutor(subgraph);
   return new CompositeBlockExecutor(
     new ActivepiecesBlockExecutor({
       cacheDir: BUNDLE_CACHE_DIR,
       connections: new DocumentConnectionResolver(subgraph, secrets),
+      // Without an attachment store a piece's ctx.files still works, but
+      // inline as a data URI; with one, bytes go to the store and the output
+      // carries a reference.
+      ...(attachments ? { attachments, stagingRoot: ATTACHMENT_STAGING_DIR } : {}),
     }),
     {
       [DOCUMENT_CREATE_BLOCK]: documents,

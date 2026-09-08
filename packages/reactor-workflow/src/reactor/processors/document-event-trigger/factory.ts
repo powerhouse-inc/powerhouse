@@ -47,6 +47,10 @@ export const documentEventTriggerFactoryBuilder: ProcessorFactoryBuilder =
     // without it the first write hits a database with no tables.
     await processor.initAndUpgrade();
     live = processor;
+    // The only host surface that carries an attachment client. The worker pool
+    // lives in this process, so this is what turns ctx.files from an inline
+    // data URI into a real attachment reference.
+    workflowRuntime.setAttachments(module.attachments);
     workflowRuntime.startTriggerSupervisor();
 
     return [
