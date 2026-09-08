@@ -1,5 +1,6 @@
 import type { Action, Operation } from "@powerhousedao/shared/document-model";
 import { deriveOperationId } from "@powerhousedao/shared/document-model";
+import { parseSignatureHashField } from "@powerhousedao/shared/document-model";
 import { describe, expect, it, vi } from "vitest";
 import { SignatureVerifier } from "../../../src/executor/signature-verifier.js";
 import { InvalidSignatureError } from "../../../src/shared/errors.js";
@@ -392,6 +393,125 @@ describe("SignatureVerifier", () => {
       ).resolves.toBeUndefined();
 
       expect(handler).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe("previous state chaining", () => {
+    /**
+     * Mirrors the production rule: a signature that declares a previous state
+     * must match the state the verifier's caller says it applies to (#2894).
+     */
+    const chainingHandler: SignatureVerificationHandler = (
+      operation,
+      _publicKey,
+      context,
+    ) => {
+      const signatures = operation.action.context!.signer!.signatures;
+      const declared = parseSignatureHashField(
+        signatures[signatures.length - 1][3],
+      ).prevStateHash;
+      return Promise.resolve(
+        declared === "" ||
+          context.previousStateHash === undefined ||
+          declared === context.previousStateHash,
+      );
+    };
+
+    it("passes the stored head to the first action", async () => {
+      const handler = vi.fn(chainingHandler);
+      const verifier = new SignatureVerifier(handler);
+      const action = makeActionWithSigner("0xpubkey", [
+        ["ts", "0xpubkey", "aid", "head-hash", "0xabcdef"],
+      ]);
+
+      await expect(
+        verifier.verifyActions("doc-1", "main", [action], "head-hash"),
+      ).resolves.toBeUndefined();
+
+      expect(handler.mock.calls[0][2].previousStateHash).toBe("head-hash");
+    });
+
+    it("rejects the first action when it declares a different state", async () => {
+      const verifier = new SignatureVerifier(vi.fn(chainingHandler));
+      const action = makeActionWithSigner("0xpubkey", [
+        ["ts", "0xpubkey", "aid", "other-hash", "0xabcdef"],
+      ]);
+
+      await expect(
+        verifier.verifyActions("doc-1", "main", [action], "head-hash"),
+      ).rejects.toThrow(InvalidSignatureError);
+    });
+
+    it("chains the second action onto the first action's resulting state", async () => {
+      const handler = vi.fn(chainingHandler);
+      const verifier = new SignatureVerifier(handler);
+      const first = makeActionWithSigner("0xpubkey", [
+        ["ts", "0xpubkey", "aid-1", "head-hash:state-1", "0xabcdef"],
+      ]);
+      const second = makeActionWithSigner("0xpubkey", [
+        ["ts", "0xpubkey", "aid-2", "state-1", "0xabcdef"],
+      ]);
+
+      await expect(
+        verifier.verifyActions("doc-1", "main", [first, second], "head-hash"),
+      ).resolves.toBeUndefined();
+
+      expect(handler.mock.calls[0][2].previousStateHash).toBe("head-hash");
+      expect(handler.mock.calls[1][2].previousStateHash).toBe("state-1");
+    });
+
+    it("rejects the second action when it declares another state", async () => {
+      const verifier = new SignatureVerifier(vi.fn(chainingHandler));
+      const first = makeActionWithSigner("0xpubkey", [
+        ["ts", "0xpubkey", "aid-1", "head-hash:state-1", "0xabcdef"],
+      ]);
+      const second = makeActionWithSigner("0xpubkey", [
+        ["ts", "0xpubkey", "aid-2", "state-elsewhere", "0xabcdef"],
+      ]);
+
+      await expect(
+        verifier.verifyActions("doc-1", "main", [first, second], "head-hash"),
+      ).rejects.toThrow(InvalidSignatureError);
+    });
+
+    it("omits previousStateHash when the preceding signature carries no resulting hash", async () => {
+      const handler = vi.fn(chainingHandler);
+      const verifier = new SignatureVerifier(handler);
+      const first = makeActionWithSigner("0xpubkey", [
+        ["ts", "0xpubkey", "aid-1", "head-hash", "0xabcdef"],
+      ]);
+      const second = makeActionWithSigner("0xpubkey", [
+        ["ts", "0xpubkey", "aid-2", "state-anything", "0xabcdef"],
+      ]);
+
+      await expect(
+        verifier.verifyActions("doc-1", "main", [first, second], "head-hash"),
+      ).resolves.toBeUndefined();
+
+      expect(handler.mock.calls[1][2].previousStateHash).toBeUndefined();
+    });
+
+    it("chains operations onto the preceding operation's resulting state", async () => {
+      const handler = vi.fn(chainingHandler);
+      const verifier = new SignatureVerifier(handler);
+      const op1 = makeOperationWithSigner(
+        "doc-1",
+        "0xpubkey",
+        [["ts", "0xpubkey", "aid-1", "head-hash:state-1", "0xabcdef"]],
+        { index: 0 },
+      );
+      const op2 = makeOperationWithSigner(
+        "doc-1",
+        "0xpubkey",
+        [["ts", "0xpubkey", "aid-2", "state-1", "0xabcdef"]],
+        { index: 1 },
+      );
+
+      await expect(
+        verifier.verifyOperations("doc-1", [op1, op2], "head-hash"),
+      ).resolves.toBeUndefined();
+
+      expect(handler.mock.calls[1][2].previousStateHash).toBe("state-1");
     });
   });
 });
