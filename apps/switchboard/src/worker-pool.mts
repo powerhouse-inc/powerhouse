@@ -167,6 +167,7 @@ const BASE_MODEL_SPECIFIERS = [
   "document-model",
   "@powerhousedao/shared/document-drive",
   "@powerhousedao/reactor-drive",
+  "@powerhousedao/reactor-group/document-models",
 ];
 
 /**

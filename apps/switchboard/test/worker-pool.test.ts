@@ -241,7 +241,12 @@ describe("buildWorkerDbConfig", () => {
 describe("resolveWorkerModelSources", () => {
   it("resolves the base specifiers to existing files", async () => {
     const sources = await resolveWorkerModelSources([], stubLogger());
-    expect(sources).toHaveLength(3);
+    expect(sources).toHaveLength(4);
+    expect(
+      sources.some((source) =>
+        source.filePath.includes("reactor-group/dist/document-models"),
+      ),
+    ).toBe(true);
     for (const source of sources) {
       expect(existsSync(source.filePath)).toBe(true);
     }
@@ -253,7 +258,7 @@ describe("resolveWorkerModelSources", () => {
       ["@powerhousedao/definitely-not-a-package"],
       logger,
     );
-    expect(sources).toHaveLength(3);
+    expect(sources).toHaveLength(4);
     expect(logger.warn).toHaveBeenCalledTimes(1);
   });
 });
