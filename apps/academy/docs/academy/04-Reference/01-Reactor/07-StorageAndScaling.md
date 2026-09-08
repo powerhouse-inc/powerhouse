@@ -231,7 +231,7 @@ type ProjectionShardBuilderConfig = {
 // BuiltInReadModelKind = "document-view" | "document-indexer"
 ```
 
-`preReadyKinds` run before a job reaches `READ_READY`; `postReadyKinds` run after. `poolSize` overrides the reused worker DB pool size for the shard pools only; the builder forces their `application_name` to `"reactor-projection-shard"`.
+`preReadyKinds` run before a job reaches `READ_READY`; `postReadyKinds` run after. Between them they must name each `BuiltInReadModelKind` exactly once: under sharding the host's own copies of the built-in read models never index an operation, so a kind named in neither list is indexed by nobody — its reads stay stale and any read carrying a consistency token for it waits forever — while a kind named in both is indexed twice per operation. `poolSize` overrides the reused worker DB pool size for the shard pools only; the builder forces their `application_name` to `"reactor-projection-shard"`.
 
 Defaults applied when the optional fields are omitted: `initTimeoutMs` 30000, `shutdownGraceMs` 5000, `drainTimeoutMs` 30000, `chainDepthReportIntervalMs` 250.
 
@@ -239,6 +239,8 @@ Defaults applied when the optional fields are omitted: `initTimeoutMs` 30000, `s
 
 - `withProjectionShards` without a `db` anywhere: `"withProjectionShards requires a db (or an executor worker pool configured with one); projection workers need connection info to open their own pools."`
 - `shardCount < 1`: `` `ProjectionShardManager: shardCount must be >= 1 (got ${shardCount})` ``.
+- `preReadyKinds` and `postReadyKinds` that do not name each built-in read model exactly once: `"withProjectionShards requires preReadyKinds and postReadyKinds to name each built-in read model (document-view, document-indexer) exactly once between them; ..."`, with the missing and duplicated kinds listed.
+- `withReadModel` or `withReadModelFactory` alongside `withProjectionShards`: the workers build their own read models from the shard config, so host-registered instances and factories would be silently omitted. Rejected rather than dropped.
 
 Shards can run on their own or alongside the worker pool. They replace the read-model coordinator; the executor side is independent. As with the worker pool, projection shards require real Postgres — the workers open their own pools and PGlite cannot be shared across threads.
 

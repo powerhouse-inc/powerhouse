@@ -1,3 +1,4 @@
+import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import { childLogger, type ILogger } from "document-model";
 import { randomUUID } from "node:crypto";
 import type { IEventBus } from "../events/interfaces.js";
@@ -13,6 +14,8 @@ import type {
   IReadModel,
   IReadModelCoordinator,
 } from "../read-models/interfaces.js";
+import type { IConsistencyTracker } from "../shared/consistency-tracker.js";
+import type { ConsistencyCoordinate } from "../shared/types.js";
 import type { ForwardingPoolInstrumentation } from "../storage/pool-instrumentation.js";
 import type {
   BuiltInReadModelKind,
@@ -23,6 +26,7 @@ import type {
   ProjectionInitMessage,
   ProjectionParentMessage,
   ProjectionPoolAcquireSamplesMessage,
+  ProjectionReadModelIndexedMessage,
   ProjectionWorkerMessage,
 } from "./protocol.js";
 import type { IProjectionTransport } from "./transport.js";
@@ -45,6 +49,26 @@ function bucketFor(documentId: string, numWorkers: number): number {
     hash = Math.imul(hash, FNV_PRIME);
   }
   return (hash >>> 0) % numWorkers;
+}
+
+/**
+ * Maps operations to the coordinates a consistency tracker is keyed by.
+ * Same shape `BaseReadModel.updateConsistencyTracker` produces in-process.
+ */
+function toConsistencyCoordinates(
+  operations: OperationWithContext[],
+): ConsistencyCoordinate[] {
+  const coordinates: ConsistencyCoordinate[] = [];
+  for (let i = 0; i < operations.length; i++) {
+    const item = operations[i]!;
+    coordinates.push({
+      documentId: item.context.documentId,
+      scope: item.context.scope,
+      branch: item.context.branch,
+      operationIndex: item.operation.index,
+    });
+  }
+  return coordinates;
 }
 
 /**
@@ -77,6 +101,34 @@ export type ProjectionShardManagerConfig = {
    * acquire-wait latencies as if each shard's pg.Pool were local.
    */
   poolInstrumentations?: ForwardingPoolInstrumentation[];
+  /**
+   * The host's consistency trackers for the built-in read models the shards
+   * run, keyed by kind. The keys double as read-model names (see
+   * `DOCUMENT_VIEW_READ_MODEL` / `DOCUMENT_INDEXER_READ_MODEL` in
+   * `read-models/names.js`), which is how a relayed `readmodel-indexed`
+   * message is matched to a tracker.
+   *
+   * The host's copies of these read models are never fed an operation under
+   * sharding, so without this every read carrying a consistency token waits
+   * on a tracker that can never advance — `ConsistencyTracker.waitFor` arms
+   * no timer when `timeoutMs` is undefined, which is what every
+   * `document-view` call site passes. The worker committed those rows to the
+   * same tables the host reads from, so advancing here is exact, not a fudge.
+   */
+  consistencyTrackers?: Partial<
+    Record<BuiltInReadModelKind, IConsistencyTracker>
+  >;
+  /**
+   * Fired when a shard errors, when it exits after having been ready, and
+   * for every JOB_WRITE_READY dropped because its shard is not ready.
+   *
+   * There is no respawn path: once a shard stops being ready it never
+   * projects again, so buffering the dropped work would only grow without
+   * bound. A host that cares wires this to its shutdown path, so the process
+   * restarts and each read model catches up from `ViewState.lastOrdinal` in
+   * `BaseReadModel.init`. May fire repeatedly — handlers must be idempotent.
+   */
+  onShardFatal?: (shardId: string, reason: Error) => void;
 };
 
 type ShardState = {
@@ -87,6 +139,15 @@ type ShardState = {
   lastDepth: number;
   lastDepthAt: number;
   poolInstrumentation?: ForwardingPoolInstrumentation;
+  /**
+   * Consistency coordinates of the jobs this shard is still projecting,
+   * keyed by jobId. Relayed `readmodel-indexed` messages carry only a count,
+   * so the host keeps the coordinates here to advance its trackers from
+   * them; the operations themselves are not retained. Empty unless
+   * `consistencyTrackers` is configured; entries live from dispatch to
+   * `readmodel-batch-completed`, and are dropped when the shard exits.
+   */
+  pendingCoordinates: Map<string, ConsistencyCoordinate[]>;
   onMessage: (msg: ProjectionWorkerMessage) => void;
   onError: (err: Error) => void;
   onExit: (code: number) => void;
@@ -126,9 +187,14 @@ export class ProjectionShardManager implements IReadModelCoordinator {
     { resolve: () => void; reject: (err: Error) => void; timer: NodeJS.Timeout }
   >();
   private readonly pendingDrains = new Map<string, PendingDrain>();
+  private readonly trackersByReadModelName = new Map<
+    string,
+    IConsistencyTracker
+  >();
   private hostSubscription?: Unsubscribe;
   private isRunning = false;
   private started = false;
+  private isShuttingDown = false;
 
   constructor(config: ProjectionShardManagerConfig) {
     if (config.shardCount < 1) {
@@ -139,6 +205,13 @@ export class ProjectionShardManager implements IReadModelCoordinator {
     this.config = config;
     this.logger = childLogger(["reactor", "projection-shard-manager"]);
     this.hostBus = config.hostBus;
+    const trackers = config.consistencyTrackers ?? {};
+    for (const kind of Object.keys(trackers) as BuiltInReadModelKind[]) {
+      const tracker = trackers[kind];
+      if (tracker) {
+        this.trackersByReadModelName.set(kind, tracker);
+      }
+    }
   }
 
   async startup(): Promise<void> {
@@ -163,6 +236,7 @@ export class ProjectionShardManager implements IReadModelCoordinator {
         lastDepth: 0,
         lastDepthAt: 0,
         poolInstrumentation: this.config.poolInstrumentations?.[i],
+        pendingCoordinates: new Map(),
         onMessage: (msg) => this.handleWorkerMessage(state, msg),
         onError: (err) => this.handleTransportError(state, err),
         onExit: (code) => this.handleTransportExit(state, code),
@@ -281,6 +355,9 @@ export class ProjectionShardManager implements IReadModelCoordinator {
   }
 
   async shutdown(): Promise<void> {
+    // Workers exit as a consequence of this call, so their `exit` events are
+    // expected from here on and must not be reported as fatal.
+    this.isShuttingDown = true;
     this.stop();
     const graceMs = this.config.shutdownGraceMs ?? DEFAULT_SHUTDOWN_GRACE_MS;
     const correlationId = randomUUID();
@@ -326,17 +403,33 @@ export class ProjectionShardManager implements IReadModelCoordinator {
 
   private routeWriteReady(event: JobWriteReadyEvent): void {
     if (event.operations.length === 0) {
+      // No shard can be selected (there is no documentId) and no read model
+      // has work to do, but JOB_READ_READY is the job's terminal signal:
+      // InMemoryJobTracker and every JobAwaiter hang without it. Mirrors
+      // ReadModelCoordinator.emitEmptyReadReady.
+      this.relayReadReady({ jobId: event.jobId, operations: [] });
+      this.relayBatchCompleted({
+        jobId: event.jobId,
+        batchSize: 0,
+        chainWaitDurationMs: 0,
+        preReadyDurationMs: 0,
+        emitDurationMs: 0,
+        postReadyDurationMs: 0,
+      });
       return;
     }
     const documentId = event.operations[0]!.context.documentId;
     const index = bucketFor(documentId, this.shards.length);
     const shard = this.shards[index]!;
     if (!shard.ready) {
-      this.logger.warn(
-        "dropping JOB_WRITE_READY: shard @index not ready",
-        index,
-      );
+      this.dropWriteReady(shard, event, documentId);
       return;
+    }
+    if (this.trackersByReadModelName.size > 0) {
+      shard.pendingCoordinates.set(
+        event.jobId,
+        toConsistencyCoordinates(event.operations),
+      );
     }
     shard.transport.postMessage({
       type: "write-ready",
@@ -345,6 +438,39 @@ export class ProjectionShardManager implements IReadModelCoordinator {
       jobMeta: event.jobMeta,
       collectionMemberships: event.collectionMemberships,
     });
+  }
+
+  /**
+   * A shard stops being ready only when it dies, and nothing respawns it, so
+   * this job's projection is genuinely lost. Buffering would grow without
+   * bound behind a shard that never comes back, so the batch is dropped —
+   * loudly, naming the job and document, and through `onShardFatal` so a host
+   * can restart rather than serve stale read models.
+   *
+   * JOB_FAILED is deliberately not emitted: every other emitter uses it for a
+   * job whose operations were *not* written (see
+   * `executor/job-result-handler.ts`), and these were written and are
+   * durable. Marking the job FAILED would invite the caller to re-submit a
+   * write that already landed.
+   */
+  private dropWriteReady(
+    shard: ShardState,
+    event: JobWriteReadyEvent,
+    documentId: string,
+  ): void {
+    const reason = new Error(
+      `projection shard ${shard.shardId} is not ready: JOB_WRITE_READY for job ${event.jobId} ` +
+        `(document ${documentId}, ${event.operations.length} operation(s)) was dropped and will ` +
+        `never be projected; the operations are written and durable, but this shard's read models ` +
+        `are now behind`,
+    );
+    this.logger.error(
+      "dropping JOB_WRITE_READY for job @jobId on shard @shardId: @error",
+      event.jobId,
+      shard.shardId,
+      reason,
+    );
+    this.config.onShardFatal?.(shard.shardId, reason);
   }
 
   private handleWorkerMessage(
@@ -362,6 +488,7 @@ export class ProjectionShardManager implements IReadModelCoordinator {
         });
         return;
       case "readmodel-indexed":
+        this.advanceConsistencyTrackers(shard, msg);
         this.relayReadModelIndexed({
           jobId: msg.jobId,
           readModelName: msg.readModelName,
@@ -372,6 +499,7 @@ export class ProjectionShardManager implements IReadModelCoordinator {
         });
         return;
       case "readmodel-batch-completed":
+        shard.pendingCoordinates.delete(msg.jobId);
         this.relayBatchCompleted({
           jobId: msg.jobId,
           batchSize: msg.batchSize,
@@ -400,6 +528,34 @@ export class ProjectionShardManager implements IReadModelCoordinator {
         return;
       }
     }
+  }
+
+  /**
+   * Advances the host's tracker for the read model the shard just indexed.
+   *
+   * The shard writes to the same tables the host reads, so once it reports a
+   * successful index the host's read path really is consistent to those
+   * coordinates. Gated on `success` for parity with
+   * `BaseReadModel.indexOperations`, which updates its tracker only after
+   * `commitOperations` returns. The worker posts this before its
+   * JOB_READ_READY, matching the in-process ordering.
+   */
+  private advanceConsistencyTrackers(
+    shard: ShardState,
+    msg: ProjectionReadModelIndexedMessage,
+  ): void {
+    if (!msg.success) {
+      return;
+    }
+    const tracker = this.trackersByReadModelName.get(msg.readModelName);
+    if (!tracker) {
+      return;
+    }
+    const coordinates = shard.pendingCoordinates.get(msg.jobId);
+    if (!coordinates || coordinates.length === 0) {
+      return;
+    }
+    tracker.update(coordinates);
   }
 
   private handlePoolAcquireSamples(
@@ -472,17 +628,37 @@ export class ProjectionShardManager implements IReadModelCoordinator {
       shard.shardId,
       err,
     );
+    if (!this.isShuttingDown) {
+      this.config.onShardFatal?.(shard.shardId, err);
+    }
   }
 
   private handleTransportExit(shard: ShardState, code: number): void {
-    if (shard.ready) {
-      this.logger.warn(
-        "projection shard exited unexpectedly @shardId code=@code",
-        shard.shardId,
-        code,
-      );
-    }
+    const wasReady = shard.ready;
     shard.ready = false;
+    // Nothing respawns the shard, so every job it had in flight is lost with
+    // it. Release them rather than pin their operations for the process's
+    // remaining life.
+    const abandoned = [...shard.pendingCoordinates.keys()];
+    shard.pendingCoordinates.clear();
+    if (!wasReady || this.isShuttingDown) {
+      return;
+    }
+    this.logger.error(
+      "projection shard exited unexpectedly @shardId code=@code, abandoning @count in-flight job(s): @jobIds",
+      shard.shardId,
+      code,
+      abandoned.length,
+      abandoned.join(", "),
+    );
+    this.config.onShardFatal?.(
+      shard.shardId,
+      new Error(
+        `projection shard ${shard.shardId} exited with code ${code}; ` +
+          `${abandoned.length} in-flight job(s) will never be projected` +
+          (abandoned.length > 0 ? `: ${abandoned.join(", ")}` : ""),
+      ),
+    );
   }
 
   private relayReadReady(event: JobReadReadyEvent): void {
