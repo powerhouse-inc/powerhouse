@@ -133,6 +133,12 @@ export async function addDrive(input: DriveInput, preferredEditor?: string) {
     },
   });
 
+  // A configured id (e.g. a local default drive) overrides the generated one.
+  // Empty strings are the "not provided" signal used by the Add Drive modal.
+  if (input.id) {
+    driveDoc.header.id = input.id;
+  }
+
   if (preferredEditor) {
     driveDoc.header.meta = { preferredEditor };
   }
