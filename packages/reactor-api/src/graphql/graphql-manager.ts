@@ -121,7 +121,10 @@ export class GraphQLManager {
   /** Cached document models for schema generation - updated on init and regenerate */
   private cachedDocumentModels: DocumentModelModule[] = [];
 
-  private readonly subgraphHandlerCache = new Map<string, FetchHandler>();
+  private readonly subgraphHandlerCache = new Map<
+    string,
+    { handler: FetchHandler; subgraph: ISubgraph }
+  >();
 
   /** Per-subgraph handlers by name, before auth/drive middleware is applied,
    * for in-process queries by trusted internals. */
@@ -374,11 +377,34 @@ export class GraphQLManager {
     // in the new IGatewayAdapter architecture hangs #waitForServer and blocks init().
   }
 
+  /** Core subgraph names are reserved: they register with core=true during
+   * init() and no package subgraph may take one of their names. */
+  #isCoreNameReserved(name: string): boolean {
+    for (const subgraphs of this.coreSubgraphsMap.values()) {
+      if (subgraphs.some((it) => it.name === name)) return true;
+    }
+    return false;
+  }
+
   async #addSubgraphInstance(
     subgraphInstance: ISubgraph,
     supergraph = "",
     core = false,
   ) {
+    // A package subgraph may not take a name a core subgraph has registered:
+    // the in-process handler map is keyed by bare name, so a same-name
+    // subgraph would shadow the core one (issue #2972). Reject rather than
+    // throw - package registration runs from a detached async closure in
+    // server.ts, where a throw is an unhandled rejection that takes the
+    // host down.
+    if (!core && this.#isCoreNameReserved(subgraphInstance.name)) {
+      this.logger.error(
+        "Rejecting subgraph @name: name is reserved by a registered core subgraph",
+        subgraphInstance.name,
+      );
+      return undefined;
+    }
+
     const subgraphsMap = core ? this.coreSubgraphsMap : this.subgraphs;
 
     const existingSubgraph = subgraphsMap
@@ -665,12 +691,26 @@ export class GraphQLManager {
   }
 
   setSupergraph(supergraph: string, subgraphs: ISubgraph[]) {
-    this.subgraphs.set(supergraph, subgraphs);
+    // setSupergraph bypasses #addSubgraphInstance, so apply the same
+    // reserved-name guard here: drop incoming subgraphs that would shadow a
+    // registered core subgraph, keep the rest.
+    const accepted: ISubgraph[] = [];
+    for (const subgraph of subgraphs) {
+      if (this.#isCoreNameReserved(subgraph.name)) {
+        this.logger.error(
+          "Rejecting subgraph @name: name is reserved by a registered core subgraph",
+          subgraph.name,
+        );
+        continue;
+      }
+      accepted.push(subgraph);
+    }
+    this.subgraphs.set(supergraph, accepted);
     const globalSubgraphs = this.subgraphs.get("graphql");
     if (globalSubgraphs) {
-      this.subgraphs.set("graphql", [...globalSubgraphs, ...subgraphs]);
+      this.subgraphs.set("graphql", [...globalSubgraphs, ...accepted]);
     } else {
-      this.subgraphs.set("graphql", subgraphs);
+      this.subgraphs.set("graphql", accepted);
     }
     return this.updateRouter();
   }
@@ -695,8 +735,11 @@ export class GraphQLManager {
     });
   }
 
+  // The mount path is owned by the host: the manager's base path, never the
+  // subgraph's own `path` field, which a package subgraph can overwrite with a
+  // field initializer (it runs after super()).
   #getSubgraphPath(subgraph: ISubgraph, supergraph: string) {
-    return path.posix.join(subgraph.path ?? "", supergraph, subgraph.name);
+    return path.posix.join(this.path, supergraph, subgraph.name);
   }
 
   /** The in-process handler map is keyed by bare name, so two distinct
@@ -730,8 +773,19 @@ export class GraphQLManager {
         const subgraphPath = this.#getSubgraphPath(subgraph, supergraph);
         try {
           // Skip if handler already cached and mounted — a replaced subgraph
-          // invalidates its entries, so a cached path is current.
-          if (this.subgraphHandlerCache.has(subgraphPath)) {
+          // invalidates its entries, so a cached path is current. Two
+          // different subgraphs landing on the same path: first mounted
+          // wins; say so.
+          const cached = this.subgraphHandlerCache.get(subgraphPath);
+          if (cached) {
+            if (cached.subgraph !== subgraph) {
+              this.logger.warn(
+                "Subgraph path @path already mounted by @kept; @name is shadowed and will not be mounted",
+                subgraphPath,
+                cached.subgraph.name,
+                subgraph.name,
+              );
+            }
             continue;
           }
 
@@ -746,7 +800,10 @@ export class GraphQLManager {
             this.#makeContextFactory(),
           );
           const fetchHandler = this.#composeFetchMiddleware(rawHandler);
-          this.subgraphHandlerCache.set(subgraphPath, fetchHandler);
+          this.subgraphHandlerCache.set(subgraphPath, {
+            handler: fetchHandler,
+            subgraph,
+          });
           this.#setInternalSubgraphHandler(subgraph, subgraphPath, rawHandler);
           this.httpAdapter.mount(subgraphPath, fetchHandler);
 

@@ -33,6 +33,13 @@ export type Context = {
 
 export type ISubgraph = {
   name: string;
+  /**
+   * @deprecated The GraphQL manager mounts every subgraph under its own base
+   * path and does not consult this field for routing, so the value a
+   * subgraph holds (including one overwritten by a field initializer after
+   * `super()`) has no effect on where it is mounted. Retained for source
+   * compatibility.
+   */
   path?: string;
   resolvers: Record<string, any>;
   typeDefs: DocumentNode;
@@ -57,6 +64,11 @@ export type SubgraphArgs = {
    * to the host's permission tables alone.
    */
   syncServingGate?: SyncScopeGate;
+  /**
+   * The host's base path, injected by the GraphQL manager when it constructs
+   * a subgraph. Subgraph code may read it, but routing ignores it: every
+   * subgraph is mounted under the manager's own base path.
+   */
   path?: string;
 };
 
