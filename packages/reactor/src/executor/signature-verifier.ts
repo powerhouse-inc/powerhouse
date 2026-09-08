@@ -1,5 +1,8 @@
 import type { Action, Operation } from "@powerhousedao/shared/document-model";
-import { deriveOperationId } from "@powerhousedao/shared/document-model";
+import {
+  deriveOperationId,
+  parseSignatureHashField,
+} from "@powerhousedao/shared/document-model";
 import { InvalidSignatureError } from "../shared/errors.js";
 import type { SignatureVerificationHandler } from "../signer/types.js";
 import { GATED_DOCUMENT_ACTIONS, targetDocumentId } from "./util.js";
@@ -16,6 +19,21 @@ function verificationDocumentId(action: Action, fallback: string): string {
     : fallback;
 }
 
+/**
+ * The state an action leaves behind, as its own last signature declares it.
+ * Undefined when that signature carries no resulting hash (#2894).
+ */
+function declaredResultingStateHash(
+  action: Action | undefined,
+): string | undefined {
+  const signatures = action?.context?.signer?.signatures;
+  if (!signatures?.length) {
+    return undefined;
+  }
+  return parseSignatureHashField(signatures[signatures.length - 1][3])
+    .resultingStateHash;
+}
+
 export class SignatureVerifier {
   constructor(private verifier?: SignatureVerificationHandler) {}
 
@@ -23,12 +41,20 @@ export class SignatureVerifier {
     documentId: string,
     branch: string,
     actions: Action[],
+    previousStateHash?: string,
   ): Promise<void> {
     if (!this.verifier) {
       return;
     }
 
-    for (const entry of actions) {
+    for (const [index, entry] of actions.entries()) {
+      // Each action applies to the state the one before it left, not to the
+      // stored head, so the expected previous state chains through the batch.
+      const expectedPrevState =
+        index === 0
+          ? previousStateHash
+          : declaredResultingStateHash(actions[index - 1]);
+
       // A malformed submission can arrive with a missing action even though
       // the type says otherwise. Without an action there is nothing signed to
       // check, so it is treated as unsigned, like any signer-less action
@@ -70,6 +96,9 @@ export class SignatureVerifier {
         isValid = await this.verifier(tempOperation, publicKey, {
           documentId: actionDocumentId,
           branch,
+          ...(expectedPrevState === undefined
+            ? {}
+            : { previousStateHash: expectedPrevState }),
         });
       } catch (error) {
         const errorMessage =
@@ -92,6 +121,7 @@ export class SignatureVerifier {
   async verifyOperations(
     documentId: string,
     operations: Operation[],
+    previousStateHash?: string,
   ): Promise<void> {
     if (!this.verifier) {
       return;
@@ -99,6 +129,10 @@ export class SignatureVerifier {
 
     for (let i = 0; i < operations.length; i++) {
       const operation = operations[i];
+      const expectedPrevState =
+        i === 0
+          ? previousStateHash
+          : declaredResultingStateHash(operations[i - 1].action);
       const action: Action | undefined = operation.action;
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- `action` is required by the type but can be absent at runtime
       if (!action?.context?.signer) {
@@ -121,6 +155,9 @@ export class SignatureVerifier {
       try {
         isValid = await this.verifier(operation, publicKey, {
           documentId: actionDocumentId,
+          ...(expectedPrevState === undefined
+            ? {}
+            : { previousStateHash: expectedPrevState }),
         });
       } catch (error) {
         const errorMessage =

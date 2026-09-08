@@ -1494,6 +1494,12 @@ export type ActionVerificationHandler = (
 export type SignatureVerificationContext = {
   documentId: string;
   branch?: string;
+  /**
+   * The hash of the scope state the action is expected to apply to, as the
+   * verifier's caller knows it. Optional: a caller cannot always determine it -
+   * a document being created in this same job has no predecessor (#2894).
+   */
+  previousStateHash?: string;
 };
 
 /**

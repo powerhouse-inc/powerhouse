@@ -639,6 +639,125 @@ describe("RenownCryptoSigner", () => {
         createSignatureVerifier(true)(broken, signer.app.key, SIGNING_CONTEXT),
       ).resolves.toBe(false);
     });
+
+    describe("previous state hash verification", () => {
+      it("verifies when the context supplies the declared previous state", async () => {
+        const action = createTestAction({ prevOpHash: "state-X" });
+        const signature = await signer.signAction(action, SIGNING_CONTEXT);
+
+        await expect(
+          verifier(
+            createOperationWithSignature(action, signature, signer.app.key),
+            signer.app.key,
+            { ...SIGNING_CONTEXT, previousStateHash: "state-X" },
+          ),
+        ).resolves.toBe(true);
+      });
+
+      it("rejects when the context supplies a different previous state", async () => {
+        const action = createTestAction({ prevOpHash: "state-X" });
+        const signature = await signer.signAction(action, SIGNING_CONTEXT);
+
+        await expect(
+          verifier(
+            createOperationWithSignature(action, signature, signer.app.key),
+            signer.app.key,
+            { ...SIGNING_CONTEXT, previousStateHash: "state-Y" },
+          ),
+        ).resolves.toBe(false);
+      });
+
+      it("accepts a signature declaring no previous state by default", async () => {
+        const action = createTestAction();
+        const signature = await signer.signAction(action, SIGNING_CONTEXT);
+        const operation = createOperationWithSignature(
+          action,
+          signature,
+          signer.app.key,
+        );
+
+        expect(signature[3]).toBe("");
+        await expect(
+          verifier(operation, signer.app.key, {
+            ...SIGNING_CONTEXT,
+            previousStateHash: "state-X",
+          }),
+        ).resolves.toBe(true);
+      });
+
+      it("rejects a signature declaring no previous state under requirePreviousState", async () => {
+        const action = createTestAction();
+        const signature = await signer.signAction(action, SIGNING_CONTEXT);
+        const strict = createSignatureVerifier(false, {
+          requirePreviousState: true,
+        });
+
+        await expect(
+          strict(
+            createOperationWithSignature(action, signature, signer.app.key),
+            signer.app.key,
+            { ...SIGNING_CONTEXT, previousStateHash: "state-X" },
+          ),
+        ).resolves.toBe(false);
+      });
+
+      it("rejects under requirePreviousState when the context supplies none", async () => {
+        const action = createTestAction({ prevOpHash: "state-X" });
+        const signature = await signer.signAction(action, SIGNING_CONTEXT);
+        const strict = createSignatureVerifier(false, {
+          requirePreviousState: true,
+        });
+        const operation = createOperationWithSignature(
+          action,
+          signature,
+          signer.app.key,
+        );
+
+        await expect(
+          strict(operation, signer.app.key, SIGNING_CONTEXT),
+        ).resolves.toBe(false);
+        await expect(
+          strict(operation, signer.app.key, {
+            ...SIGNING_CONTEXT,
+            previousStateHash: "state-X",
+          }),
+        ).resolves.toBe(true);
+      });
+
+      it("compares only the prev half of a packed prev:resulting hash field", async () => {
+        const action = createTestAction({ prevOpHash: "state-X" });
+        const signature = await signer.signActionWithResultingState(
+          action,
+          "state-Z",
+          SIGNING_CONTEXT,
+        );
+        const operation = createOperationWithSignature(
+          action,
+          signature,
+          signer.app.key,
+        );
+
+        expect(signature[3]).toBe("state-X:state-Z");
+        await expect(
+          verifier(operation, signer.app.key, {
+            ...SIGNING_CONTEXT,
+            previousStateHash: "state-X",
+          }),
+        ).resolves.toBe(true);
+        await expect(
+          verifier(operation, signer.app.key, {
+            ...SIGNING_CONTEXT,
+            previousStateHash: "state-X:state-Z",
+          }),
+        ).resolves.toBe(false);
+        await expect(
+          verifier(operation, signer.app.key, {
+            ...SIGNING_CONTEXT,
+            previousStateHash: "state-Y",
+          }),
+        ).resolves.toBe(false);
+      });
+    });
   });
 });
 

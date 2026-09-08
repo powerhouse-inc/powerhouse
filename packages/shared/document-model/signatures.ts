@@ -125,3 +125,50 @@ export type HashConfig = {
   /** Optional algorithm-specific parameters */
   params?: Record<string, unknown>;
 };
+
+/**
+ * Parses a signature's hash field (element [3]).
+ *
+ * The field is either a plain `prevStateHash`, or
+ * `prevStateHash:resultingStateHash` when the signer also committed to the
+ * state its action produces.
+ *
+ * @param hashField - The 4th element of a Signature tuple
+ * @returns The declared previous state hash and, when carried, the resulting one
+ */
+export function parseSignatureHashField(hashField: string): {
+  prevStateHash: string;
+  resultingStateHash: string | undefined;
+} {
+  const colonIndex = hashField.indexOf(":");
+
+  if (colonIndex === -1) {
+    return {
+      prevStateHash: hashField,
+      resultingStateHash: undefined,
+    };
+  }
+
+  return {
+    prevStateHash: hashField.substring(0, colonIndex),
+    resultingStateHash: hashField.substring(colonIndex + 1),
+  };
+}
+
+/**
+ * Extracts the resulting state hash from a signature, if present.
+ */
+export function extractResultingHashFromSignature(
+  signature: Signature,
+): string | undefined {
+  const hashField = signature[3];
+  const { resultingStateHash } = parseSignatureHashField(hashField);
+  return resultingStateHash;
+}
+
+/**
+ * Checks if a signature includes a resulting state hash.
+ */
+export function signatureHasResultingHash(signature: Signature): boolean {
+  return extractResultingHashFromSignature(signature) !== undefined;
+}

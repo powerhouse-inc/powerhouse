@@ -306,18 +306,23 @@ export REQUIRE_SIGNATURES=true
 export SIGNATURE_ALLOW_LEGACY=false
 ```
 
-| Env var                  | Default | Effect                                                                                                           |
-| ------------------------ | ------- | ---------------------------------------------------------------------------------------------------------------- |
-| `REQUIRE_SIGNATURES`     | `false` | Reject actions that carry no signature. A signature that is present is always verified, whatever this is set to. |
-| `SIGNATURE_ALLOW_LEGACY` | `true`  | Accept signatures produced before the scheme field existed.                                                      |
+| Env var                            | Default | Effect                                                                                                                                                                    |
+| ---------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `REQUIRE_SIGNATURES`               | `false` | Reject actions that carry no signature. A signature that is present is always verified, whatever this is set to.                                                          |
+| `SIGNATURE_ALLOW_LEGACY`           | `true`  | Accept signatures produced before the scheme field existed.                                                                                                               |
+| `SIGNATURE_REQUIRE_PREVIOUS_STATE` | `false` | Reject a signature that declares no previous state. A signature that declares one is always compared against the state its action is applied to, whatever this is set to. |
 
 Leave `SIGNATURE_ALLOW_LEGACY` on while any pre-scheme signatures remain in the
 operations table. Those schemes include a preimage with no document id, so a
 legacy signature can still be replayed onto another document — turning the flag
 off closes that, and rejects every stored signature made before the cutover.
+`SIGNATURE_REQUIRE_PREVIOUS_STATE` is off because the reactor's own sign sites
+have never stamped a previous state, so their signatures declare none and would
+all be rejected. Turn it on only once every signer populates it.
 
-Both settings can also be passed as `identity.requireSignatures` and
-`identity.allowLegacySignatures` when starting the server programmatically.
+All three settings can also be passed as `identity.requireSignatures`,
+`identity.allowLegacySignatures` and `identity.requirePreviousState` when
+starting the server programmatically.
 
 ### 2. **Frontend Integration**
 

@@ -51,6 +51,13 @@ export type IdentityOptions = {
    * set it false once no legacy signatures remain in storage.
    */
   allowLegacySignatures?: boolean;
+
+  /**
+   * If true, a signature that declares no previous state is rejected. A
+   * signature that does declare one is always compared against the state the
+   * action is applied to, whatever this is set to (#2894).
+   */
+  requirePreviousState?: boolean;
 };
 
 export type StartServerOptions = {

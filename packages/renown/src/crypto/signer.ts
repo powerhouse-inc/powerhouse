@@ -13,9 +13,18 @@ import {
   buildSignatureMessageV2,
   expectedActionHashes,
   hashActionV2,
+  parseSignatureHashField,
   SIGNATURE_SCHEME_LEGACY,
   SIGNATURE_SCHEME_V2,
   signatureScheme,
+} from "@powerhousedao/shared/document-model";
+
+// The signature hash-field parser lives in shared so both the signer and the
+// reactor-side verifier read element [3] the same way.
+export {
+  extractResultingHashFromSignature,
+  parseSignatureHashField,
+  signatureHasResultingHash,
 } from "@powerhousedao/shared/document-model";
 import type { IRenownCrypto } from "./index.js";
 
@@ -153,6 +162,13 @@ export type SignatureVerifierOptions = {
    * legacy signatures left in storage can refuse them (#2894).
    */
   allowLegacySignatures?: boolean;
+
+  /**
+   * Refuse a signature that declares no previous state hash, and refuse to
+   * verify at all when the caller cannot say which state the action applies to.
+   * Off by default, which leaves the check self-gating (#2894).
+   */
+  requirePreviousState?: boolean;
 };
 
 /**
@@ -161,7 +177,10 @@ export type SignatureVerifierOptions = {
  */
 export function createSignatureVerifier(
   requireSignature = false,
-  { allowLegacySignatures = true }: SignatureVerifierOptions = {},
+  {
+    allowLegacySignatures = true,
+    requirePreviousState = false,
+  }: SignatureVerifierOptions = {},
 ): SignatureVerificationHandler {
   return async (
     operation: Operation,
@@ -209,6 +228,26 @@ export function createSignatureVerifier(
       action,
     );
     if (!expected.includes(hash)) {
+      return false;
+    }
+
+    // Bind the signature to the state it was made at. Element [3] is inside
+    // the signed message, so a mismatch means the signature was made against a
+    // different state and an attacker cannot blank it to skip this (#2894).
+    const declaredPrevState =
+      parseSignatureHashField(prevStateHash).prevStateHash;
+    const expectedPrevState = context.previousStateHash;
+    if (requirePreviousState && declaredPrevState === "") {
+      return false;
+    }
+    if (requirePreviousState && expectedPrevState === undefined) {
+      return false;
+    }
+    if (
+      declaredPrevState !== "" &&
+      expectedPrevState !== undefined &&
+      declaredPrevState !== expectedPrevState
+    ) {
       return false;
     }
 
@@ -392,57 +431,4 @@ function bigIntToBytes(n: bigint, length: number): Uint8Array {
     n = n >> BigInt(8);
   }
   return bytes;
-}
-
-/**
- * Parses the hash field (element [3]) from a signature tuple.
- *
- * Supports two formats:
- * - Old format: just `prevStateHash` (no colon)
- * - New format: `prevStateHash:resultingStateHash` (colon-separated)
- *
- * @param hashField - The 4th element of a Signature tuple
- * @returns Object with prevStateHash and optional resultingStateHash
- */
-export function parseSignatureHashField(hashField: string): {
-  prevStateHash: string;
-  resultingStateHash: string | undefined;
-} {
-  const colonIndex = hashField.indexOf(":");
-
-  if (colonIndex === -1) {
-    return {
-      prevStateHash: hashField,
-      resultingStateHash: undefined,
-    };
-  }
-
-  return {
-    prevStateHash: hashField.substring(0, colonIndex),
-    resultingStateHash: hashField.substring(colonIndex + 1),
-  };
-}
-
-/**
- * Extracts the resulting state hash from a signature, if present.
- *
- * @param signature - A Signature tuple
- * @returns The resulting state hash, or undefined if not present
- */
-export function extractResultingHashFromSignature(
-  signature: Signature,
-): string | undefined {
-  const hashField = signature[3];
-  const { resultingStateHash } = parseSignatureHashField(hashField);
-  return resultingStateHash;
-}
-
-/**
- * Checks if a signature includes a resulting state hash.
- *
- * @param signature - A Signature tuple
- * @returns true if the signature includes a resulting state hash
- */
-export function signatureHasResultingHash(signature: Signature): boolean {
-  return extractResultingHashFromSignature(signature) !== undefined;
 }

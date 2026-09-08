@@ -521,6 +521,35 @@ export class SimpleJobExecutor implements IJobExecutor {
     );
   }
 
+  /**
+   * The scope's head operation hash, which a signature declares as the state it
+   * applies to. Undefined when the document does not exist yet - a job that
+   * creates its own document has no predecessor (#2894).
+   */
+  private async currentStateHash(
+    executing: ExecutingJob,
+    actions: Action[],
+  ): Promise<string | undefined> {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- `context` is optional at runtime
+    if (!actions.some((action) => action?.context?.signer)) {
+      return undefined;
+    }
+    const { job, signal, stores } = executing;
+    try {
+      const document = await stores.writeCache.getState(
+        job.documentId,
+        job.scope,
+        job.branch,
+        undefined,
+        signal,
+      );
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- a cached document need not carry every scope
+      return document.operations[job.scope]?.at(-1)?.hash;
+    } catch {
+      return undefined;
+    }
+  }
+
   private async processActions(
     writes: PendingWrite[],
     executing: ExecutingJob,
@@ -536,6 +565,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         job.documentId,
         job.branch,
         actions,
+        await this.currentStateHash(executing, actions),
       );
     } catch (error) {
       return {
