@@ -1,3 +1,17 @@
+## 6.2.2-dev.82 (2026-09-08)
+
+### 🩹 Fixes
+
+- **release:** emit the pnpm 11+ scoped-registry publish flag ([1ddf2464b](https://github.com/powerhouse-inc/powerhouse/commit/1ddf2464b))
+- **connect:** drop a personal tailnet host from committed config ([#2969](https://github.com/powerhouse-inc/powerhouse/pull/2969))
+- **ci:** route the @jsr scope from the workspace root .npmrc ([#2968](https://github.com/powerhouse-inc/powerhouse/pull/2968))
+- **ci:** resolve @jsr scope to npm.jsr.io in pnpm-workspace ([d5dd3a39e](https://github.com/powerhouse-inc/powerhouse/commit/d5dd3a39e))
+
+### ❤️ Thank You
+
+- acaldas
+- Frank @froid1911
+
 ## 6.2.2-dev.81 (2026-09-05)
 
 ### 🚀 Features
