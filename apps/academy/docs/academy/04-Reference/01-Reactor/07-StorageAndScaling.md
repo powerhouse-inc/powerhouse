@@ -231,7 +231,7 @@ type ProjectionShardBuilderConfig = {
 // BuiltInReadModelKind = "document-view" | "document-indexer"
 ```
 
-`preReadyKinds` run before a job reaches `READ_READY`; `postReadyKinds` run after. Between them they must name each `BuiltInReadModelKind` exactly once: under sharding the host's own copies of the built-in read models never index an operation, so a kind named in neither list is indexed by nobody — its reads stay stale and any read carrying a consistency token for it waits forever — while a kind named in both is indexed twice per operation. `poolSize` overrides the reused worker DB pool size for the shard pools only; the builder forces their `application_name` to `"reactor-projection-shard"`.
+`preReadyKinds` run before a job reaches `READ_READY`; `postReadyKinds` run after. Between them they must name each `BuiltInReadModelKind` exactly once: under sharding the host's own copies of the built-in read models never index an operation, so a kind named in neither list is indexed by nobody — its reads stay stale and any read carrying a consistency token for it waits forever — while a kind named in both is indexed twice per operation. `poolSize` overrides the reused worker DB pool size for the shard pools only; their `application_name` is `db.applicationName` when set, otherwise `"reactor-projection-shard"`.
 
 Defaults applied when the optional fields are omitted: `initTimeoutMs` 30000, `shutdownGraceMs` 5000, `drainTimeoutMs` 30000, `chainDepthReportIntervalMs` 250.
 
@@ -241,8 +241,63 @@ Defaults applied when the optional fields are omitted: `initTimeoutMs` 30000, `s
 - `shardCount < 1`: `` `ProjectionShardManager: shardCount must be >= 1 (got ${shardCount})` ``.
 - `preReadyKinds` and `postReadyKinds` that do not name each built-in read model exactly once: `"withProjectionShards requires preReadyKinds and postReadyKinds to name each built-in read model (document-view, document-indexer) exactly once between them; ..."`, with the missing and duplicated kinds listed.
 - `withReadModel` or `withReadModelFactory` alongside `withProjectionShards`: the workers build their own read models from the shard config, so host-registered instances and factories would be silently omitted. Rejected rather than dropped.
+- `withProjectionShards` alongside `withReadModelCoordinatorFactory`: two ways of owning the coordinator. Use one; the factory reaches the projection worker through its `createProjectionShardManager` dependency (see below).
+- A document model registered only as a live module when a projection worker is configured: the worker rebuilds its registry from the importable manifest, so a live-module-only model would be missing from it. Provide a `{ filePath }` or `{ packageName }` source for each.
 
-Shards can run on their own or alongside the worker pool. They replace the read-model coordinator; the executor side is independent. As with the worker pool, projection shards require real Postgres — the workers open their own pools and PGlite cannot be shared across threads.
+Shards can run on their own or alongside the worker pool. They replace the read-model coordinator wholesale; the executor side is independent. Because the replacement is wholesale, the reactor's own subscription-notification read model and processor manager — built unconditionally by `buildModule()` — are never fed an operation under bare `withProjectionShards`: GraphQL subscriptions do not fire and package-installed processors see nothing. Hosts that rely on either, or that register their own read models, use the hybrid coordinator instead. As with the worker pool, projection shards require real Postgres — the workers open their own pools and PGlite cannot be shared across threads.
+
+### Hybrid projection worker
+
+`withReadModelCoordinatorFactory` hands the coordinator's construction to a factory that runs after the reactor's internal read models exist. `createHybridProjectionCoordinatorFactory` is the shipped factory: one projection worker owns `document-view` and `document-indexer`, and the host keeps everything else, in the same order the in-process coordinator runs today — host pre-ready read models (`withReadModel`, `withReadModelFactory`), then `JOB_READ_READY` on the host bus, then subscription notifications and the processor manager post-ready. Reads carrying a consistency token stay correct because the host's trackers advance from the worker's indexing reports.
+
+```typescript
+import {
+  ReactorBuilder,
+  createHybridProjectionCoordinatorFactory,
+} from "@powerhousedao/reactor";
+
+const reactor = await new ReactorBuilder()
+  .withKysely(postgresKysely)
+  .withDocumentModelSources([
+    { packageName: "@my-org/account-document-model", subpath: "document-models" },
+  ])
+  .withReadModelFactory(async (deps) => buildMyReadModel(deps))
+  .withReadModelCoordinatorFactory(
+    createHybridProjectionCoordinatorFactory({
+      db: {
+        host: "localhost",
+        port: 5432,
+        database: "reactor",
+        user: "reactor",
+        password: process.env.PGPASSWORD!,
+        applicationName: "my-host-projection",
+      },
+      poolSize: 8,
+      onFatal: (shardId, reason) => {
+        logger.error(`projection worker ${shardId} died`, reason);
+        process.kill(process.pid, "SIGTERM");
+      },
+    }),
+  )
+  .build();
+```
+
+```typescript
+type HybridProjectionOptions = {
+  shardCount?: number; // default 1
+  poolSize?: number;
+  db?: DbConfig; // falls back to the worker pool's db
+  onFatal?: (shardId: string, reason: Error) => void;
+  initTimeoutMs?: number;
+  shutdownGraceMs?: number;
+  drainTimeoutMs?: number;
+  chainDepthReportIntervalMs?: number;
+};
+```
+
+The parent database must be the same Postgres the worker reads. Under the factory path the builder does not derive it from `db`, so pass it explicitly with `withKysely`, or configure `withWorkerPool` with the same `db`. `onFatal` fires when the worker errors or exits after it was ready, and for every write it then has to drop; nothing respawns the worker, so a host that cares should restart the process. The hook may fire repeatedly, so latch it. `withReadModelCoordinatorFactory` is mutually exclusive with `withReadModelCoordinator` and with `withProjectionShards`.
+
+Switchboard exposes this as `REACTOR_PROJECTION_WORKER=1` with `REACTOR_DB_POOL_SIZE_PROJECTION` (default 8) for the worker's pool. It requires a Postgres reactor database and is rejected in dev mode, like the executor worker pool.
 
 `withProjectionWorkerFactory` injects a custom `ProjectionWorkerFactory` and skips the default thread-transport wiring, mirroring the pool options' `factory`:
 
@@ -251,7 +306,7 @@ type ProjectionWorkerFactory = (shardIndex: number, shardId: string) => IProject
 ```
 
 :::warning Not yet stable
-Projection shards are a recent, design-doc-tracked feature. The shard-manager class itself is internal; you configure it through `withProjectionShards` and the public `ProjectionShardBuilderConfig`, `BuiltInReadModelKind`, `ProjectionWorkerFactory`, and `IProjectionTransport` types.
+Projection shards and the hybrid projection worker are recent, design-doc-tracked features. The shard-manager class itself is internal; you configure it through `withProjectionShards` or `createHybridProjectionCoordinatorFactory` and the public `ProjectionShardBuilderConfig`, `HybridProjectionOptions`, `BuiltInReadModelKind`, `ProjectionWorkerFactory`, and `IProjectionTransport` types.
 :::
 
 ## Decision guide
@@ -259,8 +314,9 @@ Projection shards are a recent, design-doc-tracked feature. The shard-manager cl
 - **In-memory PGlite (default).** Dev and tests. Zero setup, ephemeral, single process. Use it unless you need one of the below.
 - **Postgres (`withKysely` or the worker pool's `db`).** When state must survive a restart or be shared across processes.
 - **Worker pool (`withWorkerPool`).** When job execution is CPU-bound and one thread is the bottleneck. Requires Postgres and importable document-model sources.
-- **Projection shards (`withProjectionShards`).** When read-model indexing is the bottleneck. Requires Postgres. Combine with the worker pool when both write and read paths need to scale.
+- **Hybrid projection worker (`createHybridProjectionCoordinatorFactory`).** When the host event loop is saturated by indexing the built-in read models and you still need subscriptions, processors, or host read models. Requires Postgres. One worker; the host keeps everything else.
+- **Projection shards (`withProjectionShards`).** When only the built-in read models matter and you want N workers sharded by document id. Requires Postgres. Disables subscriptions and processors. Combine with the worker pool when both write and read paths need to scale.
 
-Both scaling paths require real Postgres and trade simplicity for throughput. Start in-memory, move to Postgres for persistence, and reach for the worker pool or shards only when a single thread is the proven bottleneck.
+All three scaling paths require real Postgres and trade simplicity for throughput. Start in-memory, move to Postgres for persistence, and reach for the worker pool, the hybrid projection worker, or shards only when a single thread is the proven bottleneck.
 
 For the full list of builder methods, see the builder table on [Advanced Reactor Usage](/academy/Reference/Reactor/AdvancedReactorUsage). For the read-model and processor side of indexing, see [Processors](/academy/Reference/Reactor/Processors) and [Document model registry](/academy/Reference/Reactor/DocumentModelRegistry). For the client surface that talks to a built reactor, see [IReactorClient](/academy/Reference/Reactor/ReactorClient).
