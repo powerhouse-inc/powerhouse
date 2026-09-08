@@ -1,6 +1,11 @@
 // Run-time coercion of stored config values into the shapes pieces expect:
 // the editor stores canonical values, the worker normalises before run().
 import type { ApProperty } from "../types.js";
+import {
+  assertWithinLimit,
+  DEFAULT_MAX_FILE_BYTES,
+  maxFileBytes,
+} from "./limits.js";
 
 // Framework ApFile (filename, data, extension, base64) as a plain object so
 // it survives IPC and structured cloning.
@@ -20,10 +25,19 @@ export interface FetchedFile {
 export interface NormalizeOptions {
   // Resolves a URL-valued FILE prop; defaults to fetch() with a size cap.
   fetchFile?: (url: string) => Promise<FetchedFile>;
+  // Resolves a reference-valued FILE prop (attachment:// or apfile://). The
+  // worker resolves these from files the host staged on disk, so the bytes
+  // never cross IPC.
+  resolveRef?: (ref: string) => Promise<FetchedFile>;
 }
 
-export const MAX_FILE_BYTES = 8 * 1024 * 1024;
+// Re-exported for compatibility; the ceiling itself lives in limits.ts so the
+// inbound and outbound paths cannot drift apart.
+export const MAX_FILE_BYTES = DEFAULT_MAX_FILE_BYTES;
 const FETCH_TIMEOUT_MS = 30_000;
+
+// A FILE prop whose value is a reference the host has to resolve.
+const FILE_REF = /^(?:attachment|apfile):\/\//i;
 
 export class FileFetchError extends Error {
   constructor(url: string, reason: string) {
@@ -164,19 +178,14 @@ async function defaultFetchFile(url: string): Promise<FetchedFile> {
     );
   }
   if (!response.ok) throw new FileFetchError(url, `HTTP ${response.status}`);
+  const limit = maxFileBytes();
   const declared = Number(response.headers.get("content-length"));
-  if (Number.isFinite(declared) && declared > MAX_FILE_BYTES) {
-    throw new FileFetchError(
-      url,
-      `${declared} bytes exceeds ${MAX_FILE_BYTES}`,
-    );
+  if (Number.isFinite(declared) && declared > limit) {
+    throw new FileFetchError(url, `${declared} bytes exceeds ${limit}`);
   }
   const data = Buffer.from(await response.arrayBuffer());
-  if (data.byteLength > MAX_FILE_BYTES) {
-    throw new FileFetchError(
-      url,
-      `${data.byteLength} bytes exceeds ${MAX_FILE_BYTES}`,
-    );
+  if (data.byteLength > limit) {
+    throw new FileFetchError(url, `${data.byteLength} bytes exceeds ${limit}`);
   }
   let filename = filenameFromDisposition(
     response.headers.get("content-disposition"),
@@ -210,6 +219,9 @@ export async function toApFile(
     const data = Buffer.isBuffer(value.data)
       ? value.data
       : Buffer.from(value.base64, "base64");
+    // The cap applies to every branch, not just the fetched one: an oversized
+    // data URI or file-shaped object would otherwise slip past it.
+    assertWithinLimit(data.byteLength);
     const extension = value.extension ?? extensionOf(value.filename);
     return {
       ...value,
@@ -231,12 +243,24 @@ export async function toApFile(
     const data = isBase64
       ? Buffer.from(payload, "base64")
       : Buffer.from(decodeURIComponent(payload), "utf8");
+    assertWithinLimit(data.byteLength);
     const nameParam = /;name=([^;]+)/i.exec(params)?.[1];
     return toFileValue(
       data,
       nameParam ? decodeURIComponent(nameParam) : undefined,
       mime || undefined,
     );
+  }
+  if (FILE_REF.test(trimmed)) {
+    if (!options.resolveRef) {
+      throw new FileFetchError(
+        trimmed,
+        "no attachment resolver is available in this context",
+      );
+    }
+    const resolved = await options.resolveRef(trimmed);
+    assertWithinLimit(resolved.data.byteLength);
+    return toFileValue(resolved.data, resolved.filename, resolved.contentType);
   }
   if (/^https?:\/\//i.test(trimmed)) {
     const fetched = await (options.fetchFile ?? defaultFetchFile)(trimmed);

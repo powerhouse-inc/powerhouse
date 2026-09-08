@@ -1,15 +1,30 @@
 import type { ActionContextIdentity } from "../context/action.js";
+import type { StagedFile } from "../context/files.js";
 import type { ServerInfo } from "../context/props.js";
 import type {
   RecordedListener,
   RecordedSchedule,
 } from "../context/trigger.js";
 
+// One FILE-prop value the host resolved to a path before the run, so the
+// bytes reach the worker through the shared filesystem instead of JSON IPC.
+export interface StagedInput {
+  ref: string;
+  path: string;
+  fileName?: string;
+  contentType?: string;
+}
+
 export interface RunActionRequest {
   bundleDir: string;
   actionName: string;
   propsValue: Record<string, unknown>;
   auth?: unknown;
+  // Where ctx.files.write() puts bytes for the host to ingest. Without it the
+  // action gets the data-URI service instead.
+  stagingDir?: string;
+  // Attachment refs in propsValue, already materialized by the host.
+  stagedInputs?: StagedInput[];
   // Resolved connection values served to ctx.connections.get(key).
   connections?: Record<string, unknown>;
   // Store partition; runs sharing a scope share state for the worker's lifetime.
@@ -126,6 +141,9 @@ export interface ResultResponse {
   touched: string[];
   // True when the piece set NODE_TLS_REJECT_UNAUTHORIZED=0 (contained to the worker).
   tlsPoisoned: boolean;
+  // Files the piece wrote through ctx.files during this request. The host
+  // ingests each one, then rewrites its provisional token in `output`.
+  files?: StagedFile[];
   // trigger-hook only: final store contents plus captured context calls.
   storeState?: Record<string, unknown>;
   schedules?: RecordedSchedule[];

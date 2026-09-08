@@ -6,9 +6,16 @@ import {
   InMemoryKeyValueStore,
   UnsupportedContextMemberError,
 } from "../context/action.js";
+import { readFile } from "node:fs/promises";
 import { buildCheckConnectionContext } from "../context/check.js";
-import { DataUriFilesService } from "../context/files.js";
-import { normalizePropsValue } from "../context/normalize.js";
+import {
+  DataUriFilesService,
+  StagedFilesService,
+} from "../context/files.js";
+import {
+  normalizePropsValue,
+  type NormalizeOptions,
+} from "../context/normalize.js";
 import {
   buildPropertyContext,
   findProperty,
@@ -19,6 +26,7 @@ import { buildDescriptor, describeProperties } from "../descriptor.js";
 import { loadPieceFromDir, type LoadedPiece } from "../loader.js";
 import { getActions, getTriggers, type ApProperty } from "../types.js";
 import type {
+  StagedInput,
   CheckConnectionMessage,
   CheckConnectionOutcome,
   DescribePieceMessage,
@@ -133,6 +141,27 @@ async function handleResolveOptions(
   };
 }
 
+// Reads a FILE prop's attachment ref from the copy the host staged on disk.
+// The fork shares the filesystem with its parent, so this is what keeps a
+// 50 MB scan out of the IPC channel in both directions.
+function stagedInputResolver(
+  inputs: StagedInput[] | undefined,
+): NormalizeOptions["resolveRef"] {
+  if (!inputs || inputs.length === 0) return undefined;
+  const byRef = new Map(inputs.map((input) => [input.ref, input]));
+  return async (ref: string) => {
+    const staged = byRef.get(ref);
+    if (!staged) {
+      throw new Error(`No staged file for reference "${ref}"`);
+    }
+    return {
+      data: await readFile(staged.path),
+      filename: staged.fileName,
+      contentType: staged.contentType,
+    };
+  };
+}
+
 async function handleRun(message: RunMessage): Promise<WorkerResponse> {
   const { request } = message;
   const { piece } = await loadCached(request.bundleDir);
@@ -144,10 +173,16 @@ async function handleRun(message: RunMessage): Promise<WorkerResponse> {
       `No action "${request.actionName}" in bundle ${request.bundleDir}`,
     );
   }
+  const files = request.stagingDir
+    ? new StagedFilesService(request.stagingDir)
+    : new DataUriFilesService();
   const { context, touched } = buildActionContext({
-    propsValue: await normalizePropsValue(action.props, request.propsValue),
+    propsValue: await normalizePropsValue(action.props, request.propsValue, {
+      resolveRef: stagedInputResolver(request.stagedInputs),
+    }),
     auth: request.auth,
     store: request.storeScope ? storeForScope(request.storeScope) : undefined,
+    files,
     connections: request.connections
       ? new InMemoryConnectionsProvider(request.connections)
       : undefined,
@@ -159,6 +194,9 @@ async function handleRun(message: RunMessage): Promise<WorkerResponse> {
     id: message.id,
     type: "result",
     output: jsonSafe(output),
+    ...(files instanceof StagedFilesService && files.staged().length > 0
+      ? { files: files.staged() }
+      : {}),
     touched: [...touched],
     tlsPoisoned: consumeTlsFlag(),
   };

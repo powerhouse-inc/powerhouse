@@ -2,6 +2,7 @@ import { fork, type ChildProcess } from "node:child_process";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import type { StagedFile } from "../context/files.js";
 import type {
   RecordedListener,
   RecordedSchedule,
@@ -58,6 +59,9 @@ export interface PieceWorkerResult {
   output: unknown;
   touched: string[];
   tlsPoisoned: boolean;
+  // run only: files the piece wrote through ctx.files, staged on disk for the
+  // host to ingest before the output is journalled.
+  files?: StagedFile[];
   // trigger-hook only: final store contents plus captured context calls.
   storeState?: Record<string, unknown>;
   schedules?: RecordedSchedule[];
@@ -196,6 +200,7 @@ export class PieceWorker {
             output: response.output,
             touched: response.touched,
             tlsPoisoned: response.tlsPoisoned,
+            files: response.files,
             storeState: response.storeState,
             schedules: response.schedules,
             listeners: response.listeners,

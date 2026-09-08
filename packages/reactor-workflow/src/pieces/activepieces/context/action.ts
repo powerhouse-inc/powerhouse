@@ -1,6 +1,7 @@
 // Our ActionContext → their ActionContext (doc 06 §2.8). Implements the top usage
 // tier (propsValue, auth, store, connections); the rest throws loudly, named.
 import { throwingStub, withTouchTracking } from "./stubs.js";
+import type { ActionFilesService } from "./files.js";
 import type { ConnectionsProvider } from "./props.js";
 
 export { UnsupportedContextMemberError } from "./stubs.js";
@@ -66,6 +67,10 @@ export interface ActionContextOptions {
   propsValue: Record<string, unknown>;
   auth?: unknown;
   store?: KeyValueStore;
+  // ctx.files for actions. Mirrors the option triggers already accept; when
+  // omitted the member keeps throwing, so a piece that needs files fails
+  // loudly rather than silently dropping them.
+  files?: ActionFilesService;
   connections?: ConnectionsProvider;
   executionType?: "BEGIN" | "RESUME";
   identity?: ActionContextIdentity;
@@ -131,7 +136,7 @@ export function buildActionContext(
     connections: options.connections ?? throwingStub("connections"),
     tags: throwingStub("tags"),
     server: throwingStub("server"),
-    files: throwingStub("files"),
+    files: options.files ?? throwingStub("files"),
     output: throwingStub("output"),
     agent: throwingStub("agent"),
     run: {

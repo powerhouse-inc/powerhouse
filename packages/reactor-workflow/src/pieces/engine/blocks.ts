@@ -1,5 +1,10 @@
+import { randomUUID } from "node:crypto";
+import { mkdir, rm } from "node:fs/promises";
+import path from "node:path";
 import { ensurePieceBundle } from "../activepieces/fetch.js";
+import { rewriteFileRefs, type StagedFile } from "../activepieces/context/files.js";
 import { PieceWorker } from "../activepieces/worker/host.js";
+import type { StagedInput } from "../activepieces/worker/protocol.js";
 import type { EngineConnectionResolver } from "./connections.js";
 import type { BlockExecution, BlockExecutor, BlockResult } from "./types.js";
 
@@ -113,6 +118,42 @@ export class CoreBlockExecutor implements BlockExecutor {
   }
 }
 
+// The host's attachment store, as the engine needs it: materialize a
+// reference to a path the worker can read, and ingest a path the worker wrote.
+// Both directions go through the filesystem, so bytes never enter IPC.
+export interface AttachmentPort {
+  read(
+    ref: string,
+    destPath: string,
+  ): Promise<{ fileName?: string; contentType?: string }>;
+  write(file: {
+    path: string;
+    fileName: string;
+    size: number;
+    contentType?: string;
+  }): Promise<string>;
+}
+
+const ATTACHMENT_REF = /^attachment:\/\//i;
+
+// Collects every attachment reference appearing as a string in a step config.
+// Deliberately type-agnostic: the worker decides which of them to hydrate
+// (only FILE props go through toApFile), so staging a reference no one reads
+// costs one file, while missing one would fail the step.
+function collectRefs(value: unknown, found: Set<string>): void {
+  if (typeof value === "string") {
+    if (ATTACHMENT_REF.test(value)) found.add(value);
+    return;
+  }
+  if (Array.isArray(value)) {
+    for (const entry of value) collectRefs(entry, found);
+    return;
+  }
+  if (typeof value === "object" && value !== null) {
+    for (const entry of Object.values(value)) collectRefs(entry, found);
+  }
+}
+
 export interface ActivepiecesBlockExecutorOptions {
   cacheDir: string;
   // Piece package name -> pinned version; the connector registry for this run.
@@ -121,6 +162,11 @@ export interface ActivepiecesBlockExecutorOptions {
   connections?: EngineConnectionResolver;
   worker?: PieceWorker;
   defaultTimeoutMs?: number;
+  // Both are needed for ctx.files to work: a directory the host and the forked
+  // worker share, and somewhere to put what the piece wrote. Without them a
+  // piece calling ctx.files falls back to inline data URIs.
+  stagingRoot?: string;
+  attachments?: AttachmentPort;
 }
 
 export type BlockKind = "action" | "trigger";
@@ -194,16 +240,83 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
     const timeoutMs = execution.step.timeoutSeconds
       ? execution.step.timeoutSeconds * 1000
       : this.options.defaultTimeoutMs;
-    const result = await this.worker.runAction(
-      {
-        bundleDir: bundle.dir,
-        actionName: parsed.name,
-        propsValue: execution.config as Record<string, unknown>,
-        auth,
-      },
-      timeoutMs ? { timeoutMs } : {},
-    );
-    return { output: result.output };
+
+    // One staging directory per execution, removed in the finally below. A
+    // host crash can still leave one behind, which is why it lives under a
+    // root the host can sweep at startup.
+    const stagingDir = this.options.stagingRoot
+      ? path.join(this.options.stagingRoot, randomUUID())
+      : undefined;
+    try {
+      const stagedInputs = await this.stageInputs(
+        execution.config,
+        stagingDir,
+      );
+      const result = await this.worker.runAction(
+        {
+          bundleDir: bundle.dir,
+          actionName: parsed.name,
+          propsValue: execution.config as Record<string, unknown>,
+          auth,
+          ...(stagingDir ? { stagingDir } : {}),
+          ...(stagedInputs ? { stagedInputs } : {}),
+        },
+        timeoutMs ? { timeoutMs } : {},
+      );
+      return { output: await this.ingestFiles(result.output, result.files) };
+    } finally {
+      if (stagingDir) await rm(stagingDir, { recursive: true, force: true });
+    }
+  }
+
+  private async stageInputs(
+    config: unknown,
+    stagingDir: string | undefined,
+  ): Promise<StagedInput[] | undefined> {
+    const port = this.options.attachments;
+    if (!stagingDir || !port) return undefined;
+    const refs = new Set<string>();
+    collectRefs(config, refs);
+    if (refs.size === 0) return undefined;
+    await mkdir(stagingDir, { recursive: true });
+    const staged: StagedInput[] = [];
+    let index = 0;
+    for (const ref of refs) {
+      const destPath = path.join(stagingDir, `in-${index++}`);
+      const meta = await port.read(ref, destPath);
+      staged.push({ ref, path: destPath, ...meta });
+    }
+    return staged;
+  }
+
+  // A provisional apfile:// token only becomes a real reference once the step
+  // has returned, so a piece that writes a file and then reads it back by URL
+  // within the same run would not work. No action needs that today; the fix is
+  // a bidirectional worker channel, which is its own design.
+  private async ingestFiles(
+    output: unknown,
+    files: StagedFile[] | undefined,
+  ): Promise<unknown> {
+    if (!files || files.length === 0) return output;
+    const port = this.options.attachments;
+    if (!port) {
+      throw new Error(
+        `The action wrote ${files.length} file(s) through ctx.files, but no attachment store is configured for this reactor`,
+      );
+    }
+    const refs = new Map<string, string>();
+    for (const file of files) {
+      refs.set(
+        file.token,
+        await port.write({
+          path: file.path,
+          fileName: file.fileName,
+          size: file.size,
+          contentType: file.contentType,
+        }),
+      );
+    }
+    return rewriteFileRefs(output, refs);
   }
 
   dispose(): void {
