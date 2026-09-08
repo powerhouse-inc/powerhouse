@@ -9,6 +9,8 @@ import fs from "node:fs";
 import http from "node:http";
 import https from "node:https";
 import nodePath from "node:path";
+import { Readable } from "node:stream";
+import type { ReadableStream as WebReadableStream } from "node:stream/web";
 import { match, type MatchFunction, type ParamData } from "path-to-regexp";
 import type {
   FetchHandler,
@@ -317,7 +319,19 @@ export class FastifyHttpAdapter implements IHttpAdapter {
     const fetchReq = new Request(url, { method: "GET", headers });
     const response = await entry.handler(fetchReq);
     writeResponse(reply, response);
-    return reply.send(await response.text());
+    if (response.body === null) {
+      return reply.send(await response.text());
+    }
+    // Stream the body instead of awaiting .text(): a stream-backed body
+    // (e.g. graphql-sse) only closes when the subscription completes, so
+    // awaiting would hang the request. Fastify tears the source down on
+    // client disconnect and routes pre-header stream errors to the
+    // error handler.
+    // `response.body` is typed against the global (lib) ReadableStream
+    // declaration, while Readable.fromWeb wants node:stream/web's; at
+    // runtime they are the same stream, so the cast is safe.
+    const bodyStream = response.body as WebReadableStream;
+    return reply.send(Readable.fromWeb(bodyStream));
   }
 }
 
@@ -336,7 +350,19 @@ async function serveFetchHandler(
     new Request(url, { method: req.method, headers, body }),
   );
   writeResponse(reply, response);
-  return reply.send(await response.text());
+  if (response.body === null) {
+    return reply.send(await response.text());
+  }
+  // Stream the body instead of awaiting .text(): a stream-backed body
+  // (e.g. graphql-sse) only closes when the subscription completes, so
+  // awaiting would hang the request. Fastify tears the source down on
+  // client disconnect and routes pre-header stream errors to the
+  // error handler.
+  // `response.body` is typed against the global (lib) ReadableStream
+  // declaration, while Readable.fromWeb wants node:stream/web's; at
+  // runtime they are the same stream, so the cast is safe.
+  const bodyStream = response.body as WebReadableStream;
+  return reply.send(Readable.fromWeb(bodyStream));
 }
 
 function buildUrl(req: FastifyRequest): string {

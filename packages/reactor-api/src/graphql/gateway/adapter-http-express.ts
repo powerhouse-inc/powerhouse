@@ -11,6 +11,8 @@ import fs from "node:fs";
 import http from "node:http";
 import https from "node:https";
 import path from "node:path";
+import { Readable } from "node:stream";
+import type { ReadableStream as WebReadableStream } from "node:stream/web";
 import { match, type MatchFunction, type ParamData } from "path-to-regexp";
 import type {
   FetchHandler,
@@ -297,8 +299,31 @@ export class ExpressHttpAdapter implements IHttpAdapter {
         response.headers.forEach((value, key) => {
           res.setHeader(key, value);
         });
-        const responseBody = await response.text();
-        res.send(responseBody);
+        if (response.body === null) {
+          res.send(await response.text());
+          return;
+        }
+        // Stream the body to the socket instead of awaiting .text(): a
+        // stream-backed body (e.g. graphql-sse) only closes when the
+        // subscription completes, so awaiting would hang the request.
+        // `response.body` is typed against the global (lib) ReadableStream
+        // declaration, while Readable.fromWeb wants node:stream/web's; at
+        // runtime they are the same stream, so the cast is safe.
+        const bodyStream = response.body as WebReadableStream;
+        const nodeStream = Readable.fromWeb(bodyStream);
+        req.on("close", () => {
+          // The client went away mid-stream; stop pulling from the source.
+          nodeStream.destroy();
+        });
+        nodeStream.on("error", (err) => {
+          if (res.headersSent) {
+            // The response has already started; nothing left to say.
+            res.destroy();
+          } else {
+            next(err);
+          }
+        });
+        nodeStream.pipe(res);
       })
       .catch(next);
   }
@@ -328,7 +353,31 @@ export class ExpressHttpAdapter implements IHttpAdapter {
         response.headers.forEach((value, key) => {
           res.setHeader(key, value);
         });
-        res.send(await response.text());
+        if (response.body === null) {
+          res.send(await response.text());
+          return;
+        }
+        // Stream the body to the socket instead of awaiting .text(): a
+        // stream-backed body (e.g. graphql-sse) only closes when the
+        // subscription completes, so awaiting would hang the request.
+        // `response.body` is typed against the global (lib) ReadableStream
+        // declaration, while Readable.fromWeb wants node:stream/web's; at
+        // runtime they are the same stream, so the cast is safe.
+        const bodyStream = response.body as WebReadableStream;
+        const nodeStream = Readable.fromWeb(bodyStream);
+        req.on("close", () => {
+          // The client went away mid-stream; stop pulling from the source.
+          nodeStream.destroy();
+        });
+        nodeStream.on("error", (err) => {
+          if (res.headersSent) {
+            // The response has already started; nothing left to say.
+            res.destroy();
+          } else {
+            res.status(500).send(String(err));
+          }
+        });
+        nodeStream.pipe(res);
       })
       .catch((err: unknown) => {
         res.status(500).send(String(err));

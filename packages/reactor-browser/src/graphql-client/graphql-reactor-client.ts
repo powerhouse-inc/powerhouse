@@ -297,6 +297,11 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
    * The emitted `Updated` event carries the document's id, never the
    * identifier this was called with: subscribers - including `DocumentCache` -
    * work in id space.
+   *
+   * `IReactorClient.execute`'s trailing `subject` is deliberately not accepted
+   * here. It names the subject a local read gate answers as, and this client
+   * runs no gate: the Switchboard decides what to serve from the bearer on the
+   * request. Declaring it would suggest a per-call choice that does not exist.
    */
   async execute<TDocument extends PHDocument>(
     documentIdentifier: string,

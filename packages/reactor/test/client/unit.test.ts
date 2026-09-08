@@ -2001,6 +2001,114 @@ describe("ReactorClient Unit Tests", () => {
       ]);
     });
 
+    describe("execute reads its result back as the subject it is given", () => {
+      // The write has already committed by the time the document is read
+      // back, so the subject decides only what the caller is shown - and
+      // being shown a husk with no domain scope reads as a rejected write.
+      const executed: Action[] = [
+        {
+          id: "action-1",
+          type: "TEST_ACTION",
+          scope: "global",
+          timestampUtcMs: new Date().toISOString(),
+          input: {},
+        },
+      ];
+
+      function completeOneJob(): JobInfo {
+        const jobInfo: JobInfo = {
+          id: "job-1",
+          documentId: "d1",
+          status: JobStatus.PENDING,
+          createdAtUtcIso: new Date().toISOString(),
+          consistencyToken: createEmptyConsistencyToken(),
+          meta: { batchId: "test", batchJobIds: ["job-1"] },
+        };
+        const completed: JobInfo = { ...jobInfo, status: JobStatus.READ_READY };
+        vi.mocked(mockReactor.execute).mockResolvedValue(jobInfo);
+        vi.mocked(mockJobAwaiter.waitForJob).mockResolvedValue(completed);
+        vi.mocked(mockReactor.getByIdOrSlug).mockResolvedValue(
+          docWithScopes("d1", readGlobalPolicy, {
+            global: { x: 1 },
+            local: { y: 2 },
+          }),
+        );
+        return completed;
+      }
+
+      it("serves the scopes that subject may read", async () => {
+        completeOneJob();
+
+        const doc = await client.execute("d1", "main", executed, undefined, {
+          address: "0xreader",
+        });
+
+        expect(Object.keys(doc.state).sort()).toEqual([
+          "auth",
+          "document",
+          "global",
+        ]);
+        expect((doc.state as any).global).toEqual({ x: 1 });
+      });
+
+      it("puts the subject on the view it reads the document back with", async () => {
+        const completed = completeOneJob();
+
+        await client.execute("d1", "main", executed, undefined, {
+          address: "0xreader",
+        });
+
+        expect(mockReactor.getByIdOrSlug).toHaveBeenCalledWith(
+          "d1",
+          { branch: "main", subject: { address: "0xreader" } },
+          completed.consistencyToken,
+          undefined,
+        );
+      });
+
+      it("denies domain scopes to a subject no grant names", async () => {
+        completeOneJob();
+
+        const doc = await client.execute("d1", "main", executed, undefined, {
+          address: "0xstranger",
+        });
+
+        expect(Object.keys(doc.state).sort()).toEqual(["auth", "document"]);
+      });
+
+      it("falls back to the client's own signer when no subject is given", async () => {
+        // What every existing caller does. The default mock signer names
+        // nobody, so the fallback subject matches no grant and the document
+        // comes back stripped - today's behaviour, unchanged.
+        completeOneJob();
+
+        const doc = await client.execute("d1", "main", executed);
+
+        expect(Object.keys(doc.state).sort()).toEqual(["auth", "document"]);
+
+        const signerClient = new ReactorClient(
+          createMockLogger(),
+          mockReactor,
+          createMockSigner({
+            user: { address: "0xreader", networkId: "", chainId: 0 },
+            app: { name: "connect", key: "did:key:zReader" },
+          }),
+          mockSubscriptionManager,
+          mockJobAwaiter,
+          mockDocumentIndexer,
+          mockDocumentView,
+        );
+
+        const signed = await signerClient.execute("d1", "main", executed);
+
+        expect(Object.keys(signed.state).sort()).toEqual([
+          "auth",
+          "document",
+          "global",
+        ]);
+      });
+    });
+
     it("filters each result of find", async () => {
       vi.mocked(mockReactor.find).mockResolvedValue({
         results: [
