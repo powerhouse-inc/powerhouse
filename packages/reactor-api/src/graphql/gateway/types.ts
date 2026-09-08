@@ -23,6 +23,13 @@ export type WsDisposer = { dispose: () => void | Promise<void> };
 export type FetchHandler = (request: Request) => Promise<Response>;
 
 /**
+ * Opaque identifier for a registered route. Returned by `mount()`,
+ * `getRoute()`, and `mountNodeRoute()`; pass it to `unmount()` to remove
+ * the route.
+ */
+export type RouteHandle = number;
+
+/**
  * A framework-agnostic description of a federated subgraph service.
  * Used by IGatewayAdapter.createSupergraphHandler() to compose the supergraph SDL.
  */
@@ -80,25 +87,27 @@ export interface IHttpAdapter {
   }): void;
 
   /**
-   * Mount a Fetch API handler.
-   * - exact = false (default): exact path match via internal dispatch map.
-   * - exact = true: prefix match - handler also receives all sub-paths
-   *   (uses framework router.use() semantics).
+   * Mount a Fetch API handler. Returns a handle for {@link unmount}.
+   * - exact = false (default): exact path match.
+   * - exact = true: prefix match - handler also receives all sub-paths.
+   *
+   * Mounting a path that already holds a fetch mount of the same kind
+   * replaces the previous one (last write wins).
    */
   mount(
     path: string,
     handler: FetchHandler,
     options?: { exact?: boolean },
-  ): void;
+  ): RouteHandle;
 
   /**
-   * Register a GET route that returns a Fetch Response (for health, explorer, etc.).
-   * Registered directly on the underlying framework app, bypassing the sub-router.
+   * Register a GET-only route that returns a Fetch Response (for health,
+   * explorer, etc.). Returns a handle for {@link unmount}.
    */
   getRoute(
     path: string,
     handler: (request: Request) => Response | Promise<Response>,
-  ): void;
+  ): RouteHandle;
 
   /**
    * Start listening on the given port. Returns the underlying http.Server
@@ -119,7 +128,8 @@ export interface IHttpAdapter {
    * protocols that require direct access to IncomingMessage/ServerResponse).
    *
    * The req/res objects are `http.IncomingMessage`/`http.ServerResponse`
-   * (Express Request/Response are compatible subtypes).
+   * (Express Request/Response are compatible subtypes). Returns a handle
+   * for {@link unmount}.
    */
   mountNodeRoute(
     method: "DELETE" | "GET" | "HEAD" | "POST" | "PUT",
@@ -131,7 +141,17 @@ export interface IHttpAdapter {
       res: http.ServerResponse,
       body?: unknown,
     ) => void | Promise<void>,
-  ): void;
+  ): RouteHandle;
+
+  /**
+   * Remove a route registered by `mount()`, `getRoute()`, or
+   * `mountNodeRoute()`, identified by the handle that call returned.
+   * No-op for unknown or already-removed handles.
+   *
+   * `mountRawMiddleware` is intentionally not removable: raw framework
+   * middleware (e.g. a Vite dev server) is not a single route.
+   */
+  unmount(handle: RouteHandle): void;
 
   /**
    * Register framework-specific Sentry error-capturing middleware after all routes

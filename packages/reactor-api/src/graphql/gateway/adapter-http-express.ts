@@ -12,15 +12,59 @@ import http from "node:http";
 import https from "node:https";
 import path from "node:path";
 import { match, type MatchFunction, type ParamData } from "path-to-regexp";
-import type { FetchHandler, IHttpAdapter, TlsOptions } from "./types.js";
+import type {
+  FetchHandler,
+  IHttpAdapter,
+  RouteHandle,
+  TlsOptions,
+} from "./types.js";
+import { normalizePath } from "./path-normalize.js";
+
+type GetHandler = (r: Request) => Response | Promise<Response>;
+
+type NodeHandler = (
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  body?: unknown,
+) => void | Promise<void>;
+
+type RouteEntry =
+  | {
+      kind: "fetch";
+      path: string;
+      matcher: MatchFunction<ParamData>;
+      prefix: boolean;
+      handler: FetchHandler;
+    }
+  | {
+      kind: "get";
+      path: string;
+      matcher: MatchFunction<ParamData>;
+      handler: GetHandler;
+    }
+  | {
+      kind: "node";
+      method: string;
+      path: string;
+      matcher: MatchFunction<ParamData>;
+      handler: NodeHandler;
+    };
 
 export class ExpressHttpAdapter implements IHttpAdapter {
   readonly #app: Express;
   readonly #router: IRouter;
-  readonly #handlers = new Map<
-    string,
-    { handler: FetchHandler; matcher: MatchFunction<ParamData> }
-  >();
+
+  /**
+   * Every route lives in this registry and is served by one
+   * permanently-registered dispatcher (installed by setupMiddleware), because
+   * Express 4 has no route-removal API: routes registered directly on the
+   * app or router can never be taken back. Entries iterate in registration
+   * order; mounting a path that already holds a route of the same kind (and
+   * method, for node routes) replaces the old entry, so re-mounting is
+   * last-write-wins without accumulating.
+   */
+  readonly #routes = new Map<RouteHandle, RouteEntry>();
+  #nextHandle = 0;
 
   constructor(existingApp?: Express) {
     this.#app = existingApp ?? expressLib();
@@ -40,7 +84,8 @@ export class ExpressHttpAdapter implements IHttpAdapter {
   }
 
   mountRawMiddleware(middleware: unknown): void {
-    this.#app.use(middleware as any);
+    // Connect/Express middleware shape; the caller owns its typing.
+    this.#app.use(middleware as express.RequestHandler);
   }
 
   mountNodeRoute(
@@ -51,16 +96,17 @@ export class ExpressHttpAdapter implements IHttpAdapter {
       res: http.ServerResponse,
       body?: unknown,
     ) => void | Promise<void>,
-  ): void {
-    const m = method.toLowerCase() as
-      | "delete"
-      | "get"
-      | "head"
-      | "post"
-      | "put";
-    this.#app[m](path, (req: express.Request, res: express.Response) => {
-      void handler(req, res, req.body as unknown);
+  ): RouteHandle {
+    this.#replaceDuplicates("node", path, method.toUpperCase());
+    const handle = this.#nextHandle++;
+    this.#routes.set(handle, {
+      kind: "node",
+      method: method.toUpperCase(),
+      path,
+      matcher: match(normalizePath(path)),
+      handler,
     });
+    return handle;
   }
 
   setupMiddleware({
@@ -76,14 +122,41 @@ export class ExpressHttpAdapter implements IHttpAdapter {
       bodyParser.urlencoded({ extended: true, limit: bodyLimit }),
     );
 
-    // Dispatcher registered AFTER bodyParser so req.body is populated when it fires.
+    // The single dispatch point for every registered route, registered
+    // AFTER the body parsers so node routes receive a parsed req.body.
+    // A request matching no route falls through to app-level middleware
+    // (mountRawMiddleware) and then Express's default 404.
     this.#router.use((req, res, next) => {
-      for (const { handler, matcher } of this.#handlers.values()) {
-        if (matcher(req.path)) {
-          this.#serveFetchHandler(handler, req, res, next);
+      const pathname = req.path;
+
+      // Fetch routes dispatch first: the pre-refactor in-router dispatcher
+      // also took precedence over the app-level routes.
+      for (const entry of this.#routes.values()) {
+        if (entry.kind !== "fetch" || !entry.matcher(pathname)) continue;
+        this.#serveFetchHandler(entry.handler, req, res, next);
+        return;
+      }
+
+      if (req.method === "GET" || req.method === "HEAD") {
+        for (const entry of this.#routes.values()) {
+          if (entry.kind !== "get" || !entry.matcher(pathname)) continue;
+          this.#serveGetEntry(entry, req, res);
           return;
         }
       }
+
+      for (const entry of this.#routes.values()) {
+        if (entry.kind !== "node") continue;
+        if (entry.method !== req.method) continue;
+        const matched = entry.matcher(pathname);
+        if (!matched) continue;
+        req.params = matched.params as Record<string, string>;
+        // Fire-and-forget, as before: the node handler manages its own
+        // response and the adapter does not await its promise.
+        void entry.handler(req, res, req.body as unknown);
+        return;
+      }
+
       next();
     });
   }
@@ -92,49 +165,56 @@ export class ExpressHttpAdapter implements IHttpAdapter {
     path: string,
     handler: FetchHandler,
     { exact = false }: { exact?: boolean } = {},
-  ): void {
-    if (exact) {
-      this.#router.use(path, (req, res, next) =>
-        this.#serveFetchHandler(handler, req, res, next),
-      );
-    } else {
-      // Exact match - stored in the internal dispatch map
-      this.#handlers.set(path, {
-        handler,
-        matcher: match(path),
-      });
-    }
+  ): RouteHandle {
+    this.#replaceDuplicates("fetch", path);
+    const handle = this.#nextHandle++;
+    this.#routes.set(handle, {
+      kind: "fetch",
+      path,
+      // exact=false → exact path match; exact=true → prefix match.
+      matcher: match(normalizePath(path), { end: !exact }),
+      prefix: exact,
+      handler,
+    });
+    return handle;
   }
 
   getRoute(
-    routePath: string,
+    path: string,
     handler: (request: Request) => Response | Promise<Response>,
-  ): void {
-    this.#app.get(routePath, (req, res) => {
-      const protocol = req.protocol;
-      const host = req.get("host") ?? "localhost";
-      const url = `${protocol}://${host}${req.originalUrl}`;
-      const headers = new Headers();
-      for (const [key, value] of Object.entries(req.headers)) {
-        if (typeof value === "string") {
-          headers.set(key, value);
-        } else if (Array.isArray(value)) {
-          headers.set(key, value.join(", "));
-        }
-      }
-      const fetchRequest = new Request(url, { method: "GET", headers });
-      Promise.resolve(handler(fetchRequest))
-        .then(async (response) => {
-          res.status(response.status);
-          response.headers.forEach((value, key) => {
-            res.setHeader(key, value);
-          });
-          res.send(await response.text());
-        })
-        .catch((err: unknown) => {
-          res.status(500).send(String(err));
-        });
+  ): RouteHandle {
+    this.#replaceDuplicates("get", path);
+    const handle = this.#nextHandle++;
+    this.#routes.set(handle, {
+      kind: "get",
+      path,
+      matcher: match(normalizePath(path)),
+      handler,
     });
+    return handle;
+  }
+
+  unmount(handle: RouteHandle): void {
+    this.#routes.delete(handle);
+  }
+
+  /**
+   * Drop any existing entry the new registration would duplicate (same kind
+   * and path, plus method for node routes) so a re-mount replaces instead of
+   * shadowing. Map iteration tolerates concurrent deletion.
+   */
+  #replaceDuplicates(
+    kind: RouteEntry["kind"],
+    path: string,
+    method?: string,
+  ): void {
+    for (const [handle, entry] of this.#routes) {
+      if (entry.kind !== kind || entry.path !== path) continue;
+      if (kind === "node" && entry.kind === "node" && entry.method !== method) {
+        continue;
+      }
+      this.#routes.delete(handle);
+    }
   }
 
   async listen(port: number, tls?: TlsOptions): Promise<http.Server> {
@@ -221,6 +301,38 @@ export class ExpressHttpAdapter implements IHttpAdapter {
         res.send(responseBody);
       })
       .catch(next);
+  }
+
+  #serveGetEntry(
+    entry: Extract<RouteEntry, { kind: "get" }>,
+    req: express.Request,
+    res: express.Response,
+  ): void {
+    const protocol = req.protocol;
+    const host = req.get("host") ?? "localhost";
+    const url = `${protocol}://${host}${req.originalUrl}`;
+    const headers = new Headers();
+    for (const [key, value] of Object.entries(req.headers)) {
+      if (typeof value === "string") {
+        headers.set(key, value);
+      } else if (Array.isArray(value)) {
+        headers.set(key, value.join(", "));
+      }
+    }
+    // GET is forced (matching the pre-refactor behavior, which also
+    // normalized HEAD requests through the GET route handler).
+    const fetchRequest = new Request(url, { method: "GET", headers });
+    Promise.resolve(entry.handler(fetchRequest))
+      .then(async (response) => {
+        res.status(response.status);
+        response.headers.forEach((value, key) => {
+          res.setHeader(key, value);
+        });
+        res.send(await response.text());
+      })
+      .catch((err: unknown) => {
+        res.status(500).send(String(err));
+      });
   }
 }
 

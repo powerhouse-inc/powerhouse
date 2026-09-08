@@ -1,25 +1,22 @@
 import fastifyCors from "@fastify/cors";
 import fastifyFormbody from "@fastify/formbody";
 import fastifyMiddie from "@fastify/middie";
+import type { CorsOptions } from "cors";
 import devcert from "devcert";
 import Fastify from "fastify";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
-import type { CorsOptions } from "cors";
 import fs from "node:fs";
 import http from "node:http";
 import https from "node:https";
 import nodePath from "node:path";
 import { match, type MatchFunction, type ParamData } from "path-to-regexp";
-import type { FetchHandler, IHttpAdapter, TlsOptions } from "./types.js";
-
-/**
- * Normalises a route path for path-to-regexp v8:
- * - Collapses duplicate slashes (e.g. "//explorer" → "/explorer")
- * - Converts legacy optional-param syntax ":param?" → "{/:param}?"
- */
-function normalizePath(path: string): string {
-  return path.replace(/\/+/g, "/").replace(/:(\w+)\?/g, "{/:$1}");
-}
+import type {
+  FetchHandler,
+  IHttpAdapter,
+  RouteHandle,
+  TlsOptions,
+} from "./types.js";
+import { normalizePath } from "./path-normalize.js";
 
 /** Parses body-limit strings like "50mb" to bytes. */
 function parseBodyLimit(limit: string): number {
@@ -36,12 +33,14 @@ function parseBodyLimit(limit: string): number {
 }
 
 type FetchEntry = {
+  path: string;
   handler: FetchHandler;
   matcher: MatchFunction<ParamData>;
   prefix: boolean;
 };
 
 type GetEntry = {
+  path: string;
   handler: (r: Request) => Response | Promise<Response>;
   matcher: MatchFunction<ParamData>;
 };
@@ -53,6 +52,7 @@ type NodeHandler = (
 ) => void;
 
 type NodeEntry = {
+  path: string;
   method: "DELETE" | "GET" | "HEAD" | "POST" | "PUT";
   matcher: MatchFunction<ParamData>;
   handler: NodeHandler;
@@ -64,13 +64,15 @@ type SetupOp =
   | { kind: "middie"; middleware: unknown };
 
 export class FastifyHttpAdapter implements IHttpAdapter {
-  // Dispatch maps — populated at any time (before or after listen).
-  readonly #fetchRoutes: FetchEntry[] = [];
-  readonly #getRoutes: Map<string, GetEntry> = new Map();
-  // Iterated in registration order on dispatch; entries carry their own
-  // path-to-regexp matcher so parameterised paths (e.g. "/attachments/:hash")
-  // resolve correctly and populate `req.params`.
-  readonly #nodeRoutes: NodeEntry[] = [];
+  // Dispatch maps, keyed by route handle and iterated in registration
+  // order — populated at any time (before or after listen). Mounting a
+  // path that already holds a route of the same kind (and method, for
+  // node routes) replaces the old entry, so re-mounting is last-write-
+  // wins without accumulating; unmount() removes any entry.
+  readonly #fetchRoutes = new Map<RouteHandle, FetchEntry>();
+  readonly #getRoutes = new Map<RouteHandle, GetEntry>();
+  readonly #nodeRoutes = new Map<RouteHandle, NodeEntry>();
+  #nextHandle = 0;
 
   // Ops that need the Fastify instance (CORS config, Connect middleware).
   readonly #setupOps: SetupOp[] = [];
@@ -99,32 +101,61 @@ export class FastifyHttpAdapter implements IHttpAdapter {
     path: string,
     handler: FetchHandler,
     { exact = false }: { exact?: boolean } = {},
-  ): void {
-    this.#fetchRoutes.push({
+  ): RouteHandle {
+    for (const [handle, entry] of this.#fetchRoutes) {
+      if (entry.path === path) this.#fetchRoutes.delete(handle);
+    }
+    const handle = this.#nextHandle++;
+    this.#fetchRoutes.set(handle, {
+      path,
       handler,
       // exact=false → exact path match; exact=true → prefix match.
       matcher: match(normalizePath(path), { end: !exact }),
       prefix: exact,
     });
+    return handle;
   }
 
   getRoute(
     path: string,
-    handler: (request: Request) => Response | Promise<Response>,
-  ): void {
-    this.#getRoutes.set(path, { handler, matcher: match(normalizePath(path)) });
+    handler: (r: Request) => Response | Promise<Response>,
+  ): RouteHandle {
+    for (const [handle, entry] of this.#getRoutes) {
+      if (entry.path === path) this.#getRoutes.delete(handle);
+    }
+    const handle = this.#nextHandle++;
+    this.#getRoutes.set(handle, {
+      path,
+      handler,
+      matcher: match(normalizePath(path)),
+    });
+    return handle;
   }
 
   mountNodeRoute(
     method: "DELETE" | "GET" | "HEAD" | "POST" | "PUT",
     path: string,
     handler: NodeHandler,
-  ): void {
-    this.#nodeRoutes.push({
+  ): RouteHandle {
+    for (const [handle, entry] of this.#nodeRoutes) {
+      if (entry.path === path && entry.method === method) {
+        this.#nodeRoutes.delete(handle);
+      }
+    }
+    const handle = this.#nextHandle++;
+    this.#nodeRoutes.set(handle, {
+      path,
       method,
       matcher: match(normalizePath(path)),
       handler,
     });
+    return handle;
+  }
+
+  unmount(handle: RouteHandle): void {
+    this.#fetchRoutes.delete(handle);
+    this.#getRoutes.delete(handle);
+    this.#nodeRoutes.delete(handle);
   }
 
   mountRawMiddleware(middleware: unknown): void {
@@ -233,13 +264,14 @@ export class FastifyHttpAdapter implements IHttpAdapter {
       | "DELETE"
       | "GET"
       | "HEAD"
+      | "PATCH"
       | "POST"
       | "PUT";
 
     // 1. Node routes — path-to-regexp match + method, handler manages raw
     // response. Attach decoded params onto `req.raw` so downstream handlers
     // can read them via the same `req.params` API the Express adapter exposes.
-    for (const entry of this.#nodeRoutes) {
+    for (const entry of this.#nodeRoutes.values()) {
       if (entry.method !== method) continue;
       const result = entry.matcher(pathname);
       if (!result) continue;
@@ -262,8 +294,7 @@ export class FastifyHttpAdapter implements IHttpAdapter {
     // 3. Fetch routes (GraphQL handlers, SSE, etc.).
     // Iterate in reverse so that the last-mounted handler wins when the same
     // path is mounted more than once (e.g. supergraph remount after reload).
-    for (let i = this.#fetchRoutes.length - 1; i >= 0; i--) {
-      const entry = this.#fetchRoutes[i]!;
+    for (const entry of [...this.#fetchRoutes.values()].reverse()) {
       if (entry.matcher(pathname)) {
         return serveFetchHandler(entry.handler, req, reply);
       }
@@ -297,21 +328,21 @@ async function serveFetchHandler(
 ): Promise<void> {
   const url = buildUrl(req);
   const headers = buildHeaders(req);
-
   let body: string | undefined;
   if (req.method !== "GET" && req.method !== "HEAD" && req.body !== undefined) {
     body = JSON.stringify(req.body);
   }
-
-  const fetchRequest = new Request(url, { method: req.method, headers, body });
-  const response = await handler(fetchRequest);
+  const response = await handler(
+    new Request(url, { method: req.method, headers, body }),
+  );
   writeResponse(reply, response);
   return reply.send(await response.text());
 }
 
 function buildUrl(req: FastifyRequest): string {
+  const protocol = req.protocol;
   const host = req.headers.host ?? "localhost";
-  return `${req.protocol}://${host}${req.url}`;
+  return `${protocol}://${host}${req.url}`;
 }
 
 function buildHeaders(req: FastifyRequest): Headers {
@@ -327,9 +358,9 @@ function buildHeaders(req: FastifyRequest): Headers {
 }
 
 function writeResponse(reply: FastifyReply, response: Response): void {
-  void reply.status(response.status);
+  reply.statusCode = response.status;
   response.headers.forEach((value, key) => {
-    void reply.header(key, value);
+    reply.header(key, value);
   });
 }
 
