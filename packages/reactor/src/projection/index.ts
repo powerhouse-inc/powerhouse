@@ -1,5 +1,6 @@
 export {
   ProjectionShardManager,
+  type ProjectionShardHooks,
   type ProjectionShardManagerConfig,
   type ProjectionWorkerFactory,
 } from "./projection-shard-manager.js";

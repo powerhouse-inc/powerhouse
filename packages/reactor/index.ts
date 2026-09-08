@@ -39,6 +39,7 @@ export {
 export type {
   BuiltInReadModelKind,
   IProjectionTransport,
+  ProjectionShardHooks,
   ProjectionShardManagerConfig,
   ProjectionWorkerFactory,
 } from "./src/projection/index.js";

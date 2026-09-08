@@ -110,6 +110,7 @@ describe("ProjectionShardManager", () => {
         typeof ProjectionShardManager
       >[0]["consistencyTrackers"];
       onShardFatal?: (shardId: string, reason: Error) => void;
+      onReadReady?: (event: JobReadReadyEvent) => void;
       preReadyKinds?: ("document-view" | "document-indexer")[];
     } = {},
   ): Promise<{
@@ -134,6 +135,7 @@ describe("ProjectionShardManager", () => {
       shutdownGraceMs: 10,
       consistencyTrackers: overrides.consistencyTrackers,
       onShardFatal: overrides.onShardFatal,
+      onReadReady: overrides.onReadReady,
     });
     await created.startup();
     created.start();
@@ -253,6 +255,129 @@ describe("ProjectionShardManager", () => {
       expect(fatals).toHaveLength(1);
       expect(fatals[0]!.shardId).toBe("projection-shard-0");
       expect(fatals[0]!.reason.message).toContain("boom");
+    });
+  });
+
+  describe("onReadReady hook", () => {
+    it("routes a relayed read-ready to the hook instead of the host bus, until emitReadReady", async () => {
+      const received: JobReadReadyEvent[] = [];
+      const {
+        manager: created,
+        bus,
+        transports,
+      } = await startManager({
+        onReadReady: (event) => received.push(event),
+      });
+      const readReady = nextEvent<JobReadReadyEvent>(
+        bus,
+        ReactorEventTypes.JOB_READ_READY,
+      );
+      const operations = [operation("doc-1", 0)];
+
+      transports[0]!.send({
+        type: "read-ready",
+        shardId: "projection-shard-0",
+        jobId: "job-1",
+        operations,
+      });
+
+      expect(received).toEqual([{ jobId: "job-1", operations }]);
+      await expect(
+        within(readReady, "JOB_READ_READY on the host bus", 50),
+      ).rejects.toThrow("did not settle");
+
+      await created.emitReadReady(received[0]!);
+
+      const event = await within(
+        readReady,
+        "JOB_READ_READY after emitReadReady",
+      );
+      expect(event).toEqual({ jobId: "job-1", operations });
+    });
+
+    it("emits a relayed read-ready on the host bus when the hook is absent", async () => {
+      const { bus, transports } = await startManager();
+      const readReady = nextEvent<JobReadReadyEvent>(
+        bus,
+        ReactorEventTypes.JOB_READ_READY,
+      );
+      const operations = [operation("doc-1", 0)];
+
+      transports[0]!.send({
+        type: "read-ready",
+        shardId: "projection-shard-0",
+        jobId: "job-1",
+        operations,
+      });
+
+      const event = await within(readReady, "relayed JOB_READ_READY");
+      expect(event).toEqual({ jobId: "job-1", operations });
+    });
+
+    it("routes the zero-operation relay through the hook", async () => {
+      const received: JobReadReadyEvent[] = [];
+      const { bus, transports } = await startManager({
+        onReadReady: (event) => received.push(event),
+      });
+      const readReady = nextEvent<JobReadReadyEvent>(
+        bus,
+        ReactorEventTypes.JOB_READ_READY,
+      );
+
+      await bus.emit(ReactorEventTypes.JOB_WRITE_READY, {
+        jobId: "job-empty",
+        operations: [],
+        jobMeta: JOB_META,
+      });
+
+      expect(received).toEqual([{ jobId: "job-empty", operations: [] }]);
+      expect(transports[0]!.sentOfType("write-ready")).toHaveLength(0);
+      await expect(
+        within(readReady, "JOB_READ_READY on the host bus", 50),
+      ).rejects.toThrow("did not settle");
+    });
+  });
+
+  describe("drain", () => {
+    it("resolves immediately when the only shard has exited", async () => {
+      const { manager: created, transports } = await startManager();
+
+      transports[0]!.emit("exit", 1);
+
+      await within(created.drain(), "drain with no ready shards", 50);
+      expect(transports[0]!.sentOfType("drain")).toHaveLength(0);
+    });
+
+    it("posts drain only to live shards and resolves on their drained alone", async () => {
+      const { manager: created, transports } = await startManager({
+        shardCount: 2,
+      });
+
+      transports[0]!.emit("exit", 1);
+      const drain = created.drain();
+
+      expect(transports[0]!.sentOfType("drain")).toHaveLength(0);
+      const posted = transports[1]!.sentOfType("drain");
+      expect(posted).toHaveLength(1);
+
+      transports[1]!.send({
+        type: "drained",
+        correlationId: posted[0]!.correlationId,
+        shardId: "projection-shard-1",
+      });
+
+      await within(drain, "drain with one live shard", 50);
+    });
+
+    it("releases a pending drain when the shard exits mid-drain", async () => {
+      const { manager: created, transports } = await startManager();
+
+      const drain = created.drain();
+      expect(transports[0]!.sentOfType("drain")).toHaveLength(1);
+
+      transports[0]!.emit("exit", 1);
+
+      await within(drain, "drain released by a shard exit", 50);
     });
   });
 

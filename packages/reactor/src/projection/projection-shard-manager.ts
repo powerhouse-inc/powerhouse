@@ -81,7 +81,23 @@ export type ProjectionWorkerFactory = (
   shardId: string,
 ) => IProjectionTransport;
 
-export type ProjectionShardManagerConfig = {
+export type ProjectionShardHooks = {
+  /** Takes over the host-bus JOB_READ_READY emit; call `emitReadReady` to emit. */
+  onReadReady?: (event: JobReadReadyEvent) => void;
+  /**
+   * Fired when a shard errors, when it exits after having been ready, and
+   * for every JOB_WRITE_READY dropped because its shard is not ready.
+   *
+   * There is no respawn path: once a shard stops being ready it never
+   * projects again, so buffering the dropped work would only grow without
+   * bound. A host that cares wires this to its shutdown path, so the process
+   * restarts and each read model catches up from `ViewState.lastOrdinal` in
+   * `BaseReadModel.init`. May fire repeatedly — handlers must be idempotent.
+   */
+  onShardFatal?: (shardId: string, reason: Error) => void;
+};
+
+export type ProjectionShardManagerConfig = ProjectionShardHooks & {
   shardCount: number;
   db: DbConfig;
   models: ModelManifestEntry[];
@@ -118,17 +134,6 @@ export type ProjectionShardManagerConfig = {
   consistencyTrackers?: Partial<
     Record<BuiltInReadModelKind, IConsistencyTracker>
   >;
-  /**
-   * Fired when a shard errors, when it exits after having been ready, and
-   * for every JOB_WRITE_READY dropped because its shard is not ready.
-   *
-   * There is no respawn path: once a shard stops being ready it never
-   * projects again, so buffering the dropped work would only grow without
-   * bound. A host that cares wires this to its shutdown path, so the process
-   * restarts and each read model catches up from `ViewState.lastOrdinal` in
-   * `BaseReadModel.init`. May fire repeatedly — handlers must be idempotent.
-   */
-  onShardFatal?: (shardId: string, reason: Error) => void;
 };
 
 type ShardState = {
@@ -306,14 +311,16 @@ export class ProjectionShardManager implements IReadModelCoordinator {
     this.isRunning = false;
   }
 
+  /** Waits on ready shards only; `handleTransportExit` releases one that dies. */
   async drain(): Promise<void> {
-    if (this.shards.length === 0) {
+    const readyShards = this.shards.filter((s) => s.ready);
+    if (readyShards.length === 0) {
       return;
     }
     const drainTimeoutMs =
       this.config.drainTimeoutMs ?? DEFAULT_DRAIN_TIMEOUT_MS;
     const correlationId = randomUUID();
-    const remaining = new Set(this.shards.map((s) => s.shardId));
+    const remaining = new Set(readyShards.map((s) => s.shardId));
     const promise = new Promise<void>((resolve, reject) => {
       const timer = setTimeout(() => {
         this.pendingDrains.delete(correlationId);
@@ -332,10 +339,15 @@ export class ProjectionShardManager implements IReadModelCoordinator {
         timer,
       });
     });
-    for (const shard of this.shards) {
+    for (const shard of readyShards) {
       shard.transport.postMessage({ type: "drain", correlationId });
     }
     await promise;
+  }
+
+  /** Emits JOB_READ_READY on the host bus; an `onReadReady` hook awaits this. */
+  emitReadReady(event: JobReadReadyEvent): Promise<void> {
+    return this.hostBus.emit(ReactorEventTypes.JOB_READ_READY, event);
   }
 
   getChainDepth(): number {
@@ -589,12 +601,22 @@ export class ProjectionShardManager implements IReadModelCoordinator {
     if (!pending) {
       return;
     }
-    pending.remaining.delete(msg.shardId);
-    if (pending.remaining.size === 0) {
-      this.pendingDrains.delete(msg.correlationId);
-      clearTimeout(pending.timer);
-      pending.resolve();
+    this.releaseDrain(msg.correlationId, pending, msg.shardId);
+  }
+
+  /** Removes `shardId` from a pending drain and settles it once no shard remains. */
+  private releaseDrain(
+    correlationId: string,
+    pending: PendingDrain,
+    shardId: string,
+  ): void {
+    pending.remaining.delete(shardId);
+    if (pending.remaining.size > 0) {
+      return;
     }
+    this.pendingDrains.delete(correlationId);
+    clearTimeout(pending.timer);
+    pending.resolve();
   }
 
   private handleLog(
@@ -641,6 +663,9 @@ export class ProjectionShardManager implements IReadModelCoordinator {
     // remaining life.
     const abandoned = [...shard.pendingCoordinates.keys()];
     shard.pendingCoordinates.clear();
+    for (const [correlationId, pending] of this.pendingDrains) {
+      this.releaseDrain(correlationId, pending, shard.shardId);
+    }
     if (!wasReady || this.isShuttingDown) {
       return;
     }
@@ -662,15 +687,18 @@ export class ProjectionShardManager implements IReadModelCoordinator {
   }
 
   private relayReadReady(event: JobReadReadyEvent): void {
-    void this.hostBus
-      .emit(ReactorEventTypes.JOB_READ_READY, event)
-      .catch((err: unknown) =>
-        this.logger.error(
-          "host JOB_READ_READY emit failed for job @jobId: @error",
-          event.jobId,
-          err,
-        ),
-      );
+    const hook = this.config.onReadReady;
+    if (hook) {
+      hook(event);
+      return;
+    }
+    void this.emitReadReady(event).catch((err: unknown) =>
+      this.logger.error(
+        "host JOB_READ_READY emit failed for job @jobId: @error",
+        event.jobId,
+        err,
+      ),
+    );
   }
 
   private relayReadModelIndexed(event: ReadModelIndexedEvent): void {
