@@ -1,5 +1,6 @@
 import { stringify as stringifyJson } from "safe-stable-stringify";
 import { createHash as createSha1Hash } from "sha1-uint8array";
+import { SIGNATURE_SCHEME_LEGACY, SIGNATURE_SCHEME_V2 } from "./signatures.js";
 import type { ActionSignatureContext } from "./types.js";
 
 export const hashBrowser = (
@@ -64,25 +65,25 @@ export function getUnixTimestamp(date: Date | string): string {
 }
 
 /**
- * The parameters a shared action signature covers.
+ * The parameters a shared action signature covers, the scheme included.
  *
- * The hash field is the standard action hash: SHA-256 over the document id,
- * the action's scope, type and input, so a signature is bound to the
- * document it was made for (#2894). SHA-1 was the historical hash here; it is
- * no longer produced, but remains verifiable through
- * {@link computeActionHashCandidates}.
+ * Emits {@link SIGNATURE_SCHEME_V2}: the hash binds the action to its document
+ * and to one application of itself. The SHA-1 and unversioned SHA-256 forms
+ * this used to produce are no longer written, but remain verifiable through
+ * {@link computeLegacyActionHashCandidates}.
  */
 export async function buildOperationSignatureParams({
   documentId,
   signer,
   action,
   previousStateHash,
-}: ActionSignatureContext): Promise<[string, string, string, string]> {
+}: ActionSignatureContext): Promise<[string, string, string, string, string]> {
   return [
     /*getUnixTimestamp(timestamp)*/ getUnixTimestamp(new Date()),
     signer.app.key,
-    await hashActionContentSha256(documentId, action),
+    await hashActionV2(documentId, action),
     previousStateHash,
+    SIGNATURE_SCHEME_V2,
   ];
 }
 
@@ -157,20 +158,21 @@ export function hashActionContentSha1(
 }
 
 /**
- * Every action-hash value a signature's hash field may legitimately carry for
- * the given action, across the signing schemes this codebase has produced. A
- * binding verifier recomputes these and refuses a signature whose stored hash
- * matches none of them, rather than trusting the value echoed back from the
- * signature tuple itself (#2894).
+ * Every action-hash value an unversioned signature's hash field may
+ * legitimately carry for the given action. The schemes produced before the
+ * scheme field existed cannot be told apart after the fact, so a verifier
+ * accepts any of them (#2894).
  *
- * The candidates, newest first: the standard hash, the document id included
- * when the verifier knows it; the same hash without a document id, the form
- * produced before document binding and still produced when a signer does not
- * know the document; the insertion-order JSON form, matching signatures made
- * before the preimage was canonicalized; and the legacy shared scheme, SHA-1
- * over document id, scope, type and input.
+ * Newest first: the document-bound SHA-256 hash; the same hash without a
+ * document id, which is what a signer that did not know the document
+ * produced; the insertion-order JSON form, from before the preimage was
+ * canonicalized; and the shared SHA-1 scheme.
+ *
+ * The empty-document-id candidate is what keeps a legacy signature replayable
+ * onto another document. That is the cost of accepting these at all, and it is
+ * why new signatures use {@link SIGNATURE_SCHEME_V2}.
  */
-export async function computeActionHashCandidates(
+export async function computeLegacyActionHashCandidates(
   documentId: string,
   action: ActionHashPreimage,
 ): Promise<string[]> {
@@ -183,6 +185,79 @@ export async function computeActionHashCandidates(
     ...(documentId ? [hashActionContentSha1(documentId, action)] : []),
   ];
   return [...new Set(candidates)];
+}
+
+/** The action fields the v2 preimage covers, beyond the structural slice. */
+export type ActionV2HashPreimage = ActionHashPreimage & {
+  id: string;
+  timestampUtcMs: string;
+  context?: { nonce?: string };
+};
+
+/**
+ * The v2 action hash: SHA-256 over a canonical JSON array of the scheme, the
+ * document id, and the action's scope, type, id, nonce, timestamp and input.
+ *
+ * A JSON array rather than a concatenation, because `join("")` over
+ * variable-length strings is not injective - a document id and a scope can
+ * split at a different boundary and yield the same preimage.
+ *
+ * The scheme leads the array, so the hash commits to its own scheme: relabel a
+ * v2 signature as legacy and the verifier computes legacy preimages that this
+ * hash cannot match, and vice versa. That is what makes the scheme field in
+ * the tuple safe to read before the signature has been verified.
+ *
+ * `id` and `nonce` bind the signature to one application of the action. Without
+ * them the same signed content re-submitted under a fresh action id passes the
+ * executor's duplicate check and applies again (#2894).
+ */
+export async function hashActionV2(
+  documentId: string,
+  action: ActionV2HashPreimage,
+): Promise<string> {
+  return sha256Base64(
+    stringifyJson([
+      SIGNATURE_SCHEME_V2,
+      documentId,
+      action.scope,
+      action.type,
+      action.id,
+      action.context?.nonce ?? "",
+      action.timestampUtcMs,
+      action.input,
+    ]) ?? "",
+  );
+}
+
+/**
+ * The action-hash values a signature of the given scheme may carry. One value
+ * for a versioned scheme; the legacy candidate set otherwise.
+ */
+export async function expectedActionHashes(
+  scheme: string,
+  documentId: string,
+  action: ActionV2HashPreimage,
+): Promise<string[]> {
+  if (scheme === SIGNATURE_SCHEME_V2) {
+    return [await hashActionV2(documentId, action)];
+  }
+  if (scheme !== SIGNATURE_SCHEME_LEGACY) {
+    return [];
+  }
+  return computeLegacyActionHashCandidates(documentId, action);
+}
+
+/**
+ * The message a v2 signature covers: the tuple's non-signature params as a
+ * canonical JSON array. Delimited, unlike the legacy `join("")`, so a scheme
+ * name and a timestamp cannot concatenate ambiguously.
+ */
+export function buildSignatureMessageV2(
+  params: [string, string, string, string, string],
+): Uint8Array {
+  const message = stringifyJson(params) ?? "";
+  const prefix = "\x19Signed Operation:\n" + message.length.toString();
+  return textEncode.encode(prefix + message);
 }
 
 export function ab2hex(ab: ArrayBuffer | ArrayBufferView): string {

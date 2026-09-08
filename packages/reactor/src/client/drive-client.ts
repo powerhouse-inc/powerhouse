@@ -116,6 +116,14 @@ export class DriveClient implements IDriveClient {
       },
     };
 
+    // A slug would bind the drive-bound signatures to a string the verifier
+    // never resolves back, so the drive is resolved once up front (#2894).
+    const driveId = await this.client.resolveIdOrSlug(
+      driveIdentifier,
+      undefined,
+      signal,
+    );
+
     // CREATE and UPGRADE land on the new document: bind their signatures to
     // it (#2894).
     const documentActions: Action[] = await signActions(
@@ -134,20 +142,17 @@ export class DriveClient implements IDriveClient {
         }),
       ],
       this.signer,
-      signal,
       documentId,
+      signal,
     );
 
-    // The relationship lands on the drive, but it is submitted inside the new
-    // document's job: binding it to either document breaks one of the two
-    // verifications (the job-level check uses the new document's id, the
-    // drive's load-time check uses the drive's id), so it keeps the
-    // document-agnostic form, which every bound verifier still accepts
-    // (#2894). Binding it requires the action to move to a drive-targeted
-    // job of its own.
+    // The relationship lands on the drive even though it rides in the new
+    // document's job, and verification follows the action's target, so it binds
+    // to the drive (#2894).
     const relationshipActions: Action[] = await signActions(
-      [addRelationshipAction(driveIdentifier, documentId, "child")],
+      [addRelationshipAction(driveId, documentId, "child")],
       this.signer,
+      driveId,
       signal,
     );
 
@@ -162,8 +167,8 @@ export class DriveClient implements IDriveClient {
         }),
       ],
       this.signer,
+      driveId,
       signal,
-      driveIdentifier,
     );
 
     // Two batches, not one with a dependsOn edge. A batch's edges are ordering
@@ -192,7 +197,7 @@ export class DriveClient implements IDriveClient {
       [
         {
           key: "drive",
-          documentId: driveIdentifier,
+          documentId: driveId,
           scope: getSharedActionScope(driveActions),
           branch: "main",
           actions: driveActions,
@@ -262,7 +267,7 @@ export class DriveClient implements IDriveClient {
       if (!exists) {
         throw new Error(`Node ${nodeId} not found in drive ${driveIdentifier}`);
       }
-      await this.removeFileNode(driveIdentifier, nodeId, signal);
+      await this.removeFileNode(drive.header.id, nodeId, signal);
       return;
     }
 
@@ -272,7 +277,7 @@ export class DriveClient implements IDriveClient {
         drive.state.global.nodes,
       ).filter(isFileNode);
       for (const file of fileDescendants) {
-        await this.removeFileNode(driveIdentifier, file.id, signal);
+        await this.removeFileNode(drive.header.id, file.id, signal);
       }
       await this.client.execute(
         driveIdentifier,
@@ -283,7 +288,7 @@ export class DriveClient implements IDriveClient {
       return;
     }
 
-    await this.removeFileNode(driveIdentifier, nodeId, signal);
+    await this.removeFileNode(drive.header.id, nodeId, signal);
   }
 
   async renameNode(
@@ -559,6 +564,7 @@ export class DriveClient implements IDriveClient {
     }
   }
 
+  /** `driveId` is the canonical drive id: both actions bind to it (#2894). */
   private async removeFileNode(
     driveId: string,
     fileId: string,
@@ -567,11 +573,13 @@ export class DriveClient implements IDriveClient {
     const relationshipActions: Action[] = await signActions(
       [removeRelationshipAction(driveId, fileId, "child")],
       this.signer,
+      driveId,
       signal,
     );
     const driveActions: Action[] = await signActions(
       [deleteNodeAction({ id: fileId })],
       this.signer,
+      driveId,
       signal,
     );
 

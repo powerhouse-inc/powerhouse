@@ -1,5 +1,6 @@
 import { PropagationMode } from "@powerhousedao/reactor";
 import {
+  SIGNATURE_SCHEME_LEGACY,
   type Action,
   type DocumentModelModule,
   type PHDocument,
@@ -497,7 +498,14 @@ describe("Reactor Adapters", () => {
       ]);
 
       expect(action.context?.signer?.signatures).toEqual([
-        ["1700000000", "did:key:z6Mk", "0xhash", "0xprev", "0xsig"],
+        [
+          "1700000000",
+          "did:key:z6Mk",
+          "0xhash",
+          "0xprev",
+          "0xsig",
+          SIGNATURE_SCHEME_LEGACY,
+        ],
       ]);
     });
 

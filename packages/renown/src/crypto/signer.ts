@@ -1,5 +1,6 @@
 import type {
   Action,
+  ActionSigningContext,
   AppActionSigner,
   ISigner,
   Operation,
@@ -9,8 +10,12 @@ import type {
   UserActionSigner,
 } from "@powerhousedao/shared/document-model";
 import {
-  computeActionHashCandidates,
-  hashActionContentSha256,
+  buildSignatureMessageV2,
+  expectedActionHashes,
+  hashActionV2,
+  SIGNATURE_SCHEME_LEGACY,
+  SIGNATURE_SCHEME_V2,
+  signatureScheme,
 } from "@powerhousedao/shared/document-model";
 import type { IRenownCrypto } from "./index.js";
 
@@ -51,10 +56,11 @@ export class RenownCryptoSigner implements ISigner {
 
   async signAction(
     action: Action,
+    context: ActionSigningContext,
     abortSignal?: AbortSignal,
   ): Promise<Signature> {
     const hashField = action.context?.prevOpHash ?? "";
-    return this._signAction(action, hashField, abortSignal);
+    return this._signAction(action, hashField, context, abortSignal);
   }
 
   /**
@@ -75,11 +81,12 @@ export class RenownCryptoSigner implements ISigner {
   async signActionWithResultingState(
     action: Action,
     resultingStateHash: string,
+    context: ActionSigningContext,
     abortSignal?: AbortSignal,
   ): Promise<Signature> {
     const prevStateHash = action.context?.prevOpHash ?? "";
     const hashField = `${prevStateHash}:${resultingStateHash}`;
-    return this._signAction(action, hashField, abortSignal);
+    return this._signAction(action, hashField, context, abortSignal);
   }
 
   /**
@@ -88,6 +95,7 @@ export class RenownCryptoSigner implements ISigner {
   private async _signAction(
     action: Action,
     hashField: string,
+    context: ActionSigningContext,
     abortSignal?: AbortSignal,
   ): Promise<Signature> {
     if (abortSignal?.aborted) {
@@ -95,19 +103,22 @@ export class RenownCryptoSigner implements ISigner {
     }
 
     const timestamp = (new Date().getTime() / 1000).toFixed(0);
-    const hash = await this.hashAction(action);
+    const hash = await hashActionV2(context.documentId, action);
 
     if (abortSignal?.aborted) {
       throw new Error("Signing aborted");
     }
 
-    const params: [string, string, string, string] = [
+    // The scheme is signed as well as carried, so it cannot be relabelled to
+    // steer the verifier at a weaker preimage (#2894).
+    const signed: [string, string, string, string, string] = [
       timestamp,
       this.crypto.did,
       hash,
       hashField,
+      SIGNATURE_SCHEME_V2,
     ];
-    const message = this.buildSignatureMessage(params);
+    const message = buildSignatureMessageV2(signed);
     const signatureBytes = await this.crypto.sign(message);
     const signatureHex = `0x${this.arrayBufferToHex(signatureBytes)}`;
 
@@ -115,23 +126,14 @@ export class RenownCryptoSigner implements ISigner {
       throw new Error("Signing aborted");
     }
 
-    return [...params, signatureHex];
-  }
-
-  private async hashAction(action: Action): Promise<string> {
-    // The signer binds the signature to the document the action was stamped
-    // for, when it knows it (#2894); a signer without a document id signs the
-    // document-agnostic form, which the verifier still accepts.
-    return hashActionContentSha256(action.context?.documentId ?? "", action);
-  }
-
-  private buildSignatureMessage(
-    params: [string, string, string, string],
-  ): Uint8Array {
-    const message = params.join("");
-    const prefix = "\x19Signed Operation:\n" + message.length.toString();
-    const encoder = new TextEncoder();
-    return encoder.encode(prefix + message);
+    return [
+      timestamp,
+      this.crypto.did,
+      hash,
+      hashField,
+      signatureHex,
+      SIGNATURE_SCHEME_V2,
+    ];
   }
 
   private arrayBufferToHex(buffer: Uint8Array | ArrayBuffer): string {
@@ -143,17 +145,28 @@ export class RenownCryptoSigner implements ISigner {
   }
 }
 
+export type SignatureVerifierOptions = {
+  /**
+   * Accept signatures written before the scheme field existed. Those schemes
+   * include a document-agnostic preimage, so a legacy signature can still be
+   * replayed onto another document; the flag exists so a deployment with no
+   * legacy signatures left in storage can refuse them (#2894).
+   */
+  allowLegacySignatures?: boolean;
+};
+
 /**
  * Creates a signature verification handler that verifies signatures using the Web Crypto API.
  * The verification uses ECDSA with P-256 curve and SHA-256 hash, matching the RenownCrypto signing algorithm.
  */
 export function createSignatureVerifier(
   requireSignature = false,
+  { allowLegacySignatures = true }: SignatureVerifierOptions = {},
 ): SignatureVerificationHandler {
   return async (
     operation: Operation,
     publicKey: string,
-    context?: SignatureVerificationContext,
+    context: SignatureVerificationContext,
   ): Promise<boolean> => {
     // A runtime payload can be missing its action even though the type says
     // otherwise. Such an operation carries no signer, so it is treated as
@@ -176,27 +189,39 @@ export function createSignatureVerifier(
       return false;
     }
 
-    // Bind the signature to the action: recompute the action hash from the
-    // action being verified and refuse it if the hash the signature claims
-    // matches none of the preimages the action actually carries. A signature
-    // must describe the action - and, where the verifier knows it, the
-    // document - it is attached to, not merely be a valid signature over
-    // itself (#2894).
-    const candidates = await computeActionHashCandidates(
-      context?.documentId ?? "",
-      action,
-    );
-    if (!candidates.includes(hash)) {
+    const scheme = signatureScheme(signature);
+    if (scheme === SIGNATURE_SCHEME_LEGACY && !allowLegacySignatures) {
       return false;
     }
 
-    const params: [string, string, string, string] = [
-      timestamp,
-      signerKey,
-      hash,
-      prevStateHash,
-    ];
-    const message = buildSignatureMessage(params);
+    // Bind the signature to the action: recompute the action hash from the
+    // action being verified and refuse it if the hash the signature claims
+    // matches none of the preimages the action actually carries. A signature
+    // must describe the action, and the document it is attached to, not merely
+    // be a valid signature over itself (#2894).
+    //
+    // The scheme is read from the tuple before the signature is verified,
+    // which is safe because each scheme's hash commits to its own name: a
+    // relabelled signature matches no hash the relabelled scheme computes.
+    const expected = await expectedActionHashes(
+      scheme,
+      context.documentId,
+      action,
+    );
+    if (!expected.includes(hash)) {
+      return false;
+    }
+
+    const message =
+      scheme === SIGNATURE_SCHEME_V2
+        ? buildSignatureMessageV2([
+            timestamp,
+            signerKey,
+            hash,
+            prevStateHash,
+            scheme,
+          ])
+        : buildSignatureMessage([timestamp, signerKey, hash, prevStateHash]);
     const signatureBytes = hexToUint8Array(signatureHex);
 
     const cryptoKey = await importPublicKey(publicKey);

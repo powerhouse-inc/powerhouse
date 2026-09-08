@@ -2,6 +2,9 @@ import type { Action, Signature } from "@powerhousedao/shared/document-model";
 import {
   ab2hex,
   deriveOperationId,
+  hashActionContentSha256,
+  SIGNATURE_SCHEME_LEGACY,
+  SIGNATURE_SCHEME_V2,
   type Operation,
 } from "@powerhousedao/shared/document-model";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -19,6 +22,9 @@ import {
 const TEST_DOC_ID = "test-doc-id";
 const TEST_BRANCH = "main";
 const TEST_SCOPE = "global";
+
+/** The document every signature in this file is signed for. */
+const SIGNING_CONTEXT = { documentId: TEST_DOC_ID };
 
 function createTestAction(options?: {
   prevOpHash?: string;
@@ -113,6 +119,32 @@ describe("RenownCryptoSigner", () => {
     verifier = createSignatureVerifier();
   });
 
+  /**
+   * Signs a tuple the way a pre-scheme signer did: the four legacy params
+   * concatenated, with SIGNATURE_SCHEME_LEGACY named explicitly so the
+   * signature under test is unambiguously a legacy one.
+   */
+  async function signLegacy(
+    hash: string,
+    prevStateHash = "",
+  ): Promise<Signature> {
+    const timestamp = "1700000000";
+    const message = [timestamp, signer.app.key, hash, prevStateHash].join("");
+    const signed = await signer.sign(
+      new TextEncoder().encode(
+        "\x19Signed Operation:\n" + message.length + message,
+      ),
+    );
+    return [
+      timestamp,
+      signer.app.key,
+      hash,
+      prevStateHash,
+      `0x${ab2hex(signed)}`,
+      SIGNATURE_SCHEME_LEGACY,
+    ];
+  }
+
   describe("signActionWithResultingState", () => {
     it("should include resultingStateHash in signature element [3]", async () => {
       const action = createTestAction();
@@ -121,9 +153,11 @@ describe("RenownCryptoSigner", () => {
       const signature = await signer.signActionWithResultingState(
         action,
         resultingHash,
+        SIGNING_CONTEXT,
       );
 
-      expect(signature).toHaveLength(5);
+      expect(signature).toHaveLength(6);
+      expect(signature[5]).toBe(SIGNATURE_SCHEME_V2);
       expect(signature[3]).toContain(":");
       expect(signature[3]).toContain(resultingHash);
     });
@@ -135,6 +169,7 @@ describe("RenownCryptoSigner", () => {
       const signature = await signer.signActionWithResultingState(
         action,
         resultingHash,
+        SIGNING_CONTEXT,
       );
 
       expect(signature[3]).toBe("prev-hash-xyz:resulting-hash-abc123");
@@ -147,6 +182,7 @@ describe("RenownCryptoSigner", () => {
       const signature = await signer.signActionWithResultingState(
         action,
         resultingHash,
+        SIGNING_CONTEXT,
       );
 
       expect(signature[3]).toBe(":resulting-hash-abc123");
@@ -159,16 +195,17 @@ describe("RenownCryptoSigner", () => {
       const signature = await signer.signActionWithResultingState(
         action,
         resultingHash,
+        SIGNING_CONTEXT,
       );
 
-      // The signature should still be cryptographically valid
-      // (verification rebuilds message from params[0-3])
+      // The signature should still be cryptographically valid: verification
+      // rebuilds the v2 message from params[0-3] and the scheme at [5].
       const operation = createOperationWithSignature(
         action,
         signature,
         signer.app.key,
       );
-      const result = await verifier(operation, signer.app.key);
+      const result = await verifier(operation, signer.app.key, SIGNING_CONTEXT);
 
       expect(result).toBe(true);
     });
@@ -179,7 +216,12 @@ describe("RenownCryptoSigner", () => {
       controller.abort();
 
       await expect(
-        signer.signActionWithResultingState(action, "hash", controller.signal),
+        signer.signActionWithResultingState(
+          action,
+          "hash",
+          SIGNING_CONTEXT,
+          controller.signal,
+        ),
       ).rejects.toThrow("Signing aborted");
     });
 
@@ -187,10 +229,11 @@ describe("RenownCryptoSigner", () => {
       const action = createTestAction({ prevOpHash: "prev-hash" });
       const resultingHash = "resulting-hash";
 
-      const sig1 = await signer.signAction(action);
+      const sig1 = await signer.signAction(action, SIGNING_CONTEXT);
       const sig2 = await signer.signActionWithResultingState(
         action,
         resultingHash,
+        SIGNING_CONTEXT,
       );
 
       // Element [3] should differ
@@ -204,7 +247,11 @@ describe("RenownCryptoSigner", () => {
     it("should handle empty resultingStateHash", async () => {
       const action = createTestAction({ prevOpHash: "prev-hash" });
 
-      const signature = await signer.signActionWithResultingState(action, "");
+      const signature = await signer.signActionWithResultingState(
+        action,
+        "",
+        SIGNING_CONTEXT,
+      );
 
       expect(signature[3]).toBe("prev-hash:");
     });
@@ -212,7 +259,11 @@ describe("RenownCryptoSigner", () => {
     it("should handle both empty hashes", async () => {
       const action = createTestAction(); // no prevOpHash
 
-      const signature = await signer.signActionWithResultingState(action, "");
+      const signature = await signer.signActionWithResultingState(
+        action,
+        "",
+        SIGNING_CONTEXT,
+      );
 
       expect(signature[3]).toBe(":");
     });
@@ -224,6 +275,7 @@ describe("RenownCryptoSigner", () => {
       const signature = await signer.signActionWithResultingState(
         action,
         "hash",
+        SIGNING_CONTEXT,
       );
 
       // Allow 2 second tolerance for timing variations
@@ -240,6 +292,7 @@ describe("RenownCryptoSigner", () => {
       const signature = await signer.signActionWithResultingState(
         action,
         "hash",
+        SIGNING_CONTEXT,
       );
 
       expect(signature[1]).toBe(renownCrypto.did);
@@ -252,6 +305,7 @@ describe("RenownCryptoSigner", () => {
       const signature = await signer.signActionWithResultingState(
         action,
         "hash",
+        SIGNING_CONTEXT,
       );
 
       // Hash should be a non-empty base64 string
@@ -265,6 +319,7 @@ describe("RenownCryptoSigner", () => {
       const signature = await signer.signActionWithResultingState(
         action,
         "hash",
+        SIGNING_CONTEXT,
       );
 
       expect(signature[4].startsWith("0x")).toBe(true);
@@ -275,19 +330,21 @@ describe("RenownCryptoSigner", () => {
   describe("createSignatureVerifier binding", () => {
     it("verifies a genuinely signed action", async () => {
       const action = createTestAction();
-      const signature = await signer.signAction(action);
+      const signature = await signer.signAction(action, SIGNING_CONTEXT);
       const operation = createOperationWithSignature(
         action,
         signature,
         signer.app.key,
       );
 
-      await expect(verifier(operation, signer.app.key)).resolves.toBe(true);
+      await expect(
+        verifier(operation, signer.app.key, SIGNING_CONTEXT),
+      ).resolves.toBe(true);
     });
 
     it("rejects a signature reattached to a different input", async () => {
       const action = createTestAction();
-      const signature = await signer.signAction(action);
+      const signature = await signer.signAction(action, SIGNING_CONTEXT);
       const replayed: Action = { ...action, input: { foo: "tampered" } };
       const operation = createOperationWithSignature(
         replayed,
@@ -295,12 +352,14 @@ describe("RenownCryptoSigner", () => {
         signer.app.key,
       );
 
-      await expect(verifier(operation, signer.app.key)).resolves.toBe(false);
+      await expect(
+        verifier(operation, signer.app.key, SIGNING_CONTEXT),
+      ).resolves.toBe(false);
     });
 
     it("rejects a signature reattached to a different type and scope", async () => {
       const action = createTestAction();
-      const signature = await signer.signAction(action);
+      const signature = await signer.signAction(action, SIGNING_CONTEXT);
       const replayed: Action = {
         ...action,
         type: "OTHER_ACTION",
@@ -312,7 +371,9 @@ describe("RenownCryptoSigner", () => {
         signer.app.key,
       );
 
-      await expect(verifier(operation, signer.app.key)).resolves.toBe(false);
+      await expect(
+        verifier(operation, signer.app.key, SIGNING_CONTEXT),
+      ).resolves.toBe(false);
     });
 
     it("rejects a signature made by a different key than the claimed signer", async () => {
@@ -321,19 +382,21 @@ describe("RenownCryptoSigner", () => {
         .build();
       const otherSigner = new RenownCryptoSigner(otherCrypto, "test-app");
       const action = createTestAction();
-      const signature = await otherSigner.signAction(action);
+      const signature = await otherSigner.signAction(action, SIGNING_CONTEXT);
       const operation = createOperationWithSignature(
         action,
         signature,
         signer.app.key,
       );
 
-      await expect(verifier(operation, signer.app.key)).resolves.toBe(false);
+      await expect(
+        verifier(operation, signer.app.key, SIGNING_CONTEXT),
+      ).resolves.toBe(false);
     });
 
     it("binds when the executor invokes the verifier with the document context", async () => {
       const action = createTestAction();
-      const signature = await signer.signAction(action);
+      const signature = await signer.signAction(action, SIGNING_CONTEXT);
       const operation = createOperationWithSignature(
         action,
         signature,
@@ -361,7 +424,7 @@ describe("RenownCryptoSigner", () => {
     it("verifies a signature whose action came back from a key-reordering store", async () => {
       const input = { z: 1, a: 2, m: { q: 1, b: 2 } };
       const action = createTestAction({ input });
-      const signature = await signer.signAction(action);
+      const signature = await signer.signAction(action, SIGNING_CONTEXT);
 
       // The action round-tripped through storage and its keys came back in
       // a different order. The binding must follow the content, not the key
@@ -375,6 +438,7 @@ describe("RenownCryptoSigner", () => {
         verifier(
           createOperationWithSignature(stored, signature, signer.app.key),
           signer.app.key,
+          SIGNING_CONTEXT,
         ),
       ).resolves.toBe(true);
     });
@@ -384,30 +448,19 @@ describe("RenownCryptoSigner", () => {
 
       // A signature made before the preimage was canonicalized hashed the
       // input's insertion-order JSON. Rebuild that message and sign it the
-      // way the old signer did.
+      // way the old signer did. This only holds for a legacy-scheme
+      // signature: the candidate set exists for those alone.
       const legacyHash = await hashPreimageBase64(
         [action.scope, action.type, JSON.stringify(action.input)].join(""),
       );
-      const timestamp = "1700000000";
-      const message = [timestamp, signer.app.key, legacyHash, ""].join("");
-      const signed = await signer.sign(
-        new TextEncoder().encode(
-          "\x19Signed Operation:\n" + message.length + message,
-        ),
-      );
-      const signature: Signature = [
-        timestamp,
-        signer.app.key,
-        legacyHash,
-        "",
-        `0x${ab2hex(signed)}`,
-      ];
+      const signature = await signLegacy(legacyHash);
 
       // Unchanged text: the insertion-order candidate matches.
       await expect(
         verifier(
           createOperationWithSignature(action, signature, signer.app.key),
           signer.app.key,
+          SIGNING_CONTEXT,
         ),
       ).resolves.toBe(true);
 
@@ -423,6 +476,7 @@ describe("RenownCryptoSigner", () => {
         verifier(
           createOperationWithSignature(stored, signature, signer.app.key),
           signer.app.key,
+          SIGNING_CONTEXT,
         ),
       ).resolves.toBe(false);
 
@@ -432,16 +486,14 @@ describe("RenownCryptoSigner", () => {
         verifier(
           createOperationWithSignature(tampered, signature, signer.app.key),
           signer.app.key,
+          SIGNING_CONTEXT,
         ),
       ).resolves.toBe(false);
     });
 
     it("binds a signature to the document it was signed for", async () => {
-      const action = {
-        ...createTestAction(),
-        context: { documentId: TEST_DOC_ID },
-      };
-      const signature = await signer.signAction(action);
+      const action = createTestAction();
+      const signature = await signer.signAction(action, SIGNING_CONTEXT);
       const operation = createOperationWithSignature(
         action,
         signature,
@@ -454,11 +506,8 @@ describe("RenownCryptoSigner", () => {
     });
 
     it("rejects a document-bound signature replayed onto a different document", async () => {
-      const action = {
-        ...createTestAction(),
-        context: { documentId: TEST_DOC_ID },
-      };
-      const signature = await signer.signAction(action);
+      const action = createTestAction();
+      const signature = await signer.signAction(action, SIGNING_CONTEXT);
       const operation = createOperationWithSignature(
         action,
         signature,
@@ -473,26 +522,31 @@ describe("RenownCryptoSigner", () => {
       ).resolves.toBe(false);
     });
 
-    it("rejects a document-bound signature when the verifier has no document", async () => {
-      const action = {
-        ...createTestAction(),
-        context: { documentId: TEST_DOC_ID },
-      };
-      const signature = await signer.signAction(action);
+    it("rejects a document-bound signature verified against no document", async () => {
+      // The empty id is what a document-agnostic verifier computes against. A
+      // v2 signature commits to a real document, so it must not match (#2894).
+      const action = createTestAction();
+      const signature = await signer.signAction(action, SIGNING_CONTEXT);
       const operation = createOperationWithSignature(
         action,
         signature,
         signer.app.key,
       );
 
-      await expect(verifier(operation, signer.app.key)).resolves.toBe(false);
+      await expect(
+        verifier(operation, signer.app.key, { documentId: "" }),
+      ).resolves.toBe(false);
     });
 
     it("still verifies a legacy, document-agnostic signature in a document context", async () => {
       // Migration: signatures made before the preimage included the document
       // id - or by a signer that does not know it - keep verifying (#2894).
+      // Only SIGNATURE_SCHEME_LEGACY signatures get this, which is why new
+      // signatures are v2.
       const action = createTestAction();
-      const signature = await signer.signAction(action);
+      const signature = await signLegacy(
+        await hashActionContentSha256("", action),
+      );
       const operation = createOperationWithSignature(
         action,
         signature,
@@ -504,10 +558,71 @@ describe("RenownCryptoSigner", () => {
       ).resolves.toBe(true);
     });
 
+    it("rejects a v2 signature relabelled as legacy", async () => {
+      // The v2 hash commits to its own scheme name, so relabelling steers the
+      // verifier at legacy preimages the hash cannot match (#2894).
+      const action = createTestAction();
+      const signature = await signer.signAction(action, SIGNING_CONTEXT);
+      expect(signature[5]).toBe(SIGNATURE_SCHEME_V2);
+
+      const relabelled: Signature = [
+        signature[0],
+        signature[1],
+        signature[2],
+        signature[3],
+        signature[4],
+        SIGNATURE_SCHEME_LEGACY,
+      ];
+
+      await expect(
+        verifier(
+          createOperationWithSignature(action, relabelled, signer.app.key),
+          signer.app.key,
+          SIGNING_CONTEXT,
+        ),
+      ).resolves.toBe(false);
+    });
+
+    it("rejects a legacy signature relabelled as v2", async () => {
+      const action = createTestAction();
+      const signature = await signLegacy(
+        await hashActionContentSha256(TEST_DOC_ID, action),
+      );
+
+      // The same signature verifies as what it is.
+      await expect(
+        verifier(
+          createOperationWithSignature(action, signature, signer.app.key),
+          signer.app.key,
+          SIGNING_CONTEXT,
+        ),
+      ).resolves.toBe(true);
+
+      const relabelled: Signature = [
+        signature[0],
+        signature[1],
+        signature[2],
+        signature[3],
+        signature[4],
+        SIGNATURE_SCHEME_V2,
+      ];
+
+      await expect(
+        verifier(
+          createOperationWithSignature(action, relabelled, signer.app.key),
+          signer.app.key,
+          SIGNING_CONTEXT,
+        ),
+      ).resolves.toBe(false);
+    });
+
     it("treats an operation without an action as unsigned instead of throwing", async () => {
       // A runtime payload can be missing its action even though the type
       // says otherwise; the handler must fail closed, not throw (#2894).
-      const signature = await signer.signAction(createTestAction());
+      const signature = await signer.signAction(
+        createTestAction(),
+        SIGNING_CONTEXT,
+      );
       const broken = {
         ...createOperationWithSignature(
           createTestAction(),
@@ -517,9 +632,11 @@ describe("RenownCryptoSigner", () => {
         action: undefined,
       } as unknown as Operation;
 
-      await expect(verifier(broken, signer.app.key)).resolves.toBe(true);
       await expect(
-        createSignatureVerifier(true)(broken, signer.app.key),
+        verifier(broken, signer.app.key, SIGNING_CONTEXT),
+      ).resolves.toBe(true);
+      await expect(
+        createSignatureVerifier(true)(broken, signer.app.key, SIGNING_CONTEXT),
       ).resolves.toBe(false);
     });
   });

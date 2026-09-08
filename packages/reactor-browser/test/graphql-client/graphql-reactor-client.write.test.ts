@@ -489,7 +489,9 @@ describe("GraphQLReactorClient.execute", () => {
     }).execute("doc-1", "main", batch, controller.signal);
 
     for (const call of signAction.mock.calls) {
-      expect(call[1]).toBe(controller.signal);
+      // The signature binds to the document being written (#2894).
+      expect(call[1]).toEqual({ documentId: "doc-1" });
+      expect(call[2]).toBe(controller.signal);
     }
   });
 

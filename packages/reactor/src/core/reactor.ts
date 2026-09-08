@@ -485,7 +485,7 @@ export class Reactor implements IReactor {
 
     let actions: Action[] = [createAction, upgradeAction];
     if (signer) {
-      actions = await signActions(actions, signer, signal, document.header.id);
+      actions = await signActions(actions, signer, document.header.id, signal);
     }
 
     const jobId = uuidv4();
@@ -540,7 +540,7 @@ export class Reactor implements IReactor {
     let action = deleteDocumentAction(id);
 
     if (signer) {
-      action = await signAction(action, signer, signal, id);
+      action = await signAction(action, signer, id, signal);
     }
 
     const jobId = uuidv4();
@@ -912,7 +912,7 @@ export class Reactor implements IReactor {
     ];
 
     if (signer) {
-      actions = await signActions(actions, signer, signal, sourceId);
+      actions = await signActions(actions, signer, sourceId, signal);
     }
 
     return await this.execute(sourceId, branch, actions, signal);
@@ -941,7 +941,7 @@ export class Reactor implements IReactor {
     ];
 
     if (signer) {
-      actions = await signActions(actions, signer, signal, sourceId);
+      actions = await signActions(actions, signer, sourceId, signal);
     }
 
     return await this.execute(sourceId, branch, actions, signal);

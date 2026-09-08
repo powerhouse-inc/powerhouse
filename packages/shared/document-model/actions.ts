@@ -3,7 +3,8 @@ import {
   ab2hex,
   buildOperationSignatureMessage,
   buildOperationSignatureParams,
-  computeActionHashCandidates,
+  buildSignatureMessageV2,
+  expectedActionHashes,
   hex2ab,
 } from "./crypto.js";
 import type { PHDocument } from "./documents.js";
@@ -68,6 +69,7 @@ import type {
   Signature,
   UserActionSigner,
 } from "./signatures.js";
+import { SIGNATURE_SCHEME_V2, signatureScheme } from "./signatures.js";
 import type { PHBaseState } from "./state.js";
 import type {
   ActionSignatureContext,
@@ -394,9 +396,17 @@ export async function buildOperationSignature(
   signMethod: ActionSigningHandler,
 ): Promise<Signature> {
   const params = await buildOperationSignatureParams(context);
-  const message = buildOperationSignatureMessage(params);
+  const message = buildSignatureMessageV2(params);
   const signature = await signMethod(message);
-  return [...params, `0x${ab2hex(signature)}`];
+  const [timestamp, key, hash, previousStateHash, scheme] = params;
+  return [
+    timestamp,
+    key,
+    hash,
+    previousStateHash,
+    `0x${ab2hex(signature)}`,
+    scheme,
+  ];
 }
 
 export async function buildSignedAction<
@@ -450,7 +460,8 @@ export async function verifyOperationSignature(
   documentId?: string,
 ) {
   const publicKey = signer.app.key;
-  const params = signature.slice(0, 4) as [string, string, string, string];
+  const [timestamp, key, hash, previousStateHash] = signature;
+  const scheme = signatureScheme(signature);
 
   // Bind the signature to the action it claims to cover, when the caller has
   // one: its hash field must match the action being verified, not merely be a
@@ -458,17 +469,32 @@ export async function verifyOperationSignature(
   // historical three-argument shape - has nothing to bind against and
   // verifies as this function did before the binding existed.
   if (action) {
-    const candidates = await computeActionHashCandidates(
+    const expected = await expectedActionHashes(
+      scheme,
       documentId ?? "",
       action,
     );
-    if (!candidates.includes(params[2])) {
+    if (!expected.includes(hash)) {
       return false;
     }
   }
 
   const signatureBytes = hex2ab(signature[4]);
-  const expectedMessage = buildOperationSignatureMessage(params);
+  const expectedMessage =
+    scheme === SIGNATURE_SCHEME_V2
+      ? buildSignatureMessageV2([
+          timestamp,
+          key,
+          hash,
+          previousStateHash,
+          scheme,
+        ])
+      : buildOperationSignatureMessage([
+          timestamp,
+          key,
+          hash,
+          previousStateHash,
+        ]);
   return verifyHandler(publicKey, signatureBytes, expectedMessage);
 }
 
@@ -977,15 +1003,6 @@ export type ActionContext = {
 
   /** A nonce, to cover specific signing attacks and to prevent replay attacks from no-ops. */
   nonce?: string;
-
-  /**
-   * The id of the document the action was signed for. A signer that knows it
-   * folds it into the action hash, binding the signature to that document so
-   * it cannot be replayed onto another (#2894). Signing-side metadata only:
-   * the action's wire projection does not carry it, and the verifier uses the
-   * document it is checking against rather than this value.
-   */
-  documentId?: string;
 
   /** The signer of the action. */
   signer?: ActionSigner;

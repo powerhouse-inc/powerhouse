@@ -73,7 +73,7 @@ describe("Renown on script", () => {
     expect(
       operation.action.context?.signer?.signatures
         .flat()
-        .filter((sig) => sig.length > 0).length,
+        .filter((sig) => (sig?.length ?? 0) > 0).length,
     ).toBeGreaterThan(0);
   });
 
@@ -149,6 +149,7 @@ describe("Renown on script", () => {
     const signatureA = await signerA.signActionWithResultingState(
       actionWithContext,
       predictedResultingHash,
+      { documentId: doc.header.id },
     );
 
     // Verify signature has resulting-hash format: "prevOpHash:resultingHash"

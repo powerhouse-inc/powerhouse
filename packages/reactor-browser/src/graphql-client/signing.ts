@@ -33,8 +33,6 @@ export function stampAction(
       ...action.context,
       prevOpHash: hashDocumentStateForScope(document, action.scope),
       prevOpIndex: revision - 1,
-      // Binds the resulting signature to this document (#2894).
-      ...(document.header.id ? { documentId: document.header.id } : {}),
     },
   };
 }
@@ -48,8 +46,16 @@ export function stampAction(
 export async function signStampedAction(
   action: Action,
   signer: ISigner,
+  documentId: string,
   signal?: AbortSignal,
 ): Promise<Action> {
+  // The signature binds to this id; an empty one is unverifiable (#2894).
+  if (!documentId) {
+    throw new Error(
+      "cannot sign an action: no document id to bind the signature to",
+    );
+  }
+
   const actionSigner = action.context?.signer;
   const user = actionSigner?.user ?? signer.user;
   const app = actionSigner?.app ?? signer.app;
@@ -59,7 +65,7 @@ export async function signStampedAction(
     );
   }
 
-  const signature = await signer.signAction(action, signal);
+  const signature = await signer.signAction(action, { documentId }, signal);
   return {
     ...action,
     context: {
@@ -145,6 +151,7 @@ export async function prepareSignedActions(
       await signStampedAction(
         stampAction(actions[0], snapshot),
         signer,
+        snapshot.header.id,
         signal,
       ),
     ];
@@ -176,7 +183,12 @@ export async function prepareSignedActions(
     throwIfAborted(signal, index);
 
     const stamped = stampAction(action, working, revision);
-    const signedAction = await signStampedAction(stamped, signer, signal);
+    const signedAction = await signStampedAction(
+      stamped,
+      signer,
+      snapshot.header.id,
+      signal,
+    );
     signed.push(signedAction);
 
     // The last action's state is never hashed by anything, but reducing it

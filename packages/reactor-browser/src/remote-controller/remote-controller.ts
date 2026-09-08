@@ -475,8 +475,6 @@ export class RemoteDocumentController<
           ...action.context,
           prevOpHash,
           prevOpIndex,
-          // Binds the resulting signature to this document (#2894).
-          ...(this.documentId ? { documentId: this.documentId } : {}),
         },
       };
 
@@ -493,7 +491,15 @@ export class RemoteDocumentController<
   /** Sign an action using the configured signer, preserving existing signatures. */
   private async signAction(action: Action): Promise<Action> {
     const signer = this.options.signer!;
-    const signature = await signer.signAction(action);
+    // The signature binds to this id; an empty one is unverifiable (#2894).
+    if (this.documentId === "") {
+      throw new Error(
+        "Cannot sign: no document ID to bind the signature to. Call ensureRemoteDocument() first.",
+      );
+    }
+    const signature = await signer.signAction(action, {
+      documentId: this.documentId,
+    });
     const existingSignatures = action.context?.signer?.signatures ?? [];
     return {
       ...action,

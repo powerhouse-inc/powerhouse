@@ -12,10 +12,12 @@ import type {
   Operation,
   Signature,
 } from "@powerhousedao/shared/document-model";
+import { SIGNATURE_SCHEME_V2 } from "@powerhousedao/shared/document-model";
 import { deriveOperationId } from "@powerhousedao/shared/document-model";
 import { beforeEach, describe, expect, it } from "vitest";
 
 const TEST_DOC_ID = "test-doc-id";
+const SIGNING_CONTEXT = { documentId: TEST_DOC_ID };
 const TEST_BRANCH = "main";
 const TEST_SCOPE = "global";
 
@@ -47,10 +49,11 @@ describe("RenownCryptoSigner and Verifier Integration", () => {
       scope: "global",
     };
 
-    const signature = await signer.signAction(action);
+    const signature = await signer.signAction(action, SIGNING_CONTEXT);
 
-    expect(signature).toHaveLength(5);
-    const [timestamp, signerKey, hash, prevStateHash, signatureHex] = signature;
+    expect(signature).toHaveLength(6);
+    const [timestamp, signerKey, hash, prevStateHash, signatureHex, scheme] =
+      signature;
 
     expect(timestamp).toMatch(/^\d+$/);
     expect(signerKey.startsWith("did:key:z")).toBe(true);
@@ -58,6 +61,7 @@ describe("RenownCryptoSigner and Verifier Integration", () => {
     expect(prevStateHash).toBe("");
     expect(signatureHex.startsWith("0x")).toBe(true);
     expect(signatureHex.length).toBeGreaterThan(2);
+    expect(scheme).toBe(SIGNATURE_SCHEME_V2);
   });
 
   it("verifies a signature created by RenownCryptoSigner", async () => {
@@ -71,7 +75,7 @@ describe("RenownCryptoSigner and Verifier Integration", () => {
       scope: "global",
     };
 
-    const signature = await signer.signAction(action);
+    const signature = await signer.signAction(action, SIGNING_CONTEXT);
 
     const signedAction: Action = {
       ...action,
@@ -98,7 +102,7 @@ describe("RenownCryptoSigner and Verifier Integration", () => {
       action: signedAction,
     };
 
-    const isValid = await verifier(operation, did);
+    const isValid = await verifier(operation, did, { documentId: TEST_DOC_ID });
     expect(isValid).toBe(true);
   });
 
@@ -113,7 +117,7 @@ describe("RenownCryptoSigner and Verifier Integration", () => {
       scope: "global",
     };
 
-    const signature = await signer.signAction(action);
+    const signature = await signer.signAction(action, SIGNING_CONTEXT);
     const [timestamp, signerKey, hash, prevStateHash] = signature;
     const tamperedSignature: Signature = [
       timestamp,
@@ -148,7 +152,7 @@ describe("RenownCryptoSigner and Verifier Integration", () => {
       action: signedAction,
     };
 
-    const isValid = await verifier(operation, did);
+    const isValid = await verifier(operation, did, { documentId: TEST_DOC_ID });
     expect(isValid).toBe(false);
   });
 
@@ -163,7 +167,7 @@ describe("RenownCryptoSigner and Verifier Integration", () => {
       scope: "global",
     };
 
-    const signature = await signer.signAction(action);
+    const signature = await signer.signAction(action, SIGNING_CONTEXT);
 
     const signedAction: Action = {
       ...action,
@@ -192,7 +196,9 @@ describe("RenownCryptoSigner and Verifier Integration", () => {
 
     const wrongDid =
       "did:key:zDnaerDaTF5BXEavCrfRZEk316dpbLsfPDZ3WJ5hRTPFU2169";
-    const isValid = await verifier(operation, wrongDid);
+    const isValid = await verifier(operation, wrongDid, {
+      documentId: TEST_DOC_ID,
+    });
     expect(isValid).toBe(false);
   });
 
@@ -214,7 +220,9 @@ describe("RenownCryptoSigner and Verifier Integration", () => {
       action: action,
     };
 
-    const isValid = await verifier(operation, "any-key");
+    const isValid = await verifier(operation, "any-key", {
+      documentId: TEST_DOC_ID,
+    });
     expect(isValid).toBe(true);
   });
 
@@ -245,7 +253,7 @@ describe("RenownCryptoSigner and Verifier Integration", () => {
       action: action,
     };
 
-    const isValid = await verifier(operation, did);
+    const isValid = await verifier(operation, did, { documentId: TEST_DOC_ID });
     expect(isValid).toBe(false);
   });
 
@@ -263,7 +271,7 @@ describe("RenownCryptoSigner and Verifier Integration", () => {
       },
     };
 
-    const signature = await signer.signAction(action);
+    const signature = await signer.signAction(action, SIGNING_CONTEXT);
 
     const signedAction: Action = {
       ...action,
@@ -291,7 +299,7 @@ describe("RenownCryptoSigner and Verifier Integration", () => {
       action: signedAction,
     };
 
-    const isValid = await verifier(operation, did);
+    const isValid = await verifier(operation, did, { documentId: TEST_DOC_ID });
     expect(isValid).toBe(true);
 
     expect(signature[3]).toBe("abc123");
@@ -318,7 +326,7 @@ describe("RenownCryptoSigner and Verifier Integration", () => {
       scope: "document",
     };
 
-    const signature = await signer.signAction(action);
+    const signature = await signer.signAction(action, SIGNING_CONTEXT);
 
     const signedAction: Action = {
       ...action,
@@ -345,7 +353,7 @@ describe("RenownCryptoSigner and Verifier Integration", () => {
       action: signedAction,
     };
 
-    const isValid = await verifier(operation, did);
+    const isValid = await verifier(operation, did, { documentId: TEST_DOC_ID });
     expect(isValid).toBe(true);
   });
 
@@ -366,8 +374,8 @@ describe("RenownCryptoSigner and Verifier Integration", () => {
       scope: "global",
     };
 
-    const signature1 = await signer.signAction(action1);
-    const signature2 = await signer.signAction(action2);
+    const signature1 = await signer.signAction(action1, SIGNING_CONTEXT);
+    const signature2 = await signer.signAction(action2, SIGNING_CONTEXT);
 
     expect(signature1[2]).not.toBe(signature2[2]);
     expect(signature1[4]).not.toBe(signature2[4]);
@@ -384,7 +392,7 @@ describe("RenownCryptoSigner and Verifier Integration", () => {
       scope: "global",
     };
 
-    const signature = await signer.signAction(action);
+    const signature = await signer.signAction(action, SIGNING_CONTEXT);
 
     const newKeyStorage = new MemoryKeyStorage();
     const newRenownCrypto = await new RenownCryptoBuilder()
@@ -419,10 +427,14 @@ describe("RenownCryptoSigner and Verifier Integration", () => {
       action: signedAction,
     };
 
-    const isValidWithOriginalKey = await verifier(operation, did1);
+    const isValidWithOriginalKey = await verifier(operation, did1, {
+      documentId: TEST_DOC_ID,
+    });
     expect(isValidWithOriginalKey).toBe(true);
 
-    const isValidWithDifferentKey = await verifier(operation, did2);
+    const isValidWithDifferentKey = await verifier(operation, did2, {
+      documentId: TEST_DOC_ID,
+    });
     expect(isValidWithDifferentKey).toBe(false);
   });
 });
