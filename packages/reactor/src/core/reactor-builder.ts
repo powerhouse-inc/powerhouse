@@ -712,6 +712,10 @@ export class ReactorBuilder {
         ? await this.createProjectionShardManager(
             this.projectionShardConfig,
             eventBus,
+            {
+              "document-view": documentViewConsistencyTracker,
+              "document-indexer": documentIndexerConsistencyTracker,
+            },
           )
         : new ReadModelCoordinator(eventBus, readModelInstances, [
             subscriptionNotificationReadModel,
@@ -833,10 +837,19 @@ export class ReactorBuilder {
    * injected via {@link withProjectionWorkerFactory}. Calls
    * `manager.startup()` so all N workers reach READY before the reactor
    * is returned to the caller.
+   *
+   * @param consistencyTrackers The host's trackers for the built-in read
+   *   models, keyed by kind. Under sharding the host's own copies of those
+   *   models never index an operation, so the manager advances these from the
+   *   shards' relayed indexing reports; without them every read carrying a
+   *   consistency token waits forever.
    */
   private async createProjectionShardManager(
     config: ProjectionShardBuilderConfig,
     eventBus: IEventBus,
+    consistencyTrackers: Partial<
+      Record<BuiltInReadModelKind, IConsistencyTracker>
+    >,
   ): Promise<IReadModelCoordinator> {
     const baseDb = this.resolveReactorDbConfig();
     if (!baseDb) {
@@ -877,6 +890,7 @@ export class ReactorBuilder {
       drainTimeoutMs: config.drainTimeoutMs,
       chainDepthReportIntervalMs: config.chainDepthReportIntervalMs,
       poolInstrumentations,
+      consistencyTrackers,
     });
     await manager.startup();
     this.shutdownHooks.push(() => manager.shutdown());
