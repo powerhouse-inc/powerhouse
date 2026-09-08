@@ -1,4 +1,5 @@
 import type { Node } from "@powerhousedao/shared";
+import { expandBulkArchive } from "../actions/bulk-archive.js";
 import type { DragEventHandler } from "react";
 import {
   allPass,
@@ -17,6 +18,7 @@ import {
   split,
 } from "remeda";
 import { useIsDragAndDropEnabled } from "./config/editor.js";
+import { useSelectedDriveId } from "./selected-drive.js";
 import { useSelectedFolder } from "./selected-folder.js";
 import { useDropTarget } from "./use-drop-target.js";
 
@@ -67,6 +69,7 @@ export function useDropFile(
   const { isDropTarget, setTarget, unsetTarget } = useDropTarget();
   const isDragAndDropEnabled = useIsDragAndDropEnabled();
   const selectedFolder = useSelectedFolder();
+  const selectedDriveId = useSelectedDriveId();
 
   function handleDragEvent(event: React.DragEvent<Element>, cb?: () => void) {
     if (!isDragAndDropEnabled) return;
@@ -83,15 +86,29 @@ export function useDropFile(
     cb?.();
   }
 
-  const handleAddFiles = (event: React.DragEvent<Element>) =>
-    Promise.all(
-      pipe(
-        event,
-        getFileItems,
-        filter(hasAllowedExtension),
-        map((file) => handleAddFile(file, selectedFolder)),
-      ),
-    );
+  const handleAddFiles = async (event: React.DragEvent<Element>) => {
+    const dropped = pipe(event, getFileItems, filter(hasAllowedExtension));
+    const jobs: { file: File; parent: Node | undefined }[] = [];
+    for (const file of dropped) {
+      if (selectedDriveId) {
+        try {
+          const expanded = await expandBulkArchive(
+            file,
+            selectedDriveId,
+            selectedFolder,
+          );
+          jobs.push(...expanded);
+          continue;
+        } catch (error) {
+          // Not a readable bulk archive: fall through to the single-file
+          // path, which reports the failure in the upload list.
+          console.error("Bulk archive expansion failed", error);
+        }
+      }
+      jobs.push({ file, parent: selectedFolder });
+    }
+    await Promise.all(jobs.map((job) => handleAddFile(job.file, job.parent)));
+  };
 
   const onDragEnter: DragEventHandler = (event) => handleDragEvent(event);
 

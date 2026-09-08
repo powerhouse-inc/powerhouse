@@ -11,6 +11,7 @@ export {
   setPreferredEditorOnNode,
   upgradeDocument,
 } from "./document.js";
+export { expandBulkArchive, type BulkImportJob } from "./bulk-archive.js";
 export {
   buildFolderZip,
   downloadFolderZip,
