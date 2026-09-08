@@ -139,7 +139,7 @@ export const driveDocumentModel: DocumentModelGlobalState = {
               id: "qGCiPGpTt/cyz3HzyrBn92z30dsU=",
               name: "SET_DRIVE_ICON",
               description: "",
-              schema: "input SetDriveIconInput {\n    icon: String!\n}",
+              schema: "input SetDriveIconInput {\n    icon: String\n}",
               template: "",
               reducer: "",
               errors: [],
