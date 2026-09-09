@@ -1,3 +1,24 @@
+## 6.2.2-dev.85 (2026-09-09)
+
+### 🚀 Features
+
+- **reactor-api:** prefill GraphiQL explorer from explorerURLState ([f609aaaa0](https://github.com/powerhouse-inc/powerhouse/commit/f609aaaa0))
+
+### 🩹 Fixes
+
+- **reactor-api:** keep the slash inside the group when normalizing optional params ([cd30934bf](https://github.com/powerhouse-inc/powerhouse/commit/cd30934bf))
+- **reactor-api:** import lz-string via default export for Node ESM interop ([eb5c86d43](https://github.com/powerhouse-inc/powerhouse/commit/eb5c86d43))
+- **reactor-api:** render string defaultQuery + variables prop in GraphiQL ([2555cccf6](https://github.com/powerhouse-inc/powerhouse/commit/2555cccf6))
+- **reactor-api:** escape playground state before embedding it in the page script ([7e9e31394](https://github.com/powerhouse-inc/powerhouse/commit/7e9e31394))
+- **ci:** move @jsr registry mapping to the root .npmrc ([56092b254](https://github.com/powerhouse-inc/powerhouse/commit/56092b254))
+- **reactor-browser:** remove duplicate graphql dependency and clean lockfile ([472c42a1c](https://github.com/powerhouse-inc/powerhouse/commit/472c42a1c))
+- **reactor-browser:** prefill Switchboard link with document-scoped query ([db58970d3](https://github.com/powerhouse-inc/powerhouse/commit/db58970d3))
+- **reactor-api:** register explorer route at normalized path ([b3c037aa5](https://github.com/powerhouse-inc/powerhouse/commit/b3c037aa5))
+
+### ❤️ Thank You
+
+- froid1911
+
 ## 6.2.2-dev.84 (2026-09-09)
 
 ### 🚀 Features

@@ -1,3 +1,20 @@
+## 6.2.2-dev.85 (2026-09-09)
+
+### 🚀 Features
+
+- **reactor-api:** prefill GraphiQL explorer from explorerURLState ([f609aaaa0](https://github.com/powerhouse-inc/powerhouse/commit/f609aaaa0))
+
+### 🩹 Fixes
+
+- **codegen:** the generated project's install ignores the ambient minimumReleaseAge ([22f2a7a69](https://github.com/powerhouse-inc/powerhouse/commit/22f2a7a69))
+- **ci:** move @jsr registry mapping to the root .npmrc ([56092b254](https://github.com/powerhouse-inc/powerhouse/commit/56092b254))
+- **reactor-browser:** remove duplicate graphql dependency and clean lockfile ([472c42a1c](https://github.com/powerhouse-inc/powerhouse/commit/472c42a1c))
+- **reactor-browser:** prefill Switchboard link with document-scoped query ([db58970d3](https://github.com/powerhouse-inc/powerhouse/commit/db58970d3))
+
+### ❤️ Thank You
+
+- froid1911
+
 ## 6.2.2-dev.84 (2026-09-09)
 
 ### 🚀 Features
