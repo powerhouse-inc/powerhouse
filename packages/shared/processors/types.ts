@@ -3,6 +3,7 @@ import type { Action } from "../document-model/actions.js";
 import type { IAnalyticsStore } from "../analytics/types.js";
 import type { PHDocumentHeader } from "../document-model/documents.js";
 import type { PROCESSOR_APPS } from "./constants.js";
+import type { IHttpScope } from "./http.js";
 import type { IRelationalDb } from "./relational/types.js";
 
 export type ProcessorDispatchResult = {
@@ -29,6 +30,19 @@ export interface IProcessorHostModuleBase {
   dispatch: IProcessorDispatch;
   getReadModel<T>(name: string): T;
   config?: Map<string, unknown>;
+  /**
+   * The package's slice of the HTTP surface, bound to its own namespace.
+   *
+   * Declared on the host-agnostic base rather than on each host's module so
+   * the two cannot drift: codegen types generated processors against
+   * reactor-browser's `IProcessorHostModule`, and the same source has to
+   * compile against reactor-api's.
+   *
+   * Absent whenever the host has no HTTP server — processors also run in the
+   * browser — and on the reactor when the package's name cannot be resolved to
+   * a routable namespace, so a caller must always check before using it.
+   */
+  http?: IHttpScope;
 }
 
 /**
