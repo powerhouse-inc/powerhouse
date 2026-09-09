@@ -1,7 +1,10 @@
 # ============================================================
 # Base stage: node + pnpm + ph-cmd + initialized project
 # ============================================================
-FROM node:24-alpine AS base
+# The base stage only BUILDS (pnpm, ph init, ph connect build) and emits
+# arch-independent static output, so it always runs on the build platform.
+# The runtime targets below resolve their base image per target platform.
+FROM --platform=$BUILDPLATFORM node:24-alpine AS base
 
 WORKDIR /app
 

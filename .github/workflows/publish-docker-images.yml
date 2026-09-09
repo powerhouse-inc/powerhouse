@@ -88,6 +88,11 @@ jobs:
           else
             echo "ADDITIONAL_TAG=" >> $GITHUB_ENV
           fi
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -112,6 +117,7 @@ jobs:
           context: ${{ matrix.context }}
           file: ${{ matrix.dockerfile || format('{0}/Dockerfile', matrix.context) }}
           target: ${{ matrix.target || '' }}
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: |
             ${{ matrix.harbor_only != true && format('{0}/{1}/{2}:{3}', env.REGISTRY, github.repository, matrix.image, env.GITHUB_TAG) || '' }}
