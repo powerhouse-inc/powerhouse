@@ -73,6 +73,13 @@ import {
 import type { IHttpAdapter, TlsOptions } from "./graphql/gateway/types.js";
 import { GraphQLManager } from "./graphql/graphql-manager.js";
 import {
+  CORE_PACKAGE_NAME,
+  HttpRouteService,
+  RelationalWebhookStore,
+  WEBHOOK_SEGMENT,
+  WebhookService,
+} from "./http/index.js";
+import {
   decodeExplorerUrlState,
   renderGraphqlPlayground,
 } from "./graphql/playground.js";
@@ -406,6 +413,7 @@ async function setupGraphQLManager(
   port?: number,
   reactorDriveClient?: IDriveClient,
   syncServingGate?: SyncScopeGate,
+  httpRoutes?: HttpRouteService,
 ): Promise<GraphQLManager> {
   const graphqlManager = new GraphQLManager(
     config.basePath,
@@ -427,6 +435,7 @@ async function setupGraphQLManager(
     authorizationService,
     reactorDriveClient,
     syncServingGate,
+    httpRoutes,
   );
 
   await graphqlManager.init(
@@ -458,7 +467,7 @@ function setupEventListeners(
   pkgManager: PackageManager,
   graphqlManager: GraphQLManager,
   reactorProcessorManager: IReactorProcessorManager,
-  module: IProcessorHostModule,
+  moduleFor: (packageName: string) => IProcessorHostModule,
   documentModelRegistry?: IDocumentModelRegistry,
 ): void {
   pkgManager.onDocumentModelsChange((packagedModels) => {
@@ -564,7 +573,8 @@ function setupEventListeners(
       for (const [packageName, fns] of processors) {
         await reactorProcessorManager.unregisterFactory(packageName);
 
-        const factories = fns.map((fn) => fn(module));
+        const factories = fns.map((fn) => fn(moduleFor(packageName)));
+
         const validBuilders = factories.filter(
           (factory): factory is ProcessorFactory =>
             typeof factory === "function",
@@ -647,6 +657,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   packages: PackageManager;
   dbClosers: Array<() => Promise<void>>;
   readiness: ReadinessGate;
+  httpRoutes: HttpRouteService;
 }> {
   const port = options.port ?? DEFAULT_PORT;
   const { adapter: httpAdapter } = await createHttpAdapter("express");
@@ -942,9 +953,42 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     packages: options.packages ?? [],
   });
 
+  // Package routes hang off <basePath>/api, webhooks off <basePath>/webhooks.
+  // Created here rather than in the GraphQL manager because processors are
+  // initialised before it exists.
+  //
+  // Webhook tokens live in the reactor's own database rather than per host, so
+  // a URL a provider has registered keeps working across a restart and any
+  // replica can serve it.
+  const publicUrl = resolvePublicOrigin(port);
+  const webhooks = new WebhookService({
+    store: new RelationalWebhookStore(relationalDb),
+    basePath: config.basePath,
+    publicUrl,
+  });
+  const httpRoutes = new HttpRouteService({
+    httpAdapter,
+    basePath: config.basePath,
+    authService,
+    webhooks,
+    publicUrl,
+    // The reactor sits behind switchboard-lb in every deployed topology, so the
+    // forwarded headers naming the public origin come from the balancer, not a caller.
+    trustProxy: true,
+  });
+  // The endpoint family serves from a host scope rather than the adapter, so
+  // one dispatch path covers package routes and webhooks alike.
+  webhooks.attach(
+    httpRoutes.hostScope(
+      CORE_PACKAGE_NAME,
+      path.posix.join("/", config.basePath ?? "/", WEBHOOK_SEGMENT),
+    ),
+  );
+
   return {
     port,
     httpAdapter,
+    httpRoutes,
     authFetchMiddleware,
     requireAuthFetchMiddleware,
     authService,
@@ -989,8 +1033,9 @@ async function _setupAPI(
   dbClosers: Array<() => Promise<void>> = [],
   reactorDriveClient?: IDriveClient,
   syncServingGate?: SyncScopeGate,
+  httpRoutes?: HttpRouteService,
 ): Promise<API> {
-  const hostModule: IProcessorHostModule = {
+  const hostModuleBase: IProcessorHostModule = {
     ...createReactorHostModuleBase({
       client: reactorClient,
       readModels,
@@ -1001,6 +1046,13 @@ async function _setupAPI(
     }),
     attachments: createAttachmentClient(attachments.service),
   };
+
+  // Per package, so a processor's HTTP scope is bound to its own namespace and
+  // cannot be swapped for another package's. Everything else is shared.
+  const moduleFor = (packageName: string): IProcessorHostModule => ({
+    ...hostModuleBase,
+    http: httpRoutes?.scopeForOrNull(packageName),
+  });
   const mcpServerEnabled = options.mcp ?? true;
 
   const logger = options.logger ?? defaultLogger;
@@ -1019,7 +1071,7 @@ async function _setupAPI(
     const factories = await Promise.allSettled(
       fns.map(async (fn) => {
         try {
-          return fn(hostModule);
+          return fn(moduleFor(packageName));
         } catch (e) {
           logger.error(
             `Error initializing processor factory for package ${packageName}:`,
@@ -1131,6 +1183,7 @@ async function _setupAPI(
     port,
     reactorDriveClient,
     syncServingGate,
+    httpRoutes,
   );
 
   // Set up event listeners
@@ -1138,7 +1191,7 @@ async function _setupAPI(
     packages,
     graphqlManager,
     reactorProcessorManager,
-    hostModule,
+    moduleFor,
     documentModelRegistry,
   );
 
@@ -1159,6 +1212,7 @@ async function _setupAPI(
 
   const dispose = buildApiDispose({
     graphqlManager,
+    httpRoutes,
     httpServer,
     wsServer,
     dbClosers,
@@ -1167,6 +1221,7 @@ async function _setupAPI(
 
   return {
     httpAdapter,
+    httpRoutes: httpRoutes ?? new HttpRouteService({ httpAdapter }),
     graphqlManager,
     packages,
     attachments,
@@ -1186,16 +1241,34 @@ async function _setupAPI(
  */
 function buildApiDispose(args: {
   graphqlManager: GraphQLManager;
+  httpRoutes?: HttpRouteService;
   httpServer: http.Server;
   wsServer: WebSocketServer;
   dbClosers: Array<() => Promise<void>>;
   logger: ILogger;
 }): () => Promise<void> {
-  const { graphqlManager, httpServer, wsServer, dbClosers, logger } = args;
+  const {
+    graphqlManager,
+    httpRoutes,
+    httpServer,
+    wsServer,
+    dbClosers,
+    logger,
+  } = args;
   let disposed = false;
   return async () => {
     if (disposed) return;
     disposed = true;
+
+    // Before the server closes: every package scope, and the host scopes with
+    // them. Nothing downstream depends on the routes still being mounted, and
+    // a handler answering during teardown is a handler holding a disposed
+    // dependency.
+    try {
+      httpRoutes?.disposeAll();
+    } catch (error) {
+      logger.error("API dispose: releasing HTTP routes failed: @error", error);
+    }
 
     try {
       await graphqlManager.shutdown();
@@ -1285,6 +1358,7 @@ export async function initializeAndStartAPI(
   const {
     port,
     httpAdapter,
+    httpRoutes,
     authFetchMiddleware,
     requireAuthFetchMiddleware,
     authService,
@@ -1375,6 +1449,7 @@ export async function initializeAndStartAPI(
       authorizationConfig,
       options.logger ?? defaultLogger,
     ),
+    httpRoutes,
   );
 
   return {
@@ -1386,4 +1461,26 @@ export async function initializeAndStartAPI(
     attachmentReferenceProjection,
     packageManager: packages,
   };
+}
+
+/**
+ * The origin to advertise in a webhook URL.
+ *
+ * A provider is a third party: it has to be given something it can resolve, so
+ * a relative path is not an option. The platform variables come first, then a
+ * bare deploy domain, and finally the local origin — which is right for `ph
+ * dev` behind a tunnel and, at worst, obviously wrong rather than silently
+ * unusable.
+ */
+function resolvePublicOrigin(port: number): string {
+  const explicit = process.env.PUBLIC_URL ?? process.env.RENDER_EXTERNAL_URL;
+  if (explicit) return withScheme(explicit);
+  const domain = process.env.HEROKU_APP_DEFAULT_DOMAIN_NAME;
+  if (domain) return withScheme(domain);
+  return `http://localhost:${port}`;
+}
+
+function withScheme(origin: string): string {
+  const trimmed = origin.replace(/\/+$/, "");
+  return /^https?:\/\//.test(trimmed) ? trimmed : `https://${trimmed}`;
 }
