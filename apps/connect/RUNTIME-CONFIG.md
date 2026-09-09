@@ -260,6 +260,11 @@ Edit the project's `powerhouse.config.json`, set `"packageRegistryUrl": "https:/
 **"I want default drives to load automatically."**
 `ph connect config --default-drives-url https://drive-a, https://drive-b`. The CSV is parsed into `connect.drives.defaultDrives[]` objects.
 
+**"I want my project to boot with a preconfigured local drive."**
+Add a local entry to `connect.drives.defaultDrives` in `powerhouse.config.json`:
+`{"local": true, "id": "my-drive", "name": "My Drive", "icon": "https://…", "app": "powerhouse/generic-drive-explorer"}`.
+On first boot Connect creates the drive in the user's local reactor with that id and opens the given app on it; later boots skip it (idempotent by id). The `--default-drives-url` flag only produces remote entries.
+
 **"I'm deploying the docker image to a new environment and need to override renown."**
 Set `PH_CONNECT_CONFIG_JSON='{"connect":{"renown":{"url":"https://renown.staging.example"}}}'` on the container. The entrypoint script deep-merges the JSON into the dist file before nginx starts (operator-wins); the SPA serves the new value on the very first request.
 

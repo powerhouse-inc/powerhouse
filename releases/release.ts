@@ -1,5 +1,5 @@
 import { boolean, command, flag, oneOf, option, run } from "cmd-ts";
-import { appendFileSync, existsSync } from "node:fs";
+import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import { ReleaseClient } from "nx/release";
 import type { ReleaseType } from "semver";
 import {
@@ -287,6 +287,7 @@ const app = command({
           gitCommit: false,
           gitTag: false,
           gitPush: false,
+          createRelease: false,
         });
         if (!changeLogDryRunResult.projectChangelogs) {
           throw new Error("No project changelogs were generated in dry run");
@@ -308,6 +309,9 @@ const app = command({
           stageChanges: false,
           gitPush: false,
           gitTag: false,
+          // nx creates the GitHub release before publish runs, and creating it
+          // tags the pre-bump commit. Released below instead, once git is durable.
+          createRelease: false,
         });
         if (!result.projectChangelogs) {
           throw new Error("No project changelogs were generated");
@@ -420,6 +424,9 @@ const app = command({
       // from reusing the version. Rebase the chore commit on top of the
       // latest remote tip and try again.
       pushWithRebaseRetry({ workspaceVersion, gitTag });
+      if (!dryRun && gitTag) {
+        createRemoteRelease(`v${workspaceVersion}`, workspaceVersion, preid);
+      }
     }
     // Downstream jobs install from npm the moment this job ends; the registry
     // can lag the publish ack by minutes. Runs after the git side is durable.
@@ -469,6 +476,53 @@ function injectSentryDebugIds(): void {
         `sentry-cli sourcemaps inject failed for ${dir} (exit ${result.exitCode})`,
       );
     }
+  }
+}
+
+// Body for the GitHub release: the section nx just prepended to the root
+// changelog, heading included.
+function readChangelogSection(version: string): string {
+  if (!existsSync("CHANGELOG.md")) return "";
+
+  const contents = readFileSync("CHANGELOG.md", "utf8");
+  const sections = contents.split(/^## /m);
+  const latest = sections[1];
+  if (!latest || !latest.startsWith(version)) {
+    console.warn(
+      `Root changelog does not start with ${version}; releasing without notes.`,
+    );
+    return "";
+  }
+  return `## ${latest.trimEnd()}`;
+}
+
+// nx would do this during changelog generation, which tags the pre-bump commit
+// and leaves the tag behind when a later step fails. Runs after the push, so a
+// failed release leaves nothing to clean up.
+function createRemoteRelease(
+  tag: string,
+  workspaceVersion: string,
+  preid: string | undefined,
+): void {
+  const cmd = ["gh", "release", "create", tag, "--title", tag];
+  if (preid) {
+    cmd.push("--prerelease");
+  }
+  cmd.push("--notes", readChangelogSection(workspaceVersion));
+
+  console.log(`Creating the GitHub release with: gh release create ${tag}`);
+  const result = Bun.spawnSync({
+    cmd,
+    stdio: ["ignore", "inherit", "inherit"],
+    env: {
+      ...process.env,
+      GH_TOKEN: process.env.GH_TOKEN ?? process.env.GITHUB_TOKEN,
+    },
+  });
+  if (result.exitCode !== 0) {
+    console.warn(
+      `Failed to create the GitHub release for ${tag} (exit ${result.exitCode}). The tag is pushed; create the release manually or let publish-ph-binaries create it.`,
+    );
   }
 }
 

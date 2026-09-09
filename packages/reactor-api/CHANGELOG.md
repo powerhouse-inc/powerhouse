@@ -1,3 +1,56 @@
+## 6.2.2-dev.84 (2026-09-09)
+
+### 🚀 Features
+
+- download drive folders as zip archives with round-trip import ([#134](https://github.com/powerhouse-inc/powerhouse/pull/134), [#2986](https://github.com/powerhouse-inc/powerhouse/pull/2986))
+- **scripts:** add new-worktree.sh to create ready-to-test worktrees ([#2982](https://github.com/powerhouse-inc/powerhouse/pull/2982))
+- **gateway:** add unmount() to IHttpAdapter with registry-backed dispatch ([#2973](https://github.com/powerhouse-inc/powerhouse/issues/2973))
+
+### 🩹 Fixes
+
+- **reactor-api:** subgraph mount paths and names are host-owned ([#2976](https://github.com/powerhouse-inc/powerhouse/pull/2976))
+- **academy:** pin cross-env instead of catalog: so the Docker build resolves ([705d68a09](https://github.com/powerhouse-inc/powerhouse/commit/705d68a09))
+- **reactor-api:** pipe streamed response bodies in the express and fastify adapters ([#2971](https://github.com/powerhouse-inc/powerhouse/pull/2971))
+- **reactor-api:** uninstallPackage tears down everything the package registered ([#2973](https://github.com/powerhouse-inc/powerhouse/issues/2973))
+- **reactor-api:** drop package map keys on removal and add removePackage ([#2973](https://github.com/powerhouse-inc/powerhouse/issues/2973))
+- **reactor-api:** tear down subgraph routes when packages are removed ([#2973](https://github.com/powerhouse-inc/powerhouse/issues/2973))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5
+- Frank @froid1911
+- froid1911
+
+## 6.2.2-dev.83 (2026-09-08)
+
+### 🩹 Fixes
+
+- **release:** create the GitHub release after the push, not during changelog ([df3d2c88c](https://github.com/powerhouse-inc/powerhouse/commit/df3d2c88c))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.2-dev.82 (2026-09-08)
+
+### 🚀 Features
+
+- **reactor-api:** add REQUIRE_AUTHENTICATED_CALLER env toggle ([#2951](https://github.com/powerhouse-inc/powerhouse/pull/2951))
+- **reactor-api:** add require-authenticated-caller fetch middleware ([#2951](https://github.com/powerhouse-inc/powerhouse/pull/2951))
+
+### 🩹 Fixes
+
+- **release:** emit the pnpm 11+ scoped-registry publish flag ([1ddf2464b](https://github.com/powerhouse-inc/powerhouse/commit/1ddf2464b))
+- **ci:** route the @jsr scope from the workspace root .npmrc ([#2968](https://github.com/powerhouse-inc/powerhouse/pull/2968))
+- **ci:** resolve @jsr scope to npm.jsr.io in pnpm-workspace ([d5dd3a39e](https://github.com/powerhouse-inc/powerhouse/commit/d5dd3a39e))
+
+### ❤️ Thank You
+
+- acaldas
+- Frank @froid1911
+- froid1911
+
 ## 6.2.2-dev.81 (2026-09-05)
 
 ### 🚀 Features

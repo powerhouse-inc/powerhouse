@@ -1,6 +1,7 @@
 import { Icon } from "../../powerhouse/components/icon/icon.js";
 
 export const defaultDriveOptions = [
+  "DOWNLOAD",
   "NEW_FOLDER",
   "RENAME",
   "SETTINGS",
@@ -76,6 +77,10 @@ export const debugNodeOptionsMap = {
 } as const;
 
 export const folderNodeDropdownOptions = {
+  DOWNLOAD: {
+    label: "Download as zip",
+    icon: <Icon name="DownloadFile" size={16} />,
+  },
   DUPLICATE: {
     label: "Duplicate",
     icon: <Icon name="FilesEarmark" size={16} />,
@@ -92,9 +97,9 @@ export const folderNodeDropdownOptions = {
 } as const;
 
 export const fileNodeDropdownOptions = {
+  ...folderNodeDropdownOptions,
   DOWNLOAD: {
     label: "Download",
     icon: <Icon name="DownloadFile" size={16} />,
   },
-  ...folderNodeDropdownOptions,
 };

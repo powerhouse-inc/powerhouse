@@ -422,9 +422,14 @@ async function setupGraphQLManager(
     requireAuthFetchMiddleware,
   );
 
-  for (const [, collection] of subgraphs.extended.entries()) {
+  for (const [packageName, collection] of subgraphs.extended.entries()) {
     for (const subgraph of collection) {
-      await graphqlManager.registerSubgraph(subgraph, "graphql");
+      await graphqlManager.registerSubgraph(
+        subgraph,
+        "graphql",
+        false,
+        packageName,
+      );
     }
   }
 
@@ -494,24 +499,59 @@ function setupEventListeners(
     void graphqlManager.regenerateDocumentModelSubgraphs();
   });
 
+  let knownSubgraphPackages = new Set<string>();
   pkgManager.onSubgraphsChange((packagedSubgraphs) => {
     void (async () => {
-      for (const [, subgraphs] of packagedSubgraphs) {
+      for (const [packageName, subgraphs] of packagedSubgraphs) {
+        const incomingNames = new Set<string>();
         for (const subgraph of subgraphs) {
-          await graphqlManager.registerSubgraph(subgraph, "graphql");
+          const instance = await graphqlManager.registerSubgraph(
+            subgraph,
+            "graphql",
+            false,
+            packageName,
+          );
+          // Registration returns undefined when the subgraph is rejected
+          // (e.g. its name is reserved by a core subgraph, issue #2972).
+          // Nothing was mounted, so the name is not provided and must not
+          // shield a stale same-named subgraph from being pruned below.
+          if (!instance) {
+            continue;
+          }
+          incomingNames.add(instance.name);
+        }
+        // The package is still loaded but dropped some (or all) of its
+        // subgraphs: tear down the ones it no longer provides.
+        await graphqlManager.prunePackageSubgraphs(packageName, incomingNames);
+      }
+      // A package that vanished from the map entirely (uninstalled or
+      // removed from the config) keeps none of its subgraphs.
+      for (const packageName of knownSubgraphPackages) {
+        if (!packagedSubgraphs.has(packageName)) {
+          await graphqlManager.unregisterPackage(packageName);
         }
       }
+      knownSubgraphPackages = new Set(packagedSubgraphs.keys());
       await graphqlManager.updateRouter();
     })();
   });
 
+  let knownProcessorPackages = new Set<string>();
   pkgManager.onProcessorsChange((processors) => {
     void (async () => {
+      // Packages that vanished from the map entirely keep none of their
+      // factories: unregister the leftovers.
+      for (const packageName of knownProcessorPackages) {
+        if (!processors.has(packageName)) {
+          await reactorProcessorManager.unregisterFactory(packageName);
+        }
+      }
+      knownProcessorPackages = new Set(processors.keys());
+
       for (const [packageName, fns] of processors) {
         await reactorProcessorManager.unregisterFactory(packageName);
 
         const factories = fns.map((fn) => fn(module));
-
         const validBuilders = factories.filter(
           (factory): factory is ProcessorFactory =>
             typeof factory === "function",
@@ -1212,6 +1252,7 @@ export async function initializeAndStartAPI(
     documentModelRegistry: IDocumentModelRegistry;
     readiness: ReadinessGate;
     attachmentReferenceProjection: AttachmentReferenceProjectionCapability;
+    packageManager: PackageManager;
   }
 > {
   const {
@@ -1316,5 +1357,6 @@ export async function initializeAndStartAPI(
     documentModelRegistry,
     readiness,
     attachmentReferenceProjection,
+    packageManager: packages,
   };
 }

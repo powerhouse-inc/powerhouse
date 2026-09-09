@@ -372,10 +372,23 @@ export class PackageManager implements IPackageManager {
     const documentModels = await this.loadDocumentModels([pkg]);
     const upgradeManifests = await this.loadUpgradeManifests([pkg]);
     const upgradeManifestsMap = new Map(this.upgradeManifestsMap);
-    upgradeManifestsMap.set(pkg, upgradeManifests.get(pkg) ?? []);
+    const pkgManifests = upgradeManifests.get(pkg) ?? [];
+    if (pkgManifests.length === 0) {
+      upgradeManifestsMap.delete(pkg);
+    } else {
+      upgradeManifestsMap.set(pkg, pkgManifests);
+    }
     this.upgradeManifestsMap = upgradeManifestsMap;
     const documentModelsMap = new Map(this.docModelsMap);
-    documentModelsMap.set(pkg, documentModels.get(pkg) ?? []);
+    const pkgModels = documentModels.get(pkg) ?? [];
+    if (pkgModels.length === 0) {
+      // An empty result means the package no longer contributes document
+      // models: drop the key so the change event signals removal instead of
+      // re-asserting an empty entry.
+      documentModelsMap.delete(pkg);
+    } else {
+      documentModelsMap.set(pkg, pkgModels);
+    }
     this.updatePackagesMap(documentModelsMap);
   }
 
@@ -383,7 +396,15 @@ export class PackageManager implements IPackageManager {
     this.logger.debug(`Updating subgraphs for package: ${pkg}`);
     const subgraphs = await this.loadSubgraphs([pkg]);
     const subgraphsMap = new Map(this.subgraphsMap);
-    subgraphsMap.set(pkg, subgraphs.get(pkg) ?? []);
+    const pkgSubgraphs = subgraphs.get(pkg) ?? [];
+    if (pkgSubgraphs.length === 0) {
+      // An empty result means the package no longer contributes subgraphs
+      // (e.g. its subgraphs/ entry was removed): drop the key so the change
+      // event signals removal instead of re-asserting an empty entry.
+      subgraphsMap.delete(pkg);
+    } else {
+      subgraphsMap.set(pkg, pkgSubgraphs);
+    }
     this.updateSubgraphsMap(subgraphsMap);
   }
 
@@ -391,7 +412,12 @@ export class PackageManager implements IPackageManager {
     this.logger.debug(`Updating processors for package: ${pkg}`);
     const processors = await this.loadProcessors([pkg]);
     const processorsMap = new Map(this.processorMap);
-    processorsMap.set(pkg, processors.get(pkg) ?? []);
+    const pkgProcessors = processors.get(pkg) ?? [];
+    if (pkgProcessors.length === 0) {
+      processorsMap.delete(pkg);
+    } else {
+      processorsMap.set(pkg, pkgProcessors);
+    }
     this.updateProcessorsMap(processorsMap);
   }
 
@@ -516,6 +542,31 @@ export class PackageManager implements IPackageManager {
 
     this.processorMap = processorsMap;
     this.eventEmitter.emit("processorsChange", processorsMap);
+  }
+
+  /**
+   * Remove `pkg` from all package maps and emit the change events, tearing
+   * down everything the package registered (subgraphs, processors, document
+   * models). For an uninstalled package no loader can serve it again, so
+   * nothing can re-add it.
+   */
+  removePackage(pkg: string): void {
+    this.logger.info(`Removing package: ${pkg}`);
+    const dropKey = <T>(map: Map<string, T>): Map<string, T> => {
+      if (!map.has(pkg)) return map;
+      const next = new Map(map);
+      next.delete(pkg);
+      return next;
+    };
+
+    this.docModelsMap = dropKey(this.docModelsMap);
+    this.upgradeManifestsMap = dropKey(this.upgradeManifestsMap);
+    this.subgraphsMap = dropKey(this.subgraphsMap);
+    this.processorMap = dropKey(this.processorMap);
+
+    this.updatePackagesMap(this.docModelsMap);
+    this.updateSubgraphsMap(this.subgraphsMap);
+    this.updateProcessorsMap(this.processorMap);
   }
 
   onDocumentModelsChange(

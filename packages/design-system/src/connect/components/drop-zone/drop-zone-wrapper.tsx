@@ -22,7 +22,7 @@ export function DropZoneWrapper({
     onProgress,
     resolveConflict,
   ) => {
-    return await onDropFile(file, onProgress, resolveConflict);
+    return await onDropFile(file, parent, onProgress, resolveConflict);
   };
 
   if (!isDragAndDropEnabled || !selectedDriveId) {
