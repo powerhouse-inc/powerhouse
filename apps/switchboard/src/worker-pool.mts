@@ -167,6 +167,7 @@ const BASE_MODEL_SPECIFIERS = [
   "document-model",
   "@powerhousedao/shared/document-drive",
   "@powerhousedao/reactor-drive",
+  "@powerhousedao/reactor-group/document-models",
 ];
 
 /**
@@ -353,7 +354,7 @@ function parseWorkerCount(
   return value;
 }
 
-function parseNonNegativeInt(
+export function parseNonNegativeInt(
   raw: string | undefined,
   name: string,
 ): number | undefined {

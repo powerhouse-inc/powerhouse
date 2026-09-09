@@ -32,6 +32,8 @@ export {
   type FileModelSource,
   type PackageModelSource,
   type ProjectionShardBuilderConfig,
+  type ReadModelCoordinatorFactory,
+  type ReadModelCoordinatorFactoryDeps,
   type ReadModelFactory,
   type ReadModelFactoryDeps,
   type WorkerPoolOptions,
@@ -39,9 +41,19 @@ export {
 export type {
   BuiltInReadModelKind,
   IProjectionTransport,
+  ProjectionShardHooks,
   ProjectionShardManagerConfig,
   ProjectionWorkerFactory,
 } from "./src/projection/index.js";
+// Leaf modules, not the projection barrel: the barrel pulls in worker_threads.
+export {
+  createHybridProjectionCoordinatorFactory,
+  type HybridProjectionOptions,
+} from "./src/projection/create-hybrid-projection-coordinator.js";
+export {
+  HybridProjectionCoordinator,
+  type HybridProjectionCoordinatorOptions,
+} from "./src/projection/hybrid-projection-coordinator.js";
 export { ReactorClientBuilder } from "./src/core/reactor-client-builder.js";
 export { DEFAULT_DRIVE_CONTAINER_TYPES } from "./src/core/drive-container-types.js";
 export { Reactor } from "./src/core/reactor.js";

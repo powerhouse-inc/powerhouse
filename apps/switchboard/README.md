@@ -161,6 +161,31 @@ The same settings are available programmatically via
 `startSwitchboard({ workerPool: { numWorkers, dbPoolSizePerWorker, acquireTimeoutMs } })`,
 which takes precedence over the environment variables.
 
+### Projection Worker
+
+By default the built-in `document-view` and `document-indexer` read models
+index on the host event loop. Setting `REACTOR_PROJECTION_WORKER=1` moves them
+into one `node:worker_threads` worker with its own Postgres pool; every other
+read model (drive nodes, attachment references, subscriptions, processors)
+stays on the host and still runs after the worker has indexed each job.
+
+| Variable                          | Description                                               | Default |
+| --------------------------------- | --------------------------------------------------------- | ------- |
+| `REACTOR_PROJECTION_WORKER`       | Run the built-in read models in a worker thread (`1`/`0`) | `0`     |
+| `REACTOR_DB_POOL_SIZE_PROJECTION` | Projection worker Postgres pool size                      | `8`     |
+
+The projection worker has the same requirements as the executor worker pool:
+a `postgres://` reactor database with explicit credentials, built packages
+(no `dev` mode), and it adds `REACTOR_DB_POOL_SIZE_PROJECTION` connections
+to the budget above. It can be enabled with or without `REACTOR_WORKERS`. If
+the worker thread dies, switchboard logs the failure and sends itself
+`SIGTERM` so the supervisor restarts a healthy process. If the worker cannot
+initialize at all — an unreachable database, an exhausted pooler, an
+unmigrated schema — boot fails immediately with the worker's own error and
+exits non-zero instead of waiting out the init timeout.
+
+Programmatically: `startSwitchboard({ projectionWorker: { enabled, dbPoolSize } })`.
+
 ### Reactor Enforcement Flags
 
 | Variable                       | Description                                                        | Default |

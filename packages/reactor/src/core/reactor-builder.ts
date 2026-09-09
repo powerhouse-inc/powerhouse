@@ -41,6 +41,10 @@ import type {
 // in worker_threads transports that this file otherwise only reaches through
 // a dynamic import.
 import { BUILT_IN_READ_MODEL_KINDS } from "../projection/read-model-kinds.js";
+import type {
+  ProjectionShardHooks,
+  ProjectionShardManager,
+} from "../projection/projection-shard-manager.js";
 import { ReadModelCoordinator } from "../read-models/coordinator.js";
 import { KyselyDocumentView } from "../read-models/document-view.js";
 import type {
@@ -122,6 +126,48 @@ export type ReadModelFactory = (
   deps: ReadModelFactoryDeps,
 ) => IReadModel | Promise<IReadModel>;
 
+/**
+ * Dependencies handed to a coordinator factory registered via
+ * `withReadModelCoordinatorFactory`. All constructed inside `buildModule()`.
+ */
+export interface ReadModelCoordinatorFactoryDeps {
+  /** Host bus: subscribe to JOB_WRITE_READY, emit JOB_READ_READY. */
+  eventBus: IEventBus;
+  logger: ILogger;
+  /**
+   * `withReadModel` + `withReadModelFactory` models, in registration order.
+   * Excludes documentView/documentIndexer so a worker owner cannot
+   * double-index them.
+   */
+  readModels: IReadModel[];
+  /** Post-ready: runs after JOB_READ_READY so callbacks see fresh reads. */
+  subscriptionNotificationReadModel: IReadModel;
+  /** Post-ready: every package-installed processor. */
+  processorManager: IReadModel;
+  /** Host document view; lookup surface only, never indexed by the factory. */
+  documentView: IReadModel;
+  /** Host document indexer; lookup surface only, never indexed by the factory. */
+  documentIndexer: IReadModel;
+  /**
+   * Builds and starts a projection shard manager on this event bus with the
+   * host consistency trackers wired. Registers no shutdown hook: the factory
+   * owns the manager's lifecycle through `registerShutdownHook`.
+   */
+  createProjectionShardManager: (
+    config: ProjectionShardBuilderConfig & ProjectionShardHooks,
+  ) => Promise<ProjectionShardManager>;
+  /** Appends to the list `withShutdownHook` uses; hooks run in order. */
+  registerShutdownHook: (hook: () => Promise<void>) => void;
+}
+
+/**
+ * Factory that builds the read-model coordinator from reactor internals.
+ * Awaited during `buildModule()`.
+ */
+export type ReadModelCoordinatorFactory = (
+  deps: ReadModelCoordinatorFactoryDeps,
+) => IReadModelCoordinator | Promise<IReadModelCoordinator>;
+
 export type {
   DocumentModelSource,
   FileModelSource,
@@ -191,6 +237,39 @@ function sameDatabaseTarget(a: DbConfig, b: DbConfig): boolean {
   return a.host === b.host && a.port === b.port && a.database === b.database;
 }
 
+/**
+ * Requires each built-in kind exactly once across both lists. A kind in
+ * neither list is indexed by nobody (host copies never index under a
+ * worker), so its reads go stale and its consistency-token waits never
+ * resolve; a kind in both is indexed twice per operation.
+ */
+function validateBuiltInKindCoverage(
+  preReadyKinds: BuiltInReadModelKind[],
+  postReadyKinds: BuiltInReadModelKind[],
+): void {
+  const named = [...preReadyKinds, ...postReadyKinds];
+  const missing = BUILT_IN_READ_MODEL_KINDS.filter(
+    (kind) => !named.includes(kind),
+  );
+  const duplicated = BUILT_IN_READ_MODEL_KINDS.filter(
+    (kind) => named.filter((entry) => entry === kind).length > 1,
+  );
+  if (missing.length === 0 && duplicated.length === 0) {
+    return;
+  }
+  const problems = [
+    missing.length > 0
+      ? `never named: ${missing.join(", ")} (would be indexed by no shard, leaving those reads permanently stale and their consistency-token waits unresolvable)`
+      : undefined,
+    duplicated.length > 0
+      ? `named more than once: ${duplicated.join(", ")} (would be indexed twice per operation)`
+      : undefined,
+  ].filter((problem) => problem !== undefined);
+  throw new Error(
+    `withProjectionShards requires preReadyKinds and postReadyKinds to name each built-in read model (${BUILT_IN_READ_MODEL_KINDS.join(", ")}) exactly once between them; ${problems.join("; ")}`,
+  );
+}
+
 export class ReactorBuilder {
   private logger?: ILogger;
   private documentModelSources: DocumentModelSource[] = [];
@@ -208,6 +287,7 @@ export class ReactorBuilder {
   private syncBuilder?: SyncBuilder;
   private eventBus?: IEventBus;
   private readModelCoordinator?: IReadModelCoordinator;
+  private readModelCoordinatorFactory?: ReadModelCoordinatorFactory;
   private signatureVerifier?: SignatureVerificationHandler;
   private kyselyInstance?: Kysely<Database>;
   private signalHandlersEnabled = false;
@@ -220,6 +300,7 @@ export class ReactorBuilder {
     DEFAULT_DRIVE_CONTAINER_TYPES;
   private workerPool?: WorkerPoolOptions;
   private resolvedModelManifest?: ModelManifestEntry[];
+  private moduleOnlyModelKeys: string[] = [];
   private projectionShardConfig?: ProjectionShardBuilderConfig;
   private projectionWorkerFactory?: ProjectionWorkerFactory;
   private instrumentedPools: PoolInstrumentation[] = [];
@@ -270,6 +351,16 @@ export class ReactorBuilder {
 
   withReadModelCoordinator(readModelCoordinator: IReadModelCoordinator): this {
     this.readModelCoordinator = readModelCoordinator;
+    return this;
+  }
+
+  /**
+   * Register a factory that builds the coordinator once the subscription
+   * read model, processor manager and host read models exist. Use this, not
+   * `withReadModelCoordinator`, for coordinators that compose those internals.
+   */
+  withReadModelCoordinatorFactory(factory: ReadModelCoordinatorFactory): this {
+    this.readModelCoordinatorFactory = factory;
     return this;
   }
 
@@ -426,6 +517,24 @@ export class ReactorBuilder {
     const featureFlags = resolveFeatureFlags(this.executorConfig.featureFlags);
 
     if (
+      this.readModelCoordinator !== undefined &&
+      this.readModelCoordinatorFactory !== undefined
+    ) {
+      throw new Error(
+        "withReadModelCoordinator and withReadModelCoordinatorFactory are mutually exclusive; register one coordinator source",
+      );
+    }
+
+    if (
+      this.projectionShardConfig !== undefined &&
+      this.readModelCoordinatorFactory !== undefined
+    ) {
+      throw new Error(
+        "withProjectionShards and withReadModelCoordinatorFactory are mutually exclusive; the factory owns the projection worker through its createProjectionShardManager dependency",
+      );
+    }
+
+    if (
       this.projectionShardConfig !== undefined &&
       this.readModelFactories.length > 0
     ) {
@@ -439,14 +548,16 @@ export class ReactorBuilder {
     // withReadModel is dropped on the floor under sharding rather than
     // rejected. Fail here instead.
     //
-    // KNOWN LIMITATION, not covered by any guard: the coordinator branch
-    // also owns subscriptionNotificationReadModel and processorManager, both
-    // of which buildModule constructs unconditionally — there is no caller
-    // registration to check for. Under withProjectionShards they are built,
-    // initialized, and never fed an operation, which silently disables
-    // GraphQL subscriptions and every package-installed processor. Do not
-    // enable projection sharding in a host that relies on either until that
-    // is resolved.
+    // `withProjectionShards` replaces the coordinator wholesale, so it also
+    // orphans subscriptionNotificationReadModel and processorManager — both
+    // built unconditionally below, with no caller registration to guard on.
+    // Under bare sharding they are built, initialized, and never fed an
+    // operation, which silently disables GraphQL subscriptions and every
+    // package-installed processor. (Consistency-token reads are fine: the
+    // manager advances the host trackers from the shards' readmodel-indexed
+    // reports.) Hosts that need subscriptions, processors or host read
+    // models must use `withReadModelCoordinatorFactory` with the hybrid
+    // coordinator (`createHybridProjectionCoordinatorFactory`) instead.
     if (
       this.projectionShardConfig !== undefined &&
       this.readModels.length > 0
@@ -457,39 +568,14 @@ export class ReactorBuilder {
     }
 
     // Third instance of the same bug, and the quietest: a built-in kind
-    // absent from both lists is indexed by nobody. The host's own
-    // documentView/documentIndexer are handed to the ReadModelCoordinator
-    // only, so under sharding they never index an operation — and no shard
-    // instantiates a kind it wasn't named. Reads then serve indefinitely
-    // stale data, and any read carrying a consistency token for that model
-    // calls waitFor() against a tracker nothing ever advances, which arms
-    // no timer and so waits for the life of the process. A kind named twice
-    // is the mirror image: two instances indexing the same operations and
-    // double-reporting to one tracker. Require exactly one mention each.
+    // absent from both lists is indexed by nobody. Checked here, before any
+    // pool opens, and again in createProjectionShardManager for the
+    // coordinator-factory path.
     if (this.projectionShardConfig !== undefined) {
-      const named = [
-        ...this.projectionShardConfig.preReadyKinds,
-        ...this.projectionShardConfig.postReadyKinds,
-      ];
-      const missing = BUILT_IN_READ_MODEL_KINDS.filter(
-        (kind) => !named.includes(kind),
+      validateBuiltInKindCoverage(
+        this.projectionShardConfig.preReadyKinds,
+        this.projectionShardConfig.postReadyKinds,
       );
-      const duplicated = BUILT_IN_READ_MODEL_KINDS.filter(
-        (kind) => named.filter((entry) => entry === kind).length > 1,
-      );
-      if (missing.length > 0 || duplicated.length > 0) {
-        const problems = [
-          missing.length > 0
-            ? `never named: ${missing.join(", ")} (would be indexed by no shard, leaving those reads permanently stale and their consistency-token waits unresolvable)`
-            : undefined,
-          duplicated.length > 0
-            ? `named more than once: ${duplicated.join(", ")} (would be indexed twice per operation)`
-            : undefined,
-        ].filter((problem) => problem !== undefined);
-        throw new Error(
-          `withProjectionShards requires preReadyKinds and postReadyKinds to name each built-in read model (${BUILT_IN_READ_MODEL_KINDS.join(", ")}) exactly once between them; ${problems.join("; ")}`,
-        );
-      }
     }
 
     // One resolution pass feeds both sides: the host registry gets every
@@ -514,6 +600,7 @@ export class ReactorBuilder {
       resolvedSources.manifest.length > 0
         ? resolvedSources.manifest
         : undefined;
+    this.moduleOnlyModelKeys = resolvedSources.moduleOnlyKeys;
 
     const documentModelRegistry = new DocumentModelRegistry();
     if (this.upgradeManifests.length > 0) {
@@ -682,7 +769,10 @@ export class ReactorBuilder {
 
     await executorManager.start(executorStartCount);
 
-    const readModelInstances: IReadModel[] = Array.from(
+    // withReadModel + withReadModelFactory models only. Excludes
+    // documentView/documentIndexer so a caller-supplied coordinator cannot
+    // double-index them alongside a projection worker.
+    const callerReadModels: IReadModel[] = Array.from(
       new Set([...this.readModels]),
     );
 
@@ -703,8 +793,6 @@ export class ReactorBuilder {
       console.error("Error initializing document view", error);
     }
 
-    readModelInstances.push(documentView);
-
     const documentIndexerConsistencyTracker = new ConsistencyTracker();
     const documentIndexer = new KyselyDocumentIndexer(
       database as unknown as Kysely<IndexerDatabase>,
@@ -718,8 +806,6 @@ export class ReactorBuilder {
     } catch (error) {
       console.error("Error initializing document indexer", error);
     }
-
-    readModelInstances.push(documentIndexer);
 
     const subscriptionManager = new ReactorSubscriptionManager(
       new DefaultSubscriptionErrorHandler(),
@@ -753,24 +839,50 @@ export class ReactorBuilder {
         writeCache,
         processorManagerConsistencyTracker,
       });
-      readModelInstances.push(readModel);
+      callerReadModels.push(readModel);
     }
 
+    const readModelInstances: IReadModel[] = [
+      ...callerReadModels,
+      documentView,
+      documentIndexer,
+    ];
+
+    const hostTrackers = {
+      "document-view": documentViewConsistencyTracker,
+      "document-indexer": documentIndexerConsistencyTracker,
+    };
     const readModelCoordinator = this.readModelCoordinator
       ? this.readModelCoordinator
-      : this.projectionShardConfig
-        ? await this.createProjectionShardManager(
-            this.projectionShardConfig,
+      : this.readModelCoordinatorFactory
+        ? await this.readModelCoordinatorFactory({
             eventBus,
-            {
-              "document-view": documentViewConsistencyTracker,
-              "document-indexer": documentIndexerConsistencyTracker,
-            },
-          )
-        : new ReadModelCoordinator(eventBus, readModelInstances, [
+            logger: this.logger,
+            readModels: callerReadModels,
             subscriptionNotificationReadModel,
             processorManager,
-          ]);
+            documentView,
+            documentIndexer,
+            createProjectionShardManager: (config) =>
+              this.createProjectionShardManager(
+                config,
+                eventBus,
+                hostTrackers,
+                false,
+              ),
+            registerShutdownHook: (hook) => this.shutdownHooks.push(hook),
+          })
+        : this.projectionShardConfig
+          ? await this.createProjectionShardManager(
+              this.projectionShardConfig,
+              eventBus,
+              hostTrackers,
+              true,
+            )
+          : new ReadModelCoordinator(eventBus, readModelInstances, [
+              subscriptionNotificationReadModel,
+              processorManager,
+            ]);
 
     const reactor = new Reactor(
       this.logger,
@@ -893,25 +1005,69 @@ export class ReactorBuilder {
    *   models never index an operation, so the manager advances these from the
    *   shards' relayed indexing reports; without them every read carrying a
    *   consistency token waits forever.
+   * @param registerShutdownHook Whether the builder owns `manager.shutdown()`
+   *   at signal time. False for the coordinator-factory path, whose factory
+   *   registers its own hook so host chains drain before the worker stops.
    */
   private async createProjectionShardManager(
-    config: ProjectionShardBuilderConfig,
+    config: ProjectionShardBuilderConfig & ProjectionShardHooks,
     eventBus: IEventBus,
     consistencyTrackers: Partial<
       Record<BuiltInReadModelKind, IConsistencyTracker>
     >,
-  ): Promise<IReadModelCoordinator> {
-    const baseDb = this.resolveReactorDbConfig();
+    registerShutdownHook: boolean,
+  ): Promise<ProjectionShardManager> {
+    const parentDb = this.resolveReactorDbConfig();
+    const baseDb = config.db ?? parentDb;
+    // withProjectionShards and withReadModelCoordinatorFactory are mutually
+    // exclusive, so the configured one names the caller in every message here.
+    const caller =
+      this.projectionShardConfig !== undefined
+        ? "withProjectionShards"
+        : "withReadModelCoordinatorFactory";
     if (!baseDb) {
       throw new Error(
-        "withProjectionShards requires a db (or an executor worker pool configured with one); projection workers need connection info to open their own pools.",
+        `${caller} requires a db (or an executor worker pool configured with one); projection workers need connection info to open their own pools.`,
+      );
+    }
+    const workerDb = this.workerPool?.db;
+    if (config.db && workerDb && !sameDatabaseTarget(workerDb, config.db)) {
+      throw new Error(
+        "withWorkerPool({ db }) and the projection worker db must address the same Postgres database (same host, port, and database); the parent writes operations there and the projection shards read them.",
+      );
+    }
+    // The parent serves reads from the tables the worker writes, so the
+    // worker's db must name the parent's database too. A `db` that reached
+    // this method through the coordinator factory contributed nothing to
+    // `resolveReactorDbConfig`: the factory does not run until long after the
+    // parent database is built, so without this guard the parent silently
+    // falls back to the default embedded database while the worker projects
+    // into Postgres, and the parent's read models never see a projected row.
+    // `withKysely` owns the parent connection outright and is not validated.
+    if (config.db && this.kyselyInstance === undefined) {
+      if (!parentDb) {
+        throw new Error(
+          `The projection worker db passed to ${caller} must also be the parent reactor's database, but nothing configures the parent: it would fall back to the default embedded database while the worker projects into Postgres. Pass the same { db } to withWorkerPool, or give the parent its connection with withKysely.`,
+        );
+      }
+      if (!sameDatabaseTarget(config.db, parentDb)) {
+        throw new Error(
+          `The projection worker db passed to ${caller} and the parent reactor database must address the same Postgres database (same host, port, and database); the parent writes operations there and the projection shards read them.`,
+        );
+      }
+    }
+    validateBuiltInKindCoverage(config.preReadyKinds, config.postReadyKinds);
+    // The executor pool guard in buildModule only runs with a worker pool.
+    if (this.moduleOnlyModelKeys.length > 0) {
+      throw new Error(
+        `projection workers require worker-importable sources, but these models were registered only as live modules: ${this.moduleOnlyModelKeys.join(", ")}. Provide a { filePath } or { packageName } source for each.`,
       );
     }
     const models = this.resolvedModelManifest ?? [];
     const db: DbConfig = {
       ...baseDb,
       poolSize: config.poolSize ?? baseDb.poolSize,
-      applicationName: "reactor-projection-shard",
+      applicationName: config.db?.applicationName ?? "reactor-projection-shard",
     };
     const factory =
       this.projectionWorkerFactory ??
@@ -941,9 +1097,27 @@ export class ReactorBuilder {
       chainDepthReportIntervalMs: config.chainDepthReportIntervalMs,
       poolInstrumentations,
       consistencyTrackers,
+      onReadReady: config.onReadReady,
+      onShardFatal: config.onShardFatal,
     });
-    await manager.startup();
-    this.shutdownHooks.push(() => manager.shutdown());
+    try {
+      await manager.startup();
+    } catch (error) {
+      // A shard that never reached READY leaves a live worker thread behind,
+      // which keeps the process alive after the boot error propagates.
+      try {
+        await manager.shutdown();
+      } catch (shutdownError) {
+        this.logger!.warn(
+          "projection shard manager shutdown after a failed startup also failed: @error",
+          shutdownError,
+        );
+      }
+      throw error;
+    }
+    if (registerShutdownHook) {
+      this.shutdownHooks.push(() => manager.shutdown());
+    }
     return manager;
   }
 

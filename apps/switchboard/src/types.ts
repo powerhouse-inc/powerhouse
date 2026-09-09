@@ -146,6 +146,19 @@ export type StartServerOptions = {
     dbPoolSizePerWorker?: number;
     acquireTimeoutMs?: number;
   };
+  /**
+   * Projection worker: `enabled` runs the built-in document-view /
+   * document-indexer read models in one worker thread, off the host event
+   * loop; unset keeps them in-process (the default). Unset fields fall back
+   * to the REACTOR_PROJECTION_WORKER / REACTOR_DB_POOL_SIZE_PROJECTION env
+   * vars. Requires a Postgres reactor database and worker-importable
+   * document-model sources (switchboard resolves them itself); incompatible
+   * with `dev` mode (Vite-loaded models cannot cross a thread boundary).
+   */
+  projectionWorker?: {
+    enabled?: boolean;
+    dbPoolSize?: number;
+  };
 };
 
 export type SwitchboardReactor = {

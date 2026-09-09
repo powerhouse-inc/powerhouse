@@ -9,6 +9,7 @@ import {
   REACTOR_SCHEMA,
   ReactorBuilder,
   ReactorClientBuilder,
+  createHybridProjectionCoordinatorFactory,
   instrumentPgPool,
   parseDriveUrl,
   type Database,
@@ -63,6 +64,10 @@ import {
   registerAttachmentReferenceReadModelOnModule,
 } from "./attachment-reference-read-model.mjs";
 import { applySwitchboardReactorDefaults } from "./builder-defaults.mjs";
+import {
+  assertProjectionWorkerSupported,
+  resolveProjectionWorkerOptions,
+} from "./projection-worker.mjs";
 import {
   buildWorkerDbConfig,
   resolveHostPoolSize,
@@ -396,6 +401,20 @@ async function initServer(
     }
   }
 
+  let projectionWorker = resolveProjectionWorkerOptions(
+    options.projectionWorker,
+    process.env,
+  );
+  if (projectionWorker && options.reactor) {
+    logger.warn(
+      "Projection worker configuration ignored: the caller-provided reactor owns its own read-model coordinator",
+    );
+    projectionWorker = null;
+  }
+  if (projectionWorker) {
+    assertProjectionWorkerSupported({ dev: dev === true, reactorDbUrl });
+  }
+
   // The reactor-api owns its own PGlite/HTTP/WS resources but has no shutdown
   // path of its own; we register `api.dispose` as a reactor shutdown hook so
   // those resources drain inside the reactor's SIGINT chain. The reference
@@ -432,6 +451,20 @@ async function initServer(
   }
 
   const reactorLogger = logger.child(["reactor"]);
+  // Latched: dropWriteReady reports the fatal once per dropped job.
+  let projectionWorkerFatalFired = false;
+  const onProjectionWorkerFatal = (shardId: string, reason: Error) => {
+    if (projectionWorkerFatalFired) {
+      return;
+    }
+    projectionWorkerFatalFired = true;
+    reactorLogger.error(
+      `Projection worker ${shardId} died; shutting down so the supervisor restarts a healthy process`,
+      reason,
+    );
+    // SIGTERM takes the builder's withSignalHandlers() path: kill, hooks, db.
+    process.kill(process.pid, "SIGTERM");
+  };
   // Set only when we build the reactor ourselves; a caller-provided one keeps
   // its own lifecycle and must not be torn down here.
   let ownedReactorModule: InProcessReactorClientModule | undefined;
@@ -598,6 +631,40 @@ async function initServer(
       baseKysely: baseKysely as unknown as Kysely<unknown>,
       attachmentReferenceWriter,
     });
+
+    if (projectionWorker) {
+      if (!reactorDbUrl) {
+        throw new Error(
+          "unreachable: projection worker enabled without a reactor database URL",
+        );
+      }
+      // The projection worker rebuilds its registry from the same manifest.
+      if (!workerPool) {
+        const workerSources = await resolveWorkerModelSources(
+          packages,
+          reactorLogger,
+        );
+        reactorBuilder.withDocumentModelSources(workerSources);
+      }
+      const db = {
+        ...buildWorkerDbConfig(reactorDbUrl, {
+          dbPoolSizePerWorker: projectionWorker.dbPoolSize,
+          acquireTimeoutMs: workerPool?.acquireTimeoutMs ?? 5000,
+        }),
+        applicationName: "switchboard-projection",
+      };
+      reactorBuilder.withReadModelCoordinatorFactory(
+        createHybridProjectionCoordinatorFactory({
+          shardCount: 1,
+          poolSize: projectionWorker.dbPoolSize,
+          db,
+          onFatal: onProjectionWorkerFatal,
+        }),
+      );
+      reactorLogger.info(
+        `Projection worker enabled: 1 worker thread, pool size ${projectionWorker.dbPoolSize}`,
+      );
+    }
 
     reactorBuilder.withShutdownHook(async () => {
       if (apiRef.current) await apiRef.current.dispose();

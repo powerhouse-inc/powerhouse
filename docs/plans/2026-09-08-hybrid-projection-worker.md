@@ -315,42 +315,53 @@ Ordered. Each step names its files.
 ### Step 1 — Separate "caller read models" from "built-in read models" in the builder
 
 **File:** `packages/reactor/src/core/reactor-builder.ts`
+**Status: landed** on `feat/hybrid-projection-worker` (`6341d8a63`).
 
-Today `readModelInstances` (`:635-637`) accumulates caller models, then
-`documentView` (`:656`), then `documentIndexer` (`:672`), then factory-built
-models (`:699-707`). Keep that array exactly as-is (the default coordinator
-branch depends on it and stage order is irrelevant — `runChain` uses
-`Promise.all`), and additionally track the caller-only subset:
+`buildModule()` now accumulates two distinct lists:
 
 ```ts
-const readModelInstances: IReadModel[] = Array.from(new Set([...this.readModels]));
-// NEW: the subset a caller-supplied coordinator may index host-side. Excludes
-// documentView/documentIndexer, which a projection worker owns under the
-// hybrid; indexing them here too would double-write the same tables.
-const callerReadModels: IReadModel[] = [...readModelInstances];
+    // withReadModel + withReadModelFactory models only. Excludes
+    // documentView/documentIndexer so a caller-supplied coordinator cannot
+    // double-index them alongside a projection worker.
+    const callerReadModels: IReadModel[] = Array.from(
+      new Set([...this.readModels]),
+    );
+    // ... documentView / documentIndexer constructed and init()ed as before,
+    //     but no longer pushed anywhere here ...
+    for (const factory of this.readModelFactories) {
+      const readModel = await factory({ ... });
+      callerReadModels.push(readModel);
+    }
+
+    const readModelInstances: IReadModel[] = [
+      ...callerReadModels,
+      documentView,
+      documentIndexer,
+    ];
 ```
 
-and in the factory loop at `:699-707`, push into both:
-
-```ts
-for (const factory of this.readModelFactories) {
-  const readModel = await factory({ ... });
-  readModelInstances.push(readModel);
-  callerReadModels.push(readModel);
-}
-```
+`readModelInstances` still feeds the default `new ReadModelCoordinator(...)`
+branch unchanged; the built-ins moved from the middle of the pre-ready list to
+the end, which is behaviour-identical because `runChain` uses `Promise.all`.
+`callerReadModels` is what Step 4 hands to a coordinator factory as
+`deps.readModels`.
 
 ### Step 2 — Extend `ProjectionShardManager` with the relay hook and a dead-shard-safe drain
 
 **File:** `packages/reactor/src/projection/projection-shard-manager.ts`
+**Status: landed** on `feat/hybrid-projection-worker` (`af41b2cc1`). Both hooks
+live in the exported `ProjectionShardHooks` type, which
+`ProjectionShardManagerConfig` composes (the Step 4 shape; the first draft's
+"add `onReadReady` next to `onShardFatal` on the config" wording is
+superseded).
 
 Steps 2b (zero-op relay) and 2c (`onShardFatal`) from the first draft are
 already on `main` (#2987). Two additive changes remain; both are no-ops when
 the new config field is absent and no shard has died, so the pure-shard path
 is unchanged.
 
-**2a. A relay hook.** Add to `ProjectionShardManagerConfig`, next to
-`onShardFatal`:
+**2a. A relay hook.** In `ProjectionShardHooks` (composed into
+`ProjectionShardManagerConfig`), next to `onShardFatal`:
 
 ```ts
   /**
@@ -412,6 +423,10 @@ worker death (Q3).
 ### Step 3 — New `HybridProjectionCoordinator`
 
 **New file:** `packages/reactor/src/projection/hybrid-projection-coordinator.ts`
+**Status: landed** (`b69928976`), 14 unit cases in
+`test/projection/hybrid-projection-coordinator.test.ts`. Uses the passed
+`logger` (not a child logger) so tests can isolate coordinator errors from
+the manager's.
 
 Implements `ILiveReadModelCoordinator`
 (`packages/reactor/src/read-models/interfaces.ts`) by composing a
@@ -590,6 +605,14 @@ Five details that are load-bearing:
 ### Step 4 — The coordinator **factory** on the builder
 
 **File:** `packages/reactor/src/core/reactor-builder.ts`
+**Status: landed** together with Step 5 (`4ce813dad`). Two implementation
+notes worth keeping: a coordinator returned by the factory MUST forward
+`start()`/`stop()` to its manager — `Reactor` calls `start()` on whatever the
+factory returned, and without it the manager never subscribes to
+`JOB_WRITE_READY`, so `pendingCoordinates` stays empty and consistency-token
+waits hang; and the `withProjectionShards requires ...` error strings are kept
+verbatim (academy docs quote them), so a factory-path caller with a bad kind
+list sees a message naming `withProjectionShards`.
 
 `subscriptionNotificationReadModel` and `processorManager` are constructed
 *inside* `buildModule()`, so the existing `withReadModelCoordinator(instance)`
@@ -757,6 +780,8 @@ Add an early guard in `buildModule()`: setting both
 
 ### Step 5 — Guard the two coordinator-ownership options against each other; rewrite the KNOWN LIMITATION comment
 
+**Status: landed** with Step 4 (`4ce813dad`).
+
 **File:** `packages/reactor/src/core/reactor-builder.ts`, the guards at the
 top of `buildModule()`
 
@@ -793,6 +818,20 @@ Second, replace the KNOWN LIMITATION comment with the current truth:
 
 **New file:** `packages/reactor/src/projection/create-hybrid-projection-coordinator.ts`
 **Export from:** `packages/reactor/src/projection/index.ts` and `packages/reactor/index.ts`
+**Status: landed** (`61a2ed26f`). Deviations from the sketch below: the root
+`index.ts` re-exports from the leaf modules, not the projection barrel (the
+barrel pulls `node:worker_threads` in through `transport.ts`); the
+`let coordinator` + `!` shape is a small `CoordinatorRef` object because
+`prefer-const` rejects assign-once `let`; `HybridProjectionOptions` also passes
+through `initTimeoutMs` / `shutdownGraceMs` / `drainTimeoutMs` /
+`chainDepthReportIntervalMs`; and `createProjectionShardManager` now honours
+`config.db.applicationName` (it hardcoded `reactor-projection-shard`).
+
+Follow-up landed with it (`5c9da1a45`): the "registered only as live modules"
+boot failure was gated on `this.workerPool`, but the projection worker builds
+its registry from the manifest too, so with `REACTOR_PROJECTION_WORKER=1` and
+`REACTOR_WORKERS=0` a live-module-only model would silently be missing from
+the worker. `createProjectionShardManager` now runs the same check.
 
 So switchboard's wiring is one call rather than an architecture:
 
@@ -842,6 +881,20 @@ routed, which requires `manager.start()` — and `start()` is called by
 this factory has returned and assigned `coordinator`.
 
 ### Step 7 — Switchboard wiring
+
+**Status: landed.** Env resolution (`6d38308828`): `resolveProjectionWorkerOptions`,
+`assertProjectionWorkerSupported({ dev, reactorDbUrl })` (imports
+`isPostgresUrl` from `./utils.mjs` rather than taking it as a parameter), the
+`projectionWorker` option in `types.ts`, and 38 tests. `server.mts` wiring
+(`265526877`): resolution next to `workerPool`, nulled with a warning when a
+caller-provided reactor is used, model sources registered when the executor
+pool is off, `applicationName: "switchboard-projection"`, and a once-latched
+`onFatal` that sends SIGTERM. The `options.signalHandlers === false` branch
+sketched below was dropped: `StartServerOptions` has no such field and
+switchboard always installs the handlers. Flagged, not fixed:
+`buildWorkerDbConfig` errors still say "Worker pool requires...", and
+`REACTOR_DB_ACQUIRE_TIMEOUT_MS` reaches the projection pool only through
+`workerPool?.acquireTimeoutMs`.
 
 **New file:** `apps/switchboard/src/projection-worker.mts` — mirror the shape of
 `apps/switchboard/src/worker-pool.mts` (`resolveWorkerPoolOptions`,
@@ -1053,14 +1106,120 @@ enabling in dev or without a Postgres URL throws.
 
 ### Integration
 
-Extend `packages/reactor/test/builder/integration.ts` coverage (needs
-`pnpm --filter @powerhousedao/reactor docker:up`; Postgres on **5433**,
-`postgres`/`postgres`, db `reactor`) with one end-to-end case: build a hybrid
-reactor, execute actions, and assert `reactor.get(id, view, token)` with a
-consistency token returns without hanging, and that a host-registered read
-model saw every operation exactly once.
+**Status: landed** (`31846099b`) as
+`packages/reactor/test/integration/hybrid-projection-worker-postgres.test.ts`,
+not in `test/builder/integration.ts` (that file is a SyncBuilder harness and
+is not matched by the vitest include). Follows the existing `-postgres.test.ts`
+precedent: reads `REACTOR_TEST_PG_URL` (default
+`postgres://postgres:postgres@localhost:5433/reactor`, always provided in CI),
+no skip gate, and creates its own `reactor_hybrid_worker_test` database
+because the worker hardcodes `withSchema("reactor")`. The parent database is
+supplied via `withKysely(<pg Kysely>)` — under the factory path neither
+`workerPool` nor `projectionShardConfig` is set, so without it the parent
+would silently fall back to PGlite while the worker read Postgres. The worker
+thread runs through a tsx bootstrap (`projection-worker-bootstrap.mjs`,
+mirroring `test/executor/worker/entry/worker-bootstrap.mjs`) because
+`projectionWorkerEntryPath` resolves to `dist/` which does not exist under
+vitest; the `.mjs` is listed in `eslint.config.js` `unsafeIgnoredFiles` like
+its precedent.
+
+Five cases over a real thread and real pool: coordinator is a
+`HybridProjectionCoordinator`; `reactor.get(id, undefined, token)` returns the
+latest write inside 5 s; `subscriptionManager.onDocumentStateUpdated` fires on
+`execute`; the job reaches `READ_READY`; and the host read model saw every
+`documentId:scope:branch:index` exactly once, each strictly before its
+`JOB_READ_READY`. ~1.3 s wall clock including worker spawn.
 
 ---
+
+## Status — 2026-09-08, end of implementation pass
+
+Implementation and unit/integration verification are complete on
+`feat/hybrid-projection-worker` (not pushed). Measurement and rollout
+verification remain.
+
+**Verified:**
+- reactor `pnpm test`: 191 files / 3067 tests; switchboard `pnpm test`: 13 /
+  209; `tsc --build` for reactor, switchboard and
+  `opentelemetry-instrumentation-reactor`; reactor `pnpm build`; eslint 0
+  errors across every touched file (one "file ignored" warning from the
+  deliberate `unsafeIgnoredFiles` entry for the worker bootstrap `.mjs`).
+- `dist/index.js` still has no eager `node:worker_threads` import (the two
+  matches are JSDoc text present on `main`).
+- Production switchboard smoke (`node dist/index.mjs`, Postgres on 5433,
+  `REACTOR_PROJECTION_WORKER=1`): with `REACTOR_WORKERS=0` and with
+  `REACTOR_WORKERS=2` — `Projection worker enabled`, `projection worker
+  initialized: projection-shard-0`, GraphQL `createEmptyDocument` +
+  `execute` + `findDocuments` (served by the worker-side indexer) returns the
+  written name, `pg_stat_activity` shows a `switchboard-projection` pool,
+  SIGTERM exits 0 in well under a second with the graceful sequence and no
+  lingering thread. The no-Postgres guard produces the exact expected message.
+
+**Found and fixed on the way (pre-existing on `main`):**
+- `7b25d06eb` — `BASE_MODEL_SPECIFIERS` in `worker-pool.mts` lacked
+  `@powerhousedao/reactor-group`, which `builder-defaults.mts` registers as a
+  live module, so every `REACTOR_WORKERS>0` or `REACTOR_PROJECTION_WORKER=1`
+  boot crashed with `registered only as live modules:
+  powerhouse/reactor-group@1` unless `PH_REGISTRY_PACKAGES` happened to list
+  it. This blocked the executor worker pool too, not just this feature.
+- `5c9da1a45` — the live-module-only check now also runs when only the
+  projection worker is configured (Step 6 notes).
+
+**Code-review findings, fixed (PR #2988 review, three commits):**
+- Config mismatch was invisible: the factory path's `db` does not exist when
+  `resolveReactorDbConfig()` picks the parent database, so a host that
+  configured Postgres only through `createHybridProjectionCoordinatorFactory`
+  got a PGlite parent and a Postgres worker in silence — every built-in read
+  model empty, nothing raised. The worker `db` must now name the parent's
+  database unless `withKysely` owns the parent connection.
+- A worker whose `init` threw posted a log line and stayed put: `startup()`
+  waited out `initTimeoutMs` and then reported the timeout rather than the
+  cause, the thread was never terminated, and sibling init timers stayed
+  armed. The worker now reports `init-failed` with the marshalled error (it
+  reports rather than exits, so the cause cannot lose a race with `exit`), a
+  transport error or premature exit settles the pending init, `shutdown()`
+  settles whatever is left, and the builder tears the manager down before
+  rethrowing.
+- `runHostChain` emitted no `READMODEL_BATCH_COMPLETED`, so the pre/post-ready
+  stage histograms excluded every read model this feature keeps on the host —
+  the numbers Verification 2 below depends on. The host now reports its own
+  batch alongside the worker's relayed one.
+- `apps/switchboard/src/index.mts` now exits non-zero on a boot failure. It
+  previously logged and continued, so a supervisor could not tell a failed
+  boot from a healthy one (same behaviour for the executor-pool guards on
+  `main`) — which would have made the init-failure fix above stop short of
+  actually killing the process.
+
+**Found, not fixed (pre-existing, outside this plan's scope):**
+- `buildWorkerDbConfig` error messages say "Worker pool requires..." even
+  when only the projection worker is on; `REACTOR_DB_ACQUIRE_TIMEOUT_MS`
+  reaches the projection pool only through `workerPool?.acquireTimeoutMs`.
+- Switchboard boot warns `no importable document-models entry for
+  <switchboard cwd>` — pre-existing, harmless.
+
+**Post-review verification (serial, nothing else on the machine):**
+- reactor `pnpm tsc --build` 0, `pnpm test` 191 files / 3075 tests green in
+  253s (the Postgres integration case runs for real against the compose
+  database on 5433 — it has no skip guard); switchboard `pnpm tsc --build` 0,
+  `pnpm test` 13 / 209 green; eslint 0 on every touched file.
+- Running both suites concurrently produced 28 reactor and 5 switchboard
+  failures, every one a PGlite `beforeEach` hook timeout (120000ms and
+  10000ms) in files untouched by this branch, and both suites took an order
+  of magnitude longer (3233s / 2709s). Run them serially: concurrent runs on
+  one machine cannot distinguish a defect from CPU starvation.
+
+**Remaining, in order:**
+1. Verification 2 — bench sweep against Run 11 with host-side stub read
+   models through the hybrid factory. Not run. The plan's rule stands:
+   measure before any staging rollout, and do not quote 10x for switchboard.
+2. Verification 3–4 — staging metrics (`reactor.host.eventloop.utilization`
+   is the go/no-go) and functional parity (subscription fires, processor sees
+   operations, consistency-token read returns).
+3. `powerhouse-k8s-hosting`: set `REACTOR_PROJECTION_WORKER=1` and raise
+   `limits.cpu` for the extra thread (separate repo, per the scope boundary).
+4. Reviewer-visible: one new `unsafeIgnoredFiles` line in `eslint.config.js`;
+   `validateBuiltInKindCoverage` error text still names `withProjectionShards`
+   on the factory path (academy docs quote it).
 
 ## Verification
 
