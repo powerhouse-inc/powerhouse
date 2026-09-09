@@ -14,12 +14,33 @@ function sortedJsonBody(value: Record<string, string>): string {
 
 export const exportsTemplate = innerJsonBody(packageJsonExports);
 
+// Maps a bare-name override map (as pnpm `overrides` use) to yarn v1
+// `resolutions` form; the `**/` prefix applies the pin to transitive
+// occurrences. Yarn v1 cannot pin the project's own direct dependencies
+// (bare names normalize to `**/`, and root requests carry no parent
+// path for it to match), so a direct dep keeps resolving within its
+// declared range while transitive occurrences stay pinned.
+export function toYarnResolutions(
+  overrides: Record<string, string>,
+): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(overrides).map(([pkg, version]) => [`**/${pkg}`, version]),
+  );
+}
+
 export const packageJsonTemplate = (
   projectName: string,
   peerDependencies: Record<string, string>,
   devDependencies: Record<string, string>,
-) =>
-  json`
+  resolutions?: Record<string, string>,
+) => {
+  // Leading comma: the block follows the devDependencies close brace.
+  const resolutionsBody = resolutions
+    ? `,\n  "resolutions": {
+    ${sortedJsonBody(resolutions)}
+  }`
+    : "";
+  return json`
 {
   "name": "${projectName}",
   "version": "1.0.0",
@@ -57,6 +78,7 @@ export const packageJsonTemplate = (
   },
   "devDependencies": {
     ${sortedJsonBody(devDependencies)}
-  }
+  }${resolutionsBody}
 }
 `.raw;
+};
