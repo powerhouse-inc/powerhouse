@@ -1,6 +1,4 @@
-import { execSync } from "node:child_process";
 import {
-  mkdirSync,
   mkdtempSync,
   readFileSync,
   readdirSync,
@@ -14,14 +12,20 @@ import { extract, list } from "tar";
 import { afterAll, describe, expect, it } from "vitest";
 import { packTarball } from "./pack.js";
 
-// The other suites used to build their fixtures by shelling out to `npm pack`.
-// packTarball replaced that (a full npm CLI boot per fixture was timing tests
-// out on the Windows runner), which would otherwise cost the guarantee that
-// what we hand verdaccio still looks like a real npm tarball. This test keeps
-// that guarantee by packing the same input both ways and comparing what comes
-// back out of the extraction path src/cdn.ts uses.
+// The other suites used to build their fixtures by shelling out to
+// `npm pack`; packTarball replaced that (a full npm CLI boot per fixture
+// timed tests out on the Windows runner). This test keeps the guarantee
+// that what we hand verdaccio still looks like a real npm tarball, by
+// comparing our in-process output against a committed golden produced by
+// `npm pack`.
 //
-// It is the one place that still spawns npm, and it does so once.
+// Regenerating the golden: write MANIFEST and FILES to a scratch dir, run
+// `npm pack` in it, and copy the .tgz over tests/fixtures/
+// npm-pack-compare.tgz. npm stamps every entry with a fixed constant mtime
+// and normalises modes, so the golden is host-independent. If this test
+// starts failing, regenerate the golden and inspect the diff before
+// accepting it - a layout drift there is the thing this test exists to
+// catch.
 
 const MANIFEST = { name: "cmp-pkg", version: "1.0.0", description: "t" };
 const FILES = {
@@ -40,18 +44,6 @@ function tmp(prefix: string): string {
 afterAll(() => {
   for (const dir of scratch) rmSync(dir, { recursive: true, force: true });
 });
-
-/** The source tree both packers are pointed at. */
-function seed(): string {
-  const dir = tmp("pack-src-");
-  writeFileSync(path.join(dir, "package.json"), JSON.stringify(MANIFEST));
-  for (const [rel, content] of Object.entries(FILES)) {
-    const target = path.join(dir, rel);
-    mkdirSync(path.dirname(target), { recursive: true });
-    writeFileSync(target, content);
-  }
-  return dir;
-}
 
 /** Tar header fields that decide how an entry lands on disk.
  *
@@ -102,13 +94,12 @@ async function extractedTree(tarball: Buffer): Promise<[string, string][]> {
 
 describe("packTarball", () => {
   it("extracts to the same tree as a tarball built by `npm pack`", async () => {
-    const src = seed();
-    const name = execSync("npm pack --pack-destination .", {
-      cwd: src,
-      encoding: "utf-8",
-      stdio: ["ignore", "pipe", "ignore"],
-    }).trim();
-    const fromNpm = readFileSync(path.join(src, name));
+    // Committed golden from `npm pack`; see the header comment for the
+    // regeneration recipe. We compare parsed headers and extracted content,
+    // not raw bytes, so the file stays valid across hosts and times.
+    const fromNpm = readFileSync(
+      path.join(import.meta.dirname, "fixtures/npm-pack-compare.tgz"),
+    );
 
     const mine = packTarball(MANIFEST, FILES);
 
