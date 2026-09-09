@@ -1,3 +1,13 @@
+## 6.2.2-staging.0 (2026-09-09)
+
+### 🩹 Fixes
+
+- **ci:** test package managers against pnpm latest ([#2990](https://github.com/powerhouse-inc/powerhouse/issues/2990))
+
+### ❤️ Thank You
+
+- froid1911
+
 ## 6.2.2-dev.87 (2026-09-09)
 
 ### 🩹 Fixes
