@@ -23,13 +23,19 @@ Exit 2 stops the loop before it starts. Print the output and do not repair.
 
 ```bash
 jq -r .id packages/reactor/bench/BENCHMARKS.jsonl | sort > /tmp/bench-all.txt
-jq -r '[.evidence[]?] + [.history[].evidence[]?] | .[]' packages/reactor/bench/TASKS.jsonl | sort -u > /tmp/bench-cited.txt
+jq -r '[.evidence[]?] + [.history[] | select(.status != "FIXED" and .status != "COMMITTED") | .evidence[]?] | .[]' packages/reactor/bench/TASKS.jsonl | sort -u > /tmp/bench-cited.txt
 comm -23 /tmp/bench-all.txt /tmp/bench-cited.txt
 jq -r 'select(.status == "UNVERIFIED") | [.id, .kind, .priority, .title] | @tsv' packages/reactor/bench/TASKS.jsonl
 ```
 
 The first list is records no task cites: candidates for the analyst. The second
 is findings nobody has checked: work for the verifier.
+
+FIXED and COMMITTED history entries do not count as citations. `/bench-fix`
+Step 5 has to cite the after-record it measured, so counting those would hide
+every record a fix produces - the one record the fixer's "For the analyst"
+section was written for. A record cited only that way has been measured, not
+read.
 
 **If both are empty, stop and say so.** That is the loop working, not the loop
 failing. Point at `/bench-record <name>` if they want new numbers.
