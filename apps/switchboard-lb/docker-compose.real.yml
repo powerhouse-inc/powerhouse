@@ -10,7 +10,7 @@ services:
       dockerfile: docker/Dockerfile
       target: switchboard
       args:
-        TAG: "6.0.0-dev.202"
+        TAG: "6.2.2-dev.84"
     environment:
       PORT: "8080"
       LOG_LEVEL: "warn"
@@ -25,7 +25,7 @@ services:
       dockerfile: docker/Dockerfile
       target: switchboard
       args:
-        TAG: "6.0.0-dev.202"
+        TAG: "6.2.2-dev.84"
     environment:
       PORT: "8080"
       LOG_LEVEL: "warn"
@@ -40,7 +40,7 @@ services:
       dockerfile: docker/Dockerfile
       target: switchboard
       args:
-        TAG: "6.0.0-dev.202"
+        TAG: "6.2.2-dev.84"
     environment:
       PORT: "8080"
       LOG_LEVEL: "warn"
