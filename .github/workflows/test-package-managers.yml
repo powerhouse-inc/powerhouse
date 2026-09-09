@@ -32,12 +32,9 @@ jobs:
         include:
           - id: npm
             package-manager: npm
-          - id: pnpm-10
+          - id: pnpm
             package-manager: pnpm
-            pnpm-version: "10"
-          - id: pnpm-11
-            package-manager: pnpm
-            pnpm-version: "11"
+            pnpm-version: latest
           - id: yarn
             package-manager: yarn
           - id: bun
@@ -70,12 +67,12 @@ jobs:
         with:
           version: ${{ matrix.pnpm-version }}
 
-      # pnpm v11 puts global bins at $PNPM_HOME/bin (extra subdirectory),
+      # pnpm >= 11 puts global bins at $PNPM_HOME/bin (extra subdirectory),
       # but pnpm/action-setup@v4 only adds $PNPM_HOME to PATH, so
       # `pnpm install -g` aborts with "configured global bin directory ... is
-      # not in PATH". Add the v11 bin dir explicitly.
-      - name: Append pnpm v11 global bin dir to PATH
-        if: matrix.id == 'pnpm-11'
+      # not in PATH". Add the bin dir explicitly (verified for 11 and 12).
+      - name: Append pnpm global bin dir to PATH
+        if: matrix.package-manager == 'pnpm'
         run: echo "$PNPM_HOME/bin" >> "$GITHUB_PATH"
 
       - name: Setup bun
