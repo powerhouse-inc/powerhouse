@@ -1,7 +1,7 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-09-08T20:56:57.400Z
-> Total Documents: 110
+> Generated: 2026-09-10T08:32:05.293Z
+> Total Documents: 112
 > Source: https://academy.vetra.io/llms-full.txt
 
 
@@ -27035,6 +27035,13 @@ You can now read and write documents over the GraphQL API. To expose your own qu
 
 Create and customize a subgraph, using the to-do list project as an example. This starts with the basics and adds more complex features as it goes.
 
+**TIP:**
+The same subgraph can serve plain HTTP endpoints under your package's own
+namespace through `this.http`, and inbound provider webhooks through
+`this.http.webhooks`. See [Hosting HTTP routes](../docs/docs/07-HostingHttpRoutes.md) and
+[Receiving webhooks](../docs/docs/08-ReceivingWebhooks.md).
+
+
 ## What is a subgraph?
 
 A subgraph in Powerhouse is a **GraphQL-based modular data component** that extends the functionality of your document models. While document models handle the core state and operations, subgraphs can:
@@ -28648,6 +28655,655 @@ This pattern is commonly used for:
 - **Integration** with existing enterprise systems
 - **Search and filtering** with complex SQL queries
 - **Data archival** and compliance requirements
+
+---
+
+
+## Hosting HTTP routes
+
+> Source: https://academy.vetra.io/academy/Build/WorkWithData/HostingHttpRoutes
+
+A package can serve HTTP endpoints of its own on the reactor, alongside the GraphQL API. You register routes in code against a http scope the host hands your package, and the host removes them again when the package unloads.
+
+To ensure there are no route collisions between packages, every route you register is served under your package's npm name:
+
+```
+https://switchboard.example/api/@powerhousedao/reports/reports/42
+                           └──┘ └──────────────────────┘ └───────┘
+                          prefix      package name       your path
+```
+If what you need is an webhook for a third-party provider (GitHub, Stripe, Slack) that holds no Powerhouse credentials, use [Receiving webhooks](../docs/docs/08-ReceivingWebhooks.md) instead.
+
+## Subgraphs
+
+A subgraph reads it off itself, as `this.http`:
+
+```typescript
+
+
+export class ReportsSubgraph extends BaseSubgraph {
+  name = "reports";
+
+  async onSetup(): Promise<void> {
+    this.http.get("reports/:id", async (_request, ctx) => {
+      try {
+        const document = await this.reactorClient.get<PHDocument>(
+          ctx.params.id,
+          undefined,
+          ctx.signal,
+        );
+        return Response.json({
+          id: document.header.id,
+          documentType: document.header.documentType,
+          state: document.state,
+        });
+      } catch (error) {
+        if (error instanceof Error && error.name === "DocumentNotFoundError") {
+          return Response.json({ error: "Document not found" }, { status: 404 });
+        }
+        throw error;
+      }
+    });
+  }
+}
+```
+
+## Processors
+
+A processor takes the scope in its constructor, as `module.http` from its factory. It is optional there, because a processor also runs in the browser, where there is no HTTP server:
+
+```typescript
+
+
+  IHttpScope,
+  IProcessor,
+  IRelationalDb,
+  ScopedRouteHandle,
+} from "@powerhousedao/shared/processors";
+
+
+export class ReportsProcessor implements IProcessor {
+  #route: ScopedRouteHandle | undefined;
+
+  constructor(
+    private readonly db: IRelationalDb<DB>,
+    http: IHttpScope | undefined,
+  ) {
+    // Provides access to the read model this processor maintains.
+    this.#route = http?.get(
+      "reports/:id",
+      { auth: "public" },
+      async (_req, ctx) => {
+        const report = await this.db
+          .selectFrom("reports")
+          .selectAll()
+          .where("document_id", "=", ctx.params.id)
+          .executeTakeFirst();
+
+        return report
+          ? Response.json(report)
+          : Response.json({ error: "Report not found" }, { status: 404 });
+      },
+    );
+  }
+
+  async onOperations(operations: OperationWithContext[]): Promise<void> {
+    // ...write to the reports table
+  }
+
+  async onDisconnect(): Promise<void> {
+    this.#route?.dispose();
+  }
+}
+```
+
+Registration is reversible, which is what `onDisconnect` is for: dispose the handle and the route stops answering, so a reloaded package does not leave a stale one behind.
+
+Both are the same object: one `IHttpScope` per package. Asking for it twice returns the same scope, so a reload cannot accumulate namespaces.
+
+## Register a route
+
+Each verb has a shorthand, with an optional options object before the handler.
+`get`, `post`, `put`, `patch`, `delete` and `head` are available.
+
+Handlers take a [Fetch](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) and the route context, and return a [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response). Use `route()` when you want one handler on several methods, or find the object form easier to read:
+
+```typescript
+http.route({
+  method: ["POST", "PUT"],
+  path: "reports/:id/source",
+  body: "stream",
+  handler: async (request, ctx) => {
+    await store(ctx.params.id, request.body);
+    return new Response(null, { status: 202 });
+  },
+});
+```
+
+`head()` is registered independently of `get()`, and a GET route answers `404` to a HEAD request. That is deliberate: a HEAD response is not a GET with the body dropped. Registering one means you can compute the metadata without producing the body.
+
+```typescript
+http.head("reports/:id", async (_request, ctx) => {
+  const size = await sizeOf(ctx.params.id);
+  return new Response(null, { headers: { "content-length": String(size) } });
+});
+```
+
+Registering the same method and path twice on one scope throws. Silent shadowing is how a route disappears without anyone noticing, and on a surface that carries authentication decisions that has to be loud.
+
+## Authentication
+
+`auth` defaults to `renown`, so a route you write with no options requires a verified bearer and answers `401` without one.
+
+| `auth` | Behaviour |
+| --- | --- |
+| `"renown"` (default) | A verifiable bearer is required. No bearer is a `401`. |
+| `"renown-optional"` | A bearer is verified if present; its absence yields an anonymous actor instead of a `401`. For handlers that make their own per-document decision. |
+| `"public"` | No identity is checked. `ctx.actor` is `undefined`. |
+| a function | Your own gate, run before the handler. |
+
+```typescript
+// Bearer required; ctx.actor.user is the verified principal.
+http.get("reports/:id", (_request, ctx) =>
+  Response.json({ caller: ctx.actor?.user?.address ?? null }),
+);
+
+// Unauthenticated, and written out as such.
+http.get("reports/:id/public-summary", { auth: "public" }, () =>
+  Response.json({ title: "Q3" }),
+);
+
+// Verified if a bearer is present, anonymous if not.
+http.get("reports/:id/preview", { auth: "renown-optional" }, (_req, ctx) =>
+  Response.json({ full: ctx.actor?.user !== undefined }),
+);
+```
+
+Widening has to be written out, which is the point: `grep 'auth: "public"'` across the fleet is the complete inventory of unauthenticated package routes. A route that gates inside its handler instead does not appear in that inventory.
+
+A custom authorizer receives the Node `IncomingMessage` and returns a verdict:
+
+```typescript
+
+
+const supremeAdmin: RouteAuthorizer = (req: IncomingMessage) => {
+  const presented = req.headers["x-admin-key"];
+  if (typeof presented === "string" && presented === process.env.ADMIN_KEY) {
+    return { authorized: true };
+  }
+  return { authorized: false, status: 403, message: "Admin only" };
+};
+
+http.post("admin/reindex", { auth: supremeAdmin }, () =>
+  new Response(null, { status: 202 }),
+);
+```
+
+A refusal with `status` and `message` is answered in the scope's own JSON error envelope. An endpoint that speaks a protocol with its own error shape returns the exact response instead:
+
+```typescript
+http.post(
+  "rpc",
+  {
+    auth: () => ({
+      authorized: false,
+      response: Response.json(
+        { jsonrpc: "2.0", error: { code: -32001, message: "Unauthorized" } },
+        { status: 401 },
+      ),
+    }),
+  },
+  () => new Response(null, { status: 204 }),
+);
+```
+
+That form exists so a JSON-RPC endpoint does not have to declare itself `public` and gate inside the handler, which would hide it from the inventory above.
+
+Two sharp edges:
+
+- **A custom authorizer resolves no principal.** `ctx.actor` is `undefined` on a route with a function `auth`, exactly as on a `public` one. If you need the caller's identity *and* a custom rule, use `renown` and apply the extra rule inside the handler.
+- **`auth: "renown"` does not guarantee an identity.** When the host runs with authentication disabled, every caller is the anonymous actor: `ctx.actor` is `{ user: undefined, authEnabled: false }` and a `renown` route serves them. Read `ctx.actor?.user` before deciding anything, and `ctx.actor?.authEnabled` if the difference matters.
+
+## Request bodies
+
+`body` decides how the payload reaches your handler.
+
+| `body` | Behaviour |
+| --- | --- |
+| `"parsed"` (default) | Buffered, and readable through the Fetch `Request` (`await request.json()`, `await request.text()`). The bytes go in verbatim. |
+| `"raw"` | Buffered, and also handed over as `ctx.rawBody`, byte for byte. |
+| `"stream"` | Not buffered. The Fetch `Request` body is the live request stream. |
+| `"none"` | The body is not read at all. |
+
+A buffered body is capped at `maxBodyBytes`, default 1 MiB. Past the cap the route answers `413` and closes the connection, because the rest of the body is never read and leftover bytes would be parsed as the next request. `maxBodyBytes` is inert when `body` is `"stream"`, so a streaming handler has to enforce its own ceiling while reading. GET and HEAD never read a body regardless of the mode.
+
+Use `"raw"` when a signature is computed over the octets the client sent. A parse and re-encode round trip changes key order, whitespace and duplicate keys, and the signature stops matching:
+
+```typescript
+
+
+http.post(
+  "ingest",
+  { auth: "public", body: "raw", maxBodyBytes: 64 * 1024 },
+  (request, ctx) => {
+    const raw = ctx.rawBody ?? Buffer.alloc(0);
+    const expected = createHmac("sha256", process.env.INGEST_SECRET!)
+      .update(raw)
+      .digest("hex");
+    const presented = request.headers.get("x-signature") ?? "";
+    if (
+      presented.length !== expected.length ||
+      !timingSafeEqual(Buffer.from(presented), Buffer.from(expected))
+    ) {
+      return new Response(null, { status: 401 });
+    }
+    return new Response(null, { status: 202 });
+  },
+);
+```
+
+If that is what you are building, read [Receiving webhooks](../docs/docs/08-ReceivingWebhooks.md) first. Verification, replay windows, dedupe and header redaction are already implemented there.
+
+## The route context
+
+The second handler argument carries what the scope resolved before the handler ran:
+
+- `params` — decoded path params, as strings.
+- `actor` — the resolved caller: `{ user, authEnabled }`, or `undefined` on a `public` route or one with a custom authorizer. `user.appKey` is the `did:key` of the app instance that issued the request's token, the same value a signer presents when it signs an action, so a request can decide as the same principal the write path presents.
+- `rawBody` — the exact octets received. Present only when `body` is `"raw"`.
+- `signal` — aborts when the client disconnects. Pass it into anything long-running.
+- `transport` — where the request reached the host, resolved through any reverse proxy: `{ proto, host, prefix, baseUrl }`. Use it instead of touching `req.socket` or reading `x-forwarded-*` yourself.
+
+```typescript
+http.get("reports/:id/export", async (_request, ctx) => {
+  const rows = await query(ctx.params.id, ctx.signal);
+  return Response.json({ rows, appKey: ctx.actor?.user?.appKey });
+});
+```
+
+## Serving sub-paths
+
+Two ways, both verified against the Express and Fastify hosts:
+
+```typescript
+// A wildcard param, joined with "/": /api/pkg/blobs/a/b/c.txt → "a/b/c.txt"
+http.get("blobs/*rest", { auth: "public" }, (_request, ctx) =>
+  Response.json({ rest: ctx.params.rest }),
+);
+
+// A prefix match: the handler also answers every path below "files".
+http.get("files", { auth: "public", prefix: true }, () => new Response("hit"));
+```
+
+Prefer the wildcard when you need the sub-path, since `prefix: true` gives you no param for it. Routes within a scope are matched in registration order, so register a specific route before a prefix route that would swallow it.
+
+## The forwarded origin
+
+`ctx.transport` says where the request reached the host — `proto`, `host`, `prefix`, and the `baseUrl` they compose. Behind a reverse proxy the socket knows none of this, so the values come from the `X-Forwarded-Proto`, `X-Forwarded-Host` and `X-Forwarded-Prefix` headers.
+
+Those headers are client-written. A host that is reachable without a proxy in front must not believe them, or a caller could choose the origin your package advertises — a callback URL or an asset link built from `ctx.transport.baseUrl` would point wherever the caller said. So the host declares its topology through `trustProxy` on the route service: off by default, and on in the deployed reactor, which always has a balancer in front. Untrusted, `proto` follows the socket and `host` comes from the request's own `Host` header.
+
+There is no rate limiting at this layer. A per-process counter cannot express a fleet-wide limit — behind a balancer with three instances, a declared 60/min admits up to 180 — so limits belong at the edge, where the state is shared and a flood is refused before it reaches the reactor at all.
+
+## Absolute URLs
+
+`scope.baseUrl` is the public base every route in the scope hangs off, and each registration handle carries the absolute URL that route answers on:
+
+```typescript
+const handle = http.get("reports/:id", { auth: "public" }, () =>
+  new Response(""),
+);
+// https://switchboard.example/api/@powerhousedao/reports/reports/:id
+console.log(handle.url, http.baseUrl);
+```
+
+Both are absolute, because a package hands them to third parties: a provider callback, a link stored in a document. The reactor resolves its origin from `PUBLIC_URL`, then `RENDER_EXTERNAL_URL`, then `HEROKU_APP_DEFAULT_DOMAIN_NAME`, and falls back to `http://localhost:<port>`, which is right behind a tunnel in development and obviously wrong rather than silently unusable elsewhere.
+
+A host embedding the route service without telling it an origin is the one case where both degrade to a path (`/api/document-model`). If you are about to persist a URL or send it upstream, check for a leading `/` and refuse rather than store a value no third party can resolve. When you are answering a request rather than minting a link, `ctx.transport.baseUrl` is the origin the request actually arrived on.
+
+## Disposal
+
+Packages hot-reload, so every registration is reversible — but **you do not have to do this yourself**. The host releases your whole scope when your package is replaced or removed, and every scope when it shuts down. Routes you register and forget are cleaned up.
+
+`handle.dispose()` and `scope.dispose()` are there for the cases the host cannot know about: a route you want to stop serving while the package stays loaded, or a scope a test stood up. Disposing something already gone is a no-op, and after disposal the same package can register the same path again, which is what makes a reload a dispose followed by a register.
+
+Why it is the host's job rather than yours: a route that outlives its package stays mounted against the old code, and because re-registering the same method and path throws, the *next* load would fail on the leak instead of replacing it. That is too sharp an edge to leave to every package remembering an `onDisconnect`.
+
+Webhook endpoints are not revoked when a package unloads. A redeploy must not force re-registration with every provider, so token rows persist and the endpoint answers `503` until the package returns.
+
+## The Node escape hatch
+
+Some protocols must own the socket. `nodeRoute()` hands your handler the raw `IncomingMessage` and `ServerResponse`, still inside your namespace, with nothing having touched the request stream:
+
+```typescript
+http.nodeRoute({
+  method: ["GET", "POST"],
+  path: "mcp",
+  auth: supremeAdmin,
+  handler: async (req, res) => {
+    await transport.handleRequest(req, res);
+  },
+});
+```
+
+`auth` and `prefix` still apply. `body` and `maxBodyBytes` do not exist on a node route: the handler reads the stream itself, so the scope has no body to shape and nothing to measure. A cap declared there would be silently inert, so a node route that needs one enforces it while reading.
+
+Reach for it when a protocol implementation writes to the response itself, hijacks the connection, or holds a long-lived stream the Fetch shape cannot express. Do not reach for it to get the raw bytes (`body: "raw"` does that), to stream a response (a Fetch `Response` with a `ReadableStream` body does that), or because the Fetch types are unfamiliar. You give up the body cap and the uniform error handling, and you take on writing correct status codes and headers yourself.
+
+## What the scope deliberately does not have
+
+- **`OPTIONS`.** Preflight belongs to the CORS layer, which answers for your namespace already.
+- **Middleware.** There is no `scope.use()`. Auth and body policy are declarative fields precisely so they can be audited across every package in the fleet; free-form middleware puts each package back in charge of deciding.
+- **A way to name a path.** Absolute paths, `..` segments and URL-shaped paths all throw.
+
+---
+
+
+## Receiving webhooks
+
+> Source: https://academy.vetra.io/academy/Build/WorkWithData/ReceivingWebhooks
+
+A webhook endpoint is how a third-party provider (GitHub, Stripe, Slack, a payment gateway) delivers an event into your package. You register one endpoint family for the package, mint one endpoint per logical key, and hand the resulting URL to the provider. The reactor verifies signatures, absorbs redeliveries, answers the provider's probe and rate-limits the endpoint before your code sees a delivery.
+
+This is a separate surface from [package HTTP routes](../docs/docs/07-HostingHttpRoutes.md), not a convenience wrapper on them, because four things are true of a webhook and of nothing else:
+
+- **The caller holds no credentials.** A provider cannot present a Renown bearer, so the URL is the credential. That makes it a secret, which is why it carries an opaque token and not your document id.
+- **The bytes are cryptographically load-bearing.** Signatures are computed over the exact octets sent. A parse and re-encode round trip changes key order and whitespace, and the signature stops matching.
+- **Redeliveries are expected.** Every provider retries on a timeout. Without dedupe, one delivery runs twice.
+- **Providers probe before they will register.** Slack and Facebook send a verification round that echoes a value back, and refuse the URL if it does not answer.
+
+## Register once, mint per key
+
+`register()` is called once per package, from your subgraph's `onSetup`. It returns the endpoint family, from which you mint one endpoint per key. The key is yours, a document id or an account id, and it never appears in the URL:
+
+```typescript
+
+  IHttpScope,
+  IWebhookEndpoints,
+  WebhookPolicy,
+  WebhookReply,
+  WebhookRequest,
+} from "@powerhousedao/reactor-api";
+
+export class TriggerService {
+  #endpoints: IWebhookEndpoints | undefined;
+
+  async register(http: IHttpScope): Promise<void> {
+    this.#endpoints = await http.webhooks.register({
+      name: "trigger",
+      policyFor: (key) => this.policyFor(key),
+      onRequest: (request) => this.deliver(request),
+    });
+  }
+
+  async endpointUrl(documentId: string): Promise<string | undefined> {
+    if (!this.#endpoints) return undefined;
+    const { url } = await this.#endpoints.endpointFor(documentId);
+    return url; // https://switchboard.example/webhooks/2f9c…  (32 hex chars)
+  }
+}
+```
+
+`name` distinguishes several endpoint families within one package, so a package that receives both billing events and repository events registers twice with different names.
+
+The URL is flat and namespaceless: `/webhooks/<token>`. The package and the key live in the token record, not in the path, so the URL leaks neither, and a token minted by one package can never dispatch into another's handler. The service owns the token and you own the key, which is what makes "never the document id in the URL" structural instead of a rule to remember.
+
+`endpointFor` is idempotent per key: the same key returns the same token, so a provider already registered against that URL is not left pointing at a dead one. It also answers with `createdAt`, so showing an author when the URL came into being does not mean listing every endpoint in the package. `list()` enumerates the family and `revoke(key)` retires one endpoint.
+
+Registration rejects on a host with no webhook store. Catch it rather than letting it propagate — a host without webhook triggers is not a host without your package:
+
+```typescript
+this.registration = http.webhooks
+  .register({
+    /* … */
+  })
+  .catch((error) => {
+    logger.warn("Webhooks are unavailable on this host", error);
+    return undefined;
+  });
+```
+
+## `policyFor` versus the registration
+
+This is the seam to get right, and it is where three of the four defects found in review lived.
+
+Registration-level values go under `defaults`, and `policyFor` is merged over them. Put something in `defaults` **only when it is a property of your package's integration** and true for every endpoint in the family. Anything a document configures belongs in `policyFor`, which is called with the key on every delivery.
+
+The two are separate keys on purpose. `WebhookSpec` used to extend `WebhookPolicy`, so every per-endpoint field was also settable at the top level of the registration — where it compiled, read correctly, and was wrong, because the policy that applies is resolved per endpoint. That is how the challenge round below came to be skipped.
+
+For a workflow, all of it is document configuration. The author picks the scheme, the header, the secret, the allowed methods, the dedupe field and the challenge field, and can change any of them at any time. A registration-level value would be a snapshot of whatever the package knew at boot.
+
+```typescript
+async policyFor(key: string): Promise<WebhookPolicy | undefined> {
+  const config = await this.loadConfig(key);
+  if (!config?.enabled) return undefined; // not armed
+
+  return {
+    methods: ["POST"],
+    challengeField: config.challengeField,
+    dedupe: config.dedupeField
+      ? { field: config.dedupeField, ttlSeconds: 900 }
+      : undefined,
+    verify: {
+      scheme: "hmac-prefixed",
+      secret: await this.resolveSecret(config.secretRef),
+    },
+  };
+}
+```
+
+Two consequences worth spelling out:
+
+- **Returning `undefined` disarms the endpoint**, and a disarmed endpoint answers exactly as an unknown token does.
+- **A field only the document knows must be in `policyFor`.** Putting `challengeField` on the registration alone leaves it undefined at delivery time, the provider's verification round is treated as a real delivery, and the integration can never be established. That is not hypothetical: it shipped, and no unit test that supplied the field at registration could see it.
+
+## Signature schemes
+
+`verify.scheme` selects the signature layout, `verify.secret` is the resolved secret, `verify.header` overrides the scheme's conventional header, and `verify.toleranceSeconds` sets the replay window for timestamped schemes. Every comparison is constant-time and runs over the exact bytes received.
+
+Schemes are named after the wire format, not the sender: the same layouts are used by many providers, so a brand name would fit one and mislead about the rest. Match the format your provider's documentation describes, and override `header` if it signs a different one.
+
+| Scheme               | Default header        | What is checked                                                                                                                                            |
+| -------------------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `"none"`             | —                     | Nothing. Same as omitting `verify`.                                                                                                                        |
+| `"token"`            | `x-webhook-token`     | The header equals the secret.                                                                                                                              |
+| `"hmac"`             | `x-signature`         | The digest of the body, alone.                                                                                                                             |
+| `"hmac-prefixed"`    | `x-hub-signature-256` | The digest behind a label, `sha256=<digest>`. GitHub signs this way.                                                                                       |
+| `"hmac-timestamped"` | `stripe-signature`    | `t=<unix>,v1=<digest>`, digest over `<unix>.<body>`, within the replay window. Any `v1` may match, which is how key rotation works. Stripe signs this way. |
+
+### The hash, the encoding and the label
+
+The layout above is separate from three things a sender picks independently, so the scheme names carry none of them:
+
+| Field       | Default          | Values                                                |
+| ----------- | ---------------- | ----------------------------------------------------- |
+| `algorithm` | `"sha256"`       | `"sha1"`, `"sha256"`, `"sha512"`                      |
+| `encoding`  | `"hex"`          | `"hex"`, `"base64"`                                   |
+| `prefix`    | `"<algorithm>="` | any literal; `""` for a prefixed layout with no label |
+
+Folding these into the layout name would need one name per combination and still misname any scheme whose hash was overridden. Leave them out for the common case, and set only what your sender differs on:
+
+```typescript
+// A sender still on SHA-1, labelling its signature the older way.
+verify: { scheme: "hmac-prefixed", secret, algorithm: "sha1" }
+// prefix defaults to "sha1=" — it follows the algorithm.
+
+// A sender that base64-encodes the digest under its own header.
+verify: {
+  scheme: "hmac",
+  secret,
+  encoding: "base64",
+  header: "x-webhook-signature",
+}
+```
+
+`prefix` applies only to `hmac-prefixed`: `hmac` has nothing before the digest, and `hmac-timestamped`'s `v1=` is structural rather than a label. Base64 comparison is case-sensitive; hex is not, so a sender that uppercases a hex digest still verifies.
+
+A GitHub-style provider, where the secret is fixed for the package:
+
+```typescript
+await http.webhooks.register({
+  name: "repository",
+  // Fixed for every endpoint in this family, so it belongs in `defaults`.
+  defaults: {
+    methods: ["POST"],
+    verify: {
+      scheme: "hmac-prefixed",
+      secret: process.env.GITHUB_WEBHOOK_SECRET,
+    },
+    // GitHub's delivery id is a header, not a body field.
+    dedupe: { field: { header: "x-github-delivery" } },
+  },
+  onRequest: (request) => {
+    const event = request.headers["x-github-event"];
+    return { status: 202, body: `queued ${event ?? "event"}` };
+  },
+});
+```
+
+A Stripe-style provider, with the replay window written out and a JSON reply:
+
+```typescript
+const endpoints = await http.webhooks.register({
+  name: "billing",
+  defaults: {
+    methods: ["POST"],
+    // Stripe's event id is the top-level `id`; `data.object.id` would be the
+    // subscription, which is stable across events.
+    dedupe: { field: "id", ttlSeconds: 86_400 },
+    maxBodyBytes: 512 * 1024,
+  },
+  policyFor: () => ({
+    verify: {
+      scheme: "hmac-timestamped",
+      secret: process.env.STRIPE_WEBHOOK_SECRET,
+      toleranceSeconds: 300,
+    },
+  }),
+  onRequest: async (request) => {
+    const event = request.body as { type: string };
+    const applied = await applyBillingEvent(request.key, event.type);
+    return {
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ applied }),
+    };
+  },
+});
+
+const { url } = await endpoints.endpointFor("account-42");
+```
+
+The timestamped scheme's tolerance defaults to 300 seconds when you leave it out. A delivery whose timestamp falls outside the window is refused with `401` and never reaches `onRequest`.
+
+Verification fails closed. A scheme other than `"none"` with `secret: undefined` refuses every delivery, so a secret your `policyFor` could not resolve produces `401`s rather than unverified runs. That is the right failure, but it does mean a broken secret store looks exactly like a provider with the wrong key. The log line carries the reason; the response never does, so a prober learns nothing from the body.
+
+## The challenge round
+
+`challengeField` names where the provider echoes a value back to prove the endpoint exists. When a delivery carries it, the service answers `200 text/plain` with the value and **does not invoke `onRequest`**:
+
+```typescript
+policyFor: () => ({ challengeField: "challenge" }),
+```
+
+Slack's `url_verification` round is exactly this. Without it, the probe is treated as a real delivery: the provider gets a `202` where it expected the echo, and refuses to register the URL.
+
+The challenge is answered after signature verification, so a probe must carry a valid signature if the policy declares a scheme. It is answered before dedupe, so a repeated probe is always echoed.
+
+## Dedupe
+
+`dedupe.field` names the provider's own delivery id. The first delivery with a given value runs; a repeat within the TTL is answered `200` with an empty body and `onRequest` is not called again.
+
+Providers disagree about where they put that id, so a field can be named three ways — and the same three work for `challengeField`:
+
+| Form                              | Read from                                     | Example                                     |
+| --------------------------------- | --------------------------------------------- | ------------------------------------------- |
+| `"id"`                            | the query string, then a top-level body field | Stripe — its event id is the top-level `id` |
+| `{ header: "x-github-delivery" }` | a request header                              | GitHub — its delivery id is a header        |
+| `{ body: "payload.event.id" }`    | a dot-separated path into the parsed body     | any provider that nests the delivery id     |
+
+Name the id that identifies **the delivery**, not the thing it is about. Stripe's `data.object.id` is the subscription, stable across events, so deduping on it would drop everything after the first.
+
+A bare string keeps its original meaning, so existing registrations are unaffected. Note that a body path only resolves when the body parsed as JSON: with another content type, a body-sourced field finds nothing and every retry re-runs. Prefer a header source when the provider offers one.
+
+```typescript
+dedupe: { field: "delivery_id", ttlSeconds: 900 }, // default 300
+```
+
+A redelivery is answered as accepted rather than as an error, because the provider is retrying something it has no way of knowing succeeded. Telling it "no" makes it retry again; telling it "yes" stops the retry chain without running the work twice. Delivery records live in the reactor's relational store, so dedupe holds across processes and restarts.
+
+Without `dedupe`, every retry runs. Set it whenever your handler does anything that must not happen twice.
+
+## What the handler sees
+
+`onRequest` receives a `WebhookRequest`:
+
+- `key` — your key for this endpoint, from `endpointFor`.
+- `method`, `path`, `queryParams`.
+- `headers` — lowercased, with credentials redacted. `authorization`, `proxy-authorization`, `cookie`, `set-cookie`, `x-api-key`, the known signature headers and whatever header the policy's scheme reads are all replaced with `[redacted]`, so a header dump into a log or a run journal cannot carry a live secret.
+- `raw` — the exact bytes received.
+- `body` — JSON (and `+json`) parsed to an object, `application/x-www-form-urlencoded` parsed to an object, anything else the decoded text, and `undefined` for an empty body. A malformed JSON body arrives as text rather than throwing, since a malformed body is still evidence.
+
+It returns a `WebhookReply`: `{ status, body?, contentType? }`. An unlabelled body is sent as `text/plain`, so a JSON reply says `contentType: "application/json"`. A HEAD delivery gets the status and no body.
+
+## Sync or async
+
+The reply is what the provider sees, and deciding when to send it is your call.
+
+**Async** — answer immediately, do the work afterwards. This is the safe default:
+
+```typescript
+onRequest: (request) => {
+  void this.startRun(request.key, request.body); // not awaited
+  return { status: 202 };
+},
+```
+
+**Sync** — hold the connection until the work finishes, so the provider learns the outcome. You are holding the provider's socket, which is a real cost: providers time out in seconds and retry, and a slow handler multiplies inbound load. If you do it, bound the wait yourself, answer `504` on expiry, and let the work continue rather than cancelling it. Cancelling would lose work the provider has already been told about, and the retry that follows is what `dedupe` absorbs. The reactor does not impose that timeout for you.
+
+## Method and size limits
+
+`methods` is uppercase, and `undefined` accepts every method. All six methods are mounted for every endpoint on purpose: a provider's verification round may probe with `GET` even when its deliveries are `POST`, and refusing a method is the registration's decision rather than the transport's. A method the policy excludes gets `405`.
+
+`maxBodyBytes` caps the payload, default 1 MiB, and a larger body is refused with `413` and the connection closed.
+
+There is no rate limit here. One was tried and removed: the checks that make a delivery safe to answer — the endpoint lookup and resolving the policy — necessarily run *before* a limiter could, because a `429` before the armed check would tell a prober its token is real. A limiter placed after them sheds only the cheap half of the work, and being per-process it cannot state a fleet-wide rate anyway. Rate limiting belongs at the edge, in front of the reactor.
+
+## Handling secrets
+
+`verify.secret` is a resolved value. Only a reference belongs in a document (the `secret://v1:<id>` form the workflow package uses, or whatever your package's secret store issues) and the resolved secret belongs nowhere but the return value of `policyFor`, for the moment it takes to verify one delivery.
+
+Concretely: resolve the ref inside `policyFor`, do not cache the plaintext on the document, do not write it into state, and do not log it. If resolution fails, return `secret: undefined` and let verification refuse the delivery. The service redacts the signature header and the known credential headers from what your handler sees, so a handler that journals `request.headers` cannot leak one by accident, but it cannot help with a secret your own code put somewhere.
+
+## How a delivery is answered
+
+In order, and the order is deliberate:
+
+| Situation                                    | Answer                                                     |
+| -------------------------------------------- | ---------------------------------------------------------- |
+| Unknown or malformed token                   | `404` `{"error":"Unknown endpoint"}`                       |
+| Token valid, package not loaded on this host | `503`                                                      |
+| `policyFor` returned `undefined` (disarmed)  | `404`, byte-identical to an unknown token                  |
+| Method the policy does not allow             | `405`                                                      |
+| Body past `maxBodyBytes`                     | `413`                                                      |
+| Signature verification failed                | `401`                                                      |
+| Carries the `challengeField` value           | `200 text/plain`, the value echoed, `onRequest` not called |
+| A repeat of a seen `dedupe` value            | `200`, empty, `onRequest` not called                       |
+| Anything else                                | Whatever `onRequest` returns                               |
+
+A disarmed endpoint answering exactly as an unknown token does is the point, not an accident: a prober holding a token must not be able to tell a live endpoint from one that never existed.
+
+A verification failure on a live endpoint does answer `401` rather than `404`, because a caller that holds the token has already proved the endpoint exists.
+
+## Across restarts and reloads
+
+Tokens live in the reactor's relational store, not in the package. So:
+
+- A token stays valid when the package reloads, and the same key mints the same token afterwards. A redeploy does not force re-registration with every provider.
+- While the owning package is not loaded, its endpoints answer `503`. The token is real; nothing on this host can serve it yet.
+- Any host in a fleet can serve any endpoint, since the token record carries the package and the key.
+
+Endpoints are not revoked on teardown. `revoke(key)` is the only thing that retires one.
 
 ---
 

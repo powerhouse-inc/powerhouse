@@ -100,9 +100,11 @@
         "packages/reactor/src/read-models",
         "packages/reactor-api/src/graphql",
         "packages/analytics-engine/core",
-        "packages/analytics-engine/graphql"
+        "packages/analytics-engine/graphql",
+        "packages/reactor-api/src/http",
+        "packages/shared/processors/http.ts"
       ],
-      "checkFocus": "Drive configuration, processor interface, subgraph API, relational DB processor, analytics engine query syntax, GraphQL schema shape. Ignore _-prefixed draft/archive subfolders."
+      "checkFocus": "Drive configuration, processor interface, subgraph API, relational DB processor, analytics engine query syntax, GraphQL schema shape, the package HTTP scope (IHttpScope) and webhook endpoints. Ignore _-prefixed draft/archive subfolders."
     },
     {
       "id": "build-launch",
