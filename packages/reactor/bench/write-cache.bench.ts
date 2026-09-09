@@ -1,8 +1,24 @@
-import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import {
+  AddFileInputSchema,
+  AddFolderInputSchema,
+  defaultGlobalState,
+  driveDocumentModelModule,
+  nodeReducer,
+  type AddFileAction,
+  type AddFolderAction,
+  type DocumentDrivePHState,
+} from "@powerhousedao/shared/document-drive";
+import {
+  createReducer,
   deriveOperationId,
   generateId,
+  isDocumentAction,
+  type Action,
+  type DocumentModelModule,
   type PHDocument,
+  type Reducer,
+  type SignalDispatch,
+  type StateReducer,
 } from "@powerhousedao/shared/document-model";
 import type { Options as BenchOptions } from "tinybench";
 import { bench, describe } from "vitest";
@@ -49,14 +65,16 @@ type Fixture = {
  */
 let pendingTeardown: Promise<void> = Promise.resolve();
 
-async function createFixture(): Promise<Fixture> {
+async function createFixture(
+  module: DocumentModelModule<DocumentDrivePHState> = driveDocumentModelModule,
+): Promise<Fixture> {
   await pendingTeardown;
 
   const { db, store, keyframeStore, cleanup } =
     await createTestOperationStore();
 
   const registry = new DocumentModelRegistry();
-  registry.registerModules(driveDocumentModelModule);
+  registry.registerModules(module);
 
   const destroy = async (): Promise<void> => {
     try {
@@ -87,26 +105,49 @@ async function createFixture(): Promise<Fixture> {
  * `throws` makes tinybench rethrow a failing task instead of parking the
  * error on result.error, dispatching no event and reporting a passing suite.
  */
+type BenchCaseOptions = {
+  /** A floor on samples, for cases whose iteration is slower than `time`. */
+  iterations?: number;
+  /** The module the case's registry holds, when it must not be the plain one. */
+  module?: DocumentModelModule<DocumentDrivePHState>;
+  /**
+   * Turns on the in-situ replay stamps for this case: the accumulators are
+   * cleared once prepare has finished, so nothing prepare replays is counted,
+   * and the run phase prints its decomposition under this label.
+   */
+  stamps?: string;
+};
+
 function benchCase<TState>(
   name: string,
   time: number,
   prepare: (fixture: Fixture) => Promise<TState>,
   measure: (state: TState) => Promise<void>,
+  caseOptions: BenchCaseOptions = {},
 ): void {
   let fixture: Fixture | undefined = undefined;
   let state: TState | undefined = undefined;
 
   const options: BenchOptions = {
     time,
+    iterations: caseOptions.iterations,
     throws: true,
     setup: async () => {
-      fixture = await createFixture();
+      fixture = await createFixture(caseOptions.module);
       state = await prepare(fixture);
+
+      if (caseOptions.stamps !== undefined) {
+        resetReplayStamps();
+      }
     },
-    teardown: () => {
+    teardown: (_task, mode) => {
       const finished = fixture;
       fixture = undefined;
       state = undefined;
+
+      if (caseOptions.stamps !== undefined && mode === "run") {
+        reportReplayStamps(caseOptions.stamps);
+      }
 
       if (finished) {
         pendingTeardown = finished.destroy();
@@ -190,6 +231,44 @@ async function createDocumentInStore(
   });
 }
 
+/**
+ * The action stored at `index` by `appendOperations`. Extracted so a case that
+ * replays without a store replays the same actions a stored replay reads back.
+ */
+function syntheticAction(
+  documentId: string,
+  index: number,
+): AddFileAction | AddFolderAction {
+  const isFile = index % 2 === 1;
+
+  if (isFile) {
+    return {
+      id: `${documentId}-action-${index}`,
+      type: "ADD_FILE",
+      scope: SCOPE,
+      timestampUtcMs: Date.now().toString(),
+      input: {
+        id: `${documentId}-file-${index}`,
+        name: `file-${index}.txt`,
+        documentType: "powerhouse/document-model",
+        parentFolder: null,
+      },
+    };
+  }
+
+  return {
+    id: `${documentId}-action-${index}`,
+    type: "ADD_FOLDER",
+    scope: SCOPE,
+    timestampUtcMs: Date.now().toString(),
+    input: {
+      id: `${documentId}-folder-${index}`,
+      name: `Folder ${index}`,
+      parentFolder: null,
+    },
+  };
+}
+
 /** Appends `count` global-scope operations at contiguous indices 0..count-1. */
 async function appendOperations(
   store: IOperationStore,
@@ -197,8 +276,6 @@ async function appendOperations(
   count: number,
 ): Promise<void> {
   for (let index = 0; index < count; index++) {
-    const isFile = index % 2 === 1;
-
     await store.apply(
       documentId,
       DOCUMENT_TYPE,
@@ -212,24 +289,7 @@ async function appendOperations(
           skip: 0,
           hash: `${documentId}-hash-${index}`,
           timestampUtcMs: new Date().toISOString(),
-          action: {
-            id: `${documentId}-action-${index}`,
-            type: isFile ? "ADD_FILE" : "ADD_FOLDER",
-            scope: SCOPE,
-            timestampUtcMs: Date.now().toString(),
-            input: isFile
-              ? {
-                  id: `${documentId}-file-${index}`,
-                  name: `file-${index}.txt`,
-                  documentType: "powerhouse/document-model",
-                  parentFolder: null,
-                }
-              : {
-                  id: `${documentId}-folder-${index}`,
-                  name: `Folder ${index}`,
-                  parentFolder: null,
-                },
-          },
+          action: syntheticAction(documentId, index),
         });
       },
     );
@@ -772,4 +832,217 @@ describe("Write Cache Keyframe Performance", () => {
     },
     measureKeyframeWrites,
   );
+});
+
+type ReplayStamps = {
+  wallNs: bigint;
+  bodyNs: bigint;
+  wallCalls: number;
+  bodyCalls: number;
+};
+
+/**
+ * Accumulators for the in-situ decomposition of a cold-miss replay. A tinybench
+ * case mean is the wall time of the whole measured function, so a sub-interval
+ * of one reducer call cannot be a case of its own; these totals are the only
+ * way to separate the custom reducer body, which runs on a mutative draft,
+ * from the create() draft and finalize around it.
+ */
+let replayStamps: ReplayStamps = {
+  wallNs: 0n,
+  bodyNs: 0n,
+  wallCalls: 0,
+  bodyCalls: 0,
+};
+
+function resetReplayStamps(): void {
+  replayStamps = { wallNs: 0n, bodyNs: 0n, wallCalls: 0, bodyCalls: 0 };
+}
+
+function reportReplayStamps(label: string): void {
+  const { wallNs, bodyNs, wallCalls, bodyCalls } = replayStamps;
+
+  if (wallCalls === 0 || bodyCalls === 0) {
+    console.log(`replay stamps | ${label} | no reducer calls recorded`);
+    return;
+  }
+
+  const wallUsPerCall = Number(wallNs) / 1000 / wallCalls;
+  const bodyUsPerCall = Number(bodyNs) / 1000 / bodyCalls;
+  const outsideUsPerCall = wallUsPerCall - bodyUsPerCall;
+  const bodySharePct = (Number(bodyNs) / Number(wallNs)) * 100;
+
+  console.log(
+    [
+      `replay stamps | ${label}`,
+      `reducer calls ${wallCalls} (body ${bodyCalls})`,
+      `module.reducer wall ${wallUsPerCall.toFixed(3)} us/call`,
+      `reducer body in draft ${bodyUsPerCall.toFixed(3)} us/call`,
+      `create() draft+finalize+base ${outsideUsPerCall.toFixed(3)} us/call`,
+      `body share ${bodySharePct.toFixed(1)}%`,
+    ].join(" | "),
+  );
+}
+
+/**
+ * The drive model's own custom reducer body for the two action types this
+ * bench replays, reassembled from the exported node reducer and its input
+ * schemas because the generated module keeps its state reducer private. It
+ * returns undefined for a handled action, as the generated one does, so the
+ * base reducer keeps the draft's mutations instead of replacing state.
+ */
+function applyDriveBody(
+  state: DocumentDrivePHState,
+  action: Action,
+  dispatch?: SignalDispatch,
+): DocumentDrivePHState | undefined {
+  if (isDocumentAction(action)) {
+    return state;
+  }
+
+  if (action.type === "ADD_FILE") {
+    const fileAction = action as AddFileAction;
+    AddFileInputSchema().parse(fileAction.input);
+    nodeReducer.addFileOperation(state.global, fileAction, dispatch);
+    return undefined;
+  }
+
+  if (action.type === "ADD_FOLDER") {
+    const folderAction = action as AddFolderAction;
+    AddFolderInputSchema().parse(folderAction.input);
+    nodeReducer.addFolderOperation(state.global, folderAction, dispatch);
+    return undefined;
+  }
+
+  return state;
+}
+
+const stampedDriveStateReducer: StateReducer<DocumentDrivePHState> = (
+  state,
+  action,
+  dispatch,
+) => {
+  const startedAt = process.hrtime.bigint();
+
+  try {
+    return applyDriveBody(
+      state as unknown as DocumentDrivePHState,
+      action,
+      dispatch,
+    );
+  } finally {
+    replayStamps.bodyNs += process.hrtime.bigint() - startedAt;
+    replayStamps.bodyCalls += 1;
+  }
+};
+
+const stampedDriveReducer = createReducer<DocumentDrivePHState>(
+  stampedDriveStateReducer,
+);
+
+const instrumentedDriveReducer: Reducer<DocumentDrivePHState> = (
+  document,
+  action,
+  dispatch,
+  reducerOptions,
+) => {
+  const startedAt = process.hrtime.bigint();
+
+  try {
+    return stampedDriveReducer(document, action, dispatch, reducerOptions);
+  } finally {
+    replayStamps.wallNs += process.hrtime.bigint() - startedAt;
+    replayStamps.wallCalls += 1;
+  }
+};
+
+/**
+ * The drive module with a timed reducer in place of the generated one. Only the
+ * decomposition cases register it, so the six suites above keep measuring the
+ * plain module and stay comparable with the recorded series.
+ */
+const instrumentedDriveModule: DocumentModelModule<DocumentDrivePHState> = {
+  ...driveDocumentModelModule,
+  reducer: instrumentedDriveReducer,
+};
+
+const replayActionCache = new Map<
+  number,
+  (AddFileAction | AddFolderAction)[]
+>();
+
+/** The same actions `appendOperations` stores, built once per op count. */
+function replayActions(count: number): (AddFileAction | AddFolderAction)[] {
+  const cached = replayActionCache.get(count);
+
+  if (cached) {
+    return cached;
+  }
+
+  const actions: (AddFileAction | AddFolderAction)[] = [];
+
+  for (let index = 0; index < count; index++) {
+    actions.push(syntheticAction(DOCUMENT_ID, index));
+  }
+
+  replayActionCache.set(count, actions);
+  return actions;
+}
+
+/** Op count and the time budget its cold-miss replay needs for n >= 10. */
+const REPLAY_DECOMPOSITION_CASES: [number, number][] = [
+  [100, 2000],
+  [500, 6000],
+  [1000, 8000],
+  [2000, 8000],
+];
+
+/**
+ * Why a cold-miss rebuild costs about 39x for 10x the operations. Each op count
+ * runs two legs: a full cold miss through a module whose reducer is timed, and
+ * the same actions through the drive reducer body alone on plain state, with no
+ * mutative draft and no base reducer. The recorded pair says how much of the
+ * growth the body's own work accounts for; the stamps printed by the first leg
+ * split its replay into the body measured inside the draft and everything
+ * create() does around it.
+ */
+describe("Write Cache Cold Miss Replay Decomposition", () => {
+  for (const [count, budgetMs] of REPLAY_DECOMPOSITION_CASES) {
+    benchCase(
+      `cold miss ${count} ops: instrumented cold-miss replay`,
+      budgetMs,
+      async (fixture) => {
+        await populateSingleDocument(fixture, count);
+        assertLastIndex(
+          await documentAtRevision(fixture, DOCUMENT_ID, count - 1),
+          count - 1,
+        );
+        return fixture;
+      },
+      async (fixture) => {
+        const cache = await freshCache(fixture, NO_KEYFRAMES);
+        await cache.getState(DOCUMENT_ID, SCOPE, BRANCH, count - 1);
+      },
+      {
+        iterations: 10,
+        module: instrumentedDriveModule,
+        stamps: `cold miss ${count} ops`,
+      },
+    );
+
+    bench(
+      `cold miss ${count} ops: reducer body on plain state`,
+      () => {
+        const state = driveDocumentModelModule.utils.createState({
+          global: defaultGlobalState(),
+        });
+        const actions = replayActions(count);
+
+        for (const action of actions) {
+          applyDriveBody(state, action);
+        }
+      },
+      { time: 2000, iterations: 10, throws: true },
+    );
+  }
 });
