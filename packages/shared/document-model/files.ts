@@ -261,6 +261,60 @@ export async function baseLoadFromInputVersioned<TState extends PHBaseState>(
   return loadFromZipDataVersioned<TState>(data, config, options);
 }
 
+export type BulkArchiveEntry = {
+  /** "/"-separated zip path of a file entry (no trailing slash). */
+  path: string;
+  data: Uint8Array;
+};
+
+/**
+ * Whether this zip is a single Powerhouse document: the document's four JSON
+ * entries (header/state/current-state/operations) at the archive root. A
+ * bulk archive has a folder tree instead. Returns false for any input that
+ * is not a readable zip.
+ */
+export async function isDocumentZip(data: Uint8Array): Promise<boolean> {
+  let files: Unzipped;
+  try {
+    files = await unzipAsync(data);
+  } catch {
+    return false;
+  }
+  return (
+    Boolean(files["header.json"]) &&
+    Boolean(files["state.json"]) &&
+    Boolean(files["operations.json"])
+  );
+}
+
+/**
+ * The file entries of a zip (directory entries excluded). Used for bulk
+ * archives; throws when the archive holds no files. Note this does NOT
+ * validate that the entries are document zips — pair with isDocumentZip.
+ */
+export async function parseBulkArchive(
+  data: Uint8Array,
+): Promise<BulkArchiveEntry[]> {
+  const files = await unzipAsync(data);
+  const entries = Object.entries(files)
+    .filter(([name]) => !name.endsWith("/"))
+    .map(([path, value]) => ({ path, data: value }));
+  if (entries.length === 0) {
+    throw new Error("Archive contains no files");
+  }
+  return entries;
+}
+
+/**
+ * Assemble a zip from raw entries. A key ending in "/" with empty data is a
+ * directory entry, so an archive's folder structure survives a round-trip.
+ */
+export async function zipEntries(
+  entries: Record<string, Uint8Array>,
+): Promise<Uint8Array> {
+  return zipAsync(entries);
+}
+
 export const documentModelLoadFromInput: LoadFromInput<DocumentModelPHState> = (
   input,
 ) => {

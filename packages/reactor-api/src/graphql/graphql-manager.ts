@@ -40,11 +40,13 @@ import {
   type DriveFetchMiddleware,
 } from "./gateway/drive-middleware.js";
 import { DriveOwnershipCache } from "./gateway/drive-ownership-cache.js";
+import type { RequireAuthFetchMiddleware } from "./gateway/require-auth-middleware.js";
 import type {
   FetchHandler,
   GatewayContextFactory,
   IGatewayAdapter,
   IHttpAdapter,
+  RouteHandle,
   SubgraphDefinition,
   WsDisposer,
 } from "./gateway/types.js";
@@ -105,6 +107,13 @@ export type GraphqlManagerFeatureFlags = {
   enableDocumentModelSubgraphs?: boolean;
 };
 
+/**
+ * The registration-source label for document-model-generated subgraphs, so
+ * they can be pruned like package-contributed ones (see
+ * regenerateDocumentModelSubgraphs).
+ */
+const DOCUMENT_MODEL_SUBGRAPH_SOURCE = "document-models";
+
 export class GraphQLManager {
   private initialized = false;
   private coreSubgraphsMap = new Map<string, ISubgraph[]>();
@@ -113,13 +122,30 @@ export class GraphQLManager {
 
   private readonly subgraphWsDisposers = new Map<string, WsDisposer>();
   #authMiddleware: AuthFetchMiddleware | undefined;
+  #requireAuthMiddleware: RequireAuthFetchMiddleware | undefined;
   #driveMiddleware: DriveFetchMiddleware | undefined;
   readonly driveOwnershipCache: DriveOwnershipCache;
 
   /** Cached document models for schema generation - updated on init and regenerate */
   private cachedDocumentModels: DocumentModelModule[] = [];
 
-  private readonly subgraphHandlerCache = new Map<string, FetchHandler>();
+  private readonly subgraphHandlerCache = new Map<
+    string,
+    { handler: FetchHandler; subgraph: ISubgraph }
+  >();
+
+  /** subgraphPath → the http adapter handle of its mounted route. */
+  private readonly subgraphRouteHandles = new Map<string, RouteHandle>();
+
+  /** Handle of the currently mounted supergraph SSE route, if any. */
+  private sseRouteHandle: RouteHandle | undefined;
+
+  /**
+   * Package name → the subgraph instances registered from it, keyed by
+   * subgraph name. Tracks the package association so that removed packages
+   * can be torn down (see unregisterPackage / prunePackageSubgraphs).
+   */
+  private readonly packageSubgraphs = new Map<string, Map<string, ISubgraph>>();
 
   /** Per-subgraph handlers by name, before auth/drive middleware is applied,
    * for in-process queries by trusted internals. */
@@ -172,8 +198,10 @@ export class GraphQLManager {
   async init(
     coreSubgraphs: SubgraphClass[],
     authMiddleware?: AuthFetchMiddleware,
+    requireAuthMiddleware?: RequireAuthFetchMiddleware,
   ) {
     this.#authMiddleware = authMiddleware;
+    this.#requireAuthMiddleware = requireAuthMiddleware;
     this.logger.debug(`Initializing Subgraph Manager...`);
 
     await this.driveOwnershipCache.init();
@@ -288,7 +316,16 @@ export class GraphQLManager {
       // Update cached models for schema generation
       this.cachedDocumentModels = models;
 
-      await this.#setupDocumentModelSubgraphs("graphql", models);
+      const registeredNames = await this.#setupDocumentModelSubgraphs(
+        "graphql",
+        models,
+      );
+      // A model removed since the last regeneration (e.g. its package was
+      // uninstalled) must lose its subgraph; replacing alone would keep it.
+      await this.prunePackageSubgraphs(
+        DOCUMENT_MODEL_SUBGRAPH_SOURCE,
+        registeredNames,
+      );
       await this.updateRouter();
       this.logger.info(
         "Regenerated document model subgraphs with @count models",
@@ -324,9 +361,10 @@ export class GraphQLManager {
   async #setupDocumentModelSubgraphs(
     supergraph: string,
     documentModels: DocumentModelModule[],
-  ) {
+  ): Promise<Set<string>> {
     const latestDocumentModels =
       filterLatestDocumentModelVersions(documentModels);
+    const registeredNames = new Set<string>();
 
     for (const documentModel of latestDocumentModels) {
       if (
@@ -352,7 +390,13 @@ export class GraphQLManager {
           syncServingGate: this.syncServingGate,
         });
 
-        await this.#addSubgraphInstance(subgraphInstance, supergraph, false);
+        await this.#addSubgraphInstance(
+          subgraphInstance,
+          supergraph,
+          false,
+          DOCUMENT_MODEL_SUBGRAPH_SOURCE,
+        );
+        registeredNames.add(subgraphInstance.name);
       } catch (error) {
         this.logger.error(
           `Failed to setup document model subgraph for ${documentModel.documentModel.global.id}`,
@@ -368,13 +412,39 @@ export class GraphQLManager {
     // NOT call #setupSubgraphs(this.coreSubgraphsMap) here - doing so would
     // create duplicate Apollo servers for the same core-subgraph schemas, which
     // in the new IGatewayAdapter architecture hangs #waitForServer and blocks init().
+
+    return registeredNames;
+  }
+
+  /** Core subgraph names are reserved: they register with core=true during
+   * init() and no package subgraph may take one of their names. */
+  #isCoreNameReserved(name: string): boolean {
+    for (const subgraphs of this.coreSubgraphsMap.values()) {
+      if (subgraphs.some((it) => it.name === name)) return true;
+    }
+    return false;
   }
 
   async #addSubgraphInstance(
     subgraphInstance: ISubgraph,
     supergraph = "",
     core = false,
+    packageName?: string,
   ) {
+    // A package subgraph may not take a name a core subgraph has registered:
+    // the in-process handler map is keyed by bare name, so a same-name
+    // subgraph would shadow the core one (issue #2972). Reject rather than
+    // throw - package registration runs from a detached async closure in
+    // server.ts, where a throw is an unhandled rejection that takes the
+    // host down.
+    if (!core && this.#isCoreNameReserved(subgraphInstance.name)) {
+      this.logger.error(
+        "Rejecting subgraph @name: name is reserved by a registered core subgraph",
+        subgraphInstance.name,
+      );
+      return undefined;
+    }
+
     const subgraphsMap = core ? this.coreSubgraphsMap : this.subgraphs;
 
     const existingSubgraph = subgraphsMap
@@ -391,7 +461,7 @@ export class GraphQLManager {
 
     // Same name, different instance: replace (e.g. package hot-reload).
     if (existingSubgraph) {
-      await this.#removeSubgraphInstance(existingSubgraph, subgraphsMap);
+      await this.#removeSubgraphInstance(existingSubgraph);
     }
 
     await subgraphInstance.onSetup?.();
@@ -404,18 +474,27 @@ export class GraphQLManager {
       subgraphsMap.get("graphql")?.push(subgraphInstance);
     }
 
+    if (packageName !== undefined) {
+      let byName = this.packageSubgraphs.get(packageName);
+      if (!byName) {
+        byName = new Map();
+        this.packageSubgraphs.set(packageName, byName);
+      }
+      byName.set(subgraphInstance.name, subgraphInstance);
+    }
     this.logger.info(
       `${existingSubgraph ? "Replaced" : "Registered"} ${this.path.endsWith("/") ? this.path : this.path + "/"}${supergraph ? supergraph + "/" : ""}${subgraphInstance.name} subgraph.`,
     );
     return subgraphInstance;
   }
 
-  /** Tear down a replaced subgraph: onDisconnect, drop it from every bucket,
-   * and invalidate its cached handlers so #setupSubgraphs rebuilds them. */
-  async #removeSubgraphInstance(
-    instance: ISubgraph,
-    subgraphsMap: Map<string, ISubgraph[]>,
-  ) {
+  /**
+   * Tear down a subgraph instance: disconnect it, drop it from every
+   * bucket, unmount its route, dispose its WebSocket handler, and remove
+   * its internal handler. Used when a subgraph is replaced or its package
+   * is removed; #setupSubgraphs then never re-mounts it.
+   */
+  async #removeSubgraphInstance(instance: ISubgraph) {
     try {
       await instance.onDisconnect?.();
     } catch (error) {
@@ -426,29 +505,37 @@ export class GraphQLManager {
       );
     }
 
-    for (const [bucket, subgraphs] of subgraphsMap.entries()) {
-      if (!subgraphs.includes(instance)) {
-        continue;
-      }
-      subgraphsMap.set(
-        bucket,
-        subgraphs.filter((it) => it !== instance),
-      );
+    for (const subgraphsMap of [this.coreSubgraphsMap, this.subgraphs]) {
+      for (const [bucket, subgraphs] of subgraphsMap.entries()) {
+        if (!subgraphs.includes(instance)) {
+          continue;
+        }
+        subgraphsMap.set(
+          bucket,
+          subgraphs.filter((it) => it !== instance),
+        );
 
-      const subgraphPath = this.#getSubgraphPath(instance, bucket);
-      this.subgraphHandlerCache.delete(subgraphPath);
+        const subgraphPath = this.#getSubgraphPath(instance, bucket);
+        this.subgraphHandlerCache.delete(subgraphPath);
 
-      const wsDisposer = this.subgraphWsDisposers.get(subgraphPath);
-      if (wsDisposer) {
-        this.subgraphWsDisposers.delete(subgraphPath);
-        try {
-          await wsDisposer.dispose();
-        } catch (error) {
-          this.logger.error(
-            "Error disposing subgraph websocket @name: @error",
-            instance.name,
-            error,
-          );
+        const routeHandle = this.subgraphRouteHandles.get(subgraphPath);
+        if (routeHandle !== undefined) {
+          this.httpAdapter.unmount(routeHandle);
+          this.subgraphRouteHandles.delete(subgraphPath);
+        }
+
+        const wsDisposer = this.subgraphWsDisposers.get(subgraphPath);
+        if (wsDisposer) {
+          this.subgraphWsDisposers.delete(subgraphPath);
+          try {
+            await wsDisposer.dispose();
+          } catch (error) {
+            this.logger.error(
+              "Error disposing subgraph websocket @name: @error",
+              instance.name,
+              error,
+            );
+          }
         }
       }
     }
@@ -456,6 +543,14 @@ export class GraphQLManager {
     const internalHandler = this.#internalSubgraphHandlers.get(instance.name);
     if (internalHandler?.subgraph === instance) {
       this.#internalSubgraphHandlers.delete(instance.name);
+    }
+
+    for (const [packageName, byName] of this.packageSubgraphs) {
+      if (byName.get(instance.name) !== instance) continue;
+      byName.delete(instance.name);
+      if (byName.size === 0) {
+        this.packageSubgraphs.delete(packageName);
+      }
     }
   }
 
@@ -487,10 +582,17 @@ export class GraphQLManager {
     return this.authorizationService;
   }
 
+  /**
+   * Register a subgraph class. `packageName` labels the resulting instance
+   * with its contributing package so the instance can be torn down when the
+   * package is removed or drops the subgraph (see unregisterPackage and
+   * prunePackageSubgraphs).
+   */
   async registerSubgraph(
     subgraph: SubgraphClass,
     supergraph = "",
     core = false,
+    packageName?: string,
   ) {
     const subgraphInstance = new subgraph({
       relationalDb: this.relationalDb,
@@ -504,7 +606,51 @@ export class GraphQLManager {
       syncServingGate: this.syncServingGate,
     });
 
-    return this.#addSubgraphInstance(subgraphInstance, supergraph, core);
+    return this.#addSubgraphInstance(
+      subgraphInstance,
+      supergraph,
+      core,
+      packageName,
+    );
+  }
+
+  /**
+   * Tear down every subgraph instance registered from `packageName`:
+   * disconnects the instances, unmounts their routes, disposes their
+   * WebSocket handlers, then refreshes the router so the supergraph SDL and
+   * the supergraph SSE handler no longer reference them. No-op if the
+   * package has no registered subgraphs.
+   */
+  async unregisterPackage(packageName: string): Promise<void> {
+    const byName = this.packageSubgraphs.get(packageName);
+    if (!byName || byName.size === 0) return;
+    for (const instance of Array.from(byName.values())) {
+      await this.#removeSubgraphInstance(instance);
+    }
+    await this.updateRouter();
+  }
+
+  /**
+   * Remove this package's registered subgraphs whose names are not in
+   * `keepNames` — the package is still loaded but dropped some of its
+   * subgraphs. Refreshes the router if anything was removed.
+   */
+  async prunePackageSubgraphs(
+    packageName: string,
+    keepNames: ReadonlySet<string>,
+  ): Promise<void> {
+    const byName = this.packageSubgraphs.get(packageName);
+    if (!byName) return;
+    let removed = 0;
+    for (const [name, instance] of Array.from(byName.entries())) {
+      if (!keepNames.has(name)) {
+        await this.#removeSubgraphInstance(instance);
+        removed++;
+      }
+    }
+    if (removed > 0) {
+      await this.updateRouter();
+    }
   }
 
   /** Find a registered subgraph by name, core or package-contributed. */
@@ -661,12 +807,26 @@ export class GraphQLManager {
   }
 
   setSupergraph(supergraph: string, subgraphs: ISubgraph[]) {
-    this.subgraphs.set(supergraph, subgraphs);
+    // setSupergraph bypasses #addSubgraphInstance, so apply the same
+    // reserved-name guard here: drop incoming subgraphs that would shadow a
+    // registered core subgraph, keep the rest.
+    const accepted: ISubgraph[] = [];
+    for (const subgraph of subgraphs) {
+      if (this.#isCoreNameReserved(subgraph.name)) {
+        this.logger.error(
+          "Rejecting subgraph @name: name is reserved by a registered core subgraph",
+          subgraph.name,
+        );
+        continue;
+      }
+      accepted.push(subgraph);
+    }
+    this.subgraphs.set(supergraph, accepted);
     const globalSubgraphs = this.subgraphs.get("graphql");
     if (globalSubgraphs) {
-      this.subgraphs.set("graphql", [...globalSubgraphs, ...subgraphs]);
+      this.subgraphs.set("graphql", [...globalSubgraphs, ...accepted]);
     } else {
-      this.subgraphs.set("graphql", subgraphs);
+      this.subgraphs.set("graphql", accepted);
     }
     return this.updateRouter();
   }
@@ -691,8 +851,11 @@ export class GraphQLManager {
     });
   }
 
+  // The mount path is owned by the host: the manager's base path, never the
+  // subgraph's own `path` field, which a package subgraph can overwrite with a
+  // field initializer (it runs after super()).
   #getSubgraphPath(subgraph: ISubgraph, supergraph: string) {
-    return path.posix.join(subgraph.path ?? "", supergraph, subgraph.name);
+    return path.posix.join(this.path, supergraph, subgraph.name);
   }
 
   /** The in-process handler map is keyed by bare name, so two distinct
@@ -726,8 +889,19 @@ export class GraphQLManager {
         const subgraphPath = this.#getSubgraphPath(subgraph, supergraph);
         try {
           // Skip if handler already cached and mounted — a replaced subgraph
-          // invalidates its entries, so a cached path is current.
-          if (this.subgraphHandlerCache.has(subgraphPath)) {
+          // invalidates its entries, so a cached path is current. Two
+          // different subgraphs landing on the same path: first mounted
+          // wins; say so.
+          const cached = this.subgraphHandlerCache.get(subgraphPath);
+          if (cached) {
+            if (cached.subgraph !== subgraph) {
+              this.logger.warn(
+                "Subgraph path @path already mounted by @kept; @name is shadowed and will not be mounted",
+                subgraphPath,
+                cached.subgraph.name,
+                subgraph.name,
+              );
+            }
             continue;
           }
 
@@ -742,9 +916,15 @@ export class GraphQLManager {
             this.#makeContextFactory(),
           );
           const fetchHandler = this.#composeFetchMiddleware(rawHandler);
-          this.subgraphHandlerCache.set(subgraphPath, fetchHandler);
+          this.subgraphHandlerCache.set(subgraphPath, {
+            handler: fetchHandler,
+            subgraph,
+          });
           this.#setInternalSubgraphHandler(subgraph, subgraphPath, rawHandler);
-          this.httpAdapter.mount(subgraphPath, fetchHandler);
+          this.subgraphRouteHandles.set(
+            subgraphPath,
+            this.httpAdapter.mount(subgraphPath, fetchHandler),
+          );
 
           if (subgraph.hasSubscriptions) {
             try {
@@ -879,6 +1059,12 @@ export class GraphQLManager {
       .map((subgraph) => this.#buildSubgraphSchemaModule(subgraph));
 
     if (modules.length === 0) {
+      // No subscription-capable subgraphs left: drop the SSE route rather
+      // than keep serving an empty merged schema.
+      if (this.sseRouteHandle !== undefined) {
+        this.httpAdapter.unmount(this.sseRouteHandle);
+        this.sseRouteHandle = undefined;
+      }
       return;
     }
 
@@ -908,18 +1094,30 @@ export class GraphQLManager {
       contextFactory: this.#makeContextFactory(),
     });
     const handler = this.#composeFetchMiddleware(rawHandler);
-    this.httpAdapter.mount(ssePath, handler, { exact: true });
+    // This handler is re-created on every router update: replace the
+    // previous SSE route instead of piling another one on top of it.
+    if (this.sseRouteHandle !== undefined) {
+      this.httpAdapter.unmount(this.sseRouteHandle);
+    }
+    this.sseRouteHandle = this.httpAdapter.mount(ssePath, handler, {
+      exact: true,
+    });
   }
 
   /**
    * Compose the request-level fetch middleware chain. Auth runs first
    * (so we don't validate shard before knowing the request is even
-   * authorized), drive-ownership validation runs after.
+   * authorized); the require-authenticated-caller middleware runs next,
+   * before shard validation, so an anonymous caller is rejected with a
+   * 401 rather than a 421; drive-ownership validation runs last.
    */
   #composeFetchMiddleware(rawHandler: FetchHandler): FetchHandler {
     let handler = rawHandler;
     if (this.#driveMiddleware) {
       handler = this.#driveMiddleware(handler);
+    }
+    if (this.#requireAuthMiddleware) {
+      handler = this.#requireAuthMiddleware(handler);
     }
     if (this.#authMiddleware) {
       handler = this.#authMiddleware(handler);

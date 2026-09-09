@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/academy",
-  "version": "6.2.2-dev.81",
+  "version": "6.2.2-dev.84",
   "private": true,
   "homepage": "https://powerhouse.academy",
   "packageManager": "pnpm@10.9.0",
@@ -43,7 +43,7 @@
     "react-dom": "19.2.6"
   },
   "devDependencies": {
-    "cross-env": "catalog:",
+    "cross-env": "10.1.0",
     "@docusaurus/module-type-aliases": "3.10.0",
     "@docusaurus/plugin-client-redirects": "3.10.0",
     "@docusaurus/tsconfig": "3.10.0",

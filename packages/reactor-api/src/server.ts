@@ -66,6 +66,10 @@ import {
   createGatewayAdapter,
   createHttpAdapter,
 } from "./graphql/gateway/factory.js";
+import {
+  createRequireAuthFetchMiddleware,
+  type RequireAuthFetchMiddleware,
+} from "./graphql/gateway/require-auth-middleware.js";
 import type { IHttpAdapter, TlsOptions } from "./graphql/gateway/types.js";
 import { GraphQLManager } from "./graphql/graphql-manager.js";
 import {
@@ -138,6 +142,10 @@ type Options = {
     /** Read the bearer and populate `ctx.user` independently of `enabled`.
      *  Defaults to `enabled`; `RESOLVE_CALLER_IDENTITY` overrides either. */
     resolveIdentity?: boolean;
+    /** Reject anonymous callers with a 401 before any subgraph sees the
+     *  request. Off by default; `REQUIRE_AUTHENTICATED_CALLER` overrides.
+     *  Requires identity resolution to be on — refused at boot without it. */
+    requireAuthenticatedCaller?: boolean;
   };
   /** Renown coordinates the host already resolved, used verbatim instead of
    * resolving `auth.renown` and the env again (which would warn twice). */
@@ -224,6 +232,29 @@ export function assertSkipCredentialVerificationAllowed(
         "risk; automated test runs (VITEST=true or NODE_ENV=test) are exempt.",
     );
   }
+}
+
+/**
+ * Requiring an authenticated caller requires identity resolution to exist at
+ * all: with neither AUTH_ENABLED nor RESOLVE_CALLER_IDENTITY the middleware
+ * never reads a bearer, no `user` is ever resolved, and the
+ * require-authenticated-caller middleware would reject every caller —
+ * authenticated ones included. Refuse to boot rather than run broken.
+ */
+export function assertRequireAuthenticatedCallerAllowed(
+  requireAuthenticatedCaller: boolean,
+  resolvesCallerIdentity: boolean,
+): void {
+  if (!requireAuthenticatedCaller || resolvesCallerIdentity) {
+    return;
+  }
+  throw new Error(
+    "REQUIRE_AUTHENTICATED_CALLER is set but refused: it rejects every " +
+      "request without a resolved caller, and with neither AUTH_ENABLED nor " +
+      "RESOLVE_CALLER_IDENTITY the server never reads a bearer, so it would " +
+      "reject every caller, including authenticated ones. Enable identity " +
+      "resolution first (RESOLVE_CALLER_IDENTITY=true or AUTH_ENABLED=true).",
+  );
 }
 
 function createReadinessGate(): ReadinessGate {
@@ -356,6 +387,7 @@ function buildSyncServingGate(
 async function setupGraphQLManager(
   httpAdapter: IHttpAdapter,
   authFetchMiddleware: AuthFetchMiddleware | undefined,
+  requireAuthFetchMiddleware: RequireAuthFetchMiddleware | undefined,
   httpServer: http.Server,
   wsServer: WebSocketServer,
   client: IReactorClient,
@@ -397,11 +429,20 @@ async function setupGraphQLManager(
     syncServingGate,
   );
 
-  await graphqlManager.init(subgraphs.core, authFetchMiddleware);
+  await graphqlManager.init(
+    subgraphs.core,
+    authFetchMiddleware,
+    requireAuthFetchMiddleware,
+  );
 
-  for (const [, collection] of subgraphs.extended.entries()) {
+  for (const [packageName, collection] of subgraphs.extended.entries()) {
     for (const subgraph of collection) {
-      await graphqlManager.registerSubgraph(subgraph, "graphql");
+      await graphqlManager.registerSubgraph(
+        subgraph,
+        "graphql",
+        false,
+        packageName,
+      );
     }
   }
 
@@ -471,24 +512,59 @@ function setupEventListeners(
     void graphqlManager.regenerateDocumentModelSubgraphs();
   });
 
+  let knownSubgraphPackages = new Set<string>();
   pkgManager.onSubgraphsChange((packagedSubgraphs) => {
     void (async () => {
-      for (const [, subgraphs] of packagedSubgraphs) {
+      for (const [packageName, subgraphs] of packagedSubgraphs) {
+        const incomingNames = new Set<string>();
         for (const subgraph of subgraphs) {
-          await graphqlManager.registerSubgraph(subgraph, "graphql");
+          const instance = await graphqlManager.registerSubgraph(
+            subgraph,
+            "graphql",
+            false,
+            packageName,
+          );
+          // Registration returns undefined when the subgraph is rejected
+          // (e.g. its name is reserved by a core subgraph, issue #2972).
+          // Nothing was mounted, so the name is not provided and must not
+          // shield a stale same-named subgraph from being pruned below.
+          if (!instance) {
+            continue;
+          }
+          incomingNames.add(instance.name);
+        }
+        // The package is still loaded but dropped some (or all) of its
+        // subgraphs: tear down the ones it no longer provides.
+        await graphqlManager.prunePackageSubgraphs(packageName, incomingNames);
+      }
+      // A package that vanished from the map entirely (uninstalled or
+      // removed from the config) keeps none of its subgraphs.
+      for (const packageName of knownSubgraphPackages) {
+        if (!packagedSubgraphs.has(packageName)) {
+          await graphqlManager.unregisterPackage(packageName);
         }
       }
+      knownSubgraphPackages = new Set(packagedSubgraphs.keys());
       await graphqlManager.updateRouter();
     })();
   });
 
+  let knownProcessorPackages = new Set<string>();
   pkgManager.onProcessorsChange((processors) => {
     void (async () => {
+      // Packages that vanished from the map entirely keep none of their
+      // factories: unregister the leftovers.
+      for (const packageName of knownProcessorPackages) {
+        if (!processors.has(packageName)) {
+          await reactorProcessorManager.unregisterFactory(packageName);
+        }
+      }
+      knownProcessorPackages = new Set(processors.keys());
+
       for (const [packageName, fns] of processors) {
         await reactorProcessorManager.unregisterFactory(packageName);
 
         const factories = fns.map((fn) => fn(module));
-
         const validBuilders = factories.filter(
           (factory): factory is ProcessorFactory =>
             typeof factory === "function",
@@ -560,6 +636,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   port: number;
   httpAdapter: IHttpAdapter;
   authFetchMiddleware: AuthFetchMiddleware | undefined;
+  requireAuthFetchMiddleware: RequireAuthFetchMiddleware | undefined;
   authService: AuthService | undefined;
   relationalDb: IRelationalDb;
   analyticsStore: IAnalyticsStore;
@@ -579,6 +656,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   let admins: string[] = [];
   let authEnabled = false;
   let configuredResolveIdentity: boolean | undefined;
+  let configuredRequireAuth: boolean | undefined;
   let configuredRenown: RenownConfig | undefined;
   if (options.configFile) {
     const config = getConfig(options.configFile);
@@ -589,10 +667,12 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     admins = options.auth.admins.map((a) => a.toLowerCase());
     authEnabled = options.auth.enabled;
     configuredResolveIdentity = options.auth.resolveIdentity;
+    configuredRequireAuth = options.auth.requireAuthenticatedCaller;
   }
   const {
     AUTH_ENABLED,
     RESOLVE_CALLER_IDENTITY,
+    REQUIRE_AUTHENTICATED_CALLER,
     ADMINS,
     DEFAULT_PROTECTION,
     DOCUMENT_PERMISSIONS_ENABLED,
@@ -617,6 +697,25 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   let resolveCallerIdentity = configuredResolveIdentity ?? authEnabled;
   if (RESOLVE_CALLER_IDENTITY !== undefined) {
     resolveCallerIdentity = RESOLVE_CALLER_IDENTITY === "true";
+  }
+
+  /**
+   * Whether the require-authenticated-caller middleware is active: anonymous
+   * callers are rejected with a 401 before any subgraph sees the request.
+   *
+   * Off by default, so nothing changes for existing deployments. This is the
+   * enforcement half of the `RESOLVE_CALLER_IDENTITY` split: that one lets a
+   * server know who is calling while the policy stays `OPEN`, and this one
+   * closes the hole it leaves open — under `OPEN`, an anonymous caller
+   * reaches the whole generic surface (document CRUD, sync, every custom
+   * subgraph), because `OpenAuthorizationService` answers `true` to
+   * everything. `ADMIN_ONLY` is the only alternative today, and it locks
+   * out every non-admin; this expresses "authenticated callers allowed,
+   * anonymous not".
+   */
+  let requireAuthenticatedCaller = configuredRequireAuth ?? false;
+  if (REQUIRE_AUTHENTICATED_CALLER !== undefined) {
+    requireAuthenticatedCaller = REQUIRE_AUTHENTICATED_CALLER === "true";
   }
   if (ADMINS !== undefined) {
     admins = ADMINS.split(",").map((a) => a.toLowerCase());
@@ -659,6 +758,10 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     resolveCallerIdentity,
     skipCredentialVerification,
     process.env,
+  );
+  assertRequireAuthenticatedCallerAllowed(
+    requireAuthenticatedCaller,
+    resolveCallerIdentity,
   );
   if (authEnabled && skipCredentialVerification) {
     logger.warn(
@@ -710,6 +813,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
      enforcing anything. `resolveCallerIdentity` defaults to `authEnabled`, so
      this is the same condition it always was unless a deployment opts in. */
   let authFetchMiddleware: AuthFetchMiddleware | undefined;
+  let requireAuthFetchMiddleware: RequireAuthFetchMiddleware | undefined;
   let authService: AuthService | undefined;
   if (resolveCallerIdentity || authEnabled) {
     logger.info(
@@ -746,6 +850,12 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
         })),
     });
     authFetchMiddleware = createAuthFetchMiddleware(authService);
+    if (requireAuthenticatedCaller) {
+      requireAuthFetchMiddleware = createRequireAuthFetchMiddleware();
+      logger.info(
+        "Require-authenticated-caller middleware enabled: anonymous callers are rejected with a 401 before any subgraph",
+      );
+    }
   }
 
   const dbClosers: Array<() => Promise<void>> = [];
@@ -836,6 +946,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     port,
     httpAdapter,
     authFetchMiddleware,
+    requireAuthFetchMiddleware,
     authService,
     relationalDb,
     analyticsStore,
@@ -858,6 +969,7 @@ async function _setupAPI(
   reactorProcessorManager: IReactorProcessorManager,
   httpAdapter: IHttpAdapter,
   authFetchMiddleware: AuthFetchMiddleware | undefined,
+  requireAuthFetchMiddleware: RequireAuthFetchMiddleware | undefined,
   authService: AuthService | undefined,
   port: number,
   packages: PackageManager,
@@ -1000,6 +1112,7 @@ async function _setupAPI(
   const graphqlManager = await setupGraphQLManager(
     httpAdapter,
     authFetchMiddleware,
+    requireAuthFetchMiddleware,
     httpServer,
     wsServer,
     reactorClient,
@@ -1166,12 +1279,14 @@ export async function initializeAndStartAPI(
     documentModelRegistry: IDocumentModelRegistry;
     readiness: ReadinessGate;
     attachmentReferenceProjection: AttachmentReferenceProjectionCapability;
+    packageManager: PackageManager;
   }
 > {
   const {
     port,
     httpAdapter,
     authFetchMiddleware,
+    requireAuthFetchMiddleware,
     authService,
     relationalDb,
     analyticsStore,
@@ -1236,6 +1351,7 @@ export async function initializeAndStartAPI(
     reactorProcessorManager,
     httpAdapter,
     authFetchMiddleware,
+    requireAuthFetchMiddleware,
     authService,
     port,
     packages,
@@ -1268,5 +1384,6 @@ export async function initializeAndStartAPI(
     documentModelRegistry,
     readiness,
     attachmentReferenceProjection,
+    packageManager: packages,
   };
 }

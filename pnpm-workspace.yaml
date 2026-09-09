@@ -15,6 +15,10 @@ minimumReleaseAgeExclude:
   - "@apollo/subgraph"
 dedupePeerDependents: false
 
+# pnpm 12 dropped built-in @jsr scope resolution.
+registries:
+  "@jsr": https://npm.jsr.io
+
 catalog:
   "ai": 7.0.83
   "@ai-sdk/openai-compatible": 3.0.37

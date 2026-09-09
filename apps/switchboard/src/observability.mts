@@ -28,6 +28,10 @@ import {
   ATTR_SERVICE_NAME,
   ATTR_SERVICE_VERSION,
 } from "@opentelemetry/semantic-conventions";
+import {
+  registerEventLoopInstrumentation,
+  type EventLoopInstrumentation,
+} from "@powerhousedao/opentelemetry-instrumentation-reactor";
 import * as Sentry from "@sentry/node";
 import { SentryPropagator, SentrySpanProcessor } from "@sentry/opentelemetry";
 import { childLogger } from "document-model";
@@ -116,10 +120,18 @@ const meterProvider: MeterProvider | undefined = createMeterProviderFromEnv({
   OTEL_METRIC_EXPORT_INTERVAL: process.env.OTEL_METRIC_EXPORT_INTERVAL,
   OTEL_SERVICE_NAME: process.env.OTEL_SERVICE_NAME,
 });
+let eventLoopInstrumentation: EventLoopInstrumentation | undefined;
 if (meterProvider) {
   // One-way door: must register before any code calls metrics.getMeter() —
   // most notably ReactorInstrumentation inside the reactor module.
   metrics.setGlobalMeterProvider(meterProvider);
+  // Host event-loop and CPU gauges (reactor.host.eventloop.*,
+  // reactor.host.cpu.utilization). The bench sweep identified the host event
+  // loop, not the executor, as the binding constraint on write throughput
+  // (bench/test/integration/BASELINE.md, Run 10) — these are the production
+  // counterpart of the metrics that finding was made from. Must come after
+  // setGlobalMeterProvider or the gauges bind to a no-op meter.
+  eventLoopInstrumentation = registerEventLoopInstrumentation();
 }
 
 let sdk: NodeSDK | undefined;
@@ -211,6 +223,9 @@ if (TRACING_ENABLED) {
 }
 
 async function shutdown() {
+  // Detach the observable callback before the provider drains, so the final
+  // export does not fire a gauge callback against a shutting-down meter.
+  eventLoopInstrumentation?.stop();
   await Promise.race([
     Promise.all([
       meterProvider?.shutdown().catch(() => undefined),

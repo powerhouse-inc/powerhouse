@@ -2,6 +2,7 @@ import type { IDocumentModelRegistry } from "@powerhousedao/reactor";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import { childLogger } from "document-model";
 import type { HttpPackageLoader } from "../packages/http-loader.js";
+import type { IPackageManager } from "../packages/types.js";
 import {
   InMemoryPackageStorage,
   type IPackageStorage,
@@ -18,6 +19,7 @@ export interface PackageManagementServiceOptions {
   defaultRegistryUrl?: string;
   httpLoader?: HttpPackageLoader;
   documentModelRegistry?: IDocumentModelRegistry;
+  packageManager?: IPackageManager;
 }
 
 export class PackageManagementService {
@@ -25,6 +27,7 @@ export class PackageManagementService {
   private readonly defaultRegistryUrl?: string;
   private readonly httpLoader?: HttpPackageLoader;
   private readonly documentModelRegistry?: IDocumentModelRegistry;
+  private readonly packageManager?: IPackageManager;
   private readonly logger = childLogger([
     "reactor-api",
     "package-management-service",
@@ -38,6 +41,7 @@ export class PackageManagementService {
     this.defaultRegistryUrl = options.defaultRegistryUrl;
     this.httpLoader = options.httpLoader;
     this.documentModelRegistry = options.documentModelRegistry;
+    this.packageManager = options.packageManager;
   }
 
   setOnModelsChanged(callback: (models: DocumentModelModule[]) => void): void {
@@ -123,6 +127,12 @@ export class PackageManagementService {
 
     if (this.documentModelRegistry) {
       this.documentModelRegistry.unregisterModules(...existing.documentTypes);
+    }
+
+    if (this.packageManager) {
+      // Drop the package from the manager's maps so the subgraph and
+      // processor teardown listeners run for everything it registered.
+      this.packageManager.removePackage(name);
     }
 
     this.triggerModelsChanged();

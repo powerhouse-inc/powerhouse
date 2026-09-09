@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-browser",
-  "version": "6.2.2-dev.81",
+  "version": "6.2.2-dev.84",
   "license": "AGPL-3.0-only",
   "type": "module",
   "repository": {
@@ -115,6 +115,7 @@
     "@vitest/browser": "catalog:",
     "@vitest/browser-playwright": "catalog:",
     "fast-deep-equal": "catalog:",
+    "fflate": "^0.8.2",
     "graphql": "catalog:",
     "graphql-tag": "catalog:",
     "playwright": "catalog:",

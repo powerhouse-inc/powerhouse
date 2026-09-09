@@ -33,11 +33,26 @@ export type PHConnectBranding = {
   homeBackground?: string | null;
 };
 
-export type PHConnectDefaultDrive = {
+export type PHConnectDefaultDriveRemote = {
   url: string;
   name?: string | null;
   icon?: string | null;
 };
+
+export type PHConnectDefaultDriveLocal = {
+  /** Discriminator: this entry is a local drive created on first boot. */
+  local: true;
+  /** Stable drive id; the drive is not re-created on later boots. */
+  id: string;
+  name?: string | null;
+  icon?: string | null;
+  /** Drive app (preferred editor) to open on the drive. */
+  app?: string;
+};
+
+export type PHConnectDefaultDrive =
+  | PHConnectDefaultDriveRemote
+  | PHConnectDefaultDriveLocal;
 
 export type PHConnectDriveSection = {
   enabled?: boolean;

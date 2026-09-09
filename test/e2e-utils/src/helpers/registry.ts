@@ -57,7 +57,12 @@ export async function startRegistry(
     args.push("--local-packages", options.localPackages);
   }
 
-  const child = spawn("pnpm", args, { stdio: "pipe", detached: false });
+  // `detached` puts the wrapper in its own process group so stopRegistry
+  // can signal the whole tree (the pnpm wrapper AND the ph-registry
+  // process it execs). A plain child.kill() only terminates the pnpm
+  // wrapper; the orphaned registry keeps the stdio pipe open and hangs
+  // the caller's event loop.
+  const child = spawn("pnpm", args, { stdio: "pipe", detached: true });
 
   child.stdout?.on("data", (d: Buffer) =>
     console.log(`[registry] ${d.toString().trim()}`),
@@ -82,7 +87,7 @@ export async function startRegistry(
     }
     await new Promise((r) => setTimeout(r, 500));
   }
-  child.kill();
+  killRegistryGroup(child, "SIGKILL");
   throw new Error("Registry did not start within 30s");
 }
 
@@ -123,38 +128,34 @@ export function writeNpmrc(projectDir: string, token: string): void {
   fs.writeFileSync(npmrcPath, existing + separator + additions, "utf-8");
 }
 
-export function stopRegistry(child: ChildProcess): void {
-  if (child.killed) return;
-  child.kill("SIGTERM");
-  // The registry runs as a grandchild of `pnpm exec`. The pnpm wrapper can
-  // die on SIGTERM while ph-registry survives, still holding this process's
-  // stdio pipes — the caller's event loop (and the CI job) never finishes.
-  // Give the process a grace period, then SIGKILL the wrapper and anything
-  // still holding the registry port.
-  const escalate = setTimeout(() => {
-    if (child.exitCode === null) {
-      try {
-        child.kill("SIGKILL");
-      } catch {
-        // already gone
-      }
-    }
+function killRegistryGroup(child: ChildProcess, signal: NodeJS.Signals): void {
+  if (child.pid === undefined) {
     try {
-      const holders = execSync(`lsof -ti tcp:${REGISTRY_PORT}`, {
-        encoding: "utf8",
-        stdio: "pipe",
-      })
-        .trim()
-        .split("\n")
-        .filter(Boolean);
-      if (holders.length > 0) {
-        execSync(`kill -9 ${holders.join(" ")}`, { stdio: "pipe" });
-      }
+      child.kill(signal);
     } catch {
-      // port already free (or lsof unavailable)
+      // spawn never took off
     }
-  }, 5_000);
-  escalate.unref();
+    return;
+  }
+  try {
+    process.kill(-child.pid, signal);
+  } catch {
+    try {
+      child.kill(signal);
+    } catch {
+      // already gone
+    }
+  }
+}
+
+export function stopRegistry(child: ChildProcess): void {
+  if (!child || child.killed) return;
+  killRegistryGroup(child, "SIGTERM");
+  // Escalate if the group survives the grace period. The timer is
+  // unref'd: once the group dies the stdio pipe closes and the caller's
+  // event loop can drain even if this timer never fires.
+  const t = setTimeout(() => killRegistryGroup(child, "SIGKILL"), 10_000);
+  t.unref();
 }
 
 export async function verifyPublish(packageName: string): Promise<void> {

@@ -17,22 +17,36 @@ import type {
 } from "@powerhousedao/reactor";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
+import { gql } from "graphql-tag";
 import type http from "node:http";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { WebSocketServer } from "ws";
-import { createAuthFetchMiddleware } from "../src/graphql/gateway/auth-middleware.js";
+import { BaseSubgraph } from "../src/graphql/base-subgraph.js";
+
+import {
+  createAuthFetchMiddleware,
+  type AuthFetchMiddleware,
+} from "../src/graphql/gateway/auth-middleware.js";
 import type {
   FetchHandler,
   IGatewayAdapter,
   IHttpAdapter,
   WsDisposer,
 } from "../src/graphql/gateway/types.js";
+import {
+  createRequireAuthFetchMiddleware,
+  type RequireAuthFetchMiddleware,
+} from "../src/graphql/gateway/require-auth-middleware.js";
 import { GraphQLManager } from "../src/graphql/graphql-manager.js";
 import {
   AuthorizationPolicy,
   createAuthorizationService,
 } from "../src/services/authorization.service.js";
-import type { Context } from "../src/graphql/types.js";
+import type {
+  Context,
+  ISubgraph,
+  SubgraphClass,
+} from "../src/graphql/types.js";
 import type { AuthContext, AuthService } from "../src/services/auth.service.js";
 
 // ── shared fixtures ──────────────────────────────────────────────────────────
@@ -47,6 +61,21 @@ const silentLogger: ILogger = {
   errorHandler: vi.fn(),
   child: () => silentLogger,
 };
+
+/** An ILogger whose methods are spies, for asserting on log calls. */
+function makeHarnessLogger(): ILogger {
+  const logger: ILogger = {
+    level: "error" as const,
+    verbose: vi.fn(),
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    errorHandler: vi.fn(),
+    child: () => logger,
+  };
+  return logger;
+}
 
 /** Minimal DocumentModelModule with a DocumentDrive model - required by init(). */
 function makeDriveModule(): DocumentModelModule {
@@ -64,6 +93,41 @@ function makeDriveModule(): DocumentModelModule {
             // referenced by the DocumentDrive type definition.
             state: {
               global: { schema: "type DocumentDriveState { name: String }" },
+              local: { schema: "" },
+            },
+          },
+        ],
+      },
+    },
+  } as unknown as DocumentModelModule;
+}
+
+/** A minimal second document model, shaped like makeDriveModule. */
+function makeModelModule(name: string, id: string): DocumentModelModule {
+  return {
+    documentModel: {
+      global: {
+        name,
+        id,
+        specifications: [
+          {
+            version: 1,
+            modules: [
+              {
+                name: "core",
+                operations: [
+                  {
+                    name: "doThing",
+                    schema:
+                      "input DoThingInput { x: String }\ntype DoThingResult { ok: Boolean }",
+                  },
+                ],
+              },
+            ],
+            state: {
+              global: {
+                schema: `type ${name}State { name: String }`,
+              },
               local: { schema: "" },
             },
           },
@@ -118,29 +182,35 @@ function makeMockGatewayAdapter(): IGatewayAdapter<Context> & {
 
 function makeMockHttpAdapter() {
   const mounts = new Map<string, FetchHandler>();
+  const handles = new Map<string, number>();
+  let nextHandle = 0;
   const adapter: IHttpAdapter = {
     setupMiddleware: vi.fn(),
     mount: vi.fn((p: string, h: FetchHandler) => {
       mounts.set(p, h);
+      handles.set(p, nextHandle);
+      return nextHandle++;
     }),
-    getRoute: vi.fn(),
+    getRoute: vi.fn(() => nextHandle++),
     mountRawMiddleware: vi.fn(),
-    mountNodeRoute: vi.fn(),
+    mountNodeRoute: vi.fn(() => nextHandle++),
+    unmount: vi.fn(),
     listen: vi.fn().mockResolvedValue({}),
     setupSentryErrorHandler: vi.fn(),
     handle: {},
   };
-  return { adapter, mounts };
+  return { adapter, mounts, handles };
 }
 
 type HarnessOptions = {
   path?: string;
   enableDocumentModelSubgraphs?: boolean;
   reactorClient?: IReactorClient;
+  logger?: ILogger;
 };
 
 function makeHarness(options: HarnessOptions = {}) {
-  const { adapter: httpAdapter, mounts } = makeMockHttpAdapter();
+  const { adapter: httpAdapter, mounts, handles } = makeMockHttpAdapter();
   const gatewayAdapter = makeMockGatewayAdapter();
   const reactorClient = options.reactorClient ?? makeMockReactorClient();
   const httpServer = {} as http.Server;
@@ -157,7 +227,7 @@ function makeHarness(options: HarnessOptions = {}) {
     {} as IRelationalDb,
     {} as IAnalyticsStore,
     {} as ISyncManager,
-    silentLogger,
+    options.logger ?? silentLogger,
     httpAdapter,
     gatewayAdapter,
     undefined, // authService
@@ -178,6 +248,7 @@ function makeHarness(options: HarnessOptions = {}) {
     manager,
     httpAdapter,
     mounts,
+    handles,
     gatewayAdapter,
     reactorClient,
     httpServer,
@@ -188,9 +259,15 @@ function makeHarness(options: HarnessOptions = {}) {
 /** Run init() to completion, flushing the debounced updateRouter() call. */
 async function initAndFlush(
   manager: GraphQLManager,
-  coreSubgraphs: never[] = [],
+  coreSubgraphs: SubgraphClass[] = [],
+  authMiddleware?: AuthFetchMiddleware,
+  requireAuthMiddleware?: RequireAuthFetchMiddleware,
 ) {
-  const initPromise = manager.init(coreSubgraphs);
+  const initPromise = manager.init(
+    coreSubgraphs,
+    authMiddleware,
+    requireAuthMiddleware,
+  );
   await vi.runAllTimersAsync();
   await initPromise;
 }
@@ -641,6 +718,137 @@ describe("GraphQLManager", () => {
     });
   });
 
+  // ── requireAuthMiddleware wrapping ────────────────────────────────────────
+
+  describe("init() with requireAuthMiddleware", () => {
+    function makeAuthServiceWith(user: AuthContext["user"]): AuthService {
+      return {
+        authenticateRequest: vi.fn().mockResolvedValue({
+          user,
+          admins: [],
+          auth_enabled: false,
+        }),
+      } as unknown as AuthService;
+    }
+
+    function graphqlRequest(
+      init?: RequestInit,
+      url = "http://localhost/graphql",
+    ): Request {
+      return new Request(url, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ query: "{ r { version } }" }),
+        ...init,
+      });
+    }
+
+    it("rejects an anonymous caller on the mounted supergraph handler with a 401", async () => {
+      const { manager, mounts } = makeHarness();
+      await initAndFlush(
+        manager,
+        [],
+        createAuthFetchMiddleware(makeAuthServiceWith(undefined)),
+        createRequireAuthFetchMiddleware(),
+      );
+      const handler = mounts.get("/graphql");
+      expect(handler).toBeDefined();
+
+      const res = await handler!(graphqlRequest());
+
+      expect(res.status).toBe(401);
+      await expect(res.json()).resolves.toEqual({
+        error: "Authentication required",
+      });
+    });
+
+    it("admits an authenticated caller to the mounted supergraph handler", async () => {
+      const { manager, mounts } = makeHarness();
+      await initAndFlush(
+        manager,
+        [],
+        createAuthFetchMiddleware(
+          makeAuthServiceWith({
+            address: "0xuser",
+            chainId: 1,
+            networkId: "mainnet",
+            appKey: "did:key:zuser",
+          }),
+        ),
+        createRequireAuthFetchMiddleware(),
+      );
+      const handler = mounts.get("/graphql");
+      expect(handler).toBeDefined();
+
+      const res = await handler!(graphqlRequest());
+
+      expect(res.status).toBe(200);
+    });
+
+    it("rejects an anonymous caller with a 401 before shard validation (not a 421)", async () => {
+      const { manager, mounts } = makeHarness();
+      await initAndFlush(
+        manager,
+        [],
+        createAuthFetchMiddleware(makeAuthServiceWith(undefined)),
+        createRequireAuthFetchMiddleware(),
+      );
+      const handler = mounts.get("/graphql");
+      expect(handler).toBeDefined();
+
+      // The drive is not in the ownership cache, so without the
+      // require-authenticated-caller middleware the drive middleware would
+      // answer 421. It must not get that far.
+      const res = await handler!(
+        graphqlRequest({
+          headers: {
+            "content-type": "application/json",
+            "drive-id": "drive-not-here",
+          },
+          body: JSON.stringify({ operationName: "someOperation" }),
+        }),
+      );
+
+      expect(res.status).toBe(401);
+      await expect(res.json()).resolves.toEqual({
+        error: "Authentication required",
+      });
+    });
+
+    it("lets OPTIONS preflights through to the handler", async () => {
+      const { manager, mounts } = makeHarness();
+      await initAndFlush(
+        manager,
+        [],
+        createAuthFetchMiddleware(makeAuthServiceWith(undefined)),
+        createRequireAuthFetchMiddleware(),
+      );
+      const handler = mounts.get("/graphql");
+      expect(handler).toBeDefined();
+
+      const res = await handler!(
+        new Request("http://localhost/graphql", { method: "OPTIONS" }),
+      );
+
+      expect(res.status).toBe(200);
+    });
+
+    it("leaves anonymous callers admitted when the middleware is not passed", async () => {
+      const { manager, mounts } = makeHarness();
+      await initAndFlush(
+        manager,
+        [],
+        createAuthFetchMiddleware(makeAuthServiceWith(undefined)),
+      );
+      const handler = mounts.get("/graphql");
+      expect(handler).toBeDefined();
+
+      const res = await handler!(graphqlRequest());
+
+      expect(res.status).toBe(200);
+    });
+  });
+
   // ── additional context fields ──────────────────────────────────────────────
 
   describe("setAdditionalContextFields / getAdditionalContextFields", () => {
@@ -1018,6 +1226,456 @@ describe("GraphQLManager", () => {
       await manager.shutdown();
 
       expect(wsServer.close).toHaveBeenCalledOnce();
+    });
+  });
+
+  // ── package teardown (issue #2973) ────────────────────────────────────────
+
+  describe("package teardown (issue #2973)", () => {
+    /**
+     * Build a minimal subgraph class with a spied `onDisconnect` that
+     * records the names of instances it was called on.
+     */
+    function makeSubgraphClass(
+      name: string,
+      opts: { subscriptions?: boolean } = {},
+    ): [typeof BaseSubgraph, string[]] {
+      const disconnected: string[] = [];
+      const SubgraphClass = class extends BaseSubgraph {
+        name = name;
+        hasSubscriptions = opts.subscriptions ?? false;
+        typeDefs = gql`
+          type Query {
+            ping: Boolean
+          }
+        `;
+        resolvers = { Query: { ping: () => true } };
+        onDisconnect = (): Promise<void> => {
+          disconnected.push(name);
+          return Promise.resolve();
+        };
+      };
+      return [SubgraphClass, disconnected];
+    }
+
+    async function flushRouter(manager: GraphQLManager): Promise<void> {
+      const p = manager.updateRouter();
+      await vi.runAllTimersAsync();
+      await p;
+    }
+
+    it("unregisterPackage unmounts routes and removes all subgraph state", async () => {
+      const { manager, httpAdapter, mounts, handles, gatewayAdapter } =
+        makeHarness();
+      await initAndFlush(manager);
+
+      const [Sub, disconnected] = makeSubgraphClass("alpha");
+      await manager.registerSubgraph(Sub, "graphql", false, "test-pkg");
+      await flushRouter(manager);
+
+      const routePath = "/graphql/alpha";
+      expect(mounts.has(routePath)).toBe(true);
+      const originalHandle = handles.get(routePath);
+      expect(originalHandle).toBeDefined();
+      expect(manager.hasSubgraphHandler("alpha")).toBe(true);
+      expect(manager.getSubgraphByName("alpha")).toBeDefined();
+
+      const teardown = manager.unregisterPackage("test-pkg");
+      await vi.runAllTimersAsync();
+      await teardown;
+
+      expect(httpAdapter.unmount).toHaveBeenCalledWith(originalHandle);
+      expect(manager.hasSubgraphHandler("alpha")).toBe(false);
+      expect(manager.getSubgraphByName("alpha")).toBeUndefined();
+      expect(disconnected).toContain("alpha");
+      expect(gatewayAdapter.updateSupergraph).toHaveBeenCalled();
+    });
+
+    it("unregisterPackage is a no-op for a package with no subgraphs", async () => {
+      const { manager, httpAdapter, gatewayAdapter } = makeHarness();
+      await initAndFlush(manager);
+
+      const supergraphCalls = gatewayAdapter.updateSupergraph.mock.calls.length;
+      await manager.unregisterPackage("ghost-pkg");
+
+      expect(httpAdapter.unmount).not.toHaveBeenCalled();
+      expect(gatewayAdapter.updateSupergraph.mock.calls.length).toBe(
+        supergraphCalls,
+      );
+    });
+
+    it("prunePackageSubgraphs removes only the dropped subgraphs", async () => {
+      const { manager, httpAdapter, mounts, handles } = makeHarness();
+      await initAndFlush(manager);
+
+      const [Alpha] = makeSubgraphClass("alpha");
+      const [Beta, betaDisconnected] = makeSubgraphClass("beta");
+      await manager.registerSubgraph(Alpha, "graphql", false, "test-pkg");
+      await manager.registerSubgraph(Beta, "graphql", false, "test-pkg");
+      await flushRouter(manager);
+
+      const keepPromise = manager.prunePackageSubgraphs(
+        "test-pkg",
+        new Set(["alpha"]),
+      );
+      await vi.runAllTimersAsync();
+      await keepPromise;
+
+      expect(httpAdapter.unmount).toHaveBeenCalledWith(
+        handles.get("/graphql/beta"),
+      );
+      expect(manager.hasSubgraphHandler("alpha")).toBe(true);
+      expect(manager.hasSubgraphHandler("beta")).toBe(false);
+      expect(manager.getSubgraphByName("beta")).toBeUndefined();
+      expect(betaDisconnected).toContain("beta");
+      // The kept subgraph's route stays mounted.
+      expect(mounts.has("/graphql/alpha")).toBe(true);
+    });
+
+    it("unmounts the previous route when a subgraph is replaced", async () => {
+      const { manager, httpAdapter, handles } = makeHarness();
+      await initAndFlush(manager);
+
+      const [V1] = makeSubgraphClass("alpha");
+      await manager.registerSubgraph(V1, "graphql", false, "test-pkg");
+      await flushRouter(manager);
+      const firstHandle = handles.get("/graphql/alpha");
+      expect(firstHandle).toBeDefined();
+
+      // Same name, different class: replacement path.
+      const [V2] = makeSubgraphClass("alpha");
+      await manager.registerSubgraph(V2, "graphql", false, "test-pkg");
+      await flushRouter(manager);
+
+      const secondHandle = handles.get("/graphql/alpha");
+      expect(secondHandle).toBeDefined();
+      expect(secondHandle).not.toBe(firstHandle);
+      expect(httpAdapter.unmount).toHaveBeenCalledWith(firstHandle);
+      expect(manager.hasSubgraphHandler("alpha")).toBe(true);
+    });
+
+    it("replaces the SSE route on each update and removes it when no subgraph subscribes", async () => {
+      const { manager, httpAdapter, mounts, handles } = makeHarness();
+      await initAndFlush(manager);
+
+      // No subscription-capable subgraphs: no SSE route after init.
+      expect(mounts.has("/graphql/stream")).toBe(false);
+
+      const [Sub] = makeSubgraphClass("alpha", { subscriptions: true });
+      await manager.registerSubgraph(Sub, "graphql", false, "test-pkg");
+      await flushRouter(manager);
+      expect(mounts.has("/graphql/stream")).toBe(true);
+      const firstHandle = handles.get("/graphql/stream");
+      expect(firstHandle).toBeDefined();
+
+      // A second router update re-creates the SSE handler and must replace
+      // the existing route instead of piling another one on top.
+      await flushRouter(manager);
+      const secondHandle = handles.get("/graphql/stream");
+      expect(secondHandle).toBeDefined();
+      expect(secondHandle).not.toBe(firstHandle);
+      expect(httpAdapter.unmount).toHaveBeenCalledWith(firstHandle);
+
+      // Tearing the package down removes the last subscription-capable
+      // subgraph: the SSE route must be unmounted as well.
+      const teardown = manager.unregisterPackage("test-pkg");
+      await vi.runAllTimersAsync();
+      await teardown;
+      expect(httpAdapter.unmount).toHaveBeenCalledWith(secondHandle);
+    });
+  });
+
+  // ── document model subgraph pruning (issue #2973) ───────────────────────
+
+  describe("document model subgraph pruning (issue #2973)", () => {
+    /**
+     * A model that passes hasOperationSchemas so a subgraph is generated.
+     * The global state schema must be named `<PascalModelName>State` to
+     * match what generateDocumentModelSchema references (see createSchema).
+     */
+    function makeSubgraphableModel(
+      id: string,
+      name: string,
+      stateType: string,
+    ): DocumentModelModule {
+      return {
+        documentModel: {
+          global: {
+            id,
+            name,
+            specifications: [
+              {
+                version: 1,
+                changeLog: [],
+                modules: [
+                  {
+                    name: "Base",
+                    operations: [
+                      {
+                        name: "SET_NAME",
+                        schema: "input SetNameInput { name: String }",
+                      },
+                    ],
+                  },
+                ],
+                state: {
+                  global: {
+                    schema: `type ${stateType} { name: String }`,
+                  },
+                  local: { schema: "" },
+                },
+              },
+            ],
+          },
+        },
+        actions: { setName: vi.fn() },
+        reducer: vi.fn(),
+      } as unknown as DocumentModelModule;
+    }
+
+    it("removes the subgraph of a model that disappeared since the last regeneration", async () => {
+      const drive = makeDriveModule();
+      const alpha = makeSubgraphableModel(
+        "powerhouse/alpha",
+        "Alpha Model",
+        "AlphaModelState",
+      );
+      const beta = makeSubgraphableModel(
+        "powerhouse/beta",
+        "Beta Model",
+        "BetaModelState",
+      );
+      const reactorClient = makeMockReactorClient({
+        getDocumentModelModules: vi
+          .fn()
+          .mockResolvedValue({ results: [drive, alpha, beta] }),
+      });
+      const { manager, httpAdapter, mounts, handles } = makeHarness({
+        reactorClient,
+        enableDocumentModelSubgraphs: true,
+      });
+      await initAndFlush(manager);
+
+      // Both model subgraphs are registered and mounted.
+      expect(mounts.has("/graphql/alpha-model")).toBe(true);
+      expect(mounts.has("/graphql/beta-model")).toBe(true);
+
+      // Beta's package was uninstalled: its model is gone from the source
+      // of truth. Regeneration must remove the old subgraph, not just
+      // replace the current ones.
+      vi.mocked(reactorClient.getDocumentModelModules).mockResolvedValue({
+        results: [drive, alpha],
+        options: { cursor: "", limit: 100 },
+      });
+      const regenerate = manager.regenerateDocumentModelSubgraphs();
+      await vi.runAllTimersAsync();
+      await regenerate;
+
+      expect(httpAdapter.unmount).toHaveBeenCalledWith(
+        handles.get("/graphql/beta-model"),
+      );
+      expect(manager.getSubgraphByName("beta-model")).toBeUndefined();
+      expect(manager.hasSubgraphHandler("alpha-model")).toBe(true);
+    });
+  });
+
+  // ── mount path & name ownership (issue #2972) ─────────────────────────────
+
+  describe("mount path & name ownership (issue #2972)", () => {
+    // A package subgraph trying to choose its own mount point: the field
+    // initializers run after super() and overwrite the host-injected `path`.
+    class EvilSubgraph extends BaseSubgraph {
+      name = "evil";
+      path = "/";
+    }
+
+    it("mounts under the manager's base path even when the subgraph's `path` initializer overwrote the injected value", async () => {
+      const { manager, httpAdapter } = makeHarness({ path: "/ph" });
+      await initAndFlush(manager);
+
+      const instance = await manager.registerSubgraph(EvilSubgraph, "graphql");
+      const update = manager.updateRouter();
+      await vi.runAllTimersAsync();
+      await update;
+
+      // The initializer really did clobber the injected value - without this
+      // the mount assertions below would be vacuous.
+      expect(instance?.path).toBe("/");
+
+      expect(httpAdapter.mount).toHaveBeenCalledWith(
+        "/ph/graphql/evil",
+        expect.any(Function),
+      );
+      expect(httpAdapter.mount).not.toHaveBeenCalledWith(
+        "/graphql/evil",
+        expect.any(Function),
+      );
+    });
+
+    it("ignores a plain-object subgraph's `path` for routing", async () => {
+      const { manager, httpAdapter } = makeHarness({ path: "/ph" });
+      await initAndFlush(manager);
+
+      await manager.registerSubgraphInstance(
+        {
+          name: "mcp-sub",
+          path: "/mcp",
+          typeDefs: gql`
+            type Query {
+              hi: String
+            }
+          `,
+          resolvers: {},
+          relationalDb: {} as IRelationalDb,
+          reactorClient: {} as IReactorClient,
+        },
+        "graphql",
+      );
+      const update = manager.updateRouter();
+      await vi.runAllTimersAsync();
+      await update;
+
+      expect(httpAdapter.mount).toHaveBeenCalledWith(
+        "/ph/graphql/mcp-sub",
+        expect.any(Function),
+      );
+      expect(httpAdapter.mount).not.toHaveBeenCalledWith(
+        "/mcp/graphql/mcp-sub",
+        expect.any(Function),
+      );
+    });
+
+    function makePlainSub(name: string, overrides: object = {}) {
+      return {
+        name,
+        typeDefs: gql`
+          type Query {
+            hi: String
+          }
+        `,
+        resolvers: {},
+        relationalDb: {} as IRelationalDb,
+        reactorClient: {} as IReactorClient,
+        ...overrides,
+      };
+    }
+
+    // A core subgraph named "system" - the default BaseSubgraph name is
+    // "example", so a subgraph named "system" is a deliberate collision.
+    class SystemSubgraph extends BaseSubgraph {
+      name = "system";
+    }
+
+    it("rejects a non-core subgraph that takes a registered core subgraph's name", async () => {
+      const logger = makeHarnessLogger();
+      const { manager } = makeHarness({ logger });
+      await initAndFlush(manager, [SystemSubgraph]);
+
+      const core = manager.getSubgraphByName("system");
+      expect(core).toBeDefined();
+
+      const result = await manager.registerSubgraphInstance(
+        makePlainSub("system"),
+        "graphql",
+      );
+
+      expect(result).toBeUndefined();
+      expect(manager.getSubgraphByName("system")).toBe(core);
+      expect(logger.error).toHaveBeenCalledWith(
+        "Rejecting subgraph @name: name is reserved by a registered core subgraph",
+        "system",
+      );
+
+      // The same rejection applies with the default supergraph.
+      const resultWithDefaultSupergraph =
+        await manager.registerSubgraphInstance(makePlainSub("system"));
+      expect(resultWithDefaultSupergraph).toBeUndefined();
+      expect(manager.getSubgraphByName("system")).toBe(core);
+    });
+
+    it("setSupergraph drops subgraphs that take a registered core subgraph's name", async () => {
+      const logger = makeHarnessLogger();
+      const { manager } = makeHarness({ logger });
+      await initAndFlush(manager, [SystemSubgraph]);
+
+      const core = manager.getSubgraphByName("system");
+      expect(core).toBeDefined();
+
+      const good = makePlainSub("good");
+      const evil = makePlainSub("system");
+
+      const update = manager.setSupergraph("graphql", [good, evil]);
+      await vi.runAllTimersAsync();
+      await update;
+
+      expect(logger.error).toHaveBeenCalledWith(
+        "Rejecting subgraph @name: name is reserved by a registered core subgraph",
+        "system",
+      );
+      expect(manager.getSubgraphByName("system")).toBe(core);
+      expect(manager.getSubgraphByName("good")).toBe(good);
+
+      // Whitebox: `subgraphs` is the manager's private bucket map; reach it
+      // to assert the rejected instance was never written into one.
+      const managerWithBuckets = manager as unknown as {
+        subgraphs: Map<string, ISubgraph[]>;
+      };
+      const buckets = managerWithBuckets.subgraphs;
+      for (const subgraphs of buckets.values()) {
+        expect(subgraphs).not.toContain(evil);
+      }
+      expect(buckets.get("graphql")).toContain(good);
+    });
+
+    it("rejects a document model subgraph whose kebab-cased name collides with a core subgraph", async () => {
+      const logger = makeHarnessLogger();
+      const systemModel = makeModelModule(
+        "System",
+        "powerhouse/test-system-model",
+      );
+      const { manager } = makeHarness({
+        logger,
+        enableDocumentModelSubgraphs: true,
+        reactorClient: makeMockReactorClient({
+          getDocumentModelModules: vi.fn().mockResolvedValue({
+            results: [makeDriveModule(), systemModel],
+          }),
+        }),
+      });
+
+      await initAndFlush(manager, [SystemSubgraph]);
+
+      const core = manager.getSubgraphByName("system");
+      expect(core).toBeDefined();
+      expect(logger.error).toHaveBeenCalledWith(
+        "Rejecting subgraph @name: name is reserved by a registered core subgraph",
+        "system",
+      );
+      expect(manager.getSubgraphByName("system")).toBe(core);
+    });
+
+    it("warns when two different subgraphs resolve to the same mount path", async () => {
+      const logger = makeHarnessLogger();
+      const { manager } = makeHarness({ logger });
+
+      // A plain subgraph named "early" registered before init.
+      const plain = makePlainSub("early");
+      await manager.registerSubgraphInstance(plain, "graphql");
+
+      // A core subgraph with the same name: init() mounts the core one
+      // first, so the router pass that reaches the plain subgraph at the
+      // same path must warn instead of skipping silently.
+      class CoreSubgraph extends BaseSubgraph {
+        name = "early";
+      }
+      await initAndFlush(manager, [CoreSubgraph]);
+
+      expect(logger.warn).toHaveBeenCalledWith(
+        "Subgraph path @path already mounted by @kept; @name is shadowed and will not be mounted",
+        "/graphql/early",
+        "early",
+        "early",
+      );
     });
   });
 });

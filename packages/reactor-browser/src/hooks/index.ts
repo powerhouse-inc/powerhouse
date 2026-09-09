@@ -18,6 +18,7 @@ export * from "./document-operations.js";
 export * from "./document-types.js";
 export * from "./document-version-status.js";
 export * from "./download-document.js";
+export * from "./download-folder.js";
 export * from "./drive-by-id.js";
 export * from "./drives.js";
 export * from "./editor-modules.js";

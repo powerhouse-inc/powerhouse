@@ -6,6 +6,7 @@
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import {
   setAvailableOffline,
+  setDriveIcon,
   setDriveName,
   setSharingType,
 } from "../../gen/drive/creators.js";
@@ -38,6 +39,25 @@ describe("Drive Operations", () => {
       input,
     );
     expect(updatedDocument.operations.global![0].index).toEqual(0);
+  });
+
+  it("should normalize the setDriveIcon input to Maybe when setting state", () => {
+    const withIcon = driveDocumentReducer(
+      document,
+      setDriveIcon({ icon: "icon.png" }),
+    );
+    expect(withIcon.state.global.icon).toBe("icon.png");
+
+    // icon is a nullable input, so null clears it (#2659)...
+    expect(
+      driveDocumentReducer(withIcon, setDriveIcon({ icon: null })).state.global
+        .icon,
+    ).toBeNull();
+
+    // ...and an omitted icon must land as null, never undefined.
+    expect(
+      driveDocumentReducer(withIcon, setDriveIcon({})).state.global.icon,
+    ).toBeNull();
   });
 
   it("should handle setSharingType operation", () => {

@@ -1,3 +1,75 @@
+## 6.2.2-dev.84 (2026-09-09)
+
+### 🚀 Features
+
+- download drive folders as zip archives with round-trip import ([#134](https://github.com/powerhouse-inc/powerhouse/pull/134), [#2986](https://github.com/powerhouse-inc/powerhouse/pull/2986))
+- **connect:** create local default drives on first boot ([410f71c04](https://github.com/powerhouse-inc/powerhouse/commit/410f71c04))
+- **connect:** support local drives in connect.drives.defaultDrives ([#2838](https://github.com/powerhouse-inc/powerhouse/pull/2838), [#2984](https://github.com/powerhouse-inc/powerhouse/pull/2984))
+- **gateway:** add unmount() to IHttpAdapter with registry-backed dispatch ([#2973](https://github.com/powerhouse-inc/powerhouse/issues/2973))
+- **reactor-browser:** accept a configured id in addDrive ([704fe6c08](https://github.com/powerhouse-inc/powerhouse/commit/704fe6c08))
+- **scripts:** add new-worktree.sh to create ready-to-test worktrees ([#2982](https://github.com/powerhouse-inc/powerhouse/pull/2982))
+- **shared:** allow local entries in connect.drives.defaultDrives ([bf7ed811d](https://github.com/powerhouse-inc/powerhouse/commit/bf7ed811d))
+- **switchboard:** bound and instrument the reactor host Postgres pool ([deb71b911](https://github.com/powerhouse-inc/powerhouse/commit/deb71b911))
+- **switchboard, opentelemetry-instrumentation-reactor:** emit host event-loop metrics ([e23f219ab](https://github.com/powerhouse-inc/powerhouse/commit/e23f219ab))
+
+### 🩹 Fixes
+
+- **academy:** pin cross-env instead of catalog: so the Docker build resolves ([705d68a09](https://github.com/powerhouse-inc/powerhouse/commit/705d68a09))
+- **connect:** guard the local default drive with deleted-inclusive existence ([34c222cfa](https://github.com/powerhouse-inc/powerhouse/commit/34c222cfa))
+- **connect:** skip local default drives configured without an id ([3e9c27086](https://github.com/powerhouse-inc/powerhouse/commit/3e9c27086))
+- **e2e-utils:** kill registry process group on teardown ([6f306ccc3](https://github.com/powerhouse-inc/powerhouse/commit/6f306ccc3))
+- **reactor:** the sync bench prices indexing without the chain wait ahead of it ([cba01eeec](https://github.com/powerhouse-inc/powerhouse/commit/cba01eeec))
+- **reactor:** reject withReadModel under projection shards instead of dropping it ([aed202cb3](https://github.com/powerhouse-inc/powerhouse/commit/aed202cb3))
+- **reactor:** stop projection shards losing jobs and stalling consistency reads ([6f6ed4a02](https://github.com/powerhouse-inc/powerhouse/commit/6f6ed4a02))
+- **reactor:** reject shard configs that leave a read model unindexed ([c8343f2be](https://github.com/powerhouse-inc/powerhouse/commit/c8343f2be))
+- **reactor-api:** tear down subgraph routes when packages are removed ([#2973](https://github.com/powerhouse-inc/powerhouse/issues/2973))
+- **reactor-api:** drop package map keys on removal and add removePackage ([#2973](https://github.com/powerhouse-inc/powerhouse/issues/2973))
+- **reactor-api:** uninstallPackage tears down everything the package registered ([#2973](https://github.com/powerhouse-inc/powerhouse/issues/2973))
+- **reactor-api:** pipe streamed response bodies in the express and fastify adapters ([#2971](https://github.com/powerhouse-inc/powerhouse/pull/2971))
+- **reactor-api:** subgraph mount paths and names are host-owned ([#2976](https://github.com/powerhouse-inc/powerhouse/pull/2976))
+- **reactor-api:** tear down what removed packages registered ([#2973](https://github.com/powerhouse-inc/powerhouse/pull/2973), [#2978](https://github.com/powerhouse-inc/powerhouse/pull/2978))
+- **reactor-browser:** allow clearing a drive icon via setDriveMetadata ([#2659](https://github.com/powerhouse-inc/powerhouse/pull/2659), [#2981](https://github.com/powerhouse-inc/powerhouse/pull/2981))
+- **switchboard:** resolve the host pool size only on the Postgres path ([a6ac10b15](https://github.com/powerhouse-inc/powerhouse/commit/a6ac10b15))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5
+- Frank @froid1911
+- froid1911
+
+## 6.2.2-dev.83 (2026-09-08)
+
+### 🩹 Fixes
+
+- **reactor:** let execute name the subject its returned document is read as ([#2985](https://github.com/powerhouse-inc/powerhouse/pull/2985))
+- **release:** create the GitHub release after the push, not during changelog ([df3d2c88c](https://github.com/powerhouse-inc/powerhouse/commit/df3d2c88c))
+
+### ❤️ Thank You
+
+- acaldas
+- Guillermo Puente Sandoval @gpuente
+
+## 6.2.2-dev.82 (2026-09-08)
+
+### 🚀 Features
+
+- **reactor-api:** add require-authenticated-caller fetch middleware ([#2951](https://github.com/powerhouse-inc/powerhouse/pull/2951))
+- **reactor-api:** add REQUIRE_AUTHENTICATED_CALLER env toggle ([#2951](https://github.com/powerhouse-inc/powerhouse/pull/2951))
+
+### 🩹 Fixes
+
+- **ci:** resolve @jsr scope to npm.jsr.io in pnpm-workspace ([d5dd3a39e](https://github.com/powerhouse-inc/powerhouse/commit/d5dd3a39e))
+- **ci:** route the @jsr scope from the workspace root .npmrc ([#2968](https://github.com/powerhouse-inc/powerhouse/pull/2968))
+- **connect:** drop a personal tailnet host from committed config ([#2969](https://github.com/powerhouse-inc/powerhouse/pull/2969))
+- **release:** emit the pnpm 11+ scoped-registry publish flag ([1ddf2464b](https://github.com/powerhouse-inc/powerhouse/commit/1ddf2464b))
+
+### ❤️ Thank You
+
+- acaldas
+- Frank @froid1911
+- froid1911
+
 ## 6.2.2-dev.81 (2026-09-05)
 
 ### 🚀 Features
