@@ -72,7 +72,10 @@ import {
 } from "./graphql/gateway/require-auth-middleware.js";
 import type { IHttpAdapter, TlsOptions } from "./graphql/gateway/types.js";
 import { GraphQLManager } from "./graphql/graphql-manager.js";
-import { renderGraphqlPlayground } from "./graphql/playground.js";
+import {
+  decodeExplorerUrlState,
+  renderGraphqlPlayground,
+} from "./graphql/playground.js";
 import { ReactorSubgraph } from "./graphql/reactor/subgraph.js";
 import type { SubgraphClass } from "./graphql/types.js";
 import { runMigrations } from "./migrations/index.js";
@@ -262,6 +265,16 @@ function createReadinessGate(): ReadinessGate {
       ready = true;
     },
   };
+}
+
+/**
+ * The GraphiQL explorer page's mount prefix. `path.posix.join` normalizes the
+ * join with `basePath` — a naive template literal would produce `//explorer`
+ * for the default `/` basePath, which express compiles into a route that only
+ * matches `//explorer`, leaving `GET /explorer` a 404.
+ */
+export function getExplorerPrefix(basePath: string): string {
+  return path.posix.join(basePath, "explorer");
 }
 
 function resolveAttachmentStoragePath(options: Options): string {
@@ -770,16 +783,30 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   );
 
   // Explorer route
-  const explorerPrefix = `${config.basePath}/explorer`;
+  const explorerPrefix = getExplorerPrefix(config.basePath);
   httpAdapter.getRoute(`${explorerPrefix}/:endpoint?`, (request) => {
     const url = new URL(request.url);
     // Strip the prefix to find the optional :endpoint segment
     const suffix = url.pathname.slice(explorerPrefix.length).replace(/^\//, "");
     const endpoint = suffix ? `/${suffix}` : "/graphql";
-    const query = url.searchParams.get("query") ?? undefined;
-    return new Response(renderGraphqlPlayground(endpoint, query), {
-      headers: { "Content-Type": "text/html" },
-    });
+    // Prefer the document-scoped `explorerURLState` payload (produced by the
+    // Connect DocumentToolbar) over the plain `?query=` parameter.
+    const explorerState = decodeExplorerUrlState(
+      url.searchParams.get("explorerURLState") ?? "",
+    );
+    const query =
+      explorerState?.query ?? url.searchParams.get("query") ?? undefined;
+    return new Response(
+      renderGraphqlPlayground(
+        endpoint,
+        query,
+        explorerState?.headers ?? {},
+        explorerState?.variables,
+      ),
+      {
+        headers: { "Content-Type": "text/html" },
+      },
+    );
   });
 
   /* Built whenever the bearer is read — which is not the same as the policy

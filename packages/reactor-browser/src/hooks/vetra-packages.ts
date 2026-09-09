@@ -13,13 +13,25 @@ const vetraPackageManagerFunctions = makePHEventFunctions(
 
 export const useVetraPackageManager = vetraPackageManagerFunctions.useValue;
 
-/** Returns all of the Vetra packages loaded by the Connect instance */
+const EMPTY_VETRA_PACKAGES: DocumentModelLib[] = [];
+const noPackageManagerUnsubscribe = () => {};
+
+/**
+ * Returns all of the Vetra packages loaded by the Connect instance.
+ *
+ * The snapshot and subscription must keep stable identity while no package
+ * manager is registered: `useSyncExternalStore` loops when the snapshot
+ * changes on every read, which a fresh `[]` does.
+ */
 export const useVetraPackages = () => {
   const packageManager = useVetraPackageManager();
 
   return useSyncExternalStore(
-    (cb) => (packageManager ? packageManager.subscribe(cb) : () => {}),
-    () => packageManager?.packages ?? [],
+    (cb) =>
+      packageManager
+        ? packageManager.subscribe(cb)
+        : noPackageManagerUnsubscribe,
+    () => packageManager?.packages ?? EMPTY_VETRA_PACKAGES,
   );
 };
 

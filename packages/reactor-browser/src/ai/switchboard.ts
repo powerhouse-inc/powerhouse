@@ -27,7 +27,7 @@ export function getBrowserSyncManager(): ISyncManager | undefined {
 }
 
 /** Suffix of the per-drive GraphQL channel endpoint the switchboard serves. */
-const GQL_CHANNEL_SUFFIX = "/graphql/r";
+export const GQL_CHANNEL_SUFFIX = "/graphql/r";
 
 /**
  * Resolves the switchboard that serves a drive, if any.
