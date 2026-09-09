@@ -19,7 +19,7 @@ describe("explorer route registration", () => {
     expect(getExplorerPrefix("/api/reactor")).toBe("/api/reactor/explorer");
   });
 
-  it("matches a single-slash GET /explorer with the default config", async () => {
+  it("matches a single-slash GET /explorer and its endpoint variant", async () => {
     const adapter = new ExpressHttpAdapter();
     adapter.setupMiddleware({});
     const server = await adapter.listen(0);
@@ -30,9 +30,11 @@ describe("explorer route registration", () => {
         () => new Response("graphiql", { status: 200 }),
       );
 
-      const res = await fetch(`http://127.0.0.1:${port}/explorer`);
-      expect(res.status).toBe(200);
-      expect(await res.text()).toBe("graphiql");
+      for (const path of ["/explorer", "/explorer/graphql"]) {
+        const res = await fetch(`http://127.0.0.1:${port}${path}`);
+        expect(res.status).toBe(200);
+        expect(await res.text()).toBe("graphiql");
+      }
     } finally {
       await new Promise<void>((resolve, reject) =>
         server.close((err) => (err ? reject(err) : resolve())),
