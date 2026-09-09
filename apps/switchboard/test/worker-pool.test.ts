@@ -242,9 +242,11 @@ describe("resolveWorkerModelSources", () => {
   it("resolves the base specifiers to existing files", async () => {
     const sources = await resolveWorkerModelSources([], stubLogger());
     expect(sources).toHaveLength(4);
+    // `fileURLToPath` yields native separators, so a `/` substring can only
+    // match on POSIX.
     expect(
       sources.some((source) =>
-        source.filePath.includes("reactor-group/dist/document-models"),
+        /reactor-group[\\/]dist[\\/]document-models/.test(source.filePath),
       ),
     ).toBe(true);
     for (const source of sources) {
