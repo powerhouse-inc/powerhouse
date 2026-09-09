@@ -613,6 +613,22 @@ const benchUiConfig = {
   },
 };
 
+/** The standalone stale-bot tool is plain Node scripts vendored from
+ * omp-vault-harness — give them Node globals and relax the two rules that
+ * assume the monorepo's module layout rather than a standalone script. */
+const staleBotConfig = {
+  files: ["tools/stale-bot/**/*.mjs"],
+  languageOptions: {
+    globals: {
+      ...globals.node,
+    },
+  },
+  rules: {
+    "preserve-caught-error": "off",
+    "@typescript-eslint/no-unused-vars": "off",
+  },
+};
+
 /** Recommended config from eslint */
 const eslintRecommendedConfig = eslint.configs.recommended;
 
@@ -713,6 +729,7 @@ export default defineConfig(
   reactConfig,
   javascriptConfig,
   benchUiConfig,
+  staleBotConfig,
   unsafeConfig,
   generatedFilesConfig,
   cliColdPathConfig,
