@@ -1,3 +1,13 @@
+## 6.2.2-dev.86 (2026-09-09)
+
+### 🩹 Fixes
+
+- **codegen:** emit yarn resolutions mirroring the pnpm dependency overrides ([2bcadd4be](https://github.com/powerhouse-inc/powerhouse/commit/2bcadd4be))
+
+### ❤️ Thank You
+
+- froid1911
+
 ## 6.2.2-dev.85 (2026-09-09)
 
 ### 🚀 Features
