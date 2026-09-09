@@ -1,5 +1,231 @@
 # Release Changelog
 
+## 🚀 **v6.2.2**
+
+### ✨ Highlights
+
+1. **Document-level authorization** — a decision model that evaluates auth as a projection, with group principals and conditional rules behind a staged flag chain, plus a preflight that answers "may I?" before an action is submitted
+2. **Attachments you can actually watch** — byte-level upload and download progress, working cancellation, and retry visibility, end to end from `IAttachmentClient` to the React hooks
+3. **AI assistant in Connect** — an opt-in in-browser chat that talks to your own OpenAI-compatible endpoint and acts on the reactor, with approval gating for destructive tools
+4. **Document version awareness** — Connect stops handing you a broken editor for a document newer than the installed model, and offers a previewed upgrade instead
+
+---
+
+### NEW FEATURES
+
+#### 🔐 Reactor — Document Decisions and the Auth Scope
+
+Authorization is now evaluated by a decision model that walks the operation stream, rather than by a permissions check bolted onto the write path. It ships behind a chain of feature flags, each requiring the one before it, so a deployment adopts exactly as much as it has been able to verify:
+
+```typescript
+// Each flag requires the one above it; anything unset is off.
+featureFlags: {
+  documentDecisions: true,  // evaluate decisions from the operation stream
+  authEnforcement: true,    // read the auth scope as a second projection
+  authGroups: true,         // match { group } principals via PHGroup documents
+  authConditions: true,     // evaluate `where` clauses and { match } principals
+}
+```
+
+Asking an older reactor for a later stage's flag is an unrecognized name rather than a flag that quietly does nothing — the reactor throws instead of appearing to enforce something it cannot deliver.
+
+`authGroups` folds referenced `PHGroup` documents as derived projections and re-evaluates referencing documents when a group's membership changes. `authConditions` evaluates conditions against the executing scope's state, the subject, and the action input.
+
+✅ **What to try:** turn on `documentDecisions` and `authEnforcement` in a staging reactor and watch rejected actions carry an explicit rejection reason through sync.
+
+#### 🛡️ Authorization Preflight — Ask Before You Submit
+
+A control no longer has to submit an action to discover it was not allowed. `evaluateActions` on the reactor subgraph predicts admission verdicts without submitting, and `useCanExecute` exposes that to React so a button can be disabled before it fails.
+
+```typescript
+const { canExecute } = useCanExecute(/* ... */);
+```
+
+The preflight also names the refusal when the relevant flags are off, so "denied" and "not evaluated" are distinguishable rather than both surfacing as a failure.
+
+#### 🔐 Switchboard — `REQUIRE_AUTHENTICATED_CALLER`
+
+Switchboard gained the one switch that expresses "authenticated callers allowed, anonymous not" — something neither `OPEN` (whose policy answers `true` to everything) nor `ADMIN_ONLY` (which locks out every non-admin) could express on its own.
+
+```bash
+# Admit authenticated callers, reject anonymous ones with a 401
+export REQUIRE_AUTHENTICATED_CALLER=true
+```
+
+It defaults to off, so nothing changes for existing deployments. When on, every GraphQL request without a resolved caller — subgraphs, the supergraph, and the SSE subscription endpoint alike — is answered with a `401` (`{"error": "Authentication required"}`) before any resolver runs. CORS preflights (`OPTIONS`) are still admitted, as they never carry a token.
+
+It refuses to boot without `RESOLVE_CALLER_IDENTITY=true` or `AUTH_ENABLED=true`: with identity resolution off, no bearer is ever read and it would reject every caller, including authenticated ones.
+
+#### 📎 Attachments — Byte-Level Progress, Cancellation, and Retry Visibility
+
+Upload and download progress is real now. Every single-item method on `IAttachmentClient` takes an options bag as its second parameter carrying `onProgress` and `throttleMs`, and download bytes are instrumented at a single site so presigned, switchboard, legacy and local reads all report by construction.
+
+Cancellation started working on the fetch path too: `AttachmentUploadInput.signal` was documented as "checked between stages" and then dropped entirely at the transfer — neither fetch call passed one. It is forwarded now, in Node as well as the browser.
+
+A new `XMLHttpRequest` upload transport supplies the byte events that `fetch` cannot observe for its own request body, and Connect uses it.
+
+In React, `useAttachmentUpload` routes through `client.upload({ preprocessed })` instead of reimplementing the flow, so progress, dedup reporting and cancellation are identical to the non-React path:
+
+```typescript
+const { stage, progress, cancel, reset, result } =
+  useAttachmentUpload(/* ... */);
+// stage: "idle" | "hashing" | "reserving" | "uploading" | "done" | "error"
+// progress: { percent, loaded, total, indeterminate }
+```
+
+`useAttachmentPreview` now exposes `attempt`, `maxAttempts` and `lastError` while it is still legitimately `loading`. A preview requested right after attaching used to be an indefinite spinner with no explanation, because the server's reference index only learns the document/ref pair once the operation has synced and been projected.
+
+✅ **What to try:** upload a large file in Connect and watch a real percentage, then cancel it mid-transfer.
+
+#### 🤖 Connect — In-Browser AI Assistant
+
+Connect can mount a chat assistant that talks to a user-configured OpenAI-compatible endpoint and acts on the reactor. It is **disabled by default** and opt-in per deployment:
+
+```json
+// powerhouse.config.json
+{
+  "connect": {
+    "ai": {
+      "assistantEnabled": true
+    }
+  }
+}
+```
+
+When enabled, a chat FAB appears bottom-right. The assistant is grounded in the current document id and switchboard endpoint, can introspect the switchboard GraphQL schema, and merges any `aiTools` a loaded package declares into its tool set via `DocumentModelLib.aiTools`. Tools marked with `destructiveHint` require explicit approval before they run, and the system prompt carries a secret-handling policy. Context is managed with a result budget and history compaction so long conversations stay within the model's window.
+
+#### 🔄 Document Version Awareness and Upgrades
+
+Opening a document produced by a newer document model than the one installed used to mean a broken editor. Connect now detects it and blocks the editor, showing a modal on both import paths and a warning toast with an update action.
+
+The upgrade itself is previewed before it is applied — a dry-run field diff shows what will change — and is available programmatically:
+
+```typescript
+await client.upgradeDocument(documentIdentifier, toVersion, options, signal);
+```
+
+The executor validates the action's version and revision snapshot against the state the migration actually runs on; when a concurrent edit invalidates the snapshot, the upgrade is rebuilt from a fresh read and retried before the conflict is surfaced. `useDocumentVersionStatus` exposes the status to React, and replay failures now carry a typed `UnsupportedDocumentModelVersionError` instead of a generic error.
+
+#### 🐳 Multi-Architecture Docker Images
+
+The `switchboard` and `connect` images are now published for **`linux/amd64` and `linux/arm64`**. On Apple Silicon they run natively — no `platform: linux/amd64` pin, no Rosetta or QEMU emulation.
+
+```yaml
+# This is no longer needed in your compose file:
+#   platform: linux/amd64
+services:
+  switchboard:
+    image: cr.vetra.io/powerhouse-inc-powerhouse/switchboard:latest
+```
+
+✅ **What to try:** drop the `platform:` pins from your compose file and confirm `uname -m` inside the container reports `aarch64` on an M-series Mac.
+
+#### ✍️ Renown — Server-Side Sessions and Pluggable Wallets
+
+Renown gained server-side rendering support: `@renown/sdk/node` exposes `verifyRenownSession`, `readSessionClaims` and `serializeRenownSessionCookie`, and SSR auth resolves on the first render so the address-to-name flash is gone. Wallet adapters are now pluggable (Rainbow, Privy, mock), with headless Privy email login and chain pinning for whitelabel hosts.
+
+---
+
+### BREAKING CHANGES
+
+#### Reactor — a job's operations are batched by default
+
+`batchApplies` now defaults to **on**. A batched job's writes are atomic, so a job that fails partway through leaves nothing where it used to leave the operations it had already applied.
+
+**Migration:** a half-applied job is not a state anyone asked for, so this is the better default. If a deployment depends on the old behaviour, set `batchApplies: false` in `JobExecutorConfig`.
+
+#### `reactor-attachments` — `IAttachmentClient` single-item methods take an options bag
+
+Every single-item method now takes one options bag as parameter 2 carrying `onProgress` and `throttleMs`, and the trailing positional `onStage` is gone. Arity drops from 3 to 2 everywhere.
+
+**Migration:** move `onStage` into the options bag as `onProgress`. Note that `download()` resolves with `downloading` as its last event and `loaded: 0` — byte events and the terminal `done` arrive as the caller reads the stream.
+
+#### `reactor-attachments` — `IAttachmentUpload.send(data, options?)`
+
+**Before (v6.2.1):**
+
+```typescript
+send(data: Blob): Promise<void>;
+```
+
+**After (v6.2.2):**
+
+```typescript
+send(data: Blob, options?: { onProgress?: ...; signal?: AbortSignal }): Promise<void>;
+```
+
+**Migration:** none required for most implementers. The options bag is optional, so TypeScript lets implementations keep their narrower signatures — `DirectAttachmentUpload`, `S3AttachmentUpload` and every existing `send(` call site need no edits.
+
+#### `reactor-browser` — `useAttachmentUpload` returns `stage` and an object `progress`
+
+**Before (v6.2.1):**
+
+```typescript
+const { status, progress } = useAttachmentUpload(/* ... */);
+// status: UploadStatus enum
+// progress: number, 0..1 — and a lie: 0 before the await, 1 after
+```
+
+**After (v6.2.2):**
+
+```typescript
+const { stage, progress, cancel, reset, result } =
+  useAttachmentUpload(/* ... */);
+// stage: "idle" | "hashing" | "reserving" | "uploading" | "done" | "error"
+// progress: { percent /* 0-100 */, loaded, total, indeterminate }
+```
+
+**Migration:** the `UploadStatus` enum is removed — replace it with the string union. Divide by 100 if you were feeding a 0..1 progress bar, or read `percent` directly. `cancel`, `reset` and `result` are new.
+
+#### `reactor-browser` — `useAttachmentPreview` return value grows
+
+**Migration:** none required. `stage`, `progress`, `attempt`, `maxAttempts` and `lastError` are added; the existing `url`, `header`, `loading` and `error` fields are unchanged.
+
+#### `reactor-browser` — `useRenownLoginMethods` drops its first argument
+
+**Before (v6.2.1):**
+
+```typescript
+useRenownLoginMethods(adapters, labels?)
+```
+
+**After (v6.2.2):**
+
+```typescript
+useRenownLoginMethods(labels?)
+```
+
+**Migration:** drop the first argument. The hook reads the mounted `RenownWalletProvider`'s adapters, so the provider's snapshot is now the single source of truth. A login UI no longer has to be inside the provider's subtree — and the list is empty when no provider is mounted.
+
+#### `@renown/sdk` — `build()` no longer re-authenticates a stored user
+
+**Migration:** the browser builder revalidates in the background (non-blocking, fail-open) and the node builder blocks. Callers relying on the old automatic re-auth must call `renown.revalidate()` explicitly.
+
+---
+
+### MIGRATION GUIDE
+
+1. Update every `@powerhousedao/*` dependency and `ph-cmd` to `6.2.2`.
+2. If you implement `IAttachmentClient` or call its single-item methods, move the positional `onStage` argument into the options bag as `onProgress`.
+3. Replace `UploadStatus` with the `stage` string union, and read `progress.percent` (0-100) instead of a 0..1 number.
+4. Drop the first argument from every `useRenownLoginMethods(adapters, ...)` call site.
+5. If you relied on `BaseRenownBuilder.build()` re-authenticating a stored user, add an explicit `renown.revalidate()`.
+6. If a deployment depends on a failed job leaving its already-applied operations behind, set `batchApplies: false`.
+7. Remove `platform: linux/amd64` pins for `switchboard` and `connect` from your compose files.
+
+---
+
+### BUG FIXES AND IMPROVEMENTS
+
+- **⚡ Batched job applies** — one advisory lock and one guarded insert per batch instead of per operation; the default issues 18 `Operation` inserts where forcing it off issues 909.
+- **🔄 Sync channel binding** — a channel is adopted on the first authenticated poll and the rest are refused; the address a channel is bound to is recorded, and one remote's outbox is bounded.
+- **🔍 Document id collisions** — `exists()` answers whether an id is taken, `isDocumentIdTaken` joins the client surface, and an id collision is now distinguishable from a stale-read race.
+- **📦 Connect PWA** — dynamic packages can contribute to the PWA configuration, OS-level document imports are handled, and PWA overrides are configurable via runtime config.
+- **🗂️ Local default drives** — Connect creates local default drives on first boot, `addDrive` accepts a configured id, and `connect.drives.defaultDrives` accepts local entries.
+- **🛠️ GraphiQL** — the explorer prefills from `explorerURLState`.
+- **🛠️ Reactor benchmarks** — a records CLI, JSONL benchmark and task records, and a viewer that plots runs over time and ties findings to the commits that fixed them.
+- Plus a large number of reactor, reactor-api and reactor-browser fixes across sync, replay, projections and the document-model editor.
+
 ## 🚀 **v6.0.0** — Jan–May 2026
 
 ### ✨ Highlights
