@@ -1,4 +1,5 @@
 import {
+  BOILERPLATE_DEPENDENCY_OVERRIDES,
   externalDevDependencies,
   makeVersionedDependenciesMap,
   PEER_EXTERNAL_DEPENDENCIES,
@@ -6,7 +7,7 @@ import {
   VERSIONED_PEER_DEPENDENCIES,
 } from "@powerhousedao/shared/clis";
 import { mapValues } from "remeda";
-import { packageJsonTemplate } from "templates";
+import { packageJsonTemplate, toYarnResolutions } from "templates";
 
 export async function buildBoilerplatePackageJson(args: {
   name: string;
@@ -38,6 +39,10 @@ export async function buildBoilerplatePackageJson(args: {
     ...mapValues(PEER_EXTERNAL_DEPENDENCIES, (v) => v.dev),
     ...externalDevDependencies,
   };
-
-  return packageJsonTemplate(name, peerDependencies, devDependencies);
+  return packageJsonTemplate(
+    name,
+    peerDependencies,
+    devDependencies,
+    toYarnResolutions(BOILERPLATE_DEPENDENCY_OVERRIDES),
+  );
 }

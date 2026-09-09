@@ -6,7 +6,7 @@ import { buildDocumentSubgraphQuery } from "../src/utils/switchboard.js";
 interface CompressedQueryData {
   document: string;
   variables: string;
-  headers: string;
+  headers?: string;
 }
 
 interface QueryVariables {
@@ -20,13 +20,8 @@ interface QueryHeaders {
 const documentWithOperationsQuery =
   GetDocumentWithOperationsDocument.loc!.source.body;
 
-// Mock the generateDocumentStateQueryFields function
-vi.mock("document-drive", () => ({
-  generateDocumentStateQueryFields: vi.fn(() => "stateField1\nstateField2"),
-}));
-
 describe("buildDocumentSubgraphQuery", () => {
-  const _mockDriveUrl = "https://example.com/d/test-drive";
+  const mockDocumentType = "test/doc";
   const mockDocumentId = "test-document-123";
 
   beforeEach(() => {
@@ -34,7 +29,7 @@ describe("buildDocumentSubgraphQuery", () => {
   });
 
   it("should build query without auth token", () => {
-    const result = buildDocumentSubgraphQuery(mockDocumentId);
+    const result = buildDocumentSubgraphQuery(mockDocumentType, mockDocumentId);
 
     // The result should be a compressed string
     expect(typeof result).toBe("string");
@@ -60,7 +55,12 @@ describe("buildDocumentSubgraphQuery", () => {
   it("should build query with auth token", () => {
     const authToken = "test-auth-token-123";
 
-    const result = buildDocumentSubgraphQuery(mockDocumentId, authToken);
+    const result = buildDocumentSubgraphQuery(
+      mockDocumentType,
+      mockDocumentId,
+      undefined,
+      authToken,
+    );
 
     // The result should be a compressed string
     expect(typeof result).toBe("string");
@@ -76,14 +76,19 @@ describe("buildDocumentSubgraphQuery", () => {
     expect(decompressed).toHaveProperty("headers");
 
     // Verify headers contain Authorization
-    const headers = JSON.parse(decompressed.headers) as QueryHeaders;
+    const headers = JSON.parse(decompressed.headers!) as QueryHeaders;
     expect(headers).toEqual({
       Authorization: `Bearer ${authToken}`,
     });
   });
 
   it("should handle empty auth token as undefined", () => {
-    const result = buildDocumentSubgraphQuery(mockDocumentId, "");
+    const result = buildDocumentSubgraphQuery(
+      mockDocumentType,
+      mockDocumentId,
+      undefined,
+      "",
+    );
 
     const decompressed = JSON.parse(
       decompressFromEncodedURIComponent(result) || "",
@@ -94,7 +99,7 @@ describe("buildDocumentSubgraphQuery", () => {
   });
 
   it("should generate correct GraphQL query structure", () => {
-    const result = buildDocumentSubgraphQuery(mockDocumentId);
+    const result = buildDocumentSubgraphQuery(mockDocumentType, mockDocumentId);
 
     const decompressed = JSON.parse(
       decompressFromEncodedURIComponent(result) || "",
@@ -107,19 +112,38 @@ describe("buildDocumentSubgraphQuery", () => {
   });
 
   it("should produce consistent results for same inputs", () => {
-    console.log("test-token");
-    const result1 = buildDocumentSubgraphQuery(mockDocumentId, "test-token");
+    const result1 = buildDocumentSubgraphQuery(
+      mockDocumentType,
+      mockDocumentId,
+      undefined,
+      "test-token",
+    );
 
-    const result2 = buildDocumentSubgraphQuery(mockDocumentId, "test-token");
+    const result2 = buildDocumentSubgraphQuery(
+      mockDocumentType,
+      mockDocumentId,
+      undefined,
+      "test-token",
+    );
 
     // Results should be identical for same inputs
     expect(result1).toBe(result2);
   });
 
   it("should produce different results for different auth tokens", () => {
-    const result1 = buildDocumentSubgraphQuery(mockDocumentId, "token1");
+    const result1 = buildDocumentSubgraphQuery(
+      mockDocumentType,
+      mockDocumentId,
+      undefined,
+      "token1",
+    );
 
-    const result2 = buildDocumentSubgraphQuery(mockDocumentId, "token2");
+    const result2 = buildDocumentSubgraphQuery(
+      mockDocumentType,
+      mockDocumentId,
+      undefined,
+      "token2",
+    );
 
     // Results should be different for different auth tokens
     expect(result1).not.toBe(result2);

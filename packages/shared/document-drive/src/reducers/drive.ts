@@ -12,7 +12,7 @@ export const driveReducer: DocumentDriveDriveOperations = {
     state.name = action.input.name;
   },
   setDriveIconOperation(state, action, dispatch) {
-    state.icon = action.input.icon;
+    state.icon = action.input.icon ?? null;
   },
   setSharingTypeOperation(state, action, dispatch) {
     state.sharingType = action.input.type;

@@ -282,6 +282,18 @@
             }
           }
         },
+        "ai": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "AI assistant (chat) behaviour.",
+          "properties": {
+            "assistantEnabled": {
+              "type": "boolean",
+              "description": "When true, Connect mounts the in-browser AI assistant (bottom-right chat FAB that talks to a user-configured OpenAI-compatible endpoint and acts on the reactor). Disabled by default.",
+              "default": false
+            }
+          }
+        },
         "packages": {
           "type": "object",
           "additionalProperties": false,
@@ -311,23 +323,52 @@
             },
             "defaultDrives": {
               "type": "array",
-              "description": "Drives the SPA auto-connects to on first load. Each must specify a URL; name and icon are optional overrides.",
+              "description": "Drives the SPA auto-connects to on first load. Each entry is either a remote drive (a URL, with optional name/icon overrides) or a local drive (created locally on first boot, with a stable id and optional name/icon/app).",
               "default": [],
               "items": {
-                "type": "object",
-                "additionalProperties": false,
-                "required": ["url"],
-                "properties": {
-                  "url": {
-                    "type": "string"
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["url"],
+                    "properties": {
+                      "url": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": ["string", "null"]
+                      },
+                      "icon": {
+                        "type": ["string", "null"]
+                      }
+                    }
                   },
-                  "name": {
-                    "type": ["string", "null"]
-                  },
-                  "icon": {
-                    "type": ["string", "null"]
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["local", "id"],
+                    "properties": {
+                      "local": {
+                        "const": true,
+                        "description": "Discriminator: this entry is a local drive created on first boot."
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Stable drive id. The drive is created with this id on first boot and is not re-created on later boots."
+                      },
+                      "name": {
+                        "type": ["string", "null"]
+                      },
+                      "icon": {
+                        "type": ["string", "null"]
+                      },
+                      "app": {
+                        "type": "string",
+                        "description": "Drive app (preferred editor) to open on the drive."
+                      }
+                    }
                   }
-                }
+                ]
               }
             },
             "preserveStrategy": {

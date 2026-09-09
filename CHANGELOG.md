@@ -1,3 +1,81 @@
+## 6.2.2-dev.86 (2026-09-09)
+
+### 🩹 Fixes
+
+- mirror pnpm dependency overrides as yarn resolutions in generated projects ([#2990](https://github.com/powerhouse-inc/powerhouse/pull/2990))
+- **codegen:** emit yarn resolutions mirroring the pnpm dependency overrides ([2bcadd4be](https://github.com/powerhouse-inc/powerhouse/commit/2bcadd4be))
+
+### ❤️ Thank You
+
+- Frank @froid1911
+- froid1911
+
+## 6.2.2-dev.85 (2026-09-09)
+
+### 🚀 Features
+
+- **reactor-api:** prefill GraphiQL explorer from explorerURLState ([f609aaaa0](https://github.com/powerhouse-inc/powerhouse/commit/f609aaaa0))
+
+### 🩹 Fixes
+
+- prefill Switchboard GraphQL editor with document-scoped query ([#2966](https://github.com/powerhouse-inc/powerhouse/pull/2966))
+- **ci:** move @jsr registry mapping to the root .npmrc ([56092b254](https://github.com/powerhouse-inc/powerhouse/commit/56092b254))
+- **codegen:** the generated project's install ignores the ambient minimumReleaseAge ([22f2a7a69](https://github.com/powerhouse-inc/powerhouse/commit/22f2a7a69))
+- **e2e:** escalate the registry stop to SIGKILL so teardown cannot hang ([3566c147e](https://github.com/powerhouse-inc/powerhouse/commit/3566c147e))
+- **reactor-api:** register explorer route at normalized path ([b3c037aa5](https://github.com/powerhouse-inc/powerhouse/commit/b3c037aa5))
+- **reactor-api:** escape playground state before embedding it in the page script ([7e9e31394](https://github.com/powerhouse-inc/powerhouse/commit/7e9e31394))
+- **reactor-api:** render string defaultQuery + variables prop in GraphiQL ([2555cccf6](https://github.com/powerhouse-inc/powerhouse/commit/2555cccf6))
+- **reactor-api:** import lz-string via default export for Node ESM interop ([eb5c86d43](https://github.com/powerhouse-inc/powerhouse/commit/eb5c86d43))
+- **reactor-api:** keep the slash inside the group when normalizing optional params ([cd30934bf](https://github.com/powerhouse-inc/powerhouse/commit/cd30934bf))
+- **reactor-browser:** prefill Switchboard link with document-scoped query ([db58970d3](https://github.com/powerhouse-inc/powerhouse/commit/db58970d3))
+- **reactor-browser:** remove duplicate graphql dependency and clean lockfile ([472c42a1c](https://github.com/powerhouse-inc/powerhouse/commit/472c42a1c))
+- **reactor-browser:** import lz-string via default export for Node ESM interop ([55c256d2c](https://github.com/powerhouse-inc/powerhouse/commit/55c256d2c))
+
+### ❤️ Thank You
+
+- Frank @froid1911
+- froid1911
+
+## 6.2.2-dev.84 (2026-09-09)
+
+### 🚀 Features
+
+- download drive folders as zip archives with round-trip import ([#134](https://github.com/powerhouse-inc/powerhouse/pull/134), [#2986](https://github.com/powerhouse-inc/powerhouse/pull/2986))
+- **connect:** create local default drives on first boot ([410f71c04](https://github.com/powerhouse-inc/powerhouse/commit/410f71c04))
+- **connect:** support local drives in connect.drives.defaultDrives ([#2838](https://github.com/powerhouse-inc/powerhouse/pull/2838), [#2984](https://github.com/powerhouse-inc/powerhouse/pull/2984))
+- **gateway:** add unmount() to IHttpAdapter with registry-backed dispatch ([#2973](https://github.com/powerhouse-inc/powerhouse/issues/2973))
+- **reactor-browser:** accept a configured id in addDrive ([704fe6c08](https://github.com/powerhouse-inc/powerhouse/commit/704fe6c08))
+- **scripts:** add new-worktree.sh to create ready-to-test worktrees ([#2982](https://github.com/powerhouse-inc/powerhouse/pull/2982))
+- **shared:** allow local entries in connect.drives.defaultDrives ([bf7ed811d](https://github.com/powerhouse-inc/powerhouse/commit/bf7ed811d))
+- **switchboard:** bound and instrument the reactor host Postgres pool ([deb71b911](https://github.com/powerhouse-inc/powerhouse/commit/deb71b911))
+- **switchboard, opentelemetry-instrumentation-reactor:** emit host event-loop metrics ([e23f219ab](https://github.com/powerhouse-inc/powerhouse/commit/e23f219ab))
+
+### 🩹 Fixes
+
+- **academy:** pin cross-env instead of catalog: so the Docker build resolves ([705d68a09](https://github.com/powerhouse-inc/powerhouse/commit/705d68a09))
+- **connect:** guard the local default drive with deleted-inclusive existence ([34c222cfa](https://github.com/powerhouse-inc/powerhouse/commit/34c222cfa))
+- **connect:** skip local default drives configured without an id ([3e9c27086](https://github.com/powerhouse-inc/powerhouse/commit/3e9c27086))
+- **e2e-utils:** kill registry process group on teardown ([6f306ccc3](https://github.com/powerhouse-inc/powerhouse/commit/6f306ccc3))
+- **reactor:** the sync bench prices indexing without the chain wait ahead of it ([cba01eeec](https://github.com/powerhouse-inc/powerhouse/commit/cba01eeec))
+- **reactor:** reject withReadModel under projection shards instead of dropping it ([aed202cb3](https://github.com/powerhouse-inc/powerhouse/commit/aed202cb3))
+- **reactor:** stop projection shards losing jobs and stalling consistency reads ([6f6ed4a02](https://github.com/powerhouse-inc/powerhouse/commit/6f6ed4a02))
+- **reactor:** reject shard configs that leave a read model unindexed ([c8343f2be](https://github.com/powerhouse-inc/powerhouse/commit/c8343f2be))
+- **reactor-api:** tear down subgraph routes when packages are removed ([#2973](https://github.com/powerhouse-inc/powerhouse/issues/2973))
+- **reactor-api:** drop package map keys on removal and add removePackage ([#2973](https://github.com/powerhouse-inc/powerhouse/issues/2973))
+- **reactor-api:** uninstallPackage tears down everything the package registered ([#2973](https://github.com/powerhouse-inc/powerhouse/issues/2973))
+- **reactor-api:** pipe streamed response bodies in the express and fastify adapters ([#2971](https://github.com/powerhouse-inc/powerhouse/pull/2971))
+- **reactor-api:** subgraph mount paths and names are host-owned ([#2976](https://github.com/powerhouse-inc/powerhouse/pull/2976))
+- **reactor-api:** tear down what removed packages registered ([#2973](https://github.com/powerhouse-inc/powerhouse/pull/2973), [#2978](https://github.com/powerhouse-inc/powerhouse/pull/2978))
+- **reactor-browser:** allow clearing a drive icon via setDriveMetadata ([#2659](https://github.com/powerhouse-inc/powerhouse/pull/2659), [#2981](https://github.com/powerhouse-inc/powerhouse/pull/2981))
+- **switchboard:** resolve the host pool size only on the Postgres path ([a6ac10b15](https://github.com/powerhouse-inc/powerhouse/commit/a6ac10b15))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5
+- Frank @froid1911
+- froid1911
+
 ## 6.2.2-dev.83 (2026-09-08)
 
 ### 🩹 Fixes

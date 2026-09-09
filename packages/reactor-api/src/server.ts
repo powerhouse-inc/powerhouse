@@ -72,7 +72,10 @@ import {
 } from "./graphql/gateway/require-auth-middleware.js";
 import type { IHttpAdapter, TlsOptions } from "./graphql/gateway/types.js";
 import { GraphQLManager } from "./graphql/graphql-manager.js";
-import { renderGraphqlPlayground } from "./graphql/playground.js";
+import {
+  decodeExplorerUrlState,
+  renderGraphqlPlayground,
+} from "./graphql/playground.js";
 import { ReactorSubgraph } from "./graphql/reactor/subgraph.js";
 import type { SubgraphClass } from "./graphql/types.js";
 import { runMigrations } from "./migrations/index.js";
@@ -264,6 +267,16 @@ function createReadinessGate(): ReadinessGate {
   };
 }
 
+/**
+ * The GraphiQL explorer page's mount prefix. `path.posix.join` normalizes the
+ * join with `basePath` — a naive template literal would produce `//explorer`
+ * for the default `/` basePath, which express compiles into a route that only
+ * matches `//explorer`, leaving `GET /explorer` a 404.
+ */
+export function getExplorerPrefix(basePath: string): string {
+  return path.posix.join(basePath, "explorer");
+}
+
 function resolveAttachmentStoragePath(options: Options): string {
   if (options.attachmentStoragePath) return options.attachmentStoragePath;
   if (options.dbPath && !options.dbPath.startsWith("postgres")) {
@@ -422,9 +435,14 @@ async function setupGraphQLManager(
     requireAuthFetchMiddleware,
   );
 
-  for (const [, collection] of subgraphs.extended.entries()) {
+  for (const [packageName, collection] of subgraphs.extended.entries()) {
     for (const subgraph of collection) {
-      await graphqlManager.registerSubgraph(subgraph, "graphql");
+      await graphqlManager.registerSubgraph(
+        subgraph,
+        "graphql",
+        false,
+        packageName,
+      );
     }
   }
 
@@ -494,24 +512,59 @@ function setupEventListeners(
     void graphqlManager.regenerateDocumentModelSubgraphs();
   });
 
+  let knownSubgraphPackages = new Set<string>();
   pkgManager.onSubgraphsChange((packagedSubgraphs) => {
     void (async () => {
-      for (const [, subgraphs] of packagedSubgraphs) {
+      for (const [packageName, subgraphs] of packagedSubgraphs) {
+        const incomingNames = new Set<string>();
         for (const subgraph of subgraphs) {
-          await graphqlManager.registerSubgraph(subgraph, "graphql");
+          const instance = await graphqlManager.registerSubgraph(
+            subgraph,
+            "graphql",
+            false,
+            packageName,
+          );
+          // Registration returns undefined when the subgraph is rejected
+          // (e.g. its name is reserved by a core subgraph, issue #2972).
+          // Nothing was mounted, so the name is not provided and must not
+          // shield a stale same-named subgraph from being pruned below.
+          if (!instance) {
+            continue;
+          }
+          incomingNames.add(instance.name);
+        }
+        // The package is still loaded but dropped some (or all) of its
+        // subgraphs: tear down the ones it no longer provides.
+        await graphqlManager.prunePackageSubgraphs(packageName, incomingNames);
+      }
+      // A package that vanished from the map entirely (uninstalled or
+      // removed from the config) keeps none of its subgraphs.
+      for (const packageName of knownSubgraphPackages) {
+        if (!packagedSubgraphs.has(packageName)) {
+          await graphqlManager.unregisterPackage(packageName);
         }
       }
+      knownSubgraphPackages = new Set(packagedSubgraphs.keys());
       await graphqlManager.updateRouter();
     })();
   });
 
+  let knownProcessorPackages = new Set<string>();
   pkgManager.onProcessorsChange((processors) => {
     void (async () => {
+      // Packages that vanished from the map entirely keep none of their
+      // factories: unregister the leftovers.
+      for (const packageName of knownProcessorPackages) {
+        if (!processors.has(packageName)) {
+          await reactorProcessorManager.unregisterFactory(packageName);
+        }
+      }
+      knownProcessorPackages = new Set(processors.keys());
+
       for (const [packageName, fns] of processors) {
         await reactorProcessorManager.unregisterFactory(packageName);
 
         const factories = fns.map((fn) => fn(module));
-
         const validBuilders = factories.filter(
           (factory): factory is ProcessorFactory =>
             typeof factory === "function",
@@ -730,16 +783,30 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   );
 
   // Explorer route
-  const explorerPrefix = `${config.basePath}/explorer`;
+  const explorerPrefix = getExplorerPrefix(config.basePath);
   httpAdapter.getRoute(`${explorerPrefix}/:endpoint?`, (request) => {
     const url = new URL(request.url);
     // Strip the prefix to find the optional :endpoint segment
     const suffix = url.pathname.slice(explorerPrefix.length).replace(/^\//, "");
     const endpoint = suffix ? `/${suffix}` : "/graphql";
-    const query = url.searchParams.get("query") ?? undefined;
-    return new Response(renderGraphqlPlayground(endpoint, query), {
-      headers: { "Content-Type": "text/html" },
-    });
+    // Prefer the document-scoped `explorerURLState` payload (produced by the
+    // Connect DocumentToolbar) over the plain `?query=` parameter.
+    const explorerState = decodeExplorerUrlState(
+      url.searchParams.get("explorerURLState") ?? "",
+    );
+    const query =
+      explorerState?.query ?? url.searchParams.get("query") ?? undefined;
+    return new Response(
+      renderGraphqlPlayground(
+        endpoint,
+        query,
+        explorerState?.headers ?? {},
+        explorerState?.variables,
+      ),
+      {
+        headers: { "Content-Type": "text/html" },
+      },
+    );
   });
 
   /* Built whenever the bearer is read — which is not the same as the policy
@@ -1212,6 +1279,7 @@ export async function initializeAndStartAPI(
     documentModelRegistry: IDocumentModelRegistry;
     readiness: ReadinessGate;
     attachmentReferenceProjection: AttachmentReferenceProjectionCapability;
+    packageManager: PackageManager;
   }
 > {
   const {
@@ -1316,5 +1384,6 @@ export async function initializeAndStartAPI(
     documentModelRegistry,
     readiness,
     attachmentReferenceProjection,
+    packageManager: packages,
   };
 }

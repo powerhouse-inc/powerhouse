@@ -1,3 +1,52 @@
+## 6.2.2-dev.86 (2026-09-09)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
+## 6.2.2-dev.85 (2026-09-09)
+
+### 🚀 Features
+
+- **reactor-api:** prefill GraphiQL explorer from explorerURLState ([f609aaaa0](https://github.com/powerhouse-inc/powerhouse/commit/f609aaaa0))
+
+### 🩹 Fixes
+
+- **reactor-api:** keep the slash inside the group when normalizing optional params ([cd30934bf](https://github.com/powerhouse-inc/powerhouse/commit/cd30934bf))
+- **reactor-api:** import lz-string via default export for Node ESM interop ([eb5c86d43](https://github.com/powerhouse-inc/powerhouse/commit/eb5c86d43))
+- **reactor-api:** render string defaultQuery + variables prop in GraphiQL ([2555cccf6](https://github.com/powerhouse-inc/powerhouse/commit/2555cccf6))
+- **reactor-api:** escape playground state before embedding it in the page script ([7e9e31394](https://github.com/powerhouse-inc/powerhouse/commit/7e9e31394))
+- **ci:** move @jsr registry mapping to the root .npmrc ([56092b254](https://github.com/powerhouse-inc/powerhouse/commit/56092b254))
+- **reactor-browser:** remove duplicate graphql dependency and clean lockfile ([472c42a1c](https://github.com/powerhouse-inc/powerhouse/commit/472c42a1c))
+- **reactor-browser:** prefill Switchboard link with document-scoped query ([db58970d3](https://github.com/powerhouse-inc/powerhouse/commit/db58970d3))
+- **reactor-api:** register explorer route at normalized path ([b3c037aa5](https://github.com/powerhouse-inc/powerhouse/commit/b3c037aa5))
+
+### ❤️ Thank You
+
+- froid1911
+
+## 6.2.2-dev.84 (2026-09-09)
+
+### 🚀 Features
+
+- download drive folders as zip archives with round-trip import ([#134](https://github.com/powerhouse-inc/powerhouse/pull/134), [#2986](https://github.com/powerhouse-inc/powerhouse/pull/2986))
+- **scripts:** add new-worktree.sh to create ready-to-test worktrees ([#2982](https://github.com/powerhouse-inc/powerhouse/pull/2982))
+- **gateway:** add unmount() to IHttpAdapter with registry-backed dispatch ([#2973](https://github.com/powerhouse-inc/powerhouse/issues/2973))
+
+### 🩹 Fixes
+
+- **reactor-api:** subgraph mount paths and names are host-owned ([#2976](https://github.com/powerhouse-inc/powerhouse/pull/2976))
+- **academy:** pin cross-env instead of catalog: so the Docker build resolves ([705d68a09](https://github.com/powerhouse-inc/powerhouse/commit/705d68a09))
+- **reactor-api:** pipe streamed response bodies in the express and fastify adapters ([#2971](https://github.com/powerhouse-inc/powerhouse/pull/2971))
+- **reactor-api:** uninstallPackage tears down everything the package registered ([#2973](https://github.com/powerhouse-inc/powerhouse/issues/2973))
+- **reactor-api:** drop package map keys on removal and add removePackage ([#2973](https://github.com/powerhouse-inc/powerhouse/issues/2973))
+- **reactor-api:** tear down subgraph routes when packages are removed ([#2973](https://github.com/powerhouse-inc/powerhouse/issues/2973))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5
+- Frank @froid1911
+- froid1911
+
 ## 6.2.2-dev.83 (2026-09-08)
 
 ### 🩹 Fixes

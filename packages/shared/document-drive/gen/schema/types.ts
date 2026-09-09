@@ -142,7 +142,7 @@ export type SetAvailableOfflineInput = {
 };
 
 export type SetDriveIconInput = {
-  icon: Scalars["String"]["input"];
+  icon?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 export type SetDriveNameInput = {

@@ -1,3 +1,40 @@
+## 6.2.2-dev.86 (2026-09-09)
+
+This was a version bump only for @powerhousedao/analytics-engine-knex to align it with other projects, there were no code changes.
+
+## 6.2.2-dev.85 (2026-09-09)
+
+### 🚀 Features
+
+- **reactor-api:** prefill GraphiQL explorer from explorerURLState ([f609aaaa0](https://github.com/powerhouse-inc/powerhouse/commit/f609aaaa0))
+
+### 🩹 Fixes
+
+- **ci:** move @jsr registry mapping to the root .npmrc ([56092b254](https://github.com/powerhouse-inc/powerhouse/commit/56092b254))
+- **reactor-browser:** remove duplicate graphql dependency and clean lockfile ([472c42a1c](https://github.com/powerhouse-inc/powerhouse/commit/472c42a1c))
+- **reactor-browser:** prefill Switchboard link with document-scoped query ([db58970d3](https://github.com/powerhouse-inc/powerhouse/commit/db58970d3))
+
+### ❤️ Thank You
+
+- froid1911
+
+## 6.2.2-dev.84 (2026-09-09)
+
+### 🚀 Features
+
+- download drive folders as zip archives with round-trip import ([#134](https://github.com/powerhouse-inc/powerhouse/pull/134), [#2986](https://github.com/powerhouse-inc/powerhouse/pull/2986))
+- **scripts:** add new-worktree.sh to create ready-to-test worktrees ([#2982](https://github.com/powerhouse-inc/powerhouse/pull/2982))
+
+### 🩹 Fixes
+
+- **academy:** pin cross-env instead of catalog: so the Docker build resolves ([705d68a09](https://github.com/powerhouse-inc/powerhouse/commit/705d68a09))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5
+- Frank @froid1911
+
 ## 6.2.2-dev.83 (2026-09-08)
 
 ### 🩹 Fixes

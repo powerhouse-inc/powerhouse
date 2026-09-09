@@ -2,6 +2,7 @@ import { Icon } from "#design-system";
 import {
   setSelectedNode,
   showDeleteNodeModal,
+  useDownloadFolder,
   useDragNode,
   useDropNode,
   useNodeActions,
@@ -31,6 +32,7 @@ export function FolderItem(props: {
   const { onRenameNode, onRenameDriveNodes, onDuplicateNode } =
     useNodeActions();
   const isReadMode = mode === "READ";
+  const downloadFolder = useDownloadFolder(folderNode);
   function onCancel() {
     setMode("READ");
   }
@@ -49,6 +51,7 @@ export function FolderItem(props: {
   }
 
   const dropdownMenuHandlers = {
+    DOWNLOAD: downloadFolder,
     DUPLICATE: () => onDuplicateNode(folderNode),
     RENAME: () => setMode("WRITE"),
     DELETE: () => showDeleteNodeModal(folderNode),
