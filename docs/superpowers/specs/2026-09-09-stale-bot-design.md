@@ -1,10 +1,10 @@
-# Stale-Bot Standalone Tool Design
+# Stale-Bot Tool Design
 
 - Status: **Proposed — awaiting review**
 - Date: 2026-09-09
 - Owner: froid
 - Supersedes: the `stale` profile inside the `omp-vault-harness` OMP plugin, and the earlier plugin approach (`2026-09-09-stale-bot-plugin-design.md`, dropped).
-- Home: `~/stale-bot/` — a plain folder, not a plugin, not a repo.
+- Home: `tools/stale-bot/` in the powerhouse monorepo — a plain folder, not a plugin. Versioned and PR-reviewable like the rest of the repo.
 
 ## Background
 
@@ -14,9 +14,9 @@ A stale-issue bot already runs daily against `powerhouse-inc/powerhouse` (~400 o
 HARNESS_DIR=~/.omp/stale-bot-conf node .../omp-vault-harness-stale/harness/run.mjs --once
 ```
 
-It is currently in `dryRun: true` (drafts and logs, posts nothing). It is coupled to the vault-harness plugin — shared identity, versioning, install — even though the stale bot and the vault knowledge-harness are unrelated, and it is not reusable or installable by anyone else.
+It has been in `dryRun: true` (drafts and logs, posts nothing). It is coupled to the vault-harness plugin — shared identity, versioning, install — even though the stale bot and the vault knowledge-harness are unrelated.
 
-**Decision (revised):** rather than packaging it as a standalone OMP *plugin* (the earlier direction), extract it into a **plain self-contained folder** — `~/stale-bot/` — that runs headless against the powerhouse repo. No plugin manifest, no OMP devices/commands, no repo-policy fetch, no marketplace. The only genuinely new code is a small driver (`run.mjs`); everything else is a port of pieces that already work.
+**Decision (revised):** extract it into a **plain self-contained folder** in the monorepo — `tools/stale-bot/` — that runs headless against the powerhouse repo. No plugin manifest, no OMP devices/commands, no repo-policy fetch, no marketplace. The only genuinely new code is a small driver (`run.mjs`); everything else is a port of pieces that already work. It runs **live** by default (`dryRun: false`); a one-off `--dry-run` flag still exists for when you want drafts only.
 
 ## What it is
 
@@ -30,7 +30,7 @@ A small **driver** (`run.mjs`) wires the two together and talks to GitHub via `g
 ## Folder layout
 
 ```
-~/stale-bot/
+tools/stale-bot/
   run.mjs                  # NEW — the thin CLI driver (the only new code)
   config.json              # the policy + plumbing (see Config)
   agents/stale-bot.md      # the brain (ported, verbatim)
@@ -44,7 +44,7 @@ A small **driver** (`run.mjs`) wires the two together and talks to GitHub via `g
   README.md                # what it is, how to run, config reference
 ```
 
-Nothing here is an OMP plugin: no `.omp-plugin/`, no `package.json#omp.extensions`, no `extension/index.ts`. It is a Node folder you run with `node run.mjs`.
+Nothing here is an OMP plugin: no `.omp-plugin/`, no `package.json#omp.extensions`, no `extension/index.ts`. It is a Node folder you run with `node run.mjs`. It has no dependency on the monorepo's packages — it is a standalone script that shells out to `omp` and `gh`.
 
 ## The brain — `agents/stale-bot.md`
 
@@ -83,7 +83,7 @@ Ported from the plugin's `harness/lib/sources/stale.mjs`; behavior unchanged:
 - **Idempotent paired writes:** every write re-checks live GitHub state first; comment-before-label, final-message-before-close. A mid-sweep kill resumes next run; nothing is posted twice.
 - **State** in `state/stale-state.json`: last-sweep timestamp, per-issue vetoes + cooldowns, recent sweep summaries.
 - **`sweepEveryHours` (24)** minimum interval between sweeps (enforced via state).
-- **Dry run:** identical up to the write step; drafts are logged, nothing is posted.
+- **Dry run:** identical up to the write step; drafts are logged, nothing is posted. Off by default here (the bot runs live); `--dry-run` re-enables it for a single invocation.
 
 ## The runner — `lib/runner-process.mjs` + `lib/agentdef.mjs`
 
@@ -91,7 +91,7 @@ Ported, unchanged. For each candidate the driver:
 
 1. parses `agents/stale-bot.md` (`agentdef.mjs`) → system prompt + `@worker` model + tool list;
 2. builds the brief (`buildBrief` in `stale.mjs`);
-3. spawns `omp -p --mode json --max-time <roundTimeoutMin>m` (a headless OMP child), passing the system prompt explicitly; the child's `cwd` is the powerhouse checkout;
+3. spawns `omp -p --mode json --max-time <roundTimeoutMin>m` (a headless OMP child), passing the system prompt explicitly; the child's `cwd` is the monorepo root;
 4. reads the NDJSON stream to the terminal `agent_end`; the final assistant message is ground truth (its `model`/`usage` are logged for attribution);
 5. `parseStaleVerdict` extracts + validates the JSON verdict; a malformed verdict → the round fails, no write, retried next sweep.
 
@@ -99,19 +99,20 @@ Ported, unchanged. For each candidate the driver:
 
 A small CLI that replaces the vault-harness `run.mjs` (which is coupled to worktrees, PRs, and a reviewer). It:
 
-- loads `config.json` (from the folder, or `--config <dir>`);
+- loads `config.json` (from the tool's folder, or `--config <dir>`);
 - builds the stale source (`createStaleSource(cfg)`) and wires in `runAgent` (the runner above) + `ghJson` (the gh client);
 - modes:
   - `--once` — run one sweep (drain candidates up to `max-tasks`), exit;
   - `--loop` — after each sweep, sleep `pollSeconds` and repeat (for a resident process);
-  - `--dry-run` — force dry-run for this invocation (or `"dryRun": true` in config);
+  - `--dry-run` — force dry-run for this invocation only (drafts, no posts);
   - `--status` — print config + state, exit;
   - `--max-tasks N`, `--help`.
 - no worktree, no PR, no reviewer, no health check — the stale bot is a single drafter round per issue.
+- resolves relative paths (`stateDir`, `repoPath`) against the tool's own directory / the monorepo root so it runs the same from anywhere.
 
 ## Config — `config.json`
 
-All local (no fetch from GitHub). The current `stale` block promoted to the top level, plus the plumbing the driver needs:
+All local (no fetch from GitHub). The current `stale` block promoted to the top level, plus the plumbing the driver needs. `dryRun` is `false` — the bot runs live:
 
 ```json
 {
@@ -131,37 +132,39 @@ All local (no fetch from GitHub). The current `stale` block promoted to the top 
   "pollSeconds": 3600,
   "maxTasksPerRun": null,
   "workerModel": "@worker",
-  "stateDir": "~/stale-bot/state",
-  "dryRun": true
+  "stateDir": "state",
+  "dryRun": false
 }
 ```
 
 - `model: "@worker"` (agent frontmatter) and `workerModel` resolve through `~/.omp/agent/config.yml` `modelRoles` (operator-global; not duplicated here).
-- `dryRun` stays local by design — it is the operator's live/dry switch, not repo policy.
+- `stateDir: "state"` resolves to `tools/stale-bot/state/` (the tool's own folder).
+- `dryRun: false` → live posting by default; `--dry-run` overrides for a single invocation.
 - A JSON example + field table lives in the README.
 
 ## Running it
 
 ```
-cd ~/stale-bot
-node run.mjs --once --dry-run     # one sweep, drafts only, nothing posted
-node run.mjs --once               # one sweep, posts (when dryRun is false)
-node run.mjs --loop               # sweep, sleep pollSeconds, repeat (resident)
+cd tools/stale-bot
+node run.mjs --once              # one sweep, LIVE (posts) — the default
+node run.mjs --once --dry-run    # one sweep, drafts only, nothing posted
+node run.mjs --once --max-tasks 3   # bound a sweep to N issues (good for a first live run)
+node run.mjs --loop              # sweep, sleep pollSeconds, repeat (resident)
 ```
 
-Cron (daily, matching today's `sweepEveryHours: 24`):
+Cron (daily, matching `sweepEveryHours: 24`):
 
 ```
-0 9 * * * cd /home/froid/stale-bot && /usr/bin/node run.mjs --once >> /home/froid/stale-bot/logs/cron.log 2>&1
+0 9 * * * cd /home/froid/powerhouse/tools/stale-bot && /usr/bin/node run.mjs --once >> /home/froid/powerhouse/tools/stale-bot/logs/cron.log 2>&1
 ```
 
-(Keeps the current behaviour; the `sweepEveryHours` state guard also protects against manual double-runs.)
+(The `sweepEveryHours` state guard also protects against manual double-runs.)
 
 ## What we are NOT doing
 
 - No OMP plugin (no `plugin.json`, no `package.json#omp.extensions`, no `extension/index.ts`, no OMP devices/commands, no lockfile entry).
-- No repo policy file fetched from GitHub (the earlier `.github/stale-bot.json` idea is dropped — config is simply local to the folder).
-- No skill / OMP session integration (the bot runs headless via cron; if you later want to spawn `stale-bot` from a session for a second opinion, that is a one-line add — drop the agent into `~/.omp/agent/agents/` — but it is not part of this).
+- No repo policy file fetched from GitHub (config is local to the tool's folder).
+- No skill / OMP session integration (the bot runs headless; spawning `stale-bot` from a session for a second opinion is a one-line add later — drop the agent into `~/.omp/agent/agents/` — not part of this).
 - No marketplace publication.
 - No rework of the sweep's decision math, scoring, caps, idempotency, or dry-run semantics.
 
@@ -180,20 +183,19 @@ Copied from `/home/froid/omp-vault-harness-stale/`:
 Changed:
 
 - **New** `run.mjs` (the driver) — the only new code.
-- `config.json` promoted from the `stale` sub-block to top level; vault-specific fields (`vaultRepo`, `delivery`, `prRequired`, `reviewModel`, `maxReviewRounds`, `maxWorkerRounds`, `runHealth`, `profile`, `assignee`) dropped.
-- Imports of vault helpers (e.g. `../paths.mjs`) in the ported files adjusted to the flat `lib/` layout.
+- `config.json` promoted from the `stale` sub-block to top level; vault-specific fields (`vaultRepo`, `delivery`, `prRequired`, `reviewModel`, `maxReviewRounds`, `maxWorkerRounds`, `runHealth`, `profile`, `assignee`) dropped; `dryRun` set to `false`.
+- Imports of vault helpers (e.g. `../paths.mjs`) in the ported files adjusted to the flat `lib/` layout; relative paths resolved against the tool's directory.
 
-The `omp-vault-harness` plugin is **not modified** by this work; its `stale` profile keeps working until cutover.
+The `omp-vault-harness` plugin is **not modified** by this work; its `stale` profile keeps working until you decide to retire it.
 
 ## Verification
 
-1. **Dry run:** `node ~/stale-bot/run.mjs --once --dry-run` → inspect the draft log; confirm it enumerates, scores, buckets, and drafts the expected candidates and posts nothing; confirm the state file is written.
-2. **Idempotency:** run the dry sweep twice in a row → the second run reports no new actions (state guard + `sweepEveryHours`).
-3. **Live (small):** flip `dryRun: false`, run `--once --max-tasks 2`, and confirm the two chosen issues get the correct comment/label (or final-message/close) on GitHub, matching the drafts.
-4. **Cron:** install the crontab line; let it run once unattended; check the log + a follow-up `--status`.
+1. **Prereqs:** `gh auth status` (authenticated), `omp` on PATH, `@worker` role resolves.
+2. **First live run (bounded):** `node run.mjs --once --max-tasks 3` → confirm the three highest-engagement candidates are drafted and **actually posted** on GitHub (correct comment/label, or final-message/close), matching the drafts; confirm the state file advances.
+3. **Idempotency:** re-run immediately → no duplicate posts (state guard + live re-check).
+4. **Full sweep / cron:** let an unbounded `--once` (or the cron) run; check the summary log + a follow-up `--status`.
 
 ## Open questions
 
-- **Retire the old profile?** At cutover, remove the `stale` profile from `omp-vault-harness` (cleaner) or leave it as a thin alias. Recommend removing once the standalone is proven live.
-- **Config home:** keep config in the folder (`~/stale-bot/config.json`, proposed) vs. the existing `~/.omp/stale-bot-conf/`. Recommend the folder (a self-contained "folder you run").
-- **Cron vs. resident `--loop`:** keep the daily cron (matches today) vs. a tmux/systemd resident `--loop`. Recommend the cron (simpler, matches the current setup).
+- **Retire the old `stale` profile** in `omp-vault-harness` once the standalone is proven live? (recommend: yes)
+- **Cron vs. resident `--loop`:** keep the daily cron (matches today; recommend) vs. a tmux/systemd resident `--loop`.
