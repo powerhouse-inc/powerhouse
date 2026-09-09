@@ -14,8 +14,10 @@ import type { ReadableStream as WebReadableStream } from "node:stream/web";
 import { match, type MatchFunction, type ParamData } from "path-to-regexp";
 import type {
   FetchHandler,
+  HttpMethod,
   IHttpAdapter,
-  RouteHandle,
+  NodeRouteOptions,
+  AdapterRouteHandle,
   TlsOptions,
 } from "./types.js";
 import { normalizePath } from "./path-normalize.js";
@@ -55,9 +57,11 @@ type NodeHandler = (
 
 type NodeEntry = {
   path: string;
-  method: "DELETE" | "GET" | "HEAD" | "POST" | "PUT";
+  method: HttpMethod;
   matcher: MatchFunction<ParamData>;
   handler: NodeHandler;
+  /** Claimed in the onRequest hook, before any body parsing. */
+  rawBody: boolean;
 };
 
 // Pre-listen configuration ops (need the Fastify instance to apply).
@@ -70,10 +74,10 @@ export class FastifyHttpAdapter implements IHttpAdapter {
   // order — populated at any time (before or after listen). Mounting a
   // path that already holds a route of the same kind (and method, for
   // node routes) replaces the old entry, so re-mounting is last-write-
-  // wins without accumulating; unmount() removes any entry.
-  readonly #fetchRoutes = new Map<RouteHandle, FetchEntry>();
-  readonly #getRoutes = new Map<RouteHandle, GetEntry>();
-  readonly #nodeRoutes = new Map<RouteHandle, NodeEntry>();
+  // wins without accumulating; a handle's dispose() removes its own entry.
+  readonly #fetchRoutes = new Map<number, FetchEntry>();
+  readonly #getRoutes = new Map<number, GetEntry>();
+  readonly #nodeRoutes = new Map<number, NodeEntry>();
   #nextHandle = 0;
 
   // Ops that need the Fastify instance (CORS config, Connect middleware).
@@ -102,8 +106,11 @@ export class FastifyHttpAdapter implements IHttpAdapter {
   mount(
     path: string,
     handler: FetchHandler,
-    { exact = false }: { exact?: boolean } = {},
-  ): RouteHandle {
+    { prefix, exact }: { prefix?: boolean; exact?: boolean } = {},
+  ): AdapterRouteHandle {
+    // `exact` never meant exact: it selected prefix matching. Kept as an alias
+    // so existing callers keep working while the name is retired.
+    const asPrefix = prefix ?? exact ?? false;
     for (const [handle, entry] of this.#fetchRoutes) {
       if (entry.path === path) this.#fetchRoutes.delete(handle);
     }
@@ -111,17 +118,16 @@ export class FastifyHttpAdapter implements IHttpAdapter {
     this.#fetchRoutes.set(handle, {
       path,
       handler,
-      // exact=false → exact path match; exact=true → prefix match.
-      matcher: match(normalizePath(path), { end: !exact }),
-      prefix: exact,
+      matcher: match(normalizePath(path), { end: !asPrefix }),
+      prefix: asPrefix,
     });
-    return handle;
+    return { dispose: () => this.#fetchRoutes.delete(handle) };
   }
 
   getRoute(
     path: string,
     handler: (r: Request) => Response | Promise<Response>,
-  ): RouteHandle {
+  ): AdapterRouteHandle {
     for (const [handle, entry] of this.#getRoutes) {
       if (entry.path === path) this.#getRoutes.delete(handle);
     }
@@ -131,14 +137,15 @@ export class FastifyHttpAdapter implements IHttpAdapter {
       handler,
       matcher: match(normalizePath(path)),
     });
-    return handle;
+    return { dispose: () => this.#getRoutes.delete(handle) };
   }
 
   mountNodeRoute(
-    method: "DELETE" | "GET" | "HEAD" | "POST" | "PUT",
+    method: HttpMethod,
     path: string,
     handler: NodeHandler,
-  ): RouteHandle {
+    { rawBody = false, prefix = false }: NodeRouteOptions = {},
+  ): AdapterRouteHandle {
     for (const [handle, entry] of this.#nodeRoutes) {
       if (entry.path === path && entry.method === method) {
         this.#nodeRoutes.delete(handle);
@@ -148,16 +155,11 @@ export class FastifyHttpAdapter implements IHttpAdapter {
     this.#nodeRoutes.set(handle, {
       path,
       method,
-      matcher: match(normalizePath(path)),
+      matcher: match(normalizePath(path), { end: !prefix }),
       handler,
+      rawBody,
     });
-    return handle;
-  }
-
-  unmount(handle: RouteHandle): void {
-    this.#fetchRoutes.delete(handle);
-    this.#getRoutes.delete(handle);
-    this.#nodeRoutes.delete(handle);
+    return { dispose: () => this.#nodeRoutes.delete(handle) };
   }
 
   mountRawMiddleware(middleware: unknown): void {
@@ -238,6 +240,23 @@ export class FastifyHttpAdapter implements IHttpAdapter {
       }
     }
 
+    // Raw routes are claimed here, in the earliest hook there is: Fastify
+    // parses the body before the handler runs, and it 415s an unknown content
+    // type outright, so a route that needs the octets as sent cannot wait for
+    // dispatch. `hijack()` takes the reply out of Fastify's lifecycle and the
+    // handler owns the socket from here.
+    instance.addHook("onRequest", (req, reply, done) => {
+      const claimed = this.#matchNodeRoute(req, true);
+      if (!claimed) {
+        done();
+        return;
+      }
+      (req.raw as http.IncomingMessage & { params?: ParamData }).params =
+        claimed.params;
+      reply.hijack();
+      claimed.route.handler(req.raw, reply.raw, undefined);
+    });
+
     // Single catch-all route — all dispatching is done via the Maps above so
     // that routes registered after listen() are picked up automatically.
     // OPTIONS is excluded because @fastify/cors registers its own OPTIONS /*
@@ -260,7 +279,30 @@ export class FastifyHttpAdapter implements IHttpAdapter {
     });
   }
 
-  #dispatch(req: FastifyRequest, reply: FastifyReply): void | Promise<void> {
+  /**
+   * Finds a node route for this request. `raw` selects which half of the
+   * registry to consider: raw routes are claimed in the onRequest hook, the
+   * rest in the catch-all handler once the body is parsed.
+   */
+  #matchNodeRoute(
+    req: FastifyRequest,
+    raw: boolean,
+  ): { route: NodeEntry; params: ParamData } | undefined {
+    const pathname = new URL(req.url, "http://localhost").pathname;
+    const method = req.method.toUpperCase();
+    for (const entry of this.#nodeRoutes.values()) {
+      if (entry.rawBody !== raw) continue;
+      if (entry.method !== method) continue;
+      const result = entry.matcher(pathname);
+      if (result) return { route: entry, params: result.params };
+    }
+    return undefined;
+  }
+
+  #dispatch(
+    req: FastifyRequest,
+    reply: FastifyReply,
+  ): void | Promise<FastifyReply> {
     const pathname = new URL(req.url, "http://localhost").pathname;
     const method = req.method.toUpperCase() as
       | "DELETE"
@@ -273,14 +315,12 @@ export class FastifyHttpAdapter implements IHttpAdapter {
     // 1. Node routes — path-to-regexp match + method, handler manages raw
     // response. Attach decoded params onto `req.raw` so downstream handlers
     // can read them via the same `req.params` API the Express adapter exposes.
-    for (const entry of this.#nodeRoutes.values()) {
-      if (entry.method !== method) continue;
-      const result = entry.matcher(pathname);
-      if (!result) continue;
+    const node = this.#matchNodeRoute(req, false);
+    if (node) {
       (req.raw as http.IncomingMessage & { params?: ParamData }).params =
-        result.params;
+        node.params;
       reply.hijack();
-      entry.handler(req.raw, reply.raw, req.body);
+      node.route.handler(req.raw, reply.raw, req.body);
       return;
     }
 
@@ -313,7 +353,7 @@ export class FastifyHttpAdapter implements IHttpAdapter {
     entry: GetEntry,
     req: FastifyRequest,
     reply: FastifyReply,
-  ): Promise<void> {
+  ): Promise<FastifyReply> {
     const url = buildUrl(req);
     const headers = buildHeaders(req);
     const fetchReq = new Request(url, { method: "GET", headers });
@@ -339,7 +379,7 @@ async function serveFetchHandler(
   handler: FetchHandler,
   req: FastifyRequest,
   reply: FastifyReply,
-): Promise<void> {
+): Promise<FastifyReply> {
   const url = buildUrl(req);
   const headers = buildHeaders(req);
   let body: string | undefined;

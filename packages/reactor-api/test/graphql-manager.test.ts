@@ -28,6 +28,7 @@ import {
   type AuthFetchMiddleware,
 } from "../src/graphql/gateway/auth-middleware.js";
 import type {
+  AdapterRouteHandle,
   FetchHandler,
   IGatewayAdapter,
   IHttpAdapter,
@@ -182,24 +183,32 @@ function makeMockGatewayAdapter(): IGatewayAdapter<Context> & {
 
 function makeMockHttpAdapter() {
   const mounts = new Map<string, FetchHandler>();
-  const handles = new Map<string, number>();
-  let nextHandle = 0;
+  const handles = new Map<string, AdapterRouteHandle>();
+  const disposed: AdapterRouteHandle[] = [];
+  const newHandle = (): AdapterRouteHandle => {
+    const handle: AdapterRouteHandle = {
+      dispose: vi.fn(() => {
+        disposed.push(handle);
+      }),
+    };
+    return handle;
+  };
   const adapter: IHttpAdapter = {
     setupMiddleware: vi.fn(),
     mount: vi.fn((p: string, h: FetchHandler) => {
       mounts.set(p, h);
-      handles.set(p, nextHandle);
-      return nextHandle++;
+      const handle = newHandle();
+      handles.set(p, handle);
+      return handle;
     }),
-    getRoute: vi.fn(() => nextHandle++),
+    getRoute: vi.fn(() => newHandle()),
     mountRawMiddleware: vi.fn(),
-    mountNodeRoute: vi.fn(() => nextHandle++),
-    unmount: vi.fn(),
+    mountNodeRoute: vi.fn(() => newHandle()),
     listen: vi.fn().mockResolvedValue({}),
     setupSentryErrorHandler: vi.fn(),
     handle: {},
   };
-  return { adapter, mounts, handles };
+  return { adapter, mounts, handles, disposed };
 }
 
 type HarnessOptions = {
@@ -210,7 +219,12 @@ type HarnessOptions = {
 };
 
 function makeHarness(options: HarnessOptions = {}) {
-  const { adapter: httpAdapter, mounts, handles } = makeMockHttpAdapter();
+  const {
+    adapter: httpAdapter,
+    mounts,
+    handles,
+    disposed,
+  } = makeMockHttpAdapter();
   const gatewayAdapter = makeMockGatewayAdapter();
   const reactorClient = options.reactorClient ?? makeMockReactorClient();
   const httpServer = {} as http.Server;
@@ -249,6 +263,7 @@ function makeHarness(options: HarnessOptions = {}) {
     httpAdapter,
     mounts,
     handles,
+    disposed,
     gatewayAdapter,
     reactorClient,
     httpServer,
@@ -1265,7 +1280,7 @@ describe("GraphQLManager", () => {
     }
 
     it("unregisterPackage unmounts routes and removes all subgraph state", async () => {
-      const { manager, httpAdapter, mounts, handles, gatewayAdapter } =
+      const { manager, mounts, handles, disposed, gatewayAdapter } =
         makeHarness();
       await initAndFlush(manager);
 
@@ -1284,7 +1299,7 @@ describe("GraphQLManager", () => {
       await vi.runAllTimersAsync();
       await teardown;
 
-      expect(httpAdapter.unmount).toHaveBeenCalledWith(originalHandle);
+      expect(originalHandle?.dispose).toHaveBeenCalled();
       expect(manager.hasSubgraphHandler("alpha")).toBe(false);
       expect(manager.getSubgraphByName("alpha")).toBeUndefined();
       expect(disconnected).toContain("alpha");
@@ -1292,20 +1307,20 @@ describe("GraphQLManager", () => {
     });
 
     it("unregisterPackage is a no-op for a package with no subgraphs", async () => {
-      const { manager, httpAdapter, gatewayAdapter } = makeHarness();
+      const { manager, disposed, gatewayAdapter } = makeHarness();
       await initAndFlush(manager);
 
       const supergraphCalls = gatewayAdapter.updateSupergraph.mock.calls.length;
       await manager.unregisterPackage("ghost-pkg");
 
-      expect(httpAdapter.unmount).not.toHaveBeenCalled();
+      expect(disposed).toHaveLength(0);
       expect(gatewayAdapter.updateSupergraph.mock.calls.length).toBe(
         supergraphCalls,
       );
     });
 
     it("prunePackageSubgraphs removes only the dropped subgraphs", async () => {
-      const { manager, httpAdapter, mounts, handles } = makeHarness();
+      const { manager, mounts, handles, disposed } = makeHarness();
       await initAndFlush(manager);
 
       const [Alpha] = makeSubgraphClass("alpha");
@@ -1321,9 +1336,7 @@ describe("GraphQLManager", () => {
       await vi.runAllTimersAsync();
       await keepPromise;
 
-      expect(httpAdapter.unmount).toHaveBeenCalledWith(
-        handles.get("/graphql/beta"),
-      );
+      expect(disposed).toContain(handles.get("/graphql/beta"));
       expect(manager.hasSubgraphHandler("alpha")).toBe(true);
       expect(manager.hasSubgraphHandler("beta")).toBe(false);
       expect(manager.getSubgraphByName("beta")).toBeUndefined();
@@ -1350,12 +1363,12 @@ describe("GraphQLManager", () => {
       const secondHandle = handles.get("/graphql/alpha");
       expect(secondHandle).toBeDefined();
       expect(secondHandle).not.toBe(firstHandle);
-      expect(httpAdapter.unmount).toHaveBeenCalledWith(firstHandle);
+      expect(firstHandle?.dispose).toHaveBeenCalled();
       expect(manager.hasSubgraphHandler("alpha")).toBe(true);
     });
 
     it("replaces the SSE route on each update and removes it when no subgraph subscribes", async () => {
-      const { manager, httpAdapter, mounts, handles } = makeHarness();
+      const { manager, mounts, handles, disposed } = makeHarness();
       await initAndFlush(manager);
 
       // No subscription-capable subgraphs: no SSE route after init.
@@ -1374,14 +1387,14 @@ describe("GraphQLManager", () => {
       const secondHandle = handles.get("/graphql/stream");
       expect(secondHandle).toBeDefined();
       expect(secondHandle).not.toBe(firstHandle);
-      expect(httpAdapter.unmount).toHaveBeenCalledWith(firstHandle);
+      expect(firstHandle?.dispose).toHaveBeenCalled();
 
       // Tearing the package down removes the last subscription-capable
       // subgraph: the SSE route must be unmounted as well.
       const teardown = manager.unregisterPackage("test-pkg");
       await vi.runAllTimersAsync();
       await teardown;
-      expect(httpAdapter.unmount).toHaveBeenCalledWith(secondHandle);
+      expect(secondHandle?.dispose).toHaveBeenCalled();
     });
   });
 
@@ -1450,7 +1463,7 @@ describe("GraphQLManager", () => {
           .fn()
           .mockResolvedValue({ results: [drive, alpha, beta] }),
       });
-      const { manager, httpAdapter, mounts, handles } = makeHarness({
+      const { manager, mounts, handles, disposed } = makeHarness({
         reactorClient,
         enableDocumentModelSubgraphs: true,
       });
@@ -1471,9 +1484,7 @@ describe("GraphQLManager", () => {
       await vi.runAllTimersAsync();
       await regenerate;
 
-      expect(httpAdapter.unmount).toHaveBeenCalledWith(
-        handles.get("/graphql/beta-model"),
-      );
+      expect(disposed).toContain(handles.get("/graphql/beta-model"));
       expect(manager.getSubgraphByName("beta-model")).toBeUndefined();
       expect(manager.hasSubgraphHandler("alpha-model")).toBe(true);
     });

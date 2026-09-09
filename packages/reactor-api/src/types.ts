@@ -13,6 +13,7 @@ import type {
   IRelationalDb,
   ProcessorFactory,
 } from "@powerhousedao/shared/processors";
+import type { HttpRouteService, IHttpScope } from "./http/index.js";
 import type { IHttpAdapter } from "./graphql/gateway/types.js";
 import type { IPackageManager } from "./packages/types.js";
 import type { IAttachmentAccessService } from "./services/attachment-access.service.js";
@@ -28,6 +29,10 @@ export type {
  */
 export interface IProcessorHostModule extends IReactorProcessorHostModuleBase {
   attachments: IAttachmentClient;
+  // `http` comes from the host-agnostic base, deliberately as the portable
+  // scope rather than this package's richer one. A processor runs in the
+  // browser too, so the surface it can rely on is the Fetch-shaped half; the
+  // node-shaped additions belong to a subgraph, which only ever runs here.
 }
 
 /** @deprecated Use `IProcessorHostModule`. */
@@ -40,6 +45,8 @@ export type ReadinessGate = {
 
 export type API = {
   httpAdapter: IHttpAdapter;
+  /** Hands each package a namespaced slice of the HTTP surface. */
+  httpRoutes: HttpRouteService;
   graphqlManager: GraphQLManager;
   packages: IPackageManager;
   attachments: AttachmentBuildResult;
