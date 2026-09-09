@@ -1,3 +1,24 @@
+## 6.2.2-dev.84 (2026-09-09)
+
+### 🚀 Features
+
+- download drive folders as zip archives with round-trip import ([#134](https://github.com/powerhouse-inc/powerhouse/pull/134), [#2986](https://github.com/powerhouse-inc/powerhouse/pull/2986))
+- **scripts:** add new-worktree.sh to create ready-to-test worktrees ([#2982](https://github.com/powerhouse-inc/powerhouse/pull/2982))
+- **connect:** create local default drives on first boot ([410f71c04](https://github.com/powerhouse-inc/powerhouse/commit/410f71c04))
+
+### 🩹 Fixes
+
+- **connect:** skip local default drives configured without an id ([3e9c27086](https://github.com/powerhouse-inc/powerhouse/commit/3e9c27086))
+- **connect:** guard the local default drive with deleted-inclusive existence ([34c222cfa](https://github.com/powerhouse-inc/powerhouse/commit/34c222cfa))
+- **academy:** pin cross-env instead of catalog: so the Docker build resolves ([705d68a09](https://github.com/powerhouse-inc/powerhouse/commit/705d68a09))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5
+- Frank @froid1911
+- froid1911
+
 ## 6.2.2-dev.83 (2026-09-08)
 
 ### 🩹 Fixes

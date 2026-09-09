@@ -1,3 +1,21 @@
+## 6.2.2-dev.84 (2026-09-09)
+
+### 🚀 Features
+
+- download drive folders as zip archives with round-trip import ([#134](https://github.com/powerhouse-inc/powerhouse/pull/134), [#2986](https://github.com/powerhouse-inc/powerhouse/pull/2986))
+- **scripts:** add new-worktree.sh to create ready-to-test worktrees ([#2982](https://github.com/powerhouse-inc/powerhouse/pull/2982))
+
+### 🩹 Fixes
+
+- **academy:** pin cross-env instead of catalog: so the Docker build resolves ([705d68a09](https://github.com/powerhouse-inc/powerhouse/commit/705d68a09))
+- **reactor:** reject shard configs that leave a read model unindexed ([c8343f2be](https://github.com/powerhouse-inc/powerhouse/commit/c8343f2be))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5
+- Frank @froid1911
+
 ## 6.2.2-dev.83 (2026-09-08)
 
 ### 🩹 Fixes

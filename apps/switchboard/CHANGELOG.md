@@ -1,3 +1,25 @@
+## 6.2.2-dev.84 (2026-09-09)
+
+### 🚀 Features
+
+- download drive folders as zip archives with round-trip import ([#134](https://github.com/powerhouse-inc/powerhouse/pull/134), [#2986](https://github.com/powerhouse-inc/powerhouse/pull/2986))
+- **scripts:** add new-worktree.sh to create ready-to-test worktrees ([#2982](https://github.com/powerhouse-inc/powerhouse/pull/2982))
+- **switchboard:** bound and instrument the reactor host Postgres pool ([deb71b911](https://github.com/powerhouse-inc/powerhouse/commit/deb71b911))
+- **switchboard, opentelemetry-instrumentation-reactor:** emit host event-loop metrics ([e23f219ab](https://github.com/powerhouse-inc/powerhouse/commit/e23f219ab))
+
+### 🩹 Fixes
+
+- **academy:** pin cross-env instead of catalog: so the Docker build resolves ([705d68a09](https://github.com/powerhouse-inc/powerhouse/commit/705d68a09))
+- **switchboard:** resolve the host pool size only on the Postgres path ([a6ac10b15](https://github.com/powerhouse-inc/powerhouse/commit/a6ac10b15))
+- **reactor-api:** uninstallPackage tears down everything the package registered ([#2973](https://github.com/powerhouse-inc/powerhouse/issues/2973))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5
+- Frank @froid1911
+- froid1911
+
 ## 6.2.2-dev.83 (2026-09-08)
 
 ### 🩹 Fixes
