@@ -75,9 +75,3 @@ resolved through `~/.omp/agent/config.yml` `modelRoles`.
 - `harness/lib/sources/stale.mjs` — the sweep + per-issue logic (the "hands").
 - `harness/lib/{gh,agentdef,runner-process,state,paths}.mjs` — ported helpers.
 - `state/` — runtime state + run logs (git-ignored).
-
-## Provenance
-
-Ported from the `stale` profile of the private `omp-vault-harness` OMP plugin
-(`/home/froid/omp-vault-harness-stale`), which stays untouched. The sweep,
-scoring, caps, idempotency, and dry-run semantics are unchanged.
