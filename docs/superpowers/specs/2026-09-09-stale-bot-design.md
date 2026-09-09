@@ -176,7 +176,7 @@ Cron (daily, matching `sweepEveryHours: 24`):
 
 Copied from `/home/froid/omp-vault-harness-stale/`:
 
-- `harness/lib/sources/stale.mjs` → `harness/lib/sources/stale.mjs` (kept as-is)
+- `harness/lib/sources/stale.mjs` → `harness/lib/sources/stale.mjs` (see "Changed" for one bug fix)
 - `harness/lib/agentdef.mjs` → `harness/lib/agentdef.mjs` (kept as-is)
 - `harness/lib/runner-process.mjs` → `harness/lib/runner-process.mjs` (kept as-is)
 - `harness/lib/gh.mjs` → `harness/lib/gh.mjs` (kept as-is)
@@ -190,6 +190,7 @@ Changed:
 - **New** `run.mjs` (the driver) — the only new code.
 - `config.json` keeps the `stale` wrapper (what the source reads) and drops vault-specific fields (`vaultRepo`, `delivery`, `prRequired`, `reviewModel`, `maxReviewRounds`, `maxWorkerRounds`, `runHealth`, `profile`, `assignee`); `dryRun` set to `false`.
 - No import changes to the ported files — the `harness/lib/` mirror keeps their relative imports and `paths.mjs` intact.
+- **Bug fix in ported code:** `addLabel` sent `-f label=`, which the GitHub API rejects (HTTP 422 — the field is `labels[]`). Corrected to `-f labels[]=`, which *appends* (preserving existing labels). The old dry-run harness never reached this line, so the bug went untested until the first live run.
 
 The `omp-vault-harness` plugin is **not modified** by this work; its `stale` profile keeps working until you decide to retire it.
 

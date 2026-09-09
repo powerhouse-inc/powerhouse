@@ -474,13 +474,15 @@ function postComment(ghJson, repo, number, body) {
 }
 
 function addLabel(ghJson, repo, number, label) {
+  // `labels[]` appends to the issue's existing labels; `label` is not a
+  // permitted key on this endpoint (it 422s).
   ghJson([
     "api",
     "-X",
     "POST",
     `repos/${repo}/issues/${number}/labels`,
     "-f",
-    `label=${label}`,
+    `labels[]=${label}`,
   ]);
 }
 
