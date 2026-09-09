@@ -2,6 +2,13 @@
 
 Create and customize a subgraph, using the to-do list project as an example. This starts with the basics and adds more complex features as it goes.
 
+:::tip[A subgraph is not limited to GraphQL]
+The same subgraph can serve plain HTTP endpoints under your package's own
+namespace through `this.http`, and inbound provider webhooks through
+`this.http.webhooks`. See [Hosting HTTP routes](./07-HostingHttpRoutes.md) and
+[Receiving webhooks](./08-ReceivingWebhooks.md).
+:::
+
 ## What is a subgraph?
 
 A subgraph in Powerhouse is a **GraphQL-based modular data component** that extends the functionality of your document models. While document models handle the core state and operations, subgraphs can:
