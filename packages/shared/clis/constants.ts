@@ -142,11 +142,12 @@ export const BOILERPLATE_ALLOWED_BUILDS = [
   "utf-8-validate",
 ] as const;
 
-// pnpm `overrides` written into the generated project's pnpm-workspace.yaml to
-// force a single chosen version of each, avoiding duplicates from coexisting
-// version ranges. Generated-project only — never change the monorepo catalog
-// for this (a re-resolution there pulls a tsc-crashing TS6 beta).
-export const BOILERPLATE_PNPM_OVERRIDES = {
+// Single-version pins the boilerplate enforces on generated projects,
+// avoiding duplicates from coexisting version ranges. Rendered as pnpm
+// `overrides` (pnpm-workspace.yaml) and as yarn v1 `resolutions`
+// (package.json). Generated-project only — never change the monorepo
+// catalog for this (a re-resolution there pulls a tsc-crashing TS6 beta).
+export const BOILERPLATE_DEPENDENCY_OVERRIDES = {
   "date-fns": "4.3.0",
   vite: "8.0.14",
   rolldown: "1.0.2",

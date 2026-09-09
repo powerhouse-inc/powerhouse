@@ -1,6 +1,6 @@
 import {
   BOILERPLATE_ALLOWED_BUILDS,
-  BOILERPLATE_PNPM_OVERRIDES,
+  BOILERPLATE_DEPENDENCY_OVERRIDES,
 } from "@powerhousedao/shared/clis";
 
 // Allowlists transitive postinstall scripts so `pnpm install` does not fail
@@ -11,7 +11,7 @@ const allowBuildsBody = BOILERPLATE_ALLOWED_BUILDS.map(
 ).join("\n");
 
 // Forces single versions of duplicate-prone transitive deps (see constants).
-const overridesBody = Object.entries(BOILERPLATE_PNPM_OVERRIDES)
+const overridesBody = Object.entries(BOILERPLATE_DEPENDENCY_OVERRIDES)
   .map(
     ([pkg, version]) =>
       `  ${/[@/]/.test(pkg) ? `"${pkg}"` : pkg}: "${version}"`,
