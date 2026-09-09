@@ -31,20 +31,21 @@ A small **driver** (`run.mjs`) wires the two together and talks to GitHub via `g
 
 ```
 tools/stale-bot/
-  run.mjs                  # NEW — the thin CLI driver (the only new code)
-  config.json              # the policy + plumbing (see Config)
-  agents/stale-bot.md      # the brain (ported, verbatim)
-  lib/
-    stale.mjs              # the sweep + per-issue logic (ported from the plugin)
-    github.mjs             # gh API client (ported)
-    agentdef.mjs           # parse agents/*.md frontmatter -> {systemPrompt, model, tools} (ported)
-    runner-process.mjs     # spawn `omp -p --mode json`, parse NDJSON, extract verdict (ported)
-    state.mjs              # state-file + logger plumbing (ported, trimmed)
-  state/                   # stale-state.json (created at runtime)
-  README.md                # what it is, how to run, config reference
+  run.mjs                          # NEW — the thin CLI driver (the only new code)
+  config.json                      # the policy + plumbing (see Config)
+  agents/stale-bot.md              # the brain (ported, verbatim)
+  harness/lib/
+    gh.mjs                         # gh API client (ported)
+    state.mjs                      # state-file + logger plumbing (ported)
+    paths.mjs                      # path roots (ported; `repoRoot` resolves to this tool's own root)
+    agentdef.mjs                   # parse agents/*.md frontmatter -> {systemPrompt, model, tools} (ported)
+    runner-process.mjs             # spawn `omp -p --mode json`, parse NDJSON, extract verdict (ported)
+    sources/stale.mjs              # the sweep + per-issue logic (ported from the plugin)
+  state/                           # stale-state.json + run logs (created at runtime)
+  README.md                        # what it is, how to run, config reference
 ```
 
-Nothing here is an OMP plugin: no `.omp-plugin/`, no `package.json#omp.extensions`, no `extension/index.ts`. It is a Node folder you run with `node run.mjs`. It has no dependency on the monorepo's packages — it is a standalone script that shells out to `omp` and `gh`.
+Nothing here is an OMP plugin: no `.omp-plugin/`, no `package.json#omp.extensions`, no `extension/index.ts`. It is a Node folder you run with `node run.mjs`. It has no dependency on the monorepo's packages — it is a standalone script that shells out to `omp` and `gh`. The ported files keep the plugin's `harness/lib/` layout (not flattened) so their relative imports and `paths.mjs`'s `repoRoot` (two-up-from-`lib/`) resolve to the tool's own root with no edits.
 
 ## The brain — `agents/stale-bot.md`
 
@@ -112,28 +113,31 @@ A small CLI that replaces the vault-harness `run.mjs` (which is coupled to workt
 
 ## Config — `config.json`
 
-All local (no fetch from GitHub). The current `stale` block promoted to the top level, plus the plumbing the driver needs. `dryRun` is `false` — the bot runs live:
+All local (no fetch from GitHub). Keeps the `stale` wrapper the source code reads (`cfg.stale`), plus the top-level plumbing the driver needs. `dryRun` is `false` — the bot runs live:
 
 ```json
 {
-  "repo": "powerhouse-inc/powerhouse",
-  "repoPath": "~/powerhouse",
-  "staleLabel": "Stale",
-  "exemptLabels": ["help wanted", "good first issue", "dependencies"],
-  "daysBeforeStale": 60,
-  "daysBeforeClose": 7,
-  "botLogins": [],
-  "maxStalePerSweep": 30,
-  "maxClosePerSweep": 30,
-  "maxUnstalePerSweep": 30,
-  "sweepEveryHours": 24,
-  "coolDays": 30,
-  "roundTimeoutMin": 10,
+  "stateDir": "state",
+  "workerModel": "@worker",
   "pollSeconds": 3600,
   "maxTasksPerRun": null,
-  "workerModel": "@worker",
-  "stateDir": "state",
-  "dryRun": false
+  "stale": {
+    "repo": "powerhouse-inc/powerhouse",
+    "repoPath": "~/powerhouse",
+    "staleLabel": "Stale",
+    "exemptLabels": ["help wanted", "good first issue", "dependencies"],
+    "daysBeforeStale": 60,
+    "daysBeforeClose": 7,
+    "botLogins": [],
+    "maxStalePerSweep": 30,
+    "maxClosePerSweep": 30,
+    "maxUnstalePerSweep": 30,
+    "sweepEveryHours": 24,
+    "coolDays": 30,
+    "roundTimeoutMin": 10,
+    "model": null,
+    "dryRun": false
+  }
 }
 ```
 
@@ -172,19 +176,20 @@ Cron (daily, matching `sweepEveryHours: 24`):
 
 Copied from `/home/froid/omp-vault-harness-stale/`:
 
-- `harness/lib/sources/stale.mjs` → `lib/stale.mjs` (drop the `sources/` nesting; keep `DEFAULTS`, `isBotLogin`, `engagementScore`, `parseStaleVerdict`, `buildBrief`, `processStaleTask`, `createStaleSource`, and the state-file helpers).
-- `harness/lib/agentdef.mjs` → `lib/agentdef.mjs`
-- `harness/lib/runner-process.mjs` → `lib/runner-process.mjs`
-- the `gh` client the stale source calls (`ghJson`) → `lib/github.mjs`
-- `harness/lib/state.mjs` → `lib/state.mjs` (trimmed to what the stale path uses: `createLogger`, `State`, `nowIso`, path helpers)
+- `harness/lib/sources/stale.mjs` → `harness/lib/sources/stale.mjs` (kept as-is)
+- `harness/lib/agentdef.mjs` → `harness/lib/agentdef.mjs` (kept as-is)
+- `harness/lib/runner-process.mjs` → `harness/lib/runner-process.mjs` (kept as-is)
+- `harness/lib/gh.mjs` → `harness/lib/gh.mjs` (kept as-is)
+- `harness/lib/state.mjs` → `harness/lib/state.mjs` (kept as-is)
+- `harness/lib/paths.mjs` → `harness/lib/paths.mjs` (kept as-is; `repoRoot` now resolves to the tool's own root)
 - `agents/stale-bot.md` → `agents/stale-bot.md` (verbatim)
-- the `stale` block of `~/.omp/stale-bot-conf/config.json` → `config.json` (promoted + plumbing above)
+- the `stale` block of `~/.omp/stale-bot-conf/config.json` → `config.json` (`stale` wrapper kept + top-level plumbing)
 
 Changed:
 
 - **New** `run.mjs` (the driver) — the only new code.
-- `config.json` promoted from the `stale` sub-block to top level; vault-specific fields (`vaultRepo`, `delivery`, `prRequired`, `reviewModel`, `maxReviewRounds`, `maxWorkerRounds`, `runHealth`, `profile`, `assignee`) dropped; `dryRun` set to `false`.
-- Imports of vault helpers (e.g. `../paths.mjs`) in the ported files adjusted to the flat `lib/` layout; relative paths resolved against the tool's directory.
+- `config.json` keeps the `stale` wrapper (what the source reads) and drops vault-specific fields (`vaultRepo`, `delivery`, `prRequired`, `reviewModel`, `maxReviewRounds`, `maxWorkerRounds`, `runHealth`, `profile`, `assignee`); `dryRun` set to `false`.
+- No import changes to the ported files — the `harness/lib/` mirror keeps their relative imports and `paths.mjs` intact.
 
 The `omp-vault-harness` plugin is **not modified** by this work; its `stale` profile keeps working until you decide to retire it.
 
