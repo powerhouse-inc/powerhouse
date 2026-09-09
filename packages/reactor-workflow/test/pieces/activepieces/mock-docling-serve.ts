@@ -95,11 +95,6 @@ export async function startMockDocling(opts: MockDoclingOptions = {}): Promise<M
       query: url.searchParams,
       headers: req.headers as Record<string, string | string[]>,
     });
-
-    if (opts.failAuthAlways || (opts.apiKey && req.headers["x-api-key"] !== opts.apiKey)) {
-      return json(res, 401, { detail: "Invalid API Key." });
-    }
-
     const p = url.pathname;
     if (req.method === "GET" && p === "/health") return json(res, 200, { status: "ok" });
     if (req.method === "GET" && p === "/version") {
@@ -115,6 +110,13 @@ export async function startMockDocling(opts: MockDoclingOptions = {}): Promise<M
         plaform: "linux",
       });
     }
+
+    // The real v1.32.0 gates only the /v1/* routes on the API key; the
+    // root-level diagnostics above stay open.
+    if (opts.failAuthAlways || (opts.apiKey && req.headers["x-api-key"] !== opts.apiKey)) {
+      return json(res, 401, { detail: "Invalid API Key." });
+    }
+
 
     let body: {
       sources?: Array<{ kind?: string; base64_string?: string; filename?: string; url?: string }>;

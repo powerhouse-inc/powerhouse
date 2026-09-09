@@ -43,18 +43,15 @@ import { workflowRuntime } from "./service.js";
 const PIECE = { name: "@powerhousedao/piece-docling", version: "1.0.0" };
 const FIXED_NOW = "2026-09-08T00:00:00.000Z";
 
-// Minimal docling-serve: only /health and /version — all checkConnection
-// touches. Key-gated like the real server.
+// Minimal docling-serve: /health and /version open, /v1/* key-gated — the
+// same route-level split as the real 1.32.0 (the connection check's
+// key probe lands on a /v1/ route).
 async function startMiniDocling(opts: { apiKey?: string }): Promise<{
   baseUrl: string;
   close(): Promise<void>;
 }> {
   const server = http.createServer((req, res) => {
     const u = new URL(req.url ?? "/", "http://127.0.0.1");
-    if (opts.apiKey && req.headers["x-api-key"] !== opts.apiKey) {
-      res.writeHead(401, { "content-type": "application/json" });
-      return res.end(JSON.stringify({ detail: "Invalid API Key." }));
-    }
     if (u.pathname === "/health") {
       res.writeHead(200, { "content-type": "application/json" });
       return res.end(JSON.stringify({ status: "ok" }));
@@ -62,6 +59,11 @@ async function startMiniDocling(opts: { apiKey?: string }): Promise<{
     if (u.pathname === "/version") {
       res.writeHead(200, { "content-type": "application/json" });
       return res.end(JSON.stringify({ "docling-serve": "1.32.0", docling: "2.126.0" }));
+    }
+    // Everything else (i.e. /v1/*) is gated.
+    if (opts.apiKey && req.headers["x-api-key"] !== opts.apiKey) {
+      res.writeHead(401, { "content-type": "application/json" });
+      return res.end(JSON.stringify({ detail: "Invalid API Key." }));
     }
     res.writeHead(404, { "content-type": "application/json" });
     res.end(JSON.stringify({ detail: "no route" }));

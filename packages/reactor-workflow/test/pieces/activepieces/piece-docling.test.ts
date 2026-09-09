@@ -29,7 +29,7 @@ describe("docling piece through the executor (E2E)", () => {
   let mock: MockDocling;
   let executor: ActivepiecesBlockExecutor;
   const secrets: SecretProvider = {
-    get: async (ref: string) => (ref === "secret://v1:docling" ? "k-e2e" : null),
+    get: (ref: string) => Promise.resolve(ref === "secret://v1:docling" ? "k-e2e" : null),
   } as never;
 
   beforeAll(async () => {
@@ -82,6 +82,9 @@ describe("docling piece through the executor (E2E)", () => {
     });
   });
 
+  // v1 gates only the /v1/* routes; /health stays open, so a missing key
+  // only fails on a real (gated) request. The executor surfaces the
+  // piece's typed error across the IPC boundary.
   it("surfaces a connection auth failure as a typed error", async () => {
     const bad = new ActivepiecesBlockExecutor({
       cacheDir: CACHE,
@@ -90,7 +93,7 @@ describe("docling piece through the executor (E2E)", () => {
           "phd:bad": {
             authType: "CUSTOM_AUTH",
             config: { base_url: mock.baseUrl },
-            secretRefs: [], // no key → 401 from the key-gated mock
+            secretRefs: [], // no key → 401 from the key-gated /v1 routes
           },
         },
         secrets,
@@ -98,13 +101,17 @@ describe("docling piece through the executor (E2E)", () => {
     });
     try {
       await bad.execute({
-        blockType: "@powerhousedao/piece-docling@1.0.0#health",
+        blockType: "@powerhousedao/piece-docling@1.0.0#convert_file",
         connectionId: "phd:bad",
-        config: {},
+        config: {
+          file: "data:application/pdf;base64," + Buffer.from("fake-pdf").toString("base64"),
+          ocr: false,
+        },
         step: {
           id: "s2",
-          key: "health",
-          blockType: "@powerhousedao/piece-docling@1.0.0#health",
+          key: "convert",
+          name: "Convert",
+          blockType: "@powerhousedao/piece-docling@1.0.0#convert_file",
           connectionId: "phd:bad",
           config: {},
         },
