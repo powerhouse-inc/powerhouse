@@ -35,6 +35,7 @@ pnpm install -g ph-cmd
 - [Init](#init)
 - [Use](#use)
 - [Update](#update)
+- [Self Update](#self-update)
 - [Setup Globals](#setup-globals)
 - [Use Local](#use-local)
 
@@ -129,6 +130,23 @@ Update your powerhouse dependencies to their latest tagged version
 ### Flags
 **Skip Install** - Skip running `install` with your package manager - Usage: `--skip-install, -s`
 
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
+**Help** - show help - Usage: `--help, -h`
+
+
+## Self Update
+Update the globally installed ph to the newest version of its release stream
+
+
+
+### Options
+**Tag** - dist-tag to install (defaults to the running build's stream; e.g. latest, dev) - Usage: `--tag, -t <str>`
+
+
+
+
+### Flags
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`

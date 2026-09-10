@@ -6,6 +6,7 @@ import {
 } from "@powerhousedao/shared/clis/telemetry";
 import { assertNodeVersion } from "@powerhousedao/shared/clis/utils";
 import { getVersion } from "./get-version.js";
+import { maybeNotifyOutdated } from "./utils/version-check.js";
 
 // Commands whose second positional is itself a subcommand (vs. a project
 // name / file path). Keeping this explicit avoids high-cardinality tag
@@ -72,6 +73,16 @@ async function main() {
     console.log(await getPhCmdVersionInfo(getVersion()));
     process.exit(0);
   }
+
+  // Outdated-build notice: a stream-aware version check against the
+  // registry, cached for 30 minutes and shown only on a TTY. It never
+  // blocks or breaks the command — every failure is swallowed inside
+  // `maybeNotifyOutdated`.
+  await maybeNotifyOutdated({
+    args,
+    currentVersion: getVersion(),
+    stderrIsTty: Boolean(process.stderr.isTTY),
+  });
 
   // handle the special case where running `connect` with no positional argument
   // defaults to `connect studio`
