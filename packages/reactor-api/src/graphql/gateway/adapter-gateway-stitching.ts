@@ -6,10 +6,17 @@ import { makeExecutableSchema } from "@graphql-tools/schema";
 import type { IResolvers } from "@graphql-tools/utils";
 import {
   buildASTSchema,
+  type DefinitionNode,
   type DocumentNode,
+  isTypeDefinitionNode,
+  isTypeExtensionNode,
+  Kind,
+  parse,
   print,
   type GraphQLNamedType,
   type GraphQLSchema,
+  type TypeDefinitionNode,
+  validateSchema,
 } from "graphql";
 import type http from "node:http";
 import type { WebSocketServer } from "ws";
@@ -34,13 +41,216 @@ import type {
  * - `"first"`: the earlier-registered subgraph's field definition wins.
  *
  * Every conflict is logged either way; unlike federation composition, the
- * supergraph is still built.
+ * supergraph is still built. The policy applies to field type clashes only:
+ * a type-KIND clash (the same type name declared as an object by one subgraph
+ * and as an enum/input/interface/union by another) is resolved by
+ * `mergeTypeDefs` itself, which always keeps the last declaration. Those are
+ * detected separately and reported through the same channel so they are
+ * logged rather than dropped in silence.
  */
 export type StitchConflictPolicy = "first" | "last";
 
 export type StitchingGatewayOptions = {
   onFieldTypeConflict?: StitchConflictPolicy;
 };
+
+/** Root operation types, which a subgraph may extend without defining. */
+const ROOT_TYPE_NAMES = ["Query", "Mutation", "Subscription"];
+
+/**
+ * A placeholder declaration for a type name a subgraph borrows from another
+ * subgraph. Same kind as the real declaration, so the borrowing subgraph's
+ * SDL validates the same way it does in the merged supergraph:
+ *
+ * - scalar/enum/input/object: a minimal declaration of that kind.
+ * - interface: the real declaration, because a subgraph that implements the
+ *   interface has to satisfy its field set.
+ * - union: a self-contained union over one placeholder member, so nothing the
+ *   real declaration references has to be resolvable here.
+ */
+function stubDeclaration(
+  name: string,
+  owner: TypeDefinitionNode | undefined,
+): string {
+  switch (owner?.kind) {
+    case Kind.SCALAR_TYPE_DEFINITION:
+      return `scalar ${name}`;
+    case Kind.ENUM_TYPE_DEFINITION:
+      return `enum ${name} { _STUB }`;
+    case Kind.INPUT_OBJECT_TYPE_DEFINITION:
+      return `input ${name} { _stub: Boolean }`;
+    case Kind.INTERFACE_TYPE_DEFINITION:
+      return print(owner);
+    case Kind.UNION_TYPE_DEFINITION:
+      return `type ${name}_Stub { _stub: Boolean } union ${name} = ${name}_Stub`;
+    default:
+      return `type ${name} { _stub: Boolean }`;
+  }
+}
+
+/**
+ * Drops subgraphs whose own typeDefs cannot be built into a valid schema, so
+ * one malformed subgraph is excluded instead of failing the whole supergraph
+ * build (which, since GraphQLManager.init() does not guard the supergraph
+ * gateway, would be a boot failure). Each excluded subgraph is logged; the
+ * rest are merged. This is the stitching counterpart of the federation path's
+ * `filterComposableSubgraphs`.
+ *
+ * A stitching subgraph is not self-contained the way a federation subgraph is:
+ * it may extend a root type it never defines (`analytics` only does
+ * `extend type Query`) and reference types another subgraph owns (in raw form
+ * `analytics` uses `DateTime`, declared by `auth`/`reactor`/`packages`).
+ * Building it alone would therefore reject perfectly good subgraphs. So the isolation build adds
+ * a placeholder declaration for every type name declared by some *other*
+ * subgraph in the set, plus the root types, plus every directive definition in
+ * the set. What is left to fail is the subgraph's own SDL: a dangling type
+ * reference no subgraph declares, a duplicated field, an invalid implements
+ * clause.
+ *
+ * Scope: like the federation filter, this only catches per-subgraph failures.
+ * Errors that appear only once subgraphs are merged (a field type or type kind
+ * clash) are reported by `mergeSubgraphTypeDefs`, not here.
+ */
+export function filterBuildableSubgraphs(
+  subgraphs: SubgraphDefinition[],
+  logger?: Pick<ILogger, "error">,
+): SubgraphDefinition[] {
+  // First declaration of each type name across the whole set, for stub kinds.
+  const owners = new Map<string, TypeDefinitionNode>();
+  const directiveDefs = new Map<string, DefinitionNode>();
+  for (const subgraph of subgraphs) {
+    for (const def of subgraph.typeDefs.definitions) {
+      if (isTypeDefinitionNode(def) && !owners.has(def.name.value)) {
+        owners.set(def.name.value, def);
+      } else if (
+        def.kind === Kind.DIRECTIVE_DEFINITION &&
+        !directiveDefs.has(def.name.value)
+      ) {
+        directiveDefs.set(def.name.value, def);
+      }
+    }
+  }
+
+  return subgraphs.filter((subgraph) => {
+    const own = new Set<string>();
+    const ownDirectives = new Set<string>();
+    for (const def of subgraph.typeDefs.definitions) {
+      if (isTypeDefinitionNode(def)) {
+        own.add(def.name.value);
+      } else if (def.kind === Kind.DIRECTIVE_DEFINITION) {
+        ownDirectives.add(def.name.value);
+      }
+    }
+
+    const stubs: string[] = [];
+    for (const name of new Set([...owners.keys(), ...ROOT_TYPE_NAMES])) {
+      if (!own.has(name)) {
+        stubs.push(stubDeclaration(name, owners.get(name)));
+      }
+    }
+    for (const [name, def] of directiveDefs) {
+      if (!ownDirectives.has(name)) {
+        stubs.push(print(def));
+      }
+    }
+
+    try {
+      // Merge the same way the supergraph does, so a subgraph that declares a
+      // type twice within itself is normalized here too, then build and
+      // validate: buildASTSchema asserts the SDL, validateSchema the result.
+      const documents =
+        stubs.length > 0
+          ? [subgraph.typeDefs, parse(stubs.join("\n"))]
+          : [subgraph.typeDefs];
+      const merged = mergeTypeDefs(documents, { useSchemaDefinition: false });
+      const errors = validateSchema(buildASTSchema(merged));
+      if (errors.length > 0) {
+        throw new Error(errors.map((error) => error.message).join("; "));
+      }
+      return true;
+    } catch (error) {
+      logger?.error(
+        `Stitching gateway: excluding subgraph "${subgraph.name}" from the supergraph: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+      return false;
+    }
+  });
+}
+
+/**
+ * The SDL keyword for a type definition or extension node, or undefined for a
+ * node that does not declare a named type (schema definitions, directive
+ * definitions, executable definitions). Extensions map to the same keyword as
+ * their definition: `extend type Query` and `type Query` are the same kind.
+ */
+function typeKeyword(def: DefinitionNode): string | undefined {
+  switch (def.kind) {
+    case Kind.OBJECT_TYPE_DEFINITION:
+    case Kind.OBJECT_TYPE_EXTENSION:
+      return "type";
+    case Kind.INTERFACE_TYPE_DEFINITION:
+    case Kind.INTERFACE_TYPE_EXTENSION:
+      return "interface";
+    case Kind.UNION_TYPE_DEFINITION:
+    case Kind.UNION_TYPE_EXTENSION:
+      return "union";
+    case Kind.ENUM_TYPE_DEFINITION:
+    case Kind.ENUM_TYPE_EXTENSION:
+      return "enum";
+    case Kind.INPUT_OBJECT_TYPE_DEFINITION:
+    case Kind.INPUT_OBJECT_TYPE_EXTENSION:
+      return "input";
+    case Kind.SCALAR_TYPE_DEFINITION:
+    case Kind.SCALAR_TYPE_EXTENSION:
+      return "scalar";
+    default:
+      return undefined;
+  }
+}
+
+/**
+ * Finds type names that two subgraphs declare with different kinds (object vs
+ * enum, input, interface or union). `mergeTypeDefs` does not call
+ * `onFieldTypeConflict` for these - it keeps the last declaration and drops
+ * the other subgraph's type entirely, with no diagnostic - so they are
+ * scanned for before the merge and reported alongside field conflicts.
+ */
+function scanTypeKindClashes(subgraphs: SubgraphDefinition[]): string[] {
+  const clashes: string[] = [];
+  const declaredBy = new Map<string, { keyword: string; subgraph: string }>();
+  for (const subgraph of subgraphs) {
+    for (const def of subgraph.typeDefs.definitions) {
+      if (!isTypeDefinitionNode(def) && !isTypeExtensionNode(def)) {
+        continue;
+      }
+      const keyword = typeKeyword(def);
+      if (keyword === undefined) {
+        continue;
+      }
+      const name = def.name.value;
+      const previous = declaredBy.get(name);
+      if (previous === undefined) {
+        declaredBy.set(name, { keyword, subgraph: subgraph.name });
+        continue;
+      }
+      if (previous.keyword === keyword) {
+        continue;
+      }
+      clashes.push(
+        `type kind clash on ${name}: declared as ${previous.keyword} by ` +
+          `subgraph "${previous.subgraph}" and as ${keyword} by subgraph ` +
+          `"${subgraph.name}"; mergeTypeDefs keeps the last declaration ` +
+          `(${keyword}) and drops the other, whatever the conflict policy`,
+      );
+      // Track what the merge actually keeps, so a third declaration is
+      // compared against the surviving kind.
+      declaredBy.set(name, { keyword, subgraph: subgraph.name });
+    }
+  }
+  return clashes;
+}
 
 /**
  * Merges all subgraph type definitions into one schema, applying the field
@@ -51,7 +261,7 @@ export function mergeSubgraphTypeDefs(
   subgraphs: SubgraphDefinition[],
   policy: StitchConflictPolicy,
 ): { typeDefs: DocumentNode; conflicts: string[] } {
-  const conflicts: string[] = [];
+  const conflicts: string[] = scanTypeKindClashes(subgraphs);
   const typeDefs = mergeTypeDefs(
     subgraphs.map((s) => s.typeDefs),
     {
@@ -67,7 +277,7 @@ export function mergeSubgraphTypeDefs(
         const winner = policy === "first" ? existing : other;
         const loser = policy === "first" ? other : existing;
         conflicts.push(
-          `${type.name.value}.${existing.name.value}: kept ` +
+          `field type clash on ${type.name.value}.${existing.name.value}: kept ` +
             `${print(winner.type)} (${
               policy === "first" ? "first" : "last"
             } subgraph), dropped ${print(loser.type)}`,
@@ -80,6 +290,24 @@ export function mergeSubgraphTypeDefs(
 }
 
 /**
+ * Merges the subgraph resolver maps in the order the conflict policy implies.
+ * `mergeResolvers` is unconditionally last-wins, so under `"first"` the array
+ * is reversed: the first-registered subgraph's resolver ends up applied last
+ * and wins, matching the field type the merged schema advertises. Without
+ * this the schema would advertise one subgraph's type while another
+ * subgraph's resolver ran.
+ */
+function mergeSubgraphResolvers(
+  subgraphs: SubgraphDefinition[],
+  policy: StitchConflictPolicy,
+): IResolvers {
+  const ordered = policy === "first" ? [...subgraphs].reverse() : subgraphs;
+  return mergeResolvers(
+    ordered.map((s) => s.resolvers as IResolvers | undefined),
+  );
+}
+
+/**
  * Drops resolver entries that have no matching type or field in the merged
  * schema. Document-model subgraphs generate resolver entries for operations
  * their SDL does not declare (the federation runtime silently ignores those);
@@ -88,12 +316,17 @@ export function mergeSubgraphTypeDefs(
 function filterResolversToSchema(
   typeMap: Record<string, GraphQLNamedType | undefined>,
   resolvers: Record<string, unknown>,
+  logger?: Pick<ILogger, "debug">,
 ): Record<string, unknown> {
   const filtered: Record<string, unknown> = {};
   for (const [typeName, entry] of Object.entries(resolvers)) {
     const type = typeMap[typeName];
     if (type === undefined) {
-      continue; // Type not part of the merged schema.
+      // Type not part of the merged schema.
+      logger?.debug(
+        `Stitching gateway: dropped resolvers for type "${typeName}": the merged schema has no such type`,
+      );
+      continue;
     }
     const fields =
       type instanceof Object && "getFields" in type
@@ -105,14 +338,28 @@ function filterResolversToSchema(
       continue;
     }
     if (entry === null || typeof entry !== "object") {
-      continue; // Not a resolver map: nothing to keep.
+      // Not a resolver map: nothing to keep.
+      logger?.debug(
+        `Stitching gateway: dropped resolver entry for type "${typeName}": expected a field map, got ${entry === null ? "null" : typeof entry}`,
+      );
+      continue;
     }
     const map = entry as { [key: string]: unknown };
     const kept: Record<string, unknown> = {};
+    const dropped: string[] = [];
     for (const [key, value] of Object.entries(map)) {
       if (key === "__resolveReference" || fields[key] !== undefined) {
         kept[key] = value;
+      } else {
+        dropped.push(key);
       }
+    }
+    if (dropped.length > 0) {
+      logger?.debug(
+        `Stitching gateway: dropped resolvers ${dropped
+          .map((field) => `${typeName}.${field}`)
+          .join(", ")}: the merged schema declares no such field(s)`,
+      );
     }
     if (Object.keys(kept).length > 0) {
       filtered[typeName] = kept;
@@ -128,6 +375,7 @@ function filterResolversToSchema(
 function buildMergedSchema(
   typeDefs: DocumentNode,
   resolvers: IResolvers,
+  logger?: Pick<ILogger, "debug">,
 ): GraphQLSchema {
   // A type-only build to get the merged type map; assumeValid skips SDL
   // validation, which makeExecutableSchema performs on the real build.
@@ -137,6 +385,7 @@ function buildMergedSchema(
   const filtered = filterResolversToSchema(
     typeMap,
     resolvers as Record<string, unknown>,
+    logger,
   );
   return makeExecutableSchema({ typeDefs, resolvers: filtered as IResolvers });
 }
@@ -156,9 +405,7 @@ export function mergeSubgraphSchemas(
     throw new Error("Cannot merge zero subgraphs");
   }
   const { typeDefs } = mergeSubgraphTypeDefs(subgraphs, policy);
-  const resolvers = mergeResolvers(
-    subgraphs.map((s) => s.resolvers as IResolvers | undefined),
-  );
+  const resolvers = mergeSubgraphResolvers(subgraphs, policy);
   return buildMergedSchema(typeDefs, resolvers);
 }
 
@@ -265,6 +512,10 @@ export class StitchingGatewayAdapter implements IGatewayAdapter<Context> {
       this.#supergraphServer = null;
     }
     this.#handler = null;
+    // Same as the Apollo adapter: clearing these makes a later
+    // updateSupergraph() a no-op instead of resurrecting a stopped adapter.
+    this.#getSubgraphs = null;
+    this.#contextFactory = null;
 
     // Drain the shared HTTP server ourselves (the Apollo adapter gets this
     // from ApolloServerPluginDrainHttpServer, which we cannot use here - see
@@ -297,30 +548,38 @@ export class StitchingGatewayAdapter implements IGatewayAdapter<Context> {
   }
 
   async #buildSupergraphServer(
-    subgraphs: SubgraphDefinition[],
+    all: SubgraphDefinition[],
   ): Promise<ApolloServer<Context>> {
+    let subgraphs = filterBuildableSubgraphs(all, this.#logger);
+    if (subgraphs.length === 0 && all.length > 0) {
+      // Excluding every subgraph would trade one subgraph's error for a
+      // supergraph with no root type at all; keep the original set so the
+      // build fails with the underlying error instead.
+      this.#logger.error(
+        "Stitching gateway: every subgraph failed its isolation build; merging the unfiltered set so the underlying error surfaces",
+      );
+      subgraphs = all;
+    }
     const { typeDefs, conflicts } = mergeSubgraphTypeDefs(
       subgraphs,
       this.#policy,
     );
     for (const conflict of conflicts) {
       this.#logger.warn(
-        `Stitching gateway: field type clash resolved per policy "${this.#policy}": ${conflict}`,
+        `Stitching gateway (policy "${this.#policy}"): ${conflict}`,
       );
     }
     if (conflicts.length > 0) {
       this.#logger.warn(
-        `Stitching gateway: merged ${subgraphs.length} subgraphs with ${conflicts.length} field type conflict(s); supergraph schema includes the ${this.#policy}-registered definition for each`,
+        `Stitching gateway: merged ${subgraphs.length} subgraphs with ${conflicts.length} schema conflict(s); each resolution is logged above`,
       );
     } else {
       this.#logger.debug(
         `Stitching gateway: merged ${subgraphs.length} subgraphs without conflicts`,
       );
     }
-    const resolvers = mergeResolvers(
-      subgraphs.map((s) => s.resolvers as IResolvers | undefined),
-    );
-    const schema = buildMergedSchema(typeDefs, resolvers);
+    const resolvers = mergeSubgraphResolvers(subgraphs, this.#policy);
+    const schema = buildMergedSchema(typeDefs, resolvers, this.#logger);
     return this.#makeServer(schema);
   }
 
