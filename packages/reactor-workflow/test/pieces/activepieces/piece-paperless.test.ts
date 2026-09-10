@@ -89,6 +89,7 @@ async function waitFor<T>(
 
 interface Delivery {
   token?: string;
+  path: string;
   body: unknown;
 }
 
@@ -108,7 +109,7 @@ describe.skipIf(!baseUrl)("paperless piece through the worker (E2E)", () => {
     worker = new PieceWorker();
     stagingDir = mkdtempSync(path.join(tmpdir(), `paperless-e2e-staging-${stamp}-`));
 
-    // Stands in for the switchboard's GraphQL endpoint, the way the piece
+    // Stands in for the reactor's webhook endpoint, the way the piece
     // package's live suite does: paperless must reach it, and on the host
     // netns of e2e-compose.yml that is plain loopback.
     listener = http.createServer((request, response) => {
@@ -126,14 +127,12 @@ describe.skipIf(!baseUrl)("paperless piece through the worker (E2E)", () => {
           token: request.headers["x-powerhouse-webhook-token"] as
             | string
             | undefined,
+          path: request.url ?? "",
           body: parsed,
         });
-        response.writeHead(200, { "Content-Type": "application/json" });
-        response.end(
-          JSON.stringify({
-            data: { workflowRuntime: { fireWebhook: { accepted: true } } },
-          }),
-        );
+        // What the reactor's webhook endpoint answers an accepted delivery.
+        response.writeHead(202);
+        response.end();
       });
     });
     const { promise: listening, resolve: resolveListening } =
@@ -325,7 +324,7 @@ describe.skipIf(!baseUrl)("paperless piece through the worker (E2E)", () => {
         hook: "onEnable",
         auth: auth(),
         propsValue: { sources: [2] },
-        webhookUrl: `${listenerUrl}#${triggerToken}`,
+        webhookUrl: `${listenerUrl}/webhooks/${triggerToken}`,
       });
       storeState = result.storeState;
       expect(storeState).toBeDefined();
@@ -384,23 +383,20 @@ describe.skipIf(!baseUrl)("paperless piece through the worker (E2E)", () => {
         "paperless to POST the webhook",
         120_000,
       );
-      expect(delivery.token).toBe(triggerToken);
-      const query =
-        delivery.body &&
-        typeof delivery.body === "object" &&
-        "query" in delivery.body
-          ? String((delivery.body as { query: unknown }).query)
-          : "";
-      expect(query).toContain('event: "DOCUMENT_ADDED"');
-      expect(query).not.toContain("{{");
+      // No token header: the reactor addresses the endpoint by the token in
+      // the path, so paperless is given a URL and nothing else.
+      expect(delivery.token).toBeUndefined();
+      expect(delivery.path).toContain(triggerToken);
 
-      // The worker sits below the workflow-runtime's GraphQL resolver: it
-      // receives the parsed fireWebhook payload argument, not the raw query.
-      // Mirror that extraction here.
-      const docId = Number(/docId:\s*(\d+)/.exec(query)?.[1] ?? NaN);
-      const event = /event:\s*"([A-Z_]+)"/.exec(query)?.[1] ?? "";
+      const body = (delivery.body ?? {}) as Record<string, unknown>;
+      expect(body.event).toBe("DOCUMENT_ADDED");
+      expect(JSON.stringify(body)).not.toContain("{{");
+
+      // Paperless substitutes into the param value, so the id arrives as a
+      // string; the piece's run accepts either form.
+      const docId = Number(body.doc_id);
       expect(docId).toBeGreaterThan(0);
-      expect(event).toBe("DOCUMENT_ADDED");
+      const event = String(body.event);
 
       // The supervisor's exact call: the delivered payload plus the stored
       // state; the response carries the (unchanged) state back out.
