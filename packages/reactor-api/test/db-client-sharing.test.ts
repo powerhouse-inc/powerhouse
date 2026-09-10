@@ -71,6 +71,11 @@ describe("getDbClient sharing", () => {
     const analytics = getDbClient(dir, factory);
     const attachments = getDbClient(dir, factory);
 
+    // Same reason as the `fresh` client below: let this cold boot finish
+    // before the first query, so a slow Windows runner cannot spend Knex's
+    // 30s pool-acquire budget waiting on PGlite to come up.
+    await analytics.pglite?.ready;
+
     await analytics.knex.raw('create schema if not exists "analytics"');
     await analytics.knex.raw('create table "analytics"."t" (v text)');
     await analytics.knex.raw(
