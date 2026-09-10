@@ -1487,27 +1487,31 @@ export type ActionVerificationHandler = (
 ) => Promise<boolean>;
 
 /**
- * The document scope a signature is being verified against. The verifier needs
- * the document id to bind the action hash to the document it is being applied
- * to; the branch is carried along so callers lose nothing.
+ * The document a signature is being verified against. `documentId` is required
+ * because the verifier binds the action hash to it; the branch is carried along
+ * so callers lose nothing.
  */
 export type SignatureVerificationContext = {
-  documentId?: string;
+  documentId: string;
   branch?: string;
 };
 
 /**
  * Handler for verifying operation signatures.
  *
+ * `context` is required: a signature binds to the document it was made for, so
+ * a verifier that is not told which document it is checking rejects every
+ * bound signature - indistinguishable from a forgery (#2894).
+ *
  * @param operation - The operation to verify
  * @param publicKey - The public key to verify against (from signer.app.key)
- * @param context - The document scope, used to bind the action hash to the document.
+ * @param context - The document the signature is verified against.
  * @returns Promise that resolves to true if signature is valid, false otherwise
  */
 export type SignatureVerificationHandler = (
   operation: Operation,
   publicKey: string,
-  context?: SignatureVerificationContext,
+  context: SignatureVerificationContext,
 ) => Promise<boolean>;
 
 export type ENSInfo = {
@@ -1633,11 +1637,32 @@ export interface ISigner {
    * Signs an action (used for operation signing).
    *
    * @param action - The action to sign.
+   * @param context - The document the action will be applied to.
    * @param abortSignal - Optional abort signal to cancel the signing.
    * @returns The signature tuple.
    */
-  signAction: (action: Action, abortSignal?: AbortSignal) => Promise<Signature>;
+  signAction: (
+    action: Action,
+    context: ActionSigningContext,
+    abortSignal?: AbortSignal,
+  ) => Promise<Signature>;
 }
+
+/**
+ * The document an action is being signed for.
+ *
+ * `documentId` is folded into the action hash, so a signature cannot be
+ * replayed onto another document (#2894). It must be a resolved document id,
+ * never a slug: the verifier binds against the id the operation is stored
+ * under, and a slug would hash to something it can never reproduce.
+ *
+ * It is a parameter rather than a field on the action because it is a
+ * submission coordinate - like `branch`, which the executor already passes
+ * alongside actions - not part of what the action does.
+ */
+export type ActionSigningContext = {
+  documentId: string;
+};
 
 export type IsStateOfType<TState> = (state: unknown) => state is TState;
 

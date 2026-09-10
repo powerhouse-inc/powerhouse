@@ -1,6 +1,7 @@
 import type {
   Action,
   ActionSigner,
+  ActionSigningContext,
   ISigner,
   PHDocument,
   Reducer,
@@ -15,10 +16,13 @@ import {
   baseCreateDocument,
   buildOperationSignatureMessage,
   buildOperationSignatureParams,
+  buildSignatureMessageV2,
   buildSignedAction,
   generateId,
   hashDocumentStateForScope,
+  hashActionV2,
   hex2ab,
+  SIGNATURE_SCHEME_V2,
   sign,
   verify,
   verifyOperationSignature,
@@ -68,12 +72,40 @@ async function createTestSigner(): Promise<ISigner> {
 
     async signAction(
       _action: Action,
+      _context: ActionSigningContext,
       _abortSignal?: AbortSignal,
     ): Promise<Signature> {
       await Promise.resolve();
       throw new Error("signAction not implemented in test signer");
     },
   };
+}
+
+/** SHA-256 of a string, base64-encoded. Test-only, independent of production. */
+async function sha256Base64(data: string): Promise<string> {
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(data),
+  );
+  return btoa(String.fromCharCode(...new Uint8Array(digest)));
+}
+
+/**
+ * The v2 action-hash preimage, rebuilt from the spec rather than from the
+ * production helper: a canonical JSON array of the scheme, document id, scope,
+ * type, action id, nonce, timestamp and input (#2894).
+ */
+function v2Preimage(documentId: string, action: Action): string {
+  return JSON.stringify([
+    SIGNATURE_SCHEME_V2,
+    documentId,
+    action.scope,
+    action.type,
+    action.id,
+    action.context?.nonce ?? "",
+    action.timestampUtcMs,
+    action.input,
+  ]);
 }
 
 describe("Crypto utils", () => {
@@ -109,19 +141,22 @@ describe("Crypto utils", () => {
       signer,
       previousStateHash: "",
     });
-    // The hash field is the standard action hash: SHA-256 over the document
-    // id, scope, type and input (#2894).
+    // The hash field is the v2 action hash, and the scheme is carried as the
+    // fifth param (#2894).
     expect(params).toStrictEqual([
       "1704067200",
       "0xtest",
-      "SkXGxOIwtqaYp79OWiEkhwWLr8ZkRhvm4N9rkXn4K24=",
+      await sha256Base64(v2Preimage("1", operation.action)),
       "",
+      SIGNATURE_SCHEME_V2,
     ]);
 
+    // The v2 message is the params as a canonical JSON array, length-prefixed.
     const textEncoder = new TextEncoder();
-    expect(buildOperationSignatureMessage(params)).toStrictEqual(
+    const expectedMessage = JSON.stringify(params);
+    expect(buildSignatureMessageV2(params)).toStrictEqual(
       textEncoder.encode(
-        "\x19Signed Operation:\n6017040672000xtestSkXGxOIwtqaYp79OWiEkhwWLr8ZkRhvm4N9rkXn4K24=",
+        "\x19Signed Operation:\n" + expectedMessage.length + expectedMessage,
       ),
     );
   });
@@ -156,14 +191,16 @@ describe("Crypto utils", () => {
     expect(params).toStrictEqual([
       "1704067200",
       "0xtest",
-      "SkXGxOIwtqaYp79OWiEkhwWLr8ZkRhvm4N9rkXn4K24=",
+      await sha256Base64(v2Preimage("1", operation.action)),
       "qA97yBec1rrOyf2eVsYdWwFPOso=",
+      SIGNATURE_SCHEME_V2,
     ]);
 
     const textEncoder = new TextEncoder();
-    expect(buildOperationSignatureMessage(params)).toStrictEqual(
+    const expectedMessage = JSON.stringify(params);
+    expect(buildSignatureMessageV2(params)).toStrictEqual(
       textEncoder.encode(
-        "\x19Signed Operation:\n8817040672000xtestSkXGxOIwtqaYp79OWiEkhwWLr8ZkRhvm4N9rkXn4K24=qA97yBec1rrOyf2eVsYdWwFPOso=",
+        "\x19Signed Operation:\n" + expectedMessage.length + expectedMessage,
       ),
     );
   });
@@ -232,9 +269,10 @@ describe("Crypto utils", () => {
         [
           "1704067200",
           publicKey,
-          "SkXGxOIwtqaYp79OWiEkhwWLr8ZkRhvm4N9rkXn4K24=",
+          await sha256Base64(v2Preimage("1", action)),
           "",
           expect.stringMatching(/0x[a-f0-9]{128}/),
+          SIGNATURE_SCHEME_V2,
         ],
       ],
       user: {
@@ -735,5 +773,78 @@ describe("Crypto utils", () => {
     const signature = await sign(parameters, signer);
 
     await verify(parameters, signature, signer);
+  });
+});
+
+describe("the legacy signature message", () => {
+  it("is the four params concatenated and length-prefixed", () => {
+    // Still built for verifying signatures written before the scheme field
+    // existed, so its shape has to stay put.
+    const params: [string, string, string, string] = [
+      "1704067200",
+      "0xtest",
+      "0xhash",
+      "0xprev",
+    ];
+    const message = "17040672000xtest0xhash0xprev";
+    expect(buildOperationSignatureMessage(params)).toStrictEqual(
+      new TextEncoder().encode(
+        "\x19Signed Operation:\n" + message.length + message,
+      ),
+    );
+  });
+});
+
+describe("hashActionV2", () => {
+  const baseAction: Action = {
+    id: "action-1",
+    type: "INCREMENT",
+    timestampUtcMs: "2024-01-01T00:00:00.000Z",
+    input: { a: 1, b: 2 },
+    scope: "global",
+  };
+
+  it("does not share a hash between actions differing only in id", async () => {
+    // The action id binds the signature to one application of the action:
+    // without it the same signed content re-submitted under a fresh id passes
+    // the executor's duplicate check and applies again (#2894).
+    const other: Action = { ...baseAction, id: "action-2" };
+    expect(await hashActionV2("doc-A", baseAction)).not.toBe(
+      await hashActionV2("doc-A", other),
+    );
+  });
+
+  it("does not share a hash between actions differing only in nonce", async () => {
+    const withNonce: Action = { ...baseAction, context: { nonce: "n-1" } };
+    const withOtherNonce: Action = {
+      ...baseAction,
+      context: { nonce: "n-2" },
+    };
+    expect(await hashActionV2("doc-A", withNonce)).not.toBe(
+      await hashActionV2("doc-A", withOtherNonce),
+    );
+    expect(await hashActionV2("doc-A", withNonce)).not.toBe(
+      await hashActionV2("doc-A", baseAction),
+    );
+  });
+
+  it("is stable when the input's key insertion order changes", async () => {
+    // Storage round-trips re-serialize the action and do not preserve key
+    // order (PGlite's JSONB reorders keys), so the hash must follow the
+    // input's content only (#2894).
+    const reordered: Action = {
+      ...baseAction,
+      input: { b: 2, a: 1 },
+    };
+    expect(Object.keys(reordered.input as object)).toEqual(["b", "a"]);
+    expect(await hashActionV2("doc-A", reordered)).toBe(
+      await hashActionV2("doc-A", baseAction),
+    );
+  });
+
+  it("binds the hash to the document", async () => {
+    expect(await hashActionV2("doc-A", baseAction)).not.toBe(
+      await hashActionV2("doc-B", baseAction),
+    );
   });
 });

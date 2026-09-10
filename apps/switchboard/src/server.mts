@@ -100,6 +100,8 @@ const DOCUMENT_MODEL_SUBGRAPHS_ENABLED = "DOCUMENT_MODEL_SUBGRAPHS_ENABLED";
 const DOCUMENT_MODEL_SUBGRAPHS_ENABLED_DEFAULT = true;
 const REQUIRE_SIGNATURES = "REQUIRE_SIGNATURES";
 const REQUIRE_SIGNATURES_DEFAULT = false;
+const SIGNATURE_ALLOW_LEGACY = "SIGNATURE_ALLOW_LEGACY";
+const SIGNATURE_ALLOW_LEGACY_DEFAULT = true;
 
 const DEFAULT_PORT = process.env.PORT ? Number(process.env.PORT) : 4001;
 
@@ -548,7 +550,11 @@ async function initServer(
           : undefined,
       logger: reactorLogger,
       signer: renown
-        ? getRenownSignerConfig(renown, options.identity?.requireSignatures)
+        ? getRenownSignerConfig(
+            renown,
+            options.identity?.requireSignatures,
+            options.identity?.allowLegacySignatures,
+          )
         : undefined,
     });
 
@@ -1004,6 +1010,12 @@ export const startSwitchboard = async (
       REQUIRE_SIGNATURES,
       REQUIRE_SIGNATURES_DEFAULT,
     ));
+  const allowLegacySignatures =
+    options.identity?.allowLegacySignatures ??
+    (await featureFlags.getBooleanValue(
+      SIGNATURE_ALLOW_LEGACY,
+      SIGNATURE_ALLOW_LEGACY_DEFAULT,
+    ));
   // This switchboard's own identity authenticates against the same Renown
   // instance it verifies incoming credentials against, unless told otherwise.
   const renownConfig = resolveRenownConfig(
@@ -1014,6 +1026,7 @@ export const startSwitchboard = async (
   options.identity = {
     ...options.identity,
     requireSignatures,
+    allowLegacySignatures,
     baseUrl: options.identity?.baseUrl ?? renownConfig.url,
   };
 
@@ -1023,6 +1036,7 @@ export const startSwitchboard = async (
       {
         DOCUMENT_MODEL_SUBGRAPHS_ENABLED: enableDocumentModelSubgraphs,
         REQUIRE_SIGNATURES: requireSignatures,
+        SIGNATURE_ALLOW_LEGACY: allowLegacySignatures,
       },
       null,
       2,

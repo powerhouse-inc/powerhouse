@@ -146,8 +146,9 @@ async function buildReactor(signer: ISigner): Promise<State> {
 async function signAction<A extends Action>(
   signer: ISigner,
   action: A,
+  documentId: string,
 ): Promise<A> {
-  const signature: Signature = await signer.signAction(action);
+  const signature: Signature = await signer.signAction(action, { documentId });
   return {
     ...action,
     context: {
@@ -244,7 +245,7 @@ async function handle(
       return;
     }
     const action = setDriveName({ name: body.name ?? `lt-${Date.now()}` });
-    const signed = await signAction(state.signer, action);
+    const signed = await signAction(state.signer, action, body.driveId);
     const info = await state.module.reactor.execute(body.driveId, "main", [
       signed,
     ]);

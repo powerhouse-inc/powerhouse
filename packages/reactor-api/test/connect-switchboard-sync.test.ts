@@ -21,6 +21,7 @@ import {
 } from "@powerhousedao/reactor";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+import { SIGNATURE_SCHEME_LEGACY } from "@powerhousedao/shared/document-model";
 import { ConsoleLogger } from "document-model";
 import { afterEach, describe, expect, it } from "vitest";
 import { createResolverBridge } from "./utils/gql-resolver-bridge.js";
@@ -938,6 +939,7 @@ describe("Connect-Switchboard Sync", () => {
       "pubkey123",
       "sig456",
       "hash789",
+      SIGNATURE_SCHEME_LEGACY,
     ]);
   }, 30000);
 });

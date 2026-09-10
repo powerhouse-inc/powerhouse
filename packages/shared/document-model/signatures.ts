@@ -1,6 +1,29 @@
 // Tuple from `buildOperationSignature`:
-// [timestamp, appKey, hash(docId+scope+type+input), previousStateHash, signatureHex].
-export type Signature = [string, string, string, string, string];
+// [timestamp, appKey, actionHash, previousStateHash, signatureHex, scheme].
+// `scheme` names the preimage the hash and the signed message were built
+// from. It is optional so signatures written before it existed still type
+// as a `Signature`; absent or empty means `SIGNATURE_SCHEME_LEGACY`.
+export type Signature = [string, string, string, string, string, string?];
+
+/**
+ * The unversioned schemes produced before the scheme field existed. A verifier
+ * accepts any of the preimages those producers used - see
+ * `computeLegacyActionHashCandidates` - because none of them can be told apart
+ * after the fact.
+ */
+export const SIGNATURE_SCHEME_LEGACY = "";
+
+/**
+ * Document-bound scheme: the action hash covers the document id, scope, type,
+ * action id, nonce, timestamp and input, serialized canonically, and the
+ * signed message is delimited rather than concatenated (#2894).
+ */
+export const SIGNATURE_SCHEME_V2 = "v2";
+
+/** The scheme a signature was produced under. */
+export function signatureScheme(signature: Signature): string {
+  return signature[5] ?? SIGNATURE_SCHEME_LEGACY;
+}
 
 /**
  * A user action signer.
@@ -52,14 +75,22 @@ export type PHDocumentSignatureInfo = {
  */
 const SIGNATURE_PARAM_SEPARATOR = ", ";
 
-/** The number of params a signature carries. */
-const SIGNATURE_PARAM_COUNT = 5;
+/** The number of params a signature carries, the scheme field included. */
+const SIGNATURE_PARAM_COUNT = 6;
 
-/** Joins a signature's params for transport. Already-joined input passes through. */
+/**
+ * Joins a signature's params for transport. Already-joined input passes through.
+ *
+ * A legacy signature - one with no scheme - serializes to the five params it
+ * has always serialized to, so re-transporting stored signatures does not
+ * rewrite them.
+ */
 export function serializeSignature(signature: Signature | string): string {
-  return Array.isArray(signature)
-    ? signature.join(SIGNATURE_PARAM_SEPARATOR)
-    : signature;
+  if (!Array.isArray(signature)) {
+    return signature;
+  }
+  const params = signature[5] ? signature : signature.slice(0, 5);
+  return params.join(SIGNATURE_PARAM_SEPARATOR);
 }
 
 /**
@@ -67,7 +98,8 @@ export function serializeSignature(signature: Signature | string): string {
  *
  * Short input is padded rather than refused: verification reads the params by
  * position and fails on a wrong one, which says more than a length complaint
- * raised here would.
+ * raised here would. A five-param value pads to an empty scheme, which is
+ * exactly what a legacy signature means.
  */
 export function deserializeSignature(signature: Signature | string): Signature {
   if (Array.isArray(signature)) {

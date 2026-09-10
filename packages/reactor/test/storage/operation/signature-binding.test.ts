@@ -2,9 +2,10 @@ import { beforeEach, afterEach, describe, expect, it } from "vitest";
 import type { Kysely } from "kysely";
 import type { Action, Operation } from "@powerhousedao/shared/document-model";
 import {
-  computeActionHashCandidates,
+  expectedActionHashes,
   generateId,
-  hashActionContentSha256,
+  hashActionV2,
+  SIGNATURE_SCHEME_V2,
 } from "@powerhousedao/shared/document-model";
 import type { KyselyOperationStore } from "../../../src/storage/kysely/store.js";
 import type { Database as DatabaseSchema } from "../../../src/storage/kysely/types.js";
@@ -110,14 +111,18 @@ describe.each(testFsBackends)(
 
     it("a signing-time action hash still matches after the jsonb round-trip", async () => {
       const action = createRoundTripAction();
-      const signingHash = await hashActionContentSha256(DOCUMENT_ID, action);
+      const signingHash = await hashActionV2(DOCUMENT_ID, action);
 
       const stored = await storeAndReadBack(store, action);
 
-      // A verifier that recomputes the candidates from the round-tripped
+      // A verifier that recomputes the expected hashes from the round-tripped
       // action must find the hash the signer produced — in any key order.
-      const candidates = await computeActionHashCandidates(DOCUMENT_ID, stored);
-      expect(candidates).toContain(signingHash);
+      const expected = await expectedActionHashes(
+        SIGNATURE_SCHEME_V2,
+        DOCUMENT_ID,
+        stored,
+      );
+      expect(expected).toContain(signingHash);
     });
 
     it("a signature over different content does not match the round-tripped action", async () => {
@@ -131,10 +136,14 @@ describe.each(testFsBackends)(
           name: "tampered",
         },
       };
-      const tamperedHash = await hashActionContentSha256(DOCUMENT_ID, tampered);
+      const tamperedHash = await hashActionV2(DOCUMENT_ID, tampered);
 
-      const candidates = await computeActionHashCandidates(DOCUMENT_ID, stored);
-      expect(candidates).not.toContain(tamperedHash);
+      const expected = await expectedActionHashes(
+        SIGNATURE_SCHEME_V2,
+        DOCUMENT_ID,
+        stored,
+      );
+      expect(expected).not.toContain(tamperedHash);
     });
   },
 );

@@ -812,8 +812,8 @@ export class ReactorClient implements IReactorClient {
         }),
       ],
       this.signer,
-      signal,
       documentId,
+      signal,
     );
 
     const jobs: ExecutionJobPlan[] = [
@@ -828,18 +828,25 @@ export class ReactorClient implements IReactorClient {
     ];
 
     if (parentIdentifier) {
-      // The relationship lands on the parent document, and this job targets
-      // it, so it can be bound to the parent (#2894).
-      const parentActions: Action[] = await signActions(
-        [addRelationshipAction(parentIdentifier, documentId, "child")],
-        this.signer,
-        signal,
+      // A slug would bind the signature to a string the verifier never resolves
+      // back, so the relationship names, targets and binds the canonical id
+      // (#2894).
+      const parentId = await this.documentView.resolveIdOrSlug(
         parentIdentifier,
+        { branch: "main" },
+        undefined,
+        signal,
+      );
+      const parentActions: Action[] = await signActions(
+        [addRelationshipAction(parentId, documentId, "child")],
+        this.signer,
+        parentId,
+        signal,
       );
 
       jobs.push({
         key: "parent",
-        documentId: parentIdentifier,
+        documentId: parentId,
         scope: getSharedActionScope(parentActions),
         branch: "main",
         actions: parentActions,
@@ -996,8 +1003,8 @@ export class ReactorClient implements IReactorClient {
       const signedActions = await signActions(
         [action],
         this.signer,
-        signal,
         documentId,
+        signal,
       );
       const jobInfo = await this.reactor.execute(
         documentId,
@@ -1068,10 +1075,23 @@ export class ReactorClient implements IReactorClient {
       branch,
       actions.length,
     );
-    const signedActions = await signActions(actions, this.signer, signal);
+    // The signature binds to the canonical id, and `reactor.execute` does not
+    // resolve slugs, so the verifier has to receive the same id (#2894).
+    const documentId = await this.signingDocumentId(
+      documentIdentifier,
+      branch,
+      actions,
+      signal,
+    );
+    const signedActions = await signActions(
+      actions,
+      this.signer,
+      documentId,
+      signal,
+    );
 
     const jobInfo = await this.reactor.execute(
-      documentIdentifier,
+      documentId,
       branch,
       signedActions,
       signal,
@@ -1085,7 +1105,7 @@ export class ReactorClient implements IReactorClient {
 
     const view: ViewFilter = { branch, subject };
     const result = await this.reactor.getByIdOrSlug<TDocument>(
-      documentIdentifier,
+      documentId,
       view,
       completedJob.consistencyToken,
       signal,
@@ -1108,12 +1128,44 @@ export class ReactorClient implements IReactorClient {
       branch,
       actions.length,
     );
-    const signedActions = await signActions(actions, this.signer, signal);
-
-    return this.reactor.execute(
+    // The signature binds to the canonical id, and `reactor.execute` does not
+    // resolve slugs, so the verifier has to receive the same id (#2894).
+    const documentId = await this.signingDocumentId(
       documentIdentifier,
       branch,
-      signedActions,
+      actions,
+      signal,
+    );
+    const signedActions = await signActions(
+      actions,
+      this.signer,
+      documentId,
+      signal,
+    );
+
+    return this.reactor.execute(documentId, branch, signedActions, signal);
+  }
+
+  /**
+   * The canonical id an action batch's signatures bind to.
+   *
+   * A batch that creates its own document runs before the read model has it,
+   * so its id is canonical by construction and resolving it would throw -
+   * the same exemption `GATED_DOCUMENT_ACTIONS` makes for `CREATE_DOCUMENT`.
+   */
+  private async signingDocumentId(
+    identifier: string,
+    branch: string,
+    actions: Action[],
+    signal?: AbortSignal,
+  ): Promise<string> {
+    if (actions.some((action) => action.type === "CREATE_DOCUMENT")) {
+      return identifier;
+    }
+    return this.documentView.resolveIdOrSlug(
+      identifier,
+      { branch },
+      undefined,
       signal,
     );
   }
@@ -1124,11 +1176,50 @@ export class ReactorClient implements IReactorClient {
   ): Promise<BatchExecutionResult> {
     this.logger.verbose("executeBatch(@count jobs)", request.jobs.length);
 
+    // One resolution per distinct identifier: the signature binds to the
+    // canonical id, and `reactor.executeBatch` does not resolve slugs (#2894).
+    // The exemption is decided per document over the whole batch, so a job
+    // that only edits a document created by a sibling job is exempt too.
+    const createdInBatch = new Set(
+      request.jobs
+        .filter((job) =>
+          job.actions.some((action) => action.type === "CREATE_DOCUMENT"),
+        )
+        .map((job) => job.documentId),
+    );
+    const resolvedIds = new Map<string, Promise<string>>();
+    const resolveJobDocumentId = (job: ExecutionJobPlan): Promise<string> => {
+      if (createdInBatch.has(job.documentId)) {
+        return Promise.resolve(job.documentId);
+      }
+      const key = `${job.documentId}\u0000${job.branch}`;
+      let resolved = resolvedIds.get(key);
+      if (resolved === undefined) {
+        resolved = this.documentView.resolveIdOrSlug(
+          job.documentId,
+          { branch: job.branch },
+          undefined,
+          signal,
+        );
+        resolvedIds.set(key, resolved);
+      }
+      return resolved;
+    };
+
     const signedJobs: ExecutionJobPlan[] = await Promise.all(
-      request.jobs.map(async (job) => ({
-        ...job,
-        actions: await signActions(job.actions, this.signer, signal),
-      })),
+      request.jobs.map(async (job) => {
+        const documentId = await resolveJobDocumentId(job);
+        return {
+          ...job,
+          documentId,
+          actions: await signActions(
+            job.actions,
+            this.signer,
+            documentId,
+            signal,
+          ),
+        };
+      }),
     );
 
     const batchResult = await this.reactor.executeBatch(

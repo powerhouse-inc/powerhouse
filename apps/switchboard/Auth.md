@@ -183,10 +183,10 @@ second from the first:
 export RESOLVE_CALLER_IDENTITY=true
 ```
 
-|                                  | `AUTH_ENABLED` unset       | `AUTH_ENABLED=true`             |
-| -------------------------------- | -------------------------- | ------------------------------- |
-| `RESOLVE_CALLER_IDENTITY` unset  | no user, `OPEN`            | user resolved, `ADMIN_ONLY`     |
-| `RESOLVE_CALLER_IDENTITY=true`   | **user resolved, `OPEN`**  | user resolved, `ADMIN_ONLY`     |
+|                                 | `AUTH_ENABLED` unset      | `AUTH_ENABLED=true`         |
+| ------------------------------- | ------------------------- | --------------------------- |
+| `RESOLVE_CALLER_IDENTITY` unset | no user, `OPEN`           | user resolved, `ADMIN_ONLY` |
+| `RESOLVE_CALLER_IDENTITY=true`  | **user resolved, `OPEN`** | user resolved, `ADMIN_ONLY` |
 
 It defaults to whatever `AUTH_ENABLED` is, so a deployment that never sets it
 behaves exactly as before. The bold cell is the combination `AUTH_ENABLED`
@@ -251,11 +251,11 @@ still exists. `auth.renown` says which instance answers that question:
 }
 ```
 
-| Field | Env override | Meaning |
-| --- | --- | --- |
-| `source` | `RENOWN_SOURCE` | `remote` (default) queries another instance; `self` reads this switchboard's own `renown-read-model` subgraph in-process. |
-| `url` | `RENOWN_URL` | Renown base URL, used for discovery and the REST fallback. Defaults to `https://www.renown.id`. |
-| `switchboardUrl` | `SWITCHBOARD_URL` | A switchboard's GraphQL endpoint to read credentials from directly, skipping discovery. |
+| Field            | Env override      | Meaning                                                                                                                   |
+| ---------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `source`         | `RENOWN_SOURCE`   | `remote` (default) queries another instance; `self` reads this switchboard's own `renown-read-model` subgraph in-process. |
+| `url`            | `RENOWN_URL`      | Renown base URL, used for discovery and the REST fallback. Defaults to `https://www.renown.id`.                           |
+| `switchboardUrl` | `SWITCHBOARD_URL` | A switchboard's GraphQL endpoint to read credentials from directly, skipping discovery.                                   |
 
 Env vars win over the config file field by field; a blank value counts as unset.
 With `source: "remote"` the order is `switchboardUrl`, then discovery via `url`,
@@ -284,11 +284,40 @@ than silently verified against a remote Renown.
 #### The Switchboard's Own Identity
 
 Separately from verifying incoming credentials, a switchboard has its own
-identity — the `ph login` keypair it uses to authenticate *outbound* to remote
+identity — the `ph login` keypair it uses to authenticate _outbound_ to remote
 drives and services. It authenticates against `auth.renown.url` too, so one
 setting covers both directions. Pass `identity.baseUrl` when starting the server
 to point it somewhere else; unset everywhere, it falls back to
 `https://www.renown.id`.
+
+#### Action Signature Verification
+
+Caller authentication answers _who is making this request_. Action signatures
+answer _who authored this operation_, and they are configured separately. The
+verifier recomputes each action's hash from the action and the document it is
+being applied to, so a signature cannot be lifted onto a different action or
+document.
+
+```bash
+# Reject unsigned actions outright
+export REQUIRE_SIGNATURES=true
+
+# Reject signatures written before the scheme field existed
+export SIGNATURE_ALLOW_LEGACY=false
+```
+
+| Env var                  | Default | Effect                                                                                                           |
+| ------------------------ | ------- | ---------------------------------------------------------------------------------------------------------------- |
+| `REQUIRE_SIGNATURES`     | `false` | Reject actions that carry no signature. A signature that is present is always verified, whatever this is set to. |
+| `SIGNATURE_ALLOW_LEGACY` | `true`  | Accept signatures produced before the scheme field existed.                                                      |
+
+Leave `SIGNATURE_ALLOW_LEGACY` on while any pre-scheme signatures remain in the
+operations table. Those schemes include a preimage with no document id, so a
+legacy signature can still be replayed onto another document — turning the flag
+off closes that, and rejects every stored signature made before the cutover.
+
+Both settings can also be passed as `identity.requireSignatures` and
+`identity.allowLegacySignatures` when starting the server programmatically.
 
 ### 2. **Frontend Integration**
 

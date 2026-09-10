@@ -1,4 +1,9 @@
-import { isDenied } from "@powerhousedao/shared/document-model";
+import type { Signature } from "@powerhousedao/shared/document-model";
+import {
+  isDenied,
+  SIGNATURE_SCHEME_LEGACY,
+  SIGNATURE_SCHEME_V2,
+} from "@powerhousedao/shared/document-model";
 import { describe, expect, it } from "vitest";
 import {
   envelopeToSyncOperation,
@@ -261,13 +266,70 @@ describe("envelopeToSyncOperation", () => {
                     key: "did:key:zDnaeoPjWQBJhRi3ckGp9LUVdjpuWkyv6xeD5daGWN2wed8UW",
                   },
                   signatures: [
-                    "1766004927, did:key:zDnaeoPjWQBJhRi3ckGp9LUVdjpuWkyv6xeD5daGWN2wed8UW, aQ6r1p7z, , 0x71fbbaaabe" as unknown as [
-                      string,
-                      string,
-                      string,
-                      string,
-                      string,
-                    ],
+                    "1766004927, did:key:zDnaeoPjWQBJhRi3ckGp9LUVdjpuWkyv6xeD5daGWN2wed8UW, aQ6r1p7z, , 0x71fbbaaabe" as unknown as Signature,
+                  ],
+                },
+              },
+            },
+          },
+          context: {
+            documentId: "doc-1",
+            documentType: "test/document",
+            scope: "public",
+            branch: "main",
+            ordinal: 1,
+          },
+        },
+      ],
+    };
+
+    const syncOp = envelopeToSyncOperation(envelope, "remote-1");
+
+    const signer = syncOp.operations[0].operation.action.context?.signer;
+    expect(signer).toBeDefined();
+    expect(signer?.signatures).toHaveLength(1);
+    // A five-param wire value carries no scheme, which is what LEGACY means.
+    expect(signer?.signatures[0]).toEqual([
+      "1766004927",
+      "did:key:zDnaeoPjWQBJhRi3ckGp9LUVdjpuWkyv6xeD5daGWN2wed8UW",
+      "aQ6r1p7z",
+      "",
+      "0x71fbbaaabe",
+      SIGNATURE_SCHEME_LEGACY,
+    ]);
+  });
+
+  it("should deserialize a six-param wire value with its scheme intact", () => {
+    const envelope: SyncEnvelope = {
+      type: "operations",
+      channelMeta: { id: "channel-1" },
+      operations: [
+        {
+          operation: {
+            index: 0,
+            skip: 0,
+            id: "op-1",
+            timestampUtcMs: "2024-01-01T00:00:00.000Z",
+            hash: "hash-1",
+            action: {
+              type: "TEST_OP",
+              id: "action-1",
+              scope: "public",
+              timestampUtcMs: "2024-01-01T00:00:00.000Z",
+              input: {},
+              context: {
+                signer: {
+                  user: {
+                    address: "0x123",
+                    networkId: "eip155:1",
+                    chainId: 1,
+                  },
+                  app: {
+                    name: "Connect",
+                    key: "did:key:zDnaeoPjWQBJhRi3ckGp9LUVdjpuWkyv6xeD5daGWN2wed8UW",
+                  },
+                  signatures: [
+                    `1766004927, did:key:zDnaeoPjWQBJhRi3ckGp9LUVdjpuWkyv6xeD5daGWN2wed8UW, aQ6r1p7z, , 0x71fbbaaabe, ${SIGNATURE_SCHEME_V2}` as unknown as Signature,
                   ],
                 },
               },
@@ -295,6 +357,7 @@ describe("envelopeToSyncOperation", () => {
       "aQ6r1p7z",
       "",
       "0x71fbbaaabe",
+      SIGNATURE_SCHEME_V2,
     ]);
   });
 

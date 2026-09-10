@@ -21,10 +21,12 @@ import {
 
 const state = { global: { name: "hello" }, local: {} };
 
+const DOCUMENT_ID = "doc-1";
+
 function createDocument(revision: Record<string, number>): PHDocument {
   return {
     header: {
-      id: "doc-1",
+      id: DOCUMENT_ID,
       sig: { publicKey: {}, nonce: "" },
       documentType: "powerhouse/test",
       createdAtUtcIso: "2026-01-01T00:00:00.000Z",
@@ -115,7 +117,7 @@ describe("signStampedAction", () => {
   it("appends the signature under the signer identity", async () => {
     const signer = createSigner();
     const stamped = stampAction(action, createDocument({ global: 7 }));
-    const signed = await signStampedAction(stamped, signer);
+    const signed = await signStampedAction(stamped, signer, DOCUMENT_ID);
 
     expect(signed.context?.signer?.signatures).toEqual([signature]);
     expect(signed.context?.signer?.user).toEqual(signer.user);
@@ -136,7 +138,11 @@ describe("signStampedAction", () => {
       },
     };
 
-    const signed = await signStampedAction(stamped, createSigner());
+    const signed = await signStampedAction(
+      stamped,
+      createSigner(),
+      DOCUMENT_ID,
+    );
 
     expect(signed.context?.signer?.signatures).toEqual([existing, signature]);
     expect(signed.context?.signer?.app.name).toBe("other");
@@ -145,7 +151,7 @@ describe("signStampedAction", () => {
   it("signs the stamped action, not a copy without the stamp", async () => {
     const signer = createSigner();
     const stamped = stampAction(action, createDocument({ global: 7 }));
-    await signStampedAction(stamped, signer);
+    await signStampedAction(stamped, signer, DOCUMENT_ID);
 
     const argument = vi.mocked(signer.signAction).mock.calls[0][0];
     expect(argument.context?.prevOpHash).toBe(stamped.context?.prevOpHash);
@@ -155,9 +161,9 @@ describe("signStampedAction", () => {
     const signer = { signAction: vi.fn() } as unknown as ISigner;
     const stamped = stampAction(action, createDocument({ global: 7 }));
 
-    await expect(signStampedAction(stamped, signer)).rejects.toThrow(
-      "no user or app identity",
-    );
+    await expect(
+      signStampedAction(stamped, signer, DOCUMENT_ID),
+    ).rejects.toThrow("no user or app identity");
     expect(signer.signAction).not.toHaveBeenCalled();
   });
 });
@@ -169,7 +175,7 @@ describe("signStampedAction", () => {
 function createSnapshot(revision: Record<string, number>): PHDocument {
   const document = documentModelDocumentModelModule.utils.createDocument();
   const snapshot = {
-    header: { ...document.header, revision },
+    header: { ...document.header, id: DOCUMENT_ID, revision },
     state: document.state,
     initialState: document.state,
     // What `phDocumentFromGetDocument` produces: the scopes are known, the
@@ -337,7 +343,9 @@ describe("prepareSignedActions", () => {
     );
 
     for (const call of vi.mocked(signer.signAction).mock.calls) {
-      expect(call[1]).toBe(controller.signal);
+      // The signature binds to the document being written (#2894).
+      expect(call[1]).toEqual({ documentId: DOCUMENT_ID });
+      expect(call[2]).toBe(controller.signal);
     }
   });
 

@@ -1,5 +1,6 @@
 import type { IReactorClient, JobInfo } from "@powerhousedao/reactor";
 import type { Action, PHDocument } from "@powerhousedao/shared/document-model";
+import { SIGNATURE_SCHEME_LEGACY } from "@powerhousedao/shared/document-model";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -124,7 +125,7 @@ describe("execute", () => {
 
     const submitted = argsOf(executeSpy)[2][0];
     expect(submitted.context?.signer?.signatures).toEqual([
-      ["ts", "key", "hash", "prev", "0xsig"],
+      ["ts", "key", "hash", "prev", "0xsig", SIGNATURE_SCHEME_LEGACY],
     ]);
     expect(submitted.context?.prevOpHash).toBe("deadbeef");
     expect(submitted.context?.prevOpIndex).toBe(3);

@@ -193,7 +193,9 @@ describe("GraphQLReactorClient signed batches e2e", () => {
     for (const operation of storedBatch) {
       const signer = operation.action.context?.signer;
       expect(signer).toBeDefined();
-      await expect(verify(operation, signer!.app.key)).resolves.toBe(true);
+      await expect(
+        verify(operation, signer!.app.key, { documentId }),
+      ).resolves.toBe(true);
     }
 
     // Guard against a vacuous check: one flipped byte and the same verifier
@@ -222,7 +224,9 @@ describe("GraphQLReactorClient signed batches e2e", () => {
         },
       },
     };
-    await expect(verify(tampered, headSigner.app.key)).resolves.toBe(false);
+    await expect(
+      verify(tampered, headSigner.app.key, { documentId }),
+    ).resolves.toBe(false);
 
     // What each signature actually committed to: this action, at this point in
     // the chain. Without correct sequential stamping the third signature would

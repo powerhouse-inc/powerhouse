@@ -43,6 +43,14 @@ export type IdentityOptions = {
 
   /** If true, unsigned actions will be rejected */
   requireSignatures?: boolean;
+
+  /**
+   * If false, signatures written before the scheme field existed are rejected.
+   * Those schemes include a document-agnostic preimage, so a legacy signature
+   * can still be replayed onto another document (#2894). Defaults to true;
+   * set it false once no legacy signatures remain in storage.
+   */
+  allowLegacySignatures?: boolean;
 };
 
 export type StartServerOptions = {

@@ -1,4 +1,9 @@
-import type { ISigner, Signature } from "@powerhousedao/shared/document-model";
+import type {
+  Action,
+  ActionSigningContext,
+  ISigner,
+  Signature,
+} from "@powerhousedao/shared/document-model";
 
 /**
  * A no-op signer that returns empty values for all methods.
@@ -15,7 +20,10 @@ export class PassthroughSigner implements ISigner {
     return Promise.resolve();
   }
 
-  signAction(): Promise<Signature> {
+  signAction(
+    _action: Action,
+    _context: ActionSigningContext,
+  ): Promise<Signature> {
     return Promise.resolve(["", "", "", "", ""]);
   }
 }

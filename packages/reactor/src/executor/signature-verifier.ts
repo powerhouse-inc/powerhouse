@@ -2,6 +2,19 @@ import type { Action, Operation } from "@powerhousedao/shared/document-model";
 import { deriveOperationId } from "@powerhousedao/shared/document-model";
 import { InvalidSignatureError } from "../shared/errors.js";
 import type { SignatureVerificationHandler } from "../signer/types.js";
+import { GATED_DOCUMENT_ACTIONS, targetDocumentId } from "./util.js";
+
+/**
+ * The document an action is verified against: the one it writes to, which for a
+ * document-scope action is not always the job's own document. Verifying against
+ * the job's id instead would check a signature against a document the action
+ * never lands on (#2894).
+ */
+function verificationDocumentId(action: Action, fallback: string): string {
+  return GATED_DOCUMENT_ACTIONS.has(action.type)
+    ? targetDocumentId({ type: action.type, input: action.input }, fallback)
+    : fallback;
+}
 
 export class SignatureVerifier {
   constructor(private verifier?: SignatureVerificationHandler) {}
@@ -35,12 +48,18 @@ export class SignatureVerifier {
       }
 
       const publicKey = signer.app.key;
+      const actionDocumentId = verificationDocumentId(action, documentId);
 
       let isValid: boolean;
 
       try {
         const tempOperation: Operation = {
-          id: deriveOperationId(documentId, action.scope, branch, action.id),
+          id: deriveOperationId(
+            actionDocumentId,
+            action.scope,
+            branch,
+            action.id,
+          ),
           index: 0,
           timestampUtcMs: action.timestampUtcMs || new Date().toISOString(),
           hash: "",
@@ -49,7 +68,7 @@ export class SignatureVerifier {
         };
 
         isValid = await this.verifier(tempOperation, publicKey, {
-          documentId,
+          documentId: actionDocumentId,
           branch,
         });
       } catch (error) {
@@ -95,11 +114,14 @@ export class SignatureVerifier {
       }
 
       const publicKey = signer.app.key;
+      const actionDocumentId = verificationDocumentId(action, documentId);
 
       let isValid: boolean;
 
       try {
-        isValid = await this.verifier(operation, publicKey, { documentId });
+        isValid = await this.verifier(operation, publicKey, {
+          documentId: actionDocumentId,
+        });
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : String(error);

@@ -1,3 +1,4 @@
+import { SIGNATURE_SCHEME_LEGACY } from "@powerhousedao/shared/document-model";
 import { describe, expect, it, vi } from "vitest";
 import type {
   GetDocumentOperationsQuery,
@@ -237,7 +238,7 @@ describe("GraphQLReactorClient.getOperations", () => {
     });
     expect(results.results[0].action.type).toBe("SET_NAME");
     expect(results.results[0].action.context?.signer?.signatures).toEqual([
-      ["a", "b", "c", "d", "e"],
+      ["a", "b", "c", "d", "e", SIGNATURE_SCHEME_LEGACY],
     ]);
     expect(results.results[1].id).toBe("");
     expect(results.results[1].action.context).toBeUndefined();

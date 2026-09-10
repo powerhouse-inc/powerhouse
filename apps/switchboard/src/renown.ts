@@ -71,13 +71,17 @@ export async function initRenown(
  *
  * @param renown - The renown instance
  * @param requireSignature - If true, unsigned actions are rejected
+ * @param allowLegacySignatures - If false, pre-scheme signatures are rejected
  */
 export function getRenownSignerConfig(
   renown: IRenown,
   requireSignature?: boolean,
+  allowLegacySignatures?: boolean,
 ): SignerConfig {
   return {
     signer: renown.signer,
-    verifier: createSignatureVerifier(requireSignature),
+    verifier: createSignatureVerifier(requireSignature, {
+      allowLegacySignatures,
+    }),
   };
 }

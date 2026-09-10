@@ -2,6 +2,7 @@ import type {
   PHBaseState,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
+import { SIGNATURE_SCHEME_LEGACY } from "@powerhousedao/shared/document-model";
 import { describe, expect, it } from "vitest";
 import type {
   RemoteDocumentData,
@@ -124,19 +125,24 @@ describe("screamingSnakeToCamel", () => {
 });
 
 describe("deserializeSignature", () => {
-  it("splits a comma-separated string into a 5-element tuple", () => {
-    const result = deserializeSignature("a, b, c, d, e");
-    expect(result).toEqual(["a", "b", "c", "d", "e"]);
+  it("splits a comma-separated string into a 6-element tuple", () => {
+    const result = deserializeSignature("a, b, c, d, e, v2");
+    expect(result).toEqual(["a", "b", "c", "d", "e", "v2"]);
   });
 
-  it("pads with empty strings when fewer than 5 parts", () => {
+  it("reads a 5-param wire value as a legacy signature", () => {
+    const result = deserializeSignature("a, b, c, d, e");
+    expect(result).toEqual(["a", "b", "c", "d", "e", SIGNATURE_SCHEME_LEGACY]);
+  });
+
+  it("pads with empty strings when fewer than 6 parts", () => {
     const result = deserializeSignature("a, b");
-    expect(result).toEqual(["a", "b", "", "", ""]);
+    expect(result).toEqual(["a", "b", "", "", "", SIGNATURE_SCHEME_LEGACY]);
   });
 
   it("handles empty string", () => {
     const result = deserializeSignature("");
-    expect(result).toEqual(["", "", "", "", ""]);
+    expect(result).toEqual(["", "", "", "", "", SIGNATURE_SCHEME_LEGACY]);
   });
 });
 
@@ -198,7 +204,9 @@ describe("remoteOperationToLocal", () => {
     expect(signer).toBeDefined();
     expect(signer!.user.address).toBe("0x123");
     expect(signer!.app.name).toBe("test-app");
-    expect(signer!.signatures).toEqual([["a", "b", "c", "d", "e"]]);
+    expect(signer!.signatures).toEqual([
+      ["a", "b", "c", "d", "e", SIGNATURE_SCHEME_LEGACY],
+    ]);
   });
 });
 
