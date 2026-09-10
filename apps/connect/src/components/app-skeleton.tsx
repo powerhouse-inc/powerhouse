@@ -61,6 +61,13 @@ const Loader = ({ delay = LOADER_DELAY }: { delay?: number }) => {
   useEffect(() => {
     const id = setTimeout(() => {
       setShowLoading(true);
+      // Latch it on the body — the same flag the SSR branch below sets, and
+      // the one `showInitialLoader` reads on mount. The bootstrap renders this
+      // skeleton, then swaps in the config-dependent app whose Suspense
+      // fallback is this same component, which remounts it. Without the latch
+      // the delay re-arms and the logo blinks out for another `delay` ms at
+      // exactly the moment the app is loading.
+      document.body.setAttribute("data-show-loader", "true");
     }, delay);
 
     return () => clearTimeout(id);
