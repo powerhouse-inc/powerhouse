@@ -9,6 +9,7 @@ import type { DocumentDriveNodeOperations } from "../../gen/node/actions.js";
 import {
   getDescendants,
   handleTargetNameCollisions,
+  insertNodeSorted,
   isFileNode,
   isFolderNode,
   isValidName,
@@ -42,10 +43,7 @@ export const nodeReducer: DocumentDriveNodeOperations = {
       parentFolder: action.input.parentFolder ?? null,
       documentType: action.input.documentType,
     };
-    state.nodes.push(fileNode);
-
-    // deterministically sort nodes by id
-    state.nodes.sort((a, b) => a.id.localeCompare(b.id));
+    insertNodeSorted(state, fileNode);
 
     dispatch?.({
       type: "CREATE_CHILD_DOCUMENT",
@@ -74,15 +72,12 @@ export const nodeReducer: DocumentDriveNodeOperations = {
       targetParentFolder: action.input.parentFolder || null,
     });
 
-    state.nodes.push({
+    insertNodeSorted(state, {
       ...action.input,
       name,
       kind: "folder",
       parentFolder: action.input.parentFolder ?? null,
     });
-
-    // deterministically sort nodes by id
-    state.nodes.sort((a, b) => a.id.localeCompare(b.id));
   },
   deleteNodeOperation(state, action, dispatch) {
     const node = state.nodes.find((node) => node.id === action.input.id);
