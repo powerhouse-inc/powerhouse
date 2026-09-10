@@ -4,6 +4,7 @@ import { z } from "zod";
 import {
   buildMicroEntry,
   findTarget,
+  stampReadings,
   suitesFromVitest,
   VitestBenchReport,
 } from "./from-vitest.js";
@@ -92,16 +93,19 @@ function main(): void {
     const report = readReport(path);
     process.stderr.write(`Converting ${path}\n`);
 
+    const suites = suitesFromVitest(report, target.renames);
+    const readings = stampReadings(target, RESULTS_DIRECTORY, suites);
+
     const entry = buildMicroEntry({
       target,
       runner: "vitest-bench",
       runnerVersion: readPackageVersion("vitest"),
-      suites: suitesFromVitest(report, target.renames),
+      suites,
       environment: readMachineEnvironment(target.storage),
       recordedAt: new Date().toISOString(),
-      derived: [],
+      derived: readings.derived,
       conclusions: options.conclusions,
-      caveats: options.caveats,
+      caveats: [...readings.caveats, ...options.caveats],
       title: options.title,
       question: options.question,
       tags: options.tags,
