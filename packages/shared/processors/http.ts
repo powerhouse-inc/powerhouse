@@ -23,8 +23,8 @@ export interface RouteUser {
   appKey: string;
 }
 
-// The caller, resolved before the handler runs. `user` is undefined when auth
-// is disabled host-wide, or the route allows anonymous access.
+// The resolution the scope performs before a handler runs. `RouteContext`
+// carries these two flat, rather than nesting them under one field.
 export type RouteActor = {
   user: RouteUser | undefined;
   authEnabled: boolean;
@@ -89,8 +89,12 @@ export interface RouteTransport {
 export interface RouteContext {
   /** Decoded path params. */
   params: Record<string, string>;
-  /** Resolved by the scope; undefined only when the route is `public`. */
-  actor: RouteActor | undefined;
+  // Spelled as a subgraph resolver's `ctx.user`, so a package author writes the
+  // same expression on both surfaces. Undefined when nobody was verified.
+  user: RouteUser | undefined;
+  // Whether this request's identity was checked. False on a `public` route, a
+  // custom authorizer, or a host running with authentication disabled.
+  authEnabled: boolean;
   /** The exact octets received. Present only when body is `raw`. */
   rawBody: Buffer | undefined;
   /** Aborts when the client disconnects. */
