@@ -6,6 +6,7 @@ import type { ILogger } from "document-model";
 import { ApolloServer } from "@apollo/server";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+  filterBuildableSubgraphs,
   mergeSubgraphSchemas,
   mergeSubgraphTypeDefs,
   StitchingGatewayAdapter,
@@ -75,6 +76,36 @@ function getThingLabelType(defs: DocumentNode): NamedTypeNode | undefined {
     return field.type;
   }
   return undefined;
+}
+
+/**
+ * Two subgraphs that declare the SAME root field with incompatible types and
+ * different resolvers. Which resolver runs is what the conflict policy has to
+ * decide - the merged field type alone does not pin it down.
+ */
+function clashingResolverPair(): SubgraphDefinition[] {
+  return [
+    {
+      name: "a",
+      typeDefs: gql`
+        type Query {
+          thing: String
+        }
+      `,
+      url: "http://a",
+      resolvers: { Query: { thing: () => "FROM-SUBGRAPH-A" } },
+    },
+    {
+      name: "b",
+      typeDefs: gql`
+        type Query {
+          thing: Int
+        }
+      `,
+      url: "http://b",
+      resolvers: { Query: { thing: () => 4242 } },
+    },
+  ];
 }
 
 // ─── mergeSubgraphTypeDefs (pure) ───────────────────────────────────────────
@@ -154,6 +185,70 @@ describe("mergeSubgraphTypeDefs", () => {
     expect(last.conflicts[0]).toContain("dropped String");
     expect(getThingLabelType(last.typeDefs)?.name.value).toBe("Int");
   });
+
+  it("reports a type-kind clash (same name, different AST kind)", () => {
+    const subgraphs: SubgraphDefinition[] = [
+      {
+        name: "objects",
+        typeDefs: gql`
+          type Query {
+            thing: Thing
+          }
+          type Thing {
+            label: String
+          }
+        `,
+        url: "http://objects",
+      },
+      {
+        name: "enums",
+        typeDefs: gql`
+          type Query {
+            other: String
+          }
+          enum Thing {
+            A
+            B
+          }
+        `,
+        url: "http://enums",
+      },
+    ];
+    const { conflicts } = mergeSubgraphTypeDefs(subgraphs, "last");
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0]).toContain("type kind clash");
+    expect(conflicts[0]).toContain("Thing");
+    expect(conflicts[0]).toContain("type");
+    expect(conflicts[0]).toContain("enum");
+    expect(conflicts[0]).toContain("objects");
+    expect(conflicts[0]).toContain("enums");
+  });
+
+  it("does not report an extension of a type another subgraph defines", () => {
+    const subgraphs: SubgraphDefinition[] = [
+      {
+        name: "root",
+        typeDefs: gql`
+          type Query {
+            a: String
+          }
+        `,
+        url: "http://root",
+      },
+      {
+        name: "extender",
+        typeDefs: gql`
+          extend type Query {
+            b: String
+          }
+        `,
+        url: "http://extender",
+      },
+    ];
+    // `extend type Query` is OBJECT_TYPE_EXTENSION, `type Query` is
+    // OBJECT_TYPE_DEFINITION: same kind for clash purposes.
+    expect(mergeSubgraphTypeDefs(subgraphs, "last").conflicts).toEqual([]);
+  });
 });
 
 // ─── mergeSubgraphSchemas (pure) ────────────────────────────────────────────
@@ -199,10 +294,59 @@ describe("mergeSubgraphSchemas", () => {
     await server.stop();
   });
 
+  it("runs the winning subgraph's resolver under each conflict policy", async () => {
+    const run = async (policy: "first" | "last") => {
+      const schema = mergeSubgraphSchemas(clashingResolverPair(), policy);
+      const server = new ApolloServer<Context>({
+        schema,
+        stopOnTerminationSignals: false,
+      });
+      await server.start();
+      const handler = createApolloFetchHandler(server, noopCtx);
+      const { body } = await post(handler, "{ thing }");
+      await server.stop();
+      return body;
+    };
+
+    // "first": schema advertises subgraph A's String, so A's resolver must run.
+    expect((await run("first")).data).toEqual({ thing: "FROM-SUBGRAPH-A" });
+    // "last": schema advertises subgraph B's Int, so B's resolver must run.
+    expect((await run("last")).data).toEqual({ thing: 4242 });
+  });
+
   it("throws for zero subgraphs", () => {
     expect(() => mergeSubgraphSchemas([], "last")).toThrow(
       "Cannot merge zero subgraphs",
     );
+  });
+});
+
+// ─── filterBuildableSubgraphs (pure) ───────────────────────────────────────
+
+describe("filterBuildableSubgraphs", () => {
+  it("keeps a lone subgraph that declares every root type itself", () => {
+    // Nothing is left to stub for this subgraph - the isolation build must
+    // still run (the `reactor` subgraph declares all three root types).
+    const subgraphs: SubgraphDefinition[] = [
+      {
+        name: "everything",
+        typeDefs: gql`
+          type Query {
+            a: String
+          }
+          type Mutation {
+            b: String
+          }
+          type Subscription {
+            c: String
+          }
+        `,
+        url: "http://everything",
+      },
+    ];
+    expect(filterBuildableSubgraphs(subgraphs).map((s) => s.name)).toEqual([
+      "everything",
+    ]);
   });
 });
 
@@ -333,8 +477,11 @@ describe("StitchingGatewayAdapter", () => {
     // The clash is logged, not fatal.
     expect(lines.some((l) => l.includes("field type clash"))).toBe(true);
 
-    // Both subgraph root fields survived the merge (neither dropped):
-    // with federation the second subgraph would have been excluded here.
+    // Both subgraph root fields survived the merge (neither dropped). With
+    // federation neither would have: a cross-subgraph type conflict is not
+    // caught by filterComposableSubgraphs (each subgraph builds fine on its
+    // own) - LocalCompose.initialize() throws on it and the whole supergraph
+    // build fails.
     const { res, body } = await post(handler, "{ other }");
     expect(res.status).toBe(200);
     expect(body.data).toEqual({ other: "two" });
@@ -493,5 +640,246 @@ describe("StitchingGatewayAdapter", () => {
     );
     expect(res.status).toBe(200);
     expect(capturedToken).toBe("tok");
+  });
+
+  it("updateSupergraph() after stop() is a no-op and creates no new server", async () => {
+    let calls = 0;
+    const defs: SubgraphDefinition[] = [
+      {
+        name: "a",
+        typeDefs: gql`
+          type Query {
+            a: String
+          }
+        `,
+        url: "http://unused",
+        resolvers: { Query: { a: () => "a" } },
+      },
+    ];
+    const getSubgraphs = () => {
+      calls += 1;
+      return defs;
+    };
+    await adapter.createSupergraphHandler(
+      getSubgraphs,
+      httpServer.server,
+      noopCtx,
+    );
+    expect(calls).toBe(1);
+
+    await adapter.stop();
+
+    // stop() must leave the adapter inert: no subgraph re-read, no new server.
+    await expect(adapter.updateSupergraph()).resolves.toBeUndefined();
+    expect(calls).toBe(1);
+  });
+
+  it("the supergraph runs the winning subgraph's resolver under policy first", async () => {
+    const { logger } = makeCapturingLogger();
+    const firstWins = new StitchingGatewayAdapter(logger, {
+      onFieldTypeConflict: "first",
+    });
+    const handler = await firstWins.createSupergraphHandler(
+      () => clashingResolverPair(),
+      httpServer.server,
+      noopCtx,
+    );
+    const { res, body } = await post(handler, "{ thing }");
+    expect(res.status).toBe(200);
+    expect(body.errors).toBeUndefined();
+    expect(body.data).toEqual({ thing: "FROM-SUBGRAPH-A" });
+    await firstWins.stop();
+  });
+
+  it("logs a type-kind clash instead of silently dropping a subgraph's type", async () => {
+    const { lines, logger } = makeCapturingLogger();
+    const clashing = new StitchingGatewayAdapter(logger);
+    const defs: SubgraphDefinition[] = [
+      {
+        name: "objects",
+        typeDefs: gql`
+          type Query {
+            keepMe: String
+          }
+          type Thing {
+            label: String
+          }
+        `,
+        url: "http://unused",
+        resolvers: { Query: { keepMe: () => "one" } },
+      },
+      {
+        name: "enums",
+        typeDefs: gql`
+          type Query {
+            other: String
+          }
+          enum Thing {
+            A
+            B
+          }
+        `,
+        url: "http://unused",
+        resolvers: { Query: { other: () => "two" } },
+      },
+    ];
+    const handler = await clashing.createSupergraphHandler(
+      () => defs,
+      httpServer.server,
+      noopCtx,
+    );
+    expect(
+      lines.some((l) => l.includes("type kind clash") && l.includes("Thing")),
+    ).toBe(true);
+    const { body } = await post(handler, "{ keepMe other }");
+    expect(body.data).toEqual({ keepMe: "one", other: "two" });
+    await clashing.stop();
+  });
+
+  it("logs resolver entries dropped for not being in the merged schema", async () => {
+    const { lines, logger } = makeCapturingLogger();
+    const noisy = new StitchingGatewayAdapter(logger);
+    const defs: SubgraphDefinition[] = [
+      {
+        name: "a",
+        typeDefs: gql`
+          type Query {
+            a: String
+          }
+        `,
+        url: "http://unused",
+        resolvers: {
+          Query: { a: () => "a", ghostField: () => "nope" },
+          GhostType: { x: () => "nope" },
+        },
+      },
+    ];
+    const handler = await noisy.createSupergraphHandler(
+      () => defs,
+      httpServer.server,
+      noopCtx,
+    );
+    const { body } = await post(handler, "{ a }");
+    expect(body.data).toEqual({ a: "a" });
+    expect(lines.some((l) => l.includes("GhostType"))).toBe(true);
+    expect(lines.some((l) => l.includes("ghostField"))).toBe(true);
+    await noisy.stop();
+  });
+
+  it("excludes and logs a subgraph whose typeDefs cannot build; the rest still compose", async () => {
+    const { lines, logger } = makeCapturingLogger();
+    const mixed = new StitchingGatewayAdapter(logger);
+    const defs: SubgraphDefinition[] = [
+      {
+        name: "good",
+        typeDefs: gql`
+          type Query {
+            good: String
+          }
+        `,
+        url: "http://unused",
+        resolvers: { Query: { good: () => "ok" } },
+      },
+      {
+        name: "bad",
+        typeDefs: gql`
+          type Query {
+            bad: Undefined
+          }
+        `,
+        url: "http://unused",
+        resolvers: { Query: { bad: () => "never" } },
+      },
+    ];
+    const handler = await mixed.createSupergraphHandler(
+      () => defs,
+      httpServer.server,
+      noopCtx,
+    );
+    expect(
+      lines.some(
+        (l) => l.includes('subgraph "bad"') && l.includes("Undefined"),
+      ),
+    ).toBe(true);
+    const { res, body } = await post(handler, "{ good }");
+    expect(res.status).toBe(200);
+    expect(body.data).toEqual({ good: "ok" });
+    await mixed.stop();
+  });
+
+  it("keeps an extension-only subgraph, which cannot build in isolation", async () => {
+    const { lines, logger } = makeCapturingLogger();
+    const extended = new StitchingGatewayAdapter(logger);
+    const defs: SubgraphDefinition[] = [
+      {
+        name: "root",
+        typeDefs: gql`
+          type Query {
+            a: String
+          }
+        `,
+        url: "http://unused",
+        resolvers: { Query: { a: () => "a" } },
+      },
+      {
+        // The real `analytics` subgraph is shaped exactly like this: it only
+        // extends Query, so a naive isolation build would exclude it.
+        name: "extender",
+        typeDefs: gql`
+          extend type Query {
+            b: String
+          }
+        `,
+        url: "http://unused",
+        resolvers: { Query: { b: () => "b" } },
+      },
+    ];
+    const handler = await extended.createSupergraphHandler(
+      () => defs,
+      httpServer.server,
+      noopCtx,
+    );
+    expect(lines.some((l) => l.includes("Excluding subgraph"))).toBe(false);
+    const { body } = await post(handler, "{ a b }");
+    expect(body.data).toEqual({ a: "a", b: "b" });
+    await extended.stop();
+  });
+
+  it("keeps a subgraph that references a type another subgraph defines", async () => {
+    const { lines, logger } = makeCapturingLogger();
+    const shared = new StitchingGatewayAdapter(logger);
+    const defs: SubgraphDefinition[] = [
+      {
+        name: "borrower",
+        typeDefs: gql`
+          type Query {
+            when: DateTime
+          }
+        `,
+        url: "http://unused",
+        resolvers: { Query: { when: () => "2020-01-01" } },
+      },
+      {
+        // `analytics` borrows DateTime from auth/reactor/packages the same way.
+        name: "owner",
+        typeDefs: gql`
+          scalar DateTime
+          type Query {
+            owned: String
+          }
+        `,
+        url: "http://unused",
+        resolvers: { Query: { owned: () => "owned" } },
+      },
+    ];
+    const handler = await shared.createSupergraphHandler(
+      () => defs,
+      httpServer.server,
+      noopCtx,
+    );
+    expect(lines.some((l) => l.includes("Excluding subgraph"))).toBe(false);
+    const { body } = await post(handler, "{ when owned }");
+    expect(body.data).toEqual({ when: "2020-01-01", owned: "owned" });
+    await shared.stop();
   });
 });

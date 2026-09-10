@@ -42,8 +42,10 @@ export interface AdapterRouteHandle {
 }
 
 /**
- * A framework-agnostic description of a federated subgraph service.
- * Used by IGatewayAdapter.createSupergraphHandler() to compose the supergraph SDL.
+ * A framework-agnostic description of one subgraph.
+ * Used by IGatewayAdapter.createSupergraphHandler() to compose the supergraph:
+ * federation adapters treat it as a service to call over HTTP, while the
+ * stitching adapter merges its typeDefs and resolvers in-process.
  */
 export type SubgraphDefinition = {
   name: string;
@@ -73,8 +75,10 @@ export interface IGatewayAdapter<TContext = unknown> {
   ): Promise<FetchHandler>;
 
   /**
-   * Create a federation gateway handler that composes all subgraphs into a supergraph.
-   * getSubgraphs is called eagerly (during setup) and again on every updateSupergraph() call.
+   * Create a handler that composes all subgraphs into a supergraph (a
+   * federation gateway, or a merged in-process schema under the stitching
+   * adapter). getSubgraphs is called eagerly (during setup) and again on every
+   * updateSupergraph() call.
    */
   createSupergraphHandler(
     getSubgraphs: () => SubgraphDefinition[],
@@ -83,9 +87,10 @@ export interface IGatewayAdapter<TContext = unknown> {
   ): Promise<FetchHandler>;
 
   /**
-   * Recompose the supergraph SDL from the current subgraph list and push the update
-   * to the running federation gateway. No-op if createSupergraphHandler() has not
-   * been called yet.
+   * Recompose the supergraph from the current subgraph list and push the update
+   * to the running gateway (a federation gateway, or a merged in-process schema
+   * under the stitching adapter). No-op if createSupergraphHandler() has not
+   * been called yet, or after stop().
    */
   updateSupergraph(): Promise<void>;
 
