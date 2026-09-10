@@ -10,7 +10,7 @@ import {
   type TriggerHookRequest,
 } from "@powerhousedao/reactor-connectors";
 import { childLogger } from "document-model";
-import { createHash, randomBytes } from "node:crypto";
+import { createHash } from "node:crypto";
 import {
   cronIntervalMs,
   MIN_SCHEDULE_INTERVAL_MS,
@@ -59,10 +59,10 @@ export interface TriggerSupervisorOptions {
   tickMs?: number;
   defaultIntervalMs?: number;
   hookTimeoutMs?: number;
-  // The publicly reachable GraphQL endpoint a provider posts deliveries to.
-  // Without it, a WEBHOOK trigger refuses to enable rather than registering a
-  // URL nothing can reach.
-  webhookEndpointUrl?: string;
+  // The endpoint a WEBHOOK-strategy piece registers with its provider, minted
+  // per workflow by the reactor's webhook service. Without one, such a trigger
+  // refuses to enable rather than registering a URL nothing can reach.
+  webhookUrlFor?: (workflowId: string) => Promise<string | undefined>;
   // How often a webhook trigger reconciles by polling anyway. A provider that
   // drops a delivery — paperless never retries a transport error — would
   // otherwise lose the event for good.
@@ -75,17 +75,6 @@ const MIN_INTERVAL_MS = MIN_SCHEDULE_INTERVAL_MS;
 const MAX_BACKOFF_MS = 30 * 60_000;
 const DEDUPE_TTL_MS = 30_000;
 const DEFAULT_RECONCILE_INTERVAL_MS = 15 * 60_000;
-
-// 32 bytes of base64url: the delivery credential itself, since providers like
-// paperless do not sign their webhooks. Only its hash is persisted.
-function mintDeliveryToken(): { token: string; hash: string } {
-  const token = randomBytes(32).toString("base64url");
-  return { token, hash: hashToken(token) };
-}
-
-export function hashToken(token: string): string {
-  return createHash("sha256").update(token).digest("hex");
-}
 
 function isSchedule(
   binding: TriggerBinding,
@@ -261,7 +250,7 @@ export class TriggerSupervisor {
     binding: PieceTriggerBinding,
     hook: TriggerHookRequest["hook"],
     storeState: Record<string, unknown>,
-    options: { isRepublish?: boolean; payload?: unknown; deliveryToken?: string } = {},
+    options: { isRepublish?: boolean; payload?: unknown; webhookUrl?: string } = {},
   ): Promise<PieceWorkerResult> {
     const bundle = await ensurePieceBundle({
       name: binding.packageName,
@@ -280,19 +269,14 @@ export class TriggerSupervisor {
         identity: { flowId: binding.workflowId },
         isRepublish: options.isRepublish,
         payload: options.payload,
-        webhookUrl: this.webhookUrlFor(options.deliveryToken),
+        // A poll binding gets an unroutable URL on purpose: a live one would
+        // let a piece register an endpoint that nothing ever delivers to.
+        webhookUrl:
+          options.webhookUrl ??
+          `http://localhost:0/v1/webhooks/${binding.workflowId}`,
       },
       { timeoutMs: this.hookTimeoutMs },
     );
-  }
-
-  // The endpoint plus the delivery token in the fragment. A fragment never
-  // travels on the wire, so a piece can lift the token into a header instead
-  // of leaving it in a URL that lands in access logs.
-  private webhookUrlFor(token: string | undefined): string {
-    const endpoint = this.options.webhookEndpointUrl;
-    if (!endpoint) return "http://localhost:0/v1/webhooks/unconfigured";
-    return token ? `${endpoint}#${token}` : endpoint;
   }
 
   // A trigger's strategy lives in the piece descriptor, so it takes loading
@@ -344,29 +328,20 @@ export class TriggerSupervisor {
     try {
       const strategy = await this.strategyFor(binding);
       const webhook = strategy === "WEBHOOK" || strategy === "APP_WEBHOOK";
-      // A webhook trigger mints its delivery token here: the piece registers
-      // it with the provider, and only the hash is persisted.
-      const delivery = webhook ? mintDeliveryToken() : undefined;
-      if (webhook && !this.options.webhookEndpointUrl) {
+      // The reactor's webhook service owns the token and the URL it lives in,
+      // so the piece is handed an address rather than a credential to place.
+      const webhookUrl = webhook
+        ? await this.options.webhookUrlFor?.(binding.workflowId)
+        : undefined;
+      if (webhook && !webhookUrl) {
         throw new Error(
           "This trigger delivers by webhook, but no public webhook endpoint is configured for the reactor",
         );
       }
       const result = await this.hook(binding, "onEnable", seed, {
         isRepublish,
-        deliveryToken: delivery?.token,
+        webhookUrl,
       });
-      if (delivery) {
-        await store.deleteWebhookEndpoints(binding.workflowId);
-        await store.upsertWebhookEndpoint({
-          token_hash: delivery.hash,
-          workflow_id: binding.workflowId,
-          block_type: binding.blockType,
-          created_at: now.toISOString(),
-          last_delivery_at: null,
-          delivery_count: 0,
-        });
-      }
       // A webhook trigger still polls, just slowly: the poll is the
       // reconciliation sweep that recovers deliveries the provider dropped.
       const intervalMs = webhook
@@ -502,7 +477,6 @@ export class TriggerSupervisor {
         logger.warn(`onDisable failed for workflow ${workflowId}`, error);
       }
     }
-    await store.deleteWebhookEndpoints(workflowId);
     await store.setTriggerStatus(workflowId, "DISABLED");
   }
 

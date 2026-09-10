@@ -63,25 +63,11 @@ export interface TriggerDedupeRow {
   created_at: string;
 }
 
-// One row per enabled webhook trigger. Only the hash is stored: the token
-// itself lives in the provider's configuration (paperless keeps it in the
-// workflow action's headers), and a leaked journal or database dump must not
-// let anyone fire a workflow.
-export interface WebhookEndpointRow {
-  token_hash: string;
-  workflow_id: string;
-  block_type: string;
-  created_at: string;
-  last_delivery_at: string | null;
-  delivery_count: number;
-}
-
 export interface WorkflowRuntimeDB {
   run: RunRow;
   step_execution: StepExecutionRow;
   trigger_state: TriggerStateRow;
   trigger_dedupe: TriggerDedupeRow;
-  webhook_endpoint: WebhookEndpointRow;
 }
 
 async function up(db: IRelationalDb<WorkflowRuntimeDB>): Promise<void> {
@@ -133,17 +119,6 @@ async function up(db: IRelationalDb<WorkflowRuntimeDB>): Promise<void> {
     .addColumn("run_id", "text")
     .addColumn("created_at", "text", (col) => col.notNull())
     .addPrimaryKeyConstraint("trigger_dedupe_pk", ["workflow_id", "dedupe_key"])
-    .ifNotExists()
-    .execute();
-
-  await db.schema
-    .createTable("webhook_endpoint")
-    .addColumn("token_hash", "text", (col) => col.primaryKey())
-    .addColumn("workflow_id", "text", (col) => col.notNull())
-    .addColumn("block_type", "text", (col) => col.notNull())
-    .addColumn("created_at", "text", (col) => col.notNull())
-    .addColumn("last_delivery_at", "text")
-    .addColumn("delivery_count", "integer", (col) => col.notNull())
     .ifNotExists()
     .execute();
 
@@ -421,54 +396,6 @@ export class WorkflowRunStore {
       .onConflict((oc) => oc.columns(["workflow_id", "dedupe_key"]).doNothing())
       .execute();
     return true;
-  }
-
-  // Webhook ingress: one endpoint per enabled webhook trigger, addressed by
-  // the hash of its delivery token.
-  async upsertWebhookEndpoint(row: WebhookEndpointRow): Promise<void> {
-    await this.db
-      .insertInto("webhook_endpoint")
-      .values(row)
-      .onConflict((oc) =>
-        oc.column("token_hash").doUpdateSet({
-          workflow_id: row.workflow_id,
-          block_type: row.block_type,
-        }),
-      )
-      .execute();
-  }
-
-  async findWebhookEndpoint(
-    tokenHash: string,
-  ): Promise<WebhookEndpointRow | undefined> {
-    return this.db
-      .selectFrom("webhook_endpoint")
-      .selectAll()
-      .where("token_hash", "=", tokenHash)
-      .executeTakeFirst();
-  }
-
-  async recordWebhookDelivery(
-    tokenHash: string,
-    nowIso: string,
-  ): Promise<void> {
-    const existing = await this.findWebhookEndpoint(tokenHash);
-    if (!existing) return;
-    await this.db
-      .updateTable("webhook_endpoint")
-      .set({
-        last_delivery_at: nowIso,
-        delivery_count: existing.delivery_count + 1,
-      })
-      .where("token_hash", "=", tokenHash)
-      .execute();
-  }
-
-  async deleteWebhookEndpoints(workflowId: string): Promise<void> {
-    await this.db
-      .deleteFrom("webhook_endpoint")
-      .where("workflow_id", "=", workflowId)
-      .execute();
   }
 
   async recordDedupeRun(

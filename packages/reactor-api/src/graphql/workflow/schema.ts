@@ -207,23 +207,6 @@ export const schema: DocumentNode = gql`
     credentials and records the outcome on the connection document.
     """
     checkConnection(connectionId: String!): ConnectionCheckResult!
-    """
-    Ingress for a provider's outbound webhook. The delivery token belongs in
-    the X-Powerhouse-Webhook-Token header; the argument exists for providers
-    that cannot set one. Verifies, rate-limits and enqueues, then answers —
-    the run happens after the response, because providers time out fast
-    (paperless allows five seconds and never retries a transport error).
-    """
-    fireWebhook(payload: Unknown, token: String): FireWebhookResult!
-  }
-
-  type FireWebhookResult {
-    accepted: Boolean!
-    """
-    Why a delivery was not accepted. Deliberately coarse: a provider must not
-    be able to tell an unknown token from a disabled trigger.
-    """
-    reason: String
   }
 
   type Mutation {
