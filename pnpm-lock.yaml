@@ -2690,6 +2690,9 @@ importers:
       safe-stable-stringify:
         specifier: ^2.4.3
         version: 2.5.0
+      semver:
+        specifier: 'catalog:'
+        version: 7.7.4
       sha1-uint8array:
         specifier: ^0.10.7
         version: 0.10.7

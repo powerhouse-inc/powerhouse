@@ -17,10 +17,12 @@ await build({
     "document-drive/index.ts",
     "processors/index.ts",
     "registry/index.ts",
-    // Browser-safe deep entries: Connect imports these directly so they don't
-    // pull the registry barrel's node:fs helpers into the browser bundle.
+    // Browser-safe deep entries: Connect and the design system import these
+    // directly so they don't pull the registry barrel's node:fs helpers into
+    // the browser bundle.
     "registry/manifest-slim.ts",
     "registry/urls.ts",
+    "registry/updates.ts",
   ],
   outDir: "dist",
   platform: "neutral",
