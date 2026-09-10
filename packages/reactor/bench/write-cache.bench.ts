@@ -1,3 +1,4 @@
+import { mkdirSync, writeFileSync } from "node:fs";
 import {
   AddFileInputSchema,
   AddFolderInputSchema,
@@ -106,14 +107,18 @@ async function createFixture(
  * error on result.error, dispatching no event and reporting a passing suite.
  */
 type BenchCaseOptions = {
-  /** A floor on samples, for cases whose iteration is slower than `time`. */
+  /**
+   * A floor on samples, for cases whose iteration is slower than `time`.
+   * tinybench defaults it to 10, so only a larger value changes anything.
+   */
   iterations?: number;
   /** The module the case's registry holds, when it must not be the plain one. */
   module?: DocumentModelModule<DocumentDrivePHState>;
   /**
    * Turns on the in-situ replay stamps for this case: the accumulators are
    * cleared once prepare has finished, so nothing prepare replays is counted,
-   * and the run phase prints its decomposition under this label.
+   * and the run phase files its decomposition under this label, both to the
+   * sidecar the recorder reads and to stdout.
    */
   stamps?: string;
 };
@@ -146,7 +151,7 @@ function benchCase<TState>(
       state = undefined;
 
       if (caseOptions.stamps !== undefined && mode === "run") {
-        reportReplayStamps(caseOptions.stamps);
+        recordReplayStamps(caseOptions.stamps);
       }
 
       if (finished) {
@@ -846,7 +851,8 @@ type ReplayStamps = {
  * case mean is the wall time of the whole measured function, so a sub-interval
  * of one reducer call cannot be a case of its own; these totals are the only
  * way to separate the custom reducer body, which runs on a mutative draft,
- * from the create() draft and finalize around it.
+ * from the create() draft and finalize around it. `bodyCalls` is counted
+ * separately from `wallCalls` because the two need not be equal.
  */
 let replayStamps: ReplayStamps = {
   wallNs: 0n,
@@ -859,7 +865,49 @@ function resetReplayStamps(): void {
   replayStamps = { wallNs: 0n, bodyNs: 0n, wallCalls: 0, bodyCalls: 0 };
 }
 
-function reportReplayStamps(label: string): void {
+/**
+ * One label's decomposition, in the shape the sidecar carries. A later reader
+ * has only the record, so the raw totals and both call counts are stored
+ * alongside the per-call figures rather than left to be recovered from them.
+ */
+type ReplayStampReading = {
+  label: string;
+  wallCalls: number;
+  bodyCalls: number;
+  wallMs: number;
+  bodyMs: number;
+  wallUsPerCall: number;
+  bodyUsPerWallCall: number;
+  outsideUsPerWallCall: number;
+  bodyUsPerBodyCall: number;
+  bodySharePct: number;
+};
+
+/** Every reading this process has taken, by label. */
+const replayReadings = new Map<string, ReplayStampReading>();
+
+/**
+ * Where the recorder reads the decomposition from. `--outputJson` carries case
+ * means and nothing else, so a figure that only ever reached stdout is absent
+ * from the record that cites it; this file is how the split survives the run.
+ */
+const REPLAY_STAMPS_FILE = new URL(
+  "./results/write-cache-stamps.json",
+  import.meta.url,
+);
+
+/**
+ * Files one label's decomposition and rewrites the sidecar.
+ *
+ * Body intervals are nested inside wall intervals, so `wallNs - bodyNs` is
+ * what the call spent outside the custom reducer and cannot go negative.
+ * Dividing that and `bodyNs` by `wallCalls` keeps the three figures additive;
+ * a body mean over `bodyCalls` is a different quantity, because the base
+ * reducer may invoke the state reducer any number of times per
+ * `module.reducer` call - once per op normally, once per replayed operation
+ * for an UNDO, and not at all for a scope it handles itself.
+ */
+function recordReplayStamps(label: string): void {
   const { wallNs, bodyNs, wallCalls, bodyCalls } = replayStamps;
 
   if (wallCalls === 0 || bodyCalls === 0) {
@@ -867,21 +915,73 @@ function reportReplayStamps(label: string): void {
     return;
   }
 
-  const wallUsPerCall = Number(wallNs) / 1000 / wallCalls;
-  const bodyUsPerCall = Number(bodyNs) / 1000 / bodyCalls;
-  const outsideUsPerCall = wallUsPerCall - bodyUsPerCall;
-  const bodySharePct = (Number(bodyNs) / Number(wallNs)) * 100;
+  const reading: ReplayStampReading = {
+    label,
+    wallCalls,
+    bodyCalls,
+    wallMs: Number(wallNs) / 1e6,
+    bodyMs: Number(bodyNs) / 1e6,
+    wallUsPerCall: Number(wallNs) / 1000 / wallCalls,
+    bodyUsPerWallCall: Number(bodyNs) / 1000 / wallCalls,
+    outsideUsPerWallCall: Number(wallNs - bodyNs) / 1000 / wallCalls,
+    bodyUsPerBodyCall: Number(bodyNs) / 1000 / bodyCalls,
+    bodySharePct: (Number(bodyNs) / Number(wallNs)) * 100,
+  };
+
+  replayReadings.set(label, reading);
+  writeReplayStamps();
 
   console.log(
     [
       `replay stamps | ${label}`,
       `reducer calls ${wallCalls} (body ${bodyCalls})`,
-      `module.reducer wall ${wallUsPerCall.toFixed(3)} us/call`,
-      `reducer body in draft ${bodyUsPerCall.toFixed(3)} us/call`,
-      `create() draft+finalize+base ${outsideUsPerCall.toFixed(3)} us/call`,
-      `body share ${bodySharePct.toFixed(1)}%`,
+      `module.reducer wall ${reading.wallUsPerCall.toFixed(3)} us/call`,
+      `reducer body in draft ${reading.bodyUsPerWallCall.toFixed(3)} us/call`,
+      `create() draft+finalize+base ${reading.outsideUsPerWallCall.toFixed(3)} us/call`,
+      `body per state-reducer call ${reading.bodyUsPerBodyCall.toFixed(3)} us`,
+      `body share ${reading.bodySharePct.toFixed(1)}%`,
     ].join(" | "),
   );
+}
+
+/**
+ * A full overwrite of every reading taken so far. The map starts empty on each
+ * run, so the file cannot carry a stamp from an earlier one, and writing after
+ * every case means a suite that dies partway still leaves what it measured.
+ */
+function writeReplayStamps(): void {
+  const payload = {
+    version: 1,
+    stamps: [...replayReadings.values()],
+  };
+
+  try {
+    mkdirSync(new URL("./results/", import.meta.url), { recursive: true });
+    writeFileSync(REPLAY_STAMPS_FILE, `${JSON.stringify(payload, null, 2)}\n`);
+  } catch (error) {
+    // Never fail a measured run over the sidecar. The console line still
+    // carries the reading, and a recorder that finds no file refuses loudly.
+    console.error("bench: could not write replay stamps", error);
+  }
+}
+
+/**
+ * The input validation the generated reducer runs before it touches state.
+ * `AddFileInputSchema()` builds a fresh zod object on every action rather than
+ * reusing a cached one - gen/reducer.ts:37 does exactly this - so the cost is
+ * per-call in production and not an artifact of the bench. The validation-only
+ * leg calls this same function, so the two legs cannot drift apart on the path
+ * they share.
+ */
+function validateDriveInput(action: Action): void {
+  if (action.type === "ADD_FILE") {
+    AddFileInputSchema().parse((action as AddFileAction).input);
+    return;
+  }
+
+  if (action.type === "ADD_FOLDER") {
+    AddFolderInputSchema().parse((action as AddFolderAction).input);
+  }
 }
 
 /**
@@ -902,14 +1002,14 @@ function applyDriveBody(
 
   if (action.type === "ADD_FILE") {
     const fileAction = action as AddFileAction;
-    AddFileInputSchema().parse(fileAction.input);
+    validateDriveInput(fileAction);
     nodeReducer.addFileOperation(state.global, fileAction, dispatch);
     return undefined;
   }
 
   if (action.type === "ADD_FOLDER") {
     const folderAction = action as AddFolderAction;
-    AddFolderInputSchema().parse(folderAction.input);
+    validateDriveInput(folderAction);
     nodeReducer.addFolderOperation(state.global, folderAction, dispatch);
     return undefined;
   }
@@ -989,7 +1089,7 @@ function replayActions(count: number): (AddFileAction | AddFolderAction)[] {
   return actions;
 }
 
-/** Op count and the time budget its cold-miss replay needs for n >= 10. */
+/** Op count and the time budget every leg of that count is given. */
 const REPLAY_DECOMPOSITION_CASES: [number, number][] = [
   [100, 2000],
   [500, 6000],
@@ -998,16 +1098,30 @@ const REPLAY_DECOMPOSITION_CASES: [number, number][] = [
 ];
 
 /**
- * Why a cold-miss rebuild costs about 39x for 10x the operations. Each op count
- * runs two legs: a full cold miss through a module whose reducer is timed, and
- * the same actions through the drive reducer body alone on plain state, with no
- * mutative draft and no base reducer. The recorded pair says how much of the
- * growth the body's own work accounts for; the stamps printed by the first leg
- * split its replay into the body measured inside the draft and everything
- * create() does around it.
+ * A sample floor for the instrumented leg alone, whose iteration at 2000 ops
+ * costs about two seconds and would otherwise take the four samples its budget
+ * buys. tinybench's own default is 10, so 20 is the first value that does
+ * anything; the other legs are cheap enough that the budget already buys them
+ * dozens of samples.
  */
-describe("Write Cache Cold Miss Replay Decomposition", () => {
-  for (const [count, budgetMs] of REPLAY_DECOMPOSITION_CASES) {
+const INSTRUMENTED_ITERATIONS = 20;
+
+/**
+ * Why a cold-miss rebuild costs about 39x for 10x the operations. Each op count
+ * gets a suite of its own, because the recorder derives one spread per suite:
+ * holding the count fixed makes that spread a statement about the three
+ * mechanisms, where a single suite over every count would pair the largest
+ * count's replay against the smallest count's reducer body and call the ratio
+ * a decomposition.
+ *
+ * The three legs nest. A full cold miss through a module whose reducer is
+ * timed; the drive reducer body alone on plain state, with no mutative draft
+ * and no base reducer; and the input validation that body opens with. The two
+ * gaps between them price the draft and the schema separately, and the stamps
+ * the first leg files split its own replay from the inside.
+ */
+for (const [count, budgetMs] of REPLAY_DECOMPOSITION_CASES) {
+  describe(`Write Cache Cold Miss Replay Decomposition (${count} ops)`, () => {
     benchCase(
       `cold miss ${count} ops: instrumented cold-miss replay`,
       budgetMs,
@@ -1024,7 +1138,7 @@ describe("Write Cache Cold Miss Replay Decomposition", () => {
         await cache.getState(DOCUMENT_ID, SCOPE, BRANCH, count - 1);
       },
       {
-        iterations: 10,
+        iterations: INSTRUMENTED_ITERATIONS,
         module: instrumentedDriveModule,
         stamps: `cold miss ${count} ops`,
       },
@@ -1042,7 +1156,19 @@ describe("Write Cache Cold Miss Replay Decomposition", () => {
           applyDriveBody(state, action);
         }
       },
-      { time: 2000, iterations: 10, throws: true },
+      { time: budgetMs, throws: true },
     );
-  }
-});
+
+    bench(
+      `cold miss ${count} ops: input validation only`,
+      () => {
+        const actions = replayActions(count);
+
+        for (const action of actions) {
+          validateDriveInput(action);
+        }
+      },
+      { time: budgetMs, throws: true },
+    );
+  });
+}
