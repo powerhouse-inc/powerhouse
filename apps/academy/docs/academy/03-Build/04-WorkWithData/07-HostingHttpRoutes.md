@@ -9,7 +9,8 @@ https://switchboard.example/api/@powerhousedao/reports/reports/42
                            └──┘ └──────────────────────┘ └───────┘
                           prefix      package name       your path
 ```
-If what you need is an webhook for a third-party provider (GitHub, Stripe, Slack) that holds no Powerhouse credentials, use [Receiving webhooks](./08-ReceivingWebhooks.md) instead.
+
+If what you need is a webhook for a third-party provider (GitHub, Stripe, Slack) that holds no Powerhouse credentials, use [Receiving webhooks](./08-ReceivingWebhooks.md) instead.
 
 ## Subgraphs
 
@@ -98,6 +99,7 @@ export class ReportsProcessor implements IProcessor {
 Registration is reversible, which is what `onDisconnect` is for: dispose the handle and the route stops answering, so a reloaded package does not leave a stale one behind.
 
 Both are the same object: one `IHttpScope` per package. Asking for it twice returns the same scope, so a reload cannot accumulate namespaces.
+Registering the same method and path twice on one scope throws an error.
 
 ## Register a route
 
@@ -118,17 +120,6 @@ http.route({
 });
 ```
 
-`head()` is registered independently of `get()`, and a GET route answers `404` to a HEAD request. That is deliberate: a HEAD response is not a GET with the body dropped. Registering one means you can compute the metadata without producing the body.
-
-```typescript
-http.head("reports/:id", async (_request, ctx) => {
-  const size = await sizeOf(ctx.params.id);
-  return new Response(null, { headers: { "content-length": String(size) } });
-});
-```
-
-Registering the same method and path twice on one scope throws. Silent shadowing is how a route disappears without anyone noticing, and on a surface that carries authentication decisions that has to be loud.
-
 ## Authentication
 
 `auth` defaults to `renown`, so a route you write with no options requires a verified bearer and answers `401` without one.
@@ -136,14 +127,14 @@ Registering the same method and path twice on one scope throws. Silent shadowing
 | `auth` | Behaviour |
 | --- | --- |
 | `"renown"` (default) | A verifiable bearer is required. No bearer is a `401`. |
-| `"renown-optional"` | A bearer is verified if present; its absence yields an anonymous actor instead of a `401`. For handlers that make their own per-document decision. |
-| `"public"` | No identity is checked. `ctx.actor` is `undefined`. |
-| a function | Your own gate, run before the handler. |
+| `"renown-optional"` | A bearer is verified if present; its absence leaves `ctx.user` undefined instead of answering `401`. For handlers that make their own per-document decision. |
+| `"public"` | No identity is checked. `ctx.user` is `undefined`. |
+| a [`RouteAuthorizer`](#custom-authentication) function | Your own gate, run before the handler. It receives the [`IncomingMessage`](https://nodejs.org/api/http.html#class-httpincomingmessage) and returns `{ authorized: true }`, a `{ status, message }` refusal, or a whole `Response`. It resolves no principal, so `ctx.user` stays `undefined`. |
 
 ```typescript
-// Bearer required; ctx.actor.user is the verified principal.
+// Bearer required; ctx.user is the verified principal.
 http.get("reports/:id", (_request, ctx) =>
-  Response.json({ caller: ctx.actor?.user?.address ?? null }),
+  Response.json({ caller: ctx.user?.address ?? null }),
 );
 
 // Unauthenticated, and written out as such.
@@ -153,13 +144,15 @@ http.get("reports/:id/public-summary", { auth: "public" }, () =>
 
 // Verified if a bearer is present, anonymous if not.
 http.get("reports/:id/preview", { auth: "renown-optional" }, (_req, ctx) =>
-  Response.json({ full: ctx.actor?.user !== undefined }),
+  Response.json({ full: ctx.user !== undefined }),
 );
 ```
 
-Widening has to be written out, which is the point: `grep 'auth: "public"'` across the fleet is the complete inventory of unauthenticated package routes. A route that gates inside its handler instead does not appear in that inventory.
+Note that `renown` authentication is the default. Public routes must be explicitly set.
 
-A custom authorizer receives the Node `IncomingMessage` and returns a verdict:
+### Custom authentication
+
+Pass a function that receives the `IncomingMessage` and returns a verdict:
 
 ```typescript
 import type { IncomingMessage } from "node:http";
@@ -178,30 +171,10 @@ http.post("admin/reindex", { auth: supremeAdmin }, () =>
 );
 ```
 
-A refusal with `status` and `message` is answered in the scope's own JSON error envelope. An endpoint that speaks a protocol with its own error shape returns the exact response instead:
-
-```typescript
-http.post(
-  "rpc",
-  {
-    auth: () => ({
-      authorized: false,
-      response: Response.json(
-        { jsonrpc: "2.0", error: { code: -32001, message: "Unauthorized" } },
-        { status: 401 },
-      ),
-    }),
-  },
-  () => new Response(null, { status: 204 }),
-);
-```
-
-That form exists so a JSON-RPC endpoint does not have to declare itself `public` and gate inside the handler, which would hide it from the inventory above.
-
 Two sharp edges:
 
-- **A custom authorizer resolves no principal.** `ctx.actor` is `undefined` on a route with a function `auth`, exactly as on a `public` one. If you need the caller's identity *and* a custom rule, use `renown` and apply the extra rule inside the handler.
-- **`auth: "renown"` does not guarantee an identity.** When the host runs with authentication disabled, every caller is the anonymous actor: `ctx.actor` is `{ user: undefined, authEnabled: false }` and a `renown` route serves them. Read `ctx.actor?.user` before deciding anything, and `ctx.actor?.authEnabled` if the difference matters.
+- **A custom authorizer resolves no principal.** `ctx.user` is `undefined` on a route with a function `auth`, exactly as on a `public` one. If you need the caller's identity *and* a custom rule, use `renown` and apply the extra rule inside the handler.
+- **`auth: "renown"` does not guarantee an identity.** On a host running with authentication disabled, every caller is anonymous and a `renown` route serves them anyway, so check `ctx.user` before deciding anything. If your handler needs a real identity, `ctx.authEnabled` tells you whether the host checks at all.
 
 ## Request bodies
 
@@ -214,41 +187,13 @@ Two sharp edges:
 | `"stream"` | Not buffered. The Fetch `Request` body is the live request stream. |
 | `"none"` | The body is not read at all. |
 
-A buffered body is capped at `maxBodyBytes`, default 1 MiB. Past the cap the route answers `413` and closes the connection, because the rest of the body is never read and leftover bytes would be parsed as the next request. `maxBodyBytes` is inert when `body` is `"stream"`, so a streaming handler has to enforce its own ceiling while reading. GET and HEAD never read a body regardless of the mode.
-
-Use `"raw"` when a signature is computed over the octets the client sent. A parse and re-encode round trip changes key order, whitespace and duplicate keys, and the signature stops matching:
-
-```typescript
-import { createHmac, timingSafeEqual } from "node:crypto";
-
-http.post(
-  "ingest",
-  { auth: "public", body: "raw", maxBodyBytes: 64 * 1024 },
-  (request, ctx) => {
-    const raw = ctx.rawBody ?? Buffer.alloc(0);
-    const expected = createHmac("sha256", process.env.INGEST_SECRET!)
-      .update(raw)
-      .digest("hex");
-    const presented = request.headers.get("x-signature") ?? "";
-    if (
-      presented.length !== expected.length ||
-      !timingSafeEqual(Buffer.from(presented), Buffer.from(expected))
-    ) {
-      return new Response(null, { status: 401 });
-    }
-    return new Response(null, { status: 202 });
-  },
-);
-```
-
-If that is what you are building, read [Receiving webhooks](./08-ReceivingWebhooks.md) first. Verification, replay windows, dedupe and header redaction are already implemented there.
-
 ## The route context
 
 The second handler argument carries what the scope resolved before the handler ran:
 
 - `params` — decoded path params, as strings.
-- `actor` — the resolved caller: `{ user, authEnabled }`, or `undefined` on a `public` route or one with a custom authorizer. `user.appKey` is the `did:key` of the app instance that issued the request's token, the same value a signer presents when it signs an action, so a request can decide as the same principal the write path presents.
+- `user` — the verified caller, or `undefined` when nobody was verified. Same name and shape as a subgraph resolver's `ctx.user`. `user.appKey` is the `did:key` of the app instance that issued the request's token, so a route can act as the same principal that signs actions.
+- `authEnabled` — whether this request's identity was checked. `false` on a `public` route, on a custom authorizer, and on a host running with authentication disabled.
 - `rawBody` — the exact octets received. Present only when `body` is `"raw"`.
 - `signal` — aborts when the client disconnects. Pass it into anything long-running.
 - `transport` — where the request reached the host, resolved through any reverse proxy: `{ proto, host, prefix, baseUrl }`. Use it instead of touching `req.socket` or reading `x-forwarded-*` yourself.
@@ -256,13 +201,11 @@ The second handler argument carries what the scope resolved before the handler r
 ```typescript
 http.get("reports/:id/export", async (_request, ctx) => {
   const rows = await query(ctx.params.id, ctx.signal);
-  return Response.json({ rows, appKey: ctx.actor?.user?.appKey });
+  return Response.json({ rows, appKey: ctx.user?.appKey });
 });
 ```
 
 ## Serving sub-paths
-
-Two ways, both verified against the Express and Fastify hosts:
 
 ```typescript
 // A wildcard param, joined with "/": /api/pkg/blobs/a/b/c.txt → "a/b/c.txt"
@@ -276,43 +219,17 @@ http.get("files", { auth: "public", prefix: true }, () => new Response("hit"));
 
 Prefer the wildcard when you need the sub-path, since `prefix: true` gives you no param for it. Routes within a scope are matched in registration order, so register a specific route before a prefix route that would swallow it.
 
-## The forwarded origin
-
-`ctx.transport` says where the request reached the host — `proto`, `host`, `prefix`, and the `baseUrl` they compose. Behind a reverse proxy the socket knows none of this, so the values come from the `X-Forwarded-Proto`, `X-Forwarded-Host` and `X-Forwarded-Prefix` headers.
-
-Those headers are client-written. A host that is reachable without a proxy in front must not believe them, or a caller could choose the origin your package advertises — a callback URL or an asset link built from `ctx.transport.baseUrl` would point wherever the caller said. So the host declares its topology through `trustProxy` on the route service: off by default, and on in the deployed reactor, which always has a balancer in front. Untrusted, `proto` follows the socket and `host` comes from the request's own `Host` header.
-
-There is no rate limiting at this layer. A per-process counter cannot express a fleet-wide limit — behind a balancer with three instances, a declared 60/min admits up to 180 — so limits belong at the edge, where the state is shared and a flood is refused before it reaches the reactor at all.
-
-## Absolute URLs
-
-`scope.baseUrl` is the public base every route in the scope hangs off, and each registration handle carries the absolute URL that route answers on:
-
-```typescript
-const handle = http.get("reports/:id", { auth: "public" }, () =>
-  new Response(""),
-);
-// https://switchboard.example/api/@powerhousedao/reports/reports/:id
-console.log(handle.url, http.baseUrl);
-```
-
-Both are absolute, because a package hands them to third parties: a provider callback, a link stored in a document. The reactor resolves its origin from `PUBLIC_URL`, then `RENDER_EXTERNAL_URL`, then `HEROKU_APP_DEFAULT_DOMAIN_NAME`, and falls back to `http://localhost:<port>`, which is right behind a tunnel in development and obviously wrong rather than silently unusable elsewhere.
-
-A host embedding the route service without telling it an origin is the one case where both degrade to a path (`/api/document-model`). If you are about to persist a URL or send it upstream, check for a leading `/` and refuse rather than store a value no third party can resolve. When you are answering a request rather than minting a link, `ctx.transport.baseUrl` is the origin the request actually arrived on.
-
 ## Disposal
 
 Packages hot-reload, so every registration is reversible — but **you do not have to do this yourself**. The host releases your whole scope when your package is replaced or removed, and every scope when it shuts down. Routes you register and forget are cleaned up.
 
-`handle.dispose()` and `scope.dispose()` are there for the cases the host cannot know about: a route you want to stop serving while the package stays loaded, or a scope a test stood up. Disposing something already gone is a no-op, and after disposal the same package can register the same path again, which is what makes a reload a dispose followed by a register.
+`handle.dispose()` and `scope.dispose()` are there for the cases the host cannot know about: a route you want to stop serving while the package stays loaded, or a scope a test stood up. Disposing something already gone is a no-op, and the same path can be registered again afterwards.
 
-Why it is the host's job rather than yours: a route that outlives its package stays mounted against the old code, and because re-registering the same method and path throws, the *next* load would fail on the leak instead of replacing it. That is too sharp an edge to leave to every package remembering an `onDisconnect`.
-
-Webhook endpoints are not revoked when a package unloads. A redeploy must not force re-registration with every provider, so token rows persist and the endpoint answers `503` until the package returns.
+Webhook endpoints are not revoked when a package unloads: the token stays valid and the endpoint answers `503` until the package returns, so a redeploy does not force you to re-register with every provider.
 
 ## The Node escape hatch
 
-Some protocols must own the socket. `nodeRoute()` hands your handler the raw `IncomingMessage` and `ServerResponse`, still inside your namespace, with nothing having touched the request stream:
+Some protocols must own the socket. `nodeRoute()` hands your handler the raw [`IncomingMessage`](https://nodejs.org/api/http.html#class-httpincomingmessage) and [`ServerResponse`](https://nodejs.org/api/http.html#class-httpserverresponse), still inside your namespace, with nothing having touched the request stream:
 
 ```typescript
 http.nodeRoute({
@@ -325,12 +242,12 @@ http.nodeRoute({
 });
 ```
 
-`auth` and `prefix` still apply. `body` and `maxBodyBytes` do not exist on a node route: the handler reads the stream itself, so the scope has no body to shape and nothing to measure. A cap declared there would be silently inert, so a node route that needs one enforces it while reading.
+`auth` and `prefix` still apply. `body` and `maxBodyBytes` do not exist on a node route: the handler reads the stream itself, so the scope has no body to shape and nothing to measure.
 
-Reach for it when a protocol implementation writes to the response itself, hijacks the connection, or holds a long-lived stream the Fetch shape cannot express. Do not reach for it to get the raw bytes (`body: "raw"` does that), to stream a response (a Fetch `Response` with a `ReadableStream` body does that), or because the Fetch types are unfamiliar. You give up the body cap and the uniform error handling, and you take on writing correct status codes and headers yourself.
+Reach for it when a protocol implementation writes to the response itself, hijacks the connection, or holds a long-lived stream the Fetch shape cannot express. You give up the body cap and the uniform error handling, and you write the status codes and headers yourself. For raw bytes use `body: "raw"`, and to stream a response return a `Response` with a [`ReadableStream`](https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream) body.
 
-## What the scope deliberately does not have
+## What the scope does not have
 
 - **`OPTIONS`.** Preflight belongs to the CORS layer, which answers for your namespace already.
-- **Middleware.** There is no `scope.use()`. Auth and body policy are declarative fields precisely so they can be audited across every package in the fleet; free-form middleware puts each package back in charge of deciding.
+- **Middleware.** There is no `scope.use()`. Auth and body policy are declarative fields instead, so a route's behaviour is readable from its registration.
 - **A way to name a path.** Absolute paths, `..` segments and URL-shaped paths all throw.
