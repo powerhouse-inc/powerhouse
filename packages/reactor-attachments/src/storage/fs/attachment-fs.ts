@@ -47,11 +47,22 @@ export async function writeAttachmentBytes(
   const reader = data.getReader();
   let bytesWritten = 0;
   let caughtError: Error | undefined;
+  // A destination error can land before the drain-wait below has an 'error'
+  // listener attached -- failing to open the temp file, or an async write
+  // error between chunks -- so hold one listener for the whole write. First
+  // error wins: an already-recorded source failure is the one to report.
+  const recordError = (err: unknown) => {
+    caughtError ??= err instanceof Error ? err : new Error(String(err));
+  };
+  writer.on("error", recordError);
 
   try {
     for (;;) {
       const { done, value } = await reader.read();
       if (done) break;
+      // The destination is destroyed once it errors, so writing again would
+      // return false and wait for a 'drain' that can never come.
+      if (caughtError) break;
       bytesWritten += value.byteLength;
       const canContinue = writer.write(value);
       if (!canContinue) {
@@ -70,15 +81,12 @@ export async function writeAttachmentBytes(
       }
     }
   } catch (err) {
-    caughtError = err instanceof Error ? err : new Error(String(err));
+    recordError(err);
   } finally {
     reader.releaseLock();
   }
 
   if (caughtError) {
-    // Swallow any in-flight write error: we are about to throw caughtError,
-    // and an unhandled 'error' event would otherwise crash the process.
-    writer.on("error", () => {});
     writer.destroy();
     await rm(tempPath, { force: true });
     throw caughtError;
@@ -86,7 +94,10 @@ export async function writeAttachmentBytes(
 
   try {
     await new Promise<void>((resolve, reject) => {
-      writer.end(() => resolve());
+      writer.end((err?: Error | null) => {
+        if (err) reject(err);
+        else resolve();
+      });
       writer.once("error", reject);
     });
     await rename(tempPath, path);
