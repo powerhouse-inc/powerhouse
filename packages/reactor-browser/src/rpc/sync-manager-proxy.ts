@@ -267,6 +267,7 @@ export class SyncManagerProxy implements ISyncManager {
           );
         });
       },
+      notePoll: () => {},
       config: { url },
     };
     return channel;

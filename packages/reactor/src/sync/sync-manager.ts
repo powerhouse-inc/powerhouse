@@ -80,6 +80,16 @@ export type SyncManagerConfig = {
    * the next refill derives them again from the operation index.
    */
   maxHeldOperationsPerRemote: number;
+  /**
+   * How long a serving channel may go unpolled before an outbox past its bound
+   * is removed rather than evicted.
+   *
+   * Evicting a channel nobody polls derives the same operations again on every
+   * batch, forever. Removing one that is merely behind is worse: a holder more
+   * than the bound behind could never catch up, so it is removed only once its
+   * holder has stopped asking.
+   */
+  staleRemotePollWindowMs: number;
 };
 
 enum OutboxMode {
@@ -91,7 +101,11 @@ const defaultSyncManagerConfig: SyncManagerConfig = {
   maxDeadLettersPerRemote: 100,
   maxInboxBatchSize: 32,
   maxHeldOperationsPerRemote: 10000,
+  staleRemotePollWindowMs: 5 * 60_000,
 };
+
+/** Channel types whose remotes this replica serves rather than subscribes to. */
+const PRUNABLE_CHANNEL_TYPES: ReadonlySet<string> = new Set(["polling"]);
 
 const PLAN_KEY_TO_JOB_UUID_CAP = 10000;
 
@@ -130,6 +144,8 @@ export class SyncManager implements ISyncManager {
   >();
   private readonly planKeyToJobUuid = new Map<string, string>();
   private readonly evictedOutboxFloors = new Map<string, number>();
+  private readonly prunePending = new Set<string>();
+  private pruneChain: Promise<void> = Promise.resolve();
   private readonly lastEnqueuedJobIdByKey = new Map<string, string>();
   private inboxChunkChain: Promise<void> = Promise.resolve();
 
@@ -249,6 +265,7 @@ export class SyncManager implements ISyncManager {
           })
           .finally(() => {
             this.backfillAbortControllers.delete(record.name);
+            void this.drainPrunes();
           });
       }
     }
@@ -273,6 +290,7 @@ export class SyncManager implements ISyncManager {
     this.backfillAbortControllers.clear();
     this.planKeyToJobUuid.clear();
     this.lastEnqueuedJobIdByKey.clear();
+    this.prunePending.clear();
     this.batchAggregator.clear();
 
     if (this.eventUnsubscribe) {
@@ -453,6 +471,7 @@ export class SyncManager implements ISyncManager {
       })
       .finally(() => {
         this.backfillAbortControllers.delete(name);
+        void this.drainPrunes();
       });
 
     return remote;
@@ -492,6 +511,8 @@ export class SyncManager implements ISyncManager {
       unsub();
       this.connectionStateUnsubscribes.delete(name);
     }
+    this.evictedOutboxFloors.delete(name);
+    this.prunePending.delete(name);
     this.remotes.delete(name);
   }
 
@@ -709,6 +730,8 @@ export class SyncManager implements ISyncManager {
         OutboxMode.BatchTriggered,
       );
     }
+
+    await this.drainPrunes();
   }
 
   private handleInboxAdded(remote: Remote, syncOps: SyncOperation[]): void {
@@ -1030,15 +1053,86 @@ export class SyncManager implements ISyncManager {
       known === undefined ? floor : Math.min(known, floor),
     );
 
-    this.logger.warn(
-      "Outbox for @RemoteName is past its bound of @Cap operations; evicting @Count entries from ordinal @Floor, to be derived again once it drains",
-      remote.meta.name,
-      cap,
-      evicted.length,
-      floor,
-    );
+    const staleMs = this.stalePollAgeMs(remote);
+    if (staleMs !== undefined) {
+      let held = kept;
+      for (const syncOp of evicted) {
+        held += syncOp.operations.length;
+      }
+
+      // emitBatches evicts once per page, so a large backfill reaches here
+      // repeatedly; the decision and its log belong to the first.
+      if (!this.prunePending.has(remote.meta.name)) {
+        this.prunePending.add(remote.meta.name);
+        this.logger.warn(
+          "Outbox for @RemoteName (@Collection) is past its bound of @Cap operations holding @Held, and it has not been polled for @StaleMs ms; removing the channel and its persisted rows",
+          remote.meta.name,
+          remote.meta.collectionId.key,
+          cap,
+          held,
+          staleMs,
+        );
+      }
+    } else {
+      this.logger.warn(
+        "Outbox for @RemoteName is past its bound of @Cap operations; evicting @Count entries from ordinal @Floor, to be derived again once it drains",
+        remote.meta.name,
+        cap,
+        evicted.length,
+        floor,
+      );
+    }
 
     remote.channel.outbox.remove(...evicted);
+  }
+
+  /**
+   * How long a prunable remote's holder has been silent, if past the window.
+   *
+   * The channel type is checked first: SyncManager serves and subscribes with
+   * the same interface, and a request channel reports lastSuccessUtcMs too, so
+   * age alone cannot tell a dead served channel from a client whose switchboard
+   * is merely unreachable. A channel that reports nothing (0) is never pruned.
+   */
+  private stalePollAgeMs(remote: Remote): number | undefined {
+    if (!PRUNABLE_CHANNEL_TYPES.has(remote.meta.channelConfig.type)) {
+      return undefined;
+    }
+
+    const last = remote.channel.getConnectionState().lastSuccessUtcMs;
+    if (last <= 0) {
+      return undefined;
+    }
+
+    const age = Date.now() - last;
+    return age >= this.config.staleRemotePollWindowMs ? age : undefined;
+  }
+
+  /**
+   * Removes the remotes marked stale during eviction.
+   *
+   * Never call this from the derivation path: removing a remote the caller is
+   * still iterating would pull its mailboxes out from under it.
+   */
+  private drainPrunes(): Promise<void> {
+    const next = this.pruneChain.then(async () => {
+      if (this.isShutdown) return;
+      for (const name of [...this.prunePending]) {
+        this.prunePending.delete(name);
+        if (!this.remotes.has(name)) continue;
+        try {
+          await this.remove(name);
+        } catch (error) {
+          this.logger.error(
+            "Failed to remove stale remote (@name, @error)",
+            name,
+            error instanceof Error ? error.message : String(error),
+          );
+        }
+      }
+    });
+    this.pruneChain = next.catch(() => {});
+    return next;
   }
 
   private outboxOperationCount(remote: Remote): number {

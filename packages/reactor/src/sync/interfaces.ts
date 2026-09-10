@@ -77,6 +77,14 @@ export interface IChannel {
    * not poll (e.g. push-only response channels) should treat this as a no-op.
    */
   triggerPull(): void;
+
+  /**
+   * Records that this channel's holder just interacted with it.
+   *
+   * Only a served channel has a holder to hear from; a channel that polls a
+   * remote itself should treat this as a no-op, as with triggerPull.
+   */
+  notePoll(): void;
 }
 
 /**

@@ -23,6 +23,7 @@ type FakeRemote = {
     outbox: FakeOutbox;
     inbox: { ackOrdinal: number };
     deadLetter: { items: SyncOperation[] };
+    notePoll: () => void;
   };
 };
 
@@ -88,6 +89,7 @@ function makeSyncManager(items: SyncOperation[]): ISyncManager {
       outbox: { items },
       inbox: { ackOrdinal: 0 },
       deadLetter: { items: [] },
+      notePoll: () => {},
     },
   };
   return {
@@ -495,6 +497,7 @@ describe("holding outbox entries the caller may not read", () => {
       };
       inbox: { ackOrdinal: number };
       deadLetter: { items: SyncOperation[] };
+      notePoll: () => void;
     };
   };
 
@@ -527,6 +530,7 @@ describe("holding outbox entries the caller may not read", () => {
         },
         inbox: { ackOrdinal: 0 },
         deadLetter: { items: [] },
+        notePoll: () => {},
       },
     };
     const syncManager = {

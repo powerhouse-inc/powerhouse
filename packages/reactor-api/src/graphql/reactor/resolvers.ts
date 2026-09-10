@@ -1306,6 +1306,11 @@ export function pollSyncEnvelopes(
     );
   }
 
+  // The subgraph's drive and binding checks run before this call, so reaching
+  // here is an authorized poll: the only evidence the switchboard has that this
+  // channel still has a holder.
+  remote.channel.notePoll();
+
   // Dead-letter items can originate from failed inbox jobs whose documentId is
   // outside this channel's collection, so they are filtered by the caller's read
   // access independently of the outbox (see the poll resolver in subgraph.ts).
@@ -1565,6 +1570,10 @@ export function pushSyncEnvelopes(
         `Channel not found: ${error instanceof Error ? error.message : "Unknown error"}`,
       );
     }
+
+    // A Manual-poll holder never polls on a schedule, so a push is the only
+    // liveness it ever reports.
+    remote.channel.notePoll();
 
     if (!envelope.operations || envelope.operations.length === 0) {
       continue;

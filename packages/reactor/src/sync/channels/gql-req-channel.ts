@@ -262,6 +262,9 @@ export class GqlRequestChannel implements IChannel {
     this.pollTimer.triggerNow();
   }
 
+  /** This channel polls a remote itself; it has no holder to hear from. */
+  notePoll(): void {}
+
   /**
    * Initializes the channel by registering it on the remote server and starting polling.
    */

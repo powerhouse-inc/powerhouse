@@ -714,6 +714,7 @@ describe("ReactorSubgraph Permission Checks", () => {
             inbox: { ackOrdinal: 3 },
             outbox: { items: [] },
             deadLetter: { items: [] },
+            notePoll: vi.fn(),
           },
         }),
       });
@@ -888,6 +889,7 @@ describe("ReactorSubgraph Permission Checks", () => {
           inbox: { ackOrdinal: 0 },
           outbox: { items: outbox, remove: vi.fn() },
           deadLetter: { items: deadLetter },
+          notePoll: vi.fn(),
         },
       }),
     });
@@ -1339,7 +1341,7 @@ describe("ReactorSubgraph Permission Checks", () => {
       const syncManager = {
         getById: vi.fn().mockReturnValue({
           meta: { name: "remote-1" },
-          channel: { inbox: { add: inboxAdd } },
+          channel: { inbox: { add: inboxAdd }, notePoll: vi.fn() },
         }),
       };
       return { syncManager, inboxAdd };

@@ -100,6 +100,8 @@ export class TestChannel implements IChannel {
 
   triggerPull(): void {}
 
+  notePoll(): void {}
+
   receive(envelope: SyncEnvelope): void {
     if (this.isShutdown) {
       throw new Error(
