@@ -1,0 +1,3 @@
+--- 1: fresh cache, real registry fetch (6.2.1 bundle vs published 6.2.2)
+A new version of ph-cmd is available: 6.2.2 (you have 6.2.1 — latest stream). Run 'ph self-update' to update.
+Please specify either a release tag or a version to use.
