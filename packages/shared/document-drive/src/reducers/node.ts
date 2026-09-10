@@ -12,11 +12,13 @@ import {
   isFileNode,
   isFolderNode,
   isValidName,
+  readNodes,
 } from "../utils.js";
 
 export const nodeReducer: DocumentDriveNodeOperations = {
   addFileOperation(state, action, dispatch) {
-    if (state.nodes.find((node) => node.id === action.input.id)) {
+    const nodes = readNodes(state);
+    if (nodes.find((node) => node.id === action.input.id)) {
       throw new Error(`Node with id ${action.input.id} already exists!`);
     }
 
@@ -27,7 +29,7 @@ export const nodeReducer: DocumentDriveNodeOperations = {
     }
 
     const name = handleTargetNameCollisions({
-      nodes: state.nodes,
+      nodes,
       srcName: action.input.name,
       srcKind: "file",
       targetParentFolder: action.input.parentFolder || null,
@@ -54,7 +56,8 @@ export const nodeReducer: DocumentDriveNodeOperations = {
     });
   },
   addFolderOperation(state, action) {
-    if (state.nodes.find((node) => node.id === action.input.id)) {
+    const nodes = readNodes(state);
+    if (nodes.find((node) => node.id === action.input.id)) {
       throw new Error(`Node with id ${action.input.id} already exists!`);
     }
 
@@ -65,7 +68,7 @@ export const nodeReducer: DocumentDriveNodeOperations = {
     }
 
     const name = handleTargetNameCollisions({
-      nodes: state.nodes,
+      nodes,
       srcName: action.input.name,
       srcKind: "folder",
       targetParentFolder: action.input.parentFolder || null,
