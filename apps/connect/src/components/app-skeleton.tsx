@@ -1,5 +1,10 @@
-import { getBasePath } from "@powerhousedao/connect/utils";
-import { getIsEmbedded } from "@powerhousedao/connect/hooks";
+// Leaf imports, not the `@powerhousedao/connect/{utils,hooks}` barrels: this
+// is the first contentful paint and main.tsx loads it BEFORE the runtime
+// config is fetched. The barrels re-export modules that read the config at
+// module-evaluation (which throws if the config cache isn't warm), so they
+// must stay out of this graph.
+import { getBasePath } from "../utils/browser.js";
+import { getIsEmbedded } from "../hooks/useIsEmbedded.js";
 import {
   ConnectSidebar,
   HomeScreen,
