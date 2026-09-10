@@ -229,6 +229,16 @@ docker compose down          # stop the stack (data is kept in named volumes)
 
 ## How to contribute to this project <a id="how-to-contribute"></a>
 
+The full guide — prerequisites, setup, testing, linting, and the release
+pipeline — lives in [CONTRIBUTING.md](./CONTRIBUTING.md). Everyone taking part
+in this project is expected to follow the [Code of Conduct](./CODE_OF_CONDUCT.md).
+
+Looking for work? Browse open issues labelled
+["good first issue"](https://github.com/powerhouse-inc/powerhouse/issues?q=is:open+label:%22good+first+issue%22)
+or ["help wanted"](https://github.com/powerhouse-inc/powerhouse/issues?q=is:open+label:%22help+wanted%22),
+and file new issues with one of the templates in `.github/ISSUE_TEMPLATE`
+(blank issues are disabled).
+
 ### Packages:
 
 Currently, only the `main` branch is enabled in this project, which means all packages are deployed to NPM from the `main` branch. To contribute to a package, please follow these steps:
@@ -238,7 +248,7 @@ Currently, only the `main` branch is enabled in this project, which means all pa
    ```bash
    git pull origin main
    git checkout main
-   git checkout -b feature/my-branch
+   git checkout -b feat/my-branch
    ```
 
 2. Make your changes in the feature branch.
@@ -250,4 +260,4 @@ Currently, only the `main` branch is enabled in this project, which means all pa
      ```
 4. Push your branch to GitHub and open a pull request (PR) against the `main` branch.
 5. Once your PR is approved, merge it.
-6. A GitHub Action will be triggered automatically after you merge your PR. This action will handle versioning and release the new version of the affected packages to NPM. Optionally, you can trigger the deployment of your package [manually](https://github.com/powerhouse-inc/powerhouse/actions/workflows/release-package-manual.yml)
+6. Releases are handled by the [Release Branch pipeline](https://github.com/powerhouse-inc/powerhouse/actions/workflows/release-branch.yml): the `main` branch auto-releases every night (02:00 UTC) as the next `dev` version, and you can trigger it manually from the Actions tab. See [RELEASE.md](./RELEASE.md) for the full release process.
