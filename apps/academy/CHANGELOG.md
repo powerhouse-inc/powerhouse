@@ -1,3 +1,22 @@
+## 6.2.2-dev.88 (2026-09-10)
+
+### 🚀 Features
+
+- add standalone stale-bot tool (ported sweep + headless driver) ([ed2846a6a](https://github.com/powerhouse-inc/powerhouse/commit/ed2846a6a))
+
+### 🩹 Fixes
+
+- use labels[] in stale-bot addLabel (label field 422s) ([f40b4e0ad](https://github.com/powerhouse-inc/powerhouse/commit/f40b4e0ad))
+- **reactor:** report the hybrid host chain's batch metrics ([2715ea9a6](https://github.com/powerhouse-inc/powerhouse/commit/2715ea9a6))
+- **reactor:** fail startup on a projection worker whose init throws ([2d70a9c8d](https://github.com/powerhouse-inc/powerhouse/commit/2d70a9c8d))
+- **reactor:** reject a projection worker db that is not the parent's database ([23f037022](https://github.com/powerhouse-inc/powerhouse/commit/23f037022))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5
+- froid1911
+
 ## 6.2.2-dev.87 (2026-09-09)
 
 ### 🩹 Fixes

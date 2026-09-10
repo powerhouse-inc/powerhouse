@@ -1,3 +1,35 @@
+## 6.2.2-dev.88 (2026-09-10)
+
+### 🚀 Features
+
+- add standalone stale-bot tool (ported sweep + headless driver) ([ed2846a6a](https://github.com/powerhouse-inc/powerhouse/commit/ed2846a6a))
+- **reactor:** onReadReady hook and dead-shard-safe drain on ProjectionShardManager ([af41b2cc1](https://github.com/powerhouse-inc/powerhouse/commit/af41b2cc1))
+- **reactor:** withReadModelCoordinatorFactory and a projection-manager creator on the builder ([4ce813dad](https://github.com/powerhouse-inc/powerhouse/commit/4ce813dad))
+- **reactor:** add HybridProjectionCoordinator to run host read models behind a projection worker ([b69928976](https://github.com/powerhouse-inc/powerhouse/commit/b69928976))
+- **reactor:** createHybridProjectionCoordinatorFactory ([61a2ed26f](https://github.com/powerhouse-inc/powerhouse/commit/61a2ed26f))
+- **reactor:** hybrid projection worker — built-in read models in one worker thread, host keeps the rest ([#2988](https://github.com/powerhouse-inc/powerhouse/pull/2988))
+- **reactor:** bench viewer draws a renamed case as one line ([a9f7607a1](https://github.com/powerhouse-inc/powerhouse/commit/a9f7607a1))
+- **switchboard:** resolve projection worker options from env ([6d3830882](https://github.com/powerhouse-inc/powerhouse/commit/6d3830882))
+- **switchboard:** run built-in read models in a projection worker behind REACTOR_PROJECTION_WORKER ([265526877](https://github.com/powerhouse-inc/powerhouse/commit/265526877))
+
+### 🩹 Fixes
+
+- use labels[] in stale-bot addLabel (label field 422s) ([f40b4e0ad](https://github.com/powerhouse-inc/powerhouse/commit/f40b4e0ad))
+- **reactor:** projection shard creation rejects live-module-only models ([5c9da1a45](https://github.com/powerhouse-inc/powerhouse/commit/5c9da1a45))
+- **reactor:** reject a projection worker db that is not the parent's database ([23f037022](https://github.com/powerhouse-inc/powerhouse/commit/23f037022))
+- **reactor:** fail startup on a projection worker whose init throws ([2d70a9c8d](https://github.com/powerhouse-inc/powerhouse/commit/2d70a9c8d))
+- **reactor:** report the hybrid host chain's batch metrics ([2715ea9a6](https://github.com/powerhouse-inc/powerhouse/commit/2715ea9a6))
+- **reactor:** bench viewer overview drops the timeline and calls the series table Benchmarks ([60c65ab79](https://github.com/powerhouse-inc/powerhouse/commit/60c65ab79))
+- **switchboard:** include reactor-group in the worker model sources ([7b25d06eb](https://github.com/powerhouse-inc/powerhouse/commit/7b25d06eb))
+- **switchboard:** match the worker model source path on either separator ([7b3de3b4f](https://github.com/powerhouse-inc/powerhouse/commit/7b3de3b4f))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5.1
+- Claude Opus 5
+- froid1911
+
 ## 6.2.2-dev.87 (2026-09-09)
 
 ### 🩹 Fixes
