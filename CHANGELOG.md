@@ -1,3 +1,24 @@
+## 6.2.3-dev.2 (2026-09-10)
+
+### 🚀 Features
+
+- **ph-cmd:** version-check service (stream, cache, notice hook) ([5ad1f63c3](https://github.com/powerhouse-inc/powerhouse/commit/5ad1f63c3))
+- **ph-cmd:** self-update service (install detection + execution) ([1fdaad620](https://github.com/powerhouse-inc/powerhouse/commit/1fdaad620))
+- **ph-cmd:** ph self-update command and outdated notice ([506336b32](https://github.com/powerhouse-inc/powerhouse/commit/506336b32))
+- **ph-cmd:** ph self-update and outdated-CLI notice ([#3001](https://github.com/powerhouse-inc/powerhouse/pull/3001))
+
+### 🩹 Fixes
+
+- **ci:** roll out prod registry on production releases ([354085855](https://github.com/powerhouse-inc/powerhouse/commit/354085855))
+- **design-system:** show fflate's error in the corrupt-archive upload story ([87559709a](https://github.com/powerhouse-inc/powerhouse/commit/87559709a))
+- **switchboard-lb:** keep a webhook token out of the logs and traces ([5cfdb6e93](https://github.com/powerhouse-inc/powerhouse/commit/5cfdb6e93))
+
+### ❤️ Thank You
+
+- acaldas
+- Frank @froid1911
+- froid1911
+
 ## 6.2.3-dev.1 (2026-09-10)
 
 ### 🚀 Features

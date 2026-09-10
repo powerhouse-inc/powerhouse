@@ -1,6 +1,6 @@
 {
   "name": "document-model",
-  "version": "6.2.3-dev.1",
+  "version": "6.2.3-dev.2",
   "license": "AGPL-3.0-only",
   "private": false,
   "files": [
@@ -60,8 +60,7 @@
     "zod": "catalog:"
   },
   "dependencies": {
-    "@powerhousedao/shared": "workspace:*",
-    "jszip": "^3.10.1"
+    "@powerhousedao/shared": "workspace:*"
   },
   "description": "Powerhouse document model — foundational data structure for local-first, event-sourced documents with typed operations, reducers, and GraphQL schema validation.",
   "keywords": [
