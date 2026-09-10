@@ -424,11 +424,9 @@ export function runRouteScopeTests(
       expect(await authed.text()).toBe("shhh");
     });
 
-    it("passes the resolved actor to the handler", async () => {
+    it("passes the resolved user to the handler", async () => {
       const scope = service({ authService: fakeAuthService() }).scopeFor("pkg");
-      scope.get("me", (_req, ctx) =>
-        Response.json({ user: ctx.actor?.user ?? null }),
-      );
+      scope.get("me", (_req, ctx) => Response.json({ user: ctx.user ?? null }));
 
       const res = await fetch(`${h.url}/api/pkg/me`, {
         headers: { authorization: "Bearer alice" },
@@ -437,14 +435,16 @@ export function runRouteScopeTests(
     });
 
     it("lets an anonymous caller through when the route allows it", async () => {
+      // No user, but auth is on: the pair tells this apart from a host with
+      // authentication disabled, where such a handler must refuse instead.
       const scope = service({ authService: fakeAuthService() }).scopeFor("pkg");
       scope.get("maybe", { auth: "renown-optional" }, (_req, ctx) =>
-        Response.json({ user: ctx.actor?.user ?? null }),
+        Response.json({ user: ctx.user ?? null, authEnabled: ctx.authEnabled }),
       );
 
       const res = await fetch(`${h.url}/api/pkg/maybe`);
       expect(res.status).toBe(200);
-      expect(await res.json()).toEqual({ user: null });
+      expect(await res.json()).toEqual({ user: null, authEnabled: true });
     });
 
     it("relays the auth service's own rejection", async () => {
@@ -460,7 +460,7 @@ export function runRouteScopeTests(
     it("treats every caller as anonymous when auth is disabled host-wide", async () => {
       const scope = service().scopeFor("pkg");
       scope.get("open", (_req, ctx) =>
-        Response.json({ authEnabled: ctx.actor?.authEnabled }),
+        Response.json({ authEnabled: ctx.authEnabled }),
       );
 
       const res = await fetch(`${h.url}/api/pkg/open`);
