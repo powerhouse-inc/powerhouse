@@ -41,14 +41,27 @@ local function run_token(uri)
 end
 
 describe("route.from_webhook_token", function()
+    local TOKEN = "0123456789abcdef0123456789abcdef"
+
+    it("never puts the token itself in the key", function()
+        -- The key reaches the access log, and the token is the endpoint's
+        -- whole credential.
+        local r = run_token("/webhooks/" .. TOKEN)
+        assert.are_not.equals(TOKEN, r.doc_id)
+        assert.is_nil(r.doc_id:find(TOKEN, 1, true))
+    end)
+
     it("keys on the token so one endpoint pins to one backend", function()
-        local r = run_token("/webhooks/0123456789abcdef0123456789abcdef")
-        assert.equals("0123456789abcdef0123456789abcdef", r.doc_id)
+        local a = run_token("/webhooks/" .. TOKEN)
+        local b = run_token("/webhooks/" .. TOKEN)
+        assert.equals(a.doc_id, b.doc_id)
+        assert.are_not.equals("", a.doc_id)
     end)
 
     it("keys off the last segment, so a BASE_PATH prefix still works", function()
-        local r = run_token("/base/webhooks/0123456789abcdef0123456789abcdef")
-        assert.equals("0123456789abcdef0123456789abcdef", r.doc_id)
+        local plain = run_token("/webhooks/" .. TOKEN)
+        local prefixed = run_token("/base/webhooks/" .. TOKEN)
+        assert.equals(plain.doc_id, prefixed.doc_id)
     end)
 
     it("distinct endpoints get distinct keys", function()
@@ -63,11 +76,12 @@ describe("route.from_webhook_token", function()
         assert.equals("", r.doc_id)
     end)
 
-    it("passes a malformed token through rather than judging its shape", function()
+    it("keys a malformed token rather than judging its shape", function()
         -- Whether a token is real is the origin's call: it answers unknown and
         -- malformed identically so a prober cannot tell them apart.
         local r = run_token("/webhooks/not-a-token")
-        assert.equals("not-a-token", r.doc_id)
+        assert.are_not.equals("", r.doc_id)
+        assert.are_not.equals("not-a-token", r.doc_id)
     end)
 end)
 

@@ -27,7 +27,10 @@ end
 -- with no final segment yields an empty key; the upstream answers 404 for it
 -- either way.
 function M.from_webhook_token()
-    ngx.var.doc_id = ngx.var.uri:match("([^/]+)$") or ""
+    local token = ngx.var.uri:match("([^/]+)$")
+    -- Hashed, not raw: the token is the endpoint's whole credential, and this
+    -- value reaches the access log. The digest is stable, so pinning holds.
+    ngx.var.doc_id = token and ngx.md5(token) or ""
 end
 
 -- Route key for package REST routes (`/api/<package>/…`).
