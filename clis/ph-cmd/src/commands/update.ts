@@ -5,7 +5,7 @@ import { boolean, command, flag, optional } from "cmd-ts";
 export const update = command({
   name: "update",
   description:
-    "Update your powerhouse dependencies to their latest tagged version",
+    "Update your Powerhouse dependencies and installed packages to their latest versions",
   args: {
     skipInstall: flag({
       type: optional(boolean),
@@ -13,10 +13,16 @@ export const update = command({
       short: "s",
       description: "Skip running `install` with your package manager",
     }),
+    updatePackages: flag({
+      type: optional(boolean),
+      long: "update-packages",
+      description:
+        "Auto-update installed packages (powerhouse.config.json) to their newest same-major version",
+    }),
     ...debugArgs,
   },
   handler: async (args) => {
-    const { skipInstall, debug } = args;
+    const { skipInstall, updatePackages, debug } = args;
     if (debug) {
       console.log({ args });
     }
@@ -26,12 +32,17 @@ export const update = command({
       { readPackage },
       { writePackage },
       { getTagFromVersion, logVersionUpdate, parsePackageVersion, runCmd },
+      { resolveRegistryUrl },
+      { updateInstalledPackages },
     ] = await Promise.all([
       import("chalk"),
       import("read-pkg"),
       import("write-package"),
       import("@powerhousedao/shared/clis"),
+      import("@powerhousedao/shared/registry"),
+      import("./update-packages.js"),
     ]);
+    const registryUrl = resolveRegistryUrl({ projectPath: process.cwd() });
     const packageJson = await readPackage();
 
     if (packageJson.dependencies) {
@@ -104,10 +115,19 @@ export const update = command({
 
     console.log(chalk.green(`\n✅ Project updated successfully\n`));
 
-    if (skipInstall) return;
-
+    // Detect the package manager once; it backs the install below and the
+    // update of `local` (node_modules) installed packages.
     const { detect } = await import("package-manager-detector/detect");
     const packageManager = await detect();
+
+    await updateInstalledPackages({
+      registryUrl,
+      auto: updatePackages ?? false,
+      skipInstall: skipInstall ?? false,
+      packageManager,
+    });
+
+    if (skipInstall) return;
 
     if (!packageManager) {
       throw new Error(
