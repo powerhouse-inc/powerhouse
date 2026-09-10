@@ -24,6 +24,12 @@ import { createTestSyncStorage } from "../../factories.js";
 const DRIVE_ID = "drive-bound";
 const COLLECTION = DriveCollectionId.forDrive(DRIVE_ID);
 const STALE_WINDOW_MS = 50;
+/**
+ * For tests keeping a remote alive across a batch: notePoll() through
+ * stalePollAgeMs runs on the real clock, so the survivor needs a window it
+ * cannot age out of mid-batch.
+ */
+const LIVE_WINDOW_MS = 1_000;
 
 /**
  * The serving channel: nothing takes an entry out of its outbox until a poll
@@ -125,8 +131,8 @@ describe("bounding the entries one remote's outbox holds", () => {
     await buildManager(config);
   }
 
-  function sleepPastWindow(): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, STALE_WINDOW_MS + 30));
+  function sleepPastWindow(windowMs = STALE_WINDOW_MS): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, windowMs + 100));
   }
 
   beforeEach(async () => {
@@ -319,9 +325,13 @@ describe("bounding the entries one remote's outbox holds", () => {
   });
 
   it("keeps a serving remote whose holder polled again", async () => {
+    await rebuildManager({
+      maxHeldOperationsPerRemote: 3,
+      staleRemotePollWindowMs: LIVE_WINDOW_MS,
+    });
     await seedAndAdd(6, "polling");
 
-    await sleepPastWindow();
+    await sleepPastWindow(LIVE_WINDOW_MS);
     syncManager.getByName("remote-bound").channel.notePoll();
     await emitWriteReady("doc-7", 7);
 
@@ -329,10 +339,14 @@ describe("bounding the entries one remote's outbox holds", () => {
   });
 
   it("removes one stale remote without disturbing another on the same collection", async () => {
+    await rebuildManager({
+      maxHeldOperationsPerRemote: 3,
+      staleRemotePollWindowMs: LIVE_WINDOW_MS,
+    });
     await seedAndAdd(6, "polling");
     await addRemote("remote-live", "polling");
 
-    await sleepPastWindow();
+    await sleepPastWindow(LIVE_WINDOW_MS);
     syncManager.getByName("remote-live").channel.notePoll();
     await emitWriteReady("doc-7", 7);
 
