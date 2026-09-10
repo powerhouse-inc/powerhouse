@@ -5,10 +5,22 @@ export interface PackageInfo {
   manifest: Manifest | null;
   documentTypes: string[];
   version?: string;
+  /** Install spec the user requested (name, name@tag, or name@version); present
+   *  on installed packages, used to pick the update stream. Absent for legacy
+   *  entries. */
+  spec?: string;
   /** Mapping of dist-tag → version (e.g. {latest: "1.0.0", dev: "1.1.0-dev.3"}). */
   distTags?: Record<string, string>;
   /** All published versions of the package, sorted ascending by semver. */
   versions?: string[];
+  /**
+   * The newest version the registry currently reports for this package (the
+   * `version` field of list items / single-package responses). Distinct from
+   * {@link version}, which holds the installed version on installed rows.
+   * Every registry reports it, even ones without dist-tag support, so it is
+   * the fallback target for the `latest` update stream.
+   */
+  latestVersion?: string;
   /** Accounts that own the name (publish/unpublish rights). Present only on
    *  registries with the Postgres-backed auth; omitted when untracked. */
   owners?: string[];
