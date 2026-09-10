@@ -290,6 +290,7 @@ export const PackageManagerListItem = (props: {
           open={isDropdownMenuOpen}
         >
           <button
+            aria-label="Package actions"
             className="group absolute top-3 right-3"
             onClick={(e) => {
               e.stopPropagation();
