@@ -20,6 +20,11 @@ import type http from "node:http";
 import path from "node:path";
 import { match } from "path-to-regexp";
 import type { WebSocketServer } from "ws";
+import {
+  CORE_PACKAGE_NAME,
+  HttpRouteService,
+  type IHttpScope,
+} from "../http/index.js";
 import { debounce } from "../packages/util.js";
 import type { AuthService } from "../services/auth.service.js";
 import type { IAuthorizationService } from "../services/authorization.service.js";
@@ -46,7 +51,7 @@ import type {
   GatewayContextFactory,
   IGatewayAdapter,
   IHttpAdapter,
-  RouteHandle,
+  AdapterRouteHandle,
   SubgraphDefinition,
   WsDisposer,
 } from "./gateway/types.js";
@@ -135,10 +140,10 @@ export class GraphQLManager {
   >();
 
   /** subgraphPath → the http adapter handle of its mounted route. */
-  private readonly subgraphRouteHandles = new Map<string, RouteHandle>();
+  private readonly subgraphRouteHandles = new Map<string, AdapterRouteHandle>();
 
   /** Handle of the currently mounted supergraph SSE route, if any. */
-  private sseRouteHandle: RouteHandle | undefined;
+  private sseRouteHandle: AdapterRouteHandle | undefined;
 
   /**
    * Package name → the subgraph instances registered from it, keyed by
@@ -161,6 +166,8 @@ export class GraphQLManager {
    */
   readonly reactorDriveClient?: IDriveClient;
   private readonly authorizationService: IAuthorizationService;
+  /** Route service in use: the injected one, or one built on first need. */
+  #fallbackRoutes: HttpRouteService | undefined;
 
   constructor(
     private readonly path: string,
@@ -180,6 +187,7 @@ export class GraphQLManager {
     authorizationService?: IAuthorizationService,
     reactorDriveClient?: IDriveClient,
     private readonly syncServingGate?: SyncScopeGate,
+    private readonly httpRoutes?: HttpRouteService,
   ) {
     if (!authorizationService) {
       throw new Error("GraphQLManager requires an authorizationService");
@@ -379,6 +387,7 @@ export class GraphQLManager {
       }
       try {
         const subgraphInstance = new DocumentModelSubgraph(documentModel, {
+          http: this.scopeForPackage(CORE_PACKAGE_NAME),
           relationalDb: this.relationalDb,
           analyticsStore: this.analyticsStore,
           reactorClient: this.reactorClient,
@@ -520,7 +529,7 @@ export class GraphQLManager {
 
         const routeHandle = this.subgraphRouteHandles.get(subgraphPath);
         if (routeHandle !== undefined) {
-          this.httpAdapter.unmount(routeHandle);
+          routeHandle.dispose();
           this.subgraphRouteHandles.delete(subgraphPath);
         }
 
@@ -583,10 +592,29 @@ export class GraphQLManager {
   }
 
   /**
+   * The HTTP scope a package's subgraphs get. Falls back to a scope over a
+   * throwaway service when route hosting is not configured, so a subgraph can
+   * always rely on `args.http` existing.
+   */
+  scopeForPackage(packageName: string): IHttpScope {
+    this.#fallbackRoutes ??=
+      this.httpRoutes ??
+      new HttpRouteService({
+        httpAdapter: this.httpAdapter,
+        basePath: this.path,
+        authService: this.authService,
+      });
+    // Non-throwing: a package key with no usable name yields a scope that
+    // refuses registrations, rather than taking the host down at boot.
+    return this.#fallbackRoutes.scopeForOrNull(packageName);
+  }
+
+  /**
    * Register a subgraph class. `packageName` labels the resulting instance
    * with its contributing package so the instance can be torn down when the
    * package is removed or drops the subgraph (see unregisterPackage and
-   * prunePackageSubgraphs).
+   * prunePackageSubgraphs), and decides the namespace its REST routes and
+   * webhooks live under.
    */
   async registerSubgraph(
     subgraph: SubgraphClass,
@@ -595,6 +623,11 @@ export class GraphQLManager {
     packageName?: string,
   ) {
     const subgraphInstance = new subgraph({
+      // Left undefined, the subgraph is core rather than contributed, and its
+      // routes hang off reactor-api's own namespace. Not defaulted in the
+      // parameter, because `undefined` is what keeps a core subgraph out of
+      // `packageSubgraphs` and so out of package teardown.
+      http: this.scopeForPackage(packageName ?? CORE_PACKAGE_NAME),
       relationalDb: this.relationalDb,
       analyticsStore: this.analyticsStore,
       reactorClient: this.reactorClient,
@@ -622,12 +655,36 @@ export class GraphQLManager {
    * package has no registered subgraphs.
    */
   async unregisterPackage(packageName: string): Promise<void> {
+    // Routes and webhooks belong to the package, not to its subgraphs, so this
+    // runs before the early return below: a package may contribute a processor
+    // that registers routes and no subgraph at all, and its routes still have
+    // to go. A route that outlives its package answers against unloaded code.
+    this.#disposeHttpScope(packageName);
+
     const byName = this.packageSubgraphs.get(packageName);
     if (!byName || byName.size === 0) return;
     for (const instance of Array.from(byName.values())) {
       await this.#removeSubgraphInstance(instance);
     }
     await this.updateRouter();
+  }
+
+  /**
+   * Releases the package's HTTP scope: every route it mounted, and its webhook
+   * registrations. Idempotent, and silent for a package that never had one.
+   */
+  #disposeHttpScope(packageName: string): void {
+    const routes = this.#fallbackRoutes ?? this.httpRoutes;
+    try {
+      routes?.disposeScope(packageName);
+    } catch (error) {
+      // Teardown must not be the thing that fails: a package whose name never
+      // resolved to a namespace has nothing mounted to release anyway.
+      this.logger.warn(
+        `Failed to release HTTP routes for "${packageName}": @error`,
+        error,
+      );
+    }
   }
 
   /**
@@ -1062,7 +1119,7 @@ export class GraphQLManager {
       // No subscription-capable subgraphs left: drop the SSE route rather
       // than keep serving an empty merged schema.
       if (this.sseRouteHandle !== undefined) {
-        this.httpAdapter.unmount(this.sseRouteHandle);
+        this.sseRouteHandle.dispose();
         this.sseRouteHandle = undefined;
       }
       return;
@@ -1097,7 +1154,7 @@ export class GraphQLManager {
     // This handler is re-created on every router update: replace the
     // previous SSE route instead of piling another one on top of it.
     if (this.sseRouteHandle !== undefined) {
-      this.httpAdapter.unmount(this.sseRouteHandle);
+      this.sseRouteHandle.dispose();
     }
     this.sseRouteHandle = this.httpAdapter.mount(ssePath, handler, {
       exact: true,

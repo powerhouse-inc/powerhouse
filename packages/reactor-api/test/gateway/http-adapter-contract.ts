@@ -203,9 +203,9 @@ export function runHttpAdapterContractTests(
     });
   });
 
-  // ── unmount() ─────────────────────────────────────────────────────────────
+  // ── route removal ─────────────────────────────────────────────────────────────
 
-  describe(`IHttpAdapter contract (${adapterName}) – unmount()`, () => {
+  describe(`IHttpAdapter contract (${adapterName}) – route removal`, () => {
     let h: HttpAdapterHarness;
 
     beforeEach(async () => {
@@ -226,7 +226,7 @@ export function runHttpAdapterContractTests(
       const handle = h.adapter.mount("/temp", echoHandler("temp"));
       expect((await fetch(`${h.url}/temp`)).status).toBe(200);
 
-      h.adapter.unmount(handle);
+      handle.dispose();
 
       expect((await post("/temp")).status).toBe(404);
     });
@@ -235,7 +235,7 @@ export function runHttpAdapterContractTests(
       const handle = h.adapter.getRoute("/health", () => new Response("OK"));
       expect((await fetch(`${h.url}/health`)).status).toBe(200);
 
-      h.adapter.unmount(handle);
+      handle.dispose();
 
       expect((await fetch(`${h.url}/health`)).status).toBe(404);
     });
@@ -249,7 +249,7 @@ export function runHttpAdapterContractTests(
       const before = await post("/node");
       expect(before.status).toBe(200);
 
-      h.adapter.unmount(handle);
+      handle.dispose();
 
       expect((await post("/node")).status).toBe(404);
     });
@@ -262,19 +262,19 @@ export function runHttpAdapterContractTests(
       // exact: true is a prefix route: sub-paths are served too.
       expect((await fetch(`${h.url}/sse/child`)).status).toBe(200);
 
-      h.adapter.unmount(handle);
+      handle.dispose();
 
       expect((await post("/sse")).status).toBe(404);
       expect((await fetch(`${h.url}/sse/child`)).status).toBe(404);
     });
 
-    it("unmounting a replaced route's stale handle is a no-op", async () => {
+    it("disposing a replaced route's stale handle is a no-op", async () => {
       const first = h.adapter.mount("/temp", echoHandler("first"));
       const second = h.adapter.mount("/temp", echoHandler("second"));
 
       // Re-mounting replaces the entry; the old handle is dead.
-      h.adapter.unmount(first);
-      h.adapter.unmount(first); // idempotent
+      first.dispose();
+      first.dispose(); // idempotent
 
       const res = await post("/temp");
       expect(res.status).toBe(200);
@@ -282,16 +282,25 @@ export function runHttpAdapterContractTests(
         "second",
       );
 
-      h.adapter.unmount(second);
+      second.dispose();
       expect((await post("/temp")).status).toBe(404);
     });
 
-    it("is a no-op for an unknown handle", async () => {
-      h.adapter.mount("/keep", echoHandler("keep"));
+    it("a double dispose cannot take back a later registration", async () => {
+      // Why a handle is an object rather than an id: it closes over its own
+      // entry, so it cannot name another. An id drawn from a counter could be
+      // reused, and a double dispose would then free somebody else's route.
+      const stale = h.adapter.mount("/slot", echoHandler("first"));
+      stale.dispose();
 
-      expect(() => h.adapter.unmount(99999)).not.toThrow();
+      h.adapter.mount("/slot", echoHandler("second"));
+      stale.dispose();
 
-      expect((await post("/keep")).status).toBe(200);
+      const res = await post("/slot");
+      expect(res.status).toBe(200);
+      expect(((await res.json()) as { handler: string }).handler).toBe(
+        "second",
+      );
     });
   });
 

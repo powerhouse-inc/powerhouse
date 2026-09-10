@@ -1,3 +1,50 @@
+## 6.2.3-dev.1 (2026-09-10)
+
+### 🚀 Features
+
+- **shared:** add install-spec parsing and update-target resolution ([#2357](https://github.com/powerhouse-inc/powerhouse/issues/2357))
+
+### ❤️ Thank You
+
+- froid1911
+
+## 6.2.3-dev.0 (2026-09-10)
+
+### 🚀 Features
+
+- **switchboard-lb:** route the webhook and package-REST classes ([df18b32a7](https://github.com/powerhouse-inc/powerhouse/commit/df18b32a7))
+- **reactor-api:** host package HTTP routes and webhooks in core ([235829f91](https://github.com/powerhouse-inc/powerhouse/commit/235829f91))
+
+### 🩹 Fixes
+
+- **docker:** make the switchboard load harness buildable again ([cb65fac68](https://github.com/powerhouse-inc/powerhouse/commit/cb65fac68))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.2-dev.88 (2026-09-10)
+
+### 🚀 Features
+
+- add standalone stale-bot tool (ported sweep + headless driver) ([ed2846a6a](https://github.com/powerhouse-inc/powerhouse/commit/ed2846a6a))
+- **switchboard:** run built-in read models in a projection worker behind REACTOR_PROJECTION_WORKER ([265526877](https://github.com/powerhouse-inc/powerhouse/commit/265526877))
+- **switchboard:** resolve projection worker options from env ([6d3830882](https://github.com/powerhouse-inc/powerhouse/commit/6d3830882))
+
+### 🩹 Fixes
+
+- use labels[] in stale-bot addLabel (label field 422s) ([f40b4e0ad](https://github.com/powerhouse-inc/powerhouse/commit/f40b4e0ad))
+- **switchboard:** match the worker model source path on either separator ([7b3de3b4f](https://github.com/powerhouse-inc/powerhouse/commit/7b3de3b4f))
+- **reactor:** fail startup on a projection worker whose init throws ([2d70a9c8d](https://github.com/powerhouse-inc/powerhouse/commit/2d70a9c8d))
+- **switchboard:** include reactor-group in the worker model sources ([7b25d06eb](https://github.com/powerhouse-inc/powerhouse/commit/7b25d06eb))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5.1
+- Claude Opus 5
+- froid1911
+
 ## 6.2.2-dev.87 (2026-09-09)
 
 ### 🩹 Fixes

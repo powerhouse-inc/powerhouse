@@ -219,6 +219,16 @@ export class BrowserPackageManager implements IPackageManager {
     return this.#storage.get(packageName)?.version;
   }
 
+  /**
+   * The spec the user requested when this package was installed (e.g.
+   * `name@dev` or `name@6.2.1`). Undefined for bare-name installs, legacy
+   * entries, and local packages — the Package Manager treats that as the
+   * `latest` stream when picking update targets.
+   */
+  getPackageSpec(packageName: string): string | undefined {
+    return this.#storage.get(packageName)?.spec;
+  }
+
   async addPackage(packageSpec: string): Promise<PackageManagerInstallResult> {
     // `packageSpec` may include a `@tag` / `@version` suffix (e.g. user picked
     // a specific version in the package manager UI, or re-hydrated on reload

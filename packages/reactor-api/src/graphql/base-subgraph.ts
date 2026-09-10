@@ -42,6 +42,8 @@ export class BaseSubgraph implements ISubgraph {
     }
   `;
   reactorClient: IReactorClient;
+  /** This package's namespaced slice of the HTTP surface. */
+  readonly http: SubgraphArgs["http"];
   graphqlManager: GraphQLManager;
   relationalDb: IRelationalDb;
   syncManager: ISyncManager;
@@ -65,6 +67,7 @@ export class BaseSubgraph implements ISubgraph {
     this.#resolveCanonical = createCanonicalDocumentIdResolver(
       args.reactorClient,
     );
+    this.http = args.http;
     this.reactorClient = args.reactorClient;
     this.graphqlManager = args.graphqlManager;
     this.relationalDb = args.relationalDb;

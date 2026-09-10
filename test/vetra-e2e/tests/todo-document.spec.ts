@@ -586,9 +586,13 @@ test("Change registry URL at runtime and install from new registry", async () =>
     .filter({ has: page.locator('h3:has-text("test-package-vetra")') });
   await expect(installedRow).toBeVisible({ timeout: 30_000 });
 
-  // The 3-dot menu button is the only <button> on the row; the dropdown
-  // emits a "Uninstall" menu item once open.
-  const rowDotsButton = installedRow.locator("button").first();
+  // The row's 3-dot menu button opens the dropdown that carries the
+  // "Uninstall" menu item. Target it by accessible name: the row also
+  // carries a version-picker button once its registry metadata has loaded,
+  // so "first button" is no longer unambiguous.
+  const rowDotsButton = installedRow.getByRole("button", {
+    name: "Package actions",
+  });
   await rowDotsButton.click();
   const uninstallMenuItem = page.getByText("Uninstall", { exact: true });
   await expect(uninstallMenuItem).toBeVisible({ timeout: 10_000 });

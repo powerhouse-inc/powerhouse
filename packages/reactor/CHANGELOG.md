@@ -1,3 +1,54 @@
+## 6.2.3-dev.1 (2026-09-10)
+
+### 🚀 Features
+
+- **shared:** add install-spec parsing and update-target resolution ([#2357](https://github.com/powerhouse-inc/powerhouse/issues/2357))
+
+### ❤️ Thank You
+
+- froid1911
+
+## 6.2.3-dev.0 (2026-09-10)
+
+### 🚀 Features
+
+- **switchboard-lb:** route the webhook and package-REST classes ([df18b32a7](https://github.com/powerhouse-inc/powerhouse/commit/df18b32a7))
+
+### 🩹 Fixes
+
+- **docker:** make the switchboard load harness buildable again ([cb65fac68](https://github.com/powerhouse-inc/powerhouse/commit/cb65fac68))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.2-dev.88 (2026-09-10)
+
+### 🚀 Features
+
+- add standalone stale-bot tool (ported sweep + headless driver) ([ed2846a6a](https://github.com/powerhouse-inc/powerhouse/commit/ed2846a6a))
+- **reactor:** bench viewer draws a renamed case as one line ([a9f7607a1](https://github.com/powerhouse-inc/powerhouse/commit/a9f7607a1))
+- **reactor:** createHybridProjectionCoordinatorFactory ([61a2ed26f](https://github.com/powerhouse-inc/powerhouse/commit/61a2ed26f))
+- **reactor:** add HybridProjectionCoordinator to run host read models behind a projection worker ([b69928976](https://github.com/powerhouse-inc/powerhouse/commit/b69928976))
+- **reactor:** withReadModelCoordinatorFactory and a projection-manager creator on the builder ([4ce813dad](https://github.com/powerhouse-inc/powerhouse/commit/4ce813dad))
+- **reactor:** onReadReady hook and dead-shard-safe drain on ProjectionShardManager ([af41b2cc1](https://github.com/powerhouse-inc/powerhouse/commit/af41b2cc1))
+
+### 🩹 Fixes
+
+- use labels[] in stale-bot addLabel (label field 422s) ([f40b4e0ad](https://github.com/powerhouse-inc/powerhouse/commit/f40b4e0ad))
+- **reactor:** bench viewer overview drops the timeline and calls the series table Benchmarks ([60c65ab79](https://github.com/powerhouse-inc/powerhouse/commit/60c65ab79))
+- **reactor:** report the hybrid host chain's batch metrics ([2715ea9a6](https://github.com/powerhouse-inc/powerhouse/commit/2715ea9a6))
+- **reactor:** fail startup on a projection worker whose init throws ([2d70a9c8d](https://github.com/powerhouse-inc/powerhouse/commit/2d70a9c8d))
+- **reactor:** reject a projection worker db that is not the parent's database ([23f037022](https://github.com/powerhouse-inc/powerhouse/commit/23f037022))
+- **reactor:** projection shard creation rejects live-module-only models ([5c9da1a45](https://github.com/powerhouse-inc/powerhouse/commit/5c9da1a45))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5.1
+- Claude Opus 5
+- froid1911
+
 ## 6.2.2-dev.87 (2026-09-09)
 
 ### 🩹 Fixes

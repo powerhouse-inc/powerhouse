@@ -895,6 +895,7 @@ async function initServer(
       path: graphqlManager.getBasePath(),
       authorizationService: graphqlManager.getAuthorizationService(),
       packageManagementService,
+      http: graphqlManager.scopeForPackage("@powerhousedao/switchboard"),
     });
 
     lateSubgraphs.push(

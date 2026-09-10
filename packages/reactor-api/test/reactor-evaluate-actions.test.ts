@@ -324,6 +324,7 @@ describe("the creator carve-out over GraphQL", () => {
       authorizationService: permitEverything,
       relationalDb: {} as never,
       analyticsStore: {} as never,
+      http: {} as never,
       graphqlManager: {
         driveOwnershipCache: {
           has: () => false,

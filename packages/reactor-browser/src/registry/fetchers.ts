@@ -65,3 +65,21 @@ export async function getPackagesByDocumentType(
   if (!res.ok) throw new Error(`Registry error: HTTP ${res.status}`);
   return (await res.json()) as string[];
 }
+
+/**
+ * Fetch full metadata (versions + dist-tags) for one package from the
+ * single-package endpoint. Returns null when the package no longer exists
+ * upstream.
+ */
+export async function getPackageInfo(
+  registryUrl: string,
+  name: string,
+): Promise<PackageInfo | null> {
+  const encodedName = encodeURIComponent(name);
+  const res = await fetch(
+    `${trimTrailingSlash(registryUrl)}/packages/${encodedName}`,
+  );
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`Registry error: HTTP ${res.status}`);
+  return (await res.json()) as PackageInfo;
+}

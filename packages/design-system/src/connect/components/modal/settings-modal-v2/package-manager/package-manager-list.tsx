@@ -3,6 +3,10 @@ import type {
   RegistryPackage,
   RegistryPackageList,
 } from "@powerhousedao/shared/registry";
+import {
+  getUpdateTarget,
+  parseInstallSpec,
+} from "@powerhousedao/shared/registry/updates";
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { twMerge } from "tailwind-merge";
@@ -12,6 +16,7 @@ import type { VersionSelection } from "./version-picker.js";
 import {
   VersionPicker,
   resolveDefaultVersionSelection,
+  resolveInstalledVersionSelection,
 } from "./version-picker.js";
 
 const PackageDetail: React.FC<{ label: string; value: ReactNode }> = ({
@@ -41,21 +46,33 @@ export const PackageManagerListItem = (props: {
     props;
   const [isDropdownMenuOpen, setIsDropdownMenuOpen] = useState(false);
 
-  const canPickVersion =
-    registryPackage.status === "available" ||
-    registryPackage.status === "dismissed";
+  const isInstalled = registryPackage.status === "registry-install";
   const hasVersionMetadata =
     (registryPackage.distTags &&
       Object.keys(registryPackage.distTags).length > 0) ||
     (registryPackage.versions?.length ?? 0) > 0;
+  // Available/dismissed rows have always been pickable; installed rows
+  // become pickable once their registry metadata (versions/dist-tags) has
+  // been lazy-loaded for the row.
+  const canPickVersion =
+    registryPackage.status === "available" ||
+    registryPackage.status === "dismissed" ||
+    (isInstalled && hasVersionMetadata);
 
   const [selected, setSelected] = useState<VersionSelection>(() =>
-    resolveDefaultVersionSelection({
-      distTags: registryPackage.distTags,
-      versions: registryPackage.versions,
-      version: registryPackage.version,
-      preferredTag,
-    }),
+    isInstalled && hasVersionMetadata
+      ? resolveInstalledVersionSelection({
+          spec: registryPackage.spec,
+          distTags: registryPackage.distTags,
+          versions: registryPackage.versions,
+          version: registryPackage.version,
+        })
+      : resolveDefaultVersionSelection({
+          distTags: registryPackage.distTags,
+          versions: registryPackage.versions,
+          version: registryPackage.version,
+          preferredTag,
+        }),
   );
 
   // Re-sync when the typed tag changes (e.g. user edits the search query).
@@ -70,12 +87,88 @@ export const PackageManagerListItem = (props: {
     }
   }, [preferredTag, registryPackage.distTags, registryPackage.versions]);
 
+  // Installed rows: re-preselect when their metadata first arrives (lazy
+  // load) or the installed version/spec changes (after an update). None of
+  // these deps change when the user moves the picker, so a deliberate
+  // selection is never clobbered.
+  useEffect(() => {
+    if (!isInstalled || !hasVersionMetadata) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSelected(
+      resolveInstalledVersionSelection({
+        spec: registryPackage.spec,
+        distTags: registryPackage.distTags,
+        versions: registryPackage.versions,
+        version: registryPackage.version,
+      }),
+    );
+  }, [
+    isInstalled,
+    hasVersionMetadata,
+    registryPackage.spec,
+    registryPackage.version,
+    registryPackage.distTags,
+    registryPackage.versions,
+  ]);
+
+  // Newer version on the stream the user is on (the installed tag, or
+  // `latest` for bare/pinned installs — the latter resolves from the
+  // registry's reported newest version even when the full dist-tag map is
+  // absent). Undefined when up to date or the target is unknown.
+  const updateTarget = isInstalled
+    ? getUpdateTarget(
+        { version: registryPackage.version, spec: registryPackage.spec },
+        {
+          distTags: registryPackage.distTags,
+          latestVersion: registryPackage.latestVersion,
+        },
+      )
+    : undefined;
+
+  // Version the picker currently points at, resolved through dist-tags
+  // when a tag is selected.
+  const resolvedSelected =
+    selected.kind === "tag"
+      ? registryPackage.distTags?.[selected.value]
+      : selected.value;
+  const selectionChanged =
+    isInstalled &&
+    registryPackage.version !== undefined &&
+    resolvedSelected !== undefined &&
+    resolvedSelected !== registryPackage.version;
+
+  // What the Update action installs: the user's explicit picker choice when
+  // they changed it, otherwise the stream target — the installed tag
+  // (advances the stream) for tag installs, the target version (re-pins)
+  // for bare/pinned installs.
+  const updateSpec = isInstalled
+    ? selectionChanged
+      ? buildPackageSpec(registryPackage.name, selected.value)
+      : (() => {
+          if (!updateTarget) return undefined;
+          const parsed = parseInstallSpec(registryPackage.spec);
+          return parsed.kind === "tag"
+            ? buildPackageSpec(registryPackage.name, parsed.value)
+            : buildPackageSpec(registryPackage.name, updateTarget);
+        })()
+    : undefined;
+
   const installDropdownItem = {
     id: "install",
     label: "Install",
     icon: <Icon name="DownloadFile" />,
     className: "text-foreground",
   } as const;
+
+  const updateDropdownItem =
+    isInstalled && updateSpec !== undefined
+      ? {
+          id: "update",
+          label: updateTarget !== undefined ? "Update" : "Reinstall",
+          icon: <Icon name="Reload" />,
+          className: "text-foreground",
+        }
+      : undefined;
 
   const uninstallDropdownItem = {
     id: "uninstall",
@@ -86,10 +179,12 @@ export const PackageManagerListItem = (props: {
 
   function getDropdownItems() {
     return [
-      canPickVersion ? installDropdownItem : undefined,
-      registryPackage.status === "registry-install"
-        ? uninstallDropdownItem
+      registryPackage.status === "available" ||
+      registryPackage.status === "dismissed"
+        ? installDropdownItem
         : undefined,
+      updateDropdownItem,
+      isInstalled ? uninstallDropdownItem : undefined,
     ].filter((item) => item !== undefined);
   }
 
@@ -105,18 +200,26 @@ export const PackageManagerListItem = (props: {
         <h3 className="font-semibold text-foreground">
           {registryPackage.name}
         </h3>
-        {canPickVersion && hasVersionMetadata ? (
+        {canPickVersion && hasVersionMetadata && (
           <VersionPicker
             distTags={registryPackage.distTags}
             versions={registryPackage.versions}
             selected={selected}
             onChange={setSelected}
+            installedVersion={registryPackage.version ?? undefined}
           />
-        ) : registryPackage.version ? (
+        )}
+        {updateTarget && (
+          <span className="inline-flex items-center gap-1 rounded-full border border-border bg-muted px-2 py-0.5 text-[11px] font-medium text-foreground">
+            <Icon name="ArrowUp" size={10} className="text-muted-foreground" />
+            Update available → v{updateTarget}
+          </span>
+        )}
+        {!(canPickVersion && hasVersionMetadata) && registryPackage.version && (
           <span className="text-xs font-normal text-muted-foreground">
             v{registryPackage.version}
           </span>
-        ) : null}
+        )}
       </div>
       {registryPackage.manifest !== null &&
         (() => {
@@ -175,12 +278,19 @@ export const PackageManagerListItem = (props: {
               onInstall(spec).catch(console.error);
               return;
             }
+            if (id === "update") {
+              if (updateSpec !== undefined) {
+                onInstall(updateSpec).catch(console.error);
+              }
+              return;
+            }
             onUninstall(registryPackage.name);
           }}
           onOpenChange={setIsDropdownMenuOpen}
           open={isDropdownMenuOpen}
         >
           <button
+            aria-label="Package actions"
             className="group absolute top-3 right-3"
             onClick={(e) => {
               e.stopPropagation();

@@ -16,8 +16,10 @@ import type { ReadableStream as WebReadableStream } from "node:stream/web";
 import { match, type MatchFunction, type ParamData } from "path-to-regexp";
 import type {
   FetchHandler,
+  HttpMethod,
   IHttpAdapter,
-  RouteHandle,
+  NodeRouteOptions,
+  AdapterRouteHandle,
   TlsOptions,
 } from "./types.js";
 import { normalizePath } from "./path-normalize.js";
@@ -50,6 +52,8 @@ type RouteEntry =
       path: string;
       matcher: MatchFunction<ParamData>;
       handler: NodeHandler;
+      /** Dispatched ahead of the body parsers, with the stream unread. */
+      rawBody: boolean;
     };
 
 export class ExpressHttpAdapter implements IHttpAdapter {
@@ -65,7 +69,7 @@ export class ExpressHttpAdapter implements IHttpAdapter {
    * method, for node routes) replaces the old entry, so re-mounting is
    * last-write-wins without accumulating.
    */
-  readonly #routes = new Map<RouteHandle, RouteEntry>();
+  readonly #routes = new Map<number, RouteEntry>();
   #nextHandle = 0;
 
   constructor(existingApp?: Express) {
@@ -91,24 +95,26 @@ export class ExpressHttpAdapter implements IHttpAdapter {
   }
 
   mountNodeRoute(
-    method: "DELETE" | "GET" | "HEAD" | "POST" | "PUT",
+    method: HttpMethod,
     path: string,
     handler: (
       req: http.IncomingMessage,
       res: http.ServerResponse,
       body?: unknown,
     ) => void | Promise<void>,
-  ): RouteHandle {
+    { rawBody = false, prefix = false }: NodeRouteOptions = {},
+  ): AdapterRouteHandle {
     this.#replaceDuplicates("node", path, method.toUpperCase());
     const handle = this.#nextHandle++;
     this.#routes.set(handle, {
       kind: "node",
       method: method.toUpperCase(),
       path,
-      matcher: match(normalizePath(path)),
+      matcher: match(normalizePath(path), { end: !prefix }),
+      rawBody,
       handler,
     });
-    return handle;
+    return { dispose: () => this.#routes.delete(handle) };
   }
 
   setupMiddleware({
@@ -119,6 +125,15 @@ export class ExpressHttpAdapter implements IHttpAdapter {
     bodyLimit?: string;
   }): void {
     this.#router.use(cors(corsOptions));
+
+    // Ahead of the parsers: a raw route's whole point is that nothing has read
+    // the stream. Behind them, `req` is a consumed stream and only a
+    // re-encoded `req.body` survives — which cannot carry a signature over the
+    // octets the client actually sent.
+    this.#router.use((req, res, next) => {
+      this.#dispatchNodeRoute(req, res, next, true);
+    });
+
     this.#router.use(bodyParser.json({ limit: bodyLimit }));
     this.#router.use(
       bodyParser.urlencoded({ extended: true, limit: bodyLimit }),
@@ -131,13 +146,12 @@ export class ExpressHttpAdapter implements IHttpAdapter {
     this.#router.use((req, res, next) => {
       const pathname = req.path;
 
-      // Fetch routes dispatch first: the pre-refactor in-router dispatcher
-      // also took precedence over the app-level routes.
-      for (const entry of this.#routes.values()) {
-        if (entry.kind !== "fetch" || !entry.matcher(pathname)) continue;
-        this.#serveFetchHandler(entry.handler, req, res, next);
-        return;
-      }
+      // Node routes first, then GET routes, then Fetch mounts — the same
+      // order the Fastify adapter uses. A node route is the most specific
+      // registration there is (method plus exact path), while a Fetch mount is
+      // often a prefix; letting the prefix win would silently shadow an exact
+      // route, and would do it in only one of the two adapters.
+      if (this.#dispatchNodeRoute(req, res, () => undefined, false)) return;
 
       if (req.method === "GET" || req.method === "HEAD") {
         for (const entry of this.#routes.values()) {
@@ -148,14 +162,8 @@ export class ExpressHttpAdapter implements IHttpAdapter {
       }
 
       for (const entry of this.#routes.values()) {
-        if (entry.kind !== "node") continue;
-        if (entry.method !== req.method) continue;
-        const matched = entry.matcher(pathname);
-        if (!matched) continue;
-        req.params = matched.params as Record<string, string>;
-        // Fire-and-forget, as before: the node handler manages its own
-        // response and the adapter does not await its promise.
-        void entry.handler(req, res, req.body as unknown);
+        if (entry.kind !== "fetch" || !entry.matcher(pathname)) continue;
+        this.#serveFetchHandler(entry.handler, req, res, next);
         return;
       }
 
@@ -163,28 +171,58 @@ export class ExpressHttpAdapter implements IHttpAdapter {
     });
   }
 
+  /**
+   * Serves the first node route matching this request, or calls `next()`.
+   * `raw` selects which half of the registry to consider, so the two passes —
+   * one before the body parsers, one after — never serve the same route twice.
+   */
+  #dispatchNodeRoute(
+    req: express.Request,
+    res: express.Response,
+    next: express.NextFunction,
+    raw: boolean,
+  ): boolean {
+    const pathname = req.path;
+    for (const entry of this.#routes.values()) {
+      if (entry.kind !== "node") continue;
+      if (entry.rawBody !== raw) continue;
+      if (entry.method !== req.method) continue;
+      const matched = entry.matcher(pathname);
+      if (!matched) continue;
+      req.params = matched.params as Record<string, string>;
+      // Fire-and-forget, as before: the node handler manages its own response
+      // and the adapter does not await its promise.
+      void entry.handler(req, res, entry.rawBody ? undefined : req.body);
+      return true;
+    }
+    next();
+    return false;
+  }
+
   mount(
     path: string,
     handler: FetchHandler,
-    { exact = false }: { exact?: boolean } = {},
-  ): RouteHandle {
+    { prefix, exact }: { prefix?: boolean; exact?: boolean } = {},
+  ): AdapterRouteHandle {
+    // `exact` never meant exact: it selected prefix matching. Kept as an alias
+    // so existing callers keep working while the name is retired.
+    const asPrefix = prefix ?? exact ?? false;
     this.#replaceDuplicates("fetch", path);
     const handle = this.#nextHandle++;
     this.#routes.set(handle, {
       kind: "fetch",
       path,
-      // exact=false → exact path match; exact=true → prefix match.
-      matcher: match(normalizePath(path), { end: !exact }),
-      prefix: exact,
+      matcher: match(normalizePath(path), { end: !asPrefix }),
+      prefix: asPrefix,
       handler,
     });
-    return handle;
+    return { dispose: () => this.#routes.delete(handle) };
   }
 
   getRoute(
     path: string,
     handler: (request: Request) => Response | Promise<Response>,
-  ): RouteHandle {
+  ): AdapterRouteHandle {
     this.#replaceDuplicates("get", path);
     const handle = this.#nextHandle++;
     this.#routes.set(handle, {
@@ -193,11 +231,7 @@ export class ExpressHttpAdapter implements IHttpAdapter {
       matcher: match(normalizePath(path)),
       handler,
     });
-    return handle;
-  }
-
-  unmount(handle: RouteHandle): void {
-    this.#routes.delete(handle);
+    return { dispose: () => this.#routes.delete(handle) };
   }
 
   /**
