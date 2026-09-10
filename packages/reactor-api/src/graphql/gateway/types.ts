@@ -49,6 +49,14 @@ export type SubgraphDefinition = {
   name: string;
   typeDefs: DocumentNode;
   url: string;
+  /**
+   * The subgraph's resolver map, in-process form. Optional: federation
+   * adapters (Apollo, Mercurius) execute subgraphs over HTTP and ignore this,
+   * while stitching-style adapters merge these resolvers directly into the
+   * supergraph schema. Subgraph authors never see this field - it is filled
+   * in by the gateway manager from the subgraph's own resolvers.
+   */
+  resolvers?: Record<string, unknown>;
 };
 
 export interface IGatewayAdapter<TContext = unknown> {
