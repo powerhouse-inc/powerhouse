@@ -132,16 +132,13 @@ export function readNodes(state: { nodes: Node[] }): Node[] {
 }
 
 /**
- * Add a node to the list and keep it ordered by id. The new list is built and
- * sorted as plain objects and then assigned once, so inside a mutative draft
- * the comparator never reads an element through the draft proxy. Callers must
- * add before they write anything else to nodes: the list is read with
- * readNodes, which does not see mutations made earlier in the same action.
+ * The node list with a node added, ordered by id. The list is built and sorted
+ * as plain objects, so inside a mutative draft the comparator never reads an
+ * element through the draft proxy. Pass the list read with readNodes to get
+ * that benefit; passing the draft's own list is correct but slow.
  */
-export function insertNodeSorted(state: { nodes: Node[] }, node: Node): void {
-  const nodes = [...readNodes(state), node];
-  nodes.sort((a, b) => a.id.localeCompare(b.id));
-  state.nodes = nodes;
+export function insertNodeSorted(nodes: readonly Node[], node: Node): Node[] {
+  return [...nodes, node].sort((a, b) => a.id.localeCompare(b.id));
 }
 
 export function handleTargetNameCollisions(params: {

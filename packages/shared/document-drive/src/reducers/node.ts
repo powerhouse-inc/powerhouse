@@ -43,7 +43,7 @@ export const nodeReducer: DocumentDriveNodeOperations = {
       parentFolder: action.input.parentFolder ?? null,
       documentType: action.input.documentType,
     };
-    insertNodeSorted(state, fileNode);
+    state.nodes = insertNodeSorted(nodes, fileNode);
 
     dispatch?.({
       type: "CREATE_CHILD_DOCUMENT",
@@ -72,7 +72,7 @@ export const nodeReducer: DocumentDriveNodeOperations = {
       targetParentFolder: action.input.parentFolder || null,
     });
 
-    insertNodeSorted(state, {
+    state.nodes = insertNodeSorted(nodes, {
       ...action.input,
       name,
       kind: "folder",
