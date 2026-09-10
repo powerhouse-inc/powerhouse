@@ -1,3 +1,22 @@
+## 6.2.3-dev.0 (2026-09-10)
+
+### 🚀 Features
+
+- **design-system:** use PackageAnimation for the connect-loading toast ([e35a96095](https://github.com/powerhouse-inc/powerhouse/commit/e35a96095))
+- **reactor-api:** host package HTTP routes and webhooks in core ([235829f91](https://github.com/powerhouse-inc/powerhouse/commit/235829f91))
+- **shared:** declare the HTTP surface a package can host ([ee06213ba](https://github.com/powerhouse-inc/powerhouse/commit/ee06213ba))
+- **switchboard-lb:** route the webhook and package-REST classes ([df18b32a7](https://github.com/powerhouse-inc/powerhouse/commit/df18b32a7))
+
+### 🩹 Fixes
+
+- **docker:** make the switchboard load harness buildable again ([cb65fac68](https://github.com/powerhouse-inc/powerhouse/commit/cb65fac68))
+- **ph-cli:** show recorded package versions in ph list and remove the projectInfo debug log ([72e1db2dd](https://github.com/powerhouse-inc/powerhouse/commit/72e1db2dd))
+
+### ❤️ Thank You
+
+- acaldas
+- froid1911
+
 ## 6.2.2-dev.88 (2026-09-10)
 
 ### 🚀 Features

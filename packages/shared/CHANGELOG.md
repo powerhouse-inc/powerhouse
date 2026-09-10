@@ -1,3 +1,18 @@
+## 6.2.3-dev.0 (2026-09-10)
+
+### 🚀 Features
+
+- **switchboard-lb:** route the webhook and package-REST classes ([df18b32a7](https://github.com/powerhouse-inc/powerhouse/commit/df18b32a7))
+- **shared:** declare the HTTP surface a package can host ([ee06213ba](https://github.com/powerhouse-inc/powerhouse/commit/ee06213ba))
+
+### 🩹 Fixes
+
+- **docker:** make the switchboard load harness buildable again ([cb65fac68](https://github.com/powerhouse-inc/powerhouse/commit/cb65fac68))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.2-dev.88 (2026-09-10)
 
 ### 🚀 Features
