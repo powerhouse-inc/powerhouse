@@ -45,6 +45,12 @@ export type PackageManagerProps = {
    * makes the registry fetch lazy.
    */
   onAvailableTabOpen?: () => void;
+  /**
+   * Fired on every activation of the Installed tab (including the default
+   * `initialTab="installed"` mount). The caller dedupes — this is what
+   * makes the installed-rows version-metadata fetch lazy.
+   */
+  onInstalledTabOpen?: () => void;
   /** default "installed"; used by stories/tests */
   initialTab?: "installed" | "available";
   disabled?: boolean;
@@ -65,6 +71,7 @@ export const PackageManager: React.FC<PackageManagerProps> = (props) => {
     onInstall,
     onUninstall,
     onAvailableTabOpen,
+    onInstalledTabOpen,
     initialTab = "installed",
     mutable,
     disabled,
@@ -82,6 +89,7 @@ export const PackageManager: React.FC<PackageManagerProps> = (props) => {
   // Radix never reports.
   useEffect(() => {
     if (initialTab === "available") onAvailableTabOpen?.();
+    else onInstalledTabOpen?.();
     // Fire once on mount — re-running on callback identity changes would
     // defeat the "on activation" semantics.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -107,6 +115,7 @@ export const PackageManager: React.FC<PackageManagerProps> = (props) => {
         listClassName="pr-3"
         onValueChange={(value) => {
           if (value === "available") onAvailableTabOpen?.();
+          else if (value === "installed") onInstalledTabOpen?.();
         }}
       >
         <TabContent

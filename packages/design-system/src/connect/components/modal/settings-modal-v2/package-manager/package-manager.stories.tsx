@@ -346,6 +346,75 @@ export const WithTaggedPackages: Story = {
   ],
 };
 
+// Installed registry rows with full version metadata: up-to-date, behind
+// the `dev` stream, and a pinned install behind `latest`.
+const installedUpdatePackages: RegistryPackage[] = [
+  {
+    ...mockPackages[1],
+    status: "registry-install",
+    version: "1.2.3",
+    distTags: { latest: "1.2.3" },
+    versions: ["1.0.0", "1.1.0", "1.2.3"],
+  },
+  {
+    ...mockPackages[2],
+    status: "registry-install",
+    version: "1.0.0-dev.3",
+    spec: `${mockPackages[2].name}@dev`,
+    distTags: { latest: "0.9.0", dev: "1.0.0-dev.4" },
+    versions: ["0.5.0", "0.9.0", "1.0.0-dev.3", "1.0.0-dev.4"],
+  },
+  {
+    ...mockPackages[0],
+    status: "registry-install",
+    version: "2.0.0",
+    spec: `${mockPackages[0].name}@2.0.0`,
+    distTags: { latest: "2.4.1", staging: "2.5.0-staging.1" },
+    versions: ["1.0.0", "2.0.0", "2.4.1", "2.5.0-staging.1"],
+  },
+  // The live registry shape: no dist-tags/version metadata, only the
+  // registry's newest version. The chip still fires; no picker.
+  {
+    ...mockPackages[3],
+    status: "registry-install",
+    version: "1.0.50",
+    spec: `${mockPackages[3].name}@1.0.50`,
+    latestVersion: "1.0.52",
+  },
+  // Bare install, already at the registry's newest version — no chip.
+  {
+    ...mockPackages[4],
+    status: "registry-install",
+    version: "0.1.0",
+    latestVersion: "0.1.0",
+  },
+];
+
+/**
+ * Installed registry rows in every update state: a picker preselected to
+ * the installed entry (marked "current"), an "Update available" chip when
+ * the stream moved ahead (dev stream, pinned install, and a registry that
+ * only reports its newest version), and an Update action in the row menu.
+ */
+export const InstalledUpdateAvailable: Story = {
+  ...makeStory({ packages: installedUpdatePackages }),
+  decorators: [
+    (Story) => (
+      <div className="h-[600px]">
+        <Story />
+      </div>
+    ),
+  ],
+};
+
+/**
+ * Installed row that is up to date with its stream — no chip, picker
+ * preselected to the installed version.
+ */
+export const InstalledUpToDate: Story = makeStory({
+  packages: [installedUpdatePackages[0]],
+});
+
 export const Immutable: Story = makeStory({ mutable: false });
 
 export const Empty: Story = makeStory({ packages: [], cached: true });
