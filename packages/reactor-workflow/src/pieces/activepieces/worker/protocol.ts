@@ -62,7 +62,7 @@ export interface ResolveOptionsMessage {
 export interface TriggerHookRequest {
   bundleDir: string;
   triggerName: string;
-  hook: "onEnable" | "onDisable" | "run" | "test";
+  hook: "onEnable" | "onDisable" | "run" | "test" | "onHandshake";
   propsValue: Record<string, unknown>;
   auth?: unknown;
   storeState?: Record<string, unknown>;

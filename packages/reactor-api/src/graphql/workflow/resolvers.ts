@@ -115,6 +115,8 @@ export const getResolvers = (
         args: { query: string; limit?: number | null },
       ) => searchBlocks(args.query, args.limit ?? undefined),
       connections: () => workflowRuntime.connections(),
+      webhookEndpoint: (_parent: unknown, args: { workflowId: string }) =>
+        workflowRuntime.webhookEndpoint(args.workflowId),
       secret: async (_parent: unknown, args: { ref: string }) => {
         try {
           return await (await workflowRuntime.secrets()).stat(args.ref);

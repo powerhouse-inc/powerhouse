@@ -137,6 +137,16 @@ async function up(db: IRelationalDb<WorkflowRuntimeDB>): Promise<void> {
     .addColumn("error", "text")
     .ifNotExists()
     .execute();
+
+  // The reactor's webhook service owns tokens now, in its own namespace, so
+  // the local table is dead weight wherever the GraphQL ingress once ran.
+  // Nothing is migrated: those tokens addressed a mutation that no longer
+  // exists, so a trigger re-enables onto a freshly minted endpoint.
+  try {
+    await db.schema.dropTable("webhook_endpoint").ifExists().execute();
+  } catch {
+    // Never blocks the journal: a leftover table costs nothing.
+  }
 }
 
 function jsonOrNull(value: unknown): string | null {
@@ -324,11 +334,13 @@ export class WorkflowRunStore {
       .execute();
   }
 
+  // A null next_poll_at leaves the trigger unscheduled, which is what a
+  // webhook delivery wants: it recorded a success without becoming a poll.
   async recordPollSuccess(
     workflowId: string,
     storeState: string,
     nowIso: string,
-    nextPollAtIso: string,
+    nextPollAtIso: string | null,
   ): Promise<void> {
     await this.db
       .updateTable("trigger_state")

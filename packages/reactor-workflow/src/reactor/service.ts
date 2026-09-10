@@ -1,6 +1,14 @@
 // Package-level runtime shared by the subgraph (config + manual fire) and the
 // document-event processor; moves to a dedicated runtime package later.
-import type { BaseSubgraph } from "@powerhousedao/reactor-api";
+import type {
+  BaseSubgraph,
+  IWebhookEndpoints,
+  IWebhookScope,
+  WebhookPolicy,
+  WebhookReply,
+  WebhookRequest,
+} from "@powerhousedao/reactor-api";
+
 import {
   ensurePieceBundle,
   parseBlockType,
@@ -44,9 +52,14 @@ import {
   fromSample,
   lifecycleTriggerTree,
   scheduleTriggerTree,
+  webhookTriggerTree,
   type OutputTree,
 } from "./output-tree.js";
-import { fetchPieceCatalog, fetchPieceDetail } from "./piece-catalog.js";
+import {
+  fetchPieceCatalog,
+  fetchPieceDetail,
+  fetchPieceTriggers,
+} from "./piece-catalog.js";
 import {
   BUNDLE_CACHE_DIR,
   createBlockExecutor,
@@ -67,6 +80,18 @@ import {
   type PieceTriggerBinding,
   type TriggerBinding,
 } from "./trigger-supervisor.js";
+import {
+  parseWebhookConfig,
+  WEBHOOK_BLOCK,
+  WEBHOOK_TRIGGER_KIND,
+  type WebhookConfig,
+  type WebhookPayload,
+} from "./webhook.js";
+import {
+  handshakeMatches,
+  handshakeReply,
+  type PieceHandshake,
+} from "./piece-handshake.js";
 import {
   lifecycleKindForDocumentAction,
   lifecycleKindForDriveAction,
@@ -128,9 +153,8 @@ function inputRecord(input: unknown): Record<string, unknown> {
   return input as Record<string, unknown>;
 }
 
-// Where a lifecycle payload's driveId / parentId come from. CREATE_DOCUMENT
-// knows nothing about containment, so the parent is read off the sibling
-// operations the reactor writes in the same job.
+// Where a lifecycle payload's driveId / parentId come from: CREATE_DOCUMENT knows
+// nothing about containment, so the parent is read off siblings in the same job.
 export interface LifecycleParentHint {
   // Set only by a drive operation, which is the only place the drive is named
   // outright.
@@ -142,10 +166,8 @@ export interface LifecycleParentHint {
   parentCandidate?: string;
 }
 
-// Indexes one batch of operations by the document a lifecycle event is about.
-// The reactor's own addFile writes CREATE_DOCUMENT and ADD_RELATIONSHIP in a
-// single job, so the drive is known without a read; the drive's ADD_FILE lands
-// in a later job and only enriches a fallback fire.
+// Indexes operations by the document a lifecycle event is about. addFile writes CREATE_DOCUMENT
+// and ADD_RELATIONSHIP in one job (drive known without a read); the drive's ADD_FILE lands later.
 export function collectLifecycleParentHints(
   operations: OperationWithContext[],
 ): Map<string, LifecycleParentHint> {
@@ -206,9 +228,8 @@ function accountLabelFromCheckResult(result: unknown): string | undefined {
   return undefined;
 }
 
-// The user-visible detail of a failed worker request. A piece error
-// contributes only its message; its serialized properties may hold echoed
-// credentials.
+// User-visible detail of a failed worker request; a piece error contributes only
+// its message, as its serialized properties may hold echoed credentials.
 function pieceFailureDetail(error: unknown, timeoutDetail: string): string {
   if (error instanceof PieceWorkerTimeoutError) return timeoutDetail;
   if (error instanceof PieceWorkerError) return error.serialized.message;
@@ -227,17 +248,56 @@ type TriggerRegistration = {
 } & (
   | { kind: "document-event"; filter: DocumentEventFilter }
   | { kind: "document-created" | "document-deleted"; filter: LifecycleFilter }
+  // Request-driven; the reactor mints and owns the endpoint's token.
+  | { kind: "webhook"; config: WebhookConfig }
+  // A piece whose strategy is WEBHOOK: the supervisor still owns its
+  // enable/disable state, but requests drive it instead of the tick.
+  | { kind: "piece-webhook"; binding: PieceTriggerBinding }
   // Timer-driven kinds live in the TriggerSupervisor.
   | { kind: "piece" | "schedule" }
 );
 
-const SUPERVISED_KINDS = new Set(["piece", "schedule"]);
+export const PIECE_WEBHOOK_KIND = "piece-webhook";
+
+// Kinds whose enable/disable lifecycle the supervisor owns, so leaving one
+// has to release its registration.
+const SUPERVISED_KINDS = new Set(["piece", "schedule", PIECE_WEBHOOK_KIND]);
+
+// Shared so no refusal path can accidentally answer with a distinguishing body.
+const UNAUTHORIZED: WebhookReply = { status: 401 };
+
+const JSON_CONTENT_TYPE = "application/json; charset=utf-8";
+
+// How long a sync-mode delivery holds the provider's socket; beyond this the run
+// keeps going and the provider is told so, lest a wedged step tie up connections.
+const DELIVERY_TIMEOUT_MS =
+  Number(process.env.WORKFLOW_WEBHOOK_TIMEOUT_MS) || 30_000;
+
+const TIMED_OUT = Symbol("webhook delivery timed out");
+
+/** Resolves to TIMED_OUT, and never keeps the process alive waiting to. */
+function timeout(ms: number): Promise<typeof TIMED_OUT> {
+  return new Promise((resolve) => {
+    setTimeout(() => resolve(TIMED_OUT), ms).unref();
+  });
+}
+
+/** Shaped like Activepieces' catch-webhook contract so authored expressions and adapted
+ * pieces agree where a request's parts are; headers arrive redacted, body decoded. */
+function webhookPayload(request: WebhookRequest): WebhookPayload {
+  return {
+    method: request.method,
+    path: request.path,
+    headers: request.headers,
+    queryParams: request.queryParams,
+    body: request.body,
+  };
+}
 
 export const POLL_INTERVAL_CONFIG_KEY = "pollEverySeconds";
 
-// pollEverySeconds is ours, not the piece's: lift it out of the trigger config
-// so it never reaches the piece as a prop, and so a change to it alone still
-// rewrites the trigger's config hash.
+// pollEverySeconds is ours, not the piece's: lifted out of the trigger config so it
+// never reaches the piece as a prop, yet a change to it alone still rewrites the hash.
 export function splitPollInterval(config: Record<string, unknown>): {
   config: Record<string, unknown>;
   pollIntervalMs?: number;
@@ -245,13 +305,28 @@ export function splitPollInterval(config: Record<string, unknown>): {
   if (!(POLL_INTERVAL_CONFIG_KEY in config)) return { config };
   const { [POLL_INTERVAL_CONFIG_KEY]: raw, ...rest } = config;
   const seconds = typeof raw === "string" ? Number(raw) : raw;
-  if (typeof seconds !== "number" || !Number.isFinite(seconds) || seconds <= 0) {
+  if (
+    typeof seconds !== "number" ||
+    !Number.isFinite(seconds) ||
+    seconds <= 0
+  ) {
     logger.warn(
       `Ignoring ${POLL_INTERVAL_CONFIG_KEY}=${JSON.stringify(raw)}: expected a positive number of seconds`,
     );
     return { config: rest };
   }
   return { config: rest, pollIntervalMs: Math.round(seconds * 1000) };
+}
+
+function parseWorkflowState(
+  resultingState?: string,
+): WorkflowState | undefined {
+  if (!resultingState) return undefined;
+  try {
+    return JSON.parse(resultingState) as WorkflowState;
+  } catch {
+    return undefined;
+  }
 }
 
 function configRecord(config: unknown): Record<string, unknown> {
@@ -271,24 +346,41 @@ function configRecord(config: unknown): Record<string, unknown> {
   return {};
 }
 
+// `http` is not optional on a real subgraph, but a narrowly-faked one has no
+// reason to carry it, and asking for an endpoint must not throw there.
+function hasWebhookScope(
+  subgraph: BaseSubgraph | undefined,
+): subgraph is BaseSubgraph {
+  const scope = (
+    subgraph as { http?: { webhooks?: unknown } } | undefined
+  )?.http?.webhooks;
+  return scope !== undefined;
+}
+
 export class WorkflowRuntimeService {
   private subgraph?: BaseSubgraph;
   private executor?: BlockExecutor;
   private storePromise?: Promise<WorkflowRunStore>;
   private secretsPromise?: Promise<LocalEncryptedSecretStore>;
   private readonly registry = new Map<string, TriggerRegistration>();
+  // Awaited before an endpoint answers: a delivery reaching an unseeded
+  // registry is refused exactly as an unknown token is, so it looks like one.
+  private seedPromise?: Promise<void>;
 
   // Called by the subgraph on construction; seeds the trigger registry and
   // opens the run journal.
+
+  // Keyed on the subgraph, not on "configured once": a package hot-reload
+  // builds a new one, and the old one's clients are torn down with it.
   configure(subgraph: BaseSubgraph): void {
-    if (this.subgraph) return;
+    if (this.subgraph === subgraph) return;
     this.subgraph = subgraph;
     this.storePromise = WorkflowRunStore.create(subgraph.relationalDb);
     this.storePromise.catch((error: unknown) => {
       logger.error("Failed to open the workflow run store", error);
     });
-    this.seedRegistry().catch((error: unknown) => {
-      logger.error("Failed to seed document-event registry", error);
+    this.seedPromise = this.seedRegistry().catch((error: unknown) => {
+      logger.error("Failed to seed the trigger registry", error);
     });
   }
 
@@ -325,13 +417,41 @@ export class WorkflowRuntimeService {
       type: "powerhouse/workflow",
     });
     for (const document of page.results as WorkflowDocument[]) {
-      this.updateRegistration(document.header.id, document.state.global);
+      await this.updateRegistration(document.header.id, document.state.global);
+    }
+
+    // Seeding nothing while endpoints exist is always a fault, and every
+    // webhook for this package is dead until the next seed succeeds.
+    if (this.registry.size === 0 && (await this.hasWebhookEndpoints())) {
+      logger.warn(
+        "Trigger registry seeded no workflows, but @count webhook endpoint(s) exist: their deliveries will be refused as unknown tokens",
+        await this.endpointCount(),
+      );
+      return;
     }
     logger.info(`Trigger registry seeded: ${this.registry.size} workflow(s)`);
   }
 
-  private updateRegistration(workflowId: string, state: WorkflowState): void {
+  private async endpointCount(): Promise<number> {
+    const endpoints = await this.endpoints();
+    return endpoints ? (await endpoints.list()).length : 0;
+  }
+
+  private async hasWebhookEndpoints(): Promise<boolean> {
+    return (await this.endpointCount()) > 0;
+  }
+
+  // Awaited by callers: the registry must be current before the next request
+  // can arrive. Only arming, which does I/O, is left to run on its own.
+  private async updateRegistration(
+    workflowId: string,
+    state: WorkflowState,
+  ): Promise<void> {
     const trigger = state.status === "ENABLED" ? state.trigger : undefined;
+    if (trigger?.blockType === WEBHOOK_BLOCK) {
+      await this.registerWebhook(workflowId, trigger.config);
+      return;
+    }
     const kind: TriggerKind | undefined = trigger
       ? TRIGGER_KIND_BY_BLOCK[trigger.blockType]
       : undefined;
@@ -348,14 +468,15 @@ export class WorkflowRuntimeService {
       return;
     }
     if (supervised) {
-      const supervisedKind =
-        supervised.kind === "schedule" ? "schedule" : "piece";
-      this.registry.set(workflowId, { workflowId, kind: supervisedKind });
-      this.supervisor()
-        .upsert(supervised)
-        .catch((error: unknown) => {
-          logger.error(`Trigger enable failed for ${workflowId}`, error);
-        });
+      if (supervised.kind === "schedule") {
+        this.registry.set(workflowId, { workflowId, kind: "schedule" });
+        this.enableSupervised(workflowId, supervised);
+        return;
+      }
+      // Registered as a poll binding first, then corrected once the piece's
+      // strategy is known: a WEBHOOK trigger must never be handed to the tick.
+      this.registry.set(workflowId, { workflowId, kind: "piece" });
+      await this.registerPieceTrigger(workflowId, supervised);
       return;
     }
     const had = this.registry.get(workflowId);
@@ -367,6 +488,86 @@ export class WorkflowRuntimeService {
         ? { workflowId, kind, filter: parseEventFilter(config) }
         : { workflowId, kind: kind!, filter: parseLifecycleFilter(config) },
     );
+  }
+
+  private enableSupervised(workflowId: string, binding: TriggerBinding): void {
+    this.supervisor()
+      .upsert(binding)
+      .catch((error: unknown) => {
+        logger.error(`Trigger enable failed for ${workflowId}`, error);
+      });
+  }
+
+  // A WEBHOOK-strategy piece needs its endpoint minted before onEnable runs:
+  // the piece registers that URL with the provider from inside the hook.
+  private async registerPieceTrigger(
+    workflowId: string,
+    binding: PieceTriggerBinding,
+  ): Promise<void> {
+    const delivery = await this.pieceDelivery(binding);
+    const resolved = { ...binding, delivery };
+    if (delivery === "webhook") {
+      this.registry.set(workflowId, {
+        workflowId,
+        kind: PIECE_WEBHOOK_KIND,
+        binding: resolved,
+      });
+      // Awaited: a delivery landing before the token exists would be refused,
+      // and the piece registers this URL with the provider from onEnable.
+      await (await this.endpoints())?.endpointFor(workflowId);
+    }
+    // Arming downloads a bundle and calls the provider; that stays off the
+    // operation-ingestion path.
+    this.enableSupervised(workflowId, resolved);
+  }
+
+  // Strategy comes from the piece catalog rather than the bundle: deciding
+  // poll-vs-webhook must not require loading piece code.
+  private async pieceDelivery(
+    binding: PieceTriggerBinding,
+  ): Promise<"poll" | "webhook"> {
+    try {
+      const { triggers } = await fetchPieceTriggers(binding.packageName);
+      const strategy = triggers.find(
+        (entry) => entry.name === binding.triggerName,
+      )?.strategy;
+      return strategy === "WEBHOOK" ? "webhook" : "poll";
+    } catch (error) {
+      // Unknown strategy polls: a poll that returns nothing is recoverable,
+      // a webhook endpoint nobody serves is not.
+      logger.warn(
+        "Could not resolve the trigger strategy for @block; polling",
+        binding.blockType,
+        error,
+      );
+      return "poll";
+    }
+  }
+
+  // A disabled or retyped webhook trigger loses its registry entry, so
+  // deliveries stop; the endpoint row stays so re-enabling keeps the URL.
+  private async registerWebhook(
+    workflowId: string,
+    rawConfig: unknown,
+  ): Promise<void> {
+    const had = this.registry.get(workflowId);
+    if (had && SUPERVISED_KINDS.has(had.kind)) this.dropSupervised(workflowId);
+    let config: WebhookConfig;
+    try {
+      config = parseWebhookConfig(configRecord(rawConfig));
+    } catch (error) {
+      this.registry.delete(workflowId);
+      const message = error instanceof Error ? error.message : String(error);
+      logger.error(`Webhook trigger rejected for ${workflowId}: ${message}`);
+      return;
+    }
+    this.registry.set(workflowId, {
+      workflowId,
+      kind: WEBHOOK_TRIGGER_KIND,
+      config,
+    });
+    // Awaited: a delivery landing before the token exists would be refused.
+    await (await this.endpoints())?.endpointFor(workflowId);
   }
 
   // Triggers the supervisor drives on its tick: piece polls and schedules.
@@ -418,21 +619,17 @@ export class WorkflowRuntimeService {
     workflowId: string,
     resultingState?: string,
   ): Promise<void> {
-    if (resultingState) {
-      try {
-        this.updateRegistration(
-          workflowId,
-          JSON.parse(resultingState) as WorkflowState,
-        );
-        return;
-      } catch {
-        // fall through to a fresh read
-      }
+    // Parsed before awaiting, so only a malformed state falls through to a
+    // fresh read; a registration failure must not trigger one.
+    const carried = parseWorkflowState(resultingState);
+    if (carried) {
+      await this.updateRegistration(workflowId, carried);
+      return;
     }
     if (!this.subgraph) return;
     const document =
       await this.subgraph.reactorClient.get<WorkflowDocument>(workflowId);
-    this.updateRegistration(workflowId, document.state.global);
+    await this.updateRegistration(workflowId, document.state.global);
   }
 
   // The manager routes by filter only, so every per-drive processor instance
@@ -467,9 +664,8 @@ export class WorkflowRuntimeService {
       }
       if (context.scope !== "global") continue;
       if (this.alreadySeen({ operation, context })) continue;
-      // A workflow edit updates the registry, then falls through: workflow
-      // documents are also a document-event source, so a workflow can watch
-      // its own document type (e.g. SET_WORKFLOW_STATUS).
+      // A workflow edit updates the registry, then falls through: workflow docs are
+      // also a document-event source, so a workflow can watch its own type.
       if (context.documentType === "powerhouse/workflow") {
         await this.refreshRegistration(
           context.documentId,
@@ -532,10 +728,8 @@ export class WorkflowRuntimeService {
     );
   }
 
-  // A document lifecycle event fires once per document, from whichever source
-  // reports it first. Only a fire that actually matched a workflow is
-  // recorded: a creation whose drive was still unknown matches no driveId
-  // filter, and the drive's own ADD_FILE then still gets its turn.
+  // Fires once per document, from whichever source reports it first. Only a fire that
+  // matched is recorded, so a creation with an unknown drive leaves ADD_FILE its turn.
   private readonly firedLifecycle = new Set<string>();
   private readonly firedLifecycleQueue: string[] = [];
 
@@ -602,9 +796,8 @@ export class WorkflowRuntimeService {
     if (matched) this.recordLifecycleFired(kind, payload.documentId);
   }
 
-  // A "child" edge names the parent document but not its type, and only a
-  // drive parent is what a driveId filter is about. The lookup is cached: a
-  // drive gathers many documents.
+  // A "child" edge names the parent document but not its type, and only a drive
+  // parent matters to a driveId filter. Cached: a drive gathers many documents.
   private readonly driveParentCache = new Map<string, boolean>();
 
   private async driveIdFromParent(
@@ -625,10 +818,8 @@ export class WorkflowRuntimeService {
     }
   }
 
-  // The document's own CREATE_DOCUMENT / DELETE_DOCUMENT. This is the source
-  // of truth: it also covers a document created outside every drive, it
-  // carries the real document type and name rather than a drive node's copy,
-  // and it is the only signal that a document is actually gone.
+  // The document's own CREATE_DOCUMENT / DELETE_DOCUMENT, the source of truth: it covers
+  // documents outside any drive, carries the real type and name, and alone proves deletion.
   private async matchDocumentLifecycle(
     operation: OperationWithContext["operation"],
     context: OperationWithContext["context"],
@@ -666,11 +857,8 @@ export class WorkflowRuntimeService {
     });
   }
 
-  // The drive's own view of the same events, kept as a fallback. ADD_FILE
-  // always accompanies a CREATE_DOCUMENT, so it only fires when that never
-  // reached the processor. DELETE_NODE stands on its own: removing a file from
-  // a drive leaves the document alive, and a drive-scoped workflow still wants
-  // to hear about it.
+  // The drive's fallback view: ADD_FILE always accompanies a CREATE_DOCUMENT, so it fires only
+  // when that never reached the processor. DELETE_NODE stands alone — the document stays alive.
   private async matchDriveLifecycle(
     driveId: string,
     actionType: string,
@@ -731,6 +919,8 @@ export class WorkflowRuntimeService {
       fire: (workflowId, payload, kind) => {
         this.fireFromTrigger(workflowId, payload, kind);
       },
+      webhookUrlFor: async (workflowId) =>
+        (await this.webhookEndpoint(workflowId))?.url,
       cacheDir: BUNDLE_CACHE_DIR,
       // Dev override; the 60s floor still applies.
       defaultIntervalMs:
@@ -764,6 +954,297 @@ export class WorkflowRuntimeService {
   async triggerStates(): Promise<TriggerStateRow[]> {
     const store = await this.store();
     return store ? store.listTriggerStates() : [];
+  }
+
+  private webhookEndpoints?: IWebhookEndpoints;
+  private webhookScope?: IWebhookScope;
+  // Held as a promise: `configure` seeds from the constructor, before `onSetup`, so a
+  // seeded webhook workflow would otherwise mint no token and fail to arm.
+  private webhookRegistration?: Promise<IWebhookEndpoints | undefined>;
+
+  /** Registers the workflow endpoint family with the reactor's webhook service (from onSetup;
+   * idempotent). Everything transport-shaped is the service's; only workflow identity is ours. */
+  async registerWebhookEndpoint(subgraph: BaseSubgraph): Promise<void> {
+    if (this.webhookRegistration) {
+      await this.webhookRegistration;
+      return;
+    }
+    // The scope is read here rather than passed in: the subgraph's own type
+    // carries it, so there is one identity for it instead of two.
+    this.webhookScope = subgraph.http.webhooks;
+    this.webhookRegistration = subgraph.http.webhooks
+      .register({
+        name: "trigger",
+        policyFor: (workflowId) => this.webhookPolicy(workflowId),
+        onRequest: (request) => this.deliverWebhook(request),
+      })
+      .then((endpoints) => {
+        this.webhookEndpoints = endpoints;
+        return endpoints;
+      })
+      .catch((error: unknown) => {
+        // No webhook store means no webhook triggers, not no workflows: rethrowing would take
+        // the whole subgraph down (the manager awaits onSetup), killing other triggers too.
+        logger.warn(
+          "Webhook triggers are unavailable on this host; other triggers are unaffected",
+          error,
+        );
+        return undefined;
+      });
+    await this.webhookRegistration;
+  }
+
+  /** The endpoint family, once registered. Seeding runs before `onSetup`, so a caller
+   * that needs a token has to wait for it rather than find it missing. */
+  private async endpoints(): Promise<IWebhookEndpoints | undefined> {
+    if (this.webhookEndpoints) return this.webhookEndpoints;
+    // onSetup normally registers, but seeding starts from the subgraph's
+    // constructor and an enable can reach here first. Registering on demand
+    // makes the order irrelevant, rather than failing the trigger on a race.
+    if (!this.webhookRegistration && hasWebhookScope(this.subgraph)) {
+      await this.registerWebhookEndpoint(this.subgraph);
+    }
+    return await this.webhookRegistration;
+  }
+
+  /** The per-document policy the service enforces before a delivery reaches this code;
+   * undefined means the workflow is not armed, answered exactly as an unknown token is. */
+  private async webhookPolicy(
+    workflowId: string,
+  ): Promise<WebhookPolicy | undefined> {
+    // Seeding starts from the subgraph's constructor and a delivery can beat
+    // it, and an unseeded registry is indistinguishable from a bad token.
+    await this.seedPromise;
+
+    const registration = this.registry.get(workflowId);
+    if (!registration) return undefined;
+
+    // A piece owns its own verification and parsing: its run hook decides what
+    // the request means, or rejects it.
+    if (registration.kind === PIECE_WEBHOOK_KIND) return {};
+    if (registration.kind !== WEBHOOK_TRIGGER_KIND) return undefined;
+
+    const { config } = registration;
+    return {
+      methods: config.methods,
+      challengeField: config.challengeField,
+      dedupe: config.dedupeField
+        ? {
+            field: config.dedupeField,
+            ttlSeconds: config.dedupeTtlSeconds,
+          }
+        : undefined,
+      verify:
+        config.scheme === "none"
+          ? undefined
+          : {
+              scheme: config.scheme,
+              header: config.header,
+              secret: await this.webhookSecret(config, workflowId),
+              toleranceSeconds: config.toleranceSeconds,
+              algorithm: config.algorithm,
+              encoding: config.encoding,
+              prefix: config.prefix,
+            },
+    };
+  }
+
+  // Design-time: the URL to hand the provider. Minted on demand so an author
+  // can copy it before the first delivery.
+  async webhookEndpoint(workflowId: string): Promise<{
+    workflowId: string;
+    url: string;
+    absoluteUrl: boolean;
+    armed: boolean;
+    createdAt: string;
+  } | null> {
+    const endpoints = await this.endpoints();
+    if (!endpoints) return null;
+    const registration = this.registry.get(workflowId);
+    const armed =
+      registration?.kind === WEBHOOK_TRIGGER_KIND ||
+      registration?.kind === PIECE_WEBHOOK_KIND;
+
+    // Minted whether or not the workflow is armed: an author has to give the
+    // URL to the sender before enabling, and enabling is what accepts.
+
+    // `armed` carries the difference instead, so nothing is hidden — and this
+    // never scans, which listing every endpoint to find one would.
+
+    // A host that does not know its own public origin advertises a bare path; copying that into
+    // a provider's console fails with nothing to read, so the author is told here instead.
+    const absoluteUrl = this.webhookScope?.hasPublicOrigin ?? false;
+
+    const minted = await endpoints.endpointFor(workflowId);
+    return {
+      workflowId,
+      url: minted.url,
+      absoluteUrl,
+      armed,
+      createdAt: minted.createdAt,
+    };
+  }
+
+  /** A delivery the service has already rate-limited, verified, de-duplicated and
+   * answered any challenge for; all that is left is deciding what it means. */
+  async deliverWebhook(request: WebhookRequest): Promise<WebhookReply> {
+    const workflowId = request.key;
+    const registration = this.registry.get(workflowId);
+    if (!registration) return UNAUTHORIZED;
+    if (registration.kind === PIECE_WEBHOOK_KIND) {
+      return this.deliverToPiece(registration.binding, request);
+    }
+    if (registration.kind !== WEBHOOK_TRIGGER_KIND) return UNAUTHORIZED;
+
+    const { config } = registration;
+    const payload = webhookPayload(request);
+
+    if (config.responseMode === "async") {
+      this.fireFromTrigger(workflowId, payload, WEBHOOK_TRIGGER_KIND);
+      return { status: config.responseStatus };
+    }
+    // Sync mode holds the provider's socket, so the wait is bounded. On expiry the run is left
+    // going — cancelling would lose announced work — and the 504 retry is what dedupe absorbs.
+    const run = await Promise.race([
+      this.fire(workflowId, payload, WEBHOOK_TRIGGER_KIND).then(
+        (result) => ({ ok: true, result }) as const,
+        (error: unknown) => ({ ok: false, error }) as const,
+      ),
+      timeout(DELIVERY_TIMEOUT_MS),
+    ]);
+
+    if (run === TIMED_OUT) {
+      logger.warn(
+        `Webhook run for ${workflowId} exceeded ${DELIVERY_TIMEOUT_MS}ms; answering 504 while it continues`,
+      );
+      return {
+        status: 504,
+        contentType: JSON_CONTENT_TYPE,
+        body: JSON.stringify({
+          status: "RUNNING",
+          error: "The run did not finish in time",
+        }),
+      };
+    }
+
+    if (!run.ok) {
+      const message =
+        run.error instanceof Error ? run.error.message : String(run.error);
+      logger.error(`Webhook run failed for ${workflowId}: ${message}`);
+      return {
+        status: 500,
+        contentType: JSON_CONTENT_TYPE,
+        body: JSON.stringify({ error: message }),
+      };
+    }
+
+    return {
+      status: run.result.status === "SUCCEEDED" ? config.responseStatus : 500,
+      contentType: JSON_CONTENT_TYPE,
+      body: JSON.stringify({
+        runId: run.result.runId,
+        status: run.result.status,
+        error: run.result.error ?? null,
+      }),
+    };
+  }
+
+  // The probe a sender sends before it will register the endpoint. Answered by
+  // the piece: only its own code knows what the sender wants echoed back.
+  private async pieceHandshake(
+    binding: PieceTriggerBinding,
+    request: WebhookRequest,
+  ): Promise<WebhookReply | undefined> {
+    const handshake = await this.pieceHandshakeConfig(binding);
+    if (!handshake || !handshakeMatches(handshake, request)) return undefined;
+    try {
+      const result = await this.supervisor().handshake(
+        binding,
+        webhookPayload(request),
+      );
+      return handshakeReply(result.output);
+    } catch (error) {
+      // A failed probe is the sender's answer, so it must not look like a
+      // delivery: 500 tells it to retry rather than that the endpoint is gone.
+      logger.error(
+        "Handshake failed for @block on workflow @workflow",
+        binding.blockType,
+        binding.workflowId,
+        error,
+      );
+      return { status: 500 };
+    }
+  }
+
+  private async pieceHandshakeConfig(
+    binding: PieceTriggerBinding,
+  ): Promise<PieceHandshake | undefined> {
+    try {
+      const descriptor = await this.pieceDescriptor(
+        binding.packageName,
+        binding.version,
+      );
+      return descriptor.triggers.find(
+        (entry) => entry.name === binding.triggerName,
+      )?.handshake;
+    } catch (error) {
+      // A delivery must not fail because the descriptor could not be read; the
+      // cost of guessing wrong is one probe answered as a delivery.
+      logger.warn(
+        "Could not read the handshake config for @block",
+        binding.blockType,
+        error,
+      );
+      return undefined;
+    }
+  }
+
+  // The piece owns verification and parsing, so there is no scheme to check
+  // here: its run hook decides what the request means, or rejects it.
+  private async deliverToPiece(
+    binding: PieceTriggerBinding,
+    request: WebhookRequest,
+  ): Promise<WebhookReply> {
+    const probe = await this.pieceHandshake(binding, request);
+    if (probe) return probe;
+
+    const payload = webhookPayload(request);
+    // Answered before the hook runs, as Activepieces does: a provider must not
+    // wait on piece code, and its retry would only duplicate the delivery.
+    this.supervisor()
+      .deliverWebhook(binding.workflowId, payload)
+      .then(
+        () => {
+          logger.info(
+            "Webhook delivered to @block for workflow @workflow",
+            binding.blockType,
+            binding.workflowId,
+          );
+        },
+        (error: unknown) => {
+          logger.error(
+            `Webhook delivery failed for workflow ${binding.workflowId}`,
+            error,
+          );
+        },
+      );
+    return { status: 200 };
+  }
+
+  // A missing or deleted secret is a rejection, not an error: the endpoint is
+  // configured as signed and there is nothing to verify against.
+  private async webhookSecret(
+    config: WebhookConfig,
+    workflowId: string,
+  ): Promise<string | undefined> {
+    if (!config.secretRef) return undefined;
+    try {
+      return await (await this.secrets()).get(config.secretRef);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger.error(`Webhook secret unavailable for ${workflowId}: ${message}`);
+      return undefined;
+    }
   }
 
   private readonly descriptors = new Map<string, ConnectorDescriptor>();
@@ -1062,6 +1543,8 @@ export class WorkflowRuntimeService {
         return { source: "none", nodes: [] };
       case SCHEDULE_BLOCK:
         return { source: "static", nodes: scheduleTriggerTree() };
+      case WEBHOOK_BLOCK:
+        return { source: "static", nodes: webhookTriggerTree() };
       case "core#branch":
         return {
           source: "static",

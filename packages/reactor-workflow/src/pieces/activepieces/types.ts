@@ -48,6 +48,12 @@ export const DEDUPE_KEY_PROPERTY = "_dedupe_key";
 // WEBHOOK | POLLING | MANUAL | APP_WEBHOOK
 export type ApTriggerStrategy = string;
 
+// NONE | HEADER_PRESENT | QUERY_PRESENT | BODY_PARAM_PRESENT | HEAD_REQUEST
+export interface ApHandshakeConfiguration {
+  strategy?: string;
+  paramName?: string;
+}
+
 export interface ApTrigger {
   name?: string;
   displayName?: string;
@@ -58,6 +64,7 @@ export interface ApTrigger {
   testStrategy?: string;
   props?: Record<string, ApProperty>;
   sampleData?: unknown;
+  handshakeConfiguration?: ApHandshakeConfiguration;
   onEnable?: (ctx: unknown) => Promise<void>;
   onDisable?: (ctx: unknown) => Promise<void>;
   onStart?: (ctx: unknown) => Promise<unknown>;

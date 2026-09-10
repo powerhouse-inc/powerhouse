@@ -210,6 +210,23 @@ export class TriggerSupervisor {
     });
   }
 
+  // The sender's probe, answered by the piece rather than by us: only its own
+  // code knows what the sender wants echoed back. Serialised with
+  // enable/disable like a delivery, so a probe arriving during a
+  // re-registration cannot read a half-written store.
+  handshake(
+    binding: PieceTriggerBinding,
+    payload: unknown,
+  ): Promise<PieceWorkerResult> {
+    return this.enqueue(async () => {
+      const store = await this.options.store();
+      const row = await store?.getTriggerState(binding.workflowId);
+      return this.hook(binding, "onHandshake", row ? parseStoreState(row) : {}, {
+        payload,
+      });
+    });
+  }
+
   // Ingress path: a verified delivery runs the trigger's `run` hook with the
   // payload, then goes through the same dedupe and fire path a poll does. The
   // resolver never waits for this — providers time out fast (paperless allows

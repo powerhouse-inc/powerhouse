@@ -5,6 +5,7 @@ import {
   type ApProperty,
   type ApPropertyType,
   type ApDropdownOption,
+  type ApTrigger,
   type ApTriggerStrategy,
 } from "./types.js";
 
@@ -49,12 +50,25 @@ export interface ConnectorTriggerDescriptor {
   requireAuth: boolean;
   props: ConnectorPropDescriptor[];
   hasSampleData: boolean;
+  // How the sender proves the endpoint exists before it will register it.
+  // Absent when the trigger declares no handshake, or declares NONE.
+  handshake?: { strategy: string; paramName?: string };
 }
 
 export interface ConnectorAuthDescriptor {
   type: ApPropertyType;
   displayName?: string;
   required?: boolean;
+}
+
+// NONE is how the framework spells "no handshake", so it is not carried:
+// a caller checking the field would otherwise have to know that too.
+function describeHandshake(
+  trigger: ApTrigger,
+): { strategy: string; paramName?: string } | undefined {
+  const strategy = trigger.handshakeConfiguration?.strategy;
+  if (!strategy || strategy === "NONE") return undefined;
+  return { strategy, paramName: trigger.handshakeConfiguration?.paramName };
 }
 
 export interface ConnectorSource {
@@ -125,16 +139,17 @@ function toPropDescriptor(
   return descriptor;
 }
 
-// Descriptor list for a props map. Used for nested shapes (ARRAY items) and
-// for the map a DYNAMIC props() resolver returns at design time, so the
-// editor only ever sees descriptors, never raw piece properties.
+// Descriptor list for a props map: nested ARRAY items and what a DYNAMIC
+// resolver returns, so the editor never sees raw piece properties.
 export function describeProperties(
   props: Record<string, ApProperty> | null | undefined,
   resolverIdFor?: (propName: string) => string,
 ): ConnectorPropDescriptor[] {
   if (!props || typeof props !== "object") return [];
   return Object.entries(props)
-    .filter((entry): entry is [string, ApProperty] => isPropertyObject(entry[1]))
+    .filter((entry): entry is [string, ApProperty] =>
+      isPropertyObject(entry[1]),
+    )
     .map(([propName, prop]) =>
       toPropDescriptor(propName, prop, resolverIdFor?.(propName)),
     );
@@ -180,6 +195,7 @@ export function buildDescriptor(
       ),
       hasSampleData:
         trigger.sampleData !== undefined && trigger.sampleData !== null,
+      handshake: describeHandshake(trigger),
     }),
   );
 

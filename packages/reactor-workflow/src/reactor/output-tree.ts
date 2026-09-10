@@ -284,6 +284,18 @@ export function scheduleTriggerTree(): OutputTreeNode[] {
   ];
 }
 
+// core#webhook payload: Activepieces' catch-webhook shape. Headers and query
+// are open maps, so they stay leaves the author addresses by name.
+export function webhookTriggerTree(): OutputTreeNode[] {
+  return [
+    leaf("method", "String!", "Uppercase HTTP method"),
+    leaf("path", "String!"),
+    leaf("headers", "JSONObject!", "Lowercased names; credentials redacted"),
+    leaf("queryParams", "JSONObject!"),
+    leaf("body", "Unknown", "Parsed JSON or form fields; text otherwise"),
+  ];
+}
+
 export function documentEventTree(
   actionInputChildren: OutputTreeNode[],
 ): OutputTreeNode[] {
