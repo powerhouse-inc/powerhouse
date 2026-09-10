@@ -8,6 +8,7 @@ import type {
   GenerateNodesCopyIdGenerator,
   GenerateNodesCopySrc,
 } from "./types.js";
+import { isDraft, original } from "mutative";
 
 export function isFileNode(node: Node): node is FileNode {
   return node.kind === "file";
@@ -118,6 +119,16 @@ export function getNextCopyNumber(
 
 export function escapeRegExp(string: string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * The node list as plain objects for read-only scans. Inside a mutative draft
+ * this returns the untouched base list, so a find or filter over it does not
+ * create a child draft per element it visits. Callers must read before they
+ * write: the base list does not see mutations made earlier in the same action.
+ */
+export function readNodes(state: { nodes: Node[] }): Node[] {
+  return isDraft(state) ? original(state).nodes : state.nodes;
 }
 
 export function handleTargetNameCollisions(params: {
