@@ -1,4 +1,4 @@
-import { Icon } from "#design-system";
+import { Icon, PackageAnimation } from "#design-system";
 import type { FC } from "react";
 import type {
   ToastContainerProps,
@@ -53,7 +53,7 @@ function getDefaultOptions(type: ExtendedTypeOptions): ToastOptions {
       case "connect-loading":
         options.type = "default";
         options.icon = (
-          <Icon className="text-warning" name="ClockFill" size={24} />
+          <PackageAnimation animate loop size={24} color="currentColor" />
         );
         break;
       case "connect-deleted":

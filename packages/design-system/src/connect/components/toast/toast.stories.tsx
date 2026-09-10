@@ -75,3 +75,28 @@ export const Default: Story = {
     );
   },
 };
+
+export const Loading: Story = {
+  args: {
+    type: "connect-loading",
+    content: "Installing package…",
+    autoClose: false,
+  },
+  render: (args) => {
+    const { content, ...options } = args;
+    return (
+      <button
+        className="rounded-md bg-primary px-4 py-2 text-primary-foreground hover:hover-effect active:active-effect"
+        onClick={() =>
+          toast(
+            content,
+            // @ts-expect-error - storybook doesn't support the type
+            options,
+          )
+        }
+      >
+        Trigger Loading Toast
+      </button>
+    );
+  },
+};
