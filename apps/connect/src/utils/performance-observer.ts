@@ -124,22 +124,38 @@ export function initPerformanceObserver(): () => void {
   let lcpMs = 0;
   let lcpReported = false;
   let lcpObserver: PerformanceObserver | undefined;
+
+  /** Latches the newest candidate of a batch. The last entry is the newest. */
+  const latch = (entries: ArrayLike<{ startTime: number }>): void => {
+    if (entries.length > 0) {
+      lcpMs = entries[entries.length - 1].startTime;
+    }
+  };
+
   const reportLcp = (): void => {
     // Several terminal signals can fire in one session (a click, then the page
     // hiding, then pagehide). The metric is sent for the first one only: every
     // repeat would be a double-count downstream.
     if (lcpReported) return;
     lcpReported = true;
+
+    // A PerformanceObserver delivers entries in a task of its own, so a
+    // terminal signal early in the page's life arrives while the newest
+    // candidate is still buffered. Drain it before disconnecting — otherwise
+    // an early click costs the session its LCP entirely.
+    try {
+      latch(lcpObserver?.takeRecords() ?? []);
+    } catch {
+      // draining is best-effort; report whatever was already delivered
+    }
+
     lcpObserver?.disconnect();
     if (lcpMs > 0) report("largest_contentful_paint", lcpMs);
   };
 
   try {
     lcpObserver = new PerformanceObserver((list) => {
-      const entries = list.getEntries();
-      if (entries.length > 0) {
-        lcpMs = entries[entries.length - 1].startTime;
-      }
+      latch(list.getEntries());
     });
     lcpObserver.observe({ type: "largest-contentful-paint", buffered: true });
     teardown.push(() => lcpObserver?.disconnect());

@@ -16,25 +16,54 @@ type ObserverCallback = (list: {
   getEntries: () => Array<{ name?: string; startTime: number }>;
 }) => void;
 
-let observers: Array<{ type: string; cb: ObserverCallback; live: boolean }> =
-  [];
+type FakeEntry = { name?: string; startTime: number };
+
+let observers: Array<{
+  type: string;
+  cb: ObserverCallback;
+  live: boolean;
+  pending: FakeEntry[];
+}> = [];
 
 class FakePerformanceObserver {
   constructor(private readonly cb: ObserverCallback) {}
   observe(options: { type: string }) {
-    observers.push({ type: options.type, cb: this.cb, live: true });
+    observers.push({
+      type: options.type,
+      cb: this.cb,
+      live: true,
+      pending: [],
+    });
   }
   disconnect() {
     for (const o of observers) if (o.cb === this.cb) o.live = false;
   }
+  /** Real observers hand back the entries buffered since the last callback. */
+  takeRecords(): FakeEntry[] {
+    const drained: FakeEntry[] = [];
+    for (const o of observers) {
+      if (o.cb !== this.cb) continue;
+      drained.push(...o.pending);
+      o.pending = [];
+    }
+    return drained;
+  }
 }
 
-function emit(
-  type: string,
-  entries: Array<{ name?: string; startTime: number }>,
-): void {
+function emit(type: string, entries: FakeEntry[]): void {
   for (const o of observers) {
     if (o.type === type && o.live) o.cb({ getEntries: () => entries });
+  }
+}
+
+/**
+ * Buffers entries in the observer WITHOUT running its callback — the state a
+ * real observer is in between an entry being recorded and the task that
+ * delivers it. `takeRecords()` is the only way to see them.
+ */
+function queue(type: string, entries: FakeEntry[]): void {
+  for (const o of observers) {
+    if (o.type === type && o.live) o.pending.push(...entries);
   }
 }
 
@@ -155,6 +184,30 @@ describe("initPerformanceObserver", () => {
     setVisibility("hidden");
     document.dispatchEvent(new Event("visibilitychange", { bubbles: true }));
     expect(reportsFor("largest_contentful_paint")).toEqual([{ ms: 640 }]);
+  });
+
+  it("reports the LCP candidate still queued in the observer", () => {
+    // A PerformanceObserver delivers entries in a task of its own. An
+    // interaction early in the page's life lands before that task runs, so the
+    // newest candidate is sitting in the observer's buffer rather than in the
+    // latched value. Disconnecting without draining it loses LCP for the whole
+    // session — silently, since there is nothing left to report.
+    init();
+
+    queue("largest-contentful-paint", [{ startTime: 480.2 }]);
+    window.dispatchEvent(new Event("pointerdown"));
+
+    expect(reportsFor("largest_contentful_paint")).toEqual([{ ms: 480 }]);
+  });
+
+  it("prefers a queued LCP candidate over an older delivered one", () => {
+    init();
+
+    emit("largest-contentful-paint", [{ startTime: 300 }]);
+    queue("largest-contentful-paint", [{ startTime: 950 }]);
+    window.dispatchEvent(new Event("pagehide"));
+
+    expect(reportsFor("largest_contentful_paint")).toEqual([{ ms: 950 }]);
   });
 
   it("reports no LCP when no candidate was ever observed", () => {
