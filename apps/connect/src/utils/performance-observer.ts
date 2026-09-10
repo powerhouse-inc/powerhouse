@@ -6,11 +6,11 @@ import type { PHGlobal } from "@powerhousedao/reactor-browser";
  *
  * Captures First Contentful Paint (FCP) and Largest Contentful Paint (LCP) via
  * the Performance API and reports each to the OpenPanel analytics buffer (a
- * consent-gated, never-throwing queue) and the console. Call
- * {@link initPerformanceObserver} at the very top of the entry module, before
- * the runtime config is fetched, so FCP is caught even if the browser has
- * already painted — a `PerformanceObserver` with `buffered: true` replays
- * entries that fired before `observe()` was called.
+ * consent-gated, never-throwing queue). Call {@link initPerformanceObserver}
+ * at the very top of the entry module, before the runtime config is fetched,
+ * so FCP is caught even if the browser has already painted — a
+ * `PerformanceObserver` with `buffered: true` replays entries that fired
+ * before `observe()` was called.
  *
  * This module is intentionally dependency-light (only the OpenPanel event
  * buffer, which has no runtime imports of its own) so it is safe to load
@@ -37,8 +37,8 @@ type PhWithPerformance = PHGlobal & { performance?: Record<string, number> };
 
 /**
  * Mirror the metric on `window.ph.performance` for devtools inspection. Only
- * writes to an already-existing `window.ph` (owned by main.tsx) — never
- * creates or replaces it, so it can't clobber the app's global state.
+ * writes to an already-existing `window.ph` (owned by the entry module) —
+ * never creates or replaces it, so it can't clobber the app's global state.
  */
 function storeOnWindow(name: string, value: number): void {
   try {
@@ -59,10 +59,15 @@ function report(name: string, ms: number): void {
 
   storeOnWindow(name, value);
 
-  try {
-    console.info(`[connect:performance] ${name}: ${value}ms`, props);
-  } catch {
-    // console is best-effort only
+  // The console summary is a developer aid. In a production build it is noise
+  // in every user's console and in every support screenshot, so it is gated
+  // out of the bundle there.
+  if (!import.meta.env.PROD) {
+    try {
+      console.info(`[connect:performance] ${name}: ${value}ms`, props);
+    } catch {
+      // console is best-effort only
+    }
   }
 
   try {
@@ -72,23 +77,44 @@ function report(name: string, ms: number): void {
   }
 }
 
-export function initPerformanceObserver(): void {
+/**
+ * Starts the observers. Returns a disposer that detaches all of them. The app
+ * never needs it — the observers live as long as the page does — but it keeps
+ * the module testable and leaves no listener behind.
+ */
+export function initPerformanceObserver(): () => void {
   if (
     typeof window === "undefined" ||
     typeof PerformanceObserver === "undefined"
   ) {
-    return;
+    return () => undefined;
   }
 
-  // FCP — from the "paint" buffer.
+  const teardown: Array<() => void> = [];
+
+  /** Registers a listener and queues its removal on dispose. */
+  const listen = (
+    target: EventTarget,
+    type: string,
+    handler: () => void,
+    once = true,
+  ): void => {
+    target.addEventListener(type, handler, { once });
+    teardown.push(() => target.removeEventListener(type, handler));
+  };
+
+  // FCP — from the "paint" buffer. It fires once, so stop observing after it.
   try {
-    new PerformanceObserver((list) => {
+    const fcpObserver = new PerformanceObserver((list) => {
       for (const entry of list.getEntries()) {
         if (entry.name === "first-contentful-paint") {
+          fcpObserver.disconnect();
           report("first_contentful_paint", entry.startTime);
         }
       }
-    }).observe({ type: "paint", buffered: true });
+    });
+    fcpObserver.observe({ type: "paint", buffered: true });
+    teardown.push(() => fcpObserver.disconnect());
   } catch (err) {
     console.warn("[connect:performance] FCP observer failed:", err);
   }
@@ -96,11 +122,18 @@ export function initPerformanceObserver(): void {
   // LCP — the final value only settles on an interaction or page hide, so latch
   // the latest candidate and report on the first terminal signal.
   let lcpMs = 0;
+  let lcpReported = false;
   let lcpObserver: PerformanceObserver | undefined;
   const reportLcp = (): void => {
-    if (lcpMs > 0) report("largest_contentful_paint", lcpMs);
+    // Several terminal signals can fire in one session (a click, then the page
+    // hiding, then pagehide). The metric is sent for the first one only: every
+    // repeat would be a double-count downstream.
+    if (lcpReported) return;
+    lcpReported = true;
     lcpObserver?.disconnect();
+    if (lcpMs > 0) report("largest_contentful_paint", lcpMs);
   };
+
   try {
     lcpObserver = new PerformanceObserver((list) => {
       const entries = list.getEntries();
@@ -109,17 +142,35 @@ export function initPerformanceObserver(): void {
       }
     });
     lcpObserver.observe({ type: "largest-contentful-paint", buffered: true });
-    window.addEventListener("pagehide", reportLcp, { once: true });
-    window.addEventListener(
+    teardown.push(() => lcpObserver?.disconnect());
+
+    listen(window, "pagehide", reportLcp);
+    listen(window, "pointerdown", reportLcp);
+    listen(window, "keydown", reportLcp);
+    // Not `once`: a page that loads in a background tab, or that the user tabs
+    // away from and back, fires visibilitychange more than once, and only the
+    // transition to "hidden" is terminal. A one-shot listener would be spent
+    // on an earlier "visible" event and never see the hide.
+    listen(
+      document,
       "visibilitychange",
       () => {
         if (document.visibilityState === "hidden") reportLcp();
       },
-      { once: true },
+      false,
     );
-    window.addEventListener("pointerdown", reportLcp, { once: true });
-    window.addEventListener("keydown", reportLcp, { once: true });
   } catch (err) {
     console.warn("[connect:performance] LCP observer failed:", err);
   }
+
+  return () => {
+    for (const detach of teardown) {
+      try {
+        detach();
+      } catch {
+        // teardown is best-effort only
+      }
+    }
+    teardown.length = 0;
+  };
 }
