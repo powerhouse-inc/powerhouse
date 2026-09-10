@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-09-10T09:31:08.230Z
+> Generated: 2026-09-10T12:17:45.903Z
 > Total Documents: 112
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -13570,11 +13570,13 @@ Specify the release version of Powerhouse dependencies to use.
 
 
 ## Update
-Update your powerhouse dependencies to their latest tagged version
+Update your Powerhouse dependencies and installed packages to their latest versions
 
 
 ### Flags
 **Skip Install** - Skip running `install` with your package manager - Usage: `--skip-install, -s`
+
+**Update Packages** - Auto-update installed packages (powerhouse.config.json) to their newest same-major version - Usage: `--update-packages`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 

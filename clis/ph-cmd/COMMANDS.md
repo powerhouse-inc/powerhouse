@@ -1,4 +1,4 @@
-# PH-CMD CLI Commands (6.2.3-dev.0)<br>
+# PH-CMD CLI Commands (6.2.3-dev.1)<br>
 This document provides detailed information about the available commands in the PH-CMD CLI. The CLI is published as `ph-cmd` and is invoked with the `ph` command.<br><br>
 The Powerhouse CLI (ph-cmd) is a command-line interface tool that provides essential commands for managing Powerhouse projects.
 The tool and it's commands are fundamental for creating, building, and running Document Models as a builder in studio mode.<br>
@@ -114,11 +114,15 @@ show help<br><br>
 
 
 ## Update
-Update your powerhouse dependencies to their latest tagged version
+Update your Powerhouse dependencies and installed packages to their latest versions
 ### flags
 #### Skip Install <br>
 Skip running `install` with your package manager<br><br>
 **usage:** `--skip-install, -s`<br>
+
+#### Update Packages <br>
+Auto-update installed packages (powerhouse.config.json) to their newest same-major version<br><br>
+**usage:** `--update-packages`<br>
 
 #### Debug <br>
 Log arguments passed to this command<br><br>

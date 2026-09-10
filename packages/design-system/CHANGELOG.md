@@ -1,3 +1,18 @@
+## 6.2.3-dev.1 (2026-09-10)
+
+### 🚀 Features
+
+- **design-system:** installed-package version picker, update indicator and Update action ([#2357](https://github.com/powerhouse-inc/powerhouse/issues/2357))
+- **shared:** add install-spec parsing and update-target resolution ([#2357](https://github.com/powerhouse-inc/powerhouse/issues/2357))
+
+### 🩹 Fixes
+
+- **design-system:** give package row action menu an accessible name ([b7b7705b7](https://github.com/powerhouse-inc/powerhouse/commit/b7b7705b7))
+
+### ❤️ Thank You
+
+- froid1911
+
 ## 6.2.3-dev.0 (2026-09-10)
 
 ### 🚀 Features

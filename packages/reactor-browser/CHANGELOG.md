@@ -1,3 +1,14 @@
+## 6.2.3-dev.1 (2026-09-10)
+
+### 🚀 Features
+
+- **reactor-browser:** add single-package registry fetcher and package spec accessor ([#2357](https://github.com/powerhouse-inc/powerhouse/issues/2357))
+- **shared:** add install-spec parsing and update-target resolution ([#2357](https://github.com/powerhouse-inc/powerhouse/issues/2357))
+
+### ❤️ Thank You
+
+- froid1911
+
 ## 6.2.3-dev.0 (2026-09-10)
 
 ### 🚀 Features
