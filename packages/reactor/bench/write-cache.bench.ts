@@ -4,10 +4,14 @@ import {
   AddFolderInputSchema,
   defaultGlobalState,
   driveDocumentModelModule,
+  handleTargetNameCollisions,
+  isValidName,
   nodeReducer,
   type AddFileAction,
   type AddFolderAction,
+  type DocumentDriveGlobalState,
   type DocumentDrivePHState,
+  type FileNode,
 } from "@powerhousedao/shared/document-drive";
 import {
   createReducer,
@@ -16,6 +20,7 @@ import {
   isDocumentAction,
   type Action,
   type DocumentModelModule,
+  type Operation,
   type PHDocument,
   type Reducer,
   type SignalDispatch,
@@ -1172,3 +1177,590 @@ for (const [count, budgetMs] of REPLAY_DECOMPOSITION_CASES) {
     );
   });
 }
+
+type MirrorVariant = {
+  /** The case-name fragment naming which statements the variant runs. */
+  label: string;
+  /** node.ts:19/57 find, node.ts:23/61 isValidName, utils.ts:123 collisions. */
+  reads: boolean;
+  /** node.ts:46/82 sort. The push at node.ts:43/74 runs in every variant. */
+  sort: boolean;
+};
+
+type MirrorSplitStamps = {
+  wallNs: bigint;
+  readNs: bigint;
+  writeNs: bigint;
+  bodyNs: bigint;
+  calls: number;
+};
+
+type MirrorLeg = "draft" | "plain";
+
+type MirrorSample = {
+  leg: MirrorLeg;
+  label: string;
+  count: number;
+  stamps: MirrorSplitStamps;
+};
+
+type NodeBodyApply = (
+  state: DocumentDriveGlobalState,
+  action: AddFileAction | AddFolderAction,
+) => void;
+
+function createMirrorStamps(): MirrorSplitStamps {
+  return { wallNs: 0n, readNs: 0n, writeNs: 0n, bodyNs: 0n, calls: 0 };
+}
+
+function resetMirrorStamps(stamps: MirrorSplitStamps): void {
+  stamps.wallNs = 0n;
+  stamps.readNs = 0n;
+  stamps.writeNs = 0n;
+  stamps.bodyNs = 0n;
+  stamps.calls = 0;
+}
+
+function stampStart(stamps: MirrorSplitStamps | undefined): bigint {
+  return stamps === undefined ? 0n : process.hrtime.bigint();
+}
+
+function addReadStamp(
+  stamps: MirrorSplitStamps | undefined,
+  startedAt: bigint,
+): void {
+  if (stamps !== undefined) {
+    stamps.readNs += process.hrtime.bigint() - startedAt;
+  }
+}
+
+function addWriteStamp(
+  stamps: MirrorSplitStamps | undefined,
+  startedAt: bigint,
+): void {
+  if (stamps !== undefined) {
+    stamps.writeNs += process.hrtime.bigint() - startedAt;
+  }
+}
+
+/**
+ * A statement-for-statement mirror of nodeReducer.addFileOperation and
+ * addFolderOperation (packages/shared/document-drive/src/reducers/node.ts:18-83
+ * and the handleTargetNameCollisions it calls at src/utils.ts:123-147), checked
+ * against those files at reactorSha 3cef6be7e, where they are still byte
+ * identical to B-022's caafff10fa28. It exists only so a variant can drop the
+ * read scans or the sort while running every other statement, which is what
+ * splits the draft-proxy per-node tax; it must be re-checked against node.ts
+ * and utils.ts on every future run, because drift would make it stop
+ * representing the real body silently and the split would then measure nothing.
+ *
+ * Deliberate differences, all of them per-call constants that cancel out of a
+ * per-node slope: the real addFileOperation ends in an optional dispatch call,
+ * which this harness leaves undefined exactly as the plain-state leg of the
+ * decomposition suite above does, and the two hrtime pairs that bracket the
+ * read and write intervals are only taken for the variant that carries
+ * `stamps`. The `real body (fidelity reference)` cases in the same suite run
+ * the actual reducer through the identical harness, so the mirror's claim to
+ * represent it is a measured ratio and not an assertion.
+ */
+function mirroredNodeBody(
+  state: DocumentDriveGlobalState,
+  action: AddFileAction | AddFolderAction,
+  variant: MirrorVariant,
+  stamps: MirrorSplitStamps | undefined,
+): void {
+  if (action.type === "ADD_FILE") {
+    const input = action.input;
+    let name = input.name;
+
+    if (variant.reads) {
+      const readStartedAt = stampStart(stamps);
+
+      if (state.nodes.find((node) => node.id === input.id)) {
+        throw new Error(`Node with id ${input.id} already exists!`);
+      }
+
+      if (!isValidName(input.name)) {
+        throw new Error(
+          `Invalid name: '${input.name}'. Names must not be empty or contain control characters.`,
+        );
+      }
+
+      name = handleTargetNameCollisions({
+        nodes: state.nodes,
+        srcName: input.name,
+        srcKind: "file",
+        targetParentFolder: input.parentFolder || null,
+      });
+
+      addReadStamp(stamps, readStartedAt);
+    }
+
+    const writeStartedAt = stampStart(stamps);
+
+    const fileNode: FileNode = {
+      id: input.id,
+      name,
+      kind: "file",
+      parentFolder: input.parentFolder ?? null,
+      documentType: input.documentType,
+    };
+    state.nodes.push(fileNode);
+
+    if (variant.sort) {
+      state.nodes.sort((a, b) => a.id.localeCompare(b.id));
+    }
+
+    addWriteStamp(stamps, writeStartedAt);
+    return;
+  }
+
+  const input = action.input;
+  let name = input.name;
+
+  if (variant.reads) {
+    const readStartedAt = stampStart(stamps);
+
+    if (state.nodes.find((node) => node.id === input.id)) {
+      throw new Error(`Node with id ${input.id} already exists!`);
+    }
+
+    if (!isValidName(input.name)) {
+      throw new Error(
+        `Invalid name: '${input.name}'. Names must not be empty or contain control characters.`,
+      );
+    }
+
+    name = handleTargetNameCollisions({
+      nodes: state.nodes,
+      srcName: input.name,
+      srcKind: "folder",
+      targetParentFolder: input.parentFolder || null,
+    });
+
+    addReadStamp(stamps, readStartedAt);
+  }
+
+  const writeStartedAt = stampStart(stamps);
+
+  state.nodes.push({
+    ...input,
+    name,
+    kind: "folder",
+    parentFolder: input.parentFolder ?? null,
+  });
+
+  if (variant.sort) {
+    state.nodes.sort((a, b) => a.id.localeCompare(b.id));
+  }
+
+  addWriteStamp(stamps, writeStartedAt);
+}
+
+/** The real reducer bodies the mirror claims to represent, one whole stamp. */
+function stampedRealNodeBody(
+  state: DocumentDriveGlobalState,
+  action: AddFileAction | AddFolderAction,
+  stamps: MirrorSplitStamps,
+): void {
+  const startedAt = process.hrtime.bigint();
+
+  try {
+    if (action.type === "ADD_FILE") {
+      nodeReducer.addFileOperation(state, action, undefined);
+      return;
+    }
+
+    nodeReducer.addFolderOperation(state, action, undefined);
+  } finally {
+    stamps.bodyNs += process.hrtime.bigint() - startedAt;
+  }
+}
+
+/**
+ * The operations the cold-miss replay feeds the reducer, built once per op
+ * count. The leg has to pass them: a replayed operation carrying a hash is the
+ * only thing that stops the base reducer hashing the whole scope state on every
+ * call (packages/shared/document-model/reducer.ts:639-642), which is O(nodes)
+ * and would sit in every variant's mean as a wrapper an order of magnitude
+ * larger than the body being split. kysely-write-cache.ts:966 passes exactly
+ * `skip`, `replayOptions.operation` and `skipIndexValidation`.
+ */
+const replayOperationCache = new Map<number, Operation[]>();
+
+function replayStoredOperations(count: number): Operation[] {
+  const cached = replayOperationCache.get(count);
+
+  if (cached) {
+    return cached;
+  }
+
+  const operations: Operation[] = replayActions(count).map((action, index) => ({
+    id: deriveOperationId(DOCUMENT_ID, SCOPE, BRANCH, action.id),
+    index,
+    skip: 0,
+    hash: `${DOCUMENT_ID}-hash-${String(index)}`,
+    timestampUtcMs: new Date().toISOString(),
+    action,
+  }));
+
+  replayOperationCache.set(count, operations);
+  return operations;
+}
+
+/**
+ * The draft leg: the same base reducer the cold-miss replay runs, so the state
+ * the body mutates is the real nested mutative draft create() builds at
+ * packages/shared/document-model/reducer.ts:556. Returning undefined keeps the
+ * draft's mutations, as the generated state reducer does.
+ */
+function mirrorDraftReducer(
+  apply: NodeBodyApply,
+): Reducer<DocumentDrivePHState> {
+  const stateReducer: StateReducer<DocumentDrivePHState> = (state, action) => {
+    apply(
+      (state as unknown as DocumentDrivePHState).global,
+      action as AddFileAction | AddFolderAction,
+    );
+    return undefined;
+  };
+
+  return createReducer<DocumentDrivePHState>(stateReducer);
+}
+
+function leastSquaresSlope(xs: number[], ys: number[]): number {
+  const n = xs.length;
+  const meanX = xs.reduce((total, value) => total + value, 0) / n;
+  const meanY = ys.reduce((total, value) => total + value, 0) / n;
+  let covariance = 0;
+  let variance = 0;
+
+  for (let index = 0; index < n; index++) {
+    covariance += (xs[index] - meanX) * (ys[index] - meanY);
+    variance += (xs[index] - meanX) ** 2;
+  }
+
+  return covariance / variance;
+}
+
+/**
+ * Per-node cost from the four op counts. A replay of N ops grows the node list
+ * from 0 to N-1, so the mean list a call scans is (N-1)/2 long and the per-node
+ * cost is twice the slope of per-call time against N -- the method T-016 used
+ * for the 0.7402 us/node figure this suite splits.
+ */
+function perNodeSlope(
+  samples: MirrorSample[],
+  read: (s: MirrorSample) => number,
+): number {
+  return (
+    2 *
+    leastSquaresSlope(
+      samples.map((sample) => sample.count),
+      samples.map(read),
+    )
+  );
+}
+
+const MIRROR_VARIANTS: MirrorVariant[] = [
+  { label: "mirrored body: reads + push + sort", reads: true, sort: true },
+  { label: "mirrored body: push + sort, no reads", reads: false, sort: true },
+  { label: "mirrored body: reads + push, no sort", reads: true, sort: false },
+  { label: "mirrored body: push only", reads: false, sort: false },
+];
+
+const MIRROR_FULL_LABEL = MIRROR_VARIANTS[0].label;
+const MIRROR_NO_READS_LABEL = MIRROR_VARIANTS[1].label;
+const MIRROR_NO_SORT_LABEL = MIRROR_VARIANTS[2].label;
+const MIRROR_PUSH_ONLY_LABEL = MIRROR_VARIANTS[3].label;
+const MIRROR_REAL_LABEL = "real body (fidelity reference)";
+const MIRROR_NO_BODY_LABEL = "no body: create() + base reducer only";
+
+/** Registration order, which the report reads the samples back in. */
+const MIRROR_LABELS: string[] = [
+  MIRROR_REAL_LABEL,
+  MIRROR_NO_BODY_LABEL,
+  ...MIRROR_VARIANTS.map((variant) => variant.label),
+];
+
+/** Op count and the time budget each split case needs; `iterations` sets n. */
+const READ_WRITE_SPLIT_CASES: [number, number][] = [
+  [100, 1000],
+  [500, 1000],
+  [1000, 1000],
+  [2000, 1000],
+];
+
+const mirrorSamples: MirrorSample[] = [];
+
+function mirrorSampleFor(
+  leg: MirrorLeg,
+  label: string,
+  count: number,
+): MirrorSample {
+  const sample: MirrorSample = {
+    leg,
+    label,
+    count,
+    stamps: createMirrorStamps(),
+  };
+  mirrorSamples.push(sample);
+  return sample;
+}
+
+function usPerCall(sample: MirrorSample, ns: bigint): number {
+  return sample.stamps.calls === 0
+    ? 0
+    : Number(ns) / 1000 / sample.stamps.calls;
+}
+
+function wallUsPerCall(sample: MirrorSample): number {
+  return usPerCall(sample, sample.stamps.wallNs);
+}
+
+function legSamples(leg: MirrorLeg, label: string): MirrorSample[] {
+  return mirrorSamples.filter(
+    (sample) => sample.leg === leg && sample.label === label,
+  );
+}
+
+function reportMirrorLeg(leg: MirrorLeg): void {
+  for (const label of MIRROR_LABELS) {
+    const samples = legSamples(leg, label);
+    console.log(
+      [
+        `read/write split | ${leg} | ${label}`,
+        ...samples.map(
+          (sample) =>
+            `${String(sample.count)} ops ${wallUsPerCall(sample).toFixed(3)} us/call`,
+        ),
+      ].join(" | "),
+    );
+  }
+
+  const full = legSamples(leg, MIRROR_FULL_LABEL);
+  const noReads = legSamples(leg, MIRROR_NO_READS_LABEL);
+  const noSort = legSamples(leg, MIRROR_NO_SORT_LABEL);
+  const pushOnly = legSamples(leg, MIRROR_PUSH_ONLY_LABEL);
+  const noBody = legSamples(leg, MIRROR_NO_BODY_LABEL);
+  const real = legSamples(leg, MIRROR_REAL_LABEL);
+
+  const fullSlope = perNodeSlope(full, wallUsPerCall);
+  const noReadsSlope = perNodeSlope(noReads, wallUsPerCall);
+  const noSortSlope = perNodeSlope(noSort, wallUsPerCall);
+  const pushOnlySlope = perNodeSlope(pushOnly, wallUsPerCall);
+  const noBodySlope = perNodeSlope(noBody, wallUsPerCall);
+
+  const readScan = fullSlope - noReadsSlope;
+  const sortCompare = fullSlope - noSortSlope;
+  const touch = noReadsSlope + noSortSlope - pushOnlySlope - fullSlope;
+  const pushShare = readScan / fullSlope;
+
+  console.log(
+    [
+      `read/write split | ${leg} | per-node wall slopes`,
+      `full ${fullSlope.toFixed(4)}`,
+      `no reads ${noReadsSlope.toFixed(4)}`,
+      `no sort ${noSortSlope.toFixed(4)}`,
+      `push only ${pushOnlySlope.toFixed(4)}`,
+      `no body ${noBodySlope.toFixed(4)} us/node`,
+    ].join(" | "),
+  );
+  console.log(
+    [
+      `read/write split | ${leg} | buckets from the case means, summing to the full wall slope`,
+      `read scan ${readScan.toFixed(4)}`,
+      `sort comparator ${sortCompare.toFixed(4)}`,
+      `touch, being the child drafts and the finalize they force ${touch.toFixed(4)}`,
+      `push and everything the wrapper does anyway ${pushOnlySlope.toFixed(4)}`,
+      `full wall ${fullSlope.toFixed(4)} us/node`,
+      `cross-check read scan with the touch ${(noSortSlope - pushOnlySlope).toFixed(4)}`,
+      `cross-check sort with the touch ${(noReadsSlope - pushOnlySlope).toFixed(4)} us/node`,
+    ].join(" | "),
+  );
+  console.log(
+    [
+      `read/write split | ${leg} | shares of the full per-node wall slope from the case means`,
+      `read scan ${(pushShare * 100).toFixed(1)}%`,
+      `sort comparator ${((sortCompare / fullSlope) * 100).toFixed(1)}%`,
+      `touch ${((touch / fullSlope) * 100).toFixed(1)}%`,
+      `push and wrapper ${((pushOnlySlope / fullSlope) * 100).toFixed(1)}%`,
+      `what survives removing the read scans from the draft ${((noReadsSlope / fullSlope) * 100).toFixed(1)}%`,
+      `wrapper the body does not induce, from the no-body case ${noBodySlope.toFixed(4)} us/node`,
+    ].join(" | "),
+  );
+
+  const stampedRead = perNodeSlope(full, (sample) =>
+    usPerCall(sample, sample.stamps.readNs),
+  );
+  const stampedWrite = perNodeSlope(full, (sample) =>
+    usPerCall(sample, sample.stamps.writeNs),
+  );
+  const stampedBody = stampedRead + stampedWrite;
+  const realBody = perNodeSlope(real, (sample) =>
+    usPerCall(sample, sample.stamps.bodyNs),
+  );
+
+  console.log(
+    [
+      `read/write split | ${leg} | stamped body sub-intervals`,
+      `reads ${stampedRead.toFixed(4)}`,
+      `push+sort ${stampedWrite.toFixed(4)}`,
+      `body total ${stampedBody.toFixed(4)} us/node`,
+      `push+sort share of body ${((stampedWrite / stampedBody) * 100).toFixed(1)}%`,
+    ].join(" | "),
+  );
+  console.log(
+    [
+      `read/write split | ${leg} | fidelity`,
+      `mirror body ${stampedBody.toFixed(4)} us/node`,
+      `real body ${realBody.toFixed(4)} us/node`,
+      `mirror/real slope ${(stampedBody / realBody).toFixed(4)}x`,
+      `wrapper (full wall - mirror body) ${(fullSlope - stampedBody).toFixed(4)} us/node`,
+    ].join(" | "),
+  );
+
+  for (const sample of full) {
+    const reference = real.find((item) => item.count === sample.count);
+
+    if (reference === undefined) {
+      continue;
+    }
+
+    console.log(
+      [
+        `read/write split | ${leg} | fidelity per call | ${String(sample.count)} ops`,
+        `mirror full wall ${wallUsPerCall(sample).toFixed(3)}`,
+        `real body wall ${wallUsPerCall(reference).toFixed(3)} us/call`,
+        `ratio ${(wallUsPerCall(sample) / wallUsPerCall(reference)).toFixed(4)}x`,
+        `mirror body ${usPerCall(sample, sample.stamps.readNs + sample.stamps.writeNs).toFixed(3)}`,
+        `real body ${usPerCall(reference, reference.stamps.bodyNs).toFixed(3)} us/call`,
+        `ratio ${(Number(sample.stamps.readNs + sample.stamps.writeNs) / Number(reference.stamps.bodyNs) / (sample.stamps.calls / reference.stamps.calls)).toFixed(4)}x`,
+      ].join(" | "),
+    );
+  }
+}
+
+function reportMirrorSplit(): void {
+  reportMirrorLeg("draft");
+  reportMirrorLeg("plain");
+}
+
+/**
+ * The `no body` baseline runs the wrapper and nothing else. Its node list stays
+ * empty while its operation history grows exactly as every other variant's
+ * does, so its slope is the create()/base-reducer cost per replayed operation
+ * and subtracting it leaves the reducer body the split is about.
+ */
+function mirrorApplyFor(
+  label: string,
+  variant: MirrorVariant | undefined,
+  sample: MirrorSample,
+): NodeBodyApply {
+  if (label === MIRROR_NO_BODY_LABEL) {
+    return () => undefined;
+  }
+
+  if (variant === undefined) {
+    return (state, action) => stampedRealNodeBody(state, action, sample.stamps);
+  }
+
+  return (state, action) =>
+    mirroredNodeBody(
+      state,
+      action,
+      variant,
+      label === MIRROR_FULL_LABEL ? sample.stamps : undefined,
+    );
+}
+
+function everyMirrorSampleRan(): boolean {
+  return mirrorSamples.every((sample) => sample.stamps.calls > 0);
+}
+
+/**
+ * How T-016's 12.6x draft-proxy per-node tax splits between the read scans at
+ * node.ts:19/57 and utils.ts:123 and the push+sort at node.ts:43-46/74-82. A
+ * tinybench case mean is the wall time of a whole measured function, so no case
+ * can be a sub-interval of one reducer call; instead each leg runs the mirrored
+ * body four ways over the same growing node list -- with the reads and the sort,
+ * without the reads, without the sort, and with neither -- plus a no-body
+ * baseline, and the differences between those means carry the split into the
+ * record without needing the stamps. Every variant still pushes, so the node
+ * list grows identically and the scan lengths a variant pays are the ones the
+ * full body pays.
+ *
+ * The differences are not additive, and that is the point: on a draft the first
+ * statement to touch an element pays for its child draft and the finalize that
+ * unwraps it, so the read scans pay it in the full variant and the sort
+ * comparator pays it once the reads are gone. `full - no reads` is therefore the
+ * read scan without that touch cost, `full - no sort` the comparator without it,
+ * and what those two leave between the push-only and full means is the touch
+ * itself. Which side the touch belongs to depends on the question being asked,
+ * so the report prints the body split three ways: read scan alone, push+sort
+ * carrying the touch, and push+sort without it. The stamped sub-intervals
+ * printed alongside charge the touch to the reads, the way the read statements
+ * see it in the real body, and are the figure comparable to a reads-first
+ * mirror. On the plain-state leg the touch term should collapse to noise, which
+ * is the check that the decomposition is behaving.
+ */
+describe("Write Cache Cold Miss Replay Read/Write Split", () => {
+  for (const leg of ["draft", "plain"] satisfies MirrorLeg[]) {
+    for (const label of MIRROR_LABELS) {
+      const variant = MIRROR_VARIANTS.find((item) => item.label === label);
+
+      for (const [count, budgetMs] of READ_WRITE_SPLIT_CASES) {
+        const sample = mirrorSampleFor(leg, label, count);
+        const apply: NodeBodyApply = mirrorApplyFor(label, variant, sample);
+        const reducer = leg === "draft" ? mirrorDraftReducer(apply) : undefined;
+
+        bench(
+          `${leg} leg ${String(count)} ops: ${label}`,
+          () => {
+            const operations = replayStoredOperations(count);
+            const startedAt = process.hrtime.bigint();
+
+            if (reducer === undefined) {
+              const state = driveDocumentModelModule.utils.createState({
+                global: defaultGlobalState(),
+              });
+
+              for (const operation of operations) {
+                apply(
+                  state.global,
+                  operation.action as AddFileAction | AddFolderAction,
+                );
+              }
+            } else {
+              let document = driveDocumentModelModule.utils.createDocument();
+
+              for (const operation of operations) {
+                document = reducer(document, operation.action, undefined, {
+                  skip: operation.skip,
+                  replayOptions: { operation },
+                  skipIndexValidation: true,
+                });
+              }
+            }
+
+            sample.stamps.wallNs += process.hrtime.bigint() - startedAt;
+            sample.stamps.calls += operations.length;
+          },
+          {
+            time: budgetMs,
+            iterations: 10,
+            throws: true,
+            setup: () => {
+              resetMirrorStamps(sample.stamps);
+            },
+            teardown: (_task, mode) => {
+              if (mode === "run" && everyMirrorSampleRan()) {
+                reportMirrorSplit();
+              }
+            },
+          },
+        );
+      }
+    }
+  }
+});
