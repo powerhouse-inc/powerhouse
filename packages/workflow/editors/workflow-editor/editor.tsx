@@ -7,12 +7,16 @@ import { useEffect, useMemo } from "react";
 import { useWorkflowModel } from "./document/useWorkflowModel.js";
 import "./runtime-piece-source.js";
 import {
+  createSecret,
   fetchBlockOutputTree,
   fetchConnections,
   fetchRuns,
+  fetchSecretStat,
+  fetchWebhookEndpoint,
   getBlockForm,
   invalidateConnections,
   loadBlockOptions,
+  rotateSecret,
   testTrigger,
   type OutputTreeNode,
 } from "./runtime-api.js";
@@ -34,8 +38,14 @@ function WorkflowEditor() {
       getBlockForm,
       loadOptions: loadBlockOptions,
       testTrigger: () => testTrigger(workflowId),
+      webhookEndpoint: () => fetchWebhookEndpoint(workflowId),
       listConnections: fetchConnections,
       refreshConnections: invalidateConnections,
+      secrets: {
+        save: ({ ref, value, label }) =>
+          ref ? rotateSecret(ref, value) : createSecret(value, label),
+        stat: fetchSecretStat,
+      },
     }),
     [workflowId],
   );

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { flowPorts } from "./model.js";
-import type { BlockForm } from "./forms.js";
+import type { BlockForm, BlockFormProp } from "./forms.js";
 import {
   isEmptyValue,
   missingForBlock,
@@ -51,6 +51,35 @@ describe("missingRequired", () => {
       "To",
       "Tags",
     ]);
+  });
+});
+
+describe("isPropVisible / conditional required fields", () => {
+  const secret: BlockFormProp = {
+    name: "secretRef",
+    displayName: "Signing secret",
+    type: "PH_SECRET_REF",
+    required: true,
+    showWhen: { prop: "scheme", oneOf: ["token", "hmac"] },
+  };
+
+  it("does not require a field its condition hides", () => {
+    // An unverified endpoint has no secret to sign with. Counting the hidden
+    // field as missing would show a warning with no field to resolve it.
+    expect(missingRequired([secret], { scheme: "none" })).toEqual([]);
+    expect(missingRequired([secret], {})).toEqual([]);
+  });
+
+  it("requires it once the condition is met", () => {
+    expect(missingRequired([secret], { scheme: "token" })).toEqual([
+      "Signing secret",
+    ]);
+    expect(
+      missingRequired([secret], {
+        scheme: "token",
+        secretRef: "secret://v1:a",
+      }),
+    ).toEqual([]);
   });
 });
 

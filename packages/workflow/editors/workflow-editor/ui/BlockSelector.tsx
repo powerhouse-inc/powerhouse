@@ -6,6 +6,7 @@ import type { BlockPreset } from "./blocks.js";
 import type { StepModel } from "./model.js";
 import {
   getPieceSource,
+  triggerStrategyRuns,
   type BlockSearchHitUi,
   type BlockSearchResultUi,
   type PieceActionUi,
@@ -223,10 +224,10 @@ function PieceEntries(props: {
         <div className="px-3 py-2 text-xs text-slate-400">Loading…</div>
       ) : (
         entries.map((entry) => {
-          // Only POLLING triggers run today; the rest are visible but inert.
+          // Visible but inert: picking one would arm a trigger that never fires.
           const strategy = entry.strategy ?? "POLLING";
           const unsupported =
-            props.mode === "triggers" && strategy !== "POLLING";
+            props.mode === "triggers" && !triggerStrategyRuns(strategy);
           return (
             <Row
               key={entry.name}
@@ -542,7 +543,7 @@ export function BlockSelector(props: {
                 hits.map((hit) => {
                   const strategy = hit.strategy ?? "POLLING";
                   const unsupported =
-                    hit.kind === "trigger" && strategy !== "POLLING";
+                    hit.kind === "trigger" && !triggerStrategyRuns(strategy);
                   return (
                     <Row
                       key={hit.blockType}

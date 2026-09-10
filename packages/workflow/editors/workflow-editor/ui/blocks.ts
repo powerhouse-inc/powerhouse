@@ -21,6 +21,12 @@ export const TRIGGER_PRESETS: BlockPreset[] = [
     defaultConfig: { mode: "cron", cron: "0 9 * * 1-5", timezone: "UTC" },
   },
   {
+    label: "Webhook",
+    blockType: "core#webhook",
+    description: "Fires when a provider POSTs to this workflow's URL.",
+    defaultConfig: { methods: "POST", scheme: "none", responseMode: "async" },
+  },
+  {
     label: "Document event",
     blockType: "core#document-event",
     description: "Fires when a matching document operation lands.",
@@ -50,7 +56,8 @@ export const STEP_PRESETS: BlockPreset[] = [
   {
     label: "Assert",
     blockType: "core#assert",
-    description: "Fails the run when a value is blank, rejected or not allowed.",
+    description:
+      "Fails the run when a value is blank, rejected or not allowed.",
     defaultConfig: { value: "", allowValues: [] },
   },
   {

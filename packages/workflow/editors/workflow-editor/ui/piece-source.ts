@@ -40,9 +40,15 @@ export interface PieceTriggerUi {
   name: string;
   displayName: string;
   description: string;
-  // POLLING | WEBHOOK | APP_WEBHOOK; only POLLING runs today.
+  // POLLING | WEBHOOK | APP_WEBHOOK.
   strategy: string;
   blockType: string;
+}
+
+// APP_WEBHOOK is the one the runtime cannot serve: it maps to polling, and an
+// app-webhook trigger's run hook needs a request, so a poll calls it blind.
+export function triggerStrategyRuns(strategy: string | null | undefined) {
+  return (strategy ?? "POLLING") !== "APP_WEBHOOK";
 }
 
 export interface PieceCatalogSource {

@@ -9,6 +9,16 @@ export function isEmptyValue(value: unknown): boolean {
   return false;
 }
 
+// Whether a prop's `showWhen` is met; shared with the property form so one rule
+// decides render and required — else a hidden field warns with nothing to fix.
+export function isPropVisible(
+  prop: BlockFormProp,
+  config: Record<string, unknown>,
+): boolean {
+  if (!prop.showWhen) return true;
+  return prop.showWhen.oneOf.includes(config[prop.showWhen.prop] ?? undefined);
+}
+
 // Display names of required props with no value; MARKDOWN is informational.
 export function missingRequired(
   props: BlockFormProp[],
@@ -23,6 +33,7 @@ export function missingRequired(
       (prop) =>
         prop.required &&
         prop.type !== "MARKDOWN" &&
+        isPropVisible(prop, record) &&
         isEmptyValue(record[prop.name] ?? prop.defaultValue),
     )
     .map((prop) => prop.displayName);
