@@ -75,7 +75,7 @@ async function main() {
   }
 
   // Outdated-build notice: a stream-aware version check against the
-  // registry, cached for 30 minutes and shown only on a TTY. It never
+  // registry, cached for 24 hours and shown only on a TTY. It never
   // blocks or breaks the command — every failure is swallowed inside
   // `maybeNotifyOutdated`.
   await maybeNotifyOutdated({

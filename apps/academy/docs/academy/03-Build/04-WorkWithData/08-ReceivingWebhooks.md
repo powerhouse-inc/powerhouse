@@ -1,74 +1,99 @@
 # Receiving webhooks
 
-A webhook endpoint is how a third-party provider (GitHub, Stripe, Slack, a payment gateway) delivers an event into your package. You register one endpoint family for the package, mint one endpoint per logical key, and hand the resulting URL to the provider. The reactor verifies signatures, absorbs redeliveries, answers the provider's probe and rate-limits the endpoint before your code sees a delivery.
-
-This is a separate surface from [package HTTP routes](./07-HostingHttpRoutes.md), not a convenience wrapper on them, because four things are true of a webhook and of nothing else:
-
-- **The caller holds no credentials.** A provider cannot present a Renown bearer, so the URL is the credential. That makes it a secret, which is why it carries an opaque token and not your document id.
-- **The bytes are cryptographically load-bearing.** Signatures are computed over the exact octets sent. A parse and re-encode round trip changes key order and whitespace, and the signature stops matching.
-- **Redeliveries are expected.** Every provider retries on a timeout. Without dedupe, one delivery runs twice.
-- **Providers probe before they will register.** Slack and Facebook send a verification round that echoes a value back, and refuse the URL if it does not answer.
+A webhook endpoint is how a third-party provider (GitHub, Stripe, Slack, a payment gateway) delivers an event into your package. You register one endpoint family for the package, mint one endpoint per logical key, and hand the resulting URL to the provider. The reactor verifies signatures, absorbs redeliveries and answers the provider's probe before your code sees a delivery.
 
 ## Register once, mint per key
 
-`register()` is called once per package, from your subgraph's `onSetup`. It returns the endpoint family, from which you mint one endpoint per key. The key is yours, a document id or an account id, and it never appears in the URL:
+`register()` is called once per package, and it returns the endpoint family you mint from. The key is yours — a document id, an account id — and it never appears in the URL.
+
+A subgraph registers from `onSetup`, off `this.http`:
 
 ```typescript
+import { BaseSubgraph } from "@powerhousedao/reactor-api";
 import type {
-  IHttpScope,
   IWebhookEndpoints,
-  WebhookPolicy,
   WebhookReply,
   WebhookRequest,
 } from "@powerhousedao/reactor-api";
 
-export class TriggerService {
+export class BillingSubgraph extends BaseSubgraph {
+  name = "billing";
+
   #endpoints: IWebhookEndpoints | undefined;
 
-  async register(http: IHttpScope): Promise<void> {
-    this.#endpoints = await http.webhooks.register({
-      name: "trigger",
-      policyFor: (key) => this.policyFor(key),
-      onRequest: (request) => this.deliver(request),
+  async onSetup(): Promise<void> {
+    this.#endpoints = await this.http.webhooks.register({
+      name: "invoices",
+      onRequest: (request) => this.#deliver(request),
     });
   }
 
-  async endpointUrl(documentId: string): Promise<string | undefined> {
-    if (!this.#endpoints) return undefined;
-    const { url } = await this.#endpoints.endpointFor(documentId);
-    return url; // https://switchboard.example/webhooks/2f9c…  (32 hex chars)
+  // Reached once the delivery is deduped and is not a probe.
+  async #deliver(request: WebhookRequest): Promise<WebhookReply> {
+    await this.#recordEvent(request.key, request.body);
+    return { status: 202 };
   }
+
+  /** The URL to hand the provider. */
+  async endpointUrl(documentId: string): Promise<string | undefined> {
+    const endpoint = await this.#endpoints?.endpointFor(documentId);
+    return endpoint?.url; // https://switchboard.example/webhooks/2f9c… (32 hex)
+  }
+}
+```
+
+Nothing here verifies a signature, so this endpoint accepts any caller that knows the token. That is the starting point, not the destination — [`policyFor`](#policyfor-versus-the-registration) is where a signing scheme goes, and [Signature schemes](#signature-schemes) covers the choice.
+
+A processor takes the scope in its constructor instead, and registers from there. It is optional, because a processor also runs in the browser, where there is no HTTP server:
+
+```typescript
+import type {
+  IWebhookEndpoints,
+  WebhookReply,
+  WebhookRequest,
+} from "@powerhousedao/reactor-api";
+import type { IHttpScope, IProcessor } from "@powerhousedao/shared/processors";
+
+export class BillingProcessor implements IProcessor {
+  #endpoints: Promise<IWebhookEndpoints | undefined>;
+
+  constructor(http: IHttpScope | undefined) {
+    // Registration rejects on a host with no webhook store. A host without
+    // webhook triggers is not a host without your package, so absorb it.
+    this.#endpoints =
+      http?.webhooks
+        .register({
+          name: "invoices",
+          onRequest: (request) => this.#deliver(request),
+        })
+        .catch(() => undefined) ?? Promise.resolve(undefined);
+  }
+
+  async endpointUrl(accountId: string): Promise<string | undefined> {
+    const endpoints = await this.#endpoints;
+    return (await endpoints?.endpointFor(accountId))?.url;
+  }
+
+  async #deliver(_request: WebhookRequest): Promise<WebhookReply> {
+    return { status: 202 };
+  }
+
+  onOperations: IProcessor["onOperations"] = async () => {};
+  async onDisconnect(): Promise<void> {}
 }
 ```
 
 `name` distinguishes several endpoint families within one package, so a package that receives both billing events and repository events registers twice with different names.
 
-The URL is flat and namespaceless: `/webhooks/<token>`. The package and the key live in the token record, not in the path, so the URL leaks neither, and a token minted by one package can never dispatch into another's handler. The service owns the token and you own the key, which is what makes "never the document id in the URL" structural instead of a rule to remember.
+The URL is flat and namespaceless: `/webhooks/<token>`. The package and the key live in the token record, not in the path, so the URL leaks neither, and a token minted by one package can never dispatch into another's handler.
 
 `endpointFor` is idempotent per key: the same key returns the same token, so a provider already registered against that URL is not left pointing at a dead one. It also answers with `createdAt`, so showing an author when the URL came into being does not mean listing every endpoint in the package. `list()` enumerates the family and `revoke(key)` retires one endpoint.
 
-Registration rejects on a host with no webhook store. Catch it rather than letting it propagate — a host without webhook triggers is not a host without your package:
-
-```typescript
-this.registration = http.webhooks
-  .register({
-    /* … */
-  })
-  .catch((error) => {
-    logger.warn("Webhooks are unavailable on this host", error);
-    return undefined;
-  });
-```
-
 ## `policyFor` versus the registration
-
-This is the seam to get right, and it is where three of the four defects found in review lived.
 
 Registration-level values go under `defaults`, and `policyFor` is merged over them. Put something in `defaults` **only when it is a property of your package's integration** and true for every endpoint in the family. Anything a document configures belongs in `policyFor`, which is called with the key on every delivery.
 
-The two are separate keys on purpose. `WebhookSpec` used to extend `WebhookPolicy`, so every per-endpoint field was also settable at the top level of the registration — where it compiled, read correctly, and was wrong, because the policy that applies is resolved per endpoint. That is how the challenge round below came to be skipped.
-
-For a workflow, all of it is document configuration. The author picks the scheme, the header, the secret, the allowed methods, the dedupe field and the challenge field, and can change any of them at any time. A registration-level value would be a snapshot of whatever the package knew at boot.
+If an endpoint's settings come from a document an author can edit, they all belong in `policyFor`. It runs on every delivery, so it always sees the current values; a registration-level value is fixed at boot.
 
 ```typescript
 async policyFor(key: string): Promise<WebhookPolicy | undefined> {
@@ -92,7 +117,7 @@ async policyFor(key: string): Promise<WebhookPolicy | undefined> {
 Two consequences worth spelling out:
 
 - **Returning `undefined` disarms the endpoint**, and a disarmed endpoint answers exactly as an unknown token does.
-- **A field only the document knows must be in `policyFor`.** Putting `challengeField` on the registration alone leaves it undefined at delivery time, the provider's verification round is treated as a real delivery, and the integration can never be established. That is not hypothetical: it shipped, and no unit test that supplied the field at registration could see it.
+- **A field only the document knows must be in `policyFor`.** Put `challengeField` on the registration alone and it is undefined at delivery time, so the provider's verification round is treated as a real delivery and the integration never gets established.
 
 ## Signature schemes
 
@@ -221,7 +246,7 @@ Providers disagree about where they put that id, so a field can be named three w
 
 Name the id that identifies **the delivery**, not the thing it is about. Stripe's `data.object.id` is the subscription, stable across events, so deduping on it would drop everything after the first.
 
-A bare string keeps its original meaning, so existing registrations are unaffected. Note that a body path only resolves when the body parsed as JSON: with another content type, a body-sourced field finds nothing and every retry re-runs. Prefer a header source when the provider offers one.
+A body path only resolves when the body parsed as JSON: with another content type, a body-sourced field finds nothing and every retry re-runs. Prefer a header source when the provider offers one.
 
 ```typescript
 dedupe: { field: "delivery_id", ttlSeconds: 900 }, // default 300
@@ -256,25 +281,25 @@ onRequest: (request) => {
 },
 ```
 
-**Sync** — hold the connection until the work finishes, so the provider learns the outcome. You are holding the provider's socket, which is a real cost: providers time out in seconds and retry, and a slow handler multiplies inbound load. If you do it, bound the wait yourself, answer `504` on expiry, and let the work continue rather than cancelling it. Cancelling would lose work the provider has already been told about, and the retry that follows is what `dedupe` absorbs. The reactor does not impose that timeout for you.
+**Sync** — hold the connection until the work finishes, so the provider learns the outcome. Providers time out in seconds and retry, so bound the wait yourself and answer `504` on expiry. Let the work continue rather than cancelling it, and rely on `dedupe` to absorb the retry. The reactor does not impose that timeout for you.
 
 ## Method and size limits
 
-`methods` is uppercase, and `undefined` accepts every method. All six methods are mounted for every endpoint on purpose: a provider's verification round may probe with `GET` even when its deliveries are `POST`, and refusing a method is the registration's decision rather than the transport's. A method the policy excludes gets `405`.
+`methods` is uppercase, and `undefined` accepts every method. A method the policy excludes gets `405`. Leave `GET` allowed if your provider probes with it before accepting the URL, even when its deliveries are `POST`.
 
 `maxBodyBytes` caps the payload, default 1 MiB, and a larger body is refused with `413` and the connection closed.
 
-There is no rate limit here. One was tried and removed: the checks that make a delivery safe to answer — the endpoint lookup and resolving the policy — necessarily run *before* a limiter could, because a `429` before the armed check would tell a prober its token is real. A limiter placed after them sheds only the cheap half of the work, and being per-process it cannot state a fleet-wide rate anyway. Rate limiting belongs at the edge, in front of the reactor.
+There is no rate limit here. Rate limiting belongs in front of the reactor, at your load balancer or CDN, where the limit is shared across instances rather than counted per process.
 
 ## Handling secrets
 
-`verify.secret` is a resolved value. Only a reference belongs in a document (the `secret://v1:<id>` form the workflow package uses, or whatever your package's secret store issues) and the resolved secret belongs nowhere but the return value of `policyFor`, for the moment it takes to verify one delivery.
+`verify.secret` is a resolved value. Only a reference belongs in a document (a `secret://…` form, or whatever your package's secret store issues) and the resolved secret belongs nowhere but the return value of `policyFor`, for the moment it takes to verify one delivery.
 
 Concretely: resolve the ref inside `policyFor`, do not cache the plaintext on the document, do not write it into state, and do not log it. If resolution fails, return `secret: undefined` and let verification refuse the delivery. The service redacts the signature header and the known credential headers from what your handler sees, so a handler that journals `request.headers` cannot leak one by accident, but it cannot help with a secret your own code put somewhere.
 
 ## How a delivery is answered
 
-In order, and the order is deliberate:
+Checks run in this order:
 
 | Situation                                    | Answer                                                     |
 | -------------------------------------------- | ---------------------------------------------------------- |
@@ -288,9 +313,7 @@ In order, and the order is deliberate:
 | A repeat of a seen `dedupe` value            | `200`, empty, `onRequest` not called                       |
 | Anything else                                | Whatever `onRequest` returns                               |
 
-A disarmed endpoint answering exactly as an unknown token does is the point, not an accident: a prober holding a token must not be able to tell a live endpoint from one that never existed.
-
-A verification failure on a live endpoint does answer `401` rather than `404`, because a caller that holds the token has already proved the endpoint exists.
+A disarmed endpoint answers exactly as an unknown token does, so someone probing tokens cannot tell a live endpoint from one that never existed. A verification failure answers `401` instead, since a caller holding a valid token has already proved the endpoint is there.
 
 ## Across restarts and reloads
 

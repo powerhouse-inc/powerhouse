@@ -1,3 +1,15 @@
+## 6.2.3-dev.1 (2026-09-10)
+
+### 🚀 Features
+
+- **shared:** add install-spec parsing and update-target resolution ([#2357](https://github.com/powerhouse-inc/powerhouse/issues/2357))
+- **ph-cmd:** add --update-packages flag to ph update ([159c010cb](https://github.com/powerhouse-inc/powerhouse/commit/159c010cb))
+- **ph-cmd:** add helpers to resolve and bump installed packages ([e0d125bf6](https://github.com/powerhouse-inc/powerhouse/commit/e0d125bf6))
+
+### ❤️ Thank You
+
+- froid1911
+
 ## 6.2.3-dev.0 (2026-09-10)
 
 ### 🚀 Features

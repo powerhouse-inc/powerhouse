@@ -1,3 +1,22 @@
+## 6.2.3-dev.1 (2026-09-10)
+
+### 🚀 Features
+
+- **connect:** track install spec and refresh installed-package registry data ([#2357](https://github.com/powerhouse-inc/powerhouse/issues/2357))
+- **design-system:** installed-package version picker, update indicator and Update action ([#2357](https://github.com/powerhouse-inc/powerhouse/issues/2357))
+- **ph-cmd:** add helpers to resolve and bump installed packages ([e0d125bf6](https://github.com/powerhouse-inc/powerhouse/commit/e0d125bf6))
+- **ph-cmd:** add --update-packages flag to ph update ([159c010cb](https://github.com/powerhouse-inc/powerhouse/commit/159c010cb))
+- **reactor-browser:** add single-package registry fetcher and package spec accessor ([#2357](https://github.com/powerhouse-inc/powerhouse/issues/2357))
+- **shared:** add install-spec parsing and update-target resolution ([#2357](https://github.com/powerhouse-inc/powerhouse/issues/2357))
+
+### 🩹 Fixes
+
+- **design-system:** give package row action menu an accessible name ([b7b7705b7](https://github.com/powerhouse-inc/powerhouse/commit/b7b7705b7))
+
+### ❤️ Thank You
+
+- froid1911
+
 ## 6.2.3-dev.0 (2026-09-10)
 
 ### 🚀 Features

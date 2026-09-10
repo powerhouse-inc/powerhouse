@@ -391,7 +391,8 @@ class HttpScope implements IHttpScope {
 
       await run(req, res, {
         params: routeParams(req),
-        actor,
+        user: actor?.user,
+        authEnabled: actor?.authEnabled ?? false,
         transport: resolveTransport(req, this.#trustProxy),
       });
     } catch (error) {
