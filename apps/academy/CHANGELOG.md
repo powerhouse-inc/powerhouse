@@ -1,3 +1,19 @@
+## 6.2.3-dev.2 (2026-09-10)
+
+### 🚀 Features
+
+- **ph-cmd:** ph self-update command and outdated notice ([506336b32](https://github.com/powerhouse-inc/powerhouse/commit/506336b32))
+
+### 🩹 Fixes
+
+- **ci:** roll out prod registry on production releases ([354085855](https://github.com/powerhouse-inc/powerhouse/commit/354085855))
+- **switchboard-lb:** keep a webhook token out of the logs and traces ([5cfdb6e93](https://github.com/powerhouse-inc/powerhouse/commit/5cfdb6e93))
+
+### ❤️ Thank You
+
+- acaldas
+- froid1911
+
 ## 6.2.3-dev.1 (2026-09-10)
 
 ### 🚀 Features
