@@ -1,4 +1,4 @@
-import { mkdir, rm, access } from "node:fs/promises";
+import { mkdir, rm, rename, access } from "node:fs/promises";
 import { createReadStream, createWriteStream } from "node:fs";
 import { createHash, randomUUID } from "node:crypto";
 import { join, dirname } from "node:path";
@@ -24,6 +24,16 @@ export function storageRelativePath(hash: string): string {
 
 /**
  * Write a ReadableStream to disk. Creates parent directories as needed.
+ *
+ * Bytes are streamed to a uniquely-named temp file in the destination
+ * directory and only atomically renamed onto the final path once the whole
+ * stream has been written and flushed. The final path therefore never holds a
+ * partial or torn file: a concurrent writer of the same content-addressed
+ * path (e.g. two clients re-fetching the same evicted attachment) streams to
+ * its own temp file, and the rename publishes the new content all at once. On
+ * any failure the temp file is removed and the previous file (if any) is left
+ * untouched.
+ *
  * Returns the number of bytes written.
  */
 export async function writeAttachmentBytes(
@@ -32,9 +42,11 @@ export async function writeAttachmentBytes(
 ): Promise<number> {
   await mkdir(dirname(path), { recursive: true });
 
-  const writer = createWriteStream(path);
+  const tempPath = join(dirname(path), `${randomUUID()}.tmp`);
+  const writer = createWriteStream(tempPath);
   const reader = data.getReader();
   let bytesWritten = 0;
+  let caughtError: Error | undefined;
 
   try {
     for (;;) {
@@ -57,12 +69,30 @@ export async function writeAttachmentBytes(
         });
       }
     }
+  } catch (err) {
+    caughtError = err instanceof Error ? err : new Error(String(err));
   } finally {
     reader.releaseLock();
+  }
+
+  if (caughtError) {
+    // Swallow any in-flight write error: we are about to throw caughtError,
+    // and an unhandled 'error' event would otherwise crash the process.
+    writer.on("error", () => {});
+    writer.destroy();
+    await rm(tempPath, { force: true });
+    throw caughtError;
+  }
+
+  try {
     await new Promise<void>((resolve, reject) => {
       writer.end(() => resolve());
       writer.once("error", reject);
     });
+    await rename(tempPath, path);
+  } catch (err) {
+    await rm(tempPath, { force: true });
+    throw err instanceof Error ? err : new Error(String(err));
   }
 
   return bytesWritten;
