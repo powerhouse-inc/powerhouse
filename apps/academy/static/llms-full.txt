@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-09-10T12:17:45.903Z
+> Generated: 2026-09-10T12:43:47.406Z
 > Total Documents: 112
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -13493,6 +13493,7 @@ pnpm install -g ph-cmd
 - [Init](#init)
 - [Use](#use)
 - [Update](#update)
+- [Self Update](#self-update)
 - [Setup Globals](#setup-globals)
 - [Use Local](#use-local)
 
@@ -13578,6 +13579,20 @@ Update your Powerhouse dependencies and installed packages to their latest versi
 
 **Update Packages** - Auto-update installed packages (powerhouse.config.json) to their newest same-major version - Usage: `--update-packages`
 
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
+**Help** - show help - Usage: `--help, -h`
+
+
+## Self Update
+Update the globally installed ph to the newest version of its release stream
+
+
+### Options
+**Tag** - dist-tag to install (defaults to the running build's stream; e.g. latest, dev) - Usage: `--tag, -t <str>`
+
+
+### Flags
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`

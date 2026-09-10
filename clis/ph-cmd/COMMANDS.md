@@ -6,6 +6,7 @@ The tool and it's commands are fundamental for creating, building, and running D
 - [Init](#init)
 - [Use](#use)
 - [Update](#update)
+- [Self Update](#self-update)
 - [Setup Globals](#setup-globals)
 - [Use Local](#use-local)
 <br>
@@ -124,6 +125,24 @@ Skip running `install` with your package manager<br><br>
 Auto-update installed packages (powerhouse.config.json) to their newest same-major version<br><br>
 **usage:** `--update-packages`<br>
 
+#### Debug <br>
+Log arguments passed to this command<br><br>
+**usage:** `--debug`<br>
+
+#### Help <br>
+show help<br><br>
+**usage:** `--help, -h`<br>
+
+
+## Self Update
+Update the globally installed ph to the newest version of its release stream
+### options
+#### Tag <br>
+dist-tag to install (defaults to the running build's stream; e.g. latest, dev)<br><br>
+**usage:** `--tag, -t <str>`<br>
+
+
+### flags
 #### Debug <br>
 Log arguments passed to this command<br><br>
 **usage:** `--debug`<br>

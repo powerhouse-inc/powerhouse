@@ -2,6 +2,7 @@ import { phCliHelpCommands } from "@powerhousedao/shared/clis/args";
 import { subcommands } from "cmd-ts";
 import { getVersion } from "../get-version.js";
 import { init } from "./init.js";
+import { selfUpdate } from "./self-update.js";
 import { setupGlobals } from "./setup-globals.js";
 import { update } from "./update.js";
 import { useLocal } from "./use-local.js";
@@ -20,6 +21,7 @@ export const ph = subcommands({
     init,
     use,
     update,
+    "self-update": selfUpdate,
     "setup-globals": setupGlobals,
     "use-local": useLocal,
     ...phCliHelpCommands,
