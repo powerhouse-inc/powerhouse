@@ -5,6 +5,7 @@ import {
   type IDocumentModelRegistry,
   type IOperationIndex,
   type IWriteCache,
+  type PagedResults,
 } from "@powerhousedao/reactor";
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import type { Kysely, Transaction } from "kysely";
@@ -20,7 +21,14 @@ export const ATTACHMENT_REFERENCE_READ_MODEL_ID =
 export class AttachmentReferenceReadModel extends BaseReadModel {
   private indexingQueue: Promise<void> = Promise.resolve();
   private checkpointTarget: number | undefined;
-  /** Invariant: every ordinal <= this has been committed. */
+  /**
+   * How far a replay may skip ahead of the cursor: the highest ordinal already
+   * pulled from the index while the cursor was parked.
+   *
+   * NOT a claim that every ordinal below it committed -- the parked ordinal is
+   * precisely the one that did not -- so it is a hint, and {@link replayFrom}
+   * re-probes the gap before honouring it.
+   */
   private replayedThrough: number | undefined;
   private warnedCheckpoint: number | undefined;
 
@@ -189,13 +197,46 @@ export class AttachmentReferenceReadModel extends BaseReadModel {
     return expectedOrdinal - 1;
   }
 
+  /**
+   * Opens a replay at the lowest ordinal still worth reading.
+   *
+   * {@link replayedThrough} is what keeps a permanently held hole -- a
+   * rolled-back insert, which never fills -- from re-reading the whole tail on
+   * every batch. It cannot be trusted on its own: a hole that fills without
+   * being delivered here is visible only in the index, and a mark that is
+   * never questioned would hide that operation for the life of the process.
+   * That happens whenever another writer commits the gap (a second reactor on
+   * the same database), and it leaves the cursor parked below an operation
+   * whose references were never written -- `hasReference` then answers false
+   * for an attachment that is genuinely referenced.
+   *
+   * So a parked batch spends one page probing the gap: the first row above the
+   * cursor is the missing ordinal itself once it commits. Finding it drops the
+   * mark and replays from the cursor; not finding it leaves the mark standing,
+   * which is the cheap path and the common one.
+   */
+  private async replayFrom(): Promise<PagedResults<OperationWithContext>> {
+    const fromCursor = await this.operationIndex.getSinceOrdinal(
+      this.lastOrdinal,
+    );
+    if (this.replayedThrough === undefined) {
+      return fromCursor;
+    }
+
+    // Ordinals come back ascending, so the first row answers it outright.
+    if (fromCursor.results[0]?.context.ordinal === this.lastOrdinal + 1) {
+      this.replayedThrough = undefined;
+      return fromCursor;
+    }
+
+    return this.operationIndex.getSinceOrdinal(this.replayedThrough);
+  }
+
   private async loadThroughOrdinal(
     maxOrdinal: number,
   ): Promise<OperationWithContext[]> {
     const operations: OperationWithContext[] = [];
-    let page = await this.operationIndex.getSinceOrdinal(
-      this.replayedThrough ?? this.lastOrdinal,
-    );
+    let page = await this.replayFrom();
 
     for (;;) {
       for (const item of page.results) {

@@ -184,14 +184,24 @@ function page(
   return { results, options: { cursor: "0", limit: 100 }, next };
 }
 
+/** As the index does: everything above `ordinal`, ordered by ordinal ascending. */
+function since(
+  store: readonly OperationWithContext[],
+  ordinal: number,
+): PagedResults<OperationWithContext> {
+  return page(
+    store
+      .filter((item) => item.context.ordinal > ordinal)
+      .sort((left, right) => left.context.ordinal - right.context.ordinal),
+  );
+}
+
 function operationIndex(
   results: OperationWithContext[] = [],
 ): IOperationIndex & { getSinceOrdinal: ReturnType<typeof vi.fn> } {
   return {
     getSinceOrdinal: vi.fn((ordinal: number) =>
-      Promise.resolve(
-        page(results.filter((item) => item.context.ordinal > ordinal)),
-      ),
+      Promise.resolve(since(results, ordinal)),
     ),
   } as unknown as IOperationIndex & {
     getSinceOrdinal: ReturnType<typeof vi.fn>;
@@ -200,11 +210,7 @@ function operationIndex(
 
 /** A getSinceOrdinal fake backed by a store that grows as ordinals commit. */
 function pagesFrom(store: OperationWithContext[]) {
-  return vi.fn((ordinal: number) =>
-    Promise.resolve(
-      page(store.filter((item) => item.context.ordinal > ordinal)),
-    ),
-  );
+  return vi.fn((ordinal: number) => Promise.resolve(since(store, ordinal)));
 }
 
 function dependencies(options?: {
@@ -571,11 +577,20 @@ describe("AttachmentReferenceReadModel", () => {
         expect(db.cursor).toBe(11);
       }
 
-      // Each replay resumes where the last one ended rather than at the hole.
+      // A parked batch reads twice: one bounded page probing the hole at the
+      // cursor, in case a writer elsewhere filled it, and a replay resuming
+      // where the last one ended. The first batch has no mark yet to probe.
       const starts = since.mock.calls.map(([start]) => start);
-      expect(starts).toEqual([11, 15, 16]);
+      expect(starts).toEqual([11, 11, 15, 11, 16]);
+
+      const replays = starts.filter((_, i) => i % 2 === 0);
+      const probes = starts.filter((_, i) => i % 2 === 1);
+      // The probe is pinned at the cursor, so it stays one page however far
+      // the tail runs ahead; only the replay leg advances.
+      expect(probes).toEqual([11, 11]);
+      expect(replays).toEqual([11, 15, 16]);
       expect(
-        starts.every((start, i) => i === 0 || start > starts[i - 1]!),
+        replays.every((start, i) => i === 0 || start > replays[i - 1]!),
       ).toBe(true);
     } finally {
       warn.mockRestore();
@@ -667,6 +682,43 @@ describe("AttachmentReferenceReadModel", () => {
       expect(new Set(indexed)).toEqual(
         new Set([11, 12, 13, 14, 15, 16, 17, 18]),
       );
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("sweeps past a hole filled by a writer it never hears from", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      const indexed: number[] = [];
+      const addReferences = vi.fn(
+        (references: readonly AttachmentReferenceInput[]) => {
+          indexed.push(...references.map(({ ordinal }) => ordinal));
+          return Promise.resolve();
+        },
+      );
+      const store = [op(11), op(13), op(14)];
+      const { db, index, model } = dependencies({
+        cursor: 10,
+        writer: { addReferences },
+      });
+      const since = pagesFrom(store);
+      Object.assign(index, { getSinceOrdinal: since });
+      await model.init();
+      for (const ordinal of [15, 16, 17]) {
+        store.push(op(ordinal));
+        await model.indexOperations([op(ordinal)]);
+      }
+      expect(db.cursor).toBe(11);
+
+      // 12 commits, but nothing delivers it here: a second reactor on the same
+      // database wrote it, so it exists only in the index. A mark taken on
+      // trust would skip past it forever and never write its references.
+      store.push(op(12));
+      await model.indexOperations([op(18)]);
+
+      expect(indexed).toContain(12);
+      expect(db.cursor).toBe(18);
     } finally {
       warn.mockRestore();
     }
