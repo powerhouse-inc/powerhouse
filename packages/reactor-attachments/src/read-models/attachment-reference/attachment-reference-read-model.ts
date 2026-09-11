@@ -20,6 +20,9 @@ export const ATTACHMENT_REFERENCE_READ_MODEL_ID =
 export class AttachmentReferenceReadModel extends BaseReadModel {
   private indexingQueue: Promise<void> = Promise.resolve();
   private checkpointTarget: number | undefined;
+  /** Invariant: every ordinal <= this has been committed. */
+  private replayedThrough: number | undefined;
+  private warnedCheckpoint: number | undefined;
 
   constructor(
     db: Kysely<DocumentViewDatabase>,
@@ -116,7 +119,8 @@ export class AttachmentReferenceReadModel extends BaseReadModel {
     // contiguous run so a gap that later fills is still replayed. Re-indexing
     // is idempotent, so a conservative cursor only costs repeated work.
     const checkpoint = this.contiguousEnd(candidates);
-    if (checkpoint < incomingMax) {
+    if (checkpoint < incomingMax && checkpoint !== this.warnedCheckpoint) {
+      this.warnedCheckpoint = checkpoint;
       console.warn(
         `[${this.config.readModelId}] indexed through ordinal ${incomingMax} ` +
           `but parked the cursor at ${checkpoint}: ordinal ${checkpoint + 1} is missing`,
@@ -129,9 +133,22 @@ export class AttachmentReferenceReadModel extends BaseReadModel {
       await super.indexOperations(candidates);
     } catch (error) {
       this.lastOrdinal = previousOrdinal;
+      // A failed batch leaves its range uncommitted, so the mark cannot stand.
+      this.replayedThrough = undefined;
       throw error;
     } finally {
       this.checkpointTarget = undefined;
+    }
+
+    // A parked cursor makes every later batch non-contiguous; without this mark
+    // each replay would restart at the hole and grow without bound.
+    if (checkpoint > previousOrdinal) {
+      this.replayedThrough = undefined;
+    } else if (checkpoint < incomingMax) {
+      this.replayedThrough = Math.max(
+        this.replayedThrough ?? checkpoint,
+        incomingMax,
+      );
     }
   }
 
@@ -176,7 +193,9 @@ export class AttachmentReferenceReadModel extends BaseReadModel {
     maxOrdinal: number,
   ): Promise<OperationWithContext[]> {
     const operations: OperationWithContext[] = [];
-    let page = await this.operationIndex.getSinceOrdinal(this.lastOrdinal);
+    let page = await this.operationIndex.getSinceOrdinal(
+      this.replayedThrough ?? this.lastOrdinal,
+    );
 
     for (;;) {
       for (const item of page.results) {

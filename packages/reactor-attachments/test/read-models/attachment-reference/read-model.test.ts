@@ -198,6 +198,15 @@ function operationIndex(
   };
 }
 
+/** A getSinceOrdinal fake backed by a store that grows as ordinals commit. */
+function pagesFrom(store: OperationWithContext[]) {
+  return vi.fn((ordinal: number) =>
+    Promise.resolve(
+      page(store.filter((item) => item.context.ordinal > ordinal)),
+    ),
+  );
+}
+
 function dependencies(options?: {
   cursor?: number;
   indexOperations?: OperationWithContext[];
@@ -542,6 +551,157 @@ describe("AttachmentReferenceReadModel", () => {
 
     expect(indexed).toEqual([6, 5]);
     expect(db.cursor).toBe(5);
+  });
+
+  it("replays a bounded range instead of restarting at a permanent hole", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      // Ordinal 12 was burned by a rolled-back insert and never arrives.
+      const store = [op(11), op(13), op(14)];
+      const { db, index, model } = dependencies({ cursor: 10 });
+      const since = pagesFrom(store);
+      Object.assign(index, { getSinceOrdinal: since });
+      await model.init();
+      expect(db.cursor).toBe(11);
+      since.mockClear();
+
+      for (const ordinal of [15, 16, 17]) {
+        store.push(op(ordinal));
+        await model.indexOperations([op(ordinal)]);
+        expect(db.cursor).toBe(11);
+      }
+
+      // Each replay resumes where the last one ended rather than at the hole.
+      const starts = since.mock.calls.map(([start]) => start);
+      expect(starts).toEqual([11, 15, 16]);
+      expect(
+        starts.every((start, i) => i === 0 || start > starts[i - 1]!),
+      ).toBe(true);
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("drops the replay mark when a gap-filling batch fails", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      const indexed: number[] = [];
+      const addReferences = vi.fn(
+        (references: readonly AttachmentReferenceInput[]) => {
+          indexed.push(...references.map(({ ordinal }) => ordinal));
+          return Promise.resolve();
+        },
+      );
+      const store = [op(11), op(13), op(14)];
+      const { db, index, model } = dependencies({
+        cursor: 10,
+        writer: { addReferences },
+      });
+      const since = pagesFrom(store);
+      Object.assign(index, { getSinceOrdinal: since });
+      await model.init();
+      store.push(op(15));
+      await model.indexOperations([op(15)]);
+      expect(db.cursor).toBe(11);
+      since.mockClear();
+
+      // 12 fills the gap but its write fails, so nothing above it is committed.
+      addReferences.mockImplementationOnce(() =>
+        Promise.reject(new Error("insert failed")),
+      );
+      store.push(op(12));
+      await expect(model.indexOperations([op(12)])).rejects.toThrow(
+        "insert failed",
+      );
+      expect(db.cursor).toBe(11);
+
+      // The next replay must restart at the checkpoint, not above 12.
+      store.push(op(16));
+      await model.indexOperations([op(16)]);
+      expect(since).toHaveBeenCalledWith(11);
+      expect(db.cursor).toBe(16);
+      expect(indexed).toContain(12);
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("sweeps the cursor past a hole that finally fills", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      const indexed: number[] = [];
+      const addReferences = vi.fn(
+        (references: readonly AttachmentReferenceInput[]) => {
+          indexed.push(...references.map(({ ordinal }) => ordinal));
+          return Promise.resolve();
+        },
+      );
+      const store = [op(11), op(13), op(14)];
+      const { db, index, model } = dependencies({
+        cursor: 10,
+        writer: { addReferences },
+      });
+      const since = pagesFrom(store);
+      Object.assign(index, { getSinceOrdinal: since });
+      await model.init();
+      for (const ordinal of [15, 16, 17]) {
+        store.push(op(ordinal));
+        await model.indexOperations([op(ordinal)]);
+      }
+      expect(db.cursor).toBe(11);
+      since.mockClear();
+
+      // 12 was a still-open transaction after all, and commits.
+      store.push(op(12));
+      await model.indexOperations([op(12)]);
+      expect(db.cursor).toBe(12);
+      expect(since).not.toHaveBeenCalled();
+
+      // Clearing the mark costs one replay from the checkpoint, which sweeps
+      // the cursor past the operations already indexed above the hole.
+      store.push(op(18));
+      await model.indexOperations([op(18)]);
+      expect(since).toHaveBeenCalledWith(12);
+      expect(db.cursor).toBe(18);
+      expect(indexed.filter((ordinal) => ordinal === 12)).toEqual([12]);
+      expect(new Set(indexed)).toEqual(
+        new Set([11, 12, 13, 14, 15, 16, 17, 18]),
+      );
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("warns once per parked ordinal rather than once per batch", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      const store: OperationWithContext[] = [];
+      const { db, index, model } = dependencies({ cursor: 20 });
+      const since = pagesFrom(store);
+      Object.assign(index, { getSinceOrdinal: since });
+      await model.init();
+
+      for (const ordinal of [22, 23, 24]) {
+        store.push(op(ordinal));
+        await model.indexOperations([op(ordinal)]);
+      }
+      expect(db.cursor).toBe(20);
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn.mock.calls[0]![0]).toContain("ordinal 21 is missing");
+
+      store.push(op(21));
+      await model.indexOperations([op(21)]);
+      expect(db.cursor).toBe(21);
+      expect(warn).toHaveBeenCalledTimes(1);
+
+      store.push(op(26));
+      await model.indexOperations([op(26)]);
+      expect(db.cursor).toBe(24);
+      expect(warn).toHaveBeenCalledTimes(2);
+      expect(warn.mock.calls[1]![0]).toContain("ordinal 25 is missing");
+    } finally {
+      warn.mockRestore();
+    }
   });
 
   it("warns when the cursor parks short of the delivered maximum", async () => {
