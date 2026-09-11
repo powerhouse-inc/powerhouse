@@ -182,6 +182,34 @@ describe("attachment-fs", () => {
       expect(entries.filter((e) => e.endsWith(".tmp"))).toEqual([]);
     });
 
+    it("removes the temp file when the source fails before the first chunk", async () => {
+      // createWriteStream opens lazily, so an unlink issued before the open
+      // completes removes nothing and the open then leaves the temp file
+      // behind. The other failure tests enqueue two chunks first, which forces
+      // the open, so they only catch this when the machine is loaded. Repeat
+      // instead: 192 of 200 attempts leaked before the fix.
+      const attempts = 50;
+      for (let attempt = 0; attempt < attempts; attempt++) {
+        const path = storagePath(basePath, `abcdef123456789${attempt}`);
+        const failing = new ReadableStream<Uint8Array>({
+          pull(controller) {
+            controller.error(new Error("failed before the first chunk"));
+          },
+        });
+
+        await expect(writeAttachmentBytes(path, failing)).rejects.toThrow();
+      }
+
+      const leaked: string[] = [];
+      for (const dir of await readdir(basePath)) {
+        for (const sub of await readdir(join(basePath, dir))) {
+          const entries = await readdir(join(basePath, dir, sub));
+          leaked.push(...entries.filter((e) => e.endsWith(".tmp")));
+        }
+      }
+      expect(leaked).toEqual([]);
+    });
+
     it("leaves the previous file intact when the destination write fails with no backpressure", async () => {
       const hash = "abcdef1234567890";
       const path = storagePath(basePath, hash);
