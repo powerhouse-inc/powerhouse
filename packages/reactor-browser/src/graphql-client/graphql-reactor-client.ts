@@ -537,19 +537,29 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
    * Reopens realtime after a sign-in, a sign-out or a token swap.
    *
    * Call it whenever the credentials this client authenticates with change.
-   * A no-op unless the last socket was refused for the credentials it carried:
-   * a network failure is not something a new token fixes, and a live socket
-   * already resolves `connectionParams` on its own next reconnect.
    *
-   * Without it, a refused socket stays closed until an unrelated component
-   * happens to `subscribe` - so signing in leaves realtime off with nothing
-   * said, which is exactly the state `handleRealtimeFailure` resets to avoid.
+   * A live socket is replaced. `connectionParams` are resolved once, when the
+   * socket opens, so a socket keeps presenting the credentials it was opened
+   * with until something closes it - and a sign-out closes nothing. That left
+   * a signed-out tab still receiving the previous identity's document changes,
+   * on a shared machine, for as long as the socket happened to survive.
+   *
+   * A refused socket is reopened, for the same reason from the other side:
+   * otherwise it stays closed until an unrelated component happens to
+   * `subscribe`, so signing in leaves realtime off with nothing said - the
+   * state `handleRealtimeFailure` resets to avoid.
+   *
+   * A socket that died for any other reason is left alone: a network failure
+   * is not something a new token fixes, and reopening one here would turn a
+   * credential change into a reconnect loop.
    */
   notifyCredentialsChanged(): void {
-    if (!this.realtimeRefusedCredentials) {
+    if (!this.realtimeStarted && !this.realtimeRefusedCredentials) {
       return;
     }
-    this.realtimeRefusedCredentials = false;
+    // Drops the old socket, and with it the old credentials, before any new
+    // one opens. `teardownRealtime` clears the refusal flag too.
+    this.teardownRealtime();
     if (this.listeners.length === 0) {
       // Nobody to deliver to. The next `subscribe` opens a socket anyway.
       return;

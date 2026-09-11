@@ -526,15 +526,42 @@ describe("GraphQLReactorClient realtime", () => {
     expect(ws.sockets).toHaveLength(2);
   });
 
-  it("does nothing on a credential change while realtime is healthy", () => {
-    const client = new GraphQLReactorClient({ url });
+  it("replaces a healthy socket so it stops carrying the old identity", async () => {
+    // `connectionParams` are resolved when the socket opens, and signing out
+    // closes nothing on its own. A live socket left alone kept delivering the
+    // previous identity's document changes until it happened to drop.
+    let token: string | undefined = "token-alice";
+    const client = new GraphQLReactorClient({
+      url,
+      tokenProvider: () => Promise.resolve(token),
+    });
     client.subscribe({}, vi.fn());
+    expect(await ws.only().options.connectionParams?.()).toEqual({
+      authorization: "Bearer token-alice",
+    });
+
+    token = undefined; // signed out
+    client.notifyCredentialsChanged();
+
+    expect(ws.sockets).toHaveLength(2);
+    expect(ws.sockets[0].disposed).toBe(true);
+    expect(ws.sockets[1].disposed).toBe(false);
+    expect(await ws.sockets[1].options.connectionParams?.()).toEqual({});
+  });
+
+  it("closes a healthy socket on a credential change with nobody subscribed", () => {
+    // The socket outlives its last subscriber, so signing out has to close it
+    // even when there is nobody left to deliver a replacement to.
+    const client = new GraphQLReactorClient({
+      url,
+      tokenProvider: () => Promise.resolve("token-alice"),
+    });
+    const unsubscribe = client.subscribe({}, vi.fn());
+    unsubscribe();
 
     client.notifyCredentialsChanged();
 
-    // A live socket resolves `connectionParams` on its own next reconnect.
-    expect(ws.sockets).toHaveLength(1);
-    expect(ws.only().disposed).toBe(false);
+    expect(ws.only().disposed).toBe(true);
   });
 
   it("does not reopen a refused socket that was then disposed", () => {
