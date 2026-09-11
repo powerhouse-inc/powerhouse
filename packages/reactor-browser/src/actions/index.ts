@@ -1,4 +1,5 @@
 export { dispatchActions } from "./dispatch.js";
+export { fetchDriveInfo, type DriveInfo } from "./drive-info.js";
 export {
   addDocument,
   addFileWithProgress,

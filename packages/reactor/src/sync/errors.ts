@@ -78,9 +78,39 @@ export const DRIVE_AUTH_ERROR_MESSAGES = {
   authenticationRequired: "Forbidden: authentication required",
 } as const;
 
+/**
+ * A non-GraphQL HTTP failure against a drive endpoint.
+ *
+ * Drive discovery (`GET <base>/d/:drive`) is REST, not GraphQL, so its
+ * failures cannot be a `GraphQLRequestError` without the name lying about
+ * what was called. It carries the status for the same reason that one does:
+ * `isDriveAuthError` is what decides whether a failure prompts a login, and a
+ * bare `Error` tells it nothing.
+ */
+export class DriveRequestError extends Error {
+  readonly statusCode: number | undefined;
+
+  constructor(message: string, statusCode?: number) {
+    super(message);
+    this.name = "DriveRequestError";
+    this.statusCode = statusCode;
+  }
+}
+
 /** True when the remote rejected the caller as unauthenticated/unauthorized:
- * an HTTP 401/403, or a Forbidden/Unauthorized GraphQL error. */
+ * an HTTP 401/403, or a Forbidden/Unauthorized GraphQL error.
+ *
+ * 403 and 401 only — NOT 404. The drive info endpoint answers a drive the
+ * caller may not read with the same 404 it gives a drive that does not exist,
+ * so that an unauthorized caller cannot enumerate drives by probing slugs.
+ * That is deliberate, and it costs exactly this: a protected drive is
+ * indistinguishable from a typo, and prompting for a login on every 404 would
+ * fire on every mistyped URL. See the `WWW-Authenticate` note on the endpoint
+ * for the signal that would let a client tell the two apart. */
 export function isDriveAuthError(error: unknown): boolean {
+  if (error instanceof DriveRequestError) {
+    return error.statusCode === 401 || error.statusCode === 403;
+  }
   if (!(error instanceof GraphQLRequestError)) {
     return false;
   }

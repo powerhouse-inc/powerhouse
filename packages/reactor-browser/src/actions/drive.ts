@@ -17,6 +17,7 @@ import {
   type SharingType,
 } from "@powerhousedao/shared/document-drive";
 import type { PHDocument } from "@powerhousedao/shared/document-model";
+import { fetchDriveInfo } from "./drive-info.js";
 import { getUserPermissions } from "../utils/user.js";
 import { showPHModal } from "../hooks/modals.js";
 
@@ -163,15 +164,24 @@ export async function addRemoteDrive(
     throw new Error("Sync not initialized");
   }
 
-  // Fetch drive info from the REST endpoint to get both id and graphqlEndpoint
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`Failed to resolve drive info from ${url}`);
+  // Fetch drive info from the REST endpoint to get both id and graphqlEndpoint.
+  // Sends the Renown token when there is one: a switchboard running
+  // DOCUMENT_PERMISSIONS refuses a protected drive to an anonymous caller even
+  // when the logged-in user holds a grant on it.
+  //
+  // Guarded by the same auth handler as the registration below: discovery is
+  // the FIRST call that can be refused, so a rejection here has to prompt the
+  // login too. Before this, it threw a bare Error outside the try and the
+  // refusal surfaced as "drive not reachable".
+  let driveInfo;
+  try {
+    driveInfo = await fetchDriveInfo(url);
+  } catch (error) {
+    if (isDriveAuthError(error)) {
+      showPHModal({ type: "driveAuthRequired" });
+    }
+    throw error;
   }
-  const driveInfo = (await response.json()) as {
-    id: string;
-    graphqlEndpoint: string;
-  };
 
   const resolvedDriveId = driveId ?? driveInfo.id;
   const collectionId = DriveCollectionId.forDrive(resolvedDriveId);
