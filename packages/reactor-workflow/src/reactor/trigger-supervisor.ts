@@ -4,6 +4,7 @@ import {
   ensurePieceBundle,
   extractDedupeKey,
   PieceWorker,
+  type ConnectionRequest,
   type ConnectorDescriptor,
   type PieceWorkerResult,
   type RecordedSchedule,
@@ -52,7 +53,10 @@ export const SCHEDULE_TRIGGER_KIND = "schedule";
 
 export interface TriggerSupervisorOptions {
   store: () => Promise<WorkflowRunStore | undefined>;
-  resolveAuth: (connectionId: string | null | undefined) => Promise<unknown>;
+  resolveAuth: (
+    connectionId: string | null | undefined,
+    request?: ConnectionRequest,
+  ) => Promise<unknown>;
   fire: (workflowId: string, payload: unknown, kind: string) => void;
   cacheDir: string;
   worker?: PieceWorker;
@@ -274,7 +278,12 @@ export class TriggerSupervisor {
       version: binding.version,
       cacheDir: this.options.cacheDir,
     });
-    const auth = await this.options.resolveAuth(binding.connectionId);
+    // A trigger's connection is the workflow's own, declared beside it, so it
+    // needs no run binding — but it is still bound to its connector.
+    const auth = await this.options.resolveAuth(binding.connectionId, {
+      blockType: binding.blockType,
+      piecePackage: binding.packageName,
+    });
     return this.worker.runTriggerHook(
       {
         bundleDir: bundle.dir,

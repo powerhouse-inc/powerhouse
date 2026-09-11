@@ -2,6 +2,7 @@
 // ctx.auth, shaped per Activepieces auth kind (powerhouse/connection state).
 
 import type { SecretProvider } from "./secrets.js";
+import type { WorkflowDefinition } from "./types.js";
 
 export type ConnectionAuthType =
   | "SECRET_TEXT"
@@ -18,14 +19,35 @@ export interface ConnectionSource {
   secretRefs?: { name: string; ref: string }[];
 }
 
+// Which step is asking. A resolver needs it to check the request against the
+// run's binding rather than trust the id it was handed.
+
+// piecePackage is the package the caller already resolved the block type to,
+// so a resolver never re-parses a block type to learn which piece is asking.
+export interface ConnectionRequest {
+  blockType: string;
+  piecePackage?: string;
+  stepId?: string;
+  stepKey?: string;
+}
+
 export interface EngineConnectionResolver {
-  resolve(connectionId: string): Promise<unknown>;
+  resolve(connectionId: string, request?: ConnectionRequest): Promise<unknown>;
 }
 
 export class ConnectionNotFoundError extends Error {
   constructor(connectionId: string) {
     super(`No connection registered for id "${connectionId}"`);
     this.name = "ConnectionNotFoundError";
+  }
+}
+
+// A step reached for a connection its workflow definition never declared.
+// Raised before any lookup, so it cannot say whether the id exists.
+export class ConnectionNotBoundError extends Error {
+  constructor(connectionId: string) {
+    super(`Connection "${connectionId}" is not bound to this workflow`);
+    this.name = "ConnectionNotBoundError";
   }
 }
 
@@ -106,5 +128,49 @@ export class StaticConnectionResolver implements EngineConnectionResolver {
       return Promise.reject(new ConnectionNotFoundError(connectionId));
     }
     return shapeAuthValue(source, this.secrets);
+  }
+}
+
+// Every connection a definition declares: the trigger's and each step's.
+
+// A templated id is left out — connectionId is never expression-resolved, so
+// it names no connection and a step cannot pick credentials at run time.
+export function declaredConnectionIds(
+  definition: WorkflowDefinition,
+): ReadonlySet<string> {
+  const declared = new Set<string>();
+  const declare = (connectionId: string | null | undefined) => {
+    if (connectionId && !connectionId.includes("{{")) declared.add(connectionId);
+  };
+  declare(definition.trigger?.connectionId);
+  for (const step of definition.steps) declare(step.connectionId);
+  return declared;
+}
+
+// The binding in force for the caller, or undefined when there is none. Read
+// per call because one executor serves every concurrent run.
+export type ConnectionBindingLookup = () => ReadonlySet<string> | undefined;
+
+// Server-side connection binding (doc 08 §10): a step resolves only what the
+// definition its run pinned declared.
+
+// Without a binding nothing resolves, so a path that fails to establish one
+// fails closed.
+export class BoundConnectionResolver implements EngineConnectionResolver {
+  constructor(
+    private readonly inner: EngineConnectionResolver,
+    private readonly binding: ConnectionBindingLookup,
+    private readonly onRefused?: (
+      connectionId: string,
+      request?: ConnectionRequest,
+    ) => void,
+  ) {}
+
+  resolve(connectionId: string, request?: ConnectionRequest): Promise<unknown> {
+    if (!this.binding()?.has(connectionId)) {
+      this.onRefused?.(connectionId, request);
+      return Promise.reject(new ConnectionNotBoundError(connectionId));
+    }
+    return this.inner.resolve(connectionId, request);
   }
 }

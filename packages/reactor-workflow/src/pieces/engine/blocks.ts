@@ -325,7 +325,12 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
       cacheDir: this.options.cacheDir,
     });
     const auth = execution.connectionId
-      ? await this.options.connections?.resolve(execution.connectionId)
+      ? await this.options.connections?.resolve(execution.connectionId, {
+          blockType: execution.blockType,
+          piecePackage: parsed.packageName,
+          stepId: execution.step.id,
+          stepKey: execution.step.key,
+        })
       : undefined;
 
     const timeoutMs = execution.step.timeoutSeconds

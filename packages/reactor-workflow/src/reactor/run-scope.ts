@@ -7,6 +7,9 @@ import { AsyncLocalStorage } from "node:async_hooks";
 export interface RunScope {
   workflowId: string;
   runId?: string | null;
+  // The connections the definition this run pinned declared; a step resolves
+  // nothing outside this set, and an edit mid-run never widens it.
+  connections?: ReadonlySet<string>;
 }
 
 const storage = new AsyncLocalStorage<RunScope>();
@@ -17,4 +20,10 @@ export function withRunScope<T>(scope: RunScope, fn: () => Promise<T>): Promise<
 
 export function currentWorkflowId(): string | undefined {
   return storage.getStore()?.workflowId;
+}
+
+// Undefined outside a run, which the block executor treats as "resolve
+// nothing": only a run establishes a binding.
+export function currentBoundConnections(): ReadonlySet<string> | undefined {
+  return storage.getStore()?.connections;
 }

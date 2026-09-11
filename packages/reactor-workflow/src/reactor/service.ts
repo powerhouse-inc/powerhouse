@@ -2,6 +2,7 @@
 // document-event processor; moves to a dedicated runtime package later.
 import type {
   BaseSubgraph,
+  Context,
   IWebhookEndpoints,
   IWebhookScope,
   WebhookPolicy,
@@ -10,16 +11,15 @@ import type {
 } from "@powerhousedao/reactor-api";
 
 import {
+  declaredConnectionIds,
   ensurePieceBundle,
   parseBlockType,
   PieceWorker,
   PieceWorkerError,
   PieceWorkerTimeoutError,
   runWorkflow,
-  shapeAuthValue,
   type BlockExecutor,
   type CheckConnectionOutcome,
-  type ConnectionAuthType,
   type ConnectorDescriptor,
   type SecretProvider,
   type SecretStore,
@@ -64,8 +64,10 @@ import {
   BUNDLE_CACHE_DIR,
   createBlockExecutor,
   DocumentConnectionResolver,
+  resolveConnectionAuth,
   toWorkflowDefinition,
 } from "./lib.js";
+import { packageFromConnectorId } from "../../editors/connection-editor/piece-auth.js";
 import { SCHEDULE_BLOCK } from "./schedule.js";
 import type { AttachmentPort } from "@powerhousedao/reactor-connectors";
 import {
@@ -208,13 +210,6 @@ export function collectLifecycleParentHints(
     });
   }
   return hints;
-}
-
-// "@acme/connector-imap#imap" -> "@acme/connector-imap"; mirrors the
-// connector id scheme the connection editor writes.
-function packageNameFromConnectorId(connectorId: string): string {
-  const separator = connectorId.lastIndexOf("#");
-  return separator > 0 ? connectorId.slice(0, separator) : connectorId;
 }
 
 // A piece's checkConnection returns void | boolean |
@@ -910,12 +905,12 @@ export class WorkflowRuntimeService {
   supervisor(): TriggerSupervisor {
     this.triggerSupervisor ??= new TriggerSupervisor({
       store: () => this.store(),
-      resolveAuth: async (connectionId) => {
+      resolveAuth: async (connectionId, request) => {
         if (!connectionId || !this.subgraph) return undefined;
         return new DocumentConnectionResolver(
           this.subgraph,
           this.secretProvider(),
-        ).resolve(connectionId);
+        ).resolve(connectionId, request);
       },
       fire: (workflowId, payload, kind) => {
         this.fireFromTrigger(workflowId, payload, kind);
@@ -1301,13 +1296,18 @@ export class WorkflowRuntimeService {
       .map((node) => node.id);
   }
 
-  // Design-time: every powerhouse/connection document, for connection pickers.
-  async connections(): Promise<ConnectionSummary[]> {
+  // Design-time: the powerhouse/connection documents this caller may read.
+  // The reactor client is unscoped, so the filter is ours to apply.
+  async connections(ctx?: Context): Promise<ConnectionSummary[]> {
     if (!this.subgraph) return [];
     const page = await this.subgraph.reactorClient.find({
       type: "powerhouse/connection",
     });
-    return (page.results as ConnectionDocument[]).map((document) => {
+    const readable = await this.readableDocuments(
+      page.results as ConnectionDocument[],
+      ctx,
+    );
+    return readable.map((document) => {
       const state = document.state.global;
       return {
         id: document.header.id,
@@ -1322,10 +1322,14 @@ export class WorkflowRuntimeService {
 
   // Runs the piece's app.checkConnection (when declared) against the
   // connection's credentials and records the outcome on the document.
-  async checkConnection(connectionId: string): Promise<ConnectionCheckResult> {
+  async checkConnection(
+    connectionId: string,
+    ctx?: Context,
+  ): Promise<ConnectionCheckResult> {
     if (!this.subgraph) {
       throw new Error("Workflow runtime is not configured yet");
     }
+    await this.assertCanReadDocument(connectionId, ctx);
     const document =
       await this.subgraph.reactorClient.get<ConnectionDocument>(connectionId);
     if (document.header.documentType !== "powerhouse/connection") {
@@ -1336,6 +1340,11 @@ export class WorkflowRuntimeService {
     const state = document.state.global;
     const accountLabel = state.accountLabel ?? null;
 
+    // Revocation is a decision, not an observation: recording any result here
+    // would write ERROR over it and let the next check resolve the secrets.
+    if (state.status === "REVOKED") {
+      return { ok: false, detail: "Connection is revoked", accountLabel };
+    }
     if (state.status === "UNCONFIGURED") {
       return this.recordCheckResult(document, {
         ok: false,
@@ -1352,7 +1361,7 @@ export class WorkflowRuntimeService {
       });
     }
 
-    const packageName = packageNameFromConnectorId(state.connectorId);
+    const packageName = packageFromConnectorId(state.connectorId);
     let bundleDir: string;
     try {
       const version = await this.pieceVersion(packageName);
@@ -1370,16 +1379,14 @@ export class WorkflowRuntimeService {
       });
     }
 
+    // Through the shared decision, so a revoked connection is refused here as
+    // it is on a run; the document is already in hand, so no second fetch.
     let shapedAuth: unknown;
     try {
-      shapedAuth = await shapeAuthValue(
-        {
-          authType: state.authType as ConnectionAuthType,
-          config: (state.config ?? {}) as Record<string, unknown>,
-          secretRefs: state.secretRefs,
-        },
-        this.secretProvider(),
-      );
+      shapedAuth = await resolveConnectionAuth(document, this.secretProvider(), {
+        blockType: state.connectorId,
+        piecePackage: packageName,
+      });
     } catch (error) {
       // A missing or deleted secret names its ref in the message.
       return this.recordCheckResult(document, {
@@ -1489,12 +1496,50 @@ export class WorkflowRuntimeService {
     return action ? { ...common, action } : null;
   }
 
+  // Design-time entry points hand a connection's live credentials to piece
+  // code, so the caller must be allowed to read the connection document.
+
+  // A missing context means the request arrived through a path that cannot
+  // identify its caller; that is a refusal, not a pass.
+  // Keeps only what this caller may read. Without a context nothing is
+  // readable, which is what an unauthenticated listing should return.
+  private async readableDocuments<T extends { header: { id: string } }>(
+    documents: T[],
+    ctx: Context | undefined,
+  ): Promise<T[]> {
+    if (!ctx || !this.subgraph) return [];
+    const subgraph = this.subgraph;
+    const allowed = await Promise.all(
+      documents.map((document) =>
+        subgraph
+          .assertCanRead(document.header.id, ctx)
+          .then(() => true)
+          .catch(() => false),
+      ),
+    );
+    return documents.filter((_, index) => allowed[index]);
+  }
+
+  private async assertCanReadDocument(
+    documentId: string,
+    ctx: Context | undefined,
+  ): Promise<void> {
+    if (!this.subgraph) {
+      throw new Error("Workflow runtime is not configured yet");
+    }
+    if (!ctx) {
+      throw new Error("Connection access requires an authenticated request");
+    }
+    await this.subgraph.assertCanRead(documentId, ctx);
+  }
+
   // Design-time DROPDOWN options() / DYNAMIC props(), run in the piece worker.
   async blockOptions(
     blockType: string,
     propName: string,
     input?: unknown,
     connectionId?: string,
+    ctx?: Context,
   ): Promise<unknown> {
     const parsed = parseBlockType(blockType);
     if (!parsed) {
@@ -1508,13 +1553,18 @@ export class WorkflowRuntimeService {
       }
       throw new Error(`Not a piece block type: "${blockType}"`);
     }
-    // Auth-dependent options() resolvers need the step's connection.
+    // Auth-dependent options() resolvers need the step's connection. Nothing
+    // about the request authorizes it, so the caller's own read access does.
     let auth: unknown;
     if (connectionId && this.subgraph) {
+      await this.assertCanReadDocument(connectionId, ctx);
       auth = await new DocumentConnectionResolver(
         this.subgraph,
         this.secretProvider(),
-      ).resolve(connectionId);
+      ).resolve(connectionId, {
+        blockType,
+        piecePackage: parsed.packageName,
+      });
     }
     const bundle = await ensurePieceBundle({
       name: parsed.packageName,
@@ -1657,14 +1707,21 @@ export class WorkflowRuntimeService {
   }
 
   // Runs the trigger's test hook; the test store prefix keeps cursors intact.
-  async testTrigger(workflowId: string): Promise<unknown> {
+
+  // It resolves the trigger's connection and hands the credentials to piece
+  // code, so the caller must be able to read both documents.
+  async testTrigger(workflowId: string, ctx?: Context): Promise<unknown> {
     if (!this.subgraph) {
       throw new Error("Workflow runtime is not configured yet");
     }
+    await this.assertCanReadDocument(workflowId, ctx);
     const document =
       await this.subgraph.reactorClient.get<WorkflowDocument>(workflowId);
     const trigger = document.state.global.trigger;
     if (!trigger) throw new Error("Workflow has no trigger");
+    if (trigger.connectionId) {
+      await this.assertCanReadDocument(trigger.connectionId, ctx);
+    }
     const binding = this.pieceBinding(workflowId, trigger);
     if (!binding) {
       throw new Error(`"${trigger.blockType}" is not a piece trigger`);
@@ -1696,6 +1753,9 @@ export class WorkflowRuntimeService {
       );
     }
     const definition = toWorkflowDefinition(state);
+    // Bound once, to the connections this definition names: an edit landing
+    // mid-run cannot widen what the run may resolve.
+    const connections = declaredConnectionIds(definition);
     const store = await this.store();
     // Without a journal there is nowhere durable to keep ctx.store, so the
     // executor falls back to the worker's heap.
@@ -1716,7 +1776,7 @@ export class WorkflowRuntimeService {
         rerunOf: resume?.rerunOf,
       })) ?? null;
     try {
-      const result = await withRunScope({ workflowId, runId }, () =>
+      const result = await withRunScope({ workflowId, runId, connections }, () =>
         runWorkflow({
           definition,
           executor: this.executor!,

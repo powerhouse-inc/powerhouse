@@ -2,10 +2,12 @@
 import type { BaseSubgraph } from "@powerhousedao/reactor-api";
 import {
   ActivepiecesBlockExecutor,
+  BoundConnectionResolver,
   CompositeBlockExecutor,
   shapeAuthValue,
   type BlockExecutor,
   type ConnectionAuthType,
+  type ConnectionRequest,
   type EngineConnectionResolver,
   type AttachmentPort,
   type PieceStorePort,
@@ -28,8 +30,38 @@ import {
 import type { WorkflowState } from "document-models/workflow/v1";
 import { childLogger } from "document-model";
 import { join } from "node:path";
+import { currentBoundConnections, currentWorkflowId } from "./run-scope.js";
+import { packageFromConnectorId } from "../../editors/connection-editor/piece-auth.js";
 
 const pieceLogger = childLogger(["workflow", "piece"]);
+const connectionLogger = childLogger(["workflow", "connection"]);
+
+// A connection is bound to its connector (doc 08 §10): a step of one piece
+// never receives another piece's credentials.
+
+// Absent information refuses. A caller that named no piece, or a connection
+// whose connectorId is blank, leaves nothing to check against.
+function assertConnectorMatches(
+  state: ConnectionState,
+  request: ConnectionRequest | undefined,
+): void {
+  const wanted = request?.piecePackage;
+  const owner = state.connectorId
+    ? packageFromConnectorId(state.connectorId)
+    : "";
+  if (!wanted || !owner || wanted !== owner) {
+    throw new ConnectorMismatchError();
+  }
+}
+
+// Says only that this connection is not this caller's to use: naming the
+// owning package would tell an author which connector a guessed id belongs to.
+export class ConnectorMismatchError extends Error {
+  constructor() {
+    super("Connection is not available to this block");
+    this.name = "ConnectorMismatchError";
+  }
+}
 
 // Resolves a step's connectionId to a powerhouse/connection document and
 // shapes its auth value; secret refs resolve through the managed store.
@@ -39,27 +71,43 @@ export class DocumentConnectionResolver implements EngineConnectionResolver {
     private readonly secrets: SecretProvider,
   ) {}
 
-  async resolve(connectionId: string): Promise<unknown> {
+  async resolve(
+    connectionId: string,
+    request?: ConnectionRequest,
+  ): Promise<unknown> {
     const document =
       await this.subgraph.reactorClient.get<ConnectionDocument>(connectionId);
-    if (document.header.documentType !== "powerhouse/connection") {
-      throw new Error(
-        `Document "${connectionId}" is not a powerhouse/connection`,
-      );
-    }
-    const state: ConnectionState = document.state.global;
-    if (state.status === "REVOKED") {
-      throw new Error(`Connection "${state.name || connectionId}" is revoked`);
-    }
-    return shapeAuthValue(
-      {
-        authType: state.authType as ConnectionAuthType,
-        config: (state.config ?? {}) as Record<string, unknown>,
-        secretRefs: state.secretRefs,
-      },
-      this.secrets,
-    );
+    return resolveConnectionAuth(document, this.secrets, request);
   }
+}
+
+// The one place that decides whether a connection's credentials may be shaped
+// at all. Takes the document so a caller holding one need not fetch it twice.
+export async function resolveConnectionAuth(
+  document: ConnectionDocument,
+  secrets: SecretProvider,
+  request?: ConnectionRequest,
+): Promise<unknown> {
+  // Nothing before the connector check describes what was found: a document
+  // of the wrong type answers exactly as a foreign connection does.
+  if (document.header.documentType !== "powerhouse/connection") {
+    throw new ConnectorMismatchError();
+  }
+  const state: ConnectionState = document.state.global;
+  assertConnectorMatches(state, request);
+  // Past the check the caller already holds this connection, so the reason it
+  // cannot be used is theirs to see.
+  if (state.status === "REVOKED") {
+    throw new Error(`Connection "${state.name || document.header.id}" is revoked`);
+  }
+  return shapeAuthValue(
+    {
+      authType: state.authType as ConnectionAuthType,
+      config: (state.config ?? {}) as Record<string, unknown>,
+      secretRefs: state.secretRefs,
+    },
+    secrets,
+  );
 }
 
 export const BUNDLE_CACHE_DIR = join(process.cwd(), ".ph", "ap-bundles");
@@ -73,6 +121,24 @@ export const ATTACHMENT_STAGING_DIR = join(
   "ap-attachment-staging",
 );
 
+// The executor is shared by every concurrent run, so the binding travels with
+// the run scope rather than sitting on the resolver.
+export function boundConnections(
+  inner: EngineConnectionResolver,
+): EngineConnectionResolver {
+  return new BoundConnectionResolver(
+    inner,
+    currentBoundConnections,
+    (connectionId, request) => {
+      // Named apart from a missing connection so an operator can tell a
+      // misconfigured step from an attempt to reach a foreign credential.
+      connectionLogger.warn(
+        `Step "${request?.stepKey ?? "?"}" of workflow "${currentWorkflowId() ?? "?"}" asked for connection "${connectionId}", which its definition does not declare`,
+      );
+    },
+  );
+}
+
 export function createBlockExecutor(
   subgraph: BaseSubgraph,
   secrets: SecretProvider,
@@ -83,7 +149,9 @@ export function createBlockExecutor(
   return new CompositeBlockExecutor(
     new ActivepiecesBlockExecutor({
       cacheDir: BUNDLE_CACHE_DIR,
-      connections: new DocumentConnectionResolver(subgraph, secrets),
+      connections: boundConnections(
+        new DocumentConnectionResolver(subgraph, secrets),
+      ),
       // Without it an action's ctx.store lives only in the worker's heap.
       ...(pieceStore ? { pieceStore } : {}),
       // The worker's stdio is discarded, so a piece's own console output is

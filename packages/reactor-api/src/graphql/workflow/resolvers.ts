@@ -1,4 +1,4 @@
-import { type BaseSubgraph } from "@powerhousedao/reactor-api";
+import { type BaseSubgraph, type Context } from "@powerhousedao/reactor-api";
 import { searchBlocks } from "./block-search.js";
 import {
   fetchPieceActions,
@@ -92,12 +92,14 @@ export const getResolvers = (
           input?: unknown;
           connectionId?: string | null;
         },
+        ctx: Context,
       ) =>
         workflowRuntime.blockOptions(
           args.blockType,
           args.propName,
           args.input,
           args.connectionId ?? undefined,
+          ctx,
         ),
       pieceCatalog: () => fetchPieceCatalog(),
       pieceActions: (_parent: unknown, args: { packageName: string }) =>
@@ -114,7 +116,8 @@ export const getResolvers = (
         _parent: unknown,
         args: { query: string; limit?: number | null },
       ) => searchBlocks(args.query, args.limit ?? undefined),
-      connections: () => workflowRuntime.connections(),
+      connections: (_parent: unknown, _args: unknown, ctx: Context) =>
+        workflowRuntime.connections(ctx),
       webhookEndpoint: (_parent: unknown, args: { workflowId: string }) =>
         workflowRuntime.webhookEndpoint(args.workflowId),
       secret: async (_parent: unknown, args: { ref: string }) => {
@@ -168,8 +171,11 @@ export const getResolvers = (
     WorkflowRuntimeMutations: {
       fire: (_parent: unknown, args: FireArgs) =>
         workflowRuntime.fire(args.workflowId, args.payload),
-      testTrigger: (_parent: unknown, args: { workflowId: string }) =>
-        workflowRuntime.testTrigger(args.workflowId),
+      testTrigger: (
+        _parent: unknown,
+        args: { workflowId: string },
+        ctx: Context,
+      ) => workflowRuntime.testTrigger(args.workflowId, ctx),
       rerun: (_parent: unknown, args: { runId: string }) =>
         workflowRuntime.rerun(args.runId),
       createSecret: async (
@@ -194,8 +200,11 @@ export const getResolvers = (
         await (await workflowRuntime.secrets()).delete(args.ref);
         return true;
       },
-      checkConnection: (_parent: unknown, args: { connectionId: string }) =>
-        workflowRuntime.checkConnection(args.connectionId),
+      checkConnection: (
+        _parent: unknown,
+        args: { connectionId: string },
+        ctx: Context,
+      ) => workflowRuntime.checkConnection(args.connectionId, ctx),
     },
   };
 };

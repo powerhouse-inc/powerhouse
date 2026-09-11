@@ -43,6 +43,9 @@ import { workflowRuntime } from "./service.js";
 const PIECE = { name: "@powerhousedao/piece-docling", version: "1.0.0" };
 const FIXED_NOW = "2026-09-08T00:00:00.000Z";
 
+// checkConnection demands a caller the subgraph can authorize.
+const TEST_CTX = { headers: {}, db: {}, user: { address: "0xabc" } } as never;
+
 // Minimal docling-serve: /health and /version open, /v1/* key-gated — the
 // same route-level split as the real 1.32.0 (the connection check's
 // key probe lands on a /v1/ route).
@@ -185,6 +188,7 @@ describe("WorkflowRuntimeService.checkConnection (docling piece)", () => {
         execute,
         find: vi.fn(() => ({ results: [] })),
       },
+      assertCanRead: vi.fn(() => Promise.resolve({})),
       relationalDb: createRelationalDb(db),
     } as unknown as BaseSubgraph;
     workflowRuntime.configure(subgraph);
@@ -213,7 +217,7 @@ describe("WorkflowRuntimeService.checkConnection (docling piece)", () => {
     get.mockResolvedValueOnce(document);
     execute.mockClear();
 
-    const result = await workflowRuntime.checkConnection(document.header.id);
+    const result = await workflowRuntime.checkConnection(document.header.id, TEST_CTX);
 
     expect(result).toEqual({
       ok: true,
@@ -228,7 +232,7 @@ describe("WorkflowRuntimeService.checkConnection (docling piece)", () => {
     get.mockResolvedValueOnce(document);
     execute.mockClear();
 
-    const result = await workflowRuntime.checkConnection(document.header.id);
+    const result = await workflowRuntime.checkConnection(document.header.id, TEST_CTX);
 
     expect(result.ok).toBe(false);
     expect(result.detail).toMatch(/401/);
@@ -240,7 +244,7 @@ describe("WorkflowRuntimeService.checkConnection (docling piece)", () => {
     get.mockResolvedValueOnce(document);
     execute.mockClear();
 
-    const result = await workflowRuntime.checkConnection(document.header.id);
+    const result = await workflowRuntime.checkConnection(document.header.id, TEST_CTX);
 
     expect(result.ok).toBe(false);
     expect(result.detail).toMatch(/Could not reach/i);

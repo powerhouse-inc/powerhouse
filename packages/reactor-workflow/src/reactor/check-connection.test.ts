@@ -49,6 +49,10 @@ import { fetchPieceCatalog, fetchPieceDetail } from "./piece-catalog.js";
 import { BUNDLE_CACHE_DIR } from "./lib.js";
 import { workflowRuntime } from "./service.js";
 
+// checkConnection hands credentials to piece code, so it demands a caller the
+// subgraph can authorize; the stub above allows this one.
+const TEST_CTX = { headers: {}, db: {}, user: { address: "0xabc" } } as never;
+
 const FIXED_NOW = "2026-09-04T00:00:00.000Z";
 const MISSING_SECRET_REF = `secret://v1:${"0".repeat(32)}`;
 
@@ -247,6 +251,7 @@ describe("WorkflowRuntimeService.checkConnection", () => {
         execute,
         find: vi.fn(() => ({ results: [] })),
       },
+      assertCanRead: vi.fn(() => Promise.resolve({})),
       relationalDb: createRelationalDb(db),
     } as unknown as BaseSubgraph;
     workflowRuntime.configure(subgraph);
@@ -269,7 +274,7 @@ describe("WorkflowRuntimeService.checkConnection", () => {
     get.mockResolvedValueOnce(document);
     execute.mockClear();
 
-    const result = await workflowRuntime.checkConnection(document.header.id);
+    const result = await workflowRuntime.checkConnection(document.header.id, TEST_CTX);
 
     expect(result).toEqual({
       ok: true,
@@ -299,7 +304,7 @@ describe("WorkflowRuntimeService.checkConnection", () => {
     get.mockResolvedValueOnce(document);
     execute.mockClear();
 
-    const result = await workflowRuntime.checkConnection(document.header.id);
+    const result = await workflowRuntime.checkConnection(document.header.id, TEST_CTX);
 
     expect(result.ok).toBe(false);
     expect(result.detail).toBe("auth failed: bad credentials");
@@ -318,7 +323,7 @@ describe("WorkflowRuntimeService.checkConnection", () => {
     get.mockResolvedValueOnce(document);
     execute.mockClear();
 
-    const result = await workflowRuntime.checkConnection(document.header.id);
+    const result = await workflowRuntime.checkConnection(document.header.id, TEST_CTX);
 
     expect(result).toEqual({
       ok: true,
@@ -335,7 +340,7 @@ describe("WorkflowRuntimeService.checkConnection", () => {
     get.mockResolvedValueOnce(document);
     execute.mockClear();
 
-    const result = await workflowRuntime.checkConnection(document.header.id);
+    const result = await workflowRuntime.checkConnection(document.header.id, TEST_CTX);
 
     expect(result).toEqual({
       ok: false,
@@ -362,7 +367,7 @@ describe("WorkflowRuntimeService.checkConnection", () => {
     get.mockResolvedValueOnce(document);
     execute.mockClear();
     try {
-      const result = await workflowRuntime.checkConnection(document.header.id);
+      const result = await workflowRuntime.checkConnection(document.header.id, TEST_CTX);
 
       expect(result).toEqual({
         ok: false,
@@ -385,7 +390,7 @@ describe("WorkflowRuntimeService.checkConnection", () => {
     get.mockResolvedValueOnce(document);
     execute.mockClear();
 
-    const result = await workflowRuntime.checkConnection(document.header.id);
+    const result = await workflowRuntime.checkConnection(document.header.id, TEST_CTX);
 
     expect(result).toEqual({
       ok: true,
@@ -402,7 +407,7 @@ describe("WorkflowRuntimeService.checkConnection", () => {
     get.mockResolvedValueOnce(document);
     execute.mockClear();
 
-    const result = await workflowRuntime.checkConnection(document.header.id);
+    const result = await workflowRuntime.checkConnection(document.header.id, TEST_CTX);
 
     expect(result.ok).toBe(false);
     expect(result.detail).toContain(MISSING_SECRET_REF);
@@ -417,7 +422,7 @@ describe("WorkflowRuntimeService.checkConnection", () => {
     vi.mocked(ensurePieceBundle).mockClear();
     execute.mockClear();
 
-    const result = await workflowRuntime.checkConnection(document.header.id);
+    const result = await workflowRuntime.checkConnection(document.header.id, TEST_CTX);
 
     expect(result).toEqual({
       ok: false,
@@ -437,7 +442,7 @@ describe("WorkflowRuntimeService.checkConnection", () => {
     vi.mocked(ensurePieceBundle).mockClear();
     execute.mockClear();
 
-    const result = await workflowRuntime.checkConnection(document.header.id);
+    const result = await workflowRuntime.checkConnection(document.header.id, TEST_CTX);
 
     expect(result).toEqual({
       ok: false,
@@ -451,13 +456,70 @@ describe("WorkflowRuntimeService.checkConnection", () => {
     });
   });
 
+  it("refuses a revoked connection instead of resolving its secrets", async () => {
+    let document = makeDocument();
+    document = reducer(
+      document,
+      actions.recordCheckResult({ status: "REVOKED", checkedAt: FIXED_NOW }),
+    );
+    get.mockResolvedValueOnce(document);
+    execute.mockClear();
+
+    const result = await workflowRuntime.checkConnection(
+      document.header.id,
+      TEST_CTX,
+    );
+
+    expect(result.ok).toBe(false);
+    expect(result.detail).toContain("revoked");
+    // Recording any result would write ERROR over REVOKED, which is what the
+    // second check below would then walk through.
+    expect(execute).not.toHaveBeenCalled();
+  });
+
+  it("keeps refusing a revoked connection on a second check", async () => {
+    let document = reducer(
+      makeDocument(),
+      actions.recordCheckResult({ status: "REVOKED", checkedAt: FIXED_NOW }),
+    );
+    // Writes land on the document the next read returns, so a recorded ERROR
+    // would clear REVOKED exactly as it does against a real reactor.
+    get.mockImplementation(() => Promise.resolve(document));
+    execute.mockImplementation((_id, _scope, actionList: Action[]) => {
+      document = reducer(document, actionList[0]);
+      return document;
+    });
+    vi.mocked(ensurePieceBundle).mockClear();
+
+    await workflowRuntime.checkConnection(document.header.id, TEST_CTX);
+    const second = await workflowRuntime.checkConnection(
+      document.header.id,
+      TEST_CTX,
+    );
+
+    expect(second.ok).toBe(false);
+    expect(second.detail).toContain("revoked");
+    expect(document.state.global.status).toBe("REVOKED");
+    // Nothing reached the piece, so nothing shaped the stored secrets.
+    expect(ensurePieceBundle).not.toHaveBeenCalled();
+  });
+
+  it("refuses a caller the subgraph cannot identify", async () => {
+    const document = makeDocument();
+    get.mockResolvedValueOnce(document);
+
+    await expect(
+      workflowRuntime.checkConnection(document.header.id),
+    ).rejects.toThrow("authenticated request");
+  });
+
   it("resolves the version from piece detail when the catalog misses", async () => {
     vi.mocked(fetchPieceCatalog).mockResolvedValueOnce([]);
     vi.mocked(fetchPieceDetail).mockClear();
     const document = makeDocument();
     get.mockResolvedValueOnce(document);
 
-    const result = await workflowRuntime.checkConnection(document.header.id);
+    const result = await workflowRuntime.checkConnection(document.header.id, TEST_CTX);
 
     expect(result.ok).toBe(true);
     expect(fetchPieceDetail).toHaveBeenCalledWith(PIECES.pass.name);
