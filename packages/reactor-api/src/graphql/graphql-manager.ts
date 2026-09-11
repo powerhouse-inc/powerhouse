@@ -26,7 +26,7 @@ import {
   type IHttpScope,
 } from "../http/index.js";
 import { debounce } from "../packages/util.js";
-import type { AuthService } from "../services/auth.service.js";
+import type { AuthService, User } from "../services/auth.service.js";
 import type { IAuthorizationService } from "../services/authorization.service.js";
 import type { DocumentPermissionService } from "../services/document-permission.service.js";
 import {
@@ -53,7 +53,9 @@ import type {
   IHttpAdapter,
   AdapterRouteHandle,
   SubgraphDefinition,
+  WsConnection,
   WsDisposer,
+  WsHandlers,
 } from "./gateway/types.js";
 import { createGraphQLSSEHandler } from "./sse.js";
 
@@ -118,6 +120,71 @@ export type GraphqlManagerFeatureFlags = {
  * regenerateDocumentModelSubgraphs).
  */
 const DOCUMENT_MODEL_SUBGRAPH_SOURCE = "document-models";
+
+// The two halves of WebSocket auth: who is connected, and whether at all.
+
+// graphql-ws calls `context` per operation and `onConnect` once per connection.
+
+// A throw from `context` closes 4500, which clients treat as fatal; 4403 retries.
+
+// So every refusal happens in `onConnect`, and `context` only reads the verdict.
+
+// Admission matches HTTP: a bad bearer is refused, an absent one is no user.
+
+// Anonymous is refused only under REQUIRE_AUTHENTICATED_CALLER, as for fetch.
+
+// WS needs its own check: `ws` owns the upgrade, so the fetch chain never runs.
+
+// Admitted anonymous connections authorize per document, as they do over SSE.
+export function createWsAuthHandlers(opts: {
+  authService?: AuthService;
+  /** Whether anonymous callers are refused; read at call time, not at build time. */
+  requireAuthenticatedCaller: () => boolean;
+  logger: ILogger;
+  buildContext: (
+    connectionParams: Record<string, unknown>,
+    user?: User,
+  ) => Context;
+}): WsHandlers<Context> {
+  const resolved = new WeakMap<WsConnection, User | undefined>();
+
+  return {
+    onConnect: async (connectionParams, connection) => {
+      let user: User | null = null;
+
+      if (opts.authService) {
+        try {
+          user =
+            await opts.authService.authenticateWebSocketConnection(
+              connectionParams,
+            );
+        } catch (error) {
+          // `warn`: the caller sent a bad token, the server is fine.
+          opts.logger.warn(
+            "Refusing WebSocket connection: @error",
+            error instanceof Error ? error.message : error,
+          );
+          return false;
+        }
+      }
+
+      if (user === null && opts.requireAuthenticatedCaller()) {
+        opts.logger.warn(
+          "Refusing anonymous WebSocket connection: an authenticated caller is required",
+        );
+        return false;
+      }
+
+      resolved.set(connection, user ?? undefined);
+      return true;
+    },
+
+    context: (connectionParams, connection) =>
+      Promise.resolve(
+        opts.buildContext(connectionParams, resolved.get(connection)),
+      ),
+  };
+}
 
 export class GraphQLManager {
   private initialized = false;
@@ -814,32 +881,6 @@ export class GraphQLManager {
     this.contextFields = { ...this.contextFields, ...fields };
   }
 
-  async #createWebSocketContext(
-    connectionParams: Record<string, unknown>,
-  ): Promise<Context> {
-    let user = null;
-
-    if (this.authService) {
-      user =
-        await this.authService.authenticateWebSocketConnection(
-          connectionParams,
-        );
-    }
-
-    const context: Context = {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      headers: connectionParams as any,
-      db: this.relationalDb,
-      ...this.getAdditionalContextFields(),
-    };
-
-    if (user) {
-      context.user = user;
-    }
-
-    return context;
-  }
-
   #makeContextFactory(): GatewayContextFactory<Context> {
     return (request: Request): Promise<Context> => {
       const authCtx = getAuthContext(request);
@@ -858,9 +899,24 @@ export class GraphQLManager {
     };
   }
 
-  #makeWsContextFactory() {
-    return (connectionParams: Record<string, unknown>): Promise<Context> =>
-      this.#createWebSocketContext(connectionParams);
+  #makeWsContextFactory(): WsHandlers<Context> {
+    return createWsAuthHandlers({
+      authService: this.authService,
+      // Read at call time: init() installs this after the manager is built.
+      requireAuthenticatedCaller: () =>
+        this.#requireAuthMiddleware !== undefined,
+      logger: this.logger,
+      buildContext: (connectionParams, user) => {
+        const context: Context = {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          headers: connectionParams as any,
+          db: this.relationalDb,
+          ...this.getAdditionalContextFields(),
+        };
+        if (user) context.user = user;
+        return context;
+      },
+    });
   }
 
   setSupergraph(supergraph: string, subgraphs: ISubgraph[]) {

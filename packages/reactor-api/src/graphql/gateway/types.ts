@@ -13,9 +13,30 @@ export type GatewayContextFactory<TContext = unknown> = (
   request: Request,
 ) => Promise<TContext>;
 
+// Opaque per-connection key carrying what `onConnect` resolved to `context`.
+
+/** Under graphql-ws this is `ctx.extra`, created once per socket. */
+export type WsConnection = object;
+
+// Called per operation, so it must be pure: verifying belongs in `onConnect`.
 export type WsContextFactory<TContext = unknown> = (
   connectionParams: Record<string, unknown>,
+  connection: WsConnection,
 ) => Promise<TContext>;
+
+// Admits a connection once, at `ConnectionInit`; `false` closes 4403, retryable.
+
+// It must never throw: an escaping exception closes 4500, which is fatal.
+export type WsConnectHandler = (
+  connectionParams: Record<string, unknown>,
+  connection: WsConnection,
+) => Promise<boolean>;
+
+// One object, so no adapter can thread `context` without `onConnect`.
+export type WsHandlers<TContext = unknown> = {
+  onConnect: WsConnectHandler;
+  context: WsContextFactory<TContext>;
+};
 
 export type WsDisposer = { dispose: () => void | Promise<void> };
 
@@ -94,11 +115,13 @@ export interface IGatewayAdapter<TContext = unknown> {
    */
   updateSupergraph(): Promise<void>;
 
-  /** Attach WebSocket subscriptions. Returns a disposer. */
+  // Attach WebSocket subscriptions. Both halves of `handlers` must be passed on.
+
+  /** Without `onConnect`, refusing would mean throwing: an unretryable 4500. */
   attachWebSocket(
     wsServer: WebSocketServer,
     schema: GraphQLSchema,
-    contextFactory: WsContextFactory<TContext>,
+    handlers: WsHandlers<TContext>,
   ): WsDisposer;
 
   stop(): Promise<void>;
