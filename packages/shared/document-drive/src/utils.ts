@@ -131,6 +131,16 @@ export function readNodes(state: { nodes: Node[] }): Node[] {
   return isDraft(state) ? original(state).nodes : state.nodes;
 }
 
+/**
+ * The node list with a node added, ordered by id. The list is built and sorted
+ * as plain objects, so inside a mutative draft the comparator never reads an
+ * element through the draft proxy. Pass the list read with readNodes to get
+ * that benefit; passing the draft's own list is correct but slow.
+ */
+export function insertNodeSorted(nodes: readonly Node[], node: Node): Node[] {
+  return [...nodes, node].sort((a, b) => a.id.localeCompare(b.id));
+}
+
 export function handleTargetNameCollisions(params: {
   nodes: Node[];
   targetParentFolder: string | null;
