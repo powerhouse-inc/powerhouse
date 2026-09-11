@@ -1,5 +1,10 @@
-import { getBasePath } from "@powerhousedao/connect/utils";
-import { getIsEmbedded } from "@powerhousedao/connect/hooks";
+// Leaf imports, not the `@powerhousedao/connect/{utils,hooks}` barrels: this
+// is the first contentful paint and main.tsx loads it BEFORE the runtime
+// config is fetched. The barrels re-export modules that read the config at
+// module-evaluation (which throws if the config cache isn't warm), so they
+// must stay out of this graph.
+import { getBasePath } from "../utils/browser.js";
+import { getIsEmbedded } from "../hooks/useIsEmbedded.js";
 import {
   ConnectSidebar,
   HomeScreen,
@@ -56,6 +61,13 @@ const Loader = ({ delay = LOADER_DELAY }: { delay?: number }) => {
   useEffect(() => {
     const id = setTimeout(() => {
       setShowLoading(true);
+      // Latch it on the body — the same flag the SSR branch below sets, and
+      // the one `showInitialLoader` reads on mount. The bootstrap renders this
+      // skeleton, then swaps in the config-dependent app whose Suspense
+      // fallback is this same component, which remounts it. Without the latch
+      // the delay re-arms and the logo blinks out for another `delay` ms at
+      // exactly the moment the app is loading.
+      document.body.setAttribute("data-show-loader", "true");
     }, delay);
 
     return () => clearTimeout(id);
