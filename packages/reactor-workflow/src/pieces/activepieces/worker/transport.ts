@@ -23,8 +23,16 @@ export type TransportListener<E extends TransportEvent> = (
   payload: TransportEventMap[E],
 ) => void;
 
-// One worker's connection. Implementations must deliver `message` payloads
-// structurally intact and emit `exit` exactly once when the worker ends.
+// One worker's connection. An implementation must deliver `message` payloads
+// faithfully enough for the protocol above, and emit `exit` exactly once.
+
+// "Faithfully enough" means JSON-shaped, deliberately: the fork's structured
+// clone would carry a Date or a Map, but nothing may depend on that, because
+// no other carrier could honour it.
+
+// PieceWorker flattens what it sends and the child flattens what it answers,
+// so this is a contract a socket could meet too — a transport is not required
+// to preserve anything JSON would lose.
 export interface IPieceWorkerTransport {
   send(message: unknown): void;
   on<E extends TransportEvent>(event: E, listener: TransportListener<E>): void;

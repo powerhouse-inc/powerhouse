@@ -3,6 +3,7 @@ import type {
   RecordedListener,
   RecordedSchedule,
 } from "../context/trigger.js";
+import { jsonSafe } from "./json-safe.js";
 import {
   createForkTransport,
   defaultEntryPath,
@@ -272,7 +273,9 @@ export class PieceWorker {
       worker.on("message", onMessage);
       worker.on("message", onHostCall);
       worker.on("exit", onExit);
-      worker.send({ id, type, request });
+      // Flattened here rather than per caller: config, auth and connection
+      // values are piece-authored, and the contract is JSON-shaped both ways.
+      worker.send(jsonSafe({ id, type, request }));
     });
   }
 

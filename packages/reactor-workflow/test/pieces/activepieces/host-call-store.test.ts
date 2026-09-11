@@ -61,6 +61,15 @@ const app = {
         return { implicit: await ctx.store.get("cursor") };
       },
     },
+    typed: {
+      name: "typed",
+      displayName: "Typed",
+      props: {},
+      run: async (ctx) => {
+        const put = await ctx.store.put("when", new Date(0));
+        return { put: typeof put, got: typeof (await ctx.store.get("when")) };
+      },
+    },
     refused: {
       name: "refused",
       displayName: "Refused",
@@ -237,6 +246,24 @@ describe("ctx.store over the host call channel", () => {
     expect([...store.entries.keys()]).toEqual(["FLOW/cursor"]);
   });
 
+  it("hands the host a JSON-shaped value, whatever the carrier", async () => {
+    const store = memoryStore();
+    const executor = new ActivepiecesBlockExecutor({
+      cacheDir,
+      worker,
+      pieceStore: store,
+    });
+
+    const result = await executor.execute(
+      execution("@test/cursor@1.0.0#typed", {}),
+    );
+
+    // The durable store round-trips through JSON, so a Date must not appear to
+    // survive a put just because the fork's structured clone would carry one.
+    expect(result.output).toEqual({ put: "string", got: "string" });
+    expect(typeof store.entries.get("FLOW/when")).toBe("string");
+  });
+
   it("surfaces a host refusal to the piece as a thrown error", async () => {
     const store = memoryStore({ rejectPut: "too-big" });
     const executor = new ActivepiecesBlockExecutor({
@@ -253,6 +280,18 @@ describe("ctx.store over the host call channel", () => {
     expect(output.threw).toBe(true);
     expect(output.message).toContain("too big");
     expect(store.entries.has("FLOW/too-big")).toBe(false);
+  });
+
+  it("flattens on the heap too, so the fallback does not diverge", async () => {
+    const executor = new ActivepiecesBlockExecutor({ cacheDir, worker });
+
+    const result = await executor.execute(
+      execution("@test/cursor@1.0.0#typed", {}),
+    );
+
+    // The divergence this guards against: a Date surviving only when no
+    // durable store happens to be configured.
+    expect(result.output).toEqual({ put: "string", got: "string" });
   });
 
   it("leaves ctx.store on the worker's heap when no port is configured", async () => {

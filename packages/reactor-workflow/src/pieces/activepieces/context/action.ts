@@ -1,6 +1,7 @@
 // Our ActionContext → their ActionContext (doc 06 §2.8). Implements the top usage
 // tier (propsValue, auth, store, connections); the rest throws loudly, named.
 import { throwingStub, withTouchTracking } from "./stubs.js";
+import { jsonSafe } from "../worker/json-safe.js";
 import { normalizeStoreScope, type StoreScopeName } from "./store-scope.js";
 import type { ActionFilesService } from "./files.js";
 import type { ConnectionsProvider } from "./props.js";
@@ -9,6 +10,9 @@ export { UnsupportedContextMemberError } from "./stubs.js";
 
 // The scope travels beside the key rather than inside it: which partition a
 // key belongs to is the host's decision, not a naming convention.
+
+// Values are JSON-shaped by contract: a durable store round-trips them through
+// JSON, so nothing may rely on a Date or a Map surviving a put.
 export interface KeyValueStore {
   put(key: string, value: unknown, scope?: StoreScopeName): Promise<unknown>;
   get(key: string, scope?: StoreScopeName): Promise<unknown>;
@@ -43,9 +47,12 @@ export class InMemoryKeyValueStore implements KeyValueStore {
     return Object.fromEntries(this.entries);
   }
 
+  // Flattened like the durable store, so the heap fallback is not the one
+  // place a Date survives a put.
   put(key: string, value: unknown, scope?: StoreScopeName): Promise<unknown> {
-    this.entries.set(this.scoped(key, scope), value);
-    return Promise.resolve(value);
+    const stored = jsonSafe(value);
+    this.entries.set(this.scoped(key, scope), stored);
+    return Promise.resolve(stored);
   }
 
   get(key: string, scope?: StoreScopeName): Promise<unknown> {
