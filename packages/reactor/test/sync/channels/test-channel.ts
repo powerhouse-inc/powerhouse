@@ -102,6 +102,10 @@ export class TestChannel implements IChannel {
 
   notePoll(): void {}
 
+  lastHolderPollUtcMs(): number | undefined {
+    return undefined;
+  }
+
   receive(envelope: SyncEnvelope): void {
     if (this.isShutdown) {
       throw new Error(

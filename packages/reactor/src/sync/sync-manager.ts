@@ -104,9 +104,6 @@ const defaultSyncManagerConfig: SyncManagerConfig = {
   staleRemotePollWindowMs: 5 * 60_000,
 };
 
-/** Channel types whose remotes this replica serves rather than subscribes to. */
-const PRUNABLE_CHANNEL_TYPES: ReadonlySet<string> = new Set(["polling"]);
-
 const PLAN_KEY_TO_JOB_UUID_CAP = 10000;
 
 /** Where a sync operation's run of ordinals begins. */
@@ -146,6 +143,8 @@ export class SyncManager implements ISyncManager {
   private readonly evictedOutboxFloors = new Map<string, number>();
   private readonly prunePending = new Set<string>();
   private pruneChain: Promise<void> = Promise.resolve();
+  private derivingOutboxes = 0;
+  private pruneDrainDeferred = false;
   private readonly lastEnqueuedJobIdByKey = new Map<string, string>();
   private inboxChunkChain: Promise<void> = Promise.resolve();
 
@@ -291,6 +290,7 @@ export class SyncManager implements ISyncManager {
     this.planKeyToJobUuid.clear();
     this.lastEnqueuedJobIdByKey.clear();
     this.prunePending.clear();
+    this.pruneDrainDeferred = false;
     this.batchAggregator.clear();
 
     if (this.eventUnsubscribe) {
@@ -1065,7 +1065,7 @@ export class SyncManager implements ISyncManager {
       if (!this.prunePending.has(remote.meta.name)) {
         this.prunePending.add(remote.meta.name);
         this.logger.warn(
-          "Outbox for @RemoteName (@Collection) is past its bound of @Cap operations holding @Held, and it has not been polled for @StaleMs ms; removing the channel and its persisted rows",
+          "Outbox for @RemoteName (@Collection) is past its bound of @Cap operations holding @Held, and it has not been polled for @StaleMs ms; marking the channel for removal once this derivation ends",
           remote.meta.name,
           remote.meta.collectionId.key,
           cap,
@@ -1087,20 +1087,19 @@ export class SyncManager implements ISyncManager {
   }
 
   /**
-   * How long a prunable remote's holder has been silent, if past the window.
+   * How long a served remote's holder has been silent, if past the window.
    *
-   * The channel type is checked first: SyncManager serves and subscribes with
-   * the same interface, and a request channel reports lastSuccessUtcMs too, so
-   * age alone cannot tell a dead served channel from a client whose switchboard
-   * is merely unreachable. A channel that reports nothing (0) is never pruned.
+   * The channel is asked, rather than its config inspected: SyncManager serves
+   * and subscribes with the same interface, both kinds report lastSuccessUtcMs,
+   * and the caller-supplied channelConfig.type is a free-form string the
+   * factories do not read -- so neither could tell a dead served channel from a
+   * client whose switchboard is merely unreachable. Only a channel that claims
+   * a holder by reporting when it last heard from one can be removed for that
+   * holder's silence; a channel that reports nothing (or 0) is never pruned.
    */
   private stalePollAgeMs(remote: Remote): number | undefined {
-    if (!PRUNABLE_CHANNEL_TYPES.has(remote.meta.channelConfig.type)) {
-      return undefined;
-    }
-
-    const last = remote.channel.getConnectionState().lastSuccessUtcMs;
-    if (last <= 0) {
+    const last = remote.channel.lastHolderPollUtcMs();
+    if (last === undefined || last <= 0) {
       return undefined;
     }
 
@@ -1111,15 +1110,35 @@ export class SyncManager implements ISyncManager {
   /**
    * Removes the remotes marked stale during eviction.
    *
-   * Never call this from the derivation path: removing a remote the caller is
-   * still iterating would pull its mailboxes out from under it.
+   * Removing a remote that a derivation is still iterating would pull its
+   * mailboxes out from under it, so a drain that arrives during one is deferred
+   * rather than run; the last derivation to finish re-arms it.
    */
   private drainPrunes(): Promise<void> {
+    if (this.derivingOutboxes > 0) {
+      this.pruneDrainDeferred = true;
+      return Promise.resolve();
+    }
+
     const next = this.pruneChain.then(async () => {
       if (this.isShutdown) return;
       for (const name of [...this.prunePending]) {
         this.prunePending.delete(name);
-        if (!this.remotes.has(name)) continue;
+        const remote = this.remotes.get(name);
+        if (!remote) continue;
+
+        // The mark was made mid-derivation and is acted on after it. A poll in
+        // between is the holder saying it is still there -- and a first poll is
+        // slow precisely when the outbox is huge, which is the state that
+        // marked it -- so the decision is taken again here, against now.
+        if (this.stalePollAgeMs(remote) === undefined) {
+          this.logger.info(
+            "Stale removal of @name revoked: its holder polled while the outbox was being derived",
+            name,
+          );
+          continue;
+        }
+
         try {
           await this.remove(name);
         } catch (error) {
@@ -1143,10 +1162,35 @@ export class SyncManager implements ISyncManager {
     return count;
   }
 
+  /**
+   * Derives this remote's outbox, holding off prunes for the duration.
+   *
+   * A backfill elsewhere can finish at any await in here and drain the prunes
+   * it marked; the count is what keeps that drain from removing the remote this
+   * call is still adding to.
+   */
   private async updateOutbox(
     remote: Remote,
     ackOrdinal: number,
     mode: OutboxMode = OutboxMode.Backfill,
+    signal?: AbortSignal,
+  ): Promise<void> {
+    this.derivingOutboxes++;
+    try {
+      await this.deriveOutbox(remote, ackOrdinal, mode, signal);
+    } finally {
+      this.derivingOutboxes--;
+      if (this.derivingOutboxes === 0 && this.pruneDrainDeferred) {
+        this.pruneDrainDeferred = false;
+        void this.drainPrunes();
+      }
+    }
+  }
+
+  private async deriveOutbox(
+    remote: Remote,
+    ackOrdinal: number,
+    mode: OutboxMode,
     signal?: AbortSignal,
   ): Promise<void> {
     const composedSignal = signal

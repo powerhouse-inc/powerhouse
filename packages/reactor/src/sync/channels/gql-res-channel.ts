@@ -122,6 +122,11 @@ export class GqlResponseChannel implements IChannel {
     this.lastPollUtcMs = Date.now();
   }
 
+  /** This channel is served: its holder's polls are the liveness it reports. */
+  lastHolderPollUtcMs(): number | undefined {
+    return this.lastPollUtcMs;
+  }
+
   async init(): Promise<void> {
     // get cursors -- these are the last acknowledged ordinals for the inbox and outbox
     const cursors = await this.cursorStorage.list(this.remoteName);

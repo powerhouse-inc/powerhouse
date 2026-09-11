@@ -265,6 +265,11 @@ export class GqlRequestChannel implements IChannel {
   /** This channel polls a remote itself; it has no holder to hear from. */
   notePoll(): void {}
 
+  /** No holder, so nothing this channel reports may strand one. */
+  lastHolderPollUtcMs(): number | undefined {
+    return undefined;
+  }
+
   /**
    * Initializes the channel by registering it on the remote server and starting polling.
    */

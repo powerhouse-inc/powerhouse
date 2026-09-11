@@ -85,6 +85,17 @@ export interface IChannel {
    * remote itself should treat this as a no-op, as with triggerPull.
    */
   notePoll(): void;
+
+  /**
+   * When this channel's holder last interacted with it, if it has one.
+   *
+   * A channel that polls a remote itself reports undefined: the only liveness
+   * it knows is the remote's, which says nothing about whether anyone still
+   * wants what this replica holds for it. Reporting a timestamp is the
+   * channel's own claim that it serves a holder, and is what makes it
+   * eligible to be removed when that holder goes silent.
+   */
+  lastHolderPollUtcMs(): number | undefined;
 }
 
 /**
