@@ -19,7 +19,6 @@ export function setRuntimeUrl(url: string): void {
   formCache.clear();
   outputTreeCache.clear();
   catalogCache = undefined;
-  connectionsCache = undefined;
 }
 
 function runtimeUrl(): string {
@@ -248,33 +247,20 @@ export interface ConnectionSummary {
   accountLabel: string | null;
 }
 
-// Short-lived: connections change as the user edits them in Connect.
-let connectionsCache:
-  | { at: number; promise: Promise<ConnectionSummary[]> }
-  | undefined;
-const CONNECTIONS_TTL_MS = 10_000;
-
+// Deliberately uncached. The server scopes this list to the caller's read
+// access, and nothing here identifies the caller to key a cache on.
 export function fetchConnections(): Promise<ConnectionSummary[]> {
-  if (
-    !connectionsCache ||
-    Date.now() - connectionsCache.at > CONNECTIONS_TTL_MS
-  ) {
-    const promise = gql<{
-      workflowRuntime: { connections: ConnectionSummary[] };
-    }>(
-      `query Connections { workflowRuntime { connections { id name connectorId authType status accountLabel } } }`,
-      {},
-    ).then((data) => data.workflowRuntime.connections);
-    connectionsCache = { at: Date.now(), promise };
-    promise.catch(() => (connectionsCache = undefined));
-  }
-  return connectionsCache.promise;
+  return gql<{
+    workflowRuntime: { connections: ConnectionSummary[] };
+  }>(
+    `query Connections { workflowRuntime { connections { id name connectorId authType status accountLabel } } }`,
+    {},
+  ).then((data) => data.workflowRuntime.connections);
 }
 
-// The picker creates connections itself; the cache must not hide them.
-export function invalidateConnections(): void {
-  connectionsCache = undefined;
-}
+// Kept for the picker, which creates connections and then refreshes; there is
+// no longer a cache for it to drop.
+export function invalidateConnections(): void {}
 
 export interface ConnectionCheckResult {
   ok: boolean;
