@@ -98,7 +98,9 @@ function serveNotify(
   const handler = handlers?.[message.method];
   if (!handler) return;
   try {
-    handler(message.payload);
+    // Declared void, but TypeScript admits an async function here, and its
+    // rejection would take the host down rather than the tap.
+    void Promise.resolve(handler(message.payload)).catch(() => undefined);
   } catch {
     // A broken tap is not the step's problem.
   }

@@ -33,6 +33,18 @@ const app = {
         return { processed: 2 };
       },
     },
+    detached: {
+      name: "detached",
+      displayName: "Detached",
+      props: {},
+      run: async (ctx) => {
+        // Keeps ctx past the step, the way a piece with a stray timer does.
+        setTimeout(() => {
+          void ctx.output.update({ leaked: true });
+        }, 10);
+        return { started: true };
+      },
+    },
     progressGuarded: {
       name: "progressGuarded",
       displayName: "Progress Guarded",
@@ -144,6 +156,43 @@ describe("worker notifications", () => {
     const output = result.output as { threw: boolean; member: string };
     expect(output.threw).toBe(true);
     expect(output.member).toContain("output");
+  });
+
+  it("drops an output update made after its step returned", async () => {
+    const partials: unknown[] = [];
+    const executor = new ActivepiecesBlockExecutor({
+      cacheDir,
+      worker,
+      onPartialOutput: (output) => partials.push(output),
+    });
+
+    await executor.execute(execution("@test/noisy@1.0.0#detached"));
+    // Long enough for the piece's stray timer to fire against a closed tap.
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    const result = await executor.execute(
+      execution("@test/noisy@1.0.0#progress"),
+    );
+
+    // A notification carries no request id, so a late one would otherwise be
+    // filed against whichever step happened to be running.
+    expect(partials).toEqual([{ processed: 1 }, { processed: 2 }]);
+    expect(result.output).toEqual({ processed: 2 });
+  });
+
+  it("survives a tap that rejects rather than throws", async () => {
+    const executor = new ActivepiecesBlockExecutor({
+      cacheDir,
+      worker,
+      // Declared void, but an async sink is what a real one looks like.
+      onPieceLog: (() =>
+        Promise.reject(new Error("the log sink is down"))) as unknown as (
+        entry: PieceLogEntry,
+      ) => void,
+    });
+
+    const result = await executor.execute(execution("@test/noisy@1.0.0#talk"));
+
+    expect(result.output).toEqual({ done: true });
   });
 
   it("finishes the step even when a tap throws", async () => {

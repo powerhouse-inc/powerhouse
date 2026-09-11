@@ -97,5 +97,10 @@ export function resetHostCalls(): void {
 // The one-way half: a report with no answer to wait for. It cannot fail from
 // the piece's side, so a missing channel is dropped rather than raised.
 export function notifyHost(method: string, payload: unknown): void {
-  process.send?.({ type: "host-notify", method, payload });
+  try {
+    process.send?.({ type: "host-notify", method, payload });
+  } catch {
+    // `process.send` stays defined after the channel closes and throws. A tap
+    // that threw here would be a tap that changed the step.
+  }
 }

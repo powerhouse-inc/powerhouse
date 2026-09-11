@@ -177,6 +177,7 @@ async function handleRun(message: RunMessage): Promise<WorkerResponse> {
   const durableStore = request.durableStore
     ? new RemoteKeyValueStore()
     : undefined;
+  const liveOutput = request.liveOutput ? new RemoteOutput() : undefined;
   const { context, touched } = buildActionContext({
     propsValue: await normalizePropsValue(action.props, request.propsValue, {
       resolveRef: stagedInputResolver(request.stagedInputs),
@@ -189,7 +190,7 @@ async function handleRun(message: RunMessage): Promise<WorkerResponse> {
     connections: request.connections
       ? new InMemoryConnectionsProvider(request.connections)
       : undefined,
-    output: request.liveOutput ? new RemoteOutput() : undefined,
+    output: liveOutput,
     executionType: request.executionType,
     identity: request.identity,
   });
@@ -199,6 +200,7 @@ async function handleRun(message: RunMessage): Promise<WorkerResponse> {
     output = await action.run(context);
   } finally {
     restoreConsole?.();
+    liveOutput?.close();
   }
   return {
     id: message.id,

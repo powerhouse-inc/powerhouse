@@ -92,7 +92,8 @@ export function createBlockExecutor(
         const line = `[${execution.step.key}] ${entry.message}`;
         if (entry.level === "error") pieceLogger.error(line);
         else if (entry.level === "warn") pieceLogger.warn(line);
-        else pieceLogger.debug(line);
+        else if (entry.level === "debug") pieceLogger.debug(line);
+        else pieceLogger.info(line);
       },
       // Without an attachment store a piece's ctx.files still works, but
       // inline as a data URI; with one, bytes go to the store and the output
