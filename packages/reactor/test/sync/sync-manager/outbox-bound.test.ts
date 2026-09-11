@@ -474,8 +474,14 @@ describe("bounding the entries one remote's outbox holds", () => {
   });
 
   it("keeps a remote whose holder polls between the eviction that marks it and the removal", async () => {
+    // The re-check runs on the real clock, a derivation and a microtask after
+    // the poll it has to see, so the window has to outlast that segment.
+    await rebuildManager({
+      maxHeldOperationsPerRemote: 3,
+      staleRemotePollWindowMs: LIVE_WINDOW_MS,
+    });
     await seedAndAdd(6, "gql");
-    await sleepPastWindow();
+    await sleepPastWindow(LIVE_WINDOW_MS);
 
     // The holder's first poll back is slow precisely because the outbox is
     // large -- the state that marks the remote -- so it lands while that

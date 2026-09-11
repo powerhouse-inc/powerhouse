@@ -1143,6 +1143,15 @@ export class SyncManager implements ISyncManager {
     const next = this.pruneChain.then(async () => {
       if (this.isShutdown) return;
       for (const name of [...this.prunePending]) {
+        // Taken again per remote rather than once on the way in: this body
+        // runs behind the chain and across the awaits of each removal, so a
+        // derivation can have started since. From here to the `removing` mark
+        // inside remove() nothing yields, which is what closes the window.
+        if (this.derivingOutboxes > 0) {
+          this.pruneDrainDeferred = true;
+          return;
+        }
+
         this.prunePending.delete(name);
         const remote = this.remotes.get(name);
         if (!remote) continue;
