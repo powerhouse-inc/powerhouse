@@ -99,6 +99,7 @@ import type { DocumentModelSource } from "./model-sources.js";
 import { Reactor } from "./reactor.js";
 import type {
   Database,
+  DegradedComponent,
   InProcessReactorModule,
   InProcessSyncModule,
   IReactor,
@@ -776,6 +777,26 @@ export class ReactorBuilder {
       new Set([...this.readModels]),
     );
 
+    // Initializing degraded must not take the reactor down -- a read model that
+    // cannot reach its database should not stop the writes. But a bare
+    // `console.error` and an absent component is how an operator finds out from
+    // a user report instead of from the server: the process reports healthy
+    // while answering from an index that stopped at boot. Each failure is now
+    // logged against the component that failed and recorded on the module, so a
+    // host can refuse readiness on a non-empty list.
+    const degradedComponents: DegradedComponent[] = [];
+    const startDegraded = (component: string, error: unknown): void => {
+      degradedComponents.push({
+        component,
+        error: error instanceof Error ? error : new Error(String(error)),
+      });
+      this.logger?.error(
+        "Reactor component started degraded: @component",
+        component,
+        error,
+      );
+    };
+
     const documentViewConsistencyTracker = new ConsistencyTracker();
     const documentView = new KyselyDocumentView(
       // @ts-expect-error - Database type is a superset that includes all required tables
@@ -790,7 +811,7 @@ export class ReactorBuilder {
     try {
       await documentView.init();
     } catch (error) {
-      console.error("Error initializing document view", error);
+      startDegraded("document view", error);
     }
 
     const documentIndexerConsistencyTracker = new ConsistencyTracker();
@@ -804,7 +825,7 @@ export class ReactorBuilder {
     try {
       await documentIndexer.init();
     } catch (error) {
-      console.error("Error initializing document indexer", error);
+      startDegraded("document indexer", error);
     }
 
     const subscriptionManager = new ReactorSubscriptionManager(
@@ -829,12 +850,16 @@ export class ReactorBuilder {
     try {
       await processorManager.init();
     } catch (error) {
-      console.error("Error initializing processor manager", error);
+      startDegraded("processor manager", error);
     }
 
-    for (const factory of this.readModelFactories) {
+    for (const [index, factory] of this.readModelFactories.entries()) {
       // A read model that cannot build or catch up must not take the reactor
       // down with it: log and start degraded, as the indexers above do.
+      //
+      // A factory carries no id, and a failure has no instance to ask for one,
+      // so it is named by registration order plus the function's own name when
+      // it has one -- otherwise the log cannot say which of them failed.
       try {
         const readModel = await factory({
           documentModelRegistry,
@@ -844,7 +869,10 @@ export class ReactorBuilder {
         });
         callerReadModels.push(readModel);
       } catch (error) {
-        console.error("Error initializing read model", error);
+        startDegraded(
+          `read model ${index}${factory.name ? ` (${factory.name})` : ""}`,
+          error,
+        );
       }
     }
 
@@ -968,7 +996,16 @@ export class ReactorBuilder {
       reactor,
       groupReevaluationTrigger,
       pools: this.instrumentedPools,
+      degradedComponents,
     };
+
+    if (degradedComponents.length > 0) {
+      this.logger?.warn(
+        "Reactor started with @count degraded component(s): @components",
+        degradedComponents.length,
+        degradedComponents.map(({ component }) => component).join(", "),
+      );
+    }
 
     if (this.signalHandlersEnabled) {
       this.attachSignalHandlers(module);

@@ -1,4 +1,5 @@
 import { documentModelDocumentModelModule } from "document-model";
+import type { ILogger } from "document-model";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
@@ -11,6 +12,32 @@ import type {
 import type { Job } from "../../src/queue/types.js";
 import type { DbConfig } from "../../src/executor/worker/protocol.js";
 import type { IReadModel } from "../../src/read-models/interfaces.js";
+
+/** An ILogger that keeps what it was handed, so the report can be asserted. */
+function recordingLogger(): ILogger & {
+  errors: unknown[][];
+  warns: unknown[][];
+} {
+  const errors: unknown[][] = [];
+  const warns: unknown[][] = [];
+  const noop = () => undefined;
+  const logger = {
+    level: "error",
+    verbose: noop,
+    debug: noop,
+    info: noop,
+    warn: (...args: unknown[]) => void warns.push(args),
+    error: (...args: unknown[]) => void errors.push(args),
+    errorHandler: noop,
+    child: () => logger,
+    errors,
+    warns,
+  };
+  return logger as unknown as ILogger & {
+    errors: unknown[][];
+    warns: unknown[][];
+  };
+}
 
 const TEST_DB_CONFIG: DbConfig = {
   host: "localhost",
@@ -598,41 +625,72 @@ describe("ReactorBuilder", () => {
   });
 
   describe("withReadModelFactory", () => {
-    it("logs a failing read model and still builds the reactor", async () => {
-      const errors = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => undefined);
-      try {
-        const healthy: IReadModel = {
-          name: "healthy-read-model",
+    it("reports a failing read model by name and still builds the reactor", async () => {
+      const healthy: IReadModel = {
+        name: "healthy-read-model",
+        indexOperations: () => Promise.resolve(),
+      };
+      const second = vi.fn(() => healthy);
+      const logger = recordingLogger();
+
+      // Named so the report can say which factory failed: a factory carries no
+      // id, and a failure has no instance to ask for one.
+      const buildAttachmentReferences = async (): Promise<IReadModel> => {
+        // Read model factories own catch-up, so init failures surface here.
+        const broken = {
+          name: "broken-read-model",
           indexOperations: () => Promise.resolve(),
-        };
-        const second = vi.fn(() => healthy);
-        const builder = new ReactorBuilder()
-          .withReadModelFactory(async () => {
-            // Read model factories own catch-up, so init failures surface here.
-            const broken = {
-              name: "broken-read-model",
-              indexOperations: () => Promise.resolve(),
-              init: () => Promise.reject(new Error("read model init failed")),
-            } satisfies IReadModel & { init: () => Promise<void> };
-            await broken.init();
-            return broken;
-          })
-          .withReadModelFactory(second);
+          init: () => Promise.reject(new Error("read model init failed")),
+        } satisfies IReadModel & { init: () => Promise<void> };
+        await broken.init();
+        return broken;
+      };
 
-        const module = await builder.buildModule();
-        module.reactor.kill();
+      const builder = new ReactorBuilder()
+        .withLogger(logger)
+        .withReadModelFactory(buildAttachmentReferences)
+        .withReadModelFactory(second);
 
-        expect(errors).toHaveBeenCalledWith(
-          "Error initializing read model",
-          expect.objectContaining({ message: "read model init failed" }),
-        );
-        // The failure is contained per factory: later ones still register.
-        expect(second).toHaveBeenCalledTimes(1);
-      } finally {
-        errors.mockRestore();
-      }
+      const module = await builder.buildModule();
+      module.reactor.kill();
+
+      // The reactor is up, so the failure must be legible from the outside --
+      // otherwise it is only discoverable as reads that answer from an index
+      // that stopped at boot.
+      expect(module.degradedComponents).toEqual([
+        {
+          component: "read model 0 (buildAttachmentReferences)",
+          error: expect.objectContaining({
+            message: "read model init failed",
+          }),
+        },
+      ]);
+      expect(
+        logger.errors.some(
+          ([message, component]) =>
+            typeof message === "string" &&
+            message.includes("degraded") &&
+            component === "read model 0 (buildAttachmentReferences)",
+        ),
+      ).toBe(true);
+
+      // The failure is contained per factory: later ones still register.
+      expect(second).toHaveBeenCalledTimes(1);
+    });
+
+    it("reports nothing degraded on a clean build", async () => {
+      const healthy: IReadModel = {
+        name: "healthy-read-model",
+        indexOperations: () => Promise.resolve(),
+      };
+      const builder = new ReactorBuilder()
+        .withLogger(recordingLogger())
+        .withReadModelFactory(() => healthy);
+
+      const module = await builder.buildModule();
+      module.reactor.kill();
+
+      expect(module.degradedComponents).toEqual([]);
     });
   });
 });

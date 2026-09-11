@@ -62,6 +62,7 @@ export {
   type BatchExecutionResult,
   type BatchLoadRequest,
   type BatchLoadResult,
+  type DegradedComponent,
   type ExecutionJobPlan,
   type InProcessReactorClientModule,
   type InProcessReactorModule,
