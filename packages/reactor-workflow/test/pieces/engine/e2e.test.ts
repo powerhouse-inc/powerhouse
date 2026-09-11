@@ -58,6 +58,8 @@ describe.skipIf(!httpBundle || !gotifyBundle)("workflow engine e2e", () => {
 
     executor = new ActivepiecesBlockExecutor({
       cacheDir: bundleCacheDir,
+      // The mock service is on loopback, which the default policy refuses.
+      egress: { allowAddresses: ["127.0.0.1/32", "::1/128"] },
       packages: {
         "@activepieces/piece-http": "0.11.19",
         "@activepieces/piece-gotify": "0.4.6",

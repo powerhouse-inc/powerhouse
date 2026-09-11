@@ -1,11 +1,13 @@
 // Timer-driven trigger supervisor: owns piece-trigger lifecycle (enable/
 // disable, poll cursors) and core#schedule fires; state lives in trigger_state.
 import {
+  DEFAULT_EGRESS_POLICY,
   ensurePieceBundle,
   extractDedupeKey,
   PieceWorker,
   type ConnectionRequest,
   type ConnectorDescriptor,
+  type EgressPolicy,
   type PieceWorkerResult,
   type RecordedSchedule,
   type TriggerHookRequest,
@@ -60,6 +62,9 @@ export interface TriggerSupervisorOptions {
   fire: (workflowId: string, payload: unknown, kind: string) => void;
   cacheDir: string;
   worker?: PieceWorker;
+  // Where a trigger's piece may connect to. Left unset it is the default
+  // policy, which refuses private address space; `null` lifts it entirely.
+  egress?: EgressPolicy | null;
   tickMs?: number;
   defaultIntervalMs?: number;
   hookTimeoutMs?: number;
@@ -138,6 +143,7 @@ export class TriggerSupervisor {
   private readonly defaultIntervalMs: number;
   private readonly hookTimeoutMs: number;
   private readonly now: () => Date;
+  private readonly egress: EgressPolicy | undefined;
   private timer?: NodeJS.Timeout;
   // Lifecycle ops serialize so enable/disable/poll never interleave per store.
   private ops: Promise<unknown> = Promise.resolve();
@@ -149,6 +155,10 @@ export class TriggerSupervisor {
     this.defaultIntervalMs = options.defaultIntervalMs ?? 300_000;
     this.hookTimeoutMs = options.hookTimeoutMs ?? 60_000;
     this.now = options.now ?? (() => new Date());
+    this.egress =
+      options.egress === undefined
+        ? DEFAULT_EGRESS_POLICY
+        : (options.egress ?? undefined);
   }
 
   start(): void {
@@ -300,6 +310,7 @@ export class TriggerSupervisor {
         webhookUrl:
           options.webhookUrl ??
           `http://localhost:0/v1/webhooks/${binding.workflowId}`,
+        ...(this.egress ? { egress: this.egress } : {}),
       },
       { timeoutMs: this.hookTimeoutMs },
     );
@@ -323,6 +334,7 @@ export class TriggerSupervisor {
           bundleDir: bundle.dir,
           packageName: binding.packageName,
           version: binding.version,
+          ...(this.egress ? { egress: this.egress } : {}),
         },
         { timeoutMs: this.hookTimeoutMs },
       );

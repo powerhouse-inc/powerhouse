@@ -37,6 +37,8 @@ describe("docling piece through the executor (E2E)", () => {
     ensureBundleInCache();
     executor = new ActivepiecesBlockExecutor({
       cacheDir: CACHE,
+      // The mock service is on loopback, which the default policy refuses.
+      egress: { allowAddresses: ["127.0.0.1/32", "::1/128"] },
       connections: new StaticConnectionResolver(
         {
           "phd:connection-1": {
@@ -88,6 +90,8 @@ describe("docling piece through the executor (E2E)", () => {
   it("surfaces a connection auth failure as a typed error", async () => {
     const bad = new ActivepiecesBlockExecutor({
       cacheDir: CACHE,
+      // The mock service is on loopback, which the default policy refuses.
+      egress: { allowAddresses: ["127.0.0.1/32", "::1/128"] },
       connections: new StaticConnectionResolver(
         {
           "phd:bad": {
@@ -146,6 +150,7 @@ describe("docling piece through the executor (E2E)", () => {
       const unauth = new ActivepiecesBlockExecutor({
         cacheDir: CACHE,
         connections: resolver,
+        egress: { allowAddresses: ["127.0.0.1/32", "::1/128"] },
       });
       const result = await unauth.execute({
         blockType: "@powerhousedao/piece-docling@1.0.0#health",

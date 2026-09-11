@@ -29,6 +29,7 @@ import { buildTriggerContext, runTriggerHook } from "../context/trigger.js";
 import { buildDescriptor, describeProperties } from "../descriptor.js";
 import { loadPieceFromDir, type LoadedPiece } from "../loader.js";
 import { getActions, getTriggers, type ApProperty } from "../types.js";
+import { installEgressGuard, runWithEgressPolicy } from "./egress.js";
 import type {
   StagedInput,
   CheckConnectionMessage,
@@ -41,6 +42,10 @@ import type {
   WorkerRequestMessage,
   WorkerResponse,
 } from "./protocol.js";
+
+// Before any piece module is loaded, so a piece cannot keep a pristine copy of
+// the socket layer from a request that carried no policy.
+installEgressGuard();
 
 const loadedPieces = new Map<string, Promise<LoadedPiece>>();
 // One store per scope, alive for the worker's lifetime (in-memory phase:
@@ -339,7 +344,11 @@ function dispatch(message: WorkerRequestMessage): Promise<WorkerResponse> {
 
 process.on("message", (message: unknown) => {
   if (!isWorkerMessage(message)) return;
-  const handler = dispatch(message);
+  // Deferred so a synchronous throw — a malformed egress policy — becomes a
+  // rejection the handler below reports, instead of killing the child.
+  const handler = Promise.resolve().then(() =>
+    runWithEgressPolicy(message.request.egress, () => dispatch(message)),
+  );
   handler
     .catch(
       (error: unknown): WorkerResponse => ({

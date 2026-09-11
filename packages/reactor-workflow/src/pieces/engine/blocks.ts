@@ -4,12 +4,14 @@ import path from "node:path";
 import { ensurePieceBundle } from "../activepieces/fetch.js";
 import { rewriteFileRefs, type StagedFile } from "../activepieces/context/files.js";
 import { PieceWorker } from "../activepieces/worker/host.js";
+import { DEFAULT_EGRESS_POLICY } from "../activepieces/worker/egress.js";
 import {
   LOG_WRITE,
   OUTPUT_UPDATE,
   STORE_DELETE,
   STORE_GET,
   STORE_PUT,
+  type EgressPolicy,
   type HostCallHandlers,
   type HostNotifyHandlers,
   type PieceLogEntry,
@@ -235,6 +237,9 @@ export interface ActivepiecesBlockExecutorOptions {
   // Without it `ctx.store` falls back to the worker's heap, which a step
   // timeout discards.
   pieceStore?: PieceStorePort;
+  // Where a step's piece may connect to. Left unset it is the default policy,
+  // which refuses private address space; `null` runs the piece unrestricted.
+  egress?: EgressPolicy | null;
   // Taps on a running step. Each is opt-in because it costs the worker an IPC
   // message per event, and neither is asked for unless someone reads it.
   onPieceLog?: (entry: PieceLogEntry, execution: BlockExecution) => void;
@@ -350,6 +355,10 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
       );
       const pieceStore = this.options.pieceStore;
       const notifications = stepTaps(this.options, execution);
+      const egress =
+        this.options.egress === undefined
+          ? DEFAULT_EGRESS_POLICY
+          : this.options.egress;
       const result = await this.worker.runAction(
         {
           bundleDir: bundle.dir,
@@ -361,6 +370,7 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
           ...(pieceStore ? { durableStore: true } : {}),
           ...(this.options.onPieceLog ? { captureLogs: true } : {}),
           ...(this.options.onPartialOutput ? { liveOutput: true } : {}),
+          ...(egress ? { egress } : {}),
         },
         {
           ...(timeoutMs ? { timeoutMs } : {}),

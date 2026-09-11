@@ -107,6 +107,8 @@ describe.skipIf(!rssBundle)("TriggerSupervisor", () => {
         fired.push({ workflowId, payload, kind });
       },
       cacheDir,
+      // The feed is on loopback, which the default policy refuses.
+      egress: { allowAddresses: ["127.0.0.1/32", "::1/128"] },
     });
   }, 60_000);
 
@@ -220,6 +222,7 @@ describe.skipIf(!rssBundle)("TriggerSupervisor", () => {
       resolveAuth: () => Promise.resolve(undefined),
       fire: () => undefined,
       cacheDir,
+      egress: { allowAddresses: ["127.0.0.1/32", "::1/128"] },
     });
     await forceDue();
     await orphaned.tick();

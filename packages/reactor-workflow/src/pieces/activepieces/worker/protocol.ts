@@ -15,7 +15,29 @@ export interface StagedInput {
   contentType?: string;
 }
 
-export interface RunActionRequest {
+// Where a piece may connect to while this request runs. Enforced in the child
+// at socket-connect time; absent means unrestricted, which is the old behaviour.
+export interface EgressPolicy {
+  // Hostnames (or literal IPs) the piece may reach; a leading "*." matches
+  // subdomains. Omitted or empty allows any host the address rules permit.
+  allowHosts?: string[];
+  // Addresses or CIDRs reachable even though they are private — a service on
+  // the operator's own network, say.
+  allowAddresses?: string[];
+  // Lifts the private-address block, for an operator whose isolation lives
+  // elsewhere. Local sockets, UDP and listening stay refused under any policy.
+  allowPrivateAddresses?: boolean;
+  // TCP ports the piece may reach; omitted or empty allows any.
+  allowPorts?: number[];
+}
+
+// The child is forked with an empty env, so policy can only arrive on the wire:
+// every request carries the one in force for the work it asks for.
+export interface EgressScopedRequest {
+  egress?: EgressPolicy;
+}
+
+export interface RunActionRequest extends EgressScopedRequest {
   bundleDir: string;
   actionName: string;
   propsValue: Record<string, unknown>;
@@ -49,7 +71,7 @@ export interface RunMessage {
 }
 
 // Design-time resolution of a DROPDOWN options() / DYNAMIC props() resolver.
-export interface ResolveOptionsRequest {
+export interface ResolveOptionsRequest extends EgressScopedRequest {
   bundleDir: string;
   // Action or trigger name, per kind (default "action").
   actionName: string;
@@ -68,7 +90,7 @@ export interface ResolveOptionsMessage {
 
 // One trigger lifecycle hook, executed statelessly: the persisted piece-store
 // contents are seeded in and the updated contents come back in the response.
-export interface TriggerHookRequest {
+export interface TriggerHookRequest extends EgressScopedRequest {
   bundleDir: string;
   triggerName: string;
   hook: "onEnable" | "onDisable" | "run" | "test" | "onHandshake";
@@ -92,7 +114,7 @@ export interface TriggerHookMessage {
 
 // A connection credential check. Auth crosses into the worker and stays
 // there: the piece code that reads it never runs in the host process.
-export interface CheckConnectionRequest {
+export interface CheckConnectionRequest extends EgressScopedRequest {
   bundleDir: string;
   auth?: unknown;
 }
@@ -114,7 +136,7 @@ export interface CheckConnectionOutcome {
 // Design-time descriptor of a piece: its actions, triggers and auth shape.
 // Building one requires the piece module, whose top-level code runs on load,
 // so it is built in the worker and only the plain descriptor crosses back.
-export interface DescribePieceRequest {
+export interface DescribePieceRequest extends EgressScopedRequest {
   bundleDir: string;
   // Carried through into the descriptor's `source` and its resolver ids.
   packageName: string;
