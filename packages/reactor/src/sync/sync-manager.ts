@@ -240,7 +240,7 @@ export class SyncManager implements ISyncManager {
           record.name,
           error instanceof Error ? error.message : String(error),
         );
-        await this.teardownAfterFailedInit(remote);
+        await this.dropRemoteAfterFailedInit(remote, false);
         continue;
       }
 
@@ -445,15 +445,14 @@ export class SyncManager implements ISyncManager {
     try {
       await channel.init();
     } catch (error) {
-      await this.teardownAfterFailedInit(remote);
-
       // Only a failure that says the remote itself is unusable may drop its
       // record. A refused credential or an unreachable host says nothing about
       // the configuration, so the record stays and a retry after sign-in can
       // re-add it.
-      if (!isCredentialOrNetworkError(error)) {
-        await this.remoteStorage.remove(name);
-      }
+      await this.dropRemoteAfterFailedInit(
+        remote,
+        !isCredentialOrNetworkError(error),
+      );
 
       throw error;
     }
@@ -496,35 +495,54 @@ export class SyncManager implements ISyncManager {
       throw new Error(`Remote with name '${name}' does not exist`);
     }
 
-    await this.teardownRemoteResources(remote);
+    try {
+      await this.teardownRemoteResources(remote);
 
-    // delete the remote's data
-    await this.remoteStorage.remove(name);
-    await this.cursorStorage.remove(name);
+      // delete the remote's data
+      await this.remoteStorage.remove(name);
+      await this.cursorStorage.remove(name);
+    } finally {
+      // Released last: while the slot is held, a concurrent add of the same
+      // name is refused, so it cannot race the storage deletes above. The
+      // finally still guarantees the slot is freed if one of them throws.
+      this.remotes.delete(name);
+    }
   }
 
   /**
-   * Teardown for a remote whose channel.init() rejected. A failure to tear down
-   * must not replace the init error the caller has to classify.
+   * Drops a remote whose channel.init() rejected, optionally removing its
+   * stored record. Ordered like remove(): the registry slot is released last,
+   * so a concurrent add of the same name cannot slip in and have its record
+   * deleted by the removal below. A failure to tear down must not replace the
+   * init error the caller has to classify.
    */
-  private async teardownAfterFailedInit(remote: Remote): Promise<void> {
+  private async dropRemoteAfterFailedInit(
+    remote: Remote,
+    removeStorageRecord: boolean,
+  ): Promise<void> {
+    const name = remote.meta.name;
     try {
       await this.teardownRemoteResources(remote);
+      if (removeStorageRecord) {
+        await this.remoteStorage.remove(name);
+      }
     } catch (error) {
       this.logger.error(
         "Error tearing down remote after failed init (@name, @error)",
-        remote.meta.name,
+        name,
         error instanceof Error ? error.message : String(error),
       );
+    } finally {
+      this.remotes.delete(name);
     }
   }
 
   /**
    * Releases everything wiring a remote up holds: the in-flight backfill, the
-   * channel, the status tracker entry, the connection-state subscription and
-   * the registry slot. The registry slot is released only after the channel is
-   * down, so a concurrent add of the same name cannot slip in mid-shutdown, and
-   * it is released in a finally so a failing shutdown cannot strand it.
+   * channel, the status tracker entry and the connection-state subscription.
+   * The registry slot is deliberately NOT released here -- the caller holds it
+   * until any storage removal has finished, so a concurrent add of the same
+   * name is refused for the whole teardown.
    */
   private async teardownRemoteResources(remote: Remote): Promise<void> {
     const name = remote.meta.name;
@@ -544,7 +562,6 @@ export class SyncManager implements ISyncManager {
         unsub();
         this.connectionStateUnsubscribes.delete(name);
       }
-      this.remotes.delete(name);
     }
   }
 

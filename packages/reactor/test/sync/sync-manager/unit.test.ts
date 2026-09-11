@@ -896,6 +896,62 @@ describe("SyncManager - Unit Tests", () => {
       );
     });
 
+    it("holds the registry slot until the storage record is gone", async () => {
+      await syncManager.startup();
+      const channelConfig: ChannelConfig = { type: "internal", parameters: {} };
+      await syncManager.add(
+        "remote1",
+        DriveCollectionId.forDrive("collection1"),
+        channelConfig,
+      );
+
+      // Suspend the storage delete mid-remove and check that the name is still
+      // taken. Releasing the slot any earlier would let a concurrent add write
+      // a record that this pending delete then destroys.
+      let releaseStorageRemove!: () => void;
+      vi.mocked(mockRemoteStorage.remove).mockReturnValueOnce(
+        new Promise<void>((resolve) => {
+          releaseStorageRemove = resolve;
+        }),
+      );
+
+      const removal = syncManager.remove("remote1");
+      await vi.waitFor(() =>
+        expect(mockRemoteStorage.remove).toHaveBeenCalledWith("remote1"),
+      );
+
+      await expect(
+        syncManager.add(
+          "remote1",
+          DriveCollectionId.forDrive("collection1"),
+          channelConfig,
+        ),
+      ).rejects.toThrow("Remote with name 'remote1' already exists");
+
+      releaseStorageRemove();
+      await removal;
+      expect(syncManager.list()).toHaveLength(0);
+    });
+
+    it("releases the registry slot even if the storage delete throws", async () => {
+      await syncManager.startup();
+      const channelConfig: ChannelConfig = { type: "internal", parameters: {} };
+      await syncManager.add(
+        "remote1",
+        DriveCollectionId.forDrive("collection1"),
+        channelConfig,
+      );
+
+      vi.mocked(mockRemoteStorage.remove).mockRejectedValueOnce(
+        new Error("storage down"),
+      );
+
+      await expect(syncManager.remove("remote1")).rejects.toThrow(
+        "storage down",
+      );
+      expect(syncManager.list()).toHaveLength(0);
+    });
+
     it("should cancel in-flight backfill when removing a remote", async () => {
       await syncManager.startup();
 
