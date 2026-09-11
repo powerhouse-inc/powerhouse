@@ -7,6 +7,9 @@ import {
   UnsupportedContextMemberError,
 } from "../context/action.js";
 import { RemoteKeyValueStore } from "../context/remote-store.js";
+import { RemoteOutput } from "../context/remote-output.js";
+import { captureConsole } from "./logs.js";
+import { jsonSafe } from "./json-safe.js";
 import { readFile } from "node:fs/promises";
 import { buildCheckConnectionContext } from "../context/check.js";
 import {
@@ -60,14 +63,6 @@ function loadCached(bundleDir: string): Promise<LoadedPiece> {
     loadedPieces.set(bundleDir, loading);
   }
   return loading;
-}
-
-function jsonSafe(value: unknown): unknown {
-  try {
-    return JSON.parse(JSON.stringify(value)) as unknown;
-  } catch {
-    return String(value);
-  }
 }
 
 function serializeError(error: unknown): SerializedPieceError {
@@ -194,10 +189,17 @@ async function handleRun(message: RunMessage): Promise<WorkerResponse> {
     connections: request.connections
       ? new InMemoryConnectionsProvider(request.connections)
       : undefined,
+    output: request.liveOutput ? new RemoteOutput() : undefined,
     executionType: request.executionType,
     identity: request.identity,
   });
-  const output = await action.run(context);
+  const restoreConsole = request.captureLogs ? captureConsole() : undefined;
+  let output: unknown;
+  try {
+    output = await action.run(context);
+  } finally {
+    restoreConsole?.();
+  }
   return {
     id: message.id,
     type: "result",

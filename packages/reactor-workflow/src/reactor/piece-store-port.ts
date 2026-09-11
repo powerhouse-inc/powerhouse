@@ -3,12 +3,19 @@
 
 // Which workflow a step belongs to travels on the run scope, not the executor,
 // which concurrent runs share.
-import type { PieceStorePort } from "@powerhousedao/reactor-connectors";
+import type {
+  PieceStorePort,
+  StoreScopeName,
+} from "@powerhousedao/reactor-connectors";
 import type { WorkflowRunStore } from "./store.js";
 
-// FLOW is the only scope with an identity today. A piece asking for PROJECT
-// gets a `PROJECT:`-prefixed key inside the same partition (see store.ts).
-const SCOPE = "FLOW";
+// PROJECT means "shared by every workflow in the project", and this reactor is
+// that project: the trigger registry, the run journal and the secret store are
+// all already instance-wide, so nothing new is shared by saying so.
+
+// When a real tenancy model arrives this constant becomes its default project
+// id, and the migration is one UPDATE. See issue #16.
+const PROJECT_SCOPE_KEY = "reactor";
 
 export function createPieceStorePort(
   store: WorkflowRunStore,
@@ -16,7 +23,7 @@ export function createPieceStorePort(
 ): PieceStorePort {
   // A step with no workflow in scope must fail rather than read or write
   // another workflow's keys.
-  const scopeKey = () => {
+  const flowKey = () => {
     const workflowId = workflowIdFor();
     if (!workflowId) {
       throw new Error("ctx.store is unavailable: no workflow is in scope");
@@ -24,10 +31,17 @@ export function createPieceStorePort(
     return workflowId;
   };
 
+  const partition = (scope: StoreScopeName): string =>
+    scope === "PROJECT" ? PROJECT_SCOPE_KEY : flowKey();
+
+  // Async so that a missing run scope rejects rather than throwing out of a
+  // method whose contract is a promise.
   return {
-    get: (key) => store.getPieceStoreValue(SCOPE, scopeKey(), key),
-    put: (key, value) =>
-      store.setPieceStoreValue(SCOPE, scopeKey(), key, value),
-    delete: (key) => store.deletePieceStoreValue(SCOPE, scopeKey(), key),
+    get: async (key, scope) =>
+      store.getPieceStoreValue(scope, partition(scope), key),
+    put: async (key, value, scope) =>
+      store.setPieceStoreValue(scope, partition(scope), key, value),
+    delete: async (key, scope) =>
+      store.deletePieceStoreValue(scope, partition(scope), key),
   };
 }

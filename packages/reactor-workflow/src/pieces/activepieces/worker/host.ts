@@ -16,6 +16,8 @@ import type {
   HostCallHandlers,
   HostCallMessage,
   HostCallResponse,
+  HostNotifyHandlers,
+  HostNotifyMessage,
   ResolveOptionsRequest,
   RunActionRequest,
   SerializedPieceError,
@@ -74,6 +76,34 @@ export interface PieceWorkerResult {
   listeners?: RecordedListener[];
 }
 
+// Handlers the host offers for the duration of one request: calls it answers,
+// and one-way reports it receives.
+export interface RequestTaps {
+  hostCalls?: HostCallHandlers;
+  notifications?: HostNotifyHandlers;
+}
+
+export interface RunActionOptions extends RequestTaps {
+  timeoutMs?: number;
+}
+
+type ChildMessage = WorkerResponse | HostCallMessage | HostNotifyMessage;
+
+// A tap reports on the step; it never decides its outcome. Node delivers these
+// before the result, so no draining step is needed at teardown.
+function serveNotify(
+  message: HostNotifyMessage,
+  handlers: HostNotifyHandlers | undefined,
+): void {
+  const handler = handlers?.[message.method];
+  if (!handler) return;
+  try {
+    handler(message.payload);
+  } catch {
+    // A broken tap is not the step's problem.
+  }
+}
+
 export interface PieceWorkerOptions {
   // Absolute path to the compiled worker entry; defaults to dist/worker-entry.js.
   entryPath?: string;
@@ -104,9 +134,9 @@ export class PieceWorker {
   // Runs are serialized per worker; a pool composes multiple workers later.
   runAction(
     request: RunActionRequest,
-    options: { timeoutMs?: number; hostCalls?: HostCallHandlers } = {},
+    options: RunActionOptions = {},
   ): Promise<PieceWorkerResult> {
-    return this.enqueue("run", request, options.timeoutMs, options.hostCalls);
+    return this.enqueue("run", request, options.timeoutMs, options);
   }
 
   // Design-time DROPDOWN options() / DYNAMIC props() resolution.
@@ -146,10 +176,10 @@ export class PieceWorker {
     type: WorkerRequestType,
     request: WorkerRequest,
     timeoutMs?: number,
-    hostCalls?: HostCallHandlers,
+    taps: RequestTaps = {},
   ): Promise<PieceWorkerResult> {
     const run = this.queue.then(() =>
-      this.execute(type, request, timeoutMs ?? this.defaultTimeoutMs, hostCalls),
+      this.execute(type, request, timeoutMs ?? this.defaultTimeoutMs, taps),
     );
     this.queue = run.catch(() => undefined);
     return run;
@@ -176,7 +206,7 @@ export class PieceWorker {
     type: WorkerRequestType,
     request: WorkerRequest,
     timeoutMs: number,
-    hostCalls?: HostCallHandlers,
+    taps: RequestTaps,
   ): Promise<PieceWorkerResult> {
     const worker = this.spawn();
     const id = this.nextId++;
@@ -190,9 +220,11 @@ export class PieceWorker {
       }, timeoutMs);
 
       const onMessage = (value: unknown) => {
-        const response = value as WorkerResponse | HostCallMessage;
+        const response = value as ChildMessage;
         // Ids come from two counters; dispatch on type before comparing them.
-        if (response.type === "host-call") return;
+        if (response.type === "host-call" || response.type === "host-notify") {
+          return;
+        }
         if (response.id !== id) return;
         cleanup();
         if (response.type === "result") {
@@ -218,9 +250,14 @@ export class PieceWorker {
       // Served outside the request queue: the queue is held by this very
       // request, so routing a call through it would deadlock the step.
       const onHostCall = (value: unknown) => {
-        const message = value as WorkerResponse | HostCallMessage;
-        if (message.type !== "host-call") return;
-        void this.serveHostCall(worker, message, hostCalls);
+        const message = value as ChildMessage;
+        if (message.type === "host-call") {
+          void this.serveHostCall(worker, message, taps.hostCalls);
+          return;
+        }
+        if (message.type === "host-notify") {
+          serveNotify(message, taps.notifications);
+        }
       };
 
       const cleanup = () => {

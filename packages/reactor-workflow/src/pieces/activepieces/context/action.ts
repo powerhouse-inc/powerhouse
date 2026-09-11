@@ -1,15 +1,18 @@
 // Our ActionContext → their ActionContext (doc 06 §2.8). Implements the top usage
 // tier (propsValue, auth, store, connections); the rest throws loudly, named.
 import { throwingStub, withTouchTracking } from "./stubs.js";
+import { normalizeStoreScope, type StoreScopeName } from "./store-scope.js";
 import type { ActionFilesService } from "./files.js";
 import type { ConnectionsProvider } from "./props.js";
 
 export { UnsupportedContextMemberError } from "./stubs.js";
 
+// The scope travels beside the key rather than inside it: which partition a
+// key belongs to is the host's decision, not a naming convention.
 export interface KeyValueStore {
-  put(key: string, value: unknown): Promise<unknown>;
-  get(key: string): Promise<unknown>;
-  delete(key: string): Promise<void>;
+  put(key: string, value: unknown, scope?: StoreScopeName): Promise<unknown>;
+  get(key: string, scope?: StoreScopeName): Promise<unknown>;
+  delete(key: string, scope?: StoreScopeName): Promise<void>;
 }
 
 // In-memory connection registry: key → resolved connection value.
@@ -40,18 +43,23 @@ export class InMemoryKeyValueStore implements KeyValueStore {
     return Object.fromEntries(this.entries);
   }
 
-  put(key: string, value: unknown): Promise<unknown> {
-    this.entries.set(key, value);
+  put(key: string, value: unknown, scope?: StoreScopeName): Promise<unknown> {
+    this.entries.set(this.scoped(key, scope), value);
     return Promise.resolve(value);
   }
 
-  get(key: string): Promise<unknown> {
-    return Promise.resolve(this.entries.get(key) ?? null);
+  get(key: string, scope?: StoreScopeName): Promise<unknown> {
+    return Promise.resolve(this.entries.get(this.scoped(key, scope)) ?? null);
   }
 
-  delete(key: string): Promise<void> {
-    this.entries.delete(key);
+  delete(key: string, scope?: StoreScopeName): Promise<void> {
+    this.entries.delete(this.scoped(key, scope));
     return Promise.resolve();
+  }
+
+  // One heap, so the scopes share it and are kept apart by name.
+  private scoped(key: string, scope?: StoreScopeName): string {
+    return scope === "PROJECT" ? `PROJECT:${key}` : key;
   }
 }
 
@@ -72,6 +80,9 @@ export interface ActionContextOptions {
   // loudly rather than silently dropping them.
   files?: ActionFilesService;
   connections?: ConnectionsProvider;
+  // ctx.output.update, the piece's own progress report. Omitted, the member
+  // throws, so a piece that depends on it fails by name rather than silently.
+  output?: { update(output: unknown): Promise<void> };
   executionType?: "BEGIN" | "RESUME";
   identity?: ActionContextIdentity;
   onTouch?: (member: string) => void;
@@ -118,30 +129,23 @@ export function buildActionContext(
   const store = options.store ?? new InMemoryKeyValueStore();
   const touched = new Set<string>();
 
-  // AP's engine store layout, as the trigger context already models it: FLOW
-  // scope is the default and owns the partition, so its keys stay bare.
-
-  // PROJECT's enum value is the legacy "COLLECTION"; passing the name through
-  // verbatim would put the same scope in two partitions.
-  const scoped = (key: string, scope?: unknown) =>
-    scope === "COLLECTION" || scope === "PROJECT" ? `PROJECT:${key}` : key;
-
   const base: Record<string, unknown> = {
     executionType: options.executionType ?? "BEGIN",
     auth: options.auth,
     propsValue: options.propsValue,
     store: {
       put: (key: string, value: unknown, scope?: unknown) =>
-        store.put(scoped(key, scope), value),
-      get: (key: string, scope?: unknown) => store.get(scoped(key, scope)),
+        store.put(key, value, normalizeStoreScope(scope)),
+      get: (key: string, scope?: unknown) =>
+        store.get(key, normalizeStoreScope(scope)),
       delete: (key: string, scope?: unknown) =>
-        store.delete(scoped(key, scope)),
+        store.delete(key, normalizeStoreScope(scope)),
     },
     connections: options.connections ?? throwingStub("connections"),
     tags: throwingStub("tags"),
     server: throwingStub("server"),
     files: options.files ?? throwingStub("files"),
-    output: throwingStub("output"),
+    output: options.output ?? throwingStub("output"),
     agent: throwingStub("agent"),
     run: {
       id: identity.runId ?? "run",

@@ -8,6 +8,7 @@ export * from "./context/check.js";
 export * from "./context/files.js";
 export * from "./context/normalize.js";
 export * from "./context/props.js";
+export * from "./context/store-scope.js";
 export * from "./context/trigger.js";
 export * from "./worker/protocol.js";
 export * from "./worker/host.js";

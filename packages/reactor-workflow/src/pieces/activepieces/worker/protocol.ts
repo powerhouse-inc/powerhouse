@@ -32,6 +32,12 @@ export interface RunActionRequest {
   // Serve `ctx.store` from the host over the call channel instead of the
   // in-memory partition above, so a write survives this worker.
   durableStore?: boolean;
+  // Forward the piece's console output to the host as it is written. Off by
+  // default: a chatty piece would otherwise pay IPC for logs nobody reads.
+  captureLogs?: boolean;
+  // Implement `ctx.output.update`, which reports progress mid-step. Without
+  // it the member keeps throwing, so a piece that needs it fails loudly.
+  liveOutput?: boolean;
   executionType?: "BEGIN" | "RESUME";
   identity?: ActionContextIdentity;
 }
@@ -190,6 +196,33 @@ export type HostCallHandlers = Record<
   (payload: unknown) => Promise<unknown>
 >;
 
+// The one-way half of the channel: a report the host may act on, with no
+// answer to wait for. Their engine splits the same way (rpc vs rpc-notify).
+
+// A tap must never stall the step, so these carry no id and no reply. Node's
+// IPC preserves order, which is what drains them before the result lands.
+export interface HostNotifyMessage {
+  type: "host-notify";
+  method: string;
+  payload: unknown;
+}
+
+// Handlers registered per request, like HostCallHandlers. A throw here is
+// swallowed: a failed tap must not fail the step it was reporting on.
+export type HostNotifyHandlers = Record<string, (payload: unknown) => void>;
+
+// One console call the piece made, already flattened to a string in the child.
+export interface PieceLogEntry {
+  level: "log" | "info" | "warn" | "error" | "debug";
+  message: string;
+  at: number;
+}
+
+export const LOG_WRITE = "log.write";
+export const OUTPUT_UPDATE = "output.update";
+
+// A store call carries `{ key, value?, scope }`. The scope is a name the host
+// partitions on, never a prefix the child bakes into the key.
 export const STORE_GET = "store.get";
 export const STORE_PUT = "store.put";
 export const STORE_DELETE = "store.delete";

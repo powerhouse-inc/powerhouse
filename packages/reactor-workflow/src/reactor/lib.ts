@@ -26,7 +26,10 @@ import {
   DocumentBlockExecutor,
 } from "./document-blocks.js";
 import type { WorkflowState } from "document-models/workflow/v1";
+import { childLogger } from "document-model";
 import { join } from "node:path";
+
+const pieceLogger = childLogger(["workflow", "piece"]);
 
 // Resolves a step's connectionId to a powerhouse/connection document and
 // shapes its auth value; secret refs resolve through the managed store.
@@ -83,6 +86,14 @@ export function createBlockExecutor(
       connections: new DocumentConnectionResolver(subgraph, secrets),
       // Without it an action's ctx.store lives only in the worker's heap.
       ...(pieceStore ? { pieceStore } : {}),
+      // The worker's stdio is discarded, so a piece's own console output is
+      // invisible until it is forwarded here.
+      onPieceLog: (entry, execution) => {
+        const line = `[${execution.step.key}] ${entry.message}`;
+        if (entry.level === "error") pieceLogger.error(line);
+        else if (entry.level === "warn") pieceLogger.warn(line);
+        else pieceLogger.debug(line);
+      },
       // Without an attachment store a piece's ctx.files still works, but
       // inline as a data URI; with one, bytes go to the store and the output
       // carries a reference.

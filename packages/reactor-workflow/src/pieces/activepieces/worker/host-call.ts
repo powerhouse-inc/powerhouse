@@ -93,3 +93,9 @@ export function resetHostCalls(): void {
   for (const entry of pending.values()) clearTimeout(entry.timer);
   pending.clear();
 }
+
+// The one-way half: a report with no answer to wait for. It cannot fail from
+// the piece's side, so a missing channel is dropped rather than raised.
+export function notifyHost(method: string, payload: unknown): void {
+  process.send?.({ type: "host-notify", method, payload });
+}

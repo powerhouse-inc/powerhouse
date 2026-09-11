@@ -5,12 +5,17 @@ import { ensurePieceBundle } from "../activepieces/fetch.js";
 import { rewriteFileRefs, type StagedFile } from "../activepieces/context/files.js";
 import { PieceWorker } from "../activepieces/worker/host.js";
 import {
+  LOG_WRITE,
+  OUTPUT_UPDATE,
   STORE_DELETE,
   STORE_GET,
   STORE_PUT,
   type HostCallHandlers,
+  type HostNotifyHandlers,
+  type PieceLogEntry,
   type StagedInput,
 } from "../activepieces/worker/protocol.js";
+import type { StoreScopeName } from "../activepieces/context/store-scope.js";
 import type { EngineConnectionResolver } from "./connections.js";
 import type { BlockExecution, BlockExecutor, BlockResult } from "./types.js";
 
@@ -166,15 +171,23 @@ function collectRefs(value: unknown, found: Set<string>): void {
 // Which scope a step's keys belong to is the host's business; the executor is
 // shared across runs and must not decide it.
 export interface PieceStorePort {
-  get(key: string): Promise<unknown>;
-  put(key: string, value: unknown): Promise<void>;
-  delete(key: string): Promise<void>;
+  get(key: string, scope: StoreScopeName): Promise<unknown>;
+  put(key: string, value: unknown, scope: StoreScopeName): Promise<void>;
+  delete(key: string, scope: StoreScopeName): Promise<void>;
 }
 
 // One key operation as it arrives from the worker.
 interface StoreCallPayload {
   key?: unknown;
   value?: unknown;
+  scope?: unknown;
+}
+
+// An unrecognised scope is treated as FLOW, the narrower partition: a bad
+// name must never widen what a step can reach.
+function storeScopeOf(payload: unknown): StoreScopeName {
+  const scope = (payload as StoreCallPayload | undefined)?.scope;
+  return scope === "PROJECT" ? "PROJECT" : "FLOW";
 }
 
 function storeKeyOf(payload: unknown): string {
@@ -189,16 +202,18 @@ function storeKeyOf(payload: unknown): string {
 // the piece sees from ctx.store, which is what an over-limit write should do.
 function storeHandlers(port: PieceStorePort): HostCallHandlers {
   return {
-    [STORE_GET]: (payload) => port.get(storeKeyOf(payload)),
+    [STORE_GET]: (payload) =>
+      port.get(storeKeyOf(payload), storeScopeOf(payload)),
     [STORE_PUT]: async (payload) => {
       await port.put(
         storeKeyOf(payload),
         (payload as StoreCallPayload).value,
+        storeScopeOf(payload),
       );
       return null;
     },
     [STORE_DELETE]: async (payload) => {
-      await port.delete(storeKeyOf(payload));
+      await port.delete(storeKeyOf(payload), storeScopeOf(payload));
       return null;
     },
   };
@@ -220,6 +235,29 @@ export interface ActivepiecesBlockExecutorOptions {
   // Without it `ctx.store` falls back to the worker's heap, which a step
   // timeout discards.
   pieceStore?: PieceStorePort;
+  // Taps on a running step. Each is opt-in because it costs the worker an IPC
+  // message per event, and neither is asked for unless someone reads it.
+  onPieceLog?: (entry: PieceLogEntry, execution: BlockExecution) => void;
+  onPartialOutput?: (output: unknown, execution: BlockExecution) => void;
+}
+
+// The notify handlers served to one step. Unlike a store call, nothing here
+// answers the piece: these are reports, and the step never waits on them.
+function stepTaps(
+  options: ActivepiecesBlockExecutorOptions,
+  execution: BlockExecution,
+): HostNotifyHandlers | undefined {
+  const { onPieceLog, onPartialOutput } = options;
+  if (!onPieceLog && !onPartialOutput) return undefined;
+  const handlers: HostNotifyHandlers = {};
+  if (onPieceLog) {
+    handlers[LOG_WRITE] = (payload) =>
+      onPieceLog(payload as PieceLogEntry, execution);
+  }
+  if (onPartialOutput) {
+    handlers[OUTPUT_UPDATE] = (payload) => onPartialOutput(payload, execution);
+  }
+  return handlers;
 }
 
 export type BlockKind = "action" | "trigger";
@@ -306,6 +344,7 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
         stagingDir,
       );
       const pieceStore = this.options.pieceStore;
+      const notifications = stepTaps(this.options, execution);
       const result = await this.worker.runAction(
         {
           bundleDir: bundle.dir,
@@ -315,10 +354,13 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
           ...(stagingDir ? { stagingDir } : {}),
           ...(stagedInputs ? { stagedInputs } : {}),
           ...(pieceStore ? { durableStore: true } : {}),
+          ...(this.options.onPieceLog ? { captureLogs: true } : {}),
+          ...(this.options.onPartialOutput ? { liveOutput: true } : {}),
         },
         {
           ...(timeoutMs ? { timeoutMs } : {}),
           ...(pieceStore ? { hostCalls: storeHandlers(pieceStore) } : {}),
+          ...(notifications ? { notifications } : {}),
         },
       );
       return { output: await this.ingestFiles(result.output, result.files) };

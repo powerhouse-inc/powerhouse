@@ -101,24 +101,28 @@ function memoryStore(options: { rejectPut?: string } = {}): PieceStorePort & {
 } {
   const entries = new Map<string, unknown>();
   const calls: string[] = [];
+  // The host partitions by scope, so the fake does too: one map, keys prefixed
+  // by the scope the call arrived with rather than by anything the piece wrote.
+  const at = (key: string, scope: string) => `${scope}/${key}`;
   return {
     entries,
     calls,
-    get(key) {
+    get(key, scope) {
       calls.push(`get ${key}`);
-      return Promise.resolve(entries.has(key) ? entries.get(key) : null);
+      const k = at(key, scope);
+      return Promise.resolve(entries.has(k) ? entries.get(k) : null);
     },
-    put(key, value) {
+    put(key, value, scope) {
       calls.push(`put ${key}=${JSON.stringify(value)}`);
       if (options.rejectPut === key) {
         return Promise.reject(new Error(`Store value for "${key}" is too big`));
       }
-      entries.set(key, value);
+      entries.set(at(key, scope), value);
       return Promise.resolve();
     },
-    delete(key) {
+    delete(key, scope) {
       calls.push(`delete ${key}`);
-      entries.delete(key);
+      entries.delete(at(key, scope));
       return Promise.resolve();
     },
   };
@@ -165,12 +169,12 @@ describe("ctx.store over the host call channel", () => {
       "put cursor=3",
       "get cursor",
     ]);
-    expect(store.entries.get("cursor")).toBe(3);
+    expect(store.entries.get("FLOW/cursor")).toBe(3);
   });
 
   it("resumes from what a previous step left behind", async () => {
     const store = memoryStore();
-    store.entries.set("cursor", 10);
+    store.entries.set("FLOW/cursor", 10);
     const executor = new ActivepiecesBlockExecutor({
       cacheDir,
       worker,
@@ -197,7 +201,7 @@ describe("ctx.store over the host call channel", () => {
     );
 
     expect(result.output).toEqual({ scratch: null });
-    expect(store.entries.has("scratch")).toBe(false);
+    expect(store.entries.has("FLOW/scratch")).toBe(false);
     expect(store.calls).toContain("delete scratch");
   });
 
@@ -211,9 +215,9 @@ describe("ctx.store over the host call channel", () => {
 
     await executor.execute(execution("@test/cursor@1.0.0#scoped", {}));
 
-    // StoreScope.PROJECT is the string "COLLECTION"; folding that name in
-    // verbatim would split one scope across two partitions.
-    expect([...store.entries.keys()]).toEqual(["PROJECT:shared"]);
+    // The scope reaches the host as a name, so the host decides the partition.
+    // Nothing about it is encoded in the key the piece chose.
+    expect([...store.entries.keys()]).toEqual(["PROJECT/shared"]);
   });
 
   it("treats an explicit FLOW scope as the partition's default", async () => {
@@ -230,7 +234,7 @@ describe("ctx.store over the host call channel", () => {
 
     // A piece that names FLOW and one that omits the scope mean the same key.
     expect(result.output).toEqual({ implicit: 1 });
-    expect([...store.entries.keys()]).toEqual(["cursor"]);
+    expect([...store.entries.keys()]).toEqual(["FLOW/cursor"]);
   });
 
   it("surfaces a host refusal to the piece as a thrown error", async () => {
@@ -248,7 +252,7 @@ describe("ctx.store over the host call channel", () => {
     const output = result.output as { threw: boolean; message: string };
     expect(output.threw).toBe(true);
     expect(output.message).toContain("too big");
-    expect(store.entries.has("too-big")).toBe(false);
+    expect(store.entries.has("FLOW/too-big")).toBe(false);
   });
 
   it("leaves ctx.store on the worker's heap when no port is configured", async () => {
