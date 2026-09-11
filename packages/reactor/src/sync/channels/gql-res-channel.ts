@@ -32,6 +32,7 @@ export class GqlResponseChannel implements IChannel {
   private lastPersistedOutboxOrdinal: number = 0;
   private evictedOutboxFloor: number = Number.POSITIVE_INFINITY;
   private appliedOutboxOrdinal: number = 0;
+  private lastPollUtcMs: number = Date.now();
   private connectionState: ConnectionState = "connecting";
   private readonly connectionStateCallbacks: Set<ConnectionStateChangeCallback> =
     new Set();
@@ -98,7 +99,7 @@ export class GqlResponseChannel implements IChannel {
     return {
       state: this.connectionState,
       failureCount: 0,
-      lastSuccessUtcMs: 0,
+      lastSuccessUtcMs: this.lastPollUtcMs,
       lastFailureUtcMs: 0,
       pushBlocked: false,
       pushFailureCount: 0,
@@ -116,6 +117,15 @@ export class GqlResponseChannel implements IChannel {
 
   /** Response channels are push-driven; resolvers populate mailboxes directly. */
   triggerPull(): void {}
+
+  notePoll(): void {
+    this.lastPollUtcMs = Date.now();
+  }
+
+  /** This channel is served: its holder's polls are the liveness it reports. */
+  lastHolderPollUtcMs(): number | undefined {
+    return this.lastPollUtcMs;
+  }
 
   async init(): Promise<void> {
     // get cursors -- these are the last acknowledged ordinals for the inbox and outbox

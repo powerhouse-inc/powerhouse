@@ -50,6 +50,8 @@ function createMockChannel(): IChannel {
     }),
     onConnectionStateChange: vi.fn().mockReturnValue(() => {}),
     triggerPull: vi.fn(),
+    notePoll: vi.fn(),
+    lastHolderPollUtcMs: vi.fn().mockReturnValue(undefined),
   };
 }
 
