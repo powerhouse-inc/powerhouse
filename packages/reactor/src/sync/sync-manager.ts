@@ -145,6 +145,7 @@ export class SyncManager implements ISyncManager {
   private pruneChain: Promise<void> = Promise.resolve();
   private derivingOutboxes = 0;
   private pruneDrainDeferred = false;
+  private readonly removing = new Set<string>();
   private readonly lastEnqueuedJobIdByKey = new Map<string, string>();
   private inboxChunkChain: Promise<void> = Promise.resolve();
 
@@ -491,29 +492,37 @@ export class SyncManager implements ISyncManager {
       throw new Error(`Remote with name '${name}' does not exist`);
     }
 
-    // cancel any in-flight backfill for this remote
-    const backfillController = this.backfillAbortControllers.get(name);
-    if (backfillController) {
-      backfillController.abort();
-      this.backfillAbortControllers.delete(name);
+    // The channel shuts down and the rows go several awaits before the map
+    // entry does, and a batch landing in that gap would otherwise pick this
+    // remote up and derive into mailboxes that are already being torn down.
+    this.removing.add(name);
+    try {
+      // cancel any in-flight backfill for this remote
+      const backfillController = this.backfillAbortControllers.get(name);
+      if (backfillController) {
+        backfillController.abort();
+        this.backfillAbortControllers.delete(name);
+      }
+
+      // shutdown the channel
+      await remote.channel.shutdown();
+
+      // delete the remote's data
+      await this.remoteStorage.remove(name);
+      await this.cursorStorage.remove(name);
+
+      this.syncStatusTracker.untrackRemote(name);
+      const unsub = this.connectionStateUnsubscribes.get(name);
+      if (unsub) {
+        unsub();
+        this.connectionStateUnsubscribes.delete(name);
+      }
+      this.evictedOutboxFloors.delete(name);
+      this.prunePending.delete(name);
+      this.remotes.delete(name);
+    } finally {
+      this.removing.delete(name);
     }
-
-    // shutdown the channel
-    await remote.channel.shutdown();
-
-    // delete the remote's data
-    await this.remoteStorage.remove(name);
-    await this.cursorStorage.remove(name);
-
-    this.syncStatusTracker.untrackRemote(name);
-    const unsub = this.connectionStateUnsubscribes.get(name);
-    if (unsub) {
-      unsub();
-      this.connectionStateUnsubscribes.delete(name);
-    }
-    this.evictedOutboxFloors.delete(name);
-    this.prunePending.delete(name);
-    this.remotes.delete(name);
   }
 
   list(): Remote[] {
@@ -690,7 +699,9 @@ export class SyncManager implements ISyncManager {
 
   private getRemotesForCollection(collectionId: string): Remote[] {
     return Array.from(this.remotes.values()).filter(
-      (remote) => remote.meta.collectionId.key === collectionId,
+      (remote) =>
+        remote.meta.collectionId.key === collectionId &&
+        !this.removing.has(remote.meta.name),
     );
   }
 
@@ -724,6 +735,15 @@ export class SyncManager implements ISyncManager {
 
     // finally, work through the affected remotes and backfill based on the last operation in the outbox
     for (const remote of affectedRemotes) {
+      // A drain between two derivations can remove a remote this list was
+      // built before, so membership is read again rather than assumed.
+      if (
+        !this.remotes.has(remote.meta.name) ||
+        this.removing.has(remote.meta.name)
+      ) {
+        continue;
+      }
+
       await this.updateOutbox(
         remote,
         remote.channel.outbox.latestOrdinal,
