@@ -26,9 +26,23 @@ export function createViteLogger(logger: ILogger, prefix = "") {
   // Wrapped rather than assigned: the logger methods are bound to their own
   // instance, and re-homing them onto Vite's logger object made every Vite
   // log line throw.
-  customLogger.info = (...args) => logger.info(...args);
-  customLogger.warn = (...args) => logger.warn(...args);
-  customLogger.error = (...args) => logger.error(...args);
+  //
+  // Vite's text goes through as a replacement, never as the format string: it
+  // is somebody else's prose, not a template. `ILogger` substitutes `@token`,
+  // and Vite log lines are full of npm scopes, so `pre-transforming
+  // @powerhousedao/design-system` came out as `pre-transforming
+  // null/design-system`. Substituting into `@line` instead emits it verbatim.
+  //
+  // Vite's second argument is dropped for the same reason. It is `LogOptions`
+  // -- `{ clear, timestamp }` -- and forwarding it made it the replacement for
+  // whatever `@token` the line happened to contain, or got appended as JSON.
+  // Only `error` keeps it, where it carries the error itself.
+  customLogger.info = (msg) => logger.info("@line", msg);
+  customLogger.warn = (msg) => logger.warn("@line", msg);
+  customLogger.error = (msg, options) =>
+    options?.error
+      ? logger.error("@line", msg, options.error)
+      : logger.error("@line", msg);
   return customLogger;
 }
 
