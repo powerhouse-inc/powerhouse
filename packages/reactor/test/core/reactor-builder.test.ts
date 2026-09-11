@@ -10,6 +10,7 @@ import type {
 } from "../../src/executor/interfaces.js";
 import type { Job } from "../../src/queue/types.js";
 import type { DbConfig } from "../../src/executor/worker/protocol.js";
+import type { IReadModel } from "../../src/read-models/interfaces.js";
 
 const TEST_DB_CONFIG: DbConfig = {
   host: "localhost",
@@ -592,6 +593,45 @@ describe("ReactorBuilder", () => {
         );
       } finally {
         spy.mockRestore();
+      }
+    });
+  });
+
+  describe("withReadModelFactory", () => {
+    it("logs a failing read model and still builds the reactor", async () => {
+      const errors = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => undefined);
+      try {
+        const healthy: IReadModel = {
+          name: "healthy-read-model",
+          indexOperations: () => Promise.resolve(),
+        };
+        const second = vi.fn(() => healthy);
+        const builder = new ReactorBuilder()
+          .withReadModelFactory(async () => {
+            // Read model factories own catch-up, so init failures surface here.
+            const broken = {
+              name: "broken-read-model",
+              indexOperations: () => Promise.resolve(),
+              init: () => Promise.reject(new Error("read model init failed")),
+            } satisfies IReadModel & { init: () => Promise<void> };
+            await broken.init();
+            return broken;
+          })
+          .withReadModelFactory(second);
+
+        const module = await builder.buildModule();
+        module.reactor.kill();
+
+        expect(errors).toHaveBeenCalledWith(
+          "Error initializing read model",
+          expect.objectContaining({ message: "read model init failed" }),
+        );
+        // The failure is contained per factory: later ones still register.
+        expect(second).toHaveBeenCalledTimes(1);
+      } finally {
+        errors.mockRestore();
       }
     });
   });

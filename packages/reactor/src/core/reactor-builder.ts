@@ -833,13 +833,19 @@ export class ReactorBuilder {
     }
 
     for (const factory of this.readModelFactories) {
-      const readModel = await factory({
-        documentModelRegistry,
-        operationIndex,
-        writeCache,
-        processorManagerConsistencyTracker,
-      });
-      callerReadModels.push(readModel);
+      // A read model that cannot build or catch up must not take the reactor
+      // down with it: log and start degraded, as the indexers above do.
+      try {
+        const readModel = await factory({
+          documentModelRegistry,
+          operationIndex,
+          writeCache,
+          processorManagerConsistencyTracker,
+        });
+        callerReadModels.push(readModel);
+      } catch (error) {
+        console.error("Error initializing read model", error);
+      }
     }
 
     const readModelInstances: IReadModel[] = [

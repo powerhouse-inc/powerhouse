@@ -7,7 +7,7 @@ import {
   type IWriteCache,
 } from "@powerhousedao/reactor";
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
-import type { Kysely } from "kysely";
+import type { Kysely, Transaction } from "kysely";
 import type { IAttachmentSchemaCompiler } from "../../reference-index/types.js";
 import type {
   AttachmentReferenceInput,
@@ -19,6 +19,7 @@ export const ATTACHMENT_REFERENCE_READ_MODEL_ID =
 
 export class AttachmentReferenceReadModel extends BaseReadModel {
   private indexingQueue: Promise<void> = Promise.resolve();
+  private checkpointTarget: number | undefined;
 
   constructor(
     db: Kysely<DocumentViewDatabase>,
@@ -99,54 +100,76 @@ export class AttachmentReferenceReadModel extends BaseReadModel {
   private async indexOperationsInOrdinalOrder(
     incoming: OperationWithContext[],
   ): Promise<void> {
-    const pending = this.sortAndDedupe(
-      incoming.filter(({ context }) => context.ordinal > this.lastOrdinal),
-    );
-    if (pending.length === 0) return;
+    let candidates = this.sortAndDedupe(incoming);
+    if (candidates.length === 0) return;
 
-    const incomingMax = pending[pending.length - 1]!.context.ordinal;
-    let candidates = pending;
+    const incomingMax = candidates[candidates.length - 1]!.context.ordinal;
 
-    if (!this.isContiguousThrough(candidates, incomingMax)) {
+    if (this.contiguousEnd(candidates) < incomingMax) {
       const replayed = await this.loadThroughOrdinal(incomingMax);
-      candidates = this.sortAndDedupe([...replayed, ...pending]);
+      candidates = this.sortAndDedupe([...replayed, ...candidates]);
     }
 
-    const contiguous: OperationWithContext[] = [];
-    let expectedOrdinal = this.lastOrdinal + 1;
-    for (const item of candidates) {
-      const ordinal = item.context.ordinal;
-      if (ordinal < expectedOrdinal) continue;
-      if (ordinal > expectedOrdinal || ordinal > incomingMax) break;
-      contiguous.push(item);
-      expectedOrdinal++;
-    }
-
-    if (expectedOrdinal <= incomingMax) {
-      throw new Error(
-        `Attachment reference read model cannot advance past missing ordinal ${expectedOrdinal}`,
+    // The ordinal sequence is a Postgres serial, so it has permanent holes
+    // (rolled-back inserts) and transient ones (still-open transactions).
+    // Index everything delivered, but park the cursor at the end of the
+    // contiguous run so a gap that later fills is still replayed. Re-indexing
+    // is idempotent, so a conservative cursor only costs repeated work.
+    const checkpoint = this.contiguousEnd(candidates);
+    if (checkpoint < incomingMax) {
+      console.warn(
+        `[${this.config.readModelId}] indexed through ordinal ${incomingMax} ` +
+          `but parked the cursor at ${checkpoint}: ordinal ${checkpoint + 1} is missing`,
       );
     }
 
     const previousOrdinal = this.lastOrdinal;
+    this.checkpointTarget = checkpoint;
     try {
-      await super.indexOperations(contiguous);
+      await super.indexOperations(candidates);
     } catch (error) {
       this.lastOrdinal = previousOrdinal;
       throw error;
+    } finally {
+      this.checkpointTarget = undefined;
     }
   }
 
-  private isContiguousThrough(
+  /**
+   * Writes the cursor parked by indexOperationsInOrdinalOrder instead of the
+   * batch maximum, so indexing an operation above a gap never advances past it.
+   */
+  protected override async saveState(
+    trx: Transaction<DocumentViewDatabase>,
     items: OperationWithContext[],
-    maxOrdinal: number,
-  ): boolean {
+  ): Promise<void> {
+    const target = this.checkpointTarget;
+    if (target === undefined) {
+      await super.saveState(trx, items);
+      return;
+    }
+
+    this.lastOrdinal = target;
+    await trx
+      .updateTable("ViewState")
+      .set({
+        lastOrdinal: target,
+        lastOperationTimestamp: new Date(),
+      })
+      .where("readModelId", "=", this.config.readModelId)
+      .execute();
+  }
+
+  /** Last ordinal of the contiguous run starting at lastOrdinal + 1. */
+  private contiguousEnd(items: OperationWithContext[]): number {
     let expectedOrdinal = this.lastOrdinal + 1;
     for (const item of items) {
-      if (item.context.ordinal !== expectedOrdinal) return false;
+      const ordinal = item.context.ordinal;
+      if (ordinal < expectedOrdinal) continue;
+      if (ordinal > expectedOrdinal) break;
       expectedOrdinal++;
     }
-    return expectedOrdinal > maxOrdinal;
+    return expectedOrdinal - 1;
   }
 
   private async loadThroughOrdinal(
