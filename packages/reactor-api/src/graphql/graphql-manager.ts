@@ -1073,11 +1073,17 @@ export class GraphQLManager {
       ? `https://${process.env.HEROKU_APP_DEFAULT_DOMAIN_NAME}`
       : `http://localhost:${this.port}`;
 
-    return Array.from(subgraphs.entries()).map(([subgraphPath, subgraph]) => ({
-      name: subgraphPath.replace("/", ":"),
-      typeDefs: this.#buildSubgraphSchemaModule(subgraph).typeDefs,
-      url: `${herokuOrLocal}${subgraphPath}`,
-    }));
+    return Array.from(subgraphs.entries()).map(([subgraphPath, subgraph]) => {
+      const module = this.#buildSubgraphSchemaModule(subgraph);
+      return {
+        name: subgraphPath.replace("/", ":"),
+        typeDefs: module.typeDefs,
+        // In-process form: the stitching adapter merges these resolvers into
+        // the supergraph; federation adapters ignore the field.
+        resolvers: module.resolvers,
+        url: `${herokuOrLocal}${subgraphPath}`,
+      };
+    });
   }
 
   async #createSupergraphGateway() {

@@ -65,6 +65,7 @@ import {
 import {
   createGatewayAdapter,
   createHttpAdapter,
+  type GatewayAdapterType,
 } from "./graphql/gateway/factory.js";
 import {
   createRequireAuthFetchMiddleware,
@@ -387,6 +388,29 @@ function buildSyncServingGate(
     logger,
   );
 }
+/**
+ * Resolves the gateway adapter type from the `GATEWAY_ADAPTER` env var.
+ * Defaults to "apollo" (the federation gateway, production behavior).
+ * "stitching" selects the in-process graphql-tools merge gateway (#1565
+ * prototype); "mercurius" the Fastify federation gateway.
+ */
+function resolveGatewayAdapterType(logger: ILogger): GatewayAdapterType {
+  const configured = process.env.GATEWAY_ADAPTER;
+  if (configured === undefined) {
+    return "apollo";
+  }
+  if (
+    configured === "apollo" ||
+    configured === "mercurius" ||
+    configured === "stitching"
+  ) {
+    return configured;
+  }
+  logger.warn(
+    `Unknown GATEWAY_ADAPTER="${configured}"; falling back to "apollo"`,
+  );
+  return "apollo";
+}
 
 /**
  * Sets up the subgraph manager and registers subgraphs
@@ -425,7 +449,7 @@ async function setupGraphQLManager(
     syncManager,
     logger,
     httpAdapter,
-    await createGatewayAdapter("apollo", logger),
+    await createGatewayAdapter(resolveGatewayAdapterType(logger), logger),
     authService,
     documentPermissionService,
     {

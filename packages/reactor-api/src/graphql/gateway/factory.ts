@@ -2,7 +2,7 @@ import type { ILogger } from "document-model";
 import type { Context } from "../types.js";
 import type { IGatewayAdapter, IHttpAdapter } from "./types.js";
 
-export type GatewayAdapterType = "apollo" | "mercurius";
+export type GatewayAdapterType = "apollo" | "mercurius" | "stitching";
 export type HttpAdapterType = "express" | "fastify";
 
 export async function createGatewayAdapter(
@@ -19,6 +19,11 @@ export async function createGatewayAdapter(
       const { MercuriusGatewayAdapter } =
         await import("./adapter-gateway-mercurius.js");
       return new MercuriusGatewayAdapter(logger);
+    }
+    case "stitching": {
+      const { StitchingGatewayAdapter } =
+        await import("./adapter-gateway-stitching.js");
+      return new StitchingGatewayAdapter(logger);
     }
   }
 }

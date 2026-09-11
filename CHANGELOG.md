@@ -1,3 +1,32 @@
+## 6.2.3-dev.3 (2026-09-11)
+
+### 🚀 Features
+
+- **reactor:** the write-cache bench separates draft-proxy scan cost from reducer body per replayed op ([caafff10f](https://github.com/powerhouse-inc/powerhouse/commit/caafff10f))
+- **reactor:** the write-cache bench splits the draft-proxy tax into read scans and push+sort ([cb32becd1](https://github.com/powerhouse-inc/powerhouse/commit/cb32becd1))
+- **reactor:** write-cache bench separates draft-proxy scan cost from reducer body (T-012) ([#3003](https://github.com/powerhouse-inc/powerhouse/pull/3003))
+- **reactor:** write-cache bench splits the draft-proxy tax into read scans and push+sort (T-018) ([#3008](https://github.com/powerhouse-inc/powerhouse/pull/3008))
+- **reactor-api:** add in-process stitching gateway adapter ([#1565](https://github.com/powerhouse-inc/powerhouse/issues/1565))
+
+### 🩹 Fixes
+
+- **claude:** bench-loop offers the after-record a fix produced instead of counting its FIXED citation as read ([c4b4690be](https://github.com/powerhouse-inc/powerhouse/commit/c4b4690be))
+- **reactor:** persist the cold-miss decomposition and price zod separately ([8e1722a6d](https://github.com/powerhouse-inc/powerhouse/commit/8e1722a6d))
+- **reactor:** address the five review findings on the T-012 cold-miss decomposition ([#3006](https://github.com/powerhouse-inc/powerhouse/pull/3006))
+- **reactor-api:** address review findings on the stitching gateway adapter ([222e575d9](https://github.com/powerhouse-inc/powerhouse/commit/222e575d9))
+- **reactor-attachments:** atomically write attachment blobs via a temp file ([#1673](https://github.com/powerhouse-inc/powerhouse/issues/1673))
+- **reactor-attachments:** surface destination write errors instead of renaming a partial temp file ([f612f6c45](https://github.com/powerhouse-inc/powerhouse/commit/f612f6c45))
+- **reactor-attachments:** make local-fs attachment writes atomic (temp + rename) ([#3009](https://github.com/powerhouse-inc/powerhouse/pull/3009))
+- **shared:** the drive reducer's add-node existence and collision scans read the plain node list instead of the mutative draft ([67f20e2ad](https://github.com/powerhouse-inc/powerhouse/commit/67f20e2ad))
+- **shared:** drive reducer's add-node scans read the plain node list instead of the mutative draft (T-016) ([#3013](https://github.com/powerhouse-inc/powerhouse/pull/3013))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5.1
+- Claude Opus 5
+- froid1911
+
 ## 6.2.3-dev.2 (2026-09-10)
 
 ### 🚀 Features
