@@ -4,7 +4,13 @@ import path from "node:path";
 import { ensurePieceBundle } from "../activepieces/fetch.js";
 import { rewriteFileRefs, type StagedFile } from "../activepieces/context/files.js";
 import { PieceWorker } from "../activepieces/worker/host.js";
-import type { StagedInput } from "../activepieces/worker/protocol.js";
+import {
+  STORE_DELETE,
+  STORE_GET,
+  STORE_PUT,
+  type HostCallHandlers,
+  type StagedInput,
+} from "../activepieces/worker/protocol.js";
 import type { EngineConnectionResolver } from "./connections.js";
 import type { BlockExecution, BlockExecutor, BlockResult } from "./types.js";
 
@@ -154,6 +160,50 @@ function collectRefs(value: unknown, found: Set<string>): void {
   }
 }
 
+// The durable `ctx.store`, as the engine needs it: one call per operation, so
+// a piece that checkpoints mid-loop keeps what it wrote if the step then dies.
+
+// Which scope a step's keys belong to is the host's business; the executor is
+// shared across runs and must not decide it.
+export interface PieceStorePort {
+  get(key: string): Promise<unknown>;
+  put(key: string, value: unknown): Promise<void>;
+  delete(key: string): Promise<void>;
+}
+
+// One key operation as it arrives from the worker.
+interface StoreCallPayload {
+  key?: unknown;
+  value?: unknown;
+}
+
+function storeKeyOf(payload: unknown): string {
+  const key = (payload as StoreCallPayload | undefined)?.key;
+  if (typeof key !== "string" || key === "") {
+    throw new Error("Store call carried no key");
+  }
+  return key;
+}
+
+// The handlers served to a running step. A rejection here becomes the error
+// the piece sees from ctx.store, which is what an over-limit write should do.
+function storeHandlers(port: PieceStorePort): HostCallHandlers {
+  return {
+    [STORE_GET]: (payload) => port.get(storeKeyOf(payload)),
+    [STORE_PUT]: async (payload) => {
+      await port.put(
+        storeKeyOf(payload),
+        (payload as StoreCallPayload).value,
+      );
+      return null;
+    },
+    [STORE_DELETE]: async (payload) => {
+      await port.delete(storeKeyOf(payload));
+      return null;
+    },
+  };
+}
+
 export interface ActivepiecesBlockExecutorOptions {
   cacheDir: string;
   // Piece package name -> pinned version; the connector registry for this run.
@@ -167,6 +217,9 @@ export interface ActivepiecesBlockExecutorOptions {
   // piece calling ctx.files falls back to inline data URIs.
   stagingRoot?: string;
   attachments?: AttachmentPort;
+  // Without it `ctx.store` falls back to the worker's heap, which a step
+  // timeout discards.
+  pieceStore?: PieceStorePort;
 }
 
 export type BlockKind = "action" | "trigger";
@@ -252,6 +305,7 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
         execution.config,
         stagingDir,
       );
+      const pieceStore = this.options.pieceStore;
       const result = await this.worker.runAction(
         {
           bundleDir: bundle.dir,
@@ -260,8 +314,12 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
           auth,
           ...(stagingDir ? { stagingDir } : {}),
           ...(stagedInputs ? { stagedInputs } : {}),
+          ...(pieceStore ? { durableStore: true } : {}),
         },
-        timeoutMs ? { timeoutMs } : {},
+        {
+          ...(timeoutMs ? { timeoutMs } : {}),
+          ...(pieceStore ? { hostCalls: storeHandlers(pieceStore) } : {}),
+        },
       );
       return { output: await this.ingestFiles(result.output, result.files) };
     } finally {

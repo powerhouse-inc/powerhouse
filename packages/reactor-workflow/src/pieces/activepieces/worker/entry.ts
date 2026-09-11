@@ -6,6 +6,7 @@ import {
   InMemoryKeyValueStore,
   UnsupportedContextMemberError,
 } from "../context/action.js";
+import { RemoteKeyValueStore } from "../context/remote-store.js";
 import { readFile } from "node:fs/promises";
 import { buildCheckConnectionContext } from "../context/check.js";
 import {
@@ -176,12 +177,19 @@ async function handleRun(message: RunMessage): Promise<WorkerResponse> {
   const files = request.stagingDir
     ? new StagedFilesService(request.stagingDir)
     : new DataUriFilesService();
+  // A durable store answers every get/put over the call channel, so a write
+  // survives this worker; without one the value lives only in this heap.
+  const durableStore = request.durableStore
+    ? new RemoteKeyValueStore()
+    : undefined;
   const { context, touched } = buildActionContext({
     propsValue: await normalizePropsValue(action.props, request.propsValue, {
       resolveRef: stagedInputResolver(request.stagedInputs),
     }),
     auth: request.auth,
-    store: request.storeScope ? storeForScope(request.storeScope) : undefined,
+    store:
+      durableStore ??
+      (request.storeScope ? storeForScope(request.storeScope) : undefined),
     files,
     connections: request.connections
       ? new InMemoryConnectionsProvider(request.connections)

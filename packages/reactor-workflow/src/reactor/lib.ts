@@ -8,6 +8,7 @@ import {
   type ConnectionAuthType,
   type EngineConnectionResolver,
   type AttachmentPort,
+  type PieceStorePort,
   type SecretProvider,
   type WorkflowDefinition,
 } from "@powerhousedao/reactor-connectors";
@@ -73,12 +74,15 @@ export function createBlockExecutor(
   subgraph: BaseSubgraph,
   secrets: SecretProvider,
   attachments?: AttachmentPort,
+  pieceStore?: PieceStorePort,
 ): BlockExecutor {
   const documents = new DocumentBlockExecutor(subgraph);
   return new CompositeBlockExecutor(
     new ActivepiecesBlockExecutor({
       cacheDir: BUNDLE_CACHE_DIR,
       connections: new DocumentConnectionResolver(subgraph, secrets),
+      // Without it an action's ctx.store lives only in the worker's heap.
+      ...(pieceStore ? { pieceStore } : {}),
       // Without an attachment store a piece's ctx.files still works, but
       // inline as a data URI; with one, bytes go to the store and the output
       // carries a reference.

@@ -118,9 +118,13 @@ export function buildActionContext(
   const store = options.store ?? new InMemoryKeyValueStore();
   const touched = new Set<string>();
 
-  // Their Store takes an optional StoreScope (COLLECTION/PROJECT/FLOW) per call.
+  // AP's engine store layout, as the trigger context already models it: FLOW
+  // scope is the default and owns the partition, so its keys stay bare.
+
+  // PROJECT's enum value is the legacy "COLLECTION"; passing the name through
+  // verbatim would put the same scope in two partitions.
   const scoped = (key: string, scope?: unknown) =>
-    typeof scope === "string" ? `${scope}:${key}` : key;
+    scope === "COLLECTION" || scope === "PROJECT" ? `PROJECT:${key}` : key;
 
   const base: Record<string, unknown> = {
     executionType: options.executionType ?? "BEGIN",

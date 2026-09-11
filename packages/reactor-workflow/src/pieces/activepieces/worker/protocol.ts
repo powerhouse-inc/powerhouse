@@ -29,6 +29,9 @@ export interface RunActionRequest {
   connections?: Record<string, unknown>;
   // Store partition; runs sharing a scope share state for the worker's lifetime.
   storeScope?: string;
+  // Serve `ctx.store` from the host over the call channel instead of the
+  // in-memory partition above, so a write survives this worker.
+  durableStore?: boolean;
   executionType?: "BEGIN" | "RESUME";
   identity?: ActionContextIdentity;
 }
@@ -158,3 +161,35 @@ export interface ErrorResponse {
 }
 
 export type WorkerResponse = ResultResponse | ErrorResponse;
+
+// A request the child makes of its host while a step is running: the reverse
+// direction of everything above, and the only way a piece reaches durable state.
+
+// Ids are the child's own counter, a separate space from the host's, which is
+// why every handler dispatches on `type` before comparing an id.
+export interface HostCallMessage {
+  id: number;
+  type: "host-call";
+  method: string;
+  payload: unknown;
+}
+
+// `error` carries the failure as data: a rejected promise cannot cross IPC,
+// so the reply always arrives and the child rethrows.
+export interface HostCallResponse {
+  id: number;
+  type: "host-result";
+  value?: unknown;
+  error?: string;
+}
+
+// What the host will answer for the request in flight. Registered per request,
+// so a call arriving after the step returned finds nothing and is refused.
+export type HostCallHandlers = Record<
+  string,
+  (payload: unknown) => Promise<unknown>
+>;
+
+export const STORE_GET = "store.get";
+export const STORE_PUT = "store.put";
+export const STORE_DELETE = "store.delete";
