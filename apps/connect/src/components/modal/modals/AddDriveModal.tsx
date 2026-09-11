@@ -9,12 +9,11 @@ import {
   addRemoteDrive,
   closePHModal,
   extractDriveSlugFromPath,
+  fetchDriveInfo,
   getDrives,
   setSelectedDrive,
   useAppModules,
   usePHModal,
-  useRenown,
-  useUser,
   waitForDocumentReady,
 } from "@powerhousedao/reactor-browser";
 import { t } from "i18next";
@@ -24,22 +23,9 @@ import { getCreateDriveAppOptions } from "../../../utils/create-drive-app-option
 // Safe to be generous: navigation only fires if the user is still on home.
 const REMOTE_DRIVE_NAV_TIMEOUT_MS = 30_000;
 
-async function requestPublicDriveFromReactor(
-  url: string,
-  headers?: Record<string, string>,
-): Promise<{ id: string; name: string }> {
-  const response = await fetch(url, { headers: headers ?? {} });
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}`);
-  }
-  return (await response.json()) as { id: string; name: string };
-}
-
 export function AddDriveModal() {
   const phModal = usePHModal();
   const open = phModal?.type === "addDrive";
-  const user = useUser();
-  const renown = useRenown();
   const appModules = useAppModules();
   const onAddLocalDrive = async (data: AppOptions) => {
     try {
@@ -135,24 +121,7 @@ export function AddDriveModal() {
       onAddRemoteDrive={(data) => {
         void onAddRemoteDriveSubmit(data);
       }}
-      requestPublicDrive={async (url: string) => {
-        try {
-          if (user) {
-            // aud omitted: server verifies without an audience, so aud-bearing
-            // tokens are rejected. Re-enable once both sides support it.
-            const authToken = await renown?.getBearerToken?.({
-              expiresIn: 10,
-            });
-            return requestPublicDriveFromReactor(url, {
-              Authorization: `Bearer ${authToken}`,
-            });
-          }
-          return requestPublicDriveFromReactor(url);
-        } catch (error) {
-          console.error(error);
-          return requestPublicDriveFromReactor(url);
-        }
-      }}
+      requestPublicDrive={(url: string) => fetchDriveInfo(url)}
       onOpenChange={(status) => {
         if (!status) return closePHModal();
       }}

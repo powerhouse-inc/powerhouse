@@ -98,6 +98,7 @@ function makeSyncManager(operations: OperationWithContext[]): ISyncManager {
       outbox: { items: [syncOp] },
       inbox: { ackOrdinal: 0 },
       deadLetter: { items: [] },
+      notePoll: () => {},
     },
   };
 

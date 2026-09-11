@@ -368,6 +368,7 @@ export {
   GqlResponseChannelFactory,
   IntervalPollTimer,
   DRIVE_AUTH_ERROR_MESSAGES,
+  DriveRequestError,
   isDriveAuthError,
   isRecoverableGraphQLError,
   RECOVERABLE_GRAPHQL_ERROR_CODES,

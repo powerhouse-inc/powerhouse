@@ -1306,6 +1306,11 @@ export function pollSyncEnvelopes(
     );
   }
 
+  // The subgraph's drive and binding checks run before this call, so reaching
+  // here is an authorized poll: the only evidence the switchboard has that this
+  // channel still has a holder.
+  remote.channel.notePoll();
+
   // Dead-letter items can originate from failed inbox jobs whose documentId is
   // outside this channel's collection, so they are filtered by the caller's read
   // access independently of the outbox (see the poll resolver in subgraph.ts).
@@ -1569,6 +1574,12 @@ export function pushSyncEnvelopes(
     if (!envelope.operations || envelope.operations.length === 0) {
       continue;
     }
+
+    // A Manual-poll holder never polls on a schedule, so a push is the only
+    // liveness it ever reports. It is stamped below the empty-envelope exit,
+    // and after the caller's per-operation checks upstream: an envelope
+    // carrying nothing is authorized by nothing, so it proves nothing.
+    remote.channel.notePoll();
 
     const syncOps = envelopesToSyncOperations(
       envelope as Parameters<typeof envelopesToSyncOperations>[0],
