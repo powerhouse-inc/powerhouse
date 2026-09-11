@@ -85,7 +85,7 @@ describe("Crypto utils", () => {
     vi.useRealTimers();
   });
 
-  it("should build signature with empty previousState", () => {
+  it("should build signature with empty previousState", async () => {
     const document = baseCreateDocument<CountPHState>(
       createCountDocumentState,
       createCountState(),
@@ -103,28 +103,30 @@ describe("Crypto utils", () => {
       app: { name: "test", key: "0xtest" },
       signatures: [],
     };
-    const params = buildOperationSignatureParams({
+    const params = await buildOperationSignatureParams({
       documentId: "1",
       action: operation.action,
       signer,
       previousStateHash: "",
     });
+    // The hash field is the standard action hash: SHA-256 over the document
+    // id, scope, type and input (#2894).
     expect(params).toStrictEqual([
       "1704067200",
       "0xtest",
-      "Sa/gjYf8KKaEfUhOuPk9wDzLSns=",
+      "SkXGxOIwtqaYp79OWiEkhwWLr8ZkRhvm4N9rkXn4K24=",
       "",
     ]);
 
     const textEncoder = new TextEncoder();
     expect(buildOperationSignatureMessage(params)).toStrictEqual(
       textEncoder.encode(
-        "\x19Signed Operation:\n4417040672000xtestSa/gjYf8KKaEfUhOuPk9wDzLSns=",
+        "\x19Signed Operation:\n6017040672000xtestSkXGxOIwtqaYp79OWiEkhwWLr8ZkRhvm4N9rkXn4K24=",
       ),
     );
   });
 
-  it("should build signature with previousState", () => {
+  it("should build signature with previousState", async () => {
     let document = baseCreateDocument<CountPHState>(
       createCountDocumentState,
       createCountState(),
@@ -145,7 +147,7 @@ describe("Crypto utils", () => {
       app: { name: "test", key: "0xtest" },
       signatures: [],
     };
-    const params = buildOperationSignatureParams({
+    const params = await buildOperationSignatureParams({
       documentId: "1",
       action: operation.action,
       signer,
@@ -154,14 +156,14 @@ describe("Crypto utils", () => {
     expect(params).toStrictEqual([
       "1704067200",
       "0xtest",
-      "Sa/gjYf8KKaEfUhOuPk9wDzLSns=",
+      "SkXGxOIwtqaYp79OWiEkhwWLr8ZkRhvm4N9rkXn4K24=",
       "qA97yBec1rrOyf2eVsYdWwFPOso=",
     ]);
 
     const textEncoder = new TextEncoder();
     expect(buildOperationSignatureMessage(params)).toStrictEqual(
       textEncoder.encode(
-        "\x19Signed Operation:\n7217040672000xtestSa/gjYf8KKaEfUhOuPk9wDzLSns=qA97yBec1rrOyf2eVsYdWwFPOso=",
+        "\x19Signed Operation:\n8817040672000xtestSkXGxOIwtqaYp79OWiEkhwWLr8ZkRhvm4N9rkXn4K24=qA97yBec1rrOyf2eVsYdWwFPOso=",
       ),
     );
   });
@@ -230,7 +232,7 @@ describe("Crypto utils", () => {
         [
           "1704067200",
           publicKey,
-          "Sa/gjYf8KKaEfUhOuPk9wDzLSns=",
+          "SkXGxOIwtqaYp79OWiEkhwWLr8ZkRhvm4N9rkXn4K24=",
           "",
           expect.stringMatching(/0x[a-f0-9]{128}/),
         ],
@@ -301,6 +303,8 @@ describe("Crypto utils", () => {
           new Uint8Array(data),
         );
       },
+      operation.action,
+      document.header.id,
     );
 
     expect(verified).toBe(true);
@@ -368,7 +372,355 @@ describe("Crypto utils", () => {
           new Uint8Array(data),
         );
       },
+      operation.action,
+      document.header.id,
     );
+    expect(verified).toBe(false);
+  });
+
+  it("should reject a signature replayed onto a different document", async () => {
+    const algorithm = { name: "ECDSA", namedCurve: "P-256", hash: "SHA-256" };
+    const keyPair = await crypto.subtle.generateKey(algorithm, true, [
+      "sign",
+      "verify",
+    ]);
+    const publicKey = `0x${ab2hex(
+      await crypto.subtle.exportKey("raw", keyPair.publicKey),
+    )}`;
+
+    const signHandler = async (data: Uint8Array) =>
+      new Uint8Array(
+        await crypto.subtle.sign(
+          algorithm,
+          keyPair.privateKey,
+          data.buffer as ArrayBuffer,
+        ),
+      );
+    const verifyHandler = async (
+      pk: string,
+      signature: Uint8Array,
+      data: Uint8Array,
+    ) => {
+      const importedKey = await crypto.subtle.importKey(
+        "raw",
+        hex2ab(pk),
+        algorithm,
+        true,
+        ["verify"],
+      );
+      return crypto.subtle.verify(
+        algorithm,
+        importedKey,
+        new Uint8Array(signature),
+        new Uint8Array(data),
+      );
+    };
+
+    const document = baseCreateDocument<CountPHState>(
+      createCountDocumentState,
+      createCountState(),
+    );
+    document.header.id = "doc-A";
+
+    const operation = await buildSignedAction(
+      { ...increment() },
+      countReducer as Reducer<CountPHState>,
+      document,
+      actionSigner(
+        { address: "0x123", chainId: 1, networkId: "1" },
+        { name: "test", key: publicKey },
+      ),
+      signHandler,
+    );
+
+    const signerInfo = operation.action.context!.signer!;
+
+    // Verifies against the document the signature was made for.
+    await expect(
+      verifyOperationSignature(
+        signerInfo.signatures.at(0)!,
+        signerInfo,
+        verifyHandler,
+        operation.action,
+        "doc-A",
+      ),
+    ).resolves.toBe(true);
+
+    // The same signature replayed against a different document: its hash
+    // embeds the original document id, so it must not verify (#2894).
+    await expect(
+      verifyOperationSignature(
+        signerInfo.signatures.at(0)!,
+        signerInfo,
+        verifyHandler,
+        operation.action,
+        "doc-B",
+      ),
+    ).resolves.toBe(false);
+  });
+
+  it("should reject a signature reattached to a different input", async () => {
+    const algorithm = { name: "ECDSA", namedCurve: "P-256", hash: "SHA-256" };
+    const keyPair = await crypto.subtle.generateKey(algorithm, true, [
+      "sign",
+      "verify",
+    ]);
+    const publicKey = `0x${ab2hex(
+      await crypto.subtle.exportKey("raw", keyPair.publicKey),
+    )}`;
+
+    const signHandler = async (data: Uint8Array) =>
+      new Uint8Array(
+        await crypto.subtle.sign(
+          algorithm,
+          keyPair.privateKey,
+          data.buffer as ArrayBuffer,
+        ),
+      );
+    const verifyHandler = async (
+      pk: string,
+      signature: Uint8Array,
+      data: Uint8Array,
+    ) => {
+      const importedKey = await crypto.subtle.importKey(
+        "raw",
+        hex2ab(pk),
+        algorithm,
+        true,
+        ["verify"],
+      );
+      return crypto.subtle.verify(
+        algorithm,
+        importedKey,
+        new Uint8Array(signature),
+        new Uint8Array(data),
+      );
+    };
+
+    const document = baseCreateDocument<CountPHState>(
+      createCountDocumentState,
+      createCountState(),
+    );
+    document.header.id = "doc-A";
+
+    const operation = await buildSignedAction(
+      { ...increment() },
+      countReducer as Reducer<CountPHState>,
+      document,
+      actionSigner(
+        { address: "0x123", chainId: 1, networkId: "1" },
+        { name: "test", key: publicKey },
+      ),
+      signHandler,
+    );
+
+    const signerInfo = operation.action.context!.signer!;
+
+    // The same signature attached to an action whose input changed must not
+    // verify: the hash field must describe the action it is attached to
+    // (#2894).
+    const replayed: Action = {
+      ...operation.action,
+      input: { tampered: true },
+    };
+    await expect(
+      verifyOperationSignature(
+        signerInfo.signatures.at(0)!,
+        signerInfo,
+        verifyHandler,
+        replayed,
+        "doc-A",
+      ),
+    ).resolves.toBe(false);
+  });
+
+  it("should reject a signature reattached to a different type and scope", async () => {
+    const algorithm = { name: "ECDSA", namedCurve: "P-256", hash: "SHA-256" };
+    const keyPair = await crypto.subtle.generateKey(algorithm, true, [
+      "sign",
+      "verify",
+    ]);
+    const publicKey = `0x${ab2hex(
+      await crypto.subtle.exportKey("raw", keyPair.publicKey),
+    )}`;
+
+    const signHandler = async (data: Uint8Array) =>
+      new Uint8Array(
+        await crypto.subtle.sign(
+          algorithm,
+          keyPair.privateKey,
+          data.buffer as ArrayBuffer,
+        ),
+      );
+    const verifyHandler = async (
+      pk: string,
+      signature: Uint8Array,
+      data: Uint8Array,
+    ) => {
+      const importedKey = await crypto.subtle.importKey(
+        "raw",
+        hex2ab(pk),
+        algorithm,
+        true,
+        ["verify"],
+      );
+      return crypto.subtle.verify(
+        algorithm,
+        importedKey,
+        new Uint8Array(signature),
+        new Uint8Array(data),
+      );
+    };
+
+    const document = baseCreateDocument<CountPHState>(
+      createCountDocumentState,
+      createCountState(),
+    );
+    document.header.id = "doc-A";
+
+    const operation = await buildSignedAction(
+      { ...increment() },
+      countReducer as Reducer<CountPHState>,
+      document,
+      actionSigner(
+        { address: "0x123", chainId: 1, networkId: "1" },
+        { name: "test", key: publicKey },
+      ),
+      signHandler,
+    );
+
+    const signerInfo = operation.action.context!.signer!;
+
+    const replayed: Action = {
+      ...operation.action,
+      type: "DECREMENT",
+      scope: "local",
+    };
+    await expect(
+      verifyOperationSignature(
+        signerInfo.signatures.at(0)!,
+        signerInfo,
+        verifyHandler,
+        replayed,
+        "doc-A",
+      ),
+    ).resolves.toBe(false);
+  });
+
+  it("should verify a valid signature with the three-argument form (no action to bind)", async () => {
+    const algorithm = { name: "ECDSA", namedCurve: "P-256", hash: "SHA-256" };
+    const keyPair = await crypto.subtle.generateKey(algorithm, true, [
+      "sign",
+      "verify",
+    ]);
+    const publicKey = `0x${ab2hex(
+      await crypto.subtle.exportKey("raw", keyPair.publicKey),
+    )}`;
+
+    const document = baseCreateDocument<CountPHState>(
+      createCountDocumentState,
+      createCountState(),
+    );
+    const operation = await buildSignedAction(
+      { ...increment() },
+      countReducer as Reducer<CountPHState>,
+      document,
+      actionSigner(
+        { address: "0x123", chainId: 1, networkId: "1" },
+        { name: "test", key: publicKey },
+      ),
+      async (data) =>
+        new Uint8Array(
+          await crypto.subtle.sign(
+            algorithm,
+            keyPair.privateKey,
+            data.buffer as ArrayBuffer,
+          ),
+        ),
+    );
+    const signer = operation.action.context!.signer!;
+
+    // The historical call shape carries no action, so there is nothing to
+    // bind against; the signature verifies as it did before the binding
+    // existed.
+    const verified = await verifyOperationSignature(
+      signer.signatures.at(0)!,
+      signer,
+      async (pk, signature, data) => {
+        const importedKey = await crypto.subtle.importKey(
+          "raw",
+          hex2ab(pk),
+          algorithm,
+          true,
+          ["verify"],
+        );
+        return crypto.subtle.verify(
+          algorithm,
+          importedKey,
+          new Uint8Array(signature),
+          new Uint8Array(data),
+        );
+      },
+    );
+
+    expect(verified).toBe(true);
+  });
+
+  it("should reject a tampered signature with the three-argument form", async () => {
+    const algorithm = { name: "ECDSA", namedCurve: "P-256", hash: "SHA-256" };
+    const keyPair = await crypto.subtle.generateKey(algorithm, true, [
+      "sign",
+      "verify",
+    ]);
+    const publicKey = `0x${ab2hex(
+      await crypto.subtle.exportKey("raw", keyPair.publicKey),
+    )}`;
+
+    const document = baseCreateDocument<CountPHState>(
+      createCountDocumentState,
+      createCountState(),
+    );
+    const operation = await buildSignedAction(
+      { ...increment() },
+      countReducer as Reducer<CountPHState>,
+      document,
+      actionSigner(
+        { address: "0x123", chainId: 1, networkId: "1" },
+        { name: "test", key: publicKey },
+      ),
+      async (data) =>
+        new Uint8Array(
+          await crypto.subtle.sign(
+            algorithm,
+            keyPair.privateKey,
+            data.buffer as ArrayBuffer,
+          ),
+        ),
+    );
+    const signer = operation.action.context!.signer!;
+    const signature = signer.signatures.at(0)!;
+    signature[4] = "FAKE SIGNATURE";
+
+    const verified = await verifyOperationSignature(
+      signature,
+      signer,
+      async (pk, signature, data) => {
+        const importedKey = await crypto.subtle.importKey(
+          "raw",
+          hex2ab(pk),
+          algorithm,
+          true,
+          ["verify"],
+        );
+        return crypto.subtle.verify(
+          algorithm,
+          importedKey,
+          new Uint8Array(signature),
+          new Uint8Array(data),
+        );
+      },
+    );
+
     expect(verified).toBe(false);
   });
 

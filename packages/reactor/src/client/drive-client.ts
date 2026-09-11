@@ -116,6 +116,8 @@ export class DriveClient implements IDriveClient {
       },
     };
 
+    // CREATE and UPGRADE land on the new document: bind their signatures to
+    // it (#2894).
     const documentActions: Action[] = await signActions(
       [
         createDocumentAction(createInput),
@@ -130,12 +132,26 @@ export class DriveClient implements IDriveClient {
           ),
           initialState: document.state,
         }),
-        addRelationshipAction(driveIdentifier, documentId, "child"),
       ],
+      this.signer,
+      signal,
+      documentId,
+    );
+
+    // The relationship lands on the drive, but it is submitted inside the new
+    // document's job: binding it to either document breaks one of the two
+    // verifications (the job-level check uses the new document's id, the
+    // drive's load-time check uses the drive's id), so it keeps the
+    // document-agnostic form, which every bound verifier still accepts
+    // (#2894). Binding it requires the action to move to a drive-targeted
+    // job of its own.
+    const relationshipActions: Action[] = await signActions(
+      [addRelationshipAction(driveIdentifier, documentId, "child")],
       this.signer,
       signal,
     );
 
+    // The file node lands on the drive: bind it to the drive (#2894).
     const driveActions: Action[] = await signActions(
       [
         addFileAction({
@@ -147,6 +163,7 @@ export class DriveClient implements IDriveClient {
       ],
       this.signer,
       signal,
+      driveIdentifier,
     );
 
     // Two batches, not one with a dependsOn edge. A batch's edges are ordering
@@ -159,9 +176,12 @@ export class DriveClient implements IDriveClient {
         {
           key: "document",
           documentId,
-          scope: getSharedActionScope(documentActions),
+          scope: getSharedActionScope([
+            ...documentActions,
+            ...relationshipActions,
+          ]),
           branch: "main",
-          actions: documentActions,
+          actions: [...documentActions, ...relationshipActions],
           dependsOn: [],
         },
       ],

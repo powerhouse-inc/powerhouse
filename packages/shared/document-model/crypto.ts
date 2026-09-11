@@ -63,19 +63,25 @@ export function getUnixTimestamp(date: Date | string): string {
   return (new Date(date).getTime() / 1000).toFixed(0);
 }
 
-export function buildOperationSignatureParams({
+/**
+ * The parameters a shared action signature covers.
+ *
+ * The hash field is the standard action hash: SHA-256 over the document id,
+ * the action's scope, type and input, so a signature is bound to the
+ * document it was made for (#2894). SHA-1 was the historical hash here; it is
+ * no longer produced, but remains verifiable through
+ * {@link computeActionHashCandidates}.
+ */
+export async function buildOperationSignatureParams({
   documentId,
   signer,
   action,
   previousStateHash,
-}: ActionSignatureContext): [string, string, string, string] {
-  const { /*id, timestamp,*/ scope, type } = action;
+}: ActionSignatureContext): Promise<[string, string, string, string]> {
   return [
     /*getUnixTimestamp(timestamp)*/ getUnixTimestamp(new Date()),
     signer.app.key,
-    hashBrowser(
-      [documentId, scope, /*id,*/ type, stringifyJson(action.input)].join(""),
-    ),
+    await hashActionContentSha256(documentId, action),
     previousStateHash,
   ];
 }
@@ -88,6 +94,95 @@ export function buildOperationSignatureMessage(
   const message = params.join("");
   const prefix = "\x19Signed Operation:\n" + message.length.toString();
   return textEncode.encode(prefix + message);
+}
+
+/** The structural slice of an action that an action-hash preimage is built from. */
+export type ActionHashPreimage = {
+  scope: string;
+  type: string;
+  input: unknown;
+};
+
+/** SHA-256 over a string, base64-encoded. */
+async function sha256Base64(data: string): Promise<string> {
+  const bytes = new TextEncoder().encode(data);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return uint8ArrayToBase64(new Uint8Array(digest));
+}
+
+/**
+ * The preimage an ECDSA-P-256 action signature covers: the document id, the
+ * action's scope, type and input, SHA-256 hashed. Shared by the signer and
+ * the verifier so the two can never silently diverge again (#2894).
+ *
+ * The document id leads the preimage, matching the shared scheme, and binds
+ * the signature to the document it was made for: replaying it onto another
+ * document changes the preimage and the signature stops verifying. When no
+ * document id is known at signing time it is empty, which leaves the
+ * preimage in the form earlier code signed, so those signatures still verify
+ * through the candidates (#2894).
+ *
+ * The input serializes canonically (sorted keys) rather than with
+ * `JSON.stringify`: operations pass through storage round-trips that
+ * re-serialize the action, and key order is not part of the action's content -
+ * PGlite's JSONB reorders keys, and any order-dependent serialization would
+ * leave a genuine signature unable to bind to the action it came from. The
+ * canonical form is a function of the input's content only, so the hash is
+ * stable across those round-trips.
+ */
+export async function hashActionContentSha256(
+  documentId: string,
+  action: ActionHashPreimage,
+): Promise<string> {
+  return sha256Base64(
+    [documentId, action.scope, action.type, stringifyJson(action.input)].join(
+      "",
+    ),
+  );
+}
+
+/**
+ * The preimage a shared/legacy action signature covers: the document id, scope,
+ * type and input, SHA-1 hashed.
+ */
+export function hashActionContentSha1(
+  documentId: string,
+  action: ActionHashPreimage,
+): string {
+  return hashBrowser(
+    [documentId, action.scope, action.type, stringifyJson(action.input)].join(
+      "",
+    ),
+  );
+}
+
+/**
+ * Every action-hash value a signature's hash field may legitimately carry for
+ * the given action, across the signing schemes this codebase has produced. A
+ * binding verifier recomputes these and refuses a signature whose stored hash
+ * matches none of them, rather than trusting the value echoed back from the
+ * signature tuple itself (#2894).
+ *
+ * The candidates, newest first: the standard hash, the document id included
+ * when the verifier knows it; the same hash without a document id, the form
+ * produced before document binding and still produced when a signer does not
+ * know the document; the insertion-order JSON form, matching signatures made
+ * before the preimage was canonicalized; and the legacy shared scheme, SHA-1
+ * over document id, scope, type and input.
+ */
+export async function computeActionHashCandidates(
+  documentId: string,
+  action: ActionHashPreimage,
+): Promise<string[]> {
+  const candidates = [
+    await hashActionContentSha256(documentId, action),
+    await hashActionContentSha256("", action),
+    await sha256Base64(
+      [action.scope, action.type, JSON.stringify(action.input)].join(""),
+    ),
+    ...(documentId ? [hashActionContentSha1(documentId, action)] : []),
+  ];
+  return [...new Set(candidates)];
 }
 
 export function ab2hex(ab: ArrayBuffer | ArrayBufferView): string {
