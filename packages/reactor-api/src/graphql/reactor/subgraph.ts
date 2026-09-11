@@ -121,14 +121,27 @@ export class ReactorSubgraph extends BaseSubgraph {
    * queued for the adopter.
    *
    * The refusal is the shape a read denial takes, so a puller treats it as a
-   * signal to authenticate again rather than as a transport failure.
+   * signal to authenticate again rather than as a transport failure. Pushes are
+   * refused the same way -- a push interacts with the same private queue, and
+   * reports the liveness that keeps it from being reclaimed -- but they never
+   * adopt, since the push path has no drive check to clear the claimant.
    *
    * Nothing is enforced or adopted without a serving gate. Below
    * `authEnforcement` there is no policy being enforced for the channel to
    * belong to, and refusing a poll there would break sync for no gain.
    */
-  async #bindOrRefuseChannel(channelId: string, ctx: Context): Promise<void> {
+  async #bindOrRefuseChannel(
+    channelId: string,
+    ctx: Context,
+    options: { adopt?: boolean; action?: "poll" | "push to" } = {},
+  ): Promise<void> {
     if (!this.syncServingGate) return;
+
+    // Claiming a channel is a write, so only a caller the coarse drive check
+    // has already cleared may do it. The push path has no such check and asks
+    // for refusal alone, or any authenticated address could claim a channel it
+    // can never poll and lock its rightful owner out for good.
+    const { adopt = true, action = "poll" } = options;
 
     let remote;
     try {
@@ -143,14 +156,14 @@ export class ReactorSubgraph extends BaseSubgraph {
     const address = ctx.user?.address;
 
     if (bound === undefined) {
-      if (address !== undefined) {
+      if (adopt && address !== undefined) {
         await this.syncManager.bindRemote(channelId, address);
       }
       return;
     }
 
     if (bound !== address) {
-      throw new ForbiddenError("to poll this sync channel");
+      throw new ForbiddenError(`to ${action} this sync channel`);
     }
   }
 
@@ -872,6 +885,23 @@ export class ReactorSubgraph extends BaseSubgraph {
         this.logger.debug("pushSyncEnvelopes(@args)", args);
 
         try {
+          // A push claims or proves ownership exactly as a poll does. It has to
+          // be checked here rather than left to the per-operation canMutate
+          // loop below, because an envelope carrying no operations skips that
+          // loop entirely -- and a push stamps channel liveness, so without
+          // this anyone who learns a channel id could keep that channel, and
+          // the operations it is holding, alive for good.
+          const boundChannelIds = new Set<string>();
+          for (const envelope of args.envelopes) {
+            const channelId = envelope.channelMeta.id;
+            if (boundChannelIds.has(channelId)) continue;
+            boundChannelIds.add(channelId);
+            await this.#bindOrRefuseChannel(channelId, ctx, {
+              adopt: false,
+              action: "push to",
+            });
+          }
+
           // Check canMutate per distinct (documentId, action type). Nested map
           // rather than a joined key: a separator could be forged to collide
           // two distinct pairs and skip a check.

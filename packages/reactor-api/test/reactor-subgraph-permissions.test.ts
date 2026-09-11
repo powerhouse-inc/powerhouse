@@ -1336,16 +1336,28 @@ describe("ReactorSubgraph Permission Checks", () => {
   // Mutation: pushSyncEnvelopes — canMutate per (document, action type) (S-C2)
   // ============================================================
   describe("Mutation: pushSyncEnvelopes", () => {
-    const makeSyncManager = () => {
+    const makeSyncManager = (boundAddress?: string) => {
       const inboxAdd = vi.fn();
+      const notePoll = vi.fn();
       const syncManager = {
+        bindRemote: vi.fn().mockResolvedValue(undefined),
         getById: vi.fn().mockReturnValue({
-          meta: { name: "remote-1" },
-          channel: { inbox: { add: inboxAdd }, notePoll: vi.fn() },
+          meta: {
+            id: "channel-1",
+            name: "remote-1",
+            options: { sinceTimestampUtcMs: "0", boundAddress },
+          },
+          channel: { inbox: { add: inboxAdd }, notePoll },
         }),
       };
-      return { syncManager, inboxAdd };
+      return { syncManager, inboxAdd, notePoll };
     };
+
+    /** Push never serves anything, so only the gate's presence matters here. */
+    const servingGate = () =>
+      ({
+        scopePredicateById: vi.fn(),
+      }) as unknown as SyncScopeGate;
 
     const operationFor = (documentId: string, type: string, ordinal = 0) => ({
       operation: {
@@ -1473,6 +1485,115 @@ describe("ReactorSubgraph Permission Checks", () => {
 
       expect(result).toBe(true);
       expect(mockAuthorizationService.canMutate).not.toHaveBeenCalled();
+    });
+
+    /**
+     * The per-operation canMutate loop below is skipped entirely by an envelope
+     * carrying no operations, so without the binding check a push is a way to
+     * touch a channel -- and to report the liveness that keeps its held
+     * operations from being reclaimed -- with no authorization at all.
+     */
+    it("should refuse a push to a channel bound to another subject", async () => {
+      const { syncManager, inboxAdd, notePoll } = makeSyncManager("0xowner");
+      const subgraph = buildSubgraph(
+        mockAuthorizationService,
+        syncManager,
+        servingGate(),
+      );
+
+      await expect(
+        callPushSyncEnvelopes(
+          subgraph,
+          createContext({ userAddress: "0xthief" }),
+          null,
+        ),
+      ).rejects.toThrow("Forbidden");
+      expect(notePoll).not.toHaveBeenCalled();
+      expect(inboxAdd).not.toHaveBeenCalled();
+    });
+
+    it("should refuse an anonymous push once the channel is claimed", async () => {
+      const { syncManager } = makeSyncManager("0xowner");
+      const subgraph = buildSubgraph(
+        mockAuthorizationService,
+        syncManager,
+        servingGate(),
+      );
+
+      await expect(
+        callPushSyncEnvelopes(subgraph, createContext({}), null),
+      ).rejects.toThrow("Forbidden");
+    });
+
+    it("should let the bound subject push", async () => {
+      vi.mocked(mockAuthorizationService.canMutate!).mockResolvedValue(true);
+      const { syncManager, inboxAdd } = makeSyncManager("0xowner");
+      const subgraph = buildSubgraph(
+        mockAuthorizationService,
+        syncManager,
+        servingGate(),
+      );
+
+      const result = await callPushSyncEnvelopes(
+        subgraph,
+        createContext({ userAddress: "0xowner" }),
+        [operationFor("doc-123", "SET_NAME")],
+      );
+
+      expect(result).toBe(true);
+      expect(inboxAdd).toHaveBeenCalled();
+    });
+
+    /**
+     * Claiming a channel is a write, and unlike the poll path there is no drive
+     * read check here to clear the claimant first -- so an address that could
+     * never poll the channel would take it, and bindRemote refuses to rebind.
+     */
+    it("should not claim an unbound channel for the subject pushing to it", async () => {
+      vi.mocked(mockAuthorizationService.canMutate!).mockResolvedValue(true);
+      const { syncManager } = makeSyncManager();
+      const subgraph = buildSubgraph(
+        mockAuthorizationService,
+        syncManager,
+        servingGate(),
+      );
+
+      await callPushSyncEnvelopes(
+        subgraph,
+        createContext({ userAddress: "0xstranger" }),
+        [operationFor("doc-123", "SET_NAME")],
+      );
+
+      expect(syncManager.bindRemote).not.toHaveBeenCalled();
+    });
+
+    it("should refuse nothing below the flag, where there is no gate", async () => {
+      const { syncManager } = makeSyncManager("0xowner");
+      const subgraph = buildSubgraph(mockAuthorizationService, syncManager);
+
+      await expect(
+        callPushSyncEnvelopes(
+          subgraph,
+          createContext({ userAddress: "0xthief" }),
+          null,
+        ),
+      ).resolves.toBe(true);
+    });
+
+    it("should report liveness only for an envelope that carries work", async () => {
+      const { syncManager, notePoll } = makeSyncManager();
+      const subgraph = buildSubgraph(mockAuthorizationService, syncManager);
+
+      await callPushSyncEnvelopes(subgraph, createContext({}), null);
+      expect(notePoll).not.toHaveBeenCalled();
+
+      vi.mocked(mockAuthorizationService.canMutate!).mockResolvedValue(true);
+      await callPushSyncEnvelopes(
+        subgraph,
+        createContext({ userAddress: "0xpermitted" }),
+        [operationFor("doc-123", "SET_NAME")],
+      );
+      expect(notePoll).toHaveBeenCalledTimes(1);
     });
 
     it("should not let a forged (document, action type) pair collide and skip a check", async () => {

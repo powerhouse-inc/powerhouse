@@ -1571,13 +1571,15 @@ export function pushSyncEnvelopes(
       );
     }
 
-    // A Manual-poll holder never polls on a schedule, so a push is the only
-    // liveness it ever reports.
-    remote.channel.notePoll();
-
     if (!envelope.operations || envelope.operations.length === 0) {
       continue;
     }
+
+    // A Manual-poll holder never polls on a schedule, so a push is the only
+    // liveness it ever reports. It is stamped below the empty-envelope exit,
+    // and after the caller's per-operation checks upstream: an envelope
+    // carrying nothing is authorized by nothing, so it proves nothing.
+    remote.channel.notePoll();
 
     const syncOps = envelopesToSyncOperations(
       envelope as Parameters<typeof envelopesToSyncOperations>[0],
