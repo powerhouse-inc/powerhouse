@@ -11,6 +11,7 @@ import type {
   FlowsProvider,
   ServerInfo,
 } from "./props.js";
+import { normalizeStoreScope } from "./store-scope.js";
 import { throwingStub, withTouchTracking } from "./stubs.js";
 
 export interface RecordedSchedule {
@@ -82,11 +83,14 @@ export function buildTriggerContext(
   const listeners: RecordedListener[] = [];
 
   // AP's engine store layout: FLOW scope (the default) nests under the flow
-  // id; PROJECT scope (enum value "COLLECTION") uses the bare key.
+  // id; PROJECT scope uses the bare key.
+
+  // Matching the enum's "COLLECTION" value alone missed a piece that passes
+  // the name instead, which then silently got flow scope.
   const prefix = options.storePrefix ?? "";
   const flowId = identity.flowId ?? "flow";
   const scopedKey = (key: string, scope?: unknown) =>
-    scope === "COLLECTION"
+    normalizeStoreScope(scope) === "PROJECT"
       ? `${prefix}${key}`
       : `${prefix}flow_${flowId}/${key}`;
 

@@ -173,6 +173,8 @@ describe.skipIf(!rssBundle || !webhookBundle)(
           seen.isRepublish = ctx.isRepublish;
           await ctx.store.put("lastPoll", 42);
           await ctx.store.put("shared", "p", "COLLECTION");
+          // The enum's value and its name must land in the same partition.
+          await ctx.store.put("named", "p", "PROJECT");
           seen.read = await ctx.store.get("lastPoll");
         },
       };
@@ -193,6 +195,7 @@ describe.skipIf(!rssBundle || !webhookBundle)(
       expect(store.snapshot()).toEqual({
         "testflow_f1/lastPoll": 42,
         testshared: "p",
+        testnamed: "p",
       });
     });
 
