@@ -35,8 +35,12 @@ changed — this document is the finding, not the fix.
   asymmetry in the opposite direction (WS *admits* anonymous where HTTP refuses); bug 3's catch
   blocks leak half-registered remotes; bug 4's stale-`?user=` hazard is live because Connect never
   consumes the param.
-- **Suggested ordering if these get fixed:** 1 (diagnostics first — it is masking the others), then
-  6 and 3 (data/availability), then 4 and 5 (the share-link flow), then 2 (needs a policy decision).
+- **Suggested ordering if these get fixed:** 1 first (cheap, and it masks every `useDispatch`
+  rejection, including the Forbidden writes the other defects produce — but note it does *not* mask
+  2-6 themselves: 2 is server-side, 3 logs through a correctly-bound `this.logger`, 4 and 5 are
+  silent by nature, 6 logs at error level). Then 6 and 3 (data / availability), then 4 and 5 (the
+  share-link flow), then 2 (which needs a policy decision first).
+- **Bugs 3 and 5 interact and should be fixed together** — see the correction in bug 3 (b)(3).
 
 ---
 
@@ -272,10 +276,18 @@ Worktree: ~/.worktrees/powerhouse/lib-bugs @ 9a3ddb34b
 1. Field names wrong: it's `category` + `statusCode` (+ `codes`), NOT `kind` + `status`.
 2. Helper already exists: isDriveAuthError(error) at errors.ts:330-345, exported from the barrel.
    classifyError (gql-req-channel.ts:878-904) is private.
-3. "No health state" overstated: ConnectionStateSnapshot.requiresAuth exists + crosses RPC
-   (sync-manager-proxy.ts). But NOTHING renders it — only occurrence in reactor-browser/design-system
-   src is the DEFAULT_SNAPSHOT stub at sync-manager-proxy.ts:59.
-4. RemoteStatus.pull is inert — persisted but only ever written as createIdleHealth()
+3. "No health state a UI could show" is WRONG — and the bug-3 agent's own correction of it was ALSO
+   wrong. ConnectionStateSnapshot.requiresAuth exists and crosses RPC (sync-manager-proxy.ts). The
+   agent concluded "nothing renders it", but it only grepped packages/. **apps/connect DOES render
+   it**: apps/connect/src/components/use-drive-auth-gate.ts:19
+   (`if (snap.state === "error" && snap.requiresAuth)`) drives the full-page DriveAuthGate at
+   apps/connect/src/pages/content.tsx:53-60, with its own test at
+   apps/connect/src/components/use-drive-auth-gate.test.ts.
+   => The "locked — sign in" affordance the report asks for ALREADY EXISTS, and no design-system work
+   is needed for it. It also means a remote left in a requiresAuth error state renders a full-page,
+   undismissable gate replacing Connect's content — which resolves bug 5's open caveat against
+   "Connect is still usable underneath". FIX 3 AND 5 TOGETHER.
+4. RemoteStatus.pull is inert (do not route the fix through it) — persisted but only ever written as createIdleHealth()
    (sync-manager.ts:351-352, :386-387). No writer in src/. Do NOT route the fix through it.
 5. The suggested `kind:"parse"` negative pin CONTRADICTS the code: classifyError treats parse as
    RECOVERABLE (gql-req-channel.ts:891-892). Use "missing-data" or a plain Error instead.
@@ -301,6 +313,9 @@ KEY CONSTRAINT: do NOT keep the remote in-memory without retry — addRemoteDriv
 sync.list() already has a remote (drive.ts:184-189) and add() throws "already exists"
 (sync-manager.ts:369-371), so kept-but-dead is strictly WORSE than dropped. Must update
 unit.test.ts:655 to split auth case (kept) from plain-Error case (removed).
+CONFIRMED after the fact: sync-manager.ts:369 checks `this.remotes.has(name)` — IN-MEMORY, not
+storage. So Option 1 (keep the storage record, still drop the in-memory remote) leaves re-add working
+after a failed init.
 No caller depends on the cleanup (reactor-api resolvers.ts:1188-1203, reactor-mcp tools/reactor.ts:554).
 
 **Option 2 (larger):** most machinery exists — calculateBackoffDelay + recoverFromChannelNotFound
@@ -422,12 +437,16 @@ click. Same for MigrationBanner, ServiceWorkerUpdatePrompt, ConnectionBanner and
 Radix DismissableLayer's onPointerDownOutside would reintroduce it identically.
 => NO outside-click dismissal.
 
-## Open caveat worth checking during the fix
+## Open caveat — NOW RESOLVED, and it is a real problem
 apps/connect/src/pages/content.tsx:53-60 renders a SECOND, full-page DriveAuthGate driven by
 useDriveAuthGate() -> computeAuthGate over useConnectionStates() (use-drive-auth-gate.ts:13-33). If a
 failed addRemoteDrive also leaves a requiresAuth connection state, that full-page gate replaces Connect's
-content entirely and is ALSO undismissable — "Connect is usable underneath" would then be false. Not
-verified live.
+content entirely and is ALSO undismissable — "Connect is usable underneath" would then be false.
+RESOLVED: use-drive-auth-gate.ts:19 fires on `snap.state === "error" && snap.requiresAuth`, and
+gql-req-channel.ts sets exactly that pair on an auth-refused channel (:458, :523, :825). So the
+full-page gate IS reachable from the same 401 that opens the modal. An onClose on DriveAuthGate does
+NOT fix the full-page instance — that one is driven by connection state and clears only when the
+connection is fixed (or by whatever bug 3 decides to do with a refused remote). Fix 3 and 5 together.
 
 ## (c) Repro harness (both run green at this HEAD)
 - design-system: vitest + happy-dom global, setupTests.js.
