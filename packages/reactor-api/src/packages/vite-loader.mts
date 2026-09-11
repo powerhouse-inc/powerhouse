@@ -23,9 +23,12 @@ export function createViteLogger(logger: ILogger, prefix = "") {
   const customLogger = createLogger("info", {
     prefix,
   });
-  customLogger.info = logger.info;
-  customLogger.warn = logger.warn;
-  customLogger.error = logger.error;
+  // Wrapped rather than assigned: the logger methods are bound to their own
+  // instance, and re-homing them onto Vite's logger object made every Vite
+  // log line throw.
+  customLogger.info = (...args) => logger.info(...args);
+  customLogger.warn = (...args) => logger.warn(...args);
+  customLogger.error = (...args) => logger.error(...args);
   return customLogger;
 }
 

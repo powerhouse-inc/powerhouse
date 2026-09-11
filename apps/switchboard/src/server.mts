@@ -883,7 +883,14 @@ async function initServer(
     });
 
     packageManagementService.setOnModelsChanged(() => {
-      graphqlManager.regenerateDocumentModelSubgraphs().catch(logger.error);
+      graphqlManager
+        .regenerateDocumentModelSubgraphs()
+        .catch((error: unknown) => {
+          logger.error(
+            "Failed to regenerate document model subgraphs: @error",
+            error,
+          );
+        });
     });
 
     const packagesSubgraph = new PackagesSubgraph({

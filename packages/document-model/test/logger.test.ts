@@ -168,3 +168,92 @@ describe("ConsoleLogger error formatting", () => {
     expect(lastDebug()).toMatch(/at .*logger\.test\.ts/);
   });
 });
+
+/**
+ * Pins the "method survives leaving its instance" contract.
+ *
+ * The log methods read the private field `#level`, so a method that is
+ * passed as a bare callback (`.catch(logger.error)`) or copied onto
+ * another object (reactor-api's `createViteLogger`, which assigns
+ * `customLogger.error = logger.error`) used to throw from inside the
+ * logger itself — losing the very error it was handed.
+ */
+describe("ConsoleLogger detached methods", () => {
+  type ConsoleName = "error" | "warn" | "info" | "debug";
+  let spies: Record<ConsoleName, MockInstance<ConsoleFn>>;
+
+  beforeEach(() => {
+    const spyOn = (name: ConsoleName) =>
+      vi
+        .spyOn(console, name)
+        .mockImplementation(() => {}) as unknown as MockInstance<ConsoleFn>;
+    spies = {
+      error: spyOn("error"),
+      warn: spyOn("warn"),
+      info: spyOn("info"),
+      debug: spyOn("debug"),
+    };
+  });
+
+  afterEach(() => {
+    for (const spy of Object.values(spies)) spy.mockRestore();
+  });
+
+  const last = (spy: MockInstance<ConsoleFn>): string => {
+    const calls = spy.mock.calls;
+    return calls[calls.length - 1]?.[0] as string;
+  };
+
+  const cases = [
+    ["verbose", "debug"],
+    ["debug", "debug"],
+    ["info", "info"],
+    ["warn", "warn"],
+    ["error", "error"],
+  ] as const;
+
+  for (const [method, consoleFn] of cases) {
+    it(`${method}() works when detached from the instance`, () => {
+      const log = new ConsoleLogger();
+      log.level = "verbose";
+
+      const detached: (message: string, ...replacements: any[]) => void =
+        log[method];
+
+      expect(() => {
+        detached("detached @which", method);
+      }).not.toThrow();
+      expect(last(spies[consoleFn])).toContain(`detached ${method}`);
+    });
+  }
+
+  it("works when re-homed onto a foreign object (createViteLogger shape)", () => {
+    const log = new ConsoleLogger();
+    const foreign: {
+      error: (message: string, ...replacements: any[]) => void;
+    } = { error: () => {} };
+
+    // Pre-fix this threw "Cannot read private member #level from an object
+    // whose class did not declare it" — a different failure from the bare
+    // callback case, but the same root cause.
+    foreign.error = log.error;
+
+    expect(() => {
+      foreign.error("rehomed @what", "boom");
+    }).not.toThrow();
+    expect(last(spies.error)).toContain("rehomed boom");
+  });
+
+  it("keeps the instance's own tags and level when detached", () => {
+    const log = new ConsoleLogger(["pkg", "mod"]);
+    log.level = "error";
+    const detached = log.error;
+    const detachedInfo = log.info;
+
+    detachedInfo("should not be emitted @x", 1);
+    expect(spies.info).not.toHaveBeenCalled();
+
+    detached("still tagged @x", 1);
+    expect(last(spies.error)).toContain("[pkg][mod] still tagged 1");
+  });
+});
