@@ -27,7 +27,10 @@ import {
 } from "../http/index.js";
 import { debounce } from "../packages/util.js";
 import type { AuthService } from "../services/auth.service.js";
-import type { IAuthorizationService } from "../services/authorization.service.js";
+import type {
+  CanonicalDocumentId,
+  IAuthorizationService,
+} from "../services/authorization.service.js";
 import type { DocumentPermissionService } from "../services/document-permission.service.js";
 import {
   buildSubgraphSchemaModule,
@@ -245,7 +248,7 @@ export class GraphQLManager {
     // request 404s.
     const driveRoutePath = path.posix.join(this.path, "d/:drive");
     const driveMatcher = match<{ drive: string }>(driveRoutePath);
-    this.httpAdapter.mount(driveRoutePath, async (request: Request) => {
+    const driveInfoHandler = async (request: Request): Promise<Response> => {
       const url = new URL(request.url);
       const matched = driveMatcher(url.pathname);
       const driveIdOrSlug = matched ? matched.params.drive : undefined;
@@ -260,6 +263,19 @@ export class GraphQLManager {
       try {
         const driveDoc =
           await this.reactorClient.get<DocumentDriveDocument>(driveIdOrSlug);
+
+        // Drive metadata is a document read, so it answers to the same
+        // authorization as every GraphQL read (`assertCanReadCanonical`).
+        // 404 rather than 403: a caller who may not read the drive must not
+        // be able to tell "protected" from "does not exist" by probing slugs.
+        const canRead = await this.authorizationService.canRead(
+          driveDoc.header.id as CanonicalDocumentId,
+          getAuthContext(request)?.user?.address,
+        );
+        if (!canRead) {
+          this.logger.debug(`Drive read refused: ${driveIdOrSlug}`);
+          return Response.json({ error: "Drive not found" }, { status: 404 });
+        }
 
         const forwardedProto = request.headers
           .get("x-forwarded-proto")
@@ -294,7 +310,23 @@ export class GraphQLManager {
         this.logger.debug(`Drive not found: ${driveIdOrSlug}`, error);
         return Response.json({ error: "Drive not found" }, { status: 404 });
       }
-    });
+    };
+
+    // Identity resolution only — deliberately not the full
+    // `#composeFetchMiddleware` chain. Drive discovery is the one read a
+    // client makes before it can authenticate anything: Connect reads
+    // `graphqlEndpoint` from here to register the sync remote, so a blanket
+    // require-auth gate would leave an anonymous caller unable to ever reach
+    // the authenticated surface. The bearer is read when present (an invalid
+    // one is still a 401 from the auth middleware) and the drive is then
+    // authorized individually, above. The drive-shard middleware is skipped
+    // too: any healthy backend can answer this route.
+    this.httpAdapter.mount(
+      driveRoutePath,
+      this.#authMiddleware
+        ? this.#authMiddleware(driveInfoHandler)
+        : driveInfoHandler,
+    );
     this.logger.info(`Registered REST endpoint: GET ${driveRoutePath}`);
 
     await this.#setupCoreSubgraphs("graphql", coreSubgraphs);
