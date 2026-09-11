@@ -186,7 +186,7 @@ describe.skipIf(!rssBundle)("TriggerSupervisor", () => {
     expect(row?.last_error).toBeNull();
   }, 60_000);
 
-  it("marks a failed onEnable as ERROR and does not schedule polls", async () => {
+  it("marks a failed onEnable as ERROR and schedules a retry", async () => {
     broken = true;
     const changed = {
       ...binding(),
@@ -196,8 +196,10 @@ describe.skipIf(!rssBundle)("TriggerSupervisor", () => {
     await supervisor.upsert(changed);
     const row = await store.getTriggerState("wf-sup-err");
     expect(row?.status).toBe("ERROR");
-    expect(row?.next_poll_at).toBeNull();
     expect(row?.last_error).toBeTruthy();
+    expect(row?.consecutive_failures).toBe(1);
+    // Backed off, not parked: the trigger comes back on its own.
+    expect(Date.parse(row!.next_poll_at!)).toBeGreaterThan(Date.now());
     broken = false;
   }, 60_000);
 
