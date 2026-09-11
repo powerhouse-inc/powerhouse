@@ -36,7 +36,10 @@ const { MercuriusGatewayAdapter } =
 const { StitchingGatewayAdapter } =
   await import("../../src/graphql/gateway/adapter-gateway-stitching.js");
 
-import type { IGatewayAdapter } from "../../src/graphql/gateway/types.js";
+import type {
+  IGatewayAdapter,
+  WsDisposer,
+} from "../../src/graphql/gateway/types.js";
 import type { Context } from "../../src/graphql/types.js";
 
 // ─── fixtures ────────────────────────────────────────────────────────────────
@@ -158,7 +161,7 @@ async function createHarness(
     },
   });
 
-  const disposers = [];
+  const disposers: WsDisposer[] = [];
   for (let i = 0; i < attachCount; i++) {
     disposers.push(
       adapter.attachWebSocket(wsServer, makeSchema(seen), handlers),
