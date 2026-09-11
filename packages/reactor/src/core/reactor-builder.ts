@@ -1000,7 +1000,8 @@ export class ReactorBuilder {
     };
 
     if (degradedComponents.length > 0) {
-      this.logger?.warn(
+      // buildModule assigns a default logger before anything here runs.
+      this.logger.warn(
         "Reactor started with @count degraded component(s): @components",
         degradedComponents.length,
         degradedComponents.map(({ component }) => component).join(", "),
