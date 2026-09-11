@@ -1,3 +1,23 @@
+## 6.2.3-dev.3 (2026-09-11)
+
+### 🚀 Features
+
+- **reactor-api:** add in-process stitching gateway adapter ([#1565](https://github.com/powerhouse-inc/powerhouse/issues/1565))
+- **reactor:** the write-cache bench splits the draft-proxy tax into read scans and push+sort ([cb32becd1](https://github.com/powerhouse-inc/powerhouse/commit/cb32becd1))
+- **reactor:** the write-cache bench separates draft-proxy scan cost from reducer body per replayed op ([caafff10f](https://github.com/powerhouse-inc/powerhouse/commit/caafff10f))
+
+### 🩹 Fixes
+
+- **reactor:** persist the cold-miss decomposition and price zod separately ([8e1722a6d](https://github.com/powerhouse-inc/powerhouse/commit/8e1722a6d))
+- **claude:** bench-loop offers the after-record a fix produced instead of counting its FIXED citation as read ([c4b4690be](https://github.com/powerhouse-inc/powerhouse/commit/c4b4690be))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5.1
+- Claude Opus 5
+- froid1911
+
 ## 6.2.3-dev.2 (2026-09-10)
 
 ### 🩹 Fixes
