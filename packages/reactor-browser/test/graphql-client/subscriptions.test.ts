@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DocumentChangeType as GqlDocumentChangeType } from "../../src/graphql/gen/schema.js";
 import { GraphQLReactorClient } from "../../src/graphql-client/graphql-reactor-client.js";
 import {
+  isAuthRefusalClose,
   makeAuthConnectionParams,
   startDocumentChangesSubscription,
   subscriptionsUrlFromGraphqlUrl,
@@ -29,6 +30,7 @@ const ws = vi.hoisted(() => {
   type Options = {
     url: string;
     connectionParams?: () => Promise<Record<string, string>>;
+    shouldRetry?: (errOrCloseEvent: unknown) => boolean;
   };
   type Socket = {
     options: Options;
@@ -114,6 +116,20 @@ function pushEvent(payload: DocumentChangesEventPayload): void {
     data: { documentChanges: payload },
   });
 }
+
+/**
+ * The close event graphql-ws forwards, built the way the browser builds it.
+ *
+ * `shouldRetry` and `sink.error` both receive this object, so a hand-rolled
+ * literal would not prove the client reads what it will actually be handed.
+ */
+function closeEvent(code: number, reason: string): CloseEvent {
+  return new CloseEvent("close", { code, reason, wasClean: false });
+}
+
+/** The reasons `reactor-api` closes an auth refusal 4403 with. */
+const authenticationRequired = "authentication-required";
+const bearerRejected = "bearer-rejected";
 
 beforeEach(() => {
   ws.reset();
@@ -232,6 +248,47 @@ describe("startDocumentChangesSubscription", () => {
     ws.only().subscriptions[0].sink.error(failure);
 
     expect(onError).toHaveBeenCalledExactlyOnceWith(failure);
+  });
+
+  it("declines to retry a close the server refused credentials with", () => {
+    startDocumentChangesSubscription({
+      wsUrl,
+      onEvent: vi.fn(),
+      onError: vi.fn(),
+    });
+    const { shouldRetry } = ws.only().options;
+
+    // No number of retries changes a refusal; only a credential change does.
+    expect(shouldRetry?.(closeEvent(4403, authenticationRequired))).toBe(false);
+    expect(shouldRetry?.(closeEvent(4403, bearerRejected))).toBe(false);
+  });
+
+  it("retries an ordinary close, as graphql-ws does by default", () => {
+    startDocumentChangesSubscription({
+      wsUrl,
+      onEvent: vi.fn(),
+      onError: vi.fn(),
+    });
+    const { shouldRetry } = ws.only().options;
+
+    // Abnormal closure, a server restart, and a 4403 from a server that sends
+    // no reason of its own: all transient, all still worth five attempts.
+    expect(shouldRetry?.(closeEvent(1006, ""))).toBe(true);
+    expect(shouldRetry?.(closeEvent(1012, "Service Restart"))).toBe(true);
+    expect(shouldRetry?.(closeEvent(4403, "Forbidden"))).toBe(true);
+  });
+
+  it("gives up on a connection problem that is not a close event", () => {
+    startDocumentChangesSubscription({
+      wsUrl,
+      onEvent: vi.fn(),
+      onError: vi.fn(),
+    });
+    const { shouldRetry } = ws.only().options;
+
+    // graphql-ws's default is `isLikeCloseEvent`, and this must not widen it.
+    expect(shouldRetry?.(new Error("boom"))).toBe(false);
+    expect(shouldRetry?.(undefined)).toBe(false);
   });
 
   it("unsubscribes and closes the socket when stopped", () => {
@@ -416,6 +473,91 @@ describe("GraphQLReactorClient realtime", () => {
     expect(ws.sockets[1].disposed).toBe(false);
   });
 
+  it("reopens a credential-refused socket when the credentials change", () => {
+    // The discriminator. graphql-ws declines to retry a refusal, so realtime
+    // is dead the moment the server refuses it - and nothing calls
+    // `startRealtime` again until some unrelated component subscribes. Signing
+    // in would otherwise leave the feed off for the life of the page.
+    vi.spyOn(logger, "warn").mockImplementation(() => undefined);
+    const client = new GraphQLReactorClient({ url });
+    const callback = vi.fn<(event: DocumentChangeEvent) => void>();
+    client.subscribe({}, callback);
+    const refused = ws.only();
+
+    refused.subscriptions[0].sink.error(
+      closeEvent(4403, authenticationRequired),
+    );
+    expect(refused.disposed).toBe(true);
+
+    client.notifyCredentialsChanged();
+
+    expect(ws.sockets).toHaveLength(2);
+    expect(ws.sockets[1].disposed).toBe(false);
+    ws.sockets[1].subscriptions[0].sink.next({
+      data: { documentChanges: updatedPayload("doc-1") },
+    });
+    expect(callback).toHaveBeenCalledTimes(1);
+  });
+
+  it("reopens after a rejected bearer too, not only a missing one", () => {
+    vi.spyOn(logger, "warn").mockImplementation(() => undefined);
+    const client = new GraphQLReactorClient({ url });
+    client.subscribe({}, vi.fn());
+
+    ws.only().subscriptions[0].sink.error(closeEvent(4403, bearerRejected));
+    client.notifyCredentialsChanged();
+
+    expect(ws.sockets).toHaveLength(2);
+  });
+
+  it("leaves a socket that died for any other reason alone", () => {
+    // Regression guard: a network failure is not undone by a new token, and a
+    // credential change must not turn into a reconnect loop over one.
+    vi.spyOn(logger, "warn").mockImplementation(() => undefined);
+    const client = new GraphQLReactorClient({ url });
+    client.subscribe({}, vi.fn());
+
+    ws.only().subscriptions[0].sink.error(new Error("connection refused"));
+    client.notifyCredentialsChanged();
+
+    expect(ws.sockets).toHaveLength(1);
+    // The socket was still torn down, so a later subscriber still retries.
+    client.subscribe({}, vi.fn());
+    expect(ws.sockets).toHaveLength(2);
+  });
+
+  it("does nothing on a credential change while realtime is healthy", () => {
+    const client = new GraphQLReactorClient({ url });
+    client.subscribe({}, vi.fn());
+
+    client.notifyCredentialsChanged();
+
+    // A live socket resolves `connectionParams` on its own next reconnect.
+    expect(ws.sockets).toHaveLength(1);
+    expect(ws.only().disposed).toBe(false);
+  });
+
+  it("does not reopen a refused socket that was then disposed", () => {
+    vi.spyOn(logger, "warn").mockImplementation(() => undefined);
+    const client = new GraphQLReactorClient({ url });
+    client.subscribe({}, vi.fn());
+    ws.only().subscriptions[0].sink.error(
+      closeEvent(4403, authenticationRequired),
+    );
+
+    client.dispose();
+    client.notifyCredentialsChanged();
+
+    expect(ws.sockets).toHaveLength(1);
+  });
+
+  it("is safe to report a credential change with nobody subscribed", () => {
+    const client = new GraphQLReactorClient({ url });
+
+    expect(() => client.notifyCredentialsChanged()).not.toThrow();
+    expect(ws.sockets).toHaveLength(0);
+  });
+
   it("closes the socket when disposed", () => {
     const client = new GraphQLReactorClient({ url });
     client.subscribe({}, vi.fn());
@@ -464,5 +606,21 @@ describe("GraphQLReactorClient realtime", () => {
 
     expect(() => client.dispose()).not.toThrow();
     expect(ws.sockets).toHaveLength(0);
+  });
+});
+
+describe("isAuthRefusalClose", () => {
+  it("recognises both reasons the Switchboard refuses with", () => {
+    expect(isAuthRefusalClose(closeEvent(4403, authenticationRequired))).toBe(
+      true,
+    );
+    expect(isAuthRefusalClose(closeEvent(4403, bearerRejected))).toBe(true);
+  });
+
+  it("does not claim an ordinary close or a plain error", () => {
+    expect(isAuthRefusalClose(closeEvent(1006, ""))).toBe(false);
+    expect(isAuthRefusalClose(closeEvent(4403, "Forbidden"))).toBe(false);
+    expect(isAuthRefusalClose(new Error("connection refused"))).toBe(false);
+    expect(isAuthRefusalClose(undefined)).toBe(false);
   });
 });

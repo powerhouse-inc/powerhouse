@@ -63,6 +63,18 @@ let inFlightSignIn: Promise<User | undefined> | undefined;
 let inFlightAddress: string | undefined;
 let lastSignedAddress: string | undefined;
 
+// The realtime socket stops retrying an auth refusal, because retrying the same
+// credential cannot change the answer. Only a credential change can, so tell the
+// client when one happens. Read off the ambient client rather than imported, so
+// renown never pulls the graphql-client module graph in, and so a client without
+// the method (the non-GraphQL browser client) is a no-op.
+function notifyReactorClientCredentialsChanged(): void {
+  const client = window.ph?.reactorClient as
+    | { notifyCredentialsChanged?: () => void }
+    | undefined;
+  client?.notifyCredentialsChanged?.();
+}
+
 export async function completeSignIn(
   session: WalletSession,
 ): Promise<User | undefined> {
@@ -74,7 +86,10 @@ export async function completeSignIn(
   inFlightSignIn = (async () => {
     try {
       const user = await signIn(session);
-      if (user) lastSignedAddress = address;
+      if (user) {
+        lastSignedAddress = address;
+        notifyReactorClientCredentialsChanged();
+      }
       return user;
     } finally {
       inFlightSignIn = undefined;
@@ -139,7 +154,9 @@ export async function login(
       return;
     }
 
-    return await renown.login(did);
+    const loggedIn = await renown.login(did);
+    notifyReactorClientCredentialsChanged();
+    return loggedIn;
   } catch (error) {
     logger.error(
       error instanceof Error ? error.message : JSON.stringify(error),
@@ -162,6 +179,7 @@ export async function logout() {
   const renown = window.ph?.renown;
   await renown?.logout();
   resetSignInGuard();
+  notifyReactorClientCredentialsChanged();
 
   // Clear the user parameter from URL to prevent auto-login on refresh
   const url = new URL(window.location.href);

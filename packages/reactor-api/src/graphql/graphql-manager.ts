@@ -46,16 +46,18 @@ import {
 } from "./gateway/drive-middleware.js";
 import { DriveOwnershipCache } from "./gateway/drive-ownership-cache.js";
 import type { RequireAuthFetchMiddleware } from "./gateway/require-auth-middleware.js";
-import type {
-  FetchHandler,
-  GatewayContextFactory,
-  IGatewayAdapter,
-  IHttpAdapter,
-  AdapterRouteHandle,
-  SubgraphDefinition,
-  WsConnection,
-  WsDisposer,
-  WsHandlers,
+import {
+  WS_CLOSE_REASON_AUTHENTICATION_REQUIRED,
+  WS_CLOSE_REASON_BEARER_REJECTED,
+  type FetchHandler,
+  type GatewayContextFactory,
+  type IGatewayAdapter,
+  type IHttpAdapter,
+  type AdapterRouteHandle,
+  type SubgraphDefinition,
+  type WsConnection,
+  type WsDisposer,
+  type WsHandlers,
 } from "./gateway/types.js";
 import { createGraphQLSSEHandler } from "./sse.js";
 
@@ -121,6 +123,21 @@ export type GraphqlManagerFeatureFlags = {
  */
 const DOCUMENT_MODEL_SUBGRAPH_SOURCE = "document-models";
 
+// Returning `false` closes 4403 with the reason `Forbidden`, so every refusal
+// looks alike and a client cannot tell "sign in" from "that token is no good".
+
+// An explicit close wins over the one graphql-ws would send, and carries a
+// reason. Under `graphql-ws/use/ws` the connection is `ctx.extra`, whose
+// `socket` is the `ws` WebSocket; narrowed here so the adapters keep passing a
+// plain object through.
+function refuseConnection(connection: WsConnection, reason: string): false {
+  const { socket } = connection as {
+    socket?: { close?: (code: number, reason: string) => void };
+  };
+  socket?.close?.(4403, reason);
+  return false;
+}
+
 // The two halves of WebSocket auth: who is connected, and whether at all.
 
 // graphql-ws calls `context` per operation and `onConnect` once per connection.
@@ -164,7 +181,7 @@ export function createWsAuthHandlers(opts: {
             "Refusing WebSocket connection: @error",
             error instanceof Error ? error.message : error,
           );
-          return false;
+          return refuseConnection(connection, WS_CLOSE_REASON_BEARER_REJECTED);
         }
       }
 
@@ -172,7 +189,10 @@ export function createWsAuthHandlers(opts: {
         opts.logger.warn(
           "Refusing anonymous WebSocket connection: an authenticated caller is required",
         );
-        return false;
+        return refuseConnection(
+          connection,
+          WS_CLOSE_REASON_AUTHENTICATION_REQUIRED,
+        );
       }
 
       resolved.set(connection, user ?? undefined);

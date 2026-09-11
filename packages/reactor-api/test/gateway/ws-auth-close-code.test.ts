@@ -29,6 +29,10 @@ const { createClient } = await import("graphql-ws");
 const { AuthService } = await import("../../src/services/auth.service.js");
 const { createWsAuthHandlers } =
   await import("../../src/graphql/graphql-manager.js");
+const {
+  WS_CLOSE_REASON_AUTHENTICATION_REQUIRED,
+  WS_CLOSE_REASON_BEARER_REJECTED,
+} = await import("../../src/graphql/gateway/types.js");
 const { ApolloGatewayAdapter } =
   await import("../../src/graphql/gateway/adapter-gateway-apollo.js");
 const { MercuriusGatewayAdapter } =
@@ -188,8 +192,10 @@ async function createHarness(
   };
 }
 
+// The reason is asserted, not only the code: it is what tells a client which
+// refusal it met, and therefore whether retrying alone could ever help.
 type Outcome =
-  | { kind: "closed"; code: number }
+  | { kind: "closed"; code: number; reason: string }
   | { kind: "next" }
   | { kind: "timeout" };
 
@@ -220,10 +226,14 @@ async function subscribeOnce(
           // Servers sharing a socket duplicate payloads; counting pins nothing.
           next: () => settle({ kind: "next" }),
           error: (err: unknown) => {
-            const code = (err as { code?: number } | null)?.code;
+            const close = err as { code?: number; reason?: string } | null;
             settle(
-              typeof code === "number"
-                ? { kind: "closed", code }
+              typeof close?.code === "number"
+                ? {
+                    kind: "closed",
+                    code: close.code,
+                    reason: close.reason ?? "",
+                  }
                 : { kind: "timeout" },
             );
           },
@@ -270,7 +280,11 @@ describe.each(["apollo", "mercurius", "stitching"] as const)(
 
       const outcome = await subscribeOnce(harness, {});
 
-      expect(outcome).toEqual({ kind: "closed", code: 4403 });
+      expect(outcome).toEqual({
+        kind: "closed",
+        code: 4403,
+        reason: WS_CLOSE_REASON_AUTHENTICATION_REQUIRED,
+      });
       expect(harness.seen).toHaveLength(0);
       // A throw would close 4500 and log; a missing token is no server error.
       expect(consoleError).not.toHaveBeenCalled();
@@ -302,7 +316,11 @@ describe.each(["apollo", "mercurius", "stitching"] as const)(
 
       const outcome = await subscribeOnce(harness, {});
 
-      expect(outcome).toEqual({ kind: "closed", code: 4403 });
+      expect(outcome).toEqual({
+        kind: "closed",
+        code: 4403,
+        reason: WS_CLOSE_REASON_AUTHENTICATION_REQUIRED,
+      });
       expect(harness.seen).toHaveLength(0);
     });
 
@@ -339,7 +357,11 @@ describe.each(["apollo", "mercurius", "stitching"] as const)(
       // Refused whatever REQUIRE_AUTHENTICATED_CALLER says, as HTTP 401s it.
 
       // Retryable, so a client can reconnect with a fresh token.
-      expect(outcome).toEqual({ kind: "closed", code: 4403 });
+      expect(outcome).toEqual({
+        kind: "closed",
+        code: 4403,
+        reason: WS_CLOSE_REASON_BEARER_REJECTED,
+      });
       expect(consoleError).not.toHaveBeenCalled();
       expect(harness.logger.error).not.toHaveBeenCalled();
       expect(harness.logger.warn).toHaveBeenCalled();
@@ -355,8 +377,68 @@ describe.each(["apollo", "mercurius", "stitching"] as const)(
 
       const outcome = await subscribeOnce(harness, {});
 
-      expect(outcome).toEqual({ kind: "closed", code: 4403 });
+      expect(outcome).toEqual({
+        kind: "closed",
+        code: 4403,
+        reason: WS_CLOSE_REASON_AUTHENTICATION_REQUIRED,
+      });
       expect(harness.seen).toHaveLength(0);
+    });
+
+    it("gives the two refusals different reasons on the same 4403", async () => {
+      // Returning `false` closes every refusal `4403 Forbidden`, so a client
+      // with a corrupt token and one that merely needs to sign in saw the same
+      // thing, and only the server log told them apart.
+      const requireAuth = await createHarness(adapterName, {
+        enabled: true,
+        requireAuthenticatedCaller: true,
+      });
+      let anonymous: Outcome;
+      try {
+        anonymous = await subscribeOnce(requireAuth, {});
+      } finally {
+        await requireAuth.close();
+      }
+
+      mockVerifyAuthBearerToken.mockResolvedValue(false);
+      harness = await createHarness(adapterName, {
+        enabled: true,
+        requireAuthenticatedCaller: false,
+      });
+      const badBearer = await subscribeOnce(harness, {
+        authorization: "Bearer bad-token",
+      });
+
+      expect(anonymous).toEqual({
+        kind: "closed",
+        code: 4403,
+        reason: WS_CLOSE_REASON_AUTHENTICATION_REQUIRED,
+      });
+      expect(badBearer).toEqual({
+        kind: "closed",
+        code: 4403,
+        reason: WS_CLOSE_REASON_BEARER_REJECTED,
+      });
+      expect(WS_CLOSE_REASON_AUTHENTICATION_REQUIRED).not.toBe(
+        WS_CLOSE_REASON_BEARER_REJECTED,
+      );
     });
   },
 );
+
+describe("the 4403 close reasons", () => {
+  it("fit the 123-byte cap a close reason is allowed", () => {
+    for (const reason of [
+      WS_CLOSE_REASON_AUTHENTICATION_REQUIRED,
+      WS_CLOSE_REASON_BEARER_REJECTED,
+    ]) {
+      expect(new TextEncoder().encode(reason).length).toBeLessThanOrEqual(123);
+    }
+  });
+
+  // graphql-ws sends `Forbidden` itself; a reason equal to it says nothing.
+  it("are distinct from the reason graphql-ws would have sent", () => {
+    expect(WS_CLOSE_REASON_AUTHENTICATION_REQUIRED).not.toBe("Forbidden");
+    expect(WS_CLOSE_REASON_BEARER_REJECTED).not.toBe("Forbidden");
+  });
+});

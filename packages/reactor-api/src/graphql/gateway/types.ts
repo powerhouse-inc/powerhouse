@@ -38,6 +38,30 @@ export type WsHandlers<TContext = unknown> = {
   context: WsContextFactory<TContext>;
 };
 
+// Why a WebSocket handshake was refused, carried as the reason on a 4403 close.
+
+// A wire contract. A client reads these to tell an auth refusal -- which no
+// number of retries clears, only a credential change -- from a transient close.
+
+// Both stay 4403: graphql-ws keeps that code retryable, and a reconnect
+// re-evaluates `connectionParams`, so a socket refused before a sign-in does
+// succeed after one. 4401 would kill it before a fresh token could be offered.
+
+// Keep the values stable. A close reason caps at 123 UTF-8 bytes.
+
+/** No authenticated caller resolved, and REQUIRE_AUTHENTICATED_CALLER wants one. */
+export const WS_CLOSE_REASON_AUTHENTICATION_REQUIRED =
+  "authentication-required";
+
+/** A bearer was sent and could not be verified. */
+export const WS_CLOSE_REASON_BEARER_REJECTED = "bearer-rejected";
+
+/** Every reason a refusal closes with, for a client matching on the set. */
+export const WS_AUTH_CLOSE_REASONS = [
+  WS_CLOSE_REASON_AUTHENTICATION_REQUIRED,
+  WS_CLOSE_REASON_BEARER_REJECTED,
+] as const;
+
 export type WsDisposer = { dispose: () => void | Promise<void> };
 
 // A Fetch API handler - framework agnostic
