@@ -52,6 +52,9 @@ export interface BlockResult {
   output: unknown;
   // Output port routing the step's outgoing edges; defaults to "next".
   port?: string;
+  // Secret values this step ran with. The live output keeps them, so the next
+  // step still works; only the journaled copy has them replaced.
+  redactValues?: string[];
 }
 
 export interface BlockExecutor {

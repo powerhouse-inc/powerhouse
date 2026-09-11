@@ -18,7 +18,17 @@ import {
   type StagedInput,
 } from "../activepieces/worker/protocol.js";
 import type { StoreScopeName } from "../activepieces/context/store-scope.js";
-import type { EngineConnectionResolver } from "./connections.js";
+import {
+  collectSecretValues,
+  redactError,
+  redactMessage,
+  rememberSecrets,
+} from "../activepieces/worker/redact.js";
+import type {
+  ConnectionRequest,
+  EngineConnectionResolver,
+  ResolvedConnection,
+} from "./connections.js";
 import type { BlockExecution, BlockExecutor, BlockResult } from "./types.js";
 
 export class UnknownBlockTypeError extends Error {
@@ -251,18 +261,41 @@ export interface ActivepiecesBlockExecutorOptions {
 function stepTaps(
   options: ActivepiecesBlockExecutorOptions,
   execution: BlockExecution,
+  values: string[],
 ): HostNotifyHandlers | undefined {
   const { onPieceLog, onPartialOutput } = options;
   if (!onPieceLog && !onPartialOutput) return undefined;
   const handlers: HostNotifyHandlers = {};
   if (onPieceLog) {
-    handlers[LOG_WRITE] = (payload) =>
-      onPieceLog(payload as PieceLogEntry, execution);
+    // A piece logging its own outgoing request is a common idiom, so this is
+    // one of the likeliest places for a credential to reach the host log.
+    handlers[LOG_WRITE] = (payload) => {
+      const entry = payload as PieceLogEntry;
+      // Returned, not discarded: a sink that rejects is the host's to catch.
+      return onPieceLog(
+        { ...entry, message: redactMessage(entry.message, { values }) },
+        execution,
+      );
+    };
   }
   if (onPartialOutput) {
     handlers[OUTPUT_UPDATE] = (payload) => onPartialOutput(payload, execution);
   }
   return handlers;
+}
+
+// Mutated in place rather than rewrapped: callers classify on the error's
+// class, and a new one would lose that.
+
+// `stack` embeds the message as it was at construction, so a caller logging
+// the error object rather than `.message` would otherwise still print it.
+function redactThrown(error: unknown, values: string[]): unknown {
+  if (error instanceof Error) {
+    error.message = redactMessage(error.message, { values });
+    if (error.stack) error.stack = redactMessage(error.stack, { values });
+    return rememberSecrets(error, values);
+  }
+  return rememberSecrets(redactError(error, { values }), values);
 }
 
 export type BlockKind = "action" | "trigger";
@@ -324,37 +357,37 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
       throw new TriggerBlockAsStepError(execution.blockType);
     }
 
-    const bundle = await ensurePieceBundle({
-      name: parsed.packageName,
-      version: parsed.version,
-      cacheDir: this.options.cacheDir,
-    });
-    const auth = execution.connectionId
-      ? await this.options.connections?.resolve(execution.connectionId, {
-          blockType: execution.blockType,
-          piecePackage: parsed.packageName,
-          stepId: execution.step.id,
-          stepKey: execution.step.key,
-        })
-      : undefined;
-
-    const timeoutMs = execution.step.timeoutSeconds
-      ? execution.step.timeoutSeconds * 1000
-      : this.options.defaultTimeoutMs;
-
     // One staging directory per execution, removed in the finally below. A
     // host crash can still leave one behind, which is why it lives under a
     // root the host can sweep at startup.
     const stagingDir = this.options.stagingRoot
       ? path.join(this.options.stagingRoot, randomUUID())
       : undefined;
+
+    // Bundle fetch and connection resolution belong inside the catch: a secret
+    // provider or a resolver can fail with the credential in its own message.
+    let redactValues: string[] = [];
     try {
-      const stagedInputs = await this.stageInputs(
-        execution.config,
-        stagingDir,
-      );
+      const bundle = await ensurePieceBundle({
+        name: parsed.packageName,
+        version: parsed.version,
+        cacheDir: this.options.cacheDir,
+      });
+      const connection = await this.resolveConnection(execution.connectionId, {
+        blockType: execution.blockType,
+        piecePackage: parsed.packageName,
+        stepId: execution.step.id,
+        stepKey: execution.step.key,
+      });
+      const auth = connection?.auth;
+      redactValues = connection?.secretValues ?? [];
+
+      const timeoutMs = execution.step.timeoutSeconds
+        ? execution.step.timeoutSeconds * 1000
+        : this.options.defaultTimeoutMs;
+      const stagedInputs = await this.stageInputs(execution.config, stagingDir);
       const pieceStore = this.options.pieceStore;
-      const notifications = stepTaps(this.options, execution);
+      const notifications = stepTaps(this.options, execution, redactValues);
       const egress =
         this.options.egress === undefined
           ? DEFAULT_EGRESS_POLICY
@@ -365,6 +398,7 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
           actionName: parsed.name,
           propsValue: execution.config as Record<string, unknown>,
           auth,
+          ...(redactValues.length > 0 ? { redactValues } : {}),
           ...(stagingDir ? { stagingDir } : {}),
           ...(stagedInputs ? { stagedInputs } : {}),
           ...(pieceStore ? { durableStore: true } : {}),
@@ -378,10 +412,32 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
           ...(notifications ? { notifications } : {}),
         },
       );
-      return { output: await this.ingestFiles(result.output, result.files) };
+      return {
+        output: await this.ingestFiles(result.output, result.files),
+        redactValues,
+      };
+    } catch (error) {
+      // The child already stripped what it threw; this covers what the host
+      // itself raises (bundle fetch, connection resolution, file ingest).
+      throw redactThrown(error, redactValues);
     } finally {
       if (stagingDir) await rm(stagingDir, { recursive: true, force: true });
     }
+  }
+
+  private async resolveConnection(
+    connectionId: string | null | undefined,
+    request: ConnectionRequest,
+  ): Promise<ResolvedConnection | undefined> {
+    const connections = this.options.connections;
+    if (!connectionId || !connections) return undefined;
+    // The request travels with both, so taking the secret-bearing path never
+    // means skipping the check on who is asking.
+    if (connections.resolveWithSecrets) {
+      return connections.resolveWithSecrets(connectionId, request);
+    }
+    const auth = await connections.resolve(connectionId, request);
+    return { auth, secretValues: [...collectSecretValues(auth)] };
   }
 
   private async stageInputs(

@@ -6,6 +6,7 @@ import {
   extractDedupeKey,
   PieceWorker,
   PieceWorkerError,
+  secretsFor,
   type ConnectionRequest,
   type ConnectorDescriptor,
   type EgressPolicy,
@@ -397,6 +398,9 @@ export class TriggerSupervisor {
       blockType: binding.blockType,
       piecePackage: binding.packageName,
     });
+    // Redacted in the child, so a hook's error crosses back without the
+    // credential the connection resolved to.
+    const redactValues = secretsFor(auth);
     return this.worker.runTriggerHook(
       {
         bundleDir: bundle.dir,
@@ -404,6 +408,7 @@ export class TriggerSupervisor {
         hook,
         propsValue: binding.config,
         auth,
+        ...(redactValues.length > 0 ? { redactValues } : {}),
         storeState,
         identity: { flowId: binding.workflowId },
         isRepublish: options.isRepublish,

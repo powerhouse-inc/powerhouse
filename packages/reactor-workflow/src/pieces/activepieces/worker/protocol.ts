@@ -62,6 +62,9 @@ export interface RunActionRequest extends EgressScopedRequest {
   liveOutput?: boolean;
   executionType?: "BEGIN" | "RESUME";
   identity?: ActionContextIdentity;
+  // Concrete secret values resolved for this step, so the child can strip them
+  // from an error before it crosses back; they already travel inside `auth`.
+  redactValues?: string[];
 }
 
 export interface RunMessage {
@@ -104,6 +107,8 @@ export interface TriggerHookRequest extends EgressScopedRequest {
   payload?: unknown;
   webhookUrl?: string;
   server?: ServerInfo;
+  // As on a run request: secrets stripped from errors before they cross back.
+  redactValues?: string[];
 }
 
 export interface TriggerHookMessage {

@@ -1,4 +1,10 @@
 import {
+  containsRedactedMarker,
+  redact,
+  redactMessage,
+  secretsFor,
+} from "../activepieces/worker/redact.js";
+import {
   evaluateCondition,
   resolveExpressions,
   type ExpressionScope,
@@ -31,6 +37,12 @@ export interface RunWorkflowOptions {
 function errorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
   return String(error);
+}
+
+// A record is journal material, read back by the editor and kept in the
+// database, so it never carries the live value a downstream step reads.
+function journaled(value: unknown, values: string[] | undefined): unknown {
+  return value === undefined ? undefined : redact(value, { values });
 }
 
 // Sequential v1 of the RunCoordinator (doc 08 §7.3): walks the steps+edges
@@ -97,9 +109,29 @@ export async function runWorkflow(
     decideOutgoing(step.id, undefined);
   };
 
+  // The journal keeps a redacted copy, so a replay would hand the marker to
+  // the next step. Refusing is loud; replaying it would be silently wrong.
+  const refuseReplay = (step: WorkflowStepDef) => {
+    const error =
+      `Journaled output of step "${step.key}" was redacted and cannot be ` +
+      "replayed; fire the workflow again instead of rerunning it";
+    records.set(step.id, {
+      stepId: step.id,
+      key: step.key,
+      blockType: step.blockType,
+      status: "FAILED",
+      error,
+    });
+    runFailed = error;
+  };
+
   const executeStep = async (step: WorkflowStepDef) => {
     const replay = options.completedSteps?.get(step.id);
     if (replay) {
+      if (containsRedactedMarker(replay.output)) {
+        refuseReplay(step);
+        return;
+      }
       const port = replay.port ?? "next";
       const record: StepExecutionRecord = {
         stepId: step.id,
@@ -129,8 +161,8 @@ export async function runWorkflow(
         key: step.key,
         blockType: step.blockType,
         status: "SUCCEEDED",
-        input,
-        output: result.output,
+        input: journaled(input, result.redactValues),
+        output: journaled(result.output, result.redactValues),
         port,
       };
       records.set(step.id, record);
@@ -138,13 +170,17 @@ export async function runWorkflow(
       scope.steps[step.key] = { output: result.output };
       decideOutgoing(step.id, port);
     } catch (error) {
+      // A failed step is exactly where an input gets inspected, so it is
+      // redacted with the same secrets the successful path uses.
+      const values = secretsFor(error);
+      const detail = redactMessage(errorMessage(error), { values });
       const record: StepExecutionRecord = {
         stepId: step.id,
         key: step.key,
         blockType: step.blockType,
         status: "FAILED",
-        input,
-        error: errorMessage(error),
+        input: journaled(input, values),
+        error: detail,
       };
       records.set(step.id, record);
       await journal(record);
@@ -153,7 +189,7 @@ export async function runWorkflow(
         (edge) => edge.from === step.id && edgeDecisions.get(edge.id),
       );
       if (!errorHandled) {
-        runFailed = `Step "${step.key}" failed: ${errorMessage(error)}`;
+        runFailed = `Step "${step.key}" failed: ${detail}`;
       }
     }
   };
@@ -167,6 +203,9 @@ export async function runWorkflow(
       if (isEntryStep(step)) {
         await executeStep(step);
         progressed = true;
+        // Independent roots are otherwise free to run their side effects
+        // before the outer loop notices the run is already over.
+        if (runFailed) break;
         continue;
       }
       if (inbound.length === 0) continue;

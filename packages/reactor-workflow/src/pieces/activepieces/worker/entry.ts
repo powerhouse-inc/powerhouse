@@ -10,6 +10,7 @@ import { RemoteKeyValueStore } from "../context/remote-store.js";
 import { RemoteOutput } from "../context/remote-output.js";
 import { captureConsole } from "./logs.js";
 import { jsonSafe } from "./json-safe.js";
+import { redactError, redactMessage } from "./redact.js";
 import { readFile } from "node:fs/promises";
 import { buildCheckConnectionContext } from "../context/check.js";
 import {
@@ -70,7 +71,17 @@ function loadCached(bundleDir: string): Promise<LoadedPiece> {
   return loading;
 }
 
-function serializeError(error: unknown): SerializedPieceError {
+// The secret values this request carried, if any. Redacting here rather than
+// on the host means the host process never holds them in an error object.
+function redactValuesOf(message: WorkerRequestMessage): string[] {
+  const request = message.request as { redactValues?: string[] };
+  return request.redactValues ?? [];
+}
+
+function serializeError(
+  error: unknown,
+  values: string[] = [],
+): SerializedPieceError {
   const properties: Record<string, unknown> = {};
   if (typeof error === "object" && error !== null) {
     for (const key of Object.keys(error)) {
@@ -81,12 +92,15 @@ function serializeError(error: unknown): SerializedPieceError {
     name:
       (typeof error === "object" && error !== null && error.constructor.name) ||
       "Error",
-    message: String(
-      typeof error === "object" && error !== null && "message" in error
-        ? (error as { message: unknown }).message
-        : error,
+    message: redactMessage(
+      String(
+        typeof error === "object" && error !== null && "message" in error
+          ? (error as { message: unknown }).message
+          : error,
+      ),
+      { values },
     ),
-    properties,
+    properties: redactError(properties, { values }) as Record<string, unknown>,
     unsupportedMember:
       error instanceof UnsupportedContextMemberError ? error.member : undefined,
   };
@@ -354,7 +368,7 @@ process.on("message", (message: unknown) => {
       (error: unknown): WorkerResponse => ({
         id: message.id,
         type: "error",
-        error: serializeError(error),
+        error: serializeError(error, redactValuesOf(message)),
         tlsPoisoned: consumeTlsFlag(),
       }),
     )

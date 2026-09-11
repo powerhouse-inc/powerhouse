@@ -12,4 +12,5 @@ export * from "./context/store-scope.js";
 export * from "./context/trigger.js";
 export * from "./worker/protocol.js";
 export * from "./worker/egress.js";
+export * from "./worker/redact.js";
 export * from "./worker/host.js";

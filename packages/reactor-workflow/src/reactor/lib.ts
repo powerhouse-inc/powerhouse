@@ -4,13 +4,14 @@ import {
   ActivepiecesBlockExecutor,
   BoundConnectionResolver,
   CompositeBlockExecutor,
-  shapeAuthValue,
+  shapeConnection,
   type BlockExecutor,
   type ConnectionAuthType,
   type ConnectionRequest,
   type EngineConnectionResolver,
   type AttachmentPort,
   type PieceStorePort,
+  type ResolvedConnection,
   type SecretProvider,
   type WorkflowDefinition,
 } from "@powerhousedao/reactor-connectors";
@@ -75,9 +76,18 @@ export class DocumentConnectionResolver implements EngineConnectionResolver {
     connectionId: string,
     request?: ConnectionRequest,
   ): Promise<unknown> {
+    return (await this.resolveWithSecrets(connectionId, request)).auth;
+  }
+
+  // The secret half is what journal redaction matches on, so it is resolved
+  // here rather than guessed from the shaped auth value.
+  async resolveWithSecrets(
+    connectionId: string,
+    request?: ConnectionRequest,
+  ): Promise<ResolvedConnection> {
     const document =
       await this.subgraph.reactorClient.get<ConnectionDocument>(connectionId);
-    return resolveConnectionAuth(document, this.secrets, request);
+    return resolveConnectionWithSecrets(document, this.secrets, request);
   }
 }
 
@@ -88,6 +98,17 @@ export async function resolveConnectionAuth(
   secrets: SecretProvider,
   request?: ConnectionRequest,
 ): Promise<unknown> {
+  return (await resolveConnectionWithSecrets(document, secrets, request)).auth;
+}
+
+// The same resolution, with the concrete secret strings the journal redacts
+// on. It runs every check above it: getting the secrets is not a way around
+// the question of who is asking.
+export async function resolveConnectionWithSecrets(
+  document: ConnectionDocument,
+  secrets: SecretProvider,
+  request?: ConnectionRequest,
+): Promise<ResolvedConnection> {
   // Nothing before the connector check describes what was found: a document
   // of the wrong type answers exactly as a foreign connection does.
   if (document.header.documentType !== "powerhouse/connection") {
@@ -100,7 +121,7 @@ export async function resolveConnectionAuth(
   if (state.status === "REVOKED") {
     throw new Error(`Connection "${state.name || document.header.id}" is revoked`);
   }
-  return shapeAuthValue(
+  return shapeConnection(
     {
       authType: state.authType as ConnectionAuthType,
       config: (state.config ?? {}) as Record<string, unknown>,

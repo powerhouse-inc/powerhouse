@@ -7,9 +7,11 @@ import type { IRelationalDb } from "@powerhousedao/reactor-browser";
 export interface NamespaceFactory {
   createNamespace(namespace: string): Promise<unknown>;
 }
-import type {
-  StepExecutionRecord,
-  WorkflowRunResult,
+import {
+  redact,
+  redactMessage,
+  type StepExecutionRecord,
+  type WorkflowRunResult,
 } from "@powerhousedao/reactor-connectors";
 import { childLogger } from "document-model";
 import { randomUUID } from "node:crypto";
@@ -252,6 +254,12 @@ function assertPieceStoreEntry(key: string, value: unknown): void {
 
 // Every column of a step_execution row but its surrogate id, shared by the
 // per-step write and the closing sweep so the two cannot drift.
+
+// It is also the last gate before a credential becomes a database row, which
+// is why the redaction sits here rather than at each writer.
+
+// Only the key-based pass runs here; the run's own secret values are the
+// engine's to match, and the store never sees them.
 function stepValues(runId: string, ordinal: number, step: StepExecutionRecord) {
   return {
     run_id: runId,
@@ -260,10 +268,10 @@ function stepValues(runId: string, ordinal: number, step: StepExecutionRecord) {
     step_key: step.key,
     block_type: step.blockType,
     status: step.status,
-    input: jsonOrNull(step.input),
-    output: jsonOrNull(step.output),
+    input: jsonOrNull(redact(step.input)),
+    output: jsonOrNull(redact(step.output)),
     port: step.port ?? null,
-    error: step.error ?? null,
+    error: step.error ? redactMessage(step.error) : null,
   };
 }
 
@@ -348,7 +356,7 @@ export class WorkflowRunStore {
         workflow_name: options.workflowName,
         workflow_version: options.workflowVersion,
         trigger_kind: options.triggerKind,
-        trigger_payload: jsonOrNull(options.triggerPayload),
+        trigger_payload: jsonOrNull(redact(options.triggerPayload)),
         status: "RUNNING",
         error: null,
         started_at: new Date().toISOString(),
@@ -404,7 +412,7 @@ export class WorkflowRunStore {
       .updateTable("run")
       .set({
         status: result.status,
-        error: result.error ?? null,
+        error: result.error ? redactMessage(result.error) : null,
         ended_at: new Date().toISOString(),
       })
       .where("id", "=", runId)
@@ -469,7 +477,11 @@ export class WorkflowRunStore {
     runsInFlight.delete(runId);
     await this.db
       .updateTable("run")
-      .set({ status: "FAILED", error, ended_at: new Date().toISOString() })
+      .set({
+        status: "FAILED",
+        error: redactMessage(error),
+        ended_at: new Date().toISOString(),
+      })
       .where("id", "=", runId)
       .execute();
   }
@@ -521,12 +533,18 @@ export class WorkflowRunStore {
       .executeTakeFirst();
   }
 
+  // last_error is whatever a piece's onEnable or a schedule parse threw, so it
+  // goes through the same gate a poll failure does.
   async upsertTriggerState(row: TriggerStateRow): Promise<void> {
+    const values = {
+      ...row,
+      last_error: row.last_error ? redactMessage(row.last_error) : null,
+    };
     await this.db
       .insertInto("trigger_state")
-      .values(row)
+      .values(values)
       .onConflict((oc) => {
-        const { workflow_id: _, ...rest } = row;
+        const { workflow_id: _, ...rest } = values;
         return oc.column("workflow_id").doUpdateSet(rest);
       })
       .execute();
@@ -541,7 +559,7 @@ export class WorkflowRunStore {
       .updateTable("trigger_state")
       .set({
         status,
-        last_error: error ?? null,
+        last_error: error ? redactMessage(error) : null,
         updated_at: new Date().toISOString(),
       })
       .where("workflow_id", "=", workflowId)
@@ -599,7 +617,7 @@ export class WorkflowRunStore {
       .set({
         last_poll_at: nowIso,
         next_poll_at: nextPollAtIso,
-        last_error: error,
+        last_error: redactMessage(error),
         consecutive_failures: consecutiveFailures,
         updated_at: nowIso,
       })

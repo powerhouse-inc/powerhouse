@@ -31,8 +31,21 @@ export interface ConnectionRequest {
   stepKey?: string;
 }
 
+// The auth a piece reads, plus the concrete secret strings behind it. The
+// second half is what value-based journal redaction matches on.
+export interface ResolvedConnection {
+  auth: unknown;
+  secretValues: string[];
+}
+
 export interface EngineConnectionResolver {
   resolve(connectionId: string, request?: ConnectionRequest): Promise<unknown>;
+  // Optional: hosts that predate redaction keep working without it. It takes
+  // the same request, so authorization is not skipped to get the secrets.
+  resolveWithSecrets?(
+    connectionId: string,
+    request?: ConnectionRequest,
+  ): Promise<ResolvedConnection>;
 }
 
 export class ConnectionNotFoundError extends Error {
@@ -76,11 +89,30 @@ export async function shapeAuthValue(
   source: ConnectionSource,
   secrets: SecretProvider,
 ): Promise<unknown> {
+  return (await shapeConnection(source, secrets)).auth;
+}
+
+// Only the values behind `secretRefs` are reported as secret: config fields
+// (a base URL, a username) are not, and redacting them would cost debuggability.
+export async function shapeConnection(
+  source: ConnectionSource,
+  secrets: SecretProvider,
+): Promise<ResolvedConnection> {
+  const resolved = await resolveSecrets(source, secrets);
+  return {
+    auth: shapeAuth(source, resolved),
+    secretValues: Object.values(resolved),
+  };
+}
+
+function shapeAuth(
+  source: ConnectionSource,
+  resolved: Record<string, string>,
+): unknown {
   switch (source.authType) {
     case "NONE":
       return undefined;
     case "SECRET_TEXT": {
-      const resolved = await resolveSecrets(source, secrets);
       const values = Object.values(resolved);
       if (values.length !== 1) {
         throw new Error(
@@ -90,10 +122,7 @@ export async function shapeAuthValue(
       return { type: "SECRET_TEXT", secret_text: values[0] };
     }
     case "BASIC_AUTH": {
-      const props = {
-        ...source.config,
-        ...(await resolveSecrets(source, secrets)),
-      };
+      const props = { ...source.config, ...resolved };
       return {
         type: "BASIC_AUTH",
         username: props.username,
@@ -101,11 +130,7 @@ export async function shapeAuthValue(
       };
     }
     case "CUSTOM_AUTH": {
-      const props = {
-        ...source.config,
-        ...(await resolveSecrets(source, secrets)),
-      };
-      return { type: "CUSTOM_AUTH", props };
+      return { type: "CUSTOM_AUTH", props: { ...source.config, ...resolved } };
     }
     default:
       throw new UnsupportedAuthTypeError(source.authType);
@@ -123,11 +148,17 @@ export class StaticConnectionResolver implements EngineConnectionResolver {
   }
 
   resolve(connectionId: string): Promise<unknown> {
+    return this.resolveWithSecrets(connectionId).then(
+      (resolved) => resolved.auth,
+    );
+  }
+
+  resolveWithSecrets(connectionId: string): Promise<ResolvedConnection> {
     const source = this.connections.get(connectionId);
     if (!source) {
       return Promise.reject(new ConnectionNotFoundError(connectionId));
     }
-    return shapeAuthValue(source, this.secrets);
+    return shapeConnection(source, this.secrets);
   }
 }
 

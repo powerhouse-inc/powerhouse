@@ -1,9 +1,11 @@
 // Run-journal rerun support over a real PGlite-backed store: rerun_of
-// lineage, the additive column migration, and journaled-output round-trips.
+// lineage, the additive column migration, journaled-output round-trips, and
+// the trigger payload a rerun refuses to replay.
 import { getDbClient } from "@powerhousedao/reactor-api";
 import { createRelationalDb } from "@powerhousedao/shared/processors";
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import type { IRelationalDb } from "@powerhousedao/reactor-browser";
+import { WorkflowRuntimeService } from "./service.js";
 import {
   ORPHANED_RUN_ERROR,
   WorkflowRunStore,
@@ -443,5 +445,72 @@ describe("WorkflowRunStore per-step journaling", () => {
     });
 
     expect((await broken.getRun(runId))?.status).toBe("SUCCEEDED");
+  });
+});
+
+describe("WorkflowRuntimeService rerun refusal", () => {
+  let store: WorkflowRunStore;
+  let service: WorkflowRuntimeService;
+
+  beforeAll(async () => {
+    const { db } = getDbClient();
+    store = await WorkflowRunStore.create(createRelationalDb(db));
+  });
+
+  // The service is wired by hand; only the journal and the current step list
+  // matter here, and `fire` is stubbed so nothing actually executes.
+  function serviceOver(runStore: WorkflowRunStore): WorkflowRuntimeService {
+    const built = new WorkflowRuntimeService();
+    (built as unknown as { subgraph: unknown }).subgraph = {
+      reactorClient: {
+        get: () => Promise.resolve({ state: { global: { steps: [] } } }),
+      },
+    };
+    (built as unknown as { storePromise: unknown }).storePromise =
+      Promise.resolve(runStore);
+    return built;
+  }
+
+  it("refuses a redacted trigger payload, and reruns a clean one", async () => {
+    const redactedId = await store.startRun({
+      workflowId: "wf-rerun-redacted",
+      workflowName: "Rerun me not",
+      workflowVersion: 1,
+      triggerKind: "webhook",
+      triggerPayload: { body: { id: 7, token: "inbound-token-value" } },
+    });
+    await store.finishRun(redactedId, {
+      status: "FAILED",
+      error: "boom",
+      steps: [],
+    });
+
+    service = serviceOver(store);
+    const fire = vi
+      .spyOn(service, "fire")
+      .mockResolvedValue({ runId: "next", status: "SUCCEEDED", steps: [] });
+
+    await expect(service.rerun(redactedId)).rejects.toThrow(
+      /cannot be replayed/,
+    );
+    expect(fire).not.toHaveBeenCalled();
+
+    // A payload with nothing to redact still reruns, so the refusal is about
+    // the marker and not about webhook payloads in general.
+    const cleanId = await store.startRun({
+      workflowId: "wf-rerun-clean",
+      workflowName: "Rerun me",
+      workflowVersion: 1,
+      triggerKind: "webhook",
+      triggerPayload: { body: { id: 7 } },
+    });
+    await store.finishRun(cleanId, {
+      status: "FAILED",
+      error: "boom",
+      steps: [],
+    });
+
+    await service.rerun(cleanId);
+    expect(fire.mock.calls[0][1]).toEqual({ body: { id: 7 } });
   });
 });
