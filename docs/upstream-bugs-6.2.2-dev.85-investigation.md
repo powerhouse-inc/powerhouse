@@ -593,3 +593,54 @@ attachment-reference-read-model.mts:73/111/113.
 
 ---
 
+
+---
+
+# Appendix — verification of the fixes on this branch
+
+Run at `555826342` (9 commits over `main` @ `9a3ddb34b`), worktree clean.
+
+| Check | Result |
+|-------|--------|
+| `pnpm build` | green |
+| `pnpm tsc` (workspace) | **clean** — caught 2 errors this branch introduced (TS7034/TS7005, untyped array in the new WS test); fixed in `555826342` |
+| `packages/document-model` | 399 passed, 1 skipped |
+| `packages/reactor` | 3095 passed |
+| `packages/reactor-api` | 1026 passed, 3 skipped |
+| `packages/reactor-attachments` | 531 passed |
+| `packages/reactor-browser` | 721 passed |
+| `apps/switchboard` | 217 passed |
+
+## The arrow-class-fields risk, measured
+
+The `ConsoleLogger` change makes the five log methods own properties rather than
+prototype methods. 11 `vi.spyOn(logger, ...)` sites across `packages/reactor` and
+`packages/reactor-browser` exercise that shape. Confirmed `document-model/dist/index.js`
+was rebuilt and contains the arrow form, then ran every one of those sites against it:
+146 + 47 tests green. The claim that instance-keyed spies survive detachment-safe
+methods is now measured rather than reasoned.
+
+## Open observation — a load-only red, unreproduced
+
+`packages/reactor-attachments/test/storage/fs/attachment-fs.test.ts > writeAttachmentBytes >
+leaves the previous file intact when a write fails` failed **once**, during a run where four
+package suites plus an unrelated `test:ci related` were executing concurrently.
+
+Established since:
+- the branch does not touch that file (`git diff --name-only main...HEAD` lists only the
+  read model and its test in that package);
+- the suite uses `mkdtemp` per test, so concurrent runs cannot collide on a path;
+- it passes in isolation (10/10), in the full package suite serially (531/531), under 3x
+  concurrent load of itself (10/10 x3), and in a repeat of the identical four-suite
+  sequence (531/531).
+
+The test drives a deliberately-failing `ReadableStream` with backpressure, which is the kind
+of assertion CPU starvation can perturb. NOT attributable to this branch, and NOT dismissed
+as flake: a load-only red has been a genuine defect in this repo before. Worth filing
+separately as a load-sensitive test.
+
+## What was NOT run
+
+- Postgres-backed variants (PGlite only).
+- `test/vetra-e2e`, Connect Cypress, and the package/sync integration harnesses.
+- The bug 2 recipe, which is still to be written in the `recipes` repo.
