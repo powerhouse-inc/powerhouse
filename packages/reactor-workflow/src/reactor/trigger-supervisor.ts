@@ -1,5 +1,8 @@
 // Timer-driven trigger supervisor: owns piece-trigger lifecycle (enable/
-// disable, poll cursors) and core#schedule fires; state lives in trigger_state.
+// disable, poll cursors) and core#schedule fires.
+
+// Scheduling state lives in trigger_state; whatever a hook writes through
+// ctx.store lives in piece_store, beside what actions write.
 import {
   DEFAULT_EGRESS_POLICY,
   ensurePieceBundle,
@@ -7,6 +10,7 @@ import {
   PieceWorker,
   PieceWorkerError,
   secretsFor,
+  storeHandlers,
   type ConnectionRequest,
   type ConnectorDescriptor,
   type EgressPolicy,
@@ -25,6 +29,10 @@ import {
   schedulePayload,
   SCHEDULE_BLOCK,
 } from "./schedule.js";
+import {
+  createPieceStorePort,
+  testPartitionKey,
+} from "./piece-store-port.js";
 import type { TriggerStateRow, WorkflowRunStore } from "./store.js";
 
 const logger = childLogger(["workflow", "trigger-supervisor"]);
@@ -130,11 +138,16 @@ export function pollIntervalFor(
   return intervalFromSchedules(schedules, defaultMs);
 }
 
-function parseStoreState(row: TriggerStateRow): Record<string, unknown> {
-  try {
-    return JSON.parse(row.store_state) as Record<string, unknown>;
-  } catch {
-    return {};
+// Trigger store state lives in piece_store now, beside the actions'. The
+// column is written but never read: see MIGRATION in store.ts on rollback.
+const VESTIGIAL_STORE_STATE = "{}";
+
+// Raised where the journal is first found missing, rather than deeper: every
+// caller logs it, and a silent return here reads to them as success.
+export class MissingJournalError extends Error {
+  constructor(what: string) {
+    super(`${what} needs a run journal, and none is configured`);
+    this.name = "MissingJournalError";
   }
 }
 
@@ -174,67 +187,6 @@ function backoffMs(intervalMs: number, failures: number): number {
   return Math.min(intervalMs * 2 ** failures, MAX_BACKOFF_MS);
 }
 
-// pollingHelper's TIMEBASED cursor, under the trigger's store scope prefix.
-const CURSOR_KEY = "lastPoll";
-
-// A provider's clock can run ahead of ours; beyond a day it is not skew, it is
-// a cursor that would hold the trigger silent until that date passes.
-const MAX_CURSOR_SKEW_MS = 24 * 60 * 60_000;
-
-function isPlausibleCursor(value: unknown, now: Date): value is number {
-  return (
-    typeof value === "number" &&
-    Number.isFinite(value) &&
-    value > 0 &&
-    value <= now.getTime() + MAX_CURSOR_SKEW_MS
-  );
-}
-
-// NaN and Infinity both serialise as "null", which is the one thing an
-// operator reading this warning must not be told.
-function showCursor(value: unknown): string {
-  return typeof value === "number" ? String(value) : JSON.stringify(value);
-}
-
-// The worker JSON-serialises the store before we see it, so a NaN or Infinity
-// cursor arrives as null — still ours to reject, just no longer a number.
-function isCursorShaped(value: unknown): boolean {
-  return value === null || typeof value === "number";
-}
-
-// The cursor comes back unchecked: `Math.max` over one unparseable date yields
-// NaN, which then re-delivers the whole feed forever, or nothing ever again.
-
-// A rejected cursor falls back to the previous value; with none to fall back
-// to, the key is dropped and the next poll fails loudly instead.
-function sanitizeStoreState(
-  workflowId: string,
-  next: Record<string, unknown> | undefined,
-  previous: Record<string, unknown>,
-  now: Date,
-): string {
-  // No store state at all is the worker saying nothing, not the piece clearing
-  // its cursor; wiping it here would re-deliver the backlog.
-  if (!next) return JSON.stringify(previous);
-  const state: Record<string, unknown> = { ...next };
-  for (const [key, value] of Object.entries(state)) {
-    if (key !== CURSOR_KEY && !key.endsWith(`/${CURSOR_KEY}`)) continue;
-    if (isPlausibleCursor(value, now)) continue;
-    const kept = previous[key];
-    // Only our own cursor shape is ours to police: a piece that keeps its own
-    // `lastPoll` as a string or an object is left to it.
-    if (!isCursorShaped(value) && !isPlausibleCursor(kept, now)) continue;
-    const keptLabel = isPlausibleCursor(kept, now) ? String(kept) : "no cursor";
-    logger.warn(
-      `Rejected ${key}=${showCursor(value)} from workflow ${workflowId}; ` +
-        `keeping ${keptLabel}`,
-    );
-    if (isPlausibleCursor(kept, now)) state[key] = kept;
-    else delete state[key];
-  }
-  return JSON.stringify(state);
-}
-
 export class TriggerSupervisor {
   private readonly bindings = new Map<string, TriggerBinding>();
   private readonly worker: PieceWorker;
@@ -247,6 +199,7 @@ export class TriggerSupervisor {
   // Lifecycle ops serialize so enable/disable/poll never interleave per store.
   private ops: Promise<unknown> = Promise.resolve();
   private ticking = false;
+  private warnedMissingJournal = false;
 
   constructor(private readonly options: TriggerSupervisorOptions) {
     this.worker = options.worker ?? new PieceWorker();
@@ -318,16 +271,36 @@ export class TriggerSupervisor {
     return this.enqueue(() => this.disable(workflowId, binding));
   }
 
-  // Design-time sample: the worker's "test" store prefix keeps cursors intact,
-  // and no store state is persisted back.
+  // Design-time sample, run against its own partitions so no key it writes can
+  // alias a live one, and dropped afterwards so none of it outlives the sample.
   test(binding: PieceTriggerBinding): Promise<unknown> {
     return this.enqueue(async () => {
       const store = await this.options.store();
-      const row = await store?.getTriggerState(binding.workflowId);
-      const seed = row ? parseStoreState(row) : {};
-      const result = await this.hook(binding, "test", seed);
-      return result.output;
+      try {
+        const result = await this.hook(binding, "test");
+        return result.output;
+      } finally {
+        await this.dropTestPartitions(store, binding.workflowId);
+      }
     });
+  }
+
+  // Best-effort: a sample that leaves rows behind is untidy, but failing the
+  // sample over it would be worse, and the next one overwrites them anyway.
+  private async dropTestPartitions(
+    store: WorkflowRunStore | undefined,
+    workflowId: string,
+  ): Promise<void> {
+    if (!store) return;
+    try {
+      await store.deletePieceStore("FLOW", testPartitionKey("FLOW", workflowId));
+      await store.deletePieceStore(
+        "PROJECT",
+        testPartitionKey("PROJECT", workflowId),
+      );
+    } catch (error) {
+      logger.warn(`Could not clear test store for ${workflowId}`, error);
+    }
   }
 
   // The sender's probe, answered by the piece rather than by us: only its own
@@ -338,13 +311,7 @@ export class TriggerSupervisor {
     binding: PieceTriggerBinding,
     payload: unknown,
   ): Promise<PieceWorkerResult> {
-    return this.enqueue(async () => {
-      const store = await this.options.store();
-      const row = await store?.getTriggerState(binding.workflowId);
-      return this.hook(binding, "onHandshake", row ? parseStoreState(row) : {}, {
-        payload,
-      });
-    });
+    return this.enqueue(() => this.hook(binding, "onHandshake", { payload }));
   }
 
   // Ingress path: a verified delivery runs the trigger's `run` hook with the
@@ -359,34 +326,91 @@ export class TriggerSupervisor {
         return;
       }
       const store = await this.options.store();
-      if (!store) return;
+      // Rejecting is what stops the resolver logging "Webhook delivered" for a
+      // delivery that was dropped on the floor.
+      if (!store) throw new MissingJournalError("Webhook delivery");
       const row = await store.getTriggerState(workflowId);
       const now = this.now();
-      const previous = row ? parseStoreState(row) : {};
-      const result = await this.hook(binding, "run", previous, { payload });
-      // A delivery to a trigger that never enabled still fires, but it must not
-      // clear the enable error or reset the backoff by recording a success.
-      if (row?.status === "ENABLED") {
-        await store.recordPollSuccess(
-          workflowId,
-          sanitizeStoreState(workflowId, result.storeState, previous, now),
-          now.toISOString(),
-          new Date(now.getTime() + row.interval_ms).toISOString(),
-        );
-      }
-      const items = Array.isArray(result.output) ? result.output : [];
-      for (const item of items) {
-        await this.fireItem(store, binding, item, now);
+      // A dropped delivery is the provider's to retry, and paperless never
+      // does — but a rewound cursor lets the reconcile poll find it again.
+      const rewind = await this.cursorRewind(store, workflowId);
+      try {
+        const result = await this.hook(binding, "run", { payload });
+        // Checked before the checkpoint, as a poll does: coercing a scalar to
+        // no items leaves nothing to rewind, and the delivery is lost for good.
+        if (!Array.isArray(result.output)) {
+          throw new Error(
+            `Trigger run returned ${typeof result.output}, expected an array`,
+          );
+        }
+        // A delivery to a trigger that never enabled still fires, but it must
+        // not clear the enable error or reset the backoff by recording a
+        // success.
+        if (row?.status === "ENABLED") {
+          await store.recordPollSuccess(
+            workflowId,
+            VESTIGIAL_STORE_STATE,
+            now.toISOString(),
+            new Date(now.getTime() + row.interval_ms).toISOString(),
+          );
+        }
+        for (const item of result.output) {
+          await this.fireItem(store, binding, item, now);
+        }
+      } catch (error) {
+        await rewind();
+        throw error;
       }
     });
   }
 
+  // Trigger delivery is at-least-once, and a durable store puts that at risk:
+  // pollingHelper advances its cursor *inside* the hook.
+
+  // A failure after that checkpoint would skip items the hook read but never
+  // delivered, so a delivery attempt first takes the FLOW partition as it was.
+
+  // Putting it back on any failure through the fire means the next read
+  // re-delivers, and the dedupe table absorbs the repeats.
+  private async cursorRewind(
+    store: WorkflowRunStore,
+    workflowId: string,
+  ): Promise<() => Promise<void>> {
+    const before = await store.listPieceStore("FLOW", workflowId);
+    return async () => {
+      try {
+        await store.deletePieceStore("FLOW", workflowId);
+        for (const [key, value] of Object.entries(before)) {
+          await store.setPieceStoreValue("FLOW", workflowId, key, value);
+        }
+      } catch (error) {
+        // The poll already failed; losing the rewind too costs at-most-once
+        // for this cursor, which still beats failing the supervisor's lane.
+        logger.warn(`Could not rewind the cursor for ${workflowId}`, error);
+      }
+    };
+  }
+
+  // The hook's `ctx.store` is the journal's piece_store, served call by call,
+  // so a registration id is durable the instant the piece writes it.
   private async hook(
     binding: PieceTriggerBinding,
     hook: TriggerHookRequest["hook"],
-    storeState: Record<string, unknown>,
     options: { isRepublish?: boolean; payload?: unknown; webhookUrl?: string } = {},
   ): Promise<PieceWorkerResult> {
+    const store = await this.options.store();
+    // A cursor on the heap resets on restart and re-delivers everything the
+    // trigger ever saw, so only a design-time sample may run without a journal.
+    if (!store && hook !== "test") {
+      throw new MissingJournalError(`Trigger hook "${hook}"`);
+    }
+    const pieceStore = store
+      ? createPieceStorePort(
+          store,
+          () => binding.workflowId,
+          hook === "test",
+        )
+      : undefined;
     const bundle = await ensurePieceBundle({
       name: binding.packageName,
       version: binding.version,
@@ -409,7 +433,7 @@ export class TriggerSupervisor {
         propsValue: binding.config,
         auth,
         ...(redactValues.length > 0 ? { redactValues } : {}),
-        storeState,
+        ...(pieceStore ? { durableStore: true } : {}),
         identity: { flowId: binding.workflowId },
         isRepublish: options.isRepublish,
         payload: options.payload,
@@ -420,7 +444,10 @@ export class TriggerSupervisor {
           `http://localhost:0/v1/webhooks/${binding.workflowId}`,
         ...(this.egress ? { egress: this.egress } : {}),
       },
-      { timeoutMs: this.hookTimeoutMs },
+      {
+        timeoutMs: this.hookTimeoutMs,
+        ...(pieceStore ? { hostCalls: storeHandlers(pieceStore) } : {}),
+      },
     );
   }
 
@@ -460,14 +487,21 @@ export class TriggerSupervisor {
     superseded?: TriggerBinding,
   ): Promise<void> {
     const store = await this.options.store();
-    if (!store) return;
+    // enableSupervised logs this; returning quietly would leave a workflow
+    // that looks registered and never fires.
+    if (!store) throw new MissingJournalError("Enabling a trigger");
     const hash = configHash(binding.blockType, binding.config);
     const existing = await store.getTriggerState(binding.workflowId);
     const now = this.now();
     // Only a completed enable is a republish: a retry after a failed one must
     // register again, or a piece that skips registration never delivers.
+
+    // A republish also keeps the cursor and the _webhook_id the hook wrote
+    // before, which is exactly what a blob that never migrated no longer holds.
     const isRepublish =
-      existing?.config_hash === hash && existing.status === "ENABLED";
+      existing?.config_hash === hash &&
+      existing.status === "ENABLED" &&
+      !store.hasUnmigratedTriggerState(binding.workflowId);
     if (existing && !isRepublish && existing.status === "ENABLED") {
       // The trigger changed: release the old registration first.
       await this.disableRow(binding.workflowId, existing, superseded);
@@ -478,7 +512,7 @@ export class TriggerSupervisor {
       // left behind, the entry wins a slot on every tick and never resolves.
       this.enableRetries.delete(binding.workflowId);
       if (pending?.release && existing && superseded && !isSchedule(superseded)) {
-        await this.releaseRegistration(superseded, existing);
+        await this.releaseRegistration(superseded);
       }
       await this.enableSchedule(store, binding, hash, existing);
       return;
@@ -487,9 +521,13 @@ export class TriggerSupervisor {
     if (pending?.release && existing) {
       // The failed attempt may have subscribed at the provider already, and
       // only one subscription is ever released; drop it before making another.
-      await this.releaseRegistration(binding, existing);
+      await this.releaseRegistration(binding);
     }
-    const seed = existing && isRepublish ? parseStoreState(existing) : {};
+    // A changed config is a different trigger: carrying the old cursor and,
+    // worse, the old _webhook_id would point it at a dead registration.
+    if (!isRepublish) {
+      await store.deletePieceStore("FLOW", binding.workflowId);
+    }
     let reachedProvider = false;
     try {
       const strategy = await this.strategyFor(binding);
@@ -499,8 +537,13 @@ export class TriggerSupervisor {
       const webhookUrl = webhook
         ? await this.webhookUrlOrThrow(binding.workflowId)
         : undefined;
+      if (webhook && !webhookUrl) {
+        throw new Error(
+          "This trigger delivers by webhook, but no public webhook endpoint is configured for the reactor",
+        );
+      }
       reachedProvider = true;
-      const result = await this.hook(binding, "onEnable", seed, {
+      const result = await this.hook(binding, "onEnable", {
         isRepublish,
         webhookUrl,
       });
@@ -514,12 +557,7 @@ export class TriggerSupervisor {
         block_type: binding.blockType,
         config_hash: hash,
         status: "ENABLED",
-        store_state: sanitizeStoreState(
-          binding.workflowId,
-          result.storeState,
-          seed,
-          now,
-        ),
+        store_state: VESTIGIAL_STORE_STATE,
         interval_ms: intervalMs,
         next_poll_at: new Date(now.getTime() + intervalMs).toISOString(),
         last_poll_at: null,
@@ -531,6 +569,7 @@ export class TriggerSupervisor {
       });
       this.enabledOk.add(binding.workflowId);
       this.enableRetries.delete(binding.workflowId);
+      store.clearUnmigratedTriggerState(binding.workflowId);
       logger.info(
         `Enabled ${binding.blockType} for workflow ${binding.workflowId} (every ${intervalMs}ms)`,
       );
@@ -560,7 +599,7 @@ export class TriggerSupervisor {
         block_type: binding.blockType,
         config_hash: hash,
         status: "ERROR",
-        store_state: existing?.store_state ?? "{}",
+        store_state: VESTIGIAL_STORE_STATE,
         interval_ms: intervalMs,
         next_poll_at: retryAt?.toISOString() ?? null,
         last_poll_at: null,
@@ -634,10 +673,9 @@ export class TriggerSupervisor {
   // Closing that gap needs the worker to report store writes as they happen.
   private async releaseRegistration(
     binding: PieceTriggerBinding,
-    row: TriggerStateRow,
   ): Promise<void> {
     try {
-      await this.hook(binding, "onDisable", parseStoreState(row));
+      await this.hook(binding, "onDisable");
     } catch (error) {
       logger.warn(
         `onDisable before retrying workflow ${binding.workflowId} failed`,
@@ -659,7 +697,7 @@ export class TriggerSupervisor {
       workflow_id: binding.workflowId,
       block_type: binding.blockType,
       config_hash: hash,
-      store_state: "{}",
+      store_state: VESTIGIAL_STORE_STATE,
       last_poll_at: existing?.last_poll_at ?? null,
       lease_owner: null,
       lease_expires_at: null,
@@ -710,13 +748,14 @@ export class TriggerSupervisor {
     binding?: TriggerBinding,
   ): Promise<void> {
     const store = await this.options.store();
-    if (!store) return;
+    if (!store) throw new MissingJournalError("Disabling a trigger");
     const row = await store.getTriggerState(workflowId);
     if (!row || row.status === "DISABLED") return;
     await this.disableRow(workflowId, row, binding);
   }
 
-  // store_state is kept: an unchanged re-enable republishes onto the cursor.
+  // The piece_store rows are kept: an unchanged re-enable republishes onto the
+  // cursor, and onDisable is the only thing that can release a registration.
   private async disableRow(
     workflowId: string,
     row: TriggerStateRow,
@@ -727,7 +766,7 @@ export class TriggerSupervisor {
     const target = binding ?? this.bindingFromRow(row);
     if (target && !isSchedule(target) && row.block_type !== SCHEDULE_BLOCK) {
       try {
-        await this.hook(target, "onDisable", parseStoreState(row));
+        await this.hook(target, "onDisable");
       } catch (error) {
         logger.warn(`onDisable failed for workflow ${workflowId}`, error);
       }
@@ -789,7 +828,15 @@ export class TriggerSupervisor {
 
   private async pollDue(): Promise<void> {
     const store = await this.options.store();
-    if (!store) return;
+    // Once, not on every tick: the tick repeats forever and the condition
+    // never changes without a restart.
+    if (!store) {
+      if (!this.warnedMissingJournal) {
+        this.warnedMissingJournal = true;
+        logger.error("Trigger polling is off", new MissingJournalError("Polling"));
+      }
+      return;
+    }
     const due = await store.listDueTriggerStates(this.now().toISOString());
     for (const row of due) {
       const binding = this.bindings.get(row.workflow_id);
@@ -847,9 +894,9 @@ export class TriggerSupervisor {
     binding: PieceTriggerBinding,
   ): Promise<void> {
     const now = this.now();
-    const previous = parseStoreState(row);
+    const rewind = await this.cursorRewind(store, row.workflow_id);
     try {
-      const result = await this.hook(binding, "run", previous);
+      const result = await this.hook(binding, "run");
       if (!Array.isArray(result.output)) {
         throw new Error(
           `Trigger run returned ${typeof result.output}, expected an array`,
@@ -857,7 +904,7 @@ export class TriggerSupervisor {
       }
       await store.recordPollSuccess(
         row.workflow_id,
-        sanitizeStoreState(row.workflow_id, result.storeState, previous, now),
+        VESTIGIAL_STORE_STATE,
         now.toISOString(),
         new Date(now.getTime() + row.interval_ms).toISOString(),
       );
@@ -865,6 +912,7 @@ export class TriggerSupervisor {
         await this.fireItem(store, binding, item, now);
       }
     } catch (error) {
+      await rewind();
       const message = error instanceof Error ? error.message : String(error);
       const failures = row.consecutive_failures + 1;
       const backoff = backoffMs(row.interval_ms, failures);

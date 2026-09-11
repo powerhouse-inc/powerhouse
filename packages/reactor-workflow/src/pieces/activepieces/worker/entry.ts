@@ -246,12 +246,17 @@ async function handleTriggerHook(
       `No trigger "${request.triggerName}" in bundle ${request.bundleDir}`,
     );
   }
-  const store = new InMemoryKeyValueStore(request.storeState);
+  // The durable store answers every get/put over the call channel, so a long
+  // onEnable checkpoints: registration ids survive a crash mid-hook.
+  const snapshot = request.durableStore
+    ? undefined
+    : new InMemoryKeyValueStore(request.storeState);
   const runsPiece = request.hook === "run" || request.hook === "test";
   const handle = buildTriggerContext({
     propsValue: await normalizePropsValue(trigger.props, request.propsValue),
     auth: request.auth,
-    store,
+    store: snapshot ?? new RemoteKeyValueStore(),
+    hostPartitionedStore: request.durableStore,
     // Test hooks write under a separate prefix, never the live cursor.
     storePrefix: request.hook === "test" ? "test" : "",
     identity: request.identity,
@@ -268,7 +273,11 @@ async function handleTriggerHook(
     output: jsonSafe(output),
     touched: [...handle.touched],
     tlsPoisoned: consumeTlsFlag(),
-    storeState: jsonSafe(store.snapshot()) as Record<string, unknown>,
+    // Only the snapshot path has state to hand back; a durable store already
+    // committed everything the hook wrote.
+    ...(snapshot
+      ? { storeState: jsonSafe(snapshot.snapshot()) as Record<string, unknown> }
+      : {}),
     schedules: handle.schedules,
     listeners: handle.listeners,
   };

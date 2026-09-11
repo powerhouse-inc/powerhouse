@@ -199,6 +199,44 @@ describe.skipIf(!rssBundle || !webhookBundle)(
       });
     });
 
+    it("hands a host-partitioned store the key verbatim beside its scope", async () => {
+      interface ProbeContext {
+        store: {
+          put(key: string, value: unknown, scope?: string): Promise<unknown>;
+          get(key: string): Promise<unknown>;
+        };
+      }
+      const seen: Record<string, unknown> = {};
+      const trigger = {
+        name: "probe",
+        onEnable: async (raw: unknown) => {
+          const ctx = raw as ProbeContext;
+          await ctx.store.put("lastPoll", 42);
+          await ctx.store.put("shared", "p", "COLLECTION");
+          seen.read = await ctx.store.get("lastPoll");
+        },
+      };
+      const store = new InMemoryKeyValueStore();
+      await runTriggerHook(
+        trigger,
+        "onEnable",
+        buildTriggerContext({
+          propsValue: {},
+          store,
+          identity: { flowId: "f1" },
+          hostPartitionedStore: true,
+          storePrefix: "test",
+        }),
+      );
+      expect(seen.read).toBe(42);
+      // No flow_ nesting and no "test" prefix: both are the host's partition
+      // to choose, and a prefix here would alias a live key of the same name.
+      expect(store.snapshot()).toEqual({
+        lastPoll: 42,
+        "PROJECT:shared": "p",
+      });
+    });
+
     it("throws a named error for a missing hook", async () => {
       const { piece } = await loadPieceFromDir(rssBundle);
       const trigger = {

@@ -11,7 +11,7 @@ import type {
   FlowsProvider,
   ServerInfo,
 } from "./props.js";
-import { normalizeStoreScope } from "./store-scope.js";
+import { normalizeStoreScope, type StoreScopeName } from "./store-scope.js";
 import { throwingStub, withTouchTracking } from "./stubs.js";
 
 export interface RecordedSchedule {
@@ -33,7 +33,11 @@ export interface TriggerContextOptions {
   auth?: unknown;
   store?: KeyValueStore;
   // "test" for test hooks so they never touch the live cursor; "" otherwise.
+  // Ignored when hostPartitionedStore is set — the host separates them there.
   storePrefix?: string;
+  // The store partitions on (scope, key) itself, so the key reaches it
+  // verbatim instead of carrying the scope as a name prefix. See scopedKey.
+  hostPartitionedStore?: boolean;
   identity?: ActionContextIdentity;
   // onEnable: an unchanged trigger re-enabling; pollingHelper keeps its cursor.
   isRepublish?: boolean;
@@ -82,8 +86,8 @@ export function buildTriggerContext(
   const schedules: RecordedSchedule[] = [];
   const listeners: RecordedListener[] = [];
 
-  // AP's engine store layout: FLOW scope (the default) nests under the flow
-  // id; PROJECT scope uses the bare key.
+  // AP's engine store layout, for a store that is one flat map: FLOW scope
+  // (the default) nests under the flow id; PROJECT scope uses the bare key.
 
   // Matching the enum's "COLLECTION" value alone missed a piece that passes
   // the name instead, which then silently got flow scope.
@@ -94,16 +98,34 @@ export function buildTriggerContext(
       ? `${prefix}${key}`
       : `${prefix}flow_${flowId}/${key}`;
 
+  // A host-partitioned store owns the layout, so the scope travels beside the
+  // key rather than inside it, exactly as buildActionContext passes it.
+
+  // No "test" prefix on that path: a prefix aliases, so a live key named
+  // "testMode" is a sample's "Mode" once both share one flat partition.
+
+  // Separating a sample is then the host's job, by partition — which a prefix
+  // could not do anyway, since nothing can enumerate a sample's keys to drop.
+  const address = (
+    key: string,
+    scope?: unknown,
+  ): [string, StoreScopeName | undefined] =>
+    options.hostPartitionedStore
+      ? [key, normalizeStoreScope(scope)]
+      : [scopedKey(key, scope), undefined];
+
   const base: Record<string, unknown> = {
     auth: options.auth,
     propsValue: options.propsValue,
     isRepublish: options.isRepublish ?? false,
     store: {
-      put: (key: string, value: unknown, scope?: unknown) =>
-        store.put(scopedKey(key, scope), value),
-      get: (key: string, scope?: unknown) => store.get(scopedKey(key, scope)),
+      put: (key: string, value: unknown, scope?: unknown) => {
+        const [at, partition] = address(key, scope);
+        return store.put(at, value, partition);
+      },
+      get: (key: string, scope?: unknown) => store.get(...address(key, scope)),
       delete: (key: string, scope?: unknown) =>
-        store.delete(scopedKey(key, scope)),
+        store.delete(...address(key, scope)),
     },
     flows: {
       list:

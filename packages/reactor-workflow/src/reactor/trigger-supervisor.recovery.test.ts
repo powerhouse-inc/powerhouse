@@ -95,22 +95,6 @@ describe("TriggerSupervisor robustness", () => {
     dispose: () => undefined,
   } as unknown as PieceWorker;
 
-  // Rewinds next_poll_at so the next tick treats the row as due.
-  const forceDue = async (workflowId: string) => {
-    const row = await store.getTriggerState(workflowId);
-    await store.upsertTriggerState({
-      ...row!,
-      next_poll_at: "2000-01-01T00:00:00.000Z",
-    });
-  };
-
-  const cursorOf = async (workflowId: string) => {
-    const row = await store.getTriggerState(workflowId);
-    return (JSON.parse(row!.store_state) as Record<string, unknown>)[
-      `flow_${workflowId}/lastPoll`
-    ];
-  };
-
   beforeAll(async () => {
     const { db } = getDbClient();
     store = await WorkflowRunStore.create(createRelationalDb(db));
@@ -211,37 +195,6 @@ describe("TriggerSupervisor robustness", () => {
     expect((await store.getTriggerState(wf))?.consecutive_failures).toBe(1);
   });
 
-  it("rejects an implausible cursor and keeps the previous one", async () => {
-    const wf = "wf-cursor";
-    const key = `flow_${wf}/lastPoll`;
-    const good = Date.parse("2026-09-04T08:55:00.000Z");
-    stub.enable = () => result({ storeState: { [key]: good } });
-    await supervisor.upsert(binding(wf));
-    expect(await cursorOf(wf)).toBe(good);
-
-    const rejected = [
-      Number.NaN,
-      Number.POSITIVE_INFINITY,
-      "1757000000000",
-      -1,
-      0,
-      clock.getTime() + 8 * 24 * 60 * 60_000,
-    ];
-    for (const value of rejected) {
-      stub.run = () => result({ output: [], storeState: { [key]: value } });
-      await forceDue(wf);
-      await supervisor.tick();
-      expect(await cursorOf(wf)).toBe(good);
-    }
-
-    // A plausible advance still lands.
-    const next = Date.parse("2026-09-04T08:59:00.000Z");
-    stub.run = () => result({ output: [], storeState: { [key]: next } });
-    await forceDue(wf);
-    await supervisor.tick();
-    expect(await cursorOf(wf)).toBe(next);
-  });
-
   it("keeps the trigger queued when the retry itself throws", async () => {
     const wf = "wf-retry-throws";
     stub.enable = () => {
@@ -336,27 +289,6 @@ describe("TriggerSupervisor robustness", () => {
     restarted.stop();
   });
 
-  it("rejects the null a serialised NaN cursor arrives as", async () => {
-    const wf = "wf-cursor-null";
-    const key = `flow_${wf}/lastPoll`;
-    const good = Date.parse("2026-09-04T08:55:00.000Z");
-    stub.enable = () => result({ storeState: { [key]: good } });
-    await supervisor.upsert(binding(wf));
-
-    // jsonSafe in the worker turns the piece's NaN into null before we see it.
-    stub.run = () => result({ output: [], storeState: { [key]: null } });
-    await forceDue(wf);
-    await supervisor.tick();
-    expect(await cursorOf(wf)).toBe(good);
-
-    const fresh = "wf-cursor-null-fresh";
-    stub.enable = () =>
-      result({ storeState: { [`flow_${fresh}/lastPoll`]: null } });
-    await supervisor.upsert(binding(fresh));
-    const row = await store.getTriggerState(fresh);
-    expect(JSON.parse(row!.store_state)).toEqual({});
-  });
-
   it("takes the retry with it when the trigger becomes a schedule", async () => {
     const wf = "wf-kind-change";
     const other = "wf-kind-other";
@@ -408,42 +340,4 @@ describe("TriggerSupervisor robustness", () => {
     expect((await store.getTriggerState(wf))?.status).toBe("ENABLED");
   });
 
-  it("keeps the cursor when the worker reports no store state at all", async () => {
-    const wf = "wf-cursor-absent";
-    const key = `flow_${wf}/lastPoll`;
-    const good = Date.parse("2026-09-04T08:55:00.000Z");
-    stub.enable = () => result({ storeState: { [key]: good } });
-    await supervisor.upsert(binding(wf));
-
-    stub.run = () => result({ output: [] });
-    await forceDue(wf);
-    await supervisor.tick();
-    expect(await cursorOf(wf)).toBe(good);
-  });
-
-  it("leaves a piece's own non-numeric lastPoll alone", async () => {
-    const wf = "wf-cursor-string";
-    const key = `flow_${wf}/lastPoll`;
-    const iso = "2026-09-04T08:55:00.000Z";
-    stub.enable = () => result({ storeState: { [key]: iso } });
-    await supervisor.upsert(binding(wf));
-    expect(await cursorOf(wf)).toBe(iso);
-
-    stub.run = () => result({ output: [], storeState: { [key]: iso } });
-    await forceDue(wf);
-    await supervisor.tick();
-    expect(await cursorOf(wf)).toBe(iso);
-  });
-
-  it("drops a bad cursor written at enable rather than persisting it", async () => {
-    const wf = "wf-cursor-enable";
-    const key = `flow_${wf}/lastPoll`;
-    stub.enable = () => result({ storeState: { [key]: Number.NaN } });
-    await supervisor.upsert(binding(wf));
-
-    const row = await store.getTriggerState(wf);
-    expect(row?.status).toBe("ENABLED");
-    expect(JSON.parse(row!.store_state)).toEqual({});
-    expect(fired).toEqual([]);
-  });
 });

@@ -3,7 +3,7 @@
 import { getDbClient } from "@powerhousedao/reactor-api";
 import { createRelationalDb } from "@powerhousedao/shared/processors";
 import { beforeAll, describe, expect, it } from "vitest";
-import { createPieceStorePort } from "./piece-store-port.js";
+import { createPieceStorePort, testPartitionKey } from "./piece-store-port.js";
 import { WorkflowRunStore } from "./store.js";
 
 describe("piece store partitions", () => {
@@ -52,6 +52,26 @@ describe("piece store partitions", () => {
     expect(await portFor("wf-c").get("temp", "PROJECT")).toBe("y");
   });
 
+  it("keeps two samples' PROJECT keys apart", async () => {
+    const samplePort = (workflowId: string) =>
+      createPieceStorePort(store, () => workflowId, true);
+    await samplePort("wf-s1").put("draft", "one", "PROJECT");
+    await samplePort("wf-s2").put("draft", "two", "PROJECT");
+
+    // A live PROJECT key is the reactor's, but two samples on one partition
+    // would read each other's keys and delete them on the way out.
+    expect(await samplePort("wf-s1").get("draft", "PROJECT")).toBe("one");
+    expect(await samplePort("wf-s2").get("draft", "PROJECT")).toBe("two");
+
+    // And the partition the supervisor drops afterwards is that same one.
+    await store.deletePieceStore(
+      "PROJECT",
+      testPartitionKey("PROJECT", "wf-s1"),
+    );
+    expect(await samplePort("wf-s1").get("draft", "PROJECT")).toBeNull();
+    expect(await samplePort("wf-s2").get("draft", "PROJECT")).toBe("two");
+  });
+
   it("refuses a FLOW key when no workflow is in scope", async () => {
     await expect(portFor(undefined).get("cursor", "FLOW")).rejects.toThrow(
       "no workflow is in scope",
@@ -64,5 +84,47 @@ describe("piece store partitions", () => {
     await portFor("wf-a").put("instance-wide", true, "PROJECT");
 
     expect(await portFor(undefined).get("instance-wide", "PROJECT")).toBe(true);
+  });
+
+  // The cursor guard moved here when the durable store stopped routing a
+  // trigger's writes through the supervisor. Same key, same rule.
+
+  // The last two hold either way today; they are here so a future guard
+  // cannot start policing a cursor shape that was never ours.
+  describe("the pollingHelper cursor", () => {
+    const NOW = 1_700_000_000_000;
+    const guarded = (workflowId: string) =>
+      createPieceStorePort(store, () => workflowId, false, () => NOW);
+
+    it("rejects the null a serialised NaN cursor arrives as", async () => {
+      const port = guarded("wf-nan");
+      await port.put("lastPoll", NOW - 1000, "FLOW");
+      // The worker JSON-serialises the write, so NaN reaches the host as null.
+      await port.put("lastPoll", null, "FLOW");
+
+      expect(await port.get("lastPoll", "FLOW")).toBe(NOW - 1000);
+    });
+
+    it("rejects a cursor further ahead than a provider's clock could skew", async () => {
+      const port = guarded("wf-skew");
+      await port.put("lastPoll", NOW - 1000, "FLOW");
+      await port.put("lastPoll", NOW + 8 * 24 * 60 * 60_000, "FLOW");
+
+      expect(await port.get("lastPoll", "FLOW")).toBe(NOW - 1000);
+    });
+
+    it("leaves a piece's own non-numeric lastPoll alone", async () => {
+      const port = guarded("wf-own");
+      await port.put("lastPoll", { id: "abc" }, "FLOW");
+
+      expect(await port.get("lastPoll", "FLOW")).toEqual({ id: "abc" });
+    });
+
+    it("does not police any other key", async () => {
+      const port = guarded("wf-other");
+      await port.put("lastItem", null, "FLOW");
+
+      expect(await port.get("lastItem", "FLOW")).toBeNull();
+    });
   });
 });

@@ -51,7 +51,7 @@ function renderFeed(items: FeedItem[]): string {
 }
 
 const WF = "wf-sup-1";
-const CURSOR_KEY = `flow_${WF}/lastItem`;
+const CURSOR_KEY = "lastItem";
 const PAST = "2000-01-01T00:00:00.000Z";
 
 describe.skipIf(!rssBundle)("TriggerSupervisor", () => {
@@ -123,7 +123,7 @@ describe.skipIf(!rssBundle)("TriggerSupervisor", () => {
     expect(row?.status).toBe("ENABLED");
     expect(row?.interval_ms).toBe(300_000);
     expect(
-      (JSON.parse(row!.store_state) as Record<string, unknown>)[CURSOR_KEY],
+      await store.getPieceStoreValue("FLOW", WF, CURSOR_KEY),
     ).toBe("g1");
     expect(Date.parse(row!.next_poll_at!)).toBeGreaterThan(Date.now());
   }, 60_000);
@@ -156,7 +156,7 @@ describe.skipIf(!rssBundle)("TriggerSupervisor", () => {
 
     const row = await store.getTriggerState(WF);
     expect(
-      (JSON.parse(row!.store_state) as Record<string, unknown>)[CURSOR_KEY],
+      await store.getPieceStoreValue("FLOW", WF, CURSOR_KEY),
     ).toBe("g2");
     expect(row?.consecutive_failures).toBe(0);
     expect(Date.parse(row!.next_poll_at!)).toBeGreaterThan(Date.now());
@@ -208,7 +208,7 @@ describe.skipIf(!rssBundle)("TriggerSupervisor", () => {
     const row = await store.getTriggerState(WF);
     expect(row?.status).toBe("DISABLED");
     expect(
-      (JSON.parse(row!.store_state) as Record<string, unknown>)[CURSOR_KEY],
+      await store.getPieceStoreValue("FLOW", WF, CURSOR_KEY),
     ).toBe("g2");
 
     await store.upsertTriggerState({ ...row!, next_poll_at: PAST });
@@ -233,6 +233,141 @@ describe.skipIf(!rssBundle)("TriggerSupervisor", () => {
     orphaned.stop();
   }, 60_000);
 
+  // pollingHelper advances its cursor inside the hook, so a delivery that
+  // fails afterwards would skip those items forever without the rewind.
+  it("rewinds the cursor when delivery fails after the hook checkpointed", async () => {
+    const flaky = "wf-sup-rewind";
+    let explode = false;
+    const delivered: unknown[] = [];
+    const supervisor2 = new TriggerSupervisor({
+      store: () => Promise.resolve(store),
+      resolveAuth: () => Promise.resolve(undefined),
+      fire: (_workflowId, payload) => {
+        if (explode) throw new Error("delivery sink is down");
+        delivered.push(payload);
+      },
+      cacheDir,
+      // The feed is on loopback, which the default policy refuses.
+      egress: { allowAddresses: ["127.0.0.1/32", "::1/128"] },
+    });
+    const flakyBinding = { ...binding(), workflowId: flaky };
+    await supervisor2.upsert(flakyBinding);
+    const seeded = await store.getPieceStoreValue("FLOW", flaky, CURSOR_KEY);
+
+    feedItems.unshift({
+      guid: "g-rewind",
+      title: "Rewound",
+      pubDate: "Tue, 02 Sep 2026 08:00:00 GMT",
+    });
+    explode = true;
+    const row = await store.getTriggerState(flaky);
+    await store.upsertTriggerState({ ...row!, next_poll_at: PAST });
+    await supervisor2.tick();
+
+    // The hook did advance it, and the failed poll put it back.
+    expect(await store.getPieceStoreValue("FLOW", flaky, CURSOR_KEY)).toBe(
+      seeded,
+    );
+    expect(delivered).toEqual([]);
+    expect((await store.getTriggerState(flaky))?.consecutive_failures).toBe(1);
+
+    // At-least-once: the next poll re-reads the item it never delivered.
+    explode = false;
+    const failed = await store.getTriggerState(flaky);
+    await store.upsertTriggerState({ ...failed!, next_poll_at: PAST });
+    await supervisor2.tick();
+    expect((delivered as { title?: string }[]).map((i) => i.title)).toEqual([
+      "Rewound",
+    ]);
+    supervisor2.stop();
+  }, 60_000);
+
+  it("clears the store when the config changes, keeping it on a republish", async () => {
+    const changed = "wf-sup-reconfig";
+    await supervisor.upsert({ ...binding(), workflowId: changed });
+    await store.setPieceStoreValue("FLOW", changed, "_webhook_id", 1234);
+
+    // An unchanged re-registration is a republish and keeps everything.
+    await supervisor.upsert({ ...binding(), workflowId: changed });
+    expect(
+      await store.getPieceStoreValue("FLOW", changed, "_webhook_id"),
+    ).toBe(1234);
+
+    // A different config is a different trigger: the old registration id must
+    // not survive into it, or onDisable would later free the wrong endpoint.
+    await supervisor.upsert({
+      ...binding(),
+      workflowId: changed,
+      config: { rss_feed_url: `${feedUrl}?v=2` },
+    });
+    expect(
+      await store.getPieceStoreValue("FLOW", changed, "_webhook_id"),
+    ).toBeNull();
+  }, 60_000);
+
+  it("runs a sample in its own partition and leaves nothing behind", async () => {
+    const sampled = "wf-sup-sample";
+    await supervisor.upsert({ ...binding(), workflowId: sampled });
+    const live = await store.getPieceStoreValue("FLOW", sampled, CURSOR_KEY);
+
+    const out = await supervisor.test({ ...binding(), workflowId: sampled });
+    expect(Array.isArray(out)).toBe(true);
+    // The live cursor is untouched, and the sample's partition is gone — not
+    // merely named apart, as a key prefix would have left it.
+    expect(await store.getPieceStoreValue("FLOW", sampled, CURSOR_KEY)).toBe(
+      live,
+    );
+    expect(await store.listPieceStore("FLOW", `${sampled}#test`)).toEqual({});
+  }, 60_000);
+
+  // A webhook `run` checkpoints its cursor inside the hook just as a poll
+  // does, so a malformed output has to fail rather than read as "no items".
+  it("rejects a non-array webhook run instead of swallowing the delivery", async () => {
+    const scalar = "wf-sup-scalar";
+    const advanced = "g-after-webhook";
+    const worker = {
+      describePiece: () =>
+        Promise.resolve({
+          output: {
+            triggers: [{ name: "new-item", strategy: "WEBHOOK" }],
+          },
+          touched: [],
+          tlsPoisoned: false,
+        }),
+      runTriggerHook: async (request: { hook: string }) => {
+        if (request.hook === "run") {
+          // What pollingHelper does before it returns: the cursor moves first.
+          await store.setPieceStoreValue("FLOW", scalar, CURSOR_KEY, advanced);
+          return { output: "one item", touched: [], tlsPoisoned: false };
+        }
+        return { output: [], touched: [], tlsPoisoned: false };
+      },
+      dispose: () => undefined,
+    };
+    const supervisor3 = new TriggerSupervisor({
+      store: () => Promise.resolve(store),
+      resolveAuth: () => Promise.resolve(undefined),
+      fire: () => undefined,
+      cacheDir,
+      worker: worker as unknown as ConstructorParameters<
+        typeof TriggerSupervisor
+      >[0]["worker"],
+      webhookUrlFor: () => Promise.resolve("https://reactor.test/hook"),
+    });
+    await supervisor3.upsert({ ...binding(), workflowId: scalar });
+    await store.setPieceStoreValue("FLOW", scalar, CURSOR_KEY, "g-before");
+
+    await expect(supervisor3.deliverWebhook(scalar, { id: 1 })).rejects.toThrow(
+      /expected an array/,
+    );
+    // Coercing to no items would have left the advanced cursor standing, and
+    // the event behind it could never be read again.
+    expect(await store.getPieceStoreValue("FLOW", scalar, CURSOR_KEY)).toBe(
+      "g-before",
+    );
+    supervisor3.stop();
+  }, 60_000);
+
   it("claims dedupe keys once within the TTL", async () => {
     const now = new Date().toISOString();
     expect(await store.claimDedupe(WF, "k1", 30_000, now)).toBe(true);
@@ -240,6 +375,42 @@ describe.skipIf(!rssBundle)("TriggerSupervisor", () => {
     const later = new Date(Date.now() + 60_000).toISOString();
     expect(await store.claimDedupe(WF, "k1", 30_000, later)).toBe(true);
   });
+});
+
+describe("TriggerSupervisor without a journal", () => {
+  const binding = {
+    workflowId: "wf-no-journal",
+    blockType: "@activepieces/piece-rss@0.5.9#trigger:new-item",
+    packageName: "@activepieces/piece-rss",
+    version: "0.5.9",
+    triggerName: "new-item",
+    config: { rss_feed_url: "http://127.0.0.1:1/feed.xml" },
+    connectionId: null,
+  };
+
+  const supervisor = () =>
+    new TriggerSupervisor({
+      store: () => Promise.resolve(undefined),
+      resolveAuth: () => Promise.resolve(undefined),
+      fire: () => undefined,
+      cacheDir,
+    });
+
+  // Degrading to the heap would reset the cursor on every restart and
+  // re-deliver the trigger's whole history, so a live hook refuses instead.
+  it("refuses a live hook rather than running it on the heap", async () => {
+    await expect(
+      supervisor().handshake(binding, { probe: true }),
+    ).rejects.toThrow(/needs a run journal/);
+  });
+
+  it("still answers a design-time sample, whose state is throwaway", async () => {
+    // Reaches the bundle fetch, which is as far as a journal-less reactor can
+    // get; what matters is that it is not the refusal above.
+    await expect(supervisor().test(binding)).rejects.not.toThrow(
+      /needs a run journal/,
+    );
+  }, 60_000);
 });
 
 describe("interval parsing", () => {

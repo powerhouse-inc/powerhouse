@@ -1,5 +1,8 @@
-// Trigger hooks over the worker protocol: the piece store round-trips as
+// Trigger hooks with no journal behind them: the piece store round-trips as
 // storeState, so cursors survive worker death and isRepublish keeps them.
+
+// The durable path that replaces this wherever a journal exists lives in
+// worker-trigger-store.test.ts.
 import http from "node:http";
 import type { AddressInfo } from "node:net";
 import { PieceWorker } from "../../src/activepieces/worker/host.js";

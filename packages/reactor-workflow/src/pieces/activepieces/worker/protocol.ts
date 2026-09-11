@@ -91,8 +91,11 @@ export interface ResolveOptionsMessage {
   request: ResolveOptionsRequest;
 }
 
-// One trigger lifecycle hook, executed statelessly: the persisted piece-store
-// contents are seeded in and the updated contents come back in the response.
+// One trigger lifecycle hook. With `durableStore` its `ctx.store` is the same
+// host-served store an action gets, so a write lands as the hook makes it.
+
+// Without one it runs statelessly: `storeState` seeds an in-memory store and
+// the whole snapshot comes back in the response for the caller to persist.
 export interface TriggerHookRequest extends EgressScopedRequest {
   bundleDir: string;
   triggerName: string;
@@ -100,6 +103,9 @@ export interface TriggerHookRequest extends EgressScopedRequest {
   propsValue: Record<string, unknown>;
   auth?: unknown;
   storeState?: Record<string, unknown>;
+  // Serve `ctx.store` from the host over the call channel, exactly as
+  // RunActionRequest does, instead of seeding and returning the snapshot above.
+  durableStore?: boolean;
   identity?: ActionContextIdentity;
   // onEnable of an unchanged trigger; pollingHelper keeps its cursor.
   isRepublish?: boolean;

@@ -101,6 +101,11 @@ export function pollIntervalFor(
   return intervalFromSchedules(schedules, defaultMs);
 }
 
+// STALE: store_state is vestigial — the migration in store.ts blanks it and
+// the supervisor only ever writes "{}". This always returns {} on a live row.
+
+// Only trigger-drivers.ts calls it, and only tests call that. Wiring that path
+// into service.ts without converting it to piece_store restarts every cursor.
 export function parseStoreState(row: TriggerStateRow): Record<string, unknown> {
   try {
     return JSON.parse(row.store_state) as Record<string, unknown>;

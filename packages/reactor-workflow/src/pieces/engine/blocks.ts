@@ -210,9 +210,9 @@ function storeKeyOf(payload: unknown): string {
   return key;
 }
 
-// The handlers served to a running step. A rejection here becomes the error
-// the piece sees from ctx.store, which is what an over-limit write should do.
-function storeHandlers(port: PieceStorePort): HostCallHandlers {
+// The handlers served to a running step or trigger hook. A rejection becomes
+// the error the piece sees, which is what an over-limit write should do.
+export function storeHandlers(port: PieceStorePort): HostCallHandlers {
   return {
     [STORE_GET]: (payload) =>
       port.get(storeKeyOf(payload), storeScopeOf(payload)),

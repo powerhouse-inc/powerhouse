@@ -55,6 +55,9 @@ async function firePieceItem(
 }
 
 // onEnable, with the cursor carried over only for an unchanged re-register.
+
+// STALE: this still seeds and returns the flat storeState blob. The supervisor
+// serves ctx.store from piece_store instead; see parseStoreState's note.
 async function armPiece(
   binding: PieceTriggerBinding,
   context: EnableContext,
