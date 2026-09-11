@@ -1,4 +1,10 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { CreateDocumentWithTypeModal } from "./create-document-with-type-modal.js";
 
@@ -154,6 +160,27 @@ describe("CreateDocumentWithTypeModal", () => {
       });
       expect(screen.getByPlaceholderText("Document name")).toHaveValue("");
       expect(screen.getByText("Select document type…")).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("leaves no pending reset timer behind when unmounted while closing", () => {
+    // The deferred reset fires 300ms after close, well past the point where a
+    // caller may have unmounted the modal. If it outlives unmount it sets
+    // state on a torn-down tree -- under Vitest that lands after the test
+    // environment is gone and surfaces as "window is not defined".
+    // Counts are relative: Radix schedules its own 0ms timers on render, and
+    // those are not ours to clear.
+    vi.useFakeTimers();
+    try {
+      setup();
+      fillName("My document");
+      const beforeClose = vi.getTimerCount();
+      fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+      expect(vi.getTimerCount()).toBe(beforeClose + 1);
+      cleanup();
+      expect(vi.getTimerCount()).toBe(beforeClose);
     } finally {
       vi.useRealTimers();
     }
