@@ -106,6 +106,70 @@ describe("runWorkflow", () => {
     expect(run.steps[1].output).toEqual({ got: "hello" });
   });
 
+  it("journals each terminal step as it lands, skips only in the final sweep", async () => {
+    const executor = new FakeExecutor();
+    const journaled: Array<[string, string, number]> = [];
+    const definition: WorkflowDefinition = {
+      trigger: TRIGGER,
+      steps: [
+        { id: "a", key: "first", blockType: "fake#ok", config: {} },
+        { id: "b", key: "taken", blockType: "fake#ok", config: {} },
+        { id: "c", key: "untaken", blockType: "fake#ok", config: {} },
+      ],
+      edges: [
+        edge("e1", "t", "a"),
+        edge("e2", "a", "b"),
+        edge("e3", "a", "c", "other"),
+      ],
+    };
+
+    const run = await runWorkflow({
+      definition,
+      executor,
+      onStep: (record, ordinal) => {
+        journaled.push([record.key, record.status, ordinal]);
+      },
+    });
+
+    expect(run.steps.map((s) => s.status)).toEqual([
+      "SUCCEEDED",
+      "SUCCEEDED",
+      "SKIPPED",
+    ]);
+    // Ordinals are execution order, and the skipped step is never journaled.
+    expect(journaled).toEqual([
+      ["first", "SUCCEEDED", 0],
+      ["taken", "SUCCEEDED", 1],
+    ]);
+  });
+
+  it("journals a failed step, and an onStep that throws never fails the run", async () => {
+    const executor = new FakeExecutor();
+    const journaled: string[] = [];
+    const definition: WorkflowDefinition = {
+      trigger: TRIGGER,
+      steps: [
+        { id: "a", key: "first", blockType: "fake#ok", config: {} },
+        { id: "b", key: "second", blockType: "fake#fail", config: {} },
+      ],
+      edges: [edge("e1", "t", "a"), edge("e2", "a", "b")],
+    };
+
+    const run = await runWorkflow({
+      definition,
+      executor,
+      onStep: (record) => {
+        journaled.push(`${record.key}:${record.status}`);
+        return Promise.reject(new Error("journal is down"));
+      },
+    });
+
+    // A dead journal costs durability, never the run's own outcome.
+    expect(run.status).toBe("FAILED");
+    expect(run.error).toContain('Step "second" failed: boom');
+    expect(journaled).toEqual(["first:SUCCEEDED", "second:FAILED"]);
+  });
+
   it("replays completedSteps without executing them, resuming at the failure", async () => {
     const failing = new FakeExecutor();
     const definition: WorkflowDefinition = {

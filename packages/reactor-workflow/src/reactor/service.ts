@@ -1775,6 +1775,10 @@ export class WorkflowRuntimeService {
         triggerPayload,
         rerunOf: resume?.rerunOf,
       })) ?? null;
+    let journalFailed = false;
+    // Recorded whether or not the write lands: it is what lets finishRun put a
+    // lost row back where the step ran.
+    const executionOrder = new Map<string, number>();
     try {
       const result = await withRunScope({ workflowId, runId, connections }, () =>
         runWorkflow({
@@ -1782,9 +1786,40 @@ export class WorkflowRuntimeService {
           executor: this.executor!,
           triggerPayload,
           completedSteps: resume?.completedSteps,
+          // Journal each step as it lands, so a reactor that dies mid-run
+          // still leaves a rerunnable record of the work it finished.
+          onStep:
+            store && runId
+              ? async (record, ordinal) => {
+                  executionOrder.set(record.stepId, ordinal);
+                  try {
+                    await store.recordStep(runId, ordinal, record);
+                  } catch (error) {
+                    // Swallowed on purpose, but logged once per run: a dead
+                    // journal must not look exactly like a healthy one.
+                    if (journalFailed) return;
+                    journalFailed = true;
+                    logger.warn(
+                      `Run ${runId}: journaling step "${record.key}" failed; the run continues without per-step durability`,
+                      error,
+                    );
+                  }
+                }
+              : undefined,
         }),
       );
-      if (store && runId) await store.finishRun(runId, result);
+      if (store && runId) {
+        try {
+          await store.finishRun(runId, result, executionOrder);
+        } catch (error) {
+          // The run is over and its result is the caller's; a journal that
+          // cannot say so must not turn a finished run into a failed one.
+          logger.warn(
+            `Run ${runId}: closing the run journal out failed; the run's outcome stands`,
+            error,
+          );
+        }
+      }
       return { ...result, runId };
     } catch (error) {
       if (store && runId) {

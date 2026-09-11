@@ -19,6 +19,13 @@ export interface RunWorkflowOptions {
   // Journaled outputs from a prior run, keyed by step id; matching steps
   // replay (output injected, port re-taken) instead of executing.
   completedSteps?: Map<string, { output?: unknown; port?: string | null }>;
+  // Called as each step reaches a terminal state, so a run that dies
+  // mid-flight leaves the steps it finished behind. Ordinal is execution
+  // order; skips are excluded, being knowable only once the run completes.
+  onStep?: (
+    record: StepExecutionRecord,
+    ordinal: number,
+  ) => void | Promise<void>;
 }
 
 function errorMessage(error: unknown): string {
@@ -44,6 +51,19 @@ export async function runWorkflow(
   // edgeId -> taken; an edge is decided once its source ran or was skipped.
   const edgeDecisions = new Map<string, boolean>();
   let runFailed: string | undefined;
+  let executedCount = 0;
+
+  // A failing journal write must not cost us the step's completed work: the
+  // run carries on, and finishRun's final sweep repairs the missing row.
+  const journal = async (record: StepExecutionRecord) => {
+    if (!options.onStep) return;
+    const ordinal = executedCount++;
+    try {
+      await options.onStep(record, ordinal);
+    } catch {
+      // Durability is the bonus here; run correctness is not at stake.
+    }
+  };
 
   const decideOutgoing = (sourceId: string, port: string | undefined) => {
     for (const edge of definition.edges) {
@@ -81,14 +101,16 @@ export async function runWorkflow(
     const replay = options.completedSteps?.get(step.id);
     if (replay) {
       const port = replay.port ?? "next";
-      records.set(step.id, {
+      const record: StepExecutionRecord = {
         stepId: step.id,
         key: step.key,
         blockType: step.blockType,
         status: "REPLAYED",
         output: replay.output,
         port,
-      });
+      };
+      records.set(step.id, record);
+      await journal(record);
       scope.steps[step.key] = { output: replay.output };
       decideOutgoing(step.id, port);
       return;
@@ -102,7 +124,7 @@ export async function runWorkflow(
         step,
       });
       const port = result.port ?? "next";
-      records.set(step.id, {
+      const record: StepExecutionRecord = {
         stepId: step.id,
         key: step.key,
         blockType: step.blockType,
@@ -110,18 +132,22 @@ export async function runWorkflow(
         input,
         output: result.output,
         port,
-      });
+      };
+      records.set(step.id, record);
+      await journal(record);
       scope.steps[step.key] = { output: result.output };
       decideOutgoing(step.id, port);
     } catch (error) {
-      records.set(step.id, {
+      const record: StepExecutionRecord = {
         stepId: step.id,
         key: step.key,
         blockType: step.blockType,
         status: "FAILED",
         input,
         error: errorMessage(error),
-      });
+      };
+      records.set(step.id, record);
+      await journal(record);
       decideOutgoing(step.id, "error");
       const errorHandled = definition.edges.some(
         (edge) => edge.from === step.id && edgeDecisions.get(edge.id),

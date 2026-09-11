@@ -7,7 +7,11 @@ import type { IRelationalDb } from "@powerhousedao/reactor-browser";
 export interface NamespaceFactory {
   createNamespace(namespace: string): Promise<unknown>;
 }
-import type { WorkflowRunResult } from "@powerhousedao/reactor-connectors";
+import type {
+  StepExecutionRecord,
+  WorkflowRunResult,
+} from "@powerhousedao/reactor-connectors";
+import { childLogger } from "document-model";
 import { randomUUID } from "node:crypto";
 
 export interface RunRow {
@@ -28,6 +32,8 @@ export interface RunRow {
 export interface StepExecutionRow {
   id: string;
   run_id: string;
+  // Execution order; runs journaled before per-step journaling landed hold
+  // the definition index. Both are per-run, and nothing compares across runs.
   ordinal: number;
   step_id: string;
   step_key: string;
@@ -82,6 +88,24 @@ export interface WorkflowRuntimeDB {
   trigger_state: TriggerStateRow;
   trigger_dedupe: TriggerDedupeRow;
   piece_store: PieceStoreRow;
+}
+
+const logger = childLogger(["workflow", "runtime", "store"]);
+
+// Recorded as the run's error when the reactor died mid-run, so the cause is
+// legible in the UI rather than the run just stopping.
+export const ORPHANED_RUN_ERROR =
+  "Reactor stopped before the run finished; steps completed before then were journaled";
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+// Postgres 42P07: the constraint's backing index is already there, which is
+// what a re-run migration looks like. Bad data raises 23505 instead.
+function isDuplicateObject(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false;
+  return (error as { code?: unknown }).code === "42P07";
 }
 
 async function up(db: IRelationalDb<WorkflowRuntimeDB>): Promise<void> {
@@ -149,8 +173,28 @@ async function up(db: IRelationalDb<WorkflowRuntimeDB>): Promise<void> {
     .addColumn("output", "text")
     .addColumn("port", "text")
     .addColumn("error", "text")
+    .addUniqueConstraint("step_execution_run_step", ["run_id", "step_id"])
     .ifNotExists()
     .execute();
+
+  // Additive migration for journals created before per-step journaling: the
+  // upsert in recordStep/finishRun needs this constraint to conflict on.
+  try {
+    await db.schema
+      .alterTable("step_execution")
+      .addUniqueConstraint("step_execution_run_step", ["run_id", "step_id"])
+      .execute();
+  } catch (error) {
+    // Only "already there" is benign. Swallowing anything else would leave
+    // every later upsert failing on a missing ON CONFLICT target.
+    if (!isDuplicateObject(error)) {
+      throw new Error(
+        `Could not add the step_execution (run_id, step_id) unique constraint, ` +
+          `which per-step journaling upserts against: ${errorMessage(error)}`,
+        { cause: error },
+      );
+    }
+  }
 
   await db.schema
     .createTable("piece_store")
@@ -206,6 +250,23 @@ function assertPieceStoreEntry(key: string, value: unknown): void {
   }
 }
 
+// Every column of a step_execution row but its surrogate id, shared by the
+// per-step write and the closing sweep so the two cannot drift.
+function stepValues(runId: string, ordinal: number, step: StepExecutionRecord) {
+  return {
+    run_id: runId,
+    ordinal,
+    step_id: step.stepId,
+    step_key: step.key,
+    block_type: step.blockType,
+    status: step.status,
+    input: jsonOrNull(step.input),
+    output: jsonOrNull(step.output),
+    port: step.port ?? null,
+    error: step.error ?? null,
+  };
+}
+
 function jsonOrNull(value: unknown): string | null {
   if (value === undefined) return null;
   try {
@@ -226,6 +287,13 @@ export interface StartRunOptions {
   rerunOf?: string;
 }
 
+// Runs this process started and has not closed out. A run outlives its store:
+// configure() opens a new one on each hot reload, mid-flight runs and all.
+
+// Process-local on purpose. A second reactor over the same journal would need
+// a lease, and one that can block startup costs more than a precise sweep.
+const runsInFlight = new Set<string>();
+
 export class WorkflowRunStore {
   private constructor(private readonly db: IRelationalDb<WorkflowRuntimeDB>) {}
 
@@ -236,7 +304,38 @@ export class WorkflowRunStore {
       "workflow_runtime",
     )) as IRelationalDb<WorkflowRuntimeDB>;
     await up(db);
-    return new WorkflowRunStore(db);
+    const store = new WorkflowRunStore(db);
+    await store.recoverOrphanedRuns();
+    return store;
+  }
+
+  // A run still RUNNING when the journal opens, and not one of ours, belongs
+  // to a process that is gone: close it out as FAILED.
+
+  // Without this the steps journaled before the crash are unreachable, since
+  // rerun() only accepts a FAILED run.
+  async recoverOrphanedRuns(): Promise<number> {
+    let query = this.db
+      .updateTable("run")
+      .set({
+        status: "FAILED",
+        error: ORPHANED_RUN_ERROR,
+        ended_at: new Date().toISOString(),
+      })
+      .where("status", "=", "RUNNING");
+    // Failing a run this process is still executing would hand rerun() a live
+    // run, and its side effects would happen twice.
+    if (runsInFlight.size > 0) {
+      query = query.where("id", "not in", [...runsInFlight]);
+    }
+    const result = await query.executeTakeFirst();
+    const recovered = Number(result.numUpdatedRows);
+    if (recovered > 0) {
+      logger.warn(
+        `Recovered ${recovered} workflow run(s) left RUNNING by a stopped reactor; they are now FAILED and rerunnable`,
+      );
+    }
+    return recovered;
   }
 
   async startRun(options: StartRunOptions): Promise<string> {
@@ -257,29 +356,49 @@ export class WorkflowRunStore {
         rerun_of: options.rerunOf ?? null,
       })
       .execute();
+    runsInFlight.add(id);
     return id;
   }
 
-  async finishRun(runId: string, result: WorkflowRunResult): Promise<void> {
+  // One step's terminal state, written the moment it reaches it, so a
+  // reactor killed mid-run leaves the work it finished behind.
+
+  // Keyed by (run_id, step_id): a re-executed step corrects its row.
+  async recordStep(
+    runId: string,
+    ordinal: number,
+    step: StepExecutionRecord,
+  ): Promise<void> {
+    const values = stepValues(runId, ordinal, step);
+    const { run_id: _run, step_id: _step, ...mutable } = values;
+    await this.db
+      .insertInto("step_execution")
+      .values({ id: randomUUID(), ...values })
+      .onConflict((oc) => oc.columns(["run_id", "step_id"]).doUpdateSet(mutable))
+      .execute();
+  }
+
+  // Closes the run out. `executionOrder` maps step id to the ordinal the step
+  // ran with, which a lost row cannot otherwise be given back.
+  async finishRun(
+    runId: string,
+    result: WorkflowRunResult,
+    executionOrder?: ReadonlyMap<string, number>,
+  ): Promise<void> {
+    // Terminal from here whatever the writes below do: if we leave the run
+    // RUNNING, a later sweep should be free to reach it.
+    runsInFlight.delete(runId);
     if (result.steps.length > 0) {
-      await this.db
-        .insertInto("step_execution")
-        .values(
-          result.steps.map((step, ordinal) => ({
-            id: randomUUID(),
-            run_id: runId,
-            ordinal,
-            step_id: step.stepId,
-            step_key: step.key,
-            block_type: step.blockType,
-            status: step.status,
-            input: jsonOrNull(step.input),
-            output: jsonOrNull(step.output),
-            port: step.port ?? null,
-            error: step.error ?? null,
-          })),
-        )
-        .execute();
+      try {
+        await this.sweepSteps(runId, result, executionOrder);
+      } catch (error) {
+        // The work is done and the caller is owed its result: a journal that
+        // cannot record the steps must not also cost the run its status.
+        logger.warn(
+          `Run ${runId}: writing the closing step journal failed; the run is closed out without it`,
+          error,
+        );
+      }
     }
     await this.db
       .updateTable("run")
@@ -292,7 +411,62 @@ export class WorkflowRunStore {
       .execute();
   }
 
+  // Upserts the whole step set: fills in the SKIPPED sweep per-step journaling
+  // omits, and repairs the rows a failed journal write left behind.
+  private async sweepSteps(
+    runId: string,
+    result: WorkflowRunResult,
+    executionOrder?: ReadonlyMap<string, number>,
+  ): Promise<void> {
+    const journaled = await this.db
+      .selectFrom("step_execution")
+      .select(["step_id", "ordinal"])
+      .where("run_id", "=", runId)
+      .execute();
+    // A journaled step keeps the ordinal it ran with; the sweep lands after
+    // the highest of them.
+    const ordinals = new Map(journaled.map((row) => [row.step_id, row.ordinal]));
+    let nextOrdinal = journaled.reduce(
+      (max, row) => Math.max(max, row.ordinal + 1),
+      0,
+    );
+    for (const step of result.steps) {
+      const ran = executionOrder?.get(step.stepId);
+      // A step that ran but lost its write goes back where it ran, not where
+      // the definition happens to list it.
+      if (ran === undefined || ordinals.has(step.stepId)) continue;
+      ordinals.set(step.stepId, ran);
+      nextOrdinal = Math.max(nextOrdinal, ran + 1);
+    }
+    // Skips never ran and never journaled an ordinal, so they trail everything
+    // that did, in definition order.
+    const ordinalFor = (step: StepExecutionRecord) =>
+      ordinals.get(step.stepId) ?? nextOrdinal++;
+    await this.db
+      .insertInto("step_execution")
+      .values(
+        result.steps.map((step) => ({
+          id: randomUUID(),
+          ...stepValues(runId, ordinalFor(step), step),
+        })),
+      )
+      .onConflict((oc) =>
+        oc.columns(["run_id", "step_id"]).doUpdateSet((eb) => ({
+          ordinal: eb.ref("excluded.ordinal"),
+          step_key: eb.ref("excluded.step_key"),
+          block_type: eb.ref("excluded.block_type"),
+          status: eb.ref("excluded.status"),
+          input: eb.ref("excluded.input"),
+          output: eb.ref("excluded.output"),
+          port: eb.ref("excluded.port"),
+          error: eb.ref("excluded.error"),
+        })),
+      )
+      .execute();
+  }
+
   async failRun(runId: string, error: string): Promise<void> {
+    runsInFlight.delete(runId);
     await this.db
       .updateTable("run")
       .set({ status: "FAILED", error, ended_at: new Date().toISOString() })
