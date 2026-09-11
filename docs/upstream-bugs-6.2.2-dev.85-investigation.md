@@ -246,6 +246,38 @@ There is NO existing live graphql-ws-client integration test in reactor-api.
    false already closes; the manual close merely overrides the code with a worse one. The try/catch in
    the snippet is MANDATORY not stylistic — V4: a throw inside onConnect still closes 4500.
 
+## (e) SHIPPED: fix 1, and the behaviour change it carries — RELEASE NOTE
+
+Fix 1 landed, so the reversal flagged above is real and needs saying out loud.
+
+BEFORE: `AUTH_ENABLED=true` refused a tokenless WebSocket connection at the
+handshake, whatever `REQUIRE_AUTHENTICATED_CALLER` said.
+AFTER: the refusal is keyed on `REQUIRE_AUTHENTICATED_CALLER`, as HTTP and SSE
+already were. `AUTH_ENABLED=true` with the flag unset now ADMITS a tokenless
+subscription, with no user on the context.
+
+Who is affected: a deployment running `AUTH_ENABLED=true` and NOT setting
+`REQUIRE_AUTHENTICATED_CALLER`. Nothing else changes.
+
+Why it is not a new hole, and where it still is one:
+- The reactor's own subgraph authorizes per document on every event
+  (`documentChanges`/`jobChanges` -> `canReadDocument`), so an admitted
+  anonymous socket sees exactly what an anonymous HTTP query already saw.
+- A PACKAGE-PROVIDED subgraph with subscriptions is the gap. Those resolvers
+  have no per-event authorization, and `attachWebSocket` runs for every
+  subgraph with `hasSubscriptions`. Such a subscription was previously
+  unreachable anonymously and now is not.
+- The same subgraph's QUERIES were already reachable anonymously under this
+  config: `requireAuthFetchMiddleware` is the only thing that 401s an
+  anonymous HTTP caller, and it is built only when the flag is set
+  (server.ts:887-893). So WS was accidentally stricter than HTTP, and the
+  exposure this closes over is one the deployment already had.
+
+Action for an operator who relied on the old behaviour: set
+`REQUIRE_AUTHENTICATED_CALLER=true`. That refuses anonymous on BOTH transports
+(401 over fetch, 4403 over WS) and is the flag that was always meant to express
+it. The server now warns at boot when auth is on and this flag is not set.
+
 ## Out of scope but flag it
 graphql-manager.ts:996 calls attachWebSocket ONCE PER SUBSCRIPTION-CAPABLE SUBGRAPH, all on the single
 wsServer from server.ts:655. Each useServer registers its own ws.on("connection") and overwrites
