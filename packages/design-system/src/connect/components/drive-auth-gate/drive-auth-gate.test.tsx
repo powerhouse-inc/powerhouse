@@ -38,4 +38,30 @@ describe("DriveAuthGate", () => {
     fireEvent.click(screen.getByRole("button", { name: /log out/i }));
     expect(onLogout).toHaveBeenCalledOnce();
   });
+  it("renders no close control when onClose is omitted", () => {
+    render(<DriveAuthGate onLogin={() => {}} />);
+    expect(screen.queryByRole("button", { name: "Close" })).toBeNull();
+  });
+
+  it("calls onClose once when the close control is clicked, leaving onLogin alone", () => {
+    const onClose = vi.fn();
+    const onLogin = vi.fn();
+    render(<DriveAuthGate onLogin={onLogin} onClose={onClose} />);
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    expect(onClose).toHaveBeenCalledOnce();
+    expect(onLogin).not.toHaveBeenCalled();
+  });
+
+  it('renders the close control in mode="unauthorized" too', () => {
+    const onClose = vi.fn();
+    render(
+      <DriveAuthGate
+        mode="unauthorized"
+        onLogout={() => {}}
+        onClose={onClose}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    expect(onClose).toHaveBeenCalledOnce();
+  });
 });

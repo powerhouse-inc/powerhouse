@@ -890,6 +890,21 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
       logger.info(
         "Require-authenticated-caller middleware enabled: anonymous callers are rejected with a 401 before any subgraph",
       );
+    } else {
+      // Auth is on in some form, so say plainly what it is not doing. The
+      // policy gates the reactor's own document reads; it does not gate a
+      // package-provided subgraph, which authorizes nothing on its own. This
+      // has always been true over HTTP, and WebSocket admission now matches it
+      // rather than refusing tokenless connections on AUTH_ENABLED alone --
+      // so a subscription reaches the same surface a query already did.
+      logger.warn(
+        "Anonymous callers are admitted on every transport, including WebSocket " +
+          "subscriptions: REQUIRE_AUTHENTICATED_CALLER is not set. The " +
+          "authorization policy gates the reactor's own documents, but a " +
+          "package-provided subgraph authorizes nothing on its own. Set " +
+          "REQUIRE_AUTHENTICATED_CALLER=true to refuse anonymous callers before " +
+          "any subgraph sees them.",
+      );
     }
   }
 

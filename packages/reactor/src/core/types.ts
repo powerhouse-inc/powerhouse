@@ -471,6 +471,21 @@ export interface ReactorModule {
  * direct access to internal components for advanced use cases, testing, or
  * integration scenarios.
  */
+/**
+ * A component that failed to build or catch up, and was started anyway.
+ *
+ * The reactor does not take itself down for one of these: a read model that
+ * cannot reach its database should not stop the writes. But it does serve
+ * reads that are silently incomplete, so the failure is recorded rather than
+ * only logged -- a host can refuse readiness on a non-empty list instead of
+ * reporting healthy while answering from an index that stopped at boot.
+ */
+export interface DegradedComponent {
+  /** Names the component that failed, e.g. `read model 0 (attachments)`. */
+  component: string;
+  error: Error;
+}
+
 export interface InProcessReactorModule extends ReactorModule {
   /**
    * The enforcement flags this reactor resolved, as plain booleans. Held on the
@@ -509,6 +524,11 @@ export interface InProcessReactorModule extends ReactorModule {
    * record per-pool acquire-wait and stat metrics.
    */
   pools: PoolInstrumentation[];
+  /**
+   * Components that failed to initialize and were started degraded. Empty on
+   * a clean boot. See {@link DegradedComponent}.
+   */
+  degradedComponents: DegradedComponent[];
 }
 
 /**

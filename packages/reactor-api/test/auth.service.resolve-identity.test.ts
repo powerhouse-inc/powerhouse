@@ -221,18 +221,38 @@ describe("resolveIdentity omitted (backwards compatibility)", () => {
     expect(mockVerifyAuthBearerToken).not.toHaveBeenCalled();
   });
 
-  /* Enforcement still refuses a tokenless subscription. Admitting one is a
-     concession to `resolveIdentity` alone, and must not leak into auth-on. */
-  it("enabled=true still refuses a websocket connection with no token", async () => {
+  // Reversal of an earlier decision: enabled=true used to throw here.
+
+  // WS now answers a tokenless connection as HTTP and SSE do — no user.
+
+  // Refusing anonymous is now REQUIRE_AUTHENTICATED_CALLER's job, per connection.
+
+  // Admitted subscriptions authorize per document, as over /graphql/stream.
+
+  // The old throw also closed the socket 4500, which clients never retry.
+  it("enabled=true resolves a tokenless websocket connection to no user", async () => {
     const service = new AuthService({
       enabled: true,
       admins: ADMINS,
       skipCredentialVerification: true,
     });
 
-    await expect(service.authenticateWebSocketConnection({})).rejects.toThrow(
-      /Missing authorization/,
-    );
+    await expect(
+      service.authenticateWebSocketConnection({}),
+    ).resolves.toBeNull();
+  });
+
+  // A bearer that is present and unusable is still refused, as HTTP 401s it.
+  it("enabled=true still rejects a malformed websocket authorization", async () => {
+    const service = new AuthService({
+      enabled: true,
+      admins: ADMINS,
+      skipCredentialVerification: true,
+    });
+
+    await expect(
+      service.authenticateWebSocketConnection({ authorization: "Bearer" }),
+    ).rejects.toThrow(/Invalid authorization format/);
   });
 });
 

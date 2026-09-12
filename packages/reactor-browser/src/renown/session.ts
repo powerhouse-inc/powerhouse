@@ -1,7 +1,12 @@
 import type { IRenown, User } from "@renown/sdk";
 import type { WalletSession } from "@renown/sdk/wallet";
 import { logger } from "document-model";
-import { RENOWN_CHAIN_ID, RENOWN_NETWORK_ID, RENOWN_URL } from "./constants.js";
+import {
+  RENOWN_CHAIN_ID,
+  RENOWN_NETWORK_ID,
+  RENOWN_RETURN_URL_STRIPPED_PARAMS,
+  RENOWN_URL,
+} from "./constants.js";
 import {
   getActiveWalletController,
   getWalletActivator,
@@ -26,7 +31,13 @@ export function openRenown(documentId?: string) {
   url.searchParams.set("network", RENOWN_NETWORK_ID);
   url.searchParams.set("chain", RENOWN_CHAIN_ID);
 
-  const returnUrl = new URL(window.location.pathname, window.location.origin);
+  // The whole location, so a shared link (`?driveUrl=`, feature flags, the
+  // fragment) still resolves after the round trip -- minus the params that
+  // would re-arm a redirect handler on the way back.
+  const returnUrl = new URL(window.location.href);
+  for (const param of RENOWN_RETURN_URL_STRIPPED_PARAMS) {
+    returnUrl.searchParams.delete(param);
+  }
   url.searchParams.set("returnUrl", returnUrl.toJSON());
   window.open(url, "_self")?.focus();
 }
@@ -52,6 +63,18 @@ let inFlightSignIn: Promise<User | undefined> | undefined;
 let inFlightAddress: string | undefined;
 let lastSignedAddress: string | undefined;
 
+// The realtime socket stops retrying an auth refusal, because retrying the same
+// credential cannot change the answer. Only a credential change can, so tell the
+// client when one happens. Read off the ambient client rather than imported, so
+// renown never pulls the graphql-client module graph in, and so a client without
+// the method (the non-GraphQL browser client) is a no-op.
+function notifyReactorClientCredentialsChanged(): void {
+  const client = window.ph?.reactorClient as
+    | { notifyCredentialsChanged?: () => void }
+    | undefined;
+  client?.notifyCredentialsChanged?.();
+}
+
 export async function completeSignIn(
   session: WalletSession,
 ): Promise<User | undefined> {
@@ -63,7 +86,10 @@ export async function completeSignIn(
   inFlightSignIn = (async () => {
     try {
       const user = await signIn(session);
-      if (user) lastSignedAddress = address;
+      if (user) {
+        lastSignedAddress = address;
+        notifyReactorClientCredentialsChanged();
+      }
       return user;
     } finally {
       inFlightSignIn = undefined;
@@ -128,7 +154,9 @@ export async function login(
       return;
     }
 
-    return await renown.login(did);
+    const loggedIn = await renown.login(did);
+    notifyReactorClientCredentialsChanged();
+    return loggedIn;
   } catch (error) {
     logger.error(
       error instanceof Error ? error.message : JSON.stringify(error),
@@ -151,6 +179,7 @@ export async function logout() {
   const renown = window.ph?.renown;
   await renown?.logout();
   resetSignInGuard();
+  notifyReactorClientCredentialsChanged();
 
   // Clear the user parameter from URL to prevent auto-login on refresh
   const url = new URL(window.location.href);

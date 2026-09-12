@@ -3,6 +3,7 @@ import { createReadStream, createWriteStream } from "node:fs";
 import { createHash, randomUUID } from "node:crypto";
 import { join, dirname } from "node:path";
 import { Readable } from "node:stream";
+import { finished } from "node:stream/promises";
 import { SizeMismatch, UploadTooLarge } from "../../errors.js";
 
 /**
@@ -36,6 +37,23 @@ export function storageRelativePath(hash: string): string {
  *
  * Returns the number of bytes written.
  */
+// createWriteStream opens the file lazily, so destroy() can return before the
+// open has even happened and the open then creates the file after the unlink
+// below has run. Wait for the stream to close first, or the failed write
+// leaves its temp file behind.
+async function discardTempFile(
+  writer: ReturnType<typeof createWriteStream>,
+  tempPath: string,
+): Promise<void> {
+  writer.destroy();
+  try {
+    await finished(writer, { error: false });
+  } catch {
+    // The stream is already closed, which is all this wait is for.
+  }
+  await rm(tempPath, { force: true });
+}
+
 export async function writeAttachmentBytes(
   path: string,
   data: ReadableStream<Uint8Array>,
@@ -87,8 +105,7 @@ export async function writeAttachmentBytes(
   }
 
   if (caughtError) {
-    writer.destroy();
-    await rm(tempPath, { force: true });
+    await discardTempFile(writer, tempPath);
     throw caughtError;
   }
 
@@ -102,7 +119,7 @@ export async function writeAttachmentBytes(
     });
     await rename(tempPath, path);
   } catch (err) {
-    await rm(tempPath, { force: true });
+    await discardTempFile(writer, tempPath);
     throw err instanceof Error ? err : new Error(String(err));
   }
 

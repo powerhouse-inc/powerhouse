@@ -13,9 +13,54 @@ export type GatewayContextFactory<TContext = unknown> = (
   request: Request,
 ) => Promise<TContext>;
 
+// Opaque per-connection key carrying what `onConnect` resolved to `context`.
+
+/** Under graphql-ws this is `ctx.extra`, created once per socket. */
+export type WsConnection = object;
+
+// Called per operation, so it must be pure: verifying belongs in `onConnect`.
 export type WsContextFactory<TContext = unknown> = (
   connectionParams: Record<string, unknown>,
+  connection: WsConnection,
 ) => Promise<TContext>;
+
+// Admits a connection once, at `ConnectionInit`; `false` closes 4403, retryable.
+
+// It must never throw: an escaping exception closes 4500, which is fatal.
+export type WsConnectHandler = (
+  connectionParams: Record<string, unknown>,
+  connection: WsConnection,
+) => Promise<boolean>;
+
+// One object, so no adapter can thread `context` without `onConnect`.
+export type WsHandlers<TContext = unknown> = {
+  onConnect: WsConnectHandler;
+  context: WsContextFactory<TContext>;
+};
+
+// Why a WebSocket handshake was refused, carried as the reason on a 4403 close.
+
+// A wire contract. A client reads these to tell an auth refusal -- which no
+// number of retries clears, only a credential change -- from a transient close.
+
+// Both stay 4403: graphql-ws keeps that code retryable, and a reconnect
+// re-evaluates `connectionParams`, so a socket refused before a sign-in does
+// succeed after one. 4401 would kill it before a fresh token could be offered.
+
+// Keep the values stable. A close reason caps at 123 UTF-8 bytes.
+
+/** No authenticated caller resolved, and REQUIRE_AUTHENTICATED_CALLER wants one. */
+export const WS_CLOSE_REASON_AUTHENTICATION_REQUIRED =
+  "authentication-required";
+
+/** A bearer was sent and could not be verified. */
+export const WS_CLOSE_REASON_BEARER_REJECTED = "bearer-rejected";
+
+/** Every reason a refusal closes with, for a client matching on the set. */
+export const WS_AUTH_CLOSE_REASONS = [
+  WS_CLOSE_REASON_AUTHENTICATION_REQUIRED,
+  WS_CLOSE_REASON_BEARER_REJECTED,
+] as const;
 
 export type WsDisposer = { dispose: () => void | Promise<void> };
 
@@ -94,11 +139,13 @@ export interface IGatewayAdapter<TContext = unknown> {
    */
   updateSupergraph(): Promise<void>;
 
-  /** Attach WebSocket subscriptions. Returns a disposer. */
+  // Attach WebSocket subscriptions. Both halves of `handlers` must be passed on.
+
+  /** Without `onConnect`, refusing would mean throwing: an unretryable 4500. */
   attachWebSocket(
     wsServer: WebSocketServer,
     schema: GraphQLSchema,
-    contextFactory: WsContextFactory<TContext>,
+    handlers: WsHandlers<TContext>,
   ): WsDisposer;
 
   stop(): Promise<void>;
