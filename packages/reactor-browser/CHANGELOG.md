@@ -1,3 +1,24 @@
+## 6.2.3-dev.4 (2026-09-12)
+
+### 🚀 Features
+
+- **reactor:** remove a serving remote whose holder has stopped polling instead of evicting its outbox forever ([e95547dab](https://github.com/powerhouse-inc/powerhouse/commit/e95547dab))
+
+### 🩹 Fixes
+
+- **reactor-api:** warn at boot when auth is on but anonymous is still admitted ([84605330c](https://github.com/powerhouse-inc/powerhouse/commit/84605330c))
+- **reactor-browser:** close the realtime socket when credentials change ([0d6d65920](https://github.com/powerhouse-inc/powerhouse/commit/0d6d65920))
+- say why a websocket auth refusal closed, and retry on that answer ([f773b8e67](https://github.com/powerhouse-inc/powerhouse/commit/f773b8e67))
+- **connect:** authenticate drive discovery and surface its refusals ([7ed675ea2](https://github.com/powerhouse-inc/powerhouse/commit/7ed675ea2))
+- **document-model:** make ConsoleLogger methods safe to detach ([686032a9a](https://github.com/powerhouse-inc/powerhouse/commit/686032a9a))
+- **reactor-browser:** keep the query string in the Renown returnUrl ([7ae4e8be6](https://github.com/powerhouse-inc/powerhouse/commit/7ae4e8be6))
+- **reactor:** decide a stale removal from the channel itself, and decide it again before acting ([98c4034d0](https://github.com/powerhouse-inc/powerhouse/commit/98c4034d0))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5
+
 ## 6.2.3-dev.3 (2026-09-11)
 
 ### 🚀 Features

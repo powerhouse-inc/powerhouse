@@ -1,3 +1,26 @@
+## 6.2.3-dev.4 (2026-09-12)
+
+### 🚀 Features
+
+- **reactor:** remove a serving remote whose holder has stopped polling instead of evicting its outbox forever ([e95547dab](https://github.com/powerhouse-inc/powerhouse/commit/e95547dab))
+
+### 🩹 Fixes
+
+- **reactor-api:** warn at boot when auth is on but anonymous is still admitted ([84605330c](https://github.com/powerhouse-inc/powerhouse/commit/84605330c))
+- **reactor:** say which component started degraded, and let a host see it ([ffb7c73dc](https://github.com/powerhouse-inc/powerhouse/commit/ffb7c73dc))
+- **connect:** authenticate drive discovery and surface its refusals ([7ed675ea2](https://github.com/powerhouse-inc/powerhouse/commit/7ed675ea2))
+- **reactor-attachments:** index across a hole in the ordinal sequence ([97a44ecdb](https://github.com/powerhouse-inc/powerhouse/commit/97a44ecdb))
+- **reactor:** hold the remote registry slot until its storage record is gone ([308bb30f9](https://github.com/powerhouse-inc/powerhouse/commit/308bb30f9))
+- **reactor:** take the prune-deferral decision per remote, and give the revoke test a window it cannot age out of ([96d9fc0e2](https://github.com/powerhouse-inc/powerhouse/commit/96d9fc0e2))
+- **reactor:** keep a batch from deriving into a remote that is being removed ([529f91a17](https://github.com/powerhouse-inc/powerhouse/commit/529f91a17))
+- **reactor:** keep a remote whose init() is refused for credentials ([9bfa0ea0f](https://github.com/powerhouse-inc/powerhouse/commit/9bfa0ea0f))
+- **reactor:** decide a stale removal from the channel itself, and decide it again before acting ([98c4034d0](https://github.com/powerhouse-inc/powerhouse/commit/98c4034d0))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5
+
 ## 6.2.3-dev.3 (2026-09-11)
 
 ### 🚀 Features

@@ -1,3 +1,24 @@
+## 6.2.3-dev.4 (2026-09-12)
+
+### 🚀 Features
+
+- **reactor:** remove a serving remote whose holder has stopped polling instead of evicting its outbox forever ([e95547dab](https://github.com/powerhouse-inc/powerhouse/commit/e95547dab))
+
+### 🩹 Fixes
+
+- **reactor-api:** warn at boot when auth is on but anonymous is still admitted ([84605330c](https://github.com/powerhouse-inc/powerhouse/commit/84605330c))
+- **reactor-api:** stop rewriting Vite's log lines on the way to the console ([13e4ac042](https://github.com/powerhouse-inc/powerhouse/commit/13e4ac042))
+- say why a websocket auth refusal closed, and retry on that answer ([f773b8e67](https://github.com/powerhouse-inc/powerhouse/commit/f773b8e67))
+- **reactor-api:** authorize the drive info endpoint ([3994f0ad1](https://github.com/powerhouse-inc/powerhouse/commit/3994f0ad1))
+- **reactor-api:** answer a tokenless websocket as the http path does ([bb20f8945](https://github.com/powerhouse-inc/powerhouse/commit/bb20f8945))
+- **document-model:** make ConsoleLogger methods safe to detach ([686032a9a](https://github.com/powerhouse-inc/powerhouse/commit/686032a9a))
+- **reactor-api:** bind the channel a push names, and stamp liveness only for work ([2534dd22a](https://github.com/powerhouse-inc/powerhouse/commit/2534dd22a))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5
+
 ## 6.2.3-dev.3 (2026-09-11)
 
 ### 🚀 Features

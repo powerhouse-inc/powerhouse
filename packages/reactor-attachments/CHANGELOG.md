@@ -1,3 +1,18 @@
+## 6.2.3-dev.4 (2026-09-12)
+
+### 🩹 Fixes
+
+- **reactor-api:** warn at boot when auth is on but anonymous is still admitted ([84605330c](https://github.com/powerhouse-inc/powerhouse/commit/84605330c))
+- **reactor-attachments:** probe the gap instead of trusting the replay mark ([b92d80d55](https://github.com/powerhouse-inc/powerhouse/commit/b92d80d55))
+- **reactor-attachments:** remove the temp file a failed write leaves behind ([0df6fa22f](https://github.com/powerhouse-inc/powerhouse/commit/0df6fa22f))
+- **reactor-attachments:** bound the replay that a permanent hole triggers ([37734c773](https://github.com/powerhouse-inc/powerhouse/commit/37734c773))
+- **reactor-attachments:** index across a hole in the ordinal sequence ([97a44ecdb](https://github.com/powerhouse-inc/powerhouse/commit/97a44ecdb))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5
+
 ## 6.2.3-dev.3 (2026-09-11)
 
 ### 🚀 Features

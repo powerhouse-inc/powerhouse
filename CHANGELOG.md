@@ -1,3 +1,46 @@
+## 6.2.3-dev.4 (2026-09-12)
+
+### 🚀 Features
+
+- **reactor:** remove a serving remote whose holder has stopped polling instead of evicting its outbox forever ([e95547dab](https://github.com/powerhouse-inc/powerhouse/commit/e95547dab))
+
+### 🩹 Fixes
+
+- say why a websocket auth refusal closed, and retry on that answer ([f773b8e67](https://github.com/powerhouse-inc/powerhouse/commit/f773b8e67))
+- six upstream defects reported against 6.2.2-dev.85 ([#3017](https://github.com/powerhouse-inc/powerhouse/pull/3017))
+- **connect:** scope the drive auth gate to the selected drive, and let it close ([30da3053c](https://github.com/powerhouse-inc/powerhouse/commit/30da3053c))
+- **connect:** authenticate drive discovery and surface its refusals ([7ed675ea2](https://github.com/powerhouse-inc/powerhouse/commit/7ed675ea2))
+- **design-system:** clear the modal's deferred reset on unmount ([2cedd3d81](https://github.com/powerhouse-inc/powerhouse/commit/2cedd3d81))
+- **document-model:** make ConsoleLogger methods safe to detach ([686032a9a](https://github.com/powerhouse-inc/powerhouse/commit/686032a9a))
+- **reactor:** decide a stale removal from the channel itself, and decide it again before acting ([98c4034d0](https://github.com/powerhouse-inc/powerhouse/commit/98c4034d0))
+- **reactor:** keep a remote whose init() is refused for credentials ([9bfa0ea0f](https://github.com/powerhouse-inc/powerhouse/commit/9bfa0ea0f))
+- **reactor:** keep a batch from deriving into a remote that is being removed ([529f91a17](https://github.com/powerhouse-inc/powerhouse/commit/529f91a17))
+- **reactor:** take the prune-deferral decision per remote, and give the revoke test a window it cannot age out of ([96d9fc0e2](https://github.com/powerhouse-inc/powerhouse/commit/96d9fc0e2))
+- **reactor:** hold the remote registry slot until its storage record is gone ([308bb30f9](https://github.com/powerhouse-inc/powerhouse/commit/308bb30f9))
+- **reactor:** remove a serving remote whose holder has stopped polling instead of evicting its outbox forever ([#3015](https://github.com/powerhouse-inc/powerhouse/pull/3015))
+- **reactor:** say which component started degraded, and let a host see it ([ffb7c73dc](https://github.com/powerhouse-inc/powerhouse/commit/ffb7c73dc))
+- **reactor-api:** bind the channel a push names, and stamp liveness only for work ([2534dd22a](https://github.com/powerhouse-inc/powerhouse/commit/2534dd22a))
+- **reactor-api:** answer a tokenless websocket as the http path does ([bb20f8945](https://github.com/powerhouse-inc/powerhouse/commit/bb20f8945))
+- **reactor-api:** authorize the drive info endpoint ([3994f0ad1](https://github.com/powerhouse-inc/powerhouse/commit/3994f0ad1))
+- **reactor-api:** authorize the drive info endpoint ([#3018](https://github.com/powerhouse-inc/powerhouse/pull/3018))
+- **reactor-api:** stop rewriting Vite's log lines on the way to the console ([13e4ac042](https://github.com/powerhouse-inc/powerhouse/commit/13e4ac042))
+- **reactor-api:** warn at boot when auth is on but anonymous is still admitted ([84605330c](https://github.com/powerhouse-inc/powerhouse/commit/84605330c))
+- **reactor-attachments:** index across a hole in the ordinal sequence ([97a44ecdb](https://github.com/powerhouse-inc/powerhouse/commit/97a44ecdb))
+- **reactor-attachments:** bound the replay that a permanent hole triggers ([37734c773](https://github.com/powerhouse-inc/powerhouse/commit/37734c773))
+- **reactor-attachments:** remove the temp file a failed write leaves behind ([0df6fa22f](https://github.com/powerhouse-inc/powerhouse/commit/0df6fa22f))
+- **reactor-attachments:** probe the gap instead of trusting the replay mark ([b92d80d55](https://github.com/powerhouse-inc/powerhouse/commit/b92d80d55))
+- **reactor-browser:** keep the query string in the Renown returnUrl ([7ae4e8be6](https://github.com/powerhouse-inc/powerhouse/commit/7ae4e8be6))
+- **reactor-browser:** close the realtime socket when credentials change ([0d6d65920](https://github.com/powerhouse-inc/powerhouse/commit/0d6d65920))
+- **shared:** the drive reducer sorts a plain copy of the node list and assigns it once instead of sorting the mutative draft ([53d6e1cd4](https://github.com/powerhouse-inc/powerhouse/commit/53d6e1cd4))
+- **shared:** insertNodeSorted takes the already-read node list and returns the new one ([749b7b1c9](https://github.com/powerhouse-inc/powerhouse/commit/749b7b1c9))
+- **shared:** drive reducer sorts a plain copy of the node list instead of the mutative draft (T-020) ([#3014](https://github.com/powerhouse-inc/powerhouse/pull/3014))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5.1
+- Claude Opus 5
+
 ## 6.2.3-dev.3 (2026-09-11)
 
 ### 🚀 Features

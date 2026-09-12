@@ -1,3 +1,16 @@
+## 6.2.3-dev.4 (2026-09-12)
+
+### 🩹 Fixes
+
+- **reactor-api:** warn at boot when auth is on but anonymous is still admitted ([84605330c](https://github.com/powerhouse-inc/powerhouse/commit/84605330c))
+- **connect:** authenticate drive discovery and surface its refusals ([7ed675ea2](https://github.com/powerhouse-inc/powerhouse/commit/7ed675ea2))
+- **connect:** scope the drive auth gate to the selected drive, and let it close ([30da3053c](https://github.com/powerhouse-inc/powerhouse/commit/30da3053c))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5
+
 ## 6.2.3-dev.3 (2026-09-11)
 
 ### 🚀 Features

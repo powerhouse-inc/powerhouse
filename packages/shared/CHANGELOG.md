@@ -1,3 +1,17 @@
+## 6.2.3-dev.4 (2026-09-12)
+
+### 🩹 Fixes
+
+- **reactor-api:** warn at boot when auth is on but anonymous is still admitted ([84605330c](https://github.com/powerhouse-inc/powerhouse/commit/84605330c))
+- **shared:** insertNodeSorted takes the already-read node list and returns the new one ([749b7b1c9](https://github.com/powerhouse-inc/powerhouse/commit/749b7b1c9))
+- **shared:** the drive reducer sorts a plain copy of the node list and assigns it once instead of sorting the mutative draft ([53d6e1cd4](https://github.com/powerhouse-inc/powerhouse/commit/53d6e1cd4))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5.1
+- Claude Opus 5
+
 ## 6.2.3-dev.3 (2026-09-11)
 
 ### 🚀 Features
