@@ -796,3 +796,25 @@ describe("Node Operations", () => {
     expect(second?.name).toBe("Reports (copy) 1");
   });
 });
+
+describe("Published node list", () => {
+  it("is frozen, so a consumer has to copy it before mutating", () => {
+    let document = driveCreateDocument();
+    document = driveDocumentReducer(
+      document,
+      addFolder({ id: "z", name: "Z", parentFolder: null }),
+    );
+    document = driveDocumentReducer(
+      document,
+      addFolder({ id: "a", name: "A", parentFolder: null }),
+    );
+
+    const nodes = document.state.global.nodes;
+
+    expect(nodes.map((node) => node.id)).toEqual(["a", "z"]);
+    expect(Object.isFrozen(nodes)).toBe(true);
+    expect(() =>
+      nodes.push({ id: "x", name: "X", parentFolder: null, kind: "folder" }),
+    ).toThrow(TypeError);
+  });
+});
