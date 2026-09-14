@@ -27,7 +27,24 @@ export interface LocalPiece {
   bundleDir?: string;
 }
 
-export type LocalPieceLookup = (name: string) => LocalPiece | undefined;
+// May answer asynchronously: a host whose registry loads on first use waits
+// here rather than racing every caller to have loaded it first.
+export type LocalPieceLookup = (
+  name: string,
+) => LocalPiece | undefined | Promise<LocalPiece | undefined>;
+
+// One entry of a reactor package's `pieces` export: which piece it ships and
+// where the built bundle sits, relative to the package root.
+
+// Nothing else is declared here on purpose — display name, actions, triggers
+// and auth are read from the piece itself, so the manifest cannot drift.
+export interface PackagePiece {
+  name: string;
+  version: string;
+  // Directory in npm-bundle shape (package.json + entry), or a module file.
+  bundle?: string;
+  entry?: string;
+}
 
 // The published path: fetch (or reuse) the bundle for an exact version.
 export function bundleResolver(options: {
@@ -55,16 +72,16 @@ export function localFirstResolver(
   fallback: PieceResolver,
 ): PieceResolver {
   return {
-    resolve(name: string, version: string): Promise<ResolvedPiece> {
-      const local = lookup(name);
+    async resolve(name: string, version: string): Promise<ResolvedPiece> {
+      const local = await lookup(name);
       if (!local) return fallback.resolve(name, version);
-      return Promise.resolve({
+      return {
         name,
         version: local.version,
         ...(local.entryPath ? { entryPath: local.entryPath } : {}),
         ...(local.bundleDir ? { bundleDir: local.bundleDir } : {}),
         local: true,
-      });
+      };
     },
   };
 }

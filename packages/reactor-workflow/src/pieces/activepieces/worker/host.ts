@@ -132,7 +132,7 @@ export interface IPieceWorker {
   ): Promise<PieceWorkerResult>;
   resolveOptions(
     request: ResolveOptionsRequest,
-    options?: { timeoutMs?: number },
+    options?: RequestOptions,
   ): Promise<PieceWorkerResult>;
   checkConnection(
     request: CheckConnectionRequest,
@@ -177,12 +177,13 @@ export class PieceWorker implements IPieceWorker {
     return this.enqueue("run", request, options.timeoutMs, options);
   }
 
-  // Design-time DROPDOWN options() / DYNAMIC props() resolution.
+  // Design-time DROPDOWN options() / DYNAMIC props() resolution. It takes the
+  // same taps a run does: a package piece's resolver may read the reactor.
   resolveOptions(
     request: ResolveOptionsRequest,
-    options: { timeoutMs?: number } = {},
+    options: RequestOptions = {},
   ): Promise<PieceWorkerResult> {
-    return this.enqueue("resolve-options", request, options.timeoutMs);
+    return this.enqueue("resolve-options", request, options.timeoutMs, options);
   }
 
   // A piece's app.checkConnection over resolved credentials; the output is a

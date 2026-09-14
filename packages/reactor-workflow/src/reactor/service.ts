@@ -14,8 +14,9 @@ import {
   containsRedactedMarker,
   declaredConnectionIds,
   DEFAULT_EGRESS_POLICY,
-  ensurePieceBundle,
   parseBlockType,
+  pieceModuleRef,
+  reactorHandlers,
   PieceWorker,
   PieceWorkerError,
   PieceWorkerPool,
@@ -23,6 +24,8 @@ import {
   rememberSecrets,
   runWorkflow,
   type BlockExecutor,
+  type LocalPiece,
+  type PieceModuleRef,
   type CheckConnectionOutcome,
   type ConnectorDescriptor,
   type EgressPolicy,
@@ -62,14 +65,34 @@ import {
   type OutputTree,
 } from "./output-tree.js";
 import {
+  fetchPieceActions,
   fetchPieceCatalog,
   fetchPieceDetail,
   fetchPieceTriggers,
+  type PieceActionsResult,
+  type PieceSummary,
+  type PieceTriggersResult,
 } from "./piece-catalog.js";
+import {
+  actionsResult,
+  catalogEntry,
+  detailResult,
+  localSearchHits,
+  triggersResult,
+} from "./local-catalog.js";
+import {
+  indexFromHits,
+  searchBlocks,
+  type BlockSearchIndex,
+  type BlockSearchResult,
+} from "./block-search.js";
+import { packagePieces } from "./piece-registry.js";
+import { SubgraphReactorPort } from "./reactor-port.js";
 import {
   BUNDLE_CACHE_DIR,
   createBlockExecutor,
   DocumentConnectionResolver,
+  pieceResolver,
   resolveConnectionAuth,
   toWorkflowDefinition,
 } from "./lib.js";
@@ -454,6 +477,9 @@ export class WorkflowRuntimeService {
     workflowId: string,
     state: WorkflowState,
   ): Promise<void> {
+    // An unversioned block type is pinned by what this reactor installed, so
+    // the registry answers before any of it is parsed.
+    await packagePieces.ready();
     const trigger = state.status === "ENABLED" ? state.trigger : undefined;
     if (trigger?.blockType === WEBHOOK_BLOCK) {
       await this.registerWebhook(workflowId, trigger.config);
@@ -534,7 +560,7 @@ export class WorkflowRuntimeService {
     binding: PieceTriggerBinding,
   ): Promise<"poll" | "webhook"> {
     try {
-      const { triggers } = await fetchPieceTriggers(binding.packageName);
+      const { triggers } = await this.pieceTriggers(binding.packageName);
       const strategy = triggers.find(
         (entry) => entry.name === binding.triggerName,
       )?.strategy;
@@ -597,7 +623,7 @@ export class WorkflowRuntimeService {
     workflowId: string,
     trigger: NonNullable<WorkflowState["trigger"]>,
   ): PieceTriggerBinding | undefined {
-    const parsed = parseBlockType(trigger.blockType);
+    const parsed = parseBlockType(trigger.blockType, packagePieces.versions());
     if (!parsed || parsed.kind !== "trigger") return undefined;
     const { config, pollIntervalMs } = splitPollInterval(
       configRecord(trigger.config),
@@ -932,6 +958,7 @@ export class WorkflowRuntimeService {
       webhookUrlFor: async (workflowId) =>
         (await this.webhookEndpoint(workflowId))?.url,
       cacheDir: BUNDLE_CACHE_DIR,
+      resolver: pieceResolver(),
       // Dev override; the 60s floor still applies.
       defaultIntervalMs:
         Number(process.env.WORKFLOW_POLL_INTERVAL_MS) || undefined,
@@ -1290,11 +1317,7 @@ export class WorkflowRuntimeService {
     const cacheKey = `${packageName}@${version}`;
     let descriptor = this.descriptors.get(cacheKey);
     if (!descriptor) {
-      const bundle = await ensurePieceBundle({
-        name: packageName,
-        version,
-        cacheDir: BUNDLE_CACHE_DIR,
-      });
+      const piece = await pieceResolver().resolve(packageName, version);
       // Loading the bundle runs the piece module's top-level code, so the
       // descriptor is built in the worker, never in the reactor process.
       this.designWorker ??= new PieceWorker();
@@ -1304,7 +1327,7 @@ export class WorkflowRuntimeService {
           // Loading the module runs piece-authored top-level code, which
           // has no business reaching anything at all.
           {
-            bundleDir: bundle.dir,
+            ...pieceModuleRef(piece),
             packageName,
             version,
             ...(this.designEgress ? { egress: this.designEgress } : {}),
@@ -1406,15 +1429,12 @@ export class WorkflowRuntimeService {
     }
 
     const packageName = packageFromConnectorId(state.connectorId);
-    let bundleDir: string;
+    let moduleRef: PieceModuleRef;
     try {
       const version = await this.pieceVersion(packageName);
-      const bundle = await ensurePieceBundle({
-        name: packageName,
-        version,
-        cacheDir: BUNDLE_CACHE_DIR,
-      });
-      bundleDir = bundle.dir;
+      moduleRef = pieceModuleRef(
+        await pieceResolver().resolve(packageName, version),
+      );
     } catch (error) {
       return this.recordCheckResult(document, {
         ok: false,
@@ -1449,7 +1469,7 @@ export class WorkflowRuntimeService {
         // A check that reaches somewhere a run could not would call a
         // connection healthy that every step using it will fail on.
         {
-          bundleDir,
+          ...moduleRef,
           auth: shapedAuth,
           ...(this.designEgress ? { egress: this.designEgress } : {}),
         },
@@ -1487,6 +1507,11 @@ export class WorkflowRuntimeService {
 
   // Catalog first, piece detail as fallback; the cache keeps this cheap.
   private async pieceVersion(packageName: string): Promise<string> {
+    // A package piece is pinned by what this reactor installed, and no
+    // published listing has anything to say about it.
+    await packagePieces.ready();
+    const local = packagePieces.lookup(packageName);
+    if (local) return local.version;
     try {
       const catalog = await fetchPieceCatalog();
       const version = catalog.find(
@@ -1520,10 +1545,111 @@ export class WorkflowRuntimeService {
     return result;
   }
 
+  // The pieces this reactor holds locally, described from their own code.
+
+  // One failure does not sink the catalog: a package whose piece cannot be
+  // loaded is logged and left out, the way an unreachable listing would be.
+  private async localPieces(): Promise<
+    { piece: LocalPiece; descriptor: ConnectorDescriptor }[]
+  > {
+    await packagePieces.ready();
+    const described = await Promise.all(
+      packagePieces.entries().map(async (piece) => {
+        try {
+          const descriptor = await this.pieceDescriptor(
+            piece.name,
+            piece.version,
+          );
+          return { piece, descriptor };
+        } catch (error) {
+          logger.warn(
+            `Could not describe the package piece "${piece.name}": ${String(error)}`,
+          );
+          return undefined;
+        }
+      }),
+    );
+    return described.filter((entry) => entry !== undefined);
+  }
+
+  private async localPiece(
+    packageName: string,
+  ): Promise<{ piece: LocalPiece; descriptor: ConnectorDescriptor } | undefined> {
+    await packagePieces.ready();
+    const piece = packagePieces.lookup(packageName);
+    if (!piece) return undefined;
+    return {
+      piece,
+      descriptor: await this.pieceDescriptor(piece.name, piece.version),
+    };
+  }
+
+  // Package pieces plus the published catalog, the local ones winning their
+  // own names. The listing is remote, so it may be the half that fails: with
+  // local pieces to show, that is logged rather than served as no catalog.
+  async pieceCatalog(): Promise<PieceSummary[]> {
+    const local = await this.localPieces();
+    const entries = local.map(({ piece, descriptor }) =>
+      catalogEntry(descriptor, piece.name, piece.version),
+    );
+    const names = new Set(entries.map((entry) => entry.name));
+    let published: PieceSummary[];
+    try {
+      published = await fetchPieceCatalog();
+    } catch (error) {
+      if (entries.length === 0) throw error;
+      logger.warn(`Serving package pieces only: ${String(error)}`);
+      published = [];
+    }
+    return [
+      ...entries,
+      ...published.filter((entry) => !names.has(entry.name)),
+    ].sort((a, b) => a.displayName.localeCompare(b.displayName));
+  }
+
+  async pieceActions(packageName: string): Promise<PieceActionsResult> {
+    const local = await this.localPiece(packageName);
+    return local
+      ? actionsResult(local.descriptor, local.piece.name, local.piece.version)
+      : fetchPieceActions(packageName);
+  }
+
+  async pieceTriggers(packageName: string): Promise<PieceTriggersResult> {
+    const local = await this.localPiece(packageName);
+    return local
+      ? triggersResult(local.descriptor, local.piece.name, local.piece.version)
+      : fetchPieceTriggers(packageName);
+  }
+
+  // Catalog search, with this reactor's own pieces always in it: the index
+  // behind the published half may still be building, or unreachable.
+  async searchBlocks(query: string, limit?: number): Promise<BlockSearchResult> {
+    let local: BlockSearchIndex | undefined;
+    try {
+      local = indexFromHits(
+        (await this.localPieces()).flatMap(({ piece, descriptor }) =>
+          localSearchHits(descriptor, piece.name),
+        ),
+      );
+    } catch (error) {
+      // The published half is still worth serving without them.
+      logger.warn(`Could not index the package pieces: ${String(error)}`);
+    }
+    return searchBlocks(query, limit, local);
+  }
+
+  async pieceDetail(packageName: string): Promise<unknown> {
+    const local = await this.localPiece(packageName);
+    return local
+      ? detailResult(local.descriptor, local.piece.name, local.piece.version)
+      : fetchPieceDetail(packageName);
+  }
+
   // Design-time: the action/trigger descriptor (props, auth) driving the
   // editor form; triggers come back under a "trigger" key.
   async blockDescriptor(blockType: string): Promise<unknown> {
-    const parsed = parseBlockType(blockType);
+    await packagePieces.ready();
+    const parsed = parseBlockType(blockType, packagePieces.versions());
     if (!parsed) return null;
     const descriptor = await this.pieceDescriptor(
       parsed.packageName,
@@ -1591,7 +1717,8 @@ export class WorkflowRuntimeService {
     connectionId?: string,
     ctx?: Context,
   ): Promise<unknown> {
-    const parsed = parseBlockType(blockType);
+    await packagePieces.ready();
+    const parsed = parseBlockType(blockType, packagePieces.versions());
     if (!parsed) {
       // Core blocks: document-aware props resolve against the reactor.
       if (this.subgraph && DOCUMENT_OPTION_PROPS.has(propName)) {
@@ -1616,23 +1743,30 @@ export class WorkflowRuntimeService {
         piecePackage: parsed.packageName,
       });
     }
-    const bundle = await ensurePieceBundle({
-      name: parsed.packageName,
-      version: parsed.version,
-      cacheDir: BUNDLE_CACHE_DIR,
-    });
+    const piece = await pieceResolver().resolve(
+      parsed.packageName,
+      parsed.version,
+    );
     this.designWorker ??= new PieceWorker();
-    const result = await this.designWorker.resolveOptions({
-      bundleDir: bundle.dir,
-      actionName: parsed.name,
-      kind: parsed.kind,
-      propName,
-      refresherValues: (input ?? {}) as Record<string, unknown>,
-      auth,
-      // Options come from the same service the step will call: the editor
-      // must not offer a choice a run cannot reach.
-      ...(this.designEgress ? { egress: this.designEgress } : {}),
-    });
+    const result = await this.designWorker.resolveOptions(
+      {
+        ...pieceModuleRef(piece),
+        actionName: parsed.name,
+        kind: parsed.kind,
+        propName,
+        refresherValues: (input ?? {}) as Record<string, unknown>,
+        auth,
+        // A package piece's options() reads the reactor it offers choices
+        // from, over the same port a step of it would use.
+        ...(piece.local ? { reactorAccess: true } : {}),
+        // Options come from the same service the step will call: the editor
+        // must not offer a choice a run cannot reach.
+        ...(this.designEgress ? { egress: this.designEgress } : {}),
+      },
+      piece.local && this.subgraph
+        ? { hostCalls: reactorHandlers(new SubgraphReactorPort(this.subgraph)) }
+        : {},
+    );
     return result.output;
   }
 
@@ -1641,6 +1775,7 @@ export class WorkflowRuntimeService {
     blockType: string,
     config?: unknown,
   ): Promise<OutputTree> {
+    await packagePieces.ready();
     const record = (config ?? {}) as Record<string, unknown>;
     switch (blockType) {
       case "core#manual":
@@ -1696,7 +1831,7 @@ export class WorkflowRuntimeService {
         };
       }
       default: {
-        const parsed = parseBlockType(blockType);
+        const parsed = parseBlockType(blockType, packagePieces.versions());
         if (!parsed) return { source: "none", nodes: [] };
         const detail = (await fetchPieceDetail(parsed.packageName)) as {
           actions?: Record<string, unknown>;
@@ -1775,6 +1910,7 @@ export class WorkflowRuntimeService {
     if (trigger.connectionId) {
       await this.assertCanReadDocument(trigger.connectionId, ctx);
     }
+    await packagePieces.ready();
     const binding = this.pieceBinding(workflowId, trigger);
     if (!binding) {
       throw new Error(`"${trigger.blockType}" is not a piece trigger`);

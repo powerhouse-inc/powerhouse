@@ -5,8 +5,8 @@
 // ctx.store lives in piece_store, beside what actions write.
 import {
   DEFAULT_EGRESS_POLICY,
-  ensurePieceBundle,
   extractDedupeKey,
+  pieceModuleRef,
   PieceWorker,
   PieceWorkerError,
   secretsFor,
@@ -14,12 +14,14 @@ import {
   type ConnectionRequest,
   type ConnectorDescriptor,
   type EgressPolicy,
+  type PieceResolver,
   type PieceWorkerResult,
   type RecordedSchedule,
   type TriggerHookRequest,
 } from "@powerhousedao/reactor-connectors";
 import { childLogger } from "document-model";
 import { createHash } from "node:crypto";
+import { pieceResolver } from "./lib.js";
 import {
   cronIntervalMs,
   MIN_SCHEDULE_INTERVAL_MS,
@@ -71,6 +73,9 @@ export interface TriggerSupervisorOptions {
   ) => Promise<unknown>;
   fire: (workflowId: string, payload: unknown, kind: string) => void;
   cacheDir: string;
+  // Where a trigger's piece comes from. Defaults to fetching into cacheDir,
+  // so a host that ships pieces in a package passes its own.
+  resolver?: PieceResolver;
   worker?: PieceWorker;
   // Where a trigger's piece may connect to. Left unset it is the default
   // policy, which refuses private address space; `null` lifts it entirely.
@@ -244,6 +249,12 @@ export class TriggerSupervisor {
   // Piece descriptors by package@version, for the trigger strategy lookup.
   private readonly descriptors = new Map<string, ConnectorDescriptor>();
 
+  // The host's resolver when it supplied one, else the runtime's own, which
+  // answers a package piece from the registry and everything else by fetching.
+  private resolver(): PieceResolver {
+    return this.options.resolver ?? pieceResolver();
+  }
+
   // Workflows whose onEnable failed and when to try again. The ERROR row keeps
   // the same time so a restart resumes the backoff instead of restarting it.
   private readonly enableRetries = new Map<string, EnableRetry>();
@@ -411,11 +422,10 @@ export class TriggerSupervisor {
           hook === "test",
         )
       : undefined;
-    const bundle = await ensurePieceBundle({
-      name: binding.packageName,
-      version: binding.version,
-      cacheDir: this.options.cacheDir,
-    });
+    const piece = await this.resolver().resolve(
+      binding.packageName,
+      binding.version,
+    );
     // A trigger's connection is the workflow's own, declared beside it, so it
     // needs no run binding — but it is still bound to its connector.
     const auth = await this.options.resolveAuth(binding.connectionId, {
@@ -427,7 +437,7 @@ export class TriggerSupervisor {
     const redactValues = secretsFor(auth);
     return this.worker.runTriggerHook(
       {
-        bundleDir: bundle.dir,
+        ...pieceModuleRef(piece),
         triggerName: binding.triggerName,
         hook,
         propsValue: binding.config,
@@ -459,14 +469,13 @@ export class TriggerSupervisor {
     const key = `${binding.packageName}@${binding.version}`;
     let descriptor = this.descriptors.get(key);
     if (!descriptor) {
-      const bundle = await ensurePieceBundle({
-        name: binding.packageName,
-        version: binding.version,
-        cacheDir: this.options.cacheDir,
-      });
+      const piece = await this.resolver().resolve(
+        binding.packageName,
+        binding.version,
+      );
       const result = await this.worker.describePiece(
         {
-          bundleDir: bundle.dir,
+          ...pieceModuleRef(piece),
           packageName: binding.packageName,
           version: binding.version,
           ...(this.egress ? { egress: this.egress } : {}),

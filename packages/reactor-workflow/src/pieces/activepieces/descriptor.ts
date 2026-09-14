@@ -58,7 +58,12 @@ export interface ConnectorTriggerDescriptor {
 export interface ConnectorAuthDescriptor {
   type: ApPropertyType;
   displayName?: string;
+  description?: string;
   required?: boolean;
+  // CUSTOM_AUTH's own fields. Without them a connection form has nothing to
+  // ask for, which is what a piece read from a package rather than a published
+  // listing would otherwise leave the editor with.
+  props?: ConnectorPropDescriptor[];
 }
 
 // NONE is how the framework spells "no handshake", so it is not carried:
@@ -212,10 +217,18 @@ export function buildDescriptor(
     triggers,
   };
   if (piece.auth && typeof piece.auth === "object") {
+    // CUSTOM_AUTH carries a record here; a DYNAMIC prop would carry a
+    // resolver function, which is not an auth shape at all.
+    const authProps =
+      piece.auth.props && typeof piece.auth.props === "object"
+        ? describeProperties(piece.auth.props)
+        : [];
     descriptor.auth = {
       type: piece.auth.type ?? "UNKNOWN",
       displayName: piece.auth.displayName,
+      description: piece.auth.description,
       required: piece.auth.required,
+      ...(authProps.length > 0 ? { props: authProps } : {}),
     };
   }
   return descriptor;

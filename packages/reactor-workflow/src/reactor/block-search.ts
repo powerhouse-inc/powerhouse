@@ -102,6 +102,32 @@ export function buildSearchIndex(
   return { entries, pieces };
 }
 
+// Pieces a reactor package ships, indexed the same way. They are handed in
+// rather than fetched: the catalog API has never heard of them.
+export function indexFromHits(hits: BlockSearchHit[]): BlockSearchIndex {
+  const pieces = new Set<string>();
+  const entries = hits.map((hit) => {
+    pieces.add(hit.pieceName);
+    return {
+      hit,
+      name: `${hit.displayName} ${hit.blockType.split("#").pop() ?? ""}`.toLowerCase(),
+      description: hit.description.toLowerCase(),
+      piece: hit.pieceDisplayName.toLowerCase(),
+    };
+  });
+  return { entries, pieces: pieces.size };
+}
+
+function merge(
+  index: BlockSearchIndex | undefined,
+  local: BlockSearchIndex | undefined,
+): BlockSearchIndex {
+  return {
+    entries: [...(local?.entries ?? []), ...(index?.entries ?? [])],
+    pieces: (local?.pieces ?? 0) + (index?.pieces ?? 0),
+  };
+}
+
 // Every query token must appear somewhere; hits rank by where the first
 // token lands: name prefix, then name, then piece name, then description.
 export function searchIndex(
@@ -163,21 +189,40 @@ function ensureIndex(): CachedIndex {
 }
 
 // Never blocks on the index build: callers poll while status is "indexing".
-export function searchBlocks(query: string, limit?: number): BlockSearchResult {
+
+// The status describes the published catalog alone, because that is the half
+// that can be slow or unreachable. Local pieces are searched either way, so a
+// reactor with no network still finds the blocks it ships.
+export function searchBlocks(
+  query: string,
+  limit?: number,
+  local?: BlockSearchIndex,
+): BlockSearchResult {
   const index = ensureIndex();
   if (index.error) {
     const message = index.error;
     // Drop the failed build so the next call retries.
     cached = undefined;
-    return { status: "error", hits: [], indexedPieces: 0, error: message };
+    return {
+      status: "error",
+      hits: searchIndex(merge(undefined, local), query, limit),
+      indexedPieces: local?.pieces ?? 0,
+      error: message,
+    };
   }
   if (!index.value) {
-    return { status: "indexing", hits: [], indexedPieces: 0, error: null };
+    return {
+      status: "indexing",
+      hits: searchIndex(merge(undefined, local), query, limit),
+      indexedPieces: local?.pieces ?? 0,
+      error: null,
+    };
   }
+  const merged = merge(index.value, local);
   return {
     status: "ready",
-    hits: searchIndex(index.value, query, limit),
-    indexedPieces: index.value.pieces,
+    hits: searchIndex(merged, query, limit),
+    indexedPieces: merged.pieces,
     error: null,
   };
 }

@@ -4,12 +4,15 @@ import {
   ActivepiecesBlockExecutor,
   BoundConnectionResolver,
   CompositeBlockExecutor,
+  ensurePieceBundle,
+  localFirstResolver,
   shapeConnection,
   type BlockExecutor,
   type ConnectionAuthType,
   type ConnectionRequest,
   type EngineConnectionResolver,
   type AttachmentPort,
+  type PieceResolver,
   type PieceStorePort,
   type ResolvedConnection,
   type SecretProvider,
@@ -36,6 +39,8 @@ import {
   currentPieceWorker,
   currentWorkflowId,
 } from "./run-scope.js";
+import { packagePieces } from "./piece-registry.js";
+import { SubgraphReactorPort } from "./reactor-port.js";
 import { packageFromConnectorId } from "../../editors/connection-editor/piece-auth.js";
 
 const pieceLogger = childLogger(["workflow", "piece"]);
@@ -146,6 +151,38 @@ export const ATTACHMENT_STAGING_DIR = join(
   "ap-attachment-staging",
 );
 
+// Where every piece in this runtime comes from: a package that ships one wins
+// for its own name, and everything else is fetched and cached as before.
+
+// One instance, because the registry behind it is one — a block type must not
+// resolve to a package piece in a run and to a published bundle in the editor.
+let resolver: PieceResolver | undefined;
+
+// Spelled out rather than taken from the connectors package so the fetch goes
+// through this module's own import of it, which is the seam tests replace.
+const fetched: PieceResolver = {
+  async resolve(name: string, version: string) {
+    const bundle = await ensurePieceBundle({
+      name,
+      version,
+      cacheDir: BUNDLE_CACHE_DIR,
+    });
+    return { name, version, bundleDir: bundle.dir, local: false };
+  },
+};
+
+export function pieceResolver(): PieceResolver {
+  return (resolver ??= localFirstResolver(
+    // Loads the registry on the first ask, so nothing has to have loaded it
+    // before a step, an editor query or a trigger enable reaches here.
+    async (name) => {
+      await packagePieces.ready();
+      return packagePieces.lookup(name);
+    },
+    fetched,
+  ));
+}
+
 // The executor is shared by every concurrent run, so the binding travels with
 // the run scope rather than sitting on the resolver.
 export function boundConnections(
@@ -177,6 +214,10 @@ export function createBlockExecutor(
       // Asked per step, for the same reason the binding is: one executor,
       // many runs, and each run has a child of its own.
       worker: currentPieceWorker,
+      resolver: pieceResolver(),
+      // Served only to a piece this reactor's packages ship; the executor
+      // withholds it from everything the resolver fetched.
+      reactor: new SubgraphReactorPort(subgraph),
       connections: boundConnections(
         new DocumentConnectionResolver(subgraph, secrets),
       ),

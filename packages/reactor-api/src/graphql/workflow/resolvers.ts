@@ -1,11 +1,4 @@
 import { type BaseSubgraph, type Context } from "@powerhousedao/reactor-api";
-import { searchBlocks } from "./block-search.js";
-import {
-  fetchPieceActions,
-  fetchPieceCatalog,
-  fetchPieceDetail,
-  fetchPieceTriggers,
-} from "./piece-catalog.js";
 import { workflowRuntime } from "./service.js";
 import type { RunRow, StepExecutionRow } from "./store.js";
 
@@ -101,21 +94,21 @@ export const getResolvers = (
           args.connectionId ?? undefined,
           ctx,
         ),
-      pieceCatalog: () => fetchPieceCatalog(),
+      pieceCatalog: () => workflowRuntime.pieceCatalog(),
       pieceActions: (_parent: unknown, args: { packageName: string }) =>
-        fetchPieceActions(args.packageName),
+        workflowRuntime.pieceActions(args.packageName),
       pieceTriggers: (_parent: unknown, args: { packageName: string }) =>
-        fetchPieceTriggers(args.packageName),
+        workflowRuntime.pieceTriggers(args.packageName),
       blockOutputTree: (
         _parent: unknown,
         args: { blockType: string; config?: unknown },
       ) => workflowRuntime.blockOutputTree(args.blockType, args.config),
       pieceDetail: (_parent: unknown, args: { packageName: string }) =>
-        fetchPieceDetail(args.packageName),
+        workflowRuntime.pieceDetail(args.packageName),
       searchBlocks: (
         _parent: unknown,
         args: { query: string; limit?: number | null },
-      ) => searchBlocks(args.query, args.limit ?? undefined),
+      ) => workflowRuntime.searchBlocks(args.query, args.limit ?? undefined),
       connections: (_parent: unknown, _args: unknown, ctx: Context) =>
         workflowRuntime.connections(ctx),
       webhookEndpoint: (_parent: unknown, args: { workflowId: string }) =>
