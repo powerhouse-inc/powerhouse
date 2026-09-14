@@ -134,6 +134,14 @@ describe("connection binding", () => {
     }
   }
 
+  // What a host resolver looks like: the concrete secrets come back with the
+  // auth, rather than being guessed from it afterwards.
+  class SecretBearingResolver extends RecordingResolver {
+    async resolveWithSecrets(connectionId: string, request?: ConnectionRequest) {
+      return { auth: await this.resolve(connectionId, request), secretValues: ["s3cret"] };
+    }
+  }
+
   const bindingOf = () => declaredConnectionIds(definition);
 
   it("declares the trigger's and every step's connection, never a templated one", () => {
@@ -198,5 +206,44 @@ describe("connection binding", () => {
       ConnectionNotBoundError,
     );
     expect(inner.calls).toEqual([]);
+  });
+
+  // Dropping this on the way through is silent: the caller falls back to
+  // guessing which values to redact out of the journal.
+  it("carries the inner resolver's secret-bearing path through the binding", async () => {
+    const inner = new SecretBearingResolver();
+    const bound = new BoundConnectionResolver(inner, bindingOf);
+
+    await expect(
+      bound.resolveWithSecrets?.("conn-slack", {
+        blockType: "@acme/piece-slack@1.0.0#send",
+      }),
+    ).resolves.toEqual({
+      auth: { type: "SECRET_TEXT", secret_text: "s3cret" },
+      secretValues: ["s3cret"],
+    });
+  });
+
+  it("asks the same question on the secret-bearing path", async () => {
+    const inner = new SecretBearingResolver();
+    const refused: string[] = [];
+    const bound = new BoundConnectionResolver(inner, bindingOf, (id) =>
+      refused.push(id),
+    );
+
+    await expect(
+      bound.resolveWithSecrets?.("conn-someone-elses", {
+        blockType: "@acme/piece-slack@1.0.0#send",
+      }),
+    ).rejects.toBeInstanceOf(ConnectionNotBoundError);
+    expect(inner.calls).toEqual([]);
+    expect(refused).toEqual(["conn-someone-elses"]);
+  });
+
+  // An inner resolver without the path must not appear to have one.
+  it("offers no secret-bearing path when the inner resolver has none", () => {
+    const bound = new BoundConnectionResolver(new RecordingResolver(), bindingOf);
+
+    expect(bound.resolveWithSecrets).toBeUndefined();
   });
 });

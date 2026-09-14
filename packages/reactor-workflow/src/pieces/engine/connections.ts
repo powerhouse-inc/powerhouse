@@ -188,6 +188,13 @@ export type ConnectionBindingLookup = () => ReadonlySet<string> | undefined;
 // Without a binding nothing resolves, so a path that fails to establish one
 // fails closed.
 export class BoundConnectionResolver implements EngineConnectionResolver {
+  // Present only when the inner resolver has it, because its absence is what
+  // tells a caller to fall back to guessing the secrets from the auth value.
+  readonly resolveWithSecrets?: (
+    connectionId: string,
+    request?: ConnectionRequest,
+  ) => Promise<ResolvedConnection>;
+
   constructor(
     private readonly inner: EngineConnectionResolver,
     private readonly binding: ConnectionBindingLookup,
@@ -195,13 +202,26 @@ export class BoundConnectionResolver implements EngineConnectionResolver {
       connectionId: string,
       request?: ConnectionRequest,
     ) => void,
-  ) {}
+  ) {
+    const withSecrets = inner.resolveWithSecrets?.bind(inner);
+    if (!withSecrets) return;
+    this.resolveWithSecrets = (connectionId, request) =>
+      this.bound(connectionId, request)
+        ? withSecrets(connectionId, request)
+        : Promise.reject(new ConnectionNotBoundError(connectionId));
+  }
 
   resolve(connectionId: string, request?: ConnectionRequest): Promise<unknown> {
-    if (!this.binding()?.has(connectionId)) {
-      this.onRefused?.(connectionId, request);
+    if (!this.bound(connectionId, request)) {
       return Promise.reject(new ConnectionNotBoundError(connectionId));
     }
     return this.inner.resolve(connectionId, request);
+  }
+
+  // Both paths ask the same question, so neither is a way around it.
+  private bound(connectionId: string, request?: ConnectionRequest): boolean {
+    if (this.binding()?.has(connectionId)) return true;
+    this.onRefused?.(connectionId, request);
+    return false;
   }
 }

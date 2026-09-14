@@ -198,6 +198,33 @@ describe("run-scoped connection binding", () => {
       ConnectionNotBoundError,
     );
   });
+
+  // What the block executor asks for. Without it, it falls back to guessing
+  // which values to keep out of the journal.
+  it("resolves the concrete secrets through the binding", async () => {
+    const { subgraph } = fakeSubgraph();
+    const resolver = resolverOver(subgraph);
+
+    const resolved = await withRunScope(
+      { workflowId: "wf-1", connections: bound },
+      () => resolver.resolveWithSecrets!("conn-slack", asSlack),
+    );
+
+    expect(resolved.auth).toEqual({ type: "SECRET_TEXT", secret_text: "s3cret" });
+    expect(resolved.secretValues).toContain("s3cret");
+  });
+
+  it("refuses an undeclared connection on the secret-bearing path too", async () => {
+    const { get, subgraph } = fakeSubgraph();
+    const resolver = resolverOver(subgraph);
+
+    await expect(
+      withRunScope({ workflowId: "wf-1", connections: bound }, () =>
+        resolver.resolveWithSecrets!("conn-someone-elses", asSlack),
+      ),
+    ).rejects.toBeInstanceOf(ConnectionNotBoundError);
+    expect(get).not.toHaveBeenCalled();
+  });
 });
 
 describe("connector binding", () => {
