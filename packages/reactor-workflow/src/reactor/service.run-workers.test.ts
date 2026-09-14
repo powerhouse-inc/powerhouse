@@ -7,6 +7,10 @@ import { WorkflowRuntimeService } from "./service.js";
 
 const WORKFLOW_ID = "wf-workers";
 
+function settled() {
+  return new Promise((resolve) => setImmediate(resolve));
+}
+
 function workflowDocument() {
   return {
     header: { documentType: "powerhouse/workflow" },
@@ -99,7 +103,7 @@ describe("fire() and the worker pool", () => {
   });
 
   it("closes the run's session however the run ends", async () => {
-    const { pool } = fakePool();
+    const { pool, disposed } = fakePool();
     const service = new WorkflowRuntimeService();
     const internals = service as unknown as Record<string, unknown>;
     internals.subgraph = {
@@ -107,14 +111,73 @@ describe("fire() and the worker pool", () => {
     };
     internals.pieceWorkers = pool;
     internals.executor = {
-      execute: () => Promise.reject(new Error("step blew up")),
+      // Takes the slot before failing. A step that fails without ever asking
+      // for a worker would release a slot it never held, and pass either way.
+      execute: async () => {
+        await currentPieceWorker()!.runAction({
+          bundleDir: "/nowhere",
+          actionName: "boom",
+          propsValue: {},
+        });
+      },
     };
 
     const result = await service.fire(WORKFLOW_ID);
 
-    // A failed run is still a finished run; nothing may keep holding a slot.
+    // A failed run is still a finished run: the child is killed and the slot
+    // handed back, or the next run waits on a run that is already over.
     expect(result.status).toBe("FAILED");
+    expect(disposed).toEqual([1]);
     expect(pool.stats()).toMatchObject({ active: 0, waiting: 0 });
+  });
+
+  it("takes the design worker with it on shutdown", () => {
+    const { pool } = fakePool();
+    const service = new WorkflowRuntimeService();
+    const internals = service as unknown as Record<string, unknown>;
+    internals.pieceWorkers = pool;
+    let disposedDesign = false;
+    internals.designWorker = {
+      dispose: () => {
+        disposedDesign = true;
+      },
+    };
+
+    service.shutdown();
+
+    // Forked on the editor's first request and never replaced, so a reload
+    // leaves it running unless shutdown ends it too.
+    expect(disposedDesign).toBe(true);
+    expect(internals.designWorker).toBeUndefined();
+  });
+
+  it("refuses a run that reaches the pool after shutdown", async () => {
+    const { pool, disposed } = fakePool();
+    const service = new WorkflowRuntimeService();
+    const internals = service as unknown as Record<string, unknown>;
+    let release: (() => void) | undefined;
+    internals.subgraph = {
+      reactorClient: {
+        // Holds the run between its first await and the pool, which is where
+        // a teardown lands on a reactor that is still serving.
+        get: () =>
+          new Promise((resolve) => {
+            release = () => resolve(workflowDocument());
+          }),
+      },
+    };
+    internals.pieceWorkers = pool;
+    internals.executor = { execute: () => Promise.resolve({ output: {} }) };
+
+    const run = service.fire(WORKFLOW_ID);
+    await settled();
+    service.shutdown();
+    release?.();
+
+    // The disposed pool is kept rather than cleared, so the run fails instead
+    // of quietly building a second pool and forking into it.
+    await expect(run).rejects.toThrow("disposed");
+    expect(disposed).toEqual([]);
   });
 
   it("takes no slot for a run that never reaches a piece step", async () => {

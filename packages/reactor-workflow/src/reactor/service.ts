@@ -26,6 +26,7 @@ import {
   type CheckConnectionOutcome,
   type ConnectorDescriptor,
   type EgressPolicy,
+  type PieceWorkerSession,
   type SecretProvider,
   type SecretStore,
   type WorkflowRunResult,
@@ -377,6 +378,10 @@ export class WorkflowRuntimeService {
   configure(subgraph: BaseSubgraph): void {
     if (this.subgraph === subgraph) return;
     this.subgraph = subgraph;
+    // A pool shutdown() disposed belongs to the subgraph being replaced. It is
+    // dropped here rather than there, so a run still in flight during the
+    // teardown finds a disposed pool and fails instead of forking into a new one.
+    this.pieceWorkers = undefined;
     this.storePromise = WorkflowRunStore.create(subgraph.relationalDb);
     this.storePromise.catch((error: unknown) => {
       logger.error("Failed to open the workflow run store", error);
@@ -963,8 +968,13 @@ export class WorkflowRuntimeService {
   // spawned by it — and a run holding one is over the moment we stop.
   shutdown(): void {
     this.stopTriggerSupervisor();
+    // Left in place, disposed: clearing it here would let a run that is still
+    // between awaits build a replacement and fork into it after teardown.
     this.pieceWorkers?.dispose();
-    this.pieceWorkers = undefined;
+    // Forked on the editor's first request and never replaced, so it outlives
+    // a hot reload unless it goes with everything else.
+    this.designWorker?.dispose();
+    this.designWorker = undefined;
   }
 
   async triggerStates(): Promise<TriggerStateRow[]> {
@@ -1835,8 +1845,12 @@ export class WorkflowRuntimeService {
     const executionOrder = new Map<string, number>();
     // This run's child, forked at its first piece step and killed below. Free
     // until then, so a run of document blocks never takes a slot.
-    const session = this.workers().session();
+    let session: PieceWorkerSession | undefined;
     try {
+      // Inside the try: a pool disposed while this run was starting up refuses
+      // here, and the journal records the run as failed rather than leaving it
+      // to be swept up as an orphan.
+      session = this.workers().session();
       const result = await withRunScope(
         { workflowId, runId, connections, pieceWorker: session },
         () =>
@@ -1891,7 +1905,7 @@ export class WorkflowRuntimeService {
     } finally {
       // The run owns the child, however it ended: closing kills it and hands
       // the slot to whichever run is waiting.
-      session.close();
+      session?.close();
     }
   }
 

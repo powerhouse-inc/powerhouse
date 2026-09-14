@@ -131,7 +131,13 @@ export class PieceWorkerSession implements IPieceWorker {
   }
 
   private async request<T>(fn: (worker: IPieceWorker) => Promise<T>) {
-    return fn(await this.take());
+    const worker = await this.take();
+    // Closed while this was waiting — a shutdown landing mid-run.
+
+    // Its worker is already killed, and PieceWorker forks a replacement on the
+    // next request, so dispatching now would leak a child the pool never sees.
+    if (this.closed) throw new PieceWorkerSessionClosedError();
+    return fn(worker);
   }
 
   private take(): Promise<IPieceWorker> {

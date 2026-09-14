@@ -201,6 +201,27 @@ describe("PieceWorkerPool", () => {
     expect(pool.stats()).toMatchObject({ active: 0, waiting: 0 });
   });
 
+  // The window a shutdown lands in: the slot was granted, the child built, and
+  // the request not yet sent. Dispatching then forks a child nothing tracks.
+  it("refuses to dispatch to a session disposed while it waited", async () => {
+    const { built, createWorker } = fakeWorkers();
+    let pool: PieceWorkerPool;
+    pool = new PieceWorkerPool({
+      size: 1,
+      createWorker: () => {
+        // Runs between the slot being granted and the request going out.
+        pool.dispose();
+        return createWorker();
+      },
+    });
+
+    await expect(
+      pool.session().runAction(runRequest("a")),
+    ).rejects.toBeInstanceOf(PieceWorkerSessionClosedError);
+    expect(built[0].started).toEqual([]);
+    expect(pool.stats()).toMatchObject({ active: 0, waiting: 0 });
+  });
+
   it("fails fast past a queue depth an operator capped", async () => {
     const { createWorker } = fakeWorkers();
     const pool = new PieceWorkerPool({
