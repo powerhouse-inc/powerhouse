@@ -16,6 +16,9 @@ import {
 
 export type PieceMode = "actions" | "triggers";
 
+// Logo size for the picker's rows: presets, pieces, search hits and attach.
+const ROW_LOGO = 24;
+
 export function BlockLogo(props: { blockType: string; size?: number }) {
   const meta = useBlockMeta(props.blockType);
   return (
@@ -58,19 +61,24 @@ function LogoFrame(props: {
   if (!props.src || broken) {
     return <GlyphBadge glyph={props.glyph} size={props.size} />;
   }
+  // No frame and no padding around a logo: a piece's artwork is its own tile,
+  // with its own corner radius and its own margin.
+
+  // Framing it drew our border through corners that were already rounded —
+  // and no single radius matches every piece, so the frame is left to the
+  // glyph badge, which is the only case where we draw the tile ourselves.
   return (
     <div
-      className="flex shrink-0 items-center justify-center rounded-sm border border-solid border-slate-200 bg-white"
-      style={{
-        width: props.size,
-        height: props.size,
-        padding: props.size / 5,
-      }}
+      className="flex shrink-0 items-center justify-center"
+      style={{ width: props.size, height: props.size }}
     >
       <img
         src={props.src}
         alt={props.alt}
-        className="h-full w-full object-contain"
+        // drop-shadow, not a border or a ring: it follows the image's alpha,
+        // so it traces the artwork's own silhouette — rounded corners and all
+        // — and gives a white-on-transparent logo an edge on a white row.
+        className="h-full w-full object-contain drop-shadow-sm"
         onError={() => setBroken(true)}
       />
     </div>
@@ -243,7 +251,7 @@ function PieceEntries(props: {
                 <LogoFrame
                   src={props.piece.logoUrl}
                   alt={props.piece.displayName}
-                  size={28}
+                  size={ROW_LOGO}
                 />
               }
               label={entry.displayName}
@@ -453,7 +461,7 @@ export function BlockSelector(props: {
   const presetRow = (preset: BlockPreset) => (
     <Row
       key={preset.blockType + preset.label}
-      logo={<BlockLogo blockType={preset.blockType} size={28} />}
+      logo={<BlockLogo blockType={preset.blockType} size={ROW_LOGO} />}
       label={preset.label}
       description={preset.description}
       onClick={() => props.onPick(preset)}
@@ -525,7 +533,7 @@ export function BlockSelector(props: {
                 <Row
                   key={step.id}
                   logo={
-                    <BlockLogo blockType={step.blockType} size={28} />
+                    <BlockLogo blockType={step.blockType} size={ROW_LOGO} />
                   }
                   label={step.name}
                   description={`{{steps.${step.key}}} · detached`}
@@ -568,7 +576,7 @@ export function BlockSelector(props: {
                           <LogoFrame
                             src={hit.logoUrl}
                             alt={hit.pieceDisplayName}
-                            size={28}
+                            size={ROW_LOGO}
                           />
                         }
                         label={`${hit.displayName} · ${hit.pieceDisplayName}`}
@@ -627,7 +635,7 @@ export function BlockSelector(props: {
                       <LogoFrame
                         src={entry.logoUrl}
                         alt={entry.displayName}
-                        size={28}
+                        size={ROW_LOGO}
                       />
                     }
                     label={entry.displayName}
