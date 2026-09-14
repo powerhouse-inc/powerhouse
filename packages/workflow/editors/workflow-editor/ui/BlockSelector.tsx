@@ -527,51 +527,56 @@ export function BlockSelector(props: {
                 <div className="px-3 py-1 text-xs text-red-500">
                   {search.message}
                 </div>
-              ) : search.result.status === "indexing" ? (
-                <div className="px-3 py-1 text-xs text-slate-400">
-                  Indexing the catalog… results appear shortly.
-                </div>
-              ) : search.result.status === "error" ? (
-                <div className="px-3 py-1 text-xs text-red-500">
-                  {search.result.error ?? "Search failed"}
-                </div>
-              ) : hits.length === 0 ? (
-                <div className="px-3 py-1 text-xs text-slate-400">
-                  No matching {wantedKind}s
-                </div>
               ) : (
-                hits.map((hit) => {
-                  const strategy = hit.strategy ?? "POLLING";
-                  const unsupported =
-                    hit.kind === "trigger" && !triggerStrategyRuns(strategy);
-                  return (
-                    <Row
-                      key={hit.blockType}
-                      logo={
-                        <LogoFrame
-                          src={hit.logoUrl}
-                          alt={hit.pieceDisplayName}
-                          size={28}
-                        />
-                      }
-                      label={`${hit.displayName} · ${hit.pieceDisplayName}`}
-                      description={
-                        unsupported
-                          ? `${strategy.toLowerCase()} — not supported yet`
-                          : hit.description || hit.pieceDisplayName
-                      }
-                      disabled={unsupported}
-                      onClick={() =>
-                        props.onPick({
-                          label: hit.displayName,
-                          blockType: hit.blockType,
-                          description: hit.description,
-                          defaultConfig: {},
-                        })
-                      }
-                    />
-                  );
-                })
+                <>
+                  {hits.map((hit) => {
+                    const strategy = hit.strategy ?? "POLLING";
+                    const unsupported =
+                      hit.kind === "trigger" && !triggerStrategyRuns(strategy);
+                    return (
+                      <Row
+                        key={hit.blockType}
+                        logo={
+                          <LogoFrame
+                            src={hit.logoUrl}
+                            alt={hit.pieceDisplayName}
+                            size={28}
+                          />
+                        }
+                        label={`${hit.displayName} · ${hit.pieceDisplayName}`}
+                        description={
+                          unsupported
+                            ? `${strategy.toLowerCase()} — not supported yet`
+                            : hit.description || hit.pieceDisplayName
+                        }
+                        disabled={unsupported}
+                        onClick={() =>
+                          props.onPick({
+                            label: hit.displayName,
+                            blockType: hit.blockType,
+                            description: hit.description,
+                            defaultConfig: {},
+                          })
+                        }
+                      />
+                    );
+                  })}
+                  {/* Status describes the published catalog only. Blocks this
+                    reactor ships are already listed above it. */}
+                  {search.result.status === "indexing" ? (
+                    <div className="px-3 py-1 text-xs text-slate-400">
+                      Indexing the catalog… more results appear shortly.
+                    </div>
+                  ) : search.result.status === "error" ? (
+                    <div className="px-3 py-1 text-xs text-red-500">
+                      {search.result.error ?? "Search failed"}
+                    </div>
+                  ) : hits.length === 0 ? (
+                    <div className="px-3 py-1 text-xs text-slate-400">
+                      No matching {wantedKind}s
+                    </div>
+                  ) : null}
+                </>
               )}
             </>
           ) : null}
