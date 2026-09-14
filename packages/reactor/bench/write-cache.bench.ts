@@ -1181,9 +1181,14 @@ for (const [count, budgetMs] of REPLAY_DECOMPOSITION_CASES) {
 type MirrorVariant = {
   /** The case-name fragment naming which statements the variant runs. */
   label: string;
-  /** node.ts:19/57 find, node.ts:23/61 isValidName, utils.ts:123 collisions. */
+  /** node.ts:23/59 find, node.ts:27/63 isValidName, utils.ts:164 collisions. */
   reads: boolean;
-  /** node.ts:46/82 sort. The push at node.ts:43/74 runs in every variant. */
+  /**
+   * The mirror's own in-place sort. The real body has had no push or sort of
+   * its own since T-020 moved it to build a plain list and assign it once
+   * (node.ts:47/76 insertNodeSorted); this variant toggles the mirror's
+   * stand-in for that write, and the divergence is the open finding T-022.
+   */
   sort: boolean;
 };
 
@@ -1244,11 +1249,19 @@ function addWriteStamp(
 }
 
 /**
- * A statement-for-statement mirror of nodeReducer.addFileOperation and
- * addFolderOperation (packages/shared/document-drive/src/reducers/node.ts:18-83
- * and the handleTargetNameCollisions it calls at src/utils.ts:123-147), checked
- * against those files at reactorSha 3cef6be7e, where they are still byte
- * identical to B-022's caafff10fa28. It exists only so a variant can drop the
+ * A mirror of nodeReducer.addFileOperation and addFolderOperation
+ * (packages/shared/document-drive/src/reducers/node.ts:21-82 and the
+ * handleTargetNameCollisions it calls at src/utils.ts:164-188).
+ *
+ * It is NO LONGER statement-for-statement. It was byte-checked at reactorSha
+ * 3cef6be7e, but the real body has moved twice since: T-016 routed its reads
+ * through readNodes into one local (utils.ts:132), and T-023 made that read a
+ * copy and made the single assignment freeze its list (utils.ts:147
+ * sortNodesById, :160 insertNodeSorted). This mirror still reads state.nodes
+ * twice through the draft and still pushes and sorts in place. That gap is the
+ * open finding T-022 and is measured, not hidden: the `real body (fidelity
+ * reference)` cases below run the actual reducer through this same harness, so
+ * the mirror's claim to represent it is a ratio anyone can read off the record. It exists only so a variant can drop the
  * read scans or the sort while running every other statement, which is what
  * splits the draft-proxy per-node tax; it must be re-checked against node.ts
  * and utils.ts on every future run, because drift would make it stop
@@ -1680,7 +1693,8 @@ function everyMirrorSampleRan(): boolean {
 
 /**
  * How T-016's 12.6x draft-proxy per-node tax splits between the read scans at
- * node.ts:19/57 and utils.ts:123 and the push+sort at node.ts:43-46/74-82. A
+ * node.ts:23/59 and utils.ts:164 and the mirror's stand-in push+sort for the
+ * single assignment the real body makes at node.ts:47/76. A
  * tinybench case mean is the wall time of a whole measured function, so no case
  * can be a sub-interval of one reducer call; instead each leg runs the mirrored
  * body four ways over the same growing node list -- with the reads and the sort,
