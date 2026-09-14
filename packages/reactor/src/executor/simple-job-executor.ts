@@ -1342,7 +1342,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     ).results.filter((operation) => !isGenesisOperation(operation));
 
     // Nothing to move here, but still below another scope's newest operation.
-    if (conflicting.length === 0) {
+    const nothingToMove = async (): Promise<PositionedWrites> => {
       if (!this.featureFlags.authEnforcement) {
         return plain();
       }
@@ -1352,6 +1352,10 @@ export class SimpleJobExecutor implements IJobExecutor {
         this.appendedOperations(job, revisions.revision[job.scope] ?? 0),
         signal,
       );
+    };
+
+    if (conflicting.length === 0) {
+      return nothingToMove();
     }
 
     const nextIndex = revisions.revision[job.scope] ?? 0;
@@ -1360,6 +1364,47 @@ export class SimpleJobExecutor implements IJobExecutor {
       if (operation.index < firstConflicting) {
         firstConflicting = operation.index;
       }
+    }
+
+    // The conflicting rows are not what the stream applies. An earlier reshuffle
+    // leaves the operations it retracted next to their re-appended copies, and its
+    // own backdated write, older than this one, sits between them. So re-append
+    // what the stream still applies from the first conflicting operation on,
+    // whatever its timestamp, and nothing a skip has already retracted.
+    const stored = (
+      await stores.operationStore.getSince(
+        job.documentId,
+        job.scope,
+        job.branch,
+        firstConflicting - 1,
+        undefined,
+        undefined,
+        signal,
+      )
+    ).results;
+    const conflictingIds = new Set(
+      conflicting.map((operation) => operation.id),
+    );
+    const effective = garbageCollect(sortOperations(stored)).filter(
+      (operation) => !isGenesisOperation(operation),
+    );
+    const firstMoving = effective.findIndex((operation) =>
+      conflictingIds.has(operation.id),
+    );
+    const moving = firstMoving === -1 ? [] : effective.slice(firstMoving);
+
+    if (moving.length === 0) {
+      return nothingToMove();
+    }
+
+    // A moving operation that heads an earlier reshuffle retracts what sits below
+    // it. Retracting that operation without reaching as far would bring those back.
+    let firstRetracted = moving[0].index;
+    for (const operation of moving) {
+      firstRetracted = Math.min(
+        firstRetracted,
+        operation.index - operation.skip,
+      );
     }
 
     // Given positions rather than stored rows, so a tie puts the new write
@@ -1377,8 +1422,8 @@ export class SimpleJobExecutor implements IJobExecutor {
     );
 
     const merged = reshuffleByTimestamp(
-      { index: nextIndex, skip: retractionSkip(nextIndex, firstConflicting) },
-      conflicting,
+      { index: nextIndex, skip: retractionSkip(nextIndex, firstRetracted) },
+      moving,
       incoming,
     );
 
