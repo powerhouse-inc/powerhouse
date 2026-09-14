@@ -215,6 +215,13 @@ export function createBlockExecutor(
       // many runs, and each run has a child of its own.
       worker: currentPieceWorker,
       resolver: pieceResolver(),
+      // A package piece's block type carries no version; this is where the
+      // installed one comes from, and it loads the registry if a step is the
+      // first thing to ask.
+      packages: async () => {
+        await packagePieces.ready();
+        return packagePieces.versions();
+      },
       // Served only to a piece this reactor's packages ship; the executor
       // withholds it from everything the resolver fetched.
       reactor: new SubgraphReactorPort(subgraph),

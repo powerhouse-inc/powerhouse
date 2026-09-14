@@ -353,7 +353,13 @@ export interface ActivepiecesBlockExecutorOptions {
   cacheDir: string;
   // Piece package name -> pinned version; the connector registry for this run.
   // A blockType may instead pin inline: "@scope/pkg@1.2.3#action".
-  packages?: Record<string, string>;
+
+  // A function is awaited per step, so a host whose registry loads lazily —
+  // package pieces are pinned by what is installed, not by the block type —
+  // answers with what it has by the time a step actually runs.
+  packages?:
+    | Record<string, string>
+    | (() => Record<string, string> | Promise<Record<string, string>>);
   connections?: EngineConnectionResolver;
   // The worker piece steps go to. A function is asked once per step, so a
   // host handing each run its own child answers with that run's.
@@ -488,8 +494,15 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
     return (this.own ??= new PieceWorker());
   }
 
+  private packages(): Promise<Record<string, string>> {
+    const supplied = this.options.packages;
+    return Promise.resolve(
+      typeof supplied === "function" ? supplied() : (supplied ?? {}),
+    );
+  }
+
   async execute(execution: BlockExecution): Promise<BlockResult> {
-    const parsed = parseBlockType(execution.blockType, this.options.packages);
+    const parsed = parseBlockType(execution.blockType, await this.packages());
     if (!parsed) {
       throw new UnknownBlockTypeError(execution.blockType);
     }
