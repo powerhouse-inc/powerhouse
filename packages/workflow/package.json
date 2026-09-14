@@ -47,6 +47,10 @@
       "browser": "./dist/browser/processors/index.js",
       "node": "./dist/node/processors/index.mjs"
     },
+    "./pieces": {
+      "types": "./dist/types/pieces/index.d.ts",
+      "import": "./dist/pieces/index.mjs"
+    },
     "./manifest": "./dist/powerhouse.manifest.json",
     "./style.css": "./dist/style.css"
   },
@@ -63,7 +67,7 @@
     "check-circular-imports": "npx dpdm -T ./index.ts",
     "generate": "ph-cli generate",
     "connect": "ph-cli connect",
-    "build": "ph-cli build",
+    "build": "ph-cli build && node scripts/bundle-pieces.mjs",
     "reactor": "ph-cli reactor",
     "service": "ph-cli service",
     "vetra": "ph-cli vetra",
@@ -78,6 +82,7 @@
     "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
+    "@activepieces/pieces-framework": "0.32.0",
     "@electric-sql/pglite": "0.3.15",
     "@electric-sql/pglite-tools": "0.2.20",
     "@powerhousedao/connect": "6.2.3-dev.1",
@@ -96,6 +101,7 @@
     "@vitejs/plugin-react": "^6.0.1",
     "@vitest/coverage-v8": "4.1.1",
     "document-model": "6.2.3-dev.1",
+    "esbuild": "0.28.2",
     "graphql": "16.12.0",
     "graphql-tag": "2.12.6",
     "oxfmt": "0.55.0",
