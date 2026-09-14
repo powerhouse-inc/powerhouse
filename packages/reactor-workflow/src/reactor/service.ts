@@ -13,6 +13,7 @@ import type {
 import {
   containsRedactedMarker,
   declaredConnectionIds,
+  DEFAULT_EGRESS_POLICY,
   ensurePieceBundle,
   parseBlockType,
   PieceWorker,
@@ -24,6 +25,7 @@ import {
   type BlockExecutor,
   type CheckConnectionOutcome,
   type ConnectorDescriptor,
+  type EgressPolicy,
   type SecretProvider,
   type SecretStore,
   type WorkflowRunResult,
@@ -1264,6 +1266,13 @@ export class WorkflowRuntimeService {
   private readonly descriptors = new Map<string, ConnectorDescriptor>();
   private designWorker?: PieceWorker;
 
+  // Design-time piece code runs under the policy a run would get, so nothing
+  // the editor does reaches somewhere a step could not.
+
+  // Held rather than inlined for the reason the supervisor holds one: a
+  // deployment whose isolation lives elsewhere has to be able to widen it.
+  private designEgress: EgressPolicy | undefined = DEFAULT_EGRESS_POLICY;
+
   private async pieceDescriptor(
     packageName: string,
     version: string,
@@ -1282,7 +1291,14 @@ export class WorkflowRuntimeService {
       let output: unknown;
       try {
         const result = await this.designWorker.describePiece(
-          { bundleDir: bundle.dir, packageName, version },
+          // Loading the module runs piece-authored top-level code, which
+          // has no business reaching anything at all.
+          {
+            bundleDir: bundle.dir,
+            packageName,
+            version,
+            ...(this.designEgress ? { egress: this.designEgress } : {}),
+          },
           { timeoutMs: DESCRIBE_TIMEOUT_MS },
         );
         output = result.output;
@@ -1420,7 +1436,13 @@ export class WorkflowRuntimeService {
     try {
       this.designWorker ??= new PieceWorker();
       const result = await this.designWorker.checkConnection(
-        { bundleDir, auth: shapedAuth },
+        // A check that reaches somewhere a run could not would call a
+        // connection healthy that every step using it will fail on.
+        {
+          bundleDir,
+          auth: shapedAuth,
+          ...(this.designEgress ? { egress: this.designEgress } : {}),
+        },
         { timeoutMs: CHECK_TIMEOUT_MS },
       );
       outcome = result.output as CheckConnectionOutcome;
@@ -1597,6 +1619,9 @@ export class WorkflowRuntimeService {
       propName,
       refresherValues: (input ?? {}) as Record<string, unknown>,
       auth,
+      // Options come from the same service the step will call: the editor
+      // must not offer a choice a run cannot reach.
+      ...(this.designEgress ? { egress: this.designEgress } : {}),
     });
     return result.output;
   }

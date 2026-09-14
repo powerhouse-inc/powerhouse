@@ -178,6 +178,11 @@ describe("WorkflowRuntimeService.checkConnection (docling piece)", () => {
     ]);
 
     docling = await startMiniDocling({ apiKey: "k-docling" });
+    // The mini server is on loopback, which the default policy denies — the
+    // same allowance every other loopback suite here makes.
+    (
+      workflowRuntime as unknown as { designEgress?: unknown }
+    ).designEgress = { allowAddresses: ["127.0.0.1/32", "::1/128"] };
 
     const { db } = getDbClient();
     get = vi.fn();

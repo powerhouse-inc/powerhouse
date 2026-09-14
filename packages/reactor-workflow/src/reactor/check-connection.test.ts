@@ -2,6 +2,7 @@
 // production layout, real PGlite-backed secret store, stubbed piece catalog.
 import { getDbClient, type BaseSubgraph } from "@powerhousedao/reactor-api";
 import {
+  DEFAULT_EGRESS_POLICY,
   ensurePieceBundle,
   PieceWorkerTimeoutError,
   type PieceWorker,
@@ -378,6 +379,36 @@ describe("WorkflowRuntimeService.checkConnection", () => {
         status: "ERROR",
         error: "Connection check timed out after 30s",
       });
+    } finally {
+      runtime.designWorker = previous;
+    }
+  });
+
+  // A check is piece code holding live credentials; it runs under the policy
+  // the run will, so it cannot reach anywhere a step could not.
+  it("runs the check under the same egress policy a run gets", async () => {
+    const runtime = workflowRuntime as unknown as {
+      designWorker?: Pick<PieceWorker, "checkConnection">;
+    };
+    const previous = runtime.designWorker;
+    let request: { egress?: unknown } | undefined;
+    runtime.designWorker = {
+      checkConnection: (sent) => {
+        request = sent;
+        return Promise.resolve({
+          output: { declared: false },
+          touched: [],
+          tlsPoisoned: false,
+        });
+      },
+    };
+    const document = makeDocument();
+    get.mockResolvedValueOnce(document);
+    execute.mockClear();
+    try {
+      await workflowRuntime.checkConnection(document.header.id, TEST_CTX);
+
+      expect(request?.egress).toEqual(DEFAULT_EGRESS_POLICY);
     } finally {
       runtime.designWorker = previous;
     }
