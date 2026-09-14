@@ -1,5 +1,10 @@
 // Palette presets; pure data used by the UI to seed new triggers and steps.
 
+// The document blocks live in the reactor piece, and are offered here too:
+// they are what most workflows on a reactor are built from, and a picker that
+// made an author search for them would be a worse picker.
+import { REACTOR_PIECE } from "./reactor-piece-form.js";
+
 export interface BlockPreset {
   label: string;
   blockType: string;
@@ -28,19 +33,19 @@ export const TRIGGER_PRESETS: BlockPreset[] = [
   },
   {
     label: "Document event",
-    blockType: "core#document-event",
+    blockType: `${REACTOR_PIECE}#trigger:document-event`,
     description: "Fires when a matching document operation lands.",
     defaultConfig: {},
   },
   {
     label: "Document created",
-    blockType: "core#document-created",
+    blockType: `${REACTOR_PIECE}#trigger:document-created`,
     description: "Fires when a document is added to a drive.",
     defaultConfig: {},
   },
   {
     label: "Document deleted",
-    blockType: "core#document-deleted",
+    blockType: `${REACTOR_PIECE}#trigger:document-deleted`,
     description: "Fires when a document is removed from a drive.",
     defaultConfig: {},
   },
@@ -62,37 +67,37 @@ export const STEP_PRESETS: BlockPreset[] = [
   },
   {
     label: "Create document",
-    blockType: "core#document-create",
+    blockType: `${REACTOR_PIECE}#document-create`,
     description: "Creates a Powerhouse document.",
     defaultConfig: { documentType: "", name: "" },
   },
   {
     label: "Dispatch actions",
-    blockType: "core#document-dispatch",
+    blockType: `${REACTOR_PIECE}#document-dispatch`,
     description: "Sends actions to a document.",
     defaultConfig: { documentId: "", actions: [] },
   },
   {
     label: "Get document",
-    blockType: "core#document-get",
+    blockType: `${REACTOR_PIECE}#document-get`,
     description: "Reads a document's current state.",
     defaultConfig: { documentId: "" },
   },
   {
     label: "Find documents",
-    blockType: "core#document-find",
+    blockType: `${REACTOR_PIECE}#document-find`,
     description: "Lists documents by type and name.",
     defaultConfig: { documentType: "" },
   },
   {
     label: "List document types",
-    blockType: "core#document-types",
+    blockType: `${REACTOR_PIECE}#document-types`,
     description: "Document models installed on this reactor.",
     defaultConfig: {},
   },
   {
     label: "Get document schema",
-    blockType: "core#document-schema",
+    blockType: `${REACTOR_PIECE}#document-schema`,
     description: "Action and state schemas of a document type.",
     defaultConfig: { documentType: "" },
   },

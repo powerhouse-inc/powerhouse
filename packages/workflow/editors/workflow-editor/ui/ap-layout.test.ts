@@ -14,7 +14,7 @@ function step(id: string): StepModel {
     id,
     key: id,
     name: id,
-    blockType: "core#document-dispatch",
+    blockType: "@powerhousedao/piece-reactor#document-dispatch",
     connectionId: null,
     config: {},
     retry: null,

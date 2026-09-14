@@ -8,7 +8,7 @@ import {
 } from "./canvas-menu.js";
 import type { StepModel, WorkflowModel } from "./model.js";
 
-function step(id: string, blockType = "core#document-dispatch"): StepModel {
+function step(id: string, blockType = "@powerhousedao/piece-reactor#document-dispatch"): StepModel {
   return {
     id,
     key: id,

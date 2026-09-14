@@ -187,9 +187,13 @@ describe("workflow authoring tools", () => {
       result.blocks.map((b) => [b.blockType, b.kind]),
     );
     expect(kind["core#manual"]).toBe("trigger");
-    expect(kind["core#document-created"]).toBe("trigger");
+    expect(kind["core#schedule"]).toBe("trigger");
     expect(kind["core#branch"]).toBe("step");
-    expect(kind["core#document-dispatch"]).toBe("step");
+    expect(kind["core#assert"]).toBe("step");
+    // The document blocks are a piece now; getWorkflowPieceBlocks lists them.
+    expect(Object.keys(kind).some((type) => type.includes("document"))).toBe(
+      false,
+    );
     expect(result.expressions.join("\n")).toContain("{{steps.<key>.output");
     expect(result.rules.join("\n")).toMatch(/ADD_EDGE/);
   });

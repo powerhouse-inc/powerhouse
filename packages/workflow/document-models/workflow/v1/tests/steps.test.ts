@@ -89,7 +89,7 @@ describe("StepsOperations", () => {
         id: "s1",
         key: "s1",
         name: "Step",
-        blockType: "core#document-get",
+        blockType: "@powerhousedao/piece-reactor#document-get",
         config: {},
         retry: {
           maxAttempts: 2,

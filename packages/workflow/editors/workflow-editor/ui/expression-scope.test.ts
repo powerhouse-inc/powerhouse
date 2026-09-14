@@ -6,7 +6,7 @@ import {
 } from "./expression-scope.js";
 import type { StepModel, WorkflowModel } from "./model.js";
 
-function step(id: string, blockType = "core#document-get"): StepModel {
+function step(id: string, blockType = "@powerhousedao/piece-reactor#document-get"): StepModel {
   return {
     id,
     key: id,
@@ -70,7 +70,7 @@ describe("buildExpressionScope", () => {
     });
     expect(scope.value).toEqual({
       trigger: { payload: { declared: "core#manual type" } },
-      steps: { a: { output: { declared: "core#document-get type" } } },
+      steps: { a: { output: { declared: "@powerhousedao/piece-reactor#document-get type" } } },
       variables: { apiBase: "https://x" },
     });
     expect(scope.captions).toEqual({
@@ -91,14 +91,14 @@ describe("buildExpressionScope", () => {
         steps: [
           {
             stepKey: "a",
-            blockType: "core#document-get",
+            blockType: "@powerhousedao/piece-reactor#document-get",
             status: "SUCCEEDED",
             output: { documentId: "d1" },
           },
           // Sibling branch: not upstream of b, must not appear.
           {
             stepKey: "c",
-            blockType: "core#document-get",
+            blockType: "@powerhousedao/piece-reactor#document-get",
             status: "SUCCEEDED",
             output: { documentId: "d2" },
           },
@@ -122,7 +122,7 @@ describe("buildExpressionScope", () => {
         steps: [
           {
             stepKey: "a",
-            blockType: "core#document-find",
+            blockType: "@powerhousedao/piece-reactor#document-find",
             status: "SUCCEEDED",
             output: { count: 1 },
           },
@@ -131,7 +131,7 @@ describe("buildExpressionScope", () => {
       authoredOutput: authored,
     });
     expect(scope.value.steps).toEqual({
-      a: { output: { declared: "core#document-get type" } },
+      a: { output: { declared: "@powerhousedao/piece-reactor#document-get type" } },
     });
     expect(scope.captions["steps.a.output"]).toBe("declared type");
     expect(scope.captions["trigger.payload"]).toBe("declared type");

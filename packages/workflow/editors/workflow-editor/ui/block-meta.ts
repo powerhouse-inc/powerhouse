@@ -20,53 +20,8 @@ const CORE_META: Record<string, BlockMeta> = {
   "core#manual": { displayName: "Manual", subtitle: "Trigger", glyph: "▶" },
   "core#schedule": { displayName: "Schedule", subtitle: "Trigger", glyph: "◷" },
   "core#webhook": { displayName: "Webhook", subtitle: "Trigger", glyph: "⇲" },
-  "core#document-event": {
-    displayName: "Document event",
-    subtitle: "Trigger",
-    glyph: "▤",
-  },
-  "core#document-created": {
-    displayName: "Document created",
-    subtitle: "Trigger",
-    glyph: "✚",
-  },
-  "core#document-deleted": {
-    displayName: "Document deleted",
-    subtitle: "Trigger",
-    glyph: "✖",
-  },
   "core#branch": { displayName: "Branch", subtitle: "Core", glyph: "⑂" },
   "core#assert": { displayName: "Assert", subtitle: "Core", glyph: "!" },
-  "core#document-create": {
-    displayName: "Create document",
-    subtitle: "Core",
-    glyph: "＋",
-  },
-  "core#document-dispatch": {
-    displayName: "Dispatch actions",
-    subtitle: "Core",
-    glyph: "⇥",
-  },
-  "core#document-get": {
-    displayName: "Get document",
-    subtitle: "Core",
-    glyph: "▦",
-  },
-  "core#document-find": {
-    displayName: "Find documents",
-    subtitle: "Core",
-    glyph: "⌕",
-  },
-  "core#document-types": {
-    displayName: "List document types",
-    subtitle: "Core",
-    glyph: "☰",
-  },
-  "core#document-schema": {
-    displayName: "Get document schema",
-    subtitle: "Core",
-    glyph: "⌗",
-  },
 };
 
 // "@activepieces/piece-http@0.11.19#send_request" -> http / send_request;

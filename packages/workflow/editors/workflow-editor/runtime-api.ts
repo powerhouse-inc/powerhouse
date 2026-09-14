@@ -1,6 +1,10 @@
 // Design-time channel to the workflow-runtime subgraph: piece descriptors
 // and dynamic option resolution. Not document-model coupled.
 import {
+  adaptReactorProps,
+  isReactorPieceBlock,
+} from "./ui/reactor-piece-form.js";
+import {
   CORE_FORMS,
   POLL_INTERVAL_PROP,
   type BlockForm,
@@ -80,8 +84,13 @@ export function getBlockForm(blockType: string): Promise<BlockForm | null> {
       if (!descriptor || !entry) return null;
       const isTrigger = !descriptor.action && Boolean(descriptor.trigger);
       // A poll cadence is meaningless for a trigger the provider pushes to,
-      // so the prop is only offered where it actually applies.
-      const polled = isTrigger && entry.strategy !== "WEBHOOK";
+      // or for one this reactor fires itself, so the prop is only offered
+      // where it actually applies.
+      const reactorPiece = isReactorPieceBlock(blockType);
+      const polled = isTrigger && entry.strategy !== "WEBHOOK" && !reactorPiece;
+      const props = reactorPiece
+        ? adaptReactorProps(entry.props)
+        : entry.props;
       return {
         title: `${descriptor.displayName} · ${entry.displayName}`,
         requireAuth: entry.requireAuth,
@@ -90,7 +99,7 @@ export function getBlockForm(blockType: string): Promise<BlockForm | null> {
           : entry.requireAuth
             ? ("required" as const)
             : ("optional" as const),
-        props: polled ? [...entry.props, POLL_INTERVAL_PROP] : entry.props,
+        props: polled ? [...props, POLL_INTERVAL_PROP] : props,
         triggerStrategy: isTrigger ? entry.strategy : undefined,
       };
     });

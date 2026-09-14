@@ -24,12 +24,9 @@ const READ_ONLY = {
   openWorldHint: false,
 } as const;
 
-const CORE_TRIGGERS = new Set([
-  "core#manual",
-  "core#document-event",
-  "core#document-created",
-  "core#document-deleted",
-]);
+// Core blocks that are triggers. A piece's trigger says so in its own block
+// type, which is how every document trigger is classified now.
+const CORE_TRIGGERS = new Set(["core#manual", "core#schedule", "core#webhook"]);
 
 function kindOf(blockType: string): "trigger" | "step" {
   return CORE_TRIGGERS.has(blockType) || blockType.includes("#trigger:")
@@ -58,7 +55,7 @@ function describeProp(prop: BlockFormProp) {
 
 const EXPRESSIONS = [
   "Step configs and edge conditions may contain expressions in double braces.",
-  "{{trigger.payload.<field>}} reads the trigger payload: for core#manual the payload passed to fireWorkflow; for core#document-* it carries documentId, documentType, driveId and name.",
+  "{{trigger.payload.<field>}} reads the trigger payload: for core#manual the payload passed to fireWorkflow; for the reactor piece's document triggers it carries documentId, documentType, driveId and name.",
   "{{steps.<key>.output.<path>}} reads an upstream step's output by that step's key, e.g. {{steps.fetch.output.body.title}}.",
   "{{variables.<key>}} reads a workflow variable.",
   "'a' || 'b' picks the first non-empty value, e.g. {{trigger.payload.url || 'https://example.com'}}.",
@@ -126,7 +123,7 @@ export const getWorkflowBlockConfigTool: PhAiToolDescriptor = {
       return {
         blockType,
         error:
-          "Unknown block type. Use getConnectors and getWorkflowPieceBlocks to find valid block types, or listWorkflowCoreBlocks for built-ins.",
+          "Unknown block type. Use getConnectors and getWorkflowPieceBlocks to find valid block types (documents live in @powerhousedao/piece-reactor), or listWorkflowCoreBlocks for built-ins.",
       };
     }
     return {
@@ -143,7 +140,7 @@ export const getWorkflowBlockConfigTool: PhAiToolDescriptor = {
 export const listWorkflowCoreBlocksTool: PhAiToolDescriptor = {
   name: "listWorkflowCoreBlocks",
   description:
-    "Lists the built-in core#… blocks (manual and document triggers, branch, document create and dispatch) with their config props, plus the expression syntax and the rules for building a powerhouse/workflow document.",
+    "Lists the built-in core#… blocks (manual, schedule and webhook triggers, branch and assert) with their config props, plus the expression syntax and the rules for building a powerhouse/workflow document. Documents are read and written by the @powerhousedao/piece-reactor blocks; list those with getWorkflowPieceBlocks.",
   inputSchema: {},
   annotations: { title: "List Workflow Core Blocks", ...READ_ONLY },
   callback: () =>
