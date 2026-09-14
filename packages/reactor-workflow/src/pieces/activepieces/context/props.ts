@@ -7,6 +7,7 @@ import {
   type ApProperty,
 } from "../types.js";
 import { throwingStub, withTouchTracking } from "./stubs.js";
+import type { ReactorService } from "./reactor.js";
 
 // PropertyContext surface per pieces-framework (identical in npm 0.32.0 and
 // repo main 0.38.0, checked 2026-09-01) + spike S6b findings.
@@ -26,6 +27,7 @@ export interface ServerInfo {
 
 export interface BuiltApPropertyContext {
   searchValue: string | undefined;
+  reactor: ReactorService;
   server: ServerInfo;
   project: { id: string; externalId(): Promise<string> };
   flows: FlowsProvider;
@@ -39,6 +41,9 @@ export interface PropertyContextOptions {
   connections?: ConnectionsProvider;
   server?: ServerInfo;
   projectId?: string;
+  // ctx.reactor for a design-time resolver, on the same terms as at run time:
+  // offered to a package piece, a throwing stub to every other.
+  reactor?: ReactorService;
   onTouch?: (member: string) => void;
 }
 
@@ -54,6 +59,7 @@ export function buildPropertyContext(
   const touched = new Set<string>();
   const base: Record<string, unknown> = {
     searchValue: options.searchValue,
+    reactor: options.reactor ?? throwingStub("reactor"),
     server: options.server ?? throwingStub("server"),
     project: {
       id: options.projectId ?? "project",

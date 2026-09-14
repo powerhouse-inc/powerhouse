@@ -1,7 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
-import { ensurePieceBundle } from "../activepieces/fetch.js";
+import {
+  bundleResolver,
+  pieceModuleRef,
+  type PieceResolver,
+} from "../activepieces/resolver.js";
+import type { ReactorService } from "../activepieces/context/reactor.js";
 import { rewriteFileRefs, type StagedFile } from "../activepieces/context/files.js";
 import {
   PieceWorker,
@@ -11,6 +16,12 @@ import { DEFAULT_EGRESS_POLICY } from "../activepieces/worker/egress.js";
 import {
   LOG_WRITE,
   OUTPUT_UPDATE,
+  REACTOR_CREATE,
+  REACTOR_EXECUTE,
+  REACTOR_FIND,
+  REACTOR_GET,
+  REACTOR_MODEL,
+  REACTOR_MODELS,
   STORE_DELETE,
   STORE_GET,
   STORE_PUT,
@@ -213,6 +224,110 @@ function storeKeyOf(payload: unknown): string {
   return key;
 }
 
+// The host's half of `ctx.reactor`: the same operations the piece calls, run
+// against the reactor this host serves. See activepieces/context/reactor.ts.
+
+// Registered per step and only for a piece the host resolved locally, so a
+// fetched bundle forging these calls finds no handler and is refused.
+export type ReactorPort = ReactorService;
+
+// Payloads arrive from the child, which runs piece code: a call is checked
+// here rather than trusted to have come from our own proxy.
+function reactorInput(payload: unknown): Record<string, unknown> {
+  if (typeof payload !== "object" || payload === null || Array.isArray(payload)) {
+    throw new Error("Reactor call carried no input object");
+  }
+  return payload as Record<string, unknown>;
+}
+
+function requiredString(
+  payload: Record<string, unknown>,
+  field: string,
+): string {
+  const value = payload[field];
+  if (typeof value !== "string" || value === "") {
+    throw new Error(`Reactor call carried no "${field}"`);
+  }
+  return value;
+}
+
+function optionalString(
+  payload: Record<string, unknown>,
+  field: string,
+): string | undefined {
+  const value = payload[field];
+  return typeof value === "string" && value !== "" ? value : undefined;
+}
+
+function reactorActions(payload: Record<string, unknown>) {
+  const actions = payload.actions;
+  if (!Array.isArray(actions) || actions.length === 0) {
+    throw new Error("Reactor call carried no actions");
+  }
+  return actions.map((entry, index) => {
+    const action = entry as Record<string, unknown> | null;
+    if (!action || typeof action.type !== "string") {
+      throw new Error(`Reactor call: actions[${index}] needs a string "type"`);
+    }
+    return {
+      type: action.type,
+      input: action.input,
+      ...(typeof action.scope === "string" ? { scope: action.scope } : {}),
+    };
+  });
+}
+
+export function reactorHandlers(port: ReactorPort): HostCallHandlers {
+  return {
+    [REACTOR_MODELS]: () => port.models(),
+    [REACTOR_MODEL]: (payload) =>
+      port.model(requiredString(reactorInput(payload), "documentType")),
+    [REACTOR_GET]: (payload) => {
+      const input = reactorInput(payload);
+      return port.get({
+        documentId: requiredString(input, "documentId"),
+        ...(optionalString(input, "branch")
+          ? { branch: optionalString(input, "branch") }
+          : {}),
+      });
+    },
+    [REACTOR_FIND]: (payload) => {
+      const input = reactorInput(payload);
+      return port.find({
+        ...(optionalString(input, "documentType")
+          ? { documentType: optionalString(input, "documentType") }
+          : {}),
+        ...(optionalString(input, "parentId")
+          ? { parentId: optionalString(input, "parentId") }
+          : {}),
+        ...(typeof input.limit === "number" ? { limit: input.limit } : {}),
+      });
+    },
+    [REACTOR_CREATE]: (payload) => {
+      const input = reactorInput(payload);
+      return port.create({
+        documentType: requiredString(input, "documentType"),
+        ...(optionalString(input, "name")
+          ? { name: optionalString(input, "name") }
+          : {}),
+        ...(optionalString(input, "parentId")
+          ? { parentId: optionalString(input, "parentId") }
+          : {}),
+      });
+    },
+    [REACTOR_EXECUTE]: (payload) => {
+      const input = reactorInput(payload);
+      return port.execute({
+        documentId: requiredString(input, "documentId"),
+        ...(optionalString(input, "branch")
+          ? { branch: optionalString(input, "branch") }
+          : {}),
+        actions: reactorActions(input),
+      });
+    },
+  };
+}
+
 // The handlers served to a running step or trigger hook. A rejection becomes
 // the error the piece sees, which is what an over-limit write should do.
 export function storeHandlers(port: PieceStorePort): HostCallHandlers {
@@ -252,6 +367,12 @@ export interface ActivepiecesBlockExecutorOptions {
   // Without it `ctx.store` falls back to the worker's heap, which a step
   // timeout discards.
   pieceStore?: PieceStorePort;
+  // Where a block type's piece comes from. Defaults to fetching the pinned
+  // version into `cacheDir`, which is what a published piece needs.
+  resolver?: PieceResolver;
+  // Serves `ctx.reactor`, and only to a piece the resolver answered locally.
+  // Without it even a package piece finds the member throwing.
+  reactor?: ReactorPort;
   // Where a step's piece may connect to. Left unset it is the default policy,
   // which refuses private address space; `null` runs the piece unrestricted.
   egress?: EgressPolicy | null;
@@ -349,7 +470,12 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
   // must dispose. A supplied worker belongs to whoever supplied it.
   private own: PieceWorker | undefined;
 
-  constructor(private readonly options: ActivepiecesBlockExecutorOptions) {}
+  private readonly resolver: PieceResolver;
+
+  constructor(private readonly options: ActivepiecesBlockExecutorOptions) {
+    this.resolver =
+      options.resolver ?? bundleResolver({ cacheDir: options.cacheDir });
+  }
 
   private worker(): IPieceWorker {
     const supplied = this.options.worker;
@@ -382,11 +508,10 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
     // provider or a resolver can fail with the credential in its own message.
     let redactValues: string[] = [];
     try {
-      const bundle = await ensurePieceBundle({
-        name: parsed.packageName,
-        version: parsed.version,
-        cacheDir: this.options.cacheDir,
-      });
+      const piece = await this.resolver.resolve(
+        parsed.packageName,
+        parsed.version,
+      );
       const connection = await this.resolveConnection(execution.connectionId, {
         blockType: execution.blockType,
         piecePackage: parsed.packageName,
@@ -406,9 +531,12 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
         this.options.egress === undefined
           ? DEFAULT_EGRESS_POLICY
           : this.options.egress;
+      // A fetched bundle never reaches the reactor: the handlers below are the
+      // only way in, and they are registered for a local piece alone.
+      const reactor = piece.local ? this.options.reactor : undefined;
       const result = await this.worker().runAction(
         {
-          bundleDir: bundle.dir,
+          ...pieceModuleRef(piece),
           actionName: parsed.name,
           propsValue: execution.config as Record<string, unknown>,
           auth,
@@ -416,13 +544,21 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
           ...(stagingDir ? { stagingDir } : {}),
           ...(stagedInputs ? { stagedInputs } : {}),
           ...(pieceStore ? { durableStore: true } : {}),
+          ...(reactor ? { reactorAccess: true } : {}),
           ...(this.options.onPieceLog ? { captureLogs: true } : {}),
           ...(this.options.onPartialOutput ? { liveOutput: true } : {}),
           ...(egress ? { egress } : {}),
         },
         {
           ...(timeoutMs ? { timeoutMs } : {}),
-          ...(pieceStore ? { hostCalls: storeHandlers(pieceStore) } : {}),
+          ...(pieceStore || reactor
+            ? {
+                hostCalls: {
+                  ...(pieceStore ? storeHandlers(pieceStore) : {}),
+                  ...(reactor ? reactorHandlers(reactor) : {}),
+                },
+              }
+            : {}),
           ...(notifications ? { notifications } : {}),
         },
       );

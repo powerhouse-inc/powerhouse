@@ -5,6 +5,7 @@ import { jsonSafe } from "../worker/json-safe.js";
 import { normalizeStoreScope, type StoreScopeName } from "./store-scope.js";
 import type { ActionFilesService } from "./files.js";
 import type { ConnectionsProvider } from "./props.js";
+import type { ReactorService } from "./reactor.js";
 
 export { UnsupportedContextMemberError } from "./stubs.js";
 
@@ -90,6 +91,9 @@ export interface ActionContextOptions {
   // ctx.output.update, the piece's own progress report. Omitted, the member
   // throws, so a piece that depends on it fails by name rather than silently.
   output?: { update(output: unknown): Promise<void> };
+  // ctx.reactor. Served only to a piece the host loaded from an installed
+  // reactor package; for every other piece the member throws by name.
+  reactor?: ReactorService;
   executionType?: "BEGIN" | "RESUME";
   identity?: ActionContextIdentity;
   onTouch?: (member: string) => void;
@@ -107,6 +111,7 @@ export interface BuiltApActionContext {
   server: { apiUrl: string; publicUrl: string; token: string };
   files: { write(file: unknown): Promise<string> };
   output: { update(output: unknown): Promise<void> };
+  reactor: ReactorService;
   agent: { tools: unknown[] };
   run: {
     id: string;
@@ -153,6 +158,7 @@ export function buildActionContext(
     server: throwingStub("server"),
     files: options.files ?? throwingStub("files"),
     output: options.output ?? throwingStub("output"),
+    reactor: options.reactor ?? throwingStub("reactor"),
     agent: throwingStub("agent"),
     run: {
       id: identity.runId ?? "run",

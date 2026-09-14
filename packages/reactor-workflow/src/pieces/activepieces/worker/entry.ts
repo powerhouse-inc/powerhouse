@@ -7,6 +7,7 @@ import {
   UnsupportedContextMemberError,
 } from "../context/action.js";
 import { RemoteKeyValueStore } from "../context/remote-store.js";
+import { RemoteReactorService } from "../context/reactor.js";
 import { RemoteOutput } from "../context/remote-output.js";
 import { captureConsole } from "./logs.js";
 import { jsonSafe } from "./json-safe.js";
@@ -28,11 +29,12 @@ import {
 } from "../context/props.js";
 import { buildTriggerContext, runTriggerHook } from "../context/trigger.js";
 import { buildDescriptor, describeProperties } from "../descriptor.js";
-import { loadPieceFromDir, type LoadedPiece } from "../loader.js";
+import { loadPiece, loadPieceFromDir, type LoadedPiece } from "../loader.js";
 import { getActions, getTriggers, type ApProperty } from "../types.js";
 import { installEgressGuard, runWithEgressPolicy } from "./egress.js";
 import type {
   StagedInput,
+  PieceModuleRef,
   CheckConnectionMessage,
   CheckConnectionOutcome,
   DescribePieceMessage,
@@ -62,11 +64,22 @@ function storeForScope(scope: string): InMemoryKeyValueStore {
   return store;
 }
 
-function loadCached(bundleDir: string): Promise<LoadedPiece> {
-  let loading = loadedPieces.get(bundleDir);
+// The module this request names, and the cache key for it. A package piece
+// arrives as one file; a fetched bundle as the directory holding it.
+function pieceRefKey(ref: PieceModuleRef): string {
+  const key = ref.entryPath ?? ref.bundleDir;
+  if (!key) {
+    throw new Error("Request names no piece module (entryPath or bundleDir)");
+  }
+  return key;
+}
+
+function loadCached(ref: PieceModuleRef): Promise<LoadedPiece> {
+  const key = pieceRefKey(ref);
+  let loading = loadedPieces.get(key);
   if (!loading) {
-    loading = loadPieceFromDir(bundleDir);
-    loadedPieces.set(bundleDir, loading);
+    loading = ref.entryPath ? loadPiece(key) : loadPieceFromDir(key);
+    loadedPieces.set(key, loading);
   }
   return loading;
 }
@@ -117,11 +130,12 @@ async function handleResolveOptions(
   message: ResolveOptionsMessage,
 ): Promise<WorkerResponse> {
   const { request } = message;
-  const { piece } = await loadCached(request.bundleDir);
+  const { piece } = await loadCached(request);
   const { context, touched } = buildPropertyContext({
     searchValue: request.searchValue,
     // Design-time default: an empty flows listing instead of a throwing stub.
     flows: { list: () => Promise.resolve({ data: [] }) },
+    ...(request.reactorAccess ? { reactor: new RemoteReactorService() } : {}),
   });
   const refresherValues = {
     ...(request.auth !== undefined ? { auth: request.auth } : {}),
@@ -179,13 +193,13 @@ function stagedInputResolver(
 
 async function handleRun(message: RunMessage): Promise<WorkerResponse> {
   const { request } = message;
-  const { piece } = await loadCached(request.bundleDir);
+  const { piece } = await loadCached(request);
   const action = getActions(piece)[request.actionName] as
     | ReturnType<typeof getActions>[string]
     | undefined;
   if (!action) {
     throw new Error(
-      `No action "${request.actionName}" in bundle ${request.bundleDir}`,
+      `No action "${request.actionName}" in ${pieceRefKey(request)}`,
     );
   }
   const files = request.stagingDir
@@ -197,6 +211,8 @@ async function handleRun(message: RunMessage): Promise<WorkerResponse> {
     ? new RemoteKeyValueStore()
     : undefined;
   const liveOutput = request.liveOutput ? new RemoteOutput() : undefined;
+  // Host-served reactor access, for a piece that ships inside a reactor package.
+  const reactor = request.reactorAccess ? new RemoteReactorService() : undefined;
   const { context, touched } = buildActionContext({
     propsValue: await normalizePropsValue(action.props, request.propsValue, {
       resolveRef: stagedInputResolver(request.stagedInputs),
@@ -210,6 +226,7 @@ async function handleRun(message: RunMessage): Promise<WorkerResponse> {
       ? new InMemoryConnectionsProvider(request.connections)
       : undefined,
     output: liveOutput,
+    reactor,
     executionType: request.executionType,
     identity: request.identity,
   });
@@ -237,7 +254,7 @@ async function handleTriggerHook(
   message: TriggerHookMessage,
 ): Promise<WorkerResponse> {
   const { request } = message;
-  const { piece } = await loadCached(request.bundleDir);
+  const { piece } = await loadCached(request);
   const trigger = getTriggers(piece)[request.triggerName] as
     | ReturnType<typeof getTriggers>[string]
     | undefined;
@@ -287,7 +304,7 @@ async function handleCheckConnection(
   message: CheckConnectionMessage,
 ): Promise<WorkerResponse> {
   const { request } = message;
-  const { piece } = await loadCached(request.bundleDir);
+  const { piece } = await loadCached(request);
   const app = piece as {
     checkConnection?: (context: unknown) => unknown;
   };
@@ -322,7 +339,7 @@ async function handleDescribe(
   message: DescribePieceMessage,
 ): Promise<WorkerResponse> {
   const { request } = message;
-  const { piece } = await loadCached(request.bundleDir);
+  const { piece } = await loadCached(request);
   const descriptor = buildDescriptor(piece, {
     packageName: request.packageName,
     version: request.version,

@@ -37,8 +37,16 @@ export interface EgressScopedRequest {
   egress?: EgressPolicy;
 }
 
-export interface RunActionRequest extends EgressScopedRequest {
-  bundleDir: string;
+// Where the worker finds the piece module: a bundle directory in npm shape, as
+// a registry fetch extracts it, or the module file of an installed package.
+
+// Exactly one is set; a request carrying neither is refused before any load.
+export interface PieceModuleRef {
+  bundleDir?: string;
+  entryPath?: string;
+}
+
+export interface RunActionRequest extends EgressScopedRequest, PieceModuleRef {
   actionName: string;
   propsValue: Record<string, unknown>;
   auth?: unknown;
@@ -65,6 +73,9 @@ export interface RunActionRequest extends EgressScopedRequest {
   // Concrete secret values resolved for this step, so the child can strip them
   // from an error before it crosses back; they already travel inside `auth`.
   redactValues?: string[];
+  // Serve `ctx.reactor` over the call channel. Set only for a piece the host
+  // loaded from an installed reactor package; a fetched bundle never gets it.
+  reactorAccess?: boolean;
 }
 
 export interface RunMessage {
@@ -74,8 +85,9 @@ export interface RunMessage {
 }
 
 // Design-time resolution of a DROPDOWN options() / DYNAMIC props() resolver.
-export interface ResolveOptionsRequest extends EgressScopedRequest {
-  bundleDir: string;
+export interface ResolveOptionsRequest
+  extends EgressScopedRequest,
+    PieceModuleRef {
   // Action or trigger name, per kind (default "action").
   actionName: string;
   kind?: "action" | "trigger";
@@ -83,6 +95,9 @@ export interface ResolveOptionsRequest extends EgressScopedRequest {
   refresherValues?: Record<string, unknown>;
   auth?: unknown;
   searchValue?: string;
+  // As on a run: an options() resolver of a package piece may read the reactor
+  // it is offering choices from.
+  reactorAccess?: boolean;
 }
 
 export interface ResolveOptionsMessage {
@@ -96,8 +111,9 @@ export interface ResolveOptionsMessage {
 
 // Without one it runs statelessly: `storeState` seeds an in-memory store and
 // the whole snapshot comes back in the response for the caller to persist.
-export interface TriggerHookRequest extends EgressScopedRequest {
-  bundleDir: string;
+export interface TriggerHookRequest
+  extends EgressScopedRequest,
+    PieceModuleRef {
   triggerName: string;
   hook: "onEnable" | "onDisable" | "run" | "test" | "onHandshake";
   propsValue: Record<string, unknown>;
@@ -125,8 +141,9 @@ export interface TriggerHookMessage {
 
 // A connection credential check. Auth crosses into the worker and stays
 // there: the piece code that reads it never runs in the host process.
-export interface CheckConnectionRequest extends EgressScopedRequest {
-  bundleDir: string;
+export interface CheckConnectionRequest
+  extends EgressScopedRequest,
+    PieceModuleRef {
   auth?: unknown;
 }
 
@@ -147,8 +164,9 @@ export interface CheckConnectionOutcome {
 // Design-time descriptor of a piece: its actions, triggers and auth shape.
 // Building one requires the piece module, whose top-level code runs on load,
 // so it is built in the worker and only the plain descriptor crosses back.
-export interface DescribePieceRequest extends EgressScopedRequest {
-  bundleDir: string;
+export interface DescribePieceRequest
+  extends EgressScopedRequest,
+    PieceModuleRef {
   // Carried through into the descriptor's `source` and its resolver ids.
   packageName: string;
   version: string;
@@ -259,3 +277,12 @@ export const OUTPUT_UPDATE = "output.update";
 export const STORE_GET = "store.get";
 export const STORE_PUT = "store.put";
 export const STORE_DELETE = "store.delete";
+
+// A reactor call carries the operation's own input object; the host answers
+// with documents already projected to summaries (see context/reactor.ts).
+export const REACTOR_MODELS = "reactor.models";
+export const REACTOR_MODEL = "reactor.model";
+export const REACTOR_GET = "reactor.get";
+export const REACTOR_FIND = "reactor.find";
+export const REACTOR_CREATE = "reactor.create";
+export const REACTOR_EXECUTE = "reactor.execute";
