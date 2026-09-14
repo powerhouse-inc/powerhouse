@@ -9,11 +9,11 @@ import { PieceRegistry, configuredPackages } from "./piece-registry.js";
 let root = "";
 
 // A package root as it looks once its build has run: an ESM manifest under
-// dist/pieces, and one bundle directory per piece in npm shape.
+// dist/node/pieces, and one bundle directory per piece in npm shape.
 async function writeManifest(declared: unknown[]): Promise<void> {
-  await mkdir(join(root, "dist", "pieces"), { recursive: true });
+  await mkdir(join(root, "dist", "node", "pieces"), { recursive: true });
   await writeFile(
-    join(root, "dist", "pieces", "index.mjs"),
+    join(root, "dist", "node", "pieces", "index.mjs"),
     `export const pieces = ${JSON.stringify(declared, null, 2)};\n`,
   );
 }
@@ -42,16 +42,16 @@ describe("PieceRegistry", () => {
       {
         name: "@powerhousedao/piece-reactor",
         version: "1.2.3",
-        bundle: "dist/pieces/reactor",
+        bundle: "dist/node/pieces/reactor",
       },
     ]);
-    await writeBundle("dist/pieces/reactor", "@powerhousedao/piece-reactor");
+    await writeBundle("dist/node/pieces/reactor", "@powerhousedao/piece-reactor");
 
     const registry = new PieceRegistry();
     await registry.load(root);
 
     const piece = registry.lookup("@powerhousedao/piece-reactor");
-    expect(piece?.bundleDir).toBe(join(root, "dist", "pieces", "reactor"));
+    expect(piece?.bundleDir).toBe(join(root, "dist", "node", "pieces", "reactor"));
     expect(piece?.entryPath).toBeUndefined();
     // What an unversioned block type resolves against.
     expect(registry.versions()).toEqual({
@@ -60,23 +60,23 @@ describe("PieceRegistry", () => {
   });
 
   it("takes a single module file as an entry", async () => {
-    await mkdir(join(root, "dist", "pieces"), { recursive: true });
-    await writeFile(join(root, "dist", "pieces", "solo.js"), "module.exports={};\n");
+    await mkdir(join(root, "dist", "node", "pieces"), { recursive: true });
+    await writeFile(join(root, "dist", "node", "pieces", "solo.js"), "module.exports={};\n");
     await writeManifest([
-      { name: "@acme/piece-solo", version: "0.1.0", entry: "dist/pieces/solo.js" },
+      { name: "@acme/piece-solo", version: "0.1.0", entry: "dist/node/pieces/solo.js" },
     ]);
 
     const registry = new PieceRegistry();
     await registry.load(root);
 
     expect(registry.lookup("@acme/piece-solo")?.entryPath).toBe(
-      join(root, "dist", "pieces", "solo.js"),
+      join(root, "dist", "node", "pieces", "solo.js"),
     );
   });
 
   it("skips a piece whose bundle was never built", async () => {
     await writeManifest([
-      { name: "@acme/piece-ghost", version: "1.0.0", bundle: "dist/pieces/ghost" },
+      { name: "@acme/piece-ghost", version: "1.0.0", bundle: "dist/node/pieces/ghost" },
     ]);
 
     const registry = new PieceRegistry();
@@ -96,9 +96,9 @@ describe("PieceRegistry", () => {
 
   it("loads once however many callers ask", async () => {
     await writeManifest([
-      { name: "@acme/piece-one", version: "1.0.0", bundle: "dist/pieces/one" },
+      { name: "@acme/piece-one", version: "1.0.0", bundle: "dist/node/pieces/one" },
     ]);
-    await writeBundle("dist/pieces/one", "@acme/piece-one");
+    await writeBundle("dist/node/pieces/one", "@acme/piece-one");
 
     const registry = new PieceRegistry();
     await Promise.all([
