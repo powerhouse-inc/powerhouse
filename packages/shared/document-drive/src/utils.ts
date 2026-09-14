@@ -122,23 +122,73 @@ export function escapeRegExp(string: string) {
 }
 
 /**
- * The node list as plain objects for read-only scans. Inside a mutative draft
- * this returns the untouched base list, so a find or filter over it does not
- * create a child draft per element it visits. Callers must read before they
- * write: the base list does not see mutations made earlier in the same action.
+ * A plain, unfrozen copy of the node list for read-only scans. Inside a
+ * mutative draft the copy is taken from the untouched base list, so a find or
+ * filter over it does not create a child draft per element it visits, and it is
+ * a copy because the stored list is frozen and V8 scans a frozen array several
+ * times slower than a normal one. Callers must read before they write: the base
+ * list does not see mutations made earlier in the same action.
  */
 export function readNodes(state: { nodes: Node[] }): Node[] {
-  return isDraft(state) ? original(state).nodes : state.nodes;
+  return [...(isDraft(state) ? original(state).nodes : state.nodes)];
 }
 
 /**
- * The node list with a node added, ordered by id. The list is built and sorted
- * as plain objects, so inside a mutative draft the comparator never reads an
- * element through the draft proxy. Pass the list read with readNodes to get
- * that benefit; passing the draft's own list is correct but slow.
+ * The given array sorted by id and frozen, in place -- it takes ownership of
+ * the array it is handed, which is why it is private to this module and only
+ * ever given a list built at the call site. The freeze is what makes assigning
+ * the list to a mutative draft cheap: assigning a draftable value to a draft
+ * property queues a finalize pass that walks every element of the assigned
+ * value, and the walk exits at its Object.isFrozen check instead. Elements must
+ * be plain nodes -- an element that is still a draft would never be replaced by
+ * its final value, because the walk that does that replacement is the one being
+ * skipped.
  */
-export function insertNodeSorted(nodes: readonly Node[], node: Node): Node[] {
-  return [...nodes, node].sort((a, b) => a.id.localeCompare(b.id));
+function freezeSortedById(nodes: Node[]): readonly Node[] {
+  nodes.sort((a, b) => a.id.localeCompare(b.id));
+  return Object.freeze(nodes);
+}
+
+/**
+ * A copy of the given list, sorted by id and frozen, which is the shape the
+ * node reducer assigns. Read the list with readNodes, build the new list from
+ * it, and pass what this returns to assignNodes. The copy is what keeps the
+ * freeze off the caller's array.
+ */
+export function sortNodesById(nodes: readonly Node[]): readonly Node[] {
+  return freezeSortedById([...nodes]);
+}
+
+/**
+ * The node list with a node added, ordered by id and frozen, in the same shape
+ * sortNodesById returns. The list is built and sorted as plain objects, so
+ * inside a mutative draft the comparator never reads an element through the
+ * draft proxy. Pass the list read with readNodes: the draft's own list would
+ * put child drafts in the result, which the freeze then keeps mutative from
+ * resolving.
+ */
+export function insertNodeSorted(
+  nodes: readonly Node[],
+  node: Node,
+): readonly Node[] {
+  return freezeSortedById([...nodes, node]);
+}
+
+/**
+ * Installs a node list as state.nodes. Every assignment the node reducer makes
+ * goes through here, and this is the one place a frozen array crosses into
+ * state: the generated DocumentDriveGlobalState types nodes as a mutable
+ * Node[], so the cast below is where that gap is paid rather than spread over
+ * the reducer. Consumers must treat drive.state.global.nodes as read-only --
+ * mutating it in place (push, sort, splice) throws in strict mode; copy it
+ * first, as readNodes does. Note that LOAD_STATE replaces a whole scope and can
+ * install a list this function never saw.
+ */
+export function assignNodes(
+  state: { nodes: Node[] },
+  nodes: readonly Node[],
+): void {
+  state.nodes = nodes as Node[];
 }
 
 export function handleTargetNameCollisions(params: {
