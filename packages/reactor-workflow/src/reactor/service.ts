@@ -44,10 +44,17 @@ import type {
   WorkflowState,
 } from "document-models/workflow/v1";
 import {
-  DOCUMENT_OPTION_PROPS,
-  resolveDocumentOptions,
+  DOCUMENT_CREATE_BLOCK,
+  DOCUMENT_CREATED_BLOCK,
+  DOCUMENT_DELETED_BLOCK,
+  DOCUMENT_DISPATCH_BLOCK,
+  DOCUMENT_EVENT_BLOCK,
+  DOCUMENT_FIND_BLOCK,
+  DOCUMENT_GET_BLOCK,
+  DOCUMENT_SCHEMA_BLOCK,
+  DOCUMENT_TYPES_BLOCK,
   staticString,
-} from "./document-options.js";
+} from "./reactor-piece.js";
 import {
   documentBlockTree,
   documentEventTree,
@@ -1720,14 +1727,6 @@ export class WorkflowRuntimeService {
     await packagePieces.ready();
     const parsed = parseBlockType(blockType, packagePieces.versions());
     if (!parsed) {
-      // Core blocks: document-aware props resolve against the reactor.
-      if (this.subgraph && DOCUMENT_OPTION_PROPS.has(propName)) {
-        return resolveDocumentOptions(
-          this.subgraph.reactorClient,
-          propName,
-          (input ?? {}) as Record<string, unknown>,
-        );
-      }
       throw new Error(`Not a piece block type: "${blockType}"`);
     }
     // Auth-dependent options() resolvers need the step's connection. Nothing
@@ -1791,10 +1790,10 @@ export class WorkflowRuntimeService {
         };
       case "core#assert":
         return { source: "static", nodes: [{ name: "value", type: "value" }] };
-      case "core#document-created":
-      case "core#document-deleted":
+      case DOCUMENT_CREATED_BLOCK:
+      case DOCUMENT_DELETED_BLOCK:
         return { source: "static", nodes: lifecycleTriggerTree() };
-      case "core#document-event": {
+      case DOCUMENT_EVENT_BLOCK: {
         const inputChildren = await this.operationInputFields(
           staticString(record.documentType),
           staticString(record.actionType),
@@ -1804,13 +1803,13 @@ export class WorkflowRuntimeService {
           nodes: documentEventTree(inputChildren),
         };
       }
-      case "core#document-find":
+      case DOCUMENT_FIND_BLOCK:
         return { source: "static", nodes: documentFindTree() };
-      case "core#document-schema":
+      case DOCUMENT_SCHEMA_BLOCK:
         return { source: "static", nodes: documentSchemaTree() };
-      case "core#document-types":
+      case DOCUMENT_TYPES_BLOCK:
         return { source: "static", nodes: documentTypesTree() };
-      case "core#document-get": {
+      case DOCUMENT_GET_BLOCK: {
         // The type may come from a sibling hint when the id is an expression.
         const stateChildren = await this.stateFields(
           staticString(record.documentType),
@@ -1820,8 +1819,8 @@ export class WorkflowRuntimeService {
           nodes: documentGetTree(stateChildren),
         };
       }
-      case "core#document-create":
-      case "core#document-dispatch": {
+      case DOCUMENT_CREATE_BLOCK:
+      case DOCUMENT_DISPATCH_BLOCK: {
         const stateChildren = await this.stateFields(
           staticString(record.documentType),
         );

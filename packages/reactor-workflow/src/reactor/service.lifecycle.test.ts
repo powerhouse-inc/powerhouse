@@ -1,8 +1,12 @@
-// core#document-created / core#document-deleted are backed by the document's
+// The document-created / document-deleted triggers are backed by the document's
 // own CREATE_DOCUMENT / DELETE_DOCUMENT operations, with the drive's ADD_FILE /
 // DELETE_NODE kept as a fallback.
 import type { OperationWithContext } from "document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  DOCUMENT_CREATED_BLOCK,
+  DOCUMENT_DELETED_BLOCK,
+} from "./reactor-piece.js";
 import {
   collectLifecycleParentHints,
   WorkflowRuntimeService,
@@ -171,7 +175,7 @@ describe("WorkflowRuntimeService document lifecycle triggers", () => {
   });
 
   it("fires for a document created outside every drive", async () => {
-    await register("wf-created", "core#document-created", {});
+    await register("wf-created", DOCUMENT_CREATED_BLOCK, {});
     const created = documentOp(DOC, TODO_TYPE, "CREATE_DOCUMENT", {
       documentId: DOC,
       model: TODO_TYPE,
@@ -201,7 +205,7 @@ describe("WorkflowRuntimeService document lifecycle triggers", () => {
   });
 
   it("resolves the drive from the child relationship written with the creation", async () => {
-    await register("wf-created", "core#document-created", { driveId: DRIVE });
+    await register("wf-created", DOCUMENT_CREATED_BLOCK, { driveId: DRIVE });
     await service.onOperations([
       documentOp(DOC, TODO_TYPE, "CREATE_DOCUMENT", {
         documentId: DOC,
@@ -225,7 +229,7 @@ describe("WorkflowRuntimeService document lifecycle triggers", () => {
 
   it("leaves driveId null when the parent is not a drive", async () => {
     useReactor({ "parent-1": TODO_TYPE });
-    await register("wf-created", "core#document-created", {});
+    await register("wf-created", DOCUMENT_CREATED_BLOCK, {});
     await service.onOperations([
       documentOp(DOC, TODO_TYPE, "CREATE_DOCUMENT", {
         documentId: DOC,
@@ -245,7 +249,7 @@ describe("WorkflowRuntimeService document lifecycle triggers", () => {
   });
 
   it("honours the documentType filter against the created model", async () => {
-    await register("wf-created", "core#document-created", {
+    await register("wf-created", DOCUMENT_CREATED_BLOCK, {
       documentType: "acme/other",
     });
     await service.onOperations([
@@ -258,7 +262,7 @@ describe("WorkflowRuntimeService document lifecycle triggers", () => {
   });
 
   it("reports a deletion with the stored document type and no re-read", async () => {
-    await register("wf-deleted", "core#document-deleted", {
+    await register("wf-deleted", DOCUMENT_DELETED_BLOCK, {
       documentType: TODO_TYPE,
     });
     const deleted = documentOp(DOC, TODO_TYPE, "DELETE_DOCUMENT", {
@@ -285,7 +289,7 @@ describe("WorkflowRuntimeService document lifecycle triggers", () => {
   });
 
   it("fires once when both the document and the drive report a creation", async () => {
-    await register("wf-created", "core#document-created", {});
+    await register("wf-created", DOCUMENT_CREATED_BLOCK, {});
     await service.onOperations([
       documentOp(DOC, TODO_TYPE, "CREATE_DOCUMENT", {
         documentId: DOC,
@@ -304,7 +308,7 @@ describe("WorkflowRuntimeService document lifecycle triggers", () => {
   });
 
   it("falls back to the drive's ADD_FILE when no creation operation arrives", async () => {
-    await register("wf-created", "core#document-created", { driveId: DRIVE });
+    await register("wf-created", DOCUMENT_CREATED_BLOCK, { driveId: DRIVE });
     await service.onOperations([
       globalOp(DRIVE, DRIVE_TYPE, "ADD_FILE", {
         id: DOC,
@@ -326,7 +330,7 @@ describe("WorkflowRuntimeService document lifecycle triggers", () => {
   it("lets the drive rescue a creation whose drive was still unknown", async () => {
     // A driveId-filtered trigger cannot match a creation with no drive in
     // sight, so the drive's own ADD_FILE must still get its turn.
-    await register("wf-created", "core#document-created", { driveId: DRIVE });
+    await register("wf-created", DOCUMENT_CREATED_BLOCK, { driveId: DRIVE });
     await service.onOperations([
       documentOp(DOC, TODO_TYPE, "CREATE_DOCUMENT", {
         documentId: DOC,
@@ -346,7 +350,7 @@ describe("WorkflowRuntimeService document lifecycle triggers", () => {
 
   it("still reports a drive node deletion, reading the type off the surviving document", async () => {
     useReactor({ [DRIVE]: DRIVE_TYPE, [DOC]: TODO_TYPE });
-    await register("wf-deleted", "core#document-deleted", {
+    await register("wf-deleted", DOCUMENT_DELETED_BLOCK, {
       documentType: TODO_TYPE,
     });
     await service.onOperations([
@@ -362,7 +366,7 @@ describe("WorkflowRuntimeService document lifecycle triggers", () => {
   });
 
   it("ignores document-scope operations that are not lifecycle events", async () => {
-    await register("wf-created", "core#document-created", {});
+    await register("wf-created", DOCUMENT_CREATED_BLOCK, {});
     await service.onOperations([
       documentOp(DOC, TODO_TYPE, "UPGRADE_DOCUMENT", {
         documentId: DOC,

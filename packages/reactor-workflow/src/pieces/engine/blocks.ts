@@ -660,7 +660,7 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
 }
 
 // Routes explicit handlers first, then core#*, then the piece executor.
-// Handlers let the host add blocks needing host services (e.g. core#document-*).
+// Handlers let a host add block types of its own, served in its process.
 export class CompositeBlockExecutor implements BlockExecutor {
   private readonly core = new CoreBlockExecutor();
 

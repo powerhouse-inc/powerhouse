@@ -22,15 +22,6 @@ import type {
   ConnectionDocument,
   ConnectionState,
 } from "document-models/connection/v1";
-import {
-  DOCUMENT_CREATE_BLOCK,
-  DOCUMENT_DISPATCH_BLOCK,
-  DOCUMENT_FIND_BLOCK,
-  DOCUMENT_GET_BLOCK,
-  DOCUMENT_SCHEMA_BLOCK,
-  DOCUMENT_TYPES_BLOCK,
-  DocumentBlockExecutor,
-} from "./document-blocks.js";
 import type { WorkflowState } from "document-models/workflow/v1";
 import { childLogger } from "document-model";
 import { join } from "node:path";
@@ -207,7 +198,8 @@ export function createBlockExecutor(
   attachments?: AttachmentPort,
   pieceStore?: PieceStorePort,
 ): BlockExecutor {
-  const documents = new DocumentBlockExecutor(subgraph);
+  // No handler map: the document blocks are a piece now, and they reach the
+  // reactor through the port below like any other package piece would.
   return new CompositeBlockExecutor(
     new ActivepiecesBlockExecutor({
       cacheDir: BUNDLE_CACHE_DIR,
@@ -244,14 +236,6 @@ export function createBlockExecutor(
       // carries a reference.
       ...(attachments ? { attachments, stagingRoot: ATTACHMENT_STAGING_DIR } : {}),
     }),
-    {
-      [DOCUMENT_CREATE_BLOCK]: documents,
-      [DOCUMENT_DISPATCH_BLOCK]: documents,
-      [DOCUMENT_GET_BLOCK]: documents,
-      [DOCUMENT_FIND_BLOCK]: documents,
-      [DOCUMENT_SCHEMA_BLOCK]: documents,
-      [DOCUMENT_TYPES_BLOCK]: documents,
-    },
   );
 }
 

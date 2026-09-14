@@ -1,9 +1,15 @@
 // Pure config parsing/matching for the document trigger kinds. Each config
 // field is a string or list; an omitted field matches every value.
 
-export const DOCUMENT_EVENT_BLOCK = "core#document-event";
-export const DOCUMENT_CREATED_BLOCK = "core#document-created";
-export const DOCUMENT_DELETED_BLOCK = "core#document-deleted";
+// Declared by the reactor piece, fired by this host: the processor sees every
+// operation, so matching one against a filter never leaves the process.
+import {
+  DOCUMENT_CREATED_BLOCK,
+  DOCUMENT_DELETED_BLOCK,
+  DOCUMENT_EVENT_BLOCK,
+} from "./reactor-piece.js";
+
+export { DOCUMENT_CREATED_BLOCK, DOCUMENT_DELETED_BLOCK, DOCUMENT_EVENT_BLOCK };
 
 export type TriggerKind =
   | "document-event"

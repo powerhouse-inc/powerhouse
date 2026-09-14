@@ -5,7 +5,7 @@ import { up } from "./migrations.js";
 import type { DB } from "./schema.js";
 
 // Feeds every matched operation to the workflow runtime, which fires the
-// ENABLED workflows whose core#document-event trigger matches (doc 08 §7.2).
+// ENABLED workflows whose document-event trigger matches (doc 08 §7.2).
 export class DocumentEventTrigger extends RelationalDbProcessor<DB> {
   // Set by the factory to release its singleton guard.
   onDisconnectCallback?: () => void;

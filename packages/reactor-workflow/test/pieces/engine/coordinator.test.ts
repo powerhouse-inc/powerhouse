@@ -458,21 +458,21 @@ describe("CompositeBlockExecutor handlers", () => {
       },
     };
     const executor = new CompositeBlockExecutor(new FakeExecutor(), {
-      "core#document-create": handler,
+      "host#custom-block": handler,
     });
 
     const result = await executor.execute({
-      blockType: "core#document-create",
+      blockType: "host#custom-block",
       config: {},
       step: {
         id: "s",
         key: "s",
-        blockType: "core#document-create",
+        blockType: "host#custom-block",
         config: {},
       },
     });
     expect(result.output).toBe("handled");
-    expect(handled).toEqual(["core#document-create"]);
+    expect(handled).toEqual(["host#custom-block"]);
 
     const branch = await executor.execute({
       blockType: "core#branch",
