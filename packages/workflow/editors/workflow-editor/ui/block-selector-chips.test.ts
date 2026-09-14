@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { chipsOf, CORE_CHIP, orderChips } from "./BlockSelector.js";
+import {
+  chipsOf,
+  CORE_CHIP,
+  orderChips,
+  POWERHOUSE_CHIP,
+} from "./BlockSelector.js";
 
 describe("category chips", () => {
   it("maps Activepieces categories to chip labels, merging AI variants", () => {
@@ -14,7 +19,7 @@ describe("category chips", () => {
     ]).toEqual(["Sales & CRM", "New thing"]);
   });
 
-  it("pins Core, then AI, then the rest by piece count", () => {
+  it("pins Core and Powerhouse, then AI, then the rest by piece count", () => {
     const pieces = [
       { categories: ["MARKETING"] },
       { categories: ["MARKETING", "COMMUNICATION"] },
@@ -23,12 +28,15 @@ describe("category chips", () => {
     ];
     expect(orderChips(pieces)).toEqual([
       CORE_CHIP,
+      POWERHOUSE_CHIP,
       "AI",
       "Marketing",
       "Communication",
     ]);
+    // Both built-in chips are pinned whatever the catalog holds.
     expect(orderChips([{ categories: ["COMMERCE"] }])).toEqual([
       CORE_CHIP,
+      POWERHOUSE_CHIP,
       "Commerce",
     ]);
   });

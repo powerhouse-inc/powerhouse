@@ -143,6 +143,9 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 export const CORE_CHIP = "Core";
+// The reactor's own blocks: its own chip, beside Core, because they are a
+// piece rather than an engine built-in and an author looks for them by name.
+export const POWERHOUSE_CHIP = "Powerhouse";
 const AI_CHIP = "AI";
 
 function categoryLabel(id: string): string {
@@ -159,7 +162,7 @@ export function chipsOf(piece: { categories: string[] }): Set<string> {
   return new Set(piece.categories.map(categoryLabel));
 }
 
-// Chip order: Core pinned, AI next, then by piece count.
+// Chip order: Core and Powerhouse pinned, AI next, then by piece count.
 export function orderChips(pieces: { categories: string[] }[]): string[] {
   const counts = new Map<string, number>();
   for (const piece of pieces) {
@@ -171,7 +174,12 @@ export function orderChips(pieces: { categories: string[] }[]): string[] {
     .filter(([chip]) => chip !== AI_CHIP)
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
     .map(([chip]) => chip);
-  return [CORE_CHIP, ...(counts.has(AI_CHIP) ? [AI_CHIP] : []), ...rest];
+  return [
+    CORE_CHIP,
+    POWERHOUSE_CHIP,
+    ...(counts.has(AI_CHIP) ? [AI_CHIP] : []),
+    ...rest,
+  ];
 }
 
 // Drill-in view: one piece's actions or triggers, per mode.
@@ -408,13 +416,21 @@ export function BlockSelector(props: {
       ? true
       : (chipsByPiece.get(pieceName)?.has(chip) ?? false);
 
-  const showPresets = chip === null || chip === CORE_CHIP;
-  const showCatalog = pieceSource !== undefined && chip !== CORE_CHIP;
-  const filteredPresets = showPresets
-    ? props.presets.filter((preset) =>
-        `${preset.label} ${preset.blockType}`.toLowerCase().includes(lowered),
-      )
-    : [];
+  const presetChip = chip === CORE_CHIP || chip === POWERHOUSE_CHIP;
+  const showCatalog = pieceSource !== undefined && !presetChip;
+  const matching = props.presets.filter((preset) =>
+    `${preset.label} ${preset.blockType}`.toLowerCase().includes(lowered),
+  );
+  // The engine's own blocks, then the reactor's. Two sections rather than one
+  // "Core": the document blocks are a piece, and saying so is honest.
+  const corePresets =
+    chip === null || chip === CORE_CHIP
+      ? matching.filter((preset) => preset.group !== "powerhouse")
+      : [];
+  const powerhousePresets =
+    chip === null || chip === POWERHOUSE_CHIP
+      ? matching.filter((preset) => preset.group === "powerhouse")
+      : [];
   const filteredAttach = (
     props.onAttach ? (props.attachSteps ?? []) : []
   ).filter((step) =>
@@ -433,6 +449,21 @@ export function BlockSelector(props: {
     : [];
 
   const search = useBlockSearch(query, showCatalog && !piece);
+
+  const presetRow = (preset: BlockPreset) => (
+    <Row
+      key={preset.blockType + preset.label}
+      logo={<BlockLogo blockType={preset.blockType} size={28} />}
+      label={preset.label}
+      description={preset.description}
+      onClick={() => props.onPick(preset)}
+    />
+  );
+  // Labels earn their place once there is more than one thing to tell apart.
+  const labelPresets =
+    showCatalog ||
+    filteredAttach.length > 0 ||
+    (corePresets.length > 0 && powerhousePresets.length > 0);
   const wantedKind = mode === "triggers" ? "trigger" : "action";
   const hits: BlockSearchHitUi[] =
     search.kind === "done"
@@ -493,7 +524,9 @@ export function BlockSelector(props: {
               {filteredAttach.map((step) => (
                 <Row
                   key={step.id}
-                  logo={<BlockLogo blockType={step.blockType} size={28} />}
+                  logo={
+                    <BlockLogo blockType={step.blockType} size={28} />
+                  }
                   label={step.name}
                   description={`{{steps.${step.key}}} · detached`}
                   onClick={() => props.onAttach?.(step.id)}
@@ -501,19 +534,14 @@ export function BlockSelector(props: {
               ))}
             </>
           ) : null}
-          {filteredPresets.length > 0 &&
-          (showCatalog || filteredAttach.length > 0) ? (
+          {corePresets.length > 0 && labelPresets ? (
             <SectionLabel>Core</SectionLabel>
           ) : null}
-          {filteredPresets.map((preset) => (
-            <Row
-              key={preset.blockType + preset.label}
-              logo={<BlockLogo blockType={preset.blockType} size={28} />}
-              label={preset.label}
-              description={preset.description}
-              onClick={() => props.onPick(preset)}
-            />
-          ))}
+          {corePresets.map(presetRow)}
+          {powerhousePresets.length > 0 && labelPresets ? (
+            <SectionLabel>Powerhouse</SectionLabel>
+          ) : null}
+          {powerhousePresets.map(presetRow)}
           {searchActive ? (
             <>
               <SectionLabel>
@@ -614,7 +642,7 @@ export function BlockSelector(props: {
               )}
             </>
           ) : null}
-          {filteredPresets.length === 0 &&
+          {corePresets.length + powerhousePresets.length === 0 &&
           filteredPieces.length === 0 &&
           filteredAttach.length === 0 &&
           !searchActive ? (
