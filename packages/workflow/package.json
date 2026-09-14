@@ -49,7 +49,7 @@
     },
     "./pieces": {
       "types": "./dist/types/pieces/index.d.ts",
-      "import": "./dist/pieces/index.mjs"
+      "node": "./dist/node/pieces/index.mjs"
     },
     "./manifest": "./dist/powerhouse.manifest.json",
     "./style.css": "./dist/style.css"
@@ -67,7 +67,7 @@
     "check-circular-imports": "npx dpdm -T ./index.ts",
     "generate": "ph-cli generate",
     "connect": "ph-cli connect",
-    "build": "ph-cli build && node scripts/bundle-pieces.mjs",
+    "build": "ph-cli build && node scripts/assert-pieces-built.mjs",
     "reactor": "ph-cli reactor",
     "service": "ph-cli service",
     "vetra": "ph-cli vetra",
