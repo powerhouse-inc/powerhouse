@@ -134,7 +134,9 @@ export class SubgraphReactorPort implements ReactorPort {
     const limit = input.limit ?? FIND_PAGE_LIMIT;
     let results: PHDocument[];
     if (input.documentType) {
-      results = await this.findByType(input.documentType, limit);
+      // The index takes both, so a step that named a type and a drive gets
+      // documents of that type in that drive — not every document of the type.
+      results = await this.findByType(input.documentType, limit, input.parentId);
     } else if (input.parentId) {
       const page = await this.client.find({ parentId: input.parentId }, undefined, {
         cursor: "",
@@ -168,7 +170,16 @@ export class SubgraphReactorPort implements ReactorPort {
         input.documentType,
         { parentIdentifier: input.parentId },
       );
-      return documentSummary(created, true);
+      // createEmpty takes no name, so naming it is a first operation. The
+      // drive path below sets the header instead, before the file lands.
+      if (!input.name) return documentSummary(created, true);
+      const named = await this.client.execute<PHDocument>(
+        created.header.id,
+        "main",
+        [createAction("SET_NAME", { name: input.name })],
+      );
+      assertOperationsApplied(named, 1);
+      return documentSummary(named, true);
     }
     // createEmpty only records the parent relationship; a drive also needs an
     // ADD_FILE node, or the document is created but invisible in the drive.
@@ -206,12 +217,14 @@ export class SubgraphReactorPort implements ReactorPort {
   private async findByType(
     type: string,
     limit: number,
+    parentId?: string,
   ): Promise<PHDocument[]> {
     try {
-      const page = await this.client.find({ type }, undefined, {
-        cursor: "",
-        limit,
-      });
+      const page = await this.client.find(
+        { type, ...(parentId ? { parentId } : {}) },
+        undefined,
+        { cursor: "", limit },
+      );
       return page.results;
     } catch {
       // One unreadable model must not sink a whole-reactor sweep.
@@ -236,8 +249,14 @@ export class SubgraphReactorPort implements ReactorPort {
   }
 
   private async findFolderDrive(nodeId: string): Promise<DriveTarget | null> {
-    const drives = await this.findByType(DRIVE_DOCUMENT_TYPE, FIND_PAGE_LIMIT);
-    for (const drive of drives) {
+    // Every type that counts as a drive, not just the common one: a folder in
+    // a reactor-drive would otherwise look like no drive at all.
+    const pages = await Promise.all(
+      [...DRIVE_DOCUMENT_TYPES].map((type) =>
+        this.findByType(type, FIND_PAGE_LIMIT),
+      ),
+    );
+    for (const drive of pages.flat()) {
       try {
         const node = await this.client.drives.getNode(drive.header.id, nodeId);
         if (node.kind === "folder") {

@@ -277,6 +277,15 @@ function reactorActions(payload: Record<string, unknown>) {
   });
 }
 
+// A page size the host will serve. The value arrives from piece code, so it
+// is clamped here rather than trusted; a host may cap it further.
+const MAX_FIND_LIMIT = 100;
+
+function findLimit(value: unknown): number | undefined {
+  if (typeof value !== "number" || !Number.isFinite(value)) return undefined;
+  return Math.min(Math.max(Math.floor(value), 1), MAX_FIND_LIMIT);
+}
+
 export function reactorHandlers(port: ReactorPort): HostCallHandlers {
   return {
     [REACTOR_MODELS]: () => port.models(),
@@ -300,7 +309,9 @@ export function reactorHandlers(port: ReactorPort): HostCallHandlers {
         ...(optionalString(input, "parentId")
           ? { parentId: optionalString(input, "parentId") }
           : {}),
-        ...(typeof input.limit === "number" ? { limit: input.limit } : {}),
+        ...(findLimit(input.limit) !== undefined
+          ? { limit: findLimit(input.limit) }
+          : {}),
       });
     },
     [REACTOR_CREATE]: (payload) => {

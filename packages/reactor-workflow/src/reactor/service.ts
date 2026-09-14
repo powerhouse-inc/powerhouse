@@ -1756,8 +1756,10 @@ export class WorkflowRuntimeService {
         refresherValues: (input ?? {}) as Record<string, unknown>,
         auth,
         // A package piece's options() reads the reactor it offers choices
-        // from, over the same port a step of it would use.
-        ...(piece.local ? { reactorAccess: true } : {}),
+        // from, over the same port a step of it would use — offered only when
+        // there is a host to answer, or the member would fail as a missing
+        // handler rather than as the unsupported member it is.
+        ...(piece.local && this.subgraph ? { reactorAccess: true } : {}),
         // Options come from the same service the step will call: the editor
         // must not offer a choice a run cannot reach.
         ...(this.designEgress ? { egress: this.designEgress } : {}),

@@ -59,7 +59,9 @@ function stubPort(): ReactorPort & { calls: string[] } {
       ]);
     },
     create(input) {
-      calls.push(`create ${input.documentType} parent=${input.parentId ?? "-"}`);
+      calls.push(
+        `create ${input.documentType} parent=${input.parentId ?? "-"} name=${input.name ?? "-"}`,
+      );
       return Promise.resolve(summary("new-1", input.name ?? ""));
     },
     execute(input) {
@@ -136,10 +138,10 @@ describe("the reactor piece", () => {
     );
 
     expect(port.calls).toEqual([
-      "create powerhouse/workflow parent=drive-1",
-      // SET_NAME first: the name travels with the document, then the author's
-      // own actions.
-      "execute new-1 SET_NAME,ADD_STEP",
+      // The name travels with the create — the port is what names a document,
+      // whichever path it took — so only the author's actions are dispatched.
+      "create powerhouse/workflow parent=drive-1 name=Invoice",
+      "execute new-1 ADD_STEP",
     ]);
     expect(result.output).toEqual({
       documentId: "new-1",
@@ -157,7 +159,9 @@ describe("the reactor piece", () => {
       }),
     );
 
-    expect(port.calls[0]).toBe("create powerhouse/connection parent=-");
+    expect(port.calls[0]).toBe(
+      "create powerhouse/connection parent=- name=From model",
+    );
   });
 
   it("refuses an action the step did not allow", async () => {

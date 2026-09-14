@@ -38,6 +38,17 @@ const app = {
           actions: [{ type: "SET_NAME", input: { name: "Renamed" } }],
         }),
     },
+    greedy: {
+      name: "greedy",
+      displayName: "Greedy",
+      props: {},
+      run: async (ctx) => {
+        await ctx.reactor.find({ documentType: "acme/todo", limit: 1e9 });
+        await ctx.reactor.find({ documentType: "acme/todo", limit: -5 });
+        await ctx.reactor.find({ documentType: "acme/todo", limit: 3.7 });
+        return {};
+      },
+    },
     blind: {
       name: "blind",
       displayName: "Blind",
@@ -115,8 +126,8 @@ function reactorPort(): ReactorPort & { calls: string[] } {
         state: { name: "A workflow" },
       });
     },
-    find() {
-      calls.push("find");
+    find(input) {
+      calls.push(`find limit=${input.limit ?? "-"}`);
       return Promise.resolve([]);
     },
     create(input) {
@@ -209,6 +220,24 @@ describe("ctx.reactor over the host call channel", () => {
 
     expect(port.calls).toEqual(["execute SET_NAME"]);
     expect((result.output as { name: string }).name).toBe("Renamed");
+  });
+
+  it("clamps a page size the piece asked for", async () => {
+    const port = reactorPort();
+    const executor = new ActivepiecesBlockExecutor({
+      cacheDir,
+      worker,
+      resolver: resolver(true),
+      reactor: port,
+    });
+
+    await executor.execute(
+      execution("@powerhousedao/piece-reactor@1.0.0#greedy"),
+    );
+
+    // Whatever a piece asks for, the host serves a page it is willing to
+    // read: capped, whole, and at least one.
+    expect(port.calls).toEqual(["find limit=100", "find limit=1", "find limit=3"]);
   });
 
   it("refuses a fetched bundle the same piece code", async () => {
