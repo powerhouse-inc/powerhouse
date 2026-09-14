@@ -49,8 +49,9 @@ export const documentCreateAction = createAction({
       ...(config.parentId ? { parentId: config.parentId } : {}),
     });
 
+    // The name travelled with the create; only the author's own actions are
+    // left to dispatch.
     const followUps = parseActions(config.actions ?? payload.actions, BLOCK);
-    if (name) followUps.unshift({ type: "SET_NAME", input: { name } });
     const document = followUps.length
       ? await reactor.execute({
           documentId: created.documentId,

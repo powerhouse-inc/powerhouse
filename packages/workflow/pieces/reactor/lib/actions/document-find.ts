@@ -29,12 +29,15 @@ export const documentFindAction = createAction({
       Math.max(typeof limit === "number" ? limit : DEFAULT_LIMIT, 1),
       MAX_LIMIT,
     );
+    // The index does not match names, so a name filter has to see more rows
+    // than the step will keep; without one, ask for exactly the page wanted
+    // rather than a default page per model.
+    const needle = typeof name === "string" ? name.trim().toLowerCase() : "";
     const found = await reactorOf(ctx).find({
       ...(documentType ? { documentType } : {}),
       ...(parentId ? { parentId } : {}),
+      ...(needle ? {} : { limit: capped }),
     });
-    // The index filters by type only; names are matched here.
-    const needle = typeof name === "string" ? name.trim().toLowerCase() : "";
     const documents = found
       .filter(
         (document) => !needle || document.name.toLowerCase().includes(needle),
