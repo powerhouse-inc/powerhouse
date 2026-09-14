@@ -14,6 +14,7 @@ import {
   isFolderNode,
   isValidName,
   readNodes,
+  sortNodesById,
 } from "../utils.js";
 
 export const nodeReducer: DocumentDriveNodeOperations = {
@@ -80,15 +81,18 @@ export const nodeReducer: DocumentDriveNodeOperations = {
     });
   },
   deleteNodeOperation(state, action, dispatch) {
-    const node = state.nodes.find((node) => node.id === action.input.id);
+    const nodes = readNodes(state);
+    const node = nodes.find((node) => node.id === action.input.id);
     if (!node) {
       throw new Error(`Node with id ${action.input.id} not found`);
     }
-    const descendants = getDescendants(node, state.nodes);
-    state.nodes = state.nodes.filter(
-      (node) =>
-        node.id !== action.input.id &&
-        !descendants.find((descendant) => descendant.id === node.id),
+    const descendants = getDescendants(node, nodes);
+    state.nodes = sortNodesById(
+      nodes.filter(
+        (node) =>
+          node.id !== action.input.id &&
+          !descendants.find((descendant) => descendant.id === node.id),
+      ),
     );
 
     [node, ...descendants]
@@ -109,27 +113,27 @@ export const nodeReducer: DocumentDriveNodeOperations = {
       );
     }
 
-    state.nodes = state.nodes.map((node) =>
-      node.id === action.input.id
-        ? {
-            ...node,
-            ...{
-              name: handleTargetNameCollisions({
-                nodes: state.nodes.filter((n) => n.id !== action.input.id),
-                srcName: action.input.name ?? node.name,
-                srcKind: "file",
-                targetParentFolder:
-                  action.input.parentFolder ?? node.parentFolder,
-              }),
-              documentType:
-                action.input.documentType ?? (node as FileNode).documentType,
-            },
-          }
-        : node,
+    const nodes = readNodes(state);
+    state.nodes = sortNodesById(
+      nodes.map((node) =>
+        node.id === action.input.id
+          ? {
+              ...node,
+              ...{
+                name: handleTargetNameCollisions({
+                  nodes: nodes.filter((n) => n.id !== action.input.id),
+                  srcName: action.input.name ?? node.name,
+                  srcKind: "file",
+                  targetParentFolder:
+                    action.input.parentFolder ?? node.parentFolder,
+                }),
+                documentType:
+                  action.input.documentType ?? (node as FileNode).documentType,
+              },
+            }
+          : node,
+      ),
     );
-
-    // deterministically sort nodes by id
-    state.nodes.sort((a, b) => a.id.localeCompare(b.id));
   },
   updateNodeOperation(state, action) {
     if (action.input.name && !isValidName(action.input.name)) {
@@ -138,36 +142,37 @@ export const nodeReducer: DocumentDriveNodeOperations = {
       );
     }
 
-    state.nodes = state.nodes.map((node) =>
-      node.id === action.input.id
-        ? {
-            ...node,
-            ...{
-              name: handleTargetNameCollisions({
-                nodes: state.nodes.filter((n) => n.id !== action.input.id),
-                srcName: action.input.name ?? node.name,
-                srcKind: node.kind === "file" ? "file" : "folder",
-                targetParentFolder:
-                  action.input.parentFolder ?? node.parentFolder,
-              }),
-              parentFolder:
-                action.input.parentFolder === null ? null : node.parentFolder,
-            },
-          }
-        : node,
+    const nodes = readNodes(state);
+    state.nodes = sortNodesById(
+      nodes.map((node) =>
+        node.id === action.input.id
+          ? {
+              ...node,
+              ...{
+                name: handleTargetNameCollisions({
+                  nodes: nodes.filter((n) => n.id !== action.input.id),
+                  srcName: action.input.name ?? node.name,
+                  srcKind: node.kind === "file" ? "file" : "folder",
+                  targetParentFolder:
+                    action.input.parentFolder ?? node.parentFolder,
+                }),
+                parentFolder:
+                  action.input.parentFolder === null ? null : node.parentFolder,
+              },
+            }
+          : node,
+      ),
     );
-
-    // deterministically sort nodes by id
-    state.nodes.sort((a, b) => a.id.localeCompare(b.id));
   },
   copyNodeOperation(state, action, dispatch) {
-    const node = state.nodes.find((node) => node.id === action.input.srcId);
+    const nodes = readNodes(state);
+    const node = nodes.find((node) => node.id === action.input.srcId);
 
     if (!node) {
       throw new Error(`Node with id ${action.input.srcId} not found`);
     }
 
-    const duplicatedNode = state.nodes.find(
+    const duplicatedNode = nodes.find(
       (node) => node.id === action.input.targetId,
     );
 
@@ -176,7 +181,7 @@ export const nodeReducer: DocumentDriveNodeOperations = {
     }
 
     const name = handleTargetNameCollisions({
-      nodes: state.nodes,
+      nodes,
       srcName: action.input.targetName || node.name,
       srcKind: node.kind === "file" ? "file" : "folder",
       targetParentFolder: action.input.targetParentFolder || null,
@@ -190,10 +195,7 @@ export const nodeReducer: DocumentDriveNodeOperations = {
       parentFolder: action.input.targetParentFolder || null,
     };
 
-    state.nodes.push(newNode);
-
-    // deterministically sort nodes by id
-    state.nodes.sort((a, b) => a.id.localeCompare(b.id));
+    state.nodes = insertNodeSorted(nodes, newNode);
 
     const isFile = isFileNode(newNode);
     if (isFile) {
@@ -213,21 +215,22 @@ export const nodeReducer: DocumentDriveNodeOperations = {
       );
     }
 
-    const node = state.nodes.find((node) => node.id === action.input.srcFolder);
+    const nodes = readNodes(state);
+    const node = nodes.find((node) => node.id === action.input.srcFolder);
 
     if (!node) {
       throw new Error(`Node with id ${action.input.srcFolder} not found`);
     }
 
     const name = handleTargetNameCollisions({
-      nodes: state.nodes,
+      nodes,
       srcName: node.name,
       srcKind: node.kind === "file" ? "file" : "folder",
       targetParentFolder: action.input.targetParentFolder || null,
     });
 
     if (isFolderNode(node)) {
-      const descendants = getDescendants(node, state.nodes);
+      const descendants = getDescendants(node, nodes);
       // throw error if moving a folder to one of its descendants
       if (
         descendants.find(
@@ -240,19 +243,18 @@ export const nodeReducer: DocumentDriveNodeOperations = {
       }
     }
 
-    state.nodes = state.nodes.map((node) => {
-      if (node.id === action.input.srcFolder) {
-        return {
-          ...node,
-          name,
-          parentFolder: action.input.targetParentFolder || null,
-        };
-      }
+    state.nodes = sortNodesById(
+      nodes.map((node) => {
+        if (node.id === action.input.srcFolder) {
+          return {
+            ...node,
+            name,
+            parentFolder: action.input.targetParentFolder || null,
+          };
+        }
 
-      return node;
-    });
-
-    // deterministically sort nodes by id
-    state.nodes.sort((a, b) => a.id.localeCompare(b.id));
+        return node;
+      }),
+    );
   },
 };

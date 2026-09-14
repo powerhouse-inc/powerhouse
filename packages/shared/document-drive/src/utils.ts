@@ -122,23 +122,43 @@ export function escapeRegExp(string: string) {
 }
 
 /**
- * The node list as plain objects for read-only scans. Inside a mutative draft
- * this returns the untouched base list, so a find or filter over it does not
- * create a child draft per element it visits. Callers must read before they
- * write: the base list does not see mutations made earlier in the same action.
+ * A plain, unfrozen copy of the node list for read-only scans. Inside a
+ * mutative draft the copy is taken from the untouched base list, so a find or
+ * filter over it does not create a child draft per element it visits, and it is
+ * a copy because the stored list is frozen and V8 scans a frozen array several
+ * times slower than a normal one. Callers must read before they write: the base
+ * list does not see mutations made earlier in the same action.
  */
 export function readNodes(state: { nodes: Node[] }): Node[] {
-  return isDraft(state) ? original(state).nodes : state.nodes;
+  return [...(isDraft(state) ? original(state).nodes : state.nodes)];
 }
 
 /**
- * The node list with a node added, ordered by id. The list is built and sorted
- * as plain objects, so inside a mutative draft the comparator never reads an
- * element through the draft proxy. Pass the list read with readNodes to get
- * that benefit; passing the draft's own list is correct but slow.
+ * The given list sorted by id and frozen, the only shape state.nodes is ever
+ * assigned. The freeze is what makes that assignment cheap: assigning a
+ * draftable value to a mutative draft property queues a finalize pass that
+ * walks every element of the assigned value, and the walk exits at its
+ * Object.isFrozen check instead. Callers own the array they pass and its
+ * elements must be plain nodes -- read the list with readNodes, build the new
+ * list from it, and assign what this returns once. An element that is still a
+ * draft would never be replaced by its final value, because the walk that does
+ * that replacement is the one being skipped.
+ */
+export function sortNodesById(nodes: Node[]): Node[] {
+  nodes.sort((a, b) => a.id.localeCompare(b.id));
+  Object.freeze(nodes);
+  return nodes;
+}
+
+/**
+ * The node list with a node added, ordered by id and frozen by sortNodesById.
+ * The list is built and sorted as plain objects, so inside a mutative draft the
+ * comparator never reads an element through the draft proxy. Pass the list read
+ * with readNodes: the draft's own list would put child drafts in the result,
+ * which the freeze then keeps mutative from resolving.
  */
 export function insertNodeSorted(nodes: readonly Node[], node: Node): Node[] {
-  return [...nodes, node].sort((a, b) => a.id.localeCompare(b.id));
+  return sortNodesById([...nodes, node]);
 }
 
 export function handleTargetNameCollisions(params: {
