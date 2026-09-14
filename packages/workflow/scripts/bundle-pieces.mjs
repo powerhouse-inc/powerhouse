@@ -39,7 +39,16 @@ const { pieces } = await import(
 const pkg = JSON.parse(await readFile(path.join(root, "package.json"), "utf8"));
 
 for (const piece of pieces) {
-  const where = piece.bundle ?? piece.entry;
+  // `entry` is the manifest's other form: a module file a package ships
+  // already built. This script produces the bundle-directory shape, so it
+  // says so rather than writing package.json inside a path ending in .js.
+  if (piece.entry) {
+    throw new Error(
+      `Piece "${piece.name}" declares an entry file, which this script does not build. ` +
+        `Declare "bundle" to have it bundled here, or build the entry elsewhere.`,
+    );
+  }
+  const where = piece.bundle;
   if (!where) throw new Error(`Piece "${piece.name}" declares no bundle`);
   // The manifest addresses the built output; its source sits under pieces/.
   const name = path.basename(where);
