@@ -1,3 +1,13 @@
+## 6.2.3-dev.7 (2026-09-14)
+
+### 🩹 Fixes
+
+- **reactor:** keep every operation when a second backdated write reshuffles the same stream ([#3022](https://github.com/powerhouse-inc/powerhouse/pull/3022))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.2.3-dev.6 (2026-09-14)
 
 This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.

@@ -1,3 +1,7 @@
+## 6.2.3-dev.7 (2026-09-14)
+
+This was a version bump only for @powerhousedao/reactor-drive to align it with other projects, there were no code changes.
+
 ## 6.2.3-dev.6 (2026-09-14)
 
 This was a version bump only for @powerhousedao/reactor-drive to align it with other projects, there were no code changes.
