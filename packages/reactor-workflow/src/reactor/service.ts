@@ -1832,7 +1832,9 @@ export class WorkflowRuntimeService {
       default: {
         const parsed = parseBlockType(blockType, packagePieces.versions());
         if (!parsed) return { source: "none", nodes: [] };
-        const detail = (await fetchPieceDetail(parsed.packageName)) as {
+        // Through the service, not the published catalog: a package piece is
+        // often unpublished, and its detail comes from its own descriptor.
+        const detail = (await this.pieceDetail(parsed.packageName)) as {
           actions?: Record<string, unknown>;
           triggers?: Record<string, unknown>;
         };

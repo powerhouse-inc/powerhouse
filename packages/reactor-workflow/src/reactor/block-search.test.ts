@@ -1,6 +1,23 @@
-import { describe, expect, it } from "vitest";
-import { buildSearchIndex, searchIndex } from "./block-search.js";
-import type { CatalogSuggestionEntry } from "./piece-catalog.js";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  buildSearchIndex,
+  indexFromHits,
+  resetBlockSearchIndex,
+  searchBlocks,
+  searchIndex,
+  type BlockSearchHit,
+} from "./block-search.js";
+import type * as PieceCatalog from "./piece-catalog.js";
+import {
+  fetchCatalogWithSuggestions,
+  type CatalogSuggestionEntry,
+} from "./piece-catalog.js";
+
+// The published listing is remote; this suite serves it from the fixture.
+vi.mock("./piece-catalog.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof PieceCatalog>();
+  return { ...actual, fetchCatalogWithSuggestions: vi.fn() };
+});
 
 const raw: CatalogSuggestionEntry[] = [
   {
@@ -102,5 +119,71 @@ describe("searchIndex", () => {
   it("honours the limit and ignores blank queries", () => {
     expect(searchIndex(index, "e", 2)).toHaveLength(2);
     expect(searchIndex(index, "   ")).toEqual([]);
+  });
+});
+
+// A piece a reactor package ships, as the runtime hands it to the search.
+function localHit(pieceName: string, name: string): BlockSearchHit {
+  return {
+    blockType: `${pieceName}#${name}`,
+    pieceName,
+    pieceDisplayName: "Slack",
+    logoUrl: "",
+    displayName: "Send Message To A Channel",
+    description: "",
+    kind: "action",
+    strategy: null,
+  };
+}
+
+// searchBlocks never blocks on the index build, so a caller polls; this waits
+// for the published half the way the editor does.
+async function whenReady(local?: ReturnType<typeof indexFromHits>) {
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const result = searchBlocks("send message", undefined, local);
+    if (result.status === "ready") return result;
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+  throw new Error("the published index never became ready");
+}
+
+describe("local pieces in the search", () => {
+  beforeEach(() => {
+    resetBlockSearchIndex();
+    vi.mocked(fetchCatalogWithSuggestions).mockResolvedValue(raw);
+  });
+
+  afterEach(() => resetBlockSearchIndex());
+
+  it("lists a published piece when this reactor does not ship it", async () => {
+    const result = await whenReady();
+
+    expect(
+      result.hits.some(
+        (hit) =>
+          hit.blockType ===
+          "@activepieces/piece-slack@0.9.1#send_channel_message",
+      ),
+    ).toBe(true);
+  });
+
+  it("hides the published listing of a piece this reactor installed", async () => {
+    const local = indexFromHits([
+      localHit("@activepieces/piece-slack", "send_channel_message"),
+    ]);
+
+    const result = await whenReady(local);
+    const slack = result.hits.filter(
+      (hit) => hit.pieceName === "@activepieces/piece-slack",
+    );
+
+    // One listing, and it is the installed one: picking the published block
+    // would run a different copy from the one this reactor loads.
+    expect(slack).toHaveLength(1);
+    expect(slack[0].blockType).toBe(
+      "@activepieces/piece-slack#send_channel_message",
+    );
+    // Counted once, rather than once per listing merged.
+    expect(result.indexedPieces).toBe(buildSearchIndex(raw).pieces);
   });
 });

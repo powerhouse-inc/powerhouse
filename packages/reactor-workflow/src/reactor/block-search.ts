@@ -118,13 +118,29 @@ export function indexFromHits(hits: BlockSearchHit[]): BlockSearchIndex {
   return { entries, pieces: pieces.size };
 }
 
+// A piece this reactor installed wins its own name, the way it does in the
+// catalog: listing both would offer a versioned published block beside the
+// installed one, and picking the published block would bypass the copy that
+// actually runs.
 function merge(
   index: BlockSearchIndex | undefined,
   local: BlockSearchIndex | undefined,
 ): BlockSearchIndex {
+  const localEntries = local?.entries ?? [];
+  const localNames = new Set(localEntries.map((entry) => entry.hit.pieceName));
+  const published = (index?.entries ?? []).filter(
+    (entry) => !localNames.has(entry.hit.pieceName),
+  );
+  const shadowed = new Set(
+    (index?.entries ?? [])
+      .map((entry) => entry.hit.pieceName)
+      .filter((name) => localNames.has(name)),
+  );
   return {
-    entries: [...(local?.entries ?? []), ...(index?.entries ?? [])],
-    pieces: (local?.pieces ?? 0) + (index?.pieces ?? 0),
+    entries: [...localEntries, ...published],
+    // Each package counted once, so the total says how many pieces were
+    // searched rather than how many listings were merged.
+    pieces: (local?.pieces ?? 0) + (index?.pieces ?? 0) - shadowed.size,
   };
 }
 

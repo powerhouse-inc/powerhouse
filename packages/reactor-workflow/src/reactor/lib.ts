@@ -151,16 +151,14 @@ let resolver: PieceResolver | undefined;
 
 // Spelled out rather than taken from the connectors package so the fetch goes
 // through this module's own import of it, which is the seam tests replace.
-const fetched: PieceResolver = {
-  async resolve(name: string, version: string) {
-    const bundle = await ensurePieceBundle({
-      name,
-      version,
-      cacheDir: BUNDLE_CACHE_DIR,
-    });
-    return { name, version, bundleDir: bundle.dir, local: false };
-  },
-};
+export function fetchingResolver(cacheDir: string): PieceResolver {
+  return {
+    async resolve(name: string, version: string) {
+      const bundle = await ensurePieceBundle({ name, version, cacheDir });
+      return { name, version, bundleDir: bundle.dir, local: false };
+    },
+  };
+}
 
 export function pieceResolver(): PieceResolver {
   return (resolver ??= localFirstResolver(
@@ -170,7 +168,7 @@ export function pieceResolver(): PieceResolver {
       await packagePieces.ready();
       return packagePieces.lookup(name);
     },
-    fetched,
+    fetchingResolver(BUNDLE_CACHE_DIR),
   ));
 }
 

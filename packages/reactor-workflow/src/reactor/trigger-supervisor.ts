@@ -21,7 +21,7 @@ import {
 } from "@powerhousedao/reactor-connectors";
 import { childLogger } from "document-model";
 import { createHash } from "node:crypto";
-import { pieceResolver } from "./lib.js";
+import { fetchingResolver } from "./lib.js";
 import {
   cronIntervalMs,
   MIN_SCHEDULE_INTERVAL_MS,
@@ -249,10 +249,16 @@ export class TriggerSupervisor {
   // Piece descriptors by package@version, for the trigger strategy lookup.
   private readonly descriptors = new Map<string, ConnectorDescriptor>();
 
-  // The host's resolver when it supplied one, else the runtime's own, which
-  // answers a package piece from the registry and everything else by fetching.
+  private own: PieceResolver | undefined;
+
+  // The host's resolver when it supplied one — the runtime passes its
+  // local-first one — else a fetch into the cache directory this supervisor
+  // was configured with, which a direct caller may have warmed itself.
   private resolver(): PieceResolver {
-    return this.options.resolver ?? pieceResolver();
+    return (
+      this.options.resolver ??
+      (this.own ??= fetchingResolver(this.options.cacheDir))
+    );
   }
 
   // Workflows whose onEnable failed and when to try again. The ERROR row keeps

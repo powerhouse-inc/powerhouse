@@ -167,6 +167,18 @@ describe("a package piece in the catalog", () => {
     ]);
   });
 
+  it("builds an output tree without asking the published catalog", async () => {
+    // Every fetch of the published listing rejects in this suite, so a tree
+    // that needed one would throw rather than answer.
+    const tree = (await workflowRuntime.blockOutputTree(
+      `${PIECE}#do_thing`,
+    )) as { source: string; nodes: unknown[] };
+
+    // The piece declares no output schema, so "none" is the honest answer —
+    // what matters is that it is an answer.
+    expect(tree).toEqual({ source: "none", nodes: [] });
+  });
+
   it("serves detail the published listing has nothing to say about", async () => {
     const detail = (await workflowRuntime.pieceDetail(PIECE)) as {
       version: string;
