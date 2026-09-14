@@ -11,6 +11,7 @@ const MODULE_KEYS = [
   "editors",
   "processors",
   "subgraphs",
+  "pieces",
 ] as const;
 
 function slimModules(
