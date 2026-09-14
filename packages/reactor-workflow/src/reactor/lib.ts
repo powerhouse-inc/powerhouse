@@ -31,7 +31,11 @@ import {
 import type { WorkflowState } from "document-models/workflow/v1";
 import { childLogger } from "document-model";
 import { join } from "node:path";
-import { currentBoundConnections, currentWorkflowId } from "./run-scope.js";
+import {
+  currentBoundConnections,
+  currentPieceWorker,
+  currentWorkflowId,
+} from "./run-scope.js";
 import { packageFromConnectorId } from "../../editors/connection-editor/piece-auth.js";
 
 const pieceLogger = childLogger(["workflow", "piece"]);
@@ -170,6 +174,9 @@ export function createBlockExecutor(
   return new CompositeBlockExecutor(
     new ActivepiecesBlockExecutor({
       cacheDir: BUNDLE_CACHE_DIR,
+      // Asked per step, for the same reason the binding is: one executor,
+      // many runs, and each run has a child of its own.
+      worker: currentPieceWorker,
       connections: boundConnections(
         new DocumentConnectionResolver(subgraph, secrets),
       ),

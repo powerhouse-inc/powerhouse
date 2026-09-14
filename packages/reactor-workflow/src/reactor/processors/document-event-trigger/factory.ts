@@ -34,12 +34,12 @@ export const documentEventTriggerFactoryBuilder: ProcessorFactoryBuilder =
     };
 
     const processor = new DocumentEventTrigger(namespace, filter, store);
-    // The supervisor stops with the processor: onDisconnect is the only
-    // teardown that fires on hot reloads, so timers never leak.
+    // The runtime stops with the processor: onDisconnect is the only teardown
+    // that fires on hot reloads, so timers and run children never leak.
     processor.onDisconnectCallback = () => {
       if (live === processor) {
         live = undefined;
-        workflowRuntime.stopTriggerSupervisor();
+        workflowRuntime.shutdown();
       }
     };
 

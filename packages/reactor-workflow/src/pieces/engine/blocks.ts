@@ -3,7 +3,10 @@ import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 import { ensurePieceBundle } from "../activepieces/fetch.js";
 import { rewriteFileRefs, type StagedFile } from "../activepieces/context/files.js";
-import { PieceWorker } from "../activepieces/worker/host.js";
+import {
+  PieceWorker,
+  type IPieceWorker,
+} from "../activepieces/worker/host.js";
 import { DEFAULT_EGRESS_POLICY } from "../activepieces/worker/egress.js";
 import {
   LOG_WRITE,
@@ -237,7 +240,9 @@ export interface ActivepiecesBlockExecutorOptions {
   // A blockType may instead pin inline: "@scope/pkg@1.2.3#action".
   packages?: Record<string, string>;
   connections?: EngineConnectionResolver;
-  worker?: PieceWorker;
+  // The worker piece steps go to. A function is asked once per step, so a
+  // host handing each run its own child answers with that run's.
+  worker?: IPieceWorker | (() => IPieceWorker | undefined);
   defaultTimeoutMs?: number;
   // Both are needed for ctx.files to work: a directory the host and the forked
   // worker share, and somewhere to put what the piece wrote. Without them a
@@ -340,12 +345,21 @@ export function parseBlockType(
 
 // Executes "<packageName>#<actionName>" block types through the piece worker.
 export class ActivepiecesBlockExecutor implements BlockExecutor {
-  private readonly worker: PieceWorker;
-  private readonly ownsWorker: boolean;
+  // Only set when nothing was supplied: the fallback this executor owns and
+  // must dispose. A supplied worker belongs to whoever supplied it.
+  private own: PieceWorker | undefined;
 
-  constructor(private readonly options: ActivepiecesBlockExecutorOptions) {
-    this.ownsWorker = !options.worker;
-    this.worker = options.worker ?? new PieceWorker();
+  constructor(private readonly options: ActivepiecesBlockExecutorOptions) {}
+
+  private worker(): IPieceWorker {
+    const supplied = this.options.worker;
+    if (typeof supplied === "function") {
+      const worker = supplied();
+      if (worker) return worker;
+    } else if (supplied) {
+      return supplied;
+    }
+    return (this.own ??= new PieceWorker());
   }
 
   async execute(execution: BlockExecution): Promise<BlockResult> {
@@ -392,7 +406,7 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
         this.options.egress === undefined
           ? DEFAULT_EGRESS_POLICY
           : this.options.egress;
-      const result = await this.worker.runAction(
+      const result = await this.worker().runAction(
         {
           bundleDir: bundle.dir,
           actionName: parsed.name,
@@ -491,7 +505,8 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
   }
 
   dispose(): void {
-    if (this.ownsWorker) this.worker.dispose();
+    this.own?.dispose();
+    this.own = undefined;
   }
 }
 

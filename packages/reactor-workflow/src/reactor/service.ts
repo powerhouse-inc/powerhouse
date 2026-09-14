@@ -17,6 +17,7 @@ import {
   parseBlockType,
   PieceWorker,
   PieceWorkerError,
+  PieceWorkerPool,
   PieceWorkerTimeoutError,
   rememberSecrets,
   runWorkflow,
@@ -358,6 +359,7 @@ function hasWebhookScope(
 export class WorkflowRuntimeService {
   private subgraph?: BaseSubgraph;
   private executor?: BlockExecutor;
+  private pieceWorkers?: PieceWorkerPool;
   private storePromise?: Promise<WorkflowRunStore>;
   private secretsPromise?: Promise<LocalEncryptedSecretStore>;
   private readonly registry = new Map<string, TriggerRegistration>();
@@ -944,12 +946,23 @@ export class WorkflowRuntimeService {
     this.supervisor().start();
     if (!sigtermHooked) {
       sigtermHooked = true;
-      process.once("SIGTERM", () => this.stopTriggerSupervisor());
+      process.once("SIGTERM", () => this.shutdown());
     }
   }
 
   stopTriggerSupervisor(): void {
     this.triggerSupervisor?.stop();
+  }
+
+  // Teardown for the whole runtime: on SIGTERM, and on the hot reload that
+  // replaces this package.
+
+  // The run children outlive the reactor otherwise — they are forked, not
+  // spawned by it — and a run holding one is over the moment we stop.
+  shutdown(): void {
+    this.stopTriggerSupervisor();
+    this.pieceWorkers?.dispose();
+    this.pieceWorkers = undefined;
   }
 
   async triggerStates(): Promise<TriggerStateRow[]> {
@@ -1734,6 +1747,17 @@ export class WorkflowRuntimeService {
     return this.supervisor().test(binding);
   }
 
+  // One child per run, N runs at a time. Sized by the operator: each slot is a
+  // node process, so this is the reactor's real connector concurrency.
+  private workers(): PieceWorkerPool {
+    // A queue depth of 0 waits without limit, which is what one shared worker
+    // did — a cap turns a saturated pool into failures instead of latency.
+    return (this.pieceWorkers ??= new PieceWorkerPool({
+      size: Number(process.env.WORKFLOW_RUN_CONCURRENCY) || undefined,
+      maxQueueDepth: Number(process.env.WORKFLOW_RUN_QUEUE_DEPTH) || undefined,
+    }));
+  }
+
   async fire(
     workflowId: string,
     triggerPayload?: unknown,
@@ -1784,34 +1808,39 @@ export class WorkflowRuntimeService {
     // Recorded whether or not the write lands: it is what lets finishRun put a
     // lost row back where the step ran.
     const executionOrder = new Map<string, number>();
+    // This run's child, forked at its first piece step and killed below. Free
+    // until then, so a run of document blocks never takes a slot.
+    const session = this.workers().session();
     try {
-      const result = await withRunScope({ workflowId, runId, connections }, () =>
-        runWorkflow({
-          definition,
-          executor: this.executor!,
-          triggerPayload,
-          completedSteps: resume?.completedSteps,
-          // Journal each step as it lands, so a reactor that dies mid-run
-          // still leaves a rerunnable record of the work it finished.
-          onStep:
-            store && runId
-              ? async (record, ordinal) => {
-                  executionOrder.set(record.stepId, ordinal);
-                  try {
-                    await store.recordStep(runId, ordinal, record);
-                  } catch (error) {
-                    // Swallowed on purpose, but logged once per run: a dead
-                    // journal must not look exactly like a healthy one.
-                    if (journalFailed) return;
-                    journalFailed = true;
-                    logger.warn(
-                      `Run ${runId}: journaling step "${record.key}" failed; the run continues without per-step durability`,
-                      error,
-                    );
+      const result = await withRunScope(
+        { workflowId, runId, connections, pieceWorker: session },
+        () =>
+          runWorkflow({
+            definition,
+            executor: this.executor!,
+            triggerPayload,
+            completedSteps: resume?.completedSteps,
+            // Journal each step as it lands, so a reactor that dies mid-run
+            // still leaves a rerunnable record of the work it finished.
+            onStep:
+              store && runId
+                ? async (record, ordinal) => {
+                    executionOrder.set(record.stepId, ordinal);
+                    try {
+                      await store.recordStep(runId, ordinal, record);
+                    } catch (error) {
+                      // Swallowed on purpose, but logged once per run: a dead
+                      // journal must not look exactly like a healthy one.
+                      if (journalFailed) return;
+                      journalFailed = true;
+                      logger.warn(
+                        `Run ${runId}: journaling step "${record.key}" failed; the run continues without per-step durability`,
+                        error,
+                      );
+                    }
                   }
-                }
-              : undefined,
-        }),
+                : undefined,
+          }),
       );
       if (store && runId) {
         try {
@@ -1834,6 +1863,10 @@ export class WorkflowRuntimeService {
         );
       }
       throw error;
+    } finally {
+      // The run owns the child, however it ended: closing kills it and hands
+      // the slot to whichever run is waiting.
+      session.close();
     }
   }
 

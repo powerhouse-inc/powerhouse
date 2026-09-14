@@ -122,10 +122,38 @@ export interface PieceWorkerOptions {
   transport?: PieceWorkerTransportFactory;
 }
 
+// The five requests a worker serves, plus teardown. Callers hold this rather
+// than PieceWorker itself, so a child that outlives every request and a child
+// that lives for one run are interchangeable to them.
+export interface IPieceWorker {
+  runAction(
+    request: RunActionRequest,
+    options?: RequestOptions,
+  ): Promise<PieceWorkerResult>;
+  resolveOptions(
+    request: ResolveOptionsRequest,
+    options?: { timeoutMs?: number },
+  ): Promise<PieceWorkerResult>;
+  checkConnection(
+    request: CheckConnectionRequest,
+    options?: { timeoutMs?: number },
+  ): Promise<PieceWorkerResult>;
+  describePiece(
+    request: DescribePieceRequest,
+    options?: { timeoutMs?: number },
+  ): Promise<PieceWorkerResult>;
+  runTriggerHook(
+    request: TriggerHookRequest,
+    options?: RequestOptions,
+  ): Promise<PieceWorkerResult>;
+  // Ends the worker. A caller that was handed one it does not own must not
+  // call this; PieceWorkerPool disposes the workers it hands out.
+  dispose(): void;
+}
 
 // Executes piece actions in a child process. Side-effects (TLS env poisoning,
 // crashes) stay in the child; a timed-out or crashed worker is replaced.
-export class PieceWorker {
+export class PieceWorker implements IPieceWorker {
   private readonly connect: PieceWorkerTransportFactory;
   private readonly defaultTimeoutMs: number;
   private worker: IPieceWorkerTransport | undefined;
@@ -140,7 +168,8 @@ export class PieceWorker {
     this.defaultTimeoutMs = options.defaultTimeoutMs ?? 30_000;
   }
 
-  // Runs are serialized per worker; a pool composes multiple workers later.
+  // Requests are serialized per worker; concurrency comes from holding more
+  // than one, which is what PieceWorkerPool does.
   runAction(
     request: RunActionRequest,
     options: RequestOptions = {},
