@@ -20,7 +20,7 @@ import {
 } from "@powerhousedao/reactor-browser";
 import type { PHDocument } from "@powerhousedao/shared/document-model";
 import { redo, undo } from "@powerhousedao/shared/document-model";
-import { createElement, Suspense, useEffect, useState } from "react";
+import { createElement, Suspense, useEffect, useMemo, useState } from "react";
 import { CenteredErrorMessage, ErrorBoundary } from "./error-boundary.js";
 import { DocumentUpgradeToast } from "./document-upgrade-toast.js";
 
@@ -76,19 +76,45 @@ export const DocumentEditor: React.FC<Props> = (props) => {
   const documentName = document?.header.name ?? undefined;
   const documentType = document?.header.documentType ?? undefined;
   const preferredEditor = document?.header.meta?.preferredEditor ?? undefined;
-  const {
-    globalOperations,
-    localOperations,
-    isLoading: isLoadingOperations,
-    refetch: refetchOperations,
-  } = useDocumentOperations(documentId);
+  // The scopes a document carries operations for; every document has at
+  // least "global".
+  const scopes = useMemo(() => {
+    const keys = Object.keys(document?.header.revision ?? {});
+    return keys.length > 0 ? keys : ["global"];
+  }, [document?.header.revision]);
+  const [operationScope, setOperationScope] = useState(scopes[0]);
+  const selectedScope = scopes.includes(operationScope)
+    ? operationScope
+    : scopes[0];
 
-  // Refetch operations when revision history panel opens
+  // The history panel's operations: one scope, fetched only while the panel
+  // is open. The panel asks for further pages itself.
+  const {
+    operations: historyOperations,
+    isLoading: isLoadingHistory,
+    hasNextPage: historyHasNextPage,
+    fetchNextPage: fetchNextHistoryPage,
+  } = useDocumentOperations(documentId, selectedScope, {
+    enabled: revisionHistoryVisible,
+  });
+
+  // The timeline read-mode feature maps a selected date range to a global
+  // revision, which needs the whole global history. Fetched only while a
+  // timeline item is selected; shares the cache entry with the panel when
+  // the panel is on "global".
+  const {
+    operations: globalOperations,
+    hasNextPage: globalHasNextPage,
+    isLoading: isLoadingGlobal,
+    fetchNextPage: fetchNextGlobalPage,
+  } = useDocumentOperations(documentId, "global", {
+    enabled: !!selectedTimelineItem,
+  });
   useEffect(() => {
-    if (revisionHistoryVisible) {
-      void refetchOperations();
+    if (globalHasNextPage && !isLoadingGlobal) {
+      fetchNextGlobalPage();
     }
-  }, [revisionHistoryVisible, refetchOperations]);
+  }, [globalHasNextPage, isLoadingGlobal, fetchNextGlobalPage]);
 
   const globalRevisionNumber = document?.header.revision.global ?? 0;
   const localRevisionNumber = document?.header.revision.local ?? 0;
@@ -236,25 +262,26 @@ export const DocumentEditor: React.FC<Props> = (props) => {
       data-document-type={documentType}
     >
       {revisionHistoryVisible ? (
-        isLoadingOperations ? (
-          <EditorLoader message="Loading operations" />
-        ) : (
-          <RevisionHistory
-            key={documentId}
-            documentTitle={documentName ?? ""}
-            documentId={documentId ?? ""}
-            globalOperations={globalOperations}
-            localOperations={localOperations}
-            onClose={() => setRevisionHistoryVisible(false)}
-            documentState={document.state}
-            onCopyState={() => {
-              toast("Copied document state to clipboard", { type: "success" });
-            }}
-            onCopyDocId={() => {
-              toast("Copied document ID to clipboard", { type: "success" });
-            }}
-          />
-        )
+        <RevisionHistory
+          key={documentId}
+          documentTitle={documentName ?? ""}
+          documentId={documentId ?? ""}
+          operations={historyOperations}
+          isLoading={isLoadingHistory}
+          hasNextPage={historyHasNextPage}
+          onLoadNextPage={fetchNextHistoryPage}
+          scopes={scopes}
+          scope={selectedScope}
+          onScopeChange={setOperationScope}
+          onClose={() => setRevisionHistoryVisible(false)}
+          documentState={document.state}
+          onCopyState={() => {
+            toast("Copied document state to clipboard", { type: "success" });
+          }}
+          onCopyDocId={() => {
+            toast("Copied document ID to clipboard", { type: "success" });
+          }}
+        />
       ) : (
         <Suspense
           fallback={<EditorLoader message="Loading editor" />}
