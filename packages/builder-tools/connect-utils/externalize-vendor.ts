@@ -238,10 +238,16 @@ function readCacheHit(
 
 /**
  * Resolve the installed version of each spec's owning package, deduped by
- * package name. Resolution uses Node's own module resolution from the
- * project (so pnpm-strict / hoisted layouts all work); the entry file is
- * walked up to the owning package's package.json. Unresolvable specs
- * contribute a "missing" sentinel, unknown versions "unknown".
+ * package name. Resolution order per spec:
+ *   1. the project itself, when it IS the owning package (a self-vendoring
+ *      app has no node_modules self-link);
+ *   2. the project's own node_modules link (works for pnpm-strict and
+ *      hoisted layouts alike, and — unlike `require.resolve` — for
+ *      ESM-only packages whose exports map has no CJS condition);
+ *   3. Node's own module resolution (covers transitive installs), walking
+ *      the entry up to the owning package's package.json.
+ * Unresolvable specs contribute a "missing" sentinel, unknown versions
+ * "unknown".
  */
 function resolveDepVersions(
   dirname: string,
@@ -249,29 +255,57 @@ function resolveDepVersions(
 ): Record<string, string> {
   const req = createRequire(join(dirname, "noop.js"));
   const seen: Record<string, string> = {};
+  let selfMeta: { name?: string; version?: string } | null = null;
   for (const spec of specs) {
     const { pkg } = parsePkg(spec);
     if (pkg in seen) continue;
-    let version = "missing";
-    try {
-      const entry = req.resolve(spec);
-      // Walk up to the owning package root (entry is usually a few levels
-      // below it, e.g. dist/zod.js or .pnpm/<pkg>@<v>/node_modules/<pkg>/…).
-      let dir = pathDirname(entry);
-      for (let depth = 0; depth < 8; depth++) {
-        if (existsSync(join(dir, "package.json"))) {
-          const meta = JSON.parse(
-            readFileSync(join(dir, "package.json"), "utf8"),
-          ) as { version?: string };
-          version = String(meta.version ?? "unknown");
-          break;
-        }
-        const parent = pathDirname(dir);
-        if (parent === dir) break;
-        dir = parent;
+    if (selfMeta === null) {
+      try {
+        selfMeta = JSON.parse(
+          readFileSync(join(dirname, "package.json"), "utf8"),
+        ) as { name?: string; version?: string };
+      } catch {
+        selfMeta = {};
       }
-    } catch {
-      // leave sentinel
+    }
+    let version: string;
+    if (
+      typeof selfMeta.name === "string" &&
+      selfMeta.name === pkg &&
+      typeof selfMeta.version === "string"
+    ) {
+      version = selfMeta.version;
+    } else {
+      version = "missing";
+      try {
+        const pkgRoot = realpathSync(join(dirname, "node_modules", pkg));
+        const meta = JSON.parse(
+          readFileSync(join(pkgRoot, "package.json"), "utf8"),
+        ) as { version?: string };
+        version = String(meta.version ?? "unknown");
+      } catch {
+        try {
+          const entry = req.resolve(spec);
+          // Walk up to the owning package root (entry is usually a few
+          // levels below it, e.g. dist/zod.js or
+          // .pnpm/<pkg>@<v>/node_modules/<pkg>/…).
+          let dir = pathDirname(entry);
+          for (let depth = 0; depth < 8; depth++) {
+            if (existsSync(join(dir, "package.json"))) {
+              const meta = JSON.parse(
+                readFileSync(join(dir, "package.json"), "utf8"),
+              ) as { version?: string };
+              version = String(meta.version ?? "unknown");
+              break;
+            }
+            const parent = pathDirname(dir);
+            if (parent === dir) break;
+            dir = parent;
+          }
+        } catch {
+          // leave sentinel
+        }
+      }
     }
     seen[pkg] = version;
   }
@@ -431,11 +465,16 @@ function parsePkg(spec: string): { pkg: string; sub: string } {
  * `@powerhousedao/design-system/connect/toast`, `zod/v4/core`). Those bare
  * imports need their own import-map entry, so expand each listed spec to its
  * package's concrete (non-wildcard, JS) subpath exports that share the spec's
- * prefix. Unresolvable / CSS / JSON targets are skipped. Failures leave the
- * original spec untouched.
+ * prefix. Unresolvable / CSS / JSON targets are skipped.
+ *
+ * A spec whose package isn't installed in `dirname` is dropped entirely
+ * rather than kept for the worker: the worker cannot build an entry for a
+ * missing package (its `await import` and the vite resolution both fail),
+ * and a bare re-export entry would fail the whole vendor build. The
+ * importer of a missing shared dep simply bundles its own copy.
  */
 function expandIncludeSubpaths(dirname: string, include: string[]): string[] {
-  const out = new Set<string>(include);
+  const out = new Set<string>();
   for (const spec of include) {
     const { pkg, sub } = parsePkg(spec);
     let exp: unknown;
@@ -449,6 +488,7 @@ function expandIncludeSubpaths(dirname: string, include: string[]): string[] {
     } catch {
       continue;
     }
+    out.add(sub ? spec : pkg);
     if (!exp || typeof exp !== "object") continue;
     const expMap = exp as Record<string, unknown>;
     const prefixKey = sub ? `./${sub}` : ".";
