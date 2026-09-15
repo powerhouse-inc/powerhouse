@@ -29,7 +29,10 @@ import type {
 } from "../core/types.js";
 import { getSharedActionScope, signActions } from "../core/utils.js";
 import { type IJobAwaiter } from "../shared/awaiter.js";
-import { AuthEnforcementDisabledError } from "../shared/errors.js";
+import {
+  AuthEnforcementDisabledError,
+  RelationshipNotFoundError,
+} from "../shared/errors.js";
 import {
   JobStatus,
   PropagationMode,
@@ -67,7 +70,11 @@ import {
 } from "./types.js";
 import { buildDecisionModel } from "../decision/build-decision-model.js";
 import type { IReadGate } from "../decision/read-gate.js";
-import { BareReadGate, SeededStateReader } from "../decision/read-gate.js";
+import {
+  ALWAYS_READABLE_SCOPES,
+  BareReadGate,
+  SeededStateReader,
+} from "../decision/read-gate.js";
 import type { DocumentDecisionModel } from "../decision/document-decision-model.js";
 import type { RegisteredDecisionModel } from "../decision/registered-model.js";
 import type { DecisionModel, Evaluation } from "../decision/types.js";
@@ -625,13 +632,15 @@ export class ReactorClient implements IReactorClient {
       signal,
     );
 
-    return this.documentIndexer.getOutgoing(
+    const edges = await this.reactor.getOutgoingRelationshipEdges(
       sourceId,
-      relationshipType ? [relationshipType] : undefined,
+      relationshipType,
       paging,
       undefined,
       signal,
     );
+
+    return this.gateEdges(edges, "targetId", view, signal);
   }
 
   /**
@@ -660,68 +669,131 @@ export class ReactorClient implements IReactorClient {
       signal,
     );
 
-    return this.documentIndexer.getIncoming(
+    const edges = await this.reactor.getIncomingRelationshipEdges(
       targetId,
-      relationshipType ? [relationshipType] : undefined,
+      relationshipType,
       paging,
       undefined,
       signal,
     );
+
+    return this.gateEdges(edges, "sourceId", view, signal);
   }
 
   /**
-   * The metadata recorded against one relationship, or undefined when the edge
-   * does not exist or carries none.
+   * Drops the edges whose far-end document the subject may read no domain scope
+   * of. An edge is withheld whole rather than stripped of its metadata: the
+   * document-shaped relationship reads already answer with the far end stripped
+   * to the scopes the gate allows, so the far end's existence is disclosed
+   * either way, but an edge's metadata is content about the pair that the far
+   * end's own reads would refuse. An edge to a far end stripped to nothing
+   * therefore carries content past a refusal, and there is no useful shell to
+   * hand back in its place.
+   *
+   * `nextCursor` and `options` are left as the underlying stream reported them,
+   * because a caller must feed them back to resume from the right position. A
+   * gated page can therefore be shorter than the limit it asked for.
    */
-  private async readRelationshipMetadata(
+  private async gateEdges(
+    page: PagedResults<DocumentRelationship>,
+    farEnd: "sourceId" | "targetId",
+    view: ViewFilter | undefined,
+    signal: AbortSignal | undefined,
+  ): Promise<PagedResults<DocumentRelationship>> {
+    const ids = [...new Set(page.results.map((edge) => edge[farEnd]))];
+    if (ids.length === 0) {
+      return page;
+    }
+
+    // No scopes: the gate must see every scope the document holds. Honouring a
+    // caller-supplied narrowing would let `scopes: ["auth"]` leave a document
+    // with no visible domain scope and switch the gate off. The explicit limit
+    // keeps the tail of a large page from paging out of sight and reading as
+    // absent.
+    const farEndView: ViewFilter = {
+      subject: view?.subject,
+      branch: view?.branch,
+    };
+    const documents = await this.reactor.find(
+      { ids },
+      farEndView,
+      { cursor: "0", limit: ids.length },
+      undefined,
+      signal,
+    );
+
+    const readable = new Map(
+      await Promise.all(
+        documents.results.map(async (doc) => {
+          const allows = await this.readableScopes(doc, view, signal);
+          const domainScopes = Object.keys(doc.state).filter(
+            (scope) => !ALWAYS_READABLE_SCOPES.has(scope),
+          );
+          return [
+            doc.header.id,
+            domainScopes.length === 0 || domainScopes.some(allows),
+          ] as const;
+        }),
+      ),
+    );
+
+    // A far end `find` did not return is readable. `addRelationship` tolerates a
+    // missing target, so a dangling edge is legitimate and failing closed would
+    // hide it; and `find` never drops a document for authorization, so absence
+    // here means genuinely absent and there is no content to protect.
+    const results = page.results.filter(
+      (edge) => readable.get(edge[farEnd]) !== false,
+    );
+    if (results.length === page.results.length) {
+      return page;
+    }
+
+    const nextPage = page.next;
+    return {
+      ...page,
+      results,
+      next: nextPage
+        ? async () => this.gateEdges(await nextPage(), farEnd, view, signal)
+        : undefined,
+    };
+  }
+
+  /**
+   * One relationship edge, or undefined when it does not exist. A point lookup:
+   * the pair is filtered in SQL rather than scanned out of the source's edge
+   * list, which on a drive with thousands of children is the difference between
+   * one query and dozens.
+   */
+  private async readRelationshipEdge(
     sourceIdentifier: string,
     targetIdentifier: string,
     relationshipType: string,
     view?: ViewFilter,
     signal?: AbortSignal,
-  ): Promise<Record<string, unknown> | undefined> {
-    try {
-      const sourceId = await this.documentView.resolveIdOrSlug(
-        sourceIdentifier,
-        view,
-        undefined,
-        signal,
-      );
-      const targetId = await this.documentView.resolveIdOrSlug(
-        targetIdentifier,
-        view,
-        undefined,
-        signal,
-      );
+  ): Promise<DocumentRelationship | undefined> {
+    const sourceId = await this.documentView.resolveIdOrSlug(
+      sourceIdentifier,
+      view,
+      undefined,
+      signal,
+    );
+    const targetId = await this.documentView.resolveIdOrSlug(
+      targetIdentifier,
+      view,
+      undefined,
+      signal,
+    );
 
-      let page = await this.documentIndexer.getOutgoing(
-        sourceId,
-        [relationshipType],
-        undefined,
-        undefined,
-        signal,
-      );
+    const edges = await this.documentIndexer.getDirectedRelationships(
+      sourceId,
+      targetId,
+      [relationshipType],
+      { cursor: "0", limit: 1 },
+      undefined,
+      signal,
+    );
 
-      for (;;) {
-        const edge = page.results.find((rel) => rel.targetId === targetId);
-        if (edge) {
-          return edge.metadata;
-        }
-        if (!page.next) {
-          return undefined;
-        }
-        page = await page.next();
-      }
-    } catch (error) {
-      this.logger.verbose(
-        "readRelationshipMetadata(@sourceIdentifier, @targetIdentifier, @relationshipType) failed: @error",
-        sourceIdentifier,
-        targetIdentifier,
-        relationshipType,
-        error,
-      );
-      return undefined;
-    }
+    return edges.results[0];
   }
 
   /**
@@ -1378,6 +1450,24 @@ export class ReactorClient implements IReactorClient {
       metadata,
       branch,
     );
+
+    // The write matches the edge in SQL and reports no row count, so an update
+    // of an edge that is not there reaches READ_READY having stored nothing.
+    const existing = await this.readRelationshipEdge(
+      sourceIdentifier,
+      targetIdentifier,
+      relationshipType,
+      { branch },
+      signal,
+    );
+    if (!existing) {
+      throw new RelationshipNotFoundError(
+        sourceIdentifier,
+        targetIdentifier,
+        relationshipType,
+      );
+    }
+
     const jobInfo = await this.reactor.updateRelationship(
       sourceIdentifier,
       targetIdentifier,
@@ -1469,13 +1559,18 @@ export class ReactorClient implements IReactorClient {
 
     // A move is a remove followed by an add, and the add would otherwise write a
     // fresh edge with no metadata. Read the edge first so the move carries it.
-    const metadata = await this.readRelationshipMetadata(
+    // A failed read aborts the move: once the remove has run, "the edge carried
+    // no metadata" and "the read did not answer" are indistinguishable, and
+    // treating the second as the first rewrites the edge with no metadata for
+    // good.
+    const edge = await this.readRelationshipEdge(
       sourceParentIdentifier,
       targetIdentifier,
       relationshipType,
       { branch },
       signal,
     );
+    const metadata = edge?.metadata;
 
     const removeJobInfo = await this.reactor.removeRelationship(
       sourceParentIdentifier,

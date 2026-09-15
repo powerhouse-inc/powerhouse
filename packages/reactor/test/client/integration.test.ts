@@ -15,6 +15,7 @@ import type { IEventBus } from "../../src/events/interfaces.js";
 import type { JobWriteReadyEvent } from "../../src/events/types.js";
 import { ReactorEventTypes } from "../../src/events/types.js";
 import { ConsistencyTracker } from "../../src/shared/consistency-tracker.js";
+import { RelationshipNotFoundError } from "../../src/shared/errors.js";
 import { JobStatus, PropagationMode } from "../../src/shared/types.js";
 import type { IDocumentIndexer } from "../../src/storage/interfaces.js";
 import type { Database } from "../../src/storage/kysely/types.js";
@@ -894,6 +895,20 @@ describe("ReactorClient Integration Tests", () => {
           "child",
         );
         expect(edges.results[0].metadata).toBeUndefined();
+      });
+
+      it("updateRelationship rejects when the edge does not exist", async () => {
+        await client.create(createDocModelDocument({ id: "upd-miss-parent" }));
+        await client.create(createDocModelDocument({ id: "upd-miss-child" }));
+
+        await expect(
+          client.updateRelationship(
+            "upd-miss-parent",
+            "upd-miss-child",
+            "child",
+            { order: 1 },
+          ),
+        ).rejects.toThrow(RelationshipNotFoundError);
       });
     });
   });
