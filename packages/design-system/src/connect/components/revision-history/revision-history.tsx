@@ -4,14 +4,23 @@ import {
   garbageCollect,
   sortOperations,
 } from "@powerhousedao/shared/document-model";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ConnectTooltipProvider } from "../tooltip/tooltip.js";
 import { Header } from "./header/header.js";
 import { Timeline } from "./timeline/timeline.js";
 
-type Props = {
+type CommonProps = {
   readonly documentTitle: string;
   readonly documentId: string;
+  readonly onClose: () => void;
+  readonly itemsPerPage?: number;
+  readonly documentState?: object;
+  readonly onCopyState?: () => void;
+  readonly onCopyDocId?: () => void;
+};
+
+/** The current, scoped props. */
+export type RevisionHistoryScopedProps = CommonProps & {
   /** The operations of the selected scope loaded so far, in any order. */
   readonly operations: readonly Operation[];
   /** A page of operations is being fetched. */
@@ -29,19 +38,28 @@ type Props = {
   /** The selected scope. */
   readonly scope: string;
   readonly onScopeChange: (scope: string) => void;
-  readonly onClose: () => void;
-  readonly itemsPerPage?: number;
-  readonly documentState?: object;
-  readonly onCopyState?: () => void;
-  readonly onCopyDocId?: () => void;
 };
+
+/**
+ * Legacy props: the whole global and local history, toggled inside the
+ * component.
+ * @deprecated Pass one scope's `operations` with `scopes`/`scope`/`onScopeChange` and the loading props. Removed in the next major.
+ */
+export type RevisionHistoryLegacyProps = CommonProps & {
+  readonly globalOperations: readonly Operation[];
+  readonly localOperations: readonly Operation[];
+};
+
+export type RevisionHistoryProps =
+  | RevisionHistoryScopedProps
+  | RevisionHistoryLegacyProps;
 
 /**
  * The revision history panel. It renders the newest operation first while
  * the operations API pages oldest first, so it keeps asking for the next
  * page until none is left and renders what has arrived in the meantime.
  */
-export function RevisionHistory(props: Props) {
+function ScopedRevisionHistory(props: RevisionHistoryScopedProps) {
   const {
     documentTitle,
     documentId,
@@ -160,5 +178,44 @@ export function RevisionHistory(props: Props) {
         {PaginationComponent}
       </div>
     </ConnectTooltipProvider>
+  );
+}
+
+const LEGACY_SCOPES = ["global", "local"] as const;
+const noop = () => {
+  /* the legacy form has already loaded the whole history */
+};
+
+/** Toggles between the whole global and local history loaded up front. */
+function LegacyRevisionHistory(props: RevisionHistoryLegacyProps) {
+  const { globalOperations, localOperations, ...common } = props;
+  const [scope, setScope] = useState<string>("global");
+  return (
+    <ScopedRevisionHistory
+      {...common}
+      operations={scope === "local" ? localOperations : globalOperations}
+      isLoading={false}
+      hasNextPage={false}
+      onLoadNextPage={noop}
+      scopes={LEGACY_SCOPES}
+      scope={scope}
+      onScopeChange={setScope}
+    />
+  );
+}
+
+/**
+ * The revision history panel. It renders the newest operation first while
+ * the operations API pages oldest first, so it keeps asking for the next
+ * page until none is left and renders what has arrived in the meantime.
+ *
+ * Also accepts the deprecated `globalOperations`/`localOperations` pair
+ * (see `RevisionHistoryLegacyProps`), toggling between them internally.
+ */
+export function RevisionHistory(props: RevisionHistoryProps) {
+  return "globalOperations" in props ? (
+    <LegacyRevisionHistory {...props} />
+  ) : (
+    <ScopedRevisionHistory {...props} />
   );
 }

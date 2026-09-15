@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import type { Operation } from "@powerhousedao/shared/document-model";
-import { globalOperations } from "./mocks.js";
+import { globalOperations, localOperations } from "./mocks.js";
 // @ts-expect-error - json file needs { with: "json" } but storybook doesn't support it
 import nsOperations from "./ns-operations.json";
 import { RevisionHistory } from "./revision-history.js";
@@ -135,6 +135,21 @@ export const WithoutDocumentState: Story = {
     scopes: ["global", "local"],
     scope: "global",
     onScopeChange: () => {},
+    onClose: () => {},
+  },
+};
+
+/**
+ * The deprecated `globalOperations`/`localOperations` form: the whole
+ * history of both scopes is passed up front and the component toggles
+ * between them internally.
+ */
+export const LegacyProps: Story = {
+  args: {
+    documentTitle: " MakerDAO/Monetalis RWA Report 050724",
+    documentId: "6wYLICDhX5w1Hq7mIo6CRbXUV1I=",
+    globalOperations: operations.global,
+    localOperations,
     onClose: () => {},
   },
 };

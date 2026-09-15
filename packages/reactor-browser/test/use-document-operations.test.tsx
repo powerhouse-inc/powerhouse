@@ -370,3 +370,173 @@ describe("useDocumentOperations", () => {
     });
   });
 });
+
+function LegacyProbe({ id }: { id: string | null }) {
+  const result = useDocumentOperations(id);
+  return (
+    <div>
+      <span data-testid="loading">{String(result.isLoading)}</span>
+      <span data-testid="global">
+        {result.globalOperations.map((op) => op.index).join(",")}
+      </span>
+      <span data-testid="local">
+        {result.localOperations.map((op) => op.index).join(",")}
+      </span>
+      <span data-testid="error">{result.error?.message ?? ""}</span>
+      <button data-testid="refetch" onClick={result.refetch} />
+    </div>
+  );
+}
+
+describe("useDocumentOperations (legacy form)", () => {
+  beforeEach(() => {
+    window.ph = {};
+    delete window.__phEventHandlersRegistered;
+    ensurePHEventHandlers();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    window.ph = {};
+    delete window.__phEventHandlersRegistered;
+  });
+
+  it("fetches both scopes and pages each to completion", async () => {
+    const getOperations = vi.fn<GetOperations>((_id, view, _filter, paging) => {
+      const scope = view?.scopes?.[0];
+      if (scope === "local") {
+        return Promise.resolve(makePage([createFakeOperation(0, "local")]));
+      }
+      if (paging?.cursor === "g1") {
+        return Promise.resolve(makePage([createFakeOperation(2)]));
+      }
+      return Promise.resolve(
+        makePage([createFakeOperation(0), createFakeOperation(1)], "g1"),
+      );
+    });
+    setDocumentCache(makeCache(getOperations));
+
+    const screen = render(<LegacyProbe id="doc-1" />);
+    expect(textOf(screen, "loading")).toBe("true");
+    await vi.waitFor(() => {
+      expect(textOf(screen, "loading")).toBe("false");
+    });
+    expect(textOf(screen, "global")).toBe("0,1,2");
+    expect(textOf(screen, "local")).toBe("0");
+    expect(getOperations).toHaveBeenCalledTimes(3);
+  });
+
+  it("stays loading until every page of both scopes has arrived", async () => {
+    const { promise: secondPage, resolve: resolveSecondPage } =
+      deferred<PagedResults<Operation>>();
+    const getOperations = vi.fn<GetOperations>((_id, view, _filter, paging) => {
+      const scope = view?.scopes?.[0];
+      if (scope === "local") {
+        return Promise.resolve(makePage([createFakeOperation(0, "local")]));
+      }
+      if (paging?.cursor === "g1") {
+        return secondPage;
+      }
+      return Promise.resolve(
+        makePage([createFakeOperation(0), createFakeOperation(1)], "g1"),
+      );
+    });
+    setDocumentCache(makeCache(getOperations));
+
+    const screen = render(<LegacyProbe id="doc-1" />);
+    await vi.waitFor(() => {
+      // local settled, global's first page settled, and its second page
+      // (triggered by useLoadAllPages once hasNextPage is true) requested.
+      expect(getOperations).toHaveBeenCalledTimes(3);
+    });
+    expect(textOf(screen, "loading")).toBe("true");
+    resolveSecondPage(makePage([createFakeOperation(2)]));
+    await vi.waitFor(() => {
+      expect(textOf(screen, "loading")).toBe("false");
+    });
+    expect(textOf(screen, "global")).toBe("0,1,2");
+  });
+
+  it("returns empty arrays and not loading for a null id", async () => {
+    const getOperations = vi.fn(() => Promise.resolve(makePage([])));
+    setDocumentCache(makeCache(getOperations));
+
+    const screen = render(<LegacyProbe id={null} />);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(textOf(screen, "loading")).toBe("false");
+    expect(textOf(screen, "global")).toBe("");
+    expect(textOf(screen, "local")).toBe("");
+    expect(getOperations).not.toHaveBeenCalled();
+  });
+
+  it("refetch reloads both scopes", async () => {
+    const getOperations = vi.fn<GetOperations>((_id, view) => {
+      const scope = view?.scopes?.[0];
+      return Promise.resolve(makePage([createFakeOperation(0, scope)]));
+    });
+    setDocumentCache(makeCache(getOperations));
+
+    const screen = render(<LegacyProbe id="doc-1" />);
+    await vi.waitFor(() => {
+      expect(textOf(screen, "loading")).toBe("false");
+    });
+    const callsBefore = getOperations.mock.calls.length;
+    click(screen, "refetch");
+    await vi.waitFor(() => {
+      expect(getOperations.mock.calls.length).toBe(callsBefore * 2);
+    });
+    await vi.waitFor(() => {
+      expect(textOf(screen, "loading")).toBe("false");
+    });
+    expect(textOf(screen, "global")).toBe("0");
+    expect(textOf(screen, "local")).toBe("0");
+  });
+
+  it("the scoped form is unaffected", async () => {
+    // Existing suite (`describe("useDocumentOperations")` above) already
+    // covers the scoped form thoroughly; this is a single smoke test to
+    // confirm the two-argument call still works from the same module now
+    // that the export carries an overload.
+    const getOperations = vi.fn(() =>
+      Promise.resolve(makePage([createFakeOperation(0)])),
+    );
+    setDocumentCache(makeCache(getOperations));
+
+    const screen = render(<Probe id="doc-1" scope="global" />);
+    await vi.waitFor(() => {
+      expect(textOf(screen, "count")).toBe("1");
+    });
+  });
+
+  it("globalOperations is a stable, mutable array across an identical rerender", async () => {
+    const getOperations = vi.fn(() =>
+      Promise.resolve(
+        makePage([createFakeOperation(0), createFakeOperation(1)]),
+      ),
+    );
+    setDocumentCache(makeCache(getOperations));
+
+    const captured: Operation[][] = [];
+    function CaptureProbe({ id }: { id: string }) {
+      const result = useDocumentOperations(id);
+      captured.push(result.globalOperations);
+      // Type-level proof: `globalOperations` is `Operation[]`, not
+      // `readonly Operation[]` - `.sort()` is not callable on the latter.
+      const sorted = result.globalOperations
+        .slice()
+        .sort((a, b) => a.index - b.index);
+      return <span data-testid="sorted-count">{sorted.length}</span>;
+    }
+
+    const screen = render(<CaptureProbe id="doc-1" />);
+    await vi.waitFor(() => {
+      expect(textOf(screen, "sorted-count")).toBe("2");
+    });
+    const afterSuccess = captured[captured.length - 1];
+
+    screen.rerender(<CaptureProbe id="doc-1" />);
+    const afterRerender = captured[captured.length - 1];
+
+    expect(afterRerender).toBe(afterSuccess);
+  });
+});

@@ -53,6 +53,7 @@ export {
 export { useDocumentOperations } from "../hooks/document-operations.js";
 export type {
   DocumentOperationsResult,
+  DocumentOperationsState,
   UseDocumentOperationsOptions,
 } from "../hooks/document-operations.js";
 export { setReactorClient, useReactorClient } from "../hooks/reactor.js";

@@ -165,6 +165,10 @@ type Props = {
 | `apps/connect/src/components/editors.tsx` | Scopes from header, controlled scope, `enabled`, timeline call |
 | `test/test-fusion/src/components/todo-demo.tsx` | New signature, drop manual refetch |
 
+### 6. Compatibility
+
+`useDocumentOperations(documentId)` (one argument) and the `DocumentOperationsState` type it returns remain as deprecated aliases: the call is backed by the same document cache as the scoped form, and pages both the `global` and `local` scopes to completion before reporting `isLoading: false`. `RevisionHistory` still accepts the legacy `globalOperations`/`localOperations` pair and toggles between them internally rather than requiring a controlled scope. Both are removed in the next major.
+
 ## Testing
 
 - **Cache** (vitest, mock client as in the existing `document-cache.test.tsx`): first page load and snapshot shape; `loadMoreOperations` appends and calls `next`; no request while pending; error keeps loaded operations and sets `status: "error"`; an `Updated` event for the document drops its entries and notifies operation listeners while leaving other documents alone; `invalidateOperations` aborts the in-flight request and its late result is discarded; `dispose` aborts.
