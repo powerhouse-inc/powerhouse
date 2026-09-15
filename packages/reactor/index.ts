@@ -96,10 +96,12 @@ export {
   type ConsistencyKey,
   type ConsistencyToken,
   type JobInfo,
+  type JobResultSummary,
   type PagedResults,
   type PagingOptions,
   type SearchFilter,
   type ShutdownStatus,
+  type SubmittedActionResult,
   type ViewFilter,
 } from "./src/shared/types.js";
 export {
