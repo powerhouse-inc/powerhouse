@@ -769,12 +769,11 @@ describe("BaseReadModel chunked indexing", () => {
     const view = makeView(CHUNKED);
     await view.init();
 
-    let indexing = true;
-    let readsDuringPass = 0;
+    const pass = { indexing: true, reads: 0 };
     const reader = (async () => {
-      while (indexing) {
+      while (pass.indexing) {
         await sql`SELECT 1 AS x`.execute(db);
-        readsDuringPass++;
+        pass.reads++;
         await new Promise((r) => setTimeout(r, 0));
       }
     })();
@@ -782,11 +781,11 @@ describe("BaseReadModel chunked indexing", () => {
     try {
       await view.indexOperations(makeBatch(generateId(), BATCH_SIZE));
     } finally {
-      indexing = false;
+      pass.indexing = false;
       await reader;
     }
 
-    expect(readsDuringPass).toBeGreaterThan(1);
+    expect(pass.reads).toBeGreaterThan(1);
   });
 
   it("indexes the same relationship edges chunked as unchunked", async () => {
