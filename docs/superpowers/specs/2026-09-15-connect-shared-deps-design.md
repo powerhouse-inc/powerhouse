@@ -137,7 +137,13 @@ type VendorPrebuildOptions = {
 // returns PrebuiltVendor = { vendorDir: string; imports: Record<string,string>; versions: Record<string,string> }
 
 const PROD_VENDOR_INCLUDE = [...DEFAULT_VENDOR_INCLUDE,
-  "@powerhousedao/shared", "@powerhousedao/shared/registry/urls"]; // the union also covers SHARED_DEPS
+  ...SHARED_DEP_SPECIFIERS.filter((s) => s !== "@powerhousedao/shared"),
+  ...SHARED_SUBPATHS.map((s) => `@powerhousedao/shared/${s}`)];
+// The bare shared root cannot be vendored: its type barrel references
+// node-only modules (clis/), which the current vite/rolldown cannot bundle
+// for the browser (pre-existing latent issue — it fails on main too). Its
+// browser-safe subpaths are shared instead; a bare-root import in a package
+// simply isn't externalized and bundles its own copy.
 ```
 
 The returned `imports` map uses `base + "__vendor__/<spec>.js"` values, the

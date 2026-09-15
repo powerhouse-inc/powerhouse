@@ -428,11 +428,20 @@ const vendorEnabled =
 ```ts
 import { prebuildConnectVendor, VENDOR_URL_PREFIX } from "@powerhousedao/builder-tools";
 import { SHARED_DEPS } from "@powerhousedao/shared/connect";
-// include = DEFAULT_VENDOR_INCLUDE ∪ SHARED_DEPS specifiers (the union
-// covers both the dev-proven set and the package-externalized set).
+// include = DEFAULT_VENDOR_INCLUDE ∪ SHARED_DEPS specifiers ∪ the
+// @powerhousedao/shared subpaths (SHARED_SUBPATHS). The bare shared root is
+// excluded: its type barrel references node-only modules (clis/), which the
+// current vite/rolldown cannot bundle for the browser — vendoring the root
+// fails the build (pre-existing latent issue, surfaced by this work).
 const vendor = await prebuildConnectVendor({
   dirname,
-  include: [...new Set([...DEFAULT_VENDOR_INCLUDE, ...SHARED_DEP_SPECIFIERS])],
+  include: [
+    ...new Set([
+      ...DEFAULT_VENDOR_INCLUDE,
+      ...SHARED_DEP_SPECIFIERS.filter((s) => s !== "@powerhousedao/shared"),
+      ...SHARED_SUBPATHS.map((s) => `@powerhousedao/shared/${s}`),
+    ]),
+  ],
   vendorDir: join(outDirAbs, "__vendor__"),
   base: <the same base string the app build uses (options.dynamicBase ? DYNAMIC_BASE_PLACEHOLDER : basePathOrRoot)>,
   nodeEnv: "production",
@@ -840,3 +849,39 @@ Run in the worktree; this is the evidence the feature works.
   request: status update + pointer to the PR).
 - Follow the superpowers `finishing-a-development-branch` skill for the
   merge flow once the PR is approved.
+
+## Implementation corrections (made during Tasks 5–9)
+
+Deviations from the original plan found while verifying end-to-end, each
+confirmed against `main`:
+
+1. **The bare `@powerhousedao/shared` root is excluded from the vendor
+   include** (Task 5). Its type barrel
+   (`packages/shared/types/index.ts` → `../clis/types.js`) references
+   node-only modules, which the current vite/rolldown cannot bundle for the
+   browser — vendoring the root fails the build even on `main`. The
+   browser-safe subpaths are shared instead (`SHARED_SUBPATHS` in
+   `packages/shared/connect/shared-deps.ts`: `connect`, `document-model`,
+   `processors`, `document-drive`, `registry`, `registry/urls`,
+   `registry/manifest-slim`). The root stays in `SHARED_DEPS` for
+   matching/externalization semantics; a bare-root import in a package
+   simply is not externalized.
+2. **`runConnectBuild` creates the app out dir before the vendor prebuild**
+   (Task 5). The package build writes to `dist/`, but the vendor goes to
+   the app out dir (default `.ph/connect-build/dist/`); its build lock is a
+   sibling created with a non-recursive `mkdir`, so the parent had to exist
+   first. Without this, `ph connect build` failed with an empty error
+   message (the lock-acquire path returns null silently).
+3. **`resolveDepVersions` resolves through the project's own
+   `node_modules` link first** (Task 3), falling back to
+   `require.resolve`. The old CJS-only resolution returned the `"missing"`
+   sentinel for every ESM-only workspace package (their `exports` maps have
+   no CJS condition), which would have disabled the entire version
+   compatibility feature (all host versions unknown ⇒ no warnings ever).
+   A self-referencing project (a vendoring Connect app) reads its own
+   `package.json`.
+4. **`expandIncludeSubpaths` drops unresolvable includes** (Task 5).
+   Projects that do not install every shared dep (generated projects only
+   peer-depend on `document-model` and `@powerhousedao/reactor-browser`)
+   would otherwise fail the whole vendor build on a missing package; the
+   missing one is simply not shared.
