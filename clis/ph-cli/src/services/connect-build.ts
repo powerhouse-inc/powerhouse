@@ -9,8 +9,9 @@ import { getConfig } from "@powerhousedao/shared/clis";
 import {
   normalizeBasePath,
   SHARED_DEP_SPECIFIERS,
+  SHARED_SUBPATHS,
 } from "@powerhousedao/shared/connect";
-import { existsSync, readdirSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, rmSync } from "node:fs";
 import { join, resolve } from "node:path";
 import type { InlineConfig } from "vite";
 import { build, mergeConfig } from "vite";
@@ -60,6 +61,10 @@ export async function runConnectBuild(args: ConnectBuildArgs) {
   const outDirAbs = resolve(dirname, outDir);
   let vendor: PrebuiltVendor | null = null;
   if (isVendorEnabled()) {
+    // The vendor dir's parent must exist before the prebuild: its build
+    // lock is a sibling of the vendor dir, and the package build (runBuild)
+    // writes to a different out dir, so nothing else creates it yet.
+    mkdirSync(outDirAbs, { recursive: true });
     const errorRef: { message?: string } = {};
     // The same base string the app build uses below: the dynamic-base
     // placeholder, or the normalized deploy base (CLI override wins over the
@@ -75,9 +80,16 @@ export async function runConnectBuild(args: ConnectBuildArgs) {
     vendor = await prebuildConnectVendor({
       dirname,
       // The dev-proven heavy set ∪ the package-shared set: everything the
-      // app and packages externalize onto the vendor.
+      // app and packages externalize onto the vendor. The bare
+      // @powerhousedao/shared root cannot be vendored (its type barrel
+      // reaches node-only modules); its browser-safe subpaths are listed
+      // instead (SHARED_SUBPATHS).
       include: [
-        ...new Set([...DEFAULT_VENDOR_INCLUDE, ...SHARED_DEP_SPECIFIERS]),
+        ...new Set([
+          ...DEFAULT_VENDOR_INCLUDE,
+          ...SHARED_DEP_SPECIFIERS.filter((s) => s !== "@powerhousedao/shared"),
+          ...SHARED_SUBPATHS.map((s) => `@powerhousedao/shared/${s}`),
+        ]),
       ],
       vendorDir: join(outDirAbs, "__vendor__"),
       base: appBase,
