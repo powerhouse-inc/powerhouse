@@ -300,6 +300,14 @@ export class HypercoreOperationStore implements IOperationStore {
     };
   }
 
+  /**
+   * The paging cursor encodes the ordinal to resume from (one past the last
+   * ordinal returned), not the last ordinal itself; "" or "0" (or anything
+   * unparsable) means the start of the stream. Unlike the Kysely store's
+   * `getSinceId` (whose auto-increment id starts at 1), this store's ordinal
+   * counter starts at 0, so 0 is a real, valid ordinal and the same
+   * ambiguous-cursor hazard as `getSince`/`getConflicting` applies here too.
+   */
   async getSinceId(
     id: number,
     paging?: PagingOptions,
@@ -309,13 +317,17 @@ export class HypercoreOperationStore implements IOperationStore {
       throw new Error("Operation aborted");
     }
 
-    const cursorValue =
-      paging?.cursor && parseInt(paging.cursor, 10) > 0
-        ? parseInt(paging.cursor, 10)
-        : id;
-    const effectiveId = Math.max(id, cursorValue);
+    const startId = id + 1;
+    const parsedCursor = paging?.cursor
+      ? Number.parseInt(paging.cursor, 10)
+      : NaN;
+    const cursorId =
+      Number.isFinite(parsedCursor) && parsedCursor > 0
+        ? parsedCursor
+        : startId;
+    const effectiveStart = Math.max(startId, cursorId);
 
-    const gt = ordinalPrefix() + pad(effectiveId);
+    const gt = ordinalPrefix() + pad(effectiveStart - 1);
     const lt = ordinalPrefix() + RANGE_UPPER_BOUND;
     const limit = paging?.limit ? paging.limit + 1 : undefined;
 
@@ -348,7 +360,7 @@ export class HypercoreOperationStore implements IOperationStore {
 
     const nextCursor =
       hasMore && resultItems.length > 0
-        ? resultItems[resultItems.length - 1].context.ordinal.toString()
+        ? (resultItems[resultItems.length - 1].context.ordinal + 1).toString()
         : undefined;
 
     const cursor = paging?.cursor || "0";

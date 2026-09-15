@@ -539,6 +539,42 @@ describe("HypercoreOperationStore", () => {
       expect(page3.results).toHaveLength(1);
       expect(page3.nextCursor).toBeUndefined();
     });
+
+    it("walks to exhaustion without looping when a page ends at ordinal 0", async () => {
+      const documentId = generateId();
+      const documentType = "powerhouse/test-doc";
+
+      for (let i = 0; i < 3; i++) {
+        await store.apply(
+          documentId,
+          documentType,
+          "global",
+          "main",
+          i,
+          (txn) => {
+            txn.addOperations(makeOp(i));
+          },
+        );
+      }
+
+      const pages: number[][] = [];
+      let cursor: string | undefined = "";
+      let iterations = 0;
+
+      while (cursor !== undefined) {
+        iterations++;
+        if (iterations > 10) {
+          throw new Error("cursor walk did not terminate within 10 iterations");
+        }
+
+        const page = await store.getSinceId(-1, { cursor, limit: 1 });
+
+        pages.push(page.results.map((op) => op.context.ordinal));
+        cursor = page.nextCursor;
+      }
+
+      expect(pages).toEqual([[0], [1], [2]]);
+    });
   });
 
   describe("getConflicting", () => {
