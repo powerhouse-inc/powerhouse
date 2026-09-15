@@ -39,6 +39,14 @@ export const buildArgs = {
     defaultValue: () => "dist" as const,
     defaultValueIsSerializable: true,
   }),
+  noSharedDeps: flag({
+    type: boolean,
+    long: "no-shared-deps",
+    description:
+      "Bundle the shared dependency set instead of externalizing it (default: externalize)",
+    defaultValue: () => false as const,
+    defaultValueIsSerializable: true,
+  }),
   ...debugArgs,
 };
 

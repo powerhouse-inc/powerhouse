@@ -1,9 +1,15 @@
 import {
-  browserBuildConfig,
+  browserEntry,
+  buildBrowserBuildConfig,
+  findBundledSharedDeps,
   nodeBuildConfig,
 } from "@powerhousedao/shared/build-config";
+import {
+  findSharedImports,
+  SHARED_DEP_SPECIFIERS,
+} from "@powerhousedao/shared/connect";
 import { execSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { detect, resolveCommand } from "package-manager-detector";
 import { readPackage } from "read-pkg";
@@ -50,10 +56,27 @@ export async function runBuild(args: BuildArgs) {
   // Fail fast if the manifest name and package.json name have drifted apart.
   await assertManifestNameMatchesPackage(process.cwd());
 
+  const sharedDeps = !args.noSharedDeps;
+
   await tsdownBuild({
-    ...browserBuildConfig,
+    ...buildBrowserBuildConfig({ sharedDeps }),
     outDir: join(outDir, "browser"),
   });
+
+  // Advisory: a shared dep the source imports but the output no longer
+  // references as a bare import was inlined despite the external set.
+  if (sharedDeps) {
+    const imported = findSharedImportsInSources(process.cwd(), browserEntry);
+    const bundled = findBundledSharedDeps(
+      imported,
+      readDistBrowserFiles(join(outDir, "browser")),
+    );
+    if (bundled.length > 0) {
+      console.warn(
+        `⚠ shared deps bundled instead of externalized: ${bundled.join(", ")} — check your neverBundle config`,
+      );
+    }
+  }
 
   await tsdownBuild({
     ...nodeBuildConfig,
@@ -99,4 +122,78 @@ export async function runBuild(args: BuildArgs) {
   execSync(
     `${executeLocalCommand.command} ${executeLocalCommand.args.join(" ")}`,
   );
+}
+
+function statSafe(p: string) {
+  try {
+    return statSync(p);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Expand entry globs (single-`*` segments only — the shape `browserEntry`
+ * uses) against files on disk, resolving against `root`.
+ */
+function expandEntryGlobs(root: string, globs: string[]): string[] {
+  const files = new Set<string>();
+  for (const pattern of globs) {
+    const segments = pattern.split("/").filter(Boolean);
+    let dirs = [root];
+    for (const seg of segments) {
+      const next: string[] = [];
+      for (const d of dirs) {
+        if (!statSafe(d)?.isDirectory()) continue;
+        if (seg === "*") {
+          for (const e of readdirSync(d, { withFileTypes: true })) {
+            next.push(join(d, e.name));
+          }
+        } else {
+          next.push(join(d, seg));
+        }
+      }
+      dirs = next;
+    }
+    for (const f of dirs) {
+      if (statSafe(f)?.isFile()) files.add(f);
+    }
+  }
+  return [...files];
+}
+
+/**
+ * Every shared specifier imported from the entry sources; the post-build
+ * scan compares these against the built output.
+ */
+function findSharedImportsInSources(root: string, globs: string[]): string[] {
+  const found = new Set<string>();
+  for (const file of expandEntryGlobs(root, globs)) {
+    const src = readFileSync(file, "utf8");
+    for (const spec of findSharedImports(src, SHARED_DEP_SPECIFIERS)) {
+      found.add(spec);
+    }
+  }
+  return [...found].sort();
+}
+
+/**
+ * The built JS outputs of a browser build (entry files and chunks).
+ */
+function readDistBrowserFiles(
+  dir: string,
+): { path: string; content: string }[] {
+  const out: { path: string; content: string }[] = [];
+  if (!existsSync(dir)) return out;
+  const walk = (d: string) => {
+    for (const e of readdirSync(d, { withFileTypes: true })) {
+      const p = join(d, e.name);
+      if (e.isDirectory()) walk(p);
+      else if (e.isFile() && e.name.endsWith(".js")) {
+        out.push({ path: p, content: readFileSync(p, "utf8") });
+      }
+    }
+  };
+  walk(dir);
+  return out;
 }

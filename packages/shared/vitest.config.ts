@@ -25,6 +25,7 @@ export default defineConfig({
     // their own runners / environment requirements; folding them in is a
     // separate effort.
     include: [
+      "clis/build-config.test.ts",
       "clis/source-config-schema.test.ts",
       "clis/project-ports.test.ts",
       "clis/project-env.test.ts",
