@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import type { Operation } from "@powerhousedao/shared/document-model";
-import { globalOperations, localOperations } from "./mocks.js";
+import { globalOperations } from "./mocks.js";
 // @ts-expect-error - json file needs { with: "json" } but storybook doesn't support it
 import nsOperations from "./ns-operations.json";
 import { RevisionHistory } from "./revision-history.js";
@@ -43,11 +43,33 @@ export const Default: Story = {
   args: {
     documentTitle: " MakerDAO/Monetalis RWA Report 050724",
     documentId: "6wYLICDhX5w1Hq7mIo6CRbXUV1I=",
-    globalOperations: operations.global,
-    localOperations,
+    operations: operations.global,
+    isLoading: false,
+    hasNextPage: false,
+    onLoadNextPage: () => {},
+    scopes: ["global", "local"],
+    scope: "global",
+    onScopeChange: () => {},
     onClose: () => {},
     documentState: mockDocumentState,
     onCopyState: () => console.log("State copied to clipboard!"),
+  },
+};
+
+export const LoadingFirstPage: Story = {
+  args: {
+    ...Default.args,
+    operations: [],
+    isLoading: true,
+  },
+};
+
+export const LoadingMorePages: Story = {
+  args: {
+    ...Default.args,
+    operations: operations.global.slice(0, 20),
+    isLoading: true,
+    hasNextPage: true,
   },
 };
 
@@ -55,8 +77,13 @@ export const WithSkippedOperations: Story = {
   args: {
     documentTitle: " MakerDAO/Monetalis RWA Report 050724",
     documentId: "6wYLICDhX5w1Hq7mIo6CRbXUV1I=",
-    globalOperations: skipOperations.global as unknown as Operation[],
-    localOperations,
+    operations: skipOperations.global as unknown as Operation[],
+    isLoading: false,
+    hasNextPage: false,
+    onLoadNextPage: () => {},
+    scopes: ["global", "local"],
+    scope: "global",
+    onScopeChange: () => {},
     onClose: () => {},
     documentState: mockDocumentState,
     onCopyState: () => console.log("State copied to clipboard!"),
@@ -67,8 +94,13 @@ export const WithNoItems: Story = {
   args: {
     documentTitle: " MakerDAO/Monetalis RWA Report 050724",
     documentId: "6wYLICDhX5w1Hq7mIo6CRbXUV1I=",
-    globalOperations: [],
-    localOperations: [],
+    operations: [],
+    isLoading: false,
+    hasNextPage: false,
+    onLoadNextPage: () => {},
+    scopes: ["global", "local"],
+    scope: "global",
+    onScopeChange: () => {},
     onClose: () => {},
     documentState: mockDocumentState,
     onCopyState: () => console.log("State copied to clipboard!"),
@@ -79,8 +111,13 @@ export const WithOneItem: Story = {
   args: {
     documentTitle: " MakerDAO/Monetalis RWA Report 050724",
     documentId: "6wYLICDhX5w1Hq7mIo6CRbXUV1I=",
-    globalOperations: [globalOperations[0]],
-    localOperations: [localOperations[0]],
+    operations: [globalOperations[0]],
+    isLoading: false,
+    hasNextPage: false,
+    onLoadNextPage: () => {},
+    scopes: ["global", "local"],
+    scope: "global",
+    onScopeChange: () => {},
     onClose: () => {},
     documentState: mockDocumentState,
     onCopyState: () => console.log("State copied to clipboard!"),
@@ -91,8 +128,13 @@ export const WithoutDocumentState: Story = {
   args: {
     documentTitle: " MakerDAO/Monetalis RWA Report 050724",
     documentId: "6wYLICDhX5w1Hq7mIo6CRbXUV1I=",
-    globalOperations: operations.global,
-    localOperations,
+    operations: operations.global,
+    isLoading: false,
+    hasNextPage: false,
+    onLoadNextPage: () => {},
+    scopes: ["global", "local"],
+    scope: "global",
+    onScopeChange: () => {},
     onClose: () => {},
   },
 };

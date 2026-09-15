@@ -7,16 +7,13 @@ import { makeRows } from "../utils.js";
 import { Day } from "./day.js";
 
 export type TimelineProps = {
-  readonly localOperations: Operation[];
-  readonly globalOperations: Operation[];
-  readonly scope: string;
+  readonly operations: readonly Operation[];
 };
 
 export function Timeline(props: TimelineProps) {
-  const { localOperations, globalOperations, scope } = props;
-  const operations = scope === "local" ? localOperations : globalOperations;
+  const { operations } = props;
   const initialNumRowsToShow = 100;
-  const allRows = useMemo(() => makeRows(operations), [operations]);
+  const allRows = useMemo(() => makeRows([...operations]), [operations]);
   const [scrollAmount, setScrollAmount] = useState(0);
   const [numRowsToShow, setNumRowsToShow] = useState(initialNumRowsToShow);
   const [rows, setRows] = useState(() => allRows.slice(0, numRowsToShow));

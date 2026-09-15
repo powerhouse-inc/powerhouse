@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { ConnectTooltipProvider } from "../../tooltip/tooltip.js";
-import { globalOperations, localOperations } from "../mocks.js";
+import { globalOperations } from "../mocks.js";
 import { Timeline } from "./timeline.js";
 
 const meta = {
@@ -14,9 +14,7 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    globalOperations,
-    localOperations,
-    scope: "global",
+    operations: globalOperations,
   },
   render(args) {
     return (

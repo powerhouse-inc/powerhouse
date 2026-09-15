@@ -4,7 +4,7 @@ import {
   garbageCollect,
   sortOperations,
 } from "@powerhousedao/shared/document-model";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { ConnectTooltipProvider } from "../tooltip/tooltip.js";
 import { Header } from "./header/header.js";
 import { Timeline } from "./timeline/timeline.js";
@@ -12,8 +12,19 @@ import { Timeline } from "./timeline/timeline.js";
 type Props = {
   readonly documentTitle: string;
   readonly documentId: string;
-  readonly globalOperations: Operation[];
-  readonly localOperations: Operation[];
+  /** The operations of the selected scope loaded so far, in any order. */
+  readonly operations: readonly Operation[];
+  /** A page of operations is being fetched. */
+  readonly isLoading: boolean;
+  /** More operations exist beyond the loaded ones. */
+  readonly hasNextPage: boolean;
+  /** Called by the component whenever it can take the next page. */
+  readonly onLoadNextPage: () => void;
+  /** The scopes offered in the selector, for example the keys of `document.header.revision`. */
+  readonly scopes: readonly string[];
+  /** The selected scope. */
+  readonly scope: string;
+  readonly onScopeChange: (scope: string) => void;
   readonly onClose: () => void;
   readonly itemsPerPage?: number;
   readonly documentState?: object;
@@ -21,12 +32,22 @@ type Props = {
   readonly onCopyDocId?: () => void;
 };
 
+/**
+ * The revision history panel. It renders the newest operation first while
+ * the operations API pages oldest first, so it keeps asking for the next
+ * page until none is left and renders what has arrived in the meantime.
+ */
 export function RevisionHistory(props: Props) {
   const {
     documentTitle,
     documentId,
-    globalOperations,
-    localOperations,
+    operations,
+    isLoading,
+    hasNextPage,
+    onLoadNextPage,
+    scopes,
+    scope,
+    onScopeChange,
     onClose,
     itemsPerPage = 100,
     documentState,
@@ -34,14 +55,19 @@ export function RevisionHistory(props: Props) {
     onCopyDocId,
   } = props;
 
-  const [scope, setScope] = useState<string>("global");
+  useEffect(() => {
+    if (hasNextPage && !isLoading) {
+      onLoadNextPage();
+    }
+  }, [hasNextPage, isLoading, onLoadNextPage]);
 
-  const visibleOperations = useMemo(() => {
-    const operations = scope === "global" ? globalOperations : localOperations;
-    return garbageCollect(sortOperations(operations)).sort(
-      (a, b) => b.index - a.index,
-    );
-  }, [globalOperations, localOperations, scope]);
+  const visibleOperations = useMemo(
+    () =>
+      garbageCollect(sortOperations([...operations])).sort(
+        (a, b) => b.index - a.index,
+      ),
+    [operations],
+  );
 
   const {
     pageItems,
@@ -58,9 +84,9 @@ export function RevisionHistory(props: Props) {
     itemsPerPage,
   });
 
-  function onChangeScope(scope: string) {
+  function onChangeScope(nextScope: string) {
     goToFirstPage();
-    setScope(scope);
+    onScopeChange(nextScope);
   }
 
   const showPagination = visibleOperations.length > itemsPerPage;
@@ -87,6 +113,16 @@ export function RevisionHistory(props: Props) {
     <hr className="h-12 border-none" />
   );
 
+  const hasOperations = visibleOperations.length > 0;
+
+  const EmptyState = isLoading ? (
+    <h3 className="my-40 text-foreground">Loading operations…</h3>
+  ) : (
+    <h3 className="my-40 text-foreground">
+      This document has no recorded operations yet.
+    </h3>
+  );
+
   return (
     <ConnectTooltipProvider>
       <div className="p-6">
@@ -95,25 +131,25 @@ export function RevisionHistory(props: Props) {
           onChangeScope={onChangeScope}
           onClose={onClose}
           scope={scope}
+          scopes={scopes}
           title={documentTitle}
           documentState={documentState}
           onCopyState={onCopyState}
           onCopyDocId={onCopyDocId}
         />
         {PaginationComponent}
-        <div className="mt-4 flex justify-center rounded-md bg-background p-4">
-          {visibleOperations.length > 0 ? (
+        <div className="mt-4 flex flex-col items-center rounded-md bg-background p-4">
+          {hasOperations ? (
             <div className="grid grid-cols-[minmax(min-content,1018px)]">
-              <Timeline
-                globalOperations={scope === "global" ? pageItems : []}
-                localOperations={scope === "local" ? pageItems : []}
-                scope={scope}
-              />
+              <Timeline operations={pageItems} />
             </div>
           ) : (
-            <h3 className="my-40 text-foreground">
-              This document has no recorded operations yet.
-            </h3>
+            EmptyState
+          )}
+          {hasOperations && isLoading && (
+            <p className="mt-4 text-xs text-muted-foreground">
+              Loading more operations…
+            </p>
           )}
         </div>
         {PaginationComponent}
