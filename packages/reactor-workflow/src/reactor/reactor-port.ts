@@ -40,6 +40,44 @@ interface DriveTarget {
   parentFolder?: string;
 }
 
+// The value at a dotted path inside a document's global state. Anything that
+// is not a plain object on the way down ends the walk: a path into a scalar is
+// a mismatch, not an error, because the documents being filtered are of one
+// type only by convention and the step cannot know every shape it will meet.
+function stateValueAt(document: PHDocument, path: string): unknown {
+  const globalState = (document.state as Record<string, unknown>).global;
+  let current: unknown = globalState;
+  for (const segment of path.split(".")) {
+    if (typeof current !== "object" || current === null) return undefined;
+    current = (current as Record<string, unknown>)[segment];
+  }
+  return current;
+}
+
+// Compared as strings, so a step whose value came from an expression matches a
+// number in state: every expression resolves to text by the time it reaches
+// here, and `"42" !== 42` would make the match silently impossible.
+export function matchesState(
+  document: PHDocument,
+  match: { path: string; value: string } | undefined,
+): boolean {
+  if (!match) return true;
+  const value = stateValueAt(document, match.path);
+  if (typeof value === "string") return value === match.value;
+  // Only the scalars a state field plausibly holds. A path landing on an
+  // object, an array or nothing is a mismatch rather than an error — the
+  // documents being filtered share a type only by convention, and the step
+  // cannot know every shape it will meet.
+  if (
+    typeof value === "number" ||
+    typeof value === "boolean" ||
+    typeof value === "bigint"
+  ) {
+    return String(value) === match.value;
+  }
+  return false;
+}
+
 export function documentSummary(
   document: PHDocument,
   withState: boolean,
@@ -158,7 +196,12 @@ export class SubgraphReactorPort implements ReactorPort {
         seen.add(document.header.id);
         return true;
       })
-      .map((document) => documentSummary(document, false));
+      // The index cannot query state, so a state match is applied to the page
+      // that was read. A caller that needs to match across more documents than
+      // the page holds raises `limit`; silently matching a prefix of the type
+      // would look like "no such document".
+      .filter((document) => matchesState(document, input.match))
+      .map((document) => documentSummary(document, input.withState === true));
   }
 
   async create(input: ReactorCreateInput): Promise<ReactorDocumentSummary> {

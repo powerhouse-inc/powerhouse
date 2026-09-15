@@ -286,6 +286,19 @@ function findLimit(value: unknown): number | undefined {
   return Math.min(Math.max(Math.floor(value), 1), MAX_FIND_LIMIT);
 }
 
+// The state match, as the host will accept it. Both halves must be strings and
+// the path must name something: a match with an empty path would silently pass
+// every document, which is the opposite of what a step asking to match wants.
+function findMatch(value: unknown): { path: string; value: string } | undefined {
+  if (typeof value !== "object" || value === null) return undefined;
+  const record = value as Record<string, unknown>;
+  const path = record.path;
+  const wanted = record.value;
+  if (typeof path !== "string" || path.trim() === "") return undefined;
+  if (typeof wanted !== "string") return undefined;
+  return { path: path.trim(), value: wanted };
+}
+
 export function reactorHandlers(port: ReactorPort): HostCallHandlers {
   return {
     [REACTOR_MODELS]: () => port.models(),
@@ -312,6 +325,8 @@ export function reactorHandlers(port: ReactorPort): HostCallHandlers {
         ...(findLimit(input.limit) !== undefined
           ? { limit: findLimit(input.limit) }
           : {}),
+        ...(findMatch(input.match) ? { match: findMatch(input.match) } : {}),
+        ...(input.withState === true ? { withState: true } : {}),
       });
     },
     [REACTOR_CREATE]: (payload) => {

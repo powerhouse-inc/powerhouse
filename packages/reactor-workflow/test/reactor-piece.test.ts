@@ -206,6 +206,38 @@ describe("the reactor piece", () => {
     });
   });
 
+  it("hands the host a state match, which is how a step binds to a document", async () => {
+    // The index cannot query state; this is the only way a workflow finds the
+    // document that carries a given order id, invoice number or external key.
+    const result = await executor.execute(
+      execution("document-find", {
+        documentType: "powerhouse/workflow",
+        matchPath: "orderId",
+        matchValue: "order-a",
+        includeState: true,
+      }),
+    );
+
+    expect(port.calls).toEqual([
+      'find {"documentType":"powerhouse/workflow","match":{"path":"orderId","value":"order-a"},"withState":true}',
+    ]);
+    expect(result.output).toMatchObject({ count: 2 });
+  });
+
+  it("refuses a half-written state match instead of returning everything", async () => {
+    // A field with no value would otherwise read as "no filter", handing a step
+    // that asked for one document every document of the type.
+    await expect(
+      executor.execute(
+        execution("document-find", {
+          documentType: "powerhouse/workflow",
+          matchPath: "orderId",
+        }),
+      ),
+    ).rejects.toThrow(/set together or not at all/);
+    expect(port.calls).toEqual([]);
+  });
+
   it("reads a schema, narrowed to one action when asked", async () => {
     const result = await executor.execute(
       execution("document-schema", {

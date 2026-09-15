@@ -15,6 +15,19 @@ function doc(id: string, documentType: string, name = "") {
   };
 }
 
+// The same, with state a match can be run against.
+function stateful(
+  id: string,
+  documentType: string,
+  state: Record<string, unknown>,
+) {
+  return {
+    header: { id, documentType, name: id, slug: id },
+    state: { global: { name: id, ...state } },
+    operations: { global: [{ index: 0, action: { type: "SET_NAME" } }] },
+  };
+}
+
 // A reactor that records what was asked of it, answering from the documents
 // it was seeded with.
 function fakeReactor(documents: ReturnType<typeof doc>[] = []) {
@@ -156,5 +169,87 @@ describe("SubgraphReactorPort.create", () => {
     // and a reactor-drive is a drive.
     expect(calls).toContain(`find type=${REACTOR_DRIVE} parent=-`);
     expect(calls).toContain("addFile rdrive-1 parent=folder-1 name=Invoice");
+  });
+});
+
+// Binding a document to something outside the reactor — an order on a factory
+// floor, an invoice in an archive — means finding it by a field in its state.
+// The index cannot query state, so this is what makes that possible at all.
+describe("SubgraphReactorPort.find with a state match", () => {
+  const LEDGER = "umh/production-ledger";
+
+  it("keeps only the documents holding the value at that path", async () => {
+    const { port } = fakeReactor([
+      stateful("ledger-1", LEDGER, { orderId: "order-a" }),
+      stateful("ledger-2", LEDGER, { orderId: "order-b" }),
+      stateful("ledger-3", LEDGER, {}),
+    ]);
+
+    const found = await port.find({
+      documentType: LEDGER,
+      match: { path: "orderId", value: "order-b" },
+    });
+
+    expect(found.map((entry) => entry.documentId)).toEqual(["ledger-2"]);
+  });
+
+  it("walks a dotted path into nested state", async () => {
+    const { port } = fakeReactor([
+      stateful("ledger-1", LEDGER, { settlement: { status: "OPEN" } }),
+      stateful("ledger-2", LEDGER, { settlement: { status: "CLOSED" } }),
+    ]);
+
+    const found = await port.find({
+      documentType: LEDGER,
+      match: { path: "settlement.status", value: "OPEN" },
+    });
+
+    expect(found.map((entry) => entry.documentId)).toEqual(["ledger-1"]);
+  });
+
+  it("matches a number in state against the text an expression resolved to", async () => {
+    // Every expression arrives as a string; `"42" !== 42` would make a match
+    // against a numeric field silently impossible.
+    const { port } = fakeReactor([stateful("ledger-1", LEDGER, { poNumber: 42 })]);
+
+    const found = await port.find({
+      documentType: LEDGER,
+      match: { path: "poNumber", value: "42" },
+    });
+
+    expect(found).toHaveLength(1);
+  });
+
+  it("does not match a path that lands on an object or on nothing", async () => {
+    const { port } = fakeReactor([
+      stateful("ledger-1", LEDGER, { settlement: { status: "OPEN" } }),
+      stateful("ledger-2", LEDGER, { orderId: null }),
+    ]);
+
+    const onObject = await port.find({
+      documentType: LEDGER,
+      match: { path: "settlement", value: "[object Object]" },
+    });
+    const onNull = await port.find({
+      documentType: LEDGER,
+      match: { path: "orderId", value: "" },
+    });
+
+    expect(onObject).toEqual([]);
+    expect(onNull).toEqual([]);
+  });
+
+  it("withholds state unless it was asked for", async () => {
+    // A find over a page of documents would otherwise carry every one of their
+    // states across the worker boundary.
+    const { port } = fakeReactor([
+      stateful("ledger-1", LEDGER, { orderId: "order-a", secretish: "x" }),
+    ]);
+
+    const without = await port.find({ documentType: LEDGER });
+    const with_ = await port.find({ documentType: LEDGER, withState: true });
+
+    expect(without[0]).not.toHaveProperty("state");
+    expect(with_[0].state).toMatchObject({ orderId: "order-a" });
   });
 });

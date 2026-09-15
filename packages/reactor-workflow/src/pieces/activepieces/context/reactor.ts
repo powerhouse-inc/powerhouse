@@ -54,6 +54,14 @@ export interface ReactorFindInput {
   parentId?: string;
   // Host-side cap on what the index returns; the caller still filters and slices.
   limit?: number;
+  // Keep only documents whose global state holds `value` at `path` (dotted,
+  // e.g. "orderId" or "settlement.status"). The index cannot query state, so
+  // the host reads a page and matches within it — see the host handler.
+  match?: { path: string; value: string };
+  // Return each document's global state alongside its summary. Off by default:
+  // a find over a page of documents would otherwise carry every one of their
+  // states across the worker boundary.
+  withState?: boolean;
 }
 
 export interface ReactorCreateInput {
