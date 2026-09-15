@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { globalOperations, localOperations } from "./mocks.js";
 import { RevisionHistory } from "./revision-history.js";
@@ -175,15 +175,19 @@ describe("RevisionHistory (legacy props)", () => {
     render(
       <RevisionHistory
         {...legacyBaseProps}
-        globalOperations={[]}
-        localOperations={localOperations.slice(0, 2)}
+        globalOperations={globalOperations.slice(0, 3)}
+        localOperations={[]}
       />,
     );
-    // Global is empty and shown by default, so the empty message appears
-    // until the scope selector is used; the local scope's own render path
-    // is exercised via the scoped-props tests above (`ScopedRevisionHistory`
-    // is shared code). This just proves the legacy component holds both
-    // arrays and can render with only the deprecated props.
-    expect(screen.getByText("Global scope")).toBeInTheDocument();
+    // Open the scope selector (its trigger shows the current scope's label)
+    // and pick "Local scope"; the dropdown never lists the currently
+    // selected scope, so each label is unique at every step.
+    fireEvent.click(screen.getByText("Global scope"));
+    fireEvent.click(screen.getByText("Local scope"));
+
+    expect(
+      screen.getByText("This document has no recorded operations yet."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Local scope")).toBeInTheDocument();
   });
 });

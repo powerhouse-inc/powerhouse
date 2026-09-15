@@ -457,6 +457,29 @@ describe("useDocumentOperations (legacy form)", () => {
     expect(textOf(screen, "global")).toBe("0,1,2");
   });
 
+  it("clears isLoading once a mid-history page fails, surfacing the error", async () => {
+    const getOperations = vi.fn<GetOperations>((_id, view, _filter, paging) => {
+      const scope = view?.scopes?.[0];
+      if (scope === "local") {
+        return Promise.resolve(makePage([createFakeOperation(0, "local")]));
+      }
+      if (paging?.cursor === "g1") {
+        return Promise.reject(new Error("boom"));
+      }
+      return Promise.resolve(
+        makePage([createFakeOperation(0), createFakeOperation(1)], "g1"),
+      );
+    });
+    setDocumentCache(makeCache(getOperations));
+
+    const screen = render(<LegacyProbe id="doc-1" />);
+    await vi.waitFor(() => {
+      expect(textOf(screen, "error")).toBe("boom");
+    });
+    expect(textOf(screen, "loading")).toBe("false");
+    expect(textOf(screen, "global")).toBe("0,1");
+  });
+
   it("returns empty arrays and not loading for a null id", async () => {
     const getOperations = vi.fn(() => Promise.resolve(makePage([])));
     setDocumentCache(makeCache(getOperations));

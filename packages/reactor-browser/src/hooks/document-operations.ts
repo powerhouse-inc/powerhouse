@@ -51,16 +51,11 @@ export type DocumentOperationsState = {
   refetch: () => void;
 };
 
+const EMPTY_OPERATIONS: Operation[] = [];
+
 // Operation history of one scope of a document, read from the document
 // cache and kept in step with it: a change event for the document drops the
 // cached pages and the hook loads the first page again.
-//
-// Pages arrive oldest first. A view that wants the whole history calls
-// `fetchNextPage` while `hasNextPage` is true.
-//
-// An empty first page is a final result; there is no retry. When the active
-// document cache does not serve operations, the result is empty and not
-// loading.
 function useScopeOperations(
   documentId: string | null | undefined,
   scope: string,
@@ -141,6 +136,13 @@ export function useDocumentOperations(
  * step with it: a change event for the document drops the cached pages and
  * the hook loads the first page again.
  *
+ * Pages arrive oldest first. A view that wants the whole history calls
+ * `fetchNextPage` while `hasNextPage` is true.
+ *
+ * An empty first page is a final result; there is no retry. When the active
+ * document cache does not serve operations, the result is empty and not
+ * loading.
+ *
  * @param documentId - The document id, or null/undefined to skip fetching
  * @param scope - The operation scope, for example "global" or "local"
  * @param options - Page size and whether fetching is enabled
@@ -165,38 +167,39 @@ export function useDocumentOperations(
   useLoadAllPages(primary, legacy);
   useLoadAllPages(local, legacy);
   const globalOperations = useMemo(
-    () => [...primary.operations],
-    [primary.operations],
+    () => (legacy ? [...primary.operations] : EMPTY_OPERATIONS),
+    [legacy, primary.operations],
   );
   const localOperations = useMemo(
-    () => [...local.operations],
-    [local.operations],
+    () => (legacy ? [...local.operations] : EMPTY_OPERATIONS),
+    [legacy, local.operations],
   );
   const refetch = useCallback(() => {
     primary.refetch();
     local.refetch();
   }, [primary.refetch, local.refetch]);
+  const error = primary.error ?? local.error;
   const legacyResult = useMemo<DocumentOperationsState>(
     () => ({
       globalOperations,
       localOperations,
       isLoading:
-        primary.isLoading ||
-        local.isLoading ||
-        primary.hasNextPage ||
-        local.hasNextPage,
-      error: primary.error ?? local.error,
+        !error &&
+        (primary.isLoading ||
+          local.isLoading ||
+          primary.hasNextPage ||
+          local.hasNextPage),
+      error,
       refetch,
     }),
     [
       globalOperations,
       localOperations,
+      error,
       primary.isLoading,
       local.isLoading,
       primary.hasNextPage,
       local.hasNextPage,
-      primary.error,
-      local.error,
       refetch,
     ],
   );
