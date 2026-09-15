@@ -1,3 +1,15 @@
+## 6.2.3-dev.8 (2026-09-15)
+
+### 🩹 Fixes
+
+- **shared:** the node list helpers say in the types that what they return is frozen ([066a5efef](https://github.com/powerhouse-inc/powerhouse/commit/066a5efef))
+- **shared:** the drive reducer assigns a frozen node list and scans an unfrozen copy ([310e7e1cf](https://github.com/powerhouse-inc/powerhouse/commit/310e7e1cf))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5
+
 ## 6.2.3-dev.7 (2026-09-14)
 
 ### 🩹 Fixes

@@ -1,3 +1,18 @@
+## 6.2.3-dev.8 (2026-09-15)
+
+### 🩹 Fixes
+
+- **reactor:** keep every operation when a second backdated write reshuffles the same stream ([#3022](https://github.com/powerhouse-inc/powerhouse/pull/3022))
+- **shared:** the drive reducer assigns a frozen node list and scans an unfrozen copy ([310e7e1cf](https://github.com/powerhouse-inc/powerhouse/commit/310e7e1cf))
+- **shared:** the node list helpers say in the types that what they return is frozen ([066a5efef](https://github.com/powerhouse-inc/powerhouse/commit/066a5efef))
+- **shared:** freeze the drive node list before assigning it to the mutative draft ([#3020](https://github.com/powerhouse-inc/powerhouse/pull/3020))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.2.3-dev.7 (2026-09-14)
 
 ### 🩹 Fixes
