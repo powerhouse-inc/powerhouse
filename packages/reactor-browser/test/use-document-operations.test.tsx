@@ -270,16 +270,26 @@ describe("useDocumentOperations", () => {
   });
 
   it("surfaces a failed page as an Error", async () => {
-    // `@typescript-eslint/prefer-promise-reject-errors` (type-aware) flags
-    // not only `Promise.reject(nonError)` but also `reject(nonError)` called
-    // from inside a `new Promise` executor - see the rule's `NewExpression`
-    // handler - so a non-Error rejection reason can't be exercised here
-    // without a new eslint-disable, which the task's constraints rule out
-    // (the neighbouring `use-document-safe.test.tsx` has none to match).
-    // Rejecting with an Error still covers the pass-through branch of
-    // `toError`; the `String(reason)` fallback for non-Error reasons is a
-    // one-line conversion with no branching of its own.
+    // Covers the pass-through branch of `toError`, where the rejection
+    // reason already is an Error.
     const getOperations = vi.fn(() => Promise.reject(new Error("nope")));
+    setDocumentCache(makeCache(getOperations));
+
+    const screen = render(<Probe id="doc-1" />);
+    await vi.waitFor(() => {
+      expect(textOf(screen, "error")).toBe("nope");
+    });
+    expect(textOf(screen, "loading")).toBe("false");
+  });
+
+  it("surfaces a non-Error rejection reason via toError's String(reason) fallback", async () => {
+    // `@typescript-eslint/prefer-promise-reject-errors` (type-aware) flags
+    // `Promise.reject(nonError)` and `reject(nonError)` inside a `new
+    // Promise` executor, but not `vi.fn().mockRejectedValue(nonError)` -
+    // that's a mock config call, not a `Promise.reject`/`NewExpression`
+    // the rule inspects - so this exercises the fallback without an
+    // eslint-disable.
+    const getOperations = vi.fn().mockRejectedValue("nope");
     setDocumentCache(makeCache(getOperations));
 
     const screen = render(<Probe id="doc-1" />);

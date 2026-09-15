@@ -18,7 +18,11 @@ type Props = {
   readonly isLoading: boolean;
   /** More operations exist beyond the loaded ones. */
   readonly hasNextPage: boolean;
-  /** Called by the component whenever it can take the next page. */
+  /**
+   * Called by the component whenever it can take the next page.
+   * Must be referentially stable (for example the hook's `fetchNextPage`);
+   * an inline arrow re-fires the effect every render.
+   */
   readonly onLoadNextPage: () => void;
   /** The scopes offered in the selector, for example the keys of `document.header.revision`. */
   readonly scopes: readonly string[];
@@ -89,7 +93,8 @@ export function RevisionHistory(props: Props) {
     onScopeChange(nextScope);
   }
 
-  const showPagination = visibleOperations.length > itemsPerPage;
+  const showPagination =
+    visibleOperations.length > itemsPerPage && !(isLoading && hasNextPage);
 
   const PaginationComponent = showPagination ? (
     <div className="mt-4 flex w-full justify-end">

@@ -138,9 +138,9 @@ type Props = {
 
 `apps/connect/src/components/editors.tsx`:
 
-- `scopes` is `Object.keys(document.header.revision)`, falling back to `["global"]` when empty. `operationScope` is component state initialised to the first scope.
+- `scopes` is `Object.keys(document.header.revision)`, falling back to `["global"]` when empty. `operationScope` is component state initialised to `"global"` when the document carries that scope, otherwise the first scope.
 - The panel's operations come from `useDocumentOperations(documentId, operationScope, { enabled: revisionHistoryVisible })`.
-- The timeline feature keeps working through a second call, `useDocumentOperations(documentId, "global", { enabled: !!selectedTimelineItem })`, whose result feeds `getRevisionFromDate`. A small effect calls its `fetchNextPage` while `hasNextPage` is true and `isLoading` is false, so the whole global history is available to the date lookup as before. When the panel scope is `global`, both calls share one cache entry.
+- The timeline feature keeps working through a second call, `useDocumentOperations(documentId, "global", { enabled: !!selectedTimelineItem })`, whose result feeds `getRevisionFromDate`. A small effect calls its `fetchNextPage` while `hasNextPage` is true and `isLoading` is false, so the whole global history is available to the date lookup as before. When the panel scope is `global`, both calls share one cache entry. The timeline revision passed to the editor's `context` is `undefined` while that global history is still loading or has more pages, so read mode stays on the latest state instead of jumping to revision 0.
 - The `EditorLoader` that hid the panel while operations loaded is removed; `RevisionHistory` renders at once and shows its own loading state. The effect that called `refetch` when the panel opened is removed; `enabled` covers it.
 
 `test/test-fusion/src/components/todo-demo.tsx`:

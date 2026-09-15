@@ -87,6 +87,36 @@ describe("RevisionHistory", () => {
     ).toBeInTheDocument();
   });
 
+  it("hides the pagination bar while more pages are still loading", () => {
+    render(
+      <RevisionHistory
+        {...baseProps}
+        operations={globalOperations.slice(0, 5)}
+        itemsPerPage={2}
+        isLoading={true}
+        hasNextPage={true}
+        onLoadNextPage={vi.fn()}
+      />,
+    );
+    expect(screen.queryAllByText("Next")).toHaveLength(0);
+  });
+
+  it("shows the pagination bar once loading has caught up", () => {
+    render(
+      <RevisionHistory
+        {...baseProps}
+        operations={globalOperations.slice(0, 5)}
+        itemsPerPage={2}
+        isLoading={false}
+        hasNextPage={false}
+        onLoadNextPage={vi.fn()}
+      />,
+    );
+    // The panel renders the pagination bar both above and below the
+    // timeline, so "Next" appears twice while it is showing.
+    expect(screen.getAllByText("Next").length).toBeGreaterThan(0);
+  });
+
   it("lists the given scopes in the selector", () => {
     render(
       <RevisionHistory

@@ -53,6 +53,12 @@ function EditorError({
   );
 }
 
+// Prefers "global" when the document carries it, otherwise falls back to
+// the first available scope.
+function defaultScope(scopes: string[]): string {
+  return scopes.includes("global") ? "global" : scopes[0];
+}
+
 function OpenPackageManagerButton() {
   return (
     <PowerhouseButton
@@ -82,10 +88,12 @@ export const DocumentEditor: React.FC<Props> = (props) => {
     const keys = Object.keys(document?.header.revision ?? {});
     return keys.length > 0 ? keys : ["global"];
   }, [document?.header.revision]);
-  const [operationScope, setOperationScope] = useState(scopes[0]);
+  const [operationScope, setOperationScope] = useState(() =>
+    defaultScope(scopes),
+  );
   const selectedScope = scopes.includes(operationScope)
     ? operationScope
-    : scopes[0];
+    : defaultScope(scopes);
 
   // The history panel's operations: one scope, fetched only while the panel
   // is open. The panel asks for further pages itself.
@@ -298,11 +306,17 @@ export const DocumentEditor: React.FC<Props> = (props) => {
                 key={`${editorBundleKey}:${documentId}`}
                 context={{
                   readMode: !!selectedTimelineItem,
-                  selectedTimelineRevision: getRevisionFromDate(
-                    selectedTimelineItem?.startDate,
-                    selectedTimelineItem?.endDate,
-                    globalOperations,
-                  ),
+                  // Until the whole global history has paged in, the date lookup
+                  // cannot be answered; undefined leaves the editor on the latest
+                  // state in read mode instead of jumping to revision 0.
+                  selectedTimelineRevision:
+                    isLoadingGlobal || globalHasNextPage
+                      ? undefined
+                      : getRevisionFromDate(
+                          selectedTimelineItem?.startDate,
+                          selectedTimelineItem?.endDate,
+                          globalOperations,
+                        ),
                 }}
                 documentId={document.header.id}
               />
