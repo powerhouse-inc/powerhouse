@@ -3,6 +3,7 @@ import {
   type ActionEvaluations,
   AuthEnforcementDisabledError,
   consolidateSyncOperations,
+  type DocumentRelationship,
   DriveCollectionId,
   envelopesToSyncOperations,
   type IDriveClient,
@@ -58,6 +59,7 @@ export const MAX_OPERATIONS_PER_PAGE = 100;
 import {
   fromInputMaybe,
   serializeOperationForGraphQL,
+  toDocumentRelationshipResultPage,
   toGqlActionEvaluation,
   toDocumentModelResultPage,
   toGqlJobInfo,
@@ -73,6 +75,7 @@ import type {
   ActionEvaluations as GqlActionEvaluations,
   ActionInput,
   DocumentModelResultPage,
+  DocumentRelationshipResultPage,
   JobInfo as GqlJobInfo,
   PropagationMode as GqlPropagationMode,
   PhDocumentResultPage,
@@ -296,6 +299,133 @@ export async function documentIncomingRelationships(
       `Failed to convert incoming relationships to GraphQL: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
+}
+
+export async function documentOutgoingRelationshipEdges(
+  reactorClient: IReactorClient,
+  args: {
+    sourceIdentifier: string;
+    relationshipType?: string | null;
+    view?: {
+      branch?: string | null;
+      scopes?: readonly string[] | null;
+    } | null;
+    paging?: {
+      cursor?: string | null;
+      limit?: number | null;
+    } | null;
+  },
+  subject?: AuthSubject,
+): Promise<DocumentRelationshipResultPage> {
+  const view = toRelationshipViewFilter(args.view, subject);
+  const paging = toRelationshipPagingOptions(args.paging);
+
+  let result: PagedResults<DocumentRelationship>;
+  try {
+    result = await reactorClient.getOutgoingRelationshipEdges(
+      args.sourceIdentifier,
+      fromInputMaybe(args.relationshipType),
+      view,
+      paging,
+    );
+  } catch (error) {
+    throw new GraphQLError(
+      `Failed to fetch outgoing relationship edges: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+
+  try {
+    return toDocumentRelationshipResultPage(result);
+  } catch (error) {
+    throw new GraphQLError(
+      `Failed to convert outgoing relationship edges to GraphQL: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+}
+
+export async function documentIncomingRelationshipEdges(
+  reactorClient: IReactorClient,
+  args: {
+    targetIdentifier: string;
+    relationshipType?: string | null;
+    view?: {
+      branch?: string | null;
+      scopes?: readonly string[] | null;
+    } | null;
+    paging?: {
+      cursor?: string | null;
+      limit?: number | null;
+    } | null;
+  },
+  subject?: AuthSubject,
+): Promise<DocumentRelationshipResultPage> {
+  const view = toRelationshipViewFilter(args.view, subject);
+  const paging = toRelationshipPagingOptions(args.paging);
+
+  let result: PagedResults<DocumentRelationship>;
+  try {
+    result = await reactorClient.getIncomingRelationshipEdges(
+      args.targetIdentifier,
+      fromInputMaybe(args.relationshipType),
+      view,
+      paging,
+    );
+  } catch (error) {
+    throw new GraphQLError(
+      `Failed to fetch incoming relationship edges: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+
+  try {
+    return toDocumentRelationshipResultPage(result);
+  } catch (error) {
+    throw new GraphQLError(
+      `Failed to convert incoming relationship edges to GraphQL: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+}
+
+function toRelationshipViewFilter(
+  input:
+    | {
+        branch?: string | null;
+        scopes?: readonly string[] | null;
+      }
+    | null
+    | undefined,
+  subject?: AuthSubject,
+): ViewFilter | undefined {
+  if (!input) {
+    return subject ? { subject } : undefined;
+  }
+
+  return {
+    subject,
+    branch: fromInputMaybe(input.branch),
+    scopes: toMutableArray(fromInputMaybe(input.scopes)),
+  };
+}
+
+function toRelationshipPagingOptions(
+  input:
+    | {
+        cursor?: string | null;
+        limit?: number | null;
+      }
+    | null
+    | undefined,
+): PagingOptions | undefined {
+  if (!input) {
+    return undefined;
+  }
+
+  const cursor = fromInputMaybe(input.cursor);
+  const limit = fromInputMaybe(input.limit);
+  if (!cursor && !limit) {
+    return undefined;
+  }
+
+  return { cursor: cursor || "", limit: limit || 10 };
 }
 
 export async function findDocuments(
@@ -979,10 +1109,12 @@ export async function addRelationship(
     sourceIdentifier: string;
     targetIdentifier: string;
     relationshipType: string;
+    metadata?: Record<string, unknown> | null;
     branch?: string | null;
   },
 ): Promise<ReturnType<typeof toGqlPhDocument>> {
   const branch = fromInputMaybe(args.branch);
+  const metadata = fromInputMaybe(args.metadata);
 
   let result: PHDocument;
   try {
@@ -990,11 +1122,50 @@ export async function addRelationship(
       args.sourceIdentifier,
       args.targetIdentifier,
       args.relationshipType,
+      metadata,
       branch,
     );
   } catch (error) {
     throw new GraphQLError(
       `Failed to add relationship: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+
+  try {
+    return toGqlPhDocument(result);
+  } catch (error) {
+    throw new GraphQLError(
+      `Failed to convert document to GraphQL: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+}
+
+export async function updateRelationship(
+  reactorClient: IReactorClient,
+  args: {
+    sourceIdentifier: string;
+    targetIdentifier: string;
+    relationshipType: string;
+    metadata?: Record<string, unknown> | null;
+    branch?: string | null;
+  },
+): Promise<ReturnType<typeof toGqlPhDocument>> {
+  const branch = fromInputMaybe(args.branch);
+  // The action's metadata is required and nullable: omitting it clears the edge.
+  const metadata = fromInputMaybe(args.metadata) ?? null;
+
+  let result: PHDocument;
+  try {
+    result = await reactorClient.updateRelationship(
+      args.sourceIdentifier,
+      args.targetIdentifier,
+      args.relationshipType,
+      metadata,
+      branch,
+    );
+  } catch (error) {
+    throw new GraphQLError(
+      `Failed to update relationship: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
 
