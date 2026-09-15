@@ -42,6 +42,7 @@ import {
 } from "../shared/types.js";
 import { DocumentExistence } from "../storage/interfaces.js";
 import type {
+  DocumentRelationship,
   IDocumentIndexer,
   IDocumentView,
   OperationFilter,
@@ -596,6 +597,131 @@ export class ReactorClient implements IReactorClient {
     }
 
     return this.find({ ids: sourceIds }, view, paging, signal);
+  }
+
+  /**
+   * Retrieves the outgoing relationship edges of a source document, carrying the
+   * metadata and timestamps the far-end documents do not.
+   */
+  async getOutgoingRelationshipEdges(
+    sourceIdentifier: string,
+    relationshipType?: string,
+    view?: ViewFilter,
+    paging?: PagingOptions,
+    signal?: AbortSignal,
+  ): Promise<PagedResults<DocumentRelationship>> {
+    this.logger.verbose(
+      "getOutgoingRelationshipEdges(@sourceIdentifier, @relationshipType, @view, @paging)",
+      sourceIdentifier,
+      relationshipType,
+      view,
+      paging,
+    );
+
+    const sourceId = await this.documentView.resolveIdOrSlug(
+      sourceIdentifier,
+      view,
+      undefined,
+      signal,
+    );
+
+    return this.documentIndexer.getOutgoing(
+      sourceId,
+      relationshipType ? [relationshipType] : undefined,
+      paging,
+      undefined,
+      signal,
+    );
+  }
+
+  /**
+   * Retrieves the incoming relationship edges of a target document, carrying the
+   * metadata and timestamps the far-end documents do not.
+   */
+  async getIncomingRelationshipEdges(
+    targetIdentifier: string,
+    relationshipType?: string,
+    view?: ViewFilter,
+    paging?: PagingOptions,
+    signal?: AbortSignal,
+  ): Promise<PagedResults<DocumentRelationship>> {
+    this.logger.verbose(
+      "getIncomingRelationshipEdges(@targetIdentifier, @relationshipType, @view, @paging)",
+      targetIdentifier,
+      relationshipType,
+      view,
+      paging,
+    );
+
+    const targetId = await this.documentView.resolveIdOrSlug(
+      targetIdentifier,
+      view,
+      undefined,
+      signal,
+    );
+
+    return this.documentIndexer.getIncoming(
+      targetId,
+      relationshipType ? [relationshipType] : undefined,
+      paging,
+      undefined,
+      signal,
+    );
+  }
+
+  /**
+   * The metadata recorded against one relationship, or undefined when the edge
+   * does not exist or carries none.
+   */
+  private async readRelationshipMetadata(
+    sourceIdentifier: string,
+    targetIdentifier: string,
+    relationshipType: string,
+    view?: ViewFilter,
+    signal?: AbortSignal,
+  ): Promise<Record<string, unknown> | undefined> {
+    try {
+      const sourceId = await this.documentView.resolveIdOrSlug(
+        sourceIdentifier,
+        view,
+        undefined,
+        signal,
+      );
+      const targetId = await this.documentView.resolveIdOrSlug(
+        targetIdentifier,
+        view,
+        undefined,
+        signal,
+      );
+
+      let page = await this.documentIndexer.getOutgoing(
+        sourceId,
+        [relationshipType],
+        undefined,
+        undefined,
+        signal,
+      );
+
+      for (;;) {
+        const edge = page.results.find((rel) => rel.targetId === targetId);
+        if (edge) {
+          return edge.metadata;
+        }
+        if (!page.next) {
+          return undefined;
+        }
+        page = await page.next();
+      }
+    } catch (error) {
+      this.logger.verbose(
+        "readRelationshipMetadata(@sourceIdentifier, @targetIdentifier, @relationshipType) failed: @error",
+        sourceIdentifier,
+        targetIdentifier,
+        relationshipType,
+        error,
+      );
+      return undefined;
+    }
   }
 
   /**
@@ -1196,20 +1322,67 @@ export class ReactorClient implements IReactorClient {
     sourceIdentifier: string,
     targetIdentifier: string,
     relationshipType: string,
+    metadata?: Record<string, unknown>,
     branch: string = "main",
     signal?: AbortSignal,
   ): Promise<PHDocument> {
     this.logger.verbose(
-      "addRelationship(@sourceIdentifier, @targetIdentifier, @relationshipType, @branch)",
+      "addRelationship(@sourceIdentifier, @targetIdentifier, @relationshipType, @metadata, @branch)",
       sourceIdentifier,
       targetIdentifier,
       relationshipType,
+      metadata,
       branch,
     );
     const jobInfo = await this.reactor.addRelationship(
       sourceIdentifier,
       targetIdentifier,
       relationshipType,
+      metadata,
+      branch,
+      this.signer,
+      signal,
+    );
+
+    const completedJob = await this.waitForJob(jobInfo, signal);
+
+    if (completedJob.status === JobStatus.FAILED) {
+      throw new Error(completedJob.error?.message);
+    }
+
+    const result = await this.reactor.getByIdOrSlug<PHDocument>(
+      sourceIdentifier,
+      { branch },
+      completedJob.consistencyToken,
+      signal,
+    );
+    return this.gateDocument(result, { branch }, signal);
+  }
+
+  /**
+   * Replaces the metadata of an existing relationship and waits for completion.
+   */
+  async updateRelationship(
+    sourceIdentifier: string,
+    targetIdentifier: string,
+    relationshipType: string,
+    metadata: Record<string, unknown> | null,
+    branch: string = "main",
+    signal?: AbortSignal,
+  ): Promise<PHDocument> {
+    this.logger.verbose(
+      "updateRelationship(@sourceIdentifier, @targetIdentifier, @relationshipType, @metadata, @branch)",
+      sourceIdentifier,
+      targetIdentifier,
+      relationshipType,
+      metadata,
+      branch,
+    );
+    const jobInfo = await this.reactor.updateRelationship(
+      sourceIdentifier,
+      targetIdentifier,
+      relationshipType,
+      metadata,
       branch,
       this.signer,
       signal,
@@ -1293,6 +1466,17 @@ export class ReactorClient implements IReactorClient {
       relationshipType,
       branch,
     );
+
+    // A move is a remove followed by an add, and the add would otherwise write a
+    // fresh edge with no metadata. Read the edge first so the move carries it.
+    const metadata = await this.readRelationshipMetadata(
+      sourceParentIdentifier,
+      targetIdentifier,
+      relationshipType,
+      { branch },
+      signal,
+    );
+
     const removeJobInfo = await this.reactor.removeRelationship(
       sourceParentIdentifier,
       targetIdentifier,
@@ -1312,6 +1496,7 @@ export class ReactorClient implements IReactorClient {
       targetParentIdentifier,
       targetIdentifier,
       relationshipType,
+      metadata,
       branch,
       this.signer,
       signal,
