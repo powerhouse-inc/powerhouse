@@ -8,3 +8,4 @@ export * from "./vite-config.js";
 export * from "./vite-plugins/dynamic-base.js";
 export * from "./vite-plugins/ph-config.js";
 export * from "./vite-plugins/theme-boot.js";
+export * from "./vite-plugins/vendor-import-map.js";
