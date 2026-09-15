@@ -273,23 +273,33 @@ export function getSharedActionScope(actions: Action[]): string {
 /**
  * Signs an action with the provided signer.
  * If the action already has valid signatures, it is returned unchanged.
+ *
+ * `documentId` is the document the signed action will be applied to. When
+ * given, it is stamped into the action's context before signing, so the
+ * signature binds to that document and cannot be replayed onto another
+ * (#2894). A signer that does not read the context is unaffected.
  */
 export const signAction = async (
   action: Action,
   signer: ISigner,
   signal?: AbortSignal,
+  documentId?: string,
 ): Promise<Action> => {
   const existingSignatures = action.context?.signer?.signatures;
   if (existingSignatures && existingSignatures.length > 0) {
     return action;
   }
 
-  const signature: Signature = await signer.signAction(action, signal);
+  const toSign: Action = documentId
+    ? { ...action, context: { ...action.context, documentId } }
+    : action;
+
+  const signature: Signature = await signer.signAction(toSign, signal);
 
   return {
-    ...action,
+    ...toSign,
     context: {
-      ...action.context,
+      ...toSign.context,
       signer: {
         user: {
           address: signer.user?.address || "",
@@ -313,9 +323,10 @@ export const signActions = async (
   actions: Action[],
   signer: ISigner,
   signal?: AbortSignal,
+  documentId?: string,
 ): Promise<Action[]> => {
   return Promise.all(
-    actions.map((action) => signAction(action, signer, signal)),
+    actions.map((action) => signAction(action, signer, signal, documentId)),
   );
 };
 

@@ -1487,15 +1487,27 @@ export type ActionVerificationHandler = (
 ) => Promise<boolean>;
 
 /**
+ * The document scope a signature is being verified against. The verifier needs
+ * the document id to bind the action hash to the document it is being applied
+ * to; the branch is carried along so callers lose nothing.
+ */
+export type SignatureVerificationContext = {
+  documentId?: string;
+  branch?: string;
+};
+
+/**
  * Handler for verifying operation signatures.
  *
  * @param operation - The operation to verify
  * @param publicKey - The public key to verify against (from signer.app.key)
+ * @param context - The document scope, used to bind the action hash to the document.
  * @returns Promise that resolves to true if signature is valid, false otherwise
  */
 export type SignatureVerificationHandler = (
   operation: Operation,
   publicKey: string,
+  context?: SignatureVerificationContext,
 ) => Promise<boolean>;
 
 export type ENSInfo = {
