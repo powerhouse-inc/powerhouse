@@ -102,6 +102,7 @@ export const DocumentEditor: React.FC<Props> = (props) => {
     isLoading: isLoadingHistory,
     hasNextPage: historyHasNextPage,
     fetchNextPage: fetchNextHistoryPage,
+    error: historyError,
   } = useDocumentOperations(documentId, selectedScope, {
     enabled: revisionHistoryVisible,
     // A page fetch costs the same for 100 or 500 rows in the in-browser
@@ -118,6 +119,7 @@ export const DocumentEditor: React.FC<Props> = (props) => {
     hasNextPage: globalHasNextPage,
     isLoading: isLoadingGlobal,
     fetchNextPage: fetchNextGlobalPage,
+    error: globalError,
   } = useDocumentOperations(documentId, "global", {
     enabled: !!selectedTimelineItem,
     // A page fetch costs the same for 100 or 500 rows in the in-browser
@@ -125,14 +127,16 @@ export const DocumentEditor: React.FC<Props> = (props) => {
     limit: 500,
   });
   useEffect(() => {
-    if (!globalHasNextPage || isLoadingGlobal) return;
+    // An error ends the walk; we answer from what loaded rather than
+    // retrying forever.
+    if (!globalHasNextPage || isLoadingGlobal || globalError) return;
     // Deferred: the cache's fetch and the render it triggers are both
     // synchronous, so calling fetchNextGlobalPage here directly would chain
     // fetch -> render -> effect -> fetch into one uninterrupted task;
     // setTimeout(0) yields between pages so the UI stays responsive.
     const handle = window.setTimeout(fetchNextGlobalPage, 0);
     return () => window.clearTimeout(handle);
-  }, [globalHasNextPage, isLoadingGlobal, fetchNextGlobalPage]);
+  }, [globalHasNextPage, isLoadingGlobal, fetchNextGlobalPage, globalError]);
 
   const globalRevisionNumber = document?.header.revision.global ?? 0;
   const localRevisionNumber = document?.header.revision.local ?? 0;
@@ -288,6 +292,7 @@ export const DocumentEditor: React.FC<Props> = (props) => {
           isLoading={isLoadingHistory}
           hasNextPage={historyHasNextPage}
           onLoadNextPage={fetchNextHistoryPage}
+          error={historyError}
           scopes={scopes}
           scope={selectedScope}
           onScopeChange={setOperationScope}
@@ -318,9 +323,11 @@ export const DocumentEditor: React.FC<Props> = (props) => {
                   readMode: !!selectedTimelineItem,
                   // Until the whole global history has paged in, the date lookup
                   // cannot be answered; undefined leaves the editor on the latest
-                  // state in read mode instead of jumping to revision 0.
+                  // state in read mode instead of jumping to revision 0. A failed
+                  // page ends the walk, so we answer from what loaded rather than
+                  // waiting on a page that will never arrive.
                   selectedTimelineRevision:
-                    isLoadingGlobal || globalHasNextPage
+                    (isLoadingGlobal || globalHasNextPage) && !globalError
                       ? undefined
                       : getRevisionFromDate(
                           selectedTimelineItem?.startDate,

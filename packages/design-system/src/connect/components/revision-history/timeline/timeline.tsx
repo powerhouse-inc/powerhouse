@@ -61,6 +61,7 @@ export function Timeline(props: TimelineProps) {
   return (
     <div
       className="border-l border-border dark:border-none"
+      data-testid="revision-timeline"
       ref={parentRef}
       style={{
         height: `${rowVirtualizer.getTotalSize()}px`,

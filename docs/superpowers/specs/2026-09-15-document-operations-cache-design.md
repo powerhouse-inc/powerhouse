@@ -157,7 +157,7 @@ type Props = {
 | `packages/reactor-browser/src/graphql-client/entry.ts` | Export the new types |
 | `packages/reactor-browser/test/document-cache.test.tsx` | Cache operations tests |
 | `packages/reactor-browser/test/use-document-operations.test.tsx` | Hook tests |
-| `packages/design-system/src/connect/components/revision-history/revision-history.tsx` | New props, progressive loading, loading states |
+| `packages/design-system/src/connect/components/revision-history/revision-history.tsx` | New props, waits for the whole history, progress line, error line |
 | `packages/design-system/src/connect/components/revision-history/timeline/timeline.tsx` | Single `operations` prop |
 | `packages/design-system/src/connect/components/revision-history/header/header.tsx` | Pass `scopes` |
 | `packages/design-system/src/connect/components/revision-history/header/scope.tsx` | Dynamic items |

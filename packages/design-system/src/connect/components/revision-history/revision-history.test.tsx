@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { globalOperations } from "./mocks.js";
 import { RevisionHistory } from "./revision-history.js";
 
@@ -11,6 +11,10 @@ const baseProps = {
   onScopeChange: vi.fn(),
   onClose: vi.fn(),
 };
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 describe("RevisionHistory", () => {
   it("asks for the next page when more exist and nothing is loading", () => {
@@ -26,10 +30,10 @@ describe("RevisionHistory", () => {
       />,
     );
     // The auto-pager defers the call with setTimeout(0) so the status line
-    // paints between pages; run the timer to observe it.
+    // paints between pages; it must not have fired yet synchronously.
+    expect(onLoadNextPage).not.toHaveBeenCalled();
     vi.runAllTimers();
     expect(onLoadNextPage).toHaveBeenCalledTimes(1);
-    vi.useRealTimers();
   });
 
   it("does not ask for the next page while a page is loading", () => {
@@ -48,9 +52,46 @@ describe("RevisionHistory", () => {
     expect(onLoadNextPage).not.toHaveBeenCalled();
     expect(screen.getByText("Loading operations…")).toBeInTheDocument();
     expect(screen.getByText("3 loaded so far")).toBeInTheDocument();
-    expect(screen.queryByText(/Revision \d/)).not.toBeInTheDocument();
+    expect(screen.queryByTestId("revision-timeline")).not.toBeInTheDocument();
     expect(screen.queryAllByText("Next")).toHaveLength(0);
-    vi.useRealTimers();
+  });
+
+  it("shows the progress status between pages, with no timeline yet", () => {
+    vi.useFakeTimers();
+    render(
+      <RevisionHistory
+        {...baseProps}
+        operations={globalOperations.slice(0, 3)}
+        isLoading={false}
+        hasNextPage={true}
+        onLoadNextPage={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("Loading operations…")).toBeInTheDocument();
+    expect(screen.getByText("3 loaded so far")).toBeInTheDocument();
+    expect(screen.queryByTestId("revision-timeline")).not.toBeInTheDocument();
+  });
+
+  it("ends the walk and shows what loaded when a page fails", () => {
+    vi.useFakeTimers();
+    const onLoadNextPage = vi.fn();
+    render(
+      <RevisionHistory
+        {...baseProps}
+        operations={globalOperations.slice(0, 3)}
+        isLoading={false}
+        hasNextPage={true}
+        onLoadNextPage={onLoadNextPage}
+        error={new Error("boom")}
+      />,
+    );
+    expect(
+      screen.getByText("Could not load the rest of the history: boom"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Loading operations…")).not.toBeInTheDocument();
+    vi.runAllTimers();
+    expect(onLoadNextPage).not.toHaveBeenCalled();
+    expect(screen.getByTestId("revision-timeline")).toBeInTheDocument();
   });
 
   it("does not ask for the next page when there is none", () => {
@@ -126,6 +167,7 @@ describe("RevisionHistory", () => {
     // The panel renders the pagination bar both above and below the
     // timeline, so "Next" appears twice while it is showing.
     expect(screen.getAllByText("Next").length).toBeGreaterThan(0);
+    expect(screen.getByTestId("revision-timeline")).toBeInTheDocument();
   });
 
   it("lists the given scopes in the selector", () => {

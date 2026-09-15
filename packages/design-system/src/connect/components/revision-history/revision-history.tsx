@@ -38,6 +38,11 @@ export type RevisionHistoryScopedProps = CommonProps & {
   /** The selected scope. */
   readonly scope: string;
   readonly onScopeChange: (scope: string) => void;
+  /**
+   * The last page failed. Operations loaded so far are still shown, and the
+   * walk stops asking for more; there is no retry from inside the component.
+   */
+  readonly error?: Error;
 };
 
 /**
@@ -78,10 +83,11 @@ function ScopedRevisionHistory(props: RevisionHistoryScopedProps) {
     documentState,
     onCopyState,
     onCopyDocId,
+    error,
   } = props;
 
   useEffect(() => {
-    if (!hasNextPage || isLoading) return;
+    if (!hasNextPage || isLoading || error) return;
     // Deferred: the cache's fetch and the useSyncExternalStore-driven render
     // it triggers are both synchronous, so calling onLoadNextPage here
     // directly would chain fetch -> render -> effect -> fetch into one
@@ -89,11 +95,14 @@ function ScopedRevisionHistory(props: RevisionHistoryScopedProps) {
     // the close button stays responsive between pages.
     const handle = window.setTimeout(onLoadNextPage, 0);
     return () => window.clearTimeout(handle);
-  }, [hasNextPage, isLoading, onLoadNextPage]);
+  }, [hasNextPage, isLoading, onLoadNextPage, error]);
 
   // The history is incomplete: still fetching pages, or waiting on the very
-  // first one. While true, nothing is rendered but the progress status.
-  const isWalking = hasNextPage || (isLoading && operations.length === 0);
+  // first one. While true, nothing is rendered but the progress status. A
+  // failed page ends the walk instead of latching this forever: we render
+  // what loaded and a short failure line rather than spinning with no retry.
+  const isWalking =
+    !error && (hasNextPage || (isLoading && operations.length === 0));
 
   const visibleOperations = useMemo(
     () =>
@@ -178,11 +187,16 @@ function ScopedRevisionHistory(props: RevisionHistoryScopedProps) {
           <>
             {PaginationComponent}
             <div className="mt-4 flex flex-col items-center rounded-md bg-background p-4">
+              {error && (
+                <p className="mb-2 text-xs text-destructive">
+                  Could not load the rest of the history: {error.message}
+                </p>
+              )}
               {hasOperations ? (
                 <div className="grid grid-cols-[minmax(min-content,1018px)]">
                   <Timeline operations={pageItems} />
                 </div>
-              ) : (
+              ) : error ? null : (
                 <h3 className="my-40 text-foreground">
                   This document has no recorded operations yet.
                 </h3>
