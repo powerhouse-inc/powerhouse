@@ -1,17 +1,21 @@
 import type { VetraProcessorConfigType } from "@powerhousedao/config";
 import { VETRA_PROCESSOR_CONFIG_KEY } from "@powerhousedao/config";
 import type { IReactorClient } from "@powerhousedao/reactor";
+import { getConfig } from "@powerhousedao/shared/clis";
 import { addDefaultDrive } from "@powerhousedao/switchboard/utils";
+import { join } from "node:path";
 import { blue, green, red, yellow, type Color } from "colorette";
 import type { ILogger } from "document-model";
 import { childLogger, setLogLevel } from "document-model";
 import { createLogger } from "vite";
 import type { VetraArgs } from "../types.js";
-import { generateProjectDriveId } from "../utils.js";
+import { generateProjectDriveId, POWERHOUSE_CONFIG_FILE } from "../utils.js";
+import { wasFlagExplicitlyPassed } from "../utils/cli-connect-override.js";
 import {
   configureVetraGithubUrl,
   sleep,
 } from "../utils/configure-vetra-github-url.js";
+import { mergeDefaultDrives } from "../utils/merge-default-drives.js";
 import { parseDefaultDrivesUrl } from "../utils/parse-default-drives.js";
 import { resolveSwitchboardPort } from "../utils/resolve-switchboard-port.js";
 import {
@@ -366,12 +370,56 @@ export async function startVetra(args: VetraArgs) {
 
     // Start Connect pointing to the drive (unless disabled)
     if (!disableConnect) {
+      // --drives-public-base: advertise proxy-reachable drive URLs to the
+      // browser instead of the switchboard's localhost origin.
+      const publicBase = args.drivesPublicBase;
+      const browserDriveUrl = publicBase
+        ? rebaseDriveUrl(driveUrl, publicBase)
+        : driveUrl;
+      const browserPreviewDriveUrl =
+        previewDriveUrl && publicBase
+          ? rebaseDriveUrl(previewDriveUrl, publicBase)
+          : previewDriveUrl;
+
+      // The resolved default-drive list: vetra's own drives first (the
+      // Vetra drive and, in watch mode, the preview drive), then the
+      // project's configured `connect.drives.defaultDrives` from
+      // powerhouse.config.json (issue #3023). A drive vetra also starts is
+      // listed only once. An explicit `--default-drives-url` is appended on
+      // top of this list by buildStudioConnectOverride — it never replaces
+      // the vetra drives.
+      const vetraDriveEntries = [
+        ...(browserDriveUrl
+          ? [{ url: browserDriveUrl, name: null, icon: null }]
+          : []),
+        ...(browserPreviewDriveUrl
+          ? [{ url: browserPreviewDriveUrl, name: null, icon: null }]
+          : []),
+      ];
+      const configuredDefaultDrives =
+        getConfig(join(projectDir, POWERHOUSE_CONFIG_FILE)).connect?.drives
+          ?.defaultDrives ?? [];
+      const resolvedDefaultDrives = mergeDefaultDrives(
+        vetraDriveEntries,
+        configuredDefaultDrives,
+      );
+
       if (verbose) {
         console.log("Starting Connect...");
-        const drives = previewDriveUrl
-          ? `${driveUrl}, ${previewDriveUrl}`
-          : driveUrl;
-        console.log(`   ➜ Connect will use drives: ${drives}`);
+        // Mirror buildStudioConnectOverride: an explicit
+        // --default-drives-url is appended to the resolved list.
+        const flagDefaultDrives = wasFlagExplicitlyPassed("default-drives-url")
+          ? parseDefaultDrivesUrl(args.defaultDrivesUrl ?? "")
+          : [];
+        const printedDefaultDrives = mergeDefaultDrives(
+          resolvedDefaultDrives,
+          flagDefaultDrives,
+        );
+        console.log(
+          `   ➜ Connect will use default drives: ${printedDefaultDrives
+            .map((d) => ("url" in d ? d.url : `local:${d.id}`))
+            .join(", ")}`,
+        );
       }
       console.log();
       console.log(green(`Vetra Connect: http://localhost:${connectPort}`));
@@ -384,23 +432,9 @@ export async function startVetra(args: VetraArgs) {
       // runConnectStudio so it survives the `wasFlagExplicitlyPassed`
       // gating (the user didn't pass --default-drives-url; vetra is setting
       // it itself).
-      // --drives-public-base: advertise proxy-reachable drive URLs to the
-      // browser instead of the switchboard's localhost origin.
-      const publicBase = args.drivesPublicBase;
-      const browserDriveUrl = publicBase
-        ? rebaseDriveUrl(driveUrl, publicBase)
-        : driveUrl;
-      const browserPreviewDriveUrl =
-        previewDriveUrl && publicBase
-          ? rebaseDriveUrl(previewDriveUrl, publicBase)
-          : previewDriveUrl;
       const vetraDrivesOverride = {
         drives: {
-          defaultDrives: parseDefaultDrivesUrl(
-            browserPreviewDriveUrl
-              ? [browserDriveUrl, browserPreviewDriveUrl].join(",")
-              : browserDriveUrl,
-          ),
+          defaultDrives: resolvedDefaultDrives,
           preserveStrategy: "preserve-all" as const,
         },
       };
