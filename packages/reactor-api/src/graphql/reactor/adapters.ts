@@ -163,7 +163,6 @@ export function toGqlJobInfo(job: ClientJobInfo): GqlJobInfo {
     createdAt: job.createdAtUtcIso,
     completedAt: job.completedAtUtcIso ?? null,
     error: job.error?.message ?? null,
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     result: job.result ?? null,
   };
 }

@@ -188,7 +188,14 @@ type DocumentChangeContext {
 type JobChangeEvent {
   jobId: String!
   status: String!
-  result: JSONObject!
+
+  """
+  What the job produced, once it has produced anything. Nullable for the same
+  reason as `JobInfo.result`: a job that has not written yet has produced
+  nothing, and an empty object would claim otherwise.
+  """
+  result: JSONObject
+
   error: String
 }
 
