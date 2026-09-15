@@ -5,3 +5,4 @@ export * from "./pwa-config.js";
 export * from "./pwa-manifest.js";
 export * from "./runtime-config.js";
 export * from "./schema-fragments.js";
+export * from "./shared-deps.js";

@@ -34,6 +34,7 @@ export default defineConfig({
       "connect/entrypoint-seed.test.ts",
       "connect/pwa-config.test.ts",
       "connect/pwa-manifest.test.ts",
+      "connect/shared-deps.test.ts",
       "document-drive/**/*.test.ts",
       "document-model/action-transport.test.ts",
       "document-model/files.test.ts",
