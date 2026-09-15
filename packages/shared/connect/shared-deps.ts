@@ -32,6 +32,24 @@ export const SHARED_DEP_SPECIFIERS: readonly string[] = SHARED_DEPS.map(
   (d) => d.specifier,
 );
 
+/**
+ * The `@powerhousedao/shared` subpaths the production vendor bundles. The
+ * bare root is deliberately absent: its type barrel references node-only
+ * modules (`clis/`), which the current vite/rolldown cannot bundle for the
+ * browser — vendoring the root fails the build (a pre-existing latent
+ * issue). A package that imports the bare root is simply not shared; it
+ * bundles its own copy.
+ */
+export const SHARED_SUBPATHS: readonly string[] = [
+  "connect",
+  "document-model",
+  "processors",
+  "document-drive",
+  "registry",
+  "registry/urls",
+  "registry/manifest-slim",
+];
+
 /** Split a specifier into its package name and subpath ("" for a root). */
 export function parseDepSpec(spec: string): { pkg: string; sub: string } {
   if (spec.startsWith("@")) {
