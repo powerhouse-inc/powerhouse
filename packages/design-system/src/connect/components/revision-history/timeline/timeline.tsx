@@ -16,7 +16,10 @@ export function Timeline(props: TimelineProps) {
   const allRows = useMemo(() => makeRows([...operations]), [operations]);
   const [scrollAmount, setScrollAmount] = useState(0);
   const [numRowsToShow, setNumRowsToShow] = useState(initialNumRowsToShow);
-  const [rows, setRows] = useState(() => allRows.slice(0, numRowsToShow));
+  const rows = useMemo(
+    () => allRows.slice(0, numRowsToShow),
+    [allRows, numRowsToShow],
+  );
 
   const parentRef = useRef<HTMLDivElement>(null);
 
@@ -25,7 +28,7 @@ export function Timeline(props: TimelineProps) {
   const rowVirtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: (i) => allRows[i].height,
+    estimateSize: (i) => rows[i].height,
     gap: 8,
   });
 
@@ -37,10 +40,6 @@ export function Timeline(props: TimelineProps) {
       newNumRevisions > prev ? newNumRevisions : prev,
     );
   }, [scrollAmount, hasNextPage]);
-
-  useEffect(() => {
-    setRows(allRows.slice(0, numRowsToShow));
-  }, [allRows, numRowsToShow]);
 
   const handleScroll = (e: WheelEvent) => {
     setScrollAmount((prev) => {
