@@ -1,3 +1,14 @@
+## 6.2.3-dev.9 (2026-09-15)
+
+### 🚀 Features
+
+- **shared:** pieces as a module kind a package can ship ([647c5e6f3](https://github.com/powerhouse-inc/powerhouse/commit/647c5e6f3))
+- **shared:** export a package's pieces, as the build emits them ([02804351e](https://github.com/powerhouse-inc/powerhouse/commit/02804351e))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.8 (2026-09-15)
 
 ### 🩹 Fixes
