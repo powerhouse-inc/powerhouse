@@ -28,6 +28,75 @@ function unfence(text: string): string {
     .trim();
 }
 
+// Every top-level {...} or [...] in a string, in the order they appear.
+//
+// Scanned rather than matched with a regular expression because a brace inside
+// a string literal is not a brace: `{"note": "a } here"}` is one value, and a
+// regex that does not track quoting splits it.
+function jsonSpans(text: string): string[] {
+  const spans: string[] = [];
+  let depth = 0;
+  let start = -1;
+  let inString = false;
+  let escaped = false;
+  for (let index = 0; index < text.length; index++) {
+    const character = text[index];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (character === "\\") escaped = true;
+      else if (character === '"') inString = false;
+      continue;
+    }
+    if (character === '"') {
+      inString = true;
+      continue;
+    }
+    if (character === "{" || character === "[") {
+      if (depth === 0) start = index;
+      depth++;
+      continue;
+    }
+    if (character === "}" || character === "]") {
+      if (depth === 0) continue;
+      depth--;
+      if (depth === 0 && start >= 0) {
+        spans.push(text.slice(start, index + 1));
+        start = -1;
+      }
+    }
+  }
+  return spans;
+}
+
+// JSON out of whatever a model actually said.
+//
+// The prompt asks for JSON alone and a model may still reason out loud first:
+// a reasoning model answered this piece with two pages of deliberation and the
+// object on the last line, behind a leaked channel marker. Fences were already
+// tolerated here for the same reason — this is the same accommodation, one step
+// further.
+//
+// The LAST top-level value wins, because the pattern is deliberation first and
+// answer last; an example the model quoted from the prompt would otherwise be
+// preferred over the answer it worked out.
+export function parseModelJson(text: string): unknown {
+  const cleaned = unfence(text);
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    // Not JSON on its own; look for JSON inside it.
+  }
+  const spans = jsonSpans(cleaned);
+  for (let index = spans.length - 1; index >= 0; index--) {
+    try {
+      return JSON.parse(spans[index]);
+    } catch {
+      // A span that does not parse is prose that happened to hold a brace.
+    }
+  }
+  throw new SyntaxError("no JSON value found");
+}
+
 export function parseActions(
   value: unknown,
   blockName: string,
@@ -44,7 +113,7 @@ export function parseDispatchPayload(
   let documentId: string | undefined;
   if (typeof value === "string") {
     try {
-      value = JSON.parse(unfence(value));
+      value = parseModelJson(value);
     } catch {
       throw new Error(`${blockName}: "actions" is a string but not valid JSON`);
     }
@@ -76,10 +145,9 @@ export function parseCreatePayload(
 ): CreatePayload {
   let record = value;
   if (typeof record === "string") {
-    const text = unfence(record);
-    if (!text) return {};
+    if (unfence(record) === "") return {};
     try {
-      record = JSON.parse(text);
+      record = parseModelJson(record);
     } catch {
       throw new Error(`${blockName}: "payload" is a string but not valid JSON`);
     }
