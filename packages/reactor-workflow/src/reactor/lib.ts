@@ -15,6 +15,7 @@ import {
   type PieceResolver,
   type PieceStorePort,
   type ResolvedConnection,
+  type EgressPolicy,
   type SecretProvider,
   type WorkflowDefinition,
 } from "@powerhousedao/reactor-connectors";
@@ -131,6 +132,43 @@ export async function resolveConnectionWithSecrets(
   );
 }
 
+// Piece code runs under an egress policy that denies private address space —
+// loopback, the RFC1918 ranges, the cloud metadata endpoint — because a piece
+// config is an SSRF surface and a workflow author is not always the operator.
+//
+// A reactor co-hosted with what it integrates has to widen that, or every one
+// of its connections is unreachable: a local demo pointing at
+// http://localhost:18081 fails at the first poll, and so does the dropdown that
+// would have offered it. The widening names addresses rather than switching the
+// guard off, so allowing a demo's loopback services leaves the rest of private
+// space — and the metadata endpoint — denied.
+//
+//   WORKFLOW_EGRESS_ALLOW_ADDRESSES=127.0.0.1/32,::1/128
+//
+// Unset, the default policy applies and nothing private is reachable.
+const EGRESS_ALLOW_ENV = "WORKFLOW_EGRESS_ALLOW_ADDRESSES";
+
+// A bare address is one host, not a guess at the network around it.
+function asCidr(entry: string): string {
+  if (entry.includes("/")) return entry;
+  return entry.includes(":") ? `${entry}/128` : `${entry}/32`;
+}
+
+export function configuredEgress(): EgressPolicy | undefined {
+  const raw = process.env[EGRESS_ALLOW_ENV];
+  if (raw === undefined || raw.trim() === "") return undefined;
+  const allowAddresses = raw
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter((entry) => entry !== "")
+    .map(asCidr);
+  if (allowAddresses.length === 0) return undefined;
+  pieceLogger.info(
+    `Egress policy widened by ${EGRESS_ALLOW_ENV}: ${allowAddresses.join(", ")}`,
+  );
+  return { allowAddresses };
+}
+
 export const BUNDLE_CACHE_DIR = join(process.cwd(), ".ph", "ap-bundles");
 
 // Where a piece's ctx.files output and its staged attachment inputs live for
@@ -201,6 +239,9 @@ export function createBlockExecutor(
   return new CompositeBlockExecutor(
     new ActivepiecesBlockExecutor({
       cacheDir: BUNDLE_CACHE_DIR,
+      // Undefined leaves the connectors' default policy in force; a value only
+      // ever widens it.
+      egress: configuredEgress(),
       // Asked per step, for the same reason the binding is: one executor,
       // many runs, and each run has a child of its own.
       worker: currentPieceWorker,

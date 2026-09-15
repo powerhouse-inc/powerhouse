@@ -97,6 +97,7 @@ import { packagePieces } from "./piece-registry.js";
 import { SubgraphReactorPort } from "./reactor-port.js";
 import {
   BUNDLE_CACHE_DIR,
+  configuredEgress,
   createBlockExecutor,
   DocumentConnectionResolver,
   pieceResolver,
@@ -966,6 +967,8 @@ export class WorkflowRuntimeService {
         (await this.webhookEndpoint(workflowId))?.url,
       cacheDir: BUNDLE_CACHE_DIR,
       resolver: pieceResolver(),
+      // Trigger hooks reach the same services steps do.
+      egress: configuredEgress(),
       // Dev override; the 60s floor still applies.
       defaultIntervalMs:
         Number(process.env.WORKFLOW_POLL_INTERVAL_MS) || undefined,
@@ -1315,7 +1318,11 @@ export class WorkflowRuntimeService {
 
   // Held rather than inlined for the reason the supervisor holds one: a
   // deployment whose isolation lives elsewhere has to be able to widen it.
-  private designEgress: EgressPolicy | undefined = DEFAULT_EGRESS_POLICY;
+  // Design-time piece code — a dropdown's options(), a connection check — runs
+  // under the same policy a step does, widened the same way. Without that, the
+  // editor cannot offer the lines of a floor it is about to poll.
+  private designEgress: EgressPolicy | undefined =
+    configuredEgress() ?? DEFAULT_EGRESS_POLICY;
 
   private async pieceDescriptor(
     packageName: string,
