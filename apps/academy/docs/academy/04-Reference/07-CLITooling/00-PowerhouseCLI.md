@@ -442,6 +442,15 @@ and real-time processing with a "Vetra" drive or connection to remote drives.
 - 3. Starts Connect Studio pointing to the Switchboard for user interaction (unless disabled)
 - 4. Enables real-time updates, collaboration, and code generation
 
+Default drives:
+Connect's default drives resolve to the Vetra drive (and the preview drive
+when using --watch), plus any drives configured under
+connect.drives.defaultDrives in powerhouse.config.json - de-duplicated by
+URL, so configuring project drives does not cost you the Vetra drive.
+An explicit --default-drives-url is appended to that list (de-duplicated);
+it never replaces the Vetra drive.
+
+
 
 
 ### Options
@@ -469,7 +478,7 @@ and real-time processing with a "Vetra" drive or connection to remote drives.
 **Local Package** - Path to local package to load during development - Usage: `--local-package <str>`
 
 **Environment:** `PH_LOCAL_PACKAGE`
-**Default Drives Url** - The default drives url to use in connect - Usage: `--default-drives-url <str>`
+**Default Drives Url** - Comma-separated drive URLs to use as Connect's default drives. - Usage: `--default-drives-url <str>`
 
 **Drive Preserve Strategy** - The preservation strategy to use on default drives - Usage: `--drive-preserve-strategy <value>`
 
@@ -561,7 +570,7 @@ your project.
 **Local Package** - Path to local package to load during development - Usage: `--local-package <str>`
 
 **Environment:** `PH_LOCAL_PACKAGE`
-**Default Drives Url** - The default drives url to use in connect - Usage: `--default-drives-url <str>`
+**Default Drives Url** - Comma-separated drive URLs to use as Connect's default drives. - Usage: `--default-drives-url <str>`
 
 **Drive Preserve Strategy** - The preservation strategy to use on default drives - Usage: `--drive-preserve-strategy <value>`
 
@@ -670,7 +679,7 @@ Build has no read mode; passing only &lt;key&gt; without &lt;value&gt; errors ou
 **Local Package** - Path to local package to load during development - Usage: `--local-package <str>`
 
 **Environment:** `PH_LOCAL_PACKAGE`
-**Default Drives Url** - The default drives url to use in connect - Usage: `--default-drives-url <str>`
+**Default Drives Url** - Comma-separated drive URLs to use as Connect's default drives. - Usage: `--default-drives-url <str>`
 
 **Drive Preserve Strategy** - The preservation strategy to use on default drives - Usage: `--drive-preserve-strategy <value>`
 
@@ -729,7 +738,7 @@ NOTE: You must run `ph connect build` first
 **Local Package** - Path to local package to load during development - Usage: `--local-package <str>`
 
 **Environment:** `PH_LOCAL_PACKAGE`
-**Default Drives Url** - The default drives url to use in connect - Usage: `--default-drives-url <str>`
+**Default Drives Url** - Comma-separated drive URLs to use as Connect's default drives. - Usage: `--default-drives-url <str>`
 
 **Drive Preserve Strategy** - The preservation strategy to use on default drives - Usage: `--drive-preserve-strategy <value>`
 

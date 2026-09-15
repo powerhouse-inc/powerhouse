@@ -261,6 +261,15 @@ This command:
 2. Optionally connects to remote drives instead of creating a local drive
 3. Starts Connect Studio pointing to the Switchboard for user interaction (unless disabled)
 4. Enables real-time updates, collaboration, and code generation
+
+Default drives:
+Connect's default drives resolve to the Vetra drive (and the preview drive
+when using --watch), plus any drives configured under
+connect.drives.defaultDrives in powerhouse.config.json - de-duplicated by
+URL, so configuring project drives does not cost you the Vetra drive.
+An explicit --default-drives-url is appended to that list (de-duplicated);
+it never replaces the Vetra drive.
+
 ### options
 #### Switchboard Port <br>
 port to use for the Vetra Switchboard<br><br>
@@ -303,7 +312,7 @@ Path to local package to load during development<br><br>
 **usage:** `--local-package <str>`<br>
 **env**: `PH_LOCAL_PACKAGE`
 #### Default Drives Url <br>
-The default drives url to use in connect<br><br>
+Comma-separated drive URLs to use as Connect's default drives.<br><br>
 **usage:** `--default-drives-url <str>`<br>
 
 #### Drive Preserve Strategy <br>
@@ -432,7 +441,7 @@ Path to local package to load during development<br><br>
 **usage:** `--local-package <str>`<br>
 **env**: `PH_LOCAL_PACKAGE`
 #### Default Drives Url <br>
-The default drives url to use in connect<br><br>
+Comma-separated drive URLs to use as Connect's default drives.<br><br>
 **usage:** `--default-drives-url <str>`<br>
 
 #### Drive Preserve Strategy <br>
@@ -604,7 +613,7 @@ Path to local package to load during development<br><br>
 **usage:** `--local-package <str>`<br>
 **env**: `PH_LOCAL_PACKAGE`
 #### Default Drives Url <br>
-The default drives url to use in connect<br><br>
+Comma-separated drive URLs to use as Connect's default drives.<br><br>
 **usage:** `--default-drives-url <str>`<br>
 
 #### Drive Preserve Strategy <br>
@@ -674,7 +683,7 @@ Path to local package to load during development<br><br>
 **usage:** `--local-package <str>`<br>
 **env**: `PH_LOCAL_PACKAGE`
 #### Default Drives Url <br>
-The default drives url to use in connect<br><br>
+Comma-separated drive URLs to use as Connect's default drives.<br><br>
 **usage:** `--default-drives-url <str>`<br>
 
 #### Drive Preserve Strategy <br>
