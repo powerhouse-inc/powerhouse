@@ -104,6 +104,9 @@ export const DocumentEditor: React.FC<Props> = (props) => {
     fetchNextPage: fetchNextHistoryPage,
   } = useDocumentOperations(documentId, selectedScope, {
     enabled: revisionHistoryVisible,
+    // A page fetch costs the same for 100 or 500 rows in the in-browser
+    // reactor, so fewer, bigger round trips are strictly cheaper.
+    limit: 500,
   });
 
   // The timeline read-mode feature maps a selected date range to a global
@@ -117,11 +120,18 @@ export const DocumentEditor: React.FC<Props> = (props) => {
     fetchNextPage: fetchNextGlobalPage,
   } = useDocumentOperations(documentId, "global", {
     enabled: !!selectedTimelineItem,
+    // A page fetch costs the same for 100 or 500 rows in the in-browser
+    // reactor, so fewer, bigger round trips are strictly cheaper.
+    limit: 500,
   });
   useEffect(() => {
-    if (globalHasNextPage && !isLoadingGlobal) {
-      fetchNextGlobalPage();
-    }
+    if (!globalHasNextPage || isLoadingGlobal) return;
+    // Deferred: the cache's fetch and the render it triggers are both
+    // synchronous, so calling fetchNextGlobalPage here directly would chain
+    // fetch -> render -> effect -> fetch into one uninterrupted task;
+    // setTimeout(0) yields between pages so the UI stays responsive.
+    const handle = window.setTimeout(fetchNextGlobalPage, 0);
+    return () => window.clearTimeout(handle);
   }, [globalHasNextPage, isLoadingGlobal, fetchNextGlobalPage]);
 
   const globalRevisionNumber = document?.header.revision.global ?? 0;

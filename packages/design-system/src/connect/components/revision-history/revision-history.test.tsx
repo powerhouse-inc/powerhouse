@@ -14,6 +14,7 @@ const baseProps = {
 
 describe("RevisionHistory", () => {
   it("asks for the next page when more exist and nothing is loading", () => {
+    vi.useFakeTimers();
     const onLoadNextPage = vi.fn();
     render(
       <RevisionHistory
@@ -24,10 +25,15 @@ describe("RevisionHistory", () => {
         onLoadNextPage={onLoadNextPage}
       />,
     );
+    // The auto-pager defers the call with setTimeout(0) so the status line
+    // paints between pages; run the timer to observe it.
+    vi.runAllTimers();
     expect(onLoadNextPage).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
   });
 
   it("does not ask for the next page while a page is loading", () => {
+    vi.useFakeTimers();
     const onLoadNextPage = vi.fn();
     render(
       <RevisionHistory
@@ -38,8 +44,13 @@ describe("RevisionHistory", () => {
         onLoadNextPage={onLoadNextPage}
       />,
     );
+    vi.runAllTimers();
     expect(onLoadNextPage).not.toHaveBeenCalled();
-    expect(screen.getByText("Loading more operations…")).toBeInTheDocument();
+    expect(screen.getByText("Loading operations…")).toBeInTheDocument();
+    expect(screen.getByText("3 loaded so far")).toBeInTheDocument();
+    expect(screen.queryByText(/Revision \d/)).not.toBeInTheDocument();
+    expect(screen.queryAllByText("Next")).toHaveLength(0);
+    vi.useRealTimers();
   });
 
   it("does not ask for the next page when there is none", () => {

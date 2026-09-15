@@ -122,8 +122,13 @@ function useScopeOperations(
 /** Keeps paging `result` to completion while `enabled` is true. */
 function useLoadAllPages(result: DocumentOperationsResult, enabled: boolean) {
   useEffect(() => {
-    if (enabled && result.hasNextPage && !result.isLoading)
-      result.fetchNextPage();
+    if (!enabled || !result.hasNextPage || result.isLoading) return;
+    // Deferred: the cache's fetch and the render it triggers are both
+    // synchronous, so calling fetchNextPage here directly would chain
+    // fetch -> render -> effect -> fetch into one uninterrupted task;
+    // setTimeout(0) yields between pages so the UI stays responsive.
+    const handle = window.setTimeout(result.fetchNextPage, 0);
+    return () => window.clearTimeout(handle);
   }, [enabled, result.hasNextPage, result.isLoading, result.fetchNextPage]);
 }
 

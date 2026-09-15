@@ -55,9 +55,12 @@ export type RevisionHistoryProps =
   | RevisionHistoryLegacyProps;
 
 /**
- * The revision history panel. It renders the newest operation first while
- * the operations API pages oldest first, so it keeps asking for the next
- * page until none is left and renders what has arrived in the meantime.
+ * The revision history panel. Pages arrive oldest first while the timeline
+ * renders newest first, so rendering progressively would show operations in
+ * the wrong order until the last page landed and would repaint the whole
+ * timeline on every page in between. Instead the component keeps asking for
+ * the next page, showing "Loading operations…" and a running count, until
+ * the walk completes, then renders the pagination and timeline once.
  */
 function ScopedRevisionHistory(props: RevisionHistoryScopedProps) {
   const {
@@ -78,17 +81,28 @@ function ScopedRevisionHistory(props: RevisionHistoryScopedProps) {
   } = props;
 
   useEffect(() => {
-    if (hasNextPage && !isLoading) {
-      onLoadNextPage();
-    }
+    if (!hasNextPage || isLoading) return;
+    // Deferred: the cache's fetch and the useSyncExternalStore-driven render
+    // it triggers are both synchronous, so calling onLoadNextPage here
+    // directly would chain fetch -> render -> effect -> fetch into one
+    // uninterrupted task; setTimeout(0) yields so the status line paints and
+    // the close button stays responsive between pages.
+    const handle = window.setTimeout(onLoadNextPage, 0);
+    return () => window.clearTimeout(handle);
   }, [hasNextPage, isLoading, onLoadNextPage]);
+
+  // The history is incomplete: still fetching pages, or waiting on the very
+  // first one. While true, nothing is rendered but the progress status.
+  const isWalking = hasNextPage || (isLoading && operations.length === 0);
 
   const visibleOperations = useMemo(
     () =>
-      garbageCollect(sortOperations([...operations])).sort(
-        (a, b) => b.index - a.index,
-      ),
-    [operations],
+      isWalking
+        ? []
+        : garbageCollect(sortOperations([...operations])).sort(
+            (a, b) => b.index - a.index,
+          ),
+    [operations, isWalking],
   );
 
   const {
@@ -111,8 +125,7 @@ function ScopedRevisionHistory(props: RevisionHistoryScopedProps) {
     onScopeChange(nextScope);
   }
 
-  const showPagination =
-    visibleOperations.length > itemsPerPage && !(isLoading && hasNextPage);
+  const showPagination = visibleOperations.length > itemsPerPage;
 
   const PaginationComponent = showPagination ? (
     <div className="mt-4 flex w-full justify-end">
@@ -138,14 +151,6 @@ function ScopedRevisionHistory(props: RevisionHistoryScopedProps) {
 
   const hasOperations = visibleOperations.length > 0;
 
-  const EmptyState = isLoading ? (
-    <h3 className="my-40 text-foreground">Loading operations…</h3>
-  ) : (
-    <h3 className="my-40 text-foreground">
-      This document has no recorded operations yet.
-    </h3>
-  );
-
   return (
     <ConnectTooltipProvider>
       <div className="p-6">
@@ -160,22 +165,32 @@ function ScopedRevisionHistory(props: RevisionHistoryScopedProps) {
           onCopyState={onCopyState}
           onCopyDocId={onCopyDocId}
         />
-        {PaginationComponent}
-        <div className="mt-4 flex flex-col items-center rounded-md bg-background p-4">
-          {hasOperations ? (
-            <div className="grid grid-cols-[minmax(min-content,1018px)]">
-              <Timeline operations={pageItems} />
+        {isWalking ? (
+          <div className="mt-4 flex flex-col items-center rounded-md bg-background p-4">
+            <h3 className="my-40 text-foreground">Loading operations…</h3>
+            {operations.length > 0 && (
+              <p className="text-xs text-muted-foreground">
+                {operations.length} loaded so far
+              </p>
+            )}
+          </div>
+        ) : (
+          <>
+            {PaginationComponent}
+            <div className="mt-4 flex flex-col items-center rounded-md bg-background p-4">
+              {hasOperations ? (
+                <div className="grid grid-cols-[minmax(min-content,1018px)]">
+                  <Timeline operations={pageItems} />
+                </div>
+              ) : (
+                <h3 className="my-40 text-foreground">
+                  This document has no recorded operations yet.
+                </h3>
+              )}
             </div>
-          ) : (
-            EmptyState
-          )}
-          {hasOperations && isLoading && (
-            <p className="mt-4 text-xs text-muted-foreground">
-              Loading more operations…
-            </p>
-          )}
-        </div>
-        {PaginationComponent}
+            {PaginationComponent}
+          </>
+        )}
       </div>
     </ConnectTooltipProvider>
   );
@@ -205,9 +220,10 @@ function LegacyRevisionHistory(props: RevisionHistoryLegacyProps) {
 }
 
 /**
- * The revision history panel. It renders the newest operation first while
- * the operations API pages oldest first, so it keeps asking for the next
- * page until none is left and renders what has arrived in the meantime.
+ * The revision history panel. Pages arrive oldest first while the timeline
+ * renders newest first, so it waits for the whole history to load before
+ * rendering the timeline, showing "Loading operations…" and a running count
+ * in the meantime.
  *
  * Also accepts the deprecated `globalOperations`/`localOperations` pair
  * (see `RevisionHistoryLegacyProps`), toggling between them internally.
