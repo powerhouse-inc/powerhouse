@@ -12,7 +12,6 @@ import type { IOperationIndex } from "../../../src/cache/operation-index-types.j
 import type { IWriteCache } from "../../../src/cache/write/interfaces.js";
 import {
   BaseReadModel,
-  defaultReadModelIndexingConfig,
   type ReadModelIndexingConfig,
 } from "../../../src/read-models/base-read-model.js";
 import { KyselyDocumentView } from "../../../src/read-models/document-view.js";
@@ -135,11 +134,7 @@ describe("BaseReadModel idempotency", () => {
       operationIndex,
       mockWriteCache,
       consistencyTracker,
-      {
-        readModelId: READ_MODEL_ID,
-        rebuildStateOnInit: true,
-        indexing: defaultReadModelIndexingConfig,
-      },
+      { readModelId: READ_MODEL_ID, rebuildStateOnInit: true },
     );
 
     await spyModel.init();
@@ -181,11 +176,7 @@ describe("BaseReadModel idempotency", () => {
       operationIndex,
       mockWriteCache,
       consistencyTracker1,
-      {
-        readModelId: READ_MODEL_ID,
-        rebuildStateOnInit: true,
-        indexing: defaultReadModelIndexingConfig,
-      },
+      { readModelId: READ_MODEL_ID, rebuildStateOnInit: true },
     );
 
     await spyModel1.init();
@@ -213,11 +204,7 @@ describe("BaseReadModel idempotency", () => {
       operationIndex,
       mockWriteCache,
       consistencyTracker2,
-      {
-        readModelId: READ_MODEL_ID,
-        rebuildStateOnInit: true,
-        indexing: defaultReadModelIndexingConfig,
-      },
+      { readModelId: READ_MODEL_ID, rebuildStateOnInit: true },
     );
 
     await spyModel2.init();
@@ -232,11 +219,7 @@ describe("BaseReadModel idempotency", () => {
       operationIndex,
       mockWriteCache,
       consistencyTracker1,
-      {
-        readModelId: READ_MODEL_ID,
-        rebuildStateOnInit: true,
-        indexing: defaultReadModelIndexingConfig,
-      },
+      { readModelId: READ_MODEL_ID, rebuildStateOnInit: true },
     );
 
     await spyModel1.init();
@@ -309,11 +292,7 @@ describe("BaseReadModel idempotency", () => {
       operationIndex,
       mockWriteCache,
       consistencyTracker2,
-      {
-        readModelId: READ_MODEL_ID,
-        rebuildStateOnInit: true,
-        indexing: defaultReadModelIndexingConfig,
-      },
+      { readModelId: READ_MODEL_ID, rebuildStateOnInit: true },
     );
 
     await spyModel2.init();
@@ -340,11 +319,7 @@ describe("BaseReadModel idempotency", () => {
       operationIndex,
       mockWriteCache,
       consistencyTracker1,
-      {
-        readModelId: READ_MODEL_ID,
-        rebuildStateOnInit: true,
-        indexing: defaultReadModelIndexingConfig,
-      },
+      { readModelId: READ_MODEL_ID, rebuildStateOnInit: true },
     );
 
     await spyModel1.init();
@@ -401,11 +376,7 @@ describe("BaseReadModel idempotency", () => {
       operationIndex,
       mockWriteCache,
       consistencyTracker2,
-      {
-        readModelId: READ_MODEL_ID,
-        rebuildStateOnInit: true,
-        indexing: defaultReadModelIndexingConfig,
-      },
+      { readModelId: READ_MODEL_ID, rebuildStateOnInit: true },
     );
 
     await spyModel2.init();
@@ -456,11 +427,7 @@ describe("BaseReadModel idempotency", () => {
       operationIndex,
       mockWriteCache,
       new ConsistencyTracker(),
-      {
-        readModelId: READ_MODEL_ID,
-        rebuildStateOnInit: true,
-        indexing: defaultReadModelIndexingConfig,
-      },
+      { readModelId: READ_MODEL_ID, rebuildStateOnInit: true },
     );
     const indexSpy = vi.spyOn(spyModel, "indexOperations");
 
