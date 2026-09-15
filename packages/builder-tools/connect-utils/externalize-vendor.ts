@@ -59,9 +59,13 @@ export interface VendorPrebuildOptions {
   /** Filled with the failure cause when the prebuild returns null. */
   errorRef?: { message?: string };
   /**
-   * Vite `base` for the vendor build (chunk/asset URLs). Default: the
-   * dynamic-base placeholder (dev behavior). Import-map values stay
-   * base-relative; the consumer prefixes the base when injecting.
+   * The APP's base — the same string the app build uses (the dynamic-base
+   * placeholder, or a normalized deploy base like "/app/"). The vendor's own
+   * build base is this plus the vendor segment, so emitted asset URLs land
+   * under <app-base>__vendor__/. Default: the dynamic placeholder + segment
+   * (dev behavior). Import-map values stay base-relative; the production
+   * build strips the leading slash (values then resolve against the page URL
+   * under any deploy base), the dev flow prefixes its own base.
    */
   base?: string;
   /** NODE_ENV define for the vendor build (default "development"). */
@@ -608,7 +612,8 @@ function runBuildWorker(
  * The vendor build worker, written to disk and run as a subprocess. Loads
  * `vite` from the project and `connectDynamicBasePlugin` from builder-tools' own
  * built bundle (selfModulePath). argv: dirname, vendorDir, includeJSON,
- * urlPrefix, externalJSON, dynamicBase, selfModulePath, base, nodeEnv.
+ * urlPrefix, externalJSON, dynamicBase, selfModulePath, base (app base),
+ * nodeEnv.
  */
 const VENDOR_BUILD_WORKER = `
 import { createRequire } from 'node:module';
@@ -617,8 +622,11 @@ import { join, isAbsolute } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 const [dirname, vendorDir, includeJSON, urlPrefix, externalJSON, dynamicBase, selfModulePath, baseArg, nodeEnvArg] = process.argv.slice(2);
 // Trailing argv are optional (older callers): base defaults to the dynamic
-// placeholder behavior, nodeEnv to development.
-const base = baseArg ?? dynamicBase;
+// placeholder behavior, nodeEnv to development. baseArg is the APP base —
+// the same string the app build uses; the build base appends the vendor
+// segment so emitted asset URLs land under <app-base>__vendor__/.
+const segment = urlPrefix.replace(/^\\/+/, '');
+const base = baseArg ? baseArg + segment : dynamicBase;
 const nodeEnv = nodeEnvArg ?? 'development';
 const include = JSON.parse(includeJSON);
 const external = JSON.parse(externalJSON ?? '[]');
@@ -700,7 +708,9 @@ await build({
     'process.env.NODE_ENV': JSON.stringify(nodeEnv),
     // BASE_URL resolves to the deploy base (not the vendor prefix) so vendored
     // Connect's router basename + BASE_URL-relative fetches use the right path.
-    'import.meta.env.BASE_URL': JSON.stringify(DYNAMIC_BASE_PLACEHOLDER),
+    // The app base when provided (concrete or placeholder), the placeholder
+    // otherwise (dev flow — rewritten at serve time by the dynamic-base plugin).
+    'import.meta.env.BASE_URL': JSON.stringify(baseArg ?? DYNAMIC_BASE_PLACEHOLDER),
   },
   // phVendorResolve (pre) resolves bares from the worker; esmExternalRequirePlugin owns
   // react/virtual externalization; connectDynamicBasePlugin (post) rewrites the placeholder base.
