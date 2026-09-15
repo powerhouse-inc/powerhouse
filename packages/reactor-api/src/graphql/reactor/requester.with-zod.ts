@@ -13,6 +13,7 @@ import {
   ActionEvaluationsDTO,
   DocumentChangeEventDTO,
   DocumentModelResultPageDTO,
+  DocumentRelationshipResultPageDTO,
   DocumentWithChildrenAndOperationsDTO,
   DocumentWithChildrenDTO,
   JobChangeEventDTO,
@@ -61,6 +62,20 @@ const operationValidators: OperationValidators = {
     if (data.documentIncomingRelationships) {
       PHDocumentResultPageDTO.parse(
         data.documentIncomingRelationships as PhDocumentResultPage,
+      );
+    }
+  },
+  GetDocumentOutgoingRelationshipEdges: (data) => {
+    if (data.documentOutgoingRelationshipEdges) {
+      DocumentRelationshipResultPageDTO.parse(
+        data.documentOutgoingRelationshipEdges,
+      );
+    }
+  },
+  GetDocumentIncomingRelationshipEdges: (data) => {
+    if (data.documentIncomingRelationshipEdges) {
+      DocumentRelationshipResultPageDTO.parse(
+        data.documentIncomingRelationshipEdges,
       );
     }
   },
@@ -118,6 +133,11 @@ const operationValidators: OperationValidators = {
   AddRelationship: (data) => {
     if (data.addRelationship) {
       PHDocumentDTO.parse(data.addRelationship);
+    }
+  },
+  UpdateRelationship: (data) => {
+    if (data.updateRelationship) {
+      PHDocumentDTO.parse(data.updateRelationship);
     }
   },
   RemoveRelationship: (data) => {

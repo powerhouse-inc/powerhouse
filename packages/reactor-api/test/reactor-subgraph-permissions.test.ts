@@ -131,7 +131,41 @@ describe("ReactorSubgraph Permission Checks", () => {
       executeAsync: vi.fn().mockResolvedValue("job-123"),
       rename: vi.fn().mockResolvedValue(mockDocument),
       addRelationship: vi.fn().mockResolvedValue(mockParentDocument),
+      updateRelationship: vi.fn().mockResolvedValue(mockParentDocument),
       removeRelationship: vi.fn().mockResolvedValue(mockParentDocument),
+      getOutgoingRelationshipEdges: vi.fn().mockResolvedValue({
+        results: [
+          {
+            sourceId: "parent-123",
+            targetId: "readable-child",
+            relationshipType: "child",
+            metadata: { order: 1 },
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+          {
+            sourceId: "parent-123",
+            targetId: "secret-child",
+            relationshipType: "child",
+            metadata: { order: 2 },
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        ],
+        options: { limit: 10, cursor: "" },
+      }),
+      getIncomingRelationshipEdges: vi.fn().mockResolvedValue({
+        results: [
+          {
+            sourceId: "secret-parent",
+            targetId: "doc-123",
+            relationshipType: "child",
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        ],
+        options: { limit: 10, cursor: "" },
+      }),
       moveRelationship: vi.fn().mockResolvedValue({
         source: mockParentDocument,
         target: mockParentDocument,
@@ -318,6 +352,73 @@ describe("ReactorSubgraph Permission Checks", () => {
       await expect(callDocumentOutgoingRelationships(ctx)).rejects.toThrow(
         "Forbidden",
       );
+    });
+  });
+
+  // ============================================================
+  // Query: documentOutgoingRelationshipEdges / documentIncomingRelationshipEdges
+  // ============================================================
+  describe("Query: relationship edges", () => {
+    const callOutgoingEdges = (ctx: any) => {
+      const query = (reactorSubgraph.resolvers.Query as any)
+        ?.documentOutgoingRelationshipEdges;
+      return query(
+        null,
+        { sourceIdentifier: "parent-123", relationshipType: "child" },
+        ctx,
+      );
+    };
+
+    const callIncomingEdges = (ctx: any) => {
+      const query = (reactorSubgraph.resolvers.Query as any)
+        ?.documentIncomingRelationshipEdges;
+      return query(
+        null,
+        { targetIdentifier: "doc-123", relationshipType: "child" },
+        ctx,
+      );
+    };
+
+    it("should deny access when canRead resolves false on the anchor", async () => {
+      vi.mocked(mockAuthorizationService.canRead!).mockResolvedValue(false);
+      const ctx = createContext({ userAddress: "0xunpermitted" });
+
+      await expect(callOutgoingEdges(ctx)).rejects.toThrow("Forbidden");
+      await expect(callIncomingEdges(ctx)).rejects.toThrow("Forbidden");
+    });
+
+    it("should withhold edges whose far-end document is unreadable", async () => {
+      vi.mocked(mockAuthorizationService.canRead!).mockImplementation(
+        (documentId: string) => Promise.resolve(documentId !== "secret-child"),
+      );
+      const ctx = createContext({ userAddress: "0xpermitted" });
+
+      const result = await callOutgoingEdges(ctx);
+
+      expect(result.items).toHaveLength(1);
+      expect(result.items[0].targetId).toBe("readable-child");
+      expect(result.items[0].metadata).toEqual({ order: 1 });
+    });
+
+    it("should withhold incoming edges from an unreadable source", async () => {
+      vi.mocked(mockAuthorizationService.canRead!).mockImplementation(
+        (documentId: string) => Promise.resolve(documentId !== "secret-parent"),
+      );
+      const ctx = createContext({ userAddress: "0xpermitted" });
+
+      const result = await callIncomingEdges(ctx);
+
+      expect(result.items).toHaveLength(0);
+    });
+
+    it("should not filter for a supreme admin", async () => {
+      vi.mocked(mockAuthorizationService.isSupremeAdmin!).mockReturnValue(true);
+      vi.mocked(mockAuthorizationService.canRead!).mockResolvedValue(true);
+      const ctx = createContext({ userAddress: "0xadmin" });
+
+      const result = await callOutgoingEdges(ctx);
+
+      expect(result.items).toHaveLength(2);
     });
   });
 
@@ -602,6 +703,51 @@ describe("ReactorSubgraph Permission Checks", () => {
       const ctx = createContext({ userAddress: "0xunpermitted" });
 
       await expect(callMoveRelationship(ctx)).rejects.toThrow("Forbidden");
+    });
+  });
+
+  // ============================================================
+  // Mutation: updateRelationship — write access to the source document
+  // ============================================================
+  describe("Mutation: updateRelationship", () => {
+    const callUpdateRelationship = (ctx: any) => {
+      const mutation = (reactorSubgraph.resolvers.Mutation as any)
+        ?.updateRelationship;
+      return mutation(
+        null,
+        {
+          sourceIdentifier: "parent-123",
+          targetIdentifier: "doc-123",
+          relationshipType: "child",
+          metadata: { order: 2 },
+        },
+        ctx,
+      );
+    };
+
+    it("should allow when canWrite resolves true on the source", async () => {
+      vi.mocked(mockAuthorizationService.canWrite!).mockResolvedValue(true);
+      const ctx = createContext({ userAddress: "0xpermitted" });
+
+      const result = await callUpdateRelationship(ctx);
+
+      expect(result).toBeDefined();
+      expect(mockAuthorizationService.canWrite).toHaveBeenCalled();
+      expect(mockReactorClient.updateRelationship).toHaveBeenCalledWith(
+        "parent-123",
+        "doc-123",
+        "child",
+        { order: 2 },
+        undefined,
+      );
+    });
+
+    it("should deny when canWrite resolves false on the source", async () => {
+      vi.mocked(mockAuthorizationService.canWrite!).mockResolvedValue(false);
+      const ctx = createContext({ userAddress: "0xunpermitted" });
+
+      await expect(callUpdateRelationship(ctx)).rejects.toThrow("Forbidden");
+      expect(mockReactorClient.updateRelationship).not.toHaveBeenCalled();
     });
   });
 
