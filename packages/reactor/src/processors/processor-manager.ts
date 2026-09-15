@@ -13,7 +13,10 @@ import type { ILogger } from "document-model";
 import type { Kysely } from "kysely";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
-import { BaseReadModel } from "../read-models/base-read-model.js";
+import {
+  BaseReadModel,
+  unchunkedReadModelIndexingConfig,
+} from "../read-models/base-read-model.js";
 import type {
   DocumentViewDatabase,
   ProcessorCursorRow,
@@ -71,6 +74,7 @@ export class ProcessorManager
     super(db, operationIndex, writeCache, consistencyTracker, {
       readModelId: "processor-manager",
       rebuildStateOnInit: true,
+      indexing: unchunkedReadModelIndexingConfig,
     });
     this.logger = logger;
     this.driveContainerTypes = driveContainerTypes;

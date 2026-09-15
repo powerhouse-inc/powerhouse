@@ -6,7 +6,11 @@ import type { Kysely } from "kysely";
 import { v4 as uuidv4 } from "uuid";
 import type { IOperationIndex } from "../../cache/operation-index-types.js";
 import type { IWriteCache } from "../../cache/write/interfaces.js";
-import { BaseReadModel } from "../../read-models/base-read-model.js";
+import {
+  BaseReadModel,
+  defaultReadModelIndexingConfig,
+  type ReadModelIndexingConfig,
+} from "../../read-models/base-read-model.js";
 import { DOCUMENT_INDEXER_READ_MODEL } from "../../read-models/names.js";
 import type { DocumentViewDatabase } from "../../read-models/types.js";
 import { collectAllPages } from "../../shared/collect-all-pages.js";
@@ -28,6 +32,14 @@ import type {
   Database as StorageDatabase,
 } from "./types.js";
 
+function isRelationshipAction(actionType: string): boolean {
+  return (
+    actionType === "ADD_RELATIONSHIP" ||
+    actionType === "REMOVE_RELATIONSHIP" ||
+    actionType === "UPDATE_RELATIONSHIP"
+  );
+}
+
 export type IndexerDatabase = StorageDatabase &
   DocumentIndexerDatabase &
   DocumentViewDatabase;
@@ -43,22 +55,36 @@ export class KyselyDocumentIndexer
     operationIndex: IOperationIndex,
     writeCache: IWriteCache,
     consistencyTracker: IConsistencyTracker,
+    indexing: ReadModelIndexingConfig = defaultReadModelIndexingConfig,
   ) {
     super(
       db as unknown as Kysely<DocumentViewDatabase>,
       operationIndex,
       writeCache,
       consistencyTracker,
-      { readModelId: DOCUMENT_INDEXER_READ_MODEL, rebuildStateOnInit: false },
+      {
+        readModelId: DOCUMENT_INDEXER_READ_MODEL,
+        rebuildStateOnInit: false,
+        indexing,
+      },
     );
     this._db = db;
   }
 
+  /** Opens no transaction for a batch carrying no relationship operation. */
   protected override async commitOperations(
     items: OperationWithContext[],
   ): Promise<void> {
+    const relationshipOps = items.filter((item) =>
+      isRelationshipAction(item.operation.action.type),
+    );
+
+    if (relationshipOps.length === 0) {
+      return;
+    }
+
     await this._db.transaction().execute(async (trx) => {
-      for (const item of items) {
+      for (const item of relationshipOps) {
         const { operation } = item;
         const actionType = operation.action.type;
 

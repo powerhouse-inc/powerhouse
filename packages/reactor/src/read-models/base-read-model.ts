@@ -7,12 +7,39 @@ import type {
   ConsistencyCoordinate,
   ConsistencyToken,
 } from "../shared/types.js";
+import { yieldToMain } from "../shared/utils.js";
 import type { IReadModel } from "./interfaces.js";
 import type { DocumentViewDatabase } from "./types.js";
+
+/** Bounds on an indexing pass: one transaction, and the stall between yields. */
+export type ReadModelIndexingConfig = {
+  /** Maximum operations committed in a single transaction. */
+  commitChunkSize: number;
+  /** Maximum elapsed milliseconds before yielding between chunks. */
+  yieldDeadlineMs: number;
+};
+
+/** Small enough that a chunk's transaction rarely outlasts the yield deadline. */
+export const DEFAULT_COMMIT_CHUNK_SIZE = 100;
+
+/** Matches the executor's own default, so both paths yield on the same cadence. */
+export const DEFAULT_READ_MODEL_YIELD_DEADLINE_MS = 50;
+
+export const defaultReadModelIndexingConfig: ReadModelIndexingConfig = {
+  commitChunkSize: DEFAULT_COMMIT_CHUNK_SIZE,
+  yieldDeadlineMs: DEFAULT_READ_MODEL_YIELD_DEADLINE_MS,
+};
+
+/** For read models whose callers can observe where a batch was split. */
+export const unchunkedReadModelIndexingConfig: ReadModelIndexingConfig = {
+  commitChunkSize: Number.MAX_SAFE_INTEGER,
+  yieldDeadlineMs: DEFAULT_READ_MODEL_YIELD_DEADLINE_MS,
+};
 
 export type BaseReadModelConfig = {
   readModelId: string;
   rebuildStateOnInit: boolean;
+  indexing: ReadModelIndexingConfig;
 };
 
 /**
@@ -59,14 +86,21 @@ export class BaseReadModel implements IReadModel {
     }
   }
 
-  /**
-   * Template method: runs domain-specific commitOperations, then persists
-   * state and updates consistency tracking.
-   */
+  /** Commits the batch in chunks, yielding between them with no transaction open. */
   async indexOperations(items: OperationWithContext[]): Promise<void> {
     if (items.length === 0) return;
 
-    await this.commitOperations(items);
+    const { commitChunkSize, yieldDeadlineMs } = this.config.indexing;
+    let lastYield = performance.now();
+
+    for (let start = 0; start < items.length; start += commitChunkSize) {
+      if (start > 0 && performance.now() - lastYield > yieldDeadlineMs) {
+        await yieldToMain();
+        lastYield = performance.now();
+      }
+
+      await this.commitOperations(items.slice(start, start + commitChunkSize));
+    }
 
     await this.db.transaction().execute(async (trx) => {
       await this.saveState(trx, items);
