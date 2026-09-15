@@ -13,6 +13,7 @@ import {
   defaultBaseState,
   deriveOperationId,
   DOCUMENT_DELETED_REASON,
+  operationOutcome,
 } from "@powerhousedao/shared/document-model";
 import type { Job } from "../queue/types.js";
 import {
@@ -22,6 +23,8 @@ import {
 import type {
   ConsistencyCoordinate,
   ConsistencyToken,
+  JobResultSummary,
+  SubmittedActionResult,
 } from "../shared/types.js";
 import type { JobResult, TouchedStream } from "./types.js";
 
@@ -354,4 +357,52 @@ export class TouchedStreams {
   [Symbol.iterator](): IterableIterator<TouchedStream> {
     return this.streams.values();
   }
+}
+
+/**
+ * The ids of the actions the caller handed to a job. Load and reevaluation
+ * jobs write operations nobody submitted, so they report none.
+ */
+export function submittedActionIds(job: Job): string[] {
+  return job.kind === "mutation" ? job.actions.map((action) => action.id) : [];
+}
+
+/**
+ * Reports what became of each submitted action.
+ *
+ * A job's operations can include ones it only moved to a new index, so only
+ * those carrying a submitted action are reported. Returns undefined when the
+ * job submitted nothing, which keeps `JobInfo.result` null for the jobs that
+ * have no caller to answer to.
+ */
+export function summarizeSubmittedActions(
+  operations: OperationWithContext[],
+  submitted: string[] | undefined,
+): JobResultSummary | undefined {
+  if (!submitted || submitted.length === 0) {
+    return undefined;
+  }
+
+  const ids = new Set(submitted);
+  const actions: SubmittedActionResult[] = [];
+  for (const { operation, context } of operations) {
+    if (!ids.has(operation.action.id)) {
+      continue;
+    }
+    actions.push({
+      actionId: operation.action.id,
+      scope: context.scope,
+      index: operation.index,
+      ...operationOutcome(operation),
+    });
+  }
+
+  if (actions.length === 0) {
+    return undefined;
+  }
+
+  return {
+    actions,
+    allApplied: actions.every((action) => action.kind === "applied"),
+  };
 }
