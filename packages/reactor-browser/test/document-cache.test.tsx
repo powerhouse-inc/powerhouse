@@ -13,6 +13,7 @@ import {
   addPromiseState,
   DocumentCache,
   IDLE_OPERATIONS_ENTRY,
+  isOperationCache,
   readPromiseState,
 } from "../src/document-cache.js";
 import type {
@@ -863,16 +864,16 @@ function createFakeOperation(index: number, scope = "global"): Operation {
   } as Operation;
 }
 
-/** A page whose `next` is present only when `nextPage` is given. */
+/** A page whose `nextCursor` is present only when `cursor` is given. */
 function makePage(
   results: Operation[],
-  nextPage?: () => Promise<PagedResults<Operation>>,
+  cursor?: string,
   totalCount?: number,
 ): PagedResults<Operation> {
   return {
     results,
     options: { cursor: "", limit: results.length },
-    next: nextPage,
+    nextCursor: cursor,
     totalCount,
   };
 }
@@ -883,6 +884,7 @@ function makePage(
  */
 function createOperationsClient() {
   let subscribeCallback: ((event: DocumentChangeEvent) => void) | null = null;
+  const get = vi.fn();
   const getOperations =
     vi.fn<
       (
@@ -894,7 +896,7 @@ function createOperationsClient() {
       ) => Promise<PagedResults<Operation>>
     >();
   const client = {
-    get: vi.fn(),
+    get,
     subscribe: vi.fn(
       (_search: any, cb: (event: DocumentChangeEvent) => void) => {
         subscribeCallback = cb;
@@ -908,6 +910,7 @@ function createOperationsClient() {
   }
   return {
     client,
+    get,
     getOperations,
     emitEvent,
   };
@@ -989,13 +992,13 @@ describe("DocumentCache operations", () => {
     expect(getOperations).toHaveBeenCalledTimes(1);
   });
 
-  it("appends the next page through the page's next function", async () => {
+  it("appends the next page by requesting the stored cursor", async () => {
     const { client, getOperations } = createOperationsClient();
-    const secondPage = makePage([createFakeOperation(2)]);
-    const next = vi.fn(() => Promise.resolve(secondPage));
-    getOperations.mockResolvedValue(
-      makePage([createFakeOperation(0), createFakeOperation(1)], next),
-    );
+    getOperations
+      .mockResolvedValueOnce(
+        makePage([createFakeOperation(0), createFakeOperation(1)], "cursor-1"),
+      )
+      .mockResolvedValueOnce(makePage([createFakeOperation(2)]));
     const cache = new DocumentCache(client);
 
     cache.loadOperations("doc-1", "global", 2);
@@ -1007,25 +1010,62 @@ describe("DocumentCache operations", () => {
 
     cache.loadMoreOperations("doc-1", "global");
     expect(cache.getOperationsState("doc-1", "global").status).toBe("pending");
+    expect(getOperations).toHaveBeenNthCalledWith(
+      2,
+      "doc-1",
+      { scopes: ["global"] },
+      undefined,
+      { cursor: "cursor-1", limit: 2 },
+      expect.any(AbortSignal),
+    );
     await vi.waitFor(() => {
       expect(cache.getOperationsState("doc-1", "global").status).toBe(
         "success",
       );
     });
     const entry = cache.getOperationsState("doc-1", "global");
-    expect(next).toHaveBeenCalledTimes(1);
+    expect(getOperations).toHaveBeenCalledTimes(2);
     expect(entry.operations.map((op) => op.index)).toEqual([0, 1, 2]);
     expect(entry.hasNextPage).toBe(false);
 
     // Nothing more to load: no-op.
     cache.loadMoreOperations("doc-1", "global");
-    expect(next).toHaveBeenCalledTimes(1);
+    expect(getOperations).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not start a second loadMore while the next page is pending", async () => {
+    const { client, getOperations } = createOperationsClient();
+    const second = createDeferred<PagedResults<Operation>>();
+    getOperations
+      .mockResolvedValueOnce(makePage([createFakeOperation(0)], "cursor-1"))
+      .mockReturnValueOnce(second.promise);
+    const cache = new DocumentCache(client);
+
+    cache.loadOperations("doc-1", "global", 1);
+    await vi.waitFor(() => {
+      expect(cache.getOperationsState("doc-1", "global").hasNextPage).toBe(
+        true,
+      );
+    });
+
+    cache.loadMoreOperations("doc-1", "global");
+    cache.loadMoreOperations("doc-1", "global");
+    expect(getOperations).toHaveBeenCalledTimes(2);
+
+    second.resolve(makePage([createFakeOperation(1)]));
+    await vi.waitFor(() => {
+      expect(cache.getOperationsState("doc-1", "global").status).toBe(
+        "success",
+      );
+    });
+    expect(getOperations).toHaveBeenCalledTimes(2);
   });
 
   it("keeps loaded operations and records the reason when a page fails", async () => {
     const { client, getOperations } = createOperationsClient();
-    const next = vi.fn(() => Promise.reject(new Error("boom")));
-    getOperations.mockResolvedValue(makePage([createFakeOperation(0)], next));
+    getOperations
+      .mockResolvedValueOnce(makePage([createFakeOperation(0)], "cursor-1"))
+      .mockRejectedValueOnce(new Error("boom"));
     const cache = new DocumentCache(client);
 
     cache.loadOperations("doc-1", "global", 1);
@@ -1102,6 +1142,36 @@ describe("DocumentCache operations", () => {
     expect(doc2Listener).not.toHaveBeenCalled();
   });
 
+  it("drops a slug-keyed entry's operations on an Updated event for its id", async () => {
+    const { client, get, getOperations, emitEvent } = createOperationsClient();
+    get.mockResolvedValue(createMockDocument("doc-1"));
+    getOperations.mockResolvedValue(makePage([createFakeOperation(0)]));
+    const cache = new DocumentCache(client);
+
+    // Fetching by slug records the alias from "doc-1" (the event id) to
+    // "my-slug" (the key operations are cached and subscribed under).
+    await cache.get("my-slug");
+    const listener = vi.fn();
+    cache.subscribeOperations("my-slug", listener);
+    cache.loadOperations("my-slug", "global", 10);
+    await vi.waitFor(() => {
+      expect(cache.getOperationsState("my-slug", "global").status).toBe(
+        "success",
+      );
+    });
+    listener.mockClear();
+
+    emitEvent({
+      type: DocumentChangeType.Updated,
+      documents: [createMockDocument("doc-1")],
+    } as DocumentChangeEvent);
+
+    expect(cache.getOperationsState("my-slug", "global")).toBe(
+      IDLE_OPERATIONS_ENTRY,
+    );
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
   it("drops a document's scopes on a Deleted event", async () => {
     const { client, getOperations, emitEvent } = createOperationsClient();
     getOperations.mockResolvedValue(makePage([createFakeOperation(0)]));
@@ -1150,6 +1220,23 @@ describe("DocumentCache operations", () => {
     );
   });
 
+  it("does not surface an error for a request that was invalidated before it rejected", async () => {
+    const { client, getOperations } = createOperationsClient();
+    const first = createDeferred<PagedResults<Operation>>();
+    getOperations.mockReturnValue(first.promise);
+    const cache = new DocumentCache(client);
+
+    cache.loadOperations("doc-1", "global", 10);
+    cache.invalidateOperations("doc-1");
+    first.reject(new DOMException("aborted", "AbortError"));
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(cache.getOperationsState("doc-1", "global")).toBe(
+      IDLE_OPERATIONS_ENTRY,
+    );
+  });
+
   it("does nothing on invalidation of a document with no cached scopes", () => {
     const { client } = createOperationsClient();
     const cache = new DocumentCache(client);
@@ -1175,7 +1262,7 @@ describe("DocumentCache operations", () => {
     expect(listener).not.toHaveBeenCalled();
   });
 
-  it("aborts every in-flight operations request on dispose", () => {
+  it("aborts every in-flight operations request on dispose and resets entries", () => {
     const { client, getOperations } = createOperationsClient();
     getOperations.mockReturnValue(new Promise(() => {}));
     const cache = new DocumentCache(client);
@@ -1184,5 +1271,42 @@ describe("DocumentCache operations", () => {
     cache.dispose();
     expect(getOperations.mock.calls[0][4]!.aborted).toBe(true);
     expect(getOperations.mock.calls[1][4]!.aborted).toBe(true);
+    expect(cache.getOperationsState("doc-1", "global")).toBe(
+      IDLE_OPERATIONS_ENTRY,
+    );
+    expect(cache.getOperationsState("doc-2", "global")).toBe(
+      IDLE_OPERATIONS_ENTRY,
+    );
+  });
+
+  it("recognizes a DocumentCache as an operation cache", () => {
+    const { client } = createOperationsClient();
+    expect(isOperationCache(new DocumentCache(client))).toBe(true);
+  });
+
+  it("does not recognize a document-only cache as an operation cache", () => {
+    const documentOnlyCache = {
+      get: () => Promise.resolve({} as PHDocument),
+      getBatch: () => Promise.resolve([] as PHDocument[]),
+      subscribe: () => () => undefined,
+    };
+    expect(isOperationCache(documentOnlyCache)).toBe(false);
+  });
+
+  it("returns a referentially stable snapshot after a successful load", async () => {
+    const { client, getOperations } = createOperationsClient();
+    getOperations.mockResolvedValue(makePage([createFakeOperation(0)]));
+    const cache = new DocumentCache(client);
+
+    cache.loadOperations("doc-1", "global", 10);
+    await vi.waitFor(() => {
+      expect(cache.getOperationsState("doc-1", "global").status).toBe(
+        "success",
+      );
+    });
+
+    expect(cache.getOperationsState("doc-1", "global")).toBe(
+      cache.getOperationsState("doc-1", "global"),
+    );
   });
 });

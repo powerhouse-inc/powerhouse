@@ -94,8 +94,10 @@ export function isOperationCache(cache: unknown): cache is IOperationCache {
 type OperationsRequest = {
   /** Aborts the request in flight, or marks a settled one as superseded. */
   controller: AbortController;
-  /** The `next` of the last loaded page; `undefined` when there is none. */
-  next: (() => Promise<PagedResults<Operation>>) | undefined;
+  /** The cursor for the page after the last loaded one; `undefined` when there is none. */
+  nextCursor: string | undefined;
+  /** The page size the scope was loaded with, reused for every subsequent page. */
+  limit: number;
 };
 
 /**
@@ -128,7 +130,7 @@ export class DocumentCache implements IDocumentCache, IOperationCache {
     string,
     Map<string, OperationsCacheEntry>
   >();
-  /** In-flight controllers and `next` functions, by document id then scope. */
+  /** In-flight controllers and the next page's cursor/limit, by document id then scope. */
   private operationRequests = new Map<string, Map<string, OperationsRequest>>();
   private operationListeners = new Map<string, (() => void)[]>();
 
@@ -144,13 +146,21 @@ export class DocumentCache implements IDocumentCache, IOperationCache {
     if (event.type === DOCUMENT_CHANGE_TYPE.Deleted) {
       const documentId = event.context?.childId;
       if (documentId) {
+        // Read the alias keys before `handleDocumentDeleted` clears them, so a
+        // slug-keyed operations entry is invalidated too.
+        const keys = this.cacheKeysFor(documentId);
         this.handleDocumentDeleted(documentId);
-        this.invalidateOperations(documentId);
+        for (const key of keys) {
+          this.invalidateOperations(key);
+        }
       }
     } else if (event.type === DOCUMENT_CHANGE_TYPE.Updated) {
       for (const doc of event.documents) {
+        const keys = this.cacheKeysFor(doc.header.id);
         this.handleDocumentUpdated(doc.header.id).catch(console.warn);
-        this.invalidateOperations(doc.header.id);
+        for (const key of keys) {
+          this.invalidateOperations(key);
+        }
       }
     }
   }
@@ -319,7 +329,8 @@ export class DocumentCache implements IDocumentCache, IOperationCache {
     const controller = new AbortController();
     this.setOperationsRequest(documentId, scope, {
       controller,
-      next: undefined,
+      nextCursor: undefined,
+      limit,
     });
     this.setOperationsEntry(documentId, scope, {
       ...current,
@@ -336,6 +347,7 @@ export class DocumentCache implements IDocumentCache, IOperationCache {
         controller.signal,
       ),
       controller,
+      limit,
     );
   }
 
@@ -345,23 +357,36 @@ export class DocumentCache implements IDocumentCache, IOperationCache {
     if (
       current.status !== "success" ||
       !current.hasNextPage ||
-      !request?.next
+      !request?.nextCursor
     ) {
       return;
     }
-    // `next()` carries the signal of the page that produced it, so this
-    // controller cannot cancel the network request. It still marks the page
-    // as superseded: a result arriving after invalidation is discarded.
+    // Each page gets its own controller, so invalidation can abort whichever
+    // page is currently in flight.
     const controller = new AbortController();
+    const { nextCursor, limit } = request;
     this.setOperationsRequest(documentId, scope, {
       controller,
-      next: request.next,
+      nextCursor,
+      limit,
     });
     this.setOperationsEntry(documentId, scope, {
       ...current,
       status: "pending",
     });
-    this.settleOperationsPage(documentId, scope, request.next(), controller);
+    this.settleOperationsPage(
+      documentId,
+      scope,
+      this.client.getOperations(
+        documentId,
+        { scopes: [scope] },
+        undefined,
+        { cursor: nextCursor, limit },
+        controller.signal,
+      ),
+      controller,
+      limit,
+    );
   }
 
   invalidateOperations(documentId: string): void {
@@ -394,6 +419,7 @@ export class DocumentCache implements IDocumentCache, IOperationCache {
     scope: string,
     page: Promise<PagedResults<Operation>>,
     controller: AbortController,
+    limit: number,
   ): void {
     page.then(
       (result) => {
@@ -401,13 +427,14 @@ export class DocumentCache implements IDocumentCache, IOperationCache {
         const current = this.getOperationsState(documentId, scope);
         this.setOperationsRequest(documentId, scope, {
           controller,
-          next: result.next,
+          nextCursor: result.nextCursor,
+          limit,
         });
         this.setOperationsEntry(documentId, scope, {
           status: "success",
           operations: [...current.operations, ...result.results],
           error: undefined,
-          hasNextPage: result.next !== undefined,
+          hasNextPage: !!result.nextCursor,
           totalCount: result.totalCount,
         });
       },
@@ -468,5 +495,7 @@ export class DocumentCache implements IDocumentCache, IOperationCache {
       }
     }
     this.operationRequests.clear();
+    this.operationEntries.clear();
+    this.operationListeners.clear();
   }
 }
