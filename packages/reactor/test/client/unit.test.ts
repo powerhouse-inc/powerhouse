@@ -1164,6 +1164,7 @@ describe("ReactorClient Unit Tests", () => {
         sourceId,
         targetId,
         "child",
+        undefined,
         "main",
         mockSigner,
         undefined,
