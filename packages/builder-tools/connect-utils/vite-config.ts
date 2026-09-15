@@ -1,6 +1,7 @@
 import type { PowerhouseConfig } from "@powerhousedao/config";
 import { getConfig } from "@powerhousedao/config/node";
 import {
+  SHARED_DEP_SPECIFIERS,
   deepMerge,
   loadConnectEnv,
   mergePwaConfig,
@@ -42,6 +43,7 @@ import {
 import { connectPwaPlugins } from "./vite-plugins/pwa.js";
 import { reactSelfHostPlugin } from "./vite-plugins/react-self-host.js";
 import { connectThemeBootPlugin } from "./vite-plugins/theme-boot.js";
+import { vendorImportMapPlugin } from "./vite-plugins/vendor-import-map.js";
 
 export function getConnectHtmlTags(
   options: {
@@ -468,13 +470,28 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       ...plugins,
       // Externalize React so Connect + CDN editors share one instance via the
       // import map (reactSelfHostPlugin URLs); also rewrites external require().
-      esmExternalRequirePlugin({ external: reactExternal }),
+      // Production vendor builds additionally externalize the shared package
+      // set — the Connect app's own imports of them resolve through the
+      // import map at runtime instead of being bundled.
+      esmExternalRequirePlugin({
+        external: [
+          ...reactExternal,
+          ...(options.vendor && mode === "production"
+            ? SHARED_DEP_SPECIFIERS
+            : []),
+        ],
+      }),
       // Build-only: emit the React family into the dist + static import map, so
       // React is self-hosted (not esm.sh). Dev React for non-prod/debug builds.
       reactSelfHostPlugin({
         dirname: options.dirname,
         dev: mode !== "production" || isDebug,
       }),
+      // After the react map is injected: merge the production vendor's
+      // specifier entries into that same import map.
+      ...(options.vendor && mode === "production"
+        ? [vendorImportMapPlugin({ imports: options.vendor.imports })]
+        : []),
       connectFaviconPlugin({ faviconPath: options.favicon }),
       // Pre-paint theme boot in every emitted index.html (marker-idempotent
       // with the serve-time injection in the ph-clint connect proxy).

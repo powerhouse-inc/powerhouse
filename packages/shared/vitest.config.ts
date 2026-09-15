@@ -25,6 +25,7 @@ export default defineConfig({
     // their own runners / environment requirements; folding them in is a
     // separate effort.
     include: [
+      "clis/build-config.test.ts",
       "clis/source-config-schema.test.ts",
       "clis/project-ports.test.ts",
       "clis/project-env.test.ts",
@@ -34,6 +35,7 @@ export default defineConfig({
       "connect/entrypoint-seed.test.ts",
       "connect/pwa-config.test.ts",
       "connect/pwa-manifest.test.ts",
+      "connect/shared-deps.test.ts",
       "document-drive/**/*.test.ts",
       "document-model/action-transport.test.ts",
       "document-model/files.test.ts",

@@ -1,7 +1,18 @@
-import { getConnectBaseViteConfig } from "@powerhousedao/builder-tools";
+import {
+  DEFAULT_VENDOR_INCLUDE,
+  DYNAMIC_BASE_PLACEHOLDER,
+  getConnectBaseViteConfig,
+  prebuildConnectVendor,
+  type PrebuiltVendor,
+} from "@powerhousedao/builder-tools";
 import { getConfig } from "@powerhousedao/shared/clis";
-import { existsSync } from "node:fs";
-import { join } from "node:path";
+import {
+  normalizeBasePath,
+  SHARED_DEP_SPECIFIERS,
+  SHARED_SUBPATHS,
+} from "@powerhousedao/shared/connect";
+import { existsSync, mkdirSync, readdirSync, rmSync } from "node:fs";
+import { join, resolve } from "node:path";
 import type { InlineConfig } from "vite";
 import { build, mergeConfig } from "vite";
 import type { ConnectBuildArgs } from "../types.js";
@@ -37,7 +48,66 @@ export async function runConnectBuild(args: ConnectBuildArgs) {
   await runBuild({
     outDir: "dist",
     debug,
+    // Local packages built for Connect share deps with the app vendor, same
+    // as a plain `ph build`.
+    noSharedDeps: false,
   });
+
+  // Production shared-dependency vendor: prebuilt into <outDir>/__vendor__
+  // before the app build. On by default; PH_CONNECT_VENDOR=0|false disables
+  // it. A failed prebuild fails the build — production must not ship import
+  // map entries pointing at a vendor that was never built (the dev server
+  // keeps its own soft fallback in the dev plugin).
+  const outDirAbs = resolve(dirname, outDir);
+  let vendor: PrebuiltVendor | null = null;
+  if (isVendorEnabled()) {
+    // The vendor dir's parent must exist before the prebuild: its build
+    // lock is a sibling of the vendor dir, and the package build (runBuild)
+    // writes to a different out dir, so nothing else creates it yet.
+    mkdirSync(outDirAbs, { recursive: true });
+    const errorRef: { message?: string } = {};
+    // The same base string the app build uses below: the dynamic-base
+    // placeholder, or the normalized deploy base (CLI override wins over the
+    // source config). The vendor worker appends its own segment.
+    const phConfig = getConfig(join(dirname, "powerhouse.config.json"));
+    const connectBasePath =
+      connectOverride?.app?.basePath ?? phConfig.connect?.app?.basePath;
+    const appBase = dynamicBase
+      ? DYNAMIC_BASE_PLACEHOLDER
+      : connectBasePath
+        ? normalizeBasePath(connectBasePath)
+        : "/";
+    vendor = await prebuildConnectVendor({
+      dirname,
+      // The dev-proven heavy set ∪ the package-shared set: everything the
+      // app and packages externalize onto the vendor. The bare
+      // @powerhousedao/shared root cannot be vendored (its type barrel
+      // reaches node-only modules); its browser-safe subpaths are listed
+      // instead (SHARED_SUBPATHS).
+      include: [
+        ...new Set([
+          ...DEFAULT_VENDOR_INCLUDE,
+          ...SHARED_DEP_SPECIFIERS.filter((s) => s !== "@powerhousedao/shared"),
+          ...SHARED_SUBPATHS.map((s) => `@powerhousedao/shared/${s}`),
+        ]),
+      ],
+      vendorDir: join(outDirAbs, "__vendor__"),
+      base: appBase,
+      nodeEnv: "production",
+      errorRef,
+    });
+    if (!vendor) {
+      console.error(
+        `ph connect build: the shared-dependency vendor failed to build${
+          errorRef.message ? `:\n${errorRef.message}` : ""
+        }`,
+      );
+      throw new Error("shared-dependency vendor prebuild failed");
+    }
+    // Stale top-level output goes, the vendor stays: the app build below
+    // runs with emptyOutDir: false and must not wipe it.
+    cleanDistExcept(outDirAbs, ["__vendor__"]);
+  }
 
   const baseConfig = getConnectBaseViteConfig({
     mode,
@@ -46,17 +116,60 @@ export async function runConnectBuild(args: ConnectBuildArgs) {
     cliPackageRegistryUrl: packageRegistryUrl,
     dynamicBase,
     favicon,
+    // Vendor import-map entries are relative (leading slash stripped) so
+    // they resolve against the page URL under any deploy base — root or
+    // subpath, dynamic or concrete.
+    vendor: vendor
+      ? {
+          imports: Object.fromEntries(
+            Object.entries(vendor.imports).map(([spec, url]) => [
+              spec,
+              url.startsWith("/") ? url.slice(1) : url,
+            ]),
+          ),
+          versions: vendor.versions,
+        }
+      : undefined,
   });
 
   const buildConfig: InlineConfig = {
     build: {
       outDir,
+      // The vendor dir was prebuilt into the out dir above; the build must
+      // not empty it.
+      ...(vendor ? { emptyOutDir: false } : {}),
     },
   };
 
   const config = mergeConfig(baseConfig, buildConfig);
 
   await build(config);
+}
+
+/**
+ * The production vendor prebuild runs on every `ph connect build` unless
+ * disabled with PH_CONNECT_VENDOR=0 or false.
+ */
+export function isVendorEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
+  const raw = env.PH_CONNECT_VENDOR ?? "1";
+  return raw !== "0" && raw !== "false";
+}
+
+/**
+ * Remove every top-level entry of `dist` except the kept names. Used between
+ * the vendor prebuild and the app build so stale app output goes but the
+ * just-built vendor stays (the build then runs with emptyOutDir: false).
+ * Returns the number of entries removed.
+ */
+export function cleanDistExcept(dist: string, keep: string[] = []): number {
+  if (!existsSync(dist)) return 0;
+  let removed = 0;
+  for (const entry of readdirSync(dist)) {
+    if (keep.includes(entry)) continue;
+    rmSync(join(dist, entry), { recursive: true, force: true });
+    removed += 1;
+  }
+  return removed;
 }
 
 function assertLocalPackagesInstalled(projectPath: string) {
