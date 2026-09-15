@@ -134,31 +134,61 @@ export function readNodes(state: { nodes: Node[] }): Node[] {
 }
 
 /**
- * The given list sorted by id and frozen, the only shape state.nodes is ever
- * assigned. The freeze is what makes that assignment cheap: assigning a
- * draftable value to a mutative draft property queues a finalize pass that
- * walks every element of the assigned value, and the walk exits at its
- * Object.isFrozen check instead. Callers own the array they pass and its
- * elements must be plain nodes -- read the list with readNodes, build the new
- * list from it, and assign what this returns once. An element that is still a
- * draft would never be replaced by its final value, because the walk that does
- * that replacement is the one being skipped.
+ * The given array sorted by id and frozen, in place -- it takes ownership of
+ * the array it is handed, which is why it is private to this module and only
+ * ever given a list built at the call site. The freeze is what makes assigning
+ * the list to a mutative draft cheap: assigning a draftable value to a draft
+ * property queues a finalize pass that walks every element of the assigned
+ * value, and the walk exits at its Object.isFrozen check instead. Elements must
+ * be plain nodes -- an element that is still a draft would never be replaced by
+ * its final value, because the walk that does that replacement is the one being
+ * skipped.
  */
-export function sortNodesById(nodes: Node[]): Node[] {
+function freezeSortedById(nodes: Node[]): readonly Node[] {
   nodes.sort((a, b) => a.id.localeCompare(b.id));
-  Object.freeze(nodes);
-  return nodes;
+  return Object.freeze(nodes);
 }
 
 /**
- * The node list with a node added, ordered by id and frozen by sortNodesById.
- * The list is built and sorted as plain objects, so inside a mutative draft the
- * comparator never reads an element through the draft proxy. Pass the list read
- * with readNodes: the draft's own list would put child drafts in the result,
- * which the freeze then keeps mutative from resolving.
+ * A copy of the given list, sorted by id and frozen, which is the shape the
+ * node reducer assigns. Read the list with readNodes, build the new list from
+ * it, and pass what this returns to assignNodes. The copy is what keeps the
+ * freeze off the caller's array.
  */
-export function insertNodeSorted(nodes: readonly Node[], node: Node): Node[] {
-  return sortNodesById([...nodes, node]);
+export function sortNodesById(nodes: readonly Node[]): readonly Node[] {
+  return freezeSortedById([...nodes]);
+}
+
+/**
+ * The node list with a node added, ordered by id and frozen, in the same shape
+ * sortNodesById returns. The list is built and sorted as plain objects, so
+ * inside a mutative draft the comparator never reads an element through the
+ * draft proxy. Pass the list read with readNodes: the draft's own list would
+ * put child drafts in the result, which the freeze then keeps mutative from
+ * resolving.
+ */
+export function insertNodeSorted(
+  nodes: readonly Node[],
+  node: Node,
+): readonly Node[] {
+  return freezeSortedById([...nodes, node]);
+}
+
+/**
+ * Installs a node list as state.nodes. Every assignment the node reducer makes
+ * goes through here, and this is the one place a frozen array crosses into
+ * state: the generated DocumentDriveGlobalState types nodes as a mutable
+ * Node[], so the cast below is where that gap is paid rather than spread over
+ * the reducer. Consumers must treat drive.state.global.nodes as read-only --
+ * mutating it in place (push, sort, splice) throws in strict mode; copy it
+ * first, as readNodes does. Note that LOAD_STATE replaces a whole scope and can
+ * install a list this function never saw.
+ */
+export function assignNodes(
+  state: { nodes: Node[] },
+  nodes: readonly Node[],
+): void {
+  state.nodes = nodes as Node[];
 }
 
 export function handleTargetNameCollisions(params: {

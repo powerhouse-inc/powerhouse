@@ -1,13 +1,17 @@
 import type {
   CopyNodeInput,
   DocumentDriveGlobalState,
+  Node,
 } from "../../gen/schema/types.js";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import {
+  assignNodes,
   generateNodesCopy,
   getNextCopyNumber,
   handleTargetNameCollisions,
+  insertNodeSorted,
+  sortNodesById,
 } from "../utils.js";
 
 const baseNodes: DocumentDriveGlobalState["nodes"] = [
@@ -336,5 +340,48 @@ describe("handleTargetNameCollisions", () => {
     };
     // @ts-expect-error mock
     expect(handleTargetNameCollisions(params)).toBe("Reports (copy) 2");
+  });
+});
+
+describe("node list helpers", () => {
+  const unsorted: Node[] = [
+    { id: "z", name: "Z", parentFolder: null, kind: "folder" },
+    { id: "a", name: "A", parentFolder: null, kind: "folder" },
+  ];
+
+  it("sortNodesById returns a frozen copy and leaves the caller's array alone", () => {
+    const own = [...unsorted];
+
+    const sorted = sortNodesById(own);
+
+    expect(sorted.map((node) => node.id)).toEqual(["a", "z"]);
+    expect(Object.isFrozen(sorted)).toBe(true);
+    expect(own.map((node) => node.id)).toEqual(["z", "a"]);
+    expect(Object.isFrozen(own)).toBe(false);
+  });
+
+  it("insertNodeSorted returns a frozen list and leaves the caller's array alone", () => {
+    const own = [...unsorted];
+
+    const inserted = insertNodeSorted(own, {
+      id: "m",
+      name: "M",
+      parentFolder: null,
+      kind: "folder",
+    });
+
+    expect(inserted.map((node) => node.id)).toEqual(["a", "m", "z"]);
+    expect(Object.isFrozen(inserted)).toBe(true);
+    expect(own).toHaveLength(2);
+    expect(Object.isFrozen(own)).toBe(false);
+  });
+
+  it("assignNodes installs the list it is handed", () => {
+    const state = { nodes: [] as Node[] };
+    const sorted = sortNodesById(unsorted);
+
+    assignNodes(state, sorted);
+
+    expect(state.nodes).toBe(sorted);
   });
 });
