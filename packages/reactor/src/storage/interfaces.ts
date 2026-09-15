@@ -185,6 +185,16 @@ export interface IOperationStore {
    * Returns operations for a document/scope/branch whose index is greater
    * than the given revision.
    *
+   * `paging.cursor` is opaque to callers: treat it only as the value
+   * returned in `nextCursor` from a previous page, never construct or
+   * interpret it directly. An implementation must never emit a `nextCursor`
+   * equal to the start-of-stream sentinel ("0"), since a caller that walks
+   * `nextCursor` to exhaustion would read that as "start over" and loop
+   * forever. The reference encoding (used by the Kysely and Hypercore
+   * stores) is the index to resume from, i.e. the last returned row's index
+   * plus one, so a page that happens to end at index 0 still produces a
+   * cursor distinguishable from the start sentinel.
+   *
    * @param documentId - The document id
    * @param scope - The operation scope
    * @param branch - The branch name
@@ -220,6 +230,16 @@ export interface IOperationStore {
 
   /**
    * Gets operations that may conflict with incoming operations during a load.
+   *
+   * `paging.cursor` is opaque to callers: treat it only as the value
+   * returned in `nextCursor` from a previous page, never construct or
+   * interpret it directly. An implementation must never emit a `nextCursor`
+   * equal to the start-of-stream sentinel ("0"), since a caller that walks
+   * `nextCursor` to exhaustion would read that as "start over" and loop
+   * forever. The reference encoding (used by the Kysely and Hypercore
+   * stores) is the index to resume from, i.e. the last returned row's index
+   * plus one, so a page that happens to end at index 0 still produces a
+   * cursor distinguishable from the start sentinel.
    *
    * @param documentId - The document id
    * @param scope - The scope to query

@@ -427,6 +427,53 @@ describe("HypercoreOperationStore", () => {
       expect(page2.results[1].index).toBe(4);
       expect(page2.nextCursor).toBeUndefined();
     });
+
+    it("walks to exhaustion without looping when a page ends at index 0", async () => {
+      const documentId = generateId();
+      const documentType = "powerhouse/test-doc";
+
+      for (let i = 0; i < 3; i++) {
+        await store.apply(
+          documentId,
+          documentType,
+          "global",
+          "main",
+          i,
+          (txn) => {
+            txn.addOperations(
+              makeOp(i, {
+                timestampUtcMs: new Date(Date.now() + i * 1000).toISOString(),
+              }),
+            );
+          },
+        );
+      }
+
+      const pages: number[][] = [];
+      let cursor: string | undefined = "";
+      let iterations = 0;
+
+      while (cursor !== undefined) {
+        iterations++;
+        if (iterations > 10) {
+          throw new Error("cursor walk did not terminate within 10 iterations");
+        }
+
+        const page = await store.getSince(
+          documentId,
+          "global",
+          "main",
+          -1,
+          undefined,
+          { cursor, limit: 1 },
+        );
+
+        pages.push(page.results.map((op) => op.index));
+        cursor = page.nextCursor;
+      }
+
+      expect(pages).toEqual([[0], [1], [2]]);
+    });
   });
 
   describe("getSinceId", () => {
@@ -492,6 +539,42 @@ describe("HypercoreOperationStore", () => {
       expect(page3.results).toHaveLength(1);
       expect(page3.nextCursor).toBeUndefined();
     });
+
+    it("walks to exhaustion without looping when a page ends at ordinal 0", async () => {
+      const documentId = generateId();
+      const documentType = "powerhouse/test-doc";
+
+      for (let i = 0; i < 3; i++) {
+        await store.apply(
+          documentId,
+          documentType,
+          "global",
+          "main",
+          i,
+          (txn) => {
+            txn.addOperations(makeOp(i));
+          },
+        );
+      }
+
+      const pages: number[][] = [];
+      let cursor: string | undefined = "";
+      let iterations = 0;
+
+      while (cursor !== undefined) {
+        iterations++;
+        if (iterations > 10) {
+          throw new Error("cursor walk did not terminate within 10 iterations");
+        }
+
+        const page = await store.getSinceId(-1, { cursor, limit: 1 });
+
+        pages.push(page.results.map((op) => op.context.ordinal));
+        cursor = page.nextCursor;
+      }
+
+      expect(pages).toEqual([[0], [1], [2]]);
+    });
   });
 
   describe("getConflicting", () => {
@@ -556,6 +639,53 @@ describe("HypercoreOperationStore", () => {
         new Date("2025-01-01").toISOString(),
       );
       expect(result.results).toHaveLength(0);
+    });
+
+    it("walks to exhaustion without looping when a page ends at index 0", async () => {
+      const documentId = generateId();
+      const documentType = "powerhouse/test-doc";
+      const baseTime = Date.now();
+
+      for (let i = 0; i < 3; i++) {
+        await store.apply(
+          documentId,
+          documentType,
+          "global",
+          "main",
+          i,
+          (txn) => {
+            txn.addOperations(
+              makeOp(i, {
+                timestampUtcMs: new Date(baseTime + i * 1000).toISOString(),
+              }),
+            );
+          },
+        );
+      }
+
+      const pages: number[][] = [];
+      let cursor: string | undefined = "";
+      let iterations = 0;
+
+      while (cursor !== undefined) {
+        iterations++;
+        if (iterations > 10) {
+          throw new Error("cursor walk did not terminate within 10 iterations");
+        }
+
+        const page = await store.getConflicting(
+          documentId,
+          "global",
+          "main",
+          new Date(baseTime).toISOString(),
+          { cursor, limit: 1 },
+        );
+
+        pages.push(page.results.map((op) => op.index));
+        cursor = page.nextCursor;
+      }
+
+      expect(pages).toEqual([[0], [1], [2]]);
     });
   });
 

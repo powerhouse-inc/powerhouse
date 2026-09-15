@@ -14,6 +14,7 @@ export const Default: Story = {
   args: {
     title: "MakerDAO/Monetalis RWA Report 050724",
     scope: "global",
+    scopes: ["global", "local"],
     docId: "ulIcp/LL8qjML1kOWchprJ4oAJM=",
     onChangeScope: () => {},
     onClose: () => {},

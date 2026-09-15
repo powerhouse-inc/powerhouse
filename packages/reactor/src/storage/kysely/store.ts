@@ -450,6 +450,14 @@ export class KyselyOperationStore implements IOperationStore {
     return false;
   }
 
+  /**
+   * The paging cursor here encodes the index to resume from (one past the
+   * last row returned), not the last row's own index. This keeps "0" an
+   * unambiguous start-of-stream sentinel even when a page ends at index 0
+   * (e.g. `limit: 1` on a fresh stream), which would otherwise make
+   * `nextCursor` equal the start cursor and loop a caller that walks pages
+   * forever.
+   */
   async getSince(
     documentId: string,
     scope: string,
@@ -500,8 +508,10 @@ export class KyselyOperationStore implements IOperationStore {
 
     if (paging) {
       const cursorValue = Number.parseInt(paging.cursor, 10);
-      if (cursorValue > 0) {
-        query = query.where("index", ">", cursorValue);
+      // The cursor is the index to resume from; "0" (or anything unparsable)
+      // means the start of the stream and filters nothing.
+      if (Number.isFinite(cursorValue) && cursorValue > 0) {
+        query = query.where("index", ">=", cursorValue);
       }
 
       if (paging.limit) {
@@ -514,7 +524,7 @@ export class KyselyOperationStore implements IOperationStore {
     return paginateRows(
       rows,
       paging,
-      (row) => row.index,
+      (row) => row.index + 1,
       (row) => this.rowToOperation(row),
       (cursor, limit) =>
         this.getSince(
@@ -567,6 +577,12 @@ export class KyselyOperationStore implements IOperationStore {
     );
   }
 
+  /**
+   * The paging cursor here encodes the index to resume from (one past the
+   * last row returned), not the last row's own index, for the same reason as
+   * `getSince`: a page ending at index 0 must not produce a cursor that is
+   * indistinguishable from the start-of-stream sentinel.
+   */
   async getConflicting(
     documentId: string,
     scope: string,
@@ -588,8 +604,10 @@ export class KyselyOperationStore implements IOperationStore {
 
     if (paging) {
       const cursorValue = Number.parseInt(paging.cursor, 10);
-      if (cursorValue > 0) {
-        query = query.where("index", ">", cursorValue);
+      // The cursor is the index to resume from; "0" (or anything unparsable)
+      // means the start of the stream and filters nothing.
+      if (Number.isFinite(cursorValue) && cursorValue > 0) {
+        query = query.where("index", ">=", cursorValue);
       }
 
       if (paging.limit) {
@@ -602,7 +620,7 @@ export class KyselyOperationStore implements IOperationStore {
     return paginateRows(
       rows,
       paging,
-      (row) => row.index,
+      (row) => row.index + 1,
       (row) => this.rowToOperation(row),
       (cursor, limit) =>
         this.getConflicting(

@@ -7,19 +7,19 @@ import { makeRows } from "../utils.js";
 import { Day } from "./day.js";
 
 export type TimelineProps = {
-  readonly localOperations: Operation[];
-  readonly globalOperations: Operation[];
-  readonly scope: string;
+  readonly operations: readonly Operation[];
 };
 
 export function Timeline(props: TimelineProps) {
-  const { localOperations, globalOperations, scope } = props;
-  const operations = scope === "local" ? localOperations : globalOperations;
+  const { operations } = props;
   const initialNumRowsToShow = 100;
-  const allRows = useMemo(() => makeRows(operations), [operations]);
+  const allRows = useMemo(() => makeRows([...operations]), [operations]);
   const [scrollAmount, setScrollAmount] = useState(0);
   const [numRowsToShow, setNumRowsToShow] = useState(initialNumRowsToShow);
-  const [rows, setRows] = useState(() => allRows.slice(0, numRowsToShow));
+  const rows = useMemo(
+    () => allRows.slice(0, numRowsToShow),
+    [allRows, numRowsToShow],
+  );
 
   const parentRef = useRef<HTMLDivElement>(null);
 
@@ -28,7 +28,7 @@ export function Timeline(props: TimelineProps) {
   const rowVirtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: (i) => allRows[i].height,
+    estimateSize: (i) => rows[i].height,
     gap: 8,
   });
 
@@ -40,10 +40,6 @@ export function Timeline(props: TimelineProps) {
       newNumRevisions > prev ? newNumRevisions : prev,
     );
   }, [scrollAmount, hasNextPage]);
-
-  useEffect(() => {
-    setRows(allRows.slice(0, numRowsToShow));
-  }, [allRows, numRowsToShow]);
 
   const handleScroll = (e: WheelEvent) => {
     setScrollAmount((prev) => {
@@ -65,6 +61,7 @@ export function Timeline(props: TimelineProps) {
   return (
     <div
       className="border-l border-border dark:border-none"
+      data-testid="revision-timeline"
       ref={parentRef}
       style={{
         height: `${rowVirtualizer.getTotalSize()}px`,
