@@ -822,6 +822,141 @@ describe.each(testFsBackends)("KyselyOperationStore [$name]", ({ backend }) => {
     });
   });
 
+  describe("getRevisions", () => {
+    const documentType = "powerhouse/document-drive";
+
+    async function writeAt(
+      documentId: string,
+      scope: string,
+      index: number,
+      timestampUtcMs = "2026-01-01T00:00:00.000Z",
+      branch = "main",
+    ): Promise<void> {
+      await store.apply(
+        documentId,
+        documentType,
+        scope,
+        branch,
+        index,
+        (txn) => {
+          txn.addOperations({
+            index,
+            timestampUtcMs,
+            hash: `hash-${scope}-${branch}-${index}`,
+            skip: 0,
+            id: generateId(),
+            action: addFolder({
+              id: generateId(),
+              name: `f-${index}`,
+              parentFolder: null,
+            }),
+          });
+        },
+      );
+    }
+
+    it("returns no revisions for a document with no operations", async () => {
+      const revisions = await store.getRevisions(generateId(), "main");
+
+      expect(revisions.revision).toEqual({});
+      expect(revisions.latestTimestamp).toBe(new Date(0).toISOString());
+    });
+
+    it("reports the head of every scope independently", async () => {
+      const documentId = generateId();
+      for (let i = 0; i <= 5; i++) await writeAt(documentId, "global", i);
+      for (let i = 0; i <= 2; i++) await writeAt(documentId, "local", i);
+      await writeAt(documentId, "header", 0);
+
+      const revisions = await store.getRevisions(documentId, "main");
+
+      expect(revisions.revision).toEqual({ global: 6, local: 3, header: 1 });
+    });
+
+    it("counts a revision as a number, never as concatenated text", async () => {
+      const documentId = generateId();
+      for (let i = 0; i <= 2; i++) await writeAt(documentId, "global", i);
+
+      const revisions = await store.getRevisions(documentId, "main");
+
+      expect(revisions.revision.global).toBe(3);
+      expect(typeof revisions.revision.global).toBe("number");
+    });
+
+    // A reshuffle re-appends at a fresh higher index while keeping the
+    // operation's original timestamp, so the newest timestamp in a scope can
+    // sit behind the head. The head is the largest index either way, and the
+    // latest timestamp is asked for separately for exactly this reason.
+    it("keeps the head at the largest index when a later timestamp sits behind it", async () => {
+      const documentId = generateId();
+      await writeAt(documentId, "global", 0, "2026-01-01T00:00:01.000Z");
+      await writeAt(documentId, "global", 1, "2026-06-01T00:00:00.000Z");
+      await writeAt(documentId, "global", 2, "2026-01-01T00:00:03.000Z");
+
+      const revisions = await store.getRevisions(documentId, "main");
+
+      expect(revisions.revision).toEqual({ global: 3 });
+      expect(revisions.latestTimestamp).toBe("2026-06-01T00:00:00.000Z");
+    });
+
+    it("reports the head per scope when a reshuffle touches only one of them", async () => {
+      const documentId = generateId();
+      await writeAt(documentId, "global", 0, "2026-01-01T00:00:01.000Z");
+      await writeAt(documentId, "global", 1, "2026-09-01T00:00:00.000Z");
+      await writeAt(documentId, "global", 2, "2026-01-01T00:00:02.000Z");
+      await writeAt(documentId, "auth", 0, "2026-01-01T00:00:04.000Z");
+
+      const revisions = await store.getRevisions(documentId, "main");
+
+      expect(revisions.revision).toEqual({ global: 3, auth: 1 });
+      expect(revisions.latestTimestamp).toBe("2026-09-01T00:00:00.000Z");
+    });
+
+    // A retraction can remove the tail of a scope and re-append above the hole
+    // it left, so the head is the largest index present and not a row count.
+    it("reports the largest index present, not the number of operations", async () => {
+      const documentId = generateId();
+      for (let i = 0; i <= 6; i++) await writeAt(documentId, "global", i);
+
+      await db
+        .deleteFrom("Operation")
+        .where("documentId", "=", documentId)
+        .where("scope", "=", "global")
+        .where("index", "in", [3, 4, 5])
+        .execute();
+
+      const revisions = await store.getRevisions(documentId, "main");
+
+      expect(revisions.revision).toEqual({ global: 7 });
+    });
+
+    it("does not let another branch's deeper history raise the head", async () => {
+      const documentId = generateId();
+      for (let i = 0; i <= 2; i++)
+        await writeAt(documentId, "global", i, undefined, "main");
+      for (let i = 0; i <= 9; i++)
+        await writeAt(documentId, "global", i, undefined, "feature");
+
+      await expect(
+        store.getRevisions(documentId, "main"),
+      ).resolves.toMatchObject({ revision: { global: 3 } });
+      await expect(
+        store.getRevisions(documentId, "feature"),
+      ).resolves.toMatchObject({ revision: { global: 10 } });
+    });
+
+    it("does not let another document's deeper history raise the head", async () => {
+      const documentId = generateId();
+      const other = generateId();
+      await writeAt(documentId, "global", 0);
+      for (let i = 0; i <= 9; i++) await writeAt(other, "global", i);
+
+      const revisions = await store.getRevisions(documentId, "main");
+
+      expect(revisions.revision).toEqual({ global: 1 });
+    });
+  });
+
   describe("abort signal handling", () => {
     it("should abort apply operation", async () => {
       const controller = new AbortController();
