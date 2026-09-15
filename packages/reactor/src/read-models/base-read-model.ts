@@ -20,7 +20,7 @@ export type ReadModelIndexingConfig = {
 };
 
 /** Small enough that a chunk's transaction rarely outlasts the yield deadline. */
-export const DEFAULT_COMMIT_CHUNK_SIZE = 100;
+export const DEFAULT_COMMIT_CHUNK_SIZE = 50;
 
 /** Matches the executor's own default, so both paths yield on the same cadence. */
 export const DEFAULT_READ_MODEL_YIELD_DEADLINE_MS = 50;
