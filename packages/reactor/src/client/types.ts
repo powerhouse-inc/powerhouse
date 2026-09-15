@@ -27,7 +27,10 @@ import type {
   SearchFilter,
   ViewFilter,
 } from "../shared/types.js";
-import type { OperationFilter } from "../storage/interfaces.js";
+import type {
+  DocumentRelationship,
+  OperationFilter,
+} from "../storage/interfaces.js";
 
 /**
  * Describes the types of document changes that can occur.
@@ -356,6 +359,50 @@ export interface IReactorClient {
   ): Promise<PagedResults<PHDocument>>;
 
   /**
+   * Retrieves the outgoing relationship edges of a source document.
+   *
+   * Unlike {@link IReactorClient.getOutgoingRelationships}, which returns the
+   * documents at the far end, this returns the edges themselves, carrying the
+   * metadata and timestamps recorded against each relationship.
+   *
+   * @param sourceIdentifier - Required, this is either a document "id" field or a "slug"
+   * @param relationshipType - Optional relationship type to filter by
+   * @param view - Optional filter containing branch and scopes information
+   * @param paging - Optional pagination options
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The matching relationship edges and paging cursor
+   */
+  getOutgoingRelationshipEdges(
+    sourceIdentifier: string,
+    relationshipType?: string,
+    view?: ViewFilter,
+    paging?: PagingOptions,
+    signal?: AbortSignal,
+  ): Promise<PagedResults<DocumentRelationship>>;
+
+  /**
+   * Retrieves the incoming relationship edges of a target document.
+   *
+   * Unlike {@link IReactorClient.getIncomingRelationships}, which returns the
+   * documents at the far end, this returns the edges themselves, carrying the
+   * metadata and timestamps recorded against each relationship.
+   *
+   * @param targetIdentifier - Required, this is either a document "id" field or a "slug"
+   * @param relationshipType - Optional relationship type to filter by
+   * @param view - Optional filter containing branch and scopes information
+   * @param paging - Optional pagination options
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The matching relationship edges and paging cursor
+   */
+  getIncomingRelationshipEdges(
+    targetIdentifier: string,
+    relationshipType?: string,
+    view?: ViewFilter,
+    paging?: PagingOptions,
+    signal?: AbortSignal,
+  ): Promise<PagedResults<DocumentRelationship>>;
+
+  /**
    * Filters documents by criteria and returns a list of them
    *
    * @param search - Search filter options (type, parentId, identifiers)
@@ -597,9 +644,13 @@ export interface IReactorClient {
   /**
    * Adds a relationship between two documents and waits for completion.
    *
+   * Adding a relationship that already exists is a no-op, metadata included.
+   * Use {@link IReactorClient.updateRelationship} to change an existing edge.
+   *
    * @param sourceIdentifier - Source document id or slug
    * @param targetIdentifier - Target document id or slug
    * @param relationshipType - Relationship type identifier
+   * @param metadata - Optional metadata to attach to the relationship
    * @param branch - Optional branch to add the relationship to, defaults to "main"
    * @param signal - Optional abort signal to cancel the request
    * @returns The updated source document
@@ -608,6 +659,28 @@ export interface IReactorClient {
     sourceIdentifier: string,
     targetIdentifier: string,
     relationshipType: string,
+    metadata?: Record<string, unknown>,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<PHDocument>;
+
+  /**
+   * Replaces the metadata of an existing relationship and waits for completion.
+   * The relationship's createdAt is preserved.
+   *
+   * @param sourceIdentifier - Source document id or slug
+   * @param targetIdentifier - Target document id or slug
+   * @param relationshipType - Relationship type identifier
+   * @param metadata - The metadata to store; null clears it
+   * @param branch - Optional branch holding the relationship, defaults to "main"
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The updated source document
+   */
+  updateRelationship(
+    sourceIdentifier: string,
+    targetIdentifier: string,
+    relationshipType: string,
+    metadata: Record<string, unknown> | null,
     branch?: string,
     signal?: AbortSignal,
   ): Promise<PHDocument>;
