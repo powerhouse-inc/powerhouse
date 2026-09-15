@@ -2,16 +2,20 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import {
   AddFileInputSchema,
   AddFolderInputSchema,
+  assignNodes,
   defaultGlobalState,
   driveDocumentModelModule,
   handleTargetNameCollisions,
+  insertNodeSorted,
   isValidName,
   nodeReducer,
+  readNodes,
   type AddFileAction,
   type AddFolderAction,
   type DocumentDriveGlobalState,
   type DocumentDrivePHState,
   type FileNode,
+  type Node as DriveNode,
 } from "@powerhousedao/shared/document-drive";
 import {
   createReducer,
@@ -1181,13 +1185,19 @@ for (const [count, budgetMs] of REPLAY_DECOMPOSITION_CASES) {
 type MirrorVariant = {
   /** The case-name fragment naming which statements the variant runs. */
   label: string;
-  /** node.ts:23/59 find, node.ts:27/63 isValidName, utils.ts:164 collisions. */
+  /**
+   * The two scans over the list the read returned: node.ts:23/59 find and
+   * utils.ts:164 collisions, with node.ts:27/63 isValidName between them. The
+   * read itself is not under this flag, because the real body reads once at
+   * node.ts:22/58 and the assignment at :47/76 consumes what it read, so a
+   * variant that skipped it would not be able to write.
+   */
   reads: boolean;
   /**
-   * The mirror's own in-place sort. The real body has had no push or sort of
-   * its own since T-020 moved it to build a plain list and assign it once
-   * (node.ts:47/76 insertNodeSorted); this variant toggles the mirror's
-   * stand-in for that write, and the divergence is the open finding T-022.
+   * The comparator pass inside that one assignment (utils.ts:170
+   * insertNodeSorted calling utils.ts:147 freezeSortedById). Dropping it still
+   * copies the list, still freezes the copy and still assigns it once, so the
+   * difference it makes is the comparator and not the shape of the write.
    */
   sort: boolean;
 };
@@ -1249,32 +1259,56 @@ function addWriteStamp(
 }
 
 /**
+ * insertNodeSorted with its comparator pass under the variant. Everything else
+ * the real write does is unconditional: the copy the new list is built from,
+ * the freeze that keeps assigning it to a mutative draft from starting a
+ * finalize walk (utils.ts:147), and the single assignment through assignNodes
+ * (utils.ts:187). Only the sort is
+ * gone when `sort` is false, so the difference between the two variants is the
+ * comparator and nothing else.
+ */
+function insertNodeForVariant(
+  nodes: readonly DriveNode[],
+  node: DriveNode,
+  sort: boolean,
+): readonly DriveNode[] {
+  if (sort) {
+    return insertNodeSorted(nodes, node);
+  }
+
+  return Object.freeze([...nodes, node]);
+}
+
+/**
  * A mirror of nodeReducer.addFileOperation and addFolderOperation
  * (packages/shared/document-drive/src/reducers/node.ts:21-82 and the
- * handleTargetNameCollisions it calls at src/utils.ts:164-188).
+ * readNodes, handleTargetNameCollisions and insertNodeSorted it calls at
+ * src/utils.ts:132, :194, :170 and :187).
  *
- * It is NO LONGER statement-for-statement. It was byte-checked at reactorSha
- * 3cef6be7e, but the real body has moved twice since: T-016 routed its reads
- * through readNodes into one local (utils.ts:132), and T-023 made that read a
- * copy and made the single assignment freeze its list (utils.ts:147
- * sortNodesById, :160 insertNodeSorted). This mirror still reads state.nodes
- * twice through the draft and still pushes and sorts in place. That gap is the
- * open finding T-022 and is measured, not hidden: the `real body (fidelity
- * reference)` cases below run the actual reducer through this same harness, so
- * the mirror's claim to represent it is a ratio anyone can read off the record. It exists only so a variant can drop the
- * read scans or the sort while running every other statement, which is what
- * splits the draft-proxy per-node tax; it must be re-checked against node.ts
- * and utils.ts on every future run, because drift would make it stop
- * representing the real body silently and the split would then measure nothing.
+ * It is statement-for-statement again, re-derived at reactorSha 88da88929 from
+ * the body as T-016, T-020 and T-023 left it: one readNodes(state) call whose
+ * result both scans reuse, and one assignNodes(state, insertNodeSorted(nodes,
+ * node))
+ * that sorts and freezes a plain array. The helpers are the real ones, called
+ * here, not copies of them, so the drift T-022 filed -- two state.nodes reads
+ * through the draft and an in-place push and sort, which is the pre-T-016
+ * shape -- cannot come back by a helper changing underneath this file. What
+ * can still drift is the statement order and the gating, so this must be
+ * re-checked against node.ts on every future run: the `real body (fidelity
+ * reference)` cases in the same suite run the actual reducer through the
+ * identical harness, and the mirror's claim to represent it is the ratio
+ * between them, which anyone can read off the record rather than take on
+ * assertion.
+ *
+ * It exists only so a variant can drop the read scans or the comparator while
+ * running every other statement, which is what splits the per-node tax.
  *
  * Deliberate differences, all of them per-call constants that cancel out of a
  * per-node slope: the real addFileOperation ends in an optional dispatch call,
  * which this harness leaves undefined exactly as the plain-state leg of the
  * decomposition suite above does, and the two hrtime pairs that bracket the
  * read and write intervals are only taken for the variant that carries
- * `stamps`. The `real body (fidelity reference)` cases in the same suite run
- * the actual reducer through the identical harness, so the mirror's claim to
- * represent it is a measured ratio and not an assertion.
+ * `stamps`, where the real leg takes one pair for the whole body.
  */
 function mirroredNodeBody(
   state: DocumentDriveGlobalState,
@@ -1284,12 +1318,12 @@ function mirroredNodeBody(
 ): void {
   if (action.type === "ADD_FILE") {
     const input = action.input;
+    const readStartedAt = stampStart(stamps);
+    const nodes = readNodes(state);
     let name = input.name;
 
     if (variant.reads) {
-      const readStartedAt = stampStart(stamps);
-
-      if (state.nodes.find((node) => node.id === input.id)) {
+      if (nodes.find((node) => node.id === input.id)) {
         throw new Error(`Node with id ${input.id} already exists!`);
       }
 
@@ -1300,14 +1334,14 @@ function mirroredNodeBody(
       }
 
       name = handleTargetNameCollisions({
-        nodes: state.nodes,
+        nodes,
         srcName: input.name,
         srcKind: "file",
         targetParentFolder: input.parentFolder || null,
       });
-
-      addReadStamp(stamps, readStartedAt);
     }
+
+    addReadStamp(stamps, readStartedAt);
 
     const writeStartedAt = stampStart(stamps);
 
@@ -1318,23 +1352,19 @@ function mirroredNodeBody(
       parentFolder: input.parentFolder ?? null,
       documentType: input.documentType,
     };
-    state.nodes.push(fileNode);
-
-    if (variant.sort) {
-      state.nodes.sort((a, b) => a.id.localeCompare(b.id));
-    }
+    assignNodes(state, insertNodeForVariant(nodes, fileNode, variant.sort));
 
     addWriteStamp(stamps, writeStartedAt);
     return;
   }
 
   const input = action.input;
+  const readStartedAt = stampStart(stamps);
+  const nodes = readNodes(state);
   let name = input.name;
 
   if (variant.reads) {
-    const readStartedAt = stampStart(stamps);
-
-    if (state.nodes.find((node) => node.id === input.id)) {
+    if (nodes.find((node) => node.id === input.id)) {
       throw new Error(`Node with id ${input.id} already exists!`);
     }
 
@@ -1345,27 +1375,30 @@ function mirroredNodeBody(
     }
 
     name = handleTargetNameCollisions({
-      nodes: state.nodes,
+      nodes,
       srcName: input.name,
       srcKind: "folder",
       targetParentFolder: input.parentFolder || null,
     });
-
-    addReadStamp(stamps, readStartedAt);
   }
+
+  addReadStamp(stamps, readStartedAt);
 
   const writeStartedAt = stampStart(stamps);
 
-  state.nodes.push({
-    ...input,
-    name,
-    kind: "folder",
-    parentFolder: input.parentFolder ?? null,
-  });
-
-  if (variant.sort) {
-    state.nodes.sort((a, b) => a.id.localeCompare(b.id));
-  }
+  assignNodes(
+    state,
+    insertNodeForVariant(
+      nodes,
+      {
+        ...input,
+        name,
+        kind: "folder",
+        parentFolder: input.parentFolder ?? null,
+      },
+      variant.sort,
+    ),
+  );
 
   addWriteStamp(stamps, writeStartedAt);
 }
@@ -1567,7 +1600,7 @@ function reportMirrorLeg(leg: MirrorLeg): void {
   const readScan = fullSlope - noReadsSlope;
   const sortCompare = fullSlope - noSortSlope;
   const touch = noReadsSlope + noSortSlope - pushOnlySlope - fullSlope;
-  const pushShare = readScan / fullSlope;
+  const readShare = readScan / fullSlope;
 
   console.log(
     [
@@ -1584,8 +1617,8 @@ function reportMirrorLeg(leg: MirrorLeg): void {
       `read/write split | ${leg} | buckets from the case means, summing to the full wall slope`,
       `read scan ${readScan.toFixed(4)}`,
       `sort comparator ${sortCompare.toFixed(4)}`,
-      `touch, being the child drafts and the finalize they force ${touch.toFixed(4)}`,
-      `push and everything the wrapper does anyway ${pushOnlySlope.toFixed(4)}`,
+      `touch, being any child drafts and finalize the statements still force ${touch.toFixed(4)}`,
+      `the read copy, the insert copy, the freeze, the assignment and everything the wrapper does anyway ${pushOnlySlope.toFixed(4)}`,
       `full wall ${fullSlope.toFixed(4)} us/node`,
       `cross-check read scan with the touch ${(noSortSlope - pushOnlySlope).toFixed(4)}`,
       `cross-check sort with the touch ${(noReadsSlope - pushOnlySlope).toFixed(4)} us/node`,
@@ -1594,10 +1627,10 @@ function reportMirrorLeg(leg: MirrorLeg): void {
   console.log(
     [
       `read/write split | ${leg} | shares of the full per-node wall slope from the case means`,
-      `read scan ${(pushShare * 100).toFixed(1)}%`,
+      `read scan ${(readShare * 100).toFixed(1)}%`,
       `sort comparator ${((sortCompare / fullSlope) * 100).toFixed(1)}%`,
       `touch ${((touch / fullSlope) * 100).toFixed(1)}%`,
-      `push and wrapper ${((pushOnlySlope / fullSlope) * 100).toFixed(1)}%`,
+      `copies, freeze, assignment and wrapper ${((pushOnlySlope / fullSlope) * 100).toFixed(1)}%`,
       `what survives removing the read scans from the draft ${((noReadsSlope / fullSlope) * 100).toFixed(1)}%`,
       `wrapper the body does not induce, from the no-body case ${noBodySlope.toFixed(4)} us/node`,
     ].join(" | "),
@@ -1618,9 +1651,9 @@ function reportMirrorLeg(leg: MirrorLeg): void {
     [
       `read/write split | ${leg} | stamped body sub-intervals`,
       `reads ${stampedRead.toFixed(4)}`,
-      `push+sort ${stampedWrite.toFixed(4)}`,
+      `insert+sort ${stampedWrite.toFixed(4)}`,
       `body total ${stampedBody.toFixed(4)} us/node`,
-      `push+sort share of body ${((stampedWrite / stampedBody) * 100).toFixed(1)}%`,
+      `insert+sort share of body ${((stampedWrite / stampedBody) * 100).toFixed(1)}%`,
     ].join(" | "),
   );
   console.log(
@@ -1692,31 +1725,40 @@ function everyMirrorSampleRan(): boolean {
 }
 
 /**
- * How T-016's 12.6x draft-proxy per-node tax splits between the read scans at
- * node.ts:23/59 and utils.ts:164 and the mirror's stand-in push+sort for the
- * single assignment the real body makes at node.ts:47/76. A
- * tinybench case mean is the wall time of a whole measured function, so no case
- * can be a sub-interval of one reducer call; instead each leg runs the mirrored
- * body four ways over the same growing node list -- with the reads and the sort,
- * without the reads, without the sort, and with neither -- plus a no-body
- * baseline, and the differences between those means carry the split into the
- * record without needing the stamps. Every variant still pushes, so the node
- * list grows identically and the scan lengths a variant pays are the ones the
- * full body pays.
+ * How the per-node cost of a drive add-node reducer call splits between the
+ * read scans at node.ts:23/59 and utils.ts:164 and the single sorted, frozen
+ * assignment at node.ts:47/76. A tinybench case mean is the wall time of a
+ * whole measured function, so no case can be a sub-interval of one reducer
+ * call; instead each leg runs the mirrored body four ways over the same
+ * growing node list -- with the scans and the comparator, without the scans,
+ * without the comparator, and with neither -- plus a no-body baseline, and the
+ * differences between those means carry the split into the record without
+ * needing the stamps. Every variant still reads the list and still assigns it
+ * with the new node, so the list grows identically and the scan lengths a
+ * variant pays are the ones the full body pays.
  *
- * The differences are not additive, and that is the point: on a draft the first
- * statement to touch an element pays for its child draft and the finalize that
- * unwraps it, so the read scans pay it in the full variant and the sort
- * comparator pays it once the reads are gone. `full - no reads` is therefore the
- * read scan without that touch cost, `full - no sort` the comparator without it,
- * and what those two leave between the push-only and full means is the touch
- * itself. Which side the touch belongs to depends on the question being asked,
- * so the report prints the body split three ways: read scan alone, push+sort
- * carrying the touch, and push+sort without it. The stamped sub-intervals
- * printed alongside charge the touch to the reads, the way the read statements
- * see it in the real body, and are the figure comparable to a reads-first
- * mirror. On the plain-state leg the touch term should collapse to noise, which
- * is the check that the decomposition is behaving.
+ * The read the scans share is therefore in every variant, including the ones
+ * named `no reads`: what the reads flag drops is the two O(n) scans over the
+ * list, not the O(n) copy that produced it. The copy, the second copy the
+ * insert makes, the freeze and the assignment all sit in the `push only`
+ * floor, which is why that floor is a slope and not a constant. `full - no
+ * reads` is the scans, `full - no sort` is the comparator, and what those two
+ * leave between the push-only and full means is the touch: the child drafts a
+ * statement forces by reaching an element through the draft proxy, and the
+ * finalize that unwraps them.
+ *
+ * That touch term is the reason the two differences were not additive while
+ * the body still worked on the draft. On the body as T-016, T-020 and T-023
+ * left it, that term should now collapse toward noise on BOTH legs, not only
+ * on the plain one: the scans run over a plain copy readNodes took from the base
+ * list, the comparator sorts a plain array, and the assignment is frozen, so
+ * no statement in the body reaches a node through the proxy. A draft leg that
+ * still shows a large touch term, or a draft-over-plain full slope far above
+ * 1, means a statement has started touching the draft again -- which is what
+ * this suite is now for, rather than the 12.6x tax T-016 measured and removed.
+ * The report still prints the split three ways, and the stamped sub-intervals
+ * printed alongside charge that residue to the reads, the way the read
+ * statements see it in the real body.
  */
 describe("Write Cache Cold Miss Replay Read/Write Split", () => {
   for (const leg of ["draft", "plain"] satisfies MirrorLeg[]) {
