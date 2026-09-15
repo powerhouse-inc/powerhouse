@@ -387,6 +387,40 @@ describe("KyselyOperationStore.getSince with OperationFilter", () => {
       expect(page2.results.map((op) => op.index)).toEqual([2]);
       expect(page2.nextCursor).toBeUndefined();
     });
+
+    it("getConflicting walks to exhaustion without looping when a page ends at index 0", async () => {
+      const baseTime = new Date("2024-01-15T00:00:00.000Z").getTime();
+
+      await insertOperations([
+        { type: "OP1", timestampUtcMs: baseTime },
+        { type: "OP2", timestampUtcMs: baseTime + 1000 },
+        { type: "OP3", timestampUtcMs: baseTime + 2000 },
+      ]);
+
+      const pages: number[][] = [];
+      let cursor: string | undefined = "0";
+      let iterations = 0;
+
+      while (cursor !== undefined) {
+        iterations++;
+        if (iterations > 10) {
+          throw new Error("cursor walk did not terminate within 10 iterations");
+        }
+
+        const page = await store.getConflicting(
+          documentId,
+          scope,
+          branch,
+          new Date(baseTime).toISOString(),
+          { cursor, limit: 1 },
+        );
+
+        pages.push(page.results.map((op) => op.index));
+        cursor = page.nextCursor;
+      }
+
+      expect(pages).toEqual([[0], [1], [2]]);
+    });
   });
 
   describe("edge cases", () => {
