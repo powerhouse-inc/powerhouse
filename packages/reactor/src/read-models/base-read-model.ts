@@ -39,7 +39,8 @@ export const unchunkedReadModelIndexingConfig: ReadModelIndexingConfig = {
 export type BaseReadModelConfig = {
   readModelId: string;
   rebuildStateOnInit: boolean;
-  indexing: ReadModelIndexingConfig;
+  /** Defaults to {@link defaultReadModelIndexingConfig}. */
+  indexing?: ReadModelIndexingConfig;
 };
 
 /**
@@ -52,6 +53,8 @@ export class BaseReadModel implements IReadModel {
 
   readonly name: string;
 
+  private readonly indexing: ReadModelIndexingConfig;
+
   constructor(
     protected db: Kysely<DocumentViewDatabase>,
     protected operationIndex: IOperationIndex,
@@ -60,6 +63,7 @@ export class BaseReadModel implements IReadModel {
     protected config: BaseReadModelConfig,
   ) {
     this.name = config.readModelId;
+    this.indexing = config.indexing ?? defaultReadModelIndexingConfig;
   }
 
   /**
@@ -90,7 +94,7 @@ export class BaseReadModel implements IReadModel {
   async indexOperations(items: OperationWithContext[]): Promise<void> {
     if (items.length === 0) return;
 
-    const { commitChunkSize, yieldDeadlineMs } = this.config.indexing;
+    const { commitChunkSize, yieldDeadlineMs } = this.indexing;
     let lastYield = performance.now();
 
     for (let start = 0; start < items.length; start += commitChunkSize) {
