@@ -45,6 +45,11 @@ import type {
   ProjectionShardHooks,
   ProjectionShardManager,
 } from "../projection/projection-shard-manager.js";
+import {
+  DEFAULT_COMMIT_CHUNK_SIZE,
+  DEFAULT_READ_MODEL_YIELD_DEADLINE_MS,
+  type ReadModelIndexingConfig,
+} from "../read-models/base-read-model.js";
 import { ReadModelCoordinator } from "../read-models/coordinator.js";
 import { KyselyDocumentView } from "../read-models/document-view.js";
 import type {
@@ -797,6 +802,13 @@ export class ReactorBuilder {
       );
     };
 
+    const readModelIndexing: ReadModelIndexingConfig = {
+      commitChunkSize: DEFAULT_COMMIT_CHUNK_SIZE,
+      yieldDeadlineMs:
+        this.executorConfig.yieldDeadlineMs ??
+        DEFAULT_READ_MODEL_YIELD_DEADLINE_MS,
+    };
+
     const documentViewConsistencyTracker = new ConsistencyTracker();
     const documentView = new KyselyDocumentView(
       // @ts-expect-error - Database type is a superset that includes all required tables
@@ -806,6 +818,7 @@ export class ReactorBuilder {
       writeCache,
       documentViewConsistencyTracker,
       featureFlags.documentDecisions,
+      readModelIndexing,
     );
 
     try {
@@ -820,6 +833,7 @@ export class ReactorBuilder {
       operationIndex,
       writeCache,
       documentIndexerConsistencyTracker,
+      readModelIndexing,
     );
 
     try {

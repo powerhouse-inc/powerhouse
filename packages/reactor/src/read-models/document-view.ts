@@ -27,7 +27,11 @@ import {
   type ViewFilter,
 } from "../storage/interfaces.js";
 import type { Database as StorageDatabase } from "../storage/kysely/types.js";
-import { BaseReadModel } from "./base-read-model.js";
+import {
+  BaseReadModel,
+  defaultReadModelIndexingConfig,
+  type ReadModelIndexingConfig,
+} from "./base-read-model.js";
 import type {
   DocumentViewDatabase,
   InsertableDocumentSnapshot,
@@ -50,13 +54,18 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
      * which is what makes deletion positional. Listings omit it either way.
      */
     private readonly servesDeletionBoundary: boolean,
+    indexing: ReadModelIndexingConfig = defaultReadModelIndexingConfig,
   ) {
     super(
       db as unknown as Kysely<DocumentViewDatabase>,
       operationIndex,
       writeCache,
       consistencyTracker,
-      { readModelId: DOCUMENT_VIEW_READ_MODEL, rebuildStateOnInit: true },
+      {
+        readModelId: DOCUMENT_VIEW_READ_MODEL,
+        rebuildStateOnInit: true,
+        indexing,
+      },
     );
     this._db = db;
   }
