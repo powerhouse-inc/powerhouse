@@ -15,6 +15,28 @@ import type {
 
 export const DEFAULT_PAGE_LIMIT = 500;
 
+/** Bind slots per statement: 16-bit on the wire, read signed in-process. */
+const MAX_BIND_PARAMETERS = 32_767;
+
+/** Splits rows into runs that each bind at most MAX_BIND_PARAMETERS. */
+function chunkRows<TRow extends object>(rows: TRow[]): TRow[][] {
+  if (rows.length === 0) {
+    return [];
+  }
+
+  const columnsPerRow = Math.max(1, Object.keys(rows[0]).length);
+  const perChunk = Math.max(1, Math.floor(MAX_BIND_PARAMETERS / columnsPerRow));
+  if (rows.length <= perChunk) {
+    return [rows];
+  }
+
+  const chunks: TRow[][] = [];
+  for (let i = 0; i < rows.length; i += perChunk) {
+    chunks.push(rows.slice(i, i + perChunk));
+  }
+  return chunks;
+}
+
 type CollectionMembershipRecord = {
   collectionId: string;
   documentId: string;
@@ -217,11 +239,13 @@ export class KyselyOperationIndex implements IOperationIndex {
         kyselyTxn.recordMembershipInvalidation(collectionId);
       }
 
-      await trx
-        .insertInto("document_collections")
-        .values(collectionRows)
-        .onConflict((oc) => oc.doNothing())
-        .execute();
+      for (const chunk of chunkRows(collectionRows)) {
+        await trx
+          .insertInto("document_collections")
+          .values(chunk)
+          .onConflict((oc) => oc.doNothing())
+          .execute();
+      }
     }
 
     let operationOrdinals: number[] = [];
@@ -243,13 +267,18 @@ export class KyselyOperationIndex implements IOperationIndex {
         }),
       );
 
-      const insertedOps = await trx
-        .insertInto("operation_index_operations")
-        .values(operationRows)
-        .returning("ordinal")
-        .execute();
+      // Callers index the ordinals by row position, so chunk order is kept.
+      for (const chunk of chunkRows(operationRows)) {
+        const insertedOps = await trx
+          .insertInto("operation_index_operations")
+          .values(chunk)
+          .returning("ordinal")
+          .execute();
 
-      operationOrdinals = insertedOps.map((row) => row.ordinal);
+        operationOrdinals = operationOrdinals.concat(
+          insertedOps.map((row) => row.ordinal),
+        );
+      }
     }
 
     if (memberships.length > 0) {
