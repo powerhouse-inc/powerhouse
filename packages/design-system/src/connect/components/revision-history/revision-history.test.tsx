@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { globalOperations, localOperations } from "./mocks.js";
+import { globalOperations } from "./mocks.js";
 import { RevisionHistory } from "./revision-history.js";
 
 const baseProps = {
