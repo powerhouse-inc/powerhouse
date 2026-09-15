@@ -1,11 +1,15 @@
 import type { Operation } from "@powerhousedao/shared/document-model";
-import { useCallback, useEffect, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
 import { IDLE_OPERATIONS_ENTRY, isOperationCache } from "../document-cache.js";
 import type { IOperationCache } from "../types/documents.js";
 import { useDocumentCache } from "./document-cache.js";
 
 export type UseDocumentOperationsOptions = {
-  /** Operations per page. Default 100. */
+  /**
+   * Operations per page. Default 100. Applies to the next first-page load;
+   * changing it while pages are already loaded has no effect until the next
+   * invalidation or `refetch`.
+   */
   limit?: number;
   /** Whether to fetch at all. Default true. Pass false until the operations are needed. */
   enabled?: boolean;
@@ -93,10 +97,20 @@ export function useDocumentOperations(
     }
   }, [activeId, cache]);
 
+  const error = useMemo(
+    () => (entry.status === "error" ? toError(entry.error) : undefined),
+    [entry.status, entry.error],
+  );
+
   return {
     operations: entry.operations,
-    isLoading: entry.status === "pending",
-    error: entry.status === "error" ? toError(entry.error) : undefined,
+    // `idle` while active is a load about to be kicked off by the effect
+    // above (on mount, and right after `invalidateOperations` clears the
+    // entry synchronously) - report it as loading so consumers never see a
+    // "no operations" flash before the first page request goes out.
+    isLoading:
+      entry.status === "pending" || (!!activeId && entry.status === "idle"),
+    error,
     hasNextPage: entry.hasNextPage,
     totalCount: entry.totalCount,
     fetchNextPage,

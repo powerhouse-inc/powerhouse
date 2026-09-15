@@ -43,11 +43,13 @@ function createFakeOperation(index: number, scope = "global"): Operation {
 function makePage(
   results: Operation[],
   nextCursor?: string,
+  totalCount?: number,
 ): PagedResults<Operation> {
   return {
     results,
     options: { cursor: "", limit: results.length },
     nextCursor,
+    totalCount,
   };
 }
 
@@ -75,9 +77,12 @@ function Probe(props: {
   scope?: string;
   enabled?: boolean;
   limit?: number;
+  /** Called with the `operations` array on every render, for identity checks. */
+  onOperations?: (operations: readonly Operation[]) => void;
 }) {
-  const { id, scope = "global", enabled, limit } = props;
+  const { id, scope = "global", enabled, limit, onOperations } = props;
   const result = useDocumentOperations(id, scope, { enabled, limit });
+  onOperations?.(result.operations);
   return (
     <div>
       <span data-testid="loading">{String(result.isLoading)}</span>
@@ -86,6 +91,7 @@ function Probe(props: {
         {result.operations.map((op) => op.index).join(",")}
       </span>
       <span data-testid="has-next">{String(result.hasNextPage)}</span>
+      <span data-testid="total">{result.totalCount ?? ""}</span>
       <span data-testid="error">{result.error?.message ?? ""}</span>
       <button data-testid="next" onClick={result.fetchNextPage} />
       <button data-testid="refetch" onClick={result.refetch} />
@@ -169,6 +175,7 @@ describe("useDocumentOperations", () => {
     expect(textOf(disabled, "loading")).toBe("false");
     expect(textOf(noId, "loading")).toBe("false");
     expect(textOf(disabled, "count")).toBe("0");
+    expect(textOf(disabled, "error")).toBe("");
   });
 
   it("starts fetching once enabled flips to true", async () => {
@@ -245,6 +252,14 @@ describe("useDocumentOperations", () => {
       expect(textOf(screen, "count")).toBe("1");
     });
     click(screen, "refetch");
+    // Invalidation drops the entry and notifies synchronously, but the raw
+    // DOM `.click()` above isn't wrapped in `act()`, so React's re-render
+    // lands a microtask later rather than before `.click()` returns; one
+    // microtask turn is enough - no macrotask/network wait is needed. The
+    // hook must report loading well before the refetch settles, with no
+    // "no operations" frame in between.
+    await Promise.resolve();
+    expect(textOf(screen, "loading")).toBe("true");
     await vi.waitFor(() => {
       expect(getOperations).toHaveBeenCalledTimes(2);
     });
@@ -255,6 +270,15 @@ describe("useDocumentOperations", () => {
   });
 
   it("surfaces a failed page as an Error", async () => {
+    // `@typescript-eslint/prefer-promise-reject-errors` (type-aware) flags
+    // not only `Promise.reject(nonError)` but also `reject(nonError)` called
+    // from inside a `new Promise` executor - see the rule's `NewExpression`
+    // handler - so a non-Error rejection reason can't be exercised here
+    // without a new eslint-disable, which the task's constraints rule out
+    // (the neighbouring `use-document-safe.test.tsx` has none to match).
+    // Rejecting with an Error still covers the pass-through branch of
+    // `toError`; the `String(reason)` fallback for non-Error reasons is a
+    // one-line conversion with no branching of its own.
     const getOperations = vi.fn(() => Promise.reject(new Error("nope")));
     setDocumentCache(makeCache(getOperations));
 
@@ -263,6 +287,41 @@ describe("useDocumentOperations", () => {
       expect(textOf(screen, "error")).toBe("nope");
     });
     expect(textOf(screen, "loading")).toBe("false");
+  });
+
+  it("passes totalCount through from the page", async () => {
+    const getOperations = vi.fn(() =>
+      Promise.resolve(makePage([createFakeOperation(0)], undefined, 42)),
+    );
+    setDocumentCache(makeCache(getOperations));
+
+    const screen = render(<Probe id="doc-1" />);
+    await vi.waitFor(() => {
+      expect(textOf(screen, "total")).toBe("42");
+    });
+  });
+
+  it("returns the same operations array across an identical rerender", async () => {
+    const getOperations = vi.fn(() =>
+      Promise.resolve(makePage([createFakeOperation(0)])),
+    );
+    setDocumentCache(makeCache(getOperations));
+
+    const captured: (readonly Operation[])[] = [];
+    const onOperations = (operations: readonly Operation[]) => {
+      captured.push(operations);
+    };
+
+    const screen = render(<Probe id="doc-1" onOperations={onOperations} />);
+    await vi.waitFor(() => {
+      expect(textOf(screen, "count")).toBe("1");
+    });
+    const afterSuccess = captured[captured.length - 1];
+
+    screen.rerender(<Probe id="doc-1" onOperations={onOperations} />);
+    const afterRerender = captured[captured.length - 1];
+
+    expect(afterRerender).toBe(afterSuccess);
   });
 
   it("returns an empty result when the cache has no operations support", async () => {
