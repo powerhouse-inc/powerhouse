@@ -2,6 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import {
   AddFileInputSchema,
   AddFolderInputSchema,
+  assignNodes,
   defaultGlobalState,
   driveDocumentModelModule,
   handleTargetNameCollisions,
@@ -1193,8 +1194,8 @@ type MirrorVariant = {
    */
   reads: boolean;
   /**
-   * The comparator pass inside that one assignment (utils.ts:160
-   * insertNodeSorted calling utils.ts:147 sortNodesById). Dropping it still
+   * The comparator pass inside that one assignment (utils.ts:170
+   * insertNodeSorted calling utils.ts:147 freezeSortedById). Dropping it still
    * copies the list, still freezes the copy and still assigns it once, so the
    * difference it makes is the comparator and not the shape of the write.
    */
@@ -1261,33 +1262,33 @@ function addWriteStamp(
  * insertNodeSorted with its comparator pass under the variant. Everything else
  * the real write does is unconditional: the copy the new list is built from,
  * the freeze that keeps assigning it to a mutative draft from starting a
- * finalize walk (utils.ts:147), and the single assignment. Only the sort is
+ * finalize walk (utils.ts:147), and the single assignment through assignNodes
+ * (utils.ts:187). Only the sort is
  * gone when `sort` is false, so the difference between the two variants is the
  * comparator and nothing else.
  */
 function insertNodeForVariant(
-  nodes: DriveNode[],
+  nodes: readonly DriveNode[],
   node: DriveNode,
   sort: boolean,
-): DriveNode[] {
+): readonly DriveNode[] {
   if (sort) {
     return insertNodeSorted(nodes, node);
   }
 
-  const inserted: DriveNode[] = [...nodes, node];
-  Object.freeze(inserted);
-  return inserted;
+  return Object.freeze([...nodes, node]);
 }
 
 /**
  * A mirror of nodeReducer.addFileOperation and addFolderOperation
  * (packages/shared/document-drive/src/reducers/node.ts:21-82 and the
  * readNodes, handleTargetNameCollisions and insertNodeSorted it calls at
- * src/utils.ts:132, :164 and :160).
+ * src/utils.ts:132, :194, :170 and :187).
  *
  * It is statement-for-statement again, re-derived at reactorSha 88da88929 from
  * the body as T-016, T-020 and T-023 left it: one readNodes(state) call whose
- * result both scans reuse, and one state.nodes = insertNodeSorted(nodes, node)
+ * result both scans reuse, and one assignNodes(state, insertNodeSorted(nodes,
+ * node))
  * that sorts and freezes a plain array. The helpers are the real ones, called
  * here, not copies of them, so the drift T-022 filed -- two state.nodes reads
  * through the draft and an in-place push and sort, which is the pre-T-016
@@ -1351,7 +1352,7 @@ function mirroredNodeBody(
       parentFolder: input.parentFolder ?? null,
       documentType: input.documentType,
     };
-    state.nodes = insertNodeForVariant(nodes, fileNode, variant.sort);
+    assignNodes(state, insertNodeForVariant(nodes, fileNode, variant.sort));
 
     addWriteStamp(stamps, writeStartedAt);
     return;
@@ -1385,15 +1386,18 @@ function mirroredNodeBody(
 
   const writeStartedAt = stampStart(stamps);
 
-  state.nodes = insertNodeForVariant(
-    nodes,
-    {
-      ...input,
-      name,
-      kind: "folder",
-      parentFolder: input.parentFolder ?? null,
-    },
-    variant.sort,
+  assignNodes(
+    state,
+    insertNodeForVariant(
+      nodes,
+      {
+        ...input,
+        name,
+        kind: "folder",
+        parentFolder: input.parentFolder ?? null,
+      },
+      variant.sort,
+    ),
   );
 
   addWriteStamp(stamps, writeStartedAt);
