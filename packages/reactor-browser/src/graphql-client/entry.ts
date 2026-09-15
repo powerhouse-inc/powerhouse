@@ -25,8 +25,14 @@ export * from "./index.js";
 export {
   addPromiseState,
   DocumentCache,
+  IDLE_OPERATIONS_ENTRY,
+  isOperationCache,
   readPromiseState,
 } from "../document-cache.js";
+export type {
+  IOperationCache,
+  OperationsCacheEntry,
+} from "../types/documents.js";
 export { useAttachmentService } from "../hooks/attachment-service.js";
 export {
   setDocumentCache,
@@ -45,6 +51,9 @@ export {
   useDocumentModelModules,
 } from "../hooks/document-model-modules.js";
 export { useDocumentOperations } from "../hooks/document-operations.js";
-export type { DocumentOperationsState } from "../hooks/document-operations.js";
+export type {
+  DocumentOperationsResult,
+  UseDocumentOperationsOptions,
+} from "../hooks/document-operations.js";
 export { setReactorClient, useReactorClient } from "../hooks/reactor.js";
 export type { IReactorBrowserClient } from "../types/reactor-browser-client.js";
