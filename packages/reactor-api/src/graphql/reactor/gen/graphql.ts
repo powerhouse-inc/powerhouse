@@ -223,7 +223,12 @@ export type DocumentWithChildren = {
 export type JobChangeEvent = {
   readonly error?: Maybe<Scalars["String"]["output"]>;
   readonly jobId: Scalars["String"]["output"];
-  readonly result: Scalars["JSONObject"]["output"];
+  /**
+   * What the job produced, once it has produced anything. Nullable for the same
+   * reason as `JobInfo.result`: a job that has not written yet has produced
+   * nothing, and an empty object would claim otherwise.
+   */
+  readonly result?: Maybe<Scalars["JSONObject"]["output"]>;
   readonly status: Scalars["String"]["output"];
 };
 
@@ -1389,7 +1394,7 @@ export type JobChangesSubscription = {
   readonly jobChanges: {
     readonly jobId: string;
     readonly status: string;
-    readonly result: NonNullable<unknown>;
+    readonly result?: NonNullable<unknown> | null | undefined;
     readonly error?: string | null | undefined;
   };
 };
@@ -1969,7 +1974,11 @@ export type JobChangeEventResolvers<
 > = ResolversObject<{
   error?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
   jobId?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-  result?: Resolver<ResolversTypes["JSONObject"], ParentType, ContextType>;
+  result?: Resolver<
+    Maybe<ResolversTypes["JSONObject"]>,
+    ParentType,
+    ContextType
+  >;
   status?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
 }>;
 
