@@ -380,6 +380,87 @@ describe("HypercoreOperationStore", () => {
       expect(result.nextCursor).toBeUndefined();
     });
 
+    // sinceRevision is how a reader that already holds part of the history
+    // asks for the rest of it -- the browser document cache refreshes every
+    // cached scope through this filter on every document change, so the two
+    // stores have to agree on it. `index >= sinceRevision`, matching
+    // KyselyOperationStore: a caller holding up to index N asks for N + 1.
+    it("filters by sinceRevision, inclusive of the named revision", async () => {
+      const documentId = generateId();
+      const documentType = "powerhouse/test-doc";
+
+      for (let i = 0; i < 4; i++) {
+        await store.apply(
+          documentId,
+          documentType,
+          "global",
+          "main",
+          i,
+          (txn) => {
+            txn.addOperations(
+              makeOp(i, {
+                timestampUtcMs: new Date(Date.now() + i * 1000).toISOString(),
+              }),
+            );
+          },
+        );
+      }
+
+      const result = await store.getSince(documentId, "global", "main", -1, {
+        sinceRevision: 2,
+      });
+
+      expect(result.results.map((op) => op.index)).toEqual([2, 3]);
+    });
+
+    // The refresh case itself: everything is loaded, one operation is
+    // appended, and the reader asks for exactly the tail it is missing.
+    it("returns only the tail when asked from one past the newest held revision", async () => {
+      const documentId = generateId();
+      const documentType = "powerhouse/test-doc";
+
+      for (let i = 0; i < 3; i++) {
+        await store.apply(
+          documentId,
+          documentType,
+          "global",
+          "main",
+          i,
+          (txn) => {
+            txn.addOperations(
+              makeOp(i, {
+                timestampUtcMs: new Date(Date.now() + i * 1000).toISOString(),
+              }),
+            );
+          },
+        );
+      }
+
+      const loaded = await store.getSince(documentId, "global", "main", -1);
+      const highest = Math.max(...loaded.results.map((op) => op.index));
+
+      await store.apply(
+        documentId,
+        documentType,
+        "global",
+        "main",
+        3,
+        (txn) => {
+          txn.addOperations(
+            makeOp(3, {
+              timestampUtcMs: new Date(Date.now() + 4000).toISOString(),
+            }),
+          );
+        },
+      );
+
+      const tail = await store.getSince(documentId, "global", "main", -1, {
+        sinceRevision: highest + 1,
+      });
+
+      expect(tail.results.map((op) => op.index)).toEqual([3]);
+    });
+
     it("should support cursor-based paging", async () => {
       const documentId = generateId();
       const documentType = "powerhouse/test-doc";
