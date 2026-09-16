@@ -250,7 +250,9 @@ export class PackageManager implements IPackageManager {
           "reducer" in module,
       );
       this.logger.info(
-        `Loaded ${modules.length} workflow document models from ${WORKFLOW_PACKAGE}`,
+        "Loaded @count workflow document models from @pkg",
+        modules.length,
+        WORKFLOW_PACKAGE,
       );
       return modules;
     } catch (error) {
