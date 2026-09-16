@@ -3,10 +3,7 @@
 
 // Which workflow a step belongs to travels on the run scope, not the executor,
 // which concurrent runs share.
-import type {
-  PieceStorePort,
-  StoreScopeName,
-} from "../pieces/index.js";
+import type { PieceStorePort, StoreScopeName } from "../pieces/index.js";
 import { childLogger } from "document-model";
 import type { WorkflowRunStore } from "./store.js";
 

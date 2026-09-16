@@ -1,7 +1,6 @@
 // Which partition a scope maps to, over a real PGlite-backed journal. FLOW is
 // the workflow; PROJECT is this reactor, which is what lets two workflows share.
 import { createTestRelationalDb } from "../../test/helpers/pglite.js";
-import { createRelationalDb } from "@powerhousedao/shared/processors";
 import { beforeAll, describe, expect, it } from "vitest";
 import { createPieceStorePort, testPartitionKey } from "./piece-store-port.js";
 import { WorkflowRunStore } from "./store.js";
@@ -93,7 +92,12 @@ describe("piece store partitions", () => {
   describe("the pollingHelper cursor", () => {
     const NOW = 1_700_000_000_000;
     const guarded = (workflowId: string) =>
-      createPieceStorePort(store, () => workflowId, false, () => NOW);
+      createPieceStorePort(
+        store,
+        () => workflowId,
+        false,
+        () => NOW,
+      );
 
     it("rejects the null a serialised NaN cursor arrives as", async () => {
       const port = guarded("wf-nan");

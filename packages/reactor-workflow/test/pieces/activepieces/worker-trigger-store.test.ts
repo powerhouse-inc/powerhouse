@@ -6,7 +6,10 @@
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { storeHandlers, type PieceStorePort } from "../../../src/pieces/engine/blocks.js";
+import {
+  storeHandlers,
+  type PieceStorePort,
+} from "../../../src/pieces/engine/blocks.js";
 import { PieceWorker } from "../../../src/pieces/activepieces/worker/host.js";
 
 // Registers three "remote webhooks" one at a time, then optionally dies. Each
@@ -129,9 +132,9 @@ describe("durable trigger store", () => {
 
   it("keeps what a hook wrote before it threw", async () => {
     const store = journal();
-    await expect(
-      hook(store, "onEnable", { dieAfter: "b" }),
-    ).rejects.toThrow(/hung up after b/);
+    await expect(hook(store, "onEnable", { dieAfter: "b" })).rejects.toThrow(
+      /hung up after b/,
+    );
 
     // The two endpoints that were registered are on record, so onDisable can
     // still release them. Under the snapshot protocol both ids were lost.
@@ -187,9 +190,9 @@ describe("durable trigger store", () => {
     // blob structurally could not do.
     expect((other.output as { shared: string }[])[0].shared).toBe("from-two");
     expect(store.rows.get("PROJECT/reactor/shared")).toBe("from-two");
-    expect([...store.rows.keys()].filter((k) => k.startsWith("PROJECT"))).toEqual(
-      ["PROJECT/reactor/shared"],
-    );
+    expect(
+      [...store.rows.keys()].filter((k) => k.startsWith("PROJECT")),
+    ).toEqual(["PROJECT/reactor/shared"]);
     // Their FLOW cursors stayed apart all the same.
     expect(store.rows.get("FLOW/wf-1/cursor")).toBe(1);
     expect(store.rows.get("FLOW/wf-2/cursor")).toBe(1);

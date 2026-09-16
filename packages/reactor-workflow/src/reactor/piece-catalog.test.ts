@@ -7,16 +7,15 @@ import {
 // The catalog fetcher uses global fetch; stub it per test. The first-party
 // merge must not depend on the cloud at all when the cloud is empty.
 function stubCatalog(entries: unknown[]) {
-  vi.stubGlobal(
-    "fetch",
-    (async (input: unknown) => {
-      expect(String(input)).toContain("cloud.activepieces.com/api/v1/pieces");
-      return new Response(JSON.stringify(entries), {
+  vi.stubGlobal("fetch", ((input: unknown) => {
+    expect(String(input)).toContain("cloud.activepieces.com/api/v1/pieces");
+    return Promise.resolve(
+      new Response(JSON.stringify(entries), {
         status: 200,
         headers: { "content-type": "application/json" },
-      });
-    }) as never,
-  );
+      }),
+    );
+  }) as never);
 }
 
 beforeEach(__resetCatalogCacheForTests);
@@ -25,7 +24,9 @@ afterEach(() => vi.unstubAllGlobals());
 it("lists the first-party docling piece when the cloud catalog lacks it", async () => {
   stubCatalog([]);
   const catalog = await fetchPieceCatalog();
-  const docling = catalog.find((p) => p.name === "@powerhousedao/piece-docling");
+  const docling = catalog.find(
+    (p) => p.name === "@powerhousedao/piece-docling",
+  );
   expect(docling?.displayName).toBe("Docling");
   expect(docling?.actionCount).toBe(6);
   expect(docling?.triggerCount).toBe(0);
@@ -49,7 +50,11 @@ it("prefers the cloud entry when the same short name exists upstream", async () 
 });
 
 it("keeps server-only pieces filtered", async () => {
-  stubCatalog([{ name: "@activepieces/piece-ai", version: "1.0.0", actions: 1 }]);
+  stubCatalog([
+    { name: "@activepieces/piece-ai", version: "1.0.0", actions: 1 },
+  ]);
   const catalog = await fetchPieceCatalog();
-  expect(catalog.find((p) => p.name === "@activepieces/piece-ai")).toBeUndefined();
+  expect(
+    catalog.find((p) => p.name === "@activepieces/piece-ai"),
+  ).toBeUndefined();
 });

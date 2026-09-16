@@ -11,7 +11,11 @@
 import { randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { assertWithinLimit, FileTooLargeError, maxFileBytes } from "./limits.js";
+import {
+  assertWithinLimit,
+  FileTooLargeError,
+  maxFileBytes,
+} from "./limits.js";
 import type { TriggerFilesService } from "./trigger.js";
 
 export { FileTooLargeError, maxFileBytes };
@@ -86,7 +90,8 @@ export class StagedFilesService implements ActionFilesService {
     // handing over a file the host would refuse anyway.
     assertWithinLimit(data.byteLength);
     const token = randomUUID();
-    const fileName = file.fileName && file.fileName !== "" ? file.fileName : token;
+    const fileName =
+      file.fileName && file.fileName !== "" ? file.fileName : token;
     const target = path.join(this.stagingDir, token);
     await mkdir(this.stagingDir, { recursive: true });
     await writeFile(target, data);

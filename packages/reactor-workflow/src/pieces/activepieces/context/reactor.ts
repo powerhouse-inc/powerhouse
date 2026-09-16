@@ -84,7 +84,10 @@ export interface ReactorExecuteInput {
 export interface ReactorService {
   models(): Promise<ReactorModelSummary[]>;
   model(documentType: string): Promise<ReactorModelDetail>;
-  get(input: { documentId: string; branch?: string }): Promise<ReactorDocumentSummary>;
+  get(input: {
+    documentId: string;
+    branch?: string;
+  }): Promise<ReactorDocumentSummary>;
   find(input: ReactorFindInput): Promise<ReactorDocumentSummary[]>;
   create(input: ReactorCreateInput): Promise<ReactorDocumentSummary>;
   execute(input: ReactorExecuteInput): Promise<ReactorDocumentSummary>;

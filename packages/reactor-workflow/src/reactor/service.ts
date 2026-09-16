@@ -411,10 +411,10 @@ export class WorkflowRuntimeService {
     this.pieceWorkers = undefined;
     this.storePromise = WorkflowRunStore.create(subgraph.relationalDb);
     this.storePromise.catch((error: unknown) => {
-      logger.error("Failed to open the workflow run store", error);
+      logger.error("Failed to open the workflow run store: @error", error);
     });
     this.seedPromise = this.seedRegistry().catch((error: unknown) => {
-      logger.error("Failed to seed the trigger registry", error);
+      logger.error("Failed to seed the trigger registry: @error", error);
     });
   }
 
@@ -1047,7 +1047,7 @@ export class WorkflowRuntimeService {
         // No webhook store means no webhook triggers, not no workflows: rethrowing would take
         // the whole subgraph down (the manager awaits onSetup), killing other triggers too.
         logger.warn(
-          "Webhook triggers are unavailable on this host; other triggers are unaffected",
+          "Webhook triggers are unavailable on this host; other triggers are unaffected: @error",
           error,
         );
         return undefined;
@@ -1353,6 +1353,7 @@ export class WorkflowRuntimeService {
             error,
             `Loading piece "${packageName}" timed out after ${Math.round(DESCRIBE_TIMEOUT_MS / 1000)}s`,
           ),
+          { cause: error },
         );
       }
       descriptor = output as PieceDescriptor;
@@ -1459,10 +1460,14 @@ export class WorkflowRuntimeService {
     // it is on a run; the document is already in hand, so no second fetch.
     let shapedAuth: unknown;
     try {
-      shapedAuth = await resolveConnectionAuth(document, this.secretProvider(), {
-        blockType: state.connectorId,
-        piecePackage: packageName,
-      });
+      shapedAuth = await resolveConnectionAuth(
+        document,
+        this.secretProvider(),
+        {
+          blockType: state.connectorId,
+          piecePackage: packageName,
+        },
+      );
     } catch (error) {
       // A missing or deleted secret names its ref in the message.
       return this.recordCheckResult(document, {
@@ -1635,7 +1640,10 @@ export class WorkflowRuntimeService {
 
   // Catalog search, with this reactor's own pieces always in it: the index
   // behind the published half may still be building, or unreachable.
-  async searchBlocks(query: string, limit?: number): Promise<BlockSearchResult> {
+  async searchBlocks(
+    query: string,
+    limit?: number,
+  ): Promise<BlockSearchResult> {
     let local: BlockSearchIndex | undefined;
     try {
       local = indexFromHits(
@@ -1906,7 +1914,10 @@ export class WorkflowRuntimeService {
 
   // It resolves the trigger's connection and hands the credentials to piece
   // code, so the caller must be able to read both documents.
-  async testTrigger(workflowId: string, ctx?: WorkflowCaller): Promise<unknown> {
+  async testTrigger(
+    workflowId: string,
+    ctx?: WorkflowCaller,
+  ): Promise<unknown> {
     if (!this.subgraph) {
       throw new Error("Workflow runtime is not configured yet");
     }

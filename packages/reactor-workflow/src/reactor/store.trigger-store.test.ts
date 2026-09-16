@@ -3,7 +3,6 @@
 // A WEBHOOK trigger keeps its registered endpoint id there, and a lost id
 // leaks forever: onDisable can never delete an endpoint it cannot name.
 import { createTestRelationalDb } from "../../test/helpers/pglite.js";
-import { createRelationalDb } from "@powerhousedao/shared/processors";
 import { beforeAll, describe, expect, it } from "vitest";
 import { WorkflowRunStore } from "./store.js";
 
@@ -89,8 +88,12 @@ describe("trigger store_state migration", () => {
     // A PK violation on the loser would reject up(), leaving that process with
     // no store at all — and so every trigger on it silent.
     const [a, b] = await Promise.all([remigrate(), remigrate()]);
-    expect(await a.getPieceStoreValue("FLOW", raced, "lastItem")).toBe("guid-1");
-    expect(await b.getPieceStoreValue("FLOW", raced, "lastItem")).toBe("guid-1");
+    expect(await a.getPieceStoreValue("FLOW", raced, "lastItem")).toBe(
+      "guid-1",
+    );
+    expect(await b.getPieceStoreValue("FLOW", raced, "lastItem")).toBe(
+      "guid-1",
+    );
   });
 
   it("blanks the blob so a later startup cannot replay it", async () => {

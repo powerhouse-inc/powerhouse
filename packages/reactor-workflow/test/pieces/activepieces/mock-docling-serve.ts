@@ -5,10 +5,14 @@ import http from "node:http";
 import type { AddressInfo } from "node:net";
 
 export const MOCK_MD = "# Mock doc\n\nParagraph one.";
-export const MOCK_JSON = { version: "1.7.0", records: [{ subject: "Mock Document" }] };
+export const MOCK_JSON = {
+  version: "1.7.0",
+  records: [{ subject: "Mock Document" }],
+};
 export const MOCK_HTML = "<h1>Mock doc</h1><p>Paragraph one.</p>";
 export const MOCK_TEXT = "Mock doc Paragraph one.";
-export const MOCK_DOCTAGS = "<docling><document><text>Mock doc</text></document></docling>";
+export const MOCK_DOCTAGS =
+  "<docling><document><text>Mock doc</text></document></docling>";
 export const MOCK_CHUNKS = [
   { text: "chunk one", page_no: 1, start_chunk_no: 1, end_chunk_no: 1 },
   { text: "chunk two", page_no: 1, start_chunk_no: 2, end_chunk_no: 2 },
@@ -54,7 +58,12 @@ function readBody(req: http.IncomingMessage): Promise<string> {
   });
 }
 
-function json(res: http.ServerResponse, status: number, body: unknown, headers?: Record<string, string>): void {
+function json(
+  res: http.ServerResponse,
+  status: number,
+  body: unknown,
+  headers?: Record<string, string>,
+): void {
   res.writeHead(status, { "content-type": "application/json", ...headers });
   res.end(JSON.stringify(body));
 }
@@ -79,7 +88,9 @@ function successResponse(filename: string, formats: string[]) {
   };
 }
 
-export async function startMockDocling(opts: MockDoclingOptions = {}): Promise<MockDocling> {
+export async function startMockDocling(
+  opts: MockDoclingOptions = {},
+): Promise<MockDocling> {
   const tasks = new Map<string, Task>();
   const requests: MockDocling["requests"] = [];
   const requestBodies: string[] = [];
@@ -87,7 +98,10 @@ export async function startMockDocling(opts: MockDoclingOptions = {}): Promise<M
   let seq = 0;
   let backpressureLeft = opts.backpressure ?? 0;
 
-  const server = http.createServer(async (req, res) => {
+  const handle = async (
+    req: http.IncomingMessage,
+    res: http.ServerResponse,
+  ): Promise<void> => {
     const url = new URL(req.url ?? "/", "http://127.0.0.1");
     requests.push({
       method: req.method ?? "",
@@ -96,7 +110,8 @@ export async function startMockDocling(opts: MockDoclingOptions = {}): Promise<M
       headers: req.headers as Record<string, string | string[]>,
     });
     const p = url.pathname;
-    if (req.method === "GET" && p === "/health") return json(res, 200, { status: "ok" });
+    if (req.method === "GET" && p === "/health")
+      return json(res, 200, { status: "ok" });
     if (req.method === "GET" && p === "/version") {
       // Key set mirrors the real 1.32.0 DOCLING_VERSIONS, including the
       // upstream "plaform" typo.
@@ -113,13 +128,20 @@ export async function startMockDocling(opts: MockDoclingOptions = {}): Promise<M
 
     // The real v1.32.0 gates only the /v1/* routes on the API key; the
     // root-level diagnostics above stay open.
-    if (opts.failAuthAlways || (opts.apiKey && req.headers["x-api-key"] !== opts.apiKey)) {
+    if (
+      opts.failAuthAlways ||
+      (opts.apiKey && req.headers["x-api-key"] !== opts.apiKey)
+    ) {
       return json(res, 401, { detail: "Invalid API Key." });
     }
 
-
     let body: {
-      sources?: Array<{ kind?: string; base64_string?: string; filename?: string; url?: string }>;
+      sources?: Array<{
+        kind?: string;
+        base64_string?: string;
+        filename?: string;
+        url?: string;
+      }>;
       options?: { to_formats?: string[] };
     } = {};
     if (req.method === "POST") {
@@ -138,7 +160,8 @@ export async function startMockDocling(opts: MockDoclingOptions = {}): Promise<M
     const isAsync = p.endsWith("/async");
     const isSync = isConvert || isChunk;
 
-    if (isSync && !isAsync && opts.syncSlow) return json(res, 504, { detail: "sync timeout" });
+    if (isSync && !isAsync && opts.syncSlow)
+      return json(res, 504, { detail: "sync timeout" });
     if (isSync && backpressureLeft > 0) {
       backpressureLeft--;
       return json(res, 429, { detail: "server busy" }, { "retry-after": "0" });
@@ -146,7 +169,8 @@ export async function startMockDocling(opts: MockDoclingOptions = {}): Promise<M
 
     if (isSync && isAsync) {
       const sources = body.sources ?? [];
-      if (sources.length === 0) return json(res, 422, { detail: "sources must be non-empty" });
+      if (sources.length === 0)
+        return json(res, 422, { detail: "sources must be non-empty" });
       const filename = sources[0]?.filename ?? sources[0]?.url ?? "doc";
       const id = `task-${++seq}`;
       tasks.set(id, {
@@ -183,9 +207,17 @@ export async function startMockDocling(opts: MockDoclingOptions = {}): Promise<M
       return json(res, 200, {
         task_id: id,
         task_status: task.failing ? "failure" : "success",
-        task_meta: { num_docs: 1, num_processed: 1, num_succeeded: task.failing ? 0 : 1 },
+        task_meta: {
+          num_docs: 1,
+          num_processed: 1,
+          num_succeeded: task.failing ? 0 : 1,
+        },
         failure: task.failing
-          ? { category: "inference_failure", message: "mock inference failure", retryable: false }
+          ? {
+              category: "inference_failure",
+              message: "mock inference failure",
+              retryable: false,
+            }
           : null,
       });
     }
@@ -197,7 +229,11 @@ export async function startMockDocling(opts: MockDoclingOptions = {}): Promise<M
       if (task.failing) {
         return json(res, 200, {
           task_id: id,
-          failure: { category: "inference_failure", message: "mock inference failure", retryable: false },
+          failure: {
+            category: "inference_failure",
+            message: "mock inference failure",
+            retryable: false,
+          },
         });
       }
       if (task.kind === "chunk") {
@@ -208,12 +244,18 @@ export async function startMockDocling(opts: MockDoclingOptions = {}): Promise<M
 
     if (req.method === "POST" && isSync) {
       const sources = body.sources ?? [];
-      if (sources.length === 0) return json(res, 422, { detail: "sources must be non-empty" });
+      if (sources.length === 0)
+        return json(res, 422, { detail: "sources must be non-empty" });
       const first = sources[0]; // guarded by the empty check above
       if (first.kind === "http" && String(first.url).endsWith(".zip")) {
         return json(res, 422, { detail: "zip sources are not supported" });
       }
-      const filename = first.filename ?? String(first.url ?? "doc").split("/").pop() ?? "doc";
+      const filename =
+        first.filename ??
+        String(first.url ?? "doc")
+          .split("/")
+          .pop() ??
+        "doc";
       if (p.startsWith("/v1/chunk")) {
         return json(res, 200, { chunks: MOCK_CHUNKS, processing_time: 0.3 });
       }
@@ -221,15 +263,26 @@ export async function startMockDocling(opts: MockDoclingOptions = {}): Promise<M
         return json(res, 200, {
           document: null,
           status: "failure",
-          errors: [{ category: "inference_failure", error_message: "mock inference failure" }],
+          errors: [
+            {
+              category: "inference_failure",
+              error_message: "mock inference failure",
+            },
+          ],
           processing_time: 0.1,
         });
       }
-      return json(res, 200, successResponse(String(filename), body.options?.to_formats ?? ["md"]));
+      return json(
+        res,
+        200,
+        successResponse(String(filename), body.options?.to_formats ?? ["md"]),
+      );
     }
 
     return json(res, 404, { detail: `no route ${p}` });
-  });
+  };
+
+  const server = http.createServer((req, res) => void handle(req, res));
 
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const { port } = server.address() as AddressInfo;

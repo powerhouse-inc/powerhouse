@@ -1,7 +1,6 @@
 // LocalEncryptedSecretStore over a real PGlite-backed relational namespace:
 // lifecycle, encryption at rest, tombstones, and key handling.
 import { createTestRelationalDb } from "../../test/helpers/pglite.js";
-import { createRelationalDb } from "@powerhousedao/shared/processors";
 import { randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -11,10 +10,7 @@ import {
   SecretDeletedError,
   SecretNotFoundError,
 } from "../pieces/index.js";
-import {
-  LocalEncryptedSecretStore,
-  type SecretRow,
-} from "./secret-store.js";
+import { LocalEncryptedSecretStore, type SecretRow } from "./secret-store.js";
 
 const KEY_A = randomBytes(32).toString("hex");
 const KEY_B = randomBytes(32).toString("hex");
@@ -99,9 +95,9 @@ describe("LocalEncryptedSecretStore", () => {
   });
 
   it("rejects unknown and malformed refs", async () => {
-    await expect(
-      store.get(`secret://v1:${"0".repeat(32)}`),
-    ).rejects.toThrow(SecretNotFoundError);
+    await expect(store.get(`secret://v1:${"0".repeat(32)}`)).rejects.toThrow(
+      SecretNotFoundError,
+    );
     await expect(store.get("DISCORD_BOT_TOKEN")).rejects.toThrow(
       InvalidSecretRefError,
     );

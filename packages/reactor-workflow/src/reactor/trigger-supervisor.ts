@@ -31,10 +31,7 @@ import {
   schedulePayload,
   SCHEDULE_BLOCK,
 } from "./schedule.js";
-import {
-  createPieceStorePort,
-  testPartitionKey,
-} from "./piece-store-port.js";
+import { createPieceStorePort, testPartitionKey } from "./piece-store-port.js";
 import type { TriggerStateRow, WorkflowRunStore } from "./store.js";
 
 const logger = childLogger(["workflow", "trigger-supervisor"]);
@@ -222,7 +219,7 @@ export class TriggerSupervisor {
     if (this.timer) return;
     this.timer = setInterval(() => {
       this.tick().catch((error: unknown) => {
-        logger.error("Trigger tick failed", error);
+        logger.error("Trigger tick failed: @error", error);
       });
     }, this.tickMs);
     this.timer.unref();
@@ -310,7 +307,10 @@ export class TriggerSupervisor {
   ): Promise<void> {
     if (!store) return;
     try {
-      await store.deletePieceStore("FLOW", testPartitionKey("FLOW", workflowId));
+      await store.deletePieceStore(
+        "FLOW",
+        testPartitionKey("FLOW", workflowId),
+      );
       await store.deletePieceStore(
         "PROJECT",
         testPartitionKey("PROJECT", workflowId),
@@ -413,7 +413,11 @@ export class TriggerSupervisor {
   private async hook(
     binding: PieceTriggerBinding,
     hook: TriggerHookRequest["hook"],
-    options: { isRepublish?: boolean; payload?: unknown; webhookUrl?: string } = {},
+    options: {
+      isRepublish?: boolean;
+      payload?: unknown;
+      webhookUrl?: string;
+    } = {},
   ): Promise<PieceWorkerResult> {
     const store = await this.options.store();
     // A cursor on the heap resets on restart and re-delivers everything the
@@ -422,11 +426,7 @@ export class TriggerSupervisor {
       throw new MissingJournalError(`Trigger hook "${hook}"`);
     }
     const pieceStore = store
-      ? createPieceStorePort(
-          store,
-          () => binding.workflowId,
-          hook === "test",
-        )
+      ? createPieceStorePort(store, () => binding.workflowId, hook === "test")
       : undefined;
     const piece = await this.resolver().resolve(
       binding.packageName,
@@ -469,9 +469,7 @@ export class TriggerSupervisor {
 
   // A trigger's strategy lives in the piece descriptor, so it takes loading
   // the bundle. Enables are rare and the descriptor is cached per version.
-  private async strategyFor(
-    binding: PieceTriggerBinding,
-  ): Promise<string> {
+  private async strategyFor(binding: PieceTriggerBinding): Promise<string> {
     const key = `${binding.packageName}@${binding.version}`;
     let descriptor = this.descriptors.get(key);
     if (!descriptor) {
@@ -491,7 +489,7 @@ export class TriggerSupervisor {
       descriptor = result.output as PieceDescriptor;
       this.descriptors.set(key, descriptor);
     }
-    const trigger = descriptor.triggers?.find(
+    const trigger = descriptor.triggers.find(
       (candidate) => candidate.name === binding.triggerName,
     );
     return trigger?.strategy ?? "POLLING";
@@ -526,7 +524,12 @@ export class TriggerSupervisor {
       // A piece trigger replaced by core#schedule takes its retry with it;
       // left behind, the entry wins a slot on every tick and never resolves.
       this.enableRetries.delete(binding.workflowId);
-      if (pending?.release && existing && superseded && !isSchedule(superseded)) {
+      if (
+        pending?.release &&
+        existing &&
+        superseded &&
+        !isSchedule(superseded)
+      ) {
         await this.releaseRegistration(superseded);
       }
       await this.enableSchedule(store, binding, hash, existing);
@@ -626,7 +629,9 @@ export class TriggerSupervisor {
       });
       logger.error(
         `onEnable failed for workflow ${binding.workflowId} (${failures}x): ${message}` +
-          (retryAt ? `; retrying at ${retryAt.toISOString()}` : "; not retrying"),
+          (retryAt
+            ? `; retrying at ${retryAt.toISOString()}`
+            : "; not retrying"),
       );
     }
   }
@@ -664,7 +669,9 @@ export class TriggerSupervisor {
       return false;
     }
     const pending = this.enableRetries.get(binding.workflowId);
-    const stored = existing.next_poll_at ? Date.parse(existing.next_poll_at) : NaN;
+    const stored = existing.next_poll_at
+      ? Date.parse(existing.next_poll_at)
+      : NaN;
     const at = pending?.at ?? (Number.isFinite(stored) ? stored : undefined);
     if (at === undefined || at <= now.getTime()) return false;
     if (!pending) {
@@ -848,7 +855,10 @@ export class TriggerSupervisor {
     if (!store) {
       if (!this.warnedMissingJournal) {
         this.warnedMissingJournal = true;
-        logger.error("Trigger polling is off", new MissingJournalError("Polling"));
+        logger.error(
+          "Trigger polling is off: @error",
+          new MissingJournalError("Polling"),
+        );
       }
       return;
     }
@@ -961,10 +971,6 @@ export class TriggerSupervisor {
       );
       if (!claimed) return;
     }
-    this.options.fire(
-      binding.workflowId,
-      item,
-      `piece:${binding.blockType}`,
-    );
+    this.options.fire(binding.workflowId, item, `piece:${binding.blockType}`);
   }
 }

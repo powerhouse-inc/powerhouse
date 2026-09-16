@@ -1,8 +1,5 @@
 import type { StagedFile } from "../context/files.js";
-import type {
-  RecordedListener,
-  RecordedSchedule,
-} from "../context/trigger.js";
+import type { RecordedListener, RecordedSchedule } from "../context/trigger.js";
 import { jsonSafe } from "./json-safe.js";
 import {
   createForkTransport,

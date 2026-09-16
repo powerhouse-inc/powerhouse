@@ -1,9 +1,6 @@
 // The seam between the supervisor — which owns the trigger_state row, the
 // serialization lane and the clock — and what each trigger kind does with it.
-import type {
-  PieceWorkerResult,
-  TriggerHookRequest,
-} from "../pieces/index.js";
+import type { PieceWorkerResult, TriggerHookRequest } from "../pieces/index.js";
 import type { TriggerStateRow, WorkflowRunStore } from "./store.js";
 import type {
   PieceTriggerBinding,

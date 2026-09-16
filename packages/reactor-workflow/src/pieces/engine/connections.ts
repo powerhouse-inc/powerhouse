@@ -171,7 +171,8 @@ export function declaredConnectionIds(
 ): ReadonlySet<string> {
   const declared = new Set<string>();
   const declare = (connectionId: string | null | undefined) => {
-    if (connectionId && !connectionId.includes("{{")) declared.add(connectionId);
+    if (connectionId && !connectionId.includes("{{"))
+      declared.add(connectionId);
   };
   declare(definition.trigger?.connectionId);
   for (const step of definition.steps) declare(step.connectionId);

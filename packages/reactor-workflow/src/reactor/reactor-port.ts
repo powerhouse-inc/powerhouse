@@ -174,12 +174,20 @@ export class SubgraphReactorPort implements ReactorPort {
     if (input.documentType) {
       // The index takes both, so a step that named a type and a drive gets
       // documents of that type in that drive — not every document of the type.
-      results = await this.findByType(input.documentType, limit, input.parentId);
-    } else if (input.parentId) {
-      const page = await this.client.find({ parentId: input.parentId }, undefined, {
-        cursor: "",
+      results = await this.findByType(
+        input.documentType,
         limit,
-      });
+        input.parentId,
+      );
+    } else if (input.parentId) {
+      const page = await this.client.find(
+        { parentId: input.parentId },
+        undefined,
+        {
+          cursor: "",
+          limit,
+        },
+      );
       results = page.results;
     } else {
       // The index rejects an empty filter, so sweep every installed type.
@@ -190,18 +198,20 @@ export class SubgraphReactorPort implements ReactorPort {
       results = pages.flat();
     }
     const seen = new Set<string>();
-    return results
-      .filter((document) => {
-        if (seen.has(document.header.id)) return false;
-        seen.add(document.header.id);
-        return true;
-      })
-      // The index cannot query state, so a state match is applied to the page
-      // that was read. A caller that needs to match across more documents than
-      // the page holds raises `limit`; silently matching a prefix of the type
-      // would look like "no such document".
-      .filter((document) => matchesState(document, input.match))
-      .map((document) => documentSummary(document, input.withState === true));
+    return (
+      results
+        .filter((document) => {
+          if (seen.has(document.header.id)) return false;
+          seen.add(document.header.id);
+          return true;
+        })
+        // The index cannot query state, so a state match is applied to the page
+        // that was read. A caller that needs to match across more documents than
+        // the page holds raises `limit`; silently matching a prefix of the type
+        // would look like "no such document".
+        .filter((document) => matchesState(document, input.match))
+        .map((document) => documentSummary(document, input.withState === true))
+    );
   }
 
   async create(input: ReactorCreateInput): Promise<ReactorDocumentSummary> {

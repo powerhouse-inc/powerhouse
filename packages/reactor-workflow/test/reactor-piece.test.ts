@@ -28,7 +28,9 @@ function builtPieceRoot(): string | undefined {
   } catch {
     return undefined;
   }
-  return existsSync(join(root, "dist", "node", "pieces", "reactor", "index.mjs"))
+  return existsSync(
+    join(root, "dist", "node", "pieces", "reactor", "index.mjs"),
+  )
     ? root
     : undefined;
 }
@@ -61,7 +63,11 @@ function stubPort(): ReactorPort & { calls: string[] } {
         stateSchema: "type WorkflowState { name: String }",
         actions: [
           { type: "SET_NAME", module: "base", inputSchema: null },
-          { type: "ADD_STEP", module: "steps", inputSchema: "input AddStepInput { key: String! }" },
+          {
+            type: "ADD_STEP",
+            module: "steps",
+            inputSchema: "input AddStepInput { key: String! }",
+          },
         ],
       });
     },
@@ -110,7 +116,8 @@ describe.skipIf(!workflowRoot)("the reactor piece", () => {
     registry = new PieceRegistry();
     await registry.load(workflowRoot);
     resolver = localFirstResolver(registry.lookup, {
-      resolve: () => Promise.reject(new Error("nothing is fetched in this test")),
+      resolve: () =>
+        Promise.reject(new Error("nothing is fetched in this test")),
     });
   }, 60_000);
 
@@ -276,7 +283,9 @@ describe.skipIf(!workflowRoot)("the reactor piece", () => {
   });
 
   it("resolves the type from a document id when none was given", async () => {
-    await executor.execute(execution("document-schema", { documentId: "doc-9" }));
+    await executor.execute(
+      execution("document-schema", { documentId: "doc-9" }),
+    );
 
     expect(port.calls).toEqual(["get doc-9", "model powerhouse/workflow"]);
   });

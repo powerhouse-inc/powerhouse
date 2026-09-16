@@ -724,6 +724,48 @@ const tailwindConfig = [
   },
 ];
 
+/** The engine's pieces layer knows nothing of the reactor above it, and the
+ * workflow package's browser half knows nothing of the engine. */
+const workflowBoundariesConfig = [
+  {
+    files: ["packages/reactor-workflow/src/pieces/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@powerhousedao/*", "../reactor/*", "**/reactor/**"],
+              message:
+                "The pieces layer runs a piece; it must not reach for the reactor above it or for any Powerhouse package.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["packages/workflow/{editors,ai,document-models}/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: [
+                "@powerhousedao/reactor-workflow",
+                "@powerhousedao/reactor-api",
+              ],
+              message:
+                "This half of the workflow package ships to the browser; the engine and the API run on the reactor.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+];
+
 /** Main config */
 export default defineConfig(
   ignored,
@@ -739,5 +781,6 @@ export default defineConfig(
   generatedFilesConfig,
   cliColdPathConfig,
   loggerRulesConfig,
+  workflowBoundariesConfig,
   tailwindConfig,
 );

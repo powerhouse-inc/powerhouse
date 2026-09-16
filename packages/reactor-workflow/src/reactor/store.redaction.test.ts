@@ -1,7 +1,6 @@
 // The journal's own gate: whatever the engine hands it, a credential must not
 // reach a row. Key-based only here — the store never sees the run's secrets.
 import { createTestRelationalDb } from "../../test/helpers/pglite.js";
-import { createRelationalDb } from "@powerhousedao/shared/processors";
 import { beforeAll, describe, expect, it } from "vitest";
 import { WorkflowRunStore } from "./store.js";
 

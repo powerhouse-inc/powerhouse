@@ -2,7 +2,6 @@
 // lineage, the additive column migration, journaled-output round-trips, and
 // the trigger payload a rerun refuses to replay.
 import { createTestRelationalDb } from "../../test/helpers/pglite.js";
-import { createRelationalDb } from "@powerhousedao/shared/processors";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import type { IRelationalDb } from "@powerhousedao/shared/processors";
 import { WorkflowRuntimeService } from "./service.js";
@@ -188,8 +187,9 @@ describe("WorkflowRunStore per-step journaling", () => {
   it("fails loudly when legacy duplicate rows block the constraint", async () => {
     const relationalDb = createTestRelationalDb();
     // A pre-journaling namespace: step_execution without the constraint.
-    const legacy: IRelationalDb<LegacyDB> =
-      await relationalDb.createNamespace("workflow_runtime_legacy");
+    const legacy: IRelationalDb<LegacyDB> = await relationalDb.createNamespace(
+      "workflow_runtime_legacy",
+    );
     await legacy.schema
       .createTable("step_execution")
       .addColumn("id", "text", (col) => col.primaryKey())

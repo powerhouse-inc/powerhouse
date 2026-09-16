@@ -3,7 +3,14 @@
 // ingests them and rewrites the provisional tokens before the output is
 // journalled, and an attachment reference on the way in reaches the piece as a
 // real ApFile. Bytes never cross the IPC channel in either direction.
-import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -99,7 +106,8 @@ function attachmentPort(): AttachmentPort & {
   written: { fileName: string; size: number; contentType?: string }[];
   seed: (ref: string, contents: string, fileName?: string) => Promise<void>;
 } {
-  const written: { fileName: string; size: number; contentType?: string }[] = [];
+  const written: { fileName: string; size: number; contentType?: string }[] =
+    [];
   const seeded = new Map<string, { contents: string; fileName?: string }>();
   return {
     written,

@@ -76,7 +76,12 @@ function parseCronPattern(cron: unknown, timezone: string): string {
     cronJob = new Cron(pattern, { timezone, legacyMode: false });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    throw new Error(`${SCHEDULE_BLOCK}: invalid cron "${pattern}": ${message}`);
+    throw new Error(
+      `${SCHEDULE_BLOCK}: invalid cron "${pattern}": ${message}`,
+      {
+        cause: error,
+      },
+    );
   }
   if (!cronJob.nextRun()) {
     throw new Error(`${SCHEDULE_BLOCK}: cron "${pattern}" never fires`);

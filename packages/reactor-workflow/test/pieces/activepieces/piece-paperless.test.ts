@@ -12,11 +12,20 @@
 import http from "node:http";
 import type { AddressInfo } from "node:net";
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { PieceWorker, PieceWorkerError } from "../../../src/pieces/activepieces/worker/host.js";
+import {
+  PieceWorker,
+  PieceWorkerError,
+} from "../../../src/pieces/activepieces/worker/host.js";
 
 const PIECE_PKG = path.resolve("../piece-paperless-ngx");
 const BUNDLE = path.join(PIECE_PKG, "dist");
@@ -82,7 +91,8 @@ async function waitFor<T>(
   for (;;) {
     const value = await probe();
     if (value !== undefined) return value;
-    if (Date.now() > deadline) throw new Error(`Timed out waiting for ${label}`);
+    if (Date.now() > deadline)
+      throw new Error(`Timed out waiting for ${label}`);
     await new Promise((resolve) => setTimeout(resolve, 1_000));
   }
 }
@@ -107,7 +117,9 @@ describe.skipIf(!baseUrl)("paperless piece through the worker (E2E)", () => {
     }
     token = await mintToken();
     worker = new PieceWorker();
-    stagingDir = mkdtempSync(path.join(tmpdir(), `paperless-e2e-staging-${stamp}-`));
+    stagingDir = mkdtempSync(
+      path.join(tmpdir(), `paperless-e2e-staging-${stamp}-`),
+    );
 
     // Stands in for the reactor's webhook endpoint, the way the piece
     // package's live suite does: paperless must reach it, and on the host
@@ -372,7 +384,12 @@ describe.skipIf(!baseUrl)("paperless piece through the worker (E2E)", () => {
           auth: auth(),
           stagingDir,
           stagedInputs: [
-            { ref, path: stagedPath, fileName: `trigger-${stamp}.txt`, contentType: "text/plain" },
+            {
+              ref,
+              path: stagedPath,
+              fileName: `trigger-${stamp}.txt`,
+              contentType: "text/plain",
+            },
           ],
         },
         { timeoutMs: 300_000 },

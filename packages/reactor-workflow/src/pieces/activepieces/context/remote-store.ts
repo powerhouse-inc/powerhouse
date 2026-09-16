@@ -5,11 +5,7 @@
 // HTTP call per get/put/delete — so a loop that checkpoints its cursor resumes.
 import type { KeyValueStore } from "./action.js";
 import type { StoreScopeName } from "./store-scope.js";
-import {
-  STORE_DELETE,
-  STORE_GET,
-  STORE_PUT,
-} from "../worker/protocol.js";
+import { STORE_DELETE, STORE_GET, STORE_PUT } from "../worker/protocol.js";
 import { callHost } from "../worker/host-call.js";
 import { jsonSafe } from "../worker/json-safe.js";
 

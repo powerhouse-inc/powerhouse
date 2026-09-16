@@ -13,7 +13,10 @@
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { PieceWorker, PieceWorkerError } from "../../../src/pieces/activepieces/worker/host.js";
+import {
+  PieceWorker,
+  PieceWorkerError,
+} from "../../../src/pieces/activepieces/worker/host.js";
 import path from "node:path";
 
 const PIECE_PKG = path.resolve("../piece-docling");
@@ -73,7 +76,9 @@ describe.skipIf(!baseUrl)("docling piece through the worker (E2E)", () => {
           headers: { "x-api-key": apiKey },
         });
         if (res.status !== 200) return undefined;
-        const body = (await res.json().catch(() => ({}))) as { status?: string };
+        const body = (await res.json().catch(() => ({}))) as {
+          status?: string;
+        };
         return body.status === "ok" ? true : undefined;
       },
       "docling-serve /health",
@@ -165,8 +170,9 @@ describe.skipIf(!baseUrl)("docling piece through the worker (E2E)", () => {
       },
       { timeoutMs: 600_000 },
     );
-    const md = (output as { document?: { md_content?: string | null } })
-      .document?.md_content ?? "";
+    const md =
+      (output as { document?: { md_content?: string | null } }).document
+        ?.md_content ?? "";
     expect(md).toContain(marker);
   }, 600_000);
 
@@ -191,8 +197,9 @@ describe.skipIf(!baseUrl)("docling piece through the worker (E2E)", () => {
       },
       { timeoutMs: 600_000 },
     );
-    const md = (output as { document?: { md_content?: string | null } })
-      .document?.md_content ?? "";
+    const md =
+      (output as { document?: { md_content?: string | null } }).document
+        ?.md_content ?? "";
     expect(md).toContain(marker);
   }, 600_000);
 
@@ -203,42 +210,55 @@ describe.skipIf(!baseUrl)("docling piece through the worker (E2E)", () => {
       {
         bundleDir: BUNDLE,
         actionName: "convert_file",
-        propsValue: { file: uri, ocr: false, execution: "async", timeout_seconds: 600 },
+        propsValue: {
+          file: uri,
+          ocr: false,
+          execution: "async",
+          timeout_seconds: 600,
+        },
         auth: auth(),
       },
       { timeoutMs: 600_000 },
     );
-    const md = (output as { document?: { md_content?: string | null } })
-      .document?.md_content ?? "";
+    const md =
+      (output as { document?: { md_content?: string | null } }).document
+        ?.md_content ?? "";
     expect(md).toContain(marker);
   }, 600_000);
 
   it("runs the submit_job + get_result pair across two worker calls", async () => {
-    const submitted = (await worker.runAction(
-      {
-        bundleDir: BUNDLE,
-        actionName: "submit_job",
-        propsValue: {
-          file: { filename: `w2e-job-${stamp}.pdf`, data: minimalPdf(marker) },
-          ocr: false,
+    const submitted = (
+      await worker.runAction(
+        {
+          bundleDir: BUNDLE,
+          actionName: "submit_job",
+          propsValue: {
+            file: {
+              filename: `w2e-job-${stamp}.pdf`,
+              data: minimalPdf(marker),
+            },
+            ocr: false,
+          },
+          auth: auth(),
         },
-        auth: auth(),
-      },
-      { timeoutMs: 60_000 },
-    )).output as { task_id: string; task_status: string };
+        { timeoutMs: 60_000 },
+      )
+    ).output as { task_id: string; task_status: string };
     expect(submitted.task_id).toBeTruthy();
 
     const deadline = Date.now() + 300_000;
     for (;;) {
-      const polled = (await worker.runAction(
-        {
-          bundleDir: BUNDLE,
-          actionName: "get_result",
-          propsValue: { task_id: submitted.task_id, wait_seconds: 5 },
-          auth: auth(),
-        },
-        { timeoutMs: 60_000 },
-      )).output as {
+      const polled = (
+        await worker.runAction(
+          {
+            bundleDir: BUNDLE,
+            actionName: "get_result",
+            propsValue: { task_id: submitted.task_id, wait_seconds: 5 },
+            auth: auth(),
+          },
+          { timeoutMs: 60_000 },
+        )
+      ).output as {
         done: boolean;
         document?: { md_content?: string | null };
       };
@@ -273,7 +293,8 @@ async function waitFor<T>(
   for (;;) {
     const value = await probe();
     if (value !== undefined) return value;
-    if (Date.now() > deadline) throw new Error(`Timed out waiting for ${label}`);
+    if (Date.now() > deadline)
+      throw new Error(`Timed out waiting for ${label}`);
     await new Promise((resolve) => setTimeout(resolve, 1_000));
   }
 }

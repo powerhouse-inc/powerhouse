@@ -1,10 +1,7 @@
 import type { ActionContextIdentity } from "../context/action.js";
 import type { StagedFile } from "../context/files.js";
 import type { ServerInfo } from "../context/props.js";
-import type {
-  RecordedListener,
-  RecordedSchedule,
-} from "../context/trigger.js";
+import type { RecordedListener, RecordedSchedule } from "../context/trigger.js";
 
 // One FILE-prop value the host resolved to a path before the run, so the
 // bytes reach the worker through the shared filesystem instead of JSON IPC.
@@ -86,8 +83,7 @@ export interface RunMessage {
 
 // Design-time resolution of a DROPDOWN options() / DYNAMIC props() resolver.
 export interface ResolveOptionsRequest
-  extends EgressScopedRequest,
-    PieceModuleRef {
+  extends EgressScopedRequest, PieceModuleRef {
   // Action or trigger name, per kind (default "action").
   actionName: string;
   kind?: "action" | "trigger";
@@ -112,8 +108,7 @@ export interface ResolveOptionsMessage {
 // Without one it runs statelessly: `storeState` seeds an in-memory store and
 // the whole snapshot comes back in the response for the caller to persist.
 export interface TriggerHookRequest
-  extends EgressScopedRequest,
-    PieceModuleRef {
+  extends EgressScopedRequest, PieceModuleRef {
   triggerName: string;
   hook: "onEnable" | "onDisable" | "run" | "test" | "onHandshake";
   propsValue: Record<string, unknown>;
@@ -142,8 +137,7 @@ export interface TriggerHookMessage {
 // A connection credential check. Auth crosses into the worker and stays
 // there: the piece code that reads it never runs in the host process.
 export interface CheckConnectionRequest
-  extends EgressScopedRequest,
-    PieceModuleRef {
+  extends EgressScopedRequest, PieceModuleRef {
   auth?: unknown;
 }
 
@@ -165,8 +159,7 @@ export interface CheckConnectionOutcome {
 // Building one requires the piece module, whose top-level code runs on load,
 // so it is built in the worker and only the plain descriptor crosses back.
 export interface DescribePieceRequest
-  extends EgressScopedRequest,
-    PieceModuleRef {
+  extends EgressScopedRequest, PieceModuleRef {
   // Carried through into the descriptor's `source` and its resolver ids.
   packageName: string;
   version: string;

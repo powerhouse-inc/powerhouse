@@ -2,7 +2,6 @@
 // enable/poll/fire/disable, error backoff, and the zombie-row guard.
 import { createTestRelationalDb } from "../../test/helpers/pglite.js";
 import { fetchPieceBundle } from "../pieces/index.js";
-import { createRelationalDb } from "@powerhousedao/shared/processors";
 import http from "node:http";
 import type { AddressInfo } from "node:net";
 import { fileURLToPath } from "node:url";
@@ -121,9 +120,7 @@ describe.skipIf(!rssBundle)("TriggerSupervisor", () => {
     const row = await store.getTriggerState(WF);
     expect(row?.status).toBe("ENABLED");
     expect(row?.interval_ms).toBe(300_000);
-    expect(
-      await store.getPieceStoreValue("FLOW", WF, CURSOR_KEY),
-    ).toBe("g1");
+    expect(await store.getPieceStoreValue("FLOW", WF, CURSOR_KEY)).toBe("g1");
     expect(Date.parse(row!.next_poll_at!)).toBeGreaterThan(Date.now());
   }, 60_000);
 
@@ -154,9 +151,7 @@ describe.skipIf(!rssBundle)("TriggerSupervisor", () => {
     expect((fired[0].payload as { title?: string }).title).toBe("Second");
 
     const row = await store.getTriggerState(WF);
-    expect(
-      await store.getPieceStoreValue("FLOW", WF, CURSOR_KEY),
-    ).toBe("g2");
+    expect(await store.getPieceStoreValue("FLOW", WF, CURSOR_KEY)).toBe("g2");
     expect(row?.consecutive_failures).toBe(0);
     expect(Date.parse(row!.next_poll_at!)).toBeGreaterThan(Date.now());
   }, 60_000);
@@ -206,9 +201,7 @@ describe.skipIf(!rssBundle)("TriggerSupervisor", () => {
     await supervisor.remove(WF);
     const row = await store.getTriggerState(WF);
     expect(row?.status).toBe("DISABLED");
-    expect(
-      await store.getPieceStoreValue("FLOW", WF, CURSOR_KEY),
-    ).toBe("g2");
+    expect(await store.getPieceStoreValue("FLOW", WF, CURSOR_KEY)).toBe("g2");
 
     await store.upsertTriggerState({ ...row!, next_poll_at: PAST });
     await supervisor.tick();
@@ -288,9 +281,9 @@ describe.skipIf(!rssBundle)("TriggerSupervisor", () => {
 
     // An unchanged re-registration is a republish and keeps everything.
     await supervisor.upsert({ ...binding(), workflowId: changed });
-    expect(
-      await store.getPieceStoreValue("FLOW", changed, "_webhook_id"),
-    ).toBe(1234);
+    expect(await store.getPieceStoreValue("FLOW", changed, "_webhook_id")).toBe(
+      1234,
+    );
 
     // A different config is a different trigger: the old registration id must
     // not survive into it, or onDisable would later free the wrong endpoint.

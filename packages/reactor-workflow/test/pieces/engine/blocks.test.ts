@@ -22,7 +22,9 @@ describe("core#branch", () => {
   it("compares against equals, trimmed and case-insensitively", async () => {
     const equals = "create";
     expect((await branch({ condition: "create", equals })).port).toBe("true");
-    expect((await branch({ condition: " Create\n", equals })).port).toBe("true");
+    expect((await branch({ condition: " Create\n", equals })).port).toBe(
+      "true",
+    );
     // Both sides non-empty: truthiness alone could not tell these apart.
     expect((await branch({ condition: "edit", equals })).port).toBe("false");
     expect((await branch({ condition: "", equals })).port).toBe("false");
@@ -55,13 +57,16 @@ describe("core#assert", () => {
 
   it("fails on a rejected value, trimmed and case-insensitively", async () => {
     const rejectValues = ["User Safety: safe"];
-    await expect(assert({ value: "User Safety: safe", rejectValues })).rejects
-      .toThrow(/rejected value/);
-    await expect(assert({ value: " user safety: SAFE ", rejectValues })).rejects
-      .toThrow(/rejected value/);
+    await expect(
+      assert({ value: "User Safety: safe", rejectValues }),
+    ).rejects.toThrow(/rejected value/);
+    await expect(
+      assert({ value: " user safety: SAFE ", rejectValues }),
+    ).rejects.toThrow(/rejected value/);
     // A string is one rejected value, not a list.
-    await expect(assert({ value: "nope", rejectValues: "nope" })).rejects
-      .toThrow(/rejected value/);
+    await expect(
+      assert({ value: "nope", rejectValues: "nope" }),
+    ).rejects.toThrow(/rejected value/);
     expect((await assert({ value: "A real answer.", rejectValues })).port).toBe(
       "next",
     );
@@ -89,7 +94,9 @@ describe("core#assert allowValues", () => {
   const allowValues = ["ENABLED", "DISABLED"];
 
   it("passes a value on the allow-list, trimmed and case-insensitively", async () => {
-    expect((await assert({ value: "DISABLED", allowValues })).port).toBe("next");
+    expect((await assert({ value: "DISABLED", allowValues })).port).toBe(
+      "next",
+    );
     expect((await assert({ value: " disabled\n", allowValues })).port).toBe(
       "next",
     );
@@ -103,7 +110,9 @@ describe("core#assert allowValues", () => {
   });
 
   it("treats a string as a single allowed value", async () => {
-    expect((await assert({ value: "ok", allowValues: "ok" })).port).toBe("next");
+    expect((await assert({ value: "ok", allowValues: "ok" })).port).toBe(
+      "next",
+    );
     await expect(assert({ value: "no", allowValues: "ok" })).rejects.toThrow(
       /allowed values/,
     );

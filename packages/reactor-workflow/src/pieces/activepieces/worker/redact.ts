@@ -94,7 +94,8 @@ export function isSensitiveName(name: string): boolean {
   // after it: x-hub-signature-256.
   if (normalized.includes("signature")) return true;
   return SENSITIVE_SUFFIXES.some(
-    (suffix) => normalized.length > suffix.length && normalized.endsWith(suffix),
+    (suffix) =>
+      normalized.length > suffix.length && normalized.endsWith(suffix),
   );
 }
 

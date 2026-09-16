@@ -264,7 +264,7 @@ async function migrateTriggerStoreState(
   } catch (error) {
     // Never blocks the journal: a store that fails to open is returned as
     // `undefined` forever, which silently stops every trigger in the process.
-    logger.error("Could not read trigger_state to migrate it", error);
+    logger.error("Could not read trigger_state to migrate it: @error", error);
     return unmigrated;
   }
   const pending: PendingMigration[] = [];
@@ -633,7 +633,9 @@ export class WorkflowRunStore {
     await this.db
       .insertInto("step_execution")
       .values({ id: randomUUID(), ...values })
-      .onConflict((oc) => oc.columns(["run_id", "step_id"]).doUpdateSet(mutable))
+      .onConflict((oc) =>
+        oc.columns(["run_id", "step_id"]).doUpdateSet(mutable),
+      )
       .execute();
   }
 
@@ -684,7 +686,9 @@ export class WorkflowRunStore {
       .execute();
     // A journaled step keeps the ordinal it ran with; the sweep lands after
     // the highest of them.
-    const ordinals = new Map(journaled.map((row) => [row.step_id, row.ordinal]));
+    const ordinals = new Map(
+      journaled.map((row) => [row.step_id, row.ordinal]),
+    );
     let nextOrdinal = journaled.reduce(
       (max, row) => Math.max(max, row.ordinal + 1),
       0,

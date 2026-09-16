@@ -1,11 +1,7 @@
 // Supervisor robustness over a real PGlite-backed store with a stub worker and
 // an injected clock: onEnable retry/backoff, and the poll cursor guard.
 import { createTestRelationalDb } from "../../test/helpers/pglite.js";
-import type {
-  PieceWorker,
-  PieceWorkerResult,
-} from "../pieces/index.js";
-import { createRelationalDb } from "@powerhousedao/shared/processors";
+import type { PieceWorker, PieceWorkerResult } from "../pieces/index.js";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type * as ReactorConnectors from "../pieces/index.js";
 
@@ -254,16 +250,19 @@ describe("TriggerSupervisor robustness", () => {
 
   it("retries when the webhook endpoint is not minted yet", async () => {
     const wf = "wf-webhook-race";
-    let url: string | undefined;
+    // Minted only later in the test, which is the race being exercised.
+    const endpoint: { url?: string } = {};
     stub.strategy = "WEBHOOK";
-    supervisor = newSupervisor({ webhookUrlFor: () => Promise.resolve(url) });
+    supervisor = newSupervisor({
+      webhookUrlFor: () => Promise.resolve(endpoint.url),
+    });
     await supervisor.upsert(binding(wf));
 
     let row = await store.getTriggerState(wf);
     expect(row?.status).toBe("ERROR");
     expect(row?.next_poll_at).not.toBeNull();
 
-    url = `https://reactor.example/v1/webhooks/${wf}`;
+    endpoint.url = `https://reactor.example/v1/webhooks/${wf}`;
     setClock("2026-09-04T09:02:00.000Z");
     await supervisor.tick();
     row = await store.getTriggerState(wf);
@@ -338,5 +337,4 @@ describe("TriggerSupervisor robustness", () => {
     await supervisor.tick();
     expect((await store.getTriggerState(wf))?.status).toBe("ENABLED");
   });
-
 });

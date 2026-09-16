@@ -14,10 +14,7 @@ import { jsonSafe } from "./json-safe.js";
 import { redactError, redactMessage } from "./redact.js";
 import { readFile } from "node:fs/promises";
 import { buildCheckConnectionContext } from "../context/check.js";
-import {
-  DataUriFilesService,
-  StagedFilesService,
-} from "../context/files.js";
+import { DataUriFilesService, StagedFilesService } from "../context/files.js";
 import {
   normalizePropsValue,
   type NormalizeOptions,
@@ -212,7 +209,9 @@ async function handleRun(message: RunMessage): Promise<WorkerResponse> {
     : undefined;
   const liveOutput = request.liveOutput ? new RemoteOutput() : undefined;
   // Host-served reactor access, for a piece that ships inside a reactor package.
-  const reactor = request.reactorAccess ? new RemoteReactorService() : undefined;
+  const reactor = request.reactorAccess
+    ? new RemoteReactorService()
+    : undefined;
   const { context, touched } = buildActionContext({
     propsValue: await normalizePropsValue(action.props, request.propsValue, {
       resolveRef: stagedInputResolver(request.stagedInputs),

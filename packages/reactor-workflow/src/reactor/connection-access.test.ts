@@ -2,7 +2,6 @@
 // authorize their caller, because nothing in the request itself does.
 import { createTestRelationalDb } from "../../test/helpers/pglite.js";
 import type { WorkflowRuntimeHost } from "./host.js";
-import { createRelationalDb } from "@powerhousedao/shared/processors";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { workflowRuntime } from "./service.js";
 
@@ -33,7 +32,9 @@ const assertCanRead = vi.fn((documentId: string) =>
     : Promise.reject(new Error("forbidden")),
 );
 
-const get = vi.fn(() => Promise.resolve(connectionSummaryDocument("conn-mine")));
+const get = vi.fn(() =>
+  Promise.resolve(connectionSummaryDocument("conn-mine")),
+);
 
 describe("design-time connection access", () => {
   beforeAll(() => {
@@ -76,9 +77,9 @@ describe("design-time connection access", () => {
   });
 
   it("refuses testTrigger for a workflow the caller cannot read", async () => {
-    await expect(
-      workflowRuntime.testTrigger("wf-theirs", CTX),
-    ).rejects.toThrow("forbidden");
+    await expect(workflowRuntime.testTrigger("wf-theirs", CTX)).rejects.toThrow(
+      "forbidden",
+    );
     expect(get).not.toHaveBeenCalled();
   });
 
@@ -99,9 +100,9 @@ describe("design-time connection access", () => {
     } as never);
 
     // The workflow is readable; the credentials it would resolve are not.
-    await expect(
-      workflowRuntime.testTrigger("conn-mine", CTX),
-    ).rejects.toThrow("forbidden");
+    await expect(workflowRuntime.testTrigger("conn-mine", CTX)).rejects.toThrow(
+      "forbidden",
+    );
   });
 
   it("lists only the connections the caller may read", async () => {

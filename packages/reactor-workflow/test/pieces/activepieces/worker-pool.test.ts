@@ -205,8 +205,7 @@ describe("PieceWorkerPool", () => {
   // the request not yet sent. Dispatching then forks a child nothing tracks.
   it("refuses to dispatch to a session disposed while it waited", async () => {
     const { built, createWorker } = fakeWorkers();
-    let pool: PieceWorkerPool;
-    pool = new PieceWorkerPool({
+    const pool: PieceWorkerPool = new PieceWorkerPool({
       size: 1,
       createWorker: () => {
         // Runs between the slot being granted and the request going out.

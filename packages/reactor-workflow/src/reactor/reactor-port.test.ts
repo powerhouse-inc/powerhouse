@@ -51,10 +51,16 @@ function fakeReactor(documents: ReturnType<typeof doc>[] = []) {
       return Promise.resolve(found);
     },
     createEmpty(documentType: string, options: { parentIdentifier?: string }) {
-      calls.push(`createEmpty ${documentType} parent=${options.parentIdentifier ?? "-"}`);
+      calls.push(
+        `createEmpty ${documentType} parent=${options.parentIdentifier ?? "-"}`,
+      );
       return Promise.resolve(doc("new-1", documentType));
     },
-    execute(id: string, branch: string, actions: { type: string; input?: unknown }[]) {
+    execute(
+      id: string,
+      branch: string,
+      actions: { type: string; input?: unknown }[],
+    ) {
       calls.push(
         `execute ${id} ${actions.map((a) => a.type).join(",")} name=${
           (actions[0]?.input as { name?: string } | undefined)?.name ?? "-"
@@ -86,11 +92,17 @@ function fakeReactor(documents: ReturnType<typeof doc>[] = []) {
         }
         return Promise.reject(new Error("not in this drive"));
       },
-      addFile(driveId: string, document: { header: { name: string } }, parent?: string) {
+      addFile(
+        driveId: string,
+        document: { header: { name: string } },
+        parent?: string,
+      ) {
         calls.push(
           `addFile ${driveId} parent=${parent ?? "-"} name=${document.header.name || "-"}`,
         );
-        return Promise.resolve(doc("filed-1", "acme/todo", document.header.name));
+        return Promise.resolve(
+          doc("filed-1", "acme/todo", document.header.name),
+        );
       },
     },
   };
@@ -210,7 +222,9 @@ describe("SubgraphReactorPort.find with a state match", () => {
   it("matches a number in state against the text an expression resolved to", async () => {
     // Every expression arrives as a string; `"42" !== 42` would make a match
     // against a numeric field silently impossible.
-    const { port } = fakeReactor([stateful("ledger-1", LEDGER, { poNumber: 42 })]);
+    const { port } = fakeReactor([
+      stateful("ledger-1", LEDGER, { poNumber: 42 }),
+    ]);
 
     const found = await port.find({
       documentType: LEDGER,

@@ -2,7 +2,10 @@
 
 // A trigger declares which shape its sender uses; the piece's own onHandshake
 // decides the answer. Only "is this a probe" is decided here.
-import type { WebhookReply, WebhookRequest } from "@powerhousedao/shared/processors";
+import type {
+  WebhookReply,
+  WebhookRequest,
+} from "@powerhousedao/shared/processors";
 
 export interface PieceHandshake {
   strategy: string;

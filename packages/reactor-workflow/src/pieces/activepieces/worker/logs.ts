@@ -34,7 +34,11 @@ export function captureConsole(): () => void {
         sent > MAX_ENTRIES_PER_REQUEST
           ? `[log truncated after ${MAX_ENTRIES_PER_REQUEST} entries]`
           : format(...args).slice(0, MAX_MESSAGE_LENGTH);
-      notifyHost(LOG_WRITE, { level, message, at: Date.now() } satisfies PieceLogEntry);
+      notifyHost(LOG_WRITE, {
+        level,
+        message,
+        at: Date.now(),
+      } satisfies PieceLogEntry);
     };
   }
 

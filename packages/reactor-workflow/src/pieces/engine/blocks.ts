@@ -7,11 +7,11 @@ import {
   type PieceResolver,
 } from "../activepieces/resolver.js";
 import type { ReactorService } from "../activepieces/context/reactor.js";
-import { rewriteFileRefs, type StagedFile } from "../activepieces/context/files.js";
 import {
-  PieceWorker,
-  type IPieceWorker,
-} from "../activepieces/worker/host.js";
+  rewriteFileRefs,
+  type StagedFile,
+} from "../activepieces/context/files.js";
+import { PieceWorker, type IPieceWorker } from "../activepieces/worker/host.js";
 import { DEFAULT_EGRESS_POLICY } from "../activepieces/worker/egress.js";
 import {
   LOG_WRITE,
@@ -234,7 +234,11 @@ export type ReactorPort = ReactorService;
 // Payloads arrive from the child, which runs piece code: a call is checked
 // here rather than trusted to have come from our own proxy.
 function reactorInput(payload: unknown): Record<string, unknown> {
-  if (typeof payload !== "object" || payload === null || Array.isArray(payload)) {
+  if (
+    typeof payload !== "object" ||
+    payload === null ||
+    Array.isArray(payload)
+  ) {
     throw new Error("Reactor call carried no input object");
   }
   return payload as Record<string, unknown>;
@@ -289,7 +293,9 @@ function findLimit(value: unknown): number | undefined {
 // The state match, as the host will accept it. Both halves must be strings and
 // the path must name something: a match with an empty path would silently pass
 // every document, which is the opposite of what a step asking to match wants.
-function findMatch(value: unknown): { path: string; value: string } | undefined {
+function findMatch(
+  value: unknown,
+): { path: string; value: string } | undefined {
   if (typeof value !== "object" || value === null) return undefined;
   const record = value as Record<string, unknown>;
   const path = record.path;

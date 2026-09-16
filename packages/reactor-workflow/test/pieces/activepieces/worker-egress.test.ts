@@ -278,7 +278,9 @@ describe("worker egress policy", () => {
       res.writeHead(200, { "content-type": "text/plain" });
       res.end("allowed");
     });
-    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    await new Promise<void>((resolve) =>
+      server.listen(0, "127.0.0.1", resolve),
+    );
     port = (server.address() as AddressInfo).port;
     worker = new PieceWorker();
   });
@@ -570,7 +572,12 @@ describe("address classification", () => {
   });
 
   it("leaves public addresses alone", () => {
-    for (const address of ["8.8.8.8", "1.1.1.1", "93.184.216.34", "2606:4700::1"]) {
+    for (const address of [
+      "8.8.8.8",
+      "1.1.1.1",
+      "93.184.216.34",
+      "2606:4700::1",
+    ]) {
       expect(isPrivateAddress(address)).toBe(false);
     }
   });

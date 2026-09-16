@@ -18,7 +18,10 @@ export interface RunScope {
 
 const storage = new AsyncLocalStorage<RunScope>();
 
-export function withRunScope<T>(scope: RunScope, fn: () => Promise<T>): Promise<T> {
+export function withRunScope<T>(
+  scope: RunScope,
+  fn: () => Promise<T>,
+): Promise<T> {
   return storage.run(scope, fn);
 }
 

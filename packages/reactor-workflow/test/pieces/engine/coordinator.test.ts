@@ -213,7 +213,7 @@ describe("runWorkflow", () => {
       "SUCCEEDED",
     ]);
     // Step a never re-executed; its journaled output still fed step b.
-    expect(executor.calls.map((call) => call.step?.id ?? "")).toEqual(["b"]);
+    expect(executor.calls.map((call) => call.step.id)).toEqual(["b"]);
     expect(resumed.steps[1].output).toEqual({ got: "hello" });
   });
 
@@ -382,7 +382,8 @@ describe("runWorkflow", () => {
 
 describe("parseBlockType", () => {
   it("resolves versions inline or from the registry", async () => {
-    const { parseBlockType } = await import("../../../src/pieces/engine/blocks.js");
+    const { parseBlockType } =
+      await import("../../../src/pieces/engine/blocks.js");
     expect(
       parseBlockType("@activepieces/piece-http@0.11.19#send_request"),
     ).toEqual({
@@ -408,7 +409,8 @@ describe("parseBlockType", () => {
   });
 
   it("classifies trigger block types", async () => {
-    const { parseBlockType } = await import("../../../src/pieces/engine/blocks.js");
+    const { parseBlockType } =
+      await import("../../../src/pieces/engine/blocks.js");
     expect(
       parseBlockType("@activepieces/piece-rss@0.5.0#trigger:new_item"),
     ).toEqual({

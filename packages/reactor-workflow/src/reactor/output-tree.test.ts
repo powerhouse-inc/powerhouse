@@ -179,8 +179,16 @@ describe("fromSample", () => {
     ).toEqual([
       { name: "title", type: "string" },
       { name: "count", type: "number" },
-      { name: "tags", type: "array", children: [{ name: "0", type: "string" }] },
-      { name: "meta", type: "object", children: [{ name: "ok", type: "boolean" }] },
+      {
+        name: "tags",
+        type: "array",
+        children: [{ name: "0", type: "string" }],
+      },
+      {
+        name: "meta",
+        type: "object",
+        children: [{ name: "ok", type: "boolean" }],
+      },
     ]);
   });
 });

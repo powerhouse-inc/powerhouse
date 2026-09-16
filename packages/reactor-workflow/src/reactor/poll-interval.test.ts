@@ -2,7 +2,10 @@
 // trigger config, lifted out before the config reaches the piece.
 import { describe, expect, it } from "vitest";
 import { splitPollInterval } from "./service.js";
-import { pollIntervalFor, type PieceTriggerBinding } from "./trigger-supervisor.js";
+import {
+  pollIntervalFor,
+  type PieceTriggerBinding,
+} from "./trigger-supervisor.js";
 
 const binding = (pollIntervalMs?: number): PieceTriggerBinding => ({
   workflowId: "wf",
@@ -37,9 +40,9 @@ describe("splitPollInterval", () => {
   it("drops an unusable value but still strips the key", () => {
     // The piece must never see it, valid or not.
     for (const raw of ["", "soon", 0, -5, null, {}]) {
-      expect(splitPollInterval({ channel: "c1", pollEverySeconds: raw })).toEqual(
-        { config: { channel: "c1" } },
-      );
+      expect(
+        splitPollInterval({ channel: "c1", pollEverySeconds: raw }),
+      ).toEqual({ config: { channel: "c1" } });
     }
   });
 });

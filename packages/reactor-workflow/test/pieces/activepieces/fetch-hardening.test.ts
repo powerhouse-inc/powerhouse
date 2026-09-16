@@ -59,7 +59,9 @@ describe("ensurePieceBundle hardening", () => {
   }
 
   it("extracts a bundle and reports the cached directory", async () => {
-    serve(tarball({ "package.json": manifest, "index.js": "export default 1;" }));
+    serve(
+      tarball({ "package.json": manifest, "index.js": "export default 1;" }),
+    );
     const bundle = await ensurePieceBundle({
       name: "@scope/fixture",
       version: "1.0.0",
@@ -120,7 +122,9 @@ describe("ensurePieceBundle hardening", () => {
 
   it("surfaces a fetch failure with the bundle coordinates", async () => {
     globalThis.fetch = (() =>
-      Promise.resolve(new Response("nope", { status: 404 }))) as typeof globalThis.fetch;
+      Promise.resolve(
+        new Response("nope", { status: 404 }),
+      )) as typeof globalThis.fetch;
     await expect(
       ensurePieceBundle({ name: "@scope/fixture", version: "9.9.9", cacheDir }),
     ).rejects.toThrow(/@scope\/fixture@9\.9\.9/);

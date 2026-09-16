@@ -127,7 +127,8 @@ export function findProperty(
   const prop = ownerProps(piece, actionName, kind)[propName] as
     | ApProperty
     | undefined;
-  if (!prop) throw new Error(`No prop "${propName}" on ${kind} "${actionName}"`);
+  if (!prop)
+    throw new Error(`No prop "${propName}" on ${kind} "${actionName}"`);
   return prop;
 }
 

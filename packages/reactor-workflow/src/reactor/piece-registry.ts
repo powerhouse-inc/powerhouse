@@ -15,10 +15,7 @@ const logger = childLogger(["workflow", "piece-registry"]);
 
 // Built output first, source second: a reactor running from `dist` finds the
 // first, and a dev reactor loading this project from source finds the second.
-const MANIFEST_CANDIDATES = [
-  "dist/node/pieces/index.mjs",
-  "pieces/index.ts",
-];
+const MANIFEST_CANDIDATES = ["dist/node/pieces/index.mjs", "pieces/index.ts"];
 
 const require = createRequire(import.meta.url);
 
@@ -54,7 +51,9 @@ export function configuredPackages(projectRoot: string): string[] {
     };
     return (config.packages ?? [])
       .map((entry) => entry.packageName)
-      .filter((name): name is string => typeof name === "string" && name !== "");
+      .filter(
+        (name): name is string => typeof name === "string" && name !== "",
+      );
   } catch {
     return [];
   }
@@ -64,7 +63,9 @@ async function readManifest(root: string): Promise<PackagePiece[]> {
   for (const candidate of MANIFEST_CANDIDATES) {
     const file = join(root, candidate);
     if (!existsSync(file)) continue;
-    const module = (await import(/* @vite-ignore */ pathToFileURL(file).href)) as {
+    const module = (await import(
+      /* @vite-ignore */ pathToFileURL(file).href
+    )) as {
       pieces?: unknown;
       default?: unknown;
     };

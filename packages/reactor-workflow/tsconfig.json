@@ -4,7 +4,7 @@
     "outDir": "./.tsbuild",
     "types": ["node", "vitest/globals"]
   },
-  "include": ["src", "test"],
+  "include": ["src", "test", "*.config.ts"],
   "exclude": ["dist", "node_modules"],
   "references": [
     {

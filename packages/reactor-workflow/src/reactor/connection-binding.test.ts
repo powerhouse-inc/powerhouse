@@ -60,7 +60,10 @@ function fakeSubgraph() {
     if (!document) return Promise.reject(new Error("not found"));
     return Promise.resolve(document);
   });
-  return { get, subgraph: { reactorClient: { get } } as unknown as WorkflowRuntimeHost };
+  return {
+    get,
+    subgraph: { reactorClient: { get } } as unknown as WorkflowRuntimeHost,
+  };
 }
 
 const secrets = new InMemorySecretProvider({ "vault://token": "s3cret" });
@@ -194,9 +197,9 @@ describe("run-scoped connection binding", () => {
     const { subgraph } = fakeSubgraph();
     const resolver = resolverOver(subgraph);
 
-    await expect(resolver.resolve("conn-slack", asSlack)).rejects.toBeInstanceOf(
-      ConnectionNotBoundError,
-    );
+    await expect(
+      resolver.resolve("conn-slack", asSlack),
+    ).rejects.toBeInstanceOf(ConnectionNotBoundError);
   });
 
   // What the block executor asks for. Without it, it falls back to guessing
@@ -210,7 +213,10 @@ describe("run-scoped connection binding", () => {
       () => resolver.resolveWithSecrets!("conn-slack", asSlack),
     );
 
-    expect(resolved.auth).toEqual({ type: "SECRET_TEXT", secret_text: "s3cret" });
+    expect(resolved.auth).toEqual({
+      type: "SECRET_TEXT",
+      secret_text: "s3cret",
+    });
     expect(resolved.secretValues).toContain("s3cret");
   });
 
@@ -232,9 +238,9 @@ describe("connector binding", () => {
     const { subgraph } = fakeSubgraph();
     const resolver = new DocumentConnectionResolver(subgraph, secrets);
 
-    await expect(
-      resolver.resolve("conn-imap", asSlack),
-    ).rejects.toBeInstanceOf(ConnectorMismatchError);
+    await expect(resolver.resolve("conn-imap", asSlack)).rejects.toBeInstanceOf(
+      ConnectorMismatchError,
+    );
   });
 
   it("ignores the version a blockType pins", async () => {

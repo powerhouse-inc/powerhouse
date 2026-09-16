@@ -92,7 +92,12 @@ function resolver(local: boolean): PieceResolver {
       return Promise.resolve(
         local
           ? { name, version, entryPath, local: true }
-          : { name, version, bundleDir: join(cacheDir, "fetched"), local: false },
+          : {
+              name,
+              version,
+              bundleDir: join(cacheDir, "fetched"),
+              local: false,
+            },
       );
     },
   };
@@ -170,7 +175,11 @@ describe("ctx.reactor over the host call channel", () => {
     await mkdir(fetched, { recursive: true });
     await writeFile(
       join(fetched, "package.json"),
-      JSON.stringify({ name: "@test/fetched", version: "1.0.0", main: "index.js" }),
+      JSON.stringify({
+        name: "@test/fetched",
+        version: "1.0.0",
+        main: "index.js",
+      }),
     );
     await writeFile(join(fetched, "index.js"), REACTOR_FIXTURE);
   });
@@ -237,7 +246,11 @@ describe("ctx.reactor over the host call channel", () => {
 
     // Whatever a piece asks for, the host serves a page it is willing to
     // read: capped, whole, and at least one.
-    expect(port.calls).toEqual(["find limit=100", "find limit=1", "find limit=3"]);
+    expect(port.calls).toEqual([
+      "find limit=100",
+      "find limit=1",
+      "find limit=3",
+    ]);
   });
 
   it("refuses a fetched bundle the same piece code", async () => {

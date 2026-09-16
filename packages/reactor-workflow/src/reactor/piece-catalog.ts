@@ -188,8 +188,16 @@ const FIRST_PARTY_PIECES: PieceSummary[] = [
       displayName: "Docling Serve",
       required: true,
       props: {
-        base_url: { type: "SHORT_TEXT", displayName: "Service URL", required: true },
-        api_key: { type: "SECRET_TEXT", displayName: "API Key", required: false },
+        base_url: {
+          type: "SHORT_TEXT",
+          displayName: "Service URL",
+          required: true,
+        },
+        api_key: {
+          type: "SECRET_TEXT",
+          displayName: "API Key",
+          required: false,
+        },
       },
     },
   },

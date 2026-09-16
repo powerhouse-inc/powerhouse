@@ -123,9 +123,10 @@ describe("redaction in the piece worker", () => {
       connections,
     });
 
-    const error = await executor
-      .execute(execution("boom"))
-      .then(() => undefined, (thrown: unknown) => thrown);
+    const error = await executor.execute(execution("boom")).then(
+      () => undefined,
+      (thrown: unknown) => thrown,
+    );
 
     expect(error).toBeInstanceOf(PieceWorkerError);
     const { serialized, message, stack } = error as PieceWorkerError;

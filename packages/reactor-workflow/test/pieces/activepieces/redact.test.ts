@@ -23,9 +23,12 @@ describe("redactMessage", () => {
   it("replaces the URI-encoded form of a known secret", () => {
     const secret = "p@ssw0rd/with+chars";
     expect(
-      redactMessage(`https://api.example.com/x?t=${encodeURIComponent(secret)}`, {
-        values: [secret],
-      }),
+      redactMessage(
+        `https://api.example.com/x?t=${encodeURIComponent(secret)}`,
+        {
+          values: [secret],
+        },
+      ),
     ).toBe("https://api.example.com/x?t=[redacted:secret]");
   });
 
@@ -167,9 +170,11 @@ describe("the value bar", () => {
 
   it("redacts a declared value whatever its entropy", () => {
     for (const secret of ["hunter2", "s3cr3t!", "aabbccdd"]) {
-      expect(redactMessage(`login with ${secret} failed`, {
-        values: [secret],
-      })).toBe("login with [redacted:secret] failed");
+      expect(
+        redactMessage(`login with ${secret} failed`, {
+          values: [secret],
+        }),
+      ).toBe("login with [redacted:secret] failed");
     }
   });
 
@@ -206,9 +211,9 @@ describe("what survives redaction", () => {
   });
 
   it("redacts the password half of URL userinfo, keeping the user", () => {
-    expect(
-      redactMessage("401 for https://alice:s3cretpassword@host/api"),
-    ).toBe("401 for https://alice:[redacted:password]@host/api");
+    expect(redactMessage("401 for https://alice:s3cretpassword@host/api")).toBe(
+      "401 for https://alice:[redacted:password]@host/api",
+    );
   });
 
   it("journals a large output whole, and truncates only errors", () => {

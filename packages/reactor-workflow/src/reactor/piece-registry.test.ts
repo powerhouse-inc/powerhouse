@@ -45,13 +45,18 @@ describe("PieceRegistry", () => {
         bundle: "dist/node/pieces/reactor",
       },
     ]);
-    await writeBundle("dist/node/pieces/reactor", "@powerhousedao/piece-reactor");
+    await writeBundle(
+      "dist/node/pieces/reactor",
+      "@powerhousedao/piece-reactor",
+    );
 
     const registry = new PieceRegistry();
     await registry.load(root);
 
     const piece = registry.lookup("@powerhousedao/piece-reactor");
-    expect(piece?.bundleDir).toBe(join(root, "dist", "node", "pieces", "reactor"));
+    expect(piece?.bundleDir).toBe(
+      join(root, "dist", "node", "pieces", "reactor"),
+    );
     expect(piece?.entryPath).toBeUndefined();
     // What an unversioned block type resolves against.
     expect(registry.versions()).toEqual({
@@ -61,9 +66,16 @@ describe("PieceRegistry", () => {
 
   it("takes a single module file as an entry", async () => {
     await mkdir(join(root, "dist", "node", "pieces"), { recursive: true });
-    await writeFile(join(root, "dist", "node", "pieces", "solo.js"), "module.exports={};\n");
+    await writeFile(
+      join(root, "dist", "node", "pieces", "solo.js"),
+      "module.exports={};\n",
+    );
     await writeManifest([
-      { name: "@acme/piece-solo", version: "0.1.0", entry: "dist/node/pieces/solo.js" },
+      {
+        name: "@acme/piece-solo",
+        version: "0.1.0",
+        entry: "dist/node/pieces/solo.js",
+      },
     ]);
 
     const registry = new PieceRegistry();
@@ -76,7 +88,11 @@ describe("PieceRegistry", () => {
 
   it("skips a piece whose bundle was never built", async () => {
     await writeManifest([
-      { name: "@acme/piece-ghost", version: "1.0.0", bundle: "dist/node/pieces/ghost" },
+      {
+        name: "@acme/piece-ghost",
+        version: "1.0.0",
+        bundle: "dist/node/pieces/ghost",
+      },
     ]);
 
     const registry = new PieceRegistry();
@@ -96,7 +112,11 @@ describe("PieceRegistry", () => {
 
   it("loads once however many callers ask", async () => {
     await writeManifest([
-      { name: "@acme/piece-one", version: "1.0.0", bundle: "dist/node/pieces/one" },
+      {
+        name: "@acme/piece-one",
+        version: "1.0.0",
+        bundle: "dist/node/pieces/one",
+      },
     ]);
     await writeBundle("dist/node/pieces/one", "@acme/piece-one");
 

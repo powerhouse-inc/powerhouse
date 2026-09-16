@@ -1,7 +1,6 @@
 // core#schedule through the supervisor over a real PGlite-backed store, with
 // an injected clock: enable, due fires, restart carry-over, errors, disable.
 import { createTestRelationalDb } from "../../test/helpers/pglite.js";
-import { createRelationalDb } from "@powerhousedao/shared/processors";
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { SCHEDULE_BLOCK, type SchedulePayload } from "./schedule.js";
 import { WorkflowRunStore } from "./store.js";

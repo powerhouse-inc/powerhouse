@@ -120,7 +120,9 @@ export async function resolveConnectionWithSecrets(
   // Past the check the caller already holds this connection, so the reason it
   // cannot be used is theirs to see.
   if (state.status === "REVOKED") {
-    throw new Error(`Connection "${state.name || document.header.id}" is revoked`);
+    throw new Error(
+      `Connection "${state.name || document.header.id}" is revoked`,
+    );
   }
   return shapeConnection(
     {
@@ -273,7 +275,9 @@ export function createBlockExecutor(
       // Without an attachment store a piece's ctx.files still works, but
       // inline as a data URI; with one, bytes go to the store and the output
       // carries a reference.
-      ...(attachments ? { attachments, stagingRoot: ATTACHMENT_STAGING_DIR } : {}),
+      ...(attachments
+        ? { attachments, stagingRoot: ATTACHMENT_STAGING_DIR }
+        : {}),
     }),
   );
 }

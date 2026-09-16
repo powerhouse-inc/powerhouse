@@ -137,8 +137,14 @@ describe("connection binding", () => {
   // What a host resolver looks like: the concrete secrets come back with the
   // auth, rather than being guessed from it afterwards.
   class SecretBearingResolver extends RecordingResolver {
-    async resolveWithSecrets(connectionId: string, request?: ConnectionRequest) {
-      return { auth: await this.resolve(connectionId, request), secretValues: ["s3cret"] };
+    async resolveWithSecrets(
+      connectionId: string,
+      request?: ConnectionRequest,
+    ) {
+      return {
+        auth: await this.resolve(connectionId, request),
+        secretValues: ["s3cret"],
+      };
     }
   }
 
@@ -242,7 +248,10 @@ describe("connection binding", () => {
 
   // An inner resolver without the path must not appear to have one.
   it("offers no secret-bearing path when the inner resolver has none", () => {
-    const bound = new BoundConnectionResolver(new RecordingResolver(), bindingOf);
+    const bound = new BoundConnectionResolver(
+      new RecordingResolver(),
+      bindingOf,
+    );
 
     expect(bound.resolveWithSecrets).toBeUndefined();
   });
