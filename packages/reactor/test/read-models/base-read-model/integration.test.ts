@@ -12,6 +12,7 @@ import type { IOperationIndex } from "../../../src/cache/operation-index-types.j
 import type { IWriteCache } from "../../../src/cache/write/interfaces.js";
 import {
   BaseReadModel,
+  type BaseReadModelConfig,
   type ReadModelIndexingConfig,
 } from "../../../src/read-models/base-read-model.js";
 import { KyselyDocumentView } from "../../../src/read-models/document-view.js";
@@ -847,5 +848,207 @@ describe("BaseReadModel chunked indexing", () => {
     await indexer.indexOperations(makeBatch(generateId(), BATCH_SIZE));
 
     expect(spy).toHaveBeenCalledTimes(1);
+  });
+});
+
+/** Commits nothing but the ordinals it saw, and refuses one of them on demand. */
+class FlakyReadModel extends BaseReadModel {
+  readonly committed: number[] = [];
+  readonly chunkSizes: number[] = [];
+
+  constructor(
+    db: Kysely<DocumentViewDatabase>,
+    operationIndex: IOperationIndex,
+    writeCache: IWriteCache,
+    consistencyTracker: ConsistencyTracker,
+    config: BaseReadModelConfig,
+    private failOnOrdinal: number,
+  ) {
+    super(db, operationIndex, writeCache, consistencyTracker, config);
+  }
+
+  stopFailing(): void {
+    this.failOnOrdinal = 0;
+  }
+
+  protected override async commitOperations(
+    items: OperationWithContext[],
+  ): Promise<void> {
+    if (items.length === 0) {
+      throw new Error("commitOperations received an empty chunk");
+    }
+
+    this.chunkSizes.push(items.length);
+
+    if (
+      this.failOnOrdinal > 0 &&
+      items.some((item) => item.context.ordinal === this.failOnOrdinal)
+    ) {
+      throw new Error(`commit refused ordinal ${this.failOnOrdinal}`);
+    }
+
+    for (const item of items) {
+      this.committed.push(item.context.ordinal);
+    }
+
+    await Promise.resolve();
+  }
+}
+
+describe("BaseReadModel failure boundaries", () => {
+  const READ_MODEL_ID = "flaky-read-model";
+  const FAILING_ORDINAL = 15;
+  let db: Kysely<Database>;
+  let operationIndex: IOperationIndex;
+  let writeCache: IWriteCache;
+
+  beforeEach(async () => {
+    const baseDb = new Kysely<Database>({
+      dialect: new PGliteDialect(new PGlite()),
+    });
+    const result = await runMigrations(baseDb, REACTOR_SCHEMA);
+    if (!result.success && result.error) {
+      throw new Error(`Test migration failed: ${result.error.message}`);
+    }
+    db = baseDb.withSchema(REACTOR_SCHEMA);
+    operationIndex = new KyselyOperationIndex(
+      db as unknown as Kysely<StorageDatabase>,
+    );
+    writeCache = {
+      getState: vi.fn().mockResolvedValue({}),
+      putState: vi.fn(),
+      putRun: vi.fn(),
+      invalidate: vi.fn().mockReturnValue(0),
+      clear: vi.fn(),
+      startup: vi.fn().mockResolvedValue(undefined),
+      shutdown: vi.fn().mockResolvedValue(undefined),
+    } as unknown as IWriteCache;
+  });
+
+  afterEach(async () => {
+    await db.destroy();
+  });
+
+  async function appendOperations(
+    documentId: string,
+    firstIndex: number,
+    count: number,
+  ): Promise<void> {
+    const txn = operationIndex.start();
+    txn.write(
+      Array.from({ length: count }, (_, i) => ({
+        ...createOperation(documentId, "global", "main", firstIndex + i, 0)
+          .operation,
+        documentId,
+        documentType: "test/document",
+        scope: "global",
+        branch: "main",
+        sourceRemote: "",
+      })),
+    );
+    await operationIndex.commit(txn);
+  }
+
+  async function readOperationsSince(
+    ordinal: number,
+  ): Promise<OperationWithContext[]> {
+    const collected: OperationWithContext[] = [];
+    let page = await operationIndex.getSinceOrdinal(ordinal);
+    for (;;) {
+      collected.push(...page.results);
+      if (!page.next) break;
+      page = await page.next();
+    }
+    return collected;
+  }
+
+  async function readCursor(): Promise<number | undefined> {
+    const row = await db
+      .selectFrom("ViewState")
+      .select("lastOrdinal")
+      .where("readModelId", "=", READ_MODEL_ID)
+      .executeTakeFirst();
+    return row?.lastOrdinal;
+  }
+
+  function makeModel(
+    failOnOrdinal: number,
+    indexing: ReadModelIndexingConfig,
+  ): FlakyReadModel {
+    return new FlakyReadModel(
+      db as unknown as Kysely<DocumentViewDatabase>,
+      operationIndex,
+      writeCache,
+      new ConsistencyTracker(),
+      {
+        readModelId: READ_MODEL_ID,
+        rebuildStateOnInit: false,
+        indexing,
+      },
+      failOnOrdinal,
+    );
+  }
+
+  it("parks the cursor at the last committed operation when a chunk fails", async () => {
+    await appendOperations(generateId(), 0, 40);
+
+    const failing = makeModel(FAILING_ORDINAL, CHUNKED);
+    await expect(failing.init()).rejects.toThrow(
+      `commit refused ordinal ${FAILING_ORDINAL}`,
+    );
+
+    expect(failing.committed).toEqual(
+      Array.from({ length: FAILING_ORDINAL - 1 }, (_, i) => i + 1),
+    );
+    expect(await readCursor()).toBe(FAILING_ORDINAL - 1);
+
+    const recovering = makeModel(0, CHUNKED);
+    await recovering.init();
+
+    expect(recovering.committed).toEqual(
+      Array.from(
+        { length: 41 - FAILING_ORDINAL },
+        (_, i) => i + FAILING_ORDINAL,
+      ),
+    );
+  });
+
+  it("never advances the cursor past an operation it failed to commit", async () => {
+    const documentId = generateId();
+    await appendOperations(documentId, 0, 40);
+
+    const failing = makeModel(FAILING_ORDINAL, CHUNKED);
+    await expect(failing.init()).rejects.toThrow();
+
+    await appendOperations(documentId, 40, 10);
+    const later = await readOperationsSince(40);
+    expect(later.map((item) => item.context.ordinal)).toEqual(
+      Array.from({ length: 10 }, (_, i) => i + 41),
+    );
+
+    failing.stopFailing();
+    await failing.indexOperations(later);
+
+    expect(await readCursor()).toBeLessThan(FAILING_ORDINAL);
+
+    const recovering = makeModel(0, CHUNKED);
+    await recovering.init();
+
+    const seen = new Set([...failing.committed, ...recovering.committed]);
+    for (let ordinal = 1; ordinal <= 50; ordinal++) {
+      expect(seen.has(ordinal)).toBe(true);
+    }
+  });
+
+  it("indexes the batch instead of spinning when the chunk size is zero", async () => {
+    await appendOperations(generateId(), 0, 12);
+    const items = await readOperationsSince(0);
+
+    const model = makeModel(0, { commitChunkSize: 0, yieldDeadlineMs: 50 });
+    await model.init();
+
+    expect(model.committed).toEqual(items.map((item) => item.context.ordinal));
+    expect(model.chunkSizes.every((size) => size > 0)).toBe(true);
+    expect(await readCursor()).toBe(12);
   });
 });
