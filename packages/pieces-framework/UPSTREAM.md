@@ -69,6 +69,13 @@ Current patches:
   form-data body to `BodyInit` (`@types/node` 25 no longer accepts
   `Buffer<ArrayBufferLike>` there), and replace a `@ts-expect-error` whose
   target line prettier moves with an explicit cast on `Readable.fromWeb`.
+- `upstream/framework/index.ts` and `upstream/framework/lib/property/index.ts`:
+  re-export `SeekPage`, `McpAuthConfig` and `InputProperty` as values instead
+  of `export type`. Each is a zod schema merged with a type; rolldown-plugin-dts
+  drops the `type` modifier when it bundles `dist/index.d.ts`, so upstream's
+  type-only re-export let `import { SeekPage }` typecheck and then fail at link
+  time. The runtime gains three exports upstream's lacks; `test/dist.test.ts`
+  holds the d.ts to the runtime.
 - `test/upstream/framework/test/connection-identifier-flag.test.ts`: pass
   `authors: []` to `createPiece` (upstream does not typecheck its tests).
 - `test/upstream/core-utils/test/ai-provider-health.test.ts`: make the outcome

@@ -91,6 +91,32 @@ const PATCHES: Patch[] = [
       "          );\n",
   },
   {
+    file: "upstream/framework/index.ts",
+    why: "rolldown-plugin-dts drops `type` on a re-export of a merged const+type; export the value too",
+    find: 'export type { SeekPage } from "../core-utils/index.js";\n',
+    replace: 'export { SeekPage } from "../core-utils/index.js";\n',
+  },
+  {
+    file: "upstream/framework/index.ts",
+    why: "same for McpAuthConfig: move it from the type-only block to the value block",
+    find:
+      "  DEFAULT_CHAT_TIER_ID,\n" +
+      '} from "../core-piece-types/index.js";\n' +
+      "export type {\n" +
+      "  McpAuthConfig,\n",
+    replace:
+      "  DEFAULT_CHAT_TIER_ID,\n" +
+      "  McpAuthConfig,\n" +
+      '} from "../core-piece-types/index.js";\n' +
+      "export type {\n",
+  },
+  {
+    file: "upstream/framework/lib/property/index.ts",
+    why: "same for InputProperty",
+    find: 'export type { InputProperty } from "./input/index.js";\n',
+    replace: 'export { InputProperty } from "./input/index.js";\n',
+  },
+  {
     file: "test/upstream/framework/test/connection-identifier-flag.test.ts",
     why: "upstream never typechecks this test; createPiece requires authors",
     find: '    logoUrl: "https://example.com/logo.png",\n    auth,\n',
@@ -107,7 +133,7 @@ const PATCHES: Patch[] = [
   },
 ];
 
-// The bundler-only mime-db shim; helpers/index.ts carries its own table.
+// Upstream's bundler alias for mime-db; aliasing it is the piece build's job.
 const SKIP_FILES = new Set(["mime-db-min.cjs"]);
 const REPO_URL = "https://github.com/activepieces/activepieces.git";
 const REPO_SLUG = "activepieces/activepieces";

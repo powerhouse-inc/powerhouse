@@ -62,7 +62,7 @@ export const PiecePropertyMap = z.record(z.string(), PieceProperty);
 export interface PiecePropertyMap {
   [name: string]: PieceProperty;
 }
-export type { InputProperty } from "./input/index.js";
+export { InputProperty } from "./input/index.js";
 export const InputPropertyMap = z.record(z.string(), InputProperty);
 export interface InputPropertyMap {
   [name: string]: InputProperty;

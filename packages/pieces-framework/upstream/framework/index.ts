@@ -21,7 +21,7 @@ export {
   tryCatch,
   AIProviderName,
 } from "../core-utils/index.js";
-export type { SeekPage } from "../core-utils/index.js";
+export { SeekPage } from "../core-utils/index.js";
 
 export {
   PieceCategory,
@@ -110,9 +110,9 @@ export {
   FAIL_PARENT_ON_FAILURE_HEADER,
   ACTIVEPIECES_CHAT_TIERS,
   DEFAULT_CHAT_TIER_ID,
+  McpAuthConfig,
 } from "../core-piece-types/index.js";
 export type {
-  McpAuthConfig,
   BasicAuthConnectionValue,
   CustomAuthConnectionValue,
   PopulatedFlowSummary,
