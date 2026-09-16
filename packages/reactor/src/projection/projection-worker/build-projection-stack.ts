@@ -38,8 +38,12 @@ import type {
   FactorySpec,
   ModelManifestEntry,
 } from "../../executor/worker/protocol.js";
+import type { ReadModelIndexingConfig } from "../../read-models/base-read-model.js";
 import { ReadModelCoordinator } from "../../read-models/coordinator.js";
-import { KyselyDocumentView } from "../../read-models/document-view.js";
+import {
+  DeletedDocumentRead,
+  KyselyDocumentView,
+} from "../../read-models/document-view.js";
 import type { IReadModel } from "../../read-models/interfaces.js";
 import { DocumentModelRegistry } from "../../registry/implementation.js";
 import { ConsistencyTracker } from "../../shared/consistency-tracker.js";
@@ -117,6 +121,7 @@ function instantiateReadModel(
   operationStore: KyselyOperationStore,
   operationIndex: KyselyOperationIndex,
   writeCache: KyselyWriteCache,
+  indexing: ReadModelIndexingConfig,
 ): IReadModel {
   switch (kind) {
     case "document-view": {
@@ -127,9 +132,9 @@ function instantiateReadModel(
         operationIndex,
         writeCache,
         new ConsistencyTracker(),
-        // The init payload carries no feature flags, so this view keeps hiding a
-        // deleted document. Read-side only, so it cannot diverge state.
-        false,
+        // Read-side only, so it cannot diverge state.
+        DeletedDocumentRead.NotFound,
+        indexing,
       );
     }
     case "document-indexer": {
@@ -138,6 +143,7 @@ function instantiateReadModel(
         operationIndex,
         writeCache,
         new ConsistencyTracker(),
+        indexing,
       );
     }
     default: {
@@ -223,6 +229,7 @@ export async function buildProjectionStack(
       operationStore,
       operationIndex,
       writeCache,
+      init.indexing,
     ),
   );
   const postReady = init.postReadyKinds.map((kind) =>
@@ -232,6 +239,7 @@ export async function buildProjectionStack(
       operationStore,
       operationIndex,
       writeCache,
+      init.indexing,
     ),
   );
 

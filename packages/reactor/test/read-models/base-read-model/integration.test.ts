@@ -1,7 +1,7 @@
 import { PGlite } from "@electric-sql/pglite";
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import { generateId } from "@powerhousedao/shared/document-model";
-import { Kysely } from "kysely";
+import { Kysely, sql } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -10,16 +10,32 @@ import {
 } from "../../../src/cache/kysely-operation-index.js";
 import type { IOperationIndex } from "../../../src/cache/operation-index-types.js";
 import type { IWriteCache } from "../../../src/cache/write/interfaces.js";
-import { BaseReadModel } from "../../../src/read-models/base-read-model.js";
+import {
+  BaseReadModel,
+  type BaseReadModelConfig,
+  type ReadModelIndexingConfig,
+} from "../../../src/read-models/base-read-model.js";
+import {
+  DeletedDocumentRead,
+  KyselyDocumentView,
+} from "../../../src/read-models/document-view.js";
 import type { DocumentViewDatabase } from "../../../src/read-models/types.js";
 import { ConsistencyTracker } from "../../../src/shared/consistency-tracker.js";
-import type { Database as StorageDatabase } from "../../../src/storage/kysely/types.js";
+import type { IOperationStore } from "../../../src/storage/interfaces.js";
+import { KyselyDocumentIndexer } from "../../../src/storage/kysely/document-indexer.js";
+import { KyselyOperationStore } from "../../../src/storage/kysely/store.js";
+import type {
+  DocumentIndexerDatabase,
+  Database as StorageDatabase,
+} from "../../../src/storage/kysely/types.js";
 import {
   REACTOR_SCHEMA,
   runMigrations,
 } from "../../../src/storage/migrations/migrator.js";
 
-type Database = StorageDatabase & DocumentViewDatabase;
+type Database = StorageDatabase &
+  DocumentViewDatabase &
+  DocumentIndexerDatabase;
 
 type IndexedCoordinate = {
   documentId: string;
@@ -430,5 +446,612 @@ describe("BaseReadModel idempotency", () => {
       .where("readModelId", "=", READ_MODEL_ID)
       .executeTakeFirst();
     expect(viewState?.lastOrdinal).toBe(total);
+  });
+});
+
+const BATCH_SIZE = 40;
+const CHUNKED: ReadModelIndexingConfig = {
+  commitChunkSize: 7,
+  yieldDeadlineMs: 0,
+};
+const UNCHUNKED: ReadModelIndexingConfig = {
+  commitChunkSize: Number.MAX_SAFE_INTEGER,
+  yieldDeadlineMs: 0,
+};
+
+function driveState(name: string, fileCount: number) {
+  return {
+    header: { name, slug: "stable-drive-slug" },
+    global: {
+      name,
+      nodes: Array.from({ length: fileCount }, (_, i) => ({
+        id: `node-${i}`,
+        name: `file-${i}`,
+      })),
+    },
+  };
+}
+
+/** One document/scope/branch, so every operation rewrites the same row. */
+function makeBatch(documentId: string, size: number): OperationWithContext[] {
+  const items: OperationWithContext[] = [];
+  for (let i = 0; i < size; i++) {
+    items.push({
+      operation: {
+        index: i,
+        timestampUtcMs: new Date(1700000000000 + i).toISOString(),
+        hash: `hash-${i}`,
+        skip: 0,
+        id: generateId(),
+        action: {
+          id: generateId(),
+          type: "SET_DRIVE_NAME",
+          input: { name: `drive-${i}` },
+          scope: "global",
+          timestampUtcMs: new Date(1700000000000 + i).toISOString(),
+        },
+      },
+      context: {
+        documentId,
+        documentType: "powerhouse/document-drive",
+        scope: "global",
+        branch: "main",
+        resultingState: JSON.stringify(driveState(`drive-${i}`, i)),
+        ordinal: i + 1,
+      },
+    } as unknown as OperationWithContext);
+  }
+  return items;
+}
+
+function makeRelationshipBatch(
+  sourceId: string,
+  size: number,
+): OperationWithContext[] {
+  const items: OperationWithContext[] = [];
+  for (let i = 0; i < size; i++) {
+    items.push({
+      operation: {
+        index: i,
+        timestampUtcMs: new Date(1700000000000 + i).toISOString(),
+        hash: `hash-${i}`,
+        skip: 0,
+        id: generateId(),
+        action: {
+          id: generateId(),
+          type: "ADD_RELATIONSHIP",
+          input: {
+            sourceId,
+            targetId: `target-${i}`,
+            relationshipType: "child",
+          },
+          scope: "global",
+          timestampUtcMs: new Date(1700000000000 + i).toISOString(),
+        },
+      },
+      context: {
+        documentId: sourceId,
+        documentType: "powerhouse/document-drive",
+        scope: "global",
+        branch: "main",
+        resultingState: JSON.stringify({ global: {} }),
+        ordinal: i + 1,
+      },
+    } as unknown as OperationWithContext);
+  }
+  return items;
+}
+
+describe("BaseReadModel chunked indexing", () => {
+  let db: Kysely<Database>;
+  let operationStore: IOperationStore;
+  let operationIndex: IOperationIndex;
+  let writeCache: IWriteCache;
+  let tracker: ConsistencyTracker;
+
+  beforeEach(async () => {
+    const baseDb = new Kysely<Database>({
+      dialect: new PGliteDialect(new PGlite()),
+    });
+    const result = await runMigrations(baseDb, REACTOR_SCHEMA);
+    if (!result.success && result.error) {
+      throw new Error(`Test migration failed: ${result.error.message}`);
+    }
+    db = baseDb.withSchema(REACTOR_SCHEMA);
+
+    operationStore = new KyselyOperationStore(
+      db as unknown as Kysely<StorageDatabase>,
+    );
+    operationIndex = new KyselyOperationIndex(
+      db as unknown as Kysely<StorageDatabase>,
+    );
+    writeCache = {
+      getState: vi.fn().mockResolvedValue({}),
+      putState: vi.fn(),
+      putRun: vi.fn(),
+      invalidate: vi.fn().mockReturnValue(0),
+      clear: vi.fn(),
+      startup: vi.fn().mockResolvedValue(undefined),
+      shutdown: vi.fn().mockResolvedValue(undefined),
+    } as unknown as IWriteCache;
+    tracker = new ConsistencyTracker();
+  });
+
+  afterEach(async () => {
+    await db.destroy();
+  });
+
+  function makeView(indexing: ReadModelIndexingConfig) {
+    return new KyselyDocumentView(
+      db as unknown as Kysely<StorageDatabase & DocumentViewDatabase>,
+      operationStore,
+      operationIndex,
+      writeCache,
+      tracker,
+      DeletedDocumentRead.NotFound,
+      indexing,
+    );
+  }
+
+  it("commits the batch as consecutive in-order slices covering it exactly", async () => {
+    const view = makeView(CHUNKED);
+    await view.init();
+
+    const seen: number[][] = [];
+    const commit = (
+      view as unknown as {
+        commitOperations: (i: OperationWithContext[]) => Promise<void>;
+      }
+    ).commitOperations.bind(view);
+    (
+      view as unknown as {
+        commitOperations: (i: OperationWithContext[]) => Promise<void>;
+      }
+    ).commitOperations = async (items: OperationWithContext[]) => {
+      seen.push(items.map((i) => i.operation.index));
+      await commit(items);
+    };
+
+    const batch = makeBatch(generateId(), BATCH_SIZE);
+    await view.indexOperations(batch);
+
+    expect(seen.length).toBe(Math.ceil(BATCH_SIZE / CHUNKED.commitChunkSize));
+    expect(seen.flat()).toEqual(batch.map((i) => i.operation.index));
+    for (const chunk of seen) {
+      expect(chunk.length).toBeLessThanOrEqual(CHUNKED.commitChunkSize);
+    }
+  });
+
+  it("produces the same snapshot chunked as unchunked", async () => {
+    const documentId = generateId();
+    const batch = makeBatch(documentId, BATCH_SIZE);
+
+    const unchunked = makeView(UNCHUNKED);
+    await unchunked.init();
+    await unchunked.indexOperations(batch);
+    const expected = await db
+      .selectFrom("DocumentSnapshot")
+      .selectAll()
+      .where("documentId", "=", documentId)
+      .orderBy("scope", "asc")
+      .execute();
+    const expectedSlugs = await db
+      .selectFrom("SlugMapping")
+      .selectAll()
+      .where("documentId", "=", documentId)
+      .orderBy("slug", "asc")
+      .execute();
+
+    await db.deleteFrom("DocumentSnapshot").execute();
+    await db.deleteFrom("SlugMapping").execute();
+    await db
+      .updateTable("ViewState")
+      .set({ lastOrdinal: 0 })
+      .where("readModelId", "=", "document-view")
+      .execute();
+
+    const chunked = makeView(CHUNKED);
+    await chunked.init();
+    await chunked.indexOperations(batch);
+    const actual = await db
+      .selectFrom("DocumentSnapshot")
+      .selectAll()
+      .where("documentId", "=", documentId)
+      .orderBy("scope", "asc")
+      .execute();
+    const actualSlugs = await db
+      .selectFrom("SlugMapping")
+      .selectAll()
+      .where("documentId", "=", documentId)
+      .orderBy("slug", "asc")
+      .execute();
+
+    expect(actual.length).toBe(expected.length);
+    expect(actual.length).toBeGreaterThan(0);
+    for (let i = 0; i < actual.length; i++) {
+      expect(actual[i]!.scope).toBe(expected[i]!.scope);
+      expect(actual[i]!.content).toEqual(expected[i]!.content);
+      expect(actual[i]!.slug).toBe(expected[i]!.slug);
+      expect(actual[i]!.name).toBe(expected[i]!.name);
+      expect(actual[i]!.lastOperationIndex).toBe(
+        expected[i]!.lastOperationIndex,
+      );
+      expect(actual[i]!.lastOperationHash).toBe(expected[i]!.lastOperationHash);
+      expect(actual[i]!.snapshotVersion).toBe(expected[i]!.snapshotVersion);
+    }
+    expect(actualSlugs.map((r) => r.slug)).toEqual(
+      expectedSlugs.map((r) => r.slug),
+    );
+  });
+
+  it("holds a token-carrying reader until the whole batch is indexed", async () => {
+    const documentId = generateId();
+    const batch = makeBatch(documentId, BATCH_SIZE);
+    const last = batch[batch.length - 1]!;
+
+    const view = makeView(CHUNKED);
+    await view.init();
+
+    let resolvedDuringPass = false;
+    let passFinished = false;
+    const waiter = view
+      .waitForConsistency({
+        version: 1,
+        createdAtUtcIso: new Date().toISOString(),
+        coordinates: [
+          {
+            documentId,
+            scope: "global",
+            branch: "main",
+            operationIndex: last.operation.index,
+          },
+        ],
+      })
+      .then(() => {
+        resolvedDuringPass = !passFinished;
+      });
+
+    await view.indexOperations(batch);
+    passFinished = true;
+    await waiter;
+
+    expect(resolvedDuringPass).toBe(false);
+
+    const snapshot = await db
+      .selectFrom("DocumentSnapshot")
+      .selectAll()
+      .where("documentId", "=", documentId)
+      .where("scope", "=", "global")
+      .executeTakeFirst();
+    expect(snapshot?.lastOperationIndex).toBe(last.operation.index);
+    expect((snapshot?.content as { name: string }).name).toBe(
+      `drive-${BATCH_SIZE - 1}`,
+    );
+  });
+
+  it("advances the stored ordinal only once the whole batch is committed", async () => {
+    const documentId = generateId();
+    const batch = makeBatch(documentId, BATCH_SIZE);
+
+    const view = makeView(CHUNKED);
+    await view.init();
+
+    const ordinalsSeenMidPass: (number | undefined)[] = [];
+    const commit = (
+      view as unknown as {
+        commitOperations: (i: OperationWithContext[]) => Promise<void>;
+      }
+    ).commitOperations.bind(view);
+    (
+      view as unknown as {
+        commitOperations: (i: OperationWithContext[]) => Promise<void>;
+      }
+    ).commitOperations = async (items: OperationWithContext[]) => {
+      await commit(items);
+      const row = await db
+        .selectFrom("ViewState")
+        .select("lastOrdinal")
+        .where("readModelId", "=", "document-view")
+        .executeTakeFirst();
+      ordinalsSeenMidPass.push(row?.lastOrdinal);
+    };
+
+    await view.indexOperations(batch);
+
+    expect(ordinalsSeenMidPass.length).toBeGreaterThan(1);
+    expect(ordinalsSeenMidPass.every((o) => o === 0)).toBe(true);
+
+    const after = await db
+      .selectFrom("ViewState")
+      .select("lastOrdinal")
+      .where("readModelId", "=", "document-view")
+      .executeTakeFirst();
+    expect(after?.lastOrdinal).toBe(BATCH_SIZE);
+  });
+
+  it("lets an unrelated query through while the batch is being indexed", async () => {
+    const view = makeView(CHUNKED);
+    await view.init();
+
+    const pass = { indexing: true, reads: 0 };
+    const reader = (async () => {
+      while (pass.indexing) {
+        await sql`SELECT 1 AS x`.execute(db);
+        pass.reads++;
+        await new Promise((r) => setTimeout(r, 0));
+      }
+    })();
+
+    try {
+      await view.indexOperations(makeBatch(generateId(), BATCH_SIZE));
+    } finally {
+      pass.indexing = false;
+      await reader;
+    }
+
+    expect(pass.reads).toBeGreaterThan(1);
+  });
+
+  it("indexes the same relationship edges chunked as unchunked", async () => {
+    const sourceId = generateId();
+    const batch = makeRelationshipBatch(sourceId, BATCH_SIZE);
+
+    const makeIndexer = (indexing: ReadModelIndexingConfig) =>
+      new KyselyDocumentIndexer(
+        db as never,
+        operationIndex,
+        writeCache,
+        new ConsistencyTracker(),
+        indexing,
+      );
+
+    const unchunked = makeIndexer(UNCHUNKED);
+    await unchunked.init();
+    await unchunked.indexOperations(batch);
+    const expected = await db
+      .selectFrom("DocumentRelationship")
+      .select(["sourceId", "targetId", "relationshipType"])
+      .orderBy("targetId", "asc")
+      .execute();
+
+    await db.deleteFrom("DocumentRelationship").execute();
+    await db
+      .updateTable("ViewState")
+      .set({ lastOrdinal: 0 })
+      .where("readModelId", "=", "document-indexer")
+      .execute();
+
+    const chunked = makeIndexer(CHUNKED);
+    await chunked.init();
+    await chunked.indexOperations(batch);
+    const actual = await db
+      .selectFrom("DocumentRelationship")
+      .select(["sourceId", "targetId", "relationshipType"])
+      .orderBy("targetId", "asc")
+      .execute();
+
+    expect(actual.length).toBe(BATCH_SIZE);
+    expect(actual).toEqual(expected);
+  });
+
+  it("opens no transaction per chunk for a batch with no relationship operation", async () => {
+    const indexer = new KyselyDocumentIndexer(
+      db as never,
+      operationIndex,
+      writeCache,
+      new ConsistencyTracker(),
+      CHUNKED,
+    );
+    await indexer.init();
+
+    const spy = vi.spyOn(
+      db as unknown as { transaction: () => unknown },
+      "transaction",
+    );
+    await indexer.indexOperations(makeBatch(generateId(), BATCH_SIZE));
+
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
+});
+
+/** Commits nothing but the ordinals it saw, and refuses one of them on demand. */
+class FlakyReadModel extends BaseReadModel {
+  readonly committed: number[] = [];
+  readonly chunkSizes: number[] = [];
+
+  constructor(
+    db: Kysely<DocumentViewDatabase>,
+    operationIndex: IOperationIndex,
+    writeCache: IWriteCache,
+    consistencyTracker: ConsistencyTracker,
+    config: BaseReadModelConfig,
+    private failOnOrdinal: number,
+  ) {
+    super(db, operationIndex, writeCache, consistencyTracker, config);
+  }
+
+  stopFailing(): void {
+    this.failOnOrdinal = 0;
+  }
+
+  protected override async commitOperations(
+    items: OperationWithContext[],
+  ): Promise<void> {
+    if (items.length === 0) {
+      throw new Error("commitOperations received an empty chunk");
+    }
+
+    this.chunkSizes.push(items.length);
+
+    if (
+      this.failOnOrdinal > 0 &&
+      items.some((item) => item.context.ordinal === this.failOnOrdinal)
+    ) {
+      throw new Error(`commit refused ordinal ${this.failOnOrdinal}`);
+    }
+
+    for (const item of items) {
+      this.committed.push(item.context.ordinal);
+    }
+
+    await Promise.resolve();
+  }
+}
+
+describe("BaseReadModel failure boundaries", () => {
+  const READ_MODEL_ID = "flaky-read-model";
+  const FAILING_ORDINAL = 15;
+  let db: Kysely<Database>;
+  let operationIndex: IOperationIndex;
+  let writeCache: IWriteCache;
+
+  beforeEach(async () => {
+    const baseDb = new Kysely<Database>({
+      dialect: new PGliteDialect(new PGlite()),
+    });
+    const result = await runMigrations(baseDb, REACTOR_SCHEMA);
+    if (!result.success && result.error) {
+      throw new Error(`Test migration failed: ${result.error.message}`);
+    }
+    db = baseDb.withSchema(REACTOR_SCHEMA);
+    operationIndex = new KyselyOperationIndex(
+      db as unknown as Kysely<StorageDatabase>,
+    );
+    writeCache = {
+      getState: vi.fn().mockResolvedValue({}),
+      putState: vi.fn(),
+      putRun: vi.fn(),
+      invalidate: vi.fn().mockReturnValue(0),
+      clear: vi.fn(),
+      startup: vi.fn().mockResolvedValue(undefined),
+      shutdown: vi.fn().mockResolvedValue(undefined),
+    } as unknown as IWriteCache;
+  });
+
+  afterEach(async () => {
+    await db.destroy();
+  });
+
+  async function appendOperations(
+    documentId: string,
+    firstIndex: number,
+    count: number,
+  ): Promise<void> {
+    const txn = operationIndex.start();
+    txn.write(
+      Array.from({ length: count }, (_, i) => ({
+        ...createOperation(documentId, "global", "main", firstIndex + i, 0)
+          .operation,
+        documentId,
+        documentType: "test/document",
+        scope: "global",
+        branch: "main",
+        sourceRemote: "",
+      })),
+    );
+    await operationIndex.commit(txn);
+  }
+
+  async function readOperationsSince(
+    ordinal: number,
+  ): Promise<OperationWithContext[]> {
+    const collected: OperationWithContext[] = [];
+    let page = await operationIndex.getSinceOrdinal(ordinal);
+    for (;;) {
+      collected.push(...page.results);
+      if (!page.next) break;
+      page = await page.next();
+    }
+    return collected;
+  }
+
+  async function readCursor(): Promise<number | undefined> {
+    const row = await db
+      .selectFrom("ViewState")
+      .select("lastOrdinal")
+      .where("readModelId", "=", READ_MODEL_ID)
+      .executeTakeFirst();
+    return row?.lastOrdinal;
+  }
+
+  function makeModel(
+    failOnOrdinal: number,
+    indexing: ReadModelIndexingConfig,
+  ): FlakyReadModel {
+    return new FlakyReadModel(
+      db as unknown as Kysely<DocumentViewDatabase>,
+      operationIndex,
+      writeCache,
+      new ConsistencyTracker(),
+      {
+        readModelId: READ_MODEL_ID,
+        rebuildStateOnInit: false,
+        indexing,
+      },
+      failOnOrdinal,
+    );
+  }
+
+  it("parks the cursor at the last committed operation when a chunk fails", async () => {
+    await appendOperations(generateId(), 0, 40);
+
+    const failing = makeModel(FAILING_ORDINAL, CHUNKED);
+    await expect(failing.init()).rejects.toThrow(
+      `commit refused ordinal ${FAILING_ORDINAL}`,
+    );
+
+    expect(failing.committed).toEqual(
+      Array.from({ length: FAILING_ORDINAL - 1 }, (_, i) => i + 1),
+    );
+    expect(await readCursor()).toBe(FAILING_ORDINAL - 1);
+
+    const recovering = makeModel(0, CHUNKED);
+    await recovering.init();
+
+    expect(recovering.committed).toEqual(
+      Array.from(
+        { length: 41 - FAILING_ORDINAL },
+        (_, i) => i + FAILING_ORDINAL,
+      ),
+    );
+  });
+
+  it("never advances the cursor past an operation it failed to commit", async () => {
+    const documentId = generateId();
+    await appendOperations(documentId, 0, 40);
+
+    const failing = makeModel(FAILING_ORDINAL, CHUNKED);
+    await expect(failing.init()).rejects.toThrow();
+
+    await appendOperations(documentId, 40, 10);
+    const later = await readOperationsSince(40);
+    expect(later.map((item) => item.context.ordinal)).toEqual(
+      Array.from({ length: 10 }, (_, i) => i + 41),
+    );
+
+    failing.stopFailing();
+    await failing.indexOperations(later);
+
+    expect(await readCursor()).toBeLessThan(FAILING_ORDINAL);
+
+    const recovering = makeModel(0, CHUNKED);
+    await recovering.init();
+
+    const seen = new Set([...failing.committed, ...recovering.committed]);
+    for (let ordinal = 1; ordinal <= 50; ordinal++) {
+      expect(seen.has(ordinal)).toBe(true);
+    }
+  });
+
+  it("indexes the batch instead of spinning when the chunk size is zero", async () => {
+    await appendOperations(generateId(), 0, 12);
+    const items = await readOperationsSince(0);
+
+    const model = makeModel(0, { commitChunkSize: 0, yieldDeadlineMs: 50 });
+    await model.init();
+
+    expect(model.committed).toEqual(items.map((item) => item.context.ordinal));
+    expect(model.chunkSizes.every((size) => size > 0)).toBe(true);
+    expect(await readCursor()).toBe(12);
   });
 });

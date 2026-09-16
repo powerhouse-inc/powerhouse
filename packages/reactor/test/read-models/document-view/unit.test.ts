@@ -2,7 +2,10 @@ import type { Kysely } from "kysely";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { IOperationIndex } from "../../../src/cache/operation-index-types.js";
 import type { IWriteCache } from "../../../src/cache/write/interfaces.js";
-import { KyselyDocumentView } from "../../../src/read-models/document-view.js";
+import {
+  DeletedDocumentRead,
+  KyselyDocumentView,
+} from "../../../src/read-models/document-view.js";
 import type { IConsistencyTracker } from "../../../src/shared/consistency-tracker.js";
 import {
   DocumentExistence,
@@ -74,11 +77,10 @@ describe("KyselyDocumentView Unit Tests", () => {
       mockOperationIndex,
       mockWriteCache,
       mockConsistencyTracker,
-      false,
+      DeletedDocumentRead.NotFound,
     );
   });
 
-  /** A view that serves a deleted document's state as of the deletion. */
   function viewServingBoundary(): KyselyDocumentView {
     return new KyselyDocumentView(
       mockDb,
@@ -86,7 +88,7 @@ describe("KyselyDocumentView Unit Tests", () => {
       mockOperationIndex,
       mockWriteCache,
       mockConsistencyTracker,
-      true,
+      DeletedDocumentRead.StateAtDeletion,
     );
   }
 

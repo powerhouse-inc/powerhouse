@@ -7,12 +7,60 @@ import type {
   ConsistencyCoordinate,
   ConsistencyToken,
 } from "../shared/types.js";
+import { yieldToMain } from "../shared/utils.js";
 import type { IReadModel } from "./interfaces.js";
 import type { DocumentViewDatabase } from "./types.js";
+
+/** Bounds on an indexing pass: one transaction, and the stall between yields. */
+export type ReadModelIndexingConfig = {
+  /** Maximum operations committed in a single transaction. */
+  commitChunkSize: number;
+  /** Maximum elapsed milliseconds before yielding between chunks. */
+  yieldDeadlineMs: number;
+};
+
+/** Small enough that a chunk's transaction rarely outlasts the yield deadline. */
+export const DEFAULT_COMMIT_CHUNK_SIZE = 50;
+
+/** Matches the executor's own default, so both paths yield on the same cadence. */
+export const DEFAULT_READ_MODEL_YIELD_DEADLINE_MS = 50;
+
+export const defaultReadModelIndexingConfig: ReadModelIndexingConfig = {
+  commitChunkSize: DEFAULT_COMMIT_CHUNK_SIZE,
+  yieldDeadlineMs: DEFAULT_READ_MODEL_YIELD_DEADLINE_MS,
+};
+
+/** For read models whose callers can observe where a batch was split. */
+export const unchunkedReadModelIndexingConfig: ReadModelIndexingConfig = {
+  commitChunkSize: Number.MAX_SAFE_INTEGER,
+  yieldDeadlineMs: DEFAULT_READ_MODEL_YIELD_DEADLINE_MS,
+};
+
+/**
+ * Keeps the chunk size at one operation or more: a chunk of zero or less never
+ * advances the indexing loop, so the pass would spin without ever resolving.
+ */
+function normalizeIndexingConfig(
+  config: ReadModelIndexingConfig,
+): ReadModelIndexingConfig {
+  if (Number.isNaN(config.commitChunkSize)) {
+    return { ...config, commitChunkSize: DEFAULT_COMMIT_CHUNK_SIZE };
+  }
+
+  return {
+    ...config,
+    commitChunkSize: Math.max(
+      1,
+      Math.min(Math.floor(config.commitChunkSize), Number.MAX_SAFE_INTEGER),
+    ),
+  };
+}
 
 export type BaseReadModelConfig = {
   readModelId: string;
   rebuildStateOnInit: boolean;
+  /** Defaults to {@link defaultReadModelIndexingConfig}. */
+  indexing?: ReadModelIndexingConfig;
 };
 
 /**
@@ -25,6 +73,15 @@ export class BaseReadModel implements IReadModel {
 
   readonly name: string;
 
+  private readonly indexing: ReadModelIndexingConfig;
+
+  /**
+   * Lowest ordinal this model failed to commit and has not committed since, or
+   * zero when there is none. The stored cursor is held below it so replay from
+   * the cursor still reaches every operation the failed pass left out.
+   */
+  private uncommittedOrdinal: number = 0;
+
   constructor(
     protected db: Kysely<DocumentViewDatabase>,
     protected operationIndex: IOperationIndex,
@@ -33,6 +90,9 @@ export class BaseReadModel implements IReadModel {
     protected config: BaseReadModelConfig,
   ) {
     this.name = config.readModelId;
+    this.indexing = normalizeIndexingConfig(
+      config.indexing ?? defaultReadModelIndexingConfig,
+    );
   }
 
   /**
@@ -60,18 +120,39 @@ export class BaseReadModel implements IReadModel {
   }
 
   /**
-   * Template method: runs domain-specific commitOperations, then persists
-   * state and updates consistency tracking.
+   * Commits the batch in chunks, yielding between them with no transaction
+   * open. A chunk that throws leaves the earlier chunks committed, so the pass
+   * saves the cursor for that prefix and parks it below the operation it could
+   * not commit before rethrowing.
    */
   async indexOperations(items: OperationWithContext[]): Promise<void> {
     if (items.length === 0) return;
 
-    await this.commitOperations(items);
+    const { commitChunkSize, yieldDeadlineMs } = this.indexing;
+    let lastYield = performance.now();
+    let committed = 0;
 
-    await this.db.transaction().execute(async (trx) => {
-      await this.saveState(trx, items);
-    });
+    for (let start = 0; start < items.length; start += commitChunkSize) {
+      if (start > 0 && performance.now() - lastYield > yieldDeadlineMs) {
+        await yieldToMain();
+        lastYield = performance.now();
+      }
 
+      const chunk = items.slice(start, start + commitChunkSize);
+
+      try {
+        await this.commitOperations(chunk);
+      } catch (error) {
+        this.park(items, committed);
+        await this.recordCommittedPrefix(items.slice(0, committed));
+        throw error;
+      }
+
+      committed += chunk.length;
+    }
+
+    this.liftParkIfCommitted(items);
+    await this.persistCursor(items);
     this.updateConsistencyTracker(items);
   }
 
@@ -195,5 +276,81 @@ export class BaseReadModel implements IReadModel {
     }
 
     this.consistencyTracker.update(coordinates);
+  }
+
+  /**
+   * Saves the cursor for the chunks that did commit before a later chunk threw.
+   * A failure here is swallowed: the cursor simply stays where the pass found
+   * it, which is equally safe, and the commit error is the one worth raising.
+   */
+  private async recordCommittedPrefix(
+    prefix: OperationWithContext[],
+  ): Promise<void> {
+    if (prefix.length === 0) return;
+
+    try {
+      await this.persistCursor(prefix);
+    } catch {
+      return;
+    }
+
+    this.updateConsistencyTracker(prefix);
+  }
+
+  /** Writes the cursor for the given items, never past a parked ordinal. */
+  private async persistCursor(items: OperationWithContext[]): Promise<void> {
+    await this.db.transaction().execute(async (trx) => {
+      await this.saveState(trx, items);
+      await this.clampCursorToPark(trx);
+    });
+  }
+
+  /**
+   * Holds the cursor written by {@link saveState}, which subclasses may
+   * override, below the lowest operation this model failed to commit.
+   */
+  private async clampCursorToPark(
+    trx: Transaction<DocumentViewDatabase>,
+  ): Promise<void> {
+    if (this.uncommittedOrdinal === 0) return;
+
+    const ceiling = this.uncommittedOrdinal - 1;
+    if (this.lastOrdinal <= ceiling) return;
+
+    this.lastOrdinal = ceiling;
+    await trx
+      .updateTable("ViewState")
+      .set({
+        lastOrdinal: ceiling,
+        lastOperationTimestamp: new Date(),
+      })
+      .where("readModelId", "=", this.config.readModelId)
+      .execute();
+  }
+
+  /** Remembers the lowest ordinal the failed pass left uncommitted. */
+  private park(items: OperationWithContext[], committed: number): void {
+    let lowest = 0;
+    for (let i = committed; i < items.length; i++) {
+      const ordinal = items[i]!.context.ordinal;
+      if (lowest === 0 || ordinal < lowest) lowest = ordinal;
+    }
+
+    if (lowest === 0) return;
+    if (this.uncommittedOrdinal === 0 || lowest < this.uncommittedOrdinal) {
+      this.uncommittedOrdinal = lowest;
+    }
+  }
+
+  /** The park lifts once a later pass commits the operation that failed. */
+  private liftParkIfCommitted(items: OperationWithContext[]): void {
+    if (this.uncommittedOrdinal === 0) return;
+
+    for (const item of items) {
+      if (item.context.ordinal === this.uncommittedOrdinal) {
+        this.uncommittedOrdinal = 0;
+        return;
+      }
+    }
   }
 }

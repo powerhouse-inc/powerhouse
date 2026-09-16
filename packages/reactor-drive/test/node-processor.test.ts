@@ -653,4 +653,50 @@ describe("NodeProcessor", () => {
       .executeTakeFirst();
     expect(docName?.name).toBe("Renamed");
   });
+  it("commits a copied subtree larger than the chunk size all at once", async () => {
+    const driveId = "drive-1";
+    const batch: OperationWithContext[] = [];
+
+    for (let i = 0; i < 55; i++) {
+      batch.push(
+        wrap(
+          addFolderAction({
+            folderId: `copied-folder-${i}`,
+            parentFolderId: null,
+            name: `Copied ${i}`,
+          }),
+          driveId,
+        ),
+      );
+    }
+
+    batch.push(
+      wrap(
+        addRelationshipAction(
+          driveId,
+          "copied-file",
+          DRIVE_CHILD_RELATIONSHIP_TYPE,
+          { kind: "file", parentFolderId: null } as unknown as Record<
+            string,
+            unknown
+          >,
+        ),
+        driveId,
+      ),
+    );
+
+    await expect(processor.indexOperations(batch)).rejects.toThrow(
+      /documentType/,
+    );
+
+    const rows = await db.selectFrom("DriveNode").selectAll().execute();
+    expect(rows).toHaveLength(0);
+
+    const viewState = await db
+      .selectFrom("ViewState")
+      .select("lastOrdinal")
+      .where("readModelId", "=", "reactor-drive-node-processor")
+      .executeTakeFirst();
+    expect(viewState?.lastOrdinal).toBe(0);
+  });
 });

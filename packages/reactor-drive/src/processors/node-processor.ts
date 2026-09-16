@@ -1,6 +1,7 @@
 import type { IOperationIndex, IWriteCache } from "@powerhousedao/reactor";
 import {
   BaseReadModel,
+  unchunkedReadModelIndexingConfig,
   type DocumentViewDatabase,
   type IConsistencyTracker,
 } from "@powerhousedao/reactor";
@@ -44,6 +45,14 @@ const STRUCTURE_ACTION_TYPES = new Set([
   "REMOVE_FOLDER",
 ]);
 
+/**
+ * Projects drive structure operations into the DriveNode tree.
+ *
+ * Indexes a batch unchunked: a single job may carry one action per descendant
+ * of a copied subtree, and a partially committed copy is a half-built tree that
+ * readers can see. Chunked commits would only be repaired at the next init(),
+ * so the whole batch commits or none of it does.
+ */
 export class NodeProcessor extends BaseReadModel {
   private readonly driveDb: Kysely<NodeProcessorDatabase>;
   private readonly baseDb: Kysely<unknown>;
@@ -67,6 +76,7 @@ export class NodeProcessor extends BaseReadModel {
       {
         readModelId: "reactor-drive-node-processor",
         rebuildStateOnInit: false,
+        indexing: unchunkedReadModelIndexingConfig,
       },
     );
     this.driveDb = scopedDb;

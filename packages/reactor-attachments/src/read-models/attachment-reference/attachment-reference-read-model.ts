@@ -1,5 +1,6 @@
 import {
   BaseReadModel,
+  defaultReadModelIndexingConfig,
   type DocumentViewDatabase,
   type IConsistencyTracker,
   type IDocumentModelRegistry,
@@ -18,6 +19,15 @@ import type {
 export const ATTACHMENT_REFERENCE_READ_MODEL_ID =
   "attachment-reference-read-model";
 
+/**
+ * Indexes attachment references in chunks.
+ *
+ * Each reference row stands on its own and is written insert-or-do-nothing, so
+ * a batch that commits in pieces exposes no partial structure: a reader either
+ * sees a reference or does not, and re-indexing the same range writes nothing
+ * new. Batches here are the largest in the system, which is what chunking is
+ * for.
+ */
 export class AttachmentReferenceReadModel extends BaseReadModel {
   private indexingQueue: Promise<void> = Promise.resolve();
   private checkpointTarget: number | undefined;
@@ -44,6 +54,7 @@ export class AttachmentReferenceReadModel extends BaseReadModel {
     super(db, operationIndex, writeCache, consistencyTracker, {
       readModelId: ATTACHMENT_REFERENCE_READ_MODEL_ID,
       rebuildStateOnInit: false,
+      indexing: defaultReadModelIndexingConfig,
     });
   }
 
@@ -141,7 +152,9 @@ export class AttachmentReferenceReadModel extends BaseReadModel {
       await super.indexOperations(candidates);
     } catch (error) {
       this.lastOrdinal = previousOrdinal;
-      // A failed batch leaves its range uncommitted, so the mark cannot stand.
+      // A failed batch may have committed a prefix, but the base parks the
+      // cursor below the ordinal it could not commit, and this pass cannot say
+      // which ordinals above that cursor it read, so the mark cannot stand.
       this.replayedThrough = undefined;
       throw error;
     } finally {

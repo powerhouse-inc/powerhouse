@@ -45,8 +45,16 @@ import type {
   ProjectionShardHooks,
   ProjectionShardManager,
 } from "../projection/projection-shard-manager.js";
+import {
+  DEFAULT_COMMIT_CHUNK_SIZE,
+  DEFAULT_READ_MODEL_YIELD_DEADLINE_MS,
+  type ReadModelIndexingConfig,
+} from "../read-models/base-read-model.js";
 import { ReadModelCoordinator } from "../read-models/coordinator.js";
-import { KyselyDocumentView } from "../read-models/document-view.js";
+import {
+  DeletedDocumentRead,
+  KyselyDocumentView,
+} from "../read-models/document-view.js";
 import type {
   IReadModel,
   IReadModelCoordinator,
@@ -797,6 +805,13 @@ export class ReactorBuilder {
       );
     };
 
+    const readModelIndexing: ReadModelIndexingConfig = {
+      commitChunkSize: DEFAULT_COMMIT_CHUNK_SIZE,
+      yieldDeadlineMs:
+        this.executorConfig.yieldDeadlineMs ??
+        DEFAULT_READ_MODEL_YIELD_DEADLINE_MS,
+    };
+
     const documentViewConsistencyTracker = new ConsistencyTracker();
     const documentView = new KyselyDocumentView(
       // @ts-expect-error - Database type is a superset that includes all required tables
@@ -805,7 +820,10 @@ export class ReactorBuilder {
       operationIndex,
       writeCache,
       documentViewConsistencyTracker,
-      featureFlags.documentDecisions,
+      featureFlags.documentDecisions
+        ? DeletedDocumentRead.StateAtDeletion
+        : DeletedDocumentRead.NotFound,
+      readModelIndexing,
     );
 
     try {
@@ -820,6 +838,7 @@ export class ReactorBuilder {
       operationIndex,
       writeCache,
       documentIndexerConsistencyTracker,
+      readModelIndexing,
     );
 
     try {
@@ -902,6 +921,7 @@ export class ReactorBuilder {
                 config,
                 eventBus,
                 hostTrackers,
+                readModelIndexing,
                 false,
               ),
             registerShutdownHook: (hook) => this.shutdownHooks.push(hook),
@@ -911,6 +931,7 @@ export class ReactorBuilder {
               this.projectionShardConfig,
               eventBus,
               hostTrackers,
+              readModelIndexing,
               true,
             )
           : new ReadModelCoordinator(eventBus, readModelInstances, [
@@ -1049,6 +1070,10 @@ export class ReactorBuilder {
    *   models never index an operation, so the manager advances these from the
    *   shards' relayed indexing reports; without them every read carrying a
    *   consistency token waits forever.
+   * @param indexing The chunking bounds the host's own read models index
+   *   under. The shards' read models are built inside the worker, so without
+   *   this they would fall back to the library default and a host that tuned
+   *   the cadence would silently get it on the in-process path only.
    * @param registerShutdownHook Whether the builder owns `manager.shutdown()`
    *   at signal time. False for the coordinator-factory path, whose factory
    *   registers its own hook so host chains drain before the worker stops.
@@ -1059,6 +1084,7 @@ export class ReactorBuilder {
     consistencyTrackers: Partial<
       Record<BuiltInReadModelKind, IConsistencyTracker>
     >,
+    indexing: ReadModelIndexingConfig,
     registerShutdownHook: boolean,
   ): Promise<ProjectionShardManager> {
     const parentDb = this.resolveReactorDbConfig();
@@ -1132,6 +1158,7 @@ export class ReactorBuilder {
       models,
       preReadyKinds: config.preReadyKinds,
       postReadyKinds: config.postReadyKinds,
+      indexing,
       factory,
       logger: this.logger!,
       hostBus: eventBus,

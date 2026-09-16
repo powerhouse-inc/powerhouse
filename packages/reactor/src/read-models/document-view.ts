@@ -27,13 +27,35 @@ import {
   type ViewFilter,
 } from "../storage/interfaces.js";
 import type { Database as StorageDatabase } from "../storage/kysely/types.js";
-import { BaseReadModel } from "./base-read-model.js";
+import {
+  BaseReadModel,
+  defaultReadModelIndexingConfig,
+  type ReadModelIndexingConfig,
+} from "./base-read-model.js";
 import type {
   DocumentViewDatabase,
   InsertableDocumentSnapshot,
 } from "./types.js";
 
 type Database = StorageDatabase & DocumentViewDatabase;
+
+/**
+ * What a single-document read of a deleted document returns. A listing omits a
+ * deleted document under either value.
+ */
+export enum DeletedDocumentRead {
+  /**
+   * The document reads as missing: `get` throws and `resolveIdOrSlug` does not
+   * match its id.
+   */
+  NotFound = "NotFound",
+  /**
+   * The document's state as of the deletion, with `state.document.isDeleted`
+   * telling the caller what it holds. Only meaningful with `documentDecisions`,
+   * which is what makes deletion positional.
+   */
+  StateAtDeletion = "StateAtDeletion",
+}
 
 export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
   private _db: Kysely<Database>;
@@ -44,19 +66,19 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
     operationIndex: IOperationIndex,
     writeCache: IWriteCache,
     consistencyTracker: IConsistencyTracker,
-    /**
-     * Whether a single-document read serves a deleted document's state as of the
-     * deletion rather than hiding it. Only meaningful with `documentDecisions`,
-     * which is what makes deletion positional. Listings omit it either way.
-     */
-    private readonly servesDeletionBoundary: boolean,
+    private readonly deletedDocumentRead: DeletedDocumentRead,
+    indexing: ReadModelIndexingConfig = defaultReadModelIndexingConfig,
   ) {
     super(
       db as unknown as Kysely<DocumentViewDatabase>,
       operationIndex,
       writeCache,
       consistencyTracker,
-      { readModelId: DOCUMENT_VIEW_READ_MODEL, rebuildStateOnInit: true },
+      {
+        readModelId: DOCUMENT_VIEW_READ_MODEL,
+        rebuildStateOnInit: true,
+        indexing,
+      },
     );
     this._db = db;
   }
@@ -70,6 +92,11 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
    * without either fall back to header/document/auth, because their sibling
    * echoes may be stale. All other action types index only header and their
    * own scope.
+   *
+   * The header row is the one row every scope's chain writes, so it accepts a
+   * write only from an operation whose global ordinal is at least the one the
+   * row already carries. Without that, a chunked pass that started earlier
+   * reverts a concurrent rename with the stale echo its later chunks carry.
    */
   protected override async commitOperations(
     items: OperationWithContext[],
@@ -77,8 +104,14 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
     await this._db.transaction().execute(async (trx) => {
       for (const item of items) {
         const { operation, context } = item;
-        const { documentId, scope, branch, documentType, resultingState } =
-          context;
+        const {
+          documentId,
+          scope,
+          branch,
+          documentType,
+          resultingState,
+          ordinal,
+        } = context;
         const { index, hash } = operation;
 
         if (!resultingState) {
@@ -125,6 +158,7 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
               deletedAt: now,
               lastOperationIndex: index,
               lastOperationHash: hash,
+              lastOperationOrdinal: ordinal,
               lastUpdatedAt: now,
             })
             .where("documentId", "=", documentId)
@@ -207,12 +241,29 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
 
           const existingSnapshot = await trx
             .selectFrom("DocumentSnapshot")
-            .select(["slug", "name", "isDeleted", "snapshotVersion"])
+            .select([
+              "slug",
+              "name",
+              "isDeleted",
+              "snapshotVersion",
+              "lastOperationOrdinal",
+            ])
             .$if(needsExistingContent, (qb) => qb.select("content"))
             .where("documentId", "=", documentId)
             .where("scope", "=", scopeName)
             .where("branch", "=", branch)
             .executeTakeFirst();
+
+          // Every scope's chain writes the header row, and since the chains
+          // interleave at chunk boundaries an older one can arrive last. Its
+          // header echo is stale, so it must not claim the row.
+          if (
+            scopeName === "header" &&
+            existingSnapshot !== undefined &&
+            existingSnapshot.lastOperationOrdinal > ordinal
+          ) {
+            continue;
+          }
 
           const newState =
             typeof scopeState === "object" && scopeState !== null
@@ -274,6 +325,7 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
               .set({
                 lastOperationIndex: index,
                 lastOperationHash: hash,
+                lastOperationOrdinal: ordinal,
                 lastUpdatedAt: new Date(),
                 snapshotVersion: existingSnapshot.snapshotVersion + 1,
                 content: newState,
@@ -283,6 +335,10 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
               .where("documentId", "=", documentId)
               .where("scope", "=", scopeName)
               .where("branch", "=", branch)
+              // Repeats the guard where the database can enforce it.
+              .$if(scopeName === "header", (qb) =>
+                qb.where("lastOperationOrdinal", "<=", ordinal),
+              )
               .execute();
           } else {
             const snapshot: InsertableDocumentSnapshot = {
@@ -296,6 +352,7 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
               documentType,
               lastOperationIndex: index,
               lastOperationHash: hash,
+              lastOperationOrdinal: ordinal,
               identifiers: null,
               metadata: null,
               deletedAt: null,
@@ -357,15 +414,13 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
       scopesToQuery = [];
     }
 
-    // Unfiltered when serving the boundary state; `state.document.isDeleted` tells
-    // the caller what it holds. Listings keep the filter either way.
     let query = this._db
       .selectFrom("DocumentSnapshot")
       .selectAll()
       .where("documentId", "=", documentId)
       .where("branch", "=", branch);
 
-    if (!this.servesDeletionBoundary) {
+    if (this.deletedDocumentRead === DeletedDocumentRead.NotFound) {
       query = query.where("isDeleted", "=", false);
     }
 
@@ -731,7 +786,7 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
       .where("documentId", "=", identifier)
       .where("branch", "=", branch);
 
-    if (!this.servesDeletionBoundary) {
+    if (this.deletedDocumentRead === DeletedDocumentRead.NotFound) {
       idCheckQuery = idCheckQuery.where("isDeleted", "=", false);
     }
 
