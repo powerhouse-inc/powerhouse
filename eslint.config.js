@@ -735,9 +735,15 @@ const workflowBoundariesConfig = [
         {
           patterns: [
             {
-              group: ["@powerhousedao/*", "../reactor/*", "**/reactor/**"],
+              group: [
+                "@powerhousedao/*",
+                "!@powerhousedao/pieces-framework",
+                "!@powerhousedao/pieces-framework/**",
+                "../reactor/*",
+                "**/reactor/**",
+              ],
               message:
-                "The pieces layer runs a piece; it must not reach for the reactor above it or for any Powerhouse package.",
+                "The pieces layer runs a piece; it must not reach for the reactor above it, nor for any Powerhouse package other than the piece framework it runs pieces against.",
             },
           ],
         },

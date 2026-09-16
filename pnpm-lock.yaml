@@ -2532,6 +2532,9 @@ importers:
 
   packages/reactor-workflow:
     dependencies:
+      '@powerhousedao/pieces-framework':
+        specifier: workspace:*
+        version: link:../pieces-framework
       '@powerhousedao/reactor':
         specifier: workspace:*
         version: link:../reactor
