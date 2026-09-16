@@ -1,7 +1,6 @@
 import type { PowerhouseConfig } from "@powerhousedao/config";
 import { getConfig } from "@powerhousedao/config/node";
 import {
-  SHARED_DEP_SPECIFIERS,
   deepMerge,
   loadConnectEnv,
   mergePwaConfig,
@@ -473,11 +472,19 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       // Production vendor builds additionally externalize the shared package
       // set — the Connect app's own imports of them resolve through the
       // import map at runtime instead of being bundled.
+      //
+      // The externals are the vendor's *published* specifiers, not a static
+      // list: the vendor drops entries whose package is not installed in the
+      // project, and never publishes the bare `@powerhousedao/shared` root.
+      // Externalizing a specifier the import map has no entry for leaves a
+      // bare specifier in the chunk, and the browser kills it with "Failed to
+      // resolve module specifier". Taking the keys keeps the two in step by
+      // construction — the dev plugin matches on the same map.
       esmExternalRequirePlugin({
         external: [
           ...reactExternal,
           ...(options.vendor && mode === "production"
-            ? SHARED_DEP_SPECIFIERS
+            ? Object.keys(options.vendor.imports)
             : []),
         ],
       }),
