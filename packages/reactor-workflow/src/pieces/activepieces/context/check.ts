@@ -1,37 +1,19 @@
-// Context handed to a piece's app.checkConnection: the resolved auth and
-// nothing else; other members throw with their path, as elsewhere.
+// Context handed to a piece's connection check. The framework has no
+// checkConnection hook: auth.validate({auth, server}) is the whole contract.
 import { throwingStub, withTouchTracking } from "./stubs.js";
-
-export interface CheckConnectionLogger {
-  debug(...args: unknown[]): void;
-  info(...args: unknown[]): void;
-  warn(...args: unknown[]): void;
-  error(...args: unknown[]): void;
-}
-
-// Log arguments can hold auth and the worker's stdio is dropped anyway, so
-// piece logging is discarded rather than forwarded to the host.
-const discardingLogger: CheckConnectionLogger = {
-  debug: () => undefined,
-  info: () => undefined,
-  warn: () => undefined,
-  error: () => undefined,
-};
+import type { AuthValidationServerContext } from "@powerhousedao/pieces-framework";
 
 export interface CheckConnectionContextOptions {
   auth?: unknown;
+  // apiUrl / publicUrl when the host serves them; mintOidcToken always throws,
+  // since no reactor mints tokens for a piece's validate().
+  server?: Omit<AuthValidationServerContext, "mintOidcToken">;
   onTouch?: (member: string) => void;
 }
 
 export interface BuiltApCheckConnectionContext {
   auth: unknown;
-  propsValue: Record<string, unknown>;
-  logger: CheckConnectionLogger;
-  store: unknown;
-  files: unknown;
-  server: unknown;
-  events: unknown;
-  flow: unknown;
+  server: AuthValidationServerContext;
 }
 
 export interface CheckConnectionContextHandle {
@@ -46,13 +28,12 @@ export function buildCheckConnectionContext(
   const touched = new Set<string>();
   const base: Record<string, unknown> = {
     auth: options.auth,
-    propsValue: {},
-    logger: discardingLogger,
-    store: throwingStub("store"),
-    files: throwingStub("files"),
-    server: throwingStub("server"),
-    events: throwingStub("events"),
-    flow: throwingStub("flow"),
+    server: options.server
+      ? {
+          ...options.server,
+          mintOidcToken: throwingStub("server.mintOidcToken"),
+        }
+      : throwingStub("server"),
   };
   const context = withTouchTracking(base, touched, options.onTouch);
   return {

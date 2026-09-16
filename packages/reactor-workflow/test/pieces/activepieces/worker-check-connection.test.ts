@@ -19,10 +19,9 @@ const app = {
     if (ctx.auth.props.password !== "fixture-secret") {
       throw new Error("fixture: auth did not cross the boundary");
     }
-    if (Object.keys(ctx.propsValue).length !== 0) {
-      throw new Error("fixture: propsValue must be empty");
+    if (Object.keys(ctx).sort().join(",") !== "auth,server") {
+      throw new Error("fixture: validate receives auth and server only");
     }
-    ctx.logger.info("check ran");
     return { name: "pass-account" };
   },
 };
@@ -70,11 +69,11 @@ const app = {
 };
 module.exports = { app };
 `,
-  store: `
+  oidc: `
 const app = {
-  displayName: "Store Fixture",
+  displayName: "OIDC Fixture",
   actions: {},
-  checkConnection: async (ctx) => ctx.store.get("k"),
+  checkConnection: async (ctx) => ctx.server.mintOidcToken({ audience: "a" }),
 };
 module.exports = { app };
 `,
@@ -126,9 +125,7 @@ describe("PieceWorker.checkConnection", () => {
       declared: true,
       result: { name: "pass-account" },
     });
-    expect(result.touched).toEqual(
-      expect.arrayContaining(["auth", "propsValue", "logger"]),
-    );
+    expect(result.touched).toEqual(expect.arrayContaining(["auth"]));
   });
 
   it("reports a piece that declares no check", async () => {
@@ -167,7 +164,7 @@ describe("PieceWorker.checkConnection", () => {
 
   it("names an unimplemented context member the check reached for", async () => {
     const error: unknown = await worker
-      .checkConnection({ bundleDir: bundleDir("store"), auth: AUTH })
+      .checkConnection({ bundleDir: bundleDir("oidc"), auth: AUTH })
       .then(
         () => undefined,
         (e: unknown) => e,
@@ -175,7 +172,7 @@ describe("PieceWorker.checkConnection", () => {
 
     expect(error).toBeInstanceOf(PieceWorkerError);
     expect((error as PieceWorkerError).serialized.unsupportedMember).toBe(
-      "store.get",
+      "server.mintOidcToken",
     );
   });
 

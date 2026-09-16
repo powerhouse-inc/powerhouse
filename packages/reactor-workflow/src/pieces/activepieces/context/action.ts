@@ -175,6 +175,8 @@ export function buildActionContext(
       stop: throwingStub("run.stop"),
       pause: throwingStub("run.pause"),
       respond: throwingStub("run.respond"),
+      createWaitpoint: throwingStub("run.createWaitpoint"),
+      waitForWaitpoint: throwingStub("run.waitForWaitpoint"),
     },
     project: {
       id: identity.projectId ?? "project",

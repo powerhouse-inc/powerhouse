@@ -66,4 +66,10 @@ describe("pollIntervalFor", () => {
   it("holds the 60s floor against a smaller override", () => {
     expect(pollIntervalFor(binding(5_000), undefined, 300_000)).toBe(60_000);
   });
+
+  it("arms the interval branch of setSchedule as the cadence itself", () => {
+    expect(pollIntervalFor(binding(), [{ intervalMs: 180_000 }], 300_000)).toBe(
+      180_000,
+    );
+  });
 });

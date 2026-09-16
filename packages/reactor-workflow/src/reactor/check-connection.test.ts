@@ -80,8 +80,8 @@ const app = {
     if (ctx.auth.props.password !== "fixture-secret") {
       throw new Error("fixture: secret was not resolved");
     }
-    if (Object.keys(ctx.propsValue).length !== 0) {
-      throw new Error("fixture: propsValue must be empty");
+    if (Object.keys(ctx).sort().join(",") !== "auth,server") {
+      throw new Error("fixture: validate receives auth and server only");
     }
     return { name: "pass-account" };
   },

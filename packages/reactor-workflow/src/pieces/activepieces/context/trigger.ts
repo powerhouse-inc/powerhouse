@@ -1,5 +1,6 @@
 // Our TriggerHookContext → theirs (doc 06 §2.8): one builder covering the
 // strategy variants; identity/payload as data, capabilities injected or stubbed.
+import { Cron } from "croner";
 import { DEDUPE_KEY_PROPERTY, type ApTrigger } from "../types.js";
 import {
   InMemoryKeyValueStore,
@@ -14,13 +15,12 @@ import type {
   TriggerStrategy,
   InputPropertyMap,
   ServerContext,
+  SetScheduleRequest,
   TestOrRunHookContext,
 } from "@powerhousedao/pieces-framework";
 
-export interface RecordedSchedule {
-  cronExpression: string;
-  timezone?: string;
-}
+// Both branches of the framework's SetScheduleRequest, as the piece asked.
+export type RecordedSchedule = SetScheduleRequest;
 
 type HookContextFor<S extends TriggerStrategy> = TestOrRunHookContext<
   undefined,
@@ -31,6 +31,52 @@ type HookContextFor<S extends TriggerStrategy> = TestOrRunHookContext<
 export type RecordedListener = Parameters<
   HookContextFor<TriggerStrategy.APP_WEBHOOK>["app"]["createListeners"]
 >[0];
+
+// Upstream's floor for an interval schedule; a cron is validated the way its
+// engine does, by handing the expression to a parser.
+export const MIN_SCHEDULE_INTERVAL_MS = 60_000;
+
+export class InvalidCronExpressionError extends Error {
+  constructor(cronExpression: string) {
+    super(`Invalid cron expression "${cronExpression}"`);
+    this.name = "InvalidCronExpressionError";
+  }
+}
+
+export class InvalidScheduleIntervalError extends Error {
+  constructor(intervalMs: unknown) {
+    super(
+      `Invalid schedule interval ${String(intervalMs)}: expected a whole number of milliseconds, at least ${MIN_SCHEDULE_INTERVAL_MS}`,
+    );
+    this.name = "InvalidScheduleIntervalError";
+  }
+}
+
+// setSchedule's own validation, as the engine's trigger helper performs it: an
+// interval is a whole number at or above the floor, a cron has to parse.
+export function validateSchedule(request: RecordedSchedule): RecordedSchedule {
+  if ("intervalMs" in request) {
+    const { intervalMs } = request;
+    if (
+      !Number.isInteger(intervalMs) ||
+      intervalMs < MIN_SCHEDULE_INTERVAL_MS
+    ) {
+      throw new InvalidScheduleIntervalError(intervalMs);
+    }
+    return { intervalMs };
+  }
+  const timezone = request.timezone ?? "UTC";
+  let parsed: Cron;
+  try {
+    parsed = new Cron(request.cronExpression, { timezone, legacyMode: false });
+  } catch {
+    throw new InvalidCronExpressionError(request.cronExpression);
+  }
+  if (!parsed.nextRun()) {
+    throw new InvalidCronExpressionError(request.cronExpression);
+  }
+  return { cronExpression: request.cronExpression, timezone };
+}
 
 export interface TriggerContextOptions {
   propsValue: Record<string, unknown>;
@@ -140,7 +186,7 @@ export function buildTriggerContext(
     webhookUrl: options.webhookUrl ?? "http://localhost:0/webhook",
     payload: options.payload,
     setSchedule: (schedule: RecordedSchedule) => {
-      schedules.push(schedule);
+      schedules.push(validateSchedule(schedule));
     },
     app: {
       createListeners: (listener: RecordedListener) => {
