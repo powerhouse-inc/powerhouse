@@ -1107,7 +1107,11 @@ describe("DocumentCache operations", () => {
     );
   });
 
-  it("drops a document's scopes and notifies on a document Updated event", async () => {
+  // An update appends to the operation stream, so the history already loaded
+  // is still correct. Dropping it made the panel re-walk every page from the
+  // first one on each edit; the loaded operations stay and only the tail is
+  // asked for.
+  it("refreshes a document's scopes from the last loaded revision on an Updated event", async () => {
     const { client, getOperations, emitEvent } = createOperationsClient();
     getOperations.mockResolvedValue(makePage([createFakeOperation(0)]));
     const cache = new DocumentCache(client);
@@ -1125,24 +1129,52 @@ describe("DocumentCache operations", () => {
     });
     doc1Listener.mockClear();
     doc2Listener.mockClear();
+    getOperations.mockClear();
+    getOperations.mockResolvedValue(makePage([createFakeOperation(1)]));
 
     emitEvent({
       type: DocumentChangeType.Updated,
       documents: [createMockDocument("doc-1")],
     } as DocumentChangeEvent);
 
-    expect(cache.getOperationsState("doc-1", "global")).toBe(
-      IDLE_OPERATIONS_ENTRY,
+    // Synchronously, before the refresh lands: what was loaded is still there.
+    expect(
+      cache
+        .getOperationsState("doc-1", "global")
+        .operations.map((o) => o.index),
+    ).toEqual([0]);
+
+    await vi.waitFor(() => {
+      expect(cache.getOperationsState("doc-1", "global").status).toBe(
+        "success",
+      );
+      expect(cache.getOperationsState("doc-1", "local").status).toBe("success");
+    });
+
+    // Only the operations past the last loaded one were asked for.
+    expect(getOperations).toHaveBeenCalledWith(
+      "doc-1",
+      { scopes: ["global"] },
+      { sinceRevision: 1 },
+      { cursor: "", limit: 10 },
+      expect.anything(),
     );
-    expect(cache.getOperationsState("doc-1", "local")).toBe(
-      IDLE_OPERATIONS_ENTRY,
-    );
+    expect(
+      cache
+        .getOperationsState("doc-1", "global")
+        .operations.map((o) => o.index),
+    ).toEqual([0, 1]);
+    expect(
+      cache.getOperationsState("doc-1", "local").operations.map((o) => o.index),
+    ).toEqual([0, 1]);
+
+    // An unrelated document is neither refreshed nor notified.
     expect(cache.getOperationsState("doc-2", "global").status).toBe("success");
-    expect(doc1Listener).toHaveBeenCalledTimes(1);
+    expect(doc1Listener).toHaveBeenCalled();
     expect(doc2Listener).not.toHaveBeenCalled();
   });
 
-  it("drops a slug-keyed entry's operations on an Updated event for its id", async () => {
+  it("refreshes a slug-keyed entry's operations on an Updated event for its id", async () => {
     const { client, get, getOperations, emitEvent } = createOperationsClient();
     get.mockResolvedValue(createMockDocument("doc-1"));
     getOperations.mockResolvedValue(makePage([createFakeOperation(0)]));
@@ -1160,16 +1192,61 @@ describe("DocumentCache operations", () => {
       );
     });
     listener.mockClear();
+    getOperations.mockClear();
+    getOperations.mockResolvedValue(makePage([createFakeOperation(1)]));
 
     emitEvent({
       type: DocumentChangeType.Updated,
       documents: [createMockDocument("doc-1")],
     } as DocumentChangeEvent);
 
-    expect(cache.getOperationsState("my-slug", "global")).toBe(
+    await vi.waitFor(() => {
+      expect(cache.getOperationsState("my-slug", "global").status).toBe(
+        "success",
+      );
+    });
+
+    expect(getOperations).toHaveBeenCalledWith(
+      "my-slug",
+      { scopes: ["global"] },
+      { sinceRevision: 1 },
+      { cursor: "", limit: 10 },
+      expect.anything(),
+    );
+    expect(
+      cache
+        .getOperationsState("my-slug", "global")
+        .operations.map((o) => o.index),
+    ).toEqual([0, 1]);
+    expect(listener).toHaveBeenCalled();
+  });
+
+  // A scope that has not finished paging has no "last loaded revision" to
+  // refresh from: asking for everything past the newest row it holds would
+  // skip the pages between that row and the end. Such a scope is dropped, as
+  // before, and loads again from the first page.
+  it("drops a scope whose walk is incomplete rather than refreshing past a hole", async () => {
+    const { client, getOperations, emitEvent } = createOperationsClient();
+    getOperations.mockResolvedValue(
+      makePage([createFakeOperation(0)], "next-cursor"),
+    );
+    const cache = new DocumentCache(client);
+    cache.loadOperations("doc-1", "global", 10);
+    await vi.waitFor(() => {
+      expect(cache.getOperationsState("doc-1", "global").status).toBe(
+        "success",
+      );
+    });
+    expect(cache.getOperationsState("doc-1", "global").hasNextPage).toBe(true);
+
+    emitEvent({
+      type: DocumentChangeType.Updated,
+      documents: [createMockDocument("doc-1")],
+    } as DocumentChangeEvent);
+
+    expect(cache.getOperationsState("doc-1", "global")).toBe(
       IDLE_OPERATIONS_ENTRY,
     );
-    expect(listener).toHaveBeenCalledTimes(1);
   });
 
   it("drops a document's scopes on a Deleted event", async () => {

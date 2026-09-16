@@ -90,6 +90,25 @@ export function isOperationCache(cache: unknown): cache is IOperationCache {
   );
 }
 
+/**
+ * Page size used to refresh a scope whose request record has gone missing.
+ * A loaded scope always has one, so this is a floor rather than a default.
+ */
+const FALLBACK_REFRESH_LIMIT = 100;
+
+/**
+ * The highest revision among the operations loaded so far, or -1 for none.
+ * Pages arrive oldest first, so this is normally the last entry; it is
+ * computed rather than assumed because nothing in the cache enforces that.
+ */
+function highestOperationIndex(operations: readonly Operation[]): number {
+  let highest = -1;
+  for (const operation of operations) {
+    if (operation.index > highest) highest = operation.index;
+  }
+  return highest;
+}
+
 /** Bookkeeping for one document scope that is not part of its snapshot. */
 type OperationsRequest = {
   /** Aborts the request in flight, or marks a settled one as superseded. */
@@ -159,7 +178,7 @@ export class DocumentCache implements IDocumentCache, IOperationCache {
         const keys = this.cacheKeysFor(doc.header.id);
         this.handleDocumentUpdated(doc.header.id).catch(console.warn);
         for (const key of keys) {
-          this.invalidateOperations(key);
+          this.refreshOperations(key);
         }
       }
     }
@@ -387,6 +406,88 @@ export class DocumentCache implements IDocumentCache, IOperationCache {
       controller,
       limit,
     );
+  }
+
+  /**
+   * Bring a document's cached scopes up to date after it changed, without
+   * throwing away what is already loaded.
+   *
+   * The operation stream is append-only: an update adds operations at higher
+   * revisions and never rewrites the ones below, so history already paged in
+   * is still correct. Dropping it meant a panel showing a fully loaded
+   * document re-walked every page on each edit -- the cost of which grows
+   * with the document, exactly where it hurts most. Each scope instead asks
+   * only for what comes after the newest revision it holds, using the
+   * `sinceRevision` filter, and appends the answer.
+   *
+   * A scope that has not finished paging is dropped as before: it has no
+   * meaningful "newest revision" to resume from, since asking for everything
+   * past the newest row it happens to hold would skip the pages between that
+   * row and the end of the stream.
+   */
+  private refreshOperations(documentId: string): void {
+    const scopes = this.operationEntries.get(documentId);
+    if (!scopes) return;
+
+    for (const [scope, entry] of [...scopes.entries()]) {
+      if (entry.status !== "success" || entry.hasNextPage) {
+        this.invalidateOperationsScope(documentId, scope);
+        continue;
+      }
+
+      const previous = this.operationRequests.get(documentId)?.get(scope);
+      const limit = previous?.limit ?? FALLBACK_REFRESH_LIMIT;
+      // Marks the settled page superseded, so a late arrival cannot append
+      // on top of the refresh.
+      previous?.controller.abort();
+
+      const controller = new AbortController();
+      this.setOperationsRequest(documentId, scope, {
+        controller,
+        nextCursor: undefined,
+        limit,
+      });
+      // Pending, but the operations stay in the entry: consumers keep
+      // rendering the history they have instead of flashing empty while the
+      // tail is fetched.
+      this.setOperationsEntry(documentId, scope, {
+        ...entry,
+        status: "pending",
+      });
+      this.settleOperationsPage(
+        documentId,
+        scope,
+        this.client.getOperations(
+          documentId,
+          { scopes: [scope] },
+          { sinceRevision: highestOperationIndex(entry.operations) + 1 },
+          { cursor: "", limit },
+          controller.signal,
+        ),
+        controller,
+        limit,
+      );
+    }
+  }
+
+  /** Drops one scope of a document, aborting its request if one is in flight. */
+  private invalidateOperationsScope(documentId: string, scope: string): void {
+    const requests = this.operationRequests.get(documentId);
+    const request = requests?.get(scope);
+    if (request && requests) {
+      request.controller.abort();
+      requests.delete(scope);
+      if (requests.size === 0) {
+        this.operationRequests.delete(documentId);
+      }
+    }
+    const scopes = this.operationEntries.get(documentId);
+    if (scopes?.delete(scope)) {
+      if (scopes.size === 0) {
+        this.operationEntries.delete(documentId);
+      }
+      this.notifyOperationListeners(documentId);
+    }
   }
 
   invalidateOperations(documentId: string): void {
