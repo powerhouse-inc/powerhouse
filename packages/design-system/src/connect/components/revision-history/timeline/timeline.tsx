@@ -1,6 +1,6 @@
 import type { Operation } from "@powerhousedao/shared/document-model";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef } from "react";
 import { Revision } from "../revision/revision.js";
 import { Skip } from "../skip/skip.js";
 import { makeRows } from "../utils.js";
@@ -8,55 +8,44 @@ import { Day } from "./day.js";
 
 export type TimelineProps = {
   readonly operations: readonly Operation[];
+  /**
+   * Height cap for the scroll area. The virtualizer needs a viewport it can
+   * scroll within; any CSS length works, and the default keeps the panel's
+   * header and pagination reachable without scrolling past the timeline.
+   */
+  readonly maxHeight?: number | string;
 };
 
+/**
+ * The revision timeline, windowed by row.
+ *
+ * The scroll element and the content are deliberately two different
+ * elements. A virtualizer decides what is visible by comparing its scroll
+ * element's viewport against the total content size, so a scroll element
+ * sized to the content is a viewport that shows everything at once: it never
+ * scrolls, every row is "visible", and the whole page renders while still
+ * paying the virtualizer's bookkeeping. The outer element here is therefore
+ * bounded and scrollable, and the inner sizer carries the full height that
+ * the absolutely positioned rows are placed within.
+ */
 export function Timeline(props: TimelineProps) {
-  const { operations } = props;
-  const initialNumRowsToShow = 100;
-  const allRows = useMemo(() => makeRows([...operations]), [operations]);
-  const [scrollAmount, setScrollAmount] = useState(0);
-  const [numRowsToShow, setNumRowsToShow] = useState(initialNumRowsToShow);
-  const rows = useMemo(
-    () => allRows.slice(0, numRowsToShow),
-    [allRows, numRowsToShow],
-  );
+  const { operations, maxHeight = "70vh" } = props;
+  const rows = useMemo(() => makeRows([...operations]), [operations]);
 
   const parentRef = useRef<HTMLDivElement>(null);
-
-  const hasNextPage = rows.length < allRows.length;
 
   const rowVirtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: (i) => rows[i].height,
+    // Optional chaining, not rows[i].height: a shrinking list re-renders
+    // before the virtualizer has re-measured, so this can be asked about an
+    // index the new array no longer has.
+    estimateSize: (i) => rows[i]?.height ?? 0,
     gap: 8,
+    // A few rows either side so scrolling reveals rendered content rather
+    // than blank space.
+    overscan: 8,
   });
-
-  useEffect(() => {
-    if (!hasNextPage) return;
-    const ratio = Math.floor(scrollAmount / 46);
-    const newNumRevisions = initialNumRowsToShow + ratio;
-    setNumRowsToShow((prev) =>
-      newNumRevisions > prev ? newNumRevisions : prev,
-    );
-  }, [scrollAmount, hasNextPage]);
-
-  const handleScroll = (e: WheelEvent) => {
-    setScrollAmount((prev) => {
-      const n = prev + e.deltaY;
-      if (n < 0) {
-        return 0;
-      }
-      return n;
-    });
-  };
-
-  useEffect(() => {
-    window.addEventListener("wheel", handleScroll);
-    return () => {
-      window.removeEventListener("wheel", handleScroll);
-    };
-  }, []);
 
   return (
     <div
@@ -64,34 +53,42 @@ export function Timeline(props: TimelineProps) {
       data-testid="revision-timeline"
       ref={parentRef}
       style={{
-        height: `${rowVirtualizer.getTotalSize()}px`,
+        maxHeight,
+        overflowY: "auto",
         width: "100%",
         position: "relative",
       }}
     >
-      {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-        const row = rows[virtualRow.index];
+      <div
+        style={{
+          height: `${rowVirtualizer.getTotalSize()}px`,
+          width: "100%",
+          position: "relative",
+        }}
+      >
+        {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+          const row = rows[virtualRow.index];
+          if (!row) return null;
 
-        return (
-          <div
-            key={virtualRow.index}
-            style={{
-              position: "absolute",
-              top: 0,
-              left: 16,
-              width: "100%",
-              height: `${virtualRow.size}px`,
-              transform: `translateY(${virtualRow.start}px)`,
-            }}
-          >
-            {row.type === "revision" && (
-              <Revision {...row} key={virtualRow.key} />
-            )}
-            {row.type === "skip" && <Skip key={virtualRow.key} {...row} />}
-            {row.type === "day" && <Day key={virtualRow.key} {...row} />}
-          </div>
-        );
-      })}
+          return (
+            <div
+              key={virtualRow.key}
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 16,
+                width: "100%",
+                height: `${virtualRow.size}px`,
+                transform: `translateY(${virtualRow.start}px)`,
+              }}
+            >
+              {row.type === "revision" && <Revision {...row} />}
+              {row.type === "skip" && <Skip {...row} />}
+              {row.type === "day" && <Day {...row} />}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
