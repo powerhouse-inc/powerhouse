@@ -209,6 +209,7 @@ export class ITrigger<
   ) {}
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Trigger<
   PieceAuth extends PieceAuthProperty | PieceAuthProperty[] | undefined = any,
   TriggerProps extends InputPropertyMap = any,

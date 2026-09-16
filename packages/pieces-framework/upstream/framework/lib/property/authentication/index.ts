@@ -22,6 +22,7 @@ export const PieceAuthProperty = z.union([
   SecretTextProperty,
 ]);
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type PieceAuthProperty =
   | BasicAuthProperty
   | CustomAuthProperty<any>

@@ -13,6 +13,9 @@ const packageRoot = path.resolve(
 export default [
   {
     files: ["**/*.ts"],
+    // Only two rules run here, so upstream's eslint-disable comments would all
+    // count as unused; keep them for the diffs against upstream.
+    linterOptions: { reportUnusedDisableDirectives: "off" },
     languageOptions: {
       parser: tseslint.parser,
       parserOptions: {

@@ -45,6 +45,7 @@ export function ensureTrailingSlash(url: string): string {
   return url.endsWith("/") ? url : `${url}/`;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function setAtPath<T, K extends keyof any>(
   obj: T,
   path: K | K[],
@@ -54,6 +55,7 @@ export function setAtPath<T, K extends keyof any>(
     ? path
     : ((path as string).match(/([^[.\]])+/g) as unknown as K[]);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   pathArray.reduce((acc: any, key: K, i: number) => {
     if (acc[key] === undefined) acc[key] = {};
     if (i === pathArray.length - 1) acc[key] = value;

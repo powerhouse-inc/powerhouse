@@ -57,7 +57,8 @@ Upstream is CommonJS with extensionless imports; this package is ESM under
 5. Runs `eslint --fix` with `scripts/sync-upstream.eslint.config.mjs`
    (`consistent-type-imports`, `consistent-type-exports`, prettier) so
    type-only imports and re-exports satisfy `verbatimModuleSyntax` and
-   `isolatedModules`.
+   `isolatedModules`. Unused-directive reporting is off there, so upstream's
+   `eslint-disable` comments survive even though their rules do not run.
 6. Applies the literal patches listed in `PATCHES` in
    `scripts/sync-upstream.mts`. Each must match exactly the expected number of
    times or the sync fails, so a change upstream cannot go unnoticed.

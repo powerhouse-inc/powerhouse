@@ -40,7 +40,7 @@ export type BaseOAuth2ConnectionValue = {
   scope: string;
   token_url: string;
   grant_type?: OAuth2GrantType;
-
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data: Record<string, any>;
   props?: Record<string, unknown>;
 };

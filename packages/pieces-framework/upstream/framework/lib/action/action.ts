@@ -68,6 +68,7 @@ type CreateActionParams<
   classification?: ActionClassification;
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export class IAction<
   PieceAuth extends PieceAuthProperty | PieceAuthProperty[] | undefined = any,
   ActionProps extends InputPropertyMap = InputPropertyMap,
@@ -95,6 +96,7 @@ export class IAction<
   ) {}
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Action<
   PieceAuth extends PieceAuthProperty | PieceAuthProperty[] | undefined = any,
   ActionProps extends InputPropertyMap = any,
@@ -103,6 +105,7 @@ export type Action<
 export const createAction = <
   PieceAuth extends PieceAuthProperty | PieceAuthProperty[] | undefined =
     PieceAuthProperty,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ActionProps extends InputPropertyMap = any,
 >(
   params: CreateActionParams<PieceAuth, ActionProps>,

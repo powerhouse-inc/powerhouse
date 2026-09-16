@@ -24,6 +24,7 @@ const OAuthProp = z.union([
   StaticDropdownProperty,
 ]);
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type OAuthProp =
   | ShortTextProperty<boolean>
   | SecretTextProperty<boolean>
@@ -83,10 +84,11 @@ export const OAuth2PropertyValue = z.object({
   data: z.record(z.string(), z.any()),
 });
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type OAuth2PropertyValue<T extends OAuth2Props = any> = {
   access_token: string;
   props?: OAuthPropsValue<T>;
-
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data: Record<string, any>;
 };
 
