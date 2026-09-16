@@ -83,6 +83,7 @@
     "@powerhousedao/reactor-drive": "workspace:*",
     "@powerhousedao/reactor-group": "workspace:*",
     "@powerhousedao/reactor-mcp": "workspace:*",
+    "@powerhousedao/reactor-workflow": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
     "@powerhousedao/workflow": "workspace:*",
     "@renown/sdk": "workspace:*",

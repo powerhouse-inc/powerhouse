@@ -40,6 +40,9 @@
       "path": "../reactor-mcp"
     },
     {
+      "path": "../reactor-workflow"
+    },
+    {
       "path": "../renown"
     },
     {
