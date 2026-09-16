@@ -160,6 +160,11 @@ Nothing here belongs in a piece: a piece is handed values that are already
 coerced. `.` and `./common` are unchanged, and `test/surface.test.ts` holds them
 that way.
 
+The consumer is [`@powerhousedao/reactor-workflow`](../reactor-workflow), which
+runs pieces on a reactor: its `context/normalize.ts` dispatches to `processors`,
+its `worker/egress.ts` classifies with `ssrfIpClassifier`, and its worker runs a
+thrown piece error through `formatPieceError` before redacting it.
+
 The coercion half comes from `@activepieces/engine`, of which this package
 vendors only the prop-coercion files, for the reasons in
 [UPSTREAM.md](./UPSTREAM.md). `dayjs` (the DATE_TIME processor) and `ipaddr.js`

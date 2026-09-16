@@ -19,12 +19,46 @@ src/reactor/   trigger supervisor, coordinator, run journal, secret store, ports
 `src/pieces` runs a piece. It knows nothing about reactors, documents or
 Powerhouse packages: give it a piece name, a config and a connection value and
 it returns an output. The boundary is enforced by lint — nothing under
-`src/pieces` may import `src/reactor` or any `@powerhousedao/*` package — so the
+`src/pieces` may import `src/reactor`, nor any `@powerhousedao/*` package other
+than `@powerhousedao/pieces-framework`, whose contract it implements — so the
 piece layer stays something you can reason about on its own.
 
 `src/reactor` is everything that only makes sense on a reactor: which workflow a
 trigger belongs to, where a run is journaled, whose credentials a step may
 resolve. It depends on the piece layer, never the other way round.
+
+## What comes from the piece framework
+
+The contract this engine implements is declared once, in
+[`@powerhousedao/pieces-framework`](../pieces-framework), and taken from there
+rather than restated here.
+
+- The **types**. `ApAction`, `ApTrigger`, `ApPiece` and `ApProperty` derive from
+  `ActionBase`, `TriggerBase`, `PieceBase` and the property schemas; the
+  contexts from `Store`, `ServerContext`, `FilesService`, `ConnectionsManager`,
+  `FlowsContext`, `RunContext`, `TriggerHookContext` and `SetScheduleRequest`;
+  the connection shapes from `AppConnectionType` and `AppConnectionValue`.
+  `PackagePiece`, `ReactorService` and `DEDUPE_KEY_PROPERTY` are the framework's
+  own Powerhouse half.
+- The **enums stay strings here**. A piece bundle inlines its own copy of the
+  framework, so a `PropertyType` or `TriggerStrategy` read off one shares no
+  identity with ours. Every such value is compared as a string; nothing in
+  `src/pieces` uses `instanceof` or enum identity across that boundary.
+- **Prop coercion**, from `@powerhousedao/pieces-framework/host`, which carries
+  the Activepieces engine's own property processors. `context/normalize.ts`
+  dispatches to them; only file props stay ours, because attachment and
+  `apfile://` refs, the size ceiling and a host-injected fetcher have no
+  upstream equivalent. An `ApFile` a processor builds is flattened to a plain
+  object at that boundary: a class instance does not survive the worker IPC.
+- **The SSRF table**, likewise from `./host`. `worker/egress.ts` classifies an
+  address with `ssrfIpClassifier.isBlockedIp`; the connect-time socket and DNS
+  hooks, the per-request policy and the allow-lists are ours. The one range the
+  classifier reads as unicast and we still refuse is the deprecated
+  IPv4-compatible `::/96` block, which carries the metadata endpoint.
+- **Error formatting**, again from `./host`. A thrown piece error passes through
+  `formatPieceError` before redaction, so the HTTP status, request, response and
+  the text of an HTML error page reach the run journal. Redaction runs last,
+  over the formatter's output as well.
 
 ## How reactor-api composes it
 
