@@ -2,6 +2,7 @@ import type { PGlite } from "@electric-sql/pglite";
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import { PostgresAnalyticsStore } from "@powerhousedao/analytics-engine-pg";
 import { getConfig } from "@powerhousedao/config/node";
+import { resolveWorkflowsEnabled } from "./workflow/flag.js";
 import type {
   IDocumentModelRegistry,
   IDriveClient,
@@ -144,6 +145,10 @@ type Options = {
   pgliteFactory?: PgliteFactory;
   configFile?: string;
   packages?: string[];
+  /** Powerhouse workflows; wins over PH_WORKFLOWS_ENABLED and the config file. */
+  workflows?: {
+    enabled?: boolean;
+  };
   auth?: {
     enabled: boolean;
     admins: string[];
@@ -679,6 +684,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   attachments: AttachmentBuildResult;
   attachmentReferenceIndex: AttachmentReferenceIndexBuildResult;
   packages: PackageManager;
+  workflowsEnabled: boolean;
   dbClosers: Array<() => Promise<void>>;
   readiness: ReadinessGate;
   httpRoutes: HttpRouteService;
@@ -987,9 +993,18 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     new ImportPackageLoader(),
   ];
 
+  const workflowsEnabled = resolveWorkflowsEnabled({
+    configFile: options.configFile,
+    override: options.workflows?.enabled,
+  });
+  logger.info(
+    `Powerhouse workflows ${workflowsEnabled ? "enabled" : "disabled"}`,
+  );
+
   const packages = new PackageManager(loaders, {
     configFile: options.configFile,
     packages: options.packages ?? [],
+    workflows: workflowsEnabled,
   });
 
   // Package routes hang off <basePath>/api, webhooks off <basePath>/webhooks.
@@ -1038,6 +1053,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     attachments,
     attachmentReferenceIndex,
     packages,
+    workflowsEnabled,
     dbClosers,
     readiness,
   };

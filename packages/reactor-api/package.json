@@ -84,6 +84,7 @@
     "@powerhousedao/reactor-group": "workspace:*",
     "@powerhousedao/reactor-mcp": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
+    "@powerhousedao/workflow": "workspace:*",
     "@renown/sdk": "workspace:*",
     "body-parser": "^1.20.3",
     "change-case": "catalog:",
