@@ -6,7 +6,7 @@ import {
 } from "@powerhousedao/shared/build-config";
 import {
   findSharedImports,
-  SHARED_DEP_SPECIFIERS,
+  EXTERNALIZABLE_SHARED_SPECIFIERS,
 } from "@powerhousedao/shared/connect";
 import { execSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
@@ -165,12 +165,20 @@ function expandEntryGlobs(root: string, globs: string[]): string[] {
 /**
  * Every shared specifier imported from the entry sources; the post-build
  * scan compares these against the built output.
+ *
+ * Scoped to the specifiers the build actually externalizes: a specifier the
+ * vendor does not publish (the bare `@powerhousedao/shared` root, an
+ * unvendored subpath) is deliberately bundled, so reporting it as "bundled
+ * instead of externalized" would be a false alarm.
  */
 function findSharedImportsInSources(root: string, globs: string[]): string[] {
   const found = new Set<string>();
   for (const file of expandEntryGlobs(root, globs)) {
     const src = readFileSync(file, "utf8");
-    for (const spec of findSharedImports(src, SHARED_DEP_SPECIFIERS)) {
+    for (const spec of findSharedImports(
+      src,
+      EXTERNALIZABLE_SHARED_SPECIFIERS,
+    )) {
       found.add(spec);
     }
   }
