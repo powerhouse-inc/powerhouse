@@ -111,9 +111,8 @@ export function configHash(blockType: string, config: unknown): string {
     .slice(0, 16);
 }
 
-// The poll cadence a piece asked for via setSchedule: the interval it named, or
-// the gap between its cron's next two runs (60s floor); unparseable crons fall
-// back to the default.
+// The poll cadence setSchedule asked for: the named interval, or the gap between
+// the cron's next two runs (60s floor); an unparseable cron uses the default.
 export function intervalFromSchedules(
   schedules: RecordedSchedule[] | undefined,
   defaultMs: number,

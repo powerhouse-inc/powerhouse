@@ -39,9 +39,8 @@ export class EgressDeniedError extends Error {
   }
 }
 
-// The SSRF surface — loopback, the RFC1918 ranges, the link-local block
-// holding the 169.254.169.254 metadata endpoint, multicast and the IPv6
-// equivalents — is the framework's own classifier table.
+// The SSRF surface (loopback, RFC1918, link-local incl. the metadata endpoint,
+// multicast, and the IPv6 equivalents) is the framework's classifier table.
 
 // ipaddr.js reads a deprecated IPv4-compatible address (::a.b.c.d) as unicast,
 // so ::169.254.169.254 would walk past it; the whole block is refused here.
