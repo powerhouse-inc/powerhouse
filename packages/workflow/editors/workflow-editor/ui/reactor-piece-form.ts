@@ -5,10 +5,10 @@
 // autocomplete that also takes an expression, and a per-action editor — so it
 // substitutes them by prop name. The piece stays portable; the mapping is the
 // one place that knows this editor can do better.
-import { REACTOR_PIECE } from "../../../subgraphs/workflow-runtime/reactor-piece.js";
 import type { BlockFormProp } from "./forms.js";
 
-export { REACTOR_PIECE };
+// The piece this package ships, named as pieces/index.ts declares it.
+export const REACTOR_PIECE = "@powerhousedao/piece-reactor";
 
 // Values that name a document or a model: a step is as likely to feed one
 // from an upstream expression as to pick it, which a select cannot express.

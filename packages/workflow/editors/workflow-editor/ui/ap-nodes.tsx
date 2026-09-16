@@ -34,6 +34,7 @@ function useMissingRequired(
   useEffect(() => {
     const getBlockForm = getCanvasHandlers()?.getBlockForm;
     if (!getBlockForm) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- no source yet, so there is no form to render
       setForm(null);
       return;
     }

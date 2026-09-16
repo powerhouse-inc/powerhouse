@@ -88,9 +88,7 @@ export function getBlockForm(blockType: string): Promise<BlockForm | null> {
       // where it actually applies.
       const reactorPiece = isReactorPieceBlock(blockType);
       const polled = isTrigger && entry.strategy !== "WEBHOOK" && !reactorPiece;
-      const props = reactorPiece
-        ? adaptReactorProps(entry.props)
-        : entry.props;
+      const props = reactorPiece ? adaptReactorProps(entry.props) : entry.props;
       return {
         title: `${descriptor.displayName} · ${entry.displayName}`,
         requireAuth: entry.requireAuth,

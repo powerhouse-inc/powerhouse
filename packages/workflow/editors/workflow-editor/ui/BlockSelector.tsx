@@ -56,6 +56,7 @@ function LogoFrame(props: {
 }) {
   const [broken, setBroken] = useState(false);
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- a new src gets a fresh chance to load
     setBroken(false);
   }, [props.src]);
   if (!props.src || broken) {
@@ -297,6 +298,7 @@ function useBlockSearch(query: string, enabled: boolean): SearchState {
   useEffect(() => {
     const search = getPieceSource()?.searchBlocks;
     if (!active || !search) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- drops a finished search when the query goes inactive
       setState({ kind: "idle" });
       return;
     }

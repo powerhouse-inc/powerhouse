@@ -4,8 +4,10 @@
 // package can declare a piece, build cleanly, and ship without it — the
 // registry would then find nothing and the blocks would quietly disappear
 // from the catalog. This turns that into a build failure.
+import console from "node:console";
 import { existsSync } from "node:fs";
 import path from "node:path";
+import process from "node:process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
@@ -28,7 +30,9 @@ for (const piece of pieces ?? []) {
     ? existsSync(target)
     : existsSync(path.join(target, "package.json"));
   if (!built) {
-    console.error(`pieces: "${piece.name}" declares ${where}, which is missing`);
+    console.error(
+      `pieces: "${piece.name}" declares ${where}, which is missing`,
+    );
     process.exit(1);
   }
   console.log(`piece: ${piece.name}@${piece.version} -> ${where}`);

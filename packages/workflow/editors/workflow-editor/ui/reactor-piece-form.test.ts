@@ -21,9 +21,9 @@ describe("isReactorPieceBlock", () => {
     expect(isReactorPieceBlock(`${REACTOR_PIECE}@1.0.0#document-create`)).toBe(
       true,
     );
-    expect(
-      isReactorPieceBlock(`${REACTOR_PIECE}#trigger:document-event`),
-    ).toBe(true);
+    expect(isReactorPieceBlock(`${REACTOR_PIECE}#trigger:document-event`)).toBe(
+      true,
+    );
   });
 
   it("leaves every other piece to render its props as declared", () => {
@@ -70,7 +70,10 @@ describe("adaptReactorProps", () => {
   });
 
   it("keeps actionType as a field of its own where no list needs it", () => {
-    const adapted = adaptReactorProps([prop("documentType"), prop("actionType")]);
+    const adapted = adaptReactorProps([
+      prop("documentType"),
+      prop("actionType"),
+    ]);
 
     expect(adapted.map((entry) => [entry.name, entry.type])).toEqual([
       ["documentType", "PH_AUTOCOMPLETE"],

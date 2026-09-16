@@ -23,6 +23,7 @@ export function CreateConnectionModal(props: {
   useEffect(() => {
     if (!dispatch || prefilled || state === undefined) return;
     if (state.connectorId) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot latch so the prefill dispatches exactly once
     setPrefilled(true);
     dispatch(actions.setConnectionName({ name: props.draft.name }));
     dispatch(actions.setName(props.draft.name));

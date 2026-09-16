@@ -103,8 +103,10 @@ function useResolvedProp<T>(
   const [state, setState] = useState<LoadState<T>>({ kind: "idle" });
   const [attempt, setAttempt] = useState(0);
   const loadRef = useRef(load);
+  // eslint-disable-next-line react-hooks/refs -- latest-value refs, only read inside the effect below
   loadRef.current = load;
   const parseRef = useRef(parse);
+  // eslint-disable-next-line react-hooks/refs -- latest-value refs, only read inside the effect below
   parseRef.current = parse;
   const first = useRef(true);
 
@@ -446,6 +448,7 @@ function SecretRefField(props: {
   const [stat, setStat] = useState<SecretStat | null>(null);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- clears the stale stat before the ref's own fetch
     setStat(null);
     if (!managed || !secrets) return;
     let cancelled = false;
