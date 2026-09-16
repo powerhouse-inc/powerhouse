@@ -14,6 +14,7 @@ import type {
   ISyncDeadLetterStorage,
   ISyncRemoteStorage,
 } from "../../../src/storage/interfaces.js";
+import { GraphQLRequestError } from "../../../src/sync/errors.js";
 import type {
   IChannel,
   IChannelFactory,
@@ -424,6 +425,46 @@ describe("SyncManager - Unit Tests", () => {
       );
     });
 
+    it("should release channel and tracker resources when startup init fails", async () => {
+      const failChannel = createTestChannel();
+      failChannel.init.mockRejectedValue(new Error("init boom"));
+      const unsubscribe = vi.fn();
+      failChannel.onConnectionStateChange.mockReturnValue(unsubscribe);
+      vi.mocked(mockChannelFactory.instance).mockReturnValue(
+        failChannel as any,
+      );
+
+      const untrackRemote = vi.spyOn(
+        (syncManager as any).syncStatusTracker,
+        "untrackRemote",
+      );
+
+      vi.mocked(mockRemoteStorage.list).mockResolvedValue([
+        {
+          id: "ch-fail",
+          name: "remote-fail",
+          collectionId: DriveCollectionId.forDrive("col1"),
+          channelConfig: { type: "internal", parameters: {} },
+          filter: { documentId: [], scope: [], branch: "main" },
+          options: { sinceTimestampUtcMs: "0" },
+          status: {
+            push: { state: "idle", failureCount: 0 },
+            pull: { state: "idle", failureCount: 0 },
+          },
+        },
+      ] as RemoteRecord[]);
+
+      await syncManager.startup();
+
+      expect(failChannel.shutdown).toHaveBeenCalled();
+      expect(untrackRemote).toHaveBeenCalledWith("remote-fail");
+      expect(unsubscribe).toHaveBeenCalled();
+      expect(syncManager.list()).toHaveLength(0);
+
+      // startup never touches the remote's storage record
+      expect(mockRemoteStorage.remove).not.toHaveBeenCalled();
+    });
+
     it("should backfill outbox from ackOrdinal on startup", async () => {
       const startupChannel = createTestChannel();
       startupChannel.outbox.init(5);
@@ -629,7 +670,7 @@ describe("SyncManager - Unit Tests", () => {
       ).rejects.toThrow("SyncManager is shutdown and cannot add remotes");
     });
 
-    it("should clean up on channel.init() failure", async () => {
+    it("should clean up on channel.init() failure for a non-credential reason", async () => {
       await syncManager.startup();
 
       const failChannel = createTestChannel();
@@ -653,6 +694,152 @@ describe("SyncManager - Unit Tests", () => {
 
       expect(syncManager.list()).toHaveLength(0);
       expect(mockRemoteStorage.remove).toHaveBeenCalledWith("remote-init-fail");
+    });
+
+    it("should drop the record when init fails with a permanent GraphQL category", async () => {
+      await syncManager.startup();
+
+      const failChannel = createTestChannel();
+      failChannel.init.mockRejectedValue(
+        new GraphQLRequestError(
+          "GraphQL response carried no data",
+          "missing-data",
+        ),
+      );
+      vi.mocked(mockChannelFactory.instance).mockReturnValue(
+        failChannel as any,
+      );
+
+      await expect(
+        syncManager.add(
+          "remote-missing-data",
+          DriveCollectionId.forDrive("col1"),
+          { type: "internal", parameters: {} },
+        ),
+      ).rejects.toThrow("GraphQL response carried no data");
+
+      expect(mockRemoteStorage.remove).toHaveBeenCalledWith(
+        "remote-missing-data",
+      );
+    });
+
+    it("should keep the stored record when init is refused for credentials", async () => {
+      await syncManager.startup();
+
+      const authError = new GraphQLRequestError(
+        "GraphQL request failed: 401 Unauthorized",
+        "http",
+        401,
+      );
+      const failChannel = createTestChannel();
+      failChannel.init.mockRejectedValue(authError);
+      vi.mocked(mockChannelFactory.instance).mockReturnValue(
+        failChannel as any,
+      );
+
+      // the login modal keys off the rethrown error, so it must still reject
+      await expect(
+        syncManager.add("remote-auth", DriveCollectionId.forDrive("col1"), {
+          type: "internal",
+          parameters: {},
+        }),
+      ).rejects.toBe(authError);
+
+      expect(mockRemoteStorage.upsert).toHaveBeenCalled();
+      expect(mockRemoteStorage.remove).not.toHaveBeenCalled();
+
+      // the remote must not stay registered, or a retry after sign-in would be
+      // rejected as a duplicate
+      expect(syncManager.list()).toHaveLength(0);
+    });
+
+    it("should keep the stored record when the remote is unreachable", async () => {
+      await syncManager.startup();
+
+      const networkError = new GraphQLRequestError("fetch failed", "network");
+      const failChannel = createTestChannel();
+      failChannel.init.mockRejectedValue(networkError);
+      vi.mocked(mockChannelFactory.instance).mockReturnValue(
+        failChannel as any,
+      );
+
+      await expect(
+        syncManager.add("remote-offline", DriveCollectionId.forDrive("col1"), {
+          type: "internal",
+          parameters: {},
+        }),
+      ).rejects.toBe(networkError);
+
+      expect(mockRemoteStorage.remove).not.toHaveBeenCalled();
+      expect(syncManager.list()).toHaveLength(0);
+    });
+
+    it("should allow re-adding a remote whose init was refused for credentials", async () => {
+      await syncManager.startup();
+
+      const failChannel = createTestChannel();
+      failChannel.init.mockRejectedValue(
+        new GraphQLRequestError(
+          "GraphQL request failed: 403 Forbidden",
+          "http",
+          403,
+        ),
+      );
+      const okChannel = createTestChannel();
+      vi.mocked(mockChannelFactory.instance)
+        .mockReturnValueOnce(failChannel as any)
+        .mockReturnValueOnce(okChannel as any);
+
+      const channelConfig: ChannelConfig = {
+        type: "internal",
+        parameters: {},
+      };
+
+      await expect(
+        syncManager.add(
+          "remote-retry",
+          DriveCollectionId.forDrive("col1"),
+          channelConfig,
+        ),
+      ).rejects.toThrow("403 Forbidden");
+
+      const remote = await syncManager.add(
+        "remote-retry",
+        DriveCollectionId.forDrive("col1"),
+        channelConfig,
+      );
+
+      expect(remote.meta.name).toBe("remote-retry");
+      expect(syncManager.list()).toHaveLength(1);
+    });
+
+    it("should release channel and tracker resources when add init fails", async () => {
+      await syncManager.startup();
+
+      const failChannel = createTestChannel();
+      failChannel.init.mockRejectedValue(new Error("init failed"));
+      const unsubscribe = vi.fn();
+      failChannel.onConnectionStateChange.mockReturnValue(unsubscribe);
+      vi.mocked(mockChannelFactory.instance).mockReturnValue(
+        failChannel as any,
+      );
+
+      const untrackRemote = vi.spyOn(
+        (syncManager as any).syncStatusTracker,
+        "untrackRemote",
+      );
+
+      await expect(
+        syncManager.add("remote-leak", DriveCollectionId.forDrive("col1"), {
+          type: "internal",
+          parameters: {},
+        }),
+      ).rejects.toThrow("init failed");
+
+      expect(failChannel.shutdown).toHaveBeenCalled();
+      expect(untrackRemote).toHaveBeenCalledWith("remote-leak");
+      expect(unsubscribe).toHaveBeenCalled();
+      expect(syncManager.list()).toHaveLength(0);
     });
 
     it("should use default filter and options if not provided", async () => {
@@ -707,6 +894,62 @@ describe("SyncManager - Unit Tests", () => {
       await expect(syncManager.remove("nonexistent")).rejects.toThrow(
         "Remote with name 'nonexistent' does not exist",
       );
+    });
+
+    it("holds the registry slot until the storage record is gone", async () => {
+      await syncManager.startup();
+      const channelConfig: ChannelConfig = { type: "internal", parameters: {} };
+      await syncManager.add(
+        "remote1",
+        DriveCollectionId.forDrive("collection1"),
+        channelConfig,
+      );
+
+      // Suspend the storage delete mid-remove and check that the name is still
+      // taken. Releasing the slot any earlier would let a concurrent add write
+      // a record that this pending delete then destroys.
+      let releaseStorageRemove!: () => void;
+      vi.mocked(mockRemoteStorage.remove).mockReturnValueOnce(
+        new Promise<void>((resolve) => {
+          releaseStorageRemove = resolve;
+        }),
+      );
+
+      const removal = syncManager.remove("remote1");
+      await vi.waitFor(() =>
+        expect(mockRemoteStorage.remove).toHaveBeenCalledWith("remote1"),
+      );
+
+      await expect(
+        syncManager.add(
+          "remote1",
+          DriveCollectionId.forDrive("collection1"),
+          channelConfig,
+        ),
+      ).rejects.toThrow("Remote with name 'remote1' already exists");
+
+      releaseStorageRemove();
+      await removal;
+      expect(syncManager.list()).toHaveLength(0);
+    });
+
+    it("releases the registry slot even if the storage delete throws", async () => {
+      await syncManager.startup();
+      const channelConfig: ChannelConfig = { type: "internal", parameters: {} };
+      await syncManager.add(
+        "remote1",
+        DriveCollectionId.forDrive("collection1"),
+        channelConfig,
+      );
+
+      vi.mocked(mockRemoteStorage.remove).mockRejectedValueOnce(
+        new Error("storage down"),
+      );
+
+      await expect(syncManager.remove("remote1")).rejects.toThrow(
+        "storage down",
+      );
+      expect(syncManager.list()).toHaveLength(0);
     });
 
     it("should cancel in-flight backfill when removing a remote", async () => {

@@ -212,7 +212,17 @@ describe("Subscription SSE Integration", () => {
           createdAt: "2024-01-01T00:00:00.000Z",
           completedAt: "2024-01-01T00:01:00.000Z",
           error: null,
-          result: { output: "done" },
+          result: {
+            actions: [
+              {
+                actionId: "action-1",
+                scope: "global",
+                index: 0,
+                kind: "applied",
+              },
+            ],
+            allApplied: true,
+          },
         },
         jobId: "job-123",
         documentId: "doc-1",

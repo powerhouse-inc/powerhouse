@@ -184,18 +184,33 @@ function page(
   return { results, options: { cursor: "0", limit: 100 }, next };
 }
 
+/** As the index does: everything above `ordinal`, ordered by ordinal ascending. */
+function since(
+  store: readonly OperationWithContext[],
+  ordinal: number,
+): PagedResults<OperationWithContext> {
+  return page(
+    store
+      .filter((item) => item.context.ordinal > ordinal)
+      .sort((left, right) => left.context.ordinal - right.context.ordinal),
+  );
+}
+
 function operationIndex(
   results: OperationWithContext[] = [],
 ): IOperationIndex & { getSinceOrdinal: ReturnType<typeof vi.fn> } {
   return {
     getSinceOrdinal: vi.fn((ordinal: number) =>
-      Promise.resolve(
-        page(results.filter((item) => item.context.ordinal > ordinal)),
-      ),
+      Promise.resolve(since(results, ordinal)),
     ),
   } as unknown as IOperationIndex & {
     getSinceOrdinal: ReturnType<typeof vi.fn>;
   };
+}
+
+/** A getSinceOrdinal fake backed by a store that grows as ordinals commit. */
+function pagesFrom(store: OperationWithContext[]) {
+  return vi.fn((ordinal: number) => Promise.resolve(since(store, ordinal)));
 }
 
 function dependencies(options?: {
@@ -401,11 +416,21 @@ describe("AttachmentReferenceReadModel", () => {
     expect(db.cursor).toBe(1);
   });
 
-  it("ignores processed ordinals", async () => {
-    const { addReferences, model } = dependencies({ cursor: 5 });
+  it("re-indexes redelivered ordinals without replaying or regressing the cursor", async () => {
+    const { addReferences, db, index, model } = dependencies({ cursor: 5 });
     await model.init();
+    index.getSinceOrdinal.mockClear();
+
     await model.indexOperations([op(4), op(5)]);
-    expect(addReferences).not.toHaveBeenCalled();
+
+    // Redelivery below the cursor is indexed again -- the store is idempotent --
+    // rather than dropped, and neither triggers a replay nor moves the cursor.
+    expect(addReferences).toHaveBeenCalledWith([
+      expect.objectContaining({ ordinal: 4 }),
+      expect.objectContaining({ ordinal: 5 }),
+    ]);
+    expect(index.getSinceOrdinal).not.toHaveBeenCalled();
+    expect(db.cursor).toBe(5);
   });
 
   it("keeps errors observable and the queue reusable", async () => {
@@ -477,11 +502,275 @@ describe("AttachmentReferenceReadModel", () => {
     await model.indexOperations([op(10), op(12)]);
     expect(db.cursor).toBe(12);
 
+    // An unresolved gap is a normal property of the ordinal sequence (the
+    // column is a serial, and a rolled-back insert burns a value), so 22 is
+    // indexed and the cursor parks below the hole instead of rejecting.
     const unresolved = dependencies({ cursor: 20 });
     await unresolved.model.init();
-    await expect(unresolved.model.indexOperations([op(22)])).rejects.toThrow(
-      "missing ordinal 21",
-    );
+    await expect(
+      unresolved.model.indexOperations([op(22)]),
+    ).resolves.toBeUndefined();
+    expect(unresolved.addReferences).toHaveBeenCalledWith([
+      expect.objectContaining({ ordinal: 22 }),
+    ]);
     expect(unresolved.db.cursor).toBe(20);
+  });
+
+  it("catches up across a permanent hole on init instead of throwing", async () => {
+    const { addReferences, db, model } = dependencies({
+      cursor: 10,
+      indexOperations: [op(11), op(13)],
+    });
+
+    await expect(model.init()).resolves.toBeUndefined();
+
+    expect(addReferences).toHaveBeenCalledWith([
+      expect.objectContaining({ ordinal: 11 }),
+      expect.objectContaining({ ordinal: 13 }),
+    ]);
+    expect(db.cursor).toBe(11);
+  });
+
+  it("indexes an operation above an in-flight gap and picks the gap up later", async () => {
+    const indexed: number[] = [];
+    const addReferences = vi.fn(
+      (references: readonly AttachmentReferenceInput[]) => {
+        indexed.push(...references.map(({ ordinal }) => ordinal));
+        return Promise.resolve();
+      },
+    );
+    const { db, index, model } = dependencies({
+      cursor: 4,
+      writer: { addReferences },
+    });
+    await model.init();
+
+    // Ordinal 6 commits while 5 is still an open transaction.
+    index.getSinceOrdinal.mockResolvedValue(page([op(6)]));
+    await model.indexOperations([op(6)]);
+    expect(indexed).toEqual([6]);
+    expect(db.cursor).toBe(4);
+
+    // 5 commits and is delivered live; it is indexed, not filtered away.
+    index.getSinceOrdinal.mockResolvedValue(page([op(5), op(6)]));
+    await model.indexOperations([op(5)]);
+
+    expect(indexed).toEqual([6, 5]);
+    expect(db.cursor).toBe(5);
+  });
+
+  it("replays a bounded range instead of restarting at a permanent hole", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      // Ordinal 12 was burned by a rolled-back insert and never arrives.
+      const store = [op(11), op(13), op(14)];
+      const { db, index, model } = dependencies({ cursor: 10 });
+      const since = pagesFrom(store);
+      Object.assign(index, { getSinceOrdinal: since });
+      await model.init();
+      expect(db.cursor).toBe(11);
+      since.mockClear();
+
+      for (const ordinal of [15, 16, 17]) {
+        store.push(op(ordinal));
+        await model.indexOperations([op(ordinal)]);
+        expect(db.cursor).toBe(11);
+      }
+
+      // A parked batch reads twice: one bounded page probing the hole at the
+      // cursor, in case a writer elsewhere filled it, and a replay resuming
+      // where the last one ended. The first batch has no mark yet to probe.
+      const starts = since.mock.calls.map(([start]) => start);
+      expect(starts).toEqual([11, 11, 15, 11, 16]);
+
+      const replays = starts.filter((_, i) => i % 2 === 0);
+      const probes = starts.filter((_, i) => i % 2 === 1);
+      // The probe is pinned at the cursor, so it stays one page however far
+      // the tail runs ahead; only the replay leg advances.
+      expect(probes).toEqual([11, 11]);
+      expect(replays).toEqual([11, 15, 16]);
+      expect(
+        replays.every((start, i) => i === 0 || start > replays[i - 1]!),
+      ).toBe(true);
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("drops the replay mark when a gap-filling batch fails", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      const indexed: number[] = [];
+      const addReferences = vi.fn(
+        (references: readonly AttachmentReferenceInput[]) => {
+          indexed.push(...references.map(({ ordinal }) => ordinal));
+          return Promise.resolve();
+        },
+      );
+      const store = [op(11), op(13), op(14)];
+      const { db, index, model } = dependencies({
+        cursor: 10,
+        writer: { addReferences },
+      });
+      const since = pagesFrom(store);
+      Object.assign(index, { getSinceOrdinal: since });
+      await model.init();
+      store.push(op(15));
+      await model.indexOperations([op(15)]);
+      expect(db.cursor).toBe(11);
+      since.mockClear();
+
+      // 12 fills the gap but its write fails, so nothing above it is committed.
+      addReferences.mockImplementationOnce(() =>
+        Promise.reject(new Error("insert failed")),
+      );
+      store.push(op(12));
+      await expect(model.indexOperations([op(12)])).rejects.toThrow(
+        "insert failed",
+      );
+      expect(db.cursor).toBe(11);
+
+      // The next replay must restart at the checkpoint, not above 12.
+      store.push(op(16));
+      await model.indexOperations([op(16)]);
+      expect(since).toHaveBeenCalledWith(11);
+      expect(db.cursor).toBe(16);
+      expect(indexed).toContain(12);
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("sweeps the cursor past a hole that finally fills", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      const indexed: number[] = [];
+      const addReferences = vi.fn(
+        (references: readonly AttachmentReferenceInput[]) => {
+          indexed.push(...references.map(({ ordinal }) => ordinal));
+          return Promise.resolve();
+        },
+      );
+      const store = [op(11), op(13), op(14)];
+      const { db, index, model } = dependencies({
+        cursor: 10,
+        writer: { addReferences },
+      });
+      const since = pagesFrom(store);
+      Object.assign(index, { getSinceOrdinal: since });
+      await model.init();
+      for (const ordinal of [15, 16, 17]) {
+        store.push(op(ordinal));
+        await model.indexOperations([op(ordinal)]);
+      }
+      expect(db.cursor).toBe(11);
+      since.mockClear();
+
+      // 12 was a still-open transaction after all, and commits.
+      store.push(op(12));
+      await model.indexOperations([op(12)]);
+      expect(db.cursor).toBe(12);
+      expect(since).not.toHaveBeenCalled();
+
+      // Clearing the mark costs one replay from the checkpoint, which sweeps
+      // the cursor past the operations already indexed above the hole.
+      store.push(op(18));
+      await model.indexOperations([op(18)]);
+      expect(since).toHaveBeenCalledWith(12);
+      expect(db.cursor).toBe(18);
+      expect(indexed.filter((ordinal) => ordinal === 12)).toEqual([12]);
+      expect(new Set(indexed)).toEqual(
+        new Set([11, 12, 13, 14, 15, 16, 17, 18]),
+      );
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("sweeps past a hole filled by a writer it never hears from", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      const indexed: number[] = [];
+      const addReferences = vi.fn(
+        (references: readonly AttachmentReferenceInput[]) => {
+          indexed.push(...references.map(({ ordinal }) => ordinal));
+          return Promise.resolve();
+        },
+      );
+      const store = [op(11), op(13), op(14)];
+      const { db, index, model } = dependencies({
+        cursor: 10,
+        writer: { addReferences },
+      });
+      const since = pagesFrom(store);
+      Object.assign(index, { getSinceOrdinal: since });
+      await model.init();
+      for (const ordinal of [15, 16, 17]) {
+        store.push(op(ordinal));
+        await model.indexOperations([op(ordinal)]);
+      }
+      expect(db.cursor).toBe(11);
+
+      // 12 commits, but nothing delivers it here: a second reactor on the same
+      // database wrote it, so it exists only in the index. A mark taken on
+      // trust would skip past it forever and never write its references.
+      store.push(op(12));
+      await model.indexOperations([op(18)]);
+
+      expect(indexed).toContain(12);
+      expect(db.cursor).toBe(18);
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("warns once per parked ordinal rather than once per batch", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      const store: OperationWithContext[] = [];
+      const { db, index, model } = dependencies({ cursor: 20 });
+      const since = pagesFrom(store);
+      Object.assign(index, { getSinceOrdinal: since });
+      await model.init();
+
+      for (const ordinal of [22, 23, 24]) {
+        store.push(op(ordinal));
+        await model.indexOperations([op(ordinal)]);
+      }
+      expect(db.cursor).toBe(20);
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn.mock.calls[0]![0]).toContain("ordinal 21 is missing");
+
+      store.push(op(21));
+      await model.indexOperations([op(21)]);
+      expect(db.cursor).toBe(21);
+      expect(warn).toHaveBeenCalledTimes(1);
+
+      store.push(op(26));
+      await model.indexOperations([op(26)]);
+      expect(db.cursor).toBe(24);
+      expect(warn).toHaveBeenCalledTimes(2);
+      expect(warn.mock.calls[1]![0]).toContain("ordinal 25 is missing");
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("warns when the cursor parks short of the delivered maximum", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      const { db, model } = dependencies({ cursor: 20 });
+      await model.init();
+      await model.indexOperations([op(22)]);
+
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn.mock.calls[0]![0]).toContain(
+        ATTACHMENT_REFERENCE_READ_MODEL_ID,
+      );
+      expect(warn.mock.calls[0]![0]).toContain("ordinal 21 is missing");
+      expect(db.cursor).toBe(20);
+    } finally {
+      warn.mockRestore();
+    }
   });
 });

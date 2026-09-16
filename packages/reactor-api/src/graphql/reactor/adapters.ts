@@ -1,6 +1,7 @@
 import {
   type JobInfo as ClientJobInfo,
   type DocumentChangeEvent,
+  type DocumentRelationship,
   type Evaluation,
   type PagedResults,
   PropagationMode,
@@ -26,6 +27,8 @@ import {
   type ActionEvaluation as GqlActionEvaluation,
   AuthDecision as GqlAuthDecision,
   type DocumentModelResultPage,
+  type DocumentRelationship as GqlDocumentRelationship,
+  type DocumentRelationshipResultPage as GqlDocumentRelationshipResultPage,
   type DocumentChangeEvent as GqlDocumentChangeEvent,
   type DocumentModelGlobalState as GqlDocumentModelGlobalState,
   type JobInfo as GqlJobInfo,
@@ -95,6 +98,38 @@ export function toPhDocumentResultPage(
 }
 
 /**
+ * Converts a relationship edge from the indexer to GraphQL format.
+ */
+export function toGqlDocumentRelationship(
+  relationship: DocumentRelationship,
+): GqlDocumentRelationship {
+  return {
+    sourceId: relationship.sourceId,
+    targetId: relationship.targetId,
+    relationshipType: relationship.relationshipType,
+    metadata: relationship.metadata ?? null,
+    createdAt: relationship.createdAt,
+    updatedAt: relationship.updatedAt,
+  };
+}
+
+/**
+ * Converts a PagedResults of relationship edges to GraphQL
+ * DocumentRelationshipResultPage format
+ */
+export function toDocumentRelationshipResultPage(
+  result: PagedResults<DocumentRelationship>,
+): GqlDocumentRelationshipResultPage {
+  return {
+    cursor: result.nextCursor ?? null,
+    hasNextPage: !!result.nextCursor,
+    hasPreviousPage: !!result.options.cursor,
+    items: result.results.map(toGqlDocumentRelationship),
+    totalCount: result.totalCount ?? result.results.length,
+  };
+}
+
+/**
  * Converts a PHDocument from ReactorClient to GraphQL PhDocument format
  */
 export function toGqlPhDocument(doc: PHDocument): PhDocument {
@@ -128,7 +163,6 @@ export function toGqlJobInfo(job: ClientJobInfo): GqlJobInfo {
     createdAt: job.createdAtUtcIso,
     completedAt: job.completedAtUtcIso ?? null,
     error: job.error?.message ?? null,
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     result: job.result ?? null,
   };
 }

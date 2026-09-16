@@ -15,7 +15,6 @@ import {
   setPHDocumentEditorConfig,
   setSelectedDrive,
   useAppModuleById,
-  useDrives,
   useIsAddDriveEnabled,
   useSelectedDocumentId,
   useSelectedDriveSafe,
@@ -24,11 +23,14 @@ import {
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import { useEffect } from "react";
 import { getRuntimeConfig } from "../runtime-config.js";
-import { useDriveAuthGate } from "../components/use-drive-auth-gate.js";
+import {
+  useDriveAuthGate,
+  useVisibleDrives,
+} from "../components/use-drive-auth-gate.js";
 import { useOpenRenownLogin } from "../hooks/use-renown-login.js";
 
 export function Content() {
-  const { gate } = useDriveAuthGate();
+  const { gate, dismiss } = useDriveAuthGate();
   const openLogin = useOpenRenownLogin();
   const [selectedDrive] = useSelectedDriveSafe();
   const selectedFolder = useSelectedFolder();
@@ -56,6 +58,7 @@ export function Content() {
             mode={gate}
             onLogin={openLogin}
             onLogout={() => void logout()}
+            onClose={dismiss}
           />
         </div>
       ) : showHomeScreen ? (
@@ -90,7 +93,7 @@ function DriveItem({ drive }: { drive: DocumentDriveDocument }) {
 }
 
 function HomeScreenContainer() {
-  const drives = useDrives();
+  const drives = useVisibleDrives();
   const isAddDriveEnabled = useIsAddDriveEnabled();
   const runtimeConfig = getRuntimeConfig();
   const homeBackground = runtimeConfig.connect?.branding?.homeBackground;

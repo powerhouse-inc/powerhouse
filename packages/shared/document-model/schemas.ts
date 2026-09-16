@@ -916,6 +916,10 @@ export const ManifestSchema = z.object({
   editors: PowerhouseModulesSchema,
   processors: PowerhouseModulesSchema,
   subgraphs: PowerhouseModulesSchema,
+  // Connector pieces the package ships, built under pieces/ and loaded by a
+  // host that runs them. Optional like every other module list, so a package
+  // that ships none says nothing.
+  pieces: PowerhouseModulesSchema,
   config: z.array(ConfigEntrySchema).optional(),
   pwa: PwaConfigSchema.optional(),
 });

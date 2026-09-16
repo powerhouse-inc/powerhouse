@@ -1,7 +1,7 @@
 import { Icon, Modal } from "#design-system";
 import { isValidName } from "@powerhousedao/shared/document-drive";
 import type { ComponentPropsWithoutRef } from "react";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { FormInput } from "../form-input/form-input.js";
 import { Label } from "../form/inputs/label.js";
 import type { ConnectSelectItem } from "../select/select.js";
@@ -80,8 +80,22 @@ export function CreateDocumentWithTypeModal(
         ]
       : typeItems;
 
+  // The reset is deferred so it lands after the close animation, which means
+  // it can outlive the component. Track it and clear it on unmount, otherwise
+  // it sets state on a torn-down tree.
+  const resetTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  useEffect(
+    () => () => {
+      if (resetTimer.current !== undefined) clearTimeout(resetTimer.current);
+    },
+    [],
+  );
+
   const resetAfterClose = useCallback(() => {
-    setTimeout(() => {
+    if (resetTimer.current !== undefined) clearTimeout(resetTimer.current);
+    resetTimer.current = setTimeout(() => {
+      resetTimer.current = undefined;
       setDocumentName("");
       setIsNameValid(false);
       setSelectedKey(PLACEHOLDER_KEY);

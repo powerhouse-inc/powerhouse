@@ -36,6 +36,43 @@ export type DocumentChangesSubscriptionOptions = {
 };
 
 /**
+ * The 4403 close reasons a Switchboard refuses a handshake with.
+ *
+ * Mirrors `WS_AUTH_CLOSE_REASONS` in `@powerhousedao/reactor-api`
+ * (`src/graphql/gateway/types.ts`). This package does not depend on that one,
+ * so the strings are duplicated and are a wire contract: change them on both
+ * sides or not at all.
+ */
+const authCloseReasons: readonly string[] = [
+  "authentication-required",
+  "bearer-rejected",
+];
+
+/** graphql-ws's own `isLikeCloseEvent`, which it does not export. */
+function isLikeCloseEvent(
+  value: unknown,
+): value is { code: number; reason: string } {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "code" in value &&
+    "reason" in value
+  );
+}
+
+/**
+ * Whether a socket failure is the Switchboard refusing the credentials sent.
+ *
+ * Keyed on the close reason, not the code: both refusals close 4403, because
+ * `connectionParams` is resolved per connect and a reconnect carrying a fresh
+ * token genuinely succeeds. What the reason adds is that *this* attempt cannot
+ * be fixed by repeating it.
+ */
+export function isAuthRefusalClose(error: unknown): boolean {
+  return isLikeCloseEvent(error) && authCloseReasons.includes(error.reason);
+}
+
+/**
  * Opens one `documentChanges` subscription and feeds every event to `onEvent`.
  *
  * The subscription is a firehose: no `search` argument, so the server sends
@@ -51,6 +88,13 @@ export function startDocumentChangesSubscription(
   const client = createClient({
     url: options.wsUrl,
     connectionParams: options.connectionParams,
+    // An auth refusal is not a transient fault: only a credential change clears
+    // it, so decline instead of burning the five default attempts and then
+    // reporting the same failure a half-minute later. Everything else - a
+    // network drop, a 1006, a server restart - keeps graphql-ws's own default,
+    // which retries close events and gives up on anything else.
+    shouldRetry: (errOrCloseEvent) =>
+      isLikeCloseEvent(errOrCloseEvent) && !isAuthRefusalClose(errOrCloseEvent),
   });
 
   const unsubscribe = client.subscribe<DocumentChangesSubscription>(

@@ -14,6 +14,7 @@ import {
   createDocumentAction,
   deleteDocumentAction,
   removeRelationshipAction,
+  updateRelationshipAction,
   upgradeDocumentAction,
 } from "../actions/index.js";
 import type { IEventBus } from "../events/interfaces.js";
@@ -42,6 +43,7 @@ import type {
 import { JobStatus } from "../shared/types.js";
 import { matchesScope, throwIfAborted } from "../shared/utils.js";
 import type {
+  DocumentRelationship,
   IDocumentIndexer,
   IDocumentView,
   IOperationStore,
@@ -294,6 +296,46 @@ export class Reactor implements IReactor {
     throwIfAborted(signal, () => new AbortError());
 
     return relationships.results.map((rel) => rel.sourceId);
+  }
+
+  async getOutgoingRelationshipEdges(
+    sourceId: string,
+    relationshipType?: string,
+    paging?: PagingOptions,
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
+  ): Promise<PagedResults<DocumentRelationship>> {
+    const relationships = await this.documentIndexer.getOutgoing(
+      sourceId,
+      relationshipType ? [relationshipType] : undefined,
+      paging,
+      consistencyToken,
+      signal,
+    );
+
+    throwIfAborted(signal, () => new AbortError());
+
+    return relationships;
+  }
+
+  async getIncomingRelationshipEdges(
+    targetId: string,
+    relationshipType?: string,
+    paging?: PagingOptions,
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
+  ): Promise<PagedResults<DocumentRelationship>> {
+    const relationships = await this.documentIndexer.getIncoming(
+      targetId,
+      relationshipType ? [relationshipType] : undefined,
+      paging,
+      consistencyToken,
+      signal,
+    );
+
+    throwIfAborted(signal, () => new AbortError());
+
+    return relationships;
   }
 
   async getOperations(
@@ -893,22 +935,55 @@ export class Reactor implements IReactor {
     sourceId: string,
     targetId: string,
     relationshipType: string,
+    metadata?: Record<string, unknown>,
     branch: string = "main",
     signer?: ISigner,
     signal?: AbortSignal,
   ): Promise<JobInfo> {
     this.logger.verbose(
-      "addRelationship(@sourceId, @targetId, @relationshipType, @branch)",
+      "addRelationship(@sourceId, @targetId, @relationshipType, @metadata, @branch)",
       sourceId,
       targetId,
       relationshipType,
+      metadata,
       branch,
     );
 
     throwIfAborted(signal, () => new AbortError());
 
     let actions: Action[] = [
-      addRelationshipAction(sourceId, targetId, relationshipType),
+      addRelationshipAction(sourceId, targetId, relationshipType, metadata),
+    ];
+
+    if (signer) {
+      actions = await signActions(actions, signer, signal);
+    }
+
+    return await this.execute(sourceId, branch, actions, signal);
+  }
+
+  async updateRelationship(
+    sourceId: string,
+    targetId: string,
+    relationshipType: string,
+    metadata: Record<string, unknown> | null,
+    branch: string = "main",
+    signer?: ISigner,
+    signal?: AbortSignal,
+  ): Promise<JobInfo> {
+    this.logger.verbose(
+      "updateRelationship(@sourceId, @targetId, @relationshipType, @metadata, @branch)",
+      sourceId,
+      targetId,
+      relationshipType,
+      metadata,
+      branch,
+    );
+
+    throwIfAborted(signal, () => new AbortError());
+
+    let actions: Action[] = [
+      updateRelationshipAction(sourceId, targetId, relationshipType, metadata),
     ];
 
     if (signer) {

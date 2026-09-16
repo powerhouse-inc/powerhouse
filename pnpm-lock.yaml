@@ -42,6 +42,12 @@ catalogs:
     '@graphql-codegen/typescript-resolvers':
       specifier: 5.1.5
       version: 5.1.5
+    '@graphql-tools/merge':
+      specifier: 9.1.7
+      version: 9.1.7
+    '@graphql-tools/schema':
+      specifier: 10.0.31
+      version: 10.0.31
     '@graphql-tools/utils':
       specifier: 11.0.0
       version: 11.0.0
@@ -1939,6 +1945,15 @@ importers:
       '@electric-sql/pglite':
         specifier: 'catalog:'
         version: 0.3.15
+      '@graphql-tools/merge':
+        specifier: 'catalog:'
+        version: 9.1.7(graphql@16.12.0)
+      '@graphql-tools/schema':
+        specifier: 'catalog:'
+        version: 10.0.31(graphql@16.12.0)
+      '@graphql-tools/utils':
+        specifier: 'catalog:'
+        version: 11.0.0(graphql@16.12.0)
       '@originjs/vite-plugin-commonjs':
         specifier: ^1.0.3
         version: 1.0.3

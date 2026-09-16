@@ -1,8 +1,9 @@
-import { mkdir, rm, access } from "node:fs/promises";
+import { mkdir, rm, rename, access } from "node:fs/promises";
 import { createReadStream, createWriteStream } from "node:fs";
 import { createHash, randomUUID } from "node:crypto";
 import { join, dirname } from "node:path";
 import { Readable } from "node:stream";
+import { finished } from "node:stream/promises";
 import { SizeMismatch, UploadTooLarge } from "../../errors.js";
 
 /**
@@ -24,22 +25,62 @@ export function storageRelativePath(hash: string): string {
 
 /**
  * Write a ReadableStream to disk. Creates parent directories as needed.
+ *
+ * Bytes are streamed to a uniquely-named temp file in the destination
+ * directory and only atomically renamed onto the final path once the whole
+ * stream has been written and flushed. The final path therefore never holds a
+ * partial or torn file: a concurrent writer of the same content-addressed
+ * path (e.g. two clients re-fetching the same evicted attachment) streams to
+ * its own temp file, and the rename publishes the new content all at once. On
+ * any failure the temp file is removed and the previous file (if any) is left
+ * untouched.
+ *
  * Returns the number of bytes written.
  */
+// createWriteStream opens the file lazily, so destroy() can return before the
+// open has even happened and the open then creates the file after the unlink
+// below has run. Wait for the stream to close first, or the failed write
+// leaves its temp file behind.
+async function discardTempFile(
+  writer: ReturnType<typeof createWriteStream>,
+  tempPath: string,
+): Promise<void> {
+  writer.destroy();
+  try {
+    await finished(writer, { error: false });
+  } catch {
+    // The stream is already closed, which is all this wait is for.
+  }
+  await rm(tempPath, { force: true });
+}
+
 export async function writeAttachmentBytes(
   path: string,
   data: ReadableStream<Uint8Array>,
 ): Promise<number> {
   await mkdir(dirname(path), { recursive: true });
 
-  const writer = createWriteStream(path);
+  const tempPath = join(dirname(path), `${randomUUID()}.tmp`);
+  const writer = createWriteStream(tempPath);
   const reader = data.getReader();
   let bytesWritten = 0;
+  let caughtError: Error | undefined;
+  // A destination error can land before the drain-wait below has an 'error'
+  // listener attached -- failing to open the temp file, or an async write
+  // error between chunks -- so hold one listener for the whole write. First
+  // error wins: an already-recorded source failure is the one to report.
+  const recordError = (err: unknown) => {
+    caughtError ??= err instanceof Error ? err : new Error(String(err));
+  };
+  writer.on("error", recordError);
 
   try {
     for (;;) {
       const { done, value } = await reader.read();
       if (done) break;
+      // The destination is destroyed once it errors, so writing again would
+      // return false and wait for a 'drain' that can never come.
+      if (caughtError) break;
       bytesWritten += value.byteLength;
       const canContinue = writer.write(value);
       if (!canContinue) {
@@ -57,12 +98,29 @@ export async function writeAttachmentBytes(
         });
       }
     }
+  } catch (err) {
+    recordError(err);
   } finally {
     reader.releaseLock();
+  }
+
+  if (caughtError) {
+    await discardTempFile(writer, tempPath);
+    throw caughtError;
+  }
+
+  try {
     await new Promise<void>((resolve, reject) => {
-      writer.end(() => resolve());
+      writer.end((err?: Error | null) => {
+        if (err) reject(err);
+        else resolve();
+      });
       writer.once("error", reject);
     });
+    await rename(tempPath, path);
+  } catch (err) {
+    await discardTempFile(writer, tempPath);
+    throw err instanceof Error ? err : new Error(String(err));
   }
 
   return bytesWritten;

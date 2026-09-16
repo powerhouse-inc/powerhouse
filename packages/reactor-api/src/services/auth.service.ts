@@ -162,6 +162,9 @@ export class AuthService {
     }
   }
 
+  // `null` when there is nobody to resolve: resolution off, or no bearer sent.
+
+  /** Throws only for a bearer that is present and unusable, as HTTP 401s it. */
   async authenticateWebSocketConnection(
     connectionParams: Record<string, unknown>,
   ): Promise<User | null> {
@@ -171,15 +174,12 @@ export class AuthService {
 
     const authHeader = connectionParams.authorization as string | undefined;
     if (!authHeader) {
-      /* Refusing a tokenless connection is enforcement, not resolution. When
-         only `resolveIdentity` is on the policy is still `OPEN`, so admit it
-         with no user — the same answer `authenticateRequest` gives an HTTP
-         request that carries no bearer. Without this, turning on identity
-         resolution silently breaks every unauthenticated subscription. */
-      if (!this.config.enabled) {
-        return null;
-      }
-      throw new Error("Missing authorization in connection parameters");
+      // Resolution, not enforcement: `verifyBearer` answers the same.
+
+      // Refusing anonymous is onConnect's, keyed on REQUIRE_AUTHENTICATED_CALLER.
+
+      // Subscriptions themselves authorize per document.
+      return null;
     }
 
     const token = authHeader.split(" ")[1];

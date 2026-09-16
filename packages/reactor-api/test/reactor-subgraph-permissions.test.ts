@@ -131,7 +131,41 @@ describe("ReactorSubgraph Permission Checks", () => {
       executeAsync: vi.fn().mockResolvedValue("job-123"),
       rename: vi.fn().mockResolvedValue(mockDocument),
       addRelationship: vi.fn().mockResolvedValue(mockParentDocument),
+      updateRelationship: vi.fn().mockResolvedValue(mockParentDocument),
       removeRelationship: vi.fn().mockResolvedValue(mockParentDocument),
+      getOutgoingRelationshipEdges: vi.fn().mockResolvedValue({
+        results: [
+          {
+            sourceId: "parent-123",
+            targetId: "readable-child",
+            relationshipType: "child",
+            metadata: { order: 1 },
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+          {
+            sourceId: "parent-123",
+            targetId: "secret-child",
+            relationshipType: "child",
+            metadata: { order: 2 },
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        ],
+        options: { limit: 10, cursor: "" },
+      }),
+      getIncomingRelationshipEdges: vi.fn().mockResolvedValue({
+        results: [
+          {
+            sourceId: "secret-parent",
+            targetId: "doc-123",
+            relationshipType: "child",
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        ],
+        options: { limit: 10, cursor: "" },
+      }),
       moveRelationship: vi.fn().mockResolvedValue({
         source: mockParentDocument,
         target: mockParentDocument,
@@ -322,6 +356,209 @@ describe("ReactorSubgraph Permission Checks", () => {
   });
 
   // ============================================================
+  // Query: documentOutgoingRelationshipEdges / documentIncomingRelationshipEdges
+  // ============================================================
+  describe("Query: relationship edges", () => {
+    const callOutgoingEdges = (ctx: any) => {
+      const query = (reactorSubgraph.resolvers.Query as any)
+        ?.documentOutgoingRelationshipEdges;
+      return query(
+        null,
+        { sourceIdentifier: "parent-123", relationshipType: "child" },
+        ctx,
+      );
+    };
+
+    const callIncomingEdges = (ctx: any) => {
+      const query = (reactorSubgraph.resolvers.Query as any)
+        ?.documentIncomingRelationshipEdges;
+      return query(
+        null,
+        { targetIdentifier: "doc-123", relationshipType: "child" },
+        ctx,
+      );
+    };
+
+    it("should deny access when canRead resolves false on the anchor", async () => {
+      vi.mocked(mockAuthorizationService.canRead!).mockResolvedValue(false);
+      const ctx = createContext({ userAddress: "0xunpermitted" });
+
+      await expect(callOutgoingEdges(ctx)).rejects.toThrow("Forbidden");
+      await expect(callIncomingEdges(ctx)).rejects.toThrow("Forbidden");
+    });
+
+    it("should withhold edges whose far-end document is unreadable", async () => {
+      vi.mocked(mockAuthorizationService.canRead!).mockImplementation(
+        (documentId: string) => Promise.resolve(documentId !== "secret-child"),
+      );
+      const ctx = createContext({ userAddress: "0xpermitted" });
+
+      const result = await callOutgoingEdges(ctx);
+
+      expect(result.items).toHaveLength(1);
+      expect(result.items[0].targetId).toBe("readable-child");
+      expect(result.items[0].metadata).toEqual({ order: 1 });
+    });
+
+    it("should withhold incoming edges from an unreadable source", async () => {
+      vi.mocked(mockAuthorizationService.canRead!).mockImplementation(
+        (documentId: string) => Promise.resolve(documentId !== "secret-parent"),
+      );
+      const ctx = createContext({ userAddress: "0xpermitted" });
+
+      const result = await callIncomingEdges(ctx);
+
+      expect(result.items).toHaveLength(0);
+    });
+
+    it("should not filter for a supreme admin", async () => {
+      vi.mocked(mockAuthorizationService.isSupremeAdmin!).mockReturnValue(true);
+      vi.mocked(mockAuthorizationService.canRead!).mockResolvedValue(true);
+      const ctx = createContext({ userAddress: "0xadmin" });
+
+      const result = await callOutgoingEdges(ctx);
+
+      expect(result.items).toHaveLength(2);
+      expect(result.totalCount).toBe(2);
+    });
+
+    /**
+     * A count taken before the filter tells the caller how many edges were
+     * withheld, which is the disclosure the filter exists to prevent.
+     */
+    it("should count only the edges it serves", async () => {
+      vi.mocked(mockAuthorizationService.canRead!).mockImplementation(
+        (documentId: string) => Promise.resolve(documentId !== "secret-child"),
+      );
+      const ctx = createContext({ userAddress: "0xpermitted" });
+
+      const result = await callOutgoingEdges(ctx);
+
+      expect(result.items).toHaveLength(1);
+      expect(result.totalCount).toBe(1);
+    });
+
+    it("should count a page down to zero when every far end is unreadable", async () => {
+      vi.mocked(mockAuthorizationService.canRead!).mockImplementation(
+        (documentId: string) => Promise.resolve(documentId === "doc-123"),
+      );
+      const ctx = createContext({ userAddress: "0xpermitted" });
+
+      const result = await callIncomingEdges(ctx);
+
+      expect(result.items).toHaveLength(0);
+      expect(result.totalCount).toBe(0);
+    });
+
+    /**
+     * The cursor names a position in the unfiltered stream and has to be handed
+     * back unchanged to resume from there, so a short page still reports more to
+     * come.
+     */
+    it("should leave the cursor and page flags describing the underlying stream", async () => {
+      vi.mocked(
+        mockReactorClient.getOutgoingRelationshipEdges!,
+      ).mockResolvedValue({
+        results: [
+          {
+            sourceId: "parent-123",
+            targetId: "readable-child",
+            relationshipType: "child",
+            metadata: { order: 1 },
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+          {
+            sourceId: "parent-123",
+            targetId: "secret-child",
+            relationshipType: "child",
+            metadata: { order: 2 },
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        ],
+        options: { limit: 2, cursor: "page-1" },
+        nextCursor: "page-2",
+      });
+      vi.mocked(mockAuthorizationService.canRead!).mockImplementation(
+        (documentId: string) => Promise.resolve(documentId !== "secret-child"),
+      );
+      const ctx = createContext({ userAddress: "0xpermitted" });
+
+      const result = await callOutgoingEdges(ctx);
+
+      expect(result.items).toHaveLength(1);
+      expect(result.totalCount).toBe(1);
+      expect(result.cursor).toBe("page-2");
+      expect(result.hasNextPage).toBe(true);
+      expect(result.hasPreviousPage).toBe(true);
+    });
+  });
+
+  // ============================================================
+  // Query: documentIncomingRelationships
+  // ============================================================
+  describe("Query: documentIncomingRelationships", () => {
+    const callIncomingRelationships = (ctx: any) => {
+      const query = (reactorSubgraph.resolvers.Query as any)
+        ?.documentIncomingRelationships;
+      return query(
+        null,
+        { targetIdentifier: "doc-123", relationshipType: "child" },
+        ctx,
+      );
+    };
+
+    beforeEach(() => {
+      vi.mocked(mockReactorClient.getIncomingRelationships!).mockResolvedValue({
+        results: [
+          createMockDocument("readable-parent", "Readable Parent"),
+          createMockDocument("secret-parent", "Secret Parent"),
+        ],
+        options: { limit: 2, cursor: "page-1" },
+        nextCursor: "page-2",
+      });
+    });
+
+    it("should count only the documents it serves", async () => {
+      vi.mocked(mockAuthorizationService.canRead!).mockImplementation(
+        (documentId: string) => Promise.resolve(documentId !== "secret-parent"),
+      );
+      const ctx = createContext({ userAddress: "0xpermitted" });
+
+      const result = await callIncomingRelationships(ctx);
+
+      expect(result.items).toHaveLength(1);
+      expect(result.items[0].id).toBe("readable-parent");
+      expect(result.totalCount).toBe(1);
+    });
+
+    it("should leave the cursor and page flags describing the underlying stream", async () => {
+      vi.mocked(mockAuthorizationService.canRead!).mockImplementation(
+        (documentId: string) => Promise.resolve(documentId !== "secret-parent"),
+      );
+      const ctx = createContext({ userAddress: "0xpermitted" });
+
+      const result = await callIncomingRelationships(ctx);
+
+      expect(result.cursor).toBe("page-2");
+      expect(result.hasNextPage).toBe(true);
+      expect(result.hasPreviousPage).toBe(true);
+    });
+
+    it("should not filter or recount for a supreme admin", async () => {
+      vi.mocked(mockAuthorizationService.isSupremeAdmin!).mockReturnValue(true);
+      vi.mocked(mockAuthorizationService.canRead!).mockResolvedValue(true);
+      const ctx = createContext({ userAddress: "0xadmin" });
+
+      const result = await callIncomingRelationships(ctx);
+
+      expect(result.items).toHaveLength(2);
+      expect(result.totalCount).toBe(2);
+    });
+  });
+
+  // ============================================================
   // Query: findDocuments — list-filter behavior
   // ============================================================
   describe("Query: findDocuments", () => {
@@ -364,6 +601,32 @@ describe("ReactorSubgraph Permission Checks", () => {
 
       expect(result.items).toHaveLength(0);
       expect(mockAuthorizationService.canRead).toHaveBeenCalled();
+    });
+
+    /**
+     * A count taken before the filter tells the caller how many documents were
+     * withheld, which is the disclosure the filter exists to prevent.
+     */
+    it("should count only the documents it serves", async () => {
+      vi.mocked(mockReactorClient.find!).mockResolvedValue({
+        results: [
+          createMockDocument("readable-doc", "Readable Doc"),
+          createMockDocument("secret-doc", "Secret Doc"),
+        ],
+        options: { limit: 10, cursor: "" },
+      } as PagedResults<PHDocument>);
+      vi.mocked(mockAuthorizationService.isSupremeAdmin!).mockReturnValue(
+        false,
+      );
+      vi.mocked(mockAuthorizationService.canRead!).mockImplementation(
+        (documentId: string) => Promise.resolve(documentId !== "secret-doc"),
+      );
+      const ctx = createContext({ userAddress: "0xpermitted" });
+
+      const result = await callFindDocuments(ctx);
+
+      expect(result.items).toHaveLength(1);
+      expect(result.totalCount).toBe(1);
     });
   });
 
@@ -606,6 +869,51 @@ describe("ReactorSubgraph Permission Checks", () => {
   });
 
   // ============================================================
+  // Mutation: updateRelationship — write access to the source document
+  // ============================================================
+  describe("Mutation: updateRelationship", () => {
+    const callUpdateRelationship = (ctx: any) => {
+      const mutation = (reactorSubgraph.resolvers.Mutation as any)
+        ?.updateRelationship;
+      return mutation(
+        null,
+        {
+          sourceIdentifier: "parent-123",
+          targetIdentifier: "doc-123",
+          relationshipType: "child",
+          metadata: { order: 2 },
+        },
+        ctx,
+      );
+    };
+
+    it("should allow when canWrite resolves true on the source", async () => {
+      vi.mocked(mockAuthorizationService.canWrite!).mockResolvedValue(true);
+      const ctx = createContext({ userAddress: "0xpermitted" });
+
+      const result = await callUpdateRelationship(ctx);
+
+      expect(result).toBeDefined();
+      expect(mockAuthorizationService.canWrite).toHaveBeenCalled();
+      expect(mockReactorClient.updateRelationship).toHaveBeenCalledWith(
+        "parent-123",
+        "doc-123",
+        "child",
+        { order: 2 },
+        undefined,
+      );
+    });
+
+    it("should deny when canWrite resolves false on the source", async () => {
+      vi.mocked(mockAuthorizationService.canWrite!).mockResolvedValue(false);
+      const ctx = createContext({ userAddress: "0xunpermitted" });
+
+      await expect(callUpdateRelationship(ctx)).rejects.toThrow("Forbidden");
+      expect(mockReactorClient.updateRelationship).not.toHaveBeenCalled();
+    });
+  });
+
+  // ============================================================
   // Mutation: touchChannel — read access to the collection's drive (S-H1)
   // ============================================================
   describe("Mutation: touchChannel", () => {
@@ -714,6 +1022,7 @@ describe("ReactorSubgraph Permission Checks", () => {
             inbox: { ackOrdinal: 3 },
             outbox: { items: [] },
             deadLetter: { items: [] },
+            notePoll: vi.fn(),
           },
         }),
       });
@@ -888,6 +1197,7 @@ describe("ReactorSubgraph Permission Checks", () => {
           inbox: { ackOrdinal: 0 },
           outbox: { items: outbox, remove: vi.fn() },
           deadLetter: { items: deadLetter },
+          notePoll: vi.fn(),
         },
       }),
     });
@@ -1334,16 +1644,28 @@ describe("ReactorSubgraph Permission Checks", () => {
   // Mutation: pushSyncEnvelopes — canMutate per (document, action type) (S-C2)
   // ============================================================
   describe("Mutation: pushSyncEnvelopes", () => {
-    const makeSyncManager = () => {
+    const makeSyncManager = (boundAddress?: string) => {
       const inboxAdd = vi.fn();
+      const notePoll = vi.fn();
       const syncManager = {
+        bindRemote: vi.fn().mockResolvedValue(undefined),
         getById: vi.fn().mockReturnValue({
-          meta: { name: "remote-1" },
-          channel: { inbox: { add: inboxAdd } },
+          meta: {
+            id: "channel-1",
+            name: "remote-1",
+            options: { sinceTimestampUtcMs: "0", boundAddress },
+          },
+          channel: { inbox: { add: inboxAdd }, notePoll },
         }),
       };
-      return { syncManager, inboxAdd };
+      return { syncManager, inboxAdd, notePoll };
     };
+
+    /** Push never serves anything, so only the gate's presence matters here. */
+    const servingGate = () =>
+      ({
+        scopePredicateById: vi.fn(),
+      }) as unknown as SyncScopeGate;
 
     const operationFor = (documentId: string, type: string, ordinal = 0) => ({
       operation: {
@@ -1471,6 +1793,115 @@ describe("ReactorSubgraph Permission Checks", () => {
 
       expect(result).toBe(true);
       expect(mockAuthorizationService.canMutate).not.toHaveBeenCalled();
+    });
+
+    /**
+     * The per-operation canMutate loop below is skipped entirely by an envelope
+     * carrying no operations, so without the binding check a push is a way to
+     * touch a channel -- and to report the liveness that keeps its held
+     * operations from being reclaimed -- with no authorization at all.
+     */
+    it("should refuse a push to a channel bound to another subject", async () => {
+      const { syncManager, inboxAdd, notePoll } = makeSyncManager("0xowner");
+      const subgraph = buildSubgraph(
+        mockAuthorizationService,
+        syncManager,
+        servingGate(),
+      );
+
+      await expect(
+        callPushSyncEnvelopes(
+          subgraph,
+          createContext({ userAddress: "0xthief" }),
+          null,
+        ),
+      ).rejects.toThrow("Forbidden");
+      expect(notePoll).not.toHaveBeenCalled();
+      expect(inboxAdd).not.toHaveBeenCalled();
+    });
+
+    it("should refuse an anonymous push once the channel is claimed", async () => {
+      const { syncManager } = makeSyncManager("0xowner");
+      const subgraph = buildSubgraph(
+        mockAuthorizationService,
+        syncManager,
+        servingGate(),
+      );
+
+      await expect(
+        callPushSyncEnvelopes(subgraph, createContext({}), null),
+      ).rejects.toThrow("Forbidden");
+    });
+
+    it("should let the bound subject push", async () => {
+      vi.mocked(mockAuthorizationService.canMutate!).mockResolvedValue(true);
+      const { syncManager, inboxAdd } = makeSyncManager("0xowner");
+      const subgraph = buildSubgraph(
+        mockAuthorizationService,
+        syncManager,
+        servingGate(),
+      );
+
+      const result = await callPushSyncEnvelopes(
+        subgraph,
+        createContext({ userAddress: "0xowner" }),
+        [operationFor("doc-123", "SET_NAME")],
+      );
+
+      expect(result).toBe(true);
+      expect(inboxAdd).toHaveBeenCalled();
+    });
+
+    /**
+     * Claiming a channel is a write, and unlike the poll path there is no drive
+     * read check here to clear the claimant first -- so an address that could
+     * never poll the channel would take it, and bindRemote refuses to rebind.
+     */
+    it("should not claim an unbound channel for the subject pushing to it", async () => {
+      vi.mocked(mockAuthorizationService.canMutate!).mockResolvedValue(true);
+      const { syncManager } = makeSyncManager();
+      const subgraph = buildSubgraph(
+        mockAuthorizationService,
+        syncManager,
+        servingGate(),
+      );
+
+      await callPushSyncEnvelopes(
+        subgraph,
+        createContext({ userAddress: "0xstranger" }),
+        [operationFor("doc-123", "SET_NAME")],
+      );
+
+      expect(syncManager.bindRemote).not.toHaveBeenCalled();
+    });
+
+    it("should refuse nothing below the flag, where there is no gate", async () => {
+      const { syncManager } = makeSyncManager("0xowner");
+      const subgraph = buildSubgraph(mockAuthorizationService, syncManager);
+
+      await expect(
+        callPushSyncEnvelopes(
+          subgraph,
+          createContext({ userAddress: "0xthief" }),
+          null,
+        ),
+      ).resolves.toBe(true);
+    });
+
+    it("should report liveness only for an envelope that carries work", async () => {
+      const { syncManager, notePoll } = makeSyncManager();
+      const subgraph = buildSubgraph(mockAuthorizationService, syncManager);
+
+      await callPushSyncEnvelopes(subgraph, createContext({}), null);
+      expect(notePoll).not.toHaveBeenCalled();
+
+      vi.mocked(mockAuthorizationService.canMutate!).mockResolvedValue(true);
+      await callPushSyncEnvelopes(
+        subgraph,
+        createContext({ userAddress: "0xpermitted" }),
+        [operationFor("doc-123", "SET_NAME")],
+      );
+      expect(notePoll).toHaveBeenCalledTimes(1);
     });
 
     it("should not let a forged (document, action type) pair collide and skip a check", async () => {

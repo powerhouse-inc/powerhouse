@@ -486,9 +486,10 @@ export function runGatewayAdapterContractTests(
       const { WebSocketServer } = await import("ws");
       const wss = new WebSocketServer({ noServer: true });
 
-      const disposer = h.adapter.attachWebSocket(wss, makeSchema(), () =>
-        Promise.resolve({ headers: {}, db: null }),
-      );
+      const disposer = h.adapter.attachWebSocket(wss, makeSchema(), {
+        onConnect: () => Promise.resolve(true),
+        context: () => Promise.resolve({ headers: {}, db: null }),
+      });
 
       expect(typeof disposer.dispose).toBe("function");
       await disposer.dispose();

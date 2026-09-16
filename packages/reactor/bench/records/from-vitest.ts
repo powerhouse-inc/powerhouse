@@ -1,4 +1,5 @@
-import { relative } from "node:path";
+import { readFileSync } from "node:fs";
+import { join, relative } from "node:path";
 import { z } from "zod";
 import type {
   DerivedRatio,
@@ -35,6 +36,19 @@ export type BenchTarget = {
    * with `continues`, so the record itself says which line it belongs to.
    */
   renames: Record<string, string>;
+  /**
+   * The sidecar the benchmark writes into the results directory, or empty when
+   * every figure it measures fits in a case mean. A target that names one
+   * cannot be recorded without it: the whole point of the file is that the
+   * reading would otherwise reach stdout and no further.
+   */
+  stampsFile: string;
+  /**
+   * The case-name suffix the instrumented leg carries. Each stamp label has to
+   * pair with `<label>: <this>`, which is what turns a stale or dropped
+   * sidecar into an error rather than a quietly incomplete record.
+   */
+  stampedCase: string;
 };
 
 export const BENCH_TARGETS: BenchTarget[] = [
@@ -49,6 +63,8 @@ export const BENCH_TARGETS: BenchTarget[] = [
     question: "auth evaluation cost per step, isolated from storage",
     caveats: [],
     renames: {},
+    stampsFile: "",
+    stampedCase: "",
   },
   {
     name: "events",
@@ -61,6 +77,8 @@ export const BENCH_TARGETS: BenchTarget[] = [
     question: "emit cost by subscriber count, filter shape, and payload size",
     caveats: [],
     renames: {},
+    stampsFile: "",
+    stampedCase: "",
   },
   {
     name: "queue",
@@ -75,6 +93,8 @@ export const BENCH_TARGETS: BenchTarget[] = [
       "Every case includes expect() assertion overhead alongside queue work",
     ],
     renames: {},
+    stampsFile: "",
+    stampedCase: "",
   },
   {
     name: "queue-only",
@@ -89,6 +109,8 @@ export const BENCH_TARGETS: BenchTarget[] = [
       "The two DAG cases enqueue dependents before their dependencies across sub-queues — valid per the queue contract, but not a shape any reactor producer emits, since executeBatch and loadBatch topologically sort first",
     ],
     renames: {},
+    stampsFile: "",
+    stampedCase: "",
   },
   {
     name: "cache",
@@ -104,6 +126,8 @@ export const BENCH_TARGETS: BenchTarget[] = [
       "The two keyframe cases are floored by a 100ms drain sleep for fire-and-forget keyframe writes to land, so their difference isn't persistence overhead",
     ],
     renames: {},
+    stampsFile: "write-cache-stamps.json",
+    stampedCase: "instrumented cold-miss replay",
   },
   {
     name: "sync",
@@ -118,6 +142,8 @@ export const BENCH_TARGETS: BenchTarget[] = [
       "Every scenario registers remotes before any write, with both sides writing live — none measures a reactor joining late and catching up",
     ],
     renames: {},
+    stampsFile: "",
+    stampedCase: "",
   },
 ];
 
@@ -131,6 +157,150 @@ export function findTarget(name: string): BenchTarget {
     );
   }
   return target;
+}
+
+/**
+ * One label's in-situ decomposition, as the benchmark filed it. Nothing here
+ * is optional: a sidecar missing a field is a harness that changed shape, and
+ * guessing at the gap would put an invented number in the record.
+ */
+const ReplayStampReading = z.strictObject({
+  label: z.string().min(1),
+  wallCalls: z.number().positive(),
+  bodyCalls: z.number().positive(),
+  wallMs: z.number().nonnegative(),
+  bodyMs: z.number().nonnegative(),
+  wallUsPerCall: z.number().nonnegative(),
+  bodyUsPerWallCall: z.number().nonnegative(),
+  outsideUsPerWallCall: z.number(),
+  bodyUsPerBodyCall: z.number().nonnegative(),
+  bodySharePct: z.number(),
+});
+
+export const ReplayStampsFile = z.strictObject({
+  version: z.literal(1),
+  stamps: z.array(ReplayStampReading).min(1),
+});
+export type ReplayStampsFile = z.infer<typeof ReplayStampsFile>;
+
+/** What a sidecar contributes to the entry: readings, and their limits. */
+export type StampReadings = {
+  derived: DerivedRatio[];
+  caveats: string[];
+};
+
+/** Case names in the report that belong to the target's instrumented leg. */
+function stampedCaseNames(target: BenchTarget, suites: MicroSuite[]): string[] {
+  const suffix = `: ${target.stampedCase}`;
+  return suites
+    .flatMap((suite) => suite.cases.map((entry) => entry.name))
+    .filter((name) => name.endsWith(suffix));
+}
+
+/**
+ * Folds a benchmark's sidecar into readings the entry carries.
+ *
+ * A case mean is the wall time of a whole measured function, so a benchmark
+ * that times a sub-interval of one call has nowhere in the vitest report to
+ * put it. Reading the file here is what keeps that measurement in the record
+ * instead of in a scrollback buffer.
+ *
+ * Both directions of the label/case check are errors. A stamped case with no
+ * reading means the run dropped what it was recorded to show; a reading with
+ * no case means the sidecar outlived the suite that wrote it, and its numbers
+ * describe code that did not run.
+ */
+export function stampReadings(
+  target: BenchTarget,
+  resultsDirectory: string,
+  suites: MicroSuite[],
+): StampReadings {
+  const cases = stampedCaseNames(target, suites);
+
+  if (target.stampsFile === "") {
+    return { derived: [], caveats: [] };
+  }
+
+  const path = join(resultsDirectory, target.stampsFile);
+  let raw: string;
+  try {
+    raw = readFileSync(path, "utf8");
+  } catch (error) {
+    throw new Error(
+      `${target.name} files a decomposition at ${path} that a case mean cannot carry, and it is not there: ${error instanceof Error ? error.message : String(error)}. Run ${target.recordScript} first; recording without it would drop the measurement.`,
+      { cause: error },
+    );
+  }
+
+  const parsed = ReplayStampsFile.safeParse(JSON.parse(raw) as unknown);
+  if (!parsed.success) {
+    throw new Error(
+      `${path} is not a stamps file:\n${z.prettifyError(parsed.error)}`,
+    );
+  }
+
+  const filed = new Set(
+    parsed.data.stamps.map((stamp) => `${stamp.label}: ${target.stampedCase}`),
+  );
+  const unstamped = cases.filter((name) => !filed.has(name));
+  const stale = [...filed].filter((name) => !cases.includes(name));
+
+  if (unstamped.length > 0 || stale.length > 0) {
+    throw new Error(
+      [
+        `${path} does not describe the run in ${target.resultsFile}.`,
+        ...(unstamped.length > 0
+          ? [`Cases that filed no reading: ${unstamped.join(", ")}`]
+          : []),
+        ...(stale.length > 0
+          ? [`Readings with no case in the report: ${stale.join(", ")}`]
+          : []),
+        `Re-run ${target.recordScript} so both come from one run.`,
+      ].join("\n"),
+    );
+  }
+
+  const derived: DerivedRatio[] = [];
+  const caveats: string[] = [];
+
+  for (const stamp of parsed.data.stamps) {
+    const calls = `over ${stamp.wallCalls} module.reducer calls totalling ${round(stamp.wallMs)}ms`;
+
+    derived.push(
+      {
+        name: `${stamp.label}: module.reducer wall`,
+        value: round4(stamp.wallUsPerCall),
+        unit: "us",
+        note: `Wall time of one module.reducer call, ${calls}`,
+      },
+      {
+        name: `${stamp.label}: reducer body in draft`,
+        value: round4(stamp.bodyUsPerWallCall),
+        unit: "us",
+        note: `The custom reducer body, measured inside the mutative draft, per module.reducer call. ${round(stamp.bodyMs)}ms over ${stamp.bodyCalls} state-reducer calls, or ${round4(stamp.bodyUsPerBodyCall)}us each`,
+      },
+      {
+        name: `${stamp.label}: create() draft+finalize+base`,
+        value: round4(stamp.outsideUsPerWallCall),
+        unit: "us",
+        note: `Wall minus body per module.reducer call: everything create() and the base reducer do around the body, ${calls}`,
+      },
+      {
+        name: `${stamp.label}: reducer body share`,
+        value: round(stamp.bodySharePct),
+        unit: "pct",
+        note: "Share of module.reducer wall time spent inside the custom reducer body",
+      },
+    );
+
+    if (stamp.wallCalls !== stamp.bodyCalls) {
+      caveats.push(
+        `${stamp.label}: ${stamp.wallCalls} module.reducer calls drove ${stamp.bodyCalls} state-reducer calls, so the body figure per module.reducer call aggregates more than one invocation and the two per-call means are not comparable`,
+      );
+    }
+  }
+
+  return { derived, caveats };
 }
 
 /**
@@ -313,6 +483,15 @@ export function suitesFromTinybench(
 export function buildMicroEntry(
   input: MicroEntryInput,
 ): Record<string, unknown> {
+  // A target whose harness measures more than case means has to carry those
+  // readings, and every caller builds its own input. Refusing here is what
+  // stops a third one from quietly recording the vitest half on its own.
+  if (input.target.stampsFile !== "" && input.derived.length === 0) {
+    throw new Error(
+      `${input.target.name} files a decomposition its case means cannot carry, so an entry with no derived readings would drop it. Pass stampReadings(target, resultsDirectory, suites).`,
+    );
+  }
+
   const derived = [...input.suites.map(suiteSpread), ...input.derived];
   const conclusions = [
     ...input.suites.map(suiteConclusion),
@@ -429,4 +608,9 @@ function median(samples: number[]): number {
 
 function round(value: number): number {
   return Number(value.toFixed(2));
+}
+
+/** Per-call figures live in microseconds, where two decimals lose the signal. */
+function round4(value: number): number {
+  return Number(value.toFixed(4));
 }

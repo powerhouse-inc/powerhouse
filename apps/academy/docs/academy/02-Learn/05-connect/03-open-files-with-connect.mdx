@@ -1,0 +1,76 @@
+---
+title: Open .phd files with Connect
+description: Install Connect as an app and double-clicking a .phd document imports it into a drive. Per-OS behavior, install steps, and the caveats.
+---
+
+Your users have been saving `.phd` files to their machines. But double-clicking one of them does nothing — no app is registered to open it. Connect's PWA file association fixes that: install Connect as an app, and `.phd` documents open from the file manager and land straight in a drive.
+
+## How it works
+
+A Powerhouse document is a zip archive with a vendor MIME type — `application/vnd.powerhouse.document+zip` for `.phd`, `application/vnd.powerhouse.document-model+zip` for `.phdm`. Connect's [web app manifest](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Manifest) declares that it handles those two extensions, and when a user installs the PWA the browser registers the association with the operating system.
+
+When the OS hands a file to Connect, the browser delivers it through the [LaunchQueue API](https://developer.mozilla.org/en-US/docs/Web/API/LaunchQueue). Connect then shows the **Open document** dialog — pick a drive, import. Files opened this way travel the same path as drag-and-drop, so nothing about your document models or editors changes.
+
+## Supported platforms
+
+File associations only work in Chromium-based browsers — Chrome, Edge, Brave. Firefox and Safari don't implement the File Handling API, so there's no association flow there at all; on those browsers users open documents by dragging a file into the Connect window.
+
+Once Connect is installed as an app, per platform:
+
+| Platform | Behavior |
+| -------- | -------- |
+| Windows  | `.phd`/`.phdm` register with the OS when the PWA is installed. Double-click opens Connect; right-click → **Open with** makes it the default. |
+| macOS    | Installing alone doesn't set the default app. Right-click a file → **Get Info** → **Open with:** → Connect → **Change All…** |
+| Android  | Open a `.phd` in the Files app and the app picker offers Connect. |
+| Linux / ChromeOS | Chromium ships the feature, but how the association surfaces (open-with menus, `.desktop` entries) varies by distro and desktop environment — check the open-with dialog after installing. |
+
+## Installing Connect as an app
+
+1. Open your Connect URL in Chrome or Edge.
+2. Click the install icon in the address bar — on desktop, the browser menu → **Cast, save and share** → **Install page as app** works too.
+3. Done. The installed app now handles `.phd` and `.phdm` files.
+
+The association belongs to the **installed app**, not to a browser tab: a user who only uses Connect as a web page will never get it.
+
+## What happens when you open a file
+
+Double-click a `.phd` (or select several at once):
+
+1. Connect launches — or, because `launch_handler` is `focus-existing`, an already-open window comes to the front and receives the files instead of a new window per file.
+2. The **Open document** dialog lists each file and preselects the user's first drive; they can switch it.
+3. Click **Import** — or **Rename and import**, when the drive already holds a document with the same name and the copy is automatically renamed to avoid it.
+
+If the user has no drives yet, the dialog offers to create one first; the file stays queued and the dialog comes back once the drive exists.
+
+## Caveats
+
+- **Existing installs.** The OS snapshots the file association at the moment the PWA is installed. If the association isn't live yet — or a later build adds a new file type — the browser picks it up on its own periodic manifest re-check; reinstalling the app is the sure fix.
+- **Desktop file-type icons.** Chromium doesn't use per-type document icons on desktop yet (macOS synthesizes one from the app icon, and Windows support isn't implemented), so a `.phd` shows the OS's default icon for now.
+- **The import dialog, not a direct open.** By design the association lands at the app root and asks for a destination drive — a manifest file handler can't dictate where inside the app a file opens, so the drive picker is as direct as the platform gets.
+
+<Quiz
+  question="A user on macOS wants to double-click .phd files and have them open in Connect. Which statement is true?"
+  choices={[
+    {
+      label:
+        "They need to install the PWA from Chrome or Edge — Safari has no file association support.",
+      correct: true,
+      explanation:
+        "The File Handling API is Chromium-only. The PWA has to be installed from a Chromium browser for the OS association to exist, and on macOS the default app is then set via Get Info.",
+    },
+    {
+      label:
+        "Installing the PWA from Safari is enough — double-clicking works out of the box.",
+      explanation:
+        "Safari doesn't implement the File Handling API, so there is no association to register.",
+    },
+    {
+      label:
+        "They should rename the file to .phd.zip and open it with the browser.",
+      explanation:
+        "That only exposes the underlying zip archive. The association keys on the .phd extension and its vendor MIME type.",
+    },
+  ]}
+/>
+
+Deploying Connect yourself? The manifest is configurable — a package or the project can declare additional file types of its own. See [Configure the PWA — File handling](../../03-Build/05-Launch/06-ConfigurePWA.md#file-handling).

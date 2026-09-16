@@ -15,6 +15,7 @@ import type { IEventBus } from "../../src/events/interfaces.js";
 import type { JobWriteReadyEvent } from "../../src/events/types.js";
 import { ReactorEventTypes } from "../../src/events/types.js";
 import { ConsistencyTracker } from "../../src/shared/consistency-tracker.js";
+import { RelationshipNotFoundError } from "../../src/shared/errors.js";
 import { JobStatus, PropagationMode } from "../../src/shared/types.js";
 import type { IDocumentIndexer } from "../../src/storage/interfaces.js";
 import type { Database } from "../../src/storage/kysely/types.js";
@@ -796,6 +797,118 @@ describe("ReactorClient Integration Tests", () => {
           "child",
         );
         expect(parent2Children.results.length).toBe(2);
+      });
+
+      it("should carry the relationship metadata across the move", async () => {
+        await client.create(createDocModelDocument({ id: "move-meta-src" }));
+        await client.create(createDocModelDocument({ id: "move-meta-dst" }));
+        await client.create(createDocModelDocument({ id: "move-meta-child" }));
+
+        await client.addRelationship(
+          "move-meta-src",
+          "move-meta-child",
+          "child",
+          { order: 7, label: "keep me" },
+        );
+
+        await client.moveRelationship(
+          "move-meta-src",
+          "move-meta-dst",
+          "move-meta-child",
+          "child",
+        );
+
+        const moved = await client.getOutgoingRelationshipEdges(
+          "move-meta-dst",
+          "child",
+        );
+        expect(moved.results).toHaveLength(1);
+        expect(moved.results[0].metadata).toEqual({
+          order: 7,
+          label: "keep me",
+        });
+
+        const emptied = await client.getOutgoingRelationshipEdges(
+          "move-meta-src",
+          "child",
+        );
+        expect(emptied.results).toHaveLength(0);
+      });
+    });
+
+    describe("relationship metadata", () => {
+      it("addRelationship writes metadata readable as an edge", async () => {
+        await client.create(createDocModelDocument({ id: "edge-parent" }));
+        await client.create(createDocModelDocument({ id: "edge-child" }));
+
+        await client.addRelationship("edge-parent", "edge-child", "child", {
+          parentFolderId: "folder-1",
+        });
+
+        const outgoing = await client.getOutgoingRelationshipEdges(
+          "edge-parent",
+          "child",
+        );
+        expect(outgoing.results).toHaveLength(1);
+        expect(outgoing.results[0]).toMatchObject({
+          sourceId: "edge-parent",
+          targetId: "edge-child",
+          relationshipType: "child",
+          metadata: { parentFolderId: "folder-1" },
+        });
+
+        const incoming = await client.getIncomingRelationshipEdges(
+          "edge-child",
+          "child",
+        );
+        expect(incoming.results).toHaveLength(1);
+        expect(incoming.results[0].metadata).toEqual({
+          parentFolderId: "folder-1",
+        });
+      });
+
+      it("updateRelationship replaces metadata, and null clears it", async () => {
+        await client.create(createDocModelDocument({ id: "upd-parent" }));
+        await client.create(createDocModelDocument({ id: "upd-child" }));
+
+        await client.addRelationship("upd-parent", "upd-child", "child", {
+          order: 1,
+        });
+
+        await client.updateRelationship("upd-parent", "upd-child", "child", {
+          order: 2,
+        });
+        let edges = await client.getOutgoingRelationshipEdges(
+          "upd-parent",
+          "child",
+        );
+        expect(edges.results[0].metadata).toEqual({ order: 2 });
+
+        await client.updateRelationship(
+          "upd-parent",
+          "upd-child",
+          "child",
+          null,
+        );
+        edges = await client.getOutgoingRelationshipEdges(
+          "upd-parent",
+          "child",
+        );
+        expect(edges.results[0].metadata).toBeUndefined();
+      });
+
+      it("updateRelationship rejects when the edge does not exist", async () => {
+        await client.create(createDocModelDocument({ id: "upd-miss-parent" }));
+        await client.create(createDocModelDocument({ id: "upd-miss-child" }));
+
+        await expect(
+          client.updateRelationship(
+            "upd-miss-parent",
+            "upd-miss-child",
+            "child",
+            { order: 1 },
+          ),
+        ).rejects.toThrow(RelationshipNotFoundError);
       });
     });
   });

@@ -28,7 +28,11 @@ import type {
   ISyncRemoteStorage,
 } from "../storage/interfaces.js";
 import { BatchAggregator, type PreparedBatch } from "./batch-aggregator.js";
-import { ChannelError } from "./errors.js";
+import {
+  ChannelError,
+  GraphQLRequestError,
+  isDriveAuthError,
+} from "./errors.js";
 import type { IChannelFactory, ISyncManager, Remote } from "./interfaces.js";
 import { SyncAwaiter } from "./sync-awaiter.js";
 import { SyncOperation } from "./sync-operation.js";
@@ -80,6 +84,16 @@ export type SyncManagerConfig = {
    * the next refill derives them again from the operation index.
    */
   maxHeldOperationsPerRemote: number;
+  /**
+   * How long a serving channel may go unpolled before an outbox past its bound
+   * is removed rather than evicted.
+   *
+   * Evicting a channel nobody polls derives the same operations again on every
+   * batch, forever. Removing one that is merely behind is worse: a holder more
+   * than the bound behind could never catch up, so it is removed only once its
+   * holder has stopped asking.
+   */
+  staleRemotePollWindowMs: number;
 };
 
 enum OutboxMode {
@@ -91,9 +105,22 @@ const defaultSyncManagerConfig: SyncManagerConfig = {
   maxDeadLettersPerRemote: 100,
   maxInboxBatchSize: 32,
   maxHeldOperationsPerRemote: 10000,
+  staleRemotePollWindowMs: 5 * 60_000,
 };
 
 const PLAN_KEY_TO_JOB_UUID_CAP = 10000;
+
+/**
+ * Whether a channel failure says the caller could not authenticate or could not
+ * reach the remote, rather than that the remote itself is misconfigured. The
+ * remote record stays on disk for these so a retry after sign-in can re-add it.
+ */
+function isCredentialOrNetworkError(error: unknown): boolean {
+  if (isDriveAuthError(error)) {
+    return true;
+  }
+  return error instanceof GraphQLRequestError && error.category === "network";
+}
 
 /** Where a sync operation's run of ordinals begins. */
 function firstOrdinalOf(syncOp: SyncOperation): number {
@@ -130,6 +157,11 @@ export class SyncManager implements ISyncManager {
   >();
   private readonly planKeyToJobUuid = new Map<string, string>();
   private readonly evictedOutboxFloors = new Map<string, number>();
+  private readonly prunePending = new Set<string>();
+  private pruneChain: Promise<void> = Promise.resolve();
+  private derivingOutboxes = 0;
+  private pruneDrainDeferred = false;
+  private readonly removing = new Set<string>();
   private readonly lastEnqueuedJobIdByKey = new Map<string, string>();
   private inboxChunkChain: Promise<void> = Promise.resolve();
 
@@ -224,7 +256,7 @@ export class SyncManager implements ISyncManager {
           record.name,
           error instanceof Error ? error.message : String(error),
         );
-        this.remotes.delete(record.name);
+        await this.dropRemoteAfterFailedInit(remote, false);
         continue;
       }
 
@@ -249,6 +281,7 @@ export class SyncManager implements ISyncManager {
           })
           .finally(() => {
             this.backfillAbortControllers.delete(record.name);
+            void this.drainPrunes();
           });
       }
     }
@@ -273,6 +306,8 @@ export class SyncManager implements ISyncManager {
     this.backfillAbortControllers.clear();
     this.planKeyToJobUuid.clear();
     this.lastEnqueuedJobIdByKey.clear();
+    this.prunePending.clear();
+    this.pruneDrainDeferred = false;
     this.batchAggregator.clear();
 
     if (this.eventUnsubscribe) {
@@ -429,8 +464,15 @@ export class SyncManager implements ISyncManager {
     try {
       await channel.init();
     } catch (error) {
-      this.remotes.delete(name);
-      await this.remoteStorage.remove(name);
+      // Only a failure that says the remote itself is unusable may drop its
+      // record. A refused credential or an unreachable host says nothing about
+      // the configuration, so the record stays and a retry after sign-in can
+      // re-add it.
+      await this.dropRemoteAfterFailedInit(
+        remote,
+        !isCredentialOrNetworkError(error),
+      );
+
       throw error;
     }
 
@@ -453,6 +495,7 @@ export class SyncManager implements ISyncManager {
       })
       .finally(() => {
         this.backfillAbortControllers.delete(name);
+        void this.drainPrunes();
       });
 
     return remote;
@@ -472,27 +515,85 @@ export class SyncManager implements ISyncManager {
       throw new Error(`Remote with name '${name}' does not exist`);
     }
 
-    // cancel any in-flight backfill for this remote
+    // The channel shuts down and the rows go several awaits before the map
+    // entry does, and a batch landing in that gap would otherwise pick this
+    // remote up and derive into mailboxes that are already being torn down.
+    this.removing.add(name);
+    try {
+      await this.teardownRemoteResources(remote);
+
+      // delete the remote's data
+      await this.remoteStorage.remove(name);
+      await this.cursorStorage.remove(name);
+    } finally {
+      // Released last: while the slot is held, a concurrent add of the same
+      // name is refused, so it cannot race the storage deletes above. The
+      // finally still guarantees the slot is freed if one of them throws.
+      this.remotes.delete(name);
+      this.removing.delete(name);
+    }
+  }
+
+  /**
+   * Drops a remote whose channel.init() rejected, optionally removing its
+   * stored record. Ordered like remove(): the registry slot is released last,
+   * so a concurrent add of the same name cannot slip in and have its record
+   * deleted by the removal below. A failure to tear down must not replace the
+   * init error the caller has to classify.
+   */
+  private async dropRemoteAfterFailedInit(
+    remote: Remote,
+    removeStorageRecord: boolean,
+  ): Promise<void> {
+    const name = remote.meta.name;
+    // Same guard remove() takes: the remote is registered before init() runs,
+    // so a batch could derive into mailboxes this teardown is closing.
+    this.removing.add(name);
+    try {
+      await this.teardownRemoteResources(remote);
+      if (removeStorageRecord) {
+        await this.remoteStorage.remove(name);
+      }
+    } catch (error) {
+      this.logger.error(
+        "Error tearing down remote after failed init (@name, @error)",
+        name,
+        error instanceof Error ? error.message : String(error),
+      );
+    } finally {
+      this.remotes.delete(name);
+      this.removing.delete(name);
+    }
+  }
+
+  /**
+   * Releases everything wiring a remote up holds: the in-flight backfill, the
+   * channel, the status tracker entry and the connection-state subscription.
+   * The registry slot is deliberately NOT released here -- the caller holds it
+   * until any storage removal has finished, so a concurrent add of the same
+   * name is refused for the whole teardown.
+   */
+  private async teardownRemoteResources(remote: Remote): Promise<void> {
+    const name = remote.meta.name;
+
     const backfillController = this.backfillAbortControllers.get(name);
     if (backfillController) {
       backfillController.abort();
       this.backfillAbortControllers.delete(name);
     }
 
-    // shutdown the channel
-    await remote.channel.shutdown();
-
-    // delete the remote's data
-    await this.remoteStorage.remove(name);
-    await this.cursorStorage.remove(name);
-
-    this.syncStatusTracker.untrackRemote(name);
-    const unsub = this.connectionStateUnsubscribes.get(name);
-    if (unsub) {
-      unsub();
-      this.connectionStateUnsubscribes.delete(name);
+    try {
+      await remote.channel.shutdown();
+    } finally {
+      this.syncStatusTracker.untrackRemote(name);
+      const unsub = this.connectionStateUnsubscribes.get(name);
+      if (unsub) {
+        unsub();
+        this.connectionStateUnsubscribes.delete(name);
+      }
+      this.evictedOutboxFloors.delete(name);
+      this.prunePending.delete(name);
     }
-    this.remotes.delete(name);
   }
 
   list(): Remote[] {
@@ -669,7 +770,9 @@ export class SyncManager implements ISyncManager {
 
   private getRemotesForCollection(collectionId: string): Remote[] {
     return Array.from(this.remotes.values()).filter(
-      (remote) => remote.meta.collectionId.key === collectionId,
+      (remote) =>
+        remote.meta.collectionId.key === collectionId &&
+        !this.removing.has(remote.meta.name),
     );
   }
 
@@ -703,12 +806,23 @@ export class SyncManager implements ISyncManager {
 
     // finally, work through the affected remotes and backfill based on the last operation in the outbox
     for (const remote of affectedRemotes) {
+      // A drain between two derivations can remove a remote this list was
+      // built before, so membership is read again rather than assumed.
+      if (
+        !this.remotes.has(remote.meta.name) ||
+        this.removing.has(remote.meta.name)
+      ) {
+        continue;
+      }
+
       await this.updateOutbox(
         remote,
         remote.channel.outbox.latestOrdinal,
         OutboxMode.BatchTriggered,
       );
     }
+
+    await this.drainPrunes();
   }
 
   private handleInboxAdded(remote: Remote, syncOps: SyncOperation[]): void {
@@ -1030,15 +1144,114 @@ export class SyncManager implements ISyncManager {
       known === undefined ? floor : Math.min(known, floor),
     );
 
-    this.logger.warn(
-      "Outbox for @RemoteName is past its bound of @Cap operations; evicting @Count entries from ordinal @Floor, to be derived again once it drains",
-      remote.meta.name,
-      cap,
-      evicted.length,
-      floor,
-    );
+    const staleMs = this.stalePollAgeMs(remote);
+    if (staleMs !== undefined) {
+      let held = kept;
+      for (const syncOp of evicted) {
+        held += syncOp.operations.length;
+      }
+
+      // emitBatches evicts once per page, so a large backfill reaches here
+      // repeatedly; the decision and its log belong to the first.
+      if (!this.prunePending.has(remote.meta.name)) {
+        this.prunePending.add(remote.meta.name);
+        this.logger.warn(
+          "Outbox for @RemoteName (@Collection) is past its bound of @Cap operations holding @Held, and it has not been polled for @StaleMs ms; marking the channel for removal once this derivation ends",
+          remote.meta.name,
+          remote.meta.collectionId.key,
+          cap,
+          held,
+          staleMs,
+        );
+      }
+    } else {
+      this.logger.warn(
+        "Outbox for @RemoteName is past its bound of @Cap operations; evicting @Count entries from ordinal @Floor, to be derived again once it drains",
+        remote.meta.name,
+        cap,
+        evicted.length,
+        floor,
+      );
+    }
 
     remote.channel.outbox.remove(...evicted);
+  }
+
+  /**
+   * How long a served remote's holder has been silent, if past the window.
+   *
+   * The channel is asked, rather than its config inspected: SyncManager serves
+   * and subscribes with the same interface, both kinds report lastSuccessUtcMs,
+   * and the caller-supplied channelConfig.type is a free-form string the
+   * factories do not read -- so neither could tell a dead served channel from a
+   * client whose switchboard is merely unreachable. Only a channel that claims
+   * a holder by reporting when it last heard from one can be removed for that
+   * holder's silence; a channel that reports nothing (or 0) is never pruned.
+   */
+  private stalePollAgeMs(remote: Remote): number | undefined {
+    const last = remote.channel.lastHolderPollUtcMs();
+    if (last === undefined || last <= 0) {
+      return undefined;
+    }
+
+    const age = Date.now() - last;
+    return age >= this.config.staleRemotePollWindowMs ? age : undefined;
+  }
+
+  /**
+   * Removes the remotes marked stale during eviction.
+   *
+   * Removing a remote that a derivation is still iterating would pull its
+   * mailboxes out from under it, so a drain that arrives during one is deferred
+   * rather than run; the last derivation to finish re-arms it.
+   */
+  private drainPrunes(): Promise<void> {
+    if (this.derivingOutboxes > 0) {
+      this.pruneDrainDeferred = true;
+      return Promise.resolve();
+    }
+
+    const next = this.pruneChain.then(async () => {
+      if (this.isShutdown) return;
+      for (const name of [...this.prunePending]) {
+        // Taken again per remote rather than once on the way in: this body
+        // runs behind the chain and across the awaits of each removal, so a
+        // derivation can have started since. From here to the `removing` mark
+        // inside remove() nothing yields, which is what closes the window.
+        if (this.derivingOutboxes > 0) {
+          this.pruneDrainDeferred = true;
+          return;
+        }
+
+        this.prunePending.delete(name);
+        const remote = this.remotes.get(name);
+        if (!remote) continue;
+
+        // The mark was made mid-derivation and is acted on after it. A poll in
+        // between is the holder saying it is still there -- and a first poll is
+        // slow precisely when the outbox is huge, which is the state that
+        // marked it -- so the decision is taken again here, against now.
+        if (this.stalePollAgeMs(remote) === undefined) {
+          this.logger.info(
+            "Stale removal of @name revoked: its holder polled while the outbox was being derived",
+            name,
+          );
+          continue;
+        }
+
+        try {
+          await this.remove(name);
+        } catch (error) {
+          this.logger.error(
+            "Failed to remove stale remote (@name, @error)",
+            name,
+            error instanceof Error ? error.message : String(error),
+          );
+        }
+      }
+    });
+    this.pruneChain = next.catch(() => {});
+    return next;
   }
 
   private outboxOperationCount(remote: Remote): number {
@@ -1049,10 +1262,35 @@ export class SyncManager implements ISyncManager {
     return count;
   }
 
+  /**
+   * Derives this remote's outbox, holding off prunes for the duration.
+   *
+   * A backfill elsewhere can finish at any await in here and drain the prunes
+   * it marked; the count is what keeps that drain from removing the remote this
+   * call is still adding to.
+   */
   private async updateOutbox(
     remote: Remote,
     ackOrdinal: number,
     mode: OutboxMode = OutboxMode.Backfill,
+    signal?: AbortSignal,
+  ): Promise<void> {
+    this.derivingOutboxes++;
+    try {
+      await this.deriveOutbox(remote, ackOrdinal, mode, signal);
+    } finally {
+      this.derivingOutboxes--;
+      if (this.derivingOutboxes === 0 && this.pruneDrainDeferred) {
+        this.pruneDrainDeferred = false;
+        void this.drainPrunes();
+      }
+    }
+  }
+
+  private async deriveOutbox(
+    remote: Remote,
+    ackOrdinal: number,
+    mode: OutboxMode,
     signal?: AbortSignal,
   ): Promise<void> {
     const composedSignal = signal

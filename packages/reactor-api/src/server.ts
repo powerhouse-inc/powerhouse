@@ -65,6 +65,7 @@ import {
 import {
   createGatewayAdapter,
   createHttpAdapter,
+  type GatewayAdapterType,
 } from "./graphql/gateway/factory.js";
 import {
   createRequireAuthFetchMiddleware,
@@ -387,6 +388,29 @@ function buildSyncServingGate(
     logger,
   );
 }
+/**
+ * Resolves the gateway adapter type from the `GATEWAY_ADAPTER` env var.
+ * Defaults to "apollo" (the federation gateway, production behavior).
+ * "stitching" selects the in-process graphql-tools merge gateway (#1565
+ * prototype); "mercurius" the Fastify federation gateway.
+ */
+function resolveGatewayAdapterType(logger: ILogger): GatewayAdapterType {
+  const configured = process.env.GATEWAY_ADAPTER;
+  if (configured === undefined) {
+    return "apollo";
+  }
+  if (
+    configured === "apollo" ||
+    configured === "mercurius" ||
+    configured === "stitching"
+  ) {
+    return configured;
+  }
+  logger.warn(
+    `Unknown GATEWAY_ADAPTER="${configured}"; falling back to "apollo"`,
+  );
+  return "apollo";
+}
 
 /**
  * Sets up the subgraph manager and registers subgraphs
@@ -425,7 +449,7 @@ async function setupGraphQLManager(
     syncManager,
     logger,
     httpAdapter,
-    await createGatewayAdapter("apollo", logger),
+    await createGatewayAdapter(resolveGatewayAdapterType(logger), logger),
     authService,
     documentPermissionService,
     {
@@ -865,6 +889,21 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
       requireAuthFetchMiddleware = createRequireAuthFetchMiddleware();
       logger.info(
         "Require-authenticated-caller middleware enabled: anonymous callers are rejected with a 401 before any subgraph",
+      );
+    } else {
+      // Auth is on in some form, so say plainly what it is not doing. The
+      // policy gates the reactor's own document reads; it does not gate a
+      // package-provided subgraph, which authorizes nothing on its own. This
+      // has always been true over HTTP, and WebSocket admission now matches it
+      // rather than refusing tokenless connections on AUTH_ENABLED alone --
+      // so a subscription reaches the same surface a query already did.
+      logger.warn(
+        "Anonymous callers are admitted on every transport, including WebSocket " +
+          "subscriptions: REQUIRE_AUTHENTICATED_CALLER is not set. The " +
+          "authorization policy gates the reactor's own documents, but a " +
+          "package-provided subgraph authorizes nothing on its own. Set " +
+          "REQUIRE_AUTHENTICATED_CALLER=true to refuse anonymous callers before " +
+          "any subgraph sees them.",
       );
     }
   }

@@ -33,7 +33,9 @@ export function useDispatch<TDocument = PHDocument, TAction = Action>(
     onSuccess?: (result: PHDocument) => void,
   ) {
     dispatchActions(actionOrActions, document, onErrors, onSuccess).catch(
-      logger.error,
+      (error: unknown) => {
+        logger.error("Failed to dispatch actions: @error", error);
+      },
     );
   }
   return [document, dispatch] as const;

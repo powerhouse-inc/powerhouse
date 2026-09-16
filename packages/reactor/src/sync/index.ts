@@ -51,6 +51,7 @@ export {
 
 export {
   ChannelError,
+  DriveRequestError,
   PollingChannelError,
   isDriveAuthError,
   isRecoverableGraphQLError,

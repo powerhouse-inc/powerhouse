@@ -60,6 +60,7 @@ import {
   type TypedGraphQLDocument,
 } from "./subgraph.js";
 import {
+  isAuthRefusalClose,
   makeAuthConnectionParams,
   startDocumentChangesSubscription,
   subscriptionsUrlFromGraphqlUrl,
@@ -174,6 +175,8 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
   private realtimeStarted = false;
   private realtimeGeneration = 0;
   private realtimeErrorLogged = false;
+  /** Whether the last socket died because the Switchboard refused its credentials. */
+  private realtimeRefusedCredentials = false;
 
   constructor(options: GraphQLReactorClientOptions) {
     this.tokenProvider = options.tokenProvider ?? ambientRenownTokenProvider;
@@ -510,10 +513,13 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
    * Gives up on a failed socket so that a later subscriber can try again.
    *
    * `graphql-ws` retries on its own and only reports here once it has given up,
-   * or once the server refused the subscription outright - which is what an
-   * auth-enabled Switchboard does to an anonymous subscriber. Keeping the dead
-   * stop function would make every later `subscribe` a no-op, so realtime would
-   * stay off for the life of the page even after the user signs in.
+   * or once the Switchboard refused the credentials the socket carried - which
+   * `shouldRetry` declines to retry at all. Keeping the dead stop function
+   * would make every later `subscribe` a no-op, so realtime would stay off for
+   * the life of the page even after the user signs in.
+   *
+   * Why it died is recorded: a refusal is undone by a credential change and
+   * nothing else, and {@link notifyCredentialsChanged} acts only on that.
    *
    * The generation stamp discards a report from a socket that has already been
    * replaced or disposed.
@@ -523,13 +529,49 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
       return;
     }
     this.teardownRealtime();
+    this.realtimeRefusedCredentials = isAuthRefusalClose(error);
     this.logRealtimeError(error);
+  }
+
+  /**
+   * Reopens realtime after a sign-in, a sign-out or a token swap.
+   *
+   * Call it whenever the credentials this client authenticates with change.
+   *
+   * A live socket is replaced. `connectionParams` are resolved once, when the
+   * socket opens, so a socket keeps presenting the credentials it was opened
+   * with until something closes it - and a sign-out closes nothing. That left
+   * a signed-out tab still receiving the previous identity's document changes,
+   * on a shared machine, for as long as the socket happened to survive.
+   *
+   * A refused socket is reopened, for the same reason from the other side:
+   * otherwise it stays closed until an unrelated component happens to
+   * `subscribe`, so signing in leaves realtime off with nothing said - the
+   * state `handleRealtimeFailure` resets to avoid.
+   *
+   * A socket that died for any other reason is left alone: a network failure
+   * is not something a new token fixes, and reopening one here would turn a
+   * credential change into a reconnect loop.
+   */
+  notifyCredentialsChanged(): void {
+    if (!this.realtimeStarted && !this.realtimeRefusedCredentials) {
+      return;
+    }
+    // Drops the old socket, and with it the old credentials, before any new
+    // one opens. `teardownRealtime` clears the refusal flag too.
+    this.teardownRealtime();
+    if (this.listeners.length === 0) {
+      // Nobody to deliver to. The next `subscribe` opens a socket anyway.
+      return;
+    }
+    this.startRealtime();
   }
 
   /** Closes the socket and lets a later subscriber open a new one. */
   private teardownRealtime(): void {
     this.realtimeGeneration += 1;
     this.realtimeStarted = false;
+    this.realtimeRefusedCredentials = false;
     this.stopRealtime?.();
     this.stopRealtime = undefined;
   }

@@ -33,6 +33,7 @@ import type {
   ViewFilter,
 } from "../shared/types.js";
 import type {
+  DocumentRelationship,
   IDocumentIndexer,
   IDocumentView,
   IKeyframeStore,
@@ -227,6 +228,44 @@ export interface IReactor {
   ): Promise<string[]>;
 
   /**
+   * Retrieves outgoing relationship edges from a source document, carrying the
+   * metadata and timestamps the document ids alone do not.
+   *
+   * @param sourceId - The source document id
+   * @param relationshipType - Optional relationship type to filter by
+   * @param paging - Optional pagination options
+   * @param consistencyToken - Optional token for read-after-write consistency
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The matching relationship edges
+   */
+  getOutgoingRelationshipEdges(
+    sourceId: string,
+    relationshipType?: string,
+    paging?: PagingOptions,
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
+  ): Promise<PagedResults<DocumentRelationship>>;
+
+  /**
+   * Retrieves incoming relationship edges to a target document, carrying the
+   * metadata and timestamps the document ids alone do not.
+   *
+   * @param targetId - The target document id
+   * @param relationshipType - Optional relationship type to filter by
+   * @param paging - Optional pagination options
+   * @param consistencyToken - Optional token for read-after-write consistency
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The matching relationship edges
+   */
+  getIncomingRelationshipEdges(
+    targetId: string,
+    relationshipType?: string,
+    paging?: PagingOptions,
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
+  ): Promise<PagedResults<DocumentRelationship>>;
+
+  /**
    * Retrieves the operations for a document
    *
    * @param documentId - The document id
@@ -378,9 +417,13 @@ export interface IReactor {
   /**
    * Adds a relationship between two documents.
    *
+   * Adding a relationship that already exists is a no-op, metadata included.
+   * Use {@link IReactor.updateRelationship} to change an existing edge.
+   *
    * @param sourceId - Source document id
    * @param targetId - Target document id
    * @param relationshipType - Relationship type identifier
+   * @param metadata - Optional metadata to attach to the relationship
    * @param branch - Branch to add the relationship to, defaults to "main"
    * @param signer - Optional signer to sign the actions
    * @param signal - Optional abort signal to cancel the request
@@ -390,6 +433,29 @@ export interface IReactor {
     sourceId: string,
     targetId: string,
     relationshipType: string,
+    metadata?: Record<string, unknown>,
+    branch?: string,
+    signer?: ISigner,
+    signal?: AbortSignal,
+  ): Promise<JobInfo>;
+
+  /**
+   * Replaces the metadata of an existing relationship, preserving its createdAt.
+   *
+   * @param sourceId - Source document id
+   * @param targetId - Target document id
+   * @param relationshipType - Relationship type identifier
+   * @param metadata - The metadata to store; null clears it
+   * @param branch - Branch holding the relationship, defaults to "main"
+   * @param signer - Optional signer to sign the actions
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The job id and status
+   */
+  updateRelationship(
+    sourceId: string,
+    targetId: string,
+    relationshipType: string,
+    metadata: Record<string, unknown> | null,
     branch?: string,
     signer?: ISigner,
     signal?: AbortSignal,
@@ -471,6 +537,21 @@ export interface ReactorModule {
  * direct access to internal components for advanced use cases, testing, or
  * integration scenarios.
  */
+/**
+ * A component that failed to build or catch up, and was started anyway.
+ *
+ * The reactor does not take itself down for one of these: a read model that
+ * cannot reach its database should not stop the writes. But it does serve
+ * reads that are silently incomplete, so the failure is recorded rather than
+ * only logged -- a host can refuse readiness on a non-empty list instead of
+ * reporting healthy while answering from an index that stopped at boot.
+ */
+export interface DegradedComponent {
+  /** Names the component that failed, e.g. `read model 0 (attachments)`. */
+  component: string;
+  error: Error;
+}
+
 export interface InProcessReactorModule extends ReactorModule {
   /**
    * The enforcement flags this reactor resolved, as plain booleans. Held on the
@@ -509,6 +590,11 @@ export interface InProcessReactorModule extends ReactorModule {
    * record per-pool acquire-wait and stat metrics.
    */
   pools: PoolInstrumentation[];
+  /**
+   * Components that failed to initialize and were started degraded. Empty on
+   * a clean boot. See {@link DegradedComponent}.
+   */
+  degradedComponents: DegradedComponent[];
 }
 
 /**

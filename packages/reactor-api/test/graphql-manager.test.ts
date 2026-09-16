@@ -27,6 +27,7 @@ import {
   createAuthFetchMiddleware,
   type AuthFetchMiddleware,
 } from "../src/graphql/gateway/auth-middleware.js";
+import type { IAuthorizationService } from "../src/services/authorization.service.js";
 import type {
   AdapterRouteHandle,
   FetchHandler,
@@ -216,6 +217,7 @@ type HarnessOptions = {
   enableDocumentModelSubgraphs?: boolean;
   reactorClient?: IReactorClient;
   logger?: ILogger;
+  authorizationService?: IAuthorizationService;
 };
 
 function makeHarness(options: HarnessOptions = {}) {
@@ -251,11 +253,12 @@ function makeHarness(options: HarnessOptions = {}) {
         options.enableDocumentModelSubgraphs ?? false,
     },
     4001,
-    createAuthorizationService({
-      admins: [],
-      defaultProtection: false,
-      policy: AuthorizationPolicy.OPEN,
-    }),
+    options.authorizationService ??
+      createAuthorizationService({
+        admins: [],
+        defaultProtection: false,
+        policy: AuthorizationPolicy.OPEN,
+      }),
   );
 
   return {
@@ -381,9 +384,12 @@ describe("GraphQLManager", () => {
   // ── drive info endpoint ────────────────────────────────────────────────────
 
   describe("drive info endpoint", () => {
-    async function getHandler(options: HarnessOptions = {}) {
+    async function getHandler(
+      options: HarnessOptions = {},
+      authMiddleware?: AuthFetchMiddleware,
+    ) {
       const harness = makeHarness(options);
-      await initAndFlush(harness.manager);
+      await initAndFlush(harness.manager, [], authMiddleware);
       const drivePath =
         (options.path === "/" || !options.path ? "" : options.path) +
         "/d/:drive";
@@ -477,6 +483,136 @@ describe("GraphQLManager", () => {
       );
       const body = (await res.json()) as { graphqlEndpoint: string };
       expect(body.graphqlEndpoint).toBe("http://example.com/graphql/r");
+    });
+
+    // ── authorization ──────────────────────────────────────────────────────
+    //
+    // Drive metadata is a document read. Before this gate the endpoint was
+    // mounted raw — outside every middleware — so it answered any anonymous
+    // caller with the drive's id, slug, name, icon and meta.
+
+    function denyingAuthorizationService(): IAuthorizationService {
+      return createAuthorizationService({
+        admins: [],
+        defaultProtection: false,
+        policy: AuthorizationPolicy.ADMIN_ONLY,
+      });
+    }
+
+    function authServiceFor(user: AuthContext["user"]): AuthService {
+      return {
+        authenticateRequest: vi.fn().mockResolvedValue({
+          user,
+          admins: [],
+          auth_enabled: true,
+        }),
+      } as unknown as AuthService;
+    }
+
+    it("refuses a drive the caller may not read", async () => {
+      const { handler } = await getHandler({
+        authorizationService: denyingAuthorizationService(),
+      });
+
+      const res = await handler(
+        new Request("http://localhost/d/my-drive", {
+          headers: { host: "localhost" },
+        }),
+      );
+
+      expect(res.status).toBe(404);
+    });
+
+    it("reports a refused drive as 'not found', never as forbidden", async () => {
+      // A 403 would confirm the drive exists, letting an anonymous caller
+      // enumerate protected drives by probing slugs. The refusal has to be
+      // byte-identical to the genuine miss.
+      const { handler: refused } = await getHandler({
+        authorizationService: denyingAuthorizationService(),
+      });
+      const { handler: missing } = await getHandler({
+        reactorClient: makeMockReactorClient({
+          get: vi.fn().mockRejectedValue(new Error("not found")),
+        }),
+      });
+
+      const refusedRes = await refused(
+        new Request("http://localhost/d/my-drive", {
+          headers: { host: "localhost" },
+        }),
+      );
+      const missingRes = await missing(
+        new Request("http://localhost/d/no-such-drive", {
+          headers: { host: "localhost" },
+        }),
+      );
+
+      expect(refusedRes.status).toBe(missingRes.status);
+      await expect(refusedRes.json()).resolves.toEqual(await missingRes.json());
+    });
+
+    it("withholds drive metadata from a caller who may not read it", async () => {
+      const { handler } = await getHandler({
+        authorizationService: denyingAuthorizationService(),
+      });
+
+      const res = await handler(
+        new Request("http://localhost/d/my-drive", {
+          headers: { host: "localhost" },
+        }),
+      );
+
+      const body = (await res.json()) as Record<string, unknown>;
+      expect(body).not.toHaveProperty("slug");
+      expect(body).not.toHaveProperty("name");
+      expect(body).not.toHaveProperty("icon");
+      expect(body).not.toHaveProperty("meta");
+      expect(body).not.toHaveProperty("graphqlEndpoint");
+    });
+
+    it("admits an authorized caller, resolving identity from the bearer", async () => {
+      const { handler } = await getHandler(
+        {
+          authorizationService: createAuthorizationService({
+            admins: ["0xadmin"],
+            defaultProtection: false,
+            policy: AuthorizationPolicy.ADMIN_ONLY,
+          }),
+        },
+        createAuthFetchMiddleware(
+          authServiceFor({
+            address: "0xadmin",
+            chainId: 1,
+            networkId: "mainnet",
+            appKey: "did:key:zadmin",
+          }),
+        ),
+      );
+
+      const res = await handler(
+        new Request("http://localhost/d/my-drive", {
+          headers: { host: "localhost" },
+        }),
+      );
+
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { graphqlEndpoint: string };
+      expect(typeof body.graphqlEndpoint).toBe("string");
+    });
+
+    it("stays open to anonymous callers under the OPEN policy", async () => {
+      // Drive discovery is the one read a client makes before it can
+      // authenticate: Connect reads graphqlEndpoint from here to register the
+      // sync remote. An unauthenticated switchboard must keep answering.
+      const { handler } = await getHandler();
+
+      const res = await handler(
+        new Request("http://localhost/d/my-drive", {
+          headers: { host: "localhost" },
+        }),
+      );
+
+      expect(res.status).toBe(200);
     });
   });
 

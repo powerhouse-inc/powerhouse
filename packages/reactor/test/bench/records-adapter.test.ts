@@ -1,4 +1,5 @@
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
@@ -12,6 +13,7 @@ import {
   buildMicroEntry,
   findTarget,
   sourceFilesFromVitest,
+  stampReadings,
   suiteLabel,
   suitesFromTinybench,
   suitesFromVitest,
@@ -268,7 +270,9 @@ describe("buildMicroEntry", () => {
     // is exactly what happened when the cache bench was fixed and this test
     // went on asserting the old text.
     const target = findTarget("cache");
-    const caveats = entryFor(target).caveats as string[];
+    const caveats = entryFor(target, {
+      derived: [{ name: "a harness reading", value: 1, unit: "us" }],
+    }).caveats as string[];
 
     expect(target.caveats.length).toBeGreaterThan(0);
     expect(caveats.slice(0, target.caveats.length)).toEqual(target.caveats);
@@ -301,6 +305,165 @@ describe("buildMicroEntry", () => {
     const entry = entryFor(findTarget("auth"), { suites });
 
     expect((entry.conclusions as string[])[0]).toContain("ran at");
+  });
+});
+
+/**
+ * A sidecar reading, in the shape write-cache.bench.ts files. Built here rather
+ * than checked in as a file so a change to the bench's payload breaks the test
+ * that asserts the recorder reads it.
+ */
+function reading(label: string, overrides: Record<string, unknown> = {}) {
+  return {
+    label,
+    wallCalls: 100,
+    bodyCalls: 100,
+    wallMs: 8,
+    bodyMs: 6,
+    wallUsPerCall: 80,
+    bodyUsPerWallCall: 60,
+    outsideUsPerWallCall: 20,
+    bodyUsPerBodyCall: 60,
+    bodySharePct: 75,
+    ...overrides,
+  };
+}
+
+function stampedSuites(labels: string[]): MicroSuite[] {
+  return labels.map((label) => ({
+    fullName: `bench/write-cache.bench.ts > Decomposition (${label})`,
+    cases: [
+      {
+        name: `${label}: instrumented cold-miss replay`,
+        rank: 1,
+        hz: 10,
+        meanMs: 100,
+        medianMs: 100,
+        minMs: 90,
+        maxMs: 110,
+        rmePct: 1,
+        sampleCount: 20,
+        totalTimeMs: 2000,
+      },
+    ],
+  }));
+}
+
+/** Writes a sidecar into a throwaway results directory and returns its path. */
+function withSidecar(stamps: unknown[]): string {
+  const directory = mkdtempSync(join(tmpdir(), "bench-stamps-"));
+  writeFileSync(
+    join(directory, "write-cache-stamps.json"),
+    JSON.stringify({ version: 1, stamps }),
+  );
+  return directory;
+}
+
+describe("stampReadings", () => {
+  it("carries a figure no case mean can hold into the entry", () => {
+    // The defect this exists for: the decomposition reached stdout and the
+    // record cited it anyway, so a reader had nothing to check.
+    const directory = withSidecar([reading("cold miss 100 ops")]);
+
+    const { derived } = stampReadings(
+      findTarget("cache"),
+      directory,
+      stampedSuites(["cold miss 100 ops"]),
+    );
+
+    expect(derived).toEqual([
+      {
+        name: "cold miss 100 ops: module.reducer wall",
+        value: 80,
+        unit: "us",
+        note: "Wall time of one module.reducer call, over 100 module.reducer calls totalling 8ms",
+      },
+      {
+        name: "cold miss 100 ops: reducer body in draft",
+        value: 60,
+        unit: "us",
+        note: "The custom reducer body, measured inside the mutative draft, per module.reducer call. 6ms over 100 state-reducer calls, or 60us each",
+      },
+      {
+        name: "cold miss 100 ops: create() draft+finalize+base",
+        value: 20,
+        unit: "us",
+        note: "Wall minus body per module.reducer call: everything create() and the base reducer do around the body, over 100 module.reducer calls totalling 8ms",
+      },
+      {
+        name: "cold miss 100 ops: reducer body share",
+        value: 75,
+        unit: "pct",
+        note: "Share of module.reducer wall time spent inside the custom reducer body",
+      },
+    ]);
+  });
+
+  it("reads nothing for a benchmark whose case means say it all", () => {
+    expect(stampReadings(findTarget("auth"), "nowhere", [])).toEqual({
+      derived: [],
+      caveats: [],
+    });
+  });
+
+  it("refuses to record a stamped benchmark whose sidecar is absent", () => {
+    expect(() =>
+      stampReadings(
+        findTarget("cache"),
+        join(tmpdir(), "bench-stamps-absent"),
+        stampedSuites(["cold miss 100 ops"]),
+      ),
+    ).toThrow("Run bench:cache:record first");
+  });
+
+  it("refuses a run whose stamped case filed no reading", () => {
+    const directory = withSidecar([reading("cold miss 100 ops")]);
+
+    expect(() =>
+      stampReadings(
+        findTarget("cache"),
+        directory,
+        stampedSuites(["cold miss 100 ops", "cold miss 2000 ops"]),
+      ),
+    ).toThrow("cold miss 2000 ops: instrumented cold-miss replay");
+  });
+
+  it("refuses a sidecar that outlived the suite that wrote it", () => {
+    // Stale readings are worse than none: they describe code that did not run.
+    const directory = withSidecar([
+      reading("cold miss 100 ops"),
+      reading("cold miss 5000 ops"),
+    ]);
+
+    expect(() =>
+      stampReadings(
+        findTarget("cache"),
+        directory,
+        stampedSuites(["cold miss 100 ops"]),
+      ),
+    ).toThrow("Readings with no case in the report");
+  });
+
+  it("earns a caveat when one wall call drove many body calls", () => {
+    // Then the two per-call means have different denominators and comparing
+    // them is the arithmetic that used to print a negative create() share.
+    const directory = withSidecar([
+      reading("cold miss 100 ops", { bodyCalls: 400 }),
+    ]);
+
+    const { caveats } = stampReadings(
+      findTarget("cache"),
+      directory,
+      stampedSuites(["cold miss 100 ops"]),
+    );
+
+    expect(caveats).toEqual([
+      "cold miss 100 ops: 100 module.reducer calls drove 400 state-reducer calls, so the body figure per module.reducer call aggregates more than one invocation and the two per-call means are not comparable",
+    ]);
+  });
+
+  it("keeps a stamped target from being recorded without its readings", () => {
+    expect(() => entryFor(findTarget("cache"))).toThrow("would drop it");
   });
 });
 

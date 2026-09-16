@@ -57,6 +57,11 @@ export class SyncBuilder {
     return this;
   }
 
+  withStaleRemotePollWindowMs(windowMs: number): this {
+    this.config.staleRemotePollWindowMs = windowMs;
+    return this;
+  }
+
   build(
     reactor: IReactor,
     logger: ILogger,

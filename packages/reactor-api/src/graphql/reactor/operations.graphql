@@ -13,6 +13,16 @@ fragment PHDocumentFields on PHDocument {
   lastModifiedAtUtcIso
 }
 
+# Fragment for the fields of a relationship edge
+fragment DocumentRelationshipFields on DocumentRelationship {
+  sourceId
+  targetId
+  relationshipType
+  metadata
+  createdAt
+  updatedAt
+}
+
 # Query operations
 query GetDocumentModels($namespace: String, $paging: PagingInput) {
   documentModels(namespace: $namespace, paging: $paging) {
@@ -125,6 +135,50 @@ query GetDocumentIncomingRelationships(
   ) {
     items {
       ...PHDocumentFields
+    }
+    totalCount
+    hasNextPage
+    hasPreviousPage
+    cursor
+  }
+}
+
+query GetDocumentOutgoingRelationshipEdges(
+  $sourceIdentifier: String!
+  $relationshipType: String
+  $view: ViewFilterInput
+  $paging: PagingInput
+) {
+  documentOutgoingRelationshipEdges(
+    sourceIdentifier: $sourceIdentifier
+    relationshipType: $relationshipType
+    view: $view
+    paging: $paging
+  ) {
+    items {
+      ...DocumentRelationshipFields
+    }
+    totalCount
+    hasNextPage
+    hasPreviousPage
+    cursor
+  }
+}
+
+query GetDocumentIncomingRelationshipEdges(
+  $targetIdentifier: String!
+  $relationshipType: String
+  $view: ViewFilterInput
+  $paging: PagingInput
+) {
+  documentIncomingRelationshipEdges(
+    targetIdentifier: $targetIdentifier
+    relationshipType: $relationshipType
+    view: $view
+    paging: $paging
+  ) {
+    items {
+      ...DocumentRelationshipFields
     }
     totalCount
     hasNextPage
@@ -307,12 +361,32 @@ mutation AddRelationship(
   $sourceIdentifier: String!
   $targetIdentifier: String!
   $relationshipType: String!
+  $metadata: JSONObject
   $branch: String
 ) {
   addRelationship(
     sourceIdentifier: $sourceIdentifier
     targetIdentifier: $targetIdentifier
     relationshipType: $relationshipType
+    metadata: $metadata
+    branch: $branch
+  ) {
+    ...PHDocumentFields
+  }
+}
+
+mutation UpdateRelationship(
+  $sourceIdentifier: String!
+  $targetIdentifier: String!
+  $relationshipType: String!
+  $metadata: JSONObject
+  $branch: String
+) {
+  updateRelationship(
+    sourceIdentifier: $sourceIdentifier
+    targetIdentifier: $targetIdentifier
+    relationshipType: $relationshipType
+    metadata: $metadata
     branch: $branch
   ) {
     ...PHDocumentFields

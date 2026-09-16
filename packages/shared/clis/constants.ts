@@ -201,6 +201,17 @@ export const packageJsonExports = {
     browser: "./dist/browser/processors/index.js",
     node: "./dist/node/processors/index.mjs",
   },
+  // Node only, as the build is: a piece is loaded by a host process, never by
+  // the browser. Without these a package can build a piece and still fail the
+  // `packageName/pieces` import a host resolves it through.
+  "./pieces": {
+    types: "./dist/types/pieces/index.d.ts",
+    node: "./dist/node/pieces/index.mjs",
+  },
+  "./pieces/*": {
+    types: "./dist/types/pieces/*/index.d.ts",
+    node: "./dist/node/pieces/*/index.mjs",
+  },
   "./manifest": "./dist/powerhouse.manifest.json",
   "./style.css": "./dist/style.css",
 } as const;

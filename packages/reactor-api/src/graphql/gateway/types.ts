@@ -13,9 +13,54 @@ export type GatewayContextFactory<TContext = unknown> = (
   request: Request,
 ) => Promise<TContext>;
 
+// Opaque per-connection key carrying what `onConnect` resolved to `context`.
+
+/** Under graphql-ws this is `ctx.extra`, created once per socket. */
+export type WsConnection = object;
+
+// Called per operation, so it must be pure: verifying belongs in `onConnect`.
 export type WsContextFactory<TContext = unknown> = (
   connectionParams: Record<string, unknown>,
+  connection: WsConnection,
 ) => Promise<TContext>;
+
+// Admits a connection once, at `ConnectionInit`; `false` closes 4403, retryable.
+
+// It must never throw: an escaping exception closes 4500, which is fatal.
+export type WsConnectHandler = (
+  connectionParams: Record<string, unknown>,
+  connection: WsConnection,
+) => Promise<boolean>;
+
+// One object, so no adapter can thread `context` without `onConnect`.
+export type WsHandlers<TContext = unknown> = {
+  onConnect: WsConnectHandler;
+  context: WsContextFactory<TContext>;
+};
+
+// Why a WebSocket handshake was refused, carried as the reason on a 4403 close.
+
+// A wire contract. A client reads these to tell an auth refusal -- which no
+// number of retries clears, only a credential change -- from a transient close.
+
+// Both stay 4403: graphql-ws keeps that code retryable, and a reconnect
+// re-evaluates `connectionParams`, so a socket refused before a sign-in does
+// succeed after one. 4401 would kill it before a fresh token could be offered.
+
+// Keep the values stable. A close reason caps at 123 UTF-8 bytes.
+
+/** No authenticated caller resolved, and REQUIRE_AUTHENTICATED_CALLER wants one. */
+export const WS_CLOSE_REASON_AUTHENTICATION_REQUIRED =
+  "authentication-required";
+
+/** A bearer was sent and could not be verified. */
+export const WS_CLOSE_REASON_BEARER_REJECTED = "bearer-rejected";
+
+/** Every reason a refusal closes with, for a client matching on the set. */
+export const WS_AUTH_CLOSE_REASONS = [
+  WS_CLOSE_REASON_AUTHENTICATION_REQUIRED,
+  WS_CLOSE_REASON_BEARER_REJECTED,
+] as const;
 
 export type WsDisposer = { dispose: () => void | Promise<void> };
 
@@ -42,13 +87,23 @@ export interface AdapterRouteHandle {
 }
 
 /**
- * A framework-agnostic description of a federated subgraph service.
- * Used by IGatewayAdapter.createSupergraphHandler() to compose the supergraph SDL.
+ * A framework-agnostic description of one subgraph.
+ * Used by IGatewayAdapter.createSupergraphHandler() to compose the supergraph:
+ * federation adapters treat it as a service to call over HTTP, while the
+ * stitching adapter merges its typeDefs and resolvers in-process.
  */
 export type SubgraphDefinition = {
   name: string;
   typeDefs: DocumentNode;
   url: string;
+  /**
+   * The subgraph's resolver map, in-process form. Optional: federation
+   * adapters (Apollo, Mercurius) execute subgraphs over HTTP and ignore this,
+   * while stitching-style adapters merge these resolvers directly into the
+   * supergraph schema. Subgraph authors never see this field - it is filled
+   * in by the gateway manager from the subgraph's own resolvers.
+   */
+  resolvers?: Record<string, unknown>;
 };
 
 export interface IGatewayAdapter<TContext = unknown> {
@@ -65,8 +120,10 @@ export interface IGatewayAdapter<TContext = unknown> {
   ): Promise<FetchHandler>;
 
   /**
-   * Create a federation gateway handler that composes all subgraphs into a supergraph.
-   * getSubgraphs is called eagerly (during setup) and again on every updateSupergraph() call.
+   * Create a handler that composes all subgraphs into a supergraph (a
+   * federation gateway, or a merged in-process schema under the stitching
+   * adapter). getSubgraphs is called eagerly (during setup) and again on every
+   * updateSupergraph() call.
    */
   createSupergraphHandler(
     getSubgraphs: () => SubgraphDefinition[],
@@ -75,17 +132,20 @@ export interface IGatewayAdapter<TContext = unknown> {
   ): Promise<FetchHandler>;
 
   /**
-   * Recompose the supergraph SDL from the current subgraph list and push the update
-   * to the running federation gateway. No-op if createSupergraphHandler() has not
-   * been called yet.
+   * Recompose the supergraph from the current subgraph list and push the update
+   * to the running gateway (a federation gateway, or a merged in-process schema
+   * under the stitching adapter). No-op if createSupergraphHandler() has not
+   * been called yet, or after stop().
    */
   updateSupergraph(): Promise<void>;
 
-  /** Attach WebSocket subscriptions. Returns a disposer. */
+  // Attach WebSocket subscriptions. Both halves of `handlers` must be passed on.
+
+  /** Without `onConnect`, refusing would mean throwing: an unretryable 4500. */
   attachWebSocket(
     wsServer: WebSocketServer,
     schema: GraphQLSchema,
-    contextFactory: WsContextFactory<TContext>,
+    handlers: WsHandlers<TContext>,
   ): WsDisposer;
 
   stop(): Promise<void>;

@@ -128,7 +128,7 @@ export class ConsoleLogger implements ILogger {
     return this.#level <= LOG_LEVELS.debug;
   }
 
-  verbose(message: string, ...replacements: any[]): void {
+  verbose = (message: string, ...replacements: any[]): void => {
     if (this.#level <= LOG_LEVELS.verbose) {
       const [formattedMessage, meta] = formatMessage(
         this.#tagString,
@@ -139,9 +139,9 @@ export class ConsoleLogger implements ILogger {
 
       console.debug(`[${meta["timestamp"]}] ${formattedMessage}`);
     }
-  }
+  };
 
-  debug(message: string, ...replacements: any[]): void {
+  debug = (message: string, ...replacements: any[]): void => {
     if (this.#level <= LOG_LEVELS.debug) {
       const [formattedMessage, meta] = formatMessage(
         this.#tagString,
@@ -152,9 +152,9 @@ export class ConsoleLogger implements ILogger {
 
       console.debug(`[${meta["timestamp"]}] ${formattedMessage}`);
     }
-  }
+  };
 
-  info(message: string, ...replacements: any[]): void {
+  info = (message: string, ...replacements: any[]): void => {
     if (this.#level <= LOG_LEVELS.info) {
       const [formattedMessage, meta] = formatMessage(
         this.#tagString,
@@ -165,9 +165,9 @@ export class ConsoleLogger implements ILogger {
 
       console.info(`[${meta["timestamp"]}] ${formattedMessage}`);
     }
-  }
+  };
 
-  warn(message: string, ...replacements: any[]): void {
+  warn = (message: string, ...replacements: any[]): void => {
     if (this.#level <= LOG_LEVELS.warn) {
       const [formattedMessage, meta] = formatMessage(
         this.#tagString,
@@ -178,9 +178,9 @@ export class ConsoleLogger implements ILogger {
 
       console.warn(`[${meta["timestamp"]}] ${formattedMessage}`);
     }
-  }
+  };
 
-  error(message: string, ...replacements: any[]): void {
+  error = (message: string, ...replacements: any[]): void => {
     if (this.#level <= LOG_LEVELS.error) {
       const [formattedMessage, meta] = formatMessage(
         this.#tagString,
@@ -191,7 +191,7 @@ export class ConsoleLogger implements ILogger {
 
       console.error(`[${meta["timestamp"]}] ${formattedMessage}`);
     }
-  }
+  };
 }
 
 // Singleton instance
