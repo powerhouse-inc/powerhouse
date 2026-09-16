@@ -177,6 +177,37 @@ test("package-flow: drive + document + edits propagate via switchboard", async (
 
   await page.goto(CONNECT_URL);
   await page.waitForLoadState("networkidle");
+
+  // What the page claims it can resolve, and whether the server agrees. A
+  // shared-dependency entry the map advertises but the deploy does not carry
+  // shows up only as an opaque MIME-type error, so check the vendor URLs
+  // directly and report the ones that are not real JavaScript.
+  const vendorReport = await page.evaluate(async () => {
+    const el = document.querySelector('script[type="importmap"]');
+    if (!el?.textContent) return { entries: 0, broken: [] as string[] };
+    const map = JSON.parse(el.textContent) as {
+      imports?: Record<string, string>;
+    };
+    const entries = Object.entries(map.imports ?? {});
+    const broken: string[] = [];
+    for (const [spec, url] of entries) {
+      try {
+        const res = await fetch(url, { method: "GET" });
+        const type = res.headers.get("content-type") ?? "";
+        if (!res.ok || type.includes("text/html")) {
+          broken.push(`${spec} -> ${url} [${res.status} ${type}]`);
+        }
+      } catch (e) {
+        broken.push(`${spec} -> ${url} [threw ${String(e)}]`);
+      }
+    }
+    return { entries: entries.length, broken };
+  });
+  console.log(
+    `[test] import map: ${vendorReport.entries} entries, ${vendorReport.broken.length} not served as JS`,
+  );
+  for (const b of vendorReport.broken) console.log(`[test]   broken: ${b}`);
+
   // Skeleton loader from the consumer scaffold can hang for a few seconds
   // while ph-packages.json fetches and React bootstraps.
   await page
