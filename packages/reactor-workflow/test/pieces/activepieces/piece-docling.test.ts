@@ -10,7 +10,7 @@ import {
   ActivepiecesBlockExecutor,
   StaticConnectionResolver,
   type SecretProvider,
-} from "../../src/index.js";
+} from "../../../src/pieces/index.js";
 import { startMockDocling, MOCK_MD, type MockDocling } from "./mock-docling-serve.js";
 
 const PIECE_PKG = path.resolve("../piece-docling");

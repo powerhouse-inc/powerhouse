@@ -1,6 +1,6 @@
-import { RelationalDbProcessor } from "@powerhousedao/reactor-browser";
+import { RelationalDbProcessor } from "@powerhousedao/shared/processors";
 import type { OperationWithContext } from "document-model";
-import { workflowRuntime } from "../../subgraphs/workflow-runtime/service.js";
+import { workflowRuntime } from "../../service.js";
 import { up } from "./migrations.js";
 import type { DB } from "./schema.js";
 

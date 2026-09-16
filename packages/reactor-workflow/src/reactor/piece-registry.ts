@@ -8,7 +8,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, isAbsolute, join } from "node:path";
 import { pathToFileURL } from "node:url";
-import type { LocalPiece, PackagePiece } from "@powerhousedao/reactor-connectors";
+import type { LocalPiece, PackagePiece } from "../pieces/index.js";
 import { childLogger } from "document-model";
 
 const logger = childLogger(["workflow", "piece-registry"]);

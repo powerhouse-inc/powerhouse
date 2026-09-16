@@ -2,8 +2,8 @@
 import {
   buildDescriptor,
   describeProperties,
-} from "../../src/activepieces/descriptor.js";
-import type { ApPiece, ApProperty } from "../../src/activepieces/types.js";
+} from "../../../src/pieces/activepieces/descriptor.js";
+import type { ApPiece, ApProperty } from "../../../src/pieces/activepieces/types.js";
 
 const noop = () => Promise.resolve(undefined);
 

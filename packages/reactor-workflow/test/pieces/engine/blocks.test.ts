@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CoreBlockExecutor } from "../../src/engine/blocks.js";
+import { CoreBlockExecutor } from "../../../src/pieces/engine/blocks.js";
 
 const core = new CoreBlockExecutor();
 

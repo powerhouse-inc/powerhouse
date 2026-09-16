@@ -7,8 +7,8 @@ import {
   PieceWorker,
   PieceWorkerError,
   PieceWorkerTimeoutError,
-} from "../../src/activepieces/worker/host.js";
-import type { ConnectorDescriptor } from "../../src/activepieces/descriptor.js";
+} from "../../../src/pieces/activepieces/worker/host.js";
+import type { ConnectorDescriptor } from "../../../src/pieces/activepieces/descriptor.js";
 
 const FIXTURES = {
   full: `

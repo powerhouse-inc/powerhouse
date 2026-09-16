@@ -6,12 +6,12 @@ import { join } from "node:path";
 import {
   PieceWorker,
   PieceWorkerError,
-} from "../../src/activepieces/worker/host.js";
-import type { PieceLogEntry } from "../../src/activepieces/worker/protocol.js";
-import { ActivepiecesBlockExecutor } from "../../src/engine/blocks.js";
-import { StaticConnectionResolver } from "../../src/engine/connections.js";
-import { InMemorySecretProvider } from "../../src/engine/secrets.js";
-import type { BlockExecution } from "../../src/engine/types.js";
+} from "../../../src/pieces/activepieces/worker/host.js";
+import type { PieceLogEntry } from "../../../src/pieces/activepieces/worker/protocol.js";
+import { ActivepiecesBlockExecutor } from "../../../src/pieces/engine/blocks.js";
+import { StaticConnectionResolver } from "../../../src/pieces/engine/connections.js";
+import { InMemorySecretProvider } from "../../../src/pieces/engine/secrets.js";
+import type { BlockExecution } from "../../../src/pieces/engine/types.js";
 
 const TOKEN = "ghp_9fA3kQ2xZ7rT1nP0bV6mL4sD8wJ5cH";
 

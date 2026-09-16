@@ -7,7 +7,7 @@ import {
   redact,
   redactError,
   redactMessage,
-} from "../../src/activepieces/worker/redact.js";
+} from "../../../src/pieces/activepieces/worker/redact.js";
 
 const TOKEN = "ghp_9fA3kQ2xZ7rT1nP0bV6mL4sD8wJ5cH";
 

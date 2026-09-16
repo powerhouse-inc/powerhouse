@@ -2,14 +2,14 @@
 // The bundle is fetched at runtime (CDN→npm, cached); skipped when offline.
 import http from "node:http";
 import type { AddressInfo } from "node:net";
-import { buildDescriptor } from "../../src/activepieces/descriptor.js";
-import { buildActionContext } from "../../src/activepieces/context/action.js";
+import { buildDescriptor } from "../../../src/pieces/activepieces/descriptor.js";
+import { buildActionContext } from "../../../src/pieces/activepieces/context/action.js";
 import {
   buildPropertyContext,
   resolveDynamicProperty,
-} from "../../src/activepieces/context/props.js";
-import { loadPieceFromDir } from "../../src/activepieces/loader.js";
-import { getActions } from "../../src/activepieces/types.js";
+} from "../../../src/pieces/activepieces/context/props.js";
+import { loadPieceFromDir } from "../../../src/pieces/activepieces/loader.js";
+import { getActions } from "../../../src/pieces/activepieces/types.js";
 import { fetchBundleForTest } from "./bundle-cache.js";
 
 const bundleDir = await fetchBundleForTest(

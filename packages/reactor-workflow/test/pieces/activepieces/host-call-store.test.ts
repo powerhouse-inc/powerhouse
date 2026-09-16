@@ -9,9 +9,9 @@ import { join } from "node:path";
 import {
   ActivepiecesBlockExecutor,
   type PieceStorePort,
-} from "../../src/engine/blocks.js";
-import type { BlockExecution } from "../../src/engine/types.js";
-import { PieceWorker } from "../../src/activepieces/worker/host.js";
+} from "../../../src/pieces/engine/blocks.js";
+import type { BlockExecution } from "../../../src/pieces/engine/types.js";
+import { PieceWorker } from "../../../src/pieces/activepieces/worker/host.js";
 
 // Reads a cursor and advances it item by item; each put is the checkpoint a
 // crash is supposed to preserve.

@@ -6,18 +6,33 @@ import {
   localFirstResolver,
   type PieceResolver,
   type ReactorPort,
-} from "@powerhousedao/reactor-connectors";
-import type { BlockExecution } from "@powerhousedao/reactor-connectors";
-import { build } from "esbuild";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+} from "../src/pieces/index.js";
+import type { BlockExecution } from "../src/pieces/index.js";
+import { existsSync } from "node:fs";
+import { createRequire } from "node:module";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { PieceRegistry } from "../../subgraphs/workflow-runtime/piece-registry.js";
+import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { PieceRegistry } from "../src/reactor/piece-registry.js";
 
 const PIECE = "@powerhousedao/piece-reactor";
-const packageRoot = fileURLToPath(new URL("../..", import.meta.url));
+const packageRoot = fileURLToPath(new URL("..", import.meta.url));
+
+// The piece ships built, so this runs against the module a reactor would load
+// rather than a second bundle of the same source.
+const require = createRequire(import.meta.url);
+function builtPieceRoot(): string | undefined {
+  let root: string;
+  try {
+    root = dirname(require.resolve("@powerhousedao/workflow/package.json"));
+  } catch {
+    return undefined;
+  }
+  return existsSync(join(root, "dist", "node", "pieces", "reactor", "index.mjs"))
+    ? root
+    : undefined;
+}
+const workflowRoot = builtPieceRoot();
 
 // Every call the piece made, and what the port answered with.
 function stubPort(): ReactorPort & { calls: string[] } {
@@ -87,41 +102,13 @@ function execution(block: string, config: unknown): BlockExecution {
 
 let registry: PieceRegistry;
 let resolver: PieceResolver;
-let built = "";
 let executor: ActivepiecesBlockExecutor;
 let port: ReturnType<typeof stubPort>;
 
-describe("the reactor piece", () => {
+describe.skipIf(!workflowRoot)("the reactor piece", () => {
   beforeAll(async () => {
-    // The shipped module is `ph-cli build`'s output; this bundles the same
-    // source the same way, so the suite neither waits for a full build nor
-    // silently passes on a stale one.
-    built = await mkdtemp(join(tmpdir(), "piece-reactor-"));
-    // A package root of the shape the registry reads: the manifest where the
-    // node build puts it, and the piece module where the manifest says.
-    const entry = "dist/node/pieces/reactor/index.mjs";
-    await build({
-      entryPoints: [join(packageRoot, "pieces", "reactor", "index.ts")],
-      bundle: true,
-      platform: "node",
-      format: "esm",
-      keepNames: true,
-      outfile: join(built, entry),
-      // A dependency still reaches for require(); the node build's bundler
-      // emits this shim itself, and without it the module throws on load.
-      banner: {
-        js: "import { createRequire as phRequire } from 'node:module';\nconst require = phRequire(import.meta.url);",
-      },
-      logLevel: "silent",
-    });
-    await writeFile(
-      join(built, "dist", "node", "pieces", "index.mjs"),
-      `export const pieces = ${JSON.stringify([
-        { name: PIECE, version: "1.0.0", entry },
-      ])};\n`,
-    );
     registry = new PieceRegistry();
-    await registry.load(built);
+    await registry.load(workflowRoot);
     resolver = localFirstResolver(registry.lookup, {
       resolve: () => Promise.reject(new Error("nothing is fetched in this test")),
     });
@@ -139,9 +126,8 @@ describe("the reactor piece", () => {
     });
   });
 
-  afterAll(async () => {
+  afterEach(() => {
     executor.dispose();
-    await rm(built, { recursive: true, force: true });
   });
 
   it("lists the document types the reactor holds", async () => {

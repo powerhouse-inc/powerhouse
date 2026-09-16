@@ -6,14 +6,14 @@
 // stack as the piece package's live suite:
 //   docker compose -f packages/piece-docling/test/e2e-compose.yml up -d
 //   pnpm --filter @powerhousedao/piece-docling build          # the bundle
-//   pnpm --filter @powerhousedao/reactor-connectors build     # the worker entry
+//   pnpm --filter @powerhousedao/reactor-workflow build     # the worker entry
 //   DOCLING_E2E_URL=http://localhost:5001 \
 //   DOCLING_E2E_API_KEY=docling-e2e-key \
-//   pnpm --filter @powerhousedao/reactor-connectors vitest run test/activepieces/piece-docling-e2e.test.ts
+//   pnpm --filter @powerhousedao/reactor-workflow vitest run test/pieces/activepieces/piece-docling-e2e.test.ts
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { PieceWorker, PieceWorkerError } from "../../src/activepieces/worker/host.js";
+import { PieceWorker, PieceWorkerError } from "../../../src/pieces/activepieces/worker/host.js";
 import path from "node:path";
 
 const PIECE_PKG = path.resolve("../piece-docling");

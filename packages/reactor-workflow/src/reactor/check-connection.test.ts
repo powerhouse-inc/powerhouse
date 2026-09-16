@@ -6,9 +6,9 @@ import {
   ensurePieceBundle,
   PieceWorkerTimeoutError,
   type PieceWorker,
-} from "@powerhousedao/reactor-connectors";
+} from "../pieces/index.js";
 import { createRelationalDb } from "@powerhousedao/shared/processors";
-import type * as ReactorConnectors from "@powerhousedao/reactor-connectors";
+import type * as ReactorConnectors from "../pieces/index.js";
 import type { Action, PHDocument } from "document-model";
 import {
   actions,
@@ -17,7 +17,7 @@ import {
   type ConnectionAuthType,
   type ConnectionDocument,
   type RecordCheckResultInput,
-} from "document-models/connection/v1";
+} from "@powerhousedao/workflow/document-models/connection";
 import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -34,7 +34,7 @@ import {
 
 // Bundle loads are redirected to a fixture cache (same layout as the real
 // one) so no test ever reaches the Activepieces cloud.
-vi.mock("@powerhousedao/reactor-connectors", async (importOriginal) => {
+vi.mock("../pieces/index.js", async (importOriginal) => {
   const actual = await importOriginal<typeof ReactorConnectors>();
   return { ...actual, ensurePieceBundle: vi.fn() };
 });
@@ -354,7 +354,7 @@ describe("WorkflowRuntimeService.checkConnection", () => {
     });
   });
 
-  // The worker's own timeout handling is covered in reactor-connectors; here
+  // The worker's own timeout handling is covered in src/pieces; here
   // only the mapping onto the mutation's wording, without waiting it out.
   it("records ERROR when the worker times the check out", async () => {
     const runtime = workflowRuntime as unknown as {

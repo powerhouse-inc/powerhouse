@@ -5,7 +5,7 @@
 // worker-trigger-store.test.ts.
 import http from "node:http";
 import type { AddressInfo } from "node:net";
-import { PieceWorker } from "../../src/activepieces/worker/host.js";
+import { PieceWorker } from "../../../src/pieces/activepieces/worker/host.js";
 import { fetchBundleForTest } from "./bundle-cache.js";
 
 const rssBundle = await fetchBundleForTest("@activepieces/piece-rss", "0.5.9");

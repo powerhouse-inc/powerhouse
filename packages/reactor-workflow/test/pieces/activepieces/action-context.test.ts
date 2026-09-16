@@ -2,7 +2,7 @@ import {
   buildActionContext,
   InMemoryKeyValueStore,
   UnsupportedContextMemberError,
-} from "../../src/activepieces/context/action.js";
+} from "../../../src/pieces/activepieces/context/action.js";
 
 describe("buildActionContext", () => {
   it("exposes the implemented tier: executionType, auth, propsValue, store", async () => {

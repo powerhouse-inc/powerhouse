@@ -7,12 +7,12 @@ import {
   UnsupportedAuthTypeError,
   type ConnectionRequest,
   type EngineConnectionResolver,
-} from "../../src/engine/connections.js";
+} from "../../../src/pieces/engine/connections.js";
 import {
   InMemorySecretProvider,
   SecretNotFoundError,
-} from "../../src/engine/secrets.js";
-import type { WorkflowDefinition } from "../../src/engine/types.js";
+} from "../../../src/pieces/engine/secrets.js";
+import type { WorkflowDefinition } from "../../../src/pieces/engine/types.js";
 
 describe("connection resolution", () => {
   const secrets = new InMemorySecretProvider({

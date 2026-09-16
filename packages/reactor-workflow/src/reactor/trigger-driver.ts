@@ -3,7 +3,7 @@
 import type {
   PieceWorkerResult,
   TriggerHookRequest,
-} from "@powerhousedao/reactor-connectors";
+} from "../pieces/index.js";
 import type { TriggerStateRow, WorkflowRunStore } from "./store.js";
 import type {
   PieceTriggerBinding,

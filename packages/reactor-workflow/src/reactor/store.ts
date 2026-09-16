@@ -1,6 +1,6 @@
 // Persisted run journal in the relational "workflow_runtime" namespace.
 // Dates are ISO text columns: PGlite parses `timestamp` as local time.
-import type { IRelationalDb } from "@powerhousedao/reactor-browser";
+import type { IRelationalDb } from "@powerhousedao/shared/processors";
 
 // Structural: the subgraph's relationalDb types against shared source while
 // this package resolves shared dist, so the nominal types never match.
@@ -12,7 +12,7 @@ import {
   redactMessage,
   type StepExecutionRecord,
   type WorkflowRunResult,
-} from "@powerhousedao/reactor-connectors";
+} from "../pieces/index.js";
 import { childLogger } from "document-model";
 import { randomUUID } from "node:crypto";
 import { PROJECT_SCOPE_KEY } from "./piece-store-port.js";

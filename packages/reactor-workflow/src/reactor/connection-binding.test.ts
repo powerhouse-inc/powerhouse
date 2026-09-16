@@ -5,9 +5,9 @@ import {
   ConnectionNotBoundError,
   declaredConnectionIds,
   InMemorySecretProvider,
-} from "@powerhousedao/reactor-connectors";
-import type { ConnectionDocument } from "document-models/connection/v1";
-import type { WorkflowState } from "document-models/workflow/v1";
+} from "../pieces/index.js";
+import type { ConnectionDocument } from "@powerhousedao/workflow/document-models/connection";
+import type { WorkflowState } from "@powerhousedao/workflow/document-models/workflow";
 import { describe, expect, it, vi } from "vitest";
 import {
   boundConnections,

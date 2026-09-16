@@ -33,16 +33,16 @@ import {
   type SecretProvider,
   type SecretStore,
   type WorkflowRunResult,
-} from "@powerhousedao/reactor-connectors";
+} from "../pieces/index.js";
 import { childLogger, type OperationWithContext } from "document-model";
 import {
   actions as connectionActions,
   type ConnectionDocument,
-} from "document-models/connection/v1";
+} from "@powerhousedao/workflow/document-models/connection";
 import type {
   WorkflowDocument,
   WorkflowState,
-} from "document-models/workflow/v1";
+} from "@powerhousedao/workflow/document-models/workflow";
 import {
   DOCUMENT_CREATE_BLOCK,
   DOCUMENT_CREATED_BLOCK,
@@ -104,9 +104,9 @@ import {
   resolveConnectionAuth,
   toWorkflowDefinition,
 } from "./lib.js";
-import { packageFromConnectorId } from "../../editors/connection-editor/piece-auth.js";
+import { packageFromConnectorId } from "./connector-id.js";
 import { SCHEDULE_BLOCK } from "./schedule.js";
-import type { AttachmentPort } from "@powerhousedao/reactor-connectors";
+import type { AttachmentPort } from "../pieces/index.js";
 import {
   createAttachmentPort,
   type AttachmentClientLike,

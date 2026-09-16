@@ -18,7 +18,7 @@ import {
   type PieceWorkerResult,
   type RecordedSchedule,
   type TriggerHookRequest,
-} from "@powerhousedao/reactor-connectors";
+} from "../pieces/index.js";
 import { childLogger } from "document-model";
 import { createHash } from "node:crypto";
 import { fetchingResolver } from "./lib.js";

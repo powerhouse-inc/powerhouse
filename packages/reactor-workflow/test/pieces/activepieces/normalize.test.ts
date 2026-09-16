@@ -6,8 +6,8 @@ import {
   toIsoDateTime,
   toNumber,
   type ApFileValue,
-} from "../../src/activepieces/context/normalize.js";
-import type { ApProperty } from "../../src/activepieces/types.js";
+} from "../../../src/pieces/activepieces/context/normalize.js";
+import type { ApProperty } from "../../../src/pieces/activepieces/types.js";
 
 describe("scalar coercions", () => {
   it("parses numeric strings and keeps everything else", () => {

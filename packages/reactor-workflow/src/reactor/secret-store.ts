@@ -1,6 +1,6 @@
 // Managed secrets in the relational "secrets" namespace, AES-256-GCM at rest;
 // master key from PH_SECRETS_MASTER_KEY or a generated key file.
-import type { IRelationalDb } from "@powerhousedao/reactor-browser";
+import type { IRelationalDb } from "@powerhousedao/shared/processors";
 import {
   parseSecretRef,
   secretRefFromId,
@@ -8,7 +8,7 @@ import {
   SecretNotFoundError,
   type SecretStat,
   type SecretStore,
-} from "@powerhousedao/reactor-connectors";
+} from "../pieces/index.js";
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";

@@ -5,8 +5,8 @@ import type { AddressInfo } from "node:net";
 import {
   buildActionContext,
   InMemoryConnectionsProvider,
-} from "../../src/activepieces/context/action.js";
-import { PieceWorker } from "../../src/activepieces/worker/host.js";
+} from "../../../src/pieces/activepieces/context/action.js";
+import { PieceWorker } from "../../../src/pieces/activepieces/worker/host.js";
 import { fetchBundleForTest } from "./bundle-cache.js";
 
 const gotifyBundle = await fetchBundleForTest(

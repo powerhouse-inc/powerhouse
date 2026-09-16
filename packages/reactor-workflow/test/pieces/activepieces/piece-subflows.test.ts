@@ -1,15 +1,15 @@
 // Spike S6b as a test: the design-time options channel, via the real adapter
 // modules and published bundle. Fetched at runtime (CDN→npm, cached); skipped offline.
-import { buildDescriptor } from "../../src/activepieces/descriptor.js";
+import { buildDescriptor } from "../../../src/pieces/activepieces/descriptor.js";
 import {
   buildPropertyContext,
   NotDynamicPropertyError,
   resolveByResolverId,
   resolveDynamicProperty,
-} from "../../src/activepieces/context/props.js";
-import { UnsupportedContextMemberError } from "../../src/activepieces/context/stubs.js";
-import { loadPieceFromDir } from "../../src/activepieces/loader.js";
-import { getTriggers } from "../../src/activepieces/types.js";
+} from "../../../src/pieces/activepieces/context/props.js";
+import { UnsupportedContextMemberError } from "../../../src/pieces/activepieces/context/stubs.js";
+import { loadPieceFromDir } from "../../../src/pieces/activepieces/loader.js";
+import { getTriggers } from "../../../src/pieces/activepieces/types.js";
 import { fetchBundleForTest } from "./bundle-cache.js";
 
 const bundleDir = await fetchBundleForTest(

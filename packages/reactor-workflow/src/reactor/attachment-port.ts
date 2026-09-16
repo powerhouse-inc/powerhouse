@@ -1,7 +1,7 @@
 // Adapts the reactor's attachment client to the engine's AttachmentPort: both
 // directions go through the filesystem, so a step's bytes never cross the
 // worker's JSON IPC channel.
-import type { AttachmentPort } from "@powerhousedao/reactor-connectors";
+import type { AttachmentPort } from "../pieces/index.js";
 import { childLogger } from "document-model";
 import { readFile, writeFile } from "node:fs/promises";
 

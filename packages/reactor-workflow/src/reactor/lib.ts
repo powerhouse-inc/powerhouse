@@ -18,12 +18,12 @@ import {
   type EgressPolicy,
   type SecretProvider,
   type WorkflowDefinition,
-} from "@powerhousedao/reactor-connectors";
+} from "../pieces/index.js";
 import type {
   ConnectionDocument,
   ConnectionState,
-} from "document-models/connection/v1";
-import type { WorkflowState } from "document-models/workflow/v1";
+} from "@powerhousedao/workflow/document-models/connection";
+import type { WorkflowState } from "@powerhousedao/workflow/document-models/workflow";
 import { childLogger } from "document-model";
 import { join } from "node:path";
 import {
@@ -33,7 +33,7 @@ import {
 } from "./run-scope.js";
 import { packagePieces } from "./piece-registry.js";
 import { SubgraphReactorPort } from "./reactor-port.js";
-import { packageFromConnectorId } from "../../editors/connection-editor/piece-auth.js";
+import { packageFromConnectorId } from "./connector-id.js";
 
 const pieceLogger = childLogger(["workflow", "piece"]);
 const connectionLogger = childLogger(["workflow", "connection"]);

@@ -2,7 +2,7 @@
 // sit below the coordinator. Attachment reads are authorized per document, and
 // the block executor is shared across concurrent runs, so the scope travels
 // with the async context rather than on the executor.
-import type { IPieceWorker } from "@powerhousedao/reactor-connectors";
+import type { IPieceWorker } from "../pieces/index.js";
 import { AsyncLocalStorage } from "node:async_hooks";
 
 export interface RunScope {

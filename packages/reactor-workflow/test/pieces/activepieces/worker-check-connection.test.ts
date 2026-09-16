@@ -7,8 +7,8 @@ import {
   PieceWorker,
   PieceWorkerError,
   PieceWorkerTimeoutError,
-} from "../../src/activepieces/worker/host.js";
-import type { CheckConnectionOutcome } from "../../src/activepieces/worker/protocol.js";
+} from "../../../src/pieces/activepieces/worker/host.js";
+import type { CheckConnectionOutcome } from "../../../src/pieces/activepieces/worker/protocol.js";
 
 const FIXTURES = {
   pass: `

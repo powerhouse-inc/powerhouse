@@ -1,6 +1,6 @@
 // What the runtime hands the supervisor for one workflow, plus the pure
 // helpers over it. Split out so drivers need not import the supervisor.
-import type { RecordedSchedule } from "@powerhousedao/reactor-connectors";
+import type { RecordedSchedule } from "../pieces/index.js";
 import { childLogger } from "document-model";
 import { createHash } from "node:crypto";
 import { cronIntervalMs, MIN_SCHEDULE_INTERVAL_MS } from "./schedule.js";

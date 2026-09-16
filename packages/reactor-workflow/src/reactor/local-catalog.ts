@@ -3,7 +3,7 @@
 // A published piece is described by a listing the cloud API serves; one that
 // ships inside a reactor package has no listing, so its descriptor — built in
 // the worker from the piece module — is the listing.
-import type { ConnectorDescriptor } from "@powerhousedao/reactor-connectors";
+import type { ConnectorDescriptor } from "../pieces/index.js";
 import type { BlockSearchHit } from "./block-search.js";
 import type {
   PieceActionsResult,

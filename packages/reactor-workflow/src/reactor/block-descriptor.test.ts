@@ -1,7 +1,7 @@
 // blockDescriptor over offline fixture pieces: the bundle is loaded in the
 // piece worker, so no piece module ever runs in this process.
-import { ensurePieceBundle } from "@powerhousedao/reactor-connectors";
-import type * as ReactorConnectors from "@powerhousedao/reactor-connectors";
+import { ensurePieceBundle } from "../pieces/index.js";
+import type * as ReactorConnectors from "../pieces/index.js";
 import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -10,7 +10,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 // Bundle loads are redirected to a fixture cache (same layout as the real
 // one) so no test ever reaches the Activepieces cloud.
-vi.mock("@powerhousedao/reactor-connectors", async (importOriginal) => {
+vi.mock("../pieces/index.js", async (importOriginal) => {
   const actual = await importOriginal<typeof ReactorConnectors>();
   return { ...actual, ensurePieceBundle: vi.fn() };
 });

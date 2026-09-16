@@ -5,10 +5,10 @@
 // across the IPC boundary. Skipped unless PAPERLESS_E2E_URL is set — same
 // stack as the piece package's live suite:
 //   docker compose -f packages/piece-paperless-ngx/test/e2e-compose.yml up -d
-//   pnpm --filter @powerhousedao/reactor-connectors build   # the worker entry
+//   pnpm --filter @powerhousedao/reactor-workflow build   # the worker entry
 //   PAPERLESS_E2E_URL=http://localhost:18000 \
 //   PAPERLESS_E2E_USER=admin PAPERLESS_E2E_PASSWORD=paperless-e2e \
-//   pnpm --filter @powerhousedao/reactor-connectors vitest run test/activepieces/piece-paperless.test.ts
+//   pnpm --filter @powerhousedao/reactor-workflow vitest run test/pieces/activepieces/piece-paperless.test.ts
 import http from "node:http";
 import type { AddressInfo } from "node:net";
 import { execFileSync } from "node:child_process";
@@ -16,7 +16,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "no
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { PieceWorker, PieceWorkerError } from "../../src/activepieces/worker/host.js";
+import { PieceWorker, PieceWorkerError } from "../../../src/pieces/activepieces/worker/host.js";
 
 const PIECE_PKG = path.resolve("../piece-paperless-ngx");
 const BUNDLE = path.join(PIECE_PKG, "dist");

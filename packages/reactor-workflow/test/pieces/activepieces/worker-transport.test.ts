@@ -3,13 +3,13 @@
 
 // A fake standing in for the connection is the whole point — the same seam a
 // pooled fork or a socket to another machine plugs into later.
-import { PieceWorker } from "../../src/activepieces/worker/host.js";
+import { PieceWorker } from "../../../src/pieces/activepieces/worker/host.js";
 import {
   type IPieceWorkerTransport,
   type TransportEvent,
   type TransportEventMap,
   type TransportListener,
-} from "../../src/activepieces/worker/transport.js";
+} from "../../../src/pieces/activepieces/worker/transport.js";
 
 type Reply = (message: Record<string, unknown>) => void;
 

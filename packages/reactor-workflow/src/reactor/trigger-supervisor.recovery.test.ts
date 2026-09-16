@@ -4,13 +4,13 @@ import { getDbClient } from "@powerhousedao/reactor-api";
 import type {
   PieceWorker,
   PieceWorkerResult,
-} from "@powerhousedao/reactor-connectors";
+} from "../pieces/index.js";
 import { createRelationalDb } from "@powerhousedao/shared/processors";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import type * as ReactorConnectors from "@powerhousedao/reactor-connectors";
+import type * as ReactorConnectors from "../pieces/index.js";
 
 // No bundle ever loads: the stub worker below answers for the piece.
-vi.mock("@powerhousedao/reactor-connectors", async (importOriginal) => {
+vi.mock("../pieces/index.js", async (importOriginal) => {
   const actual = await importOriginal<typeof ReactorConnectors>();
   return {
     ...actual,

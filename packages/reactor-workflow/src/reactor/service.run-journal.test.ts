@@ -1,6 +1,6 @@
 // The journal is best-effort: fire() owes its caller the run's own outcome,
 // whatever the store manages to record about it.
-import type { WorkflowRunResult } from "@powerhousedao/reactor-connectors";
+import type { WorkflowRunResult } from "../pieces/index.js";
 import { describe, expect, it } from "vitest";
 import { WorkflowRuntimeService } from "./service.js";
 

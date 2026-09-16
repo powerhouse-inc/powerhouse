@@ -13,7 +13,7 @@ import type {
   ReactorModelDetail,
   ReactorModelSummary,
   ReactorPort,
-} from "@powerhousedao/reactor-connectors";
+} from "../pieces/index.js";
 import { createAction, type Action, type PHDocument } from "document-model";
 
 const DRIVE_DOCUMENT_TYPE = "powerhouse/document-drive";

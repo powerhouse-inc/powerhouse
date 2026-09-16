@@ -6,7 +6,7 @@
 import type {
   PieceStorePort,
   StoreScopeName,
-} from "@powerhousedao/reactor-connectors";
+} from "../pieces/index.js";
 import { childLogger } from "document-model";
 import type { WorkflowRunStore } from "./store.js";
 

@@ -9,15 +9,15 @@ import { join } from "node:path";
 import {
   ActivepiecesBlockExecutor,
   type AttachmentPort,
-} from "../../src/engine/blocks.js";
-import type { BlockExecution } from "../../src/engine/types.js";
-import { PieceWorker } from "../../src/activepieces/worker/host.js";
+} from "../../../src/pieces/engine/blocks.js";
+import type { BlockExecution } from "../../../src/pieces/engine/types.js";
+import { PieceWorker } from "../../../src/pieces/activepieces/worker/host.js";
 import {
   DataUriFilesService,
   rewriteFileRefs,
   StagedFilesService,
-} from "../../src/activepieces/context/files.js";
-import { FileTooLargeError } from "../../src/activepieces/context/limits.js";
+} from "../../../src/pieces/activepieces/context/files.js";
+import { FileTooLargeError } from "../../../src/pieces/activepieces/context/limits.js";
 
 // Writes two files and nests one reference deep in the output, so the host's
 // rewrite has to walk the whole value rather than string-replace the JSON.

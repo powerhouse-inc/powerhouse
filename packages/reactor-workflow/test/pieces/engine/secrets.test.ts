@@ -5,7 +5,7 @@ import {
   parseSecretRef,
   SECRET_REF_PREFIX,
   secretRefFromId,
-} from "../../src/index.js";
+} from "../../../src/pieces/index.js";
 
 const ID = "9f2c4a1e8b7d40329fd1c05a6e83b217";
 

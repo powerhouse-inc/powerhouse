@@ -5,11 +5,11 @@ import type { AddressInfo } from "node:net";
 import {
   ActivepiecesBlockExecutor,
   CompositeBlockExecutor,
-} from "../../src/engine/blocks.js";
-import { StaticConnectionResolver } from "../../src/engine/connections.js";
-import { InMemorySecretProvider } from "../../src/engine/secrets.js";
-import { runWorkflow } from "../../src/engine/coordinator.js";
-import type { WorkflowDefinition } from "../../src/engine/types.js";
+} from "../../../src/pieces/engine/blocks.js";
+import { StaticConnectionResolver } from "../../../src/pieces/engine/connections.js";
+import { InMemorySecretProvider } from "../../../src/pieces/engine/secrets.js";
+import { runWorkflow } from "../../../src/pieces/engine/coordinator.js";
+import type { WorkflowDefinition } from "../../../src/pieces/engine/types.js";
 import {
   bundleCacheDir,
   fetchBundleForTest,

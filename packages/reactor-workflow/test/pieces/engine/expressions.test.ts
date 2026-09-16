@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   resolveExpressions,
   type ExpressionScope,
-} from "../../src/engine/expressions.js";
+} from "../../../src/pieces/engine/expressions.js";
 
 const scope: ExpressionScope = {
   trigger: { payload: { documentId: "doc-1", name: "", documentType: "a/b" } },

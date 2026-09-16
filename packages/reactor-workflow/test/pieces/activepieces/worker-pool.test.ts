@@ -5,12 +5,12 @@ import type { AddressInfo } from "node:net";
 import type {
   IPieceWorker,
   PieceWorkerResult,
-} from "../../src/activepieces/worker/host.js";
+} from "../../../src/pieces/activepieces/worker/host.js";
 import {
   PieceWorkerPool,
   PieceWorkerPoolBusyError,
   PieceWorkerSessionClosedError,
-} from "../../src/activepieces/worker/pool.js";
+} from "../../../src/pieces/activepieces/worker/pool.js";
 import { fetchBundleForTest } from "./bundle-cache.js";
 
 const httpBundle = await fetchBundleForTest(

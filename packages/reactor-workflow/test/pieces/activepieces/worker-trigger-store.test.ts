@@ -6,8 +6,8 @@
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { storeHandlers, type PieceStorePort } from "../../src/engine/blocks.js";
-import { PieceWorker } from "../../src/activepieces/worker/host.js";
+import { storeHandlers, type PieceStorePort } from "../../../src/pieces/engine/blocks.js";
+import { PieceWorker } from "../../../src/pieces/activepieces/worker/host.js";
 
 // Registers three "remote webhooks" one at a time, then optionally dies. Each
 // put is the checkpoint that decides whether an endpoint leaks at the provider.

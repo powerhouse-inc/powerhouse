@@ -1,6 +1,6 @@
 // One driver per way a trigger gets its input: a cron slot, a poll of the
 // piece, or an inbound request. The supervisor owns the row; these own the fire.
-import { extractDedupeKey } from "@powerhousedao/reactor-connectors";
+import { extractDedupeKey } from "../pieces/index.js";
 import { childLogger } from "document-model";
 import {
   MIN_SCHEDULE_INTERVAL_MS,

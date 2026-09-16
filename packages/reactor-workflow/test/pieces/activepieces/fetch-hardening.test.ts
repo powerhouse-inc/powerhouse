@@ -5,7 +5,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { gzipSync } from "node:zlib";
-import { ensurePieceBundle } from "../../src/activepieces/fetch.js";
+import { ensurePieceBundle } from "../../../src/pieces/activepieces/fetch.js";
 
 // One ustar file entry, padded to the 512-byte block size.
 function tarEntry(name: string, body: string): Buffer {

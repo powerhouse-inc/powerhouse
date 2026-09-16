@@ -3,10 +3,10 @@
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { ActivepiecesBlockExecutor } from "../../src/engine/blocks.js";
-import type { BlockExecution } from "../../src/engine/types.js";
-import { PieceWorker } from "../../src/activepieces/worker/host.js";
-import type { PieceLogEntry } from "../../src/activepieces/worker/protocol.js";
+import { ActivepiecesBlockExecutor } from "../../../src/pieces/engine/blocks.js";
+import type { BlockExecution } from "../../../src/pieces/engine/types.js";
+import { PieceWorker } from "../../../src/pieces/activepieces/worker/host.js";
+import type { PieceLogEntry } from "../../../src/pieces/activepieces/worker/protocol.js";
 
 const NOISY_FIXTURE = `
 const app = {

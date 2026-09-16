@@ -1,14 +1,14 @@
-import { CompositeBlockExecutor } from "../../src/engine/blocks.js";
-import { runWorkflow } from "../../src/engine/coordinator.js";
+import { CompositeBlockExecutor } from "../../../src/pieces/engine/blocks.js";
+import { runWorkflow } from "../../../src/pieces/engine/coordinator.js";
 import {
   lookupPath,
   resolveExpressions,
-} from "../../src/engine/expressions.js";
+} from "../../../src/pieces/engine/expressions.js";
 import type {
   BlockExecution,
   BlockExecutor,
   WorkflowDefinition,
-} from "../../src/engine/types.js";
+} from "../../../src/pieces/engine/types.js";
 
 // Fake executor: echoes resolved config; blockType "fake#fail" throws.
 class FakeExecutor implements BlockExecutor {
@@ -382,7 +382,7 @@ describe("runWorkflow", () => {
 
 describe("parseBlockType", () => {
   it("resolves versions inline or from the registry", async () => {
-    const { parseBlockType } = await import("../../src/engine/blocks.js");
+    const { parseBlockType } = await import("../../../src/pieces/engine/blocks.js");
     expect(
       parseBlockType("@activepieces/piece-http@0.11.19#send_request"),
     ).toEqual({
@@ -408,7 +408,7 @@ describe("parseBlockType", () => {
   });
 
   it("classifies trigger block types", async () => {
-    const { parseBlockType } = await import("../../src/engine/blocks.js");
+    const { parseBlockType } = await import("../../../src/pieces/engine/blocks.js");
     expect(
       parseBlockType("@activepieces/piece-rss@0.5.0#trigger:new_item"),
     ).toEqual({
@@ -434,7 +434,7 @@ describe("parseBlockType", () => {
 
   it("refuses to execute a trigger block type as a step", async () => {
     const { ActivepiecesBlockExecutor, TriggerBlockAsStepError } =
-      await import("../../src/engine/blocks.js");
+      await import("../../../src/pieces/engine/blocks.js");
     const executor = new ActivepiecesBlockExecutor({ cacheDir: "/tmp/na" });
     const blockType = "@activepieces/piece-rss@0.5.0#trigger:new_item";
     await expect(

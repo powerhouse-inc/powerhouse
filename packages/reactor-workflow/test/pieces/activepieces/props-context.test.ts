@@ -1,8 +1,8 @@
 import {
   buildPropertyContext,
   parseDynamicResolverId,
-} from "../../src/activepieces/context/props.js";
-import { UnsupportedContextMemberError } from "../../src/activepieces/context/stubs.js";
+} from "../../../src/pieces/activepieces/context/props.js";
+import { UnsupportedContextMemberError } from "../../../src/pieces/activepieces/context/stubs.js";
 
 describe("buildPropertyContext", () => {
   it("exposes searchValue, project identity, and injected providers", async () => {

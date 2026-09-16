@@ -3,9 +3,9 @@
 // built piece bundle, live mock docling-serve. The harness mirrors
 // check-connection.test.ts (same mocks, same subgraph shape).
 import { getDbClient, type BaseSubgraph } from "@powerhousedao/reactor-api";
-import { ensurePieceBundle } from "@powerhousedao/reactor-connectors";
+import { ensurePieceBundle } from "../pieces/index.js";
 import { createRelationalDb } from "@powerhousedao/shared/processors";
-import type * as ReactorConnectors from "@powerhousedao/reactor-connectors";
+import type * as ReactorConnectors from "../pieces/index.js";
 import type { Action, PHDocument } from "document-model";
 import {
   actions,
@@ -14,7 +14,7 @@ import {
   type ConnectionAuthType,
   type ConnectionDocument,
   type RecordCheckResultInput,
-} from "document-models/connection/v1";
+} from "@powerhousedao/workflow/document-models/connection";
 import { execFileSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync } from "node:fs";
 import { mkdtemp, rm } from "node:fs/promises";
@@ -25,7 +25,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it, vi, type Mock } from "vitest";
 
-vi.mock("@powerhousedao/reactor-connectors", async (importOriginal) => {
+vi.mock("../pieces/index.js", async (importOriginal) => {
   const actual = await importOriginal<typeof ReactorConnectors>();
   return { ...actual, ensurePieceBundle: vi.fn() };
 });

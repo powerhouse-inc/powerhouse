@@ -6,11 +6,11 @@ import {
   buildTriggerContext,
   runTriggerHook,
   TriggerHookNotImplementedError,
-} from "../../src/activepieces/context/trigger.js";
-import { InMemoryKeyValueStore } from "../../src/activepieces/context/action.js";
-import { buildDescriptor } from "../../src/activepieces/descriptor.js";
-import { loadPieceFromDir } from "../../src/activepieces/loader.js";
-import { getTriggers } from "../../src/activepieces/types.js";
+} from "../../../src/pieces/activepieces/context/trigger.js";
+import { InMemoryKeyValueStore } from "../../../src/pieces/activepieces/context/action.js";
+import { buildDescriptor } from "../../../src/pieces/activepieces/descriptor.js";
+import { loadPieceFromDir } from "../../../src/pieces/activepieces/loader.js";
+import { getTriggers } from "../../../src/pieces/activepieces/types.js";
 import { fetchBundleForTest } from "./bundle-cache.js";
 
 const rssBundle = await fetchBundleForTest("@activepieces/piece-rss", "0.5.9");

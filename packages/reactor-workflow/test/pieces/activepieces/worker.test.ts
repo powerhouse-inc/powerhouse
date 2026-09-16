@@ -6,7 +6,7 @@ import {
   PieceWorker,
   PieceWorkerError,
   PieceWorkerTimeoutError,
-} from "../../src/activepieces/worker/host.js";
+} from "../../../src/pieces/activepieces/worker/host.js";
 import { fetchBundleForTest } from "./bundle-cache.js";
 
 const httpBundle = await fetchBundleForTest(

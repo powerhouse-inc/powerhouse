@@ -4,7 +4,7 @@
 import { getDbClient } from "@powerhousedao/reactor-api";
 import { createRelationalDb } from "@powerhousedao/shared/processors";
 import { beforeAll, describe, expect, it, vi } from "vitest";
-import type { IRelationalDb } from "@powerhousedao/reactor-browser";
+import type { IRelationalDb } from "@powerhousedao/shared/processors";
 import { WorkflowRuntimeService } from "./service.js";
 import {
   ORPHANED_RUN_ERROR,

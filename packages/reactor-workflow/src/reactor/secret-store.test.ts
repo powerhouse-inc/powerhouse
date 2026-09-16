@@ -10,7 +10,7 @@ import {
   InvalidSecretRefError,
   SecretDeletedError,
   SecretNotFoundError,
-} from "@powerhousedao/reactor-connectors";
+} from "../pieces/index.js";
 import {
   LocalEncryptedSecretStore,
   type SecretRow,

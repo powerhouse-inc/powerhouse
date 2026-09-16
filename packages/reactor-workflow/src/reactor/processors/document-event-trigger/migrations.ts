@@ -1,17 +1,12 @@
-import type { IRelationalDb } from "@powerhousedao/reactor-browser";
+import type { DB } from "./schema.js";
+import type { IRelationalDb } from "@powerhousedao/shared/processors";
 
-export async function up(db: IRelationalDb<any>): Promise<void> {
-  // Create table
-  await db.schema
-    .createTable("todo")
-    .addColumn("task", "varchar(255)")
-    .addColumn("status", "boolean")
-    .addPrimaryKeyConstraint("todo_pkey", ["task"])
-    .ifNotExists()
-    .execute();
+// The processor keeps no tables of its own: it forwards operations to the
+// runtime, whose own stores own their schema.
+export function up(_db: IRelationalDb<DB>): Promise<void> {
+  return Promise.resolve();
 }
 
-export async function down(db: IRelationalDb<any>): Promise<void> {
-  // drop table
-  await db.schema.dropTable("todo").execute();
+export function down(_db: IRelationalDb<DB>): Promise<void> {
+  return Promise.resolve();
 }

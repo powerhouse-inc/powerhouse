@@ -5,10 +5,10 @@ import path from "node:path";
 import {
   ensurePieceBundle,
   fetchPieceBundle,
-} from "../../src/activepieces/fetch.js";
-import { buildDescriptor } from "../../src/activepieces/descriptor.js";
-import { loadPieceFromDir } from "../../src/activepieces/loader.js";
-import { getActions } from "../../src/activepieces/types.js";
+} from "../../../src/pieces/activepieces/fetch.js";
+import { buildDescriptor } from "../../../src/pieces/activepieces/descriptor.js";
+import { loadPieceFromDir } from "../../../src/pieces/activepieces/loader.js";
+import { getActions } from "../../../src/pieces/activepieces/types.js";
 import { bundleCacheDir, fetchBundleForTest } from "./bundle-cache.js";
 
 const online = Boolean(

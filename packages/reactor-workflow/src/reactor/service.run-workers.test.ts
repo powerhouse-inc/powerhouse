@@ -1,6 +1,6 @@
 // Every run gets a worker of its own, for the length of that run: the wiring
 // between the pool and the block executor is the run scope, not the executor.
-import { PieceWorkerPool } from "@powerhousedao/reactor-connectors";
+import { PieceWorkerPool } from "../pieces/index.js";
 import { describe, expect, it } from "vitest";
 import { currentPieceWorker } from "./run-scope.js";
 import { WorkflowRuntimeService } from "./service.js";

@@ -8,13 +8,13 @@ import { join } from "node:path";
 import {
   PieceWorker,
   PieceWorkerError,
-} from "../../src/activepieces/worker/host.js";
-import type { EgressPolicy } from "../../src/activepieces/worker/protocol.js";
+} from "../../../src/pieces/activepieces/worker/host.js";
+import type { EgressPolicy } from "../../../src/pieces/activepieces/worker/protocol.js";
 import {
   isEgressDenied,
   isPrivateAddress,
   parseAddress,
-} from "../../src/activepieces/worker/egress.js";
+} from "../../../src/pieces/activepieces/worker/egress.js";
 
 // Every action reports the failure rather than throwing, so the assertions can
 // read the message the piece would have caught.

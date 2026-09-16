@@ -1,20 +1,32 @@
 import type {
-  IProcessorHostModule,
+  IRelationalDb,
   ProcessorApp,
-  ProcessorFactoryBuilder,
   ProcessorFilter,
-} from "@powerhousedao/reactor-browser";
+  ProcessorRecord,
+} from "@powerhousedao/shared/processors";
 import type { PHDocumentHeader } from "document-model";
-import { workflowRuntime } from "../../subgraphs/workflow-runtime/service.js";
+import type { AttachmentClientLike } from "../../attachment-port.js";
+import { workflowRuntime } from "../../service.js";
 import { DocumentEventTrigger } from "./processor.js";
+
+// What the factory needs from the host module, named structurally so the engine
+// does not depend on either host's module type.
+export interface DocumentEventTriggerHost {
+  relationalDb: IRelationalDb;
+  attachments: AttachmentClientLike;
+}
 
 // One live instance serves every drive: the manager routes operations by
 // filter, not drive, so per-drive instances would each deliver every op.
 let live: DocumentEventTrigger | undefined;
 
-export const documentEventTriggerFactoryBuilder: ProcessorFactoryBuilder =
-  (module: IProcessorHostModule) =>
-  async (driveHeader: PHDocumentHeader, _processorApp?: ProcessorApp) => {
+export function documentEventTriggerFactoryBuilder(
+  module: DocumentEventTriggerHost,
+) {
+  return async (
+    driveHeader: PHDocumentHeader,
+    _processorApp?: ProcessorApp,
+  ): Promise<ProcessorRecord[]> => {
     if (live) return [];
 
     const namespace = DocumentEventTrigger.getNamespace(driveHeader.id);
@@ -63,3 +75,4 @@ export const documentEventTriggerFactoryBuilder: ProcessorFactoryBuilder =
       },
     ];
   };
+}

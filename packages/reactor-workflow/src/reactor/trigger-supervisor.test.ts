@@ -1,7 +1,7 @@
 // Supervisor over a real PGlite-backed store and the real worker + rss piece:
 // enable/poll/fire/disable, error backoff, and the zombie-row guard.
 import { getDbClient } from "@powerhousedao/reactor-api";
-import { fetchPieceBundle } from "@powerhousedao/reactor-connectors";
+import { fetchPieceBundle } from "../pieces/index.js";
 import { createRelationalDb } from "@powerhousedao/shared/processors";
 import http from "node:http";
 import type { AddressInfo } from "node:net";
