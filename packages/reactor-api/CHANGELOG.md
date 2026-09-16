@@ -1,3 +1,19 @@
+## 6.2.3-dev.10 (2026-09-16)
+
+### 🚀 Features
+
+- **reactor-api:** relationship metadata over GraphQL, and edge-shaped reads ([619c16537](https://github.com/powerhouse-inc/powerhouse/commit/619c16537))
+
+### 🩹 Fixes
+
+- **reactor-api:** a filtered page counts what it serves ([9cade568e](https://github.com/powerhouse-inc/powerhouse/commit/9cade568e))
+- **reactor-api:** the job subscription's result is nullable, like the query's ([b3bb5bb02](https://github.com/powerhouse-inc/powerhouse/commit/b3bb5bb02))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5
+
 ## 6.2.3-dev.9 (2026-09-15)
 
 This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
