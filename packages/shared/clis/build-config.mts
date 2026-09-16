@@ -1,8 +1,8 @@
 import { esmExternalRequirePlugin } from "rolldown/plugins";
 import type { InlineConfig } from "tsdown";
 import {
+  EXTERNALIZABLE_SHARED_SPECIFIERS,
   findSharedImports,
-  SHARED_DEP_SPECIFIERS,
 } from "../connect/shared-deps.js";
 
 const entry = [
@@ -83,7 +83,11 @@ const sourcemap = true;
 // checks and double the download). One regexp per specifier covers the root
 // and every subpath (rolldown `external` accepts strings and regexps, not
 // function matchers, in this toolchain).
-const sharedNeverBundle = SHARED_DEP_SPECIFIERS.map(
+//
+// Only the specifiers the vendor publishes are externalized — see
+// EXTERNALIZABLE_SHARED_SPECIFIERS. Externalizing one the import map has no
+// entry for would leave an unresolvable bare specifier in the output.
+const sharedNeverBundle = EXTERNALIZABLE_SHARED_SPECIFIERS.map(
   (s) => new RegExp(`^${s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(/.*)?$`),
 );
 

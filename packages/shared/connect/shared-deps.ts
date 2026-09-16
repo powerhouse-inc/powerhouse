@@ -50,6 +50,24 @@ export const SHARED_SUBPATHS: readonly string[] = [
   "registry/manifest-slim",
 ];
 
+/**
+ * The specifiers a package build may safely externalize onto the host's
+ * import map — i.e. the ones the vendor actually publishes an entry for.
+ *
+ * `@powerhousedao/shared` is narrowed to SHARED_SUBPATHS rather than taken as
+ * a prefix: the bare root is never vendored (see SHARED_SUBPATHS), and
+ * neither are its other subpaths (`analytics`, `constants`, `clis`, ...).
+ * Externalizing those would leave a bare specifier in the package's output
+ * that nothing in the import map resolves, so the package would fail to load
+ * at runtime instead of simply bundling its own copy.
+ */
+export const EXTERNALIZABLE_SHARED_SPECIFIERS: readonly string[] = [
+  ...new Set([
+    ...SHARED_DEP_SPECIFIERS.filter((s) => s !== "@powerhousedao/shared"),
+    ...SHARED_SUBPATHS.map((s) => `@powerhousedao/shared/${s}`),
+  ]),
+];
+
 /** Split a specifier into its package name and subpath ("" for a root). */
 export function parseDepSpec(spec: string): { pkg: string; sub: string } {
   if (spec.startsWith("@")) {
@@ -119,17 +137,22 @@ export function rewritePackageSource(
     return null;
   };
   let out = source;
+  // The quote character is captured and reused: a source that quotes its
+  // specifiers with ' would otherwise never match the replacement and be
+  // left un-rewritten — silently, since the specifier still maps.
   for (const re of [
-    /\bfrom\s+["']([^"'\\]+)["']/g,
-    /\bimport\s+["']([^"'\\]+)["']/g,
-    /\bimport\s*\(\s*["']([^"'\\]+)["']\s*\)/g,
+    /\bfrom\s+(["'])([^"'\\]+)\1/g,
+    /\bimport\s+(["'])([^"'\\]+)\1/g,
+    /\bimport\s*\(\s*(["'])([^"'\\]+)\1\s*\)/g,
   ]) {
-    out = out.replace(re, (match, spec: string) => {
+    out = out.replace(re, (match, quote: string, spec: string) => {
       // The match contains the quoted specifier exactly once and the
       // captured group has no quotes/backslashes ([^"'\\]), so a literal
       // replace is safe.
       const mapped = map(spec);
-      return mapped ? match.replace(`"${spec}"`, `"${mapped}"`) : match;
+      return mapped
+        ? match.replace(`${quote}${spec}${quote}`, `${quote}${mapped}${quote}`)
+        : match;
     });
   }
   return out;

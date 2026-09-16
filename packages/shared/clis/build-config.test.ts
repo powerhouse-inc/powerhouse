@@ -33,6 +33,32 @@ describe("buildBrowserBuildConfig", () => {
     expect(matches("@powerhousedao/sharedxyz")).toBe(false);
   });
 
+  // The vendor publishes no import-map entry for the bare `@powerhousedao/shared`
+  // root or for subpaths outside SHARED_SUBPATHS. Externalizing those would
+  // leave a bare specifier in the built package that nothing resolves, so the
+  // package fails to load in Connect instead of just bundling its own copy.
+  it("does not externalize the bare @powerhousedao/shared root", () => {
+    const regexps = sharedMatchers(buildBrowserBuildConfig());
+    const matches = (id: string) => regexps.some((r) => r.test(id));
+    expect(matches("@powerhousedao/shared")).toBe(false);
+  });
+
+  it("does not externalize unvendored @powerhousedao/shared subpaths", () => {
+    const regexps = sharedMatchers(buildBrowserBuildConfig());
+    const matches = (id: string) => regexps.some((r) => r.test(id));
+    expect(matches("@powerhousedao/shared/analytics")).toBe(false);
+    expect(matches("@powerhousedao/shared/constants")).toBe(false);
+    expect(matches("@powerhousedao/shared/clis")).toBe(false);
+  });
+
+  it("still externalizes the vendored @powerhousedao/shared subpaths", () => {
+    const regexps = sharedMatchers(buildBrowserBuildConfig());
+    const matches = (id: string) => regexps.some((r) => r.test(id));
+    expect(matches("@powerhousedao/shared/connect")).toBe(true);
+    expect(matches("@powerhousedao/shared/document-model")).toBe(true);
+    expect(matches("@powerhousedao/shared/registry/manifest-slim")).toBe(true);
+  });
+
   it("keeps the react string externals in the default config", () => {
     const neverBundle = buildBrowserBuildConfig().deps!.neverBundle as string[];
     for (const spec of [

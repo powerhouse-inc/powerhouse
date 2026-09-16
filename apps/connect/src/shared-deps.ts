@@ -1,4 +1,4 @@
-import { DYNAMIC_BASE_PLACEHOLDER } from "@powerhousedao/builder-tools";
+import { DYNAMIC_BASE_PLACEHOLDER } from "@powerhousedao/shared/connect";
 
 export type SharedDeps = {
   imports: Record<string, string>;

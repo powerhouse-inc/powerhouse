@@ -1,19 +1,29 @@
 import { describe, expect, it } from "vitest";
 import {
   checkSharedDeps,
+  EXTERNALIZABLE_SHARED_SPECIFIERS,
   findSharedImports,
   formatSharedDepWarnings,
   parseDepSpec,
   rewritePackageSource,
   SHARED_DEP_SPECIFIERS,
+  SHARED_SUBPATHS,
 } from "./shared-deps.js";
 
 describe("parseDepSpec", () => {
   const cases: Array<[spec: string, pkg: string, sub: string]> = [
     ["document-model", "document-model", ""],
     ["@powerhousedao/shared", "@powerhousedao/shared", ""],
-    ["@powerhousedao/shared/registry/urls", "@powerhousedao/shared", "registry/urls"],
-    ["@powerhousedao/reactor-browser/rpc", "@powerhousedao/reactor-browser", "rpc"],
+    [
+      "@powerhousedao/shared/registry/urls",
+      "@powerhousedao/shared",
+      "registry/urls",
+    ],
+    [
+      "@powerhousedao/reactor-browser/rpc",
+      "@powerhousedao/reactor-browser",
+      "rpc",
+    ],
   ];
 
   for (const [spec, pkg, sub] of cases) {
@@ -126,7 +136,8 @@ describe("checkSharedDeps", () => {
           dependencies: {
             "document-model": "*",
             zod: "workspace:*",
-            "document-engineering": "npm:@powerhousedao/document-engineering@1.0.0",
+            "document-engineering":
+              "npm:@powerhousedao/document-engineering@1.0.0",
             "document-model-x": "file:../local",
           },
         },
@@ -155,7 +166,10 @@ describe("checkSharedDeps", () => {
 
   it("ignores invalid range strings instead of throwing", () => {
     expect(
-      checkSharedDeps({ dependencies: { "document-model": "not a range" } }, host),
+      checkSharedDeps(
+        { dependencies: { "document-model": "not a range" } },
+        host,
+      ),
     ).toEqual([]);
   });
 });
@@ -164,7 +178,11 @@ describe("formatSharedDepWarnings", () => {
   it("produces one readable line per mismatch", () => {
     expect(
       formatSharedDepWarnings([
-        { package: "document-model", required: "^6.3.0", provided: "6.2.3-dev.8" },
+        {
+          package: "document-model",
+          required: "^6.3.0",
+          provided: "6.2.3-dev.8",
+        },
       ]),
     ).toEqual([
       "document-model: requires ^6.3.0, Connect provides 6.2.3-dev.8",
@@ -176,8 +194,79 @@ describe("SHARED_DEP_SPECIFIERS", () => {
   it("covers the documented shared set", () => {
     expect(SHARED_DEP_SPECIFIERS).toContain("document-model");
     expect(SHARED_DEP_SPECIFIERS).toContain("@powerhousedao/reactor-browser");
-    expect(SHARED_DEP_SPECIFIERS).toContain("@powerhousedao/shared/registry/urls");
+    expect(SHARED_DEP_SPECIFIERS).toContain(
+      "@powerhousedao/shared/registry/urls",
+    );
     expect(SHARED_DEP_SPECIFIERS).not.toContain("@powerhousedao/connect");
     expect(SHARED_DEP_SPECIFIERS).toHaveLength(6);
+  });
+});
+
+describe("rewritePackageSource quoting", () => {
+  const imports = { "document-model": "https://host/__vendor__/dm.js" };
+  const url = "https://cdn.example/pkg/index.js";
+
+  // Regression: the replacement used to hardcode double quotes, so a
+  // single-quoted specifier matched the scan but was silently left alone.
+  // In a worker (no import map) the bare specifier is then unresolvable and
+  // the package fails to load.
+  it("rewrites single-quoted specifiers", () => {
+    expect(
+      rewritePackageSource("import { x } from 'document-model';", url, imports),
+    ).toBe(`import { x } from 'https://host/__vendor__/dm.js';`);
+  });
+
+  it("rewrites single-quoted side-effect and dynamic imports", () => {
+    expect(rewritePackageSource("import 'document-model';", url, imports)).toBe(
+      `import 'https://host/__vendor__/dm.js';`,
+    );
+    expect(
+      rewritePackageSource("await import('document-model');", url, imports),
+    ).toBe(`await import('https://host/__vendor__/dm.js');`);
+  });
+
+  it("rewrites single-quoted relative specifiers against the source URL", () => {
+    expect(rewritePackageSource("export * from './a.js';", url, imports)).toBe(
+      `export * from 'https://cdn.example/pkg/a.js';`,
+    );
+  });
+
+  it("still rewrites double-quoted specifiers", () => {
+    expect(
+      rewritePackageSource('import { x } from "document-model";', url, imports),
+    ).toBe('import { x } from "https://host/__vendor__/dm.js";');
+  });
+
+  it("leaves mismatched quotes alone rather than producing broken output", () => {
+    const src = `import { x } from "document-model';`;
+    expect(rewritePackageSource(src, url, imports)).toBe(src);
+  });
+});
+
+describe("EXTERNALIZABLE_SHARED_SPECIFIERS", () => {
+  // The vendor never publishes an entry for the bare root or for subpaths
+  // outside SHARED_SUBPATHS, so externalizing them would leave an
+  // unresolvable bare specifier in a package's built output.
+  it("omits the bare @powerhousedao/shared root", () => {
+    expect(EXTERNALIZABLE_SHARED_SPECIFIERS).not.toContain(
+      "@powerhousedao/shared",
+    );
+  });
+
+  it("lists only the vendored shared subpaths", () => {
+    const shared = EXTERNALIZABLE_SHARED_SPECIFIERS.filter((s) =>
+      s.startsWith("@powerhousedao/shared"),
+    );
+    expect(new Set(shared)).toEqual(
+      new Set(SHARED_SUBPATHS.map((s) => `@powerhousedao/shared/${s}`)),
+    );
+    expect(shared.length).toBe(SHARED_SUBPATHS.length);
+  });
+
+  it("keeps the other shared packages", () => {
+    expect(EXTERNALIZABLE_SHARED_SPECIFIERS).toContain("document-model");
+    expect(EXTERNALIZABLE_SHARED_SPECIFIERS).toContain(
+      "@powerhousedao/reactor-browser",
+    );
   });
 });

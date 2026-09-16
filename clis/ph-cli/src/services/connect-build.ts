@@ -79,18 +79,7 @@ export async function runConnectBuild(args: ConnectBuildArgs) {
         : "/";
     vendor = await prebuildConnectVendor({
       dirname,
-      // The dev-proven heavy set ∪ the package-shared set: everything the
-      // app and packages externalize onto the vendor. The bare
-      // @powerhousedao/shared root cannot be vendored (its type barrel
-      // reaches node-only modules); its browser-safe subpaths are listed
-      // instead (SHARED_SUBPATHS).
-      include: [
-        ...new Set([
-          ...DEFAULT_VENDOR_INCLUDE,
-          ...SHARED_DEP_SPECIFIERS.filter((s) => s !== "@powerhousedao/shared"),
-          ...SHARED_SUBPATHS.map((s) => `@powerhousedao/shared/${s}`),
-        ]),
-      ],
+      include: productionVendorInclude(),
       vendorDir: join(outDirAbs, "__vendor__"),
       base: appBase,
       nodeEnv: "production",
@@ -144,6 +133,36 @@ export async function runConnectBuild(args: ConnectBuildArgs) {
   const config = mergeConfig(baseConfig, buildConfig);
 
   await build(config);
+}
+
+/**
+ * The specifier set the production vendor bundles: the dev-proven heavy set
+ * ∪ the package-shared set — everything the app and loaded packages
+ * externalize onto the vendor.
+ *
+ * Two specifiers are deliberately dropped:
+ *
+ * - `@powerhousedao/connect`. It is in DEFAULT_VENDOR_INCLUDE because the dev
+ *   server vendors the app to keep rebuilds cheap, but in a production build
+ *   the app *is* Connect: `SHARED_DEP_SPECIFIERS` omits it, so the app build
+ *   never externalizes it and nothing would ever resolve its import-map
+ *   entry. Vendoring it is not merely dead weight — bundling Connect's dist
+ *   for the browser pulls in its node-only `@powerhousedao/config/node`
+ *   import, and so `read-pkg` -> `unicorn-magic`, whose browser entry has no
+ *   `toPath`. That fails the vendor build, and a failed prebuild fails
+ *   `ph connect build`.
+ * - the bare `@powerhousedao/shared` root, whose barrel likewise reaches
+ *   node-only modules. Its browser-safe subpaths (SHARED_SUBPATHS) are
+ *   listed instead; a package importing the bare root bundles its own copy.
+ */
+export function productionVendorInclude(): string[] {
+  return [
+    ...new Set([
+      ...DEFAULT_VENDOR_INCLUDE.filter((s) => s !== "@powerhousedao/connect"),
+      ...SHARED_DEP_SPECIFIERS.filter((s) => s !== "@powerhousedao/shared"),
+      ...SHARED_SUBPATHS.map((s) => `@powerhousedao/shared/${s}`),
+    ]),
+  ];
 }
 
 /**

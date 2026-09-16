@@ -9,6 +9,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   cleanDistExcept,
   isVendorEnabled,
+  productionVendorInclude,
   runConnectBuild,
 } from "../src/services/connect-build.js";
 import type { ConnectBuildArgs } from "../src/types.js";
@@ -110,5 +111,45 @@ describe("cleanDistExcept", () => {
     expect(
       cleanDistExcept(join(tmpdir(), "does-not-exist-12345"), ["__vendor__"]),
     ).toBe(0);
+  });
+});
+
+describe("productionVendorInclude", () => {
+  const include = productionVendorInclude();
+
+  // Regression: `@powerhousedao/connect` is in DEFAULT_VENDOR_INCLUDE (the
+  // dev-server heavy set). Vendoring it for production bundles Connect's dist
+  // for the browser, which drags in its node-only `@powerhousedao/config/node`
+  // import -> read-pkg -> unicorn-magic's browser entry (no `toPath`) and
+  // fails the whole vendor build, and with it `ph connect build`.
+  it("omits the Connect app itself", () => {
+    expect(include).not.toContain("@powerhousedao/connect");
+  });
+
+  // The app build never externalizes Connect (SHARED_DEP_SPECIFIERS omits it),
+  // so an import-map entry for it would be dead weight even if it did build.
+  it("omits every @powerhousedao/connect subpath", () => {
+    expect(include.some((s) => s.startsWith("@powerhousedao/connect"))).toBe(
+      false,
+    );
+  });
+
+  // The bare root's barrel reaches node-only modules; only its browser-safe
+  // subpaths are vendorable.
+  it("omits the bare @powerhousedao/shared root but keeps its subpaths", () => {
+    expect(include).not.toContain("@powerhousedao/shared");
+    expect(include).toContain("@powerhousedao/shared/connect");
+    expect(include).toContain("@powerhousedao/shared/registry/urls");
+  });
+
+  it("still vendors the heavy shared libraries", () => {
+    expect(include).toContain("document-model");
+    expect(include).toContain("@powerhousedao/reactor-browser");
+    expect(include).toContain("@powerhousedao/design-system/connect");
+    expect(include).toContain("zod");
+  });
+
+  it("has no duplicates", () => {
+    expect(include.length).toBe(new Set(include).size);
   });
 });
