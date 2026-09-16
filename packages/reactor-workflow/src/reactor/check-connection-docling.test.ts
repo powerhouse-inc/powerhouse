@@ -3,7 +3,7 @@
 // built piece bundle, live mock docling-serve. The harness mirrors
 // check-connection.test.ts (same mocks, same subgraph shape).
 import { createTestRelationalDb } from "../../test/helpers/pglite.js";
-import type { WorkflowRuntimeHost } from "./host.js";
+import type { WorkflowRuntimeHostDeps } from "./host.js";
 import { ensurePieceBundle } from "../pieces/index.js";
 import type * as ReactorConnectors from "../pieces/index.js";
 import type { Action, PHDocument } from "document-model";
@@ -46,7 +46,10 @@ vi.mock("./piece-catalog.js", () => ({
 }));
 
 import { fetchPieceCatalog } from "./piece-catalog.js";
-import { workflowRuntime } from "./service.js";
+import type { WorkflowRuntimeService } from "./service.js";
+import { testRuntime } from "../../test/helpers/runtime.js";
+
+let service: WorkflowRuntimeService;
 
 const PIECE = { name: "@powerhousedao/piece-docling", version: "1.0.0" };
 const FIXED_NOW = "2026-09-08T00:00:00.000Z";
@@ -205,14 +208,9 @@ describe.skipIf(!existsSync(PIECE_PKG))(
       ]);
 
       docling = await startMiniDocling({ apiKey: "k-docling" });
-      // The mini server is on loopback, which the default policy denies — the
-      // same allowance every other loopback suite here makes.
-      (workflowRuntime as unknown as { designEgress?: unknown }).designEgress =
-        { allowAddresses: ["127.0.0.1/32", "::1/128"] };
-
       get = vi.fn();
       execute = vi.fn(() => ({}) as PHDocument);
-      const subgraph = {
+      service = testRuntime({
         reactorClient: {
           get,
           execute,
@@ -220,12 +218,17 @@ describe.skipIf(!existsSync(PIECE_PKG))(
         },
         assertCanRead: vi.fn(() => Promise.resolve({})),
         relationalDb: createTestRelationalDb(),
-      } as unknown as WorkflowRuntimeHost;
-      workflowRuntime.configure(subgraph);
+      } as unknown as WorkflowRuntimeHostDeps);
+
+      // The mini server is on loopback, which the default policy denies — the
+      // same allowance every other loopback suite here makes.
+      (service as unknown as { designEgress?: unknown }).designEgress = {
+        allowAddresses: ["127.0.0.1/32", "::1/128"],
+      };
 
       keyRef = (
         await (
-          await workflowRuntime.secrets()
+          await service.secrets()
         ).create({
           value: "k-docling",
           label: "docling api key",
@@ -233,7 +236,7 @@ describe.skipIf(!existsSync(PIECE_PKG))(
       ).ref;
       wrongRef = (
         await (
-          await workflowRuntime.secrets()
+          await service.secrets()
         ).create({
           value: "wrong-key",
           label: "docling api key (wrong)",
@@ -254,7 +257,7 @@ describe.skipIf(!existsSync(PIECE_PKG))(
       get.mockResolvedValueOnce(document);
       execute.mockClear();
 
-      const result = await workflowRuntime.checkConnection(
+      const result = await service.checkConnection(
         document.header.id,
         TEST_CTX,
       );
@@ -275,7 +278,7 @@ describe.skipIf(!existsSync(PIECE_PKG))(
       get.mockResolvedValueOnce(document);
       execute.mockClear();
 
-      const result = await workflowRuntime.checkConnection(
+      const result = await service.checkConnection(
         document.header.id,
         TEST_CTX,
       );
@@ -293,7 +296,7 @@ describe.skipIf(!existsSync(PIECE_PKG))(
       get.mockResolvedValueOnce(document);
       execute.mockClear();
 
-      const result = await workflowRuntime.checkConnection(
+      const result = await service.checkConnection(
         document.header.id,
         TEST_CTX,
       );

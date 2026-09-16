@@ -3,7 +3,8 @@
 import type { OperationWithContext } from "document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DOCUMENT_EVENT_BLOCK } from "./reactor-piece.js";
-import { WorkflowRuntimeService } from "./service.js";
+import type { WorkflowRuntimeService } from "./service.js";
+import { testRuntime } from "../../test/helpers/runtime.js";
 
 const WATCHER = "wf-watcher";
 const OTHER = "wf-other";
@@ -58,7 +59,18 @@ describe("WorkflowRuntimeService.onOperations", () => {
   let fired: { workflowId: string; payload: unknown; kind: string }[];
 
   beforeEach(async () => {
-    service = new WorkflowRuntimeService();
+    // A workflow edit with no carried state is re-read from the reactor, and
+    // every workflow this suite edits is the watcher's own definition.
+    service = testRuntime({
+      reactorClient: {
+        find: () => Promise.resolve({ results: [] }),
+        get: (id: string) =>
+          Promise.resolve({
+            header: { id, documentType: WORKFLOW_TYPE },
+            state: { global: { ...watcherState, status: "DISABLED" } },
+          }),
+      },
+    } as never);
     fired = [];
     vi.spyOn(service, "fire").mockImplementation(
       (workflowId: string, payload?: unknown, kind = "manual") => {

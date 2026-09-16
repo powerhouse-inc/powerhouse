@@ -6,14 +6,15 @@ export {
 } from "./reactor/attachment-port.js";
 export { WORKFLOW_PACKAGE_NAME } from "./reactor/package-name.js";
 export { PieceRegistry, packagePieces } from "./reactor/piece-registry.js";
-export {
-  documentEventTriggerFactoryBuilder,
-  type DocumentEventTriggerHost,
-} from "./reactor/processors/document-event-trigger/factory.js";
+export { createDocumentEventProcessorFactory } from "./reactor/processors/document-event-trigger/factory.js";
 export { DocumentEventTrigger } from "./reactor/processors/document-event-trigger/processor.js";
+export type {
+  WorkflowCaller,
+  WorkflowRuntimeHostDeps,
+} from "./reactor/host.js";
 export {
+  createWorkflowRuntime,
   WorkflowRuntimeService,
-  workflowRuntime,
   type ConnectionCheckResult,
   type ConnectionSummary,
   type PersistedRunResult,

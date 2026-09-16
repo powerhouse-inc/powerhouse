@@ -3,7 +3,8 @@
 import type { WebhookRequest } from "@powerhousedao/shared/processors";
 import type { OperationWithContext } from "document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { WorkflowRuntimeService } from "./service.js";
+import type { WorkflowRuntimeService } from "./service.js";
+import { testRuntime } from "../../test/helpers/runtime.js";
 
 const WORKFLOW_TYPE = "powerhouse/workflow";
 const WORKFLOW = "wf-hook";
@@ -75,27 +76,21 @@ describe("WorkflowRuntimeService webhooks", () => {
     ]);
   }
 
-  const policy = () =>
-    (
-      service as unknown as {
-        webhookPolicy: (id: string) => Promise<unknown>;
-      }
-    ).webhookPolicy(WORKFLOW);
+  const policy = () => service.webhookPolicy(WORKFLOW);
 
-  beforeEach(() => {
-    service = new WorkflowRuntimeService();
-    fired = [];
-    (service as unknown as { subgraph: unknown }).subgraph = {
-      reactorClient: { get: () => Promise.reject(new Error("not used")) },
-    };
-    (service as unknown as { secretsPromise: unknown }).secretsPromise =
-      Promise.resolve({
+  // A runtime is built per test rather than reconfigured: the webhook scope is
+  // a constructor dependency, so a suite that needs one builds its own.
+  function makeService(webhooks?: unknown): WorkflowRuntimeService {
+    const built = testRuntime({
+      secrets: {
         get: (ref: string) =>
           ref === SECRET_REF
             ? Promise.resolve(SECRET)
             : Promise.reject(new Error(`No secret found for ref "${ref}"`)),
-      });
-    vi.spyOn(service, "fire").mockImplementation(
+      },
+      webhooks,
+    } as never);
+    vi.spyOn(built, "fire").mockImplementation(
       (workflowId: string, payload?: unknown, kind = "manual") => {
         fired.push({ workflowId, payload, kind });
         return Promise.resolve({
@@ -105,33 +100,30 @@ describe("WorkflowRuntimeService webhooks", () => {
         } as never);
       },
     );
+    return built;
+  }
+
+  beforeEach(() => {
+    fired = [];
+    service = makeService();
   });
 
   // ── registration ─────────────────────────────────────────────────────────
 
   describe("registration", () => {
-    const subgraphWith = (webhooks: unknown) =>
-      ({
-        http: { webhooks },
-        reactorClient: { get: () => Promise.reject(new Error("not used")) },
-      }) as never;
-
     it("survives a host that has no webhook store", async () => {
-      // Webhooks unavailable means no webhook triggers, not no workflows; the
-      // manager awaits onSetup, so rethrowing takes the whole subgraph down.
-      await expect(
-        service.registerWebhookEndpoint(
-          subgraphWith({
-            register: () => Promise.reject(new Error("not available")),
-          }),
-        ),
-      ).resolves.toBeUndefined();
+      // Webhooks unavailable means no webhook triggers, not no workflows;
+      // rethrowing would take every other trigger down with it.
+      service = makeService({
+        register: () => Promise.reject(new Error("not available")),
+      });
+      await expect(service.registerWebhookEndpoint()).resolves.toBeUndefined();
 
       expect(await service.webhookEndpoint(WORKFLOW)).toBeNull();
     });
 
     it("lets a caller that needs a token wait for the registration", async () => {
-      // Seeding starts from the subgraph's constructor, before onSetup, so a
+      // Seeding starts from the constructor, before the host registers, so a
       // webhook workflow restored at boot must not find the registry unset.
       let settle: (value: unknown) => void = () => undefined;
       const endpoints = {
@@ -146,11 +138,10 @@ describe("WorkflowRuntimeService webhooks", () => {
         list: vi.fn(() => Promise.resolve([])),
       };
 
-      const registering = service.registerWebhookEndpoint(
-        subgraphWith({
-          register: () => new Promise((resolve) => (settle = resolve)),
-        }),
-      );
+      service = makeService({
+        register: () => new Promise((resolve) => (settle = resolve)),
+      });
+      const registering = service.registerWebhookEndpoint();
       const asking = service.webhookEndpoint(WORKFLOW);
 
       settle(endpoints);
@@ -162,11 +153,11 @@ describe("WorkflowRuntimeService webhooks", () => {
       expect(endpoints.endpointFor).toHaveBeenCalledWith(WORKFLOW);
     });
 
-    it("registers on demand when an enable beats onSetup", async () => {
-      // configure() starts seeding from the subgraph's constructor, and a
-      // restored webhook trigger's enable asks for a URL from there. onSetup
-      // has not run yet, so registration has to happen on the way in rather
-      // than the trigger failing on startup order.
+    it("registers on demand when an enable beats the host's start", async () => {
+      // Seeding starts from the constructor, and a restored webhook trigger's
+      // enable asks for a URL from there. The host has not started the runtime
+      // yet, so registration has to happen on the way in rather than the
+      // trigger failing on startup order.
       const endpoints = {
         endpointFor: vi.fn(() =>
           Promise.resolve({
@@ -180,8 +171,7 @@ describe("WorkflowRuntimeService webhooks", () => {
       };
       const register = vi.fn(() => Promise.resolve(endpoints));
 
-      const fresh = new WorkflowRuntimeService();
-      fresh.configure(subgraphWith({ register }));
+      const fresh = makeService({ register });
 
       // Never registered: only asked.
       expect(await fresh.webhookEndpoint(WORKFLOW)).toMatchObject({
@@ -208,9 +198,12 @@ describe("WorkflowRuntimeService webhooks", () => {
         revoke: vi.fn(),
         list: vi.fn(() => Promise.resolve([])),
       };
-      await service.registerWebhookEndpoint(
-        subgraphWith({ register: () => Promise.resolve(endpoints) }),
-      );
+      service = makeService({ register: () => Promise.resolve(endpoints) });
+      await service.registerWebhookEndpoint();
+      // Seeding asks the family whether this host has endpoints it no longer
+      // knows about; what this test watches is the mint that comes after.
+      await vi.waitFor(() => expect(endpoints.list).toHaveBeenCalled());
+      endpoints.list.mockClear();
 
       // Never armed: nothing has been published for this workflow at all.
       expect(await service.webhookEndpoint(WORKFLOW)).toMatchObject({
@@ -233,12 +226,11 @@ describe("WorkflowRuntimeService webhooks", () => {
         revoke: vi.fn(),
         list: () => Promise.resolve([]),
       };
-      await service.registerWebhookEndpoint(
-        subgraphWith({
-          register: () => Promise.resolve(endpoints),
-          hasPublicOrigin: false,
-        }),
-      );
+      service = makeService({
+        register: () => Promise.resolve(endpoints),
+        hasPublicOrigin: false,
+      });
+      await service.registerWebhookEndpoint();
       await arm({});
 
       expect(await service.webhookEndpoint(WORKFLOW)).toMatchObject({
@@ -436,17 +428,16 @@ describe("WorkflowRuntimeService webhooks", () => {
 });
 
 describe("WorkflowRuntimeService registry seeding", () => {
-  // A subgraph is rebuilt on every package hot-reload, and the service is a
-  // module singleton, so `configure` sees a new one each time.
-  function fakeSubgraph(workflows: unknown[]) {
+  // The registry is seeded from the constructor: a host that rebuilds its
+  // runtime gets a fresh sweep, and there is nothing to re-seed in between.
+  function seededRuntime(workflows: unknown[]) {
     const find = vi.fn(() => Promise.resolve({ results: workflows }));
     return {
       find,
-      subgraph: {
-        relationalDb: undefined,
+      service: testRuntime({
         reactorClient: { find },
-        http: { webhooks: { register: () => Promise.reject(new Error("no")) } },
-      } as never,
+        webhooks: { register: () => Promise.reject(new Error("no")) },
+      } as never),
     };
   }
 
@@ -465,47 +456,30 @@ describe("WorkflowRuntimeService registry seeding", () => {
     },
   });
 
-  it("re-seeds when a hot reload hands it a new subgraph", async () => {
-    // The guard used to be `if (this.subgraph) return`, so a replaced subgraph
-    // never re-seeded and the registry stayed empty for the process's life.
-    const service = new WorkflowRuntimeService();
-    const first = fakeSubgraph([enabledWorkflow("wf-1")]);
-    service.configure(first.subgraph);
+  it("sweeps the reactor once, from the constructor", async () => {
+    const first = seededRuntime([enabledWorkflow("wf-1")]);
     await vi.waitFor(() => expect(first.find).toHaveBeenCalledOnce());
 
-    const second = fakeSubgraph([enabledWorkflow("wf-1")]);
-    service.configure(second.subgraph);
+    // A replacement runtime sweeps for itself; the first one never sweeps again.
+    const second = seededRuntime([enabledWorkflow("wf-1")]);
     await vi.waitFor(() => expect(second.find).toHaveBeenCalledOnce());
-  });
-
-  it("does not re-seed when handed the same subgraph twice", async () => {
-    const service = new WorkflowRuntimeService();
-    const only = fakeSubgraph([]);
-    service.configure(only.subgraph);
-    service.configure(only.subgraph);
-    await vi.waitFor(() => expect(only.find).toHaveBeenCalledOnce());
+    expect(first.find).toHaveBeenCalledOnce();
   });
 
   it("answers no policy until seeding has finished", async () => {
     // A delivery can beat the seed, and an unseeded registry is refused
     // exactly as an unknown token is — so it must not be reachable early.
-    const service = new WorkflowRuntimeService();
     let release: (value: { results: unknown[] }) => void = () => undefined;
     const find = vi.fn(
       () =>
         new Promise<{ results: unknown[] }>((resolve) => (release = resolve)),
     );
-    service.configure({
-      relationalDb: undefined,
+    const service = testRuntime({
       reactorClient: { find },
-      http: { webhooks: { register: () => Promise.reject(new Error("no")) } },
+      webhooks: { register: () => Promise.reject(new Error("no")) },
     } as never);
 
-    const asking = (
-      service as unknown as {
-        webhookPolicy: (id: string) => Promise<unknown>;
-      }
-    ).webhookPolicy("wf-1");
+    const asking = service.webhookPolicy("wf-1");
 
     release({ results: [enabledWorkflow("wf-1")] });
     expect(await asking).toMatchObject({ methods: undefined });

@@ -16,7 +16,9 @@ vi.mock("../pieces/index.js", async (importOriginal) => {
 });
 
 import { BUNDLE_CACHE_DIR } from "./lib.js";
-import { workflowRuntime } from "./service.js";
+import { testRuntime } from "../../test/helpers/runtime.js";
+
+const runtime = testRuntime();
 
 const PIECES = {
   card: { name: "@activepieces/piece-card", version: "1.0.0" },
@@ -144,7 +146,7 @@ describe("WorkflowRuntimeService.blockDescriptor", () => {
   });
 
   it("returns the action descriptor for a piece block", async () => {
-    const descriptor = await workflowRuntime.blockDescriptor(
+    const descriptor = await runtime.blockDescriptor(
       `${PIECES.card.name}@${PIECES.card.version}#create_card`,
     );
 
@@ -189,7 +191,7 @@ describe("WorkflowRuntimeService.blockDescriptor", () => {
   });
 
   it("returns the trigger descriptor under a trigger key", async () => {
-    const descriptor = await workflowRuntime.blockDescriptor(
+    const descriptor = await runtime.blockDescriptor(
       `${PIECES.card.name}@${PIECES.card.version}#trigger:new_card`,
     );
 
@@ -208,10 +210,10 @@ describe("WorkflowRuntimeService.blockDescriptor", () => {
 
   it("serves a repeat descriptor from cache without re-resolving the bundle", async () => {
     const blockType = `${PIECES.card.name}@${PIECES.card.version}#create_card`;
-    await workflowRuntime.blockDescriptor(blockType);
+    await runtime.blockDescriptor(blockType);
     vi.mocked(ensurePieceBundle).mockClear();
 
-    const descriptor = await workflowRuntime.blockDescriptor(blockType);
+    const descriptor = await runtime.blockDescriptor(blockType);
 
     expect(descriptor).toMatchObject({ displayName: "Card Fixture" });
     expect(ensurePieceBundle).not.toHaveBeenCalled();
@@ -220,7 +222,7 @@ describe("WorkflowRuntimeService.blockDescriptor", () => {
   // The piece module's top-level code must not see the reactor's environment;
   // a fixture that reads the master key would report "leaked" if it ran here.
   it("builds the descriptor outside the reactor process", async () => {
-    const descriptor = await workflowRuntime.blockDescriptor(
+    const descriptor = await runtime.blockDescriptor(
       `${PIECES.env.name}@${PIECES.env.version}#probe`,
     );
 
@@ -229,7 +231,7 @@ describe("WorkflowRuntimeService.blockDescriptor", () => {
 
   it("surfaces a bundle that throws at module load as a clean error", async () => {
     await expect(
-      workflowRuntime.blockDescriptor(
+      runtime.blockDescriptor(
         `${PIECES.broken.name}@${PIECES.broken.version}#anything`,
       ),
     ).rejects.toThrow("fixture: exploded at module load");
@@ -237,13 +239,13 @@ describe("WorkflowRuntimeService.blockDescriptor", () => {
 
   it("keeps the bundle resolution error wording", async () => {
     await expect(
-      workflowRuntime.blockDescriptor("@activepieces/piece-absent@9.9.9#nope"),
+      runtime.blockDescriptor("@activepieces/piece-absent@9.9.9#nope"),
     ).rejects.toThrow(
       "Offline descriptor test: no fixture bundle for @activepieces/piece-absent@9.9.9",
     );
   });
 
   it("returns null for a block type that is not a piece", async () => {
-    expect(await workflowRuntime.blockDescriptor("core#manual")).toBeNull();
+    expect(await runtime.blockDescriptor("core#manual")).toBeNull();
   });
 });

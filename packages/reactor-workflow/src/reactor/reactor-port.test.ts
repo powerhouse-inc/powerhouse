@@ -1,6 +1,6 @@
 // The host half of ctx.reactor: what it asks the reactor for, and what it
 // does with what a piece sent it.
-import type { WorkflowRuntimeHost } from "./host.js";
+import type { WorkflowRuntimeHostDeps } from "./host.js";
 import { describe, expect, it } from "vitest";
 import { SubgraphReactorPort } from "./reactor-port.js";
 
@@ -108,7 +108,7 @@ function fakeReactor(documents: ReturnType<typeof doc>[] = []) {
   };
   const port = new SubgraphReactorPort({
     reactorClient: client,
-  } as unknown as WorkflowRuntimeHost);
+  } as unknown as WorkflowRuntimeHostDeps);
   return { port, calls };
 }
 

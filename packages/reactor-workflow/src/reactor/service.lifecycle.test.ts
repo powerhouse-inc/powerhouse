@@ -9,8 +9,9 @@ import {
 } from "./reactor-piece.js";
 import {
   collectLifecycleParentHints,
-  WorkflowRuntimeService,
+  type WorkflowRuntimeService,
 } from "./service.js";
+import { testRuntime } from "../../test/helpers/runtime.js";
 
 const DRIVE_TYPE = "powerhouse/document-drive";
 const WORKFLOW_TYPE = "powerhouse/workflow";
@@ -128,17 +129,25 @@ describe("WorkflowRuntimeService document lifecycle triggers", () => {
   let fired: { workflowId: string; payload: unknown; kind: string }[];
   let get: ReturnType<typeof vi.fn>;
 
-  // The subgraph is injected directly: configure() would also open the run
-  // journal and seed the registry, neither of which this test needs.
+  // Only the documents a lifecycle event names are ever fetched, so the
+  // runtime is built around that client rather than handed one later.
   function useReactor(documents: Record<string, string>): void {
     get = vi.fn((id: string) => {
       const documentType = documents[id];
       if (!documentType) return Promise.reject(new Error("not found"));
       return Promise.resolve({ header: { id, documentType, name: id } });
     });
-    (service as unknown as { subgraph: unknown }).subgraph = {
-      reactorClient: { get },
-    };
+    service = testRuntime({ reactorClient: { get } } as never);
+    vi.spyOn(service, "fire").mockImplementation(
+      (workflowId: string, payload?: unknown, kind = "manual") => {
+        fired.push({ workflowId, payload, kind });
+        return Promise.resolve({
+          runId: null,
+          status: "SUCCEEDED",
+          steps: [],
+        } as never);
+      },
+    );
   }
 
   async function register(
@@ -159,18 +168,7 @@ describe("WorkflowRuntimeService document lifecycle triggers", () => {
   }
 
   beforeEach(() => {
-    service = new WorkflowRuntimeService();
     fired = [];
-    vi.spyOn(service, "fire").mockImplementation(
-      (workflowId: string, payload?: unknown, kind = "manual") => {
-        fired.push({ workflowId, payload, kind });
-        return Promise.resolve({
-          runId: null,
-          status: "SUCCEEDED",
-          steps: [],
-        } as never);
-      },
-    );
     useReactor({ [DRIVE]: DRIVE_TYPE });
   });
 

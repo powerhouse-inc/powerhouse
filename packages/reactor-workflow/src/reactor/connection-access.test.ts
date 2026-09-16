@@ -1,9 +1,8 @@
 // The design-time surfaces that hand a connection's credentials to piece code
 // authorize their caller, because nothing in the request itself does.
-import { createTestRelationalDb } from "../../test/helpers/pglite.js";
-import type { WorkflowRuntimeHost } from "./host.js";
-import { beforeAll, describe, expect, it, vi } from "vitest";
-import { workflowRuntime } from "./service.js";
+import type { WorkflowRuntimeHostDeps } from "./host.js";
+import { describe, expect, it, vi } from "vitest";
+import { testRuntime } from "../../test/helpers/runtime.js";
 
 const BLOCK = "@acme/piece-slack@1.0.0#send_message";
 const CTX = { headers: {}, db: {}, user: { address: "0xabc" } } as never;
@@ -36,28 +35,24 @@ const get = vi.fn(() =>
   Promise.resolve(connectionSummaryDocument("conn-mine")),
 );
 
-describe("design-time connection access", () => {
-  beforeAll(() => {
-    const subgraph = {
-      reactorClient: {
-        get,
-        execute: vi.fn(),
-        find: vi.fn(() => ({
-          results: [
-            connectionSummaryDocument("conn-mine"),
-            connectionSummaryDocument("conn-theirs"),
-          ],
-        })),
-      },
-      assertCanRead,
-      relationalDb: createTestRelationalDb(),
-    } as unknown as WorkflowRuntimeHost;
-    workflowRuntime.configure(subgraph);
-  });
+const runtime = testRuntime({
+  reactorClient: {
+    get,
+    execute: vi.fn(),
+    find: vi.fn(() => ({
+      results: [
+        connectionSummaryDocument("conn-mine"),
+        connectionSummaryDocument("conn-theirs"),
+      ],
+    })),
+  },
+  assertCanRead,
+} as unknown as WorkflowRuntimeHostDeps);
 
+describe("design-time connection access", () => {
   it("refuses blockOptions for a connection the caller cannot read", async () => {
     await expect(
-      workflowRuntime.blockOptions(BLOCK, "channel", {}, "conn-theirs", CTX),
+      runtime.blockOptions(BLOCK, "channel", {}, "conn-theirs", CTX),
     ).rejects.toThrow("forbidden");
     // Refused before the credentials are ever fetched.
     expect(get).not.toHaveBeenCalled();
@@ -65,26 +60,26 @@ describe("design-time connection access", () => {
 
   it("refuses blockOptions when the request carries no caller", async () => {
     await expect(
-      workflowRuntime.blockOptions(BLOCK, "channel", {}, "conn-theirs"),
+      runtime.blockOptions(BLOCK, "channel", {}, "conn-theirs"),
     ).rejects.toThrow("authenticated request");
   });
 
   it("leaves a connection-less blockOptions call alone", async () => {
     // No connectionId, so nothing to authorize; it fails later, on the bundle.
     await expect(
-      workflowRuntime.blockOptions(BLOCK, "channel", {}, undefined, CTX),
+      runtime.blockOptions(BLOCK, "channel", {}, undefined, CTX),
     ).rejects.not.toThrow(/forbidden|authenticated request/);
   });
 
   it("refuses testTrigger for a workflow the caller cannot read", async () => {
-    await expect(workflowRuntime.testTrigger("wf-theirs", CTX)).rejects.toThrow(
+    await expect(runtime.testTrigger("wf-theirs", CTX)).rejects.toThrow(
       "forbidden",
     );
     expect(get).not.toHaveBeenCalled();
   });
 
   it("refuses testTrigger when the request carries no caller", async () => {
-    await expect(workflowRuntime.testTrigger("wf-theirs")).rejects.toThrow(
+    await expect(runtime.testTrigger("wf-theirs")).rejects.toThrow(
       "authenticated request",
     );
   });
@@ -100,18 +95,18 @@ describe("design-time connection access", () => {
     } as never);
 
     // The workflow is readable; the credentials it would resolve are not.
-    await expect(workflowRuntime.testTrigger("conn-mine", CTX)).rejects.toThrow(
+    await expect(runtime.testTrigger("conn-mine", CTX)).rejects.toThrow(
       "forbidden",
     );
   });
 
   it("lists only the connections the caller may read", async () => {
-    const listed = await workflowRuntime.connections(CTX);
+    const listed = await runtime.connections(CTX);
 
     expect(listed.map((entry) => entry.id)).toEqual(["conn-mine"]);
   });
 
   it("lists nothing to a caller it cannot identify", async () => {
-    expect(await workflowRuntime.connections()).toEqual([]);
+    expect(await runtime.connections()).toEqual([]);
   });
 });

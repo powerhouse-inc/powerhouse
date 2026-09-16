@@ -1,6 +1,6 @@
 // Server-side connection binding: a step resolves only what the definition
 // its run pinned declared, and only from its own connector (doc 08 §10).
-import type { WorkflowRuntimeHost } from "./host.js";
+import type { WorkflowRuntimeHostDeps } from "./host.js";
 import {
   ConnectionNotBoundError,
   declaredConnectionIds,
@@ -62,7 +62,7 @@ function fakeSubgraph() {
   });
   return {
     get,
-    subgraph: { reactorClient: { get } } as unknown as WorkflowRuntimeHost,
+    subgraph: { reactorClient: { get } } as unknown as WorkflowRuntimeHostDeps,
   };
 }
 
@@ -98,7 +98,7 @@ function workflowState(
 const bindingFor = (state: WorkflowState) =>
   declaredConnectionIds(toWorkflowDefinition(state));
 
-function resolverOver(subgraph: WorkflowRuntimeHost) {
+function resolverOver(subgraph: WorkflowRuntimeHostDeps) {
   return boundConnections(new DocumentConnectionResolver(subgraph, secrets));
 }
 

@@ -4,7 +4,8 @@
 import { createTestRelationalDb } from "../../test/helpers/pglite.js";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import type { IRelationalDb } from "@powerhousedao/shared/processors";
-import { WorkflowRuntimeService } from "./service.js";
+import type { WorkflowRuntimeService } from "./service.js";
+import { testRuntime } from "../../test/helpers/runtime.js";
 import {
   ORPHANED_RUN_ERROR,
   WorkflowRunStore,
@@ -364,14 +365,13 @@ describe("WorkflowRunStore per-step journaling", () => {
     expect((await store.getRun(runId))?.status).toBe("SUCCEEDED");
   });
 
-  it("leaves a run this process is still executing out of the sweep", async () => {
+  it("leaves a run it is still executing out of the sweep", async () => {
     const runId = await start();
-    // A hot reload: configure() opens a second store over the same journal
-    // while the run above is still going.
-    const reopened = await WorkflowRunStore.create(createTestRelationalDb());
+    // Failing it here would hand rerun() a live run to duplicate; the journal
+    // is per-runtime, so it knows which runs are its own.
+    await store.recoverOrphanedRuns();
 
-    // Failing it here would hand rerun() a live run to duplicate.
-    expect((await reopened.getRun(runId))?.status).toBe("RUNNING");
+    expect((await store.getRun(runId))?.status).toBe("RUNNING");
     await store.finishRun(runId, { status: "SUCCEEDED", steps: [] });
     expect((await store.getRun(runId))?.status).toBe("SUCCEEDED");
   });
@@ -452,12 +452,11 @@ describe("WorkflowRuntimeService rerun refusal", () => {
   // The service is wired by hand; only the journal and the current step list
   // matter here, and `fire` is stubbed so nothing actually executes.
   function serviceOver(runStore: WorkflowRunStore): WorkflowRuntimeService {
-    const built = new WorkflowRuntimeService();
-    (built as unknown as { subgraph: unknown }).subgraph = {
+    const built = testRuntime({
       reactorClient: {
         get: () => Promise.resolve({ state: { global: { steps: [] } } }),
       },
-    };
+    } as never);
     (built as unknown as { storePromise: unknown }).storePromise =
       Promise.resolve(runStore);
     return built;

@@ -2,7 +2,8 @@
 // whatever the store manages to record about it.
 import type { WorkflowRunResult } from "../pieces/index.js";
 import { describe, expect, it } from "vitest";
-import { WorkflowRuntimeService } from "./service.js";
+import type { WorkflowRuntimeService } from "./service.js";
+import { testRuntime } from "../../test/helpers/runtime.js";
 
 const WORKFLOW_ID = "wf-journal";
 
@@ -37,11 +38,10 @@ interface FinishCall {
 }
 
 function serviceWithStore(store: unknown): WorkflowRuntimeService {
-  const service = new WorkflowRuntimeService();
-  const internals = service as unknown as Record<string, unknown>;
-  internals.subgraph = {
+  const service = testRuntime({
     reactorClient: { get: () => Promise.resolve(workflowDocument()) },
-  };
+  } as never);
+  const internals = service as unknown as Record<string, unknown>;
   internals.executor = { execute: () => Promise.resolve({ output: {} }) };
   internals.storePromise = Promise.resolve(store);
   return service;

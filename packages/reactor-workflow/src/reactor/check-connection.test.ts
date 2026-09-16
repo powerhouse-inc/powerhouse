@@ -1,7 +1,7 @@
 // checkConnection over offline fixture pieces: local bundle cache in the
 // production layout, real PGlite-backed secret store, stubbed piece catalog.
 import { createTestRelationalDb } from "../../test/helpers/pglite.js";
-import type { WorkflowRuntimeHost } from "./host.js";
+import type { WorkflowRuntimeHostDeps } from "./host.js";
 import {
   DEFAULT_EGRESS_POLICY,
   ensurePieceBundle,
@@ -48,7 +48,10 @@ vi.mock("./piece-catalog.js", () => ({
 
 import { fetchPieceCatalog, fetchPieceDetail } from "./piece-catalog.js";
 import { BUNDLE_CACHE_DIR } from "./lib.js";
-import { workflowRuntime } from "./service.js";
+import type { WorkflowRuntimeService } from "./service.js";
+import { testRuntime } from "../../test/helpers/runtime.js";
+
+let service: WorkflowRuntimeService;
 
 // checkConnection hands credentials to piece code, so it demands a caller the
 // subgraph can authorize; the stub above allows this one.
@@ -245,7 +248,7 @@ describe("WorkflowRuntimeService.checkConnection", () => {
 
     get = vi.fn();
     execute = vi.fn(() => ({}) as PHDocument);
-    const subgraph = {
+    service = testRuntime({
       reactorClient: {
         get,
         execute,
@@ -253,11 +256,10 @@ describe("WorkflowRuntimeService.checkConnection", () => {
       },
       assertCanRead: vi.fn(() => Promise.resolve({})),
       relationalDb: createTestRelationalDb(),
-    } as unknown as WorkflowRuntimeHost;
-    workflowRuntime.configure(subgraph);
+    } as unknown as WorkflowRuntimeHostDeps);
 
     const created = await (
-      await workflowRuntime.secrets()
+      await service.secrets()
     ).create({
       value: "fixture-secret",
       label: "password",
@@ -274,10 +276,7 @@ describe("WorkflowRuntimeService.checkConnection", () => {
     get.mockResolvedValueOnce(document);
     execute.mockClear();
 
-    const result = await workflowRuntime.checkConnection(
-      document.header.id,
-      TEST_CTX,
-    );
+    const result = await service.checkConnection(document.header.id, TEST_CTX);
 
     expect(result).toEqual({
       ok: true,
@@ -307,10 +306,7 @@ describe("WorkflowRuntimeService.checkConnection", () => {
     get.mockResolvedValueOnce(document);
     execute.mockClear();
 
-    const result = await workflowRuntime.checkConnection(
-      document.header.id,
-      TEST_CTX,
-    );
+    const result = await service.checkConnection(document.header.id, TEST_CTX);
 
     expect(result.ok).toBe(false);
     expect(result.detail).toBe("auth failed: bad credentials");
@@ -329,10 +325,7 @@ describe("WorkflowRuntimeService.checkConnection", () => {
     get.mockResolvedValueOnce(document);
     execute.mockClear();
 
-    const result = await workflowRuntime.checkConnection(
-      document.header.id,
-      TEST_CTX,
-    );
+    const result = await service.checkConnection(document.header.id, TEST_CTX);
 
     expect(result).toEqual({
       ok: true,
@@ -349,10 +342,7 @@ describe("WorkflowRuntimeService.checkConnection", () => {
     get.mockResolvedValueOnce(document);
     execute.mockClear();
 
-    const result = await workflowRuntime.checkConnection(
-      document.header.id,
-      TEST_CTX,
-    );
+    const result = await service.checkConnection(document.header.id, TEST_CTX);
 
     expect(result).toEqual({
       ok: false,
@@ -368,7 +358,7 @@ describe("WorkflowRuntimeService.checkConnection", () => {
   // The worker's own timeout handling is covered in src/pieces; here
   // only the mapping onto the mutation's wording, without waiting it out.
   it("records ERROR when the worker times the check out", async () => {
-    const runtime = workflowRuntime as unknown as {
+    const runtime = service as unknown as {
       designWorker?: Pick<PieceWorker, "checkConnection">;
     };
     const previous = runtime.designWorker;
@@ -380,7 +370,7 @@ describe("WorkflowRuntimeService.checkConnection", () => {
     get.mockResolvedValueOnce(document);
     execute.mockClear();
     try {
-      const result = await workflowRuntime.checkConnection(
+      const result = await service.checkConnection(
         document.header.id,
         TEST_CTX,
       );
@@ -402,7 +392,7 @@ describe("WorkflowRuntimeService.checkConnection", () => {
   // A check is piece code holding live credentials; it runs under the policy
   // the run will, so it cannot reach anywhere a step could not.
   it("runs the check under the same egress policy a run gets", async () => {
-    const runtime = workflowRuntime as unknown as {
+    const runtime = service as unknown as {
       designWorker?: Pick<PieceWorker, "checkConnection">;
     };
     const previous = runtime.designWorker;
@@ -421,7 +411,7 @@ describe("WorkflowRuntimeService.checkConnection", () => {
     get.mockResolvedValueOnce(document);
     execute.mockClear();
     try {
-      await workflowRuntime.checkConnection(document.header.id, TEST_CTX);
+      await service.checkConnection(document.header.id, TEST_CTX);
 
       expect(request?.egress).toEqual(DEFAULT_EGRESS_POLICY);
     } finally {
@@ -436,10 +426,7 @@ describe("WorkflowRuntimeService.checkConnection", () => {
     get.mockResolvedValueOnce(document);
     execute.mockClear();
 
-    const result = await workflowRuntime.checkConnection(
-      document.header.id,
-      TEST_CTX,
-    );
+    const result = await service.checkConnection(document.header.id, TEST_CTX);
 
     expect(result).toEqual({
       ok: true,
@@ -456,10 +443,7 @@ describe("WorkflowRuntimeService.checkConnection", () => {
     get.mockResolvedValueOnce(document);
     execute.mockClear();
 
-    const result = await workflowRuntime.checkConnection(
-      document.header.id,
-      TEST_CTX,
-    );
+    const result = await service.checkConnection(document.header.id, TEST_CTX);
 
     expect(result.ok).toBe(false);
     expect(result.detail).toContain(MISSING_SECRET_REF);
@@ -474,10 +458,7 @@ describe("WorkflowRuntimeService.checkConnection", () => {
     vi.mocked(ensurePieceBundle).mockClear();
     execute.mockClear();
 
-    const result = await workflowRuntime.checkConnection(
-      document.header.id,
-      TEST_CTX,
-    );
+    const result = await service.checkConnection(document.header.id, TEST_CTX);
 
     expect(result).toEqual({
       ok: false,
@@ -497,10 +478,7 @@ describe("WorkflowRuntimeService.checkConnection", () => {
     vi.mocked(ensurePieceBundle).mockClear();
     execute.mockClear();
 
-    const result = await workflowRuntime.checkConnection(
-      document.header.id,
-      TEST_CTX,
-    );
+    const result = await service.checkConnection(document.header.id, TEST_CTX);
 
     expect(result).toEqual({
       ok: false,
@@ -523,10 +501,7 @@ describe("WorkflowRuntimeService.checkConnection", () => {
     get.mockResolvedValueOnce(document);
     execute.mockClear();
 
-    const result = await workflowRuntime.checkConnection(
-      document.header.id,
-      TEST_CTX,
-    );
+    const result = await service.checkConnection(document.header.id, TEST_CTX);
 
     expect(result.ok).toBe(false);
     expect(result.detail).toContain("revoked");
@@ -549,11 +524,8 @@ describe("WorkflowRuntimeService.checkConnection", () => {
     });
     vi.mocked(ensurePieceBundle).mockClear();
 
-    await workflowRuntime.checkConnection(document.header.id, TEST_CTX);
-    const second = await workflowRuntime.checkConnection(
-      document.header.id,
-      TEST_CTX,
-    );
+    await service.checkConnection(document.header.id, TEST_CTX);
+    const second = await service.checkConnection(document.header.id, TEST_CTX);
 
     expect(second.ok).toBe(false);
     expect(second.detail).toContain("revoked");
@@ -566,9 +538,9 @@ describe("WorkflowRuntimeService.checkConnection", () => {
     const document = makeDocument();
     get.mockResolvedValueOnce(document);
 
-    await expect(
-      workflowRuntime.checkConnection(document.header.id),
-    ).rejects.toThrow("authenticated request");
+    await expect(service.checkConnection(document.header.id)).rejects.toThrow(
+      "authenticated request",
+    );
   });
 
   it("resolves the version from piece detail when the catalog misses", async () => {
@@ -577,10 +549,7 @@ describe("WorkflowRuntimeService.checkConnection", () => {
     const document = makeDocument();
     get.mockResolvedValueOnce(document);
 
-    const result = await workflowRuntime.checkConnection(
-      document.header.id,
-      TEST_CTX,
-    );
+    const result = await service.checkConnection(document.header.id, TEST_CTX);
 
     expect(result.ok).toBe(true);
     expect(fetchPieceDetail).toHaveBeenCalledWith(PIECES.pass.name);

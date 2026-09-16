@@ -1,5 +1,5 @@
 // Scaffold file meant for customization; delete and re-run codegen to reset.
-import type { WorkflowRuntimeHost } from "./host.js";
+import type { WorkflowRuntimeHostDeps } from "./host.js";
 import {
   ActivepiecesBlockExecutor,
   BoundConnectionResolver,
@@ -69,7 +69,7 @@ export class ConnectorMismatchError extends Error {
 // shapes its auth value; secret refs resolve through the managed store.
 export class DocumentConnectionResolver implements EngineConnectionResolver {
   constructor(
-    private readonly host: WorkflowRuntimeHost,
+    private readonly host: WorkflowRuntimeHostDeps,
     private readonly secrets: SecretProvider,
   ) {}
 
@@ -231,7 +231,7 @@ export function boundConnections(
 }
 
 export function createBlockExecutor(
-  host: WorkflowRuntimeHost,
+  host: WorkflowRuntimeHostDeps,
   secrets: SecretProvider,
   attachments?: AttachmentPort,
   pieceStore?: PieceStorePort,

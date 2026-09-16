@@ -1,5 +1,5 @@
-// Package-level runtime shared by the subgraph (config + manual fire) and the
-// document-event processor; moves to a dedicated runtime package later.
+// The workflow runtime: one instance per host, serving the GraphQL subgraph
+// (config + manual fire) and the document-event processor alike.
 import type {
   IWebhookEndpoints,
   IWebhookScope,
@@ -7,7 +7,7 @@ import type {
   WebhookReply,
   WebhookRequest,
 } from "@powerhousedao/shared/processors";
-import type { WorkflowCaller, WorkflowRuntimeHost } from "./host.js";
+import type { WorkflowCaller, WorkflowRuntimeHostDeps } from "./host.js";
 
 import {
   containsRedactedMarker,
@@ -33,7 +33,11 @@ import {
   type SecretStore,
   type WorkflowRunResult,
 } from "../pieces/index.js";
-import { childLogger, type OperationWithContext } from "document-model";
+import {
+  childLogger,
+  type ILogger,
+  type OperationWithContext,
+} from "document-model";
 import {
   actions as connectionActions,
   type ConnectionDocument,
@@ -106,10 +110,7 @@ import {
 import { packageFromConnectorId } from "./connector-id.js";
 import { SCHEDULE_BLOCK } from "./schedule.js";
 import type { AttachmentPort } from "../pieces/index.js";
-import {
-  createAttachmentPort,
-  type AttachmentClientLike,
-} from "./attachment-port.js";
+import { createAttachmentPort } from "./attachment-port.js";
 import { createPieceStorePort } from "./piece-store-port.js";
 import { currentWorkflowId, withRunScope } from "./run-scope.js";
 import { LocalEncryptedSecretStore } from "./secret-store.js";
@@ -378,49 +379,40 @@ function configRecord(config: unknown): Record<string, unknown> {
   return {};
 }
 
-// A host with no HTTP surface, or one faked narrowly by a test, carries no
-// webhook scope, and asking for an endpoint must not throw there.
-function hasWebhookScope(
-  host: WorkflowRuntimeHost | undefined,
-): host is WorkflowRuntimeHost {
-  return host?.http?.webhooks !== undefined;
-}
-
 export class WorkflowRuntimeService {
-  private subgraph?: WorkflowRuntimeHost;
+  private readonly host: WorkflowRuntimeHostDeps;
+  private readonly logger: ILogger;
+  // The only host surface that carries an attachment client; without one
+  // ctx.files stays an inline data URI instead of an attachment reference.
+  private readonly attachments?: AttachmentPort;
   private executor?: BlockExecutor;
   private pieceWorkers?: PieceWorkerPool;
-  private storePromise?: Promise<WorkflowRunStore>;
-  private secretsPromise?: Promise<LocalEncryptedSecretStore>;
+  private readonly storePromise: Promise<WorkflowRunStore>;
+  private secretsPromise?: Promise<SecretStore>;
   private readonly registry = new Map<string, TriggerRegistration>();
   // Awaited before an endpoint answers: a delivery reaching an unseeded
   // registry is refused exactly as an unknown token is, so it looks like one.
-  private seedPromise?: Promise<void>;
+  private readonly seedPromise: Promise<void>;
 
-  // Called by the subgraph on construction; seeds the trigger registry and
-  // opens the run journal.
-
-  // Keyed on the subgraph, not on "configured once": a package hot-reload
-  // builds a new one, and the old one's clients are torn down with it.
-  configure(subgraph: WorkflowRuntimeHost): void {
-    if (this.subgraph === subgraph) return;
-    this.subgraph = subgraph;
-    // A pool shutdown() disposed belongs to the subgraph being replaced. It is
-    // dropped here rather than there, so a run still in flight during the
-    // teardown finds a disposed pool and fails instead of forking into a new one.
-    this.pieceWorkers = undefined;
-    this.storePromise = WorkflowRunStore.create(subgraph.relationalDb);
+  // Seeds the trigger registry and opens the run journal. The host owns this
+  // instance's lifetime, so a replaced host means a replaced runtime.
+  constructor(host: WorkflowRuntimeHostDeps) {
+    this.host = host;
+    this.logger = host.logger ?? logger;
+    this.attachments = host.attachments
+      ? createAttachmentPort(host.attachments, () => currentWorkflowId())
+      : undefined;
+    this.storePromise = WorkflowRunStore.create(host.relationalDb);
     this.storePromise.catch((error: unknown) => {
-      logger.error("Failed to open the workflow run store: @error", error);
+      this.logger.error("Failed to open the workflow run store: @error", error);
     });
     this.seedPromise = this.seedRegistry().catch((error: unknown) => {
-      logger.error("Failed to seed the trigger registry: @error", error);
+      this.logger.error("Failed to seed the trigger registry: @error", error);
     });
   }
 
   // The journal is best-effort: a broken store never blocks runs.
   async store(): Promise<WorkflowRunStore | undefined> {
-    if (!this.storePromise) return undefined;
     try {
       return await this.storePromise;
     } catch {
@@ -430,14 +422,10 @@ export class WorkflowRuntimeService {
 
   // Unlike the journal, a broken secret store must fail resolution loudly.
   secrets(): Promise<SecretStore> {
-    if (!this.subgraph) {
-      return Promise.reject(
-        new Error("Workflow runtime is not configured yet"),
-      );
-    }
-    this.secretsPromise ??= LocalEncryptedSecretStore.create(
-      this.subgraph.relationalDb,
-    );
+    this.secretsPromise ??=
+      this.host.secrets !== undefined
+        ? Promise.resolve(this.host.secrets)
+        : LocalEncryptedSecretStore.create(this.host.relationalDb);
     return this.secretsPromise;
   }
 
@@ -446,8 +434,7 @@ export class WorkflowRuntimeService {
   }
 
   private async seedRegistry(): Promise<void> {
-    if (!this.subgraph) return;
-    const page = await this.subgraph.reactorClient.find({
+    const page = await this.host.reactorClient.find({
       type: "powerhouse/workflow",
     });
     for (const document of page.results as WorkflowDocument[]) {
@@ -457,13 +444,15 @@ export class WorkflowRuntimeService {
     // Seeding nothing while endpoints exist is always a fault, and every
     // webhook for this package is dead until the next seed succeeds.
     if (this.registry.size === 0 && (await this.hasWebhookEndpoints())) {
-      logger.warn(
+      this.logger.warn(
         "Trigger registry seeded no workflows, but @count webhook endpoint(s) exist: their deliveries will be refused as unknown tokens",
         await this.endpointCount(),
       );
       return;
     }
-    logger.info(`Trigger registry seeded: ${this.registry.size} workflow(s)`);
+    this.logger.info(
+      `Trigger registry seeded: ${this.registry.size} workflow(s)`,
+    );
   }
 
   private async endpointCount(): Promise<number> {
@@ -531,7 +520,7 @@ export class WorkflowRuntimeService {
     this.supervisor()
       .upsert(binding)
       .catch((error: unknown) => {
-        logger.error(`Trigger enable failed for ${workflowId}`, error);
+        this.logger.error(`Trigger enable failed for ${workflowId}`, error);
       });
   }
 
@@ -572,7 +561,7 @@ export class WorkflowRuntimeService {
     } catch (error) {
       // Unknown strategy polls: a poll that returns nothing is recoverable,
       // a webhook endpoint nobody serves is not.
-      logger.warn(
+      this.logger.warn(
         "Could not resolve the trigger strategy for @block; polling",
         binding.blockType,
         error,
@@ -595,7 +584,9 @@ export class WorkflowRuntimeService {
     } catch (error) {
       this.registry.delete(workflowId);
       const message = error instanceof Error ? error.message : String(error);
-      logger.error(`Webhook trigger rejected for ${workflowId}: ${message}`);
+      this.logger.error(
+        `Webhook trigger rejected for ${workflowId}: ${message}`,
+      );
       return;
     }
     this.registry.set(workflowId, {
@@ -648,7 +639,7 @@ export class WorkflowRuntimeService {
     this.supervisor()
       .remove(workflowId)
       .catch((error: unknown) => {
-        logger.error(`Trigger disable failed for ${workflowId}`, error);
+        this.logger.error(`Trigger disable failed for ${workflowId}`, error);
       });
   }
 
@@ -663,9 +654,8 @@ export class WorkflowRuntimeService {
       await this.updateRegistration(workflowId, carried);
       return;
     }
-    if (!this.subgraph) return;
     const document =
-      await this.subgraph.reactorClient.get<WorkflowDocument>(workflowId);
+      await this.host.reactorClient.get<WorkflowDocument>(workflowId);
     await this.updateRegistration(workflowId, document.state.global);
   }
 
@@ -757,10 +747,13 @@ export class WorkflowRuntimeService {
   ): void {
     this.fire(workflowId, payload, kind).then(
       (run) => {
-        logger.info(`${kind} fired workflow ${workflowId}: ${run.status}`);
+        this.logger.info(`${kind} fired workflow ${workflowId}: ${run.status}`);
       },
       (error: unknown) => {
-        logger.error(`${kind} run failed for workflow ${workflowId}`, error);
+        this.logger.error(
+          `${kind} run failed for workflow ${workflowId}`,
+          error,
+        );
       },
     );
   }
@@ -843,9 +836,8 @@ export class WorkflowRuntimeService {
     if (!parentId) return undefined;
     const cached = this.driveParentCache.get(parentId);
     if (cached !== undefined) return cached ? parentId : undefined;
-    if (!this.subgraph) return undefined;
     try {
-      const parent = await this.subgraph.reactorClient.get(parentId);
+      const parent = await this.host.reactorClient.get(parentId);
       const isDrive = parent.header.documentType === DRIVE_DOCUMENT_TYPE;
       if (this.driveParentCache.size > 1024) this.driveParentCache.clear();
       this.driveParentCache.set(parentId, isDrive);
@@ -916,9 +908,9 @@ export class WorkflowRuntimeService {
       // Best-effort: unlinking a node leaves the document in place. Folder
       // nodes never resolve, so a type filter also skips them.
       try {
-        const document = await this.subgraph?.reactorClient.get(documentId);
-        documentType = document?.header.documentType;
-        name ??= document?.header.name ?? null;
+        const document = await this.host.reactorClient.get(documentId);
+        documentType = document.header.documentType;
+        name ??= document.header.name;
       } catch {
         documentType = undefined;
       }
@@ -936,20 +928,14 @@ export class WorkflowRuntimeService {
 
   private triggerSupervisor?: TriggerSupervisor;
 
-  // Supplied by the processor factory, which is the only host surface that
-  // receives an attachment client (IProcessorHostModule.attachments). The
-  // worker pool runs in this same process, so handing it over here is all the
-  // wiring the AttachmentBridge needs.
-  private attachments?: AttachmentPort;
-
   // Lazily built; started/stopped by the trigger processor's lifecycle.
   supervisor(): TriggerSupervisor {
     this.triggerSupervisor ??= new TriggerSupervisor({
       store: () => this.store(),
       resolveAuth: async (connectionId, request) => {
-        if (!connectionId || !this.subgraph) return undefined;
+        if (!connectionId) return undefined;
         const resolved = await new DocumentConnectionResolver(
-          this.subgraph,
+          this.host,
           this.secretProvider(),
         ).resolveWithSecrets(connectionId, request);
         // The supervisor reads these back off the auth value to redact what a
@@ -974,30 +960,16 @@ export class WorkflowRuntimeService {
     return this.triggerSupervisor;
   }
 
-  // Called from the switchboard processor path before the supervisor starts.
-  setAttachments(client: AttachmentClientLike): void {
-    this.attachments = createAttachmentPort(client, () => currentWorkflowId());
-    // Rebuilt on the next run so an executor made before this point picks the
-    // store up.
-    this.executor = undefined;
-  }
-
   startTriggerSupervisor(): void {
     this.supervisor().start();
-    if (!sigtermHooked) {
-      sigtermHooked = true;
-      process.once("SIGTERM", () => this.shutdown());
-    }
   }
 
   stopTriggerSupervisor(): void {
     this.triggerSupervisor?.stop();
   }
 
-  // Teardown for the whole runtime: on SIGTERM, and on the hot reload that
-  // replaces this package.
-
-  // The run children outlive the reactor otherwise — they are forked, not
+  // Teardown for the whole runtime, driven by the host. The run children
+  // outlive the reactor otherwise — they are forked, not
   // spawned by it — and a run holding one is over the moment we stop.
   shutdown(): void {
     this.stopTriggerSupervisor();
@@ -1017,21 +989,24 @@ export class WorkflowRuntimeService {
 
   private webhookEndpoints?: IWebhookEndpoints;
   private webhookScope?: IWebhookScope;
-  // Held as a promise: `configure` seeds from the constructor, before `onSetup`, so a
-  // seeded webhook workflow would otherwise mint no token and fail to arm.
+  // Held as a promise: seeding runs from the constructor, before the host
+  // registers, so a seeded webhook workflow would mint no token and fail to arm.
   private webhookRegistration?: Promise<IWebhookEndpoints | undefined>;
 
-  /** Registers the workflow endpoint family with the reactor's webhook service (from onSetup;
-   * idempotent). Everything transport-shaped is the service's; only workflow identity is ours. */
-  async registerWebhookEndpoint(host: WorkflowRuntimeHost): Promise<void> {
+  /** Registers the workflow endpoint family with the reactor's webhook service
+   * (idempotent). Everything transport-shaped is the service's; only workflow identity is ours. */
+  async registerWebhookEndpoint(): Promise<void> {
     if (this.webhookRegistration) {
       await this.webhookRegistration;
       return;
     }
-    // The scope is read here rather than passed in: the host's own type
-    // carries it, so there is one identity for it instead of two.
-    const webhooks = host.http?.webhooks;
-    if (!webhooks) return;
+    const webhooks = this.host.webhooks;
+    if (!webhooks) {
+      this.logger.warn(
+        "This host serves no webhooks; workflows with a webhook trigger will not arm",
+      );
+      return;
+    }
     this.webhookScope = webhooks;
     this.webhookRegistration = webhooks
       .register({
@@ -1044,9 +1019,9 @@ export class WorkflowRuntimeService {
         return endpoints;
       })
       .catch((error: unknown) => {
-        // No webhook store means no webhook triggers, not no workflows: rethrowing would take
-        // the whole subgraph down (the manager awaits onSetup), killing other triggers too.
-        logger.warn(
+        // No webhook store means no webhook triggers, not no workflows:
+        // rethrowing would take every other trigger down with it.
+        this.logger.warn(
           "Webhook triggers are unavailable on this host; other triggers are unaffected: @error",
           error,
         );
@@ -1055,26 +1030,24 @@ export class WorkflowRuntimeService {
     await this.webhookRegistration;
   }
 
-  /** The endpoint family, once registered. Seeding runs before `onSetup`, so a caller
-   * that needs a token has to wait for it rather than find it missing. */
+  /** The endpoint family, once registered. Seeding runs before the host starts
+   * the runtime, so a caller that needs a token waits rather than finds it missing. */
   private async endpoints(): Promise<IWebhookEndpoints | undefined> {
     if (this.webhookEndpoints) return this.webhookEndpoints;
-    // onSetup normally registers, but seeding starts from the subgraph's
+    // The host normally registers on start, but seeding runs from the
     // constructor and an enable can reach here first. Registering on demand
     // makes the order irrelevant, rather than failing the trigger on a race.
-    if (!this.webhookRegistration && hasWebhookScope(this.subgraph)) {
-      await this.registerWebhookEndpoint(this.subgraph);
+    if (!this.webhookRegistration && this.host.webhooks) {
+      await this.registerWebhookEndpoint();
     }
     return await this.webhookRegistration;
   }
 
   /** The per-document policy the service enforces before a delivery reaches this code;
    * undefined means the workflow is not armed, answered exactly as an unknown token is. */
-  private async webhookPolicy(
-    workflowId: string,
-  ): Promise<WebhookPolicy | undefined> {
-    // Seeding starts from the subgraph's constructor and a delivery can beat
-    // it, and an unseeded registry is indistinguishable from a bad token.
+  async webhookPolicy(workflowId: string): Promise<WebhookPolicy | undefined> {
+    // Seeding starts from the constructor and a delivery can beat it, and an
+    // unseeded registry is indistinguishable from a bad token.
     await this.seedPromise;
 
     const registration = this.registry.get(workflowId);
@@ -1175,7 +1148,7 @@ export class WorkflowRuntimeService {
     ]);
 
     if (run === TIMED_OUT) {
-      logger.warn(
+      this.logger.warn(
         `Webhook run for ${workflowId} exceeded ${DELIVERY_TIMEOUT_MS}ms; answering 504 while it continues`,
       );
       return {
@@ -1191,7 +1164,7 @@ export class WorkflowRuntimeService {
     if (!run.ok) {
       const message =
         run.error instanceof Error ? run.error.message : String(run.error);
-      logger.error(`Webhook run failed for ${workflowId}: ${message}`);
+      this.logger.error(`Webhook run failed for ${workflowId}: ${message}`);
       return {
         status: 500,
         contentType: JSON_CONTENT_TYPE,
@@ -1227,7 +1200,7 @@ export class WorkflowRuntimeService {
     } catch (error) {
       // A failed probe is the sender's answer, so it must not look like a
       // delivery: 500 tells it to retry rather than that the endpoint is gone.
-      logger.error(
+      this.logger.error(
         "Handshake failed for @block on workflow @workflow",
         binding.blockType,
         binding.workflowId,
@@ -1251,7 +1224,7 @@ export class WorkflowRuntimeService {
     } catch (error) {
       // A delivery must not fail because the descriptor could not be read; the
       // cost of guessing wrong is one probe answered as a delivery.
-      logger.warn(
+      this.logger.warn(
         "Could not read the handshake config for @block",
         binding.blockType,
         error,
@@ -1276,14 +1249,14 @@ export class WorkflowRuntimeService {
       .deliverWebhook(binding.workflowId, payload)
       .then(
         () => {
-          logger.info(
+          this.logger.info(
             "Webhook delivered to @block for workflow @workflow",
             binding.blockType,
             binding.workflowId,
           );
         },
         (error: unknown) => {
-          logger.error(
+          this.logger.error(
             `Webhook delivery failed for workflow ${binding.workflowId}`,
             error,
           );
@@ -1303,7 +1276,9 @@ export class WorkflowRuntimeService {
       return await (await this.secrets()).get(config.secretRef);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      logger.error(`Webhook secret unavailable for ${workflowId}: ${message}`);
+      this.logger.error(
+        `Webhook secret unavailable for ${workflowId}: ${message}`,
+      );
       return undefined;
     }
   }
@@ -1364,8 +1339,7 @@ export class WorkflowRuntimeService {
 
   // The workflows a drive holds, so a drive app can scope runs to its own.
   async driveWorkflowIds(driveId: string): Promise<string[]> {
-    if (!this.subgraph) return [];
-    const page = await this.subgraph.reactorClient.drives.listNodes(driveId);
+    const page = await this.host.reactorClient.drives.listNodes(driveId);
     // Only file nodes carry a documentType, so `in` also rules out folders.
     return page.results
       .filter(
@@ -1379,8 +1353,7 @@ export class WorkflowRuntimeService {
   // Design-time: the powerhouse/connection documents this caller may read.
   // The reactor client is unscoped, so the filter is ours to apply.
   async connections(ctx?: WorkflowCaller): Promise<ConnectionSummary[]> {
-    if (!this.subgraph) return [];
-    const page = await this.subgraph.reactorClient.find({
+    const page = await this.host.reactorClient.find({
       type: "powerhouse/connection",
     });
     const readable = await this.readableDocuments(
@@ -1406,12 +1379,9 @@ export class WorkflowRuntimeService {
     connectionId: string,
     ctx?: WorkflowCaller,
   ): Promise<ConnectionCheckResult> {
-    if (!this.subgraph) {
-      throw new Error("Workflow runtime is not configured yet");
-    }
     await this.assertCanReadDocument(connectionId, ctx);
     const document =
-      await this.subgraph.reactorClient.get<ConnectionDocument>(connectionId);
+      await this.host.reactorClient.get<ConnectionDocument>(connectionId);
     if (document.header.documentType !== "powerhouse/connection") {
       throw new Error(
         `Document "${connectionId}" is not a powerhouse/connection`,
@@ -1556,9 +1526,7 @@ export class WorkflowRuntimeService {
       checkedAt: new Date().toISOString(),
       error: result.ok ? undefined : (result.detail ?? undefined),
     });
-    await this.subgraph!.reactorClient.execute(document.header.id, "main", [
-      action,
-    ]);
+    await this.host.reactorClient.execute(document.header.id, "main", [action]);
     return result;
   }
 
@@ -1579,7 +1547,7 @@ export class WorkflowRuntimeService {
           );
           return { piece, descriptor };
         } catch (error) {
-          logger.warn(
+          this.logger.warn(
             `Could not describe the package piece "${piece.name}": ${String(error)}`,
           );
           return undefined;
@@ -1615,7 +1583,7 @@ export class WorkflowRuntimeService {
       published = await fetchPieceCatalog();
     } catch (error) {
       if (entries.length === 0) throw error;
-      logger.warn(`Serving package pieces only: ${String(error)}`);
+      this.logger.warn(`Serving package pieces only: ${String(error)}`);
       published = [];
     }
     return [
@@ -1653,7 +1621,7 @@ export class WorkflowRuntimeService {
       );
     } catch (error) {
       // The published half is still worth serving without them.
-      logger.warn(`Could not index the package pieces: ${String(error)}`);
+      this.logger.warn(`Could not index the package pieces: ${String(error)}`);
     }
     return searchBlocks(query, limit, local);
   }
@@ -1703,11 +1671,11 @@ export class WorkflowRuntimeService {
     documents: T[],
     ctx: WorkflowCaller | undefined,
   ): Promise<T[]> {
-    if (!ctx || !this.subgraph) return [];
-    const subgraph = this.subgraph;
+    if (!ctx) return [];
+    const host = this.host;
     const allowed = await Promise.all(
       documents.map((document) =>
-        subgraph
+        host
           .assertCanRead(document.header.id, ctx)
           .then(() => true)
           .catch(() => false),
@@ -1720,13 +1688,10 @@ export class WorkflowRuntimeService {
     documentId: string,
     ctx: WorkflowCaller | undefined,
   ): Promise<void> {
-    if (!this.subgraph) {
-      throw new Error("Workflow runtime is not configured yet");
-    }
     if (!ctx) {
       throw new Error("Connection access requires an authenticated request");
     }
-    await this.subgraph.assertCanRead(documentId, ctx);
+    await this.host.assertCanRead(documentId, ctx);
   }
 
   // Design-time DROPDOWN options() / DYNAMIC props(), run in the piece worker.
@@ -1745,10 +1710,10 @@ export class WorkflowRuntimeService {
     // Auth-dependent options() resolvers need the step's connection. Nothing
     // about the request authorizes it, so the caller's own read access does.
     let auth: unknown;
-    if (connectionId && this.subgraph) {
+    if (connectionId) {
       await this.assertCanReadDocument(connectionId, ctx);
       auth = await new DocumentConnectionResolver(
-        this.subgraph,
+        this.host,
         this.secretProvider(),
       ).resolve(connectionId, {
         blockType,
@@ -1772,13 +1737,13 @@ export class WorkflowRuntimeService {
         // from, over the same port a step of it would use — offered only when
         // there is a host to answer, or the member would fail as a missing
         // handler rather than as the unsupported member it is.
-        ...(piece.local && this.subgraph ? { reactorAccess: true } : {}),
+        ...(piece.local ? { reactorAccess: true } : {}),
         // Options come from the same service the step will call: the editor
         // must not offer a choice a run cannot reach.
         ...(this.designEgress ? { egress: this.designEgress } : {}),
       },
-      piece.local && this.subgraph
-        ? { hostCalls: reactorHandlers(new SubgraphReactorPort(this.subgraph)) }
+      piece.local
+        ? { hostCalls: reactorHandlers(new SubgraphReactorPort(this.host)) }
         : {},
     );
     return result.output;
@@ -1876,10 +1841,10 @@ export class WorkflowRuntimeService {
   }
 
   private async stateFields(documentType?: string) {
-    if (!documentType || !this.subgraph) return [];
+    if (!documentType) return [];
     try {
       const module =
-        await this.subgraph.reactorClient.getDocumentModelModule(documentType);
+        await this.host.reactorClient.getDocumentModelModule(documentType);
       const sdl =
         module.documentModel.global.specifications.at(-1)?.state.global.schema;
       return sdl ? fieldsFromSdl(sdl) : [];
@@ -1892,10 +1857,10 @@ export class WorkflowRuntimeService {
     documentType?: string,
     actionType?: string,
   ) {
-    if (!documentType || !actionType || !this.subgraph) return [];
+    if (!documentType || !actionType) return [];
     try {
       const module =
-        await this.subgraph.reactorClient.getDocumentModelModule(documentType);
+        await this.host.reactorClient.getDocumentModelModule(documentType);
       const latest = module.documentModel.global.specifications.at(-1);
       for (const specModule of latest?.modules ?? []) {
         for (const operation of specModule.operations) {
@@ -1918,12 +1883,9 @@ export class WorkflowRuntimeService {
     workflowId: string,
     ctx?: WorkflowCaller,
   ): Promise<unknown> {
-    if (!this.subgraph) {
-      throw new Error("Workflow runtime is not configured yet");
-    }
     await this.assertCanReadDocument(workflowId, ctx);
     const document =
-      await this.subgraph.reactorClient.get<WorkflowDocument>(workflowId);
+      await this.host.reactorClient.get<WorkflowDocument>(workflowId);
     const trigger = document.state.global.trigger;
     if (!trigger) throw new Error("Workflow has no trigger");
     if (trigger.connectionId) {
@@ -1957,11 +1919,8 @@ export class WorkflowRuntimeService {
       rerunOf: string;
     },
   ): Promise<PersistedRunResult> {
-    if (!this.subgraph) {
-      throw new Error("Workflow runtime is not configured yet");
-    }
     const document =
-      await this.subgraph.reactorClient.get<WorkflowDocument>(workflowId);
+      await this.host.reactorClient.get<WorkflowDocument>(workflowId);
     if (document.header.documentType !== "powerhouse/workflow") {
       throw new Error(`Document "${workflowId}" is not a powerhouse/workflow`);
     }
@@ -1979,7 +1938,7 @@ export class WorkflowRuntimeService {
     // Without a journal there is nowhere durable to keep ctx.store, so the
     // executor falls back to the worker's heap.
     this.executor ??= createBlockExecutor(
-      this.subgraph,
+      this.host,
       this.secretProvider(),
       this.attachments,
       store ? createPieceStorePort(store, currentWorkflowId) : undefined,
@@ -2027,7 +1986,7 @@ export class WorkflowRuntimeService {
                       // journal must not look exactly like a healthy one.
                       if (journalFailed) return;
                       journalFailed = true;
-                      logger.warn(
+                      this.logger.warn(
                         `Run ${runId}: journaling step "${record.key}" failed; the run continues without per-step durability`,
                         error,
                       );
@@ -2042,7 +2001,7 @@ export class WorkflowRuntimeService {
         } catch (error) {
           // The run is over and its result is the caller's; a journal that
           // cannot say so must not turn a finished run into a failed one.
-          logger.warn(
+          this.logger.warn(
             `Run ${runId}: closing the run journal out failed; the run's outcome stands`,
             error,
           );
@@ -2067,9 +2026,6 @@ export class WorkflowRuntimeService {
   // Resume a FAILED run: journaled step outputs replay, execution restarts
   // at the first step that didn't succeed. Runs the current definition.
   async rerun(runId: string): Promise<PersistedRunResult> {
-    if (!this.subgraph) {
-      throw new Error("Workflow runtime is not configured yet");
-    }
     const store = await this.store();
     if (!store) throw new Error("Run journal is unavailable");
     const run = await store.getRun(runId);
@@ -2089,7 +2045,7 @@ export class WorkflowRuntimeService {
           "replayed; fire the workflow again instead of rerunning it",
       );
     }
-    const document = await this.subgraph.reactorClient.get<WorkflowDocument>(
+    const document = await this.host.reactorClient.get<WorkflowDocument>(
       run.workflow_id,
     );
     const currentSteps = new Map(
@@ -2124,6 +2080,9 @@ export class WorkflowRuntimeService {
   }
 }
 
-let sigtermHooked = false;
-
-export const workflowRuntime = new WorkflowRuntimeService();
+/** The runtime a host composes: one instance, its lifetime the host's. */
+export function createWorkflowRuntime(
+  deps: WorkflowRuntimeHostDeps,
+): WorkflowRuntimeService {
+  return new WorkflowRuntimeService(deps);
+}

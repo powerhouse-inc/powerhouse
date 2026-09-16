@@ -3,7 +3,8 @@
 import { PieceWorkerPool } from "../pieces/index.js";
 import { describe, expect, it } from "vitest";
 import { currentPieceWorker } from "./run-scope.js";
-import { WorkflowRuntimeService } from "./service.js";
+import type { WorkflowRuntimeService } from "./service.js";
+import { testRuntime } from "../../test/helpers/runtime.js";
 
 const WORKFLOW_ID = "wf-workers";
 
@@ -40,11 +41,10 @@ function serviceWithPool(
   pool: PieceWorkerPool,
   onStep: (worker: unknown) => void,
 ): WorkflowRuntimeService {
-  const service = new WorkflowRuntimeService();
-  const internals = service as unknown as Record<string, unknown>;
-  internals.subgraph = {
+  const service = testRuntime({
     reactorClient: { get: () => Promise.resolve(workflowDocument()) },
-  };
+  } as never);
+  const internals = service as unknown as Record<string, unknown>;
   internals.pieceWorkers = pool;
   internals.executor = {
     // What a piece block would do: ask the scope which child is this run's.
@@ -104,11 +104,10 @@ describe("fire() and the worker pool", () => {
 
   it("closes the run's session however the run ends", async () => {
     const { pool, disposed } = fakePool();
-    const service = new WorkflowRuntimeService();
-    const internals = service as unknown as Record<string, unknown>;
-    internals.subgraph = {
+    const service = testRuntime({
       reactorClient: { get: () => Promise.resolve(workflowDocument()) },
-    };
+    } as never);
+    const internals = service as unknown as Record<string, unknown>;
     internals.pieceWorkers = pool;
     internals.executor = {
       // Takes the slot before failing. A step that fails without ever asking
@@ -133,7 +132,7 @@ describe("fire() and the worker pool", () => {
 
   it("takes the design worker with it on shutdown", () => {
     const { pool } = fakePool();
-    const service = new WorkflowRuntimeService();
+    const service = testRuntime();
     const internals = service as unknown as Record<string, unknown>;
     internals.pieceWorkers = pool;
     let disposedDesign = false;
@@ -153,10 +152,8 @@ describe("fire() and the worker pool", () => {
 
   it("refuses a run that reaches the pool after shutdown", async () => {
     const { pool, disposed } = fakePool();
-    const service = new WorkflowRuntimeService();
-    const internals = service as unknown as Record<string, unknown>;
     let release: (() => void) | undefined;
-    internals.subgraph = {
+    const service = testRuntime({
       reactorClient: {
         // Holds the run between its first await and the pool, which is where
         // a teardown lands on a reactor that is still serving.
@@ -165,7 +162,8 @@ describe("fire() and the worker pool", () => {
             release = () => resolve(workflowDocument());
           }),
       },
-    };
+    } as never);
+    const internals = service as unknown as Record<string, unknown>;
     internals.pieceWorkers = pool;
     internals.executor = { execute: () => Promise.resolve({ output: {} }) };
 

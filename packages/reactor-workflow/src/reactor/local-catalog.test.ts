@@ -24,7 +24,9 @@ vi.mock("./piece-catalog.js", async (importOriginal) => {
 
 import { resetBlockSearchIndex } from "./block-search.js";
 import { packagePieces } from "./piece-registry.js";
-import { workflowRuntime } from "./service.js";
+import { testRuntime } from "../../test/helpers/runtime.js";
+
+const runtime = testRuntime();
 
 const PIECE = "@powerhousedao/piece-fixture";
 
@@ -91,12 +93,12 @@ describe("a package piece in the catalog", () => {
 
   afterAll(async () => {
     packagePieces.reset();
-    workflowRuntime.shutdown();
+    runtime.shutdown();
     await rm(root, { recursive: true, force: true });
   });
 
   it("lists the piece with counts read from the piece itself", async () => {
-    const catalog = await workflowRuntime.pieceCatalog();
+    const catalog = await runtime.pieceCatalog();
 
     expect(catalog).toEqual([
       expect.objectContaining({
@@ -113,7 +115,7 @@ describe("a package piece in the catalog", () => {
   });
 
   it("carries the auth fields a connection form needs", async () => {
-    const [entry] = await workflowRuntime.pieceCatalog();
+    const [entry] = await runtime.pieceCatalog();
 
     expect(entry.auth).toEqual(
       expect.objectContaining({
@@ -126,8 +128,8 @@ describe("a package piece in the catalog", () => {
   });
 
   it("gives block types no version, so an upgrade keeps workflows valid", async () => {
-    const actions = await workflowRuntime.pieceActions(PIECE);
-    const triggers = await workflowRuntime.pieceTriggers(PIECE);
+    const actions = await runtime.pieceActions(PIECE);
+    const triggers = await runtime.pieceTriggers(PIECE);
 
     expect(actions.actions).toEqual([
       expect.objectContaining({
@@ -146,9 +148,10 @@ describe("a package piece in the catalog", () => {
   });
 
   it("answers a descriptor for an unversioned block type", async () => {
-    const descriptor = (await workflowRuntime.blockDescriptor(
-      `${PIECE}#do_thing`,
-    )) as { displayName: string; action: { name: string } } | null;
+    const descriptor = (await runtime.blockDescriptor(`${PIECE}#do_thing`)) as {
+      displayName: string;
+      action: { name: string };
+    } | null;
 
     expect(descriptor?.displayName).toBe("Fixture");
     expect(descriptor?.action.name).toBe("do_thing");
@@ -158,7 +161,7 @@ describe("a package piece in the catalog", () => {
     resetBlockSearchIndex();
     // The published index never builds here, and a block this reactor ships
     // must still be findable — it is the only kind an offline host has.
-    const result = await workflowRuntime.searchBlocks("thing");
+    const result = await runtime.searchBlocks("thing");
 
     // Ranked as any hit is: a name the query prefixes comes first.
     expect(result.hits.map((hit) => hit.blockType)).toEqual([
@@ -170,9 +173,10 @@ describe("a package piece in the catalog", () => {
   it("builds an output tree without asking the published catalog", async () => {
     // Every fetch of the published listing rejects in this suite, so a tree
     // that needed one would throw rather than answer.
-    const tree = (await workflowRuntime.blockOutputTree(
-      `${PIECE}#do_thing`,
-    )) as { source: string; nodes: unknown[] };
+    const tree = (await runtime.blockOutputTree(`${PIECE}#do_thing`)) as {
+      source: string;
+      nodes: unknown[];
+    };
 
     // The piece declares no output schema, so "none" is the honest answer —
     // what matters is that it is an answer.
@@ -180,7 +184,7 @@ describe("a package piece in the catalog", () => {
   });
 
   it("serves detail the published listing has nothing to say about", async () => {
-    const detail = (await workflowRuntime.pieceDetail(PIECE)) as {
+    const detail = (await runtime.pieceDetail(PIECE)) as {
       version: string;
       actions: Record<string, unknown>;
     };

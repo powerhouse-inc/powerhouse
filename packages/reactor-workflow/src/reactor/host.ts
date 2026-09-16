@@ -5,12 +5,15 @@ import type {
   IRelationalDb,
   IWebhookScope,
 } from "@powerhousedao/shared/processors";
+import type { ILogger } from "document-model";
+import type { AttachmentClientLike } from "./attachment-port.js";
+import type { SecretStore } from "../pieces/index.js";
 
 // The caller behind a request. The engine only hands it back to the host's own
 // access check, so its shape is the host's business.
 export type WorkflowCaller = object;
 
-export interface WorkflowRuntimeHost {
+export interface WorkflowRuntimeHostDeps {
   relationalDb: IRelationalDb;
   reactorClient: IReactorClient;
   // Throws when this caller may not read the document; what it resolves to is
@@ -18,5 +21,10 @@ export interface WorkflowRuntimeHost {
   assertCanRead(identifier: string, caller: WorkflowCaller): Promise<unknown>;
   // Absent on a host with no HTTP surface: webhook triggers are then
   // unavailable, which is not the same as having no workflows.
-  http?: { webhooks?: IWebhookScope };
+  webhooks?: IWebhookScope;
+  // Absent leaves ctx.files inline rather than turning it into an attachment.
+  attachments?: AttachmentClientLike;
+  // Defaults to the relational store encrypted with the host's master key.
+  secrets?: SecretStore;
+  logger?: ILogger;
 }

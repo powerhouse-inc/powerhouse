@@ -536,11 +536,11 @@ export interface StartRunOptions {
 // Runs this process started and has not closed out. A run outlives its store:
 // configure() opens a new one on each hot reload, mid-flight runs and all.
 
-// Process-local on purpose. A second reactor over the same journal would need
-// a lease, and one that can block startup costs more than a precise sweep.
-const runsInFlight = new Set<string>();
-
 export class WorkflowRunStore {
+  // Runtime-local on purpose. A second reactor over the same journal would
+  // need a lease, and one that can block startup costs more than a sweep.
+  private readonly runsInFlight = new Set<string>();
+
   private constructor(
     private readonly db: IRelationalDb<WorkflowRuntimeDB>,
     private readonly unmigrated: Set<string>,
@@ -584,8 +584,8 @@ export class WorkflowRunStore {
       .where("status", "=", "RUNNING");
     // Failing a run this process is still executing would hand rerun() a live
     // run, and its side effects would happen twice.
-    if (runsInFlight.size > 0) {
-      query = query.where("id", "not in", [...runsInFlight]);
+    if (this.runsInFlight.size > 0) {
+      query = query.where("id", "not in", [...this.runsInFlight]);
     }
     const result = await query.executeTakeFirst();
     const recovered = Number(result.numUpdatedRows);
@@ -615,7 +615,7 @@ export class WorkflowRunStore {
         rerun_of: options.rerunOf ?? null,
       })
       .execute();
-    runsInFlight.add(id);
+    this.runsInFlight.add(id);
     return id;
   }
 
@@ -648,7 +648,7 @@ export class WorkflowRunStore {
   ): Promise<void> {
     // Terminal from here whatever the writes below do: if we leave the run
     // RUNNING, a later sweep should be free to reach it.
-    runsInFlight.delete(runId);
+    this.runsInFlight.delete(runId);
     if (result.steps.length > 0) {
       try {
         await this.sweepSteps(runId, result, executionOrder);
@@ -729,7 +729,7 @@ export class WorkflowRunStore {
   }
 
   async failRun(runId: string, error: string): Promise<void> {
-    runsInFlight.delete(runId);
+    this.runsInFlight.delete(runId);
     await this.db
       .updateTable("run")
       .set({
