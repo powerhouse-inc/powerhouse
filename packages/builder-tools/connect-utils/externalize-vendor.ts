@@ -793,7 +793,9 @@ await build({
   // segment so the worker recovers the deploy base, not the vendor prefix.
   worker: { format: 'es', plugins: () => [connectDynamicBasePlugin({ forWorker: true, workerStripPrefix: urlPrefix.replace(/^\\/+/, '') })] },
   build: {
-    outDir: vendorDir, emptyOutDir: false, minify: false, target: 'esnext', cssCodeSplit: true,
+    // Production ships this to every visitor, so minify it like the app's own
+    // chunks; dev keeps readable output and the faster build.
+    outDir: vendorDir, emptyOutDir: false, minify: nodeEnv === 'production', target: 'esnext', cssCodeSplit: true,
     rollupOptions: {
       input, preserveEntrySignatures: 'strict',
       output: { format: 'es', entryFileNames: '[name].js', chunkFileNames: 'chunks/[name]-[hash].js', assetFileNames: 'assets/[name]-[hash][extname]' },
