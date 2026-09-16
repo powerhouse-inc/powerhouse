@@ -4,7 +4,7 @@
 // Everything here is what could not cross the worker boundary — model modules
 // and their factories, drive nodes, a PHDocument's operations — so the piece
 // keeps the block's own semantics and the reactor stays on this side of it.
-import type { BaseSubgraph } from "@powerhousedao/reactor-api";
+import type { WorkflowRuntimeHost } from "./host.js";
 import type {
   ReactorCreateInput,
   ReactorDocumentSummary,
@@ -116,10 +116,10 @@ function assertOperationsApplied(document: PHDocument, count: number): void {
 }
 
 export class SubgraphReactorPort implements ReactorPort {
-  constructor(private readonly subgraph: BaseSubgraph) {}
+  constructor(private readonly host: WorkflowRuntimeHost) {}
 
   private get client() {
-    return this.subgraph.reactorClient;
+    return this.host.reactorClient;
   }
 
   async models(): Promise<ReactorModelSummary[]> {

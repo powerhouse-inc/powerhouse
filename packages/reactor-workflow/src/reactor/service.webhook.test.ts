@@ -1,6 +1,6 @@
 // What is left of the webhook path once the reactor owns the transport: the
 // per-workflow policy and a verified delivery. The rest is reactor-api's.
-import type { WebhookRequest } from "@powerhousedao/reactor-api";
+import type { WebhookRequest } from "@powerhousedao/shared/processors";
 import type { OperationWithContext } from "document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { WorkflowRuntimeService } from "./service.js";

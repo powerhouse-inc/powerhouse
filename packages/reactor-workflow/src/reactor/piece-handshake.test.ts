@@ -1,6 +1,6 @@
 // Whether a request is a sender's probe, and how the piece's answer is shaped.
 // Match too widely and every delivery is answered as a probe.
-import type { WebhookRequest } from "@powerhousedao/reactor-api";
+import type { WebhookRequest } from "@powerhousedao/shared/processors";
 import { describe, expect, it } from "vitest";
 import { handshakeMatches, handshakeReply } from "./piece-handshake.js";
 

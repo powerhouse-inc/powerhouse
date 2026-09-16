@@ -1,6 +1,6 @@
 // Server-side connection binding: a step resolves only what the definition
 // its run pinned declared, and only from its own connector (doc 08 §10).
-import type { BaseSubgraph } from "@powerhousedao/reactor-api";
+import type { WorkflowRuntimeHost } from "./host.js";
 import {
   ConnectionNotBoundError,
   declaredConnectionIds,
@@ -60,7 +60,7 @@ function fakeSubgraph() {
     if (!document) return Promise.reject(new Error("not found"));
     return Promise.resolve(document);
   });
-  return { get, subgraph: { reactorClient: { get } } as unknown as BaseSubgraph };
+  return { get, subgraph: { reactorClient: { get } } as unknown as WorkflowRuntimeHost };
 }
 
 const secrets = new InMemorySecretProvider({ "vault://token": "s3cret" });
@@ -95,7 +95,7 @@ function workflowState(
 const bindingFor = (state: WorkflowState) =>
   declaredConnectionIds(toWorkflowDefinition(state));
 
-function resolverOver(subgraph: BaseSubgraph) {
+function resolverOver(subgraph: WorkflowRuntimeHost) {
   return boundConnections(new DocumentConnectionResolver(subgraph, secrets));
 }
 

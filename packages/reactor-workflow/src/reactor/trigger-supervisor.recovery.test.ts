@@ -1,6 +1,6 @@
 // Supervisor robustness over a real PGlite-backed store with a stub worker and
 // an injected clock: onEnable retry/backoff, and the poll cursor guard.
-import { getDbClient } from "@powerhousedao/reactor-api";
+import { createTestRelationalDb } from "../../test/helpers/pglite.js";
 import type {
   PieceWorker,
   PieceWorkerResult,
@@ -96,8 +96,7 @@ describe("TriggerSupervisor robustness", () => {
   } as unknown as PieceWorker;
 
   beforeAll(async () => {
-    const { db } = getDbClient();
-    store = await WorkflowRunStore.create(createRelationalDb(db));
+    store = await WorkflowRunStore.create(createTestRelationalDb());
     // The supervisor's view of the store, with one read the tests can break.
     handle = Object.create(store) as WorkflowRunStore;
     handle.getTriggerState = (workflowId: string) =>

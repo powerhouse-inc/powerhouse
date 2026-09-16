@@ -1,6 +1,6 @@
 // Supervisor over a real PGlite-backed store and the real worker + rss piece:
 // enable/poll/fire/disable, error backoff, and the zombie-row guard.
-import { getDbClient } from "@powerhousedao/reactor-api";
+import { createTestRelationalDb } from "../../test/helpers/pglite.js";
 import { fetchPieceBundle } from "../pieces/index.js";
 import { createRelationalDb } from "@powerhousedao/shared/processors";
 import http from "node:http";
@@ -97,8 +97,7 @@ describe.skipIf(!rssBundle)("TriggerSupervisor", () => {
     );
     feedUrl = `http://127.0.0.1:${(server.address() as AddressInfo).port}/feed.xml`;
 
-    const { db } = getDbClient();
-    store = await WorkflowRunStore.create(createRelationalDb(db));
+    store = await WorkflowRunStore.create(createTestRelationalDb());
     fired = [];
     supervisor = new TriggerSupervisor({
       store: () => Promise.resolve(store),

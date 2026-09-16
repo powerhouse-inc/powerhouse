@@ -1,14 +1,13 @@
 // Package-level runtime shared by the subgraph (config + manual fire) and the
 // document-event processor; moves to a dedicated runtime package later.
 import type {
-  BaseSubgraph,
-  Context,
   IWebhookEndpoints,
   IWebhookScope,
   WebhookPolicy,
   WebhookReply,
   WebhookRequest,
-} from "@powerhousedao/reactor-api";
+} from "@powerhousedao/shared/processors";
+import type { WorkflowCaller, WorkflowRuntimeHost } from "./host.js";
 
 import {
   containsRedactedMarker,
@@ -379,19 +378,16 @@ function configRecord(config: unknown): Record<string, unknown> {
   return {};
 }
 
-// `http` is not optional on a real subgraph, but a narrowly-faked one has no
-// reason to carry it, and asking for an endpoint must not throw there.
+// A host with no HTTP surface, or one faked narrowly by a test, carries no
+// webhook scope, and asking for an endpoint must not throw there.
 function hasWebhookScope(
-  subgraph: BaseSubgraph | undefined,
-): subgraph is BaseSubgraph {
-  const scope = (
-    subgraph as { http?: { webhooks?: unknown } } | undefined
-  )?.http?.webhooks;
-  return scope !== undefined;
+  host: WorkflowRuntimeHost | undefined,
+): host is WorkflowRuntimeHost {
+  return host?.http?.webhooks !== undefined;
 }
 
 export class WorkflowRuntimeService {
-  private subgraph?: BaseSubgraph;
+  private subgraph?: WorkflowRuntimeHost;
   private executor?: BlockExecutor;
   private pieceWorkers?: PieceWorkerPool;
   private storePromise?: Promise<WorkflowRunStore>;
@@ -406,7 +402,7 @@ export class WorkflowRuntimeService {
 
   // Keyed on the subgraph, not on "configured once": a package hot-reload
   // builds a new one, and the old one's clients are torn down with it.
-  configure(subgraph: BaseSubgraph): void {
+  configure(subgraph: WorkflowRuntimeHost): void {
     if (this.subgraph === subgraph) return;
     this.subgraph = subgraph;
     // A pool shutdown() disposed belongs to the subgraph being replaced. It is
@@ -1027,15 +1023,17 @@ export class WorkflowRuntimeService {
 
   /** Registers the workflow endpoint family with the reactor's webhook service (from onSetup;
    * idempotent). Everything transport-shaped is the service's; only workflow identity is ours. */
-  async registerWebhookEndpoint(subgraph: BaseSubgraph): Promise<void> {
+  async registerWebhookEndpoint(host: WorkflowRuntimeHost): Promise<void> {
     if (this.webhookRegistration) {
       await this.webhookRegistration;
       return;
     }
-    // The scope is read here rather than passed in: the subgraph's own type
+    // The scope is read here rather than passed in: the host's own type
     // carries it, so there is one identity for it instead of two.
-    this.webhookScope = subgraph.http.webhooks;
-    this.webhookRegistration = subgraph.http.webhooks
+    const webhooks = host.http?.webhooks;
+    if (!webhooks) return;
+    this.webhookScope = webhooks;
+    this.webhookRegistration = webhooks
       .register({
         name: "trigger",
         policyFor: (workflowId) => this.webhookPolicy(workflowId),
@@ -1379,7 +1377,7 @@ export class WorkflowRuntimeService {
 
   // Design-time: the powerhouse/connection documents this caller may read.
   // The reactor client is unscoped, so the filter is ours to apply.
-  async connections(ctx?: Context): Promise<ConnectionSummary[]> {
+  async connections(ctx?: WorkflowCaller): Promise<ConnectionSummary[]> {
     if (!this.subgraph) return [];
     const page = await this.subgraph.reactorClient.find({
       type: "powerhouse/connection",
@@ -1405,7 +1403,7 @@ export class WorkflowRuntimeService {
   // connection's credentials and records the outcome on the document.
   async checkConnection(
     connectionId: string,
-    ctx?: Context,
+    ctx?: WorkflowCaller,
   ): Promise<ConnectionCheckResult> {
     if (!this.subgraph) {
       throw new Error("Workflow runtime is not configured yet");
@@ -1695,7 +1693,7 @@ export class WorkflowRuntimeService {
   // readable, which is what an unauthenticated listing should return.
   private async readableDocuments<T extends { header: { id: string } }>(
     documents: T[],
-    ctx: Context | undefined,
+    ctx: WorkflowCaller | undefined,
   ): Promise<T[]> {
     if (!ctx || !this.subgraph) return [];
     const subgraph = this.subgraph;
@@ -1712,7 +1710,7 @@ export class WorkflowRuntimeService {
 
   private async assertCanReadDocument(
     documentId: string,
-    ctx: Context | undefined,
+    ctx: WorkflowCaller | undefined,
   ): Promise<void> {
     if (!this.subgraph) {
       throw new Error("Workflow runtime is not configured yet");
@@ -1729,7 +1727,7 @@ export class WorkflowRuntimeService {
     propName: string,
     input?: unknown,
     connectionId?: string,
-    ctx?: Context,
+    ctx?: WorkflowCaller,
   ): Promise<unknown> {
     await packagePieces.ready();
     const parsed = parseBlockType(blockType, packagePieces.versions());
@@ -1908,7 +1906,7 @@ export class WorkflowRuntimeService {
 
   // It resolves the trigger's connection and hands the credentials to piece
   // code, so the caller must be able to read both documents.
-  async testTrigger(workflowId: string, ctx?: Context): Promise<unknown> {
+  async testTrigger(workflowId: string, ctx?: WorkflowCaller): Promise<unknown> {
     if (!this.subgraph) {
       throw new Error("Workflow runtime is not configured yet");
     }

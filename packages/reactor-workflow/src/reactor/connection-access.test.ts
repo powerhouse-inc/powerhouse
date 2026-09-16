@@ -1,6 +1,7 @@
 // The design-time surfaces that hand a connection's credentials to piece code
 // authorize their caller, because nothing in the request itself does.
-import { getDbClient, type BaseSubgraph } from "@powerhousedao/reactor-api";
+import { createTestRelationalDb } from "../../test/helpers/pglite.js";
+import type { WorkflowRuntimeHost } from "./host.js";
 import { createRelationalDb } from "@powerhousedao/shared/processors";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { workflowRuntime } from "./service.js";
@@ -36,7 +37,6 @@ const get = vi.fn(() => Promise.resolve(connectionSummaryDocument("conn-mine")))
 
 describe("design-time connection access", () => {
   beforeAll(() => {
-    const { db } = getDbClient();
     const subgraph = {
       reactorClient: {
         get,
@@ -49,8 +49,8 @@ describe("design-time connection access", () => {
         })),
       },
       assertCanRead,
-      relationalDb: createRelationalDb(db),
-    } as unknown as BaseSubgraph;
+      relationalDb: createTestRelationalDb(),
+    } as unknown as WorkflowRuntimeHost;
     workflowRuntime.configure(subgraph);
   });
 

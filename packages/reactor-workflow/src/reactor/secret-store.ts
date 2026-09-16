@@ -12,7 +12,6 @@ import {
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import type { NamespaceFactory } from "./store.js";
 
 const IV_BYTES = 12;
 const TAG_BYTES = 16;
@@ -85,7 +84,7 @@ export class LocalEncryptedSecretStore implements SecretStore {
   ) {}
 
   static async create(
-    relationalDb: NamespaceFactory,
+    relationalDb: IRelationalDb,
     options: LocalSecretStoreOptions = {},
   ): Promise<LocalEncryptedSecretStore> {
     const db = (await relationalDb.createNamespace(

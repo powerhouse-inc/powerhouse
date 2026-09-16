@@ -1,6 +1,6 @@
 // The journal's own gate: whatever the engine hands it, a credential must not
 // reach a row. Key-based only here — the store never sees the run's secrets.
-import { getDbClient } from "@powerhousedao/reactor-api";
+import { createTestRelationalDb } from "../../test/helpers/pglite.js";
 import { createRelationalDb } from "@powerhousedao/shared/processors";
 import { beforeAll, describe, expect, it } from "vitest";
 import { WorkflowRunStore } from "./store.js";
@@ -9,8 +9,7 @@ describe("WorkflowRunStore redaction", () => {
   let store: WorkflowRunStore;
 
   beforeAll(async () => {
-    const { db } = getDbClient();
-    store = await WorkflowRunStore.create(createRelationalDb(db));
+    store = await WorkflowRunStore.create(createTestRelationalDb());
   });
 
   it("redacts credentials out of a journaled step, and keeps the rest", async () => {

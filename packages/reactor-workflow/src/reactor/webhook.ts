@@ -4,7 +4,7 @@ import type {
   WebhookField,
   WebhookHashAlgorithm,
   WebhookSignatureEncoding,
-} from "@powerhousedao/reactor-api";
+} from "@powerhousedao/shared/processors";
 
 export const WEBHOOK_BLOCK = "core#webhook";
 

@@ -1,12 +1,6 @@
 // Persisted run journal in the relational "workflow_runtime" namespace.
 // Dates are ISO text columns: PGlite parses `timestamp` as local time.
 import type { IRelationalDb } from "@powerhousedao/shared/processors";
-
-// Structural: the subgraph's relationalDb types against shared source while
-// this package resolves shared dist, so the nominal types never match.
-export interface NamespaceFactory {
-  createNamespace(namespace: string): Promise<unknown>;
-}
 import {
   redact,
   redactMessage,
@@ -552,9 +546,7 @@ export class WorkflowRunStore {
     private readonly unmigrated: Set<string>,
   ) {}
 
-  static async create(
-    relationalDb: NamespaceFactory,
-  ): Promise<WorkflowRunStore> {
+  static async create(relationalDb: IRelationalDb): Promise<WorkflowRunStore> {
     const db = (await relationalDb.createNamespace(
       "workflow_runtime",
     )) as IRelationalDb<WorkflowRuntimeDB>;

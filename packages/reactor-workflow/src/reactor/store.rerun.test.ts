@@ -1,7 +1,7 @@
 // Run-journal rerun support over a real PGlite-backed store: rerun_of
 // lineage, the additive column migration, journaled-output round-trips, and
 // the trigger payload a rerun refuses to replay.
-import { getDbClient } from "@powerhousedao/reactor-api";
+import { createTestRelationalDb } from "../../test/helpers/pglite.js";
 import { createRelationalDb } from "@powerhousedao/shared/processors";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import type { IRelationalDb } from "@powerhousedao/shared/processors";
@@ -22,14 +22,12 @@ describe("WorkflowRunStore rerun lineage", () => {
   let store: WorkflowRunStore;
 
   beforeAll(async () => {
-    const { db } = getDbClient();
-    store = await WorkflowRunStore.create(createRelationalDb(db));
+    store = await WorkflowRunStore.create(createTestRelationalDb());
   });
 
   it("survives re-running the schema migration", async () => {
-    const { db } = getDbClient();
     // Second create runs up() against the existing tables.
-    await WorkflowRunStore.create(createRelationalDb(db));
+    await WorkflowRunStore.create(createTestRelationalDb());
   });
 
   it("persists rerun_of and replays journaled outputs", async () => {
@@ -119,8 +117,7 @@ describe("WorkflowRunStore per-step journaling", () => {
   let store: WorkflowRunStore;
 
   beforeAll(async () => {
-    const { db } = getDbClient();
-    store = await WorkflowRunStore.create(createRelationalDb(db));
+    store = await WorkflowRunStore.create(createTestRelationalDb());
   });
 
   const start = () =>
@@ -189,8 +186,7 @@ describe("WorkflowRunStore per-step journaling", () => {
   });
 
   it("fails loudly when legacy duplicate rows block the constraint", async () => {
-    const { db } = getDbClient();
-    const relationalDb = createRelationalDb(db);
+    const relationalDb = createTestRelationalDb();
     // A pre-journaling namespace: step_execution without the constraint.
     const legacy: IRelationalDb<LegacyDB> =
       await relationalDb.createNamespace("workflow_runtime_legacy");
@@ -233,13 +229,12 @@ describe("WorkflowRunStore per-step journaling", () => {
     await expect(
       WorkflowRunStore.create({
         createNamespace: () => Promise.resolve(legacy),
-      }),
+      } as unknown as IRelationalDb),
     ).rejects.toThrow(/Could not add the step_execution .* unique constraint/);
   });
 
   it("sweeps a crash-orphaned run to FAILED, making it rerunnable", async () => {
-    const { db } = getDbClient();
-    const relationalDb = createRelationalDb(db);
+    const relationalDb = createTestRelationalDb();
     // Written straight to the journal, since a run this process started is one
     // it may still be executing: the crash has to predate us.
     const journal: IRelationalDb<WorkflowRuntimeDB> =
@@ -373,8 +368,7 @@ describe("WorkflowRunStore per-step journaling", () => {
     const runId = await start();
     // A hot reload: configure() opens a second store over the same journal
     // while the run above is still going.
-    const { db } = getDbClient();
-    const reopened = await WorkflowRunStore.create(createRelationalDb(db));
+    const reopened = await WorkflowRunStore.create(createTestRelationalDb());
 
     // Failing it here would hand rerun() a live run to duplicate.
     expect((await reopened.getRun(runId))?.status).toBe("RUNNING");
@@ -415,13 +409,12 @@ describe("WorkflowRunStore per-step journaling", () => {
   });
 
   it("closes the run out even when the closing step write fails", async () => {
-    const { db } = getDbClient();
-    const relationalDb = createRelationalDb(db);
+    const relationalDb = createTestRelationalDb();
     const journal: IRelationalDb<WorkflowRuntimeDB> =
       await relationalDb.createNamespace("workflow_runtime_broken");
     const broken = await WorkflowRunStore.create({
       createNamespace: () => Promise.resolve(journal),
-    });
+    } as unknown as IRelationalDb);
     const runId = await broken.startRun({
       workflowId: "wf-broken",
       workflowName: "Broken journal",
@@ -453,8 +446,7 @@ describe("WorkflowRuntimeService rerun refusal", () => {
   let service: WorkflowRuntimeService;
 
   beforeAll(async () => {
-    const { db } = getDbClient();
-    store = await WorkflowRunStore.create(createRelationalDb(db));
+    store = await WorkflowRunStore.create(createTestRelationalDb());
   });
 
   // The service is wired by hand; only the journal and the current step list

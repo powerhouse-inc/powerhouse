@@ -1,5 +1,5 @@
 // Scaffold file meant for customization; delete and re-run codegen to reset.
-import type { BaseSubgraph } from "@powerhousedao/reactor-api";
+import type { WorkflowRuntimeHost } from "./host.js";
 import {
   ActivepiecesBlockExecutor,
   BoundConnectionResolver,
@@ -69,7 +69,7 @@ export class ConnectorMismatchError extends Error {
 // shapes its auth value; secret refs resolve through the managed store.
 export class DocumentConnectionResolver implements EngineConnectionResolver {
   constructor(
-    private readonly subgraph: BaseSubgraph,
+    private readonly host: WorkflowRuntimeHost,
     private readonly secrets: SecretProvider,
   ) {}
 
@@ -87,7 +87,7 @@ export class DocumentConnectionResolver implements EngineConnectionResolver {
     request?: ConnectionRequest,
   ): Promise<ResolvedConnection> {
     const document =
-      await this.subgraph.reactorClient.get<ConnectionDocument>(connectionId);
+      await this.host.reactorClient.get<ConnectionDocument>(connectionId);
     return resolveConnectionWithSecrets(document, this.secrets, request);
   }
 }
@@ -229,7 +229,7 @@ export function boundConnections(
 }
 
 export function createBlockExecutor(
-  subgraph: BaseSubgraph,
+  host: WorkflowRuntimeHost,
   secrets: SecretProvider,
   attachments?: AttachmentPort,
   pieceStore?: PieceStorePort,
@@ -255,9 +255,9 @@ export function createBlockExecutor(
       },
       // Served only to a piece this reactor's packages ship; the executor
       // withholds it from everything the resolver fetched.
-      reactor: new SubgraphReactorPort(subgraph),
+      reactor: new SubgraphReactorPort(host),
       connections: boundConnections(
-        new DocumentConnectionResolver(subgraph, secrets),
+        new DocumentConnectionResolver(host, secrets),
       ),
       // Without it an action's ctx.store lives only in the worker's heap.
       ...(pieceStore ? { pieceStore } : {}),

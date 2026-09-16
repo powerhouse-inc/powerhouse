@@ -1,6 +1,6 @@
 // Which partition a scope maps to, over a real PGlite-backed journal. FLOW is
 // the workflow; PROJECT is this reactor, which is what lets two workflows share.
-import { getDbClient } from "@powerhousedao/reactor-api";
+import { createTestRelationalDb } from "../../test/helpers/pglite.js";
 import { createRelationalDb } from "@powerhousedao/shared/processors";
 import { beforeAll, describe, expect, it } from "vitest";
 import { createPieceStorePort, testPartitionKey } from "./piece-store-port.js";
@@ -10,8 +10,7 @@ describe("piece store partitions", () => {
   let store: WorkflowRunStore;
 
   beforeAll(async () => {
-    const { db } = getDbClient();
-    store = await WorkflowRunStore.create(createRelationalDb(db));
+    store = await WorkflowRunStore.create(createTestRelationalDb());
   });
 
   const portFor = (workflowId: string | undefined) =>

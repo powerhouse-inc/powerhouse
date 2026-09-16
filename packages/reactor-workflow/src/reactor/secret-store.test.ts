@@ -1,6 +1,6 @@
 // LocalEncryptedSecretStore over a real PGlite-backed relational namespace:
 // lifecycle, encryption at rest, tombstones, and key handling.
-import { getDbClient } from "@powerhousedao/reactor-api";
+import { createTestRelationalDb } from "../../test/helpers/pglite.js";
 import { createRelationalDb } from "@powerhousedao/shared/processors";
 import { randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
@@ -20,8 +20,7 @@ const KEY_A = randomBytes(32).toString("hex");
 const KEY_B = randomBytes(32).toString("hex");
 
 async function rawRows(): Promise<SecretRow[]> {
-  const { db } = getDbClient();
-  const ns = (await createRelationalDb(db).createNamespace("secrets")) as {
+  const ns = (await createTestRelationalDb().createNamespace("secrets")) as {
     selectFrom: (table: "secret") => {
       selectAll: () => { execute: () => Promise<SecretRow[]> };
     };
@@ -33,15 +32,13 @@ describe("LocalEncryptedSecretStore", () => {
   let store: LocalEncryptedSecretStore;
 
   beforeAll(async () => {
-    const { db } = getDbClient();
-    store = await LocalEncryptedSecretStore.create(createRelationalDb(db), {
+    store = await LocalEncryptedSecretStore.create(createTestRelationalDb(), {
       masterKeyHex: KEY_A,
     });
   });
 
   it("survives re-running the schema migration", async () => {
-    const { db } = getDbClient();
-    await LocalEncryptedSecretStore.create(createRelationalDb(db), {
+    await LocalEncryptedSecretStore.create(createTestRelationalDb(), {
       masterKeyHex: KEY_A,
     });
   });
@@ -112,28 +109,26 @@ describe("LocalEncryptedSecretStore", () => {
 
   it("a store with a different master key cannot decrypt", async () => {
     const created = await store.create({ value: "key-bound" });
-    const { db } = getDbClient();
     const otherKey = await LocalEncryptedSecretStore.create(
-      createRelationalDb(db),
+      createTestRelationalDb(),
       { masterKeyHex: KEY_B },
     );
     await expect(otherKey.get(created.ref)).rejects.toThrow();
   });
 
   it("generates and reuses a key file when no master key is set", async () => {
-    const { db } = getDbClient();
     const keyFile = join(
       process.env.TMPDIR ?? "/tmp",
       `secrets-test-${randomBytes(6).toString("hex")}.key`,
     );
     const first = await LocalEncryptedSecretStore.create(
-      createRelationalDb(db),
+      createTestRelationalDb(),
       { masterKeyHex: undefined, keyFile },
     );
     const created = await first.create({ value: "file-keyed" });
     expect(readFileSync(keyFile, "utf8").trim()).toMatch(/^[0-9a-f]{64}$/);
     const second = await LocalEncryptedSecretStore.create(
-      createRelationalDb(db),
+      createTestRelationalDb(),
       { masterKeyHex: undefined, keyFile },
     );
     await expect(second.get(created.ref)).resolves.toBe("file-keyed");

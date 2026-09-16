@@ -2,7 +2,8 @@
 // check-connection path: real PGlite secret store, real PieceWorker fork,
 // built piece bundle, live mock docling-serve. The harness mirrors
 // check-connection.test.ts (same mocks, same subgraph shape).
-import { getDbClient, type BaseSubgraph } from "@powerhousedao/reactor-api";
+import { createTestRelationalDb } from "../../test/helpers/pglite.js";
+import type { WorkflowRuntimeHost } from "./host.js";
 import { ensurePieceBundle } from "../pieces/index.js";
 import { createRelationalDb } from "@powerhousedao/shared/processors";
 import type * as ReactorConnectors from "../pieces/index.js";
@@ -82,8 +83,14 @@ async function startMiniDocling(opts: { apiKey?: string }): Promise<{
   };
 }
 
+// The piece is a separate package, not part of this repo: the suite runs
+// where someone checked it out beside this one, and skips everywhere else.
+const PIECE_PKG = fileURLToPath(
+  new URL("../../../piece-docling", import.meta.url),
+);
+
 function seedBuiltBundle(cacheDir: string): void {
-  const piecePkg = fileURLToPath(new URL("../../../piece-docling", import.meta.url));
+  const piecePkg = PIECE_PKG;
   if (!existsSync(join(piecePkg, "dist/src/index.js"))) {
     execFileSync("node", ["scripts/bundle.mjs"], { cwd: piecePkg });
   }
@@ -138,7 +145,7 @@ function lastRecordInput(): RecordCheckResultInput {
   return action.input as RecordCheckResultInput;
 }
 
-describe("WorkflowRuntimeService.checkConnection (docling piece)", () => {
+describe.skipIf(!existsSync(PIECE_PKG))("WorkflowRuntimeService.checkConnection (docling piece)", () => {
   beforeAll(async () => {
     // Keep the key in-process so the encrypted store never writes a key file.
     process.env.PH_SECRETS_MASTER_KEY =
@@ -184,7 +191,6 @@ describe("WorkflowRuntimeService.checkConnection (docling piece)", () => {
       workflowRuntime as unknown as { designEgress?: unknown }
     ).designEgress = { allowAddresses: ["127.0.0.1/32", "::1/128"] };
 
-    const { db } = getDbClient();
     get = vi.fn();
     execute = vi.fn(() => ({}) as PHDocument);
     const subgraph = {
@@ -194,8 +200,8 @@ describe("WorkflowRuntimeService.checkConnection (docling piece)", () => {
         find: vi.fn(() => ({ results: [] })),
       },
       assertCanRead: vi.fn(() => Promise.resolve({})),
-      relationalDb: createRelationalDb(db),
-    } as unknown as BaseSubgraph;
+      relationalDb: createTestRelationalDb(),
+    } as unknown as WorkflowRuntimeHost;
     workflowRuntime.configure(subgraph);
 
     keyRef = (

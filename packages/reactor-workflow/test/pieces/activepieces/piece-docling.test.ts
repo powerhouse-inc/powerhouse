@@ -13,6 +13,8 @@ import {
 } from "../../../src/pieces/index.js";
 import { startMockDocling, MOCK_MD, type MockDocling } from "./mock-docling-serve.js";
 
+// The piece is a separate package, not part of this repo: the suite runs
+// where someone checked it out beside this one, and skips everywhere else.
 const PIECE_PKG = path.resolve("../piece-docling");
 const CACHE = path.join(tmpdir(), `docling-e2e-${process.pid}`);
 
@@ -25,7 +27,7 @@ function ensureBundleInCache(): void {
   cpSync(path.join(PIECE_PKG, "dist"), dir, { recursive: true });
 }
 
-describe("docling piece through the executor (E2E)", () => {
+describe.skipIf(!existsSync(PIECE_PKG))("docling piece through the executor (E2E)", () => {
   let mock: MockDocling;
   let executor: ActivepiecesBlockExecutor;
   const secrets: SecretProvider = {

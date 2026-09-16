@@ -1,6 +1,7 @@
 // checkConnection over offline fixture pieces: local bundle cache in the
 // production layout, real PGlite-backed secret store, stubbed piece catalog.
-import { getDbClient, type BaseSubgraph } from "@powerhousedao/reactor-api";
+import { createTestRelationalDb } from "../../test/helpers/pglite.js";
+import type { WorkflowRuntimeHost } from "./host.js";
 import {
   DEFAULT_EGRESS_POLICY,
   ensurePieceBundle,
@@ -243,7 +244,6 @@ describe("WorkflowRuntimeService.checkConnection", () => {
     );
     vi.mocked(fetchPieceDetail).mockResolvedValue({ version: "1.0.0" });
 
-    const { db } = getDbClient();
     get = vi.fn();
     execute = vi.fn(() => ({}) as PHDocument);
     const subgraph = {
@@ -253,8 +253,8 @@ describe("WorkflowRuntimeService.checkConnection", () => {
         find: vi.fn(() => ({ results: [] })),
       },
       assertCanRead: vi.fn(() => Promise.resolve({})),
-      relationalDb: createRelationalDb(db),
-    } as unknown as BaseSubgraph;
+      relationalDb: createTestRelationalDb(),
+    } as unknown as WorkflowRuntimeHost;
     workflowRuntime.configure(subgraph);
 
     const created = await (

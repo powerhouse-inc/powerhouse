@@ -2,7 +2,7 @@
 
 // A WEBHOOK trigger keeps its registered endpoint id there, and a lost id
 // leaks forever: onDisable can never delete an endpoint it cannot name.
-import { getDbClient } from "@powerhousedao/reactor-api";
+import { createTestRelationalDb } from "../../test/helpers/pglite.js";
 import { createRelationalDb } from "@powerhousedao/shared/processors";
 import { beforeAll, describe, expect, it } from "vitest";
 import { WorkflowRunStore } from "./store.js";
@@ -41,14 +41,12 @@ describe("trigger store_state migration", () => {
   let store: WorkflowRunStore;
 
   beforeAll(async () => {
-    const { db } = getDbClient();
-    store = await WorkflowRunStore.create(createRelationalDb(db));
+    store = await WorkflowRunStore.create(createTestRelationalDb());
   });
 
   // Re-running up() is how the migration reaches a journal written before it.
   const remigrate = async () => {
-    const { db } = getDbClient();
-    return WorkflowRunStore.create(createRelationalDb(db));
+    return WorkflowRunStore.create(createTestRelationalDb());
   };
 
   it("moves a realistic blob into the partitions the hooks now read", async () => {
