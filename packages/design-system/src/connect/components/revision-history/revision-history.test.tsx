@@ -243,4 +243,57 @@ describe("RevisionHistory (legacy props)", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("Local scope")).toBeInTheDocument();
   });
+
+  // The payoff of the cache's incremental refresh. An edit to an open
+  // document used to drop the cached scope, which put the panel back to
+  // `isLoading` with no operations -- the walk restarting from the first
+  // page, status line and all. The cache now keeps what it has loaded and
+  // fetches only the tail, so the panel sees `isLoading` *with* operations
+  // and no next page, and must keep the timeline on screen rather than
+  // flashing the progress status on every keystroke-sized change.
+  it("keeps the timeline rendered while a refresh fetches the tail", () => {
+    const loaded = globalOperations.slice(0, 5);
+    const { rerender } = render(
+      <RevisionHistory
+        {...baseProps}
+        operations={loaded}
+        isLoading={false}
+        hasNextPage={false}
+        onLoadNextPage={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId("revision-timeline")).toBeInTheDocument();
+
+    // The document changed: the scope is loading its tail, still holding
+    // everything it had.
+    rerender(
+      <RevisionHistory
+        {...baseProps}
+        operations={loaded}
+        isLoading={true}
+        hasNextPage={false}
+        onLoadNextPage={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId("revision-timeline")).toBeInTheDocument();
+    expect(screen.queryByText("Loading operations…")).not.toBeInTheDocument();
+  });
+
+  // The contrast: a first load has nothing to show, so the status line is
+  // still the right thing to render.
+  it("still shows the progress status when loading with nothing held", () => {
+    render(
+      <RevisionHistory
+        {...baseProps}
+        operations={[]}
+        isLoading={true}
+        hasNextPage={false}
+        onLoadNextPage={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Loading operations…")).toBeInTheDocument();
+    expect(screen.queryByTestId("revision-timeline")).not.toBeInTheDocument();
+  });
 });
