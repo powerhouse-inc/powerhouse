@@ -357,6 +357,28 @@ describe("ReactorDriveClient Integration", () => {
       expect(copiedLeaf.id).not.toBe(leaf.header.id);
       expect(copiedLeaf.parentFolder).toBe(currentParent);
     });
+
+    it("carries the source document's protocol versions onto the copy", async () => {
+      const source = await driveClient.addFolder(driveId, "Protocol Source");
+      const file = makeChildDocument("Protocol File");
+      await driveClient.addFile(driveId, file, source.id);
+      const target = await driveClient.addFolder(driveId, "Protocol Target");
+
+      await driveClient.copyNode(driveId, source.id, target.id);
+
+      const copiedFolder = (await driveClient.listNodes(driveId, target.id))
+        .results[0];
+      const copiedFile = (await driveClient.listNodes(driveId, copiedFolder.id))
+        .results[0];
+
+      const srcDoc = await reactorClient.get(file.header.id);
+      const copyDoc = await reactorClient.get(copiedFile.id);
+
+      expect(srcDoc.header.protocolVersions).toEqual({ "base-reducer": 2 });
+      expect(copyDoc.header.protocolVersions).toEqual(
+        srcDoc.header.protocolVersions,
+      );
+    });
   });
 
   describe("migrateLegacyDriveState", () => {
