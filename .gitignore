@@ -28,6 +28,7 @@ coverage/
 coverage-reports/
 vitest-timings.json
 .env
+.env.local
 playwright-report/
 test-results/
 __screenshots__/

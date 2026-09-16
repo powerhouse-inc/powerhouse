@@ -1,8 +1,0 @@
-{
-  "mcpServers": {
-    "reactor-mcp": {
-      "type": "http",
-      "url": "http://localhost:4001/mcp"
-    }
-  }
-}
