@@ -512,6 +512,34 @@ function expandIncludeSubpaths(dirname: string, include: string[]): string[] {
 }
 
 /**
+ * Rebase the vendor's base-less entry URLs (`/__vendor__/x.js`) onto the
+ * deploy base, so a consumer that resolves them against the page origin lands
+ * under that base rather than the server root. A dynamic-base build keeps its
+ * placeholder, which the runtime substitutes.
+ *
+ * `base` is the app base from `prebuildConnectVendor` callers, but the
+ * VENDOR_DYNAMIC_BASE default already carries the vendor segment — that
+ * trailing segment is dropped first so it is never doubled.
+ */
+export function withVendorBase(
+  imports: Record<string, string>,
+  base: string,
+): Record<string, string> {
+  const segment = VENDOR_URL_PREFIX.replace(/^\/+/, "");
+  const appBase = base.endsWith(segment)
+    ? base.slice(0, base.length - segment.length)
+    : base;
+  return Object.fromEntries(
+    Object.entries(imports).map(([spec, url]) => [
+      spec,
+      `${appBase}/${url}`
+        .replace(/([^:])\/{2,}/g, "$1/")
+        .replace(/^\/{2,}/, "/"),
+    ]),
+  );
+}
+
+/**
  * Build the vendor into a unique temp dir, then atomically swap it into place,
  * so a concurrent reader never sees a partial bundle or import-map.json. Runs
  * the build in a throwaway subprocess (its peak memory is reclaimed on exit);
@@ -561,10 +589,16 @@ async function buildVendorAtomic(
     // The runtime data module: a real .js (not .json) so the Workbox precache
     // glob picks it up and the main thread can dynamic-import it without
     // import attributes.
+    //
+    // Its URLs carry the build's base (import-map.json stays base-less
+    // because the dev plugin applies the base itself). The worker resolves
+    // these against the page origin, so a base-less path would point at
+    // /__vendor__/ on a subpath deploy and 404.
     writeFileSync(
       join(tmpDir, "shared-deps.js"),
-      `export const imports = ${JSON.stringify(meta.imports)};\n` +
-        `export const versions = ${JSON.stringify(versions)};\n`,
+      `export const imports = ${JSON.stringify(
+        withVendorBase(meta.imports, base),
+      )};\n` + `export const versions = ${JSON.stringify(versions)};\n`,
     );
 
     // Swap: move any existing dir aside, rename temp into place, drop the old.

@@ -60,6 +60,9 @@ export async function runConnectBuild(args: ConnectBuildArgs) {
   // keeps its own soft fallback in the dev plugin).
   const outDirAbs = resolve(dirname, outDir);
   let vendor: PrebuiltVendor | null = null;
+  // The deploy base the vendor's import-map addresses are written against.
+  // Only meaningful when the vendor is built; "/" is the inert default.
+  let appBase = "/";
   if (isVendorEnabled()) {
     // The vendor dir's parent must exist before the prebuild: its build
     // lock is a sibling of the vendor dir, and the package build (runBuild)
@@ -72,7 +75,7 @@ export async function runConnectBuild(args: ConnectBuildArgs) {
     const phConfig = getConfig(join(dirname, "powerhouse.config.json"));
     const connectBasePath =
       connectOverride?.app?.basePath ?? phConfig.connect?.app?.basePath;
-    const appBase = dynamicBase
+    appBase = dynamicBase
       ? DYNAMIC_BASE_PLACEHOLDER
       : connectBasePath
         ? normalizeBasePath(connectBasePath)
@@ -110,12 +113,7 @@ export async function runConnectBuild(args: ConnectBuildArgs) {
     // subpath, dynamic or concrete.
     vendor: vendor
       ? {
-          imports: Object.fromEntries(
-            Object.entries(vendor.imports).map(([spec, url]) => [
-              spec,
-              url.startsWith("/") ? url.slice(1) : url,
-            ]),
-          ),
+          imports: vendorImportMapEntries(vendor.imports, appBase),
           versions: vendor.versions,
         }
       : undefined,
@@ -163,6 +161,31 @@ export function productionVendorInclude(): string[] {
       ...SHARED_SUBPATHS.map((s) => `@powerhousedao/shared/${s}`),
     ]),
   ];
+}
+
+/**
+ * Turn the vendor's base-less URLs (`/__vendor__/x.js`) into the addresses
+ * the page's import map ships, by prefixing the deploy base.
+ *
+ * An import map *address* must be a URL or begin with `/`, `./` or `../`;
+ * anything else is a bare specifier, which the browser rejects — it drops the
+ * entry, resolves the specifier to null, and every shared import then fails
+ * with "blocked by a null value". So the base is applied rather than the
+ * leading slash stripped: a root-relative address is both valid and correct
+ * under a subpath deploy, and a dynamic-base build keeps its placeholder for
+ * the serving proxy to substitute (the dynamic-base plugin leaves HTML
+ * tokens alone by design).
+ */
+export function vendorImportMapEntries(
+  imports: Record<string, string>,
+  appBase: string,
+): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(imports).map(([spec, url]) => [
+      spec,
+      `${appBase}/${url}`.replace(/\/{2,}/g, "/"),
+    ]),
+  );
 }
 
 /**

@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
 
 /**
@@ -14,7 +15,9 @@ import { describe, expect, it } from "vitest";
  * Build-time constants that app code also needs belong in a browser-safe
  * package (`@powerhousedao/shared/connect`), not in builder-tools.
  */
-const SRC = new URL("./", import.meta.url).pathname;
+// fileURLToPath, not URL.pathname: on Windows the latter yields "/D:/..." ,
+// which join() then turns into "D:\\D:\\...".
+const SRC = fileURLToPath(new URL("./", import.meta.url));
 
 function sourceFiles(dir: string): string[] {
   const out: string[] = [];
@@ -35,6 +38,6 @@ describe("Connect browser sources", () => {
         readFileSync(f, "utf8"),
       ),
     );
-    expect(offenders.map((f) => f.slice(SRC.length))).toEqual([]);
+    expect(offenders.map((f) => relative(SRC, f))).toEqual([]);
   });
 });

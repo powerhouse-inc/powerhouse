@@ -11,6 +11,7 @@ import {
   isVendorEnabled,
   productionVendorInclude,
   runConnectBuild,
+  vendorImportMapEntries,
 } from "../src/services/connect-build.js";
 import type { ConnectBuildArgs } from "../src/types.js";
 
@@ -151,5 +152,49 @@ describe("productionVendorInclude", () => {
 
   it("has no duplicates", () => {
     expect(include.length).toBe(new Set(include).size);
+  });
+});
+
+describe("vendorImportMapEntries", () => {
+  const raw = {
+    "document-model": "/__vendor__/document_model.js",
+    "@powerhousedao/reactor-browser": "/__vendor__/_powerhousedao_rb.js",
+  };
+
+  // An import map *address* must be a URL or start with "/", "./" or "../".
+  // Anything else is a bare specifier, which the browser rejects: the entry is
+  // dropped, the specifier resolves to null, and every shared import fails
+  // with "blocked by a null value". Stripping the leading slash produced
+  // exactly that, so the whole vendor mechanism was inert in the browser.
+  const isValidAddress = (v: string) =>
+    v.startsWith("/") ||
+    v.startsWith("./") ||
+    v.startsWith("../") ||
+    v.includes("://");
+
+  it("emits addresses the browser accepts at a root base", () => {
+    const out = vendorImportMapEntries(raw, "/");
+    expect(Object.values(out).every(isValidAddress)).toBe(true);
+    expect(out["document-model"]).toBe("/__vendor__/document_model.js");
+  });
+
+  it("prefixes the deploy base so a subpath deploy resolves", () => {
+    const out = vendorImportMapEntries(raw, "/connect/");
+    expect(Object.values(out).every(isValidAddress)).toBe(true);
+    expect(out["document-model"]).toBe("/connect/__vendor__/document_model.js");
+  });
+
+  it("keeps the dynamic-base placeholder for the proxy to substitute", () => {
+    const out = vendorImportMapEntries(raw, "/__PH_DYNAMIC_BASE__/");
+    expect(out["document-model"]).toBe(
+      "/__PH_DYNAMIC_BASE__/__vendor__/document_model.js",
+    );
+    expect(Object.values(out).every(isValidAddress)).toBe(true);
+  });
+
+  it("never collapses a base and path into a doubled slash", () => {
+    expect(
+      Object.values(vendorImportMapEntries(raw, "/connect/")),
+    ).not.toContain("/connect//__vendor__/document_model.js");
   });
 });

@@ -5,6 +5,7 @@ import { pathToFileURL } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   prebuildConnectVendor,
+  withVendorBase,
   type PrebuiltVendor,
 } from "./externalize-vendor.js";
 
@@ -62,7 +63,12 @@ describe("prebuildConnectVendor production options", () => {
       imports: Record<string, string>;
       versions: Record<string, string>;
     };
-    expect(mod.imports).toEqual(v.imports);
+    // import-map.json stays base-less (the dev plugin applies the base
+    // itself), but the runtime module carries it: the worker resolves these
+    // against the page origin, so a base-less path would 404 on a subpath
+    // deploy.
+    expect(mod.imports).toEqual(withVendorBase(v.imports, "/app/"));
+    expect(mod.imports["zod"]).toBe("/app/__vendor__/zod.js");
     expect(mod.versions).toEqual(v.versions);
   }, 240_000);
 
@@ -94,4 +100,36 @@ describe("prebuildConnectVendor production options", () => {
     expect(second).not.toBeNull();
     expect(second).toEqual(first);
   }, 240_000);
+});
+
+describe("withVendorBase", () => {
+  const raw = { "document-model": "/__vendor__/document_model.js" };
+
+  it("rebases onto a root deploy base", () => {
+    expect(withVendorBase(raw, "/__vendor__/")["document-model"]).toBe(
+      "/__vendor__/document_model.js",
+    );
+  });
+
+  // The worker resolves these against the page origin, so a base-less path
+  // would request /__vendor__/... and 404 on a subpath deploy.
+  it("rebases onto a subpath deploy base", () => {
+    expect(withVendorBase(raw, "/connect/__vendor__/")["document-model"]).toBe(
+      "/connect/__vendor__/document_model.js",
+    );
+  });
+
+  it("keeps the dynamic-base placeholder for the runtime to substitute", () => {
+    expect(
+      withVendorBase(raw, "/__PH_DYNAMIC_BASE__/__vendor__/")["document-model"],
+    ).toBe("/__PH_DYNAMIC_BASE__/__vendor__/document_model.js");
+  });
+
+  it("never emits a doubled slash", () => {
+    for (const base of ["/__vendor__/", "/connect/__vendor__/"]) {
+      for (const v of Object.values(withVendorBase(raw, base))) {
+        expect(v).not.toMatch(/[^:]\/\//);
+      }
+    }
+  });
 });
