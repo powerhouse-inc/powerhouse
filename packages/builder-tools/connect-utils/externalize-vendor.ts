@@ -32,6 +32,7 @@
 import { spawn } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import {
+  chmodSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -636,6 +637,15 @@ async function buildVendorAtomic(
     const oldDir = `${vendorDir}.old-${process.pid}-${Date.now()}`;
     if (existsSync(vendorDir)) renameSync(vendorDir, oldDir);
     renameSync(tmpDir, vendorDir);
+    // mkdtemp creates the staging dir 0700, and the rename carries that mode
+    // onto the published vendor. The build and the server are not always the
+    // same user — in a container image the build runs as root and nginx as
+    // `nginx` — and a directory nobody else can traverse makes every vendor
+    // URL unreadable. A SPA then answers each one with index.html, so the
+    // browser reports an opaque MIME-type error and the whole shared-dep
+    // mechanism is silently inert. Publish it as readable as the rest of the
+    // build output.
+    chmodSync(vendorDir, 0o755);
     rmSync(oldDir, { recursive: true, force: true });
     return { imports: meta.imports, versions };
   } catch (err) {

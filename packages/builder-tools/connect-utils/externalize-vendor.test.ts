@@ -3,6 +3,7 @@ import {
   mkdtempSync,
   readFileSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import { createRequire } from "node:module";
@@ -78,6 +79,13 @@ describe("prebuildConnectVendor production options", () => {
     expect(mod.imports).toEqual(withVendorBase(v.imports, "/app/"));
     expect(mod.imports["zod"]).toBe("/app/__vendor__/zod.js");
     expect(mod.versions).toEqual(v.versions);
+
+    // mkdtemp stages the build at 0700 and the rename carries that mode over.
+    // The build and the web server are not always the same user (root builds
+    // the image, nginx serves it), and a vendor dir nobody else can traverse
+    // makes every vendor URL fall through to index.html.
+    const mode = statSync(vendorDir).mode & 0o777;
+    expect(mode & 0o055).toBe(0o055);
   }, 240_000);
 
   it("keeps dev behavior with defaults (no base/nodeEnv)", async () => {
