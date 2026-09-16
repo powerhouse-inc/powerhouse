@@ -820,7 +820,7 @@ describe("HypercoreOperationStore", () => {
         "global",
         "main",
         new Date(baseTime).toISOString(),
-        { limit },
+        { cursor: "", limit },
       );
 
       expect(page.results.map((op) => op.index)).toEqual([0, 1, 2, 3, 4]);
@@ -863,7 +863,7 @@ describe("HypercoreOperationStore", () => {
         "global",
         "main",
         new Date(baseTime).toISOString(),
-        { limit: 5 },
+        { cursor: "", limit: 5 },
       );
 
       expect(page.results.map((op) => op.index)).toEqual([10, 11, 12, 13, 14]);
