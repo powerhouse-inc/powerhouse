@@ -1,69 +1,74 @@
 // Structural types for published Activepieces bundles (Path B). Bundles inline
 // their framework, so all typing is duck-typed — see ../../10-spike-notes-s6a.md.
+import type {
+  ActionBase,
+  BasePropertySchema,
+  DropdownOption,
+  DropdownProperty,
+  DropdownState,
+  PieceBase,
+  TriggerBase,
+  WebhookHandshakeConfiguration,
+} from "@powerhousedao/pieces-framework";
 
-// Open set: SHORT_TEXT, NUMBER, CHECKBOX, OBJECT, STATIC_DROPDOWN, DROPDOWN, DYNAMIC, ...
+export { DEDUPE_KEY_PROPERTY } from "@powerhousedao/pieces-framework";
+
+// Widened from the framework's PropertyType: a bundle inlines its own copy of
+// the enum, so a value read off one is compared as a string, never by identity.
 export type ApPropertyType = string;
 
-export interface ApDropdownOption {
-  label: string;
-  value: unknown;
-}
+export type ApDropdownOption = Pick<DropdownOption<unknown>, "label" | "value">;
 
 // STATIC_DROPDOWN options are plain data; DROPDOWN options is a resolver function.
-export interface ApStaticDropdownState {
-  options: ApDropdownOption[];
-  disabled?: boolean;
-  placeholder?: string;
-}
+export type ApStaticDropdownState = Pick<
+  DropdownState<unknown>,
+  "disabled" | "placeholder"
+> & { options: ApDropdownOption[] };
 
-export interface ApProperty {
-  displayName?: string;
-  description?: string;
-  placeholder?: string;
-  type?: ApPropertyType;
-  required?: boolean;
-  defaultValue?: unknown;
-  options?: ApStaticDropdownState | ((...args: unknown[]) => unknown);
-  // Resolver function on DYNAMIC properties.
-  props?: (...args: unknown[]) => unknown;
-  // DROPDOWN / DYNAMIC: sibling prop names whose values feed the resolver.
-  refreshers?: string[];
-  // ARRAY: schema of each item's fields; absent for plain value arrays.
-  properties?: Record<string, ApProperty>;
-}
+// Every field optional: an unknown bundle version may omit any of them, and a
+// missing field must read as absent rather than fail the descriptor.
+export type ApProperty = Partial<
+  Pick<BasePropertySchema, "displayName" | "description" | "placeholder">
+> &
+  Partial<Pick<DropdownProperty<unknown, boolean>, "refreshers">> & {
+    type?: ApPropertyType;
+    required?: boolean;
+    defaultValue?: unknown;
+    options?: ApStaticDropdownState | ((...args: unknown[]) => unknown);
+    // Resolver function on DYNAMIC properties.
+    props?: (...args: unknown[]) => unknown;
+    // ARRAY: schema of each item's fields; absent for plain value arrays.
+    properties?: Record<string, ApProperty>;
+  };
 
-export interface ApAction {
-  name?: string;
-  displayName?: string;
-  description?: string;
-  // UI metadata only — pieces run without auth despite it (spike finding).
-  requireAuth?: boolean;
+// requireAuth is UI metadata only — pieces run without auth despite it (spike finding).
+export type ApAction = Partial<
+  Pick<ActionBase, "name" | "displayName" | "description" | "requireAuth">
+> & {
   props?: Record<string, ApProperty>;
   run: (ctx: unknown) => Promise<unknown>;
-}
+};
 
-// Emitted trigger payloads may carry their own dedup key under this property.
-export const DEDUPE_KEY_PROPERTY = "_dedupe_key";
-
-// WEBHOOK | POLLING | MANUAL | APP_WEBHOOK
+// Widened from TriggerStrategy for the same reason as ApPropertyType:
+// WEBHOOK | POLLING | MANUAL | APP_WEBHOOK, read off a foreign bundle's enum.
 export type ApTriggerStrategy = string;
 
-// NONE | HEADER_PRESENT | QUERY_PRESENT | BODY_PARAM_PRESENT | HEAD_REQUEST
-export interface ApHandshakeConfiguration {
-  strategy?: string;
-  paramName?: string;
-}
+// strategy widened from WebhookHandshakeStrategy: NONE | HEADER_PRESENT |
+// QUERY_PRESENT | BODY_PARAM_PRESENT | HEAD_REQUEST.
+export type ApHandshakeConfiguration = Partial<
+  Omit<WebhookHandshakeConfiguration, "strategy">
+> & { strategy?: string };
 
-export interface ApTrigger {
-  name?: string;
-  displayName?: string;
-  description?: string;
-  requireAuth?: boolean;
+export type ApTrigger = Partial<
+  Pick<
+    TriggerBase,
+    "name" | "displayName" | "description" | "requireAuth" | "sampleData"
+  >
+> & {
   type?: ApTriggerStrategy;
-  // SIMULATION | TEST_FUNCTION
+  // Widened from TriggerTestStrategy: SIMULATION | TEST_FUNCTION.
   testStrategy?: string;
   props?: Record<string, ApProperty>;
-  sampleData?: unknown;
   handshakeConfiguration?: ApHandshakeConfiguration;
   onEnable?: (ctx: unknown) => Promise<void>;
   onDisable?: (ctx: unknown) => Promise<void>;
@@ -72,23 +77,31 @@ export interface ApTrigger {
   test?: (ctx: unknown) => Promise<unknown[]>;
   onHandshake?: (ctx: unknown) => Promise<unknown>;
   onRenew?: (ctx: unknown) => Promise<void>;
-}
+};
 
-export interface ApPiece {
-  displayName: string;
-  description?: string;
-  logoUrl?: string;
-  authors?: string[];
-  categories?: string[];
-  auth?: ApProperty;
-  minimumSupportedRelease?: string;
-  maximumSupportedRelease?: string;
-  actions?: Record<string, ApAction> | (() => Record<string, ApAction>);
-  triggers?: Record<string, ApTrigger> | (() => Record<string, ApTrigger>);
-  getAction?: (name: string) => ApAction | undefined;
-  getTrigger?: (name: string) => ApTrigger | undefined;
-  metadata?: () => Record<string, unknown>;
-}
+// `categories` is widened from PieceCategory[] for the cross-bundle reason
+// above; `auth` is the raw property, not the framework's PieceAuthProperty.
+export type ApPiece = Pick<PieceBase, "displayName"> &
+  Partial<
+    Pick<
+      PieceBase,
+      | "description"
+      | "logoUrl"
+      | "authors"
+      | "minimumSupportedRelease"
+      | "maximumSupportedRelease"
+    >
+  > & {
+    categories?: string[];
+    auth?: ApProperty;
+    // A bundle exposes these as the built record or as a zero-arg method; the
+    // framework's own Piece class only ever has the method.
+    actions?: Record<string, ApAction> | (() => Record<string, ApAction>);
+    triggers?: Record<string, ApTrigger> | (() => Record<string, ApTrigger>);
+    getAction?: (name: string) => ApAction | undefined;
+    getTrigger?: (name: string) => ApTrigger | undefined;
+    metadata?: () => Record<string, unknown>;
+  };
 
 // Normalizes the record-vs-method variants of `piece.actions`.
 export function getActions(piece: ApPiece): Record<string, ApAction> {

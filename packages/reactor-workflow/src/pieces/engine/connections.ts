@@ -3,13 +3,20 @@
 
 import type { SecretProvider } from "./secrets.js";
 import type { WorkflowDefinition } from "./types.js";
+import {
+  AppConnectionType,
+  type AppConnectionValue,
+  type BasicAuthConnectionValue,
+} from "@powerhousedao/pieces-framework";
 
+// The powerhouse/connection document model's own enum: the framework's
+// AppConnectionType, minus its OAuth2 variants, with NO_AUTH persisted as NONE.
 export type ConnectionAuthType =
-  | "SECRET_TEXT"
-  | "BASIC_AUTH"
-  | "CUSTOM_AUTH"
-  | "OAUTH2"
-  | "OIDC"
+  | `${AppConnectionType.SECRET_TEXT}`
+  | `${AppConnectionType.BASIC_AUTH}`
+  | `${AppConnectionType.CUSTOM_AUTH}`
+  | `${AppConnectionType.OAUTH2}`
+  | `${AppConnectionType.OIDC}`
   | "NONE";
 
 // Mirrors the powerhouse/connection document state the resolver consumes.
@@ -105,10 +112,12 @@ export async function shapeConnection(
   };
 }
 
+// NONE is the persisted value; the framework's NO_AUTH case carries no value a
+// piece reads, so ctx.auth stays undefined rather than becoming that shape.
 function shapeAuth(
   source: ConnectionSource,
   resolved: Record<string, string>,
-): unknown {
+): AppConnectionValue | undefined {
   switch (source.authType) {
     case "NONE":
       return undefined;
@@ -119,18 +128,21 @@ function shapeAuth(
           `SECRET_TEXT connection must have exactly one secret ref, got ${values.length}`,
         );
       }
-      return { type: "SECRET_TEXT", secret_text: values[0] };
+      return { type: AppConnectionType.SECRET_TEXT, secret_text: values[0] };
     }
     case "BASIC_AUTH": {
       const props = { ...source.config, ...resolved };
       return {
-        type: "BASIC_AUTH",
+        type: AppConnectionType.BASIC_AUTH,
         username: props.username,
         password: props.password,
-      };
+      } as BasicAuthConnectionValue;
     }
     case "CUSTOM_AUTH": {
-      return { type: "CUSTOM_AUTH", props: { ...source.config, ...resolved } };
+      return {
+        type: AppConnectionType.CUSTOM_AUTH,
+        props: { ...source.config, ...resolved },
+      };
     }
     default:
       throw new UnsupportedAuthTypeError(source.authType);

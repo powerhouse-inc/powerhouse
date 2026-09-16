@@ -6,27 +6,31 @@ import {
   type ActionContextIdentity,
   type KeyValueStore,
 } from "./action.js";
-import type {
-  ConnectionsProvider,
-  FlowsProvider,
-  ServerInfo,
-} from "./props.js";
+import type { ConnectionsProvider, FlowsProvider } from "./props.js";
 import { normalizeStoreScope, type StoreScopeName } from "./store-scope.js";
 import { throwingStub, withTouchTracking } from "./stubs.js";
+import type { ApFilesService } from "./files.js";
+import type {
+  TriggerStrategy,
+  InputPropertyMap,
+  ServerContext,
+  TestOrRunHookContext,
+} from "@powerhousedao/pieces-framework";
 
 export interface RecordedSchedule {
   cronExpression: string;
   timezone?: string;
 }
 
-export interface RecordedListener {
-  events: string[];
-  identifierValue: string;
-}
+type HookContextFor<S extends TriggerStrategy> = TestOrRunHookContext<
+  undefined,
+  InputPropertyMap,
+  S
+>;
 
-export interface TriggerFilesService {
-  write(file: { fileName?: string; data: Buffer }): Promise<string>;
-}
+export type RecordedListener = Parameters<
+  HookContextFor<TriggerStrategy.APP_WEBHOOK>["app"]["createListeners"]
+>[0];
 
 export interface TriggerContextOptions {
   propsValue: Record<string, unknown>;
@@ -46,28 +50,17 @@ export interface TriggerContextOptions {
   webhookUrl?: string;
   flows?: FlowsProvider;
   connections?: ConnectionsProvider;
-  server?: ServerInfo;
+  server?: ServerContext;
   // run/test hooks only per the AP contract; omitted members throw, named.
-  files?: TriggerFilesService;
+  files?: ApFilesService;
   onTouch?: (member: string) => void;
 }
 
-export interface BuiltApTriggerContext {
-  auth: unknown;
-  propsValue: Record<string, unknown>;
-  store: KeyValueStore;
-  isRepublish: boolean;
-  flows: FlowsProvider & { current: { id: string; version: { id: string } } };
-  step: { name: string };
-  project: { id: string; externalId(): Promise<string> };
-  connections: ConnectionsProvider;
-  server: ServerInfo;
-  webhookUrl: string;
-  payload: unknown;
-  setSchedule(schedule: RecordedSchedule): void;
-  app: { createListeners(listener: RecordedListener): void };
-  files: { write(file: unknown): Promise<string> };
-}
+// One shape for every strategy: the framework splits TriggerHookContext by
+// TriggerStrategy, but a bundle's declared strategy is not known at build time.
+export type BuiltApTriggerContext = HookContextFor<TriggerStrategy.POLLING> &
+  HookContextFor<TriggerStrategy.WEBHOOK> &
+  HookContextFor<TriggerStrategy.APP_WEBHOOK>;
 
 export interface TriggerContextHandle {
   context: BuiltApTriggerContext;

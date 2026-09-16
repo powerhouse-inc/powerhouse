@@ -6,6 +6,12 @@ import type {
   WebhookReply,
   WebhookRequest,
 } from "@powerhousedao/shared/processors";
+import { WebhookHandshakeStrategy } from "@powerhousedao/pieces-framework";
+
+// The framework's strategies as the strings they carry: a bundle inlines its
+// own copy of the enum, so the value is what crosses, never the member.
+const strategies: Record<`${WebhookHandshakeStrategy}`, string> =
+  WebhookHandshakeStrategy;
 
 export interface PieceHandshake {
   strategy: string;
@@ -18,7 +24,7 @@ export function handshakeMatches(
   handshake: PieceHandshake,
   request: WebhookRequest,
 ): boolean {
-  if (handshake.strategy === "HEAD_REQUEST") {
+  if (handshake.strategy === strategies.HEAD_REQUEST) {
     return request.method.toUpperCase() === "HEAD";
   }
   const name = handshake.paramName;
@@ -29,11 +35,11 @@ export function handshakeMatches(
   switch (handshake.strategy) {
     // Presence, not truthiness: a sender may probe with an empty value, and
     // the indexed types claim a string is always there.
-    case "HEADER_PRESENT":
+    case strategies.HEADER_PRESENT:
       return Object.hasOwn(request.headers, name.toLowerCase());
-    case "QUERY_PRESENT":
+    case strategies.QUERY_PRESENT:
       return Object.hasOwn(request.queryParams, name);
-    case "BODY_PARAM_PRESENT":
+    case strategies.BODY_PARAM_PRESENT:
       return (
         typeof request.body === "object" &&
         request.body !== null &&
