@@ -12,7 +12,16 @@ This command:
 1. Starts a Vetra Switchboard with a "Vetra" drive for document storage
 2. Optionally connects to remote drives instead of creating a local drive
 3. Starts Connect Studio pointing to the Switchboard for user interaction (unless disabled)
-4. Enables real-time updates, collaboration, and code generation`,
+4. Enables real-time updates, collaboration, and code generation
+
+Default drives:
+Connect's default drives resolve to the Vetra drive (and the preview drive
+when using --watch), plus any drives configured under
+connect.drives.defaultDrives in powerhouse.config.json - de-duplicated by
+URL, so configuring project drives does not cost you the Vetra drive.
+An explicit --default-drives-url is appended to that list (de-duplicated);
+it never replaces the Vetra drive.
+`,
   args: vetraArgs,
   handler: async (args) => {
     if (args.debug) {

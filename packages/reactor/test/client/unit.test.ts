@@ -23,6 +23,7 @@ import type { IReactorClient } from "../../src/client/types.js";
 import { DocumentChangeType } from "../../src/client/types.js";
 import type { BatchExecutionResult, IReactor } from "../../src/core/types.js";
 import type { IJobAwaiter } from "../../src/shared/awaiter.js";
+import { RelationshipNotFoundError } from "../../src/shared/errors.js";
 import {
   JobStatus,
   PropagationMode,
@@ -110,7 +111,16 @@ describe("ReactorClient Unit Tests", () => {
       execute: vi.fn(),
       executeBatch: vi.fn(),
       addRelationship: vi.fn(),
+      updateRelationship: vi.fn(),
       removeRelationship: vi.fn(),
+      getOutgoingRelationshipEdges: vi.fn().mockResolvedValue({
+        results: [],
+        options: { cursor: "0", limit: 100 },
+      }),
+      getIncomingRelationshipEdges: vi.fn().mockResolvedValue({
+        results: [],
+        options: { cursor: "0", limit: 100 },
+      }),
       deleteDocument: vi.fn(),
       getJobStatus: vi.fn(),
       create: vi.fn(),
@@ -1164,6 +1174,7 @@ describe("ReactorClient Unit Tests", () => {
         sourceId,
         targetId,
         "child",
+        undefined,
         "main",
         mockSigner,
         undefined,
@@ -1241,6 +1252,260 @@ describe("ReactorClient Unit Tests", () => {
         undefined,
       );
       expect(result).toEqual(mockDoc);
+    });
+  });
+
+  describe("updateRelationship", () => {
+    const existingEdge = {
+      sourceId: "upd-parent",
+      targetId: "upd-child",
+      relationshipType: "child",
+      metadata: { order: 1 },
+      createdAt: new Date(0),
+      updatedAt: new Date(0),
+    };
+
+    it("rejects, without dispatching, when the edge does not exist", async () => {
+      vi.mocked(mockDocumentIndexer.getDirectedRelationships).mockResolvedValue(
+        {
+          results: [],
+          options: { cursor: "0", limit: 1 },
+        },
+      );
+
+      await expect(
+        client.updateRelationship("upd-parent", "upd-child", "child", {
+          order: 2,
+        }),
+      ).rejects.toThrow(RelationshipNotFoundError);
+      expect(mockReactor.updateRelationship).not.toHaveBeenCalled();
+    });
+
+    it("dispatches when the edge exists", async () => {
+      const jobInfo: JobInfo = {
+        id: "job-1",
+        documentId: "test-doc",
+        status: JobStatus.PENDING,
+        createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-1"] },
+      };
+      const completedJobInfo: JobInfo = {
+        ...jobInfo,
+        status: JobStatus.READ_READY,
+      };
+
+      vi.mocked(mockDocumentIndexer.getDirectedRelationships).mockResolvedValue(
+        {
+          results: [existingEdge],
+          options: { cursor: "0", limit: 1 },
+        },
+      );
+      vi.mocked(mockReactor.updateRelationship).mockResolvedValue(jobInfo);
+      vi.mocked(mockJobAwaiter.waitForJob).mockResolvedValue(completedJobInfo);
+
+      await client.updateRelationship("upd-parent", "upd-child", "child", {
+        order: 2,
+      });
+
+      expect(mockReactor.updateRelationship).toHaveBeenCalledWith(
+        "upd-parent",
+        "upd-child",
+        "child",
+        { order: 2 },
+        "main",
+        mockSigner,
+        undefined,
+      );
+    });
+  });
+
+  describe("moveRelationship metadata carry", () => {
+    const jobInfo: JobInfo = {
+      id: "job-1",
+      documentId: "test-doc",
+      status: JobStatus.PENDING,
+      createdAtUtcIso: new Date().toISOString(),
+      consistencyToken: createEmptyConsistencyToken(),
+      meta: { batchId: "test", batchJobIds: ["job-1"] },
+    };
+
+    it("propagates a failed metadata read without removing the edge", async () => {
+      vi.mocked(mockDocumentIndexer.getDirectedRelationships).mockRejectedValue(
+        new Error("read side unavailable"),
+      );
+
+      await expect(
+        client.moveRelationship("source-1", "target-1", "child-1", "child"),
+      ).rejects.toThrow("read side unavailable");
+      expect(mockReactor.removeRelationship).not.toHaveBeenCalled();
+    });
+
+    it("reads the edge with one directed query rather than paging the source", async () => {
+      vi.mocked(mockDocumentIndexer.getDirectedRelationships).mockResolvedValue(
+        {
+          results: [
+            {
+              sourceId: "source-1",
+              targetId: "child-1",
+              relationshipType: "child",
+              metadata: { order: 7 },
+              createdAt: new Date(0),
+              updatedAt: new Date(0),
+            },
+          ],
+          options: { cursor: "0", limit: 1 },
+        },
+      );
+      vi.mocked(mockReactor.removeRelationship).mockResolvedValue(jobInfo);
+      vi.mocked(mockReactor.addRelationship).mockResolvedValue(jobInfo);
+      vi.mocked(mockJobAwaiter.waitForJob).mockResolvedValue({
+        ...jobInfo,
+        status: JobStatus.READ_READY,
+      });
+
+      await client.moveRelationship("source-1", "target-1", "child-1", "child");
+
+      expect(
+        mockDocumentIndexer.getDirectedRelationships,
+      ).toHaveBeenCalledTimes(1);
+      expect(mockDocumentIndexer.getDirectedRelationships).toHaveBeenCalledWith(
+        "source-1",
+        "child-1",
+        ["child"],
+        { cursor: "0", limit: 1 },
+        undefined,
+        undefined,
+      );
+      expect(mockDocumentIndexer.getOutgoing).not.toHaveBeenCalled();
+      expect(mockReactor.addRelationship).toHaveBeenCalledWith(
+        "target-1",
+        "child-1",
+        "child",
+        { order: 7 },
+        "main",
+        mockSigner,
+        undefined,
+      );
+    });
+  });
+
+  describe("relationship edge gating", () => {
+    function edgeBetween(sourceId: string, targetId: string) {
+      return {
+        sourceId,
+        targetId,
+        relationshipType: "child",
+        metadata: { order: 1 },
+        createdAt: new Date(0),
+        updatedAt: new Date(0),
+      };
+    }
+
+    function documentWithScopes(id: string, scopes: string[]): PHDocument {
+      return {
+        header: { id, documentType: "test", branch: "main" },
+        state: Object.fromEntries(scopes.map((scope) => [scope, {}])),
+        initialState: {},
+      } as unknown as PHDocument;
+    }
+
+    /** A gate that refuses every domain scope of one named document. */
+    function clientRefusing(refusedId: string): IReactorClient {
+      const gate: IReadGate = {
+        scopePredicate: (document) =>
+          Promise.resolve((scope: string) =>
+            document.header.id === refusedId
+              ? scope === "auth" || scope === "document"
+              : true,
+          ),
+      };
+      return new ReactorClient(
+        createMockLogger(),
+        mockReactor,
+        mockSigner,
+        mockSubscriptionManager,
+        mockJobAwaiter,
+        mockDocumentIndexer,
+        mockDocumentView,
+        gate,
+      );
+    }
+
+    it("withholds an outgoing edge whose far end refuses every domain scope", async () => {
+      vi.mocked(mockReactor.getOutgoingRelationshipEdges).mockResolvedValue({
+        results: [
+          edgeBetween("p", "visible"),
+          edgeBetween("p", "hidden"),
+          edgeBetween("p", "absent"),
+        ],
+        options: { cursor: "0", limit: 100 },
+      });
+      vi.mocked(mockReactor.find).mockResolvedValue({
+        results: [
+          documentWithScopes("visible", ["auth", "document", "global"]),
+          documentWithScopes("hidden", ["auth", "document", "global"]),
+        ],
+        options: { cursor: "0", limit: 3 },
+      });
+
+      const result = await clientRefusing(
+        "hidden",
+      ).getOutgoingRelationshipEdges("p", "child");
+
+      expect(result.results.map((edge) => edge.targetId)).toEqual([
+        "visible",
+        "absent",
+      ]);
+      expect(mockReactor.find).toHaveBeenCalledWith(
+        { ids: ["visible", "hidden", "absent"] },
+        { subject: undefined, branch: undefined },
+        { cursor: "0", limit: 3 },
+        undefined,
+        undefined,
+      );
+    });
+
+    it("keeps an outgoing edge whose far end holds no domain scope to withhold", async () => {
+      vi.mocked(mockReactor.getOutgoingRelationshipEdges).mockResolvedValue({
+        results: [edgeBetween("p", "meta-only")],
+        options: { cursor: "0", limit: 100 },
+      });
+      vi.mocked(mockReactor.find).mockResolvedValue({
+        results: [documentWithScopes("meta-only", ["auth", "document"])],
+        options: { cursor: "0", limit: 1 },
+      });
+
+      const result = await clientRefusing(
+        "meta-only",
+      ).getOutgoingRelationshipEdges("p", "child");
+
+      expect(result.results).toHaveLength(1);
+    });
+
+    it("withholds an incoming edge whose far end refuses every domain scope", async () => {
+      vi.mocked(mockReactor.getIncomingRelationshipEdges).mockResolvedValue({
+        results: [
+          edgeBetween("readable-parent", "c"),
+          edgeBetween("hidden-parent", "c"),
+        ],
+        options: { cursor: "0", limit: 100 },
+      });
+      vi.mocked(mockReactor.find).mockResolvedValue({
+        results: [
+          documentWithScopes("readable-parent", ["auth", "document", "global"]),
+          documentWithScopes("hidden-parent", ["auth", "document", "global"]),
+        ],
+        options: { cursor: "0", limit: 2 },
+      });
+
+      const result = await clientRefusing(
+        "hidden-parent",
+      ).getIncomingRelationshipEdges("c", "child");
+
+      expect(result.results.map((edge) => edge.sourceId)).toEqual([
+        "readable-parent",
+      ]);
     });
   });
 

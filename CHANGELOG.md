@@ -1,3 +1,40 @@
+## 6.2.3-dev.10 (2026-09-16)
+
+### 🚀 Features
+
+- **reactor:** relationship metadata on the add, update and read paths ([37f03f589](https://github.com/powerhouse-inc/powerhouse/commit/37f03f589))
+- **reactor-api:** relationship metadata over GraphQL, and edge-shaped reads ([619c16537](https://github.com/powerhouse-inc/powerhouse/commit/619c16537))
+
+### 🩹 Fixes
+
+- **reactor:** the read/write split mirror runs the reducer's current statements ([0d02ded9c](https://github.com/powerhouse-inc/powerhouse/commit/0d02ded9c))
+- **reactor:** the split mirror assigns through assignNodes like the reducer does ([b5e4034eb](https://github.com/powerhouse-inc/powerhouse/commit/b5e4034eb))
+- **reactor:** the read/write split mirror runs the reducer's current statements ([#3024](https://github.com/powerhouse-inc/powerhouse/pull/3024))
+- **reactor:** a job reports what became of each action it was given ([6237d9946](https://github.com/powerhouse-inc/powerhouse/commit/6237d9946))
+- **reactor:** relationship reads gate their far end, and refuse an absent edge ([ed4ed9c92](https://github.com/powerhouse-inc/powerhouse/commit/ed4ed9c92))
+- **reactor-api:** the job subscription's result is nullable, like the query's ([b3bb5bb02](https://github.com/powerhouse-inc/powerhouse/commit/b3bb5bb02))
+- **reactor-api:** a filtered page counts what it serves ([9cade568e](https://github.com/powerhouse-inc/powerhouse/commit/9cade568e))
+
+### 🔥 Performance
+
+- **reactor:** the snapshot lookup reads the columns it uses, not the state ([3614d7312](https://github.com/powerhouse-inc/powerhouse/commit/3614d7312))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5
+
+## 6.2.3-dev.9 (2026-09-15)
+
+### 🚀 Features
+
+- **shared:** pieces as a module kind a package can ship ([647c5e6f3](https://github.com/powerhouse-inc/powerhouse/commit/647c5e6f3))
+- **shared:** export a package's pieces, as the build emits them ([02804351e](https://github.com/powerhouse-inc/powerhouse/commit/02804351e))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.8 (2026-09-15)
 
 ### 🩹 Fixes

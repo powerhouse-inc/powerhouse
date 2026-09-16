@@ -85,7 +85,10 @@ export {
   parseDriveUrl,
   type ParsedDriveUrl,
 } from "./src/shared/drive-url.js";
-export { AuthEnforcementDisabledError } from "./src/shared/errors.js";
+export {
+  AuthEnforcementDisabledError,
+  RelationshipNotFoundError,
+} from "./src/shared/errors.js";
 export { createMutableShutdownStatus } from "./src/shared/factories.js";
 export { parsePagingOptions, type ParsedPaging } from "./src/shared/utils.js";
 export {
@@ -96,10 +99,12 @@ export {
   type ConsistencyKey,
   type ConsistencyToken,
   type JobInfo,
+  type JobResultSummary,
   type PagedResults,
   type PagingOptions,
   type SearchFilter,
   type ShutdownStatus,
+  type SubmittedActionResult,
   type ViewFilter,
 } from "./src/shared/types.js";
 export {

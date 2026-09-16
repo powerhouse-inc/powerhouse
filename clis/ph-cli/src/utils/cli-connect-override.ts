@@ -14,8 +14,12 @@
 // individual --flag values merge on top, so a flag beats a conflicting --json
 // value.
 
-import type { PHConnectRuntimeConfig } from "@powerhousedao/shared/clis";
+import type {
+  PHConnectDefaultDrive,
+  PHConnectRuntimeConfig,
+} from "@powerhousedao/shared/clis";
 import { deepMerge } from "@powerhousedao/shared/connect";
+import { mergeDefaultDrives } from "./merge-default-drives.js";
 import type { ConnectBuildArgs, ConnectStudioArgs } from "../types.js";
 import {
   normalizeKey,
@@ -325,8 +329,12 @@ export function buildCliConnectOverride(args: ConnectBuildArgs): {
  * `callerOverride` is supplied by wrappers around studio (notably `ph vetra`,
  * which sets default drives + preserveStrategy directly). The flag override
  * deep-merges on top of it: caller choices apply for every flag the user
- * didn't type, but an explicitly passed flag (e.g. `--default-drives-url`)
- * always wins.
+ * didn't type, and an explicitly passed flag wins for its own field —
+ * except `drives.defaultDrives`, which merges additively: a flag's drives
+ * are appended to the caller's list (de-duplicated by drive identity) rather
+ * than replacing it, so vetra's own drives stay in Connect's default set.
+ * Without a caller override (plain `ph connect studio`) only the flag can
+ * carry defaultDrives, so that command's behavior is unchanged.
  */
 export function buildStudioConnectOverride(
   args: ConnectStudioArgs,
@@ -349,10 +357,29 @@ export function buildStudioConnectOverride(
   // Studio commands (`ph connect studio`, `ph vetra`) always run in studio
   // mode: Connect loads the vetra package and offers builder document types.
   const studioOverride: PHConnectRuntimeConfig = { app: { studioMode: true } };
-  return [callerOverride, flagOverride, studioOverride]
+  const layers = [callerOverride, flagOverride, studioOverride].filter(
+    (o): o is PHConnectRuntimeConfig =>
+      o !== undefined && Object.keys(o).length > 0,
+  );
+  const merged = layers.reduce(
+    (acc, o) => deepMerge(acc, o),
+    {} as PHConnectRuntimeConfig,
+  );
+
+  // `deepMerge` replaces arrays, so the flag's defaultDrives would clobber
+  // the caller's list; re-apply them as the de-duplicated union instead.
+  // Only needed when two or more layers contribute default drives (the
+  // plain-studio single-layer case is already exactly the flag's list).
+  const driveGroups = layers
+    .map((l) => l.drives?.defaultDrives)
     .filter(
-      (o): o is PHConnectRuntimeConfig =>
-        o !== undefined && Object.keys(o).length > 0,
-    )
-    .reduce((acc, o) => deepMerge(acc, o), {} as PHConnectRuntimeConfig);
+      (d): d is PHConnectDefaultDrive[] => Array.isArray(d) && d.length > 0,
+    );
+  if (driveGroups.length > 1) {
+    merged.drives = {
+      ...merged.drives,
+      defaultDrives: mergeDefaultDrives(...driveGroups),
+    };
+  }
+  return merged;
 }

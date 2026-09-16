@@ -22,6 +22,17 @@ describe("slimManifest", () => {
     expect(slimManifest(manifest)).toEqual(manifest);
   });
 
+  it("keeps the pieces a package ships", () => {
+    const manifest: Manifest = {
+      name: "@x/pkg",
+      pieces: [
+        { id: "@powerhousedao/piece-reactor", name: "Powerhouse Reactor" },
+      ],
+    };
+
+    expect(slimManifest(manifest)).toEqual(manifest);
+  });
+
   it("strips unknown junk fields (the 8MB agent-manifest case)", () => {
     const junk = {
       name: "ph-apeiron-cli",

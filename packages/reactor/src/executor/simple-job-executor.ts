@@ -73,6 +73,7 @@ import {
   getNextIndexForScope,
   isGenesisOperation,
   refusalError,
+  submittedActionIds,
   TouchedStreams,
 } from "./util.js";
 
@@ -466,6 +467,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         jobId: job.id,
         operations: actionResult.operationsWithContext,
         jobMeta: job.meta,
+        submittedActionIds: submittedActionIds(job),
         collectionMemberships,
       };
     }

@@ -157,7 +157,7 @@ export const vetraSwitchboardArgs = {
 export const defaultDrivesUrl = option({
   type: optional(string),
   long: "default-drives-url",
-  description: "The default drives url to use in connect",
+  description: "Comma-separated drive URLs to use as Connect's default drives.",
   defaultValue: () => "",
 });
 

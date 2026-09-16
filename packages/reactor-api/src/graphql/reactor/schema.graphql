@@ -101,6 +101,24 @@ type PHDocumentResultPage {
   cursor: String
 }
 
+# A directed edge between two documents, with the metadata recorded against it.
+type DocumentRelationship {
+  sourceId: String!
+  targetId: String!
+  relationshipType: String!
+  metadata: JSONObject
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type DocumentRelationshipResultPage {
+  items: [DocumentRelationship!]!
+  totalCount: Int!
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  cursor: String
+}
+
 type ReactorOperationResultPage {
   items: [ReactorOperation!]!
   totalCount: Int!
@@ -170,7 +188,14 @@ type DocumentChangeContext {
 type JobChangeEvent {
   jobId: String!
   status: String!
-  result: JSONObject!
+
+  """
+  What the job produced, once it has produced anything. Nullable for the same
+  reason as `JobInfo.result`: a job that has not written yet has produced
+  nothing, and an empty object would claim otherwise.
+  """
+  result: JSONObject
+
   error: String
 }
 
@@ -437,6 +462,28 @@ type Query {
     paging: PagingInput
   ): PHDocumentResultPage!
 
+  # Get the outgoing relationship edges of a source document. Unlike
+  # documentOutgoingRelationships, which returns the documents at the far end,
+  # this returns the edges themselves, carrying their metadata and timestamps.
+  # Omit relationshipType to return edges of every type.
+  documentOutgoingRelationshipEdges(
+    sourceIdentifier: String!
+    relationshipType: String
+    view: ViewFilterInput
+    paging: PagingInput
+  ): DocumentRelationshipResultPage!
+
+  # Get the incoming relationship edges of a target document. Unlike
+  # documentIncomingRelationships, which returns the documents at the far end,
+  # this returns the edges themselves, carrying their metadata and timestamps.
+  # Omit relationshipType to return edges of every type.
+  documentIncomingRelationshipEdges(
+    targetIdentifier: String!
+    relationshipType: String
+    view: ViewFilterInput
+    paging: PagingInput
+  ): DocumentRelationshipResultPage!
+
   # Find documents by search criteria
   findDocuments(
     search: SearchFilterInput
@@ -581,11 +628,23 @@ type Mutation {
     branch: String
   ): PHDocument!
 
-  # Add a relationship between two documents
+  # Add a relationship between two documents. Adding one that already exists is
+  # a no-op, metadata included -- use updateRelationship to change an edge.
   addRelationship(
     sourceIdentifier: String!
     targetIdentifier: String!
     relationshipType: String!
+    metadata: JSONObject
+    branch: String
+  ): PHDocument!
+
+  # Replace the metadata of an existing relationship, preserving its createdAt.
+  # Omitting metadata, or passing null, clears it.
+  updateRelationship(
+    sourceIdentifier: String!
+    targetIdentifier: String!
+    relationshipType: String!
+    metadata: JSONObject
     branch: String
   ): PHDocument!
 

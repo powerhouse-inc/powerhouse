@@ -54,6 +54,27 @@ export const PHDocumentResultPageDTO = z
   })
   .strip();
 
+export const DocumentRelationshipDTO = z
+  .object({
+    sourceId: z.string(),
+    targetId: z.string(),
+    relationshipType: z.string(),
+    metadata: JSONObjectDTO.nullable().optional(),
+    createdAt: DateTimeDTO,
+    updatedAt: DateTimeDTO,
+  })
+  .strip();
+
+export const DocumentRelationshipResultPageDTO = z
+  .object({
+    items: z.array(DocumentRelationshipDTO),
+    totalCount: z.number().int(),
+    hasNextPage: z.boolean(),
+    hasPreviousPage: z.boolean(),
+    cursor: z.string().nullable().optional(),
+  })
+  .strip();
+
 export const DocumentWithChildrenDTO = z
   .object({
     document: PHDocumentDTO,

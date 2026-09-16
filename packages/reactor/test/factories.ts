@@ -880,7 +880,9 @@ export function createMockDocumentIndexer(): IDocumentIndexer {
     getOrphanedChildren: vi.fn().mockResolvedValue([]),
     hasRelationship: vi.fn().mockResolvedValue(false),
     getUndirectedRelationships: vi.fn().mockResolvedValue([]),
-    getDirectedRelationships: vi.fn().mockResolvedValue([]),
+    getDirectedRelationships: vi
+      .fn()
+      .mockResolvedValue({ results: [], options: { cursor: "0", limit: 100 } }),
     findPath: vi.fn().mockResolvedValue(null),
     findAncestors: vi.fn().mockResolvedValue({ nodes: [], edges: [] }),
     getRelationshipTypes: vi.fn().mockResolvedValue([]),

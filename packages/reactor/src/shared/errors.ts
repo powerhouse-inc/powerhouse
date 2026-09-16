@@ -307,3 +307,33 @@ export class AuthEnforcementDisabledError extends Error {
     );
   }
 }
+
+/**
+ * Error thrown when a relationship edge an operation names does not exist.
+ *
+ * Detection is by `name`, not `instanceof`: the SharedWorker RPC boundary
+ * rebuilds a thrown error from `{ name, message, stack, cause }` alone
+ * (`reactor-browser/src/rpc/error-info.ts`), so the class identity is lost in
+ * transit.
+ */
+export class RelationshipNotFoundError extends Error {
+  public readonly sourceId: string;
+  public readonly targetId: string;
+  public readonly relationshipType: string;
+
+  constructor(sourceId: string, targetId: string, relationshipType: string) {
+    super(
+      `No ${relationshipType} relationship from ${sourceId} to ${targetId}`,
+    );
+    this.name = "RelationshipNotFoundError";
+    this.sourceId = sourceId;
+    this.targetId = targetId;
+    this.relationshipType = relationshipType;
+
+    Error.captureStackTrace(this, RelationshipNotFoundError);
+  }
+
+  static isError(error: unknown): error is RelationshipNotFoundError {
+    return Error.isError(error) && error.name === "RelationshipNotFoundError";
+  }
+}

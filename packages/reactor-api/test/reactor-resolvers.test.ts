@@ -131,6 +131,84 @@ describe("ReactorSubgraph Query Resolvers", () => {
     });
   });
 
+  describe("relationship edges", () => {
+    it("returns the edge rows, metadata included", async () => {
+      const parent = createTestDocument();
+      const child = createTestDocument();
+
+      await module.client.create(parent);
+      await module.client.create(child);
+      await module.client.addRelationship(
+        parent.header.id,
+        child.header.id,
+        "child",
+        { parentFolderId: "folder-1" },
+      );
+
+      const outgoing = await resolvers.documentOutgoingRelationshipEdges(
+        module.client,
+        {
+          sourceIdentifier: parent.header.id,
+          relationshipType: "child",
+          paging: null,
+          view: null,
+        },
+      );
+
+      expect(outgoing.items.length).toBe(1);
+      expect(outgoing.items[0]).toMatchObject({
+        sourceId: parent.header.id,
+        targetId: child.header.id,
+        relationshipType: "child",
+        metadata: { parentFolderId: "folder-1" },
+      });
+      expect(outgoing.items[0].createdAt).toBeDefined();
+      expect(outgoing.items[0].updatedAt).toBeDefined();
+      expect(outgoing.totalCount).toBe(1);
+
+      const incoming = await resolvers.documentIncomingRelationshipEdges(
+        module.client,
+        {
+          targetIdentifier: child.header.id,
+          relationshipType: null,
+          paging: null,
+          view: null,
+        },
+      );
+
+      expect(incoming.items.length).toBe(1);
+      expect(incoming.items[0].metadata).toEqual({
+        parentFolderId: "folder-1",
+      });
+    });
+
+    it("reports null metadata for an edge that carries none", async () => {
+      const parent = createTestDocument();
+      const child = createTestDocument();
+
+      await module.client.create(parent);
+      await module.client.create(child);
+      await module.client.addRelationship(
+        parent.header.id,
+        child.header.id,
+        "child",
+      );
+
+      const outgoing = await resolvers.documentOutgoingRelationshipEdges(
+        module.client,
+        {
+          sourceIdentifier: parent.header.id,
+          relationshipType: "child",
+          paging: null,
+          view: null,
+        },
+      );
+
+      expect(outgoing.items.length).toBe(1);
+      expect(outgoing.items[0].metadata).toBeNull();
+    });
+  });
+
   describe("findDocuments", () => {
     it("should find documents by type", async () => {
       const testDoc = createTestDocument();
@@ -285,6 +363,87 @@ describe("ReactorSubgraph Mutation Resolvers", () => {
       });
 
       expect(result.id).toBe(parent.header.id);
+    });
+  });
+
+  describe("updateRelationship", () => {
+    it("should write metadata through addRelationship and replace it", async () => {
+      const parent = createTestDocument();
+      const child = createTestDocument();
+
+      await module.client.create(parent);
+      await module.client.create(child);
+
+      await resolvers.addRelationship(module.client, {
+        sourceIdentifier: parent.header.id,
+        targetIdentifier: child.header.id,
+        relationshipType: "child",
+        metadata: { order: 1 },
+        branch: null,
+      });
+
+      let edges = await resolvers.documentOutgoingRelationshipEdges(
+        module.client,
+        {
+          sourceIdentifier: parent.header.id,
+          relationshipType: "child",
+          paging: null,
+          view: null,
+        },
+      );
+      expect(edges.items[0].metadata).toEqual({ order: 1 });
+
+      const result = await resolvers.updateRelationship(module.client, {
+        sourceIdentifier: parent.header.id,
+        targetIdentifier: child.header.id,
+        relationshipType: "child",
+        metadata: { order: 2, label: "second" },
+        branch: null,
+      });
+      expect(result.id).toBe(parent.header.id);
+
+      edges = await resolvers.documentOutgoingRelationshipEdges(module.client, {
+        sourceIdentifier: parent.header.id,
+        relationshipType: "child",
+        paging: null,
+        view: null,
+      });
+      expect(edges.items[0].metadata).toEqual({ order: 2, label: "second" });
+    });
+
+    it("clears metadata when none is supplied", async () => {
+      const parent = createTestDocument();
+      const child = createTestDocument();
+
+      await module.client.create(parent);
+      await module.client.create(child);
+
+      await resolvers.addRelationship(module.client, {
+        sourceIdentifier: parent.header.id,
+        targetIdentifier: child.header.id,
+        relationshipType: "child",
+        metadata: { order: 1 },
+        branch: null,
+      });
+
+      await resolvers.updateRelationship(module.client, {
+        sourceIdentifier: parent.header.id,
+        targetIdentifier: child.header.id,
+        relationshipType: "child",
+        metadata: null,
+        branch: null,
+      });
+
+      const edges = await resolvers.documentOutgoingRelationshipEdges(
+        module.client,
+        {
+          sourceIdentifier: parent.header.id,
+          relationshipType: "child",
+          paging: null,
+          view: null,
+        },
+      );
+      expect(edges.items[0].metadata).toBeNull();
     });
   });
 

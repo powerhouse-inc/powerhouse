@@ -641,25 +641,20 @@ export class KyselyOperationStore implements IOperationStore {
   ): Promise<DocumentRevisions> {
     throwIfAborted(signal);
 
-    // Get the latest operation for each scope in a single query
-    // Uses a subquery to find operations where the index equals the max index for that scope
+    // The head of each scope in one pass. `index` is unique per
+    // (documentId, scope, branch) -- the unique_revision constraint -- so the
+    // largest index in a scope identifies exactly one operation, and taking the
+    // maximum is the same answer as selecting the row that carries it. Asking
+    // for the maximum directly lets Postgres aggregate a single ordered walk of
+    // unique_revision instead of re-running a per-scope subquery once for every
+    // operation row in the document.
     const scopeRevisions = await this.queryExecutor
-      .selectFrom("Operation as o1")
-      .select(["o1.scope", "o1.index", "o1.timestampUtcMs"])
-      .where("o1.documentId", "=", documentId)
-      .where("o1.branch", "=", branch)
-      .where((eb) =>
-        eb(
-          "o1.index",
-          "=",
-          eb
-            .selectFrom("Operation as o2")
-            .select((eb2) => eb2.fn.max("o2.index").as("maxIndex"))
-            .where("o2.documentId", "=", eb.ref("o1.documentId"))
-            .where("o2.branch", "=", eb.ref("o1.branch"))
-            .where("o2.scope", "=", eb.ref("o1.scope")),
-        ),
-      )
+      .selectFrom("Operation")
+      .select("scope")
+      .select((eb) => eb.fn.max("index").as("index"))
+      .where("documentId", "=", documentId)
+      .where("branch", "=", branch)
+      .groupBy("scope")
       .execute();
 
     // Asked separately because the largest timestamp is not always on the
