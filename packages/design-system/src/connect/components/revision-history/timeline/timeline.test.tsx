@@ -66,6 +66,31 @@ describe("Timeline", () => {
     expect(sizer!.style.height).toMatch(/^\d+(\.\d+)?px$/);
   });
 
+  // Bounding the viewport made it a scroll container, and a scroll container
+  // clips on BOTH axes: an overflow-y of auto forces overflow-x from visible
+  // to auto. The day header is pulled 24px left of the 16px row inset so its
+  // ring sits centred on the timeline's vertical line, which put it 8px the
+  // wrong side of the clip edge and sliced it in half.
+  it("keeps the day marker's overhang inside the scroll container", () => {
+    const { getByTestId } = renderTimeline(60);
+    const scroller = getByTestId("revision-timeline");
+    const line = scroller.firstElementChild as HTMLElement;
+
+    // The line, and so everything hanging off it, is inset from the edge that
+    // clips.
+    expect(parseFloat(line.style.marginLeft)).toBeGreaterThanOrEqual(8);
+    // The line must not be drawn on the clipping element itself -- there is
+    // no inset to hang off there.
+    expect(scroller.className).not.toMatch(/border-l/);
+    expect(line.className).toMatch(/border-l/);
+  });
+
+  // The mirror image on the right -- a row offset from the line by the inset
+  // but still a full 100% wide runs that far past the line's right edge, and
+  // the same clipping turns that into a horizontal scrollbar -- is fixed with
+  // `right: 0` in place of `width: 100%`, but is not asserted here: happy-dom
+  // has no layout, so the virtualizer renders no rows to inspect.
+
   // The old component grew the visible row count from a wheel listener bound
   // to window, so every wheel event anywhere in the app set state on a
   // mounted timeline, and the count it derived was independent of where the

@@ -6,6 +6,23 @@ import { Skip } from "../skip/skip.js";
 import { makeRows } from "../utils.js";
 import { Day } from "./day.js";
 
+/** How far each row is indented from the timeline's vertical line. */
+const ROW_INSET = 16;
+
+/**
+ * How far the day header is pulled back out again, so its ring sits centred
+ * on the line rather than beside it: the `-ml-6` in `Day`.
+ */
+const DAY_MARKER_PULL = 24;
+
+/**
+ * How far the line is inset from the scroll container's clip edge -- exactly
+ * the amount the day marker hangs past it (24 pulled back from a 16 inset
+ * leaves 8 on the wrong side of zero). Without this the ring is sliced in
+ * half, since a scrolling box clips on both axes.
+ */
+const DAY_MARKER_OVERHANG = DAY_MARKER_PULL - ROW_INSET;
+
 export type TimelineProps = {
   readonly operations: readonly Operation[];
   /**
@@ -49,7 +66,6 @@ export function Timeline(props: TimelineProps) {
 
   return (
     <div
-      className="border-l border-border dark:border-none"
       data-testid="revision-timeline"
       ref={parentRef}
       style={{
@@ -59,10 +75,18 @@ export function Timeline(props: TimelineProps) {
         position: "relative",
       }}
     >
+      {/*
+       * The vertical line lives here rather than on the scroll container, and
+       * is inset by the day marker's overhang. A scroll container clips at its
+       * padding box on both axes -- setting overflow-y to auto forces
+       * overflow-x from visible to auto -- so anything hanging off the line's
+       * left would be cut, which is exactly what the day marker does.
+       */}
       <div
+        className="border-l border-border dark:border-none"
         style={{
           height: `${rowVirtualizer.getTotalSize()}px`,
-          width: "100%",
+          marginLeft: DAY_MARKER_OVERHANG,
           position: "relative",
         }}
       >
@@ -76,8 +100,11 @@ export function Timeline(props: TimelineProps) {
               style={{
                 position: "absolute",
                 top: 0,
-                left: 16,
-                width: "100%",
+                left: ROW_INSET,
+                // `right`, not `width: 100%`: a full-width row offset by
+                // ROW_INSET runs that far past the line's right edge, which
+                // the same clipping turns into a horizontal scrollbar.
+                right: 0,
                 height: `${virtualRow.size}px`,
                 transform: `translateY(${virtualRow.start}px)`,
               }}
