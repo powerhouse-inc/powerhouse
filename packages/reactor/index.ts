@@ -312,7 +312,15 @@ export type {
 } from "./src/storage/kysely/types.js";
 
 // Read Models
-export { BaseReadModel } from "./src/read-models/base-read-model.js";
+export {
+  BaseReadModel,
+  DEFAULT_COMMIT_CHUNK_SIZE,
+  DEFAULT_READ_MODEL_YIELD_DEADLINE_MS,
+  defaultReadModelIndexingConfig,
+  unchunkedReadModelIndexingConfig,
+  type BaseReadModelConfig,
+  type ReadModelIndexingConfig,
+} from "./src/read-models/base-read-model.js";
 export { ReadModelCoordinator } from "./src/read-models/coordinator.js";
 export { KyselyDocumentView } from "./src/read-models/document-view.js";
 export {
