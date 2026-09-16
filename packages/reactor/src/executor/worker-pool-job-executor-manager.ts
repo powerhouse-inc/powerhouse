@@ -40,6 +40,7 @@ import {
   WorkerExitedError,
   WorkerInitFailedError,
 } from "./worker/errors.js";
+import { submittedActionIds } from "./util.js";
 import { bucketFor } from "./worker-pool-router.js";
 import type {
   JobWriteReadyPayload,
@@ -383,6 +384,7 @@ export class WorkerPoolJobExecutorManager implements IJobExecutorManager {
       jobId: job.id,
       operations: payload.operations,
       jobMeta: payload.jobMeta,
+      submittedActionIds: submittedActionIds(job),
       collectionMemberships,
     };
     try {

@@ -197,9 +197,18 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
         }
 
         for (const [scopeName, scopeState] of scopesToIndex) {
+          // The previous `content` is the whole prior scope state - hundreds of
+          // kilobytes of jsonb on a large drive - and only the header-meta
+          // carry-over below reads it. Selecting it unconditionally made every
+          // write pay to decompress and ship a copy of the state it was about
+          // to overwrite.
+          const needsExistingContent =
+            scopeName === "header" && preserveHeaderMeta;
+
           const existingSnapshot = await trx
             .selectFrom("DocumentSnapshot")
-            .selectAll()
+            .select(["slug", "name", "isDeleted", "snapshotVersion"])
+            .$if(needsExistingContent, (qb) => qb.select("content"))
             .where("documentId", "=", documentId)
             .where("scope", "=", scopeName)
             .where("branch", "=", branch)
@@ -224,7 +233,7 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
               name = headerName;
             }
 
-            if (preserveHeaderMeta && existingSnapshot) {
+            if (needsExistingContent && existingSnapshot) {
               const existingHeader = existingSnapshot.content as Record<
                 string,
                 unknown

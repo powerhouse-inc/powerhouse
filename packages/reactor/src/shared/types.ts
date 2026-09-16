@@ -1,4 +1,7 @@
-import type { AuthSubject } from "@powerhousedao/shared/document-model";
+import type {
+  AuthSubject,
+  OperationOutcome,
+} from "@powerhousedao/shared/document-model";
 
 /**
  * The document ID used for system operations (CREATE_DOCUMENT, DELETE_DOCUMENT, etc.)
@@ -77,6 +80,34 @@ export type JobMeta = BatchMeta & Record<string, unknown>;
 import type { Job } from "../queue/types.js";
 
 /**
+ * What became of one action the caller submitted, at the position the
+ * operation carrying it was written to.
+ */
+export type SubmittedActionResult = {
+  actionId: string;
+  scope: string;
+
+  /** The index the operation occupies in its scope. */
+  index: number;
+} & OperationOutcome;
+
+/**
+ * The outcome of every action a job was given.
+ *
+ * A reducer error or a denial does not fail the job: the operation is still
+ * written at its index, the rest of the batch still applies, and the job still
+ * reaches READ_READY. This is the only place a caller can see that one of its
+ * actions was rejected.
+ */
+export type JobResultSummary = {
+  /** One entry per submitted action that produced an operation, in write order. */
+  actions: SubmittedActionResult[];
+
+  /** False when any submitted action hit a reducer error or was denied. */
+  allApplied: boolean;
+};
+
+/**
  * Describes the current state of a job.
  */
 export type JobInfo = {
@@ -89,7 +120,13 @@ export type JobInfo = {
   completedAtUtcIso?: string;
   error?: ErrorInfo;
   errorHistory?: ErrorInfo[];
-  result?: any;
+
+  /**
+   * What the job produced for its caller, from the moment its operations are
+   * durable. Undefined until then, and on jobs that carry no submitted
+   * actions.
+   */
+  result?: JobResultSummary;
 
   /**
    * A token for coordinating reads, only valid once a job reaches COMPLETED.

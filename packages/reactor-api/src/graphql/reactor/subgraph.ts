@@ -85,6 +85,75 @@ export class ReactorSubgraph extends BaseSubgraph {
   }
 
   /**
+   * Drops the relationship edges whose far-end document the caller cannot read.
+   *
+   * An edge names two documents, so returning it discloses the far end's id. The
+   * document-shaped relationship queries already withhold far-end documents the
+   * caller cannot read; the edge-shaped queries have to withhold the same ones,
+   * or they become a way to enumerate around that check. Supreme admins read
+   * everything, so the per-edge check is skipped for them.
+   *
+   * The counts describe what is served; the cursor describes where to resume in
+   * the underlying unfiltered stream, so it is left as it came. A filtered page
+   * is therefore often shorter than the requested limit, and that is the stream
+   * continuing rather than a sign it ended.
+   */
+  private async filterRelationshipEdges<
+    TEdge extends { readonly sourceId: string; readonly targetId: string },
+    TPage extends {
+      readonly items: ReadonlyArray<TEdge>;
+      readonly totalCount: number;
+    },
+  >(
+    page: TPage,
+    farEnd: "sourceId" | "targetId",
+    ctx: Context,
+  ): Promise<TPage> {
+    if (this.authorizationService.isSupremeAdmin(ctx.user?.address)) {
+      return page;
+    }
+
+    const decisions = new Map<string, boolean>();
+    const items: TEdge[] = [];
+    for (const edge of page.items) {
+      const documentId = edge[farEnd];
+      let canRead = decisions.get(documentId);
+      if (canRead === undefined) {
+        canRead = await this.canReadDocument(
+          documentId as CanonicalDocumentId,
+          ctx,
+        );
+        decisions.set(documentId, canRead);
+      }
+      if (canRead) {
+        items.push(edge);
+      }
+    }
+
+    return this.servedPage(page, items);
+  }
+
+  /**
+   * Restates a page's totalCount over the items that survived a read filter, so
+   * that the difference between the two cannot be read off as a count of what
+   * the caller was not allowed to see.
+   */
+  private servedPage<
+    TItem,
+    TPage extends {
+      readonly items: ReadonlyArray<TItem>;
+      readonly totalCount: number;
+    },
+  >(page: TPage, items: TItem[]): TPage {
+    const withheld = page.items.length - items.length;
+    return {
+      ...page,
+      items,
+      totalCount: Math.max(0, page.totalCount - withheld),
+    };
+  }
+
+  /**
    * Adds to `forbidden` the canonical document ids in `syncOps` that the caller
    * cannot read, checking each distinct id once. Sync operation document ids are
    * canonical (never slugs), so no resolution is needed.
@@ -277,16 +346,59 @@ export class ReactorSubgraph extends BaseSubgraph {
                 filteredItems.push(item);
               }
             }
-            return {
-              ...result,
-              items: filteredItems,
-            };
+            return this.servedPage(result, filteredItems);
           }
 
           return result;
         } catch (error) {
           this.logger.error(
             "Error in documentIncomingRelationships: @Error",
+            error,
+          );
+          throw error;
+        }
+      },
+
+      documentOutgoingRelationshipEdges: async (
+        _parent,
+        args,
+        ctx: Context,
+      ) => {
+        this.logger.debug("documentOutgoingRelationshipEdges(@args)", args);
+        try {
+          const handle = await this.assertCanRead(args.sourceIdentifier, ctx);
+          const result = await resolvers.documentOutgoingRelationshipEdges(
+            this.reactorClient,
+            { ...args, sourceIdentifier: handle.fetchIdentifier },
+            this.viewSubject(ctx),
+          );
+          return await this.filterRelationshipEdges(result, "targetId", ctx);
+        } catch (error) {
+          this.logger.error(
+            "Error in documentOutgoingRelationshipEdges: @Error",
+            error,
+          );
+          throw error;
+        }
+      },
+
+      documentIncomingRelationshipEdges: async (
+        _parent,
+        args,
+        ctx: Context,
+      ) => {
+        this.logger.debug("documentIncomingRelationshipEdges(@args)", args);
+        try {
+          const handle = await this.assertCanRead(args.targetIdentifier, ctx);
+          const result = await resolvers.documentIncomingRelationshipEdges(
+            this.reactorClient,
+            { ...args, targetIdentifier: handle.fetchIdentifier },
+            this.viewSubject(ctx),
+          );
+          return await this.filterRelationshipEdges(result, "sourceId", ctx);
+        } catch (error) {
+          this.logger.error(
+            "Error in documentIncomingRelationshipEdges: @Error",
             error,
           );
           throw error;
@@ -314,10 +426,7 @@ export class ReactorSubgraph extends BaseSubgraph {
                 filteredItems.push(item);
               }
             }
-            return {
-              ...result,
-              items: filteredItems,
-            };
+            return this.servedPage(result, filteredItems);
           }
 
           return result;
@@ -725,6 +834,25 @@ export class ReactorSubgraph extends BaseSubgraph {
         } catch (error) {
           this.logger.error(
             "Error in addRelationship(@args): @Error",
+            args,
+            error,
+          );
+          throw error;
+        }
+      },
+
+      updateRelationship: async (_parent, args, ctx: Context) => {
+        this.logger.debug("updateRelationship(@args)", args);
+        try {
+          const handle = await this.assertCanWrite(args.sourceIdentifier, ctx);
+
+          return await resolvers.updateRelationship(this.reactorClient, {
+            ...args,
+            sourceIdentifier: handle.fetchIdentifier,
+          });
+        } catch (error) {
+          this.logger.error(
+            "Error in updateRelationship(@args): @Error",
             args,
             error,
           );

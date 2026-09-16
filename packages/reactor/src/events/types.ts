@@ -100,6 +100,13 @@ export type JobWriteReadyEvent = {
   operations: OperationWithContext[];
   jobMeta: JobMeta;
   /**
+   * The ids of the actions the caller submitted with this job. `operations`
+   * can also carry operations the job merely moved into a new position, so a
+   * consumer reporting back to the caller needs this to tell the two apart.
+   * Absent on jobs that carry no submitted actions.
+   */
+  submittedActionIds?: string[];
+  /**
    * Maps documentId to the collection IDs it belongs to.
    * Used by SyncManager to route operations only to remotes
    * whose collection contains the document.

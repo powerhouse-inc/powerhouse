@@ -19,6 +19,10 @@ const entry = [
   "processors/*/index.ts",
 ];
 
+// ./pieces is node-only for the same reason ./reactor is browser-only: a piece
+// is loaded and run by a host process, never by the browser.
+const nodeEntry = [...entry, "pieces/index.ts", "pieces/*/index.ts"];
+
 // ./reactor is browser-only: the SharedWorker needs it, the node build does not.
 export const browserEntry = [...entry, "reactor/index.ts"];
 
@@ -150,7 +154,7 @@ export function findBundledSharedDeps(
 }
 
 export const nodeBuildConfig: InlineConfig = {
-  entry,
+  entry: nodeEntry,
   deps: {
     alwaysBundle,
     neverBundle: nodeNeverBundle,
