@@ -3,7 +3,8 @@
 export interface PackagePiece {
   name: string;
   version: string;
-  // Directory in npm-bundle shape (package.json + entry), or a module file.
+  // Built output, relative to the package root, as the node build emits it:
+  // a directory in npm-bundle shape (package.json + entry) or a module file.
   bundle?: string;
   entry?: string;
 }

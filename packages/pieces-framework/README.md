@@ -31,6 +31,8 @@ import { httpClient, HttpMethod } from "@powerhousedao/pieces-framework/common";
    pnpm add @powerhousedao/pieces-framework
    ```
 
+   The types need `@types/node`, which a `ph init` project already has.
+
 2. **Write the piece** in `pieces/<name>/index.ts` with `createPiece`,
    `createAction`, `createTrigger` and `Property`, exactly as an Activepieces
    piece. The reactor the piece runs inside is on every context; read it with
@@ -82,14 +84,26 @@ import { httpClient, HttpMethod } from "@powerhousedao/pieces-framework/common";
    import type { PackagePiece } from "@powerhousedao/pieces-framework";
 
    export const pieces: PackagePiece[] = [
-     { name: "@acme/pieces-invoices", version: "1.0.0", entry: "pieces/invoices/index.ts" },
+     {
+       name: "@acme/pieces-invoices",
+       version: "1.0.0",
+       entry: "dist/node/pieces/invoices/index.mjs",
+     },
    ];
    ```
 
-4. **Build and run.** `ph build` inlines the framework into each piece bundle
-   under `dist/node/pieces`, so the reactor loads a self-contained module.
-   Enable workflows in `powerhouse.config.json` and start the reactor; the
-   piece appears in the workflow editor with `ctx.reactor` served by the host.
+   `entry` is the built module, relative to the package root: `ph build`
+   emits `pieces/<name>/index.ts` to `dist/node/pieces/<name>/index.mjs`.
+
+4. **Build.** `ph build` inlines the framework into each piece bundle under
+   `dist/node/pieces`, so a host loads a self-contained module. The host that
+   runs pieces on a reactor (the workflow runtime, arriving separately) reads
+   the `pieces` list, imports each `entry` and serves `ctx.reactor`.
+
+   Bundling with esbuild to ESM instead of `ph build`? `form-data`, which
+   `./common` uses, is CommonJS, so pass
+   `--banner:js="import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);"`
+   or the bundle throws `Dynamic require of "util" is not supported` on import.
 
 Outside a Powerhouse reactor, `reactorOf(ctx)` throws an error that names
 `ctx.reactor`, so a piece that ends up on another host fails legibly.
@@ -97,12 +111,11 @@ Outside a Powerhouse reactor, `reactorOf(ctx)` throws an error that names
 ## Publishing the same piece to Activepieces
 
 A piece that does not use `ctx.reactor` is a plain Activepieces piece. To
-contribute it upstream, rewrite the import specifiers
-(`@powerhousedao/pieces-framework` to `@activepieces/pieces-framework`,
-`@powerhousedao/pieces-framework/common` to `@activepieces/pieces-common`),
-drop it into `packages/pieces/community/<name>` in the Activepieces monorepo
-and run their `pieces migrate` command to bring it onto their current
-framework version.
+contribute it upstream, scaffold one in the Activepieces monorepo with
+`npm run cli pieces create`, copy your `src/` over its own, rewrite the import
+specifiers (`@powerhousedao/pieces-framework` to
+`@activepieces/pieces-framework`, `@powerhousedao/pieces-framework/common` to
+`@activepieces/pieces-common`) and run `npm run build-piece <name>`.
 
 ## Syncing upstream
 

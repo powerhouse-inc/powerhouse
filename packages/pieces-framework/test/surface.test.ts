@@ -56,7 +56,7 @@ describe("public surface", () => {
     const piece: PackagePiece = {
       name: "@acme/pieces-invoices",
       version: "1.0.0",
-      entry: "pieces/invoices/index.ts",
+      entry: "dist/node/pieces/invoices/index.mjs",
     };
     expect(piece.bundle).toBeUndefined();
   });

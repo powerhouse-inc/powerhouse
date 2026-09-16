@@ -26,8 +26,10 @@ original file, live in `upstream/MANIFEST.json`; the package versions are in
 Each package's own vitest suites (`*.spec.ts`, `*.test.ts` under `src/`, and
 `test/`) go to `test/upstream/<package>/` and run with `pnpm test`.
 
-Left out: `mime-db-min.cjs` (a bundler-only shim; the code carries its own
-content-type table) and upstream's unused `ai` and `semver` dependencies.
+Left out: `mime-db-min.cjs` (upstream's bundler alias that keeps `mime-db`,
+pulled in through `form-data`, out of piece bundles; aliasing is the piece
+build's job, so `ph build` may adopt it later) and upstream's unused `ai` and
+`semver` dependencies.
 `@activepieces/shared` is not needed: none of the four packages import it.
 
 `deepmerge-ts` and `ipaddr.js` are devDependencies only. `core-utils` imports
