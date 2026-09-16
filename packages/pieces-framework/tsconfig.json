@@ -1,0 +1,9 @@
+{
+  "extends": "../../tsconfig.options.json",
+  "compilerOptions": {
+    "outDir": "./.tsbuild",
+    "types": ["node"]
+  },
+  "include": ["**/*"],
+  "exclude": ["dist", "node_modules", ".tsbuild"]
+}

@@ -1,0 +1,569 @@
+{
+  "repository": "https://github.com/activepieces/activepieces",
+  "tag": "0.91.0",
+  "commit": "da4410d1bf6212054e55805a98d566ff1b9310b2",
+  "date": "2026-09-14T11:51:38+01:00",
+  "packages": {
+    "framework": {
+      "upstreamDir": "packages/pieces/framework",
+      "name": "@activepieces/pieces-framework",
+      "version": "0.39.0"
+    },
+    "common": {
+      "upstreamDir": "packages/pieces/common",
+      "name": "@activepieces/pieces-common",
+      "version": "0.14.0"
+    },
+    "core-piece-types": {
+      "upstreamDir": "packages/core/piece-types",
+      "name": "@activepieces/core-piece-types",
+      "version": "0.11.1"
+    },
+    "core-utils": {
+      "upstreamDir": "packages/core/utils",
+      "name": "@activepieces/core-utils",
+      "version": "0.6.2"
+    }
+  },
+  "license": {
+    "upstream": "LICENSE",
+    "sha256": "d490fc48488c4f5a721d354f0a5cce0972c7e3de768ac3e0c5851c3de79f3c9b"
+  },
+  "files": [
+    {
+      "path": "test/upstream/common/test/stream-utils.test.ts",
+      "upstream": "packages/pieces/common/test/stream-utils.test.ts",
+      "sha256": "beec8d6bde31d26c820e0adf94fd2fd364da172b9cd0fc26ff37100926451d90"
+    },
+    {
+      "path": "test/upstream/core-piece-types/src/lib/ai-providers.test.ts",
+      "upstream": "packages/core/piece-types/src/lib/ai-providers.test.ts",
+      "sha256": "4b7b5ba274132d1d25ece2bdcffbc728834729e8b126e53a6ac969049c768886"
+    },
+    {
+      "path": "test/upstream/core-utils/test/ai-provider-health.test.ts",
+      "upstream": "packages/core/utils/test/ai-provider-health.test.ts",
+      "sha256": "3f863634c8fe7bf4678c1d87042442ac7f0a5332cf59a95f2dd33c066aded5b6"
+    },
+    {
+      "path": "test/upstream/core-utils/test/byte-lru-cache.test.ts",
+      "upstream": "packages/core/utils/test/byte-lru-cache.test.ts",
+      "sha256": "4f04a124bae4b49820db5e792d5bf5571b2bdaf56673131d736068ccc247ee6c"
+    },
+    {
+      "path": "test/upstream/core-utils/test/friendly-piece-error.test.ts",
+      "upstream": "packages/core/utils/test/friendly-piece-error.test.ts",
+      "sha256": "d728d15f69123b3f0da875db5d95a231b6285fba7db6e808699ffdf3accb92d6"
+    },
+    {
+      "path": "test/upstream/framework/src/lib/property/input/date-range-property.spec.ts",
+      "upstream": "packages/pieces/framework/src/lib/property/input/date-range-property.spec.ts",
+      "sha256": "97f87aa5d0496f648e7e2b916c4bc43933164cba96907b784be905f89c8978bb"
+    },
+    {
+      "path": "test/upstream/framework/test/auth-property-for-value.test.ts",
+      "upstream": "packages/pieces/framework/test/auth-property-for-value.test.ts",
+      "sha256": "65af40d88eae04acd461543eaf38c05cf48c99e2df6704c14d03304759559a84"
+    },
+    {
+      "path": "test/upstream/framework/test/connection-identifier-flag.test.ts",
+      "upstream": "packages/pieces/framework/test/connection-identifier-flag.test.ts",
+      "sha256": "4e0bf657e7fd5e45eb4bb81cd41883af718c6c8cfda140d20d7549748a266627"
+    },
+    {
+      "path": "upstream/common/index.ts",
+      "upstream": "packages/pieces/common/src/index.ts",
+      "sha256": "7056e30f1f56a5b513a34ea62d971c6aa39bd070b8de10e38b16246ec912ce1b"
+    },
+    {
+      "path": "upstream/common/lib/authentication/index.ts",
+      "upstream": "packages/pieces/common/src/lib/authentication/index.ts",
+      "sha256": "67fb86be507e391f893d9affe136734f86fdfdd4ee49628ae9ebff06552fc61c"
+    },
+    {
+      "path": "upstream/common/lib/helpers/index.ts",
+      "upstream": "packages/pieces/common/src/lib/helpers/index.ts",
+      "sha256": "bb4fbeea4df6702cc6dcea52c4dc96b7fa072c8e8196e232e344b2d92b06e0ed"
+    },
+    {
+      "path": "upstream/common/lib/http/core/base-http-client.ts",
+      "upstream": "packages/pieces/common/src/lib/http/core/base-http-client.ts",
+      "sha256": "742ec7e018aa6001b258adbe9c6477d52c1c9f8704f79f1c8da495a6d2f1b02d"
+    },
+    {
+      "path": "upstream/common/lib/http/core/delegating-authentication-converter.ts",
+      "upstream": "packages/pieces/common/src/lib/http/core/delegating-authentication-converter.ts",
+      "sha256": "5227344d410d4be52774bce6e3d01cdc8b4fb06c8d76ebc45321bfe5b8e4f90c"
+    },
+    {
+      "path": "upstream/common/lib/http/core/fetch-http-client.ts",
+      "upstream": "packages/pieces/common/src/lib/http/core/fetch-http-client.ts",
+      "sha256": "1caee01fea1dc326d358a0c60483420f4d34dc5c2284b931967cd8f32646643d"
+    },
+    {
+      "path": "upstream/common/lib/http/core/http-client.ts",
+      "upstream": "packages/pieces/common/src/lib/http/core/http-client.ts",
+      "sha256": "466a09c779b241bb53664136ae9463db76bf8e8bfe1dd9576fddf20b9b2b751e"
+    },
+    {
+      "path": "upstream/common/lib/http/core/http-error.ts",
+      "upstream": "packages/pieces/common/src/lib/http/core/http-error.ts",
+      "sha256": "5dc6a0b4fa6b4928714c3eca153cc3e906d95f748956319a4164d2c225a9c9b0"
+    },
+    {
+      "path": "upstream/common/lib/http/core/http-header.ts",
+      "upstream": "packages/pieces/common/src/lib/http/core/http-header.ts",
+      "sha256": "f4ad82f50e78910515d640c4bfb973431f00033488d4490f62206f1316ddb41f"
+    },
+    {
+      "path": "upstream/common/lib/http/core/http-headers.ts",
+      "upstream": "packages/pieces/common/src/lib/http/core/http-headers.ts",
+      "sha256": "e4c898d0698f319e0d8493029ff0fa1882de020a52f452f848560db86d10e71d"
+    },
+    {
+      "path": "upstream/common/lib/http/core/http-message-body.ts",
+      "upstream": "packages/pieces/common/src/lib/http/core/http-message-body.ts",
+      "sha256": "330cf1b192c0902cf85851e59400ce3820dd59b89b9c269a32d64c5d54eca255"
+    },
+    {
+      "path": "upstream/common/lib/http/core/http-method.ts",
+      "upstream": "packages/pieces/common/src/lib/http/core/http-method.ts",
+      "sha256": "e787441ac632d7d8da132aa9ed16ee456a3270332903a4aaad07e1c5afb4d4cb"
+    },
+    {
+      "path": "upstream/common/lib/http/core/http-request-body.ts",
+      "upstream": "packages/pieces/common/src/lib/http/core/http-request-body.ts",
+      "sha256": "66d4962bddda5eae59299a79f5d6a80ba8972d290e6a0cdeb35a68bc31475c6f"
+    },
+    {
+      "path": "upstream/common/lib/http/core/http-request.ts",
+      "upstream": "packages/pieces/common/src/lib/http/core/http-request.ts",
+      "sha256": "f4c72da48078e1c19390353a9b77aec59130fd8c21ee0fe8a992c2a9ef1084d3"
+    },
+    {
+      "path": "upstream/common/lib/http/core/http-response.ts",
+      "upstream": "packages/pieces/common/src/lib/http/core/http-response.ts",
+      "sha256": "12ff18ac661e907f9d9fdab1430ddf0d65a18cb10b6d96e4a1b68e98b650a01f"
+    },
+    {
+      "path": "upstream/common/lib/http/core/media-type.ts",
+      "upstream": "packages/pieces/common/src/lib/http/core/media-type.ts",
+      "sha256": "cc8210d6dec32c3804d1835c016a07c4153596ef809ffabd967295eb07eb8a03"
+    },
+    {
+      "path": "upstream/common/lib/http/core/query-params.ts",
+      "upstream": "packages/pieces/common/src/lib/http/core/query-params.ts",
+      "sha256": "3e3a0e9e4f657fedc5b8762decd19a78dbb325d52d7a9ccc780d4a36121003d9"
+    },
+    {
+      "path": "upstream/common/lib/http/index.ts",
+      "upstream": "packages/pieces/common/src/lib/http/index.ts",
+      "sha256": "c7c3706f0fec90f05d5c36b32737b70c49da60241cead5682cfbc711ce7bf326"
+    },
+    {
+      "path": "upstream/common/lib/polling/index.ts",
+      "upstream": "packages/pieces/common/src/lib/polling/index.ts",
+      "sha256": "3113a3e235159d3aef9384af5d809a8d44ca2471aa3cf5a261710a7ac5a2350f"
+    },
+    {
+      "path": "upstream/common/lib/stream/index.ts",
+      "upstream": "packages/pieces/common/src/lib/stream/index.ts",
+      "sha256": "b0fe62c664db3f068b3ae4d8a2a52380c53cae4468585de3312e56c566e5c8c9"
+    },
+    {
+      "path": "upstream/common/lib/validation/index.ts",
+      "upstream": "packages/pieces/common/src/lib/validation/index.ts",
+      "sha256": "99d374c4f4f4df2a9700d712f5d8f5a427bc482001f0c28a7388e74b9dd37918"
+    },
+    {
+      "path": "upstream/core-piece-types/index.ts",
+      "upstream": "packages/core/piece-types/src/index.ts",
+      "sha256": "cd093d5f828dd115e693a72181364b84e813b8f0cc2bff7c4d190b8c285a37a0"
+    },
+    {
+      "path": "upstream/core-piece-types/lib/agents.ts",
+      "upstream": "packages/core/piece-types/src/lib/agents.ts",
+      "sha256": "7a55044cc9a606398e8dd7fbd58a3a53f9fb849b41e4fc124a812c807054b663"
+    },
+    {
+      "path": "upstream/core-piece-types/lib/ai-providers.ts",
+      "upstream": "packages/core/piece-types/src/lib/ai-providers.ts",
+      "sha256": "4933f894bdf4dc8061889103fa0cc2229dcc4f8d9a6f5bad8e80f2611e3fa4ad"
+    },
+    {
+      "path": "upstream/core-piece-types/lib/app-connection.ts",
+      "upstream": "packages/core/piece-types/src/lib/app-connection.ts",
+      "sha256": "51b962b12811db0edf5cd31df8735464aa5c28a353400c3d8a299349ef9d039a"
+    },
+    {
+      "path": "upstream/core-piece-types/lib/engine-tools.ts",
+      "upstream": "packages/core/piece-types/src/lib/engine-tools.ts",
+      "sha256": "9ec74c7f3afc7dbfb64c1c3aafc13894e446fda34d1ef8cfec8b584b1ccb97e3"
+    },
+    {
+      "path": "upstream/core-piece-types/lib/engine.ts",
+      "upstream": "packages/core/piece-types/src/lib/engine.ts",
+      "sha256": "43fd1e862d70852392774146af72c4a6a70f92f94c9cfc690712fa8ec01df45a"
+    },
+    {
+      "path": "upstream/core-piece-types/lib/execution-contracts.ts",
+      "upstream": "packages/core/piece-types/src/lib/execution-contracts.ts",
+      "sha256": "66c17cde3c4984e8d07ddcf457bd64cd89dff316f66464cb18c96fdb6473b2f2"
+    },
+    {
+      "path": "upstream/core-piece-types/lib/execution.ts",
+      "upstream": "packages/core/piece-types/src/lib/execution.ts",
+      "sha256": "bbef3c14f0a2f20d30367cce9263d6f5047f321343bd21d609adf32e6108670b"
+    },
+    {
+      "path": "upstream/core-piece-types/lib/flow-contracts.ts",
+      "upstream": "packages/core/piece-types/src/lib/flow-contracts.ts",
+      "sha256": "883eab1ca8c21a36c88349853f938a9df6208be34dd485fe6d2750a8658d1bbe"
+    },
+    {
+      "path": "upstream/core-piece-types/lib/flows.ts",
+      "upstream": "packages/core/piece-types/src/lib/flows.ts",
+      "sha256": "b632576accfdf35f25c597c0f0fb47c04dc07788e98c5aa74794e16f30d20ccd"
+    },
+    {
+      "path": "upstream/core-piece-types/lib/forms.ts",
+      "upstream": "packages/core/piece-types/src/lib/forms.ts",
+      "sha256": "00d7d1cf37698d759ac1df89d70b3b3b33bd50d930882428408b1e5923766693"
+    },
+    {
+      "path": "upstream/core-piece-types/lib/markdown.ts",
+      "upstream": "packages/core/piece-types/src/lib/markdown.ts",
+      "sha256": "d75e07f28453079fe67a68e97d09ef1710484fb0fd874862c1d8b32da25f226c"
+    },
+    {
+      "path": "upstream/core-piece-types/lib/mcp-piece.ts",
+      "upstream": "packages/core/piece-types/src/lib/mcp-piece.ts",
+      "sha256": "70ca7f4c3a583543610a1aa5921c0e0a19a54fc376ed5855d77fada405cd5c4b"
+    },
+    {
+      "path": "upstream/core-piece-types/lib/piece.ts",
+      "upstream": "packages/core/piece-types/src/lib/piece.ts",
+      "sha256": "b52fa0621c3eb47fc2bad315c160ccfbebf402fd74c0aa887383a4b0d9e0619b"
+    },
+    {
+      "path": "upstream/core-piece-types/lib/tables.ts",
+      "upstream": "packages/core/piece-types/src/lib/tables.ts",
+      "sha256": "6b665e41bb59812284961ae217158e51039bf43fbc7873b84a9c1afd7712b23d"
+    },
+    {
+      "path": "upstream/core-piece-types/lib/trigger.ts",
+      "upstream": "packages/core/piece-types/src/lib/trigger.ts",
+      "sha256": "74144ce5e382740cc5bb6416ec348390ba6cbd23b7e7a714d7d59ce339aa1026"
+    },
+    {
+      "path": "upstream/core-utils/index.ts",
+      "upstream": "packages/core/utils/src/index.ts",
+      "sha256": "d36f19fdd1a9e9ddc283b7dcb4bebcf3f595ad1469814a8b1581867f730a014c"
+    },
+    {
+      "path": "upstream/core-utils/lib/activepieces-error.ts",
+      "upstream": "packages/core/utils/src/lib/activepieces-error.ts",
+      "sha256": "fcb617e6cc0ad81ce0e5f516d601cf36dbbbcc3b5824d011633b53e7b05164e1"
+    },
+    {
+      "path": "upstream/core-utils/lib/ai-provider-health.ts",
+      "upstream": "packages/core/utils/src/lib/ai-provider-health.ts",
+      "sha256": "7cec6d8aabd2978e756fc27b8f67fcab0ce7406e753f7714bea15e919b1d8fe9"
+    },
+    {
+      "path": "upstream/core-utils/lib/assertions.ts",
+      "upstream": "packages/core/utils/src/lib/assertions.ts",
+      "sha256": "e80220133a5d63cedf0536e3f32e0533a81c581ba01c3e656b3d52f932e4b0c4"
+    },
+    {
+      "path": "upstream/core-utils/lib/base-model.ts",
+      "upstream": "packages/core/utils/src/lib/base-model.ts",
+      "sha256": "3e7a8bcc37812cd3564806f55346dc6e26bcc0fcec2a147ff45ee19c3c69961a"
+    },
+    {
+      "path": "upstream/core-utils/lib/byte-lru-cache.ts",
+      "upstream": "packages/core/utils/src/lib/byte-lru-cache.ts",
+      "sha256": "7fd5d8c8476ee8462904cba39fff120f284df6563b511e8ebe1ddda65bd8dde5"
+    },
+    {
+      "path": "upstream/core-utils/lib/color.ts",
+      "upstream": "packages/core/utils/src/lib/color.ts",
+      "sha256": "c0ab51d410e68edbabcc6addaa23ff7cb1ea768e38395f5f26764054b399a2fe"
+    },
+    {
+      "path": "upstream/core-utils/lib/connection-template.ts",
+      "upstream": "packages/core/utils/src/lib/connection-template.ts",
+      "sha256": "b650b9f0d4c087e541ece80244f476c998267255b2cd675f71e4b1044fa51aac"
+    },
+    {
+      "path": "upstream/core-utils/lib/form-errors.ts",
+      "upstream": "packages/core/utils/src/lib/form-errors.ts",
+      "sha256": "652593796f3b4590a7313daf2a825979136f1a66cca962ad0d46812a379fc077"
+    },
+    {
+      "path": "upstream/core-utils/lib/friendly-piece-error.ts",
+      "upstream": "packages/core/utils/src/lib/friendly-piece-error.ts",
+      "sha256": "87b8a1283044b605248ad33977f335f7a187b8784d1931446127e078a56d86d2"
+    },
+    {
+      "path": "upstream/core-utils/lib/id-generator.ts",
+      "upstream": "packages/core/utils/src/lib/id-generator.ts",
+      "sha256": "50dd4224101683bbc4bf93aeba88e9565f87837cca1712c839981a1e12066180"
+    },
+    {
+      "path": "upstream/core-utils/lib/locale.ts",
+      "upstream": "packages/core/utils/src/lib/locale.ts",
+      "sha256": "7cc4704d6e66c3a8075cec9876989817aa75d38c43bd7d785203f3dab1cd57d5"
+    },
+    {
+      "path": "upstream/core-utils/lib/metadata.ts",
+      "upstream": "packages/core/utils/src/lib/metadata.ts",
+      "sha256": "97db4df95599856a6eeeac7dd04f64fa7bd9c0bea41b7d879b08f9894f6d5ad5"
+    },
+    {
+      "path": "upstream/core-utils/lib/multipart-file.ts",
+      "upstream": "packages/core/utils/src/lib/multipart-file.ts",
+      "sha256": "7914c4526f6eab39a6606082a97d242b49978584b0ff549d32516136d9fcc3ca"
+    },
+    {
+      "path": "upstream/core-utils/lib/mustache-utils.ts",
+      "upstream": "packages/core/utils/src/lib/mustache-utils.ts",
+      "sha256": "1e7cca563ff43fb0665d767ae7be9e1fb810988c0ee676ee014d23e4be9e07da"
+    },
+    {
+      "path": "upstream/core-utils/lib/object-utils.ts",
+      "upstream": "packages/core/utils/src/lib/object-utils.ts",
+      "sha256": "ccb35baff0a196d6bcd879fa30661f650e4bd2f627a6a5f0f85b42a8d64245a6"
+    },
+    {
+      "path": "upstream/core-utils/lib/permission.ts",
+      "upstream": "packages/core/utils/src/lib/permission.ts",
+      "sha256": "eab90811cae62c0e887bab14df16e0ea64c1a9695537d8f372724d9feec620a2"
+    },
+    {
+      "path": "upstream/core-utils/lib/project-role.ts",
+      "upstream": "packages/core/utils/src/lib/project-role.ts",
+      "sha256": "47b68a98eef7198ed561946456765b1e90c0be9493dbb911efa88177121f2e5f"
+    },
+    {
+      "path": "upstream/core-utils/lib/seek-page.ts",
+      "upstream": "packages/core/utils/src/lib/seek-page.ts",
+      "sha256": "6e75d1be060e257c868663ca7cfb6956a34867c2c9d25f78ad1b341b157d8830"
+    },
+    {
+      "path": "upstream/core-utils/lib/ssrf-ip-classifier.ts",
+      "upstream": "packages/core/utils/src/lib/ssrf-ip-classifier.ts",
+      "sha256": "d36405f51945a1089405d728aad2627ae3c24f5584a602bd25b825f18bd79682"
+    },
+    {
+      "path": "upstream/core-utils/lib/try-catch.ts",
+      "upstream": "packages/core/utils/src/lib/try-catch.ts",
+      "sha256": "dddf8b1eb20296c9eb15c84d8286e68f02b27e91c8f9514fe506c10713580ac2"
+    },
+    {
+      "path": "upstream/core-utils/lib/utils.ts",
+      "upstream": "packages/core/utils/src/lib/utils.ts",
+      "sha256": "27a0935f1df7f47ec1484ea85b42a698b676656be9f277b6eb0b973d66587ce8"
+    },
+    {
+      "path": "upstream/framework/index.ts",
+      "upstream": "packages/pieces/framework/src/index.ts",
+      "sha256": "db059e0eda300482bbd1455175cdccfb0b7408d43e9cefa482a327dd6c9edb37"
+    },
+    {
+      "path": "upstream/framework/lib/action/action.ts",
+      "upstream": "packages/pieces/framework/src/lib/action/action.ts",
+      "sha256": "1e04801af5a6e930233651d5f8ece595ca5a34f587112305c3d033328b88699d"
+    },
+    {
+      "path": "upstream/framework/lib/context/index.ts",
+      "upstream": "packages/pieces/framework/src/lib/context/index.ts",
+      "sha256": "c9d193d1a136b5a7f0e0d96cca3a89ea920b4ac3e8ac8ee4a061cae2da517c50"
+    },
+    {
+      "path": "upstream/framework/lib/context/versioning.ts",
+      "upstream": "packages/pieces/framework/src/lib/context/versioning.ts",
+      "sha256": "01f351c1c85c84ead297bf294c22cd6e70c752bcee1eafe83b36f2a8f0cd8fdc"
+    },
+    {
+      "path": "upstream/framework/lib/i18n.ts",
+      "upstream": "packages/pieces/framework/src/lib/i18n.ts",
+      "sha256": "124200a95d93c91546a42c5f2abd4402c28a083bf0eea65fb5d689c778319b60"
+    },
+    {
+      "path": "upstream/framework/lib/index.ts",
+      "upstream": "packages/pieces/framework/src/lib/index.ts",
+      "sha256": "c2879a76fa9b25c481b5a5a5b37fd67a854813ab4d44173d80bdcf8ad1dd0303"
+    },
+    {
+      "path": "upstream/framework/lib/output-schema.ts",
+      "upstream": "packages/pieces/framework/src/lib/output-schema.ts",
+      "sha256": "1c9468fb3c62dd45a241e09dca70b3c2f36ee0c68d4b4577454709c324df2627"
+    },
+    {
+      "path": "upstream/framework/lib/piece-metadata.ts",
+      "upstream": "packages/pieces/framework/src/lib/piece-metadata.ts",
+      "sha256": "b26c1a3130dc05c4b7b351728158c7f07c886dba69e3ef34d2fad17cd3cf031f"
+    },
+    {
+      "path": "upstream/framework/lib/piece.ts",
+      "upstream": "packages/pieces/framework/src/lib/piece.ts",
+      "sha256": "4b67437b12051d23e7a51464986c47dc11dc5801bdea9c2814b7d386145a516c"
+    },
+    {
+      "path": "upstream/framework/lib/property/authentication/basic-auth-prop.ts",
+      "upstream": "packages/pieces/framework/src/lib/property/authentication/basic-auth-prop.ts",
+      "sha256": "0bab77788e50ad70877260c2b08d4222bf58053f23c55b9cf8db9bd3c4f9d226"
+    },
+    {
+      "path": "upstream/framework/lib/property/authentication/common.ts",
+      "upstream": "packages/pieces/framework/src/lib/property/authentication/common.ts",
+      "sha256": "006e7b0bc25cfe4cba89efb6847ab430c94f9fd124ea5723f00f27303d8b196d"
+    },
+    {
+      "path": "upstream/framework/lib/property/authentication/custom-auth-prop.ts",
+      "upstream": "packages/pieces/framework/src/lib/property/authentication/custom-auth-prop.ts",
+      "sha256": "24d06ae2c932c55ae4615ed88ba3c70217441f9cec452b85c3786dc06f39e4e0"
+    },
+    {
+      "path": "upstream/framework/lib/property/authentication/index.ts",
+      "upstream": "packages/pieces/framework/src/lib/property/authentication/index.ts",
+      "sha256": "647ed1c70af8b4ca6acb986cda62ed2a9aa697204c3c19d627d4350625d16714"
+    },
+    {
+      "path": "upstream/framework/lib/property/authentication/oauth2-prop.ts",
+      "upstream": "packages/pieces/framework/src/lib/property/authentication/oauth2-prop.ts",
+      "sha256": "7ae54547bb0279500a6bb6ae85b38e7a9aeb072f5f4894cdfc2deaf3d5211fa8"
+    },
+    {
+      "path": "upstream/framework/lib/property/authentication/oidc-prop.ts",
+      "upstream": "packages/pieces/framework/src/lib/property/authentication/oidc-prop.ts",
+      "sha256": "d05775d3ad4c354608baf388014acff1aa81ccd287e6900958a82b6148851a48"
+    },
+    {
+      "path": "upstream/framework/lib/property/authentication/secret-text-property.ts",
+      "upstream": "packages/pieces/framework/src/lib/property/authentication/secret-text-property.ts",
+      "sha256": "086d170fed5c2b44416fc569274a62b1b6760833b8e000be8da54fb08f1ba6af"
+    },
+    {
+      "path": "upstream/framework/lib/property/index.ts",
+      "upstream": "packages/pieces/framework/src/lib/property/index.ts",
+      "sha256": "1663f2eed7d73b5dc82d28fe33f82cc77a9ee3cd51b6f708d176a6c365ec1da7"
+    },
+    {
+      "path": "upstream/framework/lib/property/input/array-property.ts",
+      "upstream": "packages/pieces/framework/src/lib/property/input/array-property.ts",
+      "sha256": "3f89a8bc56c502bbed4da6763fa6cecc5dd853bd05c731cd739c390d894fe646"
+    },
+    {
+      "path": "upstream/framework/lib/property/input/checkbox-property.ts",
+      "upstream": "packages/pieces/framework/src/lib/property/input/checkbox-property.ts",
+      "sha256": "c1d8dbf9b7585edc30cdcb00f056fe6edee3279b5912f1fcd252c686962a0a2d"
+    },
+    {
+      "path": "upstream/framework/lib/property/input/color-property.ts",
+      "upstream": "packages/pieces/framework/src/lib/property/input/color-property.ts",
+      "sha256": "17c132971f6ef1d933791271ed0c7ce5409915da421191b9186206650ac9d376"
+    },
+    {
+      "path": "upstream/framework/lib/property/input/common.ts",
+      "upstream": "packages/pieces/framework/src/lib/property/input/common.ts",
+      "sha256": "d3ba31a58065ef39d2fd39ff4259fb279870020fc75efb2fa2142cc6eb42902b"
+    },
+    {
+      "path": "upstream/framework/lib/property/input/custom-property.ts",
+      "upstream": "packages/pieces/framework/src/lib/property/input/custom-property.ts",
+      "sha256": "843f5b8df9edb52010d5862638889612198765723cde50d4a4d82d799a5bf1bf"
+    },
+    {
+      "path": "upstream/framework/lib/property/input/date-range-property.ts",
+      "upstream": "packages/pieces/framework/src/lib/property/input/date-range-property.ts",
+      "sha256": "a6a44d0b851891a8979b7a60c53b62fd53b4200fcf5037955a8fb3ca5f2ade32"
+    },
+    {
+      "path": "upstream/framework/lib/property/input/date-time-property.ts",
+      "upstream": "packages/pieces/framework/src/lib/property/input/date-time-property.ts",
+      "sha256": "bdfb3aa3ba4b091b80115fab68080b2d5fc3baeb41c4c0cbf116ebd924dd67e1"
+    },
+    {
+      "path": "upstream/framework/lib/property/input/dropdown/common.ts",
+      "upstream": "packages/pieces/framework/src/lib/property/input/dropdown/common.ts",
+      "sha256": "54c99d55c29bccc0e342fb5f9f55bd2bba689e1446c62787631588bb01536863"
+    },
+    {
+      "path": "upstream/framework/lib/property/input/dropdown/dropdown-prop.ts",
+      "upstream": "packages/pieces/framework/src/lib/property/input/dropdown/dropdown-prop.ts",
+      "sha256": "e05edef9a88ebd0269257f068d6003b04a422ba62fc389452f1878477d161127"
+    },
+    {
+      "path": "upstream/framework/lib/property/input/dropdown/static-dropdown.ts",
+      "upstream": "packages/pieces/framework/src/lib/property/input/dropdown/static-dropdown.ts",
+      "sha256": "df68fb28aef65dc5e49a938469f3787b76910cc5a947e6623c39da92a838bfa2"
+    },
+    {
+      "path": "upstream/framework/lib/property/input/dynamic-prop.ts",
+      "upstream": "packages/pieces/framework/src/lib/property/input/dynamic-prop.ts",
+      "sha256": "7dbd3ca9704a1b2c7ab343571ff5f33b445a308c605ef3288958bb4057826d36"
+    },
+    {
+      "path": "upstream/framework/lib/property/input/file-property.ts",
+      "upstream": "packages/pieces/framework/src/lib/property/input/file-property.ts",
+      "sha256": "a8b0fcd141f961ba2f443fcde30bcbcfb651b63b7b0e38199f601f41dc056dcb"
+    },
+    {
+      "path": "upstream/framework/lib/property/input/index.ts",
+      "upstream": "packages/pieces/framework/src/lib/property/input/index.ts",
+      "sha256": "36443e764ae53f8c4498dbd53ee1bc241d27e43751e62024af1dcd38e897c689"
+    },
+    {
+      "path": "upstream/framework/lib/property/input/json-property.ts",
+      "upstream": "packages/pieces/framework/src/lib/property/input/json-property.ts",
+      "sha256": "2c3c38c40a57806678468f208a7fad0f01f07f8cfa7b10fb2ce142980495b2aa"
+    },
+    {
+      "path": "upstream/framework/lib/property/input/markdown-property.ts",
+      "upstream": "packages/pieces/framework/src/lib/property/input/markdown-property.ts",
+      "sha256": "024d50c41bd84829de8f4380a44a267f7e0866c16de235302d70b9bbb416658d"
+    },
+    {
+      "path": "upstream/framework/lib/property/input/number-property.ts",
+      "upstream": "packages/pieces/framework/src/lib/property/input/number-property.ts",
+      "sha256": "ac00cb7c9ff63db57214765c10325d61c097d99bf811caf60f0cce4b0d88b6e6"
+    },
+    {
+      "path": "upstream/framework/lib/property/input/object-property.ts",
+      "upstream": "packages/pieces/framework/src/lib/property/input/object-property.ts",
+      "sha256": "a1c01d17de55199d6918cbc4075dc5599c12924d3e3657db8490a17b47c3dfb3"
+    },
+    {
+      "path": "upstream/framework/lib/property/input/property-type.ts",
+      "upstream": "packages/pieces/framework/src/lib/property/input/property-type.ts",
+      "sha256": "0bd34edaf6b9cf66fa3797f1ee54379ab7ea804c3a5e63b3be71deab8bd8c15c"
+    },
+    {
+      "path": "upstream/framework/lib/property/input/rich-text-property.ts",
+      "upstream": "packages/pieces/framework/src/lib/property/input/rich-text-property.ts",
+      "sha256": "84fa746938640e1ec91e65185dda7d0210450151dc4524bdaa776e16b7570f86"
+    },
+    {
+      "path": "upstream/framework/lib/property/input/text-property.ts",
+      "upstream": "packages/pieces/framework/src/lib/property/input/text-property.ts",
+      "sha256": "2221de8bf29cf0c5e4fc6e082a899718f96a67159030220a73ee25067b4b2404"
+    },
+    {
+      "path": "upstream/framework/lib/property/util.ts",
+      "upstream": "packages/pieces/framework/src/lib/property/util.ts",
+      "sha256": "498a00787c4f7a4a76303ba6737453d7cc9f07272d9992f1a9b88d5cadb5aa1b"
+    },
+    {
+      "path": "upstream/framework/lib/test/index.ts",
+      "upstream": "packages/pieces/framework/src/lib/test/index.ts",
+      "sha256": "2adc05f85d17b8c6e105e5bd324f1ee3c9b9c53044735aceb5b016894a79a630"
+    },
+    {
+      "path": "upstream/framework/lib/trigger/trigger.ts",
+      "upstream": "packages/pieces/framework/src/lib/trigger/trigger.ts",
+      "sha256": "16baa9ca9f08cb94a1e0bb30fda949b14bf9e3cd1d272a8ced8cb9a54750a04e"
+    }
+  ]
+}
