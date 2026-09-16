@@ -1,5 +1,4 @@
-import { createAction } from "@activepieces/pieces-framework";
-import { reactorOf } from "../reactor.js";
+import { createAction, reactorOf } from "@powerhousedao/pieces-framework";
 
 export const documentTypesAction = createAction({
   name: "document-types",

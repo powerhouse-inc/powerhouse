@@ -1,5 +1,5 @@
 // Form descriptors driving property panels; pure data, mirrors the
-// ConnectorPropDescriptor shape from reactor-connectors.
+// ConnectorPropDescriptor shape from the workflow runtime.
 
 export interface BlockFormProp {
   name: string;
@@ -115,8 +115,6 @@ const text = (
   required,
   description,
 });
-
-
 
 // Takes a secret VALUE and commits only the minted ref, the way the
 // connection editor's SecretField does; the document never holds the value.

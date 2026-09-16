@@ -5,7 +5,7 @@
 // node build emits it to. Everything else — display name, description,
 // actions, triggers, auth — is read from the piece itself, so this list cannot
 // drift from the code.
-import type { PackagePiece } from "@powerhousedao/reactor-connectors";
+import type { PackagePiece } from "@powerhousedao/pieces-framework";
 
 export const pieces: PackagePiece[] = [
   {

@@ -4,7 +4,7 @@
 // It reaches the reactor through ctx.reactor, which the host serves over the
 // worker's call channel — piece code never holds a reactor client, and a copy
 // of this piece fetched from a registry would find the member throwing.
-import { createPiece } from "@activepieces/pieces-framework";
+import { createPiece } from "@powerhousedao/pieces-framework";
 import { POWERHOUSE_LOGO } from "./lib/logo.js";
 import { documentCreateAction } from "./lib/actions/document-create.js";
 import { documentDispatchAction } from "./lib/actions/document-dispatch.js";

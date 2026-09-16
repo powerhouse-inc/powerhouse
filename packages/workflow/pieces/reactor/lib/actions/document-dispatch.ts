@@ -1,4 +1,8 @@
-import { createAction, Property } from "@activepieces/pieces-framework";
+import {
+  createAction,
+  Property,
+  reactorOf,
+} from "@powerhousedao/pieces-framework";
 import {
   allowedActionTypes,
   parseDispatchPayload,
@@ -9,7 +13,6 @@ import {
   actionTypeProp,
   documentIdProp,
   documentTypeProp,
-  reactorOf,
 } from "../reactor.js";
 
 const BLOCK = "document-dispatch";
@@ -31,7 +34,11 @@ export const documentDispatchAction = createAction({
       "Design-time hint when the document id is an expression",
     ),
     actions: actionsProp("Actions", true),
-    actionType: actionTypeProp("Action type", false, "Suggestions for the action list above"),
+    actionType: actionTypeProp(
+      "Action type",
+      false,
+      "Suggestions for the action list above",
+    ),
     allowedActions: Property.ShortText({
       displayName: "Allowed action types",
       description: "Comma-separated whitelist; enforced when set",

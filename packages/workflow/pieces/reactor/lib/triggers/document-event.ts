@@ -5,7 +5,10 @@
 // round trip per operation would sit on that path. The piece declares them so
 // the editor reads their props and payload shape from the same place it reads
 // every other block's.
-import { createTrigger, TriggerStrategy } from "@activepieces/pieces-framework";
+import {
+  createTrigger,
+  TriggerStrategy,
+} from "@powerhousedao/pieces-framework";
 import {
   actionTypeProp,
   documentIdProp,

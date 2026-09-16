@@ -1,5 +1,5 @@
 // Splits authored text into literal and {{expression}} runs for highlighting.
-// Pattern copied from reactor-connectors engine/expressions.ts (node-only pkg).
+// Pattern copied from the workflow engine's expression parser (node-only pkg).
 const EMBEDDED_EXPRESSION = /\{\{\s*([^{}]+?)\s*\}\}/g;
 
 export type ExpressionToken =

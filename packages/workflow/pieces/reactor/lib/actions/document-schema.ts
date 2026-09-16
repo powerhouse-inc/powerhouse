@@ -1,10 +1,9 @@
-import { createAction } from "@activepieces/pieces-framework";
+import { createAction, reactorOf } from "@powerhousedao/pieces-framework";
 import { resolveDocumentId } from "../parse.js";
 import {
   actionTypeProp,
   documentIdProp,
   documentTypeProp,
-  reactorOf,
 } from "../reactor.js";
 
 export const documentSchemaAction = createAction({

@@ -1,6 +1,6 @@
-import { createAction } from "@activepieces/pieces-framework";
+import { createAction, reactorOf } from "@powerhousedao/pieces-framework";
 import { resolveDocumentId } from "../parse.js";
-import { documentIdProp, documentTypeProp, reactorOf } from "../reactor.js";
+import { documentIdProp, documentTypeProp } from "../reactor.js";
 
 export const documentGetAction = createAction({
   name: "document-get",

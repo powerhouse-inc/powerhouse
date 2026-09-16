@@ -2,19 +2,16 @@
 // from it.
 
 // `ctx.reactor` is served by the host over the worker's call channel and only
-// to a piece an installed reactor package ships. Absent, it is a stub that
-// throws by name, so a piece that ends up somewhere else fails legibly.
-import { Property } from "@activepieces/pieces-framework";
-import type { ReactorService } from "@powerhousedao/reactor-connectors";
+// to a piece an installed reactor package ships. Absent, reactorOf throws by
+// name, so a piece that ends up somewhere else fails legibly.
+import {
+  Property,
+  reactorOf,
+  type ReactorService,
+} from "@powerhousedao/pieces-framework";
 import { staticString } from "./parse.js";
 
 const DRIVE_DOCUMENT_TYPE = "powerhouse/document-drive";
-
-// Both contexts a resolver or a run can be handed carry it; neither framework
-// type declares it, because no other host serves it.
-export function reactorOf(ctx: unknown): ReactorService {
-  return (ctx as { reactor: ReactorService }).reactor;
-}
 
 interface OptionEntry {
   label: string;
@@ -39,9 +36,7 @@ async function documentOptions(
   reactor: ReactorService,
   documentType: string | undefined,
 ): Promise<OptionState> {
-  const documents = await reactor.find(
-    documentType ? { documentType } : {},
-  );
+  const documents = await reactor.find(documentType ? { documentType } : {});
   return {
     options: documents.map((document) => ({
       label: `${document.name || document.slug || "(unnamed)"} — ${document.documentType}`,
@@ -71,7 +66,9 @@ export const documentTypeProp = (
       return {
         options: models
           .map((model) => ({
-            label: model.name ? `${model.name} (${model.documentType})` : model.documentType,
+            label: model.name
+              ? `${model.name} (${model.documentType})`
+              : model.documentType,
             value: model.documentType,
           }))
           .sort((a, b) => a.value.localeCompare(b.value)),
