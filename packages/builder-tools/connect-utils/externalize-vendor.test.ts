@@ -1,9 +1,17 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { createRequire } from "node:module";
+import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
+  missingVendorEntries,
   prebuildConnectVendor,
   withVendorBase,
   type PrebuiltVendor,
@@ -131,5 +139,38 @@ describe("withVendorBase", () => {
         expect(v).not.toMatch(/[^:]\/\//);
       }
     }
+  });
+});
+
+describe("missingVendorEntries", () => {
+  let dir: string;
+  beforeAll(() => {
+    dir = mkdtempSync(join(tmpdir(), "ph-vendor-verify-"));
+    writeFileSync(join(dir, "zod.js"), "export const z = 1;\n");
+  });
+  afterAll(() => rmSync(dir, { recursive: true, force: true }));
+
+  it("reports nothing when every entry has a file", () => {
+    expect(missingVendorEntries(dir, { zod: "/__vendor__/zod.js" })).toEqual(
+      [],
+    );
+  });
+
+  // A published entry with no file becomes a bare import the app externalizes
+  // onto a URL that 404s; a SPA answers that with index.html, so the browser
+  // reports only an opaque MIME-type error with no filename.
+  it("names an entry the build never emitted", () => {
+    expect(
+      missingVendorEntries(dir, {
+        zod: "/__vendor__/zod.js",
+        "@powerhousedao/shared/connect":
+          "/__vendor__/_powerhousedao_shared_connect.js",
+      }),
+    ).toEqual([
+      {
+        spec: "@powerhousedao/shared/connect",
+        url: "/__vendor__/_powerhousedao_shared_connect.js",
+      },
+    ]);
   });
 });

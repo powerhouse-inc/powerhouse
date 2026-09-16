@@ -512,6 +512,23 @@ function expandIncludeSubpaths(dirname: string, include: string[]): string[] {
 }
 
 /**
+ * The published specifiers whose entry file the vendor build never emitted.
+ * URLs are base-less (`/__vendor__/x.js`) and resolve inside `vendorDir`.
+ */
+export function missingVendorEntries(
+  vendorDir: string,
+  imports: Record<string, string>,
+): { spec: string; url: string }[] {
+  const prefix = VENDOR_URL_PREFIX;
+  return Object.entries(imports)
+    .filter(([, url]) => {
+      const rel = url.startsWith(prefix) ? url.slice(prefix.length) : url;
+      return !existsSync(join(vendorDir, rel));
+    })
+    .map(([spec, url]) => ({ spec, url }));
+}
+
+/**
  * Rebase the vendor's base-less entry URLs (`/__vendor__/x.js`) onto the
  * deploy base, so a consumer that resolves them against the page origin lands
  * under that base rather than the server root. A dynamic-base build keeps its
@@ -582,6 +599,20 @@ async function buildVendorAtomic(
     // Stamp the version digest + version table into the published metadata so
     // the cache check can detect a dep bump and cache hits restore versions.
     const meta = JSON.parse(readFileSync(tmpMap, "utf8")) as VendorCacheMeta;
+    // Every published specifier must have a file behind it. An entry the map
+    // claims but the build never emitted becomes a bare import the app
+    // externalizes onto a URL that 404s — and since a SPA answers an unknown
+    // path with index.html, the browser reports only an opaque MIME-type
+    // error. Fail the build here, where the missing entries can be named.
+    const unbacked = missingVendorEntries(tmpDir, meta.imports);
+    if (unbacked.length > 0) {
+      throw new Error(
+        `vendor build published ${unbacked.length} import-map ` +
+          `${unbacked.length === 1 ? "entry" : "entries"} with no file behind ` +
+          `${unbacked.length === 1 ? "it" : "them"}:\n` +
+          unbacked.map((e) => `  ${e.spec} -> ${e.url}`).join("\n"),
+      );
+    }
     meta.versionDigest = versionDigest;
     meta.versions = versions;
     writeFileSync(tmpMap, JSON.stringify(meta, null, 2));
