@@ -23,9 +23,16 @@ React is shared too, but through the separate, pre-existing `__react__`
 self-host import map.
 
 A subpath of a listed package is shared whenever it is listed or is a
-subpath of a listed specifier (e.g. `@powerhousedao/shared/connect` under
-`@powerhousedao/shared`). `@powerhousedao/connect` is **not** shared: it is
-the Connect app itself.
+subpath of a listed specifier (e.g. `@powerhousedao/design-system/connect/toast`
+under `@powerhousedao/design-system/connect`).
+
+`@powerhousedao/shared` is the exception: the bare root is never vendored
+(its barrel reaches node-only modules), and neither are subpaths outside
+`SHARED_SUBPATHS` — `analytics`, `constants` and `clis` among them. Those
+are not externalized either, so a package importing one simply bundles its
+own copy rather than emitting a bare specifier nothing resolves.
+
+`@powerhousedao/connect` is **not** shared: it is the Connect app itself.
 
 ## How it works
 

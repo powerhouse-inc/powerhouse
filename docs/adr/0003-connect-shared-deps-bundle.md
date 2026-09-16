@@ -59,6 +59,12 @@ entries; the app build and the packages' builds externalize the shared set
 onto it. One copy per deploy, referenced by every consumer; the service
 worker precaches it once.
 
+The production include is the dev-server heavy set ∪ the shared set, minus
+`@powerhousedao/connect`: the dev server vendors the app to keep rebuilds
+cheap, but in a production build the app *is* Connect, so nothing resolves
+its import-map entry and its vendor entry is pure dead weight (~54MB of
+unreferenced output in the vetra-e2e fixture).
+
 The vendor is a **build artifact, not a runtime fetch**: it is produced in a
 throwaway subprocess before the app build, cached by a version digest of the
 resolved dependency versions, and fails the production build if it cannot be
