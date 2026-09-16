@@ -46,6 +46,28 @@ const app = {
         throw error;
       },
     },
+    gateway: {
+      name: "gateway",
+      displayName: "Gateway",
+      props: {},
+      run: async (ctx) => {
+        const error = new Error("Request failed with status code 502");
+        error.name = "HttpError";
+        error.request = {
+          url: "https://api.example.com/v1/items",
+          method: "POST",
+        };
+        error.response = {
+          status: 502,
+          headers: { "content-type": "text/html" },
+          body:
+            "<html><head><title>Bad gateway</title></head><body>" +
+            "<p>upstream refused " + ctx.auth.props.app_token + "</p>" +
+            "</body></html>",
+        };
+        throw error;
+      },
+    },
   },
 };
 module.exports = { app };
@@ -144,5 +166,30 @@ describe("redaction in the piece worker", () => {
       data: { message: "unauthorized" },
     });
     expect(`${message}${stack ?? ""}`).not.toContain(TOKEN);
+  });
+
+  it("formats an HTTP error into a readable message, then redacts it", async () => {
+    const executor = new ActivepiecesBlockExecutor({
+      cacheDir,
+      worker,
+      connections,
+    });
+
+    const error = await executor.execute(execution("gateway")).then(
+      () => undefined,
+      (thrown: unknown) => thrown,
+    );
+
+    expect(error).toBeInstanceOf(PieceWorkerError);
+    const { serialized } = error as PieceWorkerError;
+    // The HTML body's text, not "Request failed with status code 502".
+    expect(serialized.message).toContain("Bad gateway");
+    expect(serialized.message).toContain("upstream refused [redacted:secret]");
+    expect(serialized.properties.status).toBe(502);
+    expect(serialized.properties.requestUrl).toBe(
+      "https://api.example.com/v1/items",
+    );
+    expect(serialized.properties.requestMethod).toBe("POST");
+    expect(JSON.stringify(serialized)).not.toContain(TOKEN);
   });
 });

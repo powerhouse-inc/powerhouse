@@ -185,6 +185,8 @@ export type WorkerRequestMessage =
 export interface SerializedPieceError {
   name: string;
   message: string;
+  // The error's own enumerable properties, plus the HTTP status, request and
+  // response the framework's error formatter recovered from it.
   properties: Record<string, unknown>;
   // Set when the piece hit an unimplemented context member.
   unsupportedMember?: string;

@@ -11,6 +11,7 @@ import { RemoteReactorService } from "../context/reactor.js";
 import { RemoteOutput } from "../context/remote-output.js";
 import { captureConsole } from "./logs.js";
 import { jsonSafe } from "./json-safe.js";
+import { formatPieceError } from "@powerhousedao/pieces-framework/host";
 import { redactError, redactMessage } from "./redact.js";
 import { readFile } from "node:fs/promises";
 import { buildCheckConnectionContext } from "../context/check.js";
@@ -98,19 +99,20 @@ function serializeError(
       properties[key] = jsonSafe((error as Record<string, unknown>)[key]);
     }
   }
+  // The framework's own formatter first: it lifts an HTTP status, the request
+  // and response, and a message out of an HTML error page. Redaction stays last.
+  const { __apErrorVersion, message, errorName, ...http } =
+    formatPieceError(error);
   return {
     name:
       (typeof error === "object" && error !== null && error.constructor.name) ||
+      errorName ||
       "Error",
-    message: redactMessage(
-      String(
-        typeof error === "object" && error !== null && "message" in error
-          ? (error as { message: unknown }).message
-          : error,
-      ),
+    message: redactMessage(message, { values }),
+    properties: redactError(
+      { ...properties, ...(jsonSafe(http) as Record<string, unknown>) },
       { values },
-    ),
-    properties: redactError(properties, { values }) as Record<string, unknown>,
+    ) as Record<string, unknown>,
     unsupportedMember:
       error instanceof UnsupportedContextMemberError ? error.member : undefined,
   };
