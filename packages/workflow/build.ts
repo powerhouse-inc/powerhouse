@@ -3,6 +3,7 @@ import {
   nodeBuildConfig,
 } from "@powerhousedao/shared/build-config";
 import { execSync } from "node:child_process";
+import { appendFileSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { build } from "tsdown";
 
@@ -25,6 +26,12 @@ console.log("\n▶ Building style.css...");
 execSync("tailwindcss -i ./style.css -o ./dist/style.css", {
   stdio: "inherit",
 });
+
+// Append the editors' xyflow/canvas CSS side-effects, invisible to Tailwind.
+appendFileSync(
+  join("dist", "style.css"),
+  "\n" + readFileSync(join("dist", "browser", "style.css"), "utf8"),
+);
 
 console.log("\n▶ Checking pieces...");
 execSync("node scripts/assert-pieces-built.mjs", { stdio: "inherit" });
