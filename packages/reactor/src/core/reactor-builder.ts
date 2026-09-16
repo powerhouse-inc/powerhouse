@@ -51,7 +51,10 @@ import {
   type ReadModelIndexingConfig,
 } from "../read-models/base-read-model.js";
 import { ReadModelCoordinator } from "../read-models/coordinator.js";
-import { KyselyDocumentView } from "../read-models/document-view.js";
+import {
+  DeletedDocumentRead,
+  KyselyDocumentView,
+} from "../read-models/document-view.js";
 import type {
   IReadModel,
   IReadModelCoordinator,
@@ -817,7 +820,9 @@ export class ReactorBuilder {
       operationIndex,
       writeCache,
       documentViewConsistencyTracker,
-      featureFlags.documentDecisions,
+      featureFlags.documentDecisions
+        ? DeletedDocumentRead.StateAtDeletion
+        : DeletedDocumentRead.NotFound,
       readModelIndexing,
     );
 

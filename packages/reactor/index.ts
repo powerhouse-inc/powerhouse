@@ -322,7 +322,10 @@ export {
   type ReadModelIndexingConfig,
 } from "./src/read-models/base-read-model.js";
 export { ReadModelCoordinator } from "./src/read-models/coordinator.js";
-export { KyselyDocumentView } from "./src/read-models/document-view.js";
+export {
+  DeletedDocumentRead,
+  KyselyDocumentView,
+} from "./src/read-models/document-view.js";
 export {
   supportsLiveReadModelRegistration,
   type ILiveReadModelCoordinator,

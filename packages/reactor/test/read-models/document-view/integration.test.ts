@@ -13,7 +13,10 @@ import { KyselyOperationIndex } from "../../../src/cache/kysely-operation-index.
 import type { IOperationIndex } from "../../../src/cache/operation-index-types.js";
 import type { IWriteCache } from "../../../src/cache/write/interfaces.js";
 import type { ReadModelIndexingConfig } from "../../../src/read-models/base-read-model.js";
-import { KyselyDocumentView } from "../../../src/read-models/document-view.js";
+import {
+  DeletedDocumentRead,
+  KyselyDocumentView,
+} from "../../../src/read-models/document-view.js";
 import type { DocumentViewDatabase } from "../../../src/read-models/types.js";
 import { ConsistencyTracker } from "../../../src/shared/consistency-tracker.js";
 import {
@@ -82,7 +85,7 @@ describe("KyselyDocumentView", () => {
       operationIndex,
       mockWriteCache,
       consistencyTracker,
-      false,
+      DeletedDocumentRead.NotFound,
     );
     boundaryView = new KyselyDocumentView(
       db,
@@ -90,7 +93,7 @@ describe("KyselyDocumentView", () => {
       operationIndex,
       mockWriteCache,
       consistencyTracker,
-      true,
+      DeletedDocumentRead.StateAtDeletion,
     );
   });
 
@@ -2853,7 +2856,7 @@ describe("KyselyDocumentView", () => {
         operationIndex,
         mockWriteCache,
         new ConsistencyTracker(),
-        false,
+        DeletedDocumentRead.NotFound,
         chunked,
       );
     }

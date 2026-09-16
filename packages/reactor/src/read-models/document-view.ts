@@ -39,6 +39,24 @@ import type {
 
 type Database = StorageDatabase & DocumentViewDatabase;
 
+/**
+ * What a single-document read of a deleted document returns. A listing omits a
+ * deleted document under either value.
+ */
+export enum DeletedDocumentRead {
+  /**
+   * The document reads as missing: `get` throws and `resolveIdOrSlug` does not
+   * match its id.
+   */
+  NotFound = "NotFound",
+  /**
+   * The document's state as of the deletion, with `state.document.isDeleted`
+   * telling the caller what it holds. Only meaningful with `documentDecisions`,
+   * which is what makes deletion positional.
+   */
+  StateAtDeletion = "StateAtDeletion",
+}
+
 export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
   private _db: Kysely<Database>;
 
@@ -48,12 +66,7 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
     operationIndex: IOperationIndex,
     writeCache: IWriteCache,
     consistencyTracker: IConsistencyTracker,
-    /**
-     * Whether a single-document read serves a deleted document's state as of the
-     * deletion rather than hiding it. Only meaningful with `documentDecisions`,
-     * which is what makes deletion positional. Listings omit it either way.
-     */
-    private readonly servesDeletionBoundary: boolean,
+    private readonly deletedDocumentRead: DeletedDocumentRead,
     indexing: ReadModelIndexingConfig = defaultReadModelIndexingConfig,
   ) {
     super(
@@ -401,15 +414,13 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
       scopesToQuery = [];
     }
 
-    // Unfiltered when serving the boundary state; `state.document.isDeleted` tells
-    // the caller what it holds. Listings keep the filter either way.
     let query = this._db
       .selectFrom("DocumentSnapshot")
       .selectAll()
       .where("documentId", "=", documentId)
       .where("branch", "=", branch);
 
-    if (!this.servesDeletionBoundary) {
+    if (this.deletedDocumentRead === DeletedDocumentRead.NotFound) {
       query = query.where("isDeleted", "=", false);
     }
 
@@ -775,7 +786,7 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
       .where("documentId", "=", identifier)
       .where("branch", "=", branch);
 
-    if (!this.servesDeletionBoundary) {
+    if (this.deletedDocumentRead === DeletedDocumentRead.NotFound) {
       idCheckQuery = idCheckQuery.where("isDeleted", "=", false);
     }
 

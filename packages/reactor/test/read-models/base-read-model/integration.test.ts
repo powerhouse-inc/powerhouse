@@ -15,7 +15,10 @@ import {
   type BaseReadModelConfig,
   type ReadModelIndexingConfig,
 } from "../../../src/read-models/base-read-model.js";
-import { KyselyDocumentView } from "../../../src/read-models/document-view.js";
+import {
+  DeletedDocumentRead,
+  KyselyDocumentView,
+} from "../../../src/read-models/document-view.js";
 import type { DocumentViewDatabase } from "../../../src/read-models/types.js";
 import { ConsistencyTracker } from "../../../src/shared/consistency-tracker.js";
 import type { IOperationStore } from "../../../src/storage/interfaces.js";
@@ -585,7 +588,7 @@ describe("BaseReadModel chunked indexing", () => {
       operationIndex,
       writeCache,
       tracker,
-      false,
+      DeletedDocumentRead.NotFound,
       indexing,
     );
   }
