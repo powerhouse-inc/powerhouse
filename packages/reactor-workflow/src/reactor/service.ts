@@ -26,7 +26,7 @@ import {
   type LocalPiece,
   type PieceModuleRef,
   type CheckConnectionOutcome,
-  type ConnectorDescriptor,
+  type PieceDescriptor,
   type EgressPolicy,
   type PieceWorkerSession,
   type SecretProvider,
@@ -1308,7 +1308,7 @@ export class WorkflowRuntimeService {
     }
   }
 
-  private readonly descriptors = new Map<string, ConnectorDescriptor>();
+  private readonly descriptors = new Map<string, PieceDescriptor>();
   private designWorker?: PieceWorker;
 
   // Design-time piece code runs under the policy a run would get, so nothing
@@ -1325,7 +1325,7 @@ export class WorkflowRuntimeService {
   private async pieceDescriptor(
     packageName: string,
     version: string,
-  ): Promise<ConnectorDescriptor> {
+  ): Promise<PieceDescriptor> {
     const cacheKey = `${packageName}@${version}`;
     let descriptor = this.descriptors.get(cacheKey);
     if (!descriptor) {
@@ -1355,7 +1355,7 @@ export class WorkflowRuntimeService {
           ),
         );
       }
-      descriptor = output as ConnectorDescriptor;
+      descriptor = output as PieceDescriptor;
       this.descriptors.set(cacheKey, descriptor);
     }
     return descriptor;
@@ -1562,7 +1562,7 @@ export class WorkflowRuntimeService {
   // One failure does not sink the catalog: a package whose piece cannot be
   // loaded is logged and left out, the way an unreachable listing would be.
   private async localPieces(): Promise<
-    { piece: LocalPiece; descriptor: ConnectorDescriptor }[]
+    { piece: LocalPiece; descriptor: PieceDescriptor }[]
   > {
     await packagePieces.ready();
     const described = await Promise.all(
@@ -1586,7 +1586,7 @@ export class WorkflowRuntimeService {
 
   private async localPiece(
     packageName: string,
-  ): Promise<{ piece: LocalPiece; descriptor: ConnectorDescriptor } | undefined> {
+  ): Promise<{ piece: LocalPiece; descriptor: PieceDescriptor } | undefined> {
     await packagePieces.ready();
     const piece = packagePieces.lookup(packageName);
     if (!piece) return undefined;

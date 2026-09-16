@@ -9,7 +9,7 @@ import {
   type ApTriggerStrategy,
 } from "./types.js";
 
-export interface ConnectorPropDescriptor {
+export interface PiecePropDescriptor {
   name: string;
   displayName: string;
   description?: string;
@@ -29,33 +29,33 @@ export interface ConnectorPropDescriptor {
   refreshers?: string[];
   // Nested shape: an ARRAY item's fields, or the props a DYNAMIC resolver
   // produced (see describeProperties). OBJECT props are free-form and carry none.
-  properties?: ConnectorPropDescriptor[];
+  properties?: PiecePropDescriptor[];
 }
 
-export interface ConnectorActionDescriptor {
+export interface PieceActionDescriptor {
   name: string;
   displayName: string;
   description?: string;
   // UI metadata only — not a credential contract (spike finding).
   requireAuth: boolean;
-  props: ConnectorPropDescriptor[];
+  props: PiecePropDescriptor[];
 }
 
-export interface ConnectorTriggerDescriptor {
+export interface PieceTriggerDescriptor {
   name: string;
   displayName: string;
   description?: string;
   strategy: ApTriggerStrategy;
   testStrategy?: string;
   requireAuth: boolean;
-  props: ConnectorPropDescriptor[];
+  props: PiecePropDescriptor[];
   hasSampleData: boolean;
   // How the sender proves the endpoint exists before it will register it.
   // Absent when the trigger declares no handshake, or declares NONE.
   handshake?: { strategy: string; paramName?: string };
 }
 
-export interface ConnectorAuthDescriptor {
+export interface PieceAuthDescriptor {
   type: ApPropertyType;
   displayName?: string;
   description?: string;
@@ -63,7 +63,7 @@ export interface ConnectorAuthDescriptor {
   // CUSTOM_AUTH's own fields. Without them a connection form has nothing to
   // ask for, which is what a piece read from a package rather than a published
   // listing would otherwise leave the editor with.
-  props?: ConnectorPropDescriptor[];
+  props?: PiecePropDescriptor[];
 }
 
 // NONE is how the framework spells "no handshake", so it is not carried:
@@ -76,25 +76,25 @@ function describeHandshake(
   return { strategy, paramName: trigger.handshakeConfiguration?.paramName };
 }
 
-export interface ConnectorSource {
+export interface PieceSource {
   packageName: string;
   version: string;
 }
 
 // Serializable descriptor of an adapted piece; the engine never learns
 // Activepieces exists (doc 08 §6.2).
-export interface ConnectorDescriptor {
+export interface PieceDescriptor {
   id: string;
-  source: ConnectorSource;
+  source: PieceSource;
   displayName: string;
   description?: string;
   logoUrl?: string;
   categories?: string[];
-  auth?: ConnectorAuthDescriptor;
+  auth?: PieceAuthDescriptor;
   minimumSupportedRelease?: string;
   maximumSupportedRelease?: string;
-  actions: ConnectorActionDescriptor[];
-  triggers: ConnectorTriggerDescriptor[];
+  actions: PieceActionDescriptor[];
+  triggers: PieceTriggerDescriptor[];
 }
 
 function hasResolver(prop: ApProperty): boolean {
@@ -105,9 +105,9 @@ function toPropDescriptor(
   name: string,
   prop: ApProperty,
   resolverId?: string,
-): ConnectorPropDescriptor {
+): PiecePropDescriptor {
   const dynamic = hasResolver(prop);
-  const descriptor: ConnectorPropDescriptor = {
+  const descriptor: PiecePropDescriptor = {
     name,
     displayName: prop.displayName ?? name,
     type: prop.type ?? "UNKNOWN",
@@ -149,7 +149,7 @@ function toPropDescriptor(
 export function describeProperties(
   props: Record<string, ApProperty> | null | undefined,
   resolverIdFor?: (propName: string) => string,
-): ConnectorPropDescriptor[] {
+): PiecePropDescriptor[] {
   if (!props || typeof props !== "object") return [];
   return Object.entries(props)
     .filter((entry): entry is [string, ApProperty] =>
@@ -169,10 +169,10 @@ function isPropertyObject(value: unknown): value is ApProperty {
 // piece code beyond the actions()/triggers() accessors.
 export function buildDescriptor(
   piece: ApPiece,
-  source: ConnectorSource,
-): ConnectorDescriptor {
+  source: PieceSource,
+): PieceDescriptor {
   const actions = Object.entries(getActions(piece)).map(
-    ([actionName, action]): ConnectorActionDescriptor => ({
+    ([actionName, action]): PieceActionDescriptor => ({
       name: action.name ?? actionName,
       displayName: action.displayName ?? actionName,
       description: action.description,
@@ -186,7 +186,7 @@ export function buildDescriptor(
   );
 
   const triggers = Object.entries(getTriggers(piece)).map(
-    ([triggerName, trigger]): ConnectorTriggerDescriptor => ({
+    ([triggerName, trigger]): PieceTriggerDescriptor => ({
       name: trigger.name ?? triggerName,
       displayName: trigger.displayName ?? triggerName,
       description: trigger.description,
@@ -204,7 +204,7 @@ export function buildDescriptor(
     }),
   );
 
-  const descriptor: ConnectorDescriptor = {
+  const descriptor: PieceDescriptor = {
     id: `activepieces:${source.packageName}`,
     source,
     displayName: piece.displayName,

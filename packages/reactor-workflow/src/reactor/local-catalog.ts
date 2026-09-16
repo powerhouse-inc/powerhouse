@@ -3,7 +3,7 @@
 // A published piece is described by a listing the cloud API serves; one that
 // ships inside a reactor package has no listing, so its descriptor — built in
 // the worker from the piece module — is the listing.
-import type { ConnectorDescriptor } from "../pieces/index.js";
+import type { PieceDescriptor } from "../pieces/index.js";
 import type { BlockSearchHit } from "./block-search.js";
 import type {
   PieceActionsResult,
@@ -25,7 +25,7 @@ export function localBlockType(
 }
 
 export function catalogEntry(
-  descriptor: ConnectorDescriptor,
+  descriptor: PieceDescriptor,
   pieceName: string,
   version: string,
 ): PieceSummary {
@@ -43,7 +43,7 @@ export function catalogEntry(
 }
 
 export function actionsResult(
-  descriptor: ConnectorDescriptor,
+  descriptor: PieceDescriptor,
   pieceName: string,
   version: string,
 ): PieceActionsResult {
@@ -65,7 +65,7 @@ export function actionsResult(
 }
 
 export function triggersResult(
-  descriptor: ConnectorDescriptor,
+  descriptor: PieceDescriptor,
   pieceName: string,
   version: string,
 ): PieceTriggersResult {
@@ -87,7 +87,7 @@ export function triggersResult(
 // The piece's blocks as search hits, so a block the reactor ships is findable
 // whether or not the published catalog answered.
 export function localSearchHits(
-  descriptor: ConnectorDescriptor,
+  descriptor: PieceDescriptor,
   pieceName: string,
 ): BlockSearchHit[] {
   const pieceDisplayName = descriptor.displayName || pieceName;
@@ -120,7 +120,7 @@ export function localSearchHits(
 // triggers keyed by name. Output schemas are absent because a descriptor does
 // not carry them — a caller reading one treats that as "not authored".
 export function detailResult(
-  descriptor: ConnectorDescriptor,
+  descriptor: PieceDescriptor,
   pieceName: string,
   version: string,
 ): Record<string, unknown> {

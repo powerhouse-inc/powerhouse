@@ -195,7 +195,7 @@ export class PieceWorker implements IPieceWorker {
     return this.enqueue("check-connection", request, options.timeoutMs);
   }
 
-  // The piece's design-time descriptor; the output is a ConnectorDescriptor.
+  // The piece's design-time descriptor; the output is a PieceDescriptor.
   describePiece(
     request: DescribePieceRequest,
     options: { timeoutMs?: number } = {},

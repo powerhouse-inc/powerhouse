@@ -8,7 +8,7 @@ import {
   PieceWorkerError,
   PieceWorkerTimeoutError,
 } from "../../../src/pieces/activepieces/worker/host.js";
-import type { ConnectorDescriptor } from "../../../src/pieces/activepieces/descriptor.js";
+import type { PieceDescriptor } from "../../../src/pieces/activepieces/descriptor.js";
 
 const FIXTURES = {
   full: `
@@ -87,14 +87,14 @@ function bundleDir(name: FixtureName): string {
   return join(cacheDir, name);
 }
 
-function describeFixture(name: FixtureName): Promise<ConnectorDescriptor> {
+function describeFixture(name: FixtureName): Promise<PieceDescriptor> {
   return worker
     .describePiece({
       bundleDir: bundleDir(name),
       packageName: `@activepieces/piece-${name}`,
       version: "1.0.0",
     })
-    .then((result) => result.output as ConnectorDescriptor);
+    .then((result) => result.output as PieceDescriptor);
 }
 
 describe("PieceWorker.describePiece", () => {

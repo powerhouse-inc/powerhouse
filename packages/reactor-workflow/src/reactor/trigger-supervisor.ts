@@ -12,7 +12,7 @@ import {
   secretsFor,
   storeHandlers,
   type ConnectionRequest,
-  type ConnectorDescriptor,
+  type PieceDescriptor,
   type EgressPolicy,
   type PieceResolver,
   type PieceWorkerResult,
@@ -247,7 +247,7 @@ export class TriggerSupervisor {
   private readonly enabledOk = new Set<string>();
 
   // Piece descriptors by package@version, for the trigger strategy lookup.
-  private readonly descriptors = new Map<string, ConnectorDescriptor>();
+  private readonly descriptors = new Map<string, PieceDescriptor>();
 
   private own: PieceResolver | undefined;
 
@@ -488,7 +488,7 @@ export class TriggerSupervisor {
         },
         { timeoutMs: this.hookTimeoutMs },
       );
-      descriptor = result.output as ConnectorDescriptor;
+      descriptor = result.output as PieceDescriptor;
       this.descriptors.set(key, descriptor);
     }
     const trigger = descriptor.triggers?.find(

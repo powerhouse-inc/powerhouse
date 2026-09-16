@@ -2,7 +2,7 @@
 // loader, the worker pool and the executor, plus the stand-ins they need.
 export {
   buildDescriptor,
-  type ConnectorDescriptor,
+  type PieceDescriptor,
 } from "./pieces/activepieces/descriptor.js";
 export {
   ensurePieceBundle,
