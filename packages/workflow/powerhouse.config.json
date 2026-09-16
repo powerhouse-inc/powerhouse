@@ -1,5 +1,4 @@
 {
-  "$schema": "https://raw.githubusercontent.com/powerhouse-inc/powerhouse/main/packages/shared/clis/source-config.schema.json",
   "documentModelsDir": "./document-models",
   "editorsDir": "./editors",
   "processorsDir": "./processors",
@@ -9,51 +8,5 @@
   },
   "reactor": {
     "port": 4001
-  },
-  "packages": [],
-  "packageRegistryUrl": "https://registry.dev.vetra.io",
-  "connect": {
-    "branding": {
-      "appName": "Powerhouse Connect",
-      "homeBackground": null
-    },
-    "app": {
-      "logLevel": "info",
-      "basePath": "/",
-      "offline": true
-    },
-    "packages": {
-      "externalEnabled": true,
-      "liveReload": false
-    },
-    "drives": {
-      "allowAddDrive": true,
-      "defaultDrives": [],
-      "sections": {
-        "remote": {
-          "enabled": true,
-          "allowAdd": true,
-          "allowDelete": true
-        },
-        "local": {
-          "enabled": true,
-          "allowAdd": true,
-          "allowDelete": true
-        }
-      }
-    },
-    "renown": {
-      "url": "https://www.renown.id",
-      "networkId": "eip155",
-      "chainId": 1
-    },
-    "sentry": {
-      "dsn": null,
-      "env": "dev",
-      "tracing": false
-    },
-    "ai": {
-      "assistantEnabled": true
-    }
   }
 }

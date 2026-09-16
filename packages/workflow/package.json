@@ -1,128 +1,109 @@
 {
-  "name": "workflow",
-  "version": "1.0.0",
+  "name": "@powerhousedao/workflow",
+  "version": "6.2.3-dev.10",
   "license": "AGPL-3.0-only",
-  "files": [
-    "/dist"
-  ],
   "type": "module",
-  "sideEffects": false,
+  "sideEffects": [
+    "**/*.css",
+    "**/runtime-piece-source.*"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/powerhouse-inc/powerhouse",
+    "directory": "packages/workflow"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist"
+  ],
   "exports": {
     ".": {
+      "source": "./index.ts",
       "types": "./dist/types/index.d.ts",
       "browser": "./dist/browser/index.js",
       "node": "./dist/node/index.mjs"
     },
     "./reactor": {
+      "source": "./reactor/index.ts",
       "types": "./dist/types/reactor/index.d.ts",
       "browser": "./dist/browser/reactor/index.js"
     },
     "./document-models": {
+      "source": "./document-models/index.ts",
       "types": "./dist/types/document-models/index.d.ts",
       "browser": "./dist/browser/document-models/index.js",
       "node": "./dist/node/document-models/index.mjs"
     },
     "./document-models/*": {
+      "source": "./document-models/*/index.ts",
       "types": "./dist/types/document-models/*/index.d.ts",
       "browser": "./dist/browser/document-models/*/index.js",
       "node": "./dist/node/document-models/*/index.mjs"
     },
     "./editors": {
+      "source": "./editors/index.ts",
       "types": "./dist/types/editors/index.d.ts",
       "browser": "./dist/browser/editors/index.js",
       "node": "./dist/node/editors/index.mjs"
     },
-    "./editors/*": {
-      "types": "./dist/types/editors/*/editor.d.ts",
-      "browser": "./dist/browser/editors/*/editor.js",
-      "node": "./dist/node/editors/*/editor.mjs"
-    },
-    "./subgraphs": {
-      "types": "./dist/types/subgraphs/index.d.ts",
-      "browser": "./dist/browser/subgraphs/index.js",
-      "node": "./dist/node/subgraphs/index.mjs"
-    },
-    "./processors": {
-      "types": "./dist/types/processors/index.d.ts",
-      "browser": "./dist/browser/processors/index.js",
-      "node": "./dist/node/processors/index.mjs"
-    },
     "./pieces": {
+      "source": "./pieces/index.ts",
       "types": "./dist/types/pieces/index.d.ts",
       "node": "./dist/node/pieces/index.mjs"
     },
+    "./pieces/*": {
+      "source": "./pieces/*/index.ts",
+      "types": "./dist/types/pieces/*/index.d.ts",
+      "node": "./dist/node/pieces/*/index.mjs"
+    },
     "./manifest": "./dist/powerhouse.manifest.json",
-    "./style.css": "./dist/style.css"
+    "./style.css": "./dist/style.css",
+    "./package.json": "./package.json"
   },
   "scripts": {
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
-    "lint": "oxlint --type-aware --type-check",
-    "lint:fix": "oxlint --type-aware --type-check --fix",
-    "format": "oxfmt",
-    "format:check": "oxfmt --check",
     "tsc": "tsc",
-    "tsc:watch": "tsc --watch",
-    "check-circular-imports": "npx dpdm -T ./index.ts",
-    "generate": "ph-cli generate",
-    "connect": "ph-cli connect",
-    "build": "ph-cli build && node scripts/assert-pieces-built.mjs",
-    "reactor": "ph-cli reactor",
-    "service": "ph-cli service",
-    "vetra": "ph-cli vetra",
-    "service-startup": "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-startup.sh",
-    "service-unstartup": "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-unstartup.sh"
+    "lint": "eslint",
+    "test": "vitest --run",
+    "test:watch": "vitest",
+    "build": "tsx ./build.ts"
   },
   "dependencies": {
-    "@powerhousedao/reactor-connectors": "workspace:*",
-    "@xyflow/react": "^12.11.3",
-    "croner": "10.0.1",
-    "react-markdown": "^10.1.0",
-    "remark-gfm": "^4.0.1"
+    "@powerhousedao/design-system": "workspace:*",
+    "@powerhousedao/pieces-framework": "workspace:*",
+    "@powerhousedao/reactor": "workspace:*",
+    "@powerhousedao/reactor-browser": "workspace:*",
+    "@powerhousedao/shared": "workspace:*",
+    "@xyflow/react": "12.11.6",
+    "document-model": "workspace:*",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "react-markdown": "10.1.0",
+    "remark-gfm": "4.0.1",
+    "zod": "catalog:"
   },
   "devDependencies": {
-    "@activepieces/pieces-framework": "0.32.0",
-    "@electric-sql/pglite": "0.3.15",
-    "@electric-sql/pglite-tools": "0.2.20",
-    "@powerhousedao/connect": "6.2.3-dev.8",
-    "@powerhousedao/design-system": "6.2.3-dev.8",
-    "@powerhousedao/document-engineering": "1.40.5",
-    "@powerhousedao/ph-cli": "6.2.3-dev.8",
-    "@powerhousedao/reactor": "6.2.3-dev.8",
-    "@powerhousedao/reactor-api": "6.2.3-dev.8",
-    "@powerhousedao/reactor-browser": "6.2.3-dev.8",
-    "@powerhousedao/shared": "6.2.3-dev.8",
-    "@tailwindcss/cli": "^4.1.18",
-    "@tailwindcss/vite": "^4.1.18",
-    "@types/node": "^24.9.2",
-    "@types/react": "^19.2.3",
-    "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^6.0.1",
-    "@vitest/coverage-v8": "4.1.1",
-    "document-model": "6.2.3-dev.8",
-    "esbuild": "0.28.2",
-    "graphql": "16.12.0",
-    "graphql-tag": "2.12.6",
-    "oxfmt": "0.55.0",
-    "oxlint": "1.70.0",
-    "oxlint-tsgolint": "0.23.0",
-    "react": "19.2.6",
-    "react-dom": "19.2.6",
-    "tailwindcss": "^4.1.16",
-    "typescript": "^5.9.3",
-    "vite": "^8.0.10",
-    "vite-tsconfig-paths": "6.1.1",
-    "vitest": "4.1.1",
-    "zod": "4.3.6"
+    "@tailwindcss/cli": "catalog:",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "rolldown": "catalog:",
+    "tailwindcss": "catalog:",
+    "tsdown": "catalog:",
+    "tsx": "catalog:",
+    "vite-tsconfig-paths": "catalog:",
+    "vitest": "catalog:"
   },
-  "peerDependencies": {
-    "@powerhousedao/reactor-browser": "6.2.3-dev.8",
-    "document-model": "6.2.3-dev.8",
-    "graphql": "^16",
-    "graphql-tag": "^2",
-    "react": "^19",
-    "react-dom": "^19",
-    "zod": "^4"
-  }
+  "description": "Powerhouse workflows in Connect: the workflow and connection document models, their editors and Workflow Studio, the assistant tools and the reactor piece.",
+  "keywords": [
+    "powerhouse",
+    "workflow",
+    "automation",
+    "document-model",
+    "connect",
+    "pieces",
+    "activepieces"
+  ]
 }

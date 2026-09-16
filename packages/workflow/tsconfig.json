@@ -1,67 +1,38 @@
 {
+  "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "rootDir": ".",
-    "paths": {
-      "document-models": [
-        "./document-models/index.ts"
-      ],
-      "document-models/*": [
-        "./document-models/*/index.ts"
-      ],
-      "editors": [
-        "./editors/index.ts"
-      ],
-      "editors/*": [
-        "./editors/*/index.ts"
-      ],
-      "processors/*": [
-        "./processors/*/index.ts"
-      ],
-      "subgraphs": [
-        "./subgraphs/index.ts"
-      ],
-      "subgraphs/*": [
-        "./subgraphs/*/index.ts"
-      ]
-    },
-    "module": "nodenext",
-    "moduleDetection": "force",
-    "target": "esnext",
-    "jsx": "react-jsx",
-    "types": [
-      "node",
-      "vitest/globals"
-    ],
-    "lib": [
-      "ESNext",
-      "dom",
-      "dom.iterable"
-    ],
-    "declaration": true,
+    "outDir": "./.tsbuild",
     "declarationDir": "./dist/types",
-    "declarationMap": true,
-    "emitDeclarationOnly": true,
-    "incremental": true,
-    "strict": true,
-    "verbatimModuleSyntax": true,
-    "isolatedModules": true,
-    "noUncheckedSideEffectImports": true,
-    "skipLibCheck": true
+    "resolveJsonModule": true,
+    "types": ["node", "vitest/globals"],
+    "lib": ["ESNext", "dom", "dom.iterable"],
+    "paths": {
+      "document-models": ["./document-models/index.ts"],
+      "document-models/*": ["./document-models/*/index.ts"],
+      "editors": ["./editors/index.ts"],
+      "editors/*": ["./editors/*/index.ts"]
+    }
   },
-  "include": [
-    "**/*",
-    "./powerhouse.manifest.json"
-  ],
-  "exclude": [
-    "dist",
-    "node_modules",
-    ".ph",
-    "vitest.config.ts",
-    "main.tsx"
-  ],
+  "include": ["**/*", "./powerhouse.manifest.json"],
+  "exclude": ["dist", "node_modules", ".ph"],
   "references": [
     {
-      "path": "../reactor-connectors"
+      "path": "../design-system"
+    },
+    {
+      "path": "../document-model"
+    },
+    {
+      "path": "../pieces-framework"
+    },
+    {
+      "path": "../reactor"
+    },
+    {
+      "path": "../reactor-browser"
+    },
+    {
+      "path": "../shared"
     }
   ]
 }

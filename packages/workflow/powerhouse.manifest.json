@@ -1,10 +1,10 @@
 {
-  "name": "workflow",
-  "description": "",
+  "name": "@powerhousedao/workflow",
+  "description": "Workflows in Connect: the workflow and connection document models, their editors and Workflow Studio, and the reactor piece.",
   "category": "",
   "publisher": {
-    "name": "",
-    "url": ""
+    "name": "@powerhousedao",
+    "url": "https://github.com/powerhouse-inc/powerhouse/tree/main/packages/workflow"
   },
   "documentModels": [
     {
@@ -35,17 +35,13 @@
       "documentTypes": ["powerhouse/connection"]
     }
   ],
-  "processors": [
+  "pieces": [
     {
-      "id": "document-event-trigger",
-      "name": "document-event-trigger"
+      "id": "@powerhousedao/piece-reactor",
+      "name": "Powerhouse Reactor"
     }
   ],
-  "subgraphs": [
-    {
-      "id": "workflow-runtime",
-      "name": "workflow-runtime"
-    }
-  ],
+  "processors": [],
+  "subgraphs": [],
   "config": []
 }
