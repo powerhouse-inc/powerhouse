@@ -1,5 +1,11 @@
-// Run-time coercion of stored config values into the shapes pieces expect:
-// the editor stores canonical values, the worker normalises before run().
+// Run-time coercion of stored config values into the shapes pieces expect: the
+// engine's own property processors, with our file hydration in front of theirs.
+import type { PieceProperty } from "@powerhousedao/pieces-framework";
+import {
+  arrayZipperProcessor,
+  processors,
+  type ProcessorFn,
+} from "@powerhousedao/pieces-framework/host";
 import type { ApProperty } from "../types.js";
 import {
   assertWithinLimit,
@@ -48,66 +54,6 @@ export class FileFetchError extends Error {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
-}
-
-function parseJsonString(value: unknown): unknown {
-  if (typeof value !== "string") return value;
-  const trimmed = value.trim();
-  if (trimmed === "") return value;
-  try {
-    return JSON.parse(trimmed) as unknown;
-  } catch {
-    return value;
-  }
-}
-
-export function toNumber(value: unknown): unknown {
-  if (typeof value === "number") return value;
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    if (trimmed === "") return undefined;
-    const parsed = Number(trimmed);
-    return Number.isFinite(parsed) ? parsed : value;
-  }
-  return value;
-}
-
-export function toBoolean(value: unknown): unknown {
-  if (typeof value === "boolean") return value;
-  if (typeof value === "string") {
-    const lowered = value.trim().toLowerCase();
-    if (lowered === "true") return true;
-    if (lowered === "false" || lowered === "") return false;
-  }
-  return value;
-}
-
-// Arrays pass through; a JSON array string parses; any other non-empty
-// string is a single item; "" is the empty list.
-export function toArray(value: unknown): unknown {
-  if (Array.isArray(value)) return value;
-  if (typeof value === "string") {
-    if (value.trim() === "") return [];
-    const parsed = parseJsonString(value);
-    return Array.isArray(parsed) ? parsed : [value];
-  }
-  return [value];
-}
-
-export function toIsoDateTime(value: unknown): unknown {
-  if (value instanceof Date) {
-    return Number.isNaN(value.getTime()) ? value : value.toISOString();
-  }
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return new Date(value).toISOString();
-  }
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    if (trimmed === "") return undefined;
-    const ms = Date.parse(trimmed);
-    return Number.isNaN(ms) ? value : new Date(ms).toISOString();
-  }
-  return value;
 }
 
 const DATA_URI = /^data:([^;,]*)((?:;[^;,]*)*),([\s\S]*)$/;
@@ -269,44 +215,62 @@ export async function toApFile(
   return value;
 }
 
+// ARRAY has no entry in the processor table: the engine zips an object of
+// parallel arrays into rows itself, then processes each row's own props.
+async function normalizeArray(
+  prop: ApProperty,
+  value: unknown,
+  options: NormalizeOptions,
+): Promise<unknown> {
+  const fields = prop.properties;
+  if (!fields) return value;
+  const zipped: unknown = arrayZipperProcessor(prop as PieceProperty, value);
+  if (!Array.isArray(zipped)) return value;
+  return Promise.all(
+    (zipped as unknown[]).map((item) =>
+      isRecord(item) ? normalizePropsValue(fields, item, options) : item,
+    ),
+  );
+}
+
+// An ApFile is a class instance whose base64 is a prototype getter, and no
+// structured clone carries either; flatten it at the boundary (see ApFileValue).
+function plainFile(value: unknown): unknown {
+  if (!isRecord(value) || typeof value.filename !== "string") return value;
+  const { data } = value;
+  if (!Buffer.isBuffer(data)) return value;
+  const extension =
+    typeof value.extension === "string"
+      ? value.extension
+      : extensionOf(value.filename);
+  return {
+    filename: value.filename,
+    ...(extension ? { extension } : {}),
+    base64:
+      typeof value.base64 === "string" ? value.base64 : data.toString("base64"),
+    data,
+  };
+}
+
+const table = processors as Record<string, ProcessorFn | undefined>;
+
 export async function normalizeValue(
   prop: ApProperty,
   value: unknown,
   options: NormalizeOptions = {},
 ): Promise<unknown> {
   if (value === undefined || value === null) return value;
-  switch (prop.type) {
-    case "NUMBER":
-      return toNumber(value);
-    case "CHECKBOX":
-      return toBoolean(value);
-    case "JSON":
-      return parseJsonString(value);
-    case "OBJECT": {
-      const parsed = parseJsonString(value);
-      return isRecord(parsed) ? parsed : value;
-    }
-    case "MULTI_SELECT_DROPDOWN":
-    case "STATIC_MULTI_SELECT_DROPDOWN":
-      return toArray(value);
-    case "ARRAY": {
-      const items = toArray(value);
-      if (!prop.properties || !Array.isArray(items)) return items;
-      const fields = prop.properties;
-      const list: unknown[] = items;
-      return Promise.all(
-        list.map((item) =>
-          isRecord(item) ? normalizePropsValue(fields, item, options) : item,
-        ),
-      );
-    }
-    case "DATE_TIME":
-      return toIsoDateTime(value);
-    case "FILE":
-      return toApFile(value, options);
-    default:
-      return value;
+  if (prop.type === "ARRAY") return normalizeArray(prop, value, options);
+  if (prop.type === "FILE") {
+    // Our hydration owns the forms the engine's own processor cannot resolve:
+    // attachment and apfile refs, the size cap, and a host-injected fetcher.
+    const hydrated = await toApFile(value, options);
+    if (typeof hydrated !== "string") return hydrated;
+    return plainFile(await table.FILE?.(prop as PieceProperty, hydrated));
   }
+  const processor = prop.type ? table[prop.type] : undefined;
+  if (!processor) return value;
+  return plainFile(await processor(prop as PieceProperty, value));
 }
 
 // Normalises every configured value with a matching prop schema; keys
