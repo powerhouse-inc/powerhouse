@@ -155,6 +155,25 @@ test("package-flow: drive + document + edits propagate via switchboard", async (
   page.on("pageerror", (err) => {
     console.log(`[pageerror] ${err.message}`);
   });
+  // A module the server doesn't have is answered with the SPA's index.html at
+  // 200, so the browser only reports a MIME-type error and never names the
+  // file. Log any script answered with HTML, plus outright error statuses.
+  page.on("response", (res) => {
+    const type = res.headers()["content-type"] ?? "";
+    if (res.status() >= 400) {
+      console.log(`[browser:http] ${res.status()} ${res.url()}`);
+    } else if (
+      res.request().resourceType() === "script" &&
+      type.includes("text/html")
+    ) {
+      console.log(`[browser:html-for-script] ${res.url()}`);
+    }
+  });
+  page.on("requestfailed", (req) => {
+    console.log(
+      `[browser:requestfailed] ${req.url()} (${req.failure()?.errorText ?? "unknown"})`,
+    );
+  });
 
   await page.goto(CONNECT_URL);
   await page.waitForLoadState("networkidle");
