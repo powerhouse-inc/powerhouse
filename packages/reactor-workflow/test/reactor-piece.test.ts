@@ -8,7 +8,10 @@ import {
   type ReactorPort,
 } from "@powerhousedao/reactor-connectors";
 import type { BlockExecution } from "@powerhousedao/reactor-connectors";
-import { execFileSync } from "node:child_process";
+import { build } from "esbuild";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { PieceRegistry } from "../../subgraphs/workflow-runtime/piece-registry.js";
@@ -84,16 +87,41 @@ function execution(block: string, config: unknown): BlockExecution {
 
 let registry: PieceRegistry;
 let resolver: PieceResolver;
+let built = "";
 let executor: ActivepiecesBlockExecutor;
 let port: ReturnType<typeof stubPort>;
 
 describe("the reactor piece", () => {
   beforeAll(async () => {
-    // The bundle is a build artifact; build it the way the piece packages'
-    // own suites do rather than depending on a previous run.
-    execFileSync("node", ["scripts/bundle-pieces.mjs"], { cwd: packageRoot });
+    // The shipped module is `ph-cli build`'s output; this bundles the same
+    // source the same way, so the suite neither waits for a full build nor
+    // silently passes on a stale one.
+    built = await mkdtemp(join(tmpdir(), "piece-reactor-"));
+    // A package root of the shape the registry reads: the manifest where the
+    // node build puts it, and the piece module where the manifest says.
+    const entry = "dist/node/pieces/reactor/index.mjs";
+    await build({
+      entryPoints: [join(packageRoot, "pieces", "reactor", "index.ts")],
+      bundle: true,
+      platform: "node",
+      format: "esm",
+      keepNames: true,
+      outfile: join(built, entry),
+      // A dependency still reaches for require(); the node build's bundler
+      // emits this shim itself, and without it the module throws on load.
+      banner: {
+        js: "import { createRequire as phRequire } from 'node:module';\nconst require = phRequire(import.meta.url);",
+      },
+      logLevel: "silent",
+    });
+    await writeFile(
+      join(built, "dist", "node", "pieces", "index.mjs"),
+      `export const pieces = ${JSON.stringify([
+        { name: PIECE, version: "1.0.0", entry },
+      ])};\n`,
+    );
     registry = new PieceRegistry();
-    await registry.load(packageRoot);
+    await registry.load(built);
     resolver = localFirstResolver(registry.lookup, {
       resolve: () => Promise.reject(new Error("nothing is fetched in this test")),
     });
@@ -111,8 +139,9 @@ describe("the reactor piece", () => {
     });
   });
 
-  afterAll(() => {
+  afterAll(async () => {
     executor.dispose();
+    await rm(built, { recursive: true, force: true });
   });
 
   it("lists the document types the reactor holds", async () => {

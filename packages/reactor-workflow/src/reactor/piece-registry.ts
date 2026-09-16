@@ -16,8 +16,7 @@ const logger = childLogger(["workflow", "piece-registry"]);
 // Built output first, source second: a reactor running from `dist` finds the
 // first, and a dev reactor loading this project from source finds the second.
 const MANIFEST_CANDIDATES = [
-  "dist/pieces/index.mjs",
-  "dist/pieces/index.js",
+  "dist/node/pieces/index.mjs",
   "pieces/index.ts",
 ];
 

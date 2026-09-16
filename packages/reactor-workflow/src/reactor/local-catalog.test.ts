@@ -72,7 +72,7 @@ let root = "";
 describe("a package piece in the catalog", () => {
   beforeAll(async () => {
     root = await mkdtemp(join(tmpdir(), "local-catalog-"));
-    const bundle = join(root, "dist", "pieces", "fixture");
+    const bundle = join(root, "dist", "node", "pieces", "fixture");
     await mkdir(bundle, { recursive: true });
     await writeFile(
       join(bundle, "package.json"),
@@ -80,9 +80,9 @@ describe("a package piece in the catalog", () => {
     );
     await writeFile(join(bundle, "index.js"), SOURCE);
     await writeFile(
-      join(root, "dist", "pieces", "index.mjs"),
+      join(root, "dist", "node", "pieces", "index.mjs"),
       `export const pieces = ${JSON.stringify([
-        { name: PIECE, version: "2.0.0", bundle: "dist/pieces/fixture" },
+        { name: PIECE, version: "2.0.0", bundle: "dist/node/pieces/fixture" },
       ])};\n`,
     );
     packagePieces.reset();
