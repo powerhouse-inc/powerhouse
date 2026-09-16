@@ -2,6 +2,7 @@ import {
   DEFAULT_VENDOR_INCLUDE,
   DYNAMIC_BASE_PLACEHOLDER,
   getConnectBaseViteConfig,
+  missingVendorEntries,
   prebuildConnectVendor,
   type PrebuiltVendor,
 } from "@powerhousedao/builder-tools";
@@ -99,6 +100,25 @@ export async function runConnectBuild(args: ConnectBuildArgs) {
     // Stale top-level output goes, the vendor stays: the app build below
     // runs with emptyOutDir: false and must not wipe it.
     cleanDistExcept(outDirAbs, ["__vendor__"]);
+
+    // Re-check the published map against what is actually on disk now. The
+    // prebuild verifies its own output, but it can also return a cache hit it
+    // never rebuilt, and the clean above runs afterwards. The app build is
+    // about to externalize every specifier in this map, so an entry with no
+    // file behind it would ship as a URL that 404s — and a SPA answers that
+    // with index.html, leaving the browser only an opaque MIME-type error.
+    const unbacked = missingVendorEntries(
+      join(outDirAbs, "__vendor__"),
+      vendor.imports,
+    );
+    if (unbacked.length > 0) {
+      throw new Error(
+        `ph connect build: the shared-dependency vendor is missing ` +
+          `${unbacked.length} of the ${Object.keys(vendor.imports).length} ` +
+          `entries its import map publishes:\n` +
+          unbacked.map((e) => `  ${e.spec} -> ${e.url}`).join("\n"),
+      );
+    }
   }
 
   const baseConfig = getConnectBaseViteConfig({
