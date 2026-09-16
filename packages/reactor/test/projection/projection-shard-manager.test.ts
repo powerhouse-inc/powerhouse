@@ -8,6 +8,7 @@ import {
   type ReadModelBatchCompletedEvent,
 } from "../../src/events/types.js";
 import { ProjectionShardManager } from "../../src/projection/projection-shard-manager.js";
+import { defaultReadModelIndexingConfig } from "../../src/read-models/base-read-model.js";
 import type { DbConfig } from "../../src/projection/protocol.js";
 import { ConsistencyTracker } from "../../src/shared/consistency-tracker.js";
 import type { JobMeta } from "../../src/shared/types.js";
@@ -129,6 +130,7 @@ describe("ProjectionShardManager", () => {
         "document-indexer",
       ],
       postReadyKinds: [],
+      indexing: defaultReadModelIndexingConfig,
       factory,
       logger: new ConsoleLogger(["test"]),
       hostBus: bus,
@@ -279,6 +281,7 @@ describe("ProjectionShardManager", () => {
         models: [],
         preReadyKinds: ["document-view", "document-indexer"],
         postReadyKinds: [],
+        indexing: defaultReadModelIndexingConfig,
         factory,
         logger: new ConsoleLogger(["test"]),
         hostBus: new EventBus(),

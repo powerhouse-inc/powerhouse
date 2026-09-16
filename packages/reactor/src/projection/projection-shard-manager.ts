@@ -29,6 +29,7 @@ import type {
   ProjectionPoolAcquireSamplesMessage,
   ProjectionReadModelIndexedMessage,
   ProjectionWorkerMessage,
+  ReadModelIndexingConfig,
 } from "./protocol.js";
 import type { IProjectionTransport } from "./transport.js";
 
@@ -104,6 +105,11 @@ export type ProjectionShardManagerConfig = ProjectionShardHooks & {
   models: ModelManifestEntry[];
   preReadyKinds: BuiltInReadModelKind[];
   postReadyKinds: BuiltInReadModelKind[];
+  /**
+   * Chunking bounds the shards' read models index under. Comes from the same
+   * host config the in-process read models get, so the two paths cannot drift.
+   */
+  indexing: ReadModelIndexingConfig;
   factory: ProjectionWorkerFactory;
   logger: ILogger;
   hostBus: IEventBus;
@@ -284,6 +290,7 @@ export class ProjectionShardManager implements IReadModelCoordinator {
         preReadyKinds: this.config.preReadyKinds,
         postReadyKinds: this.config.postReadyKinds,
         chainDepthReportIntervalMs: reportIntervalMs,
+        indexing: this.config.indexing,
       };
       transport.postMessage(init);
       initPromises.push(initPromise);

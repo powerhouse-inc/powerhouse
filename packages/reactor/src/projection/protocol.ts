@@ -21,9 +21,10 @@ import type {
   ReadModelIndexingStage,
   ReadModelStage,
 } from "../events/types.js";
+import type { ReadModelIndexingConfig } from "../read-models/base-read-model.js";
 import type { JobMeta } from "../shared/types.js";
 
-export type { DbConfig, ModelManifestEntry };
+export type { DbConfig, ModelManifestEntry, ReadModelIndexingConfig };
 
 /**
  * Identifier for a built-in read model the projection worker materializes
@@ -61,6 +62,12 @@ export type ProjectionInitMessage = {
   preReadyKinds: BuiltInReadModelKind[];
   postReadyKinds: BuiltInReadModelKind[];
   chainDepthReportIntervalMs: number;
+  /**
+   * Chunking bounds every read model this worker builds indexes under. The
+   * host computes one config for both the in-process and the worker path, so
+   * a tuned cadence cannot apply to one and not the other.
+   */
+  indexing: ReadModelIndexingConfig;
 };
 
 /**

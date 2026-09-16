@@ -10,6 +10,7 @@ import {
 } from "../../src/events/types.js";
 import { HybridProjectionCoordinator } from "../../src/projection/hybrid-projection-coordinator.js";
 import { ProjectionShardManager } from "../../src/projection/projection-shard-manager.js";
+import { defaultReadModelIndexingConfig } from "../../src/read-models/base-read-model.js";
 import type { DbConfig } from "../../src/projection/protocol.js";
 import type { IReadModel } from "../../src/read-models/interfaces.js";
 import {
@@ -271,6 +272,7 @@ describe("HybridProjectionCoordinator", () => {
       models: [],
       preReadyKinds: ["document-view", "document-indexer"],
       postReadyKinds: [],
+      indexing: defaultReadModelIndexingConfig,
       factory,
       logger,
       hostBus: bus,
