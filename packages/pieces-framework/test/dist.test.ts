@@ -61,7 +61,7 @@ async function runtimeExports(jsFile: string): Promise<string[]> {
   return Object.keys(module).sort();
 }
 
-describe.each(["index", "common"])("dist/%s", (entry) => {
+describe.each(["index", "common", "host"])("dist/%s", (entry) => {
   const js = path.join(dist, `${entry}.js`);
   const dts = path.join(dist, `${entry}.d.ts`);
 

@@ -7,12 +7,19 @@ import { builtinModules } from "node:module";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { Project } from "ts-morph";
+import {
+  Project,
+  type ImportSpecifierStructure,
+  type OptionalKind,
+  type SourceFile,
+} from "ts-morph";
 
 interface UpstreamPackage {
   dir: string;
   upstreamDir: string;
   specifier: string;
+  // When set, only these paths (relative to the package root) are vendored.
+  files?: string[];
 }
 
 // Literal edits applied after the codemod and formatting; each must match
@@ -65,7 +72,41 @@ const PACKAGES: UpstreamPackage[] = [
     upstreamDir: "packages/core/utils",
     specifier: "@activepieces/core-utils",
   },
+  // Only the prop-coercion corner of the engine: everything else there reaches
+  // for the flow executor, the sandbox or the platform API. See UPSTREAM.md.
+  {
+    dir: "engine",
+    upstreamDir: "packages/server/engine",
+    specifier: "@activepieces/engine",
+    files: [
+      "src/lib/helper/dynamic-prop-keys.ts",
+      "src/lib/variables/processors/array-zipper.ts",
+      "src/lib/variables/processors/checkbox.ts",
+      "src/lib/variables/processors/date-time.ts",
+      "src/lib/variables/processors/file.ts",
+      "src/lib/variables/processors/index.ts",
+      "src/lib/variables/processors/json.ts",
+      "src/lib/variables/processors/multi-select.ts",
+      "src/lib/variables/processors/number.ts",
+      "src/lib/variables/processors/object.ts",
+      "src/lib/variables/processors/text.ts",
+      "src/lib/variables/processors/types.ts",
+      "src/lib/variables/props-processor.ts",
+      "test/variables/file-processor.test.ts",
+      "test/variables/props-validator.test.ts",
+    ],
+  },
 ];
+
+// @activepieces/shared is not vendored (8k lines of platform entities). Every
+// symbol the vendored engine files take from it is re-homed to its real owner.
+const SHARED_SPECIFIER = "@activepieces/shared";
+const SHARED_SHIM = "src/host/shared-shim.ts";
+const SHARED_SYMBOL_HOMES: Record<string, string | undefined> = {
+  AUTHENTICATION_PROPERTY_NAME: "core-piece-types",
+  AppConnectionValue: "core-piece-types",
+  PropertySettings: SHARED_SHIM,
+};
 
 const PATCHES: Patch[] = [
   {
@@ -275,6 +316,39 @@ const PATCHES: Patch[] = [
     replace: 'export { InputProperty } from "./input/index.js";\n',
   },
   {
+    file: "test/upstream/engine/test/variables/file-processor.test.ts",
+    why: "upstream never typechecks this test; propsProcessor returns unknown values",
+    find: "    const file: ApStreamingFile = processedInput.file;\n",
+    replace: "    const file = processedInput.file as ApStreamingFile;\n",
+    count: 5,
+  },
+  {
+    file: "test/upstream/engine/test/variables/props-validator.test.ts",
+    why: "upstream never typechecks this test; Property.Dropdown requires auth",
+    find:
+      "        dropdown: Property.Dropdown({\n" +
+      '          displayName: "Dropdown",\n' +
+      "          required: false,\n",
+    replace:
+      "        dropdown: Property.Dropdown({\n" +
+      '          displayName: "Dropdown",\n' +
+      "          required: false,\n" +
+      "          auth: undefined,\n",
+  },
+  {
+    file: "test/upstream/engine/test/variables/props-validator.test.ts",
+    why: "same for Property.MultiSelectDropdown",
+    find:
+      "      multiSelect: Property.MultiSelectDropdown({\n" +
+      '        displayName: "Multi Select",\n' +
+      "        required: false,\n",
+    replace:
+      "      multiSelect: Property.MultiSelectDropdown({\n" +
+      '        displayName: "Multi Select",\n' +
+      "        required: false,\n" +
+      "        auth: undefined,\n",
+  },
+  {
     file: "test/upstream/framework/test/connection-identifier-flag.test.ts",
     why: "upstream never typechecks this test; createPiece requires authors",
     find: '    logoUrl: "https://example.com/logo.png",\n    auth,\n',
@@ -290,6 +364,13 @@ const PATCHES: Patch[] = [
     count: 3,
   },
 ];
+
+// Node's ESM resolver does no extension inference for a package subpath, and
+// these dependencies ship no "exports" map. Upstream is CommonJS, we are not.
+const EXTENSIONLESS_SUBPATHS: Record<string, string> = {
+  "dayjs/plugin/timezone": "dayjs/plugin/timezone.js",
+  "dayjs/plugin/utc": "dayjs/plugin/utc.js",
+};
 
 // Upstream's bundler alias for mime-db; aliasing it is the piece build's job.
 const SKIP_FILES = new Set(["mime-db-min.cjs"]);
@@ -416,9 +497,19 @@ function planCopies(tree: Tree): Map<string, string> {
   const plan = new Map<string, string>();
   for (const pkg of PACKAGES) {
     const pkgRoot = path.join(tree.root, pkg.upstreamDir);
+    const wanted = pkg.files ? new Set(pkg.files) : undefined;
+    const taken = new Set<string>();
+    const keep = (file: string): boolean => {
+      const rel = toPosix(path.relative(pkgRoot, file));
+      if (!wanted) return true;
+      if (!wanted.has(rel)) return false;
+      taken.add(rel);
+      return true;
+    };
     const srcDir = path.join(pkgRoot, "src");
     for (const file of walk(srcDir)) {
       if (SKIP_FILES.has(path.basename(file))) continue;
+      if (!keep(file)) continue;
       const rel = path.relative(srcDir, file);
       const dest = isTestFile(file)
         ? path.join(TEST_OUT, pkg.dir, "src", rel)
@@ -427,9 +518,16 @@ function planCopies(tree: Tree): Map<string, string> {
     }
     const testDir = path.join(pkgRoot, "test");
     for (const file of walk(testDir)) {
+      if (!keep(file)) continue;
       plan.set(
         file,
         path.join(TEST_OUT, pkg.dir, "test", path.relative(testDir, file)),
+      );
+    }
+    const missing = [...(wanted ?? [])].filter((rel) => !taken.has(rel));
+    if (missing.length > 0) {
+      throw new Error(
+        `${pkg.upstreamDir} no longer has ${missing.join(", ")}; revisit the file list`,
       );
     }
   }
@@ -477,7 +575,7 @@ function rewriteSpecifier(
   if (!spec.startsWith("node:") && builtinModules.includes(spec)) {
     return `node:${spec}`;
   }
-  return spec;
+  return EXTENSIONLESS_SUBPATHS[spec] ?? spec;
 }
 
 function header(tag: string, upstreamPath: string, destFile: string): string {
@@ -486,6 +584,50 @@ function header(tag: string, upstreamPath: string, destFile: string): string {
     `// Vendored from ${REPO_SLUG}@${tag} ${upstreamPath}. MIT; see ${license}.\n` +
     `// Generated by scripts/sync-upstream.mts — do not edit by hand.\n`
   );
+}
+
+function sharedHomeFile(home: string): string {
+  return home.endsWith(".ts")
+    ? path.join(PKG_ROOT, home)
+    : path.join(UPSTREAM_OUT, home, "index.ts");
+}
+
+// Splits an @activepieces/shared import across the packages that really own each
+// symbol, plus our shim for the ones only that unvendored package declares.
+function rehomeSharedImports(sourceFile: SourceFile, destFile: string): void {
+  for (const decl of sourceFile.getImportDeclarations()) {
+    if (decl.getModuleSpecifierValue() !== SHARED_SPECIFIER) continue;
+    if (decl.getDefaultImport() ?? decl.getNamespaceImport()) {
+      throw new Error(
+        `${sourceFile.getFilePath()} imports ${SHARED_SPECIFIER} as a namespace or default; only named imports are re-homed`,
+      );
+    }
+    const byHome = new Map<string, OptionalKind<ImportSpecifierStructure>[]>();
+    for (const named of decl.getNamedImports()) {
+      const name = named.getName();
+      const home = SHARED_SYMBOL_HOMES[name];
+      if (home === undefined) {
+        throw new Error(
+          `no home recorded for ${SHARED_SPECIFIER}'s ${name}; extend SHARED_SYMBOL_HOMES`,
+        );
+      }
+      const list = byHome.get(home) ?? [];
+      list.push({
+        name,
+        alias: named.getAliasNode()?.getText(),
+        isTypeOnly: named.isTypeOnly(),
+      });
+      byHome.set(home, list);
+    }
+    for (const [home, namedImports] of byHome) {
+      sourceFile.addImportDeclaration({
+        moduleSpecifier: relativeSpecifier(destFile, sharedHomeFile(home)),
+        namedImports,
+        isTypeOnly: decl.isTypeOnly(),
+      });
+    }
+    decl.remove();
+  }
 }
 
 function codemod(tree: Tree, tag: string, plan: Map<string, string>): void {
@@ -506,6 +648,7 @@ function codemod(tree: Tree, tag: string, plan: Map<string, string>): void {
       const next = rewriteSpecifier(spec, orig, dest, plan);
       if (next !== spec) decl.setModuleSpecifier(next);
     }
+    rehomeSharedImports(sourceFile, dest);
     const upstreamPath = toPosix(path.relative(tree.root, orig));
     fs.writeFileSync(
       dest,

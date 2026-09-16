@@ -18,7 +18,12 @@ publishes them as ESM under the Powerhouse release train, and adds the
 Powerhouse types on top. The authoring API is upstream's, unchanged.
 
 ```ts
-import { createAction, createPiece, Property, reactorOf } from "@powerhousedao/pieces-framework";
+import {
+  createAction,
+  createPiece,
+  Property,
+  reactorOf,
+} from "@powerhousedao/pieces-framework";
 import { httpClient, HttpMethod } from "@powerhousedao/pieces-framework/common";
 ```
 
@@ -108,6 +113,58 @@ import { httpClient, HttpMethod } from "@powerhousedao/pieces-framework/common";
 Outside a Powerhouse reactor, `reactorOf(ctx)` throws an error that names
 `ctx.reactor`, so a piece that ends up on another host fails legibly.
 
+## `./host`, for the host and not for piece authors
+
+A host that _runs_ pieces needs more than the authoring API: stored prop values
+arrive as strings from a form and have to be coerced to what the piece's
+`props` declare, outbound requests have to be checked against the private
+address space, and a thrown HTTP client error has to be turned into something a
+user can read. Activepieces does all three in its engine; `./host` re-exports
+that code so a Powerhouse host does not reimplement it.
+
+```ts
+import {
+  formatPieceError,
+  processors,
+  propsProcessor,
+  ssrfIpClassifier,
+} from "@powerhousedao/pieces-framework/host";
+```
+
+From the engine, coercion of what an editor stored into what a piece's `props`
+declare:
+
+- `processors` — `PropertyType` → coercion function, for the eleven types that
+  need one, and `numberProcessor`, `checkboxProcessor`, `dateTimeProcessor`,
+  `fileProcessor`, `jsonProcessor`, `objectProcessor`, `textProcessor` and
+  `multiSelectProcessor` individually.
+- `arrayZipperProcessor` — turns an object of parallel arrays into `ARRAY`
+  items; `ARRAY` has no entry in the map.
+- `propsProcessor.applyProcessorsAndValidators` — a whole props map at once,
+  auth and nested `ARRAY`/`DYNAMIC` props included, returning the processed
+  input and per-key validation errors.
+- `dynamicPropKeys` — escapes and restores `DYNAMIC` prop keys around a form
+  that treats `.` and `[` as path separators.
+- `ProcessorFn`, and `PropertySettings` (ours, see
+  [UPSTREAM.md](./UPSTREAM.md)) for the stored `DYNAMIC` schema.
+
+From `core-utils`, the two host jobs that are not coercion:
+
+- `ssrfIpClassifier.isBlockedIp({ ip, allowList })` — blocks every non-unicast
+  range, with CIDR entries in the allow list.
+- `formatPieceError` — lifts the API message out of an HTTP-shaped error,
+  strips an HTML error page down to its text and caps serialization depth;
+  with `tryParseFriendlyPieceError` and the `FriendlyPieceError` type.
+
+Nothing here belongs in a piece: a piece is handed values that are already
+coerced. `.` and `./common` are unchanged, and `test/surface.test.ts` holds them
+that way.
+
+The coercion half comes from `@activepieces/engine`, of which this package
+vendors only the prop-coercion files, for the reasons in
+[UPSTREAM.md](./UPSTREAM.md). `dayjs` (the DATE_TIME processor) and `ipaddr.js`
+(the classifier) are runtime dependencies because `./host` reaches them.
+
 ## Publishing the same piece to Activepieces
 
 A piece that does not use `ctx.reactor` is a plain Activepieces piece. To
@@ -124,7 +181,8 @@ pnpm --filter @powerhousedao/pieces-framework sync-upstream -- --tag 0.91.0
 ```
 
 `scripts/sync-upstream.mts` is the only thing that writes `upstream/` and
-`test/upstream/`. It fetches the tag, copies the four source trees, rewrites
+`test/upstream/`. It fetches the tag, copies the four piece source trees plus a
+named handful of engine files, rewrites
 them to ESM with `.js` specifiers and type-only imports, formats them, applies
 a short list of literal patches that fail loudly when upstream changes, and
 records every file's upstream path and hash in `upstream/MANIFEST.json`.
