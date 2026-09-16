@@ -7,6 +7,8 @@ on:
     paths:
       - "packages/reactor/**"
       - "packages/reactor-api/**"
+      - "packages/reactor-drive/**"
+      - "packages/reactor-attachments/**"
       - "test/test-connect/**"
       - "test/test-client/**"
       - ".github/workflows/check-pr-reactor.yml"
@@ -15,6 +17,8 @@ on:
     paths:
       - "packages/reactor/**"
       - "packages/reactor-api/**"
+      - "packages/reactor-drive/**"
+      - "packages/reactor-attachments/**"
       - "test/test-connect/**"
       - "test/test-client/**"
       - ".github/workflows/check-pr-reactor.yml"
@@ -76,6 +80,15 @@ jobs:
           --reporter=default
           --reporter=json
           --outputFile.json=vitest-timings.json
+
+      # reactor-drive and reactor-attachments consume @powerhousedao/reactor
+      # through its built dist, so `test:ci -- related <changed files>` in
+      # check-commit.yml never selects their suites when only packages/reactor
+      # changes. Running them here, where the trigger already fires on
+      # packages/reactor/**, is what covers that direction. Reuses this job's
+      # install and build rather than paying for them again in a second job.
+      - name: Run reactor package tests
+        run: pnpm test:reactor-packages
 
       # This step's duration swings by ~50% run to run on identical code, while
       # install, build and lint stay flat — so it is the suite, not the runner.

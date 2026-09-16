@@ -470,11 +470,13 @@ export class ReactorDriveClient implements IDriveClient {
         reducers[m.version ?? 1] = m.reducer as Reducer<PHBaseState>;
       }
       const config: VersionedReplayConfig = { reducers };
+      const replayHeader = createPresignedHeader(newId, documentType);
+      replayHeader.protocolVersions = srcDoc.header.protocolVersions;
       const duplicated: PHDocument = replayDocumentVersioned(
         srcDoc.initialState,
         srcDoc.operations,
         config,
-        createPresignedHeader(newId, documentType),
+        replayHeader,
       );
       assertAuthPreservedOnDuplicate(
         node.id,
