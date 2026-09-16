@@ -1749,15 +1749,9 @@ importers:
 
   packages/pieces-framework:
     dependencies:
-      deepmerge-ts:
-        specifier: 7.1.0
-        version: 7.1.0
       form-data:
         specifier: 4.0.6
         version: 4.0.6
-      ipaddr.js:
-        specifier: 2.3.0
-        version: 2.3.0
       nanoid:
         specifier: 3.3.17
         version: 3.3.17
@@ -1768,6 +1762,12 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 25.2.3
+      deepmerge-ts:
+        specifier: 7.1.0
+        version: 7.1.0
+      ipaddr.js:
+        specifier: 2.3.0
+        version: 2.3.0
       ts-morph:
         specifier: 'catalog:'
         version: 27.0.2

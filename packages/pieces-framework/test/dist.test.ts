@@ -1,6 +1,6 @@
 // The published build must agree with itself: a name dist/*.d.ts presents as a
 // value has to exist in dist/*.js, or `import { X }` typechecks and fails at link.
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { Node, Project, SymbolFlags } from "ts-morph";
@@ -35,6 +35,25 @@ function valueExports(dtsFile: string): string[] {
   return names.sort();
 }
 
+// Package names behind the bare specifiers a built file imports.
+function externalImports(jsFile: string): string[] {
+  const source = readFileSync(jsFile, "utf8");
+  const specifiers = [
+    ...source.matchAll(
+      /^(?:import|export)\b[^\n;]*?\bfrom\s*["']([^"']+)["']/gm,
+    ),
+    ...source.matchAll(/^import\s*["']([^"']+)["']/gm),
+    ...source.matchAll(/\bimport\(\s*["']([^"']+)["']\s*\)/g),
+  ].flatMap((match) => match.slice(1, 2));
+  const packages = new Set<string>();
+  for (const specifier of specifiers) {
+    if (specifier.startsWith(".") || specifier.startsWith("node:")) continue;
+    const name = /^(@[^/]+\/[^/]+|[^/]+)/.exec(specifier)?.[1];
+    if (name) packages.add(name);
+  }
+  return [...packages].sort();
+}
+
 async function runtimeExports(jsFile: string): Promise<string[]> {
   const module = (await import(
     /* @vite-ignore */ pathToFileURL(jsFile).href
@@ -55,5 +74,19 @@ describe.each(["index", "common"])("dist/%s", (entry) => {
     const claimed = valueExports(dts);
     expect(claimed.length).toBeGreaterThan(0);
     expect(claimed.filter((name) => !runtime.includes(name))).toEqual([]);
+  });
+});
+
+describe("dist", () => {
+  it("imports exactly the declared dependencies", () => {
+    const { dependencies } = JSON.parse(
+      readFileSync(path.join(dist, "../package.json"), "utf8"),
+    ) as { dependencies: Record<string, string> };
+    const imported = readdirSync(dist)
+      .filter((file) => file.endsWith(".js"))
+      .flatMap((file) => externalImports(path.join(dist, file)));
+    expect([...new Set(imported)].sort()).toEqual(
+      Object.keys(dependencies).sort(),
+    );
   });
 });

@@ -50,14 +50,14 @@
     }
   },
   "dependencies": {
-    "deepmerge-ts": "7.1.0",
     "form-data": "4.0.6",
-    "ipaddr.js": "2.3.0",
     "nanoid": "3.3.17",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@types/node": "catalog:",
+    "deepmerge-ts": "7.1.0",
+    "ipaddr.js": "2.3.0",
     "ts-morph": "catalog:",
     "tsdown": "catalog:",
     "tsx": "catalog:",

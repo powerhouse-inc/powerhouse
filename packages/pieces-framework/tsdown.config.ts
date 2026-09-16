@@ -10,4 +10,6 @@ export default defineConfig({
   dts: true,
   sourcemap: true,
   minify: false,
+  // Externals carry no side effects, so an unused one cannot linger as a bare import.
+  treeshake: { moduleSideEffects: [{ external: true, sideEffects: false }] },
 });

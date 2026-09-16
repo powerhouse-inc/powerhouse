@@ -30,6 +30,12 @@ Left out: `mime-db-min.cjs` (a bundler-only shim; the code carries its own
 content-type table) and upstream's unused `ai` and `semver` dependencies.
 `@activepieces/shared` is not needed: none of the four packages import it.
 
+`deepmerge-ts` and `ipaddr.js` are devDependencies only. `core-utils` imports
+them in `deepMergeAndCast` and `ssrfIpClassifier`, which the framework barrel
+never re-exports, so the source typechecks against them and the build
+tree-shakes them away. `test/dist.test.ts` fails if a sync makes either
+reachable; that is the moment to move it to `dependencies`.
+
 ## How to sync
 
 ```sh
