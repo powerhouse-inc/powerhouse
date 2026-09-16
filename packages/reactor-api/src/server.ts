@@ -3,6 +3,7 @@ import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import { PostgresAnalyticsStore } from "@powerhousedao/analytics-engine-pg";
 import { getConfig } from "@powerhousedao/config/node";
 import { resolveWorkflowsEnabled } from "./workflow/flag.js";
+import { composeWorkflowRuntime } from "./workflow/host.js";
 import type {
   IDocumentModelRegistry,
   IDriveClient,
@@ -1089,6 +1090,7 @@ async function _setupAPI(
   reactorDriveClient?: IDriveClient,
   syncServingGate?: SyncScopeGate,
   httpRoutes?: HttpRouteService,
+  workflowsEnabled = false,
 ): Promise<API> {
   const hostModuleBase: IProcessorHostModule = {
     ...createReactorHostModuleBase({
@@ -1216,6 +1218,26 @@ async function _setupAPI(
     logger.info("Auth subgraph registered (document permissions enabled)");
   }
 
+  // Composed before the manager is built so its subgraph joins the core set,
+  // but started after it, once the schema is serving.
+  const workflows = workflowsEnabled
+    ? await composeWorkflowRuntime({
+        reactorClient,
+        relationalDb,
+        attachments: hostModuleBase.attachments,
+        // The workflow package's own HTTP namespace: its webhook endpoints
+        // live under it, not under the reactor's.
+        webhooks: httpRoutes?.scopeFor("@powerhousedao/workflow").webhooks,
+        authorizationService,
+        processorManager: reactorProcessorManager,
+        logger: logger.child(["workflow-runtime"]),
+      })
+    : undefined;
+  if (workflows) {
+    coreSubgraphs.push(workflows.subgraph);
+    logger.info("Workflow runtime subgraph registered (workflows enabled)");
+  }
+
   const graphqlManager = await setupGraphQLManager(
     httpAdapter,
     authFetchMiddleware,
@@ -1240,6 +1262,11 @@ async function _setupAPI(
     syncServingGate,
     httpRoutes,
   );
+
+  if (workflows) {
+    await workflows.start();
+    dbClosers.push(() => workflows.stop());
+  }
 
   // Set up event listeners
   setupEventListeners(
@@ -1426,6 +1453,7 @@ export async function initializeAndStartAPI(
     packages,
     dbClosers,
     readiness,
+    workflowsEnabled,
   } = await _setupCommonInfrastructure(options);
 
   const { documentModels, upgradeManifests, processors, subgraphs } =
@@ -1505,6 +1533,7 @@ export async function initializeAndStartAPI(
       options.logger ?? defaultLogger,
     ),
     httpRoutes,
+    workflowsEnabled,
   );
 
   return {

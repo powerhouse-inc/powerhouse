@@ -1,6 +1,9 @@
-import { type BaseSubgraph, type Context } from "@powerhousedao/reactor-api";
-import { workflowRuntime } from "./service.js";
-import type { RunRow, StepExecutionRow } from "./store.js";
+import type {
+  RunRow,
+  StepExecutionRow,
+  WorkflowRuntimeService,
+} from "@powerhousedao/reactor-workflow";
+import type { Context } from "../types.js";
 
 interface FireArgs {
   workflowId: string;
@@ -65,10 +68,8 @@ function toRunRecord(row: RunRow, steps: StepExecutionRow[]) {
 }
 
 export const getResolvers = (
-  subgraph: BaseSubgraph,
+  runtime: WorkflowRuntimeService,
 ): Record<string, unknown> => {
-  workflowRuntime.configure(subgraph);
-
   return {
     Query: {
       workflowRuntime: () => ({}),
@@ -76,7 +77,7 @@ export const getResolvers = (
     WorkflowRuntimeQueries: {
       health: () => "ok",
       blockDescriptor: (_parent: unknown, args: { blockType: string }) =>
-        workflowRuntime.blockDescriptor(args.blockType),
+        runtime.blockDescriptor(args.blockType),
       blockOptions: (
         _parent: unknown,
         args: {
@@ -87,43 +88,43 @@ export const getResolvers = (
         },
         ctx: Context,
       ) =>
-        workflowRuntime.blockOptions(
+        runtime.blockOptions(
           args.blockType,
           args.propName,
           args.input,
           args.connectionId ?? undefined,
           ctx,
         ),
-      pieceCatalog: () => workflowRuntime.pieceCatalog(),
+      pieceCatalog: () => runtime.pieceCatalog(),
       pieceActions: (_parent: unknown, args: { packageName: string }) =>
-        workflowRuntime.pieceActions(args.packageName),
+        runtime.pieceActions(args.packageName),
       pieceTriggers: (_parent: unknown, args: { packageName: string }) =>
-        workflowRuntime.pieceTriggers(args.packageName),
+        runtime.pieceTriggers(args.packageName),
       blockOutputTree: (
         _parent: unknown,
         args: { blockType: string; config?: unknown },
-      ) => workflowRuntime.blockOutputTree(args.blockType, args.config),
+      ) => runtime.blockOutputTree(args.blockType, args.config),
       pieceDetail: (_parent: unknown, args: { packageName: string }) =>
-        workflowRuntime.pieceDetail(args.packageName),
+        runtime.pieceDetail(args.packageName),
       searchBlocks: (
         _parent: unknown,
         args: { query: string; limit?: number | null },
-      ) => workflowRuntime.searchBlocks(args.query, args.limit ?? undefined),
+      ) => runtime.searchBlocks(args.query, args.limit ?? undefined),
       connections: (_parent: unknown, _args: unknown, ctx: Context) =>
-        workflowRuntime.connections(ctx),
+        runtime.connections(ctx),
       webhookEndpoint: (_parent: unknown, args: { workflowId: string }) =>
-        workflowRuntime.webhookEndpoint(args.workflowId),
+        runtime.webhookEndpoint(args.workflowId),
       secret: async (_parent: unknown, args: { ref: string }) => {
         try {
-          return await (await workflowRuntime.secrets()).stat(args.ref);
+          return await (await runtime.secrets()).stat(args.ref);
         } catch {
           // Unknown or malformed ref reads as "no such secret".
           return null;
         }
       },
-      secrets: async () => (await workflowRuntime.secrets()).list(),
+      secrets: async () => (await runtime.secrets()).list(),
       triggerStates: async () =>
-        (await workflowRuntime.triggerStates()).map((row) => ({
+        (await runtime.triggerStates()).map((row) => ({
           workflowId: row.workflow_id,
           blockType: row.block_type,
           status: row.status,
@@ -134,14 +135,14 @@ export const getResolvers = (
           consecutiveFailures: row.consecutive_failures,
         })),
       runs: async (_parent: unknown, args: RunsArgs) => {
-        const store = await workflowRuntime.store();
+        const store = await runtime.store();
         if (!store) return [];
         // A drive scopes runs to the workflows it holds; an explicit
         // workflowId is narrower still, so it wins.
         const scope =
           args.workflowId ??
           (args.driveId
-            ? await workflowRuntime.driveWorkflowIds(args.driveId)
+            ? await runtime.driveWorkflowIds(args.driveId)
             : undefined);
         const rows = await store.listRuns(scope, args.limit ?? 25);
         return Promise.all(
@@ -151,7 +152,7 @@ export const getResolvers = (
         );
       },
       run: async (_parent: unknown, args: { id: string }) => {
-        const store = await workflowRuntime.store();
+        const store = await runtime.store();
         if (!store) return null;
         const row = await store.getRun(args.id);
         if (!row) return null;
@@ -163,20 +164,20 @@ export const getResolvers = (
     },
     WorkflowRuntimeMutations: {
       fire: (_parent: unknown, args: FireArgs) =>
-        workflowRuntime.fire(args.workflowId, args.payload),
+        runtime.fire(args.workflowId, args.payload),
       testTrigger: (
         _parent: unknown,
         args: { workflowId: string },
         ctx: Context,
-      ) => workflowRuntime.testTrigger(args.workflowId, ctx),
+      ) => runtime.testTrigger(args.workflowId, ctx),
       rerun: (_parent: unknown, args: { runId: string }) =>
-        workflowRuntime.rerun(args.runId),
+        runtime.rerun(args.runId),
       createSecret: async (
         _parent: unknown,
         args: { value: string; label?: string | null },
       ) => {
         assertSecretWritesAllowed();
-        return (await workflowRuntime.secrets()).create({
+        return (await runtime.secrets()).create({
           value: args.value,
           label: args.label ?? undefined,
         });
@@ -186,18 +187,18 @@ export const getResolvers = (
         args: { ref: string; value: string },
       ) => {
         assertSecretWritesAllowed();
-        return (await workflowRuntime.secrets()).rotate(args.ref, args.value);
+        return (await runtime.secrets()).rotate(args.ref, args.value);
       },
       deleteSecret: async (_parent: unknown, args: { ref: string }) => {
         assertSecretWritesAllowed();
-        await (await workflowRuntime.secrets()).delete(args.ref);
+        await (await runtime.secrets()).delete(args.ref);
         return true;
       },
       checkConnection: (
         _parent: unknown,
         args: { connectionId: string },
         ctx: Context,
-      ) => workflowRuntime.checkConnection(args.connectionId, ctx),
+      ) => runtime.checkConnection(args.connectionId, ctx),
     },
   };
 };

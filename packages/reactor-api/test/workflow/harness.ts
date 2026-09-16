@@ -6,9 +6,18 @@ import {
   MemoryWebhookStore,
   WebhookService,
 } from "@powerhousedao/reactor-api";
+import {
+  createWorkflowRuntime,
+  type WorkflowRuntimeService,
+} from "@powerhousedao/reactor-workflow";
+import {
+  createRelationalDb,
+  type IRelationalDb,
+} from "@powerhousedao/shared/processors";
 import type { OperationWithContext } from "document-model";
+import type { Kysely } from "kysely";
 import { vi } from "vitest";
-import { WorkflowRuntimeService } from "../service.js";
+import { getDbClient } from "../../src/utils/db.js";
 
 export const WORKFLOW_TYPE = "powerhouse/workflow";
 export const PACKAGE_NAME = "@powerhousedao/workflow";
@@ -100,19 +109,28 @@ export async function startWebhookHost(
   // reactor wires it: nothing here touches the adapter directly.
   webhooks.attach(routes.hostScope("@powerhousedao/reactor-api", "/webhooks"));
 
-  const service = new WorkflowRuntimeService();
+  const { db } = getDbClient();
   const fired: FiredRun[] = [];
 
-  (service as unknown as { subgraph: unknown }).subgraph = {
-    reactorClient: { get: () => Promise.reject(new Error("not used")) },
-  };
-  (service as unknown as { secretsPromise: unknown }).secretsPromise =
-    Promise.resolve({
+  // Every host surface the runtime asks for, and nothing it does not: no run
+  // here reaches the reactor, and the secret store answers one fixed ref.
+  const service = createWorkflowRuntime({
+    relationalDb: createRelationalDb(
+      db as unknown as Kysely<unknown>,
+    ) as IRelationalDb,
+    reactorClient: {
+      get: () => Promise.reject(new Error("not used")),
+      find: () => Promise.resolve({ results: [] }),
+    },
+    assertCanRead: () => Promise.resolve(undefined),
+    webhooks: routes.scopeFor(PACKAGE_NAME).webhooks,
+    secrets: {
       get: (ref: string) =>
         ref === SECRET_REF
           ? Promise.resolve(SECRET)
           : Promise.reject(new Error(`No secret found for ref "${ref}"`)),
-    });
+    },
+  } as never);
   vi.spyOn(service, "fire").mockImplementation(
     (workflowId: string, payload?: unknown, kind = "manual") => {
       const run = { workflowId, payload, kind };
@@ -128,10 +146,7 @@ export async function startWebhookHost(
     },
   );
 
-  await service.registerWebhookEndpoint({
-    http: routes.scopeFor(PACKAGE_NAME),
-    reactorClient: { get: () => Promise.reject(new Error("not used")) },
-  } as never);
+  await service.registerWebhookEndpoint();
 
   const publish = async (
     config: Record<string, unknown>,
@@ -179,11 +194,7 @@ export async function startWebhookHost(
       await publish({}, "DISABLED", "core#webhook", workflowId);
     },
     policyFor(workflowId = DEFAULT_WORKFLOW) {
-      return (
-        service as unknown as {
-          webhookPolicy: (id: string) => Promise<unknown>;
-        }
-      ).webhookPolicy(workflowId);
+      return service.webhookPolicy(workflowId);
     },
     deliver(token, init = {}) {
       const query = init.query
