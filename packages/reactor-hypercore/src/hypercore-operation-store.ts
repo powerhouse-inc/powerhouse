@@ -411,12 +411,24 @@ export class HypercoreOperationStore implements IOperationStore {
 
     const stream = this.bee.createReadStream({ gte, lt });
 
+    // One row past the page is all this needs: it proves a next page exists
+    // and is dropped again below. The limit cannot be pushed down into
+    // createReadStream, because minTimestamp is applied per entry as it is
+    // read -- a raw range limit would stop short while matching operations
+    // still lay further along the range.
+    const readLimit = paging?.limit ? paging.limit + 1 : undefined;
+
     const items: Operation[] = [];
 
     for await (const entry of stream) {
       const stored = entry.value as StoredOperation;
       if (stored.timestampUtcMs >= minTimestamp) {
         items.push(this.toOperation(stored));
+        // Every operation of a document shares one key prefix, so without
+        // this the range walk drains the whole document to hand back a
+        // single page. Breaking closes the stream: for-await calls the
+        // iterator's return() on the way out.
+        if (readLimit !== undefined && items.length >= readLimit) break;
       }
     }
 

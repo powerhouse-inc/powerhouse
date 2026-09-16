@@ -687,6 +687,107 @@ describe("HypercoreOperationStore", () => {
 
       expect(pages).toEqual([[0], [1], [2]]);
     });
+
+    // The page limit has to bound the read, not just the result. Every
+    // operation of a document lives under one key prefix here, so slicing
+    // after the fact means a 100-row page of a 100k-operation document walks
+    // all 100k entries. The read stream cannot simply be given `limit`
+    // either: minTimestamp is applied to each entry after it is read, so a
+    // raw limit would cut the range short while matches remain behind it.
+    // The read has to stop once enough *matching* rows are in hand.
+    it("stops reading the key range once it has a full page", async () => {
+      const documentId = generateId();
+      const documentType = "powerhouse/test-doc";
+      const baseTime = Date.now();
+      const total = 40;
+      const limit = 5;
+
+      for (let i = 0; i < total; i++) {
+        await store.apply(
+          documentId,
+          documentType,
+          "global",
+          "main",
+          i,
+          (txn) => {
+            txn.addOperations(
+              makeOp(i, {
+                timestampUtcMs: new Date(baseTime + i * 1000).toISOString(),
+              }),
+            );
+          },
+        );
+      }
+
+      // Count what the store actually pulls off the stream, not what it
+      // returns: the bug is invisible in the results.
+      const inner = store as unknown as {
+        bee: { createReadStream: (opts?: unknown) => AsyncIterable<unknown> };
+      };
+      const createReadStream = inner.bee.createReadStream.bind(inner.bee);
+      let entriesRead = 0;
+      inner.bee.createReadStream = (opts?: unknown) =>
+        (async function* () {
+          for await (const entry of createReadStream(opts)) {
+            entriesRead++;
+            yield entry;
+          }
+        })();
+
+      const page = await store.getConflicting(
+        documentId,
+        "global",
+        "main",
+        new Date(baseTime).toISOString(),
+        { limit },
+      );
+
+      expect(page.results.map((op) => op.index)).toEqual([0, 1, 2, 3, 4]);
+      expect(page.nextCursor).toBe("5");
+      // limit + 1: the one extra row is what tells the store a next page
+      // exists. Anything beyond that is range the store had no reason to read.
+      expect(entriesRead).toBeLessThanOrEqual(limit + 1);
+    });
+
+    // The counterpart to the early stop: rows that fail the timestamp filter
+    // must not count towards the page, so the read has to keep going past
+    // them rather than stopping at `limit` raw entries.
+    it("reads past filtered-out rows to fill a page", async () => {
+      const documentId = generateId();
+      const documentType = "powerhouse/test-doc";
+      const baseTime = Date.now();
+
+      // First 10 operations are old, the next 5 are new.
+      for (let i = 0; i < 15; i++) {
+        await store.apply(
+          documentId,
+          documentType,
+          "global",
+          "main",
+          i,
+          (txn) => {
+            txn.addOperations(
+              makeOp(i, {
+                timestampUtcMs: new Date(
+                  i < 10 ? baseTime - 1_000_000 : baseTime + i * 1000,
+                ).toISOString(),
+              }),
+            );
+          },
+        );
+      }
+
+      const page = await store.getConflicting(
+        documentId,
+        "global",
+        "main",
+        new Date(baseTime).toISOString(),
+        { limit: 5 },
+      );
+
+      expect(page.results.map((op) => op.index)).toEqual([10, 11, 12, 13, 14]);
+      expect(page.nextCursor).toBeUndefined();
+    });
   });
 
   describe("getRevisions", () => {
