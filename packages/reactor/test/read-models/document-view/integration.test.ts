@@ -4,6 +4,7 @@ import {
   addFolder,
   setDriveName,
 } from "@powerhousedao/shared/document-drive";
+import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import { generateId } from "@powerhousedao/shared/document-model";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
@@ -11,6 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { KyselyOperationIndex } from "../../../src/cache/kysely-operation-index.js";
 import type { IOperationIndex } from "../../../src/cache/operation-index-types.js";
 import type { IWriteCache } from "../../../src/cache/write/interfaces.js";
+import type { ReadModelIndexingConfig } from "../../../src/read-models/base-read-model.js";
 import { KyselyDocumentView } from "../../../src/read-models/document-view.js";
 import type { DocumentViewDatabase } from "../../../src/read-models/types.js";
 import { ConsistencyTracker } from "../../../src/shared/consistency-tracker.js";
@@ -2828,6 +2830,253 @@ describe("KyselyDocumentView", () => {
       });
 
       expect(await globalSnapshotContent(documentId)).toEqual({ count: 42 });
+    });
+  });
+
+  describe("header row under concurrently indexed scopes", () => {
+    const echoBranch = "main";
+    const echoType = "powerhouse/document-drive";
+    const originalName = "Original Drive";
+    const originalSlug = "original-drive";
+    const renamedName = "Renamed Drive";
+
+    /** Two operations per commit, so a six operation batch spans three chunks. */
+    const chunked: ReadModelIndexingConfig = {
+      commitChunkSize: 2,
+      yieldDeadlineMs: 0,
+    };
+
+    function makeChunkedView(): KyselyDocumentView {
+      return new KyselyDocumentView(
+        db,
+        operationStore,
+        operationIndex,
+        mockWriteCache,
+        new ConsistencyTracker(),
+        false,
+        chunked,
+      );
+    }
+
+    function createOp(documentId: string, ordinal: number) {
+      const timestampUtcMs = new Date(1700000000000).toISOString();
+      return {
+        operation: {
+          index: 0,
+          timestampUtcMs,
+          hash: "create-hash",
+          skip: 0,
+          id: generateId(),
+          action: {
+            id: generateId(),
+            type: "CREATE_DOCUMENT",
+            scope: "header",
+            timestampUtcMs,
+            input: { protocolVersions: { "base-reducer": 2 } },
+          },
+        },
+        context: {
+          documentId,
+          documentType: echoType,
+          scope: "header",
+          branch: echoBranch,
+          resultingState: JSON.stringify({
+            header: {
+              id: documentId,
+              documentType: echoType,
+              slug: originalSlug,
+              name: originalName,
+              branch: echoBranch,
+            },
+            document: {},
+          }),
+          ordinal,
+        },
+      } as unknown as OperationWithContext;
+    }
+
+    /** Every operation carries the same header echo, still naming originalName. */
+    function globalBatch(
+      documentId: string,
+      size: number,
+      firstOrdinal: number,
+    ): OperationWithContext[] {
+      const items: OperationWithContext[] = [];
+      for (let i = 0; i < size; i++) {
+        const timestampUtcMs = new Date(1700000001000 + i).toISOString();
+        items.push({
+          operation: {
+            index: i,
+            timestampUtcMs,
+            hash: `global-hash-${i}`,
+            skip: 0,
+            id: generateId(),
+            action: {
+              id: generateId(),
+              type: "ADD_FOLDER",
+              scope: "global",
+              timestampUtcMs,
+              input: { id: `folder-${i}`, name: `Folder ${i}` },
+            },
+          },
+          context: {
+            documentId,
+            documentType: echoType,
+            scope: "global",
+            branch: echoBranch,
+            resultingState: JSON.stringify({
+              header: {
+                id: documentId,
+                documentType: echoType,
+                slug: originalSlug,
+                name: originalName,
+                branch: echoBranch,
+              },
+              global: { nodes: Array.from({ length: i + 1 }, (_, n) => n) },
+            }),
+            ordinal: firstOrdinal + i,
+          },
+        } as unknown as OperationWithContext);
+      }
+      return items;
+    }
+
+    function renameOp(documentId: string, ordinal: number) {
+      const timestampUtcMs = new Date(1700000002000).toISOString();
+      return {
+        operation: {
+          index: 1,
+          timestampUtcMs,
+          hash: "rename-hash",
+          skip: 0,
+          id: generateId(),
+          action: {
+            id: generateId(),
+            type: "SET_NAME",
+            scope: "header",
+            timestampUtcMs,
+            input: { name: renamedName },
+          },
+        },
+        context: {
+          documentId,
+          documentType: echoType,
+          scope: "header",
+          branch: echoBranch,
+          resultingState: JSON.stringify({
+            header: {
+              id: documentId,
+              documentType: echoType,
+              slug: originalSlug,
+              name: renamedName,
+              branch: echoBranch,
+            },
+          }),
+          ordinal,
+        },
+      } as unknown as OperationWithContext;
+    }
+
+    /** Runs `between` in the gap the pass opens after its first chunk commits. */
+    async function indexInterleaved(
+      chunkedView: KyselyDocumentView,
+      batch: OperationWithContext[],
+      between: () => Promise<void>,
+    ): Promise<number> {
+      let chunks = 0;
+      let fired = false;
+      let inBetween = false;
+      const target = chunkedView as unknown as {
+        commitOperations: (items: OperationWithContext[]) => Promise<void>;
+      };
+      const commit = target.commitOperations.bind(chunkedView);
+
+      target.commitOperations = async (items: OperationWithContext[]) => {
+        await commit(items);
+        if (inBetween) return;
+
+        chunks++;
+        if (fired) return;
+
+        fired = true;
+        inBetween = true;
+        await between();
+        inBetween = false;
+      };
+
+      await chunkedView.indexOperations(batch);
+      return chunks;
+    }
+
+    function headerRow(documentId: string) {
+      return db
+        .selectFrom("DocumentSnapshot")
+        .selectAll()
+        .where("documentId", "=", documentId)
+        .where("scope", "=", "header")
+        .where("branch", "=", echoBranch)
+        .executeTakeFirst();
+    }
+
+    it("keeps a header scope rename that lands between two chunks of a global batch", async () => {
+      const documentId = generateId();
+      const chunkedView = makeChunkedView();
+      await chunkedView.init();
+      await chunkedView.indexOperations([createOp(documentId, 1)]);
+
+      const chunks = await indexInterleaved(
+        chunkedView,
+        globalBatch(documentId, 6, 2),
+        async () => {
+          await chunkedView.indexOperations([renameOp(documentId, 8)]);
+        },
+      );
+
+      expect(chunks).toBe(3);
+
+      const header = await headerRow(documentId);
+      expect(header?.name).toBe(renamedName);
+      expect((header?.content as { name: string }).name).toBe(renamedName);
+    });
+
+    it("still lets a header echo newer than the header row write it", async () => {
+      const documentId = generateId();
+      const chunkedView = makeChunkedView();
+      await chunkedView.init();
+
+      await chunkedView.indexOperations([createOp(documentId, 1)]);
+      await chunkedView.indexOperations([renameOp(documentId, 2)]);
+      await chunkedView.indexOperations(globalBatch(documentId, 2, 3));
+
+      const header = await headerRow(documentId);
+      expect(header?.name).toBe(originalName);
+      expect(header?.slug).toBe(originalSlug);
+    });
+
+    it("indexes the global row from every chunk regardless of the header guard", async () => {
+      const documentId = generateId();
+      const chunkedView = makeChunkedView();
+      await chunkedView.init();
+      await chunkedView.indexOperations([createOp(documentId, 1)]);
+
+      await indexInterleaved(
+        chunkedView,
+        globalBatch(documentId, 6, 2),
+        async () => {
+          await chunkedView.indexOperations([renameOp(documentId, 8)]);
+        },
+      );
+
+      const global = await db
+        .selectFrom("DocumentSnapshot")
+        .selectAll()
+        .where("documentId", "=", documentId)
+        .where("scope", "=", "global")
+        .where("branch", "=", echoBranch)
+        .executeTakeFirst();
+
+      expect(global?.lastOperationIndex).toBe(5);
+      expect((global?.content as { nodes: number[] }).nodes).toHaveLength(6);
     });
   });
 });

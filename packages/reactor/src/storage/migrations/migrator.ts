@@ -22,6 +22,7 @@ import * as migration016 from "./016_add_dead_letter_error_type.js";
 import * as migration017 from "./017_create_group_references.js";
 import * as migration018 from "./018_add_sync_remote_bound_address.js";
 import * as migration019 from "./019_require_action_id.js";
+import * as migration020 from "./020_add_snapshot_operation_ordinal.js";
 
 const migrations = {
   "001_create_operation_table": migration001,
@@ -43,6 +44,7 @@ const migrations = {
   "017_create_group_references": migration017,
   "018_add_sync_remote_bound_address": migration018,
   "019_require_action_id": migration019,
+  "020_add_snapshot_operation_ordinal": migration020,
 };
 
 class ProgrammaticMigrationProvider implements MigrationProvider {

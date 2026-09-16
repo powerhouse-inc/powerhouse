@@ -17,6 +17,7 @@ export interface DocumentSnapshotTable {
   documentType: string;
   lastOperationIndex: number;
   lastOperationHash: string;
+  lastOperationOrdinal: Generated<number>;
   lastUpdatedAt: Generated<Date>;
   snapshotVersion: Generated<number>;
   identifiers: unknown; // JSONB type - stored as object

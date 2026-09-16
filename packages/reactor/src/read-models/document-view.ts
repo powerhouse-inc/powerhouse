@@ -79,6 +79,11 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
    * without either fall back to header/document/auth, because their sibling
    * echoes may be stale. All other action types index only header and their
    * own scope.
+   *
+   * The header row is the one row every scope's chain writes, so it accepts a
+   * write only from an operation whose global ordinal is at least the one the
+   * row already carries. Without that, a chunked pass that started earlier
+   * reverts a concurrent rename with the stale echo its later chunks carry.
    */
   protected override async commitOperations(
     items: OperationWithContext[],
@@ -86,8 +91,14 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
     await this._db.transaction().execute(async (trx) => {
       for (const item of items) {
         const { operation, context } = item;
-        const { documentId, scope, branch, documentType, resultingState } =
-          context;
+        const {
+          documentId,
+          scope,
+          branch,
+          documentType,
+          resultingState,
+          ordinal,
+        } = context;
         const { index, hash } = operation;
 
         if (!resultingState) {
@@ -134,6 +145,7 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
               deletedAt: now,
               lastOperationIndex: index,
               lastOperationHash: hash,
+              lastOperationOrdinal: ordinal,
               lastUpdatedAt: now,
             })
             .where("documentId", "=", documentId)
@@ -216,12 +228,29 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
 
           const existingSnapshot = await trx
             .selectFrom("DocumentSnapshot")
-            .select(["slug", "name", "isDeleted", "snapshotVersion"])
+            .select([
+              "slug",
+              "name",
+              "isDeleted",
+              "snapshotVersion",
+              "lastOperationOrdinal",
+            ])
             .$if(needsExistingContent, (qb) => qb.select("content"))
             .where("documentId", "=", documentId)
             .where("scope", "=", scopeName)
             .where("branch", "=", branch)
             .executeTakeFirst();
+
+          // Every scope's chain writes the header row, and since the chains
+          // interleave at chunk boundaries an older one can arrive last. Its
+          // header echo is stale, so it must not claim the row.
+          if (
+            scopeName === "header" &&
+            existingSnapshot !== undefined &&
+            existingSnapshot.lastOperationOrdinal > ordinal
+          ) {
+            continue;
+          }
 
           const newState =
             typeof scopeState === "object" && scopeState !== null
@@ -283,6 +312,7 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
               .set({
                 lastOperationIndex: index,
                 lastOperationHash: hash,
+                lastOperationOrdinal: ordinal,
                 lastUpdatedAt: new Date(),
                 snapshotVersion: existingSnapshot.snapshotVersion + 1,
                 content: newState,
@@ -292,6 +322,10 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
               .where("documentId", "=", documentId)
               .where("scope", "=", scopeName)
               .where("branch", "=", branch)
+              // Repeats the guard where the database can enforce it.
+              .$if(scopeName === "header", (qb) =>
+                qb.where("lastOperationOrdinal", "<=", ordinal),
+              )
               .execute();
           } else {
             const snapshot: InsertableDocumentSnapshot = {
@@ -305,6 +339,7 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
               documentType,
               lastOperationIndex: index,
               lastOperationHash: hash,
+              lastOperationOrdinal: ordinal,
               identifiers: null,
               metadata: null,
               deletedAt: null,
