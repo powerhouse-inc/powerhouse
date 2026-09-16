@@ -66,6 +66,12 @@ export type RegistryPackageSource =
 
 export type RegistryPackage = PackageInfo & {
   status: RegistryPackageStatus;
+  /**
+   * Shared-dependency version mismatches against the Connect build's version
+   * table, pre-formatted (see `formatSharedDepWarnings`). Absent when the
+   * host has no shared-deps table (vendor-off / dev) or none were found.
+   */
+  sharedDepWarnings?: string[];
 };
 export type RegistryPackageMap = Record<string, RegistryPackage | undefined>;
 export type RegistryPackageList = RegistryPackage[];

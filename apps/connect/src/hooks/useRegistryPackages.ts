@@ -14,10 +14,14 @@ import type {
   RegistryPackageSource,
   RegistryPackageStatus,
 } from "@powerhousedao/shared/registry";
+import { toCdnUrl } from "@powerhousedao/shared/registry/urls";
+import type { PackageDeps } from "@powerhousedao/shared/connect";
 import { slimManifest } from "@powerhousedao/shared/registry/manifest-slim";
 import type { DocumentModelLib } from "document-model";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getRuntimeConfig } from "../runtime-config.js";
+import { sharedDepMismatchWarnings } from "../package-manager.js";
+import { getSharedDeps } from "../shared-deps.js";
 
 /** Page size for the paginated Available-packages listing. */
 const AVAILABLE_PAGE_SIZE = 30;
@@ -258,6 +262,77 @@ export function useRegistryPackages() {
     },
     [],
   );
+
+  // The host's shared-deps version table, from the production vendor
+  // (null in dev / vendor-off builds — nothing to compare against, so the
+  // rows simply have no warnings).
+  const [hostVersions, setHostVersions] = useState<Record<
+    string,
+    string
+  > | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    void getSharedDeps().then((deps) => {
+      if (!cancelled) setHostVersions(deps?.versions ?? null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Shared-dependency compatibility per row: fetch each package's npm
+  // package.json once from the CDN (session-cached), compare its declared
+  // shared-dep ranges against the host table, and stamp any mismatch
+  // warnings onto the row. Sequential on purpose — a page first load is a
+  // burst of row fetches, and this keeps it to one in flight at a time.
+  // Best-effort: a fetch failure or absent CDN means no warning, same as a
+  // vendor-less host.
+  const sharedDepAttemptedRef = useRef(new Set<string>());
+  useEffect(() => {
+    if (!registryUrl || !hostVersions) return;
+    const cdnUrl = toCdnUrl(trimTrailingSlash(registryUrl));
+    const pending = registryPackageList.filter(
+      (p) =>
+        !sharedDepAttemptedRef.current.has(p.name) &&
+        p.sharedDepWarnings === undefined,
+    );
+    if (pending.length === 0) return;
+    let cancelled = false;
+    let index = 0;
+    const runNext = () => {
+      if (cancelled) return;
+      const row: RegistryPackage | undefined = pending[index++];
+      if (!row) return;
+      sharedDepAttemptedRef.current.add(row.name);
+      void (async () => {
+        try {
+          const res = await fetch(
+            `${cdnUrl}/${encodeURIComponent(row.name)}/package.json`,
+          );
+          if (!res.ok) return;
+          const pkgJson = (await res.json()) as PackageDeps;
+          const warnings = sharedDepMismatchWarnings(pkgJson, hostVersions);
+          if (warnings.length === 0) return;
+          setRegistryPackagesMap((old) => {
+            const current = old[row.name];
+            if (!current) return old;
+            return {
+              ...old,
+              [row.name]: { ...current, sharedDepWarnings: warnings },
+            };
+          });
+        } catch {
+          // no warning
+        } finally {
+          runNext();
+        }
+      })();
+    };
+    runNext();
+    return () => {
+      cancelled = true;
+    };
+  }, [registryUrl, hostVersions, registryPackageList, setRegistryPackagesMap]);
 
   useEffect(() => {
     if (!packageManager) return;

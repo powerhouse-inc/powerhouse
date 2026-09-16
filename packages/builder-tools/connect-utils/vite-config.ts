@@ -42,6 +42,7 @@ import {
 import { connectPwaPlugins } from "./vite-plugins/pwa.js";
 import { reactSelfHostPlugin } from "./vite-plugins/react-self-host.js";
 import { connectThemeBootPlugin } from "./vite-plugins/theme-boot.js";
+import { vendorImportMapPlugin } from "./vite-plugins/vendor-import-map.js";
 
 export function getConnectHtmlTags(
   options: {
@@ -468,13 +469,36 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       ...plugins,
       // Externalize React so Connect + CDN editors share one instance via the
       // import map (reactSelfHostPlugin URLs); also rewrites external require().
-      esmExternalRequirePlugin({ external: reactExternal }),
+      // Production vendor builds additionally externalize the shared package
+      // set — the Connect app's own imports of them resolve through the
+      // import map at runtime instead of being bundled.
+      //
+      // The externals are the vendor's *published* specifiers, not a static
+      // list: the vendor drops entries whose package is not installed in the
+      // project, and never publishes the bare `@powerhousedao/shared` root.
+      // Externalizing a specifier the import map has no entry for leaves a
+      // bare specifier in the chunk, and the browser kills it with "Failed to
+      // resolve module specifier". Taking the keys keeps the two in step by
+      // construction — the dev plugin matches on the same map.
+      esmExternalRequirePlugin({
+        external: [
+          ...reactExternal,
+          ...(options.vendor && mode === "production"
+            ? Object.keys(options.vendor.imports)
+            : []),
+        ],
+      }),
       // Build-only: emit the React family into the dist + static import map, so
       // React is self-hosted (not esm.sh). Dev React for non-prod/debug builds.
       reactSelfHostPlugin({
         dirname: options.dirname,
         dev: mode !== "production" || isDebug,
       }),
+      // After the react map is injected: merge the production vendor's
+      // specifier entries into that same import map.
+      ...(options.vendor && mode === "production"
+        ? [vendorImportMapPlugin({ imports: options.vendor.imports })]
+        : []),
       connectFaviconPlugin({ faviconPath: options.favicon }),
       // Pre-paint theme boot in every emitted index.html (marker-idempotent
       // with the serve-time injection in the ph-clint connect proxy).

@@ -91,6 +91,10 @@ type WorkerConstruct = {
   relationalNamespace: string;
   cdnUrl: string;
   packageSpecs: string[];
+  // Absolute-URL shared-deps import map from the main thread; lets package
+  // sources that import shared deps load as blobs in the worker (import
+  // maps don't apply here).
+  sharedImports?: Record<string, string>;
   studioMode?: boolean;
   // The worker has no runtime config, so the chain its bearer tokens are scoped
   // to is passed in; leaving it unset would sign for a chain nobody issues on.
@@ -299,6 +303,13 @@ const host = new ReactorHost({
         cdnUrl: construct.cdnUrl,
         importPackage: (url) =>
           import(/* @vite-ignore */ url) as Promise<Record<string, unknown>>,
+        sharedImports: construct.sharedImports,
+        importSource: (source) =>
+          import(
+            /* @vite-ignore */ URL.createObjectURL(
+              new Blob([source], { type: "text/javascript" }),
+            )
+          ) as Promise<Record<string, unknown>>,
       });
       const loaded = await loader.loadPackages(construct.packageSpecs);
       const vetraModels = construct.studioMode

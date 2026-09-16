@@ -32,6 +32,7 @@
 import { spawn } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import {
+  chmodSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -42,14 +43,15 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
+import { createRequire } from "node:module";
 import { dirname as pathDirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { DYNAMIC_BASE_PLACEHOLDER } from "./vite-plugins/dynamic-base.js";
 
 export interface VendorPrebuildOptions {
-  /** Project root (the reactor-project dir). */
+  /** Project root the vendor deps resolve from. */
   dirname: string;
-  /** Bare specifiers to bundle into the vendor (defaults to the heavy libs). */
+  /** Specifiers to prebuild into the vendor (defaults to the dev set). */
   include?: string[];
   /** Specifiers left external to the build (defaults to the React family). */
   external?: string[];
@@ -57,6 +59,18 @@ export interface VendorPrebuildOptions {
   vendorDir?: string;
   /** Filled with the failure cause when the prebuild returns null. */
   errorRef?: { message?: string };
+  /**
+   * The APP's base — the same string the app build uses (the dynamic-base
+   * placeholder, or a normalized deploy base like "/app/"). The vendor's own
+   * build base is this plus the vendor segment, so emitted asset URLs land
+   * under <app-base>__vendor__/. Default: the dynamic placeholder + segment
+   * (dev behavior). Import-map values stay base-relative; the production
+   * build strips the leading slash (values then resolve against the page URL
+   * under any deploy base), the dev flow prefixes its own base.
+   */
+  base?: string;
+  /** NODE_ENV define for the vendor build (default "development"). */
+  nodeEnv?: "development" | "production";
 }
 
 /**
@@ -92,8 +106,10 @@ export const VENDOR_EXTERNAL = [
 
 export interface PrebuiltVendor {
   vendorDir: string;
-  /** import map: bare specifier -> "/__vendor__/<entry>.js". */
+  /** import map: bare specifier -> "/__vendor__/<entry>.js" (base-relative). */
   imports: Record<string, string>;
+  /** Resolved versions of every included + external package. */
+  versions: Record<string, string>;
 }
 
 /** URL prefix the vendor bundle is served under by the dev middleware. */
@@ -125,24 +141,30 @@ export async function prebuildConnectVendor(
     ...include,
     ...external,
   ]);
+  const versions = resolveDepVersions(options.dirname, [
+    ...include,
+    ...external,
+  ]);
+  const base = options.base ?? VENDOR_DYNAMIC_BASE;
+  const nodeEnv = options.nodeEnv ?? "development";
 
   try {
     const hit = readCacheHit(importMapPath, include, external, versionDigest);
-    if (hit) return { vendorDir, imports: hit };
+    if (hit) return { vendorDir, ...hit };
 
     // Serialize concurrent builders on a lock dir; a loser waits for the
     // winner's result instead of clobbering the shared output.
     const lockDir = `${vendorDir}.lock`;
     const lock = acquireLock(lockDir);
     if (!lock) {
-      const imports = await waitForCacheHit(
+      const hit = await waitForCacheHit(
         importMapPath,
         include,
         external,
         versionDigest,
         lockDir,
       );
-      return imports ? { vendorDir, imports } : null;
+      return hit ? { vendorDir, ...hit } : null;
     }
 
     try {
@@ -154,16 +176,19 @@ export async function prebuildConnectVendor(
         external,
         versionDigest,
       );
-      if (raced) return { vendorDir, imports: raced };
+      if (raced) return { vendorDir, ...raced };
 
-      const imports = await buildVendorAtomic(
+      const result = await buildVendorAtomic(
         options.dirname,
         vendorDir,
         include,
         external,
         versionDigest,
+        versions,
+        base,
+        nodeEnv,
       );
-      return imports ? { vendorDir, imports } : null;
+      return result ? { vendorDir, ...result } : null;
     } finally {
       releaseLock(lock);
     }
@@ -180,16 +205,20 @@ interface VendorCacheMeta {
   external?: string[];
   versionDigest?: string;
   imports: Record<string, string>;
+  versions?: Record<string, string>;
 }
 
-// Return the cached import map iff the specifier sets AND the resolved-version
-// digest all match; otherwise null (forces a rebuild).
+// Return the cached import map + versions iff the specifier sets AND the
+// resolved-version digest all match; otherwise null (forces a rebuild).
 function readCacheHit(
   importMapPath: string,
   include: string[],
   external: string[],
   versionDigest: string,
-): Record<string, string> | null {
+): {
+  imports: Record<string, string>;
+  versions: Record<string, string>;
+} | null {
   if (!existsSync(importMapPath)) return null;
   try {
     const cached = JSON.parse(
@@ -200,7 +229,7 @@ function readCacheHit(
       sameSet(cached.external, external) &&
       cached.versionDigest === versionDigest
     ) {
-      return cached.imports;
+      return { imports: cached.imports, versions: cached.versions ?? {} };
     }
   } catch {
     // partial/corrupt import-map.json → treat as miss
@@ -208,27 +237,88 @@ function readCacheHit(
   return null;
 }
 
+/**
+ * Resolve the installed version of each spec's owning package, deduped by
+ * package name. Resolution order per spec:
+ *   1. the project itself, when it IS the owning package (a self-vendoring
+ *      app has no node_modules self-link);
+ *   2. the project's own node_modules link (works for pnpm-strict and
+ *      hoisted layouts alike, and — unlike `require.resolve` — for
+ *      ESM-only packages whose exports map has no CJS condition);
+ *   3. Node's own module resolution (covers transitive installs), walking
+ *      the entry up to the owning package's package.json.
+ * Unresolvable specs contribute a "missing" sentinel, unknown versions
+ * "unknown".
+ */
+function resolveDepVersions(
+  dirname: string,
+  specs: string[],
+): Record<string, string> {
+  const req = createRequire(join(dirname, "noop.js"));
+  const seen: Record<string, string> = {};
+  let selfMeta: { name?: string; version?: string } | null = null;
+  for (const spec of specs) {
+    const { pkg } = parsePkg(spec);
+    if (pkg in seen) continue;
+    if (selfMeta === null) {
+      try {
+        selfMeta = JSON.parse(
+          readFileSync(join(dirname, "package.json"), "utf8"),
+        ) as { name?: string; version?: string };
+      } catch {
+        selfMeta = {};
+      }
+    }
+    let version: string;
+    if (
+      typeof selfMeta.name === "string" &&
+      selfMeta.name === pkg &&
+      typeof selfMeta.version === "string"
+    ) {
+      version = selfMeta.version;
+    } else {
+      version = "missing";
+      try {
+        const pkgRoot = realpathSync(join(dirname, "node_modules", pkg));
+        const meta = JSON.parse(
+          readFileSync(join(pkgRoot, "package.json"), "utf8"),
+        ) as { version?: string };
+        version = String(meta.version ?? "unknown");
+      } catch {
+        try {
+          const entry = req.resolve(spec);
+          // Walk up to the owning package root (entry is usually a few
+          // levels below it, e.g. dist/zod.js or
+          // .pnpm/<pkg>@<v>/node_modules/<pkg>/…).
+          let dir = pathDirname(entry);
+          for (let depth = 0; depth < 8; depth++) {
+            if (existsSync(join(dir, "package.json"))) {
+              const meta = JSON.parse(
+                readFileSync(join(dir, "package.json"), "utf8"),
+              ) as { version?: string };
+              version = String(meta.version ?? "unknown");
+              break;
+            }
+            const parent = pathDirname(dir);
+            if (parent === dir) break;
+            dir = parent;
+          }
+        } catch {
+          // leave sentinel
+        }
+      }
+    }
+    seen[pkg] = version;
+  }
+  return seen;
+}
+
 // Hash the resolved version of each spec's owning package (from its installed
 // package.json). A bump or branch checkout that changes any version yields a
 // different digest, invalidating the cache. Unresolvable specs contribute a
 // sentinel so they don't silently collide.
 function resolveVersionDigest(dirname: string, specs: string[]): string {
-  const seen = new Map<string, string>();
-  for (const spec of specs) {
-    const { pkg } = parsePkg(spec);
-    if (seen.has(pkg)) continue;
-    let version = "missing";
-    try {
-      const pkgRoot = realpathSync(join(dirname, "node_modules", pkg));
-      const meta = JSON.parse(
-        readFileSync(join(pkgRoot, "package.json"), "utf8"),
-      ) as { version?: string };
-      version = String(meta.version ?? "unknown");
-    } catch {
-      // leave sentinel
-    }
-    seen.set(pkg, version);
-  }
+  const versions = resolveDepVersions(dirname, specs);
   const h = createHash("sha256");
   // Fold in the build worker so a logic/build-option change busts stale bundles,
   // not just a dep version bump.
@@ -236,8 +326,8 @@ function resolveVersionDigest(dirname: string, specs: string[]): string {
     .update(VENDOR_BUILD_WORKER)
     .digest("hex");
   h.update(`worker:${workerHash}\n`);
-  for (const pkg of [...seen.keys()].sort()) {
-    h.update(`${pkg}@${seen.get(pkg)}\n`);
+  for (const pkg of Object.keys(versions).sort()) {
+    h.update(`${pkg}@${versions[pkg]}\n`);
   }
   return h.digest("hex").slice(0, 16);
 }
@@ -327,7 +417,10 @@ async function waitForCacheHit(
   external: string[],
   versionDigest: string,
   lockDir: string,
-): Promise<Record<string, string> | null> {
+): Promise<{
+  imports: Record<string, string>;
+  versions: Record<string, string>;
+} | null> {
   const deadline = Date.now() + LOCK_STALE_MS;
   while (Date.now() < deadline) {
     const hit = readCacheHit(importMapPath, include, external, versionDigest);
@@ -373,11 +466,16 @@ function parsePkg(spec: string): { pkg: string; sub: string } {
  * `@powerhousedao/design-system/connect/toast`, `zod/v4/core`). Those bare
  * imports need their own import-map entry, so expand each listed spec to its
  * package's concrete (non-wildcard, JS) subpath exports that share the spec's
- * prefix. Unresolvable / CSS / JSON targets are skipped. Failures leave the
- * original spec untouched.
+ * prefix. Unresolvable / CSS / JSON targets are skipped.
+ *
+ * A spec whose package isn't installed in `dirname` is dropped entirely
+ * rather than kept for the worker: the worker cannot build an entry for a
+ * missing package (its `await import` and the vite resolution both fail),
+ * and a bare re-export entry would fail the whole vendor build. The
+ * importer of a missing shared dep simply bundles its own copy.
  */
 function expandIncludeSubpaths(dirname: string, include: string[]): string[] {
-  const out = new Set<string>(include);
+  const out = new Set<string>();
   for (const spec of include) {
     const { pkg, sub } = parsePkg(spec);
     let exp: unknown;
@@ -391,6 +489,7 @@ function expandIncludeSubpaths(dirname: string, include: string[]): string[] {
     } catch {
       continue;
     }
+    out.add(sub ? spec : pkg);
     if (!exp || typeof exp !== "object") continue;
     const expMap = exp as Record<string, unknown>;
     const prefixKey = sub ? `./${sub}` : ".";
@@ -414,11 +513,57 @@ function expandIncludeSubpaths(dirname: string, include: string[]): string[] {
 }
 
 /**
+ * The published specifiers whose entry file the vendor build never emitted.
+ * URLs are base-less (`/__vendor__/x.js`) and resolve inside `vendorDir`.
+ */
+export function missingVendorEntries(
+  vendorDir: string,
+  imports: Record<string, string>,
+): { spec: string; url: string }[] {
+  const prefix = VENDOR_URL_PREFIX;
+  return Object.entries(imports)
+    .filter(([, url]) => {
+      const rel = url.startsWith(prefix) ? url.slice(prefix.length) : url;
+      return !existsSync(join(vendorDir, rel));
+    })
+    .map(([spec, url]) => ({ spec, url }));
+}
+
+/**
+ * Rebase the vendor's base-less entry URLs (`/__vendor__/x.js`) onto the
+ * deploy base, so a consumer that resolves them against the page origin lands
+ * under that base rather than the server root. A dynamic-base build keeps its
+ * placeholder, which the runtime substitutes.
+ *
+ * `base` is the app base from `prebuildConnectVendor` callers, but the
+ * VENDOR_DYNAMIC_BASE default already carries the vendor segment — that
+ * trailing segment is dropped first so it is never doubled.
+ */
+export function withVendorBase(
+  imports: Record<string, string>,
+  base: string,
+): Record<string, string> {
+  const segment = VENDOR_URL_PREFIX.replace(/^\/+/, "");
+  const appBase = base.endsWith(segment)
+    ? base.slice(0, base.length - segment.length)
+    : base;
+  return Object.fromEntries(
+    Object.entries(imports).map(([spec, url]) => [
+      spec,
+      `${appBase}/${url}`
+        .replace(/([^:])\/{2,}/g, "$1/")
+        .replace(/^\/{2,}/, "/"),
+    ]),
+  );
+}
+
+/**
  * Build the vendor into a unique temp dir, then atomically swap it into place,
  * so a concurrent reader never sees a partial bundle or import-map.json. Runs
  * the build in a throwaway subprocess (its peak memory is reclaimed on exit);
- * the parent augments the import map with the version digest and does the swap.
- * Returns the published import map, or null on failure.
+ * the parent augments the import map with the version digest + the version
+ * table, writes the runtime shared-deps module, and does the swap.
+ * Returns the published import map + versions, or null on failure.
  */
 async function buildVendorAtomic(
   dirname: string,
@@ -426,7 +571,13 @@ async function buildVendorAtomic(
   include: string[],
   external: string[],
   versionDigest: string,
-): Promise<Record<string, string> | null> {
+  versions: Record<string, string>,
+  base: string,
+  nodeEnv: "development" | "production",
+): Promise<{
+  imports: Record<string, string>;
+  versions: Record<string, string>;
+} | null> {
   const parent = pathDirname(vendorDir);
   mkdirSync(parent, { recursive: true });
   const tmpDir = mkdtempSync(join(parent, ".ph-vendor.tmp-"));
@@ -436,6 +587,8 @@ async function buildVendorAtomic(
       tmpDir,
       include,
       external,
+      base,
+      nodeEnv,
     );
     const tmpMap = join(tmpDir, "import-map.json");
     if (!ok || !existsSync(tmpMap)) {
@@ -444,22 +597,81 @@ async function buildVendorAtomic(
         `vendor build failed${detail ? `:\n${detail}` : " (no output captured)"}`,
       );
     }
-    // Stamp the version digest into the published metadata so the cache check
-    // can detect a dep bump.
+    // Stamp the version digest + version table into the published metadata so
+    // the cache check can detect a dep bump and cache hits restore versions.
     const meta = JSON.parse(readFileSync(tmpMap, "utf8")) as VendorCacheMeta;
+    // Every published specifier must have a file behind it. An entry the map
+    // claims but the build never emitted becomes a bare import the app
+    // externalizes onto a URL that 404s — and since a SPA answers an unknown
+    // path with index.html, the browser reports only an opaque MIME-type
+    // error. Fail the build here, where the missing entries can be named.
+    const unbacked = missingVendorEntries(tmpDir, meta.imports);
+    if (unbacked.length > 0) {
+      throw new Error(
+        `vendor build published ${unbacked.length} import-map ` +
+          `${unbacked.length === 1 ? "entry" : "entries"} with no file behind ` +
+          `${unbacked.length === 1 ? "it" : "them"}:\n` +
+          unbacked.map((e) => `  ${e.spec} -> ${e.url}`).join("\n"),
+      );
+    }
     meta.versionDigest = versionDigest;
+    meta.versions = versions;
     writeFileSync(tmpMap, JSON.stringify(meta, null, 2));
+
+    // The runtime data module: a real .js (not .json) so the Workbox precache
+    // glob picks it up and the main thread can dynamic-import it without
+    // import attributes.
+    //
+    // Its URLs carry the build's base (import-map.json stays base-less
+    // because the dev plugin applies the base itself). The worker resolves
+    // these against the page origin, so a base-less path would point at
+    // /__vendor__/ on a subpath deploy and 404.
+    writeFileSync(
+      join(tmpDir, "shared-deps.js"),
+      `export const imports = ${JSON.stringify(
+        withVendorBase(meta.imports, base),
+      )};\n` + `export const versions = ${JSON.stringify(versions)};\n`,
+    );
 
     // Swap: move any existing dir aside, rename temp into place, drop the old.
     const oldDir = `${vendorDir}.old-${process.pid}-${Date.now()}`;
     if (existsSync(vendorDir)) renameSync(vendorDir, oldDir);
     renameSync(tmpDir, vendorDir);
+    // mkdtemp creates the staging dir 0700, and the rename carries that mode
+    // onto the published vendor. The build and the server are not always the
+    // same user — in a container image the build runs as root and nginx as
+    // `nginx` — and a directory nobody else can traverse makes every vendor
+    // URL unreadable. A SPA then answers each one with index.html, so the
+    // browser reports an opaque MIME-type error and the whole shared-dep
+    // mechanism is silently inert. Publish it as readable as the rest of the
+    // build output.
+    chmodSync(vendorDir, 0o755);
     rmSync(oldDir, { recursive: true, force: true });
-    return meta.imports;
+    return { imports: meta.imports, versions };
   } catch (err) {
     rmSync(tmpDir, { recursive: true, force: true });
     throw err;
   }
+}
+
+// The worker imports connectDynamicBasePlugin from this module's own loadable
+// form. In the published/built bundle that is import.meta.url itself; when
+// running from source (vitest), node cannot load the .ts graph, so fall back
+// to the package's built entry (dist/index.mjs).
+function resolveSelfModulePath(): string {
+  const selfPath = fileURLToPath(import.meta.url);
+  if (!selfPath.endsWith(".ts")) return selfPath;
+  let dir = pathDirname(selfPath);
+  for (let depth = 0; depth < 4; depth++) {
+    const candidate = join(dir, "dist", "index.mjs");
+    if (existsSync(candidate)) return candidate;
+    const parent = pathDirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  throw new Error(
+    "vendor build needs the built builder-tools bundle (dist/index.mjs); build the package first",
+  );
 }
 
 /**
@@ -473,12 +685,15 @@ function runBuildWorker(
   outDir: string,
   include: string[],
   external: string[],
+  base: string,
+  nodeEnv: "development" | "production",
 ): Promise<{ ok: boolean; stderr: string }> {
   const workerPath = join(outDir, "build-worker.mjs");
   writeFileSync(workerPath, VENDOR_BUILD_WORKER);
-  // Absolute path to this (built) module so the worker can import the
-  // dynamic-base plugin from builder-tools' own bundle.
-  const selfModulePath = fileURLToPath(import.meta.url);
+  // A path the worker (raw node) can import to get connectDynamicBasePlugin:
+  // the built bundle itself, or the built package entry when this module is
+  // being run from source (vitest).
+  const selfModulePath = resolveSelfModulePath();
   return new Promise((resolve) => {
     const child = spawn(
       process.execPath,
@@ -491,6 +706,8 @@ function runBuildWorker(
         JSON.stringify(external),
         VENDOR_DYNAMIC_BASE,
         selfModulePath,
+        base,
+        nodeEnv,
       ],
       { cwd: dirname, stdio: ["ignore", "pipe", "pipe"] },
     );
@@ -510,14 +727,22 @@ function runBuildWorker(
  * The vendor build worker, written to disk and run as a subprocess. Loads
  * `vite` from the project and `connectDynamicBasePlugin` from builder-tools' own
  * built bundle (selfModulePath). argv: dirname, vendorDir, includeJSON,
- * urlPrefix, externalJSON, dynamicBase, selfModulePath.
+ * urlPrefix, externalJSON, dynamicBase, selfModulePath, base (app base),
+ * nodeEnv.
  */
 const VENDOR_BUILD_WORKER = `
 import { createRequire } from 'node:module';
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { join, isAbsolute } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-const [dirname, vendorDir, includeJSON, urlPrefix, externalJSON, dynamicBase, selfModulePath] = process.argv.slice(2);
+const [dirname, vendorDir, includeJSON, urlPrefix, externalJSON, dynamicBase, selfModulePath, baseArg, nodeEnvArg] = process.argv.slice(2);
+// Trailing argv are optional (older callers): base defaults to the dynamic
+// placeholder behavior, nodeEnv to development. baseArg is the APP base —
+// the same string the app build uses; the build base appends the vendor
+// segment so emitted asset URLs land under <app-base>__vendor__/.
+const segment = urlPrefix.replace(/^\\/+/, '');
+const base = baseArg ? baseArg + segment : dynamicBase;
+const nodeEnv = nodeEnvArg ?? 'development';
 const include = JSON.parse(includeJSON);
 const external = JSON.parse(externalJSON ?? '[]');
 const externalSet = new Set(external);
@@ -590,14 +815,17 @@ const phVendorResolve = {
 };
 await build({
   root: dirname, configFile: false, logLevel: 'error',
-  // Dynamic-base placeholder + vendor segment: connectDynamicBasePlugin rewrites
-  // emitted chunk/asset URLs to resolve against the deploy base at serve time.
-  base: dynamicBase,
+  // Caller-provided build base (or the dynamic placeholder default):
+  // connectDynamicBasePlugin rewrites emitted chunk/asset URLs to resolve
+  // against the deploy base at serve time.
+  base,
   define: {
-    'process.env.NODE_ENV': '"development"',
+    'process.env.NODE_ENV': JSON.stringify(nodeEnv),
     // BASE_URL resolves to the deploy base (not the vendor prefix) so vendored
     // Connect's router basename + BASE_URL-relative fetches use the right path.
-    'import.meta.env.BASE_URL': JSON.stringify(DYNAMIC_BASE_PLACEHOLDER),
+    // The app base when provided (concrete or placeholder), the placeholder
+    // otherwise (dev flow — rewritten at serve time by the dynamic-base plugin).
+    'import.meta.env.BASE_URL': JSON.stringify(baseArg ?? DYNAMIC_BASE_PLACEHOLDER),
   },
   // phVendorResolve (pre) resolves bares from the worker; esmExternalRequirePlugin owns
   // react/virtual externalization; connectDynamicBasePlugin (post) rewrites the placeholder base.
@@ -606,7 +834,9 @@ await build({
   // segment so the worker recovers the deploy base, not the vendor prefix.
   worker: { format: 'es', plugins: () => [connectDynamicBasePlugin({ forWorker: true, workerStripPrefix: urlPrefix.replace(/^\\/+/, '') })] },
   build: {
-    outDir: vendorDir, emptyOutDir: false, minify: false, target: 'esnext', cssCodeSplit: true,
+    // Production ships this to every visitor, so minify it like the app's own
+    // chunks; dev keeps readable output and the faster build.
+    outDir: vendorDir, emptyOutDir: false, minify: nodeEnv === 'production', target: 'esnext', cssCodeSplit: true,
     rollupOptions: {
       input, preserveEntrySignatures: 'strict',
       output: { format: 'es', entryFileNames: '[name].js', chunkFileNames: 'chunks/[name]-[hash].js', assetFileNames: 'assets/[name]-[hash][extname]' },

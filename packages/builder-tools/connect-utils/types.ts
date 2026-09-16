@@ -33,6 +33,16 @@ export type IConnectOptions = {
    * Connect asset. Build input (not runtime config); from
    * `ph connect build --favicon`. Non-absolute paths resolve against the build cwd. */
   favicon?: string;
+  /**
+   * Production vendor: the prebuilt shared-dependency bundle's import map and
+   * version table (from `prebuildConnectVendor`). When set on a production
+   * build, the shared specifiers are externalized from the app bundle and
+   * merged into the page import map. Build input only.
+   */
+  vendor?: {
+    imports: Record<string, string>;
+    versions: Record<string, string>;
+  };
 };
 
 export type ConnectCommonOptions = {

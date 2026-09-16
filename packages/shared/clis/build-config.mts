@@ -1,5 +1,9 @@
 import { esmExternalRequirePlugin } from "rolldown/plugins";
 import type { InlineConfig } from "tsdown";
+import {
+  EXTERNALIZABLE_SHARED_SPECIFIERS,
+  findSharedImports,
+} from "../connect/shared-deps.js";
 
 const entry = [
   "index.ts",
@@ -20,7 +24,7 @@ const entry = [
 const nodeEntry = [...entry, "pieces/index.ts", "pieces/*/index.ts"];
 
 // ./reactor is browser-only: the SharedWorker needs it, the node build does not.
-const browserEntry = [...entry, "reactor/index.ts"];
+export const browserEntry = [...entry, "reactor/index.ts"];
 
 const alwaysBundle = ["**"];
 
@@ -69,8 +73,6 @@ const nodeNeverBundle = [
   "@electric-sql/pglite-tools",
 ];
 
-const browserNeverBundle = nodeNeverBundle;
-
 const copy = [{ from: "powerhouse.manifest.json", to: "dist" }];
 
 const config = false;
@@ -79,13 +81,23 @@ const clean = true;
 const dts = false;
 const sourcemap = true;
 
-export const browserBuildConfig: InlineConfig = {
+// Shared deps are externalized from every package build: the host (Connect)
+// resolves them to one bundled copy via the import map, so a package must
+// not inline its own copy (two instances of the same dep break identity
+// checks and double the download). One regexp per specifier covers the root
+// and every subpath (rolldown `external` accepts strings and regexps, not
+// function matchers, in this toolchain).
+//
+// Only the specifiers the vendor publishes are externalized — see
+// EXTERNALIZABLE_SHARED_SPECIFIERS. Externalizing one the import map has no
+// entry for would leave an unresolvable bare specifier in the output.
+const sharedNeverBundle = EXTERNALIZABLE_SHARED_SPECIFIERS.map(
+  (s) => new RegExp(`^${s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(/.*)?$`),
+);
+
+const baseBrowserConfig = {
   entry: browserEntry,
-  deps: {
-    alwaysBundle,
-    neverBundle: browserNeverBundle,
-  },
-  platform: "browser",
+  platform: "browser" as const,
   copy,
   config,
   clean,
@@ -102,15 +114,80 @@ export const browserBuildConfig: InlineConfig = {
   },
 };
 
-export const nodeBuildConfig: InlineConfig = {
-  entry: nodeEntry,
-  deps: {
-    alwaysBundle,
-    neverBundle: nodeNeverBundle,
-  },
-  platform: "node",
-  config,
-  clean,
-  dts,
-  sourcemap,
+export type BrowserBuildConfigOptions = {
+  /** Externalize the shared dependency set (default: true). */
+  sharedDeps?: boolean;
 };
+
+export function buildBrowserBuildConfig(
+  options: BrowserBuildConfigOptions = {},
+): InlineConfig {
+  const sharedDeps = options.sharedDeps ?? true;
+  return {
+    ...baseBrowserConfig,
+    deps: {
+      alwaysBundle,
+      neverBundle: [
+        ...nodeNeverBundle,
+        ...(sharedDeps ? sharedNeverBundle : []),
+      ],
+    },
+  };
+}
+
+// Kept for existing callers: the default (shared deps externalized).
+export const browserBuildConfig = buildBrowserBuildConfig();
+
+/**
+ * Shared specs a source imports but the built output no longer references as
+ * bare imports — the bundler inlined them, which is exactly what the
+ * external set is meant to prevent.
+ */
+export function findBundledSharedDeps(
+  importedSpecs: string[],
+  outputs: readonly { path: string; content: string }[],
+): string[] {
+  return importedSpecs.filter(
+    (spec) =>
+      !outputs.some((f) => findSharedImports(f.content, [spec]).includes(spec)),
+  );
+}
+
+export type NodeBuildConfigOptions = {
+  /** Externalize the shared dependency set (default: true). */
+  sharedDeps?: boolean;
+};
+
+/**
+ * The node build externalizes the same shared set as the browser build, for
+ * the same reason the `@powerhousedao/reactor-api` entry in `nodeNeverBundle`
+ * already gives: the host provides these, and a package carrying its own copy
+ * is a second class identity as well as dead weight. What differs is only how
+ * the import is resolved at runtime -- Connect's import map in the browser,
+ * ordinary node resolution here, which works because these are declared for
+ * the consumer to provide (`document-model`, `@powerhousedao/reactor-browser`
+ * and `zod` are peerDependencies of every generated project).
+ */
+export function buildNodeBuildConfig(
+  options: NodeBuildConfigOptions = {},
+): InlineConfig {
+  const sharedDeps = options.sharedDeps ?? true;
+  return {
+    entry: nodeEntry,
+    deps: {
+      alwaysBundle,
+      neverBundle: [
+        ...nodeNeverBundle,
+        ...(sharedDeps ? sharedNeverBundle : []),
+      ],
+    },
+    platform: "node",
+    config,
+    clean,
+    dts,
+    sourcemap,
+  };
+}
+
+// Kept for existing callers: the default (shared deps externalized).
+export const nodeBuildConfig: InlineConfig = buildNodeBuildConfig();

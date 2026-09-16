@@ -1,3 +1,4 @@
+import { DYNAMIC_BASE_PLACEHOLDER } from "@powerhousedao/shared/connect";
 import MagicString from "magic-string";
 import type { Plugin } from "vite";
 
@@ -9,8 +10,12 @@ import type { Plugin } from "vite";
  *
  * Trailing slash matches `normalizeBasePath` output, so the token sits in the
  * same syntactic position as a concrete base would.
+ *
+ * It is defined in the browser-safe shared package (and only re-exported here,
+ * where every build-side importer already reaches for it) so Connect's own
+ * runtime code can read it without importing this node-only build toolchain.
  */
-export const DYNAMIC_BASE_PLACEHOLDER = "/__PH_DYNAMIC_BASE__/";
+export { DYNAMIC_BASE_PLACEHOLDER };
 
 /**
  * Global the runtime (ph-clint proxy) must set before the entry bundle loads.

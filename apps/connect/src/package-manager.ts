@@ -10,6 +10,8 @@ import {
   type IPackageManager,
 } from "@powerhousedao/reactor-browser";
 import {
+  checkSharedDeps,
+  formatSharedDepWarnings,
   mergePwaConfig,
   type PHConnectPwa,
   type PwaContribution,
@@ -21,6 +23,7 @@ import {
   PwaConfigSchema,
 } from "@powerhousedao/shared/document-model";
 import { toCdnUrl } from "@powerhousedao/shared/registry/urls";
+import { getSharedDeps } from "./shared-deps.js";
 import {
   resolveFragmentAssetUrls,
   writeMergedPwaFragment,
@@ -58,17 +61,52 @@ type PackageWithMeta = PackageMeta & {
   spec?: string;
 };
 
+type FetchedPackageJson = {
+  version?: string;
+  dependencies?: Record<string, unknown>;
+  peerDependencies?: Record<string, unknown>;
+};
+
+async function fetchPackageJson(
+  baseUrl: string,
+): Promise<FetchedPackageJson | null> {
+  try {
+    const res = await fetch(baseUrl);
+    if (!res.ok) return null;
+    const pkg = (await res.json()) as {
+      version?: unknown;
+      dependencies?: Record<string, unknown>;
+      peerDependencies?: Record<string, unknown>;
+    };
+    return {
+      version: typeof pkg.version === "string" ? pkg.version : undefined,
+      dependencies: pkg.dependencies,
+      peerDependencies: pkg.peerDependencies,
+    };
+  } catch {
+    return null;
+  }
+}
+
 async function fetchPackageJsonVersion(
   baseUrl: string,
 ): Promise<string | undefined> {
-  try {
-    const res = await fetch(baseUrl);
-    if (!res.ok) return undefined;
-    const pkg = (await res.json()) as { version?: unknown };
-    return typeof pkg.version === "string" ? pkg.version : undefined;
-  } catch {
-    return undefined;
-  }
+  return (await fetchPackageJson(baseUrl))?.version;
+}
+
+/**
+ * Human-readable warnings for shared-dep mismatches between a package's npm
+ * `package.json` (as served by the CDN) and the host's shared-deps version
+ * table. Empty when either side is unavailable — a dev / vendor-off host has
+ * no table to compare against, and a missing package.json means the check
+ * can't run. Used by both the install flow and the package-manager UI.
+ */
+export function sharedDepMismatchWarnings(
+  pkgJson: FetchedPackageJson | null,
+  hostVersions: Record<string, string> | null | undefined,
+): string[] {
+  if (!pkgJson || !hostVersions) return [];
+  return formatSharedDepWarnings(checkSharedDeps(pkgJson, hostVersions));
 }
 
 const LOCAL_PACKAGE_NAME = "Local" as const;
@@ -357,9 +395,25 @@ export class BrowserPackageManager implements IPackageManager {
       importUrl,
       stylesheetUrl,
     });
-    packageWithMeta.version = await fetchPackageJsonVersion(
+    const pkgJson = await fetchPackageJson(
       `${this.#cdnUrl}/${name}/package.json`,
     );
+    packageWithMeta.version = pkgJson?.version;
+
+    // Non-blocking warning: a package that pins a shared dep at a version
+    // the host's vendor was built without still installs, but the host's
+    // copy is what runs — surface the mismatch before it surprises the
+    // user at runtime.
+    const warnings = sharedDepMismatchWarnings(
+      pkgJson,
+      (await getSharedDeps())?.versions,
+    );
+    if (warnings.length > 0) {
+      console.error(
+        `[package-manager] shared-deps mismatch for ${name}:\n` +
+          warnings.join("\n"),
+      );
+    }
 
     return packageWithMeta;
   }

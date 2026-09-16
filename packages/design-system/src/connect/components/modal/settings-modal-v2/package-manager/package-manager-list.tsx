@@ -215,6 +215,16 @@ export const PackageManagerListItem = (props: {
             Update available → v{updateTarget}
           </span>
         )}
+        {registryPackage.sharedDepWarnings &&
+          registryPackage.sharedDepWarnings.length > 0 && (
+            <span
+              className="inline-flex items-center gap-1 rounded-full border border-warning/40 bg-warning/10 px-2 py-0.5 text-[11px] font-medium text-warning"
+              title={registryPackage.sharedDepWarnings.join("\n")}
+            >
+              <Icon name="Exclamation" size={10} />
+              Shared deps out of date
+            </span>
+          )}
         {!(canPickVersion && hasVersionMetadata) && registryPackage.version && (
           <span className="text-xs font-normal text-muted-foreground">
             v{registryPackage.version}

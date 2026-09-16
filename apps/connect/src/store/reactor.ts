@@ -61,6 +61,7 @@ import { BrowserPackageManager } from "../package-manager.js";
 import { createWorkerReactorClientModule } from "../reactor-worker-client.js";
 import { bumpWorkerGen } from "../reactor-worker-name.js";
 import { getRuntimeConfig } from "../runtime-config.js";
+import { getSharedDeps } from "../shared-deps.js";
 import { isReactorWorkerEnabled } from "../utils/reactor-worker-flag.js";
 import {
   REACTOR_INSTANCE_NAMESPACE,
@@ -382,11 +383,16 @@ export async function createReactor(localPackage?: DocumentModelLib) {
         return module;
       },
     };
+    // The production vendor's shared-deps table (null in dev / vendor-off
+    // builds): the worker rewrites shared imports in package sources to
+    // these absolute URLs and blob-imports the result.
+    const sharedImports = (await getSharedDeps())?.imports;
     const workerClient = createWorkerReactorClientModule({
       namespace: REACTOR_INSTANCE_NAMESPACE,
       relationalNamespace: RELATIONAL_PGLITE_NAME,
       cdnUrl: packageManager.cdnUrl ?? "",
       packageSpecs,
+      sharedImports,
       studioMode: phGlobalConfig.studioMode,
       renownChainId,
       featureFlags: reactorFeatureFlags,
