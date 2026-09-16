@@ -88,6 +88,15 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
         working-directory: ./packages/reactor-browser
 
+      # The engine's piece suites fetch Activepieces bundles from npm. Keyed on
+      # the suites themselves: a run that changes none of them reuses the bundles.
+      - name: Cache Activepieces bundles
+        uses: actions/cache@v4
+        with:
+          path: packages/reactor-workflow/node_modules/.cache/ap-bundles
+          key: ap-bundles-${{ hashFiles('packages/reactor-workflow/test/pieces/**/*.test.ts', 'packages/reactor-workflow/src/reactor/trigger-supervisor.test.ts') }}
+          restore-keys: ap-bundles-
+
       - name: Run tests
         if: ${{ steps.diff.outputs.files != '' }}
         run: pnpm test:ci -- --silent passed-only related ${{ steps.diff.outputs.files }}
