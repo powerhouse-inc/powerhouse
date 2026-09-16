@@ -197,8 +197,11 @@ describe("SHARED_DEP_SPECIFIERS", () => {
     expect(SHARED_DEP_SPECIFIERS).toContain(
       "@powerhousedao/shared/registry/urls",
     );
+    // Vendored by Connect and a peerDependency of every generated project,
+    // so a package must not carry its own copy of it either.
+    expect(SHARED_DEP_SPECIFIERS).toContain("zod");
     expect(SHARED_DEP_SPECIFIERS).not.toContain("@powerhousedao/connect");
-    expect(SHARED_DEP_SPECIFIERS).toHaveLength(6);
+    expect(SHARED_DEP_SPECIFIERS).toHaveLength(7);
   });
 });
 

@@ -1,8 +1,8 @@
 import {
   browserEntry,
   buildBrowserBuildConfig,
+  buildNodeBuildConfig,
   findBundledSharedDeps,
-  nodeBuildConfig,
 } from "@powerhousedao/shared/build-config";
 import {
   findSharedImports,
@@ -79,7 +79,7 @@ export async function runBuild(args: BuildArgs) {
   }
 
   await tsdownBuild({
-    ...nodeBuildConfig,
+    ...buildNodeBuildConfig({ sharedDeps }),
     outDir: join(outDir, "node"),
   });
 

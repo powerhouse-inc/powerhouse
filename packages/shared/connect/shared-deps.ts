@@ -26,6 +26,12 @@ export const SHARED_DEPS: readonly SharedDep[] = [
     specifier: "@powerhousedao/reactor-browser",
     package: "@powerhousedao/reactor-browser",
   },
+  // Connect already vendors zod (it is in DEFAULT_VENDOR_INCLUDE, so the
+  // import map publishes an entry for it) and every generated project already
+  // declares it as a peerDependency -- yet it was missing from this set, so
+  // each package inlined a private copy anyway. It is the single biggest
+  // dependency left in a minimal package.
+  { specifier: "zod", package: "zod" },
 ];
 
 export const SHARED_DEP_SPECIFIERS: readonly string[] = SHARED_DEPS.map(

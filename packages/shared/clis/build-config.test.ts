@@ -10,7 +10,9 @@ import {
   browserBuildConfig,
   buildBrowserBuildConfig,
   browserEntry,
+  buildNodeBuildConfig,
   findBundledSharedDeps,
+  nodeBuildConfig,
 } from "./build-config.mts";
 
 function sharedMatchers(cfg: InlineConfig): RegExp[] {
@@ -96,6 +98,73 @@ describe("buildBrowserBuildConfig", () => {
     expect(
       (browserBuildConfig.deps!.neverBundle as string[]).includes("react"),
     ).toBe(true);
+  });
+});
+
+// The browser build externalizes the shared set onto Connect's import map.
+// The node build had no equivalent and inlined its own copy of every one of
+// them, which is the same duplication for the same reason the identity
+// comment on `@powerhousedao/reactor-api` already gives: the host provides
+// these, and two copies are two class identities. They are declared for the
+// consumer to provide -- document-model, @powerhousedao/reactor-browser and
+// zod are peerDependencies of every generated project.
+describe("buildNodeBuildConfig", () => {
+  it("externalizes the shared dep set, as the browser build does", () => {
+    const regexps = sharedMatchers(buildNodeBuildConfig());
+    expect(regexps.length).toBeGreaterThan(0);
+    const matches = (id: string) => regexps.some((r) => r.test(id));
+    expect(matches("document-model")).toBe(true);
+    expect(matches("@powerhousedao/reactor-browser/rpc")).toBe(true);
+    expect(matches("@powerhousedao/shared/registry/urls")).toBe(true);
+    // Same narrowing as the browser: nothing the host does not provide.
+    expect(matches("@powerhousedao/shared")).toBe(false);
+    expect(matches("@powerhousedao/shared/clis")).toBe(false);
+  });
+
+  it("keeps the node build's own entries, platform and string externals", () => {
+    const cfg = buildNodeBuildConfig();
+    expect(cfg.platform).toBe("node");
+    // ./pieces is node-only and must stay in the node entry set.
+    expect(cfg.entry).toContain("pieces/index.ts");
+    expect(cfg.entry).not.toContain("reactor/index.ts");
+    const neverBundle = cfg.deps!.neverBundle as (string | RegExp)[];
+    expect(neverBundle).toContain("@powerhousedao/reactor-api");
+    expect(neverBundle).toContain("react");
+  });
+
+  it("sharedDeps: false omits the shared regexps but keeps the rest", () => {
+    const cfg = buildNodeBuildConfig({ sharedDeps: false });
+    const neverBundle = cfg.deps!.neverBundle as (string | RegExp)[];
+    expect(neverBundle.some((e) => e instanceof RegExp)).toBe(false);
+    expect(neverBundle).toContain("@powerhousedao/reactor-api");
+  });
+
+  it("the exported default externalizes the shared set", () => {
+    expect(sharedMatchers(nodeBuildConfig).length).toBeGreaterThan(0);
+  });
+});
+
+// zod is already vendored by Connect (it is in DEFAULT_VENDOR_INCLUDE, so the
+// import map publishes an entry) and already a peerDependency of every
+// generated project -- but it was not in the shared set, so every package
+// inlined its own copy of it in both builds. It is the biggest single
+// dependency left in a minimal package.
+describe("zod", () => {
+  it("is externalized from the browser build", () => {
+    const regexps = sharedMatchers(buildBrowserBuildConfig());
+    expect(regexps.some((r) => r.test("zod"))).toBe(true);
+  });
+
+  it("is externalized from the node build", () => {
+    const regexps = sharedMatchers(buildNodeBuildConfig());
+    expect(regexps.some((r) => r.test("zod"))).toBe(true);
+  });
+
+  it("matches zod subpaths but not a package merely starting with zod", () => {
+    const regexps = sharedMatchers(buildBrowserBuildConfig());
+    const matches = (id: string) => regexps.some((r) => r.test(id));
+    expect(matches("zod/v4")).toBe(true);
+    expect(matches("zod-validation-error")).toBe(false);
   });
 });
 

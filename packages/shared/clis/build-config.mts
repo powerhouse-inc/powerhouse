@@ -153,15 +153,41 @@ export function findBundledSharedDeps(
   );
 }
 
-export const nodeBuildConfig: InlineConfig = {
-  entry: nodeEntry,
-  deps: {
-    alwaysBundle,
-    neverBundle: nodeNeverBundle,
-  },
-  platform: "node",
-  config,
-  clean,
-  dts,
-  sourcemap,
+export type NodeBuildConfigOptions = {
+  /** Externalize the shared dependency set (default: true). */
+  sharedDeps?: boolean;
 };
+
+/**
+ * The node build externalizes the same shared set as the browser build, for
+ * the same reason the `@powerhousedao/reactor-api` entry in `nodeNeverBundle`
+ * already gives: the host provides these, and a package carrying its own copy
+ * is a second class identity as well as dead weight. What differs is only how
+ * the import is resolved at runtime -- Connect's import map in the browser,
+ * ordinary node resolution here, which works because these are declared for
+ * the consumer to provide (`document-model`, `@powerhousedao/reactor-browser`
+ * and `zod` are peerDependencies of every generated project).
+ */
+export function buildNodeBuildConfig(
+  options: NodeBuildConfigOptions = {},
+): InlineConfig {
+  const sharedDeps = options.sharedDeps ?? true;
+  return {
+    entry: nodeEntry,
+    deps: {
+      alwaysBundle,
+      neverBundle: [
+        ...nodeNeverBundle,
+        ...(sharedDeps ? sharedNeverBundle : []),
+      ],
+    },
+    platform: "node",
+    config,
+    clean,
+    dts,
+    sourcemap,
+  };
+}
+
+// Kept for existing callers: the default (shared deps externalized).
+export const nodeBuildConfig: InlineConfig = buildNodeBuildConfig();
