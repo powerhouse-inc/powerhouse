@@ -20,7 +20,7 @@ import {
 } from "@powerhousedao/reactor-browser";
 import type { PHDocument } from "@powerhousedao/shared/document-model";
 import { redo, undo } from "@powerhousedao/shared/document-model";
-import { createElement, Suspense, useEffect, useState } from "react";
+import { createElement, Suspense, useEffect, useMemo, useState } from "react";
 import { CenteredErrorMessage, ErrorBoundary } from "./error-boundary.js";
 import { DocumentUpgradeToast } from "./document-upgrade-toast.js";
 
@@ -53,6 +53,12 @@ function EditorError({
   );
 }
 
+// Prefers "global" when the document carries it, otherwise falls back to
+// the first available scope.
+function defaultScope(scopes: string[]): string {
+  return scopes.includes("global") ? "global" : scopes[0];
+}
+
 function OpenPackageManagerButton() {
   return (
     <PowerhouseButton
@@ -76,19 +82,61 @@ export const DocumentEditor: React.FC<Props> = (props) => {
   const documentName = document?.header.name ?? undefined;
   const documentType = document?.header.documentType ?? undefined;
   const preferredEditor = document?.header.meta?.preferredEditor ?? undefined;
-  const {
-    globalOperations,
-    localOperations,
-    isLoading: isLoadingOperations,
-    refetch: refetchOperations,
-  } = useDocumentOperations(documentId);
+  // The scopes a document carries operations for; every document has at
+  // least "global".
+  const scopes = useMemo(() => {
+    const keys = Object.keys(document?.header.revision ?? {});
+    return keys.length > 0 ? keys : ["global"];
+  }, [document?.header.revision]);
+  const [operationScope, setOperationScope] = useState(() =>
+    defaultScope(scopes),
+  );
+  const selectedScope = scopes.includes(operationScope)
+    ? operationScope
+    : defaultScope(scopes);
 
-  // Refetch operations when revision history panel opens
+  // The history panel's operations: one scope, fetched only while the panel
+  // is open. The panel asks for further pages itself.
+  const {
+    operations: historyOperations,
+    isLoading: isLoadingHistory,
+    hasNextPage: historyHasNextPage,
+    fetchNextPage: fetchNextHistoryPage,
+    error: historyError,
+  } = useDocumentOperations(documentId, selectedScope, {
+    enabled: revisionHistoryVisible,
+    // A page fetch costs the same for 100 or 500 rows in the in-browser
+    // reactor, so fewer, bigger round trips are strictly cheaper.
+    limit: 500,
+  });
+
+  // The timeline read-mode feature maps a selected date range to a global
+  // revision, which needs the whole global history. Fetched only while a
+  // timeline item is selected; shares the cache entry with the panel when
+  // the panel is on "global".
+  const {
+    operations: globalOperations,
+    hasNextPage: globalHasNextPage,
+    isLoading: isLoadingGlobal,
+    fetchNextPage: fetchNextGlobalPage,
+    error: globalError,
+  } = useDocumentOperations(documentId, "global", {
+    enabled: !!selectedTimelineItem,
+    // A page fetch costs the same for 100 or 500 rows in the in-browser
+    // reactor, so fewer, bigger round trips are strictly cheaper.
+    limit: 500,
+  });
   useEffect(() => {
-    if (revisionHistoryVisible) {
-      void refetchOperations();
-    }
-  }, [revisionHistoryVisible, refetchOperations]);
+    // An error ends the walk; we answer from what loaded rather than
+    // retrying forever.
+    if (!globalHasNextPage || isLoadingGlobal || globalError) return;
+    // Deferred: the cache's fetch and the render it triggers are both
+    // synchronous, so calling fetchNextGlobalPage here directly would chain
+    // fetch -> render -> effect -> fetch into one uninterrupted task;
+    // setTimeout(0) yields between pages so the UI stays responsive.
+    const handle = window.setTimeout(fetchNextGlobalPage, 0);
+    return () => window.clearTimeout(handle);
+  }, [globalHasNextPage, isLoadingGlobal, fetchNextGlobalPage, globalError]);
 
   const globalRevisionNumber = document?.header.revision.global ?? 0;
   const localRevisionNumber = document?.header.revision.local ?? 0;
@@ -236,25 +284,27 @@ export const DocumentEditor: React.FC<Props> = (props) => {
       data-document-type={documentType}
     >
       {revisionHistoryVisible ? (
-        isLoadingOperations ? (
-          <EditorLoader message="Loading operations" />
-        ) : (
-          <RevisionHistory
-            key={documentId}
-            documentTitle={documentName ?? ""}
-            documentId={documentId ?? ""}
-            globalOperations={globalOperations}
-            localOperations={localOperations}
-            onClose={() => setRevisionHistoryVisible(false)}
-            documentState={document.state}
-            onCopyState={() => {
-              toast("Copied document state to clipboard", { type: "success" });
-            }}
-            onCopyDocId={() => {
-              toast("Copied document ID to clipboard", { type: "success" });
-            }}
-          />
-        )
+        <RevisionHistory
+          key={documentId}
+          documentTitle={documentName ?? ""}
+          documentId={documentId ?? ""}
+          operations={historyOperations}
+          isLoading={isLoadingHistory}
+          hasNextPage={historyHasNextPage}
+          onLoadNextPage={fetchNextHistoryPage}
+          error={historyError}
+          scopes={scopes}
+          scope={selectedScope}
+          onScopeChange={setOperationScope}
+          onClose={() => setRevisionHistoryVisible(false)}
+          documentState={document.state}
+          onCopyState={() => {
+            toast("Copied document state to clipboard", { type: "success" });
+          }}
+          onCopyDocId={() => {
+            toast("Copied document ID to clipboard", { type: "success" });
+          }}
+        />
       ) : (
         <Suspense
           fallback={<EditorLoader message="Loading editor" />}
@@ -271,11 +321,19 @@ export const DocumentEditor: React.FC<Props> = (props) => {
                 key={`${editorBundleKey}:${documentId}`}
                 context={{
                   readMode: !!selectedTimelineItem,
-                  selectedTimelineRevision: getRevisionFromDate(
-                    selectedTimelineItem?.startDate,
-                    selectedTimelineItem?.endDate,
-                    globalOperations,
-                  ),
+                  // Until the whole global history has paged in, the date lookup
+                  // cannot be answered; undefined leaves the editor on the latest
+                  // state in read mode instead of jumping to revision 0. A failed
+                  // page ends the walk, so we answer from what loaded rather than
+                  // waiting on a page that will never arrive.
+                  selectedTimelineRevision:
+                    (isLoadingGlobal || globalHasNextPage) && !globalError
+                      ? undefined
+                      : getRevisionFromDate(
+                          selectedTimelineItem?.startDate,
+                          selectedTimelineItem?.endDate,
+                          globalOperations,
+                        ),
                 }}
                 documentId={document.header.id}
               />

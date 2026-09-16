@@ -195,6 +195,14 @@ export class HypercoreOperationStore implements IOperationStore {
     return operations.some((op) => op.action.type === "CREATE_DOCUMENT");
   }
 
+  /**
+   * The paging cursor encodes the index to resume from (one past the last
+   * row returned), not the last row's own index; "" or "0" (or anything
+   * unparsable) means the start of the stream. This keeps "0" an unambiguous
+   * start-of-stream sentinel even when a page ends at index 0, which would
+   * otherwise make `nextCursor` equal the start cursor and loop a caller that
+   * walks pages forever. Mirrors the encoding in the Kysely store.
+   */
   async getSince(
     documentId: string,
     scope: string,
@@ -210,9 +218,12 @@ export class HypercoreOperationStore implements IOperationStore {
 
     const prefix = operationPrefix(documentId, scope, branch);
     const startIndex = revision + 1;
+    const parsedCursor = paging?.cursor
+      ? Number.parseInt(paging.cursor, 10)
+      : NaN;
     const cursorIndex =
-      paging?.cursor && parseInt(paging.cursor, 10) > 0
-        ? parseInt(paging.cursor, 10) + 1
+      Number.isFinite(parsedCursor) && parsedCursor > 0
+        ? parsedCursor
         : startIndex;
     const effectiveStart = Math.max(startIndex, cursorIndex);
 
@@ -264,7 +275,7 @@ export class HypercoreOperationStore implements IOperationStore {
 
     const nextCursor =
       hasMore && resultItems.length > 0
-        ? resultItems[resultItems.length - 1].index.toString()
+        ? (resultItems[resultItems.length - 1].index + 1).toString()
         : undefined;
 
     const cursor = paging?.cursor || "0";
@@ -289,6 +300,14 @@ export class HypercoreOperationStore implements IOperationStore {
     };
   }
 
+  /**
+   * The paging cursor encodes the ordinal to resume from (one past the last
+   * ordinal returned), not the last ordinal itself; "" or "0" (or anything
+   * unparsable) means the start of the stream. Unlike the Kysely store's
+   * `getSinceId` (whose auto-increment id starts at 1), this store's ordinal
+   * counter starts at 0, so 0 is a real, valid ordinal and the same
+   * ambiguous-cursor hazard as `getSince`/`getConflicting` applies here too.
+   */
   async getSinceId(
     id: number,
     paging?: PagingOptions,
@@ -298,13 +317,17 @@ export class HypercoreOperationStore implements IOperationStore {
       throw new Error("Operation aborted");
     }
 
-    const cursorValue =
-      paging?.cursor && parseInt(paging.cursor, 10) > 0
-        ? parseInt(paging.cursor, 10)
-        : id;
-    const effectiveId = Math.max(id, cursorValue);
+    const startId = id + 1;
+    const parsedCursor = paging?.cursor
+      ? Number.parseInt(paging.cursor, 10)
+      : NaN;
+    const cursorId =
+      Number.isFinite(parsedCursor) && parsedCursor > 0
+        ? parsedCursor
+        : startId;
+    const effectiveStart = Math.max(startId, cursorId);
 
-    const gt = ordinalPrefix() + pad(effectiveId);
+    const gt = ordinalPrefix() + pad(effectiveStart - 1);
     const lt = ordinalPrefix() + RANGE_UPPER_BOUND;
     const limit = paging?.limit ? paging.limit + 1 : undefined;
 
@@ -337,7 +360,7 @@ export class HypercoreOperationStore implements IOperationStore {
 
     const nextCursor =
       hasMore && resultItems.length > 0
-        ? resultItems[resultItems.length - 1].context.ordinal.toString()
+        ? (resultItems[resultItems.length - 1].context.ordinal + 1).toString()
         : undefined;
 
     const cursor = paging?.cursor || "0";
@@ -358,6 +381,12 @@ export class HypercoreOperationStore implements IOperationStore {
     };
   }
 
+  /**
+   * The paging cursor here encodes the index to resume from (one past the
+   * last row returned), not the last row's own index, for the same reason as
+   * `getSince`: a page ending at index 0 must not produce a cursor that is
+   * indistinguishable from the start-of-stream sentinel.
+   */
   async getConflicting(
     documentId: string,
     scope: string,
@@ -371,19 +400,23 @@ export class HypercoreOperationStore implements IOperationStore {
     }
 
     const prefix = operationPrefix(documentId, scope, branch);
+    const parsedCursor = paging?.cursor
+      ? Number.parseInt(paging.cursor, 10)
+      : NaN;
     const cursorIndex =
-      paging?.cursor && parseInt(paging.cursor, 10) > 0
-        ? parseInt(paging.cursor, 10)
-        : -1;
+      Number.isFinite(parsedCursor) && parsedCursor > 0 ? parsedCursor : -1;
 
-    const gt = cursorIndex >= 0 ? prefix + pad(cursorIndex) : prefix;
+    const gte = cursorIndex >= 0 ? prefix + pad(cursorIndex) : prefix;
     const lt = prefix + RANGE_UPPER_BOUND;
 
-    const stream = this.bee.createReadStream({
-      gt: cursorIndex >= 0 ? gt : undefined,
-      gte: cursorIndex >= 0 ? undefined : gt,
-      lt,
-    });
+    const stream = this.bee.createReadStream({ gte, lt });
+
+    // One row past the page is all this needs: it proves a next page exists
+    // and is dropped again below. The limit cannot be pushed down into
+    // createReadStream, because minTimestamp is applied per entry as it is
+    // read -- a raw range limit would stop short while matching operations
+    // still lay further along the range.
+    const readLimit = paging?.limit ? paging.limit + 1 : undefined;
 
     const items: Operation[] = [];
 
@@ -391,6 +424,11 @@ export class HypercoreOperationStore implements IOperationStore {
       const stored = entry.value as StoredOperation;
       if (stored.timestampUtcMs >= minTimestamp) {
         items.push(this.toOperation(stored));
+        // Every operation of a document shares one key prefix, so without
+        // this the range walk drains the whole document to hand back a
+        // single page. Breaking closes the stream: for-await calls the
+        // iterator's return() on the way out.
+        if (readLimit !== undefined && items.length >= readLimit) break;
       }
     }
 
@@ -404,7 +442,7 @@ export class HypercoreOperationStore implements IOperationStore {
 
     const nextCursor =
       hasMore && resultItems.length > 0
-        ? resultItems[resultItems.length - 1].index.toString()
+        ? (resultItems[resultItems.length - 1].index + 1).toString()
         : undefined;
 
     const cursor = paging?.cursor || "0";
