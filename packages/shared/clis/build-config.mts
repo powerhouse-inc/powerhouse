@@ -28,11 +28,13 @@ export const browserEntry = [...entry, "reactor/index.ts"];
 
 const alwaysBundle = ["**"];
 
-// React must be external in rolldown (via neverBundle) so ESM `import ... from "react"`
-// stays as a bare import and resolves to the host's React at runtime — otherwise
-// rolldown bundles react.production.js into a chunk and we get two React instances.
-// esmExternalRequirePlugin additionally rewrites any CJS `require("react")` in bundled
-// deps to an ESM import so they hit the same external.
+// React must be external so `import ... from "react"` stays a bare import and
+// resolves to the host's React at runtime; bundled, a chunk would carry a second
+// React. In the browser build the externals below belong to esmExternalRequirePlugin
+// alone: rolldown converts a CommonJS `require("react")` into an import only for
+// externals the plugin owns, and listed in neverBundle too the top-level external
+// wins, leaving a browser bundle with a require it cannot serve. use-sync-external-store
+// under zustand, and so under @xyflow/react, is the case that found this.
 const reactExternals = [
   "react",
   "react-dom",
@@ -72,6 +74,12 @@ const nodeNeverBundle = [
   "@electric-sql/pglite",
   "@electric-sql/pglite-tools",
 ];
+
+// The node build keeps React in neverBundle: node has createRequire, so a
+// CommonJS require of an external resolves there without the plugin.
+const browserNeverBundle = nodeNeverBundle.filter(
+  (spec) => typeof spec !== "string" || !reactExternals.includes(spec),
+);
 
 const copy = [{ from: "powerhouse.manifest.json", to: "dist" }];
 
@@ -128,7 +136,7 @@ export function buildBrowserBuildConfig(
     deps: {
       alwaysBundle,
       neverBundle: [
-        ...nodeNeverBundle,
+        ...browserNeverBundle,
         ...(sharedDeps ? sharedNeverBundle : []),
       ],
     },

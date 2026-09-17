@@ -61,15 +61,18 @@ describe("buildBrowserBuildConfig", () => {
     expect(matches("@powerhousedao/shared/registry/manifest-slim")).toBe(true);
   });
 
-  it("keeps the react string externals in the default config", () => {
-    const neverBundle = buildBrowserBuildConfig().deps!.neverBundle as string[];
+  it("hands the react externals to the require-rewrite plugin, not to neverBundle", () => {
+    const config = buildBrowserBuildConfig();
+    const neverBundle = config.deps!.neverBundle as (string | RegExp)[];
+    const names = (config.plugins as { name: string }[]).map((p) => p.name);
+    expect(names).toContain("builtin:esm-external-require");
     for (const spec of [
       "react",
       "react-dom",
       "react/jsx-runtime",
       "react-dom/client",
     ]) {
-      expect(neverBundle).toContain(spec);
+      expect(neverBundle).not.toContain(spec);
     }
   });
 
@@ -77,7 +80,8 @@ describe("buildBrowserBuildConfig", () => {
     const cfg = buildBrowserBuildConfig({ sharedDeps: false });
     const neverBundle = cfg.deps!.neverBundle as (string | RegExp)[];
     expect(neverBundle.some((e) => e instanceof RegExp)).toBe(false);
-    expect(neverBundle).toContain("react");
+    expect(neverBundle).toContain("@powerhousedao/connect");
+    expect(neverBundle).not.toContain("react");
     expect(cfg.deps!.alwaysBundle).toEqual(["**"]);
     expect(cfg.entry).toEqual(browserEntry);
     expect(cfg.platform).toBe("browser");
@@ -97,7 +101,7 @@ describe("buildBrowserBuildConfig", () => {
     expect(browserBuildConfig.entry).toEqual(browserEntry);
     expect(
       (browserBuildConfig.deps!.neverBundle as string[]).includes("react"),
-    ).toBe(true);
+    ).toBe(false);
   });
 });
 
