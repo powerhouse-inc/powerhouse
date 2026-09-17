@@ -1,3 +1,34 @@
+## 6.2.3-dev.11 (2026-09-17)
+
+### 🚀 Features
+
+- **connect:** paint the loading skeleton before the runtime config fetch ([6caca0128](https://github.com/powerhouse-inc/powerhouse/commit/6caca0128))
+- **connect:** shared-dep version warnings in the package manager and at install ([#2359](https://github.com/powerhouse-inc/powerhouse/pull/2359))
+- **connect:** load the vendor shared-deps table and wire it into the worker ([#2359](https://github.com/powerhouse-inc/powerhouse/pull/2359))
+- **reactor-browser,design-system:** keep the legacy useDocumentOperations and RevisionHistory shapes as deprecated aliases ([6de05e632](https://github.com/powerhouse-inc/powerhouse/commit/6de05e632))
+
+### 🩹 Fixes
+
+- **connect:** drain the LCP observer before disconnecting ([2193bc614](https://github.com/powerhouse-inc/powerhouse/commit/2193bc614))
+- **connect:** keep the loading logo visible across the skeleton remount ([531bae43e](https://github.com/powerhouse-inc/powerhouse/commit/531bae43e))
+- **connect:** report LCP once, and keep the perf console quiet in prod ([5ee301349](https://github.com/powerhouse-inc/powerhouse/commit/5ee301349))
+- **connect:** emit import-map addresses the browser accepts ([#2359](https://github.com/powerhouse-inc/powerhouse/pull/2359))
+- **connect:** keep the node-only build toolchain out of the browser graph ([#2359](https://github.com/powerhouse-inc/powerhouse/pull/2359))
+- **design-system,connect:** end the history walk on a failed page and show what loaded ([95f815b46](https://github.com/powerhouse-inc/powerhouse/commit/95f815b46))
+- hold the timeline revision until the global history is loaded, default to the global scope, hide paging mid-load ([80c3b1289](https://github.com/powerhouse-inc/powerhouse/commit/80c3b1289))
+- **reactor-browser:** page operations through nextCursor and invalidate alias keys ([ccb965869](https://github.com/powerhouse-inc/powerhouse/commit/ccb965869))
+
+### 🔥 Performance
+
+- **connect:** share the two-phase bootstrap with startConnect, fetch config in parallel ([443cba30b](https://github.com/powerhouse-inc/powerhouse/commit/443cba30b))
+- **design-system,connect:** wait for the whole history before rendering the timeline, yield between pages, fetch 500 per page ([86435721c](https://github.com/powerhouse-inc/powerhouse/commit/86435721c))
+
+### ❤️ Thank You
+
+- Claude Opus 5 (1M context)
+- Frank Pfeift
+- froid1911
+
 ## 6.2.3-dev.10 (2026-09-16)
 
 This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.

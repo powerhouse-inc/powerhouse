@@ -1,3 +1,84 @@
+## 6.2.3-dev.11 (2026-09-17)
+
+### 🚀 Features
+
+- Connect shared dependencies bundle ([#3028](https://github.com/powerhouse-inc/powerhouse/pull/3028))
+- **builder-tools:** connect build externalizes shared deps into the import map ([#2359](https://github.com/powerhouse-inc/powerhouse/pull/2359))
+- **connect:** load the vendor shared-deps table and wire it into the worker ([#2359](https://github.com/powerhouse-inc/powerhouse/pull/2359))
+- **connect:** shared-dep version warnings in the package manager and at install ([#2359](https://github.com/powerhouse-inc/powerhouse/pull/2359))
+- **connect:** paint the loading skeleton before the runtime config fetch ([6caca0128](https://github.com/powerhouse-inc/powerhouse/commit/6caca0128))
+- **ph-cli:** add mergeDefaultDrives helper for de-duplicating default-drive lists ([b2930da93](https://github.com/powerhouse-inc/powerhouse/commit/b2930da93))
+- **reactor-browser:** cache paginated operation history per document scope in DocumentCache ([73ff63152](https://github.com/powerhouse-inc/powerhouse/commit/73ff63152))
+- **reactor-browser:** worker loader rewrites shared imports for blob import ([#2359](https://github.com/powerhouse-inc/powerhouse/pull/2359))
+- **reactor-browser,design-system:** keep the legacy useDocumentOperations and RevisionHistory shapes as deprecated aliases ([6de05e632](https://github.com/powerhouse-inc/powerhouse/commit/6de05e632))
+- **shared:** canonical shared-deps list + pure import/version helpers ([#2359](https://github.com/powerhouse-inc/powerhouse/pull/2359))
+- **shared:** RegistryPackage gains sharedDepWarnings ([#2359](https://github.com/powerhouse-inc/powerhouse/pull/2359))
+- **shared:** vendor prebuild gains shared-deps.js, nodeEnv, and base options ([#2359](https://github.com/powerhouse-inc/powerhouse/pull/2359))
+- **shared:** vendor worker takes the app base and appends the vendor segment ([#2359](https://github.com/powerhouse-inc/powerhouse/pull/2359))
+- **shared:** ph connect build prebuilds the vendor and ships relative import-map entries ([#2359](https://github.com/powerhouse-inc/powerhouse/pull/2359))
+- **shared:** ph build externalizes shared deps by default + post-build scan ([#2359](https://github.com/powerhouse-inc/powerhouse/pull/2359))
+- **shared:** expose the vendorable shared subpaths ([#2359](https://github.com/powerhouse-inc/powerhouse/pull/2359))
+
+### 🩹 Fixes
+
+- hold the timeline revision until the global history is loaded, default to the global scope, hide paging mid-load ([80c3b1289](https://github.com/powerhouse-inc/powerhouse/commit/80c3b1289))
+- clear the legacy isLoading on error and test the legacy scope toggle ([785e48b65](https://github.com/powerhouse-inc/powerhouse/commit/785e48b65))
+- **builder-tools:** vendor only installed packages; resolve versions for ESM-only deps ([#2359](https://github.com/powerhouse-inc/powerhouse/pull/2359))
+- **builder-tools:** fail the vendor build on an entry with no file behind it ([71d4bbf78](https://github.com/powerhouse-inc/powerhouse/commit/71d4bbf78))
+- **builder-tools:** publish the vendor directory as traversable ([#2359](https://github.com/powerhouse-inc/powerhouse/pull/2359))
+- **connect:** keep the node-only build toolchain out of the browser graph ([#2359](https://github.com/powerhouse-inc/powerhouse/pull/2359))
+- **connect:** emit import-map addresses the browser accepts ([#2359](https://github.com/powerhouse-inc/powerhouse/pull/2359))
+- **connect:** externalize only what the vendor actually published ([#2359](https://github.com/powerhouse-inc/powerhouse/pull/2359))
+- **connect:** report LCP once, and keep the perf console quiet in prod ([5ee301349](https://github.com/powerhouse-inc/powerhouse/commit/5ee301349))
+- **connect:** keep the loading logo visible across the skeleton remount ([531bae43e](https://github.com/powerhouse-inc/powerhouse/commit/531bae43e))
+- **connect:** drain the LCP observer before disconnecting ([2193bc614](https://github.com/powerhouse-inc/powerhouse/commit/2193bc614))
+- **design-system:** size Timeline rows from the array it counts so a shrinking operations list cannot index past the end ([3ece9fc0d](https://github.com/powerhouse-inc/powerhouse/commit/3ece9fc0d))
+- **design-system:** stop the scroll container clipping the day marker ([759719e45](https://github.com/powerhouse-inc/powerhouse/commit/759719e45))
+- **design-system,connect:** end the history walk on a failed page and show what loaded ([95f815b46](https://github.com/powerhouse-inc/powerhouse/commit/95f815b46))
+- **ph-cli:** vendor the shared subpaths; create the out dir before the vendor lock ([#2359](https://github.com/powerhouse-inc/powerhouse/pull/2359))
+- **ph-cli:** append --default-drives-url to the caller's default drives in studio overrides ([217244cf8](https://github.com/powerhouse-inc/powerhouse/commit/217244cf8))
+- **ph-cli:** ph vetra honours connect.drives.defaultDrives from powerhouse.config.json ([#3023](https://github.com/powerhouse-inc/powerhouse/pull/3023))
+- **ph-cli:** scope the bundled-shared-dep warning to what is externalized ([#2359](https://github.com/powerhouse-inc/powerhouse/pull/2359))
+- **ph-cli:** verify the vendor on disk before the app externalizes onto it ([88130f4d9](https://github.com/powerhouse-inc/powerhouse/commit/88130f4d9))
+- **ph-cli:** verify the shipped vendor after the app build, not before ([893021461](https://github.com/powerhouse-inc/powerhouse/commit/893021461))
+- **reactor:** encode the operations paging cursor as the index to resume from so a page ending at index 0 does not restart the walk ([7aa58680f](https://github.com/powerhouse-inc/powerhouse/commit/7aa58680f))
+- **reactor:** apply the resume-from cursor encoding to getConflicting as well ([04f36e694](https://github.com/powerhouse-inc/powerhouse/commit/04f36e694))
+- **reactor:** an index commit spans as many statements as its rows need ([56fb6d5a0](https://github.com/powerhouse-inc/powerhouse/commit/56fb6d5a0))
+- **reactor:** a failed chunk parks the cursor, so replay still reaches the gap ([104c85869](https://github.com/powerhouse-inc/powerhouse/commit/104c85869))
+- **reactor:** the chunking opt-out is exported, so a subclass can reach it ([1aefdf7b3](https://github.com/powerhouse-inc/powerhouse/commit/1aefdf7b3))
+- **reactor:** the header row takes the newest ordinal, so a stale echo cannot revert it ([4ec732a8d](https://github.com/powerhouse-inc/powerhouse/commit/4ec732a8d))
+- **reactor:** a projection shard indexes on the host's cadence, not the default ([5d63110e8](https://github.com/powerhouse-inc/powerhouse/commit/5d63110e8))
+- **reactor-browser:** page operations through nextCursor and invalidate alias keys ([ccb965869](https://github.com/powerhouse-inc/powerhouse/commit/ccb965869))
+- **reactor-browser:** report loading during the idle window of useDocumentOperations ([a81ff0ebd](https://github.com/powerhouse-inc/powerhouse/commit/a81ff0ebd))
+- **reactor-drive:** a copied document replays under the source's protocol version ([dc5e2c283](https://github.com/powerhouse-inc/powerhouse/commit/dc5e2c283))
+- **reactor-drive:** copyNode carries the source protocol version, and CI runs the suite ([#3034](https://github.com/powerhouse-inc/powerhouse/pull/3034))
+- **reactor-hypercore:** encode the operations paging cursor as the index to resume from, matching the Kysely store ([07ed430ac](https://github.com/powerhouse-inc/powerhouse/commit/07ed430ac))
+- **reactor-hypercore:** apply the resume-from cursor encoding to getSinceId as well ([d98d347aa](https://github.com/powerhouse-inc/powerhouse/commit/d98d347aa))
+- **reactor-hypercore:** give the getConflicting paging tests a cursor ([c5a778587](https://github.com/powerhouse-inc/powerhouse/commit/c5a778587))
+
+### 🔥 Performance
+
+- **connect:** minify the production shared-dependency vendor ([#2359](https://github.com/powerhouse-inc/powerhouse/pull/2359))
+- **connect:** share the two-phase bootstrap with startConnect, fetch config in parallel ([443cba30b](https://github.com/powerhouse-inc/powerhouse/commit/443cba30b))
+- **design-system:** let the timeline virtualizer actually virtualize ([decd256b8](https://github.com/powerhouse-inc/powerhouse/commit/decd256b8))
+- **design-system,connect:** wait for the whole history before rendering the timeline, yield between pages, fetch 500 per page ([86435721c](https://github.com/powerhouse-inc/powerhouse/commit/86435721c))
+- **reactor:** the head of a scope is one aggregate, not a subquery per row ([996748fa2](https://github.com/powerhouse-inc/powerhouse/commit/996748fa2))
+- **reactor:** an indexing pass commits in chunks, so it stays linear ([2b5b37694](https://github.com/powerhouse-inc/powerhouse/commit/2b5b37694))
+- **reactor:** a commit chunk is 50 operations, measured ([74f782800](https://github.com/powerhouse-inc/powerhouse/commit/74f782800))
+- **reactor:** an indexing pass commits in chunks, so it stays linear ([#3033](https://github.com/powerhouse-inc/powerhouse/pull/3033))
+- **reactor-browser:** refresh cached operations from the last revision ([bf1e6d59f](https://github.com/powerhouse-inc/powerhouse/commit/bf1e6d59f))
+- **reactor-hypercore:** stop getConflicting reading the whole key range ([8fdc268ae](https://github.com/powerhouse-inc/powerhouse/commit/8fdc268ae))
+- **shared:** externalize the shared deps from the node build, and zod ([34147d603](https://github.com/powerhouse-inc/powerhouse/commit/34147d603))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5
+- Claude Opus 5 (1M context)
+- Frank @froid1911
+- Frank Pfeift
+- froid1911
+
 ## 6.2.3-dev.10 (2026-09-16)
 
 ### 🚀 Features

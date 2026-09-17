@@ -1,3 +1,37 @@
+## 6.2.3-dev.11 (2026-09-17)
+
+### 🚀 Features
+
+- **ph-cli:** add mergeDefaultDrives helper for de-duplicating default-drive lists ([b2930da93](https://github.com/powerhouse-inc/powerhouse/commit/b2930da93))
+- **shared:** ph build externalizes shared deps by default + post-build scan ([#2359](https://github.com/powerhouse-inc/powerhouse/pull/2359))
+- **shared:** ph connect build prebuilds the vendor and ships relative import-map entries ([#2359](https://github.com/powerhouse-inc/powerhouse/pull/2359))
+- **reactor-browser,design-system:** keep the legacy useDocumentOperations and RevisionHistory shapes as deprecated aliases ([6de05e632](https://github.com/powerhouse-inc/powerhouse/commit/6de05e632))
+
+### 🩹 Fixes
+
+- **ph-cli:** verify the shipped vendor after the app build, not before ([893021461](https://github.com/powerhouse-inc/powerhouse/commit/893021461))
+- **ph-cli:** verify the vendor on disk before the app externalizes onto it ([88130f4d9](https://github.com/powerhouse-inc/powerhouse/commit/88130f4d9))
+- **connect:** emit import-map addresses the browser accepts ([#2359](https://github.com/powerhouse-inc/powerhouse/pull/2359))
+- **ph-cli:** scope the bundled-shared-dep warning to what is externalized ([#2359](https://github.com/powerhouse-inc/powerhouse/pull/2359))
+- **connect:** keep the node-only build toolchain out of the browser graph ([#2359](https://github.com/powerhouse-inc/powerhouse/pull/2359))
+- **ph-cli:** ph vetra honours connect.drives.defaultDrives from powerhouse.config.json ([#3023](https://github.com/powerhouse-inc/powerhouse/pull/3023))
+- **ph-cli:** append --default-drives-url to the caller's default drives in studio overrides ([217244cf8](https://github.com/powerhouse-inc/powerhouse/commit/217244cf8))
+- **ph-cli:** vendor the shared subpaths; create the out dir before the vendor lock ([#2359](https://github.com/powerhouse-inc/powerhouse/pull/2359))
+- **design-system,connect:** end the history walk on a failed page and show what loaded ([95f815b46](https://github.com/powerhouse-inc/powerhouse/commit/95f815b46))
+- hold the timeline revision until the global history is loaded, default to the global scope, hide paging mid-load ([80c3b1289](https://github.com/powerhouse-inc/powerhouse/commit/80c3b1289))
+- **reactor-browser:** page operations through nextCursor and invalidate alias keys ([ccb965869](https://github.com/powerhouse-inc/powerhouse/commit/ccb965869))
+
+### 🔥 Performance
+
+- **shared:** externalize the shared deps from the node build, and zod ([34147d603](https://github.com/powerhouse-inc/powerhouse/commit/34147d603))
+- **design-system,connect:** wait for the whole history before rendering the timeline, yield between pages, fetch 500 per page ([86435721c](https://github.com/powerhouse-inc/powerhouse/commit/86435721c))
+
+### ❤️ Thank You
+
+- Claude Opus 5 (1M context)
+- Frank Pfeift
+- froid1911
+
 ## 6.2.3-dev.10 (2026-09-16)
 
 This was a version bump only for @powerhousedao/ph-cli to align it with other projects, there were no code changes.

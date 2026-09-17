@@ -1,3 +1,27 @@
+## 6.2.3-dev.11 (2026-09-17)
+
+### 🚀 Features
+
+- **reactor-browser,design-system:** keep the legacy useDocumentOperations and RevisionHistory shapes as deprecated aliases ([6de05e632](https://github.com/powerhouse-inc/powerhouse/commit/6de05e632))
+
+### 🩹 Fixes
+
+- **reactor-hypercore:** give the getConflicting paging tests a cursor ([c5a778587](https://github.com/powerhouse-inc/powerhouse/commit/c5a778587))
+- **design-system,connect:** end the history walk on a failed page and show what loaded ([95f815b46](https://github.com/powerhouse-inc/powerhouse/commit/95f815b46))
+- **reactor-hypercore:** apply the resume-from cursor encoding to getSinceId as well ([d98d347aa](https://github.com/powerhouse-inc/powerhouse/commit/d98d347aa))
+- **reactor-hypercore:** encode the operations paging cursor as the index to resume from, matching the Kysely store ([07ed430ac](https://github.com/powerhouse-inc/powerhouse/commit/07ed430ac))
+- hold the timeline revision until the global history is loaded, default to the global scope, hide paging mid-load ([80c3b1289](https://github.com/powerhouse-inc/powerhouse/commit/80c3b1289))
+- **reactor-browser:** page operations through nextCursor and invalidate alias keys ([ccb965869](https://github.com/powerhouse-inc/powerhouse/commit/ccb965869))
+
+### 🔥 Performance
+
+- **reactor-hypercore:** stop getConflicting reading the whole key range ([8fdc268ae](https://github.com/powerhouse-inc/powerhouse/commit/8fdc268ae))
+- **design-system,connect:** wait for the whole history before rendering the timeline, yield between pages, fetch 500 per page ([86435721c](https://github.com/powerhouse-inc/powerhouse/commit/86435721c))
+
+### ❤️ Thank You
+
+- Frank Pfeift
+
 ## 6.2.3-dev.10 (2026-09-16)
 
 This was a version bump only for @powerhousedao/reactor-hypercore to align it with other projects, there were no code changes.

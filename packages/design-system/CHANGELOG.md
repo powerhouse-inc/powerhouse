@@ -1,3 +1,29 @@
+## 6.2.3-dev.11 (2026-09-17)
+
+### 🚀 Features
+
+- **connect:** shared-dep version warnings in the package manager and at install ([#2359](https://github.com/powerhouse-inc/powerhouse/pull/2359))
+- **reactor-browser,design-system:** keep the legacy useDocumentOperations and RevisionHistory shapes as deprecated aliases ([6de05e632](https://github.com/powerhouse-inc/powerhouse/commit/6de05e632))
+
+### 🩹 Fixes
+
+- **design-system:** stop the scroll container clipping the day marker ([759719e45](https://github.com/powerhouse-inc/powerhouse/commit/759719e45))
+- **design-system,connect:** end the history walk on a failed page and show what loaded ([95f815b46](https://github.com/powerhouse-inc/powerhouse/commit/95f815b46))
+- **design-system:** size Timeline rows from the array it counts so a shrinking operations list cannot index past the end ([3ece9fc0d](https://github.com/powerhouse-inc/powerhouse/commit/3ece9fc0d))
+- clear the legacy isLoading on error and test the legacy scope toggle ([785e48b65](https://github.com/powerhouse-inc/powerhouse/commit/785e48b65))
+- hold the timeline revision until the global history is loaded, default to the global scope, hide paging mid-load ([80c3b1289](https://github.com/powerhouse-inc/powerhouse/commit/80c3b1289))
+- **reactor-browser:** page operations through nextCursor and invalidate alias keys ([ccb965869](https://github.com/powerhouse-inc/powerhouse/commit/ccb965869))
+
+### 🔥 Performance
+
+- **design-system:** let the timeline virtualizer actually virtualize ([decd256b8](https://github.com/powerhouse-inc/powerhouse/commit/decd256b8))
+- **design-system,connect:** wait for the whole history before rendering the timeline, yield between pages, fetch 500 per page ([86435721c](https://github.com/powerhouse-inc/powerhouse/commit/86435721c))
+
+### ❤️ Thank You
+
+- Frank Pfeift
+- froid1911
+
 ## 6.2.3-dev.10 (2026-09-16)
 
 This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.

@@ -1,3 +1,36 @@
+## 6.2.3-dev.11 (2026-09-17)
+
+### 🚀 Features
+
+- **reactor-browser,design-system:** keep the legacy useDocumentOperations and RevisionHistory shapes as deprecated aliases ([6de05e632](https://github.com/powerhouse-inc/powerhouse/commit/6de05e632))
+
+### 🩹 Fixes
+
+- **reactor:** a projection shard indexes on the host's cadence, not the default ([5d63110e8](https://github.com/powerhouse-inc/powerhouse/commit/5d63110e8))
+- **reactor:** the header row takes the newest ordinal, so a stale echo cannot revert it ([4ec732a8d](https://github.com/powerhouse-inc/powerhouse/commit/4ec732a8d))
+- **reactor:** the chunking opt-out is exported, so a subclass can reach it ([1aefdf7b3](https://github.com/powerhouse-inc/powerhouse/commit/1aefdf7b3))
+- **reactor:** a failed chunk parks the cursor, so replay still reaches the gap ([104c85869](https://github.com/powerhouse-inc/powerhouse/commit/104c85869))
+- **reactor:** an index commit spans as many statements as its rows need ([56fb6d5a0](https://github.com/powerhouse-inc/powerhouse/commit/56fb6d5a0))
+- **design-system,connect:** end the history walk on a failed page and show what loaded ([95f815b46](https://github.com/powerhouse-inc/powerhouse/commit/95f815b46))
+- **reactor-hypercore:** encode the operations paging cursor as the index to resume from, matching the Kysely store ([07ed430ac](https://github.com/powerhouse-inc/powerhouse/commit/07ed430ac))
+- **reactor:** apply the resume-from cursor encoding to getConflicting as well ([04f36e694](https://github.com/powerhouse-inc/powerhouse/commit/04f36e694))
+- **reactor:** encode the operations paging cursor as the index to resume from so a page ending at index 0 does not restart the walk ([7aa58680f](https://github.com/powerhouse-inc/powerhouse/commit/7aa58680f))
+- hold the timeline revision until the global history is loaded, default to the global scope, hide paging mid-load ([80c3b1289](https://github.com/powerhouse-inc/powerhouse/commit/80c3b1289))
+- **reactor-browser:** page operations through nextCursor and invalidate alias keys ([ccb965869](https://github.com/powerhouse-inc/powerhouse/commit/ccb965869))
+
+### 🔥 Performance
+
+- **reactor:** a commit chunk is 50 operations, measured ([74f782800](https://github.com/powerhouse-inc/powerhouse/commit/74f782800))
+- **reactor:** an indexing pass commits in chunks, so it stays linear ([2b5b37694](https://github.com/powerhouse-inc/powerhouse/commit/2b5b37694))
+- **reactor:** the head of a scope is one aggregate, not a subquery per row ([996748fa2](https://github.com/powerhouse-inc/powerhouse/commit/996748fa2))
+- **design-system,connect:** wait for the whole history before rendering the timeline, yield between pages, fetch 500 per page ([86435721c](https://github.com/powerhouse-inc/powerhouse/commit/86435721c))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5
+- Frank Pfeift
+
 ## 6.2.3-dev.10 (2026-09-16)
 
 ### 🚀 Features

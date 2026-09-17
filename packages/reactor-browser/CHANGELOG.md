@@ -1,3 +1,29 @@
+## 6.2.3-dev.11 (2026-09-17)
+
+### 🚀 Features
+
+- **reactor-browser:** worker loader rewrites shared imports for blob import ([#2359](https://github.com/powerhouse-inc/powerhouse/pull/2359))
+- **reactor-browser,design-system:** keep the legacy useDocumentOperations and RevisionHistory shapes as deprecated aliases ([6de05e632](https://github.com/powerhouse-inc/powerhouse/commit/6de05e632))
+- **reactor-browser:** cache paginated operation history per document scope in DocumentCache ([73ff63152](https://github.com/powerhouse-inc/powerhouse/commit/73ff63152))
+
+### 🩹 Fixes
+
+- **design-system,connect:** end the history walk on a failed page and show what loaded ([95f815b46](https://github.com/powerhouse-inc/powerhouse/commit/95f815b46))
+- clear the legacy isLoading on error and test the legacy scope toggle ([785e48b65](https://github.com/powerhouse-inc/powerhouse/commit/785e48b65))
+- hold the timeline revision until the global history is loaded, default to the global scope, hide paging mid-load ([80c3b1289](https://github.com/powerhouse-inc/powerhouse/commit/80c3b1289))
+- **reactor-browser:** report loading during the idle window of useDocumentOperations ([a81ff0ebd](https://github.com/powerhouse-inc/powerhouse/commit/a81ff0ebd))
+- **reactor-browser:** page operations through nextCursor and invalidate alias keys ([ccb965869](https://github.com/powerhouse-inc/powerhouse/commit/ccb965869))
+
+### 🔥 Performance
+
+- **reactor-browser:** refresh cached operations from the last revision ([bf1e6d59f](https://github.com/powerhouse-inc/powerhouse/commit/bf1e6d59f))
+- **design-system,connect:** wait for the whole history before rendering the timeline, yield between pages, fetch 500 per page ([86435721c](https://github.com/powerhouse-inc/powerhouse/commit/86435721c))
+
+### ❤️ Thank You
+
+- Frank Pfeift
+- froid1911
+
 ## 6.2.3-dev.10 (2026-09-16)
 
 ### 🚀 Features

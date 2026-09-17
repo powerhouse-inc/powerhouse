@@ -1,3 +1,35 @@
+## 6.2.3-dev.11 (2026-09-17)
+
+### 🚀 Features
+
+- **shared:** vendor worker takes the app base and appends the vendor segment ([#2359](https://github.com/powerhouse-inc/powerhouse/pull/2359))
+- **builder-tools:** connect build externalizes shared deps into the import map ([#2359](https://github.com/powerhouse-inc/powerhouse/pull/2359))
+- **shared:** vendor prebuild gains shared-deps.js, nodeEnv, and base options ([#2359](https://github.com/powerhouse-inc/powerhouse/pull/2359))
+- **reactor-browser,design-system:** keep the legacy useDocumentOperations and RevisionHistory shapes as deprecated aliases ([6de05e632](https://github.com/powerhouse-inc/powerhouse/commit/6de05e632))
+
+### 🩹 Fixes
+
+- **builder-tools:** publish the vendor directory as traversable ([#2359](https://github.com/powerhouse-inc/powerhouse/pull/2359))
+- **builder-tools:** fail the vendor build on an entry with no file behind it ([71d4bbf78](https://github.com/powerhouse-inc/powerhouse/commit/71d4bbf78))
+- **connect:** externalize only what the vendor actually published ([#2359](https://github.com/powerhouse-inc/powerhouse/pull/2359))
+- **connect:** emit import-map addresses the browser accepts ([#2359](https://github.com/powerhouse-inc/powerhouse/pull/2359))
+- **connect:** keep the node-only build toolchain out of the browser graph ([#2359](https://github.com/powerhouse-inc/powerhouse/pull/2359))
+- **builder-tools:** vendor only installed packages; resolve versions for ESM-only deps ([#2359](https://github.com/powerhouse-inc/powerhouse/pull/2359))
+- **design-system,connect:** end the history walk on a failed page and show what loaded ([95f815b46](https://github.com/powerhouse-inc/powerhouse/commit/95f815b46))
+- hold the timeline revision until the global history is loaded, default to the global scope, hide paging mid-load ([80c3b1289](https://github.com/powerhouse-inc/powerhouse/commit/80c3b1289))
+- **reactor-browser:** page operations through nextCursor and invalidate alias keys ([ccb965869](https://github.com/powerhouse-inc/powerhouse/commit/ccb965869))
+
+### 🔥 Performance
+
+- **connect:** minify the production shared-dependency vendor ([#2359](https://github.com/powerhouse-inc/powerhouse/pull/2359))
+- **design-system,connect:** wait for the whole history before rendering the timeline, yield between pages, fetch 500 per page ([86435721c](https://github.com/powerhouse-inc/powerhouse/commit/86435721c))
+
+### ❤️ Thank You
+
+- Claude Opus 5 (1M context)
+- Frank Pfeift
+- froid1911
+
 ## 6.2.3-dev.10 (2026-09-16)
 
 This was a version bump only for @powerhousedao/builder-tools to align it with other projects, there were no code changes.
