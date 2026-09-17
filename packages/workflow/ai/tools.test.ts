@@ -358,6 +358,48 @@ describe("getConnections", () => {
     ]);
   });
 
+  it("treats null and empty-string config values as missing, not false/0", async () => {
+    const client = {
+      get: vi.fn(() =>
+        Promise.resolve({
+          state: {
+            global: {
+              config: {
+                host: null,
+                port: 0,
+                username: "",
+                verifySsl: false,
+              },
+              secretRefs: [
+                { id: "oid-1", name: "password", ref: "secret://v1:abc" },
+              ],
+            },
+          },
+        }),
+      ),
+    };
+    installWindow(client);
+    vi.stubGlobal(
+      "fetch",
+      graphqlFetch({
+        catalog: { workflowRuntime: { pieceCatalog: [IMAP_PIECE] } },
+        connections: {
+          workflowRuntime: {
+            connections: [CONNECTIONS.workflowRuntime.connections[1]],
+          },
+        },
+      }),
+    );
+
+    const result = await tools.getConnections();
+
+    // IMAP_PIECE's required config fields are host and username.
+    expect(result.connections[0].missingConfig.sort()).toEqual([
+      "host",
+      "username",
+    ]);
+  });
+
   it("treats an unknown connector as authless", async () => {
     installWindow({
       get: vi.fn(() => Promise.resolve({ state: { global: {} } })),

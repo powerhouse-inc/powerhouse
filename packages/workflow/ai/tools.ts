@@ -6,6 +6,7 @@ import type { PhAiToolDescriptor } from "@powerhousedao/shared/document-model";
 import { z } from "zod";
 import {
   connectorIdForPiece,
+  isConfigValueMissing,
   packageFromConnectorId,
   planFromAuth,
   type AuthField,
@@ -173,7 +174,10 @@ export async function getConnections(): Promise<{
           .filter((field) => field.required && !refNames.has(field.name))
           .map((field) => field.name),
         missingConfig: plan.configFields
-          .filter((field) => field.required && config[field.name] === undefined)
+          .filter(
+            (field) =>
+              field.required && isConfigValueMissing(config[field.name]),
+          )
           .map((field) => field.name),
       };
     }),

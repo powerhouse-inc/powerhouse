@@ -1,5 +1,6 @@
 // Design-time channel to the workflow-runtime subgraph: piece descriptors
 // and dynamic option resolution. Not document-model coupled.
+import { ambientRenownTokenProvider } from "@powerhousedao/reactor-browser/graphql-client";
 import {
   adaptReactorProps,
   isReactorPieceBlock,
@@ -11,7 +12,8 @@ import {
   type BlockFormProp,
 } from "./ui/forms.js";
 
-const DEFAULT_RUNTIME_URL = "http://localhost:4001/graphql/workflow-runtime";
+export const DEFAULT_RUNTIME_URL =
+  "http://localhost:4001/graphql/workflow-runtime";
 
 let currentRuntimeUrl: string | undefined;
 
@@ -33,9 +35,15 @@ async function gql<T>(
   query: string,
   variables: Record<string, unknown>,
 ): Promise<T> {
+  // Mirrors the reactor-browser switchboard AI tool's auth: attach the
+  // Renown bearer token when one is available, else go out anonymously.
+  const token = await ambientRenownTokenProvider();
   const response = await fetch(runtimeUrl(), {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: {
+      "content-type": "application/json",
+      ...(token ? { authorization: `Bearer ${token}` } : {}),
+    },
     body: JSON.stringify({ query, variables }),
   });
   const body = (await response.json()) as {

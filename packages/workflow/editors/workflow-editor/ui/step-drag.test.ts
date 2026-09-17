@@ -47,10 +47,13 @@ describe("moveRejection", () => {
     ["b", "c"],
   ]);
 
-  it("allows moving a step under a later one", () => {
+  it("refuses moving a step under a step it already reaches (cycle)", () => {
     expect(
       canMoveStep(chain, { stepId: "a", toParentId: "c", port: "next" }),
     ).toBe(false);
+  });
+
+  it("allows moving a later step under an earlier one on a different port", () => {
     expect(
       canMoveStep(chain, { stepId: "c", toParentId: "a", port: "error" }),
     ).toBe(true);

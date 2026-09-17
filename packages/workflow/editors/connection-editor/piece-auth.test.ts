@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   connectorIdForPiece,
+  isAuthComplete,
+  isConfigValueMissing,
   packageFromConnectorId,
   planFromAuth,
+  type AuthPlan,
 } from "./piece-auth.js";
 
 describe("planFromAuth", () => {
@@ -68,6 +71,61 @@ describe("planFromAuth", () => {
   it("defaults to NONE when authless", () => {
     expect(planFromAuth(null).authType).toBe("NONE");
     expect(planFromAuth(undefined).supported).toBe(true);
+  });
+});
+
+describe("isConfigValueMissing", () => {
+  it("treats undefined, null and empty string as missing", () => {
+    expect(isConfigValueMissing(undefined)).toBe(true);
+    expect(isConfigValueMissing(null)).toBe(true);
+    expect(isConfigValueMissing("")).toBe(true);
+  });
+
+  it("treats false and 0 as present", () => {
+    expect(isConfigValueMissing(false)).toBe(false);
+    expect(isConfigValueMissing(0)).toBe(false);
+  });
+});
+
+describe("isAuthComplete", () => {
+  const plan: AuthPlan = {
+    authType: "CUSTOM_AUTH",
+    configFields: [
+      { name: "host", displayName: "Host", required: true },
+      { name: "port", displayName: "Port", required: false },
+    ],
+    secretFields: [{ name: "token", displayName: "Token", required: true }],
+    supported: true,
+  };
+
+  it("is complete once every required field is filled", () => {
+    expect(
+      isAuthComplete(plan, { host: "a" }, new Map([["token", "ref-1"]])),
+    ).toBe(true);
+  });
+
+  it("is incomplete when a required config value is missing, null or empty", () => {
+    expect(isAuthComplete(plan, {}, new Map([["token", "ref-1"]]))).toBe(false);
+    expect(
+      isAuthComplete(plan, { host: null }, new Map([["token", "ref-1"]])),
+    ).toBe(false);
+    expect(
+      isAuthComplete(plan, { host: "" }, new Map([["token", "ref-1"]])),
+    ).toBe(false);
+  });
+
+  it("is incomplete when a required secret ref is missing", () => {
+    expect(isAuthComplete(plan, { host: "a" }, new Map())).toBe(false);
+  });
+
+  it("ignores optional fields", () => {
+    expect(
+      isAuthComplete(
+        plan,
+        { host: "a", port: undefined },
+        new Map([["token", "ref-1"]]),
+      ),
+    ).toBe(true);
   });
 });
 

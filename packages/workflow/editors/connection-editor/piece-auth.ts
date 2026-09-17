@@ -22,6 +22,27 @@ export interface AuthPlan {
   supported: boolean;
 }
 
+// Missing means unset, explicitly null, or emptied to "" - not `false`/`0`.
+export function isConfigValueMissing(value: unknown): boolean {
+  return value === undefined || value === null || value === "";
+}
+
+// Whether every required config/secret field of the plan is filled; pure so
+// it can drive a live re-check as the user edits, not just a one-time mark.
+export function isAuthComplete(
+  plan: AuthPlan,
+  config: Record<string, unknown>,
+  refs: Map<string, string>,
+): boolean {
+  const configOk = plan.configFields.every(
+    (field) => !field.required || !isConfigValueMissing(config[field.name]),
+  );
+  const secretsOk = plan.secretFields.every(
+    (field) => !field.required || Boolean(refs.get(field.name)),
+  );
+  return configOk && secretsOk;
+}
+
 interface AuthPropDescriptor {
   displayName?: string;
   description?: string;

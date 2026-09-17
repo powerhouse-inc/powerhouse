@@ -15,6 +15,7 @@ import {
 } from "../workflow-editor/runtime-api.js";
 import { AutocompleteInput } from "../workflow-editor/ui/Autocomplete.js";
 import {
+  isAuthComplete,
   packageFromConnectorId,
   planFromAuth,
   type AuthField,
@@ -325,21 +326,19 @@ export function ConnectionForm(props: {
   const config = (state.config ?? {}) as Record<string, unknown>;
   const refByName = new Map(state.secretRefs.map((ref) => [ref.name, ref.ref]));
 
-  // Flip UNCONFIGURED to OK once every required field of the plan is filled.
+  // Recomputed on every edit: promotes UNCONFIGURED to OK, and demotes back
+  // when a required field is cleared. REVOKED/ERROR are left alone.
   const maybeMarkConfigured = (
     nextConfig: Record<string, unknown>,
     nextRefs: Map<string, string>,
   ) => {
-    if (state.status !== "UNCONFIGURED" || !plan.supported) return;
-    const configOk = plan.configFields.every(
-      (field) =>
-        !field.required ||
-        (nextConfig[field.name] !== undefined && nextConfig[field.name] !== ""),
-    );
-    const secretsOk = plan.secretFields.every(
-      (field) => !field.required || Boolean(nextRefs.get(field.name)),
-    );
-    if (configOk && secretsOk) callbacks.setStatus("OK");
+    if (!plan.supported) return;
+    const complete = isAuthComplete(plan, nextConfig, nextRefs);
+    if (complete && state.status === "UNCONFIGURED") {
+      callbacks.setStatus("OK");
+    } else if (!complete && state.status === "OK") {
+      callbacks.setStatus("UNCONFIGURED");
+    }
   };
 
   return (
@@ -430,7 +429,12 @@ export function ConnectionForm(props: {
                 nextRefs.set(field.name, ref);
                 maybeMarkConfigured(config, nextRefs);
               }}
-              onRemove={() => callbacks.removeSecretRef(field.name)}
+              onRemove={() => {
+                callbacks.removeSecretRef(field.name);
+                const nextRefs = new Map(refByName);
+                nextRefs.delete(field.name);
+                maybeMarkConfigured(config, nextRefs);
+              }}
             />
           ))}
         </div>
