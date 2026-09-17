@@ -1,6 +1,11 @@
 // Piece catalog proxied from the Activepieces public metadata API — the same
 // source their piece selector uses. Bundles themselves load lazily on use.
 
+import type {
+  ActionBase,
+  PieceMetadataModel,
+  TriggerBase,
+} from "@powerhousedao/pieces-framework";
 import { PAPERLESS_LOGO } from "./first-party-logos.js";
 import { SERVER_ONLY_PIECES } from "./unsupported-pieces.js";
 
@@ -65,33 +70,33 @@ export interface PieceTriggersResult {
   auth: unknown;
 }
 
-interface CatalogEntry {
-  name?: string;
-  displayName?: string;
-  description?: string;
-  logoUrl?: string;
-  version?: string;
+// An untrusted HTTP response in the shape of their own metadata types, so every
+// field is optional and the closed enums stay widened to string.
+type CatalogEntry = Partial<
+  Pick<
+    PieceMetadataModel,
+    "name" | "displayName" | "description" | "logoUrl" | "version"
+  >
+> & {
   actions?: number | Record<string, PieceDetailAction>;
   triggers?: number | Record<string, PieceDetailTrigger>;
   categories?: string[];
   auth?: unknown;
-}
+};
 
-interface PieceDetailAction {
-  name?: string;
-  displayName?: string;
-  description?: string;
+type PieceDetailAction = Partial<
+  Pick<ActionBase, "name" | "displayName" | "description">
+> & {
   // Their discovery filter: "ai" marks agent-targeted atomics.
   audience?: string;
-}
+};
 
-interface PieceDetailTrigger {
-  name?: string;
-  displayName?: string;
-  description?: string;
+type PieceDetailTrigger = Partial<
+  Pick<TriggerBase, "name" | "displayName" | "description">
+> & {
   // POLLING | WEBHOOK | APP_WEBHOOK; runtime support varies by strategy.
   type?: string;
-}
+};
 
 // List entry with suggestionType=ACTION_AND_TRIGGER: the same list endpoint
 // their selector searches, carrying every action/trigger name inline.

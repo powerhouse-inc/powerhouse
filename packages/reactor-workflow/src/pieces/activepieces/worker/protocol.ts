@@ -1,6 +1,9 @@
 import type { ActionContextIdentity } from "../context/action.js";
 import type { StagedFile } from "../context/files.js";
-import type { ServerInfo } from "../context/props.js";
+import type {
+  ExecutionType,
+  ServerContext,
+} from "@powerhousedao/pieces-framework";
 import type { RecordedListener, RecordedSchedule } from "../context/trigger.js";
 
 // One FILE-prop value the host resolved to a path before the run, so the
@@ -65,7 +68,7 @@ export interface RunActionRequest extends EgressScopedRequest, PieceModuleRef {
   // Implement `ctx.output.update`, which reports progress mid-step. Without
   // it the member keeps throwing, so a piece that needs it fails loudly.
   liveOutput?: boolean;
-  executionType?: "BEGIN" | "RESUME";
+  executionType?: `${ExecutionType}`;
   identity?: ActionContextIdentity;
   // Concrete secret values resolved for this step, so the child can strip them
   // from an error before it crosses back; they already travel inside `auth`.
@@ -123,7 +126,7 @@ export interface TriggerHookRequest
   // WEBHOOK payloads; also handed to test runs.
   payload?: unknown;
   webhookUrl?: string;
-  server?: ServerInfo;
+  server?: ServerContext;
   // As on a run request: secrets stripped from errors before they cross back.
   redactValues?: string[];
 }
@@ -182,6 +185,8 @@ export type WorkerRequestMessage =
 export interface SerializedPieceError {
   name: string;
   message: string;
+  // The error's own enumerable properties, plus the HTTP status, request and
+  // response the framework's error formatter recovered from it.
   properties: Record<string, unknown>;
   // Set when the piece hit an unimplemented context member.
   unsupportedMember?: string;

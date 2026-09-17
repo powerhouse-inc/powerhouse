@@ -1,49 +1,59 @@
 import {
   normalizePropsValue,
+  normalizeValue,
   toApFile,
-  toArray,
-  toBoolean,
-  toIsoDateTime,
-  toNumber,
   type ApFileValue,
 } from "../../../src/pieces/activepieces/context/normalize.js";
 import type { ApProperty } from "../../../src/pieces/activepieces/types.js";
 
+const coerce = (type: string, value: unknown) =>
+  normalizeValue({ type }, value);
+
 describe("scalar coercions", () => {
-  it("parses numeric strings and keeps everything else", () => {
-    expect(toNumber("42")).toBe(42);
-    expect(toNumber(" 3.5 ")).toBe(3.5);
-    expect(toNumber(7)).toBe(7);
-    expect(toNumber("")).toBeUndefined();
-    expect(toNumber("abc")).toBe("abc");
+  // NaN for unparseable text, not the original string: the engine's number
+  // processor is Number(value), and a piece must not receive a string here.
+  it("parses numeric strings", async () => {
+    expect(await coerce("NUMBER", "42")).toBe(42);
+    expect(await coerce("NUMBER", " 3.5 ")).toBe(3.5);
+    expect(await coerce("NUMBER", 7)).toBe(7);
+    expect(await coerce("NUMBER", "")).toBeUndefined();
+    expect(await coerce("NUMBER", "abc")).toBeNaN();
   });
 
-  it("parses boolean strings", () => {
-    expect(toBoolean("true")).toBe(true);
-    expect(toBoolean("False")).toBe(false);
-    expect(toBoolean("")).toBe(false);
-    expect(toBoolean(true)).toBe(true);
-    expect(toBoolean("yes")).toBe("yes");
+  // Only JSON's own true/false parse; "False" and "" are not booleans, and an
+  // empty checkbox is absent rather than false.
+  it("parses boolean strings", async () => {
+    expect(await coerce("CHECKBOX", "true")).toBe(true);
+    expect(await coerce("CHECKBOX", "False")).toBe("False");
+    expect(await coerce("CHECKBOX", "")).toBeUndefined();
+    expect(await coerce("CHECKBOX", true)).toBe(true);
+    expect(await coerce("CHECKBOX", "yes")).toBe("yes");
   });
 
-  it("turns strings into arrays", () => {
-    expect(toArray(["a"])).toEqual(["a"]);
-    expect(toArray('["a","b"]')).toEqual(["a", "b"]);
-    expect(toArray("single")).toEqual(["single"]);
-    expect(toArray("")).toEqual([]);
-    expect(toArray(5)).toEqual([5]);
+  // An empty multi-select is absent rather than the empty list.
+  it("turns strings into arrays", async () => {
+    expect(await coerce("MULTI_SELECT_DROPDOWN", ["a"])).toEqual(["a"]);
+    expect(await coerce("MULTI_SELECT_DROPDOWN", '["a","b"]')).toEqual([
+      "a",
+      "b",
+    ]);
+    expect(await coerce("MULTI_SELECT_DROPDOWN", "single")).toEqual(["single"]);
+    expect(await coerce("MULTI_SELECT_DROPDOWN", "")).toBeUndefined();
+    expect(await coerce("MULTI_SELECT_DROPDOWN", 5)).toEqual([5]);
   });
 
-  it("normalises date-times to ISO and keeps unparseable text", () => {
-    expect(toIsoDateTime("2026-09-04T10:00:00.000Z")).toBe(
+  // Anything dayjs cannot read is dropped, a number included: a piece reading
+  // a DATE_TIME prop is promised an ISO string or nothing.
+  it("normalises date-times to ISO and drops what it cannot read", async () => {
+    expect(await coerce("DATE_TIME", "2026-09-04T10:00:00.000Z")).toBe(
       "2026-09-04T10:00:00.000Z",
     );
-    expect(toIsoDateTime("2026-09-04T10:00:00+02:00")).toBe(
+    expect(await coerce("DATE_TIME", "2026-09-04T10:00:00+02:00")).toBe(
       "2026-09-04T08:00:00.000Z",
     );
-    expect(toIsoDateTime(0)).toBe("1970-01-01T00:00:00.000Z");
-    expect(toIsoDateTime("")).toBeUndefined();
-    expect(toIsoDateTime("tomorrow-ish")).toBe("tomorrow-ish");
+    expect(await coerce("DATE_TIME", 0)).toBeUndefined();
+    expect(await coerce("DATE_TIME", "")).toBeUndefined();
+    expect(await coerce("DATE_TIME", "tomorrow-ish")).toBeUndefined();
   });
 });
 
@@ -123,6 +133,7 @@ describe("normalizePropsValue", () => {
       text: "42",
       extra: "kept",
     });
+    // `plain` is an ARRAY with no item schema, which the engine leaves alone.
     expect(result).toEqual({
       count: 12,
       flag: true,
@@ -131,25 +142,22 @@ describe("normalizePropsValue", () => {
       when: "2026-01-02T03:04:05.000Z",
       picks: ["a", "b"],
       rows: [{ qty: 2, label: "two" }, "loose"],
-      plain: ["one"],
+      plain: "one",
       text: "42",
       extra: "kept",
     });
   });
 
-  it("keeps values the coercion cannot improve", async () => {
+  // A value the coercion cannot read does not reach the piece as its raw text:
+  // JSON and DATE_TIME drop it, NUMBER yields NaN, OBJECT parses any JSON.
+  it("refuses values the coercion cannot read", async () => {
     const result = await normalizePropsValue(props, {
       count: "twelve",
       payload: "{not json",
       headers: "[1,2]",
       when: "later",
     });
-    expect(result).toEqual({
-      count: "twelve",
-      payload: "{not json",
-      headers: "[1,2]",
-      when: "later",
-    });
+    expect(result).toEqual({ count: NaN, headers: [1, 2] });
   });
 
   it("drops keys that normalise to undefined and skips absent props", async () => {

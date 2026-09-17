@@ -23,6 +23,11 @@
       "upstreamDir": "packages/core/utils",
       "name": "@activepieces/core-utils",
       "version": "0.6.2"
+    },
+    "engine": {
+      "upstreamDir": "packages/server/engine",
+      "name": "@activepieces/engine",
+      "version": "0.7.0"
     }
   },
   "license": {
@@ -54,6 +59,16 @@
       "path": "test/upstream/core-utils/test/friendly-piece-error.test.ts",
       "upstream": "packages/core/utils/test/friendly-piece-error.test.ts",
       "sha256": "d728d15f69123b3f0da875db5d95a231b6285fba7db6e808699ffdf3accb92d6"
+    },
+    {
+      "path": "test/upstream/engine/test/variables/file-processor.test.ts",
+      "upstream": "packages/server/engine/test/variables/file-processor.test.ts",
+      "sha256": "d27f1f38f47763d5eac601a1d877f6afbace7778771657001991442cdbf32b2a"
+    },
+    {
+      "path": "test/upstream/engine/test/variables/props-validator.test.ts",
+      "upstream": "packages/server/engine/test/variables/props-validator.test.ts",
+      "sha256": "794d3ee48e626b883e2002676a48450795f7e07504eda355cd8401b72a7df9ac"
     },
     {
       "path": "test/upstream/framework/src/lib/property/input/date-range-property.spec.ts",
@@ -364,6 +379,71 @@
       "path": "upstream/core-utils/lib/utils.ts",
       "upstream": "packages/core/utils/src/lib/utils.ts",
       "sha256": "27a0935f1df7f47ec1484ea85b42a698b676656be9f277b6eb0b973d66587ce8"
+    },
+    {
+      "path": "upstream/engine/lib/helper/dynamic-prop-keys.ts",
+      "upstream": "packages/server/engine/src/lib/helper/dynamic-prop-keys.ts",
+      "sha256": "4e1b12895f745e05c53d77dab64245b6d0c46a9ca30325ac80b0b5bbdf62aeaa"
+    },
+    {
+      "path": "upstream/engine/lib/variables/processors/array-zipper.ts",
+      "upstream": "packages/server/engine/src/lib/variables/processors/array-zipper.ts",
+      "sha256": "134a460c529afa8997149729eac31006744c40236fa22aff17314f06943f732c"
+    },
+    {
+      "path": "upstream/engine/lib/variables/processors/checkbox.ts",
+      "upstream": "packages/server/engine/src/lib/variables/processors/checkbox.ts",
+      "sha256": "0adff737ffbd4940f74f8b67ce8510eb6109cbe20fc386bee13b60c9cfd843d2"
+    },
+    {
+      "path": "upstream/engine/lib/variables/processors/date-time.ts",
+      "upstream": "packages/server/engine/src/lib/variables/processors/date-time.ts",
+      "sha256": "2c897948944ec9daf8f9fd152dc422610536fcbe66f3358b0c5b652ae295f50d"
+    },
+    {
+      "path": "upstream/engine/lib/variables/processors/file.ts",
+      "upstream": "packages/server/engine/src/lib/variables/processors/file.ts",
+      "sha256": "e7b033fbc0289f4c0bbbb0e800202c46367a0d1496d1ce28e6dc782ea2bdbc8e"
+    },
+    {
+      "path": "upstream/engine/lib/variables/processors/index.ts",
+      "upstream": "packages/server/engine/src/lib/variables/processors/index.ts",
+      "sha256": "0ef6117897e772f7229632eff8bbfe99393912e7d7cb297e96c7502145d673cd"
+    },
+    {
+      "path": "upstream/engine/lib/variables/processors/json.ts",
+      "upstream": "packages/server/engine/src/lib/variables/processors/json.ts",
+      "sha256": "1b463c4942c6b03b6401c752375203c3b7a7475db008fcb103323b0851afabe8"
+    },
+    {
+      "path": "upstream/engine/lib/variables/processors/multi-select.ts",
+      "upstream": "packages/server/engine/src/lib/variables/processors/multi-select.ts",
+      "sha256": "c151cf7c7e06040354569d74cc7ad3f350b4b8b496961911934807094773dda9"
+    },
+    {
+      "path": "upstream/engine/lib/variables/processors/number.ts",
+      "upstream": "packages/server/engine/src/lib/variables/processors/number.ts",
+      "sha256": "203aabc98003045e78aad32c4e30a75b125f20027f5bbf3f5918291994f5d2c1"
+    },
+    {
+      "path": "upstream/engine/lib/variables/processors/object.ts",
+      "upstream": "packages/server/engine/src/lib/variables/processors/object.ts",
+      "sha256": "53fdf88d6faff774d6fdfdab001ef69c1b63790df257d179a83fa8122ccc1596"
+    },
+    {
+      "path": "upstream/engine/lib/variables/processors/text.ts",
+      "upstream": "packages/server/engine/src/lib/variables/processors/text.ts",
+      "sha256": "147e37926b309f625b95bfc9b6bc72bbf0002bb978244882158616f3a4a365ce"
+    },
+    {
+      "path": "upstream/engine/lib/variables/processors/types.ts",
+      "upstream": "packages/server/engine/src/lib/variables/processors/types.ts",
+      "sha256": "791e8e772783f338578c839c9a719a88836de6602fd30efd43486e16c497102f"
+    },
+    {
+      "path": "upstream/engine/lib/variables/props-processor.ts",
+      "upstream": "packages/server/engine/src/lib/variables/props-processor.ts",
+      "sha256": "9aa8737b14914a0941014e8d8f502243fbbe8546ac8e7c3a1f7930d03e7cf9f3"
     },
     {
       "path": "upstream/framework/index.ts",

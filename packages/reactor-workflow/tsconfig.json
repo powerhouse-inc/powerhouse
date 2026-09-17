@@ -11,6 +11,9 @@
       "path": "../document-model"
     },
     {
+      "path": "../pieces-framework"
+    },
+    {
       "path": "../reactor"
     },
     {

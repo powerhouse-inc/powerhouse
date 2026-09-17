@@ -16,7 +16,6 @@ import {
   FileTooLargeError,
   maxFileBytes,
 } from "./limits.js";
-import type { TriggerFilesService } from "./trigger.js";
 
 export { FileTooLargeError, maxFileBytes };
 
@@ -32,14 +31,16 @@ export interface StagedFile {
   contentType?: string;
 }
 
-export interface ActionFilesService {
+// The framework's FilesService for both actions and triggers, narrowed to a
+// Buffer (the staging path cannot stream) with fileName optional.
+export interface ApFilesService {
   write(file: { fileName?: string; data: Buffer }): Promise<string>;
 }
 
 // Default for both actions and triggers when the host injects nothing: inline
 // the bytes as a data URI so the payload stays self-contained. Bounded by the
 // shared cap, since a data URI lands in the run journal.
-export class DataUriFilesService implements TriggerFilesService {
+export class DataUriFilesService implements ApFilesService {
   write(file: { fileName?: string; data: Buffer }): Promise<string> {
     const data = Buffer.isBuffer(file.data)
       ? file.data
@@ -73,7 +74,7 @@ function contentTypeFor(fileName: string): string | undefined {
 
 // Worker-side service: writes into `<stagingDir>/<uuid>` and remembers what it
 // wrote so the worker can report it on the response.
-export class StagedFilesService implements ActionFilesService {
+export class StagedFilesService implements ApFilesService {
   private readonly files: StagedFile[] = [];
 
   constructor(private readonly stagingDir: string) {}

@@ -35,16 +35,7 @@ export type LocalPieceLookup = (
 
 // One entry of a reactor package's `pieces` export: which piece it ships and
 // where the built bundle sits, relative to the package root.
-
-// Nothing else is declared here on purpose — display name, actions, triggers
-// and auth are read from the piece itself, so the manifest cannot drift.
-export interface PackagePiece {
-  name: string;
-  version: string;
-  // Directory in npm-bundle shape (package.json + entry), or a module file.
-  bundle?: string;
-  entry?: string;
-}
+export type { PackagePiece } from "@powerhousedao/pieces-framework";
 
 // The published path: fetch (or reuse) the bundle for an exact version.
 export function bundleResolver(options: {

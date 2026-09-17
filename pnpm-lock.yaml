@@ -1749,9 +1749,15 @@ importers:
 
   packages/pieces-framework:
     dependencies:
+      dayjs:
+        specifier: 1.11.9
+        version: 1.11.9
       form-data:
         specifier: 4.0.6
         version: 4.0.6
+      ipaddr.js:
+        specifier: 2.3.0
+        version: 2.3.0
       nanoid:
         specifier: 3.3.17
         version: 3.3.17
@@ -1765,9 +1771,6 @@ importers:
       deepmerge-ts:
         specifier: 7.1.0
         version: 7.1.0
-      ipaddr.js:
-        specifier: 2.3.0
-        version: 2.3.0
       ts-morph:
         specifier: 'catalog:'
         version: 27.0.2
@@ -2529,6 +2532,9 @@ importers:
 
   packages/reactor-workflow:
     dependencies:
+      '@powerhousedao/pieces-framework':
+        specifier: workspace:*
+        version: link:../pieces-framework
       '@powerhousedao/reactor':
         specifier: workspace:*
         version: link:../reactor
@@ -14697,6 +14703,9 @@ packages:
 
   dayjs@1.11.19:
     resolution: {integrity: sha512-t5EcLVS6QPBNqM2z8fakk/NKel+Xzshgt8FFKAn+qwlD1pzZWxh0nVCrvFK7ZDb6XucZeF9z8C7CBWTRIVApAw==}
+
+  dayjs@1.11.9:
+    resolution: {integrity: sha512-QvzAURSbQ0pKdIye2txOzNaHmxtUBXerpY0FJsFXUMKbIZeFm5ht1LS/jFsrncjnmtv8HsG0W2g6c0zUjZWmpA==}
 
   debounce-promise@3.1.2:
     resolution: {integrity: sha512-rZHcgBkbYavBeD9ej6sP56XfG53d51CD4dnaw989YX/nZ/ZJfgRx/9ePKmTNiUiyQvh4mtrMoS3OAWW+yoYtpg==}
@@ -43483,6 +43492,8 @@ snapshots:
   dayjs@1.11.18: {}
 
   dayjs@1.11.19: {}
+
+  dayjs@1.11.9: {}
 
   debounce-promise@3.1.2: {}
 

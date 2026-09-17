@@ -4,11 +4,11 @@
 [activepieces/activepieces](https://github.com/activepieces/activepieces).
 Never edit them by hand; re-run the sync instead.
 
-| | |
-| --- | --- |
-| Tag | `0.91.0` |
-| Commit | `da4410d1bf6212054e55805a98d566ff1b9310b2` |
-| Committed | 2026-09-14 |
+|           |                                            |
+| --------- | ------------------------------------------ |
+| Tag       | `0.91.0`                                   |
+| Commit    | `da4410d1bf6212054e55805a98d566ff1b9310b2` |
+| Committed | 2026-09-14                                 |
 
 The same facts, plus the per-file upstream path and the SHA-256 of every
 original file, live in `upstream/MANIFEST.json`; the package versions are in
@@ -16,12 +16,25 @@ original file, live in `upstream/MANIFEST.json`; the package versions are in
 
 ## What is vendored
 
-| Upstream package | Upstream path | Here |
-| --- | --- | --- |
-| `@activepieces/pieces-framework` 0.39.0 | `packages/pieces/framework/src` | `upstream/framework/` |
-| `@activepieces/pieces-common` 0.14.0 | `packages/pieces/common/src` | `upstream/common/` |
+| Upstream package                        | Upstream path                   | Here                         |
+| --------------------------------------- | ------------------------------- | ---------------------------- |
+| `@activepieces/pieces-framework` 0.39.0 | `packages/pieces/framework/src` | `upstream/framework/`        |
+| `@activepieces/pieces-common` 0.14.0    | `packages/pieces/common/src`    | `upstream/common/`           |
 | `@activepieces/core-piece-types` 0.11.1 | `packages/core/piece-types/src` | `upstream/core-piece-types/` |
-| `@activepieces/core-utils` 0.6.2 | `packages/core/utils/src` | `upstream/core-utils/` |
+| `@activepieces/core-utils` 0.6.2        | `packages/core/utils/src`       | `upstream/core-utils/`       |
+| `@activepieces/engine` 0.7.0            | `packages/server/engine/src`    | `upstream/engine/`           |
+
+The first four are vendored whole. The engine is not: `PACKAGES` gives it an
+explicit `files` list, and the sync fails if any listed path disappears
+upstream. Only the prop-coercion corner is taken — `lib/variables/processors/*`,
+`lib/variables/props-processor.ts` and `lib/helper/dynamic-prop-keys.ts` — which
+is what `./host` re-exports. Everything else in that package reaches for the
+flow executor, the isolated-vm sandbox or the platform API: the trigger helper,
+the piece executor and loader, and `lib/helper/error-handling.ts`, whose
+retry/continue-on-failure logic takes `EngineConstants` and
+`FlowExecutorContext` and so would drag the whole handler tree in.
+`lib/variables/property-path.ts` is left out too: `props-processor.ts` does not
+import it, and it would add a `jsep` dependency.
 
 Each package's own vitest suites (`*.spec.ts`, `*.test.ts` under `src/`, and
 `test/`) go to `test/upstream/<package>/` and run with `pnpm test`.
@@ -30,13 +43,23 @@ Left out: `mime-db-min.cjs` (upstream's bundler alias that keeps `mime-db`,
 pulled in through `form-data`, out of piece bundles; aliasing is the piece
 build's job, so `ph build` may adopt it later) and upstream's unused `ai` and
 `semver` dependencies.
-`@activepieces/shared` is not needed: none of the four packages import it.
+Of the engine's own tests only `test/variables/props-validator.test.ts` and
+`test/variables/file-processor.test.ts` come along: the rest need
+`@activepieces/shared`, `props-resolver` or `FlowExecutorContext`.
 
-`deepmerge-ts` and `ipaddr.js` are devDependencies only. `core-utils` imports
-them in `deepMergeAndCast` and `ssrfIpClassifier`, which the framework barrel
-never re-exports, so the source typechecks against them and the build
-tree-shakes them away. `test/dist.test.ts` fails if a sync makes either
-reachable; that is the moment to move it to `dependencies`.
+`@activepieces/shared` (8k lines of platform entities) is not vendored. The four
+piece packages never import it; the engine files do, so the codemod re-homes
+each symbol they use — `AUTHENTICATION_PROPERTY_NAME` and `AppConnectionValue`
+to `upstream/core-piece-types/`, which really defines them, and `PropertySettings`
+to `src/host/shared-shim.ts`, a Powerhouse-owned declaration of the minimal
+shape `props-processor.ts` reads. An unmapped symbol fails the sync.
+
+`deepmerge-ts` is a devDependency only: `core-utils` imports it in
+`deepMergeAndCast`, which the framework barrel never re-exports, so the source
+typechecks against it and the build tree-shakes it away. `test/dist.test.ts`
+fails if a sync makes it reachable; that is the moment to move it to
+`dependencies`. `ipaddr.js` and `dayjs` are runtime dependencies because `./host`
+does reach them, through `ssrfIpClassifier` and the DATE_TIME processor.
 
 ## How to sync
 
@@ -60,14 +83,18 @@ Upstream is CommonJS with extensionless imports; this package is ESM under
    imports to relative paths into `upstream/`.
 2. Adds `.js` (or `/index.js`) to relative specifiers, resolved against the
    real files.
-3. Prefixes node builtins with `node:`.
+3. Prefixes node builtins with `node:`, and adds the extension Node's ESM
+   resolver will not infer for a subpath of a dependency with no `"exports"`
+   map (`dayjs/plugin/utc` becomes `dayjs/plugin/utc.js`).
 4. Prepends a two-line header naming the upstream path and the tag.
 5. Runs `eslint --fix` with `scripts/sync-upstream.eslint.config.mjs`
    (`consistent-type-imports`, `consistent-type-exports`, prettier) so
    type-only imports and re-exports satisfy `verbatimModuleSyntax` and
    `isolatedModules`. Unused-directive reporting is off there, so upstream's
    `eslint-disable` comments survive even though their rules do not run.
-6. Applies the literal patches listed in `PATCHES` in
+6. Splits an `@activepieces/shared` import across the modules that really own
+   each symbol, per `SHARED_SYMBOL_HOMES`.
+7. Applies the literal patches listed in `PATCHES` in
    `scripts/sync-upstream.mts`. Each must match exactly the expected number of
    times or the sync fails, so a change upstream cannot go unnoticed.
 
@@ -134,6 +161,12 @@ Current patches:
 - `test/upstream/core-utils/test/ai-provider-health.test.ts`: make the outcome
   reporter return `void` instead of `Array.prototype.push`'s number (three
   sites).
+- `test/upstream/engine/test/variables/file-processor.test.ts`: cast the
+  processor's `unknown` result to `ApStreamingFile` instead of annotating the
+  binding (five sites).
+- `test/upstream/engine/test/variables/props-validator.test.ts`: pass
+  `auth: undefined` to `Property.Dropdown` and `Property.MultiSelectDropdown`,
+  which require it.
 
 The vendored trees are excluded from the root ESLint run: their lint stance is
 upstream's, and the codemod already applies this repo's formatting.

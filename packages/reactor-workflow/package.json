@@ -36,6 +36,7 @@
     "build": "tsdown"
   },
   "dependencies": {
+    "@powerhousedao/pieces-framework": "workspace:*",
     "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
     "@powerhousedao/workflow": "workspace:*",

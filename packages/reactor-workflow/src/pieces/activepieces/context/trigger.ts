@@ -1,31 +1,81 @@
 // Our TriggerHookContext → theirs (doc 06 §2.8): one builder covering the
 // strategy variants; identity/payload as data, capabilities injected or stubbed.
+import { Cron } from "croner";
 import { DEDUPE_KEY_PROPERTY, type ApTrigger } from "../types.js";
 import {
   InMemoryKeyValueStore,
   type ActionContextIdentity,
   type KeyValueStore,
 } from "./action.js";
-import type {
-  ConnectionsProvider,
-  FlowsProvider,
-  ServerInfo,
-} from "./props.js";
+import type { ConnectionsProvider, FlowsProvider } from "./props.js";
 import { normalizeStoreScope, type StoreScopeName } from "./store-scope.js";
 import { throwingStub, withTouchTracking } from "./stubs.js";
+import type { ApFilesService } from "./files.js";
+import type {
+  TriggerStrategy,
+  InputPropertyMap,
+  ServerContext,
+  SetScheduleRequest,
+  TestOrRunHookContext,
+} from "@powerhousedao/pieces-framework";
 
-export interface RecordedSchedule {
-  cronExpression: string;
-  timezone?: string;
+// Both branches of the framework's SetScheduleRequest, as the piece asked.
+export type RecordedSchedule = SetScheduleRequest;
+
+type HookContextFor<S extends TriggerStrategy> = TestOrRunHookContext<
+  undefined,
+  InputPropertyMap,
+  S
+>;
+
+export type RecordedListener = Parameters<
+  HookContextFor<TriggerStrategy.APP_WEBHOOK>["app"]["createListeners"]
+>[0];
+
+// Upstream's floor for an interval schedule; a cron is validated the way its
+// engine does, by handing the expression to a parser.
+export const MIN_SCHEDULE_INTERVAL_MS = 60_000;
+
+export class InvalidCronExpressionError extends Error {
+  constructor(cronExpression: string) {
+    super(`Invalid cron expression "${cronExpression}"`);
+    this.name = "InvalidCronExpressionError";
+  }
 }
 
-export interface RecordedListener {
-  events: string[];
-  identifierValue: string;
+export class InvalidScheduleIntervalError extends Error {
+  constructor(intervalMs: unknown) {
+    super(
+      `Invalid schedule interval ${String(intervalMs)}: expected a whole number of milliseconds, at least ${MIN_SCHEDULE_INTERVAL_MS}`,
+    );
+    this.name = "InvalidScheduleIntervalError";
+  }
 }
 
-export interface TriggerFilesService {
-  write(file: { fileName?: string; data: Buffer }): Promise<string>;
+// setSchedule's own validation, as the engine's trigger helper performs it: an
+// interval is a whole number at or above the floor, a cron has to parse.
+export function validateSchedule(request: RecordedSchedule): RecordedSchedule {
+  if ("intervalMs" in request) {
+    const { intervalMs } = request;
+    if (
+      !Number.isInteger(intervalMs) ||
+      intervalMs < MIN_SCHEDULE_INTERVAL_MS
+    ) {
+      throw new InvalidScheduleIntervalError(intervalMs);
+    }
+    return { intervalMs };
+  }
+  const timezone = request.timezone ?? "UTC";
+  let parsed: Cron;
+  try {
+    parsed = new Cron(request.cronExpression, { timezone, legacyMode: false });
+  } catch {
+    throw new InvalidCronExpressionError(request.cronExpression);
+  }
+  if (!parsed.nextRun()) {
+    throw new InvalidCronExpressionError(request.cronExpression);
+  }
+  return { cronExpression: request.cronExpression, timezone };
 }
 
 export interface TriggerContextOptions {
@@ -46,28 +96,17 @@ export interface TriggerContextOptions {
   webhookUrl?: string;
   flows?: FlowsProvider;
   connections?: ConnectionsProvider;
-  server?: ServerInfo;
+  server?: ServerContext;
   // run/test hooks only per the AP contract; omitted members throw, named.
-  files?: TriggerFilesService;
+  files?: ApFilesService;
   onTouch?: (member: string) => void;
 }
 
-export interface BuiltApTriggerContext {
-  auth: unknown;
-  propsValue: Record<string, unknown>;
-  store: KeyValueStore;
-  isRepublish: boolean;
-  flows: FlowsProvider & { current: { id: string; version: { id: string } } };
-  step: { name: string };
-  project: { id: string; externalId(): Promise<string> };
-  connections: ConnectionsProvider;
-  server: ServerInfo;
-  webhookUrl: string;
-  payload: unknown;
-  setSchedule(schedule: RecordedSchedule): void;
-  app: { createListeners(listener: RecordedListener): void };
-  files: { write(file: unknown): Promise<string> };
-}
+// One shape for every strategy: the framework splits TriggerHookContext by
+// TriggerStrategy, but a bundle's declared strategy is not known at build time.
+export type BuiltApTriggerContext = HookContextFor<TriggerStrategy.POLLING> &
+  HookContextFor<TriggerStrategy.WEBHOOK> &
+  HookContextFor<TriggerStrategy.APP_WEBHOOK>;
 
 export interface TriggerContextHandle {
   context: BuiltApTriggerContext;
@@ -147,7 +186,7 @@ export function buildTriggerContext(
     webhookUrl: options.webhookUrl ?? "http://localhost:0/webhook",
     payload: options.payload,
     setSchedule: (schedule: RecordedSchedule) => {
-      schedules.push(schedule);
+      schedules.push(validateSchedule(schedule));
     },
     app: {
       createListeners: (listener: RecordedListener) => {

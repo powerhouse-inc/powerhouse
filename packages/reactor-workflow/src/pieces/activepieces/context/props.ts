@@ -7,39 +7,44 @@ import {
   type ApProperty,
 } from "../types.js";
 import { throwingStub, withTouchTracking } from "./stubs.js";
-import type { ReactorService } from "./reactor.js";
+import type {
+  ConnectionsManager,
+  FlowsContext,
+  PropertyContext,
+  ReactorService,
+  ServerContext,
+} from "@powerhousedao/pieces-framework";
 
-// PropertyContext surface per pieces-framework (identical in npm 0.32.0 and
-// repo main 0.38.0, checked 2026-09-01) + spike S6b findings.
+// The framework's FlowsContext.list, minus the SeekPage cursors the host does
+// not serve: a resolver only ever reads `data`.
 export interface FlowsProvider {
-  list(params?: { externalIds?: string[] }): Promise<{ data: unknown[] }>;
+  list(
+    ...params: Parameters<FlowsContext["list"]>
+  ): Promise<{ data: unknown[] }>;
 }
 
+// The framework's ConnectionsManager with its return widened: the host serves
+// whatever a connection resolved to, not only the shapes upstream enumerates.
 export interface ConnectionsProvider {
-  get(key: string): Promise<unknown>;
+  get(...params: Parameters<ConnectionsManager["get"]>): Promise<unknown>;
 }
 
-export interface ServerInfo {
-  apiUrl: string;
-  publicUrl: string;
-  token: string;
-}
-
-export interface BuiltApPropertyContext {
-  searchValue: string | undefined;
-  reactor: ReactorService;
-  server: ServerInfo;
-  project: { id: string; externalId(): Promise<string> };
+export type BuiltApPropertyContext = Omit<
+  PropertyContext,
+  "flows" | "connections"
+> & {
   flows: FlowsProvider;
   connections: ConnectionsProvider;
-}
+  // ctx.reactor: the Powerhouse capability the framework has no member for.
+  reactor: ReactorService;
+};
 
 export interface PropertyContextOptions {
   searchValue?: string;
   // Injected capabilities; anything omitted throws with its member path.
   flows?: FlowsProvider;
   connections?: ConnectionsProvider;
-  server?: ServerInfo;
+  server?: ServerContext;
   projectId?: string;
   // ctx.reactor for a design-time resolver, on the same terms as at run time:
   // offered to a package piece, a throwing stub to every other.

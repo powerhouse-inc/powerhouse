@@ -72,14 +72,18 @@ export function configHash(blockType: string, config: unknown): string {
     .slice(0, 16);
 }
 
-// The poll cadence a piece asked for via setSchedule: the gap between the
-// cron's next two runs (60s floor); unparseable crons fall back to the default.
+// The poll cadence setSchedule asked for: the named interval, or the gap between
+// the cron's next two runs (60s floor); an unparseable cron uses the default.
 export function intervalFromSchedules(
   schedules: RecordedSchedule[] | undefined,
   defaultMs: number,
 ): number {
-  const cron = schedules?.at(-1)?.cronExpression;
-  if (!cron) return Math.max(defaultMs, MIN_INTERVAL_MS);
+  const schedule = schedules?.at(-1);
+  if (!schedule) return Math.max(defaultMs, MIN_INTERVAL_MS);
+  if ("intervalMs" in schedule) {
+    return Math.max(schedule.intervalMs, MIN_INTERVAL_MS);
+  }
+  const cron = schedule.cronExpression;
   const intervalMs = cronIntervalMs(cron);
   if (intervalMs === undefined) {
     logger.warn(`Unsupported setSchedule cron "${cron}"; using the default`);

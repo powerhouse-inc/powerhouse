@@ -10,6 +10,7 @@ import dgram from "node:dgram";
 import dns from "node:dns";
 import net, { isIP } from "node:net";
 import { AsyncLocalStorage } from "node:async_hooks";
+import { ssrfIpClassifier } from "@powerhousedao/pieces-framework/host";
 import type { EgressPolicy } from "./protocol.js";
 
 export const EGRESS_DENIED_CODE = "EGRESS_DENIED";
@@ -38,128 +39,41 @@ export class EgressDeniedError extends Error {
   }
 }
 
-// The SSRF surface: loopback, the RFC1918 ranges, the link-local block holding
-// the 169.254.169.254 metadata endpoint, multicast, and the IPv6 equivalents.
-const PRIVATE_RANGES = [
-  "0.0.0.0/8",
-  "10.0.0.0/8",
-  "100.64.0.0/10",
-  "127.0.0.0/8",
-  "169.254.0.0/16",
-  "172.16.0.0/12",
-  "192.0.0.0/24",
-  "192.0.2.0/24",
-  "192.88.99.0/24",
-  "192.168.0.0/16",
-  "198.18.0.0/15",
-  "198.51.100.0/24",
-  "203.0.113.0/24",
-  "224.0.0.0/4",
-  "240.0.0.0/4",
-  // Covers ::1 and the deprecated ::a.b.c.d forms in one range.
-  "::/96",
-  "fc00::/7",
-  "fe80::/10",
-  "ff00::/8",
-  "2001:db8::/32",
-  // 6to4 and NAT64 both carry an arbitrary IPv4 destination — 2002:a9fe:a9fe::
-  // is the metadata endpoint — so the whole translation prefix is refused.
-  "2002::/16",
-  "64:ff9b::/96",
-];
+// The SSRF surface (loopback, RFC1918, link-local incl. the metadata endpoint,
+// multicast, and the IPv6 equivalents) is the framework's classifier table.
 
-interface Cidr {
-  bytes: Uint8Array;
-  prefix: number;
+// ipaddr.js reads a deprecated IPv4-compatible address (::a.b.c.d) as unicast,
+// so ::169.254.169.254 would walk past it; the whole block is refused here.
+const IPV4_COMPATIBLE = new net.BlockList();
+IPV4_COMPATIBLE.addSubnet("::", 96, "ipv6");
+
+function familyOf(address: string): "ipv4" | "ipv6" {
+  return isIP(address) === 6 ? "ipv6" : "ipv4";
 }
 
-function parseIpv4(value: string): Uint8Array | undefined {
-  const parts = value.split(".");
-  if (parts.length !== 4) return undefined;
-  const bytes = new Uint8Array(4);
-  for (let i = 0; i < 4; i++) {
-    if (!/^\d{1,3}$/.test(parts[i])) return undefined;
-    const octet = Number(parts[i]);
-    if (octet > 255) return undefined;
-    bytes[i] = octet;
-  }
-  return bytes;
-}
-
-function parseIpv6(value: string): Uint8Array | undefined {
-  let text = value;
-  // Rewrite an embedded IPv4 tail ("::ffff:1.2.3.4") as two hex groups, so the
-  // group walk below has a single shape to handle.
-  if (text.includes(".")) {
-    const colon = text.lastIndexOf(":");
-    const quad = parseIpv4(text.slice(colon + 1));
-    if (!quad) return undefined;
-    const high = ((quad[0] << 8) | quad[1]).toString(16);
-    const low = ((quad[2] << 8) | quad[3]).toString(16);
-    text = `${text.slice(0, colon + 1)}${high}:${low}`;
-  }
-  const halves = text.split("::");
-  if (halves.length > 2) return undefined;
-  const head = halves[0] ? halves[0].split(":") : [];
-  const tail = halves.length === 2 && halves[1] ? halves[1].split(":") : [];
-  const fill = 8 - head.length - tail.length;
-  if (halves.length === 1 ? fill !== 0 : fill < 0) return undefined;
-  const groups = [...head, ...Array<string>(fill).fill("0"), ...tail];
-  const bytes = new Uint8Array(16);
-  for (let i = 0; i < 8; i++) {
-    if (!/^[0-9a-f]{1,4}$/i.test(groups[i])) return undefined;
-    const group = Number.parseInt(groups[i], 16);
-    bytes[i * 2] = group >> 8;
-    bytes[i * 2 + 1] = group & 0xff;
-  }
-  return bytes;
-}
-
-// An IPv4-mapped address is classified as the v4 address it carries, or
-// ::ffff:169.254.169.254 walks straight past the v4 ranges.
-function unmapV4(bytes: Uint8Array): Uint8Array {
-  for (let i = 0; i < 10; i++) if (bytes[i] !== 0) return bytes;
-  if (bytes[10] !== 0xff || bytes[11] !== 0xff) return bytes;
-  return bytes.slice(12);
-}
-
-export function parseAddress(value: string): Uint8Array | undefined {
+// The address without its zone, or undefined when it is not one at all.
+export function parseAddress(value: string): string | undefined {
   const bare = value.split("%")[0];
-  const kind = isIP(bare);
-  if (kind === 4) return parseIpv4(bare);
-  if (kind !== 6) return undefined;
-  const bytes = parseIpv6(bare);
-  return bytes && unmapV4(bytes);
+  return isIP(bare) === 0 ? undefined : bare;
 }
 
-function parseCidr(spec: string): Cidr {
+// Compiled eagerly so a malformed entry fails the request rather than
+// degrading it to no enforcement.
+function addAllowedAddress(list: net.BlockList, spec: string): void {
   const slash = spec.indexOf("/");
   const mask = slash === -1 ? "" : spec.slice(slash + 1);
-  const bytes = parseAddress(slash === -1 ? spec : spec.slice(0, slash));
-  if (!bytes) {
+  const address = parseAddress(slash === -1 ? spec : spec.slice(0, slash));
+  if (!address) {
     throw new Error(`Egress policy entry "${spec}" is not an IP address`);
   }
-  const width = bytes.length * 8;
+  const family = familyOf(address);
+  const width = family === "ipv6" ? 128 : 32;
   const prefix = mask === "" ? width : Number(mask);
-  if (!Number.isInteger(prefix) || prefix < 0 || prefix > width) {
+  if (!Number.isInteger(prefix) || prefix < 1 || prefix > width) {
     throw new Error(`Egress policy entry "${spec}" has an invalid prefix`);
   }
-  return { bytes, prefix };
+  list.addSubnet(address, prefix, family);
 }
-
-function inCidr(address: Uint8Array, cidr: Cidr): boolean {
-  if (address.length !== cidr.bytes.length) return false;
-  let remaining = cidr.prefix;
-  for (let i = 0; i < address.length && remaining > 0; i++) {
-    const bits = Math.min(8, remaining);
-    const mask = (0xff << (8 - bits)) & 0xff;
-    if ((address[i] & mask) !== (cidr.bytes[i] & mask)) return false;
-    remaining -= bits;
-  }
-  return true;
-}
-
-const PRIVATE = PRIVATE_RANGES.map(parseCidr);
 
 type NativeLookup = (
   hostname: string,
@@ -193,15 +107,16 @@ const RESOLVER_METHODS = [
 ];
 
 export function isPrivateAddress(value: string): boolean {
-  const bytes = parseAddress(value);
+  const address = parseAddress(value);
   // An address we cannot classify counts as private: fail closed.
-  if (!bytes) return true;
-  return PRIVATE.some((cidr) => inCidr(bytes, cidr));
+  if (!address) return true;
+  if (IPV4_COMPATIBLE.check(address, familyOf(address))) return true;
+  return ssrfIpClassifier.isBlockedIp({ ip: address, allowList: [] });
 }
 
 interface CompiledPolicy {
   hosts: string[] | undefined;
-  addresses: Cidr[];
+  addresses: net.BlockList | undefined;
   ports: number[] | undefined;
   allowPrivate: boolean;
 }
@@ -214,9 +129,12 @@ function compile(policy: EgressPolicy): CompiledPolicy {
     }
     return port;
   });
+  const specs = policy.allowAddresses ?? [];
+  const addresses = new net.BlockList();
+  for (const spec of specs) addAllowedAddress(addresses, spec);
   return {
     hosts: hosts && hosts.length > 0 ? hosts : undefined,
-    addresses: (policy.allowAddresses ?? []).map(parseCidr),
+    addresses: specs.length > 0 ? addresses : undefined,
     ports: ports && ports.length > 0 ? ports : undefined,
     allowPrivate: policy.allowPrivateAddresses === true,
   };
@@ -233,10 +151,10 @@ function hostAllowed(policy: CompiledPolicy, host: string): boolean {
 }
 
 function addressAllowed(policy: CompiledPolicy, address: string): boolean {
-  const bytes = parseAddress(address);
-  if (!bytes) return false;
-  if (policy.addresses.some((cidr) => inCidr(bytes, cidr))) return true;
-  return policy.allowPrivate || !isPrivateAddress(address);
+  const ip = parseAddress(address);
+  if (!ip) return false;
+  if (policy.addresses?.check(ip, familyOf(ip))) return true;
+  return policy.allowPrivate || !isPrivateAddress(ip);
 }
 
 // The policy of the request in flight, and the one the work started under: both

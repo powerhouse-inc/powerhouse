@@ -3,17 +3,31 @@
 import { throwingStub, withTouchTracking } from "./stubs.js";
 import { jsonSafe } from "../worker/json-safe.js";
 import { normalizeStoreScope, type StoreScopeName } from "./store-scope.js";
-import type { ActionFilesService } from "./files.js";
+import type { ApFilesService } from "./files.js";
 import type { ConnectionsProvider } from "./props.js";
-import type { ReactorService } from "./reactor.js";
+import type {
+  BaseContext,
+  ConnectionsManager,
+  ExecutionType,
+  FilesService,
+  FlowsContext,
+  InputPropertyMap,
+  OutputContext,
+  ReactorService,
+  RunContext,
+  ServerContext,
+  StepContext,
+  Store,
+  TagsManager,
+} from "@powerhousedao/pieces-framework";
 
 export { UnsupportedContextMemberError } from "./stubs.js";
 
 // The scope travels beside the key rather than inside it: which partition a
 // key belongs to is the host's decision, not a naming convention.
 
-// Values are JSON-shaped by contract: a durable store round-trips them through
-// JSON, so nothing may rely on a Date or a Map surviving a put.
+// The host's half of the framework's Store, with its generics dropped: a
+// durable store round-trips through JSON, so nothing comes back as the T put in.
 export interface KeyValueStore {
   put(key: string, value: unknown, scope?: StoreScopeName): Promise<unknown>;
   get(key: string, scope?: StoreScopeName): Promise<unknown>;
@@ -86,7 +100,7 @@ export interface ActionContextOptions {
   // ctx.files for actions. Mirrors the option triggers already accept; when
   // omitted the member keeps throwing, so a piece that needs files fails
   // loudly rather than silently dropping them.
-  files?: ActionFilesService;
+  files?: ApFilesService;
   connections?: ConnectionsProvider;
   // ctx.output.update, the piece's own progress report. Omitted, the member
   // throws, so a piece that depends on it fails by name rather than silently.
@@ -94,38 +108,34 @@ export interface ActionContextOptions {
   // ctx.reactor. Served only to a piece the host loaded from an installed
   // reactor package; for every other piece the member throws by name.
   reactor?: ReactorService;
-  executionType?: "BEGIN" | "RESUME";
+  executionType?: `${ExecutionType}`;
   identity?: ActionContextIdentity;
   onTouch?: (member: string) => void;
 }
 
-// Shape of the context we hand to `action.run()`. Members beyond the
-// implemented tier exist but throw UnsupportedContextMemberError when used.
+// Shape of the context we hand to `action.run()`: the framework's ActionContext
+// member for member. Those beyond the implemented tier throw, named.
 export interface BuiltApActionContext {
-  executionType: "BEGIN" | "RESUME";
+  executionType: `${ExecutionType}`;
   auth: unknown;
   propsValue: Record<string, unknown>;
-  store: KeyValueStore;
-  connections: { get(key: string): Promise<unknown> };
-  tags: { add(tag: unknown): Promise<void> };
-  server: { apiUrl: string; publicUrl: string; token: string };
-  files: { write(file: unknown): Promise<string> };
-  output: { update(output: unknown): Promise<void> };
+  store: Store;
+  connections: ConnectionsManager;
+  tags: TagsManager;
+  server: ServerContext;
+  files: FilesService;
+  output: OutputContext;
   reactor: ReactorService;
+  // Carried by the framework's own test double but absent from its types.
   agent: { tools: unknown[] };
-  run: {
-    id: string;
-    stop(request?: unknown): void;
-    pause(request?: unknown): void;
-    respond(request?: unknown): void;
-  };
-  project: { id: string; externalId(): Promise<string> };
-  flows: {
-    list(): Promise<unknown>;
-    current: { id: string; version: { id: string } };
-  };
-  step: { name: string };
-  generateResumeUrl(params?: unknown): string;
+  run: RunContext;
+  project: BaseContext<undefined, InputPropertyMap>["project"];
+  flows: FlowsContext;
+  step: StepContext;
+  generateResumeUrl(params: {
+    queryParams: Record<string, string>;
+    sync?: boolean;
+  }): string;
 }
 
 export interface ActionContextHandle {
@@ -165,6 +175,8 @@ export function buildActionContext(
       stop: throwingStub("run.stop"),
       pause: throwingStub("run.pause"),
       respond: throwingStub("run.respond"),
+      createWaitpoint: throwingStub("run.createWaitpoint"),
+      waitForWaitpoint: throwingStub("run.waitForWaitpoint"),
     },
     project: {
       id: identity.projectId ?? "project",

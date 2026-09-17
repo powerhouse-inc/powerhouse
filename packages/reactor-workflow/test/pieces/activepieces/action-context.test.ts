@@ -30,9 +30,9 @@ describe("buildActionContext", () => {
   it("throws a named error from unimplemented capability methods", () => {
     const { context: ctx } = buildActionContext({ propsValue: {} });
 
-    expect(() => ctx.files.write({})).toThrowError(
-      UnsupportedContextMemberError,
-    );
+    expect(() =>
+      ctx.files.write({ fileName: "f.txt", data: Buffer.from("x") }),
+    ).toThrowError(UnsupportedContextMemberError);
     try {
       void ctx.connections.get("key");
       expect.unreachable();
@@ -44,7 +44,7 @@ describe("buildActionContext", () => {
     }
     expect(() => ctx.server.apiUrl).toThrowError(UnsupportedContextMemberError);
     expect(() => ctx.run.stop()).toThrowError(UnsupportedContextMemberError);
-    expect(() => ctx.generateResumeUrl({})).toThrowError(
+    expect(() => ctx.generateResumeUrl({ queryParams: {} })).toThrowError(
       UnsupportedContextMemberError,
     );
   });
