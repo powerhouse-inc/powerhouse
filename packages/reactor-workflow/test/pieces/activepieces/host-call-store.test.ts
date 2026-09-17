@@ -1,0 +1,308 @@
+// ctx.store over the host call channel: the piece asks its host for every
+// get/put/delete while the step is still running.
+
+// That is the semantic their pieces are written against — theirs is an HTTP
+// call per operation — and it is what lets a loop resume where it stopped.
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import {
+  ActivepiecesBlockExecutor,
+  type PieceStorePort,
+} from "../../../src/pieces/engine/blocks.js";
+import type { BlockExecution } from "../../../src/pieces/engine/types.js";
+import { PieceWorker } from "../../../src/pieces/activepieces/worker/host.js";
+
+// Reads a cursor and advances it item by item; each put is the checkpoint a
+// crash is supposed to preserve.
+const CURSOR_FIXTURE = `
+const app = {
+  displayName: "Cursor Fixture",
+  actions: {
+    advance: {
+      name: "advance",
+      displayName: "Advance",
+      props: {},
+      run: async (ctx) => {
+        const before = await ctx.store.get("cursor");
+        const start = typeof before === "number" ? before : 0;
+        for (let i = start + 1; i <= start + 3; i++) {
+          await ctx.store.put("cursor", i);
+        }
+        return { before, after: await ctx.store.get("cursor") };
+      },
+    },
+    forget: {
+      name: "forget",
+      displayName: "Forget",
+      props: {},
+      run: async (ctx) => {
+        await ctx.store.put("scratch", "value");
+        await ctx.store.delete("scratch");
+        return { scratch: await ctx.store.get("scratch") };
+      },
+    },
+    scoped: {
+      name: "scoped",
+      displayName: "Scoped",
+      props: {},
+      run: async (ctx) => {
+        // What StoreScope.PROJECT actually carries at runtime.
+        await ctx.store.put("shared", "project-wide", "COLLECTION");
+        return { key: await ctx.store.get("shared", "COLLECTION") };
+      },
+    },
+    flowScoped: {
+      name: "flowScoped",
+      displayName: "Flow Scoped",
+      props: {},
+      run: async (ctx) => {
+        await ctx.store.put("cursor", 1, "FLOW");
+        return { implicit: await ctx.store.get("cursor") };
+      },
+    },
+    typed: {
+      name: "typed",
+      displayName: "Typed",
+      props: {},
+      run: async (ctx) => {
+        const put = await ctx.store.put("when", new Date(0));
+        return { put: typeof put, got: typeof (await ctx.store.get("when")) };
+      },
+    },
+    refused: {
+      name: "refused",
+      displayName: "Refused",
+      props: {},
+      run: async (ctx) => {
+        try {
+          await ctx.store.put("too-big", "x");
+          return { threw: false };
+        } catch (error) {
+          return { threw: true, message: String(error.message) };
+        }
+      },
+    },
+  },
+};
+module.exports = { app };
+`;
+
+let cacheDir = "";
+let worker: PieceWorker;
+
+async function writeFixture(name: string, source: string): Promise<string> {
+  const dir = join(cacheDir, `${name.replace("/", "-")}-1.0.0`);
+  await mkdir(dir, { recursive: true });
+  await writeFile(
+    join(dir, "package.json"),
+    JSON.stringify({ name, version: "1.0.0", main: "index.js" }),
+  );
+  await writeFile(join(dir, "index.js"), source);
+  return dir;
+}
+
+// Records the order operations arrive in, which is what shows they are served
+// during the step rather than replayed from a snapshot afterwards.
+function memoryStore(options: { rejectPut?: string } = {}): PieceStorePort & {
+  entries: Map<string, unknown>;
+  calls: string[];
+} {
+  const entries = new Map<string, unknown>();
+  const calls: string[] = [];
+  // The host partitions by scope, so the fake does too: one map, keys prefixed
+  // by the scope the call arrived with rather than by anything the piece wrote.
+  const at = (key: string, scope: string) => `${scope}/${key}`;
+  return {
+    entries,
+    calls,
+    get(key, scope) {
+      calls.push(`get ${key}`);
+      const k = at(key, scope);
+      return Promise.resolve(entries.has(k) ? entries.get(k) : null);
+    },
+    put(key, value, scope) {
+      calls.push(`put ${key}=${JSON.stringify(value)}`);
+      if (options.rejectPut === key) {
+        return Promise.reject(new Error(`Store value for "${key}" is too big`));
+      }
+      entries.set(at(key, scope), value);
+      return Promise.resolve();
+    },
+    delete(key, scope) {
+      calls.push(`delete ${key}`);
+      entries.delete(at(key, scope));
+      return Promise.resolve();
+    },
+  };
+}
+
+function execution(blockType: string, config: unknown): BlockExecution {
+  return {
+    blockType,
+    config,
+    step: { id: "s1", key: "step", blockType } as BlockExecution["step"],
+  };
+}
+
+describe("ctx.store over the host call channel", () => {
+  beforeAll(async () => {
+    cacheDir = await mkdtemp(join(tmpdir(), "ap-host-call-"));
+    worker = new PieceWorker();
+    await writeFixture("@test/cursor", CURSOR_FIXTURE);
+  });
+
+  afterAll(async () => {
+    worker.dispose();
+    await rm(cacheDir, { recursive: true, force: true });
+  });
+
+  it("serves each get and put while the step is still running", async () => {
+    const store = memoryStore();
+    const executor = new ActivepiecesBlockExecutor({
+      cacheDir,
+      worker,
+      pieceStore: store,
+    });
+
+    const result = await executor.execute(
+      execution("@test/cursor@1.0.0#advance", {}),
+    );
+
+    expect(result.output).toEqual({ before: null, after: 3 });
+    // Every checkpoint reached the host in order, not as one batch at the end.
+    expect(store.calls).toEqual([
+      "get cursor",
+      "put cursor=1",
+      "put cursor=2",
+      "put cursor=3",
+      "get cursor",
+    ]);
+    expect(store.entries.get("FLOW/cursor")).toBe(3);
+  });
+
+  it("resumes from what a previous step left behind", async () => {
+    const store = memoryStore();
+    store.entries.set("FLOW/cursor", 10);
+    const executor = new ActivepiecesBlockExecutor({
+      cacheDir,
+      worker,
+      pieceStore: store,
+    });
+
+    const result = await executor.execute(
+      execution("@test/cursor@1.0.0#advance", {}),
+    );
+
+    expect(result.output).toEqual({ before: 10, after: 13 });
+  });
+
+  it("deletes a key rather than writing it as null", async () => {
+    const store = memoryStore();
+    const executor = new ActivepiecesBlockExecutor({
+      cacheDir,
+      worker,
+      pieceStore: store,
+    });
+
+    const result = await executor.execute(
+      execution("@test/cursor@1.0.0#forget", {}),
+    );
+
+    expect(result.output).toEqual({ scratch: null });
+    expect(store.entries.has("FLOW/scratch")).toBe(false);
+    expect(store.calls).toContain("delete scratch");
+  });
+
+  it("carries their scope prefix through to the host", async () => {
+    const store = memoryStore();
+    const executor = new ActivepiecesBlockExecutor({
+      cacheDir,
+      worker,
+      pieceStore: store,
+    });
+
+    await executor.execute(execution("@test/cursor@1.0.0#scoped", {}));
+
+    // The scope reaches the host as a name, so the host decides the partition.
+    // Nothing about it is encoded in the key the piece chose.
+    expect([...store.entries.keys()]).toEqual(["PROJECT/shared"]);
+  });
+
+  it("treats an explicit FLOW scope as the partition's default", async () => {
+    const store = memoryStore();
+    const executor = new ActivepiecesBlockExecutor({
+      cacheDir,
+      worker,
+      pieceStore: store,
+    });
+
+    const result = await executor.execute(
+      execution("@test/cursor@1.0.0#flowScoped", {}),
+    );
+
+    // A piece that names FLOW and one that omits the scope mean the same key.
+    expect(result.output).toEqual({ implicit: 1 });
+    expect([...store.entries.keys()]).toEqual(["FLOW/cursor"]);
+  });
+
+  it("hands the host a JSON-shaped value, whatever the carrier", async () => {
+    const store = memoryStore();
+    const executor = new ActivepiecesBlockExecutor({
+      cacheDir,
+      worker,
+      pieceStore: store,
+    });
+
+    const result = await executor.execute(
+      execution("@test/cursor@1.0.0#typed", {}),
+    );
+
+    // The durable store round-trips through JSON, so a Date must not appear to
+    // survive a put just because the fork's structured clone would carry one.
+    expect(result.output).toEqual({ put: "string", got: "string" });
+    expect(typeof store.entries.get("FLOW/when")).toBe("string");
+  });
+
+  it("surfaces a host refusal to the piece as a thrown error", async () => {
+    const store = memoryStore({ rejectPut: "too-big" });
+    const executor = new ActivepiecesBlockExecutor({
+      cacheDir,
+      worker,
+      pieceStore: store,
+    });
+
+    const result = await executor.execute(
+      execution("@test/cursor@1.0.0#refused", {}),
+    );
+
+    const output = result.output as { threw: boolean; message: string };
+    expect(output.threw).toBe(true);
+    expect(output.message).toContain("too big");
+    expect(store.entries.has("FLOW/too-big")).toBe(false);
+  });
+
+  it("flattens on the heap too, so the fallback does not diverge", async () => {
+    const executor = new ActivepiecesBlockExecutor({ cacheDir, worker });
+
+    const result = await executor.execute(
+      execution("@test/cursor@1.0.0#typed", {}),
+    );
+
+    // The divergence this guards against: a Date surviving only when no
+    // durable store happens to be configured.
+    expect(result.output).toEqual({ put: "string", got: "string" });
+  });
+
+  it("leaves ctx.store on the worker's heap when no port is configured", async () => {
+    const executor = new ActivepiecesBlockExecutor({ cacheDir, worker });
+
+    const result = await executor.execute(
+      execution("@test/cursor@1.0.0#advance", {}),
+    );
+
+    // No port means no durability contract; the value lives only as long as
+    // this worker does.
+    expect(result.output).toEqual({ before: null, after: 3 });
+  });
+});

@@ -17,6 +17,9 @@ export default defineConfig({
     environment: "happy-dom",
     setupFiles: ["./setupTests.ts"],
     passWithNoTests: true,
+    // The codegen factory pays its whole import on the first test; a Windows
+    // runner needs more than the default five seconds for it.
+    testTimeout: 30_000,
   },
   plugins: [react(), tsconfigPaths()],
 });

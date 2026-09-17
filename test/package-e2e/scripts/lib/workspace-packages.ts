@@ -33,6 +33,7 @@ export const WORKSPACE_PUBLISH_PACKAGES = [
   "@powerhousedao/reactor-group",
   "@powerhousedao/reactor-hypercore",
   "@powerhousedao/reactor-mcp",
+  "@powerhousedao/reactor-workflow",
   "@powerhousedao/opentelemetry-instrumentation-reactor",
   "@powerhousedao/registry",
   "@powerhousedao/shared",
