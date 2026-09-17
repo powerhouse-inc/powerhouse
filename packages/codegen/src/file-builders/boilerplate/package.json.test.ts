@@ -49,3 +49,22 @@ describe("boilerplate dependency overrides", () => {
     expect(JSON.parse(out)).not.toHaveProperty("resolutions");
   });
 });
+
+describe("boilerplate release-age policy", () => {
+  it("turns off pnpm's minimum release age in pnpm-workspace.yaml", () => {
+    // `ph init` resolves a fresh lockfile, so pnpm 11's 1440-minute default
+    // would reject that very lockfile on every later command in the project.
+    expect(pnpmWorkspaceTemplate).toContain("minimumReleaseAge: 0");
+  });
+
+  it("renders the exclude list as a YAML sequence", () => {
+    expect(pnpmWorkspaceTemplate).toContain(
+      [
+        "minimumReleaseAgeExclude:",
+        '  - "@powerhousedao/*"',
+        '  - "@renown/*"',
+        "  - document-model",
+      ].join("\n"),
+    );
+  });
+});
