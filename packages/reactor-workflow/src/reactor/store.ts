@@ -884,7 +884,7 @@ export class WorkflowRunStore {
   }
 
   // Claim-with-status dedupe: true when the key was free (caller fires).
-  // Select-then-insert is safe: the supervisor serializes all claims.
+  // The insert's own conflict outcome is the claim; a prior select can't be trusted.
   async claimDedupe(
     workflowId: string,
     dedupeKey: string,
@@ -897,14 +897,7 @@ export class WorkflowRunStore {
       .where("workflow_id", "=", workflowId)
       .where("created_at", "<", cutoff)
       .execute();
-    const existing = await this.db
-      .selectFrom("trigger_dedupe")
-      .select("dedupe_key")
-      .where("workflow_id", "=", workflowId)
-      .where("dedupe_key", "=", dedupeKey)
-      .executeTakeFirst();
-    if (existing) return false;
-    await this.db
+    const inserted = await this.db
       .insertInto("trigger_dedupe")
       .values({
         workflow_id: workflowId,
@@ -913,8 +906,9 @@ export class WorkflowRunStore {
         created_at: nowIso,
       })
       .onConflict((oc) => oc.columns(["workflow_id", "dedupe_key"]).doNothing())
-      .execute();
-    return true;
+      .returning("dedupe_key")
+      .executeTakeFirst();
+    return inserted !== undefined;
   }
 
   async recordDedupeRun(
@@ -961,23 +955,8 @@ export class WorkflowRunStore {
     assertPieceStoreEntry(key, value);
     const encoded = JSON.stringify(value);
     const nowIso = new Date().toISOString();
-    const existing = await this.db
-      .selectFrom("piece_store")
-      .select("key")
-      .where("scope", "=", scope)
-      .where("scope_key", "=", scopeKey)
-      .where("key", "=", key)
-      .executeTakeFirst();
-    if (existing) {
-      await this.db
-        .updateTable("piece_store")
-        .set({ value: encoded, updated_at: nowIso })
-        .where("scope", "=", scope)
-        .where("scope_key", "=", scopeKey)
-        .where("key", "=", key)
-        .execute();
-      return;
-    }
+    // One upsert, not select-then-branch: concurrent writers can share a scope
+    // (PROJECT scope_key is one row for every workflow) and would otherwise race.
     await this.db
       .insertInto("piece_store")
       .values({
@@ -987,6 +966,11 @@ export class WorkflowRunStore {
         value: encoded,
         updated_at: nowIso,
       })
+      .onConflict((oc) =>
+        oc
+          .columns(["scope", "scope_key", "key"])
+          .doUpdateSet({ value: encoded, updated_at: nowIso }),
+      )
       .execute();
   }
 

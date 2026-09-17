@@ -129,4 +129,87 @@ describe("ensurePieceBundle hardening", () => {
       ensurePieceBundle({ name: "@scope/fixture", version: "9.9.9", cacheDir }),
     ).rejects.toThrow(/@scope\/fixture@9\.9\.9/);
   });
+
+  // gunzip's maxOutputLength bounds decompression, but does nothing for the
+  // raw transfer that runs before it — these cover that gap directly.
+  function serveDeclaredContentLength(len: number): void {
+    globalThis.fetch = (() => {
+      calls += 1;
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        headers: {
+          get: (name: string) =>
+            name === "content-length" ? String(len) : null,
+        },
+        body: null,
+        arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
+      } as unknown as Response);
+    }) as typeof globalThis.fetch;
+  }
+
+  // A liar Content-Length must not exempt the body from the streamed check.
+  function serveStreamed(
+    totalBytes: number,
+    declaredContentLength?: number,
+  ): void {
+    globalThis.fetch = (() => {
+      calls += 1;
+      const stream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          const chunkSize = 8 * 1024 * 1024;
+          let remaining = totalBytes;
+          while (remaining > 0) {
+            const size = Math.min(chunkSize, remaining);
+            controller.enqueue(new Uint8Array(size));
+            remaining -= size;
+          }
+          controller.close();
+        },
+      });
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        headers: {
+          get: (name: string) =>
+            name === "content-length" && declaredContentLength !== undefined
+              ? String(declaredContentLength)
+              : null,
+        },
+        body: stream,
+      } as unknown as Response);
+    }) as typeof globalThis.fetch;
+  }
+
+  it("rejects a response whose Content-Length exceeds the compressed-size cap", async () => {
+    serveDeclaredContentLength(100 * 1024 * 1024);
+    await expect(
+      ensurePieceBundle({ name: "@scope/fixture", version: "1.0.0", cacheDir }),
+    ).rejects.toThrow(/exceeds the .* compressed size cap/);
+  });
+
+  it("rejects a streamed body over the cap even when Content-Length under-reports it", async () => {
+    serveStreamed(64 * 1024 * 1024 + 1024, 1024);
+    await expect(
+      ensurePieceBundle({ name: "@scope/fixture", version: "1.0.0", cacheDir }),
+    ).rejects.toThrow(/exceeds the .* compressed size cap/);
+  });
+
+  it("rejects a package name that could escape the cache directory", async () => {
+    await expect(
+      ensurePieceBundle({ name: "../evil", version: "1.0.0", cacheDir }),
+    ).rejects.toThrow(/Invalid piece package name/);
+    expect(calls).toBe(0);
+  });
+
+  it("rejects a package version that could escape the cache directory", async () => {
+    await expect(
+      ensurePieceBundle({
+        name: "@scope/fixture",
+        version: "1.0.0/../../../../tmp/evil",
+        cacheDir,
+      }),
+    ).rejects.toThrow(/Invalid piece package version/);
+    expect(calls).toBe(0);
+  });
 });

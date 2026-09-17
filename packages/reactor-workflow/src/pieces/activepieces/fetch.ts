@@ -21,6 +21,28 @@ export function npmTarballUrl(name: string, version: string): string {
   return `${NPM_REGISTRY_URL}/${name}/-/${unscoped}-${version}.tgz`;
 }
 
+// name/version come from a workflow step's blockType, an unconstrained string.
+const NPM_NAME_RE = /^(@[a-z0-9][a-z0-9-_.]*\/)?[a-z0-9][a-z0-9-_.]*$/;
+const NPM_VERSION_RE = /^[A-Za-z0-9][A-Za-z0-9.+-]*$/;
+
+function assertValidPackageCoordinate(name: string, version: string): void {
+  if (!NPM_NAME_RE.test(name)) {
+    throw new Error(`Invalid piece package name: ${name}`);
+  }
+  if (!NPM_VERSION_RE.test(version)) {
+    throw new Error(`Invalid piece package version: ${version}`);
+  }
+}
+
+// Belt-and-suspenders: the path we're about to rm/rename must land under cacheDir.
+function assertWithinCacheDir(dir: string, cacheDir: string): void {
+  const root = path.resolve(cacheDir);
+  const resolved = path.resolve(dir);
+  if (resolved !== root && !resolved.startsWith(root + path.sep)) {
+    throw new Error(`Resolved piece cache path escapes cacheDir: ${dir}`);
+  }
+}
+
 function readString(header: Buffer, offset: number, length: number): string {
   const slice = header.subarray(offset, offset + length);
   const nul = slice.indexOf(0);
@@ -30,6 +52,10 @@ function readString(header: Buffer, offset: number, length: number): string {
 // Published piece bundles run a few hundred KB extracted; the cap is well clear
 // of that and bounds what a hostile or corrupt tarball can inflate to.
 const MAX_EXTRACTED_BYTES = 64 * 1024 * 1024;
+
+// Caps the compressed transfer itself, before gunzip ever runs — the decompressed
+// cap above does nothing for a huge (not necessarily bomb-like) response body.
+const MAX_COMPRESSED_BYTES = 64 * 1024 * 1024;
 
 // Minimal ustar extraction: regular files only, "package/" root stripped.
 async function extractTarball(tgz: Buffer, dest: string): Promise<void> {
@@ -81,6 +107,37 @@ export interface FetchedBundle {
   installed: boolean;
 }
 
+// Bounds the transfer before gunzip: rejects an over-limit Content-Length up
+// front, else tracks a running total as the body streams in.
+async function readBoundedBody(
+  response: Response,
+  url: string,
+): Promise<Buffer> {
+  const declared = response.headers.get("content-length");
+  if (declared && Number(declared) > MAX_COMPRESSED_BYTES) {
+    throw new Error(
+      `${url} exceeds the ${MAX_COMPRESSED_BYTES}-byte compressed size cap (Content-Length: ${declared})`,
+    );
+  }
+  if (!response.body) return Buffer.from(await response.arrayBuffer());
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > MAX_COMPRESSED_BYTES) {
+      await reader.cancel();
+      throw new Error(
+        `${url} exceeds the ${MAX_COMPRESSED_BYTES}-byte compressed size cap`,
+      );
+    }
+    chunks.push(value);
+  }
+  return Buffer.concat(chunks);
+}
+
 async function downloadTarball(
   name: string,
   version: string,
@@ -100,7 +157,7 @@ async function downloadTarball(
         lastError = new Error(`${url} responded ${response.status}`);
         continue;
       }
-      return { tgz: Buffer.from(await response.arrayBuffer()), source };
+      return { tgz: await readBoundedBody(response, url), source };
     } catch (error) {
       lastError = error;
     }
@@ -116,7 +173,9 @@ export async function fetchPieceBundle(
   options: FetchPieceBundleOptions,
 ): Promise<FetchedBundle> {
   const { name, version, cacheDir, timeoutMs = 30_000 } = options;
+  assertValidPackageCoordinate(name, version);
   const dir = path.join(cacheDir, `${name.replace("/", "-")}-${version}`);
+  assertWithinCacheDir(dir, cacheDir);
   if (existsSync(path.join(dir, "package.json"))) {
     return {
       dir,
@@ -152,10 +211,12 @@ export async function installPieceBundle(
   options: FetchPieceBundleOptions,
 ): Promise<FetchedBundle> {
   const { name, version, cacheDir, timeoutMs = 120_000 } = options;
+  assertValidPackageCoordinate(name, version);
   const workspace = path.join(
     cacheDir,
     `${name.replace("/", "-")}-${version}.install`,
   );
+  assertWithinCacheDir(workspace, cacheDir);
   const dir = path.join(workspace, "node_modules", name);
   if (
     existsSync(path.join(workspace, "ready")) &&

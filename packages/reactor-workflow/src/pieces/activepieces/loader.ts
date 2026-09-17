@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -31,15 +31,21 @@ export function resolveEntry(pieceDir: string): string {
     }
   }
   candidates.push(pkg.main, pkg.module, "src/index.js", "index.js", "main.js");
+  // A bundle's manifest (or a symlink inside it) must not point the entry
+  // outside pieceDir; realpath so a symlink can't launder the escape.
+  const root = realpathSync(pieceDir);
+  const rootWithSep = root + path.sep;
   for (const candidate of candidates) {
     if (!candidate) continue;
     const abs = path.resolve(pieceDir, candidate);
+    let real: string;
     try {
-      readFileSync(abs);
-      return abs;
+      real = realpathSync(abs);
     } catch {
-      // try the next candidate
+      continue; // candidate doesn't exist; try the next one
     }
+    if (real !== root && !real.startsWith(rootWithSep)) continue;
+    return abs;
   }
   throw new Error(`No entry file found for piece bundle at ${pieceDir}`);
 }
