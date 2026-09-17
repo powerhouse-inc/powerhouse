@@ -2,8 +2,6 @@ import type { PGlite } from "@electric-sql/pglite";
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import { PostgresAnalyticsStore } from "@powerhousedao/analytics-engine-pg";
 import { getConfig } from "@powerhousedao/config/node";
-import { resolveWorkflowsEnabled } from "./workflow/flag.js";
-import { composeWorkflowRuntime } from "./workflow/host.js";
 import type {
   IDocumentModelRegistry,
   IDriveClient,
@@ -146,10 +144,6 @@ type Options = {
   pgliteFactory?: PgliteFactory;
   configFile?: string;
   packages?: string[];
-  /** Powerhouse workflows; wins over PH_WORKFLOWS_ENABLED and the config file. */
-  workflows?: {
-    enabled?: boolean;
-  };
   auth?: {
     enabled: boolean;
     admins: string[];
@@ -685,7 +679,6 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   attachments: AttachmentBuildResult;
   attachmentReferenceIndex: AttachmentReferenceIndexBuildResult;
   packages: PackageManager;
-  workflowsEnabled: boolean;
   dbClosers: Array<() => Promise<void>>;
   readiness: ReadinessGate;
   httpRoutes: HttpRouteService;
@@ -994,18 +987,9 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     new ImportPackageLoader(),
   ];
 
-  const workflowsEnabled = resolveWorkflowsEnabled({
-    configFile: options.configFile,
-    override: options.workflows?.enabled,
-  });
-  logger.info(
-    `Powerhouse workflows ${workflowsEnabled ? "enabled" : "disabled"}`,
-  );
-
   const packages = new PackageManager(loaders, {
     configFile: options.configFile,
     packages: options.packages ?? [],
-    workflows: workflowsEnabled,
   });
 
   // Package routes hang off <basePath>/api, webhooks off <basePath>/webhooks.
@@ -1054,7 +1038,6 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     attachments,
     attachmentReferenceIndex,
     packages,
-    workflowsEnabled,
     dbClosers,
     readiness,
   };
@@ -1090,7 +1073,6 @@ async function _setupAPI(
   reactorDriveClient?: IDriveClient,
   syncServingGate?: SyncScopeGate,
   httpRoutes?: HttpRouteService,
-  workflowsEnabled = false,
 ): Promise<API> {
   const hostModuleBase: IProcessorHostModule = {
     ...createReactorHostModuleBase({
@@ -1218,30 +1200,6 @@ async function _setupAPI(
     logger.info("Auth subgraph registered (document permissions enabled)");
   }
 
-  // Composed before the manager is built so its subgraph joins the core set,
-  // but started after it, once the schema is serving.
-  const workflows = workflowsEnabled
-    ? await composeWorkflowRuntime({
-        reactorClient,
-        relationalDb,
-        attachments: hostModuleBase.attachments,
-        // A step reads attachments with no caller behind it, so the projected
-        // document/ref relationship is what authorizes the read.
-        attachmentReferences: attachmentReferenceIndex.store,
-        attachmentReferenceProjection,
-        // The workflow package's own HTTP namespace: its webhook endpoints
-        // live under it, not under the reactor's.
-        webhooks: httpRoutes?.scopeFor("@powerhousedao/workflow").webhooks,
-        authorizationService,
-        processorManager: reactorProcessorManager,
-        logger: logger.child(["workflow-runtime"]),
-      })
-    : undefined;
-  if (workflows) {
-    coreSubgraphs.push(workflows.subgraph);
-    logger.info("Workflow runtime subgraph registered (workflows enabled)");
-  }
-
   const graphqlManager = await setupGraphQLManager(
     httpAdapter,
     authFetchMiddleware,
@@ -1266,13 +1224,6 @@ async function _setupAPI(
     syncServingGate,
     httpRoutes,
   );
-
-  if (workflows) {
-    await workflows.start();
-    // Ahead of the database closers: stopping the runtime deletes its
-    // processor cursors through the relational db they destroy.
-    dbClosers.unshift(() => workflows.stop());
-  }
 
   // Set up event listeners
   setupEventListeners(
@@ -1464,7 +1415,6 @@ export async function initializeAndStartAPI(
     packages,
     dbClosers,
     readiness,
-    workflowsEnabled,
   } = await _setupCommonInfrastructure(options);
 
   const { documentModels, upgradeManifests, processors, subgraphs } =
@@ -1544,7 +1494,6 @@ export async function initializeAndStartAPI(
       options.logger ?? defaultLogger,
     ),
     httpRoutes,
-    workflowsEnabled,
   );
 
   return {

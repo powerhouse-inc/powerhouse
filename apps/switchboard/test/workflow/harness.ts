@@ -2,6 +2,7 @@
 // adapter, route service and webhook service, which the unit tests cannot.
 import {
   createHttpAdapter,
+  getDbClient,
   HttpRouteService,
   MemoryWebhookStore,
   WebhookService,
@@ -17,7 +18,6 @@ import {
 import type { OperationWithContext } from "document-model";
 import type { Kysely } from "kysely";
 import { vi } from "vitest";
-import { getDbClient } from "../../src/utils/db.js";
 
 export const WORKFLOW_TYPE = "powerhouse/workflow";
 export const PACKAGE_NAME = "@powerhousedao/workflow";

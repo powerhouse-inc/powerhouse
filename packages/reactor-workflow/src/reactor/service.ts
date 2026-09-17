@@ -1,5 +1,5 @@
 // The workflow runtime: one instance per host, serving the GraphQL subgraph
-// (config + manual fire) and the document-event processor alike.
+// (config + manual fire) and the workflow-triggers read model alike.
 import type {
   IWebhookEndpoints,
   IWebhookScope,
@@ -755,9 +755,9 @@ export class WorkflowRuntimeService {
     return false;
   }
 
-  // Called by the workflow-triggers read model (and by the document-event
-  // processor). Registry updates and the journal write for every matched fire
-  // are awaited; execution is not, so runs never block operation ingestion.
+  // Called by the workflow-triggers read model. Registry updates and the
+  // journal write for every matched fire are awaited; execution is not, so
+  // runs never block operation ingestion.
   async onOperations(operations: OperationWithContext[]): Promise<void> {
     const hints = collectLifecycleParentHints(operations);
     for (const { operation, context } of operations) {

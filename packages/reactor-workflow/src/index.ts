@@ -6,8 +6,6 @@ export {
 } from "./reactor/attachment-port.js";
 export { WORKFLOW_PACKAGE_NAME } from "./reactor/package-name.js";
 export { PieceRegistry, packagePieces } from "./reactor/piece-registry.js";
-export { createDocumentEventProcessorFactory } from "./reactor/processors/document-event-trigger/factory.js";
-export { DocumentEventTrigger } from "./reactor/processors/document-event-trigger/processor.js";
 export type {
   WorkflowCaller,
   WorkflowRuntimeHostDeps,

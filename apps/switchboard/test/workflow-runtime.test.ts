@@ -90,9 +90,6 @@ function fakeEngine() {
   return {
     runtime,
     constructed,
-    // The processor the read model replaces: a spy here fails the test that
-    // would have registered it.
-    createDocumentEventProcessorFactory: vi.fn(),
     module: {
       WORKFLOW_PACKAGE_NAME: "@powerhousedao/workflow",
       WORKFLOW_TRIGGERS_READ_MODEL: "workflow-triggers",
@@ -321,7 +318,7 @@ describe("composeWorkflowRuntime", () => {
     expect(logger.error).toHaveBeenCalledTimes(1);
   });
 
-  it("arms the webhooks and the supervisor on start, and no processor", async () => {
+  it("arms the webhooks and the supervisor on start", async () => {
     const engine = fakeEngine();
     const workflows = await compose(engine, stubLogger());
 
@@ -329,7 +326,6 @@ describe("composeWorkflowRuntime", () => {
 
     expect(engine.runtime.registerWebhookEndpoint).toHaveBeenCalledTimes(1);
     expect(engine.runtime.startTriggerSupervisor).toHaveBeenCalledTimes(1);
-    expect(engine.createDocumentEventProcessorFactory).not.toHaveBeenCalled();
   });
 
   it("shuts the runtime down once on stop", async () => {

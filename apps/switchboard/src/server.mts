@@ -846,9 +846,6 @@ async function initServer(
         ? { "@powerhousedao/vetra": [vetraProcessorFactory] }
         : {},
       configFile: configPath,
-      // This host composes the runtime itself; reactor-api's own path stays
-      // off so nothing is registered twice.
-      workflows: { enabled: false },
       mcp: options.mcp ?? true,
       logger: apiLogger,
       enableDocumentModelSubgraphs: options.enableDocumentModelSubgraphs,

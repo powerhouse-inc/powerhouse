@@ -14,7 +14,6 @@ import {
   AuthorizationPolicy,
   ForbiddenError,
   createCanonicalDocumentIdResolver,
-  createWorkflowRuntimeSubgraph,
   type AttachmentReferenceProjectionCapability,
   type CanonicalDocumentId,
   type Context,
@@ -36,6 +35,7 @@ import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import type { IWebhookScope } from "@powerhousedao/shared/processors";
 import type { ILogger } from "document-model";
 import type { Kysely } from "kysely";
+import { createWorkflowRuntimeSubgraph } from "./workflow/subgraph.js";
 
 type WorkflowEngineModule = typeof WorkflowEngine;
 
