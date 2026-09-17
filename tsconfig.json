@@ -74,6 +74,9 @@
     },
     {
       "path": "scripts/release"
+    },
+    {
+      "path": "tools/doc-harness"
     }
   ],
   "files": []

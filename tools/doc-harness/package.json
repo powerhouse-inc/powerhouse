@@ -1,0 +1,27 @@
+{
+  "name": "doc-harness",
+  "version": "0.0.0",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "description": "Validates the Academy reactor docs by having docs-only Claude agents build recipes, then judging where the docs failed them.",
+  "scripts": {
+    "cli": "tsx src/cli.ts",
+    "test": "vitest run",
+    "tsc": "tsc",
+    "lint": "eslint",
+    "studio": "mastra dev --dir src/mastra"
+  },
+  "dependencies": {
+    "@mastra/core": "catalog:",
+    "@mastra/libsql": "catalog:",
+    "commander": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}
