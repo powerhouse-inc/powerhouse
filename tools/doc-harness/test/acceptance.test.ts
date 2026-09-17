@@ -102,7 +102,12 @@ describe("parseVitestJson", () => {
       numFailedTests: 2,
       testResults: [{ name: "x" }],
     });
-    expect(parseVitestJson(text)).toEqual({ passed: 3, failed: 2, total: 5 });
+    expect(parseVitestJson(text)).toEqual({
+      passed: 3,
+      failed: 2,
+      total: 5,
+      suiteErrors: 0,
+    });
   });
 
   it("returns null for non-JSON and for JSON without the counters", () => {

@@ -16,11 +16,17 @@ export type Runner = (
 /** The subset of vitest's JSON reporter output the harness reads. */
 export const VitestJsonSummary = z.object({
   numTotalTests: z.number(),
+  numFailedTestSuites: z.number().optional(),
   numPassedTests: z.number(),
   numFailedTests: z.number(),
 });
 
-export type TestCounts = { passed: number; failed: number; total: number };
+export type TestCounts = {
+  passed: number;
+  failed: number;
+  total: number;
+  suiteErrors: number;
+};
 
 export function parseVitestJson(text: string): TestCounts | null {
   let json: unknown;
@@ -35,6 +41,7 @@ export function parseVitestJson(text: string): TestCounts | null {
     passed: parsed.data.numPassedTests,
     failed: parsed.data.numFailedTests,
     total: parsed.data.numTotalTests,
+    suiteErrors: parsed.data.numFailedTestSuites ?? 0,
   };
 }
 
@@ -70,6 +77,7 @@ export async function runAcceptance(
     tscOk: null,
     tscOutputPath: null,
     vitestOk: null,
+    suiteErrors: 0,
     passed: 0,
     failed: 0,
     total: 0,
@@ -106,6 +114,11 @@ export async function runAcceptance(
       "run",
       "--reporter=json",
       `--outputFile=${o.layout.vitestJsonPath}`,
+      // Pinned recipe configs lack these; never grade the reference copy or probes.
+      "--exclude",
+      "**/reference/**",
+      "--exclude",
+      "**/__verify__/**",
     ],
     {
       cwd,

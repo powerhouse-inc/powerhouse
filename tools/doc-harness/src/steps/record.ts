@@ -151,6 +151,7 @@ function acceptanceVerdict(tests: AcceptanceOutput): boolean | null {
   return (
     tests.tscOk !== false &&
     tests.vitestOk === true &&
+    tests.suiteErrors === 0 &&
     tests.total > 0 &&
     tests.failed === 0
   );

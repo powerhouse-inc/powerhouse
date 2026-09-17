@@ -62,7 +62,7 @@ afterEach(() => {
 });
 
 describe("scaffoldWorkspace", () => {
-  it("writes exactly the four workspace files", () => {
+  it("writes exactly the five workspace files", () => {
     const dir = path.join(tmp, "ws");
     const t = task({ extraDeps: { kysely: "^0.28.17" } });
     const written = scaffoldWorkspace({ dir, task: t, pin: PIN });
@@ -71,6 +71,7 @@ describe("scaffoldWorkspace", () => {
       "package.json",
       "pnpm-workspace.yaml",
       "tsconfig.json",
+      "vitest.config.ts",
     ]);
 
     const pkg: unknown = JSON.parse(
@@ -109,7 +110,7 @@ describe("scaffoldWorkspace", () => {
         types: ["node"],
       },
       include: ["**/*.ts"],
-      exclude: ["node_modules", "dist"],
+      exclude: ["node_modules", "dist", "reference", "__verify__"],
     });
 
     const yaml = readFileSync(path.join(dir, "pnpm-workspace.yaml"), "utf8");

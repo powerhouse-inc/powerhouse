@@ -49,7 +49,12 @@ export default defineConfig({
     tsconfigPaths: true,
   },
   test: {
-    exclude: ["**/node_modules/**", "**/dist/**"],
+    exclude: [
+      "**/node_modules/**",
+      "**/dist/**",
+      "**/reference/**",
+      "**/__verify__/**",
+    ],
   },
 });
 `;
@@ -120,7 +125,8 @@ export function workspaceTsconfig(task: Task): object {
     },
     // Recipes are flat or src/-rooted; include everything and exclude the usual.
     include: ["**/*.ts"],
-    exclude: ["node_modules", "dist"],
+    // reference/ is arm B's read-only copy; __verify__/ holds verifier probes.
+    exclude: ["node_modules", "dist", "reference", "__verify__"],
   };
 }
 
@@ -132,6 +138,9 @@ export function scaffoldWorkspace(o: ScaffoldOptions): string[] {
     "pnpm-workspace.yaml": `${ALLOW_BUILDS_YAML}\n${RELEASE_AGE_YAML}`,
     "tsconfig.json": `${JSON.stringify(workspaceTsconfig(o.task), null, 2)}\n`,
     ".gitignore": "node_modules\ndist\n",
+    // Always present: without it vitest walks up and finds doc-harness's own
+    // config, whose include matches nothing in the workspace.
+    "vitest.config.ts": DEFAULT_VITEST_CONFIG,
   };
   for (const [name, content] of Object.entries(files)) {
     writeFileSync(path.join(o.dir, name), content);

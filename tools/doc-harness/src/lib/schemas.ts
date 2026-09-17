@@ -168,6 +168,8 @@ export const TestsResult = z.object({
   tscOutputPath: z.string().nullable(),
   /** True when vitest ran and wrote its JSON report; null when it did not run. */
   vitestOk: z.boolean().nullable(),
+  /** Test files that failed to collect; their tests never counted. */
+  suiteErrors: z.number().default(0),
   passed: z.number(),
   failed: z.number(),
   total: z.number(),
@@ -363,6 +365,7 @@ export const AcceptanceOutput = TestsResult.pick({
   kind: true,
   tscOk: true,
   vitestOk: true,
+  suiteErrors: true,
   passed: true,
   failed: true,
   total: true,
