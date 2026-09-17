@@ -112,11 +112,17 @@ describe("ensurePieceBundle hardening", () => {
   });
 
   it("rejects a tarball that inflates past the cap", async () => {
-    // 96 MB of zeros compresses to a few hundred KB; the cap is 64 MB.
-    const bomb = gzipSync(Buffer.alloc(96 * 1024 * 1024));
+    // 2 MB of zeros compresses to a few KB; the cap is lowered to 1 MB so the
+    // test proves the ceiling without inflating 64 MB on a slow runner.
+    const bomb = gzipSync(Buffer.alloc(2 * 1024 * 1024));
     serve(bomb);
     await expect(
-      ensurePieceBundle({ name: "@scope/fixture", version: "1.0.0", cacheDir }),
+      ensurePieceBundle({
+        name: "@scope/fixture",
+        version: "1.0.0",
+        cacheDir,
+        maxExtractedBytes: 1024 * 1024,
+      }),
     ).rejects.toThrow(/Failed to decompress piece bundle/);
   });
 
