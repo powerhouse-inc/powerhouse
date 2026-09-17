@@ -27,3 +27,7 @@
 /* Component styles for powerhouse-vetra-packages and vetra. */
 @import "@powerhousedao/powerhouse-vetra-packages/style.css";
 @import "@powerhousedao/vetra/style.css";
+/* Loaded like vetra's: a local package mounts no stylesheet of its own, so the
+   workflow editors' and canvas styles ride with Connect's. Class-scoped, so a
+   deployment with workflows off pays bytes, not behaviour. */
+@import "@powerhousedao/workflow/style.css";

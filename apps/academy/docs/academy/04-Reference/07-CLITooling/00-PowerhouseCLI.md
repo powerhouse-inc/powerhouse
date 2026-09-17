@@ -641,6 +641,8 @@ Build has no read mode; passing only &lt;key&gt; without &lt;value&gt; errors ou
 
 **External Packages** - Override connect.packages.externalEnabled. - Usage: `--external-packages <value>`
 
+**Workflows** - Override connect.app.workflowsEnabled (load the @powerhousedao/workflow package: workflow + connection documents, their editors and Workflow Studio). - Usage: `--workflows <value>`
+
 **Remote Drives Enabled** - Override connect.drives.sections.remote.enabled (the unified cloud+public section). - Usage: `--remote-drives-enabled <value>`
 
 **Remote Drives Allow Add** - Override connect.drives.sections.remote.allowAdd. - Usage: `--remote-drives-allow-add <value>`

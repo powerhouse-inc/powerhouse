@@ -45,6 +45,8 @@ export type WorkerReactorClientArgs = {
    *  worker rewrites package sources to these URLs and blob-imports them. */
   sharedImports?: Record<string, string>;
   studioMode?: boolean;
+  /** Loads the workflow package's document models. Independent of studioMode. */
+  workflowsEnabled?: boolean;
   /** Chain the worker's bearer tokens are scoped to; matches the main thread's Renown instance. */
   renownChainId?: number;
   /** Enforcement flags for the worker's reactor; it has no runtime config to read them from. */
@@ -135,6 +137,7 @@ export function createWorkerReactorClientModule(
         packageSpecs: args.packageSpecs,
         sharedImports: args.sharedImports,
         studioMode: args.studioMode,
+        workflowsEnabled: args.workflowsEnabled,
         renownChainId: args.renownChainId,
         featureFlags: args.featureFlags,
       },

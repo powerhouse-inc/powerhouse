@@ -30,6 +30,7 @@ import {
 } from "./utils/pwa-idb.js";
 import { refreshPwaManifestLink } from "./utils/pwa-manifest-link.js";
 import vetraPkg from "@powerhousedao/vetra/package.json" with { type: "json" };
+import workflowPkg from "@powerhousedao/workflow/package.json" with { type: "json" };
 
 type PackageMeta = {
   name: string;
@@ -140,6 +141,7 @@ export class BrowserPackageManager implements IPackageManager {
     localPackage?: DocumentModelLib<any>,
     localPackageVersion?: string,
     studioMode?: boolean,
+    workflowsEnabled?: boolean,
   ) {
     this.addLocalPackage(common.manifest.name, common, commonPkg.version);
     // Vetra is builder-only and not CDN-loadable; lazy-load it (code-split
@@ -147,6 +149,16 @@ export class BrowserPackageManager implements IPackageManager {
     if (studioMode) {
       const vetra = await import("@powerhousedao/vetra");
       this.addLocalPackage(vetra.manifest.name, vetra, vetraPkg.version);
+    }
+    // Same shape for the workflow package, behind its own independent flag.
+    // Only the package root: `./pieces` and `./reactor` are node-only.
+    if (workflowsEnabled) {
+      const workflow = await import("@powerhousedao/workflow");
+      this.addLocalPackage(
+        workflow.manifest.name,
+        workflow,
+        workflowPkg.version,
+      );
     }
     if (localPackage) {
       this.updateLocalPackage(localPackage, localPackageVersion);

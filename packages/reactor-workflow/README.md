@@ -7,7 +7,8 @@ piece in a child process.
 
 The document models, their editors and Workflow Studio live in
 [`@powerhousedao/workflow`](../workflow); the GraphQL subgraph that serves this
-runtime lives in [`@powerhousedao/reactor-api`](../reactor-api).
+runtime lives in [`apps/switchboard`](../../apps/switchboard), the host that
+composes the runtime.
 
 ## The seam
 
@@ -60,22 +61,32 @@ rather than restated here.
   the text of an HTML error page reach the run journal. Redaction runs last,
   over the formatter's output as well.
 
-## How reactor-api composes it
+## How the host composes it
 
-The engine names no host type. `WorkflowRuntimeHost` (`src/reactor/host.ts`) is
-the four things the runtime reads — a relational db, a reactor client, a read
-check, and optionally the HTTP scope its webhook endpoints live under. The API
-builds one and calls `workflowRuntime.configure(host)`.
+The engine names no host type. `WorkflowRuntimeHostDeps` (`src/reactor/host.ts`)
+is what the runtime reads — a relational db, a reactor client, the read and
+write checks, and optionally the HTTP scope its webhook endpoints live under.
+`createWorkflowRuntime(deps)` returns a configured runtime; nothing here
+constructs one by itself.
 
-Everything else is the host's:
+Switchboard is that host (`apps/switchboard/src/workflow-runtime.mts`). It
+resolves the `workflows` flag, builds the runtime from what `startAPI` hands
+back, and owns the GraphQL face in `apps/switchboard/src/workflow/`, registered
+live with the GraphQL manager the way a package subgraph is. reactor-api knows
+nothing about workflows.
 
-- the `workflows` feature flag decides whether any of this is constructed;
-- the `workflow-runtime` GraphQL subgraph is a core subgraph of reactor-api,
-  conditional on that flag, and its resolvers call the runtime's query methods;
-- the webhook endpoints are registered under the `@powerhousedao/workflow`
-  namespace, which this package exports as `WORKFLOW_PACKAGE_NAME`;
-- the document-event processor is registered with the host's processor manager
-  through `documentEventTriggerFactoryBuilder`.
+Document operations reach the runtime through a **read model**, not a
+processor: `WorkflowTriggersReadModel` (`WORKFLOW_TRIGGERS_READ_MODEL`) is
+registered on the reactor's read-model coordinator at the
+`WORKFLOW_TRIGGERS_READ_MODEL_STAGE` (`post_ready`) stage, and its
+`indexOperations` is `runtime.onOperations`. The durable cursor `BaseReadModel`
+gives it means an operation written while the runtime is down catches up on the
+next boot instead of vanishing; a fresh registration starts at head, so history
+is never replayed. `onOperations` journals a matched fire before it returns, so
+the cursor never passes an event that is not yet durable.
+
+The webhook endpoints are registered under the `@powerhousedao/workflow`
+namespace, which this package exports as `WORKFLOW_PACKAGE_NAME`.
 
 ## The worker entry
 

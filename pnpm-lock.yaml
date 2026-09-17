@@ -591,6 +591,9 @@ importers:
       '@powerhousedao/vetra':
         specifier: workspace:*
         version: link:../../packages/vetra
+      '@powerhousedao/workflow':
+        specifier: workspace:*
+        version: link:../../packages/workflow
       '@privy-io/react-auth':
         specifier: 3.35.0
         version: 3.35.0(@date-fns/tz@1.4.1)(@solana-program/system@0.10.0(@solana/kit@5.5.1(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)))(@solana-program/token@0.9.0(@solana/kit@5.5.1(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)))(@solana/kit@5.5.1(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10))(@solana/sysvars@5.5.1(typescript@5.9.3))(@tanstack/query-core@5.90.20)(@tanstack/react-query@5.90.21(react@19.2.6))(@types/react@19.2.14)(bufferutil@4.1.0)(date-fns@4.1.0)(encoding@0.1.13)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.6))(utf-8-validate@5.0.10)(zod@4.3.6)
@@ -793,12 +796,18 @@ importers:
       '@powerhousedao/reactor-group':
         specifier: workspace:*
         version: link:../../packages/reactor-group
+      '@powerhousedao/reactor-workflow':
+        specifier: workspace:*
+        version: link:../../packages/reactor-workflow
       '@powerhousedao/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       '@powerhousedao/vetra':
         specifier: workspace:*
         version: link:../../packages/vetra
+      '@powerhousedao/workflow':
+        specifier: workspace:*
+        version: link:../../packages/workflow
       '@pyroscope/nodejs':
         specifier: ^0.4.5
         version: 0.4.10(express@4.22.1)(fastify@5.8.5)
@@ -820,6 +829,12 @@ importers:
       express:
         specifier: ^4.21.2
         version: 4.22.1
+      graphql:
+        specifier: 'catalog:'
+        version: 16.12.0
+      graphql-tag:
+        specifier: 'catalog:'
+        version: 2.12.6(graphql@16.12.0)
       kysely:
         specifier: 'catalog:'
         version: 0.28.16
@@ -2027,15 +2042,9 @@ importers:
       '@powerhousedao/reactor-mcp':
         specifier: workspace:*
         version: link:../reactor-mcp
-      '@powerhousedao/reactor-workflow':
-        specifier: workspace:*
-        version: link:../reactor-workflow
       '@powerhousedao/shared':
         specifier: workspace:*
         version: link:../shared
-      '@powerhousedao/workflow':
-        specifier: workspace:*
-        version: link:../workflow
       '@renown/sdk':
         specifier: workspace:*
         version: link:../renown

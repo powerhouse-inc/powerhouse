@@ -1,11 +1,13 @@
 import type {
+  Context,
+  IAuthorizationService,
+} from "@powerhousedao/reactor-api";
+import type {
   RunRow,
   StepExecutionRow,
   WorkflowRuntimeService,
 } from "@powerhousedao/reactor-workflow";
 import { GraphQLError } from "graphql";
-import type { IAuthorizationService } from "../../services/authorization.service.js";
-import type { Context } from "../types.js";
 
 interface FireArgs {
   workflowId: string;

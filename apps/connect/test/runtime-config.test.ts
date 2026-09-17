@@ -95,6 +95,47 @@ describe("runtime-config loader", () => {
     ).toEqual({ a: 1 });
   });
 
+  it("defaults connect.app.workflowsEnabled to false and reads it independently of studioMode", async () => {
+    // Connect's workflows flag is file-only, like every other runtime field:
+    // off unless the emitted config turns it on, and orthogonal to studio mode.
+    stubFetch({
+      schemaVersion: 2,
+      packages: [],
+      localPackage: null,
+      connect: { app: { basePath: "/" } },
+    });
+    const { loadRuntimeConfig } = await import("../src/runtime-config.js");
+    const config = await loadRuntimeConfig();
+    expect(config.connect.app?.workflowsEnabled).toBe(false);
+    expect(DEFAULT_CONNECT_CONFIG.app?.workflowsEnabled).toBe(false);
+  });
+
+  it("lets the file turn workflows on without turning studio mode on", async () => {
+    stubFetch({
+      schemaVersion: 2,
+      packages: [],
+      localPackage: null,
+      connect: { app: { workflowsEnabled: true } },
+    });
+    const { loadRuntimeConfig } = await import("../src/runtime-config.js");
+    const config = await loadRuntimeConfig();
+    expect(config.connect.app?.workflowsEnabled).toBe(true);
+    expect(config.connect.app?.studioMode).toBe(false);
+  });
+
+  it("lets the file turn studio mode on without turning workflows on", async () => {
+    stubFetch({
+      schemaVersion: 2,
+      packages: [],
+      localPackage: null,
+      connect: { app: { studioMode: true } },
+    });
+    const { loadRuntimeConfig } = await import("../src/runtime-config.js");
+    const config = await loadRuntimeConfig();
+    expect(config.connect.app?.studioMode).toBe(true);
+    expect(config.connect.app?.workflowsEnabled).toBe(false);
+  });
+
   it("caches the loaded config across calls (single fetch)", async () => {
     stubFetch({ schemaVersion: 2, packages: [], localPackage: null });
     const { loadRuntimeConfig } = await import("../src/runtime-config.js");

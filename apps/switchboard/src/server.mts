@@ -33,6 +33,7 @@ import {
 import { httpsHooksPath } from "@powerhousedao/reactor-api/https-hooks";
 import type { VitePackageLoader } from "@powerhousedao/reactor-api/vite";
 import { createRemoteAttachmentService } from "@powerhousedao/reactor-attachments";
+import { createAttachmentClient } from "@powerhousedao/reactor-attachments/client";
 import {
   DriveNodeView,
   NodeProcessor,
@@ -75,6 +76,13 @@ import {
   resolveWorkerPoolOptions,
 } from "./worker-pool.mjs";
 import { initFeatureFlags } from "./feature-flags.js";
+import {
+  WORKFLOW_PACKAGE_NAME,
+  composeWorkflowRuntime,
+  loadWorkflowDocumentModels,
+  resolveWorkflowsEnabled,
+  type ComposedWorkflowRuntime,
+} from "./workflow-runtime.mjs";
 import { ClosablePGliteDialect } from "./pglite-dialect.js";
 import { migratePgliteDir } from "./pglite-migration.js";
 import {
@@ -149,6 +157,16 @@ export function isPortAvailable(port: number): Promise<boolean> {
 /** The powerhouse.config.json this run reads, defaulting to the cwd copy. */
 function resolveConfigPath(configFile: string | undefined): string {
   return configFile ?? path.join(process.cwd(), "powerhouse.config.json");
+}
+
+// An unreadable config file means "not configured", not a boot failure:
+// workflows are opt-in.
+function readConfigWorkflowsEnabled(configPath: string): boolean {
+  try {
+    return getConfig(configPath).workflows?.enabled ?? false;
+  } catch {
+    return false;
+  }
 }
 
 async function resolveServerPort(
@@ -465,6 +483,10 @@ async function initServer(
     // SIGTERM takes the builder's withSignalHandlers() path: kill, hooks, db.
     process.kill(process.pid, "SIGTERM");
   };
+  // Resolved in startSwitchboard, which owns the flag mechanism; initServer
+  // only reads the answer.
+  const workflowsEnabled = options.workflows?.enabled === true;
+
   // Set only when we build the reactor ourselves; a caller-provided one keeps
   // its own lifecycle and must not be torn down here.
   let ownedReactorModule: InProcessReactorClientModule | undefined;
@@ -563,8 +585,18 @@ async function initServer(
         )
       : [];
 
+    // The workflow package is composed by this host now, so its models come
+    // in here rather than through reactor-api's package manager.
+    const workflowDocumentModels: DocumentModelModule[] = workflowsEnabled
+      ? await loadWorkflowDocumentModels()
+      : [];
+
     applySwitchboardReactorDefaults(reactorBuilder, clientBuilder, {
-      documentModels: [...documentModels, ...vetraDocumentModels],
+      documentModels: [
+        ...documentModels,
+        ...vetraDocumentModels,
+        ...workflowDocumentModels,
+      ],
       upgradeManifests,
       executorConfig:
         hasSkipThreshold || enabledFeatureFlags.length > 0
@@ -873,6 +905,61 @@ async function initServer(
 
   const lateSubgraphs: Promise<unknown>[] = [];
 
+  // The workflow runtime is a switchboard component: composed from what the
+  // api handed back, registered like any other late subgraph.
+  let workflows: ComposedWorkflowRuntime | undefined;
+  if (workflowsEnabled) {
+    workflows = await composeWorkflowRuntime({
+      reactorClient: client,
+      clientModule: options.reactor ?? ownedReactorModule,
+      relationalDb: api.relationalDb,
+      attachments: createAttachmentClient(api.attachments.service),
+      // A step reads attachments with no caller behind it, so the projected
+      // document/ref relationship is what authorizes the read.
+      attachmentReferences: api.attachmentReferenceIndex.store,
+      attachmentReferenceProjection: api.attachmentReferenceProjection,
+      // The workflow package's own HTTP namespace: its webhook endpoints live
+      // under it, not under the reactor's.
+      webhooks: api.httpRoutes.scopeFor(WORKFLOW_PACKAGE_NAME).webhooks,
+      authorizationService: api.authorizationService,
+      logger: logger.child(["workflow-runtime"]),
+    });
+
+    const WorkflowRuntimeSubgraph = workflows.subgraph;
+    const workflowSubgraph = new WorkflowRuntimeSubgraph({
+      reactorClient: client,
+      http: graphqlManager.scopeForPackage(WORKFLOW_PACKAGE_NAME),
+      relationalDb: api.relationalDb,
+      analyticsStore: undefined as never,
+      graphqlManager,
+      syncManager: api.syncManager,
+      authorizationService: graphqlManager.getAuthorizationService(),
+      path: graphqlManager.getBasePath(),
+    });
+
+    lateSubgraphs.push(
+      graphqlManager
+        .registerSubgraphInstance(workflowSubgraph, "graphql", false)
+        .catch((error: unknown) => {
+          logger.error(
+            "Failed to register workflow-runtime subgraph: @error",
+            error,
+          );
+        }),
+    );
+
+    await workflows.start();
+    logger.info("Workflow runtime started");
+  }
+
+  // Ahead of the api: the runtime's store lives in the read-model database
+  // that dispose closes, and its children outlive the reactor otherwise.
+  const shutdown = async () => {
+    await workflows?.stop();
+    await api.dispose();
+  };
+  apiRef.current = { dispose: shutdown };
+
   // Wire up dynamic package management if HTTP loader is configured
   if (httpLoader) {
     const packageManagementService = new PackageManagementService({
@@ -1028,9 +1115,10 @@ async function initServer(
     reactor: client,
     attachmentService,
     attachmentReferenceProjection: api.attachmentReferenceProjection,
+    workflowTriggers: workflows?.triggers,
     renown,
     port: serverPort,
-    shutdown: () => api.dispose(),
+    shutdown,
   };
 }
 
@@ -1079,6 +1167,14 @@ export const startSwitchboard = async (
       REQUIRE_SIGNATURES,
       REQUIRE_SIGNATURES_DEFAULT,
     ));
+
+  const configPathForFlags = resolveConfigPath(options.configFile);
+  const workflowsEnabled = await resolveWorkflowsEnabled({
+    featureFlags,
+    override: options.workflows?.enabled,
+    configEnabled: readConfigWorkflowsEnabled(configPathForFlags),
+  });
+  options.workflows = { enabled: workflowsEnabled };
   // This switchboard's own identity authenticates against the same Renown
   // instance it verifies incoming credentials against, unless told otherwise.
   const renownConfig = resolveRenownConfig(
@@ -1098,6 +1194,7 @@ export const startSwitchboard = async (
       {
         DOCUMENT_MODEL_SUBGRAPHS_ENABLED: enableDocumentModelSubgraphs,
         REQUIRE_SIGNATURES: requireSignatures,
+        PH_WORKFLOWS_ENABLED: workflowsEnabled,
       },
       null,
       2,

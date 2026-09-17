@@ -1,10 +1,12 @@
 // What the workflow subgraph does with the caller behind a request: every
 // workflow-scoped field hands it to the runtime, and secret writes are admins'.
+import type {
+  Context,
+  IAuthorizationService,
+} from "@powerhousedao/reactor-api";
 import type { WorkflowRuntimeService } from "@powerhousedao/reactor-workflow";
 import { describe, expect, it, vi } from "vitest";
-import { getResolvers } from "../../src/graphql/workflow/resolvers.js";
-import type { IAuthorizationService } from "../../src/services/authorization.service.js";
-import type { Context } from "../../src/graphql/types.js";
+import { getResolvers } from "../../src/workflow/resolvers.js";
 
 const CTX = {
   headers: {},

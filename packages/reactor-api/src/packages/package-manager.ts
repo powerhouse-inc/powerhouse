@@ -90,8 +90,6 @@ export function getUniqueUpgradeManifests(
   return Array.from(uniqueManifests.values());
 }
 
-const WORKFLOW_PACKAGE = "@powerhousedao/workflow";
-
 export class PackageManager implements IPackageManager {
   private readonly logger = childLogger(["reactor-api", "package-manager"]);
   private loaders: ISubscribablePackageLoader[];
@@ -184,13 +182,6 @@ export class PackageManager implements IPackageManager {
       ReactorGroupV1 as unknown as DocumentModelModule,
     ]);
 
-    if (this.options.workflows) {
-      documentModelModuleMap.set(
-        WORKFLOW_PACKAGE,
-        await this.loadWorkflowDocumentModels(),
-      );
-    }
-
     for (const pkg of packages) {
       const allDocumentModels: DocumentModelModule[] = [];
       const failures: { loader: string; error: unknown }[] = [];
@@ -229,38 +220,6 @@ export class PackageManager implements IPackageManager {
     }
 
     return documentModelModuleMap;
-  }
-
-  // The workflow package is loaded by specifier rather than through a package
-  // loader: it is a declared dependency, so a failure here is a misconfigured
-  // reactor and not a package that happens to be absent.
-  private async loadWorkflowDocumentModels(): Promise<DocumentModelModule[]> {
-    const load =
-      this.options.workflowDocumentModels ??
-      (() =>
-        import("@powerhousedao/workflow/document-models") as Promise<
-          Record<string, unknown>
-        >);
-    try {
-      const modules = Object.values(await load()).filter(
-        (module): module is DocumentModelModule =>
-          typeof module === "object" &&
-          module !== null &&
-          "documentModel" in module &&
-          "reducer" in module,
-      );
-      this.logger.info(
-        "Loaded @count workflow document models from @pkg",
-        modules.length,
-        WORKFLOW_PACKAGE,
-      );
-      return modules;
-    } catch (error) {
-      throw new Error(
-        `workflows are enabled but ${WORKFLOW_PACKAGE} could not be loaded`,
-        { cause: error },
-      );
-    }
   }
 
   /** Upgrade manifests currently loaded across all packages, one per type. */

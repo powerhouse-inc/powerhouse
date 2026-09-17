@@ -3,6 +3,8 @@ import type {
   IReactorClient,
 } from "@powerhousedao/reactor";
 import type { AttachmentReferenceProjectionCapability } from "@powerhousedao/reactor-api";
+import type { WorkflowTriggersCapability } from "./workflow-runtime.mjs";
+export type { WorkflowTriggersCapability };
 import type { IAttachmentService } from "@powerhousedao/reactor-attachments";
 import type { IRenown } from "@renown/sdk";
 import type { DriveInput } from "@powerhousedao/shared/document-drive";
@@ -103,6 +105,11 @@ export type StartServerOptions = {
   /** Base URL for the attachment service; defaults to `PH_SWITCHBOARD_PUBLIC_URL` then `http(s)://localhost:${port}`. */
   attachmentServiceUrl?: string;
   mcp?: boolean;
+  /** Powerhouse workflows: the runtime, its subgraph, its webhooks and its
+   * document models. Wins over PH_WORKFLOWS_ENABLED and the config file. */
+  workflows?: {
+    enabled?: boolean;
+  };
   processorConfig?: Map<string, unknown>;
   disableLocalPackages?: boolean;
   enableDocumentModelSubgraphs?: boolean;
@@ -168,6 +175,9 @@ export type SwitchboardReactor = {
   attachmentService: IAttachmentService;
   /** Whether the authoritative attachment-reference projection is active. */
   attachmentReferenceProjection: AttachmentReferenceProjectionCapability;
+  /** Whether the workflow runtime's operation intake is indexing. Undefined
+   * when workflows are off; unavailable means no document trigger fires. */
+  workflowTriggers?: WorkflowTriggersCapability;
   /** The Renown instance if identity was initialized */
   renown: IRenown | null;
   /**

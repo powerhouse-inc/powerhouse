@@ -24,6 +24,7 @@ export const DEFAULT_CONNECT_CONFIG: PHConnectRuntimeConfig = {
     basePath: "/",
     offline: true,
     studioMode: false,
+    workflowsEnabled: false,
   },
   ai: {
     assistantEnabled: false,

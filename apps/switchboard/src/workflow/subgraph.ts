@@ -1,7 +1,6 @@
+import { BaseSubgraph, type SubgraphClass } from "@powerhousedao/reactor-api";
 import type { WorkflowRuntimeService } from "@powerhousedao/reactor-workflow";
 import type { DocumentNode } from "graphql";
-import { BaseSubgraph } from "../base-subgraph.js";
-import type { SubgraphClass } from "../types.js";
 import { getResolvers } from "./resolvers.js";
 import { schema } from "./schema.js";
 
