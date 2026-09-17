@@ -19,6 +19,11 @@ export {
   type ConnectionSummary,
   type PersistedRunResult,
 } from "./reactor/service.js";
+export {
+  WorkflowTriggersReadModel,
+  WORKFLOW_TRIGGERS_READ_MODEL,
+  WORKFLOW_TRIGGERS_READ_MODEL_STAGE,
+} from "./reactor/workflow-triggers-read-model.js";
 export type {
   PieceStoreRow,
   RunRow,
