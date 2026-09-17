@@ -289,7 +289,7 @@ export const AttemptSummary = z.object({
   turns: z.number().nullable(),
   costUsd: z.number(),
   durationMs: z.number(),
-  escapes: z.record(EscapeKind, z.number()),
+  escapes: z.partialRecord(EscapeKind, z.number()),
   docPagesRead: z.number(),
   contaminated: z.boolean(),
   findingsKept: z.number(),

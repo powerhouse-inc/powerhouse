@@ -1,0 +1,118 @@
+{
+  "type": "object",
+  "properties": {
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "WRONG",
+              "STALE",
+              "MISSING",
+              "UNCLEAR"
+            ]
+          },
+          "docPath": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "line": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "quote": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "symbol": {
+            "type": "string"
+          },
+          "claim": {
+            "type": "string"
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "turn": {
+                  "type": "number"
+                },
+                "uuid": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "turn",
+                "uuid"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "proposedEdit": {
+            "type": "string"
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        },
+        "required": [
+          "kind",
+          "docPath",
+          "line",
+          "quote",
+          "symbol",
+          "claim",
+          "evidence",
+          "proposedEdit",
+          "confidence"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "summary": {
+      "type": "string",
+      "maxLength": 1500
+    },
+    "buildQualityNotes": {
+      "type": "string",
+      "maxLength": 1500
+    }
+  },
+  "required": [
+    "findings",
+    "summary",
+    "buildQualityNotes"
+  ],
+  "additionalProperties": false
+}
