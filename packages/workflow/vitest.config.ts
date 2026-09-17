@@ -17,6 +17,10 @@ export default defineConfig({
       "pieces/**/*.test.ts",
     ],
     globals: true,
+    // Every dependency is inlined (below), so a test that re-imports the module
+    // graph pays the whole transform again; a Windows runner needs the room.
+    hookTimeout: 60_000,
+    testTimeout: 30_000,
     server: {
       deps: {
         // The condition above also picks the TypeScript "source" export of
