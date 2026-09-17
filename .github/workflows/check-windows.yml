@@ -40,6 +40,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      # Defender scans every one of the ~100k files pnpm links and the build
+      # writes; a narrow exclusion, not -DisableRealtimeMonitoring.
+      - name: Exclude the workspace from Defender real-time scanning
+        shell: pwsh
+        run: |
+          try {
+            Add-MpPreference -ExclusionPath "$env:GITHUB_WORKSPACE", "$env:LOCALAPPDATA\pnpm" -ErrorAction Stop
+            Write-Host "Defender exclusions added."
+          } catch {
+            Write-Host "::warning::Could not add Defender exclusions: $_"
+          }
+
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
