@@ -43,3 +43,10 @@ export interface ClaudeDriver {
 
 /** The CLI version the transcript extractor's fixtures were recorded with. */
 export const VALIDATED_CLI_VERSION = "2.1.258";
+
+/** Canonical ids observed from `--model sonnet|opus|haiku` on 2.1.258. */
+export const MODEL_IDS = {
+  builder: "claude-sonnet-5",
+  judge: "claude-opus-5",
+  cheap: "claude-haiku-4-5-20251001",
+} as const;

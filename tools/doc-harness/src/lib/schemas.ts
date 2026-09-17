@@ -33,8 +33,14 @@ export const ResultRecord = z
     num_turns: z.number().optional(),
     total_cost_usd: z.number().optional(),
     session_id: z.string().optional(),
+    /** Absent on budget exhaustion (errors[] is set instead). */
     result: z.string().optional(),
     structured_output: z.unknown().optional(),
+    /** completed | api_error | budget_exhausted (observed on 2.1.258). */
+    terminal_reason: z.string().optional(),
+    api_error_status: z.number().nullable().optional(),
+    errors: z.array(z.string()).optional(),
+    permission_denials: z.array(z.record(z.string(), z.unknown())).optional(),
     usage: z.record(z.string(), z.unknown()).optional(),
     modelUsage: z.record(z.string(), z.unknown()).optional(),
   })
@@ -89,6 +95,7 @@ export const Escape = z.object({
   turn: z.number(),
   detail: z.string(),
 });
+export type Escape = z.infer<typeof Escape>;
 
 export const DocPageRead = z.object({
   /** Relative to the docs snapshot root. */
@@ -96,6 +103,7 @@ export const DocPageRead = z.object({
   firstTurn: z.number(),
   via: z.enum(["Read", "Grep", "Glob", "Bash"]),
 });
+export type DocPageRead = z.infer<typeof DocPageRead>;
 
 export const BashCommand = z.object({
   turn: z.number(),
@@ -104,6 +112,7 @@ export const BashCommand = z.object({
   exitCodeInferred: z.number().nullable(),
   stderrHead: z.string(),
 });
+export type BashCommand = z.infer<typeof BashCommand>;
 
 export const SymbolUse = z.object({
   pkg: z.string(),
@@ -113,6 +122,7 @@ export const SymbolUse = z.object({
   docPage: z.string().nullable(),
   documentedAnywhere: z.boolean(),
 });
+export type SymbolUse = z.infer<typeof SymbolUse>;
 
 export const TokenUsage = z.object({
   input: z.number(),
@@ -120,6 +130,7 @@ export const TokenUsage = z.object({
   cacheCreation: z.number(),
   cacheRead: z.number(),
 });
+export type TokenUsage = z.infer<typeof TokenUsage>;
 
 /** Deterministic extraction from a transcript. Written to metrics.json. */
 export const Metrics = z.object({
@@ -147,6 +158,7 @@ export type Metrics = z.infer<typeof Metrics>;
 /* --------------------------------------------------------- acceptance */
 
 export const AcceptanceKind = z.enum(["vitest", "tsc-only", "none"]);
+export type AcceptanceKind = z.infer<typeof AcceptanceKind>;
 
 /** Written to tests.json. */
 export const TestsResult = z.object({
@@ -194,6 +206,7 @@ export const JudgeOutput = z.object({
 export type JudgeOutput = z.infer<typeof JudgeOutput>;
 
 export const DropReason = z.enum(["unlocatable", "duplicate"]);
+export type DropReason = z.infer<typeof DropReason>;
 
 /** Written to judge.json: the raw output plus what the post-checks did. */
 export const JudgeStepResult = z.object({
@@ -222,6 +235,7 @@ export const VerifyResult = z.object({
   /** True when a deterministic pre-check decided it, no model involved. */
   byPrecheck: z.boolean().default(false),
 });
+export type VerifyResult = z.infer<typeof VerifyResult>;
 
 export const VerifyOutput = z.object({ results: z.array(VerifyResult) });
 export type VerifyOutput = z.infer<typeof VerifyOutput>;
@@ -259,6 +273,7 @@ export const AttemptStatus = z.enum([
   "contaminated",
   "skipped",
 ]);
+export type AttemptStatus = z.infer<typeof AttemptStatus>;
 
 /** Written to attempt.json and embedded in RUNS.jsonl. */
 export const AttemptSummary = z.object({
