@@ -54,6 +54,7 @@ export type ConnectFlagInput = {
   renownSwitchboardUrl?: string | undefined;
   allowAddDrive?: boolean | undefined;
   externalPackages?: boolean | undefined;
+  workflows?: boolean | undefined;
   remoteDrivesEnabled?: boolean | undefined;
   remoteDrivesAllowAdd?: boolean | undefined;
   remoteDrivesAllowDelete?: boolean | undefined;
@@ -130,7 +131,7 @@ export function wasFlagExplicitlyPassed(longName: string): boolean {
 }
 
 /**
- * Build a `connect.*` partial from the 19 field flags. Only includes paths
+ * Build a `connect.*` partial from the 20 field flags. Only includes paths
  * the user explicitly set (undefined values are excluded).
  *
  * Single source of truth for the flag → JSON-path mapping; consumed by both
@@ -142,6 +143,7 @@ export function buildConnectFlagPatch(args: ConnectFlagInput): PlainObject {
   const app: PlainObject = {};
   setIfDefined(app, "basePath", args.basePath);
   setIfDefined(app, "logLevel", args.logLevel);
+  setIfDefined(app, "workflowsEnabled", args.workflows);
   if (Object.keys(app).length > 0) out.app = app;
 
   const renown: PlainObject = {};
@@ -234,6 +236,7 @@ export function buildCliConnectOverride(args: ConnectBuildArgs): {
     renownSwitchboardUrl: args.renownSwitchboardUrl,
     allowAddDrive: args.allowAddDrive,
     externalPackages: args.externalPackages,
+    workflows: args.workflows,
     remoteDrivesEnabled: args.remoteDrivesEnabled,
     remoteDrivesAllowAdd: args.remoteDrivesAllowAdd,
     remoteDrivesAllowDelete: args.remoteDrivesAllowDelete,

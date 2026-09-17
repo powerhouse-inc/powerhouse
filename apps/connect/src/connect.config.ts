@@ -201,6 +201,9 @@ const PH_CONNECT_ANALYTICS_DATABASE_NAME = `${PH_CONNECT_BASE_PATH.replace(
 export const connectConfig = {
   appVersion: env.PH_CONNECT_VERSION,
   studioMode: runtime.app?.studioMode ?? false,
+  // Boot-time constant, so it is read straight off the runtime config rather
+  // than through the PHGlobalConfig event machinery. Off unless turned on.
+  workflowsEnabled: runtime.app?.workflowsEnabled ?? false,
   warnOutdatedApp: phGlobalConfig.warnOutdatedApp,
   appVersionCheckInterval: 60 * 60 * 1000,
   routerBasename: PH_CONNECT_BASE_PATH,

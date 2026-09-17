@@ -1,5 +1,28 @@
-import { describe, expect, it } from "vitest";
-import { sharedDepMismatchWarnings } from "./package-manager.js";
+// @vitest-environment happy-dom
+import vetraPkg from "@powerhousedao/vetra/package.json" with { type: "json" };
+import workflowPkg from "@powerhousedao/workflow/package.json" with { type: "json" };
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  BrowserPackageManager,
+  sharedDepMismatchWarnings,
+} from "./package-manager.js";
+
+// Both packages are reached through a lazy `import()`, so the fake stands in
+// for the code-split chunk without pulling either package's editors in here.
+vi.mock("@powerhousedao/vetra", () => ({
+  manifest: { name: "@powerhousedao/vetra" },
+  documentModels: [],
+  editors: [],
+}));
+
+vi.mock("@powerhousedao/workflow", () => ({
+  manifest: { name: "@powerhousedao/workflow" },
+  documentModels: [],
+  editors: [],
+}));
+
+const VETRA = "@powerhousedao/vetra";
+const WORKFLOW = "@powerhousedao/workflow";
 
 const HOST_VERSIONS = {
   "document-model": "1.4.0",
@@ -38,5 +61,50 @@ describe("sharedDepMismatchWarnings", () => {
     expect(warnings[0]).toContain("reactor-browser");
     expect(warnings[0]).toContain(">=9.0.0");
     expect(warnings[0]).toContain("3.2.1");
+  });
+});
+
+describe("BrowserPackageManager.init — flag-gated local packages", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+
+  function manager() {
+    return new BrowserPackageManager("test", null);
+  }
+
+  it("registers neither vetra nor workflow with both flags off", async () => {
+    const pm = manager();
+    await pm.init(undefined, undefined, false, false);
+    expect(pm.getPackageSource(VETRA)).toBeNull();
+    expect(pm.getPackageSource(WORKFLOW)).toBeNull();
+  });
+
+  it("registers the workflow package by manifest name and package.json version when the flag is on", async () => {
+    const pm = manager();
+    await pm.init(undefined, undefined, false, true);
+    expect(pm.getPackageSource(WORKFLOW)).toBe("common");
+    expect(pm.getPackageVersion(WORKFLOW)).toBe(workflowPkg.version);
+  });
+
+  it("does not register workflow for studio mode alone", async () => {
+    const pm = manager();
+    await pm.init(undefined, undefined, true, false);
+    expect(pm.getPackageSource(VETRA)).toBe("common");
+    expect(pm.getPackageVersion(VETRA)).toBe(vetraPkg.version);
+    expect(pm.getPackageSource(WORKFLOW)).toBeNull();
+  });
+
+  it("does not register vetra for workflows alone", async () => {
+    const pm = manager();
+    await pm.init(undefined, undefined, false, true);
+    expect(pm.getPackageSource(VETRA)).toBeNull();
+  });
+
+  it("registers both when both flags are on", async () => {
+    const pm = manager();
+    await pm.init(undefined, undefined, true, true);
+    expect(pm.getPackageSource(VETRA)).toBe("common");
+    expect(pm.getPackageSource(WORKFLOW)).toBe("common");
   });
 });

@@ -113,6 +113,11 @@
               "type": "boolean",
               "description": "Studio mode. Enables builder-only capabilities: Connect loads the vetra package and exposes DocumentModel (and vetra spec types) as creatable documents. Forced on by `ph vetra` / `ph connect studio`; false by default.",
               "default": false
+            },
+            "workflowsEnabled": {
+              "type": "boolean",
+              "description": "Powerhouse workflows in Connect. When true the tab loads the @powerhousedao/workflow package (workflow + connection documents, their editors and Workflow Studio) and the reactor worker registers its document models. Connect's counterpart to the reactor-side `workflows.enabled` / PH_WORKFLOWS_ENABLED; independent of studioMode. False by default.",
+              "default": false
             }
           }
         },

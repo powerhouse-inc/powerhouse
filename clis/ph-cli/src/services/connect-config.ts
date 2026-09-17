@@ -135,6 +135,7 @@ function argsToFlagInput(args: ConnectConfigArgs): ConnectFlagInput {
     renownSwitchboardUrl: args.renownSwitchboardUrl,
     allowAddDrive: args.allowAddDrive,
     externalPackages: args.externalPackages,
+    workflows: args.workflows,
     remoteDrivesEnabled: args.remoteDrivesEnabled,
     remoteDrivesAllowAdd: args.remoteDrivesAllowAdd,
     remoteDrivesAllowDelete: args.remoteDrivesAllowDelete,
@@ -157,7 +158,7 @@ function argsToFlagInput(args: ConnectConfigArgs): ConnectFlagInput {
 }
 
 /**
- * Whether any field flag (any of the 19) was passed. Distinguishes the
+ * Whether any field flag (any of the 20) was passed. Distinguishes the
  * single-field-set mode from list mode when neither `--get` nor `--json` is
  * present.
  */
