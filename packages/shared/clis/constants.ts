@@ -151,6 +151,14 @@ export const BOILERPLATE_DEPENDENCY_OVERRIDES = {
   "date-fns": "4.3.0",
   vite: "8.0.14",
   rolldown: "1.0.2",
+  // @apollo/subgraph 2.15 swapped @apollo/federation-internals for
+  // @graphql-tools/utils@^12, which coexists with the v11 the rest of the
+  // stack is on. Subgraph schemas built against v12 then fail composition in
+  // @apollo/gateway 2.14.x: every subgraph is dropped with "doc.definitions is
+  // not iterable" and the switchboard starts with no query root type. Hold the
+  // federation pair on one train until gateway and graphql-tools move together.
+  "@apollo/subgraph": "2.14.4",
+  "@apollo/gateway": "2.14.4",
 } as const satisfies Record<string, string>;
 
 export const VERSIONED_DEV_DEPENDENCIES = [
