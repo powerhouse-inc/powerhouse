@@ -97,3 +97,5 @@ export function buildGraphQlDriveDocument(
     initialState: doc.state.global,
   };
 }
+
+// Probe: a one-line change in a mid-fan-out package, to watch the scoped test selection.
