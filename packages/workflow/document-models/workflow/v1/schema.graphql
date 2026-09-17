@@ -1,0 +1,294 @@
+scalar Unknown
+scalar DateTime
+scalar Address
+scalar AttachmentRef
+scalar Amount_Tokens
+scalar EthereumAddress
+scalar EmailAddress
+scalar Amount_Percentage
+scalar Date
+scalar URL
+scalar Amount_Money
+scalar OLabel
+scalar Currency
+scalar PHID
+scalar OID
+scalar Amount_Fiat
+scalar Amount_Currency
+scalar Amount_Crypto
+scalar Amount
+scalar Upload
+
+enum WorkflowStatus {
+  DRAFT
+  ENABLED
+  DISABLED
+  ARCHIVED
+}
+
+enum RunStatus {
+  PENDING
+  RUNNING
+  WAITING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+  PARKED
+}
+
+enum ConcurrencyMode {
+  SINGLETON
+  QUEUE
+  PARALLEL
+}
+
+enum FailureMode {
+  PARK
+  NOTIFY
+  IGNORE
+}
+
+enum BackoffKind {
+  FIXED
+  EXPONENTIAL
+}
+
+type RetryPolicy {
+  maxAttempts: Int!
+  backoff: BackoffKind!
+  initialDelaySeconds: Int!
+  maxDelaySeconds: Int!
+  "Error classes that are retryable. Everything else fails terminally on attempt 1."
+  retryOn: [String!]!
+}
+
+"Layout only. The runtime ignores it."
+type Point {
+  x: Float!
+  y: Float!
+}
+
+type TriggerBinding {
+  id: OID!
+  "Fully-qualified block type, e.g. 'core#schedule' or '@acme/connector-imap#imap.newMessage'."
+  blockType: String!
+  "Connection document id, when the trigger's connector requires one."
+  connectionId: PHID
+  "Validated against the trigger's configSchema."
+  config: Unknown!
+  "Optional server-side filter applied before a run is started."
+  filter: Unknown
+}
+
+type WorkflowStep {
+  id: OID!
+  "Author-visible label; unique within the workflow; used in expressions."
+  key: String!
+  name: String!
+  blockType: String!
+  connectionId: PHID
+  config: Unknown!
+  "Per-step override of the workflow default retry policy."
+  retry: RetryPolicy
+  timeoutSeconds: Int
+  "Expression yielding a stable key; two executions with the same key are one side effect."
+  idempotencyKeyExpression: String
+  position: Point
+}
+
+type WorkflowEdge {
+  id: OID!
+  "Source step id, or the trigger id for the entry edge."
+  from: OID!
+  to: OID!
+  "Named output port of the source step: 'next', 'true', 'false', 'error', or a case label."
+  port: String!
+  "Optional guard expression; the edge is taken only when it evaluates truthy."
+  condition: String
+}
+
+type WorkflowVariable {
+  id: OID!
+  "Name used in expressions."
+  key: String!
+  "Default value; the trigger payload can be mapped onto it."
+  value: Unknown
+  description: String
+}
+
+type WorkflowPolicy {
+  "SINGLETON drops a firing while a run is active; QUEUE serialises; PARALLEL runs concurrently."
+  concurrency: ConcurrencyMode!
+  maxParallelRuns: Int
+  runTimeoutSeconds: Int!
+  "Bounds how long a run may stay suspended on a waitpoint."
+  maxSuspensionDays: Int!
+  defaultRetry: RetryPolicy!
+  "What happens to a run whose steps have all failed terminally."
+  onFailure: FailureMode!
+  retainRunsDays: Int!
+  journalAsDocument: Boolean!
+}
+
+type WorkflowState {
+  name: String!
+  description: String
+  "Only ENABLED workflows get trigger instances."
+  status: WorkflowStatus!
+  "Monotonic; bumped on every structural edit. A run records the version it executed."
+  version: Int!
+  trigger: TriggerBinding
+  steps: [WorkflowStep!]!
+  edges: [WorkflowEdge!]!
+  variables: [WorkflowVariable!]!
+  policy: WorkflowPolicy!
+  "Denormalised for inspectors; written by the runtime."
+  lastRunAt: DateTime
+  lastRunStatus: RunStatus
+}
+
+# workflow
+
+input SetWorkflowNameInput {
+    name: String!
+}
+
+input SetWorkflowDescriptionInput {
+    description: String
+}
+
+input SetWorkflowStatusInput {
+    status: WorkflowStatus!
+}
+
+# trigger
+
+input SetTriggerInput {
+    id: OID!
+    blockType: String!
+    connectionId: PHID
+    config: Unknown!
+    filter: Unknown
+}
+
+input ClearTriggerInput {
+    _: Boolean
+}
+
+# steps
+
+input AddStepRetryPolicyInput {
+    maxAttempts: Int!
+    backoff: BackoffKind!
+    initialDelaySeconds: Int!
+    maxDelaySeconds: Int!
+    retryOn: [String!]!
+}
+
+input AddStepPositionInput {
+    x: Float!
+    y: Float!
+}
+
+input AddStepInput {
+    id: OID!
+    key: String!
+    name: String!
+    blockType: String!
+    connectionId: PHID
+    config: Unknown!
+    retry: AddStepRetryPolicyInput
+    timeoutSeconds: Int
+    idempotencyKeyExpression: String
+    position: AddStepPositionInput
+}
+
+input UpdateStepRetryPolicyInput {
+    maxAttempts: Int!
+    backoff: BackoffKind!
+    initialDelaySeconds: Int!
+    maxDelaySeconds: Int!
+    retryOn: [String!]!
+}
+
+input UpdateStepPositionInput {
+    x: Float!
+    y: Float!
+}
+
+input UpdateStepInput {
+    id: OID!
+    key: String
+    name: String
+    blockType: String
+    connectionId: PHID
+    config: Unknown
+    retry: UpdateStepRetryPolicyInput
+    timeoutSeconds: Int
+    idempotencyKeyExpression: String
+    position: UpdateStepPositionInput
+}
+
+input RemoveStepInput {
+    id: OID!
+}
+
+input SetStepConfigInput {
+    id: OID!
+    config: Unknown!
+}
+
+# edges
+
+input AddEdgeInput {
+    id: OID!
+    from: OID!
+    to: OID!
+    port: String!
+    condition: String
+}
+
+input RemoveEdgeInput {
+    id: OID!
+}
+
+# variables
+
+input SetVariableInput {
+    id: OID!
+    key: String!
+    value: Unknown
+    description: String
+}
+
+input RemoveVariableInput {
+    id: OID!
+}
+
+# policy
+
+input SetPolicyRetryPolicyInput {
+    maxAttempts: Int!
+    backoff: BackoffKind!
+    initialDelaySeconds: Int!
+    maxDelaySeconds: Int!
+    retryOn: [String!]!
+}
+
+input SetPolicyInput {
+    concurrency: ConcurrencyMode
+    maxParallelRuns: Int
+    runTimeoutSeconds: Int
+    maxSuspensionDays: Int
+    defaultRetry: SetPolicyRetryPolicyInput
+    onFailure: FailureMode
+    retainRunsDays: Int
+    journalAsDocument: Boolean
+}
+
+# runtime
+
+input SetLastRunInput {
+    lastRunAt: DateTime!
+    lastRunStatus: RunStatus!
+}

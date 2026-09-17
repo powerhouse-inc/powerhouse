@@ -1,0 +1,24 @@
+/* React Flow paints the node layer above the edge-label layer, and gives every
+   node an inline z-index, so a picker in either layer loses to the nodes. */
+.react-flow__node:has([data-selector-open="true"]) {
+  z-index: 1002 !important;
+}
+
+/* The edge "Insert step" picker lives in the edge-label layer, which sits
+   below every node. Lift the label wrapper while its picker is open. */
+.react-flow__edgelabel-renderer > div:has([data-selector-open="true"]) {
+  z-index: 1002;
+}
+
+/* The right-click menu is a sibling of the flow; keep it above the lifted
+   node layer. */
+.workflow-context-menu {
+  z-index: 1003;
+}
+
+/* The expression picker is portalled to <body> to escape the side panel's
+   scroll container, so it only has to clear the canvas layers: one above the
+   right-click menu. */
+.workflow-expression-popup {
+  z-index: 1004;
+}

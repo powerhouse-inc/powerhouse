@@ -341,6 +341,11 @@ export type PowerhouseConfig = {
     driveUrl?: string;
     connectPort?: number;
   };
+  // Powerhouse workflows on this reactor. Off unless turned on here or with
+  // PH_WORKFLOWS_ENABLED, which wins over this file.
+  workflows?: {
+    enabled?: boolean;
+  };
   packageRegistryUrl?: string;
   connect?: PHConnectRuntimeConfig;
 };

@@ -71,6 +71,10 @@ export type IPackageLoaderOptions = {
 export type IPackageManagerOptions = {
   packages?: string[];
   configFile?: string;
+  /** Register @powerhousedao/workflow's document models. */
+  workflows?: boolean;
+  /** Seam for tests; defaults to importing that package's document models. */
+  workflowDocumentModels?: () => Promise<Record<string, unknown>>;
 };
 
 export interface PackageConfig {

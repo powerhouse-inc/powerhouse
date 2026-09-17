@@ -230,6 +230,17 @@
         }
       }
     },
+    "workflows": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Powerhouse workflows on this reactor.",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Register the workflow document models and run workflows. Overridden by PH_WORKFLOWS_ENABLED."
+        }
+      }
+    },
     "packageRegistryUrl": {
       "type": "string",
       "description": "Project-wide package registry endpoint. Used by `ph install` / `ph publish` / `ph registry-login` and Switchboard, and copied verbatim into the runtime config so the Connect SPA's Package Manager UI reads the same registry."

@@ -232,6 +232,18 @@ export const sourceConfigSchema = {
         },
       },
     },
+    workflows: {
+      type: "object",
+      additionalProperties: false,
+      description: "Powerhouse workflows on this reactor.",
+      properties: {
+        enabled: {
+          type: "boolean",
+          description:
+            "Register the workflow document models and run workflows. Overridden by PH_WORKFLOWS_ENABLED.",
+        },
+      },
+    },
     packageRegistryUrl: {
       type: "string",
       description:
