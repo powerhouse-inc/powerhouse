@@ -100,6 +100,7 @@ jobs:
       # The engine's piece suites fetch Activepieces bundles from npm. Keyed on
       # the suites themselves: a run that changes none of them reuses the bundles.
       - name: Cache Activepieces bundles
+        if: ${{ steps.scope.outputs.mode == 'full' || contains(steps.scope.outputs.filters, '@powerhousedao/reactor-workflow') }}
         uses: actions/cache@v4
         with:
           path: packages/reactor-workflow/node_modules/.cache/ap-bundles
