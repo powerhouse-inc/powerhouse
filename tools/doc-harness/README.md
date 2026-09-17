@@ -59,8 +59,8 @@ workflow and skips finished work.
 
 | command | purpose |
 |---|---|
-| `run --tasks a,b --arms A,B --n 3 --concurrency 2 [--dry-run]` | run the matrix |
-| `resume <runId>` | continue an interrupted run |
+| `run --tasks a,b --arms A,B --n 3 --concurrency 2 [--dry-run] [--throttle-at 0.9]` | run the matrix |
+| `resume <runId> [--redo-failed [reasons]] [--throttle-at <ratio>]` | continue an interrupted run; optionally redo failed attempts first |
 | `report <runId>` | rewrite `REPORT.md` |
 | `inspect [runId]` | list Mastra runs or dump one run's steps |
 | `catalog list \| validate` | inspect the task catalog |
@@ -71,6 +71,28 @@ workflow and skips finished work.
 installs, so the whole pipeline runs offline in seconds; its FINDINGS and RUNS
 lines go into the run directory, never into the committed files.
 
+`--redo-failed [reasons]` (default `rate-limited,wall-clock`) resets every
+attempt whose build, judge or verifier failed for one of the listed reasons
+before the run is re-driven: the failed step's outputs and everything
+downstream move to `<attempt>/previous/<n>/` (a build redo also sets the
+workspace aside, minus `node_modules`), the attempt's lines leave
+`FINDINGS.jsonl`, the run's line leaves `RUNS.jsonl` and `run.json` is
+reopened so the summary re-appends it. A judge or verifier redo keeps the build
+and its grading. A reason may be scoped to one step (`judge:budget-exhausted`);
+`record:budget-exhausted` only re-records matching attempts (attempt.json and
+their findings lines) so a new status taxonomy applies without redoing work.
+
+`--throttle-at <ratio>` (default `0.9`, `0` disables) holds new `claude`
+processes while the account's five-hour rate-limit window is at or above the
+ratio, polling every minute for up to 15 minutes. The CLI only reports
+utilisation in `rate_limit_event` records, which the driver surfaces when a
+process ends, so the reading is always one process stale: a wait ends early
+only when a concurrent process finishes with a lower reading. Judge and
+verifier budgets scale with their input (one dollar per 40 KB of compact
+transcript, $0.75 per kept finding), capped at three times the catalog value;
+their wall clocks grow five minutes per 100 KB, capped at 45 minutes. The
+effective limits are recorded in `judge.json` and `verify.json`.
+
 `--runs-root`, `--state-dir` and `--recipes-root` relocate the run directory,
 the Mastra DB and the recipes checkout (default: a sibling of the monorepo).
 Each attempt's `workspace/node_modules` is removed once it is graded unless
@@ -79,6 +101,26 @@ Each attempt's `workspace/node_modules` is removed once it is graded unless
 Because `runs/` sits inside the monorepo, the sandbox denies the monorepo's
 sibling directories along the path to it rather than the root, so the builder
 can read its own workspace but nothing else in the checkout.
+
+## Failure classes
+
+Every attempt ends in one `status` (attempt.json, RUNS.jsonl, the report).
+Rate-limited and contaminated attempts are excluded from pass rates.
+
+| status | meaning | graded | judged | findings | redo |
+|---|---|---|---|---|---|
+| `infra-fail` | `pnpm install` failed | no | no | no | rerun the install by deleting `prepare.json` |
+| `rate-limited` | the builder was killed by the wall clock (or exited without a result) while the CLI was retrying the API: `system/api_retry` was the last word, or three retries fell in the final two minutes | no | no | no | `resume --redo-failed` |
+| `build-fail` | the builder failed for any other reason: a genuine `wall-clock` hang, `api-error`, `no-result-record`, `nonzero-exit`, `spawn-error`, `cli-version-drift` | only for `nonzero-exit` | only for `nonzero-exit` | only for `nonzero-exit` | `resume --redo-failed wall-clock,...` |
+| `contaminated` | the builder read outside the docs and its workspace, or used the network | yes | yes | dropped | no |
+| `complete` | the builder finished and the workspace was graded | yes | yes | yes | no |
+| `complete` + `truncated: true` | the builder hit `--max-budget-usd` (`budget-exhausted`) but the workspace was graded and the transcript judged anyway; the report marks it and counts a passing one as a pass | yes | yes | yes | no |
+
+A judge or verifier that fails does not change the attempt's status: the
+failure reason lands in `judgeFailed` and the report's `judge` column, and
+`resume --redo-failed` redoes that step alone. Killed builders report no cost;
+`buildTokens` (summed from the streamed assistant records) stands in for it,
+and the report counts such attempts as "unmetered".
 
 ## Mastra Studio
 

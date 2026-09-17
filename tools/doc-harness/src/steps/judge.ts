@@ -1,19 +1,27 @@
-/** The judge `claude -p` with a JSON schema, then the deterministic post-checks. */
+/**
+ * The judge `claude -p` with a JSON schema, then the deterministic post-checks.
+ * Skipped when the builder failed for an infrastructure reason: the attempt
+ * will be redone, so its partial transcript is not worth judging.
+ */
 import { createStep } from "@mastra/core/workflows";
 import { randomUUID } from "node:crypto";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
+import { costLabel } from "../lib/attempt-status.js";
+import { judgeBudgetUsd, scaledWallClockMs } from "../lib/budgets.js";
 import { buildDocsSymbolIndex } from "../lib/docs.js";
 import { postCheckFindings } from "../lib/judge-checks.js";
 import { PROMPTS_ROOT } from "../lib/paths.js";
 import { buildJudgePrompt } from "../lib/prompts.js";
 import {
   ExtractOutput,
+  isInfraFailure,
   JudgeOutput,
   JudgeOutputSummary,
   JudgeStepResult,
 } from "../lib/schemas.js";
 import { acceptance } from "./acceptance.js";
+import { build } from "./build.js";
 import {
   attemptLabel,
   attemptScope,
@@ -25,7 +33,11 @@ import {
 
 const JUDGE_TOOLS = ["Read", "Grep", "Glob"];
 const JUDGE_MAX_TURNS = 40;
-const JUDGE_WALL_CLOCK_MS = 15 * 60_000;
+export const JUDGE_WALL_CLOCK_MS = 15 * 60_000;
+
+export function fileSize(file: string): number {
+  return existsSync(file) ? statSync(file).size : 0;
+}
 
 export function judgeSchemaFile(promptsRoot: string = PROMPTS_ROOT): string {
   return path.join(promptsRoot, "schemas", "judge.schema.json");
@@ -38,6 +50,7 @@ function summarize(
   return {
     judgePath,
     skipped: false,
+    failureReason: result.claude?.failureReason ?? null,
     rawFindings: result.raw?.findings.length ?? 0,
     kept: result.kept.length,
     dropped: result.dropped.length,
@@ -58,10 +71,12 @@ export const judge = createStep({
     const cached = readCached(layout.judgeJson, JudgeStepResult);
     if (cached) return summarize(cached, layout.judgeJson);
 
-    if (inputData.skipped) {
+    const built = params.getStepResult(build);
+    if (inputData.skipped || isInfraFailure(built.failureReason)) {
       return {
         judgePath: layout.judgeJson,
         skipped: true,
+        failureReason: null,
         rawFindings: 0,
         kept: 0,
         dropped: 0,
@@ -89,6 +104,9 @@ export const judge = createStep({
     const systemPromptFile = path.join(layout.dir, "judge.system.md");
     writeText(systemPromptFile, prompts.system);
 
+    const compactBytes = fileSize(inputData.compactPath);
+    const budgetUsd = judgeBudgetUsd(task.budgets.judgeUsd, compactBytes);
+    const wallClockMs = scaledWallClockMs(JUDGE_WALL_CLOCK_MS, compactBytes);
     const outcome = await callClaude(ctx, ctx.judgeDriver, {
       cwd: layout.dir,
       prompt: prompts.task,
@@ -99,8 +117,8 @@ export const judge = createStep({
       tools: JUDGE_TOOLS,
       permissionMode: "dontAsk",
       maxTurns: JUDGE_MAX_TURNS,
-      maxBudgetUsd: task.budgets.judgeUsd,
-      wallClockMs: JUDGE_WALL_CLOCK_MS,
+      maxBudgetUsd: budgetUsd,
+      wallClockMs,
       jsonSchemaFile: judgeSchemaFile(ctx.promptsRoot),
       sessionId: randomUUID(),
       authMode: input.args.auth,
@@ -123,10 +141,16 @@ export const judge = createStep({
         })
       : { kept: [], dropped: [], relabelled: [] };
 
-    const result: JudgeStepResult = { claude: outcome, raw, ...checks };
+    const result: JudgeStepResult = {
+      claude: outcome,
+      budgetUsd,
+      wallClockMs,
+      raw,
+      ...checks,
+    };
     writeJson(layout.judgeJson, result);
     ctx.log(
-      `${attemptLabel(input)} judge ${outcome.ok ? "ok" : `FAILED (${outcome.failureReason ?? "?"})`} findings=${result.kept.length} dropped=${result.dropped.length} cost=$${(outcome.costUsd ?? 0).toFixed(2)}`,
+      `${attemptLabel(input)} judge ${outcome.ok ? "ok" : `FAILED (${outcome.failureReason ?? "?"})`} findings=${result.kept.length} dropped=${result.dropped.length} ${costLabel(outcome)} budget=$${budgetUsd.toFixed(2)} compact=${Math.round(compactBytes / 1024)}KB`,
     );
     return summarize(result, layout.judgeJson);
   },

@@ -10,6 +10,7 @@ import {
   ResultRecord,
   type ClaudeFailureReason,
 } from "./schemas.js";
+import { parseTranscriptLines, walkTranscript } from "./transcript.js";
 
 export interface FakeClaudeOptions {
   /** A stream-json file; any result line in it is replaced. */
@@ -54,10 +55,9 @@ export class FakeClaude implements ClaudeDriver {
       .filter((l) => !isResultLine(l));
 
     const result = this.#result(inv, failWith);
+    const killed = failWith === "wall-clock" || failWith === "rate-limited";
     const emitResult =
-      failWith !== "no-result-record" &&
-      failWith !== "wall-clock" &&
-      failWith !== "spawn-error";
+      failWith !== "no-result-record" && !killed && failWith !== "spawn-error";
     const out = emitResult ? [...lines, JSON.stringify(result)] : lines;
 
     for (const p of [inv.transcriptPath, inv.stderrPath]) {
@@ -77,11 +77,14 @@ export class FakeClaude implements ClaudeDriver {
     }
 
     const exit = exitFor(failWith);
+    const walk = walkTranscript(parseTranscriptLines(lines.join("\n")).records);
     return this.#outcome(inv, argv, {
+      tokens: walk.turns.length > 0 ? walk.tokens : null,
       exitCode: exit.code,
       signal: exit.signal,
-      killedByWallClock: failWith === "wall-clock",
+      killedByWallClock: killed,
       failureReason: failWith,
+      apiRetries: failWith === "rate-limited" ? 3 : 0,
       resultRecord: emitResult ? result : null,
       structuredOutput: emitResult ? (result.structured_output ?? null) : null,
       sessionJsonlPath,
@@ -187,6 +190,7 @@ function exitFor(failWith: ClaudeFailureReason | undefined): {
     case "nonzero-exit":
       return { code: 1, signal: null };
     case "wall-clock":
+    case "rate-limited":
       return { code: null, signal: "SIGTERM" };
     case "spawn-error":
     case "cli-version-drift":

@@ -15,6 +15,13 @@ import {
   type HarnessContext,
 } from "../lib/context.js";
 import { createDrivers, recordFiles } from "../lib/drivers.js";
+import { FINDINGS_FILE, RUNS_FILE } from "../lib/paths.js";
+import {
+  describeRedo,
+  parseRedoReasons,
+  redoFailedAttempts,
+} from "../lib/redo.js";
+import { UtilizationThrottle } from "../lib/throttle.js";
 import {
   MONOREPO_ROOT,
   newRunId,
@@ -51,6 +58,7 @@ interface RunOptions {
   allowCliDrift?: boolean;
   builderModel: string;
   judgeModel: string;
+  throttleAt: string;
   runsRoot: string;
   stateDir: string;
   recipesRoot?: string;
@@ -61,6 +69,17 @@ interface ResumeOptions {
   stateDir: string;
   recipesRoot?: string;
   allowCliDrift?: boolean;
+  /** true when passed without a value; a comma list of failure reasons otherwise. */
+  redoFailed?: string | true;
+  throttleAt?: string;
+}
+
+function ratio(value: string, name: string): number {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 0 || n > 1) {
+    throw new Error(`--${name} must be between 0 and 1, got ${value}`);
+  }
+  return n;
 }
 
 function positiveInt(value: string, name: string): number {
@@ -152,11 +171,16 @@ async function drive(o: {
     }
     const s = result.result;
     o.ctx.log(
-      `run ${o.input.runId}: ${s.attempts} attempts, ${s.complete} complete, ${s.failed} failed, ${s.contaminated} contaminated, ${s.findingsAppended} findings appended`,
+      `run ${o.input.runId}: ${s.attempts} attempts, ${s.complete} complete (${s.truncated} truncated), ${s.failed} failed, ${s.rateLimited} rate-limited, ${s.contaminated} contaminated, ${s.findingsAppended} findings appended`,
     );
+    if (s.rateLimited > 0) {
+      o.ctx.log(
+        `${s.rateLimited} attempt(s) were rate-limited: redo them with doc-harness resume ${o.input.runId} --redo-failed`,
+      );
+    }
     o.ctx.log(`report ${s.reportPath}`);
     o.ctx.log(`open ${reportUrl(o.input.runId)} (with pnpm studio running)`);
-    return s.failed > 0 ? 1 : 0;
+    return s.failed > 0 || s.rateLimited > 0 ? 1 : 0;
   } finally {
     clearHarnessContext(o.input.runId);
     await mastra.shutdown().catch(() => undefined);
@@ -180,6 +204,7 @@ async function runCommand(opts: RunOptions): Promise<never> {
     keepWorkspaces: opts.keepWorkspaces === true,
     builderModel: opts.builderModel,
     judgeModel: opts.judgeModel,
+    throttleAt: ratio(opts.throttleAt, "throttle-at"),
   });
   if (args.arms.length === 0) throw new Error("--arms must name A, B or A,B");
 
@@ -204,7 +229,9 @@ async function runCommand(opts: RunOptions): Promise<never> {
   for (const { task, arm } of m.rows) {
     log(`  ${task.id.padEnd(28)} ${arm} x${args.n}  ${task.acceptance.kind}`);
   }
-  log(`${m.attempts} attempts, budget ceiling $${m.ceiling.toFixed(2)}`);
+  log(
+    `${m.attempts} attempts, budget ceiling $${m.ceiling.toFixed(2)} (judge and verifier budgets scale with input, up to 3x)`,
+  );
 
   const code = await drive({
     input: {
@@ -225,6 +252,7 @@ async function runCommand(opts: RunOptions): Promise<never> {
       ...recordFiles(layout, args.dryRun),
       dryRun: args.dryRun,
       semaphore,
+      throttle: new UtilizationThrottle({ threshold: args.throttleAt, log }),
       log,
     },
     stateDir: opts.stateDir,
@@ -241,9 +269,26 @@ async function resumeCommand(
   if (!existsSync(layout.runJson)) {
     throw new Error(`run ${runId} not found at ${layout.runJson}`);
   }
-  const record = RunRecord.parse(
+  let record = RunRecord.parse(
     JSON.parse(readFileSync(layout.runJson, "utf8")),
   );
+  if (opts.throttleAt !== undefined) {
+    record.args.throttleAt = ratio(opts.throttleAt, "throttle-at");
+  }
+  const files = recordFiles(layout, record.args.dryRun);
+  if (opts.redoFailed !== undefined) {
+    const result = redoFailedAttempts(layout, {
+      reasons: parseRedoReasons(opts.redoFailed),
+      findingsFile: files.findingsFile ?? FINDINGS_FILE,
+      runsFile: files.runsFile ?? RUNS_FILE,
+    });
+    for (const line of describeRedo(result)) log(line);
+    if (result.reset.length > 0) {
+      record = RunRecord.parse(
+        JSON.parse(readFileSync(layout.runJson, "utf8")),
+      );
+    }
+  }
   const { driver, judgeDriver, semaphore } = createDrivers(
     record.args,
     opts.allowCliDrift === true,
@@ -272,9 +317,13 @@ async function resumeCommand(
       runsRoot: opts.runsRoot,
       recipesRoot: opts.recipesRoot ?? recipesRoot(),
       monorepoRoot: MONOREPO_ROOT,
-      ...recordFiles(layout, record.args.dryRun),
+      ...files,
       dryRun: record.args.dryRun,
       semaphore,
+      throttle: new UtilizationThrottle({
+        threshold: record.args.throttleAt,
+        log,
+      }),
       log,
     },
     stateDir: opts.stateDir,
@@ -307,6 +356,11 @@ export function register(program: Command): void {
     )
     .option("--builder-model <id>", "builder model", MODEL_IDS.builder)
     .option("--judge-model <id>", "judge and verifier model", MODEL_IDS.judge)
+    .option(
+      "--throttle-at <ratio>",
+      "hold new claude processes while the five-hour window is at or above this utilisation; 0 disables",
+      "0.9",
+    )
     .option("--runs-root <dir>", "runs directory", RUNS_ROOT)
     .option("--state-dir <dir>", "Mastra state directory", STATE_DIR)
     .option("--recipes-root <dir>", "recipes checkout (default: ../recipes)")
@@ -323,6 +377,14 @@ export function register(program: Command): void {
     .option(
       "--allow-cli-drift",
       "run on a claude version the extractor was not validated against",
+    )
+    .option(
+      "--redo-failed [reasons]",
+      "reset attempts whose build, judge or verifier failed for these reasons (default rate-limited,wall-clock; prefix with build:, judge:, verify: to scope, or record: to only re-record) and redo them",
+    )
+    .option(
+      "--throttle-at <ratio>",
+      "override the recorded throttle threshold for this drive",
     )
     .action((runId: string, opts: ResumeOptions) => resumeCommand(runId, opts));
 }

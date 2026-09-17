@@ -3,6 +3,7 @@ import { createStep } from "@mastra/core/workflows";
 import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import type { z } from "zod";
+import { costLabel, totalTokens } from "../lib/attempt-status.js";
 import {
   BuildOutput,
   ClaudeOutcome,
@@ -54,6 +55,8 @@ export const build = createStep({
         turns: null,
         exitCode: null,
         killedByWallClock: false,
+        tokens: null,
+        apiRetries: 0,
         claude: null,
       };
       writeJson(layout.buildJson, skipped);
@@ -79,8 +82,12 @@ export const build = createStep({
       stderrPath: layout.stderrPath,
       sessionJsonlCopyPath: layout.sessionJsonlPath,
     });
+    const retries =
+      outcome.apiRetries > 0 ? ` apiRetries=${outcome.apiRetries}` : "";
+    const stalled =
+      outcome.stalledMs === null ? "" : ` stalled=${outcome.stalledMs}ms`;
     ctx.log(
-      `${attemptLabel(input)} build ${outcome.ok ? "ok" : `FAILED (${outcome.failureReason ?? "?"})`} turns=${outcome.turns ?? "?"} cost=$${(outcome.costUsd ?? 0).toFixed(2)} ${outcome.durationMs}ms`,
+      `${attemptLabel(input)} build ${outcome.ok ? "ok" : `FAILED (${outcome.failureReason ?? "?"})`} turns=${outcome.turns ?? "?"} ${costLabel(outcome)} ${outcome.durationMs}ms${retries}${stalled}`,
     );
 
     const json: BuildJson = {
@@ -94,6 +101,8 @@ export const build = createStep({
       turns: outcome.turns,
       exitCode: outcome.exitCode,
       killedByWallClock: outcome.killedByWallClock,
+      tokens: totalTokens(outcome.tokens),
+      apiRetries: outcome.apiRetries,
       claude: outcome,
     };
     writeJson(layout.buildJson, json);

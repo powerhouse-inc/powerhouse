@@ -17,11 +17,16 @@ import {
   ClaudeOutcome,
   ResultRecord,
   type ClaudeFailureReason,
+  type RateLimitUtilization,
+  type TokenUsage,
 } from "./schemas.js";
 import { Semaphore } from "./semaphore.js";
 
 const STDERR_TAIL_BYTES = 4096;
 const SIGKILL_GRACE_MS = 5_000;
+/** A kill with this many retries, the last one this recent, is a rate-limit stall. */
+const STALL_MIN_RETRIES = 3;
+const STALL_RECENT_MS = 2 * 60_000;
 
 /** The argv after the binary. Pure; the prompt is always the last element. */
 export function buildArgs(inv: ClaudeInvocation): string[] {
@@ -146,16 +151,18 @@ export class ClaudeCli implements ClaudeDriver {
     let resultRecord: ResultRecord | null = null;
     let stderrTail = "";
     let pending = "";
+    const stream = new StreamTracker();
 
     const onLine = (line: string) => {
       transcript.write(line + "\n");
-      if (!line.includes('"type":"result"')) return;
       let json: unknown;
       try {
         json = JSON.parse(line);
       } catch {
         return;
       }
+      stream.observe(json, Date.now());
+      if (!line.includes('"type":"result"')) return;
       const parsed = ResultRecord.safeParse(json);
       if (parsed.success) resultRecord = parsed.data;
     };
@@ -210,12 +217,14 @@ export class ClaudeCli implements ClaudeDriver {
         if (pending.length > 0) onLine(pending);
         pending = "";
         void Promise.all([finish(transcript), finish(stderr)]).then(() => {
-          const durationMs = Date.now() - startedAt;
+          const endedAt = Date.now();
+          const durationMs = endedAt - startedAt;
           const failureReason = classify({
             killedByWallClock,
             spawnError,
             code,
             result: resultRecord,
+            stall: stream.stall(endedAt),
           });
           const outcome: ClaudeOutcome = {
             ok: failureReason === undefined,
@@ -237,6 +246,12 @@ export class ClaudeCli implements ClaudeDriver {
             model: inv.model,
             cliVersion,
             argv,
+            apiRetries: stream.apiRetries,
+            rateLimitUtilization: stream.utilization,
+            stalledMs: killedByWallClock
+              ? endedAt - (stream.lastMeaningfulAt ?? startedAt)
+              : null,
+            tokens: stream.tokens(),
           };
           resolve(ClaudeOutcome.parse(outcome));
         });
@@ -251,14 +266,107 @@ export class ClaudeCli implements ClaudeDriver {
   }
 }
 
-function classify(input: {
+/** What the driver learned from stdout while the process ran. */
+export class StreamTracker {
+  apiRetries = 0;
+  lastRetryAt: number | null = null;
+  /** Arrival time of the last assistant or user record. */
+  lastMeaningfulAt: number | null = null;
+  /** True when nothing but system records followed the last api_retry. */
+  lastRecordWasRetry = false;
+  utilization: RateLimitUtilization = { fiveHour: null, sevenDay: null };
+  readonly #usageByMessage = new Map<string, Record<string, unknown>>();
+  #anonymous = 0;
+
+  observe(json: unknown, now: number): void {
+    if (!isRecord(json)) return;
+    const type = json.type;
+    if (type === "system") {
+      if (json.subtype === "api_retry") {
+        this.apiRetries += 1;
+        this.lastRetryAt = now;
+        this.lastRecordWasRetry = true;
+      }
+      return;
+    }
+    if (type === "rate_limit_event") {
+      const info = isRecord(json.rate_limit_info) ? json.rate_limit_info : {};
+      const windows = isRecord(info.unifiedWindows) ? info.unifiedWindows : {};
+      this.utilization = {
+        fiveHour: utilizationOf(windows.five_hour) ?? this.utilization.fiveHour,
+        sevenDay: utilizationOf(windows.seven_day) ?? this.utilization.sevenDay,
+      };
+      return;
+    }
+    this.lastRecordWasRetry = false;
+    if (type === "assistant" || type === "user") this.lastMeaningfulAt = now;
+    if (type === "assistant" && isRecord(json.message)) {
+      const usage = json.message.usage;
+      if (isRecord(usage)) {
+        const id =
+          typeof json.message.id === "string"
+            ? json.message.id
+            : `anon-${this.#anonymous++}`;
+        this.#usageByMessage.set(id, usage);
+      }
+    }
+  }
+
+  /** The stall evidence classify() weighs when the run produced no result. */
+  stall(endedAt: number): StallEvidence {
+    return {
+      apiRetries: this.apiRetries,
+      lastRecordWasRetry: this.lastRecordWasRetry,
+      lastRetryAgoMs:
+        this.lastRetryAt === null ? null : endedAt - this.lastRetryAt,
+    };
+  }
+
+  tokens(): TokenUsage | null {
+    if (this.#usageByMessage.size === 0) return null;
+    const t: TokenUsage = {
+      input: 0,
+      output: 0,
+      cacheCreation: 0,
+      cacheRead: 0,
+    };
+    for (const u of this.#usageByMessage.values()) {
+      t.input += numberOf(u.input_tokens);
+      t.output += numberOf(u.output_tokens);
+      t.cacheCreation += numberOf(u.cache_creation_input_tokens);
+      t.cacheRead += numberOf(u.cache_read_input_tokens);
+    }
+    return t;
+  }
+}
+
+export interface StallEvidence {
+  apiRetries: number;
+  lastRecordWasRetry: boolean;
+  lastRetryAgoMs: number | null;
+}
+
+/** A retry as the last word, or a burst of retries right before the end. */
+export function isRateLimitStall(stall: StallEvidence): boolean {
+  if (stall.apiRetries === 0) return false;
+  if (stall.lastRecordWasRetry) return true;
+  return (
+    stall.apiRetries >= STALL_MIN_RETRIES &&
+    stall.lastRetryAgoMs !== null &&
+    stall.lastRetryAgoMs <= STALL_RECENT_MS
+  );
+}
+
+export function classify(input: {
   killedByWallClock: boolean;
   spawnError: Error | undefined;
   code: number | null;
   result: ResultRecord | null;
+  stall?: StallEvidence;
 }): ClaudeFailureReason | undefined {
-  const { killedByWallClock, spawnError, code, result } = input;
-  if (killedByWallClock) return "wall-clock";
+  const { killedByWallClock, spawnError, code, result, stall } = input;
+  const stalled = stall !== undefined && isRateLimitStall(stall);
+  if (killedByWallClock) return stalled ? "rate-limited" : "wall-clock";
   if (spawnError) return "spawn-error";
   if (
     result &&
@@ -270,9 +378,24 @@ function classify(input: {
   if (result && (result.is_error || result.terminal_reason === "api_error")) {
     return "api-error";
   }
+  if (!result && stalled) return "rate-limited";
   if (code !== 0) return "nonzero-exit";
   if (!result) return "no-result-record";
   return undefined;
+}
+
+function utilizationOf(window: unknown): number | null {
+  return isRecord(window) && typeof window.utilization === "number"
+    ? window.utilization
+    : null;
+}
+
+function numberOf(v: unknown): number {
+  return typeof v === "number" ? v : 0;
+}
+
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
 }
 
 /** The CLI encodes the resolved cwd (macOS: /tmp -> /private/tmp), so try both spellings. */
@@ -335,6 +458,10 @@ function refused(
     model: inv.model,
     cliVersion,
     argv,
+    apiRetries: 0,
+    rateLimitUtilization: { fiveHour: null, sevenDay: null },
+    stalledMs: null,
+    tokens: null,
   } satisfies ClaudeOutcome);
 }
 

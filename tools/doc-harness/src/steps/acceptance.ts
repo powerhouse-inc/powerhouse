@@ -1,8 +1,17 @@
-/** Hidden tests plus the .d.ts collection the judge reads. */
+/**
+ * Hidden tests plus the .d.ts collection the judge reads. Runs whenever the
+ * builder got to write anything, including budget-exhausted builds; only
+ * infrastructure failures (killed, no result) skip it.
+ */
 import { createStep } from "@mastra/core/workflows";
 import { z } from "zod";
 import { runAcceptance } from "../lib/acceptance.js";
-import { AcceptanceOutput, BuildOutput, TestsResult } from "../lib/schemas.js";
+import {
+  AcceptanceOutput,
+  BuildOutput,
+  isInfraFailure,
+  TestsResult,
+} from "../lib/schemas.js";
 import { collectDts } from "../lib/workspace.js";
 import {
   attemptLabel,
@@ -45,7 +54,7 @@ export const acceptance = createStep({
     if (cached) return toOutput(cached, layout.testsJson);
 
     let json: TestsJson;
-    if (inputData.skipped) {
+    if (inputData.skipped || isInfraFailure(inputData.failureReason)) {
       json = {
         kind: task.acceptance.kind,
         tscOk: null,

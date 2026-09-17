@@ -11,7 +11,7 @@ import {
   sectionRel,
   type PhLoraMapping,
 } from "../src/lib/report.js";
-import { RunRecord } from "../src/lib/schemas.js";
+import { AttemptSummary, RunRecord } from "../src/lib/schemas.js";
 
 const FIXTURES = path.join(import.meta.dirname, "fixtures/report");
 const RUN_ID = "2026-09-17T10-00-00Z";
@@ -114,19 +114,21 @@ describe("writeReport", () => {
     expect(report).toContain("pin: `6.2.2-dev.62`");
     expect(report).toContain("cliVersion: `2.1.258`");
     expect(report).toContain(
-      "attempts: 5 (1 contaminated, excluded from rates)",
+      "attempts: 5 (1 contaminated, 0 rate-limited; both excluded from rates); 0 truncated",
     );
+    expect(report).toContain("unmetered (killed) attempts: 1");
   });
 
   it("renders one attempts row per task and arm", () => {
     expect(report).toContain(
-      "| custom-read-model | A | 2 | 2/2 | 4/6 | 32.0 | $3.75 | dts-read: 2 | 0 |",
+      "| custom-read-model | A | 2 | 2/2 | 0 | 4/6 | 32.0 | $3.75 | 2 ok | dts-read: 2 | 0 | 0 |",
     );
     expect(report).toContain(
-      "| custom-read-model | B | 1 | 1/1 | 3/3 | 18.0 | $1.00 | none | 0 |",
+      "| custom-read-model | B | 1 | 1/1 | 0 | 3/3 | 18.0 | $1.00 | 1 ok | none | 0 | 0 |",
     );
+    // A#2 was killed by the wall clock: its recorded cost is not trusted.
     expect(report).toContain(
-      "| batch-progress | A | 2 | 1/2 | 0/0 | 12.0 | $3.50 | dts-read: 6, denied-path-bash: 1 | 1 |",
+      "| batch-progress | A | 2 | 1/2 | 0 | 0/0 | 12.0 | $0.40 (+1 unmetered) | 2 ok | dts-read: 6, denied-path-bash: 1 | 1 | 0 |",
     );
   });
 
@@ -190,6 +192,76 @@ describe("writeReport", () => {
 
   it("fails on an unknown run", () => {
     expect(() => writeReport({ runId: "nope", runsRoot })).toThrow(/not found/);
+  });
+});
+
+describe("renderReport with rate-limited and truncated attempts", () => {
+  const run = RunRecord.parse(
+    JSON.parse(
+      readFileSync(path.join(FIXTURES, "runs", RUN_ID, "run.json"), "utf8"),
+    ),
+  );
+  const base = run.attempts[2];
+  run.attempts.push(
+    {
+      ...base,
+      n: 2,
+      status: "complete",
+      buildOk: false,
+      buildFailureReason: "budget-exhausted",
+      truncated: true,
+      acceptanceOk: true,
+      testsPassed: 3,
+      testsTotal: 3,
+      costUsd: 3.0,
+      judgeFailed: "budget-exhausted",
+    },
+    {
+      ...base,
+      taskId: "batch-progress",
+      n: 1,
+      status: "rate-limited",
+      buildOk: false,
+      buildFailureReason: "rate-limited",
+      acceptanceOk: null,
+      testsPassed: 0,
+      testsTotal: 0,
+      turns: null,
+      costUsd: 0,
+      buildTokens: 2_800_000,
+      findingsKept: 0,
+    },
+  );
+  const md = renderReport(run, [], { mapping, tasks });
+
+  it("excludes rate-limited attempts from the rates and says so", () => {
+    expect(md).toContain(
+      "attempts: 7 (1 contaminated, 1 rate-limited; both excluded from rates); 1 truncated",
+    );
+    expect(md).toContain("unmetered (killed) attempts: 2");
+    // B: the truncated build passed its tests; the rate-limited one is not counted.
+    expect(md).toContain("| B | 100% (2/2) | 0 | 0.00 |");
+    expect(md).toContain("| batch-progress | 0% (0/1) | n/a |");
+    expect(md).toContain("excluded from the rates below");
+  });
+
+  it("shows the truncated marker, the judge column and tokens for unmetered cost", () => {
+    expect(md).toContain(
+      "| custom-read-model | B | 2 | 1/2 | 1 | 6/6 | 18.0 | $4.00 | 1 ok, 1 budget-exhausted | none | 0 | 0 |",
+    );
+    expect(md).toContain(
+      "| batch-progress | B | 1 | 0/1 | 0 | 0/0 | - | $0.00 (+1 unmetered, 2.8M tok) | 1 skipped | none | 0 | 1 |",
+    );
+  });
+
+  it("parses attempt.json files written before the new fields existed", () => {
+    const { truncated: _t, buildTokens: _b, judgeFailed: _j, ...old } = base;
+    const parsed = AttemptSummary.parse(old);
+    expect(parsed).toMatchObject({
+      truncated: false,
+      buildTokens: null,
+      judgeFailed: null,
+    });
   });
 });
 

@@ -10,6 +10,7 @@ import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { runLayout } from "../src/lib/paths.js";
 import {
+  attemptStatusLabel,
   escapeHtml,
   isSafeSegment,
   listAttemptFiles,
@@ -147,6 +148,32 @@ describe("listRuns and the index", () => {
       'href="/doc-harness/runs/2026-09-17T10-00-00Z/report"',
     );
     expect(html).toContain("<table>");
+    expect(html).toContain("<th>rate-limited</th>");
+    expect(listRuns(runsRoot)[0].rateLimited).toBe(0);
+  });
+
+  it("attemptStatusLabel marks truncation and judge failures", () => {
+    expect(
+      attemptStatusLabel({
+        status: "complete",
+        truncated: false,
+        judgeFailed: null,
+      }),
+    ).toBe("complete");
+    expect(
+      attemptStatusLabel({
+        status: "complete",
+        truncated: true,
+        judgeFailed: "budget-exhausted",
+      }),
+    ).toBe("complete (truncated; judge budget-exhausted)");
+    expect(
+      attemptStatusLabel({
+        status: "rate-limited",
+        truncated: false,
+        judgeFailed: null,
+      }),
+    ).toBe("rate-limited");
   });
 
   it("listAttemptFiles returns only the known files that exist", () => {

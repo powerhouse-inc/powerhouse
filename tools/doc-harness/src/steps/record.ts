@@ -3,6 +3,7 @@ import { createStep } from "@mastra/core/workflows";
 import { existsSync, rmSync } from "node:fs";
 import path from "node:path";
 import { z } from "zod";
+import { attemptStatus, isTruncated } from "../lib/attempt-status.js";
 import { appendFindings, toFindingRecord } from "../lib/findings.js";
 import {
   type AcceptanceOutput,
@@ -13,7 +14,6 @@ import {
   RecordOutput,
   VerifyOutputSummary,
   VerifyStepResult,
-  type AttemptStatus,
   type EscapeKind,
   type FindingRecord,
 } from "../lib/schemas.js";
@@ -67,12 +67,13 @@ export const record = createStep({
     const verified = inputData;
     const metrics = readCached(layout.metricsJson, Metrics);
 
-    let status: AttemptStatus;
-    if (!prepared.installOk) status = "infra-fail";
-    else if (built.skipped) status = "skipped";
-    else if (!built.ok) status = "build-fail";
-    else if (extracted.contaminated) status = "contaminated";
-    else status = "complete";
+    const status = attemptStatus({
+      installOk: prepared.installOk,
+      buildSkipped: built.skipped,
+      buildOk: built.ok,
+      buildFailureReason: built.failureReason,
+      contaminated: extracted.contaminated,
+    });
 
     const escapes: Partial<Record<EscapeKind, number>> = {};
     for (const e of metrics?.escapes ?? []) {
@@ -97,10 +98,20 @@ export const record = createStep({
       findingsKept: judged.kept,
       findingsVerified: verified.verified,
       findingsRefuted: verified.refuted,
+      truncated: isTruncated({
+        buildOk: built.ok,
+        buildFailureReason: built.failureReason,
+      }),
+      buildTokens: built.tokens,
+      judgeFailed: judged.failureReason,
     };
 
     let findingsAppended = 0;
-    if (!summary.contaminated && !verified.skipped) {
+    if (
+      !summary.contaminated &&
+      status !== "rate-limited" &&
+      !verified.skipped
+    ) {
       const { kept } = readJson(layout.judgeJson, JudgeStepResult);
       const { results } = readJson(layout.verifyJson, VerifyStepResult);
       const recordedAt = new Date().toISOString();
@@ -131,7 +142,7 @@ export const record = createStep({
         rmSync(modules, { recursive: true, force: true });
     }
     ctx.log(
-      `${attemptLabel(input)} ${status} findings=${summary.findingsKept} appended=${findingsAppended} cost=$${summary.costUsd.toFixed(2)}`,
+      `${attemptLabel(input)} ${status}${summary.truncated ? " (truncated)" : ""}${summary.judgeFailed ? ` judge=${summary.judgeFailed}` : ""} findings=${summary.findingsKept} appended=${findingsAppended} cost=$${summary.costUsd.toFixed(2)}`,
     );
     return Promise.resolve({
       attemptPath: layout.attemptJson,

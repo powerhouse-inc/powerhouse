@@ -6,6 +6,7 @@ import { RUNS_ROOT, runLayout, type AttemptLayout } from "../lib/paths.js";
 import { Arm, RunRecord } from "../lib/schemas.js";
 import {
   attemptNav,
+  attemptStatusLabel,
   isSafeSegment,
   listAttemptFiles,
   listRuns,
@@ -50,7 +51,7 @@ function attemptsOf(
     taskId: a.taskId,
     arm: a.arm,
     n: a.n,
-    status: a.status,
+    status: attemptStatusLabel(a),
     files: listAttemptFiles(run.attempt(a.taskId, a.arm, a.n)),
   }));
 }

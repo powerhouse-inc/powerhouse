@@ -5,6 +5,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { z } from "zod";
+import { formatTokens } from "./attempt-status.js";
 import type { Task } from "./catalog.js";
 import { summarizeFindings } from "./findings.js";
 import { MONOREPO_ROOT, type RunLayout } from "./paths.js";
@@ -79,8 +80,54 @@ export interface ReportOptions {
   metrics?: (summary: AttemptSummary) => Metrics | null;
 }
 
+/** Truncated builds count: the workspace was graded like any other. */
 function passed(a: AttemptSummary): boolean {
-  return a.status === "complete" && a.buildOk && a.acceptanceOk !== false;
+  return (
+    a.status === "complete" &&
+    (a.buildOk || a.truncated) &&
+    a.acceptanceOk !== false
+  );
+}
+
+/** Contaminated and rate-limited attempts say nothing about the docs. */
+export function countsForRates(a: AttemptSummary): boolean {
+  return !a.contaminated && a.status !== "rate-limited";
+}
+
+/** The builder was killed, so the CLI never reported a cost. */
+export function unmetered(a: AttemptSummary): boolean {
+  return (
+    a.buildFailureReason === "rate-limited" ||
+    a.buildFailureReason === "wall-clock"
+  );
+}
+
+function costCell(cell: AttemptSummary[]): string {
+  const metered = cell.filter((a) => !unmetered(a));
+  const killed = cell.filter(unmetered);
+  const base = money(metered.reduce((s, a) => s + a.costUsd, 0));
+  if (killed.length === 0) return base;
+  const tokens = killed.reduce((s, a) => s + (a.buildTokens ?? 0), 0);
+  const tok = tokens > 0 ? `, ${formatTokens(tokens)} tok` : "";
+  return `${base} (+${killed.length} unmetered${tok})`;
+}
+
+/** The judge never runs for these statuses. */
+const JUDGE_SKIPPED_STATUSES: AttemptSummary["status"][] = [
+  "rate-limited",
+  "infra-fail",
+  "skipped",
+];
+
+function judgeCell(cell: AttemptSummary[]): string {
+  const counts = new Map<string, number>();
+  const bump = (k: string) => counts.set(k, (counts.get(k) ?? 0) + 1);
+  for (const a of cell) {
+    if (JUDGE_SKIPPED_STATUSES.includes(a.status)) bump("skipped");
+    else if (a.judgeFailed === null) bump("ok");
+    else bump(a.judgeFailed);
+  }
+  return [...counts.entries()].map(([k, n]) => `${n} ${k}`).join(", ");
 }
 
 function pct(num: number, den: number): string {
@@ -132,7 +179,13 @@ export function renderReport(
   findings: FindingRecord[],
   opts: ReportOptions = {},
 ): string {
-  const clean = run.attempts.filter((a) => !a.contaminated);
+  const clean = run.attempts.filter(countsForRates);
+  const contaminated = run.attempts.filter((a) => a.contaminated).length;
+  const rateLimited = run.attempts.filter(
+    (a) => a.status === "rate-limited",
+  ).length;
+  const killed = run.attempts.filter(unmetered).length;
+  const truncated = run.attempts.filter((a) => a.truncated).length;
   const arms = Arm.options.filter((arm) =>
     run.attempts.some((a) => a.arm === arm),
   );
@@ -147,7 +200,8 @@ export function renderReport(
     `- catalogHash: \`${run.catalogHash}\``,
     `- started: ${run.startedAt}; finished: ${run.finishedAt ?? "(unfinished)"}`,
     `- args: tasks ${run.args.tasks.join(",") || "(all)"}; arms ${run.args.arms.join(",")}; n ${run.args.n}; concurrency ${run.args.concurrency}; sandbox ${run.args.sandbox}; auth ${run.args.auth}; builder ${run.args.builderModel}; judge ${run.args.judgeModel}${run.args.dryRun ? "; dry run" : ""}${run.args.skipVerify ? "; verify skipped" : ""}`,
-    `- attempts: ${run.attempts.length} (${run.attempts.length - clean.length} contaminated, excluded from rates)`,
+    `- attempts: ${run.attempts.length} (${contaminated} contaminated, ${rateLimited} rate-limited; both excluded from rates); ${truncated} truncated (graded after the build hit its budget)`,
+    `- unmetered (killed) attempts: ${killed} (cost unknown; tokens shown instead)`,
     "",
   );
 
@@ -165,11 +219,14 @@ export function renderReport(
         arm,
         String(cell.length),
         `${cell.filter((a) => a.buildOk).length}/${cell.length}`,
+        String(cell.filter((a) => a.truncated).length),
         `${cell.reduce((s, a) => s + a.testsPassed, 0)}/${cell.reduce((s, a) => s + a.testsTotal, 0)}`,
         mean(cell.flatMap((a) => (a.turns === null ? [] : [a.turns]))),
-        money(cell.reduce((s, a) => s + a.costUsd, 0)),
+        costCell(cell),
+        judgeCell(cell),
         escapeCell(totals),
         String(cell.filter((a) => a.contaminated).length),
+        String(cell.filter((a) => a.status === "rate-limited").length),
       ]);
     }
   }
@@ -180,14 +237,19 @@ export function renderReport(
         "arm",
         "n",
         "buildOk",
+        "truncated",
         "tests",
         "turns (mean)",
         "cost",
+        "judge",
         "escapes",
         "contaminated",
+        "rate-limited",
       ],
       attemptRows,
     ),
+    "",
+    "`truncated` builds hit their budget and were graded anyway; `rate-limited` builds were killed while the CLI retried the API and are excluded from the rates below (redo them with `resume --redo-failed`).",
     "",
   );
 

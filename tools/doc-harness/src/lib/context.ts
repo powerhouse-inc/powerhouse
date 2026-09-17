@@ -19,6 +19,7 @@ import { CATALOG_FILE } from "./paths.js";
 import { defaultHarnessContext } from "./drivers.js";
 import type { RunArgs } from "./schemas.js";
 import type { Semaphore } from "./semaphore.js";
+import type { UtilizationThrottle } from "./throttle.js";
 
 export interface HarnessContext {
   /** Builder. */
@@ -42,6 +43,8 @@ export interface HarnessContext {
   dryRun: boolean;
   /** Bounds concurrent claude processes across the whole run. */
   semaphore: Semaphore;
+  /** Holds new claude processes while the rate-limit window is nearly spent. */
+  throttle?: UtilizationThrottle;
   log: (line: string) => void;
 }
 

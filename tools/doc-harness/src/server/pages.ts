@@ -3,7 +3,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { Marked } from "marked";
 import type { AttemptLayout } from "../lib/paths.js";
-import type { Arm, RunRecord } from "../lib/schemas.js";
+import type { Arm, AttemptSummary, RunRecord } from "../lib/schemas.js";
 import { RunRecord as RunRecordSchema } from "../lib/schemas.js";
 
 /** One directory or file name: no separators, no `..`, no percent escapes. */
@@ -169,7 +169,18 @@ export interface RunListEntry {
   finishedAt: string | null;
   attempts: number;
   pass: number;
+  rateLimited: number;
   reportExists: boolean;
+}
+
+/** `complete (truncated; judge budget-exhausted)` style label for one attempt. */
+export function attemptStatusLabel(
+  a: Pick<AttemptSummary, "status" | "truncated" | "judgeFailed">,
+): string {
+  const notes: string[] = [];
+  if (a.truncated) notes.push("truncated");
+  if (a.judgeFailed !== null) notes.push(`judge ${a.judgeFailed}`);
+  return notes.length === 0 ? a.status : `${a.status} (${notes.join("; ")})`;
 }
 
 /** Every `runs/<id>/run.json` that parses, newest first. */
@@ -192,6 +203,8 @@ export function listRuns(runsRoot: string): RunListEntry[] {
       finishedAt: record.finishedAt,
       attempts: record.attempts.length,
       pass: record.attempts.filter((a) => a.acceptanceOk === true).length,
+      rateLimited: record.attempts.filter((a) => a.status === "rate-limited")
+        .length,
       reportExists: existsSync(path.join(dir, "REPORT.md")),
     });
   }
@@ -208,13 +221,17 @@ export function renderIndex(runs: RunListEntry[]): string {
       const report = r.reportExists
         ? `<a href="${escapeHtml(reportHref(r.runId))}">report</a>`
         : `<span class="muted">no report</span>`;
-      return `<tr><td><a href="${escapeHtml(runHref(r.runId))}">${escapeHtml(r.runId)}</a></td><td>${escapeHtml(r.finishedAt ?? "running")}</td><td>${r.attempts}</td><td>${r.pass}/${r.attempts}</td><td>${report}</td></tr>`;
+      const limited =
+        r.rateLimited > 0
+          ? `<td>${r.rateLimited}</td>`
+          : `<td class="muted">0</td>`;
+      return `<tr><td><a href="${escapeHtml(runHref(r.runId))}">${escapeHtml(r.runId)}</a></td><td>${escapeHtml(r.finishedAt ?? "running")}</td><td>${r.attempts}</td><td>${r.pass}/${r.attempts}</td>${limited}<td>${report}</td></tr>`;
     })
     .join("\n");
   const table =
     runs.length === 0
       ? `<p class="muted">No runs yet.</p>`
-      : `<table><thead><tr><th>run</th><th>finished</th><th>attempts</th><th>pass</th><th></th></tr></thead><tbody>\n${rows}\n</tbody></table>`;
+      : `<table><thead><tr><th>run</th><th>finished</th><th>attempts</th><th>pass</th><th>rate-limited</th><th></th></tr></thead><tbody>\n${rows}\n</tbody></table>`;
   return page({
     title: "doc-harness runs",
     body: `<h1>doc-harness runs</h1>\n${table}`,

@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Stand-in for the `claude` binary. Behaviour is picked by FAKE_CLAUDE_MODE:
-#   ok | noresult | apierror | budget | structured | hang
+#   ok | noresult | apierror | budget | structured | hang | stall | retry-ok
+# stall: init, one assistant record, three api_retry records, then hangs.
+# retry-ok: init, a rate_limit_event and three api_retry records, then the ok run.
 # FAKE_CLAUDE_ARGS_FILE, when set, receives argv one per line.
 # FAKE_CLAUDE_WRITE_SESSION=1 writes a session file the way the CLI does,
 # under $CLAUDE_CONFIG_DIR/projects/<encoded cwd>/<--session-id>.jsonl.
@@ -41,5 +43,7 @@ case "$mode" in
   budget)     cat "$here/budget.jsonl"; exit 1 ;;
   structured) cat "$here/structured.jsonl"; exit 0 ;;
   hang)       head -n 1 "$here/ok.jsonl"; sleep 60; exit 0 ;;
+  stall)      head -n 2 "$here/ok.jsonl"; tail -n 3 "$here/retry.jsonl"; sleep 60; exit 0 ;;
+  retry-ok)   head -n 1 "$here/ok.jsonl"; cat "$here/retry.jsonl"; tail -n +2 "$here/ok.jsonl"; exit 0 ;;
   *)          echo "fake-claude: unknown mode $mode" >&2; exit 2 ;;
 esac

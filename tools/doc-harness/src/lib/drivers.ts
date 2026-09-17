@@ -19,6 +19,7 @@ import {
 } from "./paths.js";
 import type { RunArgs } from "./schemas.js";
 import { Semaphore } from "./semaphore.js";
+import { UtilizationThrottle } from "./throttle.js";
 
 export const BUILDER_FIXTURE = path.join(
   HARNESS_ROOT,
@@ -82,6 +83,7 @@ export function defaultHarnessContext(
   opts: DefaultContextOptions = {},
 ): HarnessContext {
   const runsRoot = opts.runsRoot ?? RUNS_ROOT;
+  const log = opts.log ?? ((line: string) => process.stderr.write(`${line}\n`));
   return {
     ...createDrivers(args, opts.allowCliDrift ?? false),
     ...recordFiles(runLayout(runId, runsRoot), args.dryRun),
@@ -89,6 +91,7 @@ export function defaultHarnessContext(
     recipesRoot: opts.recipesRoot ?? recipesRoot(),
     monorepoRoot: MONOREPO_ROOT,
     dryRun: args.dryRun,
-    log: opts.log ?? ((line) => process.stderr.write(`${line}\n`)),
+    throttle: new UtilizationThrottle({ threshold: args.throttleAt, log }),
+    log,
   };
 }

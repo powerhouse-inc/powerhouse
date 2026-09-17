@@ -82,6 +82,9 @@ function attempt(overrides: Partial<AttemptSummary> = {}): AttemptSummary {
     findingsKept: 1,
     findingsVerified: 1,
     findingsRefuted: 0,
+    truncated: false,
+    buildTokens: null,
+    judgeFailed: null,
     ...overrides,
   };
 }
@@ -109,6 +112,7 @@ function runRecord(overrides: Partial<RunRecord> = {}): RunRecord {
       keepWorkspaces: false,
       builderModel: "sonnet",
       judgeModel: "opus",
+      throttleAt: 0.9,
     },
     attempts: [attempt()],
     ...overrides,

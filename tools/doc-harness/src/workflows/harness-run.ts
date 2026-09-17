@@ -37,7 +37,11 @@ const SnapshotOutput = z.object({
 export const HarnessRunOutput = z.object({
   attempts: z.number(),
   complete: z.number(),
+  /** complete attempts whose build hit its budget before finishing. */
+  truncated: z.number(),
   failed: z.number(),
+  /** Builders killed while the CLI retried the API; `resume --redo-failed` redoes them. */
+  rateLimited: z.number(),
   contaminated: z.number(),
   findingsAppended: z.number(),
   reportPath: z.string(),
@@ -170,9 +174,11 @@ const summarize = createStep({
     return Promise.resolve({
       attempts: record.attempts.length,
       complete: count((a) => a.status === "complete"),
+      truncated: count((a) => a.status === "complete" && a.truncated),
       failed: count(
         (a) => a.status === "build-fail" || a.status === "infra-fail",
       ),
+      rateLimited: count((a) => a.status === "rate-limited"),
       contaminated: count((a) => a.contaminated),
       findingsAppended: inputData.reduce((s, o) => s + o.findingsAppended, 0),
       reportPath,

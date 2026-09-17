@@ -64,13 +64,22 @@ export function writeText(file: string, text: string): void {
   writeFileSync(file, text);
 }
 
-/** Every claude process goes through the run-wide semaphore. */
+/**
+ * Every claude process goes through the run-wide semaphore, and waits out a
+ * nearly spent rate-limit window first. Utilisation is only observed when an
+ * outcome ends, so the throttle is coarse: it reacts one process late.
+ */
 export function callClaude(
   ctx: HarnessContext,
   driver: ClaudeDriver,
   inv: ClaudeInvocation,
 ): Promise<ClaudeOutcome> {
-  return ctx.semaphore.with(() => driver.run(inv));
+  return ctx.semaphore.with(async () => {
+    await ctx.throttle?.wait();
+    const outcome = await driver.run(inv);
+    ctx.throttle?.observe(outcome.rateLimitUtilization);
+    return outcome;
+  });
 }
 
 export function attemptLabel(

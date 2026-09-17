@@ -2,6 +2,7 @@
 import { createStep } from "@mastra/core/workflows";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
+import { scaledWallClockMs, verifyBudgetUsd } from "../lib/budgets.js";
 import { buildDocsSymbolIndex } from "../lib/docs.js";
 import { precheckVerify } from "../lib/judge-checks.js";
 import { PROMPTS_ROOT } from "../lib/paths.js";
@@ -15,6 +16,7 @@ import {
   type VerifyResult,
 } from "../lib/schemas.js";
 import { dtsHasSymbol } from "../lib/workspace.js";
+import { fileSize } from "./judge.js";
 import {
   attemptLabel,
   attemptScope,
@@ -28,7 +30,7 @@ import {
 
 const VERIFIER_TOOLS = ["Read", "Grep", "Glob", "Bash", "Write", "Edit"];
 const VERIFIER_MAX_TURNS = 60;
-const VERIFIER_WALL_CLOCK_MS = 20 * 60_000;
+export const VERIFIER_WALL_CLOCK_MS = 20 * 60_000;
 
 export function verifierSchemaFile(promptsRoot: string = PROMPTS_ROOT) {
   return path.join(promptsRoot, "schemas", "verifier.schema.json");
@@ -121,6 +123,14 @@ export const verify = createStep({
 
     let claude: VerifyStepResult["claude"] = null;
     let model: VerifyResult[] | null = null;
+    const budgetUsd = verifyBudgetUsd(
+      task.budgets.verifyUsd,
+      judged.kept.length,
+    );
+    const wallClockMs = scaledWallClockMs(
+      VERIFIER_WALL_CLOCK_MS,
+      fileSize(layout.compactMd),
+    );
     if (pending.length > 0) {
       const prompts = buildVerifierPrompt(
         {
@@ -147,8 +157,8 @@ export const verify = createStep({
         tools: VERIFIER_TOOLS,
         permissionMode: "dontAsk",
         maxTurns: VERIFIER_MAX_TURNS,
-        maxBudgetUsd: task.budgets.verifyUsd,
-        wallClockMs: VERIFIER_WALL_CLOCK_MS,
+        maxBudgetUsd: budgetUsd,
+        wallClockMs,
         jsonSchemaFile: verifierSchemaFile(ctx.promptsRoot),
         sessionId: randomUUID(),
         authMode: input.args.auth,
@@ -163,6 +173,8 @@ export const verify = createStep({
 
     const result: VerifyStepResult = {
       claude,
+      budgetUsd,
+      wallClockMs,
       results: mergeVerifyResults(
         prechecked,
         pending.map((p) => p.index),
@@ -172,7 +184,7 @@ export const verify = createStep({
     writeJson(layout.verifyJson, result);
     const summary = summarize(result, layout.verifyJson);
     ctx.log(
-      `${attemptLabel(input)} verify ${summary.verified}V/${summary.refuted}R/${summary.unverified}U prechecked=${prechecked.length} cost=$${summary.costUsd.toFixed(2)}`,
+      `${attemptLabel(input)} verify ${summary.verified}V/${summary.refuted}R/${summary.unverified}U prechecked=${prechecked.length} cost=$${summary.costUsd.toFixed(2)} budget=$${budgetUsd.toFixed(2)}`,
     );
     return summary;
   },

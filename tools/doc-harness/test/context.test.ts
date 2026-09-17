@@ -19,6 +19,7 @@ const args: RunArgs = {
   keepWorkspaces: false,
   builderModel: "claude-sonnet-5",
   judgeModel: "claude-opus-5",
+  throttleAt: 0.9,
 };
 
 const tmp = mkdtempSync(path.join(os.tmpdir(), "doc-harness-ctx-"));

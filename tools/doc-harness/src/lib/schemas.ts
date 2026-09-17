@@ -52,11 +52,46 @@ export const ClaudeFailureReason = z.enum([
   "api-error",
   "budget-exhausted",
   "wall-clock",
+  /** Killed or ended without a result while the CLI was retrying the API. */
+  "rate-limited",
   "nonzero-exit",
   "spawn-error",
   "cli-version-drift",
 ]);
 export type ClaudeFailureReason = z.infer<typeof ClaudeFailureReason>;
+
+/** The run never reached a result the harness can grade; no LLM spend follows. */
+export const INFRA_FAILURE_REASONS: readonly ClaudeFailureReason[] = [
+  "rate-limited",
+  "wall-clock",
+  "spawn-error",
+  "cli-version-drift",
+  "no-result-record",
+  "api-error",
+];
+
+export function isInfraFailure(
+  reason: ClaudeFailureReason | null | undefined,
+): boolean {
+  return reason !== null && reason !== undefined
+    ? INFRA_FAILURE_REASONS.includes(reason)
+    : false;
+}
+
+/** Utilisation of the account's rate-limit windows, from `rate_limit_event` records. */
+export const RateLimitUtilization = z.object({
+  fiveHour: z.number().nullable(),
+  sevenDay: z.number().nullable(),
+});
+export type RateLimitUtilization = z.infer<typeof RateLimitUtilization>;
+
+export const TokenUsage = z.object({
+  input: z.number(),
+  output: z.number(),
+  cacheCreation: z.number(),
+  cacheRead: z.number(),
+});
+export type TokenUsage = z.infer<typeof TokenUsage>;
 
 /** What the driver reports; written to build.json / judge.json / verify.json. */
 export const ClaudeOutcome = z.object({
@@ -77,6 +112,16 @@ export const ClaudeOutcome = z.object({
   model: z.string(),
   cliVersion: z.string(),
   argv: z.array(z.string()),
+  /** `system/api_retry` records seen on stdout. */
+  apiRetries: z.number().default(0),
+  rateLimitUtilization: RateLimitUtilization.default({
+    fiveHour: null,
+    sevenDay: null,
+  }),
+  /** Killed runs only: wall clock elapsed since the last assistant or user record. */
+  stalledMs: z.number().nullable().default(null),
+  /** Summed from the assistant records streamed, so killed runs have it too. */
+  tokens: TokenUsage.nullable().default(null),
 });
 export type ClaudeOutcome = z.infer<typeof ClaudeOutcome>;
 
@@ -124,14 +169,6 @@ export const SymbolUse = z.object({
   documentedAnywhere: z.boolean(),
 });
 export type SymbolUse = z.infer<typeof SymbolUse>;
-
-export const TokenUsage = z.object({
-  input: z.number(),
-  output: z.number(),
-  cacheCreation: z.number(),
-  cacheRead: z.number(),
-});
-export type TokenUsage = z.infer<typeof TokenUsage>;
 
 /** Deterministic extraction from a transcript. Written to metrics.json. */
 export const Metrics = z.object({
@@ -216,6 +253,9 @@ export type DropReason = z.infer<typeof DropReason>;
 /** Written to judge.json: the raw output plus what the post-checks did. */
 export const JudgeStepResult = z.object({
   claude: ClaudeOutcome.nullable(),
+  /** Effective limits after scaling with the compact transcript size. */
+  budgetUsd: z.number().nullable().default(null),
+  wallClockMs: z.number().nullable().default(null),
   raw: JudgeOutput.nullable(),
   kept: z.array(Finding),
   dropped: z.array(z.object({ finding: Finding, reason: DropReason })),
@@ -248,6 +288,9 @@ export type VerifyOutput = z.infer<typeof VerifyOutput>;
 /** Written to verify.json. */
 export const VerifyStepResult = z.object({
   claude: ClaudeOutcome.nullable(),
+  /** Effective limits after scaling with the number of kept findings. */
+  budgetUsd: z.number().nullable().default(null),
+  wallClockMs: z.number().nullable().default(null),
   results: z.array(VerifyResult),
 });
 export type VerifyStepResult = z.infer<typeof VerifyStepResult>;
@@ -275,6 +318,8 @@ export const AttemptStatus = z.enum([
   "complete",
   "infra-fail",
   "build-fail",
+  /** The builder was killed while the CLI was retrying the API; redo it. */
+  "rate-limited",
   "contaminated",
   "skipped",
 ]);
@@ -302,6 +347,12 @@ export const AttemptSummary = z.object({
   findingsKept: z.number(),
   findingsVerified: z.number(),
   findingsRefuted: z.number(),
+  /** The build hit its budget but the workspace was graded anyway. */
+  truncated: z.boolean().default(false),
+  /** Builder tokens (all four kinds) when a transcript exists; the cost proxy for killed runs. */
+  buildTokens: z.number().nullable().default(null),
+  /** Why the judge produced nothing, when it ran and failed. */
+  judgeFailed: ClaudeFailureReason.nullable().default(null),
 });
 export type AttemptSummary = z.infer<typeof AttemptSummary>;
 
@@ -317,6 +368,8 @@ export const RunArgs = z.object({
   keepWorkspaces: z.boolean(),
   builderModel: z.string(),
   judgeModel: z.string(),
+  /** Five-hour window utilisation at which new claude processes wait; 0 disables. */
+  throttleAt: z.number().min(0).max(1).default(0.9),
 });
 export type RunArgs = z.infer<typeof RunArgs>;
 
@@ -358,6 +411,9 @@ export const BuildOutput = z.object({
   turns: z.number().nullable(),
   exitCode: z.number().nullable(),
   killedByWallClock: z.boolean(),
+  /** All builder tokens, when a transcript exists. */
+  tokens: z.number().nullable().default(null),
+  apiRetries: z.number().default(0),
 });
 export type BuildOutput = z.infer<typeof BuildOutput>;
 
@@ -387,6 +443,7 @@ export type ExtractOutput = z.infer<typeof ExtractOutput>;
 export const JudgeOutputSummary = z.object({
   judgePath: z.string(),
   skipped: z.boolean(),
+  failureReason: ClaudeFailureReason.nullable().default(null),
   rawFindings: z.number(),
   kept: z.number(),
   dropped: z.number(),

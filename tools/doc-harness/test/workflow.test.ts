@@ -224,6 +224,7 @@ describe("harnessRun dry run", () => {
         keepWorkspaces: false,
         builderModel: "claude-sonnet-5",
         judgeModel: "claude-opus-5",
+        throttleAt: 0.9,
       },
     };
     setHarnessContext(RUN_ID, ctx);
@@ -259,7 +260,9 @@ describe("harnessRun dry run", () => {
     expect(result.result).toMatchObject({
       attempts: 4,
       complete: 4,
+      truncated: 0,
       failed: 0,
+      rateLimited: 0,
       contaminated: 0,
       findingsAppended: 4,
     });
@@ -393,6 +396,160 @@ describe("harnessRun dry run", () => {
     expect(verifier.invocations).toHaveLength(before.verifier);
     expect(lines(ctx.runsFile!)).toHaveLength(before.runs);
     expect(lines(ctx.findingsFile!)).toHaveLength(before.findings);
+  }, 60_000);
+});
+
+/** One task, arm A, with a builder that fails the given way. */
+async function driveFailing(
+  failWith: "budget-exhausted" | "rate-limited",
+  runId: string,
+) {
+  const tmp = mkdtempSync(path.join(tmpdir(), "doc-harness-workflow-fail-"));
+  const monorepoRoot = path.join(tmp, "monorepo");
+  write(
+    path.join(monorepoRoot, "apps/academy/docs/academy/reactor/builder.md"),
+    "# ReactorBuilder\n",
+  );
+  git(monorepoRoot, "init", "-q");
+  git(monorepoRoot, "add", "-A");
+  git(monorepoRoot, "commit", "-q", "-m", "docs");
+  const pinnedRoot = path.join(tmp, "pinned");
+  write(path.join(pinnedRoot, "alpha/tests/alpha.test.ts"), "// hidden\n");
+  const catalogFile = path.join(tmp, "tasks.json");
+  writeFileSync(catalogFile, catalogJson());
+  const builder = new FakeClaude({
+    transcriptFixture: OK_TRANSCRIPT,
+    failWith,
+  });
+  const judge = new FakeClaude({
+    transcriptFixture: OK_TRANSCRIPT,
+    structuredOutput: judgeOutput,
+  });
+  const verifier = new FakeClaude({
+    transcriptFixture: OK_TRANSCRIPT,
+    structuredOutput: verifierOutput,
+  });
+  const ctx: HarnessContext = {
+    driver: builder,
+    judgeDriver: new RoutingDriver(judge, verifier),
+    runsRoot: path.join(tmp, "runs"),
+    recipesRoot: path.join(tmp, "recipes"),
+    monorepoRoot,
+    pinnedRoot,
+    catalogFile,
+    findingsFile: path.join(tmp, "FINDINGS.jsonl"),
+    runsFile: path.join(tmp, "RUNS.jsonl"),
+    dryRun: true,
+    semaphore: new Semaphore(1),
+    log: () => undefined,
+  };
+  const args = {
+    tasks: ["alpha"],
+    arms: ["A" as const],
+    n: 1,
+    concurrency: 1,
+    dryRun: true,
+    sandbox: "dontAsk" as const,
+    auth: "oauth-isolated" as const,
+    skipVerify: false,
+    keepWorkspaces: false,
+    builderModel: "claude-sonnet-5",
+    judgeModel: "claude-opus-5",
+    throttleAt: 0.9,
+  };
+  setHarnessContext(runId, ctx);
+  const mastra = createMastra(path.join(tmp, "state"));
+  try {
+    const run = await mastra.getWorkflow("harnessRun").createRun({ runId });
+    const result = await run.start({
+      inputData: {
+        runId,
+        tasks: ["alpha"],
+        arms: ["A"],
+        n: 1,
+        docsSha: "HEAD",
+        pin: "6.2.2-dev.62",
+        args,
+      },
+    });
+    if (result.status !== "success") throw new Error(JSON.stringify(result));
+    const attempt = runLayout(runId, ctx.runsRoot).attempt("alpha", "A", 1);
+    const summary = AttemptSummary.parse(
+      JSON.parse(readFileSync(attempt.attemptJson, "utf8")),
+    );
+    const tests = JSON.parse(readFileSync(attempt.testsJson, "utf8")) as {
+      skipped: boolean;
+    };
+    return {
+      result: result.result,
+      summary,
+      tests,
+      metricsExists: existsSync(attempt.metricsJson),
+      compactExists: existsSync(attempt.compactMd),
+      judgeCalls: judge.invocations.length,
+      verifierCalls: verifier.invocations.length,
+      findings: existsSync(ctx.findingsFile!)
+        ? readFileSync(ctx.findingsFile!, "utf8").split("\n").filter(Boolean)
+        : [],
+    };
+  } finally {
+    clearHarnessContext(runId);
+    await mastra.shutdown().catch(() => undefined);
+    rmSync(tmp, { recursive: true, force: true });
+  }
+}
+
+describe("harnessRun with a failing builder", () => {
+  it("budget-exhausted: graded, judged and recorded as complete + truncated", async () => {
+    const r = await driveFailing("budget-exhausted", "2026-09-17T12-10-00Z");
+    expect(r.result).toMatchObject({
+      attempts: 1,
+      complete: 1,
+      truncated: 1,
+      failed: 0,
+      rateLimited: 0,
+      findingsAppended: 1,
+    });
+    expect(r.summary).toMatchObject({
+      status: "complete",
+      truncated: true,
+      buildOk: false,
+      buildFailureReason: "budget-exhausted",
+      judgeFailed: null,
+      findingsKept: 1,
+    });
+    expect(r.summary.buildTokens).toBeGreaterThan(0);
+    expect(r.tests.skipped).toBe(false);
+    expect(r.judgeCalls).toBe(1);
+    expect(r.verifierCalls).toBe(1);
+    expect(r.compactExists).toBe(true);
+    expect(r.findings).toHaveLength(1);
+  }, 60_000);
+
+  it("rate-limited: no grading, no judge, no findings; recorded for --redo-failed", async () => {
+    const r = await driveFailing("rate-limited", "2026-09-17T12-20-00Z");
+    expect(r.result).toMatchObject({
+      attempts: 1,
+      complete: 0,
+      failed: 0,
+      rateLimited: 1,
+      findingsAppended: 0,
+    });
+    expect(r.summary).toMatchObject({
+      status: "rate-limited",
+      truncated: false,
+      buildOk: false,
+      buildFailureReason: "rate-limited",
+      acceptanceOk: null,
+      findingsKept: 0,
+    });
+    expect(r.tests.skipped).toBe(true);
+    expect(r.judgeCalls).toBe(0);
+    expect(r.verifierCalls).toBe(0);
+    // The transcript is still mined: metrics and the compact view exist.
+    expect(r.metricsExists).toBe(true);
+    expect(r.compactExists).toBe(true);
+    expect(r.findings).toHaveLength(0);
   }, 60_000);
 });
 

@@ -13,7 +13,14 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { ClaudeInvocation } from "../src/lib/claude-driver.js";
 import { VALIDATED_CLI_VERSION } from "../src/lib/claude-driver.js";
-import { ClaudeCli, buildArgs, parseCliVersion } from "../src/lib/claude.js";
+import {
+  ClaudeCli,
+  StreamTracker,
+  buildArgs,
+  classify,
+  isRateLimitStall,
+  parseCliVersion,
+} from "../src/lib/claude.js";
 import { FakeClaude } from "../src/lib/fake-claude.js";
 import { ClaudeOutcome } from "../src/lib/schemas.js";
 import { Semaphore } from "../src/lib/semaphore.js";
@@ -249,6 +256,47 @@ describe("ClaudeCli with the fake binary", () => {
     });
   });
 
+  it("stall: killed while the CLI retries the API is rate-limited, not wall-clock", async () => {
+    const { driver, env } = cli("stall");
+    const inv = invocation({ extraEnv: env, wallClockMs: 500 });
+    const out = await driver.run(inv);
+    expect(out.ok).toBe(false);
+    expect(out.killedByWallClock).toBe(true);
+    expect(out.failureReason).toBe("rate-limited");
+    expect(out.apiRetries).toBe(3);
+    expect(out.stalledMs).not.toBeNull();
+    expect(out.stalledMs!).toBeGreaterThan(0);
+    expect(out.costUsd).toBeNull();
+    // The one assistant record streamed before the stall still counts.
+    expect(out.tokens).toEqual({
+      input: 10,
+      output: 4,
+      cacheCreation: 4770,
+      cacheRead: 7441,
+    });
+    expect(out.rateLimitUtilization).toEqual({
+      fiveHour: null,
+      sevenDay: null,
+    });
+    const lines = readFileSync(inv.transcriptPath, "utf8").trim().split("\n");
+    expect(lines).toHaveLength(5);
+  });
+
+  it("retry-ok: retries before a result stay ok, with the retries and utilisation recorded", async () => {
+    const { driver, env } = cli("retry-ok");
+    const out = await driver.run(invocation({ extraEnv: env }));
+    expect(out.ok).toBe(true);
+    expect(out.failureReason).toBeUndefined();
+    expect(out.apiRetries).toBe(3);
+    expect(out.stalledMs).toBeNull();
+    expect(out.rateLimitUtilization).toEqual({
+      fiveHour: 0.93,
+      sevenDay: 0.48,
+    });
+    expect(out.costUsd).toBeCloseTo(0.0188332);
+    expect(out.tokens?.output).toBeGreaterThan(0);
+  });
+
   it("refuses to spawn on CLI version drift", async () => {
     const { driver, env } = cli("ok", { validatedVersion: "9.9.9" });
     const inv = invocation({ extraEnv: env });
@@ -343,6 +391,113 @@ describe("ClaudeCli with the fake binary", () => {
   });
 });
 
+describe("classify", () => {
+  const base = {
+    killedByWallClock: false,
+    spawnError: undefined,
+    code: 0,
+    result: null,
+  };
+  const quiet = {
+    apiRetries: 0,
+    lastRecordWasRetry: false,
+    lastRetryAgoMs: null,
+  };
+
+  it("a genuine hang stays wall-clock", () => {
+    expect(
+      classify({ ...base, killedByWallClock: true, code: null, stall: quiet }),
+    ).toBe("wall-clock");
+  });
+
+  it("a kill right after an api_retry is rate-limited", () => {
+    const stall = {
+      apiRetries: 1,
+      lastRecordWasRetry: true,
+      lastRetryAgoMs: 30_000,
+    };
+    expect(
+      classify({ ...base, killedByWallClock: true, code: null, stall }),
+    ).toBe("rate-limited");
+  });
+
+  it("three retries within the final two minutes count even when a tool result came after", () => {
+    const recent = {
+      apiRetries: 3,
+      lastRecordWasRetry: false,
+      lastRetryAgoMs: 90_000,
+    };
+    const stale = { ...recent, lastRetryAgoMs: 10 * 60_000 };
+    const few = { ...recent, apiRetries: 2 };
+    expect(isRateLimitStall(recent)).toBe(true);
+    expect(isRateLimitStall(stale)).toBe(false);
+    expect(isRateLimitStall(few)).toBe(false);
+  });
+
+  it("exiting without a result while retrying is rate-limited; otherwise no-result-record", () => {
+    const stall = {
+      apiRetries: 2,
+      lastRecordWasRetry: true,
+      lastRetryAgoMs: 5,
+    };
+    expect(classify({ ...base, stall })).toBe("rate-limited");
+    expect(classify({ ...base, code: 1, stall })).toBe("rate-limited");
+    expect(classify({ ...base, stall: quiet })).toBe("no-result-record");
+  });
+
+  it("a result record wins over stall evidence", () => {
+    const stall = {
+      apiRetries: 5,
+      lastRecordWasRetry: false,
+      lastRetryAgoMs: 5,
+    };
+    const result = {
+      type: "result" as const,
+      subtype: "success",
+      is_error: false,
+    };
+    expect(classify({ ...base, result, stall })).toBeUndefined();
+  });
+});
+
+describe("StreamTracker", () => {
+  it("sums usage once per message id and tracks the last meaningful record", () => {
+    const t = new StreamTracker();
+    const usage = {
+      input_tokens: 5,
+      output_tokens: 7,
+      cache_read_input_tokens: 100,
+    };
+    t.observe({ type: "system", subtype: "init" }, 1_000);
+    t.observe({ type: "assistant", message: { id: "m1", usage } }, 2_000);
+    t.observe({ type: "assistant", message: { id: "m1", usage } }, 2_500);
+    t.observe({ type: "user", message: {} }, 3_000);
+    t.observe({ type: "system", subtype: "api_retry" }, 4_000);
+    t.observe({ type: "system", subtype: "thinking_tokens" }, 4_500);
+    expect(t.tokens()).toEqual({
+      input: 5,
+      output: 7,
+      cacheCreation: 0,
+      cacheRead: 100,
+    });
+    expect(t.lastMeaningfulAt).toBe(3_000);
+    expect(t.apiRetries).toBe(1);
+    expect(t.lastRecordWasRetry).toBe(true);
+    expect(t.stall(10_000)).toEqual({
+      apiRetries: 1,
+      lastRecordWasRetry: true,
+      lastRetryAgoMs: 6_000,
+    });
+    t.observe({ type: "assistant", message: { id: "m2", usage } }, 5_000);
+    expect(t.lastRecordWasRetry).toBe(false);
+    expect(t.tokens()?.output).toBe(14);
+  });
+
+  it("returns null tokens when no assistant record was seen", () => {
+    expect(new StreamTracker().tokens()).toBeNull();
+  });
+});
+
 describe("FakeClaude", () => {
   const fixture = path.join(FIXTURES, "ok.jsonl");
 
@@ -388,6 +543,7 @@ describe("FakeClaude", () => {
     ["api-error", 1, null],
     ["nonzero-exit", 1, null],
     ["wall-clock", null, "SIGTERM"],
+    ["rate-limited", null, "SIGTERM"],
     ["spawn-error", null, null],
     ["cli-version-drift", null, null],
   ] as const)("failWith %s", async (reason, code, signal) => {
@@ -401,11 +557,18 @@ describe("FakeClaude", () => {
     expect(out.failureReason).toBe(reason);
     expect(out.exitCode).toBe(code);
     expect(out.signal).toBe(signal);
-    expect(out.killedByWallClock).toBe(reason === "wall-clock");
+    expect(out.killedByWallClock).toBe(
+      reason === "wall-clock" || reason === "rate-limited",
+    );
     if (reason === "api-error") expect(out.resultRecord?.is_error).toBe(true);
-    if (reason === "no-result-record" || reason === "wall-clock") {
+    if (
+      reason === "no-result-record" ||
+      reason === "wall-clock" ||
+      reason === "rate-limited"
+    ) {
       expect(out.resultRecord).toBeNull();
     }
+    if (reason === "rate-limited") expect(out.apiRetries).toBe(3);
   });
 
   it("delayMs is honoured", async () => {
