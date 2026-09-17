@@ -2,7 +2,10 @@
 // does with what a piece sent it.
 import type { WorkflowRuntimeHostDeps } from "./host.js";
 import { describe, expect, it } from "vitest";
-import { SubgraphReactorPort } from "./reactor-port.js";
+import {
+  ScopedDesignTimeReactorPort,
+  SubgraphReactorPort,
+} from "./reactor-port.js";
 
 const DRIVE = "powerhouse/document-drive";
 const REACTOR_DRIVE = "powerhouse/reactor-drive";
@@ -265,5 +268,66 @@ describe("SubgraphReactorPort.find with a state match", () => {
 
     expect(without[0]).not.toHaveProperty("state");
     expect(with_[0].state).toMatchObject({ orderId: "order-a" });
+  });
+});
+
+// options() and props() run a package's own code inside a GraphQL request, so
+// the port it is handed is the caller's, not the reactor's.
+describe("ScopedDesignTimeReactorPort", () => {
+  const CTX = { headers: {}, db: {}, user: { address: "0xabc" } };
+  const MINE = "d-mine";
+  const THEIRS = "d-theirs";
+
+  function scoped(withCaller = true) {
+    const client = {
+      get: (id: string) => Promise.resolve(doc(id, "acme/todo")),
+      find: () =>
+        Promise.resolve({
+          results: [doc(MINE, "acme/todo"), doc(THEIRS, "acme/todo")],
+        }),
+      execute: () => Promise.reject(new Error("must not execute")),
+      createEmpty: () => Promise.reject(new Error("must not create")),
+    };
+    return new ScopedDesignTimeReactorPort(
+      {
+        reactorClient: client,
+        assertCanRead: (documentId: string) =>
+          documentId === MINE
+            ? Promise.resolve({})
+            : Promise.reject(new Error("forbidden")),
+      } as unknown as WorkflowRuntimeHostDeps,
+      withCaller ? CTX : undefined,
+    );
+  }
+
+  it("reads only what the caller may read", async () => {
+    await expect(scoped().get({ documentId: THEIRS })).rejects.toThrow(
+      "forbidden",
+    );
+    expect((await scoped().get({ documentId: MINE })).documentId).toBe(MINE);
+  });
+
+  it("filters a find down to the caller's documents", async () => {
+    const found = await scoped().find({ documentType: "acme/todo" });
+
+    expect(found.map((entry) => entry.documentId)).toEqual([MINE]);
+  });
+
+  it("reads nothing for a request with no caller", async () => {
+    await expect(scoped(false).get({ documentId: MINE })).rejects.toThrow(
+      "authenticated request",
+    );
+    expect(await scoped(false).find({ documentType: "acme/todo" })).toEqual([]);
+  });
+
+  it("refuses to write at all", async () => {
+    // Resolving options is not an occasion to mutate the reactor, and there is
+    // no write check here to authorize it with.
+    await expect(
+      scoped().create({ documentType: "acme/todo" }),
+    ).rejects.toThrow("not available");
+    await expect(
+      scoped().execute({ documentId: MINE, actions: [] }),
+    ).rejects.toThrow("not available");
   });
 });

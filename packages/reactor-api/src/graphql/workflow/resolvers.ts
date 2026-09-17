@@ -3,6 +3,8 @@ import type {
   StepExecutionRow,
   WorkflowRuntimeService,
 } from "@powerhousedao/reactor-workflow";
+import { GraphQLError } from "graphql";
+import type { IAuthorizationService } from "../../services/authorization.service.js";
 import type { Context } from "../types.js";
 
 interface FireArgs {
@@ -16,15 +18,14 @@ interface RunsArgs {
   limit?: number;
 }
 
-// Prod gate until runtime auth lands: writes are refused unless opted in.
-function assertSecretWritesAllowed(): void {
-  if (
-    process.env.NODE_ENV !== "development" &&
-    process.env.PH_SECRETS_ALLOW_WRITE !== "true"
-  ) {
-    throw new Error(
-      "Secret writes are disabled; set PH_SECRETS_ALLOW_WRITE=true on the switchboard",
-    );
+// A secret belongs to the reactor, not to any one document, so writing one is
+// an administrator's call — the gate the package mutations already use.
+function requireAdmin(
+  authorizationService: IAuthorizationService,
+  ctx: Context,
+): void {
+  if (!authorizationService.isSupremeAdmin(ctx.user?.address)) {
+    throw new GraphQLError("Admin access required");
   }
 }
 
@@ -69,6 +70,7 @@ function toRunRecord(row: RunRow, steps: StepExecutionRow[]) {
 
 export const getResolvers = (
   runtime: WorkflowRuntimeService,
+  authorizationService: IAuthorizationService,
 ): Record<string, unknown> => {
   return {
     Query: {
@@ -112,8 +114,11 @@ export const getResolvers = (
       ) => runtime.searchBlocks(args.query, args.limit ?? undefined),
       connections: (_parent: unknown, _args: unknown, ctx: Context) =>
         runtime.connections(ctx),
-      webhookEndpoint: (_parent: unknown, args: { workflowId: string }) =>
-        runtime.webhookEndpoint(args.workflowId),
+      webhookEndpoint: (
+        _parent: unknown,
+        args: { workflowId: string },
+        ctx: Context,
+      ) => runtime.webhookEndpoint(args.workflowId, ctx),
       secret: async (_parent: unknown, args: { ref: string }) => {
         try {
           return await (await runtime.secrets()).stat(args.ref);
@@ -123,8 +128,8 @@ export const getResolvers = (
         }
       },
       secrets: async () => (await runtime.secrets()).list(),
-      triggerStates: async () =>
-        (await runtime.triggerStates()).map((row) => ({
+      triggerStates: async (_parent: unknown, _args: unknown, ctx: Context) =>
+        (await runtime.triggerStates(ctx)).map((row) => ({
           workflowId: row.workflow_id,
           blockType: row.block_type,
           status: row.status,
@@ -134,49 +139,34 @@ export const getResolvers = (
           lastError: row.last_error,
           consecutiveFailures: row.consecutive_failures,
         })),
-      runs: async (_parent: unknown, args: RunsArgs) => {
-        const store = await runtime.store();
-        if (!store) return [];
-        // A drive scopes runs to the workflows it holds; an explicit
-        // workflowId is narrower still, so it wins.
-        const scope =
-          args.workflowId ??
-          (args.driveId
-            ? await runtime.driveWorkflowIds(args.driveId)
-            : undefined);
-        const rows = await store.listRuns(scope, args.limit ?? 25);
-        return Promise.all(
-          rows.map(async (row) =>
-            toRunRecord(row, await store.getSteps(row.id)),
-          ),
-        );
-      },
-      run: async (_parent: unknown, args: { id: string }) => {
-        const store = await runtime.store();
-        if (!store) return null;
-        const row = await store.getRun(args.id);
-        if (!row) return null;
-        return toRunRecord(row, await store.getSteps(row.id));
+      runs: async (_parent: unknown, args: RunsArgs, ctx: Context) =>
+        (await runtime.runs(args, ctx)).map((record) =>
+          toRunRecord(record.row, record.steps),
+        ),
+      run: async (_parent: unknown, args: { id: string }, ctx: Context) => {
+        const record = await runtime.run(args.id, ctx);
+        return record ? toRunRecord(record.row, record.steps) : null;
       },
     },
     Mutation: {
       workflowRuntime: () => ({}),
     },
     WorkflowRuntimeMutations: {
-      fire: (_parent: unknown, args: FireArgs) =>
-        runtime.fire(args.workflowId, args.payload),
+      fire: (_parent: unknown, args: FireArgs, ctx: Context) =>
+        runtime.fire(args.workflowId, args.payload, "manual", undefined, ctx),
       testTrigger: (
         _parent: unknown,
         args: { workflowId: string },
         ctx: Context,
       ) => runtime.testTrigger(args.workflowId, ctx),
-      rerun: (_parent: unknown, args: { runId: string }) =>
-        runtime.rerun(args.runId),
+      rerun: (_parent: unknown, args: { runId: string }, ctx: Context) =>
+        runtime.rerun(args.runId, ctx),
       createSecret: async (
         _parent: unknown,
         args: { value: string; label?: string | null },
+        ctx: Context,
       ) => {
-        assertSecretWritesAllowed();
+        requireAdmin(authorizationService, ctx);
         return (await runtime.secrets()).create({
           value: args.value,
           label: args.label ?? undefined,
@@ -185,12 +175,17 @@ export const getResolvers = (
       rotateSecret: async (
         _parent: unknown,
         args: { ref: string; value: string },
+        ctx: Context,
       ) => {
-        assertSecretWritesAllowed();
+        requireAdmin(authorizationService, ctx);
         return (await runtime.secrets()).rotate(args.ref, args.value);
       },
-      deleteSecret: async (_parent: unknown, args: { ref: string }) => {
-        assertSecretWritesAllowed();
+      deleteSecret: async (
+        _parent: unknown,
+        args: { ref: string },
+        ctx: Context,
+      ) => {
+        requireAdmin(authorizationService, ctx);
         await (await runtime.secrets()).delete(args.ref);
         return true;
       },

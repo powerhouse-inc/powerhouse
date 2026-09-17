@@ -141,9 +141,10 @@ type Query {
 }
 ```
 
-**There is no query that returns a value.** Mutations are auth-gated (admin/user role once runtime
-auth lands; behind `PH_SECRETS_ALLOW_WRITE=true` in dev until then). Values must be excluded from
-request logging on this route.
+**There is no query that returns a value.** Mutations are auth-gated: a secret belongs to the
+reactor rather than to any one document, so `createSecret`/`rotateSecret`/`deleteSecret` require a
+supreme admin (`IAuthorizationService.isSupremeAdmin`), the same gate the package mutations use.
+Values must be excluded from request logging on this route.
 
 **Connect talks to the service, never to the backend.** This GraphQL surface *is* the secrets
 service's front door — Connect uses it directly. What Connect must never do is reach the backend
@@ -217,7 +218,7 @@ pattern from attachments (`AttachmentReferenceReadModel`) is the template if/whe
    that way), server logs, GraphQL responses, or error messages (backend errors are wrapped;
    `SecretNotFoundError` carries the ref, never a value).
 2. `resolve` is callable only from server-side execution paths; it is not on any transport.
-3. Write mutations are auth-gated; dev-mode opt-in until runtime auth exists.
+3. Write mutations are auth-gated: admin-only, decided by the reactor's authorization service.
 4. Journal redaction (separate work item) additionally scrubs anything *equal to* a resolved secret
    value from recorded step output, as defense in depth against pieces echoing credentials.
 5. Rotation guidance in docs: a value that ever landed in a document (the known failure mode) is

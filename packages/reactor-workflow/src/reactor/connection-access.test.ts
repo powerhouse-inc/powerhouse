@@ -109,4 +109,20 @@ describe("design-time connection access", () => {
   it("lists nothing to a caller it cannot identify", async () => {
     expect(await runtime.connections()).toEqual([]);
   });
+
+  it("refuses checkConnection to a caller who may only read", async () => {
+    // Every outcome of a check is recorded on the connection, so reading it
+    // is not enough to run one.
+    const execute = vi.fn();
+    const readOnly = testRuntime({
+      reactorClient: { get, execute, find: vi.fn() },
+      assertCanRead,
+      assertCanWrite: () => Promise.reject(new Error("forbidden write")),
+    } as unknown as WorkflowRuntimeHostDeps);
+
+    await expect(readOnly.checkConnection("conn-mine", CTX)).rejects.toThrow(
+      "forbidden write",
+    );
+    expect(execute).not.toHaveBeenCalled();
+  });
 });

@@ -18,6 +18,9 @@ interface LegacyDB {
   step_execution: StepExecutionRow;
 }
 
+// The host here allows every read; a rerun still has to name who asked.
+const CTX = { headers: {}, db: {}, user: { address: "0xabc" } } as never;
+
 describe("WorkflowRunStore rerun lineage", () => {
   let store: WorkflowRunStore;
 
@@ -481,7 +484,7 @@ describe("WorkflowRuntimeService rerun refusal", () => {
       .spyOn(service, "fire")
       .mockResolvedValue({ runId: "next", status: "SUCCEEDED", steps: [] });
 
-    await expect(service.rerun(redactedId)).rejects.toThrow(
+    await expect(service.rerun(redactedId, CTX)).rejects.toThrow(
       /cannot be replayed/,
     );
     expect(fire).not.toHaveBeenCalled();
@@ -501,7 +504,7 @@ describe("WorkflowRuntimeService rerun refusal", () => {
       steps: [],
     });
 
-    await service.rerun(cleanId);
+    await service.rerun(cleanId, CTX);
     expect(fire.mock.calls[0][1]).toEqual({ body: { id: 7 } });
   });
 });

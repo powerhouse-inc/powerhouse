@@ -2,8 +2,9 @@
 // directions go through the filesystem, so a step's bytes never cross the
 // worker's JSON IPC channel.
 import type { AttachmentPort } from "../pieces/index.js";
+import { FileTooLargeError, maxFileBytes } from "../pieces/index.js";
 import { childLogger } from "document-model";
-import { readFile, writeFile } from "node:fs/promises";
+import { open, readFile, rm } from "node:fs/promises";
 
 const logger = childLogger(["workflow", "attachments"]);
 
@@ -15,10 +16,12 @@ export interface AttachmentClientLike {
     fileName?: string;
     mimeType?: string;
   }): Promise<{ ref?: string } & Record<string, unknown>>;
-  downloadBlob(input: {
-    documentId: string;
-    ref: string;
-  }): Promise<{ blob: Blob } & Record<string, unknown>>;
+  // Streamed rather than materialized: the size limit has to refuse an
+  // oversized attachment before its bytes are in this process's memory.
+  download(input: { documentId: string; ref: string }): Promise<{
+    header: { sizeBytes?: number; mimeType?: string; fileName?: string };
+    body: ReadableStream<Uint8Array>;
+  }>;
 }
 
 function refOf(result: Record<string, unknown>): string {
@@ -30,12 +33,43 @@ function refOf(result: Record<string, unknown>): string {
   throw new Error("The attachment store returned no reference for the upload");
 }
 
+// Writes the body out while counting it, so a stream that outgrows the limit
+// is cancelled mid-flight and its partial file removed.
+async function writeCapped(
+  body: ReadableStream<Uint8Array>,
+  destPath: string,
+  limit: number,
+): Promise<void> {
+  const reader = body.getReader();
+  const handle = await open(destPath, "w");
+  let written = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      written += value.byteLength;
+      if (written > limit) {
+        await reader.cancel();
+        throw new FileTooLargeError(written, limit);
+      }
+      await handle.write(value);
+    }
+  } catch (error) {
+    await handle.close();
+    await rm(destPath, { force: true });
+    throw error;
+  }
+  await handle.close();
+}
+
 export function createAttachmentPort(
   client: AttachmentClientLike,
-  // Attachment reads are authorized against a document. A step's references
-  // come from its own run journal, so the workflow document is the one that
-  // vouches for them.
+  // Attachment reads are authorized against a document, and a step's refs come
+  // from its own run journal: the workflow document is what vouches for them.
   documentIdFor: () => string | undefined,
+  // Whether that document really references the ref. A step carries no caller,
+  // so this relationship is all that stands between it and any known blob.
+  canReadRef: (documentId: string, ref: string) => Promise<boolean>,
 ): AttachmentPort {
   return {
     async read(ref, destPath) {
@@ -45,14 +79,29 @@ export function createAttachmentPort(
           `Cannot resolve ${ref}: no workflow document is in scope to authorize the read`,
         );
       }
-      const result = await client.downloadBlob({ documentId, ref });
-      const bytes = Buffer.from(await result.blob.arrayBuffer());
-      await writeFile(destPath, bytes);
-      const fileName =
-        typeof result.fileName === "string" ? result.fileName : undefined;
+      if (!(await canReadRef(documentId, ref))) {
+        throw new Error(
+          `Cannot resolve ${ref}: workflow document "${documentId}" does not reference it`,
+        );
+      }
+      const limit = maxFileBytes();
+      const { header, body } = await client.download({ documentId, ref });
+      // The declared size refuses before a byte is read; writeCapped's own
+      // count is what catches a header that understated the body.
+      if (
+        typeof header.sizeBytes === "number" &&
+        Number.isFinite(header.sizeBytes) &&
+        header.sizeBytes > limit
+      ) {
+        await body.cancel().catch(() => undefined);
+        throw new FileTooLargeError(header.sizeBytes, limit);
+      }
+      await writeCapped(body, destPath, limit);
       const contentType =
-        result.blob.type !== "" ? result.blob.type : undefined;
-      return { fileName, contentType };
+        header.mimeType !== undefined && header.mimeType !== ""
+          ? header.mimeType
+          : undefined;
+      return { fileName: header.fileName, contentType };
     },
 
     async write(file) {

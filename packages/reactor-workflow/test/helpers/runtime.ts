@@ -19,6 +19,7 @@ export function testRuntime(
     relationalDb: createTestRelationalDb(),
     reactorClient: emptyClient,
     assertCanRead: () => Promise.resolve(undefined),
+    assertCanWrite: () => Promise.resolve(undefined),
     ...deps,
   });
 }

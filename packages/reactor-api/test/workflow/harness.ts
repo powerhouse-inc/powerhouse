@@ -24,6 +24,8 @@ export const PACKAGE_NAME = "@powerhousedao/workflow";
 /** A ref the harness's secret store resolves; anything else rejects. */
 export const SECRET_REF = "secret://v1:00112233445566778899aabbccddeeff";
 export const SECRET = "s3cret";
+// Minting an endpoint is a read of the workflow, so the harness asks as one.
+const CALLER = { headers: {}, db: {}, user: { address: "0xabc" } } as never;
 
 export interface FiredRun {
   workflowId: string;
@@ -123,6 +125,7 @@ export async function startWebhookHost(
       find: () => Promise.resolve({ results: [] }),
     },
     assertCanRead: () => Promise.resolve(undefined),
+    assertCanWrite: () => Promise.resolve(undefined),
     webhooks: routes.scopeFor(PACKAGE_NAME).webhooks,
     secrets: {
       get: (ref: string) =>
@@ -182,7 +185,7 @@ export async function startWebhookHost(
         opts.blockType ?? "core#webhook",
         workflowId,
       );
-      const endpoint = await service.webhookEndpoint(workflowId);
+      const endpoint = await service.webhookEndpoint(workflowId, CALLER);
       if (!endpoint) throw new Error(`No endpoint minted for ${workflowId}`);
       fired.length = 0;
       return {

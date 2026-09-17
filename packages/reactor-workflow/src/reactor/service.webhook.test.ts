@@ -10,6 +10,8 @@ const WORKFLOW_TYPE = "powerhouse/workflow";
 const WORKFLOW = "wf-hook";
 const SECRET_REF = "secret://v1:00112233445566778899aabbccddeeff";
 const SECRET = "s3cret";
+// The URL carries the workflow's webhook token, so minting one is a read.
+const CTX = { headers: {}, db: {}, user: { address: "0xabc" } } as never;
 
 let ordinal = 0;
 
@@ -119,7 +121,7 @@ describe("WorkflowRuntimeService webhooks", () => {
       });
       await expect(service.registerWebhookEndpoint()).resolves.toBeUndefined();
 
-      expect(await service.webhookEndpoint(WORKFLOW)).toBeNull();
+      expect(await service.webhookEndpoint(WORKFLOW, CTX)).toBeNull();
     });
 
     it("lets a caller that needs a token wait for the registration", async () => {
@@ -142,7 +144,7 @@ describe("WorkflowRuntimeService webhooks", () => {
         register: () => new Promise((resolve) => (settle = resolve)),
       });
       const registering = service.registerWebhookEndpoint();
-      const asking = service.webhookEndpoint(WORKFLOW);
+      const asking = service.webhookEndpoint(WORKFLOW, CTX);
 
       settle(endpoints);
       await registering;
@@ -174,13 +176,13 @@ describe("WorkflowRuntimeService webhooks", () => {
       const fresh = makeService({ register });
 
       // Never registered: only asked.
-      expect(await fresh.webhookEndpoint(WORKFLOW)).toMatchObject({
+      expect(await fresh.webhookEndpoint(WORKFLOW, CTX)).toMatchObject({
         url: "https://host/webhooks/t",
       });
       expect(register).toHaveBeenCalledTimes(1);
 
       // And asking again does not register a second endpoint family.
-      await fresh.webhookEndpoint(WORKFLOW);
+      await fresh.webhookEndpoint(WORKFLOW, CTX);
       expect(register).toHaveBeenCalledTimes(1);
     });
 
@@ -206,7 +208,7 @@ describe("WorkflowRuntimeService webhooks", () => {
       endpoints.list.mockClear();
 
       // Never armed: nothing has been published for this workflow at all.
-      expect(await service.webhookEndpoint(WORKFLOW)).toMatchObject({
+      expect(await service.webhookEndpoint(WORKFLOW, CTX)).toMatchObject({
         url: "https://host/webhooks/t",
         armed: false,
       });
@@ -233,7 +235,7 @@ describe("WorkflowRuntimeService webhooks", () => {
       await service.registerWebhookEndpoint();
       await arm({});
 
-      expect(await service.webhookEndpoint(WORKFLOW)).toMatchObject({
+      expect(await service.webhookEndpoint(WORKFLOW, CTX)).toMatchObject({
         url: "/webhooks/t",
         absoluteUrl: false,
       });

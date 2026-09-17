@@ -76,6 +76,12 @@ function fakePool() {
   return { pool, disposed };
 }
 
+// A manual fire is the caller-facing path, so it carries one.
+const CTX = { headers: {}, db: {}, user: { address: "0xabc" } } as never;
+
+const fireManually = (service: WorkflowRuntimeService) =>
+  service.fire(WORKFLOW_ID, undefined, "manual", undefined, CTX);
+
 describe("fire() and the worker pool", () => {
   it("keeps one session for the whole run", async () => {
     const { pool } = fakePool();
@@ -83,6 +89,10 @@ describe("fire() and the worker pool", () => {
 
     await serviceWithPool(pool, (worker) => seen.push(worker)).fire(
       WORKFLOW_ID,
+      undefined,
+      "manual",
+      undefined,
+      CTX,
     );
 
     expect(seen).toHaveLength(2);
@@ -97,7 +107,7 @@ describe("fire() and the worker pool", () => {
     const seen: unknown[] = [];
     const service = serviceWithPool(pool, (worker) => seen.push(worker));
 
-    await Promise.all([service.fire(WORKFLOW_ID), service.fire(WORKFLOW_ID)]);
+    await Promise.all([fireManually(service), fireManually(service)]);
 
     expect(new Set(seen).size).toBe(2);
   });
@@ -121,7 +131,7 @@ describe("fire() and the worker pool", () => {
       },
     };
 
-    const result = await service.fire(WORKFLOW_ID);
+    const result = await fireManually(service);
 
     // A failed run is still a finished run: the child is killed and the slot
     // handed back, or the next run waits on a run that is already over.
@@ -167,7 +177,7 @@ describe("fire() and the worker pool", () => {
     internals.pieceWorkers = pool;
     internals.executor = { execute: () => Promise.resolve({ output: {} }) };
 
-    const run = service.fire(WORKFLOW_ID);
+    const run = fireManually(service);
     await settled();
     service.shutdown();
     release?.();
@@ -181,7 +191,7 @@ describe("fire() and the worker pool", () => {
   it("takes no slot for a run that never reaches a piece step", async () => {
     const { pool, disposed } = fakePool();
 
-    await serviceWithPool(pool, () => undefined).fire(WORKFLOW_ID);
+    await fireManually(serviceWithPool(pool, () => undefined));
 
     // The steps above never called through to the worker, so no child was
     // forked for them — the session cost the run nothing.

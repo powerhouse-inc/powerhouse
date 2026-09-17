@@ -65,6 +65,9 @@ function recordingStore(finishRun: (call: FinishCall) => Promise<void>) {
   };
 }
 
+// A manual fire is the caller-facing path, so it carries one.
+const CTX = { headers: {}, db: {}, user: { address: "0xabc" } } as never;
+
 describe("fire() and the run journal", () => {
   it("keeps a finished run's outcome when finishRun throws", async () => {
     const store = recordingStore(() =>
@@ -72,7 +75,13 @@ describe("fire() and the run journal", () => {
     );
     const service = serviceWithStore(store);
 
-    const result = await service.fire(WORKFLOW_ID, { v: 1 });
+    const result = await service.fire(
+      WORKFLOW_ID,
+      { v: 1 },
+      "manual",
+      undefined,
+      CTX,
+    );
 
     // The steps already ran: reporting them is what failed, not the run.
     expect(result.status).toBe("SUCCEEDED");
@@ -87,7 +96,13 @@ describe("fire() and the run journal", () => {
       return Promise.resolve();
     });
 
-    await serviceWithStore(store).fire(WORKFLOW_ID);
+    await serviceWithStore(store).fire(
+      WORKFLOW_ID,
+      undefined,
+      "manual",
+      undefined,
+      CTX,
+    );
 
     // runWorkflow returns definition order; only the callback knows better.
     expect(calls[0].result.steps.map((step) => step.stepId)).toEqual([

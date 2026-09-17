@@ -1,6 +1,11 @@
 // Composes the workflow runtime for a reactor that has workflows enabled. The
 // engine is loaded lazily, so a host with the flag off never imports it.
-import type { IReactorClient, IRelationalDb } from "@powerhousedao/reactor";
+import type {
+  AttachmentHash,
+  AttachmentRef,
+  IReactorClient,
+  IRelationalDb,
+} from "@powerhousedao/reactor";
 import type * as WorkflowEngine from "@powerhousedao/reactor-workflow";
 import type {
   AttachmentClientLike,
@@ -11,8 +16,11 @@ import type {
   IProcessorManager,
   IWebhookScope,
 } from "@powerhousedao/shared/processors";
+import { createRef, parseRef } from "@powerhousedao/reactor-attachments";
+import type { IAttachmentReferenceReader } from "@powerhousedao/reactor-attachments";
 import type { ILogger } from "document-model";
 import { ForbiddenError } from "../graphql/errors.js";
+import type { AttachmentReferenceProjectionCapability } from "../services/attachment-access.service.js";
 import type { Context, SubgraphClass } from "../graphql/types.js";
 import { createWorkflowRuntimeSubgraph } from "../graphql/workflow/subgraph.js";
 import {
@@ -28,6 +36,10 @@ export interface ComposeWorkflowRuntimeDeps {
   reactorClient: IReactorClient;
   relationalDb: IRelationalDb;
   attachments: AttachmentClientLike;
+  /** The projected document/ref relationships a step's attachment read is
+   * checked against; without them, or without the projection, nothing reads. */
+  attachmentReferences?: IAttachmentReferenceReader;
+  attachmentReferenceProjection?: AttachmentReferenceProjectionCapability;
   webhooks?: IWebhookScope;
   authorizationService: IAuthorizationService;
   processorManager: IProcessorManager;
@@ -73,6 +85,68 @@ function readAssertion(
   };
 }
 
+/** The same, for a design-time call that writes what it names. */
+function writeAssertion(
+  authorizationService: IAuthorizationService,
+  reactorClient: IReactorClient,
+): WorkflowRuntimeHostDeps["assertCanWrite"] {
+  const resolveCanonical = createCanonicalDocumentIdResolver(reactorClient);
+  return async (identifier: string, caller: WorkflowCaller) => {
+    const ctx = caller as Context;
+    if (authorizationService.isSupremeAdmin(ctx.user?.address)) return;
+    if (
+      authorizationService.config.policy !==
+      AuthorizationPolicy.DOCUMENT_PERMISSIONS
+    ) {
+      throw new ForbiddenError();
+    }
+    let documentId: CanonicalDocumentId;
+    try {
+      documentId = await resolveCanonical(identifier);
+    } catch {
+      throw new ForbiddenError();
+    }
+    const canWrite = await authorizationService.canWrite(
+      documentId,
+      ctx.user?.address,
+    );
+    if (!canWrite) throw new ForbiddenError("to write this document");
+  };
+}
+
+/** Whether the workflow document really references the attachment. A step
+ * carries no caller, so the relationship is the whole check. */
+function attachmentRefCheck(
+  deps: ComposeWorkflowRuntimeDeps,
+): WorkflowRuntimeHostDeps["canReadAttachmentRef"] {
+  const resolveCanonical = createCanonicalDocumentIdResolver(
+    deps.reactorClient,
+  );
+  const references = deps.attachmentReferences;
+  const projection = deps.attachmentReferenceProjection;
+  return async (documentId: string, ref: string) => {
+    // An index nobody maintains is evidence of nothing, so it denies rather
+    // than waves the read through.
+    if (!references || projection?.status !== "available") return false;
+    let parsed: { version: number; hash: string };
+    try {
+      parsed = parseRef(ref as AttachmentRef);
+    } catch {
+      return false;
+    }
+    if (parsed.version !== 1) return false;
+    const canonicalRef = createRef(parsed.hash.toLowerCase() as AttachmentHash);
+    try {
+      return await references.hasReference(
+        await resolveCanonical(documentId),
+        canonicalRef,
+      );
+    } catch {
+      return false;
+    }
+  };
+}
+
 export async function composeWorkflowRuntime(
   deps: ComposeWorkflowRuntimeDeps,
 ): Promise<ComposedWorkflowRuntime> {
@@ -92,8 +166,13 @@ export async function composeWorkflowRuntime(
     relationalDb: deps.relationalDb,
     reactorClient: deps.reactorClient,
     assertCanRead: readAssertion(deps.authorizationService, deps.reactorClient),
+    assertCanWrite: writeAssertion(
+      deps.authorizationService,
+      deps.reactorClient,
+    ),
     webhooks: deps.webhooks,
     attachments: deps.attachments,
+    canReadAttachmentRef: attachmentRefCheck(deps),
     logger: deps.logger,
   });
 

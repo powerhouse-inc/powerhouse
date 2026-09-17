@@ -4,7 +4,7 @@
 // Everything here is what could not cross the worker boundary — model modules
 // and their factories, drive nodes, a PHDocument's operations — so the piece
 // keeps the block's own semantics and the reactor stays on this side of it.
-import type { WorkflowRuntimeHostDeps } from "./host.js";
+import type { WorkflowCaller, WorkflowRuntimeHostDeps } from "./host.js";
 import type {
   ReactorCreateInput,
   ReactorDocumentSummary,
@@ -25,6 +25,14 @@ const DRIVE_DOCUMENT_TYPES = new Set([
 // The index rejects an empty filter, so a typeless sweep asks per type; this
 // caps what each one contributes before the caller slices.
 const FIND_PAGE_LIMIT = 100;
+
+// Design time resolves options for an editor, never edits documents: a piece
+// asking to write there is refused rather than authorized.
+const DESIGN_TIME_WRITES_REFUSED =
+  "Reactor writes are not available while resolving design-time options";
+
+const DESIGN_TIME_CALLER_REQUIRED =
+  "Design-time reactor access requires an authenticated request";
 
 // Base actions every document type accepts, beyond its model's own.
 const BASE_ACTIONS = [
@@ -320,5 +328,61 @@ export class SubgraphReactorPort implements ReactorPort {
       }
     }
     return null;
+  }
+}
+
+// Design-time `ctx.reactor`, bound to the caller behind the GraphQL request.
+// A piece's options()/props() code is the package's, not the reactor's.
+export class ScopedDesignTimeReactorPort implements ReactorPort {
+  private readonly inner: SubgraphReactorPort;
+
+  constructor(
+    private readonly host: WorkflowRuntimeHostDeps,
+    private readonly caller: WorkflowCaller | undefined,
+  ) {
+    this.inner = new SubgraphReactorPort(host);
+  }
+
+  models(): Promise<ReactorModelSummary[]> {
+    return this.inner.models();
+  }
+
+  model(documentType: string): Promise<ReactorModelDetail> {
+    return this.inner.model(documentType);
+  }
+
+  async get(input: {
+    documentId: string;
+    branch?: string;
+  }): Promise<ReactorDocumentSummary> {
+    if (!this.caller) throw new Error(DESIGN_TIME_CALLER_REQUIRED);
+    await this.host.assertCanRead(input.documentId, this.caller);
+    return this.inner.get(input);
+  }
+
+  async find(input: ReactorFindInput): Promise<ReactorDocumentSummary[]> {
+    const found = await this.inner.find(input);
+    // Filtered rather than refused: one unreadable document in a sweep is not
+    // the caller's error, and the list is what options() offers.
+    const allowed = await Promise.all(
+      found.map((document) => this.canRead(document.documentId)),
+    );
+    return found.filter((_, index) => allowed[index]);
+  }
+
+  create(_input: ReactorCreateInput): Promise<ReactorDocumentSummary> {
+    return Promise.reject(new Error(DESIGN_TIME_WRITES_REFUSED));
+  }
+
+  execute(_input: ReactorExecuteInput): Promise<ReactorDocumentSummary> {
+    return Promise.reject(new Error(DESIGN_TIME_WRITES_REFUSED));
+  }
+
+  private async canRead(documentId: string): Promise<boolean> {
+    if (!this.caller) return false;
+    return this.host
+      .assertCanRead(documentId, this.caller)
+      .then(() => true)
+      .catch(() => false);
   }
 }

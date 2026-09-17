@@ -80,6 +80,51 @@ describe("composeWorkflowRuntime", () => {
     expect(deps.attachments).toEqual({ id: "attachments" });
     expect(deps.webhooks).toEqual({ id: "webhooks" });
     expect(typeof deps.assertCanRead).toBe("function");
+    expect(typeof deps.assertCanWrite).toBe("function");
+    expect(typeof deps.canReadAttachmentRef).toBe("function");
+  });
+
+  it("authorizes a step's attachment read against the reference index", async () => {
+    const engine = fakeEngine();
+    const hasReference = vi.fn(() => Promise.resolve(true));
+    await compose(engine, {
+      attachmentReferences: { hasReference },
+      attachmentReferenceProjection: { status: "available" },
+      reactorClient: { resolveIdOrSlug: (id: string) => Promise.resolve(id) },
+    }).composed;
+    const [deps] = engine.module.createWorkflowRuntime.mock.calls[0];
+    const canRead = deps.canReadAttachmentRef as (
+      documentId: string,
+      ref: string,
+    ) => Promise<boolean>;
+
+    expect(await canRead("wf-1", `attachment://v1:${"a".repeat(64)}`)).toBe(
+      true,
+    );
+    // A ref the parser does not recognize is never looked up at all.
+    expect(await canRead("wf-1", "not-a-ref")).toBe(false);
+    expect(hasReference).toHaveBeenCalledTimes(1);
+  });
+
+  it("reads no attachment when nothing maintains the reference index", async () => {
+    const engine = fakeEngine();
+    // An index nobody projects is evidence of nothing, so it denies.
+    await compose(engine, {
+      attachmentReferences: { hasReference: () => Promise.resolve(true) },
+      attachmentReferenceProjection: {
+        status: "unavailable",
+        reason: "initializer-did-not-report",
+      },
+    }).composed;
+    const [deps] = engine.module.createWorkflowRuntime.mock.calls[0];
+    const canRead = deps.canReadAttachmentRef as (
+      documentId: string,
+      ref: string,
+    ) => Promise<boolean>;
+
+    expect(await canRead("wf-1", `attachment://v1:${"a".repeat(64)}`)).toBe(
+      false,
+    );
   });
 
   it("serves a subgraph the GraphQL manager can construct", async () => {

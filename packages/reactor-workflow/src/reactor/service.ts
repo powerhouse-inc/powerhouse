@@ -97,7 +97,7 @@ import {
   type BlockSearchResult,
 } from "./block-search.js";
 import { packagePieces } from "./piece-registry.js";
-import { SubgraphReactorPort } from "./reactor-port.js";
+import { ScopedDesignTimeReactorPort } from "./reactor-port.js";
 import {
   BUNDLE_CACHE_DIR,
   configuredEgress,
@@ -114,7 +114,12 @@ import { createAttachmentPort } from "./attachment-port.js";
 import { createPieceStorePort } from "./piece-store-port.js";
 import { currentWorkflowId, withRunScope } from "./run-scope.js";
 import { LocalEncryptedSecretStore } from "./secret-store.js";
-import { WorkflowRunStore, type TriggerStateRow } from "./store.js";
+import {
+  WorkflowRunStore,
+  type RunRow,
+  type StepExecutionRow,
+  type TriggerStateRow,
+} from "./store.js";
 import {
   TriggerSupervisor,
   type PieceTriggerBinding,
@@ -162,12 +167,34 @@ export interface ConnectionCheckResult {
   accountLabel: string | null;
 }
 
+/** A journal row with the steps that belong to it, as the subgraph serves it. */
+export interface RunRecord {
+  row: RunRow;
+  steps: StepExecutionRow[];
+}
+
+export interface WebhookEndpointRecord {
+  workflowId: string;
+  url: string;
+  absoluteUrl: boolean;
+  armed: boolean;
+  createdAt: string;
+}
+
 // Matches the piece worker's default action timeout; a hung check kills the
 // worker instead of hanging the mutation.
 const CHECK_TIMEOUT_MS = 30_000;
 // Same convention for the design-time descriptor build; a bundle that hangs
 // on import kills the worker instead of the request.
 const DESCRIBE_TIMEOUT_MS = 30_000;
+
+// Bounded because the registry is seeded once, from the constructor: a sweep
+// that fails past this is reported rather than retried forever.
+const SEED_ATTEMPTS = 3;
+const SEED_RETRY_BASE_MS = 250;
+
+const sleep = (ms: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, ms).unref());
 
 const logger = childLogger(["workflow", "runtime"]);
 
@@ -393,6 +420,8 @@ export class WorkflowRuntimeService {
   // Awaited before an endpoint answers: a delivery reaching an unseeded
   // registry is refused exactly as an unknown token is, so it looks like one.
   private readonly seedPromise: Promise<void>;
+  // What the last seeding attempt failed with, once the retries are spent.
+  private seedError?: unknown;
 
   // Seeds the trigger registry and opens the run journal. The host owns this
   // instance's lifetime, so a replaced host means a replaced runtime.
@@ -400,15 +429,21 @@ export class WorkflowRuntimeService {
     this.host = host;
     this.logger = host.logger ?? logger;
     this.attachments = host.attachments
-      ? createAttachmentPort(host.attachments, () => currentWorkflowId())
+      ? createAttachmentPort(
+          host.attachments,
+          () => currentWorkflowId(),
+          // A host that serves attachments without answering for them reads
+          // nothing: an unanswerable relationship is not a permitted one.
+          (documentId, ref) =>
+            host.canReadAttachmentRef?.(documentId, ref) ??
+            Promise.resolve(false),
+        )
       : undefined;
     this.storePromise = WorkflowRunStore.create(host.relationalDb);
     this.storePromise.catch((error: unknown) => {
       this.logger.error("Failed to open the workflow run store: @error", error);
     });
-    this.seedPromise = this.seedRegistry().catch((error: unknown) => {
-      this.logger.error("Failed to seed the trigger registry: @error", error);
-    });
+    this.seedPromise = this.seedWithRetries();
   }
 
   // The journal is best-effort: a broken store never blocks runs.
@@ -431,6 +466,39 @@ export class WorkflowRuntimeService {
 
   private secretProvider(): SecretProvider {
     return { get: (ref) => this.secrets().then((store) => store.get(ref)) };
+  }
+
+  /** The seeding failure a restart is needed to clear, or undefined while the
+   * registry is seeded. Resolves once seeding has finished either way. */
+  async seedFailure(): Promise<unknown> {
+    await this.seedPromise;
+    return this.seedError;
+  }
+
+  // A seed that never lands leaves every poll and webhook trigger inert until
+  // the process restarts, so a transient failure is retried before it stands.
+  private async seedWithRetries(): Promise<void> {
+    for (let attempt = 1; attempt <= SEED_ATTEMPTS; attempt += 1) {
+      try {
+        await this.seedRegistry();
+        this.seedError = undefined;
+        return;
+      } catch (error) {
+        this.seedError = error;
+        if (attempt === SEED_ATTEMPTS) break;
+        this.logger.warn(
+          `Seeding the trigger registry failed (attempt ${attempt}/${SEED_ATTEMPTS}), retrying: @error`,
+          error,
+        );
+        await sleep(SEED_RETRY_BASE_MS * 2 ** (attempt - 1));
+      }
+    }
+    // Resolved rather than rejected: a delivery racing a dead registry is
+    // still answered as an unknown token, not as a broken endpoint.
+    this.logger.error(
+      `Failed to seed the trigger registry after ${SEED_ATTEMPTS} attempts; its workflows stay inactive until the reactor restarts: @error`,
+      this.seedError,
+    );
   }
 
   private async seedRegistry(): Promise<void> {
@@ -946,7 +1014,7 @@ export class WorkflowRuntimeService {
         this.fireFromTrigger(workflowId, payload, kind);
       },
       webhookUrlFor: async (workflowId) =>
-        (await this.webhookEndpoint(workflowId))?.url,
+        (await this.mintWebhookEndpoint(workflowId))?.url,
       cacheDir: BUNDLE_CACHE_DIR,
       resolver: pieceResolver(),
       // Trigger hooks reach the same services steps do.
@@ -982,9 +1050,13 @@ export class WorkflowRuntimeService {
     this.designWorker = undefined;
   }
 
-  async triggerStates(): Promise<TriggerStateRow[]> {
+  // A trigger's state names its workflow and its last error, so the rows are
+  // filtered to the workflows this caller may read.
+  async triggerStates(ctx?: WorkflowCaller): Promise<TriggerStateRow[]> {
     const store = await this.store();
-    return store ? store.listTriggerStates() : [];
+    if (!store) return [];
+    const rows = await store.listTriggerStates();
+    return this.readableRows(rows, (row) => row.workflow_id, ctx);
   }
 
   private webhookEndpoints?: IWebhookEndpoints;
@@ -1085,13 +1157,20 @@ export class WorkflowRuntimeService {
 
   // Design-time: the URL to hand the provider. Minted on demand so an author
   // can copy it before the first delivery.
-  async webhookEndpoint(workflowId: string): Promise<{
-    workflowId: string;
-    url: string;
-    absoluteUrl: boolean;
-    armed: boolean;
-    createdAt: string;
-  } | null> {
+  async webhookEndpoint(
+    workflowId: string,
+    ctx?: WorkflowCaller,
+  ): Promise<WebhookEndpointRecord | null> {
+    // The URL carries the token that is the entire credential for a public
+    // route, so handing it out is a read of the workflow itself.
+    await this.assertCanReadDocument(workflowId, ctx);
+    return this.mintWebhookEndpoint(workflowId);
+  }
+
+  // The supervisor's own lookup: server-side, with no caller to authorize.
+  private async mintWebhookEndpoint(
+    workflowId: string,
+  ): Promise<WebhookEndpointRecord | null> {
     const endpoints = await this.endpoints();
     if (!endpoints) return null;
     const registration = this.registry.get(workflowId);
@@ -1337,17 +1416,77 @@ export class WorkflowRuntimeService {
     return descriptor;
   }
 
-  // The workflows a drive holds, so a drive app can scope runs to its own.
-  async driveWorkflowIds(driveId: string): Promise<string[]> {
-    const page = await this.host.reactorClient.drives.listNodes(driveId);
+  // The workflows a drive holds that this caller may read, so a drive app can
+  // scope runs to its own.
+  async driveWorkflowIds(
+    driveId: string,
+    ctx?: WorkflowCaller,
+  ): Promise<string[]> {
+    await this.assertCanReadDocument(driveId, ctx);
+    let page = await this.host.reactorClient.drives.listNodes(driveId);
+    const nodes = [...page.results];
+    // A drive past one page would otherwise scope runs to a prefix of its
+    // workflows and read as a history that never happened.
+    while (page.next) {
+      page = await page.next();
+      nodes.push(...page.results);
+    }
     // Only file nodes carry a documentType, so `in` also rules out folders.
-    return page.results
+    const ids = nodes
       .filter(
         (node) =>
           "documentType" in node &&
           node.documentType === WORKFLOW_DOCUMENT_TYPE,
       )
       .map((node) => node.id);
+    return this.readableRows(ids, (id) => id, ctx);
+  }
+
+  // The run journal, scoped to what this caller may read: a run carries its
+  // trigger payload and every step's input and output.
+  async runs(
+    args: { workflowId?: string; driveId?: string; limit?: number },
+    ctx?: WorkflowCaller,
+  ): Promise<RunRecord[]> {
+    const store = await this.store();
+    if (!store) return [];
+    // A drive scopes runs to the workflows it holds; an explicit workflowId is
+    // narrower still, so it wins.
+    let scope: string | string[] | undefined;
+    if (args.workflowId) {
+      await this.assertCanReadDocument(args.workflowId, ctx);
+      scope = args.workflowId;
+    } else if (args.driveId) {
+      scope = await this.driveWorkflowIds(args.driveId, ctx);
+      if (scope.length === 0) return [];
+    } else if (!ctx) {
+      // An unscoped listing is every workflow in the reactor, so it needs a
+      // caller to filter by.
+      return [];
+    }
+    const rows = await store.listRuns(scope, args.limit ?? 25);
+    const readable = await this.readableRows(
+      rows,
+      (row) => row.workflow_id,
+      ctx,
+    );
+    return Promise.all(
+      readable.map(async (row) => ({
+        row,
+        steps: await store.getSteps(row.id),
+      })),
+    );
+  }
+
+  // One run, or null when the caller may not read its workflow: "not yours"
+  // and "no such run" must not be distinguishable.
+  async run(runId: string, ctx?: WorkflowCaller): Promise<RunRecord | null> {
+    const store = await this.store();
+    if (!store || !ctx) return null;
+    const row = await store.getRun(runId);
+    if (!row) return null;
+    if (!(await this.canReadDocument(row.workflow_id, ctx))) return null;
+    return { row, steps: await store.getSteps(row.id) };
   }
 
   // Design-time: the powerhouse/connection documents this caller may read.
@@ -1380,6 +1519,9 @@ export class WorkflowRuntimeService {
     ctx?: WorkflowCaller,
   ): Promise<ConnectionCheckResult> {
     await this.assertCanReadDocument(connectionId, ctx);
+    // A check records its outcome on the connection, so this is a write: a
+    // read-only caller is refused before anything is fetched or resolved.
+    await this.assertCanWriteDocument(connectionId, ctx);
     const document =
       await this.host.reactorClient.get<ConnectionDocument>(connectionId);
     if (document.header.documentType !== "powerhouse/connection") {
@@ -1684,6 +1826,30 @@ export class WorkflowRuntimeService {
     return documents.filter((_, index) => allowed[index]);
   }
 
+  // The same filter for journal rows, which carry the document they belong to
+  // rather than being one.
+  private async readableRows<T>(
+    rows: T[],
+    documentIdOf: (row: T) => string,
+    ctx: WorkflowCaller | undefined,
+  ): Promise<T[]> {
+    if (!ctx) return [];
+    const allowed = await Promise.all(
+      rows.map((row) => this.canReadDocument(documentIdOf(row), ctx)),
+    );
+    return rows.filter((_, index) => allowed[index]);
+  }
+
+  private canReadDocument(
+    documentId: string,
+    ctx: WorkflowCaller,
+  ): Promise<boolean> {
+    return this.host
+      .assertCanRead(documentId, ctx)
+      .then(() => true)
+      .catch(() => false);
+  }
+
   private async assertCanReadDocument(
     documentId: string,
     ctx: WorkflowCaller | undefined,
@@ -1692,6 +1858,16 @@ export class WorkflowRuntimeService {
       throw new Error("Connection access requires an authenticated request");
     }
     await this.host.assertCanRead(documentId, ctx);
+  }
+
+  private async assertCanWriteDocument(
+    documentId: string,
+    ctx: WorkflowCaller | undefined,
+  ): Promise<void> {
+    if (!ctx) {
+      throw new Error("Connection access requires an authenticated request");
+    }
+    await this.host.assertCanWrite(documentId, ctx);
   }
 
   // Design-time DROPDOWN options() / DYNAMIC props(), run in the piece worker.
@@ -1743,7 +1919,11 @@ export class WorkflowRuntimeService {
         ...(this.designEgress ? { egress: this.designEgress } : {}),
       },
       piece.local
-        ? { hostCalls: reactorHandlers(new SubgraphReactorPort(this.host)) }
+        ? {
+            hostCalls: reactorHandlers(
+              new ScopedDesignTimeReactorPort(this.host, ctx),
+            ),
+          }
         : {},
     );
     return result.output;
@@ -1918,7 +2098,13 @@ export class WorkflowRuntimeService {
       completedSteps: Map<string, { output?: unknown; port?: string | null }>;
       rerunOf: string;
     },
+    ctx?: WorkflowCaller,
   ): Promise<PersistedRunResult> {
+    // "manual" is the only kind a caller can ask for; every other one is
+    // system-initiated and already authorized by whatever armed the trigger.
+    if (triggerKind === "manual") {
+      await this.assertCanReadDocument(workflowId, ctx);
+    }
     const document =
       await this.host.reactorClient.get<WorkflowDocument>(workflowId);
     if (document.header.documentType !== "powerhouse/workflow") {
@@ -2025,11 +2211,17 @@ export class WorkflowRuntimeService {
 
   // Resume a FAILED run: journaled step outputs replay, execution restarts
   // at the first step that didn't succeed. Runs the current definition.
-  async rerun(runId: string): Promise<PersistedRunResult> {
+  async rerun(
+    runId: string,
+    ctx?: WorkflowCaller,
+  ): Promise<PersistedRunResult> {
     const store = await this.store();
     if (!store) throw new Error("Run journal is unavailable");
     const run = await store.getRun(runId);
     if (!run) throw new Error(`Run "${runId}" not found`);
+    // A replay is the workflow's own side effects again, so it is the
+    // workflow — not the run id — that the caller has to be allowed to touch.
+    await this.assertCanReadDocument(run.workflow_id, ctx);
     if (run.status !== "FAILED") {
       throw new Error(`Only FAILED runs can be rerun; run is ${run.status}`);
     }

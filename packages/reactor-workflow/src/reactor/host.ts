@@ -19,11 +19,17 @@ export interface WorkflowRuntimeHostDeps {
   // Throws when this caller may not read the document; what it resolves to is
   // the host's own handle, which the engine never reads.
   assertCanRead(identifier: string, caller: WorkflowCaller): Promise<unknown>;
+  // The same check for a call that writes the document it names: recording a
+  // connection check is a mutation, so reading it is not enough.
+  assertCanWrite(identifier: string, caller: WorkflowCaller): Promise<unknown>;
   // Absent on a host with no HTTP surface: webhook triggers are then
   // unavailable, which is not the same as having no workflows.
   webhooks?: IWebhookScope;
   // Absent leaves ctx.files inline rather than turning it into an attachment.
   attachments?: AttachmentClientLike;
+  // Whether this document is the one that vouches for the ref. A step runs
+  // with no caller, so the relationship is the whole check; absent denies.
+  canReadAttachmentRef?(documentId: string, ref: string): Promise<boolean>;
   // Defaults to the relational store encrypted with the host's master key.
   secrets?: SecretStore;
   logger?: ILogger;

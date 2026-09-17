@@ -1225,6 +1225,10 @@ async function _setupAPI(
         reactorClient,
         relationalDb,
         attachments: hostModuleBase.attachments,
+        // A step reads attachments with no caller behind it, so the projected
+        // document/ref relationship is what authorizes the read.
+        attachmentReferences: attachmentReferenceIndex.store,
+        attachmentReferenceProjection,
         // The workflow package's own HTTP namespace: its webhook endpoints
         // live under it, not under the reactor's.
         webhooks: httpRoutes?.scopeFor("@powerhousedao/workflow").webhooks,
@@ -1265,7 +1269,9 @@ async function _setupAPI(
 
   if (workflows) {
     await workflows.start();
-    dbClosers.push(() => workflows.stop());
+    // Ahead of the database closers: stopping the runtime deletes its
+    // processor cursors through the relational db they destroy.
+    dbClosers.unshift(() => workflows.stop());
   }
 
   // Set up event listeners

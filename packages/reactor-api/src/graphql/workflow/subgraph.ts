@@ -13,7 +13,9 @@ export function createWorkflowRuntimeSubgraph(
   return class WorkflowRuntimeSubgraph extends BaseSubgraph {
     name = "workflow-runtime";
     typeDefs: DocumentNode = schema;
-    resolvers = getResolvers(runtime);
+    // A field initializer runs after super(), so the authorization service
+    // the secret mutations gate on is already in place.
+    resolvers = getResolvers(runtime, this.authorizationService);
     additionalContextFields = {};
   };
 }
