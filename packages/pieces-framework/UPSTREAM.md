@@ -77,6 +77,51 @@ Current patches:
   form-data body to `BodyInit` (`@types/node` 25 no longer accepts
   `Buffer<ArrayBufferLike>` there), and replace a `@ts-expect-error` whose
   target line prettier moves with an explicit cast on `Readable.fromWeb`.
+- `upstream/common/lib/http/core/fetch-http-client.ts`: drop the unconditional
+  `process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"` at the top of `sendRequest`.
+  That flag is process-wide, so it disabled certificate verification for every
+  HTTPS request in the host for as long as the process ran, not just the
+  current one. Upstream's own bug (activepieces/activepieces@main still has
+  it); no design here relies on it.
+- `upstream/common/lib/http/core/fetch-http-client.ts`: stop `console.error`-ing
+  the `HttpError` built for a failed request. `HttpError`'s message embeds the
+  raw outgoing request body, so this was writing piece secrets (API keys,
+  tokens, form fields) to host-level logs on every failed call. Upstream's own
+  bug too; callers already get the same detail back via `toFailsafeOutput`.
+- `upstream/common/lib/stream/index.ts`: guard `readChunks` against a
+  non-positive `chunkSize`. `pendingLength >= chunkSize` is permanently true
+  for `chunkSize <= 0`, so the drain loop never yields control back to the
+  outer `for await`, hanging the generator forever. Unreachable today (nothing
+  calls it yet) but it is public framework API.
+- `upstream/common/lib/helpers/index.ts`: in `createCustomApiCallAction`, stop
+  injecting `authValue` into headers whenever `authLocation` is merely
+  non-nil. `authLocation` defaults to `"headers"` and is never actually nil at
+  that point, so `authLocation === "headers" || !isNil(authLocation)` always
+  held — query-param credentials were duplicated into the request headers.
+- `upstream/framework/lib/property/input/array-property.ts`: add
+  `JsonProperty` and `ColorProperty` to the runtime `ArraySubProps` union (and
+  import them as values). The exported `ArraySubProps<R>` type and
+  `Property.Array` both already allow Json/Color sub-properties; the runtime
+  schema rejected them.
+- `upstream/framework/lib/property/input/array-property.ts`: make
+  `ArrayProperty`'s `properties` field `z.optional(...)`. The exported
+  `ArrayProperty<R>` type already marks it optional, and
+  `piecePropertiesUtils.buildSchema` already handles an absent value; the
+  runtime schema required it.
+- `upstream/framework/lib/property/input/index.ts`: add `CustomProperty` to
+  the runtime `InputProperty` union (and import it as a value).
+  `Property.Custom` builds exactly that shape, and it's part of the exported
+  `InputProperty` type, but the runtime schema rejected it.
+- `upstream/framework/lib/property/authentication/custom-auth-prop.ts`: add
+  `SecretTextProperty`, `MarkDownProperty` and `StaticMultiSelectDropdownProperty`
+  to the runtime `CustomAuthProps` union (and import them as values). All
+  three are part of the exported `CustomAuthProps` type; the runtime schema
+  was narrower.
+- `upstream/framework/lib/property/input/markdown-property.ts`: add an
+  optional `variant` field to the runtime `MarkDownProperty` schema.
+  `Property.MarkDown` always writes one and the exported type declares it,
+  but the schema had no such key, so zod silently stripped
+  `WARNING`/`TIP`/`BORDERLESS` variants on parse.
 - `upstream/framework/index.ts` and `upstream/framework/lib/property/index.ts`:
   re-export `SeekPage`, `McpAuthConfig` and `InputProperty` as values instead
   of `export type`. Each is a zod schema merged with a type; rolldown-plugin-dts

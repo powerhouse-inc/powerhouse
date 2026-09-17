@@ -399,9 +399,7 @@ export function createCustomApiCallAction<
         url: fullUrl,
         headers: {
           ...((headers ?? {}) as HttpHeaders),
-          ...(authLocation === "headers" || !isNil(authLocation)
-            ? authValue
-            : {}),
+          ...(authLocation === "headers" ? authValue : {}),
         },
         queryParams: {
           ...(authLocation === "queryParams" ? (authValue as QueryParams) : {}),

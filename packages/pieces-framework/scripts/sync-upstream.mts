@@ -91,6 +91,164 @@ const PATCHES: Patch[] = [
       "          );\n",
   },
   {
+    file: "upstream/common/lib/http/core/fetch-http-client.ts",
+    why: "NODE_TLS_REJECT_UNAUTHORIZED is process-wide; this disabled cert verification for the whole host on every request",
+    find:
+      "  ): Promise<HttpResponse<ResponseBody>> {\n" +
+      '    process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0";\n' +
+      "\n" +
+      "    const { urlWithoutQueryParams, queryParams: urlQueryParams } =\n",
+    replace:
+      "  ): Promise<HttpResponse<ResponseBody>> {\n" +
+      "    const { urlWithoutQueryParams, queryParams: urlQueryParams } =\n",
+  },
+  {
+    file: "upstream/common/lib/http/core/fetch-http-client.ts",
+    why: "HttpError's message embeds the request body; logging it can write secrets to host logs",
+    find:
+      "      });\n" +
+      "      console.error(\n" +
+      '        "[HttpClient#(sanitized error message)] Request failed:",\n' +
+      "        httpError,\n" +
+      "      );\n" +
+      "      throw httpError;\n",
+    replace: "      });\n      throw httpError;\n",
+  },
+  {
+    file: "upstream/common/lib/stream/index.ts",
+    why: "chunkSize <= 0 makes the drain loop's condition permanently true, hanging the generator forever",
+    find:
+      "  let pending: Buffer[] = [];\n" +
+      "  let pendingLength = 0;\n" +
+      "  for await (const data of readable) {\n",
+    replace:
+      "  let pending: Buffer[] = [];\n" +
+      "  let pendingLength = 0;\n" +
+      "  if (!Number.isInteger(chunkSize) || chunkSize <= 0) {\n" +
+      '    throw new Error("chunkSize must be a positive integer");\n' +
+      "  }\n" +
+      "  for await (const data of readable) {\n",
+  },
+  {
+    file: "upstream/common/lib/helpers/index.ts",
+    why: '!isNil(authLocation) is always true (it defaults to "headers"), so query-param auth was duplicated into headers',
+    find:
+      '          ...(authLocation === "headers" || !isNil(authLocation)\n' +
+      "            ? authValue\n" +
+      "            : {}),\n",
+    replace: '          ...(authLocation === "headers" ? authValue : {}),\n',
+  },
+  {
+    file: "upstream/framework/lib/property/input/array-property.ts",
+    why: "ArraySubProps's runtime union omits Json/Color even though the exported type and Property.Array both allow them",
+    find:
+      'import type { JsonProperty } from "./json-property.js";\n' +
+      'import type { ColorProperty } from "./color-property.js";\n',
+    replace:
+      'import { JsonProperty } from "./json-property.js";\n' +
+      'import { ColorProperty } from "./color-property.js";\n',
+  },
+  {
+    file: "upstream/framework/lib/property/input/array-property.ts",
+    why: "same: add the two schemas to the union, ordered as the type union below already has them",
+    find:
+      "    FileProperty,\n" + "    DateTimeProperty,\n" + "  ]),\n" + ");\n",
+    replace:
+      "    FileProperty,\n" +
+      "    JsonProperty,\n" +
+      "    ColorProperty,\n" +
+      "    DateTimeProperty,\n" +
+      "  ]),\n" +
+      ");\n",
+  },
+  {
+    file: "upstream/framework/lib/property/input/array-property.ts",
+    why: "the exported ArrayProperty<R> type and buildSchema both treat properties as optional; the runtime schema required it",
+    find: "  properties: ArraySubProps,\n",
+    replace: "  properties: z.optional(ArraySubProps),\n",
+  },
+  {
+    file: "upstream/framework/lib/property/input/index.ts",
+    why: "CustomProperty is part of the exported InputProperty type and built by Property.Custom, but missing from the runtime union",
+    find:
+      "import type {\n" +
+      "  CustomProperty,\n" +
+      "  CustomPropertyCodeFunctionParams,\n" +
+      '} from "./custom-property.js";\n',
+    replace:
+      'import { CustomProperty } from "./custom-property.js";\n' +
+      'import type { CustomPropertyCodeFunctionParams } from "./custom-property.js";\n',
+  },
+  {
+    file: "upstream/framework/lib/property/input/index.ts",
+    why: "same: add it to the union, matching its place in the type union just below",
+    find: "  FileProperty,\n  ColorProperty,\n]);\n",
+    replace: "  FileProperty,\n  CustomProperty,\n  ColorProperty,\n]);\n",
+  },
+  {
+    file: "upstream/framework/lib/property/authentication/custom-auth-prop.ts",
+    why: "the runtime CustomAuthProps union is narrower than the exported type; make StaticMultiSelectDropdownProperty a value import",
+    find: 'import type { StaticMultiSelectDropdownProperty } from "../input/dropdown/static-dropdown.js";\n',
+    replace:
+      'import { StaticMultiSelectDropdownProperty } from "../input/dropdown/static-dropdown.js";\n',
+  },
+  {
+    file: "upstream/framework/lib/property/authentication/custom-auth-prop.ts",
+    why: "same: SecretTextProperty is a valid CustomAuthProps member too",
+    find: 'import type { SecretTextProperty } from "./secret-text-property.js";\n',
+    replace:
+      'import { SecretTextProperty } from "./secret-text-property.js";\n',
+  },
+  {
+    file: "upstream/framework/lib/property/authentication/custom-auth-prop.ts",
+    why: "same: MarkDownProperty is a valid CustomAuthProps member too",
+    find: 'import type { MarkDownProperty } from "../input/markdown-property.js";\n',
+    replace:
+      'import { MarkDownProperty } from "../input/markdown-property.js";\n',
+  },
+  {
+    file: "upstream/framework/lib/property/authentication/custom-auth-prop.ts",
+    why: "add the three schemas the exported CustomAuthProps type already permits, ordered as that type is",
+    find:
+      "  z.union([\n" +
+      "    ShortTextProperty,\n" +
+      "    LongTextProperty,\n" +
+      "    NumberProperty,\n" +
+      "    CheckboxProperty,\n" +
+      "    StaticDropdownProperty,\n" +
+      "  ]),\n",
+    replace:
+      "  z.union([\n" +
+      "    ShortTextProperty,\n" +
+      "    LongTextProperty,\n" +
+      "    SecretTextProperty,\n" +
+      "    NumberProperty,\n" +
+      "    StaticDropdownProperty,\n" +
+      "    CheckboxProperty,\n" +
+      "    MarkDownProperty,\n" +
+      "    StaticMultiSelectDropdownProperty,\n" +
+      "  ]),\n",
+  },
+  {
+    file: "upstream/framework/lib/property/input/markdown-property.ts",
+    why: "Property.MarkDown always writes a variant, and the type declares it, but the runtime schema stripped it as an unknown key",
+    find:
+      'import type { MarkdownVariant } from "../../../../core-piece-types/index.js";\n' +
+      "\n" +
+      "export const MarkDownProperty = z.object({\n" +
+      "  ...BasePropertySchema.shape,\n" +
+      "  ...TPropertyValue(z.void(), PropertyType.MARKDOWN).shape,\n" +
+      "});\n",
+    replace:
+      'import { MarkdownVariant } from "../../../../core-piece-types/index.js";\n' +
+      "\n" +
+      "export const MarkDownProperty = z.object({\n" +
+      "  ...BasePropertySchema.shape,\n" +
+      "  ...TPropertyValue(z.void(), PropertyType.MARKDOWN).shape,\n" +
+      "  variant: z.optional(z.enum(MarkdownVariant)),\n" +
+      "});\n",
+  },
+  {
     file: "upstream/framework/index.ts",
     why: "rolldown-plugin-dts drops `type` on a re-export of a merged const+type; export the value too",
     find: 'export type { SeekPage } from "../core-utils/index.js";\n',

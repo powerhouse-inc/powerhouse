@@ -12,8 +12,8 @@ import { MultiSelectDropdownProperty } from "./dropdown/dropdown-prop.js";
 import { CheckboxProperty } from "./checkbox-property.js";
 import { NumberProperty } from "./number-property.js";
 import { FileProperty } from "./file-property.js";
-import type { JsonProperty } from "./json-property.js";
-import type { ColorProperty } from "./color-property.js";
+import { JsonProperty } from "./json-property.js";
+import { ColorProperty } from "./color-property.js";
 import { DateTimeProperty } from "./date-time-property.js";
 
 export const ArraySubProps = z.record(
@@ -27,13 +27,15 @@ export const ArraySubProps = z.record(
     CheckboxProperty,
     NumberProperty,
     FileProperty,
+    JsonProperty,
+    ColorProperty,
     DateTimeProperty,
   ]),
 );
 
 export const ArrayProperty = z.object({
   ...BasePropertySchema.shape,
-  properties: ArraySubProps,
+  properties: z.optional(ArraySubProps),
   ...TPropertyValue(z.array(z.unknown()), PropertyType.ARRAY).shape,
 });
 

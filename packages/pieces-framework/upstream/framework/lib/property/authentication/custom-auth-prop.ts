@@ -6,12 +6,12 @@ import { PropertyType } from "../input/property-type.js";
 import { LongTextProperty, ShortTextProperty } from "../input/text-property.js";
 import { NumberProperty } from "../input/number-property.js";
 import { CheckboxProperty } from "../input/checkbox-property.js";
-import type { StaticMultiSelectDropdownProperty } from "../input/dropdown/static-dropdown.js";
+import { StaticMultiSelectDropdownProperty } from "../input/dropdown/static-dropdown.js";
 import { StaticDropdownProperty } from "../input/dropdown/static-dropdown.js";
 import type { StaticPropsValue } from "../index.js";
-import type { SecretTextProperty } from "./secret-text-property.js";
+import { SecretTextProperty } from "./secret-text-property.js";
 import { BasePieceAuthSchema } from "./common.js";
-import type { MarkDownProperty } from "../input/markdown-property.js";
+import { MarkDownProperty } from "../input/markdown-property.js";
 import type { ServerContext } from "../../context/index.js";
 
 const CustomAuthProps = z.record(
@@ -19,9 +19,12 @@ const CustomAuthProps = z.record(
   z.union([
     ShortTextProperty,
     LongTextProperty,
+    SecretTextProperty,
     NumberProperty,
-    CheckboxProperty,
     StaticDropdownProperty,
+    CheckboxProperty,
+    MarkDownProperty,
+    StaticMultiSelectDropdownProperty,
   ]),
 );
 

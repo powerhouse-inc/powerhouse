@@ -23,10 +23,8 @@ import { ObjectProperty } from "./object-property.js";
 import { PropertyType } from "./property-type.js";
 import { LongTextProperty, ShortTextProperty } from "./text-property.js";
 import { RichTextProperty } from "./rich-text-property.js";
-import type {
-  CustomProperty,
-  CustomPropertyCodeFunctionParams,
-} from "./custom-property.js";
+import { CustomProperty } from "./custom-property.js";
+import type { CustomPropertyCodeFunctionParams } from "./custom-property.js";
 import { ColorProperty } from "./color-property.js";
 import type { PieceAuthProperty } from "../authentication/index.js";
 
@@ -48,6 +46,7 @@ export const InputProperty = z.union([
   DateTimeProperty,
   DateRangeProperty,
   FileProperty,
+  CustomProperty,
   ColorProperty,
 ]);
 

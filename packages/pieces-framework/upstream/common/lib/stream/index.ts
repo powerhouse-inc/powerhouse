@@ -22,6 +22,9 @@ async function* readChunks({
 }): AsyncGenerator<Buffer> {
   let pending: Buffer[] = [];
   let pendingLength = 0;
+  if (!Number.isInteger(chunkSize) || chunkSize <= 0) {
+    throw new Error("chunkSize must be a positive integer");
+  }
   for await (const data of readable) {
     pending.push(Buffer.isBuffer(data) ? data : Buffer.from(data));
     pendingLength += pending[pending.length - 1].length;

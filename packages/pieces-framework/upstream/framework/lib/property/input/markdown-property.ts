@@ -3,11 +3,12 @@
 import * as z from "zod/mini";
 import { BasePropertySchema, TPropertyValue } from "./common.js";
 import { PropertyType } from "./property-type.js";
-import type { MarkdownVariant } from "../../../../core-piece-types/index.js";
+import { MarkdownVariant } from "../../../../core-piece-types/index.js";
 
 export const MarkDownProperty = z.object({
   ...BasePropertySchema.shape,
   ...TPropertyValue(z.void(), PropertyType.MARKDOWN).shape,
+  variant: z.optional(z.enum(MarkdownVariant)),
 });
 
 export type MarkDownProperty = BasePropertySchema &
