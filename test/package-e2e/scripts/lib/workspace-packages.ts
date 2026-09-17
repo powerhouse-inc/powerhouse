@@ -37,6 +37,7 @@ export const WORKSPACE_PUBLISH_PACKAGES = [
   "@powerhousedao/registry",
   "@powerhousedao/shared",
   "@powerhousedao/vetra",
+  "@powerhousedao/workflow",
   "@powerhousedao/powerhouse-vetra-packages",
   "@powerhousedao/analytics-engine-browser",
   "@powerhousedao/analytics-engine-core",
