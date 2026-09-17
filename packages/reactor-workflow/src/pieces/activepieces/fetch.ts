@@ -282,9 +282,11 @@ async function resolveBundle(
 }
 
 async function runNpmInstall(cwd: string, timeoutMs: number): Promise<void> {
+  // Windows installs npm as npm.cmd, which only a shell can spawn.
+  const windows = process.platform === "win32";
   await new Promise<void>((resolve, reject) => {
     execFile(
-      "npm",
+      windows ? "npm.cmd" : "npm",
       [
         "install",
         "--ignore-scripts",
@@ -292,7 +294,7 @@ async function runNpmInstall(cwd: string, timeoutMs: number): Promise<void> {
         "--no-fund",
         "--loglevel=error",
       ],
-      { cwd, timeout: timeoutMs },
+      { cwd, timeout: timeoutMs, shell: windows },
       (error, _stdout, stderr) => {
         if (error) {
           reject(
