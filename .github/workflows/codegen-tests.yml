@@ -14,7 +14,9 @@ on:
   # imports or writes into a generated project's package.json -- see
   # VERSIONED_PEER_DEPENDENCIES in packages/shared/clis/constants.ts.
   pull_request:
-    branches: ["main"]
+    # ci/** lets a change to this workflow be exercised by a pull request
+    # stacked on its branch before it reaches main.
+    branches: ["main", "ci/**"]
     paths:
       - "packages/codegen/**"
       - "test/codegen/**"
