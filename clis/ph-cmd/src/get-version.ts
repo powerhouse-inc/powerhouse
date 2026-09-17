@@ -1,3 +1,4 @@
+// ci scope probe: harmless comment, do not merge
 declare const CLI_VERSION: string | undefined;
 declare const CLI_GIT_SHA: string | undefined;
 
