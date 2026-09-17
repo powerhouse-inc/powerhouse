@@ -1,0 +1,35 @@
+/**
+ * WARNING: DO NOT EDIT
+ * This file is auto-generated and updated by codegen
+ */
+import type {
+  IProcessorHostModule,
+  ProcessorRecord,
+} from "@powerhousedao/reactor-browser";
+import type { PHDocumentHeader } from "document-model";
+
+export const processorFactory = async (module: IProcessorHostModule) => {
+  const { processorFactoryBuilders } =
+    module.processorApp === "connect"
+      ? await import("./connect.js")
+      : await import("./switchboard.js");
+
+  const factories = await Promise.all(
+    processorFactoryBuilders.map(
+      async (buildFactory) => await buildFactory(module),
+    ),
+  );
+
+  // Return the inner function that will be called for each drive
+  return async (driveHeader: PHDocumentHeader): Promise<ProcessorRecord[]> => {
+    const processors: ProcessorRecord[] = [];
+
+    // Call each cached factory with the driveHeader
+    for (const factory of factories) {
+      const factoryProcessors = await factory(driveHeader, module.processorApp);
+      processors.push(...factoryProcessors);
+    }
+
+    return processors;
+  };
+};
