@@ -65,6 +65,7 @@ function attempt(overrides: Partial<AttemptSummary> = {}): AttemptSummary {
     buildFailureReason: null,
     tscOk: true,
     testsPassed: 3,
+    acceptanceOk: true,
     testsTotal: 3,
     turns: 20,
     costUsd: 1.5,

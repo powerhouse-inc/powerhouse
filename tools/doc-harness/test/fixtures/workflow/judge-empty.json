@@ -1,0 +1,5 @@
+{
+  "findings": [],
+  "summary": "Dry run: the fake judge reports no findings.",
+  "buildQualityNotes": "Dry run: no build was inspected."
+}

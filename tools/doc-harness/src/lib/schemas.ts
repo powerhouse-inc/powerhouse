@@ -166,6 +166,8 @@ export const TestsResult = z.object({
   kind: AcceptanceKind,
   tscOk: z.boolean().nullable(),
   tscOutputPath: z.string().nullable(),
+  /** True when vitest ran and wrote its JSON report; null when it did not run. */
+  vitestOk: z.boolean().nullable(),
   passed: z.number(),
   failed: z.number(),
   total: z.number(),
@@ -285,6 +287,8 @@ export const AttemptSummary = z.object({
   buildOk: z.boolean(),
   buildFailureReason: ClaudeFailureReason.nullable(),
   tscOk: z.boolean().nullable(),
+  /** The acceptance verdict for the task kind; null when nothing was graded. */
+  acceptanceOk: z.boolean().nullable(),
   testsPassed: z.number(),
   testsTotal: z.number(),
   turns: z.number().nullable(),
@@ -358,6 +362,7 @@ export type BuildOutput = z.infer<typeof BuildOutput>;
 export const AcceptanceOutput = TestsResult.pick({
   kind: true,
   tscOk: true,
+  vitestOk: true,
   passed: true,
   failed: true,
   total: true,

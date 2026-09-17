@@ -80,12 +80,7 @@ export interface ReportOptions {
 }
 
 function passed(a: AttemptSummary): boolean {
-  return (
-    a.status === "complete" &&
-    a.buildOk &&
-    a.tscOk !== false &&
-    a.testsPassed === a.testsTotal
-  );
+  return a.status === "complete" && a.buildOk && a.acceptanceOk !== false;
 }
 
 function pct(num: number, den: number): string {

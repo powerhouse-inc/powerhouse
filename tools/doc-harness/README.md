@@ -68,7 +68,19 @@ workflow and skips finished work.
 | `records verify \| show <key> \| summary` | the findings store |
 
 `--dry-run` swaps the Claude driver for a fixture-backed fake and skips
-installs, so the whole pipeline runs offline in seconds.
+installs, so the whole pipeline runs offline in seconds; its FINDINGS and RUNS
+lines go into the run directory, never into the committed files.
+
+`--runs-root`, `--state-dir` and `--recipes-root` relocate the run directory,
+the Mastra DB and the recipes checkout (default: a sibling of the monorepo).
+Each attempt's `workspace/node_modules` is removed once it is graded unless
+`--keep-workspaces` is passed.
+
+Because `runs/` sits inside the monorepo, the sandbox denies the monorepo's
+sibling directories along the path to it rather than the root, so the builder
+can read its own workspace but nothing else in the checkout.
+
+`pnpm studio` opens Mastra Studio on the default state DB to browse past runs.
 
 ## Catalog
 
