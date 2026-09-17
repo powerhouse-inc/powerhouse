@@ -6,10 +6,29 @@ concurrency:
 
 on:
   workflow_dispatch:
+  # Deliberately unfiltered on main: this job takes ~12.6 minutes and the paths
+  # below are a judgement call, so main stays the backstop that always runs it.
   push:
     branches: ["main"]
+  # The generator itself, the suites, and the workspace packages test/codegen
+  # imports or writes into a generated project's package.json -- see
+  # VERSIONED_PEER_DEPENDENCIES in packages/shared/clis/constants.ts.
   pull_request:
     branches: ["main"]
+    paths:
+      - "packages/codegen/**"
+      - "test/codegen/**"
+      - "packages/shared/**"
+      - "packages/document-model/**"
+      - "packages/reactor/**"
+      - "packages/reactor-api/**"
+      - "packages/reactor-browser/**"
+      - "packages/analytics-engine/core/**"
+      - "packages/config/**"
+      - "clis/ph-cli/**"
+      - ".github/workflows/codegen-tests.yml"
+      - "pnpm-lock.yaml"
+      - "package.json"
     types: [opened, reopened, synchronize]
 
 permissions:
