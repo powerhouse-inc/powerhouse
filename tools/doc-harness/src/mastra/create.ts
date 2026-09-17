@@ -8,6 +8,7 @@ import { LibSQLStore } from "@mastra/libsql";
 import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { STATE_DIR } from "../lib/paths.js";
+import { docHarnessRoutes } from "../server/routes.js";
 import { harnessRun } from "../workflows/harness-run.js";
 import { taskRun } from "../workflows/task-run.js";
 
@@ -21,5 +22,6 @@ export function createMastra(stateDir: string = STATE_DIR) {
       url: `file:${path.resolve(stateDir, "harness.db")}`,
     }),
     logger: false,
+    server: { apiRoutes: docHarnessRoutes() },
   });
 }

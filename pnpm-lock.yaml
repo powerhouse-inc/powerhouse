@@ -222,6 +222,9 @@ catalogs:
     luxon:
       specifier: 3.7.2
       version: 3.7.2
+    marked:
+      specifier: 18.0.12
+      version: 18.0.12
     mastra:
       specifier: 1.30.0
       version: 1.30.0
@@ -3838,6 +3841,9 @@ importers:
       commander:
         specifier: 'catalog:'
         version: 12.1.0
+      marked:
+        specifier: 'catalog:'
+        version: 18.0.12
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -19004,6 +19010,11 @@ packages:
 
   markdown-table@3.0.4:
     resolution: {integrity: sha512-wiYz4+JrLyb/DqW2hkFJxP7Vd7JuTDm77fvbM8VfEQdmSMqcImWeeRbHwZjBjIFki/VaMK2BhFi7oUUZeM5bqw==}
+
+  marked@18.0.12:
+    resolution: {integrity: sha512-LEm4ga2YeI2T3GVHj9b0BaDPPk93LLTHMFeMyQbNIzPxc8vCI0y/scy0ZA6z6lXKyT9j9Nhl/OC6ZYKYGuFScA==}
+    engines: {node: '>= 20'}
+    hasBin: true
 
   mastra@1.30.0:
     resolution: {integrity: sha512-fed0N9+0PuXfit8lEDDk+EP3amwczgon6W1EVlXV5ZB7ZyJyz+dzzcRh1TIeugVls34zBJvRjgbaqy0v6IJXlA==}
@@ -50287,6 +50298,8 @@ snapshots:
       repeat-string: 1.6.1
 
   markdown-table@3.0.4: {}
+
+  marked@18.0.12: {}
 
   mastra@1.30.0(@hono/node-server@1.19.10(hono@4.12.9))(@mastra/core@1.67.0(@grpc/grpc-js@1.14.3)(ai@7.0.83(zod@4.3.6))(bufferutil@4.1.0)(express@5.2.1)(rxjs@7.8.2)(utf-8-validate@5.0.10)(zod@4.3.6))(bufferutil@4.1.0)(rxjs@7.8.2)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.3.6):
     dependencies:

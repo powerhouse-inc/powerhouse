@@ -96,6 +96,16 @@ context from `args`, so `args.dryRun: true` runs offline on fixtures and
 pins `DOC_HARNESS_ROOT` because Studio serves a bundle from `.mastra/` and the
 harness resolves its paths from its own location.
 
+### Report in the browser
+
+While Studio is running, the dev server also serves each run's files as HTML
+at http://localhost:4111/doc-harness. The index lists every `runs/*/run.json`;
+a run page links its rendered `REPORT.md` (`/doc-harness/runs/<runId>/report`,
+or `report.md` for the raw markdown) and each attempt's compact transcript and
+JSON files. `doc-harness run` prints the report URL when it finishes;
+`DOC_HARNESS_STUDIO_URL` changes the host it prints. The pages only read
+inside `runs/` and escape any HTML the report contains.
+
 ## Catalog
 
 `catalog/tasks.json` describes each task: a behaviour-level prompt, the

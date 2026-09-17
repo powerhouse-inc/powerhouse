@@ -19,6 +19,7 @@ import {
   MONOREPO_ROOT,
   newRunId,
   recipesRoot,
+  reportUrl,
   runLayout,
   RUNS_ROOT,
   STATE_DIR,
@@ -154,6 +155,7 @@ async function drive(o: {
       `run ${o.input.runId}: ${s.attempts} attempts, ${s.complete} complete, ${s.failed} failed, ${s.contaminated} contaminated, ${s.findingsAppended} findings appended`,
     );
     o.ctx.log(`report ${s.reportPath}`);
+    o.ctx.log(`open ${reportUrl(o.input.runId)} (with pnpm studio running)`);
     return s.failed > 0 ? 1 : 0;
   } finally {
     clearHarnessContext(o.input.runId);

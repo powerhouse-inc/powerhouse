@@ -42,6 +42,18 @@ export const RUNS_FILE = path.join(HARNESS_ROOT, "RUNS.jsonl");
 export const STATE_DIR = path.join(HARNESS_ROOT, "state");
 export const RUNS_ROOT = path.join(HARNESS_ROOT, "runs");
 
+/** Where `pnpm studio` listens; DOC_HARNESS_STUDIO_URL overrides. */
+export function studioBaseUrl(): string {
+  return (
+    process.env.DOC_HARNESS_STUDIO_URL ?? "http://localhost:4111"
+  ).replace(/\/+$/, "");
+}
+
+/** The rendered REPORT.md, served by the Studio routes. */
+export function reportUrl(runId: string): string {
+  return `${studioBaseUrl()}/doc-harness/runs/${encodeURIComponent(runId)}/report`;
+}
+
 export interface AttemptLayout {
   taskId: string;
   arm: Arm;

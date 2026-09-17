@@ -16,6 +16,7 @@
     "@mastra/core": "catalog:",
     "@mastra/libsql": "catalog:",
     "commander": "catalog:",
+    "marked": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {

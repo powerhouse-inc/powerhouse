@@ -7,7 +7,7 @@ import { parseCliVersion } from "../lib/claude.js";
 import { catalogOf, getHarnessContext } from "../lib/context.js";
 import { snapshotDocs, writeDocsIndex } from "../lib/docs.js";
 import { appendRun } from "../lib/findings.js";
-import { CATALOG_FILE, runLayout } from "../lib/paths.js";
+import { CATALOG_FILE, reportUrl, runLayout } from "../lib/paths.js";
 import { writeReport } from "../commands/report.js";
 import { Arm, AttemptSummary, RunArgs, RunRecord } from "../lib/schemas.js";
 import { readCached, readJson, writeJson } from "../steps/shared.js";
@@ -41,6 +41,7 @@ export const HarnessRunOutput = z.object({
   contaminated: z.number(),
   findingsAppended: z.number(),
   reportPath: z.string(),
+  reportUrl: z.string(),
 });
 export type HarnessRunOutput = z.infer<typeof HarnessRunOutput>;
 
@@ -175,6 +176,7 @@ const summarize = createStep({
       contaminated: count((a) => a.contaminated),
       findingsAppended: inputData.reduce((s, o) => s + o.findingsAppended, 0),
       reportPath,
+      reportUrl: reportUrl(init.runId),
     });
   },
 });
