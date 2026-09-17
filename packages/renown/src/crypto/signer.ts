@@ -4,8 +4,13 @@ import type {
   ISigner,
   Operation,
   Signature,
+  SignatureVerificationContext,
   SignatureVerificationHandler,
   UserActionSigner,
+} from "@powerhousedao/shared/document-model";
+import {
+  computeActionHashCandidates,
+  hashActionContentSha256,
 } from "@powerhousedao/shared/document-model";
 import type { IRenownCrypto } from "./index.js";
 
@@ -114,15 +119,10 @@ export class RenownCryptoSigner implements ISigner {
   }
 
   private async hashAction(action: Action): Promise<string> {
-    const payload = [
-      action.scope,
-      action.type,
-      JSON.stringify(action.input),
-    ].join("");
-    const encoder = new TextEncoder();
-    const data = encoder.encode(payload);
-    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-    return this.arrayBufferToBase64(hashBuffer);
+    // The signer binds the signature to the document the action was stamped
+    // for, when it knows it (#2894); a signer without a document id signs the
+    // document-agnostic form, which the verifier still accepts.
+    return hashActionContentSha256(action.context?.documentId ?? "", action);
   }
 
   private buildSignatureMessage(
@@ -141,15 +141,6 @@ export class RenownCryptoSigner implements ISigner {
       .map((byte) => byte.toString(16).padStart(2, "0"))
       .join("");
   }
-
-  private arrayBufferToBase64(buffer: ArrayBuffer): string {
-    const bytes = new Uint8Array(buffer);
-    let binary = "";
-    for (let i = 0; i < bytes.length; i++) {
-      binary += String.fromCharCode(bytes[i]);
-    }
-    return btoa(binary);
-  }
 }
 
 /**
@@ -159,12 +150,20 @@ export class RenownCryptoSigner implements ISigner {
 export function createSignatureVerifier(
   requireSignature = false,
 ): SignatureVerificationHandler {
-  return async (operation: Operation, publicKey: string): Promise<boolean> => {
-    const signer = operation.action.context?.signer;
-    if (!signer || !publicKey) {
+  return async (
+    operation: Operation,
+    publicKey: string,
+    context?: SignatureVerificationContext,
+  ): Promise<boolean> => {
+    // A runtime payload can be missing its action even though the type says
+    // otherwise. Such an operation carries no signer, so it is treated as
+    // unsigned rather than throwing (#2894).
+    const action: Action | undefined = operation.action;
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- `action` is required by the type but can be absent at runtime
+    if (!action?.context?.signer || !publicKey) {
       return !requireSignature;
     }
-
+    const signer = action.context.signer;
     const signatures = signer.signatures;
     if (signatures.length === 0) {
       return false;
@@ -174,6 +173,20 @@ export function createSignatureVerifier(
     const [timestamp, signerKey, hash, prevStateHash, signatureHex] = signature;
 
     if (signerKey !== publicKey) {
+      return false;
+    }
+
+    // Bind the signature to the action: recompute the action hash from the
+    // action being verified and refuse it if the hash the signature claims
+    // matches none of the preimages the action actually carries. A signature
+    // must describe the action - and, where the verifier knows it, the
+    // document - it is attached to, not merely be a valid signature over
+    // itself (#2894).
+    const candidates = await computeActionHashCandidates(
+      context?.documentId ?? "",
+      action,
+    );
+    if (!candidates.includes(hash)) {
       return false;
     }
 

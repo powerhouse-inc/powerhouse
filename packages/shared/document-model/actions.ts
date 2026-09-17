@@ -3,6 +3,7 @@ import {
   ab2hex,
   buildOperationSignatureMessage,
   buildOperationSignatureParams,
+  computeActionHashCandidates,
   hex2ab,
 } from "./crypto.js";
 import type { PHDocument } from "./documents.js";
@@ -392,7 +393,7 @@ export async function buildOperationSignature(
   context: ActionSignatureContext,
   signMethod: ActionSigningHandler,
 ): Promise<Signature> {
-  const params = buildOperationSignatureParams(context);
+  const params = await buildOperationSignatureParams(context);
   const message = buildOperationSignatureMessage(params);
   const signature = await signMethod(message);
   return [...params, `0x${ab2hex(signature)}`];
@@ -445,9 +446,27 @@ export async function verifyOperationSignature(
   signature: Signature,
   signer: Omit<ActionSigner, "signatures">,
   verifyHandler: ActionVerificationHandler,
+  action?: Action,
+  documentId?: string,
 ) {
   const publicKey = signer.app.key;
   const params = signature.slice(0, 4) as [string, string, string, string];
+
+  // Bind the signature to the action it claims to cover, when the caller has
+  // one: its hash field must match the action being verified, not merely be a
+  // valid signature over itself (#2894). A caller without the action - the
+  // historical three-argument shape - has nothing to bind against and
+  // verifies as this function did before the binding existed.
+  if (action) {
+    const candidates = await computeActionHashCandidates(
+      documentId ?? "",
+      action,
+    );
+    if (!candidates.includes(params[2])) {
+      return false;
+    }
+  }
+
   const signatureBytes = hex2ab(signature[4]);
   const expectedMessage = buildOperationSignatureMessage(params);
   return verifyHandler(publicKey, signatureBytes, expectedMessage);
@@ -958,6 +977,15 @@ export type ActionContext = {
 
   /** A nonce, to cover specific signing attacks and to prevent replay attacks from no-ops. */
   nonce?: string;
+
+  /**
+   * The id of the document the action was signed for. A signer that knows it
+   * folds it into the action hash, binding the signature to that document so
+   * it cannot be replayed onto another (#2894). Signing-side metadata only:
+   * the action's wire projection does not carry it, and the verifier uses the
+   * document it is checking against rather than this value.
+   */
+  documentId?: string;
 
   /** The signer of the action. */
   signer?: ActionSigner;

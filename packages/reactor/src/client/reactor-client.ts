@@ -1011,6 +1011,7 @@ export class ReactorClient implements IReactorClient {
       ],
       this.signer,
       signal,
+      documentId,
     );
 
     const jobs: ExecutionJobPlan[] = [
@@ -1025,10 +1026,13 @@ export class ReactorClient implements IReactorClient {
     ];
 
     if (parentIdentifier) {
+      // The relationship lands on the parent document, and this job targets
+      // it, so it can be bound to the parent (#2894).
       const parentActions: Action[] = await signActions(
         [addRelationshipAction(parentIdentifier, documentId, "child")],
         this.signer,
         signal,
+        parentIdentifier,
       );
 
       jobs.push({
@@ -1187,7 +1191,12 @@ export class ReactorClient implements IReactorClient {
         revision: { ...document.header.revision },
       });
 
-      const signedActions = await signActions([action], this.signer, signal);
+      const signedActions = await signActions(
+        [action],
+        this.signer,
+        signal,
+        documentId,
+      );
       const jobInfo = await this.reactor.execute(
         documentId,
         branch,

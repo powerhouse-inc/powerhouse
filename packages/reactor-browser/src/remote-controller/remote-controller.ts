@@ -475,6 +475,8 @@ export class RemoteDocumentController<
           ...action.context,
           prevOpHash,
           prevOpIndex,
+          // Binds the resulting signature to this document (#2894).
+          ...(this.documentId ? { documentId: this.documentId } : {}),
         },
       };
 
