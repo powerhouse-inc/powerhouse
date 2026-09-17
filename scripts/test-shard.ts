@@ -23,7 +23,13 @@ function packages(): string[] {
     (m) => m[1],
   );
   if (names.length === 0) throw new Error("no --filter entries in test:ci");
-  return names;
+  const scope = process.env.TEST_SCOPE_FILTERS ?? "";
+  if (scope.trim() === "") return names;
+  // Narrowed to the packages .github/actions/test-scope selected for the diff.
+  const selected = new Set(
+    [...scope.matchAll(/--filter=(\S+)/g)].map((m) => m[1]),
+  );
+  return names.filter((n) => selected.has(n));
 }
 
 // Longest-processing-time first: heaviest suite into the lightest shard.
@@ -69,6 +75,10 @@ if (!Number.isInteger(index) || index < 1 || index > total) {
 }
 
 const mine = shards[index - 1];
+if (mine.names.length === 0) {
+  console.log(`shard ${index}/${total}: no packages selected`);
+  process.exit(0);
+}
 console.log(`shard ${index}/${total}: ${mine.names.join(" ")}`);
 
 // spawnSync, not execFileSync: a failing suite should surface vitest's own

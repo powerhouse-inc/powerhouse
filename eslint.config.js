@@ -645,6 +645,17 @@ const staleBotConfig = {
   },
 };
 
+/** Composite-action helpers are plain Node scripts the runner executes; they
+ * belong to no package and so get Node globals here. */
+const githubActionsConfig = {
+  files: [".github/**/*.mjs"],
+  languageOptions: {
+    globals: {
+      ...globals.node,
+    },
+  },
+};
+
 /** Recommended config from eslint */
 const eslintRecommendedConfig = eslint.configs.recommended;
 
@@ -794,6 +805,7 @@ export default defineConfig(
   javascriptConfig,
   benchUiConfig,
   staleBotConfig,
+  githubActionsConfig,
   unsafeConfig,
   generatedFilesConfig,
   cliColdPathConfig,

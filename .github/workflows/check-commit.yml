@@ -83,8 +83,8 @@ jobs:
       - name: Run circular imports check
         run: pnpm check-circular-imports
 
-  # The whole suite, split three ways. Three is the useful maximum: switchboard
-  # alone is 44s of the 137s total, so a fourth shard would sit idle.
+  # The suites the diff can reach, split three ways. Three is the useful
+  # maximum: switchboard alone is 44s of the 137s total.
   test:
     name: Test (shard ${{ matrix.shard }}/3)
     runs-on: ubuntu-latest
@@ -99,19 +99,46 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Get changed files
+        id: diff
+        uses: ./.github/actions/changed-files
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.5.1
+
+      # Prints the packages the diff can reach, so a reader of the log can see
+      # why a suite ran or did not.
+      - name: Decide test scope
+        id: scope
+        if: ${{ steps.diff.outputs.files != '' }}
+        uses: ./.github/actions/test-scope
+        with:
+          files: ${{ steps.diff.outputs.files }}
+
+      - name: Skip tests (nothing the suites can see changed)
+        if: ${{ steps.diff.outputs.files == '' || steps.scope.outputs.mode == 'none' }}
+        run: echo "No changed file belongs to a package test:ci runs; skipping tests."
 
       - name: General setup
+        if: ${{ steps.scope.outputs.mode == 'full' || steps.scope.outputs.mode == 'affected' }}
         uses: ./.github/actions/setup
 
       # reactor-browser runs half its suite in a real chromium (vitest browser
       # mode). Installed in every shard so the split can be rebalanced freely.
       - name: Install playwright chromium
+        if: ${{ steps.scope.outputs.mode == 'full' || contains(steps.scope.outputs.filters, '@powerhousedao/reactor-browser') }}
         run: pnpm exec playwright install --with-deps chromium
         working-directory: ./packages/reactor-browser
 
       # The engine's piece suites fetch Activepieces bundles from npm. Keyed on
       # the suites themselves: a run that changes none of them reuses the bundles.
       - name: Cache Activepieces bundles
+        if: ${{ steps.scope.outputs.mode == 'full' || contains(steps.scope.outputs.filters, '@powerhousedao/reactor-workflow') }}
         uses: actions/cache@v4
         with:
           path: packages/reactor-workflow/node_modules/.cache/ap-bundles
@@ -119,6 +146,9 @@ jobs:
           restore-keys: ap-bundles-
 
       - name: Run shard
+        if: ${{ steps.scope.outputs.mode == 'full' || steps.scope.outputs.mode == 'affected' }}
+        env:
+          TEST_SCOPE_FILTERS: ${{ steps.scope.outputs.filters }}
         run: pnpm exec tsx scripts/test-shard.ts ${{ matrix.shard }} 3
 
   notify-discord:
